@@ -53,6 +53,7 @@ export const WATCH_CHANNEL_IDS = [
   'dark-xiangqi',
   'duck-xiangqi',
   'atomic-xiangqi',
+  'crazyhouse-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',
@@ -268,7 +269,43 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         responses: {
           '200': OK({
             type: 'object',
-            properties: { playing: { type: 'integer' }, online: { type: 'integer' } },
+            properties: {
+              playing: { type: 'integer' },
+              online: { type: 'integer' },
+              playingBySpec: {
+                type: 'object',
+                description:
+                  'Live games in play per game spec id with at least one person seated; zero entries are omitted.',
+                additionalProperties: { type: 'integer' },
+              },
+              totalCompletedGames: {
+                type: ['integer', 'null'],
+                description:
+                  'Counted completed games, as on /api/stats/public; refreshed at most every 30 seconds. Null without a database.',
+              },
+              last30dCompletedGames: {
+                type: ['integer', 'null'],
+                description: 'Counted games completed in the last 30 days; same cache.',
+              },
+            },
+          }),
+        },
+      },
+    },
+    '/api/play/variant-order': {
+      get: {
+        tags: ['Site'],
+        summary: 'Variants ordered by recent play',
+        description:
+          'Game spec ids ordered by counted human games that ended in the last 28 days, most first; ties in the canonical order. Cached for six hours. Empty without a database.',
+        responses: {
+          '200': OK({
+            type: 'object',
+            properties: {
+              order: { type: 'array', items: { type: 'string' } },
+              windowDays: { type: 'integer' },
+              computedAt: { type: 'string', format: 'date-time' },
+            },
           }),
         },
       },
@@ -339,7 +376,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         tags: ['Games'],
         summary: 'Curated recent games across variants',
         description:
-          'The pool the homepage board draws from: substantial finished games, interleaved across variants for breadth, not sorted by recency.',
+          'The pool the homepage board draws from: substantial finished games, interleaved across variants for breadth, not sorted by recency. Each entry also carries `delayedAir` (boolean): true for fog variants that can never be shown live, which the homepage board replays after they end, at their recorded pace.',
         responses: { '200': OK(games(ref('GameRecord'))), '503': PERSISTENCE },
       },
     },
@@ -471,6 +508,11 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
             'channel',
             { type: 'string', enum: [...WATCH_CHANNEL_IDS], default: 'top' },
             'Which channel. The set is what /watch offers and can change as variants launch.',
+          ),
+          query(
+            'curated',
+            { type: 'string', enum: ['0'] },
+            '`0` lists the full feed without the 20-ply bar the Featured channel applies (what /games "Just finished" shows).',
           ),
         ],
         responses: {
@@ -643,16 +685,27 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
           pathParam('handle', 'The player’s handle.'),
           query('offset', { type: 'integer', minimum: 0, default: 0 }, 'Skip this many.'),
           query('limit', { type: 'integer', minimum: 1, maximum: 50, default: 15 }, 'Page size.'),
+          query(
+            'variant',
+            { type: 'string' },
+            'Rating pool, e.g. `xiangqi`; unknown values list every variant.',
+          ),
+          query(
+            'result',
+            { type: 'string', enum: ['win', 'loss', 'draw'] },
+            'Result from this player’s seat.',
+          ),
+          query('vs', { type: 'string' }, 'Opponent handle (case-insensitive, exact).'),
         ],
         responses: {
           '200': OK({
             type: 'object',
             properties: {
               games: { type: 'array', items: { type: 'object' } },
-              total: { type: 'integer' },
+              total: { type: 'integer', description: 'Games matching the filters.' },
             },
           }),
-          '400': ERROR_RESPONSE('`invalid_handle`'),
+          '400': ERROR_RESPONSE('`invalid_handle`, `invalid_result`, `invalid_opponent`'),
           '404': NOT_FOUND,
           '503': PERSISTENCE,
         },

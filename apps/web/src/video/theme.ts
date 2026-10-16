@@ -59,7 +59,7 @@ export const VIDEO_BOARD_STYLE = `
   .xq-live-lastmove-ring {
     fill: none;
     stroke: #d6af4e;
-    stroke-width: 4;
+    stroke-opacity: 0.8;
   }
   .xq-live-selection-cell { fill: rgba(31, 111, 91, 0.32); stroke: none; }
   .xq-live-hint-dot { fill: rgba(31, 111, 91, 0.72); opacity: 0.9; }

@@ -8,6 +8,7 @@ import {
   type MoveJudgment,
   moveJudgment,
   winPercent,
+  winPercentK,
 } from '@mistboard/game';
 import { postAnalysisJob } from './analysis-job-poll.js';
 
@@ -164,7 +165,10 @@ export function computeGameAnalysis(
   const firstMover = opts?.firstMover ?? 'red';
   const evals = [...response.plies].sort((a, b) => a.ply - b.ply);
   const moves: MoveAnalysis[] = [];
-  const redWinPercents = evals.map((entry) => winPercent(entry.cp, entry.mate));
+  // Stored cp are on the analysing engine's own scale (AB-JChess's are steeper than
+  // PikaJieQi's), so they become win% on that engine's curve, named by the stored engineId.
+  const winK = winPercentK(response.engineId);
+  const redWinPercents = evals.map((entry) => winPercent(entry.cp, entry.mate, winK));
   // A move that IS the engine's best move for the position before it can never be an error
   // BY THAT ENGINE, whatever the realized swing says. The swing can still be negative: the
   // pre-move eval and the post-move eval come from two INDEPENDENT searches, so a horizon
@@ -349,7 +353,8 @@ export function mergeDecisionAnalysis(
   analysis: GameAnalysis,
   decisionByPly: ReadonlyMap<number, PlyDecision>,
 ): { red: PlayerAnalysis; black: PlayerAnalysis } {
-  const redWinPercents = analysis.evals.map((e) => winPercent(e.cp, e.mate));
+  const winK = winPercentK(analysis.engineId);
+  const redWinPercents = analysis.evals.map((e) => winPercent(e.cp, e.mate, winK));
   const chance = new Set(analysis.chancePlies);
   const override = new Map<number, number | null>();
   const counts: Record<'red' | 'black', { i: number; m: number; b: number }> = {

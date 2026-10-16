@@ -18,6 +18,12 @@
   text-decoration: none;
 }
 
+/* On a month's own page, that month. */
+.static-prose .changelog-months-link[aria-current="page"] {
+  color: var(--site-text);
+  font-weight: 600;
+}
+
 .static-prose .changelog-months-link:hover {
   color: var(--site-accent);
   text-decoration: underline;

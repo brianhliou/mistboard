@@ -6,19 +6,30 @@
 //   xiangqi family  apps/web/src/xiangqi-board-surface.ts + app-base.css
 //                   (--xq-board-bg #f5dca8, --xq-board-ink #5a3a14, 1.2px grid,
 //                   margin 0.6 cell, no river label, no star points) and
-//                   xiangqi-piece-sets.ts (`international`: #fef0d7 disc, 2.8
-//                   ring in #c30d0d / #202427, PNG art per INTERNATIONAL_IMAGE_FRAMES;
-//                   jieqi face-down = pieceBackMark; duck = gold ring + duck.png;
-//                   treasure = the international treasure art).
+//                   xiangqi-piece-sets.ts (`international`: #fef0d7 disc, one 2.8
+//                   ring in #202427 on both sides, PNG art per INTERNATIONAL_IMAGE_FRAMES;
+//                   jieqi face-down = pieceBackMark at the face's size; duck = gold
+//                   ring + duck.png; treasure = the international treasure art).
+//                   The piece's outer edge spans 98% of the point gap (board-metrics.ts
+//                   xiangqiPieceDrawSize); no shadow (the piece look of 2026-10-14).
 //   banqi           apps/web/src/live-banqi-render.ts (same bg/ink, 1.5px grid,
-//                   international discs, jade face-down #2f8f6b / #184a38).
+//                   international discs at 92% of the cell, jade face-down
+//                   #2f8f6b / #184a38 at the same size).
 //   jungle          apps/web/src/jungle-skins.ts + jungle-art.ts, the default
-//                   'bare' board and 'animals' tokens.
+//                   'bare' board and 'animals' tokens: rounded squares spanning
+//                   the whole cell, one #28323c ring on both sides.
 //   fog chess       packages/board-render BROWN_PALETTE + inline cburnett pieces,
 //                   via renderBoardComposition.
 // Piece art is the same PNG the browser loads, embedded as a data URI from the
 // web build (loadCardArt). Without the art (no dist, a missing file) a piece
-// falls back to the baked traditional glyph so the card still draws.
+// falls back to the baked traditional glyph so the card still draws. The art is
+// 512-1024 px and a card draws it at ~100-200 px; resvg cannot shrink a raster
+// that far cleanly, so each file is embedded from the halving (artHref) within
+// 2x of the size it lands at in the PNG.
+//
+// The traditional (hanzi) set is the other xiangqi-family option, for the zh
+// rules pages' cards (CardPieceSet); it is drawn from the baked glyph outlines,
+// as the live board draws it, and needs no art.
 //
 // Layout rule (2026-09-12): a board card gives the board the full card height;
 // caption text lives in the horizontal margin beside it, never under it.
@@ -43,6 +54,7 @@ import {
 } from '@mistboard/game';
 import type { PositionOgBoard } from './og-position.js';
 import { escapeXml, OG_FONT, OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
+import { halvePng, OG_CARD_ZOOM, pngSize } from './og-raster.js';
 
 // ── Card frame ────────────────────────────────────────────────────────────────
 
@@ -62,7 +74,26 @@ export const CARD_BG = '#0f1115';
 
 type Ink = 'red' | 'black';
 
-export type CardArt = ReadonlyMap<string, string>;
+/** The xiangqi-family piece sets a card can draw: the site default
+ *  (international figurines) and the traditional hanzi set the site gives zh
+ *  readers (memory piece_set_default_by_locale_settled). The traditional set
+ *  has no art files: the live site draws it from the baked glyph outlines
+ *  (xiangqi-piece-sets.ts renderXiangqiPieceGlyphed + cjkGlyphMark), and so does
+ *  the card. Jungle and chess boards ignore it. */
+export const CARD_PIECE_SETS = ['international', 'traditional'] as const;
+export type CardPieceSet = (typeof CARD_PIECE_SETS)[number];
+
+export function isCardPieceSet(value: string): value is CardPieceSet {
+  return (CARD_PIECE_SETS as readonly string[]).includes(value);
+}
+
+/** One resolution of an art file: its longer side in pixels and its data URI. */
+export type ArtLevel = { readonly px: number; readonly uri: string };
+/** Each art file as its halvings, largest (the file itself) first. */
+export type CardArt = ReadonlyMap<string, readonly ArtLevel[]>;
+
+/** The smallest halving kept: no card draws a piece under ~100 px. */
+const MIN_ART_PX = 64;
 
 const XIANGQI_ROLES = [
   'general',
@@ -106,12 +137,20 @@ export function loadCardArt(staticDir: string): Promise<CardArt> {
   let pending = artByDir.get(staticDir);
   if (!pending) {
     pending = (async () => {
-      const art = new Map<string, string>();
+      const art = new Map<string, readonly ArtLevel[]>();
       await Promise.all(
         cardArtPaths().map(async (relPath) => {
           try {
-            const buf = await fs.readFile(resolve(staticDir, relPath));
-            art.set(relPath, `data:image/png;base64,${buf.toString('base64')}`);
+            let png: Buffer = await fs.readFile(resolve(staticDir, relPath));
+            const levels: ArtLevel[] = [];
+            for (;;) {
+              const { width, height } = pngSize(png);
+              const px = Math.max(width, height);
+              levels.push({ px, uri: `data:image/png;base64,${png.toString('base64')}` });
+              if (px / 2 < MIN_ART_PX) break;
+              png = await halvePng(png);
+            }
+            art.set(relPath, levels);
           } catch {
             // absent: fallback glyph
           }
@@ -124,6 +163,19 @@ export function loadCardArt(staticDir: string): Promise<CardArt> {
   return pending;
 }
 
+/** The art file's data URI for an image `units` wide in the card's SVG: the
+ *  smallest halving at least as large as the image lands in the PNG, so resvg
+ *  never shrinks it by 2x or more (it aliases past that). Undefined when the
+ *  file is not loaded. */
+export function artHref(art: CardArt, relPath: string, units: number): string | undefined {
+  const levels = art.get(relPath);
+  if (!levels?.length) return undefined;
+  const need = units * OG_CARD_ZOOM;
+  let pick = levels[0]!;
+  for (const level of levels) if (level.px >= need) pick = level;
+  return pick.uri;
+}
+
 /** Forget loaded art (tests). */
 export function resetCardArt(): void {
   artByDir.clear();
@@ -134,7 +186,9 @@ export function resetCardArt(): void {
 const BOARD_BG = '#f5dca8';
 const BOARD_INK = '#5a3a14';
 const DISC_FACE = '#fef0d7';
-const DISC_RING: Record<Ink, string> = { red: '#c30d0d', black: '#202427' };
+/** INTERNATIONAL_RING_STROKE in apps/web/src/xiangqi-piece-sets.ts: one dark ring
+ *  on both sides since 2026-10-14 (the figure's fill carries the side). */
+const DISC_RING = '#202427';
 const BACK: Record<Ink, { fill: string; stroke: string }> = {
   red: { fill: '#a95f4a', stroke: '#6f342c' },
   black: { fill: '#2f7d62', stroke: '#174536' },
@@ -149,7 +203,10 @@ const JUNGLE = {
   mark: '#8a6534',
   grid: 'rgba(91,74,50,0.55)',
   disc: '#fff2cf',
-  ring: { red: '#b5322b', black: '#28323c' } as Record<Ink, string>,
+  /** Ink by side: only the text fallback when the art is missing. */
+  ink: { red: '#b5322b', black: '#28323c' } as Record<Ink, string>,
+  /** JUNGLE_ART.animalRing in apps/web/src/jungle-art.ts: one ring on both sides. */
+  ring: '#28323c',
 };
 // Mirrors TRADITIONAL in apps/web/src/xiangqi-piece-sets.ts, the glyph fallback.
 const TRADITIONAL: Record<Ink, Record<string, string>> = {
@@ -183,14 +240,40 @@ const FRAMES: Record<string, { x: number; y: number; w: number; h: number }> = {
   cannon: { x: -11, y: -11, w: 122, h: 122 },
   soldier: { x: 0, y: 0, w: 100, h: 100 },
   'crossed-soldier': { x: 0, y: 0, w: 100, h: 100 },
-  treasure: { x: -7, y: -7, w: 114, h: 114 },
+  // 2 units low, as on the site's disc: the diamond is top-heavy (xiangqi-piece-sets.ts).
+  treasure: { x: -7, y: -5, w: 114, h: 114 },
 };
 
 // ── Geometry ──────────────────────────────────────────────────────────────────
 
 /** Live intersection boards: margin 0.6 cell (xiangqi-board.ts CELL 60 / MARGIN 36). */
 const INTERSECTION_MARGIN = 0.6;
-const PIECE_RATIO = 0.9;
+// The piece look of 2026-10-14, ported from the web (the server cannot import
+// apps/web): every xiangqi piece is drawn in a 100-unit box whose outline ends
+// at 94.8 (r 46 plus half a 2.8 ring), so a piece whose outer edge spans REACH
+// of the cell is drawn in a box of cell x REACH / 0.948.
+//   xiangqi family  XIANGQI_PIECE_REACH 0.98, XIANGQI_PIECE_OUTLINE_SHARE 0.948
+//                   (apps/web/src/board-metrics.ts xiangqiPieceDrawSize)
+//   banqi           BANQI_PIECE_REACH 0.92 (apps/web/src/live-banqi-render.ts)
+//   jungle          JUNGLE_TOKEN_REACH 1 (apps/web/src/jungle-art.ts)
+const PIECE_OUTLINE_SHARE = 0.948;
+const PIECE_RATIO = 0.98 / PIECE_OUTLINE_SHARE;
+const BANQI_REACH = 0.92;
+const BANQI_PIECE_RATIO = BANQI_REACH / PIECE_OUTLINE_SHARE;
+/** The banqi jade back's stroke (.banqi-back > circle, 2 px on the 64 px cell). */
+const BANQI_BACK_STROKE = 2 / 64;
+// JUNGLE_ART in apps/web/src/jungle-art.ts: the token is a rounded square, the
+// cream face out to the ring and the ring on the edge, ratios to its nominal size.
+const JUNGLE_REACH = 1;
+const JUNGLE_HALF = 0.45;
+const JUNGLE_RING = 0.0274;
+const JUNGLE_CORNER_PER_HALF = 14 / 46;
+/** jungleTokenSize: the nominal token size whose outer edge spans JUNGLE_REACH of the cell. */
+function jungleTokenSize(cell: number): number {
+  return (cell * JUNGLE_REACH) / (2 * JUNGLE_HALF + JUNGLE_RING);
+}
+/** JUNGLE_ART.faceDown: the jade tile, a rounded square at the face-up size. */
+const JUNGLE_BACK_STROKE = 0.039;
 
 export function intersectionLayout(files: number, ranks: number, height: number) {
   const cell = height / (ranks - 1 + 2 * INTERSECTION_MARGIN);
@@ -206,33 +289,37 @@ export function intersectionLayout(files: number, ranks: number, height: number)
   };
 }
 
-/** The board's drawn size inside the slot: height-bound, then capped at the
- *  slot width for wide boards. */
-export function boardSize(board: PositionOgBoard): { width: number; height: number } {
-  const h = CARD_BOARD_HEIGHT;
-  let aspect: number;
+/** The board's width over its height, as drawn. */
+function boardAspect(board: PositionOgBoard): number {
   switch (board.kind) {
     case 'intersection': {
       const g = intersectionLayout(board.files, board.ranks, 1000);
-      aspect = g.width / 1000;
-      break;
+      return g.width / 1000;
     }
     case 'grid':
-      aspect = board.files / board.ranks;
-      break;
+      return board.files / board.ranks;
     case 'jungle':
-      aspect = JUNGLE_WIDTH / JUNGLE_HEIGHT;
-      break;
+      return JUNGLE_WIDTH / JUNGLE_HEIGHT;
     case 'chess':
-      aspect = 1;
-      break;
+      return 1;
     default: {
       const unreachable: never = board;
       throw new Error(`card board: unhandled ${String(unreachable)}`);
     }
   }
-  if (h * aspect <= CARD_BOARD_MAX_WIDTH) return { width: h * aspect, height: h };
-  return { width: CARD_BOARD_MAX_WIDTH, height: CARD_BOARD_MAX_WIDTH / aspect };
+}
+
+/** The board's drawn size inside the slot: height-bound, then capped at the
+ *  slot width for wide boards. */
+export function boardSize(
+  board: PositionOgBoard,
+  slotHeight: number = CARD_BOARD_HEIGHT,
+  slotWidth: number = CARD_BOARD_MAX_WIDTH,
+): { width: number; height: number } {
+  const aspect = boardAspect(board);
+  const h = slotHeight;
+  if (h * aspect <= slotWidth) return { width: h * aspect, height: h };
+  return { width: slotWidth, height: slotWidth / aspect };
 }
 
 // ── Piece primitives ──────────────────────────────────────────────────────────
@@ -241,14 +328,21 @@ function piece(cx: number, cy: number, size: number, inner: string): string {
   return `<g transform="translate(${cx - size / 2} ${cy - size / 2}) scale(${size / 100})">${inner}</g>`;
 }
 
-function internationalDisc(ink: Ink): string {
-  return `<circle cx="50" cy="50" r="46" fill="${DISC_FACE}" stroke="${DISC_RING[ink]}" stroke-width="2.8"/>`;
+function internationalDisc(): string {
+  return `<circle cx="50" cy="50" r="46" fill="${DISC_FACE}" stroke="${DISC_RING}" stroke-width="2.8"/>`;
 }
 
-function artImage(art: CardArt, relPath: string, role: string): string | null {
-  const uri = art.get(relPath);
-  if (!uri) return null;
+/** A rounded square centred on (cx, cy), `half` from centre to edge, with the
+ *  site's 14-per-46 corner (jungle-art.ts jungleTokenSquare). */
+function roundedSquare(cx: number, cy: number, half: number, attrs: string): string {
+  return `<rect x="${cx - half}" y="${cy - half}" width="${2 * half}" height="${2 * half}" rx="${half * JUNGLE_CORNER_PER_HALF}" ${attrs}/>`;
+}
+
+/** `size` is the piece's box in card units (`piece()` scales the 100-unit box to it). */
+function artImage(art: CardArt, relPath: string, role: string, size: number): string | null {
   const f = FRAMES[role] ?? FRAMES.soldier!;
+  const uri = artHref(art, relPath, (Math.max(f.w, f.h) / 100) * size);
+  if (!uri) return null;
   return `<image href="${uri}" x="${f.x}" y="${f.y}" width="${f.w}" height="${f.h}" preserveAspectRatio="xMidYMid meet"/>`;
 }
 
@@ -261,32 +355,53 @@ function glyphInner(ink: Ink, glyph: string): string {
   return `<circle cx="50" cy="50" r="46" fill="#f3e6c4" stroke="${inkHex}" stroke-width="2.5"/><circle cx="50" cy="50" r="38" fill="none" stroke="${inkHex}" stroke-width="1.5"/>${mark}`;
 }
 
-/** A revealed xiangqi-family piece in the international set, or the
- *  traditional glyph disc when its art is not loaded. */
-function xiangqiPiece(art: CardArt, ink: Ink, role: string, artRole: string): string {
-  const image = artImage(art, `piece-sets/xiangqi/international/${ink}-${artRole}.png`, artRole);
-  if (image) return `${internationalDisc(ink)}${image}`;
+function traditionalInner(ink: Ink, role: string): string {
   return glyphInner(ink, TRADITIONAL[ink][role] ?? (role === 'treasure' ? '寶' : '?'));
 }
 
-/** pieceBackMark: a jieqi face-down piece (ink public, role hidden). */
+/** A revealed xiangqi-family piece: the traditional set's character disc, or
+ *  the international art (falling back to the character disc when the art is
+ *  not loaded). */
+function xiangqiPiece(
+  art: CardArt,
+  ink: Ink,
+  role: string,
+  artRole: string,
+  size: number,
+  pieceSet: CardPieceSet,
+): string {
+  if (pieceSet === 'traditional') return traditionalInner(ink, role);
+  const image = artImage(
+    art,
+    `piece-sets/xiangqi/international/${ink}-${artRole}.png`,
+    artRole,
+    size,
+  );
+  if (image) return `${internationalDisc()}${image}`;
+  return traditionalInner(ink, role);
+}
+
+/** pieceBackMark: a jieqi face-down piece (ink public, role hidden), the same
+ *  outer size as the face-up piece beside it (r 46; it was r 43 before 2026-10-14). */
 function backInner(ink: Ink): string {
   const b = BACK[ink];
-  return `<circle cx="50" cy="50" r="43" fill="${b.fill}" stroke="${b.stroke}" stroke-width="3"/>`;
+  return `<circle cx="50" cy="50" r="46" fill="${b.fill}" stroke="${b.stroke}" stroke-width="3"/>`;
 }
 
-function duckInner(art: CardArt): string {
-  const uri = art.get('piece-sets/xiangqi/animal-dobutsu/duck.png');
+/** The duck as the live board draws it in each set (xiangqi-piece-sets.ts
+ *  duckMarks): on the international disc, or inside the glyph sets' double-ring
+ *  disc at the size their character would take. */
+function duckInner(art: CardArt, size: number, pieceSet: CardPieceSet): string {
+  const box = pieceSet === 'traditional' ? 74 : 84;
+  const at = (100 - box) / 2;
+  const uri = artHref(art, 'piece-sets/xiangqi/animal-dobutsu/duck.png', (box / 100) * size);
   const image = uri
-    ? `<image href="${uri}" x="8" y="8" width="84" height="84" preserveAspectRatio="xMidYMid meet"/>`
+    ? `<image href="${uri}" x="${at}" y="${at}" width="${box}" height="${box}" preserveAspectRatio="xMidYMid meet"/>`
     : `<text x="50" y="50" text-anchor="middle" dominant-baseline="central" font-family="${OG_FONT}" font-size="30" font-weight="700" fill="${DUCK_RING}">DUCK</text>`;
+  if (pieceSet === 'traditional') {
+    return `<circle cx="50" cy="50" r="46" fill="#f3e6c4" stroke="${DUCK_RING}" stroke-width="2.5"/><circle cx="50" cy="50" r="38" fill="none" stroke="${DUCK_RING}" stroke-width="1.5"/>${image}`;
+  }
   return `<circle cx="50" cy="50" r="46" fill="${DISC_FACE}" stroke="${DUCK_RING}" stroke-width="2.8"/>${image}`;
-}
-
-/** Live drop shadow under the pieces (live-xiangqi.css .xq-piece). A filter,
- *  not CSS, so resvg draws it. */
-function shadowDefs(id: string): string {
-  return `<defs><filter id="${id}" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="2" flood-color="#231b12" flood-opacity="0.25"/></filter></defs>`;
 }
 
 // ── Boards ────────────────────────────────────────────────────────────────────
@@ -302,13 +417,12 @@ function renderIntersection(
   board: Extract<PositionOgBoard, { kind: 'intersection' }>,
   art: CardArt,
   height: number,
-  id: string,
+  pieceSet: CardPieceSet,
 ): string {
   const g = intersectionLayout(board.files, board.ranks, height);
   const { cell, width } = g;
   const parts: string[] = [
     `<rect x="0" y="0" width="${width}" height="${height}" rx="${boardCornerRadius(width)}" fill="${BOARD_BG}"/>`,
-    shadowDefs(id),
   ];
   const lw = Math.max(1, cell / 50);
   const line = (x1: number, y1: number, x2: number, y2: number) =>
@@ -340,7 +454,6 @@ function renderIntersection(
       `<rect x="${g.px(at.file) - cell / 2}" y="${g.py(at.rank) - cell / 2}" width="${cell}" height="${cell}" fill="rgba(58,40,16,0.42)"/>`,
     );
   }
-  parts.push(`<g filter="url(#${id})">`);
   for (const pc of board.pieces) {
     const artRole =
       pc.role === 'soldier' && hasCrossedRiver(pc.color, pc.rank, board.ranks)
@@ -351,7 +464,7 @@ function renderIntersection(
         g.px(pc.file),
         g.py(pc.rank),
         g.pieceSize,
-        xiangqiPiece(art, pc.color, pc.role, artRole),
+        xiangqiPiece(art, pc.color, pc.role, artRole, g.pieceSize, pieceSet),
       ),
     );
   }
@@ -359,11 +472,18 @@ function renderIntersection(
     const cx = g.px(extra.file);
     const cy = g.py(extra.rank);
     if (extra.kind === 'face-down') parts.push(piece(cx, cy, g.pieceSize, backInner(extra.ink)));
-    else if (extra.kind === 'duck') parts.push(piece(cx, cy, g.pieceSize, duckInner(art)));
+    else if (extra.kind === 'duck')
+      parts.push(piece(cx, cy, g.pieceSize, duckInner(art, g.pieceSize, pieceSet)));
     else
-      parts.push(piece(cx, cy, g.pieceSize, xiangqiPiece(art, extra.ink, 'treasure', 'treasure')));
+      parts.push(
+        piece(
+          cx,
+          cy,
+          g.pieceSize,
+          xiangqiPiece(art, extra.ink, 'treasure', 'treasure', g.pieceSize, pieceSet),
+        ),
+      );
   }
-  parts.push('</g>');
   return parts.join('');
 }
 
@@ -376,17 +496,21 @@ function renderGrid(
   art: CardArt,
   width: number,
   height: number,
-  id: string,
+  pieceSet: CardPieceSet,
 ): string {
   const cell = width / board.files;
   const jungle = board.tiles.some((t) => !t.hidden && t.mark.kind === 'text');
   const bg = jungle ? JUNGLE.land : BOARD_BG;
   const gridInk = jungle ? JUNGLE.grid : BOARD_INK;
-  const parts: string[] = [
-    `<rect x="0" y="0" width="${width}" height="${height}" rx="${boardCornerRadius(width)}" fill="${bg}"/>`,
-    shadowDefs(id),
-  ];
+  const radius = boardCornerRadius(width);
   const lw = jungle ? 1 : Math.max(1, cell / 40);
+  // Under an outline the fill stops at the stroke's centre line, not the board
+  // edge: two curves ending on the same edge both antialias there, and the
+  // light fill bled through the brown at every corner (Brian, 2026-10-11).
+  const fillInset = jungle ? 0 : lw / 2;
+  const parts: string[] = [
+    `<rect x="${fillInset}" y="${fillInset}" width="${width - 2 * fillInset}" height="${height - 2 * fillInset}" rx="${Math.max(0, radius - fillInset)}" fill="${bg}"/>`,
+  ];
   for (let f = 1; f < board.files; f += 1) {
     parts.push(
       `<line x1="${f * cell}" y1="0" x2="${f * cell}" y2="${height}" stroke="${gridInk}" stroke-width="${lw}"/>`,
@@ -398,30 +522,49 @@ function renderGrid(
     );
   }
   if (!jungle) {
+    // The stroke is centred on a path inset by half its width, so the path must
+    // round at the fill's radius less that inset: the same rx would put the
+    // curve on a different centre and let the fill poke out past the outline at
+    // every corner (Brian, 2026-10-11, on the banqi square card).
     parts.push(
-      `<rect x="${lw / 2}" y="${lw / 2}" width="${width - lw}" height="${height - lw}" rx="${boardCornerRadius(width)}" fill="none" stroke="${gridInk}" stroke-width="${lw}"/>`,
+      `<rect x="${lw / 2}" y="${lw / 2}" width="${width - lw}" height="${height - lw}" rx="${Math.max(0, radius - lw / 2)}" fill="none" stroke="${gridInk}" stroke-width="${lw}"/>`,
     );
   }
   const cx = (file: number) => (file + 0.5) * cell;
   const cy = (rank: number) => (board.ranks - rank + 0.5) * cell;
-  parts.push(`<g filter="url(#${id})">`);
   for (const tile of board.tiles) {
     const x = cx(tile.file);
     const y = cy(tile.rank);
     if (tile.hidden) {
-      const r = jungle ? 0.374 * cell : 0.46 * PIECE_RATIO * cell;
-      const sw = jungle ? 0.031 * cell : 2;
-      parts.push(
-        `<circle cx="${x}" cy="${y}" r="${r}" fill="${JADE.fill}" stroke="${JADE.stroke}" stroke-width="${sw}"/>`,
-      );
+      // Face-down tiles match the face-up pieces' outer size and shape: the
+      // jungle-art.ts jade rounded square, or live-banqi-render.ts's jade disc
+      // whose outer edge (stroke included) lands at 92% of the cell.
+      if (jungle) {
+        const sw = JUNGLE_BACK_STROKE * cell;
+        parts.push(
+          roundedSquare(
+            x,
+            y,
+            (JUNGLE_REACH * cell - sw) / 2,
+            `fill="${JADE.fill}" stroke="${JADE.stroke}" stroke-width="${sw}"`,
+          ),
+        );
+      } else {
+        const sw = BANQI_BACK_STROKE * cell;
+        parts.push(
+          `<circle cx="${x}" cy="${y}" r="${(BANQI_REACH * cell - sw) / 2}" fill="${JADE.fill}" stroke="${JADE.stroke}" stroke-width="${sw}"/>`,
+        );
+      }
     } else if (tile.mark.kind === 'glyph') {
       const role = roleOfGlyph(tile.mark.glyph) ?? 'soldier';
-      parts.push(piece(x, y, PIECE_RATIO * cell, xiangqiPiece(art, tile.ink, role, role)));
+      const size = BANQI_PIECE_RATIO * cell;
+      parts.push(piece(x, y, size, xiangqiPiece(art, tile.ink, role, role, size, pieceSet)));
     } else {
-      parts.push(jungleToken(art, x, y, 0.87 * cell, tile.ink, roleOfJungleName(tile.mark.text)));
+      parts.push(
+        jungleToken(art, x, y, jungleTokenSize(cell), tile.ink, roleOfJungleName(tile.mark.text)),
+      );
     }
   }
-  parts.push('</g>');
   return parts.join('');
 }
 
@@ -445,14 +588,20 @@ function jungleToken(
   ink: Ink,
   role: JunglePieceRole,
 ): string {
-  const uri = art.get(`piece-sets/jungle/dobutsu/${ink}-${role}.png`);
+  const uri = artHref(art, `piece-sets/jungle/dobutsu/${ink}-${role}.png`, size);
   const inner = uri
     ? `<image href="${uri}" x="${cx - size / 2}" y="${cy - size / 2}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>`
-    : `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="${OG_FONT}" font-size="${size * 0.3}" font-weight="700" fill="${JUNGLE.ring[ink]}">${escapeXml(role[0]!.toUpperCase() + role.slice(1))}</text>`;
+    : `<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-family="${OG_FONT}" font-size="${size * 0.3}" font-weight="700" fill="${JUNGLE.ink[ink]}">${escapeXml(role[0]!.toUpperCase() + role.slice(1))}</text>`;
+  const half = JUNGLE_HALF * size;
   return [
-    `<circle cx="${cx}" cy="${cy}" r="${0.485 * size}" fill="${JUNGLE.disc}"/>`,
+    roundedSquare(cx, cy, half, `fill="${JUNGLE.disc}"`),
     inner,
-    `<circle cx="${cx}" cy="${cy}" r="${0.45 * size}" fill="none" stroke="${JUNGLE.ring[ink]}" stroke-width="${0.032 * size}"/>`,
+    roundedSquare(
+      cx,
+      cy,
+      half,
+      `fill="none" stroke="${JUNGLE.ring}" stroke-width="${JUNGLE_RING * size}"`,
+    ),
   ].join('');
 }
 
@@ -470,13 +619,11 @@ function renderJungle(
   board: Extract<PositionOgBoard, { kind: 'jungle' }>,
   art: CardArt,
   height: number,
-  id: string,
 ): string {
   const cell = height / JUNGLE_HEIGHT;
   const width = JUNGLE_WIDTH * cell;
   const parts: string[] = [
     `<rect x="0" y="0" width="${width}" height="${height}" rx="${boardCornerRadius(width)}" fill="${JUNGLE.land}"/>`,
-    shadowDefs(id),
   ];
   const left = (file: number) => file * cell;
   const top = (rank: number) => (JUNGLE_HEIGHT - rank) * cell;
@@ -512,20 +659,18 @@ function renderJungle(
       `<line x1="0" y1="${r * cell}" x2="${width}" y2="${r * cell}" stroke="${JUNGLE.grid}" stroke-width="1"/>`,
     );
   }
-  parts.push(`<g filter="url(#${id})">`);
   for (const pc of board.pieces) {
     parts.push(
       jungleToken(
         art,
         left(pc.file) + cell / 2,
         top(pc.rank) + cell / 2,
-        0.86 * cell,
+        jungleTokenSize(cell),
         pc.ink,
         pc.role,
       ),
     );
   }
-  parts.push('</g>');
   return parts.join('');
 }
 
@@ -606,6 +751,7 @@ const NAME_MIN = 30;
 const SCORE_SIZE = 40;
 const TOKEN_SIZE = 56;
 const VARIANT_SIZE = 38;
+const VARIANT_MIN = 26;
 
 /** The seat's king piece, drawn the way the board draws it: the general on
  *  the xiangqi family, the lion on the jungle boards, the cburnett king on the
@@ -616,10 +762,16 @@ function seatToken(
   cx: number,
   cy: number,
   jungle: boolean,
+  pieceSet: CardPieceSet,
 ): string {
   if (ink === 'white') return chessKing('white', cx, cy);
   if (jungle) return jungleToken(art, cx, cy, TOKEN_SIZE, ink, 'lion');
-  return piece(cx, cy, TOKEN_SIZE, xiangqiPiece(art, ink, 'general', 'general'));
+  return piece(
+    cx,
+    cy,
+    TOKEN_SIZE,
+    xiangqiPiece(art, ink, 'general', 'general', TOKEN_SIZE, pieceSet),
+  );
 }
 
 function chessKing(color: 'white' | 'black', cx: number, cy: number): string {
@@ -646,6 +798,7 @@ function playerRows(
   boardHeight: number,
   jungleInk: boolean,
   chess: boolean,
+  pieceSet: CardPieceSet,
 ): string[] {
   const gap = 16;
   const nameX = x + TOKEN_SIZE + gap;
@@ -666,7 +819,7 @@ function playerRows(
     const cy = firstBaseline - size * 0.36;
     const token = chess
       ? chessKing(player.ink === 'white' ? 'white' : 'black', cx, cy)
-      : seatToken(art, player.ink, cx, cy, jungleInk);
+      : seatToken(art, player.ink, cx, cy, jungleInk, pieceSet);
     const score = player.score
       ? `<text x="${x + width}" y="${firstBaseline}" text-anchor="end" fill="#e5e9df" font-family="${OG_FONT}" font-size="${SCORE_SIZE}" font-weight="700">${escapeXml(player.score)}</text>`
       : '';
@@ -683,45 +836,48 @@ function playerRows(
   const topY = boardY + 8 + size;
   const bottomY = boardY + boardHeight - 10 - (bottomLines.length - 1) * lineGap;
   const midY = (topY + (topLines.length - 1) * lineGap + bottomY) / 2;
-  const variantY = midY - 6;
+  // A long label (a broadcast event's name) wraps like a name rather than
+  // running off the card; a one-line label sits exactly where it always did.
+  // The width estimate runs narrow on bold Latin, hence the margin; a label
+  // still too long for two lines shrinks, never below VARIANT_MIN.
+  const variantWidth = width * 0.9;
+  const variantLines = breakLine(players.variant, VARIANT_SIZE, variantWidth);
+  const variantSize = Math.min(
+    ...variantLines.map((line) => fit(line, VARIANT_SIZE, VARIANT_MIN, variantWidth)),
+  );
+  const variantGap = variantSize * 1.15;
+  const variantY = midY - 6 - ((variantLines.length - 1) * variantGap) / 2;
   return [
     row(players.top, topLines, topY),
-    `<text x="${x}" y="${variantY}" fill="#c9cfc3" font-family="${OG_FONT}" font-size="${VARIANT_SIZE}" font-weight="600">${escapeXml(players.variant)}</text>`,
-    brandLine(x, variantY + VARIANT_SIZE * 1.3),
+    ...variantLines.map(
+      (line, index) =>
+        `<text x="${x}" y="${variantY + index * variantGap}" fill="#c9cfc3" font-family="${OG_FONT}" font-size="${variantSize}" font-weight="600">${escapeXml(line)}</text>`,
+    ),
+    brandLine(x, variantY + (variantLines.length - 1) * variantGap + VARIANT_SIZE * 1.3),
     row(players.bottom, bottomLines, bottomY),
   ];
 }
 
-/**
- * A finished board card: the board at full height on the left, the caption in
- * the column beside it, the brand at the column's foot. `board` is the public
- * projection og-position.ts resolves; `art` is loadCardArt's map (or an empty
- * map for the glyph fallback).
- */
-export function renderBoardCard(
+/** The board alone, drawn at the origin at `width` x `height` (boardSize's
+ *  numbers for the slot it goes in); the card frames place it. */
+function renderBoardInner(
   board: PositionOgBoard,
   art: CardArt,
-  caption: CardCaption,
+  width: number,
+  height: number,
+  pieceSet: CardPieceSet,
 ): string {
-  const { width, height } = boardSize(board);
-  const boardX = CARD_BOARD_X;
-  const boardY = CARD_PAD + (CARD_BOARD_HEIGHT - height) / 2;
-  const id = 'card-shadow';
-  let inner: string;
   switch (board.kind) {
     case 'intersection':
-      inner = renderIntersection(board, art, height, id);
-      break;
+      return renderIntersection(board, art, height, pieceSet);
     case 'grid':
-      inner = renderGrid(board, art, width, height, id);
-      break;
+      return renderGrid(board, art, width, height, pieceSet);
     case 'jungle':
-      inner = renderJungle(board, art, height, id);
-      break;
+      return renderJungle(board, art, height);
     case 'chess':
       // The composition centres its board on the canvas width it is given, so a
       // canvas of exactly the board's width puts it at the origin.
-      inner = renderBoardComposition({
+      return renderBoardComposition({
         layout: 'single',
         canvasWidth: width,
         boardY: 0,
@@ -736,12 +892,29 @@ export function renderBoardCard(
           },
         ],
       });
-      break;
     default: {
       const unreachable: never = board;
       throw new Error(`card board: unhandled ${String(unreachable)}`);
     }
   }
+}
+
+/**
+ * A finished board card: the board at full height on the left, the caption in
+ * the column beside it, the brand at the column's foot. `board` is the public
+ * projection og-position.ts resolves; `art` is loadCardArt's map (or an empty
+ * map for the glyph fallback); `pieceSet` picks the xiangqi family's pieces.
+ */
+export function renderBoardCard(
+  board: PositionOgBoard,
+  art: CardArt,
+  caption: CardCaption,
+  pieceSet: CardPieceSet = 'international',
+): string {
+  const { width, height } = boardSize(board);
+  const boardX = CARD_BOARD_X;
+  const boardY = CARD_PAD + (CARD_BOARD_HEIGHT - height) / 2;
+  const inner = renderBoardInner(board, art, width, height, pieceSet);
   const columnX = boardX + width + CAPTION_GAP;
   const columnW = CAPTION_RIGHT - columnX;
   const parts: string[] = [
@@ -762,6 +935,7 @@ export function renderBoardCard(
         height,
         jungleInk,
         board.kind === 'chess',
+        pieceSet,
       ),
       `</svg>`,
     );
@@ -788,4 +962,56 @@ export function renderBoardCard(
   }
   parts.push(brandLine(columnX, boardY + height - 4), `</svg>`);
   return parts.join('');
+}
+
+// ── Aspect cards ──────────────────────────────────────────────────────────────
+
+/** The extra shapes an Article's JSON-LD offers beside the wide card. Google
+ *  crops the wide card to a square in some surfaces, which cut the caption off;
+ *  these are framed for their own shape instead. */
+export const CARD_ASPECTS = ['16x9', '4x3', '1x1'] as const;
+export type CardAspect = (typeof CARD_ASPECTS)[number];
+
+/** Each aspect's frame in SVG units. Rasterised at OG_CARD_ZOOM (2) that is
+ *  1920x1080, 1600x1200 and 1200x1200; at these units the board comes out the
+ *  same size as on the wide card (552 to 492 tall against 582), so pieces,
+ *  lines and art mip levels match it. */
+export const CARD_ASPECT_FRAMES: Record<CardAspect, { width: number; height: number }> = {
+  '16x9': { width: 960, height: 540 },
+  '4x3': { width: 800, height: 600 },
+  '1x1': { width: 600, height: 600 },
+};
+
+export function isCardAspect(value: string): value is CardAspect {
+  return (CARD_ASPECTS as readonly string[]).includes(value);
+}
+
+/**
+ * The board alone, centred in an aspect frame: no caption and no brand. The
+ * board owns the frame, and centring it means any further centre crop (a
+ * square cut of the 16:9 card) still reads as a board. A caption is left off on
+ * purpose: these images sit beside the page title in search, which already says
+ * what the wide card's caption says, and text is what a crop cuts.
+ */
+export function renderBoardAspectCard(
+  board: PositionOgBoard,
+  art: CardArt,
+  aspect: CardAspect,
+  pieceSet: CardPieceSet = 'international',
+): string {
+  const frame = CARD_ASPECT_FRAMES[aspect];
+  const { width, height } = boardSize(
+    board,
+    frame.height - 2 * CARD_PAD,
+    Math.min(CARD_BOARD_MAX_WIDTH, frame.width - 2 * CARD_PAD),
+  );
+  const boardX = (frame.width - width) / 2;
+  const boardY = (frame.height - height) / 2;
+  const inner = renderBoardInner(board, art, width, height, pieceSet);
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${frame.width}" height="${frame.height}" viewBox="0 0 ${frame.width} ${frame.height}">`,
+    `<rect width="${frame.width}" height="${frame.height}" fill="${CARD_BG}"/>`,
+    `<svg x="${boardX}" y="${boardY}" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${inner}</svg>`,
+    `</svg>`,
+  ].join('');
 }

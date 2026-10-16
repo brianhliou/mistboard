@@ -26,7 +26,7 @@ const ANNOTATED_TREE: SerializedTree = {
   },
 };
 
-function mount(): HTMLElement {
+function mount(initialTree: SerializedTree = ANNOTATED_TREE): HTMLElement {
   const root = document.createElement('div');
   document.body.append(root);
   mountXiangqiReview(root, {
@@ -34,7 +34,7 @@ function mount(): HTMLElement {
     title: 'Study',
     summary: '',
     moves: [],
-    initialTree: ANNOTATED_TREE,
+    initialTree,
     analysis: null,
   });
   return root;
@@ -52,6 +52,30 @@ beforeEach(() => pinXiangqiNotation('coordinate'));
 afterEach(() => pinXiangqiNotation(null));
 
 describe('viewer-visible study comments', () => {
+  it('shows no comment box at all in a game without notes', () => {
+    const root = mount({
+      version: 1,
+      root: { children: [{ uci: 'h3e3', children: [{ uci: 'h8e8', children: [] }] }] },
+    });
+    const panel = root.querySelector<HTMLElement>('.review-comment-panel');
+    expect(panel?.hidden).toBe(true);
+    key('ArrowLeft');
+    expect(panel?.hidden).toBe(true);
+    root.remove();
+  });
+
+  it('hides the box on an uncommented move of a game with notes, leaving no empty gap', () => {
+    const root = mount();
+    // Mount lands on h8e8, which has no note; the game has others.
+    const panel = root.querySelector<HTMLElement>('.review-comment-panel');
+    expect(panel?.hidden).toBe(true);
+    // Back one move onto the commented h3e3: the box appears with its note.
+    key('ArrowLeft');
+    expect(panel?.hidden).toBe(false);
+    expect(panel?.textContent).toBe('The cannon centralises.');
+    root.remove();
+  });
+
   it('marks commented moves and shows the current node text under the board', () => {
     const root = mount();
     // Two commented MOVES carry bubble markers (the root has no move cell).
@@ -60,8 +84,8 @@ describe('viewer-visible study comments', () => {
     expect(root.querySelector('.move-tree__comment--user')).toBeNull();
 
     // Mount lands on the mainline tip (h8e8, uncommented): panel hidden.
-    const panel = root.querySelector('.review-comment-panel');
-    expect(panel?.classList.contains('review-comment-panel--empty')).toBe(true);
+    const panel = root.querySelector<HTMLElement>('.review-comment-panel');
+    expect(panel?.hidden).toBe(true);
 
     // Click the commented move: its text appears in the panel.
     const cell = [...root.querySelectorAll('.review-move-list__move')].find((c) =>
@@ -69,7 +93,7 @@ describe('viewer-visible study comments', () => {
     ) as HTMLElement;
     cell.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     expect(panel?.textContent).toBe('The cannon centralises.');
-    expect(panel?.classList.contains('review-comment-panel--empty')).toBe(false);
+    expect(panel?.hidden).toBe(false);
 
     // Step back to the root: the intro shows.
     key('ArrowLeft');

@@ -12,7 +12,7 @@
 // not end finished. A live fog game has no card and no meta.
 
 import type { ServerResponse } from 'node:http';
-import { winPercent } from '@mistboard/game';
+import { GAME_IMAGE_VERSION, winPercent } from '@mistboard/game';
 import { type CardArt, loadCardArt, renderBoardCard } from './og-card-board.js';
 import { serveGameOgImage } from './og-image.js';
 import { isPositionOgVariant, positionOgVariantLabel, resolvePositionOg } from './og-position.js';
@@ -20,6 +20,7 @@ import { escapeXml, OG_FONT, OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
 import { createPngCache, redirectToDefault, svgToPng, writePng } from './og-raster.js';
 import * as persistence from './persistence.js';
 import type { StoredPlyEval } from './persistence-game-analysis.js';
+import { isReplayableGame } from './replayable-games.js';
 import { postgamePlayers } from './routes/lib.js';
 import {
   type VariantTenantCard,
@@ -27,10 +28,9 @@ import {
   variantTenantForRoomId,
 } from './variant-tenant/registry.js';
 
-/** Bumped when the card's LOOK changes so scrapers holding an old PNG under the
- *  immutable Cache-Control re-fetch. The content is fixed per game (finished,
- *  immutable), so nothing else ever needs a bump. */
-export const TENANT_GAME_OG_IMAGE_VERSION = 1;
+/** The card's version (@mistboard/game GAME_IMAGE_VERSION, which the review
+ *  page's image download shares). */
+export const TENANT_GAME_OG_IMAGE_VERSION = GAME_IMAGE_VERSION;
 
 /** Smallest eval swing, in win% points for the side that moved, that counts as
  *  the turning point. Lichess's "mistake" threshold (analysis.ts moveJudgment);
@@ -53,6 +53,20 @@ const liveStore: TenantGameCardStore = {
   events: (roomId) => persistence.loadRoomEvents(roomId),
   analysis: (roomId, engineId, depth) => persistence.getGameAnalysis(roomId, engineId, depth),
 };
+
+async function storedGameReplays(
+  registration: VariantTenantRegistration,
+  roomId: string,
+  store: TenantGameCardStore,
+): Promise<boolean> {
+  return isReplayableGame(roomId, {
+    registrationForRoomId: () => registration,
+    loadRoomsEvents: async () => {
+      const events = await store.events(roomId);
+      return new Map(events ? [[roomId, events]] : []);
+    },
+  });
+}
 
 // ── The game behind a URL ──────────────────────────────────────────────────────
 
@@ -83,6 +97,9 @@ export async function tenantGameCard(
   if (!isPositionOgVariant(card.variant)) return null;
   const game = await store.summary(roomId);
   if (!game || game.variant !== registration.gameSpecId) return null;
+  // A game whose stored log no longer replays has no card and no page meta
+  // (replay-guard.ts): the page keeps its generic meta, the image its default.
+  if (!(await storedGameReplays(registration, roomId, store))) return null;
   const outcome = outcomeLine(game);
   if (!outcome) return null;
   // Tenant participants are written in tenant.colors order
@@ -274,7 +291,7 @@ export async function serveTenantGameOgImage(
     redirectToDefault(response);
     return;
   }
-  const art = staticDir ? await loadCardArt(staticDir) : new Map<string, string>();
+  const art = staticDir ? await loadCardArt(staticDir) : new Map();
   const svg = await renderTenantGameCard(entry, store, art);
   const png = await svgToPng(svg);
   cache.set(key, png);

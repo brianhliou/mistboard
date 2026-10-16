@@ -18,7 +18,7 @@ const CHROME_COPY: Record<string, string> = {
   'learn.xiangqi.resetConfirm': 'You will lose all your progress. Reset anyway?',
   'learn.xiangqi.menu': 'Menu',
   'learn.xiangqi.backToMenu': 'Back to menu',
-  'learn.xiangqi.play': 'Play',
+  'learn.xiangqi.play': 'Play!',
   'learn.xiangqi.retry': 'Retry',
   'learn.xiangqi.next': 'Next',
   'learn.xiangqi.nextStage': 'Next:',

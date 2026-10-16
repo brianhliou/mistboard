@@ -404,25 +404,103 @@
   color: var(--site-fg, inherit);
 }
 
-/* Move times: per-ply bars, colored by side, growing from a shared baseline. */
+/* Move times: per-ply bars, colored by side, mirrored about a centre line (the
+   first seat's up, the second seat's down), as lichess draws them. */
 .review-move-times {
+  /* The frame for the clock layer, the cursor and the hover readout. */
+  position: relative;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 1px;
   height: 140px;
   padding: 4px 0;
-  border-bottom: 1px solid var(--site-border);
+  /* The centre line, drawn here so an untimed game (no clock layer) has it too. */
+  background: linear-gradient(var(--site-border), var(--site-border)) center / 100% 1px no-repeat;
+  cursor: crosshair;
 }
 .review-move-times__bar {
+  /* Positioned so the bars paint over the clock layer behind them. Centred on
+     the mid line, then shifted half their own height off it. */
+  position: relative;
   flex: 1 1 0;
   min-width: 1px;
+  transition: opacity 80ms linear;
+}
+.review-move-times__bar--up {
+  transform: translateY(-50%);
   border-radius: 1px 1px 0 0;
 }
+.review-move-times__bar--down {
+  transform: translateY(50%);
+  border-radius: 0 0 1px 1px;
+}
+/* Hover: the hovered bar stays full strength and the rest step back, so the bar
+   the readout names is the one the eye lands on. */
+.review-move-times--hovering .review-move-times__bar:not(.review-move-times__bar--hovered) {
+  opacity: 0.5;
+}
+/* The ply cursor: the advantage chart's hairline, in the same accent. */
+.review-move-times__cursor {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 1px;
+  margin-left: -0.5px;
+  background: var(--site-brand-accent);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.review-move-times__cursor[hidden] {
+  display: none;
+}
+/* Remaining clocks behind the bars (move-times-chart.ts): centre = zero, the
+   first seat's clock from the top edge, the second seat's from the bottom. A
+   quiet layer: the bars are the subject, the clocks are context. */
+.review-move-times__clocks {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 0;
+  width: 100%;
+  height: calc(100% - 8px);
+  pointer-events: none;
+}
+.review-move-times__clock-area {
+  fill: currentColor;
+  fill-opacity: 0.12;
+  stroke: none;
+}
+.review-move-times__clock-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-opacity: 0.45;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.review-move-times__clock-mid {
+  stroke: var(--site-border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.review-move-times__clock--red {
+  color: var(--seat-first-ink, #c0563f);
+}
+.review-move-times__clock--black {
+  color: var(--seat-second-ink, #34302e);
+}
+/* White ink on the light panel is invisible at a wash's opacity, so the white
+   clock takes the white bar's outline tone. */
+.review-move-times__clock--white {
+  color: #b8b1a5;
+}
+/* The family's inks (seat-disc-ink.css), so a jungle game's second seat is Blue
+   and a dark-theme Black bar is the charcoal that shows on the dark panel. */
 .review-move-times__bar--red {
-  background: #c0563f;
+  background: var(--seat-first-ink, #c0563f);
 }
 .review-move-times__bar--black {
-  background: #34302e;
+  background: var(--seat-second-ink, #34302e);
 }
 /* Chess: the first seat plays White. This used to be a `.dark-chess-review
    .review-move-times__bar--red` override -- the bar was still CALLED red and a page
@@ -430,7 +508,7 @@
    named for what it is, so the override is REMOVED in the same change rather than
    left to rot beside the rule that replaced it. */
 .review-move-times__bar--white {
-  background: #e9e5dc;
+  background: var(--ink-white, #e9e5dc);
   border: 1px solid #b8b1a5;
   box-sizing: border-box;
 }
@@ -439,6 +517,19 @@
   font-size: 12px;
   color: var(--site-muted);
   text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.review-move-times__total {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+/* Each side's total carries its bar ink, so the caption names the bars. */
+.review-move-times__swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
 }
 
 /* Share & export rows: label · read-only field · copy button. */
@@ -600,6 +691,13 @@
 .review-import__error:empty {
   display: none;
 }
+/* Phones and tablets: iOS zooms the page into any field under 16px on focus,
+   and these are what you paste a FEN or a move list into. */
+@media (pointer: coarse) {
+  .review-import__field {
+    font-size: 16px;
+  }
+}
 
 /* Right-rail captured-material rows (lichess round: mat-top / mat-bot). Fixed
    compact tile size (not board-relative — the rail width is stable). Empty
@@ -651,37 +749,9 @@
   padding-block: 4px;
 }
 
-/* The pocket as lichess draws a crazyhouse one: a filled band the width of the
-   rail, one evenly spaced slot per droppable role, and the roles you hold none
-   of ghosted rather than absent. Two things follow from drawing the empty slots
-   instead of hiding them — the row never reads as blank space, and a piece
-   always appears in the SAME slot, so a capture fills a gap rather than
-   re-flowing the row. */
-.review-material-row.drop-mini-reserve-strip--all-roles {
-  padding-block: 0;
-  border-radius: var(--site-radius, 10px);
-  background: var(--site-panel-muted, color-mix(in srgb, var(--site-border) 45%, transparent));
-}
-
-.review-material-row.drop-mini-reserve-strip--all-roles .drop-mini-reserve-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-evenly;
-  height: 100%;
-  gap: 0;
-}
-
-/* Held-none slots keep their footprint and stay legible as a silhouette. Lichess
-   uses 0.1; a xiangqi disc is line art rather than a solid figure, so it needs
-   more than that to register at all at rail size. */
-.review-material-row.drop-mini-reserve-strip--all-roles .drop-mini-reserve-piece.is-empty {
-  opacity: 0.22;
-}
-
-.review-material-row.drop-mini-reserve-strip--all-roles .drop-mini-reserve-piece {
-  background: transparent;
-  border-color: transparent;
-}
+/* The drop pocket (fortress, crazyhouse) draws its own bar, slots, ghosts and
+   badge in drop-reserve.css (.drop-pocket), the same bar the live room shows
+   beside the clocks; this rail only hosts it. */
 
 .review-material-row .review-material-points {
   align-self: center;
@@ -772,6 +842,10 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
+  /* Fill the board track. The track is a flex row that centres its child, so
+     without this the column shrinks to its content: a narrow underboard (a
+     Share & export tab alone) shrank the board with it. */
+  width: 100%;
 }
 /* Stretch to the board-stage width so the chart / POV boards line up under the
    board rather than shrinking to their own content. */
@@ -859,11 +933,27 @@
   border-top: 1px solid var(--site-border);
 }
 /* Playback controls fused into the box as its last strip (study surface, see
-   review-layout.ts): a hairline divides them from the move list and they carry
-   the box's bottom inset instead of the page-background bar's. */
+   review-layout.ts): the box's own hairline divides them from the move list,
+   and the box edge closes them, so the band drops its bottom rule. */
 .review-rail-main > .review-controls {
-  border-top: 1px solid var(--site-border);
-  padding: 4px 2px;
+  border-top-color: var(--site-border);
+  border-bottom: 0;
+}
+/* Detached controls (game review, analysis): the bar sits below the analyse
+   table, as on lichess, so it closes itself as a small card with the panel's
+   border, radius and width. The fill and button states stay the band's own
+   (move-nav-bar.css), so it reads as the live room's tinted strip rather than a
+   bare one on the page. The outer buttons round with the card; the card cannot
+   clip them because the menu rises out of it. */
+.review-rail-mainwrap + .review-controls {
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+}
+.review-rail-mainwrap + .review-controls > .move-nav-bar__button:first-child {
+  border-radius: 5px 0 0 5px;
+}
+.review-rail-mainwrap + .review-controls > .move-nav-bar__button:last-of-type {
+  border-radius: 0 5px 5px 0;
 }
 
 /* On board-beside-table layouts the analyse table's bottom tracks the board's
@@ -942,10 +1032,10 @@
      stretched group, which would render a ~600px empty panel beside a 308px
      board. Size the CHAT, never the group: chat-resize.ts derives the drag
      handle's ceiling from the panel's PARENT, so a group that is content-sized
-     around the panel makes that ceiling track the panel itself. The handle then
-     ratchets shut, one-way: every shrink lowers the ceiling to the new height
-     and the panel can never grow back. Whatever sizes this chat, the group it
-     sits in has to keep a height of its own. */
+     around the panel makes that ceiling track the panel itself. Left alone that
+     ratchets the handle shut (every shrink lowers the ceiling to the new
+     height); chat-resize now probes for it and climbs to the rail (#298), but
+     the group keeping a height of its own is still the cheap, exact case. */
   .banqi-review .review-shell__left {
     height: auto;
   }
@@ -1145,6 +1235,118 @@
   }
 }
 
+/* Touch rows in the move list (mobile audit 2026-10, issue 6: 26px rows).
+   36px keeps four rows in the 140px phone strip below. */
+@media (pointer: coarse) {
+  .review-shell .review-move-list__move {
+    min-height: 36px;
+    align-items: center;
+  }
+}
+
+/* col1 stack (review, analysis, study, broadcast): board, arrows, a short move
+   strip, then everything else. Without it the phone stack ran board, underboard
+   (tabs, chart, the analysis import), game meta, the whole move list, and only
+   then the arrows: a screen or more below the board, so you could not step
+   through a game and watch the board at once (mobile audit 2026-10,
+   board-nav-split on every template).
+
+   The center column and the right rail dissolve (display: contents) and every
+   piece takes a row by `order`; the scaffold tags each with data-col1-area
+   (review-layout.ts COL1_AREAS). Nothing moves in the DOM, so col2 and col3
+   are untouched. The scaffold alone sets the cluster class: the
+   live room and /watch share the cluster but put other things in its rails.
+   The embedded shell (broadcast) repeats this under its own container query
+   at the end of the file. */
+@media (max-width: 799px) {
+  .review-shell:not(.review-shell--embedded) .review-shell__cluster--col1-stack {
+    grid-template-areas: none;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    :is(
+      .review-shell__center,
+      .review-center-column,
+      .review-shell__right,
+      .review-shell__right > .review-rail-group
+    ) {
+    display: contents;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    :is([data-col1-area], .review-shell__left > .review-rail-group) {
+    grid-area: auto;
+    width: min(100%, 560px);
+    min-width: 0;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    :is([data-col1-area="board"], [data-col1-area="under"]) {
+    width: 100%;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="board"] {
+    order: 1;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="nav"] {
+    order: 2;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="moves"] {
+    order: 3;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="extra"] {
+    order: 4;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="under"] {
+    order: 5;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    .review-shell__left
+    > .review-rail-group {
+    order: 6;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    [data-col1-area="summary"] {
+    order: 7;
+  }
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    .review-shell__left
+    > .review-rail-group--deferred {
+    order: 8;
+  }
+  /* The move strip: a few rows that scroll on their own; the list keeps the
+     current move in view inside its own scroller (move-list.ts). */
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    .review-rail-main
+    .review-move-list__rows {
+    max-height: 140px;
+  }
+  /* A study fuses its arrows into the moves box as the last strip (see
+     review-layout.ts). On the stack they lead the box instead, so they still
+     sit right under the board. */
+  .review-shell:not(.review-shell--embedded)
+    .review-shell__cluster--col1-stack
+    .review-rail-main
+    > .review-controls {
+    order: -1;
+    border-top: 0;
+    border-bottom: 1px solid var(--site-border);
+  }
+}
+
 /* The board resize grip's own styles moved to board-resize.css, imported by
    board-resize.ts so every surface that mounts a grip is styled. */
 
@@ -1155,7 +1357,10 @@
 
 /* ── Under-board authored-comment panel ─────────────────────────────────────
    Shows the CURRENT node's study comment; the move list carries only a small
-   bubble marker per commented move. Hidden when the node has no comment. */
+   bubble marker per commented move. Hidden when the node has no comment, and
+   as tall as the note when it has one: no reserved empty box between the
+   board and the tabs (Brian, 2026-10-02). The cost is that stepping onto or off
+   a note moves what is below the board by the note's height. */
 .review-comment-panel {
   border: 1px solid var(--site-border);
   border-radius: var(--site-radius, 10px);
@@ -1165,36 +1370,8 @@
   font-size: 13px;
   line-height: 1.55;
 }
-/* An empty caption keeps its box rather than vanishing. `display: none` meant a
-   single step onto or off a commented move resized the page by the height of the
-   note -- measured at 316px on Secret in the Tangerine, whose chapters carry up
-   to 99 of them -- and everything below the board jumped under the cursor while
-   the reader was clicking through the game. Two lines are reserved, so a typical
-   note costs no reflow at all and a long one costs the overflow only. */
-.review-comment-panel {
-  /* A FIXED text area, not a floor: the box is exactly two lines tall whatever
-     the note says, so nothing below the board moves as the reader steps.
-     `min-height` was not enough -- it resolves against the border box, so two
-     line-heights of min-height bought about one line of text and a two-line note
-     still pushed by ~20px.
-     content-box is deliberate: the height is the TEXT area and the padding and
-     border sit outside it, which is the only way to state "two lines" without
-     re-deriving it from the padding every time that changes. Two lines because
-     the longest move annotation measured across every study on the site is 106
-     characters, which is two lines at this width; anything longer clamps. */
-  box-sizing: content-box;
-  height: calc(2 * 1.55em);
-  overflow: hidden;
-}
-.review-comment-panel:not(.review-comment-panel--empty) {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-.review-comment-panel--empty {
-  border-color: transparent;
-  background: none;
+.review-comment-panel[hidden] {
+  display: none;
 }
 
 /* Bubble marker on a commented move in the move list. */
@@ -1281,29 +1458,49 @@
   flex: 1 1 auto;
   min-height: 0;
 }
-/* The book pops the explorer up over the BOTTOM of the moves box, not the whole
-   column: the top of the move list stays visible above it, the explorer fills
-   the lower portion and scrolls on its own, and the top border + shadow read as
-   a panel that rose over the list. Toggling the book hides it (see the [hidden]
-   rule in opening-explorer.css), restoring the full move list. */
-.review-rail-overlay {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  top: auto;
-  height: 62%;
-  max-height: 62%;
-  z-index: 6;
+/* The book opens the explorer (or the endgame table that stands in for it) as
+   the bottom section of the moves box, not a panel over it: the box keeps its
+   board-height footprint, the explorer takes at most 40% of it and scrolls the
+   rest of its rows and the top games inside, and the move list flexes into
+   whatever is left, so the current move is never hidden under it. Few rows
+   shrink it to fit. One border wraps both: the moves part drops its bottom
+   corners and the explorer closes the box, its square top edge flush against
+   the list. Selectors carry the wrapper so they outrank .opening-explorer's own
+   border and max-height whatever the bundle order. Toggling the book hides it
+   (the [hidden] rule in opening-explorer.css), restoring the full move list. */
+.review-rail-mainwrap > .review-rail-overlay {
+  flex: 0 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  border-top: 1px solid var(--site-border);
-  border-radius: 6px 6px 0 0;
-  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.16);
+  border: 1px solid var(--site-border);
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
 }
-/* Footer host: the same "rose over the bottom of the list" grammar as the
-   explorer, but sized to its content and pinned to the box's bottom edge, which
-   is the board's bottom line. Retro mode's box mounts here. Transparent to
-   pointer input while empty so the move list underneath stays clickable. */
+.review-rail-mainwrap:has(> .review-rail-overlay:not([hidden])) > .review-rail-main {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+@media (min-width: 800px) {
+  .review-shell__right .review-rail-mainwrap:has(> .review-rail-overlay:not([hidden])) {
+    height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
+  }
+  .review-shell__right
+    .review-rail-mainwrap:has(> .review-rail-overlay:not([hidden]))
+    > .review-rail-main {
+    flex: 1 1 0;
+    height: auto;
+  }
+  .review-shell__right .review-rail-mainwrap > .review-rail-overlay {
+    max-height: 40%;
+  }
+  .review-shell__cluster--gauge .review-shell__right .review-rail-mainwrap > .review-rail-overlay {
+    border-bottom-left-radius: 0;
+  }
+}
+/* Footer host: a panel that rises over the bottom of the list, sized to its
+   content and pinned to the box's bottom edge, which is the board's bottom
+   line. Retro mode's box mounts here. Transparent to pointer input while empty
+   so the move list underneath stays clickable. */
 .review-rail-footer {
   position: absolute;
   left: 0;
@@ -1516,4 +1713,153 @@
   font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* Embedded: board and moves only, inside a host page's column (a broadcast
+   event keeps its header and game list around the board, lichess's relay).
+   The columns follow the host column's width, not the viewport's, so every
+   rule here is a container query on the shell. */
+.review-shell--embedded {
+  max-width: none;
+  /* The player strip sits above the board, in the space a full-page shell
+     takes from its top padding and the nav. */
+  padding: 26px 0 0;
+  container-type: inline-size;
+  --uni-table-min: 280px;
+  /* The moves take the width the board leaves, up to lichess's widest. */
+  --uni-table-max: 520px;
+}
+
+.review-shell--embedded .review-shell__cluster {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "board"
+    "table";
+  grid-template-rows: auto;
+  min-height: 0;
+  width: 100%;
+  justify-items: center;
+}
+
+.review-shell--embedded .review-shell__gauge {
+  display: none;
+}
+
+@container (min-width: 640px) {
+  .review-shell--embedded .review-shell__cluster {
+    --uni-board-w-budget: calc(
+      100cqw -
+      var(--uni-table-min) -
+      var(--uni-gap) -
+      var(--uni-gauge-w, 0px)
+    );
+    --uni-board-width: min(
+      calc(
+        min(
+          var(--uni-board-w-budget),
+          calc(var(--uni-board-h-budget) * var(--uni-board-aspect, 1)),
+          var(--uni-board-max, 10000px)
+        ) *
+        var(--uni-board-scale, 1)
+      ),
+      var(--uni-board-fit-w, 10000px)
+    );
+    grid-template-columns: var(--uni-board-width) minmax(var(--uni-table-min), var(--uni-table-max));
+    grid-template-areas: "board table";
+    justify-content: start;
+    justify-items: stretch;
+    width: auto;
+    margin-inline: 0;
+  }
+
+  .review-shell--embedded .review-shell__cluster--gauge {
+    --uni-gauge-w: 20px;
+    column-gap: 0;
+    grid-template-columns:
+      var(--uni-board-width)
+      var(--uni-gauge-w)
+      minmax(var(--uni-table-min), var(--uni-table-max));
+    grid-template-areas: "board gauge table";
+  }
+
+  .review-shell--embedded .review-shell__cluster--gauge .review-shell__gauge {
+    display: block;
+  }
+}
+
+/* The col1 stack (see "col1 stack" above) for the embedded shell (a broadcast
+   board), which goes to one column on its own container width rather than the
+   viewport's, so the same rules sit under the container query. */
+@container (max-width: 639.98px) {
+  .review-shell--embedded .review-shell__cluster--col1-stack {
+    grid-template-areas: none;
+  }
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    :is(
+      .review-shell__center,
+      .review-center-column,
+      .review-shell__right,
+      .review-shell__right > .review-rail-group
+    ) {
+    display: contents;
+  }
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    :is([data-col1-area], .review-shell__left > .review-rail-group) {
+    grid-area: auto;
+    width: 100%;
+    min-width: 0;
+  }
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    :is([data-col1-area="board"], [data-col1-area="under"]) {
+    width: 100%;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="board"] {
+    order: 1;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="nav"] {
+    order: 2;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="moves"] {
+    order: 3;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="extra"] {
+    order: 4;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="under"] {
+    order: 5;
+  }
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    .review-shell__left
+    > .review-rail-group {
+    order: 6;
+  }
+  .review-shell--embedded .review-shell__cluster--col1-stack [data-col1-area="summary"] {
+    order: 7;
+  }
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    .review-shell__left
+    > .review-rail-group--deferred {
+    order: 8;
+  }
+  /* The move strip: a few rows that scroll on their own; the list keeps the
+     current move in view inside its own scroller (move-list.ts). */
+  .review-shell--embedded
+    .review-shell__cluster--col1-stack
+    .review-rail-main
+    .review-move-list__rows {
+    max-height: 140px;
+  }
+  /* A study fuses its arrows into the moves box as the last strip (see
+     review-layout.ts). On the stack they lead the box instead, so they still
+     sit right under the board. */
+  .review-shell--embedded .review-shell__cluster--col1-stack .review-rail-main > .review-controls {
+    order: -1;
+    border-top: 0;
+    border-bottom: 1px solid var(--site-border);
+  }
 }

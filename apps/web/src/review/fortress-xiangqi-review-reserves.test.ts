@@ -92,7 +92,17 @@ describe('Fortress review reserves', () => {
     const root = mount([]);
     for (const row of root.querySelectorAll('.review-material-row')) {
       const slots = row.querySelectorAll('.drop-mini-reserve-piece');
-      expect(slots).toHaveLength(7); // chariot horse cannon soldier treasure advisor elephant
+      // The lichess pocket order carried to xiangqi, Treasure last.
+      expect([...slots].map((el) => (el as HTMLElement).dataset.role)).toEqual([
+        'soldier',
+        'cannon',
+        'horse',
+        'chariot',
+        'elephant',
+        'advisor',
+        'treasure',
+      ]);
+      expect(row.classList.contains('drop-pocket')).toBe(true);
       // Nothing captured yet, so every slot is a ghost.
       expect(row.querySelectorAll('.drop-mini-reserve-piece.is-empty')).toHaveLength(7);
     }

@@ -19,7 +19,12 @@ import { internalEngineAnalysisConfigured } from './../internal-engine-client.js
 import * as persistence from './../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
 import type { RecentEveGameRecord } from './../persistence-games.js';
-import { eventReplayResponse, parsePositiveInteger } from './../server-policy.js';
+import {
+  filterReplayableGames,
+  isReplayableGame,
+  markUnavailableGames,
+} from '../replayable-games.js';
+import { eventReplayResponse, parsePositiveInteger, withDelayedAir } from './../server-policy.js';
 import { listWatchChannels, type WatchChannel, watchChannelForId } from './../watch-channels.js';
 import {
   collectLiveTvCandidates,
@@ -80,8 +85,12 @@ function pickHeadlineSeat(seats: ChannelSeat[]): WatchChannelTopPlayer | null {
   return best ?? fallback;
 }
 
-// The headline seat for a channel's rail row (lichess shows the featured game's
-// top player under the channel name).
+// The headline seat for a channel's rail row: the top player of the channel's
+// head game, the one the board opens on (lichess shows the featured game's top
+// player under the channel name). It used to rank seats across the whole
+// 64-game feed, so the rail named a rated player from hours earlier while the
+// board showed a guest-vs-bot game (prod, 2026-10-04: "scene-1174 1662" over
+// Guest vs Pikafish L4).
 //
 // People come first. Ranking purely by rating put the BOT on most PvE channels'
 // rail rows, because a bot carries a calibrated rating while its human opponent
@@ -91,10 +100,10 @@ function pickHeadlineSeat(seats: ChannelSeat[]): WatchChannelTopPlayer | null {
 // to naming the machine.
 //
 // Within the chosen pool the old rule stands: highest-rated seat, else the
-// freshest named one. null for an empty channel, so the row renders name-only.
+// first named one. null for an empty channel, so the row renders name-only.
 export function channelTopPlayer(games: RecentEveGameRecord[]): WatchChannelTopPlayer | null {
   const seats: ChannelSeat[] = [];
-  for (const game of games) {
+  for (const game of games.slice(0, 1)) {
     const gameSeats: ChannelSeat[] =
       game.participants.length > 0
         ? game.participants.map((participant) => ({
@@ -226,7 +235,8 @@ export async function tryHandle(
     const offset = boundedInt(parsedUrl.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
     const limit = boundedInt(parsedUrl.searchParams.get('limit'), 15, 1, 50);
     const page = await persistence.listFavoriteGames(user.id, offset, limit);
-    writeJson(response, 200, page);
+    // Your own list: a game that cannot be opened stays, marked.
+    writeJson(response, 200, { games: await markUnavailableGames(page.games), total: page.total });
     return true;
   }
 
@@ -286,7 +296,11 @@ export async function tryHandle(
       return true;
     }
     const now = new Date();
-    const featured = electLiveTvFeatured(channelId, collectLiveTvCandidates(ctx, now.getTime()));
+    const featured = electLiveTvFeatured(
+      channelId,
+      collectLiveTvCandidates(ctx, now.getTime()),
+      now.getTime(),
+    );
     if (!featured) {
       writeJson(response, 200, { channel: channelId, featured: null, now: now.toISOString() });
       return true;
@@ -357,19 +371,34 @@ export async function tryHandle(
     // for every channel, so it comes from the short-lived rail cache when warm:
     // 2 queries instead of 20 on a click-through, which is the whole browsing
     // pattern this surface is for.
-    const active = await loadChannel(channel);
+    // The active channel's list is what the client opens: drop games whose
+    // stored log no longer replays (replayable-games.ts) before anything reads it.
+    // `curated=0` lists the channel's full feed without the curation bar: /games
+    // "Just finished", where a game that leaves the live wall has to land
+    // however short it was. That list is not the channel's rail row, so it never
+    // writes the rail; the rail is then built (or read) as for any other channel.
+    const uncurated = parsedUrl.searchParams.get('curated') === '0';
+    const loadedActive = await loadChannel(uncurated ? { ...channel, curated: false } : channel);
+    const activeUnlocked = await filterReplayableGames(loadedActive.unlocked);
+    const active = {
+      ...loadedActive,
+      unlocked: activeUnlocked,
+      topPlayer: channelTopPlayer(activeUnlocked),
+    };
     const cachedRail = cachedWatchRail(now.getTime());
     let rail: readonly WatchRailRow[];
     if (cachedRail) {
-      rail = withFreshRow(cachedRail, railRow(active));
+      rail = uncurated ? cachedRail : withFreshRow(cachedRail, railRow(active));
     } else {
       const others = await Promise.all(
         listWatchChannels()
-          .filter((candidate) => candidate.id !== channel.id)
+          .filter((candidate) => uncurated || candidate.id !== channel.id)
           .map(loadChannel),
       );
       // Rebuilt in canonical rail order, not completion order.
-      const byId = new Map([active, ...others].map((result) => [result.channel.id, result]));
+      const byId = new Map(
+        [...(uncurated ? [] : [active]), ...others].map((result) => [result.channel.id, result]),
+      );
       rail = listWatchChannels().map((candidate) => railRow(byId.get(candidate.id)!));
       storeWatchRail(rail, now.getTime());
     }
@@ -397,7 +426,7 @@ export async function tryHandle(
 
   if (pathname === '/api/games/recent') {
     if (!requirePersistence(response)) return true;
-    const games = await persistence.listRecentPublicGames(10);
+    const games = await filterReplayableGames(await persistence.listRecentPublicGames(10));
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ games }));
     return true;
@@ -411,7 +440,13 @@ export async function tryHandle(
     const variants = [
       ...new Set(listWatchChannels().flatMap((channel) => [...channel.legacyVariants])),
     ];
-    const games = await persistence.listShowcaseGames({ variants });
+    // delayedAir: whether the homepage TV may air the game after the fact (fog
+    // variants only; live-capable ones only ever show frozen). See airsOnDelay.
+    // A game whose stored log no longer replays (its variant's rules changed
+    // under it) would air as "This game could not be loaded": skip it.
+    const games = withDelayedAir(
+      await filterReplayableGames(await persistence.listShowcaseGames({ variants })),
+    );
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ games }));
     return true;
@@ -562,7 +597,9 @@ export async function tryHandle(
     }
     const { a, b } = resolution.pair;
     const [games, tallies] = await Promise.all([
-      persistence.queryHeadToHeadGames(a, b, game.variant, CROSSTABLE_GAME_LIMIT),
+      persistence
+        .queryHeadToHeadGames(a, b, game.variant, CROSSTABLE_GAME_LIMIT)
+        .then((rows) => filterReplayableGames(rows)),
       persistence.tallyHeadToHeadGames(a, b, game.variant),
     ]);
     writeJson(
@@ -577,7 +614,7 @@ export async function tryHandle(
   if (summaryMatch) {
     const roomId = decodeURIComponent(summaryMatch[1]!);
     const game = await gameSummaryForApi(ctx, roomId);
-    if (!game) {
+    if (!game || !(await isReplayableGame(roomId))) {
       response.writeHead(404, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ error: 'not_found' }));
       return true;
@@ -653,7 +690,7 @@ export async function tryHandle(
 
   if (pathname === '/api/eve-games/recent') {
     if (!requirePersistence(response)) return true;
-    const games = await persistence.listRecentEveGames();
+    const games = await filterReplayableGames(await persistence.listRecentEveGames());
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ games }));
     return true;

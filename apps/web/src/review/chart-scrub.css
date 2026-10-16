@@ -1,0 +1,38 @@
+/* Hover readout shared by the underboard charts (chart-scrub.ts): the ply under
+   the pointer, named and read. The charts are otherwise shapes with no numbers on
+   them, so this is where they become readable move by move. Anchored to the
+   cursor and pinned inside the frame at both ends (showChartTip), which is why it
+   takes a percentage transform rather than a fixed offset. The host frame is the
+   positioning context. */
+.review-chart-tip {
+  position: absolute;
+  top: 6px;
+  z-index: 2;
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+  padding: 3px 7px;
+  border: 1px solid var(--site-border);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--site-panel) 92%, transparent);
+  color: var(--site-text);
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.review-chart-tip--low {
+  top: auto;
+  bottom: 6px;
+}
+.review-chart-tip[hidden] {
+  display: none;
+}
+.review-chart-tip__move {
+  font-weight: 600;
+}
+.review-chart-tip__value,
+.review-chart-tip__detail {
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}

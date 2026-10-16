@@ -11,6 +11,9 @@
 // texture per skin and toggles live on data-fog-theme; flat skins keep the tint.
 
 export type XiangqiFogGeometry = {
+  /** Top-left of the fogged region; the square grid starts half a cell in. */
+  x?: number;
+  y?: number;
   width: number;
   height: number;
   cell: number;
@@ -33,6 +36,8 @@ export function xiangqiFogRegion(
   // tile origin half a cell before the first intersection drops exactly one
   // smoke tile into each fog square.
   const off = geo.margin - geo.cell / 2;
+  const x = geo.x ?? 0;
+  const y = geo.y ?? 0;
   // Drift is a <foreignObject> HTML div rather than an SVG <image>: an animated
   // WebP only animates as a CSS background, not inside an SVG <image> (which
   // freezes on the first frame). background-size + repeat keeps the one-tile-per-
@@ -45,21 +50,21 @@ export function xiangqiFogRegion(
     "background-image:url('/fog/fog.webp')",
     'background-repeat:repeat',
     `background-size:${geo.cell}px ${geo.cell}px`,
-    `background-position:${off}px ${off}px`,
+    `background-position:${off - x}px ${off - y}px`,
   ].join(';');
   return `
     <defs>
       <mask id="${maskId}">
-        <rect x="0" y="0" width="${geo.width}" height="${geo.height}" rx="${geo.rx}" fill="white"/>
+        <rect x="${x}" y="${y}" width="${geo.width}" height="${geo.height}" rx="${geo.rx}" fill="white"/>
         ${cutouts}
       </mask>
     </defs>
     <g mask="url(#${maskId})">
-      <rect class="${tintClass}" x="0" y="0" width="${geo.width}" height="${geo.height}"/>
-      <foreignObject class="xq-fog-tex xq-fog-tex-drift" x="0" y="0" width="${geo.width}" height="${geo.height}" mask="url(#${maskId})">
+      <rect class="${tintClass}" x="${x}" y="${y}" width="${geo.width}" height="${geo.height}"/>
+      <foreignObject class="xq-fog-tex xq-fog-tex-drift" x="${x}" y="${y}" width="${geo.width}" height="${geo.height}" mask="url(#${maskId})">
         <div xmlns="http://www.w3.org/1999/xhtml" style="${driftStyle}"></div>
       </foreignObject>
-      <image class="xq-fog-tex xq-fog-tex-mist" href="/fog/mistveil.webp" x="0" y="0" width="${geo.width}" height="${geo.height}" preserveAspectRatio="xMidYMid slice"/>
+      <image class="xq-fog-tex xq-fog-tex-mist" href="/fog/mistveil.webp" x="${x}" y="${y}" width="${geo.width}" height="${geo.height}" preserveAspectRatio="xMidYMid slice"/>
     </g>
   `;
 }

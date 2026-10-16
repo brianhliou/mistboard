@@ -3,6 +3,7 @@
 // totals. Pure reads over user_ratings/games; no users-row plumbing. Split out
 // of persistence-accounts.ts.
 import { PROVISIONAL_RD } from './glicko.js';
+import { COUNTED_USER, countedAccountSeat } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import type { PlayerTitle } from './persistence-titles.js';
 import type { RatingTimeClass, RatingVariant } from './rating-buckets.js';
@@ -51,6 +52,7 @@ export async function getLeaderboard(query: LeaderboardQuery): Promise<Leaderboa
      WHERE r.variant = $1 AND r.time_class = $2
        AND u.profile_visibility IN ('public', 'unlisted')
        AND r.games_played > 0
+       AND u.${COUNTED_USER}
      ORDER BY (r.elo_rating - 2 * r.rating_deviation) DESC
      LIMIT $3`,
     [query.variant, query.timeClass, bounded],
@@ -109,6 +111,8 @@ export async function getLeaderboardSummary(query: {
        WHERE r.time_class = $1
          AND u.profile_visibility IN ('public', 'unlisted')
          AND r.games_played > 0
+         -- Stats-excluded accounts (the operator, QA) rate mostly test games.
+         AND u.${COUNTED_USER}
      ) ranked
      WHERE row_number <= $2
      ORDER BY variant, row_number`,
@@ -144,7 +148,9 @@ export type ActivePlayerEntry = {
 
 // Most-active ladder: completed human games per account, any variant, rated or
 // casual. At low liquidity this fills the leaderboard's first panel while the
-// rating ladders are still empty.
+// rating ladders are still empty. Stats-excluded accounts (the operator's own,
+// QA) are left off through countedAccountSeat, like every other public figure;
+// their opponents keep the games they played against them.
 export async function getMostActivePlayers(limit = 10): Promise<ActivePlayerEntry[]> {
   const bounded = Math.max(1, Math.min(limit, 50));
   const { rows } = await getPool().query<{
@@ -157,7 +163,7 @@ export async function getMostActivePlayers(limit = 10): Promise<ActivePlayerEntr
      FROM game_participants p
      JOIN games g ON g.room_id = p.game_id
      JOIN users u ON u.id = p.subject_id
-     WHERE p.subject_type = 'user'
+     WHERE ${countedAccountSeat('p')}
        AND g.status = 'completed'
        AND u.profile_visibility IN ('public', 'unlisted')
      GROUP BY u.id, u.handle, u.display_name, u.title

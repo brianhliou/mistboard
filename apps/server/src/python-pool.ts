@@ -294,6 +294,19 @@ class PoolWorker {
       this.readyResolve = null;
       this.readyReject = null;
     }
+    // Take this worker out of rotation BEFORE handing a request back: the retry
+    // dispatches synchronously, and a worker still marked ready (a pool timeout or
+    // a stdin write error, where 'close' has not fired yet) would be handed its
+    // own retry and die with it (prod 2026-10-12: retry on worker 0 in the same
+    // ms, "worker 0 exited code=null" 36ms later).
+    this.ready = false;
+    if (this.process && !this.process.killed) {
+      try {
+        this.process.kill('SIGKILL');
+      } catch {
+        /* ignore */
+      }
+    }
     if (this.current) {
       const req = this.current;
       this.current = null;
@@ -316,14 +329,6 @@ class PoolWorker {
       // This worker is being torn down + restarted; the pool retries the move on
       // a healthy worker (cold-start) or rejects if out of attempts.
       this.onRequestFailure(req, err);
-    }
-    this.ready = false;
-    if (this.process && !this.process.killed) {
-      try {
-        this.process.kill('SIGKILL');
-      } catch {
-        /* ignore */
-      }
     }
     // The 'close' event will fire (or already fired). Fire the permanent-
     // death callback exactly once per worker lifetime so the pool can

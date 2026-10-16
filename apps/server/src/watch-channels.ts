@@ -3,6 +3,7 @@ import {
   DARK_CHESS_SPEC_ID,
   type GameFamilyId,
   type GameSpecId,
+  isRetiredGameSpec,
 } from '@mistboard/game';
 import type { GameMode } from './persistence-game-lifecycle.js';
 import { registeredVariantTenants } from './variant-tenant/registry.js';
@@ -145,6 +146,9 @@ function channelEnabled(channel: WatchChannel): boolean {
   const registration = registeredVariantTenants().find(
     (entry) => entry.watch?.channelId === channel.id,
   );
+  // A retired variant keeps its tenant (live games finish, finished games
+  // replay) but has no TV channel: nothing new is starting there.
+  if (registration && isRetiredGameSpec(registration.gameSpecId)) return false;
   return registration?.enabled() ?? false;
 }
 

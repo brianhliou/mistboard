@@ -39,36 +39,31 @@ describe('landing lobby bot seeks', () => {
     vi.unstubAllEnvs();
   });
 
-  it('renders seven distinct variants, opening with the ascending xiangqi ladder', () => {
+  it('renders six distinct variants, opening with the ascending xiangqi ladder', () => {
     const panel = buildLobbyPanel('en', { hydrate: false });
     const seeds = [...panel.querySelectorAll<HTMLElement>('.landing-lobby-seed')];
-    expect(seeds).toHaveLength(9);
+    expect(seeds).toHaveLength(8);
 
     const signature = seeds.map((seed) => `${seed.dataset.botId}|${seed.dataset.gameSpec}`);
     expect(signature).toEqual([
       'fairy-stockfish-level-2|xiangqi',
       'fairy-stockfish-level-5|xiangqi',
       'fairy-stockfish-level-8|xiangqi',
-      'pikafish|jieqi',
+      'pikafish-level-2|jieqi',
       'misty|banqi',
-      'fairy-stockfish-level-5|atomic-xiangqi',
-      'fairy-stockfish-level-3|duck-xiangqi',
-      'fairy-stockfish-level-5|fortress-xiangqi',
+      'fairy-stockfish-level-4|duck-xiangqi',
+      'fairy-stockfish-level-3|crazyhouse-xiangqi',
       'misty|dark-chess',
     ]);
-    expect(new Set(signature).size).toBe(9);
-    expect(new Set(seeds.map((seed) => seed.dataset.gameSpec)).size).toBe(7);
-    // Every clock is at or slower than the variant's own default, in the row
-    // order asserted above:
-    //   xiangqi x3, jieqi, atomic at 10+5 — deliberate full-board variants whose
-    //     default is already the slowest pace, so they have nothing to rotate to;
-    //   banqi, fortress — house 3+2 default, rotating through 3+2/5+5/10+5;
-    //   duck — 5+5 default, rotating through 5+5/10+5;
-    //   fog chess at 5+5 — an engine PIN, not a preference: Misty's per-move
-    //     floor outruns a 2s increment and it loses on time (#283).
+    // Fortress and Atomic Xiangqi left the rotation when they retired (2026-10-11).
+    expect(new Set(signature).size).toBe(8);
+    expect(new Set(seeds.map((seed) => seed.dataset.gameSpec)).size).toBe(6);
+    // Every bot row advertises the bot default, 10+5, in every variant: it is
+    // the slowest pace, so the rotation has nothing slower to move to, and it
+    // clears the fog engines' 5s increment floor (#283).
     expect(
       seeds.map((seed) => seed.querySelector('.landing-lobby-seed-time')?.textContent),
-    ).toEqual(['10+5', '10+5', '10+5', '10+5', '10+5', '10+5', '10+5', '3+2', '5+5']);
+    ).toEqual(Array(8).fill('10+5'));
   });
 
   it('labels each seed as an engine game rather than a human seek', () => {
@@ -125,9 +120,9 @@ describe('landing lobby bot seeks', () => {
       mode: 'pve',
       botId: 'misty',
       gameSpecId: 'dark-chess',
-      // Pinned pace, not the house 3+2 (#283) — and the row's label matches, so
-      // the click starts the clock it advertised.
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+      // The bot default, not the house 3+2 (#283) — and the row's label
+      // matches, so the click starts the clock it advertised.
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
       preferredColor: 'random',
       rated: false,
     });
@@ -213,11 +208,11 @@ describe('landing lobby bot seeks', () => {
     expect(xiangqi?.textContent).toBe('—');
     expect(xiangqi?.getAttribute('data-pool-rating')).toBe('2450?');
     // Unmatched bots keep the placeholder rather than guessing a number.
-    const banqi = panel.querySelector(
-      '.landing-lobby-seed[data-bot-id="misty"][data-game-spec="banqi"] .landing-lobby-seed-rating',
+    const duck = panel.querySelector(
+      '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-4"][data-game-spec="duck-xiangqi"] .landing-lobby-seed-rating',
     );
-    expect(banqi?.textContent).toBe('—');
-    expect(banqi?.getAttribute('title')).toBeNull();
+    expect(duck?.textContent).toBe('—');
+    expect(duck?.getAttribute('title')).toBeNull();
   });
 
   it('lists human seeks above the bots in one table with the same column grammar', async () => {
@@ -311,10 +306,9 @@ describe('landing lobby bot seeks', () => {
       'xiangqi',
       'jieqi',
       'banqi',
-      'atomic-xiangqi',
-      'dark-xiangqi',
       'duck-xiangqi',
-      'fortress-xiangqi',
+      'crazyhouse-xiangqi',
+      'dark-xiangqi',
       'dark-chess',
       'jungle',
       'jungle-flip',

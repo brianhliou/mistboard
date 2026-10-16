@@ -85,7 +85,16 @@ export type EmbedRoute =
   | { kind: 'tv' }
   | { kind: 'puzzle'; route: EmbedPuzzleRoute }
   | { kind: 'analysis'; route: EmbedAnalysisRoute }
-  | { kind: 'line'; route: EmbedLineRoute };
+  | { kind: 'line'; route: EmbedLineRoute }
+  | { kind: 'broadcast'; route: EmbedBroadcastRoute };
+
+export type EmbedBroadcastRoute = { boardId: string };
+
+/** `/embed/broadcast/xiangqi/board/:boardId`, or null when the path is not one. */
+export function embedBroadcastRouteFromPath(pathname: string): EmbedBroadcastRoute | null {
+  const m = /^\/embed\/broadcast\/xiangqi\/board\/([A-Za-z0-9_-]{1,160})\/?$/.exec(pathname);
+  return m ? { boardId: m[1] as string } : null;
+}
 
 /** The variants a bare line can be framed as: the ones with a replay board on
  *  the embed card. Anything else is refused by name rather than drawn on the
@@ -94,7 +103,9 @@ export const EMBED_LINE_VARIANTS = [
   'xiangqi',
   'duck-xiangqi',
   'atomic-xiangqi',
+  'crazyhouse-xiangqi',
   'banqi',
+  'jieqi',
   'jungle',
   'chess',
 ] as const;
@@ -105,7 +116,10 @@ export type EmbedLineRoute = { variant: EmbedLineVariant };
 /** `/embed/line/:variant`: a move list with no game or study behind it, carried
  *  in the query string (`?fen=` for a position other than the start, `?moves=`
  *  as comma- or space-separated tokens in the variant's own spelling, plus
- *  `red=`, `black=`, `event=`, `result=` for the card's chrome). */
+ *  `red=`, `black=`, `event=`, `result=` for the card's chrome, and
+ *  `orientation=black` to seat Black at the bottom, and `arrows=1` to draw the
+ *  opening move as an arrow on the opening frame only, or `arrow=<move>` to
+ *  draw a named move there instead; jieqi only for now). */
 export function embedLineRouteFromPath(pathname: string): EmbedLineRoute | null {
   const m = /^\/embed\/line\/([a-z-]{1,32})\/?$/.exec(pathname);
   if (!m) return null;
@@ -120,6 +134,14 @@ export type EmbedLineSpec = {
   black: string | null;
   event: string | null;
   result: string | null;
+  /** Which seat sits at the bottom of the board; Red unless `orientation=black`. */
+  orientation?: 'red' | 'black';
+  /** Draw the move played from the opening frame as an arrow on that frame (`arrows=1`). */
+  arrows?: boolean;
+  /** `arrow=i10i4`: the move the board is about when it is not the one played
+   *  next (a capture held in reserve). Drawn on the opening frame in place of
+   *  the played move; implies `arrows`. */
+  arrow?: string | null;
 };
 
 const LINE_TOKEN = /^[a-z0-9@+=#-]{2,12}$/i;
@@ -147,6 +169,9 @@ export function embedLineFromSearch(search: string): EmbedLineSpec {
     black: text('black', 80),
     event: text('event', 160),
     result: text('result', 20),
+    orientation: params.get('orientation') === 'black' ? 'black' : 'red',
+    arrows: params.get('arrows') === '1',
+    arrow: LINE_TOKEN.test(params.get('arrow') ?? '') ? params.get('arrow') : null,
   };
 }
 
@@ -185,6 +210,8 @@ export function embedRouteFromPath(pathname: string): EmbedRoute | null {
   if (analysis) return { kind: 'analysis', route: analysis };
   const line = embedLineRouteFromPath(pathname);
   if (line) return { kind: 'line', route: line };
+  const broadcast = embedBroadcastRouteFromPath(pathname);
+  if (broadcast) return { kind: 'broadcast', route: broadcast };
   return null;
 }
 
@@ -225,4 +252,23 @@ export function embedPlyFromSearch(search: string): number | null {
  */
 export function embedPovFromSearch(search: string): EmbedPov | null {
   return embedPov(new URLSearchParams(search).get('pov'));
+}
+
+/**
+ * `?solution=hidden` on a study or line embed: open on the start position with
+ * the score sheet, its comments and the result covered, so a reader can try
+ * the problem before reading the answer. The cover lifts on its button or on
+ * the first step forward. Anything else, or absent, shows the sheet as before.
+ */
+export function embedSolutionHiddenFromSearch(search: string): boolean {
+  return new URLSearchParams(search).get('solution') === 'hidden';
+}
+
+/** An embed path with `solution=hidden` added, for a host (an article's embed
+ *  block) that frames a problem without its answer. Keeps any query and hash. */
+export function embedPathWithSolutionHidden(path: string): string {
+  const hashAt = path.indexOf('#');
+  const base = hashAt >= 0 ? path.slice(0, hashAt) : path;
+  const hash = hashAt >= 0 ? path.slice(hashAt) : '';
+  return `${base}${base.includes('?') ? '&' : '?'}solution=hidden${hash}`;
 }

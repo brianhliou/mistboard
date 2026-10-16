@@ -48,8 +48,21 @@ export function shouldReloadForChunkLoadError(err: unknown): boolean {
   return isChunkLoadError(err) && markChunkReloadAttempt();
 }
 
+// True from the moment this page commits to a stale-chunk reload until the
+// page unloads. Vite's import() resolves to undefined once the global handler
+// below prevents the preload error, so every caller that destructures the
+// module (`const { mountLanding } = await import(...)`) throws a TypeError in
+// the gap before the reload lands. Those throws are a side effect of the
+// recovery, not a defect: callers and error tracking check this and stay quiet.
+let reloadPending = false;
+
+export function chunkReloadPending(): boolean {
+  return reloadPending;
+}
+
 export function reloadForChunkLoadError(err: unknown): boolean {
   if (!shouldReloadForChunkLoadError(err)) return false;
+  reloadPending = true;
   location.reload();
   return true;
 }
@@ -63,16 +76,21 @@ export function reloadForChunkLoadError(err: unknown): boolean {
 // isChunkLoadError would not match). Shares the per-mount guards' one-shot
 // session cap, so the two layers can never combine into a reload loop. Once the
 // one-shot is spent the event is left alone and Vite rethrows to the import()
-// caller (e.g. mountOrReport's error panel). Returns an uninstaller (for tests;
+// caller (e.g. mountOrReport's error panel). While the one-shot is in flight,
+// import() resolves to undefined (see chunkReloadPending). Returns an uninstaller (for tests;
 // the app installs once for the page lifetime).
 export function installGlobalChunkLoadRecovery(
   reload: () => void = () => location.reload(),
 ): () => void {
   const onPreloadError = (event: Event): void => {
     if (!markChunkReloadAttempt()) return;
+    reloadPending = true;
     event.preventDefault();
     reload();
   };
   window.addEventListener('vite:preloadError', onPreloadError);
-  return () => window.removeEventListener('vite:preloadError', onPreloadError);
+  return () => {
+    window.removeEventListener('vite:preloadError', onPreloadError);
+    reloadPending = false;
+  };
 }

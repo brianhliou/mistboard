@@ -20,11 +20,13 @@ import {
 } from './study-i18n.js';
 import './live-xiangqi.css';
 import './xiangqi-postgame.css';
+import './review/practice.css';
 import './study.css';
 import './study-index.css';
 import type { XiangqiPieceRole } from '@mistboard/game';
 import { deepCloneJson, normalizeStartFen, parsePracticeGoal } from '@mistboard/game';
 import { buildStudyChat } from './review/spectator-chat.js';
+import { fetchStudyChapterAnalysis } from './review/study-analysis.js';
 import { mountStudyReview } from './review/study-review.js';
 import type { TreeReviewHandle } from './review/tree-review.js';
 import type { SerializedTree } from './review/tree-serialize.js';
@@ -47,6 +49,13 @@ import {
 } from './study-catalog.js';
 import { openChapterDialog } from './study-chapter-dialog.js';
 import {
+  buildChapterGameRow,
+  chapterEventGroups,
+  displayEventName,
+  studyFocusPlayer,
+  studyGamesSummary,
+} from './study-chapter-games.js';
+import {
   buildStudyRail,
   type ChapterControlModel,
   type ChapterSettingsPatch,
@@ -55,9 +64,11 @@ import {
   openChapterSettingsDialog,
   openStudySaveRecoveryDialog,
   openStudySettingsDialog,
+  type StudyRailActions,
   type StudySettingsPatch,
   type StudyVisibility,
 } from './study-controls.js';
+import { buildGameRowLabel, gameCoachContext, gameRowParts } from './study-game-row.js';
 import { buildStudyThumbnail } from './study-thumbnails.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
@@ -97,6 +108,9 @@ type ChapterDto = {
   practiceGoal?: string | null;
   /** Whether the signed-in reader has already solved this exercise. */
   solved?: boolean;
+  /** The chapter has a stored engine analysis (study_chapter_analysis): the
+   *  page fetches it and the underboard gets the advantage chart. */
+  hasAnalysis?: boolean;
   /** PGN-style tags: who had Red, the result, the event. Absent on chapters
    *  authored before migration 128, and on chapters that are not a real game. */
   tags?: {
@@ -118,17 +132,29 @@ const EMPTY_TREE: SerializedTree = { version: 1, root: { children: [] } };
 const studyMountTokens = new WeakMap<HTMLElement, object>();
 const studyMountCleanups = new WeakMap<HTMLElement, () => void>();
 
-export function mountStudy(root: HTMLElement, studyId: string, initialChapterId?: string): void {
+/**
+ * Mount a study page into `root`.
+ *
+ * The returned promise settles once the first chapter's board has landed (or
+ * the error page has rendered); it never rejects. The board stacks are
+ * code-split, so the page is not usable until then. The app shell fires and
+ * forgets it; tests await it instead of polling for the board.
+ */
+export function mountStudy(
+  root: HTMLElement,
+  studyId: string,
+  initialChapterId?: string,
+): Promise<void> {
   studyMountCleanups.get(root)?.();
   const token = {};
   studyMountTokens.set(root, token);
   root.classList.add('landing-page', 'xiangqi-postgame-route');
   root.replaceChildren(buildNav(), notice(t('study.loadingOne')));
-  void loadStudy(studyId)
+  return loadStudy(studyId)
     .then((result) => {
       if (studyMountTokens.get(root) !== token) return;
-      if (result.ok) renderStudy(root, result.study, result.chapters, initialChapterId);
-      else renderError(root, result.status);
+      if (result.ok) return renderStudy(root, result.study, result.chapters, initialChapterId);
+      renderError(root, result.status);
     })
     .catch(() => {
       if (studyMountTokens.get(root) === token) renderError(root, 0);
@@ -172,10 +198,10 @@ function renderStudy(
   study: StudyDto,
   chapters: ChapterDto[],
   initialChapterId?: string,
-): void {
+): Promise<void> {
   if (chapters.length === 0) {
     renderError(root, 415);
-    return;
+    return Promise.resolve();
   }
   let activeId = chapters.some((chapter) => chapter.id === initialChapterId)
     ? initialChapterId!
@@ -649,7 +675,8 @@ function renderStudy(
     });
   };
 
-  function renderActive(): void {
+  /** Rebuilds the page; resolves once the chapter's async board (if any) has mounted. */
+  function renderActive(): Promise<void> {
     // Captured before the rebuild tears the old rail out of the DOM, so a
     // chapter switch keeps the reader's place in a long chapter list.
     const previousListScrollTop =
@@ -660,7 +687,7 @@ function renderStudy(
     // rather than rendering some other variant's board.
     if (!chapter || !isStudyVariantId(chapter.variant)) {
       renderError(root, 415);
-      return;
+      return Promise.resolve();
     }
     const variant = chapter.variant;
     activeId = chapter.id;
@@ -690,8 +717,15 @@ function renderStudy(
      * one.
      */
     const learnerView = { ...study, isOwner: false };
-    const rail = (status: HTMLElement, asLearner = false): HTMLElement =>
+    const rail = (
+      status: HTMLElement,
+      asLearner = false,
+      chapterLabel?: StudyRailActions['chapterLabel'],
+      groupHeading?: StudyRailActions['groupHeading'],
+    ): HTMLElement =>
       buildStudyRail(asLearner ? learnerView : study, chapters, activeId, status, {
+        ...(chapterLabel ? { chapterLabel } : {}),
+        ...(groupHeading ? { groupHeading } : {}),
         previousListScrollTop,
         onSwitch: switchTo,
         onAdd: addChapter,
@@ -786,44 +820,88 @@ function renderStudy(
       const practiceNav = buildNav();
       const practiceIndex = chapters.findIndex((entry) => entry.id === chapter.id);
       const nextChapter = chapters[practiceIndex + 1];
-      void import('./review/study-practice.js').then(({ mountPracticeChapter }) => {
-        mountPracticeChapter(root, {
-          chapter,
-          nav: practiceNav,
-          goal: practiceGoal,
-          // No centred page header: the set's name lives in the rail card, the
-          // exercise's goal lives under the board. A title floating above the
-          // three columns belongs to neither and reads as a stray caption.
-          aside,
-          chapterId: chapter.id,
-          studyId: study.id,
-          progress: { index: practiceIndex + 1, total: chapters.length },
-          // Omitted on the last chapter, so the button is not offered at all
-          // rather than offered and inert.
-          ...(nextChapter ? { onNext: () => void switchTo(nextChapter.id) } : {}),
-        });
-      });
+      const practiceMounted = import('./review/study-practice.js').then(
+        ({ mountPracticeChapter }) => {
+          mountPracticeChapter(root, {
+            chapter,
+            nav: practiceNav,
+            goal: practiceGoal,
+            // No centred page header: the set's name lives in the rail card, the
+            // exercise's goal lives under the board. A title floating above the
+            // three columns belongs to neither and reads as a stray caption.
+            aside,
+            chapterId: chapter.id,
+            studyId: study.id,
+            progress: { index: practiceIndex + 1, total: chapters.length },
+            // Omitted on the last chapter, so the button is not offered at all
+            // rather than offered and inert.
+            ...(nextChapter ? { onNext: () => void switchTo(nextChapter.id) } : {}),
+          });
+        },
+      );
       attachStudyTitleRow(root, study.id, studyVariant(), studyActions(study));
-      return;
+      return practiceMounted;
     }
 
     // A gamebook chapter is played (guess-the-move) by viewers and by the owner in
     // preview; the owner authors it in the review board otherwise.
     if (gamebookable && chapter.gamebook && (!study.isOwner || previewMode)) {
+      // The practice branch's rail card, for the same reasons: the study's name
+      // heads the rail instead of floating centred above three columns it is not
+      // aligned with, and the chapter name is not repeated (it is the highlighted
+      // row). No chat either: guess-the-move is a solo drill, and the chat was a
+      // 500px empty box that squeezed the chapter list to five rows.
       const aside = document.createElement('div');
       aside.className = 'study-aside';
-      aside.append(rail(statusSpan(study.isOwner)), buildStudyChat(study.id));
+      const railCard = document.createElement('section');
+      railCard.className = 'practice__panel practice__rail-card study-gamebook-rail';
+      const railHead = document.createElement('header');
+      railHead.className = 'practice__rail-head';
+      const railTitle = document.createElement('h1');
+      railTitle.className = 'practice__rail-title';
+      railTitle.textContent = localizedStudyName(study.name, study.i18n);
+      railHead.append(railTitle);
+      // A chapter that is a position from a real game is laid out from its tags
+      // (players, side to move, move and round) rather than its sentence of a
+      // name, which a one-line row cut off mid-opponent.
+      const chapterRail = rail(statusSpan(study.isOwner), false, (model) => {
+        const full = chapters.find((entry) => entry.id === model.id);
+        const parts = full ? gameRowParts(full) : null;
+        // Players only: event, round and date are read once, in the coach's
+        // game card, rather than on twenty rows.
+        return parts ? buildGameRowLabel(parts) : null;
+      });
+      // Like and copy close the card, above the errata line, rather than sitting
+      // above the list: the card is navigation first, and in a rail this narrow
+      // they wrapped the "N Chapters" line into three.
+      const actions = studyActions(study);
+      if (actions.length > 0) {
+        const foot = document.createElement('div');
+        foot.className = 'study-actions study-gamebook-rail__actions';
+        foot.append(...actions);
+        const errata = chapterRail.querySelector('.study-errata--inline');
+        if (errata) errata.before(foot);
+        else chapterRail.append(foot);
+      }
+      railCard.append(railHead, chapterRail);
+      aside.append(railCard);
+      const game = gameCoachContext(chapter);
+      const players = gameRowParts(chapter);
       mountXiangqiGamebook(root, {
         tree: chapter.root,
         orientation: chapter.orientation === 'black' ? 'black' : 'red',
-        title: localizedStudyName(study.name, study.i18n),
-        summary: localizedStudyName(chapter.name, chapter.i18n),
+        // The player replaces the root's children, so it re-mounts the site nav
+        // the render above put there; without it this chapter had no top bar.
+        nav: buildNav(),
         aside,
+        ...(game ? { game } : {}),
+        ...(players ? { seats: { red: players.red, black: players.black } } : {}),
       });
-      attachStudyTitleRow(root, study.id, studyVariant(), studyActions(study));
-      return;
+      return Promise.resolve();
     }
 
+    const gameFocus = studyFocusPlayer(chapters);
+    const eventGroups = chapterEventGroups(chapters);
     let handle: TreeReviewHandle | null = null;
     activeHandle = null;
     const status = statusSpan(study.isOwner);
@@ -883,7 +961,15 @@ function renderStudy(
     // page renders its nav, then the board lands. A stale mount (the reader
     // switched chapters while the chunk loaded) is dropped on arrival.
     const mountToken = ++mountSeq;
-    void mountStudyReview(variant, root, {
+    // The chapter's engine analysis, cut to the mainline prefix it still covers
+    // in the tree being mounted (for an owner, possibly an unsaved draft).
+    // Started now so it loads beside the board chunk.
+    const mountedTree = autosave?.initialTree ?? chapter.root;
+    const storedAnalysis = chapter.hasAnalysis
+      ? fetchStudyChapterAnalysis(study.id, chapter.id, mountedTree)
+      : null;
+    return mountStudyReview(variant, root, {
+      storedAnalysis,
       reviewSurface: 'study',
       pageClassName: `${variant}-review study-review`,
       ariaLabel: t('study.ariaStudy'),
@@ -913,7 +999,17 @@ function renderStudy(
             };
           })()
         : {}),
-      actions: rail(status),
+      // A chapter that is a whole game is laid out from its tags (players, date,
+      // a result chip), grouped under its event when the games span several.
+      actions: rail(
+        status,
+        false,
+        (model) => {
+          const full = chapters.find((entry) => entry.id === model.id);
+          return full ? buildChapterGameRow(full, gameFocus) : null;
+        },
+        (model) => eventGroups.get(model.id) ?? null,
+      ),
       aboutTab: { label: t('study.aboutTab'), body: aboutPanel(study, chapter) },
       // PGN download sits with FEN/Share/Moves rather than in the owner-only
       // settings menu: a study whose work cannot leave it is a trap, so every
@@ -931,6 +1027,10 @@ function renderStudy(
       // The way to actually play it is Preview, so that is the action offered
       // here AND the tab the panel opens on. Read-only without a visible way to
       // test would just move the trap somewhere else.
+      // A reader opens on the chart when there is one, as a game review does;
+      // the owner keeps the authoring tabs in front. A chapter whose analysis
+      // covers nothing has no such tab, and the panel falls back to its first.
+      ...(chapter.hasAnalysis && !study.isOwner ? { initialUnderboardTab: 'analysis' } : {}),
       ...(chapter.practice && study.isOwner && !previewMode
         ? {
             boardReadOnly: {
@@ -960,7 +1060,7 @@ function renderStudy(
             },
           }
         : {}),
-      initialTree: autosave?.initialTree ?? chapter.root,
+      initialTree: mountedTree,
       // A composition chapter (SerializedTree.rootFen) roots the board at its
       // hand-set position; an invalid FEN degrades to the standard start, same
       // posture as a corrupt blob.
@@ -981,14 +1081,20 @@ function renderStudy(
     })
       .then((mounted) => {
         if (mountToken !== mountSeq) return;
-        attachStudyTitleRow(root, study.id, studyVariant(), studyActions(study, { clone: false }));
+        attachStudyTitleRow(
+          root,
+          study.id,
+          studyVariant(),
+          studyActions(study, { clone: false }),
+          studyGamesSummary(chapters),
+        );
         handle = mounted;
         activeHandle = mounted;
       })
       .catch(() => renderError(root, 415));
   }
 
-  renderActive();
+  return renderActive();
 }
 
 /**
@@ -1019,6 +1125,7 @@ function attachStudyTitleRow(
   studyId: string,
   variant: StudyVariantId,
   actions: HTMLElement[],
+  gamesLine: string | null = null,
 ): void {
   const title = root.querySelector<HTMLElement>('.review-info-card__title, .gamebook__title');
   if (!title) return;
@@ -1040,7 +1147,23 @@ function attachStudyTitleRow(
   const row = document.createElement('div');
   row.className = 'study-page__title-row';
   title.before(row);
-  copy.append(title, ...(hasSummary ? [summary] : []));
+  // The study's games in one line, from the chapter tags ("47 games · Oct 2022
+  // to Sep 2026 · Tony Fung Ga Zen +20 =17 -10"): what an import of one
+  // player's run is, before any chapter is opened.
+  const games = gamesLine ? document.createElement('p') : null;
+  if (games && gamesLine) {
+    games.className = 'study-page__games';
+    // Each part on one line, so a narrow rail breaks between "Sep 2026" and
+    // the player's score rather than inside the player's name.
+    gamesLine.split(' · ').forEach((part, index) => {
+      if (index > 0) games.append(' · ');
+      const span = document.createElement('span');
+      span.className = 'study-page__games-part';
+      span.textContent = part;
+      games.append(span);
+    });
+  }
+  copy.append(title, ...(games ? [games] : []), ...(hasSummary ? [summary] : []));
   row.append(...(thumbnail ? [thumbnail] : []), copy);
   if (hasSummary) attachSummaryToggle(copy, summary);
   // The actions take a full-width line UNDER the title copy (the row wraps),
@@ -1208,7 +1331,7 @@ export function gameDetails(chapter: ChapterDto): HTMLElement {
   list.className = 'study-about__game';
   const tags = localizedChapterTags(chapter.tags ?? {}, chapter.i18n);
   const rows: Array<[string, string]> = [
-    [t('study.gameEvent'), tags.event ?? ''],
+    [t('study.gameEvent'), tags.event ? displayEventName(tags.event) : ''],
     [t('study.gameDate'), tags.date ?? ''],
     [t('study.gameResult'), tags.result ?? ''],
   ];

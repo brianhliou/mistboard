@@ -1,5 +1,6 @@
 import { BANQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
 import { BANQI_DEFAULT_ENGINE_ID, isBanqiEngineClientId } from './../banqi-engine.js';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   createTenantRoomsRoute,
   resolveFirstMoverHumanSeat,
@@ -12,14 +13,15 @@ import {
 // 'red' | 'black' | 'random'.
 export type BanqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createBanqiRoom(
     timeControl?: RoomTimeControl,
     creatorPreference?: 'red' | 'black' | 'random',
     engine?: { engineId: string; seat: 'red' | 'black'; botId?: string },
+    rated?: boolean,
   ): Promise<
-    | { ok: true; room: { id: string; gameSpecId: string } }
+    | { ok: true; room: { id: string; gameSpecId: string; rated: boolean } }
     | { ok: false; error: 'banqi_disabled' | 'persistence_failure' | 'room_id_collision' }
   >;
 };
@@ -41,9 +43,10 @@ const banqiRoute = createTenantRoomsRoute<
     isEngineClientId: isBanqiEngineClientId,
     seats: BANQI_SEATS,
   },
-  rated: { kind: 'reject-as-surface' },
-  createRoom: (ctx, { timeControl, preferredColor, engine }) =>
-    ctx.createBanqiRoom(timeControl, preferredColor, engine),
+  // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):
+  // PvP may be rated wherever Find opponent is; PvE never is.
+  createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
+    ctx.createBanqiRoom(timeControl, preferredColor, engine, rated),
 });
 
 export const requestsBanqi = banqiRoute.matchesCreateRequest;

@@ -2,6 +2,7 @@ import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 import { createGameTable } from './game-table.js';
 import './live-lifecycle-effects.css';
 import type { LiveRefs } from './live-state.js';
+import './seat-disc-ink.css';
 import './review/review-shell.css';
 import './live-review.css';
 import { buildLiveRoomChat } from './review/spectator-chat.js';
@@ -14,7 +15,10 @@ export function setLiveLayoutGameSpec(target: HTMLElement, gameSpecId: string | 
   target.classList.toggle('live-route--chess', gameSpecId === null || gameSpecId === 'dark-chess');
   target.classList.toggle(
     'live-route--xiangqi',
-    gameSpecId === 'dark-xiangqi' || gameSpecId === 'xiangqi' || gameSpecId === 'atomic-xiangqi',
+    gameSpecId === 'dark-xiangqi' ||
+      gameSpecId === 'xiangqi' ||
+      gameSpecId === 'atomic-xiangqi' ||
+      gameSpecId === 'crazyhouse-xiangqi',
   );
   target.classList.toggle('live-route--duck-xiangqi', gameSpecId === 'duck-xiangqi');
   target.classList.toggle('live-route--fortress-xiangqi', gameSpecId === 'fortress-xiangqi');
@@ -23,6 +27,7 @@ export function setLiveLayoutGameSpec(target: HTMLElement, gameSpecId: string | 
   target.classList.toggle('live-route--jungle', gameSpecId === 'jungle');
   target.classList.toggle('live-route--jungle-flip', gameSpecId === 'jungle-flip');
   target.classList.toggle('live-route--mahjong', gameSpecId === 'mahjong');
+  target.classList.toggle('live-route--xiangqi-mahjong', gameSpecId === 'xiangqi-mahjong');
 }
 
 // Static room chrome only. Live game decisions stay in live-render.ts.

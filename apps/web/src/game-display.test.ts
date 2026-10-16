@@ -1,5 +1,6 @@
 import {
   BANQI_SPEC_ID,
+  CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   XIANGQI_SPEC_ID,
@@ -9,9 +10,12 @@ import {
   brandedEngineName,
   displayParticipantName,
   type FeaturedGame,
+  firstMoverColorName,
   type GameParticipant,
+  gameOutcome,
   matchupLabel,
   matchupSeats,
+  secondMoverColorName,
   terminationLabel,
 } from './game-display.js';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
@@ -183,6 +187,20 @@ describe('displayParticipantName', () => {
   });
 });
 
+// Xiangqi mahjong's seat ids are bookkeeping; with no names at hand the outcome
+// is seat-neutral, never "West wins". The Hong Kong table keeps its winds.
+describe('gameOutcome for wind seats', () => {
+  it('is seat-neutral for xiangqi mahjong and keeps the wind for mahjong', () => {
+    expect(gameOutcome('west-wins', 'xiangqi-mahjong')).toEqual({ label: 'Won' });
+    expect(gameOutcome('east-wins', 'xiangqi-mahjong')).toEqual({ label: 'Won' });
+    expect(gameOutcome('east-wins', 'mahjong')).toEqual({ winner: 'East' });
+  });
+
+  it('pairs xiangqi mahjong seats east vs west', () => {
+    expect(matchupSeats(game('xiangqi-mahjong'))).toEqual(['east', 'west']);
+  });
+});
+
 // The watch meta card humanized the kebab code ("General captured") in every
 // locale; every persisted GameTermination now has a catalog entry.
 describe('terminationLabel', () => {
@@ -230,3 +248,31 @@ function participant(color: GameParticipant['color'], displayName: string): Game
     visibility: 'public',
   };
 }
+
+// The correspondence side picker names move order in each variant's own words.
+// Fog Xiangqi read "White" before every variant joined (2026-10-02).
+describe('correspondence side names', () => {
+  it('names the sides of every eligible variant', () => {
+    const sides = Object.fromEntries(
+      CORRESPONDENCE_ELIGIBLE_SPEC_IDS.map((id) => [
+        id,
+        `${firstMoverColorName(id)}/${secondMoverColorName(id)}`,
+      ]),
+    );
+    expect(sides).toEqual({
+      xiangqi: 'Red/Black',
+      'dark-chess': 'White/Black',
+      jieqi: 'Red/Black',
+      banqi: 'First/Second',
+      'duck-xiangqi': 'Red/Black',
+      'crazyhouse-xiangqi': 'Red/Black',
+      'dark-xiangqi': 'Red/Black',
+      jungle: 'Red/Black',
+      'jungle-flip': 'First/Second',
+    });
+    // A retired variant left the create list, but a game in progress still
+    // names its sides.
+    expect(firstMoverColorName('fortress-xiangqi')).toBe('Red');
+    expect(firstMoverColorName('no-such-spec')).toBe('White');
+  });
+});

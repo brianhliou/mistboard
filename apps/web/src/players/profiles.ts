@@ -8,16 +8,22 @@ export type PlayerProfile = {
   photo?: string;
   photoCredit?: string;
   born?: string;
-  /** Short title tag shown before the name, lichess-style: GM, NM. */
+  /** Short title tag shown before the name, lichess-style: GM, IM, FM, NM. */
   title?: PlayerTitle;
   /** The written profile, when one exists. */
   profileHref?: string;
 };
 
-export type PlayerTitle = 'GM' | 'NM';
+// GM is the CXA's 特级大师 or the WXF's International Grandmaster; NM the
+// CXA's 国家大师; IM and FM are WXF titles only (players/player-title.ts).
+export type PlayerTitle = 'GM' | 'IM' | 'FM' | 'NM';
+
+export const PLAYER_TITLES: readonly PlayerTitle[] = ['GM', 'IM', 'FM', 'NM'];
 
 export const PLAYER_TITLE_LABEL: Readonly<Record<PlayerTitle, string>> = {
   GM: '特级大师 · Grandmaster',
+  IM: '国际大师 · International master (WXF)',
+  FM: '棋联大师 · Federation master (WXF)',
   NM: '象棋大师 · National master',
 };
 
@@ -28,5 +34,39 @@ export const PLAYER_PROFILES: Readonly<Record<string, PlayerProfile>> = {
     born: '2005, Wenling, Zhejiang',
     title: 'NM',
     profileHref: '/blog/yin-sheng',
+  },
+  'cao-yanlei': {
+    // No authored photo: his portrait is xiangqiqipu's (players/xiangqiqipu-photos.ts),
+    // credited and linked on the page.
+    born: '1991, Sanmenxia, Henan',
+    // CXA 国家大师 (2021 registration list). His grandmaster title is the WXF's,
+    // for Macau, which this tag set does not carry; facts.md § Titles.
+    title: 'NM',
+    profileHref: '/blog/cao-yanlei',
+  },
+  'lai-ly-huynh': {
+    photo: '/article-thumbs/lai-ly-huynh-2026-face.jpg',
+    photoCredit: 'Vietnam Xiangqi Federation via Thanh Niên',
+    born: '1990, Vĩnh Long, Vietnam',
+    // WXF International Grandmaster IGM0067 (official list 2022-11-24).
+    title: 'GM',
+    profileHref: '/blog/lai-ly-huynh',
+  },
+  'zuo-wenjing': {
+    // Han Chuanhao / Xinhua, 2023-10-07, after the Asian Games final (via ifeng).
+    // Her xiangqiqipu portrait is dropped as outdated (harvest OUTDATED_PHOTOS).
+    // profileHref goes in with the first ship after her page goes live (10-16).
+    photo: '/article-thumbs/zuo-wenjing-2023-face.jpg',
+    photoCredit: 'Han Chuanhao / Xinhua',
+    born: '1993',
+  },
+  'tony-fung-ga-zen': {
+    photo: '/article-thumbs/tony-fung-2023-face.jpg',
+    photoCredit: 'Mr.C / Sportsoho',
+    born: '1998',
+    // WXF International Master IM0140 (title lists 2022-11-24 and 2022-12-09);
+    // the HKCCA's own grandmaster titles are Hong Kong titles, not on this tag.
+    title: 'IM',
+    profileHref: '/blog/tony-fung-ga-zen',
   },
 };

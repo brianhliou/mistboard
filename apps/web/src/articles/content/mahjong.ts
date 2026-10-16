@@ -84,6 +84,7 @@ export const mahjongArticle: Article = {
         },
         {
           kind: 'table',
+          wrap: true,
           headers: ['Claim', 'What you need', 'Who may make it'],
           rows: [
             [
@@ -152,6 +153,7 @@ export const mahjongArticle: Article = {
         },
         {
           kind: 'table',
+          wrap: true,
           headers: ['Route', 'Faan', 'What it takes'],
           rows: [
             ['對對糊 All Pungs', '3', 'Four pungs or kongs and a pair, no chows. Three on its own'],
@@ -175,6 +177,7 @@ export const mahjongArticle: Article = {
         },
         {
           kind: 'table',
+          wrap: true,
           headers: ['Pattern', 'Faan', 'Notes'],
           rows: [
             ['平糊 All Chows', '1', 'Four chows and a pair'],

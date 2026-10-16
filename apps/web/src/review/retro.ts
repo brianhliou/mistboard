@@ -10,7 +10,7 @@
 // This module is the state machine only. It knows nothing about DOM, boards or
 // engines beyond the small RetroHost seam the tree controller hands it, so the
 // whole flow is unit-testable with a hand-built tree.
-import { winPercent } from '@mistboard/game';
+import { winPercent, winPercentK } from '@mistboard/game';
 import type { CevalLine } from './engine/ceval-types.js';
 import type { GameAnalysis } from './game-analysis.js';
 import type { GameTreeNode, TreePath } from './game-tree.js';
@@ -228,7 +228,9 @@ export function createRetro<Move, Truth>(
     const winAfter = 100 - winPercent(best.scoreCp, best.mate);
     const before = host.analysis.evals.find((e) => e.ply === current!.fault.node.ply - 1);
     if (!before) return;
-    const redBefore = winPercent(before.cp, before.mate);
+    // Each side on its own engine's curve: the try is the browser engine's score (lila's
+    // curve), the position before it the stored analysis (its engineId's curve).
+    const redBefore = winPercent(before.cp, before.mate, winPercentK(host.analysis.engineId));
     const winBefore = side === 'red' ? redBefore : 100 - redBefore;
     if (winAfter >= winBefore - RETRO_TOLERANCE) onWin();
     else onFail();

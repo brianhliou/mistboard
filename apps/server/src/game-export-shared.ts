@@ -6,7 +6,7 @@
 
 import type { RecentEveGameRecord } from './persistence.js';
 
-export const SCHEMA_VERSION = '1.0';
+export const SCHEMA_VERSION = '1.1';
 export const LICENSE = 'CC BY 4.0';
 export const DEFAULT_SITE_HOST = 'https://mistboard.com';
 export const SITE_NAME = 'Mistboard';
@@ -17,6 +17,8 @@ export const JSON_CONTENT_TYPE = 'application/json; charset=utf-8';
 export type PublicationTimeControl = {
   initial_ms: number | null;
   increment_ms: number | null;
+  /** Imported engine matches only: the fixed think time per move, no clock. */
+  movetime_ms?: number;
   label: string;
 };
 
@@ -38,6 +40,20 @@ export function timeControlFromSummary(summary: RecentEveGameRecord): Publicatio
     increment_ms: increment,
     label: timeControlLabel(initial, increment),
   };
+}
+
+/**
+ * A clockless game played at a fixed time per move (an imported engine match,
+ * origin.movetimeMs). The label is PGN's moves/seconds form: "1/4" is one move
+ * in 4 seconds. A game with a clock keeps its clock.
+ */
+export function withMovetime(
+  timeControl: PublicationTimeControl,
+  movetimeMs: number | undefined,
+): PublicationTimeControl {
+  if (!movetimeMs || timeControl.initial_ms != null) return timeControl;
+  const seconds = Math.round(movetimeMs / 100) / 10;
+  return { ...timeControl, movetime_ms: movetimeMs, label: `1/${seconds}` };
 }
 
 export function timeControlLabel(initialMs: number | null, incrementMs: number | null): string {

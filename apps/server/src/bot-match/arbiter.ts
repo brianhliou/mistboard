@@ -232,7 +232,9 @@ export async function runArbiterGame(cfg: ArbiterConfig): Promise<ArbiterResult>
     const legalMoves = rules.getLegalMoves(projection.state, color);
 
     if (legalMoves.length === 0) {
-      // No pseudo-legal fog move (rare, no check concept in dark chess): score a draw.
+      // No pseudo-legal fog move: a draw (fog rules, 2026-09-30). The variant
+      // now finishes the game on the move that causes it, so this is a guard
+      // for a rules kernel that does not.
       return result({ winner: null, outcome: 'no-legal-moves' });
     }
     if (ply >= maxPlies) {
@@ -361,7 +363,12 @@ export async function runArbiterGame(cfg: ArbiterConfig): Promise<ArbiterResult>
   if (status.type === 'finished') {
     return result({
       winner: status.winner,
-      outcome: status.reason === 'king-captured' ? 'king-captured' : 'draw',
+      outcome:
+        status.reason === 'king-captured'
+          ? 'king-captured'
+          : status.reason === 'no-legal-moves'
+            ? 'no-legal-moves'
+            : 'draw',
     });
   }
   // Should be unreachable (loop only exits on !playing), but stay defensive.

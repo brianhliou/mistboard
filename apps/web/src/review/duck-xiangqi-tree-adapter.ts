@@ -33,11 +33,11 @@
 //      worth distinguishing.
 //
 //   2. THE LABEL IS THE LIVE CLIENT'S. `e2-e5@c7`, and `e2xe5#` for a general
-//      capture - the same two spellings `duckTurnLabel` writes in
-//      live-duck-xiangqi.ts, so the move list in a review reads exactly like the
-//      move list beside the live board. The label is deliberately NOT the key:
-//      the key is dash-free (a UCI-shaped token) because the tree's NodeId ends
-//      up in URLs and serialized studies.
+//      capture - the one `duckXiangqiTurnLabel` (duck-xiangqi-turn-label.ts)
+//      the live room writes too, so the move list in a review reads exactly
+//      like the move list beside the live board. The label is deliberately NOT
+//      the key: the key is dash-free (a UCI-shaped token) because the tree's
+//      NodeId ends up in URLs and serialized studies.
 //
 //   3. `fromUci` TAKES BOTH SPELLINGS. A persisted study tree stores keys, but
 //      the analysis board's `?moves=` param and its import box hand this the
@@ -63,6 +63,7 @@ import {
   getDuckXiangqiPlayerView,
   isDuckXiangqiLegalTurn,
 } from '@mistboard/game';
+import { duckXiangqiTurnLabel } from '../duck-xiangqi-turn-label.js';
 import type { ProjectedView, VariantTreeAdapter } from './game-tree.js';
 
 /** Synthetic game id for a tree's own truth state (state identity only, no room). */
@@ -81,21 +82,6 @@ function splitFromTo(token: string): [string, string] | null {
   if (secondFile < 0) return null;
   const cut = secondFile + 1;
   return [token.slice(0, cut), token.slice(cut)];
-}
-
-/**
- * Move-list text for a turn: `e2-e5@c7`, or `e2xe5#` for the general capture
- * that ends the game before the duck would move.
- *
- * Kept in this module rather than imported from live-duck-xiangqi.ts on purpose:
- * that module is the live room's entry point and pulls the whole tenant client
- * in with it, which the review surface must not load. The two spellings are
- * asserted equal in duck-xiangqi-tree-adapter.test.ts.
- */
-export function duckXiangqiTurnLabel(turn: DuckXiangqiTurn): string {
-  return turn.duckTo === null
-    ? `${turn.from}x${turn.to}#`
-    : `${turn.from}-${turn.to}@${turn.duckTo}`;
 }
 
 /** The canonical node id / UCI-shaped token for a turn: `e2e5@c7`, or `e2e5`

@@ -5,10 +5,12 @@
 //
 // The split is about honesty, not effort. PGN needs a move notation a reader
 // can follow: chess has SAN, xiangqi has WXF/ICCS. Fog xiangqi shares the 9x10
-// board and its moves serialize in ICCS coordinates. Hidden-identity and flip
-// variants (jieqi, banqi, jungle-flip), drops (fortress), and jungle have no
-// notation standard; a "PGN" of coordinate pairs would be JSON wearing a hat, so
-// they get the JSON publication only. A shuffled start would need [SetUp]/[FEN] support.
+// board and its moves serialize in ICCS coordinates. The hidden-piece variants
+// (jieqi, banqi, jungle-flip) write a movetext whose every reveal names the
+// piece it turned over (ICGA notation for banqi; hidden-piece-record.ts), so
+// their PGN replays on its own. Drops (fortress) and jungle have no notation
+// standard; a "PGN" of coordinate pairs would be JSON wearing a hat, so they get
+// the JSON publication only.
 //
 // Deliberately an explicit map with no fallback: a variant absent here exports
 // nothing, and adding one is a conscious decision about its notation.
@@ -21,8 +23,8 @@ export const GAME_EXPORT_FORMATS = {
   'dark-chess': ['pgn', 'json'],
   xiangqi: ['pgn', 'json'],
   'dark-xiangqi': ['pgn', 'json'],
-  jieqi: ['json'],
-  banqi: ['json'],
+  jieqi: ['pgn', 'json'],
+  banqi: ['pgn', 'json'],
   'fortress-xiangqi': ['json'],
   // JSON only, for the same reason as the others: a turn here is a piece move
   // AND a duck placement, and neither WXF nor ICCS has anything to say about the
@@ -33,8 +35,11 @@ export const GAME_EXPORT_FORMATS = {
   // ATOMIC kernel (atomic-xiangqi-game-export.ts); a standard replay would
   // diverge at the first capture.
   'atomic-xiangqi': ['pgn', 'json'],
+  // JSON only. A drop has no WXF or ICCS spelling, so a PGN movetext would
+  // not reconstruct the game.
+  'crazyhouse-xiangqi': ['json'],
   jungle: ['json'],
-  'jungle-flip': ['json'],
+  'jungle-flip': ['pgn', 'json'],
 } as const satisfies Readonly<Record<string, readonly GameExportFormat[]>>;
 
 export type GameExportVariant = keyof typeof GAME_EXPORT_FORMATS;
@@ -47,3 +52,13 @@ export function isGameExportVariant(variant: string): variant is GameExportVaria
 export function exportFormatsForVariant(variant: string): readonly GameExportFormat[] {
   return isGameExportVariant(variant) ? GAME_EXPORT_FORMATS[variant] : [];
 }
+
+/** Version of the game's board image (`/og/game/:id.png`), shared by the
+ *  tenant game card's og:image URL and the review page's image download (a chess
+ *  room's legacy card keeps its own GAME_OG_IMAGE_VERSION). Bumped when the
+ *  card's LOOK changes: the PNG is served immutable for a year, so the scraper
+ *  and the CDN (which keys on the query) re-fetch only under a new `?v=`. The
+ *  content is fixed per game (finished, immutable), so nothing else needs one.
+ *  2: piece art drawn from a halving within 2x of its output size (it aliased).
+ *  3 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares. */
+export const GAME_IMAGE_VERSION = 3;

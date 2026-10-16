@@ -1,4 +1,9 @@
-import type { XiangqiBroadcastBoard } from '@mistboard/game';
+import {
+  XIANGQI_BROADCAST_SCHEMA,
+  type XiangqiBroadcastBoard,
+  type XiangqiBroadcastRound,
+  type XiangqiBroadcastTour,
+} from '@mistboard/game';
 import type pg from 'pg';
 import * as persistence from './persistence.js';
 import { withRollbackTransaction } from './persistence-db.js';
@@ -9,17 +14,23 @@ import { defaultXiangqiBroadcastFetch } from './xiangqi-broadcast-fetch.js';
 export type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
 
 import {
+  getXiangqiBroadcastTour,
   listXiangqiBroadcastBoards,
   listXiangqiBroadcastRounds,
 } from './persistence-xiangqi-broadcasts.js';
 import {
   buildDiscoveryManifestSources,
   buildStatedRoundManifestSources,
+  completeSourceUrls,
   type DiscoverySource,
   isXiangqiBroadcastDiscoveryUrl,
   NO_ACTIVE_ROUND_MESSAGE,
+  NOTHING_NEW_MESSAGE,
   parseXiangqiBroadcastDiscoverySource,
   resolveScheduledRound,
+  roundNumberFromRoundId,
+  type StoredBoardRef,
+  settledStatedRounds,
 } from './xiangqi-broadcast-discovery.js';
 import { registerDefaultXiangqiBroadcastDiscoveryProviders } from './xiangqi-broadcast-discovery-dpxq.js';
 
@@ -50,6 +61,15 @@ export type XiangqiBroadcastManifestSource = {
   roundName?: string;
   /** Board number to assign, for sources that serve one game per page. */
   boardNumber?: number;
+  /** Board id to file a single-game page under (discovery only; see
+   *  DiscoveryManifestSource.sourceBoardId). */
+  sourceBoardId?: string;
+  /** A board to apply as it is, with nothing to fetch (discovery only: a
+   *  round page's pairing and result). Never read from a fetched manifest. */
+  resultsOnly?: XiangqiBroadcastBoard;
+  /** A stored board to retire (discovery only; see
+   *  DiscoveryManifestSource.retireBoardId). Never read from a fetched manifest. */
+  retireBoardId?: string;
 };
 
 export type XiangqiBroadcastSourceManifest = {
@@ -127,6 +147,27 @@ type SourceUnit = {
   sourceUrl: string;
   snapshot: XiangqiBroadcastSourceSnapshot;
 };
+
+type RetireUnit = { sourceUrl: string; tourSlug: string; roundId: string; boardId: string };
+
+async function applyRetireUnit(
+  unit: RetireUnit,
+  client: pg.PoolClient | null,
+): Promise<XiangqiBroadcastPollSourceOutcome> {
+  const input = { tourSlug: unit.tourSlug, roundId: unit.roundId, boardId: unit.boardId };
+  const update = client
+    ? await persistence.retireSupersededXiangqiBroadcastAggregateOn(client, input)
+    : await persistence.retireSupersededXiangqiBroadcastAggregate(input);
+  return {
+    ok: true,
+    sourceUrl: unit.sourceUrl,
+    tourSlug: unit.tourSlug,
+    roundsImported: 0,
+    boardsSeen: 0,
+    boardsFailed: update.ok ? 0 : 1,
+    updates: [update],
+  };
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -296,7 +337,23 @@ type PollContext = {
    * source_malformed on every poll.
    */
   tourSlug?: string;
+  /** Pause between a manifest's page fetches; see LEAF_FETCH_SPACING_MS. */
+  leafSpacingMs: number;
+  /** Pause before a discovery retry; see DISCOVERY_RETRY_BACKOFF_MS. */
+  retryBackoffMs: number;
 };
+
+// dpxq answers 503 to a burst: 33 requests in two seconds (one game list and a
+// manifest's 32 pages) failed from a laptop on 2026-09-23, and prod logged
+// source_fetch_error the day before. A pause between pages keeps a full poll
+// near fifteen seconds. Only the real network gets it; an injected fetch (the
+// tests, the fake source server) has no one to be polite to.
+export const LEAF_FETCH_SPACING_MS = 400;
+
+// A discovery fetch that timed out or got a 5xx is tried once more after this
+// pause, which gives a busy dpxq a moment without holding the poll long. Like
+// the spacing above, only the real network waits.
+export const DISCOVERY_RETRY_BACKOFF_MS = 2_000;
 
 async function recordSourceError(
   context: Pick<PollContext, 'dryRun' | 'tourSlug'>,
@@ -482,6 +539,29 @@ async function convertWxfSourceUnit(
   };
 }
 
+// A results-only board carries its tour and round in the manifest entry, the
+// same pins a fetched page gets; the tour name is the stored one, so applying
+// it renames nothing.
+function resultsOnlyUnit(
+  sourceUrl: string,
+  entry: XiangqiBroadcastManifestSource,
+  board: XiangqiBroadcastBoard,
+): SourceUnit {
+  const tour: XiangqiBroadcastTour = {
+    schema: XIANGQI_BROADCAST_SCHEMA,
+    slug: board.tourSlug,
+    name: entry.tourName ?? board.tourSlug,
+  };
+  const round: XiangqiBroadcastRound = {
+    schema: XIANGQI_BROADCAST_SCHEMA,
+    id: board.roundId,
+    tourSlug: board.tourSlug,
+    name: entry.roundName ?? board.roundId,
+    sourceUrl,
+  };
+  return { sourceUrl, snapshot: { tour, rounds: [round], boards: [board] } };
+}
+
 async function applySourceUnit(
   context: PollContext,
   unit: SourceUnit,
@@ -609,6 +689,20 @@ async function discoverManifest(
   };
 }
 
+// Quiet discovery results write no sync log, so each one says so once per
+// process in the server log, where "why has this tour imported nothing" can
+// still be answered.
+const quietDiscoveryNoted = new Set<string>();
+
+function noteQuietDiscoveryOnce(tourSlug: string, message: string): void {
+  const key = `${tourSlug}\u0000${message}`;
+  if (quietDiscoveryNoted.has(key)) return;
+  quietDiscoveryNoted.add(key);
+  console.info(
+    JSON.stringify({ level: 'info', kind: 'xiangqi_broadcast_source_empty', tourSlug, message }),
+  );
+}
+
 // A provider that states each board's round is filed by those rounds and is
 // never time-gated: see buildStatedRoundManifestSources for why. Boards the
 // store already holds complete are left out of the manifest, so an idle tour
@@ -621,27 +715,72 @@ async function discoverStatedRounds(
   | { ok: true; manifest: XiangqiBroadcastSourceManifest }
   | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string; quiet?: true }
 > {
+  const stored: StoredBoardRef[] = [];
+  for (const round of rounds) {
+    const roundNumber = roundNumberFromRoundId(round.id);
+    const boards = await listXiangqiBroadcastBoards(round.id);
+    for (const board of boards) {
+      stored.push({
+        id: board.id,
+        sourceBoardId: board.sourceBoardId,
+        ...(roundNumber !== undefined ? { roundNumber } : {}),
+        ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
+        red: board.red,
+        black: board.black,
+        status: board.status,
+        result: board.result,
+        plies: board.moves.length,
+        ...(board.details ? { details: board.details } : {}),
+      });
+    }
+  }
+  const settledRounds = settledStatedRounds(stored);
+  const completeUrls = completeSourceUrls(stored);
+
   const discovered = await source.provider.discover({
     config: source.config,
     fetchImpl: context.fetchImpl,
     timeoutMs: context.timeoutMs,
+    settledRounds,
+    completeUrls,
+    spacingMs: context.leafSpacingMs,
+    retryBackoffMs: context.retryBackoffMs,
   });
   if (!discovered.ok) {
+    // Every round the source names is stored and finished: the same answer as
+    // a manifest with nothing to apply, not a fault.
+    if (discovered.message === NOTHING_NEW_MESSAGE) {
+      return { ok: false, kind: 'source_malformed', message: discovered.message, quiet: true };
+    }
+    // A source with nothing published yet is how every event looks before
+    // (and often during) its first round. Quiet only while we hold no boards
+    // for the tour: a source that empties after we stored games is a fault.
+    if (discovered.quiet && stored.length === 0) {
+      noteQuietDiscoveryOnce(source.tourSlug, discovered.message);
+      return {
+        ok: false,
+        kind: 'source_fetch_error',
+        message: discovered.message,
+        quiet: true,
+      };
+    }
     return { ok: false, kind: 'source_fetch_error', message: discovered.message };
   }
 
-  const completeUrls = new Set<string>();
-  for (const round of rounds) {
-    for (const board of await listXiangqiBroadcastBoards(round.id)) {
-      if (board.status === 'complete' && board.sourceUrl) completeUrls.add(board.sourceUrl);
-    }
-  }
+  // The tour's own name, unless the source URL pins one: a converted record
+  // names its tour after the event tag (2026年第21届亚洲象棋个人锦标赛), which
+  // drops the section a curated name carries (男子组) and would merge the men's
+  // and women's pages into one name on the first import.
+  const storedTour = source.tourName ? null : await getXiangqiBroadcastTour(source.tourSlug);
+  const named: DiscoverySource = storedTour ? { ...source, tourName: storedTour.name } : source;
 
   const built = buildStatedRoundManifestSources({
-    source,
+    source: named,
     boards: discovered.boards,
     rounds: rounds.map((row) => ({ id: row.id, ...(row.name ? { name: row.name } : {}) })),
     completeUrls,
+    ...(discovered.pairings ? { pairings: discovered.pairings } : {}),
+    stored,
   });
   if (!built.ok) {
     return {
@@ -651,14 +790,14 @@ async function discoverStatedRounds(
       ...(built.quiet ? { quiet: true as const } : {}),
     };
   }
-  if (built.droppedForCap > 0 || built.droppedUnscheduled > 0) {
-    // The cap is not a loss here (the rest come on the next poll, since the
-    // imported ones drop out), but an unseeded round is: those boards never
-    // land until someone seeds it, so say so where an operator will look.
+  if (built.droppedForCap > 0 || built.roundsAdded.length > 0) {
+    // The cap is not a loss (the rest come on the next poll, since the
+    // imported ones drop out); a new round is worth a line because it has no
+    // start time until someone seeds one.
     console.warn(
       `[xiangqi-broadcast] ${source.provider.name} kept ${built.sources.length} board(s), ` +
         `deferred ${built.droppedForCap} over the manifest cap, ` +
-        `dropped ${built.droppedUnscheduled} for rounds the schedule has not seeded`,
+        `added round(s) ${built.roundsAdded.join(', ') || 'none'} the schedule had not seeded`,
     );
   }
   return {
@@ -750,9 +889,34 @@ async function pollSourceOutcomes(
       | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string }
     )
   > = [];
+  const retirements: RetireUnit[] = [];
   if (body.kind === 'manifest') {
+    let fetchedLeaves = 0;
     for (const entry of body.manifest.sources) {
-      const { url, ...entryOptions } = entry;
+      const { url, resultsOnly, retireBoardId, ...entryOptions } = entry;
+      if (retireBoardId) {
+        if (entry.tourSlug && entry.roundId) {
+          retirements.push({
+            sourceUrl: url,
+            tourSlug: entry.tourSlug,
+            roundId: entry.roundId,
+            boardId: retireBoardId,
+          });
+        }
+        continue;
+      }
+      if (resultsOnly) {
+        resolutions.push({
+          sourceUrl: url,
+          ok: true,
+          unit: resultsOnlyUnit(url, entry, resultsOnly),
+        });
+        continue;
+      }
+      if (fetchedLeaves > 0 && context.leafSpacingMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, context.leafSpacingMs));
+      }
+      fetchedLeaves += 1;
       resolutions.push({
         sourceUrl: url,
         ...(await resolveLeafSource(context, url, entryOptions, { manifestUrl: sourceUrl })),
@@ -791,6 +955,7 @@ async function pollSourceOutcomes(
             },
       );
     }
+    for (const retirement of retirements) outcomes.push(await applyRetireUnit(retirement, client));
     return outcomes;
   };
 
@@ -809,6 +974,7 @@ export async function pollXiangqiBroadcastSourceOnce(input: {
   timeoutMs?: number;
   fetchImpl?: XiangqiBroadcastSourceFetch;
   sourcePolicy?: XiangqiBroadcastSourceUrlPolicy;
+  leafSpacingMs?: number;
 }): Promise<XiangqiBroadcastPollResult> {
   const context: PollContext = {
     timeoutMs: input.timeoutMs ?? 5_000,
@@ -817,6 +983,8 @@ export async function pollXiangqiBroadcastSourceOnce(input: {
     fetchImpl: input.fetchImpl ?? defaultXiangqiBroadcastFetch,
     sourcePolicy: input.sourcePolicy ?? xiangqiBroadcastSourceUrlPolicyFromEnv(),
     ...(input.tourSlug ? { tourSlug: input.tourSlug } : {}),
+    leafSpacingMs: input.leafSpacingMs ?? (input.fetchImpl ? 0 : LEAF_FETCH_SPACING_MS),
+    retryBackoffMs: input.fetchImpl ? 0 : DISCOVERY_RETRY_BACKOFF_MS,
   };
 
   const polled = await pollSourceOutcomes(context, input.sourceUrl);

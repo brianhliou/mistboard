@@ -17,7 +17,7 @@ import {
   BOARD_FILES,
   BOARD_HEIGHT,
   BOARD_WIDTH,
-  CELL,
+  fileLineX,
   lerpPoint,
   MARGIN,
   PIECE_SIZE,
@@ -304,7 +304,7 @@ function regionRect(region: VideoRegion, perspective: 'red' | 'black'): string {
     return `<rect class="xqv-region" x="${Math.min(a.x, b.x) - pad}" y="${Math.min(a.y, b.y) - pad}" width="${Math.abs(b.x - a.x) + pad * 2}" height="${Math.abs(b.y - a.y) + pad * 2}" rx="8"/>`;
   }
   const fileIndex = Math.max(0, BOARD_FILES.indexOf(region.file));
-  const x = MARGIN + fileIndex * CELL;
+  const x = fileLineX(fileIndex, perspective);
   return `<rect class="xqv-region" x="${x - 20}" y="${MARGIN - 20}" width="40" height="${BOARD_HEIGHT - (MARGIN - 20) * 2}" rx="8"/>`;
 }
 

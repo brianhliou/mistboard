@@ -1,17 +1,22 @@
 import { type GameEvent, maybeGameSpecForId } from '@mistboard/game';
-import { banqiResultLabel } from './banqi-result-label.js';
-import { seatInkForVariant } from './flip-seat-ink.js';
+import { shouldShowClockTenths, shouldShowFinalClockTenths } from './account-preferences.js';
+import { applyClockEmphasis, setClockFace } from './clock-emphasis.js';
+import { resultLabel, watchQueueResultLabel } from './finished-result-label.js';
+import { payloadFirstColor, seatInkForVariant } from './flip-seat-ink.js';
 import { createGameTable } from './game-table.js';
 import { t } from './i18n/catalog.js';
-import { jungleFlipResultLabel } from './jungle-flip-result-label.js';
 import { renderVariantMarker } from './variant-markers.js';
-import type { VariantMiniId } from './variant-mini-boards.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
 import { boardAspectForSpec } from './watch-board-aspect.js';
+import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
+import {
+  playWatchSoundPlan,
+  watchLiveEndSoundPlan,
+  watchLiveMoveSoundPlan,
+} from './watch-sound.js';
 import './watch-route.css';
 import {
-  colorWinsLabel,
   displayLiveName,
   displayParticipantName,
   type FeaturedGame,
@@ -20,13 +25,12 @@ import {
   matchupSeats,
   namesMatchupLabel,
   participantForColor,
-  sourceLabel,
   terminationLabel,
   variantDisplayLabel,
   watchChannelLabel,
 } from './game-display.js';
 import { gameMetaForGame, reviewUrlForGame, timeControlLabelForGame } from './game-meta.js';
-import { initLiveSound, playSound } from './live-sound.js';
+import { initLiveSound } from './live-sound.js';
 import { participantProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
 import type { GameMeta, ReplayHandle } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
@@ -34,13 +38,16 @@ import {
   createGameMetaCard,
   type GameMetaPlayer,
   seatResultScores,
+  timeAgoLabel,
 } from './review/game-meta-card.js';
 import { createMoveList, type MoveList } from './review/move-list.js';
 import { installReviewKeyboard } from './review/review-layout.js';
 import { createReviewShell } from './review/review-shell.js';
+import { seatDiscEl } from './seat-disc.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildLoadingState, buildNav } from './site-shell.js';
 import { buildUiIcon } from './ui-icon.js';
+import { localizedRulesHref } from './variant-public-surfaces.js';
 import { seatColorWord, seatInkFamily } from './variant-seat-label.js';
 import { formatClock } from './web-utils.js';
 
@@ -123,6 +130,7 @@ const LIVE_TV_TOP_POLL_MS = 4_000;
 // only changes about once a second, but a move's whole think can drain inside a ~700ms
 // playback window, so the poll has to be finer than the digits it shows.
 const WATCH_CLOCK_TICK_MS = 100;
+const WATCH_CORRESPONDENCE_MIN_MS = 24 * 60 * 60 * 1000;
 
 // The featured LIVE game from /api/watch/live?channel=top (the cross-channel
 // election). Mirrors landing-tv.ts's shape; the payload is the tenant's
@@ -142,20 +150,6 @@ type LiveFeatured = {
   }>;
   payload?: Record<string, unknown>;
 };
-
-// A live flip game's bound ink, read out of the postgame-shaped payload's view.
-// The payload is `Record<string, unknown>` by contract (the renderers own its
-// shape), so this narrows defensively: anything unexpected reads as unbound,
-// which renders a neutral disc rather than a wrong one.
-function liveFirstColor(featured: LiveFeatured): 'red' | 'black' | null {
-  const view = (featured.payload as { view?: { firstColor?: unknown } } | undefined)?.view;
-  const firstColor = view?.firstColor;
-  return firstColor === 'red' || firstColor === 'black' ? firstColor : null;
-}
-
-export function shouldPlayWatchMoveSound(previousPly: number | null, nextPly: number): boolean {
-  return previousPly !== null && nextPly === previousPly + 1;
-}
 
 // Ordering guard for user-initiated channel/game switches.
 //
@@ -223,6 +217,17 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // feed fetch below, rather than serializing it behind /api/watch.
   void loadReplayModule();
 
+  // A viewer who lands on Top came for the game in progress (the homepage's
+  // live card links here with no ?game=). Ask for it alongside the feed so the
+  // first board painted is the live one; waiting for the first poll showed the
+  // last finished game for ~4s before the live board replaced it (2026-09-25).
+  const initialLive = wantsInitialLive(window.location.href)
+    ? fetchLiveFeatured('?channel=top').catch((err) => {
+        console.warn(err);
+        return null;
+      })
+    : Promise.resolve(null);
+
   let currentFeed = await fetchWatchFeed().catch((err) => {
     console.warn(err);
     return null;
@@ -288,7 +293,12 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   let clockTicker: number | null = null;
   let watchPly = 0;
   let watchMaxPly = 0;
+  // The live board's last ply that was heard (or seeded, silently). Only the
+  // live follow moves it: one ply past it sounds, anything else re-seeds. Null
+  // when no live game is on the board, so the next one seeds rather than sounds.
   let lastSoundPly: number | null = null;
+  // The live game whose end tone has played, so it plays once.
+  let endSoundRoomId: string | null = null;
   let queuePreviewHandles: ReplayHandle[] = [];
   let queuePreviewKey = '';
   let queueRenderVersion = 0;
@@ -331,6 +341,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     livePayload = null;
     liveHandle?.destroy();
     liveHandle = null;
+    lastSoundPly = null;
     // The rail was drawn from the live handle; stop its ticker before the
     // completed-feed render seeds the rail again (or nothing does).
     clearMoveList();
@@ -443,7 +454,10 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   const ensureClockSeats = (): { top: HTMLElement; bottom: HTMLElement } => {
     if (clockSeats) return clockSeats;
     const mount = (host: HTMLElement): HTMLElement => {
+      // The room's clock row (room-chrome.ts): same class, face and time-left bar,
+      // so the two right columns read as one table.
       const row = document.createElement('div');
+      row.className = 'clock-time-row';
       row.append(document.createElement('strong'));
       host.replaceChildren(row);
       return row;
@@ -459,14 +473,42 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       return;
     }
     const seats = ensureClockSeats();
-    const paint = (row: HTMLElement, remainingMs: number, live: boolean): void => {
+    const ended = readout.toMove === null;
+    // A day-long allowance is correspondence: it resets every move, so a share of
+    // it says nothing (room-chrome passes null for days-per-move rooms too).
+    const barStartMs =
+      readout.initialMs && readout.initialMs < WATCH_CORRESPONDENCE_MIN_MS
+        ? readout.initialMs
+        : null;
+    const paint = (
+      row: HTMLElement,
+      playerLine: Element | null,
+      remainingMs: number,
+      live: boolean,
+    ): void => {
       const time = row.firstElementChild;
-      const text = formatClock(remainingMs);
-      if (time && time.textContent !== text) time.textContent = text;
+      // A finished game's final times keep their tenths, as in the room; an hours
+      // clock never does (72:00:00.0 reads as noise).
+      const tenths =
+        remainingMs < 3_600_000 &&
+        (ended ? shouldShowFinalClockTenths() : shouldShowClockTenths(remainingMs, live));
+      if (time instanceof HTMLElement) setClockFace(time, formatClock(remainingMs, tenths));
+      applyClockEmphasis(row, remainingMs, barStartMs);
       row.classList.toggle('active', live);
+      playerLine?.classList.toggle('active', live);
     };
-    paint(seats.top, readout.second, readout.toMove === 'second');
-    paint(seats.bottom, readout.first, readout.toMove === 'first');
+    paint(
+      seats.top,
+      watch.playerTop.firstElementChild,
+      readout.second,
+      readout.toMove === 'second',
+    );
+    paint(
+      seats.bottom,
+      watch.playerBottom.firstElementChild,
+      readout.first,
+      readout.toMove === 'first',
+    );
   };
 
   // Poll the handle rather than having it push: both renderers already interpolate the
@@ -487,9 +529,9 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
 
   // Re-highlight the current move + refresh the scrubber bounds/status. Driven by
   // the handle's onPlyChange on every autoplay tick or manual jump.
+  // Silent by design: plies also change on seeds, scrubs, jumps and replay
+  // playback. Live sound is driven from updateLive, which knows a frame is new.
   const syncMoveList = (ply: number, maxPly: number): void => {
-    if (shouldPlayWatchMoveSound(lastSoundPly, ply)) playSound('move');
-    lastSoundPly = ply;
     watchPly = ply;
     watchMaxPly = maxPly;
     moveList?.update(ply, jumpBoardToPly);
@@ -504,9 +546,6 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     moveList = null;
     watchPly = 0;
     watchMaxPly = 0;
-    // A different game's plies are not a continuation of this one's, so the
-    // next seed must not read as "one move later" and fire the move sound.
-    lastSoundPly = null;
     moveScrubber.setBounds(0, 0);
     stopClockTicker();
     clearClocks();
@@ -862,7 +901,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     const players = featured.players ?? [];
     const first = players.find((p) => p.color === 'red' || p.color === 'white') ?? players[0];
     const ordered = first ? [first, ...players.filter((p) => p !== first)] : players;
-    const firstColor = liveFirstColor(featured);
+    const firstColor = payloadFirstColor(featured.payload);
     return ordered.map((p) => ({
       color: seatInkForVariant(featured.gameSpecId, p.color, firstColor),
       name: displayLiveName(p.name, t('watch.guest')),
@@ -872,24 +911,23 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     }));
   };
 
-  // Left meta card + right-rail seat rows + LIVE badge for the featured game.
+  // Left meta card + right-rail seat rows for the featured game. No LIVE chip:
+  // the running clock already says the game is live.
   const renderLiveMeta = (featured: LiveFeatured): void => {
     const players = liveMetaPlayers(featured);
     const variantName = variantDisplayLabel(featured.gameSpecId);
     setWatchSeatInkFamily(watch, featured.gameSpecId ?? null);
     renderWatchMainReviewLink(watch.reviewLink, null);
     watch.metaRoot.replaceChildren();
-    const badge = document.createElement('div');
-    badge.className = 'watch-live-badge';
-    badge.textContent = t('watch.liveBadge');
     const card = createGameMetaCard({
       markerId: variantMiniIdForRawVariant(featured.gameSpecId) ?? undefined,
       headline: [t('watch.inProgress')],
       variantName,
+      variantHref: localizedRulesHref(featured.gameSpecId),
       players,
       status: null,
     });
-    watch.metaRoot.append(badge, card.el);
+    watch.metaRoot.append(card.el);
     watch.gameTableRoot.hidden = false;
     renderWatchHeadline(watch.headlineRoot, {
       matchup: playersMatchupLabel(players),
@@ -927,6 +965,8 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     liveShownPly = featured.ply;
     watch.el.classList.add('watch-live-mode');
     followLiveRail(liveHandle);
+    // A new game on the board is a seed, never "one move later".
+    lastSoundPly = liveHandle.plyCount?.() ?? featured.ply;
     renderLiveMeta(featured);
     renderQueue(currentFeed, null, null);
     // Top always follows the CURRENT top game, so the shareable URL is
@@ -937,11 +977,20 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   const updateLive = async (featured: LiveFeatured): Promise<void> => {
     registerLiveNames(featured);
     if (featured.payload) livePayload = { roomId: featured.roomId, payload: featured.payload };
-    if (featured.ply > liveShownPly && featured.payload && liveHandle) {
-      await liveHandle.loadGame(featured.roomId);
+    const handle = liveHandle;
+    if (featured.ply > liveShownPly && featured.payload && handle) {
+      await handle.loadGame(featured.roomId);
+      if (handle !== liveHandle) return; // dropped or replaced while loading
       liveShownPly = featured.ply;
-      followLiveRail(liveHandle);
+      followLiveRail(handle);
       renderLiveMeta(featured);
+      // Live forward progress: each new ply sounds as its mover heard it when the
+      // frame carries one or two; a bigger jump (a tab catching up) re-seeds
+      // silently.
+      const ply = handle.plyCount?.() ?? featured.ply;
+      const plan = watchLiveMoveSoundPlan(lastSoundPly, ply, (p) => handle.moveSoundAtPly?.(p));
+      lastSoundPly = ply;
+      playWatchSoundPlan(plan);
     }
   };
 
@@ -957,11 +1006,54 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
 
   // The live game ended (or vanished): drop the live board and fall back to the
   // completed cross-variant feed for the Top channel.
+  // The followed game left the live feed. Ask its finished record whether it
+  // actually ended (a live payload never carries the end: the server stops
+  // serving the room once it finishes), through the live handle itself: with the
+  // live payload withdrawn, its loader falls back to the finished-game endpoint
+  // (the same live-to-finished handoff the homepage board uses), and a game that
+  // merely went quiet has no finished record, so it stays silent. When it did
+  // end: the moves no live frame carried, then one neutral end tone, once per
+  // game. The TV feed cannot answer this: it is a curated cut that may never
+  // list the game (a short PvE game, for one).
+  const soundLiveGameEnd = async (): Promise<void> => {
+    const handle = liveHandle;
+    const roomId = liveRoomId;
+    const lastLivePly = lastSoundPly;
+    if (!handle || !roomId || endSoundRoomId === roomId || !handle.gameResult) return;
+    livePayload = null;
+    try {
+      await handle.loadGame(roomId);
+    } catch (err) {
+      console.warn(err);
+      return;
+    }
+    const result = handle.gameResult();
+    if (!result || result === 'in-progress' || endSoundRoomId === roomId) return;
+    endSoundRoomId = roomId;
+    playWatchSoundPlan(
+      watchLiveEndSoundPlan(lastLivePly, handle.plyCount?.() ?? null, (p) =>
+        handle.moveSoundAtPly?.(p),
+      ),
+    );
+  };
+
   const exitLive = async (): Promise<void> => {
+    const endedRoomId = liveRoomId;
+    await soundLiveGameEnd();
     dropLiveBoard();
-    // Repaint the completed cross-variant board and refresh the URL to whatever
-    // game it lands on (the live game just finished; its ?game= is now valid).
-    await renderFeed(currentFeed, currentFeed, false, { urlMode: 'replace' });
+    // The feed in hand was fetched while this game was still live, so it cannot
+    // hold it: repainting from it put the PREVIOUS finished game on the board
+    // and pinned it there (2026-09-25). Refetch, and land on the game the viewer
+    // just watched end when the feed has it.
+    const fresh = await fetchWatchFeed(undefined, { force: true }).catch((err) => {
+      console.warn(err);
+      return null;
+    });
+    const feed = fresh ?? currentFeed;
+    if (endedRoomId && feed?.unlocked.some((game) => game.roomId === endedRoomId)) {
+      selectedRoomByChannel.set(feed.activeChannel, endedRoomId);
+    }
+    await renderFeed(feed, currentFeed, true, { urlMode: 'replace' });
   };
 
   let liveTickInFlight = false;
@@ -976,16 +1068,15 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
         liveActive && liveRoomId
           ? `?channel=top&room=${encodeURIComponent(liveRoomId)}&ply=${liveShownPly}`
           : '?channel=top';
-      // Bounded: a response that never completes would otherwise hold
-      // liveTickInFlight forever and freeze live mode with no error.
-      const resp = await fetch(`/api/watch/live${query}`, {
-        signal: AbortSignal.timeout(LIVE_TV_TOP_POLL_MS * 2),
-      });
-      if (resp.ok) {
-        const data = (await resp.json()) as { featured: LiveFeatured | null };
+      const data = await fetchLiveFeatured(query);
+      if (data) {
         if (data.featured) {
           if (liveActive && data.featured.roomId === liveRoomId) await updateLive(data.featured);
-          else await enterLive(data.featured);
+          else {
+            // Another game took the board; the one leaving may have just ended.
+            if (liveActive) await soundLiveGameEnd();
+            await enterLive(data.featured);
+          }
         } else if (liveActive) {
           await exitLive();
         }
@@ -1022,6 +1113,12 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     if (livePollTimer !== null) window.clearTimeout(livePollTimer);
     dropLiveBoard();
   });
+  // With a live game in progress the live board takes the center slot before
+  // the feed renders, so renderFeed only fills the channel list and queue.
+  const firstLive = await initialLive;
+  if (firstLive?.featured && currentFeed?.activeChannel === 'top') {
+    await enterLive(firstLive.featured).catch((err) => console.warn(err));
+  }
   await renderFeed(currentFeed, null, false, { urlMode: 'replace' });
   if (!document.hidden) {
     pollTimer = window.setTimeout(() => void refreshFeed(), pollDelay(currentFeed));
@@ -1104,7 +1201,11 @@ async function mountWatchReplay(
       namesByRoomId,
       onGameEnd: holdAtEnd,
       onPlyChange,
-      ...(live ? { live: true, loadPostgameOverride: live.loadPostgameOverride } : {}),
+      // A followed game whose finished record is not there (it went quiet, or
+      // has not persisted yet) keeps its last frame instead of the error notice.
+      ...(live
+        ? { live: true, loadPostgameOverride: live.loadPostgameOverride, onLoadError: () => true }
+        : {}),
     });
   }
   // Chess (chessground): the fog channel (dark-chess). Watch only ever serves COMPLETED games, so the middle
@@ -1118,7 +1219,6 @@ async function mountWatchReplay(
     showControls: false,
     keyboardNav: false,
     revealOnFinish: false,
-    clampPace: true,
     metadataMode: 'compact',
     showCaptures: false,
     hideGameIdPill: true,
@@ -1180,6 +1280,24 @@ async function requestWatchFeed(channel: string | null): Promise<WatchFeed> {
 // One fetch per (channel, in-flight window), with the result cached for
 // WATCH_FEED_CACHE_MS. `force` bypasses the cache but still joins an in-flight
 // request — the poll uses it so a refresh is never served a stale body.
+// Top with no ?game= is the only landing that follows the live game; a ?game=
+// deep link asked for that finished game, and other channels never go live.
+export function wantsInitialLive(href: string): boolean {
+  const url = new URL(href);
+  const channel = url.searchParams.get('channel');
+  return (channel === null || channel === 'top') && !url.searchParams.get('game');
+}
+
+// Null on a non-OK response. Bounded: a response that never completes would
+// otherwise hold the live tick's in-flight flag forever and freeze live mode.
+async function fetchLiveFeatured(query: string): Promise<{ featured: LiveFeatured | null } | null> {
+  const resp = await fetch(`/api/watch/live${query}`, {
+    signal: AbortSignal.timeout(LIVE_TV_TOP_POLL_MS * 2),
+  });
+  if (!resp.ok) return null;
+  return (await resp.json()) as { featured: LiveFeatured | null };
+}
+
 async function fetchWatchFeed(
   channelOverride?: string | null,
   options: { force?: boolean } = {},
@@ -1567,7 +1685,7 @@ function buildWatchSection(feed: WatchFeed | null): WatchSection {
   // ── Right rail: the shared room game table, with watch-owned behavior ──
   const right = document.createElement('div');
   right.className = 'watch-right';
-  const gameTable = createGameTable();
+  const gameTable = createGameTable({ navMenu: false });
   gameTable.el.classList.add('watch-game-table');
   right.append(gameTable.el);
 
@@ -1705,8 +1823,12 @@ function renderWatchMetaCard(root: HTMLElement, game: FeaturedGame | null): void
     game.rated === true ? t('watch.rated') : game.rated === false ? t('watch.casual') : null;
   const card = createGameMetaCard({
     markerId: variantMiniIdForRawVariant(game.variant) ?? undefined,
-    headline: [timeControlLabelForGame(game), ratedSegment, sourceLabel(game.mode)],
+    // No "Human vs engine" segment: the BOT tag on the player row already says
+    // it, and the extra words wrapped the headline onto two lines.
+    headline: [timeControlLabelForGame(game), ratedSegment],
     variantName: variantDisplayLabel(game.variant),
+    variantHref: localizedRulesHref(game.variant),
+    subline: timeAgoLabel(game.endedAt) || null,
     players,
     status: watchGameStatusLine(game),
   });
@@ -1777,11 +1899,9 @@ function renderWatchPlayerRows(
 function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
   const row = document.createElement('span');
   row.className = 'clock-player-line watch-game-table__player';
-  const disc = document.createElement('span');
   // A null color is a flip variant whose opening flip has not bound an ink yet:
-  // render the neutral ring rather than guessing a side.
-  disc.className = `watch-player-disc watch-player-disc--${player.color ?? 'unbound'}`;
-  disc.setAttribute('aria-hidden', 'true');
+  // the disc renders the neutral ring rather than guessing a side.
+  const disc = seatDiscEl(player.color, 'watch-player-disc');
   row.append(disc, playerNameEl(player.name, player.profile ?? null, 'clock-name'));
   if (player.isEngine) {
     const bot = document.createElement('span');
@@ -1795,26 +1915,13 @@ function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
     rating.textContent = String(player.rating);
     row.append(rating);
   }
+  // The room's turn pill; syncClocks marks the side whose clock is running.
+  const toMove = document.createElement('span');
+  toMove.className = 'clock-to-move';
+  toMove.textContent = t('live.toMove');
+  row.append(toMove);
   return row;
 }
-
-// The shared variant marker for each watch channel, so the TV rail reads in
-// the same icon language as the picker, rules rail, leaderboard, and profile.
-// Channel ids match VariantMiniId ids; the dark-chess channel shows the
-// dark-chess marker. An unmapped channel keeps its (empty) marker slot so the
-// rows stay grid-aligned.
-const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
-  'dark-chess': 'dark-chess',
-  xiangqi: 'xiangqi',
-  'dark-xiangqi': 'dark-xiangqi',
-  'fortress-xiangqi': 'fortress-xiangqi',
-  'duck-xiangqi': 'duck-xiangqi',
-  'atomic-xiangqi': 'atomic-xiangqi',
-  jieqi: 'jieqi',
-  banqi: 'banqi',
-  jungle: 'jungle',
-  'jungle-flip': 'jungle-flip',
-};
 
 // Lichess's `cogs` icon, used for its Bot and computer TV channels. Mistboard
 // and Lichess are both AGPL-3.0-or-later, so keep the source link beside this
@@ -1851,7 +1958,7 @@ export function renderWatchChannelList(root: HTMLElement, feed: WatchFeed | null
     const thumb = document.createElement('span');
     thumb.className = 'watch-channel-thumb';
     thumb.setAttribute('aria-hidden', 'true');
-    const miniId = CHANNEL_MINI_BY_ID[channel.id];
+    const miniId = WATCH_CHANNEL_MINI_IDS[channel.id];
     if (channel.id === 'top') {
       thumb.append(buildUiIcon('featured-channel', 'watch-channel-crown'));
     } else if (channel.id === 'engines') {
@@ -2039,25 +2146,6 @@ export function formatWatchScope(
     : `latest ${feed.unlockLimit}`;
 }
 
-export function resultLabel(result: string): string {
-  if (result === 'white-wins') return t('watch.whiteWins');
-  if (result === 'black-wins') return t('watch.blackWins');
-  if (result === 'red-wins') return t('watch.redWins');
-  return t('watch.draw');
-}
-
-// Flip variants (Banqi, Flip Jungle) decouple seat from ink, so their seat-keyed
-// result needs the game's firstColor to read by ink ("Black wins" / "Blue wins").
-// Every other variant has seat == ink; route the winning-side word through
-// seatColorWord so the Jungle family reads "Blue wins" (its canonical second-seat
-// color) instead of "Black wins".
-export function watchQueueResultLabel(game: FeaturedGame): string {
-  if (game.variant === 'banqi') return banqiResultLabel(game.result, game.firstColor ?? null);
-  if (game.variant === 'jungle-flip')
-    return jungleFlipResultLabel(game.result, game.firstColor ?? null);
-  const result = game.result;
-  if (result === 'red-wins') return colorWinsLabel(seatColorWord(game.variant, 'red'));
-  if (result === 'black-wins') return colorWinsLabel(seatColorWord(game.variant, 'black'));
-  if (result === 'white-wins') return colorWinsLabel(seatColorWord(game.variant, 'white'));
-  return resultLabel(result);
-}
+// resultLabel / watchQueueResultLabel live in finished-result-label.ts (shared
+// with /games); re-exported here for existing importers.
+export { resultLabel, watchQueueResultLabel };

@@ -22,8 +22,8 @@ import {
   resultLabel,
   seedWatchRail,
   setWatchSeatInkFamily,
-  shouldPlayWatchMoveSound,
   WATCH_FEED_CACHE_MS,
+  wantsInitialLive,
   watchFeedCacheIsFresh,
   watchFeedIsDark,
   watchGamePlayers,
@@ -33,6 +33,18 @@ import {
   watchQueueResultLabel,
   watchRailAnchor,
 } from './watch-route.js';
+
+describe('wantsInitialLive', () => {
+  it('follows the live game on a bare Top landing', () => {
+    expect(wantsInitialLive('https://mistboard.com/watch')).toBe(true);
+    expect(wantsInitialLive('https://mistboard.com/watch?channel=top')).toBe(true);
+  });
+
+  it('keeps a finished-game deep link and other channels off the live fetch', () => {
+    expect(wantsInitialLive('https://mistboard.com/watch?channel=top&game=abc')).toBe(false);
+    expect(wantsInitialLive('https://mistboard.com/watch?channel=xiangqi')).toBe(false);
+  });
+});
 
 describe('watchRailAnchor', () => {
   it('keeps tall boards as the anchor', () => {
@@ -51,17 +63,6 @@ describe('watchRailAnchor', () => {
     expect(watchRailAnchor(0, 0)).toBe('board');
     expect(watchRailAnchor(0, 480)).toBe('board');
     expect(watchRailAnchor(308, 0)).toBe('board');
-  });
-});
-
-describe('watch move sounds', () => {
-  it('sounds only a single forward ply, not initial paint, jumps, or loop resets', () => {
-    expect(shouldPlayWatchMoveSound(null, 0)).toBe(false);
-    expect(shouldPlayWatchMoveSound(0, 1)).toBe(true);
-    expect(shouldPlayWatchMoveSound(1, 2)).toBe(true);
-    expect(shouldPlayWatchMoveSound(2, 2)).toBe(false);
-    expect(shouldPlayWatchMoveSound(2, 8)).toBe(false);
-    expect(shouldPlayWatchMoveSound(8, 0)).toBe(false);
   });
 });
 
@@ -183,6 +184,42 @@ describe('watch route copy helpers', () => {
     expect(watchQueueResultLabel(base)).toBe('First wins');
     // Non-banqi variants are untouched by the ink translation.
     expect(watchQueueResultLabel({ ...base, variant: 'xiangqi' })).toBe('Red wins');
+  });
+
+  // Xiangqi mahjong's east/west are bookkeeping: the label read "Draw" for every
+  // decided match (no branch matched 'east-wins'). It names the winning player.
+  it('names the winning player of a xiangqi mahjong match, never the seat', () => {
+    const base: FeaturedGame = {
+      blackName: null,
+      corpusId: null,
+      mode: 'pve',
+      plyCount: 60,
+      result: 'west-wins',
+      roomId: 'xmj_watch',
+      termination: 'checkmate',
+      variant: 'xiangqi-mahjong',
+      whiteName: null,
+      participants: [
+        {
+          color: 'east',
+          displayName: 'brianhliou',
+          subjectType: 'user',
+          subjectId: 'u_brian',
+          visibility: 'public',
+        },
+        {
+          color: 'west',
+          displayName: 'Xiangqi mahjong bot',
+          subjectType: 'bot',
+          subjectId: null,
+          visibility: 'public',
+        },
+      ],
+    };
+    expect(watchQueueResultLabel(base)).toBe('Xiangqi mahjong bot wins');
+    expect(watchQueueResultLabel({ ...base, result: 'east-wins' })).toBe('brianhliou wins');
+    expect(watchQueueResultLabel({ ...base, result: 'draw' })).toBe('Draw');
+    expect(watchQueueResultLabel({ ...base, participants: [] })).toBe('Guest wins');
   });
 
   it('labels a Flip Jungle queue result by bound ink, in the family colour words', () => {

@@ -40,10 +40,132 @@
   fill: var(--xq-cell-palace, color-mix(in srgb, #7c4d72 24%, transparent));
 }
 
+/* Jungle theme art (xiangqi-board-surface.ts draws it only under that theme). */
+.xq-surface .xq-live-palace-rug {
+  fill: #fdeac8;
+}
+
+.xq-surface .xq-live-palace-seam {
+  stroke: #b89a66;
+  stroke-opacity: 0.5;
+  stroke-width: 1.3;
+}
+
+.xq-surface .xq-live-river-bank {
+  stroke: #e9d49a;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+/* The lawn wants a lighter seam than the tan board's 42% ink. */
+:root[data-xiangqi-board-theme="jungle"] .xq-surface .xq-live-cell-line {
+  stroke: color-mix(in srgb, var(--xq-live-ink) 24%, transparent);
+}
+
 .xq-surface .xq-live-coord {
   fill: var(--xq-coord-ink, color-mix(in srgb, var(--xq-live-ink, #5a3a14) 72%, transparent));
   font-weight: 700;
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* Start markers: the printed brackets at the cannons' and soldiers' starting
+   points (xiangqiSurfaceStartMarkers). The same ink as the grid, so a custom
+   board colour carries them along with the lines. */
+.xq-surface .xq-live-start-mark {
+  fill: none;
+  stroke: var(--xq-live-ink, #5a3a14);
+  stroke-width: 1.2;
+  stroke-linecap: square;
+}
+
+/* A surface that has not re-rendered since the reader turned them off still
+   hides them. */
+:root[data-xiangqi-start-markers="off"] .xq-surface .xq-live-start-mark {
+  display: none;
+}
+
+/* Move hints and the selection on a dark picked colour. The tuned teal
+   (live-xiangqi.css) sits at about 1.2:1 on walnut and under 2:1 on navy, so a
+   dark board swaps it for a light mint. Jungle keeps its lawn and its teal. */
+:root[data-xiangqi-board-tone="dark"]:not([data-xiangqi-board-theme="jungle"]) .xq-live-hint-dot {
+  fill: rgba(167, 243, 208, 0.85);
+}
+:root[data-xiangqi-board-tone="dark"]:not([data-xiangqi-board-theme="jungle"])
+  .xq-live-hint-capture {
+  stroke: rgba(167, 243, 208, 0.7);
+}
+:root[data-xiangqi-board-tone="dark"]:not([data-xiangqi-board-theme="jungle"])
+  .xq-live-selection-cell,
+:root[data-xiangqi-board-tone="dark"]:not([data-xiangqi-board-theme="jungle"])
+  .xq-live-target-hover {
+  fill: rgba(167, 243, 208, 0.28);
+}
+
+/* The ?boardgrain=1 wood grain (xiangqiSurfaceGrain): a faint overlay under the
+   lines, never on top of them. 0.3 judged in the dev pair (2026-10-08): at 0.5
+   the streaks competed with the grid. */
+.xq-surface .xq-live-grain {
+  opacity: 0.3;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* River text (gear > Board > River text, xiangqiSurfaceRiver). Both captions are
+   always drawn and the root data attribute picks which one shows (app-base.css:
+   --xq-river-label-display / --xq-river-brand-display). These rules lived in
+   live-xiangqi.css, which the fortress routes never import, so a board that
+   only takes the surface would have shown both captions at once. Sizes are in
+   board units for the standard board's 60-unit cell; --xq-river-scale (set by
+   xiangqiSurfaceRiver) keeps the caption the same share of the river on a
+   board drawn at another cell size (jieqi and fortress use 72). */
+.xq-surface .xq-live-river,
+.xq-surface .xq-live-river text {
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.xq-surface .xq-live-river text {
+  dominant-baseline: central;
+  fill: var(--xq-live-ink, #5a3a14);
+  font-family: ui-serif, Georgia, serif;
+  font-size: calc(22px * var(--xq-river-scale, 1));
+  font-weight: 700;
+  letter-spacing: calc(4px * var(--xq-river-scale, 1));
+  text-anchor: middle;
+}
+
+.xq-surface .xq-live-river-label {
+  display: var(--xq-river-label-display, none);
+}
+
+/* The wordmark: the same ink as 楚河 漢界, in title case, large enough to fill
+   the river as the hanzi do, lightly tracked. 32px and 0.04em are what
+   xiangqi-board-surface.ts centres against (BRAND_FONT_SIZE,
+   XIANGQI_RIVER_BRAND_TRACKING). Style 'a' is a serif; the alternate 'b'
+   (?xqRiverStyle=b) is the nav's wordmark, Noto Sans in lower case. */
+.xq-surface .xq-live-river-brand {
+  display: var(--xq-river-brand-display, none);
+}
+
+.xq-surface .xq-live-river text.xq-live-river-brand {
+  font-size: calc(32px * var(--xq-river-scale, 1));
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+:root[data-xiangqi-river-style="b"] .xq-surface .xq-live-river text.xq-live-river-brand {
+  font-family: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+}
+
+/* The square grid's river is a narrow band: no room for a caption without
+   covering the pieces beside it, so neither shows there. */
+.xq-surface--cell .xq-live-river-label,
+.xq-surface--cell .xq-live-river-brand {
+  display: none;
 }

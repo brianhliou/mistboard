@@ -70,12 +70,14 @@ export function definePersistenceTests(area: string, registerTests: () => void):
       await client.query(
         `TRUNCATE
            auth_rate_limit_buckets,
+           game_data_files,
            stripe_events,
            engine_move_jobs,
            live_engine_games,
            puzzle_attempts,
            puzzle_quality_sessions,
            ops_readout_snapshots,
+           feedback_submissions,
            user_puzzle_ratings,
            puzzle_ratings,
            puzzle_daily_selections,

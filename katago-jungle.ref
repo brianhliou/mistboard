@@ -1,0 +1,23 @@
+f7743af9e29bdc27c1dcef17e42086edf07cb076
+# ^ The KataGo-AnimalChess commit the prod image runs (scripts/engine-assets.sh
+# reads the first line; this comment is ignored).
+#
+# KataGo-AnimalChess is hzyhhzy's KataGomo (https://github.com/hzyhhzy/KataGomo,
+# branch AnimalChess2025, MIT like lightvector's KataGo it is built on): KataGo
+# with the jungle (Dou Shou Qi) rules and a two-stage move. It holds the top
+# jungle seat because it won the challenge on brianhliou.com/challenges, 82-0-118
+# against MistyJungle 0.0.6 at 1,000 visits and 0.690 over 50 games at the 150
+# visits the seat serves (mistboard#434; mistboard-engine
+# lab/jungle-katago-2026-09-21). f7743af9 is the branch tip both matches ran,
+# 2026-01-05.
+#
+# Only the binary is built here. The net (b10c384, 2026-02-28) ships inside
+# Kouza's (lxsgx23) Dandelion 4 GUI release, so railpack.json downloads that zip
+# at image build time (scripts/fetch-katago-jungle-net.sh), checks the zip's and
+# the net's sha256, and never puts the net in a release of ours. hzyhhzy agreed
+# to the site running the engine with that net (hzyhhzy/KataGomo#12,
+# "Agree, no problem"), credited.
+#
+# Eigen CPU backend, built with AVX2/FMA (engine-assets.sh KATA_CMAKE_FLAGS): its
+# strength is the net, and prod web's EPYC has avx2 (checked for AB-JChess,
+# 2026-09-30). Linked static, so the image's glibc does not matter.

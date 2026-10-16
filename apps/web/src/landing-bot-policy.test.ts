@@ -1,14 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import {
   fairyStockfishLevel,
+  JIEQI_FIRST_GAME_LEVEL,
+  jieqiPrimaryLevel,
   LANDING_BOT_GAME_SPEC_IDS,
+  landingBotLadder,
+  landingBotLadderIndex,
   landingBotLineup,
   landingBotOffer,
   landingBotRotationBucket,
   landingLobbyBotOffer,
   landingXiangqiBotOffers,
+  pikafishJieqiLevel,
+  playableBotIdsBySpec,
+  pveEngineIdForRememberedPick,
   xiangqiPrimaryLevel,
 } from './landing-bot-policy.js';
+import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
 describe('landing bot policy', () => {
   it('uses shared six-hour UTC buckets', () => {
@@ -19,21 +27,21 @@ describe('landing bot policy', () => {
     expect(after).toBe(before + 1);
   });
 
-  it('shows seven distinct variants and covers the full shelf in any two buckets', () => {
+  it('shows six distinct variants and covers the full shelf in any two buckets', () => {
     for (let bucket = 0; bucket < 3; bucket++) {
       const current = landingBotLineup(bucket);
       const next = landingBotLineup(bucket + 1);
 
-      expect(current).toHaveLength(7);
-      expect(new Set(current).size).toBe(7);
+      expect(current).toHaveLength(6);
+      expect(new Set(current).size).toBe(6);
       expect(new Set([...current, ...next])).toEqual(new Set(LANDING_BOT_GAME_SPEC_IDS));
     }
   });
 
-  it('pins one stable FSF opponent per variant, at the variant default pace', () => {
-    // Xiangqi is a deliberate variant: it defaults to 10+5, not the 3+2 house
-    // pace, because guests flagged 36% of their games at 3+2. The offer has to
-    // advertise that, since the click starts the picker on the same default.
+  it('pins one stable FSF opponent per variant, at the bot default pace', () => {
+    // Every bot game defaults to 10+5, not the 3+2 house pace, because guests
+    // flagged a third of their xiangqi and jieqi bot games at 3+2. The offer has
+    // to advertise that, since the click starts the picker on the same default.
     // A device with no remembered xiangqi engine is a first-time visitor and
     // gets the bottom rung (#365); see the memory cases below.
     expect(landingBotOffer('xiangqi')).toMatchObject({
@@ -41,10 +49,10 @@ describe('landing bot policy', () => {
       botName: 'Fairy-Stockfish Level 2',
       timeControlId: '10m5',
     });
-    // Fortress xiangqi has no default of its own, so it keeps the house pace.
-    expect(landingBotOffer('fortress-xiangqi')).toMatchObject({
+    // Duck xiangqi keeps 3+2 for human games, but its bot game is 10+5.
+    expect(landingBotOffer('duck-xiangqi')).toMatchObject({
       botId: 'fairy-stockfish-level-4',
-      timeControlId: '3m2',
+      timeControlId: '10m5',
     });
   });
 
@@ -88,8 +96,58 @@ describe('landing bot policy', () => {
     ).toMatchObject({ botId: 'fairy-stockfish-level-8', timeControlId: '10m5' });
     // Only xiangqi reads the memory; the other variants keep their fixed bot.
     expect(
-      landingBotOffer('fortress-xiangqi', { rememberedXiangqiBotId: 'fairy-stockfish-level-8' }),
+      landingBotOffer('duck-xiangqi', { rememberedXiangqiBotId: 'fairy-stockfish-level-8' }),
     ).toMatchObject({ botId: 'fairy-stockfish-level-4' });
+  });
+
+  it('starts a first-time jieqi device on Level 2 and keeps a remembered Pikafish level', () => {
+    // Newcomer: no remembered jieqi bot, same rule as xiangqi.
+    expect(JIEQI_FIRST_GAME_LEVEL).toBe(2);
+    expect(jieqiPrimaryLevel(undefined)).toBe(2);
+    expect(jieqiPrimaryLevel(null)).toBe(2);
+    expect(jieqiPrimaryLevel('')).toBe(2);
+    expect(landingBotOffer('jieqi')).toMatchObject({
+      botId: 'pikafish-level-2',
+      botName: 'Pikafish Level 2',
+      timeControlId: '10m5',
+    });
+    // Remembered: a one-click start stores the bot id, a setup-dialog pick the
+    // engine id; both name the same rung and are kept exactly.
+    expect(jieqiPrimaryLevel('pikafish-level-6')).toBe(6);
+    expect(jieqiPrimaryLevel('pikafish-jieqi-level-3')).toBe(3);
+    expect(jieqiPrimaryLevel('pikafish-level-1')).toBe(1);
+    expect(
+      landingBotOffer('jieqi', { rememberedJieqiBotId: 'pikafish-jieqi-level-5' }),
+    ).toMatchObject({ botId: 'pikafish-level-5', botName: 'Pikafish Level 5' });
+    // Anything else is a returning player, not a newcomer: Level 4.
+    for (const other of [
+      'pikafish',
+      'pikafish-jieqi-strongest',
+      'ab-jchess',
+      'ab-jchess-jieqi',
+      'pikafish-level-8',
+      'pikafish-level-0',
+      'fairy-stockfish-level-2',
+    ]) {
+      expect(jieqiPrimaryLevel(other)).toBe(4);
+    }
+    expect(pikafishJieqiLevel('pikafish-jieqi-level-42')).toBeNull();
+    // The xiangqi memory never moves the jieqi offer, and vice versa.
+    expect(
+      landingBotOffer('jieqi', { rememberedXiangqiBotId: 'fairy-stockfish-level-8' }),
+    ).toMatchObject({ botId: 'pikafish-level-2' });
+    expect(landingBotOffer('xiangqi', { rememberedJieqiBotId: 'pikafish-level-6' })).toMatchObject({
+      botId: 'fairy-stockfish-level-2',
+    });
+  });
+
+  it('opens the setup dialog on the homepage first-game level when nothing is remembered', () => {
+    expect(webVariantTenantForSpecId('jieqi')?.landing?.defaultEngineId).toBe(
+      `pikafish-jieqi-level-${JIEQI_FIRST_GAME_LEVEL}`,
+    );
+    expect(webVariantTenantForSpecId('xiangqi')?.landing?.defaultEngineId).toBe(
+      `fairy-stockfish-xiangqi-level-${xiangqiPrimaryLevel(null)}`,
+    );
   });
 
   describe('lobby rows rotate rung and clock by bucket', () => {
@@ -101,7 +159,7 @@ describe('landing bot policy', () => {
     ) => buckets.map((bucket) => landingLobbyBotOffer(gameSpecId, { bucket, allowedPaces })!);
 
     it('keeps a Fairy-Stockfish rung within one step of its tier and visits all three', () => {
-      for (const gameSpecId of ['fortress-xiangqi', 'duck-xiangqi', 'atomic-xiangqi']) {
+      for (const gameSpecId of ['duck-xiangqi', 'crazyhouse-xiangqi']) {
         const levels = rowsFor(gameSpecId).map((offer) => fairyStockfishLevel(offer.botId));
         expect(new Set(levels)).toEqual(new Set([3, 4, 5]));
         // Three consecutive buckets show three different rungs: a returning
@@ -116,79 +174,233 @@ describe('landing bot policy', () => {
           new Set(['misty']),
         );
       }
-      expect(new Set(rowsFor('jieqi').map((offer) => offer.botId))).toEqual(new Set(['pikafish']));
+      // Jieqi's ladder rows stay on the newcomer level until the ladder is rated.
+      expect(new Set(rowsFor('jieqi').map((offer) => offer.botId))).toEqual(
+        new Set(['pikafish-level-2']),
+      );
     });
 
-    it('rotates the clock through the allowed paces at or slower than the default', () => {
-      // House-pace variants have three slower-or-equal paces and visit them all.
-      for (const gameSpecId of ['banqi', 'fortress-xiangqi', 'jungle', 'jungle-flip']) {
-        expect(new Set(rowsFor(gameSpecId).map((offer) => offer.timeControlId))).toEqual(
-          new Set(['3m2', '5m5', '10m5']),
-        );
-      }
-      expect(
-        new Set(rowsFor('duck-xiangqi', ['3m2', '5m5', '10m5']).map((o) => o.timeControlId)),
-      ).toEqual(new Set(['5m5', '10m5']));
-      // The deliberate variants default to the slowest pace (the 2026-09-01
-      // guest-pace fix), so there is nothing slower to rotate to and they
-      // never drop back to the 3+2 that flagged a third of guest games.
-      for (const gameSpecId of ['xiangqi', 'jieqi', 'atomic-xiangqi']) {
+    it('never rotates the clock below the bot default', () => {
+      // The bot default is the slowest pace, so there is nothing slower to
+      // rotate to, and no row drops back to the 3+2 that flagged a third of
+      // guest games. Holds for the fog engines too: 10+5 clears their floor.
+      for (const gameSpecId of LANDING_BOT_GAME_SPEC_IDS) {
         expect(new Set(rowsFor(gameSpecId).map((offer) => offer.timeControlId))).toEqual(
           new Set(['10m5']),
         );
       }
     });
 
-    it('holds a pinned engine to its pin whatever the picker offers', () => {
-      for (const gameSpecId of ['dark-chess', 'dark-xiangqi']) {
-        expect(new Set(rowsFor(gameSpecId).map((offer) => offer.timeControlId))).toEqual(
-          new Set(['5m5']),
-        );
-      }
-    });
-
     it('never advertises a pace the picker would not start', () => {
-      // A narrowed picker (only 5+5 offered) narrows the rotation with it.
-      expect(new Set(rowsFor('banqi', ['5m5']).map((offer) => offer.timeControlId))).toEqual(
-        new Set(['5m5']),
-      );
-      // An empty set falls back to the variant default rather than a dead row.
+      // An empty set falls back to the bot default rather than a dead row.
       expect(new Set(rowsFor('banqi', []).map((offer) => offer.timeControlId))).toEqual(
-        new Set(['3m2']),
+        new Set(['10m5']),
       );
     });
 
     it('leaves the Quick Pairing offer untouched', () => {
       // The chip shows no name, so it cannot rotate (#365); only the row does.
       for (const bucket of buckets) {
-        expect(landingBotOffer('fortress-xiangqi')).toMatchObject({
+        expect(landingBotOffer('duck-xiangqi')).toMatchObject({
           botId: 'fairy-stockfish-level-4',
-          timeControlId: '3m2',
+          timeControlId: '10m5',
         });
         expect(
-          landingLobbyBotOffer('fortress-xiangqi', { bucket, allowedPaces: ALL_PACES }),
+          landingLobbyBotOffer('duck-xiangqi', { bucket, allowedPaces: ALL_PACES }),
         ).not.toBeNull();
       }
     });
   });
 
   it('uses the established house bot for every other supported variant', () => {
-    expect(landingBotOffer('jieqi')?.botId).toBe('pikafish');
-    for (const gameSpecId of ['banqi', 'jungle', 'jungle-flip']) {
+    expect(landingBotOffer('jieqi')?.botId).toBe('pikafish-level-2');
+    // Every Misty variant, fog included, advertises the 10+5 bot default. For
+    // the fog engines it also clears the 5s increment floor (#283) the picker
+    // and the create routes enforce (isAllowedEngineTimeControl).
+    for (const gameSpecId of ['banqi', 'jungle', 'jungle-flip', 'dark-chess', 'dark-xiangqi']) {
       expect(landingBotOffer(gameSpecId)).toMatchObject({
         botId: 'misty',
-        timeControlId: '3m2',
+        timeControlId: '10m5',
       });
     }
-    // The fog variants are the exception to the house pace: their engines have
-    // a per-move floor a 2s increment cannot cover, so they lose on time in
-    // long games (#283) and their offers take the 5+5 pin the picker and the
-    // create routes also enforce (engineTimeControlPin).
-    for (const gameSpecId of ['dark-chess', 'dark-xiangqi']) {
-      expect(landingBotOffer(gameSpecId)).toMatchObject({
-        botId: 'misty',
-        timeControlId: '5m5',
-      });
+  });
+
+  it('maps a remembered jieqi bot to the engine the setup menu lists', () => {
+    const menu = webVariantTenantForSpecId('jieqi')?.landing?.engineOptions?.map((e) => e.id) ?? [];
+    for (const botId of ['pikafish', 'pikafish-level-1', 'pikafish-level-4', 'pikafish-level-7']) {
+      expect(menu).toContain(pveEngineIdForRememberedPick('jieqi', botId));
     }
+    expect(pveEngineIdForRememberedPick('jieqi', 'pikafish')).toBe('pikafish-jieqi-strongest');
+    expect(pveEngineIdForRememberedPick('jieqi', 'pikafish-jieqi-level-3')).toBe(
+      'pikafish-jieqi-level-3',
+    );
+    expect(pveEngineIdForRememberedPick('xiangqi', 'pikafish')).toBe('pikafish-xiangqi-level-8');
+  });
+
+  it('maps a remembered xiangqi bot to the engine the setup menu lists', () => {
+    const menu =
+      webVariantTenantForSpecId('xiangqi')?.landing?.engineOptions?.map((e) => e.id) ?? [];
+    for (const botId of ['pikafish', 'fairy-stockfish-level-1', 'fairy-stockfish-level-8']) {
+      expect(menu).toContain(pveEngineIdForRememberedPick('xiangqi', botId));
+    }
+    expect(pveEngineIdForRememberedPick('xiangqi', 'fairy-stockfish-level-5')).toBe(
+      'fairy-stockfish-xiangqi-level-5',
+    );
+    expect(pveEngineIdForRememberedPick('xiangqi', 'fairy-stockfish-xiangqi-level-3')).toBe(
+      'fairy-stockfish-xiangqi-level-3',
+    );
+    // The dialog's engine id reads back as the same rung on the homepage.
+    expect(xiangqiPrimaryLevel('fairy-stockfish-xiangqi-level-7')).toBe(7);
+    expect(xiangqiPrimaryLevel('fairy-stockfish-xiangqi-level-9')).toBe(5);
+    // Other variants keep their ids untouched.
+    expect(pveEngineIdForRememberedPick('duck-xiangqi', 'fairy-stockfish-level-5')).toBe(
+      'fairy-stockfish-level-5',
+    );
+  });
+
+  it('maps a remembered KataGo bot to the jungle engine the setup menu lists', () => {
+    const menu =
+      webVariantTenantForSpecId('jungle')?.landing?.engineOptions?.map((e) => e.id) ?? [];
+    expect(menu).toContain(pveEngineIdForRememberedPick('jungle', 'katago'));
+    expect(pveEngineIdForRememberedPick('jungle', 'katago')).toBe('katago-jungle');
+    expect(pveEngineIdForRememberedPick('jungle', 'misty-jungle-level-2')).toBe(
+      'misty-jungle-level-2',
+    );
+  });
+});
+
+describe('landing bot ladder (homepage play panel)', () => {
+  const ids = (spec: string) => landingBotLadder(spec).map((rung) => rung.botId);
+
+  // These ids must exist in apps/server/src/first-party-bots.ts for the variant,
+  // or the one-click create fails. Pinned here because the web cannot import it.
+  it('walks xiangqi Fairy-Stockfish 1-8, then full-strength Pikafish', () => {
+    expect(ids('xiangqi')).toEqual([
+      ...Array.from({ length: 8 }, (_, i) => `fairy-stockfish-level-${i + 1}`),
+      'pikafish',
+    ]);
+  });
+
+  it('walks jieqi Pikafish Levels 1-8 (Level 8 is the pikafish bot), then AB-JChess', () => {
+    expect(ids('jieqi')).toEqual([
+      ...Array.from({ length: 7 }, (_, i) => `pikafish-level-${i + 1}`),
+      'pikafish',
+      'ab-jchess',
+    ]);
+    expect(landingBotLadder('jieqi').map((rung) => rung.level)).toEqual([
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      null,
+    ]);
+  });
+
+  it('gives the other Fairy-Stockfish variants eight levels and no named top', () => {
+    for (const spec of ['duck-xiangqi', 'crazyhouse-xiangqi']) {
+      expect(ids(spec)).toEqual(
+        Array.from({ length: 8 }, (_, i) => `fairy-stockfish-level-${i + 1}`),
+      );
+    }
+  });
+
+  it('offers no ladder, row or chip for a retired variant', () => {
+    for (const spec of ['fortress-xiangqi', 'atomic-xiangqi']) {
+      expect(ids(spec)).toEqual([]);
+      expect(landingBotOffer(spec)).toBeNull();
+      expect(landingLobbyBotOffer(spec, { bucket: 0, allowedPaces: ['10m5'] })).toBeNull();
+      expect(LANDING_BOT_GAME_SPEC_IDS).not.toContain(spec);
+      for (const bucket of [0, 1]) expect(landingBotLineup(bucket)).not.toContain(spec);
+    }
+  });
+
+  it('marks only the rungs that play on a trained net as NNUE', () => {
+    const nnue = (spec: string) =>
+      landingBotLadder(spec)
+        .filter((rung) => rung.net === 'nnue')
+        .map((rung) => rung.botId);
+    expect(nnue('xiangqi')).toEqual(['fairy-stockfish-level-8', 'pikafish']);
+    expect(nnue('jieqi')).toEqual(['ab-jchess']);
+    expect(nnue('duck-xiangqi')).toEqual([]);
+    expect(nnue('banqi')).toEqual([]);
+  });
+
+  it('gives the house-built variants a single Misty', () => {
+    for (const spec of ['dark-chess', 'dark-xiangqi', 'banqi', 'jungle', 'jungle-flip']) {
+      expect(ids(spec)).toEqual(['misty']);
+    }
+    expect(ids('not-a-variant')).toEqual([]);
+  });
+
+  it('puts KataGo above Misty in jungle only where the server can seat it', () => {
+    const jungle = (playable: string[]) =>
+      landingBotLadder('jungle', new Set(playable)).map((rung) => rung.botId);
+    expect(jungle([])).toEqual(['misty']);
+    expect(jungle(['misty'])).toEqual(['misty']);
+    expect(jungle(['misty', 'katago'])).toEqual(['misty', 'katago']);
+    // Flip Jungle has no KataGo seat, whatever the roster says.
+    expect(
+      landingBotLadder('jungle-flip', new Set(['misty', 'katago'])).map((r) => r.botId),
+    ).toEqual(['misty']);
+    const top = landingBotLadder('jungle', new Set(['katago']))[1];
+    expect(top).toMatchObject({ name: 'KataGo', engine: 'KataGo', level: null, net: 'neural' });
+  });
+
+  it('keeps Misty as the jungle starter when KataGo is offered', () => {
+    const ladder = landingBotLadder('jungle', new Set(['katago']));
+    expect(ladder[landingBotLadderIndex(ladder, landingBotOffer('jungle')?.botId)]?.botId).toBe(
+      'misty',
+    );
+    // A pick remembered as the bot id or the setup dialog's engine id lands on KataGo.
+    expect(ladder[landingBotLadderIndex(ladder, 'katago')]?.botId).toBe('katago');
+    expect(ladder[landingBotLadderIndex(ladder, 'katago-jungle')]?.botId).toBe('katago');
+    // Not offered: the remembered pick misses and the caller falls back to Misty.
+    expect(landingBotLadderIndex(landingBotLadder('jungle'), 'katago-jungle')).toBe(-1);
+  });
+
+  it('reads the playable bots per variant from the /api/bots roster', () => {
+    const bySpec = playableBotIdsBySpec([
+      {
+        id: 'misty',
+        playOptions: [
+          { gameSpecId: 'jungle', playable: true },
+          { gameSpecId: 'jungle-flip', playable: true },
+        ],
+      },
+      { id: 'katago', playOptions: [{ gameSpecId: 'jungle', playable: false }] },
+      { id: 'ab-jchess' },
+    ]);
+    expect([...(bySpec.get('jungle') ?? [])]).toEqual(['misty']);
+    expect([...(bySpec.get('jungle-flip') ?? [])]).toEqual(['misty']);
+    expect(bySpec.has('jieqi')).toBe(false);
+    expect(
+      playableBotIdsBySpec([
+        { id: 'katago', playOptions: [{ gameSpecId: 'jungle', playable: true }] },
+      ]).get('jungle'),
+    ).toEqual(new Set(['katago']));
+  });
+
+  it('starts every ladder variant on a rung its canonical offer names', () => {
+    for (const spec of LANDING_BOT_GAME_SPEC_IDS) {
+      const offer = landingBotOffer(spec);
+      expect(landingBotLadderIndex(landingBotLadder(spec), offer?.botId)).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('maps the setup dialog’s remembered jieqi engines back onto the ladder', () => {
+    const ladder = landingBotLadder('jieqi');
+    expect(ladder[landingBotLadderIndex(ladder, 'pikafish-jieqi-level-5')]?.botId).toBe(
+      'pikafish-level-5',
+    );
+    expect(ladder[landingBotLadderIndex(ladder, 'pikafish-jieqi-strongest')]?.botId).toBe(
+      'pikafish',
+    );
+    expect(ladder[landingBotLadderIndex(ladder, 'ab-jchess-jieqi')]?.botId).toBe('ab-jchess');
+    expect(landingBotLadderIndex(ladder, 'something-else')).toBe(-1);
+    expect(landingBotLadderIndex(ladder, null)).toBe(-1);
   });
 });

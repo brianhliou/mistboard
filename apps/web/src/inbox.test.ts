@@ -1,5 +1,41 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+describe('fitComposerInput', () => {
+  function textarea(scrollHeight: number): HTMLTextAreaElement {
+    const input = document.createElement('textarea');
+    Object.defineProperty(input, 'scrollHeight', { configurable: true, value: scrollHeight });
+    Object.defineProperty(input, 'offsetHeight', { configurable: true, value: 56 });
+    Object.defineProperty(input, 'clientHeight', { configurable: true, value: 54 });
+    return input;
+  }
+
+  it('keeps one line as a pill with no scrollbar', async () => {
+    const { fitComposerInput } = await import('./inbox.js');
+    const input = textarea(54);
+    fitComposerInput(input);
+    expect(input.style.height).toBe('56px');
+    expect(input.classList.contains('is-multiline')).toBe(false);
+    expect(input.style.overflowY).toBe('hidden');
+  });
+
+  it('grows with a multi-line message and drops the pill shape', async () => {
+    const { fitComposerInput } = await import('./inbox.js');
+    const input = textarea(140);
+    fitComposerInput(input);
+    expect(input.style.height).toBe('142px');
+    expect(input.classList.contains('is-multiline')).toBe(true);
+    expect(input.style.overflowY).toBe('hidden');
+  });
+
+  it('caps the height and scrolls past it', async () => {
+    const { fitComposerInput } = await import('./inbox.js');
+    const input = textarea(600);
+    fitComposerInput(input);
+    expect(input.style.height).toBe('220px');
+    expect(input.style.overflowY).toBe('auto');
+  });
+});
+
 describe('inbox page', () => {
   beforeEach(() => {
     vi.useFakeTimers();

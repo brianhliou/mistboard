@@ -1,4 +1,3 @@
-import { JUNGLE_SAMPLE_GAME } from '../../jungle-sample-game.js';
 import {
   JUNGLE_DEN_ENTRY,
   JUNGLE_ELEPHANT_STUCK,
@@ -18,14 +17,14 @@ import {
   JUNGLE_TRAP,
   playClosing,
 } from '../diagrams.js';
-import type { Article } from '../types.js';
+import type { Article, ArticleBlock } from '../types.js';
 
 export const jungleArticle: Article = {
   slug: 'jungle',
   kind: 'rules',
   title: 'Jungle Chess Rules (Dou Shou Qi, Animal Chess)',
   summary:
-    "Jungle Chess, also called Dou Shou Qi or Animal Chess: eight ranked animals on a 7 by 9 board, rivers only the rat can cross, and a race to the opponent's den. Play rated games and analyse them free in your browser.",
+    "Jungle Chess, also called Dou Shou Qi or Animal Chess, puts eight ranked animals on a 7 by 9 board, and the first to walk into the other's den wins. The rat, the lowest rank, can take the elephant, the highest.",
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-30',
@@ -204,18 +203,19 @@ export const jungleArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'This engine game shows a lion leap, a rat swim and capture an elephant, and the final entry into Blue’s den.',
+          text: 'An engine game from a 200-game match between KataGo-AnimalChess (Red) and Mistboard’s own engine (Blue), and it uses nearly every rule on this page. Blue’s tiger jumps the left river sideways on move 11, and its lion jumps the right one on move 13. On move 38 Red’s lion jumps the river lengthwise, and on move 40 Red’s rat, standing on land, takes Blue’s elephant. Three moves later a wolf takes a tiger standing in Red’s own trap, where it has no rank left, and on move 47 Red walks into Blue’s den.',
         },
         {
-          kind: 'jungle-replay',
-          spec: {
-            red: JUNGLE_SAMPLE_GAME.red,
-            black: JUNGLE_SAMPLE_GAME.black,
-            event: JUNGLE_SAMPLE_GAME.event,
-            outcome: JUNGLE_SAMPLE_GAME.outcome,
-            resultText: JUNGLE_SAMPLE_GAME.result,
-            moves: JUNGLE_SAMPLE_GAME.moves,
-          },
+          kind: 'embed',
+          path: '/embed/study/0t8xpyv6/QMMg2Yz8',
+          title: 'Jungle: an engine game with river jumps, a rat taking the elephant, and a den entry',
+          // Width-bound at the 702px column: the 7x9 board gets the column
+          // minus the move sheet, plus seat rows, controls, header and credit.
+          aspect: [702, 780],
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: 'All 200 games are in the [companion study](/study/0t8xpyv6), with the sideways tiger jumps and the shortest and longest wins picked out first.',
         },
       ],
     },
@@ -253,7 +253,7 @@ export const jungleArticle: Article = {
             {
               question: 'Is there a winning strategy for Jungle Chess?',
               answer:
-                'No forced win is known. Dou Shou Qi has been solved only up to seven pieces on the board, and the full sixteen-piece game is open. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.',
+                'No forced win is known. Dou Shou Qi is unsolved: the largest published endgame tablebase covers positions with up to four pieces, against sixteen at the start. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.',
             },
             {
               question: 'What other names does Jungle Chess have?',
@@ -266,7 +266,7 @@ export const jungleArticle: Article = {
     },
     playClosing({
       heading: 'Play on Mistboard',
-      lead: 'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+      lead: 'A rat on land can take the elephant, and the elephant can never take a rat. No account needed.',
       playLabel: 'Play vs computer',
       playHref: '/?play=computer&gameSpecId=jungle',
       secondary: [
@@ -275,6 +275,7 @@ export const jungleArticle: Article = {
           href: '/?play=friend&gameSpecId=jungle',
           emphasis: 'secondary',
         },
+        { label: 'The 200 engine games', href: '/study/0t8xpyv6', emphasis: 'secondary' },
       ],
     }),
   ],

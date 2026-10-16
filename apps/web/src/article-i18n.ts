@@ -12,6 +12,7 @@
 // (head term 迷雾国际象棋 / 迷霧國際象棋 validated against the zh chess-variant
 // community; Traditional carries the Taiwan lexical forks, not a glyph conversion).
 import { hasOwnKey } from '@mistboard/game';
+import { endgamePageDictionary } from './articles/xiangqi-endgames-text.js';
 import type { Article } from './articles-data.js';
 import { contentLocalePrefix, type Locale, localizedHref } from './i18n/locale.js';
 
@@ -32,10 +33,73 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-10, not native-reviewed; the 10-14 English edits
+  // (shogi bakazume, the generator's limits) re-translated 2026-10-15 and
+  // locked with the English, which publishes in the same release.
+  'helpmates-in-xiangqi',
+  // Machine-drafted 2026-10-14, not native-reviewed, a day after the English
+  // copy published (2026-10-13) with English zh pages, which is what added
+  // UNTRANSLATED_ARTICLE_SLUGS and its gate.
+  'fortress-and-atomic-xiangqi-on-hold',
+  // Machine-drafted 2026-10-10, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (jieqi readers are mostly Chinese).
+  'jieqi-puzzle-search',
+  // Machine-drafted 2026-10-09, not native-reviewed, locked with its English
+  // copy, which publishes in the same release.
+  'banqi-perpetual-chase',
+  // Machine-drafted 2026-10-08, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the brianhliou.com draft of
+  // 2026-10-08, folded in before it was posted).
+  'longest-forced-mates-xiangqi',
+  // Machine-drafted 2026-10-07, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the fe26e31c repetition-key fix).
+  'chariot-cannon-repetition-key',
+  // Machine-drafted 2026-10-07, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the brianhliou.com post of
+  // 2026-07-02, folded in; sentences reused from its zh versions).
+  'flip-jungle-skill-ceiling',
+  // Machine-drafted 2026-10-07, not native-reviewed; every string is generated
+  // from articles/xiangqi-endgames-text.ts, which holds all three scripts.
+  'xiangqi-endgames',
+  // Machine-translated 2026-10-07, locked with its English copy, which
+  // publishes in the same release. Board headings and legends are SVG text,
+  // swapped by localizeSvgMarkup; the two charts have per-locale files.
+  'duck-xiangqi-game-tree',
+  // Machine-drafted 2026-10-06, not native-reviewed, locked with its English
+  // copy, which publishes in the same release. Terms follow the 2026-10-01
+  // brianhliou.com write-up of the same audit (排局, 连将杀, 双解, 错谱, 困毙).
+  'solver-audit',
+  // Machine-drafted 2026-10-02, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (the AB-JChess post's follow-up).
+  'pikafish-reveal-bug',
+  // copy, which publishes in the same release (the AB-JChess post's pattern).
+  'katago-jungle',
+  // Machine-drafted 2026-10-01, not native-reviewed, locked the day after the
+  // English copy published (2026-09-30); its News entry was already in zh.
+  'one-thousand-games',
+  // Machine-drafted 2026-09-30, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (jieqi readers are mostly Chinese).
+  'ab-jchess',
+  // Machine-drafted 2026-09-30, not native-reviewed, locked with its English
+  // copy, which publishes in the same release. Jieqi's readers are mostly
+  // Chinese-speaking, so the zh pages ship with the English one.
+  'jieqi-bot-wins',
   // Machine-drafted 2026-09-21, not native-reviewed, locked the day the English
   // copy published. First player page; the xiangqi terms follow the champions
   // and world-title dictionaries (仙人指路, 飞相, 中炮, 车马炮).
   'yin-sheng',
+  // Machine-drafted 2026-09-25, not native-reviewed. The second player page;
+  // locked with its English copy, which publishes in the same release.
+  'cao-yanlei',
+  // Machine-drafted 2026-10-01, not native-reviewed. The third player page; locked
+  // with its English copy, which publishes in the same release.
+  'lai-ly-huynh',
+  // Machine-drafted 2026-10-03. The fourth player page; locked with its English
+  // copy, which publishes in the same release.
+  'tony-fung-ga-zen',
+  // Machine-drafted 2026-10-11, not native-reviewed. The fifth player page;
+  // locked with its English copy, which publishes in the same release.
+  'zuo-wenjing',
   // Machine-drafted 2026-09-03, not native-reviewed, locked the day the English
   // copy published. The openings article's dictionary was already complete and
   // waiting: the lock requires a PUBLISHED article, so it could not be listed
@@ -91,23 +155,52 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'jungle-flip',
   'fortress-xiangqi',
   // Machine-drafted 2026-09-11, not native-reviewed, locked the day the English
-  // copy froze. The rules page only so far: duck-xiangqi-build was published
+  // copy froze. The rules page only so far: duck-xiangqi-strategy was published
   // after this list was written and is not translated yet, so it is English
   // until its own copy is frozen.
   'duck-xiangqi',
   // Machine-drafted 2026-09-13, not native-reviewed, locked the day the English
   // copy published (the anti article) and two days after (the duck build post).
-  'duck-xiangqi-build',
+  'duck-xiangqi-strategy',
   'anti-xiangqi',
   // Machine-drafted 2026-09-15, locked the day the English copy published.
   'horde-xiangqi',
+  // Machine-drafted 2026-10-07, not native-reviewed, from the zh-hans and
+  // zh-hant brianhliou.com posts; locked the day the English copy publishes.
+  'benedict-xiangqi',
   // Machine-drafted 2026-09-17, not native-reviewed, locked the day the rules
   // page and the launch note were listed.
   'atomic-xiangqi',
   'atomic-xiangqi-build',
+  // Machine-drafted 2026-10-01, not native-reviewed, locked the day the rules
+  // page was listed with the public launch. Terms follow Fortress's (持子,
+  // 打入) and the site's variant name (疯狂屋象棋 / 瘋狂屋象棋).
+  'crazyhouse-xiangqi',
   'misty',
   'server-enforced-fog',
 ] as const;
+
+// Published articles that deliberately have no zh pages, each with its reason.
+// Every published article is in TRANSLATED_ARTICLE_SLUGS or here, and
+// article-i18n.coverage.test.ts fails one in neither: an opt-in list alone let
+// fortress-and-atomic-xiangqi-on-hold go live on 2026-10-13 with English zh
+// pages and every test green.
+export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
+  mahjong:
+    'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
+  'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
+  // Vietnamese renders of a translated English article (derived-translation.ts);
+  // a zh reader gets the source article's zh page.
+  'choi-co-tuong-voi-may': 'Vietnamese copy of pikafish, whose zh pages exist.',
+  'co-up': 'Vietnamese copy of jieqi-platform, whose zh pages exist.',
+  'khai-cuoc-co-up': 'Vietnamese copy of jieqi-openings, whose zh pages exist.',
+  'lai-ly-huynh-co-tuong': 'Vietnamese copy of lai-ly-huynh, whose zh pages exist.',
+  // Chess posts moved from brianhliou.com on 2026-10-15 with their original dates;
+  // their old zh pairs were dropped, so zh waits for a translation of the moved text.
+  'en-passant-under-fog': 'Moved from brianhliou.com in English; not yet translated.',
+  'most-played-move': 'Moved from brianhliou.com in English; not yet translated.',
+  'chess960-starting-positions': 'Moved from brianhliou.com in English; not yet translated.',
+};
 
 const TRANSLATED_ARTICLE_SLUG_SET = new Set<string>(TRANSLATED_ARTICLE_SLUGS);
 
@@ -132,12 +225,1466 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // jieqi-puzzle-search: machine-drafted 2026-10-10, not native-reviewed. Terms follow ab-jchess and jieqi-bot-wins (暗子, 翻子, 暗吃, 胜率, 访客, 皮卡鱼); 题目 for puzzle as in how-puzzle-mining-works.
+  'Looking for jieqi puzzles': '在揭棋里找题目',
+  'We searched 2,939 positions from 50 jieqi games for puzzles. 58 had one clearly best move and 15 of those turned on a hidden piece. None of the 15 passed the rules our xiangqi puzzles go through, and we stopped looking.':
+    '我们在 50 盘揭棋对局的 2,939 个局面里寻找题目。58 个局面有一步明显最好的着法，其中 15 个取决于一枚暗子。这 15 个没有一个通过我们象棋题目要过的规则，于是我们不再寻找。',
+  'We scored 2,939 positions from 50 jieqi games. 58 had one clearly best move, and 15 of those turned on a face-down piece.':
+    '我们给 50 盘揭棋对局中的 2,939 个局面打了分。58 个局面有一步明显最好的着法，其中 15 个取决于一枚暗子。',
+  'Four positions passed the rules our xiangqi puzzles go through, and none turns on a hidden piece. The hidden-piece answers were bets or moves the tile hardly touched.':
+    '有四个局面通过了我们象棋题目要过的规则，没有一个取决于暗子。取决于暗子的答案，要么是赌博，要么是暗子几乎无关的着法。',
+  'Skill shows in timing: a tile on its starting square moves as its home piece, so a capture it threatens can usually wait.':
+    '实力体现在时机上：停在原位的暗子按原位棋子的走法走，所以它威胁的吃子通常可以等一等。',
+  'In [jieqi](/rules/jieqi), every piece except the generals starts face down, and a piece shows what it is when it first moves. A xiangqi puzzle asks for a forced line, and in jieqi a forced line rarely gets past the first piece that turns over, because nobody knows yet what it will be.':
+    '在[揭棋](/rules/jieqi)里，除将帅以外的每一枚棋子开局时都是暗子，第一次走动时才亮出身份。象棋题目要求一条强制着法，而在揭棋里，强制着法很少能越过第一枚被翻开的棋子，因为谁也不知道它会是什么。',
+  'In October we asked a different question. If a jieqi puzzle is a decision under uncertainty, the way a poker hand is, does the game produce them? We have stopped looking, and the last section says what would make us start again.':
+    '10 月，我们换了一个问题。如果揭棋题目是一种不确定条件下的决策，就像一手扑克牌，那么这个棋会产生这样的题目吗？我们已经不再寻找，最后一节说明什么情况会让我们重新开始。',
+  'How we looked': '我们怎么找',
+  'We took the 50 most recent finished jieqi games on the site with 20 plies or more, 2,939 positions in all. All 50 were played on 8 October by guests against a bot: 34 against [AB-JChess](/blog/ab-jchess), 13 against Pikafish at level 2 and 3 against full-strength Pikafish.':
+    '我们取了本站最近 50 盘已结束、至少 20 个半回合的揭棋对局，共 2,939 个局面。50 盘都是 10 月 8 日访客对电脑下的：34 盘对 [AB-JChess](/blog/ab-jchess)，13 盘对 2 级皮卡鱼，3 盘对全强度皮卡鱼。',
+  "AB-JChess scored the candidate moves in every position. A move that turns a piece over was scored once for each piece it could be, and the scores were averaged, weighted by how many of each piece the side to move had not yet seen. The site's jieqi game review grades a reveal the same way, from only what the player could know.":
+    'AB-JChess 为每个局面的候选着法打分。一步会翻开棋子的着法，按它可能是的每种棋子各打一次分，再按走子方尚未见过的每种棋子的数量加权平均。本站的揭棋对局复盘也是这样给翻子评分的，只用棋手能知道的信息。',
+  'A position counted when the best move beat the second best by at least 15 points of winning chance, both at our standard depth and at four times that, with every move searched to at least one full ply.':
+    '一个局面要算数，最佳着法必须比次佳着法高出至少 15 个百分点的胜率，在我们的标准深度和四倍深度下都是如此，并且每步着法都至少搜索满一个半回合。',
+  'What turned up': '找到了什么',
+  '58 positions passed, from 24 of the 50 games. 43 of them are ordinary tactics with a quiet move as the answer, and 15 of those never touch a face-down piece in the first five plies of the line. They are xiangqi puzzles that happen to come from jieqi games.':
+    '有 58 个局面通过，来自 50 盘中的 24 盘。其中 43 个是普通战术，答案是一步不吃子的着法，这当中有 15 个在着法的前五个半回合里根本不碰暗子。它们是恰好出自揭棋对局的象棋题目。',
+  'The other 15 turn on a hidden piece, and they come in two kinds. Of the 58, 25 had a person to move, and the person found the answer 19 times.':
+    '另外 15 个取决于一枚暗子，分为两类。58 个局面中有 25 个轮到真人走，真人找到答案 19 次。',
+  'The lottery ticket': '彩票',
+  'The side to move is lost on every quiet move, and one tile could save it. We found five, all from lost positions, and the right answer usually loses.':
+    '走子方走任何不吃子的着法都输，只有一枚暗子能救。我们找到五个，都出自已输的局面，正确答案通常也会输。',
+  'Black to move. Black has two tiles left, and from where Black sits each could be a soldier, horse, chariot or cannon. The a10 tile moves as a chariot on its first move, whatever it is, so a10-a1 lands on the back rank. If it turns out to be a chariot it is mate; anything else and it is lost. That is one chance in four, 25%, against 2% for the next best move. Black played it and turned over a soldier.':
+    '黑方走。黑方还剩两枚暗子，从黑方的角度看，每一枚都可能是卒、马、车或炮。a10 的暗子第一步无论是什么都按车走，所以 a10-a1 落在底线上。如果翻出车就是杀棋；翻出别的就输。这是四分之一的机会，25%，而次佳着法只有 2%。黑方走了这步，翻出一个卒。',
+  'Lottery ticket: Black to move, the game as dealt': '彩票：黑方走，按实际发到的暗子',
+  "One chance in four was right for what Black could see, and the ticket was blank all the same. A piece taken face down leaves the board without being shown to its owner, so Black's count of unseen pieces still included two that were already gone.":
+    '从黑方能看到的信息来说，四分之一的机会是对的，可这张彩票照样没中。一枚被暗吃的棋子离开棋盘时不会亮给它的主人看，所以黑方算的未见棋子里，仍包括两枚早已不在的棋子。',
+  'Black piece not yet seen': '尚未见过的黑方棋子',
+  'Where it really was': '它实际在哪里',
+  'Taken face down by Red on its move 17': '红方在其第 17 回合暗吃',
+  'Taken face down by Red on its move 20': '红方在其第 20 回合暗吃',
+  'The tile on a10': 'a10 的暗子',
+  'The tile on i10': 'i10 的暗子',
+  'Four pieces for two tiles, so each tile was a chariot one time in four from where Black sat. The chariot had left the board 11 moves earlier.':
+    '两枚暗子对应四种棋子，所以从黑方的角度看，每一枚暗子是车的机会都是四分之一。而车早在 11 回合前就已离开棋盘。',
+  'The same move with a chariot dealt to a10: mate. This is the deal Black was playing for, and it was not possible in this game.':
+    '同一步棋，假如 a10 发到的是车：杀棋。这是黑方期待的发子，而在这盘棋里它不可能出现。',
+  'Lottery ticket: the same position if a10 were the chariot': '彩票：假如 a10 是车，同一局面',
+  "Black to move. a10-a1, taking Red's face-down piece, and a10-b10 turn over the same tile, a soldier or a chariot at even odds from where Black sat. If it is the chariot, a10-a1 wins 95 to 98% of the time whatever it captured, and a10-b10 48%. On average that is 49.2% against 24.1%. Black found it, and turned over a soldier: Red had taken Black's chariot face down on its second move.":
+    '黑方走。a10-a1 吃掉红方的暗子，a10-b10 也翻开同一枚暗子，从黑方的角度看，是卒还是车各占一半。如果是车，a10-a1 无论吃到什么都有 95% 到 98% 的胜率，a10-b10 则是 48%。平均下来是 49.2% 对 24.1%。黑方找到了这步，翻出一个卒：红方在第二回合就暗吃了黑方的车。',
+  'Double or nothing: Black to move, the game as played': '孤注一掷：黑方走，实战局面',
+  'A stored move': '留着的一步',
+  'A capture that wins whatever the tile turns out to be can wait: in the game below it stayed available for six turns. It works because a face-down tile moves as the piece whose starting square it stands on, so its first move, capture included, does not depend on the deal.':
+    '一步无论暗子翻出什么都能赢的吃子可以等：在下面这盘棋里，它在六个回合里一直都在。原因是暗子按它所在原位的棋子走法走，所以它的第一步，包括吃子，并不取决于发到什么。',
+  "In 46 of the 2,939 positions a face-down tile could make a capture that won whatever the tile turned out to be. They came from 22 such captures, and the same capture was often there turn after turn; one stayed on the board for eight of its owner's turns. Nine were played. Holding one was usually free: in all but two of the 46 positions another move came within 15 points of it, and those two are one capture on consecutive turns, shown further down.":
+    '在 2,939 个局面中，有 46 个局面里一枚暗子能吃子，而且无论翻出什么都赢。它们来自 22 次这样的吃子，同一个吃子常常一回合接一回合地留着；有一个在它主人的八个回合里一直都在。最后走出的有九次。留着通常不吃亏：46 个局面里，除两个以外，都有另一步着法与它相差不到 15 个百分点，而那两个是连续两回合里的同一个吃子，下文会展示。',
+  "Black to move. The i10 tile can run down the file as a chariot and take Red's i4 tile on this turn and each of the next five. Black plays elsewhere, the capture stays, and its score rises from 85% to 97%. Black takes on move 15; the tile is an elephant.":
+    '黑方走。i10 的暗子可以按车沿直线冲下去，在这一回合和接下来的五个回合里吃掉红方 i4 的暗子。黑方走别处，这个吃子一直留着，它的分数从 85% 升到 97%。黑方在第 15 回合吃掉；那枚暗子是象。',
+  'A stored capture: Black waits five turns, then takes': '留着的吃子：黑方等了五个回合才吃',
+  'Which tile': '翻哪一枚',
+  'The question is which face-down piece to move, and the right one works whatever it turns out to be. We found ten.':
+    '问题是走哪一枚暗子，而正确的那枚无论翻出什么都成立。我们找到十个。',
+  "In the example below Black threatens d5xd1 check, with mate on the next move. Four of Red's 38 moves stop it. c1-a3 is the best of them, and it works by getting out of the way: the a1 tile moves as a chariot, so with c1 empty it can take back on d1. The tile on c1 can be any of six pieces, and c1-a3 stops the mate for every one.":
+    '在下面的例子里，黑方威胁 d5xd1 将军，下一步就杀。红方的 38 步着法中有四步能挡住。c1-a3 是其中最好的，它靠让开来解：a1 的暗子按车走，所以 c1 空出来后它可以在 d1 吃回。c1 的暗子可能是六种棋子中的任何一种，而 c1-a3 对每一种都能解杀。',
+  'Red to move. c1-a3 stops the mate but leaves the a5 cannon hanging, and Black took it at once. The tile was an advisor. Only a chariot on a3 would have guarded a5.':
+    '红方走。c1-a3 解了杀，但留下 a5 的炮无人保护，黑方立刻吃掉了它。那枚暗子是仕。只有 a3 上是车才能保住 a5。',
+  'Which tile: Red to move, the game as played': '翻哪一枚：红方走，实战局面',
+  'c1 turns out to be': 'c1 翻出的是',
+  'Left face down': '仍是暗子',
+  "Black's best reply": '黑方最佳应着',
+  "Red's winning chance": '红方胜率',
+  'a10-b10': 'a10-b10',
+  d5xa5: 'd5xa5',
+  'After c1-a3, by what the tile turns out to be. Black takes the cannon unless the tile is a chariot, and is better in every case. c1-a3 is the best move in the position and still loses most of the time: 36% on average, against 13% for the next best.':
+    'c1-a3 之后，按暗子翻出的是什么分列。除非暗子是车，黑方都会吃掉炮，而且每种情况下黑方都更好。c1-a3 是这个局面的最佳着法，却多半还是输：平均 36%，次佳着法是 13%。',
+  'Held to the xiangqi puzzle rules': '用象棋题目的规则检验',
+  'Our [xiangqi puzzles](/blog/how-puzzle-mining-works) come from a miner with stricter rules. The opponent has just blundered, giving up 25 or more points of winning chance. The game was not already decided before that. After the right move the solver is winning, and after the second best move it is not.':
+    '我们的[象棋题目](/blog/how-puzzle-mining-works)来自一个规则更严格的挖掘器。对手刚刚走了一步败着，丢掉了 25 个百分点以上的胜率。在那之前，棋局还没有分出胜负。走出正确着法后解题方处于胜势，走出次佳着法则不然。',
+  Step: '步骤',
+  'Positions left': '剩余局面',
+  Scanned: '扫描',
+  "Passed the xiangqi miner's rules": '通过象棋挖掘器的规则',
+  'Mates in one dropped, as the miner does': '剔除一步杀，与挖掘器做法相同',
+  'Positions with a single legal move dropped': '剔除只有一步合法着法的局面',
+  'The same 2,939 positions through the rules our xiangqi puzzles pass.':
+    '同样的 2,939 个局面，经过我们象棋题目要过的规则。',
+  'A person was to move in three of the four and missed all three; the bot was to move in the fourth. None turns on a hidden piece. Every lottery ticket and every which-tile position failed, because the side to move was not winning or the opponent had not blundered.':
+    '四个局面中有三个轮到真人走，三个都没找到；第四个轮到电脑走。没有一个取决于暗子。每一张彩票、每一个翻哪一枚的局面都没通过，原因是走子方并不处于胜势，或者对手并没有走出败着。',
+  "Red to move. e3-f3 and the engine's line after it. The interest is mostly jieqi's: Red's revealed elephant and advisors stand outside the zones they could never leave in xiangqi.":
+    '红方走。e3-f3 以及引擎随后的着法。它的看点主要属于揭棋：红方已翻开的相和仕，站在象棋里永远离不开的区域之外。',
+  'Red to move: the first of four': '红方走：四个中的第一个',
+  "Red to move. i10-f10 and the engine's line, in which Black loses the chariot two moves later. No face-down piece is left on the board. Red played i10-i9 instead.":
+    '红方走。i10-f10 以及引擎的着法，黑方在两回合后丢车。棋盘上已经没有暗子。红方实战走了 i10-i9。',
+  'Red to move: the second of four': '红方走：四个中的第二个',
+  "Red to move. h10-h9 and the engine's line. It is ordinary xiangqi: a tile turns over only on the line's last move.":
+    '红方走。h10-h9 以及引擎的着法。这是普通的象棋：只在着法的最后一步才有暗子被翻开。',
+  'Red to move: the third of four': '红方走：四个中的第三个',
+  'Black to move. e7-f7 and mate in six, with no face-down piece left on the board. The bot played e3-c3 instead.':
+    '黑方走。e7-f7，六步杀，棋盘上已没有暗子。电脑实战走了 e3-c3。',
+  'Black to move: the fourth of four': '黑方走：四个中的第四个',
+  'Why we stopped': '我们为什么停下',
+  'The chart shows the problem. A lottery ticket is all or nothing: right because one deal in four wins outright, and usually lost. A which-tile answer scores about the same for every piece, because it meets the threat on the board and the tile hardly matters. A fair puzzle needs a single line that works, and a decision about a hidden piece rarely has one.':
+    '图表说明了问题。彩票是全有或全无：它之所以对，是因为四次发子中有一次直接获胜，而它通常会输。翻哪一枚的答案，对每种棋子的得分都差不多，因为它应对的是盘面上的威胁，暗子是什么几乎无关紧要。一道公平的题目需要一条成立的着法，而关于暗子的决定很少有这样一条。',
+  "The mover's winning chance after the answer, once for each piece the tile could be, from the two examples above. The dashed line is the average the review grades by.":
+    '解答之后走子方的胜率，按暗子可能是的每种棋子各算一次，取自上面两个例子。虚线是复盘据以评分的平均值。',
+  'We tried two ways round it. The first was to grade as if the face-down pieces were known, using the real deal. That gave 16 positions through the xiangqi rules: the same 15, plus one reveal that wins only because the tile was a cannon (100% for a cannon, 59 to 73% for anything else). A puzzle whose answer depends on what the solver cannot see is not one we would publish.':
+    '我们试了两种绕过去的办法。第一种是按暗子已知来评分，用真实的发子。这样有 16 个局面通过了象棋规则：同样的 15 个，加上一步只因为暗子是炮才赢的翻子（是炮为 100%，是别的则为 59% 到 73%）。答案取决于解题者看不见的东西，这样的题目我们不会发布。',
+  'The second was to look for reveals that win whatever comes up: the best move turns a tile over, every piece it could be scores 81% or more, and the next best move 60% or less. There were none in the 2,939 positions.':
+    '第二种是寻找无论翻出什么都赢的翻子：最佳着法翻开一枚暗子，它可能是的每种棋子得分都在 81% 以上，而次佳着法在 60% 以下。2,939 个局面里一个也没有。',
+  'The nearest thing to a fair jieqi puzzle we found is a stored capture, where the capture is certain and only the piece after it is luck.':
+    '我们找到的最接近公平的揭棋题目，是留着的吃子：吃子是确定的，只有吃完之后翻出的棋子靠运气。',
+  "Red to move. The h1 tile moves as a horse and takes Black's chariot on g3, and it does that whatever the tile is. Red's winning chance is 93 to 95% for each of the three pieces it could be, against 78% for the next best move. The bot, Pikafish at level 2, missed it two turns running. The tile was a chariot. It is the only capture of the 22 that beat the next best move by 15 points.":
+    '红方走。h1 的暗子按马走，吃掉黑方在 g3 的车，而且无论暗子是什么都能这样做。对它可能是的三种棋子，红方胜率都是 93% 到 95%，次佳着法则是 78%。电脑（2 级皮卡鱼）连续两回合都没看到。那枚暗子是车。在 22 次吃子中，它是唯一比次佳着法高出 15 个百分点的。',
+  'A capture that does not depend on the tile: Red to move': '不取决于暗子的吃子：红方走',
+  Limit: '限制',
+  'What it could change': '可能改变什么',
+  'One engine, AB-JChess, set every answer': '只有一个引擎 AB-JChess 决定所有答案',
+  'A second engine could disagree': '第二个引擎可能有不同看法',
+  'Only its top five to eight moves were scored': '只给它排名前五到八的着法打了分',
+  'An unscored move could narrow a gap': '一步未打分的着法可能缩小差距',
+  '50 games from one day, guests against a bot': '50 盘对局来自同一天，都是访客对电脑',
+  'Other games could turn up other positions': '其他对局可能出现其他局面',
+  'The bot was to move in half the positions': '一半局面轮到电脑走',
+  'Half of what we found no person faced': '我们找到的局面有一半没有真人面对过',
+  'What the 50 games say': '这 50 盘棋说明了什么',
+  'Jieqi does not produce puzzles the way xiangqi does. Four positions in 50 games passed our xiangqi rules, none of them about a hidden piece, and the hidden-piece answers were bets or moves the tile hardly touched.':
+    '揭棋产生题目的方式和象棋不一样。50 盘对局里有四个局面通过了我们的象棋规则，没有一个与暗子有关；取决于暗子的答案，要么是赌博，要么是暗子几乎无关的着法。',
+  'Skill shows in timing more than in guessing. A tile on its starting square moves as its home piece, so a capture it threatens is a move in reserve: play something else while it is safe, and take it before it can be blocked. When a tile must turn over, pick the one that holds whatever it is, and remember that your count of what it could be includes pieces your opponent took face down.':
+    '实力更多体现在时机上，而不是猜测上。停在原位的暗子按原位棋子的走法走，所以它威胁的吃子是一步留着备用的棋：趁它安全时先走别的，在它被挡住之前吃掉。必须翻开一枚暗子时，选那枚无论是什么都能撑住的，并且记住，你对它可能是什么的计算里，包含了对手暗吃掉的棋子。',
+  'We would look again for puzzles about that timing, with an answer that holds for every deal, in thousands of games where a person was to move, checked by a second engine. Until then, the hidden pieces in jieqi are something to play, not something to solve.':
+    '我们会为这种时机的题目再找一次：答案对每一种发子都成立，取自数千盘由真人走子的对局，并由第二个引擎检验。在那之前，揭棋里的暗子是拿来下的，不是拿来解的。',
+  'WINNING CHANCE BY WHAT THE TILE TURNS OUT TO BE': '按暗子翻出的棋子分列的胜率',
+  'Lottery ticket: a10-a1, Black to move': '彩票：a10-a1，黑方走',
+  'average 25%': '平均 25%',
+  'Which tile: c1-a3, Red to move': '翻哪一枚：c1-a3，红方走',
+  'average 36%': '平均 36%',
+  'Looking for jieqi puzzles: what 50 games turned up': '在揭棋里找题目：50 盘对局找到了什么',
+  // banqi-perpetual-chase: machine-drafted 2026-10-11, not native-reviewed. Piece names follow banqi-statistics (将 士 象 车 马 炮 卒); a ply is 步.
+  'The Perpetual Chase Rule in Banqi': '暗棋长捉规则',
+  'Perpetual Chase in Banqi': '暗棋的长捉',
+  'A repeating chase can also go round a square of four. The chased piece runs round the corner, the chaser follows one step behind, and the board comes back every eight plies.':
+    '重复的长捉也可以绕着四个格子转。被捉的子绕着角落跑，捉的一方落后一步跟着，每八步棋盘就回到原样。',
+  'Herding chases are fine': '赶子的长捉没问题',
+  'From a game on Mistboard, 30 September 2026. The player’s general chased the bot’s advisor five times, from b2 to f3, where the player’s other advisor took it.':
+    '来自 Mistboard 上 2026 年 9 月 30 日的一盘棋。玩家的将把机器人的士追了五次，从 b2 一直追到 f3，在那里被玩家的另一个士吃掉。',
+  'What other rules say': '其他规则怎么说',
+  'Four rule sets and a reference work, as read in October 2026.':
+    '四套规则和一部参考资料，2026 年 10 月查阅。',
+  'Perpetual chase': '长捉',
+  'No-progress draw': '无进展判和',
+  '[TCGA computer banqi rules, Hsu (2019)](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)':
+    '[TCGA 电脑暗棋比赛规则，Hsu（2019）](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)',
+  'No chase rule. A position repeated three times draws.': '无长捉规定。同一局面出现三次判和。',
+  '60 plies': '60 步',
+  '[Chen, Shen and Hsu, ICGA Journal (2010)](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)':
+    '[Chen、Shen、Hsu，《ICGA Journal》（2010）](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)',
+  'No chase rule. Repeated positions draw.': '无长捉规定。局面重复判和。',
+  '40 plies': '40 步',
+  'No chasing the same piece 10 times in a row.': '不能连续 10 次追击同一颗子',
+  '50 plies': '50 步',
+  'Not mentioned.': '未提及',
+  'A chase move may not make a position appear for the third time.':
+    '一步捉不得让同一局面出现第三次。',
+  'Why not a move count': '为什么不用步数上限',
+  'Making the chaser lose, as xiangqi does, needs someone to judge what counts as a chase, and no banqi source uses it. Repetition needs no number and no judge. It stops a repeating chase at the repeat and leaves a chase that goes somewhere alone.':
+    '像象棋那样判捉的一方输，得有人判断什么算捉，而且没有一份暗棋资料采用。重复规则不需要数字，也不需要裁判。重复的长捉在重复时就被挡下，有进展的长捉则不受影响。',
+  advisor: '士',
+  soldier: '卒',
+  elephant: '象',
+  chariot: '车',
+  cannon: '炮',
+  general: '将',
+  'Banqi rules': '暗棋规则',
+  'THE ADVISOR RUNS FIVE TIMES': '士逃了五次',
+  'THE OTHER ADVISOR TAKES IT': '另一个士吃掉它',
+  'In banqi a chased piece often has one safe square, so a chase can go back and forth until the position repeats, and under plain threefold repetition the chaser alone decides the draw. Tournament rules allow it and apps cap the chase at 7 or 10 moves. Mistboard forbids the chase move that would repeat a position a third time, and leaves chases that go somewhere alone.':
+    '暗棋里被捉的子常常只有一个安全的格子，所以长捉可以来回走到局面重复；如果只按三次重复判和，和不和完全由捉的一方决定。比赛规则允许这样判和，应用则把长捉限在 7 次或 10 次。Mistboard 禁止会让同一局面第三次出现的那一步捉，把目标赶向别处的长捉则不去管它。',
+  'In a perpetual chase one piece attacks another move after move. In banqi the runner often has one safe square, so the two go back and forth until the position repeats.':
+    '长捉就是一颗子一步接一步地攻击另一颗子。在暗棋里，逃的一方常常只有一个安全的格子，于是两颗子来回走，直到局面重复。',
+  'The runner can’t stay put without being taken, so under plain threefold repetition the chaser alone decides whether the game is drawn.':
+    '逃的一方不动就会被吃，所以如果只按三次重复判和，和不和完全由捉的一方决定。',
+  'Mistboard forbids the chase move that would make a position appear for the third time. A chase that drives its target onto new squares never repeats, and the rule leaves it alone.':
+    'Mistboard 禁止会让同一局面第三次出现的那一步捉。把目标一路赶向新格子的长捉永远不会重复，这条规则不去管它。',
+  'Tournament rules draw on repetition, and apps cap a chase at 7 or 10 moves, which comes after the repetition in every chase draw we have seen.':
+    '比赛规则按重复局面判和，应用把长捉限在 7 次或 10 次，但在我们见过的每一盘长捉和棋里，这个上限都来得比重复晚。',
+  'A perpetual chase is one piece attacking another move after move while the other keeps running. In [banqi](/rules/banqi), Chinese dark chess, the runner often has a single safe square, so the two pieces go back and forth until the position repeats. Whether that should be a draw, and who gets to decide, is a question banqi rule sets answer in different ways.':
+    '长捉，就是一颗子一步接一步地攻击另一颗子，而被捉的子一直在逃。在[暗棋](/rules/banqi)里，逃的一方常常只有一个安全的格子，于是两颗子来回走，直到局面重复。这该不该算和棋、由谁来决定，各套暗棋规则的答案不一样。',
+  'Why banqi needs a chase rule': '暗棋为什么需要长捉规则',
+  'In chess a threefold repetition needs both players to keep repeating, and either of them can play something else. In banqi the chased piece can’t stay put without being taken, so it runs. With one safe square it shuttles back and forth as the chaser does, and the third repetition comes when the chaser wants it. In [the game below](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd) the player was far ahead and the bot had lost its general, so the draw saved the bot.':
+    '国际象棋的三次重复需要双方一直重复下去，任何一方都可以改走别的。暗棋里被捉的子不动就会被吃，所以只能逃。如果只有一个安全的格子，它就跟着捉的一方来回走，第三次重复什么时候出现，由捉的一方说了算。在[下面这盘棋](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)里，玩家大幅领先，机器人的将也已经被吃，这盘和棋救了机器人。',
+  'Back and forth on two squares, from a game on Mistboard, 16 September 2026.':
+    '两格之间来回走，来自 Mistboard 上 2026 年 9 月 16 日的一盘棋。',
+  'The bot has just flipped g2 and turned up a red advisor beside the player’s black chariot. A chariot can’t take an advisor, which outranks it, and e1 and h1 hold its own soldiers, so f1 is its only free square.':
+    '机器人刚在 g2 翻出一颗红士，就在玩家的黑车旁边。士比车大，车吃不了它；e1 和 h1 都是车自己的卒，所以 f1 是它唯一的空格。',
+  'The advisor’s fourth chase brings the position round a third time, and under plain threefold repetition the game is drawn. Under Mistboard’s rule this move is forbidden, so the advisor would have to play something else.':
+    '士的第四次捉让局面第三次出现，如果只按三次重复判和，这盘就和了。按 Mistboard 的规则，这一步被禁止，士只能改走别的。',
+  'Round a square of four, in a constructed position. Every time the chariot runs it has one safe square.':
+    '绕着四格转，这是摆出来的局面。车每次逃都只有一个安全的格子。',
+  'The black advisor on a1 attacks the red chariot on a2. Face-down tiles on a3, b3, c2 and c1 close its other exits.':
+    'a1 的黑士攻击 a2 的红车。a3、b3、c2、c1 上的暗子挡住了车的其他出路。',
+  'The advisor’s fourth chase brings the board back where it started. Each lap repeats every position, so under plain threefold repetition the game is drawn early in the third lap. Under Mistboard’s rule, the chase move that would make a position appear for the third time is forbidden.':
+    '士的第四次捉让棋盘回到起点。每转一圈，每个局面都重复一次，所以如果只按三次重复判和，第三圈刚开始就会判和。按 Mistboard 的规则，会让局面第三次出现的那一步捉被禁止。',
+  'Some chases drive the target somewhere. Every move puts the target on a square it hasn’t stood on, so no position comes round again, and the chase ends when the target runs out of room or into another piece.':
+    '有些长捉是把目标往某个地方赶。每一步都让目标走到它没站过的格子，所以没有局面会再出现；目标无路可逃，或撞上另一颗子，这次长捉就结束了。',
+  'Winning a piece this way, as in [that game](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a), is ordinary good play. A chase rule has to stop the repeating chase and leave this one alone.':
+    '像[那盘棋](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a)这样赢下一颗子，是正常的好棋。长捉规则要挡的是重复的长捉，这一种应该放着不管。',
+  '[Chinese Dark Chess 2 app (Google Play)](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)':
+    '[暗棋2 应用（Google Play）](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)',
+  'No chasing the same piece more than 7 times in a row.': '不可连续长捉同一颗子超过 7 次。',
+  '[FunTown app](https://darkchess.funtown.com.tw/rules2.html)':
+    '[FunTown 戏谷 应用](https://darkchess.funtown.com.tw/rules2.html)',
+  '[Chinese Wikipedia, banqi](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)':
+    '[中文维基百科：暗棋](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)',
+  '50 moves with no flip or capture': '连续 50 步没有翻子或吃子',
+  Mistboard: 'Mistboard',
+  'A rule that makes the chaser lose comes from [xiangqi](/rules/xiangqi), where every piece is face up. Under the Asian rules for that game, chasing one piece without end is a forbidden move, and a side that keeps playing one must change it or lose, as [Chinese Wikipedia sets out](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B)). None of the banqi sources above makes the chaser lose.':
+    '捉的一方判负，这条规则来自[象棋](/rules/xiangqi)，象棋的棋子全都明着摆在棋盘上。按亚洲象棋规则，无休止地捉同一颗子是禁止着法，一直走禁止着法的一方必须变着，否则判负，[中文维基百科](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B))有整理。上面的暗棋资料没有一份判捉的一方输。',
+  'Mistboard’s rule': 'Mistboard 的规则',
+  'Mistboard keeps threefold repetition and the 40-ply no-progress draw, and adds one rule: **a chase move may not make a position appear for the third time.** The chaser has to play something else, unless it has no other legal move. A repetition that comes from anything other than a chase still draws.':
+    'Mistboard 保留三次重复和 40 步无进展判和，再加一条规则：**一步捉不得让同一局面出现第三次。** 捉的一方必须改走别的，除非没有其他合法着法。不是由捉造成的重复照样判和。',
+  'The apps count instead: once a piece has chased the same piece 7 times in a row, or 10, it must stop. The trouble is that the repetition comes first. In the two-square game above, the position came round a third time on the bot’s fourth chase move. A 7-move cap would still have allowed three more, so with threefold repetition in force the game is drawn exactly as before. In all eight repetition draws on Mistboard, the third repetition came between the third and sixth chase move, before either cap.':
+    '应用的做法是计数：一颗子连续捉同一颗子 7 次或 10 次之后，就必须停下。问题是重复会先来。在上面那盘两格来回的棋里，局面在机器人第四次捉时就第三次出现了。上限设 7 次的话，它还可以再捉三次，所以只要三次重复照样判和，这盘照样是和棋。Mistboard 上全部八盘重复和棋，第三次重复都出现在第三到第六次捉之间，比两种上限都早。',
+  'A count also treats a herding chase the same way, and stops it at the same number whether or not the target is about to run out of room. Players don’t agree on the number either. A Taiwanese player who wrote to us about one of these draws called a perpetual chase a clear foul and the count an open question: 7 is too few, he said, and a friend of his plays to 12.':
+    '计数对赶子的长捉也一视同仁，不管目标是不是快无路可逃，到了次数就叫停。玩家对数字也没有共识。一位台湾玩家为了其中一盘和棋写信给我们，他说长捉明显犯规，次数则还有得讨论：7 次太少，他有个朋友下到 12 次。',
+  'Why not make the chaser lose': '为什么不判捉的一方负',
+  'The rule in full': '完整规则',
+  'For anyone implementing it. The rule reads only what both players can see, so it works online or across a table.':
+    '写给要实现这条规则的人。规则只看双方都看得到的东西，所以网上或面对面都能用。',
+  Term: '术语',
+  Meaning: '含义',
+  'Chase move': '捉',
+  'A move with no flip or capture, after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count; whether the target is protected doesn’t matter.':
+    '不翻子也不吃子的一步，走完之后，刚走的那颗子能吃掉对方上一步刚走的那颗子。炮隔子吃也算；目标有没有被保护不影响。',
+  Flee: '逃',
+  'A move by the piece the previous move chased.': '上一步被捉的那颗子所走的一步。',
+  Position: '局面',
+  'Where each face-up piece stands, which squares hold face-down tiles, and whose move it is. Counts start over after every flip or capture.':
+    '每颗翻开的子在哪里、哪些格子有暗子、轮到哪一方走。每次翻子或吃子之后重新计数。',
+  Forbidden: '禁止',
+  'A chase move that would make a position appear for the third time.':
+    '会让同一局面第三次出现的一步捉。',
+  'Repetition draw': '重复和棋',
+  'A position reached by any move other than a chase or a flee draws on its third appearance.':
+    '由捉或逃以外的着法走出来的局面，第三次出现时判和。',
+  'Only move': '唯一着法',
+  'If every legal move is a forbidden chase, they all stay legal.':
+    '如果所有合法着法都是被禁止的捉，这些着法就全部保持合法。',
+  'Mutual chase': '一捉一',
+  'A flee that also attacks the chaser is an ordinary move. Only two cannons on one line can do this.':
+    '逃的同时又攻击追兵的一步，算作普通着法。只有同一条线上的两个炮做得到。',
+  'Unchanged: 40 plies with no flip or capture, chase moves included.':
+    '不变：连续 40 步没有翻子或吃子，捉也算在内。',
+  'Not covered': '尚未涵盖',
+  'A chaser switching between two targets. We will extend the rule if it comes up.':
+    '在两个目标之间轮流捉。如果对局里出现了，我们会扩充规则。',
+  'Before the rule': '规则之前',
+  'Until October 2026 Mistboard drew every threefold repetition. In 127 games people played against [MistyBanqi](/blog/mistybanqi), our bot, from July to early October, eight ended in a repetition draw, and the bot was the chaser in every one ([21 July](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead), [23 July](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2), [28 July](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df), 16 September [three](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e) [times](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f) [over](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd), [22 September](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64), [2 October](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)). Replayed under the current rule, none of the eight is a draw, and no move a person played in any of the 127 games would have been forbidden.':
+    '2026 年 10 月之前，Mistboard 的三次重复一律判和。7 月到 10 月初，真人对我们的机器人 [MistyBanqi](/blog/mistybanqi) 下了 127 盘，其中八盘以重复局面判和，每一盘捉的一方都是机器人（[7 月 21 日](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead)、[7 月 23 日](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2)、[7 月 28 日](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df)、9 月 16 日的[第一](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e)、[第二](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f)、[第三盘](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)、[9 月 22 日](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64)、[10 月 2 日](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)）。按现行规则重放，这八盘没有一盘是和棋，127 盘里真人走过的每一步也都不会被禁止。',
+  'Is a perpetual chase a draw in banqi?': '暗棋的长捉算和棋吗？',
+  'It depends on the rule set. Tournament rules for computer banqi draw any position repeated three times, so a chase that repeats is a draw. On Mistboard it never is: the chase move that would bring a position round a third time is forbidden, and the chaser has to play something else.':
+    '看用哪套规则。电脑暗棋的比赛规则把同一局面出现三次判和，所以会重复的长捉就是和棋。在 Mistboard 上永远不是：会让局面第三次出现的那一步捉被禁止，捉的一方必须改走别的。',
+  'How many times can you chase a piece in banqi?': '暗棋里一颗子最多能捉几次？',
+  'Two popular apps set a cap: Chinese Dark Chess 2 at 7 chases of the same piece in a row, FunTown at 10. Mistboard has no count. A chase can run as long as it reaches new positions; only the move that would repeat a position a third time is forbidden.':
+    '两款常见的应用设了上限：暗棋2 是连续捉同一颗子 7 次，FunTown 是 10 次。Mistboard 不计次数。只要长捉一直走出新的局面，就可以一直捉下去；只有会让局面第三次出现的那一步被禁止。',
+  'What counts as a chase in banqi?': '暗棋里什么算捉？',
+  'On Mistboard, a move with no flip or capture after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count, and it doesn’t matter whether the target is protected.':
+    '在 Mistboard 上，不翻子也不吃子、走完后刚走的那颗子能吃掉对方上一步刚走的那颗子的一步。炮隔子吃也算，目标有没有被保护不影响。',
+  'Does the chaser lose in banqi?': '暗棋里长捉的一方会判负吗？',
+  'Not in any banqi rule set we found, and not on Mistboard. Losing for a perpetual chase comes from xiangqi, where someone has to judge what counts as a chase. On Mistboard the repeating move is simply not allowed.':
+    '我们找到的暗棋规则都不会，Mistboard 也不会。长捉判负来自象棋，那需要有人裁定什么算捉。在 Mistboard 上，会造成重复的那一步直接不能走。',
+  'How a chase ends': '长捉怎么结束',
+  'On Mistboard a chase can run as long as it is getting somewhere, and a good one wins a piece. What it can’t do is go round in a circle until the game is drawn: the move that would bring a position back a third time is off the table, so the chaser has to try something else, and the game goes on.':
+    '在 Mistboard 上，长捉只要还在推进，就可以一直捉下去，好的长捉能赢下一颗子。它不能做的，是绕圈子绕到和棋：会让局面第三次出现的那一步不能走，捉的一方只能另想办法，棋也就继续下去。',
+  'Perpetual Chase Rule in Banqi (Chinese Dark Chess)': '暗棋长捉规则与重复局面判和',
+  // longest-forced-mates-xiangqi: machine-drafted 2026-10-08, not native-reviewed. Terms follow the study uXu609QE zh names and solver-audit (困毙, 半回合 for a ply, 回合 for a move).
+  'The Longest Forced Mates in Xiangqi': '象棋最长的必胜杀局',
+  'The Longest Forced Mates': '最长的必胜杀局',
+  'A horse and a soldier beat a general with both advisors and both elephants, and the slowest win in that endgame takes 65 moves. Seven records from xiangqi endgame tablebases, with the lines, and five of them end with the loser having no legal move.':
+    '马和兵联手就能胜士象全，而这一残局里最慢的胜法要走65回合。这里收录七项出自象棋残局库的纪录，每项都附完整着法，其中五项以负方无着可走告终。',
+  'We generated xiangqi endgame tablebases for every one-and-two-attacker class against the full defence and pulled out the deepest position in each. The longest is a horse and a soldier: 65 moves of best play by both sides.':
+    '我们为一子和两子进攻对士象全的每一类残局生成了象棋残局库，并找出每一类中最深的局面。最长的是马兵：双方都走最佳着法，共65回合。',
+  'Five of the seven records end with the losing general having no legal move. That is 困毙, and in xiangqi it loses, so a longest-mate line can finish without a check on the board.':
+    '七项纪录中有五项以负方无着可走告终。这就是困毙，在象棋里判负，所以一条最长杀局可以在盘面上没有将军的情况下结束。',
+  "The lines survive the rules a real game runs under. No position repeats, and the longest stretch without a capture is 27 moves, inside the 60-move limit. Chess's 549-move tablebase record is drawn by its own 50-move rule; these are not.":
+    '这些着法经得起实战规则的检验。没有局面重复，最长的无吃子段落为27回合，在60回合限着之内。国际象棋549步的残局库纪录会被它自己的50步规则判和；这几局不会。',
+  'A tablebase holds every legal position of one material class together with its exact distance to mate under best play. Once you have the table, the longest mate in the class is a fact about the class: no engine opinion, no sampling, no search that might have missed something. Chess has had these numbers for decades, and its records are famous enough to have their own genre of video.':
+    '残局库收录某一子力组合的每一个合法局面，以及双方最佳着法下该局面到将死的精确距离。有了这张表，该类残局中最长的杀局就是这一类的事实：不是引擎的看法，不是抽样，也不是可能漏掉什么的搜索。国际象棋几十年前就有了这些数字，它的纪录有名到自成一类视频。',
+  'Xiangqi has the numbers too, and almost nobody knows it. 象棋云库 ([chessdb.cn](https://www.chessdb.cn/), the Chinese chess cloud database) publishes a maximum-DTM table for 8,705 material classes, linked from its homepage and written only in Chinese; the deepest entry there is 马马士 against 马卒象象 at 759 plies, a forced win 380 moves long. The 116-move record against 士象全 has been in the literature since Wu, Liu and Hsu reported it at Computers and Games in 2004. What none of them publish is the game. The table gives you a FEN and an integer and stops, and the 2004 paper gives a move count. Neither shows the moves in between.':
+    '象棋也有这些数字，只是几乎没人知道。象棋云库（[chessdb.cn](https://www.chessdb.cn/)）公布了一张涵盖8,705类子力组合的最长杀着距离（DTM）表，首页有链接，只有中文版；表中最深的一项是马马士对马卒象象，759个半回合，即一盘380回合的必胜棋。对士象全的116回合纪录，自 Wu、Liu 和 Hsu 于2004年在 Computers and Games 会议上发表以来，一直见于文献。他们都没有公布的，是这盘棋本身。云库的表给出一个 FEN 和一个整数就结束了，2004年的论文给出一个回合数。两者都没有给出中间的着法。',
+  "So this page is the lines. We generated the tables ourselves with Nguyen Pham's [FelicityEgtb](https://github.com/nguyenpham/FelicityEgtb); that is also the only way to check a published number against anything.":
+    '所以这一页给出的就是着法。残局库是我们用 Nguyen Pham 的 [FelicityEgtb](https://github.com/nguyenpham/FelicityEgtb) 自己生成的；这也是拿已公布的数字去对照任何东西的唯一办法。',
+  'The records': '纪录',
+  'Every class below is the attacker against 士象全: a general with both advisors and both elephants, which is the standard full defence. Mate counts are moves, not plies, and both sides play perfectly: the winner mates as fast as the position allows, the loser holds out as long as it can.':
+    '下面每一类都是攻方对士象全：将带双士双象，即标准的全套防守。杀着步数以回合计，而非半回合，双方都走完美着法：胜方以局面允许的最快速度成杀，负方尽可能久地坚持。',
+  Attacker: '攻方',
+  'Longest win': '最长胜局',
+  'Ends in': '结局',
+  'Horse and soldier (马兵)': '马兵',
+  'Two cannons (双炮)': '双炮',
+  'Chariot with its own full guard, against the same (车仕相全)': '车仕相全',
+  'Cannon and horse (炮马)': '炮马',
+  'Chariot alone (单车)': '单车',
+  'Two horses (双马)': '双马',
+  'Two soldiers (双兵)': '双兵',
+  '[mate in 65](/study/uXu609QE/GuhYA0we)': '[65回合成杀](/study/uXu609QE/GuhYA0we)',
+  '[mate in 52](/study/uXu609QE/u0z3Pvce)': '[52回合成杀](/study/uXu609QE/u0z3Pvce)',
+  '[mate in 43](/study/uXu609QE/85yb318c)': '[43回合成杀](/study/uXu609QE/85yb318c)',
+  '[mate in 36](/study/uXu609QE/LM1vYAUC)': '[36回合成杀](/study/uXu609QE/LM1vYAUC)',
+  '[mate in 32](/study/uXu609QE/rLYsuFtE)': '[32回合成杀](/study/uXu609QE/rLYsuFtE)',
+  '[mate in 31](/study/uXu609QE/aEdsvwA6)': '[31回合成杀](/study/uXu609QE/aEdsvwA6)',
+  '[mate in 22](/study/uXu609QE/4neR0BI5)': '[22回合成杀](/study/uXu609QE/4neR0BI5)',
+  checkmate: '将死',
+  'A lone horse, a lone cannon and a lone soldier cannot win against the full defence at all. That is old knowledge, and the tables have it as a flat draw.':
+    '单马、单炮、单兵对士象全根本赢不了。这是老知识，残局库里也都是和棋。',
+  'Each line is a [chapter in a study](/study/uXu609QE). The chapters have no sidelines and nothing is missing: every other move by the loser reaches a position closer to mate, and every other move by the winner either throws the win away or takes longer. That is what makes the line the longest one.':
+    '每一条着法都是[一个研究中的一章](/study/uXu609QE)。各章没有变着，也没有遗漏：负方任何别的走法，所到局面离杀更近；胜方任何别的走法，不是失去胜势就是更慢。这正是它成为最长着法的原因。',
+  'A horse and a soldier against the full guard: mate in 65': '马兵对士象全：65回合',
+  'The longest of the seven, step by step. The other six are the next chapters of the same study.':
+    '七局中最长的一局，可逐着演示。另外六局是同一研究的后续各章。',
+  'Five of the seven end without a check': '七局中有五局不是以将军结束',
+  'In chess, a stalemated king is a draw, so every longest-mate line ends in checkmate. Xiangqi scores it the other way: a side with no legal move loses. The position is called 困毙, and the loser is usually not in check at all when it happens. By the end of these lines the defence has lost its advisors and elephants, and the general stands alone in the palace with nothing it can legally play.':
+    '在国际象棋里，逼和算和棋，所以每一条最长杀局都以将死告终。象棋的判法正相反：无着可走的一方判负。这种局面叫困毙，发生时负方通常根本没有被将军。在这几条着法的结尾，防守方的士象都已丢光，将独自留在九宫里，却没有一步合法着法可走。',
+  'That is the shape of five of these seven records, including the two longest. Here is the second longest, two cannons against the full guard, from five moves before the end: 52 moves of manoeuvring, and the last one is a quiet move that leaves the general no square to go to.':
+    '这七项纪录中有五项是这种结局，包括最长的两项。下面是第二长的一项，双炮对士象全，从终局前五回合开始：五十二回合的周旋，最后一步是一着不带将的闲着，让将无处可走。',
+  'Two cannons against the full guard: the last five moves of the mate in 52':
+    '双炮对士象全：52回合杀局的最后五回合',
+  'Five moves from the end. The cannon on e1 takes the last elephant on e8, the other cannon swings from f2 round to b9, and the e8 cannon steps up to e9 under the general, which runs to d10. Then the quiet e9-c9: the b9 cannon now fires over it into d9, and the open e-file means e10 would face the red general. Black is not in check and has no legal move.':
+    '离终局还有五回合。e1的炮吃掉e8上最后一个象，另一只炮从f2经b2绕到b9，e8的炮再进到e9，贴在将的下方，黑将走到d10。随后是不带将的闲着e9-c9：b9的炮隔着它打到d9，而e线已经打开，将若走e10就会与红帅照面。黑方没有被将军，却无着可走。',
+  'The rules the table does not know': '残局库不知道的规则',
+  "A tablebase knows legal positions and moves and nothing else. It has never heard of the repetition law or 自然限着, the rule that draws a game after 60 moves with no capture, so a table's headline number can be a line that could never be played out. That is what happened to chess's famous one: the 549-move mate in the 7-piece tables is drawn by the 50-move rule long before it lands.":
+    '残局库只知道合法局面和着法，别的一概不知。它不知道重复局面的规则，也不知道自然限着（60回合无吃子即判和的规则），所以表中的一个醒目数字，可能是一条实战中永远走不完的着法。国际象棋那个著名的纪录就是这样：七子残局库里的549步杀，远在成杀之前就会被50步规则判和。',
+  'These seven are not. We replayed each line against both rules: no position repeats in any of them, and the longest capture-free stretch is 27 moves, in 双炮 and in 车仕相全, well inside the 60-move limit.':
+    '这七局不是。我们用这两条规则逐一重放了每条着法：没有一局出现局面重复，最长的无吃子段落是27回合，出现在双炮和车仕相全两局中，远在60回合限着之内。',
+  'Checking against the published table': '与公布的表对照',
+  "象棋云库's table gives the deepest position in each class with Red to move; ours takes the deepest whoever is to move. Where those are the same question the two agree exactly: two soldiers 43 plies, cannon and soldier 131, horse and soldier 129, cannon and horse 71.":
+    '象棋云库的表给出每一类中红先的最深局面；我们的表取最深局面，不论轮到哪一方走。在两者问的是同一个问题时，结果完全一致：双兵43个半回合，炮兵131，马兵129，炮马71。',
+  "A maximum is not automatically a record, though. Cannon and soldier's 131 plies is the deepest number in the whole 士象全 group, but 象棋云库's own API, asked about that position, returns exactly one winning move, a cannon capture of an elephant, with every other move drawn and the position after it scoring 130. It is a capture followed by a 130-ply mate against a defence missing an elephant, which is why cannon and soldier is not in the table above.":
+    '不过，最大值不一定就是纪录。炮兵的131个半回合是整个士象全组里最深的数字，但拿象棋云库自己的 API 去查这个局面，返回的取胜着法只有一步，炮打象，其余着法都是和棋，吃子之后的局面得分是130。这其实是一步吃子加上一盘对缺一象的防守的130个半回合杀局，所以炮兵不在上面的表里。',
+  'What is missing': '还缺什么',
+  "Every class here has one side with nothing but a general and its guard. The interesting case is two attackers against a defence that also keeps material, 车马 against 车士象全 and its neighbours, where neither side is obliged to capture anything. That is where the 60-move rule would actually bite, and where a record might turn out to be unplayable in the way chess's is. It is also about 9 billion indices, which wants a machine with considerably more memory than a laptop.":
+    '这里的每一类，都有一方只剩将和士象。更有意思的情况是两个进攻子对一个同样保有子力的防守，比如车马对车士象全及其相近的组合，双方都没有非吃子不可的义务。60回合限着真正会起作用的正是这里，一项纪录也可能像国际象棋那样，实战中根本走不完。它也有大约90亿个索引，需要一台内存远大于笔记本电脑的机器。',
+  'Play through all seven': '逐着演示全部七局',
+  'The basic endgames': '基本残局',
+  // chariot-cannon-repetition-key: machine-drafted 2026-10-07, not native-reviewed.
+  'Chariot and cannon both start with C': '车和炮的英文都以 C 开头',
+  'Chariot and cannon, both C': '车和炮，都是 C',
+  'A xiangqi threefold repetition bug: the chariot and the cannon shared a key':
+    '象棋三次重复局面判定的一个错误：车和炮被记成了同一个字母',
+  "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.":
+    'Mistboard 象棋重复局面判定所用的键里，有一个只差一个字符的错误：一个局面明明只出现了两次，对局却被判为三次重复和棋。',
+  'Our xiangqi repetition key labelled each piece by the first letter of its role, so the chariot and the cannon were both `c`. Swapping a chariot and a cannon left the key unchanged, so a game could be drawn by threefold repetition after only two.':
+    '我们的象棋重复局面键用棋子角色英文名的首字母来标记每个棋子，于是车（chariot）和炮（cannon）都是 `c`。车和炮互换位置后，键不变，所以一个局面只出现两次，对局就可能被判为三次重复和棋。',
+  'The fix writes out the role name. Fog Chess had the same bug with the king and the knight. No finished game changes result.':
+    '修复后，键里写出完整的角色名。迷雾国际象棋的王（king）和马（knight）也有同样的错误。已结束的对局，没有一盘结果改变。',
+  'The key used the first letter of each role': '键只用了每个角色的首字母',
+  'Threefold repetition needs a way to say "this is the same position." Mistboard turns each position into a string and counts how often each one comes up.':
+    '三次重复需要一种方法来判断“这是同一个局面”。Mistboard 把每个局面转成一个字符串，并统计每个字符串出现了几次。',
+  "`role[0]` is the first letter of the role, and two of xiangqi's seven roles start with `c`. A red chariot on a1 and cannon on b3 write `a1rc` and `b3rc`. Swap them and they still write `a1rc` and `b3rc`.":
+    '`role[0]` 是角色名的首字母，而象棋的七种角色里有两种以 `c` 开头。a1 上的红车和 b3 上的红炮分别写成 `a1rc` 和 `b3rc`。两者互换后，写出来仍然是 `a1rc` 和 `b3rc`。',
+  "The opening position next to the same position with red's a1 chariot and b3 cannon swapped":
+    '开局局面，旁边是红方 a1 车与 b3 炮互换后的同一局面',
+  "Left: the opening. Right: red's a1 chariot and b3 cannon have traded places. The old key cannot tell them apart.":
+    '左：开局。右：红方 a1 的车和 b3 的炮互换了位置。旧的键分不出两者。',
+  'Fourteen legal plies drew a game': '十四步合法着法，判出一盘和棋',
+  'Red makes the swap in five moves while Black walks a chariot out and home, then each side moves a horse out and back:':
+    '红方用五步完成互换，同时黑方把一个车走出去再走回来；然后双方各把一个马跳出去再跳回来：',
+  After: '走完',
+  'Old count': '旧计数',
+  'Real count': '实际计数',
+  'the start': '开局',
+  'opening: 1': '开局局面：1',
+  'the swap, 5 moves a side': '互换，每方 5 步',
+  'swapped: 1': '互换局面：1',
+  'a horse out and back': '马跳出再跳回',
+  '3, draw': '3，判和',
+  'swapped: 2': '互换局面：2',
+  'Fourteen legal plies, and the site scored a draw. No player reported it; it turned up in a read of this code while jieqi was getting a repetition rule.':
+    '十四步合法着法，网站就判了和棋。没有棋手报告过这个问题；它是在给揭棋加上重复局面规则时，阅读这段代码发现的。',
+  'The fix writes the role out in full': '修复：把角色名完整写出',
+  'A test plays those fourteen plies and checks the game goes on. The same shortcut was in Fog Chess (king and knight both `k`) and Duck Xiangqi; both are fixed.':
+    '一个测试会走完这十四步，并检查对局仍在继续。迷雾国际象棋（王 king 和马 knight 都是 `k`）和鸭子象棋里也有同样的简写；两者都已修复。',
+  'What it means on the site': '对网站意味着什么',
+  '**Finished games:** none change. Replayed under the corrected key, all 29 xiangqi repetition draws, 2 perpetual-check losses, 2 Duck Xiangqi draws and 19 Fog Chess draws end the same way.':
+    '**已结束的对局：**没有一盘改变。用修正后的键重放，全部 29 盘象棋重复局面和棋、2 盘长将判负、2 盘鸭子象棋和棋和 19 盘迷雾国际象棋和棋，结果都一样。',
+  '**New games:** xiangqi, Fog Xiangqi, Fog Chess and Duck Xiangqi end on repetition only when a position has really occurred three times.':
+    '**新对局：**象棋、迷雾象棋、迷雾国际象棋和鸭子象棋，只有在同一局面真正出现三次时，才会因重复局面结束。',
+  "**Puzzles:** the miner's duplicate check reads both spellings, so no published puzzle comes back as new.":
+    '**谜题：**谜题挖掘器的查重会同时识别新旧两种写法，所以已发布的谜题不会被当成新题再出现。',
+  'A key built from abbreviations needs one check that no single abbreviation shows: that no two names shorten to the same thing. A letter table written by hand makes that check when someone picks `r` for the chariot. `role[0]` never did.':
+    '用缩写拼成的键需要一项检查，而这项检查从任何单个缩写上都看不出来：没有两个名字缩写成同一个东西。手写的字母表在有人为车选定 `r` 的那一刻，就做了这项检查。`role[0]` 从来没有做过。',
+  // xiangqi-endgames (2026-10-07): generated from the page's own text module.
+  ...endgamePageDictionary('zh-Hans'),
+  // flip-jungle-skill-ceiling, katago-jungle den races, pikafish-reveal-bug audit, and the two links to the new page (2026-10-07): machine-drafted, not native-reviewed.
+  'Flip Jungle: 512 times the search still loses 23% of games':
+    '翻翻棋：搜索量提升 512 倍，仍有 23% 的对局落败',
+  'Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.':
+    '翻翻棋是所有动物都盖着的 4×4 斗兽棋。一个近乎完美的引擎能测出翻棋之后还剩多少棋力：512 倍的搜索量大约只换来 242 Elo，而且仍会输掉 23% 的对局。',
+  '[Flip Jungle](/rules/jungle-flip) is Jungle Chess on a 4×4 board with all sixteen animals face-down. Each turn you flip a tile, which reveals a random animal, or move a face-up animal one square. MistyJungleFlip, the bot you play here, picks the optimal move 99 to 100% of the time in the endgames that can be checked exactly. That makes it a measuring instrument for the question every flip game raises: how much of a game is skill, and how much is the flips?':
+    '[翻翻棋](/rules/jungle-flip)是在 4×4 棋盘上进行的斗兽棋，十六只动物开局时全都盖着。轮到你时，可以翻开一张棋子，随机揭示一只动物，或者把一只已翻开的动物走一格。本站的电脑 MistyJungleFlip 在能精确核对的残局中，选出最优着法的比例为 99% 到 100%。这让它成了一件测量仪器，用来回答每种翻棋游戏都会引出的问题：一盘棋里有多少是棋力，多少是翻棋？',
+  'Less skill than it feels like. A copy of the engine with 512 times more search still loses 23% of its games against the weaker one.':
+    '比感觉上要少。搜索量多 512 倍的引擎副本，对上较弱的那一个，仍会输掉 23% 的对局。',
+  Measure: '测量项',
+  'Search ladder, 1k to 512k nodes': '搜索阶梯，1k 到 512k 节点',
+  '242 Elo across a 512× range': '512 倍跨度对应 242 Elo',
+  '512× more search': '搜索量提升 512 倍',
+  'loses 23% of games': '输掉 23% 的对局',
+  '8× more search': '搜索量提升 8 倍',
+  'loses 37 to 40%': '输掉 37% 到 40%',
+  'Any search against random moves': '任意搜索对随机走子',
+  'about 99% (random won 0 of 800)': '约 99%（随机方 800 局全败）',
+  'Endgames, 5 pieces or fewer, against exact tablebases': '残局（5 子以内）对精确残局库',
+  '99 to 100% optimal': '99% 到 100% 最优',
+  'Midgames, 5 to 6 pieces, against an exact solver': '中局（5 到 6 子）对精确求解器',
+  '200 of 200 moves optimal': '200 着中 200 着最优',
+  'A search engine with exact endgames': '一个带精确残局的搜索引擎',
+  'MistyJungleFlip is alpha-beta search with a handwritten evaluation and no neural network: material plus mobility, with a small term against draws. Its strength is set by a node budget, not a clock, so the same position gets the same move on any machine, and a measured gap belongs to the engine rather than the hardware.':
+    'MistyJungleFlip 是 alpha-beta 搜索，配手工评估函数，没有神经网络：评估值由子力加机动性构成，另有一个小小的厌和项。棋力由节点预算而非时钟决定，因此同一局面在任何机器上都返回同一着法，测出的差距属于引擎而不是硬件。',
+  'A flip is a chance node. Its value is the average over the animals still face-down, pruned with star-minimax, the chance-node form of alpha-beta. Endgames come from exact tablebases instead, solved backward from every finished position. Each entry stores the result under best play and the distance to it.':
+    '翻棋是机会节点。它的价值是所有仍盖着的动物的平均值，并用 star-minimax，即机会节点版的 alpha-beta 进行剪枝。残局则来自精确残局库，从每个终局局面往回推解出。每个条目存储双方最佳着法下的结果，以及到达该结果的距离。',
+  'Checked against exact answers where they exist': '凡有精确答案之处，都拿来核对',
+  'Self-play shows which of two versions is stronger, not whether either plays well: two copies of one engine share the same blind spots. So move quality is graded against the tablebases. In endgames of up to five pieces the engine played the optimal move 99 to 100% of the time; the misses were search depth, and a deeper search cleared them. A forward solver built on the tablebases reaches five- and six-piece midgames with tiles still face-down, and on 200 of those the engine matched the optimal move every time.':
+    '自我对弈只能测出两个版本哪个更强，测不出它们是否下得好：同一引擎的两个副本共享同样的盲点。所以着法质量改为对照残局库来评分。在最多五子的残局中，引擎选出最优着法的比例为 99% 到 100%；失误都是搜索深度问题，更深的搜索就解决了。基于残局库构建的前向求解器能覆盖仍有棋子盖着的五子和六子中局；在其中 200 个局面上，引擎每次都走出了最优着法。',
+  'That coverage stops where exact computation stops, near the end of the game. The opening, where the flips happen, is too large to solve, so nothing here verifies the engine’s opening play.':
+    '这种覆盖到精确计算的边界为止，也就是接近终局处。翻棋发生的开局阶段太大，无法求解，所以这里的一切都没有验证引擎的开局水平。',
+  '512 times the search buys about 242 Elo': '512 倍的搜索量，大约只值 242 Elo',
+  'To measure the opening without an exact answer, four copies searching 1k, 8k, 64k and 512k nodes a move played a round robin of paired, colour-swapped games, 120 per pairing. Their fitted ratings were +0, +89, +153 and +242. Each eightfold step is worth 64 to 89 Elo, and the ladder flattens at the top: 320k to 640k nodes was worth 6 Elo. In chess, 512 times the compute is worth several hundred.':
+    '为了在没有精确答案的情况下衡量开局，四个副本分别每着搜索 1k、8k、64k 和 512k 节点，进行成对换色的循环赛，每个配对 120 局。拟合出的等级分为 +0、+89、+153 和 +242。每 8 倍的台阶值 64 到 89 Elo，且在高端趋于平坦：320k 到 640k 节点只值 6 Elo。在国际象棋里，512 倍的算力值好几百分。',
+  'Upsets are more common than the ratings suggest. An engine with 8 times the search loses 37 to 40% of its games; one with 512 times loses 23%. The flips decide enough games on their own that more search cannot close the gap.':
+    '爆冷比等级分所暗示的更常见。搜索量多 8 倍的引擎会输掉 37% 到 40% 的对局；多 512 倍的输掉 23%。翻棋自身决定的对局足够多，更多搜索也补不上这个差距。',
+  'The one big step is at the bottom. A 1k-node search beats a random mover about 99% of the time (random won 0 of 800 games across the tiers), a gap near 850 Elo. About 80% of the distance from random to perfect is that single step, from moving at random to searching at all. Tuning the evaluation did nothing: better piece values, a rat-and-elephant term and draw aversion all came back flat in paired self-play.':
+    '唯一的大台阶在最底部。1k 节点的搜索约 99% 地战胜随机走子（各档位共 800 局中随机方 0 胜），差距接近 850 Elo。从随机到完美的距离里，约 80% 就在这一步上，即从随便走子到开始搜索。调评估函数毫无作用：更好的子力价值、鼠与象的专项、厌和项，在成对自我对弈中全都没有变化。',
+  'Perfect play against perfect play is a draw': '完美对完美是和棋',
+  'Small versions of the game can be solved outright. With two and four pieces, every tile face-down at the start and played to the end under the full rules, the game is a draw under best play: two perfect players cannot beat each other. Solving even a six-piece game from the opening crosses 40 million distinct positions, the same wall that keeps the sixteen-piece game out of reach, so the full game is unproven.':
+    '足够小的版本可以彻底解出。两子和四子的版本，开局时所有棋子都盖着，按完整规则下到终局，在双方最佳着法下都是和棋：两个完美棋手无法战胜彼此。哪怕从开局解一个六子游戏，也已超过 4000 万个不同局面，正是这道墙让十六子的完整游戏无法企及，所以完整游戏未被证明。',
+  'That still places the 23%. Perfect against perfect is a draw. Perfect against a much weaker player is a near-certain win: the random mover lost all 800 of its games. Two close players sit in between, with the gap inside the variance and the flips deciding.':
+    '这仍能给那 23% 定位。完美对完美是和棋。完美对远弱的棋手几乎必胜：随机走子方 800 局全败。两个接近的棋手处在中间，差距落在方差之内，由翻棋来决定。',
+  'How far the tablebases go': '残局库能走多远',
+  'The tables cover every fully revealed position at each piece count and ignore the 40-half-move no-progress rule.':
+    '这些表覆盖每个子数下所有完全翻开的局面，不计 40 个半回合的无进展规则。',
+  Pieces: '子数',
+  Positions: '局面数',
+  'Longest forced win': '最长必胜',
+  Build: '构建',
+  '9 plies': '9 着',
+  instant: '瞬时',
+  '1.9M': '190 万',
+  '21 plies': '21 着',
+  '2 s': '2 秒',
+  '79M': '7900 万',
+  '41 plies': '41 着',
+  '200 s': '200 秒',
+  '2.3B': '23 亿',
+  '63 plies': '63 着',
+  '4 hr on a laptop, 2.8 GB': '笔记本上 4 小时，2.8 GB',
+  '46B': '460 亿',
+  unbuilt: '未构建',
+  'days, ~140 GB of RAM': '数天，约 140 GB 内存',
+  'Six pieces could be built on a rented server and would add nothing: five-piece coverage already grades every endgame that reaches the tables. Past that, a full solve means the opening, a flip tree of sixteen distinct pieces revealed in random order, with on the order of 10¹¹ or more reachable states.':
+    '六子表可以在租用的服务器上构建，但毫无增益：五子的覆盖已经能给每一个进入表中的残局评分。再往前，完整求解就意味着要解开局，而开局是一棵翻棋树：十六个不同棋子以随机顺序翻开，可达状态在 10¹¹ 量级以上。',
+  'The distance column was not in the first tables. They stored win, draw or loss, which is enough to grade moves but not to finish games. In one self-play game the engine held a tiger and a rat against a lone elephant, a forced win (the rat traps the elephant in three plies, since an elephant cannot take a rat). For eight turns it played moves the tables graded optimal and made no progress, because every winning move scored the same, until repetition drew the game. With the distance stored, a win in 3 outranks a win in 9: the engine takes the shortest forced win, drags out forced losses, and that endgame ends with the rat taking the elephant in three. Chess endgame tables such as Syzygy carry a distance for the same reason.':
+    '最初的表里没有距离这一列。它们只存胜、和、负，这足以给着法评分，却不足以收官。在一盘自我对弈中，引擎有一虎一鼠对孤象，按表是必胜（鼠三着内困住象，因为象不能吃鼠）。连续八回合，它走出按表评为最优的着法，却毫无进展，因为每一步取胜着法得分相同，直到重复规则判为和棋。存入距离后，3 着取胜优于 9 着取胜：引擎选最短的必胜路线，并把必败局面尽量拖长，那个残局以鼠三着吃象告终。国际象棋的残局库，例如 Syzygy，附带距离也是同样的原因。',
+  'Skill shows in the average, not the game': '棋力体现在平均值上，而不在单局上',
+  'Skill is real in Flip Jungle: the 242-Elo ladder is a real gap, and over a long match the stronger engine wins. But the deal and the flips decide a large share of any one game, so even a far stronger player loses often, and one result says little about who is better. The measurement still missing is a rating against a strong human player, the one test that does not lean on the engine or its solver.':
+    '翻翻棋里棋力是真实存在的：242 Elo 的阶梯是真实差距，在长期对抗中更强的引擎会赢。但发牌和翻棋决定了任一局中相当大的一部分，所以哪怕强得多的棋手也常常落败，一局结果几乎说明不了谁更强。还缺的测量是对强人类棋手的等级分，这是唯一不依赖引擎或其求解器的检验。',
+  'Our [game review](/blog/skill-vs-luck) splits each flip into the decision and the luck, so you can see which share of your own games was which. The [twenty engine games](/study/uKxJ60mN) from the rules page show the bot playing itself, and the engine’s source is [on GitHub](https://github.com/brianhliou/misty-flip-jungle).':
+    '本站的[对局复盘](/blog/skill-vs-luck)把每一次翻子拆成决定和运气，让你看清自己的对局里哪部分是哪一种。规则页上的[二十盘引擎对局](/study/uKxJ60mN)是电脑自我对弈，引擎源码在 [GitHub 上](https://github.com/brianhliou/misty-flip-jungle)。',
+  'Play MistyJungleFlip': '与 MistyJungleFlip 对弈',
+  'Flip Jungle rules': '翻翻棋规则',
+  'FLIP JUNGLE': '翻翻棋',
+  'SKILL CEILING': '棋力上限',
+  '512× THE SEARCH, 23% LOST': '512 倍搜索，仍输 23%',
+  'Flip Jungle skill vs luck: 512× more search still loses 23% of games':
+    '翻翻棋的棋力与运气：搜索量多 512 倍，仍输 23% 的对局',
+  "Flip Jungle's skill ceiling": '翻翻棋的棋力上限',
+  'How much of a flip game the flips decide is measured in [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling): an engine with 512 times the search still loses 23% of its games.':
+    '翻棋游戏里有多少由翻棋决定，[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了测量：搜索量多 512 倍的引擎，仍会输掉 23% 的对局。',
+  'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.':
+    '电脑有多强，翻棋又决定了多少？[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精确残局库给它评分，并测出 512 倍的搜索量值多少。',
+  'Misty has no idea of a den race': 'Misty 不懂冲兽穴竞速',
+  'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den. It never asks whether a runner heading for its own den gets there first; it finds out when the search reaches the den, about 12 plies out. In August we tried three ways to teach it, and all three came back null or negative.':
+    'Misty 对局面的评估是子力，加上每个棋子离对方兽穴距离的奖励。它从不去问奔向自己兽穴的对方棋子是否会先到；等搜索抵达兽穴时它才发现，那大约是 12 着之后。8 月我们试了三种办法教它，三种结果都是无效或负收益。',
+  'First, how often a race decides a game. Of 172 self-play games at Misty’s usual 5 million nodes, 52.9% ended in a repetition draw, 26.2% in a den entry and 20.9% in a no-progress draw. Only 4.7% were genuine races, won by a side that was level or behind ten plies out. The same test at 200k nodes reported 22%: weaker play inflates races about fivefold.':
+    '先看竞速多常决定对局。在 Misty 平常的 500 万节点下自我对弈 172 盘，52.9% 以重复和棋结束，26.2% 以进入兽穴结束，20.9% 以无进展和棋结束。只有 4.7% 是真正的竞速：胜方在十着之前持平或落后。同样的测试在 20 万节点下给出 22%：较弱的对弈会把竞速夸大约五倍。',
+  'Deeper search finds little more. Over those 8 races, 60 million nodes saw the loss at most 4 plies sooner than 5 million, and no sooner in 4 of them. A search extension near the dens scored +45 Elo when granted free, at 3.3 times the nodes; held to the same budget, it scored −15 and −12. A den-race term, comparing the two runners once per side, scored −3 and +9 at weights 10 and 25. Each of those matches was 300 colour-swapped pairs.':
+    '更深的搜索也找不到多少东西。在这 8 盘竞速里，6000 万节点比 500 万节点最多早 4 着看到败势，其中 4 盘一着也没有提前。兽穴附近的搜索延伸在免费给予时得到 +45 Elo，代价是 3.3 倍的节点；把预算固定后，它得到 −15 和 −12。专门的冲兽穴竞速评估项，每方各比较一次双方的奔袭棋子，在权重 10 和 25 下分别得到 −3 和 +9。每一场对抗都是 300 对换色对局。',
+  'Misty plays a race well enough when the search reaches it. In one self-play game under the old tiger rule, Red’s tiger took a wolf and stood in the d-file corridor beside Blue’s elephant. It could not jump sideways, so Blue did not hurry to take it. When the elephant stepped from d7 to d6, Red’s lion jumped from c3 to c7, into the square the elephant had left. The elephant took the tiger on d5, and the lion was three moves from a den Blue could not defend. Blue ended 13 points ahead and lost. Misty has no den-race term; depth found the line. Since 21 September the tiger jumps sideways, so the corridor no longer traps it.':
+    '搜索够得着时，Misty 照样能把竞速下好。在旧虎规则下的一盘自我对弈中，红方的虎吃掉一只狼，站进 d 路通道，就在蓝方的象旁边。它不能横向跳，所以蓝方不急着吃它。当象从 d7 走到 d6，红方的狮从 c3 跳到 c7，跳进象刚离开的格子。象在 d5 吃掉了虎，而狮离一个蓝方守不住的兽穴只差三步。蓝方最终领先 13 分，却输了。Misty 没有冲兽穴竞速评估项；是搜索深度找到了这条线。自 9 月 21 日起，虎可以横向跳，这条通道不再困得住它。',
+  'What did move Jungle Chess was two constants from the same games: a no-capture draw clock that ended games early, and a draw contempt near zero. Changing them took self-play from a quarter of games decided to about half. The lesson we kept: hold the search budget fixed, or you measure the budget. The 52 games are in [one study](/study/4UhOMlsE).':
+    '真正改变了斗兽棋对局的，是同一批对局里找到的两个常数：一个让对局过早结束的无吃子和棋计数，以及接近零的和棋轻视值。改掉它们后，自我对弈中分出胜负的对局从四分之一升到大约一半。我们留下的教训是：要把搜索预算固定住，否则测的只是预算。那 52 盘对局都收在[一个研究](/study/4UhOMlsE)里。',
+  'An earlier audit tested the averaging on the buggy engine':
+    '更早的一次审查，是在有漏洞的引擎上测试取平均的',
+  'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. The engine had already beaten ten nets distilled from its own evaluations, the best of them scoring 0.43. Each test played the changed engine against the shipped one, colours alternating, at equal time, with a referee dealing the hidden pieces so neither engine saw one.':
+    '9 月，我们测试了一份外部对同一引擎的源码审查，来自 [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai)。它的五项发现里，有两项值得下一场对抗来检验。在此之前，这个引擎已经赢过十个从它自身评估蒸馏出来的网络，其中最好的得分 0.43。每项测试都让改动后的引擎对阵已上线的引擎，轮换执色，用时相同，由裁判程序发放暗子，双方引擎都看不到暗子。',
+  'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. Fixing it alone scored 0.475 over 200 games at 500 ms a move (91-101-8). Retuning the 43 terms it touches, over 10,000 SPSA game pairs, scored 0.507 (96-93-11). Both are within noise: 200 games is ±0.07 at 95%, roughly ±50 Elo, so a change worth 10 Elo cannot be seen.':
+    '第一项是真实的评估漏洞：有一方的暗子从未被计入，所以红方威胁暗子能得分，黑方从来得不到。只修这个漏洞，每着 500 ms 下 200 盘得分 0.475（91-101-8）。再用 10,000 对 SPSA 对局重新调校它涉及的 43 项参数，得分 0.507（96-93-11）。两者都在噪声之内：200 盘在 95% 置信度下是 ±0.07，大约 ±50 Elo，所以价值 10 Elo 的改动根本看不出来。',
+  'The second was the averaging this page is about, a clamped weighted average with a fallback to the worst case. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. A replacement took the engine’s top four moves, searched each possible piece separately and played the best average. It scored 0.370 over 100 games (30-56-14) at 2.2 times the time, and 0.410 over 50 games (17-26-7) at 7 times. We concluded then that the worst-case fallback does useful work.':
+    '第二项就是本页讲的取平均：一个带上下限的加权平均，并在需要时退回最差结果。7 月，它曾选了一步真实胜率 64% 的翻子，放弃了胜率 97% 的稳妥着法。替代方案取引擎排名前四的着法，对每一种可能的棋子分别搜索，再走平均值最好的一步。它在 2.2 倍用时下 100 盘得分 0.370（30-56-14），在 7 倍用时下 50 盘得分 0.410（17-26-7）。我们当时的结论是：退回最差结果这一步确实有用。',
+  'That conclusion came from the colour bug above. The fallback was meant to assume the worst, and as Black it assumed the best, so the test ran on an engine that was not doing it half the time. Since then [AB-JChess](/blog/ab-jchess) has beaten this engine 248-136-16 over 400 games and is now the top jieqi bot.':
+    '这个结论来自上面的颜色漏洞。退回这一步本该假设最坏情况，而执黑时它假设的是最好情况，所以那次测试用的引擎有一半时间根本没在这样做。此后 [AB-JChess](/blog/ab-jchess) 在 400 盘中以 248-136-16 战胜了这个引擎，现在是最强的揭棋电脑。',
+  // duck-xiangqi, duck-xiangqi-strategy, misty blog merge (2026-10-07): machine-translated.
+  'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has five. The sections below are where that difference lands.':
+    '国际象棋只有一种挡子的办法：站到它想去的点上。象棋有五种。下面几节讲的就是这个差别落在哪里。',
+  'The facing rule is check in another form. Two generals on an open file attack each other, so leaving them facing is moving into check, which xiangqi already forbids. Duck Chess has no check, so the facing rule has nothing left to say and goes with it. Duck Chess does the same with kings: they may stand side by side, and a king takes a king.':
+    '将帅不能照面这条规则，其实是将军的另一种说法。同一路上中间无子的两位将帅互相攻击，所以让它们照面就等于送将，而象棋本来就禁止送将。鸭子国际象棋没有将军，这条规则也就无话可说，随之取消。鸭子国际象棋对王也是这样处理的：两王可以相邻，王可以吃王。',
+  'Clear the board down to the two generals, on e1 and e10. Of the 88 empty points, 8 keep them apart: e2 to e9. Under xiangqi’s facing rule those 8 would be the only legal places for the duck. Here all 88 are legal, and the other 80 lose on the spot.':
+    '把棋盘清到只剩两位将帅，分别在 e1 和 e10。88 个空点里，只有 8 个能把它们隔开：e2 到 e9。按象棋的照面规则，鸭子只能合法地放在这 8 个点上。这里 88 个点都合法，而其余 80 个点放下去就当场输棋。',
+  'The duck half is nearly always about the other player: which line to shut, which horse to freeze, what to make awkward. So half of every turn goes on spoiling. It feels like always playing your second-best move.':
+    '放鸭子的那一半几乎总是冲着对手去的：封哪条线，蹩哪匹马，给对方添什么别扭。所以每一回合有一半花在搅局上。感觉就像永远在走自己的次优着。',
+  'Duck Xiangqi: an ordinary middlegame, eighteen moves into an engine game':
+    '鸭子象棋：一盘引擎对局第十八回合的普通中局',
+  'The engine sees that capture coming from any distance. A person often won’t: it comes from the far end of the board, down a file the duck was guarding a turn ago. None of the six published engine games ends this way. Two of the original seven did, and both came from an engine bug that could lose track of the capture. After the fix on 29 September, one of those games replayed as a different win and the other never reached a decisive finish, so the study holds six.':
+    '引擎隔多远都能看到这一吃。人却常常看不到：它来自棋盘的另一端，沿着一路杀过来，而鸭子上一回合还守在那一路上。已发布的六盘引擎对局没有一盘是这样结束的。最初的七盘里有两盘是，而且两盘都源于一个引擎漏洞：引擎可能会算丢这一吃。9 月 29 日修复之后，其中一盘重下变成了另一种赢法，另一盘始终没有分出胜负，所以研习里现在是六盘。',
+  'That is the range across the six engine games, and the median is 171. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
+    '这是六盘引擎对局的范围，中位数是 171 步。请把它当成一盘完整的棋而不是小玩意，并据此选择用时：这里提供 5+5 和 10+5 两种节奏，正是出于这个原因。',
+  'Obscuro’s paper ships no code. Misty is a Python and Rust implementation of its architecture, with a documented engine protocol and a server you can play it on. The other open implementation I know of is [obscuro-chess](https://github.com/opowell/obscuro-chess), a JavaScript port started in August 2026. Misty is published so that anyone can run it, read it, or take it apart.':
+    'Obscuro 的论文没有附带代码。Misty 是该架构的 Python 和 Rust 实现，有文档化的引擎协议，也有一个可以和它对弈的服务器。我所知道的另一个开源实现是 [obscuro-chess](https://github.com/opowell/obscuro-chess)，一个 2026 年 8 月开始的 JavaScript 移植版。Misty 开源发布，任何人都可以运行、阅读和拆解它。',
+  // how-puzzle-mining-works blog merge (2026-10-07): machine-translated.
+  'Every source carries a licence status, and publishing refuses any puzzle whose source has not been cleared.':
+    '每个来源都带有授权状态，来源未获授权的题目一律不予发布。',
+  'What survives the gate goes to an audit. A separate process searches every solution again at depth 22 with no node ceiling, knowing nothing of what the first pass decided, and about 6% of the survivors do not hold up. Those are dropped too.':
+    '通过判定关卡的题目还要接受复核。另一个独立进程以 22 层深度、不设节点上限，把每道题的解答重新搜索一遍，它完全不知道第一遍的结论。大约 6% 的幸存者经不起复核，同样被丢弃。',
+  'In August 2026 mining cost about six core-hours per thousand games, or about one core-minute per published puzzle.':
+    '2026 年 8 月，挖掘的成本约为每千盘对局六个核心小时，也就是每发布一道题目约一个核心分钟。',
+  'A rating scores what makes the line hard to see': '评分衡量的是这条线路难在哪里',
+  'Every puzzle needs a rating before anyone has solved it, so the trainer can pick problems near your level. Rating by mate depth gives four distinct values across the corpus. The rating walks the solution instead: a quiet first move adds, a capture subtracts, a sacrifice the solver never wins back adds up to 200, and the number of replies the defender has pushes it either way. On 2 September 2026 the 1,415 puzzles served had 479 distinct ratings between 1000 and 2600.':
+    '每道题目在还没有人解过之前就需要一个评分，这样训练器才能挑出接近你水平的题目。只按杀棋步数评分，整个题库只会得到四个不同的数值。所以评分会把解答逐步走一遍：第一步不吃子会加分，吃子会减分，解题者弃掉且始终没有追回的子力最多加 200 分，防守方可走的应着数量则可能加分也可能减分。2026 年 9 月 2 日，上线的 1,415 道题目共有 479 个不同的评分，介于 1000 到 2600 之间。',
+  'The largest penalty goes to a first move that takes something nothing can take back, scaled by the piece it wins and capped at a chariot’s 900, because a hanging piece is the easiest thing on a board to spot. The check only runs while the game is still going. A capture that mates also leaves the defender no legal reply, and counted naively that looks like a piece nothing can recapture, which would mark down every mating capture in the corpus.':
+    '扣分最多的，是第一步吃掉一个对方无法反吃的子，扣分按吃到的子力计算，上限是一个车的 900，因为无人保护的子是棋盘上最容易发现的东西。这项检查只在对局仍在进行时才执行。吃子同时将死对方时，防守方也没有任何合法应着；如果照字面去数，这看起来就像一个无法反吃的子，题库里每一步吃子成杀都会被扣分。',
+  'One kind of position is withheld: the solver is already at least 300 centipawns ahead and the answer takes something undefended. It teaches nothing at any rating, and a rating can only decide who gets shown a problem. That rule hid 12% of the corpus.':
+    '有一类局面不予上线：解题者已经领先至少 300 厘兵，而答案是吃掉一个无人保护的子。这种题目在任何评分上都教不了什么，而评分只能决定一道题出现在谁面前。这条规则隐藏了题库的 12%。',
+  // katago-jungle blog merge (2026-10-07): machine-translated.
+  "Mistboard's own rules code refereed every game, and each engine only proposed moves. The budgets were matched on time, about two seconds a move on one machine: Misty at its usual 5 million nodes on one thread, KataGo at 1,000 visits on four threads with the b10c384 network. Both engines stop at a fixed amount of search, so the games played on Modal are the games either would play here. KataGo's own repetition rule was switched off, so the referee's applied to both sides.":
+    '每盘棋都由 Mistboard 自己的规则代码裁判，两个引擎只负责提出着法。双方的预算按用时对齐，在同一台机器上每步大约两秒：Misty 用它平时的 500 万个节点、单线程，KataGo 用 1,000 次访问、四线程，搭配 b10c384 神经网络。两个引擎都在固定的搜索量处停下，所以在 Modal 上下出的棋，就是它们在这里会下出的棋。KataGo 自带的重复局面规则被关闭，双方都按裁判的规则处理重复。',
+  KataGo: 'KataGo',
+  Wins: '胜',
+  Losses: '负',
+  Score: '得分率',
+  'As red, 100 games': '执红，100 盘',
+  'As black, 100 games': '执黑，100 盘',
+  Total: '合计',
+  'The median game ran 127 plies. The 95% interval on the score is 0.67 to 0.74, about +125 to +180 Elo; the challenge asked for 0.55.':
+    '对局长度的中位数是 127 个半回合。得分率的 95% 置信区间是 0.67 到 0.74，约合 +125 到 +180 Elo；挑战赛的要求是 0.55。',
+  'All 200 games are in [one study](/study/0t8xpyv6), and the raw records are in [one file](/jungle-games/katago-vs-misty-2026-09-21.jsonl), a line of JSON per game.':
+    '全部 200 盘都收在[一个研究](/study/0t8xpyv6)里，原始记录放在[一个文件](/jungle-games/katago-vs-misty-2026-09-21.jsonl)中，每盘一行 JSON。',
+  'The tiger now jumps the river sideways': '虎现在可以横向跳河',
+  'We found KataGo while searching GitHub for jieqi engines. It lives on the AnimalChess2025 branch of a repository named KataGomo, and nothing in that name says Jungle Chess, so an earlier search for Jungle engines had missed it.':
+    '我们是在 GitHub 上找揭棋引擎时发现 KataGo 的。它放在一个名为 KataGomo 的仓库的 AnimalChess2025 分支上，名字里看不出和斗兽棋有关，所以之前专门找斗兽棋引擎时漏掉了它。',
+  "Its tiger jumps the river sideways as well as lengthwise, the same leap as the lion. Ours jumped lengthwise only, a reading taken from English Wikipedia's article. Tencent's QQ游戏 rules, Leiden University's Dou Shou Qi page and KataGo's own source all give the tiger the lion's jump, and a match between an engine trained on one rule and an engine playing another would have measured the rule.":
+    '它的虎既能纵向跳河，也能横向跳河，跳法和狮一样。我们的虎原先只能纵向跳，这个理解来自英文维基百科的条目。腾讯 QQ游戏的规则、莱顿大学的斗兽棋页面和 KataGo 自己的源代码，都让虎拥有和狮一样的跳法；一个按某条规则训练的引擎，去和一个按另一条规则下棋的引擎比赛，比出来的只是规则的差别。',
+  'Since 21 September the tiger on Mistboard jumps both ways, in the rules engine, the bot, the analysis board, the [rules page](/rules/jungle) and the puzzles. One puzzle the new jump refutes was withdrawn. The change only adds moves, so every earlier game is still legal as played.':
+    '从 9 月 21 日起，Mistboard 上的虎可以纵横两个方向跳河，规则引擎、电脑、分析棋盘、[规则页面](/rules/jungle)和题目都已更新。有一道题目被新的跳法驳倒，已经撤下。这次改动只增加了着法，所以之前的每一盘棋按原样仍然合法。',
+  'KataGo is the Go program, retrained by self-play': 'KataGo 就是那个围棋程序，用自我对弈重新训练',
+  'KataGo-AnimalChess is stock KataGo with the board and rules swapped for Jungle Chess and the self-play loop run as it was: 400 visits a move in self-play, a 10-block, 384-channel network trained by SGD on two GPUs, and rules randomised across the variants the Dandelion app supports, so one network plays all of them. The repository estimates under $50 of compute to reach top strength in a small game. The weights ship inside the app download, with no separate release and no stated licence.':
+    'KataGo-AnimalChess 就是原版 KataGo，只是把棋盘和规则换成了斗兽棋，自我对弈的训练流程原样照跑：自我对弈时每步 400 次访问，10 个残差块、384 个通道的神经网络在两块 GPU 上用 SGD 训练，规则在 Dandelion 软件支持的各个变体之间随机切换，所以一个网络就能下所有变体。仓库里估计，在一个小型棋类上练到顶尖棋力，算力花费不到 50 美元。网络权重打包在软件的下载里，没有单独发布，也没有注明许可协议。',
+  "Misty's evaluation is three hand-written terms: material, distance to the den and a trap penalty. A learned correction on top of it did not help.":
+    'Misty 的评估只有三项手写的内容：子力、离兽穴的距离，以及陷阱扣分。在它之上再加一层学习出来的修正，并没有帮助。',
+  // atomic-xiangqi blog merge (2026-10-07): machine-translated.
+  'This is the one change from a straight port, and the straight port had two faults that needed it. The first showed on move one. From the starting array each cannon can jump the enemy cannon and take the horse behind it, and the blast takes the chariot and elephant beside the horse as well: three pieces for a cannon, and every best-play engine game opened with both sides doing it. The second was a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent.':
+    '这是相对于直接移植的唯一改动，直接移植的版本有两个毛病，都要靠它解决。第一个在第一回合就出现了。从开局阵势起，每一方的炮都能隔着对方的炮打掉后面的马，而爆炸还会带走马旁边的车和象：一个炮换三个子，在引擎的最佳着法对局里，每一盘开局双方都这样走。第二个是一种最早第三回合就能出现、防守方永远无法拒绝的重复局面和棋。一辆车站在士所在的线上，威胁把将帅炸掉。唯一的防守是用炮垫挡；而如果炮也会爆炸，这一垫挡同时就是隔着车反打进攻方自己的士，于是车只好换到另一条士线上，炮跟过去，局面重复。在引擎对局中，少了一辆车的一方靠这一招就能顶住比自己强得多的对手。',
+  'The fix took two rules, and neither works alone. A quiet shot ends the opening exchange and leaves the block standing but harmless, but the chariot may still hop and the cannon still has to follow. Counting a blast threat as check (the next section) does nothing by itself: while the block can shoot back, both sides check on every move, and a repetition both sides check through is a draw. With both rules the hop is a one-sided perpetual check and loses. The engine scores it as a loss and plays on, about a quarter of a pawn down. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.':
+    '解决它用了两条规则，缺一不可。炮击不爆炸，开局的那种兑换就没有了，垫挡仍然成立却不构成威胁；但车仍然可以来回跳，炮也仍然得跟过去。把爆炸威胁算作将军（见下一节），单独用也不起作用：只要垫挡的炮还能反打，双方每一步都在将军，而双方都在将军的重复局面判和。两条规则合在一起，来回跳就成了单方面的长将，判负。引擎也把它算作输棋，宁可落后大约四分之一个兵继续下。炮由此变成一枚用来兑换和垫挡的棋子，而不再是扫清一条横线的棋子；爆炸的其余部分全部不变。',
+  'Every number on this page comes from engine games refereed by the rules kernel and played by a patched Fairy-Stockfish, and the two have to agree on every legal-move count before a number is read. The engine with ten times the nodes wins 29 of 32 games, at two strength levels, without losing one. Of the 44 first moves from the array, each played out at a million nodes a side, none wins for Red and three lose. None of the 19 repetition draws is a one-sided perpetual check. The [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab) has the kernel, the patch and the commands behind each number.':
+    '本页的每一个数字都来自引擎对局：由规则内核裁判，由打过补丁的 Fairy-Stockfish 来下，两者必须在每一个合法着法数上完全一致，才开始读任何数字。节点数多十倍的引擎在两个强度档位上下了 32 盘，赢 29 盘，一盘未输。从开局阵势出发的 44 种第一步，每种都以双方各一百万节点下完，没有一种让红方获胜，有三种让红方输棋。19 盘重复局面和棋里，没有一盘是单方面的长将。[变体实验室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)里有内核、补丁和每个数字背后的命令。',
+  // solver-audit blog merge (2026-10-07): machine-translated.
+  '適情雅趣 第108局 争舟走渡 prints a mate in seven, thirteen plies. At Red’s first move the soldier can take the advisor beside the general instead, 兵四平五, and that mates in six. Nine of the 172 can be mated faster than printed.':
+    '《適情雅趣》第108局 争舟走渡印的是七着杀，共十三步。红方第一着改用兵吃将旁边的士，兵四平五，六着就能成杀。172局中有9局存在比所印更快的杀法。',
+  '適情雅趣 第108局 争舟走渡: a mate in six where the book prints seven':
+    '適情雅趣 第108局 争舟走渡：书中印七着杀，六着即可成杀',
+  'The book’s line, with 兵四平五 as a branch at Red’s first move: it takes the advisor and mates a move sooner.':
+    '书中着法，红方第一着处另有分枝兵四平五：吃士，早一着成杀。',
+  'The audit was wrong three times first': '审校先错了三次',
+  'The counts above come from the fourth version of the audit. The first was a pass over the quiet compositions, and it searched the position after the key as though Red were to play twice. It reported 176 of 190 sound. The number meant nothing, because every search had started on the wrong side.':
+    '上面的数字来自第四版审校。第一版检验的是不连将的排局，它在首着之后的局面上搜索时，当成了红方连走两步。结果报告190局中176局无瑕。这个数字毫无意义，因为每一次搜索都从错误的一方开始。',
+  'The second judged every composition as a chess mate-in-n. A quiet 排局 claims only 红先胜, Red plays and wins, and against that claim a second key and a faster mate are not faults. About half the faults that pass counted went away. Both mistakes were in the quiet-move audit, shelved for the reason in the next section; the 172 above are continuous-check problems, where the length is part of what the book claims.':
+    '第二版把每一局都当成国际象棋排局里的“n着杀”来判。不连将的排局只声称红先胜，对这样的结论来说，第二首着和更快的杀法都不算毛病。那一轮算出的毛病大约有一半就此作废。这两个错误都出在不连将排局的审校里，那部分已经搁置，原因见下一节；上面的172局都是连将杀排局，着数本身就是书中结论的一部分。',
+  'The third was running the exact search without the engine screen described above. Eight records were first read as broken compositions: five are the Red wins past the search’s reach in the table, and three are the broken records above.':
+    '第三个错误是没有先做上面说的引擎筛查，就直接跑精确搜索。有八局起初被判为排局本身有缺陷：其中五局是表中那些红方能胜但超出搜索范围的，另外三局是上面的错谱。',
+  'A fourth was in the helpmates, the problems where both sides cooperate to reach mate. The composer that built them tested for checkmate, and xiangqi also scores 困毙, a side left with no legal move, as a loss. A line ending in 困毙 is a second solution, so 22 of the 186 helpmates we had published as sound had lines the composer could not see, 64 in the worst of them. A re-check that counts 困毙 is written and has not shipped yet.':
+    '第四个错误出在协作杀里，也就是双方合作走成杀局的题。生成这些题的程序只检验将死，而象棋把困毙，即一方无子可动，同样判负。以困毙结束的着法也是一种解，所以我们当作唯一解发布的186道协作杀里，有22道含有生成程序看不到的解，最多的一道有64种。按困毙计算的复查程序已经写好，还没有上线。',
+  'Four bugs, and each was a rule we knew and had not put into the tool: whose move it is, what a 排局 claims, that a mistyped record looks like a broken composition, and that 困毙 loses.':
+    '四个错误，每一个都是我们本来知道、却没有写进工具的规则：轮到哪一方走，排局声称的是什么，录错的棋谱看起来和有缺陷的排局一样，以及困毙判负。',
+  // duck-xiangqi-game-tree (2026-10-07). Machine-translated 2026-10-07. Terms
+  // follow the duck-xiangqi rules page (回合, 落点, 炮架, 应着, 将帅) plus 博弈树
+  // and 半回合; square names (h3, e8) and Fairy-Stockfish stay Latin.
+  'One Duck Xiangqi move is worth two xiangqi moves': '鸭子象棋走一步，抵得上象棋走两步',
+  'Duck Xiangqi’s game tree': '鸭子象棋的博弈树',
+  'Duck Xiangqi’s Game Tree, Measured Against Xiangqi': '鸭子象棋的博弈树：与象棋对比实测',
+  'Red’s first Duck Xiangqi turn reaches more positions than a full xiangqi move by each side. About half of them leave the opponent exactly the same choices, so a search can skip them. What is left still cuts how far an engine sees almost in half.':
+    '鸭子象棋里红方的第一个回合，能走出的局面比象棋里双方各走一步还多。其中大约一半给对手留下完全相同的选择，所以搜索可以跳过它们。剩下的部分仍让引擎能看到的深度几乎减半。',
+  'A turn in [Duck Xiangqi](/rules/duck-xiangqi) has two parts. You move a piece, then you put the duck on any empty point, where it blocks everything until your opponent moves it. We counted what that second choice does to the game tree, the map of every position the game can reach.':
+    '[鸭子象棋](/rules/duck-xiangqi)的一个回合分两半。你先走一个子，再把鸭子放到任意一个空点上；在对手把它挪走之前，它挡住一切。我们统计了这第二个选择对博弈树的影响。博弈树就是对局所能到达的每一个局面的总图。',
+  'Red’s first turn alone makes 2,554 positions': '光是红方的第一个回合，就有 2,554 个局面',
+  'Red has 44 moves from the starting position in both games. In xiangqi, black’s replies to them make 1,920 positions. In Duck Xiangqi, red’s turn is not over until the duck lands on one of the empty points, about 58 of them, so red’s first turn alone makes 2,554.':
+    '两种棋里，红方在初始局面都有 44 种走法。在象棋里，黑方对这些走法的应着共构成 1,920 个局面。在鸭子象棋里，要等鸭子落到某个空点上（空点大约有 58 个），红方的回合才算走完，所以光是红方的第一个回合就有 2,554 个局面。',
+  'A xiangqi board after red plays cannon h3 to e3, with a yellow dot on each of the 58 empty points where the duck could land.':
+    '红炮从 h3 走到 e3 之后的象棋棋盘，鸭子可以落下的 58 个空点上各有一个黄点。',
+  'One of red’s 44 first moves. In xiangqi, black would reply next. In Duck Xiangqi, red first puts the duck on one of these points, and each choice is a different position.':
+    '红方 44 种第一步走法中的一种。在象棋里，接下来轮到黑方应着。在鸭子象棋里，红方要先把鸭子放到这些点中的一个上，每一种选择都是一个不同的局面。',
+  'The gap compounds with every turn. After one turn each, Duck Xiangqi already has more positions than xiangqi has after two turns each.':
+    '这个差距每走一个回合都会成倍放大。双方各走一个回合之后，鸭子象棋的局面数就已经超过象棋双方各走两个回合之后的局面数。',
+  'Positions after': '走完以下回合后的局面数',
+  Xiangqi: '象棋',
+  'Duck Xiangqi': '鸭子象棋',
+  'Red’s first turn': '红方第一个回合',
+  'One turn each': '双方各一个回合',
+  'Two turns each': '双方各两个回合',
+  'Not counted': '未统计',
+  'Every legal sequence from the starting position, counted by Fairy-Stockfish.':
+    '从初始局面出发的每一条合法着法序列，由 Fairy-Stockfish 统计。',
+  'Half of those positions are the same position': '这些局面里，有一半其实是同一个局面',
+  'The duck matters when it lands where black’s next move goes: a point a black piece moves to, slides through, or jumps over. Anywhere else, black has exactly the replies it would have with no duck on the board.':
+    '鸭子只有落在黑方下一步要经过的地方才有作用：黑方棋子要走到的点、要滑过的点，或者要跳过的点。落在别处，黑方的应着和盘上没有鸭子时完全一样。',
+  'The same board. 30 points carry an orange disc with the number of black replies a duck there takes away, up to 8 on e8 in front of black’s palace. The other 28 points are small grey dots.':
+    '同一张棋盘。30 个点上有橙色圆片，上面的数字是鸭子落在那里会让黑方少掉的应着数，最多的是黑方九宫前沿的 e8，少 8 种。其余 28 个点是灰色小点。',
+  'Most of the points that matter sit on black’s side, in the paths of black’s pieces. On some of them the duck also gives a black cannon something to jump over, which adds a reply.':
+    '有作用的点大多在黑方一侧，位于黑方棋子的路线上。其中有些点上，鸭子还给黑方的炮当了炮架，因而多出一种应着。',
+  'The busiest point is e8, in front of black’s palace: a duck there takes 8 replies away whatever red played first. The 28 grey points change nothing. Put the duck on any of them and black faces the same choices, then moves the duck somewhere new, so the game that follows is the same game. Two small things differ: black cannot leave the duck where it is, and repetitions count the duck’s square.':
+    '最要紧的点是黑方九宫前沿的 e8：无论红方第一步走什么，鸭子落在那里都会让黑方少掉 8 种应着。那 28 个灰点什么也不改变。把鸭子放在其中任何一点上，黑方面对的选择都一样，然后再把鸭子挪到新的地方，所以接下来的对局还是同一盘棋。只有两处小差别：黑方不能把鸭子留在原地，而判定重复局面时要算上鸭子所在的点。',
+  'So a search can look at one of them and skip the rest. Count every duck placement that leaves black the same replies once, and at the first move red’s 2,554 turns come down to 1,310.':
+    '所以搜索只需看其中一个，其余的都可以跳过。凡是给黑方留下相同应着的落点都只算一次，第一步时红方的 2,554 种回合就降到 1,310 种。',
+  'Four bars. Xiangqi after red moves: 44. Xiangqi after red and black have both moved: 1,920. Duck Xiangqi after red moves and places the duck: 2,554. Duck Xiangqi counting placements that leave black the same replies once: 1,310.':
+    '四根横条。象棋，红方走一步后：44。象棋，红黑双方各走一步后：1,920。鸭子象棋，红方走棋并放好鸭子后：2,554。鸭子象棋，给黑方留下相同应着的落点只算一次：1,310。',
+  'Positions from the start, counted by the site’s own rules engine.':
+    '从初始局面出发的局面数，由本站自己的规则引擎统计。',
+  'A duck away from your opponent’s pieces wastes half your turn':
+    '鸭子离对手的棋子太远，等于浪费半个回合',
+  'The same board is a rule of thumb for players. Put the duck on a grey point and your opponent’s choices are exactly what they would be without it, so you have played a xiangqi move and passed on the rest of your turn. The duck earns its place in the paths of your opponent’s pieces: on the files their chariots and cannons use, and in front of their horses and elephants. At the start, the points that take the most away are on your opponent’s cannon row, where one duck cuts across both cannons at once.':
+    '同一张棋盘对棋手来说也是一条经验法则。把鸭子放在灰点上，对手的选择和没有鸭子时完全一样，等于你只走了一步象棋，回合的另一半白白放弃了。鸭子要放在对手棋子的路线上才有价值：放在对方车和炮所走的路上，或者挡在对方的马和象前面。开局时，作用最大的点在对手炮所在的那一行，一只鸭子能同时截断两门炮。',
+  'The duck’s share of the tree grows as pieces come off': '子力越少，鸭子在博弈树里的分量越大',
+  'To see past the opening, we had Fairy-Stockfish play 64 games of each against itself and counted the choices at every move. Xiangqi’s choices shrink as pieces come off the board. In Duck Xiangqi each capture also frees a point for the duck, so a turn stays nearly as wide as it was in the opening, and 200 half-moves in it has about 100 times the choices of a xiangqi move.':
+    '为了看到开局以后的情况，我们让 Fairy-Stockfish 在两种棋里各自战 64 局，并统计每一步的选择数。象棋的选择随着棋子离盘而减少。在鸭子象棋里，每吃掉一个子也会给鸭子空出一个点，所以一个回合几乎和开局时一样宽；走到第 200 个半回合时，它的选择数约是象棋一步的 100 倍。',
+  'A line chart on a log scale. Duck Xiangqi stays between about 1,500 and 2,500 legal turns from ply 0 to ply 220. Xiangqi starts at 44 legal moves and falls to around 20 after ply 120. The gap is marked as about 50 times at ply 10 and about 100 times at ply 200.':
+    '一张对数刻度的折线图。从第 0 个到第 220 个半回合，鸭子象棋的合法回合数一直在大约 1,500 到 2,500 之间。象棋从 44 种合法着法开始，第 120 个半回合之后降到 20 种左右。图中标出了差距：第 10 个半回合约 50 倍，第 200 个半回合约 100 倍。',
+  'Legal turns at each ply in 64 games per variant that Fairy-Stockfish played against itself, on a log scale. Games end at different lengths, so fewer games feed the right side of the chart.':
+    'Fairy-Stockfish 在每种棋里各自战 64 局，图中是每个半回合的合法回合数，采用对数刻度。各局长短不一，所以图的右侧来自较少的对局。',
+  'The same search sees 25 turns ahead in xiangqi and 14 in Duck Xiangqi':
+    '同样的搜索，在象棋里能向前看 25 个回合，在鸭子象棋里只有 14 个',
+  'That width costs search depth. Given the same number of positions to look at, Fairy-Stockfish sees a little over half as far ahead in Duck Xiangqi. We counted depth in turns in both games, and a Duck Xiangqi turn includes the duck. A search that counted each set of equivalent duck placements once would win some of that depth back. We have not measured how much.':
+    '这种宽度要拿搜索深度来换。搜索同样数量的局面，Fairy-Stockfish 在鸭子象棋里看到的深度只比象棋的一半多一点。两种棋的深度我们都按回合计算，鸭子象棋的一个回合包括放鸭子。如果搜索把每组等价的鸭子落点只算一次，就能赢回一部分深度。能赢回多少，我们还没有测过。',
+  'Positions searched': '搜索局面数',
+  'Xiangqi depth': '象棋深度',
+  'Duck Xiangqi depth': '鸭子象棋深度',
+  'Median of three positions: the start, and two and four turns in.':
+    '三个局面的中位数：初始局面，以及走了两个回合和四个回合之后的局面。',
+  'One small rule makes xiangqi a new game': '一条小规则，让象棋变成一种新棋',
+  'The board, the pieces and the way they move are all xiangqi’s, so a xiangqi player can sit down and play Duck Xiangqi straight away. The duck still changes almost everything under them. Opening theory stops after the first move, because every line in it assumes there is no duck. And the game is harder for the kind of engine that plays it now. Classical search, the alpha-beta search Fairy-Stockfish runs, pays for every extra choice at every turn it looks ahead, which is why the depth gap grows with the budget.':
+    '棋盘、棋子和走法全都是象棋的，所以象棋棋手坐下来就能下鸭子象棋。但鸭子几乎改变了棋子背后的一切。开局理论在第一步之后就失效了，因为其中每一路变化都假定棋盘上没有鸭子。对目前下这种棋的引擎来说，它也更难。传统搜索，也就是 Fairy-Stockfish 所用的 alpha-beta 搜索，每向前多看一个回合，都要为每一个多出来的选择付出代价，这就是为什么搜索预算越大，深度差距越大。',
+  'We don’t know yet what strong Duck Xiangqi looks like. Some placements are pure technique, like the duck on e8 that takes away eight replies. Others might be aimed at the player rather than the position: a duck on a quiet point that invites one move, or a duck that blocks the line your opponent is watching while the real threat is somewhere else. An engine that sees 14 turns ahead finds the first kind. The second kind will show up only in games between strong players.':
+    '我们还不知道高水平的鸭子象棋是什么样子。有些落点纯粹是技术，比如放在 e8 的鸭子，一下拿走八个应着。另一些落点针对的可能是对手这个人，而不是局面：把鸭子放在一个安静的点上，引诱对方走某一步；或者用鸭子挡住对手正盯着的那条线，而真正的威胁在别处。一个能向前看 14 个回合的引擎找得到第一种。第二种，只有在高手之间的对局里才会出现。',
+  'How we counted': '我们是怎么统计的',
+  'The site’s own rules engine, the code that checks every move played here, counted the first move’s positions, and Fairy-Stockfish counted the deeper ones. Fairy-Stockfish also played the 64 games per variant, at 100,000 positions a move, with its neural network off. Xiangqi counts are strictly legal, so a move that leaves your own general capturable does not count. Duck Xiangqi has no check rule (you win by capturing the general), so every piece move counts.':
+    '第一步的局面由本站自己的规则引擎统计，也就是检查这里每一步棋的那段代码；更深的局面由 Fairy-Stockfish 统计。每种棋的 64 局也是 Fairy-Stockfish 下的，每步搜索 100,000 个局面，并关闭了神经网络。象棋的计数严格按合法着法，所以让自己的将帅可被吃掉的着法不算。鸭子象棋没有将军规则（吃掉将帅即获胜），所以每一步走子都算。',
+  'After cannon h3 to e3, the duck can land': '红炮从 h3 走到 e3 后，鸭子可以落在',
+  'on any of these 58 points': '这 58 个点中的任意一点上',
+  'A point the duck can land on. Each one': '鸭子可以落下的点。每一个',
+  'is a different position.': '都是一个不同的局面。',
+  'Only 30 of those 58 points change': '这 58 个点里只有 30 个',
+  'what black can play': '会改变黑方能走的棋',
+  'A duck here takes this many of black’s': '鸭子落在这里，黑方的 45 种应着',
+  '45 replies away': '会少掉圆片上这么多种',
+  'A duck here changes nothing for black': '鸭子落在这里，对黑方毫无影响',
+  // Its two charts, written per locale by scripts/duck-tree-figures.mjs.
+  '/article-thumbs/duck-tree-counts.svg': '/article-thumbs/duck-tree-counts.zh-hans.svg',
+  '/article-thumbs/duck-tree-counts-dark.svg': '/article-thumbs/duck-tree-counts-dark.zh-hans.svg',
+  '/article-thumbs/duck-tree-branching.svg': '/article-thumbs/duck-tree-branching.zh-hans.svg',
+  '/article-thumbs/duck-tree-branching-dark.svg':
+    '/article-thumbs/duck-tree-branching-dark.zh-hans.svg',
+  // solver-audit (2026-10-06): machine-drafted, not native-reviewed. Terms follow
+  // the 2026-10-01 brianhliou.com write-up (排局, 连将杀, 双解, 第二首着, 错谱).
+  'Auditing the Old Manuals': '求解器审校古谱',
+  'What the Solver Found in the Old Manuals': '求解器在古谱里发现了什么',
+  'We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt: the position as recorded cannot be the one the composer meant.':
+    '我们用穷尽求解器检验了《適情雅趣》（1570）、《渊深海阔》（1808）和一部现代集子中每一局较短的连将杀排局，共172局，问的是书中所印的解法是否唯一。45局是唯一的。70局在变化树的某处有第二种取胜续着，14局有第二首着，9局存在更快的杀法，另有3局是棋谱录错了，而不是排局本身有误。',
+  'A 排局 gives you a diagram and a claim. Red to play and mate in five, by checks all the way. For four centuries the check on that claim has been another player’s eyes, and the tradition is good at it: these positions have been copied, corrected and argued over by people who knew the game better than any of us. We asked a machine to search the whole tree and report every other way the mate works.':
+    '一局排局给你一张图和一个结论：红先，五着连将杀。四百年来，检验这个结论的是另一位棋手的眼睛，而这一传统很擅长此事：这些局面被比我们任何人都更懂棋的人抄录、校正、争论过。我们让机器搜索整棵变化树，报告每一种别的成杀方法。',
+  'We did that for the short problems, the ones where a solution runs nine to thirteen plies and exhaustive search finishes. 172 compositions across three books. The books hold up better than the engine reports suggested and worse than a composition judge would want.':
+    '我们对短局做了这件事，也就是解法在九到十三步之间、穷尽搜索能算完的那些。三本书，172局排局。这些书比引擎报告所暗示的更经得起检验，但比排局裁判所希望的要差。',
+  'Where the positions come from': '局面从哪里来',
+  'The three books are on dpxq.com, the two classical ones typed from 1980s and 1990s annotated reprints of Ming and Qing woodblocks. We mined every public-domain manual on its two 古谱 shelves, 2,938 records, and published the ones that replay as studies here, after telling the site’s owner, with a link back to each record. The diagrams and the moves are centuries old; every modern editor’s note stays on dpxq, because that part is not ours to republish.':
+    '这三本书都在 dpxq.com 上，两本古谱是根据二十世纪八九十年代明清木刻本的注释重印本录入的。我们挖掘了它两个古谱书架上的每一部公有领域棋谱，共2,938局，并在告知网站站长之后，把能够逐着演示的那些作为研究发布在这里，每局都附有原棋谱的链接。图和着法是几百年前的；现代编者的每一条注释都留在 dpxq 上，因为那部分不该由我们转载。',
+  'A record arrives as two strings. 適情雅趣 第011局 群鼠争穴 is a board of two digits per piece, reading from Black’s back rank, and a move list in the same coordinates. Both are one long line in the file; they are broken up here, four pieces to a group:':
+    '一局棋谱到手时是两个字符串。《適情雅趣》第011局 群鼠争穴的局面是每个棋子两位数字，从黑方底线读起，着法列表用同样的坐标。两者在文件里都是一整行；这里把它们拆开，每组四个棋子：',
+  'The record for 第011局 as dpxq serves it, trimmed to the three tags that carry the position, the solution and the book’s verdict (“Red gives up both chariots; the two cannons win”).':
+    'dpxq 提供的第011局棋谱，只保留承载局面、解法和书中结论（红方弃掉双车，靠双炮取胜）的三个标签。',
+  'That becomes a position and a line by replaying it through the same rules kernel the site plays with. The replay is the first check, and it tests our copy of each record: a solution recorded short still replays cleanly, but a mis-typed piece usually produces an illegal move somewhere, and those records are dropped whole. Then Pikafish sweeps each position for a verdict that contradicts the book’s, which is where the engine can say “this is not a Red win” and stop.':
+    '把它在本站对局所用的同一套规则内核上重新走一遍，就得到一个局面和一条着法。这次重放首先检验的是棋谱，而不是书：一个解法记短了仍然能顺利重放，但录错的棋子通常会在某处产生非法着法，这些棋谱会被整局剔除，而不是截短。然后皮卡鱼逐一扫描每个局面，寻找与书中结论相矛盾的判断，引擎能在这里说出「这不是红胜」，然后到此为止。',
+  'The sweep cannot say whether the solution is the only one. That takes exhaustive search: every legal Red move at every turn, every Black reply, to the end of the claimed length. On these boards, with twenty pieces and a nine-to-thirteen-ply solution, it finishes in seconds to a few minutes per problem. The whole audit below is a few hours of laptop time.':
+    '这次扫描说不出解法是否唯一。那需要穷尽搜索：每一回合红方的每一步合法着法，黑方的每一种应着，一直搜到所称的步数为止。在这些局面上，二十个棋子、九到十三步的解法，每局只需几秒到几分钟。下面的整个审校在笔记本电脑上跑了几个小时。',
+  'What counts as a fault': '什么算毛病',
+  'Four things can be wrong with a solution that still mates. A second key: another first move forces the mate in the same number of moves, so the diagram has two answers. A dual: further in, after some defence, Red has two winning continuations. A faster mate: the book prints a mate in seven and a mate in five exists, which breaks the stipulation outright. A longer mate: the book is right about who wins and wrong about how long, because Black has a better defence than the one printed.':
+    '一个仍能成杀的解法可能有四种毛病。第二首着：另一个首着在同样着数内强制成杀，于是这张图有两个答案。双解：再往后，在黑方某种防守之后，红方有两种取胜续着。更快的杀法：书中印的是七着杀，而存在五着杀，这直接违反了题意。更长的杀法：书中对胜负的判断是对的，对着数的判断是错的，因为黑方有一步比所印着法更好的防守。',
+  'The dual is where the two traditions differ. Western chess composition has treated it as a fault since the nineteenth century. 朱鹤洲’s ten-character standard for judging 排局 asks for 新深妙多走少美无趣名, novelty, depth, brilliance, many variations, every attacking piece moving, few pieces, a pretty diagram, no idle piece, amusement and an apt title. Uniqueness is not on the list.':
+    '双解正是两种传统分歧的地方。西方国际象棋排局自十九世纪起就把它当作毛病。朱鹤洲评判排局的十字标准要求「新深妙多走少美无趣名」：新颖、深刻、巧妙、变化多、攻子都要走动、子少、图形美观、无闲子、有趣味、题名贴切。唯一性不在其中。',
+  'Forty-five of 172 are clean': '172局中有45局无瑕',
+  Book: '书',
+  Audited: '审校',
+  Sound: '无瑕',
+  Dual: '双解',
+  'Second key': '第二首着',
+  Faster: '更快',
+  Longer: '更长',
+  '林幼如作品集 (20th c.)': '林幼如作品集（20世纪）',
+  'Continuous-check compositions up to thirteen plies, each solved exhaustively: every key, every winning continuation after every defence. Each problem is counted once, under its most serious fault. The nine not in a column are one book key that misses its own length and five Red wins past the search’s reach, in 適情雅趣 and 林幼如作品集, and the three broken records in 渊深海阔.':
+    '十三步以内的连将杀排局，每局都做了穷尽求解：每一个首着，每一种防守之后的每一种取胜续着。每局只按最严重的毛病计一次。不在任何一列中的九局，是一局书中首着在所记步数内杀不了，以及五局红方能胜但超出搜索范围（分布在《適情雅趣》和《林幼如作品集》中），还有《渊深海阔》中的三局错谱。',
+  'Most of the findings are duals, and they are clear-cut. 適情雅趣 第011局 群鼠争穴 is a mate in seven: both chariots are given up, and the cannons and the horse do the rest. At Red’s sixth move the book plays 傌六进五, and 傌六进七 mates from the same position in the same number of moves.':
+    '双解才是重点，而且都不是勉强算数的情况。《適情雅趣》第011局 群鼠争穴是七着杀：双车都弃掉，由双炮和马完成其余部分。红方第六着书中走傌六进五，而在同一局面上傌六进七也能在同样着数内成杀。',
+  'The book’s line to Red’s sixth move, and then the other mate played out. Neither editor nor reader was looking for it, because in this tradition it has never been a fault. The chapter in the study carries both.':
+    '书中着法走到红方第六着，然后把另一种杀法走出来。编者和读者都没有去找它，因为在这一传统里它从来不算毛病。研究里的这一章两种都收了。',
+  '適情雅趣 第011局 群鼠争穴: the book’s line and the dual':
+    '適情雅趣 第011局 群鼠争穴：书中着法与双解',
+  'The second keys are the ones a composer would care about. 第015局 妙振兵铃 opens with a chariot check and mates in six; pushing the soldier on d9 up beside the general mates in six as well, by a different arrangement of the same pieces. Seven of those in 適情雅趣 alone.':
+    '第二首着才是排局作者会在意的。第015局 妙振兵铃以车将开局，六着成杀；把 d9 上的兵推到将旁边，同样六着成杀，只是同样的子换了一种排列。仅《適情雅趣》一书就有七局这样的情况。',
+  'The second key played out: a different first move, the same six moves to mate.':
+    '第二首着走出来：不同的首着，同样六着成杀。',
+  '適情雅趣 第015局 妙振兵铃: two first moves that both mate in six':
+    '適情雅趣 第015局 妙振兵铃：两个首着都能六着成杀',
+  'When the record itself is broken': '当棋谱本身录错时',
+  '渊深海阔 第217局 疾诛文丑 claims a mate in five with every move a check, and the printed line does mate. It mates because Black’s fourth move walks into it. Black has a second legal move there, 车5退8, swinging the chariot that has stood on e2 since the diagram back to e10; after it Red has no check at all, so a continuous-check mate is over on the spot, and no quiet move mates either.':
+    '《渊深海阔》第217局 疾诛文丑声称连将五着杀，所印着法也确实成杀。之所以成杀，是因为黑方第四着自己走进了杀局。黑方在那里还有另一步合法着法：车5退8，把原图中就停在 e2 的车调回 e10；走了这步之后，红方一步将军都没有，连将杀就此结束，任何不将军的着法也杀不了。',
+  'The book’s line to Red’s fourth move, and then the move the record does not give: 车5退8 in place of 士6进5. Red is out of checks.':
+    '书中着法走到红方第四着，然后是棋谱没有给出的那一着：以车5退8代替士6进5。红方没有将可走了。',
+  '渊深海阔 第217局 疾诛文丑: the record as transcribed, and Black’s mate':
+    '渊深海阔 第217局 疾诛文丑：按录入的棋谱，以及黑方的杀法',
+  'No editor prints a Red win in a position where Red is lost, so the diagram as typed is probably not the composition. Which piece is wrong is a question a machine can help with: try every single-piece edit to the diagram, and ask which of them makes the book’s own line a forced mate in five. Of 154 edits, four do. Three of them concern the black chariot on e2, and the fourth puts a black soldier on e3, in that chariot’s file.':
+    '没有哪位编者会在红方必败的局面上印红胜，所以录入的这张图很可能不是原排局。错的是哪个子，机器可以帮忙回答：对图做每一种单子改动，看哪些能让书中自己的着法成为五着强制杀。154种改动中，有四种可以。其中三种涉及 e2 的黑车，第四种是在 e3 放一个黑卒，正好在那个车的线上。',
+  'Every single-piece edit that restores the book’s solution. Three remove the black chariot on e2 or make it a weaker piece; the fourth blocks its file with the soldier from d2.':
+    '能恢复书中解法的每一种单子改动。三种是去掉 e2 的黑车，或把它换成较弱的子；第四种是用 d2 的卒挡住它的线。',
+  'We sent the board and the line to the person who maintains dpxq’s records, in Chinese, with our guess that the chariot was a soldier in the book. His answer was 古谱就有错呀: the old manuals have errors in them. He did not check a printed copy, so whether the chariot is the book’s mistake or the transcriber’s is still open. If you have a printed edition of 渊深海阔, the square is e2.':
+    '我们把局面和着法用中文发给了维护 dpxq 棋谱的人，并附上我们的猜测：书中那个车原本是卒。他的回答是「古谱就有错呀」。他没有核对印本，所以这个车究竟是古书的错还是转录的错，仍无定论。如果你有《渊深海阔》的印本，要看的格子是 e2。',
+  'The other two, 第202局 and 第265局, are worse off. No single-piece edit restores either of them, so whatever went wrong took more than one piece with it, or the move list is mis-typed as well. All three are still in the 渊深海阔 study as dpxq records them, and the audit study carries the finding.':
+    '另外两局，第202局和第265局，情况更糟。没有任何单子改动能恢复其中任何一局，所以出错的不止一个子，或者着法列表也录错了。三局都按 dpxq 的记录原样留在《渊深海阔》的研究里，审校研究则收录了这一发现。',
+  'Those three are the ones inside the 172. Across the whole corpus, 34 records are flagged as corrupt: the diagram as typed does not support the claim printed beside it. Ten of them claim mate by continuous checks, and nine are refuted inside the book’s own line, in four manuals; in each, the search ran six moves past the recorded length and found no continuous-check mate. They have a study of their own, linked below, ordered by how decisive the refutation is: in 第217局 Red is left without a single check, and in the last Red still has ten checks that go nowhere.':
+    '这三局是172局之内的。在整个语料库中，有34局棋谱被标为错谱：录入的图支撑不了旁边印着的结论。其中十局声称连将杀，九局在书中自己的着法之内就被驳倒，分布在四部棋谱中；每一局的搜索都比所记步数多走了六着，也找不到连将杀。它们单独收在一个研究里，链接在下面，按驳倒的干脆程度排序：第217局中红方一步将军都没有，最后一局里红方仍有十步将军，却都杀不了。',
+  'An exact search that reports no forced mate looks identical whether the composition is broken or the record is, and one engine evaluation at the root separates them in seconds. Five positions we had flagged as cooked turned out fine that way: Red does force the mate, later than the printed line.':
+    '精确搜索报告没有强制杀时，排局本身有缺陷和棋谱录错看起来一模一样，而在根局面上做一次引擎评估，几秒钟就能区分两者。我们原本标为有缺陷的五个局面，这样一查就没问题：红方确实能强制成杀，只是比所印着法晚。',
+  'The four great positions: nothing broken': '四大名局：没有一局不成立',
+  '七星聚会, 蚯蚓降龙, 野马操田 and 千里独行 are the street positions, argued over since 百局象棋谱 in 1801. They claim a draw, and a draw cannot be proved without the repetition law. What can be tested is whether the claim breaks, with one side forcing a mate. Across twenty-nine records of those four and their relatives, the search found no mate that contradicts the book. On eight it proved that neither side mates within its depth; on the rest it ran out of budget for one side or both before it could say.':
+    '七星聚会、蚯蚓降龙、野马操田和千里独行是江湖排局，自1801年的《百局象棋谱》起就争论不休。它们的结论是和棋，而不借助重复局面的规则，和棋是证明不了的。能检验的是这个结论会不会被打破，即某一方能否强制成杀。在这四局及其变体的二十九份棋谱中，搜索没有找到与书相矛盾的杀法。其中八份证明了双方在搜索深度内都杀不了；其余的，在得出结论之前，一方或双方的搜索预算就用完了。',
+  '七星聚会 as 渊深海阔 prints it: two chariots, a cannon and three soldiers against a chariot, an elephant and four soldiers. Fifty-four plies of the book’s line. Red cannot force a mate within the search; for Black, the search ran out of budget before it could say.':
+    '《渊深海阔》所印的七星聚会：双车、一炮、三兵对一车、一象、四卒。书中着法共五十四步。在搜索范围内红方无法强制成杀；黑方这边，搜索在得出结论前就用完了预算。',
+  '渊深海阔 第001局 七星曜彩: the book’s draw, fifty-four plies':
+    '渊深海阔 第001局 七星曜彩：书中的和局，五十四步',
+  'What we did not check': '我们没有检查的部分',
+  'The quiet compositions, which are most of the corpus. A 宽紧杀 runs past twenty plies on a board with twenty pieces, and the exhaustive search that settles a nine-ply problem does not finish there. A proof-number search gets further and still runs out on the long ones. Everything above is about continuous-check problems only.':
+    '不是连将的排局，也就是语料库的大部分。一局宽紧杀在二十个子的局面上要走二十步以上，能算清九步题的穷尽搜索在那里算不完。证明数搜索能走得更远，但在长局上还是会算不完。上面的一切都只涉及连将杀排局。',
+  'None of this is a claim about the compositions as compositions. A dual in 適情雅趣 is a dual by a standard 適情雅趣 was not written to, and the geometry that made these positions worth copying for four hundred years does not depend on whether the line is unique.':
+    '这些都不是对这些排局作为作品的评价。《適情雅趣》里的双解，是按一个《適情雅趣》本来就不为之而写的标准算出的双解；让这些局面四百年来值得抄录的那种几何之美，丝毫不受这个计数影响。',
+  'Play every finding': '逐着演示每一项发现',
+  'The nine refuted records': '九局被驳倒的棋谱',
+  'The manuals themselves': '古谱原书',
+  'An Exact Audit of the Classical Xiangqi Manuals': '用精确搜索审校古典象棋谱',
+  // Homepage card titles (`cardTitle`), 2026-10-03: the article's own zh
+  // title cut to fit the card, machine-drafted, not native-reviewed.
+  'Pikafish misjudged its reveals': '皮卡鱼误判了翻子',
+  'KataGo, a stronger Jungle bot': 'KataGo：更强的斗兽棋电脑',
+  '14 wins against our jieqi bot': '战胜我们揭棋电脑的 14 盘棋',
+  'How Strong Players Open Jieqi': '高手眼中的揭棋开局',
+  'Multi-solution puzzles': '有不止一个答案的题目',
+  'Skill vs. Luck in Flip Games': '把翻子棋的实力和运气分开',
+  'Duck Xiangqi Strategy': '鸭子象棋攻略',
+  'Xiangqi Antichess Is a Draw': '象棋棋盘上的反棋是和棋',
+  'Horde on the Xiangqi Board': '象棋棋盘上的部落棋',
+  'Atomic Xiangqi Is Live': '原子象棋上线了',
+  'Server-Side Fog Chess': '用服务器实现迷雾国际象棋',
+  'Play Pikafish online': '在线与皮卡鱼对弈',
+  // ab-jchess (match link): machine-drafted 2026-10-02, not native-reviewed.
+  'All 400 games are on the site, each with its own review page: [browse the match](/games/search?variant=jieqi&source=engine-match).':
+    '全部 400 盘对局都在网站上，每盘都有自己的复盘页面：[查看这场对抗赛](/games/search?variant=jieqi&source=engine-match)。',
+  // pikafish-reveal-bug: machine-drafted 2026-10-02, not native-reviewed.
+  'Our Pikafish jieqi bot misjudged its reveals': '我们的皮卡鱼揭棋电脑误判了翻子',
+  'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.':
+    '我们的皮卡鱼揭棋电脑把一些翻子评估得远比实际要好，原因是两个错误。两个错误都已修复，修复后棋力只有很小的损失，或者完全没有损失。',
+  'In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, priced some of those bets far too well. It would turn over a piece that gets mated for most of what it could be, and rate the move as winning.':
+    '在[揭棋](/rules/jieqi)里，翻开一个暗子就是一次下注。你知道它可能是哪些棋子，但不知道究竟是哪一个。我们的皮卡鱼电脑，也就是第 1 到第 8 级背后的引擎，把其中一些赌注估得太好了。它会翻开一个在大多数可能下都会被将死的棋子，还把这步棋评为胜势。',
+  'We found it on October 2, while writing the [AB-JChess post](/blog/ab-jchess). The fix is live for every level and for the engine you can run on the analysis board.':
+    '我们在 10 月 2 日写 [AB-JChess 那篇文章](/blog/ab-jchess)时发现了这个问题。修复已经上线，所有级别都已更新，分析棋盘上可以运行的引擎也一样。',
+  'The bot averages a reveal over the pieces it could be': '电脑会对暗子可能是的每一种棋子取平均',
+  'When the bot considers a move that turns a piece over, it plays the move once for each piece the face-down one could be. It scores each, then averages the scores, weighted by how many of each piece are left. A reveal that wins if the piece is a chariot and gets mated if it is a soldier should score somewhere in between. Two bugs broke that average.':
+    '电脑考虑一步翻子时，会对暗子可能是的每一种棋子各走一次这步棋，分别打分，再按每种棋子剩余的数量加权平均。一步翻子如果翻出车就赢、翻出兵就被将死，分数应该介于两者之间。两个错误破坏了这个平均。',
+  'For Black, the average took the best piece': '对黑方来说，平均取了最好的那个棋子',
+  "Before averaging, the code turns every score to one player's point of view. It picked the player from a setting that was never filled in, so it always assumed Red. For Red's reveals that was right. For Black's, the scores were upside down, and a rule meant to take the worst outcome, when the outcomes spread far apart, took the best one.":
+    '取平均之前，代码会把每个分数换算到某一方的视角。它根据一个从未被赋值的设置来判断是哪一方，所以总是当成红方。对红方的翻子，这样没有问题。对黑方的翻子，分数就是反的：一条本该在结果相差很大时取最差结果的规则，取了最好的结果。',
+  "That was the game the AB-JChess post first led with. Pikafish, as Black, turned over the piece on d10 and moved it to e9, rating the game nearly 19 pawns in its favour. Only an advisor on e9 stops the chariot's mate on f10, and an advisor was 1 of the 11 pieces it could have been. It was a chariot, and Black was mated next move.":
+    'AB-JChess 那篇文章最初开头用的就是这盘棋。皮卡鱼执黑，把 d10 的暗子翻开走到 e9，自评领先将近 19 个兵。只有 e9 上是士，才能挡住车在 f10 的将杀，而在它可能是的 11 个棋子里，士只有 1 个。翻出来是车，黑方下一步就被将死。',
+  'Jieqi: Pikafish, as Black, is about to reveal on d10': '揭棋：皮卡鱼执黑，即将翻开 d10 的暗子',
+  'Scores the search cut short were averaged as exact':
+    '被搜索中途放弃的分数，被当成精确值取了平均',
+  'An engine saves time by giving up on a move once it knows the move is worse than the best one so far. It then returns a bound, which means "this much, or worse". That is safe when the next step is a comparison. The bot fed these bounds into the average as if they were exact scores, so a piece that gets mated could come back as "no better than +7" and count as +7.':
+    '引擎为了节省时间，一旦知道某步棋不如目前最好的一步，就会放弃继续搜索它，返回一个界限，意思是“最多这么多，或者更差”。如果接下来只是比较大小，这样做是安全的。但这个电脑把这些界限当成精确分数放进了平均，于是一个会被将死的棋子可能返回“不超过 +7”，然后就按 +7 计算。',
+  "In the first game of the AB-JChess post, the bot, as Red, turned over the piece on b3 and moved it to d3. Searched again with the old bot, the move rates more than eight pawns in Red's favour. Six times in ten that piece is a soldier or an elephant, and Black's cannon mates at once on h1. Averaged honestly, the move is worth about three pawns to Black. The fixed bot sees the mate and plays the advisor from e2 to f3, the move AB-JChess recommends.":
+    '在 AB-JChess 那篇文章的第一盘棋里，电脑执红，把 b3 的暗子翻开走到 d3。用旧版电脑重新搜索，这步棋评为红方领先八个兵以上。这个棋子十次里有六次是兵或相，黑炮立刻在 h1 将死。如实平均的话，这步棋对黑方来说价值大约三个兵。修复后的电脑看到了这个将杀，改走仕从 e2 到 f3，也就是 AB-JChess 推荐的着法。',
+  'Jieqi: the bot is about to reveal on b3': '揭棋：电脑即将翻开 b3 的暗子',
+  'Where the bugs are in the code': '错误在代码里的位置',
+  "Both are in our copy of Pikafish's jieqi branch. Simplified, the old code scored a reveal like this:":
+    '两个错误都在我们复制的皮卡鱼揭棋分支里。简化后，旧代码是这样给翻子打分的：',
+  'The colour flip is in [misc.h, lines 360 to 366](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/misc.h#L360-L366), set from [search.cpp, line 1310](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1310) by asking whether the side to move is the "first side", a field [nothing ever assigns](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/position.h#L212). The window is the one at [search.cpp, line 1462](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1462): each piece is searched inside the window of the move above it, and a piece that gets mated comes back as the window\'s lower edge.':
+    '颜色翻转在 [misc.h 第 360 到 366 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/misc.h#L360-L366)，由 [search.cpp 第 1310 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1310)设置：它判断走棋方是不是“先手方”，而这个字段[从来没有被赋值](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/position.h#L212)。窗口问题在 [search.cpp 第 1462 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1462)：每种棋子都在上一层着法的窗口内搜索，一个会被将死的棋子返回的是窗口的下沿。',
+  "We found the second one by printing every piece's score at a reveal. In one match game, three of the four pieces the bot could turn over were mated, and all three came back as exactly 738, the bottom of the window. The fourth scored 792. The bot averaged them to 745 and rated the move as winning.":
+    '我们通过打印翻子时每种棋子的分数找到了第二个错误。在一盘对抗赛对局里，电脑可能翻出的四种棋子中有三种会被将死，而这三种返回的都恰好是 738，也就是窗口的下沿。第四种得 792。电脑把它们平均成 745，把这步棋评为胜势。',
+  'The colour flip is gone, and a piece whose score came back as a bound is searched again. The whole change is [one commit, 28 lines](https://github.com/brianhliou/pikafish-jieqi-wasm/commit/bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9).':
+    '颜色翻转已经去掉，返回界限值的棋子会重新搜索。全部改动是[一次提交，28 行](https://github.com/brianhliou/pikafish-jieqi-wasm/commit/bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9)。',
+  'The fixed bot rates reveals close to their worth, and plays about as well':
+    '修复后的电脑对翻子的估值接近实际，棋力也基本不变',
+  "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one, perhaps slightly weaker: in 600 quick games it won 264 and lost 300, and with four times the search per move it won 95 and lost 97 in 200.":
+    '在 AB-JChess 对抗赛中决定皮卡鱼输棋的 71 步里，旧版电脑把其中 16 步评得比实际好至少五个兵。修复后的电脑只有 3 步。它的棋力和旧版差不多，也许略弱一点：快棋 600 盘，它赢 264 盘、输 300 盘；每步搜索量加到四倍后对下 200 盘，它赢 95 盘、输 97 盘。',
+  'The fix covers the move the bot is choosing. Deeper in its search the old averaging is still there, because fixing it everywhere made the bot about 150 Elo weaker.':
+    '修复只覆盖电脑正在选择的那一步。在更深的搜索里，旧的平均方式依然存在，因为在所有地方都修复会让电脑弱大约 150 Elo。',
+  'AB-JChess has the second flaw, and it rarely matters': 'AB-JChess 也有第二个错误，但很少有影响',
+  'AB-JChess is built from Pikafish and averages reveals the same way. It has the cut-short flaw and not the colour one. Of the 60 reveals that decided its losses to our bot, it overrated 2.':
+    'AB-JChess 基于皮卡鱼，也用同样的方式对翻子取平均。它有搜索中途放弃的问题，没有颜色的问题。在决定它输给我们电脑的 60 步翻子中，它只高估了 2 步。',
+  'A question about one move caught it': '一个关于一步棋的问题发现了它',
+  'The AB-JChess post first used game 108 to show how Pikafish judged a reveal. What caught the bug was asking why the bot would play d10-e9 at all. A correct search cannot find a mate in its own best line and still call the position winning. We took the examples out of that post the same day.':
+    'AB-JChess 那篇文章最初用第 108 盘来说明皮卡鱼如何判断翻子。发现这个错误的，是一个问题：电脑到底为什么会走 d10-e9？正确的搜索不可能在自己的最佳变化里看到将杀，还把局面评为胜势。我们当天就把那些例子从那篇文章里删掉了。',
+  'Play the jieqi bot': '挑战揭棋电脑',
+  'A bug in the Pikafish jieqi bot: how it misjudged turning over a piece':
+    '皮卡鱼揭棋电脑的一个错误：它如何误判翻开暗子',
+  // katago-jungle: machine-drafted 2026-10-02, not native-reviewed.
+  "We scored every position of two of those wins again with both engines, at the match settings. Each chart shows one number, KataGo's chance of winning, judged twice: once by KataGo and once by Misty. Where the lines part, the engines disagree about who is winning. A draw counts as half a win, and Misty's centipawns become a chance through the curve our analysis board uses, 1 / (1 + e^(−0.00368 × cp)).":
+    '我们用两个引擎按比赛设置，把其中两盘胜局的每个局面重新评估了一遍。每张图只显示一个数：KataGo 的胜率，由两个引擎各判断一次，一次是 KataGo 自己，一次是 Misty。两条线分开的地方，就是两个引擎对谁占优看法不一。和棋算作半胜；Misty 的分数（厘兵）按我们分析棋盘使用的曲线 1 / (1 + e^(−0.00368 × cp)) 换算成胜率。',
+  "On move 29 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. Misty only saw it on move 36, seven moves later.":
+    '第 29 回合 Misty 把困在角落的虎从 g8 走到 g9，KataGo 对自己的得分从 61% 升到 92%，而 Misty 仍认为自己 +111。KataGo 为红方给出的变化从狮 b1-b2 开始，能让红方保持 37%。Misty 到第 36 回合才看出来，晚了七个回合。',
+  'In these two games, KataGo saw the win seven moves and two moves before Misty did.':
+    '在这两盘棋中，KataGo 分别比 Misty 早七个回合和两个回合看出胜局。',
+  "Game 67: KataGo's chances of winning": '第 67 盘：KataGo 的胜率',
+  "Game 94: KataGo's chances of winning": '第 94 盘：KataGo 的胜率',
+  "Game 67, KataGo's chances of winning as KataGo and Misty judged them. KataGo's jumps on move 29, when Misty plays tiger g8-g9; Misty's catches up on move 36.":
+    '第 67 盘，KataGo 和 Misty 各自判断的 KataGo 胜率。第 29 回合 Misty 走虎 g8-g9 时，KataGo 的判断跳升；Misty 的判断到第 36 回合才跟上。',
+  "Game 94, KataGo's chances of winning as KataGo and Misty judged them. KataGo's jumps on move 50, when Misty plays cat c8-c7; Misty's catches up on move 52.":
+    '第 94 盘，KataGo 和 Misty 各自判断的 KataGo 胜率。第 50 回合 Misty 走猫 c8-c7 时，KataGo 的判断跳升；Misty 的判断到第 52 回合才跟上。',
+  'KataGo thinks': 'KataGo 的判断',
+  'Misty thinks': 'Misty 的判断',
+  'Move 29: Misty plays tiger g8-g9': '第 29 回合：Misty 走虎 g8-g9',
+  'KataGo jumps from 61% to 92%': 'KataGo 从 61% 升到 92%',
+  'Move 36: Misty': '第 36 回合：Misty',
+  'finally sees it': '才看出来',
+  'Move 50: Misty plays cat c8-c7': '第 50 回合：Misty 走猫 c8-c7',
+  'KataGo jumps from 63% to 98%': 'KataGo 从 63% 升到 98%',
+  'Move 52: Misty': '第 52 回合：Misty',
+  "Misty, playing red, won a wolf on move 11 and read itself ahead for most of the game, while KataGo's score stayed at 50% and then climbed.":
+    'Misty 执红，第 11 回合吃掉一只狼，大半盘都认为自己领先；而 KataGo 的得分先停在 50%，随后一路上升。',
+  "Misty, playing black, won a wolf on move 19 and read itself ahead for most of the next 30 moves, while KataGo's score crept from 50% to 63%.":
+    'Misty 执黑，第 19 回合吃掉一只狼，此后 30 个回合里大部分时间都认为自己领先；而 KataGo 的得分从 50% 慢慢升到 63%。',
+  "On move 50 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss two moves later. KataGo's line for black, elephant d6-d7, keeps black at 38%.":
+    '第 50 回合 Misty 把猫从 c8 走到 c7，KataGo 从 63% 升到 98%。Misty 仍认为自己 +80，两个回合之后才算出必输。KataGo 为黑方给出的变化是象 d6-d7，能让黑方保持 38%。',
+  'KataGo, a stronger Jungle Chess bot': 'KataGo：更强的斗兽棋电脑',
+  'KataGo for Jungle Chess: 82 wins, 118 draws and no losses against Misty':
+    'KataGo 斗兽棋：对 Misty 82 胜 118 和 0 负',
+  'Two wins, read by both engines': '两盘胜局，两个引擎各自怎么看',
+  'Game 67: a wolf up, and lost': '第 67 盘：多一只狼，却输了',
+  "Jungle Chess, game 67: Misty's moves marked by KataGo":
+    '斗兽棋第 67 盘：KataGo 标注的 Misty 着法',
+  'Game 94: the slow squeeze': '第 94 盘：慢慢收紧',
+  "Jungle Chess, game 94: Misty's moves marked by KataGo":
+    '斗兽棋第 94 盘：KataGo 标注的 Misty 着法',
+  Move: '回合',
+  'A Jungle Chess engine that learned by playing itself now sits above Misty. In 200 games against Misty it won 82, lost none and drew 118.':
+    '一个靠自我对弈学会斗兽棋的引擎，现在排在 Misty 之上。它和 Misty 下了 200 盘，赢 82 盘，一盘未输，和 118 盘。',
+  "[Jungle Chess](/rules/jungle) on Mistboard has a new top bot. It is KataGo-AnimalChess, hzyhhzy's [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025) built on lightvector's [KataGo](https://github.com/lightvector/KataGo), playing with the b10c384 network from Dandelion 4 by Kouza ([lxsgx23](https://github.com/lxsgx23)). We play it here with [hzyhhzy's permission](https://github.com/hzyhhzy/KataGomo/issues/12), under the name KataGo.":
+    '[斗兽棋](/rules/jungle)在 Mistboard 上有了新的最强电脑。它就是 KataGo-AnimalChess：hzyhhzy 在 lightvector 的 [KataGo](https://github.com/lightvector/KataGo) 基础上开发的 [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025)，使用 Kouza（[lxsgx23](https://github.com/lxsgx23)）Dandelion 4 的 b10c384 神经网络。我们经 [hzyhhzy 许可](https://github.com/hzyhhzy/KataGomo/issues/12)在这里使用它，名字就叫 KataGo。',
+  'KataGo learned Jungle Chess by playing itself, the way AlphaZero learned chess. A neural network proposes moves and judges positions, and a search checks its ideas. No other engine taught it.':
+    'KataGo 和 AlphaZero 学国际象棋一样，靠自己和自己下棋学会了斗兽棋。神经网络提出着法、评估局面，搜索再去检验它的想法。没有任何别的引擎教过它。',
+  'Play KataGo': '挑战 KataGo',
+  'See all bots': '查看所有电脑',
+  '82 wins and no losses against Misty': '对 Misty 82 胜 0 负',
+  "Before putting it on the site, we played it against Misty, our own Jungle Chess bot, in an open challenge of 200 games at 1,000 visits a move. hzyhhzy's engine won 82, lost none and drew 118, a score of 0.705. Every win came from walking into Misty's den, and every draw was a repetition.":
+    '上线之前，我们让它和我们自己的斗兽棋电脑 Misty 进行了一场公开挑战赛：200 盘，每步 1,000 次访问。hzyhhzy 的引擎赢 82 盘、输 0 盘、和 118 盘，得分率 0.705。每一盘胜局都是走进 Misty 的兽穴取胜，每一盘和棋都是重复局面。',
+  'Misty is still where you start': '入门仍从 Misty 开始',
+  'KataGo is at the top of the Jungle Chess bot list, above Misty. Misty stays the default and the easier opponent; pick KataGo when you want the stronger game. Game review and analysis for Jungle Chess still run on Misty.':
+    'KataGo 排在斗兽棋电脑列表的最上面，在 Misty 之上。Misty 仍是默认对手，也是较容易的那一个；想下更难的棋就选 KataGo。斗兽棋的复盘和分析仍由 Misty 负责。',
+  'On the site KataGo searches 150 visits a move, which takes about 1.5 to 3.5 seconds. At that setting it scored 19 wins, no losses and 31 draws in 50 games against Misty, 0.690, which cannot be told apart from the 1,000-visit result. The strength is in the network.':
+    '在网站上，KataGo 每步搜索 150 次访问，大约用时 1.5 到 3.5 秒。在这个设置下，它和 Misty 下了 50 盘，19 胜 0 负 31 和，得分率 0.690，与 1,000 次访问的结果分不出差别。它的棋力来自神经网络。',
+  'KataGomo is open source at [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo). Thank you, hzyhhzy, for the engine and for letting us use it; lightvector, for KataGo; and Kouza, for the Dandelion 4 network.':
+    'KataGomo 是开源项目，地址是 [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo)。感谢 hzyhhzy 提供引擎并允许我们使用，感谢 lightvector 的 KataGo，也感谢 Kouza 的 Dandelion 4 神经网络。',
+  'Jungle Chess rules': '斗兽棋规则',
+  // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed.
+  '1,000 games played': '已下完 1,000 盘棋',
+  'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盘对局',
+  'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.':
+    '从 6 月 1 日起，棋友们已经在 Mistboard 上下完了 1,000 盘棋，其中大部分是在 9 月下的。感谢每一位来这里下棋的棋友。',
+  'Mistboard passed 1,000 finished games this week. A game counts once both sides have moved and it ends, against another person or a bot. Engine matches and our test accounts are left out, and counting started on June 1.':
+    'Mistboard 本周下完的棋突破了 1,000 盘。一盘棋只要双方都走过棋并且下完，就计为一盘，不论对手是人还是电脑。引擎之间的对局和我们的测试账号不计在内，计数从 6 月 1 日开始。',
+  'The Mistboard statistics page: 1,000 games played, games per week climbing from a handful in June to nearly 400 in the week of September 21, jieqi far ahead by variant, and almost every game against a bot.':
+    'Mistboard 统计页面：已下 1,000 盘棋；每周对局数从 6 月的寥寥几盘升到 9 月 21 日那一周的近 400 盘；按变体看揭棋遥遥领先；几乎所有对局都是和电脑下的。',
+  'The statistics page on the day the count reached 1,000.': '计数达到 1,000 盘当天的统计页面。',
+  'June had 12 games. September has had nearly 800, and the week of September 21 alone had 387. The [statistics page](/stats) keeps the running count.':
+    '6 月只有 12 盘。9 月已经有近 800 盘，光是 9 月 21 日那一周就有 387 盘。[统计页面](/stats)会持续更新计数。',
+  '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 608 of the first 1,000. [Banqi](/rules/banqi) and [xiangqi](/rules/xiangqi) come next with 96 and 82, then Fog Chess, Jungle, Fog Xiangqi, Duck Xiangqi, Flip Jungle and Fortress Xiangqi. Seven of those games were between two people; the rest were against the bots.':
+    '[揭棋](/rules/jieqi)，也就是棋子背面朝下开局的象棋，在前 1,000 盘里占了 608 盘。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分别是 96 盘和 82 盘，然后是迷雾国际象棋、斗兽棋、迷雾象棋、鸭子象棋、翻翻棋和堡垒象棋。这些对局里只有 7 盘是两个人对下，其余都是和电脑下的。',
+  'Thank you': '感谢',
+  'Thank you to everyone who played a game, reported a bug, or supports the site as a [patron](/patron). We are building the best place to play Chinese chess and original board games, free and [open source](https://github.com/brianhliou/mistboard).':
+    '感谢每一位来下过棋、报告过问题，或者成为[赞助会员](/patron)支持网站的朋友。我们要把这里做成下中国象棋和原创棋类游戏最好的地方，免费并且[开源](https://github.com/brianhliou/mistboard)。',
+  'Ideas and questions go on the [forum](/forum), where other players can add to them. Anything private, like a bug with your account or billing trouble, goes through [Contact](/contact). What you tell us decides what comes next.':
+    '想法和问题请发到[论坛](/forum)，其他棋友也能在下面补充。私人的事情，比如账号出了问题或付款遇到麻烦，请通过[联系](/contact)页面告诉我们。你们的意见决定我们接下来做什么。',
+  'Play a game': '开始对局',
+  'Send feedback': '发送反馈',
+  "In late September, before putting it on the site, we played it against that bot: 400 games at 4 seconds a move, on the same settings the site uses, with AB-JChess's network of September 11. AB-JChess won 248, lost 136 and drew 16, a 64% score. It won as Red and as Black.":
+    '9 月下旬上线之前，我们让它和那个电脑下了 400 盘，每步 4 秒，设置与网站上完全相同，AB-JChess 用的是 9 月 11 日的网络。AB-JChess 赢 248 盘、输 136 盘、和 16 盘，得分率 64%。执红执黑都占上风。',
+  "AB-JChess is at the top of the jieqi bot list, above Level 8. Levels 1 to 8 stay Pikafish, and a new player starts at Level 2. It does not take a level number: the top place holds the strongest jieqi engine we have measured, under its own name. Its rating on the [bots page](/bots), 2354 against Level 8's 2226, comes from the same bot-against-bot games that rate the levels. Its authors are training stronger networks; when one is released, we will play it against this one and switch if it wins.":
+    'AB-JChess 排在揭棋电脑列表的最上面，在第 8 级之上。第 1 到第 8 级仍是皮卡鱼，新手从第 2 级开始。它不占用级别编号：最高的位置留给我们实测过最强的揭棋引擎，并以它自己的名字标示。它在[电脑对手页面](/bots)上的等级分是 2354（第 8 级为 2226），和各个级别一样，来自电脑之间的对局。作者们正在训练更强的网络；新网络发布后，我们会让它和现在这个对弈，赢了就换上。',
+  // ab-jchess: machine-drafted 2026-09-30, not native-reviewed.
+  'While writing this post we found a bug in how our Pikafish bot scored reveals. It is fixed; [a follow-up post](/blog/pikafish-reveal-bug) covers what it was and what it cost.':
+    '写这篇文章的过程中，我们发现我们的皮卡鱼电脑在给翻子打分时有一个错误。现已修复，[后续文章](/blog/pikafish-reveal-bug)讲清楚了这个错误是什么、造成了多大影响。',
+  'AB-JChess, a stronger jieqi bot': 'AB-JChess：更强的揭棋电脑',
+  'AB-JChess: the open-source jieqi engine that beat Pikafish 248 to 136':
+    'AB-JChess：以 248 比 136 战胜皮卡鱼的开源揭棋引擎',
+  'An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games.':
+    '一个自带神经网络的开源揭棋引擎，现在排在皮卡鱼第 8 级之上。它在 400 盘中以 248 比 136 战胜全力的皮卡鱼。',
+  '[Jieqi](/rules/jieqi) on Mistboard has a new top bot. [AB-JChess](https://github.com/lxsgx23/AB-JChess) is an open-source jieqi engine by Huorongrong and Laoxu (Kouza), and we play it here with their permission. It sits above Pikafish Level 8, the bot people have been playing since August.':
+    '[揭棋](/rules/jieqi)在 Mistboard 上有了新的最强电脑。[AB-JChess](https://github.com/lxsgx23/AB-JChess) 是由 Huorongrong 和 Laoxu（Kouza）开发的开源揭棋引擎，我们经作者许可在这里使用它。它排在皮卡鱼第 8 级之上，也就是棋友们从 8 月起一直在下的那个电脑。',
+  'Play AB-JChess': '挑战 AB-JChess',
+  'Two ways to be strong': '两种强法',
+  '[Pikafish](https://github.com/official-pikafish/Pikafish) is built for speed. It looks at more than a million positions a second and judges each one by rules written by hand. AB-JChess is built from Pikafish too, but it judges positions with a neural network trained on about a billion jieqi positions. It looks at about fifty times fewer positions, and understands each one better. Its training code is public in the same repository, under [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch).':
+    '[皮卡鱼](https://github.com/official-pikafish/Pikafish)靠速度取胜。它每秒看一百多万个局面，用人工写成的规则评估每一个局面。AB-JChess 同样由皮卡鱼改造而来，但它用神经网络评估局面，这个网络用大约十亿个揭棋局面训练而成。它看的局面少了大约五十倍，但对每个局面理解得更深。它的训练代码也公开在同一个代码库里，见 [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch)。',
+  'Where it sits': '它排在哪里',
+  // ab-jchess examples: machine-drafted 2026-10-03, not native-reviewed.
+  'Where the edge comes from': '优势从哪里来',
+  'Each engine reported a score with every move it played in the match, and when the two disagreed, AB-JChess was usually the one that was right. In 137 games there came a point where AB-JChess gave itself 75% or more while Pikafish, on the move before or after, gave AB-JChess 60% or less. AB-JChess won 115 of those games, lost 13 and drew 9. The other way round, Pikafish at 75% or more for itself while AB-JChess gave it 60% or less, happened in 202 games, and Pikafish won 101 of them, lost 90 and drew 11. These are the numbers Pikafish reported during the match, with the reveal bug we have since fixed.':
+    '比赛中，两个引擎每走一步都会报出一个分数；两者看法不一致时，通常是 AB-JChess 看对了。有 137 盘棋出现过这样的时刻：AB-JChess 给自己 75% 或更高，而皮卡鱼在前一步或后一步只给 AB-JChess 60% 或更低。这些棋 AB-JChess 赢了 115 盘，输 13 盘，和 9 盘。反过来，皮卡鱼给自己 75% 或更高、而 AB-JChess 只给它 60% 或更低的情况出现在 202 盘棋中，皮卡鱼赢了其中 101 盘，输 90 盘，和 11 盘。这些是皮卡鱼在比赛中报出的分数，当时还带着我们后来修复的翻子错误。',
+  "Here are two of AB-JChess's wins, both as Red, where its score climbed while Pikafish's stayed level. We scored every position again with both engines, AB-JChess searching 1 million positions and the fixed Pikafish 64 million, and turned each engine's numbers into an expected score with a curve fitted on the match. Each chart shows AB-JChess's score as each engine saw it, with moves numbered as on the board below it. On the boards, ?! marks a Pikafish move that cost 5 to 10 points by AB-JChess's count; neither game has a worse one.":
+    '下面是 AB-JChess 的两盘胜局，两盘它都执红，它的分数一路上升，而皮卡鱼的分数一直持平。我们用两个引擎把每个局面重新评估了一遍（AB-JChess 每个局面搜索 100 万个节点，修复后的皮卡鱼搜索 6400 万个），并用一条按这次对抗赛拟合的曲线把各自的分值换算成期望得分。每张图显示两个引擎各自眼中 AB-JChess 的得分，回合编号与下方棋盘一致。棋盘上的 ?! 标出按 AB-JChess 的算法让皮卡鱼损失 5 到 10 个百分点的着法；两盘棋里都没有更差的着法。',
+  'Game 68: two advisors and an elephant, for an attack': '第 68 盘：两个士和一个象，换来一场攻势',
+  'AB-JChess thinks': 'AB-JChess 的判断',
+  'Pikafish thinks': '皮卡鱼的判断',
+  'Move 18: the horse takes the elephant': '第 18 回合：马吃象',
+  'AB-JChess 85%, Pikafish 50%': 'AB-JChess 85%，皮卡鱼 50%',
+  'Move 23: Pikafish': '第 23 回合：皮卡鱼',
+  agrees: '才认同',
+  'Move 16: the chariots are off': '第 16 回合：双方兑掉车',
+  'AB-JChess 83%, Pikafish 48%': 'AB-JChess 83%，皮卡鱼 48%',
+  'Move 21: Pikafish': '第 21 回合：皮卡鱼',
+  "Pikafish, as Black, took a face-down advisor with its chariot on move 11, then sent the horse that came up on b1 into Red's camp, where it took the second advisor and an elephant. AB-JChess spent those moves bringing a chariot, a horse and a soldier near Black's king. From move 13 to move 21, AB-JChess never had Red below 69%; Pikafish, searching the same positions, had Red between 40% and 58%.":
+    '皮卡鱼执黑，第 11 回合用车吃掉一个暗子士，随后把在 b1 翻出的马杀进红方阵地，又吃掉第二个士和一个象。AB-JChess 利用这几步把一个车、一个马和一个兵调到黑将附近。从第 13 回合到第 21 回合，AB-JChess 给红方的估分从未低于 69%；皮卡鱼搜索同样的局面，给红方的估分在 40% 到 58% 之间。',
+  "Game 68: AB-JChess's score, as each engine saw it": '第 68 盘：两个引擎眼中 AB-JChess 的得分',
+  "Game 68, AB-JChess's expected score by move as AB-JChess and Pikafish saw it. On move 18 AB-JChess has Red at 85% and Pikafish at 50%; Pikafish agrees from move 23.":
+    '第 68 盘，AB-JChess 和皮卡鱼各自眼中 AB-JChess 每回合的期望得分。第 18 回合 AB-JChess 给红方 85%，皮卡鱼给 50%；皮卡鱼从第 23 回合起才认同。',
+  "Jieqi, game 68: Pikafish's moves marked by AB-JChess":
+    '揭棋第 68 盘：AB-JChess 标注的皮卡鱼着法',
+  "On move 18 the horse took the elephant on c1. AB-JChess had Red at 85%; Pikafish had Red at 50%, and during the game it had reported 47%. Red's elephant took the horse on move 20. Pikafish's own score for Red reached 85% on move 21, when the piece it turned over on b10 came up a soldier.":
+    '第 18 回合，马吃掉了 c1 的象。AB-JChess 给红方 85%；皮卡鱼给红方 50%，对局中它报的是 47%。第 20 回合红象吃掉了这匹马。第 21 回合皮卡鱼在 b10 翻出的棋子是兵，它自己给红方的估分这才升到 85%。',
+  'Game 6: one chariot against a face-down back row': '第 6 盘：一车对一排没翻开的暗子',
+  'In game 6 AB-JChess took an advisor with its chariot on move 15 and let the chariots come off. After move 16 Red had the only chariot on the board, and the seven pieces Black had not turned over could only be five soldiers and two horses. AB-JChess had Red at 83%; Pikafish had Red at 48%.':
+    '第 6 盘，AB-JChess 第 15 回合用车吃掉一个士，并让双方兑车。第 16 回合之后，盘面上只剩红方一个车，而黑方还没翻开的七个棋子只可能是五个兵和两个马。AB-JChess 给红方 83%；皮卡鱼给红方 48%。',
+  "Game 6: AB-JChess's score, as each engine saw it": '第 6 盘：两个引擎眼中 AB-JChess 的得分',
+  "Game 6, AB-JChess's expected score by move as AB-JChess and Pikafish saw it. On move 16 AB-JChess has Red at 83% and Pikafish at 48%; Pikafish agrees from move 21.":
+    '第 6 盘，AB-JChess 和皮卡鱼各自眼中 AB-JChess 每回合的期望得分。第 16 回合 AB-JChess 给红方 83%，皮卡鱼给 48%；皮卡鱼从第 21 回合起才认同。',
+  "Jieqi, game 6: Pikafish's moves marked by AB-JChess": '揭棋第 6 盘：AB-JChess 标注的皮卡鱼着法',
+  "Red's chariot reached Black's back row on move 19 and took two horses there. AB-JChess had Red above 80% from move 17, Pikafish from move 21.":
+    '第 19 回合红车冲到黑方底线，吃掉了那里的两个马。AB-JChess 从第 17 回合起给红方的估分就在 80% 以上，皮卡鱼要到第 21 回合。',
+  'What a longer search says': '搜得更久会怎样',
+  "We searched each of the five marked moves again, the game move and AB-JChess's choice each on its own: AB-JChess at 4 million positions, the fixed Pikafish at 256 million. AB-JChess still puts two of them 5 points or more below its choice and the other three within 2 points. Pikafish prefers AB-JChess's choice once and its own game move four times. So the single moves are close calls. The gap is in the scores the two engines give the positions, and in both games Pikafish's own score came round to AB-JChess's later: on move 23 rather than 18 in game 68, and on move 21 rather than 17 in game 6. The study shows both engines' numbers at every marked move.":
+    '我们把五步被标注的着法重新搜索了一遍，实战着法和 AB-JChess 的选择各自单独搜索：AB-JChess 搜索 400 万个节点，修复后的皮卡鱼搜索 2.56 亿个。AB-JChess 仍然认为其中两步比它的选择差 5 个百分点以上，另外三步相差不到 2 个百分点。皮卡鱼有一次更喜欢 AB-JChess 的选择，另外四次更喜欢自己的实战着法。所以单看每一步，差别都很小。差距在于两个引擎对局面给出的分数；两盘棋里，皮卡鱼自己的分数都是后来才跟上 AB-JChess：第 68 盘是第 23 回合而不是第 18 回合，第 6 盘是第 21 回合而不是第 17 回合。研究里每一步被标注的着法都附有两个引擎的分数。',
+  Thanks: '致谢',
+  'AB-JChess is open source under the GPL-3.0 licence, at [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess). Its authors let us use the engine and its network on Mistboard. The network is downloaded from their own release each time we build the site, never re-hosted. Thank you, Huorongrong and Laoxu.':
+    'AB-JChess 以 GPL-3.0 许可证开源，地址是 [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess)。作者允许我们在 Mistboard 上使用这个引擎及其神经网络。每次构建网站时，神经网络都从作者自己的发布页下载，从不在本站转存。谢谢 Huorongrong 和 Laoxu。',
+  // jieqi-bot-wins: machine-drafted 2026-09-30, not native-reviewed.
+  'Fourteen wins against our jieqi bot': '战胜我们揭棋电脑的 14 盘棋',
+  'Beating the Pikafish jieqi bot: 14 wins in 596 games': '战胜皮卡鱼揭棋电脑：596 盘中的 14 胜',
+  'Since August 23, people have played our jieqi bot 596 times and beaten it 14 times. Here is how those games were won, and seven new levels for everyone else.':
+    '8 月 23 日以来，棋友们和我们的揭棋电脑下了 596 盘，赢了 14 盘。本文讲这些棋是怎么赢的，也介绍为大家新增的七个级别。',
+  'If you have played [jieqi](/rules/jieqi) against the computer here, you have been playing Pikafish at full strength. Until this week it was the only jieqi bot we had.':
+    '如果你在这里和电脑下过[揭棋](/rules/jieqi)，你面对的一直是全力的皮卡鱼。直到本周，它都是我们唯一的揭棋电脑。',
+  'Since August 23 it has played 596 games against more than 60 people and lost 16 of them. Two of those losses were our fault: once the engine timed out and the bot resigned, and once it walked into a mate its search could not see. That leaves 14 games that people won outright, about one in 42.':
+    '8 月 23 日以来，它和 60 多位棋友下了 596 盘，输了 16 盘。其中两盘是我们的问题：一次是引擎超时、电脑认输，一次是它走进了搜索看不到的杀棋。剩下的 14 盘是棋友实打实赢下来的，大约每 42 盘赢一盘。',
+  'That is a hard wall to learn against, so the ladder now has seven easier levels below it. The rest of this page is about the 14 wins, because they show where the top level can be beaten.':
+    '这样的对手很难拿来练棋，所以现在它下面多了七个更容易的级别。本文其余部分讲这 14 盘胜局，因为它们说明了最高级别可以在哪里被击败。',
+  'Play jieqi': '下揭棋',
+  'See all levels': '查看所有级别',
+  'Eight levels': '八个级别',
+  'Levels 1 to 7 are the same engine choosing among its top few moves, with more room for error at the lower levels. Level 8 is the bot you have been playing. We set each level by playing the bots against each other and against a player that moves at random, so every step up is measured. The ratings are on the [bots page](/bots).':
+    '第 1 到第 7 级是同一个引擎，在它最看好的几步棋里挑选，级别越低，出错的余地越大。第 8 级就是你一直在下的那个电脑。我们让这些电脑互相对弈，也和一个随机走棋的对手对弈，以此确定每个级别，所以每升一级都有实测数据。等级分见[电脑对手页面](/bots)。',
+  'If you have played jieqi here before, you were playing Level 8.':
+    '如果你以前在这里下过揭棋，你下的就是第 8 级。',
+  'How the fourteen were won': '这 14 盘是怎么赢的',
+  "Five of the 14 ended in stalemate. In jieqi, as in xiangqi, a side with no legal move loses, so trapping the bot's general with nowhere to go is a win even when it is not in check. In every one of them the bot had seen the loss coming several moves earlier, and every move it had left lost. The game below opens at move 11, just before the turn: the bot is sure it is well ahead, and one move later it is lost. Step forward with the arrows to reach the stalemate.":
+    '14 盘中有 5 盘以困毙结束。揭棋和象棋一样，无子可走的一方判负，所以即使没有将军，把电脑的老将困得无路可走也算赢。这几盘里，电脑都提前好几步就看到了败局，它剩下的每一步都是输棋。下面这盘从第 11 回合开始，正是转折之前：电脑确信自己大优，一步之后就已经输了。用箭头往后走，就能看到困毙。',
+  "Jieqi: a guest stalemates the bot's lone general after 63 moves":
+    '揭棋：一位访客在第 63 回合困毙电脑的孤帅',
+  'Five of the wins turned right after the bot moved one of its own face-down pieces. A hidden piece is revealed when it moves, and the bot tends to value that move as if the reveal will go its way. This game opens at move 15 with the bot well ahead and about to reveal a piece. The reply takes a cannon, and within a few moves the lead is gone.':
+    '有 5 盘的转折，就发生在电脑走动自己的一个暗子之后。暗子一动就会翻开，而电脑给这步棋估值时，往往当作翻出来的子会对自己有利。这盘从第 15 回合开始，电脑大优，正准备翻开一个子。对方的应着吃掉一门炮，几步之后优势就没了。',
+  "Jieqi: a guest punishes the bot's reveal and mates in 32 moves":
+    '揭棋：一位访客抓住电脑翻子的破绽，32 回合将死',
+  'Not every win needed a gamble from the bot. @tonghuiqu has four of the 14, and in the longest of them the game turned on ordinary moves, not a lucky reveal. It opens at move 19 with the game level; over the next 20 moves @tonghuiqu gains ground one step at a time, and mates on move 68.':
+    '并不是每一盘都靠电脑冒险。@tonghuiqu 赢了其中 4 盘，最长的那一盘靠的是寻常着法，而不是翻子的运气。这盘从第 19 回合开始，局面均势；接下来的 20 回合里，@tonghuiqu 一步一步扩大优势，第 68 回合将死。',
+  'Jieqi: @tonghuiqu outplays the bot over 68 moves': '揭棋：@tonghuiqu 用 68 回合下赢电脑',
+  'The winners were also patient. Five of the 14 went past 50 moves, and in this one the lead changed hands twice. It opens at move 42, with the bot ahead for the second time and about to reveal a piece. The player takes over from there and finishes it 38 moves later.':
+    '赢家也都很有耐心。14 盘中有 5 盘超过 50 回合，这一盘的优势还两度易手。它从第 42 回合开始，电脑第二次占优，正准备翻开一个子。棋友从这里扭转局面，38 回合后赢下这盘棋。',
+  'Jieqi: a guest wins an 80-move game after the lead changes twice':
+    '揭棋：优势两度易手后，一位访客赢下 80 回合的长局',
+  'All fourteen': '全部 14 盘',
+  Side: '执子',
+  'Moves played': '回合数',
+  Finish: '结局',
+  'Every game a person won against the full-strength bot from August 23 to September 29. The finish links to the game. Guests are not named.':
+    '8 月 23 日至 9 月 29 日期间，棋友战胜全力电脑的每一盘棋。点结局可以打开对局。访客不列名字。',
+  'Before August 23': '8 月 23 日之前',
+  'Until August 23 the jieqi bot ran on a quicker setting than we meant it to, searching for a fraction of a second a move. It won 13 games in a row in early August anyway. Then it lost nine in three days, most likely all to one player, which is how we noticed. We moved it to full strength that night, and none of those nine games are counted above.':
+    '8 月 23 日之前，揭棋电脑误用了一个比我们原意更快的设置，每步只搜索不到一秒。即便如此，它在 8 月上旬还是连赢了 13 盘。随后它三天里输了 9 盘，很可能都是输给同一位棋手，我们这才发现问题。当晚我们就把它调回全力，这 9 盘都没有计入上面的统计。',
+  'What is next': '接下来',
+  'A stronger engine now sits above Level 8: AB-JChess, an open-source jieqi engine by Huorongrong and Laoxu (Kouza), which beat full-strength Pikafish in 248 of 400 games. Its story, and how it handles positions like these, follows next week.':
+    '现在第 8 级之上还有一个更强的引擎：AB-JChess，由 Huorongrong 和 Laoxu（Kouza）开发的开源揭棋引擎，400 盘中赢了全力的皮卡鱼 248 盘。它的故事，以及它在类似局面中的表现，下周再写。',
+  'Jieqi rules': '揭棋规则',
+  Guest: '访客',
+  '@tonghuiqu': '@tonghuiqu',
+  '@boliquangtri': '@boliquangtri',
+  'Sep 4': '9月4日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_9fe33497-3ace-4465-bb15-e0736c7438ad)':
+    '[将死](/watch?channel=jieqi&game=jq_9fe33497-3ace-4465-bb15-e0736c7438ad)',
+  'Sep 13': '9月13日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_4b7e09b1-5056-4a0c-b6b1-61ed12ff03d7)':
+    '[将死](/watch?channel=jieqi&game=jq_4b7e09b1-5056-4a0c-b6b1-61ed12ff03d7)',
+  'Sep 17': '9月17日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_bed23125-b330-41f6-b88d-6fb750cb3a19)':
+    '[将死](/watch?channel=jieqi&game=jq_bed23125-b330-41f6-b88d-6fb750cb3a19)',
+  'Sep 19': '9月19日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_edca0a1c-eff0-47cb-bc19-51b441eb0859)':
+    '[困毙](/watch?channel=jieqi&game=jq_edca0a1c-eff0-47cb-bc19-51b441eb0859)',
+  '[Checkmate](/watch?channel=jieqi&game=jq_f5ab7428-e3b0-4389-8a9f-9d552665017a)':
+    '[将死](/watch?channel=jieqi&game=jq_f5ab7428-e3b0-4389-8a9f-9d552665017a)',
+  'Sep 21': '9月21日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_8ae5fc9e-6eb1-4b9f-9e75-2485137db1f5)':
+    '[困毙](/watch?channel=jieqi&game=jq_8ae5fc9e-6eb1-4b9f-9e75-2485137db1f5)',
+  '[Stalemate](/watch?channel=jieqi&game=jq_53ead5f3-3c1b-4e7d-8b30-896cce9ab8ff)':
+    '[困毙](/watch?channel=jieqi&game=jq_53ead5f3-3c1b-4e7d-8b30-896cce9ab8ff)',
+  'Sep 22': '9月22日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_3c0ae446-92b4-457e-b9eb-8da7dbef9e7b)':
+    '[困毙](/watch?channel=jieqi&game=jq_3c0ae446-92b4-457e-b9eb-8da7dbef9e7b)',
+  'Sep 23': '9月23日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_1895343d-5933-4361-84d0-21d8d06f0e5a)':
+    '[将死](/watch?channel=jieqi&game=jq_1895343d-5933-4361-84d0-21d8d06f0e5a)',
+  'Sep 24': '9月24日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_207d4371-1376-4cc9-a982-e27f4ee40e2c)':
+    '[将死](/watch?channel=jieqi&game=jq_207d4371-1376-4cc9-a982-e27f4ee40e2c)',
+  'Sep 25': '9月25日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_36a1267e-1a57-4526-a615-365ab2592edd)':
+    '[困毙](/watch?channel=jieqi&game=jq_36a1267e-1a57-4526-a615-365ab2592edd)',
+  'Sep 27': '9月27日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_823995d4-feed-4d7d-b258-367664bb0dc2)':
+    '[将死](/watch?channel=jieqi&game=jq_823995d4-feed-4d7d-b258-367664bb0dc2)',
+  'Sep 29': '9月29日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_2538c964-9d13-4a25-98ac-bbe4639f12dd)':
+    '[将死](/watch?channel=jieqi&game=jq_2538c964-9d13-4a25-98ac-bbe4639f12dd)',
+  '[Checkmate](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)':
+    '[将死](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一个相关的盲点跟将有关。只有卒、对方的将或炮的跳吃拿得下它，所以被围住的将一次只怕一种子，而引擎很慢才会替被逼到角落的将腾出空间。它有时候会把一颗子调到棋盘另一头，同时一颗孤零零的敌方卒走过来把它困死。跟上面那个和棋是同一个缺口：这套评估函数对于好几步之外慢慢成形的安静威胁，没有什么感觉。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
-    '这对你是有好处的。如果你子力落后，不代表就输了：把它一颗强子引进长捉，MistyBanqi 可能就走进那个它看不出该拒绝的和棋。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a [repetition draw](/blog/banqi-perpetual-chase) it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '这对你是有好处的。如果你子力落后，不代表就输了：MistyBanqi 可能来回挪子，走进那个它看不出该拒绝的[重复和棋](/blog/banqi-perpetual-chase)。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
+  // cao-yanlei (zh-Hans), machine-drafted 2026-09-25, not native-reviewed. Mainland
+  // players' names stay in one form in both scripts, as on the yin-sheng page.
+  'His 2026 record by event.': '他 2026 年各项赛事的战绩。',
+  Event: '赛事',
+  Dates: '日期',
+  W: '胜',
+  D: '和',
+  L: '负',
+  'Match vs Lại': '对赖理兄番棋',
+  'Jan 3–5': '1月3–5日',
+  'Jan 6–7': '1月6–7日',
+  'Team championship': '全国团体赛',
+  'Mar 28–Apr 2': '3月28日–4月2日',
+  'Chunqiu Daye arena': '春丘大叶杯擂台赛',
+  'Apr 4–6': '4月4–6日',
+  'Xintai Cup': '新泰杯',
+  'May 14': '5月14日',
+  'Gaogang Cup': '高新高港杯',
+  'Jun 4': '6月4日',
+  'Shanghai qualifying': '上海杯海选赛',
+  'Aug 9': '8月9日',
+  'League qualifier': '象甲预选赛',
+  'Aug 17–19': '8月17–19日',
+  'Gulin open': '古蔺公开赛',
+  'Aug 23': '8月23日',
+  'League, stage one': '象甲第一阶段',
+  'Sep 14–18': '9月14–18日',
+  "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.":
+    '一月在十局番棋中以 12 比 8 击败世界冠军，之后是他整个赛季的对局，直到中国象甲联赛第一阶段。棋盘上展示六局，全部 75 局都附有分析。',
+  'Cao Yanlei at the board. Photo: 象棋字典 via Sohu.':
+    '对局中的曹岩磊。图片：象棋字典，经搜狐转载。',
+  'Cao Yanlei in a dark suit and white shirt, looking down at the pieces during a tournament game.':
+    '曹岩磊身穿深色西装和白衬衫，在比赛中低头看着棋盘。',
+  "Cao Yanlei 曹岩磊 is the player the Chinese press calls the master of the sacrifice. In January he beat the world champion, Lại Lý Huynh, in a ten-game match, and in September he was second in the individual table at the first stage of China's top league. The association's ranking at the end of last year had him third in the country.":
+    '曹岩磊就是中文媒体口中的“弃子大师”。一月他在十局番棋中击败世界冠军赖理兄，九月在中国象甲联赛第一阶段的个人排名中位列第二。中国象棋协会去年年底的积分排名，他排全国第三。',
+  "He learned the game at four from the grandfather who raised him, and at thirteen he was the youngest national master in China. Around 2011 Macau signed him, and for most of his twenties he played for Macau, often against the mainland's best: three World Championship bronzes, and in 2019 the world masters title, won against Wang Tianyi in the final. He is registered to Hubei now and plays the league for Shanghai Jiahong. In January 2025 the Chinese Xiangqi Association's [match-fixing ruling](/blog/xiangqi-match-fixing) gave him its lightest penalty, a public criticism, with no ban. This page is his 2026 so far.":
+    '他四岁跟抚养他长大的爷爷学棋，十三岁成为当时全国最年轻的象棋大师。2011 年前后澳门把他签了下来，他二十多岁的大部分时间都代表澳门出赛，常常对上内地最强的棋手：三次世锦赛铜牌，2019 年又在世界象棋大师赛决赛击败王天一夺冠。他现在注册在湖北，联赛代表上海嘉弘出战。2025 年 1 月，中国象棋协会的[打假球处理决定](/blog/xiangqi-match-fixing)给了他最轻的处罚：通报批评，没有禁赛。这一页写的是他 2026 年到目前为止的比赛。',
+  '2026 so far': '2026 年至今',
+  "Ten events, from a ten-game match against the world champion in January to the first stage of China's top league in September. I ran all 75 games through the same engine analysis Mistboard gives your own games.":
+    '十项赛事，从一月对世界冠军的十局番棋，到九月的中国象甲联赛第一阶段。全部 75 局我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  'Baizuishan Cup': '百醉山杯',
+  "**He fights.** Watching him win the Wuyang Cup last year, the veteran Lü Qin told 羊城晚报 that Cao's style is combative and he never picks the safe line. Cao said much the same: he likes to attack, and to keep varying his play.":
+    '**他敢打。** 去年看他拿下五羊杯时，老将吕钦对《羊城晚报》说，曹岩磊的棋风很“好斗”，从不挑稳健的棋下。曹岩磊自己也这么说：他喜欢进攻，也喜欢下出不同的变化。',
+  '**He plays for the win with red.** Most of his wins come with the red pieces, and he opens with the central cannon, the most direct move in the game, almost as often as with the quiet soldier push. Yin Sheng did not play the central cannon once in his unbeaten month. With black he is happy to draw.':
+    '**执红他要赢。** 他的胜局大多是执红下出来的，而且他开局走中炮（最直接的一步）几乎跟走仙人指路一样多。尹昇在他不败的那个月一盘中炮都没走过。执黑他乐于求和。',
+  "**Zhao Panwei is his hardest opponent.** They met sixteen times this year, most of them in the April arena, and Cao's win is below. Against everyone else he loses about one game in twelve.":
+    '**赵攀伟是他最难对付的对手。** 两人今年交手十六盘，大多在四月的擂台赛，曹岩磊赢下的那一盘就在下面。对其他所有人，他大约十二盘才输一盘。',
+  '**The sacrifices are real.** The engine confirms six this year, each a piece offered and never won back. Two are on the boards below: a cannon left hanging on move 16 in the long match win with black, and a horse against He Wenzhe in April.':
+    '**弃子是真的。** 引擎确认他今年有六次真弃子，每次都是送出一子、再也没有拿回来。下面的棋盘里有两次：番棋那盘执黑长局的胜局中，第 16 回合一门炮就那样挂着；还有四月对何文哲送出的一匹马。',
+  'The ten-game match': '十局番棋',
+  "The two had met before. In November 2016, at the Han Xin Cup in Sydney, Cao, playing for Macau, beat Lại Lý Huynh of Vietnam in the final, the first final of that event without a mainland Chinese player in it. Nine years later Lại became the first world champion from outside China, beating Yin Sheng in the final in Shanghai. So when a tea company booked the two of them into a room in Zhengzhou this January for ten rapid games over three evenings, Tuổi Trẻ in Vietnam billed it as China's revenge.":
+    '两人以前交过手。2016 年 11 月在悉尼的韩信杯，代表澳门的曹岩磊在决赛击败越南的赖理兄，那是这项赛事第一次决赛里没有内地棋手。九年后，赖理兄成为第一位来自中国以外的世界冠军，在上海的决赛击败了尹昇。所以今年一月，一家茶企把两人请到郑州，三个晚上下十盘快棋，越南的《青年报》把它说成中国的复仇之战。',
+  "The first evening was three draws. On the second Cao won twice, and this is the longer of the two, his only win of the match with black. Lại's soldier push on move 25 is the loose move, and Cao takes almost sixty more to collect.":
+    '第一个晚上三盘和棋。第二个晚上曹岩磊赢了两盘，这是其中较长的一盘，也是他这场番棋唯一一盘执黑的胜局。赖理兄第 25 回合挺兵是松懈的一步，曹岩磊花了将近六十个回合才把优势兑现。',
+  "Lại Lý Huynh vs Cao Yanlei, 4 January 2026. The board opens after red's 25th move, with Cao to play as black.":
+    '赖理兄对曹岩磊，2026 年 1 月 4 日。棋盘从红方第 25 回合之后开始，轮到执黑的曹岩磊走。',
+  '2026 Chunqiu Daye Cup ten-game match': '2026 春丘大叶杯十局番棋',
+  'Lại hit back with a quick win on the last evening, which left Cao needing a draw from the last game. He won it in 19 moves: Lại pushed his central soldier on move 12, and seven moves later he resigned.':
+    '最后一个晚上赖理兄很快扳回一盘，于是最后一盘曹岩磊只需要和棋。他却 19 回合就赢了：赖理兄第 12 回合挺中卒，七个回合后认输。',
+  "Cao Yanlei vs Lại Lý Huynh, 5 January 2026, the last game. The board opens after black's 12th, with red to move.":
+    '曹岩磊对赖理兄，2026 年 1 月 5 日，最后一盘。棋盘从黑方第 12 回合之后开始，轮到红方走。',
+  'The Baizuishan Cup': '百醉山杯',
+  "The next day he went straight into an open and won seven of his ten games without losing one. On the first day he beat Wang Yongqiang in the cleanest game of his year, with an accuracy of 99. Wang's cannon slid across on move 11, Cao's chariot swung across in reply, and after Wang's 22nd move the engine sees mate in nine. Wang resigned two moves later.":
+    '第二天他直接去打一个公开赛，十盘赢七盘，一盘没输。第一天他赢了王永强，这是他今年下得最干净的一盘，准确率 99。王永强第 11 回合平炮，曹岩磊随即把车平了过去；王永强走完第 22 回合，引擎已经看到九步杀。两个回合后王永强认输。',
+  "Cao Yanlei vs Wang Yongqiang, 6 January 2026. The board opens after black's 11th, with red to move.":
+    '曹岩磊对王永强，2026 年 1 月 6 日。棋盘从黑方第 11 回合之后开始，轮到红方走。',
+  '2026 Baizuishan Cup': '2026 百醉山杯',
+  'The Chunqiu Daye arena': '春丘大叶杯擂台赛',
+  'King of the hill: three players, one holding the arena, and each challenge is a single 20-minute game, then five-minute games until somebody wins. Everyone has four lives. In April Cao beat Zhao Panwei once and He Wenzhe twice before Zhao knocked him out.':
+    '擂台赛：三人一组，一人守擂，每次挑战先下一盘 20 分钟的慢棋，再下五分钟的快棋直到分出胜负。每人有四条命。四月曹岩磊先赢了赵攀伟一次、何文哲两次，之后被赵攀伟淘汰。',
+  "The win over Zhao came with black. The game was level until Zhao pulled his chariot back on move 18. Cao's edge soldier crossed the river on that same move and kept walking, one file across on move 21 and another on move 22, straight after Zhao's horse went wrong. Zhao resigned after move 30.":
+    '赢赵攀伟的那盘他执黑。第 18 回合赵攀伟退车之前，局面一直均势。曹岩磊的边卒就在同一回合过河，接着一路往前：第 21 回合平一路，第 22 回合再平一路，正好在赵攀伟走错马之后。赵攀伟在第 30 回合后认输。',
+  "Zhao Panwei vs Cao Yanlei, 4 April 2026. The board opens after red's 18th, with Cao to play as black.":
+    '赵攀伟对曹岩磊，2026 年 4 月 4 日。棋盘从红方第 18 回合之后开始，轮到执黑的曹岩磊走。',
+  "Against He Wenzhe the next day he offered a horse on move 15, one of the six sacrifices the engine confirms this year. The game stayed level until He's cannon slid to the edge on move 27. Two moves later Cao's cannon went deep, his chariot ran the length of the board on move 36, and He resigned after the next move.":
+    '第二天对何文哲，他第 15 回合送出一匹马，这是引擎确认的今年六次弃子之一。直到第 27 回合何文哲把炮平到边线，局面都是均势。两个回合后曹岩磊的炮长驱直入，第 36 回合车一路进到底线，何文哲在下一步之后认输。',
+  "Cao Yanlei vs He Wenzhe, 5 April 2026. The board opens after black's 14th, with Cao to move.":
+    '曹岩磊对何文哲，2026 年 4 月 5 日。棋盘从黑方第 14 回合之后开始，轮到曹岩磊走。',
+  '2026 Chunqiu Daye Cup arena': '2026 春丘大叶杯擂台赛',
+  'The league': '象甲联赛',
+  "In August he topped the qualifier for China's top league, level with Hong Kong's Feng Jiajun, and took Shanghai Jiahong up with him. His one draw there was against Yin Sheng on the first day.":
+    '八月他在象甲预选赛与香港的冯家俊并列个人第一，也把上海嘉弘带进了联赛。他在那里唯一的一盘和棋，是第一天对尹昇。',
+  "At stage one in September he was second in the individual table after nine rounds, behind Wang Yubo, and lost one game in sixteen. On the last day he beat Meng Chen, the man who knocked him out of the 2023 national championship in the quarter-final. Meng's cannon raid on move 12 gave the game away, though it took Cao until move 39 to finish it.":
+    '九月的第一阶段，九轮过后他在个人排名中位列第二，仅次于王禹博，十六盘只输一盘。最后一天他赢了孟辰，正是孟辰在 2023 年全国个人赛八强战淘汰了他。孟辰第 12 回合炮打中兵，把这盘棋送了出去，不过曹岩磊一直到第 39 回合才收官。',
+  "Cao Yanlei vs Meng Chen, 17 September 2026. The board opens after black's 12th, with red to move.":
+    '曹岩磊对孟辰，2026 年 9 月 17 日。棋盘从黑方第 12 回合之后开始，轮到红方走。',
+  "The league's second stage is in October, and the national championship runs from November 21 to 29 in Changchun. He reached the quarter-final in 2023 and went out in the last sixteen in December. The association's ranking at the end of last year had him third in China.":
+    '象甲第二阶段在十月，全国个人赛 11 月 21 日至 29 日在长春举行。他在 2023 年打进八强，去年十二月止步十六强。中国象棋协会去年年底的积分排名，他排全国第三。',
+  'All 75 games': '全部 75 局',
+  "Every game of the year is in a Mistboard study, with the engine's judgments and lines on each one, and 71 of the 75 are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; analysis by Pikafish through Mistboard's review pipeline, September 2026.":
+    '今年的每一盘都在 Mistboard 的一个研究里，每盘都有引擎的判断和变化；75 盘中有 71 盘也在直播档案里，附网站的分析。资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 9 月。',
+  'Cao Yanlei 曹岩磊: games, results, and analysis': '曹岩磊：对局、战绩与分析',
+  'Portrait of Cao Yanlei.': '曹岩磊肖像。',
+  'Wang Yongqiang': '王永强',
+  'Zhao Panwei': '赵攀伟',
+  // lai-ly-huynh (zh-Hans), machine-drafted 2026-10-01, not native-reviewed. Mainland
+  // players' names stay in one form in both scripts, as on the cao-yanlei page; the
+  // two 羊城晚报 quotes are his own words from the Chinese original, not back-translated.
+  // Shared keys (title, Event, Dates, W, D, L, Opponent, Red, Black, the players'
+  // names) already exist above and are reused.
+  'Lại Lý Huynh 赖理兄, the world xiangqi champion: games and analysis':
+    '赖理兄，世界象棋冠军：对局与分析',
+  'The first world champion from outside China, unbeaten in Shanghai and winner of the final with black. His title run and the year since, five wins on the board, 38 games analysed.':
+    '第一位来自中国以外的世界冠军，上海世锦赛一局未输，决赛执黑取胜。他的夺冠之路和此后一年，盘面上五盘胜局，38 局附引擎分析。',
+  'Lại Lý Huynh at the board.': '对局中的赖理兄。',
+  'English-speaking xiangqi players, and Vietnamese fans who want his games in one place with analysis.':
+    '说英语的象棋棋友，以及想把他的对局连同分析集中在一处看的越南棋迷。',
+  'Lại Lý Huynh in a white team shirt, arms folded, looking down at the board during a game.':
+    '赖理兄身穿白色队服，双臂交叉，在对局中低头看着棋盘。',
+  'Lại Lý Huynh at the Five Rams Cup, Guangzhou, February 2026. Photo: Vietnam Xiangqi Federation, via Thanh Niên.':
+    '2026 年 2 月，广州五羊杯上的赖理兄。图片：越南象棋联合会，经 Thanh Niên 转载。',
+  "Lại Lý Huynh 赖理兄 is the world champion. In Shanghai last September he went through the World Xiangqi Championship without losing a game and won the final against China's Yin Sheng with the black pieces, the first player from outside China to take the title. The Chinese press calls him Vietnam's king of xiangqi, 越南棋王. At home his fans call him Nam Phương công tử, the young master from the South.":
+    '赖理兄是现任世界冠军。去年九月在上海，他在世界象棋锦标赛中一局未输，决赛执黑击败中国的尹昇，成为第一位夺得这一头衔的中国以外棋手。中文媒体称他为“越南棋王”。在越南国内，棋迷叫他 Nam Phương công tử，意思是“南方公子”。',
+  "He was born in 1990 in Vĩnh Long, in the Mekong Delta, and learned the game watching his father play. He has won Vietnam's national championship six times and holds the WXF's International Grandmaster title. In 2016 he became the first foreign player in China's top league, for Hangzhou, and in 2023 he won the league with them. In February he was the first wildcard ever to reach the final of the Five Rams Cup, China's invitation event for its national champions.":
+    '他 1990 年生于湄公河三角洲的永隆，看父亲下棋学会了象棋。他六次夺得越南全国冠军，拥有世界象棋联合会的国际特级大师称号。2016 年他代表杭州出战，成为中国象甲联赛的第一位外籍棋手，2023 年随杭州队夺得联赛冠军。今年二月，他成为五羊杯历史上第一位打进决赛的外卡棋手，五羊杯是中国邀请全国冠军参加的邀请赛。',
+  'This page is his year as champion: the title run, the year since, and five of his wins on the board. I ran the 38 individual games we hold through the same engine analysis Mistboard gives your own games.':
+    '这一页写的是他当世界冠军的这一年：夺冠之路、此后一年，以及盘面上他的五盘胜局。我们收录的 38 盘个人赛对局，我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  '**He wins with black.** Five of his six wins in Shanghai came with the black pieces, the side that moves second, the final among them. Across the 38 individual games we hold he won eight with black and three with red. With red he mostly draws, thirteen of his eighteen red games.':
+    '**他执黑赢棋。** 他在上海的六盘胜局中有五盘是执黑（后走的一方）赢的，决赛也在其中。我们收录的 38 盘个人赛对局里，他执黑赢了八盘，执红只赢三盘。执红他大多是和棋，十八盘执红有十三盘和。',
+  '**He opens with the Cross-Palace Cannon.** In eleven of his eighteen red games his first move slid a cannon across to the far side of his own palace. It is a quieter start than the central cannon, and it leaves the game to be won later.':
+    '**他开局走过宫炮。** 十八盘执红的对局里有十一盘，他第一步就把一门炮平过九宫，放到九宫另一侧。这比中炮开局安静，把赢棋留到后面。',
+  '**He was precise when it counted.** His median accuracy across the nine games in Shanghai was 98. The engine confirms three sacrifices in his year, a piece offered and never won back, and one of them came in the world final.':
+    '**关键时刻他下得很准。** 他在上海九盘棋的准确率中位数是 98。引擎确认他这一年有三次真弃子，都是送出一子、再也没有拿回来，其中一次就在世锦赛决赛。',
+  '**He learned from China\'s best.** "The league gave me a very valuable chance to learn," he told 羊城晚报 in February. "I could play and at the same time study how China\'s top players play." He has trained with engines since 2005.':
+    '**他向中国最强的棋手学习。** 他今年二月对《羊城晚报》说：“象甲联赛给了我非常宝贵的学习机会。我可以一边比赛，一边观摩学习中国顶尖棋手的棋路和技巧。”他从 2005 年起就用引擎训练。',
+  'The world title': '世界冠军',
+  "He had been one game from the title before. In Houston in 2023 he reached the final against Meng Chen, drew the slow game and lost the rapid tiebreak. Two years later the championship ran in Shanghai from 22 to 27 September, eight rounds and then a final between the top two. He won five and drew three, against Yin Sheng on the first day, Meng Fanrui and Malaysia's Li Dezhi, and finished level with Yin Sheng on 13 points.":
+    '他以前也离冠军只差一盘棋。2023 年在休斯敦，他打进决赛对孟辰，慢棋和了，快棋加赛输了。两年后，世锦赛于 9 月 22 日至 27 日在上海举行，先赛八轮，再由前两名下决赛。他五胜三和，和的是第一天的尹昇、孟繁睿和马来西亚的黎德志，最后与尹昇同积 13 分。',
+  Round: '轮次',
+  Colour: '执子',
+  Result: '结果',
+  Win: '胜',
+  Draw: '和',
+  Final: '决赛',
+  'Ryan Emmanuel Haris (East Malaysia)': '莱恩（东马来西亚）',
+  'Yin Sheng (China)': '尹昇（中国）',
+  'Mingjian Li (USA)': '李铭坚（美国）',
+  'Tony Fung Ga Zen (Hong Kong)': '冯家俊（香港）',
+  'Calvin Tay Yelin (East Malaysia)': '郑义霖（东马来西亚）',
+  'Meng Fanrui (China)': '孟繁睿（中国）',
+  'Chong Heung Ming (Philippines)': '庄宏明（菲律宾）',
+  'Li Dezhi (Malaysia)': '黎德志（马来西亚）',
+  'His world championship, round by round.': '他的世锦赛，逐轮战绩。',
+  "In round three he met the United States' Mingjian Li, who held him level for nineteen moves. Li's chariot push on move 20 let it go. Lại finished at 98 percent accuracy and needed another 47 moves to bring it home.":
+    '第三轮他遇到美国的李铭坚，对方和他均势周旋了十九个回合。李铭坚第 20 回合进车，把局面送了出去。赖理兄全盘准确率 98%，又走了 47 个回合才把这盘棋拿下。',
+  "Mingjian Li vs Lại Lý Huynh, 23 September 2025, round 3. The board opens after red's 20th move, with Lại to play as black.":
+    '李铭坚对赖理兄，2025 年 9 月 23 日，第 3 轮。棋盘从红方第 20 回合之后开始，轮到执黑的赖理兄走。',
+  '2025 World Xiangqi Championship, round 3': '2025 世界象棋锦标赛，第 3 轮',
+  "In round seven Chong Heung Ming of the Philippines slid his cannon across on move 17. Lại's horse jumped into the centre the same move, the engine's own first choice, and his cannon followed it in. Chong resigned after move 32.":
+    '第七轮，菲律宾的庄宏明第 17 回合平炮。赖理兄同一回合跃马入中，正是引擎的首选，随后他的炮也跟了进去。庄宏明在第 32 回合后认输。',
+  "Chong Heung Ming vs Lại Lý Huynh, 25 September 2025, round 7. The board opens after red's 17th move, with Lại to play as black.":
+    '庄宏明对赖理兄，2025 年 9 月 25 日，第 7 轮。棋盘从红方第 17 回合之后开始，轮到执黑的赖理兄走。',
+  '2025 World Xiangqi Championship, round 7': '2025 世界象棋锦标赛，第 7 轮',
+  "The final was one game, Yin Sheng with red. Yin Sheng pressed early, and by move 27 it was level again. Lại pushed his central cannon into Yin Sheng's camp, a piece offer the engine rates as the best move on the board. Yin Sheng took it, and the engine still called the game level. On move 38 his advisor stepped back. From there Lại's soldier on the third file walked down the board, and Yin Sheng resigned after move 52.":
+    '决赛只下一盘，尹昇执红。尹昇开局施压，到第 27 回合局面又回到均势。赖理兄把中炮打进尹昇的阵地，这是一步弃子，引擎认为是当时盘面上的最佳着法。尹昇吃了炮，引擎仍判局面均势。第 38 回合尹昇退士。此后赖理兄的三路卒一路向下挺进，尹昇在第 52 回合后认输。',
+  "Yin Sheng vs Lại Lý Huynh, 27 September 2025, the final. The board opens after red's 27th move, with Lại to play as black.":
+    '尹昇对赖理兄，2025 年 9 月 27 日，决赛。棋盘从红方第 27 回合之后开始，轮到执黑的赖理兄走。',
+  '2025 World Xiangqi Championship, final': '2025 世界象棋锦标赛，决赛',
+  "Yin Sheng was born in 2005. A year later he went 31 games without a loss and has [his own page](/blog/yin-sheng). The championship's history, and Lại's earlier games in it, are on the [world championship page](/blog/xiangqi-world-championship).":
+    '尹昇生于 2005 年。一年后他连续 31 局不败，他也有[自己的专页](/blog/yin-sheng)。世锦赛的历史，以及赖理兄早年在这项赛事里的对局，见[世界象棋锦标赛专页](/blog/xiangqi-world-championship)。',
+  'The year since': '此后一年',
+  "At home the title made him a national figure. In June the state awarded him the First-Class Labour Order, and in April he won the rapid title at the national championship. Most of his games this year, though, were against China's best on their ground, and those are in the table below.":
+    '在越南国内，这个冠军让他成了家喻户晓的人物。六月国家授予他一级劳动勋章，四月他在全国锦标赛上拿下快棋冠军。不过他今年的大部分对局，是在中国的地盘上对阵中国最强的棋手，都列在下表。',
+  'World Rapid Open, Shanghai': '世界快棋公开赛，上海',
+  'Sep 26, 2025': '2025年9月26日',
+  'Match vs Cao Yanlei, Zhengzhou': '对曹岩磊番棋，郑州',
+  'Dukang arena final, Zhengzhou': '酒祖杜康杯擂台赛年终总决赛，郑州',
+  'Jan 9–10': '1月9–10日',
+  'Five Rams Cup, Guangzhou': '五羊杯，广州',
+  'Feb 25–Mar 1': '2月25日–3月1日',
+  May: '5月',
+  'Vietnam vs Guangdong, Đà Nẵng': '越南对广东，岘港',
+  Jul: '7月',
+  'The year since the title, events with a complete record.': '夺冠后的一年，只列战绩完整的赛事。',
+  "In January a tea company booked him and Cao Yanlei into a room in Zhengzhou for [ten rapid games](/broadcast/xiangqi/2026-chunqiu-dayie-ten-game-match) over three evenings, a rematch of their 2016 Han Xin Cup final in Sydney. Cao won the match 12 to 8, and [his page](/blog/cao-yanlei) tells it from his side. Lại's win was game eight, with black, in 18 moves. Cao's horse stepped back on move 15; Lại's chariot went straight up the file in reply, his horse followed, and Cao resigned three moves later.":
+    '一月，一家茶企把他和曹岩磊请到郑州，三个晚上下[十盘快棋](/broadcast/xiangqi/2026-chunqiu-dayie-ten-game-match)，重演两人 2016 年在悉尼的韩信杯决赛。曹岩磊以 12 比 8 赢下番棋，[他的专页](/blog/cao-yanlei)从他那一方讲了这场比赛。赖理兄赢的是第八盘，执黑，18 回合。曹岩磊第 15 回合退马，赖理兄随即进车直冲，马也跟了上去，三个回合后曹岩磊认输。',
+  "Cao Yanlei vs Lại Lý Huynh, 5 January 2026, game 8 of the match. The board opens after red's 15th move, with Lại to play as black.":
+    '曹岩磊对赖理兄，2026 年 1 月 5 日，番棋第 8 盘。棋盘从红方第 15 回合之后开始，轮到执黑的赖理兄走。',
+  '2026 ten-game match, game 8': '2026 春丘大叶杯十局番棋，第 8 盘',
+  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions. In February it gave its first wildcard to Lại, and he reached the final. In the semi-final he beat Zhao Panwei, the opponent Cao Yanlei found hardest all year, winning the first game with red and drawing the second. Zhao's horse jumped forward on move 17; Lại's horses came forward and Zhao resigned after move 40. Cheng Yudong beat him in the final, a draw and then a loss. The [whole event](/broadcast/xiangqi/2026-wuyang-cup) is in the broadcast archive.":
+    '广州的五羊杯邀请的是中国的全国冠军。今年二月它第一次发出外卡，给了赖理兄，他一路打进决赛。半决赛他击败赵攀伟，就是曹岩磊全年最难对付的那位对手：第一盘执红获胜，第二盘弈和。赵攀伟第 17 回合跃马进击，赖理兄的双马随之跃出，赵攀伟在第 40 回合后认输。决赛他负于程宇东，一和一负。[整项赛事](/broadcast/xiangqi/2026-wuyang-cup)都在直播档案里。',
+  "Lại Lý Huynh vs Zhao Panwei, 28 February 2026, Five Rams Cup semi-final, game 1. The board opens after black's 17th move, with Lại to move.":
+    '赖理兄对赵攀伟，2026 年 2 月 28 日，五羊杯半决赛第 1 盘。棋盘从黑方第 17 回合之后开始，轮到赖理兄走。',
+  '2026 Five Rams Cup, semi-final': '2026 五羊杯，半决赛',
+  '"Since I won the world championship, more people in Vietnam follow xiangqi," he said in Guangzhou, "and more of them have started playing."':
+    '他在广州说：“自从世锦赛夺冠之后，越南国内关注象棋的人越来越多了，开始下棋、喜欢象棋的人也明显变多了。”',
+  'All 38 games': '全部 38 局',
+  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 15 of them are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; the round table from the WXF results book; the Five Rams Cup and arena records from VnExpress, and the Vietnam vs Guangdong record from VnExpress and 象棋热情; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '本页的每一盘都在 Mistboard 的一个研究里，附引擎的判断和变化；其中 15 盘也在直播档案里，附网站的分析。资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；逐轮战绩表来自世界象棋联合会的成绩册；五羊杯和擂台赛战绩来自 VnExpress，越南对广东的战绩来自 VnExpress 和象棋热情；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
+  'His games in the archive': '他在档案里的对局',
+  'Mingjian Li': '李铭坚',
+  'Chong Heung Ming': '庄宏明',
+  // tony-fung-ga-zen (zh-Hans), machine-drafted 2026-10-03. Mainland players' names
+  // stay in one form in both scripts, as on the cao-yanlei and lai-ly-huynh pages, so
+  // theirs live only here and reach zh-Hant through the spread. Titles follow the
+  // HKCCA's own list (香港特级大师); the opening list uses the site's terms (中炮,
+  // 士角炮). Shared keys (Round, Opponent, Colour, Result, Red, Black, Win, Draw,
+  // Event, Dates, W, D, L, League qualifier, Five Rams Cup, Guangzhou, How he plays,
+  // Meng Fanrui, Open the study, His games in the archive) already exist above.
+  "Tony Fung 冯家俊, Hong Kong's first Asian xiangqi champion: games and analysis":
+    '冯家俊，香港首位亚洲象棋个人冠军：对局与分析',
+  'Tony Fung 冯家俊': '冯家俊',
+  "Hong Kong's first Asian individual champion and its 2022 world championship finalist. His last fifteen months and the 2022 run, six games on the board, 50 games analysed.":
+    '香港首位亚洲象棋个人冠军，也是 2022 年打进世锦赛决赛的香港棋手。他最近十五个月和 2022 年的决赛之路，盘面上六盘对局，50 局附引擎分析。',
+  'Tony Fung in a white Hong Kong team shirt.': '身穿白色香港队服的冯家俊。',
+  'English-speaking xiangqi players, and Hong Kong players who follow him through the Hong Kong association and the local sports press.':
+    '说英语的象棋棋友，以及通过香港象棋总会和本地体育媒体关注他的香港棋友。',
+  'Tony Fung in a white Hong Kong team shirt, one hand resting on the edge of a xiangqi board, smiling at the camera.':
+    '冯家俊身穿白色香港队服，一只手搭在棋盘边上，对着镜头微笑。',
+  'Tony Fung in September 2023, before the Asian Games. Photo: Mr.C / Sportsoho.':
+    '2023 年 9 月亚运会前的冯家俊。图片：Mr.C / Sportsoho 运动版图。',
+  "Tony Fung 冯家俊 is the Asian champion. In October 2026 he won the Asian Individual Championship in Manila, beating China's Wang Yubo in a blitz playoff, the first Hong Kong player to win it. In 2022 he went through eight rounds of the World Xiangqi Championship with one loss and reached the final, and second place equalled Hong Kong's best result at the event. In August 2026 he scored nine points out of ten in the qualifier for China's top league, four wins and a draw, the best individual score there, shared with Cao Yanlei.":
+    '冯家俊是亚洲冠军。2026 年 10 月，他在马尼拉的亚洲象棋个人锦标赛夺冠，在超快棋加赛中击败中国的王禹博，是第一位拿下这项冠军的香港棋手。2022 年世界象棋锦标赛，他八轮只输一盘，打进决赛，拿到的亚军追平了香港在这项赛事的最好成绩。2026 年 8 月，他在中国象甲联赛的预选赛十分拿下九分，四胜一和，是那里最好的个人成绩，与曹岩磊并列。',
+  "He was born in 1998 and has played for Hong Kong since he was 18. At the 2023 Asian Games in Hangzhou he was in the team that won bronze in the mixed team event, Hong Kong's first xiangqi medal at the Games. In April 2025 he won the Hong Kong Open for the first time, beating Cheng Yin Lung in the final. The WXF lists him as an International Master, and Hong Kong's own association lists him among its Hong Kong Grandmasters.":
+    '他生于 1998 年，18 岁起代表香港出赛。2023 年杭州亚运会，他所在的香港队拿下象棋混合团体铜牌，这是香港在亚运会上的第一枚象棋奖牌。2025 年 4 月他首次夺得全港个人赛冠军，决赛击败郑彦隆。世界象棋联合会把他列为国际大师，香港本地的象棋总会则把他列入香港特级大师名册。',
+  'This page is his last fifteen months and the 2022 run to the final, with six of his games on the board. I ran the 50 games we hold through the same engine analysis Mistboard gives your own games.':
+    '这一页写的是他最近十五个月，以及 2022 年打进决赛的那一路，盘面上有他的六盘对局。我们收录的 50 盘对局，我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  '**He is hardest to beat with red.** Since July 2025 he has lost two of his twenty-three red games, both on one day of an open qualifier in Shanghai.':
+    '**执红他最难被击败。** 2025 年 7 月以来，他二十三盘执红只输了两盘，都是在上海一项海选赛的同一天输的。',
+  '**He has no single opening.** His 27 red games here start four different ways, with the central cannon, the Palcorner Cannon, a horse or a soldier, and each of them comes up at least five times.':
+    '**他没有固定的开局。** 这里他的 27 盘执红对局有四种开法：中炮、士角炮、起马或进兵，每一种都至少出现五次。',
+  '**He plays the long game.** Talking to Sportsoho in 2023, he said that neither he nor his senior Wong Hok Him is the kind of player who goes for the kill from the opening; both like to draw a game out and keep the threat hidden, a needle in the cotton. His longest win here ran 81 moves.':
+    '**他下长棋。** 2023 年接受 Sportsoho 运动版图采访时，他说自己和师兄黄学谦都不是一开局就搏杀的类型，两人都喜欢把战线拉长，把威胁藏起来，绵里藏针。他在这里最长的一盘胜局走了 81 回合。',
+  'Asian Individual Championship, Manila': '亚洲象棋个人锦标赛，马尼拉',
+  'Lin Zichong, Singapore': '林子冲，新加坡',
+  'Wang Yubo, China': '王禹博，中国',
+  'Liu Daxiang, East Malaysia': '刘大湘，东马来西亚',
+  'Quang Nguyen, Australia': 'Quang Nguyen，澳大利亚',
+  'Cheng Yudong, China': '程宇东，中国',
+  'Lại Lý Huynh, Vietnam': '赖理兄，越南',
+  'Final, rapid': '决赛，快棋',
+  'Final, blitz': '决赛，超快棋',
+  "His Asian Individual Championship, round by round. Records for rounds one to six have not been published; the final's three games are in the study.":
+    '他的亚洲个人锦标赛，逐轮战绩。第一到第六轮的棋谱尚未公布；决赛的三盘对局在研究里。',
+  "Tony Fung Ga Zen vs Wang Yubo, 2026 Asian Individual Championship, final, blitz playoff, 6 October 2026. Fung won with red in 60 moves. The board opens after black's move 38, with Fung to move.":
+    '冯家俊对王禹博，2026 亚洲象棋个人锦标赛决赛，超快棋加赛，2026 年 10 月 6 日。冯家俊执红 60 回合取胜。棋盘从黑方第 38 回合之后开始，轮到冯家俊走。',
+  '2026 Asian Individual Championship, final, blitz playoff':
+    '2026 亚洲象棋个人锦标赛，决赛，超快棋加赛',
+  'Oct 2–8, 2026': '2026年10月2–8日',
+  "Fung won the [21st Asian Individual Championship](/broadcast/xiangqi/2026-asian-individual-men) in Manila, from 2 to 8 October, and did not lose a game. No Hong Kong player had won it before. In the final he met Wang Yubo, China's national champion of 2025, whom he had drawn with in round two. They drew the classical game and the rapid playoff, and Fung won the blitz playoff. Cheng Yudong of China was third, and Lại Lý Huynh, also unbeaten, was fourth.":
+    '冯家俊在马尼拉赢得[第 21 届亚洲象棋个人锦标赛](/broadcast/xiangqi/2026-asian-individual-men)，比赛从 10 月 2 日打到 8 日，他一盘未输。此前没有香港棋手拿过这项冠军。决赛他对上 2025 年全国冠军、中国的王禹博，两人在第二轮已经下和过一次。慢棋和快棋加赛都是和棋，冯家俊在超快棋加赛中取胜。中国的程宇东获得第三，同样不败的赖理兄排名第四。',
+  'China league qualifier, Hangzhou': '象甲预选赛，杭州',
+  "Teams outside China's top league play a qualifier to get in. Hong Kong sent a team to Hangzhou from 17 to 19 August, and Fung played all five rounds. He won four and drew the other, on the first day. Zhejiang Mintai and Cao Yanlei's Shanghai Jiahong went through.":
+    '不在象甲联赛的队伍要打预选赛才能进入联赛。8 月 17 日至 19 日，香港派队到杭州参赛，冯家俊五轮全部上场，赢了四盘，另一盘是第一天的和棋。最后晋级的是浙江民泰和曹岩磊所在的上海嘉弘。',
+  'Wang Dayu': '王大禹',
+  'Zheng Yichen': '郑奕宸',
+  'Lu Hao': '吕皓',
+  'Liu Zehao': '刘泽昊',
+  'Zhang Rui': '张瑞',
+  'His league qualifier, round by round.': '他的象甲预选赛，逐轮战绩。',
+  "Tony Fung Ga Zen vs Wang Dayu, 2026 China league qualifier, round 1, 17 August 2026. Fung won with red in 28 moves. The board opens after black's move 13, with Fung to move.":
+    '冯家俊对王大禹，2026 象甲预选赛第 1 轮，2026 年 8 月 17 日。冯家俊执红 28 回合取胜。棋盘从黑方第 13 回合之后开始，轮到冯家俊走。',
+  '2026 China league qualifier, round 1': '2026 象甲预选赛，第 1 轮',
+  "Tony Fung Ga Zen vs Lu Hao, 2026 China league qualifier, round 3, 18 August 2026. Fung won with red in 40 moves. The board opens after black's move 16, with Fung to move.":
+    '冯家俊对吕皓，2026 象甲预选赛第 3 轮，2026 年 8 月 18 日。冯家俊执红 40 回合取胜。棋盘从黑方第 16 回合之后开始，轮到冯家俊走。',
+  '2026 China league qualifier, round 3': '2026 象甲预选赛，第 3 轮',
+  'Cao Yanlei, who shared the top score and took Shanghai Jiahong into the league, has [his own page](/blog/cao-yanlei). The [qualifier](/broadcast/xiangqi/2026-league-qualifier) is in the broadcast archive.':
+    '与他并列最高分、并把上海嘉弘带进联赛的曹岩磊，也有[自己的专页](/blog/cao-yanlei)。[这次预选赛](/broadcast/xiangqi/2026-league-qualifier)收在直播档案里。',
+  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions and runs a qualifying group for players from Hong Kong, Macau and Taiwan. Fung won it in January. He beat Chao Yi-fan of Chinese Taipei with a win and a draw, then drew two slow games with his Hong Kong teammate Wong Hok Him and went through when Wong ran out of time in the rapid playoff.":
+    '广州的五羊杯邀请中国的全国冠军参赛，另设一个港澳台组，给香港、澳门和台湾的棋手争取名额。一月冯家俊拿下了这个组。他先以一胜一和击败中华台北的赵奕帆，再和香港队友黄学谦下了两盘慢棋，都是和棋，快棋加赛中黄学谦超时，冯家俊晋级。',
+  "Chao Yi-fan vs Tony Fung Ga Zen, 2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier, 29 January 2026. Fung won with black in 81 moves. The board opens after red's move 40, with Fung to move.":
+    '赵奕帆对冯家俊，2026 五羊杯港澳台组选拔赛，2026 年 1 月 29 日。冯家俊执黑 81 回合取胜。棋盘从红方第 40 回合之后开始，轮到冯家俊走。',
+  '2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier': '2026 五羊杯，港澳台组选拔赛',
+  "In the final stage in February he drew with black against China's Meng Fanrui, whom he had also held to a draw at the world championship in Shanghai. Wang Yubo then beat him twice, and the cup went to Cheng Yudong. The [whole event](/broadcast/xiangqi/2026-wuyang-cup) is in the broadcast archive.":
+    '二月的决赛阶段，他执黑和了中国的孟繁睿，在上海世锦赛上他也和孟繁睿下成和棋。随后王禹博两次击败他，五羊杯最后由程宇东夺得。[整项赛事](/broadcast/xiangqi/2026-wuyang-cup)都在直播档案里。',
+  "Meng Fanrui vs Tony Fung Ga Zen, 2026 Five Rams Cup, final stage, 25 February 2026. Drawn in 28 moves. The board opens after red's move 12, with Fung to move.":
+    '孟繁睿对冯家俊，2026 五羊杯决赛阶段，2026 年 2 月 25 日。28 回合弈和。棋盘从红方第 12 回合之后开始，轮到冯家俊走。',
+  '2026 Five Rams Cup, final stage': '2026 五羊杯，决赛阶段',
+  'Every event since July 2025': '2025 年 7 月以来的每项赛事',
+  'At the 2025 World Championship in Shanghai he finished eighth. The table has every event since July 2025 for which we hold his full record.':
+    '2025 年上海世锦赛他排名第八。下表列出 2025 年 7 月以来我们有他完整战绩的每一项赛事。',
+  'Shanghai Cup': '上海杯',
+  'Sep 9, 2026': '2026年9月9日',
+  'League qualifier, Hangzhou': '象甲预选赛，杭州',
+  'Aug 17–19, 2026': '2026年8月17–19日',
+  'World Championship, Shanghai': '世锦赛，上海',
+  'Sep 22–27, 2025': '2025年9月22–27日',
+  'National Games, mass-participation final, Shenzhen': '全运会群众比赛决赛，深圳',
+  'Sep 5–7, 2025': '2025年9月5–7日',
+  'Shanghai Cup, open qualifier': '上海杯海选赛',
+  'Aug 9–10, 2025': '2025年8月9–10日',
+  'Jul 30–Aug 2, 2025': '2025年7月30日–8月2日',
+  'The Five Rams Cup and the September 2025 World Rapid Open are left out: some of his games there are missing from our sources.':
+    '五羊杯和 2025 年 9 月的世界快棋公开赛没有列入：我们的资料来源缺了他在这两项赛事的部分对局。',
+  '2022 World Championship, Kuching': '2022 年世锦赛，古晋',
+  "The championship ran in Kuching, in Sarawak, from 24 to 28 October 2022, eight rounds and then a final between the top two. Fung won five, drew two and lost one, and finished level with Vietnam's Nguyễn Thành Bảo on 12 points, ahead on tiebreak. He lost the final to China's Wang Tianyi. Second place equalled Hong Kong's best result at a world championship, Wong Hok Him's in 2019.":
+    '这届世锦赛 2022 年 10 月 24 日至 28 日在砂拉越的古晋举行，先赛八轮，再由前两名下决赛。冯家俊五胜两和一负，与越南的阮成保同积 12 分，凭小分领先。决赛他负于中国的王天一。这个亚军追平了香港在世锦赛的最好成绩，也就是黄学谦 2019 年的成绩。',
+  'The win that put him in the final came in round eight, with black, against Cheng Yin Lung, his Hong Kong teammate and the man he would beat again in the Hong Kong Open final two and a half years later.':
+    '把他送进决赛的那盘胜局在第八轮，他执黑对郑彦隆。郑彦隆是他的香港队友，两年半后他在全港个人赛决赛又一次击败了对方。',
+  "Cheng Yin Lung vs Tony Fung Ga Zen, 2022 World Xiangqi Championship, round 8, 27 October 2022. Fung won with black in 35 moves. The board opens after red's move 25, with Fung to move.":
+    '郑彦隆对冯家俊，2022 世界象棋锦标赛第 8 轮，2022 年 10 月 27 日。冯家俊执黑 35 回合取胜。棋盘从红方第 25 回合之后开始，轮到冯家俊走。',
+  '2022 World Xiangqi Championship, round 8': '2022 世界象棋锦标赛，第 8 轮',
+  'Lại Lý Huynh, who won the title in 2025 and has [his own page](/blog/lai-ly-huynh), drew with Fung in round six, and again at the Asian Games a year later.':
+    '2025 年夺冠的赖理兄也有[自己的专页](/blog/lai-ly-huynh)，他在第六轮与冯家俊弈和，一年后在亚运会上两人又下成和棋。',
+  'All 50 games': '全部 50 局',
+  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 13 of them are in the broadcast archive with the site's analysis.":
+    '本页的每一盘都在 Mistboard 的一个研究里，附引擎的判断和变化；其中 13 盘也在直播档案里，附网站的分析。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event; the 2022 results from the Chinese Xiangqi Association's report on Sina and from China News Service; the Five Rams Cup qualifier from Yangcheng Evening News; the Asian Games from Sing Tao; the 2026 Asian Individual Championship from HK01, Sing Tao and Bongda Plus; the Hong Kong Open from HK01 and Sportsroad; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；2022 年的成绩来自新浪刊发的中国象棋协会报道和中新网；五羊杯选拔赛来自《羊城晚报》；亚运会来自《星岛》；2026 年亚洲象棋个人锦标赛来自 HK01、《星岛》和 Bongda Plus；全港个人赛来自 HK01 和体路 Sportsroad；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
+  'Tony Fung Ga Zen': '冯家俊',
+  'Chao Yi-fan': '赵奕帆',
+  'Cheng Yin Lung': '郑彦隆',
+  // zuo-wenjing (zh-Hans), machine-drafted 2026-10-11, not native-reviewed. Mainland
+  // players' names stay in one form in both scripts, so the name-only keys and the
+  // dates live here and reach zh-Hant through the spread. Her Asian Games quote is
+  // the original Chinese from the Hubei Sports Bureau.
+  'Zuo Wenjing 左文静': '左文静',
+  'Zuo Wenjing': '左文静',
+  "The 2022 women's world champion and a double gold medallist at the 2023 Asian Games. Her title run in Kuching and her 2026 season, five games on the board, 32 games analysed.":
+    '2022 年女子世界冠军，2023 年亚运会两枚金牌得主。她在古晋的夺冠之路和她的 2026 赛季，盘面上五盘对局，32 局附引擎分析。',
+  'Zuo Wenjing smiling, holding up her Asian Games gold medal.': '左文静微笑着举起她的亚运会金牌。',
+  "English-speaking xiangqi players who follow the women's game. She has no public social account, so the page is found through search and the site.":
+    '关注女子象棋的说英语的棋友。她没有公开的社交账号，所以这一页靠搜索和本站被找到。',
+  "Zuo Wenjing won the 2022 women's world championship in Kuching with six wins and a draw, and two gold medals at the 2023 Asian Games.":
+    '左文静在古晋以六胜一和夺得 2022 年女子世界冠军，又在 2023 年亚运会上拿下两枚金牌。',
+  "In 2026 she went unbeaten through China's national team championship, six wins and a draw, and reached the Shanghai Cup semi-final.":
+    '2026 年她在全国象棋团体赛上保持不败，六胜一和，还打进了上海杯半决赛。',
+  'With red she opens with the elephant: 15 of her 22 red games here start that way.':
+    '执红她用飞相开局：这里她的 22 盘执红对局，有 15 盘这样开局。',
+  'Her median accuracy at the 2022 championship was 96, against 91.7 over her 26 games since December 2025.':
+    '她在 2022 年世锦赛的准确率中位数是 96，而 2025 年 12 月以来的 26 盘对局是 91.7。',
+  'Zuo Wenjing with her gold medal at the 2023 Asian Games in Hangzhou. Photo: Han Chuanhao / Xinhua.':
+    '2023 年杭州亚运会上手持金牌的左文静。图片：韩传号 / 新华社。',
+  'Zuo Wenjing in a white China team jacket, smiling through round glasses, holding flowers in one hand and her gold medal up in the other.':
+    '左文静身穿白色中国队外套，戴着圆框眼镜微笑，一只手拿着鲜花，另一只手举起金牌。',
+  "Zuo Wenjing 左文静 is the 2022 women's world xiangqi champion. In Kuching that October she won six of her seven games and drew the other, with her Chinese teammate Chen Xinglin, and won the last round to take the title. A year later, at the Asian Games in Hangzhou, she won two gold medals: the women's individual event, beating Wang Linna in the final, and the mixed team event with China.":
+    '左文静是 2022 年女子世界象棋冠军。那年十月在古晋，她七盘赢了六盘，另一盘与中国队友陈幸琳弈和，最后一轮获胜夺得冠军。一年后在杭州亚运会上，她拿下两枚金牌：一枚是女子个人赛，决赛击败王琳娜；另一枚是随中国队拿下的混合团体赛。',
+  'She was born in 1993 in Zibo, in Shandong, and plays for Hubei, which she joined as a child as a pupil of Liu Dahua. She became a national master in 2006 and a Chinese grandmaster in 2022, the year of her world title. The WXF lists her as an International Master.':
+    '她 1993 年生于山东淄博，代表湖北出赛，少年时加入湖北队，师从柳大华。2006 年获得全国大师称号，2022 年，也就是她夺得世界冠军的那一年，成为象棋特级大师。世界象棋联合会把她列为国际大师。',
+  'This page is her 2022 world championship and her season since December 2025, with five of her games on the board. I ran the 32 games we hold through the same engine analysis Mistboard gives your own games.':
+    '这一页写的是她的 2022 年世锦赛和她 2025 年 12 月以来的赛季，盘面上有她的五盘对局。我们收录的 32 盘对局，我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  'How she plays': '她的棋风',
+  '**She opens with the elephant.** In 15 of her 22 red games here her first move brings an elephant to the centre, and she played it in three of her four red games at the 2022 championship.':
+    '**她用飞相开局。** 这里她的 22 盘执红对局中，有 15 盘第一步就是飞相；2022 年世锦赛她四盘执红，有三盘这样走。',
+  '**She was at her most accurate in Kuching.** Her median accuracy over the six championship games we hold is 96, against 91.7 over her 26 games since December 2025. In the last round, the game that decided the title, the engine marks no inaccuracy on any of her moves.':
+    '**她在古晋下得最精准。** 我们收录的六盘世锦赛对局，她的准确率中位数是 96，而 2025 年 12 月以来的 26 盘是 91.7。决定冠军归属的最后一轮，引擎没有给她的任何一步标出失准。',
+  "**Her opponents make the first mistake.** In 16 of her 20 wins here, the engine marks her opponent's first mistake before any of hers.":
+    '**对手先出错。** 这里她赢的 20 盘中有 16 盘，引擎标出的第一个错着出自对手，早于她的任何错着。',
+  'The title': '夺冠',
+  "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Chinese Taipei, and the title with it.":
+    '第十七届世界象棋锦标赛在砂拉越的古晋举行，女子组 2022 年 10 月 24 日至 29 日赛七轮。左文静前四盘全胜，第五轮与陈幸琳弈和，最后两轮都赢了。那时冠军已注定落在两位中国棋手之一。最后一盘她击败中华台北的彭柔安，冠军也随之到手。',
+  'Lee Meng Ju, Chinese Taipei': '李孟儒，中华台北',
+  'Anna Yin Meixian, United States': 'Anna Yin Meixian，美国',
+  'Ngo Lan Huang': '吴兰香',
+  'Fiona Tan Min Fang, Singapore': '陈茗芳，新加坡',
+  'Chen Xinglin, China': '陈幸琳，中国',
+  'Nguyen Hoang Yen, Vietnam': '阮黄燕，越南',
+  'Nguyen Hoang Yen': '阮黄燕',
+  'Peng Jou-An, Chinese Taipei': '彭柔安，中华台北',
+  'Peng Jou-An': '彭柔安',
+  "Her 2022 World Championship, round by round. Names and federations as the WXF's game records give them; round three's federation is left out because other sources give a different one. The record of round one does not replay, so that game is on no board.":
+    '她的 2022 年世锦赛，逐轮战绩。姓名和所属协会依照世界象棋联合会棋谱集的写法；第三轮的协会没有列出，因为其他来源给出的不一样。第一轮的棋谱无法回放，所以那盘不在盘面上。',
+  "Nguyen Hoang Yen vs Zuo Wenjing, 2022 World Xiangqi Championship, women, round 6, 27 October 2022. Zuo won with black in 37 moves. The board opens after red's move 10, with Zuo to move.":
+    '阮黄燕对左文静，2022 世界象棋锦标赛女子组第 6 轮，2022 年 10 月 27 日。左文静执黑 37 回合取胜。棋盘从红方第 10 回合之后开始，轮到左文静走。',
+  '2022 World Xiangqi Championship, women, round 6': '2022 世界象棋锦标赛，女子组第 6 轮',
+  "Zuo Wenjing vs Peng Jou-An, 2022 World Xiangqi Championship, women, round 7, 29 October 2022. Zuo won with red in 32 moves. The board opens after black's move 17, with Zuo to move.":
+    '左文静对彭柔安，2022 世界象棋锦标赛女子组第 7 轮，2022 年 10 月 29 日。左文静执红 32 回合取胜。棋盘从黑方第 17 回合之后开始，轮到左文静走。',
+  '2022 World Xiangqi Championship, women, round 7': '2022 世界象棋锦标赛，女子组第 7 轮',
+  "Tony Fung of Hong Kong, who reached the men's final at the same championship, has [his own page](/blog/tony-fung-ga-zen).":
+    '在同一届世锦赛打进男子组决赛的香港棋手冯家俊，也有[自己的专页](/blog/tony-fung-ga-zen)。',
+  'Asian Games, Hangzhou': '杭州亚运会',
+  'At the 2023 Asian Games in Hangzhou she won the women\'s individual gold, beating Wang Linna in the final. Her second gold came in the mixed team event, where she played three games for China, won two and drew the other. "I\'m very happy to win two golds," she told the Hubei Sports Bureau. "It\'s my first time at an event this big. I got to see a lot of my idols, and to play against top players."':
+    '在 2023 年杭州亚运会上，她夺得女子个人赛金牌，决赛击败王琳娜。第二枚金牌来自混合团体赛，她为中国队下了三盘，两胜一和。她对湖北省体育局说：“获得2金很开心！我第一次参加这样的大型赛会，可以看到很多自己的偶像，还可以跟高手过招。”',
+  'Her 2026 season': '她的 2026 赛季',
+  'National Team Championship, Zhangjiakou': '全国象棋团体赛，张家口',
+  "The national team championship ran from 28 March to 2 April 2026. Zuo played all seven rounds for Hubei's women's team, drew the first with black against Huang Leilei and won the other six.":
+    '全国象棋团体赛于 2026 年 3 月 28 日至 4 月 2 日举行。左文静代表湖北女队打满七轮，首轮执黑与黄蕾蕾弈和，其余六轮全胜。',
+  'Huang Leilei': '黄蕾蕾',
+  'Fu Anxin': '傅安欣',
+  'Zhang Jiawen': '张佳雯',
+  'Jiang Yu': '姜瑀',
+  'Dong Yunan': '董毓男',
+  'Zhang Tingting': '张婷婷',
+  'Li Chao': '李超',
+  'Wu Dan': '吴丹',
+  'Her national team championship, round by round.': '她的全国团体赛，逐轮战绩。',
+  "Zuo Wenjing vs Fu Anxin, 2026 National Team Championship, women, 28 March 2026. Zuo won with red in 37 moves. The board opens after black's move 9, with Zuo to move.":
+    '左文静对傅安欣，2026 全国象棋团体赛女子组，2026 年 3 月 28 日。左文静执红 37 回合取胜。棋盘从黑方第 9 回合之后开始，轮到左文静走。',
+  '2026 National Team Championship, women': '2026 全国象棋团体赛，女子组',
+  'The [whole event](/broadcast/xiangqi/2026-womens-xiangqi-team-championship) is in the broadcast archive.':
+    '[整项赛事](/broadcast/xiangqi/2026-womens-xiangqi-team-championship)都在直播档案里。',
+  "At the Shanghai Cup, from 9 to 13 September, she reached the semi-final of the women's event and lost it to Wang Zihan of Hebei. We hold her four games with red there: two wins, a draw and that loss.":
+    '9 月 9 日至 13 日的上海杯，她打进女子组半决赛，负于河北的王子涵。我们收录了她在那里的四盘执红对局：两胜一和，以及那盘败局。',
+  "Zuo Wenjing vs Dong Yunan, 2026 Shanghai Cup, women, 10 September 2026. Zuo won with red in 34 moves. The board opens after black's move 24, with Zuo to move.":
+    '左文静对董毓男，2026 上海杯女子组，2026 年 9 月 10 日。左文静执红 34 回合取胜。棋盘从黑方第 24 回合之后开始，轮到左文静走。',
+  '2026 Shanghai Cup, women': '2026 上海杯，女子组',
+  "Women's league, Suifenhe": '女子甲级联赛，绥芬河',
+  "A week later she played two events back to back in Suifenhe: the qualifier for China's women's league, from 20 to 22 September, and then the first stage of the league itself, to 27 September. She scored five wins, a draw and a loss in the qualifier, the loss to Wang Linna, whom she had beaten for the Asian Games gold. In the league she won six, drew two and lost two, and in round five she played Wang Zihan twice, two weeks after the Shanghai semi-final, winning with black and drawing with red.":
+    '一周后，她在绥芬河接连参加两项赛事：先是 9 月 20 日至 22 日的全国象棋女子甲级联赛预选赛，接着是联赛本身的第一阶段，打到 9 月 27 日。预选赛她五胜一和一负，输给了王琳娜，正是她在亚运会金牌之战中击败的对手。联赛中她六胜两和两负，第五轮两次对阵王子涵，距上海杯半决赛只有两周，执黑取胜，执红弈和。',
+  "Zuo Wenjing vs Wu Dan, 2026 Women's League qualifier, 21 September 2026. Zuo won with red in 21 moves. The board opens after black's move 5, with Zuo to move.":
+    '左文静对吴丹，2026 全国象棋女子甲级联赛预选赛，2026 年 9 月 21 日。左文静执红 21 回合取胜。棋盘从黑方第 5 回合之后开始，轮到左文静走。',
+  "2026 Women's League qualifier": '2026 全国象棋女子甲级联赛预选赛',
+  'The [qualifier](/broadcast/xiangqi/2026-womens-league-qualifier) and the [league](/broadcast/xiangqi/2026-womens-xiangqi-league) are in the broadcast archive.':
+    '[预选赛](/broadcast/xiangqi/2026-womens-league-qualifier)和[联赛](/broadcast/xiangqi/2026-womens-xiangqi-league)都在直播档案里。',
+  'Every event with her full record': '成绩齐全的每项赛事',
+  "Women's league, first stage, Suifenhe": '女子甲级联赛第一阶段，绥芬河',
+  'Sep 23–27, 2026': '2026年9月23–27日',
+  "Women's league qualifier, Suifenhe": '女子甲级联赛预选赛，绥芬河',
+  'Sep 20–22, 2026': '2026年9月20–22日',
+  'Mar 28–Apr 2, 2026': '2026年3月28日–4月2日',
+  'World Championship, Kuching': '世锦赛，古晋',
+  'Oct 24–29, 2022': '2022年10月24–29日',
+  'Every event for which we hold all her results. The Shanghai Cup, the Xintai Cup, the July squad selection and the December 2025 national individual championship are left out: we hold only some of her games there.':
+    '我们收齐她全部成绩的每一项赛事。上海杯、新泰杯、七月的国家集训队选拔赛和 2025 年 12 月的全国象棋个人赛没有列入：我们只收录了她在那里的部分对局。',
+  'Where she stands': '她现在的位置',
+  "Her 2026 games are in the broadcast archive with the site's analysis, and her player page there has her results.":
+    '她的 2026 年对局都在直播档案里，附网站的分析；她在那里的棋手页面列有她的成绩。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event, and for 2022 from the WXF's book of game records; the 2022 result from Xinhua and Viet Nam News; the Asian Games from Sina and the Hubei Sports Bureau, which with Chinese Wikipedia also gives her biography; the Shanghai Cup semi-final from The Paper; her titles from the WXF title list of December 2022 and China's national registration list of 2023; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局，2022 年的棋谱来自世界象棋联合会的棋谱集；2022 年的成绩来自新华社和 Viet Nam News；亚运会来自新浪和湖北省体育局，她的生平也来自湖北省体育局和中文维基百科；上海杯半决赛来自澎湃新闻；她的称号来自世界象棋联合会 2022 年 12 月的称号名单和 2023 年的全国等级称号注册名单；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
+  "Four years after Kuching she still wins most of her games. She went through the spring's team championship without a loss, reached the last four in Shanghai, and won 11 of her 17 games across the two September league events. The world title has gone elsewhere since: to Tang Sinan in 2023 and to Tang Dan in 2025, and Tang Dan beat her at the national individual championship in Jinan in December 2025. What has not changed since 2022 is the opening: she still starts with the elephant, and her wins still come from the other side's first mistake.":
+    '古晋夺冠四年后，她仍然赢下大部分对局。春天的团体赛她一盘未输，在上海打进四强，九月的两项联赛赛事 17 盘赢了 11 盘。此后世界冠军另有归属：2023 年是唐思楠，2025 年是唐丹，唐丹还在 2025 年 12 月济南的全国象棋个人赛上击败了她。2022 年以来没有变的是开局：她仍然以飞相起手，她的胜局仍然来自对方的第一个错着。',
+  'Her games in the archive': '她在档案里的对局',
+  "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
+    '左文静，2022 年女子世界象棋冠军：对局与分析',
   // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：对局、战绩与分析',
@@ -245,18 +1792,9 @@ const ZH_HANS: Record<string, string> = {
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
-  'World Championship Game 11, Sochi 2014': '世界冠军赛第 11 局，2014 年索契',
-  'Anand resigns. Carlsen (White) wins the match.': '阿南德认输。卡尔森（白方）赢得这场比赛。',
-  'Sacrifice the Horse in 13': '弃马十三着',
-  'Classic manual, 1632': '古谱，1632 年',
-  "Checkmate on move 13. Red's paired cannons pin the general on the open central file.":
-    '第 13 回合将死。红方双炮沿着打通的中路把将困死。',
   'PikaJieQi self-play': 'PikaJieQi 自对弈',
   'Red works through the reveals and delivers checkmate on move 36.':
     '红方在一次次揭子中推进，第 36 回合将死。',
-  'Engine self-play · 2.5 s per move': '引擎自对弈 · 每步 2.5 秒',
-  'Black mates on move 43 with the soldier to b1, the same soldier that crossed the river on move 4. Red’s general has nowhere to go: its own soldier blocks a2, and Black covers both b1 and b2.':
-    '黑方第 43 回合以兵到 b1 将死，正是第 4 回合过河的那个兵。红帅无处可走：己方的兵挡住 a2，而 b1 和 b2 都在黑方控制之下。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Machine-drafted, not native-reviewed, per the standing decision above.
   // Terms are taken from what this site already publishes rather than invented:
@@ -381,7 +1919,7 @@ const ZH_HANS: Record<string, string> = {
   // Drives the localized <title>; not covered by the prose test, so it is easy to miss.
   'For titled xiangqi and chess players': '致象棋与国际象棋的头衔棋手',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.':
-    '通过认证的头衔棋手，名字旁会显示金色徽章，可以开设让学员找得到的教练主页，作品也有机会登上首页。认证大约只需两分钟。',
+    '通过认证的头衔棋手，名字旁会显示金色徽章，可以开设让学员找得到的教练主页，首页今后也会刊登他们的作品。认证大约只需要两分钟。',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes: start at [mistboard.com/verify-title](/verify-title).':
     '通过认证的头衔棋手，名字旁会显示金色徽章，可以开设让学员找得到的教练主页，作品也有机会登上首页。认证大约只需两分钟：请前往 [mistboard.com/verify-title](/verify-title)。',
   'Mistboard accepts WXF and CXA titles (XGM, XIM, XNM, XWGM, XWIM) and FIDE titles (GM, IM, FM, CM, WGM, WIM, WFM, WCM). Link your federation profile, give your real name, note the results behind the claim, and an admin reviews it personally.':
@@ -400,8 +1938,8 @@ const ZH_HANS: Record<string, string> = {
   '**Your own byline.** Send something longer and it gets edited and published under your name, with your title beside it.':
     '**署名文章。** 写一篇长一点的稿子寄来，我们会编辑后以你的名义发表，并在名字旁标上你的头衔。',
   'Why Mistboard': '为什么选择 Mistboard',
-  'Mistboard is where xiangqi is played in English. Free, open source, no ads, no paywall, no premium tier. Every board, every puzzle, every lesson is open to everyone who shows up.':
-    'Mistboard 是用英语下象棋的地方。免费、开源，没有广告，没有付费墙，也没有会员等级。每一副棋盘、每一道题目、每一节课，对每一个来到这里的人都开放。',
+  'Mistboard is free and open source, with no ads. Every game, puzzle and lesson is open to everyone. A Patron subscription adds a badge to your profile and nothing else.':
+    'Mistboard 免费、开源，没有广告。每一局棋、每一道题目、每一节课都对所有人开放。赞助会员订阅只会在你的资料页上加一个徽章，别无其他。',
   'That audience has never had a serious English-language home, and it has never had titled players to learn from. You would be among the first, on a site built to put your name in front of them rather than bury it.':
     '这批棋迷从来没有一个像样的英语大本营，也从来没有头衔棋手可以请教。你会是最早的一批，而这个网站从一开始就是为了把你的名字摆到他们面前，而不是埋起来。',
   'Verify your title': '认证你的头衔',
@@ -475,7 +2013,7 @@ const ZH_HANS: Record<string, string> = {
     'Stockfish 这样的经典国际象棋引擎有一个优势：它能看到整个棋盘。它通过搜索博弈树来选择着法，向前推演双方可能走出的变化，再回传最佳变化的价值（极小化极大算法）。这种搜索假设只有一个真实局面和一条真实的延续。',
   "Under fog there is no single position to search. Misty can't see the opponent's pieces, so the board it has to reason about is a belief set: many legal boards consistent with what it has observed. A move that wins on one board can hang the king on another. Misty samples from that set, searches those worlds, and looks for a move that holds up across them.":
     '迷雾下不存在一个可供搜索的单一局面。Misty 看不到对手的棋子，因此它必须推理的是一个信念集合：许多与已观察信息一致的合法棋盘。同一步棋可能在一个棋盘上获胜，却在另一个棋盘上白送国王。Misty 从集合中采样，搜索这些可能世界，并寻找在它们之中都站得住脚的着法。',
-  'Sampling boards and searching them is the straightforward part. Combining the answers is where fog chess stops behaving like chess, and Misty borrows its method from poker: it minimizes regret across the sampled worlds, converging toward a strategy an opponent cannot exploit, instead of taking the move with the best average score. Obscuro, the strongest published Fog of War chess engine, works the same way. The hard part is keeping that model faithful to what has actually been observed while the clock is running.':
+  'Sampling boards and searching them is the straightforward part. Combining the answers is where Fog Chess stops behaving like chess, and Misty borrows its method from poker: it minimizes regret across the sampled worlds, converging toward a strategy an opponent cannot exploit, instead of taking the move with the best average score. Obscuro, the strongest published Fog of War chess engine, works the same way. The hard part is keeping that model faithful to what has actually been observed while the clock is running.':
     '采样棋盘并搜索它们是相对直接的部分。真正让迷雾国际象棋不再像国际象棋的，是如何汇总这些答案；Misty 的方法借自扑克：它在采样出的各个可能世界上最小化遗憾值，逐步收敛到一个对手无法利用的策略，而不是选择平均分最高的着法。公开发表的最强迷雾国际象棋引擎 Obscuro 采用同样的思路。难点在于，在时钟不停走动时，让这个模型始终忠于已经观察到的信息。',
   "What's hard": '难点在哪里',
   'Two things. The first is the possible-board set itself. A few plies into a foggy middlegame, "every consistent board" blows up fast. Misty has to keep that uncertainty under control inside a live-game time budget.':
@@ -486,10 +2024,8 @@ const ZH_HANS: Record<string, string> = {
   'The current production engine is Misty 1.6. Most of the work since the first public release has been hardening, not a new personality: avoid rare king walks into hidden captures, avoid major-piece hangs in fog, stop stale search memory from leaking into a new live position, see fog-castles during search, and steer away from unstable early lines with a small opening book. Version 1.6 closes one specific queen hang. The safety check that vetoes catastrophic captures was subtracting the value of the piece being taken, so giving up a queen for a defended rook scored as a small loss rather than a disaster, and Misty walked into it in two real games before the floor that catches it shipped.':
     '当前生产引擎是 Misty 1.6。首次公开发布后的大部分工作都在加固，而不是塑造新个性：避免国王偶尔走进隐藏吃子范围，避免大子在迷雾中白送，阻止过期的搜索记忆泄漏到新的实时局面，在搜索中看见迷雾下的王车易位，并用小型开局库避开不稳定的早期变化。1.6 版修正了一处特定的白送皇后问题：否决灾难性吃子的安全检查会先减去被吃棋子的价值，于是用皇后换一个有保护的车只被算作小亏而不是灾难；在这道下限修好之前，Misty 在两盘真实对局中都走进了这个陷阱。',
   'The engine is open source': '引擎已开源',
-  "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the fog chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.":
+  "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the Fog Chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.":
     'Misty 的源代码以 GPL 协议发布在 GitHub 上，也可以从 PyPI 安装，包名是 misty-chess。公开的部分就是迷雾国际象棋引擎本身：信念枚举器、搜索、在提交着法时否决灾难性选择的守卫，以及要求 Rust 与 Python 两套实现在每一步都逐字节一致的测试套件。变体同系引擎与研究实验代码仍然是私有的。',
-  'Obscuro is not public. So as far as I can find, Misty is the only Fog of War chess engine built on that architecture that anyone else can run, read, or take apart, and that is most of the reason to publish it.':
-    'Obscuro 并未公开。因此据我所知，Misty 是唯一一个基于该架构、并且其他人可以运行、阅读和拆解的迷雾国际象棋引擎，这也是把它开源的主要理由。',
   'Misty on GitHub': 'GitHub 上的 Misty',
   'That does not make Misty solved or perfectly safe. It means the cheap fog-specific failures that made earlier versions look silly are much rarer, so games against it test your understanding instead of your patience.':
     '这并不意味着 Misty 已被彻底解决或绝对安全。它意味着那些让早期版本显得可笑的低级迷雾特有错误已经少见得多，因此与它对弈考验的是你的理解，而不是耐心。',
@@ -497,7 +2033,7 @@ const ZH_HANS: Record<string, string> = {
   "Misty is the strongest Fog of War chess engine I've seen available to play, but version numbers are not ratings. The yardstick that matters is human play, and I won't put a number on it until a serious human match earns one.":
     'Misty 是我见过可以直接对弈的最强迷雾国际象棋引擎，但版本号不是等级分。真正有意义的标尺是人类实战；在一场严肃的人机比赛给出依据之前，我不会为它标上数字。',
   "What's next": '下一步是什么',
-  'Misty itself stays focused on Fog of War chess. The same redacted engine protocol now supports variant-specific siblings, including Misty DMX for Dark Mini Xiangqi and MistyBanqi for Banqi, but those are separate engines with their own rules and evaluation problems.':
+  'Misty itself stays focused on Fog of War chess. The same redacted engine protocol now supports variant-specific siblings, including Misty DMX for Dark Mini Xiangqi and MistyBanqi for banqi, but those are separate engines with their own rules and evaluation problems.':
     'Misty 本身会继续专注于迷雾国际象棋。同一套脱敏引擎协议现在也支持针对特定变体的同系引擎，包括迷雾迷你象棋的 Misty DMX 和暗棋的 MistyBanqi，但它们是独立引擎，各有自己的规则与评估问题。',
   "Misty is live on Mistboard, and every serious game against it sharpens the estimate of where it stands. Play one, and you're part of the benchmark.":
     'Misty 已在 Mistboard 上线，每一盘严肃的人机对局都会让我们更准确地估计它的水平。来下一盘，你也会成为这项基准的一部分。',
@@ -569,7 +2105,7 @@ const ZH_HANS: Record<string, string> = {
 
   // -- How MistyBanqi Plays (engine article) --
   'How MistyBanqi Plays': 'MistyBanqi 是怎么下棋的',
-  'MistyBanqi is the engine you play in Banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.':
+  'MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.':
     'MistyBanqi 是你在 Mistboard 上对弈暗棋时面对的引擎：一个采用手写评估的经典搜索引擎。它如何思考，以及一个值得知道的盲点：它会把已经赢定的棋下成和棋。',
   'How it thinks': '它如何思考',
   "Banqi hides information in its own way: every tile starts face-down, and flipping one reveals a random piece from the bag of what's left. So unlike chess, the engine's search tree mixes ordinary moves with chance events. MistyBanqi treats a flip as a chance node, averaging over the pieces the tile might turn out to be, and otherwise searches like a classical chess engine: it looks ahead through the lines both sides could play and backs up the value of the best one.":
@@ -584,7 +2120,7 @@ const ZH_HANS: Record<string, string> = {
   'It can draw a game it has won': '它会把赢定的棋下成和棋',
   'Here is the same engine in a position it has completely won. It is up ten pieces to two, with nothing left to capture, and the only task is to walk the win home. It draws instead.':
     '同样这个引擎，下面处在一个它已经完全赢定的局面。它以十子对两子领先，已经没有子可吃，唯一要做的就是把胜势走到底。结果它却下成了和棋。',
-  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and Banqi's threefold-repetition rule ends the game a draw.":
+  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and banqi's threefold-repetition rule ends the game a draw.":
     '评估里没有任何一项会因为「把优势转化为胜利」而比「单纯守住子力」给更高的分，于是一个遥遥领先的局面和一个真正已经赢下的局面，得分几乎一样。既然没有哪一项促使它取得进展，它就只是来回挪子，而暗棋的三次重复局面规则便把这盘判成和棋。',
   'It can also lose its own general': '它也可能丢掉自己的将帅',
   'How each of these was found, reproduced, and measured is written up in detail in the engineering post linked below.':
@@ -601,8 +2137,8 @@ const ZH_HANS: Record<string, string> = {
   'Draw by repetition · MistyBanqi up 10 pieces to 2': '重复局面和棋 · MistyBanqi 十子对两子领先',
   'MistyBanqi wins · the opponent is left with no piece to move':
     'MistyBanqi 获胜 · 对手已无子可走',
-  "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, this is the escape: herd a strong piece into a perpetual chase and it may let the draw happen.":
-    'MistyBanqi（红方）以十子对两子领先，是一个轻松赢定的局面，但它的评估并不会因为「把优势转化为胜利」而比「守住子力」给更高的分，于是它只来回挪子、不去逼抢，最终因三次重复局面被判和棋。如果你对它子力落后，这就是脱身之道：用长捉缠住一枚大子，它也许就放任和棋发生。',
+  "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, keep the game going: it may shuffle its own way into a draw.":
+    'MistyBanqi（红方）以十子对两子领先，是一个轻松赢定的局面，但它的评估并不会因为「把优势转化为胜利」而比「守住子力」给更高的分，于是它只来回挪子、不去逼抢，最终因三次重复局面被判和棋。如果你对它子力落后，别放弃：它也许会来回挪子，自己走进和棋。',
   'MistyBanqi (the first player) won this one outright, leaving the opponent with nothing to move. Banqi swings hard with the flips: it fell behind on material early here, then calculated its way back and cleared the board. Grinding down a position like this, capture by capture, is the strong half of its game.':
     'MistyBanqi（先手）干净利落地赢下了这盘，让对手无子可走。暗棋的局势随翻子剧烈起伏：这盘里它开局子力落后，随后凭计算一步步扳回，把对手清光。像这样一子一子地碾下去，是它棋力强的那一半。',
 
@@ -611,7 +2147,7 @@ const ZH_HANS: Record<string, string> = {
   "Misty is Mistboard's Fog of War chess engine: how it sees, searches possible boards, avoids hidden catastrophes, and where the current version stands.":
     'Misty 是 Mistboard 的迷雾国际象棋引擎：它如何观察、搜索可能局面、避开隐藏灾难，以及当前版本处在什么水平。',
   'How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.':
-    'Mistboard 如何把隐藏信息留在服务器端：规范真实局面、按座位投影视野、私密实时房间，以及公开的赛后复盘。',
+    'Mistboard 如何把隐藏信息留在服务器端：服务器保存规范的真实局面，按座位投影各方的视野，实时对局房间保持私密，赛后复盘则公开。',
 
   // -- Shared rules-page headings --
   'Board and setup': '棋盘与布局',
@@ -673,6 +2209,84 @@ const ZH_HANS: Record<string, string> = {
 
   // -- Xiangqi primer (rules) --
   'Xiangqi Rules': '象棋规则',
+  // #410 rebuild (2026-09-25), machine-drafted, not native-reviewed.
+  'How big is a xiangqi board, and how many pieces are there?':
+    '象棋棋盘有多大？一共有多少枚棋子？',
+  'The board has 9 files and 10 ranks, 90 points in all, with pieces standing on the points rather than in squares. There are 32 pieces, 16 per side: one general, two advisors, two elephants, two horses, two chariots, two cannons and five soldiers.':
+    '棋盘有 9 条纵线、10 条横线，共 90 个交叉点，棋子落在交叉点上而不是格子里。全盘共 32 枚棋子，每方 16 枚：一个将（帅）、两个士、两个象、两匹马、两个车、两个炮和五个兵（卒）。',
+  'What do the Chinese characters on xiangqi pieces mean?': '象棋棋子上的汉字是什么意思？',
+  "Each piece is named by one character, and Red and Black mostly write the same word two ways. The generals differ: Red's 帥 means commander and Black's 將 means general. The advisors, 仕 and 士, are both read shì and mean a scholar-official. Red's elephant 相 means minister and Black's 象 means elephant, and the two are pronounced alike. The horse (傌 / 馬), chariot (俥 / 車) and cannon (炮 / 砲) are one word each, with one component added or swapped on one side: Red's cannon takes the fire radical and Black's the stone radical. The soldiers differ again: Red's 兵 is a soldier and Black's 卒 a foot soldier.":
+    '每枚棋子用一个字表示，红黑双方大多是同一个字的两种写法。将帅不同：红方的「帥」是统帅，黑方的「將」是将领。士是「仕」与「士」，都读 shì，意思是士人、官员。红方的「相」是宰相，黑方的「象」是大象，两者读音相同。马（傌 / 馬）、车（俥 / 車）、炮（炮 / 砲）各是同一个字，只是一方多了或换了一个偏旁：红方的炮是火字旁，黑方的砲是石字旁。兵卒也不同：红方的「兵」是士兵，黑方的「卒」是步卒。',
+  'What is the flying general rule?': '什么是「飞将」规则？',
+  'It is the rule that the two generals may never face each other on an open file with nothing between them (飞将 in Chinese). The name comes from the idea that a general facing the other could fly down the file and capture it. In practice any move that would leave the generals facing each other is illegal, so a general controls the file in front of it like a chariot.':
+    '就是双方将帅不能在中间无子的同一条纵线上对脸的规则（又称「白脸将」）。这个名字来自一种说法：将帅若对脸，一方可以沿纵线「飞」过去吃掉对方。实际上，任何让将帅对脸的走法都不合法，所以将帅就像车一样控制着它正前方的纵线。',
+  'Every piece captures the way it moves, except the cannon.': '除了炮，每种棋子都按走法吃子。',
+  'Any distance along a line; captures by jumping exactly one piece': '沿线走任意距离；隔一子打子',
+  Piece: '棋子',
+  'The rules of xiangqi for chess players: the palace and river, cannon screens, facing generals, perpetual check, notation, and a famous game to play through. Playable on Mistboard against the Pikafish engine or a friend.':
+    '写给国际象棋棋手的象棋规则：九宫与楚河汉界、炮架、将帅对脸、长将、记谱法，以及一盘可以逐步重演的名局。可在 Mistboard 上与皮卡鱼引擎或朋友对弈。',
+  'For chess players: six rule changes': '写给国际象棋棋手：六条不同的规则',
+  'If you already play chess, most of xiangqi will feel familiar. These are the six rules that catch chess players out, each explained in full further down.':
+    '如果你会下国际象棋，象棋的大部分内容都会让你觉得熟悉。下面是最容易让国际象棋棋手吃亏的六条规则，后文会逐一详细说明。',
+  Rule: '规则',
+  'In chess': '国际象棋',
+  'In xiangqi': '象棋',
+  'No legal move': '无子可走',
+  'Stalemate, a draw': '逼和，算和棋',
+  'A loss for the player who cannot move': '无子可走的一方判负（困毙）',
+  'The two kings': '双方的王（将帅）',
+  'May stand on the same file': '可以站在同一条竖线上',
+  'The generals may never face each other on an open file': '将帅不能在中间无子的同一条纵线上对脸',
+  'Checking forever': '不停将军',
+  'A draw by repetition': '重复局面判和',
+  'A loss for the side giving every check': '每步都将军的一方判负（长将）',
+  Capturing: '吃子',
+  'Every piece captures the way it moves': '每种棋子都按走法吃子',
+  'The cannon captures only by jumping one piece': '炮只能隔一子打子',
+  'Knight and bishop': '马与象',
+  'The knight jumps and the bishop slides': '马可以跳子，象沿斜线滑行',
+  'The horse and elephant are stopped by a piece in their path':
+    '马和象会被路上的棋子挡住（蹩马腿、塞象眼）',
+  'Promotion and castling': '升变与王车易位',
+  'Both exist': '两者都有',
+  'Neither exists; a soldier never promotes': '两者都没有；兵卒永不升变',
+  'Setting up': '摆棋',
+  "Files are lettered a to i from Red's left and ranks numbered 1 to 10 from Red's side, so Red's back rank is rank 1. Each back rank holds, from one edge to the other: chariot, horse, elephant, advisor, general, advisor, elephant, horse, chariot. Each side's cannons stand on the b and h files two ranks in front of it, on rank 3 for Red, and its five soldiers stand on the a, c, e, g and i files one rank further up.":
+    '从红方的左手边起，纵线依次标为 a 到 i；横线从红方一侧起标为 1 到 10，因此红方底线是第 1 横线。每一方底线从一边到另一边依次是：车、马、象、士、将、士、象、马、车。双方的炮都放在 b 线和 h 线、底线往前两格的位置（红方在第 3 横线），五个兵卒再往前一格，放在 a、c、e、g、i 五条线上。',
+  'For chess players: the chariot is exactly a rook, the horse is a knight that can be blocked, and the general is a king confined to its palace. The elephant only loosely resembles a bishop, and the advisor and the cannon have no chess counterpart.':
+    '对照国际象棋：车就是国际象棋的车，马是会被蹩腿的马，将帅是困在九宫里的王。象与国际象棋的象只是略有相似，而士和炮在国际象棋里没有对应的棋子。',
+  'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
+    '将帅不能对脸的规则也是一种进攻手段。将帅可以从一条无子的纵线远端协助将死对方，因为对方的将帅不能走到这条线上。',
+  Repetition: '重复局面',
+  'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
+    '你不能靠不停将军来挽救一盘输棋。如果同一局面出现三次，而其中一方在这一循环的每一步都在将军，这一方判负。如果双方每步都在将军，或者双方都没有将军，则判和。',
+  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. A game is also drawn after 60 consecutive plies without a capture.':
+    '正式比赛规则更进一步，还禁止长捉对方无根的棋子。Mistboard 不判定长捉，因此重复的捉子按和棋计。连续 60 个半回合没有吃子，也判和。',
+  'Mistakes chess players make': '国际象棋棋手常犯的错误',
+  'Habit from chess': '国际象棋的习惯',
+  'What happens in xiangqi': '在象棋里的结果',
+  'Moving a piece off the file between the two generals': '把挡在双方将帅之间那条纵线上的棋子走开',
+  'The move is illegal: it would leave the generals facing each other':
+    '这步棋不合法：会让将帅对脸',
+  'Heading for stalemate to save a lost game': '想靠逼和挽救输棋',
+  'Stalemate loses, so the escape is a defeat': '困毙判负，所以这条退路本身就是输棋',
+  'Checking again and again to force a draw': '反复将军以求和棋',
+  'Perpetual check loses for the side giving it': '长将的一方判负',
+  'Putting a piece between an enemy cannon and your general': '把棋子垫在对方的炮和己方将帅之间',
+  'The move is illegal: with exactly one piece between them, the cannon attacks your general':
+    '这步棋不合法：中间正好隔一子时，炮就在攻击你的将帅',
+  'Moving a horse or elephant without checking its path': '走马或象时不看路上有没有棋子',
+  "A piece on the horse's leg or the elephant's eye blocks the move":
+    '马腿或象眼上有棋子，这步就走不了',
+  'Reading xiangqi moves': '怎么读象棋棋谱',
+  "Xiangqi moves are written three ways. Mistboard shows algebraic notation by default outside Chinese: the central cannon is **Che3**, the cannon on the h file moving to e3. WXF notation numbers files from each player's right and writes the same move **C2.5**: cannon on file 2 moves sideways to file 5. Chinese notation reads the same way in characters: **炮二平五**, cannon two traverses to five. The move list setting switches between them.":
+    '象棋着法有三种写法。Mistboard 的中文界面默认使用中文记谱，其他语言默认使用代数记谱：中炮写作 **Che3**，意思是 h 线上的炮走到 e3。WXF 记谱从每一方自己的右手边给纵线编号，同一步写作 **C2.5**：第 2 线的炮平移到第 5 线。中文记谱用汉字表达同样的意思：**炮二平五**。着法列表的设置可以在三者之间切换。',
+  'A first opening': '第一个开局',
+  "The most common opening is the central cannon (中炮): Red moves a cannon to the centre file, aiming at Black's central soldier and the general behind it. Black's most common answer is the screen horses (屏风马), both horses developed toward the centre to guard that soldier. [Central Cannon vs Screen Horses](/study/4KXXmLaG) collects model games of the pairing.":
+    '最常见的开局是中炮：红方把一只炮平到中路，瞄准黑方的中卒和其后的将。黑方最常见的应法是屏风马，两匹马都向中路跳出，保护这枚中卒。[中炮对屏风马](/study/4KXXmLaG)收录了这一对局型的范局。',
+  'Is perpetual check allowed in xiangqi?': '象棋允许长将吗？',
+  'No. A player who repeats the position by giving check on every move loses. On Mistboard the side that checked on every move of a threefold repetition loses; if both sides checked throughout, or neither did, it is a draw.':
+    '不允许。靠每步将军来重复局面的一方判负。在 Mistboard 上，同一局面出现三次时，若其中一方在这一循环的每一步都在将军，这一方判负；若双方都一直在将军，或都没有将军，则判和。',
   // seoTitle: drives the localized <title>. Without an entry the zh pages would
   // regress to the English seoTitle, since seoTitle is outside articleProse.
   'Xiangqi Rules: How to Play Chinese Chess': '象棋规则：中国象棋怎么下',
@@ -703,13 +2317,12 @@ const ZH_HANS: Record<string, string> = {
     '当敌方棋子攻击将帅时，即为**将军**。每一步都必须保证己方将帅安全，因此被将军的一方必须移动将帅、吃掉进攻棋子或挡住攻击。若没有合法应法，便是将死，被将军的一方告负。',
   'A player with no legal move also loses, even when the general is not in check. In Western chess that position is a stalemate draw; in xiangqi it is a win for the player who made the last move.':
     '即使将帅没有被将军，完全没有合法走法的一方也会告负。在西洋国际象棋中这是逼和；在象棋中则由走出上一着的一方获胜。',
-  'Tournament rules use detailed procedures for perpetual check, perpetual chase, and other repeated attacks. Mistboard uses two automatic draw rules: the same position three times, or 60 consecutive plies without a capture.':
-    '正式比赛规则对长将、长捉和其他重复进攻有详细判定程序。Mistboard 采用两条自动和棋规则：同一局面出现三次，或连续 60 个半回合没有吃子。',
   "To see the pieces work together, step through a famous trap from a manual printed in 1632. Red gives up a horse; when Black grabs it, Red's chariots and cannons pour through the gap and checkmate on the thirteenth move.":
     '想看棋子如何协同作战，可以逐步重演一则出自 1632 年棋谱的著名陷阱。红方故意送出一匹马，黑方一旦贪吃，红方的车炮便乘虚而入，在第十三着将死对手。',
 
   // -- Chess primer --
   'Chess Rules': '国际象棋规则',
+  'Chess Rules: Castling, Promotion and En Passant': '国际象棋规则：王车易位、升变与吃过路兵',
   'Chess is a two-player strategy game played for centuries. It descends from the Indian game chaturanga of around the 6th century and reached Europe through Persia and the Islamic world; its modern form, with the long-range queen and bishop, took shape in Europe in the late 1400s.':
     '国际象棋是一种已有数百年历史的双人策略游戏。它源自约公元 6 世纪的印度游戏恰图兰加，经由波斯和伊斯兰世界传入欧洲；其现代形式（拥有远程的后和象）于 15 世纪末在欧洲成形。',
   'Board setup': '棋盘布置',
@@ -790,8 +2403,8 @@ const ZH_HANS: Record<string, string> = {
     '注意 d7 的车能看到 b7 的后和 h7 的王，却看不到 a7。棋子的视野止于它走法的尽头。',
   'The game ends when a king is captured. No check, no checkmate, no warning.':
     '当一方的王被吃掉时，对局即告结束。没有将军，没有将死，也没有任何预警。',
-  "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. There is no stalemate draw and no insufficient-material draw.":
-    'Mistboard 会在三次重复局面（同一真实局面出现三次，且轮到走子的一方相同、王车易位权与吃过路兵权也相同）或五十回合规则（连续五十个回合无兵的走动、也无吃子）时自动判和。两条规则都针对真实局面，而非任何一方各自的视野。这里没有逼和，也没有子力不足判和。',
+  "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. A side with no moves at all, every piece blocked, also draws. Otherwise you must move, even if every move walks into attack. There is no insufficient-material draw.":
+    'Mistboard 会在三次重复局面（同一真实局面出现三次，且轮到走子的一方相同、王车易位权与吃过路兵权也相同）或五十回合规则（连续五十个回合无兵的走动、也无吃子）时自动判和。两条规则都针对真实局面，而非任何一方各自的视野。若一方完全无子可动（所有棋子都被堵死），同样判和。除此之外必须走棋，哪怕每一步都会走进对方的攻击范围。没有子力不足判和。',
   'A king may castle out of, through, or into check.':
     '王可以在被将军时易位，可以穿过被攻击的格子易位，也可以易位到被攻击的格子上。',
   'Pawns see forward push squares when those squares are empty. They see diagonal squares only when an enemy piece is actually there to capture.':
@@ -800,7 +2413,7 @@ const ZH_HANS: Record<string, string> = {
     '白方看不到 a4 或 b4：黑兵挡住了这些推进，所以它们不是合法走法。有些规则会显示被阻挡的兵推进格；Mistboard 不会。',
   "En passant is chess's strangest move, so our vision rule bends for it: the capturing pawn sees the captured pawn on its adjacent square. The window is one move only. Pass on the capture and the chance is gone.":
     '吃过路兵是国际象棋中最奇特的一步，因此我们的视野规则为它破了个例：执行吃子的兵能看到相邻格子上那个将被吃掉的对方兵。这个窗口只持续一步。若放弃这次吃子，机会便不复存在。',
-  'The goal is not perfect certainty. A good fog chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
+  'The goal is not perfect certainty. A good Fog Chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
     '目标不是获得完美确定性。优秀的迷雾棋手会判断哪些隐藏局面危险到必须尊重，然后选择在那些局面中也能成立的走法。',
   'A pawn sees where it can push. Fog on a push square means an opponent piece or pawn is blocking it.':
     '兵能看到它可以推进到的格子。若推进格被迷雾遮住，就说明那里有对方的棋子或兵挡着。',
@@ -896,10 +2509,10 @@ const ZH_HANS: Record<string, string> = {
     '每个被占据的交叉点都是可见的，因此双方都能看出将帅何时受到攻击。尚未走动的暗子按其起始位置对应的兵种发动攻击。一旦走动，它立即翻明；任何来自落点的攻击都按翻明后的真实身份计算。',
   'Normal check rules apply: a move may not leave your own general attacked, and a player in check must answer the threat. You win by checkmate or by leaving the opponent with no legal move. The facing-generals rule still applies, and dark pieces block the file like any other piece.':
     '通常的将军规则依然适用：走子后不能让己方将帅受到攻击，被将军时必须应对。将死对方，或让对方无合法走法，即可获胜。将帅对脸规则仍然有效，暗子也和其他棋子一样会挡住纵线。',
-  'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture. Repeated positions do not trigger a separate automatic draw.':
-    '连续 120 个半回合，也就是双方各走 60 步而没有吃子时，Mistboard 自动判和。重复局面不会另外触发自动和棋。',
-  'Step through a self-play game. Dark pieces appear as colored backs and reveal their identity the first time they move. Red wins by checkmate.':
-    '逐步查看一盘自我对弈。暗子以彩色背面显示，第一次走动时翻明身份。红方以将死获胜。',
+  'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture.':
+    '连续 120 个半回合，也就是双方各走 60 步而没有吃子时，Mistboard 自动判和。',
+  'Repetition follows xiangqi. On the third occurrence of the same position, a player who gave check on every one of their moves in the repeating cycle loses, so perpetual check cannot save a lost game. If both players checked throughout, or the cycle had no checks, the game is drawn. Perpetual chase without check is not ruled on and stays a draw.':
+    '重复局面按象棋规则处理。同一局面第三次出现时，若一方在重复循环中的每一步都将军，该方判负，长将不能挽救败局。若双方都一直将军，或循环中没有将军，则判和。不将军的长捉不作裁决，按和棋处理。',
   Turns: '回合',
   'Capture by rank': '按等级吃子',
   'The cannon': '炮',
@@ -907,6 +2520,8 @@ const ZH_HANS: Record<string, string> = {
     '当对手轮到自己却无棋可走时，你获胜——通常是因为敌方棋子被全部吃光，有时则是被困死、无路可走。这里的将不是王棋：吃掉它只是进展，而非胜利，棋局会一直进行到一方被吃光或被困死为止。',
   'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
     'Mistboard 有两种自动和棋：连续 40 个半回合没有翻子或吃子，或同一局面出现三次。翻子或吃子会不可逆地改变局面，因此会重置两个计数。',
+  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '捉子（长捉）指既不翻子也不吃子、走完后能吃掉对方刚走动那枚棋子的一步棋，不论那枚棋子有没有根。捉子的一方不能用捉子让同一局面第三次出现，必须改走别的着法，除非没有其他合法着法。由捉子造成的重复局面一律不判和，因为被捉的棋子不走就会被吃。不断把对方棋子赶到新位置的捉子不受限制。[这条规则为什么这样定](/blog/banqi-perpetual-chase)，附对局。',
   'Play MistyBanqi': '对战 MistyBanqi',
   'Challenge a friend': '挑战好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -938,8 +2553,6 @@ const ZH_HANS: Record<string, string> = {
     '任何一枚棋子走进敌方兽穴、吃光敌方所有棋子，或让对手无合法着法，你都立即获胜。棋子不能走进己方兽穴。',
   'Games draw on threefold repetition, or when 100 half-moves (50 by each player) pass with no capture.':
     '若同一局面出现三次，或连续 100 个半回合（每方 50 步）无吃子，则判和。',
-  'This engine game shows a lion leap, a rat swim and capture an elephant, and the final entry into Blue’s den.':
-    '这盘引擎对局展示狮子跳河、老鼠游水并吃掉大象，以及最后进入蓝方兽穴。',
   'One of each animal in two colors is shuffled and placed face-down on the sixteen squares. Nobody knows what is under a tile until it is flipped. The first tile the first player flips sets that player’s color; the other player takes the other color.':
     '两种颜色各一套八种动物，洗匀后背面朝上放在十六个格子里。在翻开之前，谁也不知道棋子下面是什么。先行者翻开的第一枚棋子决定其颜色，另一位玩家执另一色。',
   'On your turn, do one thing: flip one face-down tile, or move one of your revealed animals one square up, down, left, or right. Face-down tiles block movement and cannot be captured. You cannot pass.':
@@ -957,19 +2570,9 @@ const ZH_HANS: Record<string, string> = {
     '若同一局面出现三次，或连续 40 个半回合（每方 20 步）没有翻棋、吃子或同归于尽，则判和。',
   'Mistboard also ends a fully revealed, one-animal-each position when neither side can force a win. Equal ranks are always dead because any meeting removes both; some unequal-rank chases are also unwinnable. These positions are drawn immediately.':
     '当棋子全部翻开、双方各剩一只动物且谁也无法强制获胜时，Mistboard 也会结束对局。同级棋子必为死局，因为相遇会双双离场；某些不同等级的追逐也无法取胜。这些局面立即判和。',
-  'This engine game shows two equal-rank trades: first the Lions, then the Elephants. Blue wins after Red’s last animal leaves the board.':
-    '这盘引擎对局展示两次同级兑子：先是双方的狮子，再是双方的大象。红方最后一只动物离场后，蓝方获胜。',
   'Can the bot see the face-down tiles?': '电脑能看到背面朝上的棋子吗？',
   'No. The engine gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do.':
     '不能。引擎拿到的棋盘和你一样：每个背面朝上的棋子都以未知的形式发给它，只附带尚未翻开的棋子数量；它和你在同一时刻，也就是翻开的那一刻，才知道那是什么棋子。',
-  'Engine vs engine': '引擎对引擎',
-  'Red wins by reaching the den · 69 plies': '红方进入兽穴获胜 · 69 个半回合',
-  'Red’s rat has already taken Blue’s elephant in the open, and with the strongest piece off the board Red walks a piece straight into Blue’s undefended den. Reaching the enemy den ends the game at once, no matter what material is left.':
-    '红方的老鼠已经在空地上吃掉了蓝方的大象，最强的棋子离场后，红方径直把一枚棋子走进蓝方无人防守的兽穴。进入对方兽穴会立刻结束对局，无论场上还剩多少子力。',
-  'Engine self-play': '引擎自我对弈',
-  'Blue wins by elimination · 36 plies': '蓝方吃光对手获胜 · 36 个半回合',
-  'Both lions and both elephants have already traded off the board, and the pieces that survived all belong to Blue. Red has nothing left that can move, so the game ends: with no piece to move and no tile to flip, Red loses.':
-    '两只狮子和两头大象都已同归于尽离场，存活下来的棋子全部属于蓝方。红方再无可走之子，于是对局结束：既没有棋子可走，也没有棋子可翻，红方告负。',
 
   // -- Branded rules names --
   'Fog Chess Rules': '迷雾国际象棋规则',
@@ -977,20 +2580,18 @@ const ZH_HANS: Record<string, string> = {
   // one, so both English keys land on the same Chinese title. That is the
   // point of seoTitle -- 'fog of war chess' is what players type.
   'Fog of War Chess Rules': '迷雾国际象棋规则',
-  'Fog Chess rules: chess under Fog of War, where each side sees only the squares its pieces reach, there are no check warnings, and the king falls by capture.':
-    '迷雾国际象棋规则：战争迷雾下的国际象棋。每一方只能看到己方棋子可及的格子，没有将军提示，王被吃掉即负。',
+  "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.":
+    '迷雾国际象棋就是只能看到己方棋子所能到达的格子的国际象棋。没有人提示将军，所以王要被吃掉才算输，王也可能易位到自己看不见的攻击之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷雾国际象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 对 dark chess / Fog of War chess 的公开名称。Jens Bæk Nielsen 与 Torben Osted 于 1989 年发明了它。它属于隐式迷雾：没有裁判，也没有侦察动作。每一方的视野完全由己方棋子的合法走法范围推导而来。',
-  'The rules of xiangqi: palaces, the river, cannon screens, facing generals, and a famous game to play through. Now playable on Mistboard against the Pikafish engine or a friend.':
-    '象棋规则：九宫、楚河汉界、炮架、将帅照面，以及一盘可逐步回放的名局。现在可在 Mistboard 上与 Pikafish 引擎或好友对弈。',
   'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
     '象棋的现代形态在宋代（960 至 1279 年）的中国成型，炮也在这一时期加入棋盘。它的前身可以追溯到更早几个世纪，并与国际象棋、将棋、朝鲜象棋同源于更古老的印度游戏恰图兰卡。今天它是世界上参与人数最多的棋类游戏之一。',
   'Fog Xiangqi Rules': '迷雾象棋规则',
-  'Fog of War Xiangqi Rules': '迷雾象棋规则',
+  'Fog of War Xiangqi Rules': '迷雾象棋规则：战争迷雾下的象棋',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
     '迷雾象棋由 Brian H. Liou 于 2026 年设计，是 Mistboard 的原创变体。战争迷雾早在 1989 年就由 Jens Bæk Nielsen 和 Torben Osted 发明的「黑棋」引入国际象棋，如今也是 chess.com 的常规变体，却从未有人把它移植到象棋上。真正让它变得奇特的是炮。炮只能隔子吃子，所以在迷雾中，你既看不见目标，也无法确定炮架是否还在。',
-  'Fog Xiangqi rules: xiangqi under Fog of War, where each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.':
-    '战争迷雾下的象棋：每一方只能看到己方棋子可及的点位，隐藏阻挡会影响视野，擒获将帅即获胜。',
+  "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.":
+    '迷雾象棋就是战争迷雾下的象棋。你看不见的棋子照样可以蹩你的马腿；一方的将帅若与对方将帅之间的直线上没有棋子阻挡，就可以直接把对方将帅吃掉。',
   'Fog Xiangqi is xiangqi under Fog of War. Pieces keep their normal movement, but unseen enemy pieces stay hidden and danger is not announced. Capture the general to win.':
     '迷雾象棋是在战争迷雾下对弈的象棋。棋子保留正常走法，但看不见的敌方棋子会被隐藏，危险不会被提示。擒获将帅即获胜。',
   'If Xiangqi is new to you, start with [Xiangqi Rules](/rules/xiangqi). If you already play xiangqi, the sections below explain only what fog changes.':
@@ -1002,7 +2603,7 @@ const ZH_HANS: Record<string, string> = {
   'Use [Xiangqi Rules](/rules/xiangqi) for the base game. This page covers what changes.':
     '基础规则请参考[象棋规则](/rules/xiangqi)。本页只说明变化之处。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
-    '普通国际象棋规则，也就是迷雾国际象棋背后的基础：王车易位、升变、吃过路兵、和棋规则，以及一盘可逐步回放的名局。',
+    '普通国际象棋的规则，也是迷雾国际象棋背后的基础：王车易位、升变、吃过路兵、各种和棋规则，以及一盘可以逐步回放的著名对局。',
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
     '国际象棋是信息公开的底层游戏。为它加上战争迷雾，便得到迷雾国际象棋：你视野之外的敌方棋子会消失，而王由被吃而落败。',
   'Read Fog Chess': '阅读迷雾国际象棋',
@@ -1013,22 +2614,22 @@ const ZH_HANS: Record<string, string> = {
     '来玩 Misty 的迷雾国际象棋，或阅读面向玩家的规则文章，了解同一套视野模型。',
   'Read Fog Chess Rules': '阅读迷雾国际象棋规则',
   'Jungle Chess Rules (Dou Shou Qi, Animal Chess)': '斗兽棋规则：玩法详解与免费在线对弈',
-  "Jungle Chess, also called Dou Shou Qi or Animal Chess: eight ranked animals on a 7 by 9 board, rivers only the rat can cross, and a race to the opponent's den. Play rated games and analyse them free in your browser.":
-    '斗兽棋（又称动物棋）规则详解：棋盘 7×9，八种按等级排列的动物，只有老鼠能过的河，以及冲入对方兽穴的竞赛。免费在线对弈，支持等级分与复盘分析。',
+  "Jungle Chess, also called Dou Shou Qi or Animal Chess, puts eight ranked animals on a 7 by 9 board, and the first to walk into the other's den wins. The rat, the lowest rank, can take the elephant, the highest.":
+    '斗兽棋又称动物棋，在 7×9 棋盘上摆着八种按等级排列的动物，先走进对方兽穴的一方获胜。等级最低的老鼠可以吃掉等级最高的大象。',
   'Jungle has been played online for years, mostly in apps and on Chinese game portals. Rated games, a post-game review, and an engine that tells you where it went wrong have not come with it. The serious Jungle engine work sits in academic papers and endgame tablebases, nowhere you can actually play. Mistboard puts all three in one place.':
     '斗兽棋在网上已经玩了很多年，大多在手机应用和国内游戏平台上。但等级分对局、赛后复盘，以及一台能告诉你哪一步走错的引擎，一直没有跟上。真正认真的斗兽棋引擎研究留在学术论文和残局库里，没有落在任何能实际对弈的地方。Mistboard 把这三件事放在了一起。',
   'Jungle Chess is a two-player strategy game about rank and terrain. Each side commands eight animals and tries to reach the enemy den or eliminate the enemy army.':
     '斗兽棋是一种围绕等级与地形展开的双人策略游戏。双方各指挥八种动物，目标是进入敌方兽穴或消灭敌方全部棋子。',
   'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻棋规则：玩法详解与免费在线对弈',
-  'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down, you flip to reveal, and equal ranks trade off the board. Play it free in your browser.':
-    '斗兽棋的 4×4 翻面版本，又称翻翻棋。所有动物开局均背面朝上，翻开即亮明身份，等级相同的双方同归于尽、一起离场。免费在线对弈，无需注册。',
+  'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
+    '斗兽棋的 4×4 翻面版本，又称翻翻棋。所有动物开局均背面朝上。每回合翻开一枚或走动一枚，等级相同的双方同归于尽、一起离场。',
   'Jieqi Rules (Reveal Xiangqi)': '揭棋规则：玩法详解与免费在线对弈',
-  'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, moves first as the point it stands on, then reveals. Play it free in your browser.':
-    '揭棋规则详解：除将帅外的棋子都隐藏身份，首次按所在起始位置的棋子走法行棋，然后翻开并按真实身份行棋。免费在线对弈，无需注册。',
+  'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
+    '揭棋是一种暗子玩法的中国象棋变体，这里详解它的规则。除将帅外，所有棋子开局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻开，此后按真实身份行棋。',
   "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
     '揭棋保留象棋的棋盘和将死目标，但隐藏所有非将帅棋子的身份。暗子首次按它所在起始位置的棋子走法移动、攻击和吃子，走完后翻开，之后按真实身份行棋。',
-  'Banqi, also called Chinese dark chess or blind chess: the 4 by 8 half-board game with face-down pieces, rank captures, and screen-jumping cannons. Play it free in your browser.':
-    '暗棋规则详解：在 4×8 半盘上进行，棋子背面朝上，按等级吃子，炮隔子跳吃，也没有王棋。免费在线对弈，无需注册。',
+  'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
+    '暗棋又称盲棋，在半张象棋棋盘上以背面朝上的棋子进行。棋子按等级吃子，但有两个例外：卒可以吃将，炮则隔着一个炮架跳吃任何棋子。',
   'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
     '暗棋是在半张象棋棋盘上进行的快节奏隐藏棋子游戏。三十二枚棋子全部洗匀并背面朝上。第一次翻子决定双方颜色。之后每回合都在两种行动中选择：翻开棋子，或移动一枚已翻开的棋子。除炮外，吃子按等级进行。',
   'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
@@ -1068,21 +2669,19 @@ const ZH_HANS: Record<string, string> = {
   // Machine-drafted like the rest of this dictionary (see the note at the top
   // of TRANSLATED_ARTICLE_SLUGS); not native-reviewed.
   'Every xiangqi champion since 1956': '1956年以来的每一位全国象棋冠军',
-  'Xiangqi is playable on Mistboard: find a casual or rated game against another player, take on the engine ladder, or challenge a friend. No account required. Signing in unlocks rated games.':
-    '象棋可在 Mistboard 上对弈：与其他玩家进行休闲或积分对局，挑战引擎等级阶梯，或邀请好友。无需账户即可对弈，登录后可进行积分对局。',
+  "Rated games need an account. Casual games, the engine ladder and friend links don't.":
+    '积分对局需要账户。休闲对局、引擎等级阶梯和好友链接都不需要。',
   'Find an opponent': '寻找对手',
-  'Fortress Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '堡垒象棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '斗兽棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '翻翻棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Jieqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '揭棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Fog Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '迷雾象棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Fog Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '迷雾国际象棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
+  'A rat on land can take the elephant, and the elephant can never take a rat. No account needed.':
+    '陆地上的老鼠可以吃大象，大象却永远不能吃老鼠。无需账户。',
+  'When an animal takes an enemy of the same rank, both leave the board. No account needed.':
+    '动物吃同等级的敌子时，两枚棋子一起离开棋盘。无需账户。',
+  'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does.':
+    'Mistboard 采用仅向吃子方揭示的规则。你吃掉一枚暗子时会得知它是什么，对手则永远不会知道。',
+  'The generals may face each other here. A general that sees the other down a clear file can capture it. No account needed.':
+    '这里允许将帅照面。一方将帅若在无阻挡的直线上看见对方，就可以直接擒获。无需账户。',
+  'You can castle out of, through or into check, and nobody tells you when your king is attacked. No account needed.':
+    '王可以在被将军时易位，可以穿过被攻击的格子，也可以易位到被攻击的格子上；王被攻击时也没有任何提示。无需账户。',
   'CAPTURED PIECE KNOWLEDGE': '被吃暗子信息',
   General: '将',
   Advisor: '士',
@@ -1522,6 +3121,33 @@ const ZH_HANS: Record<string, string> = {
     '本页的每一局棋都是一份研究里的一章，你可以在那里从头到尾走一遍：完整的着法树、引擎的变化作为可以走进去的分支、每位冠军一章且顺序相同，末尾还有2025年的世界赛决赛。',
   'Learn how the pieces move': '学习各子的走法',
   'Play through the whole study': '走一遍完整研究',
+  // Merged from the brianhliou.com champions post (2026-10-03): provenance, scale of the case, the annotation pipeline and its totals.
+  'The record was assembled from Chinese sources and cross-checked: title counts, every year won, and the shared title marked as shared. The figure and the table both render from that one dataset, so the picture and the table cannot disagree with each other.':
+    '这份纪录依据中文资料整理并交叉核对：夺冠次数、每一个夺冠年份，并列的那一届也标作并列。图和表都由同一份数据生成，所以两者不会互相矛盾。',
+  'The association sanctioned 49 people over buying and selling games, and a court in Hangzhou convicted six grandmasters of bribery.':
+    '中国象棋协会因买棋卖棋处罚了49人，杭州一家法院以行贿受贿判决六名特级大师有罪。',
+  'How the games were annotated': '这些棋局讲解是怎样做出来的',
+  'Every annotation on this page comes out of one analysis pipeline. Give it a game and it returns a finished study: every move judged, the engine’s preferred alternative hung as a branch you can play into, a verdict closing each branch, and a note saying what the move cost. It runs in four stages.':
+    '本页的每一条讲解都出自同一条分析流程。输入一局棋，它返回一份完成的研究：每一着都有评判，引擎偏好的替代着法挂成可以走进去的分支，每条分支以一个结论收尾，另附一段说明，指出这一着付出了什么代价。它分四个阶段运行。',
+  '**Harvest and verify.** The games come out of the public archives, and every one is replayed through the rules engine before it is kept. A record that does not replay legally is reported as broken rather than published. That matters more than it sounds: the archives contain transcription errors, and a game nobody checked is a game that will eventually show a reader an illegal move.':
+    '**采集与校验。** 棋局来自公开棋谱库，每一局在保留之前都会用规则引擎重放一遍。无法合法重放的棋谱会被报告为损坏，而不是发布出去。这比听起来更重要：棋谱库里有抄录错误，而没人校验过的棋局，终有一天会给读者展示一着违规着法。',
+  '**Analyse.** Pikafish at a million nodes a position, once per ply, at MultiPV 2, so every position yields a best move and a runner-up. The runner-up is the expensive part and it earns its keep: without it you can say a move was bad, but you cannot say a move was the only one, so ! and !! could not be marked. Plies where a piece was offered get a second search, to find out whether the engine’s own line takes it.':
+    '**分析。** Pikafish，每个局面一百万个节点，每步一次，MultiPV 2，因此每个局面都给出一个最佳着法和一个次优着法。次优着法是花费最大的部分，但物有所值：没有它，你可以说某一着很差，却不能说某一着是唯一的一着，于是 ! 和 !! 就无法标注。有子力送吃的那些步还会再做一次搜索，看引擎自己的变化会不会吃。',
+  '**Judge.** Win probability before and after each move decides whether it was an inaccuracy, a mistake or a blunder. A separate pass looks for the moves worth praising. The engine’s own line becomes a sibling branch on the move it should have replaced.':
+    '**评判。** 每一着前后的胜率决定它是失准、错着还是漏着。另有一遍专门寻找值得称赞的着法。引擎自己的变化会挂成同级分支，接在它本该取代的那一着上。',
+  '**Score.** Each branch closes with an assessment symbol in the notation chess players already read: ± a clear advantage, ⩲ a slight one, = level, and the same signs reversed when Black is better.':
+    '**打分。** 每条分支以国际象棋棋手已经熟悉的评估符号收尾：± 明显优势，⩲ 略优，= 均势，黑方占优时符号反过来。',
+  'None of it is specific to these games. The same machinery produces the alternative lines and annotations everywhere else on Mistboard, and pointing it at a new game costs an afternoon of engine time rather than a month of annotating by hand.':
+    '这一切都不是只为这些棋局定制的。Mistboard 其他各处的替代变化和讲解都由同一套机制生成，把它指向一局新棋，花掉的是一个下午的引擎时间，而不是一个月的手工注解。',
+  'Across this page and its companion on [the world title](/blog/xiangqi-world-championship), that comes to 25 games. Of the 201 moves judged, 108 are inaccuracies, 82 are mistakes or blunders, and 11 are moves the engine wanted to praise, three of them marked brilliant.':
+    '把本页和讲[世界冠军](/blog/xiangqi-world-championship)的姊妹篇合起来，一共是25局棋。在被评判的201步中，108步是失准，82步是错着或漏着，11步是引擎想要称赞的着法，其中三步被标为妙手。',
+  'Both champion pages': '两个冠军页面合计',
+  'games annotated': '已讲解棋局',
+  'mainline moves': '主线着法',
+  'moves judged worth marking': '被判定值得标注的着法',
+  'engine sidelines': '引擎副线',
+  'moves inside those sidelines': '这些副线中的着法',
+  'moves in the published trees': '已发布着法树中的着法',
   'Yang Guanlin 杨官璘': '杨官璘',
   'Li Yiting 李义庭': '李义庭',
   'Hu Ronghua 胡荣华': '胡荣华',
@@ -1838,8 +3464,158 @@ const ZH_HANS: Record<string, string> = {
   Pawn: '兵',
   'Pawn push': '仙人指路',
   'Crossed cannon': '过河炮',
+  // -- Helpmates in Xiangqi (helpmates-in-xiangqi): machine-drafted 2026-10-10, not native-reviewed.
+  // Terms follow the study 5CdUHFsq zh names (合作杀, 纯杀, 纯正杀, 炮架) and solver-audit (困毙, 排局). --
+  'Helpmates in Xiangqi': '象棋合作杀',
+  'In a helpmate both sides cooperate so Red can mate. A search found 164 helpmates in two for xiangqi; try the best ten, solutions hidden until you ask.':
+    '合作杀里，双方合作，让红方将死对方。搜索找出了164道两步合作杀，我们挑出其中最好的十道供你试解，答案在你要求前保持隐藏。',
+  'A helpmate turns a problem inside out: both sides cooperate so that one side is mated in a stated number of moves. We searched one slice of it in xiangqi, helpmate in two with Black first and Red mating: 1,470 sound, 186 distinct, 164 after a re-proof.':
+    '合作杀把排局翻了个面：双方合作，让一方在规定步数内被将死。我们在象棋里搜索了其中一小块：两步合作杀，黑方先走，红方成杀。结果是1,470道无误，186道互不相同，复核后剩164道。',
+  "Xiangqi's own rules shape the genre. A general with no legal move has lost, which cost us 22 problems, and the cannon can mate over a screen Black supplies, as 19 of the 164 do.":
+    '象棋自己的规则塑造了这个体裁。将帅无子可走即判负（困毙），这让我们损失了22道题；炮可以借黑方送来的炮架成杀，164道中有19道如此。',
+  "The good ones look impossible. In one, Red has a general and a horse against twelve black pieces, and of Black's 45 legal first moves exactly one leads to mate.":
+    '好题看起来不可能。其中一道，红方只有帅和一马，对黑方十二子；黑方45种合法的第一步中，只有一种能导向杀局。',
+  'Black to move. Red has a general and a horse; Black has twelve pieces.':
+    '黑方先走。红方有帅和一马；黑方有十二子。',
+  "Two moves each later, mate. Black's horse went out and came back to e9, walling in its own general, and Red's horse reached f8.":
+    '双方各走两步后成杀。黑马出去又回到e9，堵住了自己的将；红马跳到f8。',
+  'In an ordinary [xiangqi](/rules/xiangqi) (Chinese chess) problem the two sides are enemies: Red plays, Black defends as well as it can, and Red wins anyway. A helpmate drops the fight. Both sides cooperate so that one of them is mated in a stated number of moves. The claim is not that the losing side cannot stop it; it is that out of everything both sides could play, this is the only line that works.':
+    '在普通的[象棋](/rules/xiangqi)排局里，双方是对手：红方进攻，黑方尽力防守，红方仍然取胜。合作杀放下了对抗。双方合作，让其中一方在规定步数内被将死。它要证明的不是被杀的一方挡不住，而是在双方所有可能的走法中，只有这一路行得通。',
+  'The genre is old in Western chess, where the usual form, written h#n, has Black move first and White mate on its nth move. That is a convention, not a limit: a helpmate can run to any length, and either side can move first or be mated. The classical xiangqi manuals ask for a win or a draw against the best defence, never for cooperation, so we asked whether a helpmate works on this board, starting with one narrow slice: helpmate in two, Black first, Red mates. Can a search compose sound ones, and are any of them worth solving?':
+    '合作杀在国际象棋里历史悠久，常见形式记作h#n：黑方先走，白方在第n步将杀。这只是惯例，不是限制：合作杀可以任意长，任何一方都可以先走，也可以是被杀的一方。古典象棋谱要求的都是面对最佳防守取胜或求和，从不要求双方合作，所以我们想知道合作杀在这张棋盘上是否成立，并从很窄的一块开始：两步合作杀，黑先，红杀。搜索能否编出无误的题？其中有没有值得一解的？',
+  'Where this sits in the tradition': '它在传统中的位置',
+  'Xiangqi problem composition is the older tradition. The earliest known problem, Two Dragons Leave the Sea, is in a Southern Song encyclopedia dated to 1266. The classical manuals followed: a Ming collection of 550 problems in 1570, The Secret in the Orange in 1632, then the Qing collections, one of which (1801) holds the famous street problems such as Seven Stars Gathering ([a history of the manuals](https://www.xiangqi.com/articles/a-short-introduction-to-the-xiangqi-manuals-up-till-the-ming-dynasty)).':
+    '象棋排局是更古老的传统。已知最早的排局“二龙出海”，见于南宋类书《事林广记》，年代定为1266年。古典棋谱随后出现：1570年收局550则的《适情雅趣》，1632年的《橘中秘》，再到清代各谱，其中1801年的《竹香斋象戏谱》收有“七星聚会”等著名江湖排局（[棋谱简史](https://www.xiangqi.com/articles/a-short-introduction-to-the-xiangqi-manuals-up-till-the-ming-dynasty)）。',
+  'What runs through all of them is a fixed goal. Each problem names its result, a win or a draw, and the solver plays the losing side as well as it can be played. The Ming problems are nearly all wins; the Qing ones are mostly draws. The tradition grew by varying the position, generation after generation, rather than by varying what the solver is asked to do.':
+    '贯穿其中的是固定的目标。每道题都标明结果，胜或和，解题者替败方走出最顽强的应着。明代的题几乎都是胜局，清代的多为和局。这个传统靠一代代变换局面发展，而不是变换对解题者的要求。',
+  "Western composition went the other way: it kept the board and changed the goal. Max Lange published the first helpmate in 1854, with White moving first and more than one solution; Sam Loyd's of 1860 was the first with Black to move, and A. Barbe's of 1861 the first with a single solution ([the genre's history](https://en.wikipedia.org/wiki/Helpmate)). Selfmates, series movers and the rest came the same way. The helpmate is now the largest single section of the FIDE Album, the official anthology of the best problems: 2,539 of the 9,218 entries for 2010 to 2012 ([FIDE](https://www.fide.com/images/stories/NEWS_2017/FIDE_News/FIDE_Album_2010-2012_sample_pages.pdf)).":
+    '西方排局走了另一条路：保留棋盘，改变目标。马克斯·朗格于1854年发表了第一道合作杀，白方先走，且不止一解；萨姆·劳埃德1860年的题首次让黑方先走，A. 巴尔贝1861年的题首次只有唯一解（[该体裁的历史](https://en.wikipedia.org/wiki/Helpmate)）。自杀题、连续着法题等也都是这样来的。如今合作杀是国际棋联排局年鉴（FIDE Album，官方的优秀排局选集）中最大的单一类别：2010至2012年卷9,218则中占2,539则（[FIDE](https://www.fide.com/images/stories/NEWS_2017/FIDE_News/FIDE_Album_2010-2012_sample_pages.pdf)）。',
+  "Shogi took the idea from chess too. Its problemists call it bakazume, the cooperative mate: both sides work together to mate the defending king in the fewest moves, and, as in shogi's ordinary mating problems, the attacker moves first (in chess the mated side usually does), normally has no king on the board, and the defender holds every piece not in play. Fairy shogi problems with this goal were being published by the 1960s; in 1970 Kato Tetsu published one 163 moves long, and in 1971 the magazine Tsume Shogi Paradise began a regular series of them ([Japanese Wikipedia](https://ja.wikipedia.org/wiki/%E3%83%95%E3%82%A7%E3%82%A2%E3%83%AA%E3%83%BC%E8%A9%B0%E5%B0%86%E6%A3%8B)).":
+    '将棋也从国际象棋那里借来了这个想法。将棋排局家称之为ばか詰（bakazume），即合作诘将：双方合作，用最少的步数将死守方的王；与将棋的普通诘将棋一样，攻方先走（国际象棋里通常是被杀的一方先走），盘上一般没有攻方的王，守方持有所有不在盘上的棋子。以此为目标的变体诘将棋到1960年代已有发表；1970年Kato Tetsu发表了一道长达163手的作品，1971年《詰将棋パラダイス》杂志开始定期刊登这类题（[日文维基百科](https://ja.wikipedia.org/wiki/%E3%83%95%E3%82%A7%E3%82%A2%E3%83%AA%E3%83%BC%E8%A9%B0%E5%B0%86%E6%A3%8B)）。',
+  'Cooperative mate in three, attacker first. The attacker, playing up the board, has a dragon on 3d, the red piece: a promoted rook, it moves as a rook or one square diagonally. The defender, whose pieces point down the board, has a king on 2b and a lance on 2e, which moves any distance straight ahead.':
+    '三步合作诘，攻方先走。攻方向上进攻，在3d有一枚龙王，即红色的棋子：升变后的飞车，可以像飞车一样走，也可以斜走一格。守方的棋子朝下，王在2b，香车在2e，香车可以向正前方走任意格。',
+  'The dragon takes the lance on 2e with check, the king steps to 1c, and the attacker drops the captured lance on 1d. The dragon guards 1d and the whole 2-file, and the lance sees through the king to 1b.':
+    '龙王吃掉2e的香车并将军，王走到1c，攻方把吃来的香车打在1d。龙王控制1d和整条2路，香车的攻击线穿过王直达1b。',
+  "The example on Japanese Wikipedia's page shows what the cooperative goal changes. Dropping the lance farther from the king on the 1-file looks just as good, but then the defender, who holds every spare piece, can drop one in between. An ordinary shogi problem discounts an interposition that is simply captured; a cooperative one counts it, so only 1d mates in three. Our search of the position agrees: it is the only cooperative mate in three, and there is none in one.":
+    '日文维基百科这一页的例子说明了合作目标带来的变化。把香车打在1路上离王更远的地方，看起来同样可行，但这样一来，持有所有余子的守方就能在中间打入一子。普通诘将棋不计较一个只会被直接吃掉的垫子；合作诘则要计算它，所以只有打在1d才能三步成杀。我们对这个局面的搜索结果一致：它是唯一的三步合作杀，且不存在一步杀。',
+  "Henry Forsberg, 1935. The solution is 1. Qf6 Nc5 2. Qb2 Ra4 mate: the black queen walks to b2 to block its own king's last square, and the white rook mates. The problem is famous for its twins: put a rook, bishop, knight or pawn on a6 instead of the queen and each has its own single solution, five mates from one diagram.":
+    '亨利·福斯伯格，1935年。解法是 1. Qf6 Nc5 2. Qb2 Ra4 将杀（Q为后，N为马，R为车）：黑后走到b2，堵住自己王的最后一格，白车成杀。这道题以“孪生题”闻名：把a6的后换成车、象、马或兵，每一种都有各自的唯一解，一张图五种杀法。',
+  'We have not found a xiangqi helpmate older than ours. Web searches in Chinese for the names chess problemists give the helpmate turned up chess problems and ordinary xiangqi mating patterns, never a cooperative xiangqi problem, and the classical manuals all ask for a win or a draw. If you know of an earlier one, [tell us](/contact).':
+    '我们还没有找到比我们更早的象棋合作杀。用国际象棋排局家对合作杀的各种叫法做中文网络搜索，找到的是国际象棋题和普通的象棋杀法，从来没有合作的象棋题；古典棋谱要求的也都是胜或和。如果你知道更早的一道，请[告诉我们](/contact)。',
+  'Composing them': '如何编题',
+  'Defender holds every other piece': '守方持有其余所有棋子',
+  'Attacker holds nothing': '攻方手中无子',
+  'The generator is the naive half of this work, and it is worth saying so plainly. A position maker deals diagrams blind, either every placement of a few pieces or random armies from a profile that fixes how much material each side gets. The solver walks every cooperative line of two moves a side, Black first, and keeps a diagram only if exactly one line mates. Nothing in the generator knows what a good problem is: it aims at no theme, prefers no quiet move over a capture, and has no sense of economy. The profiles that gave Black an army and Red one or two pieces produced most of what is worth looking at.':
+    '生成器是这项工作中天真的一半，这一点值得直说。局面生成器盲目地摆出图形：要么枚举少数几子的所有摆法，要么按设定双方子力的配置随机摆出阵容。求解器遍历双方各两步的所有合作走法，黑方先走，只保留恰好一路成杀的图形。生成器本身完全不知道什么是好题：它不瞄准任何主题，不偏好静着胜过吃子，也没有经济性的概念。给黑方整支军队、红方一两个子的配置，产出了大部分值得一看的题。',
+  "This is the floor, and there is a lot of room above it. A composer starts from an idea and builds the position around it, and a search can work the same way. It could start from the mate it wants, say a cannon mating over a black screen, and unwind it to positions two moves earlier instead of dealing until one turns up. It could take a good problem and change it a piece at a time, keeping the changes that make the right first move harder to see or leave less red material idle. It could score what a solver feels: how many of Black's first moves look as natural as the right one, and whether the key move is a quiet one. Or it could skip dealing entirely. Chess composers now have [exhaustive helpmate tables](https://github.com/osick/helpmate-tablebase), complete through five pieces, that list every sound helpmate for a given material and leave a search only the choosing; we did not build one for xiangqi. Each of these would find problems ours cannot.":
+    '这只是起点，上面还有很大的空间。排局家从一个构思出发，围绕它搭建局面，搜索也可以这样做。它可以从想要的杀形出发，比如炮隔着黑方的炮架将杀，再倒推出两步之前的局面，而不是一直摆到碰上一道为止。它可以拿一道好题，一次改动一个子，保留那些让正确的第一步更难看出、或让红方闲置子力更少的改动。它可以给解题者的感受打分：黑方有多少个第一步看起来和正解一样自然，关键着是不是一步静着。或者它可以完全不靠随机摆局。国际象棋排局家现在有了[穷举的合作杀表](https://github.com/osick/helpmate-tablebase)，五子以内已经完整，列出给定子力下所有无误的合作杀，搜索只剩挑选；我们没有为象棋做这样的表。这些方法每一种都能找到我们的方法找不到的题。',
+  'The pipeline, in outline.': '流程概览。',
+  Results: '结果',
+  'The search found 1,470 sound helpmates. Most were the same mate reached from a different setup, often a spectator piece one square over, so we grouped them by the final picture. That left **186 distinct mates**. The re-proof then removed 22, for a reason covered below, and **164 stand**.':
+    '搜索找到1,470道无误的合作杀。大多数是同一个杀形从不同的布局得到，往往只是一个旁观的子挪了一格，所以我们按最终杀形分组。剩下**186种不同的杀法**。复核又去掉了22道，原因见下文，**留下164道**。',
+  'Of the 164, 39 are pure mates, where no square around the mated general is covered twice, and 19 are model mates: pure, with every red piece on the board doing work.':
+    '164道中，39道是纯杀，即被杀一方将周围没有一格被重复控制；19道是纯正杀：既是纯杀，盘上每个红子又都在发挥作用。',
+  'Mate delivered by': '成杀的子',
+  Problems: '题数',
+  'The 164 problems that stand, by the red piece that gives the final check.':
+    '留下的164道题，按最后一步将军的红子分类。',
+  'The best ten': '最好的十道',
+  "Ten problems, one idea each. All 164 are in [the study](/study/5CdUHFsq), these ten first and the rest in ranked order. Every one is the slice we searched: Black, Red, Black, Red, and Red's second move mates.":
+    '十道题，各有一个主题。全部164道都在[这个研习](/study/5CdUHFsq)里，这十道在前，其余按排名排列。每一道都属于我们搜索的那一块：黑、红、黑、红，红方第二步成杀。',
+  'Red has a general and one soldier against seven black pieces, a chariot and both advisors among them. Find the square where a lone soldier can mate, then ask which black piece has to wall the general in.':
+    '红方只有帅和一兵，对黑方七子，其中有一车和双士。先找出孤兵能在哪一格成杀，再想想哪个黑子得去堵住自己的将。',
+  'Helpmate 1: a general and one soldier': '合作杀1：光帅一兵',
+  "Red has a general and a horse already in Black's camp; Black has twelve pieces. Black has 45 legal first moves, and exactly one of them leads to mate.":
+    '红方有帅和一匹已在黑方阵中的马；黑方有十二子。黑方有45种合法的第一步，只有一种能导向杀局。',
+  'Helpmate 2: one horse against twelve': '合作杀2：一马对十二子',
+  'A single red cannon against fifteen black pieces. A cannon cannot check without a screen, so look at which black piece can provide one.':
+    '一门红炮对黑方十五子。炮没有炮架就不能将军，所以要看哪个黑子能当炮架。',
+  'Helpmate 3: one cannon against fifteen': '合作杀3：一炮对十五子',
+  "A red chariot against twelve, with Black's back rank already thinned out. The question is which squares beside the black general need filling, and by what.":
+    '一辆红车对十二子，黑方底线已经空了一些。问题是黑将旁边哪些格子需要填上，用什么子填。',
+  'Helpmate 4: one chariot against twelve': '合作杀4：一车对十二子',
+  "A general and a horse against twelve again, the horse this time on h8, near a black chariot in the corner. The horse needs both of Red's moves.":
+    '又是帅和一马对十二子，这次马在h8，靠近角上的一辆黑车。这匹马要用掉红方的两步。',
+  'Helpmate 5: a horse on the right': '合作杀5：右翼一马',
+  "The fullest board of the ten: three red soldiers deep in Black's half against fourteen black pieces.":
+    '十道中子力最多的一局：三个红兵深入黑方半边，对黑方十四子。',
+  'Helpmate 6: eighteen pieces': '合作杀6：十八子',
+  'Six pieces: a general, cannon and soldier for Red, a general, cannon and horse for Black. Look at what the red cannon on e5 needs before it can give check.':
+    '六个子：红方帅、炮、兵，黑方将、炮、马。看看e5的红炮在将军之前需要什么。',
+  'Helpmate 7: six pieces': '合作杀7：六子',
+  "Black's general is already out of its back rank, with Red's soldier and cannon stacked on the g-file. Red's last move here does two jobs.":
+    '黑将已经离开底线，红兵和红炮叠在g路上。红方这里的最后一步一着两用。',
+  'Helpmate 8: six pieces again': '合作杀8：又是六子',
+  'Black has two chariots, a horse and a cannon on an open board, and 55 legal first moves. Red has one horse.':
+    '开阔的棋盘上黑方有双车、一马、一炮，第一步有55种合法走法。红方只有一马。',
+  'Helpmate 9: an open board': '合作杀9：开阔的棋盘',
+  "A general and one soldier against twelve, the soldier already on f8 beside Black's palace. Black's own pieces have to finish the cage.":
+    '帅和一兵对十二子，兵已在黑方九宫旁的f8。黑方得用自己的子把笼子合上。',
+  'Helpmate 10: one soldier against twelve': '合作杀10：一兵对十二子',
+  'What we learned': '我们学到了什么',
+  "**Xiangqi decides what counts as sound.** A general with no legal move has lost, so a helpmate can also end with the losing side not in check and simply nothing to play. Our composer tested only for checkmates. Re-proved under the real rule, 22 of the 186 had other lines it could not see, from 3 to 64 of them, and two could be mated in one. A soundness test ported from chess brings chess's idea of a finished game with it.":
+    '**象棋决定什么才算无误。**将帅无子可走即判负，所以合作杀也可以在被杀一方没有被将军、只是无棋可走时结束。我们的编题程序只检测了将死。按真正的规则复核后，186道中有22道另有程序没看到的路线，从3路到64路不等，其中两道一步就能杀。从国际象棋移植来的无误检验，也把国际象棋对“终局”的理解一并带了过来。',
+  '**The cannon is the theme chess cannot have.** It checks by jumping exactly one piece, and in a helpmate the mated side is cooperating, so Black can supply the screen. Nineteen of the 164 mate over a black screen. The facing-generals rule adds another: the red general can take squares from its own palace, as in the seventh problem.':
+    '**炮是国际象棋不可能有的主题。**炮隔一子将军，而在合作杀里被杀一方是合作的，所以黑方可以送上炮架。164道中有19道借黑方的炮架成杀。将帅不能对面的规则又添了一种：红帅可以从自己的九宫控制格子，比如第七道题。',
+  '**The palace makes the lopsided problems possible.** A xiangqi general never leaves its nine-point palace and has at most four squares to step to, so a couple of black moves can wall it in. That fits what the search turned up: the profiles with a black army against one or two red pieces produced most of the good problems, because Black does nearly all the building and Red only has to arrive. A chess king has the whole board and up to eight squares, and a helpmate there spends far more of its moves taking them away.':
+    '**九宫让这些悬殊的题成为可能。**象棋的将帅从不离开九个点的九宫，最多只有四个点可走，所以黑方走几步就能把它围死。这与搜索的结果相符：黑方整支军队对红方一两个子的配置产出了大部分好题，因为几乎所有的搭建都由黑方完成，红方只需赶到。国际象棋的王拥有整个棋盘和最多八个格子，那里的合作杀要花多得多的步数把这些格子一一封掉。',
+  '**Finding sound problems is the easy part.** The search turned up 1,470 sound helpmates, and most were the same mate from a different setup: grouped by the final picture they came to 186. Soundness is a yes or no that a solver can check. Whether a problem is worth setting up for a friend is not, and nothing in this pipeline measures it. That is the gap the next generator has to close.':
+    '**找到无误的题是容易的部分。**搜索找到1,470道无误的合作杀，大多数是同一个杀形从不同的布局得到：按最终杀形分组后只有186种。是否无误是一个求解器能检验的是非题。一道题值不值得摆给朋友看则不是，而这个流程里没有任何东西能衡量它。这正是下一个生成器要填补的空白。',
+  'What is left to find': '还有什么可找',
+  'We searched one corner of the genre, and the rest is open. **Longer helpmates** first. Our search found almost no sound helpmates in three: a third move gives both sides many more ways to reach the same mate, so a generator has to aim at unique lines rather than deal and filter. How long can a sound xiangqi helpmate be: ten moves, twenty, a hundred? And can a search prove that a long one is the shortest of its kind, or that its line is the only one?':
+    '我们只搜索了这个体裁的一角，其余都还空着。首先是**更长的合作杀**。我们的搜索几乎没找到无误的三步合作杀：多一步，双方就有多得多的方法走到同一个杀形，所以生成器得直接瞄准唯一路线，而不是先摆后筛。无误的象棋合作杀最长能有多长：十步，二十步，一百步？搜索能否证明一道长题是同类中最短的，或者它的路线是唯一的？',
+  '**More impossible-looking ones**: the weakest red force against the most black, a lone soldier mating a full army. And **the other shapes of the genre**: Red moving first, and Red as the side that is mated. We have not searched either. If you find one, or a longer or stranger one than ours, we would love to see it: put it in [the forum](/forum), or write it up on your own blog and tell us where.':
+    '**更多看似不可能的题**：最弱的红方子力对最多的黑子，一个孤兵将死整支军队。还有**这个体裁的其他形式**：红方先走，以及红方作为被杀的一方。这两种我们都还没有搜索。如果你找到一道，或者比我们的更长、更奇的，我们很想看看：发到[论坛](/forum)，或者写在你自己的博客上并告诉我们在哪里。',
+  "What the slice already shows is that xiangqi does take helpmates, and they are not chess problems on a different board. The rules that make xiangqi what it is, the loss without a legal move, the cannon's screen, the facing generals, decide which problems are sound and how the best of them mate. A good one looks impossible because Red has almost nothing. It works because Black's army is the material the mate is built from: the walls, the screen, the squares filled in around its own general. That is the hope behind this work: to carry the genres Western composers invented onto the xiangqi board, find what is beautiful in them here, and in time find a helpmate good enough to make a xiangqi player stop and set it up for a friend.":
+    '这一小块已经表明，象棋容得下合作杀，而且它们不是换了张棋盘的国际象棋题。让象棋成为象棋的那些规则，困毙判负、炮架、将帅对面，决定了哪些题无误，也决定了最好的题如何成杀。好题看起来不可能，因为红方几乎什么都没有。它之所以成立，是因为黑方的大军正是构成杀局的材料：墙、炮架、自己将周围被填满的格子。这就是这项工作背后的希望：把西方排局家发明的体裁搬到象棋棋盘上，找出它们在这里的美，并且终有一天找到一道好到让象棋棋手停下来、摆给朋友看的合作杀。',
+  'Solve all 164': '解全部164道',
+  'The longest forced mates': '最长的连将杀',
+  'Helpmates in Xiangqi (Chinese Chess): 164 Two-Move Problems': '象棋合作杀：164道两步合作杀排局',
+  'Black to move, helpmate in 2': '黑先，两步合作杀',
+  'The mate': '杀局',
   // -- The xiangqi match-fixing case --
   // Machine-drafted 2026-08-30, not native-reviewed, same standing as the two
+  'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games: 8 life bans, 37 timed bans and 4 reprimands.':
+    '2024到2026年间，中国象棋协会因买棋卖棋处罚了49人：终身禁赛8人，限期禁赛37人，通报批评4人。',
+  'Ten of the thirteen national champions since 2005 carry a ruling, including Wang Tianyi, the top-rated player from 2014 to 2023.':
+    '2005年以来的十三位全国冠军中，有十人受到处罚，其中包括2014到2023年间等级分第一的王天一。',
+  'A Hangzhou court convicted six grandmasters of bribery in September 2025. The charge was bribery, not gambling.':
+    '2025年9月，杭州一家法院以行贿受贿判决六名特级大师有罪。罪名是行贿受贿，不是赌博。',
+  'Engine cheating is alleged in every account and charged in none. No result or title has been struck from the record.':
+    '各方说法都提到用软件作弊，但没有一项指控涉及。至今没有任何成绩或称号被撤销。',
+  'This is our best reading of what has been published. If you know something here to be wrong or out of date, [tell us](/contact) and we will correct it.':
+    '本页是我们对已公开报道的最佳解读。如果你知道其中有错误或已过时的内容，请[告诉我们](/contact)，我们会更正。',
+  'Who’s who': '人物一览',
+  'The names that recur below. A ban is the association’s penalty and bars a player from competing; a prison term is the court’s.':
+    '下文反复出现的人物。禁赛是协会的处罚，禁止棋手参赛；徒刑是法院的判决。',
+  Person: '人物',
+  'Part in the case': '在案中的角色',
+  'Top-rated player 2014 to 2023; bought games': '2014至2023年等级分第一；买棋',
+  'Life ban; 2 years 9 months in prison': '终身禁赛；有期徒刑2年9个月',
+  'On the recorded calls; the go-between for most of Wang Tianyi’s payments':
+    '录音通话的一方；王天一大部分付款的中间人',
+  'Life ban; 1 year in prison': '终身禁赛；有期徒刑1年',
+  'The other voice on the recordings': '录音中的另一方',
+  'Banned 4 years 3 months; not charged': '禁赛4年3个月；未被起诉',
+  '2005 champion; one outlet reports he passed the recordings on':
+    '2005年冠军；有一家媒体报道录音由他转出',
+  'Life ban; 2 years 7 months in prison, appeal rejected': '终身禁赛；有期徒刑2年7个月，上诉被驳回',
+  '2007 champion': '2007年冠军',
+  'Life ban; 4 years 9 months in prison, the longest term': '终身禁赛；有期徒刑4年9个月，刑期最长',
+  'Xie Jing 谢靖, Xu Chao 徐超': '谢靖、徐超',
+  '2013 and 2017 champions': '2013年和2017年冠军',
+  'Life bans; 2 years 6 months in prison each': '均终身禁赛；各判有期徒刑2年6个月',
+  'Veteran player; alleged engine cheating for years, then accused an official by name':
+    '老将；多年来指称对手用软件作弊，随后实名举报一名官员',
+  'Not sanctioned': '未受处罚',
+  'Joined Liu Dahua’s accusation': '与柳大华联名举报',
+  'Banned 3 years': '禁赛3年',
+  'Guo Liping 郭莉萍': '郭莉萍',
+  'Official at the sport administration, named in the accusation':
+    '棋牌运动管理中心官员，被举报点名',
+  'Left the post in December 2024; not charged': '2024年12月去职；未被起诉',
+  'Ban from competing': '禁赛处罚',
+  'Prison term': '刑期',
   'The Xiangqi Match-Fixing Case': '象棋假棋案',
   'Xiangqi Match-Fixing: 录音门, the Bans, and the Convictions': '象棋假棋案：录音门、禁赛与判决',
   'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.':
@@ -1872,8 +3648,8 @@ const ZH_HANS: Record<string, string> = {
   'The spine of the case. Liu Dahua’s earlier private complaints are his own account rather than a documented date.':
     '本案的主线。柳大华更早的私下反映出自他本人的说法，并无确切日期可考。',
   'Two processes, one case': '两条并行的程序，同一起案件',
-  'The disciplinary track and the criminal track are separate. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
-    '纪律处理与刑事追诉是两条独立的程序，时间表也不相同。被判刑的六人正是被处罚的四十九人中的六位，并非另一批人。',
+  'The disciplinary track and the criminal track are separate: the association can only bar a player from competing, and only the court can send one to prison. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
+    '纪律处理与刑事追诉是两条独立的程序：协会只能禁止棋手参赛，只有法院才能判处徒刑。两者时间表也不相同。被判刑的六人正是被处罚的四十九人中的六位，并非另一批人。',
   'A third track went nowhere in public. Three officials left the chess and card centre while the case ran: its director Zhu Guoping 朱国平 and its discipline secretary Guo Yujun 郭玉军 in November 2024, and Guo Liping in December. No removal notice mentions this case, and no official has been reported as charged or sanctioned in connection with it.':
     '第三条线在公开层面没有下文。案件进行期间，棋牌运动管理中心有三名官员去职：主任朱国平与纪检书记郭玉军于2024年11月，郭莉萍于同年12月。没有一份免职通知提到本案，也没有任何官员被报道因此被追究或处罚。',
   'The Chinese Xiangqi Association has sanctioned 49 people in three batches: two in September 2024, forty-one in January 2025, and six in April 2026. That is 8 lifetime bans, 37 timed bans and 4 public reprimands. Revocation of the technical grade title accompanies 19 of the 45 bans rather than all of them. Only the three timed bans in the April 2026 notice carry published start and end dates, all running from 24 July 2024; the January notice publishes no dates at all, so when most of those bans expire is not a matter of public record.':
@@ -1881,7 +3657,6 @@ const ZH_HANS: Record<string, string> = {
   'The association published almost every name. Where a player also appears on the champion lists, his national title years are in the last column.':
     '协会公布了几乎每一个名字。若该棋手同时出现在冠军名单上，其全国冠军年份列在最后一栏。',
   Player: '棋手',
-  Penalty: '处罚',
   'National title': '全国冠军',
   'The 47 the association named. The other two were withheld because they were under 18 when the conduct occurred. Revocation of the technical grade title accompanies 19 of the 45 bans, not all of them.':
     '协会具名公布的47人。另外两人因涉案时未满18周岁而未公布姓名。45项禁赛中有19项同时撤销技术等级称号，并非全部。',
@@ -1890,9 +3665,8 @@ const ZH_HANS: Record<string, string> = {
   'Separately, the Shangcheng District People’s Court in Hangzhou convicted six grandmasters on 24 September 2025 of offering and accepting bribes as non-state functionaries, under Articles 163 and 164 of the criminal law. The Chinese press calls it the sport’s first criminal corruption case.':
     '另一条线上，杭州市上城区人民法院于2025年9月24日以对非国家工作人员行贿罪、非国家工作人员受贿罪判决六名特级大师有罪，依据刑法第163条与第164条。中文媒体称之为中国象棋反腐第一案。',
   Convicted: '被判刑者',
-  Sentence: '刑期',
-  'Reported from the 24 September 2025 verdict. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
-    '据2025年9月24日宣判的报道整理。判决书未公开：这些数字源自检方的指控，其中只有洪智一项另有作为法院结果的报道。王天一与赵鑫鑫另被并处罚金，金额从未公布。',
+  'Reported from the 24 September 2025 verdict. The terms are 有期徒刑, fixed-term imprisonment; whether any was suspended has not been reported. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
+    '据2025年9月24日宣判的报道整理。刑期均为有期徒刑，是否适用缓刑未见报道。判决书未公开：这些数字源自检方的指控，其中只有洪智一项另有作为法院结果的报道。王天一与赵鑫鑫另被并处罚金，金额从未公布。',
   'The strongest player in the world was buying': '最强的棋手是买家',
   'Wang Tianyi was China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
     '王天一在2014到2023年间等级分居全国第一，被称为象棋第一人。检方指控他行贿22笔、合计94.2万元，受贿2笔、合计11.6万元。22笔中有19笔经由王跃飞。',
@@ -2037,7 +3811,7 @@ const ZH_HANS: Record<string, string> = {
   // read that is not coming. Locked the same day its English copy published, so
   // any later English edit orphans a key here and fails the coverage test.
   'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.':
-    '免费和引擎或朋友下揭棋，不用注册，下完还能复盘，分析会把你的选择和你的运气分开算。',
+    '免费和揭棋AI（皮卡鱼、AB-JChess）或朋友下揭棋，不用注册账号；下完还能复盘，分析会把你自己的选择和运气分开计算。',
   'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.':
     '揭棋就是把每个子都翻扣过去的[象棋](/rules/xiangqi)。暗子按它所在那个点原本摆的子走，走完就翻开，之后一直是翻出来的那个子。开局时你不知道任何一个子是什么，连自己的也不知道。[规则页](/rules/jieqi)有详细说明。',
   'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).':
@@ -2050,8 +3824,8 @@ const ZH_HANS: Record<string, string> = {
   'Black delivers checkmate on move 73.': '黑方在第 73 回合将死。',
   'That is [a real game on this site](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf), not a demo, and every screenshot below comes from it.':
     '那是[本站的一盘真实对局](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf)，不是演示，下面每一张截图都来自这盘棋。',
-  'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link. Free, no sign-up, nothing to install.':
-    '用 1+1、3+2 或 5+5 和引擎下，或者把链接发给朋友。免费，不用注册，什么都不用装。',
+  'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link.':
+    '在[象棋在线对弈](/zh-hans)首页用 1+1、3+2 或 5+5 和引擎下，或者把链接发给朋友。',
   'Review your games': '复盘你的对局',
   'Ask for analysis on a finished game and the review separates what you chose from what you drew, which is the part a chess site has no reason to do. You also get the usual: a graph of the whole game, an accuracy score for each player, and every inaccuracy, mistake and blunder marked with the move that was better. It runs on our servers and takes a few minutes.':
     '对下完的棋点一次分析，复盘会把你选的和你揭到的分开来讲，这一块是国际象棋网站没有理由去做的。常规的东西也都有：整盘棋的优势曲线、双方各自的准确率，以及每一个不准确、失误和严重失误，都标出更好的着法。分析在我们的服务器上跑，要几分钟。',
@@ -2072,8 +3846,8 @@ const ZH_HANS: Record<string, string> = {
   'Your accuracy is then built from the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
     '准确率只由这些选择算出来，所以揭得好不会把它抬高，揭得差也不会把它拉低。',
   'And it runs in your browser': '而且它就在你的浏览器里跑',
-  'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued, nothing is sent anywhere, and it needs no account. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.':
-    '分析棋盘把同一个引擎放在你自己的机器上跑，你摆一条变化，它就把最佳着法画在棋盘上。不用排队，什么都不会传出去，也不需要账号。[引擎是开源的](https://github.com/brianhliou/pikafish-jieqi-wasm)，所以这里的某个数字如果看着不对，你可以直接去读算出它的那段代码。',
+  'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued and nothing is sent anywhere. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.':
+    '分析棋盘把同一个引擎放在你自己的机器上跑，你摆一条变化，它就把最佳着法画在棋盘上。不用排队，什么都不会传出去。[引擎是开源的](https://github.com/brianhliou/pikafish-jieqi-wasm)，所以这里的某个数字如果看着不对，你可以直接去读算出它的那段代码。',
   'Running in a browser tab.': '就在一个浏览器标签页里跑。',
   'The analysis board with the local engine switched on: PikaJieQi at depth 18 and 335,000 nodes per second, three candidate lines each with an evaluation, and arrows for each drawn on the jieqi board.':
     '打开本地引擎后的分析棋盘：PikaJieQi 深度 18，每秒 335,000 个节点，三条候选变化各带一个评分，并在揭棋棋盘上分别画出箭头。',
@@ -2127,9 +3901,9 @@ const ZH_HANS: Record<string, string> = {
   // rules page has been serving this line in English on both zh pages since it
   // was locked.
   'Black wins by checkmate · 73 moves': '黑方将死获胜 · 73 回合',
-  'Red wins by checkmate · 36 moves': '红方将死获胜 · 36 回合',
   // -- Duck Xiangqi --
   'Duck Xiangqi Rules': '鸭子象棋规则',
+  'Duck Xiangqi Rules: Duck Chess Meets Xiangqi': '鸭子象棋规则：当鸭子国际象棋遇上象棋',
   'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.':
     '把鸭子国际象棋搬到象棋盘上。每一回合都是先走一步棋，再放一次鸭子；鸭子像棋子一样挡路，也一样能当炮架；吃掉对方的将帅即获胜。',
   'Duck Xiangqi is [xiangqi](/rules/xiangqi) with a duck on the board. Every turn you make a legal xiangqi move, and then you move the duck to an empty point. Both halves are one turn, and neither of them is optional.':
@@ -2140,8 +3914,6 @@ const ZH_HANS: Record<string, string> = {
     'Brian H. Liou 于 2026 年把鸭子象棋移植到 9 路 10 线的棋盘上，作为 Mistboard 原创。Dr Tim Paulden 在 2016 年发明了[鸭子国际象棋](https://duckchess.com)，而 Jim Aikin 早在 1999 年就在[八石棋](https://www.chessvariants.com/page/EightStoneChess)里把可移动的中立石子放上了国际象棋盘。此前没有人把这个想法搬到象棋上。让它变得古怪的棋子是炮：炮吃子必须隔着一个子跳过去，而放在任何地方的鸭子都算一个子，所以你每放一次鸭子，都是给对手架起一座可以打过来的炮架。',
   'The duck belongs to nobody. Nothing can capture it and nothing can land on it, it is never material, and it is not either side’s piece. Its whole job is to be in the way, and both players take turns deciding where.':
     '鸭子不属于任何一方。没有子能吃它，也没有子能落在它上面；它不计入子力，也不是任何一方的棋子。它唯一的作用就是挡在路上，而挡在哪里由双方轮流决定。',
-  'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has four. The sections below are where that difference lands.':
-    '国际象棋只有一种挡子的办法：站到它想去的点上。象棋有四种。下面几节讲的就是这个差别落在哪里。',
   'One turn, two actions': '一个回合，两个动作',
   'The board, the pieces, and the opening array are ordinary xiangqi. Red moves first.':
     '棋盘、棋子和开局摆法都和普通象棋一样。红方先行。',
@@ -2180,19 +3952,16 @@ const ZH_HANS: Record<string, string> = {
     '所以鸭子既能挡路也能防守，而且是个难受的防守者：守住一路，等于每一回合都要把鸭子押在那里。',
   'An engine game at full strength, 8 seconds a move. Watch the duck rather than the pieces: a cannon is firing over it in 30 of the 120 plies, and near the end Red is using it to hold a file its general cannot survive without.':
     '一盘引擎全力对局，每步 8 秒。看鸭子，别看棋子：全局 120 着里有 30 着是炮隔着它开火，接近尾声时红方正用它守住一路，少了这一路帅就活不成。',
-  'Engine self-play · 8s per move': '引擎自对弈 · 每步 8 秒',
-  'Black captures the general on move 60. Red had the better of the opening, but the engine eval was still within a pawn and a half of level as late as ply 63, and Black ground it out from there.':
-    '黑方在第 60 回合吃掉将帅。红方开局占优，但到第 63 着时引擎评估离均势仍不到一个半兵，黑方从那里一点点磨了下来。',
-  'This game was chosen from 8 played the same way, for how much the duck does in it. 7 of the 8 finished; all 7 are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
-    '这盘棋是从同样条件下的 8 盘里挑出来的，因为鸭子在其中出力最多。8 盘里有 7 盘下完；这 7 盘都收在[配套研究](/study/uMbk76wd)里，一盘一章，并注明每盘僵持了多久、鸭子在做什么。',
+  'This game was chosen from 8 played the same way, for how much the duck does in it. It and five more engine games are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
+    '这盘棋是从同样条件下的 8 盘里挑出来的，因为鸭子在其中出力最多。它和另外五盘引擎对局都收在[配套研究](/study/uMbk76wd)里，一盘一章，并注明每盘僵持了多久、鸭子在做什么。',
   'Capturing the enemy general wins. A player with no legal turn loses, which is xiangqi’s answer to stalemate and the reverse of Duck Chess, where a player with no move wins. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
     '吃掉对方将帅即获胜。无合法回合可走的一方判负，这就是象棋对困毙的处理，与鸭子国际象棋正好相反：在那边，无步可走的一方获胜。对局同样可以因超时、认输或弃局结束，和这里的其他棋一样。',
   'Two rules draw. The third occurrence of the same position is a draw, and the duck’s point is part of the position, since where it stands changes what every piece can do. Sixty moves by each player without a capture is also a draw, which is xiangqi’s own no-progress limit. Duck Chess never defined draw rules, so this half of the ruleset had to come from the xiangqi side.':
     '有两条和棋规则。同一局面第三次出现即为和棋，而鸭子所在的点也算局面的一部分，因为它站在哪里会改变每个棋子能做什么。双方各走六十回合而无吃子也判和，这是象棋自己的无进展上限。鸭子国际象棋从未定过和棋规则，所以这一半规则只能来自象棋这一边。',
-  'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of seven in the companion study.':
-    '可以和八个强度的引擎对战，也可以和朋友下。上面那盘示例对局是配套研究里七盘中的一盘。',
+  'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of six in the companion study.':
+    '可以和八个强度的引擎对战，也可以和朋友下。上面那盘示例对局是配套研究里六盘中的一盘。',
   'Play Duck Xiangqi': '下鸭子象棋',
-  'Seven engine games': '七盘引擎对局',
+  'Six engine games': '六盘引擎对局',
   // ── puzzles-with-more-than-one-solution (2026-09-11) ──
   // Machine-drafted, not native-reviewed, per the standing decision above. Terms follow the mining explainer: 题目, 漏着, 着法, 半回合, 复核, 厘兵. 评分器 for the grader, 挖掘器 for the miner.
   'Puzzles with more than one solution': '有不止一个答案的题目',
@@ -2247,24 +4016,13 @@ const ZH_HANS: Record<string, string> = {
     '今日题目，来自留下的题库。如果你找到一个网站不接受的将死，那现在就是一个 bug，我想听你说说。',
   'Today’s xiangqi puzzle': '今日象棋题目',
   'How the miner works': '挖掘器是怎么工作的',
-  // anti-xiangqi and duck-xiangqi-build. Machine-drafted 2026-09-13, not
+  // anti-xiangqi and duck-xiangqi-strategy. Machine-drafted 2026-09-13, not
   // native-reviewed; the anti terms match the brianhliou.com post's
   // vocabulary (反棋, 反象棋, 证明凭证, 僵局, 死局).
   'Antichess on the Xiangqi Board Is a Draw': '象棋棋盘上的反棋是和棋',
   'Anti Xiangqi: Antichess on the Xiangqi Board Is a Draw': '反象棋：象棋棋盘上的反棋是和棋',
   'We put antichess on the xiangqi board and measured it before designing anything. Black has two moves to find in the opening, Red cannot go wrong, and then the palace keeps five pieces a side out of reach. Every other opening loses, 63 of them provably. We are publishing the measurement, not the variant.':
     '我们把反棋放到象棋棋盘上，先测量再设计。黑方在开局有两步棋必须找到，红方不会走错，之后九宫让每方五个棋子无法被触及。其余每一种开局都会输，其中 63 种已被证明。我们发布的是这份测量，而不是这个变体。',
-  'Antichess is chess with two rules changed: if you can capture you must, and you win by losing every piece you have. The king is an ordinary piece. Lichess plays it, and it was solved in 2016. We put the same two rules on the xiangqi board, with the general an ordinary piece and no facing rule, and measured what came out before designing anything.':
-    '反棋（自杀棋）是改了两条规则的国际象棋：能吃子就必须吃，把自己所有棋子都送掉的一方获胜。王只是普通棋子。Lichess 上可以下它，它在 2016 年已被解决。我们把同样的两条规则搬到象棋棋盘上，将帅作为普通棋子，不设白脸将规则，先测量结果再谈设计。',
-  'It is a draw. Black has two moves to find in the opening and Red cannot go wrong; after that, the pieces you must lose sit in the palace where nothing can reach them. Every other opening loses, and 63 of those losses are proven. The full analysis, with every engine game, every proof and a viewer for all of it, is on brianhliou.com; this page is the short account and the reason there is no play button.':
-    '结论是和棋。黑方在开局有两步棋必须找到，红方不会走错；之后你必须送掉的那些棋子都待在九宫里，什么都够不到它们。其余每一种开局都会输，其中 63 种负局已被证明。完整分析连同每一盘引擎对局、每一份证明和一个浏览器都在 brianhliou.com；本页是简短的说明，也解释了为什么这里没有“开始对局”按钮。',
-  'The opening has one safe path': '开局只有一条安全路线',
-  'Red’s first move is a cannon taking a horse through the enemy cannon; the two choices are mirror images, so call it 1. Cxb10. Black must capture and has two ways. Taking the cannon back with the chariot loses by force: Red gives its pieces away one at a time, the chariot has to take every one, and Red is out of pieces in 34 plies. That is proven, a certificate of 1,864 positions replayed by a checker that knows only the rules. Firing the other cannon into Red’s back rank, 1...Cxh1, holds.':
-    '红方第一着是炮隔着对方的炮吃马；两种选择互为镜像，就称之为 1. Cxb10。黑方必须吃子，有两种方式。用车吃回那门炮会被强制击败：红方把棋子一个个送出去，车不得不逐一吃掉，34 步之后红方无子。这一点已被证明，一份 1,864 个局面的证明凭证已由一个只懂规则的校验器重放。用另一门炮轰向红方底线，1...Cxh1，则站得住。',
-  'Black’s two captures after 1. Cxb10. The chariot recapture on b10 is a proven loss; the cannon shot to h1, over Red’s own h3 cannon, is the only move.':
-    '1. Cxb10 之后黑方的两种吃法。车在 b10 吃回是已被证明的负着；炮隔着红方自己的 h3 炮打到 h1，是唯一的着法。',
-  'Red then has two replies and both hold: take the cannon quietly, 2. Rxh1, and the exchange is over; or keep firing with 2. Cxd10, which sets Black a second trap, since only 2...Kxd10, the general taking the cannon, holds. The chain of forced captures has 166 possible endings and we played a game from every distinct one. Two survive. Every other branch loses for the side that took it.':
-    '接着红方有两种应法，都站得住：安静地用车吃炮，2. Rxh1，交换就此结束；或者继续开炮，2. Cxd10，给黑方设下第二个陷阱，因为只有用将吃炮的 2...Kxd10 站得住。这条连锁强制吃子有 166 个可能的终点，我们从每一个不同的终点各下了一盘。两个存活下来。其余每一条分支都会让走进去的一方输。',
   'The two endings that survive the chain. Fourteen pieces each, no capture on the board, and the game is open.':
     '连锁中存活下来的两个终点。双方各十四子，棋盘上无子可吃，棋局就此展开。',
   'Then the palace makes it a draw': '然后九宫让它成为和棋',
@@ -2272,29 +4030,404 @@ const ZH_HANS: Record<string, string> = {
     '要取胜，你必须送掉将、两个士和两个象，而它们谁都离不开家。每一个都只能被走到它跟前的敌方棋子吃掉，而双方都在设法摆脱恰恰是那些棋子。一旦双方都没有了车、马、炮、兵，就再也不可能发生吃子，规则把这判为和棋。',
   'The engine’s own game at two million nodes a move, ply 35. Nothing on the board can ever capture anything again.':
     '引擎每着两百万节点自战的对局，第 35 步。棋盘上再没有任何棋子能吃掉任何东西。',
-  'In every engine game, the side that wanted the game to stop could feed its mobile pieces to the opponent, who had to take them, or park a lone chariot on lines nothing of the opponent’s could ever enter. At one and five million nodes the chariots stayed on and the game became a hundred plies of soldiers traded in pairs, ending the same way. That is evidence for a draw rather than a proof of one: no search we ran found a win from either surviving position, and the reason it could not is a property of the board.':
-    '在每一盘引擎对局里，想让棋局停下来的一方都可以把可出击的子力送给对手，对手不得不吃；或者把一辆孤车停在对方任何棋子都永远进不来的线路上。在一百万和五百万节点下，车留在了棋盘上，棋局变成一百步成对交换的兵战，结局相同。这是和棋的证据，而不是证明：我们跑过的搜索都没有从任何一个存活局面找到胜法，而找不到的原因是棋盘本身的性质。',
-  'Four repairs and two siblings, none a game': '四种修补和两个同族变体，没有一个成为像样的棋',
-  'Scoring every stall for the side with fewer pieces removes the free draw but cannot be tested without an engine that plays for the count. Codrus, the 1844 ancestor where you win by losing the general, draws through the same opening lines, faster. Losers, where the general stays royal, is decisive the wrong way: a forced win for Black at every strength we tried, because a check suspends the obligation to capture and that tempo lands with the second player. Letting the palace pieces out is a different board.':
-    '把每一个僵局判给子少的一方能去掉免费的和棋，但没有一个为子数而战的引擎就无法测试。Codrus 是 1844 年的祖先，输掉将即获胜，它经由同样的开局路线成和，而且更快。Losers 保留将的王者身份，有胜负，但方向错了：在我们试过的每一种强度下都是黑方必胜，因为一次将军会暂停吃子义务，而这个先手落在后手一方。放九宫里的棋子出来则已经是另一张棋盘了。',
   'What we are publishing instead of a play page': '我们发布的是什么，而不是一个对局页面',
-  'The rule kernel with the three rule sets written out, the Fairy-Stockfish stanzas, all 166 endings of the opening chain, one engine game from each at two search depths, every proof certificate, a checker that replays them against the rules in a few seconds, and every game in a viewer. If you can show a third surviving opening, a defence in any certificate, or a win for either side from the positions above, open an issue there; the write-up will say so.':
-    '完整写出三套规则的规则内核、Fairy-Stockfish 的变体配置、开局连锁的全部 166 个终点、每个终点在两种搜索深度下各一盘引擎对局、每一份证明凭证、一个几秒钟内就能对照规则重放它们的校验器，以及放在浏览器里的每一盘棋。如果你能给出第三条存活的开局、任何一份凭证里的防守，或者从上面的局面出发任何一方的胜法，请去那里提一个 issue；文章会如实写明。',
-  'Read the full analysis': '阅读完整分析',
+  // benedict-xiangqi (2026-10-07): machine-drafted, not native-reviewed.
+  'Benedict Xiangqi Is Unfair': '本尼迪克特象棋并不公平',
+  'Benedict Xiangqi: The First Mover Wins 78%': '本尼迪克特象棋：先手方胜率 78%',
+  'We put Benedict Chess’s rule on the xiangqi board: nothing is captured, and every enemy piece your moved piece attacks joins you. The game has no endgame and no draws, and the first mover wins 78% of engine games, nearly all of it from one cannon move. The pie rule looks like the repair.':
+    '我们把本尼迪克特国际象棋的规则搬到象棋棋盘上：不吃子，你走动的棋子所攻击的每一个敌方棋子都会倒戈归你。这个游戏没有残局，也没有和棋；在引擎对局中先手方赢下 78%，几乎全部来自一步炮。饼干规则看起来是修补的办法。',
+  'Benedict Chess has no captures. When you move a piece, every enemy piece it attacks from its new square changes color and joins you, and you win by turning the enemy king. W. D. Troyka invented it and named it for Benedict Arnold, who changed sides. We put the same rule on the xiangqi board and measured the result with an engine of our own.':
+    '本尼迪克特国际象棋没有吃子。你走一步棋后，这枚棋子从新位置攻击到的每一个敌方棋子都会变色并加入你方；把对方的王变过来就赢了。它由 W. D. Troyka 发明，并以叛变投敌的本尼迪克特·阿诺德命名。我们把同一条规则放到象棋棋盘上，并用我们自己写的引擎测量了结果。',
+  'Conversion games already exist, and several sit one rule away from this one. Desertion Chess converts a piece by moving next to it, and keeps captures. Andernach Chess turns the capturing piece. Cleopatra Chess is Troyka’s rule for a single piece. Banqi and jieqi, xiangqi’s own flipping games, turn a piece over to reveal what it is, which says nothing about whose it is. Benedict Xiangqi takes Troyka’s rule whole, for every piece, on the xiangqi board.':
+    '转化类的棋早已存在，其中有几种与本作只差一条规则。叛逃棋（Desertion Chess）靠走到一枚棋子旁边来转化它，并保留吃子。安德纳赫棋（Andernach Chess）改变的是吃子的那枚棋子。克娄巴特拉棋（Cleopatra Chess）是只对一枚棋子生效的 Troyka 规则。翻翻棋（暗棋）和揭棋是象棋自己的翻子游戏，翻开一枚棋子是为了揭示它是什么，与它归谁无关。本尼迪克特象棋把 Troyka 的规则完整地用于每一枚棋子，搬到象棋棋盘上。',
+  'The port forced four design decisions with no default answer. Then the measurement found the game unfair: the first mover wins 78% of engine games, and nearly all of that comes from one cannon move on move one. Mistboard has no Benedict Xiangqi play page. This page holds the design and the measurement.':
+    '移植过程中有四个设计决定没有现成答案。随后测量发现这个游戏并不公平：先手方赢下 78% 的引擎对局，而且几乎全部来自第一步的一着炮。Mistboard 没有本尼迪克特象棋的对局页面，本页记录的是设计与测量。',
+  'The rule': '规则',
+  'Move a piece. Every enemy piece it attacks from where it lands joins you. Nothing is ever captured, so all 32 pieces stay on the board for the whole game, and a move that attacks the enemy general wins.':
+    '走一枚棋子。它从落点攻击到的每一个敌方棋子都会加入你方。棋子永远不会被吃掉，所以 32 枚棋子整局都留在棋盘上；一步攻击到对方将帅的棋即获胜。',
+  'The rule on a demo board. The rings mark the pieces the move converted.':
+    '在演示棋盘上的规则。圆圈标出这步棋转化的棋子。',
+  'Red to move. The chariot on d1 attacks nothing. Two black soldiers stand on the fourth rank, where it is going.':
+    '红方走棋。d1 上的车什么也没有攻击。两个黑卒站在第四横线上，正是它要去的地方。',
+  'Both soldiers change sides. Nothing was captured and nothing left the board, so Red is two pieces up and Black two down from one move.':
+    '两个卒都换了阵营。没有吃子，也没有棋子离开棋盘，所以一步棋就让红方多出两子、黑方少了两子。',
+  'A standing attack does nothing. Only the piece that moved converts, so a chariot already bearing on a piece has to move again to take it. Threats are made by moving.':
+    '停在原地的攻击不起作用。只有走动的那枚棋子会转化对方，所以已经瞄着某枚棋子的车必须再走一步才能拿下它。威胁只能靠走棋来制造。',
+  'What it does to xiangqi': '它对象棋做了什么',
+  '**No endgame, ever.** There are no trades and nothing simplifies, and an endgame tablebase cannot exist because the material never shrinks. Xiangqi endgame theory, which is most of xiangqi theory, does not transfer at all.':
+    '**永远没有残局。** 没有兑子，局面不会简化，残局库也不可能存在，因为子力从不减少。象棋的残局理论，也就是象棋理论的大部分，完全用不上。',
+  '**Cannons never weaken.** A xiangqi cannon needs a screen to capture, so in xiangqi it weakens as the board empties. Here the board never empties, and a cannon is as dangerous late in the game as on move 3.':
+    '**炮永远不会变弱。** 象棋的炮需要炮架才能吃子，所以在象棋里它会随着棋盘变空而变弱。这里棋盘从不变空，炮在对局后段和第 3 步时一样危险。',
+  '**Advisors and elephants defend nothing.** They exist to guard against captures, and there are no captures. They still block lines and screen for cannons, but everything they were designed to do is gone.':
+    '**仕和相什么也守不住。** 它们存在是为了防吃子，而这里没有吃子。它们仍能挡住线路、给炮当炮架，但它们被设计出来要做的事都没有了。',
+  '**Games are short and nobody draws.** Half of the 54 engine games below were over by ply 28. None of them was drawn, and none of 6,000 games of uniformly random legal moves was either. With no material to trade and no endgame to grind, every game reaches a decision.':
+    '**对局很短，没有人和棋。** 下面 54 盘引擎对局中，一半在第 28 步前结束。没有一盘是和棋，6,000 盘均匀随机合法着法的对局也没有一盘和棋。没有子力可兑，也没有残局可磨，每一盘都会分出胜负。',
+  '**About 28% of legal moves lose on the spot.** That is the mean over the 1,696 positions in the engine games. The median position has 10% of its moves losing, and a minority of very sharp positions carries the mean. The share climbs from 24% in the first fifth of a game to 37% in the last, so there is no quiet opening phase to develop in.':
+    '**约 28% 的合法着法当场就输。** 这是引擎对局中 1,696 个局面的平均值。中位局面有 10% 的着法会输，平均值是由少数非常尖锐的局面拉高的。这个比例从对局前五分之一的 24% 升到最后五分之一的 37%，所以不存在可以安心出子的平静开局阶段。',
+  'Designing it: four decisions': '设计：四个决定',
+  '**The generals still may never face.** Xiangqi forbids the two generals from standing on one file with nothing between them, and we kept it. The alternative is to make the flying general a win, and it breaks: only the piece that moved converts, so unblocking the file wins nothing, and the generals end up facing each other while play carries on until someone shuffles a general along the file to claim it.':
+    '**将帅仍然不能照面。** 象棋禁止两个将帅在同一条直线上中间无子相隔，我们保留了这条规则。另一种做法是把白脸将变成胜利条件，但它行不通：只有走动的棋子才会转化，所以打开这条线并不能取胜，结果将帅相对而立，对局却继续，直到有人把将帅沿着这条线挪一步去领取胜利。',
+  'Keeping the prohibition costs nothing and adds something xiangqi does not have. A piece pinned on the generals’ file cannot be removed, because nothing here removes anything, and converting it does not release it, since a conversion recolors in place. You can win the piece and still be unable to move it until a general steps off the file.':
+    '保留这条禁令没有代价，还带来了象棋没有的东西。被钉在将帅线上的棋子无法被移走，因为这里没有任何东西能移走棋子；转化它也不能解开牵制，因为转化是原地变色。你可以赢得这枚棋子，却仍然动不了它，直到一方的将帅离开这条线。',
+  '**Advisors and elephants are bound to the region they stand in, whoever owns them.** A converted advisor stands inside the enemy palace. Bound to its owner’s palace it would be frozen there for good; bound to the palace it stands in, it keeps playing and attacks from inside. From the starting array the two readings agree, because every advisor starts in its own palace.':
+    '**仕和相受它们所在的区域约束，不论归谁所有。** 被转化的仕站在敌方九宫里。如果受原主人的九宫约束，它会永远冻结在那里；受它所在的九宫约束，它就能继续行棋，从内部发动攻击。从初始局面看两种理解是一样的，因为每个仕都从自己的九宫出发。',
+  '**Soldiers are bound to their owner.** A soldier’s forward direction has to follow whoever owns it now, or a converted soldier marches away from its new side forever. Getting these two rules backwards breaks the game quietly.':
+    '**兵卒受其主人约束。** 兵卒的前进方向必须跟随它现在的主人，否则被转化的兵卒会永远背离新的阵营前进。把这两条规则弄反，会悄无声息地毁掉这个游戏。',
+  '**Draws need a progress clock.** With no captures, nearly every move can be undone, and three-fold repetition alone is not enough. The clock resets on the only two events that cannot be undone: a conversion, or a soldier move.':
+    '**和棋需要进度计数。** 没有吃子，几乎每一步都可以撤回，仅靠三次重复局面不够。计数在仅有的两种不可撤回的事件上清零：一次转化，或一步兵卒走动。',
+  'How we tested it': '我们如何测试',
+  'No existing engine plays this. Pikafish and Fairy-Stockfish encode capture rules, and Fairy-Stockfish’s one conversion mechanism flips pieces enclosed by a drop, Reversi-style, which is a different rule. So we wrote one in Rust: alpha-beta search with a transposition table, principal variation search, late move reductions, and a quiescence search over conversions. Its piece values were fitted by logistic regression on self-play outcomes, and they beat our hand-picked values head to head.':
+    '现有的引擎都下不了这个棋。Pikafish 和 Fairy-Stockfish 都内置了吃子规则，而 Fairy-Stockfish 唯一的转化机制是像黑白棋那样翻转被落子包围的棋子，那是另一条规则。所以我们用 Rust 写了一个：带置换表的 alpha-beta 搜索、主要变例搜索、后期着法缩减，以及针对转化的静态搜索。它的子力价值是用逻辑回归在自对弈结果上拟合出来的，并在对抗中胜过了我们手工挑选的价值。',
+  'We do not quote the fitted values. An earlier fit on a quarter of the data had several values whose signs later reversed, which is more noise than a table of piece values can carry. The ordering survived: advisors and elephants come out close to worthless, which follows anyway from there being nothing to defend against.':
+    '我们不公布拟合出的数值。早先用四分之一数据做的一次拟合中，有好几个数值后来符号反转，这样的噪声是一张子力价值表承受不了的。排序保留了下来：仕和相几乎一文不值，而这本来就可以从无需防守推出。',
+  'The rules were checked before anything was measured. All 54 engine games below replay through Mistboard’s TypeScript rule kernel with the same conversions and the same number of legal moves at every one of their 1,696 positions, and every board on this page is played through that kernel. Three results do not depend on how well the engine plays.':
+    '在测量任何东西之前，先检查了规则。下面全部 54 盘引擎对局都能在 Mistboard 的 TypeScript 规则内核中重放，1,696 个局面中的每一个都得到相同的转化和相同数量的合法着法；本页的每一个棋盘也都经过这个内核。有三个结果不取决于引擎下得多好。',
+  Test: '测试',
+  'Uniformly random legal moves, 6,000 games': '均匀随机合法着法，6,000 局',
+  '54.5% for the first mover, no draws': '先手方 54.5%，无和棋',
+  'Proof search from the starting array, 20.8 billion nodes': '从初始局面做证明搜索，208 亿节点',
+  'No forced win within 13 plies': '13 步之内没有强制胜',
+  'Legal moves that lose on the spot, 1,696 positions': '当场就输的合法着法，1,696 个局面',
+  'Mean 28%, median 10%': '平均 28%，中位数 10%',
+  'Random play already favors the first mover. 54.5% over 6,000 games is about seven standard errors above even, so a tempo is worth something before either side plays well.':
+    '随机对弈已经偏向先手方。6,000 局中 54.5% 比五五开高出约七个标准误，所以在双方都还下不好之前，一步先手就已经有价值。',
+  'The proof needs care, because an ordinary search cannot make one. Late move reductions search later moves shallower, so a normal search that finds no win has only shown that it did not look everywhere. With reductions and quiescence turned off, and the question asked as a yes or no at the mate threshold, the search proves there is no forced win within 13 plies. That took 20.8 billion nodes and about half an hour.':
+    '这个证明需要谨慎，因为普通搜索做不出证明。后期着法缩减会把靠后的着法搜得更浅，所以普通搜索没找到胜着，只说明它没有处处都看到。关闭缩减和静态搜索，并在杀棋阈值上以是或否来提问，搜索就证明了 13 步之内没有强制胜。这用了 208 亿个节点，约半小时。',
+  'We also checked whether the 78% moves when the engine gets stronger. It barely moves between 300,000 and 2 million nodes a move, a sevenfold range.':
+    '我们还检查了引擎变强时 78% 是否会变化。从每步 30 万节点到 200 万节点，七倍的范围内，它几乎没有变化。',
+  'Stability alone is not enough. An earlier version of this measurement varied its games with a six-ply random opening book, got 52.7%, and held it across a tenfold range of engine strength. It was stable because the book spent the very tempo being measured: six random plies throw the advantage away before either engine plays a move. A broken thermometer reads room temperature in every room. The 78% uses no book and takes its variety from evaluation jitter.':
+    '仅有稳定还不够。这项测量的早期版本用六步随机开局库来让对局多样化，得到 52.7%，并且在十倍的引擎强度范围内保持不变。它稳定，是因为开局库把要测量的那一步先手花掉了：六步随机着法在两个引擎走第一步之前就把优势丢掉了。坏掉的温度计在每个房间都显示室温。78% 不用开局库，对局的多样性来自评估抖动。',
+  'One cannon move decides it': '一步炮定胜负',
+  'The first mover wins 78% of engine games, measured from the starting array with no opening book and the two colors taking the first move in turn. Then we measured each of Red’s 42 legal first moves on its own, and the diagnosis changed shape.':
+    '先手方赢下 78% 的引擎对局，这是从初始局面测得的，不用开局库，红黑轮流先走。随后我们单独测量了红方全部 42 个合法的第一步，诊断的样子变了。',
+  'Red scores': '红方得分',
+  c1a3: 'c1a3',
+  h1g3: 'h1g3',
+  a4a5: 'a4a5',
+  e1e2: 'e1e2',
+  a1a3: 'a1a3',
+  g4g5: 'g4g5',
+  g1i3: 'g1i3',
+  b3b2: 'b3b2',
+  b3b4: 'b3b4',
+  b3a3: 'b3a3',
+  h3h2: 'h3h2',
+  b3b7: 'b3b7',
+  b3c3: 'b3c3',
+  b3d3: 'b3d3',
+  d1e2: 'd1e2',
+  h1i3: 'h1i3',
+  i4i5: 'i4i5',
+  e4e5: 'e4e5',
+  h3f3: 'h3f3',
+  b3f3: 'b3f3',
+  a1a2: 'a1a2',
+  b3g3: 'b3g3',
+  b1a3: 'b1a3',
+  h3h7: 'h3h7',
+  h3c3: 'h3c3',
+  c1e3: 'c1e3',
+  h3h4: 'h3h4',
+  i1i2: 'i1i2',
+  b3e3: 'b3e3',
+  b3b6: 'b3b6',
+  h3g3: 'h3g3',
+  c4c5: 'c4c5',
+  f1e2: 'f1e2',
+  i1i3: 'i1i3',
+  h3e3: 'h3e3',
+  h3h5: 'h3h5',
+  h3i3: 'h3i3',
+  h3d3: 'h3d3',
+  b3b5: 'b3b5',
+  g1e3: 'g1e3',
+  b1c3: 'b1c3',
+  h3h6: 'h3h6',
+  'All 42 legal first moves, 24 engine games each at 300,000 nodes a move. Read down each pair of columns, lowest score first.':
+    '全部 42 个合法的第一步，每个以每步 30 万节点下 24 盘引擎对局。按每一对列从上往下读，得分从低到高。',
+  'The two best are the same idea, a cannon lifted to the fifth or sixth rank: h3h6 scores 91.7% and b3b5 87.5%. The three that score nothing are two elephant moves to the edge of the board, c1a3 and g1i3, and the general stepping up the middle, e1e2. Red’s first move is worth anywhere from nothing to 92%, so the 78% measures an engine that always finds the strong opening.':
+    '最好的两步是同一个想法，把炮升到第五或第六横线：h3h6 得 91.7%，b3b5 得 87.5%。得零分的三步是两步走到棋盘边上的相（c1a3 和 g1i3），以及帅从中路上一步（e1e2）。红方第一步的价值从零到 92% 不等，所以 78% 衡量的是一个总能找到强势开局的引擎。',
+  'From the starting array. The rings mark what each move converted, and on the last move the general it attacks.':
+    '从初始局面开始。圆圈标出每步棋转化的棋子，最后一步标出它攻击的将。',
+  'The starting array, Red to move.': '初始局面，红方走棋。',
+  'The cannon fires up the b-file over Black’s own cannon and turns the horse on b10. It also threatens b5e5, with Black’s soldier on e7 as the screen and the general behind it. 32 of Black’s 38 replies lose at once, and b5e5 wins against every one of them.':
+    '炮沿 b 线隔着黑方自己的炮打过去，把 b10 的马变了过来。它同时威胁 b5e5：以黑方 e7 的卒为炮架，将就在后面。黑方 38 种应着中有 32 种当场就输，而 b5e5 对每一种都能取胜。',
+  'Black answers in kind and turns the horse on h1. It looks reasonable, and it is one of the 32.':
+    '黑方以同样方式回应，把 h1 的马变过去。这步看起来很合理，但它就是那 32 种之一。',
+  'The cannon fires over the soldier on e7 at the general on e10, and the game is over.':
+    '炮隔着 e7 的卒打向 e10 的将，对局结束。',
+  'A xiangqi cannon needs exactly one piece between it and its target, and Black’s starting position supplies that piece in the right place for free. The threat exists because the xiangqi starting array happens to sit where Benedict’s rule can use it.':
+    '象棋的炮和目标之间需要正好一枚棋子，而黑方的初始局面免费把这枚棋子摆在了恰好的位置。这个威胁之所以存在，是因为象棋的初始局面恰好落在本尼迪克特规则能利用的地方。',
+  'Every game the engine played': '引擎下的每一盘棋',
+  'All 54 games from the strongest setting, 2 million nodes a move, uncurated. Red moved first in 36 and won 33; Black moved first in 18 and won 13. The first mover won 46, and the eight it lost are the ones worth opening.':
+    '最强设置下的全部 54 盘对局，每步 200 万节点，未经挑选。红方先走 36 盘，赢 33 盘；黑方先走 18 盘，赢 13 盘。先手方赢了 46 盘，输掉的那 8 盘最值得打开看看。',
+  'All 54 games, each replayed through the rule kernel. The rings mark the pieces each move converted, and on the last move the general it attacks. The arrow keys step through the game on the board.':
+    '全部 54 盘对局，每一盘都经规则内核重放。圆圈标出每步棋转化的棋子，最后一步标出它攻击的将。用方向键逐步浏览棋盘上的对局。',
+  'First mover won (%1)': '先手方胜（%1）',
+  'First mover lost (%1)': '先手方负（%1）',
+  'Game %1: %2 first, %3 plies': '第 %1 局：%2先走，%3 步',
+  '%1 moved first and won in %2 plies.': '%1先走，%2 步获胜。',
+  '%1 moved first and lost in %2 plies.': '%1先走，%2 步落败。',
+  'Engine, 2M nodes': '引擎，200 万节点',
+  'The pie rule': '饼干规则',
+  'The spread across those 42 openings is what makes the game recoverable, and the repair already exists. The pie rule divides a cake the way two children do: one cuts, the other picks. Red plays a first move, then Black chooses whether to stay Black or take over Red’s position. Playing the strongest opening becomes pointless when Black can simply take it.':
+    '这 42 种开局之间的差距正是这个游戏可以挽救的原因，而修补办法已经存在。饼干规则像两个孩子分蛋糕：一个切，另一个挑。红方先走第一步，然后黑方选择继续执黑，还是接手红方的局面。当黑方可以直接拿走最强的开局时，走最强的开局就没有意义了。',
+  'So Red is pushed toward the move closest to even, and four of the 42 sit there. Two are the cannon declining its own best square, and two are the quietest developing moves on the board.':
+    '于是红方被推向最接近均势的着法，42 步中有四步在那里。两步是炮放弃自己的最佳位置，另外两步是棋盘上最安静的出子着法。',
+  'The four first moves closest to even, with what Red scores after each.':
+    '最接近均势的四个第一步，以及每一步之后红方的得分。',
+  'b3b4, 45.8%. The cannon steps up one square, short of the fifth rank that does the damage.':
+    'b3b4，45.8%。炮向前一步，还没到造成破坏的第五横线。',
+  'b3b7, 50.0%. The cannon goes all the way in, converting now and giving up the standing threat.':
+    'b3b7，50.0%。炮一直打进去，立刻转化，放弃了持续的威胁。',
+  'd1e2, 54.2%. An advisor develops into the middle of the palace.':
+    'd1e2，54.2%。仕走到九宫中心出子。',
+  'e4e5, 54.2%. The central soldier: the one quiet developing move that is not a blunder.':
+    'e4e5，54.2%。中兵：唯一一步不是败着的安静出子着法。',
+  'Held to one of those, the game lands near 50%, because Red can no longer use the advantage. Hex is a proven first-player win at every board size and is played competitively, because of the swap.':
+    '限定在其中一步上，对局就会接近 50%，因为红方再也无法利用这份优势。六贯棋（Hex）在每种棋盘大小下都被证明是先手胜，却因为换边规则而被竞技性地下着。',
+  'Those four numbers come from 24 games each: too few to rank them against each other, and enough to say the spread from 0% to 92% is real. Confirming that one of them holds near 50% over a proper sample is the open work.':
+    '这四个数字各来自 24 盘对局：不足以在它们之间排名，但足以说明从 0% 到 92% 的差距是真实的。用足够的样本确认其中一步能稳定在 50% 附近，是尚待完成的工作。',
+  'The pie rule fixes fairness and leaves the sharpness alone. The losing-move share is a property of the rules, so it does not move. The contest becomes even and stays sharp, and whether people want to play that is a question win rates cannot answer.':
+    '饼干规则修正了公平性，而没有改变尖锐程度。当场就输的着法比例是规则本身的属性，所以它不会变。比赛变得均衡，却依然尖锐；人们是否想下这样的棋，胜率回答不了。',
+  'It is not shippable as a competitive game. No rated ladder survives the first mover winning three games in four.':
+    '它还不能作为竞技游戏上线。先手方每四盘赢三盘，任何等级分阶梯都撑不住。',
+  'Unfair does not mean unplayable. Losing chess is a proven first-player win and is played every day, because the proof runs down lines no human finds, and Hex is played behind the swap. What is different here is depth. This 78% rests on one move you can say in a sentence, lift a cannon to the fifth rank, and an engine finds it every time. A proven win nobody can reach is a curiosity. A win you can memorize is the game.':
+    '不公平不等于不能下。自杀棋已被证明是先手胜，却每天都有人下，因为那个证明走的是人类找不到的变化；六贯棋则在换边规则下照样被人下。这里的不同在于深度。这个 78% 依靠的是一步一句话就能说清的棋，把炮升到第五横线，而引擎每次都能找到它。没人够得着的已证胜局只是奇闻；一个能背下来的胜法就是整个游戏。',
+  'Two repairs beyond the pie rule are untested. Marking the general and giving the defender one move to answer would blunt the cannon threat directly. Or the starting array could move its central soldiers, since the threat exists only because Black’s soldier stands where a cannon needs its screen.':
+    '饼干规则之外，还有两个修补办法未经测试。把将帅标记出来、给防守方一步应对的机会，可以直接削弱炮的威胁。或者改动初始局面中的中兵，因为这个威胁之所以存在，只是因为黑方的卒恰好站在炮需要炮架的位置。',
+  'Does Red have a forced win?': '红方有强制胜吗？',
+  'Everything above is a win rate, a statement about two particular engines. Whether the game is a first-player win under perfect play has an answer that does not depend on how well anything plays. What we have is a lower bound, no forced win within 13 plies. That rules out a cheap one, and half of the engine games were over by ply 28.':
+    '上面的一切都是胜率，是关于两个特定引擎的陈述。这个游戏在完美对弈下是否先手胜，其答案不取决于任何东西下得多好。我们手里的是一个下界，13 步之内没有强制胜。这排除了廉价的胜法，而引擎对局中有一半在第 28 步前就结束了。',
+  'Two things make the question harder than it looks. Material is conserved, so there is no endgame database to build and nothing for a forward search to meet in the middle. Strategy stealing does not apply either: pieces move and never accumulate, so a first player cannot make an arbitrary move and then discard it. What helps is that games are short and always decisive, a shallow and sharply terminal tree, which is the shape proof-number search is good at.':
+    '有两件事让这个问题比看起来更难。子力守恒，所以没有残局库可建，正向搜索也没有可以会合的中点。策略窃取也用不上：棋子只会移动，从不累积，所以先手方不能随便走一步再把它丢掉。有帮助的是对局短且总能分出胜负，是一棵浅而终局尖锐的树，而这正是证明数搜索擅长的形状。',
+  'The next rung is 14 plies. The proof splits across Red’s 42 first moves and runs them in parallel at almost no loss, because with no forced win no branch ever cuts off another. Splitting two plies deep gives 1,740 independent jobs, enough for a cluster. Proof-number search, which spends its effort on the narrowest part of the proof tree, is how Mark Watkins solved losing chess, and we have not implemented it yet.':
+    '下一级是 14 步。证明可以按红方 42 个第一步拆分并几乎无损地并行运行，因为既然没有强制胜，任何一个分支都不会剪掉另一个。拆到两步深，会得到 1,740 个独立任务，足以用上一个集群。证明数搜索把精力花在证明树最窄的部分，马克·沃特金斯正是用它解决了自杀棋，而我们还没有实现它。',
+  'A weak solution, or an ultra-weak one by an argument we have not thought of, would settle the pie rule question too: a proven first-player win is exactly the case the swap was invented for. The engine, the test harness, the 54 games and the full opening table are in one repository.':
+    '弱解，或者通过我们没想到的论证得到的超弱解，也会顺带解决饼干规则的问题：已被证明的先手胜正是换边规则被发明出来要应对的情形。引擎、测试工具、54 盘对局和完整的开局表都在一个代码仓库里。',
+  'Check the numbers': '核对数据',
+  'Benedict Xiangqi: Benedict Chess on the Xiangqi Board, Measured':
+    '本尼迪克特象棋：象棋棋盘上的本尼迪克特国际象棋，实测',
   'Check the proofs yourself': '亲自检验这些证明',
   'Learn xiangqi': '学习象棋',
-  'AFTER 1. Cxb10: BLACK MUST CAPTURE': '1. Cxb10 之后：黑方必须吃子',
   '2. Rxh1 Rxb10: RED TO MOVE': '2. Rxh1 Rxb10：轮到红方',
   '2. Cxd10 Kxd10 3. Rxh1: BLACK TO MOVE': '2. Cxd10 Kxd10 3. Rxh1：轮到黑方',
   'PLY 35 OF THE 2M GAME: A DEAD BOARD': '2M 对局第 35 步：死局',
-  'Duck Xiangqi Is Live: How Not to Lose Your First Game': '鸭子象棋上线了：怎样不输掉你的第一盘',
-  'Duck Xiangqi: How Not to Lose Your First Game': '鸭子象棋：怎样不输掉你的第一盘',
+  // anti-xiangqi merge (2026-10-07): the brianhliou.com post folded in.
+  'Antichess is chess with two rules changed: if you can capture you must, and you win by losing every piece you have. The king is an ordinary piece. Lichess plays it, and it was solved in 2016, when Mark Watkins showed that 1. e3 wins by force for White. We put the same two rules on the xiangqi board, with the general an ordinary piece and no facing rule, and measured what came out before designing anything.':
+    '反棋（自杀棋）是改了两条规则的国际象棋：能吃子就必须吃，把自己所有棋子都送掉的一方获胜。王只是普通棋子。Lichess 上可以下它，它在 2016 年已被解决：马克·沃特金斯证明了 1. e3 是白方的强制胜着。我们把同样的两条规则搬到象棋棋盘上，将帅作为普通棋子，不设白脸将规则，先测量结果再谈设计。',
+  'It is a draw. Black has two moves to find in the opening and Red cannot go wrong; after that, the pieces you must lose sit in the palace where nothing can reach them. Every other opening loses, and 63 of those losses are proven. That is why Mistboard has no Anti Xiangqi play page, and this one holds the measurement.':
+    '结论是和棋。黑方在开局有两步棋必须找到，红方不会走错；之后你必须送掉的那些棋子都待在九宫里，什么都够不到它们。其余每一种开局都会输，其中 63 种负局已被证明。这就是 Mistboard 没有反象棋对局页面的原因，本页记录的就是这份测量。',
+  'Antichess rules have been tried on other boards, and Fairy-Stockfish will play them on most of the boards it knows. This page measures the full xiangqi board end to end, with every ending of the forced opening played out, the losing lines proven, and the evidence published where anyone can rerun it.':
+    '反棋规则在其他棋盘上也有人试过，Fairy-Stockfish 在它支持的大多数棋盘上都能按这套规则下棋。本页对完整的象棋棋盘做了从头到尾的测量：强制开局的每一个终点都下完了，输棋的变化都有证明，证据公开发布，任何人都可以重新运行。',
+  'Notation is chess-style: R chariot, H horse, E elephant, A advisor, K general, C cannon, P soldier; files a to i from Red’s left, ranks 1 to 10 from Red’s side, so 1. Cxb10 is a cannon taking whatever stands on b10. A ply is one move by one side. If you have not played xiangqi, the [rules page](/rules/xiangqi) covers it in a few minutes.':
+    '记谱采用国际象棋式写法：R 车，H 马，E 象，A 士，K 将，C 炮，P 兵；纵线 a 到 i 自红方左侧数起，横线 1 到 10 自红方一侧数起，所以 1. Cxb10 表示炮吃掉 b10 上的任何棋子。一步指一方走一着。如果你没下过象棋，[规则页](/rules/xiangqi)几分钟就能讲清楚。',
+  'The opening: Black has two moves to find': '开局：黑方有两步棋必须找到',
+  'The forced part of the game is a chain of captures four or five plies long, with three forks on the main line. Two are Black’s, and both decide the game. One is Red’s, and does not. A fourth, after a losing move by Black, holds most of the tree. Red’s first move is a cannon taking a horse; the two choices are mirror images, so call it 1. Cxb10. In the boards below, the arrows are every capture the side to move has.':
+    '棋局中被强制的部分是一条四到五步长的吃子连锁，主线上有三个分叉。两个属于黑方，都决定胜负。一个属于红方，并不决定胜负。第四个出现在黑方走出一着输棋之后，树的大部分都在它下面。红方第一着是炮吃马；两种选择互为镜像，就称之为 1. Cxb10。下面的棋盘里，箭头标出的是行棋方的每一种吃法。',
+  'Fork A. Black must capture and has two ways: take the cannon back with the chariot, or fire the other cannon into Red’s back rank over Red’s own h3 cannon. 1...Rxb10 loses by force in 34 plies, and that is proven. 1...Cxh1 holds.':
+    '分叉 A。黑方必须吃子，有两种走法：用车把炮吃回来，或者隔着红方自己的 h3 炮，把另一门炮打进红方底线。1...Rxb10 在 34 步内被强制击败，这一点已被证明。1...Cxh1 守得住。',
+  'Fork B. Red has two replies and both hold. 2. Rxh1 ends the exchange, since 2...Rxb10 is Black’s only capture and the chain stops at ply 4 with Red to move. 2. Cxd10 keeps firing and sets Black a second trap. The engine took 2. Rxh1 at every budget.':
+    '分叉 B。红方有两种应着，都守得住。2. Rxh1 结束这次交换，因为 2...Rxb10 是黑方唯一的吃法，连锁在第 4 步停止，轮到红方。2. Cxd10 继续开炮，给黑方设下第二个陷阱。引擎在每一种预算下都选了 2. Rxh1。',
+  'Fork C. Black again has two captures, and again the obvious one loses. 2...Kxd10, the general taking the cannon, holds, with 3. Rxh1 forced and the chain stopping at ply 5, Black to move. 2...Cxf1 loses to 3. Kxf1 Kxd10, after which Red wins by extinction in 38 plies.':
+    '分叉 C。黑方又有两种吃法，而且又是显眼的那种会输。2...Kxd10，用将吃炮，守得住：3. Rxh1 是被迫的，连锁在第 5 步停止，轮到黑方。2...Cxf1 输给 3. Kxf1 Kxd10，此后红方在 38 步内送光全部棋子取胜。',
+  'Fork D. After 2...Cxf1 Red has three captures, and 3. Kxf1 wins. 3. Cxa10 leads into 21 endings and draws with best play; 3. Cxf10 leads into 58 and loses to 3...Kxf10. Red never needs either, so nobody can be made to reach those 79 endings.':
+    '分叉 D。2...Cxf1 之后红方有三种吃法，3. Kxf1 取胜。3. Cxa10 通向 21 个终点，双方最佳着法下是和棋；3. Cxf10 通向 58 个终点，输给 3...Kxf10。红方两者都用不着，所以谁也不会被迫走到那 79 个终点。',
+  Fork: '分叉',
+  Capture: '吃法',
+  'With best play': '最佳着法下',
+  'Endings below': '下方终点',
+  Proven: '已证明',
+  'Fork A': '分叉 A',
+  '1... Cxh1': '1... Cxh1',
+  '1... Rxb10': '1... Rxb10',
+  'Red wins': '红方胜',
+  'Fork B': '分叉 B',
+  '2. Rxh1': '2. Rxh1',
+  '2. Cxd10': '2. Cxd10',
+  'Fork C': '分叉 C',
+  '2... Cxf1': '2... Cxf1',
+  '2... Kxd10': '2... Kxd10',
+  'Fork D': '分叉 D',
+  '3. Kxf1': '3. Kxf1',
+  '3. Cxf10': '3. Cxf10',
+  'Black wins': '黑方胜',
+  '3. Cxa10': '3. Cxa10',
+  'Every capture at the four forks, valued by backing the chain’s 83 endings up the tree: at each fork the side to move takes the capture that is best for it. Proven counts the endings below with a machine-checked proof.':
+    '四个分叉处的每一种吃法，其价值由连锁的 83 个终点沿树回推得出：在每个分叉，行棋方选择对自己最有利的吃法。“已证明”一栏统计下方终点中有机器核验证明的数量。',
+  'One verdict on the main line rests on search alone. The engine found 2...Cxf1 losing at 100,000 nodes a move and again at a million, and the prover ran out of budget on it. If it does hold, Black has a second way to draw, and the game is still a draw.':
+    '主线上有一个判断只依赖搜索。引擎在每着 100,000 节点下判定 2...Cxf1 会输，在一百万节点下也是如此，而证明器在它上面耗尽了预算。如果它确实守得住，黑方就多了一条和棋之路，棋局依然是和棋。',
+  'Why the chariot recapture loses': '为什么用车吃回会输',
+  'A certificate is a tree: at every Red move it holds one move, and at every Black move it holds every legal reply. The one for 1...Rxb10 has 1,864 positions. Below is its main line. At Red’s first free move Black has 42 legal replies, and the certificate answers each of them.':
+    '证明凭证是一棵树：红方每一着只保留一着，黑方每一着保留所有合法应着。1...Rxb10 的那一份有 1,864 个局面。下面是它的主变。在红方第一着自由着法处，黑方有 42 种合法应着，凭证对每一种都有应对。',
+  'The main line of the proof that 1...Rxb10 loses, 34 plies, with notes on the plies that matter. The whole tree is in the evidence repository.':
+    '证明 1...Rxb10 会输的主变，共 34 步，关键步附有注释。整棵树在证据代码库里。',
+  'The natural recapture. From here Red wins by force; the certificate covers 1,864 positions.':
+    '自然的吃回。从这里起红方必胜；证明凭证覆盖 1,864 个局面。',
+  'Red’s first free move is quiet: the chariot steps to a2. Black has 42 legal replies and the certificate answers each one. This is the main line.':
+    '红方第一着自由着法是静着：车走到 a2。黑方有 42 种合法应着，凭证对每一种都有应对。这是主变。',
+  'The chariot to b2, with the b8 cannon now screened onto the b1 horse. Black has exactly one legal move.':
+    '车到 b2，b8 的炮此时正架在 b1 的马上。黑方恰好只有一种合法着法。',
+  'Red must take the cannon.': '红方必须吃炮。',
+  'Black must take the chariot: the whole b-file is open.': '黑方必须吃车：整条 b 线都是空的。',
+  'A quiet move that leaves Black’s chariot exactly one capture, the elephant on c1.':
+    '一着静着，让黑方的车恰好只剩一种吃法：c1 的相。',
+  'The elephant steps to i3, into the chariot’s reach; two replies, both covered.':
+    '相走到 i3，进入车的射程；两种应着，都在覆盖之内。',
+  'Red has no pieces left and has won. Black could not decline a single capture along the way.':
+    '红方已无棋子，赢了。一路上黑方没有一次吃子能够拒绝。',
+  'A quiet move that leaves your opponent exactly one capture is a move your opponent has to make. Red’s back-rank pieces become a queue, and Black’s chariot, forced to take whatever is put in front of it, empties the queue for Red. Thirty plies later Red has nothing left and has won. So Black’s only move is 1...Cxh1.':
+    '一着安静的着法若让对手只剩恰好一种吃法，那就是对手不得不走的着法。红方底线的棋子变成一列队伍，黑方的车被迫吃掉摆到面前的一切，就替红方把这列队伍清空。三十步之后红方一子不剩，赢了。所以黑方唯一的着法是 1...Cxh1。',
+  'After the chain: what each side plays for': '连锁之后：双方各图什么',
+  'Left, after 1. Cxb10 Cxh1 2. Rxh1 Rxb10, Red to move. Right, after 2. Cxd10 Kxd10 3. Rxh1, Black to move, the same material with the general on d10. The engine’s games from here, at three budgets, show what the middlegame is about.':
+    '左边是 1. Cxb10 Cxh1 2. Rxh1 Rxb10 之后，轮到红方。右边是 2. Cxd10 Kxd10 3. Rxh1 之后，轮到黑方，子力相同，只是将在 d10。引擎从这里出发、在三种预算下的对局，显示了中局在争什么。',
+  '**You cannot lose a piece; you can only have it taken.** So every move is an offer, and the ones that count are the offers the opponent cannot refuse: a quiet move that leaves them exactly one capture.':
+    '**你没法主动丢子，只能让对方吃掉。**所以每一着都是一次奉送，真正起作用的是对手无法拒绝的奉送：一着安静的着法，让对手只剩恰好一种吃法。',
+  '**A loose chariot is a liability.** Put pieces in its path and it must take every one, which is how the chariot recapture loses. So both sides open by offering cannons. In the game at two million nodes a move, 3. Cb3 screens Black’s cannon onto the b1 horse, three captures follow, and both chariots are loose. Fourteen plies of compelled captures follow, with material coming off in step.':
+    '**一辆无人守护的车是负担。**在它的路径上摆子，它就必须一个个吃掉；用车吃回之所以会输，正是这个原因。所以双方开局都改为送炮。在每着两百万节点的那一局里，3. Cb3 给黑方的炮架到 b1 的马上，随后发生三次吃子，两辆车都成了无人守护的子力。接下来是十四步被迫的吃子，双方子力同步减少。',
+  'The engine against itself at two million nodes a move, 44 plies. It opened on the other wing; the game is shown mirrored so its files match the boards above.':
+    '引擎每着两百万节点的自战对局，共 44 步。它实际是在另一翼开局的；这里把对局镜像显示，让纵线与上面的棋盘一致。',
+  'Cannon takes the horse over Black’s cannon. Red’s only two legal moves are this and its mirror image.':
+    '炮隔着黑方的炮吃马。红方仅有的两种合法着法就是这一着和它的镜像。',
+  'Black declines the chariot recapture, a proven loss, and fires the other cannon down the h-file with Red’s h3 cannon as the screen. The only move that holds.':
+    '黑方放弃已被证明会输的车吃回，改用另一门炮沿 h 线开火，以红方的 h3 炮为炮架。唯一站得住的一着。',
+  'The chariot takes the cannon. Continuing with 2. Cxd10, the other cannon capture, would also hold.':
+    '车吃炮。改走另一种炮吃法 2. Cxd10 同样站得住。',
+  'Black’s only legal move. The forced part is over: fourteen pieces each, Red to move, no capture on the board.':
+    '黑方唯一的合法着法。强制部分结束：双方各十四子，轮到红方，棋盘上无子可吃。',
+  'The first free move of the game. Red puts its last cannon on b3, where it screens Black’s b8 cannon onto the b1 horse: an offer Black cannot refuse.':
+    '全局第一着自由着法。红方把最后一门炮放到 b3，充当黑方 b8 炮吃 b1 马的炮架：一份黑方无法拒绝的奉送。',
+  'Only legal move.': '唯一合法着法。',
+  'The same exchange on the other wing: chariot takes cannon, and Rxb3 will be forced in reply.':
+    '另一翼同样的交换：车吃炮，接下来 Rxb3 将是被迫的应着。',
+  'Both chariots are now loose on the back ranks with nothing but captures available. For the next fourteen plies each chariot has only captures to make, and the two sides shed material in step.':
+    '两辆车如今都松动在底线上，除了吃子别无选择。接下来十四步里每辆车都只能吃子，双方同步弃子。',
+  'The last capture of the feast. Five pieces each: general, two advisors, an elephant, one chariot.':
+    '盛宴的最后一次吃子。双方各五子：将、双士、一象、一车。',
+  'Red pulls the lever. The elephant steps to i3, on Black’s chariot’s file, where Black has no other capture: Rxi3 is compelled.':
+    '红方扳动杠杆。相走到黑方车所在纵线上的 i3，黑方别无其他吃法：Rxi3 是被迫的。',
+  'The chariot itself: Ri2, and Black must take it. Red now has nothing that can leave the palace.':
+    '轮到车本身：Ri2，黑方必须吃掉。红方再没有能离开九宫的棋子了。',
+  'The advisor steps into the chariot’s path. Black must take, and Red’s other advisor must take back.':
+    '仕走进车的路径。黑方必须吃，红方的另一只仕必须吃回。',
+  'Red: general and one advisor. Black: general, two advisors, an elephant. Nothing on the board can ever capture anything again.':
+    '红方：帅和一仕。黑方：将、双士、一象。棋盘上再没有任何棋子能吃掉任何东西。',
+  'Third occurrence of the position: draw by repetition. Red has fewer pieces and no way to lose them; Black has no way to make Red take anything.':
+    '局面第三次出现：重复局面成和。红方子少却无法送掉；黑方也无法迫使红方吃任何东西。',
+  '**Or a slow war of soldiers.** At five million nodes nobody finds a forcing offer early, and soldiers walk into each other for a hundred plies, taken in pairs, with an elephant and a general thrown in on the way.':
+    '**或者是一场缓慢的兵战。**在五百万节点下，双方早期都没找到强制性的奉送，兵卒彼此走近，持续一百步，成对被吃掉，中途还搭进去一个象和一个将。',
+  'The engine against itself at five million nodes a move, 131 plies, mirrored the same way. The notes follow the trades.':
+    '引擎每着五百万节点的自战对局，共 131 步，以同样方式镜像显示。注释跟随着这些兑子。',
+  'The same four forced plies as every game.': '和每盘棋一样的四步强制着法。',
+  'The chariots take each other’s cannons and Red’s chariot is taken in turn: eleven pieces each, and the game becomes a soldier war.':
+    '双方的车互吃对方的炮，红方的车随即也被吃掉：各剩十一子，棋局变成一场兵战。',
+  'Red offers a soldier on i5. Black answers with a soldier on i6: now Red’s soldier must take it, and Black’s chariot must take back.':
+    '红方把兵送到 i5。黑方以 i6 的卒回应：现在红方的兵必须吃它，黑方的车必须吃回。',
+  'Two soldiers off in two compelled captures. This is the trade the rest of the game is made of: a soldier steps into another’s path, the capture is compelled, and the capturer is taken in turn.':
+    '两次被迫吃子，去掉两个兵。这盘棋的余下部分就是由这种交换构成的：一个兵走进另一个兵的路径，吃子被迫发生，吃子者随即被吃。',
+  'A soldier taken by a soldier, then a soldier taken by an elephant. Material keeps coming off in pairs, and every capture is one the taker could not refuse.':
+    '兵吃兵，再象吃兵。子力继续成对消失，每一次吃子都是吃子方无法拒绝的。',
+  'Black stepped an elephant into the path of Red’s last soldier, giving it up so the soldier lands on e8, where the chariot must take it. Red has no soldiers left.':
+    '黑方把象送进红方最后一个兵的路径，用它换得该兵落到 e8，车必须在那里吃掉它。红方再无兵。',
+  'Red walks its general into the soldier’s path and Black must take it. Under these rules that is progress for Red; the elephant takes the soldier back, and no soldiers remain.':
+    '红方把帅走进卒的路径，黑方必须吃掉。按这些规则，这对红方是进展；相吃回卒，棋盘上再无兵卒。',
+  'From here nothing can be forced. Black’s chariot sits on the c-file behind its own elephant, on lines none of Red’s remaining pieces can reach; Red’s advisors and elephants cannot leave their half; and either chariot could be thrown away at will. Five pieces each, and the board is as dead as the palace-only one.':
+    '从这里起，什么都无法强迫。黑方的车停在 c 线上自己的象后面，所处线路红方剩余的棋子都够不到；红方的仕和相离不开自己的半边；而任何一方的车都可以随时扔掉。各剩五子，棋盘和只剩九宫棋子的那种局面一样死。',
+  'Third occurrence of the position: draw by repetition, five pieces each, both sides shuffling an elephant and a chariot.':
+    '局面第三次出现：重复局面成和，各剩五子，双方来回挪动象和车。',
+  'The two-million-node game gets there at ply 35, Red feeding its last mobile pieces to Black’s chariot, and repeats to a draw at ply 44. The soldier war ends with a chariot and the palace pieces each, and that draw can be checked by hand. Black’s chariot sits on lines none of Red’s pieces can reach, so it can never be made to capture; either chariot can be thrown away at will; and with no capture on the board any move is legal, so whoever wants to wait shuffles an advisor until the progress clock ends the game.':
+    '两百万节点那一局在第 35 步到达这里，红方把最后几个可出击的棋子喂给黑方的车，随后在第 44 步重复局面成和。兵战以双方各余一车加九宫棋子收场，这个和棋可以手算验证。黑方的车停在红方任何棋子都够不到的线路上，所以永远不会被迫吃子；任何一方的车都可以随时扔掉；而棋盘上无子可吃时任何着法都合法，于是想等的一方就来回挪士，直到无吃子步数限制终结棋局。',
+  'To win you need the opponent to keep enough mobile force to eat your whole palace, and to be compelled to use it. They control that force: they can throw it into captures you cannot refuse, park it, or wait. In every engine game one of the three was there when wanted, and in random play a quarter of 3,000 games stall.':
+    '要取胜，你需要对手保留足够的出击力量来吃光你整个九宫，并且被迫动用它。那股力量在对手手里：他们可以把它扔进你无法拒绝的吃子里，可以搁着不动，也可以等。在每一盘引擎对局里，三者之一总在需要时出现；而在随机对弈中，3,000 局里有四分之一成了僵局。',
+  'This is evidence for a draw, short of a proof. Search to five million nodes a move found no win from either surviving position. We have not shown that a way out exists from every position the chain can lead to, only that no search found a position without one. The title is that verdict and that geometry.':
+    '这是和棋的证据，还不是证明。每着五百万节点的搜索在两个存活局面里都没找到胜法。我们没有证明从连锁可能通向的每个局面都存在出路，只是说没有任何搜索找到过没有出路的局面。标题说的就是这个判断和这套几何结构。',
+  'Could it be made a game?': '能把它改成一个能下的棋吗？',
+  'The draw comes from one fact: five pieces a side can only be taken by pieces the opponent would rather throw away. A repair has to change that, change what you have to lose, or change what a stall is worth. We tried four, through the same referee, sweep, prover and self-play. None made a game.':
+    '和棋源于一个事实：每方五个棋子只能被对手宁愿扔掉的棋子吃掉。修补方案要么改变这一点，要么改变你必须送掉的东西，要么改变僵局的价值。我们试了四种，走的是同一套裁判、扫描、证明器和自战流程。没有一种做出了像样的棋。',
+  '**Score every stall for the side with fewer pieces.** This is FICS’s stalemate rule applied wherever the game stops, and it hands a frozen board to whoever is lighter. Random play goes from 26% undecided to 4% with no tilt (Red 47.9%). Engine play did not change at all: the engine does not know the rule, so the same games were simply scored differently, which says nothing about the game the rule would create. Testing it properly needs a Fairy-Stockfish patch so the engine plays for the count. It is the only repair that keeps the game recognisable and might work, and the stall key is already in the kernel if anyone wants to try.':
+    '**所有僵局都判给子少的一方。**这是把 FICS 的困毙规则应用到棋局停下的任何情形，它把冻结的棋盘交给子力更少的一方。随机对弈的未决比例从 26% 降到 4%，且没有偏向（红方 47.9%）。引擎对弈毫无变化：引擎不知道这条规则，所以还是同样的对局，只是判法不同，这对该规则会造就的棋毫无说明力。要正经测试，需要给 Fairy-Stockfish 打补丁，让引擎为子数而下。这是唯一一种既保留棋的辨识度又可能奏效的修补，僵局那个开关已经在内核里，有人想试就能试。',
+  '**Lose the general instead of everything.** Codrus, the 1844 ancestor, puts the target in reach down a file, but a side that sheds its mobile pieces can still never be made to take the enemy general. It draws through the same two opening lines, faster: 28 endings, 20 of 25 losses proven, three self-play draws.':
+    '**只需送掉将，而不是全部。**Codrus 是 1844 年的祖先，目标沿纵线总是够得到，但抛掉可出击棋子的一方仍然永远不会被迫吃掉对方的将。它经由同样的两条开局变化成和，而且更快：28 个终点，25 个负局中有 20 个已被证明，三盘自战和棋。',
+  '**Keep the general royal.** Losers, ICC’s version, keeps check and mate, and being mated or reduced to the bare general wins. It is decisive the wrong way: Black wins at one, two and five million nodes, and backing up its 16-ending chain gives Black too, with 7 of 13 losses proven. A check suspends the obligation to capture, and that tempo lands with the second player in every line we looked at.':
+    '**保留将的王者身份。**Losers 是 ICC 的版本，保留将军与将死，被将死或只剩光将的一方获胜。它有胜负，但方向错了：黑方在一百万、两百万和五百万节点下都获胜，把它 16 个终点的连锁回推，结果也是黑方，13 个负局中有 7 个已被证明。将军会暂停吃子义务，而在我们看过的每一条变化里，这个先手都落到后手一方。',
+  '**Let the palace pieces out.** That removes the fortress by removing the confinement, and most of what makes the pieces xiangqi’s goes with it. We did not measure it; it is a different board.':
+    '**放九宫里的棋子出来。**这是靠取消禁闭来消除堡垒，而让这些棋子成为象棋棋子的大部分特征也随之消失。我们没有测量它；那是另一张棋盘。',
+  'How we checked it': '我们是怎么核验的',
+  '**The referee** is a xiangqi rule kernel with switches for the rules above. Its move generation matches Fairy-Stockfish’s on 209 positions, with zero disagreements. In every game the engine proposes and the kernel decides, applies and ends the game, so an engine quietly playing different rules aborts the run.':
+    '**裁判**是一个带有上述规则开关的象棋规则内核。它的着法生成在 209 个局面上与 Fairy-Stockfish 一致，零处分歧。每一盘里都由引擎提议，内核判定、执行并终止棋局，所以一个悄悄按不同规则下棋的引擎会让整轮运行中止。',
+  '**The player** is Fairy-Stockfish, configured through a variants file. Its evaluation was never taught this objective, and it shows. Ten times the search beats one times the search only 10-4 with 6 draws here, against 20-0 on normal xiangqi. That is why the opening rests on proofs.':
+    '**棋手**是 Fairy-Stockfish，通过一个变体配置文件设定。它的评估从未针对这个目标训练过，结果也看得出来：十倍搜索量对一倍搜索量在这里只赢到 10-4 带 6 和，而在普通象棋上是 20-0。这就是开局部分依靠证明的原因。',
+  '**The prover** takes a position and a claim, such as “Red wins from here”, and builds a tree with one winning move at each of the winner’s turns and every legal reply at each of the loser’s, down to positions the kernel says are over. If the tree closes, the claim is a fact about the rules, whatever any engine thinks. It is proof-number search with a 60-ply cutoff that counts as a loss for the side trying to win, so a proof can never lean on it. Every proof is saved as a certificate, and a separate checker replays certificates against the kernel and does nothing else.':
+    '**证明器**接收一个局面和一个论断，比如“红方从此处必胜”，然后构建一棵树：胜方每一手保留一着取胜着法，负方每一手保留所有合法应着，一直下到内核判定已经结束的局面。如果这棵树闭合，这个论断就是关于规则的事实，与任何引擎的看法无关。它采用证明数搜索，设有 60 步截断，截断计为进攻方失败，因此证明永远不会依赖它。每个证明都保存为一份证明凭证，另有一个独立的校验器只负责把凭证对照内核重放，别的什么都不做。',
+  'The sweep: whoever moves first at the end of the chain wins': '扫描：连锁终点谁先走谁赢',
+  'The kernel walked every branch of the opening chain, 605 positions and 166 endings between 4 and 18 plies in, 72 of them at ply 14, and in 130 of them at least one general is already gone. Mirror images aside, 83 are distinct. The engine played a game from each at 100,000 nodes a move. In 70 of the 83 the game was over within 14 to 36 more plies, and the winner was whoever had the first free move at the ending, 66 times out of 70. The other 13 stalled, a draw under the rules as written.':
+    '内核走遍了开局连锁的每一个分支：605 个局面，166 个终点分布在第 4 到第 18 步之间，其中 72 个在第 14 步，而且其中 130 个终点里至少已有一方的将不在了。撇开镜像，83 个互不相同。引擎从每个终点各下一局，每着 100,000 节点。83 局中有 70 局在再走 14 到 36 步内结束，而胜者就是在终点拥有第一着自由着法的一方，70 局里有 66 局如此。另外 13 局成了僵局，按写下的规则算和棋。',
+  'Ending at ply': '终点所在步数',
+  'Moves first': '谁先走',
+  Endings: '终点数',
+  Stalls: '僵局',
+  '6 to 12': '6 到 12',
+  Alternating: '交替',
+  'One engine game from each of the 83 distinct endings, 100,000 nodes a move for both sides.':
+    '83 个不同终点各一盘引擎对局，双方都是每着 100,000 节点。',
+  'So inside the chain, every choice between captures is a choice about who moves first when the chain ends. Rerun at a million nodes a move, eleven verdicts moved: six stalls became wins, two wins took longer, three stalls stayed stalls, and no win changed sides.':
+    '所以在连锁内部，每一次在吃法之间的选择，实际上都是在选择连锁结束时谁先走。以每着一百万节点重跑，十一个判断发生了变化：六个僵局变成胜局，两个胜局耗时更长，三个僵局仍是僵局，没有任何胜局换边。',
+  'The sweep finds candidates and settles nothing on its own. Its wins held up: none changed sides at ten times the budget, and 63 of the 70 were then proven without the engine. Its stalls are weaker evidence, since six of the 13 became wins at a million. The two stalls that matter are the surviving endings, and they stayed stalls at a million and in every game from the array at up to five million nodes a move.':
+    '扫描只找出候选，本身不能定论。它的胜局站住了：在十倍预算下没有一个换边，70 个中有 63 个随后在不依赖引擎的情况下被证明。它的僵局是较弱的证据，因为 13 个里有 6 个在一百万节点下变成了胜局。真正要紧的两个僵局是存活下来的终点，它们在一百万节点下，以及从初始阵型出发、每着最高五百万节点的每一盘对局中，都仍是僵局。',
+  'The proofs': '证明',
+  'From each of the 70 decisive endings, with a budget of a million positions, 63 proofs closed, 7 ran out of budget, and none was refuted. The median proof is 19 positions, a single line in which every defending reply is compelled; the largest is the 1,864 of the chariot recapture. The checker passes all 63. The fork table is those values backed up the chain from the 100,000-node sweep, and scoring it from the million-node sweep changes no value within eight plies of the array.':
+    '从 70 个分出胜负的终点各自出发，预算为一百万个局面：63 个证明闭合，7 个耗尽预算，没有一个被推翻。证明的中位规模是 19 个局面，是一条单线，防守方的每个应着都是被迫的；最大的是车吃回那一支的 1,864 个局面。校验器 63 个全部通过。分叉表就是这些价值从 100,000 节点扫描沿连锁回推的结果；改用一百万节点扫描评分，在距初始阵型八步以内没有任何价值改变。',
+  'Every game, to step through': '每一盘棋，逐步回放',
+  'Every game this article rests on is in the viewer below: the engine against itself at one, two and five million nodes a move; a game from each of the 83 endings of the opening chain; the 20 ladder games, where a strong engine met a weak one from random openings; and the main line of each of the 63 proofs. It opens on the 2M game. Pick any other from the list.':
+    '本文依据的每一盘棋都在下面的查看器里：引擎每着一百万、两百万和五百万节点的自战对局；开局连锁 83 个终点各一盘；20 盘阶梯对局，即强引擎从随机开局对阵弱引擎；以及 63 个证明各自的主变。查看器先打开 2M 那盘。列表里的任何一盘都可以选。',
+  'All 169 games, each replayed through the rule kernel. The arrow keys step through the one on the board.':
+    '全部 169 盘棋，每一盘都经规则内核重放。方向键可以逐步走棋盘上的这一盘。',
+  'by extinction': '全灭',
+  'by the progress clock': '无吃子步数到限',
+  'by repetition': '重复局面',
+  Game: '对局',
+  'Best play, engine against itself': '最佳着法：引擎自战',
+  'Every ending of the opening chain (%1), engine at 100k':
+    '开局连锁的每个终点（%1），引擎每着 100k 节点',
+  'Ladder: 100k against 10k nodes from eight random plies (20)':
+    '阶梯对局：100k 对 10k 节点，前八步随机（20）',
+  'Proof lines: the certificate’s main line (%1)': '证明线：证明凭证的主变（%1）',
+  '%1M nodes a move, %2 plies': '每着 %1M 节点，%2 步',
+  'ending at ply %1 #%2: stall, %3 at %4': '第 %1 步终点 #%2：僵局，第 %4 步%3',
+  'ending at ply %1 #%2: %3 in %4': '第 %1 步终点 #%2：%3，共 %4 步',
+  'ending at ply %1 #%2: %3 in %4, proven': '第 %1 步终点 #%2：%3，共 %4 步，已证明',
+  'pair %1, 100k as %2: %3 in %4': '第 %1 对，100k 执%2：%3，共 %4 步',
+  'ending at ply %1 #%2: %3, %4 positions': '第 %1 步终点 #%2：%3，%4 个局面',
+  '%1 %2 after %3 plies, %4 million nodes a move for both sides.':
+    '%3 步后%1（%2），双方每着 %4M 节点。',
+  '%1 %2 after %3 plies. The chain ended at ply %4.': '%3 步后%1（%2）。连锁在第 %4 步结束。',
+  '%1 %2 after %3 plies. The chain ended at ply %4; the loss from there is proven.':
+    '%3 步后%1（%2）。连锁在第 %4 步结束；从那里起的输棋已被证明。',
+  '%1 %2 after %3 plies. The first eight plies were random; 100k nodes played %4, 10k the other side.':
+    '%3 步后%1（%2）。前八步是随机的；100k 节点执%4，10k 执另一方。',
+  'The engine opened 1. Cxh10; shown as its mirror image so the files match the boards in the post.':
+    '引擎实际以 1. Cxh10 开局；这里按镜像显示，让纵线与文中的棋盘一致。',
+  '%1 by force from the ending at ply %2: the certificate covers %3 positions, and this is its main line, every defender reply here being one the certificate answers.':
+    '从第 %2 步的终点起，%1已成定局：证明凭证覆盖 %3 个局面，这是它的主变，这里防守方的每个应着都是凭证有答案的。',
+  'Fairy-Stockfish, 100k nodes': 'Fairy-Stockfish，100k 节点',
+  'Fairy-Stockfish, 10k nodes': 'Fairy-Stockfish，10k 节点',
+  'Fairy-Stockfish, %1M nodes': 'Fairy-Stockfish，%1M 节点',
+  'the proof': '证明',
+  'Everything above is in one repository: the rule kernel, the three Fairy-Stockfish stanzas, all 166 endings of the opening chain, one engine game from each ending at each budget, every proof certificate, and the games in a viewer that opens from the folder. `npm run verify` replays every certificate against the rules in a few seconds and reports 63, 63, 20 and 7 valid, and the README has the four commands that reproduce the sweep and the proofs with a Fairy-Stockfish binary.':
+    '上面的一切都在一个代码库里：规则内核，三段 Fairy-Stockfish 变体配置，开局连锁的全部 166 个终点，每个终点在每种预算下各一盘引擎对局，每一份证明凭证，以及可以直接从该目录打开的对局浏览器。`npm run verify` 几秒钟内就把每一份凭证对照规则重放一遍，并报告 63、63、20 和 7 项有效；README 里有四条命令，配合一个 Fairy-Stockfish 可执行文件即可复现扫描与证明。',
+  'If you can show a third surviving opening, a defence in any certificate, or a win for either side from the positions above, open an issue there. This page will say so.':
+    '如果你能给出第三条存活的开局、任何一份凭证里的防守，或者从上面的局面出发任何一方的胜法，请去那里提一个 issue。本页会如实写明。',
+  'FORK A: BLACK TO MOVE': '分叉 A：轮到黑方',
+  'FORK B: RED TO MOVE': '分叉 B：轮到红方',
+  'FORK C: BLACK TO MOVE': '分叉 C：轮到黑方',
+  'FORK D: RED TO MOVE': '分叉 D：轮到红方',
+  'Duck Xiangqi Strategy for Your First Game': '鸭子象棋攻略：你的第一盘',
   'Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.':
     '双方共用一只鸭子的象棋。规则一分钟就能读完。决定你第一盘胜负的东西要花更久，首先是这一条：你放下的鸭子是对手的炮架，永远不是你的。',
-  'Duck Xiangqi is live today. It is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
-    '鸭子象棋今天上线。它是双方共用一只鸭子的象棋：你走一着普通的象棋着法，然后把鸭子放到任意一个空点上。它挡住一切，不属于任何一方，也不能被吃掉。规则大约一分钟就能读完。',
-  'What follows is not the rules. It is what decides your first game, starting with the one that catches everybody: the most obstructive-looking square for the duck is usually the one that arms your opponent’s cannon. These come from the seven engine games behind this launch, and from measuring the engine itself.':
-    '下面写的不是规则，而是决定你第一盘胜负的东西，先从人人都会中招的那一条说起：看起来最碍事的鸭子落点，往往正是给对手的炮装上炮架的那个点。这些心得来自这次上线背后的七盘引擎对局，以及对引擎本身的测量。',
+  'Duck Xiangqi is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
+    '鸭子象棋是双方共用一只鸭子的象棋：你走一着普通的象棋着法，然后把鸭子放到任意一个空点上。它挡住一切，不属于任何一方，也不能被吃掉。规则大约一分钟就能读完。',
+  'The rules page has the rules. This article is about what decides your first game, starting with the mistake that catches everybody: the square where the duck looks most obstructive is usually the one that arms your opponent’s cannon. It draws on the six engine games published with the variant and on measurements of the engine itself.':
+    '规则在规则页上。这篇写的是决定你第一盘胜负的东西，先从人人都会中招的那一条说起：看起来最碍事的鸭子落点，往往正是给对手的炮装上炮架的那个点。这些心得来自随这个变体一起公布的六盘引擎对局，以及对引擎本身的测量。',
   'A turn is a move plus a duck placement': '一回合是一着棋加一次放鸭',
   'Every turn you move a piece and then place the duck. The move is xiangqi and you already know how to think about it. The placement is the new game, and it is where first games are lost.':
     '每一回合你先走一个棋子，再放鸭子。走子就是象棋，你已经知道该怎么想。放鸭才是新的部分，第一盘棋往往就输在这里。',
@@ -2312,8 +4445,8 @@ const ZH_HANS: Record<string, string> = {
   'There is no check and no checkmate': '没有将军，也没有将死',
   'You may leave your general attacked, move it onto an attacked point, and nothing on the board or in the interface says a word. Your opponent wins by actually taking it, and the game ends there.':
     '你可以让将帅处于被攻击状态，也可以把它走到被攻击的点上，棋盘和界面都不会说一个字。对手通过真的吃掉它来获胜，棋局到此结束。',
-  'This is not a theoretical risk. All seven of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.':
-    '这不是理论上的风险。我们发布的七盘引擎对局全部以将帅被直接吃掉告终。没有一盘走到认输、重复局面或困毙：每一盘的结束都是因为有人能吃将帅，而且吃了。每一回合都自己数一遍威胁，包括鸭子刚刚打开的那些。',
+  'This is not a theoretical risk. All six of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.':
+    '这不是理论上的风险。我们发布的六盘引擎对局全部以将帅被直接吃掉告终。没有一盘走到认输、重复局面或困毙：每一盘的结束都是因为有人能吃将帅，而且吃了。每一回合都自己数一遍威胁，包括鸭子刚刚打开的那些。',
   'The duck must move every turn': '鸭子每回合都必须移动',
   'A duck jamming a horse’s leg, filling an elephant’s eye or holding a file is doing that job for exactly one turn. Then it is your problem again: on your next turn you have to pick it up and put it somewhere else.':
     '蹩住马腿、塞住象眼或守住一条纵线的鸭子，只能干这件事恰好一个回合。然后它又成了你的问题：下一回合你必须把它拿起来放到别处。',
@@ -2324,16 +4457,14 @@ const ZH_HANS: Record<string, string> = {
     '机器人是打过补丁的 Fairy-Stockfish，回合里走子的那一半它走得很正经。放鸭的那一半它是在猜。这是测量出来的，不是猜测。',
   'We scored every legal duck placement after the engine’s own opening move, 58 of them, and the engine returned an identical evaluation for all 58. Raising the search from 300,000 nodes to four million changed the number but not the verdict: still identical across every placement. Fairy-Stockfish has no evaluation term for a duck or a wall, so nothing in its scoring can prefer one point to another, and the placement it reports is whatever its move ordering happened to surface.':
     '我们对引擎自己开局着法之后的每一种合法放鸭位置打分，共 58 种，引擎对这 58 种给出了完全相同的评估值。把搜索从 300,000 节点提高到四百万，数值变了，结论没变：每一种落点依然完全相同。Fairy-Stockfish 的评估里没有关于鸭子或墙的项，所以它的打分不可能偏好任何一个点，它报出的落点只是着法排序碰巧先冒出来的那一个。',
-  'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all seven.':
-    '这让它在象棋的那一半是个真正的对手，在鸭子的那一半却是个糟糕的老师。如果你觉得它的落点很随意，那是因为确实如此。这些对局的走子部分仍然值得一读，下面的研习里有全部七盘。',
+  'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all six.':
+    '这让它在象棋的那一半是个真正的对手，在鸭子的那一半却是个糟糕的老师。如果你觉得它的落点很随意，那是因为确实如此。这些对局的走子部分仍然值得一读，下面的研习里有全部六盘。',
   'The generals may face each other': '将帅可以对面',
   'In ordinary xiangqi that is forbidden. Here the prohibition stopped making sense once check was gone, so flying the general is simply a capture that ends the game. It is one more threat with no warning attached, and one more line the duck can open or close.':
     '在普通象棋里这是禁止的。这里一旦没有了将军，这条禁令就失去了意义，所以飞将只是一次结束棋局的吃子。它是又一个没有任何警告的威胁，也是鸭子可以打开或关闭的又一条线路。',
-  'Games run 120 to 229 plies': '对局长度在 120 到 229 步之间',
-  'That is the range across the seven engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
-    '这是七盘引擎对局的范围。请把它当成一盘完整的棋而不是小玩意，并据此选择用时：这里提供 5+5 和 10+5 两种节奏，正是出于这个原因。',
-  'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all seven engine games if you want to watch it played first.':
-    '八个引擎强度，或者找个朋友。规则页有带图解的完整规则，如果想先看看别人怎么下，研习里有全部七盘引擎对局。',
+  'Games run 120 to 249 plies': '对局长度在 120 到 249 步之间',
+  'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all six engine games if you want to watch it played first.':
+    '八个引擎强度，或者找个朋友。规则页有带图解的完整规则，如果想先看看别人怎么下，研习里有全部六盘引擎对局。',
   Rules: '规则',
   'FIRST: A LEGAL XIANGQI MOVE': '第一步：一着合法的象棋着法',
   'THEN: THE DUCK': '第二步：放鸭子',
@@ -2348,43 +4479,19 @@ const ZH_HANS: Record<string, string> = {
     '我们把部落棋搬到象棋棋盘上，先测量再动手：十二种开局阵形、两种兵的走法，每一种由引擎自战四局。用象棋自己的兵，全军靠同一招赢下每一局；让兵从开局起就有过河兵的走法，棋局则变成四局里有三局和棋的围城。我们发布的是这份测量，而不是这个变体。',
   'Horde chess is 36 pawns and no king against a normal army; the pawns win by checkmate, the army by taking the last pawn. Lichess has played it since 2015. We put the same idea on the xiangqi board: Red has soldiers only and no general, Black has the standard army, and everything else is xiangqi. Then we measured it before designing anything.':
     '部落棋是 36 个兵、没有王，对阵正常的一军；兵靠将死取胜，全军靠吃掉最后一个兵取胜。Lichess 从 2015 年起就有它。我们把同样的想法搬到象棋棋盘上：红方只有兵、没有将，黑方是标准全军，其他一切照象棋。然后在设计任何东西之前先做了测量。',
-  'None of the twenty-four designs is a game, and the reason is the soldier. Below the river a block of soldiers cannot defend itself; above it the army cannot attack it. The full map, with a picture of every array beside its result and every engine game in a viewer, is on brianhliou.com; this page is the short account and the reason there is no play button.':
-    '二十四种设计没有一种是一盘棋，原因在兵身上。河的这边一片兵阵守不住自己；河的那边全军攻不动它。完整的设计地图，每种阵形旁边都有图和结果，每一盘引擎对局都能在浏览器里回放，都在 brianhliou.com；本页是简短的说明，也解释了为什么这里没有「开始对局」按钮。',
-  'Twelve arrays and two soldiers': '十二种阵形，两种兵',
-  'The soldier’s move is the whole design space; how many soldiers, where they start, what shape the block is and which no-capture clock runs are dials. We turned all of them: 18 to 45 soldiers, blocks at the back, a rank forward, or already across the river, the parent’s silhouette, xiangqi’s own five soldier points. Two soldier rules: xiangqi’s own, which moves one point forward and sideways only after crossing the river, and the veteran, which has the crossed soldier’s move from its first step. Every array was played four times at four search budgets by Fairy-Stockfish against itself, refereed by a rule kernel that had agreed with the engine on every legal move first.':
-    '兵的走法就是整个设计空间；兵有多少、从哪里起步、兵阵是什么形状、用哪一种无吃子步数限制，都只是旋钮。我们把它们全都转过了：18 到 45 个兵，兵阵靠后、前移一行、或者一开始就在河对岸，原版的轮廓，象棋原有的五个兵位。两种兵的走法：象棋自己的兵，向前一步、过河后才能横走；老兵，从第一步起就有过河兵的走法。每种阵形都由 Fairy-Stockfish 自战，四种搜索量各一局，由一个事先已与引擎在每一步合法着法上达成一致的规则内核担任裁判。',
   'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward, drawn with the crossed-soldier piece because that is the move they have.':
     '原版阵形配标准兵，以及我们找到的最接近一盘棋的设计：36 个老兵前移一行，用过河兵的棋子图案画出，因为那正是它们的走法。',
   'Standard soldiers: the chariot eats the horde from behind': '标准兵：车从背后吃光兵团',
-  'A standard soldier covers only the point in front of it, so the horde is nine columns rather than a wall. The moment a column empties, a chariot drops through it to the first rank and takes a soldier a move from behind, and nothing in the horde attacks backward. Every array of 40 or fewer that starts on its own side loses this way, four games out of four. Only a five-deep block of 45, or a start already across the river, sometimes gets enough soldiers over before the chariot is done, and those cells split.':
-    '标准兵只控制正前方一个点，所以兵团是九根纵列，而不是一堵墙。哪一列一空，车就顺着它落到底线，从背后每着吃一个兵，而兵团里没有任何子能向后攻击。40 兵及以下、从己方半场开始的每一种阵形都是这样输的，四局全输。只有五行厚的 45 兵阵，或者一开始就在河对岸的阵形，有时能在车吃完之前把足够多的兵送过河，那几格的结果才分化。',
-  'The million-node game from the parent’s array. Black’s chariot drops through the f-file, which the horde emptied by advancing; fifteen moves later eleven soldiers are gone and the army has lost nothing for them.':
-    '原版阵形的 100 万节点对局。黑车顺着兵团推进时空出来的 f 线落到底线；十五回合后十一个兵没了，全军毫无损失。',
   'Veteran soldiers: the horde holds, and the siege is a draw': '老兵：兵团守得住，围城是和棋',
-  'Give every horde soldier the crossed soldier’s move from the start and the road closes: a veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side. Between equals the game becomes a siege: the horde marches to the palace, finds a general and two chariots waiting, and stops, because the block guards itself where it stands but can only advance a whole rank at a time while the army waits. Forty-eight games: 37 draws, six horde wins, five army wins, all five against 18 soldiers.':
-    '让兵团的每个兵从开局起就有过河兵的走法，路就堵上了：一列老兵攻击身边的点，车不能白白停在它旁边。兵团成了一方棋。势均力敌之间，棋局成了围城：兵团推进到九宫前，发现一个将带着双车在等，然后停住，因为兵阵站在原地时能互相保护，却只能整行一起推进，而全军在一旁等着。四十八局：37 和，兵团 6 胜，全军 5 胜，五胜全是对 18 兵。',
-  'The one array the horde is favoured in is the same siege with a better score, not a different game: four hundred to a thousand plies in which the army’s best plan is to wait in the palace and the horde’s is to shuffle a block one point at a time.':
-    '兵团占优的唯一阵形是同一场围城加一个更好的比分，不是另一盘棋：四百到一千步里，全军的最佳计划是待在九宫里等，兵团的最佳计划是把兵阵一格一格地挪。',
-  'What a different soldier would need': '换一种兵需要什么',
-  'A chess pawn captures diagonally, so the pawn behind covers the point its neighbour steps to and pawns advance as chains; that is why Horde works in chess. The xiangqi soldier captures the way it moves, straight ahead, so the point a soldier steps to is covered by nothing, and the river is a cliff: no cover on the way, total cover once there. No count, start rank, shape or clock changes that. What would is a soldier with cover on the way, and the candidates run from a diagonal-forward capture to a double step, two soldiers a turn, or the chess pawn outright. We stopped at the veteran because it is the only one xiangqi already has; each of the others is a new piece and a different game.':
-    '国际象棋的兵斜着吃子，所以后面的兵保护着邻兵要走到的点，兵成链推进；部落棋在国际象棋里成立就是这个原因。象棋的兵怎么走就怎么吃，直着向前，所以兵要走到的点没有任何子保护，河就是一道悬崖：路上毫无掩护，到了那边掩护全面。兵数、起始行、阵形、无吃子限制都改变不了这一点。能改变它的是一种在路上有掩护的兵，候选从斜向前吃子，到第一步走两格、每回合走两个兵，直到干脆用国际象棋的兵。我们止步于老兵，因为它是唯一象棋本来就有的；其余每一种都是新棋子，也就是另一盘棋。',
   'The rule kernel with both soldier rules and all twelve arrays, the Fairy-Stockfish stanzas, all 387 engine games, the checks behind them, and a verifier that replays every game against the rules and recomputes the tallies in half a minute, with no engine needed. If you have a soldier rule that gives the block cover on the way, that is where the next attempt starts; open an issue there and the write-up will say so.':
     '含两种兵的走法和全部十二种阵形的规则内核、Fairy-Stockfish 的变体配置、全部 387 盘引擎对局、它们背后的各项检验，以及一个不需要引擎、半分钟内就能对照规则重放每一盘并重新计算统计的校验器。如果你有一种能给兵阵路上掩护的兵的走法，下一次尝试就从那里开始；去那里提一个 issue，文章会如实写明。',
   'Check the games yourself': '亲自检验这些对局',
-  '36 STANDARD SOLDIERS, RANKS 1-4': '36 个标准兵，第 1-4 行',
-  '36 VETERANS, RANKS 2-5': '36 个老兵，第 2-5 行',
-  'MOVE 25: THE f-FILE IS OPEN': '第 25 回合：f 线已空',
-  '15 MOVES LATER: 11 SOLDIERS GONE': '15 回合后：11 个兵没了',
+  '36 STANDARD SOLDIERS, RANKS 1-4': '36 个标准兵，第 1-4 线',
+  '36 VETERANS, RANKS 2-5': '36 个老兵，第 2-5 线',
   // horde-xiangqi playthrough frames (2026-09-15).
   // horde-xiangqi playthrough frames (2026-09-15).
-  'The horde’s win from its best array, the one it wins four times in five, every ply: the march, the siege, both chariots falling, and the smother at ply 435. Replayed on this page through the rule kernel; every game in this array is in the viewer on brianhliou.com.':
-    '兵团在它最好的阵形（五局四胜的那一种）里的胜局，每一步都在：行军、围城、双车先后被吃，以及第 435 步的困毙。本页通过规则内核重放；这种阵形的每一盘棋都在 brianhliou.com 的浏览器里。',
   'Horde, 36 veterans': '兵团，36 个老兵',
   'The army': '全军',
-  'The block edges forward a rank at a time; the army has given up two soldiers and a horse and has not touched the block.':
-    '兵阵一行一行地向前挪；全军已经丢了两个兵和一个马，还没碰到兵阵。',
-  'Seven soldiers are across the river and the army is down to eight pieces: both elephants and all five soldiers gone. The chariots cannot sit beside a veteran column.':
-    '七个兵过了河，全军只剩八个子：两个象和五个兵全没了。车没法停在老兵纵列的旁边。',
   'Ten across. From here the two chariots and the general hold the palace and the block shuffles: this is the siege every veteran game above 27 soldiers reaches.':
     '十个兵过河。从这里起双车和将守住九宫，兵阵来回挪动：这就是 27 兵以上的每一局老兵对局都会走到的围城。',
   'The first chariot falls, traded for soldiers the horde could afford to lose; nineteen are left.':
@@ -2398,6 +4505,203 @@ const ZH_HANS: Record<string, string> = {
     'Fairy-Stockfish 自战，每着 100 万节点，120 步无吃子限制',
   'Red wins. Xiangqi scores the side with no legal move as the loser; Lichess Horde would call it a draw.':
     '红方胜。象棋判无子可动的一方负；Lichess 的部落棋会判和。',
+  // horde-xiangqi games card (2026-10-07).
+  'Fifty-eight of the engine games are in the viewer below: the engine against itself on the arrays at 200,000, one million and five million nodes a move, 28 games with standard soldiers and 28 with veterans; and two ladder games on the standard forward array, where 100,000 nodes met 10,000: the horde’s fastest win, mate at ply 151, and a draw on the clock. It opens on the horde’s win above. Pick any other from the list.':
+    '引擎对局中有五十八盘在下面的查看器里：引擎在各个阵形上自战，每着 200,000、一百万和五百万节点，标准兵 28 盘，老兵 28 盘；另有两盘标准兵前压阵形上的阶梯对局，100,000 节点对 10,000 节点：兵团最快的一胜，第 151 步将死，以及一盘无吃子步数到限的和棋。查看器先打开上面那盘兵团的胜局。列表里的任何一盘都可以选。',
+  'All 58 games, each replayed through the rule kernel. The arrow keys step through the one on the board.':
+    '全部 58 盘棋，每一盘都经规则内核重放。方向键可以逐步走棋盘上的这一盘。',
+  'Ladder: 100k against 10k nodes': '阶梯对局：100k 对 10k 节点',
+  'Standard soldiers, engine against itself': '标准兵，引擎自战',
+  'Veteran soldiers, engine against itself': '老兵，引擎自战',
+  '%1: %2 nodes, %3-ply clock. %4': '%1：%2 节点，%3 步无吃子限制。%4',
+  'Horde at %1, army at %2 nodes. %3': '兵团 %1，全军 %2 节点。%3',
+  '18, ranks 1-2': '18 兵，第 1-2 线',
+  '18, ranks 3-4': '18 兵，第 3-4 线',
+  '27, ranks 1-3': '27 兵，第 1-3 线',
+  '27, ranks 2-4': '27 兵，第 2-4 线',
+  '27, ranks 4-6': '27 兵，第 4-6 线',
+  '36, ranks 1-4': '36 兵，第 1-4 线',
+  '36, ranks 2-5': '36 兵，第 2-5 线',
+  '36, ranks 3-6': '36 兵，第 3-6 线',
+  '45, ranks 1-5': '45 兵，第 1-5 线',
+  '32, xiangqi’s five points': '32 兵，象棋的五个兵位',
+  '31, parent shape': '31 兵，母版形状',
+  '40, parent shape': '40 兵，母版形状',
+  'Stopped by the harness at its 1,000-ply cap. Played on from there with the clock in force, it was drawn on the clock at ply %1. Both sides %2 nodes a move, %3-ply no-capture clock.':
+    '测试框架在 1,000 步上限处停下了这盘棋。从那里在无吃子限制下续弈，于第 %1 步因无吃子步数到限成和。双方每着 %2 节点，%3 步无吃子限制。',
+  '%1 after %2 plies. Both sides %3 nodes a move, %4-ply no-capture clock.':
+    '%2 步后%1。双方每着 %3 节点，%4 步无吃子限制。',
+  '%1 after %2 plies. The horde searched %3 nodes a move, the army %4.':
+    '%2 步后%1。兵团每着搜索 %3 节点，全军 %4。',
+  'Unfinished: the harness stopped it at its %1-ply cap. Both sides %2 nodes a move, %3-ply no-capture clock.':
+    '未下完：测试框架在 %1 步上限处停下了它。双方每着 %2 节点，%3 步无吃子限制。',
+  'Fairy-Stockfish, %1 nodes': 'Fairy-Stockfish，%1 节点',
+  'Unfinished at %1 plies': '第 %1 步时未下完',
+  'Army wins by extinction': '全军以全灭取胜',
+  'Unfinished at the ply cap': '到步数上限时未下完',
+  'Draw by the clock': '无吃子步数到限，和棋',
+  'Draw by repetition': '重复局面，和棋',
+  'Horde wins by checkmate': '兵团将死取胜',
+  'Horde wins by smother': '兵团困毙取胜',
+  // horde-xiangqi merge (2026-10-07): the brianhliou.com post folded in.
+  'None of the twenty-four designs is a game, and the reason is the soldier. With xiangqi’s own soldier the army wins every start of 40 or fewer on its own side of the river, by one trick: a chariot behind the block. Give the soldier its crossed-river move from the first step and the trick is gone, but the game becomes a siege, 37 draws in 48 games. Below the river the block cannot defend itself; above it the army cannot attack it. There is no play page for Horde Xiangqi; this page holds the measurement.':
+    '二十四种设计没有一种成得了游戏，原因在兵身上。用象棋原本的兵，凡是兵团起始于自己这半边、40 兵及以下的阵形，全军每局都赢，靠的是同一个招法：一只车绕到兵阵背后。让兵从第一步起就有过河兵的走法，这个招法就没了，但棋局变成围城，48 局里 37 局和棋。过河之前，兵阵无法自保；过河之后，全军攻不动它。部落象棋没有对局页面；本页记录的是这份测量。',
+  'The rules': '规则',
+  'Horde chess is the parent: 36 pawns and no king against a normal army. The port keeps as much of xiangqi as it can. Red is the horde: soldiers only, no general, and Red moves first. Black is the standard army. Red wins by checkmate; Black wins by capturing every red piece. There is no check against the horde and no facing rule, since only one general exists.':
+    '国际象棋的部落棋（Horde）是它的母版：36 个兵、没有王，对抗正常的一方军队。这次移植尽量保留象棋本身的规则。红方是兵团：只有兵，没有帅，红方先行。黑方是标准全军。红方靠将死取胜；黑方靠吃掉红方所有子取胜。由于棋盘上只有一个将，兵团一方不存在被将，也不存在白脸将。',
+  'The side to move with no legal move loses, as in xiangqi; Lichess Horde calls it a draw, and the terminal rules below say how much that matters. Threefold repetition draws, and so does a run of 60 or 120 plies without a capture. Standard soldiers move as in xiangqi: one point forward, sideways only after crossing the river, never backward. Veteran soldiers have the crossed soldier’s move from their first step. The army’s five soldiers stay standard either way.':
+    '轮到行棋而无合法着法的一方判负，与象棋相同；Lichess 的部落棋判为和棋，下面的终局规则一节会说明这有多大影响。三次重复局面判和；连续 60 或 120 步无吃子也判和。标准兵走法与象棋相同：向前一格，过河后才能横走，永不后退。老兵从第一步起就有过河兵的走法。无论哪种设定，全军一方的五个兵都是标准兵。',
+  'The design space': '设计空间',
+  'Five dials. A design is a soldier rule and a start array, and twenty-four were played.':
+    '五个旋钮。一种设计由一种兵的走法和一种初始阵形构成，我们下了二十四种。',
+  Dial: '旋钮',
+  'Settings tried': '试过的设定',
+  'The soldier’s move': '兵的走法',
+  'Standard; veteran (sideways from move one)': '标准；老兵（第一步即可横走）',
+  'How many soldiers': '兵的数量',
+  'Where the block starts': '兵阵起始位置',
+  'At the back (rank 1 up), forward (rank 2 or 3 up), across the river (front rank on rank 6)':
+    '靠底（第 1 线往上）、前压（第 2 或第 3 线往上）、过河（前排位于第 6 线）',
+  'The block’s shape': '兵阵的形状',
+  'Full rows; the parent’s shape (rows plus paired outposts); xiangqi’s five soldier points':
+    '整排；母版的形状（成排再加成对的前哨）；象棋的五个兵位',
+  'Terminal rules': '终局规则',
+  'No-capture clock of 60 or 120 plies; stalemate as a loss (xiangqi) or a draw (the parent)':
+    '60 或 120 步的无吃子步数限制；困毙判负（象棋）或判和（母版）',
+  'Every design ran on stock Fairy-Stockfish with a short configuration and no engine code, refereed by a rule kernel that agreed with the engine’s move generator before any game was read (the checks are under “How we checked it”). Each array was played four times, the engine against itself at four search budgets with no randomness, and once more at a million nodes a move. The engine cannot use its xiangqi neural net without a red general on the board, so it plays on classical evaluation alone. It plays the game anyway.':
+    '每种设计都跑在原版 Fairy-Stockfish 上，只用一小段配置，不改引擎代码，由一个规则内核担任裁判，并在读取任何对局之前就与引擎的着法生成器逐一核对一致（检查见“我们是怎么核验的”一节）。每种阵形下四局，引擎在四档搜索预算下自我对弈，无随机成分；再以每着一百万节点下一局。棋盘上没有红帅，引擎无法使用它的象棋神经网络，因此只靠古典评估下棋。它照样把棋下完了。',
+  'The twelve start arrays, in the order of the tables below. Red is the horde, Black the standard army; each array was played with both soldier rules.':
+    '十二种初始阵形，按下方表格的顺序排列。红方是兵团，黑方是标准全军；每种阵形都用两种兵的走法各下过。',
+  'Nine of the twelve arrays go to the army four games out of four, by one mechanism. A standard soldier covers only the point in front of it, so the horde is nine columns rather than a wall. The moment a column empties, a chariot drops through it to the first rank and eats the block from behind at a soldier a move, and nothing in the horde attacks backward. Shape changes nothing: an outpost is a target, not cover.':
+    '十二种阵形里有九种四局全归全军，靠的是同一个机制。标准兵只控制它正前方那一格，所以兵团是九列纵队，而不是一道墙。某一列一旦走空，车就从这一列直落底线，一着吃一个兵地从背后蚕食兵阵，而兵团没有任何子力能向后攻击。形状不起作用：前哨是靶子，不是掩护。',
+  'The million-node game from the parent’s array, every ply. The chariot drops at ply 50; step on from there to watch the block go from behind. Replayed on this page through the rule kernel.':
+    '原版阵形的一百万节点对局，每一步都在。车在第 50 步落到底线；从那里往后一步步看兵阵如何从背后被吃掉。本页通过规则内核重放。',
+  'Fairy-Stockfish against itself, a million nodes a move, 60-ply clock':
+    'Fairy-Stockfish 自战，每着 100 万节点，60 步无吃子限制',
+  'Black wins: the last soldier is gone.': '黑方胜：最后一个兵也没了。',
+  'The other three arrays are one exception: enough soldiers get across before the chariot is done. 45 on ranks 1 to 5 is a five-deep block, and its four games split two army wins, one horde mate and one draw. The two arrays that start across the river begin in contact with the army’s soldiers. The 27 still loses; the 36 is a coin flip that skips the march and previews the veteran game.':
+    '另外三种阵形是同一个例外：在车做完这件事之前，有足够多的兵过了河。第 1 至 5 线的 45 兵是五层深的兵阵，四局结果是全军两胜、兵团将死一局、和棋一局。两种从过河处起始的阵形一开局就与全军的兵短兵相接。27 兵仍然要输；36 兵则是五五开，它跳过了行军阶段，预演了老兵版的棋局。',
+  Soldiers: '兵数',
+  Start: '起始',
+  Army: '全军',
+  Horde: '兵团',
+  '1M game': '百万节点局',
+  Plies: '步数',
+  'Ranks 1-2': '第 1-2 线',
+  'Army, extinction': '全军，全灭',
+  'Ranks 3-4': '第 3-4 线',
+  'Ranks 1-3': '第 1-3 线',
+  'Ranks 2-4': '第 2-4 线',
+  'Ranks 4-6': '第 4-6 线',
+  'Ranks 1-4': '第 1-4 线',
+  'Ranks 2-5': '第 2-5 线',
+  'Ranks 3-6': '第 3-6 线',
+  'Horde, mate': '兵团，将死',
+  'Ranks 1-5': '第 1-5 线',
+  'Xiangqi’s five points': '象棋的五个兵位',
+  'Parent shape': '母版形状',
+  'Army, Horde and Draw count four games per array at 150,000, 200,000, 300,000 and 500,000 nodes a move, 120-ply clock, every move the engine’s first choice. Then the single game at a million nodes with a 60-ply clock, and its length. Four arrays were played once more at five million nodes: the army won the 36 on ranks 1 to 4 in 156 plies, the 36 on ranks 2 to 5 in 146 and the 32 in 106, and the 36 across the river drew by repetition at 104.':
+    '全军、兵团、和棋三栏统计每种阵形的四局，每着 150,000、200,000、300,000 和 500,000 节点，120 步无吃子限制，每着都取引擎首选。之后是每着一百万节点、60 步限制下的单局及其步数。有四种阵形在每着五百万节点下又下了一局：全军在 156 步赢下第 1 至 4 线的 36 兵，在 146 步赢下第 2 至 5 线的 36 兵，在 106 步赢下 32 兵；过河起始的 36 兵在第 104 步因重复局面和棋。',
+  'The chariot’s road exists because a standard soldier attacks nothing beside it, and xiangqi already has a soldier that does: the crossed soldier, which moves and captures one point forward or sideways. Veteran soldiers are a horde that starts promoted. Every horde soldier has that move from its first step, nothing else changes, and a player learns nothing new.':
+    '车之所以有路可走，是因为标准兵不攻击身旁任何一格，而象棋里本来就有一种能做到的兵：过河兵，可向前或横向一格行走与吃子。老兵就是一开始就已经升变的兵团。兵团的每个兵从第一步起就有这种走法，其余一切不变，玩家不需要学任何新东西。',
+  'This closes the road. A veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side, and between equals the game becomes a siege: 48 games, 37 draws. The army wins only against 18 soldiers, and from 27 up it never wins.':
+    '这条路被堵死了。老兵纵队会攻击身旁各格，车没法白站在它旁边。兵团成了真正的一方，而在实力相当的双方之间，棋局变成围城：48 局，37 和。全军只赢得了对 18 兵的局，从 27 兵往上它一局不胜。',
+  'Army lost': '全军损失',
+  'Draw, clock': '和棋，步数限制',
+  'Horde, smother': '兵团，困毙',
+  'Draw, repetition': '和棋，重复局面',
+  'Four games per array at the same four budgets and the 120-ply clock, then the single game at a million nodes; Army lost counts the army’s pieces lost in that game. *Three million-node games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; no capture followed, and the ply shown is where the clock ended them. Each ended with nine or ten soldiers against a general and both chariots, with an elephant or an advisor beside them in two.':
+    '每种阵形在同样的四档预算、120 步限制下各下四局，然后是一百万节点下的单局；全军损失一栏统计全军在那一局里损失的子力。*有三局一百万节点对局撞上了测试框架的 1,000 步上限，之后从该局面继续下，步数限制照常生效；之后未再出现吃子，表中所示步数即为步数限制终止之处。三局结束时都是九或十个兵对将加双车，其中两局还多一个象或一个士。',
+  '**The ending.** The horde marches, takes the army’s cannons and elephants on the way in, and arrives at the palace to find a general with two chariots waiting. From there the soldiers cannot force their way past the chariots, and the chariots cannot eat a block of soldiers that guard each other. Start rank and shape decide how much of the army the horde takes on the way in, and nothing else. The parent’s 31 shows the other face of the same rule: its four games drew at 155 to 245 plies with never more than two soldiers across the river, because a block that has not moved cannot be attacked and a block that moves loses the soldier that moved.':
+    '**终局形态。**兵团行军推进，路上吃掉全军的炮和相，抵达九宫时发现将和两只车在那里等着。到了这一步，兵冲不过车，车也吃不动互相保护的兵阵。起始横线和形状只决定兵团在路上能吃掉全军多少子，别无其他。母版的 31 兵展示了同一条规则的另一面：四局在 155 至 245 步和棋，过河的兵从未超过两个，因为没动过的兵阵无法被攻击，而一动就要丢掉动过的那个兵。',
+  'The ending, here from the 40-soldier array at a million nodes a move: twelve soldiers against a general, an advisor and two chariots at ply 754. The soldiers cannot force a way past the chariots, and the chariots take a soldier only when one steps out of the block: two in the next 246 plies, at 822 and 896.':
+    '终局形态，这里取自 40 兵阵形、每着一百万节点的对局：第 754 步时，十二个兵对将、士和双车。兵冲不过车，而车只有在某个兵走出兵阵时才吃得到它：接下来 246 步里只吃了两个，分别在第 822 和 896 步。',
+  'We took the 40-soldier ending at ply 754 and let the engine play it on for 200 more plies at five million nodes a side: one capture, and the engine’s own evaluation of the horde’s advantage slid from 2.3 pawns to 0.7. At a million nodes the army had managed two captures in the same stretch, then none in the next 120, and the clock ended it. Two soldiers in 262 plies is not winning an ending.':
+    '我们把 40 兵那局在第 754 步的残局拿出来，让引擎双方各以每着五百万节点再下 200 步：只吃了一个子，而引擎自己对兵团优势的评估值从 2.3 兵滑到 0.7。在一百万节点下，全军在同样这段里吃了两个子，接下来的 120 步里一个也没吃，步数限制结束了对局。262 步吃两个兵，算不上赢下残局。',
+  '**The win.** The 36 that starts a rank forward took both chariots and smothered the bare general at ply 435: no move, no check, which xiangqi scores as a loss. It is the one array where the horde is the favourite, with three wins in its four games and the million-node game too: a rank closer to the river, it arrives with more of the army already gone and enough soldiers left to trade for the chariots. The horde’s other wins are the same finish, all past ply 390, and four of its six are the smother.':
+    '**取胜的那一局。**前压一线的 36 兵吃掉了两只车，并在第 435 步把光将困毙：无着可走又未被将，象棋判负。这是兵团唯一占优的阵形，四局赢三局，一百万节点那局也赢了：离河近一线，抵达时全军已经损失更多，而剩下的兵也足够换掉两只车。兵团其余的胜局都是同样的收束，全部在第 390 步之后，六胜里有四胜是困毙。',
+  'The horde’s win, every ply: the march, the siege, the chariots falling at plies 267 and 431, and the smother at ply 435. Replayed on this page through the rule kernel.':
+    '兵团的胜局，每一步都在：行军、围城、第 267 和第 431 步双车先后被吃，以及第 435 步的困毙。本页通过规则内核重放。',
+  'The terminal rules': '终局规则',
+  'Three ways a game here stops without a winner, and they are not the same thing. **Repetition**: the same position with the same side to move three times; a draw. **The clock**: a run of plies with no capture, 60 or 120 of them; a draw, and a soldier stepping forward does not reset it. **The cap**: the harness stopped the game at 400, 1,000 or 2,000 plies. That is not a rule of the game, so a capped game is unfinished, not drawn. Three million-node veteran games hit the 1,000 cap and were played on until the clock ended them, and no four-budget game reached 2,000, so every result in the tables is one of the first two.':
+    '这里有三种让棋局无胜负而终止的方式，它们并不是一回事。**重复局面**：同一局面、同一方行棋出现三次；判和。**步数限制**：连续若干步无吃子，60 步或 120 步；判和，而且兵向前一步并不重置计数。**上限**：测试框架在 400、1,000 或 2,000 步处终止对局。这不是棋规，所以被截断的对局是未下完，而不是和棋。有三局一百万节点的老兵对局撞上了 1,000 步上限，随后继续下到步数限制终止；而四档预算的对局没有一局到过 2,000 步，因此表格里的每个结果都属于前两种。',
+  '**The clock.** Xiangqi’s no-capture rule is 60 plies. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
+    '**步数限制。**象棋的无吃子规则是 60 步。用标准兵时，48 局里只触发过一次。用老兵时它是常见的收束：37 和里有 30 局如此，另外七局是重复局面。设成 60 步会在行军还在进行时截断还活着的棋局，所以老兵对局和每一组四局样本都用 120 步。步数限制同时也是引擎遵循的规则，所以 60 步限制下的一局和 120 步限制下的一局，从第 2 步起就是两局不同的棋，而不是同一局在不同处被截断。',
+  '**Stalemate.** Under the parent’s rule a general with no move and no check is a draw. Re-scoring every game in the lab under that rule: five of the horde’s seven equal-strength wins with veterans become draws, and one of its four with standard soldiers; against a random army, 20 of its 35 wins with standard soldiers and 16 of its 38 with veterans; and five of its ten wins in the veteran budget ladder. The smother is the horde’s mate about half the time, and the parent’s rule would take it away.':
+    '**困毙。**按母版的规则，将无着可走又未被将判和棋。把实验室里的每局都按这条规则重新判定：老兵、实力相当条件下兵团的七胜里有五胜变成和棋，标准兵的四胜里有一胜变成和棋；对随机走子的全军，标准兵下兵团的 35 胜里有 20 胜、老兵下 38 胜里有 16 胜变成和棋；老兵预算阶梯测试的十胜里有五胜同样如此。困毙大约占了兵团胜法的一半，而母版的规则会把它拿掉。',
+  'Why the soldier fails, and what a different soldier would need':
+    '兵为什么不行，换一种兵又需要什么',
+  'The game has two phases, and xiangqi’s soldier fails in each of them differently.':
+    '棋局分两个阶段，象棋的兵在每个阶段都以不同方式失灵。',
+  '**Below the river, the block cannot defend itself.** A standard soldier attacks only the point ahead of it. So the horde is nine columns, not a wall: a chariot beside a column, or behind it, is untouchable, and any file that empties is a road to the back rank. Every start of 40 or fewer on the horde’s own side is decided here, by that one chariot, four games in four. At 45 the block is deep enough to outlast it some of the time, and that array splits.':
+    '**过河之前，兵阵无法自保。**标准兵只攻击正前方一格。于是兵团是九列纵队，而不是一道墙：车站在某列旁边或它后面都碰不到，任何走空的纵线都是通往底线的大路。兵团在自己这半边、40 兵及以下的所有阵形，都在这一阶段被这一只车判定，四局全输。到 45 兵时，兵阵够厚，有时能熬过去，那一种阵形于是结果分化。',
+  '**Above the river, the block cannot move.** A crossed soldier (or a veteran) attacks sideways too, so the block guards itself where it stands. But it protects only the points its soldiers could step to, never the point ahead of a neighbour. The soldier that steps forward lands on a point nobody covers and is a free capture until a neighbour steps up beside it. So the block can advance only as a whole rank, nine moves per rank, while the army waits, and any soldier that moves early is picked off. The army, for its part, cannot attack a block that has not moved. Nine of the twelve veteran arrays end there in every game or all but one: a general and two chariots in the palace, a block of soldiers outside it, and nothing either side can do.':
+    '**过河之后，兵阵动不了。**过河兵（或老兵）也能横向攻击，所以兵阵原地就能互相保护。但它只保护自家兵能走到的格子，绝不保护邻兵正前方那一格。向前一步的兵落在没人控制的格子上，在邻兵跟上来并列之前就是白送的一子。于是兵阵只能整排整排地推进，每推一排要走九着，而全军只需等待；任何提前走动的兵都会被点掉。而全军一方也攻不动一个没动过的兵阵。十二种老兵阵形里有九种就在这里终止，或全部对局如此，或只有一局例外：将和两只车守在九宫，一堆兵围在外面，双方都无事可做。',
+  'The same step on three boards: the middle piece has just moved one point forward, and the green rings are the points its side now protects. A chess pawn captures diagonally, so the pawn on d4 covers e5 and the pawn that arrived there is safe from the rook: pawns advance as chains. A xiangqi soldier captures the way it moves, straight ahead, so d4 and f4 cover d5 and f5 and nothing covers e5; the chariot takes the soldier for free. Veteran soldiers (right) attack sideways too, which makes the block guard itself where it stands, and still nothing covers the point a soldier steps to. The horde can hold its ground and cannot leave it.':
+    '同一步棋，三张棋盘：中间那个子刚向前走了一格，绿圈是它这一方此刻保护的点。国际象棋的兵斜着吃子，所以 d4 的兵控制着 e5，走到那里的兵车吃不得：兵成链推进。象棋的兵怎么走就怎么吃，直着向前，所以 d4 和 f4 控制 d5 和 f5，没有任何子控制 e5；车白吃这个兵。老兵（右）也能横向攻击，所以兵阵原地就能互相保护，但兵要走到的那一点仍然没有任何子控制。兵团守得住阵地，却离不开它。',
+  'A chess pawn is built differently. It captures diagonally, so the pawn on d4 already covers e5 before the e-pawn steps there: pawns advance as chains, one at a time, each landing protected, and a chain can be undermined from the base. That is why Horde works in chess and why chess players never have to think about it. On the xiangqi board the river is a cliff: no cover on the way, total cover once there, and no setting of count, start rank, shape or clock changes that. Those are the dials we turned. The one we left alone, past the veteran, is the soldier itself.':
+    '国际象棋的兵构造不同。它斜吃，所以 d4 的兵在 e 兵走到 e5 之前就已经控制了 e5：兵是成链推进的，一次走一个，每一步落点都有保护，而兵链可以从底部瓦解。这就是部落棋在国际象棋里成立、而国际象棋棋手根本不必考虑这件事的原因。在象棋盘上，河是一道悬崖：过去的路上没有掩护，一旦过去又是全覆盖，而数量、起始横线、形状、步数限制怎么调都改变不了这一点。这些正是我们转过的旋钮。除了老兵之外，我们没有碰的那个旋钮，就是兵本身。',
+  'That is where the next attempt starts. The property the horde is missing is cover on the way: a soldier that protects the point its neighbour is about to step to, so the block can advance one piece at a time instead of one rank at a time. Anything that supplies it is a candidate, from small to large: a soldier that captures diagonally forward but still moves straight, a double step on the first move, two soldiers moving per turn as in the old Five Tigers handicap, a second promotion at the far rank, or the chess pawn outright, which turns this into Horde chess on a bigger board. We stopped at the veteran because it is the only one of these xiangqi already has; each of the others is a new piece, and a new piece is a different game. The rules are data in the lab, so any of them is one line and an afternoon of engine time, and the tables here are the baseline to beat.':
+    '下一次尝试就从那里开始。兵团缺的那条性质是路上的掩护：一个能保护邻兵即将踏上的那一格的兵，好让兵阵一次推进一个子，而不是一次推进一排。任何能提供这条性质的设计都是候选，改动从小到大不等：斜前吃子但仍直走的兵、第一步可走两格、像旧时“五虎”让子那样一回合走两个兵、到底线后再升一次变，或者干脆直接用国际象棋的兵，那就把这变成了大棋盘上的部落国际象棋。我们止步于老兵，因为它是这些方案里唯一象棋本来就有的；其余每一个都是新子力，而新子力就是另一种游戏。规则在实验室里就是数据，所以其中任何一个都只是一行配置加一下午的引擎时间，而这里的表格就是需要超越的基线。',
+  'Run it yourself': '自己跑一遍',
+  'The whole variant is a stanza in Fairy-Stockfish’s `variants.ini`. This is the parent’s array with veteran soldiers and the 120-ply clock (`nMoveRule` counts moves, so 60 is 120 plies); for standard soldiers drop the `customPiece1` line and write `P` for `V` in the start position.':
+    '整个变体就是 Fairy-Stockfish 的 `variants.ini` 里的一段。下面是母版阵形配老兵与 120 步限制（`nMoveRule` 按回合计，所以 60 就是 120 步）；要用标准兵，删掉 `customPiece1` 那一行，并在初始局面里把 `V` 写成 `P`。',
+  'Two lines matter and are easy to leave out. `chasingRule = none` is mandatory: the engine’s chase detector reads the missing general’s square on a kingless side. `flyingGeneral = false` changes nothing and documents a fact: the engine keys the facing rule on its king piece and silently switches it off when one side has none.':
+    '有两行很关键、又很容易漏掉。`chasingRule = none` 是必需的：在无将的一方，引擎的捉子检测会去读那个不存在的将的位置。`flyingGeneral = false` 其实不改变任何东西，只是记录一个事实：引擎把白脸将规则挂在它的王类子力上，一方没有王时会静默关掉它。',
+  '**The engine plays these rules.** A rule kernel (the same one that ran Atomic Xiangqi, with hooks for a side with no general, a win by extinction, and the veteran soldier) referees every game: the engine proposes a move, the kernel validates and applies it, and an engine quietly playing different rules aborts the run instead of producing a record of a different game. Before any game was read, the two had to agree on every legal move: perft to depth 3 from each array, nine hand-built positions compared as exact move sets, and 300 positions from random play. Zero disagreements, both soldier rules, all twelve arrays.':
+    '**引擎确实在按这些规则下棋。**一个规则内核（就是跑原子象棋那一个，加上了无将一方、全灭取胜和老兵的接口）为每一局担任裁判：引擎提出一着，内核校验并落子，如果引擎悄悄按别的规则下棋，运行会中止，而不是产出另一种游戏的记录。在读取任何对局之前，两者必须在每一个合法着法上一致：从每个阵形做深度 3 的 perft、九个手工构造的局面按精确着法集合比对、以及随机走子产生的 300 个局面。零分歧，两种兵的走法、全部十二种阵形。',
+  '**The engine understands the game.** At 100,000 nodes it beat a random mover 70-0 with standard soldiers and 78 of 80 with veterans. Ten times the search budget beat a tenth of it 17-1-2 on the standard forward array and 11-0-9 on veterans. One footnote: on the parent’s array with standard soldiers, ten times the budget scored only 55%, because every decided game went to the army whichever budget held it; the seat was the result, not the search.':
+    '**引擎懂这个游戏。**在 100,000 节点下，它用标准兵对随机走子方 70-0，用老兵 80 局胜 78 局。十倍搜索预算对十分之一预算，在标准前压阵形上 17-1-2，在老兵上 11-0-9。一条脚注：在母版阵形配标准兵时，十倍预算只拿到 55%，因为无论哪一档预算坐哪一边，每一局有胜负的棋都归全军；决定结果的是座位，不是搜索。',
+  '**How deep the search is.** Node budgets, not time, so nothing depends on the machine: 200,000, 1 million and 5 million nodes a move reach about depth 12, 15 to 20, and 24 to 33 on these positions. Play is not saturated at these budgets: the across-the-river array with standard soldiers went draw, army, horde, horde, army, horde, draw across seven budgets. The standard-soldier verdict holds at every budget tried, by the same mechanism, and that claim is safe. The siege is the position class search is worst at: a hundred-ply plan is invisible at depth 20, and classical evaluation has no idea what the ending is worth (it scored the fortress at +2.3 for the horde while the army was eroding it). So the draw claim is weaker than the loss claim, and a human with a plan might do better on either side than the engine did.':
+    '**搜索有多深。**用节点预算而不是时间，所以结果不依赖机器：每着 200,000、一百万和五百万节点，在这些局面上大致达到深度 12、15 至 20、24 至 33。在这些预算下棋力还没饱和：标准兵的过河阵形，七档预算跑出来依次是和、全军、兵团、兵团、全军、兵团、和。标准兵的结论在试过的每一档预算下都成立，机制一致，这个论断是稳的。围城是搜索最不擅长的局面类型：一百步的计划在深度 20 下完全看不见，而古典评估根本不知道这种残局值多少（在全军正在蚕食兵阵时，它给这个堡垒打了兵团 +2.3）。所以和棋的论断比负局的论断要弱，有计划的人类在任何一边都可能下得比引擎好。',
+  '**One game is one sample.** Every array was played four times, at 150,000, 200,000, 300,000 and 500,000 nodes a move, every move the engine’s first choice and no random openings, so the counts in the tables are a rate and the million-node game is one of five, not the verdict. A deterministic engine replays the same game from the same start, so the budgets are what make the four games different, and the script refuses an array where two of them came out identical (none did). Where an array splits, the split is the result. One more caveat on the veteran numbers: the engine sees the veteran as a custom piece with a value estimated from its mobility, not tuned, so its judgement of a soldier-for-piece trade is rougher than for the standard soldier. The fortress it cannot break at five million nodes is real; the material it gave up on the way in may not be best play.':
+    '**一局只是一个样本。**每种阵形都下了四局，每着 150,000、200,000、300,000 和 500,000 节点，每着都取引擎首选，没有随机开局，所以表格里的计数是一个比率，而一百万节点对局是五局之一，不是结论。确定性的引擎从同一起始会重现同一局棋，所以正是预算让这四局不同；脚本会拒收其中两局完全相同的阵形（没有出现过）。结果分化时，分化本身就是结果。关于老兵数据还有一条说明：引擎把老兵当作自定义子力，其价值是按机动性估出来的，未经调优，所以它对“一兵换一子”的判断比对标准兵更粗糙。它在五百万节点下都攻不破的那个堡垒是真实的；而它推进路上舍掉的子力，可能并非最佳着法。',
+  'A variant is a game, for this series, if it clears three bars under measured play: it is decided between good players rather than drawn by default; neither side wins from the start; and both seats have something to do. Horde Xiangqi clears none of them in any design tried.':
+    '对这个系列而言，一个变体要算游戏，需要在可测量的对弈中越过三道门槛：在高手之间有胜负，而不是默认和棋；任何一方都不能从开局就必胜；两个座位都有事可做。部落象棋在试过的任何设计里都一道也没越过。',
+  '**Standard soldiers:** the army wins from every start of 40 or fewer on its own side of the river, 36 games out of 36, by one trick. Decided, but from move one. At 45, or starting across the river, the array is a coin flip settled by the opening exchanges.':
+    '**标准兵：**兵团起始于自己这半边、40 兵及以下的所有阵形，全军全胜，36 局全胜，靠的是同一个招法。有胜负，但从第一着就定了。到 45 兵，或从过河处起始，阵形就变成由开局几手交换决定的五五开。',
+  '**Veteran soldiers:** a siege that two good players draw 37 times in 48, in games of 137 to 1,098 plies. The horde wins six, four of them by smother, and the army wins five, all against 18 soldiers. Not decided, and neither seat has a plan: the army’s best play is to sit in the palace and wait, the horde’s is to shuffle a block one point at a time. The one array the horde is favoured in is the same siege with a better score, not a different game.':
+    '**老兵：**两位高手之间是一场围城，48 局里 37 局和棋，每局 137 至 1,098 步。兵团胜六局，其中四局靠困毙；全军胜五局，全都是对 18 兵。没有胜负，而且两个座位都没有计划：全军的最佳下法是待在九宫里等，兵团的最佳下法是把兵阵一格一格地挪。兵团唯一占优的阵形只是同一场围城分数更好一点，不是另一种游戏。',
+  '**Against weak play** the horde is dangerous: at 100,000 nodes it beat a random army 35 times in 35, 20 of them by smother, and people are weaker than a million-node search. That makes it a trap, not a game.':
+    '**对付弱手时**兵团很危险：在 100,000 节点下它对随机走子的全军 35 局全胜，其中 20 局靠困毙，而人比一百万节点的搜索要弱。这让它成了一个陷阱，而不是一个游戏。',
+  'What would reopen it: a human result, a soldier rule that gives the block cover on the way (the candidates are listed above), or a chariot-fall rate well above the six in 48 measured here. Nothing so far points that way for xiangqi’s own soldier. The soldier is the design space, the river is a cliff in it, and the next design has to change the soldier.':
+    '什么能让它重新打开：人类对局的结果、一种能给兵阵提供路上掩护的兵的规则（候选已列在上面），或者车被吃的比率远高于这里测到的 48 局中 6 局。就象棋原本的兵而言，目前没有任何迹象指向那个方向。兵就是设计空间，河是其中的一道悬崖，下一个设计必须改兵。',
+  '**Prior art.** We looked in Fairy-Stockfish’s variant file, PyChess, Lichess, Chess.com’s official list, PlayStrategy, Ludii, both Wikipedias’ xiangqi-variant pages, chessvariants.com’s 9x10 index, a Zhihu list of 231 folk xiangqi variants and the nine soldier-named variants with rules on Baidu Baike, and found no horde among them. Tieba’s folk boards and Chess.com’s user variants we could not read, so this is a thorough negative, not an exhaustive one. Xiangqi’s own lopsided games (Manchu chess, Five Tigers, the nine-piece handicap) run the other way, taking pieces from one side, soldiers first. Horde chess descends from BrainKing’s Horde Chess (2002) and Lord Dunsany’s “Pieces against Pawns” (1942), and Lichess settled its rules in [scalachess](https://github.com/lichess-org/scalachess/commit/79cfa70) in 2015.':
+    '**已有工作检索。**我们查过 Fairy-Stockfish 的变体文件、PyChess、Lichess、Chess.com 的官方列表、PlayStrategy、Ludii、中英文维基百科的象棋变体条目、chessvariants.com 的 9x10 索引、知乎上一份 231 种民间象棋变体的清单，以及百度百科上九种带“兵”字名称且有规则的变体，没有找到部落式的变体。贴吧的民间棋盘和 Chess.com 的用户变体我们看不到，所以这是一次尽力的否证，而非穷尽的否证。象棋本身的不对称让子棋（满洲棋、五虎、九子让先）走的是反方向，是从一方拿掉子力，先拿兵。国际象棋的部落棋源自 BrainKing 的 Horde Chess（2002）和 Lord Dunsany 的“Pieces against Pawns”（1942），Lichess 在 2015 年于 [scalachess](https://github.com/lichess-org/scalachess/commit/79cfa70) 定下了它的规则。',
+  'The engine is [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish); the harness that produced the games, with the engine gate and the commands, is the [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab).':
+    '引擎是 [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish)；产出这些对局的测试框架，连同引擎校验关卡和相关命令，是[变体实验室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)。',
+  '18, RANKS 1-2': '18 兵，第 1-2 线',
+  '18, RANKS 3-4': '18 兵，第 3-4 线',
+  '27, RANKS 1-3': '27 兵，第 1-3 线',
+  '27, RANKS 2-4': '27 兵，第 2-4 线',
+  '27, RANKS 4-6': '27 兵，第 4-6 线',
+  '36, RANKS 1-4': '36 兵，第 1-4 线',
+  '36, RANKS 2-5': '36 兵，第 2-5 线',
+  '36, RANKS 3-6': '36 兵，第 3-6 线',
+  '45, RANKS 1-5': '45 兵，第 1-5 线',
+  '32, XIANGQI’S FIVE POINTS': '32 兵，象棋的五个兵位',
+  '31, PARENT SHAPE': '31 兵，母版形状',
+  '40, PARENT SHAPE': '40 兵，母版形状',
+  'PLY 754: 12 SOLDIERS': '第 754 步：12 个兵',
+  'PLY 1,000: 10 SOLDIERS': '第 1,000 步：10 个兵',
+  'CHESS: AFTER e4-e5, d4 COVERS e5': '国际象棋：e4-e5 之后，d4 控制 e5',
+  'SOLDIERS: AFTER e4-e5, NOTHING COVERS e5': '兵：e4-e5 之后，无子控制 e5',
+  'VETERANS: STILL NOTHING COVERS e5': '老兵：仍然无子控制 e5',
+  'Horde, 36 soldiers': '兵团，36 个兵',
+  'The parent’s array: 36 standard soldiers on ranks 1 to 4, no general, Red to move. Black is the whole army.':
+    '原版阵形：36 个标准兵位于第 1 至 4 线，没有帅，红方先行。黑方是完整的全军。',
+  'The chariot drops to the first rank through the f-file, which the horde emptied by advancing. No soldier attacks backward, so nothing can touch it there.':
+    '车顺着 f 线落到底线，这一列是兵团推进时自己走空的。没有兵能向后攻击，所以它停在那里谁也碰不到。',
+  'It takes a soldier from behind and goes on at about one a move: fifteen moves after the drop, 11 soldiers are gone for a horse and two of the army’s soldiers.':
+    '它从背后吃掉一个兵，然后大约一着吃一个地继续下去：落底线十五回合后，十一个兵没了，换来的是全军的一个马和两个兵。',
+  'The last soldier falls. The whole horde cost the army four soldiers and two horses.':
+    '最后一个兵倒下。整个兵团只让全军付出了四个兵和两个马。',
+  'The start: 36 veterans on ranks 2 to 5, no general, Red to move. Black is the whole army.':
+    '开局：36 个老兵位于第 2 至 5 线，没有帅，红方先行。黑方是完整的全军。',
+  'The block edges forward a rank at a time; four soldiers have gone for two of the army’s soldiers and a horse.':
+    '兵阵一行一行地向前挪；四个兵已经没了，换掉了全军两个兵和一个马。',
+  'Seven soldiers are across the river and the army is down to eight pieces: both elephants, a horse and all five soldiers gone. The chariots cannot sit beside a veteran column.':
+    '七个兵过了河，全军只剩八个子：两个象、一个马和五个兵全没了。车没法停在老兵纵列的旁边。',
   // -- Atomic Xiangqi (rules page + launch note), machine-drafted 2026-09-17 --
   // Diagram labels (localizeSvgMarkup swaps <text> nodes through this dictionary).
   'CHARIOT TAKES THE HORSE': '车吃马',
@@ -2437,8 +4741,6 @@ const ZH_HANS: Record<string, string> = {
     '炮吃子不爆炸。只移除炮和它的目标：目标旁边的棋子不受影响，炮跳过的炮架也不受影响。炮击是远程的；爆炸只发生在接触时。',
   'Red’s cannon fires over its soldier and takes the horse. The cannon and the horse go; the chariot and cannon beside the horse stay, and so does the soldier that screened the shot.':
     '红炮隔着己方的兵打马。炮和马消失；马旁边的车和炮留下，充当炮架的兵也留下。',
-  'This is the one change from a straight port, and it is there because the straight port has a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent. A quiet shot leaves the block standing but harmless, and the check rule below makes the hop that remains a loss for the side making it. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.':
-    '这是相对于直接移植的唯一改动，原因是直接移植的版本存在一种最早第三回合就能出现、防守方永远无法拒绝的重复局面和棋。一辆车站在士所在的线上，威胁把将帅炸掉。唯一的防守是用炮垫挡；而如果炮也会爆炸，这一垫挡同时就是隔着车反打进攻方自己的士，于是车只好换到另一条士线上，炮跟过去，局面重复。在引擎对局中，少了一辆车的一方靠这一招就能顶住比自己强得多的对手。炮击不爆炸，垫挡仍然成立却不构成威胁，下面的将军规则又让剩下的那种来回跳成为跳的一方的输棋。炮由此变成一枚用来兑换和垫挡的棋子，而不再是扫清一条横线的棋子；爆炸的其余部分全部不变。',
   'A threat to blow up the general is check': '炸掉将帅的威胁算作将军',
   'Xiangqi’s rules about the general stand. A move may not leave your general where a piece attacks it, and the two generals may not face each other down an open file. Checkmate wins. A player with no legal move loses.':
     '象棋关于将帅的规则照旧。走棋不能让自己的将帅留在被攻击的位置，双方将帅不能在无子相隔的同一条线上照面。将死获胜。无子可动的一方负。',
@@ -2454,11 +4756,17 @@ const ZH_HANS: Record<string, string> = {
     '本页背后的引擎对局之一：一千万节点的 Fairy-Stockfish 执红，对阵一百万节点的自己。第 6 回合红方已多出一个半兵，之后局面一直接近，直到黑方第 21 回合的 Hxf9：马吃 f9 的炮，而黑方自己的士就在旁边的 f10。爆炸带走了士，九宫白白少了一子，从此再没恢复：第 30 回合的 Cb9 让将失去了掩护，第 38 回合红车吃掉 d8 的炮，紧挨着 d9 的将。爆炸带走了将，连同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
     '原子象棋：一盘由九宫内自炸决定的引擎对局',
-  'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the design post has the measurements behind the cannon rule; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
-    '和八个强度档位的引擎对弈，或者用邀请链接约朋友。[发布说明](/blog/atomic-xiangqi-build)讲的是第一盘棋的胜负由什么决定；设计文章有炮规则背后的测量数据；研究里有全部十二盘引擎对局，每次爆炸都有标记，每盘的决定性一步都有注解。',
-  'Play Atomic Xiangqi': '下原子象棋',
-  'The design post': '设计文章',
   'The twelve engine games': '十二盘引擎对局',
+  // Retirement notes (2026-10-11), machine translation of English not yet signed off.
+  'Atomic Xiangqi is no longer open for new games; finished games still replay. The [launch note](/blog/atomic-xiangqi-build) is what decided a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
+    '原子象棋已不再开放新对局，已结束的对局仍可回放。[发布说明](/blog/atomic-xiangqi-build)讲的是第一盘棋的胜负由什么决定；研究里有全部十二盘引擎对局，每次爆炸都有标记，每盘的决定性一步都有注解。',
+  'Atomic Xiangqi was retired on 2026-10-11: it no longer takes new games, and finished games still replay. The rules page has the whole thing with diagrams.':
+    '原子象棋已于 2026-10-11 下线：不再接受新对局，已结束的对局仍可回放。规则页面配有图解，讲得完整。',
+  'Fortress Xiangqi is no longer open for new games; finished games still replay. Its nearest relative here is Crazyhouse Xiangqi: a piece you capture joins your hand and drops back in, on the full board. No account needed.':
+    '堡垒象棋已不再开放新对局，已结束的对局仍可回放。本站与它最接近的是疯狂屋象棋：吃掉的棋子进入你的持子，可以打回棋盘，用的是完整棋盘。无需账户。',
+  'Play Crazyhouse Xiangqi': '下疯狂屋象棋',
+  'Crazyhouse Xiangqi rules': '疯狂屋象棋规则',
+  'Further reading': '延伸阅读',
   'Atomic Xiangqi: What Decides Your First Game': '原子象棋：第一盘棋的胜负由什么决定',
   'Atomic Xiangqi Is Live: What Decides Your First Game':
     '原子象棋上线了：第一盘棋的胜负由什么决定',
@@ -2499,16 +4807,12 @@ const ZH_HANS: Record<string, string> = {
     '对局以爆炸或将死结束，在 23 到 73 回合之间',
   'Of the ten decisive engine games behind this launch, six end with a general blown up and four with checkmate; the shortest is 23 moves and the longest 73. Expect a full game, and pick a clock for one: 10+5 is the default here.':
     '这次发布背后的十盘分出胜负的引擎对局里，六盘以将帅被炸结束，四盘以将死结束；最短 23 回合，最长 73 回合。要做好下完一整盘的准备，并按此选择用时：这里默认是 10+5。',
-  'Openings look like xiangqi’s. The cannon shot that took a cannon and a horse together under an earlier version of the rules is gone, so nobody trades cannons on move one; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':
-    '开局看起来和象棋一样。早期版本规则下那记一炮同时带走对方的炮和马的炮击已经没有了，所以没人会在第一回合兑炮；引擎的开局是 Cb5、Ri3、Ra3 或 Hg3，第一次爆炸通常出现在中局。',
+  'Openings look like xiangqi’s. The opening cannon shot that took a horse, a chariot and an elephant at once under an earlier version of the rules is gone; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':
+    '开局看起来和象棋一样。早期版本规则下那记一炮同时带走对方马、车、象的开局炮击已经没有了；引擎的开局是 Cb5、Ri3、Ra3 或 Hg3，第一次爆炸通常出现在中局。',
   'The bot takes a general on offer without thinking': '送到嘴边的将帅，电脑想都不想就吃',
   'The bot is Fairy-Stockfish with a patch for these rules, eight node-anchored levels, the same ladder the other xiangqi variants use. Its weaker levels are weakened by choosing a move other than the best one they found, and on the duck board that made a level-1 bot decline a general capture it could see. Here the loop checks for a move that removes the general before it asks the engine anything, so a general left next to a capturable piece is taken at every level. Weakness is in how the bot builds a position, not in whether it finishes one.':
     '电脑是加了这套规则补丁的 Fairy-Stockfish，八个以节点数锚定的等级，和其他象棋变体用的是同一套阶梯。较弱的等级是通过不走自己找到的最佳着法来削弱的，在鸭子象棋的棋盘上，这曾让一个 1 级电脑放弃了一次它看得见的吃将。这里的循环在向引擎提问之前会先检查有没有能移除将帅的着法，所以留在可吃棋子旁边的将帅，在每一个等级都会被吃掉。电脑的弱点在于它如何构筑局面，而不在于它会不会收官。',
-  'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.':
-    '八个引擎强度档位，或者用邀请链接约朋友。规则页面配有图解，讲得完整。',
-  'Invite a friend': '邀请朋友',
   // banqi capture table + FAQ, jungle FAQ (2026-09-17)
-  'Piece (red / black)': '棋子（红 / 黑）',
   'General 帥 / 將': '将帅：帅 / 将',
   'Advisor 仕 / 士': '士：仕 / 士',
   'Elephant 相 / 象': '象：相 / 象',
@@ -2547,8 +4851,8 @@ const ZH_HANS: Record<string, string> = {
   'Move any animal into the enemy den, capture all eight enemy animals, or leave your opponent with no legal move. You cannot enter your own den. The game draws on threefold repetition or 100 half-moves without a capture.':
     '任何一只动物走进敌方兽穴、吃光敌方八只动物，或让对手无棋可走，都立刻获胜。不能走进自己的兽穴。三次重复局面，或 100 个半回合没有吃子，判和。',
   'Is there a winning strategy for Jungle Chess?': '斗兽棋有必胜法吗？',
-  'No forced win is known. Dou Shou Qi has been solved only up to seven pieces on the board, and the full sixteen-piece game is open. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.':
-    '目前没有已知的必胜法。斗兽棋只被完全解到盘面剩七枚棋子，完整的十六枚棋子开局仍未解开。实战上有用的想法是：留住鼠当作对付象的答案，让狮和虎待在河边发挥跳河的威胁，并且不要让自己兽穴周围的格子无人防守。',
+  'No forced win is known. Dou Shou Qi is unsolved: the largest published endgame tablebase covers positions with up to four pieces, against sixteen at the start. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.':
+    '目前没有已知的必胜法。斗兽棋尚未被解开：已发表的最大残局库只涵盖盘面最多四枚棋子的局面，而开局有十六枚。实战上有用的想法是：留住鼠当作对付象的答案，让狮和虎待在河边发挥跳河的威胁，并且不要让自己兽穴周围的格子无人防守。',
   'What other names does Jungle Chess have?': '斗兽棋的英文怎么说？',
   'Dou Shou Qi, Animal Chess, Jungle, and Animal Checkers in English. Dou shou qi is the Chinese name, literally fighting-animal chess, and it is the same name in Taiwan, Hong Kong, and the mainland.':
     '英文叫 Jungle Chess、Dou Shou Qi、Animal Chess，也有人叫 Jungle 或 Animal Checkers。中文在中国大陆写作斗兽棋，台湾和香港写作鬥獸棋。',
@@ -2556,7 +4860,6 @@ const ZH_HANS: Record<string, string> = {
   Moves: '走法',
   Limits: '限制',
   'One point along a line': '沿线走一点',
-  'The same way': '与走法相同',
   'Never leaves the palace; may not face the other general on an open file':
     '不能离开九宫；两将不能在无子的同一直线上照面',
   'One point diagonally': '斜走一点',
@@ -2567,13 +4870,10 @@ const ZH_HANS: Record<string, string> = {
   'Blocked by a piece on the first point': '直走的第一点有子则蹩马腿',
   'Any distance along a line': '沿直线任意距离',
   'Cannot jump': '不能跳过棋子',
-  'Jumps exactly one piece and takes the enemy beyond it': '隔一子跳吃后面的敌子',
   'Needs a screen to capture': '吃子必须隔一子（炮架）',
   'One point forward; one point sideways too after crossing the river':
     '向前一点；过河后也可横走一点',
   'Never backward; never promotes': '永远不能后退；没有升变',
-  'The seven pieces. Every piece captures the way it moves, except the cannon.':
-    '七种棋子。除炮以外，每种棋子怎么走就怎么吃。',
   'How does each piece move in xiangqi?': '象棋每种棋子怎么走？',
   'General: one point along a line, inside the palace. Advisor: one point diagonally, inside the palace. Elephant: two points diagonally, never across the river. Horse: one point along a line then one diagonally out, blocked if the first point is occupied. Chariot: any distance along a line. Cannon: moves like a chariot, captures by jumping exactly one piece. Soldier: one point forward, and sideways too after crossing the river.':
     '将：在九宫内沿线走一点。士：在九宫内斜走一点。象：斜走两点（田字），不能过河。马：先直走一点再斜走一点（日字），第一点有子则蹩马腿。车：沿直线任意距离。炮：走法同车，吃子时隔一子跳吃。兵：向前一点，过河后也可横走一点。口诀：马走日、象走田、车走直路炮翻山、士走斜线护将边、小卒一去不回还。',
@@ -2623,20 +4923,20 @@ const ZH_HANS: Record<string, string> = {
   // pikafish (2026-09-21, machine-drafted, not native-reviewed). Mainland wording on purpose: 在线, 网页版, 人机, 账号, 服务器 are the words the Bing corpus uses.
   'Pikafish on Mistboard': '皮卡鱼在线：在 Mistboard 上与皮卡鱼对弈',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
-    '皮卡鱼在线对弈：免费象棋引擎，网页版，无需下载',
-  'Play Pikafish, the strongest open-source xiangqi engine, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    '在浏览器里直接与最强开源象棋引擎皮卡鱼对弈。免费、不用注册、不用下载。可选难度等级，可下揭棋，还能用它复盘你的对局。',
+    '皮卡鱼象棋在线对弈：象棋和揭棋，免费网页版',
+  'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
+    '在浏览器里直接与开源象棋引擎皮卡鱼对弈，它由 Stockfish 改造而来。免费、不用注册、不用下载。可选难度等级，可下揭棋，还能用它复盘你的对局。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     '想找地方与皮卡鱼对弈或用它分析的象棋棋手。',
   '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
     '[皮卡鱼（Pikafish）](https://github.com/official-pikafish/Pikafish) 是目前最强的开源象棋引擎，由 Stockfish 改造而来。多数人要先下载引擎，再配一个界面才能用。在这里，它直接在网页里运行。',
   'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    '可以直接挑战皮卡鱼本尊，也可以从八级人机阶梯的低级别开始；可以和它下揭棋；也可以把下完的棋交给它复盘。免费，不用注册，不用安装，手机浏览器也能玩。',
+    '可以直接挑战皮卡鱼本尊，也可以从八级人机阶梯的低级别开始；可以和它下揭棋；也可以把下完的棋交给它复盘。[中国象棋在线对弈](/zh-hans)免费，不用注册，不用安装，手机浏览器也能玩。',
   'Play Pikafish': '与皮卡鱼对弈',
   'Play Pikafish at jieqi': '与皮卡鱼下揭棋',
   'Play against Pikafish': '人机对弈：挑战皮卡鱼',
-  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.':
-    '点一下就开局。系统给你分配颜色和时钟，对面是每步搜索三百万个局面的皮卡鱼。不需要账号。',
+  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move.':
+    '点一下就开局。系统给你分配颜色和时钟，对面是每步搜索三百万个局面的皮卡鱼。',
   'Three million positions a move is a lot. Below Pikafish sits an eight-level ladder of Fairy-Stockfish bots, level 1 for someone who learned the moves this week, level 8 close to the top. Every level has a measured rating from playing the others, anchored at 1500 to an engine that picks random legal moves.':
     '每步三百万个局面很强。皮卡鱼之下还有八级 Fairy-Stockfish 人机阶梯：一级适合这周刚学会走子的人，八级已接近顶端。每一级都有实测等级分，由各级互相对弈得出，并以一个随机走合法着法的引擎定为 1500 分作基准。',
   Opponent: '对手',
@@ -2786,10 +5086,10 @@ const ZH_HANS: Record<string, string> = {
     '被吃的时候，炮排在马下面：马可以吃它。',
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '卒不能吃炮。它可以吃另一颗卒，或吃将。',
-  'Play against the engine or challenge a friend. No account required.':
-    '跟引擎下，或邀朋友对弈。不用账号。',
-  'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
-    'Mistboard 采用台湾规则，加上台湾电脑对局协会的比赛和棋规则（Chen、Shen 与 Hsu，ICGA Journal，2010 年）：上面的 40 步无进展计数和重复局面判和。两条有文献记载的变体规则刻意不采用：炮不能吃暗子，将永远不能吃卒，就算是它的第一步也一样。如果你学的是另一套大小顺序，本页这一套才是引擎和站上每一盘棋遵守的。',
+  'A soldier can take the general, and the general can never take a soldier. No account needed.':
+    '卒可以吃将，将却永远不能吃卒。无需账户。',
+  'Mistboard plays the standard Taiwanese game, the one used in computer competition and on the main banqi sites in Taiwan. The draw rules come from the competition rules of Chen, Shen and Hsu (ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. A common house rule lets a cannon also fire at a face-down tile, often played together with chain captures. That is a side variant, not the standard game, and it is not played here: a cannon only captures revealed enemy pieces. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
+    'Mistboard 采用标准台湾暗棋，也就是电脑对局比赛和台湾主要暗棋网站使用的规则。和棋规则取自 Chen、Shen 与 Hsu 的比赛规则（ICGA Journal，2010 年）：上面的 40 步无进展计数和重复局面判和。常见的一条家规允许炮隔子打暗子，通常和连吃一起玩。这是变体，不是标准规则，本站不采用：炮只能吃已翻开的敌方棋子。如果你学的是另一套大小顺序，本页这一套才是引擎和站上每一盘棋遵守的。',
   'An engine game': '一盘引擎对局',
   'Banqi: an engine game under the competition rules': '暗棋：比赛规则下的一盘引擎对局',
   'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs for the game, and the opponent plays the other.':
@@ -2813,19 +5113,2167 @@ const ZH_HANS: Record<string, string> = {
     '一颗炮架，再来是目标。大小不重要：炮吃将。',
   'No screen, no capture: the chariot beside it is safe, and so is the horse two squares up with nothing between.':
     '没有炮架就不能吃：旁边的车是安全的，上面隔两格、中间没有子的马也是。',
+  // Rules-page study embeds (2026-09-25): duck, jungle, fog chess.
+  'Misty against itself at 30 seconds a move, shown with the whole board visible. Black wins White’s queen for a rook on move 10, but on move 27 White’s rook lands on e8 and Black’s king steps to d8 beside it. Fog chess has no check to warn it, and 28.Rxd8 captures the king.':
+    'Misty 自我对弈，每步 30 秒，这里显示整个棋盘。第 10 回合黑方以一车换得白方的后，但第 27 回合白方的车落到 e8，黑方的王走到旁边的 d8。迷雾国际象棋没有将军来提醒它，28.Rxd8 吃掉了王。',
+  'Fog Chess: Misty against itself, White captures the king on move 28':
+    '迷雾国际象棋：Misty 自我对弈，白方第 28 回合吃王',
+  'The [companion study](/study/MbaW80XR) has eleven of these games, and shows each side’s fogged view move by move.':
+    '[配套研究](/study/MbaW80XR)收录了十一盘这样的对局，并逐步显示双方各自在迷雾中看到的局面。',
+  'Eleven engine games': '十一盘引擎对局',
+  'An engine game from a 200-game match between KataGo-AnimalChess (Red) and Mistboard’s own engine (Blue), and it uses nearly every rule on this page. Blue’s tiger jumps the left river sideways on move 11, and its lion jumps the right one on move 13. On move 38 Red’s lion jumps the river lengthwise, and on move 40 Red’s rat, standing on land, takes Blue’s elephant. Three moves later a wolf takes a tiger standing in Red’s own trap, where it has no rank left, and on move 47 Red walks into Blue’s den.':
+    '这盘引擎对局出自 KataGo-AnimalChess（红方）与 Mistboard 自家引擎（蓝方）的 200 盘对抗赛，几乎用到了本页的所有规则。第 11 回合蓝方的老虎横跳过左边的河，第 13 回合它的狮子跳过右边的河。第 38 回合红方的狮子纵跳过河，第 40 回合红方站在陆地上的老鼠吃掉了蓝方的大象。三回合后，一只狼吃掉了站在红方陷阱里、已失去全部等级的老虎；第 47 回合红方走进蓝方兽穴。',
+  'Jungle: an engine game with river jumps, a rat taking the elephant, and a den entry':
+    '斗兽棋：一盘有跳河、鼠吃象和入穴的引擎对局',
+  'All 200 games are in the [companion study](/study/0t8xpyv6), with the sideways tiger jumps and the shortest and longest wins picked out first.':
+    '全部 200 盘都收录在[配套研究](/study/0t8xpyv6)里，老虎横跳、最短和最长的胜局排在最前面。',
+  'The 200 engine games': '200 盘引擎对局',
+  'Duck Xiangqi: an engine game, Black captures the general on move 60':
+    '鸭子象棋：一盘引擎对局，黑方第 60 回合吃掉帅',
+  // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
+  'Sacrifice the Horse in 13': '弃马十三着',
+  'Classic manual, 1632': '古谱，1632 年',
+  'World Championship Game 11, Sochi 2014': '世界冠军赛第 11 局，2014 年索契',
+  'Anand resigns. Carlsen (White) wins the match.': '阿南德认输。卡尔森（白方）赢得这场比赛。',
+  'Fortress Xiangqi: an engine game, Black mates on move 43':
+    '堡垒象棋：一盘引擎对局，黑方第 43 回合将死',
+  'Twenty engine games': '二十盘引擎对局',
+  'PikaJieQi against itself at the settings the site’s bot uses. Face-down pieces show as colored backs until they first move. Red’s advisor point on d1 turns out to hold a chariot on move 9, and between moves 13 and 23 Red’s chariots take five of Black’s pieces before they are ever turned over. The corners do not keep their promise either: Black’s a10 is an elephant, and Red’s a1 and i1 are an elephant and a soldier. Red mates on move 37.':
+    'PikaJieQi 以本站电脑所用的设置自我对弈。暗子在第一次走动前以彩色背面显示。红方 d1 仕位上的暗子在第 9 回合翻出来是一只车；第 13 到第 23 回合之间，红方的车吃掉了黑方五枚还没翻开的暗子。角上的棋子也不守承诺：黑方 a10 是一只象，红方 a1 和 i1 分别是相和兵。红方在第 37 回合将死。',
+  'Jieqi: an engine game, Red mates on move 37': '揭棋：一盘引擎对局，红方第 37 回合将死',
+  'The [companion study](/study/wd6c7qvG) has eighteen games played the same way, one chapter each.':
+    '[配套研究](/study/wd6c7qvG)收录了十八盘以同样方式下的对局，每盘一章。',
+  'Eighteen engine games': '十八盘引擎对局',
+  // Rules-page study embeds, flip jungle (2026-09-25).
+  'MistyJungleFlip against itself at three times the strength the site’s bot plays at. The first flip turns up red, so the first player is Red. The cats meet and trade off on move 10, a red rat takes Blue’s elephant on move 24, and on move 28 the two lions trade off too, which leaves Blue with no move. Red wins.':
+    'MistyJungleFlip 以本站电脑三倍的强度自我对弈。第一次翻出的是红子，所以先手执红。第 10 回合双方的猫相遇并同归于尽，第 24 回合红方的老鼠吃掉了蓝方的大象，第 28 回合双方的狮子也同归于尽，蓝方随即无子可走。红方获胜。',
+  'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盘引擎对局，红方第 28 回合获胜',
+  'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
+    '[配套研究](/study/uKxJ60mN)收录了这一批全部二十盘对局，每盘都从自己的发牌开始，并附有对局经过的说明。',
+  // -- fortress-and-atomic-xiangqi-on-hold, machine-drafted 2026-10-14, not native-reviewed. Terms follow the
+  // Fortress and Atomic rules pages (宝, 持子, 打入, 长将) and the site's variant names. --
+  'Back to the drawing board: Fortress and Atomic Xiangqi': '推倒重来：堡垒象棋与原子象棋',
+  'Back to the drawing board: Fortress Xiangqi and Atomic Xiangqi':
+    '推倒重来：堡垒象棋和原子象棋暂停开放',
+  'Fortress and Atomic on hold': '堡垒与原子象棋暂停',
+  'On 11 October we stopped new games of Fortress Xiangqi and Atomic Xiangqi so we can redesign them. In Fortress the drops took over a small board; Atomic only stopped looping after the cannon got its own exception. Finished games still replay.':
+    '10 月 11 日，我们停止了堡垒象棋和原子象棋的新对局，以便重新设计。在堡垒象棋里，打入主宰了一张小棋盘；原子象棋则是在炮有了自己的例外规则之后，才不再陷入循环。已结束的对局仍可回放。',
+  'Fortress Xiangqi and Atomic Xiangqi are on hold while we redesign them. You cannot start a new game, but finished games still replay and both rules pages stay up.':
+    '堡垒象棋和原子象棋已暂停，我们正在重新设计。你无法开始新对局，但已结束的对局仍可回放，两个规则页面也都保留。',
+  'In Fortress the drops took over the small board. A redesign has to make a smaller xiangqi that still feels like the full game.':
+    '在堡垒象棋里，打入主宰了小棋盘。重新设计必须做出一种更小的象棋，下起来仍像完整的象棋。',
+  'Atomic only played well after the cannon got its own exception. A redesign has to give it a cannon that follows the same rule as every other piece.':
+    '原子象棋是在炮有了自己的例外规则之后才下得好。重新设计必须给它一个和其他所有棋子遵循同一条规则的炮。',
+  'On 11 October we stopped new games of [Fortress Xiangqi](/rules/fortress-xiangqi) and [Atomic Xiangqi](/rules/atomic-xiangqi). Games already played still replay from their links, and both rules pages stay up. We designed both games, and we launched both before they were ready. What went wrong with each, and what does a version worth bringing back have to fix?':
+    '10 月 11 日，我们停止了[堡垒象棋](/rules/fortress-xiangqi)和[原子象棋](/rules/atomic-xiangqi)的新对局。已经下过的对局仍可从各自的链接回放，两个规则页面也都保留。这两款棋都是我们设计的，也都是在还没准备好时就上线了。它们各自出了什么问题？一个值得重新推出的版本又必须解决什么？',
+  'Fortress Xiangqi tried four new ideas at once': '堡垒象棋同时尝试了四个新点子',
+  'Fortress was played on a 7 by 8 board with the two palaces in opposite corners. It added the Treasure, a new piece that steps one point in any direction. A captured piece went into your hand, and you could drop it back onto the board later as your own move. For its first two months it also had veteran soldiers, which we later took out.':
+    '堡垒象棋在 7×8 的棋盘上进行，两个九宫分处对角。它加入了「宝」，一个可以向任意方向走一步的新棋子。被吃掉的棋子进入你的持子，之后你可以用自己的一步把它打回棋盘。最初的两个月里它还有老兵，后来我们把老兵去掉了。',
+  'Each idea was worth trying. Together they made a game that was hard to learn, and the drops overwhelmed the rest. With the general boxed into a corner of a small board, one piece dropped beside it was often enough. A typical engine game ended this way, with most of both armies still on the board.':
+    '每个点子都值得一试。合在一起，却成了一款难学的棋，而打入压倒了其余一切。将帅被困在小棋盘的一角，往它旁边打入一子往往就够了。一盘典型的引擎对局就是这样结束的，双方的大部分兵力都还在盘上。',
+  'Black drops a soldier from its hand on b1, beside the general. With the horse on c3 guarding b1 and Red’s own chariot on a2, the general has nowhere to go, and that is mate.':
+    '黑方从持子中把一枚卒打在 b1，紧挨着帅。c3 的马守住 b1，红方自己的车又占着 a2，帅无路可走，这就是将死。',
+  'A redesign has to make a smaller xiangqi that keeps the feel of the full game, without drops taking over.':
+    '重新设计必须做出一种更小的象棋，保留完整象棋的感觉，又不让打入主宰全局。',
+  'Until then, drops live on the site in [Crazyhouse Xiangqi](/rules/crazyhouse-xiangqi), which plays them on the normal board with the normal pieces and palaces.':
+    '在此之前，本站的打入玩法在[疯狂屋象棋](/rules/crazyhouse-xiangqi)里：它在普通棋盘上，用普通的棋子和九宫来打入。',
+  'Atomic Xiangqi needed an exception for the cannon': '原子象棋得为炮开一个例外',
+  'In Atomic Xiangqi a capture explodes. The piece that captures, the piece it takes and every piece on the four points next to the capture leave the board. Soldiers survive a blast; a general does not, and losing it loses the game.':
+    '在原子象棋里，吃子会爆炸。吃子的棋子、被吃的棋子，以及吃子点相邻四个点上的所有棋子，都离开棋盘。兵卒能在爆炸中幸存；将帅不能，失去它就输掉这盘棋。',
+  'In the first version the cannon exploded too, which made it the perfect defender: it could block a chariot’s attack and threaten back through the chariot. An attacker could often force a draw this way.':
+    '在最初的版本里，炮也会爆炸，这让它成了完美的防守者：它能挡住车的进攻，再隔着车反过来威胁。进攻方常常就这样被拖成和棋。',
+  'Under the first rules. (a) The chariot threatens the advisor on d10. (b) The cannon blocks and threatens d1 through the chariot. (c) The chariot switches files. (d) The cannon follows, and the cycle repeats.':
+    '按最初的规则。(a) 车威胁 d10 的士。(b) 炮挡住，并隔着车威胁 d1。(c) 车换到另一路。(d) 炮跟过去，循环重复。',
+  '(a) Rd2': '(a) Rd2',
+  '(b) Cd6': '(b) Cd6',
+  '(c) Rf2': '(c) Rf2',
+  '(d) Cf6': '(d) Cf6',
+  'With its palace closed in, as here, the defender has no other move, and a repetition rule can’t break the cycle because both sides threaten on every move.':
+    '像这里这样九宫被封住时，防守方没有别的着法；重复局面规则也打破不了这个循环，因为双方每一步都在威胁。',
+  'To launch it, we made a cannon’s capture remove only the cannon and its target, and made the side that keeps up a threat through a repeated cycle lose, like perpetual check in xiangqi.':
+    '为了上线，我们让炮吃子只移除炮和它的目标，并规定在重复的循环里一直保持威胁的一方判负，就像象棋里的长将。',
+  'That ended the loop, but left the cannon playing by its own rule: it alone can capture next to its own general. We launched before we had a design without that patch.':
+    '这结束了循环，却让炮按自己的规则行事：只有它能在己方将帅的相邻点上吃子。我们在找到不需要这个补丁的设计之前就上线了。',
+  'A redesign needs a cannon that follows the same rule as every other piece.':
+    '重新设计需要一个和其他所有棋子遵循同一条规则的炮。',
+  'Both come back when they are right': '两款棋都会在做对之后回来',
+  'We would rather run a short list of games we stand behind than keep two that need an apology. Neither game is dead. Each has one problem to solve. Fortress needs a small board that drops do not take over, and Atomic needs a cannon with no exception. When a version of either one solves it, that game comes back.':
+    '我们宁愿只运营一小批自己认可的棋，也不愿留着两款需要道歉的棋。两款棋都没有死。各自都有一个问题要解决：堡垒象棋需要一张不被打入主宰的小棋盘，原子象棋需要一个没有例外的炮。哪一款的新版本解决了它的问题，那款棋就会回来。',
+  'If dropping pieces was the part of Fortress you liked, Crazyhouse Xiangqi is where drops live on the site today.':
+    '如果打入是你在堡垒象棋里喜欢的部分，如今本站的打入玩法就在疯狂屋象棋里。',
+  // -- Crazyhouse Xiangqi (rules page), machine-drafted 2026-10-02 for the hand-start rules, not native-reviewed --
+  'Crazyhouse Xiangqi Rules': '疯狂屋象棋规则',
+  'The sample game’s last move. Left, Red to move with three soldiers in hand. Right, one dropped on e9 mates the general on f9.':
+    '示范对局的最后一步。左图：轮到红方走，持子里有三个兵。右图：其中一个打入 e9，将死 f9 的将。',
+  'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with drops. A piece you capture joins your hand as one of your own, and each turn you either move a piece on the board or drop one from your hand onto an empty point. Both sides also start with their two advisors and two elephants in hand.':
+    '疯狂屋象棋就是带打入的[象棋](/rules/xiangqi)。吃掉的棋子作为你自己的棋子进入你的持子；每一步，你要么在棋盘上走一枚棋子，要么从持子中取出一枚打入一个空点。此外，双方开局时两士两象都在持子里。',
+  'The last position of the sample game below. Red mates by dropping a soldier on e9, ringed. Each side’s hand is drawn on its own side of the board: Black’s above, Red’s below.':
+    '下方示范对局的最后局面。红方把兵打入 e9（圈出处）将死对方。双方的持子画在各自一侧：黑方在棋盘上方，红方在下方。',
+  'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi have been proposed before, in Moshe Callen’s Drop-Xiangqi (2007) and in Fairy-Stockfish’s built-in xiangqihouse, but none became a settled standard. This one is a complete rule set, tested in well over 1,600 engine games across more than 40 candidate rule sets.':
+    'Brian H. Liou 于 2026 年设计了这一版本，作为 Mistboard 原创。此前已有人为象棋提出过打入规则，如 Moshe Callen 的 Drop-Xiangqi（2007）和 Fairy-Stockfish 内置的 xiangqihouse，但都没有成为公认的标准。这一版是一套完整的规则，经过 40 多套候选规则、远超 1,600 盘引擎对局的检验。',
+  'Advisors and elephants start in hand': '士和象开局在持子里',
+  'The start. Black’s hand is above the board and Red’s below, two advisors and two elephants each.':
+    '开局。黑方的持子在棋盘上方，红方的在下方，各有两士两象。',
+  'Advisors and elephants move anywhere on their own half': '士和象可以在己方半盘任意行走',
+  'An advisor steps one point diagonally and an elephant two, as in xiangqi, and an elephant is still blocked when the point between (its eye) is occupied. What changes is where they may go: an advisor is no longer held to the palace, nor an elephant to its seven points. Both may go anywhere on their own side of the river, and neither ever crosses it.':
+    '和象棋一样，士斜走一格，象斜走两格；中间那个点（象眼）被占时，象仍然不能走。变化在于它们能去的地方：士不再限于九宫，象也不再限于原来的七个点。两者都可以在己方河界这一侧任意行走，但永远不能过河。',
+  'Left, an advisor on c2, outside the palace, steps to any of four points. Right, on the river bank at e5 it has two; the crosses are the points the river keeps it from.':
+    '左图：九宫外 c2 的士可以走到四个点中的任何一个。右图：在河岸 e5 上只有两个点可走；叉号是被河界挡住的点。',
+  'An elephant dropped off its seven old points moves on from there by the same two-point step, and never gets back onto them.':
+    '打入到原来七个点之外的象，从那里起照样斜走两格，而且永远回不到那七个点上。',
+  'Left, an elephant dropped on d3 reaches b1, b5, f1 and f5, none of them a point a xiangqi elephant ever stands on. Right, a soldier on e4 fills its eye, and the step to f5 is gone.':
+    '左图：打入 d3 的象可以走到 b1、b5、f1 和 f5，这些都不是象棋里的象能站的点。右图：e4 的兵塞住了象眼，走向 f5 的那一步就没有了。',
+  'Each turn is a move or a drop': '每一步要么走子，要么打入',
+  'On your turn you do one thing: move a piece on the board, or take a piece from your hand and put it on an empty point. A drop is the whole turn, and dropping is never required.':
+    '轮到你时，只做一件事：在棋盘上走一枚棋子，或者从持子中取出一枚棋子放到一个空点上。打入就是这一步的全部，而且从来不是必须的。',
+  'Two ways to start. Left, Red moves the cannon from h3 to e3. Right, Red drops an elephant on e3 instead, and Red’s hand is one elephant lighter.':
+    '两种开局方式。左图：红方把炮从 h3 走到 e3。右图：红方改为把一只象打入 e3，红方持子里就少了一只象。',
+  'Captured pieces join your hand': '吃掉的棋子进入你的持子',
+  'Red’s chariot takes the black horse on c7, and a red horse joins the soldier already in Red’s hand.':
+    '红车吃掉 c7 的黑马，红方持子里原有一个兵，现在又多了一匹红马。',
+  'Where each piece may drop': '每种棋子可以打入的位置',
+  'A piece may be dropped on any empty point, with one limit: advisors and elephants stay on your own half of the board. Chariots, horses, cannons and soldiers may go anywhere, the enemy palace and your own back rank included.':
+    '棋子可以打入任何空点，只有一个限制：士和象只能留在己方半盘。车、马、炮、兵可以打入任何地方，包括对方九宫和己方底线。',
+  'Red’s drop zones on an empty board: 45 points for an advisor or elephant, all 90 for a chariot, horse, cannon or soldier. Black’s are the mirror image.':
+    '红方在空棋盘上的打入区域：士或象 45 个点，车、马、炮、兵全部 90 个点。黑方的区域与之上下对称。',
+  'A drop may give check and mate': '打入可以将军，也可以将死',
+  'The dropped piece may attack the general itself, or become the screen one of your own cannons fires over. A drop may also block a check. The one drop you may not make is one that leaves your own general in check, such as a piece that becomes the screen an enemy cannon fires over at your general.':
+    '打入的棋子可以自己攻击对方将帅，也可以成为己方某个炮隔着打将的炮架。打入也可以挡将。唯一不允许的打入，是让己方将帅处于被将军状态的打入，例如打入的棋子成了对方炮隔着打己方将帅的炮架。',
+  'Left, a horse dropped on d8 checks the general on e10. Right, a soldier dropped on e6 gives Red’s cannon on e3 its screen.':
+    '左图：打入 d8 的马将军 e10 的将。右图：打入 e6 的兵成了红方 e3 炮的炮架。',
+  'Fairy-Stockfish against itself under these rules, five seconds a move. Both sides drop advisors and elephants on points they never reach in xiangqi, and Red’s attack comes out of its hand: seven of its checks are drops, and the last is mate.':
+    'Fairy-Stockfish 按这套规则自我对弈，每步五秒。双方都把士和象打入象棋里到不了的点，红方的进攻则来自持子：它有七次将军是打入，最后一次就是将死。',
+  'Watch Red’s advisor dropped on d4 on move 6, Black’s elephant dropped in the corner on a10 on move 18, the cannon Red drops with check on move 31, and the mate on move 49.':
+    '留意第 6 回合红方打入 d4 的士、第 18 回合黑方打入角上 a10 的象、第 31 回合红方打入将军的炮，以及第 49 回合的将死。',
+  'Crazyhouse Xiangqi: a comeback, and a soldier drop mates':
+    '疯狂屋象棋：一盘翻盘局，打入一兵将死',
+  'This game is one of six in the [companion study](/study/nlZy4yNA), each with notes on the drops that decided it.':
+    '这盘棋是[配套研究](/study/nlZy4yNA)中的六盘之一，每盘都注明了决定胜负的打入。',
+  'The six engine games': '六盘引擎对局',
+  'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.':
+    '被吃掉的棋子归入吃子一方的持子、士和象开局就在持子里的象棋：持子可以打入任何一个空点，士和象只能打入己方半盘，打入的子可以将军，也可以将死。',
+  'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
+    '其余一切都是象棋：棋盘、其他棋子的走法、待在九宫里的将帅、河界、双方将帅不能在同一条直线上无子相隔地照面的规则，以及对局结束的方式。',
+  'Each side begins with its two advisors and two elephants in hand, not on the board. The back rank reads chariot, horse, two empty points, the general, two empty points, horse, chariot. The cannons and soldiers stand where they always do.':
+    '双方开局时，两士两象都在持子里，不在棋盘上。底线依次是车、马、两个空点、将帅、两个空点、马、车。炮和兵的位置与平常相同。',
+  'Red moves first, and the first move may already be a drop.': '红方先走，第一步就可以打入。',
+  'When you capture a piece it leaves the board and goes into your hand as one of your own. Take a black horse and you hold a red horse. Both hands are shown beside the board, so you always know what your opponent can drop.':
+    '你吃掉一枚棋子后，它离开棋盘，作为你自己的棋子进入你的持子。吃掉黑马，你就持有一匹红马。双方的持子都显示在棋盘旁边，所以你随时知道对手能打入什么。',
+  'The general is never captured, so it is never in a hand. Every other piece can be: chariots, horses, elephants, advisors, cannons and soldiers.':
+    '将帅永远不会被吃，所以永远不会成为持子。其他棋子都可以：车、马、象、士、炮和兵。',
+  'Any number of soldiers may share a file. A soldier moves from wherever it lands as if it had walked there: one step forward on your own half, even from your back rank, and forward or sideways once across the river.':
+    '同一条直线上可以有任意多个兵。兵从落点起照常行走，就像走到那里一样：在己方半盘只能向前一步，即使从底线出发也是如此；过河后可以向前或横走。',
+  'How the game ends': '对局如何结束',
+  '**Checkmate wins,** by a move or by a drop. As in xiangqi, so does stalemate: a player with no legal move loses, in check or not. Count your drops as moves. A player with a piece in hand and an empty point to put it on is rarely out of moves.':
+    '**将死获胜，**无论是走子将死还是打入将死。和象棋一样，困毙也获胜：无子可动的一方判负，无论是否被将军。打入也算着法。手里有持子、盘上又有空点可放的一方，很少会无棋可走。',
+  '**Repetition.** When the same position occurs for the third time, with the same pieces on the same points, the same pieces in both hands and the same player to move, the game is drawn. If one player gave check with every move of the repeating cycle and the other did not, the checking player loses instead: perpetual check is not a way to save a game.':
+    '**重复局面。**同一局面第三次出现时，即同样的棋子在同样的点上、双方持子相同、轮到同一方走，判和。如果在重复的循环中一方每一步都在将军而另一方没有，那么将军的一方反而判负：长将不能用来保住一盘棋。',
+  '**Sixty plies without a capture** is a draw. Moves and drops both count toward the sixty; only a capture starts the count again.':
+    '**连续六十个半回合没有吃子**判和。走子和打入都计入这六十个半回合；只有吃子才会让计数重新开始。',
+  'Time, resignation and abandonment end a game as they do everywhere else on Mistboard.':
+    '超时、认输和弃局的处理与 Mistboard 上其他对局相同。',
+  'Can a drop give check?': '打入可以将军吗？',
+  'Yes. A drop may check and may mate, directly or by becoming the screen for one of your cannons. The only drop you may not make is one that leaves your own general in check.':
+    '可以。打入可以将军，也可以将死，既可以直接将军，也可以通过成为己方炮的炮架将军。唯一不允许的打入，是让己方将帅处于被将军状态的打入。',
+  'Why can my elephant not cross the river?': '为什么我的象不能过河？',
+  'Advisors and elephants never cross it, by move or by drop. On your own side of the river they may stand on any point, so that whole half is open to them.':
+    '士和象永远不能过河，走子和打入都一样。在己方河界这一侧，它们可以站在任何点上，所以那半边棋盘对它们完全开放。',
+  'Why do advisors and elephants start in hand?': '为什么士和象开局就在持子里？',
+  'So both sides have pieces to drop from the first move, placed where the game needs them instead of on fixed points.':
+    '这样双方从第一步起就有棋子可以打入，可以放在对局需要的地方，而不是固定的位置。',
+  'Does a drop reset the sixty-ply count?': '打入会让六十个半回合的计数重新开始吗？',
+  'No. Only a capture does. Without that, two players could trade drops forever without either one taking anything.':
+    '不会。只有吃子会。否则双方可以永远互相打入，谁也不吃子。',
+  'Crazyhouse Xiangqi is on Mistboard against the Fairy-Stockfish ladder, a friend with an invite link, or whoever is waiting in the lobby.':
+    '在 Mistboard 上，你可以和 Fairy-Stockfish 的各个强度档位对弈，用邀请链接约朋友，或者和大厅里正在等待的玩家下一盘疯狂屋象棋。',
+  'Play the computer': '与电脑对弈',
+
+  // -- Diagram labels across the rules pages, machine-drafted 2026-10-01. --
+  // localizeSvgMarkup swaps <text> nodes through this dictionary; the coverage
+  // test now gates them (articleDiagramLabels), so a new label fails CI here.
+  // jieqi rules
+  'SHUFFLED START': '洗混后的开局',
+  'BEFORE: HORSE POINT': '翻子前：马位',
+  'AFTER: REVEALED CANNON': '翻子后：翻出炮',
+  'ADVISOR AFTER REVEAL': '翻明后的士',
+  'ELEPHANT AFTER REVEAL': '翻明后的象',
+  CAPTURE: '吃子',
+  // jieqi openings
+  'FACE-DOWN ON A CANNON POINT': '炮位上的暗子',
+  'SPENT: A SOLDIER TOOK THE HORSE': '已用掉：一个兵吃了马',
+  'FOUR OPENINGS, ONE MOVE EACH': '四种开局，各走一步',
+  'BOTH CANNONS TAKE BOTH HORSES': '双炮打双马',
+  // xiangqi rules (the piece names also label the fog xiangqi vision boards)
+  'STARTING POSITION': '初始局面',
+  GENERAL: '将',
+  ADVISOR: '士',
+  ELEPHANT: '象',
+  HORSE: '马',
+  CHARIOT: '车',
+  CANNON: '炮',
+  SOLDIER: '兵',
+  'FACING: FORBIDDEN': '对脸：禁止',
+  'SCREENED: ALLOWED': '有子相隔：允许',
+  'THE RIVER': '河界',
+  'THE EYE': '象眼',
+  UNOBSTRUCTED: '无阻挡',
+  'LEG BLOCKED': '蹩马腿',
+  MOVE: '走子',
+  'BEFORE THE RIVER': '过河前',
+  'ACROSS THE RIVER': '过河后',
+  // fog xiangqi
+  "RED'S VIEW": '红方视野',
+  "RED'S VIEW BEFORE": '红方视野：之前',
+  "RED'S VIEW AFTER": '红方视野：之后',
+  // fortress xiangqi
+  MOVES: '走法',
+  'SCREEN CAPTURE': '隔架吃子',
+  'RIVER-LOCKED': '不能过河',
+  'EYE BLOCKED': '塞象眼',
+  'ANY EMPTY POINT': '任意空点',
+  'YOUR OWN HALF': '己方半场',
+  'YOUR OWN PALACE': '己方九宫',
+  // duck xiangqi
+  'ONE TURN IN': '走完一回合',
+  'STARTING POSITION, NO DUCK YET': '初始局面，还没有鸭子',
+  'HORSE, OPEN': '马，畅通',
+  'HORSE, LEG BLOCKED': '马，蹩腿',
+  'ELEPHANT, OPEN': '象，畅通',
+  'ELEPHANT, EYE FILLED': '象，塞眼',
+  'THE ONLY PLACEMENTS THAT SURVIVE': '仅存的安全落点',
+  // crazyhouse xiangqi (the kernel-built diagrams, crazyhouse-xiangqi-rules-diagrams.ts)
+  'START: ADVISORS AND ELEPHANTS IN HAND': '开局：士和象都在持子里',
+  'MATE WITH A DROPPED SOLDIER': '打入兵将死',
+  'BEFORE THE DROP': '打入之前',
+  'AFTER: MATE': '之后：将死',
+  'A MOVE': '走子',
+  'A DROP': '打入',
+  'BEFORE THE CAPTURE': '吃子之前',
+  'AFTER: A RED HORSE IN HAND': '之后：红马进入持子',
+  'A DROP THAT CHECKS': '打入将军',
+  'A DROP THAT SCREENS': '打入作炮架',
+  'ADVISOR OUTSIDE THE PALACE': '九宫外的士',
+  'ADVISOR ON THE RIVER BANK': '河岸上的士',
+  'ELEPHANT OFF ITS OLD POINTS': '离开原来象位的象',
+  // shogi4 (two-line labels, one key per line)
+  '✓ straight': '✓ 直走',
+  '✓ diagonal': '✓ 斜走',
+  leap: '跳越',
+  '✕ not over': '✕ 不能跳越',
+  'an enemy': '敌方棋子',
+  '✕ not onto': '✕ 不能落在',
+  'your own': '己方棋子上',
+  farm: '农场',
+  before: '之前',
+  after: '之后',
+  // jungle and flip jungle rank ladder (Rat, Tiger, Lion, Elephant were already keyed)
+  Leopard: '豹',
+  Wolf: '狼',
+  Dog: '狗',
+  Cat: '猫',
+  // -- Index card words, 2026-10-01. textCard (articles/text-card.ts) looks its
+  // lines up here; renderArticleThumbnail swaps any other card's words. --
+  'GAMES PLAYED': '盘棋已下完',
+  'EVERY PIECE FACE DOWN': '每枚棋子都背面朝下',
+  XIANGQI: '象棋',
+  JIEQI: '揭棋',
+  'JUNGLE CHESS': '斗兽棋',
+  CHAMPIONS: '冠军',
+  'WORLD TITLE': '世界冠军',
+  PIKAFISH: '皮卡鱼',
+  'PLAY IT IN YOUR BROWSER': '在浏览器里直接对弈',
+  'THE NEW TOP BOT': '新的最强电脑',
+  'A STRONGER BOT': '更强的电脑',
+  'EVERY NATIONAL TITLE': '每一届全国个人赛',
+  'SINCE 1956': '1956 年至今',
+  'THE EASIER OF THE TWO': '两者中较容易的那个',
+  'SINCE 1990': '1990 年至今',
+  '12% of blunders become puzzles': '12% 的漏着成为题目',
+  'AND WHY THE REST ARE NOT': '以及其余为何落选',
+  '10 of the last 13 champions': '近 13 位冠军中有 10 位',
+  'CHINESE XIANGQI ASSOCIATION RULINGS': '中国象棋协会处罚决定',
+  'VERIFIED TITLES': '已核实的头衔',
+  // en-passant-under-fog: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
+  "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.":
+    '我的战争迷雾国际象棋引擎按标准象棋的合法性规则记录吃过路兵格，而这个变体根本没有这条规则。吃过路兵的可用性决定了兵能看见什么，于是真实棋盘从引擎的信念集合中掉了出去，它对着41个并不存在的世界下完了整局。',
+  'Misty tracks every board consistent with what it has seen, stored as FEN strings. In one game it finished against 41 boards, none of them the real one.':
+    'Misty 会跟踪所有与它所观察到的信息相符的棋盘，以 FEN 字符串存储。在一局棋中，它是对着41个棋盘下完的，而其中没有一个是真实棋盘。',
+  'python-chess writes the en passant square only when the capture is legal in standard chess. Under fog the capture is legal even in check, and a pawn that can take en passant sees that square, so the true position stopped matching what Misty had seen.':
+    'python-chess 只在这步吃子在标准象棋中合法时才写出吃过路兵格。在迷雾规则下，即使被将军这步吃子也合法，而能吃过路兵的兵看得见那个格子，于是真实局面不再与 Misty 观察到的信息相符。',
+  'The fix records the square whenever a pawn can take. Replaying all 271 games, lost-truth cases outside the sampled games went from four to none.':
+    '修正后，只要有兵能吃就记录该格。重放全部271局，抽样局面之外丢失真相的情形由四例降为零。',
+  'Nothing caught it: the Rust port copied python-chess byte for byte, so the test comparing the two passed, and a belief that loses the truth gets more confident, not less.':
+    '没有任何机制发现它：Rust 移植版逐字节照搬 python-chess，所以对比两者的测试通过了；而一个丢失真相的信念只会变得更自信，不会变得更不确定。',
+  "Game `e751c6c4`, Misty as Black, move 29. White pushes the g-pawn two squares, beside Black's pawn on f4. White's queen on d6 attacks the black king.":
+    '对局 `e751c6c4`，Misty 执黑，第29回合。白方把 g 兵推进两格，落在黑方 f4 兵的旁边。白方位于 d6 的后正攻击着黑王。',
+  'Record the square when a pawn can take, regardless of whether taking is wise. That is `EnPassantMode.XFEN`, and it is the fog rule. It still omits the square when no enemy pawn is adjacent, so the belief does not split over a square nobody can use.':
+    '只要有兵能吃就记录该格，不管吃下去是否明智。这就是 `EnPassantMode.XFEN`，也正是迷雾规则。当旁边没有敌方兵时它仍然会省略该格，这样信念就不会因为一个谁都用不上的格子而分裂。',
+  'At the failing ply `P` now goes 625 to 617, truth kept. Replaying all 271 games reports no lost-truth decisions outside the sampled games, against four before.':
+    '在出错的那一着，`P` 现在是从625变到617，真相得以保留。重放全部271局，抽样局面之外不再报告任何丢失真相的决策，此前是四例。',
+  'Why nothing caught it': '为什么没有任何机制发现它',
+  "Fixed in the engine on 2026-09-10 and released in [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3). Every board above is drawn by the engine's own visibility code from that position; the script that draws them refuses to run if the two views stop differing by exactly g3 and g4.":
+    '已于2026-09-10在引擎中修正，并随 [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3) 发布。上面每一张棋盘都是引擎自己的可见性代码从该局面绘制的；绘图脚本一旦发现两个视图的差异不再恰好是 g3 和 g4，就会拒绝运行。',
+  // most-played-move: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
+  'When the Most Played Move Is an Inaccuracy': '当最常走的一手其实是不精确',
+  "Half are gambits and sidelines the masters never play. Where masters reach the position, most already play the engine's move; only four share the club's mistake.":
+    '其中一半是大师从不下的弃兵和冷门变例。在大师确实到达过的局面里，多数人早已走引擎的那一手；只有四个局面里大师和俱乐部棋手犯了同样的错。',
+  'The biggest by games: after 1.e4 e5 2.f4 d6, 85% of club players play 3.Nf3, and 3.d3 is nearly a pawn better.':
+    '按对局数算最大的一个：1.e4 e5 2.f4 d6之后，85%的俱乐部棋手走3.Nf3，而3.d3几乎要好上一个兵。',
+  "The fix is in the explorer's settings: the masters database, 2018 onward. All 144 are in a study.":
+    '解决办法就在局面浏览器的设置里：大师数据库，2018年起。全部144个局面都在一份研究里。',
+  'The opening explorer on Lichess shows you, for any position, what people played next and how it went. It can show you three databases (every rated game on Lichess, the masters, or one player), filtered by rating band, speed and year, and the masters filtered by era is the best free opening book there is. But the table a club player sees by default is the Lichess database at their own rating, and its top row is the most played move at their level. That row is the move most of us play, because everyone else did. I asked how often it is an inaccuracy.':
+    'Lichess的开局局面浏览器会告诉你，在任意局面下人们接着走了什么、结果如何。它能显示三个数据库（Lichess上所有等级分对局、大师对局，或某一位棋手），可按分段、棋速和年份筛选，而按年代筛选的大师库是现有最好的免费开局库。但俱乐部棋手默认看到的那张表，是自己分段下的Lichess数据库，首行就是这个水平上最常走的一手。那一行是我们大多数人会走的一手，只因为别人都这么走。我想知道，它有多常是一步不精确。',
+  'Where "most played" comes from': '「最常走」从何而来',
+  "Then every position went through Stockfish 18 at 20,000,000 nodes with three lines. The most played move is judged against the best move from the same search, by lila's own winning-chance formula, the one that decides what gets a `?!` on a Lichess report. A gap of 0.1 or more is an inaccuracy, 0.2 a mistake, 0.3 a blunder. Every flagged position then got a second 20M search with a different thread count, and 24 of 168 did not survive it; 144 did. That is the same noise floor the [last post](https://brianhliou.com/posts/lichess-analysis-accuracy/) found, and it is why one search is never the verdict here.":
+    '随后每个局面都用Stockfish 18在20,000,000节点下跑了三条变例。最常走的一手，是按同一次搜索给出的最佳着法来评判的，采用lila自己的获胜机会公式，也就是决定Lichess报告里哪一手会被标上`?!`的那个公式。差距达到0.1及以上算不精确，0.2算错着，0.3算漏着。每个被标记的局面又用不同线程数做了第二次20M搜索，168个里有24个没能通过；144个通过了。这和[上一篇](https://brianhliou.com/posts/lichess-analysis-accuracy/)发现的噪声底线一致，也正因如此，这里单次搜索从来不是定论。',
+  'For each of the 144 I also pulled the masters database by era (before 2010, 2010 to 2017, since 2018), which is where the shapes come from.':
+    '对这144个局面，我还按年代（2010年前、2010到2017年、2018年起）调取了大师数据库，下面的几种形态就是由此得来的。',
+  'Four shapes': '四种形态',
+  shape: '形态',
+  positions: '局面数',
+  'what it means': '含义',
+  'club only': '只有俱乐部棋手',
+  "masters have no games there, or fewer than twenty; the line is the club's alone":
+    '大师在此没有对局，或不足二十局；这条变例只属于俱乐部棋手',
+  'masters always knew': '大师一直就知道',
+  "the masters' top move is the engine's move in every era": '每个年代大师的首选都是引擎那一手',
+  'masters play a third move': '大师走第三种着法',
+  "the masters avoid both the club move and the engine's first choice":
+    '大师既避开俱乐部的那一手，也避开引擎的首选',
+  'masters switched': '大师改弦更张',
+  "the masters' top move became the engine's move in a later era":
+    '大师的首选在后来的年代变成了引擎那一手',
+  'everyone plays it': '所有人都这么走',
+  "the masters' top move is the club move too": '大师的首选也是俱乐部棋手的那一手',
+  "The club's book is mostly a book the masters never opened: 69 positions are gambits and sidelines with no masters games worth counting. Where the masters do play the position, they already agree with the engine in 51 cases, and moved toward it in 8 more. In only four of 144 do masters and club share the mistake. Theory is not lagging the engine much; the club is lagging theory.":
+    '俱乐部棋手的开局库，大体上是一本大师从未翻开的书：69个局面是弃兵和冷门变例，大师对局数少到不值一提。在大师确实下过的局面里，有51例他们本就与引擎一致，另有8例后来转向了引擎的着法。144个局面中，只有四个是大师和俱乐部棋手同犯一错。理论并没有落后引擎多少；落后理论的是俱乐部棋手。',
+  'Ten positions': '十个局面',
+  "Each has a board below. The most played move is on the mainline with its mark; the engine's line is the sideline with the numbers; the comment holds the club share and the masters' history. The strips first: how often the club move and the engine move are played, by 1600 to 2200 players and by masters in each era.":
+    '每个局面下方都有一张棋盘。最常走的一手在主线上并带标记；引擎的变例是带评估值的副线；注释里写着俱乐部占比和大师的历史选择。先看条形图：俱乐部的那一手和引擎的那一手，分别被1600到2200分棋手以及各年代大师走了多大比例。',
+  "Rust is the club's favourite, blue the engine's move. Masters cells with fewer than twenty games are left blank.":
+    '铁锈色是俱乐部棋手的最爱，蓝色是引擎的着法。大师栏对局数不足二十的留空。',
+  'For ten opening positions, bars showing how often the club move and the engine move are played by 1600 to 2200 players on Lichess, and by masters before 2010, in 2010 to 2017, and since 2018.':
+    '十个开局局面中，俱乐部的一手和引擎的一手分别被Lichess上1600到2200分棋手，以及2010年前、2010到2017年、2018年起的大师走出的频率条形图。',
+  "**King's Gambit, 2...d6.** After 1.e4 e5 2.f4 d6, 85% of club players play 3.Nf3, and so did half the masters who reached it. At 20M it is −0.67; 3.d3 is +0.25, because after 3.Nf3 exf4 Black takes the pawn and keeps it (the next position in the tree agrees: 44% then play 3...Nc6?! instead of taking). Everyone plays it, and it is the biggest miss on the list by games.":
+    '**王翼弃兵，2...d6。**1.e4 e5 2.f4 d6之后，85%的俱乐部棋手走3.Nf3，到过这个局面的大师也有一半这么走。在20M下它是−0.67；3.d3是+0.25，因为3.Nf3 exf4之后黑方吃兵并守住（树里的下一个局面也印证了这点：44%的人接着走3...Nc6?!而不是吃兵）。所有人都这么走，而且按对局数算，这是名单上最大的一次失误。',
+  "King's Gambit 2...d6: 3.Nf3 is the club move, 3.d3 the engine's":
+    '王翼弃兵2...d6：3.Nf3是俱乐部的一手，3.d3是引擎的一手',
+  '**Petrov, 3.Bc4.** 1.e4 e5 2.Nf3 Nf6 3.Bc4 reaches ten million club games, and a third of Black players answer 3...Nc6, turning it into a Two Knights. 3...Nxe4 takes the pawn: −0.54 against +0.15. The masters have taken it in every era, seven times in ten.':
+    '**彼得罗夫防御，3.Bc4。**1.e4 e5 2.Nf3 Nf6 3.Bc4的俱乐部对局数达到一千万，三分之一的黑方棋手应以3...Nc6，把它变成两马防御。3...Nxe4吃兵：−0.54对+0.15。大师在每个年代都吃了这个兵，十局里有七局。',
+  'Petrov 3.Bc4: the club plays Nc6, the engine takes on e4':
+    '彼得罗夫防御3.Bc4：俱乐部棋手走Nc6，引擎吃e4',
+  "Four Knights Spanish 4.Nc3: the club plays d6, the engine plays Rubinstein's Nd4":
+    '四马西班牙4.Nc3：俱乐部棋手走d6，引擎走Rubinstein的Nd4',
+  '**Vienna Gambit, 3...exf4.** 1.e4 e5 2.Nc3 Nf6 3.f4, and 30% take the pawn. It is +0.63 for White; 3...d5, the move 97% of masters have played in every era, is −0.31. Taking is the natural move and the losing one, which is what the gambit is for.':
+    '**维也纳弃兵，3...exf4。**1.e4 e5 2.Nc3 Nf6 3.f4，30%的人吃兵。这对白方是+0.63；而3...d5，各个年代97%的大师都走的一手，是−0.31。吃兵是自然的一手，也是输棋的一手，弃兵的用意正在于此。',
+  "Vienna Gambit: exf4 is the club move, d5 the engine's and the masters'":
+    '维也纳弃兵：exf4是俱乐部的一手，d5是引擎和大师的一手',
+  "**London, 2...g6 3.Nc3.** 1.d4 Nf6 2.Bf4 g6 3.Nc3 and 73% of the club plays 3...Bg7, the move you play in every other London. Here it is +0.62 and 3...d5 is 0.00, because 3.Nc3 is there to play 4.e4, and the bishop move lets it happen while 3...d5 stops it. The masters' share of 3...d5 went 48%, 66%, 77% by era.":
+    '**伦敦体系，2...g6 3.Nc3。**1.d4 Nf6 2.Bf4 g6 3.Nc3，73%的俱乐部棋手走3...Bg7，也就是在其他所有伦敦体系里都会走的那一手。这里它是+0.62，而3...d5是0.00，因为3.Nc3就是为了走4.e4，象走一步反倒放行，3...d5才拦得住。大师走3...d5的占比按年代依次为48%、66%、77%。',
+  "London 2...g6 3.Nc3: Bg7 is the club move, d5 the engine's":
+    '伦敦体系2...g6 3.Nc3：Bg7是俱乐部的一手，d5是引擎的一手',
+  '**Scandinavian, 3.Ng5 line.** 1.e4 d5 2.Nf3 dxe4 3.Ng5 Nf6 4.d3 exd3 5.Bxd3, a million club games, and 31% of Black players play 5...h6 to ask the knight. The answer is 6.Nxf7 Kxf7 7.Bg6+ and the queen on d8 goes: +2.70 for White against −1.12 for 5...Nc6. No master has ever been in this position.':
+    '**中心弃兵防御，3.Ng5变例。**1.e4 d5 2.Nf3 dxe4 3.Ng5 Nf6 4.d3 exd3 5.Bxd3，俱乐部对局一百万局，31%的黑方棋手走5...h6去赶马。回答是6.Nxf7 Kxf7 7.Bg6+，d8的后就没了：白方+2.70，而5...Nc6是−1.12。从没有大师到过这个局面。',
+  'Scandinavian 3.Ng5 line: 5...h6 is the club move and loses the queen':
+    '中心弃兵防御3.Ng5变例：5...h6是俱乐部的一手，会丢后',
+  "QGA 3.e4 e5: 4.d5 is the club move, 4.Nf3 the engine's and the masters'":
+    '后翼弃兵接受3.e4 e5：4.d5是俱乐部的一手，4.Nf3是引擎和大师的一手',
+  'All 144 are in [the study](/study/ibFQtGAL), these ten first, the rest ranked by how many games they touch times how much the move gives up.':
+    '全部144个局面都在[这份研究](/study/ibFQtGAL)里，这十个排在最前，其余按涉及对局数乘以该着法损失的幅度排序。',
+  'Reading the explorer': '怎么读局面浏览器',
+  "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; four of the ten above are a capture or a declined capture.":
+    '你所在分段最常走的一手，是和你同分段的多数人会走的一手，这并不是推荐，局面浏览器也从没说过它是。能解决这份名单上大部分问题的筛选项，就在齿轮菜单里。切换到大师数据库，把年份设为2018年起，别用全时段的表：大师的开局库是会变的，而全时段表是各年代的平均。还有，当最常走的一手是吃兵或拒收弃兵时，先问问引擎，别轻信大众；上面十个局面里有四个涉及吃子或拒收吃子。',
+  'How this was measured': '测量方法',
+  'Open the 144 positions':
+    '<a class="cta cta-primary" href="{{ site.embed_origin }}/study/{{ page.study }}">打开这144个局面</a>',
+  'The deep puzzles':
+    '<a class="cta cta-secondary" href="{{ site.embed_origin }}/study/fhC7BCG7">深度谜题</a>',
+  'Xiangqi for chess players':
+    '<a class="cta cta-secondary" href="{{ site.embed_origin }}/rules/xiangqi">写给国际象棋棋手的中国象棋入门</a>',
+  // chess960-starting-positions: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
+  'Chess960 Starting Positions Ranked By Stockfish': 'Stockfish 对国际象棋960全部开局局面的排名',
+  'Stockfish 18 rankings for all 960 Chess960/Fischer Random starting positions. Most balanced: SP-418 and SP-563; standard chess is near median.':
+    'Stockfish 18 对全部960个国际象棋960（菲舍尔任意制）开局局面的排名。最均衡的是 SP-418 与 SP-563；标准国际象棋接近中位数。',
+  'I evaluated all 960 Chess960 starting positions with Stockfish 18 at depth 36. Every one favors White.':
+    '我用 Stockfish 18 在搜索深度 36 下评估了全部 960 个国际象棋960开局局面。每一个都对白方有利。',
+  'The most balanced are SP-418 and SP-563, at +0.07. The most lopsided is SP-783 (QRKNRNBB) at +1.08, the only one over a pawn.':
+    '最均衡的是 SP-418 与 SP-563，评估值 +0.07。最失衡的是 SP-783（QRKNRNBB），评估值 +1.08，是唯一超过一个兵的局面。',
+  'Standard chess, SP-518, is +0.31 and ranks 463 of 960: almost exactly the median.':
+    '标准国际象棋即 SP-518，评估值 +0.31，在 960 个局面中排第 463 位：几乎正好是中位数。',
+  'None of the 105 starts used in recent elite Freestyle events came from the ten most White-favored. All 960 are in a CSV.':
+    '近期顶级 Freestyle 赛事所用的 105 个开局局面，没有一个来自最偏向白方的前十。全部 960 个都在一个 CSV 文件里。',
+  'I evaluated all 960 **Chess960 starting positions** with Stockfish 18 at uniform depth 36. Chess960 is also called **Fischer Random chess**; each legal back rank is usually identified by a **Scharnagl ID** from 0 to 959.':
+    '我用 Stockfish 18 在统一搜索深度 36 下评估了全部 960 个**国际象棋960开局局面**。国际象棋960也叫**菲舍尔任意制国际象棋**；每一种合法的底排通常用 0 到 959 的 **Scharnagl ID** 来标识。',
+  'Chess960 is the modern tournament name for Fischer Random chess, the variant Bobby Fischer proposed in 1996 to reduce opening memorization and force players back into over-the-board problem solving. The pieces are randomized across 960 legal back-rank layouts while preserving bishops on opposite colors and keeping the king between the rooks so castling still works.':
+    '国际象棋960是菲舍尔任意制国际象棋在现代比赛中的名称，这一变体由鲍比·菲舍尔于 1996 年提出，目的是减少开局背谱，迫使棋手回到棋盘前真正解决问题。棋子在 960 种合法底排布局中随机排列，同时保持双象异色、王位于两车之间，使王车易位依然可行。',
+  'Evaluations are white-POV: positive favors White, and **+1.00 is roughly one pawn**.':
+    '评估值均以白方视角给出：正值对白方有利，**+1.00 大致相当于一个兵**。',
+  Finding: '结论',
+  'Evaluation range': '评估值区间',
+  '+0.07 to +1.08': '+0.07 至 +1.08',
+  'Black-favored starts': '偏向黑方的开局局面',
+  'Standard chess, SP-518': '标准国际象棋，SP-518',
+  'Standard chess rank by balance': '标准国际象棋按均衡度的排名',
+  'Starts more balanced than standard chess': '比标准国际象棋更均衡的开局局面',
+  'Move-1 castling best moves': '第 1 着即王车易位为最佳着法的局面',
+  'Recent elite corpus overlap with highlighted starts': '近期顶级赛事棋局与重点开局局面的重合',
+  'SP-482, once': 'SP-482，一次',
+  "If you want the **most balanced Chess960 starting positions**, the clean candidates are **SP-418, SP-563, SP-269, SP-444, and SP-786**. All evaluate at +0.10 or below, far under standard chess's +0.31.":
+    '如果你想要**最均衡的国际象棋960开局局面**，明确的候选是 **SP-418、SP-563、SP-269、SP-444 和 SP-786**。它们的评估值都在 +0.10 及以下，远低于标准国际象棋的 +0.31。',
+  'Full dataset: [chess960_starting_position_evals.csv](/article-data/chess960-starting-position-evals.csv) (960 rows).':
+    '完整数据集：[chess960_starting_position_evals.csv](/article-data/chess960-starting-position-evals.csv)（960 行）。',
+  'How I Evaluated The Chess960 Positions': '我是如何评估这些国际象棋960局面的',
+  'The evaluation contract is deliberately narrow:': '评估条件刻意设得很窄：',
+  Parameter: '参数',
+  Value: '取值',
+  Engine: '引擎',
+  'Stockfish 18': 'Stockfish 18',
+  Depth: '搜索深度',
+  MultiPV: 'MultiPV',
+  'Chess960 mode': '国际象棋960模式',
+  '`UCI_Chess960=true`': '`UCI_Chess960=true`',
+  Compute: '算力',
+  'Modal, 96 batches × 10 positions': 'Modal，96 批 × 10 个局面',
+  Runtime: '运行时间',
+  '33 minutes wall, under $3': '实际耗时 33 分钟，不到 3 美元',
+  'Every starting position used the same depth target, so the rankings do not mix shallow and deep engine outputs. The pipeline is the same cloud Stockfish setup described in the [previous post on scaling Stockfish compute](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/).':
+    '每个开局局面都用同一个深度目标，因此排名不会把浅层和深层的引擎输出混在一起。这套流水线与[上一篇关于扩展 Stockfish 算力的文章](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)中描述的云端 Stockfish 配置相同。',
+  'Quality checks:': '质量检查：',
+  '959/960 reached depth 36; 1 position fell back to depth 35 at the time cap.':
+    '959/960 达到搜索深度 36；有 1 个局面在时间上限处回落到深度 35。',
+  'Median principal-variation length: 36 plies.': '主变着法长度中位数：36 着。',
+  'Check against Lichess cache': '与 Lichess 缓存的比对',
+  'Best-move agreement': '最佳着法一致率',
+  'Evaluation correlation': '评估值相关性',
+  'Absolute Δcp <= 0.20': 'Δcp 绝对值 <= 0.20',
+  'Mean Δcp': 'Δcp 平均值',
+  'The top-10 order moves around between datasets, but the headline does not: standard chess sits near the median, every start favors White at depth 36, and 9 starts have castling as the best first move.':
+    '前十名的顺序在两份数据之间会有变动，但主要结论不变：标准国际象棋接近中位数，在深度 36 下每个开局局面都偏向白方，并且有 9 个局面以王车易位为最佳首着。',
+  'Chess960 Evaluation Distribution': '国际象棋960评估值分布',
+  'Most starts land in a narrow white-edge band. The right tail is short: only one start crosses +1.00.':
+    '大多数开局局面落在一条狭窄的白方优势带里。右尾很短：只有一个局面越过 +1.00。',
+  evaluation: '评估值',
+  '< 0.00 (black-favored)': '< 0.00（偏向黑方）',
+  '0.00 to 0.09': '0.00 至 0.09',
+  '0.10 to 0.24': '0.10 至 0.24',
+  '0.25 to 0.49': '0.25 至 0.49',
+  '0.50 to 0.99': '0.50 至 0.99',
+  'Evaluation distribution histogram': '评估值分布直方图',
+  'At shallower public-cache depth, SP-663 can appear slightly black-favored (-0.10 in the Lichess cache). At depth 36 it evaluates at +0.14. The "black-favored start" result disappears under the uniform deeper search.':
+    '在公共缓存较浅的深度下，SP-663 会显得略偏黑方（Lichess 缓存中为 -0.10）。在深度 36 下它的评估值是 +0.14。在统一的更深搜索下，「偏向黑方的开局局面」这一结果就消失了。',
+  'Where Standard Chess Ranks': '标准国际象棋排在哪里',
+  'The default start, **SP-518 (RNBQKBNR)**, evaluates to **+0.31**. It ranks 463/960 by ascending imbalance: almost exactly the median. 462 Chess960 starts are more balanced; 497 are more imbalanced.':
+    '默认的开局局面 **SP-518（RNBQKBNR）**评估值为 **+0.31**。按失衡程度升序排列，它排第 463/960：几乎正好是中位数。462 个国际象棋960开局局面更均衡；497 个更失衡。',
+  'SP-518: standard chess. +0.31 at depth 36, best move d4.':
+    '<figcaption style="font-size: 0.88rem; line-height: 1.35; margin-top: 0.45rem; text-align: center;"><strong>SP-518：标准国际象棋。</strong> 深度 36 下 +0.31，最佳着法 d4。</figcaption>',
+  'SP-518, the standard chess starting position': 'SP-518，标准国际象棋的开局局面',
+  'This is a structural result, not a claim about which starting position is better to play. Standard chess is near the middle of the Chess960 balance distribution.':
+    '这是一个结构性结果，并不是在说哪个开局局面下起来更好。标准国际象棋处在国际象棋960均衡度分布的中间附近。',
+  'Most Imbalanced Chess960 Start: SP-783': '最失衡的国际象棋960开局局面：SP-783',
+  'One position crosses +1.00: **SP-783 (QRKNRNBB)**, at **+1.08** with best move `b4`. It is the largest opening edge in the full 960-position set.':
+    '有一个局面越过了 +1.00：**SP-783（QRKNRNBB）**，评估值 **+1.08**，最佳着法 `b4`。这是全部 960 个局面中最大的开局优势。',
+  'SP-783: QRKNRNBB. The most white-favored start at +1.08, best move b4.':
+    '<figcaption style="font-size: 0.88rem; line-height: 1.35; margin-top: 0.45rem; text-align: center;"><strong>SP-783：QRKNRNBB。</strong> 最偏向白方的开局局面，+1.08，最佳着法 b4。</figcaption>',
+  'SP-783, the most imbalanced Chess960 starting position': 'SP-783，最失衡的国际象棋960开局局面',
+  'Every other starting position lands between +0.07 and +0.92.':
+    '其余所有开局局面都落在 +0.07 到 +0.92 之间。',
+  'Most White-Favored Chess960 Starting Positions': '最偏向白方的国际象棋960开局局面',
+  'Only one position crosses +1.00. The rest of the top 10 sit between +0.68 and +0.92.':
+    '只有一个局面越过 +1.00。前十名中的其余局面落在 +0.68 到 +0.92 之间。',
+  SP: 'SP',
+  'back-rank': '底排',
+  depth: '深度',
+  QRKNRNBB: 'QRKNRNBB',
+  b4: 'b4',
+  QRKRNNBB: 'QRKRNNBB',
+  RBQNKRBN: 'RBQNKRBN',
+  f4: 'f4',
+  QNRKBBRN: 'QNRKBBRN',
+  c4: 'c4',
+  BBNNRKRQ: 'BBNNRKRQ',
+  g3: 'g3',
+  QBBRKRNN: 'QBBRKRNN',
+  Ng3: 'Ng3',
+  QRNNKRBB: 'QRNNKRBB',
+  RQKNBBRN: 'RQKNBBRN',
+  RNKBNQBR: 'RNKBNQBR',
+  e4: 'e4',
+  BBNRNKRQ: 'BBNRNKRQ',
+  g4: 'g4',
+  "Board previews are clickable. The green arrow marks the engine's best first move. Full principal variations are in the CSV.":
+    '棋盘预览可点击。绿色箭头标出引擎的最佳首着。完整主变着法见 CSV。',
+  '**SP-783** `QRKNRNBB` · +1.08 · best b4 · 29 plies':
+    '**SP-783** `QRKNRNBB` · +1.08 · 最佳 b4 · 29 着',
+  'SP-783 starting position; SP-783 final position after principal variation':
+    'SP-783 开局局面；SP-783 主变着法走完后的局面',
+  'Principal variation: `1. b4 b5 2. a4 a5 3. axb5 axb4 4. Qxa8 Rxa8 5. Rxb4 g5 6. g4 Ra1+ 7. Rb1 Rxb1+ 8. Kxb1 Nb7 9. d3 h5 10. gxh5 Ne6 11. Ng3 Nd6 12. c4 Bh7 13. Ne3 Nd4 14. Kc1 f5 15. Kd2`':
+    '主变着法：`1. b4 b5 2. a4 a5 3. axb5 axb4 4. Qxa8 Rxa8 5. Rxb4 g5 6. g4 Ra1+ 7. Rb1 Rxb1+ 8. Kxb1 Nb7 9. d3 h5 10. gxh5 Ne6 11. Ng3 Nd6 12. c4 Bh7 13. Ne3 Nd4 14. Kc1 f5 15. Kd2`',
+  '**SP-879** `QRKRNNBB` · +0.92 · best b4 · 41 plies':
+    '**SP-879** `QRKRNNBB` · +0.92 · 最佳 b4 · 41 着',
+  'SP-879 starting position; SP-879 final position after principal variation':
+    'SP-879 开局局面；SP-879 主变着法走完后的局面',
+  'Principal variation: `1. b4 a5 2. a4 f5 3. Nd3 axb4 4. Ne3 d6 5. f4 c5 6. Nxf5 Be6 7. Nxe7+ Kd7 8. Nxc5+ Kxe7 9. Nxe6 Nxe6 10. Bb6 Rdc8 11. Rxb4 Qa6 12. f5 g6 13. Qa2 gxf5 14. g4 f4 15. a5 Nf6 16. Bf3 Bg7 17. c3 Ng5 18. Re1 Nd7 19. h4 Bxc3 20. dxc3 Rxc3+ 21. Kb1`':
+    '主变着法：`1. b4 a5 2. a4 f5 3. Nd3 axb4 4. Ne3 d6 5. f4 c5 6. Nxf5 Be6 7. Nxe7+ Kd7 8. Nxc5+ Kxe7 9. Nxe6 Nxe6 10. Bb6 Rdc8 11. Rxb4 Qa6 12. f5 g6 13. Qa2 gxf5 14. g4 f4 15. a5 Nf6 16. Bf3 Bg7 17. c3 Ng5 18. Re1 Nd7 19. h4 Bxc3 20. dxc3 Rxc3+ 21. Kb1`',
+  '**SP-604** `RBQNKRBN` · +0.81 · best f4 · 39 plies':
+    '**SP-604** `RBQNKRBN` · +0.81 · 最佳 f4 · 39 着',
+  'SP-604 starting position; SP-604 final position after principal variation':
+    'SP-604 开局局面；SP-604 主变着法走完后的局面',
+  'Principal variation: `1. f4 c5 2. Ng3 Ne6 3. e3 f6 4. c4 g5 5. Ne2 gxf4 6. exf4 Nd4 7. Nxd4 cxd4 8. Bxd4 Qxc4 9. Qxc4 Bxc4 10. Rf2 Ng6 11. g3 Bb5 12. Ne3 Bc6 13. Bc3 e5 14. fxe5 fxe5 15. Rxf8+ Nxf8 16. Bf5 Bc7 17. O-O-O O-O-O 18. Rf1 Re8 19. Bc2 Ne6 20. Rf7`':
+    '主变着法：`1. f4 c5 2. Ng3 Ne6 3. e3 f6 4. c4 g5 5. Ne2 gxf4 6. exf4 Nd4 7. Nxd4 cxd4 8. Bxd4 Qxc4 9. Qxc4 Bxc4 10. Rf2 Ng6 11. g3 Bb5 12. Ne3 Bc6 13. Bc3 e5 14. fxe5 fxe5 15. Rxf8+ Nxf8 16. Bf5 Bc7 17. O-O-O O-O-O 18. Rf1 Re8 19. Bc2 Ne6 20. Rf7`',
+  '**SP-298** `QNRKBBRN` · +0.73 · best c4 · 28 plies':
+    '**SP-298** `QNRKBBRN` · +0.73 · 最佳 c4 · 28 着',
+  'SP-298 starting position; SP-298 final position after principal variation':
+    'SP-298 开局局面；SP-298 主变着法走完后的局面',
+  'Principal variation: `1. c4 f5 2. d4 e6 3. e3 Bh5+ 4. f3 Bf7 5. b3 Be7 6. Bc3 Ng6 7. Nd2 a5 8. f4 O-O 9. Bd3 Ba3 10. Bb2 Bxb2 11. Qxb2 d6 12. g4 Rce8 13. O-O-O a4 14. d5 fxg4`':
+    '主变着法：`1. c4 f5 2. d4 e6 3. e3 Bh5+ 4. f3 Bf7 5. b3 Be7 6. Bc3 Ng6 7. Nd2 a5 8. f4 O-O 9. Bd3 Ba3 10. Bb2 Bxb2 11. Qxb2 d6 12. g4 Rce8 13. O-O-O a4 14. d5 fxg4`',
+  '**SP-80** `BBNNRKRQ` · +0.73 · best g3 · 39 plies':
+    '**SP-80** `BBNNRKRQ` · +0.73 · 最佳 g3 · 39 着',
+  'SP-80 starting position; SP-80 final position after principal variation':
+    'SP-80 开局局面；SP-80 主变着法走完后的局面',
+  'Principal variation: `1. g3 c5 2. Nd3 c4 3. Nc5 Nb6 4. b3 d6 5. Ne4 Nc6 6. h4 e6 7. h5 h6 8. Qh4 d5 9. Nec3 a6 10. e4 d4 11. Ne2 g5 12. hxg6 fxg6 13. Bb2 Bd6 14. e5 Bxe5 15. c3 d3 16. Nd4 Qf6 17. Nxc6 bxc6 18. Ba3+ Kf7 19. Nb2 c5 20. Qxf6+`':
+    '主变着法：`1. g3 c5 2. Nd3 c4 3. Nc5 Nb6 4. b3 d6 5. Ne4 Nc6 6. h4 e6 7. h5 h6 8. Qh4 d5 9. Nec3 a6 10. e4 d4 11. Ne2 g5 12. hxg6 fxg6 13. Bb2 Bd6 14. e5 Bxe5 15. c3 d3 16. Nd4 Qf6 17. Nxc6 bxc6 18. Ba3+ Kf7 19. Nb2 c5 20. Qxf6+`',
+  '**SP-868** `QBBRKRNN` · +0.70 · best Ng3 · 39 plies':
+    '**SP-868** `QBBRKRNN` · +0.70 · 最佳 Ng3 · 39 着',
+  'SP-868 starting position; SP-868 final position after principal variation':
+    'SP-868 开局局面；SP-868 主变着法走完后的局面',
+  'Principal variation: `1. Ng3 d5 2. Nh5 f6 3. Nxg7+ Kf7 4. Nh5 Ng6 5. d4 Nh4 6. f3 Nxg2+ 7. Kf2 Nh4 8. c4 dxc4 9. b3 c5 10. Bxh7 cxd4 11. Qb1 d3 12. bxc4 Bd6 13. exd3 Bf5 14. Bxf5 Nxf5 15. Ng3 Nd4 16. N1e2 Bc5 17. Be3 Qc8 18. Bxd4 Bxd4+ 19. Kg2 Nh6 20. Rh1`':
+    '主变着法：`1. Ng3 d5 2. Nh5 f6 3. Nxg7+ Kf7 4. Nh5 Ng6 5. d4 Nh4 6. f3 Nxg2+ 7. Kf2 Nh4 8. c4 dxc4 9. b3 c5 10. Bxh7 cxd4 11. Qb1 d3 12. bxc4 Bd6 13. exd3 Bf5 14. Bxf5 Nxf5 15. Ng3 Nd4 16. N1e2 Bc5 17. Be3 Qc8 18. Bxd4 Bxd4+ 19. Kg2 Nh6 20. Rh1`',
+  '**SP-399** `QRNNKRBB` · +0.70 · best b4 · 34 plies':
+    '**SP-399** `QRNNKRBB` · +0.70 · 最佳 b4 · 34 着',
+  'SP-399 starting position; SP-399 final position after principal variation':
+    'SP-399 开局局面；SP-399 主变着法走完后的局面',
+  'Principal variation: `1. b4 h6 2. f4 Bh7 3. Nc3 g5 4. f5 b6 5. Nb3 Nd6 6. Bd4 Bxd4 7. Nxd4 f6 8. d3 c6 9. a4 Qb7 10. Kd2 O-O 11. g4 Kg7 12. h4 Qc7 13. hxg5 hxg5 14. b5 Bg8 15. bxc6 dxc6 16. Ne4 Nxe4+ 17. Bxe4 Qd6`':
+    '主变着法：`1. b4 h6 2. f4 Bh7 3. Nc3 g5 4. f5 b6 5. Nb3 Nd6 6. Bd4 Bxd4 7. Nxd4 f6 8. d3 c6 9. a4 Qb7 10. Kd2 O-O 11. g4 Kg7 12. h4 Qc7 13. hxg5 hxg5 14. b5 Bg8 15. bxc6 dxc6 16. Ne4 Nxe4+ 17. Bxe4 Qd6`',
+  '**SP-794** `RQKNBBRN` · +0.68 · best f4 · 35 plies':
+    '**SP-794** `RQKNBBRN` · +0.68 · 最佳 f4 · 35 着',
+  'SP-794 starting position; SP-794 final position after principal variation':
+    'SP-794 开局局面；SP-794 主变着法走完后的局面',
+  'Principal variation: `1. f4 c6 2. e3 f5 3. c4 g5 4. Qxf5 gxf4 5. Qxf4 Qxf4 6. exf4 Ne6 7. f5 Nd4 8. Ng3 Nf7 9. Bf2 Bg7 10. Nc3 Nh6 11. Bd3 Rf8 12. O-O Ndxf5 13. Nxf5 Nxf5 14. Rae1 Bg6 15. Bxf5 Rxf5 16. Rxe7 Bxc3 17. dxc3 b6 18. Ree1`':
+    '主变着法：`1. f4 c6 2. e3 f5 3. c4 g5 4. Qxf5 gxf4 5. Qxf4 Qxf4 6. exf4 Ne6 7. f5 Nd4 8. Ng3 Nf7 9. Bf2 Bg7 10. Nc3 Nh6 11. Bd3 Rf8 12. O-O Ndxf5 13. Nxf5 Nxf5 14. Rae1 Bg6 15. Bxf5 Rxf5 16. Rxe7 Bxc3 17. dxc3 b6 18. Ree1`',
+  '**SP-557** `RNKBNQBR` · +0.68 · best e4 · 32 plies':
+    '**SP-557** `RNKBNQBR` · +0.68 · 最佳 e4 · 32 着',
+  'SP-557 starting position; SP-557 final position after principal variation':
+    'SP-557 开局局面；SP-557 主变着法走完后的局面',
+  'Principal variation: `1. e4 e5 2. f4 exf4 3. Nc3 f5 4. Qxf4 Be6 5. e5 g5 6. Qe3 Nc6 7. d4 d5 8. h4 h6 9. Qf3 gxh4 10. Nd3 Ng7 11. Nf4 Bg5 12. Ne2 O-O-O 13. Kb1 Bf7 14. Bf2 Ne6 15. Nxe6 Bxe6 16. Nf4 Bf7`':
+    '主变着法：`1. e4 e5 2. f4 exf4 3. Nc3 f5 4. Qxf4 Be6 5. e5 g5 6. Qe3 Nc6 7. d4 d5 8. h4 h6 9. Qf3 gxh4 10. Nd3 Ng7 11. Nf4 Bg5 12. Ne2 O-O-O 13. Kb1 Bf7 14. Bf2 Ne6 15. Nxe6 Bxe6 16. Nf4 Bf7`',
+  '**SP-176** `BBNRNKRQ` · +0.68 · best g4 · 36 plies':
+    '**SP-176** `BBNRNKRQ` · +0.68 · 最佳 g4 · 36 着',
+  'SP-176 starting position; SP-176 final position after principal variation':
+    'SP-176 开局局面；SP-176 主变着法走完后的局面',
+  'Principal variation: `1. g4 c5 2. b3 Nc7 3. c4 b6 4. Be4 Bxe4 5. Qxe4 Nd6 6. Qf3 h6 7. e3 Qh7 8. Ne2 Ne6 9. Be5 O-O 10. Bxd6 Bxd6 11. h4 f5 12. g5 hxg5 13. hxg5 f4 14. e4 Qg6 15. d3 Bb8 16. d4 cxd4 17. Nxd4 Nxd4 18. Rxd4 Be5`':
+    '主变着法：`1. g4 c5 2. b3 Nc7 3. c4 b6 4. Be4 Bxe4 5. Qxe4 Nd6 6. Qf3 h6 7. e3 Qh7 8. Ne2 Ne6 9. Be5 O-O 10. Bxd6 Bxd6 11. h4 f5 12. g5 hxg5 13. hxg5 f4 14. e4 Qg6 15. d3 Bb8 16. d4 cxd4 17. Nxd4 Nxd4 18. Rxd4 Be5`',
+  'Most Balanced Chess960 Starting Positions': '最均衡的国际象棋960开局局面',
+  "These are the starts where the position itself contributes the least white edge. All are +0.12 or below, far under standard chess's +0.31.":
+    '这些是局面本身给白方带来优势最小的开局。全部在 +0.12 及以下，远低于标准国际象棋的 +0.31。',
+  BRNQNBKR: 'BRNQNBKR',
+  BRNKNRQB: 'BRNKNRQB',
+  NRKBNQBR: 'NRKBNQBR',
+  Nb3: 'Nb3',
+  RBNNQKBR: 'RBNNQKBR',
+  d4: 'd4',
+  BRQKNBRN: 'BRQKNBRN',
+  NQNBRKBR: 'NQNBRKBR',
+  BQRNKBNR: 'BQRNKBNR',
+  e3: 'e3',
+  RKQNNRBB: 'RKQNNRBB',
+  NNBBRKRQ: 'NNBBRKRQ',
+  d3: 'd3',
+  NQBRNKRB: 'NQBRNKRB',
+  '**SP-418** `BRNQNBKR` · +0.07 · best b4 · 32 plies':
+    '**SP-418** `BRNQNBKR` · +0.07 · 最佳 b4 · 32 着',
+  'SP-418 starting position; SP-418 final position after principal variation':
+    'SP-418 开局局面；SP-418 主变着法走完后的局面',
+  'Principal variation: `1. b4 b5 2. e3 e6 3. Be2 Be7 4. O-O O-O 5. d3 a6 6. Qd2 d6 7. Nb3 c5 8. bxc5 dxc5 9. Nf3 Nb6 10. c4 Nd7 11. Ne5 Nef6 12. Qa5 Bd6 13. Qxd8 Rfxd8 14. Nxd7 Nxd7 15. cxb5 axb5 16. Rfc1 Rdc8`':
+    '主变着法：`1. b4 b5 2. e3 e6 3. Be2 Be7 4. O-O O-O 5. d3 a6 6. Qd2 d6 7. Nb3 c5 8. bxc5 dxc5 9. Nf3 Nb6 10. c4 Nd7 11. Ne5 Nef6 12. Qa5 Bd6 13. Qxd8 Rfxd8 14. Nxd7 Nxd7 15. cxb5 axb5 16. Rfc1 Rdc8`',
+  '**SP-563** `BRNKNRQB` · +0.07 · best g4 · 40 plies':
+    '**SP-563** `BRNKNRQB` · +0.07 · 最佳 g4 · 40 着',
+  'SP-563 starting position; SP-563 final position after principal variation':
+    'SP-563 开局局面；SP-563 主变着法走完后的局面',
+  'Principal variation: `1. g4 g5 2. Ncd3 a5 3. b3 Bxa1 4. Rxa1 b6 5. h4 h6 6. Bxa8 Rxa8 7. a4 f6 8. f4 gxf4 9. Nxf4 e5 10. Nh5 Ne7 11. Qg2 c6 12. Nd3 Qe6 13. Kc1 Kc7 14. e4 Rg8 15. Nf2 d5 16. Kb2 Nd6 17. Qf3 Raf8 18. d3 d4 19. Ng3 b5 20. Nf5 bxa4`':
+    '主变着法：`1. g4 g5 2. Ncd3 a5 3. b3 Bxa1 4. Rxa1 b6 5. h4 h6 6. Bxa8 Rxa8 7. a4 f6 8. f4 gxf4 9. Nxf4 e5 10. Nh5 Ne7 11. Qg2 c6 12. Nd3 Qe6 13. Kc1 Kc7 14. e4 Rg8 15. Nf2 d5 16. Kb2 Nd6 17. Qf3 Raf8 18. d3 d4 19. Ng3 b5 20. Nf5 bxa4`',
+  '**SP-269** `NRKBNQBR` · +0.09 · best Nb3 · 38 plies':
+    '**SP-269** `NRKBNQBR` · +0.09 · 最佳 Nb3 · 38 着',
+  'SP-269 starting position; SP-269 final position after principal variation':
+    'SP-269 开局局面；SP-269 主变着法走完后的局面',
+  'Principal variation: `1. Nb3 f5 2. f4 Nb6 3. d3 c6 4. c3 d6 5. Nd2 Bc7 6. Nef3 Nf6 7. e4 fxe4 8. dxe4 e5 9. fxe5 dxe5 10. b4 Nbd7 11. Bb3 Bb6 12. Qd1 Bxg1 13. Qxg1 a5 14. Bxg8 Qxg8 15. Qa7 Qxa2 16. O-O O-O 17. bxa5 Ra8 18. Qxb7 Qxa5 19. Qb3+ Kh8`':
+    '主变着法：`1. Nb3 f5 2. f4 Nb6 3. d3 c6 4. c3 d6 5. Nd2 Bc7 6. Nef3 Nf6 7. e4 fxe4 8. dxe4 e5 9. fxe5 dxe5 10. b4 Nbd7 11. Bb3 Bb6 12. Qd1 Bxg1 13. Qxg1 a5 14. Bxg8 Qxg8 15. Qa7 Qxa2 16. O-O O-O 17. bxa5 Ra8 18. Qxb7 Qxa5 19. Qb3+ Kh8`',
+  '**SP-444** `RBNNQKBR` · +0.10 · best d4 · 33 plies':
+    '**SP-444** `RBNNQKBR` · +0.10 · 最佳 d4 · 33 着',
+  'SP-444 starting position; SP-444 final position after principal variation':
+    'SP-444 开局局面；SP-444 主变着法走完后的局面',
+  'Principal variation: `1. d4 f6 2. f3 Bf7 3. e4 c6 4. Bf2 O-O 5. a4 a5 6. O-O e5 7. dxe5 fxe5 8. Ne3 Ne7 9. Qd2 Ne6 10. Ne2 d6 11. Kh1 Nc5 12. Ng4 Ng6 13. Ng3 Bc7 14. Nf5 Rd8 15. Bxc5 dxc5 16. Qc3 c4 17. Ba2`':
+    '主变着法：`1. d4 f6 2. f3 Bf7 3. e4 c6 4. Bf2 O-O 5. a4 a5 6. O-O e5 7. dxe5 fxe5 8. Ne3 Ne7 9. Qd2 Ne6 10. Ne2 d6 11. Kh1 Nc5 12. Ng4 Ng6 13. Ng3 Bc7 14. Nf5 Rd8 15. Bxc5 dxc5 16. Qc3 c4 17. Ba2`',
+  '**SP-786** `BRQKNBRN` · +0.10 · best c4 · 31 plies':
+    '**SP-786** `BRQKNBRN` · +0.10 · 最佳 c4 · 31 着',
+  'SP-786 starting position; SP-786 final position after principal variation':
+    'SP-786 开局局面；SP-786 主变着法走完后的局面',
+  'Principal variation: `1. c4 e6 2. f4 b5 3. c5 a5 4. b3 d6 5. Nd3 Ng6 6. e3 Be7 7. Be2 Nf6 8. cxd6 cxd6 9. Qxc8+ Rxc8 10. g3 Nd5 11. Nhf2 Bf6 12. a3 O-O 13. Bxf6 Nxf6 14. Nb2 Bd5 15. Bxb5 Bxb3+ 16. Ke2`':
+    '主变着法：`1. c4 e6 2. f4 b5 3. c5 a5 4. b3 d6 5. Nd3 Ng6 6. e3 Be7 7. Be2 Nf6 8. cxd6 cxd6 9. Qxc8+ Rxc8 10. g3 Nd5 11. Nhf2 Bf6 12. a3 O-O 13. Bxf6 Nxf6 14. Nb2 Bd5 15. Bxb5 Bxb3+ 16. Ke2`',
+  '**SP-29** `NQNBRKBR` · +0.11 · best c4 · 31 plies':
+    '**SP-29** `NQNBRKBR` · +0.11 · 最佳 c4 · 31 着',
+  'SP-29 starting position; SP-29 final position after principal variation':
+    'SP-29 开局局面；SP-29 主变着法走完后的局面',
+  'Principal variation: `1. c4 e5 2. f3 c6 3. b4 f6 4. Bb3 Bf7 5. Bf2 O-O 6. O-O d5 7. cxd5 cxd5 8. a4 Bb6 9. e3 Ne7 10. Nc2 Kh8 11. Qa2 a5 12. d4 Bc7 13. dxe5 Bxe5 14. Kh1 Nb6 15. Ne2 Nc4 16. bxa5`':
+    '主变着法：`1. c4 e5 2. f3 c6 3. b4 f6 4. Bb3 Bf7 5. Bf2 O-O 6. O-O d5 7. cxd5 cxd5 8. a4 Bb6 9. e3 Ne7 10. Nc2 Kh8 11. Qa2 a5 12. d4 Bc7 13. dxe5 Bxe5 14. Kh1 Nb6 15. Ne2 Nc4 16. bxa5`',
+  '**SP-482** `BQRNKBNR` · +0.11 · best e3 · 32 plies · elite match':
+    '**SP-482** `BQRNKBNR` · +0.11 · 最佳 e3 · 32 着 · 顶级对抗赛',
+  'SP-482 starting position; SP-482 final position after principal variation':
+    'SP-482 开局局面；SP-482 主变着法走完后的局面',
+  'Principal variation: `1. e3 e6 2. b4 f5 3. f4 Nf6 4. Nf3 Be7 5. c4 b6 6. Be2 Nf7 7. Nf2 c5 8. bxc5 bxc5 9. Qc2 Rg8 10. h4 Bc6 11. Rb1 Qa8 12. Bc3 Nh5 13. d3 Ng3 14. Rh3 Nxe2 15. Kxe2 Rb8 16. Rxb8+ Qxb8`':
+    '主变着法：`1. e3 e6 2. b4 f5 3. f4 Nf6 4. Nf3 Be7 5. c4 b6 6. Be2 Nf7 7. Nf2 c5 8. bxc5 bxc5 9. Qc2 Rg8 10. h4 Bc6 11. Rb1 Qa8 12. Bc3 Nh5 13. d3 Ng3 14. Rh3 Nxe2 15. Kxe2 Rb8 16. Rxb8+ Qxb8`',
+  '**SP-719** `RKQNNRBB` · +0.11 · best f4 · 43 plies':
+    '**SP-719** `RKQNNRBB` · +0.11 · 最佳 f4 · 43 着',
+  'SP-719 starting position; SP-719 final position after principal variation':
+    'SP-719 开局局面；SP-719 主变着法走完后的局面',
+  'Principal variation: `1. f4 f5 2. g3 g6 3. d3 d6 4. c4 c5 5. Nc3 Nc6 6. Qd2 Qd7 7. Nc2 Nc7 8. b3 Bf7 9. O-O-O Ne6 10. e3 O-O 11. d4 Nb4 12. Nxb4 cxb4 13. Nd5 Nc7 14. Nxc7 Qxc7 15. Qxb4 Rfb8 16. Qc3 a5 17. a4 d5 18. Kd2 dxc4 19. bxc4 Qxc4 20. Qxc4 Bxc4 21. Rfe1 Ra7 22. Rb1`':
+    '主变着法：`1. f4 f5 2. g3 g6 3. d3 d6 4. c4 c5 5. Nc3 Nc6 6. Qd2 Qd7 7. Nc2 Nc7 8. b3 Bf7 9. O-O-O Ne6 10. e3 O-O 11. d4 Nb4 12. Nxb4 cxb4 13. Nd5 Nc7 14. Nxc7 Qxc7 15. Qxb4 Rfb8 16. Qc3 a5 17. a4 d5 18. Kd2 dxc4 19. bxc4 Qxc4 20. Qxc4 Bxc4 21. Rfe1 Ra7 22. Rb1`',
+  '**SP-85** `NNBBRKRQ` · +0.12 · best d3 · 25 plies':
+    '**SP-85** `NNBBRKRQ` · +0.12 · 最佳 d3 · 25 着',
+  'SP-85 starting position; SP-85 final position after principal variation':
+    'SP-85 开局局面；SP-85 主变着法走完后的局面',
+  'Principal variation: `1. d3 e5 2. h4 d6 3. Nb3 h5 4. g3 Nb6 5. e4 Nc6 6. Bd2 g6 7. Bf3 Bf6 8. Nc3 Bd7 9. Bg2 O-O-O 10. a4 Be6 11. Bh3 Nd7 12. Nd5 g5 13. Nxf6`':
+    '主变着法：`1. d3 e5 2. h4 d6 3. Nb3 h5 4. g3 Nb6 5. e4 Nc6 6. Bd2 g6 7. Bf3 Bf6 8. Nc3 Bd7 9. Bg2 O-O-O 10. a4 Be6 11. Bh3 Nd7 12. Nd5 g5 13. Nxf6`',
+  '**SP-119** `NQBRNKRB` · +0.12 · best c4 · 31 plies':
+    '**SP-119** `NQBRNKRB` · +0.12 · 最佳 c4 · 31 着',
+  'SP-119 starting position; SP-119 final position after principal variation':
+    'SP-119 开局局面；SP-119 主变着法走完后的局面',
+  'Principal variation: `1. c4 g6 2. d4 c6 3. O-O d5 4. cxd5 cxd5 5. Nac2 Bf5 6. g3 Nac7 7. Bg2 Bg7 8. a4 Nd6 9. Qa2 O-O 10. Ne3 Be6 11. b3 b5 12. Nd3 Ne4 13. Bb2 b4 14. Qa1 Bh6 15. f4 a5 16. Nc5`':
+    '主变着法：`1. c4 g6 2. d4 c6 3. O-O d5 4. cxd5 cxd5 5. Nac2 Bf5 6. g3 Nac7 7. Bg2 Bg7 8. a4 Nd6 9. Qa2 O-O 10. Ne3 Be6 11. b3 b5 12. Nd3 Ne4 13. Bb2 b4 14. Qa1 Bh6 15. f4 a5 16. Nc5`',
+  'Best First Moves In Chess960': '国际象棋960中的最佳首着',
+  "Across all 960 starts, **94.9%** have a pawn move as Stockfish's best first move. `e4` and `d4` are still the most common, but they cover only 36% of the field. The Chess960-specific signal is flank activity: `f4`, `b4`, and `g4` combine for 27.3%.":
+    '在全部 960 个开局局面中，**94.9%** 的 Stockfish 最佳首着是兵着。`e4` 和 `d4` 仍然最常见，但只覆盖 36% 的局面。国际象棋960特有的信号是翼侧活动：`f4`、`b4` 和 `g4` 合计占 27.3%。',
+  '%': '%',
+  a4: 'a4',
+  'Piece-move and move-1 castling details': '<summary>子力着法与第 1 着王车易位的细节</summary>',
+  'Piece moves account for 49 positions, or 5.1% of the field. Knights account for 40 of them. The other 9 are legal move-1 castles.':
+    '子力着法占 49 个局面，即全部的 5.1%。其中 40 个是马着。另外 9 个是合法的第 1 着王车易位。',
+  'Origin to dest': '起点到终点',
+  '`Ng3`': 'Ng3',
+  'h1 to g3': 'h1 到 g3',
+  '`O-O`': '`O-O`',
+  'f1 to g1': 'f1 到 g1',
+  '`Nc3`': '`Nc3`',
+  'b1 to c3': 'b1 到 c3',
+  '`Nb3`': 'Nb3',
+  'a1 to b3': 'a1 到 b3',
+  '`Nf3`': '`Nf3`',
+  'g1 to f3': 'g1 到 f3',
+  '`Nh3`': '`Nh3`',
+  'g1 to h3': 'g1 到 h3',
+  '`Nde3`': '`Nde3`',
+  'd1 to e3': 'd1 到 e3',
+  '`Ncd3`': '`Ncd3`',
+  'c1 to d3': 'c1 到 d3',
+  'The 9 move-1 castling starts all place the king on `f1` and the kingside rook on `g1`: SP-296 (+0.20), SP-308 (+0.35), SP-312 (+0.37), SP-324 (+0.22), SP-407 (+0.16), SP-580 (+0.26), SP-585 (+0.26), SP-596 (+0.22), and SP-612 (+0.40).':
+    '这 9 个第 1 着王车易位的开局局面都把王放在 `f1`、王翼车放在 `g1`：SP-296（+0.20）、SP-308（+0.35）、SP-312（+0.37）、SP-324（+0.22）、SP-407（+0.16）、SP-580（+0.26）、SP-585（+0.26）、SP-596（+0.22）和 SP-612（+0.40）。 </details>',
+  'What Recent Elite Chess960 Actually Picked': '近期顶级国际象棋960实际选了什么',
+  'I mapped recent elite Freestyle broadcast PGNs back to Scharnagl IDs using the starting FEN. This avoids relying on the PGN `Variant` tag: some 2025 Freestyle broadcasts are labeled `Variant "Standard"` even though the FEN is a Chess960 start.':
+    '我用开局 FEN 把近期顶级 Freestyle 直播 PGN 映射回 Scharnagl ID。这样就不用依赖 PGN 的 `Variant` 标签：有些 2025 年的 Freestyle 直播标注为 `Variant "Standard"`，尽管 FEN 是一个国际象棋960开局局面。',
+  'The modern elite corpus:': '现代顶级赛事棋局集：',
+  Games: '局数',
+  'unique SPs': '不重复 SP 数',
+  '**Total**': '**总计**',
+  'The most repeated starts are mostly tournament-format artifacts: paired games, rematches, and bracket mini-matches reuse the same position.':
+    '出现次数最多的开局局面大多是赛制造成的：成对的棋局、复赛和淘汰赛小型对抗赛都会重复使用同一个局面。',
+  eval: '评估值',
+  'appeared in': '出现于',
+  '`RBKNQRBN`': '`RBKNQRBN`',
+  '`RNKNRQBB`': '`RNKNRQBB`',
+  'Las Vegas': '拉斯维加斯站',
+  '`QRKBNNBR`': '`QRKBNNBR`',
+  '`BBQNRNKR`': '`BBQNRNKR`',
+  '`NRKBQNBR`': '`NRKBQNBR`',
+  '`RQBNKNRB`': '`RQBNKNRB`',
+  '`RBNQKNBR`': '`RBNQKNBR`',
+  '`RNBBKNQR`': '`RNBBKNQR`',
+  'All selected Scharnagl IDs by event': '<summary>各赛事所选用的全部 Scharnagl ID</summary>',
+  'SPs used': '<th>所用 SP</th>',
+  'Overlap with the highlighted sets:': '与重点集合的重合情况：',
+  'Highlight set': '重点集合',
+  'Matches in the 426-game corpus': '在 426 局棋局集中的匹配数',
+  'Top 10 most white-favored': '最偏向白方的前十',
+  none: '无',
+  'Top 10 most equal': '最均势的前十',
+  'The only highlighted start that appeared was neutral, not extreme: **SP-482 (BQRNKBNR) evaluates at +0.11** and appeared once in Las Vegas.':
+    '唯一出现过的重点开局局面是中性的，而非极端的：**SP-482（BQRNKBNR）评估值为 +0.11**，在拉斯维加斯站出现过一次。',
+  Field: '字段',
+  '`BQRNKBNR`': 'BQRNKBNR',
+  game: '棋局',
+  'Magnus Carlsen vs Levon Aronian': 'Magnus Carlsen 对 Levon Aronian',
+  result: '结果',
+  round: '轮次',
+  broadcast: '直播',
+  '[Las Vegas round-robin white tiebreak, game 1](https://lichess.org/broadcast/freestyle-chess-grand-slam-las-vegas--round-robin-white/tiebreak--game-1/nhVdjSZB)':
+    '[拉斯维加斯循环赛白方加赛，第 1 局](https://lichess.org/broadcast/freestyle-chess-grand-slam-las-vegas--round-robin-white/tiebreak--game-1/nhVdjSZB)',
+  'Critical position after 20...d5. White to move. Lichess marks 21.c5? as the mistake; 21.cxd5 was best. Green arrow: best capture. Gray arrow: game move.':
+    '<figcaption><strong>20...d5 之后的关键局面。</strong> 轮到白方走。Lichess 标注 21.c5? 为失误；21.cxd5 才是最佳。绿色箭头：最佳吃子。灰色箭头：实战着法。</figcaption>',
+  'Critical midgame position after 20...d5 in Magnus Carlsen vs Levon Aronian, SP-482':
+    'Magnus Carlsen 对 Levon Aronian，SP-482，20...d5 之后的关键中局局面',
+  'The game result is not meaningful by itself. The selection result is: among 105 unique modern elite starts, none came from the top-10 white-favored list.':
+    '这盘棋的结果本身说明不了什么。有意义的是选择结果：在 105 个不重复的现代顶级开局局面中，没有一个来自最偏向白方的前十名单。',
+  'Any start in the CSV opens on a Chess960 analysis board: [SP-418](https://lichess.org/analysis/chess960/brnqnbkr/pppppppp/8/8/8/8/PPPPPPPP/BRNQNBKR_w_KQkq_-_0_1) for one of the most balanced starts, [SP-783](https://lichess.org/analysis/chess960/qrknrnbb/pppppppp/8/8/8/8/PPPPPPPP/QRKNRNBB_w_KQkq_-_0_1) for the most white-favored.':
+    'CSV 中的任一开局局面都能在国际象棋960分析棋盘上打开：[SP-418](https://lichess.org/analysis/chess960/brnqnbkr/pppppppp/8/8/8/8/PPPPPPPP/BRNQNBKR_w_KQkq_-_0_1) 是最均衡的开局局面之一，[SP-783](https://lichess.org/analysis/chess960/qrknrnbb/pppppppp/8/8/8/8/PPPPPPPP/QRKNRNBB_w_KQkq_-_0_1) 则最偏向白方。',
+  Reproducibility: '可复现性',
+  'Quick Answers': '快速问答',
+  'What is the most balanced Chess960 starting position?':
+    '**最均衡的国际象棋960开局局面是哪个？**',
+  'SP-418 (BRNQNBKR) and SP-563 (BRNKNRQB) are the most balanced in this run. Both evaluate at +0.07 for White.':
+    '在这次运行中，SP-418（BRNQNBKR）和 SP-563（BRNKNRQB）最均衡。两者对白方的评估值都是 +0.07。',
+  'What is the most imbalanced Chess960 starting position?':
+    '**最失衡的国际象棋960开局局面是哪个？**',
+  'SP-783 (QRKNRNBB) is the most white-favored start at +1.08.':
+    'SP-783（QRKNRNBB）最偏向白方，评估值 +1.08。',
+  'Is standard chess balanced compared to Chess960?': '**与国际象棋960相比，标准国际象棋均衡吗？**',
+  'Standard chess, SP-518 (RNBQKBNR), evaluates at +0.31 and ranks 463/960 by balance. It is almost exactly median.':
+    '标准国际象棋 SP-518（RNBQKBNR）评估值为 +0.31，按均衡度排第 463/960，几乎正好是中位数。',
+  'Are any Chess960 starts better for Black?': '**有对黑方更有利的国际象棋960开局局面吗？**',
+  'Not at Stockfish 18 depth 36. All 960 starts evaluate as White-favored.':
+    '在 Stockfish 18 深度 36 下没有。全部 960 个开局局面的评估值都偏向白方。',
+  'Further Reading': '延伸阅读',
+  "[Scaling Parallel Stockfish Analysis](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/): methodology for running Stockfish at scale on cloud CPU workers, written for the case where the cache doesn't have the answer.":
+    '[扩展并行 Stockfish 分析](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)：在云端 CPU 工作节点上大规模运行 Stockfish 的方法，面向缓存*没有*现成答案的情形。',
+  '[Mistboard](/): free online Chinese chess in English, which also hosts open-source Fog of War chess. Its Chess960 pregame (Draft960) was retired in September 2026.':
+    '[Mistboard](/)：英文界面的免费在线象棋网站，同时提供开源的迷雾国际象棋。其国际象棋960赛前选项（Draft960）已于 2026 年 9 月下线。',
+  Dataset: '数据集',
+  '[Download the full CSV](/article-data/chess960-starting-position-evals.csv) (960 rows). Columns: `scharnagl_id`, `back_rank`, `fen`, `position_key`, `cp`, `mate`, `best_move`, `pv`, `depth`, `nodes`, `source`, `fetched_at_iso`.':
+    '[下载完整 CSV](/article-data/chess960-starting-position-evals.csv)（960 行）。列：`scharnagl_id`、`back_rank`、`fen`、`position_key`、`cp`、`mate`、`best_move`、`pv`、`depth`、`nodes`、`source`、`fetched_at_iso`。',
 };
 
 const ZH_HANT: Record<string, string> = {
-  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
-    '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
-    '這對你是有好處的。如果你子力落後，不代表就輸了：把它一顆強子引進長捉，MistyBanqi 可能就走進那個它看不出該拒絕的和棋。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
-  "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
-    '另一個相關的盲點跟將有關。只有卒、對方的將或砲的跳吃拿得下它，所以被圍住的將一次只怕一種子，而引擎很慢才會替被逼到角落的將騰出空間。它有時候會把一顆子調到棋盤另一頭，同時一顆孤零零的敵方卒走過來把它困死。跟上面那個和棋是同一個缺口：這套評估函數對於好幾步之外慢慢成形的安靜威脅，沒有什麼感覺。',
+  ...ZH_HANS,
+  // jieqi-puzzle-search: machine-drafted 2026-10-10, not native-reviewed. Terms follow ab-jchess and jieqi-bot-wins (暗子, 翻子, 暗吃, 勝率, 訪客, 皮卡魚, 覆盤, 著法).
+  'Looking for jieqi puzzles': '在揭棋裡找題目',
+  'We searched 2,939 positions from 50 jieqi games for puzzles. 58 had one clearly best move and 15 of those turned on a hidden piece. None of the 15 passed the rules our xiangqi puzzles go through, and we stopped looking.':
+    '我們在 50 盤揭棋對局的 2,939 個局面裡尋找題目。58 個局面有一步明顯最好的著法，其中 15 個取決於一枚暗子。這 15 個沒有一個通過我們象棋題目要過的規則，於是我們不再尋找。',
+  'We scored 2,939 positions from 50 jieqi games. 58 had one clearly best move, and 15 of those turned on a face-down piece.':
+    '我們給 50 盤揭棋對局中的 2,939 個局面打了分。58 個局面有一步明顯最好的著法，其中 15 個取決於一枚暗子。',
+  'Four positions passed the rules our xiangqi puzzles go through, and none turns on a hidden piece. The hidden-piece answers were bets or moves the tile hardly touched.':
+    '有四個局面通過了我們象棋題目要過的規則，沒有一個取決於暗子。取決於暗子的答案，要麼是賭博，要麼是暗子幾乎無關的著法。',
+  'Skill shows in timing: a tile on its starting square moves as its home piece, so a capture it threatens can usually wait.':
+    '實力體現在時機上：停在原位的暗子按原位棋子的走法走，所以它威脅的吃子通常可以等一等。',
+  'In [jieqi](/rules/jieqi), every piece except the generals starts face down, and a piece shows what it is when it first moves. A xiangqi puzzle asks for a forced line, and in jieqi a forced line rarely gets past the first piece that turns over, because nobody knows yet what it will be.':
+    '在[揭棋](/rules/jieqi)裡，除將帥以外的每一枚棋子開局時都是暗子，第一次走動時才亮出身份。象棋題目要求一條強制著法，而在揭棋裡，強制著法很少能越過第一枚被翻開的棋子，因為誰也不知道它會是什麼。',
+  'In October we asked a different question. If a jieqi puzzle is a decision under uncertainty, the way a poker hand is, does the game produce them? We have stopped looking, and the last section says what would make us start again.':
+    '10 月，我們換了一個問題。如果揭棋題目是一種不確定條件下的決策，就像一手撲克牌，那麼這個棋會產生這樣的題目嗎？我們已經不再尋找，最後一節說明什麼情況會讓我們重新開始。',
+  'How we looked': '我們怎麼找',
+  'We took the 50 most recent finished jieqi games on the site with 20 plies or more, 2,939 positions in all. All 50 were played on 8 October by guests against a bot: 34 against [AB-JChess](/blog/ab-jchess), 13 against Pikafish at level 2 and 3 against full-strength Pikafish.':
+    '我們取了本站最近 50 盤已結束、至少 20 個半回合的揭棋對局，共 2,939 個局面。50 盤都是 10 月 8 日訪客對電腦下的：34 盤對 [AB-JChess](/blog/ab-jchess)，13 盤對 2 級皮卡魚，3 盤對全強度皮卡魚。',
+  "AB-JChess scored the candidate moves in every position. A move that turns a piece over was scored once for each piece it could be, and the scores were averaged, weighted by how many of each piece the side to move had not yet seen. The site's jieqi game review grades a reveal the same way, from only what the player could know.":
+    'AB-JChess 為每個局面的候選著法評分。一步會翻開棋子的著法，按它可能是的每種棋子各打一次分，再按走子方尚未見過的每種棋子的數量加權平均。本站的揭棋對局覆盤也是這樣給翻子評分的，只用棋手能知道的資訊。',
+  'A position counted when the best move beat the second best by at least 15 points of winning chance, both at our standard depth and at four times that, with every move searched to at least one full ply.':
+    '一個局面要算數，最佳著法必須比次佳著法高出至少 15 個百分點的勝率，在我們的標準深度和四倍深度下都是如此，並且每步著法都至少搜索滿一個半回合。',
+  'What turned up': '找到了什麼',
+  '58 positions passed, from 24 of the 50 games. 43 of them are ordinary tactics with a quiet move as the answer, and 15 of those never touch a face-down piece in the first five plies of the line. They are xiangqi puzzles that happen to come from jieqi games.':
+    '有 58 個局面通過，來自 50 盤中的 24 盤。其中 43 個是普通戰術，答案是一步不吃子的著法，這當中有 15 個在著法的前五個半回合裡根本不碰暗子。它們是恰好出自揭棋對局的象棋題目。',
+  'The other 15 turn on a hidden piece, and they come in two kinds. Of the 58, 25 had a person to move, and the person found the answer 19 times.':
+    '另外 15 個取決於一枚暗子，分為兩類。58 個局面中有 25 個輪到真人走，真人找到答案 19 次。',
+  'The lottery ticket': '彩票',
+  'The side to move is lost on every quiet move, and one tile could save it. We found five, all from lost positions, and the right answer usually loses.':
+    '走子方走任何不吃子的著法都輸，只有一枚暗子能救。我們找到五個，都出自已輸的局面，正確答案通常也會輸。',
+  'Black to move. Black has two tiles left, and from where Black sits each could be a soldier, horse, chariot or cannon. The a10 tile moves as a chariot on its first move, whatever it is, so a10-a1 lands on the back rank. If it turns out to be a chariot it is mate; anything else and it is lost. That is one chance in four, 25%, against 2% for the next best move. Black played it and turned over a soldier.':
+    '黑方走。黑方還剩兩枚暗子，從黑方的角度看，每一枚都可能是卒、馬、車或炮。a10 的暗子第一步無論是什麼都按車走，所以 a10-a1 落在底線上。如果翻出車就是殺棋；翻出別的就輸。這是四分之一的機會，25%，而次佳著法只有 2%。黑方走了這步，翻出一個卒。',
+  'Lottery ticket: Black to move, the game as dealt': '彩票：黑方走，按實際發到的暗子',
+  "One chance in four was right for what Black could see, and the ticket was blank all the same. A piece taken face down leaves the board without being shown to its owner, so Black's count of unseen pieces still included two that were already gone.":
+    '從黑方能看到的資訊來說，四分之一的機會是對的，可這張彩票照樣沒中。一枚被暗吃的棋子離開棋盤時不會亮給它的主人看，所以黑方算的未見棋子裡，仍包括兩枚早已不在的棋子。',
+  'Black piece not yet seen': '尚未見過的黑方棋子',
+  'Where it really was': '它實際在哪裡',
+  'Taken face down by Red on its move 17': '紅方在其第 17 回合暗吃',
+  'Taken face down by Red on its move 20': '紅方在其第 20 回合暗吃',
+  'The tile on a10': 'a10 的暗子',
+  'The tile on i10': 'i10 的暗子',
+  'Four pieces for two tiles, so each tile was a chariot one time in four from where Black sat. The chariot had left the board 11 moves earlier.':
+    '兩枚暗子對應四種棋子，所以從黑方的角度看，每一枚暗子是車的機會都是四分之一。而車早在 11 回合前就已離開棋盤。',
+  'The same move with a chariot dealt to a10: mate. This is the deal Black was playing for, and it was not possible in this game.':
+    '同一步棋，假如 a10 發到的是車：殺棋。這是黑方期待的發子，而在這盤棋裡它不可能出現。',
+  'Lottery ticket: the same position if a10 were the chariot': '彩票：假如 a10 是車，同一局面',
+  "Black to move. a10-a1, taking Red's face-down piece, and a10-b10 turn over the same tile, a soldier or a chariot at even odds from where Black sat. If it is the chariot, a10-a1 wins 95 to 98% of the time whatever it captured, and a10-b10 48%. On average that is 49.2% against 24.1%. Black found it, and turned over a soldier: Red had taken Black's chariot face down on its second move.":
+    '黑方走。a10-a1 吃掉紅方的暗子，a10-b10 也翻開同一枚暗子，從黑方的角度看，是卒還是車各占一半。如果是車，a10-a1 無論吃到什麼都有 95% 到 98% 的勝率，a10-b10 則是 48%。平均下來是 49.2% 對 24.1%。黑方找到了這步，翻出一個卒：紅方在第二回合就暗吃了黑方的車。',
+  'Double or nothing: Black to move, the game as played': '孤注一擲：黑方走，實戰局面',
+  'A stored move': '留著的一步',
+  'A capture that wins whatever the tile turns out to be can wait: in the game below it stayed available for six turns. It works because a face-down tile moves as the piece whose starting square it stands on, so its first move, capture included, does not depend on the deal.':
+    '一步無論暗子翻出什麼都能贏的吃子可以等：在下面這盤棋裡，它在六個回合裡一直都在。原因是暗子按它所在原位的棋子走法走，所以它的第一步，包括吃子，並不取決於發到什麼。',
+  "In 46 of the 2,939 positions a face-down tile could make a capture that won whatever the tile turned out to be. They came from 22 such captures, and the same capture was often there turn after turn; one stayed on the board for eight of its owner's turns. Nine were played. Holding one was usually free: in all but two of the 46 positions another move came within 15 points of it, and those two are one capture on consecutive turns, shown further down.":
+    '在 2,939 個局面中，有 46 個局面裡一枚暗子能吃子，而且無論翻出什麼都贏。它們來自 22 次這樣的吃子，同一個吃子常常一回合接一回合地留著；有一個在它主人的八個回合裡一直都在。最後走出的有九次。留著通常不吃虧：46 個局面裡，除兩個以外，都有另一步著法與它相差不到 15 個百分點，而那兩個是連續兩回合裡的同一個吃子，下文會展示。',
+  "Black to move. The i10 tile can run down the file as a chariot and take Red's i4 tile on this turn and each of the next five. Black plays elsewhere, the capture stays, and its score rises from 85% to 97%. Black takes on move 15; the tile is an elephant.":
+    '黑方走。i10 的暗子可以按車沿直線衝下去，在這一回合和接下來的五個回合裡吃掉紅方 i4 的暗子。黑方走別處，這個吃子一直留著，它的分數從 85% 升到 97%。黑方在第 15 回合吃掉；那枚暗子是象。',
+  'A stored capture: Black waits five turns, then takes': '留著的吃子：黑方等了五個回合才吃',
+  'Which tile': '翻哪一枚',
+  'The question is which face-down piece to move, and the right one works whatever it turns out to be. We found ten.':
+    '問題是走哪一枚暗子，而正確的那枚無論翻出什麼都成立。我們找到十個。',
+  "In the example below Black threatens d5xd1 check, with mate on the next move. Four of Red's 38 moves stop it. c1-a3 is the best of them, and it works by getting out of the way: the a1 tile moves as a chariot, so with c1 empty it can take back on d1. The tile on c1 can be any of six pieces, and c1-a3 stops the mate for every one.":
+    '在下面的例子裡，黑方威脅 d5xd1 將軍，下一步就殺。紅方的 38 步著法中有四步能擋住。c1-a3 是其中最好的，它靠讓開來解：a1 的暗子按車走，所以 c1 空出來後它可以在 d1 吃回。c1 的暗子可能是六種棋子中的任何一種，而 c1-a3 對每一種都能解殺。',
+  'Red to move. c1-a3 stops the mate but leaves the a5 cannon hanging, and Black took it at once. The tile was an advisor. Only a chariot on a3 would have guarded a5.':
+    '紅方走。c1-a3 解了殺，但留下 a5 的炮無人保護，黑方立刻吃掉了它。那枚暗子是仕。只有 a3 上是車才能保住 a5。',
+  'Which tile: Red to move, the game as played': '翻哪一枚：紅方走，實戰局面',
+  'c1 turns out to be': 'c1 翻出的是',
+  'Left face down': '仍是暗子',
+  "Black's best reply": '黑方最佳應著',
+  "Red's winning chance": '紅方勝率',
+  'a10-b10': 'a10-b10',
+  d5xa5: 'd5xa5',
+  'After c1-a3, by what the tile turns out to be. Black takes the cannon unless the tile is a chariot, and is better in every case. c1-a3 is the best move in the position and still loses most of the time: 36% on average, against 13% for the next best.':
+    'c1-a3 之後，按暗子翻出的是什麼分列。除非暗子是車，黑方都會吃掉炮，而且每種情況下黑方都更好。c1-a3 是這個局面的最佳著法，卻多半還是輸：平均 36%，次佳著法是 13%。',
+  'Held to the xiangqi puzzle rules': '用象棋題目的規則檢驗',
+  'Our [xiangqi puzzles](/blog/how-puzzle-mining-works) come from a miner with stricter rules. The opponent has just blundered, giving up 25 or more points of winning chance. The game was not already decided before that. After the right move the solver is winning, and after the second best move it is not.':
+    '我們的[象棋題目](/blog/how-puzzle-mining-works)來自一個規則更嚴格的挖掘器。對手剛剛走了一步敗著，丟掉了 25 個百分點以上的勝率。在那之前，棋局還沒有分出勝負。走出正確著法後解題方處於勝勢，走出次佳著法則不然。',
+  Step: '步驟',
+  'Positions left': '剩餘局面',
+  Scanned: '掃描',
+  "Passed the xiangqi miner's rules": '通過象棋挖掘器的規則',
+  'Mates in one dropped, as the miner does': '剔除一步殺，與挖掘器做法相同',
+  'Positions with a single legal move dropped': '剔除只有一步合法著法的局面',
+  'The same 2,939 positions through the rules our xiangqi puzzles pass.':
+    '同樣的 2,939 個局面，經過我們象棋題目要過的規則。',
+  'A person was to move in three of the four and missed all three; the bot was to move in the fourth. None turns on a hidden piece. Every lottery ticket and every which-tile position failed, because the side to move was not winning or the opponent had not blundered.':
+    '四個局面中有三個輪到真人走，三個都沒找到；第四個輪到電腦走。沒有一個取決於暗子。每一張彩票、每一個翻哪一枚的局面都沒通過，原因是走子方並不處於勝勢，或者對手並沒有走出敗著。',
+  "Red to move. e3-f3 and the engine's line after it. The interest is mostly jieqi's: Red's revealed elephant and advisors stand outside the zones they could never leave in xiangqi.":
+    '紅方走。e3-f3 以及引擎隨後的著法。它的看點主要屬於揭棋：紅方已翻開的相和仕，站在象棋裡永遠離不開的區域之外。',
+  'Red to move: the first of four': '紅方走：四個中的第一個',
+  "Red to move. i10-f10 and the engine's line, in which Black loses the chariot two moves later. No face-down piece is left on the board. Red played i10-i9 instead.":
+    '紅方走。i10-f10 以及引擎的著法，黑方在兩回合後丟車。棋盤上已經沒有暗子。紅方實戰走了 i10-i9。',
+  'Red to move: the second of four': '紅方走：四個中的第二個',
+  "Red to move. h10-h9 and the engine's line. It is ordinary xiangqi: a tile turns over only on the line's last move.":
+    '紅方走。h10-h9 以及引擎的著法。這是普通的象棋：只在著法的最後一步才有暗子被翻開。',
+  'Red to move: the third of four': '紅方走：四個中的第三個',
+  'Black to move. e7-f7 and mate in six, with no face-down piece left on the board. The bot played e3-c3 instead.':
+    '黑方走。e7-f7，六步殺，棋盤上已沒有暗子。電腦實戰走了 e3-c3。',
+  'Black to move: the fourth of four': '黑方走：四個中的第四個',
+  'Why we stopped': '我們為什麼停下',
+  'The chart shows the problem. A lottery ticket is all or nothing: right because one deal in four wins outright, and usually lost. A which-tile answer scores about the same for every piece, because it meets the threat on the board and the tile hardly matters. A fair puzzle needs a single line that works, and a decision about a hidden piece rarely has one.':
+    '圖表說明了問題。彩票是全有或全無：它之所以對，是因為四次發子中有一次直接獲勝，而它通常會輸。翻哪一枚的答案，對每種棋子的得分都差不多，因為它應對的是盤面上的威脅，暗子是什麼幾乎無關緊要。一道公平的題目需要一條成立的著法，而關於暗子的決定很少有這樣一條。',
+  "The mover's winning chance after the answer, once for each piece the tile could be, from the two examples above. The dashed line is the average the review grades by.":
+    '解答之後走子方的勝率，按暗子可能是的每種棋子各算一次，取自上面兩個例子。虛線是覆盤據以評分的平均值。',
+  'We tried two ways round it. The first was to grade as if the face-down pieces were known, using the real deal. That gave 16 positions through the xiangqi rules: the same 15, plus one reveal that wins only because the tile was a cannon (100% for a cannon, 59 to 73% for anything else). A puzzle whose answer depends on what the solver cannot see is not one we would publish.':
+    '我們試了兩種繞過去的辦法。第一種是按暗子已知來評分，用真實的發子。這樣有 16 個局面通過了象棋規則：同樣的 15 個，加上一步只因為暗子是炮才贏的翻子（是炮為 100%，是別的則為 59% 到 73%）。答案取決於解題者看不見的東西，這樣的題目我們不會發布。',
+  'The second was to look for reveals that win whatever comes up: the best move turns a tile over, every piece it could be scores 81% or more, and the next best move 60% or less. There were none in the 2,939 positions.':
+    '第二種是尋找無論翻出什麼都贏的翻子：最佳著法翻開一枚暗子，它可能是的每種棋子得分都在 81% 以上，而次佳著法在 60% 以下。2,939 個局面裡一個也沒有。',
+  'The nearest thing to a fair jieqi puzzle we found is a stored capture, where the capture is certain and only the piece after it is luck.':
+    '我們找到的最接近公平的揭棋題目，是留著的吃子：吃子是確定的，只有吃完之後翻出的棋子靠運氣。',
+  "Red to move. The h1 tile moves as a horse and takes Black's chariot on g3, and it does that whatever the tile is. Red's winning chance is 93 to 95% for each of the three pieces it could be, against 78% for the next best move. The bot, Pikafish at level 2, missed it two turns running. The tile was a chariot. It is the only capture of the 22 that beat the next best move by 15 points.":
+    '紅方走。h1 的暗子按馬走，吃掉黑方在 g3 的車，而且無論暗子是什麼都能這樣做。對它可能是的三種棋子，紅方勝率都是 93% 到 95%，次佳著法則是 78%。電腦（2 級皮卡魚）連續兩回合都沒看到。那枚暗子是車。在 22 次吃子中，它是唯一比次佳著法高出 15 個百分點的。',
+  'A capture that does not depend on the tile: Red to move': '不取決於暗子的吃子：紅方走',
+  Limit: '限制',
+  'What it could change': '可能改變什麼',
+  'One engine, AB-JChess, set every answer': '只有一個引擎 AB-JChess 決定所有答案',
+  'A second engine could disagree': '第二個引擎可能有不同看法',
+  'Only its top five to eight moves were scored': '只給它排名前五到八的著法打了分',
+  'An unscored move could narrow a gap': '一步未評分的著法可能縮小差距',
+  '50 games from one day, guests against a bot': '50 盤對局來自同一天，都是訪客對電腦',
+  'Other games could turn up other positions': '其他對局可能出現其他局面',
+  'The bot was to move in half the positions': '一半局面輪到電腦走',
+  'Half of what we found no person faced': '我們找到的局面有一半沒有真人面對過',
+  'What the 50 games say': '這 50 盤棋說明了什麼',
+  'Jieqi does not produce puzzles the way xiangqi does. Four positions in 50 games passed our xiangqi rules, none of them about a hidden piece, and the hidden-piece answers were bets or moves the tile hardly touched.':
+    '揭棋產生題目的方式和象棋不一樣。50 盤對局裡有四個局面通過了我們的象棋規則，沒有一個與暗子有關；取決於暗子的答案，要麼是賭博，要麼是暗子幾乎無關的著法。',
+  'Skill shows in timing more than in guessing. A tile on its starting square moves as its home piece, so a capture it threatens is a move in reserve: play something else while it is safe, and take it before it can be blocked. When a tile must turn over, pick the one that holds whatever it is, and remember that your count of what it could be includes pieces your opponent took face down.':
+    '實力更多體現在時機上，而不是猜測上。停在原位的暗子按原位棋子的走法走，所以它威脅的吃子是一步留著備用的棋：趁它安全時先走別的，在它被擋住之前吃掉。必須翻開一枚暗子時，選那枚無論是什麼都能撐住的，並且記住，你對它可能是什麼的計算裡，包含了對手暗吃掉的棋子。',
+  'We would look again for puzzles about that timing, with an answer that holds for every deal, in thousands of games where a person was to move, checked by a second engine. Until then, the hidden pieces in jieqi are something to play, not something to solve.':
+    '我們會為這種時機的題目再找一次：答案對每一種發子都成立，取自數千盤由真人走子的對局，並由第二個引擎檢驗。在那之前，揭棋裡的暗子是拿來下的，不是拿來解的。',
+  'WINNING CHANCE BY WHAT THE TILE TURNS OUT TO BE': '按暗子翻出的棋子分列的勝率',
+  'Lottery ticket: a10-a1, Black to move': '彩票：a10-a1，黑方走',
+  'average 25%': '平均 25%',
+  'Which tile: c1-a3, Red to move': '翻哪一枚：c1-a3，紅方走',
+  'average 36%': '平均 36%',
+  'Looking for jieqi puzzles: what 50 games turned up': '在揭棋裡找題目：50 盤對局找到了什麼',
+  // banqi-perpetual-chase: machine-drafted 2026-10-11, not native-reviewed. Piece names follow banqi-statistics (將 士 象 車 馬 砲 卒); a ply is 步.
+  'The Perpetual Chase Rule in Banqi': '暗棋長捉規則',
+  'Perpetual Chase in Banqi': '暗棋的長捉',
+  'A repeating chase can also go round a square of four. The chased piece runs round the corner, the chaser follows one step behind, and the board comes back every eight plies.':
+    '重複的長捉也可以繞著四個格子轉。被捉的子繞著角落跑，捉的一方落後一步跟著，每八步棋盤就回到原樣。',
+  'Herding chases are fine': '趕子的長捉沒問題',
+  'From a game on Mistboard, 30 September 2026. The player’s general chased the bot’s advisor five times, from b2 to f3, where the player’s other advisor took it.':
+    '來自 Mistboard 上 2026 年 9 月 30 日的一盤棋。玩家的將把機器人的士追了五次，從 b2 一直追到 f3，在那裡被玩家的另一個士吃掉。',
+  'What other rules say': '其他規則怎麼說',
+  'Four rule sets and a reference work, as read in October 2026.':
+    '四套規則和一部參考資料，2026 年 10 月查閱。',
+  'Perpetual chase': '長捉',
+  'No-progress draw': '無進展判和',
+  '[TCGA computer banqi rules, Hsu (2019)](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)':
+    '[TCGA 電腦暗棋比賽規則，Hsu（2019）](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2019/hwks/rules.pdf)',
+  'No chase rule. A position repeated three times draws.': '無長捉規定。同一局面出現三次判和。',
+  '60 plies': '60 步',
+  '[Chen, Shen and Hsu, ICGA Journal (2010)](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)':
+    '[Chen、Shen、Hsu，《ICGA Journal》（2010）](https://homes.cs.washington.edu/~armin/ICGA2010.pdf)',
+  'No chase rule. Repeated positions draw.': '無長捉規定。局面重複判和。',
+  '40 plies': '40 步',
+  'No chasing the same piece 10 times in a row.': '不能連續 10 次追擊同一顆子',
+  '50 plies': '50 步',
+  'Not mentioned.': '未提及',
+  'A chase move may not make a position appear for the third time.':
+    '一步捉不得讓同一局面出現第三次。',
+  'Why not a move count': '為什麼不用步數上限',
+  'Making the chaser lose, as xiangqi does, needs someone to judge what counts as a chase, and no banqi source uses it. Repetition needs no number and no judge. It stops a repeating chase at the repeat and leaves a chase that goes somewhere alone.':
+    '像象棋那樣判捉的一方輸，得有人判斷什麼算捉，而且沒有一份暗棋資料採用。重複規則不需要數字，也不需要裁判。重複的長捉在重複時就被擋下，有進展的長捉則不受影響。',
+  advisor: '士',
+  soldier: '卒',
+  elephant: '象',
+  chariot: '車',
+  cannon: '砲',
+  general: '將',
+  'Banqi rules': '暗棋規則',
+  'THE ADVISOR RUNS FIVE TIMES': '士逃了五次',
+  'THE OTHER ADVISOR TAKES IT': '另一個士吃掉它',
+  'In banqi a chased piece often has one safe square, so a chase can go back and forth until the position repeats, and under plain threefold repetition the chaser alone decides the draw. Tournament rules allow it and apps cap the chase at 7 or 10 moves. Mistboard forbids the chase move that would repeat a position a third time, and leaves chases that go somewhere alone.':
+    '暗棋裡被捉的子常常只有一個安全的格子，所以長捉可以來回走到局面重複；如果只按三次重複判和，和不和完全由捉的一方決定。比賽規則允許這樣判和，應用則把長捉限在 7 次或 10 次。Mistboard 禁止會讓同一局面第三次出現的那一步捉，把目標趕向別處的長捉則不去管它。',
+  'In a perpetual chase one piece attacks another move after move. In banqi the runner often has one safe square, so the two go back and forth until the position repeats.':
+    '長捉就是一顆子一步接一步地攻擊另一顆子。在暗棋裡，逃的一方常常只有一個安全的格子，於是兩顆子來回走，直到局面重複。',
+  'The runner can’t stay put without being taken, so under plain threefold repetition the chaser alone decides whether the game is drawn.':
+    '逃的一方不動就會被吃，所以如果只按三次重複判和，和不和完全由捉的一方決定。',
+  'Mistboard forbids the chase move that would make a position appear for the third time. A chase that drives its target onto new squares never repeats, and the rule leaves it alone.':
+    'Mistboard 禁止會讓同一局面第三次出現的那一步捉。把目標一路趕向新格子的長捉永遠不會重複，這條規則不去管它。',
+  'Tournament rules draw on repetition, and apps cap a chase at 7 or 10 moves, which comes after the repetition in every chase draw we have seen.':
+    '比賽規則按重複局面判和，應用把長捉限在 7 次或 10 次，但在我們見過的每一盤長捉和棋裡，這個上限都來得比重複晚。',
+  'A perpetual chase is one piece attacking another move after move while the other keeps running. In [banqi](/rules/banqi), Chinese dark chess, the runner often has a single safe square, so the two pieces go back and forth until the position repeats. Whether that should be a draw, and who gets to decide, is a question banqi rule sets answer in different ways.':
+    '長捉，就是一顆子一步接一步地攻擊另一顆子，而被捉的子一直在逃。在[暗棋](/rules/banqi)裡，逃的一方常常只有一個安全的格子，於是兩顆子來回走，直到局面重複。這該不該算和棋、由誰來決定，各套暗棋規則的答案不一樣。',
+  'Why banqi needs a chase rule': '暗棋為什麼需要長捉規則',
+  'In chess a threefold repetition needs both players to keep repeating, and either of them can play something else. In banqi the chased piece can’t stay put without being taken, so it runs. With one safe square it shuttles back and forth as the chaser does, and the third repetition comes when the chaser wants it. In [the game below](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd) the player was far ahead and the bot had lost its general, so the draw saved the bot.':
+    '國際象棋的三次重複需要雙方一直重複下去，任何一方都可以改走別的。暗棋裡被捉的子不動就會被吃，所以只能逃。如果只有一個安全的格子，它就跟著捉的一方來回走，第三次重複什麼時候出現，由捉的一方說了算。在[下面這盤棋](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)裡，玩家大幅領先，機器人的將也已經被吃，這盤和棋救了機器人。',
+  'Back and forth on two squares, from a game on Mistboard, 16 September 2026.':
+    '兩格之間來回走，來自 Mistboard 上 2026 年 9 月 16 日的一盤棋。',
+  'The bot has just flipped g2 and turned up a red advisor beside the player’s black chariot. A chariot can’t take an advisor, which outranks it, and e1 and h1 hold its own soldiers, so f1 is its only free square.':
+    '機器人剛在 g2 翻出一顆紅士，就在玩家的黑車旁邊。士比車大，車吃不了它；e1 和 h1 都是車自己的卒，所以 f1 是它唯一的空格。',
+  'The advisor’s fourth chase brings the position round a third time, and under plain threefold repetition the game is drawn. Under Mistboard’s rule this move is forbidden, so the advisor would have to play something else.':
+    '士的第四次捉讓局面第三次出現，如果只按三次重複判和，這盤就和了。按 Mistboard 的規則，這一步被禁止，士只能改走別的。',
+  'Round a square of four, in a constructed position. Every time the chariot runs it has one safe square.':
+    '繞著四格轉，這是擺出來的局面。車每次逃都只有一個安全的格子。',
+  'The black advisor on a1 attacks the red chariot on a2. Face-down tiles on a3, b3, c2 and c1 close its other exits.':
+    'a1 的黑士攻擊 a2 的紅車。a3、b3、c2、c1 上的暗子擋住了車的其他出路。',
+  'The advisor’s fourth chase brings the board back where it started. Each lap repeats every position, so under plain threefold repetition the game is drawn early in the third lap. Under Mistboard’s rule, the chase move that would make a position appear for the third time is forbidden.':
+    '士的第四次捉讓棋盤回到起點。每轉一圈，每個局面都重複一次，所以如果只按三次重複判和，第三圈剛開始就會判和。按 Mistboard 的規則，會讓局面第三次出現的那一步捉被禁止。',
+  'Some chases drive the target somewhere. Every move puts the target on a square it hasn’t stood on, so no position comes round again, and the chase ends when the target runs out of room or into another piece.':
+    '有些長捉是把目標往某個地方趕。每一步都讓目標走到它沒站過的格子，所以沒有局面會再出現；目標無路可逃，或撞上另一顆子，這次長捉就結束了。',
+  'Winning a piece this way, as in [that game](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a), is ordinary good play. A chase rule has to stop the repeating chase and leave this one alone.':
+    '像[那盤棋](/banqi/game/bq_795ec889-96d0-48f4-914f-6f1db438441a)這樣贏下一顆子，是正常的好棋。長捉規則要擋的是重複的長捉，這一種應該放著不管。',
+  '[Chinese Dark Chess 2 app (Google Play)](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)':
+    '[暗棋2 應用（Google Play）](https://play.google.com/store/apps/details?id=com.xidea.ChineseDarkChess2&hl=zh_TW)',
+  'No chasing the same piece more than 7 times in a row.': '不可連續長捉同一顆子超過 7 次。',
+  '[FunTown app](https://darkchess.funtown.com.tw/rules2.html)':
+    '[FunTown 戲谷 應用](https://darkchess.funtown.com.tw/rules2.html)',
+  '[Chinese Wikipedia, banqi](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)':
+    '[中文維基百科：暗棋](https://zh.wikipedia.org/zh-tw/%E6%9A%97%E6%A3%8B)',
+  '50 moves with no flip or capture': '連續 50 步沒有翻子或吃子',
+  Mistboard: 'Mistboard',
+  'A rule that makes the chaser lose comes from [xiangqi](/rules/xiangqi), where every piece is face up. Under the Asian rules for that game, chasing one piece without end is a forbidden move, and a side that keeps playing one must change it or lose, as [Chinese Wikipedia sets out](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B)). None of the banqi sources above makes the chaser lose.':
+    '捉的一方判負，這條規則來自[象棋](/rules/xiangqi)，象棋的棋子全都明著擺在棋盤上。按亞洲象棋規則，無休止地捉同一顆子是禁止著法，一直走禁止著法的一方必須變著，否則判負，[中文維基百科](https://zh.wikipedia.org/wiki/%E9%95%B7%E6%89%93_(%E8%B1%A1%E6%A3%8B))有整理。上面的暗棋資料沒有一份判捉的一方輸。',
+  'Mistboard’s rule': 'Mistboard 的規則',
+  'Mistboard keeps threefold repetition and the 40-ply no-progress draw, and adds one rule: **a chase move may not make a position appear for the third time.** The chaser has to play something else, unless it has no other legal move. A repetition that comes from anything other than a chase still draws.':
+    'Mistboard 保留三次重複和 40 步無進展判和，再加一條規則：**一步捉不得讓同一局面出現第三次。** 捉的一方必須改走別的，除非沒有其他合法著法。不是由捉造成的重複照樣判和。',
+  'The apps count instead: once a piece has chased the same piece 7 times in a row, or 10, it must stop. The trouble is that the repetition comes first. In the two-square game above, the position came round a third time on the bot’s fourth chase move. A 7-move cap would still have allowed three more, so with threefold repetition in force the game is drawn exactly as before. In all eight repetition draws on Mistboard, the third repetition came between the third and sixth chase move, before either cap.':
+    '應用的做法是計數：一顆子連續捉同一顆子 7 次或 10 次之後，就必須停下。問題是重複會先來。在上面那盤兩格來回的棋裡，局面在機器人第四次捉時就第三次出現了。上限設 7 次的話，它還可以再捉三次，所以只要三次重複照樣判和，這盤照樣是和棋。Mistboard 上全部八盤重複和棋，第三次重複都出現在第三到第六次捉之間，比兩種上限都早。',
+  'A count also treats a herding chase the same way, and stops it at the same number whether or not the target is about to run out of room. Players don’t agree on the number either. A Taiwanese player who wrote to us about one of these draws called a perpetual chase a clear foul and the count an open question: 7 is too few, he said, and a friend of his plays to 12.':
+    '計數對趕子的長捉也一視同仁，不管目標是不是快無路可逃，到了次數就叫停。玩家對數字也沒有共識。一位台灣玩家為了其中一盤和棋寫信給我們，他說長捉明顯犯規，次數則還有得討論：7 次太少，他有個朋友下到 12 次。',
+  'Why not make the chaser lose': '為什麼不判捉的一方負',
+  'The rule in full': '完整規則',
+  'For anyone implementing it. The rule reads only what both players can see, so it works online or across a table.':
+    '寫給要實作這條規則的人。規則只看雙方都看得到的東西，所以網上或面對面都能用。',
+  Term: '術語',
+  Meaning: '含義',
+  'Chase move': '捉',
+  'A move with no flip or capture, after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count; whether the target is protected doesn’t matter.':
+    '不翻子也不吃子的一步，走完之後，剛走的那顆子能吃掉對方上一步剛走的那顆子。砲隔子吃也算；目標有沒有被保護不影響。',
+  Flee: '逃',
+  'A move by the piece the previous move chased.': '上一步被捉的那顆子所走的一步。',
+  Position: '局面',
+  'Where each face-up piece stands, which squares hold face-down tiles, and whose move it is. Counts start over after every flip or capture.':
+    '每顆翻開的子在哪裡、哪些格子有暗子、輪到哪一方走。每次翻子或吃子之後重新計數。',
+  Forbidden: '禁止',
+  'A chase move that would make a position appear for the third time.':
+    '會讓同一局面第三次出現的一步捉。',
+  'Repetition draw': '重複和棋',
+  'A position reached by any move other than a chase or a flee draws on its third appearance.':
+    '由捉或逃以外的著法走出來的局面，第三次出現時判和。',
+  'Only move': '唯一著法',
+  'If every legal move is a forbidden chase, they all stay legal.':
+    '如果所有合法著法都是被禁止的捉，這些著法就全部保持合法。',
+  'Mutual chase': '一捉一',
+  'A flee that also attacks the chaser is an ordinary move. Only two cannons on one line can do this.':
+    '逃的同時又攻擊追兵的一步，算作普通著法。只有同一條線上的兩個砲做得到。',
+  'Unchanged: 40 plies with no flip or capture, chase moves included.':
+    '不變：連續 40 步沒有翻子或吃子，捉也算在內。',
+  'Not covered': '尚未涵蓋',
+  'A chaser switching between two targets. We will extend the rule if it comes up.':
+    '在兩個目標之間輪流捉。如果對局裡出現了，我們會擴充規則。',
+  'Before the rule': '規則之前',
+  'Until October 2026 Mistboard drew every threefold repetition. In 127 games people played against [MistyBanqi](/blog/mistybanqi), our bot, from July to early October, eight ended in a repetition draw, and the bot was the chaser in every one ([21 July](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead), [23 July](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2), [28 July](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df), 16 September [three](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e) [times](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f) [over](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd), [22 September](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64), [2 October](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)). Replayed under the current rule, none of the eight is a draw, and no move a person played in any of the 127 games would have been forbidden.':
+    '2026 年 10 月之前，Mistboard 的三次重複一律判和。7 月到 10 月初，真人對我們的機器人 [MistyBanqi](/blog/mistybanqi) 下了 127 盤，其中八盤以重複局面判和，每一盤捉的一方都是機器人（[7 月 21 日](/banqi/game/bq_15a9801b-7f1b-4618-81ff-33c243adeead)、[7 月 23 日](/banqi/game/bq_65458fb8-71d2-4e4c-86ca-823057fc9ac2)、[7 月 28 日](/banqi/game/bq_1a550b3b-40b7-4184-86f4-16c479b926df)、9 月 16 日的[第一](/banqi/game/bq_8dbdd7ac-6612-4785-a7d9-73c0a0987e5e)、[第二](/banqi/game/bq_f7bc7130-e399-4a00-9609-baee9cad719f)、[第三盤](/banqi/game/bq_391b54b2-eb4f-4a21-9ed0-f934aa4772cd)、[9 月 22 日](/banqi/game/bq_374af1fe-bb55-462d-a3d7-54970fd03f64)、[10 月 2 日](/banqi/game/bq_879c07b6-b804-4a21-9d46-39febc900b90)）。按現行規則重放，這八盤沒有一盤是和棋，127 盤裡真人走過的每一步也都不會被禁止。',
+  'Is a perpetual chase a draw in banqi?': '暗棋的長捉算和棋嗎？',
+  'It depends on the rule set. Tournament rules for computer banqi draw any position repeated three times, so a chase that repeats is a draw. On Mistboard it never is: the chase move that would bring a position round a third time is forbidden, and the chaser has to play something else.':
+    '看用哪套規則。電腦暗棋的比賽規則把同一局面出現三次判和，所以會重複的長捉就是和棋。在 Mistboard 上永遠不是：會讓局面第三次出現的那一步捉被禁止，捉的一方必須改走別的。',
+  'How many times can you chase a piece in banqi?': '暗棋裡一顆子最多能捉幾次？',
+  'Two popular apps set a cap: Chinese Dark Chess 2 at 7 chases of the same piece in a row, FunTown at 10. Mistboard has no count. A chase can run as long as it reaches new positions; only the move that would repeat a position a third time is forbidden.':
+    '兩款常見的應用設了上限：暗棋2 是連續捉同一顆子 7 次，FunTown 是 10 次。Mistboard 不計次數。只要長捉一直走出新的局面，就可以一直捉下去；只有會讓局面第三次出現的那一步被禁止。',
+  'What counts as a chase in banqi?': '暗棋裡什麼算捉？',
+  'On Mistboard, a move with no flip or capture after which the moved piece could capture the enemy piece that moved just before it. Cannon jumps count, and it doesn’t matter whether the target is protected.':
+    '在 Mistboard 上，不翻子也不吃子、走完後剛走的那顆子能吃掉對方上一步剛走的那顆子的一步。砲隔子吃也算，目標有沒有被保護不影響。',
+  'Does the chaser lose in banqi?': '暗棋裡長捉的一方會判負嗎？',
+  'Not in any banqi rule set we found, and not on Mistboard. Losing for a perpetual chase comes from xiangqi, where someone has to judge what counts as a chase. On Mistboard the repeating move is simply not allowed.':
+    '我們找到的暗棋規則都不會，Mistboard 也不會。長捉判負來自象棋，那需要有人裁定什麼算捉。在 Mistboard 上，會造成重複的那一步直接不能走。',
+  'How a chase ends': '長捉怎麼結束',
+  'On Mistboard a chase can run as long as it is getting somewhere, and a good one wins a piece. What it can’t do is go round in a circle until the game is drawn: the move that would bring a position back a third time is off the table, so the chaser has to try something else, and the game goes on.':
+    '在 Mistboard 上，長捉只要還在推進，就可以一直捉下去，好的長捉能贏下一顆子。它不能做的，是繞圈子繞到和棋：會讓局面第三次出現的那一步不能走，捉的一方只能另想辦法，棋也就繼續下去。',
+  'Perpetual Chase Rule in Banqi (Chinese Dark Chess)': '暗棋長捉規則與重複局面判和',
+  // longest-forced-mates-xiangqi: machine-drafted 2026-10-08, not native-reviewed. Terms follow the study uXu609QE zh names and solver-audit (困斃, 象棋雲庫, 著法); the bare 困毙 table cells take the Traditional glyph.
+  'The Longest Forced Mates in Xiangqi': '象棋最長的必勝殺局',
+  'The Longest Forced Mates': '最長的必勝殺局',
+  'A horse and a soldier beat a general with both advisors and both elephants, and the slowest win in that endgame takes 65 moves. Seven records from xiangqi endgame tablebases, with the lines, and five of them end with the loser having no legal move.':
+    '馬和兵聯手就能勝士象全，而這一殘局裡最慢的勝法要走65回合。這裡收錄七項出自象棋殘局庫的紀錄，每項都附完整著法，其中五項以負方無著可走告終。',
+  'We generated xiangqi endgame tablebases for every one-and-two-attacker class against the full defence and pulled out the deepest position in each. The longest is a horse and a soldier: 65 moves of best play by both sides.':
+    '我們為一子和兩子進攻對士象全的每一類殘局生成了象棋殘局庫，並找出每一類中最深的局面。最長的是馬兵：雙方都走最佳著法，共65回合。',
+  'Five of the seven records end with the losing general having no legal move. That is 困毙, and in xiangqi it loses, so a longest-mate line can finish without a check on the board.':
+    '七項紀錄中有五項以負方無著可走告終。這就是困斃，在象棋裡判負，所以一條最長殺局可以在盤面上沒有將軍的情況下結束。',
+  "The lines survive the rules a real game runs under. No position repeats, and the longest stretch without a capture is 27 moves, inside the 60-move limit. Chess's 549-move tablebase record is drawn by its own 50-move rule; these are not.":
+    '這些著法經得起實戰規則的檢驗。沒有局面重複，最長的無吃子段落為27回合，在60回合限著之內。國際象棋549步的殘局庫紀錄會被它自己的50步規則判和；這幾局不會。',
+  'A tablebase holds every legal position of one material class together with its exact distance to mate under best play. Once you have the table, the longest mate in the class is a fact about the class: no engine opinion, no sampling, no search that might have missed something. Chess has had these numbers for decades, and its records are famous enough to have their own genre of video.':
+    '殘局庫收錄某一子力組合的每一個合法局面，以及雙方最佳著法下該局面到將死的精確距離。有了這張表，該類殘局中最長的殺局就是這一類的事實：不是引擎的看法，不是抽樣，也不是可能漏掉什麼的搜尋。國際象棋幾十年前就有了這些數字，它的紀錄有名到自成一類影片。',
+  'Xiangqi has the numbers too, and almost nobody knows it. 象棋云库 ([chessdb.cn](https://www.chessdb.cn/), the Chinese chess cloud database) publishes a maximum-DTM table for 8,705 material classes, linked from its homepage and written only in Chinese; the deepest entry there is 马马士 against 马卒象象 at 759 plies, a forced win 380 moves long. The 116-move record against 士象全 has been in the literature since Wu, Liu and Hsu reported it at Computers and Games in 2004. What none of them publish is the game. The table gives you a FEN and an integer and stops, and the 2004 paper gives a move count. Neither shows the moves in between.':
+    '象棋也有這些數字，只是幾乎沒人知道。象棋雲庫（[chessdb.cn](https://www.chessdb.cn/)）公佈了一張涵蓋8,705類子力組合的最長殺著距離（DTM）表，首頁有連結，只有中文版；表中最深的一項是馬馬士對馬卒象象，759個半回合，即一盤380回合的必勝棋。對士象全的116回合紀錄，自 Wu、Liu 和 Hsu 於2004年在 Computers and Games 會議上發表以來，一直見於文獻。他們都沒有公佈的，是這盤棋本身。雲庫的表給出一個 FEN 和一個整數就結束了，2004年的論文給出一個回合數。兩者都沒有給出中間的著法。',
+  "So this page is the lines. We generated the tables ourselves with Nguyen Pham's [FelicityEgtb](https://github.com/nguyenpham/FelicityEgtb); that is also the only way to check a published number against anything.":
+    '所以這一頁給出的就是著法。殘局庫是我們用 Nguyen Pham 的 [FelicityEgtb](https://github.com/nguyenpham/FelicityEgtb) 自己生成的；這也是拿已公佈的數字去對照任何東西的唯一辦法。',
+  'The records': '紀錄',
+  'Every class below is the attacker against 士象全: a general with both advisors and both elephants, which is the standard full defence. Mate counts are moves, not plies, and both sides play perfectly: the winner mates as fast as the position allows, the loser holds out as long as it can.':
+    '下面每一類都是攻方對士象全：將帶雙士雙象，即標準的全套防守。殺著步數以回合計，而非半回合，雙方都走完美著法：勝方以局面允許的最快速度成殺，負方盡可能久地堅持。',
+  Attacker: '攻方',
+  'Longest win': '最長勝局',
+  'Ends in': '結局',
+  'Horse and soldier (马兵)': '馬兵',
+  'Two cannons (双炮)': '雙炮',
+  'Chariot with its own full guard, against the same (车仕相全)': '車仕相全',
+  'Cannon and horse (炮马)': '炮馬',
+  'Chariot alone (单车)': '單車',
+  'Two horses (双马)': '雙馬',
+  'Two soldiers (双兵)': '雙兵',
+  '[mate in 65](/study/uXu609QE/GuhYA0we)': '[65回合成殺](/study/uXu609QE/GuhYA0we)',
+  '[mate in 52](/study/uXu609QE/u0z3Pvce)': '[52回合成殺](/study/uXu609QE/u0z3Pvce)',
+  '[mate in 43](/study/uXu609QE/85yb318c)': '[43回合成殺](/study/uXu609QE/85yb318c)',
+  '[mate in 36](/study/uXu609QE/LM1vYAUC)': '[36回合成殺](/study/uXu609QE/LM1vYAUC)',
+  '[mate in 32](/study/uXu609QE/rLYsuFtE)': '[32回合成殺](/study/uXu609QE/rLYsuFtE)',
+  '[mate in 31](/study/uXu609QE/aEdsvwA6)': '[31回合成殺](/study/uXu609QE/aEdsvwA6)',
+  '[mate in 22](/study/uXu609QE/4neR0BI5)': '[22回合成殺](/study/uXu609QE/4neR0BI5)',
+  checkmate: '將死',
+  'A lone horse, a lone cannon and a lone soldier cannot win against the full defence at all. That is old knowledge, and the tables have it as a flat draw.':
+    '單馬、單炮、單兵對士象全根本贏不了。這是老知識，殘局庫裡也都是和棋。',
+  'Each line is a [chapter in a study](/study/uXu609QE). The chapters have no sidelines and nothing is missing: every other move by the loser reaches a position closer to mate, and every other move by the winner either throws the win away or takes longer. That is what makes the line the longest one.':
+    '每一條著法都是[一個研究中的一章](/study/uXu609QE)。各章沒有變著，也沒有遺漏：負方任何別的走法，所到局面離殺更近；勝方任何別的走法，不是失去勝勢就是更慢。這正是它成為最長著法的原因。',
+  'A horse and a soldier against the full guard: mate in 65': '馬兵對士象全：65回合',
+  'The longest of the seven, step by step. The other six are the next chapters of the same study.':
+    '七局中最長的一局，可逐著演示。另外六局是同一研究的後續各章。',
+  'Five of the seven end without a check': '七局中有五局不是以將軍結束',
+  'In chess, a stalemated king is a draw, so every longest-mate line ends in checkmate. Xiangqi scores it the other way: a side with no legal move loses. The position is called 困毙, and the loser is usually not in check at all when it happens. By the end of these lines the defence has lost its advisors and elephants, and the general stands alone in the palace with nothing it can legally play.':
+    '在國際象棋裡，逼和算和棋，所以每一條最長殺局都以將死告終。象棋的判法正相反：無著可走的一方判負。這種局面叫困斃，發生時負方通常根本沒有被將軍。在這幾條著法的結尾，防守方的士象都已丟光，將獨自留在九宮裡，卻沒有一步合法著法可走。',
+  'That is the shape of five of these seven records, including the two longest. Here is the second longest, two cannons against the full guard, from five moves before the end: 52 moves of manoeuvring, and the last one is a quiet move that leaves the general no square to go to.':
+    '這七項紀錄中有五項是這種結局，包括最長的兩項。下面是第二長的一項，雙炮對士象全，從終局前五回合開始：五十二回合的周旋，最後一步是一著不帶將的閒著，讓將無處可走。',
+  'Two cannons against the full guard: the last five moves of the mate in 52':
+    '雙炮對士象全：52回合殺局的最後五回合',
+  'Five moves from the end. The cannon on e1 takes the last elephant on e8, the other cannon swings from f2 round to b9, and the e8 cannon steps up to e9 under the general, which runs to d10. Then the quiet e9-c9: the b9 cannon now fires over it into d9, and the open e-file means e10 would face the red general. Black is not in check and has no legal move.':
+    '離終局還有五回合。e1的炮吃掉e8上最後一個象，另一隻炮從f2經b2繞到b9，e8的炮再進到e9，貼在將的下方，黑將走到d10。隨後是不帶將的閒著e9-c9：b9的炮隔著它打到d9，而e線已經打開，將若走e10就會與紅帥照面。黑方沒有被將軍，卻無著可走。',
+  'The rules the table does not know': '殘局庫不知道的規則',
+  "A tablebase knows legal positions and moves and nothing else. It has never heard of the repetition law or 自然限着, the rule that draws a game after 60 moves with no capture, so a table's headline number can be a line that could never be played out. That is what happened to chess's famous one: the 549-move mate in the 7-piece tables is drawn by the 50-move rule long before it lands.":
+    '殘局庫只知道合法局面和著法，別的一概不知。它不知道重複局面的規則，也不知道自然限著（60回合無吃子即判和的規則），所以表中的一個醒目數字，可能是一條實戰中永遠走不完的著法。國際象棋那個著名的紀錄就是這樣：七子殘局庫裡的549步殺，遠在成殺之前就會被50步規則判和。',
+  'These seven are not. We replayed each line against both rules: no position repeats in any of them, and the longest capture-free stretch is 27 moves, in 双炮 and in 车仕相全, well inside the 60-move limit.':
+    '這七局不是。我們用這兩條規則逐一重放了每條著法：沒有一局出現局面重複，最長的無吃子段落是27回合，出現在雙炮和車仕相全兩局中，遠在60回合限著之內。',
+  'Checking against the published table': '與公佈的表對照',
+  "象棋云库's table gives the deepest position in each class with Red to move; ours takes the deepest whoever is to move. Where those are the same question the two agree exactly: two soldiers 43 plies, cannon and soldier 131, horse and soldier 129, cannon and horse 71.":
+    '象棋雲庫的表給出每一類中紅先的最深局面；我們的表取最深局面，不論輪到哪一方走。在兩者問的是同一個問題時，結果完全一致：雙兵43個半回合，炮兵131，馬兵129，炮馬71。',
+  "A maximum is not automatically a record, though. Cannon and soldier's 131 plies is the deepest number in the whole 士象全 group, but 象棋云库's own API, asked about that position, returns exactly one winning move, a cannon capture of an elephant, with every other move drawn and the position after it scoring 130. It is a capture followed by a 130-ply mate against a defence missing an elephant, which is why cannon and soldier is not in the table above.":
+    '不過，最大值不一定就是紀錄。炮兵的131個半回合是整個士象全組裡最深的數字，但拿象棋雲庫自己的 API 去查這個局面，返回的取勝著法只有一步，炮打象，其餘著法都是和棋，吃子之後的局面得分是130。這其實是一步吃子加上一盤對缺一象的防守的130個半回合殺局，所以炮兵不在上面的表裡。',
+  'What is missing': '還缺什麼',
+  "Every class here has one side with nothing but a general and its guard. The interesting case is two attackers against a defence that also keeps material, 车马 against 车士象全 and its neighbours, where neither side is obliged to capture anything. That is where the 60-move rule would actually bite, and where a record might turn out to be unplayable in the way chess's is. It is also about 9 billion indices, which wants a machine with considerably more memory than a laptop.":
+    '這裡的每一類，都有一方只剩將和士象。更有意思的情況是兩個進攻子對一個同樣保有子力的防守，比如車馬對車士象全及其相近的組合，雙方都沒有非吃子不可的義務。60回合限著真正會起作用的正是這裡，一項紀錄也可能像國際象棋那樣，實戰中根本走不完。它也有大約90億個索引，需要一台記憶體遠大於筆記型電腦的機器。',
+  'Play through all seven': '逐著演示全部七局',
+  'The basic endgames': '基本殘局',
+  困毙: '困斃',
+  // chariot-cannon-repetition-key: machine-drafted 2026-10-07, not native-reviewed.
+  'Chariot and cannon both start with C': '車和炮的英文都以 C 開頭',
+  'Chariot and cannon, both C': '車和炮，都是 C',
+  'A xiangqi threefold repetition bug: the chariot and the cannon shared a key':
+    '象棋三次重複局面判定的一個錯誤：車和炮被記成了同一個字母',
+  "A one-character bug in Mistboard's xiangqi repetition key let a game end in a threefold draw after a position had occurred only twice.":
+    'Mistboard 象棋重複局面判定所用的鍵裡，有一個只差一個字元的錯誤：一個局面明明只出現了兩次，對局卻被判為三次重複和棋。',
+  'Our xiangqi repetition key labelled each piece by the first letter of its role, so the chariot and the cannon were both `c`. Swapping a chariot and a cannon left the key unchanged, so a game could be drawn by threefold repetition after only two.':
+    '我們的象棋重複局面鍵用棋子角色英文名的首字母來標記每個棋子，於是車（chariot）和炮（cannon）都是 `c`。車和炮互換位置後，鍵不變，所以一個局面只出現兩次，對局就可能被判為三次重複和棋。',
+  'The fix writes out the role name. Fog Chess had the same bug with the king and the knight. No finished game changes result.':
+    '修復後，鍵裡寫出完整的角色名。迷霧國際象棋的王（king）和馬（knight）也有同樣的錯誤。已結束的對局，沒有一盤結果改變。',
+  'The key used the first letter of each role': '鍵只用了每個角色的首字母',
+  'Threefold repetition needs a way to say "this is the same position." Mistboard turns each position into a string and counts how often each one comes up.':
+    '三次重複需要一種方法來判斷「這是同一個局面」。Mistboard 把每個局面轉成一個字串，並統計每個字串出現了幾次。',
+  "`role[0]` is the first letter of the role, and two of xiangqi's seven roles start with `c`. A red chariot on a1 and cannon on b3 write `a1rc` and `b3rc`. Swap them and they still write `a1rc` and `b3rc`.":
+    '`role[0]` 是角色名的首字母，而象棋的七種角色裡有兩種以 `c` 開頭。a1 上的紅車和 b3 上的紅炮分別寫成 `a1rc` 和 `b3rc`。兩者互換後，寫出來仍然是 `a1rc` 和 `b3rc`。',
+  "The opening position next to the same position with red's a1 chariot and b3 cannon swapped":
+    '開局局面，旁邊是紅方 a1 車與 b3 炮互換後的同一局面',
+  "Left: the opening. Right: red's a1 chariot and b3 cannon have traded places. The old key cannot tell them apart.":
+    '左：開局。右：紅方 a1 的車和 b3 的炮互換了位置。舊的鍵分不出兩者。',
+  'Fourteen legal plies drew a game': '十四步合法著法，判出一盤和棋',
+  'Red makes the swap in five moves while Black walks a chariot out and home, then each side moves a horse out and back:':
+    '紅方用五步完成互換，同時黑方把一個車走出去再走回來；然後雙方各把一個馬跳出去再跳回來：',
+  After: '走完',
+  'Old count': '舊計數',
+  'Real count': '實際計數',
+  'the start': '開局',
+  'opening: 1': '開局局面：1',
+  'the swap, 5 moves a side': '互換，每方 5 步',
+  'swapped: 1': '互換局面：1',
+  'a horse out and back': '馬跳出再跳回',
+  '3, draw': '3，判和',
+  'swapped: 2': '互換局面：2',
+  'Fourteen legal plies, and the site scored a draw. No player reported it; it turned up in a read of this code while jieqi was getting a repetition rule.':
+    '十四步合法著法，網站就判了和棋。沒有棋手回報過這個問題；它是在給揭棋加上重複局面規則時，閱讀這段程式碼發現的。',
+  'The fix writes the role out in full': '修復：把角色名完整寫出',
+  'A test plays those fourteen plies and checks the game goes on. The same shortcut was in Fog Chess (king and knight both `k`) and Duck Xiangqi; both are fixed.':
+    '一個測試會走完這十四步，並檢查對局仍在繼續。迷霧國際象棋（王 king 和馬 knight 都是 `k`）和鴨子象棋裡也有同樣的簡寫；兩者都已修復。',
+  'What it means on the site': '對網站意味著什麼',
+  '**Finished games:** none change. Replayed under the corrected key, all 29 xiangqi repetition draws, 2 perpetual-check losses, 2 Duck Xiangqi draws and 19 Fog Chess draws end the same way.':
+    '**已結束的對局：**沒有一盤改變。用修正後的鍵重放，全部 29 盤象棋重複局面和棋、2 盤長將判負、2 盤鴨子象棋和棋和 19 盤迷霧國際象棋和棋，結果都一樣。',
+  '**New games:** xiangqi, Fog Xiangqi, Fog Chess and Duck Xiangqi end on repetition only when a position has really occurred three times.':
+    '**新對局：**象棋、迷霧象棋、迷霧國際象棋和鴨子象棋，只有在同一局面真正出現三次時，才會因重複局面結束。',
+  "**Puzzles:** the miner's duplicate check reads both spellings, so no published puzzle comes back as new.":
+    '**謎題：**謎題挖掘器的查重會同時識別新舊兩種寫法，所以已發布的謎題不會被當成新題再出現。',
+  'A key built from abbreviations needs one check that no single abbreviation shows: that no two names shorten to the same thing. A letter table written by hand makes that check when someone picks `r` for the chariot. `role[0]` never did.':
+    '用縮寫拼成的鍵需要一項檢查，而這項檢查從任何單個縮寫上都看不出來：沒有兩個名字縮寫成同一個東西。手寫的字母表在有人為車選定 `r` 的那一刻，就做了這項檢查。`role[0]` 從來沒有做過。',
+  // flip-jungle-skill-ceiling, katago-jungle den races, pikafish-reveal-bug audit, and the two links to the new page (2026-10-07): machine-drafted, not native-reviewed.
+  'Flip Jungle: 512 times the search still loses 23% of games':
+    '翻翻棋：搜尋量提升 512 倍，仍有 23% 的對局落敗',
+  'Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.':
+    '翻翻棋是所有動物都蓋著的 4×4 鬥獸棋。一個近乎完美的引擎能測出翻棋之後還剩多少棋力：512 倍的搜尋量大約只換來 242 Elo，而且仍會輸掉 23% 的對局。',
+  '[Flip Jungle](/rules/jungle-flip) is Jungle Chess on a 4×4 board with all sixteen animals face-down. Each turn you flip a tile, which reveals a random animal, or move a face-up animal one square. MistyJungleFlip, the bot you play here, picks the optimal move 99 to 100% of the time in the endgames that can be checked exactly. That makes it a measuring instrument for the question every flip game raises: how much of a game is skill, and how much is the flips?':
+    '[翻翻棋](/rules/jungle-flip)是在 4×4 棋盤上進行的鬥獸棋，十六隻動物開局時全都蓋著。輪到你時，可以翻開一張棋子，隨機揭示一隻動物，或者把一隻已翻開的動物走一格。本站的電腦 MistyJungleFlip 在能精確核對的殘局中，選出最優著法的比例為 99% 到 100%。這讓它成了一件測量儀器，用來回答每種翻棋遊戲都會引出的問題：一盤棋裡有多少是棋力，多少是翻棋？',
+  'Less skill than it feels like. A copy of the engine with 512 times more search still loses 23% of its games against the weaker one.':
+    '比感覺上要少。搜尋量多 512 倍的引擎副本，對上較弱的那一個，仍會輸掉 23% 的對局。',
+  Measure: '測量項',
+  'Search ladder, 1k to 512k nodes': '搜尋階梯，1k 到 512k 節點',
+  '242 Elo across a 512× range': '512 倍跨度對應 242 Elo',
+  '512× more search': '搜尋量提升 512 倍',
+  'loses 23% of games': '輸掉 23% 的對局',
+  '8× more search': '搜尋量提升 8 倍',
+  'loses 37 to 40%': '輸掉 37% 到 40%',
+  'Any search against random moves': '任意搜尋對隨機走子',
+  'about 99% (random won 0 of 800)': '約 99%（隨機方 800 局全敗）',
+  'Endgames, 5 pieces or fewer, against exact tablebases': '殘局（5 子以內）對精確殘局庫',
+  '99 to 100% optimal': '99% 到 100% 最優',
+  'Midgames, 5 to 6 pieces, against an exact solver': '中局（5 到 6 子）對精確求解器',
+  '200 of 200 moves optimal': '200 著中 200 著最優',
+  'A search engine with exact endgames': '一個帶精確殘局的搜尋引擎',
+  'MistyJungleFlip is alpha-beta search with a handwritten evaluation and no neural network: material plus mobility, with a small term against draws. Its strength is set by a node budget, not a clock, so the same position gets the same move on any machine, and a measured gap belongs to the engine rather than the hardware.':
+    'MistyJungleFlip 是 alpha-beta 搜尋，配手工評估函式，沒有神經網路：評估值由子力加機動性構成，另有一個小小的厭和項。棋力由節點預算而非時鐘決定，因此同一局面在任何機器上都回傳同一著法，測出的差距屬於引擎而不是硬體。',
+  'A flip is a chance node. Its value is the average over the animals still face-down, pruned with star-minimax, the chance-node form of alpha-beta. Endgames come from exact tablebases instead, solved backward from every finished position. Each entry stores the result under best play and the distance to it.':
+    '翻棋是機會節點。它的價值是所有仍蓋著的動物的平均值，並用 star-minimax，即機會節點版的 alpha-beta 進行剪枝。殘局則來自精確殘局庫，從每個終局局面往回推解出。每個條目儲存雙方最佳著法下的結果，以及到達該結果的距離。',
+  'Checked against exact answers where they exist': '凡有精確答案之處，都拿來核對',
+  'Self-play shows which of two versions is stronger, not whether either plays well: two copies of one engine share the same blind spots. So move quality is graded against the tablebases. In endgames of up to five pieces the engine played the optimal move 99 to 100% of the time; the misses were search depth, and a deeper search cleared them. A forward solver built on the tablebases reaches five- and six-piece midgames with tiles still face-down, and on 200 of those the engine matched the optimal move every time.':
+    '自我對弈只能測出兩個版本哪個更強，測不出它們是否下得好：同一引擎的兩個副本共享同樣的盲點。所以著法品質改為對照殘局庫來評分。在最多五子的殘局中，引擎選出最優著法的比例為 99% 到 100%；失誤都是搜尋深度問題，更深的搜尋就解決了。基於殘局庫建構的前向求解器能涵蓋仍有棋子蓋著的五子和六子中局；在其中 200 個局面上，引擎每次都走出了最優著法。',
+  'That coverage stops where exact computation stops, near the end of the game. The opening, where the flips happen, is too large to solve, so nothing here verifies the engine’s opening play.':
+    '這種涵蓋到精確計算的邊界為止，也就是接近終局處。翻棋發生的開局階段太大，無法求解，所以這裡的一切都沒有驗證引擎的開局水準。',
+  '512 times the search buys about 242 Elo': '512 倍的搜尋量，大約只值 242 Elo',
+  'To measure the opening without an exact answer, four copies searching 1k, 8k, 64k and 512k nodes a move played a round robin of paired, colour-swapped games, 120 per pairing. Their fitted ratings were +0, +89, +153 and +242. Each eightfold step is worth 64 to 89 Elo, and the ladder flattens at the top: 320k to 640k nodes was worth 6 Elo. In chess, 512 times the compute is worth several hundred.':
+    '為了在沒有精確答案的情況下衡量開局，四個副本分別每著搜尋 1k、8k、64k 和 512k 節點，進行成對換色的循環賽，每個配對 120 局。擬合出的等級分為 +0、+89、+153 和 +242。每 8 倍的台階值 64 到 89 Elo，且在高端趨於平坦：320k 到 640k 節點只值 6 Elo。在國際象棋裡，512 倍的算力值好幾百分。',
+  'Upsets are more common than the ratings suggest. An engine with 8 times the search loses 37 to 40% of its games; one with 512 times loses 23%. The flips decide enough games on their own that more search cannot close the gap.':
+    '爆冷比等級分所暗示的更常見。搜尋量多 8 倍的引擎會輸掉 37% 到 40% 的對局；多 512 倍的輸掉 23%。翻棋自身決定的對局足夠多，更多搜尋也補不上這個差距。',
+  'The one big step is at the bottom. A 1k-node search beats a random mover about 99% of the time (random won 0 of 800 games across the tiers), a gap near 850 Elo. About 80% of the distance from random to perfect is that single step, from moving at random to searching at all. Tuning the evaluation did nothing: better piece values, a rat-and-elephant term and draw aversion all came back flat in paired self-play.':
+    '唯一的大台階在最底部。1k 節點的搜尋約 99% 地戰勝隨機走子（各檔位共 800 局中隨機方 0 勝），差距接近 850 Elo。從隨機到完美的距離裡，約 80% 就在這一步上，即從隨便走子到開始搜尋。調評估函式毫無作用：更好的子力價值、鼠與象的專項、厭和項，在成對自我對弈中全都沒有變化。',
+  'Perfect play against perfect play is a draw': '完美對完美是和棋',
+  'Small versions of the game can be solved outright. With two and four pieces, every tile face-down at the start and played to the end under the full rules, the game is a draw under best play: two perfect players cannot beat each other. Solving even a six-piece game from the opening crosses 40 million distinct positions, the same wall that keeps the sixteen-piece game out of reach, so the full game is unproven.':
+    '足夠小的版本可以徹底解出。兩子和四子的版本，開局時所有棋子都蓋著，按完整規則下到終局，在雙方最佳著法下都是和棋：兩個完美棋手無法戰勝彼此。哪怕從開局解一個六子遊戲，也已超過 4000 萬個不同局面，正是這道牆讓十六子的完整遊戲無法企及，所以完整遊戲未被證明。',
+  'That still places the 23%. Perfect against perfect is a draw. Perfect against a much weaker player is a near-certain win: the random mover lost all 800 of its games. Two close players sit in between, with the gap inside the variance and the flips deciding.':
+    '這仍能給那 23% 定位。完美對完美是和棋。完美對遠弱的棋手幾乎必勝：隨機走子方 800 局全敗。兩個接近的棋手處在中間，差距落在變異數之內，由翻棋來決定。',
+  'How far the tablebases go': '殘局庫能走多遠',
+  'The tables cover every fully revealed position at each piece count and ignore the 40-half-move no-progress rule.':
+    '這些表涵蓋每個子數下所有完全翻開的局面，不計 40 個半回合的無進展規則。',
+  Pieces: '子數',
+  Positions: '局面數',
+  'Longest forced win': '最長必勝',
+  Build: '建構',
+  '9 plies': '9 著',
+  instant: '瞬間',
+  '1.9M': '190 萬',
+  '21 plies': '21 著',
+  '2 s': '2 秒',
+  '79M': '7900 萬',
+  '41 plies': '41 著',
+  '200 s': '200 秒',
+  '2.3B': '23 億',
+  '63 plies': '63 著',
+  '4 hr on a laptop, 2.8 GB': '筆電上 4 小時，2.8 GB',
+  '46B': '460 億',
+  unbuilt: '未建構',
+  'days, ~140 GB of RAM': '數天，約 140 GB 記憶體',
+  'Six pieces could be built on a rented server and would add nothing: five-piece coverage already grades every endgame that reaches the tables. Past that, a full solve means the opening, a flip tree of sixteen distinct pieces revealed in random order, with on the order of 10¹¹ or more reachable states.':
+    '六子表可以在租用的伺服器上建構，但毫無增益：五子的涵蓋已經能給每一個進入表中的殘局評分。再往前，完整求解就意味著要解開局，而開局是一棵翻棋樹：十六個不同棋子以隨機順序翻開，可達狀態在 10¹¹ 量級以上。',
+  'The distance column was not in the first tables. They stored win, draw or loss, which is enough to grade moves but not to finish games. In one self-play game the engine held a tiger and a rat against a lone elephant, a forced win (the rat traps the elephant in three plies, since an elephant cannot take a rat). For eight turns it played moves the tables graded optimal and made no progress, because every winning move scored the same, until repetition drew the game. With the distance stored, a win in 3 outranks a win in 9: the engine takes the shortest forced win, drags out forced losses, and that endgame ends with the rat taking the elephant in three. Chess endgame tables such as Syzygy carry a distance for the same reason.':
+    '最初的表裡沒有距離這一欄。它們只存勝、和、負，這足以給著法評分，卻不足以收官。在一盤自我對弈中，引擎有一虎一鼠對孤象，按表是必勝（鼠三著內困住象，因為象不能吃鼠）。連續八回合，它走出按表評為最優的著法，卻毫無進展，因為每一步取勝著法得分相同，直到重複規則判為和棋。存入距離後，3 著取勝優於 9 著取勝：引擎選最短的必勝路線，並把必敗局面盡量拖長，那個殘局以鼠三著吃象告終。國際象棋的殘局庫，例如 Syzygy，附帶距離也是同樣的原因。',
+  'Skill shows in the average, not the game': '棋力體現在平均值上，而不在單局上',
+  'Skill is real in Flip Jungle: the 242-Elo ladder is a real gap, and over a long match the stronger engine wins. But the deal and the flips decide a large share of any one game, so even a far stronger player loses often, and one result says little about who is better. The measurement still missing is a rating against a strong human player, the one test that does not lean on the engine or its solver.':
+    '翻翻棋裡棋力是真實存在的：242 Elo 的階梯是真實差距，在長期對抗中更強的引擎會贏。但發牌和翻棋決定了任一局中相當大的一部分，所以哪怕強得多的棋手也常常落敗，一局結果幾乎說明不了誰更強。還缺的測量是對強人類棋手的等級分，這是唯一不依賴引擎或其求解器的檢驗。',
+  'Our [game review](/blog/skill-vs-luck) splits each flip into the decision and the luck, so you can see which share of your own games was which. The [twenty engine games](/study/uKxJ60mN) from the rules page show the bot playing itself, and the engine’s source is [on GitHub](https://github.com/brianhliou/misty-flip-jungle).':
+    '本站的[對局覆盤](/blog/skill-vs-luck)把每一次翻子拆成決定和運氣，讓你看清自己的對局裡哪部分是哪一種。規則頁上的[二十盤引擎對局](/study/uKxJ60mN)是電腦自我對弈，引擎原始碼在 [GitHub 上](https://github.com/brianhliou/misty-flip-jungle)。',
+  'Play MistyJungleFlip': '與 MistyJungleFlip 對弈',
+  'Flip Jungle rules': '翻翻棋規則',
+  'FLIP JUNGLE': '翻翻棋',
+  'SKILL CEILING': '棋力上限',
+  '512× THE SEARCH, 23% LOST': '512 倍搜尋，仍輸 23%',
+  'Flip Jungle skill vs luck: 512× more search still loses 23% of games':
+    '翻翻棋的棋力與運氣：搜尋量多 512 倍，仍輸 23% 的對局',
+  "Flip Jungle's skill ceiling": '翻翻棋的棋力上限',
+  'How much of a flip game the flips decide is measured in [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling): an engine with 512 times the search still loses 23% of its games.':
+    '翻棋遊戲裡有多少由翻棋決定，[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了測量：搜尋量多 512 倍的引擎，仍會輸掉 23% 的對局。',
+  'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.':
+    '電腦有多強，翻棋又決定了多少？[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精確殘局庫給它評分，並測出 512 倍的搜尋量值多少。',
+  'Misty has no idea of a den race': 'Misty 不懂衝獸穴競速',
+  'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den. It never asks whether a runner heading for its own den gets there first; it finds out when the search reaches the den, about 12 plies out. In August we tried three ways to teach it, and all three came back null or negative.':
+    'Misty 對局面的評估是子力，加上每個棋子離對方獸穴距離的獎勵。它從不去問奔向自己獸穴的對方棋子是否會先到；等搜尋抵達獸穴時它才發現，那大約是 12 著之後。8 月我們試了三種辦法教它，三種結果都是無效或負收益。',
+  'First, how often a race decides a game. Of 172 self-play games at Misty’s usual 5 million nodes, 52.9% ended in a repetition draw, 26.2% in a den entry and 20.9% in a no-progress draw. Only 4.7% were genuine races, won by a side that was level or behind ten plies out. The same test at 200k nodes reported 22%: weaker play inflates races about fivefold.':
+    '先看競速多常決定對局。在 Misty 平常的 500 萬節點下自我對弈 172 盤，52.9% 以重複和棋結束，26.2% 以進入獸穴結束，20.9% 以無進展和棋結束。只有 4.7% 是真正的競速：勝方在十著之前持平或落後。同樣的測試在 20 萬節點下給出 22%：較弱的對弈會把競速誇大約五倍。',
+  'Deeper search finds little more. Over those 8 races, 60 million nodes saw the loss at most 4 plies sooner than 5 million, and no sooner in 4 of them. A search extension near the dens scored +45 Elo when granted free, at 3.3 times the nodes; held to the same budget, it scored −15 and −12. A den-race term, comparing the two runners once per side, scored −3 and +9 at weights 10 and 25. Each of those matches was 300 colour-swapped pairs.':
+    '更深的搜尋也找不到多少東西。在這 8 盤競速裡，6000 萬節點比 500 萬節點最多早 4 著看到敗勢，其中 4 盤一著也沒有提前。獸穴附近的搜尋延伸在免費給予時得到 +45 Elo，代價是 3.3 倍的節點；把預算固定後，它得到 −15 和 −12。專門的衝獸穴競速評估項，每方各比較一次雙方的奔襲棋子，在權重 10 和 25 下分別得到 −3 和 +9。每一場對抗都是 300 對換色對局。',
+  'Misty plays a race well enough when the search reaches it. In one self-play game under the old tiger rule, Red’s tiger took a wolf and stood in the d-file corridor beside Blue’s elephant. It could not jump sideways, so Blue did not hurry to take it. When the elephant stepped from d7 to d6, Red’s lion jumped from c3 to c7, into the square the elephant had left. The elephant took the tiger on d5, and the lion was three moves from a den Blue could not defend. Blue ended 13 points ahead and lost. Misty has no den-race term; depth found the line. Since 21 September the tiger jumps sideways, so the corridor no longer traps it.':
+    '搜尋夠得著時，Misty 照樣能把競速下好。在舊虎規則下的一盤自我對弈中，紅方的虎吃掉一隻狼，站進 d 路通道，就在藍方的象旁邊。它不能橫向跳，所以藍方不急著吃它。當象從 d7 走到 d6，紅方的獅從 c3 跳到 c7，跳進象剛離開的格子。象在 d5 吃掉了虎，而獅離一個藍方守不住的獸穴只差三步。藍方最終領先 13 分，卻輸了。Misty 沒有衝獸穴競速評估項；是搜尋深度找到了這條線。自 9 月 21 日起，虎可以橫向跳，這條通道不再困得住它。',
+  'What did move Jungle Chess was two constants from the same games: a no-capture draw clock that ended games early, and a draw contempt near zero. Changing them took self-play from a quarter of games decided to about half. The lesson we kept: hold the search budget fixed, or you measure the budget. The 52 games are in [one study](/study/4UhOMlsE).':
+    '真正改變了鬥獸棋對局的，是同一批對局裡找到的兩個常數：一個讓對局過早結束的無吃子和棋計數，以及接近零的和棋輕視值。改掉它們後，自我對弈中分出勝負的對局從四分之一升到大約一半。我們留下的教訓是：要把搜尋預算固定住，否則測的只是預算。那 52 盤對局都收在[一個研究](/study/4UhOMlsE)裡。',
+  'An earlier audit tested the averaging on the buggy engine':
+    '更早的一次審查，是在有漏洞的引擎上測試取平均的',
+  'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. The engine had already beaten ten nets distilled from its own evaluations, the best of them scoring 0.43. Each test played the changed engine against the shipped one, colours alternating, at equal time, with a referee dealing the hidden pieces so neither engine saw one.':
+    '9 月，我們測試了一份外部對同一引擎的原始碼審查，來自 [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai)。它的五項發現裡，有兩項值得下一場對抗來檢驗。在此之前，這個引擎已經贏過十個從它自身評估蒸餾出來的網路，其中最好的得分 0.43。每項測試都讓改動後的引擎對陣已上線的引擎，輪換執色，用時相同，由裁判程式發放暗子，雙方引擎都看不到暗子。',
+  'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. Fixing it alone scored 0.475 over 200 games at 500 ms a move (91-101-8). Retuning the 43 terms it touches, over 10,000 SPSA game pairs, scored 0.507 (96-93-11). Both are within noise: 200 games is ±0.07 at 95%, roughly ±50 Elo, so a change worth 10 Elo cannot be seen.':
+    '第一項是真實的評估漏洞：有一方的暗子從未被計入，所以紅方威脅暗子能得分，黑方從來得不到。只修這個漏洞，每著 500 ms 下 200 盤得分 0.475（91-101-8）。再用 10,000 對 SPSA 對局重新調校它涉及的 43 項參數，得分 0.507（96-93-11）。兩者都在雜訊之內：200 盤在 95% 信賴水準下是 ±0.07，大約 ±50 Elo，所以價值 10 Elo 的改動根本看不出來。',
+  'The second was the averaging this page is about, a clamped weighted average with a fallback to the worst case. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. A replacement took the engine’s top four moves, searched each possible piece separately and played the best average. It scored 0.370 over 100 games (30-56-14) at 2.2 times the time, and 0.410 over 50 games (17-26-7) at 7 times. We concluded then that the worst-case fallback does useful work.':
+    '第二項就是本頁講的取平均：一個帶上下限的加權平均，並在需要時退回最差結果。7 月，它曾選了一步真實勝率 64% 的翻子，放棄了勝率 97% 的穩妥著法。替代方案取引擎排名前四的著法，對每一種可能的棋子分別搜尋，再走平均值最好的一步。它在 2.2 倍用時下 100 盤得分 0.370（30-56-14），在 7 倍用時下 50 盤得分 0.410（17-26-7）。我們當時的結論是：退回最差結果這一步確實有用。',
+  'That conclusion came from the colour bug above. The fallback was meant to assume the worst, and as Black it assumed the best, so the test ran on an engine that was not doing it half the time. Since then [AB-JChess](/blog/ab-jchess) has beaten this engine 248-136-16 over 400 games and is now the top jieqi bot.':
+    '這個結論來自上面的顏色漏洞。退回這一步本該假設最壞情況，而執黑時它假設的是最好情況，所以那次測試用的引擎有一半時間根本沒在這樣做。此後 [AB-JChess](/blog/ab-jchess) 在 400 盤中以 248-136-16 戰勝了這個引擎，現在是最強的揭棋電腦。',
+  // duck-xiangqi, duck-xiangqi-strategy, misty blog merge (2026-10-07): machine-translated.
+  'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has five. The sections below are where that difference lands.':
+    '國際象棋只有一種擋子的辦法：站到它想去的點上。象棋有五種。下面幾節講的就是這個差別落在哪裡。',
+  'The facing rule is check in another form. Two generals on an open file attack each other, so leaving them facing is moving into check, which xiangqi already forbids. Duck Chess has no check, so the facing rule has nothing left to say and goes with it. Duck Chess does the same with kings: they may stand side by side, and a king takes a king.':
+    '將帥不能照面這條規則，其實是將軍的另一種說法。同一路上中間無子的兩位將帥互相攻擊，所以讓它們照面就等於送將，而象棋本來就禁止送將。鴨子國際象棋沒有將軍，這條規則也就無話可說，隨之取消。鴨子國際象棋對王也是這樣處理的：兩王可以相鄰，王可以吃王。',
+  'Clear the board down to the two generals, on e1 and e10. Of the 88 empty points, 8 keep them apart: e2 to e9. Under xiangqi’s facing rule those 8 would be the only legal places for the duck. Here all 88 are legal, and the other 80 lose on the spot.':
+    '把棋盤清到只剩兩位將帥，分別在 e1 和 e10。88 個空點裡，只有 8 個能把它們隔開：e2 到 e9。按象棋的照面規則，鴨子只能合法地放在這 8 個點上。這裡 88 個點都合法，而其餘 80 個點放下去就當場輸棋。',
+  'The duck half is nearly always about the other player: which line to shut, which horse to freeze, what to make awkward. So half of every turn goes on spoiling. It feels like always playing your second-best move.':
+    '放鴨子的那一半幾乎總是衝著對手去的：封哪條線，蹩哪匹馬，給對方添什麼彆扭。所以每一回合有一半花在攪局上。感覺就像永遠在走自己的次優著。',
+  'Duck Xiangqi: an ordinary middlegame, eighteen moves into an engine game':
+    '鴨子象棋：一盤引擎對局第十八回合的普通中局',
+  'The engine sees that capture coming from any distance. A person often won’t: it comes from the far end of the board, down a file the duck was guarding a turn ago. None of the six published engine games ends this way. Two of the original seven did, and both came from an engine bug that could lose track of the capture. After the fix on 29 September, one of those games replayed as a different win and the other never reached a decisive finish, so the study holds six.':
+    '引擎隔多遠都能看到這一吃。人卻常常看不到：它來自棋盤的另一端，沿著一路殺過來，而鴨子上一回合還守在那一路上。已發布的六盤引擎對局沒有一盤是這樣結束的。最初的七盤裡有兩盤是，而且兩盤都源於一個引擎漏洞：引擎可能會算丟這一吃。9 月 29 日修復之後，其中一盤重下變成了另一種贏法，另一盤始終沒有分出勝負，所以研習裡現在是六盤。',
+  'That is the range across the six engine games, and the median is 171. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
+    '這是六盤引擎對局的範圍，中位數是 171 步。請把它當成一盤完整的棋而不是小玩意，並據此選擇用時：這裡提供 5+5 和 10+5 兩種節奏，正是出於這個原因。',
+  'Obscuro’s paper ships no code. Misty is a Python and Rust implementation of its architecture, with a documented engine protocol and a server you can play it on. The other open implementation I know of is [obscuro-chess](https://github.com/opowell/obscuro-chess), a JavaScript port started in August 2026. Misty is published so that anyone can run it, read it, or take it apart.':
+    'Obscuro 的論文沒有附帶程式碼。Misty 是該架構的 Python 和 Rust 實作，有文件化的引擎協定，也有一個可以和它對弈的伺服器。我所知道的另一個開源實作是 [obscuro-chess](https://github.com/opowell/obscuro-chess)，一個 2026 年 8 月開始的 JavaScript 移植版。Misty 開源發布，任何人都可以執行、閱讀和拆解它。',
+  // how-puzzle-mining-works blog merge (2026-10-07): machine-translated.
+  'Every source carries a licence status, and publishing refuses any puzzle whose source has not been cleared.':
+    '每個來源都帶有授權狀態，來源未獲授權的題目一律不予發布。',
+  'What survives the gate goes to an audit. A separate process searches every solution again at depth 22 with no node ceiling, knowing nothing of what the first pass decided, and about 6% of the survivors do not hold up. Those are dropped too.':
+    '通過判定關卡的題目還要接受複核。另一個獨立程序以 22 層深度、不設節點上限，把每道題的解答重新搜尋一遍，它完全不知道第一遍的結論。大約 6% 的倖存者經不起複核，同樣被丟棄。',
+  'In August 2026 mining cost about six core-hours per thousand games, or about one core-minute per published puzzle.':
+    '2026 年 8 月，挖掘的成本約為每千盤對局六個核心小時，也就是每發布一道題目約一個核心分鐘。',
+  'A rating scores what makes the line hard to see': '評分衡量的是這條線路難在哪裡',
+  'Every puzzle needs a rating before anyone has solved it, so the trainer can pick problems near your level. Rating by mate depth gives four distinct values across the corpus. The rating walks the solution instead: a quiet first move adds, a capture subtracts, a sacrifice the solver never wins back adds up to 200, and the number of replies the defender has pushes it either way. On 2 September 2026 the 1,415 puzzles served had 479 distinct ratings between 1000 and 2600.':
+    '每道題目在還沒有人解過之前就需要一個評分，這樣訓練器才能挑出接近你水準的題目。只按殺棋步數評分，整個題庫只會得到四個不同的數值。所以評分會把解答逐步走一遍：第一步不吃子會加分，吃子會減分，解題者棄掉且始終沒有追回的子力最多加 200 分，防守方可走的應著數量則可能加分也可能減分。2026 年 9 月 2 日，上線的 1,415 道題目共有 479 個不同的評分，介於 1000 到 2600 之間。',
+  'The largest penalty goes to a first move that takes something nothing can take back, scaled by the piece it wins and capped at a chariot’s 900, because a hanging piece is the easiest thing on a board to spot. The check only runs while the game is still going. A capture that mates also leaves the defender no legal reply, and counted naively that looks like a piece nothing can recapture, which would mark down every mating capture in the corpus.':
+    '扣分最多的，是第一步吃掉一個對方無法反吃的子，扣分按吃到的子力計算，上限是一個車的 900，因為無人保護的子是棋盤上最容易發現的東西。這項檢查只在對局仍在進行時才執行。吃子同時將死對方時，防守方也沒有任何合法應著；如果照字面去數，這看起來就像一個無法反吃的子，題庫裡每一步吃子成殺都會被扣分。',
+  'One kind of position is withheld: the solver is already at least 300 centipawns ahead and the answer takes something undefended. It teaches nothing at any rating, and a rating can only decide who gets shown a problem. That rule hid 12% of the corpus.':
+    '有一類局面不予上線：解題者已經領先至少 300 厘兵，而答案是吃掉一個無人保護的子。這種題目在任何評分上都教不了什麼，而評分只能決定一道題出現在誰面前。這條規則隱藏了題庫的 12%。',
+  // katago-jungle blog merge (2026-10-07): machine-translated.
+  "Mistboard's own rules code refereed every game, and each engine only proposed moves. The budgets were matched on time, about two seconds a move on one machine: Misty at its usual 5 million nodes on one thread, KataGo at 1,000 visits on four threads with the b10c384 network. Both engines stop at a fixed amount of search, so the games played on Modal are the games either would play here. KataGo's own repetition rule was switched off, so the referee's applied to both sides.":
+    '每盤棋都由 Mistboard 自己的規則程式碼裁判，兩個引擎只負責提出著法。雙方的預算按用時對齊，在同一台機器上每步大約兩秒：Misty 用它平時的 500 萬個節點、單執行緒，KataGo 用 1,000 次訪問、四執行緒，搭配 b10c384 神經網路。兩個引擎都在固定的搜尋量處停下，所以在 Modal 上下出的棋，就是它們在這裡會下出的棋。KataGo 內建的重複局面規則被關閉，雙方都按裁判的規則處理重複。',
+  KataGo: 'KataGo',
+  Wins: '勝',
+  Losses: '負',
+  Score: '得分率',
+  'As red, 100 games': '執紅，100 盤',
+  'As black, 100 games': '執黑，100 盤',
+  Total: '合計',
+  'The median game ran 127 plies. The 95% interval on the score is 0.67 to 0.74, about +125 to +180 Elo; the challenge asked for 0.55.':
+    '對局長度的中位數是 127 個半回合。得分率的 95% 信賴區間是 0.67 到 0.74，約合 +125 到 +180 Elo；挑戰賽的要求是 0.55。',
+  'All 200 games are in [one study](/study/0t8xpyv6), and the raw records are in [one file](/jungle-games/katago-vs-misty-2026-09-21.jsonl), a line of JSON per game.':
+    '全部 200 盤都收在[一個研究](/study/0t8xpyv6)裡，原始紀錄放在[一個檔案](/jungle-games/katago-vs-misty-2026-09-21.jsonl)中，每盤一行 JSON。',
+  'The tiger now jumps the river sideways': '虎現在可以橫向跳河',
+  'We found KataGo while searching GitHub for jieqi engines. It lives on the AnimalChess2025 branch of a repository named KataGomo, and nothing in that name says Jungle Chess, so an earlier search for Jungle engines had missed it.':
+    '我們是在 GitHub 上找揭棋引擎時發現 KataGo 的。它放在一個名為 KataGomo 的儲存庫的 AnimalChess2025 分支上，名字裡看不出和鬥獸棋有關，所以之前專門找鬥獸棋引擎時漏掉了它。',
+  "Its tiger jumps the river sideways as well as lengthwise, the same leap as the lion. Ours jumped lengthwise only, a reading taken from English Wikipedia's article. Tencent's QQ游戏 rules, Leiden University's Dou Shou Qi page and KataGo's own source all give the tiger the lion's jump, and a match between an engine trained on one rule and an engine playing another would have measured the rule.":
+    '它的虎既能縱向跳河，也能橫向跳河，跳法和獅一樣。我們的虎原先只能縱向跳，這個理解來自英文維基百科的條目。騰訊 QQ遊戲的規則、萊頓大學的鬥獸棋頁面和 KataGo 自己的原始碼，都讓虎擁有和獅一樣的跳法；一個按某條規則訓練的引擎，去和一個按另一條規則下棋的引擎比賽，比出來的只是規則的差別。',
+  'Since 21 September the tiger on Mistboard jumps both ways, in the rules engine, the bot, the analysis board, the [rules page](/rules/jungle) and the puzzles. One puzzle the new jump refutes was withdrawn. The change only adds moves, so every earlier game is still legal as played.':
+    '從 9 月 21 日起，Mistboard 上的虎可以縱橫兩個方向跳河，規則引擎、電腦、分析棋盤、[規則頁面](/rules/jungle)和題目都已更新。有一道題目被新的跳法駁倒，已經撤下。這次改動只增加了著法，所以之前的每一盤棋按原樣仍然合法。',
+  'KataGo is the Go program, retrained by self-play': 'KataGo 就是那個圍棋程式，用自我對弈重新訓練',
+  'KataGo-AnimalChess is stock KataGo with the board and rules swapped for Jungle Chess and the self-play loop run as it was: 400 visits a move in self-play, a 10-block, 384-channel network trained by SGD on two GPUs, and rules randomised across the variants the Dandelion app supports, so one network plays all of them. The repository estimates under $50 of compute to reach top strength in a small game. The weights ship inside the app download, with no separate release and no stated licence.':
+    'KataGo-AnimalChess 就是原版 KataGo，只是把棋盤和規則換成了鬥獸棋，自我對弈的訓練流程原樣照跑：自我對弈時每步 400 次訪問，10 個殘差塊、384 個通道的神經網路在兩塊 GPU 上用 SGD 訓練，規則在 Dandelion 軟體支援的各個變體之間隨機切換，所以一個網路就能下所有變體。儲存庫裡估計，在一個小型棋類上練到頂尖棋力，算力花費不到 50 美元。網路權重打包在軟體的下載裡，沒有單獨發布，也沒有註明授權條款。',
+  "Misty's evaluation is three hand-written terms: material, distance to the den and a trap penalty. A learned correction on top of it did not help.":
+    'Misty 的評估只有三項手寫的內容：子力、離獸穴的距離，以及陷阱扣分。在它之上再加一層學習出來的修正，並沒有幫助。',
+  // atomic-xiangqi blog merge (2026-10-07): machine-translated.
+  'This is the one change from a straight port, and the straight port had two faults that needed it. The first showed on move one. From the starting array each cannon can jump the enemy cannon and take the horse behind it, and the blast takes the chariot and elephant beside the horse as well: three pieces for a cannon, and every best-play engine game opened with both sides doing it. The second was a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent.':
+    '這是相對於直接移植的唯一改動，直接移植的版本有兩個毛病，都要靠它解決。第一個在第一回合就出現了。從開局陣勢起，每一方的炮都能隔著對方的炮打掉後面的馬，而爆炸還會帶走馬旁邊的車和象：一個炮換三個子，在引擎的最佳著法對局裡，每一盤開局雙方都這樣走。第二個是一種最早第三回合就能出現、防守方永遠無法拒絕的重複局面和棋。一輛車站在士所在的線上，威脅把將帥炸掉。唯一的防守是用炮墊擋；而如果炮也會爆炸，這一墊擋同時就是隔著車反打進攻方自己的士，於是車只好換到另一條士線上，炮跟過去，局面重複。在引擎對局中，少了一輛車的一方靠這一招就能頂住比自己強得多的對手。',
+  'The fix took two rules, and neither works alone. A quiet shot ends the opening exchange and leaves the block standing but harmless, but the chariot may still hop and the cannon still has to follow. Counting a blast threat as check (the next section) does nothing by itself: while the block can shoot back, both sides check on every move, and a repetition both sides check through is a draw. With both rules the hop is a one-sided perpetual check and loses. The engine scores it as a loss and plays on, about a quarter of a pawn down. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.':
+    '解決它用了兩條規則，缺一不可。炮擊不爆炸，開局的那種兌換就沒有了，墊擋仍然成立卻不構成威脅；但車仍然可以來回跳，炮也仍然得跟過去。把爆炸威脅算作將軍（見下一節），單獨用也不起作用：只要墊擋的炮還能反打，雙方每一步都在將軍，而雙方都在將軍的重複局面判和。兩條規則合在一起，來回跳就成了單方面的長將，判負。引擎也把它算作輸棋，寧可落後大約四分之一個兵繼續下。炮由此變成一枚用來兌換和墊擋的棋子，而不再是掃清一條橫線的棋子；爆炸的其餘部分全部不變。',
+  'Every number on this page comes from engine games refereed by the rules kernel and played by a patched Fairy-Stockfish, and the two have to agree on every legal-move count before a number is read. The engine with ten times the nodes wins 29 of 32 games, at two strength levels, without losing one. Of the 44 first moves from the array, each played out at a million nodes a side, none wins for Red and three lose. None of the 19 repetition draws is a one-sided perpetual check. The [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab) has the kernel, the patch and the commands behind each number.':
+    '本頁的每一個數字都來自引擎對局：由規則內核裁判，由打過補丁的 Fairy-Stockfish 來下，兩者必須在每一個合法著法數上完全一致，才開始讀任何數字。節點數多十倍的引擎在兩個強度檔位上下了 32 盤，贏 29 盤，一盤未輸。從開局陣勢出發的 44 種第一步，每種都以雙方各一百萬節點下完，沒有一種讓紅方獲勝，有三種讓紅方輸棋。19 盤重複局面和棋裡，沒有一盤是單方面的長將。[變體實驗室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)裡有內核、補丁和每個數字背後的命令。',
+  // solver-audit blog merge (2026-10-07): machine-translated.
+  '適情雅趣 第108局 争舟走渡 prints a mate in seven, thirteen plies. At Red’s first move the soldier can take the advisor beside the general instead, 兵四平五, and that mates in six. Nine of the 172 can be mated faster than printed.':
+    '《適情雅趣》第108局 爭舟走渡印的是七著殺，共十三步。紅方第一著改用兵吃將旁邊的士，兵四平五，六著就能成殺。172局中有9局存在比所印更快的殺法。',
+  '適情雅趣 第108局 争舟走渡: a mate in six where the book prints seven':
+    '適情雅趣 第108局 爭舟走渡：書中印七著殺，六著即可成殺',
+  'The book’s line, with 兵四平五 as a branch at Red’s first move: it takes the advisor and mates a move sooner.':
+    '書中著法，紅方第一著處另有分枝兵四平五：吃士，早一著成殺。',
+  'The audit was wrong three times first': '審校先錯了三次',
+  'The counts above come from the fourth version of the audit. The first was a pass over the quiet compositions, and it searched the position after the key as though Red were to play twice. It reported 176 of 190 sound. The number meant nothing, because every search had started on the wrong side.':
+    '上面的數字來自第四版審校。第一版檢驗的是不連將的排局，它在首著之後的局面上搜尋時，當成了紅方連走兩步。結果報告190局中176局無瑕。這個數字毫無意義，因為每一次搜尋都從錯誤的一方開始。',
+  'The second judged every composition as a chess mate-in-n. A quiet 排局 claims only 红先胜, Red plays and wins, and against that claim a second key and a faster mate are not faults. About half the faults that pass counted went away. Both mistakes were in the quiet-move audit, shelved for the reason in the next section; the 172 above are continuous-check problems, where the length is part of what the book claims.':
+    '第二版把每一局都當成國際象棋排局裡的「n著殺」來判。不連將的排局只聲稱紅先勝，對這樣的結論來說，第二首著和更快的殺法都不算毛病。那一輪算出的毛病大約有一半就此作廢。這兩個錯誤都出在不連將排局的審校裡，那部分已經擱置，原因見下一節；上面的172局都是連將殺排局，著數本身就是書中結論的一部分。',
+  'The third was running the exact search without the engine screen described above. Eight records were first read as broken compositions: five are the Red wins past the search’s reach in the table, and three are the broken records above.':
+    '第三個錯誤是沒有先做上面說的引擎篩查，就直接跑精確搜尋。有八局起初被判為排局本身有缺陷：其中五局是表中那些紅方能勝但超出搜尋範圍的，另外三局是上面的錯譜。',
+  'A fourth was in the helpmates, the problems where both sides cooperate to reach mate. The composer that built them tested for checkmate, and xiangqi also scores 困毙, a side left with no legal move, as a loss. A line ending in 困毙 is a second solution, so 22 of the 186 helpmates we had published as sound had lines the composer could not see, 64 in the worst of them. A re-check that counts 困毙 is written and has not shipped yet.':
+    '第四個錯誤出在協作殺裡，也就是雙方合作走成殺局的題。生成這些題的程式只檢驗將死，而象棋把困斃，即一方無子可動，同樣判負。以困斃結束的著法也是一種解，所以我們當作唯一解發布的186道協作殺裡，有22道含有生成程式看不到的解，最多的一道有64種。按困斃計算的複查程式已經寫好，還沒有上線。',
+  'Four bugs, and each was a rule we knew and had not put into the tool: whose move it is, what a 排局 claims, that a mistyped record looks like a broken composition, and that 困毙 loses.':
+    '四個錯誤，每一個都是我們本來知道、卻沒有寫進工具的規則：輪到哪一方走，排局聲稱的是什麼，錄錯的棋譜看起來和有缺陷的排局一樣，以及困斃判負。',
   // Traditional starts from the complete Simplified key set, then every
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
-  ...ZH_HANS,
+  ...endgamePageDictionary('zh-Hant'),
+  // duck-xiangqi-game-tree (2026-10-07). Machine-translated 2026-10-07; Taiwan
+  // forms where the site already uses them (搜尋, 著法, 程式碼, 神經網路).
+  'One Duck Xiangqi move is worth two xiangqi moves': '鴨子象棋走一步，抵得上象棋走兩步',
+  'Duck Xiangqi’s game tree': '鴨子象棋的博弈樹',
+  'Duck Xiangqi’s Game Tree, Measured Against Xiangqi': '鴨子象棋的博弈樹：與象棋對比實測',
+  'Red’s first Duck Xiangqi turn reaches more positions than a full xiangqi move by each side. About half of them leave the opponent exactly the same choices, so a search can skip them. What is left still cuts how far an engine sees almost in half.':
+    '鴨子象棋裡紅方的第一個回合，能走出的局面比象棋裡雙方各走一步還多。其中大約一半給對手留下完全相同的選擇，所以搜尋可以跳過它們。剩下的部分仍讓引擎能看到的深度幾乎減半。',
+  'A turn in [Duck Xiangqi](/rules/duck-xiangqi) has two parts. You move a piece, then you put the duck on any empty point, where it blocks everything until your opponent moves it. We counted what that second choice does to the game tree, the map of every position the game can reach.':
+    '[鴨子象棋](/rules/duck-xiangqi)的一個回合分兩半。你先走一個子，再把鴨子放到任意一個空點上；在對手把它挪走之前，它擋住一切。我們統計了這第二個選擇對博弈樹的影響。博弈樹就是對局所能到達的每一個局面的總圖。',
+  'Red’s first turn alone makes 2,554 positions': '光是紅方的第一個回合，就有 2,554 個局面',
+  'Red has 44 moves from the starting position in both games. In xiangqi, black’s replies to them make 1,920 positions. In Duck Xiangqi, red’s turn is not over until the duck lands on one of the empty points, about 58 of them, so red’s first turn alone makes 2,554.':
+    '兩種棋裡，紅方在初始局面都有 44 種走法。在象棋裡，黑方對這些走法的應著共構成 1,920 個局面。在鴨子象棋裡，要等鴨子落到某個空點上（空點大約有 58 個），紅方的回合才算走完，所以光是紅方的第一個回合就有 2,554 個局面。',
+  'A xiangqi board after red plays cannon h3 to e3, with a yellow dot on each of the 58 empty points where the duck could land.':
+    '紅炮從 h3 走到 e3 之後的象棋棋盤，鴨子可以落下的 58 個空點上各有一個黃點。',
+  'One of red’s 44 first moves. In xiangqi, black would reply next. In Duck Xiangqi, red first puts the duck on one of these points, and each choice is a different position.':
+    '紅方 44 種第一步走法中的一種。在象棋裡，接下來輪到黑方應著。在鴨子象棋裡，紅方要先把鴨子放到這些點中的一個上，每一種選擇都是一個不同的局面。',
+  'The gap compounds with every turn. After one turn each, Duck Xiangqi already has more positions than xiangqi has after two turns each.':
+    '這個差距每走一個回合都會成倍放大。雙方各走一個回合之後，鴨子象棋的局面數就已經超過象棋雙方各走兩個回合之後的局面數。',
+  'Positions after': '走完以下回合後的局面數',
+  Xiangqi: '象棋',
+  'Duck Xiangqi': '鴨子象棋',
+  'Red’s first turn': '紅方第一個回合',
+  'One turn each': '雙方各一個回合',
+  'Two turns each': '雙方各兩個回合',
+  'Not counted': '未統計',
+  'Every legal sequence from the starting position, counted by Fairy-Stockfish.':
+    '從初始局面出發的每一條合法著法序列，由 Fairy-Stockfish 統計。',
+  'Half of those positions are the same position': '這些局面裡，有一半其實是同一個局面',
+  'The duck matters when it lands where black’s next move goes: a point a black piece moves to, slides through, or jumps over. Anywhere else, black has exactly the replies it would have with no duck on the board.':
+    '鴨子只有落在黑方下一步要經過的地方才有作用：黑方棋子要走到的點、要滑過的點，或者要跳過的點。落在別處，黑方的應著和盤上沒有鴨子時完全一樣。',
+  'The same board. 30 points carry an orange disc with the number of black replies a duck there takes away, up to 8 on e8 in front of black’s palace. The other 28 points are small grey dots.':
+    '同一張棋盤。30 個點上有橙色圓片，上面的數字是鴨子落在那裡會讓黑方少掉的應著數，最多的是黑方九宮前沿的 e8，少 8 種。其餘 28 個點是灰色小點。',
+  'Most of the points that matter sit on black’s side, in the paths of black’s pieces. On some of them the duck also gives a black cannon something to jump over, which adds a reply.':
+    '有作用的點大多在黑方一側，位於黑方棋子的路線上。其中有些點上，鴨子還給黑方的炮當了炮架，因而多出一種應著。',
+  'The busiest point is e8, in front of black’s palace: a duck there takes 8 replies away whatever red played first. The 28 grey points change nothing. Put the duck on any of them and black faces the same choices, then moves the duck somewhere new, so the game that follows is the same game. Two small things differ: black cannot leave the duck where it is, and repetitions count the duck’s square.':
+    '最要緊的點是黑方九宮前沿的 e8：無論紅方第一步走什麼，鴨子落在那裡都會讓黑方少掉 8 種應著。那 28 個灰點什麼也不改變。把鴨子放在其中任何一點上，黑方面對的選擇都一樣，然後再把鴨子挪到新的地方，所以接下來的對局還是同一盤棋。只有兩處小差別：黑方不能把鴨子留在原地，而判定重複局面時要算上鴨子所在的點。',
+  'So a search can look at one of them and skip the rest. Count every duck placement that leaves black the same replies once, and at the first move red’s 2,554 turns come down to 1,310.':
+    '所以搜尋只需看其中一個，其餘的都可以跳過。凡是給黑方留下相同應著的落點都只算一次，第一步時紅方的 2,554 種回合就降到 1,310 種。',
+  'Four bars. Xiangqi after red moves: 44. Xiangqi after red and black have both moved: 1,920. Duck Xiangqi after red moves and places the duck: 2,554. Duck Xiangqi counting placements that leave black the same replies once: 1,310.':
+    '四根橫條。象棋，紅方走一步後：44。象棋，紅黑雙方各走一步後：1,920。鴨子象棋，紅方走棋並放好鴨子後：2,554。鴨子象棋，給黑方留下相同應著的落點只算一次：1,310。',
+  'Positions from the start, counted by the site’s own rules engine.':
+    '從初始局面出發的局面數，由本站自己的規則引擎統計。',
+  'A duck away from your opponent’s pieces wastes half your turn':
+    '鴨子離對手的棋子太遠，等於浪費半個回合',
+  'The same board is a rule of thumb for players. Put the duck on a grey point and your opponent’s choices are exactly what they would be without it, so you have played a xiangqi move and passed on the rest of your turn. The duck earns its place in the paths of your opponent’s pieces: on the files their chariots and cannons use, and in front of their horses and elephants. At the start, the points that take the most away are on your opponent’s cannon row, where one duck cuts across both cannons at once.':
+    '同一張棋盤對棋手來說也是一條經驗法則。把鴨子放在灰點上，對手的選擇和沒有鴨子時完全一樣，等於你只走了一步象棋，回合的另一半白白放棄了。鴨子要放在對手棋子的路線上才有價值：放在對方車和炮所走的路上，或者擋在對方的馬和象前面。開局時，作用最大的點在對手炮所在的那一行，一隻鴨子能同時截斷兩門炮。',
+  'The duck’s share of the tree grows as pieces come off': '子力越少，鴨子在博弈樹裡的分量越大',
+  'To see past the opening, we had Fairy-Stockfish play 64 games of each against itself and counted the choices at every move. Xiangqi’s choices shrink as pieces come off the board. In Duck Xiangqi each capture also frees a point for the duck, so a turn stays nearly as wide as it was in the opening, and 200 half-moves in it has about 100 times the choices of a xiangqi move.':
+    '為了看到開局以後的情況，我們讓 Fairy-Stockfish 在兩種棋裡各自戰 64 局，並統計每一步的選擇數。象棋的選擇隨著棋子離盤而減少。在鴨子象棋裡，每吃掉一個子也會給鴨子空出一個點，所以一個回合幾乎和開局時一樣寬；走到第 200 個半回合時，它的選擇數約是象棋一步的 100 倍。',
+  'A line chart on a log scale. Duck Xiangqi stays between about 1,500 and 2,500 legal turns from ply 0 to ply 220. Xiangqi starts at 44 legal moves and falls to around 20 after ply 120. The gap is marked as about 50 times at ply 10 and about 100 times at ply 200.':
+    '一張對數刻度的折線圖。從第 0 個到第 220 個半回合，鴨子象棋的合法回合數一直在大約 1,500 到 2,500 之間。象棋從 44 種合法著法開始，第 120 個半回合之後降到 20 種左右。圖中標出了差距：第 10 個半回合約 50 倍，第 200 個半回合約 100 倍。',
+  'Legal turns at each ply in 64 games per variant that Fairy-Stockfish played against itself, on a log scale. Games end at different lengths, so fewer games feed the right side of the chart.':
+    'Fairy-Stockfish 在每種棋裡各自戰 64 局，圖中是每個半回合的合法回合數，採用對數刻度。各局長短不一，所以圖的右側來自較少的對局。',
+  'The same search sees 25 turns ahead in xiangqi and 14 in Duck Xiangqi':
+    '同樣的搜尋，在象棋裡能向前看 25 個回合，在鴨子象棋裡只有 14 個',
+  'That width costs search depth. Given the same number of positions to look at, Fairy-Stockfish sees a little over half as far ahead in Duck Xiangqi. We counted depth in turns in both games, and a Duck Xiangqi turn includes the duck. A search that counted each set of equivalent duck placements once would win some of that depth back. We have not measured how much.':
+    '這種寬度要拿搜尋深度來換。搜尋同樣數量的局面，Fairy-Stockfish 在鴨子象棋裡看到的深度只比象棋的一半多一點。兩種棋的深度我們都按回合計算，鴨子象棋的一個回合包括放鴨子。如果搜尋把每組等價的鴨子落點只算一次，就能贏回一部分深度。能贏回多少，我們還沒有測過。',
+  'Positions searched': '搜尋局面數',
+  'Xiangqi depth': '象棋深度',
+  'Duck Xiangqi depth': '鴨子象棋深度',
+  'Median of three positions: the start, and two and four turns in.':
+    '三個局面的中位數：初始局面，以及走了兩個回合和四個回合之後的局面。',
+  'One small rule makes xiangqi a new game': '一條小規則，讓象棋變成一種新棋',
+  'The board, the pieces and the way they move are all xiangqi’s, so a xiangqi player can sit down and play Duck Xiangqi straight away. The duck still changes almost everything under them. Opening theory stops after the first move, because every line in it assumes there is no duck. And the game is harder for the kind of engine that plays it now. Classical search, the alpha-beta search Fairy-Stockfish runs, pays for every extra choice at every turn it looks ahead, which is why the depth gap grows with the budget.':
+    '棋盤、棋子和走法全都是象棋的，所以象棋棋手坐下來就能下鴨子象棋。但鴨子幾乎改變了棋子背後的一切。開局理論在第一步之後就失效了，因為其中每一路變化都假定棋盤上沒有鴨子。對目前下這種棋的引擎來說，它也更難。傳統搜尋，也就是 Fairy-Stockfish 所用的 alpha-beta 搜尋，每向前多看一個回合，都要為每一個多出來的選擇付出代價，這就是為什麼搜尋預算越大，深度差距越大。',
+  'We don’t know yet what strong Duck Xiangqi looks like. Some placements are pure technique, like the duck on e8 that takes away eight replies. Others might be aimed at the player rather than the position: a duck on a quiet point that invites one move, or a duck that blocks the line your opponent is watching while the real threat is somewhere else. An engine that sees 14 turns ahead finds the first kind. The second kind will show up only in games between strong players.':
+    '我們還不知道高水準的鴨子象棋是什麼樣子。有些落點純粹是技術，比如放在 e8 的鴨子，一下拿走八個應著。另一些落點針對的可能是對手這個人，而不是局面：把鴨子放在一個安靜的點上，引誘對方走某一步；或者用鴨子擋住對手正盯著的那條線，而真正的威脅在別處。一個能向前看 14 個回合的引擎找得到第一種。第二種，只有在高手之間的對局裡才會出現。',
+  'How we counted': '我們是怎麼統計的',
+  'The site’s own rules engine, the code that checks every move played here, counted the first move’s positions, and Fairy-Stockfish counted the deeper ones. Fairy-Stockfish also played the 64 games per variant, at 100,000 positions a move, with its neural network off. Xiangqi counts are strictly legal, so a move that leaves your own general capturable does not count. Duck Xiangqi has no check rule (you win by capturing the general), so every piece move counts.':
+    '第一步的局面由本站自己的規則引擎統計，也就是檢查這裡每一步棋的那段程式碼；更深的局面由 Fairy-Stockfish 統計。每種棋的 64 局也是 Fairy-Stockfish 下的，每步搜尋 100,000 個局面，並關閉了神經網路。象棋的計數嚴格按合法著法，所以讓自己的將帥可被吃掉的著法不算。鴨子象棋沒有將軍規則（吃掉將帥即獲勝），所以每一步走子都算。',
+  'After cannon h3 to e3, the duck can land': '紅炮從 h3 走到 e3 後，鴨子可以落在',
+  'on any of these 58 points': '這 58 個點中的任意一點上',
+  'A point the duck can land on. Each one': '鴨子可以落下的點。每一個',
+  'is a different position.': '都是一個不同的局面。',
+  'Only 30 of those 58 points change': '這 58 個點裡只有 30 個',
+  'what black can play': '會改變黑方能走的棋',
+  'A duck here takes this many of black’s': '鴨子落在這裡，黑方的 45 種應著',
+  '45 replies away': '會少掉圓片上這麼多種',
+  'A duck here changes nothing for black': '鴨子落在這裡，對黑方毫無影響',
+  // Its two charts, written per locale by scripts/duck-tree-figures.mjs.
+  '/article-thumbs/duck-tree-counts.svg': '/article-thumbs/duck-tree-counts.zh-hant.svg',
+  '/article-thumbs/duck-tree-counts-dark.svg': '/article-thumbs/duck-tree-counts-dark.zh-hant.svg',
+  '/article-thumbs/duck-tree-branching.svg': '/article-thumbs/duck-tree-branching.zh-hant.svg',
+  '/article-thumbs/duck-tree-branching-dark.svg':
+    '/article-thumbs/duck-tree-branching-dark.zh-hant.svg',
+  // solver-audit (2026-10-06): machine-drafted Traditional, not native-reviewed;
+  // terms follow the zh-hant brianhliou.com twin (搜尋, 著法, 首著, 錯譜).
+  'Auditing the Old Manuals': '求解器審校古譜',
+  'What the Solver Found in the Old Manuals': '求解器在古譜裡發現了什麼',
+  'We ran an exhaustive solver over every short continuous-check composition in 適情雅趣 (1570), 渊深海阔 (1808) and a modern collection: 172 problems, asking whether the printed solution is the only one. Forty-five are. Seventy have a second winning continuation somewhere in the tree, fourteen have a second first move, nine can be mated faster, and three records turned out to be corrupt: the position as recorded cannot be the one the composer meant.':
+    '我們用窮盡求解器檢驗了《適情雅趣》（1570）、《淵深海闊》（1808）和一部現代集子中每一局較短的連將殺排局，共172局，問的是書中所印的解法是否唯一。45局是唯一的。70局在變化樹的某處有第二種取勝續著，14局有第二首著，9局存在更快的殺法，另有3局是棋譜錄錯了，而不是排局本身有誤。',
+  'A 排局 gives you a diagram and a claim. Red to play and mate in five, by checks all the way. For four centuries the check on that claim has been another player’s eyes, and the tradition is good at it: these positions have been copied, corrected and argued over by people who knew the game better than any of us. We asked a machine to search the whole tree and report every other way the mate works.':
+    '一局排局給你一張圖和一個結論：紅先，五著連將殺。四百年來，檢驗這個結論的是另一位棋手的眼睛，而這一傳統很擅長此事：這些局面被比我們任何人都更懂棋的人抄錄、校正、爭論過。我們讓機器搜尋整棵變化樹，報告每一種別的成殺方法。',
+  'We did that for the short problems, the ones where a solution runs nine to thirteen plies and exhaustive search finishes. 172 compositions across three books. The books hold up better than the engine reports suggested and worse than a composition judge would want.':
+    '我們對短局做了這件事，也就是解法在九到十三步之間、窮盡搜尋能算完的那些。三本書，172局排局。這些書比引擎報告所暗示的更經得起檢驗，但比排局裁判所希望的要差。',
+  'Where the positions come from': '局面從哪裡來',
+  'The three books are on dpxq.com, the two classical ones typed from 1980s and 1990s annotated reprints of Ming and Qing woodblocks. We mined every public-domain manual on its two 古谱 shelves, 2,938 records, and published the ones that replay as studies here, after telling the site’s owner, with a link back to each record. The diagrams and the moves are centuries old; every modern editor’s note stays on dpxq, because that part is not ours to republish.':
+    '這三本書都在 dpxq.com 上，兩本古譜是根據二十世紀八九十年代明清木刻本的註釋重印本錄入的。我們挖掘了它兩個古譜書架上的每一部公有領域棋譜，共2,938局，並在告知網站站長之後，把能夠逐著演示的那些作為研究發佈在這裡，每局都附有原棋譜的連結。圖和著法是幾百年前的；現代編者的每一條註釋都留在 dpxq 上，因為那部分不該由我們轉載。',
+  'A record arrives as two strings. 適情雅趣 第011局 群鼠争穴 is a board of two digits per piece, reading from Black’s back rank, and a move list in the same coordinates. Both are one long line in the file; they are broken up here, four pieces to a group:':
+    '一局棋譜到手時是兩個字串。《適情雅趣》第011局 群鼠爭穴的局面是每個棋子兩位數字，從黑方底線讀起，著法列表用同樣的座標。兩者在檔案裡都是一整行；這裡把它們拆開，每組四個棋子：',
+  'The record for 第011局 as dpxq serves it, trimmed to the three tags that carry the position, the solution and the book’s verdict (“Red gives up both chariots; the two cannons win”).':
+    'dpxq 提供的第011局棋譜，只保留承載局面、解法和書中結論（紅方棄掉雙車，靠雙炮取勝）的三個標籤。',
+  'That becomes a position and a line by replaying it through the same rules kernel the site plays with. The replay is the first check, and it tests our copy of each record: a solution recorded short still replays cleanly, but a mis-typed piece usually produces an illegal move somewhere, and those records are dropped whole. Then Pikafish sweeps each position for a verdict that contradicts the book’s, which is where the engine can say “this is not a Red win” and stop.':
+    '把它在本站對局所用的同一套規則核心上重新走一遍，就得到一個局面和一條著法。這次重放首先檢驗的是棋譜，而不是書：一個解法記短了仍然能順利重放，但錄錯的棋子通常會在某處產生非法著法，這些棋譜會被整局剔除，而不是截短。然後皮卡魚逐一掃描每個局面，尋找與書中結論相矛盾的判斷，引擎能在這裡說出「這不是紅勝」，然後到此為止。',
+  'The sweep cannot say whether the solution is the only one. That takes exhaustive search: every legal Red move at every turn, every Black reply, to the end of the claimed length. On these boards, with twenty pieces and a nine-to-thirteen-ply solution, it finishes in seconds to a few minutes per problem. The whole audit below is a few hours of laptop time.':
+    '這次掃描說不出解法是否唯一。那需要窮盡搜尋：每一回合紅方的每一步合法著法，黑方的每一種應著，一直搜到所稱的步數為止。在這些局面上，二十個棋子、九到十三步的解法，每局只需幾秒到幾分鐘。下面的整個審校在筆電上跑了幾個小時。',
+  'What counts as a fault': '什麼算毛病',
+  'Four things can be wrong with a solution that still mates. A second key: another first move forces the mate in the same number of moves, so the diagram has two answers. A dual: further in, after some defence, Red has two winning continuations. A faster mate: the book prints a mate in seven and a mate in five exists, which breaks the stipulation outright. A longer mate: the book is right about who wins and wrong about how long, because Black has a better defence than the one printed.':
+    '一個仍能成殺的解法可能有四種毛病。第二首著：另一個首著在同樣著數內強制成殺，於是這張圖有兩個答案。雙解：再往後，在黑方某種防守之後，紅方有兩種取勝續著。更快的殺法：書中印的是七著殺，而存在五著殺，這直接違反了題意。更長的殺法：書中對勝負的判斷是對的，對著數的判斷是錯的，因為黑方有一步比所印著法更好的防守。',
+  'The dual is where the two traditions differ. Western chess composition has treated it as a fault since the nineteenth century. 朱鹤洲’s ten-character standard for judging 排局 asks for 新深妙多走少美无趣名, novelty, depth, brilliance, many variations, every attacking piece moving, few pieces, a pretty diagram, no idle piece, amusement and an apt title. Uniqueness is not on the list.':
+    '雙解正是兩種傳統分歧的地方。西方西洋棋排局自十九世紀起就把它當作毛病。朱鶴洲評判排局的十字標準要求「新深妙多走少美無趣名」：新穎、深刻、巧妙、變化多、攻子都要走動、子少、圖形美觀、無閒子、有趣味、題名貼切。唯一性不在其中。',
+  'Forty-five of 172 are clean': '172局中有45局無瑕',
+  Book: '書',
+  Audited: '審校',
+  Sound: '無瑕',
+  Dual: '雙解',
+  'Second key': '第二首著',
+  Faster: '更快',
+  Longer: '更長',
+  '林幼如作品集 (20th c.)': '林幼如作品集（20世紀）',
+  'Continuous-check compositions up to thirteen plies, each solved exhaustively: every key, every winning continuation after every defence. Each problem is counted once, under its most serious fault. The nine not in a column are one book key that misses its own length and five Red wins past the search’s reach, in 適情雅趣 and 林幼如作品集, and the three broken records in 渊深海阔.':
+    '十三步以內的連將殺排局，每局都做了窮盡求解：每一個首著，每一種防守之後的每一種取勝續著。每局只按最嚴重的毛病計一次。不在任何一欄中的九局，是一局書中首著在所記步數內殺不了，以及五局紅方能勝但超出搜尋範圍（分佈在《適情雅趣》和《林幼如作品集》中），還有《淵深海闊》中的三局錯譜。',
+  'Most of the findings are duals, and they are clear-cut. 適情雅趣 第011局 群鼠争穴 is a mate in seven: both chariots are given up, and the cannons and the horse do the rest. At Red’s sixth move the book plays 傌六进五, and 傌六进七 mates from the same position in the same number of moves.':
+    '雙解才是重點，而且都不是勉強算數的情況。《適情雅趣》第011局 群鼠爭穴是七著殺：雙車都棄掉，由雙炮和馬完成其餘部分。紅方第六著書中走傌六進五，而在同一局面上傌六進七也能在同樣著數內成殺。',
+  'The book’s line to Red’s sixth move, and then the other mate played out. Neither editor nor reader was looking for it, because in this tradition it has never been a fault. The chapter in the study carries both.':
+    '書中著法走到紅方第六著，然後把另一種殺法走出來。編者和讀者都沒有去找它，因為在這一傳統裡它從來不算毛病。研究裡的這一章兩種都收了。',
+  '適情雅趣 第011局 群鼠争穴: the book’s line and the dual':
+    '適情雅趣 第011局 群鼠爭穴：書中著法與雙解',
+  'The second keys are the ones a composer would care about. 第015局 妙振兵铃 opens with a chariot check and mates in six; pushing the soldier on d9 up beside the general mates in six as well, by a different arrangement of the same pieces. Seven of those in 適情雅趣 alone.':
+    '第二首著才是排局作者會在意的。第015局 妙振兵鈴以車將開局，六著成殺；把 d9 上的兵推到將旁邊，同樣六著成殺，只是同樣的子換了一種排列。僅《適情雅趣》一書就有七局這樣的情況。',
+  'The second key played out: a different first move, the same six moves to mate.':
+    '第二首著走出來：不同的首著，同樣六著成殺。',
+  '適情雅趣 第015局 妙振兵铃: two first moves that both mate in six':
+    '適情雅趣 第015局 妙振兵鈴：兩個首著都能六著成殺',
+  'When the record itself is broken': '當棋譜本身錄錯時',
+  '渊深海阔 第217局 疾诛文丑 claims a mate in five with every move a check, and the printed line does mate. It mates because Black’s fourth move walks into it. Black has a second legal move there, 车5退8, swinging the chariot that has stood on e2 since the diagram back to e10; after it Red has no check at all, so a continuous-check mate is over on the spot, and no quiet move mates either.':
+    '《淵深海闊》第217局 疾誅文醜聲稱連將五著殺，所印著法也確實成殺。之所以成殺，是因為黑方第四著自己走進了殺局。黑方在那裡還有另一步合法著法：車5退8，把原圖中就停在 e2 的車調回 e10；走了這步之後，紅方一步將軍都沒有，連將殺就此結束，任何不將軍的著法也殺不了。',
+  'The book’s line to Red’s fourth move, and then the move the record does not give: 车5退8 in place of 士6进5. Red is out of checks.':
+    '書中著法走到紅方第四著，然後是棋譜沒有給出的那一著：以車5退8代替士6進5。紅方沒有將可走了。',
+  '渊深海阔 第217局 疾诛文丑: the record as transcribed, and Black’s mate':
+    '淵深海闊 第217局 疾誅文醜：按錄入的棋譜，以及黑方的殺法',
+  'No editor prints a Red win in a position where Red is lost, so the diagram as typed is probably not the composition. Which piece is wrong is a question a machine can help with: try every single-piece edit to the diagram, and ask which of them makes the book’s own line a forced mate in five. Of 154 edits, four do. Three of them concern the black chariot on e2, and the fourth puts a black soldier on e3, in that chariot’s file.':
+    '沒有哪位編者會在紅方必敗的局面上印紅勝，所以錄入的這張圖很可能不是原排局。錯的是哪個子，機器可以幫忙回答：對圖做每一種單子改動，看哪些能讓書中自己的著法成為五著強制殺。154種改動中，有四種可以。其中三種涉及 e2 的黑車，第四種是在 e3 放一個黑卒，正好在那個車的線上。',
+  'Every single-piece edit that restores the book’s solution. Three remove the black chariot on e2 or make it a weaker piece; the fourth blocks its file with the soldier from d2.':
+    '能恢復書中解法的每一種單子改動。三種是去掉 e2 的黑車，或把它換成較弱的子；第四種是用 d2 的卒擋住它的線。',
+  'We sent the board and the line to the person who maintains dpxq’s records, in Chinese, with our guess that the chariot was a soldier in the book. His answer was 古谱就有错呀: the old manuals have errors in them. He did not check a printed copy, so whether the chariot is the book’s mistake or the transcriber’s is still open. If you have a printed edition of 渊深海阔, the square is e2.':
+    '我們把局面和著法用中文發給了維護 dpxq 棋譜的人，並附上我們的猜測：書中那個車原本是卒。他的回答是「古譜就有錯呀」。他沒有核對印本，所以這個車究竟是古書的錯還是轉錄的錯，仍無定論。如果你有《淵深海闊》的印本，要看的格子是 e2。',
+  'The other two, 第202局 and 第265局, are worse off. No single-piece edit restores either of them, so whatever went wrong took more than one piece with it, or the move list is mis-typed as well. All three are still in the 渊深海阔 study as dpxq records them, and the audit study carries the finding.':
+    '另外兩局，第202局和第265局，情況更糟。沒有任何單子改動能恢復其中任何一局，所以出錯的不止一個子，或者著法列表也錄錯了。三局都按 dpxq 的記錄原樣留在《淵深海闊》的研究裡，審校研究則收錄了這一發現。',
+  'Those three are the ones inside the 172. Across the whole corpus, 34 records are flagged as corrupt: the diagram as typed does not support the claim printed beside it. Ten of them claim mate by continuous checks, and nine are refuted inside the book’s own line, in four manuals; in each, the search ran six moves past the recorded length and found no continuous-check mate. They have a study of their own, linked below, ordered by how decisive the refutation is: in 第217局 Red is left without a single check, and in the last Red still has ten checks that go nowhere.':
+    '這三局是172局之內的。在整個語料庫中，有34局棋譜被標為錯譜：錄入的圖支撐不了旁邊印著的結論。其中十局聲稱連將殺，九局在書中自己的著法之內就被駁倒，分佈在四部棋譜中；每一局的搜尋都比所記步數多走了六著，也找不到連將殺。它們單獨收在一個研究裡，連結在下面，按駁倒的乾脆程度排序：第217局中紅方一步將軍都沒有，最後一局裡紅方仍有十步將軍，卻都殺不了。',
+  'An exact search that reports no forced mate looks identical whether the composition is broken or the record is, and one engine evaluation at the root separates them in seconds. Five positions we had flagged as cooked turned out fine that way: Red does force the mate, later than the printed line.':
+    '精確搜尋報告沒有強制殺時，排局本身有缺陷和棋譜錄錯看起來一模一樣，而在根局面上做一次引擎評估，幾秒鐘就能區分兩者。我們原本標為有缺陷的五個局面，這樣一查就沒問題：紅方確實能強制成殺，只是比所印著法晚。',
+  'The four great positions: nothing broken': '四大名局：沒有一局不成立',
+  '七星聚会, 蚯蚓降龙, 野马操田 and 千里独行 are the street positions, argued over since 百局象棋谱 in 1801. They claim a draw, and a draw cannot be proved without the repetition law. What can be tested is whether the claim breaks, with one side forcing a mate. Across twenty-nine records of those four and their relatives, the search found no mate that contradicts the book. On eight it proved that neither side mates within its depth; on the rest it ran out of budget for one side or both before it could say.':
+    '七星聚會、蚯蚓降龍、野馬操田和千里獨行是江湖排局，自1801年的《百局象棋譜》起就爭論不休。它們的結論是和棋，而不借助重複局面的規則，和棋是證明不了的。能檢驗的是這個結論會不會被打破，即某一方能否強制成殺。在這四局及其變體的二十九份棋譜中，搜尋沒有找到與書相矛盾的殺法。其中八份證明了雙方在搜尋深度內都殺不了；其餘的，在得出結論之前，一方或雙方的搜尋預算就用完了。',
+  '七星聚会 as 渊深海阔 prints it: two chariots, a cannon and three soldiers against a chariot, an elephant and four soldiers. Fifty-four plies of the book’s line. Red cannot force a mate within the search; for Black, the search ran out of budget before it could say.':
+    '《淵深海闊》所印的七星聚會：雙車、一炮、三兵對一車、一象、四卒。書中著法共五十四步。在搜尋範圍內紅方無法強制成殺；黑方這邊，搜尋在得出結論前就用完了預算。',
+  '渊深海阔 第001局 七星曜彩: the book’s draw, fifty-four plies':
+    '淵深海闊 第001局 七星曜彩：書中的和局，五十四步',
+  'What we did not check': '我們沒有檢查的部分',
+  'The quiet compositions, which are most of the corpus. A 宽紧杀 runs past twenty plies on a board with twenty pieces, and the exhaustive search that settles a nine-ply problem does not finish there. A proof-number search gets further and still runs out on the long ones. Everything above is about continuous-check problems only.':
+    '不是連將的排局，也就是語料庫的大部分。一局寬緊殺在二十個子的局面上要走二十步以上，能算清九步題的窮盡搜尋在那裡算不完。證明數搜尋能走得更遠，但在長局上還是會算不完。上面的一切都只涉及連將殺排局。',
+  'None of this is a claim about the compositions as compositions. A dual in 適情雅趣 is a dual by a standard 適情雅趣 was not written to, and the geometry that made these positions worth copying for four hundred years does not depend on whether the line is unique.':
+    '這些都不是對這些排局作為作品的評價。《適情雅趣》裡的雙解，是按一個《適情雅趣》本來就不為之而寫的標準算出的雙解；讓這些局面四百年來值得抄錄的那種幾何之美，絲毫不受這個計數影響。',
+  'Play every finding': '逐著演示每一項發現',
+  'The nine refuted records': '九局被駁倒的棋譜',
+  'The manuals themselves': '古譜原書',
+  'An Exact Audit of the Classical Xiangqi Manuals': '用精確搜尋審校古典象棋譜',
+  // Homepage card titles (`cardTitle`), 2026-10-03: the article's own zh
+  // title cut to fit the card, machine-drafted, not native-reviewed.
+  'Pikafish misjudged its reveals': '皮卡魚誤判了翻子',
+  'KataGo, a stronger Jungle bot': 'KataGo：更強的鬥獸棋電腦',
+  '14 wins against our jieqi bot': '戰勝我們揭棋電腦的 14 盤棋',
+  'How Strong Players Open Jieqi': '高手眼中的揭棋開局',
+  'Multi-solution puzzles': '有不止一個答案的題目',
+  'Skill vs. Luck in Flip Games': '把翻子棋的實力和運氣分開',
+  'Duck Xiangqi Strategy': '鴨子象棋攻略',
+  'Xiangqi Antichess Is a Draw': '象棋棋盤上的反棋是和棋',
+  'Horde on the Xiangqi Board': '象棋棋盤上的部落棋',
+  'Atomic Xiangqi Is Live': '原子象棋上線了',
+  'Server-Side Fog Chess': '用伺服器實現迷霧國際象棋',
+  'Play Pikafish online': '線上與皮卡魚對弈',
+  // ab-jchess (match link): machine-drafted 2026-10-02, not native-reviewed.
+  'All 400 games are on the site, each with its own review page: [browse the match](/games/search?variant=jieqi&source=engine-match).':
+    '全部 400 盤對局都在網站上，每盤都有自己的覆盤頁面：[查看這場對抗賽](/games/search?variant=jieqi&source=engine-match)。',
+  // pikafish-reveal-bug: machine-drafted 2026-10-02, not native-reviewed.
+  'Our Pikafish jieqi bot misjudged its reveals': '我們的皮卡魚揭棋電腦誤判了翻子',
+  'Our Pikafish jieqi bot rated some reveals far better than they were. Two bugs caused it. Both are fixed, at little or no cost in strength.':
+    '我們的皮卡魚揭棋電腦把一些翻子評估得遠比實際要好，原因是兩個錯誤。兩個錯誤都已修復，修復後棋力只有很小的損失，或者完全沒有損失。',
+  'In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, priced some of those bets far too well. It would turn over a piece that gets mated for most of what it could be, and rate the move as winning.':
+    '在[揭棋](/rules/jieqi)裡，翻開一個暗子就是一次下注。你知道它可能是哪些棋子，但不知道究竟是哪一個。我們的皮卡魚電腦，也就是第 1 到第 8 級背後的引擎，把其中一些賭注估得太好了。它會翻開一個在大多數可能下都會被將死的棋子，還把這步棋評為勝勢。',
+  'We found it on October 2, while writing the [AB-JChess post](/blog/ab-jchess). The fix is live for every level and for the engine you can run on the analysis board.':
+    '我們在 10 月 2 日寫 [AB-JChess 那篇文章](/blog/ab-jchess)時發現了這個問題。修復已經上線，所有級別都已更新，分析棋盤上可以運行的引擎也一樣。',
+  'The bot averages a reveal over the pieces it could be': '電腦會對暗子可能是的每一種棋子取平均',
+  'When the bot considers a move that turns a piece over, it plays the move once for each piece the face-down one could be. It scores each, then averages the scores, weighted by how many of each piece are left. A reveal that wins if the piece is a chariot and gets mated if it is a soldier should score somewhere in between. Two bugs broke that average.':
+    '電腦考慮一步翻子時，會對暗子可能是的每一種棋子各走一次這步棋，分別打分，再按每種棋子剩餘的數量加權平均。一步翻子如果翻出車就贏、翻出兵就被將死，分數應該介於兩者之間。兩個錯誤破壞了這個平均。',
+  'For Black, the average took the best piece': '對黑方來說，平均取了最好的那個棋子',
+  "Before averaging, the code turns every score to one player's point of view. It picked the player from a setting that was never filled in, so it always assumed Red. For Red's reveals that was right. For Black's, the scores were upside down, and a rule meant to take the worst outcome, when the outcomes spread far apart, took the best one.":
+    '取平均之前，程式會把每個分數換算到某一方的視角。它根據一個從未被賦值的設定來判斷是哪一方，所以總是當成紅方。對紅方的翻子，這樣沒有問題。對黑方的翻子，分數就是反的：一條本該在結果相差很大時取最差結果的規則，取了最好的結果。',
+  "That was the game the AB-JChess post first led with. Pikafish, as Black, turned over the piece on d10 and moved it to e9, rating the game nearly 19 pawns in its favour. Only an advisor on e9 stops the chariot's mate on f10, and an advisor was 1 of the 11 pieces it could have been. It was a chariot, and Black was mated next move.":
+    'AB-JChess 那篇文章最初開頭用的就是這盤棋。皮卡魚執黑，把 d10 的暗子翻開走到 e9，自評領先將近 19 個兵。只有 e9 上是士，才能擋住車在 f10 的將殺，而在它可能是的 11 個棋子裡，士只有 1 個。翻出來是車，黑方下一步就被將死。',
+  'Jieqi: Pikafish, as Black, is about to reveal on d10': '揭棋：皮卡魚執黑，即將翻開 d10 的暗子',
+  'Scores the search cut short were averaged as exact':
+    '被搜尋中途放棄的分數，被當成精確值取了平均',
+  'An engine saves time by giving up on a move once it knows the move is worse than the best one so far. It then returns a bound, which means "this much, or worse". That is safe when the next step is a comparison. The bot fed these bounds into the average as if they were exact scores, so a piece that gets mated could come back as "no better than +7" and count as +7.':
+    '引擎為了節省時間，一旦知道某步棋不如目前最好的一步，就會放棄繼續搜尋它，返回一個界限，意思是「最多這麼多，或者更差」。如果接下來只是比較大小，這樣做是安全的。但這個電腦把這些界限當成精確分數放進了平均，於是一個會被將死的棋子可能返回「不超過 +7」，然後就按 +7 計算。',
+  "In the first game of the AB-JChess post, the bot, as Red, turned over the piece on b3 and moved it to d3. Searched again with the old bot, the move rates more than eight pawns in Red's favour. Six times in ten that piece is a soldier or an elephant, and Black's cannon mates at once on h1. Averaged honestly, the move is worth about three pawns to Black. The fixed bot sees the mate and plays the advisor from e2 to f3, the move AB-JChess recommends.":
+    '在 AB-JChess 那篇文章的第一盤棋裡，電腦執紅，把 b3 的暗子翻開走到 d3。用舊版電腦重新搜尋，這步棋評為紅方領先八個兵以上。這個棋子十次裡有六次是兵或相，黑炮立刻在 h1 將死。如實平均的話，這步棋對黑方來說價值大約三個兵。修復後的電腦看到了這個將殺，改走仕從 e2 到 f3，也就是 AB-JChess 推薦的著法。',
+  'Jieqi: the bot is about to reveal on b3': '揭棋：電腦即將翻開 b3 的暗子',
+  'Where the bugs are in the code': '錯誤在程式碼裡的位置',
+  "Both are in our copy of Pikafish's jieqi branch. Simplified, the old code scored a reveal like this:":
+    '兩個錯誤都在我們複製的皮卡魚揭棋分支裡。簡化後，舊程式碼是這樣給翻子打分的：',
+  'The colour flip is in [misc.h, lines 360 to 366](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/misc.h#L360-L366), set from [search.cpp, line 1310](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1310) by asking whether the side to move is the "first side", a field [nothing ever assigns](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/position.h#L212). The window is the one at [search.cpp, line 1462](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1462): each piece is searched inside the window of the move above it, and a piece that gets mated comes back as the window\'s lower edge.':
+    '顏色翻轉在 [misc.h 第 360 到 366 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/misc.h#L360-L366)，由 [search.cpp 第 1310 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1310)設定：它判斷走棋方是不是「先手方」，而這個欄位[從來沒有被賦值](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/position.h#L212)。窗口問題在 [search.cpp 第 1462 行](https://github.com/brianhliou/pikafish-jieqi-wasm/blob/e75cee3a3698794b4b6f5574a8774f0575bc0c21/src/search.cpp#L1462)：每種棋子都在上一層著法的窗口內搜尋，一個會被將死的棋子返回的是窗口的下沿。',
+  "We found the second one by printing every piece's score at a reveal. In one match game, three of the four pieces the bot could turn over were mated, and all three came back as exactly 738, the bottom of the window. The fourth scored 792. The bot averaged them to 745 and rated the move as winning.":
+    '我們透過列印翻子時每種棋子的分數找到了第二個錯誤。在一盤對抗賽對局裡，電腦可能翻出的四種棋子中有三種會被將死，而這三種返回的都恰好是 738，也就是窗口的下沿。第四種得 792。電腦把它們平均成 745，把這步棋評為勝勢。',
+  'The colour flip is gone, and a piece whose score came back as a bound is searched again. The whole change is [one commit, 28 lines](https://github.com/brianhliou/pikafish-jieqi-wasm/commit/bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9).':
+    '顏色翻轉已經去掉，返回界限值的棋子會重新搜尋。全部改動是[一次提交，28 行](https://github.com/brianhliou/pikafish-jieqi-wasm/commit/bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9)。',
+  'The fixed bot rates reveals close to their worth, and plays about as well':
+    '修復後的電腦對翻子的估值接近實際，棋力也基本不變',
+  "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one, perhaps slightly weaker: in 600 quick games it won 264 and lost 300, and with four times the search per move it won 95 and lost 97 in 200.":
+    '在 AB-JChess 對抗賽中決定皮卡魚輸棋的 71 步裡，舊版電腦把其中 16 步評得比實際好至少五個兵。修復後的電腦只有 3 步。它的棋力和舊版差不多，也許略弱一點：快棋 600 盤，它贏 264 盤、輸 300 盤；每步搜索量加到四倍後對下 200 盤，它贏 95 盤、輸 97 盤。',
+  'The fix covers the move the bot is choosing. Deeper in its search the old averaging is still there, because fixing it everywhere made the bot about 150 Elo weaker.':
+    '修復只涵蓋電腦正在選擇的那一步。在更深的搜尋裡，舊的平均方式依然存在，因為在所有地方都修復會讓電腦弱大約 150 Elo。',
+  'AB-JChess has the second flaw, and it rarely matters': 'AB-JChess 也有第二個錯誤，但很少有影響',
+  'AB-JChess is built from Pikafish and averages reveals the same way. It has the cut-short flaw and not the colour one. Of the 60 reveals that decided its losses to our bot, it overrated 2.':
+    'AB-JChess 基於皮卡魚，也用同樣的方式對翻子取平均。它有搜尋中途放棄的問題，沒有顏色的問題。在決定它輸給我們電腦的 60 步翻子中，它只高估了 2 步。',
+  'A question about one move caught it': '一個關於一步棋的問題發現了它',
+  'The AB-JChess post first used game 108 to show how Pikafish judged a reveal. What caught the bug was asking why the bot would play d10-e9 at all. A correct search cannot find a mate in its own best line and still call the position winning. We took the examples out of that post the same day.':
+    'AB-JChess 那篇文章最初用第 108 盤來說明皮卡魚如何判斷翻子。發現這個錯誤的，是一個問題：電腦到底為什麼會走 d10-e9？正確的搜尋不可能在自己的最佳變化裡看到將殺，還把局面評為勝勢。我們當天就把那些例子從那篇文章裡刪掉了。',
+  'Play the jieqi bot': '挑戰揭棋電腦',
+  'A bug in the Pikafish jieqi bot: how it misjudged turning over a piece':
+    '皮卡魚揭棋電腦的一個錯誤：它如何誤判翻開暗子',
+  // katago-jungle: machine-drafted 2026-10-02, not native-reviewed.
+  "We scored every position of two of those wins again with both engines, at the match settings. Each chart shows one number, KataGo's chance of winning, judged twice: once by KataGo and once by Misty. Where the lines part, the engines disagree about who is winning. A draw counts as half a win, and Misty's centipawns become a chance through the curve our analysis board uses, 1 / (1 + e^(−0.00368 × cp)).":
+    '我們用兩個引擎按比賽設定，把其中兩盤勝局的每個局面重新評估了一遍。每張圖只顯示一個數：KataGo 的勝率，由兩個引擎各判斷一次，一次是 KataGo 自己，一次是 Misty。兩條線分開的地方，就是兩個引擎對誰佔優看法不一。和棋算作半勝；Misty 的分數（釐兵）按我們分析棋盤使用的曲線 1 / (1 + e^(−0.00368 × cp)) 換算成勝率。',
+  "On move 29 Misty moved its cornered tiger from g8 to g9, and KataGo's score for itself went from 61% to 92% while Misty still read +111. KataGo's line for red starts with lion b1-b2 and keeps red at 37%. Misty only saw it on move 36, seven moves later.":
+    '第 29 回合 Misty 把困在角落的虎從 g8 走到 g9，KataGo 對自己的得分從 61% 升到 92%，而 Misty 仍認為自己 +111。KataGo 為紅方給出的變化從獅 b1-b2 開始，能讓紅方保持 37%。Misty 到第 36 回合才看出來，晚了七個回合。',
+  'In these two games, KataGo saw the win seven moves and two moves before Misty did.':
+    '在這兩盤棋中，KataGo 分別比 Misty 早七個回合和兩個回合看出勝局。',
+  "Game 67: KataGo's chances of winning": '第 67 盤：KataGo 的勝率',
+  "Game 94: KataGo's chances of winning": '第 94 盤：KataGo 的勝率',
+  "Game 67, KataGo's chances of winning as KataGo and Misty judged them. KataGo's jumps on move 29, when Misty plays tiger g8-g9; Misty's catches up on move 36.":
+    '第 67 盤，KataGo 和 Misty 各自判斷的 KataGo 勝率。第 29 回合 Misty 走虎 g8-g9 時，KataGo 的判斷跳升；Misty 的判斷到第 36 回合才跟上。',
+  "Game 94, KataGo's chances of winning as KataGo and Misty judged them. KataGo's jumps on move 50, when Misty plays cat c8-c7; Misty's catches up on move 52.":
+    '第 94 盤，KataGo 和 Misty 各自判斷的 KataGo 勝率。第 50 回合 Misty 走貓 c8-c7 時，KataGo 的判斷跳升；Misty 的判斷到第 52 回合才跟上。',
+  'KataGo thinks': 'KataGo 的判斷',
+  'Misty thinks': 'Misty 的判斷',
+  'Move 29: Misty plays tiger g8-g9': '第 29 回合：Misty 走虎 g8-g9',
+  'KataGo jumps from 61% to 92%': 'KataGo 從 61% 升到 92%',
+  'Move 36: Misty': '第 36 回合：Misty',
+  'finally sees it': '才看出來',
+  'Move 50: Misty plays cat c8-c7': '第 50 回合：Misty 走貓 c8-c7',
+  'KataGo jumps from 63% to 98%': 'KataGo 從 63% 升到 98%',
+  'Move 52: Misty': '第 52 回合：Misty',
+  "Misty, playing red, won a wolf on move 11 and read itself ahead for most of the game, while KataGo's score stayed at 50% and then climbed.":
+    'Misty 執紅，第 11 回合吃掉一隻狼，大半盤都認為自己領先；而 KataGo 的得分先停在 50%，隨後一路上升。',
+  "Misty, playing black, won a wolf on move 19 and read itself ahead for most of the next 30 moves, while KataGo's score crept from 50% to 63%.":
+    'Misty 執黑，第 19 回合吃掉一隻狼，此後 30 個回合裡大部分時間都認為自己領先；而 KataGo 的得分從 50% 慢慢升到 63%。',
+  "On move 50 Misty moved its cat from c8 to c7, and KataGo went from 63% to 98%. Misty read +80 and found the forced loss two moves later. KataGo's line for black, elephant d6-d7, keeps black at 38%.":
+    '第 50 回合 Misty 把貓從 c8 走到 c7，KataGo 從 63% 升到 98%。Misty 仍認為自己 +80，兩個回合之後才算出必輸。KataGo 為黑方給出的變化是象 d6-d7，能讓黑方保持 38%。',
+  'KataGo, a stronger Jungle Chess bot': 'KataGo：更強的鬥獸棋電腦',
+  'KataGo for Jungle Chess: 82 wins, 118 draws and no losses against Misty':
+    'KataGo 鬥獸棋：對 Misty 82 勝 118 和 0 負',
+  'Two wins, read by both engines': '兩盤勝局，兩個引擎各自怎麼看',
+  'Game 67: a wolf up, and lost': '第 67 盤：多一隻狼，卻輸了',
+  "Jungle Chess, game 67: Misty's moves marked by KataGo":
+    '鬥獸棋第 67 盤：KataGo 標註的 Misty 著法',
+  'Game 94: the slow squeeze': '第 94 盤：慢慢收緊',
+  "Jungle Chess, game 94: Misty's moves marked by KataGo":
+    '鬥獸棋第 94 盤：KataGo 標註的 Misty 著法',
+  Move: '回合',
+  'A Jungle Chess engine that learned by playing itself now sits above Misty. In 200 games against Misty it won 82, lost none and drew 118.':
+    '一個靠自我對弈學會鬥獸棋的引擎，現在排在 Misty 之上。它和 Misty 下了 200 盤，贏 82 盤，一盤未輸，和 118 盤。',
+  "[Jungle Chess](/rules/jungle) on Mistboard has a new top bot. It is KataGo-AnimalChess, hzyhhzy's [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025) built on lightvector's [KataGo](https://github.com/lightvector/KataGo), playing with the b10c384 network from Dandelion 4 by Kouza ([lxsgx23](https://github.com/lxsgx23)). We play it here with [hzyhhzy's permission](https://github.com/hzyhhzy/KataGomo/issues/12), under the name KataGo.":
+    '[鬥獸棋](/rules/jungle)在 Mistboard 上有了新的最強電腦。它就是 KataGo-AnimalChess：hzyhhzy 在 lightvector 的 [KataGo](https://github.com/lightvector/KataGo) 基礎上開發的 [KataGomo](https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025)，使用 Kouza（[lxsgx23](https://github.com/lxsgx23)）Dandelion 4 的 b10c384 神經網路。我們經 [hzyhhzy 許可](https://github.com/hzyhhzy/KataGomo/issues/12)在這裡使用它，名字就叫 KataGo。',
+  'KataGo learned Jungle Chess by playing itself, the way AlphaZero learned chess. A neural network proposes moves and judges positions, and a search checks its ideas. No other engine taught it.':
+    'KataGo 和 AlphaZero 學西洋棋一樣，靠自己和自己下棋學會了鬥獸棋。神經網路提出著法、評估局面，搜尋再去檢驗它的想法。沒有任何別的引擎教過它。',
+  'Play KataGo': '挑戰 KataGo',
+  'See all bots': '查看所有電腦',
+  '82 wins and no losses against Misty': '對 Misty 82 勝 0 負',
+  "Before putting it on the site, we played it against Misty, our own Jungle Chess bot, in an open challenge of 200 games at 1,000 visits a move. hzyhhzy's engine won 82, lost none and drew 118, a score of 0.705. Every win came from walking into Misty's den, and every draw was a repetition.":
+    '上線之前，我們讓它和我們自己的鬥獸棋電腦 Misty 進行了一場公開挑戰賽：200 盤，每步 1,000 次訪問。hzyhhzy 的引擎贏 82 盤、輸 0 盤、和 118 盤，得分率 0.705。每一盤勝局都是走進 Misty 的獸穴取勝，每一盤和棋都是重複局面。',
+  'Misty is still where you start': '入門仍從 Misty 開始',
+  'KataGo is at the top of the Jungle Chess bot list, above Misty. Misty stays the default and the easier opponent; pick KataGo when you want the stronger game. Game review and analysis for Jungle Chess still run on Misty.':
+    'KataGo 排在鬥獸棋電腦列表的最上面，在 Misty 之上。Misty 仍是預設對手，也是較容易的那一個；想下更難的棋就選 KataGo。鬥獸棋的復盤和分析仍由 Misty 負責。',
+  'On the site KataGo searches 150 visits a move, which takes about 1.5 to 3.5 seconds. At that setting it scored 19 wins, no losses and 31 draws in 50 games against Misty, 0.690, which cannot be told apart from the 1,000-visit result. The strength is in the network.':
+    '在網站上，KataGo 每步搜尋 150 次訪問，大約用時 1.5 到 3.5 秒。在這個設定下，它和 Misty 下了 50 盤，19 勝 0 負 31 和，得分率 0.690，與 1,000 次訪問的結果分不出差別。它的棋力來自神經網路。',
+  'KataGomo is open source at [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo). Thank you, hzyhhzy, for the engine and for letting us use it; lightvector, for KataGo; and Kouza, for the Dandelion 4 network.':
+    'KataGomo 是開源專案，網址是 [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo)。感謝 hzyhhzy 提供引擎並允許我們使用，感謝 lightvector 的 KataGo，也感謝 Kouza 的 Dandelion 4 神經網路。',
+  'Jungle Chess rules': '鬥獸棋規則',
+  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
+    '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a [repetition draw](/blog/banqi-perpetual-chase) it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '這對你是有好處的。如果你子力落後，不代表就輸了：MistyBanqi 可能來回挪子，走進那個它看不出該拒絕的[重複和棋](/blog/banqi-perpetual-chase)。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
+  "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
+    '另一個相關的盲點跟將有關。只有卒、對方的將或砲的跳吃拿得下它，所以被圍住的將一次只怕一種子，而引擎很慢才會替被逼到角落的將騰出空間。它有時候會把一顆子調到棋盤另一頭，同時一顆孤零零的敵方卒走過來把它困死。跟上面那個和棋是同一個缺口：這套評估函數對於好幾步之外慢慢成形的安靜威脅，沒有什麼感覺。',
+  // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed. Variant names follow the
+  // rules pages (迷霧國際象棋, 鬥獸棋, 鴨子象棋, 翻翻棋, 堡壘象棋).
+  '1,000 games played': '已下完 1,000 盤棋',
+  'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盤對局',
+  'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.':
+    '從 6 月 1 日起，棋友們已經在 Mistboard 上下完了 1,000 盤棋，其中大部分是在 9 月下的。感謝每一位來這裡下棋的棋友。',
+  'Mistboard passed 1,000 finished games this week. A game counts once both sides have moved and it ends, against another person or a bot. Engine matches and our test accounts are left out, and counting started on June 1.':
+    'Mistboard 本週下完的棋突破了 1,000 盤。一盤棋只要雙方都走過棋並且下完，就計為一盤，不論對手是人還是電腦。引擎之間的對局和我們的測試帳號不計在內，計數從 6 月 1 日開始。',
+  'The Mistboard statistics page: 1,000 games played, games per week climbing from a handful in June to nearly 400 in the week of September 21, jieqi far ahead by variant, and almost every game against a bot.':
+    'Mistboard 統計頁面：已下 1,000 盤棋；每週對局數從 6 月的寥寥幾盤升到 9 月 21 日那一週的近 400 盤；按變體看揭棋遙遙領先；幾乎所有對局都是和電腦下的。',
+  'The statistics page on the day the count reached 1,000.': '計數達到 1,000 盤當天的統計頁面。',
+  'June had 12 games. September has had nearly 800, and the week of September 21 alone had 387. The [statistics page](/stats) keeps the running count.':
+    '6 月只有 12 盤。9 月已經有近 800 盤，光是 9 月 21 日那一週就有 387 盤。[統計頁面](/stats)會持續更新計數。',
+  '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 608 of the first 1,000. [Banqi](/rules/banqi) and [xiangqi](/rules/xiangqi) come next with 96 and 82, then Fog Chess, Jungle, Fog Xiangqi, Duck Xiangqi, Flip Jungle and Fortress Xiangqi. Seven of those games were between two people; the rest were against the bots.':
+    '[揭棋](/rules/jieqi)，也就是棋子背面朝下開局的象棋，在前 1,000 盤裡占了 608 盤。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分別是 96 盤和 82 盤，然後是迷霧國際象棋、鬥獸棋、迷霧象棋、鴨子象棋、翻翻棋和堡壘象棋。這些對局裡只有 7 盤是兩個人對下，其餘都是和電腦下的。',
+  'Thank you': '感謝',
+  'Thank you to everyone who played a game, reported a bug, or supports the site as a [patron](/patron). We are building the best place to play Chinese chess and original board games, free and [open source](https://github.com/brianhliou/mistboard).':
+    '感謝每一位來下過棋、回報過問題，或者成為[贊助會員](/patron)支持網站的朋友。我們要把這裡做成下象棋和原創棋類遊戲最好的地方，免費並且[開源](https://github.com/brianhliou/mistboard)。',
+  'Ideas and questions go on the [forum](/forum), where other players can add to them. Anything private, like a bug with your account or billing trouble, goes through [Contact](/contact). What you tell us decides what comes next.':
+    '想法和問題請發到[論壇](/forum)，其他棋友也能在下面補充。私人的事情，比如帳號出了問題或付款遇到麻煩，請透過[聯絡](/contact)頁面告訴我們。你們的意見決定我們接下來做什麼。',
+  'Play a game': '開始對局',
+  'Send feedback': '送出回饋',
+  "In late September, before putting it on the site, we played it against that bot: 400 games at 4 seconds a move, on the same settings the site uses, with AB-JChess's network of September 11. AB-JChess won 248, lost 136 and drew 16, a 64% score. It won as Red and as Black.":
+    '9 月下旬上線之前，我們讓它和那個電腦下了 400 盤，每步 4 秒，設定與網站上完全相同，AB-JChess 用的是 9 月 11 日的網路。AB-JChess 贏 248 盤、輸 136 盤、和 16 盤，得分率 64%。執紅執黑都佔上風。',
+  "AB-JChess is at the top of the jieqi bot list, above Level 8. Levels 1 to 8 stay Pikafish, and a new player starts at Level 2. It does not take a level number: the top place holds the strongest jieqi engine we have measured, under its own name. Its rating on the [bots page](/bots), 2354 against Level 8's 2226, comes from the same bot-against-bot games that rate the levels. Its authors are training stronger networks; when one is released, we will play it against this one and switch if it wins.":
+    'AB-JChess 排在揭棋電腦列表的最上面，在第 8 級之上。第 1 到第 8 級仍是皮卡魚，新手從第 2 級開始。它不佔用級別編號：最高的位置留給我們實測過最強的揭棋引擎，並以它自己的名字標示。它在[電腦對手頁面](/bots)上的等級分是 2354（第 8 級為 2226），和各個級別一樣，來自電腦之間的對局。作者們正在訓練更強的網路；新網路發布後，我們會讓它和現在這個對弈，贏了就換上。',
+  // ab-jchess: machine-drafted 2026-09-30, not native-reviewed.
+  'While writing this post we found a bug in how our Pikafish bot scored reveals. It is fixed; [a follow-up post](/blog/pikafish-reveal-bug) covers what it was and what it cost.':
+    '寫這篇文章的過程中，我們發現我們的皮卡魚電腦在給翻子打分時有一個錯誤。現已修復，[後續文章](/blog/pikafish-reveal-bug)講清楚了這個錯誤是什麼、造成了多大影響。',
+  'AB-JChess, a stronger jieqi bot': 'AB-JChess：更強的揭棋電腦',
+  'AB-JChess: the open-source jieqi engine that beat Pikafish 248 to 136':
+    'AB-JChess：以 248 比 136 戰勝皮卡魚的開源揭棋引擎',
+  'An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games.':
+    '一個自帶神經網路的開源揭棋引擎，現在排在皮卡魚第 8 級之上。它在 400 盤中以 248 比 136 戰勝全力的皮卡魚。',
+  '[Jieqi](/rules/jieqi) on Mistboard has a new top bot. [AB-JChess](https://github.com/lxsgx23/AB-JChess) is an open-source jieqi engine by Huorongrong and Laoxu (Kouza), and we play it here with their permission. It sits above Pikafish Level 8, the bot people have been playing since August.':
+    '[揭棋](/rules/jieqi)在 Mistboard 上有了新的最強電腦。[AB-JChess](https://github.com/lxsgx23/AB-JChess) 是由 Huorongrong 和 Laoxu（Kouza）開發的開源揭棋引擎，我們經作者許可在這裡使用它。它排在皮卡魚第 8 級之上，也就是棋友們從 8 月起一直在下的那個電腦。',
+  'Play AB-JChess': '挑戰 AB-JChess',
+  'Two ways to be strong': '兩種強法',
+  '[Pikafish](https://github.com/official-pikafish/Pikafish) is built for speed. It looks at more than a million positions a second and judges each one by rules written by hand. AB-JChess is built from Pikafish too, but it judges positions with a neural network trained on about a billion jieqi positions. It looks at about fifty times fewer positions, and understands each one better. Its training code is public in the same repository, under [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch).':
+    '[皮卡魚](https://github.com/official-pikafish/Pikafish)靠速度取勝。它每秒看一百多萬個局面，用人工寫成的規則評估每一個局面。AB-JChess 同樣由皮卡魚改造而來，但它用神經網路評估局面，這個網路用大約十億個揭棋局面訓練而成。它看的局面少了大約五十倍，但對每個局面理解得更深。它的訓練程式碼也公開在同一個程式庫裡，見 [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch)。',
+  'Where it sits': '它排在哪裡',
+  // ab-jchess examples: machine-drafted 2026-10-03, not native-reviewed.
+  'Where the edge comes from': '優勢從哪裡來',
+  'Each engine reported a score with every move it played in the match, and when the two disagreed, AB-JChess was usually the one that was right. In 137 games there came a point where AB-JChess gave itself 75% or more while Pikafish, on the move before or after, gave AB-JChess 60% or less. AB-JChess won 115 of those games, lost 13 and drew 9. The other way round, Pikafish at 75% or more for itself while AB-JChess gave it 60% or less, happened in 202 games, and Pikafish won 101 of them, lost 90 and drew 11. These are the numbers Pikafish reported during the match, with the reveal bug we have since fixed.':
+    '比賽中，兩個引擎每走一步都會報出一個分數；兩者看法不一致時，通常是 AB-JChess 看對了。有 137 盤棋出現過這樣的時刻：AB-JChess 給自己 75% 或更高，而皮卡魚在前一步或後一步只給 AB-JChess 60% 或更低。這些棋 AB-JChess 贏了 115 盤，輸 13 盤，和 9 盤。反過來，皮卡魚給自己 75% 或更高、而 AB-JChess 只給它 60% 或更低的情況出現在 202 盤棋中，皮卡魚贏了其中 101 盤，輸 90 盤，和 11 盤。這些是皮卡魚在比賽中報出的分數，當時還帶著我們後來修復的翻子錯誤。',
+  "Here are two of AB-JChess's wins, both as Red, where its score climbed while Pikafish's stayed level. We scored every position again with both engines, AB-JChess searching 1 million positions and the fixed Pikafish 64 million, and turned each engine's numbers into an expected score with a curve fitted on the match. Each chart shows AB-JChess's score as each engine saw it, with moves numbered as on the board below it. On the boards, ?! marks a Pikafish move that cost 5 to 10 points by AB-JChess's count; neither game has a worse one.":
+    '下面是 AB-JChess 的兩盤勝局，兩盤它都執紅，它的分數一路上升，而皮卡魚的分數一直持平。我們用兩個引擎把每個局面重新評估了一遍（AB-JChess 每個局面搜尋 100 萬個節點，修復後的皮卡魚搜尋 6400 萬個），並用一條按這次對抗賽擬合的曲線把各自的分值換算成期望得分。每張圖顯示兩個引擎各自眼中 AB-JChess 的得分，回合編號與下方棋盤一致。棋盤上的 ?! 標出按 AB-JChess 的算法讓皮卡魚損失 5 到 10 個百分點的著法；兩盤棋裡都沒有更差的著法。',
+  'Game 68: two advisors and an elephant, for an attack': '第 68 盤：兩個士和一個象，換來一場攻勢',
+  'AB-JChess thinks': 'AB-JChess 的判斷',
+  'Pikafish thinks': '皮卡魚的判斷',
+  'Move 18: the horse takes the elephant': '第 18 回合：馬吃象',
+  'AB-JChess 85%, Pikafish 50%': 'AB-JChess 85%，皮卡魚 50%',
+  'Move 23: Pikafish': '第 23 回合：皮卡魚',
+  agrees: '才認同',
+  'Move 16: the chariots are off': '第 16 回合：雙方兌掉車',
+  'AB-JChess 83%, Pikafish 48%': 'AB-JChess 83%，皮卡魚 48%',
+  'Move 21: Pikafish': '第 21 回合：皮卡魚',
+  "Pikafish, as Black, took a face-down advisor with its chariot on move 11, then sent the horse that came up on b1 into Red's camp, where it took the second advisor and an elephant. AB-JChess spent those moves bringing a chariot, a horse and a soldier near Black's king. From move 13 to move 21, AB-JChess never had Red below 69%; Pikafish, searching the same positions, had Red between 40% and 58%.":
+    '皮卡魚執黑，第 11 回合用車吃掉一個暗子士，隨後把在 b1 翻出的馬殺進紅方陣地，又吃掉第二個士和一個象。AB-JChess 利用這幾步把一個車、一個馬和一個兵調到黑將附近。從第 13 回合到第 21 回合，AB-JChess 給紅方的估分從未低於 69%；皮卡魚搜尋同樣的局面，給紅方的估分在 40% 到 58% 之間。',
+  "Game 68: AB-JChess's score, as each engine saw it": '第 68 盤：兩個引擎眼中 AB-JChess 的得分',
+  "Game 68, AB-JChess's expected score by move as AB-JChess and Pikafish saw it. On move 18 AB-JChess has Red at 85% and Pikafish at 50%; Pikafish agrees from move 23.":
+    '第 68 盤，AB-JChess 和皮卡魚各自眼中 AB-JChess 每回合的期望得分。第 18 回合 AB-JChess 給紅方 85%，皮卡魚給 50%；皮卡魚從第 23 回合起才認同。',
+  "Jieqi, game 68: Pikafish's moves marked by AB-JChess":
+    '揭棋第 68 盤：AB-JChess 標註的皮卡魚著法',
+  "On move 18 the horse took the elephant on c1. AB-JChess had Red at 85%; Pikafish had Red at 50%, and during the game it had reported 47%. Red's elephant took the horse on move 20. Pikafish's own score for Red reached 85% on move 21, when the piece it turned over on b10 came up a soldier.":
+    '第 18 回合，馬吃掉了 c1 的象。AB-JChess 給紅方 85%；皮卡魚給紅方 50%，對局中它報的是 47%。第 20 回合紅象吃掉了這匹馬。第 21 回合皮卡魚在 b10 翻出的棋子是兵，它自己給紅方的估分這才升到 85%。',
+  'Game 6: one chariot against a face-down back row': '第 6 盤：一車對一排沒翻開的暗子',
+  'In game 6 AB-JChess took an advisor with its chariot on move 15 and let the chariots come off. After move 16 Red had the only chariot on the board, and the seven pieces Black had not turned over could only be five soldiers and two horses. AB-JChess had Red at 83%; Pikafish had Red at 48%.':
+    '第 6 盤，AB-JChess 第 15 回合用車吃掉一個士，並讓雙方兌車。第 16 回合之後，盤面上只剩紅方一個車，而黑方還沒翻開的七個棋子只可能是五個兵和兩個馬。AB-JChess 給紅方 83%；皮卡魚給紅方 48%。',
+  "Game 6: AB-JChess's score, as each engine saw it": '第 6 盤：兩個引擎眼中 AB-JChess 的得分',
+  "Game 6, AB-JChess's expected score by move as AB-JChess and Pikafish saw it. On move 16 AB-JChess has Red at 83% and Pikafish at 48%; Pikafish agrees from move 21.":
+    '第 6 盤，AB-JChess 和皮卡魚各自眼中 AB-JChess 每回合的期望得分。第 16 回合 AB-JChess 給紅方 83%，皮卡魚給 48%；皮卡魚從第 21 回合起才認同。',
+  "Jieqi, game 6: Pikafish's moves marked by AB-JChess": '揭棋第 6 盤：AB-JChess 標註的皮卡魚著法',
+  "Red's chariot reached Black's back row on move 19 and took two horses there. AB-JChess had Red above 80% from move 17, Pikafish from move 21.":
+    '第 19 回合紅車衝到黑方底線，吃掉了那裡的兩個馬。AB-JChess 從第 17 回合起給紅方的估分就在 80% 以上，皮卡魚要到第 21 回合。',
+  'What a longer search says': '搜得更久會怎樣',
+  "We searched each of the five marked moves again, the game move and AB-JChess's choice each on its own: AB-JChess at 4 million positions, the fixed Pikafish at 256 million. AB-JChess still puts two of them 5 points or more below its choice and the other three within 2 points. Pikafish prefers AB-JChess's choice once and its own game move four times. So the single moves are close calls. The gap is in the scores the two engines give the positions, and in both games Pikafish's own score came round to AB-JChess's later: on move 23 rather than 18 in game 68, and on move 21 rather than 17 in game 6. The study shows both engines' numbers at every marked move.":
+    '我們把五步被標註的著法重新搜尋了一遍，實戰著法和 AB-JChess 的選擇各自單獨搜尋：AB-JChess 搜尋 400 萬個節點，修復後的皮卡魚搜尋 2.56 億個。AB-JChess 仍然認為其中兩步比它的選擇差 5 個百分點以上，另外三步相差不到 2 個百分點。皮卡魚有一次更喜歡 AB-JChess 的選擇，另外四次更喜歡自己的實戰著法。所以單看每一步，差別都很小。差距在於兩個引擎對局面給出的分數；兩盤棋裡，皮卡魚自己的分數都是後來才跟上 AB-JChess：第 68 盤是第 23 回合而不是第 18 回合，第 6 盤是第 21 回合而不是第 17 回合。研究裡每一步被標註的著法都附有兩個引擎的分數。',
+  Thanks: '致謝',
+  'AB-JChess is open source under the GPL-3.0 licence, at [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess). Its authors let us use the engine and its network on Mistboard. The network is downloaded from their own release each time we build the site, never re-hosted. Thank you, Huorongrong and Laoxu.':
+    'AB-JChess 以 GPL-3.0 授權條款開源，網址是 [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess)。作者允許我們在 Mistboard 上使用這個引擎及其神經網路。每次建置網站時，神經網路都從作者自己的發佈頁下載，從不在本站轉存。謝謝 Huorongrong 和 Laoxu。',
+  // jieqi-bot-wins: machine-drafted 2026-09-30, not native-reviewed.
+  'Fourteen wins against our jieqi bot': '戰勝我們揭棋電腦的 14 盤棋',
+  'Beating the Pikafish jieqi bot: 14 wins in 596 games': '戰勝皮卡魚揭棋電腦：596 盤中的 14 勝',
+  'Since August 23, people have played our jieqi bot 596 times and beaten it 14 times. Here is how those games were won, and seven new levels for everyone else.':
+    '8 月 23 日以來，棋友們和我們的揭棋電腦下了 596 盤，贏了 14 盤。本文講這些棋是怎麼贏的，也介紹為大家新增的七個級別。',
+  'If you have played [jieqi](/rules/jieqi) against the computer here, you have been playing Pikafish at full strength. Until this week it was the only jieqi bot we had.':
+    '如果你在這裡和電腦下過[揭棋](/rules/jieqi)，你面對的一直是全力的皮卡魚。直到本週，它都是我們唯一的揭棋電腦。',
+  'Since August 23 it has played 596 games against more than 60 people and lost 16 of them. Two of those losses were our fault: once the engine timed out and the bot resigned, and once it walked into a mate its search could not see. That leaves 14 games that people won outright, about one in 42.':
+    '8 月 23 日以來，它和 60 多位棋友下了 596 盤，輸了 16 盤。其中兩盤是我們的問題：一次是引擎逾時、電腦認輸，一次是它走進了搜尋看不到的殺棋。剩下的 14 盤是棋友實打實贏下來的，大約每 42 盤贏一盤。',
+  'That is a hard wall to learn against, so the ladder now has seven easier levels below it. The rest of this page is about the 14 wins, because they show where the top level can be beaten.':
+    '這樣的對手很難拿來練棋，所以現在它下面多了七個更容易的級別。本文其餘部分講這 14 盤勝局，因為它們說明了最高級別可以在哪裡被擊敗。',
+  'Play jieqi': '下揭棋',
+  'See all levels': '查看所有級別',
+  'Eight levels': '八個級別',
+  'Levels 1 to 7 are the same engine choosing among its top few moves, with more room for error at the lower levels. Level 8 is the bot you have been playing. We set each level by playing the bots against each other and against a player that moves at random, so every step up is measured. The ratings are on the [bots page](/bots).':
+    '第 1 到第 7 級是同一個引擎，在它最看好的幾步棋裡挑選，級別越低，出錯的餘地越大。第 8 級就是你一直在下的那個電腦。我們讓這些電腦互相對弈，也和一個隨機走棋的對手對弈，以此確定每個級別，所以每升一級都有實測數據。等級分見[電腦對手頁面](/bots)。',
+  'If you have played jieqi here before, you were playing Level 8.':
+    '如果你以前在這裡下過揭棋，你下的就是第 8 級。',
+  'How the fourteen were won': '這 14 盤是怎麼贏的',
+  "Five of the 14 ended in stalemate. In jieqi, as in xiangqi, a side with no legal move loses, so trapping the bot's general with nowhere to go is a win even when it is not in check. In every one of them the bot had seen the loss coming several moves earlier, and every move it had left lost. The game below opens at move 11, just before the turn: the bot is sure it is well ahead, and one move later it is lost. Step forward with the arrows to reach the stalemate.":
+    '14 盤中有 5 盤以困斃結束。揭棋和象棋一樣，無子可走的一方判負，所以即使沒有將軍，把電腦的老將困得無路可走也算贏。這幾盤裡，電腦都提前好幾步就看到了敗局，它剩下的每一步都是輸棋。下面這盤從第 11 回合開始，正是轉折之前：電腦確信自己大優，一步之後就已經輸了。用箭頭往後走，就能看到困斃。',
+  "Jieqi: a guest stalemates the bot's lone general after 63 moves":
+    '揭棋：一位訪客在第 63 回合困斃電腦的孤帥',
+  'Five of the wins turned right after the bot moved one of its own face-down pieces. A hidden piece is revealed when it moves, and the bot tends to value that move as if the reveal will go its way. This game opens at move 15 with the bot well ahead and about to reveal a piece. The reply takes a cannon, and within a few moves the lead is gone.':
+    '有 5 盤的轉折，就發生在電腦走動自己的一個暗子之後。暗子一動就會翻開，而電腦給這步棋估值時，往往當作翻出來的子會對自己有利。這盤從第 15 回合開始，電腦大優，正準備翻開一個子。對方的應著吃掉一門炮，幾步之後優勢就沒了。',
+  "Jieqi: a guest punishes the bot's reveal and mates in 32 moves":
+    '揭棋：一位訪客抓住電腦翻子的破綻，32 回合將死',
+  'Not every win needed a gamble from the bot. @tonghuiqu has four of the 14, and in the longest of them the game turned on ordinary moves, not a lucky reveal. It opens at move 19 with the game level; over the next 20 moves @tonghuiqu gains ground one step at a time, and mates on move 68.':
+    '並不是每一盤都靠電腦冒險。@tonghuiqu 贏了其中 4 盤，最長的那一盤靠的是尋常著法，而不是翻子的運氣。這盤從第 19 回合開始，局面均勢；接下來的 20 回合裡，@tonghuiqu 一步一步擴大優勢，第 68 回合將死。',
+  'Jieqi: @tonghuiqu outplays the bot over 68 moves': '揭棋：@tonghuiqu 用 68 回合下贏電腦',
+  'The winners were also patient. Five of the 14 went past 50 moves, and in this one the lead changed hands twice. It opens at move 42, with the bot ahead for the second time and about to reveal a piece. The player takes over from there and finishes it 38 moves later.':
+    '贏家也都很有耐心。14 盤中有 5 盤超過 50 回合，這一盤的優勢還兩度易手。它從第 42 回合開始，電腦第二次佔優，正準備翻開一個子。棋友從這裡扭轉局面，38 回合後贏下這盤棋。',
+  'Jieqi: a guest wins an 80-move game after the lead changes twice':
+    '揭棋：優勢兩度易手後，一位訪客贏下 80 回合的長局',
+  'All fourteen': '全部 14 盤',
+  Side: '執子',
+  'Moves played': '回合數',
+  Finish: '結局',
+  'Every game a person won against the full-strength bot from August 23 to September 29. The finish links to the game. Guests are not named.':
+    '8 月 23 日至 9 月 29 日期間，棋友戰勝全力電腦的每一盤棋。點結局可以打開對局。訪客不列名字。',
+  'Before August 23': '8 月 23 日之前',
+  'Until August 23 the jieqi bot ran on a quicker setting than we meant it to, searching for a fraction of a second a move. It won 13 games in a row in early August anyway. Then it lost nine in three days, most likely all to one player, which is how we noticed. We moved it to full strength that night, and none of those nine games are counted above.':
+    '8 月 23 日之前，揭棋電腦誤用了一個比我們原意更快的設定，每步只搜尋不到一秒。即便如此，它在 8 月上旬還是連贏了 13 盤。隨後它三天裡輸了 9 盤，很可能都是輸給同一位棋手，我們這才發現問題。當晚我們就把它調回全力，這 9 盤都沒有計入上面的統計。',
+  'What is next': '接下來',
+  'A stronger engine now sits above Level 8: AB-JChess, an open-source jieqi engine by Huorongrong and Laoxu (Kouza), which beat full-strength Pikafish in 248 of 400 games. Its story, and how it handles positions like these, follows next week.':
+    '現在第 8 級之上還有一個更強的引擎：AB-JChess，由 Huorongrong 和 Laoxu（Kouza）開發的開源揭棋引擎，400 盤中贏了全力的皮卡魚 248 盤。它的故事，以及它在類似局面中的表現，下週再寫。',
+  'Jieqi rules': '揭棋規則',
+  Guest: '訪客',
+  '@tonghuiqu': '@tonghuiqu',
+  '@boliquangtri': '@boliquangtri',
+  'Sep 4': '9月4日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_9fe33497-3ace-4465-bb15-e0736c7438ad)':
+    '[將死](/watch?channel=jieqi&game=jq_9fe33497-3ace-4465-bb15-e0736c7438ad)',
+  'Sep 13': '9月13日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_4b7e09b1-5056-4a0c-b6b1-61ed12ff03d7)':
+    '[將死](/watch?channel=jieqi&game=jq_4b7e09b1-5056-4a0c-b6b1-61ed12ff03d7)',
+  'Sep 17': '9月17日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_bed23125-b330-41f6-b88d-6fb750cb3a19)':
+    '[將死](/watch?channel=jieqi&game=jq_bed23125-b330-41f6-b88d-6fb750cb3a19)',
+  'Sep 19': '9月19日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_edca0a1c-eff0-47cb-bc19-51b441eb0859)':
+    '[困斃](/watch?channel=jieqi&game=jq_edca0a1c-eff0-47cb-bc19-51b441eb0859)',
+  '[Checkmate](/watch?channel=jieqi&game=jq_f5ab7428-e3b0-4389-8a9f-9d552665017a)':
+    '[將死](/watch?channel=jieqi&game=jq_f5ab7428-e3b0-4389-8a9f-9d552665017a)',
+  'Sep 21': '9月21日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_8ae5fc9e-6eb1-4b9f-9e75-2485137db1f5)':
+    '[困斃](/watch?channel=jieqi&game=jq_8ae5fc9e-6eb1-4b9f-9e75-2485137db1f5)',
+  '[Stalemate](/watch?channel=jieqi&game=jq_53ead5f3-3c1b-4e7d-8b30-896cce9ab8ff)':
+    '[困斃](/watch?channel=jieqi&game=jq_53ead5f3-3c1b-4e7d-8b30-896cce9ab8ff)',
+  'Sep 22': '9月22日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_3c0ae446-92b4-457e-b9eb-8da7dbef9e7b)':
+    '[困斃](/watch?channel=jieqi&game=jq_3c0ae446-92b4-457e-b9eb-8da7dbef9e7b)',
+  'Sep 23': '9月23日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_1895343d-5933-4361-84d0-21d8d06f0e5a)':
+    '[將死](/watch?channel=jieqi&game=jq_1895343d-5933-4361-84d0-21d8d06f0e5a)',
+  'Sep 24': '9月24日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_207d4371-1376-4cc9-a982-e27f4ee40e2c)':
+    '[將死](/watch?channel=jieqi&game=jq_207d4371-1376-4cc9-a982-e27f4ee40e2c)',
+  'Sep 25': '9月25日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_36a1267e-1a57-4526-a615-365ab2592edd)':
+    '[困斃](/watch?channel=jieqi&game=jq_36a1267e-1a57-4526-a615-365ab2592edd)',
+  'Sep 27': '9月27日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_823995d4-feed-4d7d-b258-367664bb0dc2)':
+    '[將死](/watch?channel=jieqi&game=jq_823995d4-feed-4d7d-b258-367664bb0dc2)',
+  'Sep 29': '9月29日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_2538c964-9d13-4a25-98ac-bbe4639f12dd)':
+    '[將死](/watch?channel=jieqi&game=jq_2538c964-9d13-4a25-98ac-bbe4639f12dd)',
+  '[Checkmate](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)':
+    '[將死](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)',
+  // cao-yanlei (zh-Hant), machine-drafted 2026-09-25, not native-reviewed. Mainland
+  // players' names stay in one form in both scripts, as on the yin-sheng page.
+  'His 2026 record by event.': '他 2026 年各項賽事的戰績。',
+  Event: '賽事',
+  Dates: '日期',
+  W: '勝',
+  D: '和',
+  L: '負',
+  'Match vs Lại': '對賴理兄番棋',
+  'Jan 3–5': '1月3–5日',
+  'Jan 6–7': '1月6–7日',
+  'Team championship': '全國團體賽',
+  'Mar 28–Apr 2': '3月28日–4月2日',
+  'Chunqiu Daye arena': '春丘大葉盃擂台賽',
+  'Apr 4–6': '4月4–6日',
+  'Xintai Cup': '新泰盃',
+  'May 14': '5月14日',
+  'Gaogang Cup': '高新高港盃',
+  'Jun 4': '6月4日',
+  'Shanghai qualifying': '上海盃海選賽',
+  'Aug 9': '8月9日',
+  'League qualifier': '象甲預選賽',
+  'Aug 17–19': '8月17–19日',
+  'Gulin open': '古藺公開賽',
+  'Aug 23': '8月23日',
+  'League, stage one': '象甲第一階段',
+  'Sep 14–18': '9月14–18日',
+  "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.":
+    '一月在十局番棋中以 12 比 8 擊敗世界冠軍，之後是他整個賽季的對局，直到中國象甲聯賽第一階段。棋盤上展示六局，全部 75 局都附有分析。',
+  'Cao Yanlei at the board. Photo: 象棋字典 via Sohu.':
+    '對局中的曹岩磊。圖片：象棋字典，經搜狐轉載。',
+  'Cao Yanlei in a dark suit and white shirt, looking down at the pieces during a tournament game.':
+    '曹岩磊身穿深色西裝和白襯衫，在比賽中低頭看著棋盤。',
+  "Cao Yanlei 曹岩磊 is the player the Chinese press calls the master of the sacrifice. In January he beat the world champion, Lại Lý Huynh, in a ten-game match, and in September he was second in the individual table at the first stage of China's top league. The association's ranking at the end of last year had him third in the country.":
+    '曹岩磊就是中文媒體口中的「棄子大師」。一月他在十局番棋中擊敗世界冠軍賴理兄，九月在中國象甲聯賽第一階段的個人排名中位列第二。中國象棋協會去年年底的積分排名，他排全國第三。',
+  "He learned the game at four from the grandfather who raised him, and at thirteen he was the youngest national master in China. Around 2011 Macau signed him, and for most of his twenties he played for Macau, often against the mainland's best: three World Championship bronzes, and in 2019 the world masters title, won against Wang Tianyi in the final. He is registered to Hubei now and plays the league for Shanghai Jiahong. In January 2025 the Chinese Xiangqi Association's [match-fixing ruling](/blog/xiangqi-match-fixing) gave him its lightest penalty, a public criticism, with no ban. This page is his 2026 so far.":
+    '他四歲跟撫養他長大的爺爺學棋，十三歲成為當時全國最年輕的象棋大師。2011 年前後澳門把他簽了下來，他二十多歲的大部分時間都代表澳門出賽，常常對上內地最強的棋手：三次世錦賽銅牌，2019 年又在世界象棋大師賽決賽擊敗王天一奪冠。他現在註冊在湖北，聯賽代表上海嘉弘出戰。2025 年 1 月，中國象棋協會的[打假球處理決定](/blog/xiangqi-match-fixing)給了他最輕的處罰：通報批評，沒有禁賽。這一頁寫的是他 2026 年到目前為止的比賽。',
+  '2026 so far': '2026 年至今',
+  "Ten events, from a ten-game match against the world champion in January to the first stage of China's top league in September. I ran all 75 games through the same engine analysis Mistboard gives your own games.":
+    '十項賽事，從一月對世界冠軍的十局番棋，到九月的中國象甲聯賽第一階段。全部 75 局我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  'Baizuishan Cup': '百醉山盃',
+  "**He fights.** Watching him win the Wuyang Cup last year, the veteran Lü Qin told 羊城晚报 that Cao's style is combative and he never picks the safe line. Cao said much the same: he likes to attack, and to keep varying his play.":
+    '**他敢打。** 去年看他拿下五羊盃時，老將吕钦對《羊城晚報》說，曹岩磊的棋風很「好鬥」，從不挑穩健的棋下。曹岩磊自己也這麼說：他喜歡進攻，也喜歡下出不同的變化。',
+  '**He plays for the win with red.** Most of his wins come with the red pieces, and he opens with the central cannon, the most direct move in the game, almost as often as with the quiet soldier push. Yin Sheng did not play the central cannon once in his unbeaten month. With black he is happy to draw.':
+    '**執紅他要贏。** 他的勝局大多是執紅下出來的，而且他開局走中炮（最直接的一步）幾乎跟走仙人指路一樣多。尹昇在他不敗的那個月一盤中炮都沒走過。執黑他樂於求和。',
+  "**Zhao Panwei is his hardest opponent.** They met sixteen times this year, most of them in the April arena, and Cao's win is below. Against everyone else he loses about one game in twelve.":
+    '**赵攀伟是他最難對付的對手。** 兩人今年交手十六盤，大多在四月的擂台賽，曹岩磊贏下的那一盤就在下面。對其他所有人，他大約十二盤才輸一盤。',
+  '**The sacrifices are real.** The engine confirms six this year, each a piece offered and never won back. Two are on the boards below: a cannon left hanging on move 16 in the long match win with black, and a horse against He Wenzhe in April.':
+    '**棄子是真的。** 引擎確認他今年有六次真棄子，每次都是送出一子、再也沒有拿回來。下面的棋盤裡有兩次：番棋那盤執黑長局的勝局中，第 16 回合一門炮就那樣掛著；還有四月對何文哲送出的一匹馬。',
+  'The ten-game match': '十局番棋',
+  "The two had met before. In November 2016, at the Han Xin Cup in Sydney, Cao, playing for Macau, beat Lại Lý Huynh of Vietnam in the final, the first final of that event without a mainland Chinese player in it. Nine years later Lại became the first world champion from outside China, beating Yin Sheng in the final in Shanghai. So when a tea company booked the two of them into a room in Zhengzhou this January for ten rapid games over three evenings, Tuổi Trẻ in Vietnam billed it as China's revenge.":
+    '兩人以前交過手。2016 年 11 月在雪梨的韓信盃，代表澳門的曹岩磊在決賽擊敗越南的賴理兄，那是這項賽事第一次決賽裡沒有內地棋手。九年後，賴理兄成為第一位來自中國以外的世界冠軍，在上海的決賽擊敗了尹昇。所以今年一月，一家茶企把兩人請到鄭州，三個晚上下十盤快棋，越南的《青年報》把它說成中國的復仇之戰。',
+  "The first evening was three draws. On the second Cao won twice, and this is the longer of the two, his only win of the match with black. Lại's soldier push on move 25 is the loose move, and Cao takes almost sixty more to collect.":
+    '第一個晚上三盤和棋。第二個晚上曹岩磊贏了兩盤，這是其中較長的一盤，也是他這場番棋唯一一盤執黑的勝局。賴理兄第 25 回合挺兵是鬆懈的一步，曹岩磊花了將近六十個回合才把優勢兌現。',
+  "Lại Lý Huynh vs Cao Yanlei, 4 January 2026. The board opens after red's 25th move, with Cao to play as black.":
+    '賴理兄對曹岩磊，2026 年 1 月 4 日。棋盤從紅方第 25 回合之後開始，輪到執黑的曹岩磊走。',
+  '2026 Chunqiu Daye Cup ten-game match': '2026 春丘大葉盃十局番棋',
+  'Lại hit back with a quick win on the last evening, which left Cao needing a draw from the last game. He won it in 19 moves: Lại pushed his central soldier on move 12, and seven moves later he resigned.':
+    '最後一個晚上賴理兄很快扳回一盤，於是最後一盤曹岩磊只需要和棋。他卻 19 回合就贏了：賴理兄第 12 回合挺中卒，七個回合後認輸。',
+  "Cao Yanlei vs Lại Lý Huynh, 5 January 2026, the last game. The board opens after black's 12th, with red to move.":
+    '曹岩磊對賴理兄，2026 年 1 月 5 日，最後一盤。棋盤從黑方第 12 回合之後開始，輪到紅方走。',
+  'The Baizuishan Cup': '百醉山盃',
+  "The next day he went straight into an open and won seven of his ten games without losing one. On the first day he beat Wang Yongqiang in the cleanest game of his year, with an accuracy of 99. Wang's cannon slid across on move 11, Cao's chariot swung across in reply, and after Wang's 22nd move the engine sees mate in nine. Wang resigned two moves later.":
+    '第二天他直接去打一個公開賽，十盤贏七盤，一盤沒輸。第一天他贏了王永强，這是他今年下得最乾淨的一盤，準確率 99。王永强第 11 回合平炮，曹岩磊隨即把車平了過去；王永强走完第 22 回合，引擎已經看到九步殺。兩個回合後王永强認輸。',
+  "Cao Yanlei vs Wang Yongqiang, 6 January 2026. The board opens after black's 11th, with red to move.":
+    '曹岩磊對王永强，2026 年 1 月 6 日。棋盤從黑方第 11 回合之後開始，輪到紅方走。',
+  '2026 Baizuishan Cup': '2026 百醉山盃',
+  'The Chunqiu Daye arena': '春丘大葉盃擂台賽',
+  'King of the hill: three players, one holding the arena, and each challenge is a single 20-minute game, then five-minute games until somebody wins. Everyone has four lives. In April Cao beat Zhao Panwei once and He Wenzhe twice before Zhao knocked him out.':
+    '擂台賽：三人一組，一人守擂，每次挑戰先下一盤 20 分鐘的慢棋，再下五分鐘的快棋直到分出勝負。每人有四條命。四月曹岩磊先贏了赵攀伟一次、何文哲兩次，之後被赵攀伟淘汰。',
+  "The win over Zhao came with black. The game was level until Zhao pulled his chariot back on move 18. Cao's edge soldier crossed the river on that same move and kept walking, one file across on move 21 and another on move 22, straight after Zhao's horse went wrong. Zhao resigned after move 30.":
+    '贏赵攀伟的那盤他執黑。第 18 回合赵攀伟退車之前，局面一直均勢。曹岩磊的邊卒就在同一回合過河，接著一路往前：第 21 回合平一路，第 22 回合再平一路，正好在赵攀伟走錯馬之後。赵攀伟在第 30 回合後認輸。',
+  "Zhao Panwei vs Cao Yanlei, 4 April 2026. The board opens after red's 18th, with Cao to play as black.":
+    '赵攀伟對曹岩磊，2026 年 4 月 4 日。棋盤從紅方第 18 回合之後開始，輪到執黑的曹岩磊走。',
+  "Against He Wenzhe the next day he offered a horse on move 15, one of the six sacrifices the engine confirms this year. The game stayed level until He's cannon slid to the edge on move 27. Two moves later Cao's cannon went deep, his chariot ran the length of the board on move 36, and He resigned after the next move.":
+    '第二天對何文哲，他第 15 回合送出一匹馬，這是引擎確認的今年六次棄子之一。直到第 27 回合何文哲把炮平到邊線，局面都是均勢。兩個回合後曹岩磊的炮長驅直入，第 36 回合車一路進到底線，何文哲在下一步之後認輸。',
+  "Cao Yanlei vs He Wenzhe, 5 April 2026. The board opens after black's 14th, with Cao to move.":
+    '曹岩磊對何文哲，2026 年 4 月 5 日。棋盤從黑方第 14 回合之後開始，輪到曹岩磊走。',
+  '2026 Chunqiu Daye Cup arena': '2026 春丘大葉盃擂台賽',
+  'The league': '象甲聯賽',
+  "In August he topped the qualifier for China's top league, level with Hong Kong's Feng Jiajun, and took Shanghai Jiahong up with him. His one draw there was against Yin Sheng on the first day.":
+    '八月他在象甲預選賽與香港的馮家俊並列個人第一，也把上海嘉弘帶進了聯賽。他在那裡唯一的一盤和棋，是第一天對尹昇。',
+  "At stage one in September he was second in the individual table after nine rounds, behind Wang Yubo, and lost one game in sixteen. On the last day he beat Meng Chen, the man who knocked him out of the 2023 national championship in the quarter-final. Meng's cannon raid on move 12 gave the game away, though it took Cao until move 39 to finish it.":
+    '九月的第一階段，九輪過後他在個人排名中位列第二，僅次於王禹博，十六盤只輸一盤。最後一天他贏了孟辰，正是孟辰在 2023 年全國個人賽八強戰淘汰了他。孟辰第 12 回合炮打中兵，把這盤棋送了出去，不過曹岩磊一直到第 39 回合才收官。',
+  "Cao Yanlei vs Meng Chen, 17 September 2026. The board opens after black's 12th, with red to move.":
+    '曹岩磊對孟辰，2026 年 9 月 17 日。棋盤從黑方第 12 回合之後開始，輪到紅方走。',
+  "The league's second stage is in October, and the national championship runs from November 21 to 29 in Changchun. He reached the quarter-final in 2023 and went out in the last sixteen in December. The association's ranking at the end of last year had him third in China.":
+    '象甲第二階段在十月，全國個人賽 11 月 21 日至 29 日在長春舉行。他在 2023 年打進八強，去年十二月止步十六強。中國象棋協會去年年底的積分排名，他排全國第三。',
+  'All 75 games': '全部 75 局',
+  "Every game of the year is in a Mistboard study, with the engine's judgments and lines on each one, and 71 of the 75 are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; analysis by Pikafish through Mistboard's review pipeline, September 2026.":
+    '今年的每一盤都在 Mistboard 的一個研究裡，每盤都有引擎的判斷和變化；75 盤中有 71 盤也在直播檔案裡，附網站的分析。資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 9 月。',
+  'Cao Yanlei 曹岩磊: games, results, and analysis': '曹岩磊：對局、戰績與分析',
+  'Portrait of Cao Yanlei.': '曹岩磊肖像。',
+  'Wang Yongqiang': '王永强',
+  'Zhao Panwei': '赵攀伟',
+  'Meng Chen': '孟辰',
+  // lai-ly-huynh (zh-Hant), machine-drafted 2026-10-01, not native-reviewed. After the
+  // spread, like cao-yanlei's. Mainland players' names stay simplified (赵攀伟, 程宇东);
+  // 賴理兄 and the foreign players (李銘堅, 莊宏明, 馮家俊, 鄭義霖, 萊恩) convert, as on
+  // the world championship page.
+  'Lại Lý Huynh 赖理兄, the world xiangqi champion: games and analysis':
+    '賴理兄，世界象棋冠軍：對局與分析',
+  'The first world champion from outside China, unbeaten in Shanghai and winner of the final with black. His title run and the year since, five wins on the board, 38 games analysed.':
+    '第一位來自中國以外的世界冠軍，上海世錦賽一局未輸，決賽執黑取勝。他的奪冠之路和此後一年，盤面上五盤勝局，38 局附引擎分析。',
+  'Lại Lý Huynh at the board.': '對局中的賴理兄。',
+  'English-speaking xiangqi players, and Vietnamese fans who want his games in one place with analysis.':
+    '說英語的象棋棋友，以及想把他的對局連同分析集中在一處看的越南棋迷。',
+  'Lại Lý Huynh in a white team shirt, arms folded, looking down at the board during a game.':
+    '賴理兄身穿白色隊服，雙臂交叉，在對局中低頭看著棋盤。',
+  'Lại Lý Huynh at the Five Rams Cup, Guangzhou, February 2026. Photo: Vietnam Xiangqi Federation, via Thanh Niên.':
+    '2026 年 2 月，廣州五羊盃上的賴理兄。圖片：越南象棋聯合會，經 Thanh Niên 轉載。',
+  "Lại Lý Huynh 赖理兄 is the world champion. In Shanghai last September he went through the World Xiangqi Championship without losing a game and won the final against China's Yin Sheng with the black pieces, the first player from outside China to take the title. The Chinese press calls him Vietnam's king of xiangqi, 越南棋王. At home his fans call him Nam Phương công tử, the young master from the South.":
+    '賴理兄是現任世界冠軍。去年九月在上海，他在世界象棋錦標賽中一局未輸，決賽執黑擊敗中國的尹昇，成為第一位奪得這一頭銜的中國以外棋手。中文媒體稱他為「越南棋王」。在越南國內，棋迷叫他 Nam Phương công tử，意思是「南方公子」。',
+  "He was born in 1990 in Vĩnh Long, in the Mekong Delta, and learned the game watching his father play. He has won Vietnam's national championship six times and holds the WXF's International Grandmaster title. In 2016 he became the first foreign player in China's top league, for Hangzhou, and in 2023 he won the league with them. In February he was the first wildcard ever to reach the final of the Five Rams Cup, China's invitation event for its national champions.":
+    '他 1990 年生於湄公河三角洲的永隆，看父親下棋學會了象棋。他六次奪得越南全國冠軍，擁有世界象棋聯合會的國際特級大師稱號。2016 年他代表杭州出戰，成為中國象甲聯賽的第一位外籍棋手，2023 年隨杭州隊奪得聯賽冠軍。今年二月，他成為五羊盃歷史上第一位打進決賽的外卡棋手，五羊盃是中國邀請全國冠軍參加的邀請賽。',
+  'This page is his year as champion: the title run, the year since, and five of his wins on the board. I ran the 38 individual games we hold through the same engine analysis Mistboard gives your own games.':
+    '這一頁寫的是他當世界冠軍的這一年：奪冠之路、此後一年，以及盤面上他的五盤勝局。我們收錄的 38 盤個人賽對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  '**He wins with black.** Five of his six wins in Shanghai came with the black pieces, the side that moves second, the final among them. Across the 38 individual games we hold he won eight with black and three with red. With red he mostly draws, thirteen of his eighteen red games.':
+    '**他執黑贏棋。** 他在上海的六盤勝局中有五盤是執黑（後走的一方）贏的，決賽也在其中。我們收錄的 38 盤個人賽對局裡，他執黑贏了八盤，執紅只贏三盤。執紅他大多是和棋，十八盤執紅有十三盤和。',
+  '**He opens with the Cross-Palace Cannon.** In eleven of his eighteen red games his first move slid a cannon across to the far side of his own palace. It is a quieter start than the central cannon, and it leaves the game to be won later.':
+    '**他開局走過宮炮。** 十八盤執紅的對局裡有十一盤，他第一步就把一門炮平過九宮，放到九宮另一側。這比中炮開局安靜，把贏棋留到後面。',
+  '**He was precise when it counted.** His median accuracy across the nine games in Shanghai was 98. The engine confirms three sacrifices in his year, a piece offered and never won back, and one of them came in the world final.':
+    '**關鍵時刻他下得很準。** 他在上海九盤棋的準確率中位數是 98。引擎確認他這一年有三次真棄子，都是送出一子、再也沒有拿回來，其中一次就在世錦賽決賽。',
+  '**He learned from China\'s best.** "The league gave me a very valuable chance to learn," he told 羊城晚报 in February. "I could play and at the same time study how China\'s top players play." He has trained with engines since 2005.':
+    '**他向中國最強的棋手學習。** 他今年二月對《羊城晚報》說：「象甲聯賽給了我非常寶貴的學習機會。我可以一邊比賽，一邊觀摩學習中國頂尖棋手的棋路和技巧。」他從 2005 年起就用引擎訓練。',
+  'The world title': '世界冠軍',
+  "He had been one game from the title before. In Houston in 2023 he reached the final against Meng Chen, drew the slow game and lost the rapid tiebreak. Two years later the championship ran in Shanghai from 22 to 27 September, eight rounds and then a final between the top two. He won five and drew three, against Yin Sheng on the first day, Meng Fanrui and Malaysia's Li Dezhi, and finished level with Yin Sheng on 13 points.":
+    '他以前也離冠軍只差一盤棋。2023 年在休斯敦，他打進決賽對孟辰，慢棋和了，快棋加賽輸了。兩年後，世錦賽於 9 月 22 日至 27 日在上海舉行，先賽八輪，再由前兩名下決賽。他五勝三和，和的是第一天的尹昇、孟繁睿和馬來西亞的黎德志，最後與尹昇同積 13 分。',
+  Round: '輪次',
+  Colour: '執子',
+  Result: '結果',
+  Win: '勝',
+  Draw: '和',
+  Final: '決賽',
+  'Ryan Emmanuel Haris (East Malaysia)': '萊恩（東馬來西亞）',
+  'Yin Sheng (China)': '尹昇（中國）',
+  'Mingjian Li (USA)': '李銘堅（美國）',
+  'Tony Fung Ga Zen (Hong Kong)': '馮家俊（香港）',
+  'Calvin Tay Yelin (East Malaysia)': '鄭義霖（東馬來西亞）',
+  'Meng Fanrui (China)': '孟繁睿（中國）',
+  'Chong Heung Ming (Philippines)': '莊宏明（菲律賓）',
+  'Li Dezhi (Malaysia)': '黎德志（馬來西亞）',
+  'His world championship, round by round.': '他的世錦賽，逐輪戰績。',
+  "In round three he met the United States' Mingjian Li, who held him level for nineteen moves. Li's chariot push on move 20 let it go. Lại finished at 98 percent accuracy and needed another 47 moves to bring it home.":
+    '第三輪他遇到美國的李銘堅，對方和他均勢周旋了十九個回合。李銘堅第 20 回合進車，把局面送了出去。賴理兄全盤準確率 98%，又走了 47 個回合才把這盤棋拿下。',
+  "Mingjian Li vs Lại Lý Huynh, 23 September 2025, round 3. The board opens after red's 20th move, with Lại to play as black.":
+    '李銘堅對賴理兄，2025 年 9 月 23 日，第 3 輪。棋盤從紅方第 20 回合之後開始，輪到執黑的賴理兄走。',
+  '2025 World Xiangqi Championship, round 3': '2025 世界象棋錦標賽，第 3 輪',
+  "In round seven Chong Heung Ming of the Philippines slid his cannon across on move 17. Lại's horse jumped into the centre the same move, the engine's own first choice, and his cannon followed it in. Chong resigned after move 32.":
+    '第七輪，菲律賓的莊宏明第 17 回合平炮。賴理兄同一回合躍馬入中，正是引擎的首選，隨後他的炮也跟了進去。莊宏明在第 32 回合後認輸。',
+  "Chong Heung Ming vs Lại Lý Huynh, 25 September 2025, round 7. The board opens after red's 17th move, with Lại to play as black.":
+    '莊宏明對賴理兄，2025 年 9 月 25 日，第 7 輪。棋盤從紅方第 17 回合之後開始，輪到執黑的賴理兄走。',
+  '2025 World Xiangqi Championship, round 7': '2025 世界象棋錦標賽，第 7 輪',
+  "The final was one game, Yin Sheng with red. Yin Sheng pressed early, and by move 27 it was level again. Lại pushed his central cannon into Yin Sheng's camp, a piece offer the engine rates as the best move on the board. Yin Sheng took it, and the engine still called the game level. On move 38 his advisor stepped back. From there Lại's soldier on the third file walked down the board, and Yin Sheng resigned after move 52.":
+    '決賽只下一盤，尹昇執紅。尹昇開局施壓，到第 27 回合局面又回到均勢。賴理兄把中炮打進尹昇的陣地，這是一步棄子，引擎認為是當時盤面上的最佳著法。尹昇吃了炮，引擎仍判局面均勢。第 38 回合尹昇退士。此後賴理兄的三路卒一路向下挺進，尹昇在第 52 回合後認輸。',
+  "Yin Sheng vs Lại Lý Huynh, 27 September 2025, the final. The board opens after red's 27th move, with Lại to play as black.":
+    '尹昇對賴理兄，2025 年 9 月 27 日，決賽。棋盤從紅方第 27 回合之後開始，輪到執黑的賴理兄走。',
+  '2025 World Xiangqi Championship, final': '2025 世界象棋錦標賽，決賽',
+  "Yin Sheng was born in 2005. A year later he went 31 games without a loss and has [his own page](/blog/yin-sheng). The championship's history, and Lại's earlier games in it, are on the [world championship page](/blog/xiangqi-world-championship).":
+    '尹昇生於 2005 年。一年後他連續 31 局不敗，他也有[自己的專頁](/blog/yin-sheng)。世錦賽的歷史，以及賴理兄早年在這項賽事裡的對局，見[世界象棋錦標賽專頁](/blog/xiangqi-world-championship)。',
+  'The year since': '此後一年',
+  "At home the title made him a national figure. In June the state awarded him the First-Class Labour Order, and in April he won the rapid title at the national championship. Most of his games this year, though, were against China's best on their ground, and those are in the table below.":
+    '在越南國內，這個冠軍讓他成了家喻戶曉的人物。六月國家授予他一級勞動勳章，四月他在全國錦標賽上拿下快棋冠軍。不過他今年的大部分對局，是在中國的地盤上對陣中國最強的棋手，都列在下表。',
+  'World Rapid Open, Shanghai': '世界快棋公開賽，上海',
+  'Sep 26, 2025': '2025年9月26日',
+  'Match vs Cao Yanlei, Zhengzhou': '對曹岩磊番棋，鄭州',
+  'Dukang arena final, Zhengzhou': '酒祖杜康盃擂台賽年終總決賽，鄭州',
+  'Jan 9–10': '1月9–10日',
+  'Five Rams Cup, Guangzhou': '五羊盃，廣州',
+  'Feb 25–Mar 1': '2月25日–3月1日',
+  May: '5月',
+  'Vietnam vs Guangdong, Đà Nẵng': '越南對廣東，峴港',
+  Jul: '7月',
+  'The year since the title, events with a complete record.': '奪冠後的一年，只列戰績完整的賽事。',
+  "In January a tea company booked him and Cao Yanlei into a room in Zhengzhou for [ten rapid games](/broadcast/xiangqi/2026-chunqiu-dayie-ten-game-match) over three evenings, a rematch of their 2016 Han Xin Cup final in Sydney. Cao won the match 12 to 8, and [his page](/blog/cao-yanlei) tells it from his side. Lại's win was game eight, with black, in 18 moves. Cao's horse stepped back on move 15; Lại's chariot went straight up the file in reply, his horse followed, and Cao resigned three moves later.":
+    '一月，一家茶企把他和曹岩磊請到鄭州，三個晚上下[十盤快棋](/broadcast/xiangqi/2026-chunqiu-dayie-ten-game-match)，重演兩人 2016 年在雪梨的韓信盃決賽。曹岩磊以 12 比 8 贏下番棋，[他的專頁](/blog/cao-yanlei)從他那一方講了這場比賽。賴理兄贏的是第八盤，執黑，18 回合。曹岩磊第 15 回合退馬，賴理兄隨即進車直衝，馬也跟了上去，三個回合後曹岩磊認輸。',
+  "Cao Yanlei vs Lại Lý Huynh, 5 January 2026, game 8 of the match. The board opens after red's 15th move, with Lại to play as black.":
+    '曹岩磊對賴理兄，2026 年 1 月 5 日，番棋第 8 盤。棋盤從紅方第 15 回合之後開始，輪到執黑的賴理兄走。',
+  '2026 ten-game match, game 8': '2026 春丘大葉盃十局番棋，第 8 盤',
+  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions. In February it gave its first wildcard to Lại, and he reached the final. In the semi-final he beat Zhao Panwei, the opponent Cao Yanlei found hardest all year, winning the first game with red and drawing the second. Zhao's horse jumped forward on move 17; Lại's horses came forward and Zhao resigned after move 40. Cheng Yudong beat him in the final, a draw and then a loss. The [whole event](/broadcast/xiangqi/2026-wuyang-cup) is in the broadcast archive.":
+    '廣州的五羊盃邀請的是中國的全國冠軍。今年二月它第一次發出外卡，給了賴理兄，他一路打進決賽。半決賽他擊敗赵攀伟，就是曹岩磊全年最難對付的那位對手：第一盤執紅獲勝，第二盤弈和。赵攀伟第 17 回合躍馬進擊，賴理兄的雙馬隨之躍出，赵攀伟在第 40 回合後認輸。決賽他負於程宇东，一和一負。[整項賽事](/broadcast/xiangqi/2026-wuyang-cup)都在直播檔案裡。',
+  "Lại Lý Huynh vs Zhao Panwei, 28 February 2026, Five Rams Cup semi-final, game 1. The board opens after black's 17th move, with Lại to move.":
+    '賴理兄對赵攀伟，2026 年 2 月 28 日，五羊盃半決賽第 1 盤。棋盤從黑方第 17 回合之後開始，輪到賴理兄走。',
+  '2026 Five Rams Cup, semi-final': '2026 五羊盃，半決賽',
+  '"Since I won the world championship, more people in Vietnam follow xiangqi," he said in Guangzhou, "and more of them have started playing."':
+    '他在廣州說：「自從世錦賽奪冠之後，越南國內關注象棋的人越來越多了，開始下棋、喜歡象棋的人也明顯變多了。」',
+  'All 38 games': '全部 38 局',
+  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 15 of them are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; the round table from the WXF results book; the Five Rams Cup and arena records from VnExpress, and the Vietnam vs Guangdong record from VnExpress and 象棋热情; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '本頁的每一盤都在 Mistboard 的一個研究裡，附引擎的判斷和變化；其中 15 盤也在直播檔案裡，附網站的分析。資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；逐輪戰績表來自世界象棋聯合會的成績冊；五羊盃和擂台賽戰績來自 VnExpress，越南對廣東的戰績來自 VnExpress 和象棋熱情；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
+  'His games in the archive': '他在檔案裡的對局',
+  'Mingjian Li': '李銘堅',
+  'Chong Heung Ming': '莊宏明',
+  // tony-fung-ga-zen (zh-Hant), machine-drafted 2026-10-03. After the spread, like
+  // lai-ly-huynh's. Mainland players' names stay simplified and come from the spread
+  // (王大禹, 吕皓, 王禹博, 程宇东); Hong Kong and Taiwan players convert (馮家俊, 黃學謙,
+  // 鄭彥隆, 趙奕帆), as do 賴理兄 and the place names. Cup is 盃, as on the other pages.
+  "Tony Fung 冯家俊, Hong Kong's first Asian xiangqi champion: games and analysis":
+    '馮家俊，香港首位亞洲象棋個人冠軍：對局與分析',
+  'Tony Fung 冯家俊': '馮家俊',
+  "Hong Kong's first Asian individual champion and its 2022 world championship finalist. His last fifteen months and the 2022 run, six games on the board, 50 games analysed.":
+    '香港首位亞洲象棋個人冠軍，也是 2022 年打進世錦賽決賽的香港棋手。他最近十五個月和 2022 年的決賽之路，盤面上六盤對局，50 局附引擎分析。',
+  'Tony Fung in a white Hong Kong team shirt.': '身穿白色香港隊服的馮家俊。',
+  'English-speaking xiangqi players, and Hong Kong players who follow him through the Hong Kong association and the local sports press.':
+    '說英語的象棋棋友，以及透過香港象棋總會和本地體育媒體關注他的香港棋友。',
+  'Tony Fung in a white Hong Kong team shirt, one hand resting on the edge of a xiangqi board, smiling at the camera.':
+    '馮家俊身穿白色香港隊服，一隻手搭在棋盤邊上，對著鏡頭微笑。',
+  'Tony Fung in September 2023, before the Asian Games. Photo: Mr.C / Sportsoho.':
+    '2023 年 9 月亞運會前的馮家俊。圖片：Mr.C / Sportsoho 運動版圖。',
+  "Tony Fung 冯家俊 is the Asian champion. In October 2026 he won the Asian Individual Championship in Manila, beating China's Wang Yubo in a blitz playoff, the first Hong Kong player to win it. In 2022 he went through eight rounds of the World Xiangqi Championship with one loss and reached the final, and second place equalled Hong Kong's best result at the event. In August 2026 he scored nine points out of ten in the qualifier for China's top league, four wins and a draw, the best individual score there, shared with Cao Yanlei.":
+    '馮家俊是亞洲冠軍。2026 年 10 月，他在馬尼拉的亞洲象棋個人錦標賽奪冠，在超快棋加賽中擊敗中國的王禹博，是第一位拿下這項冠軍的香港棋手。2022 年世界象棋錦標賽，他八輪只輸一盤，打進決賽，拿到的亞軍追平了香港在這項賽事的最好成績。2026 年 8 月，他在中國象甲聯賽的預選賽十分拿下九分，四勝一和，是那裡最好的個人成績，與曹岩磊並列。',
+  "He was born in 1998 and has played for Hong Kong since he was 18. At the 2023 Asian Games in Hangzhou he was in the team that won bronze in the mixed team event, Hong Kong's first xiangqi medal at the Games. In April 2025 he won the Hong Kong Open for the first time, beating Cheng Yin Lung in the final. The WXF lists him as an International Master, and Hong Kong's own association lists him among its Hong Kong Grandmasters.":
+    '他生於 1998 年，18 歲起代表香港出賽。2023 年杭州亞運會，他所在的香港隊拿下象棋混合團體銅牌，這是香港在亞運會上的第一枚象棋獎牌。2025 年 4 月他首次奪得全港個人賽冠軍，決賽擊敗鄭彥隆。世界象棋聯合會把他列為國際大師，香港本地的象棋總會則把他列入香港特級大師名冊。',
+  'This page is his last fifteen months and the 2022 run to the final, with six of his games on the board. I ran the 50 games we hold through the same engine analysis Mistboard gives your own games.':
+    '這一頁寫的是他最近十五個月，以及 2022 年打進決賽的那一路，盤面上有他的六盤對局。我們收錄的 50 盤對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  '**He is hardest to beat with red.** Since July 2025 he has lost two of his twenty-three red games, both on one day of an open qualifier in Shanghai.':
+    '**執紅他最難被擊敗。** 2025 年 7 月以來，他二十三盤執紅只輸了兩盤，都是在上海一項海選賽的同一天輸的。',
+  '**He has no single opening.** His 27 red games here start four different ways, with the central cannon, the Palcorner Cannon, a horse or a soldier, and each of them comes up at least five times.':
+    '**他沒有固定的開局。** 這裡他的 27 盤執紅對局有四種開法：中炮、士角炮、起馬或進兵，每一種都至少出現五次。',
+  '**He plays the long game.** Talking to Sportsoho in 2023, he said that neither he nor his senior Wong Hok Him is the kind of player who goes for the kill from the opening; both like to draw a game out and keep the threat hidden, a needle in the cotton. His longest win here ran 81 moves.':
+    '**他下長棋。** 2023 年接受 Sportsoho 運動版圖採訪時，他說自己和師兄黃學謙都不是一開局就搏殺的類型，兩人都喜歡把戰線拉長，把威脅藏起來，綿裡藏針。他在這裡最長的一盤勝局走了 81 回合。',
+  'Asian Individual Championship, Manila': '亞洲象棋個人錦標賽，馬尼拉',
+  'Lin Zichong, Singapore': '林子沖，新加坡',
+  'Wang Yubo, China': '王禹博，中國',
+  'Liu Daxiang, East Malaysia': '劉大湘，東馬來西亞',
+  'Quang Nguyen, Australia': 'Quang Nguyen，澳洲',
+  'Cheng Yudong, China': '程宇東，中國',
+  'Lại Lý Huynh, Vietnam': '賴理兄，越南',
+  'Final, rapid': '決賽，快棋',
+  'Final, blitz': '決賽，超快棋',
+  "His Asian Individual Championship, round by round. Records for rounds one to six have not been published; the final's three games are in the study.":
+    '他的亞洲個人錦標賽，逐輪戰績。第一到第六輪的棋譜尚未公佈；決賽的三盤對局在研究裡。',
+  "Tony Fung Ga Zen vs Wang Yubo, 2026 Asian Individual Championship, final, blitz playoff, 6 October 2026. Fung won with red in 60 moves. The board opens after black's move 38, with Fung to move.":
+    '馮家俊對王禹博，2026 亞洲象棋個人錦標賽決賽，超快棋加賽，2026 年 10 月 6 日。馮家俊執紅 60 回合取勝。棋盤從黑方第 38 回合之後開始，輪到馮家俊走。',
+  '2026 Asian Individual Championship, final, blitz playoff':
+    '2026 亞洲象棋個人錦標賽，決賽，超快棋加賽',
+  "Fung won the [21st Asian Individual Championship](/broadcast/xiangqi/2026-asian-individual-men) in Manila, from 2 to 8 October, and did not lose a game. No Hong Kong player had won it before. In the final he met Wang Yubo, China's national champion of 2025, whom he had drawn with in round two. They drew the classical game and the rapid playoff, and Fung won the blitz playoff. Cheng Yudong of China was third, and Lại Lý Huynh, also unbeaten, was fourth.":
+    '馮家俊在馬尼拉贏得[第 21 屆亞洲象棋個人錦標賽](/broadcast/xiangqi/2026-asian-individual-men)，比賽從 10 月 2 日打到 8 日，他一盤未輸。此前沒有香港棋手拿過這項冠軍。決賽他對上 2025 年全國冠軍、中國的王禹博，兩人在第二輪已經下和過一次。慢棋和快棋加賽都是和棋，馮家俊在超快棋加賽中取勝。中國的程宇東獲得第三，同樣不敗的賴理兄排名第四。',
+  'China league qualifier, Hangzhou': '象甲預選賽，杭州',
+  "Teams outside China's top league play a qualifier to get in. Hong Kong sent a team to Hangzhou from 17 to 19 August, and Fung played all five rounds. He won four and drew the other, on the first day. Zhejiang Mintai and Cao Yanlei's Shanghai Jiahong went through.":
+    '不在象甲聯賽的隊伍要打預選賽才能進入聯賽。8 月 17 日至 19 日，香港派隊到杭州參賽，馮家俊五輪全部上場，贏了四盤，另一盤是第一天的和棋。最後晉級的是浙江民泰和曹岩磊所在的上海嘉弘。',
+  'His league qualifier, round by round.': '他的象甲預選賽，逐輪戰績。',
+  "Tony Fung Ga Zen vs Wang Dayu, 2026 China league qualifier, round 1, 17 August 2026. Fung won with red in 28 moves. The board opens after black's move 13, with Fung to move.":
+    '馮家俊對王大禹，2026 象甲預選賽第 1 輪，2026 年 8 月 17 日。馮家俊執紅 28 回合取勝。棋盤從黑方第 13 回合之後開始，輪到馮家俊走。',
+  '2026 China league qualifier, round 1': '2026 象甲預選賽，第 1 輪',
+  "Tony Fung Ga Zen vs Lu Hao, 2026 China league qualifier, round 3, 18 August 2026. Fung won with red in 40 moves. The board opens after black's move 16, with Fung to move.":
+    '馮家俊對吕皓，2026 象甲預選賽第 3 輪，2026 年 8 月 18 日。馮家俊執紅 40 回合取勝。棋盤從黑方第 16 回合之後開始，輪到馮家俊走。',
+  '2026 China league qualifier, round 3': '2026 象甲預選賽，第 3 輪',
+  'Cao Yanlei, who shared the top score and took Shanghai Jiahong into the league, has [his own page](/blog/cao-yanlei). The [qualifier](/broadcast/xiangqi/2026-league-qualifier) is in the broadcast archive.':
+    '與他並列最高分、並把上海嘉弘帶進聯賽的曹岩磊，也有[自己的專頁](/blog/cao-yanlei)。[這次預選賽](/broadcast/xiangqi/2026-league-qualifier)收在直播檔案裡。',
+  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions and runs a qualifying group for players from Hong Kong, Macau and Taiwan. Fung won it in January. He beat Chao Yi-fan of Chinese Taipei with a win and a draw, then drew two slow games with his Hong Kong teammate Wong Hok Him and went through when Wong ran out of time in the rapid playoff.":
+    '廣州的五羊盃邀請中國的全國冠軍參賽，另設一個港澳台組，給香港、澳門和台灣的棋手爭取名額。一月馮家俊拿下了這個組。他先以一勝一和擊敗中華台北的趙奕帆，再和香港隊友黃學謙下了兩盤慢棋，都是和棋，快棋加賽中黃學謙超時，馮家俊晉級。',
+  "Chao Yi-fan vs Tony Fung Ga Zen, 2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier, 29 January 2026. Fung won with black in 81 moves. The board opens after red's move 40, with Fung to move.":
+    '趙奕帆對馮家俊，2026 五羊盃港澳台組選拔賽，2026 年 1 月 29 日。馮家俊執黑 81 回合取勝。棋盤從紅方第 40 回合之後開始，輪到馮家俊走。',
+  '2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier': '2026 五羊盃，港澳台組選拔賽',
+  "In the final stage in February he drew with black against China's Meng Fanrui, whom he had also held to a draw at the world championship in Shanghai. Wang Yubo then beat him twice, and the cup went to Cheng Yudong. The [whole event](/broadcast/xiangqi/2026-wuyang-cup) is in the broadcast archive.":
+    '二月的決賽階段，他執黑和了中國的孟繁睿，在上海世錦賽上他也和孟繁睿下成和棋。隨後王禹博兩次擊敗他，五羊盃最後由程宇东奪得。[整項賽事](/broadcast/xiangqi/2026-wuyang-cup)都在直播檔案裡。',
+  "Meng Fanrui vs Tony Fung Ga Zen, 2026 Five Rams Cup, final stage, 25 February 2026. Drawn in 28 moves. The board opens after red's move 12, with Fung to move.":
+    '孟繁睿對馮家俊，2026 五羊盃決賽階段，2026 年 2 月 25 日。28 回合弈和。棋盤從紅方第 12 回合之後開始，輪到馮家俊走。',
+  '2026 Five Rams Cup, final stage': '2026 五羊盃，決賽階段',
+  'Every event since July 2025': '2025 年 7 月以來的每項賽事',
+  'At the 2025 World Championship in Shanghai he finished eighth. The table has every event since July 2025 for which we hold his full record.':
+    '2025 年上海世錦賽他排名第八。下表列出 2025 年 7 月以來我們有他完整戰績的每一項賽事。',
+  'Shanghai Cup': '上海盃',
+  'League qualifier, Hangzhou': '象甲預選賽，杭州',
+  'World Championship, Shanghai': '世錦賽，上海',
+  'National Games, mass-participation final, Shenzhen': '全運會群眾比賽決賽，深圳',
+  'Shanghai Cup, open qualifier': '上海盃海選賽',
+  'The Five Rams Cup and the September 2025 World Rapid Open are left out: some of his games there are missing from our sources.':
+    '五羊盃和 2025 年 9 月的世界快棋公開賽沒有列入：我們的資料來源缺了他在這兩項賽事的部分對局。',
+  '2022 World Championship, Kuching': '2022 年世錦賽，古晉',
+  "The championship ran in Kuching, in Sarawak, from 24 to 28 October 2022, eight rounds and then a final between the top two. Fung won five, drew two and lost one, and finished level with Vietnam's Nguyễn Thành Bảo on 12 points, ahead on tiebreak. He lost the final to China's Wang Tianyi. Second place equalled Hong Kong's best result at a world championship, Wong Hok Him's in 2019.":
+    '這屆世錦賽 2022 年 10 月 24 日至 28 日在砂拉越的古晉舉行，先賽八輪，再由前兩名下決賽。馮家俊五勝兩和一負，與越南的阮成保同積 12 分，憑小分領先。決賽他負於中國的王天一。這個亞軍追平了香港在世錦賽的最好成績，也就是黃學謙 2019 年的成績。',
+  'The win that put him in the final came in round eight, with black, against Cheng Yin Lung, his Hong Kong teammate and the man he would beat again in the Hong Kong Open final two and a half years later.':
+    '把他送進決賽的那盤勝局在第八輪，他執黑對鄭彥隆。鄭彥隆是他的香港隊友，兩年半後他在全港個人賽決賽又一次擊敗了對方。',
+  "Cheng Yin Lung vs Tony Fung Ga Zen, 2022 World Xiangqi Championship, round 8, 27 October 2022. Fung won with black in 35 moves. The board opens after red's move 25, with Fung to move.":
+    '鄭彥隆對馮家俊，2022 世界象棋錦標賽第 8 輪，2022 年 10 月 27 日。馮家俊執黑 35 回合取勝。棋盤從紅方第 25 回合之後開始，輪到馮家俊走。',
+  '2022 World Xiangqi Championship, round 8': '2022 世界象棋錦標賽，第 8 輪',
+  'Lại Lý Huynh, who won the title in 2025 and has [his own page](/blog/lai-ly-huynh), drew with Fung in round six, and again at the Asian Games a year later.':
+    '2025 年奪冠的賴理兄也有[自己的專頁](/blog/lai-ly-huynh)，他在第六輪與馮家俊弈和，一年後在亞運會上兩人又下成和棋。',
+  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 13 of them are in the broadcast archive with the site's analysis.":
+    '本頁的每一盤都在 Mistboard 的一個研究裡，附引擎的判斷和變化；其中 13 盤也在直播檔案裡，附網站的分析。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event; the 2022 results from the Chinese Xiangqi Association's report on Sina and from China News Service; the Five Rams Cup qualifier from Yangcheng Evening News; the Asian Games from Sing Tao; the 2026 Asian Individual Championship from HK01, Sing Tao and Bongda Plus; the Hong Kong Open from HK01 and Sportsroad; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；2022 年的成績來自新浪刊發的中國象棋協會報導和中新網；五羊盃選拔賽來自《羊城晚報》；亞運會來自《星島》；2026 年亞洲象棋個人錦標賽來自 HK01、《星島》和 Bongda Plus；全港個人賽來自 HK01 和體路 Sportsroad；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
+  'Tony Fung Ga Zen': '馮家俊',
+  'Chao Yi-fan': '趙奕帆',
+  'Cheng Yin Lung': '鄭彥隆',
+  // zuo-wenjing (zh-Hant), machine-drafted 2026-10-11, not native-reviewed. After the
+  // spread, like tony-fung-ga-zen's. Mainland players' names stay simplified and come
+  // from the spread (左文静, 陈幸琳, 王琳娜, 王子涵, 唐丹 and her 2026 opponents);
+  // Taiwan, Singapore and Vietnam players convert (李孟儒, 陳茗芳, 阮黃燕, 吳蘭香),
+  // as do the place names. Cup is 盃, as on the other pages.
+  "The 2022 women's world champion and a double gold medallist at the 2023 Asian Games. Her title run in Kuching and her 2026 season, five games on the board, 32 games analysed.":
+    '2022 年女子世界冠軍，2023 年亞運會兩枚金牌得主。她在古晉的奪冠之路和她的 2026 賽季，盤面上五盤對局，32 局附引擎分析。',
+  'Zuo Wenjing smiling, holding up her Asian Games gold medal.': '左文静微笑著舉起她的亞運會金牌。',
+  "English-speaking xiangqi players who follow the women's game. She has no public social account, so the page is found through search and the site.":
+    '關注女子象棋的說英語的棋友。她沒有公開的社群帳號，所以這一頁靠搜尋和本站被找到。',
+  "Zuo Wenjing won the 2022 women's world championship in Kuching with six wins and a draw, and two gold medals at the 2023 Asian Games.":
+    '左文静在古晉以六勝一和奪得 2022 年女子世界冠軍，又在 2023 年亞運會上拿下兩枚金牌。',
+  "In 2026 she went unbeaten through China's national team championship, six wins and a draw, and reached the Shanghai Cup semi-final.":
+    '2026 年她在全國象棋團體賽上保持不敗，六勝一和，還打進了上海盃半決賽。',
+  'With red she opens with the elephant: 15 of her 22 red games here start that way.':
+    '執紅她用飛相開局：這裡她的 22 盤執紅對局，有 15 盤這樣開局。',
+  'Her median accuracy at the 2022 championship was 96, against 91.7 over her 26 games since December 2025.':
+    '她在 2022 年世錦賽的準確率中位數是 96，而 2025 年 12 月以來的 26 盤對局是 91.7。',
+  'Zuo Wenjing with her gold medal at the 2023 Asian Games in Hangzhou. Photo: Han Chuanhao / Xinhua.':
+    '2023 年杭州亞運會上手持金牌的左文静。圖片：韩传号 / 新華社。',
+  'Zuo Wenjing in a white China team jacket, smiling through round glasses, holding flowers in one hand and her gold medal up in the other.':
+    '左文静身穿白色中國隊外套，戴著圓框眼鏡微笑，一隻手拿著鮮花，另一隻手舉起金牌。',
+  "Zuo Wenjing 左文静 is the 2022 women's world xiangqi champion. In Kuching that October she won six of her seven games and drew the other, with her Chinese teammate Chen Xinglin, and won the last round to take the title. A year later, at the Asian Games in Hangzhou, she won two gold medals: the women's individual event, beating Wang Linna in the final, and the mixed team event with China.":
+    '左文静是 2022 年女子世界象棋冠軍。那年十月在古晉，她七盤贏了六盤，另一盤與中國隊友陈幸琳弈和，最後一輪獲勝奪得冠軍。一年後在杭州亞運會上，她拿下兩枚金牌：一枚是女子個人賽，決賽擊敗王琳娜；另一枚是隨中國隊拿下的混合團體賽。',
+  'She was born in 1993 in Zibo, in Shandong, and plays for Hubei, which she joined as a child as a pupil of Liu Dahua. She became a national master in 2006 and a Chinese grandmaster in 2022, the year of her world title. The WXF lists her as an International Master.':
+    '她 1993 年生於山東淄博，代表湖北出賽，少年時加入湖北隊，師從柳大华。2006 年獲得全國大師稱號，2022 年，也就是她奪得世界冠軍的那一年，成為象棋特級大師。世界象棋聯合會把她列為國際大師。',
+  'This page is her 2022 world championship and her season since December 2025, with five of her games on the board. I ran the 32 games we hold through the same engine analysis Mistboard gives your own games.':
+    '這一頁寫的是她的 2022 年世錦賽和她 2025 年 12 月以來的賽季，盤面上有她的五盤對局。我們收錄的 32 盤對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  'How she plays': '她的棋風',
+  '**She opens with the elephant.** In 15 of her 22 red games here her first move brings an elephant to the centre, and she played it in three of her four red games at the 2022 championship.':
+    '**她用飛相開局。** 這裡她的 22 盤執紅對局中，有 15 盤第一步就是飛相；2022 年世錦賽她四盤執紅，有三盤這樣走。',
+  '**She was at her most accurate in Kuching.** Her median accuracy over the six championship games we hold is 96, against 91.7 over her 26 games since December 2025. In the last round, the game that decided the title, the engine marks no inaccuracy on any of her moves.':
+    '**她在古晉下得最精準。** 我們收錄的六盤世錦賽對局，她的準確率中位數是 96，而 2025 年 12 月以來的 26 盤是 91.7。決定冠軍歸屬的最後一輪，引擎沒有給她的任何一步標出失準。',
+  "**Her opponents make the first mistake.** In 16 of her 20 wins here, the engine marks her opponent's first mistake before any of hers.":
+    '**對手先出錯。** 這裡她贏的 20 盤中有 16 盤，引擎標出的第一個錯著出自對手，早於她的任何錯著。',
+  'The title': '奪冠',
+  "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Chinese Taipei, and the title with it.":
+    '第十七屆世界象棋錦標賽在砂拉越的古晉舉行，女子組 2022 年 10 月 24 日至 29 日賽七輪。左文静前四盤全勝，第五輪與陈幸琳弈和，最後兩輪都贏了。那時冠軍已註定落在兩位中國棋手之一。最後一盤她擊敗中華台北的彭柔安，冠軍也隨之到手。',
+  'Lee Meng Ju, Chinese Taipei': '李孟儒，中華台北',
+  'Anna Yin Meixian, United States': 'Anna Yin Meixian，美國',
+  'Ngo Lan Huang': '吳蘭香',
+  'Fiona Tan Min Fang, Singapore': '陳茗芳，新加坡',
+  'Chen Xinglin, China': '陈幸琳，中國',
+  'Nguyen Hoang Yen, Vietnam': '阮黃燕，越南',
+  'Nguyen Hoang Yen': '阮黃燕',
+  'Peng Jou-An, Chinese Taipei': '彭柔安，中華台北',
+  "Her 2022 World Championship, round by round. Names and federations as the WXF's game records give them; round three's federation is left out because other sources give a different one. The record of round one does not replay, so that game is on no board.":
+    '她的 2022 年世錦賽，逐輪戰績。姓名和所屬協會依照世界象棋聯合會棋譜集的寫法；第三輪的協會沒有列出，因為其他來源給出的不一樣。第一輪的棋譜無法回放，所以那盤不在盤面上。',
+  "Nguyen Hoang Yen vs Zuo Wenjing, 2022 World Xiangqi Championship, women, round 6, 27 October 2022. Zuo won with black in 37 moves. The board opens after red's move 10, with Zuo to move.":
+    '阮黃燕對左文静，2022 世界象棋錦標賽女子組第 6 輪，2022 年 10 月 27 日。左文静執黑 37 回合取勝。棋盤從紅方第 10 回合之後開始，輪到左文静走。',
+  '2022 World Xiangqi Championship, women, round 6': '2022 世界象棋錦標賽，女子組第 6 輪',
+  "Zuo Wenjing vs Peng Jou-An, 2022 World Xiangqi Championship, women, round 7, 29 October 2022. Zuo won with red in 32 moves. The board opens after black's move 17, with Zuo to move.":
+    '左文静對彭柔安，2022 世界象棋錦標賽女子組第 7 輪，2022 年 10 月 29 日。左文静執紅 32 回合取勝。棋盤從黑方第 17 回合之後開始，輪到左文静走。',
+  '2022 World Xiangqi Championship, women, round 7': '2022 世界象棋錦標賽，女子組第 7 輪',
+  "Tony Fung of Hong Kong, who reached the men's final at the same championship, has [his own page](/blog/tony-fung-ga-zen).":
+    '在同一屆世錦賽打進男子組決賽的香港棋手馮家俊，也有[自己的專頁](/blog/tony-fung-ga-zen)。',
+  'Asian Games, Hangzhou': '杭州亞運會',
+  'At the 2023 Asian Games in Hangzhou she won the women\'s individual gold, beating Wang Linna in the final. Her second gold came in the mixed team event, where she played three games for China, won two and drew the other. "I\'m very happy to win two golds," she told the Hubei Sports Bureau. "It\'s my first time at an event this big. I got to see a lot of my idols, and to play against top players."':
+    '在 2023 年杭州亞運會上，她奪得女子個人賽金牌，決賽擊敗王琳娜。第二枚金牌來自混合團體賽，她為中國隊下了三盤，兩勝一和。她對湖北省體育局說：「獲得2金很開心！我第一次參加這樣的大型賽會，可以看到很多自己的偶像，還可以跟高手過招。」',
+  'Her 2026 season': '她的 2026 賽季',
+  'National Team Championship, Zhangjiakou': '全國象棋團體賽，張家口',
+  "The national team championship ran from 28 March to 2 April 2026. Zuo played all seven rounds for Hubei's women's team, drew the first with black against Huang Leilei and won the other six.":
+    '全國象棋團體賽於 2026 年 3 月 28 日至 4 月 2 日舉行。左文静代表湖北女隊打滿七輪，首輪執黑與黄蕾蕾弈和，其餘六輪全勝。',
+  'Her national team championship, round by round.': '她的全國團體賽，逐輪戰績。',
+  "Zuo Wenjing vs Fu Anxin, 2026 National Team Championship, women, 28 March 2026. Zuo won with red in 37 moves. The board opens after black's move 9, with Zuo to move.":
+    '左文静對傅安欣，2026 全國象棋團體賽女子組，2026 年 3 月 28 日。左文静執紅 37 回合取勝。棋盤從黑方第 9 回合之後開始，輪到左文静走。',
+  '2026 National Team Championship, women': '2026 全國象棋團體賽，女子組',
+  'The [whole event](/broadcast/xiangqi/2026-womens-xiangqi-team-championship) is in the broadcast archive.':
+    '[整項賽事](/broadcast/xiangqi/2026-womens-xiangqi-team-championship)都在直播檔案裡。',
+  "At the Shanghai Cup, from 9 to 13 September, she reached the semi-final of the women's event and lost it to Wang Zihan of Hebei. We hold her four games with red there: two wins, a draw and that loss.":
+    '9 月 9 日至 13 日的上海盃，她打進女子組半決賽，負於河北的王子涵。我們收錄了她在那裡的四盤執紅對局：兩勝一和，以及那盤敗局。',
+  "Zuo Wenjing vs Dong Yunan, 2026 Shanghai Cup, women, 10 September 2026. Zuo won with red in 34 moves. The board opens after black's move 24, with Zuo to move.":
+    '左文静對董毓男，2026 上海盃女子組，2026 年 9 月 10 日。左文静執紅 34 回合取勝。棋盤從黑方第 24 回合之後開始，輪到左文静走。',
+  '2026 Shanghai Cup, women': '2026 上海盃，女子組',
+  "Women's league, Suifenhe": '女子甲級聯賽，綏芬河',
+  "A week later she played two events back to back in Suifenhe: the qualifier for China's women's league, from 20 to 22 September, and then the first stage of the league itself, to 27 September. She scored five wins, a draw and a loss in the qualifier, the loss to Wang Linna, whom she had beaten for the Asian Games gold. In the league she won six, drew two and lost two, and in round five she played Wang Zihan twice, two weeks after the Shanghai semi-final, winning with black and drawing with red.":
+    '一週後，她在綏芬河接連參加兩項賽事：先是 9 月 20 日至 22 日的全國象棋女子甲級聯賽預選賽，接著是聯賽本身的第一階段，打到 9 月 27 日。預選賽她五勝一和一負，輸給了王琳娜，正是她在亞運會金牌之戰中擊敗的對手。聯賽中她六勝兩和兩負，第五輪兩次對陣王子涵，距上海盃半決賽只有兩週，執黑取勝，執紅弈和。',
+  "Zuo Wenjing vs Wu Dan, 2026 Women's League qualifier, 21 September 2026. Zuo won with red in 21 moves. The board opens after black's move 5, with Zuo to move.":
+    '左文静對吴丹，2026 全國象棋女子甲級聯賽預選賽，2026 年 9 月 21 日。左文静執紅 21 回合取勝。棋盤從黑方第 5 回合之後開始，輪到左文静走。',
+  "2026 Women's League qualifier": '2026 全國象棋女子甲級聯賽預選賽',
+  'The [qualifier](/broadcast/xiangqi/2026-womens-league-qualifier) and the [league](/broadcast/xiangqi/2026-womens-xiangqi-league) are in the broadcast archive.':
+    '[預選賽](/broadcast/xiangqi/2026-womens-league-qualifier)和[聯賽](/broadcast/xiangqi/2026-womens-xiangqi-league)都在直播檔案裡。',
+  'Every event with her full record': '成績齊全的每項賽事',
+  "Women's league, first stage, Suifenhe": '女子甲級聯賽第一階段，綏芬河',
+  "Women's league qualifier, Suifenhe": '女子甲級聯賽預選賽，綏芬河',
+  'World Championship, Kuching': '世錦賽，古晉',
+  'Every event for which we hold all her results. The Shanghai Cup, the Xintai Cup, the July squad selection and the December 2025 national individual championship are left out: we hold only some of her games there.':
+    '我們收齊她全部成績的每一項賽事。上海盃、新泰盃、七月的國家集訓隊選拔賽和 2025 年 12 月的全國象棋個人賽沒有列入：我們只收錄了她在那裡的部分對局。',
+  'Where she stands': '她現在的位置',
+  "Her 2026 games are in the broadcast archive with the site's analysis, and her player page there has her results.":
+    '她的 2026 年對局都在直播檔案裡，附網站的分析；她在那裡的棋手頁面列有她的成績。',
+  "Sources: game records from dpxq.com, which may not hold every game of an event, and for 2022 from the WXF's book of game records; the 2022 result from Xinhua and Viet Nam News; the Asian Games from Sina and the Hubei Sports Bureau, which with Chinese Wikipedia also gives her biography; the Shanghai Cup semi-final from The Paper; her titles from the WXF title list of December 2022 and China's national registration list of 2023; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局，2022 年的棋譜來自世界象棋聯合會的棋譜集；2022 年的成績來自新華社和 Viet Nam News；亞運會來自新浪和湖北省體育局，她的生平也來自湖北省體育局和中文維基百科；上海盃半決賽來自澎湃新聞；她的稱號來自世界象棋聯合會 2022 年 12 月的稱號名單和 2023 年的全國等級稱號註冊名單；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
+  "Four years after Kuching she still wins most of her games. She went through the spring's team championship without a loss, reached the last four in Shanghai, and won 11 of her 17 games across the two September league events. The world title has gone elsewhere since: to Tang Sinan in 2023 and to Tang Dan in 2025, and Tang Dan beat her at the national individual championship in Jinan in December 2025. What has not changed since 2022 is the opening: she still starts with the elephant, and her wins still come from the other side's first mistake.":
+    '古晉奪冠四年後，她仍然贏下大部分對局。春天的團體賽她一盤未輸，在上海打進四強，九月的兩項聯賽賽事 17 盤贏了 11 盤。此後世界冠軍另有歸屬：2023 年是唐思楠，2025 年是唐丹，唐丹還在 2025 年 12 月濟南的全國象棋個人賽上擊敗了她。2022 年以來沒有變的是開局：她仍然以飛相起手，她的勝局仍然來自對方的第一個錯著。',
+  'Her games in the archive': '她在檔案裡的對局',
+  "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
+    '左文静，2022 年女子世界象棋冠軍：對局與分析',
   // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. After the
   // spread, or the Simplified entries win (they did, for one deploy).
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：對局、戰績與分析',
@@ -2933,18 +7381,9 @@ const ZH_HANT: Record<string, string> = {
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
-  'World Championship Game 11, Sochi 2014': '世界冠軍賽第 11 局，2014 年索契',
-  'Anand resigns. Carlsen (White) wins the match.': '阿南德認輸。卡爾森（白方）贏得這場比賽。',
-  'Sacrifice the Horse in 13': '棄馬十三著',
-  'Classic manual, 1632': '古譜，1632 年',
-  "Checkmate on move 13. Red's paired cannons pin the general on the open central file.":
-    '第 13 回合將死。紅方雙炮沿著打通的中路把將困死。',
   'PikaJieQi self-play': 'PikaJieQi 自對弈',
   'Red works through the reveals and delivers checkmate on move 36.':
     '紅方在一次次揭子中推進，第 36 回合將死。',
-  'Engine self-play · 2.5 s per move': '引擎自對弈 · 每步 2.5 秒',
-  'Black mates on move 43 with the soldier to b1, the same soldier that crossed the river on move 4. Red’s general has nowhere to go: its own soldier blocks a2, and Black covers both b1 and b2.':
-    '黑方第 43 回合以兵到 b1 將死，正是第 4 回合過河的那個兵。紅帥無處可走：己方的兵擋住 a2，而 b1 和 b2 都在黑方控制之下。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Script conversion of the Simplified above, not an independent translation:
   // the coverage test requires the two to stay parallel in length and to carry
@@ -3056,8 +7495,158 @@ const ZH_HANT: Record<string, string> = {
   'Rejected: two winning answers.': '拒絕：兩個都能贏的答案。',
   Solver: '解題方',
   Defence: '防守方',
+  // -- Helpmates in Xiangqi (helpmates-in-xiangqi): machine-drafted 2026-10-10, not native-reviewed.
+  // Terms follow the study 5CdUHFsq zh names (合作殺, 純殺, 純正殺, 炮架) and solver-audit (困斃, 排局). --
+  'Helpmates in Xiangqi': '象棋合作殺',
+  'In a helpmate both sides cooperate so Red can mate. A search found 164 helpmates in two for xiangqi; try the best ten, solutions hidden until you ask.':
+    '合作殺裡，雙方合作，讓紅方將死對方。搜尋找出了164道兩步合作殺，我們挑出其中最好的十道供你試解，答案在你要求前保持隱藏。',
+  'A helpmate turns a problem inside out: both sides cooperate so that one side is mated in a stated number of moves. We searched one slice of it in xiangqi, helpmate in two with Black first and Red mating: 1,470 sound, 186 distinct, 164 after a re-proof.':
+    '合作殺把排局翻了個面：雙方合作，讓一方在規定步數內被將死。我們在象棋裡搜尋了其中一小塊：兩步合作殺，黑方先走，紅方成殺。結果是1,470道無誤，186道互不相同，複核後剩164道。',
+  "Xiangqi's own rules shape the genre. A general with no legal move has lost, which cost us 22 problems, and the cannon can mate over a screen Black supplies, as 19 of the 164 do.":
+    '象棋自己的規則塑造了這個體裁。將帥無子可走即判負（困斃），這讓我們損失了22道題；炮可以借黑方送來的炮架成殺，164道中有19道如此。',
+  "The good ones look impossible. In one, Red has a general and a horse against twelve black pieces, and of Black's 45 legal first moves exactly one leads to mate.":
+    '好題看起來不可能。其中一道，紅方只有帥和一馬，對黑方十二子；黑方45種合法的第一步中，只有一種能導向殺局。',
+  'Black to move. Red has a general and a horse; Black has twelve pieces.':
+    '黑方先走。紅方有帥和一馬；黑方有十二子。',
+  "Two moves each later, mate. Black's horse went out and came back to e9, walling in its own general, and Red's horse reached f8.":
+    '雙方各走兩步後成殺。黑馬出去又回到e9，堵住了自己的將；紅馬跳到f8。',
+  'In an ordinary [xiangqi](/rules/xiangqi) (Chinese chess) problem the two sides are enemies: Red plays, Black defends as well as it can, and Red wins anyway. A helpmate drops the fight. Both sides cooperate so that one of them is mated in a stated number of moves. The claim is not that the losing side cannot stop it; it is that out of everything both sides could play, this is the only line that works.':
+    '在普通的[象棋](/rules/xiangqi)排局裡，雙方是對手：紅方進攻，黑方盡力防守，紅方仍然取勝。合作殺放下了對抗。雙方合作，讓其中一方在規定步數內被將死。它要證明的不是被殺的一方擋不住，而是在雙方所有可能的走法中，只有這一路行得通。',
+  'The genre is old in Western chess, where the usual form, written h#n, has Black move first and White mate on its nth move. That is a convention, not a limit: a helpmate can run to any length, and either side can move first or be mated. The classical xiangqi manuals ask for a win or a draw against the best defence, never for cooperation, so we asked whether a helpmate works on this board, starting with one narrow slice: helpmate in two, Black first, Red mates. Can a search compose sound ones, and are any of them worth solving?':
+    '合作殺在西洋棋裡歷史悠久，常見形式記作h#n：黑方先走，白方在第n步將殺。這只是慣例，不是限制：合作殺可以任意長，任何一方都可以先走，也可以是被殺的一方。古典象棋譜要求的都是面對最佳防守取勝或求和，從不要求雙方合作，所以我們想知道合作殺在這張棋盤上是否成立，並從很窄的一塊開始：兩步合作殺，黑先，紅殺。搜尋能否編出無誤的題？其中有沒有值得一解的？',
+  'Where this sits in the tradition': '它在傳統中的位置',
+  'Xiangqi problem composition is the older tradition. The earliest known problem, Two Dragons Leave the Sea, is in a Southern Song encyclopedia dated to 1266. The classical manuals followed: a Ming collection of 550 problems in 1570, The Secret in the Orange in 1632, then the Qing collections, one of which (1801) holds the famous street problems such as Seven Stars Gathering ([a history of the manuals](https://www.xiangqi.com/articles/a-short-introduction-to-the-xiangqi-manuals-up-till-the-ming-dynasty)).':
+    '象棋排局是更古老的傳統。已知最早的排局「二龍出海」，見於南宋類書《事林廣記》，年代定為1266年。古典棋譜隨後出現：1570年收局550則的《適情雅趣》，1632年的《橘中秘》，再到清代各譜，其中1801年的《竹香齋象戲譜》收有「七星聚會」等著名江湖排局（[棋譜簡史](https://www.xiangqi.com/articles/a-short-introduction-to-the-xiangqi-manuals-up-till-the-ming-dynasty)）。',
+  'What runs through all of them is a fixed goal. Each problem names its result, a win or a draw, and the solver plays the losing side as well as it can be played. The Ming problems are nearly all wins; the Qing ones are mostly draws. The tradition grew by varying the position, generation after generation, rather than by varying what the solver is asked to do.':
+    '貫穿其中的是固定的目標。每道題都標明結果，勝或和，解題者替敗方走出最頑強的應著。明代的題幾乎都是勝局，清代的多為和局。這個傳統靠一代代變換局面發展，而不是變換對解題者的要求。',
+  "Western composition went the other way: it kept the board and changed the goal. Max Lange published the first helpmate in 1854, with White moving first and more than one solution; Sam Loyd's of 1860 was the first with Black to move, and A. Barbe's of 1861 the first with a single solution ([the genre's history](https://en.wikipedia.org/wiki/Helpmate)). Selfmates, series movers and the rest came the same way. The helpmate is now the largest single section of the FIDE Album, the official anthology of the best problems: 2,539 of the 9,218 entries for 2010 to 2012 ([FIDE](https://www.fide.com/images/stories/NEWS_2017/FIDE_News/FIDE_Album_2010-2012_sample_pages.pdf)).":
+    '西方排局走了另一條路：保留棋盤，改變目標。馬克斯·朗格於1854年發表了第一道合作殺，白方先走，且不止一解；薩姆·勞埃德1860年的題首次讓黑方先走，A. 巴爾貝1861年的題首次只有唯一解（[該體裁的歷史](https://en.wikipedia.org/wiki/Helpmate)）。自殺題、連續著法題等也都是這樣來的。如今合作殺是國際棋聯排局年鑑（FIDE Album，官方的優秀排局選集）中最大的單一類別：2010至2012年卷9,218則中占2,539則（[FIDE](https://www.fide.com/images/stories/NEWS_2017/FIDE_News/FIDE_Album_2010-2012_sample_pages.pdf)）。',
+  "Shogi took the idea from chess too. Its problemists call it bakazume, the cooperative mate: both sides work together to mate the defending king in the fewest moves, and, as in shogi's ordinary mating problems, the attacker moves first (in chess the mated side usually does), normally has no king on the board, and the defender holds every piece not in play. Fairy shogi problems with this goal were being published by the 1960s; in 1970 Kato Tetsu published one 163 moves long, and in 1971 the magazine Tsume Shogi Paradise began a regular series of them ([Japanese Wikipedia](https://ja.wikipedia.org/wiki/%E3%83%95%E3%82%A7%E3%82%A2%E3%83%AA%E3%83%BC%E8%A9%B0%E5%B0%86%E6%A3%8B)).":
+    '將棋也從西洋棋那裡借來了這個想法。將棋排局家稱之為ばか詰（bakazume），即合作詰將：雙方合作，用最少的步數將死守方的王；與將棋的普通詰將棋一樣，攻方先走（西洋棋裡通常是被殺的一方先走），盤上一般沒有攻方的王，守方持有所有不在盤上的棋子。以此為目標的變體詰將棋到1960年代已有發表；1970年Kato Tetsu發表了一道長達163手的作品，1971年《詰将棋パラダイス》雜誌開始定期刊登這類題（[日文維基百科](https://ja.wikipedia.org/wiki/%E3%83%95%E3%82%A7%E3%82%A2%E3%83%AA%E3%83%BC%E8%A9%B0%E5%B0%86%E6%A3%8B)）。',
+  'Cooperative mate in three, attacker first. The attacker, playing up the board, has a dragon on 3d, the red piece: a promoted rook, it moves as a rook or one square diagonally. The defender, whose pieces point down the board, has a king on 2b and a lance on 2e, which moves any distance straight ahead.':
+    '三步合作詰，攻方先走。攻方向上進攻，在3d有一枚龍王，即紅色的棋子：升變後的飛車，可以像飛車一樣走，也可以斜走一格。守方的棋子朝下，王在2b，香車在2e，香車可以向正前方走任意格。',
+  'The dragon takes the lance on 2e with check, the king steps to 1c, and the attacker drops the captured lance on 1d. The dragon guards 1d and the whole 2-file, and the lance sees through the king to 1b.':
+    '龍王吃掉2e的香車並將軍，王走到1c，攻方把吃來的香車打在1d。龍王控制1d和整條2路，香車的攻擊線穿過王直達1b。',
+  "The example on Japanese Wikipedia's page shows what the cooperative goal changes. Dropping the lance farther from the king on the 1-file looks just as good, but then the defender, who holds every spare piece, can drop one in between. An ordinary shogi problem discounts an interposition that is simply captured; a cooperative one counts it, so only 1d mates in three. Our search of the position agrees: it is the only cooperative mate in three, and there is none in one.":
+    '日文維基百科這一頁的例子說明了合作目標帶來的變化。把香車打在1路上離王更遠的地方，看起來同樣可行，但這樣一來，持有所有餘子的守方就能在中間打入一子。普通詰將棋不計較一個只會被直接吃掉的墊子；合作詰則要計算它，所以只有打在1d才能三步成殺。我們對這個局面的搜尋結果一致：它是唯一的三步合作殺，且不存在一步殺。',
+  "Henry Forsberg, 1935. The solution is 1. Qf6 Nc5 2. Qb2 Ra4 mate: the black queen walks to b2 to block its own king's last square, and the white rook mates. The problem is famous for its twins: put a rook, bishop, knight or pawn on a6 instead of the queen and each has its own single solution, five mates from one diagram.":
+    '亨利·福斯伯格，1935年。解法是 1. Qf6 Nc5 2. Qb2 Ra4 將殺（Q為皇后，N為騎士，R為城堡）：黑皇后走到b2，堵住自己國王的最後一格，白城堡成殺。這道題以「孿生題」聞名：把a6的皇后換成城堡、主教、騎士或兵，每一種都有各自的唯一解，一張圖五種殺法。',
+  'We have not found a xiangqi helpmate older than ours. Web searches in Chinese for the names chess problemists give the helpmate turned up chess problems and ordinary xiangqi mating patterns, never a cooperative xiangqi problem, and the classical manuals all ask for a win or a draw. If you know of an earlier one, [tell us](/contact).':
+    '我們還沒有找到比我們更早的象棋合作殺。用西洋棋排局家對合作殺的各種叫法做中文網路搜尋，找到的是西洋棋題和普通的象棋殺法，從來沒有合作的象棋題；古典棋譜要求的也都是勝或和。如果你知道更早的一道，請[告訴我們](/contact)。',
+  'Composing them': '如何編題',
+  'Defender holds every other piece': '守方持有其餘所有棋子',
+  'Attacker holds nothing': '攻方手中無子',
+  'The generator is the naive half of this work, and it is worth saying so plainly. A position maker deals diagrams blind, either every placement of a few pieces or random armies from a profile that fixes how much material each side gets. The solver walks every cooperative line of two moves a side, Black first, and keeps a diagram only if exactly one line mates. Nothing in the generator knows what a good problem is: it aims at no theme, prefers no quiet move over a capture, and has no sense of economy. The profiles that gave Black an army and Red one or two pieces produced most of what is worth looking at.':
+    '生成器是這項工作中天真的一半，這一點值得直說。局面生成器盲目地擺出圖形：要麼枚舉少數幾子的所有擺法，要麼按設定雙方子力的配置隨機擺出陣容。求解器遍歷雙方各兩步的所有合作走法，黑方先走，只保留恰好一路成殺的圖形。生成器本身完全不知道什麼是好題：它不瞄準任何主題，不偏好靜著勝過吃子，也沒有經濟性的概念。給黑方整支軍隊、紅方一兩個子的配置，產出了大部分值得一看的題。',
+  "This is the floor, and there is a lot of room above it. A composer starts from an idea and builds the position around it, and a search can work the same way. It could start from the mate it wants, say a cannon mating over a black screen, and unwind it to positions two moves earlier instead of dealing until one turns up. It could take a good problem and change it a piece at a time, keeping the changes that make the right first move harder to see or leave less red material idle. It could score what a solver feels: how many of Black's first moves look as natural as the right one, and whether the key move is a quiet one. Or it could skip dealing entirely. Chess composers now have [exhaustive helpmate tables](https://github.com/osick/helpmate-tablebase), complete through five pieces, that list every sound helpmate for a given material and leave a search only the choosing; we did not build one for xiangqi. Each of these would find problems ours cannot.":
+    '這只是起點，上面還有很大的空間。排局家從一個構思出發，圍繞它搭建局面，搜尋也可以這樣做。它可以從想要的殺形出發，比如炮隔著黑方的炮架將殺，再倒推出兩步之前的局面，而不是一直擺到碰上一道為止。它可以拿一道好題，一次改動一個子，保留那些讓正確的第一步更難看出、或讓紅方閒置子力更少的改動。它可以給解題者的感受打分：黑方有多少個第一步看起來和正解一樣自然，關鍵著是不是一步靜著。或者它可以完全不靠隨機擺局。西洋棋排局家現在有了[窮舉的合作殺表](https://github.com/osick/helpmate-tablebase)，五子以內已經完整，列出給定子力下所有無誤的合作殺，搜尋只剩挑選；我們沒有為象棋做這樣的表。這些方法每一種都能找到我們的方法找不到的題。',
+  'The pipeline, in outline.': '流程概覽。',
+  Results: '結果',
+  'The search found 1,470 sound helpmates. Most were the same mate reached from a different setup, often a spectator piece one square over, so we grouped them by the final picture. That left **186 distinct mates**. The re-proof then removed 22, for a reason covered below, and **164 stand**.':
+    '搜尋找到1,470道無誤的合作殺。大多數是同一個殺形從不同的布局得到，往往只是一個旁觀的子挪了一格，所以我們按最終殺形分組。剩下**186種不同的殺法**。複核又去掉了22道，原因見下文，**留下164道**。',
+  'Of the 164, 39 are pure mates, where no square around the mated general is covered twice, and 19 are model mates: pure, with every red piece on the board doing work.':
+    '164道中，39道是純殺，即被殺一方將周圍沒有一格被重複控制；19道是純正殺：既是純殺，盤上每個紅子又都在發揮作用。',
+  'Mate delivered by': '成殺的子',
+  Problems: '題數',
+  'The 164 problems that stand, by the red piece that gives the final check.':
+    '留下的164道題，按最後一步將軍的紅子分類。',
+  'The best ten': '最好的十道',
+  "Ten problems, one idea each. All 164 are in [the study](/study/5CdUHFsq), these ten first and the rest in ranked order. Every one is the slice we searched: Black, Red, Black, Red, and Red's second move mates.":
+    '十道題，各有一個主題。全部164道都在[這個研習](/study/5CdUHFsq)裡，這十道在前，其餘按排名排列。每一道都屬於我們搜尋的那一塊：黑、紅、黑、紅，紅方第二步成殺。',
+  'Red has a general and one soldier against seven black pieces, a chariot and both advisors among them. Find the square where a lone soldier can mate, then ask which black piece has to wall the general in.':
+    '紅方只有帥和一兵，對黑方七子，其中有一車和雙士。先找出孤兵能在哪一格成殺，再想想哪個黑子得去堵住自己的將。',
+  'Helpmate 1: a general and one soldier': '合作殺1：光帥一兵',
+  "Red has a general and a horse already in Black's camp; Black has twelve pieces. Black has 45 legal first moves, and exactly one of them leads to mate.":
+    '紅方有帥和一匹已在黑方陣中的馬；黑方有十二子。黑方有45種合法的第一步，只有一種能導向殺局。',
+  'Helpmate 2: one horse against twelve': '合作殺2：一馬對十二子',
+  'A single red cannon against fifteen black pieces. A cannon cannot check without a screen, so look at which black piece can provide one.':
+    '一門紅炮對黑方十五子。炮沒有炮架就不能將軍，所以要看哪個黑子能當炮架。',
+  'Helpmate 3: one cannon against fifteen': '合作殺3：一炮對十五子',
+  "A red chariot against twelve, with Black's back rank already thinned out. The question is which squares beside the black general need filling, and by what.":
+    '一輛紅車對十二子，黑方底線已經空了一些。問題是黑將旁邊哪些格子需要填上，用什麼子填。',
+  'Helpmate 4: one chariot against twelve': '合作殺4：一車對十二子',
+  "A general and a horse against twelve again, the horse this time on h8, near a black chariot in the corner. The horse needs both of Red's moves.":
+    '又是帥和一馬對十二子，這次馬在h8，靠近角上的一輛黑車。這匹馬要用掉紅方的兩步。',
+  'Helpmate 5: a horse on the right': '合作殺5：右翼一馬',
+  "The fullest board of the ten: three red soldiers deep in Black's half against fourteen black pieces.":
+    '十道中子力最多的一局：三個紅兵深入黑方半邊，對黑方十四子。',
+  'Helpmate 6: eighteen pieces': '合作殺6：十八子',
+  'Six pieces: a general, cannon and soldier for Red, a general, cannon and horse for Black. Look at what the red cannon on e5 needs before it can give check.':
+    '六個子：紅方帥、炮、兵，黑方將、炮、馬。看看e5的紅炮在將軍之前需要什麼。',
+  'Helpmate 7: six pieces': '合作殺7：六子',
+  "Black's general is already out of its back rank, with Red's soldier and cannon stacked on the g-file. Red's last move here does two jobs.":
+    '黑將已經離開底線，紅兵和紅炮疊在g路上。紅方這裡的最後一步一著兩用。',
+  'Helpmate 8: six pieces again': '合作殺8：又是六子',
+  'Black has two chariots, a horse and a cannon on an open board, and 55 legal first moves. Red has one horse.':
+    '開闊的棋盤上黑方有雙車、一馬、一炮，第一步有55種合法走法。紅方只有一馬。',
+  'Helpmate 9: an open board': '合作殺9：開闊的棋盤',
+  "A general and one soldier against twelve, the soldier already on f8 beside Black's palace. Black's own pieces have to finish the cage.":
+    '帥和一兵對十二子，兵已在黑方九宮旁的f8。黑方得用自己的子把籠子合上。',
+  'Helpmate 10: one soldier against twelve': '合作殺10：一兵對十二子',
+  'What we learned': '我們學到了什麼',
+  "**Xiangqi decides what counts as sound.** A general with no legal move has lost, so a helpmate can also end with the losing side not in check and simply nothing to play. Our composer tested only for checkmates. Re-proved under the real rule, 22 of the 186 had other lines it could not see, from 3 to 64 of them, and two could be mated in one. A soundness test ported from chess brings chess's idea of a finished game with it.":
+    '**象棋決定什麼才算無誤。**將帥無子可走即判負，所以合作殺也可以在被殺一方沒有被將軍、只是無棋可走時結束。我們的編題程式只檢測了將死。按真正的規則複核後，186道中有22道另有程式沒看到的路線，從3路到64路不等，其中兩道一步就能殺。從西洋棋移植來的無誤檢驗，也把西洋棋對「終局」的理解一併帶了過來。',
+  '**The cannon is the theme chess cannot have.** It checks by jumping exactly one piece, and in a helpmate the mated side is cooperating, so Black can supply the screen. Nineteen of the 164 mate over a black screen. The facing-generals rule adds another: the red general can take squares from its own palace, as in the seventh problem.':
+    '**炮是西洋棋不可能有的主題。**炮隔一子將軍，而在合作殺裡被殺一方是合作的，所以黑方可以送上炮架。164道中有19道借黑方的炮架成殺。將帥不能對面的規則又添了一種：紅帥可以從自己的九宮控制格子，比如第七道題。',
+  '**The palace makes the lopsided problems possible.** A xiangqi general never leaves its nine-point palace and has at most four squares to step to, so a couple of black moves can wall it in. That fits what the search turned up: the profiles with a black army against one or two red pieces produced most of the good problems, because Black does nearly all the building and Red only has to arrive. A chess king has the whole board and up to eight squares, and a helpmate there spends far more of its moves taking them away.':
+    '**九宮讓這些懸殊的題成為可能。**象棋的將帥從不離開九個點的九宮，最多只有四個點可走，所以黑方走幾步就能把它圍死。這與搜尋的結果相符：黑方整支軍隊對紅方一兩個子的配置產出了大部分好題，因為幾乎所有的搭建都由黑方完成，紅方只需趕到。西洋棋的王擁有整個棋盤和最多八個格子，那裡的合作殺要花多得多的步數把這些格子一一封掉。',
+  '**Finding sound problems is the easy part.** The search turned up 1,470 sound helpmates, and most were the same mate from a different setup: grouped by the final picture they came to 186. Soundness is a yes or no that a solver can check. Whether a problem is worth setting up for a friend is not, and nothing in this pipeline measures it. That is the gap the next generator has to close.':
+    '**找到無誤的題是容易的部分。**搜尋找到1,470道無誤的合作殺，大多數是同一個殺形從不同的佈局得到：按最終殺形分組後只有186種。是否無誤是一個求解器能檢驗的是非題。一道題值不值得擺給朋友看則不是，而這個流程裡沒有任何東西能衡量它。這正是下一個生成器要填補的空白。',
+  'What is left to find': '還有什麼可找',
+  'We searched one corner of the genre, and the rest is open. **Longer helpmates** first. Our search found almost no sound helpmates in three: a third move gives both sides many more ways to reach the same mate, so a generator has to aim at unique lines rather than deal and filter. How long can a sound xiangqi helpmate be: ten moves, twenty, a hundred? And can a search prove that a long one is the shortest of its kind, or that its line is the only one?':
+    '我們只搜尋了這個體裁的一角，其餘都還空著。首先是**更長的合作殺**。我們的搜尋幾乎沒找到無誤的三步合作殺：多一步，雙方就有多得多的方法走到同一個殺形，所以生成器得直接瞄準唯一路線，而不是先擺後篩。無誤的象棋合作殺最長能有多長：十步，二十步，一百步？搜尋能否證明一道長題是同類中最短的，或者它的路線是唯一的？',
+  '**More impossible-looking ones**: the weakest red force against the most black, a lone soldier mating a full army. And **the other shapes of the genre**: Red moving first, and Red as the side that is mated. We have not searched either. If you find one, or a longer or stranger one than ours, we would love to see it: put it in [the forum](/forum), or write it up on your own blog and tell us where.':
+    '**更多看似不可能的題**：最弱的紅方子力對最多的黑子，一個孤兵將死整支軍隊。還有**這個體裁的其他形式**：紅方先走，以及紅方作為被殺的一方。這兩種我們都還沒有搜尋。如果你找到一道，或者比我們的更長、更奇的，我們很想看看：發到[論壇](/forum)，或者寫在你自己的部落格上並告訴我們在哪裡。',
+  "What the slice already shows is that xiangqi does take helpmates, and they are not chess problems on a different board. The rules that make xiangqi what it is, the loss without a legal move, the cannon's screen, the facing generals, decide which problems are sound and how the best of them mate. A good one looks impossible because Red has almost nothing. It works because Black's army is the material the mate is built from: the walls, the screen, the squares filled in around its own general. That is the hope behind this work: to carry the genres Western composers invented onto the xiangqi board, find what is beautiful in them here, and in time find a helpmate good enough to make a xiangqi player stop and set it up for a friend.":
+    '這一小塊已經表明，象棋容得下合作殺，而且它們不是換了張棋盤的西洋棋題。讓象棋成為象棋的那些規則，困斃判負、炮架、將帥對面，決定了哪些題無誤，也決定了最好的題如何成殺。好題看起來不可能，因為紅方幾乎什麼都沒有。它之所以成立，是因為黑方的大軍正是構成殺局的材料：牆、炮架、自己將周圍被填滿的格子。這就是這項工作背後的希望：把西方排局家發明的體裁搬到象棋棋盤上，找出它們在這裡的美，並且終有一天找到一道好到讓象棋棋手停下來、擺給朋友看的合作殺。',
+  'Solve all 164': '解全部164道',
+  'The longest forced mates': '最長的連將殺',
+  'Helpmates in Xiangqi (Chinese Chess): 164 Two-Move Problems': '象棋合作殺：164道兩步合作殺排局',
+  'Black to move, helpmate in 2': '黑先，兩步合作殺',
+  'The mate': '殺局',
   // -- The xiangqi match-fixing case --
   // champion pages. Player names stay in SIMPLIFIED for the Traditional reader:
+  'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games: 8 life bans, 37 timed bans and 4 reprimands.':
+    '2024到2026年間，中國象棋協會因買棋賣棋處罰了49人：終身禁賽8人，限期禁賽37人，通報批評4人。',
+  'Ten of the thirteen national champions since 2005 carry a ruling, including Wang Tianyi, the top-rated player from 2014 to 2023.':
+    '2005年以來的十三位全國冠軍中，有十人受到處罰，其中包括2014到2023年間等級分第一的王天一。',
+  'A Hangzhou court convicted six grandmasters of bribery in September 2025. The charge was bribery, not gambling.':
+    '2025年9月，杭州一家法院以行賄受賄判決六名特級大師有罪。罪名是行賄受賄，不是賭博。',
+  'Engine cheating is alleged in every account and charged in none. No result or title has been struck from the record.':
+    '各方說法都提到用軟體作弊，但沒有一項指控涉及。至今沒有任何成績或稱號被撤銷。',
+  'This is our best reading of what has been published. If you know something here to be wrong or out of date, [tell us](/contact) and we will correct it.':
+    '本頁是我們對已公開報導的最佳解讀。如果你知道其中有錯誤或已過時的內容，請[告訴我們](/contact)，我們會更正。',
+  'Who’s who': '人物一覽',
+  'The names that recur below. A ban is the association’s penalty and bars a player from competing; a prison term is the court’s.':
+    '下文反覆出現的人物。禁賽是協會的處罰，禁止棋手參賽；徒刑是法院的判決。',
+  Person: '人物',
+  'Part in the case': '在案中的角色',
+  'Top-rated player 2014 to 2023; bought games': '2014至2023年等級分第一；買棋',
+  'Life ban; 2 years 9 months in prison': '終身禁賽；有期徒刑2年9個月',
+  'On the recorded calls; the go-between for most of Wang Tianyi’s payments':
+    '錄音通話的一方；王天一大部分付款的中間人',
+  'Life ban; 1 year in prison': '終身禁賽；有期徒刑1年',
+  'The other voice on the recordings': '錄音中的另一方',
+  'Banned 4 years 3 months; not charged': '禁賽4年3個月；未被起訴',
+  '2005 champion; one outlet reports he passed the recordings on':
+    '2005年冠軍；有一家媒體報導錄音由他轉出',
+  'Life ban; 2 years 7 months in prison, appeal rejected': '終身禁賽；有期徒刑2年7個月，上訴被駁回',
+  '2007 champion': '2007年冠軍',
+  'Life ban; 4 years 9 months in prison, the longest term': '終身禁賽；有期徒刑4年9個月，刑期最長',
+  'Xie Jing 谢靖, Xu Chao 徐超': '謝靖、徐超',
+  '2013 and 2017 champions': '2013年和2017年冠軍',
+  'Life bans; 2 years 6 months in prison each': '均終身禁賽；各判有期徒刑2年6個月',
+  'Veteran player; alleged engine cheating for years, then accused an official by name':
+    '老將；多年來指稱對手用軟體作弊，隨後實名舉報一名官員',
+  'Not sanctioned': '未受處罰',
+  'Joined Liu Dahua’s accusation': '與柳大華聯名舉報',
+  'Banned 3 years': '禁賽3年',
+  'Guo Liping 郭莉萍': '郭莉萍',
+  'Official at the sport administration, named in the accusation':
+    '棋牌運動管理中心官員，被舉報點名',
+  'Left the post in December 2024; not charged': '2024年12月去職；未被起訴',
+  'Ban from competing': '禁賽處罰',
+  'Prison term': '刑期',
   'The Xiangqi Match-Fixing Case': '象棋假棋案',
   'Xiangqi Match-Fixing: 录音门, the Bans, and the Convictions': '象棋假棋案：錄音門、禁賽與判決',
   'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.':
@@ -3090,8 +7679,8 @@ const ZH_HANT: Record<string, string> = {
   'The spine of the case. Liu Dahua’s earlier private complaints are his own account rather than a documented date.':
     '本案的主線。柳大华更早的私下反映出自他本人的說法，並無確切日期可考。',
   'Two processes, one case': '兩條並行的程序，同一起案件',
-  'The disciplinary track and the criminal track are separate. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
-    '紀律處理與刑事追訴是兩條獨立的程序，時間表也不相同。被判刑的六人正是被處罰的四十九人中的六位，並非另一批人。',
+  'The disciplinary track and the criminal track are separate: the association can only bar a player from competing, and only the court can send one to prison. They ran on different timetables, and the six convicted are six of the forty-nine banned rather than a different group.':
+    '紀律處理與刑事追訴是兩條獨立的程序：協會只能禁止棋手參賽，只有法院才能判處徒刑。兩者時間表也不相同。被判刑的六人正是被處罰的四十九人中的六位，並非另一批人。',
   'A third track went nowhere in public. Three officials left the chess and card centre while the case ran: its director Zhu Guoping 朱国平 and its discipline secretary Guo Yujun 郭玉军 in November 2024, and Guo Liping in December. No removal notice mentions this case, and no official has been reported as charged or sanctioned in connection with it.':
     '第三條線在公開層面沒有下文。案件進行期間，棋牌運動管理中心有三名官員去職：主任朱国平與紀檢書記郭玉军於2024年11月，郭莉萍於同年12月。沒有一份免職通知提到本案，也沒有任何官員被報道因此被追究或處罰。',
   'The Chinese Xiangqi Association has sanctioned 49 people in three batches: two in September 2024, forty-one in January 2025, and six in April 2026. That is 8 lifetime bans, 37 timed bans and 4 public reprimands. Revocation of the technical grade title accompanies 19 of the 45 bans rather than all of them. Only the three timed bans in the April 2026 notice carry published start and end dates, all running from 24 July 2024; the January notice publishes no dates at all, so when most of those bans expire is not a matter of public record.':
@@ -3099,7 +7688,6 @@ const ZH_HANT: Record<string, string> = {
   'The association published almost every name. Where a player also appears on the champion lists, his national title years are in the last column.':
     '協會公布了幾乎每一個名字。若該棋手同時出現在冠軍名單上，其全國冠軍年份列在最後一欄。',
   Player: '棋手',
-  Penalty: '處罰',
   'National title': '全國冠軍',
   'The 47 the association named. The other two were withheld because they were under 18 when the conduct occurred. Revocation of the technical grade title accompanies 19 of the 45 bans, not all of them.':
     '協會具名公布的47人。另外兩人因涉案時未滿18周歲而未公布姓名。45項禁賽中有19項同時撤銷技術等級稱號，並非全部。',
@@ -3108,9 +7696,8 @@ const ZH_HANT: Record<string, string> = {
   'Separately, the Shangcheng District People’s Court in Hangzhou convicted six grandmasters on 24 September 2025 of offering and accepting bribes as non-state functionaries, under Articles 163 and 164 of the criminal law. The Chinese press calls it the sport’s first criminal corruption case.':
     '另一條線上，杭州市上城區人民法院於2025年9月24日以對非國家工作人員行賄罪、非國家工作人員受賄罪判決六名特級大師有罪，依據刑法第163條與第164條。中文媒體稱之為中國象棋反腐第一案。',
   Convicted: '被判刑者',
-  Sentence: '刑期',
-  'Reported from the 24 September 2025 verdict. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
-    '據2025年9月24日宣判的報道整理。判決書未公開：這些數字源自檢方的指控，其中只有洪智一項另有作為法院結果的報道。王天一與赵鑫鑫另被併處罰金，金額從未公布。',
+  'Reported from the 24 September 2025 verdict. The terms are 有期徒刑, fixed-term imprisonment; whether any was suspended has not been reported. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
+    '據2025年9月24日宣判的報導整理。刑期均為有期徒刑，是否適用緩刑未見報導。判決書未公開：這些數字源自檢方的指控，其中只有洪智一項另有作為法院結果的報導。王天一與趙鑫鑫另被併處罰金，金額從未公布。',
   'The strongest player in the world was buying': '最強的棋手是買家',
   'Wang Tianyi was China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
     '王天一在2014到2023年間等級分居全國第一，被稱為象棋第一人。檢方指控他行賄22筆、合計94.2萬元，受賄2筆、合計11.6萬元。22筆中有19筆經由王跃飞。',
@@ -3152,7 +7739,7 @@ const ZH_HANT: Record<string, string> = {
   'Bring your title to Mistboard': '把你的頭銜帶到 Mistboard',
   'For titled xiangqi and chess players': '致象棋與國際象棋的頭銜棋手',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.':
-    '通過認證的頭銜棋手，名字旁會顯示金色徽章，可以開設讓學員找得到的教練主頁，作品也有機會登上首頁。認證大約只需兩分鐘。',
+    '通過認證的頭銜棋手，名字旁會顯示金色徽章，可以開設讓學員找得到的教練主頁，首頁今後也會刊登他們的作品。認證大約只需要兩分鐘。',
   'Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes: start at [mistboard.com/verify-title](/verify-title).':
     '通過認證的頭銜棋手，名字旁會顯示金色徽章，可以開設讓學員找得到的教練主頁，作品也有機會登上首頁。認證大約只需兩分鐘：請前往 [mistboard.com/verify-title](/verify-title)。',
   'Mistboard accepts WXF and CXA titles (XGM, XIM, XNM, XWGM, XWIM) and FIDE titles (GM, IM, FM, CM, WGM, WIM, WFM, WCM). Link your federation profile, give your real name, note the results behind the claim, and an admin reviews it personally.':
@@ -3171,8 +7758,8 @@ const ZH_HANT: Record<string, string> = {
   '**Your own byline.** Send something longer and it gets edited and published under your name, with your title beside it.':
     '**署名文章。** 寫一篇長一點的稿子寄來，我們會編輯後以你的名義發表，並在名字旁標上你的頭銜。',
   'Why Mistboard': '為什麼選擇 Mistboard',
-  'Mistboard is where xiangqi is played in English. Free, open source, no ads, no paywall, no premium tier. Every board, every puzzle, every lesson is open to everyone who shows up.':
-    'Mistboard 是用英語下象棋的地方。免費、開源，沒有廣告，沒有付費牆，也沒有會員等級。每一副棋盤、每一道題目、每一節課，對每一個來到這裡的人都開放。',
+  'Mistboard is free and open source, with no ads. Every game, puzzle and lesson is open to everyone. A Patron subscription adds a badge to your profile and nothing else.':
+    'Mistboard 免費、開源，沒有廣告。每一局棋、每一道題目、每一堂課都對所有人開放。贊助會員訂閱只會在你的資料頁上加一個徽章，別無其他。',
   'That audience has never had a serious English-language home, and it has never had titled players to learn from. You would be among the first, on a site built to put your name in front of them rather than bury it.':
     '這批棋迷從來沒有一個像樣的英語大本營，也從來沒有頭銜棋手可以請教。你會是最早的一批，而這個網站從一開始就是為了把你的名字擺到他們面前，而不是埋起來。',
   'Verify your title': '認證你的頭銜',
@@ -3246,7 +7833,7 @@ const ZH_HANT: Record<string, string> = {
     'Stockfish 這樣的經典國際象棋引擎有一個優勢：它能看到整個棋盤。它透過搜尋博弈樹來選擇著法，向前推演雙方可能走出的變化，再回傳最佳變化的價值（極小化極大演算法）。這種搜尋假設只有一個真實局面和一條真實的延續。',
   "Under fog there is no single position to search. Misty can't see the opponent's pieces, so the board it has to reason about is a belief set: many legal boards consistent with what it has observed. A move that wins on one board can hang the king on another. Misty samples from that set, searches those worlds, and looks for a move that holds up across them.":
     '迷霧下不存在一個可供搜尋的單一局面。Misty 看不到對手的棋子，因此它必須推理的是一個信念集合：許多與已觀察資訊一致的合法棋盤。同一步棋可能在一個棋盤上獲勝，卻在另一個棋盤上白送國王。Misty 從集合中取樣，搜尋這些可能世界，並尋找在它們之中都站得住腳的著法。',
-  'Sampling boards and searching them is the straightforward part. Combining the answers is where fog chess stops behaving like chess, and Misty borrows its method from poker: it minimizes regret across the sampled worlds, converging toward a strategy an opponent cannot exploit, instead of taking the move with the best average score. Obscuro, the strongest published Fog of War chess engine, works the same way. The hard part is keeping that model faithful to what has actually been observed while the clock is running.':
+  'Sampling boards and searching them is the straightforward part. Combining the answers is where Fog Chess stops behaving like chess, and Misty borrows its method from poker: it minimizes regret across the sampled worlds, converging toward a strategy an opponent cannot exploit, instead of taking the move with the best average score. Obscuro, the strongest published Fog of War chess engine, works the same way. The hard part is keeping that model faithful to what has actually been observed while the clock is running.':
     '取樣棋盤並搜尋它們是相對直接的部分。真正讓迷霧國際象棋不再像國際象棋的，是如何彙總這些答案；Misty 的方法借自撲克：它在取樣出的各個可能世界上最小化遺憾值，逐步收斂到一個對手無法利用的策略，而不是選擇平均分最高的著法。公開發表的最強迷霧國際象棋引擎 Obscuro 採用同樣的思路。難點在於，在時鐘不停走動時，讓這個模型始終忠於已經觀察到的資訊。',
   "What's hard": '難點在哪裡',
   'Two things. The first is the possible-board set itself. A few plies into a foggy middlegame, "every consistent board" blows up fast. Misty has to keep that uncertainty under control inside a live-game time budget.':
@@ -3257,10 +7844,8 @@ const ZH_HANT: Record<string, string> = {
   'The current production engine is Misty 1.6. Most of the work since the first public release has been hardening, not a new personality: avoid rare king walks into hidden captures, avoid major-piece hangs in fog, stop stale search memory from leaking into a new live position, see fog-castles during search, and steer away from unstable early lines with a small opening book. Version 1.6 closes one specific queen hang. The safety check that vetoes catastrophic captures was subtracting the value of the piece being taken, so giving up a queen for a defended rook scored as a small loss rather than a disaster, and Misty walked into it in two real games before the floor that catches it shipped.':
     '目前正式環境的引擎是 Misty 1.6。首次公開發布後的大部分工作都在加固，而不是塑造新個性：避免國王偶爾走進隱藏吃子範圍，避免大子在迷霧中白送，阻止過期的搜尋記憶洩漏到新的即時局面，在搜尋中看見迷霧下的王車易位，並用小型開局庫避開不穩定的早期變化。1.6 版修正了一處特定的白送皇后問題：否決災難性吃子的安全檢查會先減去被吃棋子的價值，於是用皇后換一個有保護的車只被算作小虧而不是災難；在這道下限修好之前，Misty 在兩盤真實對局中都走進了這個陷阱。',
   'The engine is open source': '引擎已開源',
-  "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the fog chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.":
+  "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the Fog Chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.":
     'Misty 的原始碼以 GPL 授權發布在 GitHub 上，也可以從 PyPI 安裝，套件名稱是 misty-chess。公開的部分就是迷霧國際象棋引擎本身：信念列舉器、搜尋、在提交著法時否決災難性選擇的守衛，以及要求 Rust 與 Python 兩套實作在每一步都逐位元組一致的測試套件。變體同系引擎與研究實驗程式碼仍然是私有的。',
-  'Obscuro is not public. So as far as I can find, Misty is the only Fog of War chess engine built on that architecture that anyone else can run, read, or take apart, and that is most of the reason to publish it.':
-    'Obscuro 並未公開。因此據我所知，Misty 是唯一一個基於該架構、並且其他人可以執行、閱讀和拆解的迷霧國際象棋引擎，這也是把它開源的主要理由。',
   'Misty on GitHub': 'GitHub 上的 Misty',
   'That does not make Misty solved or perfectly safe. It means the cheap fog-specific failures that made earlier versions look silly are much rarer, so games against it test your understanding instead of your patience.':
     '這並不意味著 Misty 已被徹底解決或絕對安全。它意味著那些讓早期版本顯得可笑的低級迷霧特有錯誤已經少見得多，因此與它對弈考驗的是你的理解，而不是耐心。',
@@ -3268,7 +7853,7 @@ const ZH_HANT: Record<string, string> = {
   "Misty is the strongest Fog of War chess engine I've seen available to play, but version numbers are not ratings. The yardstick that matters is human play, and I won't put a number on it until a serious human match earns one.":
     'Misty 是我見過可以直接對弈的最強迷霧國際象棋引擎，但版本號不是等級分。真正有意義的標尺是人類實戰；在一場嚴肅的人機比賽給出依據之前，我不會為它標上數字。',
   "What's next": '下一步是什麼',
-  'Misty itself stays focused on Fog of War chess. The same redacted engine protocol now supports variant-specific siblings, including Misty DMX for Dark Mini Xiangqi and MistyBanqi for Banqi, but those are separate engines with their own rules and evaluation problems.':
+  'Misty itself stays focused on Fog of War chess. The same redacted engine protocol now supports variant-specific siblings, including Misty DMX for Dark Mini Xiangqi and MistyBanqi for banqi, but those are separate engines with their own rules and evaluation problems.':
     'Misty 本身會繼續專注於迷霧國際象棋。同一套去識別化引擎協定現在也支援針對特定變體的同系引擎，包括迷霧迷你象棋的 Misty DMX 和暗棋的 MistyBanqi，但它們是獨立引擎，各有自己的規則與評估問題。',
   "Misty is live on Mistboard, and every serious game against it sharpens the estimate of where it stands. Play one, and you're part of the benchmark.":
     'Misty 已在 Mistboard 上線，每一盤嚴肅的人機對局都會讓我們更準確地估計它的水準。來下一盤，你也會成為這項基準的一部分。',
@@ -3340,7 +7925,7 @@ const ZH_HANT: Record<string, string> = {
 
   // -- How MistyBanqi Plays (engine article) --
   'How MistyBanqi Plays': 'MistyBanqi 是怎麼下棋的',
-  'MistyBanqi is the engine you play in Banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.':
+  'MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.':
     'MistyBanqi 是你在 Mistboard 上對弈暗棋時面對的引擎：一個採用手寫評估的經典搜尋引擎。它如何思考，以及一個值得知道的盲點：它會把已經贏定的棋下成和棋。',
   'How it thinks': '它如何思考',
   "Banqi hides information in its own way: every tile starts face-down, and flipping one reveals a random piece from the bag of what's left. So unlike chess, the engine's search tree mixes ordinary moves with chance events. MistyBanqi treats a flip as a chance node, averaging over the pieces the tile might turn out to be, and otherwise searches like a classical chess engine: it looks ahead through the lines both sides could play and backs up the value of the best one.":
@@ -3355,7 +7940,7 @@ const ZH_HANT: Record<string, string> = {
   'It can draw a game it has won': '它會把贏定的棋下成和棋',
   'Here is the same engine in a position it has completely won. It is up ten pieces to two, with nothing left to capture, and the only task is to walk the win home. It draws instead.':
     '同樣這個引擎，下面處在一個它已經完全贏定的局面。它以十子對兩子領先，已經沒有子可吃，唯一要做的就是把勝勢走到底。結果它卻下成了和棋。',
-  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and Banqi's threefold-repetition rule ends the game a draw.":
+  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and banqi's threefold-repetition rule ends the game a draw.":
     '評估裡沒有任何一項會因為「把優勢轉化為勝利」而比「單純守住子力」給更高的分，於是一個遙遙領先的局面和一個真正已經贏下的局面，得分幾乎一樣。既然沒有哪一項促使它取得進展，它就只是來回挪子，而暗棋的三次重複局面規則便把這盤判成和棋。',
   'It can also lose its own general': '它也可能丟掉自己的將帥',
   'How each of these was found, reproduced, and measured is written up in detail in the engineering post linked below.':
@@ -3372,8 +7957,8 @@ const ZH_HANT: Record<string, string> = {
   'Draw by repetition · MistyBanqi up 10 pieces to 2': '重複局面和棋 · MistyBanqi 十子對兩子領先',
   'MistyBanqi wins · the opponent is left with no piece to move':
     'MistyBanqi 獲勝 · 對手已無子可走',
-  "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, this is the escape: herd a strong piece into a perpetual chase and it may let the draw happen.":
-    'MistyBanqi（紅方）以十子對兩子領先，是一個輕鬆贏定的局面，但它的評估並不會因為「把優勢轉化為勝利」而比「守住子力」給更高的分，於是它只來回挪子、不去逼搶，最終因三次重複局面被判和棋。如果你對它子力落後，這就是脫身之道：用長捉纏住一枚大子，它也許就放任和棋發生。',
+  "MistyBanqi (Red) is up ten pieces to two, a trivially won position, but its evaluation gives no reward for converting a win over holding material, so it shuffles instead of pressing and the game is drawn by threefold repetition. If you're losing on material against it, keep the game going: it may shuffle its own way into a draw.":
+    'MistyBanqi（紅方）以十子對兩子領先，是一個輕鬆贏定的局面，但它的評估並不會因為「把優勢轉化為勝利」而比「守住子力」給更高的分，於是它只來回挪子、不去逼搶，最終因三次重複局面被判和棋。如果你對它子力落後，別放棄：它也許會來回挪子，自己走進和棋。',
   'MistyBanqi (the first player) won this one outright, leaving the opponent with nothing to move. Banqi swings hard with the flips: it fell behind on material early here, then calculated its way back and cleared the board. Grinding down a position like this, capture by capture, is the strong half of its game.':
     'MistyBanqi（先手）乾淨俐落地贏下了這盤，讓對手無子可走。暗棋的局勢隨翻子劇烈起伏：這盤裡它開局子力落後，隨後憑計算一步步扳回，把對手清光。像這樣一子一子地輾下去，是它棋力強的那一半。',
 
@@ -3382,7 +7967,7 @@ const ZH_HANT: Record<string, string> = {
   "Misty is Mistboard's Fog of War chess engine: how it sees, searches possible boards, avoids hidden catastrophes, and where the current version stands.":
     'Misty 是 Mistboard 的迷霧國際象棋引擎：它如何觀察、搜尋可能盤面、避開隱藏災難，以及目前版本處在什麼水平。',
   'How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.':
-    'Mistboard 如何把隱藏資訊留在伺服器端：標準真實局面、按座位投影視野、私密即時房間，以及公開的賽後複盤。',
+    'Mistboard 如何把隱藏資訊留在伺服器端：伺服器保存標準的真實局面，按座位投影各方的視野，即時對局房間保持私密，賽後複盤則公開。',
 
   // -- Shared rules-page headings --
   'Board and setup': '棋盤與佈局',
@@ -3444,7 +8029,85 @@ const ZH_HANT: Record<string, string> = {
 
   // -- Xiangqi primer (rules) --
   'Xiangqi Rules': '象棋規則',
-  'Xiangqi Rules: How to Play Chinese Chess': '象棋規則：中國象棋怎麼下',
+  // #410 rebuild (2026-09-25), machine-drafted, not native-reviewed.
+  'How big is a xiangqi board, and how many pieces are there?':
+    '象棋棋盤有多大？一共有多少枚棋子？',
+  'The board has 9 files and 10 ranks, 90 points in all, with pieces standing on the points rather than in squares. There are 32 pieces, 16 per side: one general, two advisors, two elephants, two horses, two chariots, two cannons and five soldiers.':
+    '棋盤有 9 條直線、10 條橫線，共 90 個交叉點，棋子落在交叉點上而不是格子裡。全盤共 32 枚棋子，每方 16 枚：一個帥（將）、兩個仕（士）、兩個相（象）、兩匹馬、兩個車、兩個炮和五個兵（卒）。',
+  'What do the Chinese characters on xiangqi pieces mean?': '象棋棋子上的漢字是什麼意思？',
+  "Each piece is named by one character, and Red and Black mostly write the same word two ways. The generals differ: Red's 帥 means commander and Black's 將 means general. The advisors, 仕 and 士, are both read shì and mean a scholar-official. Red's elephant 相 means minister and Black's 象 means elephant, and the two are pronounced alike. The horse (傌 / 馬), chariot (俥 / 車) and cannon (炮 / 砲) are one word each, with one component added or swapped on one side: Red's cannon takes the fire radical and Black's the stone radical. The soldiers differ again: Red's 兵 is a soldier and Black's 卒 a foot soldier.":
+    '每枚棋子用一個字表示，紅黑雙方大多是同一個字的兩種寫法。將帥不同：紅方的「帥」是統帥，黑方的「將」是將領。仕士是「仕」與「士」，都讀 shì，意思是士人、官員。紅方的「相」是宰相，黑方的「象」是大象，兩者讀音相同。馬（傌 / 馬）、車（俥 / 車）、炮（炮 / 砲）各是同一個字，只是一方多了或換了一個偏旁：紅方的炮是火字旁，黑方的砲是石字旁。兵卒也不同：紅方的「兵」是士兵，黑方的「卒」是步卒。',
+  'What is the flying general rule?': '什麼是「飛將」規則？',
+  'It is the rule that the two generals may never face each other on an open file with nothing between them (飞将 in Chinese). The name comes from the idea that a general facing the other could fly down the file and capture it. In practice any move that would leave the generals facing each other is illegal, so a general controls the file in front of it like a chariot.':
+    '就是雙方將帥不能在中間無子的同一條直線上對臉的規則（又稱「白臉將」）。這個名字來自一種說法：將帥若對臉，一方可以沿直線「飛」過去吃掉對方。實際上，任何讓將帥對臉的走法都不合法，所以將帥就像車一樣控制著它正前方的直線。',
+  'Every piece captures the way it moves, except the cannon.': '除了炮，每種棋子都按走法吃子。',
+  'Any distance along a line; captures by jumping exactly one piece': '沿線走任意距離；隔一子打子',
+  Piece: '棋子',
+  'The rules of xiangqi for chess players: the palace and river, cannon screens, facing generals, perpetual check, notation, and a famous game to play through. Playable on Mistboard against the Pikafish engine or a friend.':
+    '寫給西洋棋棋手的象棋規則：九宮與楚河漢界、炮架、將帥對臉、長將、記譜法，以及一盤可以逐步重演的名局。可在 Mistboard 上與皮卡魚引擎或朋友對弈。',
+  'For chess players: six rule changes': '寫給西洋棋棋手：六條不同的規則',
+  'If you already play chess, most of xiangqi will feel familiar. These are the six rules that catch chess players out, each explained in full further down.':
+    '如果你會下西洋棋，象棋的大部分內容都會讓你覺得熟悉。下面是最容易讓西洋棋棋手吃虧的六條規則，後文會逐一詳細說明。',
+  Rule: '規則',
+  'In chess': '西洋棋',
+  'In xiangqi': '象棋',
+  'No legal move': '無子可走',
+  'Stalemate, a draw': '逼和，算和棋',
+  'A loss for the player who cannot move': '無子可走的一方判負（困斃）',
+  'The two kings': '雙方的王（將帥）',
+  'May stand on the same file': '可以站在同一條直線上',
+  'The generals may never face each other on an open file': '將帥不能在中間無子的同一條直線上對臉',
+  'Checking forever': '不停將軍',
+  'A draw by repetition': '重複局面判和',
+  'A loss for the side giving every check': '每步都將軍的一方判負（長將）',
+  Capturing: '吃子',
+  'Every piece captures the way it moves': '每種棋子都按走法吃子',
+  'The cannon captures only by jumping one piece': '炮只能隔一子打子',
+  'Knight and bishop': '馬與象',
+  'The knight jumps and the bishop slides': '馬可以跳子，象沿斜線滑行',
+  'The horse and elephant are stopped by a piece in their path':
+    '馬和象會被路上的棋子擋住（蹩馬腿、塞象眼）',
+  'Promotion and castling': '升變與王車易位',
+  'Both exist': '兩者都有',
+  'Neither exists; a soldier never promotes': '兩者都沒有；兵卒永不升變',
+  'Setting up': '擺棋',
+  "Files are lettered a to i from Red's left and ranks numbered 1 to 10 from Red's side, so Red's back rank is rank 1. Each back rank holds, from one edge to the other: chariot, horse, elephant, advisor, general, advisor, elephant, horse, chariot. Each side's cannons stand on the b and h files two ranks in front of it, on rank 3 for Red, and its five soldiers stand on the a, c, e, g and i files one rank further up.":
+    '從紅方的左手邊起，直線依次標為 a 到 i；橫線從紅方一側起標為 1 到 10，因此紅方底線是第 1 橫線。每一方底線從一邊到另一邊依次是：車、馬、相、仕、帥、仕、相、馬、車。雙方的炮都放在 b 線和 h 線、底線往前兩格的位置（紅方在第 3 橫線），五個兵卒再往前一格，放在 a、c、e、g、i 五條線上。',
+  'For chess players: the chariot is exactly a rook, the horse is a knight that can be blocked, and the general is a king confined to its palace. The elephant only loosely resembles a bishop, and the advisor and the cannon have no chess counterpart.':
+    '對照西洋棋：車就是西洋棋的城堡，馬是會被蹩腿的騎士，將帥是困在九宮裡的國王。相與西洋棋的主教只是略有相似，而仕和炮在西洋棋裡沒有對應的棋子。',
+  'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
+    '將帥不能對臉的規則也是一種進攻手段。將帥可以從一條無子的直線遠端協助將死對方，因為對方的將帥不能走到這條線上。',
+  Repetition: '重複局面',
+  'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
+    '你不能靠不停將軍來挽救一盤輸棋。如果同一局面出現三次，而其中一方在這一循環的每一步都在將軍，這一方判負。如果雙方每步都在將軍，或者雙方都沒有將軍，則判和。',
+  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. A game is also drawn after 60 consecutive plies without a capture.':
+    '正式比賽規則更進一步，還禁止長捉對方無根的棋子。Mistboard 不判定長捉，因此重複的捉子按和棋計。連續 60 個半回合沒有吃子，也判和。',
+  'Mistakes chess players make': '西洋棋棋手常犯的錯誤',
+  'Habit from chess': '西洋棋的習慣',
+  'What happens in xiangqi': '在象棋裡的結果',
+  'Moving a piece off the file between the two generals': '把擋在雙方將帥之間那條直線上的棋子走開',
+  'The move is illegal: it would leave the generals facing each other':
+    '這步棋不合法：會讓將帥對臉',
+  'Heading for stalemate to save a lost game': '想靠逼和挽救輸棋',
+  'Stalemate loses, so the escape is a defeat': '困斃判負，所以這條退路本身就是輸棋',
+  'Checking again and again to force a draw': '反覆將軍以求和棋',
+  'Perpetual check loses for the side giving it': '長將的一方判負',
+  'Putting a piece between an enemy cannon and your general': '把棋子墊在對方的炮和己方將帥之間',
+  'The move is illegal: with exactly one piece between them, the cannon attacks your general':
+    '這步棋不合法：中間正好隔一子時，炮就在攻擊你的將帥',
+  'Moving a horse or elephant without checking its path': '走馬或相時不看路上有沒有棋子',
+  "A piece on the horse's leg or the elephant's eye blocks the move":
+    '馬腿或象眼上有棋子，這步就走不了',
+  'Reading xiangqi moves': '怎麼讀象棋棋譜',
+  "Xiangqi moves are written three ways. Mistboard shows algebraic notation by default outside Chinese: the central cannon is **Che3**, the cannon on the h file moving to e3. WXF notation numbers files from each player's right and writes the same move **C2.5**: cannon on file 2 moves sideways to file 5. Chinese notation reads the same way in characters: **炮二平五**, cannon two traverses to five. The move list setting switches between them.":
+    '象棋著法有三種寫法。Mistboard 的中文介面預設使用中文記譜，其他語言預設使用代數記譜：中炮寫作 **Che3**，意思是 h 線上的炮走到 e3。WXF 記譜從每一方自己的右手邊給直線編號，同一步寫作 **C2.5**：第 2 線的炮平移到第 5 線。中文記譜用漢字表達同樣的意思：**炮二平五**。著法列表的設定可以在三者之間切換。',
+  'A first opening': '第一個開局',
+  "The most common opening is the central cannon (中炮): Red moves a cannon to the centre file, aiming at Black's central soldier and the general behind it. Black's most common answer is the screen horses (屏风马), both horses developed toward the centre to guard that soldier. [Central Cannon vs Screen Horses](/study/4KXXmLaG) collects model games of the pairing.":
+    '最常見的開局是中炮：紅方把一隻炮平到中路，瞄準黑方的中卒和其後的將。黑方最常見的應法是屏風馬，兩匹馬都向中路跳出，保護這枚中卒。[中炮對屏風馬](/study/4KXXmLaG)收錄了這一對局型的範局。',
+  'Is perpetual check allowed in xiangqi?': '象棋允許長將嗎？',
+  'No. A player who repeats the position by giving check on every move loses. On Mistboard the side that checked on every move of a threefold repetition loses; if both sides checked throughout, or neither did, it is a draw.':
+    '不允許。靠每步將軍來重複局面的一方判負。在 Mistboard 上，同一局面出現三次時，若其中一方在這一循環的每一步都在將軍，這一方判負；若雙方都一直在將軍，或都沒有將軍，則判和。',
+  'Xiangqi Rules: How to Play Chinese Chess': '象棋規則：象棋怎麼下',
   'Red and Black alternate moves, with Red first. Each side begins with 16 pieces: one general, two advisors, two elephants, two horses, two chariots, two cannons, and five soldiers. The goal is to checkmate the opposing general.':
     '紅黑雙方輪流走子，紅方先行。每一方開局有 16 枚棋子：一個將（帥）、兩個士（仕）、兩個象（相）、兩個馬、兩個車、兩個炮（砲）和五個兵（卒）。目標是將死對方的將帥。',
   'The board has 9 files and 10 ranks. In the traditional presentation, pieces sit on the intersections of the lines rather than inside squares.':
@@ -3472,13 +8135,12 @@ const ZH_HANT: Record<string, string> = {
     '當敵方棋子攻擊將帥時，即為**將軍**。每一步都必須保證己方將帥安全，因此被將軍的一方必須移動將帥、吃掉進攻棋子或擋住攻擊。若沒有合法應法，便是將死，被將軍的一方告負。',
   'A player with no legal move also loses, even when the general is not in check. In Western chess that position is a stalemate draw; in xiangqi it is a win for the player who made the last move.':
     '即使將帥沒有被將軍，完全沒有合法走法的一方也會告負。在西洋棋中這是逼和；在象棋中則由走出上一著的一方獲勝。',
-  'Tournament rules use detailed procedures for perpetual check, perpetual chase, and other repeated attacks. Mistboard uses two automatic draw rules: the same position three times, or 60 consecutive plies without a capture.':
-    '正式比賽規則對長將、長捉和其他重複進攻有詳細判定程序。Mistboard 採用兩條自動和棋規則：同一局面出現三次，或連續 60 個半回合沒有吃子。',
   "To see the pieces work together, step through a famous trap from a manual printed in 1632. Red gives up a horse; when Black grabs it, Red's chariots and cannons pour through the gap and checkmate on the thirteenth move.":
     '想看棋子如何協同作戰，可以逐步重演一則出自 1632 年棋譜的著名陷阱。紅方故意送出一匹馬，黑方一旦貪吃，紅方的車炮便乘虛而入，在第十三著將死對手。',
 
   // -- Chess primer --
   'Chess Rules': '國際象棋規則',
+  'Chess Rules: Castling, Promotion and En Passant': '國際象棋規則：王車易位、升變與吃過路兵',
   'Chess is a two-player strategy game played for centuries. It descends from the Indian game chaturanga of around the 6th century and reached Europe through Persia and the Islamic world; its modern form, with the long-range queen and bishop, took shape in Europe in the late 1400s.':
     '國際象棋是一種已有數百年歷史的雙人策略遊戲。它源自約公元 6 世紀的印度遊戲恰圖蘭加，經由波斯和伊斯蘭世界傳入歐洲；其現代形式（擁有遠程的后和象）於 15 世紀末在歐洲成形。',
   'Board setup': '棋盤佈置',
@@ -3557,8 +8219,8 @@ const ZH_HANT: Record<string, string> = {
     '注意 d7 的車能看到 b7 的后和 h7 的王，卻看不到 a7。棋子的視野止於它走法的盡頭。',
   'The game ends when a king is captured. No check, no checkmate, no warning.':
     '當一方的王被吃掉時，對局即告結束。沒有將軍，沒有將死，也沒有任何預警。',
-  "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. There is no stalemate draw and no insufficient-material draw.":
-    'Mistboard 會在三次重複局面（同一真實局面出現三次，且輪到走子的一方相同、王車易位權與吃過路兵權也相同）或五十回合規則（連續五十個回合無兵的走動、也無吃子）時自動判和。兩條規則都針對真實局面，而非任何一方各自的視野。這裡沒有逼和，也沒有子力不足判和。',
+  "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. A side with no moves at all, every piece blocked, also draws. Otherwise you must move, even if every move walks into attack. There is no insufficient-material draw.":
+    'Mistboard 會在三次重複局面（同一真實局面出現三次，且輪到走子的一方相同、王車易位權與吃過路兵權也相同）或五十回合規則（連續五十個回合無兵的走動、也無吃子）時自動判和。兩條規則都針對真實局面，而非任何一方各自的視野。若一方完全無子可動（所有棋子都被堵死），同樣判和。除此之外必須走棋，哪怕每一步都會走進對方的攻擊範圍。沒有子力不足判和。',
   'A king may castle out of, through, or into check.':
     '王可以在被將軍時易位，可以穿過被攻擊的格子易位，也可以易位到被攻擊的格子上。',
   'Pawns see forward push squares when those squares are empty. They see diagonal squares only when an enemy piece is actually there to capture.':
@@ -3567,7 +8229,7 @@ const ZH_HANT: Record<string, string> = {
     '白方看不到 a4 或 b4：黑兵擋住了這些推進，所以它們不是合法走法。有些規則會顯示被阻擋的兵推進格；Mistboard 不會。',
   "En passant is chess's strangest move, so our vision rule bends for it: the capturing pawn sees the captured pawn on its adjacent square. The window is one move only. Pass on the capture and the chance is gone.":
     '吃過路兵是國際象棋中最奇特的一步，因此我們的視野規則為它破了個例：執行吃子的兵能看到相鄰格子上那個將被吃掉的對方兵。這個窗口只持續一步。若放棄這次吃子，機會便不復存在。',
-  'The goal is not perfect certainty. A good fog chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
+  'The goal is not perfect certainty. A good Fog Chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
     '目標不是獲得完美確定性。優秀的迷霧棋手會判斷哪些隱藏局面危險到必須尊重，然後選擇在那些局面中也能成立的走法。',
   'A pawn sees where it can push. Fog on a push square means an opponent piece or pawn is blocking it.':
     '兵能看到它可以推進到的格子。若推進格被迷霧遮住，就說明那裡有對方的棋子或兵擋著。',
@@ -3662,10 +8324,10 @@ const ZH_HANT: Record<string, string> = {
     '每個被佔據的交叉點都是可見的，因此雙方都能看出將帥何時受到攻擊。尚未走動的暗子按其起始位置對應的兵種發動攻擊。一旦走動，牠立即翻明；任何來自落點的攻擊都按翻明後的真實身份計算。',
   'Normal check rules apply: a move may not leave your own general attacked, and a player in check must answer the threat. You win by checkmate or by leaving the opponent with no legal move. The facing-generals rule still applies, and dark pieces block the file like any other piece.':
     '通常的將軍規則依然適用：走子後不能讓己方將帥受到攻擊，被將軍時必須應對。將死對方，或讓對方無合法走法，即可獲勝。將帥對臉規則仍然有效，暗子也和其他棋子一樣會擋住縱線。',
-  'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture. Repeated positions do not trigger a separate automatic draw.':
-    '連續 120 個半回合，也就是雙方各走 60 步而沒有吃子時，Mistboard 自動判和。重複局面不會另外觸發自動和棋。',
-  'Step through a self-play game. Dark pieces appear as colored backs and reveal their identity the first time they move. Red wins by checkmate.':
-    '逐步查看一盤自我對弈。暗子以彩色背面顯示，第一次走動時翻明身份。紅方以將死獲勝。',
+  'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture.':
+    '連續 120 個半回合，也就是雙方各走 60 步而沒有吃子時，Mistboard 自動判和。',
+  'Repetition follows xiangqi. On the third occurrence of the same position, a player who gave check on every one of their moves in the repeating cycle loses, so perpetual check cannot save a lost game. If both players checked throughout, or the cycle had no checks, the game is drawn. Perpetual chase without check is not ruled on and stays a draw.':
+    '重複局面按象棋規則處理。同一局面第三次出現時，若一方在重複循環中的每一步都將軍，該方判負，長將不能挽救敗局。若雙方都一直將軍，或循環中沒有將軍，則判和。不將軍的長捉不作裁決，按和棋處理。',
   Turns: '回合',
   'Capture by rank': '按等級吃子',
   'The cannon': '砲',
@@ -3673,6 +8335,8 @@ const ZH_HANT: Record<string, string> = {
     '當對手輪到自己卻無棋可走時，你獲勝——通常是因為敵方棋子被全部吃光，有時則是被困死、無路可走。這裡的將不是王棋：吃掉它只是進展，而非勝利，棋局會一直進行到一方被吃光或被困死為止。',
   'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
     'Mistboard 有兩種自動和棋：連續 40 個半回合沒有翻子或吃子，或同一局面出現三次。翻子或吃子會不可逆地改變局面，因此會重置兩個計數。',
+  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '捉子（長捉）指既不翻子也不吃子、走完後能吃掉對方剛走動那枚棋子的一步棋，不論那枚棋子有沒有根。捉子的一方不能用捉子讓同一局面第三次出現，必須改走別的著法，除非沒有其他合法著法。由捉子造成的重複局面一律不判和，因為被捉的棋子不走就會被吃。不斷把對方棋子趕到新位置的捉子不受限制。[這條規則為什麼這樣定](/blog/banqi-perpetual-chase)，附對局。',
   'Play MistyBanqi': '對戰 MistyBanqi',
   'Challenge a friend': '挑戰好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -3685,8 +8349,6 @@ const ZH_HANT: Record<string, string> = {
     '任何一枚棋子走進敵方獸穴、吃光敵方所有棋子，或讓對手無合法著法，你都立即獲勝。棋子不能走進己方獸穴。',
   'Games draw on threefold repetition, or when 100 half-moves (50 by each player) pass with no capture.':
     '若同一局面出現三次，或連續 100 個半回合（每方 50 步）無吃子，則判和。',
-  'This engine game shows a lion leap, a rat swim and capture an elephant, and the final entry into Blue’s den.':
-    '這盤引擎對局展示獅子跳河、老鼠游水並吃掉大象，以及最後進入藍方獸穴。',
   'One of each animal in two colors is shuffled and placed face-down on the sixteen squares. Nobody knows what is under a tile until it is flipped. The first tile the first player flips sets that player’s color; the other player takes the other color.':
     '兩種顏色各一套八種動物，洗勻後背面朝上放在十六個格子裡。在翻開之前，誰也不知道棋子下面是什麼。先行者翻開的第一枚棋子決定其顏色，另一位玩家執另一色。',
   'On your turn, do one thing: flip one face-down tile, or move one of your revealed animals one square up, down, left, or right. Face-down tiles block movement and cannot be captured. You cannot pass.':
@@ -3704,19 +8366,9 @@ const ZH_HANT: Record<string, string> = {
     '若同一局面出現三次，或連續 40 個半回合（每方 20 步）沒有翻棋、吃子或同歸於盡，則判和。',
   'Mistboard also ends a fully revealed, one-animal-each position when neither side can force a win. Equal ranks are always dead because any meeting removes both; some unequal-rank chases are also unwinnable. These positions are drawn immediately.':
     '當棋子全部翻開、雙方各剩一隻動物且誰也無法強制獲勝時，Mistboard 也會結束對局。同級棋子必為死局，因為相遇會雙雙離場；某些不同等級的追逐也無法取勝。這些局面立即判和。',
-  'This engine game shows two equal-rank trades: first the Lions, then the Elephants. Blue wins after Red’s last animal leaves the board.':
-    '這盤引擎對局展示兩次同級兌子：先是雙方的獅子，再是雙方的大象。紅方最後一隻動物離場後，藍方獲勝。',
   'Can the bot see the face-down tiles?': '電腦能看到背面朝上的棋子嗎？',
   'No. The engine gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do.':
     '不能。引擎拿到的棋盤和你一樣：每個背面朝上的棋子都以未知的形式發給它，只附帶尚未翻開的棋子數量；它和你在同一時刻，也就是翻開的那一刻，才知道那是什麼棋子。',
-  'Engine vs engine': '引擎對引擎',
-  'Red wins by reaching the den · 69 plies': '紅方進入獸穴獲勝 · 69 個半回合',
-  'Red’s rat has already taken Blue’s elephant in the open, and with the strongest piece off the board Red walks a piece straight into Blue’s undefended den. Reaching the enemy den ends the game at once, no matter what material is left.':
-    '紅方的老鼠已經在空地上吃掉了藍方的大象，最強的棋子離場後，紅方逕直把一枚棋子走進藍方無人防守的獸穴。進入對方獸穴會立刻結束對局，無論場上還剩多少子力。',
-  'Engine self-play': '引擎自我對弈',
-  'Blue wins by elimination · 36 plies': '藍方吃光對手獲勝 · 36 個半回合',
-  'Both lions and both elephants have already traded off the board, and the pieces that survived all belong to Blue. Red has nothing left that can move, so the game ends: with no piece to move and no tile to flip, Red loses.':
-    '兩隻獅子和兩頭大象都已同歸於盡離場，存活下來的棋子全部屬於藍方。紅方再無可走之子，於是對局結束：既沒有棋子可走，也沒有棋子可翻，紅方告負。',
 
   // -- Branded rules names --
   'Fog Chess Rules': '迷霧國際象棋規則',
@@ -3724,20 +8376,18 @@ const ZH_HANT: Record<string, string> = {
   // one, so both English keys land on the same Chinese title. That is the
   // point of seoTitle -- 'fog of war chess' is what players type.
   'Fog of War Chess Rules': '迷霧國際象棋規則',
-  'Fog Chess rules: chess under Fog of War, where each side sees only the squares its pieces reach, there are no check warnings, and the king falls by capture.':
-    '迷霧國際象棋規則：戰爭迷霧下的國際象棋。每一方只能看到己方棋子可及的格子，沒有將軍提示，王被吃掉即負。',
+  "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.":
+    '迷霧國際象棋就是只能看到己方棋子所能到達的格子的國際象棋。沒有人提示將軍，所以王要被吃掉才算輸，王也可能易位到自己看不見的攻擊之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷霧國際象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 對 dark chess / Fog of War chess 的公開名稱。Jens Bæk Nielsen 與 Torben Osted 於 1989 年發明了它。它屬於隱式迷霧：沒有裁判，也沒有偵察動作。每一方的視野完全由己方棋子的合法走法範圍推導而來。',
-  'The rules of xiangqi: palaces, the river, cannon screens, facing generals, and a famous game to play through. Now playable on Mistboard against the Pikafish engine or a friend.':
-    '象棋規則：九宮、楚河漢界、砲架、將帥照面，以及一盤可逐步回放的名局。現在可在 Mistboard 上與 Pikafish 引擎或好友對弈。',
   'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
     '象棋的現代形態在宋代（960 至 1279 年）的中國成型，砲也在這一時期加入棋盤。它的前身可以追溯到更早幾個世紀，並與國際象棋、將棋、朝鮮象棋同源於更古老的印度遊戲恰圖蘭卡。今天它是世界上參與人數最多的棋類遊戲之一。',
   'Fog Xiangqi Rules': '迷霧象棋規則',
-  'Fog of War Xiangqi Rules': '迷霧象棋規則',
+  'Fog of War Xiangqi Rules': '迷霧象棋規則：戰爭迷霧下的象棋',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
     '迷霧象棋由 Brian H. Liou 於 2026 年設計，是 Mistboard 的原創變體。戰爭迷霧早在 1989 年就由 Jens Bæk Nielsen 和 Torben Osted 發明的「黑棋」引入西洋棋，如今也是 chess.com 的常規變體，卻從未有人把它移植到象棋上。真正讓它變得奇特的是砲。砲只能隔子吃子，所以在迷霧中，你既看不見目標，也無法確定砲架是否還在。',
-  'Fog Xiangqi rules: xiangqi under Fog of War, where each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.':
-    '戰爭迷霧下的象棋：每一方只能看到己方棋子可及的點位，隱藏阻擋會影響視野，擒獲將帥即獲勝。',
+  "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.":
+    '迷霧象棋就是戰爭迷霧下的象棋。你看不見的棋子照樣可以蹩你的馬腿；一方的將帥若與對方將帥之間的直線上沒有棋子阻擋，就可以直接把對方將帥吃掉。',
   'Fog Xiangqi is xiangqi under Fog of War. Pieces keep their normal movement, but unseen enemy pieces stay hidden and danger is not announced. Capture the general to win.':
     '迷霧象棋是在戰爭迷霧下對弈的象棋。棋子保留正常走法，但看不見的敵方棋子會被隱藏，危險不會被提示。擒獲將帥即獲勝。',
   'If Xiangqi is new to you, start with [Xiangqi Rules](/rules/xiangqi). If you already play xiangqi, the sections below explain only what fog changes.':
@@ -3749,7 +8399,7 @@ const ZH_HANT: Record<string, string> = {
   'Use [Xiangqi Rules](/rules/xiangqi) for the base game. This page covers what changes.':
     '基礎規則請參考[象棋規則](/rules/xiangqi)。本頁只說明變化之處。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
-    '普通國際象棋規則，也就是迷霧國際象棋背後的基礎：王車易位、升變、吃過路兵、和棋規則，以及一盤可逐步回放的名局。',
+    '普通國際象棋的規則，也是迷霧國際象棋背後的基礎：王車易位、升變、吃過路兵、各種和棋規則，以及一盤可以逐步回放的著名對局。',
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
     '國際象棋是資訊公開的底層遊戲。為它加上戰爭迷霧，便得到迷霧國際象棋：你視野之外的敵方棋子會消失，而王由被吃而落敗。',
   'Read Fog Chess': '閱讀迷霧國際象棋',
@@ -3760,15 +8410,15 @@ const ZH_HANT: Record<string, string> = {
     '來玩 Misty 的迷霧國際象棋，或閱讀面向玩家的規則文章，了解同一套視野模型。',
   'Read Fog Chess Rules': '閱讀迷霧國際象棋規則',
   'Jungle Chess Rules (Dou Shou Qi, Animal Chess)': '鬥獸棋規則：玩法詳解與免費線上對弈',
-  "Jungle Chess, also called Dou Shou Qi or Animal Chess: eight ranked animals on a 7 by 9 board, rivers only the rat can cross, and a race to the opponent's den. Play rated games and analyse them free in your browser.":
-    '鬥獸棋（又稱動物棋）規則詳解：棋盤 7×9，八種按等級排列的動物，只有老鼠能過的河，以及衝入對方獸穴的競賽。免費線上對弈，支援等級分與覆盤分析。',
+  "Jungle Chess, also called Dou Shou Qi or Animal Chess, puts eight ranked animals on a 7 by 9 board, and the first to walk into the other's den wins. The rat, the lowest rank, can take the elephant, the highest.":
+    '鬥獸棋又稱動物棋，在 7×9 棋盤上擺著八種按等級排列的動物，先走進對方獸穴的一方獲勝。等級最低的老鼠可以吃掉等級最高的大象。',
   'Jungle has been played online for years, mostly in apps and on Chinese game portals. Rated games, a post-game review, and an engine that tells you where it went wrong have not come with it. The serious Jungle engine work sits in academic papers and endgame tablebases, nowhere you can actually play. Mistboard puts all three in one place.':
     '鬥獸棋在網上已經玩了很多年，大多在手機應用和中文遊戲平台上。但等級分對局、賽後覆盤，以及一台能告訴你哪一步走錯的引擎，一直沒有跟上。真正認真的鬥獸棋引擎研究留在學術論文和殘局庫裡，沒有落在任何能實際對弈的地方。Mistboard 把這三件事放在了一起。',
   'Jungle Chess is a two-player strategy game about rank and terrain. Each side commands eight animals and tries to reach the enemy den or eliminate the enemy army.':
     '鬥獸棋是一種圍繞等級與地形展開的雙人策略遊戲。雙方各指揮八種動物，目標是進入敵方獸穴或消滅敵方全部棋子。',
   'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻棋規則：玩法詳解與免費線上對弈',
-  'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down, you flip to reveal, and equal ranks trade off the board. Play it free in your browser.':
-    '鬥獸棋的 4×4 翻面版本，又稱翻翻棋。所有動物開局均背面朝上，翻開即亮明身分，等級相同的雙方同歸於盡、一起離場。免費線上對弈，無需註冊。',
+  'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
+    '鬥獸棋的 4×4 翻面版本，又稱翻翻棋。所有動物開局均背面朝上。每回合翻開一枚或走動一枚，等級相同的雙方同歸於盡、一起離場。',
   'Jieqi Rules (Reveal Xiangqi)': '揭棋規則：玩法詳解與免費線上對弈',
   'Ranks and captures': '等級與吃子',
   'Each side has the same eight animals. Strongest to weakest: elephant, lion, tiger, leopard, wolf, dog, cat, rat. A piece captures an adjacent enemy of equal or lower rank.':
@@ -4102,10 +8752,10 @@ const ZH_HANT: Record<string, string> = {
   // Champion names were masked through the conversion, so 杨官璘 stays 杨官璘.
   // Only values that actually fork appear here; the rest inherit via the spread.
   'Every Xiangqi Champion: Chinese Chess Title Holders and Their Games':
-    '歷屆全國象棋冠軍：中國象棋冠軍名錄與對局講解',
+    '歷屆中國全國象棋冠軍：冠軍名錄與對局講解',
   'Every Xiangqi Champion': '歷屆全國象棋冠軍',
   'Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for thirteen of them. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.':
-    '1956年以來中國象棋全國個人賽的每一位冠軍，其中十三位各配一局講解棋譜。另有這個頭銜出現之前的九百年，以及被從紀錄裡抹去的十年。',
+    '1956年以來中國全國象棋個人賽的每一位冠軍，其中十三位各配一局講解棋譜。另有這個頭銜出現之前的九百年，以及被從紀錄裡抹去的十年。',
   'Ask who the greatest chess player was and you get an argument with a shape to it: Fischer or Kasparov or Carlsen, measured against a title that has passed hand to hand since 1886. Ask the same about xiangqi and most English answers stop at the question.':
     '問國際象棋史上誰最強，你會得到一場有章法的爭論：菲舍爾、卡斯帕羅夫還是卡爾森，衡量的標尺是一個自1886年起代代相傳的頭銜。同樣的問題放到象棋上，多數英文的回答止步於提問本身。',
   'There is an answer, and almost nobody disputes it. Hu Ronghua won fourteen national championships, took the first at fifteen and the last at fifty-five, and won or shared every one of the ten championships held between 1960 and 1979. What is harder to explain is why the title he dominated is only sixty-nine years old, in a game that was already being played in its modern form when the Song dynasty fell. What follows is every winner, and a game for thirteen of them in the order they first took the title. Our own engine annotates the boards; the analysis is Pikafish at a million nodes a position.':
@@ -4221,6 +8871,33 @@ const ZH_HANT: Record<string, string> = {
   'Every game on this page is a chapter in a study you can work through properly: the full move tree, the engine’s lines as branches you can walk, one chapter per champion in the same order, and the 2025 world final at the end.':
     '本頁的每一局棋都是一份研究裡的一章，你可以在那裡從頭到尾走一遍：完整的著法樹、引擎的變化作為可以走進去的分支、每位冠軍一章且順序相同，末尾還有2025年的世界賽決賽。',
   'Learn how the pieces move': '學習各子的走法',
+  // Merged from the brianhliou.com champions post (2026-10-03): provenance, scale of the case, the annotation pipeline and its totals.
+  'The record was assembled from Chinese sources and cross-checked: title counts, every year won, and the shared title marked as shared. The figure and the table both render from that one dataset, so the picture and the table cannot disagree with each other.':
+    '這份紀錄依據中文資料整理並交叉核對：奪冠次數、每一個奪冠年份，並列的那一屆也標作並列。圖和表都由同一份資料生成，所以兩者不會互相矛盾。',
+  'The association sanctioned 49 people over buying and selling games, and a court in Hangzhou convicted six grandmasters of bribery.':
+    '中國象棋協會因買棋賣棋處罰了49人，杭州一家法院以行賄受賄判決六名特級大師有罪。',
+  'How the games were annotated': '這些棋局講解是怎樣做出來的',
+  'Every annotation on this page comes out of one analysis pipeline. Give it a game and it returns a finished study: every move judged, the engine’s preferred alternative hung as a branch you can play into, a verdict closing each branch, and a note saying what the move cost. It runs in four stages.':
+    '本頁的每一條講解都出自同一條分析流程。輸入一局棋，它回傳一份完成的研究：每一著都有評判，引擎偏好的替代著法掛成可以走進去的分支，每條分支以一個結論收尾，另附一段說明，指出這一著付出了什麼代價。它分四個階段執行。',
+  '**Harvest and verify.** The games come out of the public archives, and every one is replayed through the rules engine before it is kept. A record that does not replay legally is reported as broken rather than published. That matters more than it sounds: the archives contain transcription errors, and a game nobody checked is a game that will eventually show a reader an illegal move.':
+    '**擷取與驗證。** 棋局來自公開棋譜庫，每一局在保留之前都會透過規則引擎重播一遍。無法合法重播的棋譜會被回報為損壞，而不會發佈。這比聽起來更重要：棋譜庫中含有抄錄錯誤，而沒有人查核過的棋局，遲早會讓讀者看到一著不合法的著法。',
+  '**Analyse.** Pikafish at a million nodes a position, once per ply, at MultiPV 2, so every position yields a best move and a runner-up. The runner-up is the expensive part and it earns its keep: without it you can say a move was bad, but you cannot say a move was the only one, so ! and !! could not be marked. Plies where a piece was offered get a second search, to find out whether the engine’s own line takes it.':
+    '**分析。** Pikafish，每個局面一百萬個節點，每步一次，MultiPV 2，因此每個局面都給出一個最佳著法和一個次佳著法。次佳著法是花費最大的部分，但物有所值：沒有它，你可以說某一著很差，卻不能說某一著是唯一的一著，於是 ! 和 !! 就無從標記。有子力送吃的那些步還會再做一次搜尋，看引擎自己的變化會不會吃。',
+  '**Judge.** Win probability before and after each move decides whether it was an inaccuracy, a mistake or a blunder. A separate pass looks for the moves worth praising. The engine’s own line becomes a sibling branch on the move it should have replaced.':
+    '**評判。** 每一著前後的勝率決定它是失準、錯著還是漏著。另有一輪專門尋找值得稱讚的著法。引擎自己的變化會掛成同級分支，接在它本該取代的那一著上。',
+  '**Score.** Each branch closes with an assessment symbol in the notation chess players already read: ± a clear advantage, ⩲ a slight one, = level, and the same signs reversed when Black is better.':
+    '**評分。** 每條分支以國際象棋棋手已經熟悉的評估符號收尾：± 明顯優勢，⩲ 略優，= 均勢，黑方佔優時符號反過來。',
+  'None of it is specific to these games. The same machinery produces the alternative lines and annotations everywhere else on Mistboard, and pointing it at a new game costs an afternoon of engine time rather than a month of annotating by hand.':
+    '這一切都不是只為這些棋局訂製的。Mistboard 其他各處的替代變化和講解都由同一套機制產生，把它指向一局新棋，花掉的是一個下午的引擎時間，而不是一個月的手工註解。',
+  'Across this page and its companion on [the world title](/blog/xiangqi-world-championship), that comes to 25 games. Of the 201 moves judged, 108 are inaccuracies, 82 are mistakes or blunders, and 11 are moves the engine wanted to praise, three of them marked brilliant.':
+    '把本頁和講[世界冠軍](/blog/xiangqi-world-championship)的姊妹篇合起來，一共是25局棋。在被評判的201步中，108步是失準，82步是錯著或漏著，11步是引擎想要稱讚的著法，其中三步被標為妙手。',
+  'Both champion pages': '兩個冠軍頁面合計',
+  'games annotated': '已講解棋局',
+  'mainline moves': '主線著法',
+  'moves judged worth marking': '被判定值得標註的著法',
+  'engine sidelines': '引擎副線',
+  'moves inside those sidelines': '這些副線中的著法',
+  'moves in the published trees': '已發佈著法樹中的著法',
   title: '冠軍',
   'shared title': '並列冠軍',
   'title, champion later banned': '冠軍，其後被禁賽',
@@ -4304,7 +8981,7 @@ const ZH_HANT: Record<string, string> = {
   'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.':
     '许银川對阮武君，2007年，出自他三個冠軍中的最後一個。我們的引擎給他打出98.5分，是本頁最乾淨的一局。',
   'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
-    '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。他至今仍是拿下這個頭銜最年輕的棋手，而這一冠也讓他集齊全國、亞洲與世界三項冠軍，中國象棋界稱之為大滿貫。',
+    '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。他至今仍是拿下這個頭銜最年輕的棋手，而這一冠也讓他集齊全國、亞洲與世界三項冠軍，象棋界稱之為大滿貫。',
   'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.':
     '2025年1月12日，他在一次處罰四十一人的決定中被終身禁賽。',
   'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.':
@@ -4393,7 +9070,7 @@ const ZH_HANT: Record<string, string> = {
   'Jieqi has no opening book. It has an argument about the first move, running on Chinese forums among players with thousands of games, never written down in English. Why a face-down piece is a one-shot option you can waste, five openings ranked, and the pawn push weighed against the crossed cannon on all six reveals.':
     '揭棋沒有開局譜。它有的是一場關於第一步的爭論，在中文論壇上持續多年，參與者都是對局上千盤的棋手，卻從未有人用英文寫下來。為什麼一枚暗子是隻能用一次的權利、五種開局的排序，以及仙人指路與過河炮在六種翻出結果下的逐一比較。',
   'Jieqi has no opening book. No catalog of variations, no agreed piece-value table, nothing to memorize. One of the strongest players who writes about the game, a level-two Chinese xiangqi player claiming 90% over three thousand games, started the missing book and got one chapter in.':
-    '揭棋沒有開局譜。沒有變例目錄，沒有公認的子力價值表，沒有需要背的東西。寫這個遊戲寫得最好的棋手之一，一位自稱三千盤勝率九成的中國象棋二級棋士，動手寫了那本缺失的書，寫完第一章就停了。',
+    '揭棋沒有開局譜。沒有變例目錄，沒有公認的子力價值表，沒有需要背的東西。寫這個遊戲寫得最好的棋手之一，一位自稱三千盤勝率九成的象棋二級棋士，動手寫了那本缺失的書，寫完第一章就停了。',
   'What exists is an argument about the first move, running on Chinese forums for years, never written down in English. Here it is, with the sources at the bottom. Treat it as what strong players believe: none of it has been measured.':
     '真正存在的是一場關於第一步的爭論，在中文論壇上持續多年，從未有人用英文寫下來。以下就是這場爭論，出處列在文末。請把它當作高手們的看法：其中沒有一條經過實測。',
   'Every piece but the two generals starts face-down and shuffled. Neither player knows their own.':
@@ -4534,7 +9211,7 @@ const ZH_HANT: Record<string, string> = {
   // read that is not coming. Locked the same day its English copy published, so
   // any later English edit orphans a key here and fails the coverage test.
   'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.':
-    '免費和引擎或朋友下揭棋，不用註冊，下完還能複盤，分析會把你的選擇和你的運氣分開算。',
+    '免費和揭棋AI（皮卡魚、AB-JChess）或朋友下揭棋，不用註冊帳號；下完還能複盤，分析會把你自己的選擇和運氣分開計算。',
   'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.':
     '揭棋就是把每個子都翻扣過去的[象棋](/rules/xiangqi)。暗子按它所在那個點原本擺的子走，走完就翻開，之後一直是翻出來的那個子。開局時你不知道任何一個子是什麼，連自己的也不知道。[規則頁](/rules/jieqi)有詳細說明。',
   'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).':
@@ -4547,8 +9224,8 @@ const ZH_HANT: Record<string, string> = {
   'Black delivers checkmate on move 73.': '黑方在第 73 回合將死。',
   'That is [a real game on this site](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf), not a demo, and every screenshot below comes from it.':
     '那是[本站的一盤真實對局](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf)，不是演示，下面每一張截圖都來自這盤棋。',
-  'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link. Free, no sign-up, nothing to install.':
-    '用 1+1、3+2 或 5+5 和引擎下，或者把連結發給朋友。免費，不用註冊，什麼都不用裝。',
+  'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link.':
+    '在[象棋線上對弈](/zh-hant)首頁用 1+1、3+2 或 5+5 和引擎下，或者把連結發給朋友。',
   'Review your games': '複盤你的對局',
   'Ask for analysis on a finished game and the review separates what you chose from what you drew, which is the part a chess site has no reason to do. You also get the usual: a graph of the whole game, an accuracy score for each player, and every inaccuracy, mistake and blunder marked with the move that was better. It runs on our servers and takes a few minutes.':
     '對下完的棋點一次分析，複盤會把你選的和你揭到的分開來講，這一塊是西洋棋網站沒有理由去做的。常規的東西也都有：整盤棋的優勢曲線、雙方各自的準確率，以及每一個不準確、失誤和嚴重失誤，都標出更好的著法。分析在我們的伺服器上跑，要幾分鐘。',
@@ -4569,8 +9246,8 @@ const ZH_HANT: Record<string, string> = {
   'Your accuracy is then built from the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
     '準確率只由這些選擇算出來，所以揭得好不會把它抬高，揭得差也不會把它拉低。',
   'And it runs in your browser': '而且它就在你的瀏覽器裡跑',
-  'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued, nothing is sent anywhere, and it needs no account. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.':
-    '分析棋盤把同一個引擎放在你自己的機器上跑，你擺一條變化，它就把最佳著法畫在棋盤上。不用排隊，什麼都不會傳出去，也不需要帳號。[引擎是開放原始碼的](https://github.com/brianhliou/pikafish-jieqi-wasm)，所以這裡的某個數字如果看著不對，你可以直接去讀算出它的那段程式碼。',
+  'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued and nothing is sent anywhere. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.':
+    '分析棋盤把同一個引擎放在你自己的機器上跑，你擺一條變化，它就把最佳著法畫在棋盤上。不用排隊，什麼都不會傳出去。[引擎是開放原始碼的](https://github.com/brianhliou/pikafish-jieqi-wasm)，所以這裡的某個數字如果看著不對，你可以直接去讀算出它的那段程式碼。',
   'Running in a browser tab.': '就在一個瀏覽器分頁裡跑。',
   'The analysis board with the local engine switched on: PikaJieQi at depth 18 and 335,000 nodes per second, three candidate lines each with an evaluation, and arrows for each drawn on the jieqi board.':
     '打開本機引擎後的分析棋盤：PikaJieQi 深度 18，每秒 335,000 個節點，三條候選變化各帶一個評分，並在揭棋棋盤上分別畫出箭頭。',
@@ -4624,9 +9301,9 @@ const ZH_HANT: Record<string, string> = {
   // rules page has been serving this line in English on both zh pages since it
   // was locked.
   'Black wins by checkmate · 73 moves': '黑方將死獲勝 · 73 回合',
-  'Red wins by checkmate · 36 moves': '紅方將死獲勝 · 36 回合',
   // -- Duck Xiangqi --
   'Duck Xiangqi Rules': '鴨子象棋規則',
+  'Duck Xiangqi Rules: Duck Chess Meets Xiangqi': '鴨子象棋規則：當鴨子國際象棋遇上象棋',
   'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.':
     '把鴨子國際象棋搬到象棋盤上。每一回合都是先走一步棋，再放一次鴨子；鴨子像棋子一樣擋路，也一樣能當炮架；吃掉對方的將帥即獲勝。',
   'Duck Xiangqi is [xiangqi](/rules/xiangqi) with a duck on the board. Every turn you make a legal xiangqi move, and then you move the duck to an empty point. Both halves are one turn, and neither of them is optional.':
@@ -4637,8 +9314,6 @@ const ZH_HANT: Record<string, string> = {
     'Brian H. Liou 於 2026 年把鴨子象棋移植到 9 路 10 線的棋盤上，作為 Mistboard 原創。Dr Tim Paulden 在 2016 年發明了[鴨子國際象棋](https://duckchess.com)，而 Jim Aikin 早在 1999 年就在[八石棋](https://www.chessvariants.com/page/EightStoneChess)裡把可移動的中立石子放上了國際象棋盤。此前沒有人把這個想法搬到象棋上。讓它變得古怪的棋子是炮：炮吃子必須隔著一個子跳過去，而放在任何地方的鴨子都算一個子，所以你每放一次鴨子，都是給對手架起一座可以打過來的炮架。',
   'The duck belongs to nobody. Nothing can capture it and nothing can land on it, it is never material, and it is not either side’s piece. Its whole job is to be in the way, and both players take turns deciding where.':
     '鴨子不屬於任何一方。沒有子能吃它，也沒有子能落在它上面；它不計入子力，也不是任何一方的棋子。它唯一的作用就是擋在路上，而擋在哪裡由雙方輪流決定。',
-  'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has four. The sections below are where that difference lands.':
-    '國際象棋只有一種擋子的辦法：站到它想去的點上。象棋有四種。下面幾節講的就是這個差別落在哪裡。',
   'One turn, two actions': '一個回合，兩個動作',
   'The board, the pieces, and the opening array are ordinary xiangqi. Red moves first.':
     '棋盤、棋子和開局擺法都和普通象棋一樣。紅方先行。',
@@ -4677,19 +9352,16 @@ const ZH_HANT: Record<string, string> = {
     '所以鴨子既能擋路也能防守，而且是個難受的防守者：守住一路，等於每一回合都要把鴨子押在那裡。',
   'An engine game at full strength, 8 seconds a move. Watch the duck rather than the pieces: a cannon is firing over it in 30 of the 120 plies, and near the end Red is using it to hold a file its general cannot survive without.':
     '一盤引擎全力對局，每步 8 秒。看鴨子，別看棋子：全局 120 著裡有 30 著是炮隔著它開火，接近尾聲時紅方正用它守住一路，少了這一路帥就活不成。',
-  'Engine self-play · 8s per move': '引擎自對弈 · 每步 8 秒',
-  'Black captures the general on move 60. Red had the better of the opening, but the engine eval was still within a pawn and a half of level as late as ply 63, and Black ground it out from there.':
-    '黑方在第 60 回合吃掉將帥。紅方開局占優，但到第 63 著時引擎評估離均勢仍不到一個半兵，黑方從那裡一點點磨了下來。',
-  'This game was chosen from 8 played the same way, for how much the duck does in it. 7 of the 8 finished; all 7 are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
-    '這盤棋是從同樣條件下的 8 盤裡挑出來的，因為鴨子在其中出力最多。8 盤裡有 7 盤下完；這 7 盤都收在[配套研究](/study/uMbk76wd)裡，一盤一章，並註明每盤僵持了多久、鴨子在做什麼。',
+  'This game was chosen from 8 played the same way, for how much the duck does in it. It and five more engine games are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
+    '這盤棋是從同樣條件下的 8 盤裡挑出來的，因為鴨子在其中出力最多。它和另外五盤引擎對局都收在[配套研究](/study/uMbk76wd)裡，一盤一章，並註明每盤僵持了多久、鴨子在做什麼。',
   'Capturing the enemy general wins. A player with no legal turn loses, which is xiangqi’s answer to stalemate and the reverse of Duck Chess, where a player with no move wins. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
     '吃掉對方將帥即獲勝。無合法回合可走的一方判負，這就是象棋對困斃的處理，與鴨子國際象棋正好相反：在那邊，無步可走的一方獲勝。對局同樣可以因超時、認輸或棄局結束，和這裡的其他棋一樣。',
   'Two rules draw. The third occurrence of the same position is a draw, and the duck’s point is part of the position, since where it stands changes what every piece can do. Sixty moves by each player without a capture is also a draw, which is xiangqi’s own no-progress limit. Duck Chess never defined draw rules, so this half of the ruleset had to come from the xiangqi side.':
     '有兩條和棋規則。同一局面第三次出現即為和棋，而鴨子所在的點也算局面的一部分，因為它站在哪裡會改變每個棋子能做什麼。雙方各走六十回合而無吃子也判和，這是象棋自己的無進展上限。鴨子國際象棋從未定過和棋規則，所以這一半規則只能來自象棋這一邊。',
-  'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of seven in the companion study.':
-    '可以和八個強度的引擎對戰，也可以和朋友下。上面那盤示例對局是配套研究裡七盤中的一盤。',
+  'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of six in the companion study.':
+    '可以和八個強度的引擎對戰，也可以和朋友下。上面那盤示例對局是配套研究裡六盤中的一盤。',
   'Play Duck Xiangqi': '下鴨子象棋',
-  'Seven engine games': '七盤引擎對局',
+  'Six engine games': '六盤引擎對局',
   // ── puzzles-with-more-than-one-solution (2026-09-11) ──
   // Script conversion of the Simplified above, not an independent translation; ASCII token stream identical (the counts, dates, the two GitHub links).
   'Puzzles with more than one solution': '有不止一個答案的題目',
@@ -4744,23 +9416,12 @@ const ZH_HANT: Record<string, string> = {
     '今日題目，來自留下的題庫。如果你找到一個網站不接受的將死，那現在就是一個 bug，我想聽你說說。',
   'Today’s xiangqi puzzle': '今日象棋題目',
   'How the miner works': '挖掘器是怎麼工作的',
-  // anti-xiangqi and duck-xiangqi-build, derived from the Simplified entries
+  // anti-xiangqi and duck-xiangqi-strategy, derived from the Simplified entries
   // by script conversion plus the Taiwan lexical forks (2026-09-13).
   'Antichess on the Xiangqi Board Is a Draw': '象棋棋盤上的反棋是和棋',
   'Anti Xiangqi: Antichess on the Xiangqi Board Is a Draw': '反象棋：象棋棋盤上的反棋是和棋',
   'We put antichess on the xiangqi board and measured it before designing anything. Black has two moves to find in the opening, Red cannot go wrong, and then the palace keeps five pieces a side out of reach. Every other opening loses, 63 of them provably. We are publishing the measurement, not the variant.':
     '我們把反棋放到象棋棋盤上，先測量再設計。黑方在開局有兩步棋必須找到，紅方不會走錯，之後九宮讓每方五個棋子無法被觸及。其餘每一種開局都會輸，其中 63 種已被證明。我們發佈的是這份測量，而不是這個變體。',
-  'Antichess is chess with two rules changed: if you can capture you must, and you win by losing every piece you have. The king is an ordinary piece. Lichess plays it, and it was solved in 2016. We put the same two rules on the xiangqi board, with the general an ordinary piece and no facing rule, and measured what came out before designing anything.':
-    '反棋（自殺棋）是改了兩條規則的國際象棋：能吃子就必須吃，把自己所有棋子都送掉的一方獲勝。王只是普通棋子。Lichess 上可以下它，它在 2016 年已被解決。我們把同樣的兩條規則搬到象棋棋盤上，將帥作為普通棋子，不設白臉將規則，先測量結果再談設計。',
-  'It is a draw. Black has two moves to find in the opening and Red cannot go wrong; after that, the pieces you must lose sit in the palace where nothing can reach them. Every other opening loses, and 63 of those losses are proven. The full analysis, with every engine game, every proof and a viewer for all of it, is on brianhliou.com; this page is the short account and the reason there is no play button.':
-    '結論是和棋。黑方在開局有兩步棋必須找到，紅方不會走錯；之後你必須送掉的那些棋子都待在九宮裡，什麼都夠不到它們。其餘每一種開局都會輸，其中 63 種負局已被證明。完整分析連同每一盤引擎對局、每一份證明和一個瀏覽器都在 brianhliou.com；本頁是簡短的說明，也解釋了為什麼這裡沒有“開始對局”按鈕。',
-  'The opening has one safe path': '開局只有一條安全路線',
-  'Red’s first move is a cannon taking a horse through the enemy cannon; the two choices are mirror images, so call it 1. Cxb10. Black must capture and has two ways. Taking the cannon back with the chariot loses by force: Red gives its pieces away one at a time, the chariot has to take every one, and Red is out of pieces in 34 plies. That is proven, a certificate of 1,864 positions replayed by a checker that knows only the rules. Firing the other cannon into Red’s back rank, 1...Cxh1, holds.':
-    '紅方第一著是炮隔著對方的炮吃馬；兩種選擇互為鏡像，就稱之為 1. Cxb10。黑方必須吃子，有兩種方式。用車吃回那門炮會被強制擊敗：紅方把棋子一個個送出去，車不得不逐一吃掉，34 步之後紅方無子。這一點已被證明，一份 1,864 個局面的證明憑證已由一個只懂規則的檢驗器重播。用另一門炮轟向紅方底線，1...Cxh1，則站得住。',
-  'Black’s two captures after 1. Cxb10. The chariot recapture on b10 is a proven loss; the cannon shot to h1, over Red’s own h3 cannon, is the only move.':
-    '1. Cxb10 之後黑方的兩種吃法。車在 b10 吃回是已被證明的負著；炮隔著紅方自己的 h3 炮打到 h1，是唯一的著法。',
-  'Red then has two replies and both hold: take the cannon quietly, 2. Rxh1, and the exchange is over; or keep firing with 2. Cxd10, which sets Black a second trap, since only 2...Kxd10, the general taking the cannon, holds. The chain of forced captures has 166 possible endings and we played a game from every distinct one. Two survive. Every other branch loses for the side that took it.':
-    '接著紅方有兩種應法，都站得住：安靜地用車吃炮，2. Rxh1，交換就此結束；或者繼續開炮，2. Cxd10，給黑方設下第二個陷阱，因為只有用將吃炮的 2...Kxd10 站得住。這條連鎖強制吃子有 166 個可能的終點，我們從每一個不同的終點各下了一盤。兩個存活下來。其餘每一條分支都會讓走進去的一方輸。',
   'The two endings that survive the chain. Fourteen pieces each, no capture on the board, and the game is open.':
     '連鎖中存活下來的兩個終點。雙方各十四子，棋盤上無子可吃，棋局就此展開。',
   'Then the palace makes it a draw': '然後九宮讓它成為和棋',
@@ -4768,29 +9429,352 @@ const ZH_HANT: Record<string, string> = {
     '要取勝，你必須送掉將、兩個士和兩個象，而它們誰都離不開家。每一個都只能被走到它跟前的敵方棋子吃掉，而雙方都在設法擺脫恰恰是那些棋子。一旦雙方都沒有了車、馬、炮、兵，就再也不可能發生吃子，規則把這判為和棋。',
   'The engine’s own game at two million nodes a move, ply 35. Nothing on the board can ever capture anything again.':
     '引擎每著兩百萬節點自戰的對局，第 35 步。棋盤上再沒有任何棋子能吃掉任何東西。',
-  'In every engine game, the side that wanted the game to stop could feed its mobile pieces to the opponent, who had to take them, or park a lone chariot on lines nothing of the opponent’s could ever enter. At one and five million nodes the chariots stayed on and the game became a hundred plies of soldiers traded in pairs, ending the same way. That is evidence for a draw rather than a proof of one: no search we ran found a win from either surviving position, and the reason it could not is a property of the board.':
-    '在每一盤引擎對局裡，想讓棋局停下來的一方都可以把可出擊的子力送給對手，對手不得不吃；或者把一輛孤車停在對方任何棋子都永遠進不來的線路上。在一百萬和五百萬節點下，車留在了棋盤上，棋局變成一百步成對交換的兵戰，結局相同。這是和棋的證據，而不是證明：我們跑過的搜尋都沒有從任何一個存活局面找到勝法，而找不到的原因是棋盤本身的性質。',
-  'Four repairs and two siblings, none a game': '四種修補和兩個同族變體，沒有一個成為像樣的棋',
-  'Scoring every stall for the side with fewer pieces removes the free draw but cannot be tested without an engine that plays for the count. Codrus, the 1844 ancestor where you win by losing the general, draws through the same opening lines, faster. Losers, where the general stays royal, is decisive the wrong way: a forced win for Black at every strength we tried, because a check suspends the obligation to capture and that tempo lands with the second player. Letting the palace pieces out is a different board.':
-    '把每一個僵局判給子少的一方能去掉免費的和棋，但沒有一個為子數而戰的引擎就無法測試。Codrus 是 1844 年的祖先，輸掉將即獲勝，它經由同樣的開局路線成和，而且更快。Losers 保留將的王者身份，有勝負，但方向錯了：在我們試過的每一種強度下都是黑方必勝，因為一次將軍會暫停吃子義務，而這個先手落在後手一方。放九宮裡的棋子出來則已經是另一張棋盤了。',
   'What we are publishing instead of a play page': '我們發佈的是什麼，而不是一個對局頁面',
-  'The rule kernel with the three rule sets written out, the Fairy-Stockfish stanzas, all 166 endings of the opening chain, one engine game from each at two search depths, every proof certificate, a checker that replays them against the rules in a few seconds, and every game in a viewer. If you can show a third surviving opening, a defence in any certificate, or a win for either side from the positions above, open an issue there; the write-up will say so.':
-    '完整寫出三套規則的規則核心、Fairy-Stockfish 的變體配置、開局連鎖的全部 166 個終點、每個終點在兩種搜尋深度下各一盤引擎對局、每一份證明憑證、一個幾秒鐘內就能對照規則重播它們的檢驗器，以及放在瀏覽器裡的每一盤棋。如果你能給出第三條存活的開局、任何一份憑證裡的防守，或者從上面的局面出發任何一方的勝法，請去那裡提一個 issue；文章會如實寫明。',
-  'Read the full analysis': '閱讀完整分析',
+  // benedict-xiangqi (2026-10-07), converted from the Simplified entries.
+  'Benedict Xiangqi Is Unfair': '本尼迪克特象棋並不公平',
+  'Benedict Xiangqi: The First Mover Wins 78%': '本尼迪克特象棋：先手方勝率 78%',
+  'We put Benedict Chess’s rule on the xiangqi board: nothing is captured, and every enemy piece your moved piece attacks joins you. The game has no endgame and no draws, and the first mover wins 78% of engine games, nearly all of it from one cannon move. The pie rule looks like the repair.':
+    '我們把本尼迪克特國際象棋的規則搬到象棋棋盤上：不喫子，你走動的棋子所攻擊的每一個敵方棋子都會倒戈歸你。這個遊戲沒有殘局，也沒有和棋；在引擎對局中先手方贏下 78%，幾乎全部來自一步炮。餅乾規則看起來是修補的辦法。',
+  'Benedict Chess has no captures. When you move a piece, every enemy piece it attacks from its new square changes color and joins you, and you win by turning the enemy king. W. D. Troyka invented it and named it for Benedict Arnold, who changed sides. We put the same rule on the xiangqi board and measured the result with an engine of our own.':
+    '本尼迪克特國際象棋沒有喫子。你走一步棋後，這枚棋子從新位置攻擊到的每一個敵方棋子都會變色並加入你方；把對方的王變過來就贏了。它由 W. D. Troyka 發明，並以叛變投敵的本尼迪克特·阿諾德命名。我們把同一條規則放到象棋棋盤上，並用我們自己寫的引擎測量了結果。',
+  'Conversion games already exist, and several sit one rule away from this one. Desertion Chess converts a piece by moving next to it, and keeps captures. Andernach Chess turns the capturing piece. Cleopatra Chess is Troyka’s rule for a single piece. Banqi and jieqi, xiangqi’s own flipping games, turn a piece over to reveal what it is, which says nothing about whose it is. Benedict Xiangqi takes Troyka’s rule whole, for every piece, on the xiangqi board.':
+    '轉化類的棋早已存在，其中有幾種與本作只差一條規則。叛逃棋（Desertion Chess）靠走到一枚棋子旁邊來轉化它，並保留喫子。安德納赫棋（Andernach Chess）改變的是喫子的那枚棋子。克婁巴特拉棋（Cleopatra Chess）是隻對一枚棋子生效的 Troyka 規則。翻翻棋（暗棋）和揭棋是象棋自己的翻子游戲，翻開一枚棋子是爲了揭示它是什麼，與它歸誰無關。本尼迪克特象棋把 Troyka 的規則完整地用於每一枚棋子，搬到象棋棋盤上。',
+  'The port forced four design decisions with no default answer. Then the measurement found the game unfair: the first mover wins 78% of engine games, and nearly all of that comes from one cannon move on move one. Mistboard has no Benedict Xiangqi play page. This page holds the design and the measurement.':
+    '移植過程中有四個設計決定沒有現成答案。隨後測量發現這個遊戲並不公平：先手方贏下 78% 的引擎對局，而且幾乎全部來自第一步的一着炮。Mistboard 沒有本尼迪克特象棋的對局頁面，本頁記錄的是設計與測量。',
+  'The rule': '規則',
+  'Move a piece. Every enemy piece it attacks from where it lands joins you. Nothing is ever captured, so all 32 pieces stay on the board for the whole game, and a move that attacks the enemy general wins.':
+    '走一枚棋子。它從落點攻擊到的每一個敵方棋子都會加入你方。棋子永遠不會被喫掉，所以 32 枚棋子整局都留在棋盤上；一步攻擊到對方將帥的棋即獲勝。',
+  'The rule on a demo board. The rings mark the pieces the move converted.':
+    '在演示棋盤上的規則。圓圈標出這步棋轉化的棋子。',
+  'Red to move. The chariot on d1 attacks nothing. Two black soldiers stand on the fourth rank, where it is going.':
+    '紅方走棋。d1 上的車什麼也沒有攻擊。兩個黑卒站在第四橫線上，正是它要去的地方。',
+  'Both soldiers change sides. Nothing was captured and nothing left the board, so Red is two pieces up and Black two down from one move.':
+    '兩個卒都換了陣營。沒有喫子，也沒有棋子離開棋盤，所以一步棋就讓紅方多出兩子、黑方少了兩子。',
+  'A standing attack does nothing. Only the piece that moved converts, so a chariot already bearing on a piece has to move again to take it. Threats are made by moving.':
+    '停在原地的攻擊不起作用。只有走動的那枚棋子會轉化對方，所以已經瞄着某枚棋子的車必須再走一步才能拿下它。威脅只能靠走棋來製造。',
+  'What it does to xiangqi': '它對象棋做了什麼',
+  '**No endgame, ever.** There are no trades and nothing simplifies, and an endgame tablebase cannot exist because the material never shrinks. Xiangqi endgame theory, which is most of xiangqi theory, does not transfer at all.':
+    '**永遠沒有殘局。** 沒有兌子，局面不會簡化，殘局庫也不可能存在，因爲子力從不減少。象棋的殘局理論，也就是象棋理論的大部分，完全用不上。',
+  '**Cannons never weaken.** A xiangqi cannon needs a screen to capture, so in xiangqi it weakens as the board empties. Here the board never empties, and a cannon is as dangerous late in the game as on move 3.':
+    '**炮永遠不會變弱。** 象棋的炮需要炮架才能喫子，所以在象棋裏它會隨着棋盤變空而變弱。這裏棋盤從不變空，炮在對局後段和第 3 步時一樣危險。',
+  '**Advisors and elephants defend nothing.** They exist to guard against captures, and there are no captures. They still block lines and screen for cannons, but everything they were designed to do is gone.':
+    '**仕和相什麼也守不住。** 它們存在是爲了防喫子，而這裏沒有喫子。它們仍能擋住線路、給炮當炮架，但它們被設計出來要做的事都沒有了。',
+  '**Games are short and nobody draws.** Half of the 54 engine games below were over by ply 28. None of them was drawn, and none of 6,000 games of uniformly random legal moves was either. With no material to trade and no endgame to grind, every game reaches a decision.':
+    '**對局很短，沒有人和棋。** 下面 54 盤引擎對局中，一半在第 28 步前結束。沒有一盤是和棋，6,000 盤均勻隨機合法着法的對局也沒有一盤和棋。沒有子力可兌，也沒有殘局可磨，每一盤都會分出勝負。',
+  '**About 28% of legal moves lose on the spot.** That is the mean over the 1,696 positions in the engine games. The median position has 10% of its moves losing, and a minority of very sharp positions carries the mean. The share climbs from 24% in the first fifth of a game to 37% in the last, so there is no quiet opening phase to develop in.':
+    '**約 28% 的合法着法當場就輸。** 這是引擎對局中 1,696 個局面的平均值。中位局面有 10% 的着法會輸，平均值是由少數非常尖銳的局面拉高的。這個比例從對局前五分之一的 24% 升到最後五分之一的 37%，所以不存在可以安心出子的平靜開局階段。',
+  'Designing it: four decisions': '設計：四個決定',
+  '**The generals still may never face.** Xiangqi forbids the two generals from standing on one file with nothing between them, and we kept it. The alternative is to make the flying general a win, and it breaks: only the piece that moved converts, so unblocking the file wins nothing, and the generals end up facing each other while play carries on until someone shuffles a general along the file to claim it.':
+    '**將帥仍然不能照面。** 象棋禁止兩個將帥在同一條直線上中間無子相隔，我們保留了這條規則。另一種做法是把白臉將變成勝利條件，但它行不通：只有走動的棋子纔會轉化，所以打開這條線並不能取勝，結果將帥相對而立，對局卻繼續，直到有人把將帥沿着這條線挪一步去領取勝利。',
+  'Keeping the prohibition costs nothing and adds something xiangqi does not have. A piece pinned on the generals’ file cannot be removed, because nothing here removes anything, and converting it does not release it, since a conversion recolors in place. You can win the piece and still be unable to move it until a general steps off the file.':
+    '保留這條禁令沒有代價，還帶來了象棋沒有的東西。被釘在將帥線上的棋子無法被移走，因爲這裏沒有任何東西能移走棋子；轉化它也不能解開牽制，因爲轉化是原地變色。你可以贏得這枚棋子，卻仍然動不了它，直到一方的將帥離開這條線。',
+  '**Advisors and elephants are bound to the region they stand in, whoever owns them.** A converted advisor stands inside the enemy palace. Bound to its owner’s palace it would be frozen there for good; bound to the palace it stands in, it keeps playing and attacks from inside. From the starting array the two readings agree, because every advisor starts in its own palace.':
+    '**仕和相受它們所在的區域約束，不論歸誰所有。** 被轉化的仕站在敵方九宮裏。如果受原主人的九宮約束，它會永遠凍結在那裏；受它所在的九宮約束，它就能繼續行棋，從內部發動攻擊。從初始局面看兩種理解是一樣的，因爲每個仕都從自己的九宮出發。',
+  '**Soldiers are bound to their owner.** A soldier’s forward direction has to follow whoever owns it now, or a converted soldier marches away from its new side forever. Getting these two rules backwards breaks the game quietly.':
+    '**兵卒受其主人約束。** 兵卒的前進方向必須跟隨它現在的主人，否則被轉化的兵卒會永遠背離新的陣營前進。把這兩條規則弄反，會悄無聲息地毀掉這個遊戲。',
+  '**Draws need a progress clock.** With no captures, nearly every move can be undone, and three-fold repetition alone is not enough. The clock resets on the only two events that cannot be undone: a conversion, or a soldier move.':
+    '**和棋需要進度計數。** 沒有喫子，幾乎每一步都可以撤回，僅靠三次重複局面不夠。計數在僅有的兩種不可撤回的事件上清零：一次轉化，或一步兵卒走動。',
+  'How we tested it': '我們如何測試',
+  'No existing engine plays this. Pikafish and Fairy-Stockfish encode capture rules, and Fairy-Stockfish’s one conversion mechanism flips pieces enclosed by a drop, Reversi-style, which is a different rule. So we wrote one in Rust: alpha-beta search with a transposition table, principal variation search, late move reductions, and a quiescence search over conversions. Its piece values were fitted by logistic regression on self-play outcomes, and they beat our hand-picked values head to head.':
+    '現有的引擎都下不了這個棋。Pikafish 和 Fairy-Stockfish 都內置了喫子規則，而 Fairy-Stockfish 唯一的轉化機制是像黑白棋那樣翻轉被落子包圍的棋子，那是另一條規則。所以我們用 Rust 寫了一個：帶置換表的 alpha-beta 搜索、主要變例搜索、後期着法縮減，以及針對轉化的靜態搜索。它的子力價值是用邏輯迴歸在自對弈結果上擬合出來的，並在對抗中勝過了我們手工挑選的價值。',
+  'We do not quote the fitted values. An earlier fit on a quarter of the data had several values whose signs later reversed, which is more noise than a table of piece values can carry. The ordering survived: advisors and elephants come out close to worthless, which follows anyway from there being nothing to defend against.':
+    '我們不公佈擬合出的數值。早先用四分之一數據做的一次擬閤中，有好幾個數值後來符號反轉，這樣的噪聲是一張子力價值表承受不了的。排序保留了下來：仕和相幾乎一文不值，而這本來就可以從無需防守推出。',
+  'The rules were checked before anything was measured. All 54 engine games below replay through Mistboard’s TypeScript rule kernel with the same conversions and the same number of legal moves at every one of their 1,696 positions, and every board on this page is played through that kernel. Three results do not depend on how well the engine plays.':
+    '在測量任何東西之前，先檢查了規則。下面全部 54 盤引擎對局都能在 Mistboard 的 TypeScript 規則內核中重放，1,696 個局面中的每一個都得到相同的轉化和相同數量的合法着法；本頁的每一個棋盤也都經過這個內核。有三個結果不取決於引擎下得多好。',
+  Test: '測試',
+  'Uniformly random legal moves, 6,000 games': '均勻隨機合法着法，6,000 局',
+  '54.5% for the first mover, no draws': '先手方 54.5%，無和棋',
+  'Proof search from the starting array, 20.8 billion nodes': '從初始局面做證明搜索，208 億節點',
+  'No forced win within 13 plies': '13 步之內沒有強制勝',
+  'Legal moves that lose on the spot, 1,696 positions': '當場就輸的合法着法，1,696 個局面',
+  'Mean 28%, median 10%': '平均 28%，中位數 10%',
+  'Random play already favors the first mover. 54.5% over 6,000 games is about seven standard errors above even, so a tempo is worth something before either side plays well.':
+    '隨機對弈已經偏向先手方。6,000 局中 54.5% 比五五開高出約七個標準誤，所以在雙方都還下不好之前，一步先手就已經有價值。',
+  'The proof needs care, because an ordinary search cannot make one. Late move reductions search later moves shallower, so a normal search that finds no win has only shown that it did not look everywhere. With reductions and quiescence turned off, and the question asked as a yes or no at the mate threshold, the search proves there is no forced win within 13 plies. That took 20.8 billion nodes and about half an hour.':
+    '這個證明需要謹慎，因爲普通搜索做不出證明。後期着法縮減會把靠後的着法搜得更淺，所以普通搜索沒找到勝着，只說明它沒有處處都看到。關閉縮減和靜態搜索，並在殺棋閾值上以是或否來提問，搜索就證明了 13 步之內沒有強制勝。這用了 208 億個節點，約半小時。',
+  'We also checked whether the 78% moves when the engine gets stronger. It barely moves between 300,000 and 2 million nodes a move, a sevenfold range.':
+    '我們還檢查了引擎變強時 78% 是否會變化。從每步 30 萬節點到 200 萬節點，七倍的範圍內，它幾乎沒有變化。',
+  'Stability alone is not enough. An earlier version of this measurement varied its games with a six-ply random opening book, got 52.7%, and held it across a tenfold range of engine strength. It was stable because the book spent the very tempo being measured: six random plies throw the advantage away before either engine plays a move. A broken thermometer reads room temperature in every room. The 78% uses no book and takes its variety from evaluation jitter.':
+    '僅有穩定還不夠。這項測量的早期版本用六步隨機開局庫來讓對局多樣化，得到 52.7%，並且在十倍的引擎強度範圍內保持不變。它穩定，是因爲開局庫把要測量的那一步先手花掉了：六步隨機着法在兩個引擎走第一步之前就把優勢丟掉了。壞掉的溫度計在每個房間都顯示室溫。78% 不用開局庫，對局的多樣性來自評估抖動。',
+  'One cannon move decides it': '一步炮定勝負',
+  'The first mover wins 78% of engine games, measured from the starting array with no opening book and the two colors taking the first move in turn. Then we measured each of Red’s 42 legal first moves on its own, and the diagnosis changed shape.':
+    '先手方贏下 78% 的引擎對局，這是從初始局面測得的，不用開局庫，紅黑輪流先走。隨後我們單獨測量了紅方全部 42 個合法的第一步，診斷的樣子變了。',
+  'Red scores': '紅方得分',
+  'All 42 legal first moves, 24 engine games each at 300,000 nodes a move. Read down each pair of columns, lowest score first.':
+    '全部 42 個合法的第一步，每個以每步 30 萬節點下 24 盤引擎對局。按每一對列從上往下讀，得分從低到高。',
+  'The two best are the same idea, a cannon lifted to the fifth or sixth rank: h3h6 scores 91.7% and b3b5 87.5%. The three that score nothing are two elephant moves to the edge of the board, c1a3 and g1i3, and the general stepping up the middle, e1e2. Red’s first move is worth anywhere from nothing to 92%, so the 78% measures an engine that always finds the strong opening.':
+    '最好的兩步是同一個想法，把炮升到第五或第六橫線：h3h6 得 91.7%，b3b5 得 87.5%。得零分的三步是兩步走到棋盤邊上的相（c1a3 和 g1i3），以及帥從中路上一步（e1e2）。紅方第一步的價值從零到 92% 不等，所以 78% 衡量的是一個總能找到強勢開局的引擎。',
+  'From the starting array. The rings mark what each move converted, and on the last move the general it attacks.':
+    '從初始局面開始。圓圈標出每步棋轉化的棋子，最後一步標出它攻擊的將。',
+  'The starting array, Red to move.': '初始局面，紅方走棋。',
+  'The cannon fires up the b-file over Black’s own cannon and turns the horse on b10. It also threatens b5e5, with Black’s soldier on e7 as the screen and the general behind it. 32 of Black’s 38 replies lose at once, and b5e5 wins against every one of them.':
+    '炮沿 b 線隔着黑方自己的炮打過去，把 b10 的馬變了過來。它同時威脅 b5e5：以黑方 e7 的卒爲炮架，將就在後面。黑方 38 種應着中有 32 種當場就輸，而 b5e5 對每一種都能取勝。',
+  'Black answers in kind and turns the horse on h1. It looks reasonable, and it is one of the 32.':
+    '黑方以同樣方式回應，把 h1 的馬變過去。這步看起來很合理，但它就是那 32 種之一。',
+  'The cannon fires over the soldier on e7 at the general on e10, and the game is over.':
+    '炮隔着 e7 的卒打向 e10 的將，對局結束。',
+  'A xiangqi cannon needs exactly one piece between it and its target, and Black’s starting position supplies that piece in the right place for free. The threat exists because the xiangqi starting array happens to sit where Benedict’s rule can use it.':
+    '象棋的炮和目標之間需要正好一枚棋子，而黑方的初始局面免費把這枚棋子擺在了恰好的位置。這個威脅之所以存在，是因爲象棋的初始局面恰好落在本尼迪克特規則能利用的地方。',
+  'Every game the engine played': '引擎下的每一盤棋',
+  'All 54 games from the strongest setting, 2 million nodes a move, uncurated. Red moved first in 36 and won 33; Black moved first in 18 and won 13. The first mover won 46, and the eight it lost are the ones worth opening.':
+    '最強設置下的全部 54 盤對局，每步 200 萬節點，未經挑選。紅方先走 36 盤，贏 33 盤；黑方先走 18 盤，贏 13 盤。先手方贏了 46 盤，輸掉的那 8 盤最值得打開看看。',
+  'All 54 games, each replayed through the rule kernel. The rings mark the pieces each move converted, and on the last move the general it attacks. The arrow keys step through the game on the board.':
+    '全部 54 盤對局，每一盤都經規則內核重放。圓圈標出每步棋轉化的棋子，最後一步標出它攻擊的將。用方向鍵逐步瀏覽棋盤上的對局。',
+  'First mover won (%1)': '先手方勝（%1）',
+  'First mover lost (%1)': '先手方負（%1）',
+  '%1 moved first and won in %2 plies.': '%1先走，%2 步獲勝。',
+  '%1 moved first and lost in %2 plies.': '%1先走，%2 步落敗。',
+  'Engine, 2M nodes': '引擎，200 萬節點',
+  'The pie rule': '餅乾規則',
+  'The spread across those 42 openings is what makes the game recoverable, and the repair already exists. The pie rule divides a cake the way two children do: one cuts, the other picks. Red plays a first move, then Black chooses whether to stay Black or take over Red’s position. Playing the strongest opening becomes pointless when Black can simply take it.':
+    '這 42 種開局之間的差距正是這個遊戲可以挽救的原因，而修補辦法已經存在。餅乾規則像兩個孩子分蛋糕：一個切，另一個挑。紅方先走第一步，然後黑方選擇繼續執黑，還是接手紅方的局面。當黑方可以直接拿走最強的開局時，走最強的開局就沒有意義了。',
+  'So Red is pushed toward the move closest to even, and four of the 42 sit there. Two are the cannon declining its own best square, and two are the quietest developing moves on the board.':
+    '於是紅方被推向最接近均勢的着法，42 步中有四步在那裏。兩步是炮放棄自己的最佳位置，另外兩步是棋盤上最安靜的出子着法。',
+  'The four first moves closest to even, with what Red scores after each.':
+    '最接近均勢的四個第一步，以及每一步之後紅方的得分。',
+  'b3b4, 45.8%. The cannon steps up one square, short of the fifth rank that does the damage.':
+    'b3b4，45.8%。炮向前一步，還沒到造成破壞的第五橫線。',
+  'b3b7, 50.0%. The cannon goes all the way in, converting now and giving up the standing threat.':
+    'b3b7，50.0%。炮一直打進去，立刻轉化，放棄了持續的威脅。',
+  'd1e2, 54.2%. An advisor develops into the middle of the palace.':
+    'd1e2，54.2%。仕走到九宮中心出子。',
+  'e4e5, 54.2%. The central soldier: the one quiet developing move that is not a blunder.':
+    'e4e5，54.2%。中兵：唯一一步不是敗着的安靜出子着法。',
+  'Held to one of those, the game lands near 50%, because Red can no longer use the advantage. Hex is a proven first-player win at every board size and is played competitively, because of the swap.':
+    '限定在其中一步上，對局就會接近 50%，因爲紅方再也無法利用這份優勢。六貫棋（Hex）在每種棋盤大小下都被證明是先手勝，卻因爲換邊規則而被競技性地下着。',
+  'Those four numbers come from 24 games each: too few to rank them against each other, and enough to say the spread from 0% to 92% is real. Confirming that one of them holds near 50% over a proper sample is the open work.':
+    '這四個數字各來自 24 盤對局：不足以在它們之間排名，但足以說明從 0% 到 92% 的差距是真實的。用足夠的樣本確認其中一步能穩定在 50% 附近，是尚待完成的工作。',
+  'The pie rule fixes fairness and leaves the sharpness alone. The losing-move share is a property of the rules, so it does not move. The contest becomes even and stays sharp, and whether people want to play that is a question win rates cannot answer.':
+    '餅乾規則修正了公平性，而沒有改變尖銳程度。當場就輸的着法比例是規則本身的屬性，所以它不會變。比賽變得均衡，卻依然尖銳；人們是否想下這樣的棋，勝率回答不了。',
+  'It is not shippable as a competitive game. No rated ladder survives the first mover winning three games in four.':
+    '它還不能作爲競技遊戲上線。先手方每四盤贏三盤，任何等級分階梯都撐不住。',
+  'Unfair does not mean unplayable. Losing chess is a proven first-player win and is played every day, because the proof runs down lines no human finds, and Hex is played behind the swap. What is different here is depth. This 78% rests on one move you can say in a sentence, lift a cannon to the fifth rank, and an engine finds it every time. A proven win nobody can reach is a curiosity. A win you can memorize is the game.':
+    '不公平不等於不能下。自殺棋已被證明是先手勝，卻每天都有人下，因爲那個證明走的是人類找不到的變化；六貫棋則在換邊規則下照樣被人下。這裏的不同在於深度。這個 78% 依靠的是一步一句話就能說清的棋，把炮升到第五橫線，而引擎每次都能找到它。沒人夠得着的已證勝局只是奇聞；一個能背下來的勝法就是整個遊戲。',
+  'Two repairs beyond the pie rule are untested. Marking the general and giving the defender one move to answer would blunt the cannon threat directly. Or the starting array could move its central soldiers, since the threat exists only because Black’s soldier stands where a cannon needs its screen.':
+    '餅乾規則之外，還有兩個修補辦法未經測試。把將帥標記出來、給防守方一步應對的機會，可以直接削弱炮的威脅。或者改動初始局面中的中兵，因爲這個威脅之所以存在，只是因爲黑方的卒恰好站在炮需要炮架的位置。',
+  'Does Red have a forced win?': '紅方有強制勝嗎？',
+  'Everything above is a win rate, a statement about two particular engines. Whether the game is a first-player win under perfect play has an answer that does not depend on how well anything plays. What we have is a lower bound, no forced win within 13 plies. That rules out a cheap one, and half of the engine games were over by ply 28.':
+    '上面的一切都是勝率，是關於兩個特定引擎的陳述。這個遊戲在完美對弈下是否先手勝，其答案不取決於任何東西下得多好。我們手裏的是一個下界，13 步之內沒有強制勝。這排除了廉價的勝法，而引擎對局中有一半在第 28 步前就結束了。',
+  'Two things make the question harder than it looks. Material is conserved, so there is no endgame database to build and nothing for a forward search to meet in the middle. Strategy stealing does not apply either: pieces move and never accumulate, so a first player cannot make an arbitrary move and then discard it. What helps is that games are short and always decisive, a shallow and sharply terminal tree, which is the shape proof-number search is good at.':
+    '有兩件事讓這個問題比看起來更難。子力守恆，所以沒有殘局庫可建，正向搜索也沒有可以會合的中點。策略竊取也用不上：棋子只會移動，從不累積，所以先手方不能隨便走一步再把它丟掉。有幫助的是對局短且總能分出勝負，是一棵淺而終局尖銳的樹，而這正是證明數搜索擅長的形狀。',
+  'The next rung is 14 plies. The proof splits across Red’s 42 first moves and runs them in parallel at almost no loss, because with no forced win no branch ever cuts off another. Splitting two plies deep gives 1,740 independent jobs, enough for a cluster. Proof-number search, which spends its effort on the narrowest part of the proof tree, is how Mark Watkins solved losing chess, and we have not implemented it yet.':
+    '下一級是 14 步。證明可以按紅方 42 個第一步拆分並幾乎無損地並行運行，因爲既然沒有強制勝，任何一個分支都不會剪掉另一個。拆到兩步深，會得到 1,740 個獨立任務，足以用上一個集羣。證明數搜索把精力花在證明樹最窄的部分，馬克·沃特金斯正是用它解決了自殺棋，而我們還沒有實現它。',
+  'A weak solution, or an ultra-weak one by an argument we have not thought of, would settle the pie rule question too: a proven first-player win is exactly the case the swap was invented for. The engine, the test harness, the 54 games and the full opening table are in one repository.':
+    '弱解，或者通過我們沒想到的論證得到的超弱解，也會順帶解決餅乾規則的問題：已被證明的先手勝正是換邊規則被髮明出來要應對的情形。引擎、測試工具、54 盤對局和完整的開局表都在一個代碼倉庫裏。',
+  'Check the numbers': '覈對數據',
+  'Benedict Xiangqi: Benedict Chess on the Xiangqi Board, Measured':
+    '本尼迪克特象棋：象棋棋盤上的本尼迪克特國際象棋，實測',
   'Check the proofs yourself': '親自檢驗這些證明',
   'Learn xiangqi': '學習象棋',
-  'AFTER 1. Cxb10: BLACK MUST CAPTURE': '1. Cxb10 之後：黑方必須吃子',
   '2. Rxh1 Rxb10: RED TO MOVE': '2. Rxh1 Rxb10：輪到紅方',
   '2. Cxd10 Kxd10 3. Rxh1: BLACK TO MOVE': '2. Cxd10 Kxd10 3. Rxh1：輪到黑方',
   'PLY 35 OF THE 2M GAME: A DEAD BOARD': '2M 對局第 35 步：死局',
-  'Duck Xiangqi Is Live: How Not to Lose Your First Game': '鴨子象棋上線了：怎樣不輸掉你的第一盤',
-  'Duck Xiangqi: How Not to Lose Your First Game': '鴨子象棋：怎樣不輸掉你的第一盤',
+  // anti-xiangqi merge (2026-10-07), converted from the Simplified entries.
+  'Antichess is chess with two rules changed: if you can capture you must, and you win by losing every piece you have. The king is an ordinary piece. Lichess plays it, and it was solved in 2016, when Mark Watkins showed that 1. e3 wins by force for White. We put the same two rules on the xiangqi board, with the general an ordinary piece and no facing rule, and measured what came out before designing anything.':
+    '反棋（自殺棋）是改了兩條規則的國際象棋：能吃子就必須吃，把自己所有棋子都送掉的一方獲勝。王只是普通棋子。Lichess 上可以下它，它在 2016 年已被解決：馬克·沃特金斯證明了 1. e3 是白方的強制勝著。我們把同樣的兩條規則搬到象棋棋盤上，將帥作為普通棋子，不設白臉將規則，先測量結果再談設計。',
+  'It is a draw. Black has two moves to find in the opening and Red cannot go wrong; after that, the pieces you must lose sit in the palace where nothing can reach them. Every other opening loses, and 63 of those losses are proven. That is why Mistboard has no Anti Xiangqi play page, and this one holds the measurement.':
+    '結論是和棋。黑方在開局有兩步棋必須找到，紅方不會走錯；之後你必須送掉的那些棋子都待在九宮裡，什麼都夠不到它們。其餘每一種開局都會輸，其中 63 種負局已被證明。這就是 Mistboard 沒有反象棋對局頁面的原因，本頁記錄的就是這份測量。',
+  'Antichess rules have been tried on other boards, and Fairy-Stockfish will play them on most of the boards it knows. This page measures the full xiangqi board end to end, with every ending of the forced opening played out, the losing lines proven, and the evidence published where anyone can rerun it.':
+    '反棋規則在其他棋盤上也有人試過，Fairy-Stockfish 在它支援的大多數棋盤上都能按這套規則下棋。本頁對完整的象棋棋盤做了從頭到尾的測量：強制開局的每一個終點都下完了，輸棋的變化都有證明，證據公開發布，任何人都可以重新執行。',
+  'Notation is chess-style: R chariot, H horse, E elephant, A advisor, K general, C cannon, P soldier; files a to i from Red’s left, ranks 1 to 10 from Red’s side, so 1. Cxb10 is a cannon taking whatever stands on b10. A ply is one move by one side. If you have not played xiangqi, the [rules page](/rules/xiangqi) covers it in a few minutes.':
+    '記譜採用國際象棋式寫法：R 車，H 馬，E 象，A 士，K 將，C 炮，P 兵；縱線 a 到 i 自紅方左側數起，橫線 1 到 10 自紅方一側數起，所以 1. Cxb10 表示炮吃掉 b10 上的任何棋子。一步指一方走一著。如果你沒下過象棋，[規則頁](/rules/xiangqi)幾分鐘就能講清楚。',
+  'The opening: Black has two moves to find': '開局：黑方有兩步棋必須找到',
+  'The forced part of the game is a chain of captures four or five plies long, with three forks on the main line. Two are Black’s, and both decide the game. One is Red’s, and does not. A fourth, after a losing move by Black, holds most of the tree. Red’s first move is a cannon taking a horse; the two choices are mirror images, so call it 1. Cxb10. In the boards below, the arrows are every capture the side to move has.':
+    '棋局中被強制的部分是一條四到五步長的吃子連鎖，主線上有三個分叉。兩個屬於黑方，都決定勝負。一個屬於紅方，並不決定勝負。第四個出現在黑方走出一著輸棋之後，樹的大部分都在它下面。紅方第一著是炮吃馬；兩種選擇互為映象，就稱之為 1. Cxb10。下面的棋盤裡，箭頭標出的是行棋方的每一種吃法。',
+  'Fork A. Black must capture and has two ways: take the cannon back with the chariot, or fire the other cannon into Red’s back rank over Red’s own h3 cannon. 1...Rxb10 loses by force in 34 plies, and that is proven. 1...Cxh1 holds.':
+    '分叉 A。黑方必須吃子，有兩種走法：用車把炮吃回來，或者隔著紅方自己的 h3 炮，把另一門炮打進紅方底線。1...Rxb10 在 34 步內被強制擊敗，這一點已被證明。1...Cxh1 守得住。',
+  'Fork B. Red has two replies and both hold. 2. Rxh1 ends the exchange, since 2...Rxb10 is Black’s only capture and the chain stops at ply 4 with Red to move. 2. Cxd10 keeps firing and sets Black a second trap. The engine took 2. Rxh1 at every budget.':
+    '分叉 B。紅方有兩種應著，都守得住。2. Rxh1 結束這次交換，因為 2...Rxb10 是黑方唯一的吃法，連鎖在第 4 步停止，輪到紅方。2. Cxd10 繼續開炮，給黑方設下第二個陷阱。引擎在每一種預算下都選了 2. Rxh1。',
+  'Fork C. Black again has two captures, and again the obvious one loses. 2...Kxd10, the general taking the cannon, holds, with 3. Rxh1 forced and the chain stopping at ply 5, Black to move. 2...Cxf1 loses to 3. Kxf1 Kxd10, after which Red wins by extinction in 38 plies.':
+    '分叉 C。黑方又有兩種吃法，而且又是顯眼的那種會輸。2...Kxd10，用將吃炮，守得住：3. Rxh1 是被迫的，連鎖在第 5 步停止，輪到黑方。2...Cxf1 輸給 3. Kxf1 Kxd10，此後紅方在 38 步內送光全部棋子取勝。',
+  'Fork D. After 2...Cxf1 Red has three captures, and 3. Kxf1 wins. 3. Cxa10 leads into 21 endings and draws with best play; 3. Cxf10 leads into 58 and loses to 3...Kxf10. Red never needs either, so nobody can be made to reach those 79 endings.':
+    '分叉 D。2...Cxf1 之後紅方有三種吃法，3. Kxf1 取勝。3. Cxa10 通向 21 個終點，雙方最佳著法下是和棋；3. Cxf10 通向 58 個終點，輸給 3...Kxf10。紅方兩者都用不著，所以誰也不會被迫走到那 79 個終點。',
+  Fork: '分叉',
+  Capture: '吃法',
+  'With best play': '最佳著法下',
+  'Endings below': '下方終點',
+  Proven: '已證明',
+  'Fork A': '分叉 A',
+  'Red wins': '紅方勝',
+  'Fork B': '分叉 B',
+  'Fork C': '分叉 C',
+  'Fork D': '分叉 D',
+  'Black wins': '黑方勝',
+  'Every capture at the four forks, valued by backing the chain’s 83 endings up the tree: at each fork the side to move takes the capture that is best for it. Proven counts the endings below with a machine-checked proof.':
+    '四個分叉處的每一種吃法，其價值由連鎖的 83 個終點沿樹回推得出：在每個分叉，行棋方選擇對自己最有利的吃法。「已證明」一欄統計下方終點中有機器核驗證明的數量。',
+  'One verdict on the main line rests on search alone. The engine found 2...Cxf1 losing at 100,000 nodes a move and again at a million, and the prover ran out of budget on it. If it does hold, Black has a second way to draw, and the game is still a draw.':
+    '主線上有一個判斷只依賴搜尋。引擎在每著 100,000 節點下判定 2...Cxf1 會輸，在一百萬節點下也是如此，而證明器在它上面耗盡了預算。如果它確實守得住，黑方就多了一條和棋之路，棋局依然是和棋。',
+  'Why the chariot recapture loses': '為什麼用車吃回會輸',
+  'A certificate is a tree: at every Red move it holds one move, and at every Black move it holds every legal reply. The one for 1...Rxb10 has 1,864 positions. Below is its main line. At Red’s first free move Black has 42 legal replies, and the certificate answers each of them.':
+    '證明憑證是一棵樹：紅方每一著只保留一著，黑方每一著保留所有合法應著。1...Rxb10 的那一份有 1,864 個局面。下面是它的主變。在紅方第一著自由著法處，黑方有 42 種合法應著，憑證對每一種都有應對。',
+  'The main line of the proof that 1...Rxb10 loses, 34 plies, with notes on the plies that matter. The whole tree is in the evidence repository.':
+    '證明 1...Rxb10 會輸的主變，共 34 步，關鍵步附有註釋。整棵樹在證據程式碼庫裡。',
+  'The natural recapture. From here Red wins by force; the certificate covers 1,864 positions.':
+    '自然的吃回。從這裡起紅方必勝；證明憑證覆蓋 1,864 個局面。',
+  'Red’s first free move is quiet: the chariot steps to a2. Black has 42 legal replies and the certificate answers each one. This is the main line.':
+    '紅方第一著自由著法是靜著：車走到 a2。黑方有 42 種合法應著，憑證對每一種都有應對。這是主變。',
+  'The chariot to b2, with the b8 cannon now screened onto the b1 horse. Black has exactly one legal move.':
+    '車到 b2，b8 的炮此時正架在 b1 的馬上。黑方恰好只有一種合法著法。',
+  'Red must take the cannon.': '紅方必須吃炮。',
+  'Black must take the chariot: the whole b-file is open.': '黑方必須吃車：整條 b 線都是空的。',
+  'A quiet move that leaves Black’s chariot exactly one capture, the elephant on c1.':
+    '一著靜著，讓黑方的車恰好只剩一種吃法：c1 的相。',
+  'The elephant steps to i3, into the chariot’s reach; two replies, both covered.':
+    '相走到 i3，進入車的射程；兩種應著，都在覆蓋之內。',
+  'Red has no pieces left and has won. Black could not decline a single capture along the way.':
+    '紅方已無棋子，贏了。一路上黑方沒有一次吃子能夠拒絕。',
+  'A quiet move that leaves your opponent exactly one capture is a move your opponent has to make. Red’s back-rank pieces become a queue, and Black’s chariot, forced to take whatever is put in front of it, empties the queue for Red. Thirty plies later Red has nothing left and has won. So Black’s only move is 1...Cxh1.':
+    '一著安靜的著法若讓對手只剩恰好一種吃法，那就是對手不得不走的著法。紅方底線的棋子變成一列隊伍，黑方的車被迫吃掉擺到面前的一切，就替紅方把這列隊伍清空。三十步之後紅方一子不剩，贏了。所以黑方唯一的著法是 1...Cxh1。',
+  'After the chain: what each side plays for': '連鎖之後：雙方各圖什麼',
+  'Left, after 1. Cxb10 Cxh1 2. Rxh1 Rxb10, Red to move. Right, after 2. Cxd10 Kxd10 3. Rxh1, Black to move, the same material with the general on d10. The engine’s games from here, at three budgets, show what the middlegame is about.':
+    '左邊是 1. Cxb10 Cxh1 2. Rxh1 Rxb10 之後，輪到紅方。右邊是 2. Cxd10 Kxd10 3. Rxh1 之後，輪到黑方，子力相同，只是將在 d10。引擎從這裡出發、在三種預算下的對局，顯示了中局在爭什麼。',
+  '**You cannot lose a piece; you can only have it taken.** So every move is an offer, and the ones that count are the offers the opponent cannot refuse: a quiet move that leaves them exactly one capture.':
+    '**你沒法主動丟子，只能讓對方吃掉。**所以每一著都是一次奉送，真正起作用的是對手無法拒絕的奉送：一著安靜的著法，讓對手只剩恰好一種吃法。',
+  '**A loose chariot is a liability.** Put pieces in its path and it must take every one, which is how the chariot recapture loses. So both sides open by offering cannons. In the game at two million nodes a move, 3. Cb3 screens Black’s cannon onto the b1 horse, three captures follow, and both chariots are loose. Fourteen plies of compelled captures follow, with material coming off in step.':
+    '**一輛無人守護的車是負擔。**在它的路徑上擺子，它就必須一個個吃掉；用車吃回之所以會輸，正是這個原因。所以雙方開局都改為送炮。在每著兩百萬節點的那一局裡，3. Cb3 給黑方的炮架到 b1 的馬上，隨後發生三次吃子，兩輛車都成了無人守護的子力。接下來是十四步被迫的吃子，雙方子力同步減少。',
+  'The engine against itself at two million nodes a move, 44 plies. It opened on the other wing; the game is shown mirrored so its files match the boards above.':
+    '引擎每著兩百萬節點的自戰對局，共 44 步。它實際是在另一翼開局的；這裡把對局映象顯示，讓縱線與上面的棋盤一致。',
+  'Cannon takes the horse over Black’s cannon. Red’s only two legal moves are this and its mirror image.':
+    '炮隔著黑方的炮吃馬。紅方僅有的兩種合法著法就是這一著和它的映象。',
+  'Black declines the chariot recapture, a proven loss, and fires the other cannon down the h-file with Red’s h3 cannon as the screen. The only move that holds.':
+    '黑方放棄已被證明會輸的車吃回，改用另一門炮沿 h 線開火，以紅方的 h3 炮為炮架。唯一站得住的一著。',
+  'The chariot takes the cannon. Continuing with 2. Cxd10, the other cannon capture, would also hold.':
+    '車吃炮。改走另一種炮吃法 2. Cxd10 同樣站得住。',
+  'Black’s only legal move. The forced part is over: fourteen pieces each, Red to move, no capture on the board.':
+    '黑方唯一的合法著法。強制部分結束：雙方各十四子，輪到紅方，棋盤上無子可吃。',
+  'The first free move of the game. Red puts its last cannon on b3, where it screens Black’s b8 cannon onto the b1 horse: an offer Black cannot refuse.':
+    '全域性第一著自由著法。紅方把最後一門炮放到 b3，充當黑方 b8 炮吃 b1 馬的炮架：一份黑方無法拒絕的奉送。',
+  'Only legal move.': '唯一合法著法。',
+  'The same exchange on the other wing: chariot takes cannon, and Rxb3 will be forced in reply.':
+    '另一翼同樣的交換：車吃炮，接下來 Rxb3 將是被迫的應著。',
+  'Both chariots are now loose on the back ranks with nothing but captures available. For the next fourteen plies each chariot has only captures to make, and the two sides shed material in step.':
+    '兩輛車如今都鬆動在底線上，除了吃子別無選擇。接下來十四步裡每輛車都只能吃子，雙方同步棄子。',
+  'The last capture of the feast. Five pieces each: general, two advisors, an elephant, one chariot.':
+    '盛宴的最後一次吃子。雙方各五子：將、雙士、一象、一車。',
+  'Red pulls the lever. The elephant steps to i3, on Black’s chariot’s file, where Black has no other capture: Rxi3 is compelled.':
+    '紅方扳動槓桿。相走到黑方車所在縱線上的 i3，黑方別無其他吃法：Rxi3 是被迫的。',
+  'The chariot itself: Ri2, and Black must take it. Red now has nothing that can leave the palace.':
+    '輪到車本身：Ri2，黑方必須吃掉。紅方再沒有能離開九宮的棋子了。',
+  'The advisor steps into the chariot’s path. Black must take, and Red’s other advisor must take back.':
+    '仕走進車的路徑。黑方必須吃，紅方的另一隻仕必須吃回。',
+  'Red: general and one advisor. Black: general, two advisors, an elephant. Nothing on the board can ever capture anything again.':
+    '紅方：帥和一仕。黑方：將、雙士、一象。棋盤上再沒有任何棋子能吃掉任何東西。',
+  'Third occurrence of the position: draw by repetition. Red has fewer pieces and no way to lose them; Black has no way to make Red take anything.':
+    '局面第三次出現：重複局面成和。紅方子少卻無法送掉；黑方也無法迫使紅方吃任何東西。',
+  '**Or a slow war of soldiers.** At five million nodes nobody finds a forcing offer early, and soldiers walk into each other for a hundred plies, taken in pairs, with an elephant and a general thrown in on the way.':
+    '**或者是一場緩慢的兵戰。**在五百萬節點下，雙方早期都沒找到強制性的奉送，兵卒彼此走近，持續一百步，成對被吃掉，中途還搭進去一個象和一個將。',
+  'The engine against itself at five million nodes a move, 131 plies, mirrored the same way. The notes follow the trades.':
+    '引擎每著五百萬節點的自戰對局，共 131 步，以同樣方式映象顯示。註釋跟隨著這些兌子。',
+  'The same four forced plies as every game.': '和每盤棋一樣的四步強制著法。',
+  'The chariots take each other’s cannons and Red’s chariot is taken in turn: eleven pieces each, and the game becomes a soldier war.':
+    '雙方的車互吃對方的炮，紅方的車隨即也被吃掉：各剩十一子，棋局變成一場兵戰。',
+  'Red offers a soldier on i5. Black answers with a soldier on i6: now Red’s soldier must take it, and Black’s chariot must take back.':
+    '紅方把兵送到 i5。黑方以 i6 的卒回應：現在紅方的兵必須吃它，黑方的車必須吃回。',
+  'Two soldiers off in two compelled captures. This is the trade the rest of the game is made of: a soldier steps into another’s path, the capture is compelled, and the capturer is taken in turn.':
+    '兩次被迫吃子，去掉兩個兵。這盤棋的餘下部分就是由這種交換構成的：一個兵走進另一個兵的路徑，吃子被迫發生，吃子者隨即被吃。',
+  'A soldier taken by a soldier, then a soldier taken by an elephant. Material keeps coming off in pairs, and every capture is one the taker could not refuse.':
+    '兵吃兵，再象吃兵。子力繼續成對消失，每一次吃子都是吃子方無法拒絕的。',
+  'Black stepped an elephant into the path of Red’s last soldier, giving it up so the soldier lands on e8, where the chariot must take it. Red has no soldiers left.':
+    '黑方把象送進紅方最後一個兵的路徑，用它換得該兵落到 e8，車必須在那裡吃掉它。紅方再無兵。',
+  'Red walks its general into the soldier’s path and Black must take it. Under these rules that is progress for Red; the elephant takes the soldier back, and no soldiers remain.':
+    '紅方把帥走進卒的路徑，黑方必須吃掉。按這些規則，這對紅方是進展；相吃回卒，棋盤上再無兵卒。',
+  'From here nothing can be forced. Black’s chariot sits on the c-file behind its own elephant, on lines none of Red’s remaining pieces can reach; Red’s advisors and elephants cannot leave their half; and either chariot could be thrown away at will. Five pieces each, and the board is as dead as the palace-only one.':
+    '從這裡起，什麼都無法強迫。黑方的車停在 c 線上自己的象後面，所處線路紅方剩餘的棋子都夠不到；紅方的仕和相離不開自己的半邊；而任何一方的車都可以隨時扔掉。各剩五子，棋盤和只剩九宮棋子的那種局面一樣死。',
+  'Third occurrence of the position: draw by repetition, five pieces each, both sides shuffling an elephant and a chariot.':
+    '局面第三次出現：重複局面成和，各剩五子，雙方來回挪動象和車。',
+  'The two-million-node game gets there at ply 35, Red feeding its last mobile pieces to Black’s chariot, and repeats to a draw at ply 44. The soldier war ends with a chariot and the palace pieces each, and that draw can be checked by hand. Black’s chariot sits on lines none of Red’s pieces can reach, so it can never be made to capture; either chariot can be thrown away at will; and with no capture on the board any move is legal, so whoever wants to wait shuffles an advisor until the progress clock ends the game.':
+    '兩百萬節點那一局在第 35 步到達這裡，紅方把最後幾個可出擊的棋子餵給黑方的車，隨後在第 44 步重複局面成和。兵戰以雙方各餘一車加九宮棋子收場，這個和棋可以手算驗證。黑方的車停在紅方任何棋子都夠不到的線路上，所以永遠不會被迫吃子；任何一方的車都可以隨時扔掉；而棋盤上無子可吃時任何著法都合法，於是想等的一方就來回挪士，直到無吃子步數限制終結棋局。',
+  'To win you need the opponent to keep enough mobile force to eat your whole palace, and to be compelled to use it. They control that force: they can throw it into captures you cannot refuse, park it, or wait. In every engine game one of the three was there when wanted, and in random play a quarter of 3,000 games stall.':
+    '要取勝，你需要對手保留足夠的出擊力量來吃光你整個九宮，並且被迫動用它。那股力量在對手手裡：他們可以把它扔進你無法拒絕的吃子裡，可以擱著不動，也可以等。在每一盤引擎對局裡，三者之一總在需要時出現；而在隨機對弈中，3,000 局裡有四分之一成了僵局。',
+  'This is evidence for a draw, short of a proof. Search to five million nodes a move found no win from either surviving position. We have not shown that a way out exists from every position the chain can lead to, only that no search found a position without one. The title is that verdict and that geometry.':
+    '這是和棋的證據，還不是證明。每著五百萬節點的搜尋在兩個存活局面裡都沒找到勝法。我們沒有證明從連鎖可能通向的每個局面都存在出路，只是說沒有任何搜尋找到過沒有出路的局面。標題說的就是這個判斷和這套幾何結構。',
+  'Could it be made a game?': '能把它改成一個能下的棋嗎？',
+  'The draw comes from one fact: five pieces a side can only be taken by pieces the opponent would rather throw away. A repair has to change that, change what you have to lose, or change what a stall is worth. We tried four, through the same referee, sweep, prover and self-play. None made a game.':
+    '和棋源於一個事實：每方五個棋子只能被對手寧願扔掉的棋子吃掉。修補方案要麼改變這一點，要麼改變你必須送掉的東西，要麼改變僵局的價值。我們試了四種，走的是同一套裁判、掃描、證明器和自戰流程。沒有一種做出了像樣的棋。',
+  '**Score every stall for the side with fewer pieces.** This is FICS’s stalemate rule applied wherever the game stops, and it hands a frozen board to whoever is lighter. Random play goes from 26% undecided to 4% with no tilt (Red 47.9%). Engine play did not change at all: the engine does not know the rule, so the same games were simply scored differently, which says nothing about the game the rule would create. Testing it properly needs a Fairy-Stockfish patch so the engine plays for the count. It is the only repair that keeps the game recognisable and might work, and the stall key is already in the kernel if anyone wants to try.':
+    '**所有僵局都判給子少的一方。**這是把 FICS 的困斃規則應用到棋局停下的任何情形，它把凍結的棋盤交給子力更少的一方。隨機對弈的未決比例從 26% 降到 4%，且沒有偏向（紅方 47.9%）。引擎對弈毫無變化：引擎不知道這條規則，所以還是同樣的對局，只是判法不同，這對該規則會造就的棋毫無說明力。要正經測試，需要給 Fairy-Stockfish 打補丁，讓引擎為子數而下。這是唯一一種既保留棋的辨識度又可能奏效的修補，僵局那個開關已經在核心裡，有人想試就能試。',
+  '**Lose the general instead of everything.** Codrus, the 1844 ancestor, puts the target in reach down a file, but a side that sheds its mobile pieces can still never be made to take the enemy general. It draws through the same two opening lines, faster: 28 endings, 20 of 25 losses proven, three self-play draws.':
+    '**只需送掉將，而不是全部。**Codrus 是 1844 年的祖先，目標沿縱線總是夠得到，但拋掉可出擊棋子的一方仍然永遠不會被迫吃掉對方的將。它經由同樣的兩條開局變化成和，而且更快：28 個終點，25 個負局中有 20 個已被證明，三盤自戰和棋。',
+  '**Keep the general royal.** Losers, ICC’s version, keeps check and mate, and being mated or reduced to the bare general wins. It is decisive the wrong way: Black wins at one, two and five million nodes, and backing up its 16-ending chain gives Black too, with 7 of 13 losses proven. A check suspends the obligation to capture, and that tempo lands with the second player in every line we looked at.':
+    '**保留將的王者身份。**Losers 是 ICC 的版本，保留將軍與將死，被將死或只剩光將的一方獲勝。它有勝負，但方向錯了：黑方在一百萬、兩百萬和五百萬節點下都獲勝，把它 16 個終點的連鎖回推，結果也是黑方，13 個負局中有 7 個已被證明。將軍會暫停吃子義務，而在我們看過的每一條變化裡，這個先手都落到後手一方。',
+  '**Let the palace pieces out.** That removes the fortress by removing the confinement, and most of what makes the pieces xiangqi’s goes with it. We did not measure it; it is a different board.':
+    '**放九宮裡的棋子出來。**這是靠取消禁閉來消除堡壘，而讓這些棋子成為象棋棋子的大部分特徵也隨之消失。我們沒有測量它；那是另一張棋盤。',
+  'How we checked it': '我們是怎麼核驗的',
+  '**The referee** is a xiangqi rule kernel with switches for the rules above. Its move generation matches Fairy-Stockfish’s on 209 positions, with zero disagreements. In every game the engine proposes and the kernel decides, applies and ends the game, so an engine quietly playing different rules aborts the run.':
+    '**裁判**是一個帶有上述規則開關的象棋規則核心。它的著法生成在 209 個局面上與 Fairy-Stockfish 一致，零處分歧。每一盤裡都由引擎提議，核心判定、執行並終止棋局，所以一個悄悄按不同規則下棋的引擎會讓整輪執行中止。',
+  '**The player** is Fairy-Stockfish, configured through a variants file. Its evaluation was never taught this objective, and it shows. Ten times the search beats one times the search only 10-4 with 6 draws here, against 20-0 on normal xiangqi. That is why the opening rests on proofs.':
+    '**棋手**是 Fairy-Stockfish，透過一個變體配置檔案設定。它的評估從未針對這個目標訓練過，結果也看得出來：十倍搜尋量對一倍搜尋量在這裡只贏到 10-4 帶 6 和，而在普通象棋上是 20-0。這就是開區域性分依靠證明的原因。',
+  '**The prover** takes a position and a claim, such as “Red wins from here”, and builds a tree with one winning move at each of the winner’s turns and every legal reply at each of the loser’s, down to positions the kernel says are over. If the tree closes, the claim is a fact about the rules, whatever any engine thinks. It is proof-number search with a 60-ply cutoff that counts as a loss for the side trying to win, so a proof can never lean on it. Every proof is saved as a certificate, and a separate checker replays certificates against the kernel and does nothing else.':
+    '**證明器**接收一個局面和一個論斷，比如「紅方從此處必勝」，然後構建一棵樹：勝方每一手保留一著取勝著法，負方每一手保留所有合法應著，一直下到核心判定已經結束的局面。如果這棵樹閉合，這個論斷就是關於規則的事實，與任何引擎的看法無關。它採用證明數搜尋，設有 60 步截斷，截斷計為進攻方失敗，因此證明永遠不會依賴它。每個證明都儲存為一份證明憑證，另有一個獨立的校驗器只負責把憑證對照核心重放，別的什麼都不做。',
+  'The sweep: whoever moves first at the end of the chain wins': '掃描：連鎖終點誰先走誰贏',
+  'The kernel walked every branch of the opening chain, 605 positions and 166 endings between 4 and 18 plies in, 72 of them at ply 14, and in 130 of them at least one general is already gone. Mirror images aside, 83 are distinct. The engine played a game from each at 100,000 nodes a move. In 70 of the 83 the game was over within 14 to 36 more plies, and the winner was whoever had the first free move at the ending, 66 times out of 70. The other 13 stalled, a draw under the rules as written.':
+    '核心走遍了開局連鎖的每一個分支：605 個局面，166 個終點分佈在第 4 到第 18 步之間，其中 72 個在第 14 步，而且其中 130 個終點裡至少已有一方的將不在了。撇開映象，83 個互不相同。引擎從每個終點各下一局，每著 100,000 節點。83 局中有 70 局在再走 14 到 36 步內結束，而勝者就是在終點擁有第一著自由著法的一方，70 局裡有 66 局如此。另外 13 局成了僵局，按寫下的規則算和棋。',
+  'Ending at ply': '終點所在步數',
+  'Moves first': '誰先走',
+  Endings: '終點數',
+  Stalls: '僵局',
+  '6 to 12': '6 到 12',
+  Alternating: '交替',
+  'One engine game from each of the 83 distinct endings, 100,000 nodes a move for both sides.':
+    '83 個不同終點各一盤引擎對局，雙方都是每著 100,000 節點。',
+  'So inside the chain, every choice between captures is a choice about who moves first when the chain ends. Rerun at a million nodes a move, eleven verdicts moved: six stalls became wins, two wins took longer, three stalls stayed stalls, and no win changed sides.':
+    '所以在連鎖內部，每一次在吃法之間的選擇，實際上都是在選擇連鎖結束時誰先走。以每著一百萬節點重跑，十一個判斷髮生了變化：六個僵局變成勝局，兩個勝局耗時更長，三個僵局仍是僵局，沒有任何勝局換邊。',
+  'The sweep finds candidates and settles nothing on its own. Its wins held up: none changed sides at ten times the budget, and 63 of the 70 were then proven without the engine. Its stalls are weaker evidence, since six of the 13 became wins at a million. The two stalls that matter are the surviving endings, and they stayed stalls at a million and in every game from the array at up to five million nodes a move.':
+    '掃描只找出候選，本身不能定論。它的勝局站住了：在十倍預算下沒有一個換邊，70 箇中有 63 個隨後在不依賴引擎的情況下被證明。它的僵局是較弱的證據，因為 13 個裡有 6 個在一百萬節點下變成了勝局。真正要緊的兩個僵局是存活下來的終點，它們在一百萬節點下，以及從初始陣型出發、每著最高五百萬節點的每一盤對局中，都仍是僵局。',
+  'The proofs': '證明',
+  'From each of the 70 decisive endings, with a budget of a million positions, 63 proofs closed, 7 ran out of budget, and none was refuted. The median proof is 19 positions, a single line in which every defending reply is compelled; the largest is the 1,864 of the chariot recapture. The checker passes all 63. The fork table is those values backed up the chain from the 100,000-node sweep, and scoring it from the million-node sweep changes no value within eight plies of the array.':
+    '從 70 個分出勝負的終點各自出發，預算為一百萬個局面：63 個證明閉合，7 個耗盡預算，沒有一個被推翻。證明的中位規模是 19 個局面，是一條單線，防守方的每個應著都是被迫的；最大的是車吃回那一支的 1,864 個局面。校驗器 63 個全部透過。分叉表就是這些價值從 100,000 節點掃描沿連鎖回推的結果；改用一百萬節點掃描評分，在距初始陣型八步以內沒有任何價值改變。',
+  'Every game, to step through': '每一盤棋，逐步回放',
+  'Every game this article rests on is in the viewer below: the engine against itself at one, two and five million nodes a move; a game from each of the 83 endings of the opening chain; the 20 ladder games, where a strong engine met a weak one from random openings; and the main line of each of the 63 proofs. It opens on the 2M game. Pick any other from the list.':
+    '本文依據的每一盤棋都在下面的檢視器裡：引擎每著一百萬、兩百萬和五百萬節點的自戰對局；開局連鎖 83 個終點各一盤；20 盤階梯對局，即強引擎從隨機開局對陣弱引擎；以及 63 個證明各自的主變。檢視器先打開 2M 那盤。列表裡的任何一盤都可以選。',
+  'All 169 games, each replayed through the rule kernel. The arrow keys step through the one on the board.':
+    '全部 169 盤棋，每一盤都經規則內核重放。方向鍵可以逐步走棋盤上的這一盤。',
+  'by extinction': '全滅',
+  'by the progress clock': '無吃子步數到限',
+  'by repetition': '重複局面',
+  Game: '對局',
+  'Best play, engine against itself': '最佳著法：引擎自戰',
+  'Every ending of the opening chain (%1), engine at 100k':
+    '開局連鎖的每個終點（%1），引擎每著 100k 節點',
+  'Ladder: 100k against 10k nodes from eight random plies (20)':
+    '階梯對局：100k 對 10k 節點，前八步隨機（20）',
+  'Proof lines: the certificate’s main line (%1)': '證明線：證明憑證的主變（%1）',
+  '%1M nodes a move, %2 plies': '每著 %1M 節點，%2 步',
+  'ending at ply %1 #%2: stall, %3 at %4': '第 %1 步終點 #%2：僵局，第 %4 步%3',
+  'ending at ply %1 #%2: %3 in %4': '第 %1 步終點 #%2：%3，共 %4 步',
+  'ending at ply %1 #%2: %3 in %4, proven': '第 %1 步終點 #%2：%3，共 %4 步，已證明',
+  'pair %1, 100k as %2: %3 in %4': '第 %1 對，100k 執%2：%3，共 %4 步',
+  'ending at ply %1 #%2: %3, %4 positions': '第 %1 步終點 #%2：%3，%4 個局面',
+  '%1 %2 after %3 plies, %4 million nodes a move for both sides.':
+    '%3 步後%1（%2），雙方每著 %4M 節點。',
+  '%1 %2 after %3 plies. The chain ended at ply %4.': '%3 步後%1（%2）。連鎖在第 %4 步結束。',
+  '%1 %2 after %3 plies. The chain ended at ply %4; the loss from there is proven.':
+    '%3 步後%1（%2）。連鎖在第 %4 步結束；從那裡起的輸棋已被證明。',
+  '%1 %2 after %3 plies. The first eight plies were random; 100k nodes played %4, 10k the other side.':
+    '%3 步後%1（%2）。前八步是隨機的；100k 節點執%4，10k 執另一方。',
+  'The engine opened 1. Cxh10; shown as its mirror image so the files match the boards in the post.':
+    '引擎實際以 1. Cxh10 開局；這裡按映象顯示，讓縱線與文中的棋盤一致。',
+  '%1 by force from the ending at ply %2: the certificate covers %3 positions, and this is its main line, every defender reply here being one the certificate answers.':
+    '從第 %2 步的終點起，%1已成定局：證明憑證覆蓋 %3 個局面，這是它的主變，這裡防守方的每個應著都是憑證有答案的。',
+  'Fairy-Stockfish, 100k nodes': 'Fairy-Stockfish，100k 節點',
+  'Fairy-Stockfish, 10k nodes': 'Fairy-Stockfish，10k 節點',
+  'Fairy-Stockfish, %1M nodes': 'Fairy-Stockfish，%1M 節點',
+  'the proof': '證明',
+  'Everything above is in one repository: the rule kernel, the three Fairy-Stockfish stanzas, all 166 endings of the opening chain, one engine game from each ending at each budget, every proof certificate, and the games in a viewer that opens from the folder. `npm run verify` replays every certificate against the rules in a few seconds and reports 63, 63, 20 and 7 valid, and the README has the four commands that reproduce the sweep and the proofs with a Fairy-Stockfish binary.':
+    '上面的一切都在一個程式碼庫裡：規則核心，三段 Fairy-Stockfish 變體配置，開局連鎖的全部 166 個終點，每個終點在每種預算下各一盤引擎對局，每一份證明憑證，以及可以直接從該目錄開啟的對局瀏覽器。`npm run verify` 幾秒鐘內就把每一份憑證對照規則重放一遍，並報告 63、63、20 和 7 項有效；README 裡有四條命令，配合一個 Fairy-Stockfish 可執行檔案即可復現掃描與證明。',
+  'If you can show a third surviving opening, a defence in any certificate, or a win for either side from the positions above, open an issue there. This page will say so.':
+    '如果你能給出第三條存活的開局、任何一份憑證裡的防守，或者從上面的局面出發任何一方的勝法，請去那裡提一個 issue。本頁會如實寫明。',
+  'FORK A: BLACK TO MOVE': '分叉 A：輪到黑方',
+  'FORK B: RED TO MOVE': '分叉 B：輪到紅方',
+  'FORK C: BLACK TO MOVE': '分叉 C：輪到黑方',
+  'FORK D: RED TO MOVE': '分叉 D：輪到紅方',
+  'Duck Xiangqi Strategy for Your First Game': '鴨子象棋攻略：你的第一盤',
   'Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.':
     '雙方共用一隻鴨子的象棋。規則一分鐘就能讀完。決定你第一盤勝負的東西要花更久，首先是這一條：你放下的鴨子是對手的炮架，永遠不是你的。',
-  'Duck Xiangqi is live today. It is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
-    '鴨子象棋今天上線。它是雙方共用一隻鴨子的象棋：你走一著普通的象棋著法，然後把鴨子放到任意一個空點上。它擋住一切，不屬於任何一方，也不能被吃掉。規則大約一分鐘就能讀完。',
-  'What follows is not the rules. It is what decides your first game, starting with the one that catches everybody: the most obstructive-looking square for the duck is usually the one that arms your opponent’s cannon. These come from the seven engine games behind this launch, and from measuring the engine itself.':
-    '下面寫的不是規則，而是決定你第一盤勝負的東西，先從人人都會中招的那一條說起：看起來最礙事的鴨子落點，往往正是給對手的炮裝上炮架的那個點。這些心得來自這次上線背後的七盤引擎對局，以及對引擎本身的測量。',
+  'Duck Xiangqi is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
+    '鴨子象棋是雙方共用一隻鴨子的象棋：你走一著普通的象棋著法，然後把鴨子放到任意一個空點上。它擋住一切，不屬於任何一方，也不能被吃掉。規則大約一分鐘就能讀完。',
+  'The rules page has the rules. This article is about what decides your first game, starting with the mistake that catches everybody: the square where the duck looks most obstructive is usually the one that arms your opponent’s cannon. It draws on the six engine games published with the variant and on measurements of the engine itself.':
+    '規則在規則頁上。這篇寫的是決定你第一盤勝負的東西，先從人人都會中招的那一條說起：看起來最礙事的鴨子落點，往往正是給對手的炮裝上炮架的那個點。這些心得來自隨這個變體一起公布的六盤引擎對局，以及對引擎本身的測量。',
   'A turn is a move plus a duck placement': '一回合是一著棋加一次放鴨',
   'Every turn you move a piece and then place the duck. The move is xiangqi and you already know how to think about it. The placement is the new game, and it is where first games are lost.':
     '每一回合你先走一個棋子，再放鴨子。走子就是象棋，你已經知道該怎麼想。放鴨才是新的部分，第一盤棋往往就輸在這裡。',
@@ -4808,8 +9792,8 @@ const ZH_HANT: Record<string, string> = {
   'There is no check and no checkmate': '沒有將軍，也沒有將死',
   'You may leave your general attacked, move it onto an attacked point, and nothing on the board or in the interface says a word. Your opponent wins by actually taking it, and the game ends there.':
     '你可以讓將帥處於被攻擊狀態，也可以把它走到被攻擊的點上，棋盤和介面都不會說一個字。對手通過真的吃掉它來獲勝，棋局到此結束。',
-  'This is not a theoretical risk. All seven of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.':
-    '這不是理論上的風險。我們發佈的七盤引擎對局全部以將帥被直接吃掉告終。沒有一盤走到認輸、重複局面或困斃：每一盤的結束都是因為有人能吃將帥，而且吃了。每一回合都自己數一遍威脅，包括鴨子剛剛打開的那些。',
+  'This is not a theoretical risk. All six of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.':
+    '這不是理論上的風險。我們發佈的六盤引擎對局全部以將帥被直接吃掉告終。沒有一盤走到認輸、重複局面或困斃：每一盤的結束都是因為有人能吃將帥，而且吃了。每一回合都自己數一遍威脅，包括鴨子剛剛打開的那些。',
   'The duck must move every turn': '鴨子每回合都必須移動',
   'A duck jamming a horse’s leg, filling an elephant’s eye or holding a file is doing that job for exactly one turn. Then it is your problem again: on your next turn you have to pick it up and put it somewhere else.':
     '蹩住馬腿、塞住象眼或守住一條縱線的鴨子，只能幹這件事恰好一個回合。然後它又成了你的問題：下一回合你必須把它拿起來放到別處。',
@@ -4820,16 +9804,14 @@ const ZH_HANT: Record<string, string> = {
     '機器人是打過修補程式的 Fairy-Stockfish，回合裡走子的那一半它走得很正經。放鴨的那一半它是在猜。這是測量出來的，不是猜測。',
   'We scored every legal duck placement after the engine’s own opening move, 58 of them, and the engine returned an identical evaluation for all 58. Raising the search from 300,000 nodes to four million changed the number but not the verdict: still identical across every placement. Fairy-Stockfish has no evaluation term for a duck or a wall, so nothing in its scoring can prefer one point to another, and the placement it reports is whatever its move ordering happened to surface.':
     '我們對引擎自己開局著法之後的每一種合法放鴨位置評分，共 58 種，引擎對這 58 種給出了完全相同的評估值。把搜尋從 300,000 節點提高到四百萬，數值變了，結論沒變：每一種落點依然完全相同。Fairy-Stockfish 的評估裡沒有關於鴨子或牆的項，所以它的評分不可能偏好任何一個點，它報出的落點只是著法排序碰巧先冒出來的那一個。',
-  'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all seven.':
-    '這讓它在象棋的那一半是個真正的對手，在鴨子的那一半卻是個糟糕的老師。如果你覺得它的落點很隨意，那是因為確實如此。這些對局的走子部分仍然值得一讀，下面的研習裡有全部七盤。',
+  'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all six.':
+    '這讓它在象棋的那一半是個真正的對手，在鴨子的那一半卻是個糟糕的老師。如果你覺得它的落點很隨意，那是因為確實如此。這些對局的走子部分仍然值得一讀，下面的研習裡有全部六盤。',
   'The generals may face each other': '將帥可以對面',
   'In ordinary xiangqi that is forbidden. Here the prohibition stopped making sense once check was gone, so flying the general is simply a capture that ends the game. It is one more threat with no warning attached, and one more line the duck can open or close.':
     '在普通象棋裡這是禁止的。這裡一旦沒有了將軍，這條禁令就失去了意義，所以飛將只是一次結束棋局的吃子。它是又一個沒有任何警告的威脅，也是鴨子可以打開或關閉的又一條線路。',
-  'Games run 120 to 229 plies': '對局長度在 120 到 229 步之間',
-  'That is the range across the seven engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
-    '這是七盤引擎對局的範圍。請把它當成一盤完整的棋而不是小玩意，並據此選擇用時：這裡提供 5+5 和 10+5 兩種節奏，正是出於這個原因。',
-  'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all seven engine games if you want to watch it played first.':
-    '八個引擎強度，或者找個朋友。規則頁有帶圖解的完整規則，如果想先看看別人怎麼下，研習裡有全部七盤引擎對局。',
+  'Games run 120 to 249 plies': '對局長度在 120 到 249 步之間',
+  'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all six engine games if you want to watch it played first.':
+    '八個引擎強度，或者找個朋友。規則頁有帶圖解的完整規則，如果想先看看別人怎麼下，研習裡有全部六盤引擎對局。',
   Rules: '規則',
   'FIRST: A LEGAL XIANGQI MOVE': '第一步：一著合法的象棋著法',
   'THEN: THE DUCK': '第二步：放鴨子',
@@ -4844,43 +9826,19 @@ const ZH_HANT: Record<string, string> = {
     '我們把部落棋搬到象棋棋盤上，先測量再動手：十二種開局陣形、兩種兵的走法，每一種由引擎自戰四局。用象棋自己的兵，全軍靠同一招贏下每一局；讓兵從開局起就有過河兵的走法，棋局則變成四局裡有三局和棋的圍城。我們發佈的是這份測量，而不是這個變體。',
   'Horde chess is 36 pawns and no king against a normal army; the pawns win by checkmate, the army by taking the last pawn. Lichess has played it since 2015. We put the same idea on the xiangqi board: Red has soldiers only and no general, Black has the standard army, and everything else is xiangqi. Then we measured it before designing anything.':
     '部落棋是 36 個兵、沒有王，對陣正常的一軍；兵靠將死取勝，全軍靠吃掉最後一個兵取勝。Lichess 從 2015 年起就有它。我們把同樣的想法搬到象棋棋盤上：紅方只有兵、沒有將，黑方是標準全軍，其他一切照象棋。然後在設計任何東西之前先做了測量。',
-  'None of the twenty-four designs is a game, and the reason is the soldier. Below the river a block of soldiers cannot defend itself; above it the army cannot attack it. The full map, with a picture of every array beside its result and every engine game in a viewer, is on brianhliou.com; this page is the short account and the reason there is no play button.':
-    '二十四種設計沒有一種是一盤棋，原因在兵身上。河的這邊一片兵陣守不住自己；河的那邊全軍攻不動它。完整的設計地圖，每種陣形旁邊都有圖和結果，每一盤引擎對局都能在瀏覽器裡回放，都在 brianhliou.com；本頁是簡短的說明，也解釋了為什麼這裡沒有「開始對局」按鈕。',
-  'Twelve arrays and two soldiers': '十二種陣形，兩種兵',
-  'The soldier’s move is the whole design space; how many soldiers, where they start, what shape the block is and which no-capture clock runs are dials. We turned all of them: 18 to 45 soldiers, blocks at the back, a rank forward, or already across the river, the parent’s silhouette, xiangqi’s own five soldier points. Two soldier rules: xiangqi’s own, which moves one point forward and sideways only after crossing the river, and the veteran, which has the crossed soldier’s move from its first step. Every array was played four times at four search budgets by Fairy-Stockfish against itself, refereed by a rule kernel that had agreed with the engine on every legal move first.':
-    '兵的走法就是整個設計空間；兵有多少、從哪裡起步、兵陣是什麼形狀、用哪一種無吃子步數限制，都只是旋鈕。我們把它們全都轉過了：18 到 45 個兵，兵陣靠後、前移一行、或者一開始就在河對岸，原版的輪廓，象棋原有的五個兵位。兩種兵的走法：象棋自己的兵，向前一步、過河後才能橫走；老兵，從第一步起就有過河兵的走法。每種陣形都由 Fairy-Stockfish 自戰，四種搜尋量各一局，由一個事先已與引擎在每一步合法著法上達成一致的規則內核擔任裁判。',
   'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward, drawn with the crossed-soldier piece because that is the move they have.':
     '原版陣形配標準兵，以及我們找到的最接近一盤棋的設計：36 個老兵前移一行，用過河兵的棋子圖案畫出，因為那正是它們的走法。',
   'Standard soldiers: the chariot eats the horde from behind': '標準兵：車從背後吃光兵團',
-  'A standard soldier covers only the point in front of it, so the horde is nine columns rather than a wall. The moment a column empties, a chariot drops through it to the first rank and takes a soldier a move from behind, and nothing in the horde attacks backward. Every array of 40 or fewer that starts on its own side loses this way, four games out of four. Only a five-deep block of 45, or a start already across the river, sometimes gets enough soldiers over before the chariot is done, and those cells split.':
-    '標準兵只控制正前方一個點，所以兵團是九根縱列，而不是一堵牆。哪一列一空，車就順著它落到底線，從背後每著吃一個兵，而兵團裡沒有任何子能向後攻擊。40 兵及以下、從己方半場開始的每一種陣形都是這樣輸的，四局全輸。只有五行厚的 45 兵陣，或者一開始就在河對岸的陣形，有時能在車吃完之前把足夠多的兵送過河，那幾格的結果才分化。',
-  'The million-node game from the parent’s array. Black’s chariot drops through the f-file, which the horde emptied by advancing; fifteen moves later eleven soldiers are gone and the army has lost nothing for them.':
-    '原版陣形的 100 萬節點對局。黑車順著兵團推進時空出來的 f 線落到底線；十五回合後十一個兵沒了，全軍毫無損失。',
   'Veteran soldiers: the horde holds, and the siege is a draw': '老兵：兵團守得住，圍城是和棋',
-  'Give every horde soldier the crossed soldier’s move from the start and the road closes: a veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side. Between equals the game becomes a siege: the horde marches to the palace, finds a general and two chariots waiting, and stops, because the block guards itself where it stands but can only advance a whole rank at a time while the army waits. Forty-eight games: 37 draws, six horde wins, five army wins, all five against 18 soldiers.':
-    '讓兵團的每個兵從開局起就有過河兵的走法，路就堵上了：一列老兵攻擊身邊的點，車不能白白停在它旁邊。兵團成了一方棋。勢均力敵之間，棋局成了圍城：兵團推進到九宮前，發現一個將帶著雙車在等，然後停住，因為兵陣站在原地時能互相保護，卻只能整行一起推進，而全軍在一旁等著。四十八局：37 和，兵團 6 勝，全軍 5 勝，五勝全是對 18 兵。',
-  'The one array the horde is favoured in is the same siege with a better score, not a different game: four hundred to a thousand plies in which the army’s best plan is to wait in the palace and the horde’s is to shuffle a block one point at a time.':
-    '兵團佔優的唯一陣形是同一場圍城加一個更好的比分，不是另一盤棋：四百到一千步裡，全軍的最佳計劃是待在九宮裡等，兵團的最佳計劃是把兵陣一格一格地挪。',
-  'What a different soldier would need': '換一種兵需要什麼',
-  'A chess pawn captures diagonally, so the pawn behind covers the point its neighbour steps to and pawns advance as chains; that is why Horde works in chess. The xiangqi soldier captures the way it moves, straight ahead, so the point a soldier steps to is covered by nothing, and the river is a cliff: no cover on the way, total cover once there. No count, start rank, shape or clock changes that. What would is a soldier with cover on the way, and the candidates run from a diagonal-forward capture to a double step, two soldiers a turn, or the chess pawn outright. We stopped at the veteran because it is the only one xiangqi already has; each of the others is a new piece and a different game.':
-    '國際象棋的兵斜著吃子，所以後面的兵保護著鄰兵要走到的點，兵成鏈推進；部落棋在國際象棋裡成立就是這個原因。象棋的兵怎麼走就怎麼吃，直著向前，所以兵要走到的點沒有任何子保護，河就是一道懸崖：路上毫無掩護，到了那邊掩護全面。兵數、起始行、陣形、無吃子限制都改變不了這一點。能改變它的是一種在路上有掩護的兵，候選從斜向前吃子，到第一步走兩格、每回合走兩個兵，直到乾脆用國際象棋的兵。我們止步於老兵，因為它是唯一象棋本來就有的；其餘每一種都是新棋子，也就是另一盤棋。',
   'The rule kernel with both soldier rules and all twelve arrays, the Fairy-Stockfish stanzas, all 387 engine games, the checks behind them, and a verifier that replays every game against the rules and recomputes the tallies in half a minute, with no engine needed. If you have a soldier rule that gives the block cover on the way, that is where the next attempt starts; open an issue there and the write-up will say so.':
     '含兩種兵的走法和全部十二種陣形的規則內核、Fairy-Stockfish 的變體配置、全部 387 盤引擎對局、它們背後的各項檢驗，以及一個不需要引擎、半分鐘內就能對照規則重放每一盤並重新計算統計的校驗器。如果你有一種能給兵陣路上掩護的兵的走法，下一次嘗試就從那裡開始；去那裡提一個 issue，文章會如實寫明。',
   'Check the games yourself': '親自檢驗這些對局',
-  '36 STANDARD SOLDIERS, RANKS 1-4': '36 個標準兵，第 1-4 行',
-  '36 VETERANS, RANKS 2-5': '36 個老兵，第 2-5 行',
-  'MOVE 25: THE f-FILE IS OPEN': '第 25 回合：f 線已空',
-  '15 MOVES LATER: 11 SOLDIERS GONE': '15 回合後：11 個兵沒了',
+  '36 STANDARD SOLDIERS, RANKS 1-4': '36 個標準兵，第 1-4 線',
+  '36 VETERANS, RANKS 2-5': '36 個老兵，第 2-5 線',
   // horde-xiangqi playthrough frames, derived (2026-09-15).
   // horde-xiangqi playthrough frames, derived (2026-09-15).
-  'The horde’s win from its best array, the one it wins four times in five, every ply: the march, the siege, both chariots falling, and the smother at ply 435. Replayed on this page through the rule kernel; every game in this array is in the viewer on brianhliou.com.':
-    '兵團在它最好的陣形（五局四勝的那一種）裡的勝局，每一步都在：行軍、圍城、雙車先後被吃，以及第 435 步的困斃。本頁通過規則內核重放；這種陣形的每一盤棋都在 brianhliou.com 的瀏覽器裡。',
   'Horde, 36 veterans': '兵團，36 個老兵',
   'The army': '全軍',
-  'The block edges forward a rank at a time; the army has given up two soldiers and a horse and has not touched the block.':
-    '兵陣一行一行地向前挪；全軍已經丟了兩個兵和一個馬，還沒碰到兵陣。',
-  'Seven soldiers are across the river and the army is down to eight pieces: both elephants and all five soldiers gone. The chariots cannot sit beside a veteran column.':
-    '七個兵過了河，全軍只剩八個子：兩個象和五個兵全沒了。車沒法停在老兵縱列的旁邊。',
   'Ten across. From here the two chariots and the general hold the palace and the block shuffles: this is the siege every veteran game above 27 soldiers reaches.':
     '十個兵過河。從這裡起雙車和將守住九宮，兵陣來回挪動：這就是 27 兵以上的每一局老兵對局都會走到的圍城。',
   'The first chariot falls, traded for soldiers the horde could afford to lose; nineteen are left.':
@@ -4894,6 +9852,203 @@ const ZH_HANT: Record<string, string> = {
     'Fairy-Stockfish 自戰，每著 100 萬節點，120 步無吃子限制',
   'Red wins. Xiangqi scores the side with no legal move as the loser; Lichess Horde would call it a draw.':
     '紅方勝。象棋判無子可動的一方負；Lichess 的部落棋會判和。',
+  // horde-xiangqi games card (2026-10-07).
+  'Fifty-eight of the engine games are in the viewer below: the engine against itself on the arrays at 200,000, one million and five million nodes a move, 28 games with standard soldiers and 28 with veterans; and two ladder games on the standard forward array, where 100,000 nodes met 10,000: the horde’s fastest win, mate at ply 151, and a draw on the clock. It opens on the horde’s win above. Pick any other from the list.':
+    '引擎對局中有五十八盤在下面的檢視器裡：引擎在各個陣形上自戰，每著 200,000、一百萬和五百萬節點，標準兵 28 盤，老兵 28 盤；另有兩盤標準兵前壓陣形上的階梯對局，100,000 節點對 10,000 節點：兵團最快的一勝，第 151 步將死，以及一盤無吃子步數到限的和棋。檢視器先開啟上面那盤兵團的勝局。列表裡的任何一盤都可以選。',
+  'All 58 games, each replayed through the rule kernel. The arrow keys step through the one on the board.':
+    '全部 58 盤棋，每一盤都經規則核心重放。方向鍵可以逐步走棋盤上的這一盤。',
+  'Ladder: 100k against 10k nodes': '階梯對局：100k 對 10k 節點',
+  'Standard soldiers, engine against itself': '標準兵，引擎自戰',
+  'Veteran soldiers, engine against itself': '老兵，引擎自戰',
+  '%1: %2 nodes, %3-ply clock. %4': '%1：%2 節點，%3 步無吃子限制。%4',
+  'Horde at %1, army at %2 nodes. %3': '兵團 %1，全軍 %2 節點。%3',
+  '18, ranks 1-2': '18 兵，第 1-2 線',
+  '18, ranks 3-4': '18 兵，第 3-4 線',
+  '27, ranks 1-3': '27 兵，第 1-3 線',
+  '27, ranks 2-4': '27 兵，第 2-4 線',
+  '27, ranks 4-6': '27 兵，第 4-6 線',
+  '36, ranks 1-4': '36 兵，第 1-4 線',
+  '36, ranks 2-5': '36 兵，第 2-5 線',
+  '36, ranks 3-6': '36 兵，第 3-6 線',
+  '45, ranks 1-5': '45 兵，第 1-5 線',
+  '32, xiangqi’s five points': '32 兵，象棋的五個兵位',
+  '31, parent shape': '31 兵，母版形狀',
+  '40, parent shape': '40 兵，母版形狀',
+  'Stopped by the harness at its 1,000-ply cap. Played on from there with the clock in force, it was drawn on the clock at ply %1. Both sides %2 nodes a move, %3-ply no-capture clock.':
+    '測試框架在 1,000 步上限處停下了這盤棋。從那裡在無吃子限制下續弈，於第 %1 步因無吃子步數到限成和。雙方每著 %2 節點，%3 步無吃子限制。',
+  '%1 after %2 plies. Both sides %3 nodes a move, %4-ply no-capture clock.':
+    '%2 步後%1。雙方每著 %3 節點，%4 步無吃子限制。',
+  '%1 after %2 plies. The horde searched %3 nodes a move, the army %4.':
+    '%2 步後%1。兵團每著搜尋 %3 節點，全軍 %4。',
+  'Unfinished: the harness stopped it at its %1-ply cap. Both sides %2 nodes a move, %3-ply no-capture clock.':
+    '未下完：測試框架在 %1 步上限處停下了它。雙方每著 %2 節點，%3 步無吃子限制。',
+  'Fairy-Stockfish, %1 nodes': 'Fairy-Stockfish，%1 節點',
+  'Unfinished at %1 plies': '第 %1 步時未下完',
+  'Army wins by extinction': '全軍以全滅取勝',
+  'Unfinished at the ply cap': '到步數上限時未下完',
+  'Draw by the clock': '無吃子步數到限，和棋',
+  'Draw by repetition': '重複局面，和棋',
+  'Horde wins by checkmate': '兵團將死取勝',
+  'Horde wins by smother': '兵團困斃取勝',
+  // horde-xiangqi merge (2026-10-07), converted from the Simplified entries.
+  'None of the twenty-four designs is a game, and the reason is the soldier. With xiangqi’s own soldier the army wins every start of 40 or fewer on its own side of the river, by one trick: a chariot behind the block. Give the soldier its crossed-river move from the first step and the trick is gone, but the game becomes a siege, 37 draws in 48 games. Below the river the block cannot defend itself; above it the army cannot attack it. There is no play page for Horde Xiangqi; this page holds the measurement.':
+    '二十四種設計沒有一種成得了遊戲，原因在兵身上。用象棋原本的兵，凡是兵團起始於自己這半邊、40 兵及以下的陣形，全軍每局都贏，靠的是同一個招法：一隻車繞到兵陣背後。讓兵從第一步起就有過河兵的走法，這個招法就沒了，但棋局變成圍城，48 局裡 37 局和棋。過河之前，兵陣無法自保；過河之後，全軍攻不動它。部落象棋沒有對局頁面；本頁記錄的是這份測量。',
+  'The rules': '規則',
+  'Horde chess is the parent: 36 pawns and no king against a normal army. The port keeps as much of xiangqi as it can. Red is the horde: soldiers only, no general, and Red moves first. Black is the standard army. Red wins by checkmate; Black wins by capturing every red piece. There is no check against the horde and no facing rule, since only one general exists.':
+    '國際象棋的部落棋（Horde）是它的母版：36 個兵、沒有王，對抗正常的一方軍隊。這次移植儘量保留象棋本身的規則。紅方是兵團：只有兵，沒有帥，紅方先行。黑方是標準全軍。紅方靠將死取勝；黑方靠吃掉紅方所有子取勝。由於棋盤上只有一個將，兵團一方不存在被將，也不存在白臉將。',
+  'The side to move with no legal move loses, as in xiangqi; Lichess Horde calls it a draw, and the terminal rules below say how much that matters. Threefold repetition draws, and so does a run of 60 or 120 plies without a capture. Standard soldiers move as in xiangqi: one point forward, sideways only after crossing the river, never backward. Veteran soldiers have the crossed soldier’s move from their first step. The army’s five soldiers stay standard either way.':
+    '輪到行棋而無合法著法的一方判負，與象棋相同；Lichess 的部落棋判為和棋，下面的終局規則一節會說明這有多大影響。三次重複局面判和；連續 60 或 120 步無吃子也判和。標準兵走法與象棋相同：向前一格，過河後才能橫走，永不後退。老兵從第一步起就有過河兵的走法。無論哪種設定，全軍一方的五個兵都是標準兵。',
+  'The design space': '設計空間',
+  'Five dials. A design is a soldier rule and a start array, and twenty-four were played.':
+    '五個旋鈕。一種設計由一種兵的走法和一種初始陣形構成，我們下了二十四種。',
+  Dial: '旋鈕',
+  'Settings tried': '試過的設定',
+  'The soldier’s move': '兵的走法',
+  'Standard; veteran (sideways from move one)': '標準；老兵（第一步即可橫走）',
+  'How many soldiers': '兵的數量',
+  'Where the block starts': '兵陣起始位置',
+  'At the back (rank 1 up), forward (rank 2 or 3 up), across the river (front rank on rank 6)':
+    '靠底（第 1 線往上）、前壓（第 2 或第 3 線往上）、過河（前排位於第 6 線）',
+  'The block’s shape': '兵陣的形狀',
+  'Full rows; the parent’s shape (rows plus paired outposts); xiangqi’s five soldier points':
+    '整排；母版的形狀（成排再加成對的前哨）；象棋的五個兵位',
+  'Terminal rules': '終局規則',
+  'No-capture clock of 60 or 120 plies; stalemate as a loss (xiangqi) or a draw (the parent)':
+    '60 或 120 步的無吃子步數限制；困斃判負（象棋）或判和（母版）',
+  'Every design ran on stock Fairy-Stockfish with a short configuration and no engine code, refereed by a rule kernel that agreed with the engine’s move generator before any game was read (the checks are under “How we checked it”). Each array was played four times, the engine against itself at four search budgets with no randomness, and once more at a million nodes a move. The engine cannot use its xiangqi neural net without a red general on the board, so it plays on classical evaluation alone. It plays the game anyway.':
+    '每種設計都跑在原版 Fairy-Stockfish 上，只用一小段配置，不改引擎程式碼，由一個規則核心擔任裁判，並在讀取任何對局之前就與引擎的著法生成器逐一核對一致（檢查見「我們是怎麼核驗的」一節）。每種陣形下四局，引擎在四檔搜尋預算下自我對弈，無隨機成分；再以每著一百萬節點下一局。棋盤上沒有紅帥，引擎無法使用它的象棋神經網路，因此只靠古典評估下棋。它照樣把棋下完了。',
+  'The twelve start arrays, in the order of the tables below. Red is the horde, Black the standard army; each array was played with both soldier rules.':
+    '十二種初始陣形，按下方表格的順序排列。紅方是兵團，黑方是標準全軍；每種陣形都用兩種兵的走法各下過。',
+  'Nine of the twelve arrays go to the army four games out of four, by one mechanism. A standard soldier covers only the point in front of it, so the horde is nine columns rather than a wall. The moment a column empties, a chariot drops through it to the first rank and eats the block from behind at a soldier a move, and nothing in the horde attacks backward. Shape changes nothing: an outpost is a target, not cover.':
+    '十二種陣形裡有九種四局全歸全軍，靠的是同一個機制。標準兵只控制它正前方那一格，所以兵團是九列縱隊，而不是一道牆。某一列一旦走空，車就從這一列直落底線，一著吃一個兵地從背後蠶食兵陣，而兵團沒有任何子力能向後攻擊。形狀不起作用：前哨是靶子，不是掩護。',
+  'The million-node game from the parent’s array, every ply. The chariot drops at ply 50; step on from there to watch the block go from behind. Replayed on this page through the rule kernel.':
+    '原版陣形的一百萬節點對局，每一步都在。車在第 50 步落到底線；從那裡往後一步步看兵陣如何從背後被吃掉。本頁透過規則核心重放。',
+  'Fairy-Stockfish against itself, a million nodes a move, 60-ply clock':
+    'Fairy-Stockfish 自戰，每著 100 萬節點，60 步無吃子限制',
+  'Black wins: the last soldier is gone.': '黑方勝：最後一個兵也沒了。',
+  'The other three arrays are one exception: enough soldiers get across before the chariot is done. 45 on ranks 1 to 5 is a five-deep block, and its four games split two army wins, one horde mate and one draw. The two arrays that start across the river begin in contact with the army’s soldiers. The 27 still loses; the 36 is a coin flip that skips the march and previews the veteran game.':
+    '另外三種陣形是同一個例外：在車做完這件事之前，有足夠多的兵過了河。第 1 至 5 線的 45 兵是五層深的兵陣，四局結果是全軍兩勝、兵團將死一局、和棋一局。兩種從過河處起始的陣形一開局就與全軍的兵短兵相接。27 兵仍然要輸；36 兵則是五五開，它跳過了行軍階段，預演了老兵版的棋局。',
+  Soldiers: '兵數',
+  Start: '起始',
+  Army: '全軍',
+  Horde: '兵團',
+  '1M game': '百萬節點局',
+  Plies: '步數',
+  'Ranks 1-2': '第 1-2 線',
+  'Army, extinction': '全軍，全滅',
+  'Ranks 3-4': '第 3-4 線',
+  'Ranks 1-3': '第 1-3 線',
+  'Ranks 2-4': '第 2-4 線',
+  'Ranks 4-6': '第 4-6 線',
+  'Ranks 1-4': '第 1-4 線',
+  'Ranks 2-5': '第 2-5 線',
+  'Ranks 3-6': '第 3-6 線',
+  'Horde, mate': '兵團，將死',
+  'Ranks 1-5': '第 1-5 線',
+  'Xiangqi’s five points': '象棋的五個兵位',
+  'Parent shape': '母版形狀',
+  'Army, Horde and Draw count four games per array at 150,000, 200,000, 300,000 and 500,000 nodes a move, 120-ply clock, every move the engine’s first choice. Then the single game at a million nodes with a 60-ply clock, and its length. Four arrays were played once more at five million nodes: the army won the 36 on ranks 1 to 4 in 156 plies, the 36 on ranks 2 to 5 in 146 and the 32 in 106, and the 36 across the river drew by repetition at 104.':
+    '全軍、兵團、和棋三欄統計每種陣形的四局，每著 150,000、200,000、300,000 和 500,000 節點，120 步無吃子限制，每著都取引擎首選。之後是每著一百萬節點、60 步限制下的單局及其步數。有四種陣形在每著五百萬節點下又下了一局：全軍在 156 步贏下第 1 至 4 線的 36 兵，在 146 步贏下第 2 至 5 線的 36 兵，在 106 步贏下 32 兵；過河起始的 36 兵在第 104 步因重複局面和棋。',
+  'The chariot’s road exists because a standard soldier attacks nothing beside it, and xiangqi already has a soldier that does: the crossed soldier, which moves and captures one point forward or sideways. Veteran soldiers are a horde that starts promoted. Every horde soldier has that move from its first step, nothing else changes, and a player learns nothing new.':
+    '車之所以有路可走，是因為標準兵不攻擊身旁任何一格，而象棋裡本來就有一種能做到的兵：過河兵，可向前或橫向一格行走與吃子。老兵就是一開始就已經升變的兵團。兵團的每個兵從第一步起就有這種走法，其餘一切不變，玩家不需要學任何新東西。',
+  'This closes the road. A veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side, and between equals the game becomes a siege: 48 games, 37 draws. The army wins only against 18 soldiers, and from 27 up it never wins.':
+    '這條路被堵死了。老兵縱隊會攻擊身旁各格，車沒法白站在它旁邊。兵團成了真正的一方，而在實力相當的雙方之間，棋局變成圍城：48 局，37 和。全軍只贏得了對 18 兵的局，從 27 兵往上它一局不勝。',
+  'Army lost': '全軍損失',
+  'Draw, clock': '和棋，步數限制',
+  'Horde, smother': '兵團，困斃',
+  'Draw, repetition': '和棋，重複局面',
+  'Four games per array at the same four budgets and the 120-ply clock, then the single game at a million nodes; Army lost counts the army’s pieces lost in that game. *Three million-node games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; no capture followed, and the ply shown is where the clock ended them. Each ended with nine or ten soldiers against a general and both chariots, with an elephant or an advisor beside them in two.':
+    '每種陣形在同樣的四檔預算、120 步限制下各下四局，然後是一百萬節點下的單局；全軍損失一欄統計全軍在那一局裡損失的子力。*有三局一百萬節點對局撞上了測試框架的 1,000 步上限，之後從該局面繼續下，步數限制照常生效；之後未再出現吃子，表中所示步數即為步數限制終止之處。三局結束時都是九或十個兵對將加雙車，其中兩局還多一個象或一個士。',
+  '**The ending.** The horde marches, takes the army’s cannons and elephants on the way in, and arrives at the palace to find a general with two chariots waiting. From there the soldiers cannot force their way past the chariots, and the chariots cannot eat a block of soldiers that guard each other. Start rank and shape decide how much of the army the horde takes on the way in, and nothing else. The parent’s 31 shows the other face of the same rule: its four games drew at 155 to 245 plies with never more than two soldiers across the river, because a block that has not moved cannot be attacked and a block that moves loses the soldier that moved.':
+    '**終局形態。**兵團行軍推進，路上吃掉全軍的炮和相，抵達九宮時發現將和兩隻車在那裡等著。到了這一步，兵衝不過車，車也吃不動互相保護的兵陣。起始橫線和形狀只決定兵團在路上能吃掉全軍多少子，別無其他。母版的 31 兵展示了同一條規則的另一面：四局在 155 至 245 步和棋，過河的兵從未超過兩個，因為沒動過的兵陣無法被攻擊，而一動就要丟掉動過的那個兵。',
+  'The ending, here from the 40-soldier array at a million nodes a move: twelve soldiers against a general, an advisor and two chariots at ply 754. The soldiers cannot force a way past the chariots, and the chariots take a soldier only when one steps out of the block: two in the next 246 plies, at 822 and 896.':
+    '終局形態，這裡取自 40 兵陣形、每著一百萬節點的對局：第 754 步時，十二個兵對將、士和雙車。兵衝不過車，而車只有在某個兵走出兵陣時才吃得到它：接下來 246 步裡只吃了兩個，分別在第 822 和 896 步。',
+  'We took the 40-soldier ending at ply 754 and let the engine play it on for 200 more plies at five million nodes a side: one capture, and the engine’s own evaluation of the horde’s advantage slid from 2.3 pawns to 0.7. At a million nodes the army had managed two captures in the same stretch, then none in the next 120, and the clock ended it. Two soldiers in 262 plies is not winning an ending.':
+    '我們把 40 兵那局在第 754 步的殘局拿出來，讓引擎雙方各以每著五百萬節點再下 200 步：只吃了一個子，而引擎自己對兵團優勢的評估值從 2.3 兵滑到 0.7。在一百萬節點下，全軍在同樣這段裡吃了兩個子，接下來的 120 步裡一個也沒吃，步數限制結束了對局。262 步吃兩個兵，算不上贏下殘局。',
+  '**The win.** The 36 that starts a rank forward took both chariots and smothered the bare general at ply 435: no move, no check, which xiangqi scores as a loss. It is the one array where the horde is the favourite, with three wins in its four games and the million-node game too: a rank closer to the river, it arrives with more of the army already gone and enough soldiers left to trade for the chariots. The horde’s other wins are the same finish, all past ply 390, and four of its six are the smother.':
+    '**取勝的那一局。**前壓一線的 36 兵吃掉了兩隻車，並在第 435 步把光將困斃：無著可走又未被將，象棋判負。這是兵團唯一佔優的陣形，四局贏三局，一百萬節點那局也贏了：離河近一線，抵達時全軍已經損失更多，而剩下的兵也足夠換掉兩隻車。兵團其餘的勝局都是同樣的收束，全部在第 390 步之後，六勝裡有四勝是困斃。',
+  'The horde’s win, every ply: the march, the siege, the chariots falling at plies 267 and 431, and the smother at ply 435. Replayed on this page through the rule kernel.':
+    '兵團的勝局，每一步都在：行軍、圍城、第 267 和第 431 步雙車先後被吃，以及第 435 步的困斃。本頁透過規則核心重放。',
+  'The terminal rules': '終局規則',
+  'Three ways a game here stops without a winner, and they are not the same thing. **Repetition**: the same position with the same side to move three times; a draw. **The clock**: a run of plies with no capture, 60 or 120 of them; a draw, and a soldier stepping forward does not reset it. **The cap**: the harness stopped the game at 400, 1,000 or 2,000 plies. That is not a rule of the game, so a capped game is unfinished, not drawn. Three million-node veteran games hit the 1,000 cap and were played on until the clock ended them, and no four-budget game reached 2,000, so every result in the tables is one of the first two.':
+    '這裡有三種讓棋局無勝負而終止的方式，它們並不是一回事。**重複局面**：同一局面、同一方行棋出現三次；判和。**步數限制**：連續若干步無吃子，60 步或 120 步；判和，而且兵向前一步並不重置計數。**上限**：測試框架在 400、1,000 或 2,000 步處終止對局。這不是棋規，所以被截斷的對局是未下完，而不是和棋。有三局一百萬節點的老兵對局撞上了 1,000 步上限，隨後繼續下到步數限制終止；而四檔預算的對局沒有一局到過 2,000 步，因此表格裡的每個結果都屬於前兩種。',
+  '**The clock.** Xiangqi’s no-capture rule is 60 plies. With standard soldiers it fired once in 48 games. With veterans it is the usual ending: 30 of the 37 draws, the other seven by repetition. At 60 plies it cuts live games short with the march still going, so the veteran games and every four-game sample run at 120. The clock is also a rule the engine plays by, so a game under a 60-ply clock and one under 120 are different games from ply 2, not one game cut at different points.':
+    '**步數限制。**象棋的無吃子規則是 60 步。用標準兵時，48 局裡只觸發過一次。用老兵時它是常見的收束：37 和裡有 30 局如此，另外七局是重複局面。設成 60 步會在行軍還在進行時截斷還活著的棋局，所以老兵對局和每一組四局樣本都用 120 步。步數限制同時也是引擎遵循的規則，所以 60 步限制下的一局和 120 步限制下的一局，從第 2 步起就是兩局不同的棋，而不是同一局在不同處被截斷。',
+  '**Stalemate.** Under the parent’s rule a general with no move and no check is a draw. Re-scoring every game in the lab under that rule: five of the horde’s seven equal-strength wins with veterans become draws, and one of its four with standard soldiers; against a random army, 20 of its 35 wins with standard soldiers and 16 of its 38 with veterans; and five of its ten wins in the veteran budget ladder. The smother is the horde’s mate about half the time, and the parent’s rule would take it away.':
+    '**困斃。**按母版的規則，將無著可走又未被將判和棋。把實驗室裡的每局都按這條規則重新判定：老兵、實力相當條件下兵團的七勝裡有五勝變成和棋，標準兵的四勝裡有一勝變成和棋；對隨機走子的全軍，標準兵下兵團的 35 勝裡有 20 勝、老兵下 38 勝裡有 16 勝變成和棋；老兵預算階梯測試的十勝裡有五勝同樣如此。困斃大約佔了兵團勝法的一半，而母版的規則會把它拿掉。',
+  'Why the soldier fails, and what a different soldier would need':
+    '兵為什麼不行，換一種兵又需要什麼',
+  'The game has two phases, and xiangqi’s soldier fails in each of them differently.':
+    '棋局分兩個階段，象棋的兵在每個階段都以不同方式失靈。',
+  '**Below the river, the block cannot defend itself.** A standard soldier attacks only the point ahead of it. So the horde is nine columns, not a wall: a chariot beside a column, or behind it, is untouchable, and any file that empties is a road to the back rank. Every start of 40 or fewer on the horde’s own side is decided here, by that one chariot, four games in four. At 45 the block is deep enough to outlast it some of the time, and that array splits.':
+    '**過河之前，兵陣無法自保。**標準兵只攻擊正前方一格。於是兵團是九列縱隊，而不是一道牆：車站在某列旁邊或它後面都碰不到，任何走空的縱線都是通往底線的大路。兵團在自己這半邊、40 兵及以下的所有陣形，都在這一階段被這一隻車判定，四局全輸。到 45 兵時，兵陣夠厚，有時能熬過去，那一種陣形於是結果分化。',
+  '**Above the river, the block cannot move.** A crossed soldier (or a veteran) attacks sideways too, so the block guards itself where it stands. But it protects only the points its soldiers could step to, never the point ahead of a neighbour. The soldier that steps forward lands on a point nobody covers and is a free capture until a neighbour steps up beside it. So the block can advance only as a whole rank, nine moves per rank, while the army waits, and any soldier that moves early is picked off. The army, for its part, cannot attack a block that has not moved. Nine of the twelve veteran arrays end there in every game or all but one: a general and two chariots in the palace, a block of soldiers outside it, and nothing either side can do.':
+    '**過河之後，兵陣動不了。**過河兵（或老兵）也能橫向攻擊，所以兵陣原地就能互相保護。但它只保護自家兵能走到的格子，絕不保護鄰兵正前方那一格。向前一步的兵落在沒人控制的格子上，在鄰兵跟上來並列之前就是白送的一子。於是兵陣只能整排整排地推進，每推一排要走九著，而全軍只需等待；任何提前走動的兵都會被點掉。而全軍一方也攻不動一個沒動過的兵陣。十二種老兵陣形裡有九種就在這裡終止，或全部對局如此，或只有一局例外：將和兩隻車守在九宮，一堆兵圍在外面，雙方都無事可做。',
+  'The same step on three boards: the middle piece has just moved one point forward, and the green rings are the points its side now protects. A chess pawn captures diagonally, so the pawn on d4 covers e5 and the pawn that arrived there is safe from the rook: pawns advance as chains. A xiangqi soldier captures the way it moves, straight ahead, so d4 and f4 cover d5 and f5 and nothing covers e5; the chariot takes the soldier for free. Veteran soldiers (right) attack sideways too, which makes the block guard itself where it stands, and still nothing covers the point a soldier steps to. The horde can hold its ground and cannot leave it.':
+    '同一步棋，三張棋盤：中間那個子剛向前走了一格，綠圈是它這一方此刻保護的點。國際象棋的兵斜著吃子，所以 d4 的兵控制著 e5，走到那裡的兵車吃不得：兵成鏈推進。象棋的兵怎麼走就怎麼吃，直著向前，所以 d4 和 f4 控制 d5 和 f5，沒有任何子控制 e5；車白吃這個兵。老兵（右）也能橫向攻擊，所以兵陣原地就能互相保護，但兵要走到的那一點仍然沒有任何子控制。兵團守得住陣地，卻離不開它。',
+  'A chess pawn is built differently. It captures diagonally, so the pawn on d4 already covers e5 before the e-pawn steps there: pawns advance as chains, one at a time, each landing protected, and a chain can be undermined from the base. That is why Horde works in chess and why chess players never have to think about it. On the xiangqi board the river is a cliff: no cover on the way, total cover once there, and no setting of count, start rank, shape or clock changes that. Those are the dials we turned. The one we left alone, past the veteran, is the soldier itself.':
+    '國際象棋的兵構造不同。它斜吃，所以 d4 的兵在 e 兵走到 e5 之前就已經控制了 e5：兵是成鏈推進的，一次走一個，每一步落點都有保護，而兵鏈可以從底部瓦解。這就是部落棋在國際象棋裡成立、而國際象棋棋手根本不必考慮這件事的原因。在象棋盤上，河是一道懸崖：過去的路上沒有掩護，一旦過去又是全覆蓋，而數量、起始橫線、形狀、步數限制怎麼調都改變不了這一點。這些正是我們轉過的旋鈕。除了老兵之外，我們沒有碰的那個旋鈕，就是兵本身。',
+  'That is where the next attempt starts. The property the horde is missing is cover on the way: a soldier that protects the point its neighbour is about to step to, so the block can advance one piece at a time instead of one rank at a time. Anything that supplies it is a candidate, from small to large: a soldier that captures diagonally forward but still moves straight, a double step on the first move, two soldiers moving per turn as in the old Five Tigers handicap, a second promotion at the far rank, or the chess pawn outright, which turns this into Horde chess on a bigger board. We stopped at the veteran because it is the only one of these xiangqi already has; each of the others is a new piece, and a new piece is a different game. The rules are data in the lab, so any of them is one line and an afternoon of engine time, and the tables here are the baseline to beat.':
+    '下一次嘗試就從那裡開始。兵團缺的那條性質是路上的掩護：一個能保護鄰兵即將踏上的那一格的兵，好讓兵陣一次推進一個子，而不是一次推進一排。任何能提供這條性質的設計都是候選，改動從小到大不等：斜前吃子但仍直走的兵、第一步可走兩格、像舊時「五虎」讓子那樣一回合走兩個兵、到底線後再升一次變，或者乾脆直接用國際象棋的兵，那就把這變成了大棋盤上的部落國際象棋。我們止步於老兵，因為它是這些方案裡唯一象棋本來就有的；其餘每一個都是新子力，而新子力就是另一種遊戲。規則在實驗室裡就是資料，所以其中任何一個都只是一行配置加一下午的引擎時間，而這裡的表格就是需要超越的基線。',
+  'Run it yourself': '自己跑一遍',
+  'The whole variant is a stanza in Fairy-Stockfish’s `variants.ini`. This is the parent’s array with veteran soldiers and the 120-ply clock (`nMoveRule` counts moves, so 60 is 120 plies); for standard soldiers drop the `customPiece1` line and write `P` for `V` in the start position.':
+    '整個變體就是 Fairy-Stockfish 的 `variants.ini` 裡的一段。下面是母版陣形配老兵與 120 步限制（`nMoveRule` 按回合計，所以 60 就是 120 步）；要用標準兵，刪掉 `customPiece1` 那一行，並在初始局面裡把 `V` 寫成 `P`。',
+  'Two lines matter and are easy to leave out. `chasingRule = none` is mandatory: the engine’s chase detector reads the missing general’s square on a kingless side. `flyingGeneral = false` changes nothing and documents a fact: the engine keys the facing rule on its king piece and silently switches it off when one side has none.':
+    '有兩行很關鍵、又很容易漏掉。`chasingRule = none` 是必需的：在無將的一方，引擎的捉子檢測會去讀那個不存在的將的位置。`flyingGeneral = false` 其實不改變任何東西，只是記錄一個事實：引擎把白臉將規則掛在它的王類子力上，一方沒有王時會靜默關掉它。',
+  '**The engine plays these rules.** A rule kernel (the same one that ran Atomic Xiangqi, with hooks for a side with no general, a win by extinction, and the veteran soldier) referees every game: the engine proposes a move, the kernel validates and applies it, and an engine quietly playing different rules aborts the run instead of producing a record of a different game. Before any game was read, the two had to agree on every legal move: perft to depth 3 from each array, nine hand-built positions compared as exact move sets, and 300 positions from random play. Zero disagreements, both soldier rules, all twelve arrays.':
+    '**引擎確實在按這些規則下棋。**一個規則核心（就是跑原子象棋那一個，加上了無將一方、全滅取勝和老兵的介面）為每一局擔任裁判：引擎提出一著，核心校驗並落子，如果引擎悄悄按別的規則下棋，執行會中止，而不是產出另一種遊戲的記錄。在讀取任何對局之前，兩者必須在每一個合法著法上一致：從每個陣形做深度 3 的 perft、九個手工構造的局面按精確著法集合比對、以及隨機走子產生的 300 個局面。零分歧，兩種兵的走法、全部十二種陣形。',
+  '**The engine understands the game.** At 100,000 nodes it beat a random mover 70-0 with standard soldiers and 78 of 80 with veterans. Ten times the search budget beat a tenth of it 17-1-2 on the standard forward array and 11-0-9 on veterans. One footnote: on the parent’s array with standard soldiers, ten times the budget scored only 55%, because every decided game went to the army whichever budget held it; the seat was the result, not the search.':
+    '**引擎懂這個遊戲。**在 100,000 節點下，它用標準兵對隨機走子方 70-0，用老兵 80 局勝 78 局。十倍搜尋預算對十分之一預算，在標準前壓陣形上 17-1-2，在老兵上 11-0-9。一條腳註：在母版陣形配標準兵時，十倍預算只拿到 55%，因為無論哪一檔預算坐哪一邊，每一局有勝負的棋都歸全軍；決定結果的是座位，不是搜尋。',
+  '**How deep the search is.** Node budgets, not time, so nothing depends on the machine: 200,000, 1 million and 5 million nodes a move reach about depth 12, 15 to 20, and 24 to 33 on these positions. Play is not saturated at these budgets: the across-the-river array with standard soldiers went draw, army, horde, horde, army, horde, draw across seven budgets. The standard-soldier verdict holds at every budget tried, by the same mechanism, and that claim is safe. The siege is the position class search is worst at: a hundred-ply plan is invisible at depth 20, and classical evaluation has no idea what the ending is worth (it scored the fortress at +2.3 for the horde while the army was eroding it). So the draw claim is weaker than the loss claim, and a human with a plan might do better on either side than the engine did.':
+    '**搜尋有多深。**用節點預算而不是時間，所以結果不依賴機器：每著 200,000、一百萬和五百萬節點，在這些局面上大致達到深度 12、15 至 20、24 至 33。在這些預算下棋力還沒飽和：標準兵的過河陣形，七檔預算跑出來依次是和、全軍、兵團、兵團、全軍、兵團、和。標準兵的結論在試過的每一檔預算下都成立，機制一致，這個論斷是穩的。圍城是搜尋最不擅長的局面型別：一百步的計劃在深度 20 下完全看不見，而古典評估根本不知道這種殘局值多少（在全軍正在蠶食兵陣時，它給這個堡壘打了兵團 +2.3）。所以和棋的論斷比負局的論斷要弱，有計劃的人類在任何一邊都可能下得比引擎好。',
+  '**One game is one sample.** Every array was played four times, at 150,000, 200,000, 300,000 and 500,000 nodes a move, every move the engine’s first choice and no random openings, so the counts in the tables are a rate and the million-node game is one of five, not the verdict. A deterministic engine replays the same game from the same start, so the budgets are what make the four games different, and the script refuses an array where two of them came out identical (none did). Where an array splits, the split is the result. One more caveat on the veteran numbers: the engine sees the veteran as a custom piece with a value estimated from its mobility, not tuned, so its judgement of a soldier-for-piece trade is rougher than for the standard soldier. The fortress it cannot break at five million nodes is real; the material it gave up on the way in may not be best play.':
+    '**一局只是一個樣本。**每種陣形都下了四局，每著 150,000、200,000、300,000 和 500,000 節點，每著都取引擎首選，沒有隨機開局，所以表格裡的計數是一個比率，而一百萬節點對局是五局之一，不是結論。確定性的引擎從同一起始會重現同一局棋，所以正是預算讓這四局不同；指令碼會拒收其中兩局完全相同的陣形（沒有出現過）。結果分化時，分化本身就是結果。關於老兵資料還有一條說明：引擎把老兵當作自定義子力，其價值是按機動性估出來的，未經調優，所以它對「一兵換一子」的判斷比對標準兵更粗糙。它在五百萬節點下都攻不破的那個堡壘是真實的；而它推進路上舍掉的子力，可能並非最佳著法。',
+  'A variant is a game, for this series, if it clears three bars under measured play: it is decided between good players rather than drawn by default; neither side wins from the start; and both seats have something to do. Horde Xiangqi clears none of them in any design tried.':
+    '對這個系列而言，一個變體要算遊戲，需要在可測量的對弈中越過三道門檻：在高手之間有勝負，而不是預設和棋；任何一方都不能從開局就必勝；兩個座位都有事可做。部落象棋在試過的任何設計裡都一道也沒越過。',
+  '**Standard soldiers:** the army wins from every start of 40 or fewer on its own side of the river, 36 games out of 36, by one trick. Decided, but from move one. At 45, or starting across the river, the array is a coin flip settled by the opening exchanges.':
+    '**標準兵：**兵團起始於自己這半邊、40 兵及以下的所有陣形，全軍全勝，36 局全勝，靠的是同一個招法。有勝負，但從第一著就定了。到 45 兵，或從過河處起始，陣形就變成由開局幾手交換決定的五五開。',
+  '**Veteran soldiers:** a siege that two good players draw 37 times in 48, in games of 137 to 1,098 plies. The horde wins six, four of them by smother, and the army wins five, all against 18 soldiers. Not decided, and neither seat has a plan: the army’s best play is to sit in the palace and wait, the horde’s is to shuffle a block one point at a time. The one array the horde is favoured in is the same siege with a better score, not a different game.':
+    '**老兵：**兩位高手之間是一場圍城，48 局裡 37 局和棋，每局 137 至 1,098 步。兵團勝六局，其中四局靠困斃；全軍勝五局，全都是對 18 兵。沒有勝負，而且兩個座位都沒有計劃：全軍的最佳下法是待在九宮裡等，兵團的最佳下法是把兵陣一格一格地挪。兵團唯一佔優的陣形只是同一場圍城分數更好一點，不是另一種遊戲。',
+  '**Against weak play** the horde is dangerous: at 100,000 nodes it beat a random army 35 times in 35, 20 of them by smother, and people are weaker than a million-node search. That makes it a trap, not a game.':
+    '**對付弱手時**兵團很危險：在 100,000 節點下它對隨機走子的全軍 35 局全勝，其中 20 局靠困斃，而人比一百萬節點的搜尋要弱。這讓它成了一個陷阱，而不是一個遊戲。',
+  'What would reopen it: a human result, a soldier rule that gives the block cover on the way (the candidates are listed above), or a chariot-fall rate well above the six in 48 measured here. Nothing so far points that way for xiangqi’s own soldier. The soldier is the design space, the river is a cliff in it, and the next design has to change the soldier.':
+    '什麼能讓它重新開啟：人類對局的結果、一種能給兵陣提供路上掩護的兵的規則（候選已列在上面），或者車被吃的比率遠高於這裡測到的 48 局中 6 局。就象棋原本的兵而言，目前沒有任何跡象指向那個方向。兵就是設計空間，河是其中的一道懸崖，下一個設計必須改兵。',
+  '**Prior art.** We looked in Fairy-Stockfish’s variant file, PyChess, Lichess, Chess.com’s official list, PlayStrategy, Ludii, both Wikipedias’ xiangqi-variant pages, chessvariants.com’s 9x10 index, a Zhihu list of 231 folk xiangqi variants and the nine soldier-named variants with rules on Baidu Baike, and found no horde among them. Tieba’s folk boards and Chess.com’s user variants we could not read, so this is a thorough negative, not an exhaustive one. Xiangqi’s own lopsided games (Manchu chess, Five Tigers, the nine-piece handicap) run the other way, taking pieces from one side, soldiers first. Horde chess descends from BrainKing’s Horde Chess (2002) and Lord Dunsany’s “Pieces against Pawns” (1942), and Lichess settled its rules in [scalachess](https://github.com/lichess-org/scalachess/commit/79cfa70) in 2015.':
+    '**已有工作檢索。**我們查過 Fairy-Stockfish 的變體檔案、PyChess、Lichess、Chess.com 的官方列表、PlayStrategy、Ludii、中英文維基百科的象棋變體條目、chessvariants.com 的 9x10 索引、知乎上一份 231 種民間象棋變體的清單，以及百度百科上九種帶「兵」字名稱且有規則的變體，沒有找到部落式的變體。貼吧的民間棋盤和 Chess.com 的使用者變體我們看不到，所以這是一次盡力的否證，而非窮盡的否證。象棋本身的不對稱讓子棋（滿洲棋、五虎、九子讓先）走的是反方向，是從一方拿掉子力，先拿兵。國際象棋的部落棋源自 BrainKing 的 Horde Chess（2002）和 Lord Dunsany 的「Pieces against Pawns」（1942），Lichess 在 2015 年於 [scalachess](https://github.com/lichess-org/scalachess/commit/79cfa70) 定下了它的規則。',
+  'The engine is [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish); the harness that produced the games, with the engine gate and the commands, is the [variant lab](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab).':
+    '引擎是 [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish)；產出這些對局的測試框架，連同引擎校驗關卡和相關命令，是[變體實驗室](https://github.com/brianhliou/mistboard/tree/main/scripts/variant-lab)。',
+  '18, RANKS 1-2': '18 兵，第 1-2 線',
+  '18, RANKS 3-4': '18 兵，第 3-4 線',
+  '27, RANKS 1-3': '27 兵，第 1-3 線',
+  '27, RANKS 2-4': '27 兵，第 2-4 線',
+  '27, RANKS 4-6': '27 兵，第 4-6 線',
+  '36, RANKS 1-4': '36 兵，第 1-4 線',
+  '36, RANKS 2-5': '36 兵，第 2-5 線',
+  '36, RANKS 3-6': '36 兵，第 3-6 線',
+  '45, RANKS 1-5': '45 兵，第 1-5 線',
+  '32, XIANGQI’S FIVE POINTS': '32 兵，象棋的五個兵位',
+  '31, PARENT SHAPE': '31 兵，母版形狀',
+  '40, PARENT SHAPE': '40 兵，母版形狀',
+  'PLY 754: 12 SOLDIERS': '第 754 步：12 個兵',
+  'PLY 1,000: 10 SOLDIERS': '第 1,000 步：10 個兵',
+  'CHESS: AFTER e4-e5, d4 COVERS e5': '國際象棋：e4-e5 之後，d4 控制 e5',
+  'SOLDIERS: AFTER e4-e5, NOTHING COVERS e5': '兵：e4-e5 之後，無子控制 e5',
+  'VETERANS: STILL NOTHING COVERS e5': '老兵：仍然無子控制 e5',
+  'Horde, 36 soldiers': '兵團，36 個兵',
+  'The parent’s array: 36 standard soldiers on ranks 1 to 4, no general, Red to move. Black is the whole army.':
+    '原版陣形：36 個標準兵位於第 1 至 4 線，沒有帥，紅方先行。黑方是完整的全軍。',
+  'The chariot drops to the first rank through the f-file, which the horde emptied by advancing. No soldier attacks backward, so nothing can touch it there.':
+    '車順著 f 線落到底線，這一列是兵團推進時自己走空的。沒有兵能向後攻擊，所以它停在那裡誰也碰不到。',
+  'It takes a soldier from behind and goes on at about one a move: fifteen moves after the drop, 11 soldiers are gone for a horse and two of the army’s soldiers.':
+    '它從背後吃掉一個兵，然後大約一著吃一個地繼續下去：落底線十五回合後，十一個兵沒了，換來的是全軍的一個馬和兩個兵。',
+  'The last soldier falls. The whole horde cost the army four soldiers and two horses.':
+    '最後一個兵倒下。整個兵團只讓全軍付出了四個兵和兩個馬。',
+  'The start: 36 veterans on ranks 2 to 5, no general, Red to move. Black is the whole army.':
+    '開局：36 個老兵位於第 2 至 5 線，沒有帥，紅方先行。黑方是完整的全軍。',
+  'The block edges forward a rank at a time; four soldiers have gone for two of the army’s soldiers and a horse.':
+    '兵陣一行一行地向前挪；四個兵已經沒了，換掉了全軍兩個兵和一個馬。',
+  'Seven soldiers are across the river and the army is down to eight pieces: both elephants, a horse and all five soldiers gone. The chariots cannot sit beside a veteran column.':
+    '七個兵過了河，全軍只剩八個子：兩個象、一個馬和五個兵全沒了。車沒法停在老兵縱列的旁邊。',
   // -- Atomic Xiangqi (rules page + launch note), Traditional, 2026-09-17 --
   // Diagram labels.
   'CHARIOT TAKES THE HORSE': '車吃馬',
@@ -4933,8 +10088,6 @@ const ZH_HANT: Record<string, string> = {
     '炮吃子不爆炸。只移除炮和它的目標：目標旁邊的棋子不受影響，炮跳過的炮架也不受影響。炮擊是遠端的；爆炸只發生在接觸時。',
   'Red’s cannon fires over its soldier and takes the horse. The cannon and the horse go; the chariot and cannon beside the horse stay, and so does the soldier that screened the shot.':
     '紅炮隔著己方的兵打馬。炮和馬消失；馬旁邊的車和炮留下，充當炮架的兵也留下。',
-  'This is the one change from a straight port, and it is there because the straight port has a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent. A quiet shot leaves the block standing but harmless, and the check rule below makes the hop that remains a loss for the side making it. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.':
-    '這是相對於直接移植的唯一改動，原因是直接移植的版本存在一種最早第三回合就能出現、防守方永遠無法拒絕的重複局面和棋。一輛車站在士所在的線上，威脅把將帥炸掉。唯一的防守是用炮墊擋；而如果炮也會爆炸，這一墊擋同時就是隔著車反打進攻方自己的士，於是車只好換到另一條士線上，炮跟過去，局面重複。在引擎對局中，少了一輛車的一方靠這一招就能頂住比自己強得多的對手。炮擊不爆炸，墊擋仍然成立卻不構成威脅，下面的將軍規則又讓剩下的那種來回跳成為跳的一方的輸棋。炮由此變成一枚用來兌換和墊擋的棋子，而不再是掃清一條橫線的棋子；爆炸的其餘部分全部不變。',
   'A threat to blow up the general is check': '炸掉將帥的威脅算作將軍',
   'Xiangqi’s rules about the general stand. A move may not leave your general where a piece attacks it, and the two generals may not face each other down an open file. Checkmate wins. A player with no legal move loses.':
     '象棋關於將帥的規則照舊。走棋不能讓自己的將帥留在被攻擊的位置，雙方將帥不能在無子相隔的同一條線上照面。將死獲勝。無子可動的一方負。',
@@ -4950,18 +10103,24 @@ const ZH_HANT: Record<string, string> = {
     '本頁背後的引擎對局之一：一千萬節點的 Fairy-Stockfish 執紅，對陣一百萬節點的自己。第 6 回合紅方已多出一個半兵，之後局面一直接近，直到黑方第 21 回合的 Hxf9：馬吃 f9 的炮，而黑方自己的士就在旁邊的 f10。爆炸帶走了士，九宮白白少了一子，從此再沒恢復：第 30 回合的 Cb9 讓將失去了掩護，第 38 回合紅車吃掉 d8 的炮，緊挨著 d9 的將。爆炸帶走了將，連同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
     '原子象棋：一盤由九宮內自炸決定的引擎對局',
-  'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the design post has the measurements behind the cannon rule; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
-    '和八個強度檔位的引擎對弈，或者用邀請連結約朋友。[釋出說明](/blog/atomic-xiangqi-build)講的是第一盤棋的勝負由什麼決定；設計文章有炮規則背後的測量資料；研究裡有全部十二盤引擎對局，每次爆炸都有標記，每盤的決定性一步都有註解。',
-  'Play Atomic Xiangqi': '下原子象棋',
-  'The design post': '設計文章',
   'The twelve engine games': '十二盤引擎對局',
+  // Retirement notes (2026-10-11), machine translation of English not yet signed off.
+  'Atomic Xiangqi is no longer open for new games; finished games still replay. The [launch note](/blog/atomic-xiangqi-build) is what decided a first game; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
+    '原子象棋已不再開放新對局，已結束的對局仍可回放。[釋出說明](/blog/atomic-xiangqi-build)講的是第一盤棋的勝負由什麼決定；研究裡有全部十二盤引擎對局，每次爆炸都有標記，每盤的決定性一步都有註解。',
+  'Atomic Xiangqi was retired on 2026-10-11: it no longer takes new games, and finished games still replay. The rules page has the whole thing with diagrams.':
+    '原子象棋已於 2026-10-11 下線：不再接受新對局，已結束的對局仍可回放。規則頁面配有圖解，講得完整。',
+  'Fortress Xiangqi is no longer open for new games; finished games still replay. Its nearest relative here is Crazyhouse Xiangqi: a piece you capture joins your hand and drops back in, on the full board. No account needed.':
+    '堡壘象棋已不再開放新對局，已結束的對局仍可回放。本站與它最接近的是瘋狂屋象棋：吃掉的棋子進入你的持子，可以打回棋盤，用的是完整棋盤。無需帳號。',
+  'Play Crazyhouse Xiangqi': '下瘋狂屋象棋',
+  'Crazyhouse Xiangqi rules': '瘋狂屋象棋規則',
+  'Further reading': '延伸閱讀',
   'Atomic Xiangqi: What Decides Your First Game': '原子象棋：第一盤棋的勝負由什麼決定',
   'Atomic Xiangqi Is Live: What Decides Your First Game':
     '原子象棋上線了：第一盤棋的勝負由什麼決定',
   'Chinese chess where a capture is an explosion. The rules take a minute. What decides your first game is the three points beside your general, the cannon that no longer clears a rank, and a chariot on your advisor file counting as check.':
-    '每次吃子都會爆炸的中國象棋。規則一分鐘就能讀完。決定你第一盤棋勝負的，是將帥旁邊的三個點、不再掃清橫線的炮，以及站在你士線上的車算作將軍。',
+    '每次吃子都會爆炸的象棋。規則一分鐘就能讀完。決定你第一盤棋勝負的，是將帥旁邊的三個點、不再掃清橫線的炮，以及站在你士線上的車算作將軍。',
   'Atomic Xiangqi is live today, against a bot at eight strengths or a friend by invite link. It is Chinese chess where a capture is an explosion: the piece that captures, the piece it takes and everything on the four points next to it are removed, soldiers survive, and a general does not. Same set, same array, three lines of rules.':
-    '原子象棋今天上線，可以和八個強度檔位的電腦對弈，也可以用邀請連結約朋友。它是每次吃子都會爆炸的中國象棋：吃子的棋子、被吃的棋子以及相鄰四個點上的一切都被移除，兵卒倖存，將帥不能。同樣的棋子，同樣的開局擺法，三行規則。',
+    '原子象棋今天上線，可以和八個強度檔位的電腦對弈，也可以用邀請連結約朋友。它是每次吃子都會爆炸的象棋：吃子的棋子、被吃的棋子以及相鄰四個點上的一切都被移除，兵卒倖存，將帥不能。同樣的棋子，同樣的開局擺法，三行規則。',
   'What follows is not the rules. It is what decides a first game, taken from the twelve engine games behind this launch and the few hundred it took to find rules that hold.':
     '下面寫的不是規則，而是第一盤棋的勝負由什麼決定，取自這次釋出背後的十二盤引擎對局，以及為找到站得住的規則而下的幾百盤。',
   'Nothing next to a general is safe to take': '將帥旁邊的任何棋子都吃不得',
@@ -4995,16 +10154,12 @@ const ZH_HANT: Record<string, string> = {
     '對局以爆炸或將死結束，在 23 到 73 回合之間',
   'Of the ten decisive engine games behind this launch, six end with a general blown up and four with checkmate; the shortest is 23 moves and the longest 73. Expect a full game, and pick a clock for one: 10+5 is the default here.':
     '這次釋出背後的十盤分出勝負的引擎對局裡，六盤以將帥被炸結束，四盤以將死結束；最短 23 回合，最長 73 回合。要做好下完一整盤的準備，並按此選擇用時：這裡預設是 10+5。',
-  'Openings look like xiangqi’s. The cannon shot that took a cannon and a horse together under an earlier version of the rules is gone, so nobody trades cannons on move one; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':
-    '開局看起來和象棋一樣。早期版本規則下那記一炮同時帶走對方的炮和馬的炮擊已經沒有了，所以沒人會在第一回合兌炮；引擎的開局是 Cb5、Ri3、Ra3 或 Hg3，第一次爆炸通常出現在中局。',
+  'Openings look like xiangqi’s. The opening cannon shot that took a horse, a chariot and an elephant at once under an earlier version of the rules is gone; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':
+    '開局看起來和象棋一樣。早期版本規則下那記一炮同時帶走對方馬、車、象的開局炮擊已經沒有了；引擎的開局是 Cb5、Ri3、Ra3 或 Hg3，第一次爆炸通常出現在中局。',
   'The bot takes a general on offer without thinking': '送到嘴邊的將帥，電腦想都不想就吃',
   'The bot is Fairy-Stockfish with a patch for these rules, eight node-anchored levels, the same ladder the other xiangqi variants use. Its weaker levels are weakened by choosing a move other than the best one they found, and on the duck board that made a level-1 bot decline a general capture it could see. Here the loop checks for a move that removes the general before it asks the engine anything, so a general left next to a capturable piece is taken at every level. Weakness is in how the bot builds a position, not in whether it finishes one.':
     '電腦是加了這套規則補丁的 Fairy-Stockfish，八個以節點數錨定的等級，和其他象棋變體用的是同一套階梯。較弱的等級是透過不走自己找到的最佳著法來削弱的，在鴨子象棋的棋盤上，這曾讓一個 1 級電腦放棄了一次它看得見的吃將。這裡的循環在向引擎提問之前會先檢查有沒有能移除將帥的著法，所以留在可吃棋子旁邊的將帥，在每一個等級都會被吃掉。電腦的弱點在於它如何構築局面，而不在於它會不會收官。',
-  'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.':
-    '八個引擎強度檔位，或者用邀請連結約朋友。規則頁面配有圖解，講得完整。',
-  'Invite a friend': '邀請朋友',
   // banqi capture table + FAQ, jungle FAQ (2026-09-17)
-  'Piece (red / black)': '棋子（紅 / 黑）',
   'General 帥 / 將': '將帥：帥 / 將',
   'Advisor 仕 / 士': '士：仕 / 士',
   'Elephant 相 / 象': '象：相 / 象',
@@ -5043,19 +10198,19 @@ const ZH_HANT: Record<string, string> = {
   'Move any animal into the enemy den, capture all eight enemy animals, or leave your opponent with no legal move. You cannot enter your own den. The game draws on threefold repetition or 100 half-moves without a capture.':
     '任何一隻動物走進敵方獸穴、吃光敵方八隻動物，或讓對手無棋可走，都立刻獲勝。不能走進自己的獸穴。三次重複局面，或 100 個半回合沒有吃子，判和。',
   'Is there a winning strategy for Jungle Chess?': '鬥獸棋有必勝法嗎？',
-  'No forced win is known. Dou Shou Qi has been solved only up to seven pieces on the board, and the full sixteen-piece game is open. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.':
-    '目前沒有已知的必勝法。鬥獸棋只被完全解到盤面剩七枚棋子，完整的十六枚棋子開局仍未解開。實戰上有用的想法是：留住鼠當作對付象的答案，讓獅和虎待在河邊發揮跳河的威脅，並且不要讓自己獸穴周圍的格子無人防守。',
+  'No forced win is known. Dou Shou Qi is unsolved: the largest published endgame tablebase covers positions with up to four pieces, against sixteen at the start. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.':
+    '目前沒有已知的必勝法。鬥獸棋尚未被解開：已發表的最大殘局庫只涵蓋盤面最多四枚棋子的局面，而開局有十六枚。實戰上有用的想法是：留住鼠當作對付象的答案，讓獅和虎待在河邊發揮跳河的威脅，並且不要讓自己獸穴周圍的格子無人防守。',
   'What other names does Jungle Chess have?': '鬥獸棋的英文怎麼說？',
   'Dou Shou Qi, Animal Chess, Jungle, and Animal Checkers in English. Dou shou qi is the Chinese name, literally fighting-animal chess, and it is the same name in Taiwan, Hong Kong, and the mainland.':
     '英文叫 Jungle Chess、Dou Shou Qi、Animal Chess，也有人叫 Jungle 或 Animal Checkers。中文在台灣和香港寫作鬥獸棋，中國大陸寫作斗兽棋。',
   // Overrides for every zh-Hans key that fell through to Simplified on the zh-Hant pages (2026-09-17). OpenCC s2twp, then 炮→砲 and 機器人→電腦 to match the rest of this table; prose re-read by hand.
   'The rat takes the elephant.': '鼠吃掉象。',
-  'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, moves first as the point it stands on, then reveals. Play it free in your browser.':
-    '揭棋規則詳解：除將帥外的棋子都隱藏身份，首次按所在起始位置的棋子走法行棋，然後翻開並按真實身份行棋。免費線上對弈，無需註冊。',
+  'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
+    '揭棋是一種暗子玩法的象棋變體，這裡詳解它的規則。除將帥外，所有棋子開局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻開，此後按真實身份行棋。',
   "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
     '揭棋保留象棋的棋盤和將死目標，但隱藏所有非將帥棋子的身份。暗子首次按它所在起始位置的棋子走法移動、攻擊和吃子，走完後翻開，之後按真實身份行棋。',
-  'Banqi, also called Chinese dark chess or blind chess: the 4 by 8 half-board game with face-down pieces, rank captures, and screen-jumping cannons. Play it free in your browser.':
-    '暗棋規則詳解：在 4×8 半盤上進行，棋子背面朝上，按等級吃子，砲隔子跳吃，也沒有王棋。免費線上對弈，無需註冊。',
+  'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
+    '暗棋又稱盲棋，在半張象棋棋盤上以背面朝上的棋子進行。棋子按等級吃子，但有兩個例外：卒可以吃將，炮則隔著一個炮架跳吃任何棋子。',
   'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
     '暗棋是在半張象棋棋盤上進行的快節奏隱藏棋子遊戲。三十二枚棋子全部洗勻並背面朝上。第一次翻子決定雙方顏色。之後每回合都在兩種行動中選擇：翻開棋子，或移動一枚已翻開的棋子。除砲外，吃子按等級進行。',
   'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
@@ -5076,21 +10231,19 @@ const ZH_HANT: Record<string, string> = {
   'Play on Mistboard': '在 Mistboard 上對弈',
   'Play vs computer': '對戰電腦',
   'Every xiangqi champion since 1956': '1956年以來的每一位全國象棋冠軍',
-  'Xiangqi is playable on Mistboard: find a casual or rated game against another player, take on the engine ladder, or challenge a friend. No account required. Signing in unlocks rated games.':
-    '象棋可在 Mistboard 上對弈：與其他玩家進行休閒或積分對局，挑戰引擎等級階梯，或邀請好友。無需帳號即可對弈，登入後可進行積分對局。',
+  "Rated games need an account. Casual games, the engine ladder and friend links don't.":
+    '積分對局需要帳號。休閒對局、引擎等級階梯和好友連結都不需要。',
   'Find an opponent': '尋找對手',
-  'Fortress Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '堡壘象棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '鬥獸棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '翻翻棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Jieqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '揭棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Fog Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '迷霧象棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Fog Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '迷霧國際象棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
+  'A rat on land can take the elephant, and the elephant can never take a rat. No account needed.':
+    '陸地上的老鼠可以吃大象，大象卻永遠不能吃老鼠。無需帳號。',
+  'When an animal takes an enemy of the same rank, both leave the board. No account needed.':
+    '動物吃同等級的敵子時，兩枚棋子一起離開棋盤。無需帳號。',
+  'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does.':
+    'Mistboard 採用僅向吃子方揭示的規則。你吃掉一枚暗子時會得知它是什麼，對手則永遠不會知道。',
+  'The generals may face each other here. A general that sees the other down a clear file can capture it. No account needed.':
+    '這裡允許將帥照面。一方將帥若在無阻擋的直線上看見對方，就可以直接擒獲。無需帳號。',
+  'You can castle out of, through or into check, and nobody tells you when your king is attacked. No account needed.':
+    '王可以在被將軍時易位，可以穿過被攻擊的格子，也可以易位到被攻擊的格子上；王被攻擊時也沒有任何提示。無需帳號。',
   Years: '年份',
   'The decade that was struck': '被抹去的十年',
   'Play through the whole study': '走一遍完整研究',
@@ -5119,7 +10272,6 @@ const ZH_HANT: Record<string, string> = {
   Moves: '走法',
   Limits: '限制',
   'One point along a line': '沿線走一點',
-  'The same way': '與走法相同',
   'Never leaves the palace; may not face the other general on an open file':
     '不能離開九宮；兩將不能在無子的同一直線上照面',
   'One point diagonally': '斜走一點',
@@ -5130,13 +10282,10 @@ const ZH_HANT: Record<string, string> = {
   'Blocked by a piece on the first point': '直走的第一點有子則蹩馬腿',
   'Any distance along a line': '沿直線任意距離',
   'Cannot jump': '不能跳過棋子',
-  'Jumps exactly one piece and takes the enemy beyond it': '隔一子跳吃後面的敵子',
   'Needs a screen to capture': '吃子必須隔一子（砲架）',
   'One point forward; one point sideways too after crossing the river':
     '向前一點；過河後也可橫走一點',
   'Never backward; never promotes': '永遠不能後退；沒有升變',
-  'The seven pieces. Every piece captures the way it moves, except the cannon.':
-    '七種棋子。除砲以外，每種棋子怎麼走就怎麼吃。',
   'How does each piece move in xiangqi?': '象棋每種棋子怎麼走？',
   'General: one point along a line, inside the palace. Advisor: one point diagonally, inside the palace. Elephant: two points diagonally, never across the river. Horse: one point along a line then one diagonally out, blocked if the first point is occupied. Chariot: any distance along a line. Cannon: moves like a chariot, captures by jumping exactly one piece. Soldier: one point forward, and sideways too after crossing the river.':
     '將：在九宮內沿線走一點。士：在九宮內斜走一點。象：斜走兩點（田字），不能過河。馬：先直走一點再斜走一點（日字），第一點有子則蹩馬腿。車：沿直線任意距離。砲：走法同車，吃子時隔一子跳吃。兵：向前一點，過河後也可橫走一點。口訣：馬走日、象走田、車走直路砲翻山、士走斜線護將邊、小卒一去不回還。',
@@ -5186,20 +10335,20 @@ const ZH_HANT: Record<string, string> = {
   // pikafish: Taiwan forms (線上, 網頁, 帳號, 伺服器, 等級, 選單, 資料, 西洋棋, 建置).
   'Pikafish on Mistboard': '皮卡魚線上：在 Mistboard 上與皮卡魚對弈',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
-    '皮卡魚線上對弈：免費象棋引擎，網頁版，免下載',
-  'Play Pikafish, the strongest open-source xiangqi engine, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    '在瀏覽器裡直接與最強開源象棋引擎皮卡魚對弈。免費、不用註冊、不用下載。可選難度等級，可下揭棋，還能用它復盤你的對局。',
+    '皮卡魚象棋線上對弈：象棋和揭棋，免費網頁版',
+  'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
+    '在瀏覽器裡直接與開源象棋引擎皮卡魚對弈，它由 Stockfish 改造而來。免費、不用註冊、不用下載。可選難度等級，可下揭棋，還能用它復盤你的對局。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     '想找地方與皮卡魚對弈或用它分析的象棋棋手。',
   '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
     '[皮卡魚（Pikafish）](https://github.com/official-pikafish/Pikafish) 是目前最強的開源象棋引擎，由 Stockfish 改造而來。多數人要先下載引擎，再搭配一個介面才能用。在這裡，它直接在網頁裡運行。',
   'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    '可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它復盤。免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
+    '可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它復盤。[象棋線上對弈](/zh-hant)免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
   'Play Pikafish': '與皮卡魚對弈',
   'Play Pikafish at jieqi': '與皮卡魚下揭棋',
   'Play against Pikafish': '人機對弈：挑戰皮卡魚',
-  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.':
-    '點一下就開局。系統給你分配顏色和時鐘，對面是每步搜尋三百萬個局面的皮卡魚。不需要帳號。',
+  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move.':
+    '點一下就開局。系統給你分配顏色和時鐘，對面是每步搜尋三百萬個局面的皮卡魚。',
   'Three million positions a move is a lot. Below Pikafish sits an eight-level ladder of Fairy-Stockfish bots, level 1 for someone who learned the moves this week, level 8 close to the top. Every level has a measured rating from playing the others, anchored at 1500 to an engine that picks random legal moves.':
     '每步三百萬個局面很強。皮卡魚之下還有八級 Fairy-Stockfish 人機階梯：一級適合這週剛學會走子的人，八級已接近頂端。每一級都有實測等級分，由各級互相對弈得出，並以一個隨機走合法著法的引擎定為 1500 分作基準。',
   Opponent: '對手',
@@ -5349,10 +10498,10 @@ const ZH_HANT: Record<string, string> = {
     '被吃的時候，砲排在馬下面：馬可以吃它。',
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '卒不能吃砲。它可以吃另一顆卒，或吃將。',
-  'Play against the engine or challenge a friend. No account required.':
-    '跟引擎下，或邀朋友對弈。不用帳號。',
-  'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
-    'Mistboard 採用台灣規則，加上台灣電腦對局協會的比賽和棋規則（Chen、Shen 與 Hsu，ICGA Journal，2010 年）：上面的 40 步無進展計數和重複局面判和。兩條有文獻記載的變體規則刻意不採用：砲不能吃暗子，將永遠不能吃卒，就算是它的第一步也一樣。如果你學的是另一套大小順序，本頁這一套才是引擎和站上每一盤棋遵守的。',
+  'A soldier can take the general, and the general can never take a soldier. No account needed.':
+    '卒可以吃將，將卻永遠不能吃卒。無需帳號。',
+  'Mistboard plays the standard Taiwanese game, the one used in computer competition and on the main banqi sites in Taiwan. The draw rules come from the competition rules of Chen, Shen and Hsu (ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. A common house rule lets a cannon also fire at a face-down tile, often played together with chain captures. That is a side variant, not the standard game, and it is not played here: a cannon only captures revealed enemy pieces. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
+    'Mistboard 採用標準台灣暗棋，也就是電腦對局比賽和台灣主要暗棋網站使用的規則。和棋規則取自 Chen、Shen 與 Hsu 的比賽規則（ICGA Journal，2010 年）：上面的 40 步無進展計數和重複局面判和。常見的一條家規允許砲隔子打暗子，通常和連吃一起玩。這是變體，不是標準規則，本站不採用：砲只能吃已翻開的敵方棋子。如果你學的是另一套大小順序，本頁這一套才是引擎和站上每一盤棋遵守的。',
   'An engine game': '一盤引擎對局',
   'Banqi: an engine game under the competition rules': '暗棋：比賽規則下的一盤引擎對局',
   'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs for the game, and the opponent plays the other.':
@@ -5376,6 +10525,731 @@ const ZH_HANT: Record<string, string> = {
     '一顆砲架，再來是目標。大小不重要：砲吃將。',
   'No screen, no capture: the chariot beside it is safe, and so is the horse two squares up with nothing between.':
     '沒有砲架就不能吃：旁邊的車是安全的，上面隔兩格、中間沒有子的馬也是。',
+  // Rules-page study embeds (2026-09-25): duck, jungle, fog chess.
+  'Misty against itself at 30 seconds a move, shown with the whole board visible. Black wins White’s queen for a rook on move 10, but on move 27 White’s rook lands on e8 and Black’s king steps to d8 beside it. Fog chess has no check to warn it, and 28.Rxd8 captures the king.':
+    'Misty 自我對弈，每步 30 秒，這裡顯示整個棋盤。第 10 回合黑方以一車換得白方的后，但第 27 回合白方的車落到 e8，黑方的王走到旁邊的 d8。迷霧國際象棋沒有將軍來提醒它，28.Rxd8 吃掉了王。',
+  'Fog Chess: Misty against itself, White captures the king on move 28':
+    '迷霧國際象棋：Misty 自我對弈，白方第 28 回合吃王',
+  'The [companion study](/study/MbaW80XR) has eleven of these games, and shows each side’s fogged view move by move.':
+    '[配套研究](/study/MbaW80XR)收錄了十一盤這樣的對局，並逐步顯示雙方各自在迷霧中看到的局面。',
+  'Eleven engine games': '十一盤引擎對局',
+  'An engine game from a 200-game match between KataGo-AnimalChess (Red) and Mistboard’s own engine (Blue), and it uses nearly every rule on this page. Blue’s tiger jumps the left river sideways on move 11, and its lion jumps the right one on move 13. On move 38 Red’s lion jumps the river lengthwise, and on move 40 Red’s rat, standing on land, takes Blue’s elephant. Three moves later a wolf takes a tiger standing in Red’s own trap, where it has no rank left, and on move 47 Red walks into Blue’s den.':
+    '這盤引擎對局出自 KataGo-AnimalChess（紅方）與 Mistboard 自家引擎（藍方）的 200 盤對抗賽，幾乎用到了本頁的所有規則。第 11 回合藍方的老虎橫跳過左邊的河，第 13 回合它的獅子跳過右邊的河。第 38 回合紅方的獅子縱跳過河，第 40 回合紅方站在陸地上的老鼠吃掉了藍方的大象。三回合後，一隻狼吃掉了站在紅方陷阱裡、已失去全部等級的老虎；第 47 回合紅方走進藍方獸穴。',
+  'Jungle: an engine game with river jumps, a rat taking the elephant, and a den entry':
+    '鬥獸棋：一盤有跳河、鼠吃象和入穴的引擎對局',
+  'All 200 games are in the [companion study](/study/0t8xpyv6), with the sideways tiger jumps and the shortest and longest wins picked out first.':
+    '全部 200 盤都收錄在[配套研究](/study/0t8xpyv6)裡，老虎橫跳、最短和最長的勝局排在最前面。',
+  'The 200 engine games': '200 盤引擎對局',
+  'Duck Xiangqi: an engine game, Black captures the general on move 60':
+    '鴨子象棋：一盤引擎對局，黑方第 60 回合吃掉帥',
+  // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
+  'Sacrifice the Horse in 13': '棄馬十三著',
+  'Classic manual, 1632': '古譜，1632 年',
+  'World Championship Game 11, Sochi 2014': '世界冠軍賽第 11 局，2014 年索契',
+  'Anand resigns. Carlsen (White) wins the match.': '阿南德認輸。卡爾森（白方）贏得這場比賽。',
+  'Fortress Xiangqi: an engine game, Black mates on move 43':
+    '堡壘象棋：一盤引擎對局，黑方第 43 回合將死',
+  'Twenty engine games': '二十盤引擎對局',
+  'PikaJieQi against itself at the settings the site’s bot uses. Face-down pieces show as colored backs until they first move. Red’s advisor point on d1 turns out to hold a chariot on move 9, and between moves 13 and 23 Red’s chariots take five of Black’s pieces before they are ever turned over. The corners do not keep their promise either: Black’s a10 is an elephant, and Red’s a1 and i1 are an elephant and a soldier. Red mates on move 37.':
+    'PikaJieQi 以本站電腦所用的設定自我對弈。暗子在第一次走動前以彩色背面顯示。紅方 d1 仕位上的暗子在第 9 回合翻出來是一隻車；第 13 到第 23 回合之間，紅方的車吃掉了黑方五枚還沒翻開的暗子。角上的棋子也不守承諾：黑方 a10 是一隻象，紅方 a1 和 i1 分別是相和兵。紅方在第 37 回合將死。',
+  'Jieqi: an engine game, Red mates on move 37': '揭棋：一盤引擎對局，紅方第 37 回合將死',
+  'The [companion study](/study/wd6c7qvG) has eighteen games played the same way, one chapter each.':
+    '[配套研究](/study/wd6c7qvG)收錄了十八盤以同樣方式下的對局，每盤一章。',
+  'Eighteen engine games': '十八盤引擎對局',
+  // Rules-page study embeds, flip jungle (2026-09-25).
+  'MistyJungleFlip against itself at three times the strength the site’s bot plays at. The first flip turns up red, so the first player is Red. The cats meet and trade off on move 10, a red rat takes Blue’s elephant on move 24, and on move 28 the two lions trade off too, which leaves Blue with no move. Red wins.':
+    'MistyJungleFlip 以本站電腦三倍的強度自我對弈。第一次翻出的是紅子，所以先手執紅。第 10 回合雙方的貓相遇並同歸於盡，第 24 回合紅方的老鼠吃掉了藍方的大象，第 28 回合雙方的獅子也同歸於盡，藍方隨即無子可走。紅方獲勝。',
+  'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盤引擎對局，紅方第 28 回合獲勝',
+  'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
+    '[配套研究](/study/uKxJ60mN)收錄了這一批全部二十盤對局，每盤都從自己的發牌開始，並附有對局經過的說明。',
+  // -- fortress-and-atomic-xiangqi-on-hold, machine-drafted 2026-10-14, not native-reviewed. Terms follow the
+  // Fortress and Atomic rules pages (寶, 持子, 打入, 長將) and the site's variant names. --
+  'Back to the drawing board: Fortress and Atomic Xiangqi': '推倒重來：堡壘象棋與原子象棋',
+  'Back to the drawing board: Fortress Xiangqi and Atomic Xiangqi':
+    '推倒重來：堡壘象棋和原子象棋暫停開放',
+  'Fortress and Atomic on hold': '堡壘與原子象棋暫停',
+  'On 11 October we stopped new games of Fortress Xiangqi and Atomic Xiangqi so we can redesign them. In Fortress the drops took over a small board; Atomic only stopped looping after the cannon got its own exception. Finished games still replay.':
+    '10 月 11 日，我們停止了堡壘象棋和原子象棋的新對局，以便重新設計。在堡壘象棋裡，打入主宰了一張小棋盤；原子象棋則是在炮有了自己的例外規則之後，才不再陷入循環。已結束的對局仍可回放。',
+  'Fortress Xiangqi and Atomic Xiangqi are on hold while we redesign them. You cannot start a new game, but finished games still replay and both rules pages stay up.':
+    '堡壘象棋和原子象棋已暫停，我們正在重新設計。你無法開始新對局，但已結束的對局仍可回放，兩個規則頁面也都保留。',
+  'In Fortress the drops took over the small board. A redesign has to make a smaller xiangqi that still feels like the full game.':
+    '在堡壘象棋裡，打入主宰了小棋盤。重新設計必須做出一種更小的象棋，下起來仍像完整的象棋。',
+  'Atomic only played well after the cannon got its own exception. A redesign has to give it a cannon that follows the same rule as every other piece.':
+    '原子象棋是在炮有了自己的例外規則之後才下得好。重新設計必須給它一個和其他所有棋子遵循同一條規則的炮。',
+  'On 11 October we stopped new games of [Fortress Xiangqi](/rules/fortress-xiangqi) and [Atomic Xiangqi](/rules/atomic-xiangqi). Games already played still replay from their links, and both rules pages stay up. We designed both games, and we launched both before they were ready. What went wrong with each, and what does a version worth bringing back have to fix?':
+    '10 月 11 日，我們停止了[堡壘象棋](/rules/fortress-xiangqi)和[原子象棋](/rules/atomic-xiangqi)的新對局。已經下過的對局仍可從各自的連結回放，兩個規則頁面也都保留。這兩款棋都是我們設計的，也都是在還沒準備好時就上線了。它們各自出了什麼問題？一個值得重新推出的版本又必須解決什麼？',
+  'Fortress Xiangqi tried four new ideas at once': '堡壘象棋同時嘗試了四個新點子',
+  'Fortress was played on a 7 by 8 board with the two palaces in opposite corners. It added the Treasure, a new piece that steps one point in any direction. A captured piece went into your hand, and you could drop it back onto the board later as your own move. For its first two months it also had veteran soldiers, which we later took out.':
+    '堡壘象棋在 7×8 的棋盤上進行，兩個九宮分處對角。它加入了「寶」，一個可以向任意方向走一步的新棋子。被吃掉的棋子進入你的持子，之後你可以用自己的一步把它打回棋盤。最初的兩個月裡它還有老兵，後來我們把老兵去掉了。',
+  'Each idea was worth trying. Together they made a game that was hard to learn, and the drops overwhelmed the rest. With the general boxed into a corner of a small board, one piece dropped beside it was often enough. A typical engine game ended this way, with most of both armies still on the board.':
+    '每個點子都值得一試。合在一起，卻成了一款難學的棋，而打入壓倒了其餘一切。將帥被困在小棋盤的一角，往它旁邊打入一子往往就夠了。一盤典型的引擎對局就是這樣結束的，雙方的大部分兵力都還在盤上。',
+  'Black drops a soldier from its hand on b1, beside the general. With the horse on c3 guarding b1 and Red’s own chariot on a2, the general has nowhere to go, and that is mate.':
+    '黑方從持子中把一枚卒打在 b1，緊挨著帥。c3 的馬守住 b1，紅方自己的車又占著 a2，帥無路可走，這就是將死。',
+  'A redesign has to make a smaller xiangqi that keeps the feel of the full game, without drops taking over.':
+    '重新設計必須做出一種更小的象棋，保留完整象棋的感覺，又不讓打入主宰全局。',
+  'Until then, drops live on the site in [Crazyhouse Xiangqi](/rules/crazyhouse-xiangqi), which plays them on the normal board with the normal pieces and palaces.':
+    '在此之前，本站的打入玩法在[瘋狂屋象棋](/rules/crazyhouse-xiangqi)裡：它在普通棋盤上，用普通的棋子和九宮來打入。',
+  'Atomic Xiangqi needed an exception for the cannon': '原子象棋得為炮開一個例外',
+  'In Atomic Xiangqi a capture explodes. The piece that captures, the piece it takes and every piece on the four points next to the capture leave the board. Soldiers survive a blast; a general does not, and losing it loses the game.':
+    '在原子象棋裡，吃子會爆炸。吃子的棋子、被吃的棋子，以及吃子點相鄰四個點上的所有棋子，都離開棋盤。兵卒能在爆炸中倖存；將帥不能，失去它就輸掉這盤棋。',
+  'In the first version the cannon exploded too, which made it the perfect defender: it could block a chariot’s attack and threaten back through the chariot. An attacker could often force a draw this way.':
+    '在最初的版本裡，炮也會爆炸，這讓它成了完美的防守者：它能擋住車的進攻，再隔著車反過來威脅。進攻方常常就這樣被拖成和棋。',
+  'Under the first rules. (a) The chariot threatens the advisor on d10. (b) The cannon blocks and threatens d1 through the chariot. (c) The chariot switches files. (d) The cannon follows, and the cycle repeats.':
+    '按最初的規則。(a) 車威脅 d10 的士。(b) 炮擋住，並隔著車威脅 d1。(c) 車換到另一路。(d) 炮跟過去，循環重複。',
+  '(a) Rd2': '(a) Rd2',
+  '(b) Cd6': '(b) Cd6',
+  '(c) Rf2': '(c) Rf2',
+  '(d) Cf6': '(d) Cf6',
+  'With its palace closed in, as here, the defender has no other move, and a repetition rule can’t break the cycle because both sides threaten on every move.':
+    '像這裡這樣九宮被封住時，防守方沒有別的著法；重複局面規則也打破不了這個循環，因為雙方每一步都在威脅。',
+  'To launch it, we made a cannon’s capture remove only the cannon and its target, and made the side that keeps up a threat through a repeated cycle lose, like perpetual check in xiangqi.':
+    '為了上線，我們讓炮吃子只移除炮和它的目標，並規定在重複的循環裡一直保持威脅的一方判負，就像象棋裡的長將。',
+  'That ended the loop, but left the cannon playing by its own rule: it alone can capture next to its own general. We launched before we had a design without that patch.':
+    '這結束了循環，卻讓炮按自己的規則行事：只有它能在己方將帥的相鄰點上吃子。我們在找到不需要這個補丁的設計之前就上線了。',
+  'A redesign needs a cannon that follows the same rule as every other piece.':
+    '重新設計需要一個和其他所有棋子遵循同一條規則的炮。',
+  'Both come back when they are right': '兩款棋都會在做對之後回來',
+  'We would rather run a short list of games we stand behind than keep two that need an apology. Neither game is dead. Each has one problem to solve. Fortress needs a small board that drops do not take over, and Atomic needs a cannon with no exception. When a version of either one solves it, that game comes back.':
+    '我們寧願只營運一小批自己認可的棋，也不願留著兩款需要道歉的棋。兩款棋都沒有死。各自都有一個問題要解決：堡壘象棋需要一張不被打入主宰的小棋盤，原子象棋需要一個沒有例外的炮。哪一款的新版本解決了它的問題，那款棋就會回來。',
+  'If dropping pieces was the part of Fortress you liked, Crazyhouse Xiangqi is where drops live on the site today.':
+    '如果打入是你在堡壘象棋裡喜歡的部分，如今本站的打入玩法就在瘋狂屋象棋裡。',
+  // -- Crazyhouse Xiangqi (rules page), machine-drafted 2026-10-02 for the hand-start rules, not native-reviewed --
+  'Crazyhouse Xiangqi Rules': '瘋狂屋象棋規則',
+  'The sample game’s last move. Left, Red to move with three soldiers in hand. Right, one dropped on e9 mates the general on f9.':
+    '示範對局的最後一步。左圖：輪到紅方走，持子裡有三個兵。右圖：其中一個打入 e9，將死 f9 的將。',
+  'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with drops. A piece you capture joins your hand as one of your own, and each turn you either move a piece on the board or drop one from your hand onto an empty point. Both sides also start with their two advisors and two elephants in hand.':
+    '瘋狂屋象棋就是帶打入的[象棋](/rules/xiangqi)。吃掉的棋子作為你自己的棋子進入你的持子；每一步，你要麼在棋盤上走一枚棋子，要麼從持子中取出一枚打入一個空點。此外，雙方開局時兩士兩象都在持子裡。',
+  'The last position of the sample game below. Red mates by dropping a soldier on e9, ringed. Each side’s hand is drawn on its own side of the board: Black’s above, Red’s below.':
+    '下方示範對局的最後局面。紅方把兵打入 e9（圈出處）將死對方。雙方的持子畫在各自一側：黑方在棋盤上方，紅方在下方。',
+  'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi have been proposed before, in Moshe Callen’s Drop-Xiangqi (2007) and in Fairy-Stockfish’s built-in xiangqihouse, but none became a settled standard. This one is a complete rule set, tested in well over 1,600 engine games across more than 40 candidate rule sets.':
+    'Brian H. Liou 於 2026 年設計了這一版本，作為 Mistboard 原創。此前已有人為象棋提出過打入規則，如 Moshe Callen 的 Drop-Xiangqi（2007）和 Fairy-Stockfish 內建的 xiangqihouse，但都沒有成為公認的標準。這一版是一套完整的規則，經過 40 多套候選規則、遠超 1,600 盤引擎對局的檢驗。',
+  'Advisors and elephants start in hand': '士和象開局在持子裡',
+  'The start. Black’s hand is above the board and Red’s below, two advisors and two elephants each.':
+    '開局。黑方的持子在棋盤上方，紅方的在下方，各有兩士兩象。',
+  'Advisors and elephants move anywhere on their own half': '士和象可以在己方半盤任意行走',
+  'An advisor steps one point diagonally and an elephant two, as in xiangqi, and an elephant is still blocked when the point between (its eye) is occupied. What changes is where they may go: an advisor is no longer held to the palace, nor an elephant to its seven points. Both may go anywhere on their own side of the river, and neither ever crosses it.':
+    '和象棋一樣，士斜走一格，象斜走兩格；中間那個點（象眼）被佔時，象仍然不能走。變化在於它們能去的地方：士不再限於九宮，象也不再限於原來的七個點。兩者都可以在己方河界這一側任意行走，但永遠不能過河。',
+  'Left, an advisor on c2, outside the palace, steps to any of four points. Right, on the river bank at e5 it has two; the crosses are the points the river keeps it from.':
+    '左圖：九宮外 c2 的士可以走到四個點中的任何一個。右圖：在河岸 e5 上只有兩個點可走；叉號是被河界擋住的點。',
+  'An elephant dropped off its seven old points moves on from there by the same two-point step, and never gets back onto them.':
+    '打入到原來七個點之外的象，從那裡起照樣斜走兩格，而且永遠回不到那七個點上。',
+  'Left, an elephant dropped on d3 reaches b1, b5, f1 and f5, none of them a point a xiangqi elephant ever stands on. Right, a soldier on e4 fills its eye, and the step to f5 is gone.':
+    '左圖：打入 d3 的象可以走到 b1、b5、f1 和 f5，這些都不是象棋裡的象能站的點。右圖：e4 的兵塞住了象眼，走向 f5 的那一步就沒有了。',
+  'Each turn is a move or a drop': '每一步要麼走子，要麼打入',
+  'On your turn you do one thing: move a piece on the board, or take a piece from your hand and put it on an empty point. A drop is the whole turn, and dropping is never required.':
+    '輪到你時，只做一件事：在棋盤上走一枚棋子，或者從持子中取出一枚棋子放到一個空點上。打入就是這一步的全部，而且從來不是必須的。',
+  'Two ways to start. Left, Red moves the cannon from h3 to e3. Right, Red drops an elephant on e3 instead, and Red’s hand is one elephant lighter.':
+    '兩種開局方式。左圖：紅方把炮從 h3 走到 e3。右圖：紅方改為把一隻象打入 e3，紅方持子裡就少了一隻象。',
+  'Captured pieces join your hand': '吃掉的棋子進入你的持子',
+  'Red’s chariot takes the black horse on c7, and a red horse joins the soldier already in Red’s hand.':
+    '紅車吃掉 c7 的黑馬，紅方持子裡原有一個兵，現在又多了一匹紅馬。',
+  'Where each piece may drop': '每種棋子可以打入的位置',
+  'A piece may be dropped on any empty point, with one limit: advisors and elephants stay on your own half of the board. Chariots, horses, cannons and soldiers may go anywhere, the enemy palace and your own back rank included.':
+    '棋子可以打入任何空點，只有一個限制：士和象只能留在己方半盤。車、馬、炮、兵可以打入任何地方，包括對方九宮和己方底線。',
+  'Red’s drop zones on an empty board: 45 points for an advisor or elephant, all 90 for a chariot, horse, cannon or soldier. Black’s are the mirror image.':
+    '紅方在空棋盤上的打入區域：士或象 45 個點，車、馬、炮、兵全部 90 個點。黑方的區域與之上下對稱。',
+  'A drop may give check and mate': '打入可以將軍，也可以將死',
+  'The dropped piece may attack the general itself, or become the screen one of your own cannons fires over. A drop may also block a check. The one drop you may not make is one that leaves your own general in check, such as a piece that becomes the screen an enemy cannon fires over at your general.':
+    '打入的棋子可以自己攻擊對方將帥，也可以成為己方某個炮隔著打將的炮架。打入也可以擋將。唯一不允許的打入，是讓己方將帥處於被將軍狀態的打入，例如打入的棋子成了對方炮隔著打己方將帥的炮架。',
+  'Left, a horse dropped on d8 checks the general on e10. Right, a soldier dropped on e6 gives Red’s cannon on e3 its screen.':
+    '左圖：打入 d8 的馬將軍 e10 的將。右圖：打入 e6 的兵成了紅方 e3 炮的炮架。',
+  'Fairy-Stockfish against itself under these rules, five seconds a move. Both sides drop advisors and elephants on points they never reach in xiangqi, and Red’s attack comes out of its hand: seven of its checks are drops, and the last is mate.':
+    'Fairy-Stockfish 按這套規則自我對弈，每步五秒。雙方都把士和象打入象棋裡到不了的點，紅方的進攻則來自持子：它有七次將軍是打入，最後一次就是將死。',
+  'Watch Red’s advisor dropped on d4 on move 6, Black’s elephant dropped in the corner on a10 on move 18, the cannon Red drops with check on move 31, and the mate on move 49.':
+    '留意第 6 回合紅方打入 d4 的士、第 18 回合黑方打入角上 a10 的象、第 31 回合紅方打入將軍的炮，以及第 49 回合的將死。',
+  'Crazyhouse Xiangqi: a comeback, and a soldier drop mates':
+    '瘋狂屋象棋：一盤翻盤局，打入一兵將死',
+  'This game is one of six in the [companion study](/study/nlZy4yNA), each with notes on the drops that decided it.':
+    '這盤棋是[配套研究](/study/nlZy4yNA)中的六盤之一，每盤都註明了決定勝負的打入。',
+  'The six engine games': '六盤引擎對局',
+  'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point, advisors and elephants on their own half, check and mate included.':
+    '被吃掉的棋子歸入吃子一方的持子、士和象開局就在持子裡的象棋：持子可以打入任何一個空點，士和象只能打入己方半盤，打入的子可以將軍，也可以將死。',
+  'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
+    '其餘一切都是象棋：棋盤、其他棋子的走法、待在九宮裡的將帥、河界、雙方將帥不能在同一條直線上無子相隔地照面的規則，以及對局結束的方式。',
+  'Each side begins with its two advisors and two elephants in hand, not on the board. The back rank reads chariot, horse, two empty points, the general, two empty points, horse, chariot. The cannons and soldiers stand where they always do.':
+    '雙方開局時，兩士兩象都在持子裡，不在棋盤上。底線依次是車、馬、兩個空點、將帥、兩個空點、馬、車。炮和兵的位置與平常相同。',
+  'Red moves first, and the first move may already be a drop.': '紅方先走，第一步就可以打入。',
+  'When you capture a piece it leaves the board and goes into your hand as one of your own. Take a black horse and you hold a red horse. Both hands are shown beside the board, so you always know what your opponent can drop.':
+    '你吃掉一枚棋子後，它離開棋盤，作為你自己的棋子進入你的持子。吃掉黑馬，你就持有一匹紅馬。雙方的持子都顯示在棋盤旁邊，所以你隨時知道對手能打入什麼。',
+  'The general is never captured, so it is never in a hand. Every other piece can be: chariots, horses, elephants, advisors, cannons and soldiers.':
+    '將帥永遠不會被吃，所以永遠不會成為持子。其他棋子都可以：車、馬、象、士、炮和兵。',
+  'Any number of soldiers may share a file. A soldier moves from wherever it lands as if it had walked there: one step forward on your own half, even from your back rank, and forward or sideways once across the river.':
+    '同一條直線上可以有任意多個兵。兵從落點起照常行走，就像走到那裡一樣：在己方半盤只能向前一步，即使從底線出發也是如此；過河後可以向前或橫走。',
+  'How the game ends': '對局如何結束',
+  '**Checkmate wins,** by a move or by a drop. As in xiangqi, so does stalemate: a player with no legal move loses, in check or not. Count your drops as moves. A player with a piece in hand and an empty point to put it on is rarely out of moves.':
+    '**將死獲勝，**無論是走子將死還是打入將死。和象棋一樣，困斃也獲勝：無子可動的一方判負，無論是否被將軍。打入也算著法。手裡有持子、盤上又有空點可放的一方，很少會無棋可走。',
+  '**Repetition.** When the same position occurs for the third time, with the same pieces on the same points, the same pieces in both hands and the same player to move, the game is drawn. If one player gave check with every move of the repeating cycle and the other did not, the checking player loses instead: perpetual check is not a way to save a game.':
+    '**重複局面。**同一局面第三次出現時，即同樣的棋子在同樣的點上、雙方持子相同、輪到同一方走，判和。如果在重複的循環中一方每一步都在將軍而另一方沒有，那麼將軍的一方反而判負：長將不能用來保住一盤棋。',
+  '**Sixty plies without a capture** is a draw. Moves and drops both count toward the sixty; only a capture starts the count again.':
+    '**連續六十個半回合沒有吃子**判和。走子和打入都計入這六十個半回合；只有吃子才會讓計數重新開始。',
+  'Time, resignation and abandonment end a game as they do everywhere else on Mistboard.':
+    '超時、認輸和棄局的處理與 Mistboard 上其他對局相同。',
+  'Can a drop give check?': '打入可以將軍嗎？',
+  'Yes. A drop may check and may mate, directly or by becoming the screen for one of your cannons. The only drop you may not make is one that leaves your own general in check.':
+    '可以。打入可以將軍，也可以將死，既可以直接將軍，也可以透過成為己方炮的炮架將軍。唯一不允許的打入，是讓己方將帥處於被將軍狀態的打入。',
+  'Why can my elephant not cross the river?': '為什麼我的象不能過河？',
+  'Advisors and elephants never cross it, by move or by drop. On your own side of the river they may stand on any point, so that whole half is open to them.':
+    '士和象永遠不能過河，走子和打入都一樣。在己方河界這一側，它們可以站在任何點上，所以那半邊棋盤對它們完全開放。',
+  'Why do advisors and elephants start in hand?': '為什麼士和象開局就在持子裡？',
+  'So both sides have pieces to drop from the first move, placed where the game needs them instead of on fixed points.':
+    '這樣雙方從第一步起就有棋子可以打入，可以放在對局需要的地方，而不是固定的位置。',
+  'Does a drop reset the sixty-ply count?': '打入會讓六十個半回合的計數重新開始嗎？',
+  'No. Only a capture does. Without that, two players could trade drops forever without either one taking anything.':
+    '不會。只有吃子會。否則雙方可以永遠互相打入，誰也不吃子。',
+  'Crazyhouse Xiangqi is on Mistboard against the Fairy-Stockfish ladder, a friend with an invite link, or whoever is waiting in the lobby.':
+    '在 Mistboard 上，你可以和 Fairy-Stockfish 的各個強度檔位對弈，用邀請連結約朋友，或者和大廳裡正在等待的玩家下一盤瘋狂屋象棋。',
+  'Play the computer': '與電腦對弈',
+
+  // -- Diagram labels across the rules pages, machine-drafted 2026-10-01. --
+  // localizeSvgMarkup swaps <text> nodes through this dictionary; the coverage
+  // test now gates them (articleDiagramLabels), so a new label fails CI here.
+  // jieqi rules
+  'SHUFFLED START': '洗混後的開局',
+  'BEFORE: HORSE POINT': '翻子前：馬位',
+  'AFTER: REVEALED CANNON': '翻子後：翻出炮',
+  'ADVISOR AFTER REVEAL': '翻明後的士',
+  'ELEPHANT AFTER REVEAL': '翻明後的象',
+  CAPTURE: '吃子',
+  // jieqi openings
+  'FACE-DOWN ON A CANNON POINT': '炮位上的暗子',
+  'SPENT: A SOLDIER TOOK THE HORSE': '已用掉：一個兵吃了馬',
+  'FOUR OPENINGS, ONE MOVE EACH': '四種開局，各走一步',
+  'BOTH CANNONS TAKE BOTH HORSES': '雙炮打雙馬',
+  // xiangqi rules (the piece names also label the fog xiangqi vision boards)
+  'STARTING POSITION': '初始局面',
+  GENERAL: '將',
+  ADVISOR: '士',
+  ELEPHANT: '象',
+  HORSE: '馬',
+  CHARIOT: '車',
+  CANNON: '炮',
+  SOLDIER: '兵',
+  'FACING: FORBIDDEN': '對臉：禁止',
+  'SCREENED: ALLOWED': '有子相隔：允許',
+  'THE RIVER': '河界',
+  'THE EYE': '象眼',
+  UNOBSTRUCTED: '無阻擋',
+  'LEG BLOCKED': '蹩馬腿',
+  MOVE: '走子',
+  'BEFORE THE RIVER': '過河前',
+  'ACROSS THE RIVER': '過河後',
+  // fog xiangqi
+  "RED'S VIEW": '紅方視野',
+  "RED'S VIEW BEFORE": '紅方視野：之前',
+  "RED'S VIEW AFTER": '紅方視野：之後',
+  // fortress xiangqi
+  MOVES: '走法',
+  'SCREEN CAPTURE': '隔架吃子',
+  'RIVER-LOCKED': '不能過河',
+  'EYE BLOCKED': '塞象眼',
+  'ANY EMPTY POINT': '任意空點',
+  'YOUR OWN HALF': '己方半場',
+  'YOUR OWN PALACE': '己方九宮',
+  // duck xiangqi
+  'ONE TURN IN': '走完一回合',
+  'STARTING POSITION, NO DUCK YET': '初始局面，還沒有鴨子',
+  'HORSE, OPEN': '馬，暢通',
+  'HORSE, LEG BLOCKED': '馬，蹩腿',
+  'ELEPHANT, OPEN': '象，暢通',
+  'ELEPHANT, EYE FILLED': '象，塞眼',
+  'THE ONLY PLACEMENTS THAT SURVIVE': '僅存的安全落點',
+  // crazyhouse xiangqi (the kernel-built diagrams, crazyhouse-xiangqi-rules-diagrams.ts)
+  'START: ADVISORS AND ELEPHANTS IN HAND': '開局：士和象都在持子裡',
+  'MATE WITH A DROPPED SOLDIER': '打入兵將死',
+  'BEFORE THE DROP': '打入之前',
+  'AFTER: MATE': '之後：將死',
+  'A MOVE': '走子',
+  'A DROP': '打入',
+  'BEFORE THE CAPTURE': '吃子之前',
+  'AFTER: A RED HORSE IN HAND': '之後：紅馬進入持子',
+  'A DROP THAT CHECKS': '打入將軍',
+  'A DROP THAT SCREENS': '打入作炮架',
+  'ADVISOR OUTSIDE THE PALACE': '九宮外的士',
+  'ADVISOR ON THE RIVER BANK': '河岸上的士',
+  'ELEPHANT OFF ITS OLD POINTS': '離開原來象位的象',
+  // shogi4 (two-line labels, one key per line)
+  '✓ straight': '✓ 直走',
+  '✓ diagonal': '✓ 斜走',
+  leap: '跳越',
+  '✕ not over': '✕ 不能跳越',
+  'an enemy': '敵方棋子',
+  '✕ not onto': '✕ 不能落在',
+  'your own': '己方棋子上',
+  farm: '農場',
+  before: '之前',
+  after: '之後',
+  // jungle and flip jungle rank ladder (Rat, Tiger, Lion, Elephant were already keyed)
+  Leopard: '豹',
+  Wolf: '狼',
+  Dog: '狗',
+  Cat: '貓',
+  // -- Index card words, 2026-10-01. textCard (articles/text-card.ts) looks its
+  // lines up here; renderArticleThumbnail swaps any other card's words. --
+  'GAMES PLAYED': '盤棋已下完',
+  'EVERY PIECE FACE DOWN': '每枚棋子都背面朝下',
+  XIANGQI: '象棋',
+  JIEQI: '揭棋',
+  'JUNGLE CHESS': '鬥獸棋',
+  CHAMPIONS: '冠軍',
+  'WORLD TITLE': '世界冠軍',
+  PIKAFISH: '皮卡魚',
+  'PLAY IT IN YOUR BROWSER': '在瀏覽器裡直接對弈',
+  'THE NEW TOP BOT': '新的最強電腦',
+  'A STRONGER BOT': '更強的電腦',
+  'EVERY NATIONAL TITLE': '每一屆全國個人賽',
+  'SINCE 1956': '1956 年至今',
+  'THE EASIER OF THE TWO': '兩者中較容易的那個',
+  'SINCE 1990': '1990 年至今',
+  '12% of blunders become puzzles': '12% 的漏著成為題目',
+  'AND WHY THE REST ARE NOT': '以及其餘為何落選',
+  '10 of the last 13 champions': '近 13 位冠軍中有 10 位',
+  'CHINESE XIANGQI ASSOCIATION RULINGS': '中國象棋協會處罰決定',
+  'VERIFIED TITLES': '已核實的頭銜',
+  // en-passant-under-fog: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
+  "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.":
+    '我的迷霧戰爭西洋棋引擎依標準西洋棋的合法性記錄吃過路兵的目標格，可是這個變體根本沒有這條規則。能否吃過路兵決定了兵能看見什麼，於是真實棋盤從引擎的信念中掉了出去，它在最後對著 41 個不存在的世界下完了那盤棋。',
+  'Misty tracks every board consistent with what it has seen, stored as FEN strings. In one game it finished against 41 boards, none of them the real one.':
+    'Misty 追蹤所有與它所見一致的棋盤，以 FEN 字串儲存。有一盤棋它最後是對著 41 個棋盤下完的，其中沒有一個是真的。',
+  'python-chess writes the en passant square only when the capture is legal in standard chess. Under fog the capture is legal even in check, and a pawn that can take en passant sees that square, so the true position stopped matching what Misty had seen.':
+    'python-chess 只在該吃子於標準西洋棋中合法時才寫出吃過路兵的目標格。在迷霧規則下，即使被將軍，這個吃子也是合法的，而能吃過路兵的兵看得見那個格子，於是真實局面不再與 Misty 所見相符。',
+  'The fix records the square whenever a pawn can take. Replaying all 271 games, lost-truth cases outside the sampled games went from four to none.':
+    '修正方式是只要有兵能吃就記下該格。重播全部 271 盤棋後，抽樣棋局以外的真值遺失案例由四例降為零。',
+  'Nothing caught it: the Rust port copied python-chess byte for byte, so the test comparing the two passed, and a belief that loses the truth gets more confident, not less.':
+    '沒有任何機制抓到它：Rust 移植版逐位元組複製了 python-chess 的行為，所以比對兩者的測試通過了；而一個遺失真值的信念只會變得更有把握，不會更不確定。',
+  "Game `e751c6c4`, Misty as Black, move 29. White pushes the g-pawn two squares, beside Black's pawn on f4. White's queen on d6 attacks the black king.":
+    '棋局 `e751c6c4`，Misty 執黑，第 29 著。白方將 g 兵推進兩格，落在黑方 f4 兵的旁邊。白方在 d6 的后攻擊黑王。',
+  'Record the square when a pawn can take, regardless of whether taking is wise. That is `EnPassantMode.XFEN`, and it is the fog rule. It still omits the square when no enemy pawn is adjacent, so the belief does not split over a square nobody can use.':
+    '只要有兵能吃，就記下那個格子，不管吃下去是否明智。這就是 `EnPassantMode.XFEN`，也是迷霧規則。當旁邊沒有敵方兵時它仍會省略該格，所以信念不會因為一個沒人能用的格子而分裂。',
+  'At the failing ply `P` now goes 625 to 617, truth kept. Replaying all 271 games reports no lost-truth decisions outside the sampled games, against four before.':
+    '在出錯的那一著，`P` 現在是由 625 變為 617，真值保留。重播全部 271 盤棋後，抽樣棋局以外沒有任何真值遺失的決策，先前則有四例。',
+  'Why nothing caught it': '為什麼沒有任何機制抓到它',
+  "Fixed in the engine on 2026-09-10 and released in [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3). Every board above is drawn by the engine's own visibility code from that position; the script that draws them refuses to run if the two views stop differing by exactly g3 and g4.":
+    '已於 2026-09-10 在引擎中修正，並隨 [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3) 發佈。上方每一張棋盤都是由引擎自己的可見性程式碼從該局面繪製的；繪圖的腳本若發現兩個視野的差異不再剛好是 g3 與 g4，就會拒絕執行。',
+  // most-played-move: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
+  'When the Most Played Move Is an Inaccuracy': '當最多人下的著法其實是不精確',
+  "Half are gambits and sidelines the masters never play. Where masters reach the position, most already play the engine's move; only four share the club's mistake.":
+    '其中半數是大師從不採用的棄兵與冷門變例。在大師確實下到的局面裡，多數大師早已走引擎的著法；只有四個局面與俱樂部棋手犯同樣的錯。',
+  'The biggest by games: after 1.e4 e5 2.f4 d6, 85% of club players play 3.Nf3, and 3.d3 is nearly a pawn better.':
+    '以對局數計最大的一例：1.e4 e5 2.f4 d6 之後，85% 的俱樂部棋手走 3.Nf3，而 3.d3 幾乎好上一個兵。',
+  "The fix is in the explorer's settings: the masters database, 2018 onward. All 144 are in a study.":
+    '解法就在局面瀏覽器的設定裡：大師資料庫，2018 年起。全部 144 個都收在一份研究中。',
+  'The opening explorer on Lichess shows you, for any position, what people played next and how it went. It can show you three databases (every rated game on Lichess, the masters, or one player), filtered by rating band, speed and year, and the masters filtered by era is the best free opening book there is. But the table a club player sees by default is the Lichess database at their own rating, and its top row is the most played move at their level. That row is the move most of us play, because everyone else did. I asked how often it is an inaccuracy.':
+    'Lichess 的開局瀏覽器會告訴你，在任一局面下大家接著走了什麼、結果如何。它可以顯示三種資料庫（Lichess 上所有計分對局、大師對局，或某位棋手的對局），並可按分數段、棋速與年份篩選，而按年代篩選的大師資料庫是現有最好的免費開局書。但俱樂部棋手預設看到的表格，是自己分數段的 Lichess 資料庫，最上面一列就是該水準最多人下的著法。那一列是我們大多數人會走的著法，因為別人都這樣走。我想知道：它有多常是一個不精確？',
+  'Where "most played" comes from': '「最多人下」是怎麼來的',
+  "Then every position went through Stockfish 18 at 20,000,000 nodes with three lines. The most played move is judged against the best move from the same search, by lila's own winning-chance formula, the one that decides what gets a `?!` on a Lichess report. A gap of 0.1 or more is an inaccuracy, 0.2 a mistake, 0.3 a blunder. Every flagged position then got a second 20M search with a different thread count, and 24 of 168 did not survive it; 144 did. That is the same noise floor the [last post](https://brianhliou.com/posts/lichess-analysis-accuracy/) found, and it is why one search is never the verdict here.":
+    '接著每個局面都用 Stockfish 18 以 20,000,000 節點、三條變例跑過。最多人下的著法，是以同一次搜尋得出的最佳著法為基準來評判，採用 lila 自己的取勝機會公式，也就是決定 Lichess 分析報告上何時標 `?!` 的那個公式。差距 0.1 以上算不精確，0.2 算錯著，0.3 算嚴重錯著。每個被標記的局面再以不同執行緒數做第二次 20M 搜尋，168 個中有 24 個沒能通過；144 個通過了。這正是[上一篇文章](https://brianhliou.com/posts/lichess-analysis-accuracy/)發現的同一個雜訊底線，也是為什麼本文從不以單次搜尋作為定論。',
+  'For each of the 144 I also pulled the masters database by era (before 2010, 2010 to 2017, since 2018), which is where the shapes come from.':
+    '這 144 個局面我也按年代（2010 年之前、2010 到 2017、2018 年起）取了大師資料庫的資料，下面的分類就是從這裡來的。',
+  'Four shapes': '四種型態',
+  shape: '型態',
+  positions: '局面數',
+  'what it means': '含意',
+  'club only': '只有俱樂部棋手',
+  "masters have no games there, or fewer than twenty; the line is the club's alone":
+    '大師在此沒有對局，或少於二十局；這條變例是俱樂部棋手獨有的',
+  'masters always knew': '大師一直都知道',
+  "the masters' top move is the engine's move in every era":
+    '大師的首選著法在每個年代都是引擎的著法',
+  'masters play a third move': '大師走第三種著法',
+  "the masters avoid both the club move and the engine's first choice":
+    '大師既不走俱樂部的著法，也不走引擎的首選',
+  'masters switched': '大師改弦易轍',
+  "the masters' top move became the engine's move in a later era":
+    '大師的首選著法在較晚的年代變成了引擎的著法',
+  'everyone plays it': '大家都這樣走',
+  "the masters' top move is the club move too": '大師的首選著法也是俱樂部的著法',
+  "The club's book is mostly a book the masters never opened: 69 positions are gambits and sidelines with no masters games worth counting. Where the masters do play the position, they already agree with the engine in 51 cases, and moved toward it in 8 more. In only four of 144 do masters and club share the mistake. Theory is not lagging the engine much; the club is lagging theory.":
+    '俱樂部棋手的開局書，大多是大師從未翻開的一本：69 個局面是棄兵與冷門變例，沒有值得計入的大師對局。在大師確實會下的局面中，有 51 個他們已經和引擎一致，另有 8 個逐漸朝引擎的著法移動。144 個中只有四個是大師與俱樂部棋手共犯同一個錯。理論並沒有落後引擎太多；是俱樂部棋手落後理論。',
+  'Ten positions': '十個局面',
+  "Each has a board below. The most played move is on the mainline with its mark; the engine's line is the sideline with the numbers; the comment holds the club share and the masters' history. The strips first: how often the club move and the engine move are played, by 1600 to 2200 players and by masters in each era.":
+    '每一個下面都有一個棋盤。最多人下的著法在主變例上，並附標記；引擎的變例是帶數字的副變例；註解裡有俱樂部棋手的比例以及大師的歷史選擇。先看長條圖：俱樂部著法與引擎著法分別被 1600 到 2200 分棋手、以及各年代大師走出的頻率。',
+  "Rust is the club's favourite, blue the engine's move. Masters cells with fewer than twenty games are left blank.":
+    '鏽紅色是俱樂部棋手的最愛，藍色是引擎的著法。大師欄位不足二十局者留空。',
+  'For ten opening positions, bars showing how often the club move and the engine move are played by 1600 to 2200 players on Lichess, and by masters before 2010, in 2010 to 2017, and since 2018.':
+    '十個開局局面的長條圖，顯示俱樂部著法與引擎著法分別被 Lichess 上 1600 到 2200 分棋手，以及 2010 年之前、2010 到 2017、2018 年起的大師走出的頻率。',
+  "**King's Gambit, 2...d6.** After 1.e4 e5 2.f4 d6, 85% of club players play 3.Nf3, and so did half the masters who reached it. At 20M it is −0.67; 3.d3 is +0.25, because after 3.Nf3 exf4 Black takes the pawn and keeps it (the next position in the tree agrees: 44% then play 3...Nc6?! instead of taking). Everyone plays it, and it is the biggest miss on the list by games.":
+    '**王翼棄兵，2...d6。**1.e4 e5 2.f4 d6 之後，85% 的俱樂部棋手走 3.Nf3，下到此局面的大師也有半數如此。在 20M 下它是 −0.67；3.d3 是 +0.25，因為 3.Nf3 exf4 之後黑方吃下這個兵並守住它（局面樹的下一個局面也印證了這點：接著有 44% 走 3...Nc6?! 而不吃兵）。大家都這樣走，而以對局數計，這是本清單上最大的一次失誤。',
+  "King's Gambit 2...d6: 3.Nf3 is the club move, 3.d3 the engine's":
+    '王翼棄兵 2...d6：3.Nf3 是俱樂部的著法，3.d3 是引擎的著法',
+  '**Petrov, 3.Bc4.** 1.e4 e5 2.Nf3 Nf6 3.Bc4 reaches ten million club games, and a third of Black players answer 3...Nc6, turning it into a Two Knights. 3...Nxe4 takes the pawn: −0.54 against +0.15. The masters have taken it in every era, seven times in ten.':
+    '**彼得羅夫防禦，3.Bc4。**1.e4 e5 2.Nf3 Nf6 3.Bc4 累積了一千萬局俱樂部對局，三分之一的黑方回以 3...Nc6，把它變成兩馬防禦。3...Nxe4 可以吃兵：−0.54 對 +0.15。大師在每個年代都吃了這個兵，十次有七次。',
+  'Petrov 3.Bc4: the club plays Nc6, the engine takes on e4':
+    '彼得羅夫防禦 3.Bc4：俱樂部棋手走 Nc6，引擎在 e4 吃兵',
+  "Four Knights Spanish 4.Nc3: the club plays d6, the engine plays Rubinstein's Nd4":
+    '四馬防禦西班牙式 4.Nc3：俱樂部棋手走 d6，引擎走 Rubinstein 的 Nd4',
+  '**Vienna Gambit, 3...exf4.** 1.e4 e5 2.Nc3 Nf6 3.f4, and 30% take the pawn. It is +0.63 for White; 3...d5, the move 97% of masters have played in every era, is −0.31. Taking is the natural move and the losing one, which is what the gambit is for.':
+    '**維也納棄兵，3...exf4。**1.e4 e5 2.Nc3 Nf6 3.f4，30% 的人吃兵。這是白方 +0.63；而 3...d5，也就是各年代 97% 大師都走的著法，是 −0.31。吃兵是最自然的一著，也是輸掉的一著，而這正是棄兵的用意。',
+  "Vienna Gambit: exf4 is the club move, d5 the engine's and the masters'":
+    '維也納棄兵：exf4 是俱樂部的著法，d5 是引擎也是大師的著法',
+  "**London, 2...g6 3.Nc3.** 1.d4 Nf6 2.Bf4 g6 3.Nc3 and 73% of the club plays 3...Bg7, the move you play in every other London. Here it is +0.62 and 3...d5 is 0.00, because 3.Nc3 is there to play 4.e4, and the bishop move lets it happen while 3...d5 stops it. The masters' share of 3...d5 went 48%, 66%, 77% by era.":
+    '**倫敦系統，2...g6 3.Nc3。**1.d4 Nf6 2.Bf4 g6 3.Nc3，73% 的俱樂部棋手走 3...Bg7，那是在其他倫敦系統裡都會走的一著。但在這裡它是 +0.62，而 3...d5 是 0.00，因為 3.Nc3 的用意就是要走 4.e4，象的那一著讓它得以實現，而 3...d5 則阻止了它。大師走 3...d5 的比例按年代依序是 48%、66%、77%。',
+  "London 2...g6 3.Nc3: Bg7 is the club move, d5 the engine's":
+    '倫敦系統 2...g6 3.Nc3：Bg7 是俱樂部的著法，d5 是引擎的著法',
+  '**Scandinavian, 3.Ng5 line.** 1.e4 d5 2.Nf3 dxe4 3.Ng5 Nf6 4.d3 exd3 5.Bxd3, a million club games, and 31% of Black players play 5...h6 to ask the knight. The answer is 6.Nxf7 Kxf7 7.Bg6+ and the queen on d8 goes: +2.70 for White against −1.12 for 5...Nc6. No master has ever been in this position.':
+    '**中心兵防禦，3.Ng5 變例。**1.e4 d5 2.Nf3 dxe4 3.Ng5 Nf6 4.d3 exd3 5.Bxd3，一百萬局俱樂部對局，31% 的黑方走 5...h6 來趕馬。回應是 6.Nxf7 Kxf7 7.Bg6+，d8 上的后就沒了：白方 +2.70，對比 5...Nc6 的 −1.12。從來沒有大師身處這個局面。',
+  'Scandinavian 3.Ng5 line: 5...h6 is the club move and loses the queen':
+    '中心兵防禦 3.Ng5 變例：5...h6 是俱樂部的著法，會丟后',
+  "QGA 3.e4 e5: 4.d5 is the club move, 4.Nf3 the engine's and the masters'":
+    '接受后翼棄兵 3.e4 e5：4.d5 是俱樂部的著法，4.Nf3 是引擎也是大師的著法',
+  'All 144 are in [the study](/study/ibFQtGAL), these ten first, the rest ranked by how many games they touch times how much the move gives up.':
+    '全部 144 個都收在[這份研究](/study/ibFQtGAL)裡，這十個排在最前面，其餘按「涉及對局數乘以該著法所損失的幅度」排序。',
+  'Reading the explorer': '如何閱讀局面瀏覽器',
+  "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; four of the ten above are a capture or a declined capture.":
+    '你所在分數段中最多人下的著法，就是與你同分的人多數會走的著法，這並不是推薦，局面瀏覽器也從未說它是推薦。能修正這份清單上大部分問題的篩選條件，已經在齒輪選單裡了。切換到大師資料庫，並把年份設為 2018 年起，不要用全時期的表格：大師的開局書會移動，而全時期的表格是各年代的平均。此外，當最多人下的著法是吃兵或拒吃時，先查引擎，別輕信群眾；上面十個局面裡有四個是吃子或拒吃。',
+  'How this was measured': '測量方式',
+  'Open the 144 positions':
+    '<a class="cta cta-primary" href="{{ site.embed_origin }}/study/{{ page.study }}">打開這 144 個局面</a>',
+  'The deep puzzles':
+    '<a class="cta cta-secondary" href="{{ site.embed_origin }}/study/fhC7BCG7">深層排局</a>',
+  'Xiangqi for chess players':
+    '<a class="cta cta-secondary" href="{{ site.embed_origin }}/rules/xiangqi">給西洋棋棋手的象棋入門</a>',
+  // chess960-starting-positions: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
+  'Chess960 Starting Positions Ranked By Stockfish': 'Stockfish 評出的西洋棋960開局局面排名',
+  'Stockfish 18 rankings for all 960 Chess960/Fischer Random starting positions. Most balanced: SP-418 and SP-563; standard chess is near median.':
+    'Stockfish 18 對全部 960 個西洋棋960（費舍爾任意制）開局局面的排名。最均衡的是 SP-418 與 SP-563；標準西洋棋接近中位數。',
+  'I evaluated all 960 Chess960 starting positions with Stockfish 18 at depth 36. Every one favors White.':
+    '我用 Stockfish 18 以深度 36 評估了全部 960 個西洋棋960開局局面。每一個都對白方有利。',
+  'The most balanced are SP-418 and SP-563, at +0.07. The most lopsided is SP-783 (QRKNRNBB) at +1.08, the only one over a pawn.':
+    '最均衡的是 SP-418 與 SP-563，皆為 +0.07。最失衡的是 SP-783（QRKNRNBB），達 +1.08，是唯一超過一個兵的局面。',
+  'Standard chess, SP-518, is +0.31 and ranks 463 of 960: almost exactly the median.':
+    '標準西洋棋（SP-518）為 +0.31，在 960 個中排名第 463：幾乎正好是中位數。',
+  'None of the 105 starts used in recent elite Freestyle events came from the ten most White-favored. All 960 are in a CSV.':
+    '近期頂級 Freestyle 賽事使用的 105 個開局中，沒有一個出自最有利於白方的前十名。全部 960 個都收錄在一份 CSV 中。',
+  'I evaluated all 960 **Chess960 starting positions** with Stockfish 18 at uniform depth 36. Chess960 is also called **Fischer Random chess**; each legal back rank is usually identified by a **Scharnagl ID** from 0 to 959.':
+    '我用 Stockfish 18 以統一深度 36 評估了全部 960 個**西洋棋960開局局面**。西洋棋960也稱為**費舍爾任意制西洋棋**；每一個合法底線排列通常以 0 到 959 的 **Scharnagl ID** 標示。',
+  'Chess960 is the modern tournament name for Fischer Random chess, the variant Bobby Fischer proposed in 1996 to reduce opening memorization and force players back into over-the-board problem solving. The pieces are randomized across 960 legal back-rank layouts while preserving bishops on opposite colors and keeping the king between the rooks so castling still works.':
+    '西洋棋960是費舍爾任意制西洋棋在現代賽事中的名稱，這個變體由鮑比·菲舍爾於 1996 年提出，目的是減少開局記憶、迫使棋手回到棋盤前實際解決問題。棋子在 960 種合法底線排列中隨機分佈，同時保持兩個主教位於不同顏色格，並讓王位於兩個城堡之間，使王車易位仍然可行。',
+  'Evaluations are white-POV: positive favors White, and **+1.00 is roughly one pawn**.':
+    '評估值以白方視角表示：正值對白方有利，而**+1.00 大致相當於一個兵**。',
+  Finding: '發現',
+  'Evaluation range': '評估值範圍',
+  '+0.07 to +1.08': '+0.07 到 +1.08',
+  'Black-favored starts': '對黑方有利的開局',
+  'Standard chess, SP-518': '標準西洋棋，SP-518',
+  'Standard chess rank by balance': '標準西洋棋依均衡度的排名',
+  'Starts more balanced than standard chess': '比標準西洋棋更均衡的開局',
+  'Move-1 castling best moves': '第 1 著即為王車易位的最佳著法',
+  'Recent elite corpus overlap with highlighted starts': '近期頂級賽事棋譜與重點開局的重疊',
+  'SP-482, once': 'SP-482，一次',
+  "If you want the **most balanced Chess960 starting positions**, the clean candidates are **SP-418, SP-563, SP-269, SP-444, and SP-786**. All evaluate at +0.10 or below, far under standard chess's +0.31.":
+    '如果你想找**最均衡的西洋棋960開局局面**，明確的候選是 **SP-418、SP-563、SP-269、SP-444 與 SP-786**。它們的評估值都在 +0.10 以下，遠低於標準西洋棋的 +0.31。',
+  'Full dataset: [chess960_starting_position_evals.csv](/article-data/chess960-starting-position-evals.csv) (960 rows).':
+    '完整資料集：[chess960_starting_position_evals.csv](/article-data/chess960-starting-position-evals.csv)（960 列）。',
+  'How I Evaluated The Chess960 Positions': '我如何評估這些西洋棋960局面',
+  'The evaluation contract is deliberately narrow:': '評估條件刻意設得很窄：',
+  Parameter: '參數',
+  Value: '值',
+  Engine: '引擎',
+  'Stockfish 18': 'Stockfish 18',
+  Depth: '深度',
+  MultiPV: 'MultiPV',
+  'Chess960 mode': '西洋棋960模式',
+  '`UCI_Chess960=true`': '`UCI_Chess960=true`',
+  Compute: '運算',
+  'Modal, 96 batches × 10 positions': 'Modal，96 批 × 10 個局面',
+  Runtime: '執行時間',
+  '33 minutes wall, under $3': '實際耗時 33 分鐘，不到 3 美元',
+  'Every starting position used the same depth target, so the rankings do not mix shallow and deep engine outputs. The pipeline is the same cloud Stockfish setup described in the [previous post on scaling Stockfish compute](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/).':
+    '每個開局局面都用相同的深度目標，因此排名不會混雜淺層與深層的引擎輸出。這套流程與[先前談擴展 Stockfish 運算的文章](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)中所述的雲端 Stockfish 設定相同。',
+  'Quality checks:': '品質檢查：',
+  '959/960 reached depth 36; 1 position fell back to depth 35 at the time cap.':
+    '959/960 達到深度 36；有 1 個局面在時間上限時退回深度 35。',
+  'Median principal-variation length: 36 plies.': '主變著法長度中位數：36 著。',
+  'Check against Lichess cache': '與 Lichess 快取的核對',
+  'Best-move agreement': '最佳著法一致度',
+  'Evaluation correlation': '評估值相關性',
+  'Absolute Δcp <= 0.20': '絕對 Δcp <= 0.20',
+  'Mean Δcp': '平均 Δcp',
+  'The top-10 order moves around between datasets, but the headline does not: standard chess sits near the median, every start favors White at depth 36, and 9 starts have castling as the best first move.':
+    '前十名的順序在兩份資料集之間會有變動，但主要結論不變：標準西洋棋位於中位數附近，在深度 36 下每個開局都對白方有利，而有 9 個開局的最佳第一著是王車易位。',
+  'Chess960 Evaluation Distribution': '西洋棋960評估值分佈',
+  'Most starts land in a narrow white-edge band. The right tail is short: only one start crosses +1.00.':
+    '多數開局落在白方小優勢的窄帶內。右尾很短：只有一個開局超過 +1.00。',
+  evaluation: '評估值',
+  '< 0.00 (black-favored)': '< 0.00（對黑方有利）',
+  '0.00 to 0.09': '0.00 到 0.09',
+  '0.10 to 0.24': '0.10 到 0.24',
+  '0.25 to 0.49': '0.25 到 0.49',
+  '0.50 to 0.99': '0.50 到 0.99',
+  'Evaluation distribution histogram': '評估值分佈直方圖',
+  'At shallower public-cache depth, SP-663 can appear slightly black-favored (-0.10 in the Lichess cache). At depth 36 it evaluates at +0.14. The "black-favored start" result disappears under the uniform deeper search.':
+    '在較淺的公開快取深度下，SP-663 可能看起來略微對黑方有利（Lichess 快取中為 -0.10）。在深度 36 時它的評估值是 +0.14。在統一的較深搜尋下，「對黑方有利的開局」這個結果就消失了。',
+  'Where Standard Chess Ranks': '標準西洋棋排在哪裡',
+  'The default start, **SP-518 (RNBQKBNR)**, evaluates to **+0.31**. It ranks 463/960 by ascending imbalance: almost exactly the median. 462 Chess960 starts are more balanced; 497 are more imbalanced.':
+    '預設開局 **SP-518（RNBQKBNR）**的評估值是 **+0.31**。依失衡程度遞增排序，它排在 463/960：幾乎正好是中位數。有 462 個西洋棋960開局更均衡；497 個更失衡。',
+  'SP-518: standard chess. +0.31 at depth 36, best move d4.':
+    '<figcaption style="font-size: 0.88rem; line-height: 1.35; margin-top: 0.45rem; text-align: center;"><strong>SP-518：標準西洋棋。</strong> 深度 36 時為 +0.31，最佳著法 d4。</figcaption>',
+  'SP-518, the standard chess starting position': 'SP-518，標準西洋棋的開局局面',
+  'This is a structural result, not a claim about which starting position is better to play. Standard chess is near the middle of the Chess960 balance distribution.':
+    '這是一個結構性的結果，並非主張哪個開局局面比較適合下。標準西洋棋位於西洋棋960均衡度分佈的中間附近。',
+  'Most Imbalanced Chess960 Start: SP-783': '最失衡的西洋棋960開局：SP-783',
+  'One position crosses +1.00: **SP-783 (QRKNRNBB)**, at **+1.08** with best move `b4`. It is the largest opening edge in the full 960-position set.':
+    '有一個局面超過 +1.00：**SP-783（QRKNRNBB）**，評估值 **+1.08**，最佳著法為 `b4`。它是全部 960 個局面中開局優勢最大的一個。',
+  'SP-783: QRKNRNBB. The most white-favored start at +1.08, best move b4.':
+    '<figcaption style="font-size: 0.88rem; line-height: 1.35; margin-top: 0.45rem; text-align: center;"><strong>SP-783：QRKNRNBB。</strong> 最有利於白方的開局，+1.08，最佳著法 b4。</figcaption>',
+  'SP-783, the most imbalanced Chess960 starting position': 'SP-783，最失衡的西洋棋960開局局面',
+  'Every other starting position lands between +0.07 and +0.92.':
+    '其餘所有開局局面都落在 +0.07 到 +0.92 之間。',
+  'Most White-Favored Chess960 Starting Positions': '最有利於白方的西洋棋960開局局面',
+  'Only one position crosses +1.00. The rest of the top 10 sit between +0.68 and +0.92.':
+    '只有一個局面超過 +1.00。前十名中的其餘局面落在 +0.68 到 +0.92 之間。',
+  SP: 'SP',
+  'back-rank': '底線排列',
+  depth: '深度',
+  QRKNRNBB: 'QRKNRNBB',
+  b4: 'b4',
+  QRKRNNBB: 'QRKRNNBB',
+  RBQNKRBN: 'RBQNKRBN',
+  f4: 'f4',
+  QNRKBBRN: 'QNRKBBRN',
+  c4: 'c4',
+  BBNNRKRQ: 'BBNNRKRQ',
+  g3: 'g3',
+  QBBRKRNN: 'QBBRKRNN',
+  Ng3: 'Ng3',
+  QRNNKRBB: 'QRNNKRBB',
+  RQKNBBRN: 'RQKNBBRN',
+  RNKBNQBR: 'RNKBNQBR',
+  e4: 'e4',
+  BBNRNKRQ: 'BBNRNKRQ',
+  g4: 'g4',
+  "Board previews are clickable. The green arrow marks the engine's best first move. Full principal variations are in the CSV.":
+    '棋盤預覽可以點擊。綠色箭頭標示引擎的最佳第一著。完整主變著法收錄在 CSV 中。',
+  '**SP-783** `QRKNRNBB` · +1.08 · best b4 · 29 plies':
+    '**SP-783** `QRKNRNBB` · +1.08 · 最佳著法 b4 · 29 著',
+  'SP-783 starting position; SP-783 final position after principal variation':
+    'SP-783 的開局局面；SP-783 走完主變著法後的最終局面',
+  'Principal variation: `1. b4 b5 2. a4 a5 3. axb5 axb4 4. Qxa8 Rxa8 5. Rxb4 g5 6. g4 Ra1+ 7. Rb1 Rxb1+ 8. Kxb1 Nb7 9. d3 h5 10. gxh5 Ne6 11. Ng3 Nd6 12. c4 Bh7 13. Ne3 Nd4 14. Kc1 f5 15. Kd2`':
+    '主變著法：`1. b4 b5 2. a4 a5 3. axb5 axb4 4. Qxa8 Rxa8 5. Rxb4 g5 6. g4 Ra1+ 7. Rb1 Rxb1+ 8. Kxb1 Nb7 9. d3 h5 10. gxh5 Ne6 11. Ng3 Nd6 12. c4 Bh7 13. Ne3 Nd4 14. Kc1 f5 15. Kd2`',
+  '**SP-879** `QRKRNNBB` · +0.92 · best b4 · 41 plies':
+    '**SP-879** `QRKRNNBB` · +0.92 · 最佳著法 b4 · 41 著',
+  'SP-879 starting position; SP-879 final position after principal variation':
+    'SP-879 的開局局面；SP-879 走完主變著法後的最終局面',
+  'Principal variation: `1. b4 a5 2. a4 f5 3. Nd3 axb4 4. Ne3 d6 5. f4 c5 6. Nxf5 Be6 7. Nxe7+ Kd7 8. Nxc5+ Kxe7 9. Nxe6 Nxe6 10. Bb6 Rdc8 11. Rxb4 Qa6 12. f5 g6 13. Qa2 gxf5 14. g4 f4 15. a5 Nf6 16. Bf3 Bg7 17. c3 Ng5 18. Re1 Nd7 19. h4 Bxc3 20. dxc3 Rxc3+ 21. Kb1`':
+    '主變著法：`1. b4 a5 2. a4 f5 3. Nd3 axb4 4. Ne3 d6 5. f4 c5 6. Nxf5 Be6 7. Nxe7+ Kd7 8. Nxc5+ Kxe7 9. Nxe6 Nxe6 10. Bb6 Rdc8 11. Rxb4 Qa6 12. f5 g6 13. Qa2 gxf5 14. g4 f4 15. a5 Nf6 16. Bf3 Bg7 17. c3 Ng5 18. Re1 Nd7 19. h4 Bxc3 20. dxc3 Rxc3+ 21. Kb1`',
+  '**SP-604** `RBQNKRBN` · +0.81 · best f4 · 39 plies':
+    '**SP-604** `RBQNKRBN` · +0.81 · 最佳著法 f4 · 39 著',
+  'SP-604 starting position; SP-604 final position after principal variation':
+    'SP-604 的開局局面；SP-604 走完主變著法後的最終局面',
+  'Principal variation: `1. f4 c5 2. Ng3 Ne6 3. e3 f6 4. c4 g5 5. Ne2 gxf4 6. exf4 Nd4 7. Nxd4 cxd4 8. Bxd4 Qxc4 9. Qxc4 Bxc4 10. Rf2 Ng6 11. g3 Bb5 12. Ne3 Bc6 13. Bc3 e5 14. fxe5 fxe5 15. Rxf8+ Nxf8 16. Bf5 Bc7 17. O-O-O O-O-O 18. Rf1 Re8 19. Bc2 Ne6 20. Rf7`':
+    '主變著法：`1. f4 c5 2. Ng3 Ne6 3. e3 f6 4. c4 g5 5. Ne2 gxf4 6. exf4 Nd4 7. Nxd4 cxd4 8. Bxd4 Qxc4 9. Qxc4 Bxc4 10. Rf2 Ng6 11. g3 Bb5 12. Ne3 Bc6 13. Bc3 e5 14. fxe5 fxe5 15. Rxf8+ Nxf8 16. Bf5 Bc7 17. O-O-O O-O-O 18. Rf1 Re8 19. Bc2 Ne6 20. Rf7`',
+  '**SP-298** `QNRKBBRN` · +0.73 · best c4 · 28 plies':
+    '**SP-298** `QNRKBBRN` · +0.73 · 最佳著法 c4 · 28 著',
+  'SP-298 starting position; SP-298 final position after principal variation':
+    'SP-298 的開局局面；SP-298 走完主變著法後的最終局面',
+  'Principal variation: `1. c4 f5 2. d4 e6 3. e3 Bh5+ 4. f3 Bf7 5. b3 Be7 6. Bc3 Ng6 7. Nd2 a5 8. f4 O-O 9. Bd3 Ba3 10. Bb2 Bxb2 11. Qxb2 d6 12. g4 Rce8 13. O-O-O a4 14. d5 fxg4`':
+    '主變著法：`1. c4 f5 2. d4 e6 3. e3 Bh5+ 4. f3 Bf7 5. b3 Be7 6. Bc3 Ng6 7. Nd2 a5 8. f4 O-O 9. Bd3 Ba3 10. Bb2 Bxb2 11. Qxb2 d6 12. g4 Rce8 13. O-O-O a4 14. d5 fxg4`',
+  '**SP-80** `BBNNRKRQ` · +0.73 · best g3 · 39 plies':
+    '**SP-80** `BBNNRKRQ` · +0.73 · 最佳著法 g3 · 39 著',
+  'SP-80 starting position; SP-80 final position after principal variation':
+    'SP-80 的開局局面；SP-80 走完主變著法後的最終局面',
+  'Principal variation: `1. g3 c5 2. Nd3 c4 3. Nc5 Nb6 4. b3 d6 5. Ne4 Nc6 6. h4 e6 7. h5 h6 8. Qh4 d5 9. Nec3 a6 10. e4 d4 11. Ne2 g5 12. hxg6 fxg6 13. Bb2 Bd6 14. e5 Bxe5 15. c3 d3 16. Nd4 Qf6 17. Nxc6 bxc6 18. Ba3+ Kf7 19. Nb2 c5 20. Qxf6+`':
+    '主變著法：`1. g3 c5 2. Nd3 c4 3. Nc5 Nb6 4. b3 d6 5. Ne4 Nc6 6. h4 e6 7. h5 h6 8. Qh4 d5 9. Nec3 a6 10. e4 d4 11. Ne2 g5 12. hxg6 fxg6 13. Bb2 Bd6 14. e5 Bxe5 15. c3 d3 16. Nd4 Qf6 17. Nxc6 bxc6 18. Ba3+ Kf7 19. Nb2 c5 20. Qxf6+`',
+  '**SP-868** `QBBRKRNN` · +0.70 · best Ng3 · 39 plies':
+    '**SP-868** `QBBRKRNN` · +0.70 · 最佳著法 Ng3 · 39 著',
+  'SP-868 starting position; SP-868 final position after principal variation':
+    'SP-868 的開局局面；SP-868 走完主變著法後的最終局面',
+  'Principal variation: `1. Ng3 d5 2. Nh5 f6 3. Nxg7+ Kf7 4. Nh5 Ng6 5. d4 Nh4 6. f3 Nxg2+ 7. Kf2 Nh4 8. c4 dxc4 9. b3 c5 10. Bxh7 cxd4 11. Qb1 d3 12. bxc4 Bd6 13. exd3 Bf5 14. Bxf5 Nxf5 15. Ng3 Nd4 16. N1e2 Bc5 17. Be3 Qc8 18. Bxd4 Bxd4+ 19. Kg2 Nh6 20. Rh1`':
+    '主變著法：`1. Ng3 d5 2. Nh5 f6 3. Nxg7+ Kf7 4. Nh5 Ng6 5. d4 Nh4 6. f3 Nxg2+ 7. Kf2 Nh4 8. c4 dxc4 9. b3 c5 10. Bxh7 cxd4 11. Qb1 d3 12. bxc4 Bd6 13. exd3 Bf5 14. Bxf5 Nxf5 15. Ng3 Nd4 16. N1e2 Bc5 17. Be3 Qc8 18. Bxd4 Bxd4+ 19. Kg2 Nh6 20. Rh1`',
+  '**SP-399** `QRNNKRBB` · +0.70 · best b4 · 34 plies':
+    '**SP-399** `QRNNKRBB` · +0.70 · 最佳著法 b4 · 34 著',
+  'SP-399 starting position; SP-399 final position after principal variation':
+    'SP-399 的開局局面；SP-399 走完主變著法後的最終局面',
+  'Principal variation: `1. b4 h6 2. f4 Bh7 3. Nc3 g5 4. f5 b6 5. Nb3 Nd6 6. Bd4 Bxd4 7. Nxd4 f6 8. d3 c6 9. a4 Qb7 10. Kd2 O-O 11. g4 Kg7 12. h4 Qc7 13. hxg5 hxg5 14. b5 Bg8 15. bxc6 dxc6 16. Ne4 Nxe4+ 17. Bxe4 Qd6`':
+    '主變著法：`1. b4 h6 2. f4 Bh7 3. Nc3 g5 4. f5 b6 5. Nb3 Nd6 6. Bd4 Bxd4 7. Nxd4 f6 8. d3 c6 9. a4 Qb7 10. Kd2 O-O 11. g4 Kg7 12. h4 Qc7 13. hxg5 hxg5 14. b5 Bg8 15. bxc6 dxc6 16. Ne4 Nxe4+ 17. Bxe4 Qd6`',
+  '**SP-794** `RQKNBBRN` · +0.68 · best f4 · 35 plies':
+    '**SP-794** `RQKNBBRN` · +0.68 · 最佳著法 f4 · 35 著',
+  'SP-794 starting position; SP-794 final position after principal variation':
+    'SP-794 的開局局面；SP-794 走完主變著法後的最終局面',
+  'Principal variation: `1. f4 c6 2. e3 f5 3. c4 g5 4. Qxf5 gxf4 5. Qxf4 Qxf4 6. exf4 Ne6 7. f5 Nd4 8. Ng3 Nf7 9. Bf2 Bg7 10. Nc3 Nh6 11. Bd3 Rf8 12. O-O Ndxf5 13. Nxf5 Nxf5 14. Rae1 Bg6 15. Bxf5 Rxf5 16. Rxe7 Bxc3 17. dxc3 b6 18. Ree1`':
+    '主變著法：`1. f4 c6 2. e3 f5 3. c4 g5 4. Qxf5 gxf4 5. Qxf4 Qxf4 6. exf4 Ne6 7. f5 Nd4 8. Ng3 Nf7 9. Bf2 Bg7 10. Nc3 Nh6 11. Bd3 Rf8 12. O-O Ndxf5 13. Nxf5 Nxf5 14. Rae1 Bg6 15. Bxf5 Rxf5 16. Rxe7 Bxc3 17. dxc3 b6 18. Ree1`',
+  '**SP-557** `RNKBNQBR` · +0.68 · best e4 · 32 plies':
+    '**SP-557** `RNKBNQBR` · +0.68 · 最佳著法 e4 · 32 著',
+  'SP-557 starting position; SP-557 final position after principal variation':
+    'SP-557 的開局局面；SP-557 走完主變著法後的最終局面',
+  'Principal variation: `1. e4 e5 2. f4 exf4 3. Nc3 f5 4. Qxf4 Be6 5. e5 g5 6. Qe3 Nc6 7. d4 d5 8. h4 h6 9. Qf3 gxh4 10. Nd3 Ng7 11. Nf4 Bg5 12. Ne2 O-O-O 13. Kb1 Bf7 14. Bf2 Ne6 15. Nxe6 Bxe6 16. Nf4 Bf7`':
+    '主變著法：`1. e4 e5 2. f4 exf4 3. Nc3 f5 4. Qxf4 Be6 5. e5 g5 6. Qe3 Nc6 7. d4 d5 8. h4 h6 9. Qf3 gxh4 10. Nd3 Ng7 11. Nf4 Bg5 12. Ne2 O-O-O 13. Kb1 Bf7 14. Bf2 Ne6 15. Nxe6 Bxe6 16. Nf4 Bf7`',
+  '**SP-176** `BBNRNKRQ` · +0.68 · best g4 · 36 plies':
+    '**SP-176** `BBNRNKRQ` · +0.68 · 最佳著法 g4 · 36 著',
+  'SP-176 starting position; SP-176 final position after principal variation':
+    'SP-176 的開局局面；SP-176 走完主變著法後的最終局面',
+  'Principal variation: `1. g4 c5 2. b3 Nc7 3. c4 b6 4. Be4 Bxe4 5. Qxe4 Nd6 6. Qf3 h6 7. e3 Qh7 8. Ne2 Ne6 9. Be5 O-O 10. Bxd6 Bxd6 11. h4 f5 12. g5 hxg5 13. hxg5 f4 14. e4 Qg6 15. d3 Bb8 16. d4 cxd4 17. Nxd4 Nxd4 18. Rxd4 Be5`':
+    '主變著法：`1. g4 c5 2. b3 Nc7 3. c4 b6 4. Be4 Bxe4 5. Qxe4 Nd6 6. Qf3 h6 7. e3 Qh7 8. Ne2 Ne6 9. Be5 O-O 10. Bxd6 Bxd6 11. h4 f5 12. g5 hxg5 13. hxg5 f4 14. e4 Qg6 15. d3 Bb8 16. d4 cxd4 17. Nxd4 Nxd4 18. Rxd4 Be5`',
+  'Most Balanced Chess960 Starting Positions': '最均衡的西洋棋960開局局面',
+  "These are the starts where the position itself contributes the least white edge. All are +0.12 or below, far under standard chess's +0.31.":
+    '這些是局面本身給白方的優勢最小的開局。全部都在 +0.12 以下，遠低於標準西洋棋的 +0.31。',
+  BRNQNBKR: 'BRNQNBKR',
+  BRNKNRQB: 'BRNKNRQB',
+  NRKBNQBR: 'NRKBNQBR',
+  Nb3: 'Nb3',
+  RBNNQKBR: 'RBNNQKBR',
+  d4: 'd4',
+  BRQKNBRN: 'BRQKNBRN',
+  NQNBRKBR: 'NQNBRKBR',
+  BQRNKBNR: 'BQRNKBNR',
+  e3: 'e3',
+  RKQNNRBB: 'RKQNNRBB',
+  NNBBRKRQ: 'NNBBRKRQ',
+  d3: 'd3',
+  NQBRNKRB: 'NQBRNKRB',
+  '**SP-418** `BRNQNBKR` · +0.07 · best b4 · 32 plies':
+    '**SP-418** `BRNQNBKR` · +0.07 · 最佳著法 b4 · 32 著',
+  'SP-418 starting position; SP-418 final position after principal variation':
+    'SP-418 的開局局面；SP-418 走完主變著法後的最終局面',
+  'Principal variation: `1. b4 b5 2. e3 e6 3. Be2 Be7 4. O-O O-O 5. d3 a6 6. Qd2 d6 7. Nb3 c5 8. bxc5 dxc5 9. Nf3 Nb6 10. c4 Nd7 11. Ne5 Nef6 12. Qa5 Bd6 13. Qxd8 Rfxd8 14. Nxd7 Nxd7 15. cxb5 axb5 16. Rfc1 Rdc8`':
+    '主變著法：`1. b4 b5 2. e3 e6 3. Be2 Be7 4. O-O O-O 5. d3 a6 6. Qd2 d6 7. Nb3 c5 8. bxc5 dxc5 9. Nf3 Nb6 10. c4 Nd7 11. Ne5 Nef6 12. Qa5 Bd6 13. Qxd8 Rfxd8 14. Nxd7 Nxd7 15. cxb5 axb5 16. Rfc1 Rdc8`',
+  '**SP-563** `BRNKNRQB` · +0.07 · best g4 · 40 plies':
+    '**SP-563** `BRNKNRQB` · +0.07 · 最佳著法 g4 · 40 著',
+  'SP-563 starting position; SP-563 final position after principal variation':
+    'SP-563 的開局局面；SP-563 走完主變著法後的最終局面',
+  'Principal variation: `1. g4 g5 2. Ncd3 a5 3. b3 Bxa1 4. Rxa1 b6 5. h4 h6 6. Bxa8 Rxa8 7. a4 f6 8. f4 gxf4 9. Nxf4 e5 10. Nh5 Ne7 11. Qg2 c6 12. Nd3 Qe6 13. Kc1 Kc7 14. e4 Rg8 15. Nf2 d5 16. Kb2 Nd6 17. Qf3 Raf8 18. d3 d4 19. Ng3 b5 20. Nf5 bxa4`':
+    '主變著法：`1. g4 g5 2. Ncd3 a5 3. b3 Bxa1 4. Rxa1 b6 5. h4 h6 6. Bxa8 Rxa8 7. a4 f6 8. f4 gxf4 9. Nxf4 e5 10. Nh5 Ne7 11. Qg2 c6 12. Nd3 Qe6 13. Kc1 Kc7 14. e4 Rg8 15. Nf2 d5 16. Kb2 Nd6 17. Qf3 Raf8 18. d3 d4 19. Ng3 b5 20. Nf5 bxa4`',
+  '**SP-269** `NRKBNQBR` · +0.09 · best Nb3 · 38 plies':
+    '**SP-269** `NRKBNQBR` · +0.09 · 最佳著法 Nb3 · 38 著',
+  'SP-269 starting position; SP-269 final position after principal variation':
+    'SP-269 的開局局面；SP-269 走完主變著法後的最終局面',
+  'Principal variation: `1. Nb3 f5 2. f4 Nb6 3. d3 c6 4. c3 d6 5. Nd2 Bc7 6. Nef3 Nf6 7. e4 fxe4 8. dxe4 e5 9. fxe5 dxe5 10. b4 Nbd7 11. Bb3 Bb6 12. Qd1 Bxg1 13. Qxg1 a5 14. Bxg8 Qxg8 15. Qa7 Qxa2 16. O-O O-O 17. bxa5 Ra8 18. Qxb7 Qxa5 19. Qb3+ Kh8`':
+    '主變著法：`1. Nb3 f5 2. f4 Nb6 3. d3 c6 4. c3 d6 5. Nd2 Bc7 6. Nef3 Nf6 7. e4 fxe4 8. dxe4 e5 9. fxe5 dxe5 10. b4 Nbd7 11. Bb3 Bb6 12. Qd1 Bxg1 13. Qxg1 a5 14. Bxg8 Qxg8 15. Qa7 Qxa2 16. O-O O-O 17. bxa5 Ra8 18. Qxb7 Qxa5 19. Qb3+ Kh8`',
+  '**SP-444** `RBNNQKBR` · +0.10 · best d4 · 33 plies':
+    '**SP-444** `RBNNQKBR` · +0.10 · 最佳著法 d4 · 33 著',
+  'SP-444 starting position; SP-444 final position after principal variation':
+    'SP-444 的開局局面；SP-444 走完主變著法後的最終局面',
+  'Principal variation: `1. d4 f6 2. f3 Bf7 3. e4 c6 4. Bf2 O-O 5. a4 a5 6. O-O e5 7. dxe5 fxe5 8. Ne3 Ne7 9. Qd2 Ne6 10. Ne2 d6 11. Kh1 Nc5 12. Ng4 Ng6 13. Ng3 Bc7 14. Nf5 Rd8 15. Bxc5 dxc5 16. Qc3 c4 17. Ba2`':
+    '主變著法：`1. d4 f6 2. f3 Bf7 3. e4 c6 4. Bf2 O-O 5. a4 a5 6. O-O e5 7. dxe5 fxe5 8. Ne3 Ne7 9. Qd2 Ne6 10. Ne2 d6 11. Kh1 Nc5 12. Ng4 Ng6 13. Ng3 Bc7 14. Nf5 Rd8 15. Bxc5 dxc5 16. Qc3 c4 17. Ba2`',
+  '**SP-786** `BRQKNBRN` · +0.10 · best c4 · 31 plies':
+    '**SP-786** `BRQKNBRN` · +0.10 · 最佳著法 c4 · 31 著',
+  'SP-786 starting position; SP-786 final position after principal variation':
+    'SP-786 的開局局面；SP-786 走完主變著法後的最終局面',
+  'Principal variation: `1. c4 e6 2. f4 b5 3. c5 a5 4. b3 d6 5. Nd3 Ng6 6. e3 Be7 7. Be2 Nf6 8. cxd6 cxd6 9. Qxc8+ Rxc8 10. g3 Nd5 11. Nhf2 Bf6 12. a3 O-O 13. Bxf6 Nxf6 14. Nb2 Bd5 15. Bxb5 Bxb3+ 16. Ke2`':
+    '主變著法：`1. c4 e6 2. f4 b5 3. c5 a5 4. b3 d6 5. Nd3 Ng6 6. e3 Be7 7. Be2 Nf6 8. cxd6 cxd6 9. Qxc8+ Rxc8 10. g3 Nd5 11. Nhf2 Bf6 12. a3 O-O 13. Bxf6 Nxf6 14. Nb2 Bd5 15. Bxb5 Bxb3+ 16. Ke2`',
+  '**SP-29** `NQNBRKBR` · +0.11 · best c4 · 31 plies':
+    '**SP-29** `NQNBRKBR` · +0.11 · 最佳著法 c4 · 31 著',
+  'SP-29 starting position; SP-29 final position after principal variation':
+    'SP-29 的開局局面；SP-29 走完主變著法後的最終局面',
+  'Principal variation: `1. c4 e5 2. f3 c6 3. b4 f6 4. Bb3 Bf7 5. Bf2 O-O 6. O-O d5 7. cxd5 cxd5 8. a4 Bb6 9. e3 Ne7 10. Nc2 Kh8 11. Qa2 a5 12. d4 Bc7 13. dxe5 Bxe5 14. Kh1 Nb6 15. Ne2 Nc4 16. bxa5`':
+    '主變著法：`1. c4 e5 2. f3 c6 3. b4 f6 4. Bb3 Bf7 5. Bf2 O-O 6. O-O d5 7. cxd5 cxd5 8. a4 Bb6 9. e3 Ne7 10. Nc2 Kh8 11. Qa2 a5 12. d4 Bc7 13. dxe5 Bxe5 14. Kh1 Nb6 15. Ne2 Nc4 16. bxa5`',
+  '**SP-482** `BQRNKBNR` · +0.11 · best e3 · 32 plies · elite match':
+    '**SP-482** `BQRNKBNR` · +0.11 · 最佳著法 e3 · 32 著 · 頂級對局',
+  'SP-482 starting position; SP-482 final position after principal variation':
+    'SP-482 的開局局面；SP-482 走完主變著法後的最終局面',
+  'Principal variation: `1. e3 e6 2. b4 f5 3. f4 Nf6 4. Nf3 Be7 5. c4 b6 6. Be2 Nf7 7. Nf2 c5 8. bxc5 bxc5 9. Qc2 Rg8 10. h4 Bc6 11. Rb1 Qa8 12. Bc3 Nh5 13. d3 Ng3 14. Rh3 Nxe2 15. Kxe2 Rb8 16. Rxb8+ Qxb8`':
+    '主變著法：`1. e3 e6 2. b4 f5 3. f4 Nf6 4. Nf3 Be7 5. c4 b6 6. Be2 Nf7 7. Nf2 c5 8. bxc5 bxc5 9. Qc2 Rg8 10. h4 Bc6 11. Rb1 Qa8 12. Bc3 Nh5 13. d3 Ng3 14. Rh3 Nxe2 15. Kxe2 Rb8 16. Rxb8+ Qxb8`',
+  '**SP-719** `RKQNNRBB` · +0.11 · best f4 · 43 plies':
+    '**SP-719** `RKQNNRBB` · +0.11 · 最佳著法 f4 · 43 著',
+  'SP-719 starting position; SP-719 final position after principal variation':
+    'SP-719 的開局局面；SP-719 走完主變著法後的最終局面',
+  'Principal variation: `1. f4 f5 2. g3 g6 3. d3 d6 4. c4 c5 5. Nc3 Nc6 6. Qd2 Qd7 7. Nc2 Nc7 8. b3 Bf7 9. O-O-O Ne6 10. e3 O-O 11. d4 Nb4 12. Nxb4 cxb4 13. Nd5 Nc7 14. Nxc7 Qxc7 15. Qxb4 Rfb8 16. Qc3 a5 17. a4 d5 18. Kd2 dxc4 19. bxc4 Qxc4 20. Qxc4 Bxc4 21. Rfe1 Ra7 22. Rb1`':
+    '主變著法：`1. f4 f5 2. g3 g6 3. d3 d6 4. c4 c5 5. Nc3 Nc6 6. Qd2 Qd7 7. Nc2 Nc7 8. b3 Bf7 9. O-O-O Ne6 10. e3 O-O 11. d4 Nb4 12. Nxb4 cxb4 13. Nd5 Nc7 14. Nxc7 Qxc7 15. Qxb4 Rfb8 16. Qc3 a5 17. a4 d5 18. Kd2 dxc4 19. bxc4 Qxc4 20. Qxc4 Bxc4 21. Rfe1 Ra7 22. Rb1`',
+  '**SP-85** `NNBBRKRQ` · +0.12 · best d3 · 25 plies':
+    '**SP-85** `NNBBRKRQ` · +0.12 · 最佳著法 d3 · 25 著',
+  'SP-85 starting position; SP-85 final position after principal variation':
+    'SP-85 的開局局面；SP-85 走完主變著法後的最終局面',
+  'Principal variation: `1. d3 e5 2. h4 d6 3. Nb3 h5 4. g3 Nb6 5. e4 Nc6 6. Bd2 g6 7. Bf3 Bf6 8. Nc3 Bd7 9. Bg2 O-O-O 10. a4 Be6 11. Bh3 Nd7 12. Nd5 g5 13. Nxf6`':
+    '主變著法：`1. d3 e5 2. h4 d6 3. Nb3 h5 4. g3 Nb6 5. e4 Nc6 6. Bd2 g6 7. Bf3 Bf6 8. Nc3 Bd7 9. Bg2 O-O-O 10. a4 Be6 11. Bh3 Nd7 12. Nd5 g5 13. Nxf6`',
+  '**SP-119** `NQBRNKRB` · +0.12 · best c4 · 31 plies':
+    '**SP-119** `NQBRNKRB` · +0.12 · 最佳著法 c4 · 31 著',
+  'SP-119 starting position; SP-119 final position after principal variation':
+    'SP-119 的開局局面；SP-119 走完主變著法後的最終局面',
+  'Principal variation: `1. c4 g6 2. d4 c6 3. O-O d5 4. cxd5 cxd5 5. Nac2 Bf5 6. g3 Nac7 7. Bg2 Bg7 8. a4 Nd6 9. Qa2 O-O 10. Ne3 Be6 11. b3 b5 12. Nd3 Ne4 13. Bb2 b4 14. Qa1 Bh6 15. f4 a5 16. Nc5`':
+    '主變著法：`1. c4 g6 2. d4 c6 3. O-O d5 4. cxd5 cxd5 5. Nac2 Bf5 6. g3 Nac7 7. Bg2 Bg7 8. a4 Nd6 9. Qa2 O-O 10. Ne3 Be6 11. b3 b5 12. Nd3 Ne4 13. Bb2 b4 14. Qa1 Bh6 15. f4 a5 16. Nc5`',
+  'Best First Moves In Chess960': '西洋棋960中的最佳第一著',
+  "Across all 960 starts, **94.9%** have a pawn move as Stockfish's best first move. `e4` and `d4` are still the most common, but they cover only 36% of the field. The Chess960-specific signal is flank activity: `f4`, `b4`, and `g4` combine for 27.3%.":
+    '在全部 960 個開局中，有 **94.9%** 的 Stockfish 最佳第一著是兵的走法。`e4` 與 `d4` 依然最常見，但只佔全體的 36%。西洋棋960特有的訊號是側翼活動：`f4`、`b4` 與 `g4` 合計佔 27.3%。',
+  '%': '%',
+  a4: 'a4',
+  'Piece-move and move-1 castling details': '<summary>棋子走法與第 1 著王車易位的細節</summary>',
+  'Piece moves account for 49 positions, or 5.1% of the field. Knights account for 40 of them. The other 9 are legal move-1 castles.':
+    '棋子走法佔 49 個局面，即全體的 5.1%。其中 40 個是騎士。其餘 9 個是合法的第 1 著王車易位。',
+  'Origin to dest': '起點到終點',
+  '`Ng3`': 'Ng3',
+  'h1 to g3': 'h1 到 g3',
+  '`O-O`': '`O-O`',
+  'f1 to g1': 'f1 到 g1',
+  '`Nc3`': '`Nc3`',
+  'b1 to c3': 'b1 到 c3',
+  '`Nb3`': 'Nb3',
+  'a1 to b3': 'a1 到 b3',
+  '`Nf3`': '`Nf3`',
+  'g1 to f3': 'g1 到 f3',
+  '`Nh3`': '`Nh3`',
+  'g1 to h3': 'g1 到 h3',
+  '`Nde3`': '`Nde3`',
+  'd1 to e3': 'd1 到 e3',
+  '`Ncd3`': '`Ncd3`',
+  'c1 to d3': 'c1 到 d3',
+  'The 9 move-1 castling starts all place the king on `f1` and the kingside rook on `g1`: SP-296 (+0.20), SP-308 (+0.35), SP-312 (+0.37), SP-324 (+0.22), SP-407 (+0.16), SP-580 (+0.26), SP-585 (+0.26), SP-596 (+0.22), and SP-612 (+0.40).':
+    '這 9 個第 1 著即王車易位的開局，都把王放在 `f1`、王翼城堡放在 `g1`：SP-296（+0.20）、SP-308（+0.35）、SP-312（+0.37）、SP-324（+0.22）、SP-407（+0.16）、SP-580（+0.26）、SP-585（+0.26）、SP-596（+0.22）與 SP-612（+0.40）。 </details>',
+  'What Recent Elite Chess960 Actually Picked': '近期頂級西洋棋960實際選了哪些開局',
+  'I mapped recent elite Freestyle broadcast PGNs back to Scharnagl IDs using the starting FEN. This avoids relying on the PGN `Variant` tag: some 2025 Freestyle broadcasts are labeled `Variant "Standard"` even though the FEN is a Chess960 start.':
+    '我利用起始 FEN，把近期頂級 Freestyle 賽事轉播的 PGN 對應回 Scharnagl ID。這樣就不必依賴 PGN 的 `Variant` 標籤：有些 2025 年的 Freestyle 轉播標成 `Variant "Standard"`，即使其 FEN 其實是西洋棋960的開局。',
+  'The modern elite corpus:': '現代頂級賽事棋譜集：',
+  Games: '對局數',
+  'unique SPs': '不同的 SP 數',
+  '**Total**': '**總計**',
+  'The most repeated starts are mostly tournament-format artifacts: paired games, rematches, and bracket mini-matches reuse the same position.':
+    '重複次數最多的開局，多半是賽制造成的現象：成對對局、重賽以及淘汰賽的小型對抗賽都會重複使用同一個局面。',
+  eval: '評估值',
+  'appeared in': '出現於',
+  '`RBKNQRBN`': '`RBKNQRBN`',
+  '`RNKNRQBB`': '`RNKNRQBB`',
+  'Las Vegas': '拉斯維加斯',
+  '`QRKBNNBR`': '`QRKBNNBR`',
+  '`BBQNRNKR`': '`BBQNRNKR`',
+  '`NRKBQNBR`': '`NRKBQNBR`',
+  '`RQBNKNRB`': '`RQBNKNRB`',
+  '`RBNQKNBR`': '`RBNQKNBR`',
+  '`RNBBKNQR`': '`RNBBKNQR`',
+  'All selected Scharnagl IDs by event': '<summary>各賽事所選用的全部 Scharnagl ID</summary>',
+  'SPs used': '<th>使用的 SP</th>',
+  'Overlap with the highlighted sets:': '與重點開局集合的重疊：',
+  'Highlight set': '重點集合',
+  'Matches in the 426-game corpus': '在 426 局棋譜集中的符合數',
+  'Top 10 most white-favored': '最有利於白方的前十名',
+  none: '無',
+  'Top 10 most equal': '最均衡的前十名',
+  'The only highlighted start that appeared was neutral, not extreme: **SP-482 (BQRNKBNR) evaluates at +0.11** and appeared once in Las Vegas.':
+    '唯一出現過的重點開局是中性的，而非極端的：**SP-482（BQRNKBNR）的評估值為 +0.11**，在拉斯維加斯出現過一次。',
+  Field: '欄位',
+  '`BQRNKBNR`': 'BQRNKBNR',
+  game: '對局',
+  'Magnus Carlsen vs Levon Aronian': 'Magnus Carlsen 對 Levon Aronian',
+  result: '結果',
+  round: '輪次',
+  broadcast: '轉播',
+  '[Las Vegas round-robin white tiebreak, game 1](https://lichess.org/broadcast/freestyle-chess-grand-slam-las-vegas--round-robin-white/tiebreak--game-1/nhVdjSZB)':
+    '[拉斯維加斯循環賽白組加賽，第 1 局](https://lichess.org/broadcast/freestyle-chess-grand-slam-las-vegas--round-robin-white/tiebreak--game-1/nhVdjSZB)',
+  'Critical position after 20...d5. White to move. Lichess marks 21.c5? as the mistake; 21.cxd5 was best. Green arrow: best capture. Gray arrow: game move.':
+    '<figcaption><strong>20...d5 之後的關鍵局面。</strong> 白方走。Lichess 標記 21.c5? 為失誤；21.cxd5 才是最佳著法。綠色箭頭：最佳吃子。灰色箭頭：實戰著法。</figcaption>',
+  'Critical midgame position after 20...d5 in Magnus Carlsen vs Levon Aronian, SP-482':
+    'Magnus Carlsen 對 Levon Aronian（SP-482）在 20...d5 之後的關鍵中局局面',
+  'The game result is not meaningful by itself. The selection result is: among 105 unique modern elite starts, none came from the top-10 white-favored list.':
+    '對局結果本身沒有什麼意義。有意義的是選擇結果：在 105 個不同的現代頂級開局中，沒有一個出自最有利於白方的前十名。',
+  'Any start in the CSV opens on a Chess960 analysis board: [SP-418](https://lichess.org/analysis/chess960/brnqnbkr/pppppppp/8/8/8/8/PPPPPPPP/BRNQNBKR_w_KQkq_-_0_1) for one of the most balanced starts, [SP-783](https://lichess.org/analysis/chess960/qrknrnbb/pppppppp/8/8/8/8/PPPPPPPP/QRKNRNBB_w_KQkq_-_0_1) for the most white-favored.':
+    'CSV 中的任何開局都能在西洋棋960分析棋盤上開啟：[SP-418](https://lichess.org/analysis/chess960/brnqnbkr/pppppppp/8/8/8/8/PPPPPPPP/BRNQNBKR_w_KQkq_-_0_1) 是最均衡的開局之一，[SP-783](https://lichess.org/analysis/chess960/qrknrnbb/pppppppp/8/8/8/8/PPPPPPPP/QRKNRNBB_w_KQkq_-_0_1) 則是最有利於白方的開局。',
+  Reproducibility: '可重現性',
+  'Quick Answers': '快速問答',
+  'What is the most balanced Chess960 starting position?':
+    '**最均衡的西洋棋960開局局面是哪一個？**',
+  'SP-418 (BRNQNBKR) and SP-563 (BRNKNRQB) are the most balanced in this run. Both evaluate at +0.07 for White.':
+    '在這次執行中，SP-418（BRNQNBKR）與 SP-563（BRNKNRQB）最均衡。兩者的白方評估值皆為 +0.07。',
+  'What is the most imbalanced Chess960 starting position?':
+    '**最失衡的西洋棋960開局局面是哪一個？**',
+  'SP-783 (QRKNRNBB) is the most white-favored start at +1.08.':
+    'SP-783（QRKNRNBB）是最有利於白方的開局，評估值 +1.08。',
+  'Is standard chess balanced compared to Chess960?': '**和西洋棋960相比，標準西洋棋算均衡嗎？**',
+  'Standard chess, SP-518 (RNBQKBNR), evaluates at +0.31 and ranks 463/960 by balance. It is almost exactly median.':
+    '標準西洋棋 SP-518（RNBQKBNR）的評估值是 +0.31，依均衡度排名 463/960。幾乎正好是中位數。',
+  'Are any Chess960 starts better for Black?': '**有任何西洋棋960開局對黑方更有利嗎？**',
+  'Not at Stockfish 18 depth 36. All 960 starts evaluate as White-favored.':
+    '在 Stockfish 18 深度 36 下沒有。全部 960 個開局的評估值都對白方有利。',
+  'Further Reading': '延伸閱讀',
+  "[Scaling Parallel Stockfish Analysis](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/): methodology for running Stockfish at scale on cloud CPU workers, written for the case where the cache doesn't have the answer.":
+    '[擴展平行 Stockfish 分析](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)：在雲端 CPU 工作節點上大規模執行 Stockfish 的方法論，針對快取*沒有*答案的情況而寫。',
+  '[Mistboard](/): free online Chinese chess in English, which also hosts open-source Fog of War chess. Its Chess960 pregame (Draft960) was retired in September 2026.':
+    '[Mistboard](/)：免費的英文介面線上象棋，同時也提供開源的迷霧西洋棋。其西洋棋960賽前選項（Draft960）已於 2026 年 9 月下線。',
+  Dataset: '資料集',
+  '[Download the full CSV](/article-data/chess960-starting-position-evals.csv) (960 rows). Columns: `scharnagl_id`, `back_rank`, `fen`, `position_key`, `cp`, `mate`, `best_move`, `pv`, `depth`, `nodes`, `source`, `fetched_at_iso`.':
+    '[下載完整 CSV](/article-data/chess960-starting-position-evals.csv)（960 列）。欄位：`scharnagl_id`、`back_rank`、`fen`、`position_key`、`cp`、`mate`、`best_move`、`pv`、`depth`、`nodes`、`source`、`fetched_at_iso`。',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
@@ -5383,12 +11257,34 @@ const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
   'zh-Hant': ZH_HANT,
 };
 
+// Fields that hold board geometry rather than prose. A dictionary key that
+// happens to equal a geometry token (the bare role names `advisor`, `general`
+// added for the banqi chase labels) must not rewrite a deal or a move list: on
+// 2026-10-13 that turned every zh jieqi and banqi replay deal into 士/将 roles
+// and the deal check threw. Values under these keys are copied untranslated.
+export const ARTICLE_GEOMETRY_KEYS: ReadonlySet<string> = new Set([
+  'deal',
+  'moves',
+  'role',
+  'color',
+  'square',
+  'squares',
+  'from',
+  'to',
+  'uci',
+  'fen',
+  'perspective',
+  'orientation',
+]);
+
 function deepTranslate<T>(value: T, dict: Record<string, string>): T {
-  if (typeof value === 'string') return (dict[value] ?? value) as T;
+  if (typeof value === 'string') return (hasOwnKey(dict, value) ? dict[value] : value) as T;
   if (Array.isArray(value)) return value.map((v) => deepTranslate(v, dict)) as T;
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value)) out[k] = deepTranslate(v, dict);
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = ARTICLE_GEOMETRY_KEYS.has(k) ? v : deepTranslate(v, dict);
+    }
     return out as T;
   }
   return value;

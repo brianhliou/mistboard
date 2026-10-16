@@ -46,6 +46,13 @@ export type StudyRailActions = {
    *  said it belonged. (The favourite moved for the same reason, to the info
    *  card's title row.) */
   errata?: HTMLElement | null;
+  /** A richer label for a row, in place of the plain name (the gamebook rail
+   *  lays a game position out as players + where in the game). Null keeps the
+   *  name. The name stays the row's title either way. */
+  chapterLabel?: (chapter: ChapterControlModel) => HTMLElement | null;
+  /** A small header to insert above a row, opening a run of chapters (a game
+   *  study's event). Null for no header. */
+  groupHeading?: (chapter: ChapterControlModel) => string | null;
 };
 
 export function buildStudyRail(
@@ -175,6 +182,16 @@ export function buildStudyRail(
       });
   };
   chapters.forEach((chapter, index) => {
+    const heading = actions.groupHeading?.(chapter) ?? null;
+    if (heading) {
+      // A label, not a chapter: presentation keeps it out of the list's count.
+      const group = document.createElement('li');
+      group.className = 'study-chapters__group';
+      group.setAttribute('role', 'presentation');
+      group.textContent = heading;
+      group.title = heading;
+      list.append(group);
+    }
     const row = document.createElement('li');
     row.className = 'study-chapters__row';
     row.dataset.chapterId = chapter.id;
@@ -234,10 +251,15 @@ export function buildStudyRail(
     } else {
       num.textContent = String(index + 1);
     }
-    const name = document.createElement('span');
-    name.className = 'study-chapters__name';
-    name.textContent = chapterLabel;
+    const custom = actions.chapterLabel?.(chapter) ?? null;
+    const name = custom ?? document.createElement('span');
+    if (!custom) {
+      name.className = 'study-chapters__name';
+      name.textContent = chapterLabel;
+    }
     name.title = chapterLabel;
+    // A custom label is laid out for the eye; the name says it in words.
+    if (custom) link.setAttribute('aria-label', `${index + 1}. ${chapterLabel}`);
     link.append(num, name);
     link.addEventListener('click', (event) => {
       if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {

@@ -19,7 +19,7 @@
 // player is offered, so the immediate-loss guard (xiangqi, fortress) and the
 // take-the-win scan (duck) run here exactly as they do in the live room.
 
-import { replayTenantEvents } from './variant-tenant/runtime.js';
+import { applyTenantEvent, replayTenantEvents } from './variant-tenant/runtime.js';
 import type {
   TenantGameStateLike,
   TenantRoomEvent,
@@ -45,16 +45,40 @@ export type VariantEveAdapter<
   tenant: VariantTenant<any, C, M, State, any, Spec>;
   /** Resolve an engine id to its playing tier; null for engines this variant cannot play. */
   tierFor(engineId: string | undefined): VariantEveTier | null;
-  /** The EvE-only uniformly-random mover, the 0-Elo anchor. Never player-facing. */
+  /**
+   * The EvE-only uniformly-random mover, the 0-Elo anchor. Never player-facing.
+   * An adapter without one plays games for data only: nothing can rate it
+   * (no anchor, so no rating_policy is ever stamped on its jobs).
+   */
   randomEngineId?: string;
+  /**
+   * For an engine that is a standalone binary the image may or may not carry
+   * (railpack fetches banqi-engine and jungle-engine behind build flags): the
+   * worker capability a task of this variant requires, and the probe that says
+   * whether this box has the binary. A worker without it never claims the task,
+   * so a missing binary leaves the game queued instead of failing it.
+   */
+  requiredCapability?: string;
+  available?(): boolean;
   legalMoves(state: State): readonly M[];
   moveToUci(move: M): string;
   legalMoveForUci(legalMoves: readonly M[], uci: string): M | null;
-  /** Ask the engine for a move given the UCI history from the start position. */
+  /**
+   * Server-secret per-game setup (a jieqi deal), stamped on the room-created event
+   * the way the live runtime does. Seeded from the pairing's opening seed, so the two
+   * colour orders of a pairing play the same deal.
+   */
+  createSetup?(seed: bigint): unknown;
+  /**
+   * Ask the engine for a move given the UCI history from the start position. `context`
+   * carries the game's events and the mover, for variants whose engine input is not a
+   * move list (jieqi: a redacted FEN built from the events, as the mover sees it).
+   */
   search(
     engineId: string,
     history: string[],
     opts: { movetimeMs: number },
+    context: { events: readonly unknown[]; color: string },
   ): Promise<{ best: string | null }>;
   /**
    * Live-path selection that runs BEFORE the search and replaces it when it
@@ -76,6 +100,8 @@ export type VariantEveMoveRequest<M> = {
   history: string[];
   legalMoves: readonly M[];
   tier: VariantEveTier;
+  events: readonly unknown[];
+  color: string;
 };
 
 /** Returns the engine's move as UCI, or null when it has none. Injectable for tests. */
@@ -121,8 +147,15 @@ export async function playVariantEngineGame<
   const moveProvider = input.moveProvider ?? defaultMoveProvider(adapter);
   const rng = input.rng ?? Math.random;
   type Event = TenantRoomEvent<C, M, Spec>;
+  const setup = adapter.createSetup?.(seedFrom(input.openingPolicy?.seed));
   const events: Event[] = [
-    { type: 'room-created', at: startedAt, roomId: input.roomId, gameSpecId: adapter.gameSpecId },
+    {
+      type: 'room-created',
+      at: startedAt,
+      roomId: input.roomId,
+      gameSpecId: adapter.gameSpecId,
+      ...(setup !== undefined ? { setup } : {}),
+    },
     {
       type: 'seat-assigned',
       at: startedAt,
@@ -144,9 +177,14 @@ export async function playVariantEngineGame<
     await input.onEvent?.(events[seq]!, seq);
   }
 
-  const replay = () => replayTenantEvents(adapter.tenant, events).state as State;
+  // The projection is carried forward one event at a time. Replaying the whole
+  // log every ply made a game O(n²) move applications, which blocked the worker's
+  // event loop for ~0.4 s a ply late in long jieqi and fortress games (#476).
+  let projection = replayTenantEvents(adapter.tenant, events);
+  const replay = () => projection.state as State;
   const push = async (event: Event) => {
     events.push(event);
+    projection = applyTenantEvent(adapter.tenant, projection, event);
     await input.onEvent?.(event, events.length - 1);
   };
 
@@ -205,7 +243,14 @@ export async function playVariantEngineGame<
     } else {
       move = adapter.beforeSearch?.(state, legalMoves, color) ?? null;
       if (move === null) {
-        const uci = await moveProvider({ engineId, history: [...history], legalMoves, tier });
+        const uci = await moveProvider({
+          engineId,
+          history: [...history],
+          legalMoves,
+          tier,
+          events: [...events],
+          color,
+        });
         move = uci === null ? null : adapter.legalMoveForUci(legalMoves, uci);
         if (move !== null && adapter.guard) move = adapter.guard(state, move, legalMoves);
       }
@@ -255,9 +300,12 @@ function defaultMoveProvider<
   Spec extends string,
 >(adapter: VariantEveAdapter<C, M, State, Spec>): VariantEveMoveProvider<M> {
   return async (request) => {
-    const { best } = await adapter.search(request.engineId, request.history, {
-      movetimeMs: request.tier.movetimeMs,
-    });
+    const { best } = await adapter.search(
+      request.engineId,
+      request.history,
+      { movetimeMs: request.tier.movetimeMs },
+      { events: request.events, color: request.color },
+    );
     return best;
   };
 }
@@ -277,7 +325,7 @@ function randomOpeningPlies(policy: Record<string, unknown> | undefined): number
   return typeof n === 'number' && Number.isInteger(n) && n > 0 ? n : 0;
 }
 
-function seedFrom(value: unknown): bigint {
+export function seedFrom(value: unknown): bigint {
   if (typeof value === 'string') {
     try {
       return BigInt(value);

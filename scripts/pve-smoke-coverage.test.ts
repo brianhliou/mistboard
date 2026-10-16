@@ -21,6 +21,10 @@ import { VARIANT_SMOKE_CONFIGS } from './lib/variant-smoke-configs.mjs';
 const EXEMPT: Readonly<Record<string, string>> = {
   // Covered by prod:smoke:engines, which plays the fog-chess engine directly.
   'dark-chess': 'prod:smoke:engines',
+  // Retired 2026-10-11: every create path answers 410, so there is no PvE to
+  // smoke. Their config rows and prod:smoke:<name> scripts are dead until deleted.
+  'fortress-xiangqi': 'retired',
+  'atomic-xiangqi': 'retired',
 };
 
 function pveGameSpecIds(): string[] {
@@ -56,17 +60,96 @@ test('every PvE variant has a prod smoke, or a written reason it does not', () =
   );
 });
 
+// An engine family is one binary behind one variant: the rungs of a ladder
+// (`-level-3`, `-strongest`) are the same engine at a different budget.
+function engineFamily(engineId: string): string {
+  return engineId.replace(/-level-\d+$/, '').replace(/-(amateur|strong|strongest)$/, '');
+}
+
+test('every engine family of a PvE variant is smoked, not just the default one', () => {
+  // The variant test above passed on 2026-10-03 while Pikafish Level 8 resigned
+  // every xiangqi game at move 1: the xiangqi smoke played the default
+  // Fairy-Stockfish rung, and nothing asked the second family for a move. The
+  // default smoke reaches one family per variant; every other family needs a
+  // row that names its engineId.
+  const families = new Map<string, Set<string>>();
+  for (const bot of FIRST_PARTY_BOT_PROFILES) {
+    for (const [spec, engineId] of Object.entries(bot.engines)) {
+      if (spec in EXEMPT) continue;
+      if (!families.has(spec)) families.set(spec, new Set());
+      families.get(spec)?.add(engineFamily(engineId));
+    }
+  }
+  const pinned = new Set(
+    Object.values(VARIANT_SMOKE_CONFIGS)
+      .map((config) => (config as { engineId?: string }).engineId)
+      .filter((engineId): engineId is string => typeof engineId === 'string')
+      .map(engineFamily),
+  );
+  assert.ok(families.get('xiangqi')?.size === 2, 'expected two xiangqi engine families');
+  const unsmoked: string[] = [];
+  for (const [spec, specFamilies] of families) {
+    const unpinned = [...specFamilies].filter((family) => !pinned.has(family));
+    if (unpinned.length > 1) unsmoked.push(`${spec}: ${unpinned.join(', ')}`);
+  }
+  assert.deepEqual(
+    unsmoked,
+    [],
+    `variants with more than one engine family the default smoke cannot reach: ${unsmoked.join('; ')}. ` +
+      'Add a row with engineId to scripts/lib/variant-smoke-configs.mjs for all but the default family.',
+  );
+});
+
 test('every smoked variant is wired into the release gate', async () => {
   const { readFile } = await import('node:fs/promises');
   const releaseSource = await readFile(new URL('./release-prod.mjs', import.meta.url), 'utf8');
   // A config row that no release row invokes is coverage that never runs — the
   // exact shape of the original gap, one level down.
   for (const config of Object.values(VARIANT_SMOKE_CONFIGS)) {
+    if (EXEMPT[config.gameSpecId] === 'retired') {
+      assert.ok(
+        !releaseSource.includes(`'prod:smoke:${config.name}'`),
+        `prod:smoke:${config.name} smokes a retired variant, whose games the server refuses`,
+      );
+      continue;
+    }
     assert.ok(
       releaseSource.includes(`'prod:smoke:${config.name}'`),
       `prod:smoke:${config.name} is configured but not run by the release smoke tier`,
     );
   }
+});
+
+test('every smoke the release tier runs by name is a package.json script', async () => {
+  // The release invokes `npm run prod:smoke:<name>`, so a config row and a
+  // release row with no script behind them die on `Missing script` after a
+  // green deploy, the way prod:smoke:practice did on 2026-09-06.
+  const { readFile } = await import('node:fs/promises');
+  const releaseSource = await readFile(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as {
+    scripts: Record<string, string>;
+  };
+  const invoked = [...releaseSource.matchAll(/npmCommand\('(prod:smoke:[^']+)'/g)].map(
+    (match) => match[1],
+  );
+  const configured = Object.values(VARIANT_SMOKE_CONFIGS).map(
+    (config) => `prod:smoke:${config.name}`,
+  );
+  assert.ok(invoked.length >= 5, `expected the release smoke rows, found ${invoked.length}`);
+  const missing = [...new Set([...invoked, ...configured])].filter(
+    (script) => !(script in pkg.scripts),
+  );
+  assert.deepEqual(
+    missing,
+    [],
+    missing
+      .map(
+        (script) =>
+          `${script} is run by scripts/release-prod.mjs but is not in package.json: ` +
+          `add "${script}": "node scripts/prod-<variant>-smoke.mjs" to its scripts`,
+      )
+      .join('\n'),
+  );
 });
 
 test('EXEMPT does not drift: every exemption still names a real PvE spec', () => {

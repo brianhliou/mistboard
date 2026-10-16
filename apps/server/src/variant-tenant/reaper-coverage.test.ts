@@ -39,6 +39,8 @@ type Cell = {
   moves: number;
   connected: Color[];
   reaped: boolean;
+  // Created by a lobby match rather than an invite link.
+  lobby?: boolean;
 };
 
 const CELLS: Cell[] = [
@@ -84,6 +86,30 @@ const CELLS: Cell[] = [
     reaped: true,
   },
   {
+    // Deliberately unclaimed, the contrast for the lobby row below: someone is
+    // sitting in an invite room waiting for the friend they sent the link to,
+    // and that wait is never cut short. The window arms when they leave.
+    name: 'invite link, opponent not joined yet, creator present -> waits',
+    timeControl: LIVE_TC,
+    seats: 'white-only',
+    moves: 0,
+    connected: ['white'],
+    reaped: false,
+  },
+  {
+    // The same shape from a lobby match (prod, 2026-10-02): the lobby paired a
+    // seeker whose tab had died, and the joiner sat alone forever under an
+    // invite prompt. Nobody is coming to a lobby room late, so the no-show
+    // window claims it even with the joiner present.
+    name: 'lobby match, opponent never connected, other player present -> no-show abort',
+    timeControl: LIVE_TC,
+    seats: 'white-only',
+    moves: 0,
+    connected: ['white'],
+    reaped: true,
+    lobby: true,
+  },
+  {
     // KNOWN GAP, deliberately left open -- but no longer reachable by creating
     // one. A room with no clock at all is claimed by nothing once it is past
     // move 1 with both players gone: nothing can flag it, the pregame window has
@@ -113,6 +139,7 @@ function buildRoom(cell: Cell) {
   const created = createTenantRuntimeRoom(darkChessTenant, `dchx_reaper_${CELLS.indexOf(cell)}`, {
     now: 1_000,
     ...(cell.timeControl ? { timeControl: cell.timeControl } : {}),
+    ...(cell.lobby ? { lobbyMatch: true } : {}),
   });
   assert.ok(created.ok, `fixture room must create (got ${created.ok ? '' : created.error})`);
   const room = created.room;

@@ -1,7 +1,8 @@
 # Fairy-Stockfish (WASM) — vendored engine assets
 
 These files are the client-side analysis engine behind the review board's
-"local engine" (ceval) for the xiangqi variants (fortress, atomic) and chess.
+"local engine" (ceval) for the xiangqi variants (fortress, atomic, crazyhouse)
+and chess.
 Standard xiangqi runs on mainline Pikafish instead (`../pikafish/`, since
 2026-09); jieqi on PikaJieQi (`../pikafish-jieqi/`). They run entirely in the
 browser, in a Web Worker, and require a cross-origin-isolated context
@@ -9,12 +10,17 @@ browser, in a Web Worker, and require a cross-origin-isolated context
 
 - `stockfish.js` / `stockfish.wasm` / `stockfish.worker.js` — the multi-threaded
   Fairy-Stockfish WASM build, **patched** (see Provenance).
-- `fortress-xiangqi.ini`, `atomic-xiangqi.ini` — our custom-variant definitions.
-  Both are concatenated into one `variants.ini` in the engine's in-memory FS at
-  load time (`VariantPath` names one file), then selected per evaluation with
-  `UCI_Variant=fortressxiangqi` / `atomicxiangqi`. Each is a hand-mirrored copy
-  of the server's (`apps/server/src/*.ini`); nothing keeps them in sync but a
-  diff.
+- `fortress-xiangqi.ini`, `atomic-xiangqi.ini`, `crazyhouse-xiangqi.ini` — our
+  custom-variant definitions. All are concatenated into one `variants.ini` in
+  the engine's in-memory FS at load time (`VariantPath` names one file), then
+  selected per evaluation with `UCI_Variant=fortressxiangqi` / `atomicxiangqi` /
+  `crazyhousexiangqi`. Each is a hand-mirrored copy of the server's
+  (`apps/server/src/*.ini`); for crazyhouse a test
+  (`fsf-variant-ini-move-rule.test.ts`) fails if the stanza drifts, the others
+  are kept in sync by a diff. Crazyhouse uses stock options only; on
+  2026-10-02 this core matched the native engine's legal moves and perft(2) at
+  all 449 positions of `packages/game/src/fixtures/crazyhouse-xiangqi-parity.json`
+  (the hand-start rules: advisors and elephants in hand, drop check allowed).
 
 Until 2026-09 this directory also carried `xiangqi-c07e94a5c7cb.nnue`, FSF's
 official standard-xiangqi net (the one the server's Level 8 bot still runs),

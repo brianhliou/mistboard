@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type DarkXiangqiWireView,
   darkXiangqiClickResult,
+  fogLayer,
   renderDarkXiangqiBoardSvg,
 } from './live-dark-xiangqi.js';
 
@@ -40,6 +41,44 @@ describe('Dark Xiangqi board svg', () => {
 
     expect(svg).toContain('aria-label="black hidden piece"');
     expect(svg).not.toContain('aria-label="black soldier"');
+  });
+
+  // The homepage viewer drew the square grid with fog holes cut at intersection
+  // heights (a river gap too high below the river) and a fog sheet 6 units
+  // short of the bottom edge, because the fog was built before the layout was
+  // known and sized to the intersection board.
+  it('cuts square-grid fog holes on the square-grid cells, river gap included', () => {
+    const view: DarkXiangqiWireView = { ...viewFixture(), visibleSquares: ['b3', 'a1'] };
+    const fog = fogLayer(view, 'red', 'm', 'cell');
+
+    // The sheet spans the cells plus the river strip: 9 x 60 by 10 x 60 + 12.
+    expect(fog).toContain('<rect x="6" y="6" width="540" height="612" rx="0" fill="white"/>');
+    // b3 sits below the river: row 7, centre 36 + 7 * 60 + 12 = 468.
+    expect(fog).toContain('<rect x="65.5" y="437.5" width="61" height="61" fill="black"/>');
+    // a1 is the bottom-left square and bleeds to the sheet's own edges.
+    expect(fog).toContain('<rect x="6" y="557.5" width="60.5" height="60.5" fill="black"/>');
+  });
+
+  it('keeps intersection-board fog holes where they were', () => {
+    const fog = fogLayer({ ...viewFixture(), visibleSquares: ['b3'] }, 'red', 'm', 'intersection');
+
+    expect(fog).toContain('<rect x="0" y="0" width="552" height="612" rx="0" fill="white"/>');
+    expect(fog).toContain('<rect x="65.5" y="425.5" width="61" height="61" fill="black"/>');
+  });
+
+  // The square grid's cells are opaque, so palace bands drawn before them were
+  // painted over and Fog Xiangqi showed no palace at all on that layout.
+  it('draws the square-grid palace above the cells', () => {
+    window.history.replaceState({}, '', '/?xqLayout=cell');
+    try {
+      const svg = renderDarkXiangqiBoardSvg(viewFixture());
+      expect(svg.indexOf('class="xq-live-palace-bands"')).toBeGreaterThan(
+        svg.indexOf('class="xq-live-grid"'),
+      );
+      expect(svg).toContain('xq-live-palace-band');
+    } finally {
+      window.history.replaceState({}, '', '/');
+    }
   });
 
   it('masks fog by default and drops the mask when fog is off', () => {
@@ -133,13 +172,56 @@ describe('Dark Xiangqi last-move marks', () => {
     lastMove: { from, to },
   });
 
-  it('draws the same origin wash and destination halo as the open board', () => {
+  it('draws the same origin wash and destination band as the open board', () => {
     const svg = renderDarkXiangqiBoardSvg(withLastMove('b3', 'b4'));
 
     expect(svg).toContain('xq-live-lastmove-cell xq-live-lastmove-from');
     expect(svg).toContain('xq-live-lastmove-ring');
     // The old treatment: two bare -cell circles, no -from, no ring.
     expect(svg).not.toMatch(/class="xq-live-lastmove-cell"/);
+    // Wash and band both under the pieces: the band hugs the disc from outside.
+    const pieces = svg.indexOf('<g class="xq-live-pieces">');
+    expect(svg.indexOf('xq-live-lastmove-from')).toBeLessThan(pieces);
+    expect(svg.indexOf('xq-live-lastmove-ring')).toBeLessThan(pieces);
+    expect(svg.match(/xq-live-lastmove-ring/g)).toHaveLength(1);
+  });
+
+  it('draws the square-grid marks on the square grid, only where the viewer can see', () => {
+    window.history.replaceState({}, '', '/?xqLayout=cell');
+    try {
+      const svg = renderDarkXiangqiBoardSvg(withLastMove('b3', 'b4'));
+      expect(svg).toContain(
+        'class="xq-live-lastmove-origin xq-live-lastmove-from" fill="#f59e0b" fill-opacity="0.65"',
+      );
+      expect(svg).toContain('xq-live-lastmove-square xq-live-lastmove-to');
+      expect(svg).toContain('class="xq-live-lastmove-piece-ring"');
+      expect(svg.indexOf('xq-live-lastmove-piece-ring')).toBeGreaterThan(
+        svg.indexOf('<g class="xq-live-lastmove-over"'),
+      );
+      expect(svg).not.toContain('xq-live-lastmove-ring');
+      expect(svg).not.toContain('xq-live-lastmove-cell');
+      // Only what the viewer can see: b7 is in the fog, so neither the
+      // destination tint nor the ring may say where the piece went.
+      const half = renderDarkXiangqiBoardSvg(withLastMove('b8', 'b7'));
+      expect(half).toContain('xq-live-lastmove-origin');
+      expect(half).not.toContain('xq-live-lastmove-to');
+      expect(half).not.toContain('xq-live-lastmove-piece-ring');
+      // Arriving on a visible square from a hidden one: ring, no origin.
+      const arriving = renderDarkXiangqiBoardSvg({
+        ...viewFixture(),
+        lastMove: { from: 'i1', to: 'b4' },
+      });
+      expect(arriving).toContain('xq-live-lastmove-piece-ring');
+      expect(arriving).not.toContain('xq-live-lastmove-from');
+      // A move wholly in the fog marks nothing.
+      const hidden = renderDarkXiangqiBoardSvg({
+        ...viewFixture(),
+        lastMove: { from: 'i1', to: 'i2' },
+      });
+      expect(hidden).not.toMatch(/xq-live-lastmove-(origin|square|piece-ring)/);
+    } finally {
+      window.history.replaceState({}, '', '/');
+    }
   });
 
   it('marks only the endpoints this viewer can see', () => {

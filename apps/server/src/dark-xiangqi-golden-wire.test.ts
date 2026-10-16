@@ -6,8 +6,9 @@
  * fixture-independent hidden-info invariants.
  *
  * Dark Xiangqi wire quirks this suite intentionally pins (they differ from
- * DMX): the snapshot has NO mode/pveEngineId/rated/forfeitDeadline/rematch
- * keys; spectators and the other seat DO receive non-move events (only
+ * DMX): the snapshot has NO mode/rated/forfeitDeadline keys, carries roomMode
+ * (pveEngineId only in a bot room; 2026-10-14, so a bot game gets Rematch),
+ * and a finished PvP room carries the shared rematch offer flags; spectators and the other seat DO receive non-move events (only
  * move-played is redacted); the board re-encodes shrouded entries as
  * {color, shrouded: true}; the event log accepts seat-vacated.
  *
@@ -31,6 +32,7 @@ import {
   appendTenantRuntimeEvent,
   createTenantRuntimeRoomFromEvents,
   expireTenantClock,
+  tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
   tenantSnapshotPayload,
 } from './variant-tenant/runtime.js';
@@ -78,7 +80,23 @@ function recordStep(
     step.snapshots[seat] = snapshotFor(room, seat);
   }
   script.steps.push(step);
+  // The seated hello's history rides beside the snapshot, not inside it, so it
+  // is kept out of the recorded fixture and checked by the invariants below.
+  const histories: Record<string, unknown> = {};
+  for (const seat of SEATS) {
+    histories[seat] = tenantLiveHistoryExtras(darkXiangqiTenant, room, {
+      id: `client-${seat}`,
+      seat,
+      solo: false,
+    });
+  }
+  helloHistories.set(`${script.id}/${label}`, JSON.parse(JSON.stringify(histories)));
 }
+
+// Per step, per seat: the seat-history half of that seat's hello frame
+// (tenantLiveHistoryExtras), as it would cross the wire.
+const helloHistories = new Map<string, Record<string, { liveHistory?: SeatHistory }>>();
+type SeatHistory = Array<{ ply: number; view: WireSnapshot['state'] }>;
 
 function append(
   script: GoldenScript,
@@ -388,14 +406,33 @@ test('dxq golden wire: lastMove is stripped unless the seat moved last', () => {
   assert.equal(snapshots.black!.state.lastMove, undefined);
 });
 
-test('dxq golden wire: snapshot omits engine/rated/rematch keys (dxq wire shape)', () => {
-  const script = runScriptA();
-  const last = script.steps.at(-1);
-  assert.ok(last);
-  for (const seat of SEATS) {
-    const snapshot: SeatRecord = last.snapshots[seat]!;
-    for (const key of ['mode', 'pveEngineId', 'rated', 'forfeitDeadline', 'rematch']) {
-      assert.ok(!(key in snapshot), `dxq snapshot must not carry '${key}'`);
+test('dxq golden wire: snapshot marks room mode, omits rated keys, and offers rematch only once finished', () => {
+  for (const script of runAllScripts()) {
+    for (const step of script.steps) {
+      for (const seat of SEATS) {
+        const snapshot = step.snapshots[seat] as SeatRecord & Record<string, unknown>;
+        if (!snapshot) continue;
+        // 2026-10-14: roomMode so the client knows a bot game (Rematch); a
+        // scripted room has no engine seat, so no engine id rides along.
+        assert.equal(snapshot.roomMode, 'pvp', `${script.id}/${step.label}: roomMode pvp`);
+        for (const key of ['mode', 'pveEngineId', 'rated', 'forfeitDeadline']) {
+          assert.ok(!(key in snapshot), `dxq snapshot must not carry '${key}'`);
+        }
+        const status = (snapshot.state as { status: { type: string } }).status.type;
+        if (status !== 'finished') {
+          assert.ok(!('rematch' in snapshot), `${script.id}/${step.label}: no rematch live`);
+          continue;
+        }
+        // The rematch block is two booleans and a room id: no position, no fog.
+        assert.deepEqual(Object.keys(snapshot.rematch as object).sort(), [
+          'finalizedRoomId',
+          'offers',
+        ]);
+        assert.deepEqual(Object.keys((snapshot.rematch as { offers: object }).offers).sort(), [
+          'black',
+          'red',
+        ]);
+      }
     }
   }
 });
@@ -429,4 +466,48 @@ test('dxq golden wire: a finished room opens fully to a spectator', () => {
     }
   }
   assert.ok(finishedSteps > 0, 'no finished step in the scripts: this test asserted nothing');
+});
+
+test("dxq golden wire: a live seat hello carries only that seat's own history", () => {
+  let liveSeatSteps = 0;
+  for (const script of runAllScripts()) {
+    for (const step of script.steps) {
+      const where = `${script.id}/${step.label}`;
+      const histories = helloHistories.get(where);
+      assert.ok(histories, `${where}: no hello history recorded`);
+      // The spectator never gets one, live or not.
+      assert.deepEqual(histories.spectator, {}, `${where}: spectator got a seat history`);
+      const snapshots = wireSnapshots(step);
+      const status = (snapshots.red!.state as { status?: { type?: string } }).status?.type;
+      if (status !== 'playing') {
+        // Finished rooms reveal through the snapshot; aborted rooms have nothing.
+        assert.deepEqual(histories.red, {}, `${where}: closed room sent red a history`);
+        assert.deepEqual(histories.black, {}, `${where}: closed room sent black a history`);
+        continue;
+      }
+      for (const seat of ['red', 'black'] as const) {
+        const history: SeatHistory | undefined = histories[seat]?.liveHistory;
+        assert.ok(history && history.length > 0, `${where}: ${seat} has no history`);
+        liveSeatSteps += 1;
+        // The tip is the seat's live snapshot view (legal moves aside).
+        assert.deepStrictEqual(
+          history.at(-1)!.view,
+          { ...snapshots[seat]!.state, legalMoves: [] },
+          `${where}: ${seat} history tip is not its live view`,
+        );
+        for (const { ply, view } of history) {
+          assert.equal((view as { perspective?: string }).perspective, seat);
+          const visible = new Set(view.visibleSquares);
+          for (const [square, entry] of Object.entries(view.board)) {
+            if (entry.shrouded) {
+              assert.ok(!('piece' in entry), `${where} ply ${ply}: shrouded ${square} has a piece`);
+            } else if (entry.piece.color !== seat) {
+              assert.ok(visible.has(square), `${where} ply ${ply}: ${seat} sees hidden ${square}`);
+            }
+          }
+        }
+      }
+    }
+  }
+  assert.ok(liveSeatSteps > 0, 'no live seated step in the scripts: this test asserted nothing');
 });

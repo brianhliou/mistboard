@@ -29,13 +29,13 @@ export const banqiArticle: Article = {
   playableOnMistboard: true,
   title: 'Banqi Rules (Chinese Dark Chess)',
   summary:
-    'Banqi, also called Chinese dark chess or blind chess: the 4 by 8 half-board game with face-down pieces, rank captures, and screen-jumping cannons. Play it free in your browser.',
+    'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-15',
   updatedAt: '2026-09-21',
   audience:
-    'Experienced Banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
+    'Experienced banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
   thumbnail: { kind: 'svg', svg: BANQI_RULES_THUMBNAIL },
   intro: [
     {
@@ -176,6 +176,10 @@ export const banqiArticle: Article = {
           kind: 'paragraph',
           text: 'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.',
         },
+        {
+          kind: 'paragraph',
+          text: 'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.',
+        },
       ],
     },
     {
@@ -187,7 +191,7 @@ export const banqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.',
+          text: 'Mistboard plays the standard Taiwanese game, the one used in computer competition and on the main banqi sites in Taiwan. The draw rules come from the competition rules of Chen, Shen and Hsu (ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. A common house rule lets a cannon also fire at a face-down tile, often played together with chain captures. That is a side variant, not the standard game, and it is not played here: a cannon only captures revealed enemy pieces. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.',
         },
       ],
     },
@@ -204,7 +208,7 @@ export const banqiArticle: Article = {
           title: 'Banqi: an engine game under the competition rules',
           // Width-bound at the article column: a 2:1 board beside the 226px
           // sheet, plus the seat rows, controls and credit line.
-          aspect: [702, 440],
+          aspect: [702, 446],
         } as ArticleBlock,
       ],
     },
@@ -247,7 +251,7 @@ export const banqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Play against the engine or challenge a friend. No account required.',
+          text: 'A soldier can take the general, and the general can never take a soldier. No account needed.',
         },
         {
           kind: 'cta',

@@ -32,13 +32,14 @@ import {
 } from './server-mahjong-bots.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
   clearTenantRuntimeTimers,
@@ -123,6 +124,7 @@ registerVariantTenant({
   isEngineClientId: isMahjongBotClientId,
   engineDisplayName: (clientId) => (isMahjongBotClientId(clientId) ? 'Mahjong bot' : null),
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(mahjongTenant),
   errorPrefix: 'mahjong',
   enabled: mahjongTenant.enabled,
   // No TV channel. A table whose scoring is unverified should not be the board
@@ -143,6 +145,8 @@ registerVariantTenant({
       room as unknown as MahjongLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearTenantRuntimeTimers(room as unknown as MahjongLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(mahjongTenant, mahjongRooms.values(), mahjongWs.lifecycleCtx, at),
   clearRooms: () => mahjongRooms.clear(),
   http: {
     matchesCreateRequest: requestsMahjong,

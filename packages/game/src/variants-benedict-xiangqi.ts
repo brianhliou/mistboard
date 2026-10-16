@@ -637,7 +637,8 @@ export function benedictXiangqiPositionRepetitionKey(state: BenedictXiangqiGameS
   const cells: string[] = [];
   for (const square of allBenedictXiangqiSquares()) {
     const piece = state.board[square];
-    if (piece) cells.push(`${square}:${piece.color[0]}${piece.role[0]}`);
+    // The whole role, not its first letter: chariot and cannon both start with c.
+    if (piece) cells.push(`${square}:${piece.color[0]}.${piece.role}`);
   }
   return `${cells.join(',')}|${turn}`;
 }

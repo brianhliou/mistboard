@@ -106,10 +106,38 @@ export type MistboardReadoutBroadcasts = {
   // A handful of ids so the comment says which rows, capped so the snapshot
   // stays small when a whole tour breaks.
   unservableBoardIds: string[];
+  // Top events dpxq's tour index lists that no tour of ours polls: live,
+  // upcoming, or just finished with records up. Null when the index could not
+  // be read; absent on snapshots from before 2026-09-23, when the 2026 women's
+  // league was found live on dpxq while our calendar said it had no edition.
+  untrackedEvents?: MistboardReadoutUntrackedEvent[] | null;
+};
+
+export type MistboardReadoutUntrackedEvent = {
+  dpxqTour: string;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  section: 'live' | 'upcoming' | 'ended';
+  hasGameList: boolean;
+};
+
+export type MistboardReadoutMissingEngine = { variant: string; binary: string };
+
+// /contact submissions (feedback_submissions). Counts and page paths only: the
+// readout reaches a public issue, so a message body or a reply address never
+// enters it. Optional so snapshots from before 2026-10-06 still parse.
+export type MistboardReadoutFeedback = {
+  // Every submission ever stored: only grows, so the day-over-day difference
+  // is what arrived since the last readout.
+  received: number;
+  // Paths of the newest few submissions, newest first, as the client sent
+  // them. The action text filters them to plain page paths.
+  recentPaths: Array<string | null>;
 };
 
 export type MistboardReadoutCollectorError = {
-  section: 'product' | 'puzzles' | 'mining' | 'engines' | 'broadcasts';
+  section: 'product' | 'puzzles' | 'mining' | 'engines' | 'broadcasts' | 'feedback';
   code: 'collector_failed';
 };
 
@@ -136,12 +164,18 @@ export type MistboardReadoutV1 = {
     // census. Runtime-only: absent on snapshots from before it existed, and
     // it restarts from whoever is connected when the server restarts.
     broadcastViewersPeak?: number;
+    // Enabled engines the serving box cannot run (engine-boot-check.ts), such as
+    // AB-JChess when its net's build-time download soft-failed and the top jieqi
+    // slot is hidden. Absent where the caller cannot see the serving box (the
+    // local CLI) and on snapshots from before 2026-10-06.
+    missingEngines?: MistboardReadoutMissingEngine[];
   };
   product: MistboardReadoutProduct | null;
   puzzles: ElephantChessPuzzleQualityReport | null;
   mining: MistboardReadoutMining | null;
   engines: MistboardReadoutEngines | null;
   broadcasts?: MistboardReadoutBroadcasts | null;
+  feedback?: MistboardReadoutFeedback | null;
   actions: MistboardReadoutAction[];
   collectorErrors: MistboardReadoutCollectorError[];
   trend: MistboardReadoutTrendPoint[];
@@ -158,6 +192,7 @@ export type MistboardReadoutFacts = {
   mining: MistboardReadoutMining | null;
   engines: MistboardReadoutEngines | null;
   broadcasts?: MistboardReadoutBroadcasts | null;
+  feedback?: MistboardReadoutFeedback | null;
   collectorErrors?: MistboardReadoutCollectorError[];
   trend?: MistboardReadoutTrendPoint[];
 };
@@ -200,8 +235,8 @@ export function buildMistboardReadout(input: {
   const collectorErrors = [...(input.facts.collectorErrors ?? [])].sort((a, b) =>
     a.section.localeCompare(b.section),
   );
-  const actions = buildActions(input.facts, input.previousReport ?? null).sort((a, b) =>
-    a.dedupeKey.localeCompare(b.dedupeKey),
+  const actions = buildActions(input.facts, input.previousReport ?? null, input.runtime).sort(
+    (a, b) => a.dedupeKey.localeCompare(b.dedupeKey),
   );
   const verdict = readoutVerdict(actions, collectorErrors, input.runtime);
   const reportWithoutFingerprint = {
@@ -221,6 +256,7 @@ export function buildMistboardReadout(input: {
     mining: input.facts.mining,
     engines: input.facts.engines,
     broadcasts: input.facts.broadcasts ?? null,
+    feedback: input.facts.feedback ?? null,
     actions,
     collectorErrors,
     trend: input.facts.trend ?? [],
@@ -235,10 +271,13 @@ export function buildMistboardReadout(input: {
 function buildActions(
   facts: MistboardReadoutFacts,
   previousReport: MistboardReadoutV1 | null,
+  runtime: MistboardReadoutRuntime,
 ): MistboardReadoutAction[] {
   const actions: MistboardReadoutAction[] = [
     ...productActions(facts.product, previousReport),
     ...operationsActions(facts, previousReport),
+    ...missingEngineActions(runtime, previousReport),
+    ...feedbackActions(facts.feedback ?? null, previousReport),
   ];
   const quality = facts.puzzles;
   // A checkpoint is a level that never falls back: sessions only go up, so
@@ -482,7 +521,112 @@ function operationsActions(
       text: `${broadcasts.unservableBoards} of ${broadcasts.boards} stored broadcast board${broadcasts.boards === 1 ? '' : 's'} cannot be replayed by the board API (500 on the page)${sample ? `: ${sample}` : ''}.`,
     });
   }
+  // An event dpxq tracks and we do not is a seed waiting to happen, and a
+  // league's rounds are announced days ahead, so this fires the day a new one
+  // appears, not on the standing list. An unreadable index says nothing.
+  const untracked = broadcasts?.untrackedEvents;
+  if (untracked && untracked.length > 0) {
+    const previousIds = new Set(
+      (previousReport?.broadcasts?.untrackedEvents ?? []).map((event) => event.dpxqTour),
+    );
+    const fresh = untracked.filter((event) => !previousIds.has(event.dpxqTour));
+    if (fresh.length > 0) {
+      const listed = fresh
+        .slice(0, 3)
+        .map(
+          (event) =>
+            `${event.name} (dpxq ${event.dpxqTour}, ${event.section === 'ended' ? 'records up' : event.section}, ${event.startsOn.slice(5)} to ${event.endsOn.slice(5)})`,
+        )
+        .join('; ');
+      actions.push({
+        code: 'broadcast-events-untracked',
+        severity: 'action',
+        dedupeKey: `broadcast-events-untracked:${fresh
+          .map((event) => event.dpxqTour)
+          .sort()
+          .join(',')}`,
+        ownerIssue: null,
+        text: `dpxq lists ${fresh.length} top event${fresh.length === 1 ? '' : 's'} we do not relay: ${listed}${fresh.length > 3 ? '; …' : ''}. Seed and grade it (xiangqi-broadcast-levels.ts).`,
+      });
+    }
+  }
   return actions;
+}
+
+// An enabled engine missing from the serving box latches until a build puts it
+// back, so fire on the day an engine joins the missing set, not on the level:
+// the daily email goes out once per new gap, and the Operations line keeps
+// naming it in every report after. The AB-JChess net is the expected case: the
+// build fetches it from the authors' release and builds without it when that
+// fails (scripts/fetch-abjchess-net.sh), which hides the top jieqi slot.
+function missingEngineActions(
+  runtime: MistboardReadoutRuntime,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  const missing = runtime.missingEngines;
+  if (!missing || missing.length === 0) return [];
+  const before = new Set((previousReport?.production.missingEngines ?? []).map(missingEngineKey));
+  const fresh = missing.filter((engine) => !before.has(missingEngineKey(engine)));
+  if (fresh.length === 0) return [];
+  const hints = fresh.some((engine) => engine.binary === 'ab-jchess')
+    ? ` AB-JChess: the build skips its net when the download from the authors' release fails or does not match its checksum (build log: "abjchess-net: WARNING"), so the top jieqi bot is hidden. Redeploy once their release answers.`
+    : '';
+  return [
+    {
+      code: 'engines-missing',
+      severity: 'action',
+      dedupeKey: `engines-missing:${missing.map(missingEngineKey).sort().join(',')}`,
+      ownerIssue: null,
+      text: `Enabled engine${fresh.length === 1 ? '' : 's'} missing on the serving box: ${fresh.map(renderMissingEngine).join(', ')}.${hints}`,
+    },
+  ];
+}
+
+function missingEngineKey(engine: MistboardReadoutMissingEngine): string {
+  return `${engine.variant}:${engine.binary}`;
+}
+
+function renderMissingEngine(engine: MistboardReadoutMissingEngine): string {
+  return `${engine.binary} (${engine.variant})`;
+}
+
+// Feedback sat unread in the table until someone happened to look (2026-10-06).
+// This is awareness only: arrivals are an edge on the received counter, so the
+// line fires the day messages land and never for what was already there. With
+// no baseline (the first readout to count it, or a failed collector last time,
+// which already reads unknown) there is no telling what is new, so it is quiet.
+const FEEDBACK_PATHS_SHOWN = 3;
+
+function feedbackActions(
+  feedback: MistboardReadoutFeedback | null,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  if (!feedback) return [];
+  const previous = previousReport?.feedback?.received;
+  if (typeof previous !== 'number') return [];
+  const count = feedback.received - previous;
+  if (count <= 0) return [];
+  const shown = feedback.recentPaths.slice(0, Math.min(count, FEEDBACK_PATHS_SHOWN));
+  const paths = `${shown.map(feedbackPathLabel).join(', ')}${count > shown.length ? ', …' : ''}`;
+  const plural = count === 1 ? '' : 's';
+  return [
+    {
+      code: 'feedback-new',
+      severity: 'action',
+      dedupeKey: `feedback-new:${feedback.received}`,
+      ownerIssue: null,
+      text: `${count} new feedback message${plural} since the last readout (${paths}). Read with npm run feedback:inbox.`,
+    },
+  ];
+}
+
+// The path is whatever the client posted, and this text lands on a public
+// GitHub issue: echo a plain page path in a code span (never a link), and
+// nothing else.
+function feedbackPathLabel(path: string | null): string {
+  if (!path) return 'no page given';
+  const bare = path.split(/[?#]/, 1)[0] ?? '';
+  return /^\/[A-Za-z0-9/_.%-]{0,96}$/.test(bare) ? `\`${bare}\`` : 'an unlisted page';
 }
 
 // A schema-v1 snapshot carries no player count at all, so the runtime check is
@@ -520,11 +664,22 @@ function readoutVerdict(
   return 'healthy';
 }
 
+// Codes whose every firing is a new event rather than a persisting problem key
+// on their dedupeKey. New feedback is one: two days of arrivals are two
+// different messages, and collapsing the second into "same problem" would skip
+// the email and issue comment that are the whole point of the line.
+const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set(['feedback-new']);
+
 function alertKey(
   verdict: MistboardReadoutVerdict,
   actions: readonly MistboardReadoutAction[],
 ): string {
-  const shape = [verdict, ...actions.map((action) => action.code).sort()].join('|');
+  const shape = [
+    verdict,
+    ...actions
+      .map((action) => (ALERT_PER_EVENT_CODES.has(action.code) ? action.dedupeKey : action.code))
+      .sort(),
+  ].join('|');
   return createHash('sha256').update(shape).digest('hex').slice(0, 16);
 }
 
@@ -635,6 +790,12 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
       `- Broadcast viewers: peak ${report.production.broadcastViewersPeak} open streams today (UTC day, runtime counter)`,
     );
   }
+  const missingEngines = report.production.missingEngines;
+  if (missingEngines && missingEngines.length > 0) {
+    lines.push(
+      `- Engines missing on the serving box: ${missingEngines.map(renderMissingEngine).join(', ')}`,
+    );
+  }
   if (!report.mining) lines.push('- Mining status unavailable.');
   else {
     lines.push(
@@ -655,8 +816,14 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
   // Optional on the type because older snapshots predate the section; the
   // renderer meets those on /readouts.
   if (report.broadcasts) {
+    const untracked = report.broadcasts.untrackedEvents;
     lines.push(
-      `- Broadcasts: ${report.broadcasts.boards} stored boards, ${report.broadcasts.unservableBoards} unservable`,
+      `- Broadcasts: ${report.broadcasts.boards} stored boards, ${report.broadcasts.unservableBoards} unservable` +
+        (untracked === undefined
+          ? ''
+          : untracked === null
+            ? ', dpxq index unreadable'
+            : `, ${untracked.length} top event${untracked.length === 1 ? '' : 's'} on dpxq not relayed`),
     );
   }
   if (report.collectorErrors.length > 0) {

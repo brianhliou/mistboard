@@ -6,10 +6,10 @@ import {
   parseDuckXiangqiFen,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { duckXiangqiTurnLabel } from '../duck-xiangqi-turn-label.js';
 import {
   duckXiangqiTreeAdapter,
   duckXiangqiTurnKey,
-  duckXiangqiTurnLabel,
   parseDuckXiangqiTurnToken,
 } from './duck-xiangqi-tree-adapter.js';
 import { createGameTree, ROOT_PATH } from './game-tree.js';
@@ -30,8 +30,8 @@ describe('duck xiangqi turn tokens', () => {
   });
 
   it('labels turns the way the live move list does', () => {
-    // Same two spellings as duckTurnLabel in live-duck-xiangqi.ts: a review and a
-    // live room must not disagree about how a turn is written.
+    // The live room uses the same function (duck-xiangqi-turn-label.ts): a
+    // review and a live room must not disagree about how a turn is written.
     expect(duckXiangqiTurnLabel({ from: 'b3', to: 'b7', duckTo: 'c4' })).toBe('b3-b7@c4');
     expect(duckXiangqiTurnLabel({ from: 'e5', to: 'e10', duckTo: null })).toBe('e5xe10#');
   });

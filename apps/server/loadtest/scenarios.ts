@@ -1,6 +1,6 @@
 import {
   DARK_CHESS_SPEC_ID,
-  engineTimeControlPin,
+  isAllowedEngineTimeControl,
   type Move,
   type RoomTimeControl,
   TIME_CONTROLS,
@@ -33,16 +33,16 @@ const BLITZ = TIME_CONTROLS.find((tc) => tc.id === '3m2')!;
 // were their only callers. Fog PvE can no longer be stressed at varying paces
 // (see FOG_PVE below); reintroduce them with a PvP row if pace pressure, rather
 // than engine pressure, is what a future scenario needs to measure.
-// Fog PvE is engine-pinned (#283): the fog engines cannot honor a 1s or 2s
+// Fog PvE is engine-floored (#283): the fog engines cannot honor a 1s or 2s
 // increment, and the create route refuses those paces, so a PvE scenario at
 // BULLET/BLITZ/CASUAL would 400 before a single game started. The PvE rows
-// below therefore share one pace and vary what a load test actually varies:
+// below therefore share one pace, the fastest the floor admits, and vary what a load test actually varies:
 // concurrency, move count, and duration. The pace dimension lives on the PvP
 // rows, where humans still set their own clock.
 const FOG_PVE: RoomTimeControl = (() => {
-  const pin = engineTimeControlPin(DARK_CHESS_SPEC_ID);
-  if (!pin) throw new Error('fog PvE scenarios expect an engine pin');
-  return { initialMs: pin.initialMs, incrementMs: pin.incrementMs };
+  const pace = TIME_CONTROLS.find((tc) => isAllowedEngineTimeControl(DARK_CHESS_SPEC_ID, tc));
+  if (!pace) throw new Error('fog PvE scenarios expect a pace the engine floor admits');
+  return { initialMs: pace.initialMs, incrementMs: pace.incrementMs };
 })();
 
 export const scenarios: Record<string, Scenario> = {

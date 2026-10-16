@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { XIANGQI_ENDGAME_CORPUS } from '@mistboard/game';
+import { XIANGQI_ENDGAME_CORPUS, xiangqiEndgamePracticeSets } from '@mistboard/game';
 import { PRACTICE_SETS, practiceChapterBody } from './seed-xiangqi-practice-study.js';
 import {
   ENDGAME_STUDY_LANGS,
@@ -95,23 +95,34 @@ describe('practice study translation coverage', () => {
   });
 
   it('PRACTICE_SET_I18N has no entry for a set that no longer exists', () => {
-    const slugs = new Set(PRACTICE_SETS.map((set) => set.slug));
+    const slugs = new Set<string>(PRACTICE_SETS.map((set) => set.slug));
     const orphans = Object.keys(PRACTICE_SET_I18N).filter((slug) => !slugs.has(slug));
     assert.deepEqual(orphans, [], `orphaned practice set translations: ${orphans.join(', ')}`);
   });
 
   it('every exercise gets a localized name and comment in both scripts', () => {
-    for (const entry of XIANGQI_ENDGAME_CORPUS) {
+    for (const chapter of xiangqiEndgamePracticeSets().flatMap((set) => set.chapters)) {
+      const body = practiceChapterBody(chapter);
       for (const lang of ENDGAME_STUDY_LANGS) {
-        const body = practiceChapterBody(entry) as {
-          i18n?: Record<string, { name: string }>;
-          root: { root: { annotations: { comments: { i18n?: Record<string, string> }[] } } };
-        };
-        assert.ok(body.i18n?.[lang]?.name, `${entry.id} has no ${lang} chapter name`);
+        assert.ok(body.i18n?.[lang]?.name, `${chapter.id} has no ${lang} chapter name`);
         const comment = body.root.root.annotations.comments[0];
-        assert.ok(comment?.i18n?.[lang], `${entry.id} has no ${lang} root comment`);
+        assert.ok(comment?.i18n?.[lang], `${chapter.id} has no ${lang} root comment`);
       }
     }
+  });
+
+  it('chapter names are unique within every set, the key the seeder matches on', () => {
+    for (const set of xiangqiEndgamePracticeSets()) {
+      const names = set.chapters.map((chapter) => practiceChapterBody(chapter).name);
+      assert.equal(new Set(names).size, names.length, `${set.slug} chapter names collide`);
+    }
+  });
+
+  it('every set the definition holds has a name, and every name a set', () => {
+    assert.deepEqual(
+      PRACTICE_SETS.map((set) => set.slug),
+      xiangqiEndgamePracticeSets().map((set) => set.slug),
+    );
   });
 
   it('a practice comment never states the verdict the exercise asks for', () => {

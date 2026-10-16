@@ -1,5 +1,9 @@
 import { beforeEach, expect, test } from 'vitest';
-import { mountXiangqiReplay, type XiangqiReplaySpec } from './xiangqi-replay.js';
+import {
+  mountXiangqiReplay,
+  mountXiangqiReplayBoard,
+  type XiangqiReplaySpec,
+} from './xiangqi-replay.js';
 
 // 1.C2.5 H8+7 2.H2+3 P7+1 — four real plies, enough to judge one of them.
 const ICCS = 'h2e2 h9g7 h0g2 g6g5';
@@ -221,6 +225,36 @@ test('a judged move carries its cost on the move, not in a card below', () => {
   c.destroy();
 });
 
+test('a sideline under an unmarked move is an alternative, not an improvement', () => {
+  // A study's second key or equally fast mate hangs off a move nobody faulted;
+  // every such branch used to read "better was".
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    annotations: { byPly: { 1: { note: 'A second key.', line: 'h0g2 h9g7' } } },
+  });
+  expect(el.querySelector('.xq-replay-branch-tag')?.textContent).toBe('also');
+  c.destroy();
+});
+
+test('the embed board tags its sidelines the same way', () => {
+  const b = mountXiangqiReplayBoard(el, {
+    ...base,
+    annotations: { byPly: { 1: { line: 'h0g2 h9g7' }, 2: { glyph: '?!', line: 'h9g7' } } },
+  });
+  const tags = b.moveEntries().map((e) => e.line?.tag);
+  expect(tags.slice(0, 2)).toEqual(['also', 'better was']);
+  b.destroy();
+});
+
+test('an author label still names the sideline', () => {
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    annotations: { byPly: { 1: { glyph: '?', label: 'the book', line: 'h0g2 h9g7' } } },
+  });
+  expect(el.querySelector('.xq-replay-branch-tag')?.textContent).toBe('the book');
+  c.destroy();
+});
+
 test('prose we did not generate reaches the reader intact', () => {
   const c = mountXiangqiReplay(el, {
     ...base,
@@ -279,6 +313,34 @@ test('arrow keys keep working after clicking a move in the list', () => {
 
   el.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
   expect(label()).toBe(after);
+  c.destroy();
+});
+
+test('arrow keys keep stepping, not just once, after clicking a move', () => {
+  // The click handed focus to the new current move button, but the first arrow
+  // press rebuilt the list again and detached it: one step, then the keys went
+  // to <body> and scrolled the page. Press where a real key lands, the focused
+  // element, so the test sees what the reader's keyboard sees.
+  const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  const label = () =>
+    el.querySelector('.xq-replay-move-button.is-current')?.textContent?.trim() ?? '';
+  const press = (key: string) =>
+    (document.activeElement ?? document.body).dispatchEvent(
+      new KeyboardEvent('keydown', { key, bubbles: true }),
+    );
+
+  (mainButtons(el)[0] as HTMLButtonElement | undefined)?.click();
+  const seen = [label()];
+  for (let i = 0; i < 3; i++) {
+    press('ArrowRight');
+    expect(el.contains(document.activeElement), `focus left the widget after press ${i + 1}`).toBe(
+      true,
+    );
+    seen.push(label());
+  }
+  expect(new Set(seen).size, 'each press should step to a new move').toBe(4);
+  press('ArrowLeft');
+  expect(label()).toBe(seen[2]);
   c.destroy();
 });
 
@@ -346,7 +408,10 @@ test('a judged move is badged on the board, and only on the mainline', () => {
 test('nothing drawn for an edge-rank move escapes the board viewBox', () => {
   // The margin was once sized to clear the piece alone, which cropped the
   // last-move ring on every edge move and cut the top off a badge on any piece
-  // reaching the back rank. A corner move exercises both axes at once.
+  // reaching the back rank. A corner move exercises both axes at once. The piece
+  // shadow is off by default since 2026-10-14; switch it on so its offset disc
+  // is checked too.
+  document.documentElement.dataset.xiangqiPieceShadow = 'on';
   const c = mountXiangqiReplay(el, {
     ...base,
     // a1-a10: Red's chariot up the edge file to Black's back rank.
@@ -365,20 +430,43 @@ test('nothing drawn for an edge-rank move escapes the board viewBox', () => {
   ];
   // The board content sits inside a <g transform="translate(PAD PAD)">, so the
   // circle coordinates below are already in the same space as the viewBox.
+  // A piece is a nested <svg> with its own 100-unit box; its circles are mapped
+  // into board space through that box (and the piece shadow's translate).
+  const boardSpace = (circle: SVGCircleElement): [number, number, number] => {
+    let cx = Number(circle.getAttribute('cx') ?? 0);
+    let cy = Number(circle.getAttribute('cy') ?? 0);
+    let r = Number(circle.getAttribute('r'));
+    const shift = circle.parentElement
+      ?.getAttribute('transform')
+      ?.match(/translate\(([-\d.]+) ([-\d.]+)\)/);
+    const piece = circle.closest('svg');
+    if (piece && piece !== svg) {
+      if (shift) {
+        cx += Number(shift[1]);
+        cy += Number(shift[2]);
+      }
+      const k = Number(piece.getAttribute('width')) / 100;
+      cx = Number(piece.getAttribute('x')) + cx * k;
+      cy = Number(piece.getAttribute('y')) + cy * k;
+      r *= k;
+    }
+    return [cx, cy, r];
+  };
   const circles = [...el.querySelectorAll('circle')];
   expect(circles.length).toBeGreaterThan(0);
+  expect(el.querySelectorAll('.xq-piece-shadow').length).toBeGreaterThan(0);
   for (const circle of circles) {
-    const cx = Number(circle.getAttribute('cx'));
-    const cy = Number(circle.getAttribute('cy'));
-    const r = Number(circle.getAttribute('r'));
+    const [cx, cy, r] = boardSpace(circle);
     if (!Number.isFinite(cx) || !Number.isFinite(cy) || !Number.isFinite(r)) continue;
-    const label = circle.getAttribute('class') ?? 'circle';
+    const label =
+      circle.parentElement?.getAttribute('class') ?? circle.getAttribute('class') ?? 'circle';
     expect(cx - r, `${label} crosses the left edge`).toBeGreaterThanOrEqual(-0.5);
     expect(cy - r, `${label} crosses the top edge`).toBeGreaterThanOrEqual(-0.5);
     expect(cx + r, `${label} crosses the right edge`).toBeLessThanOrEqual(vw + 0.5);
     expect(cy + r, `${label} crosses the bottom edge`).toBeLessThanOrEqual(vh + 0.5);
   }
   c.destroy();
+  delete document.documentElement.dataset.xiangqiPieceShadow;
 });
 
 // Clicking to the end of a game disables the "next" control, and a browser hands

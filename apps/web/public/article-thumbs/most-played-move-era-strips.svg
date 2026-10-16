@@ -1,0 +1,182 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 600" width="680" height="600" role="img" aria-labelledby="t" font-family="system-ui, -apple-system, sans-serif" font-size="12">
+<title id="t">For ten opening positions, how often the club move and the engine move are played: by 1600-2200 players on Lichess, and by masters before 2010, in 2010 to 2017, and since 2018</title>
+<style>text{fill:#1f1f1f}.n{fill:#1f1f1f;opacity:.55;font-size:10px}</style>
+<text x="250" y="20" font-weight="600">club, 1600-2200</text>
+<text x="358" y="20" font-weight="600">masters to 2009</text>
+<text x="466" y="20" font-weight="600">2010-2017</text>
+<text x="574" y="20" font-weight="600">2018 on</text>
+<rect x="250" y="30" width="10" height="6" fill="#c45a1c"/><text x="264" y="36" class="n">the club move</text>
+<rect x="360" y="30" width="10" height="6" fill="#2f6fb8"/><text x="374" y="36" class="n">the engine move</text>
+<text x="0" y="60" font-weight="600">King's Gambit, 2...d6</text>
+<text x="0" y="75" class="n">club plays Nf3, engine d3</text>
+<rect x="250" y="50" width="59.7" height="10" fill="#c45a1c" rx="1"/>
+<text x="313.7" y="59" class="n">85%</text>
+<rect x="250" y="64" width="1.5" height="10" fill="#2f6fb8" rx="1"/>
+<text x="255.5" y="73" class="n">1%</text>
+<text x="250" y="91" class="n">6,497,498 games</text>
+<rect x="358" y="50" width="34.0" height="10" fill="#c45a1c" rx="1"/>
+<text x="396.0" y="59" class="n">49%</text>
+<rect x="358" y="64" width="8.0" height="10" fill="#2f6fb8" rx="1"/>
+<text x="370.0" y="73" class="n">11%</text>
+<text x="358" y="91" class="n">35 games</text>
+<text x="466" y="66" class="n">12 games, too few</text>
+<text x="574" y="66" class="n">9 games, too few</text>
+<text x="0" y="114" font-weight="600">Petrov, 3.Bc4</text>
+<text x="0" y="129" class="n">club plays Nc6, engine Nxe4</text>
+<rect x="250" y="104" width="23.2" height="10" fill="#c45a1c" rx="1"/>
+<text x="277.2" y="113" class="n">33%</text>
+<rect x="250" y="118" width="17.8" height="10" fill="#2f6fb8" rx="1"/>
+<text x="271.8" y="127" class="n">25%</text>
+<text x="250" y="145" class="n">10,075,185 games</text>
+<rect x="358" y="104" width="15.0" height="10" fill="#c45a1c" rx="1"/>
+<text x="377.0" y="113" class="n">21%</text>
+<rect x="358" y="118" width="49.6" height="10" fill="#2f6fb8" rx="1"/>
+<text x="411.6" y="127" class="n">71%</text>
+<text x="358" y="145" class="n">117 games</text>
+<text x="466" y="120" class="n">17 games, too few</text>
+<rect x="574" y="104" width="8.1" height="10" fill="#c45a1c" rx="1"/>
+<text x="586.1" y="113" class="n">12%</text>
+<rect x="574" y="118" width="47.2" height="10" fill="#2f6fb8" rx="1"/>
+<text x="625.2" y="127" class="n">67%</text>
+<text x="574" y="145" class="n">43 games</text>
+<text x="0" y="168" font-weight="600">Four Knights Spanish, 4.Nc3</text>
+<text x="0" y="183" class="n">club plays d6, engine Nd4</text>
+<rect x="250" y="158" width="21.8" height="10" fill="#c45a1c" rx="1"/>
+<text x="275.8" y="167" class="n">31%</text>
+<rect x="250" y="172" width="7.4" height="10" fill="#2f6fb8" rx="1"/>
+<text x="261.4" y="181" class="n">11%</text>
+<text x="250" y="199" class="n">5,389,858 games</text>
+<rect x="358" y="158" width="4.1" height="10" fill="#c45a1c" rx="1"/>
+<text x="366.1" y="167" class="n">6%</text>
+<rect x="358" y="172" width="26.4" height="10" fill="#2f6fb8" rx="1"/>
+<text x="388.4" y="181" class="n">38%</text>
+<text x="358" y="199" class="n">3,138 games</text>
+<rect x="466" y="158" width="1.8" height="10" fill="#c45a1c" rx="1"/>
+<text x="471.8" y="167" class="n">2%</text>
+<rect x="466" y="172" width="19.0" height="10" fill="#2f6fb8" rx="1"/>
+<text x="489.0" y="181" class="n">27%</text>
+<text x="466" y="199" class="n">1,814 games</text>
+<rect x="574" y="158" width="1.5" height="10" fill="#c45a1c" rx="1"/>
+<text x="579.5" y="167" class="n">2%</text>
+<rect x="574" y="172" width="27.4" height="10" fill="#2f6fb8" rx="1"/>
+<text x="605.4" y="181" class="n">39%</text>
+<text x="574" y="199" class="n">2,666 games</text>
+<text x="0" y="222" font-weight="600">Vienna Gambit</text>
+<text x="0" y="237" class="n">club plays exf4, engine d5</text>
+<rect x="250" y="212" width="21.0" height="10" fill="#c45a1c" rx="1"/>
+<text x="275.0" y="221" class="n">30%</text>
+<rect x="250" y="226" width="18.3" height="10" fill="#2f6fb8" rx="1"/>
+<text x="272.3" y="235" class="n">26%</text>
+<text x="250" y="253" class="n">4,247,096 games</text>
+<rect x="358" y="212" width="1.5" height="10" fill="#c45a1c" rx="1"/>
+<text x="363.5" y="221" class="n">0%</text>
+<rect x="358" y="226" width="67.6" height="10" fill="#2f6fb8" rx="1"/>
+<text x="429.6" y="235" class="n">97%</text>
+<text x="358" y="253" class="n">700 games</text>
+<rect x="466" y="212" width="1.5" height="10" fill="#c45a1c" rx="1"/>
+<text x="471.5" y="221" class="n">0%</text>
+<rect x="466" y="226" width="69.0" height="10" fill="#2f6fb8" rx="1"/>
+<text x="539.0" y="235" class="n">98%</text>
+<text x="466" y="253" class="n">200 games</text>
+<rect x="574" y="212" width="1.5" height="10" fill="#c45a1c" rx="1"/>
+<text x="579.5" y="221" class="n">0%</text>
+<rect x="574" y="226" width="68.2" height="10" fill="#2f6fb8" rx="1"/>
+<text x="646.2" y="235" class="n">97%</text>
+<text x="574" y="253" class="n">310 games</text>
+<text x="0" y="276" font-weight="600">Stafford Gambit, move 6</text>
+<text x="0" y="291" class="n">club plays Bc4, engine h3</text>
+<rect x="250" y="266" width="18.5" height="10" fill="#c45a1c" rx="1"/>
+<text x="272.5" y="275" class="n">26%</text>
+<rect x="250" y="280" width="17.0" height="10" fill="#2f6fb8" rx="1"/>
+<text x="271.0" y="289" class="n">24%</text>
+<text x="250" y="307" class="n">1,224,881 games</text>
+<text x="358" y="282" class="n">1 game, too few</text>
+<text x="466" y="282" class="n">no games</text>
+<text x="574" y="282" class="n">2 games, too few</text>
+<text x="0" y="330" font-weight="600">Busch-Gass, 2...Bc5</text>
+<text x="0" y="345" class="n">club plays Bc4, engine Nxe5</text>
+<rect x="250" y="320" width="33.6" height="10" fill="#c45a1c" rx="1"/>
+<text x="287.6" y="329" class="n">48%</text>
+<rect x="250" y="334" width="10.3" height="10" fill="#2f6fb8" rx="1"/>
+<text x="264.3" y="343" class="n">15%</text>
+<text x="250" y="361" class="n">6,973,667 games</text>
+<text x="358" y="336" class="n">2 games, too few</text>
+<text x="466" y="336" class="n">1 game, too few</text>
+<text x="574" y="336" class="n">2 games, too few</text>
+<text x="0" y="384" font-weight="600">Falkbeer, 3.exd5</text>
+<text x="0" y="399" class="n">club plays e4, engine exf4</text>
+<rect x="250" y="374" width="30.2" height="10" fill="#c45a1c" rx="1"/>
+<text x="284.2" y="383" class="n">43%</text>
+<rect x="250" y="388" width="23.1" height="10" fill="#2f6fb8" rx="1"/>
+<text x="277.1" y="397" class="n">33%</text>
+<text x="250" y="415" class="n">4,084,022 games</text>
+<rect x="358" y="374" width="20.6" height="10" fill="#c45a1c" rx="1"/>
+<text x="382.6" y="383" class="n">30%</text>
+<rect x="358" y="388" width="25.5" height="10" fill="#2f6fb8" rx="1"/>
+<text x="387.5" y="397" class="n">36%</text>
+<text x="358" y="415" class="n">505 games</text>
+<rect x="466" y="374" width="11.6" height="10" fill="#c45a1c" rx="1"/>
+<text x="481.6" y="383" class="n">17%</text>
+<rect x="466" y="388" width="51.4" height="10" fill="#2f6fb8" rx="1"/>
+<text x="521.4" y="397" class="n">73%</text>
+<text x="466" y="415" class="n">169 games</text>
+<rect x="574" y="374" width="7.1" height="10" fill="#c45a1c" rx="1"/>
+<text x="585.1" y="383" class="n">10%</text>
+<rect x="574" y="388" width="57.3" height="10" fill="#2f6fb8" rx="1"/>
+<text x="635.3" y="397" class="n">82%</text>
+<text x="574" y="415" class="n">159 games</text>
+<text x="0" y="438" font-weight="600">London, 2...g6 3.Nc3</text>
+<text x="0" y="453" class="n">club plays Bg7, engine d5</text>
+<rect x="250" y="428" width="51.3" height="10" fill="#c45a1c" rx="1"/>
+<text x="305.3" y="437" class="n">73%</text>
+<rect x="250" y="442" width="10.7" height="10" fill="#2f6fb8" rx="1"/>
+<text x="264.7" y="451" class="n">15%</text>
+<text x="250" y="469" class="n">2,357,512 games</text>
+<rect x="358" y="428" width="26.5" height="10" fill="#c45a1c" rx="1"/>
+<text x="388.5" y="437" class="n">38%</text>
+<rect x="358" y="442" width="33.8" height="10" fill="#2f6fb8" rx="1"/>
+<text x="395.8" y="451" class="n">48%</text>
+<text x="358" y="469" class="n">29 games</text>
+<rect x="466" y="428" width="14.9" height="10" fill="#c45a1c" rx="1"/>
+<text x="484.9" y="437" class="n">21%</text>
+<rect x="466" y="442" width="46.1" height="10" fill="#2f6fb8" rx="1"/>
+<text x="516.1" y="451" class="n">66%</text>
+<text x="466" y="469" class="n">314 games</text>
+<rect x="574" y="428" width="12.0" height="10" fill="#c45a1c" rx="1"/>
+<text x="590.0" y="437" class="n">17%</text>
+<rect x="574" y="442" width="53.8" height="10" fill="#2f6fb8" rx="1"/>
+<text x="631.8" y="451" class="n">77%</text>
+<text x="574" y="469" class="n">899 games</text>
+<text x="0" y="492" font-weight="600">Scandinavian, 3.Ng5 line, move 6</text>
+<text x="0" y="507" class="n">club plays h6, engine Nc6</text>
+<rect x="250" y="482" width="21.8" height="10" fill="#c45a1c" rx="1"/>
+<text x="275.8" y="491" class="n">31%</text>
+<rect x="250" y="496" width="18.4" height="10" fill="#2f6fb8" rx="1"/>
+<text x="272.4" y="505" class="n">26%</text>
+<text x="250" y="523" class="n">1,018,785 games</text>
+<text x="358" y="498" class="n">no games</text>
+<text x="466" y="498" class="n">no games</text>
+<text x="574" y="498" class="n">no games</text>
+<text x="0" y="546" font-weight="600">QGA, 3.e4 e5</text>
+<text x="0" y="561" class="n">club plays d5, engine Nf3</text>
+<rect x="250" y="536" width="44.2" height="10" fill="#c45a1c" rx="1"/>
+<text x="298.2" y="545" class="n">63%</text>
+<rect x="250" y="550" width="19.3" height="10" fill="#2f6fb8" rx="1"/>
+<text x="273.3" y="559" class="n">28%</text>
+<text x="250" y="577" class="n">892,653 games</text>
+<rect x="358" y="536" width="1.8" height="10" fill="#c45a1c" rx="1"/>
+<text x="363.8" y="545" class="n">2%</text>
+<rect x="358" y="550" width="67.8" height="10" fill="#2f6fb8" rx="1"/>
+<text x="429.8" y="559" class="n">97%</text>
+<text x="358" y="577" class="n">959 games</text>
+<rect x="466" y="536" width="1.5" height="10" fill="#c45a1c" rx="1"/>
+<text x="471.5" y="545" class="n">0%</text>
+<rect x="466" y="550" width="70.0" height="10" fill="#2f6fb8" rx="1"/>
+<text x="540.0" y="559" class="n">100%</text>
+<text x="466" y="577" class="n">707 games</text>
+<rect x="574" y="536" width="1.5" height="10" fill="#c45a1c" rx="1"/>
+<text x="579.5" y="545" class="n">1%</text>
+<rect x="574" y="550" width="69.3" height="10" fill="#2f6fb8" rx="1"/>
+<text x="647.3" y="559" class="n">99%</text>
+<text x="574" y="577" class="n">899 games</text>
+</svg>

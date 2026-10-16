@@ -9,9 +9,15 @@
 
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
+import { serverConfig } from '../server-config.js';
 import { reserveHydratedLiveEngineSeat } from '../server-live-engine-reservations.js';
 import { recordTenantPersistenceError } from './events.js';
-import { createTenantRuntimeRoomFromEvents, isTenantEventLog } from './runtime.js';
+import {
+  appendTenantRuntimeEvent,
+  createTenantRuntimeRoomFromEvents,
+  isTenantEventLog,
+  tenantOrphanPauseFor,
+} from './runtime.js';
 import type {
   TenantGameStateLike,
   TenantRuntimeRoom,
@@ -68,6 +74,7 @@ export async function getOrLoadTenantRoom<
     return null;
   }
   const room = hydrated.room;
+  await pauseOrphanedTenantRoom(tenant, room, Date.now(), serverConfig.orphanThresholdMs);
   room.seatTokens = tenantSeatTokenStatesFromPersistence<C>(
     await persistence.loadRoomSeatTokens<C>(roomId),
   );
@@ -88,6 +95,49 @@ export async function getOrLoadTenantRoom<
   }
   rooms.set(roomId, room);
   return room;
+}
+
+// A live game whose server died without running its shutdown pause (SIGKILL,
+// a crash) is paused here, at its last event, so the outage is not charged to
+// the side to move. Persisted before the room goes live; a failed write leaves
+// the room as it was rather than refusing to load it.
+export async function pauseOrphanedTenantRoom<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  now: number,
+  orphanThresholdMs: number,
+): Promise<void> {
+  const pause = tenantOrphanPauseFor<C, M, Spec>(
+    room.projection,
+    room.events,
+    now,
+    orphanThresholdMs,
+  );
+  if (!pause) return;
+  const seq = room.events.length;
+  try {
+    if (persistence.isInitialized()) await persistence.appendRoomEvent(room.id, seq, pause);
+  } catch (err) {
+    recordTenantPersistenceError(tenant, room.id, seq, pause.type, err as Error);
+    return;
+  }
+  appendTenantRuntimeEvent(tenant, room, pause);
+  logger.warn(
+    {
+      kind: `${tenant.persistence.logKindPrefix}_orphan_paused`,
+      room_id: room.id,
+      paused_at: pause.at,
+      gap_ms: now - (pause.at - 1),
+    },
+    `${tenant.persistence.logLabel} live game paused on hydration after an unclean stop`,
+  );
 }
 
 export async function restoreHydratedTenantEngineReservation<

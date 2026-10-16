@@ -2,7 +2,7 @@
  * Dark Xiangqi (9x10, hidden/dev-only) registry entry. Owns the tenant's
  * live-room map, the room-factory binding, and hydration (moved out of
  * index.ts at the registry dispatch collapse). No rematch flow yet. Matchmaking
- * is casual random-seat (unrated) and gated by the tenant enable flag. Imported
+ * is random-seat, rated or casual, and gated by the tenant enable flag. Imported
  * for side effects by variant-tenant/register-tenants.ts.
  */
 
@@ -25,16 +25,19 @@ import {
 import {
   clearDarkXiangqiRuntimeTimers,
   type DarkXiangqiLiveRoom,
+  darkXiangqiWs,
   handleDarkXiangqiWebSocketConnection,
 } from './server-ws-dark-xiangqi.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import { xiangqiExportUci, xiangqiPgnWriter } from './xiangqi-game-export.js';
 
 export const darkXiangqiRooms = new Map<string, DarkXiangqiLiveRoom>();
@@ -43,6 +46,8 @@ export async function createDarkXiangqiRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: DarkXiangqiCreatorPreference,
   engine?: DarkXiangqiRoomEngineSeat,
+  // Lobby seeks and rated friend rooms (POST /api/rooms PvP); PvE never rates.
+  rated = false,
 ): Promise<DarkXiangqiLiveRoomCreation> {
   return createDarkXiangqiLiveRoom(
     {
@@ -56,6 +61,7 @@ export async function createDarkXiangqiRoom(
     timeControl,
     creatorPreference,
     engine,
+    rated,
   );
 }
 
@@ -72,6 +78,29 @@ export async function getOrLoadDarkXiangqiRoom(
   return room as DarkXiangqiLiveRoom | null;
 }
 
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+// The /games feed seals fog, so the inbox draws a player their own fog view:
+// the seat redaction the room snapshot runs for that seat, nothing wider.
+const darkXiangqiCorrespondence = tenantCorrespondenceBinding(darkXiangqiTenant, {
+  factoryContext: () => ({
+    rooms: darkXiangqiRooms as unknown as Map<string, DarkXiangqiRuntimeRoom>,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, darkXiangqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(darkXiangqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(
+      darkXiangqiTenant,
+      darkXiangqiRooms as unknown as Map<string, DarkXiangqiRuntimeRoom>,
+      roomId,
+    ),
+  lifecycleCtx: darkXiangqiWs.lifecycleCtx,
+  seatBoard: true,
+});
+
 registerVariantTenant({
   kind: darkXiangqiTenant.kind,
   gameSpecId: darkXiangqiTenant.gameSpecId,
@@ -83,6 +112,7 @@ registerVariantTenant({
     legacyVariants: ['dark-xiangqi'],
   },
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(darkXiangqiTenant),
   errorPrefix: 'dark_xiangqi',
   enabled: darkXiangqiTenant.enabled,
   rooms: darkXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
@@ -101,17 +131,25 @@ registerVariantTenant({
     ),
   clearRuntimeTimers: (room) =>
     clearDarkXiangqiRuntimeTimers(room as unknown as DarkXiangqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      darkXiangqiTenant,
+      darkXiangqiRooms.values(),
+      darkXiangqiWs.lifecycleCtx,
+      at,
+    ),
   clearRooms: () => darkXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsDarkXiangqi,
-    handleCreate: (ctx, _request, response, body) =>
-      handleDarkXiangqiCreate({ ...ctx, createDarkXiangqiRoom }, response, body),
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleDarkXiangqiCreate({ ...ctx, createDarkXiangqiRoom }, response, body, accountUser),
   },
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createDarkXiangqiRoom(timeControl, 'random');
+    createRoom: async (timeControl, rated) => {
+      const created = await createDarkXiangqiRoom(timeControl, 'random', undefined, rated);
       if (!created.ok) throw new Error(`dark_xiangqi_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },
@@ -131,6 +169,5 @@ registerVariantTenant({
     analysis: null,
     fen: standardXiangqiFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...darkXiangqiCorrespondence,
 });

@@ -52,6 +52,36 @@ export type XiangqiBroadcastRound = {
   sourceUrl?: string;
 };
 
+/** How a game was played, as the source states it: 慢棋 standard, 快棋 rapid,
+ *  超快棋 blitz (a team league's tiebreak). */
+export type XiangqiBroadcastGameKind = 'standard' | 'rapid' | 'blitz';
+
+/**
+ * What a source says about the game beyond the moves: which team match it
+ * belongs to, the table, which game of the table's pair, how it was played.
+ * A team league round is a set of matches (北京-江苏), each with four tables
+ * that play twice with colours swapped, plus blitz tiebreaks when a match is
+ * level; without these a round reads as the same pairings listed twice.
+ * Every field is optional: archive and WXF pages carry few of them.
+ */
+export type XiangqiBroadcastGameDetails = {
+  /** The team match as the source names it, "北京-江苏". */
+  match?: string;
+  /** Cached English form of `match`; recomputed at ingestion. */
+  matchEn?: string;
+  /** Table within the match (第04台). */
+  table?: number;
+  /** Game within the table's pairing (第1局). */
+  game?: number;
+  kind?: XiangqiBroadcastGameKind;
+  /** The time control as the source writes it, "40分＋20秒". */
+  timeControl?: string;
+  /** When the game was played, ISO with the event's offset. */
+  playedAt?: string;
+  /** Opening as the source classifies it, "B05 中炮对进左马". */
+  opening?: string;
+};
+
 export type XiangqiBroadcastBoard = {
   schema: typeof XIANGQI_BROADCAST_SCHEMA;
   id: string;
@@ -65,6 +95,7 @@ export type XiangqiBroadcastBoard = {
   result: XiangqiBroadcastResult;
   moves: XiangqiMove[];
   sourceUrl?: string;
+  details?: XiangqiBroadcastGameDetails;
 };
 
 export type XiangqiBroadcastTapeEvent = {
@@ -236,9 +267,30 @@ export function validateXiangqiBroadcastBoard(
   }
   validateMoveList(value.moves, 'board.moves', errors);
   validateOptionalString(value, 'sourceUrl', 'board', errors);
+  if (value.details !== undefined) validateGameDetails(value.details, errors);
   return errors.length
     ? { ok: false, errors }
     : { ok: true, value: value as XiangqiBroadcastBoard };
+}
+
+const GAME_KINDS = new Set<XiangqiBroadcastGameKind>(['standard', 'rapid', 'blitz']);
+
+function validateGameDetails(value: unknown, errors: string[]): void {
+  if (!isRecord(value)) {
+    errors.push('board.details must be an object');
+    return;
+  }
+  for (const key of ['match', 'matchEn', 'timeControl', 'playedAt', 'opening'] as const) {
+    validateOptionalString(value, key, 'board.details', errors);
+  }
+  for (const key of ['table', 'game'] as const) {
+    if (value[key] !== undefined && (!Number.isInteger(value[key]) || Number(value[key]) < 1)) {
+      errors.push(`board.details.${key} must be a positive integer`);
+    }
+  }
+  if (value.kind !== undefined && !GAME_KINDS.has(value.kind as XiangqiBroadcastGameKind)) {
+    errors.push('board.details.kind must be standard, rapid, or blitz');
+  }
 }
 
 export function validateXiangqiBroadcastTape(
@@ -407,8 +459,47 @@ export function broadcastSourcePageHref(sourceUrl: string | undefined): string |
   return undefined;
 }
 
+// Tours imported by hand, whose source URL names a game page (or nothing)
+// rather than the dpxq tour, mapped to that tour: the calendar lists each event
+// once by it, and the records credit links the tour's own dpxq page. Reviewed
+// in the same diff as the tour it maps, like the level grades.
+export const HAND_IMPORTED_DPXQ_TOURS: Readonly<Record<string, string>> = {
+  // 象甲"腾讯天天象棋"预选赛, Aug 17-19: 99 games pasted from movelist_12656.
+  '2026-league-qualifier': '12656',
+  // 10th North American Championship, Houston, Apr 3-5: 75 games from tour_12473.
+  '2026-north-american-championship': '12473',
+};
+
+/** dpxq's own page for a tour: the event, its rounds and its games. */
+export function dpxqTourPageUrl(tourId: string): string {
+  return `http://www.dpxq.com/hldcg/tour_${tourId}.html`;
+}
+
+/** The dpxq tour a tour of ours relays, from its discovery URL or the
+ *  hand-import map; null for a tour from anywhere else. */
+export function dpxqTourIdForTour(tour: {
+  slug: string;
+  sourceUrl?: string | null;
+}): string | null {
+  if (tour.sourceUrl?.startsWith('mistboard-discover://dpxq-tour')) {
+    try {
+      const id = new URL(tour.sourceUrl).searchParams.get('tour');
+      if (id && /^\d+$/.test(id)) return id;
+    } catch {
+      // Fall through to the hand-import map.
+    }
+  }
+  return HAND_IMPORTED_DPXQ_TOURS[tour.slug] ?? null;
+}
+
+/**
+ * The credit links the page a reader can check the records against: the
+ * tour's own dpxq page when the records came from dpxq and we know the tour,
+ * else the source's site.
+ */
 export function broadcastRecordsCredit(
   boards: readonly { sourceUrl?: string }[],
+  tour?: { slug: string; sourceUrl?: string | null } | null,
 ): { host: string; href: string } | null {
   const origins = new Map<string, string>();
   for (const board of boards) {
@@ -425,6 +516,7 @@ export function broadcastRecordsCredit(
   // Credit only what can be stated without qualification.
   if (origins.size !== 1) return null;
   const [entry] = [...origins.entries()];
-  const [host, href] = entry!;
-  return { host, href };
+  const [host, origin] = entry!;
+  const dpxqTour = host === 'dpxq.com' && tour ? dpxqTourIdForTour(tour) : null;
+  return { host, href: dpxqTour ? dpxqTourPageUrl(dpxqTour) : origin };
 }

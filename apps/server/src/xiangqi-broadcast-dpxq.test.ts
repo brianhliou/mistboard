@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { looksLikeDpxqPage, normalizeDpxqPageToFrameHtml } from './xiangqi-broadcast-dpxq.js';
+import { decodeSourceBody } from './xiangqi-broadcast-fetch.js';
 import { interpretXiangqiBroadcastSourceBody } from './xiangqi-broadcast-poller.js';
 import { translateXiangqiBroadcastSnapshot } from './xiangqi-broadcast-translate.js';
 import { convertWxfDhtmlXqPageToSnapshot } from './xiangqi-broadcast-wxf-dhtmlxq.js';
@@ -118,6 +119,64 @@ test('a tiebreak with the same pairing and colours in one round is its own board
   assert.notEqual(convert(undefined).id, classical.id);
 });
 
+test('a record whose title opens with a Latin team name is keyed by its game, not the team', () => {
+  // dpxq titles a record "<red team> <red> <result> <black team> <black>"; the
+  // 2026 North American Championship's teams include HTown and Katy, and the
+  // title's first token was read as a board token, so every game a team played
+  // red landed on one board.
+  const EVENT = '2026年第十届北美杯象棋锦标赛';
+  const convert = (title: string, red: string, black: string, id: string) => {
+    const page = liveBoardPage({ red, black, plies: 8, event: EVENT, round: '第04轮' }).replace(
+      '[DhtmlXQ_binit]',
+      `[DhtmlXQ_title]${title}[/DhtmlXQ_title]<br>[DhtmlXQ_binit]`,
+    );
+    const normalized = normalizeDpxqPageToFrameHtml(page);
+    const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '', {
+      sourceUrl: `http://www.dpxq.com/hldcg/search/view_m_${id}.html`,
+    });
+    if (!converted.ok) throw new Error('dpxq conversion failed');
+    return converted.snapshot.boards[0]!;
+  };
+  const first = convert('HTown 林年浩 和 UsCentralVietnamese 谢文川', '林年浩', '谢文川', '140580');
+  const second = convert('HTown David Nguyen 负 Katy 黎日光', 'David Nguyen', '黎日光', '140590');
+  assert.notEqual(first.sourceBoardId, 'htown');
+  assert.match(first.sourceBoardId, /^b[0-9a-z]+$/);
+  assert.notEqual(first.id, second.id);
+});
+
+test('a record matched to its round-page pairing is filed under the pairing id', () => {
+  // Real record: 2024 Asian individual championship, men r07 table 1 game 2
+  // (the final's rapid playoff), view_m_128343.
+  const page = readFileSync(
+    fileURLToPath(new URL('../fixtures/dpxq/view_m_128343-asian-2024.html', import.meta.url)),
+    'utf-8',
+  );
+  const normalized = normalizeDpxqPageToFrameHtml(page);
+  assert.ok(normalized.ok);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '', {
+    tourSlug: 'asian-2024-men',
+    roundId: 'asian-2024-men-r07',
+    sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_128343.html',
+    sourceBoardId: 'r07t01g2',
+    boardNumber: 1,
+  });
+  assert.ok(converted.ok);
+  if (!converted.ok) return;
+  const board = converted.snapshot.boards[0]!;
+  // The same id the results-only board from the round page carries, so the
+  // record extends it in place.
+  assert.equal(board.id, 'asian-2024-men-asian-2024-men-r07-r07t01g2');
+  assert.equal(board.sourceBoardId, 'r07t01g2');
+  assert.equal(board.boardNumber, 1);
+  assert.equal(board.red.name, '刘柏宏');
+  assert.equal(board.result, '1-0');
+  assert.equal(board.moves.length, 63);
+  assert.deepEqual(
+    { table: board.details?.table, game: board.details?.game, kind: board.details?.kind },
+    { table: 1, game: 2, kind: 'rapid' },
+  );
+});
+
 test('looksLikeDpxqPage flags raw dpxq pages, not framed WXF or JSON', () => {
   assert.equal(looksLikeDpxqPage(ARCHIVE_HTML), true);
   assert.equal(looksLikeDpxqPage(liveBoardPage({ red: 'A', black: 'B', plies: 4 })), true);
@@ -143,6 +202,45 @@ test('dpxq archive page normalizes and replays as the full real game', () => {
   assert.equal(board.black.name, '陶汉明');
   assert.equal(board.result, '1/2-1/2');
   assert.equal(board.status, 'complete');
+});
+
+test('an archive page with variations replays branch 0, the game as played', () => {
+  // view_m_140550 (2026 North American Championship): the movelist var holds a
+  // branch list and the [DhtmlXQ_movelist] tag stays empty.
+  const branched = ARCHIVE_HTML.replace(
+    /var DhtmlXQ_movelist = '\[DhtmlXQ_movelist\]\d+\[\/DhtmlXQ_movelist\]'/,
+    `var DhtmlXQ_movelist = '[0_1_0]${FULL_MOVELIST}[/0_1_0][0_57_1]18282002[/0_57_1][1_88_2]1435[/1_88_2]'`,
+  );
+  assert.notEqual(branched, ARCHIVE_HTML);
+  const normalized = normalizeDpxqPageToFrameHtml(branched);
+  assert.equal(normalized.ok, true);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  assert.equal(converted.snapshot.boards[0]!.moves.length, 89);
+});
+
+test('an archive page filed with no round does not take its opening as the round', () => {
+  // The 2026 春丘大叶杯 ten-game match: "players - event - opening - site",
+  // four parts, and an empty round tag.
+  const noRound = ARCHIVE_HTML.replace(/ - 第02轮 - D33 /, ' - D33 ').replace(
+    /\[DhtmlXQ_round\][^[]*\[\/DhtmlXQ_round\]/,
+    '[DhtmlXQ_round][/DhtmlXQ_round]',
+  );
+  assert.notEqual(noRound, ARCHIVE_HTML);
+  const normalized = normalizeDpxqPageToFrameHtml(noRound);
+  assert.equal(normalized.ok, true);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  const round = converted.snapshot.rounds[0]!;
+  assert.doesNotMatch(round.name, /D33|中炮/);
+  assert.doesNotMatch(round.id, /d33/i);
+
+  // The stated round still comes through.
+  const stated = normalizeDpxqPageToFrameHtml(ARCHIVE_HTML);
+  const withRound = convertWxfDhtmlXqPageToSnapshot(stated.ok ? stated.html : '');
+  assert.equal(withRound.ok && withRound.snapshot.rounds[0]!.name, '第02轮');
 });
 
 test('interpret routes a raw dpxq page through the dpxq adapter', () => {
@@ -310,6 +408,32 @@ test('a live board takes the team from the combined red/black tag', () => {
   assert.equal(board.black.federation, '杭州市棋类协会');
 });
 
+test('a Latin name with spaces does not lend its first word to the team', () => {
+  // view_m_140512 (2026 North American Championship): [DhtmlXQ_red] "Katy Van
+  // Nguyen", [DhtmlXQ_redname] "Van Nguyen". Split at the last space, the team
+  // read "Katy Van".
+  const base = liveBoardPage({ red: 'Katy Van Nguyen', black: '纽约 孟健', plies: 8 });
+  const named = base.replace(
+    '</body>',
+    '[DhtmlXQ_redname]Van Nguyen[/DhtmlXQ_redname][DhtmlXQ_blackname]孟健[/DhtmlXQ_blackname]</body>',
+  );
+  const withTeamTag = named.replace(
+    '</body>',
+    '[DhtmlXQ_redteam]Katy[/DhtmlXQ_redteam][DhtmlXQ_blackteam]纽约[/DhtmlXQ_blackteam]</body>',
+  );
+  for (const page of [named, withTeamTag]) {
+    const normalized = normalizeDpxqPageToFrameHtml(page);
+    const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+    assert.equal(converted.ok, true);
+    if (!converted.ok) return;
+    const board = converted.snapshot.boards[0]!;
+    assert.equal(board.red.name, 'Van Nguyen');
+    assert.equal(board.red.federation, 'Katy');
+    assert.equal(board.black.name, '孟健');
+    assert.equal(board.black.federation, '纽约');
+  }
+});
+
 test('an individual game gets no invented affiliation', () => {
   const page = liveBoardPage({ red: '王天一', black: '郑惟桐', plies: 8 });
   const normalized = normalizeDpxqPageToFrameHtml(page);
@@ -320,4 +444,56 @@ test('an individual game gets no invented affiliation', () => {
   assert.equal(board.red.name, '王天一');
   assert.equal(board.red.federation, undefined);
   assert.equal(board.black.federation, undefined);
+});
+
+// Two real 2026 men's league game pages (gb2312, round 6, 2026-09-22 uploads):
+// table 4 of 北京-江苏 game 1, a standard game with a year typo in its date,
+// and table 4 of 广东-上海 game 2, a 5+3 blitz tiebreak that the flat grid
+// used to number "Board 73".
+function leaguePage(name: string): string {
+  const bytes = readFileSync(fileURLToPath(new URL(`../fixtures/dpxq/${name}`, import.meta.url)));
+  return decodeSourceBody(new Uint8Array(bytes), null);
+}
+
+test('a league game page carries its match, table, game, kind and date onto the board', () => {
+  const normalized = normalizeDpxqPageToFrameHtml(leaguePage('view_m_143907-league-r06.html'));
+  assert.equal(normalized.ok, true);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  const [board] = translateXiangqiBroadcastSnapshot(converted.snapshot).boards;
+  assert.deepEqual(board?.details, {
+    match: '北京-江苏',
+    table: 4,
+    game: 1,
+    kind: 'standard',
+    timeControl: '40分＋20秒',
+    // The page says 2029; the event is 2026年…, so the event's year wins.
+    playedAt: '2026-09-16T19:00:00+08:00',
+    opening: 'B05 中炮对进左马',
+    matchEn: 'Beijing-Jiangsu',
+  });
+});
+
+test('a tiebreak page is marked blitz with its own time control', () => {
+  const normalized = normalizeDpxqPageToFrameHtml(
+    leaguePage('view_m_143921-league-r06-blitz.html'),
+  );
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  const details = converted.snapshot.boards[0]?.details;
+  assert.equal(details?.match, '广东-上海');
+  assert.equal(details?.table, 4);
+  assert.equal(details?.game, 2);
+  assert.equal(details?.kind, 'blitz');
+  assert.equal(details?.timeControl, '5分＋3秒');
+});
+
+test('a page that states no details still records that it was read', () => {
+  const normalized = normalizeDpxqPageToFrameHtml(ARCHIVE_HTML);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  assert.ok(converted.snapshot.boards[0]?.details, 'an empty details object, not undefined');
 });

@@ -22,7 +22,12 @@
 
 import type { JungleColor, JunglePieceRole } from '@mistboard/game';
 import { Crosshair, House, type IconNode } from 'lucide';
-import { JUNGLE_ART, type JungleCueBadgeSpec, jungleCueBadgeSvg } from './jungle-art.js';
+import {
+  JUNGLE_ART,
+  type JungleCueBadgeSpec,
+  jungleCueBadgeSvg,
+  jungleTokenSquare,
+} from './jungle-art.js';
 
 export type JungleBoardSkin = 'illustrated' | 'bare';
 export type JunglePieceSkin = 'animals' | 'characters';
@@ -159,15 +164,19 @@ export type PlainTokenOptions = {
    *  not the art -- so both token skins draw the identical mark. */
   cueBadge?: boolean;
   cueBadgeOverrides?: Partial<JungleCueBadgeSpec>;
+  /** The size the river badge is drawn from; defaults to `size` (see framedTokenSvg). */
+  badgeSize?: number;
 };
 
-/** The character token: the same cream disc + ink ring as the animal token, with
- *  the traditional character and its capture rank in place of the cutout. Sharing
- *  the disc geometry means a swap never moves a piece or breaks a last-move ring. */
+/** The character token: the same cream rounded square + ring as the animal token,
+ *  with the traditional character and its capture rank in place of the cutout.
+ *  Sharing the geometry means a swap never moves a piece or breaks a last-move mark.
+ *  The ring keeps the side's ink here: only the animal art carries the side colour
+ *  on its own. */
 export function characterTokenSvg(opts: PlainTokenOptions): string {
   const { cx, cy, size, ink, role, ringStrokeRatio, filterId, cueBadge, cueBadgeOverrides } = opts;
-  const discR = size * JUNGLE_ART.discRadiusRatio;
-  const ringR = size * JUNGLE_ART.ringRadiusRatio;
+  const faceHalf = size * JUNGLE_ART.discRadiusRatio;
+  const ringHalf = size * JUNGLE_ART.ringRadiusRatio;
   const ringW = size * (ringStrokeRatio ?? JUNGLE_ART.ringStrokeRatio);
   const inkHex = JUNGLE_ART.ink[ink];
   const open = filterId ? `<g filter="url(#${filterId})">` : '<g>';
@@ -175,13 +184,15 @@ export function characterTokenSvg(opts: PlainTokenOptions): string {
   // the ring; both are centred on the disc as one optical block.
   return [
     open,
-    `<circle cx="${cx}" cy="${cy}" r="${discR}" fill="${JUNGLE_ART.discFill}"/>`,
+    jungleTokenSquare(cx, cy, faceHalf, `fill="${JUNGLE_ART.discFill}"`),
     `<text x="${cx}" y="${cy - size * 0.06}" font-family="serif" font-size="${size * 0.5}" font-weight="700" ` +
       `fill="${inkHex}" text-anchor="middle" dominant-baseline="central">${GLYPH[role]}</text>`,
     `<text x="${cx}" y="${cy + size * 0.27}" font-family="system-ui, sans-serif" font-size="${size * 0.19}" font-weight="600" ` +
       `fill="${inkHex}" fill-opacity="0.75" text-anchor="middle" dominant-baseline="central">${RANK[role]}</text>`,
-    `<circle cx="${cx}" cy="${cy}" r="${ringR}" fill="none" stroke="${inkHex}" stroke-width="${ringW}"/>`,
+    jungleTokenSquare(cx, cy, ringHalf, `fill="none" stroke="${inkHex}" stroke-width="${ringW}"`),
     `</g>`,
-    cueBadge ? jungleCueBadgeSvg(cx, cy, size, role, ink, cueBadgeOverrides ?? {}) : '',
+    cueBadge
+      ? jungleCueBadgeSvg(cx, cy, opts.badgeSize ?? size, role, ink, cueBadgeOverrides ?? {})
+      : '',
   ].join('');
 }

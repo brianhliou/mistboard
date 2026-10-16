@@ -14,8 +14,13 @@
  */
 
 import type { ClockPolicyKind, RoomTimeControl } from '@mistboard/game';
-import { clockPolicyKindFor, isAbortReason, maybeGameSpecForId } from '@mistboard/game';
-import { countDeployGatingRooms } from '../deploy-gate.js';
+import {
+  clockPolicyKindFor,
+  isAbortReason,
+  isRetiredGameSpec,
+  maybeGameSpecForId,
+} from '@mistboard/game';
+import { countDeployGatingRooms, resumablePveRoomPredicate } from '../deploy-gate.js';
 import {
   firstPartyBotForEngine,
   firstPartyBotForId,
@@ -23,20 +28,36 @@ import {
   liveSeatEngineName,
 } from '../first-party-bots.js';
 import { roomViewPolicy } from '../server-policy.js';
+import {
+  guardTenantReplay,
+  noteReplayableTenantGame,
+  noteUnreplayableTenantGame,
+  UnreplayableTenantGameError,
+} from './replay-guard.js';
 import type {
   TenantClientEvent,
   TenantClockState,
   TenantEndReason,
   TenantGameStateLike,
   TenantGameStatus,
+  TenantPauseReason,
   TenantProjection,
+  TenantResumeReason,
   TenantRoomEvent,
   TenantRuntimeRoom,
   TenantSeat,
   TenantSnapshotClient,
   VariantTenant,
 } from './tenant.js';
-import { assertForfeitPolicy, forfeitWinnerOf, lastSeat, tenantSeatMayAct } from './tenant.js';
+import {
+  assertForfeitPolicy,
+  forfeitWinnerOf,
+  isTenantAdjudicationReason,
+  isTenantGameOrigin,
+  lastSeat,
+  TENANT_SERVER_ONLY_EVENT_TYPES,
+  tenantSeatMayAct,
+} from './tenant.js';
 
 export type TenantRoomCreation<
   Kind extends string,
@@ -56,7 +77,7 @@ export type TenantRoomHydration<
   Spec extends string = string,
 > =
   | { ok: true; room: TenantRuntimeRoom<Kind, C, M, State, Spec> }
-  | { ok: false; error: 'empty_event_log' | 'invalid_event_log' };
+  | { ok: false; error: 'empty_event_log' | 'invalid_event_log' | 'unreplayable_event_log' };
 
 export function isTenantRoomId(tenant: { roomIdPrefix: string }, roomId: string): boolean {
   return roomId.startsWith(tenant.roomIdPrefix);
@@ -262,6 +283,7 @@ export function createTenantRuntimeRoom<
     pveBotId?: string;
     rated?: boolean;
     timeControl?: RoomTimeControl;
+    lobbyMatch?: boolean;
   } = {},
 ): TenantRoomCreation<Kind, C, M, State, Spec> {
   // A tenant with more than two seats that has not said what a forfeit does
@@ -269,6 +291,11 @@ export function createTenantRuntimeRoom<
   // room rather than discovering it mid-game.
   assertForfeitPolicy(tenant);
   if (!tenant.enabled()) return { ok: false, error: 'disabled' };
+  // The backstop for a retired spec: every path that starts a game (rooms,
+  // lobby matches, correspondence, rematches, bot-vs-bot) comes through here,
+  // while a game in progress rehydrates through createTenantRuntimeRoomFromEvents
+  // and is untouched. The routes answer 410 before they get this far.
+  if (isRetiredGameSpec(tenant.gameSpecId)) return { ok: false, error: 'disabled' };
 
   const now = options.now ?? Date.now();
   const setup = tenant.rules.createSetup?.();
@@ -283,6 +310,7 @@ export function createTenantRuntimeRoom<
       ...(options.rated ? { rated: true } : {}),
       ...(options.timeControl ? { timeControl: options.timeControl } : {}),
       ...(setup !== undefined ? { setup } : {}),
+      ...(options.lobbyMatch ? { lobbyMatch: true } : {}),
     },
   ];
   if (options.timeControl) {
@@ -312,10 +340,21 @@ export function createTenantRuntimeRoomFromEvents<
 >(
   tenant: VariantTenant<Kind, C, M, State, View, Spec>,
   events: readonly TenantRoomEvent<C, M, Spec>[],
-  projection = replayTenantEvents(tenant, events),
+  replayed?: TenantProjection<C, State, Spec>,
 ): TenantRoomHydration<Kind, C, M, State, Spec> {
   if (events.length === 0) return { ok: false, error: 'empty_event_log' };
   if (!isTenantEventLog(tenant, events)) return { ok: false, error: 'invalid_event_log' };
+  let projection: TenantProjection<C, State, Spec>;
+  try {
+    projection = replayed ?? replayTenantEvents(tenant, events);
+  } catch (err) {
+    // A log the current rules refuse (replay-guard.ts): the room is gone, not
+    // a server fault, so hydration answers like any other unloadable log.
+    if (err instanceof UnreplayableTenantGameError) {
+      return { ok: false, error: 'unreplayable_event_log' };
+    }
+    throw err;
+  }
   const first = events[0]!;
   const pveBotId = first.type === 'room-created' ? (first.pveBotId ?? null) : null;
   return {
@@ -361,6 +400,9 @@ const REJECTABLE_EVENT_TYPES = new Set([
   'seat-resigned',
   'game-aborted',
   'seat-forfeited',
+  'game-adjudicated',
+  'clock-paused',
+  'clock-resumed',
 ]);
 
 /**
@@ -435,7 +477,44 @@ export function replayTenantEvents<
           first.setup,
         )
       : initialTenantProjection(tenant, firstRoomId);
-  return events.reduce((projection, event) => applyTenantEvent(tenant, projection, event), seed);
+  // The replay boundary: a stored log the current rules refuse (a variant's
+  // rules changed under an old game) becomes UnreplayableTenantGameError, which
+  // every read surface treats as "no such game" (replay-guard.ts).
+  return guardTenantReplay(tenant.kind, first?.roomId, () =>
+    events.reduce((projection, event) => applyTenantEvent(tenant, projection, event), seed),
+  );
+}
+
+/**
+ * Does this stored log still replay under the tenant's current rules? The
+ * check list and picker surfaces run before they show a game
+ * (VariantTenantRegistration.replays, replayable-games.ts). A log that fails
+ * the schema check counts as not replayable too: no read surface can open it.
+ */
+export function tenantReplayCheck<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+): (events: readonly unknown[], roomId: string) => boolean {
+  return (events, roomId) => {
+    if (!isTenantEventLog(tenant, events, roomId)) {
+      noteUnreplayableTenantGame(tenant.kind, roomId, new Error('invalid event log'));
+      return false;
+    }
+    try {
+      replayTenantEvents(tenant, events);
+    } catch (err) {
+      if (err instanceof UnreplayableTenantGameError) return false;
+      throw err;
+    }
+    noteReplayableTenantGame(roomId);
+    return true;
+  };
 }
 
 /**
@@ -518,6 +597,9 @@ export function applyTenantEvent<
   }
   if (event.type === 'move-played') {
     if (status.type !== 'playing') return projection;
+    // A paused game takes no moves: its clock is frozen, and a move landing on
+    // a frozen clock would read it as not yet armed and never restart it.
+    if (projection.paused) return projection;
     // Same predicate the live path uses, so a replayed claim is accepted by
     // exactly the states that accepted it live.
     if (!tenantSeatMayAct(tenant, projection.state, event.color)) return projection;
@@ -573,7 +655,93 @@ export function applyTenantEvent<
       state: finishByForfeit(tenant, projection.state, event.color, 'abandonment'),
     };
   }
+  if (event.type === 'game-adjudicated') {
+    if (status.type !== 'playing' || !tenant.rules.adjudicate) return projection;
+    return {
+      ...projection,
+      clock: freezeTenantClock(projection.clock, event.at),
+      state: tenant.rules.adjudicate(projection.state, event.winner, event.reason),
+    };
+  }
+  if (event.type === 'clock-paused') {
+    if (status.type !== 'playing' || projection.paused || !projection.clock) return projection;
+    return {
+      ...projection,
+      clock: event.clock,
+      paused: { at: event.at, activeColor: event.activeColor },
+    };
+  }
+  if (event.type === 'clock-resumed') {
+    if (status.type !== 'playing' || !projection.paused) return projection;
+    const { paused: _paused, ...rest } = projection;
+    return { ...rest, clock: event.clock };
+  }
   return projection;
+}
+
+/**
+ * The pause a server stop appends to a live game, or null when there is
+ * nothing to protect: a finished or already-paused game, an untimed one, or a
+ * correspondence game (its days-scale deadline is durable and a restart costs
+ * it nothing). The clock freezes at `at`; who was on move rides along because
+ * the frozen clock drops it.
+ */
+export function tenantPauseEventFor<C extends string, M, Spec extends string>(
+  projection: TenantProjection<C, TenantGameStateLike<C>, Spec>,
+  at: number,
+  reason: TenantPauseReason,
+): Extract<TenantRoomEvent<C, M, Spec>, { type: 'clock-paused' }> | null {
+  if (projection.state.status.type !== 'playing' || projection.paused) return null;
+  const clock = projection.clock;
+  if (!clock) return null;
+  if (clockPolicyKindFor(projection.timeControl) === 'days-per-move') return null;
+  const frozen = freezeTenantClock(clock, at);
+  if (!frozen) return null;
+  return {
+    type: 'clock-paused',
+    at,
+    roomId: projection.roomId,
+    reason,
+    activeColor: clock.activeColor,
+    clock: frozen,
+  };
+}
+
+// The resume that restarts the clock of whoever was on move when it paused.
+export function tenantResumeEventFor<C extends string, M, Spec extends string>(
+  projection: TenantProjection<C, TenantGameStateLike<C>, Spec>,
+  at: number,
+  reason: TenantResumeReason,
+): Extract<TenantRoomEvent<C, M, Spec>, { type: 'clock-resumed' }> | null {
+  const paused = projection.paused;
+  if (projection.state.status.type !== 'playing' || !paused || !projection.clock) return null;
+  return {
+    type: 'clock-resumed',
+    at,
+    roomId: projection.roomId,
+    reason,
+    clock: {
+      ...projection.clock,
+      activeColor: paused.activeColor,
+      runningSince: paused.activeColor === null ? null : at,
+    },
+  };
+}
+
+// A server that died without running its shutdown (SIGKILL, a crash) leaves a
+// live game with no pause, and the whole outage would land on the side to
+// move. Found on hydration by the gap since the last event: past the threshold
+// it is an outage, not a long think, and the game is paused at the last event.
+// Same rule and threshold as the chess stack's applyOrphanRecoveryIfNeeded.
+export function tenantOrphanPauseFor<C extends string, M, Spec extends string>(
+  projection: TenantProjection<C, TenantGameStateLike<C>, Spec>,
+  events: readonly TenantRoomEvent<C, M, Spec>[],
+  now: number,
+  orphanThresholdMs: number,
+): Extract<TenantRoomEvent<C, M, Spec>, { type: 'clock-paused' }> | null {
+  const last = events[events.length - 1];
+  if (!last || now - last.at < orphanThresholdMs) return null;
+  return tenantPauseEventFor<C, M, Spec>(projection, last.at + 1, 'orphaned');
 }
 
 // The full per-seat snapshot wire shape. Pinned per tenant by its golden wire
@@ -669,6 +837,31 @@ export function tenantSeatProfiles<
   return profiles;
 }
 
+// The board a client is shown: the `state` half of its snapshot. One function
+// so every surface that shows a seat its board (the room snapshot, the
+// /correspondence inbox card) runs the same redaction for that seat.
+export function tenantSeatStateView<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  client: TenantSnapshotClient<C>,
+): View {
+  // Board half of the finished-game reveal, paired with the event half in
+  // tenantClientEvents. Both consult the same roomViewPolicy so a finished room
+  // can never hand out a full move list beside an empty board, which is what a
+  // one-sided change produces.
+  const reveal = tenantRoomRevealsTruth(tenant, room, client);
+  return reveal && tenant.visibility.truthView
+    ? tenant.visibility.truthView(room.projection.state, room.events)
+    : tenant.visibility.viewForClient(room.projection.state, client, room.events);
+}
+
 export function tenantSnapshotPayload<
   Kind extends string,
   C extends string,
@@ -681,15 +874,7 @@ export function tenantSnapshotPayload<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): TenantSnapshotPayload<C, M, View, Spec> & Record<string, unknown> {
-  // Board half of the finished-game reveal, paired with the event half in
-  // tenantClientEvents. Both consult the same roomViewPolicy so a finished room
-  // can never hand out a full move list beside an empty board, which is what a
-  // one-sided change produces.
-  const reveal = tenantRoomRevealsTruth(tenant, room, client);
-  const state =
-    reveal && tenant.visibility.truthView
-      ? tenant.visibility.truthView(room.projection.state, room.events)
-      : tenant.visibility.viewForClient(room.projection.state, client, room.events);
+  const state = tenantSeatStateView(tenant, room, client);
   return {
     type: 'snapshot' as const,
     roomId: room.id,
@@ -707,8 +892,157 @@ export function tenantSnapshotPayload<
     seatProfiles: tenantSeatProfiles(tenant, room),
     state,
     timeControl: room.projection.timeControl,
+    // Only on lobby rooms, so every invite room's wire (and golden fixture) is
+    // unchanged. Tells the client there is no invite link to share.
+    ...(tenantRoomIsLobbyMatch(room) ? { lobbyMatch: true } : {}),
+    // A room fact for every tenant, so the header reads Rated on each of them.
+    // It used to ride only in the snapshotExtras of the tenants that had rated
+    // friend rooms first (xiangqi, fortress, duck, atomic, crazyhouse); jieqi,
+    // banqi, jungle, flip jungle and Fog Xiangqi rated games, lobby-paired ones
+    // included, showed "Casual". Only on rated rooms, so casual wire is unchanged.
+    ...(room.rated ? { rated: true } : {}),
+    // PvP rematch offers (rematch.ts), for every tenant that rematches, only
+    // once the game is over: a reload shows a pending offer, and a live room's
+    // wire is unchanged. The flags say which seat offered, nothing else.
+    ...(room.projection.state.status.type === 'finished' && tenantRoomOffersRematch(tenant, room)
+      ? {
+          rematch: {
+            offers: tenantRematchOfferFlags(tenant, room),
+            finalizedRoomId: room.rematch.finalizedRoomId ?? null,
+          },
+        }
+      : {}),
     ...(tenant.wire?.snapshotExtras?.(room, client) ?? {}),
   };
+}
+
+/**
+ * The viewer's own per-ply history for the HELLO frame (visibility.liveHistory),
+ * so a reload of a LIVE room can step back through every ply. Empty unless
+ * every gate holds:
+ *   - the tenant implements liveHistory (hidden-info tenants whose clients
+ *     cannot rebuild a live game from their redacted log; absence sends
+ *     nothing),
+ *   - the viewer is a COLOR seat (ws.ts calls this for a seat only after
+ *     assignTenantSeat authenticated the seat token or account) or a spectator
+ *     whom the visibility class lets see a live board at all: a 'dark' room's
+ *     live spectator is shown nothing (roomViewPolicy), so it gets no history
+ *     whatever the hook would return,
+ *   - the room is still playing: a finished room reveals truth through the
+ *     snapshot (and the client rebuilds from it), an aborted one has nothing
+ *     to replay.
+ * Hello only, not every snapshot: broadcastEventAppended builds a snapshot per
+ * client per move, and the history is O(plies) views.
+ */
+export function tenantLiveHistoryExtras<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  client: TenantSnapshotClient<C>,
+): { liveHistory?: Array<{ ply: number; view: View }> } {
+  const liveHistory = tenant.visibility.liveHistory;
+  if (!liveHistory) return {};
+  if (room.projection.state.status.type !== 'playing') return {};
+  const viewer = client.seat;
+  if (viewer === 'spectator') {
+    const spec = maybeGameSpecForId(tenant.gameSpecId);
+    if (!spec) return {};
+    if (roomViewPolicy(spec.visibility, false, 'spectator') === 'nothing') return {};
+  } else if (!tenant.colors.includes(viewer)) {
+    return {};
+  }
+  const history = liveHistory(room.events, viewer);
+  return history.length > 0 ? { liveHistory: history } : {};
+}
+
+/**
+ * The generic liveHistory builder: replay the log through the tenant and ask
+ * viewForClient, at ply 0 and after every move-played, for the view it would
+ * have served this viewer then (the log cut at that event). Hidden-info safe by
+ * construction: each entry is a view the same function already served, or
+ * would have served, this viewer live; nothing is derived from a later ply.
+ * legalMoves are dropped: a scrubbed board takes no input (touching it returns
+ * to live, which carries the live legal moves), and they are bytes per ply.
+ */
+export function tenantPerPlyViews<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  events: readonly TenantRoomEvent<C, M, Spec>[],
+  viewer: TenantSeat<C>,
+): Array<{ ply: number; view: View }> {
+  const created = events[0];
+  if (created?.type !== 'room-created') return [];
+  const client: TenantSnapshotClient<C> = { id: `ply-view-${viewer}`, seat: viewer, solo: false };
+  const withoutLegalMoves = (view: View): View =>
+    view && typeof view === 'object' && 'legalMoves' in view
+      ? ({ ...view, legalMoves: [] } as View)
+      : view;
+  let projection = replayTenantEvents(tenant, [created]);
+  const history = [
+    {
+      ply: 0,
+      view: withoutLegalMoves(
+        tenant.visibility.viewForClient(projection.state, client, events.slice(0, 1)),
+      ),
+    },
+  ];
+  for (const [index, event] of events.entries()) {
+    if (index === 0) continue;
+    projection = applyTenantEvent(tenant, projection, event);
+    if (event.type !== 'move-played') continue;
+    history.push({
+      ply: history.length,
+      view: withoutLegalMoves(
+        tenant.visibility.viewForClient(projection.state, client, events.slice(0, index + 1)),
+      ),
+    });
+  }
+  return history;
+}
+
+/** Was this room made by a lobby match? Read off the durable room-created event. */
+export function tenantRoomIsLobbyMatch(room: { events: readonly { type: string }[] }): boolean {
+  const first = room.events[0] as { type: string; lobbyMatch?: unknown } | undefined;
+  return first?.type === 'room-created' && first.lobbyMatch === true;
+}
+
+/**
+ * Does this room offer the mutual-confirm rematch (rematch.ts)? Every tenant
+ * does by default. The exceptions are structural, so a new tenant inherits them:
+ * a tenant that opts out (mahjong's table of four, correspondence-only dark
+ * chess), a table of more than two (the rematch swaps two seats), a bot game
+ * (the engine never offers: the web Rematch button opens a new bot room
+ * instead), a correspondence room (#531), and a retired variant, which opens no
+ * new rooms (createTenantRuntimeRoom), so its Rematch could only fail.
+ */
+export function tenantRoomOffersRematch<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+): boolean {
+  if (tenant.rematch) return false;
+  if (tenant.colors.length !== 2) return false;
+  if (isRetiredGameSpec(tenant.gameSpecId)) return false;
+  if (room.projection.timeControl?.daysPerMove !== undefined) return false;
+  return tenantPveEngineId(tenant, room) === null;
 }
 
 export function tenantRematchOfferFlags<C extends string>(
@@ -783,6 +1117,7 @@ export function tenantEventsForClient<
   const reveal = tenantRoomRevealsTruth(tenant, room, client);
   let ply = 0;
   for (const event of room.events) {
+    if (TENANT_SERVER_ONLY_EVENT_TYPES.has(event.type)) continue;
     if (event.type === 'move-played') ply += 1;
     const visible = reveal
       ? ((event.type === 'move-played'
@@ -904,7 +1239,9 @@ export function isTenantEvent<
         tenant.rules.isColor(event.creatorPreference)) &&
       (event.pveBotId === undefined || typeof event.pveBotId === 'string') &&
       (event.rated === undefined || typeof event.rated === 'boolean') &&
-      (event.timeControl === undefined || isRoomTimeControl(event.timeControl))
+      (event.timeControl === undefined || isRoomTimeControl(event.timeControl)) &&
+      (event.origin === undefined || isTenantGameOrigin(event.origin)) &&
+      (event.lobbyMatch === undefined || typeof event.lobbyMatch === 'boolean')
     );
   }
   if (event.type === 'seat-assigned') {
@@ -946,6 +1283,26 @@ export function isTenantEvent<
     return (
       tenant.rules.isColor(event.color) &&
       (event.clock === undefined || isTenantClockState(tenant, event.clock))
+    );
+  }
+  if (event.type === 'game-adjudicated') {
+    return (
+      tenant.rules.adjudicate !== undefined &&
+      (event.winner === null || tenant.rules.isColor(event.winner)) &&
+      isTenantAdjudicationReason(event.reason)
+    );
+  }
+  if (event.type === 'clock-paused') {
+    return (
+      (event.reason === 'shutdown' || event.reason === 'orphaned') &&
+      (event.activeColor === null || tenant.rules.isColor(event.activeColor)) &&
+      isTenantClockState(tenant, event.clock)
+    );
+  }
+  if (event.type === 'clock-resumed') {
+    return (
+      (event.reason === 'players-returned' || event.reason === 'grace-elapsed') &&
+      isTenantClockState(tenant, event.clock)
     );
   }
   return false;
@@ -1031,13 +1388,26 @@ export function isTenantClockState<C extends string>(
 // chess map agree on what "live" means. They used to disagree: this side
 // dropped correspondence and the chess side didn't, so a single chess
 // correspondence room could block every deploy forever.
+//
+// Pass the tenant to stop counting its resumable PvE games (#559): a spec in
+// RESUMABLE_PVE_GAME_SPECS whose room has an engine in a seat. Same predicate
+// as the registry's census, so the gate and its explanation agree.
 export function countActiveTenantGames(
   rooms: Iterable<{
     events?: readonly { at?: number }[];
-    projection: { state: { status: { type: string } }; timeControl?: RoomTimeControl };
+    projection: {
+      state: { status: { type: string } };
+      timeControl?: RoomTimeControl;
+      seats?: object;
+    };
   }>,
+  tenant?: Parameters<typeof resumablePveRoomPredicate>[0],
 ): number {
-  return countDeployGatingRooms(rooms);
+  return countDeployGatingRooms(
+    rooms,
+    Date.now(),
+    tenant ? resumablePveRoomPredicate(tenant) : undefined,
+  );
 }
 
 export function computeTenantConnectedSeats<C extends string>(

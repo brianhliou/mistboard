@@ -53,3 +53,18 @@ export function seatInkForVariant(
   if (seat !== 'red' && seat !== 'black') return seat;
   return flipSeatInk(seat, firstColor ?? null);
 }
+
+/**
+ * A live flip game's bound ink, read out of a postgame-shaped board payload's
+ * view (the /watch rows and the /games cards both get one). The payload is
+ * `Record<string, unknown>` by contract (the renderers own its shape), so this
+ * narrows defensively: anything unexpected reads as unbound, which renders a
+ * neutral disc rather than a wrong one.
+ */
+export function payloadFirstColor(
+  payload: Record<string, unknown> | null | undefined,
+): FlipSeat | null {
+  const view = (payload as { view?: { firstColor?: unknown } } | null | undefined)?.view;
+  const firstColor = view?.firstColor;
+  return firstColor === 'red' || firstColor === 'black' ? firstColor : null;
+}

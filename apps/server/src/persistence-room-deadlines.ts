@@ -7,6 +7,7 @@
  * stays the source of truth; this table only decides which rooms to look at.
  */
 
+import { linkableHandleSql } from './persistence-correspondence-seeks.js';
 import { getPool } from './persistence-db.js';
 
 export type RoomDeadlineRecord = {
@@ -34,7 +35,13 @@ export type CorrespondenceGameSummary = {
   mySeat: string;
   isYourMove: boolean;
   opponentName: string | null;
+  // The opponent's handle for a /@/<handle> link; null for a closed or private
+  // account (linkableHandleSql) and for a seat with no account behind it.
+  opponentHandle?: string | null;
   dueAt: Date;
+  // Rated correspondence: read off the room's own room-created event (seq 0), the
+  // durable home of the flag, so the index needs no copy of it.
+  rated?: boolean;
 };
 
 export async function upsertRoomDeadline(record: RoomDeadlineRecord): Promise<void> {
@@ -78,11 +85,16 @@ export async function listCorrespondenceGamesForUser(
     on_move_seat: string;
     due_at: Date;
     opponent_name: string | null;
+    opponent_handle: string | null;
+    rated: boolean;
   }>(
     `SELECT rd.room_id, rd.game_spec_id, mine.seat AS my_seat, rd.seat AS on_move_seat,
-            rd.due_at, COALESCE(opp_user.display_name, opp_user.handle) AS opponent_name
+            rd.due_at, COALESCE(opp_user.display_name, opp_user.handle) AS opponent_name,
+            ${linkableHandleSql('opp_user')} AS opponent_handle,
+            COALESCE((created.payload->>'rated')::boolean, false) AS rated
      FROM room_seat_tokens mine
      JOIN room_deadlines rd ON rd.room_id = mine.room_id
+     LEFT JOIN events created ON created.room_id = rd.room_id AND created.seq = 0
      LEFT JOIN room_seat_tokens opp
        ON opp.room_id = mine.room_id AND opp.seat <> mine.seat AND opp.revoked_at IS NULL
      LEFT JOIN users opp_user ON opp_user.id = opp.user_id
@@ -96,7 +108,9 @@ export async function listCorrespondenceGamesForUser(
     mySeat: row.my_seat,
     isYourMove: row.on_move_seat === row.my_seat,
     opponentName: row.opponent_name,
+    opponentHandle: row.opponent_handle,
     dueAt: row.due_at,
+    rated: row.rated,
   }));
 }
 
@@ -160,10 +174,13 @@ export async function listDueRoomDeadlines(now: Date, limit = 50): Promise<DueRo
 // query needs no room hydration.
 export type DeadlineWarningCandidate = {
   roomId: string;
+  gameSpecId: string;
   dueAt: Date;
   allowanceMs: number;
   recipientEmail: string;
   recipientUserId: string;
+  // users.locale ('en' | 'zh-Hans' | 'zh-Hant' | null): the email's language.
+  recipientLocale: string | null;
   opponentName: string | null;
 };
 
@@ -176,14 +193,16 @@ export async function listDeadlineWarningCandidates(
 ): Promise<DeadlineWarningCandidate[]> {
   const { rows } = await getPool().query<{
     room_id: string;
+    game_spec_id: string;
     due_at: Date;
     allowance_ms: string | null;
     recipient_email: string;
     recipient_user_id: string;
+    recipient_locale: string | null;
     opponent_name: string | null;
   }>(
-    `SELECT rd.room_id, rd.due_at, rd.seat_user_id AS recipient_user_id,
-            u.email AS recipient_email,
+    `SELECT rd.room_id, rd.game_spec_id, rd.due_at, rd.seat_user_id AS recipient_user_id,
+            u.email AS recipient_email, u.locale AS recipient_locale,
             COALESCE(opp_user.display_name, opp_user.handle) AS opponent_name,
             (rc.payload->'timeControl'->>'initialMs') AS allowance_ms
      FROM room_deadlines rd
@@ -207,10 +226,12 @@ export async function listDeadlineWarningCandidates(
     .filter((row) => row.allowance_ms !== null)
     .map((row) => ({
       roomId: row.room_id,
+      gameSpecId: row.game_spec_id,
       dueAt: row.due_at,
       allowanceMs: Number(row.allowance_ms),
       recipientEmail: row.recipient_email,
       recipientUserId: row.recipient_user_id,
+      recipientLocale: row.recipient_locale,
       opponentName: row.opponent_name,
     }));
 }

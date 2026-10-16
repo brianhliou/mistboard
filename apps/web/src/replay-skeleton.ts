@@ -1,3 +1,5 @@
+import { t } from './i18n/catalog.js';
+
 // Neutral "loading a game" placeholder shown while a replay renderer mounts (a
 // watch channel switch, or a homepage showcase variant change that tears down one
 // renderer kind and mounts another) so the board slot gives feedback instead of
@@ -24,7 +26,7 @@ export function renderWatchReplaySkeleton(root: HTMLElement, aspectRatio?: numbe
   }
   const caption = document.createElement('div');
   caption.className = 'watch-replay-skeleton-caption';
-  caption.textContent = 'Loading game';
+  caption.textContent = t('replay.loadingGame');
   skeleton.append(board, caption);
   root.replaceChildren(skeleton);
 }
@@ -37,7 +39,7 @@ export function renderWatchReplayFailure(root: HTMLElement): void {
   board.className = 'watch-replay-skeleton-board';
   const caption = document.createElement('div');
   caption.className = 'watch-replay-skeleton-caption';
-  caption.textContent = 'Game viewer unavailable';
+  caption.textContent = t('home.gameViewerUnavailable');
   failure.append(board, caption);
   root.replaceChildren(failure);
 }

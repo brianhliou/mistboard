@@ -5,24 +5,10 @@ import './pages-static.css';
 import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
 import { buildContact } from './contact.js';
 import { t } from './i18n/catalog.js';
-import { currentLocale, type Locale } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
-import {
-  formatStatNumber as formatNumber,
-  type PublicSiteStats,
-  type PublicStatsMode,
-} from './stats-charts.js';
-
-const publicStatsModes: Array<{
-  key: PublicStatsMode;
-  labelKey: 'about.modePve' | 'about.modePvp';
-}> = [
-  { key: 'pvp', labelKey: 'about.modePvp' },
-  { key: 'pve', labelKey: 'about.modePve' },
-];
-
 export function mountAbout(root: HTMLElement): void {
   const locale = currentLocale();
   root.replaceChildren();
@@ -69,8 +55,25 @@ export async function mountNews(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
   root.replaceChildren();
   root.classList.add('landing-page', 'news-route');
-  const { buildNewsPage } = await import('./news-page.js');
-  root.append(buildNav(locale), buildStaticPageLayout('news', buildNewsPage(locale), locale));
+  const { buildNewsPage, newsArchiveHrefForHash, newsMonthExists, newsMonthFromPath } =
+    await import('./news-page.js');
+  let monthId = newsMonthFromPath(globalThis.location?.pathname ?? '');
+  const hash = decodeURIComponent(globalThis.location?.hash ?? '').replace(/^#/, '');
+  // A /feed#<entry> link from before the entry moved to its month's page.
+  const archiveHref = !monthId && hash ? newsArchiveHrefForHash(hash) : null;
+  if (archiveHref) {
+    globalThis.location.replace(archiveHref);
+    return;
+  }
+  // An unknown month renders /feed, so the address says so too.
+  if (monthId && !newsMonthExists(monthId)) {
+    globalThis.history.replaceState(null, '', '/feed');
+    monthId = null;
+  }
+  root.append(
+    buildNav(locale),
+    buildStaticPageLayout('news', buildNewsPage(locale, monthId), locale),
+  );
 }
 
 export async function mountPatron(root: HTMLElement): Promise<void> {
@@ -109,15 +112,124 @@ export async function mountArticlesIndex(
   mountArticleThumbnails(index);
 }
 
-/* /blog, baked at build time. The index is authored data with no live or
- * per-account content, so the prerendered DOM is exactly the page a reader
- * gets. It was the one sitemap-advertised article surface still answering with
- * an empty shell while every individual post was prerendered. Default locale
- * and the "By Mistboard" view only: the localized indexes and the (currently
- * empty) community view stay on the client-rendered shell. */
-export async function renderArticlesIndexShellForPrerender(): Promise<string> {
+/* /blog, /zh-hans/blog and /zh-hant/blog, baked at build time. The index is
+ * authored data with no live or per-account content, so the prerendered DOM is
+ * exactly the page a reader gets. The "By Mistboard" view only: the (currently
+ * empty) community view stays on the client-rendered shell. The two Chinese
+ * indexes served a 4.7KB shell with no canonical or hreflang until 2026-10-02
+ * while sitting in the sitemap. */
+export async function renderArticlesIndexShellForPrerender(
+  lang?: import('./article-i18n.js').ArticleLang | null,
+): Promise<string> {
   const { buildArticlesIndex } = await import('./articles.js');
-  return `${buildNav().outerHTML}${buildArticlesIndex(undefined, 'mistboard').outerHTML}`;
+  const locale: Locale = lang ?? 'en';
+  return `${buildNav(locale).outerHTML}${buildArticlesIndex(lang ?? undefined, 'mistboard').outerHTML}`;
+}
+
+// Meta and head links for each baked index (blog, rules). The three indexes of
+// a section are one page in three languages, so every one names the same
+// alternate set (hreflang is a property of the group, not the page) and a
+// self-referencing canonical. Title and description match ARTICLES_INDEX_META
+// and RULES_INDEX_META in apps/server/src/server-static-pages.ts, which cover
+// the shell fallback.
+type IndexPrerenderMeta = Record<Locale, { title: string; description: string }>;
+
+const INDEX_PATH_PREFIX: Record<Locale, string> = {
+  en: '',
+  'zh-Hans': '/zh-hans',
+  'zh-Hant': '/zh-hant',
+};
+
+const ARTICLES_INDEX_PRERENDER_META: IndexPrerenderMeta = {
+  en: {
+    title: 'Xiangqi and Variant Articles | Mistboard',
+    description:
+      'Long-form articles on xiangqi (Chinese chess) and its variants: rules explained, champions and players, engine research, puzzles, and how Mistboard is built.',
+  },
+  'zh-Hans': {
+    title: '象棋与变体文章 | Mistboard',
+    description:
+      '关于象棋（中国象棋）及其变体的长文：规则详解、历届冠军与棋手、引擎研究、残局题目，以及 Mistboard 是怎样做出来的。',
+  },
+  'zh-Hant': {
+    title: '象棋與變體文章 | Mistboard',
+    description:
+      '關於象棋（中國象棋）及其變體的長文：規則詳解、歷屆冠軍與棋手、引擎研究、殘局題目，以及 Mistboard 是怎樣做出來的。',
+  },
+};
+
+const RULES_INDEX_PRERENDER_META: IndexPrerenderMeta = {
+  en: {
+    title: 'Xiangqi and Variant Rules | Mistboard',
+    description:
+      'Full rules for every game on Mistboard: xiangqi (Chinese chess), jieqi, banqi, Jungle and chess, plus Fog of War, Duck Xiangqi and other xiangqi variants.',
+  },
+  'zh-Hans': {
+    title: '象棋与变体规则 | Mistboard',
+    description:
+      'Mistboard 上每一种棋的完整规则：象棋（中国象棋）、揭棋、暗棋、斗兽棋和国际象棋，以及迷雾、鸭子等各种象棋变体。',
+  },
+  'zh-Hant': {
+    title: '象棋與變體規則 | Mistboard',
+    description:
+      'Mistboard 上每一種棋的完整規則：象棋（中國象棋）、揭棋、暗棋、鬥獸棋和國際象棋，以及迷霧、鴨子等各種象棋變體。',
+  },
+};
+
+type IndexPrerenderHead = {
+  title: string;
+  description: string;
+  url: string;
+  htmlLang: Locale;
+  headLinks: string;
+};
+
+function indexPrerenderHead(
+  host: string,
+  section: 'blog' | 'rules',
+  table: IndexPrerenderMeta,
+  lang?: import('./article-i18n.js').ArticleLang | null,
+): IndexPrerenderHead {
+  const locale: Locale = lang ?? 'en';
+  const meta = table[locale];
+  const urlFor = (l: Locale) => `${host}${INDEX_PATH_PREFIX[l]}/${section}`;
+  const url = urlFor(locale);
+  const alternates = (['en', 'zh-Hans', 'zh-Hant'] as const)
+    .map((l) => `<link rel="alternate" hreflang="${l}" href="${urlFor(l)}" />`)
+    .join('');
+  return {
+    title: meta.title,
+    description: meta.description,
+    url,
+    htmlLang: locale,
+    headLinks: `<link rel="canonical" href="${url}" />${alternates}<link rel="alternate" hreflang="x-default" href="${urlFor('en')}" />`,
+  };
+}
+
+export function articlesIndexPrerenderHead(
+  host: string,
+  lang?: import('./article-i18n.js').ArticleLang | null,
+): IndexPrerenderHead {
+  return indexPrerenderHead(host, 'blog', ARTICLES_INDEX_PRERENDER_META, lang);
+}
+
+export function rulesIndexPrerenderHead(
+  host: string,
+  lang?: import('./article-i18n.js').ArticleLang | null,
+): IndexPrerenderHead {
+  return indexPrerenderHead(host, 'rules', RULES_INDEX_PRERENDER_META, lang);
+}
+
+/* /rules, /zh-hans/rules and /zh-hant/rules, baked at build time: the same DOM
+ * mountRulesIndex builds, minus the thumbnail hydration it runs after mount.
+ * All three served a 4.9KB client shell with no canonical, hreflang or text
+ * until 2026-10-02 while sitting in the sitemap. */
+export async function renderRulesIndexShellForPrerender(
+  lang?: import('./article-i18n.js').ArticleLang | null,
+): Promise<string> {
+  const { buildRulesIndex } = await import('./articles.js');
+  const locale: Locale = lang ?? 'en';
+  return `${buildNav(locale).outerHTML}${buildRulesIndex(lang ?? undefined).outerHTML}`;
 }
 
 export async function mountRulesIndex(
@@ -132,13 +244,29 @@ export async function mountRulesIndex(
   mountArticleThumbnails(index);
 }
 
+/* /blog/<slug>, /rules/<slug> and their zh copies, baked at build time into a
+ * root carrying ARTICLE_ROUTE_CLASS: the same frame mountArticle builds, nav
+ * first. Until #557 the bake was the bare <main> in a classless root, so the
+ * client mount put the nav above it and restyled the root, and the whole page
+ * jumped (rules p75 layout shift 0.40, blog 0.26). */
+export const ARTICLE_ROUTE_CLASS = 'landing-page articles-route';
+
+export async function renderArticlePageShellForPrerender(
+  slug: string,
+  lang?: import('./article-i18n.js').ArticleLang | null,
+): Promise<string> {
+  const { buildArticlePage } = await import('./articles.js');
+  const locale: Locale = lang ?? 'en';
+  return `${buildNav(locale).outerHTML}${buildArticlePage(slug, lang ?? undefined).outerHTML}`;
+}
+
 export async function mountArticle(
   root: HTMLElement,
   slug: string,
   lang?: import('./article-i18n.js').ArticleLang | null,
 ): Promise<void> {
-  root.replaceChildren();
-  root.classList.add('landing-page', 'articles-route');
+  // Load everything before clearing the root: a failed import then leaves the
+  // prerendered article on screen instead of an empty page.
   const {
     buildArticlePage,
     mountPendingWidgets,
@@ -149,13 +277,17 @@ export async function mountArticle(
   const { findArticle } = await import('./articles-data.js');
   const { translateArticle } = await import('./article-i18n.js');
   const { setBoardFamily, xiangqiAppearanceEnabled } = await import('./theme.js');
+  root.replaceChildren();
+  root.classList.add(...ARTICLE_ROUTE_CLASS.split(' '));
   const base = findArticle(slug);
   // Show the family's board/piece pickers while the article is open so the
   // diagrams react to the right controls (each family only when its flag is on).
   const family = base?.boardFamily;
   setBoardFamily(family === 'xiangqi' && xiangqiAppearanceEnabled() ? 'xiangqi' : 'chess');
   const article = base && lang ? translateArticle(base, lang) : base;
-  if (article) document.title = `${article.title} · Mistboard`;
+  // seoTitle, as the prerender uses: the display title here would replace the
+  // search title Google indexes the moment the client mounts.
+  if (article) document.title = `${article.seoTitle ?? article.title} · Mistboard`;
   const articlePage = buildArticlePage(slug, lang ?? undefined);
   root.append(buildNav(), articlePage);
   mountPendingWidgets(articlePage);
@@ -200,7 +332,6 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     t('about.openSourceSuffix', {}, locale),
   ]);
 
-  const platformActivity = buildPlatformActivity(locale);
   section.append(
     heading,
     lede,
@@ -216,129 +347,8 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     engineP,
     oss1Heading,
     oss1P,
-    platformActivity,
   );
-  void hydratePlatformActivity(platformActivity, locale);
   return section;
-}
-
-function buildPlatformActivity(locale: Locale = currentLocale()): HTMLElement {
-  const section = document.createElement('section');
-  section.className = 'platform-activity';
-  section.id = 'platform-activity';
-  section.setAttribute('aria-labelledby', 'platform-activity-heading');
-
-  const heading = document.createElement('h2');
-  heading.id = 'platform-activity-heading';
-  heading.className = 'about-subheading';
-  heading.textContent = t('about.activityHeading', {}, locale);
-
-  const intro = aboutParagraph([t('about.activityIntro', {}, locale)]);
-
-  const body = document.createElement('div');
-  body.className = 'platform-activity-body';
-  body.setAttribute('aria-live', 'polite');
-  renderPlatformActivityLoading(body, locale);
-
-  section.append(heading, intro, body);
-  return section;
-}
-
-async function hydratePlatformActivity(
-  section: HTMLElement,
-  locale: Locale = currentLocale(),
-): Promise<void> {
-  const body = section.querySelector<HTMLElement>('.platform-activity-body');
-  if (!body) return;
-  try {
-    const stats = await fetchPublicStats();
-    renderPlatformActivityStats(body, stats, locale);
-  } catch {
-    renderPlatformActivityUnavailable(body, locale);
-  }
-}
-
-async function fetchPublicStats(): Promise<PublicSiteStats> {
-  const response = await fetch('/api/stats/public', { credentials: 'same-origin' });
-  if (!response.ok) throw new Error(`stats unavailable: ${response.status}`);
-  return (await response.json()) as PublicSiteStats;
-}
-
-function renderPlatformActivityLoading(body: HTMLElement, locale: Locale = currentLocale()): void {
-  const loading = document.createElement('p');
-  loading.className = 'platform-activity-status';
-  loading.textContent = t('about.activityLoading', {}, locale);
-  body.replaceChildren(loading);
-}
-
-function renderPlatformActivityUnavailable(
-  body: HTMLElement,
-  locale: Locale = currentLocale(),
-): void {
-  const status = document.createElement('p');
-  status.className = 'platform-activity-status';
-  status.textContent = t('about.activityUnavailable', {}, locale);
-  body.replaceChildren(status);
-}
-
-function renderPlatformActivityStats(
-  body: HTMLElement,
-  stats: PublicSiteStats,
-  locale: Locale = currentLocale(),
-): void {
-  const summary = document.createElement('p');
-  summary.className = 'platform-activity-summary';
-  summary.append(
-    document.createTextNode(
-      t(
-        'about.activitySummaryTotal',
-        { total: formatNumber(stats.totalCompletedGames, locale) },
-        locale,
-      ),
-    ),
-  );
-  if (stats.last30dCompletedGames > 0) {
-    summary.append(
-      document.createTextNode(
-        t(
-          'about.activitySummaryRecent',
-          { count: formatNumber(stats.last30dCompletedGames, locale) },
-          locale,
-        ),
-      ),
-    );
-  }
-  summary.append(document.createTextNode('. '));
-  // The chart lives on /stats now (one chart, one home); this section keeps
-  // the sentence and the split and points at the full page.
-  const more = aboutLink(t('about.activityFullStats', {}, locale), '/stats');
-  more.className = 'platform-activity-more';
-  summary.append(more);
-  body.replaceChildren(summary, buildModeSplit(stats.modeTotals, locale));
-}
-
-function buildModeSplit(
-  modeTotals: Record<PublicStatsMode, number>,
-  locale: Locale = currentLocale(),
-): HTMLElement {
-  const list = document.createElement('ul');
-  list.className = 'platform-activity-mode-list';
-  list.setAttribute('aria-label', t('about.modeSplit', {}, locale));
-  for (const mode of publicStatsModes) {
-    const item = document.createElement('li');
-    item.className = `platform-activity-mode-item mode-${mode.key}`;
-
-    const name = document.createElement('span');
-    name.textContent = `${t(mode.labelKey, {}, locale)} `;
-
-    const value = document.createElement('strong');
-    value.textContent = formatNumber(modeTotals[mode.key] ?? 0, locale);
-
-    item.append(name, value);
-    list.append(item);
-  }
-
-  return list;
 }
 
 function aboutSubheading(text: string): HTMLElement {
@@ -391,6 +401,31 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     textLine(t('source.chessground', {}, locale)),
     textLine(t('source.chessops', {}, locale)),
     textLine(t('source.stockfish', {}, locale)),
+    // Its authors asked for a credit with a link (lxsgx23/AB-JChess#1).
+    linkLine(t('source.abJchess', {}, locale), 'https://github.com/lxsgx23/AB-JChess'),
+    // The top jungle bot (#434): engine, the engine it is built on, and the net's
+    // source, each linked; hzyhhzy agreed to it running here credited (hzyhhzy/KataGomo#12).
+    linkLine(
+      t('source.katagomo', {}, locale),
+      'https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025',
+    ),
+    linkLine(t('source.katago', {}, locale), 'https://github.com/lightvector/KataGo'),
+    linkLine(t('source.dandelion', {}, locale), 'https://github.com/lxsgx23/Dandelion-Chess'),
+    // The tablebase in the explorer pane and practice grading read chessdb.cn
+    // (through our server); credited with a link like the engines.
+    linkLine(t('source.chessdb', {}, locale), 'https://www.chessdb.cn/'),
+    // Pikafish runs the top xiangqi bot and all xiangqi analysis; credited with
+    // its home page and the NNUE weights license (no commercial use without
+    // permission), in the reader's language where pikafish.com has one.
+    pikafishCreditLine(locale),
+    // The five third-party xiangqi piece sets (2026-10-08); sources and licences
+    // sit beside the files in public/piece-sets/xiangqi/<id>/README.md. Wood is
+    // CC BY 4.0, so its credit names the author and links the licence.
+    linkLine(t('source.pieceSetLacquer', {}, locale), PIECE_SET_SOURCE_URLS.lacquer),
+    woodPieceSetCreditLine(locale),
+    linkLine(t('source.pieceSetBook', {}, locale), PIECE_SET_SOURCE_URLS.book),
+    linkLine(t('source.pieceSetBrush', {}, locale), PIECE_SET_SOURCE_URLS.brush),
+    linkLine(t('source.pieceSetClerical', {}, locale), PIECE_SET_SOURCE_URLS.clerical),
   ]);
 
   const identity = sourceBlock(t('source.projectIdentity', {}, locale), [
@@ -410,6 +445,29 @@ function buildFaq(locale: Locale = currentLocale()): HTMLElement {
   const heading = document.createElement('h1');
   heading.className = 'site-section-heading';
   heading.textContent = t('faq.heading', {}, locale);
+
+  // Playing online first: what a searcher for 象棋在线 / "xiangqi online" asks
+  // before a first game. These sat on the homepage for a day (2026-09-25) and
+  // moved here: the homepage stays the product, this page answers questions.
+  const playQuestions = [
+    ['faq.playWebQuestion', 'faq.playWebAnswer'],
+    ['faq.playComputerQuestion', 'faq.playComputerAnswer'],
+    ['faq.playFriendQuestion', 'faq.playFriendAnswer'],
+    ['faq.playOtherQuestion', 'faq.playOtherAnswer'],
+    ['faq.playReviewQuestion', 'faq.playReviewAnswer'],
+  ] as const;
+  const playBlock: HTMLElement[] = [];
+  for (const [questionKey, answerKey] of playQuestions) {
+    playBlock.push(aboutSubheading(t(questionKey, {}, locale)));
+    const answer: Array<string | Node> = [t(answerKey, {}, locale)];
+    if (answerKey === 'faq.playComputerAnswer') {
+      answer.push(
+        ' ',
+        aboutLink(t('faq.playBotsLink', {}, locale), localizedHref('/bots', locale)),
+      );
+    }
+    playBlock.push(aboutParagraph(answer));
+  }
 
   const q1 = aboutSubheading(t('faq.darkChessQuestion', {}, locale));
   const a1 = aboutParagraph([
@@ -452,6 +510,7 @@ function buildFaq(locale: Locale = currentLocale()): HTMLElement {
 
   section.append(
     heading,
+    ...playBlock,
     q1,
     a1,
     qAccount,
@@ -589,6 +648,8 @@ function buildPrivacy(locale: Locale = currentLocale()): HTMLElement {
   const h3 = aboutSubheading(t('privacy.publicGamesHeading', {}, locale));
   const p3 = aboutParagraph([
     t('privacy.publicGamesPrefix', {}, locale),
+    aboutLink(t('privacy.downloadsLink', {}, locale), '/data'),
+    t('privacy.publicGamesMiddle', {}, locale),
     aboutExternalLink(
       t('privacy.ccByLink', {}, locale),
       'https://creativecommons.org/licenses/by/4.0/',
@@ -622,6 +683,55 @@ function textLine(value: string): HTMLSpanElement {
   const span = document.createElement('span');
   span.textContent = value;
   return span;
+}
+
+export const PIKAFISH_REPO_URL = 'https://github.com/official-pikafish/Pikafish';
+export const PIKAFISH_SITE_URL = 'https://pikafish.com/';
+const PIKAFISH_WEIGHTS_LICENSE_URLS: Record<Locale, string> = {
+  en: 'https://www.pikafish.com/en/list.html',
+  'zh-Hans': 'https://www.pikafish.com/list.html',
+  'zh-Hant': 'https://www.pikafish.com/zh-hant/list.html',
+};
+
+export function pikafishWeightsLicenseUrl(locale: Locale): string {
+  return PIKAFISH_WEIGHTS_LICENSE_URLS[locale];
+}
+
+function pikafishCreditLine(locale: Locale): HTMLSpanElement {
+  const line = document.createElement('span');
+  line.className = 'source-credit-pikafish';
+  line.append(
+    linkLine(t('source.pikafish', {}, locale), PIKAFISH_REPO_URL),
+    ' ',
+    linkLine(t('source.pikafishSite', {}, locale), PIKAFISH_SITE_URL),
+    ' · ',
+    linkLine(t('source.pikafishWeightsLicense', {}, locale), pikafishWeightsLicenseUrl(locale)),
+  );
+  return line;
+}
+
+const PYCHESS_XIANGQI_PIECES_URL =
+  'https://github.com/gbtami/pychess-variants/tree/master/static/images/pieces/xiangqi';
+
+export const PIECE_SET_SOURCE_URLS = {
+  lacquer: `${PYCHESS_XIANGQI_PIECES_URL}/playok`,
+  wood: 'https://github.com/Kadagaden/chess-pieces/tree/master/xiangqi_gmchess_style_wood',
+  book: 'https://www.babelstone.co.uk/Fonts/Xiangqi.html',
+  brush: `${PYCHESS_XIANGQI_PIECES_URL}/hnzw`,
+  clerical: `${PYCHESS_XIANGQI_PIECES_URL}/lishuw`,
+} as const;
+
+const CC_BY_4_URL = 'https://creativecommons.org/licenses/by/4.0/';
+
+function woodPieceSetCreditLine(locale: Locale): HTMLSpanElement {
+  const line = document.createElement('span');
+  line.className = 'source-credit-wood';
+  line.append(
+    linkLine(t('source.pieceSetWood', {}, locale), PIECE_SET_SOURCE_URLS.wood),
+    ' · ',
+    linkLine(t('source.pieceSetWoodLicense', {}, locale), CC_BY_4_URL),
+  );
+  return line;
 }
 
 function linkLine(label: string, href: string): HTMLAnchorElement {

@@ -15,7 +15,7 @@ export const banqiEngineArticle: Article = {
   boardFamily: 'xiangqi',
   title: 'How MistyBanqi Plays',
   summary:
-    'MistyBanqi is the engine you play in Banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.',
+    'MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-20',
@@ -95,12 +95,12 @@ export const banqiEngineArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and Banqi's threefold-repetition rule ends the game a draw.",
+            "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and banqi's threefold-repetition rule ends the game a draw.",
         },
         {
           kind: 'paragraph',
           text:
-            "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.",
+            "There's an upshot for you here. If you're losing on material, you're not necessarily lost: MistyBanqi may shuffle into a [repetition draw](/blog/banqi-perpetual-chase) it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.",
         },
       ],
     },
@@ -137,7 +137,7 @@ export const banqiEngineArticle: Article = {
       secondary: [
         {
           label: 'The engineering story',
-          href: 'https://brianhliou.com/posts/tuning-a-banqi-engine/',
+          href: 'https://brianhliou.com/posts/building-banqi-engine/',
           emphasis: 'secondary',
           external: true,
         },

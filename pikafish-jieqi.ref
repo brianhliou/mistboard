@@ -1,13 +1,20 @@
-e75cee3a3698794b4b6f5574a8774f0575bc0c21
+bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9
 # ^ The commit the prod image runs (scripts/engine-assets.sh reads the first line;
 # this comment is ignored).
 #
-# NOT an upstream commit as of 2026-08-31. It is upstream `23b9466c` plus two
-# patches, carried on https://github.com/brianhliou/pikafish-jieqi-wasm branch
+# NOT an upstream commit as of 2026-08-31. It is upstream `23b9466c` plus our
+# patches (dated below), carried on https://github.com/brianhliou/pikafish-jieqi-wasm branch
 # `jieqi_old-mistboard`, and the Build engines workflow fetches it from THAT repo
 # rather than official-pikafish/Pikafish. The upstream base is unchanged, so moving to a newer
 # upstream jieqi_old is a cherry-pick, not a merge. The pinned commit must be
 # reachable from that branch: the build clones it --single-branch.
+#
+# bcc83f88 (2026-10-02, #497): reveals are scored honestly. ScoreCalc flipped each
+# revealed identity's score for Black (keyed on a never-assigned firstSideMove), so
+# Black's reveals took the best identity instead of the worst; and an identity whose
+# PV search failed low returned the window edge, which the average took as exact.
+# Fail-lows at the root are now re-searched. Self-play vs e75cee3a at 1M nodes/move,
+# 600 games: -21 Elo [-48, +6]; over-rated decisive reveals 16 -> 3 of 71 (#497).
 #
 # e75cee3a (2026-09-03): a Threads.stop check and a main-thread check_time() at
 # qsearch entry (src/search.cpp). qsearch had neither, and the dark-piece recursion

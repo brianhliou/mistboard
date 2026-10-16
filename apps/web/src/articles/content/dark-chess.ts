@@ -52,7 +52,7 @@ export const darkChessArticle: Article = {
     // title carries theirs while the h1 keeps ours.
     seoTitle: 'Fog of War Chess Rules',
     summary:
-      'Fog Chess rules: chess under Fog of War, where each side sees only the squares its pieces reach, there are no check warnings, and the king falls by capture.',
+      "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.",
     status: 'published',
     publishedAt: '2026-05-22',
     updatedAt: '2026-07-12',
@@ -156,7 +156,7 @@ export const darkChessArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. There is no stalemate draw and no insufficient-material draw.",
+              "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. A side with no moves at all, every piece blocked, also draws. Otherwise you must move, even if every move walks into attack. There is no insufficient-material draw.",
           },
         ],
       },
@@ -272,6 +272,27 @@ export const darkChessArticle: Article = {
         ],
       },
       {
+        heading: 'An engine game',
+        blocks: [
+          {
+            kind: 'paragraph',
+            text: 'Misty against itself at 30 seconds a move, shown with the whole board visible. Black wins White’s queen for a rook on move 10, but on move 27 White’s rook lands on e8 and Black’s king steps to d8 beside it. Fog chess has no check to warn it, and 28.Rxd8 captures the king.',
+          },
+          {
+            kind: 'embed',
+            path: '/embed/study/MbaW80XR/GMg6Qz89',
+            title: 'Fog Chess: Misty against itself, White captures the king on move 28',
+            // Width-bound at the 702px column: the 8x8 board gets the column
+            // minus the move sheet, plus seat rows, controls, header and credit.
+            aspect: [702, 645],
+          } as ArticleBlock,
+          {
+            kind: 'paragraph',
+            text: 'The [companion study](/study/MbaW80XR) has eleven of these games, and shows each side’s fogged view move by move.',
+          },
+        ],
+      },
+      {
         heading: 'Common questions',
         blocks: [
           {
@@ -288,7 +309,7 @@ export const darkChessArticle: Article = {
       },
       playClosing({
         heading: 'Play on Mistboard',
-        lead: 'Fog Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+        lead: 'You can castle out of, through or into check, and nobody tells you when your king is attacked. No account needed.',
         playLabel: 'Play vs computer',
         playHref: '/?play=computer&gameSpecId=dark-chess',
         secondary: [
@@ -297,6 +318,7 @@ export const darkChessArticle: Article = {
             href: '/?play=friend&gameSpecId=dark-chess',
             emphasis: 'secondary',
           },
+          { label: 'Eleven engine games', href: '/study/MbaW80XR', emphasis: 'secondary' },
         ],
       }),
     ],

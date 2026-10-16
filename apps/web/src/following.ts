@@ -4,6 +4,10 @@
 // and an unfollow affordance. Self-only surface: the API lists only the
 // viewer's own follows, and anonymous visitors get a sign-in prompt instead of
 // a redirect so the deep link explains itself.
+//
+// /following?tab=followers is the private Followers list (2026-10-08): who
+// follows the viewer, newest first. Same self-only posture: the endpoint is
+// keyed by the session, and nobody else can see an account's followers.
 
 import './following.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
@@ -29,13 +33,41 @@ type FollowingPage = {
   total: number;
 };
 
+// handle is null when the follower's profile may not be linked (private or
+// closed): the row shows the name without a link.
+type FollowerEntry = {
+  handle: string | null;
+  displayName: string;
+  title?: string | null;
+  createdAt: string;
+};
+
+type FollowersPage = {
+  entries: FollowerEntry[];
+  total: number;
+};
+
+type FriendsTab = 'following' | 'followers';
+
 const PAGE_SIZE = 50;
+
+function currentTab(): FriendsTab {
+  return new URLSearchParams(window.location.search).get('tab') === 'followers'
+    ? 'followers'
+    : 'following';
+}
 
 export async function mountFollowing(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
+  const tab = currentTab();
   root.replaceChildren();
   root.classList.add('landing-page', 'following-route');
-  root.append(buildNav(locale), buildLoadingState(t('following.loading', {}, locale)));
+  root.append(
+    buildNav(locale),
+    buildLoadingState(
+      t(tab === 'followers' ? 'following.followersLoading' : 'following.loading', {}, locale),
+    ),
+  );
 
   const user = await fetchCurrentUser().catch(() => null);
 
@@ -57,13 +89,32 @@ export async function mountFollowing(root: HTMLElement): Promise<void> {
 
   const sub = document.createElement('p');
   sub.className = 'following-sub';
-  sub.textContent = t('following.intro', {}, locale);
+  sub.textContent = t(
+    tab === 'followers' ? 'following.followersIntro' : 'following.intro',
+    {},
+    locale,
+  );
 
-  header.append(heading, sub);
+  header.append(heading, buildTabs(tab, locale), sub);
 
   const body = document.createElement('section');
   body.className = 'following-body';
   shell.append(header, body);
+
+  if (tab === 'followers') {
+    const firstFollowers = await fetchFollowersPage(0);
+    if (!firstFollowers) {
+      body.append(
+        buildNotice(
+          t('following.tabFollowers', {}, locale),
+          t('following.followersLoadFailed', {}, locale),
+        ),
+      );
+      return;
+    }
+    renderFollowers(body, sub, firstFollowers, locale);
+    return;
+  }
 
   const first = await fetchFollowingPage(0);
   if (!first) {
@@ -146,6 +197,122 @@ function renderFollowing(
     });
     body.append(more);
   }
+}
+
+// Following | Followers. Plain links rather than script tabs, so each list
+// has its own URL (the bell's overflow row deep-links the Followers one).
+function buildTabs(active: FriendsTab, locale: Locale): HTMLElement {
+  const nav = document.createElement('nav');
+  nav.className = 'following-tabs';
+  nav.setAttribute('aria-label', t('following.tabsLabel', {}, locale));
+  const tabs: Array<[FriendsTab, string, string]> = [
+    ['following', '/following', t('following.tabFollowing', {}, locale)],
+    ['followers', '/following?tab=followers', t('following.tabFollowers', {}, locale)],
+  ];
+  for (const [tab, href, label] of tabs) {
+    const link = document.createElement('a');
+    link.className = 'following-tab';
+    link.href = href;
+    link.textContent = label;
+    link.dataset.tab = tab;
+    if (tab === active) link.setAttribute('aria-current', 'page');
+    nav.append(link);
+  }
+  return nav;
+}
+
+function renderFollowers(
+  body: HTMLElement,
+  countLine: HTMLElement,
+  first: FollowersPage,
+  locale: Locale,
+): void {
+  let total = first.total;
+  let loaded = first.entries.length;
+
+  if (total === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'following-empty';
+    empty.textContent = t('following.followersEmpty', {}, locale);
+    body.replaceChildren(empty);
+    return;
+  }
+  const updateCount = () => {
+    countLine.textContent = t(
+      total === 1 ? 'following.countOne' : 'following.countMany',
+      { count: total },
+      locale,
+    );
+  };
+  updateCount();
+
+  const table = document.createElement('table');
+  table.className = 'following-table following-table-followers';
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  for (const key of ['following.colPlayer', 'following.colFollowed'] as const) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = t(key, {}, locale);
+    headRow.append(th);
+  }
+  thead.append(headRow);
+  const tbody = document.createElement('tbody');
+  table.append(thead, tbody);
+  for (const entry of first.entries) tbody.append(buildFollowerRow(entry, locale));
+  body.replaceChildren(table);
+
+  if (loaded < total) {
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'following-load-more';
+    more.textContent = t('following.loadMore', {}, locale);
+    more.addEventListener('click', () => {
+      more.disabled = true;
+      void fetchFollowersPage(loaded).then((page) => {
+        if (!page) {
+          more.disabled = false;
+          return;
+        }
+        total = page.total;
+        loaded += page.entries.length;
+        for (const entry of page.entries) tbody.append(buildFollowerRow(entry, locale));
+        updateCount();
+        if (loaded < total && page.entries.length > 0) more.disabled = false;
+        else more.remove();
+      });
+    });
+    body.append(more);
+  }
+}
+
+function buildFollowerRow(entry: FollowerEntry, locale: Locale): HTMLTableRowElement {
+  const row = document.createElement('tr');
+  row.className = 'following-row follower-row';
+
+  const playerCell = document.createElement('td');
+  playerCell.className = 'following-player';
+  // A follower whose profile may not be linked gets the same look without
+  // the link (or the hover card, which would fetch that profile).
+  const holder = document.createElement(entry.handle ? 'a' : 'span');
+  holder.className = 'following-player-link';
+  if (entry.handle && holder instanceof HTMLAnchorElement) {
+    holder.href = `/@/${encodeURIComponent(entry.handle)}`;
+  }
+  prependTitleBadge(holder, entry.title, locale);
+  const name = document.createElement('span');
+  name.className = 'following-player-name';
+  name.textContent = entry.displayName;
+  holder.append(name);
+  if (entry.handle) attachUserCard(holder, entry.handle);
+  playerCell.append(holder);
+
+  const followedCell = document.createElement('td');
+  followedCell.className = 'follower-since';
+  followedCell.textContent = formatLastSeen(entry.createdAt, locale);
+
+  row.append(playerCell, followedCell);
+  return row;
 }
 
 function buildHead(locale: Locale): HTMLTableSectionElement {
@@ -254,6 +421,18 @@ async function fetchFollowingPage(offset: number): Promise<FollowingPage | null>
   if (!resp?.ok) return null;
   try {
     return (await resp.json()) as FollowingPage;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchFollowersPage(offset: number): Promise<FollowersPage | null> {
+  const resp = await fetch(`/api/relations/followers?offset=${offset}&limit=${PAGE_SIZE}`).catch(
+    () => null,
+  );
+  if (!resp?.ok) return null;
+  try {
+    return (await resp.json()) as FollowersPage;
   } catch {
     return null;
   }

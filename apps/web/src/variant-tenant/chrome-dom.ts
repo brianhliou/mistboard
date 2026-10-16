@@ -3,6 +3,9 @@
  * no variant or live-state knowledge.
  */
 
+import { moveListScroller } from '../game-table.js';
+import { t } from '../i18n/catalog.js';
+
 export function infoItem(label: string, value: string): HTMLDivElement {
   const item = document.createElement('div');
   const key = document.createElement('span');
@@ -28,8 +31,9 @@ export function noticeBody(text: string): HTMLElement {
 export function presenceDot(connected: boolean): HTMLSpanElement {
   const dot = document.createElement('span');
   dot.className = `presence-dot ${connected ? 'is-online' : 'is-offline'}`;
-  dot.setAttribute('aria-label', connected ? 'Connected' : 'Disconnected');
-  dot.title = connected ? 'Connected' : 'Disconnected';
+  const label = connected ? t('live.connConnected') : t('live.connDisconnected');
+  dot.setAttribute('aria-label', label);
+  dot.title = label;
   return dot;
 }
 
@@ -80,16 +84,17 @@ export function syncMoveListScroll(
   const follow = state ? shouldFollowLatestMove(state, moveListFollowState.get(list)) : false;
   if (state) moveListFollowState.set(list, { plyCount: state.plyCount, wasLive: state.live });
   window.requestAnimationFrame(() => {
+    const scroller = moveListScroller(list);
     const active = list.querySelector<HTMLElement>('.active');
     if (active) {
-      const listRect = list.getBoundingClientRect();
+      const scrollerRect = scroller.getBoundingClientRect();
       const activeRect = active.getBoundingClientRect();
       const centeredDelta =
-        activeRect.top - listRect.top - (list.clientHeight - activeRect.height) / 2;
-      list.scrollTo({ top: Math.max(0, list.scrollTop + centeredDelta), behavior: 'auto' });
+        activeRect.top - scrollerRect.top - (scroller.clientHeight - activeRect.height) / 2;
+      scroller.scrollTo({ top: Math.max(0, scroller.scrollTop + centeredDelta), behavior: 'auto' });
       return;
     }
-    if (follow) list.scrollTop = list.scrollHeight;
+    if (follow) scroller.scrollTop = scroller.scrollHeight;
   });
 }
 

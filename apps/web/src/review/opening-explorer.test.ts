@@ -1,10 +1,14 @@
 import {
   applyStandardXiangqiMove,
   createInitialXiangqiState,
+  parseStandardXiangqiFen,
+  type XiangqiGameState,
   type XiangqiMove,
+  type XiangqiTablebaseResponse,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createOpeningExplorer } from './opening-explorer.js';
+import { createXiangqiTablebasePanel } from './xiangqi-tablebase-panel.js';
 
 const START_KEY = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR r';
 
@@ -132,6 +136,54 @@ describe('opening explorer', () => {
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     expect(String(fetchSpy.mock.calls[1]?.[0])).not.toContain(encodeURIComponent(START_KEY));
+  });
+
+  it('asks once stepping settles, not once per ply, and serves a cached position at once', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchSpy = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        jsonResponse(payload()),
+      );
+      vi.stubGlobal('fetch', fetchSpy);
+
+      const explorer = createOpeningExplorer({ settleMs: 250 });
+      document.body.append(explorer.el);
+      explorer.setActive(true);
+      // A held arrow key: five plies inside the settle window, plus a re-render
+      // of the last one, which must not restart or cancel the pending lookup.
+      let state = createInitialXiangqiState('t');
+      const line: Array<[string, string]> = [
+        ['h3', 'e3'],
+        ['h10', 'g8'],
+        ['h1', 'g3'],
+        ['i10', 'h10'],
+      ];
+      explorer.setState(state);
+      for (const [from, to] of line) {
+        await vi.advanceTimersByTimeAsync(60);
+        state = applyStandardXiangqiMove(state, { from, to } as XiangqiMove);
+        explorer.setState(state);
+      }
+      explorer.setState(state);
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(explorer.el.textContent).toContain('Loading opening statistics');
+
+      await vi.advanceTimersByTimeAsync(250);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(explorer.el.querySelectorAll('.opening-explorer__row')).toHaveLength(2);
+
+      // Back to the start (uncached: settles, asks once), then forward to the
+      // settled position again: cached, so it renders with no new request.
+      explorer.setState(createInitialXiangqiState('t'));
+      await vi.advanceTimersByTimeAsync(250);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      explorer.setState(state);
+      expect(explorer.el.querySelectorAll('.opening-explorer__row')).toHaveLength(2);
+      await vi.advanceTimersByTimeAsync(250);
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('queries nothing until its tab is on screen', async () => {
@@ -324,6 +376,141 @@ describe('opening explorer', () => {
     await flushPromises();
 
     expect(explorer.el.querySelector<HTMLElement>('.opening-explorer__opening')?.hidden).toBe(true);
+  });
+
+  it('previews a hovered book move in the book tone', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(payload())),
+    );
+    const explorer = createOpeningExplorer();
+    const hovered: [XiangqiMove | null, string | null][] = [];
+    explorer.onHoverMove((move, tone) => hovered.push([move, tone]));
+    explorer.setActive(true);
+    explorer.setState(createInitialXiangqiState('t'));
+    await flushPromises();
+
+    const row = explorer.el.querySelector<HTMLElement>('.opening-explorer__row');
+    row?.dispatchEvent(new MouseEvent('mouseenter'));
+    row?.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(hovered[0]?.[1]).toBe('book');
+    expect(hovered[1]).toEqual([null, null]);
+  });
+});
+
+// Lichess's model: one book button, one pane; a covered endgame shows the exact
+// table in that pane instead of the opening book.
+describe('opening explorer with the tablebase', () => {
+  const ENDGAME = '3k5/9/5N3/9/2b6/9/9/9/4K4/9 w';
+  const EXACT: XiangqiTablebaseResponse = {
+    status: 'exact',
+    result: 'win',
+    dtm: 9,
+    moves: [
+      { from: 'f8', to: 'd7', result: 'win', dtm: 9 },
+      { from: 'f8', to: 'e6', result: 'draw', dtm: null },
+    ],
+  };
+
+  function endgame(): XiangqiGameState {
+    const parsed = parseStandardXiangqiFen(ENDGAME);
+    if (!parsed.ok) throw new Error('bad fen');
+    return parsed.state;
+  }
+
+  function book(el: HTMLElement): HTMLElement | null {
+    return el.querySelector<HTMLElement>('.opening-explorer__book');
+  }
+
+  afterEach(() => {
+    document.body.replaceChildren();
+    vi.unstubAllGlobals();
+  });
+
+  it('shows the table in place of the book, and never asks the book', async () => {
+    const fetchSpy = vi.fn(async () => jsonResponse(payload()));
+    vi.stubGlobal('fetch', fetchSpy);
+    const tablebase = createXiangqiTablebasePanel(async () => EXACT);
+    const explorer = createOpeningExplorer({ tablebase });
+    document.body.append(explorer.el);
+    explorer.setActive(true);
+    explorer.setState(endgame());
+    await flushPromises();
+
+    expect(tablebase.el.parentElement).toBe(explorer.el);
+    expect(tablebase.el.hidden).toBe(false);
+    expect(book(explorer.el)?.hidden).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('falls back to the book when the tablebase has no answer', async () => {
+    const fetchSpy = vi.fn(async () => jsonResponse(payload()));
+    vi.stubGlobal('fetch', fetchSpy);
+    const tablebase = createXiangqiTablebasePanel(async () => ({ status: 'none' }));
+    const explorer = createOpeningExplorer({ tablebase });
+    explorer.setActive(true);
+    explorer.setState(endgame());
+    await flushPromises();
+
+    expect(tablebase.el.hidden).toBe(true);
+    expect(book(explorer.el)?.hidden).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the book for an opening without asking the tablebase', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(payload())),
+    );
+    const lookup = vi.fn(async () => EXACT);
+    const explorer = createOpeningExplorer({ tablebase: createXiangqiTablebasePanel(lookup) });
+    explorer.setActive(true);
+    explorer.setState(createInitialXiangqiState('t'));
+    await flushPromises();
+
+    expect(lookup).not.toHaveBeenCalled();
+    expect(explorer.el.querySelectorAll('.opening-explorer__row')).toHaveLength(2);
+  });
+
+  it('stays closed and asks nothing while the pane is closed; opening catches up', async () => {
+    const lookup = vi.fn(async () => EXACT);
+    const tablebase = createXiangqiTablebasePanel(lookup);
+    const explorer = createOpeningExplorer({ tablebase });
+    explorer.setState(endgame());
+    await flushPromises();
+    expect(explorer.el.hidden).toBe(true);
+    expect(lookup).not.toHaveBeenCalled();
+
+    explorer.setActive(true);
+    await flushPromises();
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(tablebase.el.hidden).toBe(false);
+
+    // Close and reopen on the same position: the table is still there.
+    explorer.setActive(false);
+    expect(explorer.el.hidden).toBe(true);
+    explorer.setActive(true);
+    await flushPromises();
+    expect(tablebase.el.hidden).toBe(false);
+    expect(lookup).toHaveBeenCalledTimes(1);
+  });
+
+  it('plays and previews table rows through the pane, inked by result', async () => {
+    const tablebase = createXiangqiTablebasePanel(async () => EXACT);
+    const explorer = createOpeningExplorer({ tablebase });
+    const played: XiangqiMove[] = [];
+    const hovered: [XiangqiMove | null, string | null][] = [];
+    explorer.onPlayMove((move) => played.push(move));
+    explorer.onHoverMove((move, tone) => hovered.push([move, tone]));
+    explorer.setActive(true);
+    explorer.setState(endgame());
+    await flushPromises();
+
+    const rows = [...tablebase.el.querySelectorAll<HTMLElement>('.xq-tablebase__row')];
+    rows[1]?.dispatchEvent(new MouseEvent('mouseenter'));
+    rows[0]?.click();
+    expect(hovered).toEqual([[{ from: 'f8', to: 'e6' }, 'draw']]);
+    expect(played).toEqual([{ from: 'f8', to: 'd7' }]);
   });
 });
 

@@ -12,8 +12,13 @@
 // bell that 500s takes the nav down with it.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { DAY_MS } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import * as persistence from './../persistence.js';
+import {
+  type CorrespondenceEndedNotificationJson,
+  unseenFinishedCorrespondenceGames,
+} from './correspondence-games.js';
 import { readJsonBody, requireMethod, requirePersistence, writeJson } from './lib.js';
 
 export type NotificationCounts = {
@@ -24,6 +29,31 @@ export type NotificationCounts = {
   // one busy thread cannot swamp the badge.
   forumTopics: number;
   incomingChallenges: number;
+  // Public board seeks of yours that lapsed with no taker, not yet seen (161).
+  seekExpiries: number;
+  // Correspondence games that ended since the player last looked, and not by
+  // their own act (167; the /correspondence page's "New" tag, same watermark).
+  correspondenceFinished: number;
+};
+
+// One lapsed board seek, with its terms so the bell can offer to post it again.
+export type SeekExpiryNotificationJson = {
+  seekId: string;
+  gameSpecId: string;
+  daysPerMove: number;
+  preferredColor: 'first' | 'second' | 'random';
+  rated: boolean;
+  expiredAt: string;
+  // How long a board seek stays up, so the copy never drifts from the rule.
+  ttlDays: number;
+};
+
+// One new follower, newest first. handle is null when the follower's profile
+// may not be linked (linkableHandleSql); the row then names them without a link.
+export type NewFollowerNotificationJson = {
+  handle: string | null;
+  displayName: string;
+  followedAt: string;
 };
 
 export type ForumWatchNotificationJson = {
@@ -36,12 +66,24 @@ export type ForumWatchNotificationJson = {
 };
 
 // The bell payload: every count, plus the per-topic rows behind forumTopics
-// (capped, most recently active first) so the panel can deep-link each one.
+// (capped, most recently active first) so the panel can deep-link each one,
+// and the newest followers behind newFollowers (capped the same way).
 export type NotificationsPayload = NotificationCounts & {
+  followedBy: NewFollowerNotificationJson[];
   forumWatched: ForumWatchNotificationJson[];
+  seekExpired: SeekExpiryNotificationJson[];
+  correspondenceFinishedGames: CorrespondenceEndedNotificationJson[];
 };
 
 const FORUM_BELL_ROWS = 5;
+const FOLLOWER_BELL_ROWS = 5;
+const SEEK_EXPIRY_BELL_ROWS = 3;
+const FINISHED_BELL_ROWS = 3;
+const SEEK_TTL_DAYS = Math.round(persistence.CORRESPONDENCE_SEEK_TTL_MS / DAY_MS);
+
+// Read receipts the bell can send: the users.*_seen_at watermarks, plus the
+// expired-seek notices, which carry their own per-row seen_at.
+type SeenKind = persistence.NotificationWatermarkKind | 'seek-expiries';
 
 async function countOrZero(work: Promise<number>): Promise<number> {
   try {
@@ -66,28 +108,61 @@ export async function tryHandle(
       return true;
     }
 
-    const [inboxUnread, correspondenceYourMove, newFollowers, forumWatched, incomingChallenges] =
-      await Promise.all([
-        countOrZero(persistence.countUnreadDmThreads(user.id)),
-        countOrZero(
-          persistence
-            .listCorrespondenceGamesForUser(user.id)
-            .then((games) => games.reduce((count, game) => count + (game.isYourMove ? 1 : 0), 0)),
-        ),
-        countOrZero(persistence.countNewFollowers(user.id)),
+    const [
+      inboxUnread,
+      correspondenceYourMove,
+      newFollowers,
+      forumWatched,
+      incomingChallenges,
+      seekExpired,
+      correspondenceFinished,
+    ] = await Promise.all([
+      countOrZero(persistence.countUnreadDmThreads(user.id)),
+      countOrZero(
         persistence
-          .unreadWatchedForumTopics(user.id, { limit: FORUM_BELL_ROWS })
-          .catch((): persistence.UnreadWatchedForumTopics => ({ total: 0, topics: [] })),
-        countOrZero(persistence.countIncomingChallenges(user.id)),
-      ]);
+          .listCorrespondenceGamesForUser(user.id)
+          .then((games) => games.reduce((count, game) => count + (game.isYourMove ? 1 : 0), 0)),
+      ),
+      persistence
+        .unseenNewFollowers(user.id, { limit: FOLLOWER_BELL_ROWS })
+        .catch((): persistence.UnseenNewFollowers => ({ total: 0, followers: [] })),
+      persistence
+        .unreadWatchedForumTopics(user.id, { limit: FORUM_BELL_ROWS })
+        .catch((): persistence.UnreadWatchedForumTopics => ({ total: 0, topics: [] })),
+      countOrZero(persistence.countIncomingChallenges(user.id)),
+      persistence
+        .unseenSeekExpiryNotices(user.id, { limit: SEEK_EXPIRY_BELL_ROWS })
+        .catch(() => ({ total: 0, notices: [] as persistence.SeekExpiryNotice[] })),
+      unseenFinishedCorrespondenceGames(user.id, { limit: FINISHED_BELL_ROWS }).catch(() => ({
+        total: 0,
+        games: [] as CorrespondenceEndedNotificationJson[],
+      })),
+    ]);
 
     const payload: NotificationsPayload = {
       inboxUnread,
       correspondenceYourMove,
-      newFollowers,
+      newFollowers: newFollowers.total,
+      followedBy: newFollowers.followers.map((follower) => ({
+        handle: follower.handle,
+        displayName: follower.displayName,
+        followedAt: follower.followedAt.toISOString(),
+      })),
       forumTopics: forumWatched.total,
       incomingChallenges,
       forumWatched: forumWatched.topics,
+      seekExpiries: seekExpired.total,
+      seekExpired: seekExpired.notices.map((notice) => ({
+        seekId: notice.seekId,
+        gameSpecId: notice.gameSpecId,
+        daysPerMove: notice.daysPerMove,
+        preferredColor: notice.preferredColor,
+        rated: notice.rated,
+        expiredAt: notice.expiredAt.toISOString(),
+        ttlDays: SEEK_TTL_DAYS,
+      })),
+      correspondenceFinished: correspondenceFinished.total,
+      correspondenceFinishedGames: correspondenceFinished.games,
     };
     writeJson(response, 200, payload);
     return true;
@@ -102,11 +177,17 @@ export async function tryHandle(
       return true;
     }
     const body = await readJsonBody(request);
-    if (!persistence.isNotificationWatermarkKind(body.kind)) {
+    const kind = body.kind as SeenKind;
+    if (kind === 'seek-expiries') {
+      await persistence.markSeekExpiryNoticesSeen(user.id);
+      writeJson(response, 200, { ok: true });
+      return true;
+    }
+    if (!persistence.isNotificationWatermarkKind(kind)) {
       writeJson(response, 400, { error: 'invalid_kind' });
       return true;
     }
-    await persistence.markNotificationsSeen(user.id, body.kind);
+    await persistence.markNotificationsSeen(user.id, kind);
     writeJson(response, 200, { ok: true });
     return true;
   }

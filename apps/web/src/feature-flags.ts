@@ -37,6 +37,20 @@ export function mahjongEnabled(): boolean {
   return import.meta.env.VITE_MAHJONG_ENABLED === 'true';
 }
 
+// Xiangqi mahjong (the 32-tile, two-player game). Off by default and gated
+// exactly like Hong Kong mahjong: the server flag, plus the per-account
+// allowlist, so turning this on renders the table only for grant holders.
+export function xiangqiMahjongEnabled(): boolean {
+  return import.meta.env.VITE_XIANGQI_MAHJONG_ENABLED === 'true';
+}
+
+// Crazyhouse Xiangqi renderer. Launched: always on, like fortress and atomic
+// (the server MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED flag remains the runtime
+// kill-switch for room creation).
+export function crazyhouseXiangqiEnabled(): boolean {
+  return true;
+}
+
 export function duckXiangqiEnabled(): boolean {
   return true;
 }

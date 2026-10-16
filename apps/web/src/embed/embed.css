@@ -12,6 +12,11 @@
    legible on any host. What sits outside the panel (the chapter title and the
    credit line) takes the host's ground, which is why ?theme= exists: an
    embedder on a dark page pins dark and both halves agree. */
+
+/* The credit line under the card. Its own file because an article replay board
+   draws the same link outside any embed (xiangqi-replay.ts). */
+@import "./embed-credit.css";
+
 .embed-body {
   margin: 0;
   padding: 0;
@@ -33,18 +38,6 @@
      only on a small VIEWPORT then never stacks at all. */
   container-type: inline-size;
   container-name: embed-frame;
-}
-
-.embed-credit {
-  color: var(--site-muted);
-  font-size: 12px;
-  text-align: center;
-  text-decoration: none;
-}
-
-.embed-credit:hover {
-  color: var(--site-link);
-  text-decoration: underline;
 }
 
 .embed-note {
@@ -180,6 +173,55 @@ body.embed-body {
   text-align: center;
 }
 
+/* A header carrying a control (the fog view picker): title and control on one
+   line when they fit, the control wrapping under the title when they do not. */
+.embed-card-header--controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 12px;
+}
+
+/* White | Truth | Black: the review page's segmented control (.review-pov),
+   compact enough for a header line. */
+.embed-pov {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 8px);
+  background: var(--site-panel, var(--site-surface));
+}
+
+.embed-pov__button {
+  padding: 3px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.embed-pov__button:hover {
+  background: var(--site-hover, var(--site-surface));
+  color: var(--site-text);
+}
+
+.embed-pov__button.active {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+}
+
+.embed-pov__button:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: -2px;
+}
+
 /* Seat rows, the card's own, above and below the board: a disc in the seat's
    ink, the name in heading ink, and the clock (a game's; a study's slot stays
    empty) in muted figures at the far end. 39px each, the number SEAT_ROWS_PX
@@ -223,36 +265,6 @@ body.embed-body {
   display: none;
 }
 
-/* The disc is the study card's seat marker (articles.css .xq-replay-seat-dot):
-   literal piece inks, not theme tokens, so the black seat stays a dark dot on
-   the dark theme; the border keeps it visible against a dark card. The dark ink
-   reads the seat-disc token so the jungle family paints blue. */
-.embed-seat-disc {
-  flex: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 1px solid var(--site-border);
-  background: #f4f1e9;
-}
-
-.embed-seat-disc--red {
-  background: #c0392b;
-  border-color: #c0392b;
-}
-
-.embed-seat-disc--black,
-.embed-seat-disc--blue {
-  background: var(--seat-dark-ink, #2b2b2b);
-  border-color: var(--seat-dark-ink-border, var(--site-border));
-}
-
-.embed-seat-disc--unbound {
-  background: transparent;
-  border-style: dashed;
-  opacity: 0.55;
-}
-
 /* The board sits on a mat inside the card rather than running to its edges,
    with the corners of the mat rounded: the study card's board (articles.css
    .raw-svg-stepper-frame-xq, 12px inset) and the reason the two embeds read
@@ -268,13 +280,153 @@ body.embed-body {
   overflow: hidden;
 }
 
-/* Back, forward, and the two jumps, with the ply count between them. Under the
-   board, not under the sheet: the reader's eye is on the board when stepping. */
+/* The study boards that paint a bare svg into their own frame (jieqi, flip
+   jungle, fortress): width-driven, height from the viewBox, like the rest. */
+.embed-board
+:is(.jieqi-embed-board, .jungle-flip-embed-board, .fxq-embed-board-svg, .chx-embed-board-svg) {
+  line-height: 0;
+}
+
+.embed-board
+  :is(.jieqi-embed-board, .jungle-flip-embed-board, .fxq-embed-board-svg, .chx-embed-board-svg)
+  > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Fortress Xiangqi: each hand as a pocket band above and below the board, one
+   slot per droppable role with the empty ones ghosted (the review rail's
+   pocket, drop-reserve.css). The slot scales with the board, 62/516 of its
+   width as in the review, so the column keeps one aspect ratio at any size:
+   the band is 0.13 of the board width, FORTRESS_EMBED_HAND_RATIO in
+   fortress-xiangqi-replay-board.ts, which the card's arithmetic reads. */
+.embed-board .fxq-embed-board {
+  container-type: inline-size;
+}
+
+.embed-board .fxq-embed-hand.drop-mini-reserve-strip {
+  --drop-mini-hand-piece-size: calc(100cqw * 62 / 516);
+  --drop-mini-hand-tile-size: var(--drop-mini-hand-piece-size);
+  --drop-mini-hand-band-height: calc(100cqw * 0.13);
+
+  display: flex;
+  align-items: center;
+  height: var(--drop-mini-hand-band-height);
+  min-height: 0;
+  padding: 0;
+}
+
+.embed-board .fxq-embed-hand .drop-mini-reserve-row {
+  gap: calc(100cqw * 4 / 516);
+}
+
+.embed-board .fxq-embed-hand .drop-mini-reserve-piece {
+  flex: 0 1 var(--drop-mini-hand-piece-size);
+  min-width: 0;
+  width: auto;
+  height: auto;
+  aspect-ratio: 1;
+  border-color: transparent;
+  background: transparent;
+}
+
+.embed-board .fxq-embed-hand .drop-mini-reserve-piece svg {
+  width: 100%;
+  height: 100%;
+}
+
+.embed-board .fxq-embed-hand .drop-mini-reserve-piece.is-empty {
+  opacity: 0.24;
+}
+
+/* Crazyhouse Xiangqi: each hand as the game room's pocket (drop-pocket.ts,
+   the rounded bar with a count badge bottom-right) in a band above and below
+   the board. The replay widget's hands drew pieces bigger than the board's;
+   here the slot is 0.085 of the board width, a size under an on-board disc
+   (54/552), so the pocket reads as the room's at any frame width. The band is
+   0.12 of the board width, CRAZYHOUSE_EMBED_HAND_RATIO in
+   crazyhouse-xiangqi-replay-board.ts, which the card's arithmetic reads. The
+   bar hugs its six slots and centres in the band instead of spanning the
+   board, and stops being its own size container so the slot reads the
+   board's width. */
+.embed-board .chx-embed-board {
+  container-type: inline-size;
+}
+
+.embed-board .chx-embed-hand-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(100cqw * 0.12);
+}
+
+.embed-board .chx-embed-hand.drop-mini-reserve-strip.drop-pocket {
+  --pocket-pad: calc(100cqw * 0.008);
+  --pocket-gap: calc(100cqw * 0.01);
+
+  container-type: normal;
+  width: auto;
+}
+
+.embed-board .chx-embed-hand .drop-mini-reserve-row {
+  --pocket-slot: calc(100cqw * 0.085);
+
+  width: auto;
+}
+
+.embed-board .chx-embed-hand .drop-mini-reserve-piece {
+  flex: 0 0 var(--pocket-slot);
+  width: var(--pocket-slot);
+  height: var(--pocket-slot);
+}
+
+/* Back, a menu, forward: the article replay's bar (articles.css,
+   .xq-replay-annotated). Under the board, not under the sheet: the reader's eye
+   is on the board when stepping. The menu opens upward, so the bar is its
+   positioning context. */
 .embed-card-controls {
+  position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr auto 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   align-items: stretch;
   border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+}
+
+.embed-card-menu {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  z-index: 5;
+  display: flex;
+  min-width: 150px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 28%);
+  transform: translateX(-50%);
+}
+
+.embed-card-menu[hidden] {
+  display: none;
+}
+
+.embed-card-menu-item {
+  padding: 9px 14px;
+  border: none;
+  background: none;
+  color: var(--site-text);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.embed-card-menu-item:hover {
+  background: var(--site-hover);
+  color: var(--site-heading);
 }
 
 .embed-card-control {
@@ -302,15 +454,14 @@ body.embed-body {
 }
 
 .embed-card-status {
-  display: flex;
-  align-items: center;
-  min-width: 52px;
-  padding: 0 10px;
-  color: var(--site-muted);
-  font-size: 11px;
-  text-align: center;
-  justify-content: center;
-  font-variant-numeric: tabular-nums;
+  /* Not drawn: the bar is three buttons. Kept as a polite live region so a
+     screen reader still hears where the board is. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Out of flow on purpose, the study card's own trick: in normal flow a 180-ply
@@ -416,6 +567,56 @@ body.embed-body {
   text-align: center;
 }
 
+/* A problem shown without its answer (hideSolution): the sheet stays laid out
+   underneath, invisible and inert, and the cover holds the rail's place with a
+   prompt and one button. Stepping forward lifts it too (embed-card.ts). */
+.embed-card-rail--solution-hidden .embed-card-rail-inner {
+  visibility: hidden;
+}
+
+.embed-card-solution-cover {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.embed-card-solution-prompt {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.embed-card-solution-show {
+  padding: 7px 14px;
+  border: 1px solid var(--site-accent);
+  border-radius: 6px;
+  background: var(--site-accent-soft, transparent);
+  color: var(--site-accent-strong, var(--site-heading));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.embed-card-solution-show:hover {
+  background: var(--site-accent);
+  color: var(--site-on-accent, #fff);
+}
+
+.embed-card-solution-show:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 2px;
+}
+
 @media (max-width: 479px) {
   /* Stacked, the card takes the whole frame again: the sheet is under the
      board, so whatever height the board does not need is the sheet's. */
@@ -502,6 +703,102 @@ body.embed-body {
 
 .embed-board .showcase-seat.active .showcase-seat-clock {
   color: var(--site-text, inherit);
+}
+
+/* A drop variant's game board (the tenant watch renderer, sidedCaptures):
+   [hand, board, hand] in one row. The homepage stacks them in landing.css,
+   which the embed does not load, so here the row became three columns, the
+   hands at their live-room size squeezed the board to nothing and the card
+   collapsed. Stack them as the study embed does: each hand a band above and
+   below the board sized off the board's width, the column's aspect taken from
+   embedColumnAspect (EMBED_HAND_BAND_RATIO in embed-card.ts keeps the band
+   numbers). Crazyhouse draws the hand as the game room's pocket bar, 0.085
+   slots in a 0.12 band, matching .chx-embed-hand; Fortress as its study embed
+   does, 62/516 slots in a 0.13 band, no bar. Scoped to the card: the TV
+   embed has its own stage. */
+.embed-card .embed-board .replay-layout-solo .showcase-board-row:has(> .showcase-reserve) {
+  --embed-hand-band: 0.12;
+  --embed-hand-slot: 0.085;
+  --embed-hand-pad: calc(100cqw * 0.008);
+  --embed-hand-bar: color-mix(in srgb, var(--site-border) 46%, transparent);
+
+  container-type: inline-size;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.embed-card
+  .embed-board
+  .replay-layout-solo
+  .showcase-board-row:has(> .showcase-reserve):has(.fxq-board) {
+  --embed-hand-band: 0.13;
+  --embed-hand-slot: calc(62 / 516);
+  --embed-hand-pad: 0px;
+  --embed-hand-bar: transparent;
+}
+
+.embed-card .embed-board .showcase-board-row > .showcase-reserve.drop-mini-reserve-strip {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: calc(100cqw * var(--embed-hand-band));
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.embed-card .embed-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-row {
+  flex: 0 0 auto;
+  width: auto;
+  gap: calc(100cqw * 0.01);
+  padding: var(--embed-hand-pad);
+  border-radius: var(--site-radius, 10px);
+  background: var(--embed-hand-bar);
+}
+
+.embed-card .embed-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-piece {
+  flex: 0 0 calc(100cqw * var(--embed-hand-slot));
+  width: calc(100cqw * var(--embed-hand-slot));
+  height: calc(100cqw * var(--embed-hand-slot));
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.embed-card .embed-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-piece svg {
+  width: 100%;
+  height: 100%;
+}
+
+.embed-card .embed-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-piece.is-empty {
+  opacity: 0.26;
+  filter: grayscale(1);
+}
+
+/* The count badge bottom-right, as on the game room's pocket. */
+.embed-card .embed-board .showcase-board-row > .showcase-reserve .captures-count-badge {
+  position: absolute;
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  line-height: 1;
+  right: -3px;
+  bottom: -3px;
+  min-width: clamp(14px, calc(100cqw * var(--embed-hand-slot) * 0.4), 19px);
+  height: clamp(14px, calc(100cqw * var(--embed-hand-slot) * 0.4), 19px);
+  padding: 0 3px;
+  border: 1.5px solid var(--site-panel, #ffffff);
+  border-radius: 999px;
+  background: var(--site-accent);
+  color: var(--site-on-accent, #ffffff);
+  font-size: clamp(9px, calc(100cqw * var(--embed-hand-slot) * 0.27), 12px);
+  font-variant-numeric: tabular-nums;
 }
 
 /* The chessground fallback (fog chess and its cousins) renders the review
@@ -914,4 +1211,14 @@ body.embed-body {
   min-height: 0;
   overflow: auto;
   padding-top: 0;
+}
+
+/* articles.css caps an article's xiangqi board at 296px when the VIEWPORT is
+   600px or narrower, a phone rule. Inside an embed the viewport is the iframe,
+   so any host that framed the card at 600px or less got a 296px board in a
+   356px column (measured 2026-09-25 on the live embed at 600x700). The card
+   sizes the board column itself (fitBoard), so the board fills it. */
+.embed-card .embed-board .raw-svg-stepper-frame-xq > .xq-article-svg[data-xq-layout="single"],
+.embed-card .embed-board .article-figure-xq > .xq-article-svg[data-xq-layout="single"] {
+  width: 100%;
 }

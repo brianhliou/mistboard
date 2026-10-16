@@ -3,9 +3,9 @@ import * as persistence from './../persistence.js';
 import {
   DEFAULT_RATING_BUCKET,
   PUBLIC_RATING_TIME_CLASS,
-  PUBLIC_RATING_TIME_CLASSES,
-  parseRatingTimeClass,
   parseRatingVariant,
+  parseVisibleRatingTimeClass,
+  visibleRatingTimeClasses,
 } from './../rating-buckets.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
 
@@ -32,7 +32,7 @@ export async function tryHandle(
     ]);
     writeJson(response, 200, {
       timeClass,
-      timeClasses: PUBLIC_RATING_TIME_CLASSES,
+      timeClasses: visibleRatingTimeClasses(),
       ladders,
       activePlayers,
     });
@@ -55,7 +55,7 @@ export async function tryHandle(
   writeJson(response, 200, {
     leaderboard: entries,
     bucket: { variant, timeClass },
-    timeClasses: PUBLIC_RATING_TIME_CLASSES,
+    timeClasses: visibleRatingTimeClasses(),
   });
   return true;
 }
@@ -66,5 +66,5 @@ export async function tryHandle(
 // caller did not ask for.
 function requestedTimeClass(parsedUrl: URL) {
   const raw = parsedUrl.searchParams.get('timeClass');
-  return raw === null ? PUBLIC_RATING_TIME_CLASS : parseRatingTimeClass(raw);
+  return raw === null ? PUBLIC_RATING_TIME_CLASS : parseVisibleRatingTimeClass(raw);
 }

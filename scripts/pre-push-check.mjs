@@ -56,6 +56,14 @@ function parseArgs(args) {
       options.planOnly = true;
     } else if (arg === '--json') {
       options.json = true;
+    } else if (arg === '--base') {
+      // With --files: the revision the files changed from, so the targeted plan
+      // verifies that committed range instead of the (clean) working tree.
+      index += 1;
+      if (index >= args.length || args[index].startsWith('--')) {
+        throw new Error('--base requires a revision');
+      }
+      options.remoteSha = args[index];
     } else if (arg === '--files') {
       options.explicitFiles = true;
       index += 1;

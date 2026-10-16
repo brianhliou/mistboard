@@ -7,15 +7,22 @@ import {
   embedPlyFromSearch,
   embedPovFromSearch,
   embedRouteFromPath,
+  embedSolutionHiddenFromSearch,
   embedThemeFromSearch,
 } from './embed/embed-route.js';
 import './board-fog.css';
 import './styles.css';
 import { initializeAccountNav } from './account-nav.js';
 import { analysisVariantFromPath, analysisVariantLabel } from './analysis-catalog.js';
-import { captureException, setPostHogInstance, trackLocaleResolved } from './analytics.js';
+import {
+  applyInternalTag,
+  captureException,
+  setPostHogInstance,
+  trackLocaleResolved,
+} from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import {
+  chunkReloadPending,
   clearChunkReloadAttempt,
   installGlobalChunkLoadRecovery,
   reloadForChunkLoadError,
@@ -30,14 +37,17 @@ import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl, resolveLocale } from './i18n/locale.js';
 import {
   challengesNotificationSource,
+  correspondenceFinishedNotificationSource,
   correspondenceNotificationSource,
   followersNotificationSource,
   forumNotificationSource,
   inboxNotificationSource,
   registerNotificationSource,
+  seekExpiryNotificationSource,
 } from './notification-nav.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { mountRestartBanner, refreshRestartBanner, setRestartBanner } from './restart-banner.js';
+import { captureServerRender } from './server-render-fallback.js';
 import { initializeThemeSettings, pinSiteTheme } from './theme.js';
 import {
   type WebVariantTenant,
@@ -75,6 +85,10 @@ registerNotificationSource(forumNotificationSource);
 // Directed challenges are correspondence seeks, so this source has nothing to
 // report unless correspondence is on.
 if (correspondenceEnabled()) registerNotificationSource(challengesNotificationSource);
+// A public board seek that lapsed with no taker: told once, then seen.
+if (correspondenceEnabled()) registerNotificationSource(seekExpiryNotificationSource);
+// A correspondence game that ended while you were away: told once, then seen.
+if (correspondenceEnabled()) registerNotificationSource(correspondenceFinishedNotificationSource);
 // An embed runs inside SOMEONE ELSE'S page, so the site bootstrap below is not
 // just wasted work there, it is work we have no business doing in their document:
 // the account nav fetches /api/auth/me with credentials, and analytics reports a
@@ -114,6 +128,7 @@ if (!isEmbedDocument)
           restartAt: number | null;
           restartPhase?: 'pending' | 'restarting' | null;
           ratedEnabled?: boolean;
+          correspondenceRatedEnabled?: boolean;
         } | null,
       ) => {
         if (data) {
@@ -125,7 +140,9 @@ if (!isEmbedDocument)
                 : null;
           setRestartBanner(phase);
         }
-        if (data) setRatedModeEnabled(data.ratedEnabled === true);
+        if (data) {
+          setRatedModeEnabled(data.ratedEnabled === true, data.correspondenceRatedEnabled === true);
+        }
       },
     )
     .catch(() => {
@@ -156,7 +173,11 @@ if (phKey && phHost && import.meta.env.PROD && !isEmbedDocument) {
       // Chromium fires at window.onerror when an observer callback defers a
       // layout to the next frame; nothing breaks and it never reproduces on
       // Firefox/Safari. Filtering here keeps it out of Error Tracking entirely.
+      // Errors thrown while a stale-chunk reload is in flight are the reload's
+      // own side effect (lazy imports resolve undefined until it lands), so
+      // they are dropped too; the failed chunk itself is not an app defect.
       before_send: (event) => {
+        if (event?.event === '$exception' && chunkReloadPending()) return null;
         const message = event?.properties?.$exception_values?.[0];
         if (typeof message === 'string' && message.includes('ResizeObserver loop')) {
           return null;
@@ -164,6 +185,7 @@ if (phKey && phHost && import.meta.env.PROD && !isEmbedDocument) {
         return event;
       },
     });
+    applyInternalTag(posthog);
     posthog.capture('$pageview', { path: window.location.pathname });
     setPostHogInstance(posthog);
   });
@@ -172,14 +194,21 @@ if (phKey && phHost && import.meta.env.PROD && !isEmbedDocument) {
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
 const appRoot = app;
+// Before any mount touches #app: what the server prerendered, if anything.
+const serverRender = captureServerRender(appRoot);
 
 const params = new URLSearchParams(window.location.search);
 const path = window.location.pathname.replace(/\/+$/, '') || '/';
 const replaySample = params.get('replay');
 const playDeepLink = params.get('play');
+// The dev live-room shortcut (?room= / ?variant= / ?dev). /games/search and
+// /data own their own ?variant= (the picker), so the shortcut must not claim
+// those pages.
 const wantsLive =
   import.meta.env.DEV &&
   !playDeepLink &&
+  path !== '/games/search' &&
+  path !== '/data' &&
   (params.has('room') || params.has('variant') || params.has('dev'));
 const page = params.get('page');
 const gameRoomId = gameRoomIdFromPath(path);
@@ -194,7 +223,28 @@ const wantsFaq = path === '/faq' || page === 'faq';
 const wantsTerms = path === '/terms' || page === 'terms';
 const wantsPrivacy = path === '/privacy' || page === 'privacy';
 const wantsContribute = path === '/contribute' || page === 'contribute';
-const wantsChangelog = path === '/changelog' || page === 'changelog';
+const wantsCreators = path === '/creators' || page === 'creators';
+// Engine champions: locale-prefixed like /bots, so the zh copies moved from
+// brianhliou.com/zh-hans/challenges/ have URLs of their own. The page was
+// /challenges until 2026-10-07: the server 301s the old paths
+// (legacyPageRedirect); the client still takes them (Vite dev, a cached shell)
+// and swaps the address bar to the canonical URL.
+const wantsLegacyChampions =
+  path === '/challenges' || path === '/zh-hans/challenges' || path === '/zh-hant/challenges';
+if (wantsLegacyChampions) {
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `${path.replace(/challenges$/, 'champions')}${window.location.search}${window.location.hash}`,
+  );
+}
+const wantsChampions =
+  wantsLegacyChampions ||
+  path === '/champions' ||
+  path === '/zh-hans/champions' ||
+  path === '/zh-hant/champions';
+const wantsChangelog =
+  path === '/changelog' || /^\/changelog\/\d{4}-\d{2}$/.exec(path) !== null || page === 'changelog';
 const wantsDevelopers = path === '/developers' || page === 'developers';
 const wantsApiDocs = path === '/api-docs' || page === 'api-docs';
 const wantsThanks = path === '/thanks' || page === 'thanks';
@@ -237,7 +287,12 @@ const articleSlug = articleSlugFromPath(path);
 const articleLang = articleLangFromPath(path);
 const articleIndexView = articleIndexViewFromPath(path);
 const wantsArticlesIndex = articleIndexView !== null || page === 'blog';
-const wantsNews = path === '/feed' || path === '/news' || page === 'feed' || page === 'news';
+const wantsNews =
+  path === '/feed' ||
+  /^\/feed\/\d{4}-\d{2}$/.test(path) ||
+  path === '/news' ||
+  page === 'feed' ||
+  page === 'news';
 const forumRedirectPostId = forumRedirectPostIdFromPath(path);
 const forumTopicId = forumTopicIdFromPath(path);
 const wantsForumReports = path === '/forum/reports';
@@ -261,9 +316,18 @@ const wantsVideos =
   path === '/zh-hant/videos' ||
   page === 'videos';
 const wantsXiangqiPlayersIndex = path === '/players';
-const xiangqiPlayerSlug = /^\/players\/([^/]+)$/.exec(path)?.[1] ?? null;
+// Teams first: /players/teams would otherwise read as a player slug.
+const wantsXiangqiTeamsIndex = path === '/players/teams';
+const xiangqiTeamKey = /^\/players\/teams\/([^/]+)$/.exec(path)?.[1] ?? null;
+const xiangqiPlayerSlug = wantsXiangqiTeamsIndex
+  ? null
+  : (/^\/players\/([^/]+)$/.exec(path)?.[1] ?? null);
 const wantsXiangqiBroadcastIndex = path === '/broadcast/xiangqi';
 const wantsXiangqiBroadcastOps = path === '/broadcast/xiangqi/ops';
+// The section's own pages. Matched before the tour route below, which would
+// otherwise read `calendar` and `about` as tour slugs.
+const wantsXiangqiBroadcastCalendar = path === '/broadcast/xiangqi/calendar';
+const wantsXiangqiBroadcastAbout = path === '/broadcast/xiangqi/about';
 const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
 const xiangqiBroadcastRound = xiangqiBroadcastRoundFromPath(path);
 const xiangqiBroadcastTourSlug = xiangqiBroadcastTourSlugFromPath(path);
@@ -319,7 +383,9 @@ const wantsAccountsAdmin = path === '/accounts';
 const engineProfileId = path.startsWith('/engine/')
   ? decodeURIComponent(path.slice('/engine/'.length))
   : null;
-const wantsBots = path === '/bots';
+// Locale-prefixed too, the /zh-hans/videos shape: the prefix alone sets the
+// locale, so 象棋人机对战 has an indexable Chinese URL.
+const wantsBots = path === '/bots' || path === '/zh-hans/bots' || path === '/zh-hant/bots';
 const botProfileId = path.startsWith('/bot/')
   ? decodeURIComponent(path.slice('/bot/'.length))
   : null;
@@ -341,6 +407,10 @@ const wantsCurrentGames = path === '/games';
 // know about is a conformance failure.
 const wantsHistoricalXiangqiSearch = path === '/games/search';
 const wantsXiangqiImport = path === '/import';
+// Monthly downloads of every finished game (lichess's database.lichess.org).
+const wantsDataPage = path === '/data';
+// What the data files hold, the licence, and how hidden pieces appear.
+const wantsDataAbout = path === '/data/about';
 const historicalXiangqiGameId = historicalXiangqiGameIdFromPath(path);
 // Accepts the locale-prefixed permalink too (/zh-hans/study/:id). The locale
 // itself is already picked up from the URL by initializeLocaleFromCurrentUrl;
@@ -351,7 +421,14 @@ const studyChapterRoute = studyChapterRouteFromPath(path);
 const studyId = studyBaseId ?? studyChapterRoute?.studyId ?? null;
 const studyChapterId = studyChapterRoute?.chapterId ?? null;
 const wantsStudyIndex = path === '/study';
-const wantsPractice = path === '/practice';
+// Locale-prefixed too, like the course: localeFromPath() picks the language.
+const wantsPractice =
+  path === '/practice' || path === '/zh-hans/practice' || path === '/zh-hant/practice';
+const wantsPracticePosition = path === '/practice/position';
+// One shelf exercise by set slug and position (article links, #521): a bounce
+// page that resolves the chapter in this database. The module validates the
+// pair; isClientRoute already 404s anything that is not one.
+const wantsPracticeChapter = /^\/practice\/([a-z-]+)\/([a-z0-9-]+)$/.exec(path) !== null;
 // Hidden DEV-only lab for Jungle river-movement cues (rat / tiger / lion). No nav entry.
 const wantsJungleCuesLab = import.meta.env.DEV && path === '/jungle-cues';
 // Hidden DEV-only audition lab for sound sets. No nav entry.
@@ -391,7 +468,7 @@ if (replaySample) {
     ),
   );
 } else if (wantsTenantLiveRoom && tenantLiveRoom?.loadLiveRoomClient) {
-  setTitle(tenantLiveRoom.pageTitle);
+  setTitleKey(tenantLiveRoom.pageTitleKey);
   const loadTenantLiveRoom = tenantLiveRoom.loadLiveRoomClient;
   void mountOrReport(() =>
     loadTenantLiveRoom().then((bootstrap) => {
@@ -399,14 +476,14 @@ if (replaySample) {
     }),
   );
 } else if (liveRoomId || wantsLive) {
-  setTitle('Live');
+  setTitleKey('live.pageTitle');
   void mountOrReport(() =>
     import('./live.js').then(({ bootstrapLiveRoom }) => bootstrapLiveRoom()),
   );
 } else if (tenantPostgame?.tenant.enabled()) {
   const { tenant, mount, roomId } = tenantPostgame;
   appRoot.dataset.favoriteGameId = roomId;
-  setTitle(tenant.pageTitle);
+  setTitleKey(tenant.pageTitleKey);
   void mountOrReport(() => mount(appRoot, roomId).then(() => undefined));
 } else if (gameRoomTenantRedirect) {
   // A stale/shared /game/<tenant-id> link (e.g. /game/dxq_...): variant-tenant
@@ -445,6 +522,20 @@ if (replaySample) {
       mountEditorPage(appRoot, editorVariant),
     ),
   );
+} else if (wantsPracticePosition) {
+  setTitleKey('nav.practice');
+  void mountOrReport(() =>
+    import('./practice-position.js').then(({ mountPracticePosition }) => {
+      mountPracticePosition(appRoot);
+    }),
+  );
+} else if (wantsPracticeChapter) {
+  setTitleKey('nav.practice');
+  void mountOrReport(() =>
+    import('./practice-chapter-redirect.js').then(({ mountPracticeChapterRedirect }) =>
+      mountPracticeChapterRedirect(path),
+    ),
+  );
 } else if (wantsPractice) {
   setTitleKey('nav.practice');
   void mountOrReport(() =>
@@ -463,7 +554,7 @@ if (replaySample) {
   setTitleKey('nav.studies');
   void mountOrReport(() =>
     import('./study.js').then(({ mountStudy }) => {
-      mountStudy(appRoot, studyId, studyChapterId ?? undefined);
+      void mountStudy(appRoot, studyId, studyChapterId ?? undefined);
     }),
   );
 } else if (wantsXiangqiImport) {
@@ -478,8 +569,19 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./current-games.js').then(({ mountCurrentGames }) => mountCurrentGames(appRoot)),
   );
+} else if (wantsDataAbout) {
+  setTitleKey('data.aboutHeading');
+  void mountOrReport(() =>
+    import('./data-page.js').then(({ mountDataAbout }) => mountDataAbout(appRoot)),
+  );
+} else if (wantsDataPage) {
+  setTitleKey('data.heading');
+  void mountOrReport(() =>
+    import('./data-page.js').then(({ mountDataPage }) => mountDataPage(appRoot)),
+  );
 } else if (wantsHistoricalXiangqiSearch) {
-  setTitle('Xiangqi game search');
+  // The page retitles itself per picked variant once mounted.
+  setTitleKey('historical.heading');
   void mountOrReport(() =>
     import('./historical-xiangqi-search.js').then(({ mountHistoricalXiangqiSearch }) =>
       mountHistoricalXiangqiSearch(appRoot),
@@ -559,7 +661,9 @@ if (replaySample) {
     ),
   );
 } else if (wantsBots) {
-  setTitleKey('profile.bots');
+  // The one title setter for /bots; the page itself sets none, so the two
+  // cannot race (the old pair left zh tabs reading 机器人).
+  setTitleKey('bots.tabTitle');
   void mountOrReport(() => import('./bots.js').then(({ mountBots }) => mountBots(appRoot)));
 } else if (botProfileId) {
   setTitle('Bot');
@@ -623,6 +727,20 @@ if (replaySample) {
       mountXiangqiPlayersIndex(appRoot),
     ),
   );
+} else if (wantsXiangqiTeamsIndex) {
+  setTitle('Xiangqi teams');
+  void mountOrReport(() =>
+    import('./xiangqi-players.js').then(({ mountXiangqiTeamsIndex }) =>
+      mountXiangqiTeamsIndex(appRoot),
+    ),
+  );
+} else if (xiangqiTeamKey) {
+  setTitle('Xiangqi team');
+  void mountOrReport(() =>
+    import('./xiangqi-players.js').then(({ mountXiangqiTeam }) =>
+      mountXiangqiTeam(appRoot, decodeURIComponent(xiangqiTeamKey)),
+    ),
+  );
 } else if (xiangqiPlayerSlug) {
   setTitle('Xiangqi player');
   void mountOrReport(() =>
@@ -633,8 +751,31 @@ if (replaySample) {
 } else if (wantsXiangqiBroadcastIndex) {
   setTitle('Xiangqi broadcasts');
   void mountOrReport(() =>
-    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastIndex }) =>
-      mountXiangqiBroadcastIndex(appRoot),
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, mountXiangqiBroadcastIndex }) => {
+        installBroadcastNavigation(appRoot);
+        return mountXiangqiBroadcastIndex(appRoot);
+      },
+    ),
+  );
+} else if (wantsXiangqiBroadcastCalendar) {
+  setTitle('Xiangqi broadcast calendar');
+  void mountOrReport(() =>
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, broadcastPageForPath }) => {
+        installBroadcastNavigation(appRoot);
+        return broadcastPageForPath(path)?.(appRoot);
+      },
+    ),
+  );
+} else if (wantsXiangqiBroadcastAbout) {
+  setTitle('About xiangqi broadcasts');
+  void mountOrReport(() =>
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, broadcastPageForPath }) => {
+        installBroadcastNavigation(appRoot);
+        return broadcastPageForPath(path)?.(appRoot);
+      },
     ),
   );
 } else if (wantsXiangqiBroadcastOps) {
@@ -647,26 +788,35 @@ if (replaySample) {
 } else if (xiangqiBroadcastBoardId) {
   setTitle('Xiangqi broadcast');
   void mountOrReport(() =>
-    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastBoard }) =>
-      mountXiangqiBroadcastBoard(appRoot, xiangqiBroadcastBoardId),
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, mountXiangqiBroadcastBoard }) => {
+        installBroadcastNavigation(appRoot);
+        return mountXiangqiBroadcastBoard(appRoot, xiangqiBroadcastBoardId);
+      },
     ),
   );
 } else if (xiangqiBroadcastRound) {
   setTitle('Xiangqi broadcast');
   void mountOrReport(() =>
-    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastRound }) =>
-      mountXiangqiBroadcastRound(
-        appRoot,
-        xiangqiBroadcastRound.tourSlug,
-        xiangqiBroadcastRound.roundId,
-      ),
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, mountXiangqiBroadcastRound }) => {
+        installBroadcastNavigation(appRoot);
+        return mountXiangqiBroadcastRound(
+          appRoot,
+          xiangqiBroadcastRound.tourSlug,
+          xiangqiBroadcastRound.roundId,
+        );
+      },
     ),
   );
 } else if (xiangqiBroadcastTourSlug) {
   setTitle('Xiangqi broadcast');
   void mountOrReport(() =>
-    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastTour }) =>
-      mountXiangqiBroadcastTour(appRoot, xiangqiBroadcastTourSlug),
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, mountXiangqiBroadcastTour }) => {
+        installBroadcastNavigation(appRoot);
+        return mountXiangqiBroadcastTour(appRoot, xiangqiBroadcastTourSlug);
+      },
     ),
   );
 } else if (wantsPuzzles) {
@@ -700,7 +850,10 @@ if (replaySample) {
     import('./landing.js').then(({ mountLanding }) => mountLanding(appRoot)),
   );
 } else if (articleSlug) {
-  setTitleKey('articles.heading');
+  // A prerendered article already carries its own title; "Articles" would
+  // stand in for it until mountArticle's imports land, and a crawler that
+  // snapshots in that window indexes the placeholder.
+  if (!serverRender.present) setTitleKey('articles.heading');
   void mountOrReport(() =>
     import('./pages-static.js').then(({ mountArticle }) =>
       mountArticle(appRoot, articleSlug, articleLang),
@@ -754,9 +907,14 @@ if (replaySample) {
   // embed silently ignored it and always opened on move one. A chapter
   // linked to make a point about one move should be able to open on it.
   const studyPly = embedPlyFromSearch(window.location.search);
+  // `?pov=` opens a fog chess chapter in one seat's view; its picker still
+  // switches.
+  const studyPov = embedPovFromSearch(window.location.search);
+  // `?solution=hidden` covers the sheet until the reader asks: a problem chapter.
+  const hideSolution = embedSolutionHiddenFromSearch(window.location.search);
   void mountOrReport(() =>
     import('./embed/embed-study-page.js').then(({ mountEmbedStudy }) =>
-      mountEmbedStudy(appRoot, studyRoute, { startPly: studyPly }),
+      mountEmbedStudy(appRoot, studyRoute, { startPly: studyPly, pov: studyPov, hideSolution }),
     ),
   );
 } else if (embedRoute?.kind === 'game') {
@@ -788,7 +946,18 @@ if (replaySample) {
   const startPly = embedPlyFromSearch(window.location.search);
   void mountOrReport(() =>
     import('./embed/embed-line-page.js').then(({ mountEmbedLine }) =>
-      mountEmbedLine(appRoot, lineRoute, line, { startPly }),
+      mountEmbedLine(appRoot, lineRoute, line, {
+        startPly,
+        hideSolution: embedSolutionHiddenFromSearch(window.location.search),
+      }),
+    ),
+  );
+} else if (embedRoute?.kind === 'broadcast') {
+  const broadcastRoute = embedRoute.route;
+  const startPly = embedPlyFromSearch(window.location.search);
+  void mountOrReport(() =>
+    import('./embed/embed-broadcast-page.js').then(({ mountEmbedBroadcast }) =>
+      mountEmbedBroadcast(appRoot, broadcastRoute, { startPly }),
     ),
   );
 } else if (embedRoute?.kind === 'analysis') {
@@ -849,6 +1018,16 @@ if (replaySample) {
   setTitleKey('contribute.heading');
   void mountOrReport(() =>
     import('./contribute-page.js').then(({ mountContribute }) => mountContribute(appRoot)),
+  );
+} else if (wantsCreators) {
+  setTitleKey('creators.heading');
+  void mountOrReport(() =>
+    import('./creators-page.js').then(({ mountCreators }) => mountCreators(appRoot)),
+  );
+} else if (wantsChampions) {
+  setTitleKey('champions.heading');
+  void mountOrReport(() =>
+    import('./champions-page.js').then(({ mountChampions }) => mountChampions(appRoot)),
   );
 } else if (wantsChangelog) {
   setTitleKey('changelog.heading');
@@ -917,15 +1096,24 @@ async function mountOrReport(run: () => Promise<void>): Promise<void> {
     // them here; awaiting the resolved promise is free for English visitors.
     await localeReady;
     await run();
+    serverRender.keepTitle(currentLocale());
     clearChunkReloadAttempt();
   } catch (err) {
     console.error(err);
+    // A prerendered page is complete without the client: put it back rather
+    // than leave a half-mounted root, whether or not a reload follows (search
+    // renderers may ignore the reload and index what is on screen).
+    serverRender.restore();
+    // The global stale-chunk handler already started a reload, and that is why
+    // import() handed this mount undefined: no panel, no error report.
+    if (chunkReloadPending()) return;
     if (reloadForChunkLoadError(err)) return;
     // Surface the swallowed mount failure to Error Tracking. Without this the
     // friendly "Page failed to load" panel below is the ONLY trace of a broken
     // route (e.g. a stale /game/<tenant-id> link 403ing on the chess shell) —
     // handled errors never reach posthog's automatic $exception hook.
     captureException(err, { context: 'route_mount', path: window.location.pathname });
+    if (serverRender.present) return;
     appRoot.replaceChildren();
     appRoot.classList.add('landing-page');
     const shell = document.createElement('main');

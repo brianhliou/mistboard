@@ -33,6 +33,8 @@ import type { Client, Room } from './server-types.js';
 
 type CreateRoomOptions = {
   randomSeating?: boolean;
+  // Lobby-matched PvP room (routes/lobby.ts); see Room.lobbyMatch.
+  lobbyMatch?: boolean;
   engineColor?: 'white' | 'black';
   engineReservationId?: string;
   botId?: string;
@@ -399,6 +401,7 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
         randomEngine: mode === 'pve',
         engineReservationId: mode === 'pve' ? (options.engineReservationId ?? null) : null,
         randomSeating: options.randomSeating === true && mode === 'pvp',
+        ...(options.lobbyMatch === true && mode === 'pvp' ? { lobbyMatch: true } : {}),
         creatorPreference:
           mode === 'pvp' && options.creatorPreference ? options.creatorPreference : null,
         pveEngineId: mode === 'pve' ? engineId : null,

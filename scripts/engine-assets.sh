@@ -33,13 +33,30 @@ RECIPE_VERSION=1
 # The ISA every server engine targets. Do not swap in avx2 without confirming
 # the container's CPU flags (stockfish.ref).
 ARCH=x86-64-sse41-popcnt
+# AB-JChess alone targets AVX2: its strength is its NNUE, which runs several
+# times slower on sse41. Prod web's EPYC has avx2/bmi2/avx512 (checked
+# 2026-09-30); the Build engines runner has avx2 too, so verify runs it there.
+ABJ_ARCH=x86-64-avx2
+# KataGo-AnimalChess is CMake, not a Stockfish makefile: the Eigen CPU backend
+# with AVX2/FMA (its net is its strength, like AB-JChess), linked static, and
+# without libzip, which only selfplay uses (katago-jungle.ref).
+KATA_CMAKE_FLAGS="-DUSE_BACKEND=EIGEN -DUSE_AVX2=1 -DCMAKE_BUILD_TYPE=Release -DNO_GIT_REVISION=1 -DZLIB_USE_STATIC_LIBS=ON -DLIBZIP_LIBRARY=OFF -DCMAKE_EXE_LINKER_FLAGS=-static"
 ASSET="engines-$ARCH.tar.gz"
 RELEASE_REPO=brianhliou/mistboard
+# Pikafish's `make build` downloads official-pikafish/Networks `master-net`, a
+# release asset upstream replaces in place: on 2026-10-01 it became a net the
+# pinned binary refuses ("Network evaluation parameters compatible with the
+# engine must be available"), the 10-02 rebuild packaged it, and Level 8
+# resigned every game at move 1. The net is pinned by hash like everything
+# else, from our own copy of the one that pairs with pikafish.ref. A Pikafish
+# bump picks its matching net and uploads it the same way.
+PIKAFISH_NET_SHA256=7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e
+PIKAFISH_NET_URL=https://github.com/$RELEASE_REPO/releases/download/pikafish-net-7d13d735/pikafish.nnue
 # Every file whose content decides the binaries. The workflow's push paths and
 # the Railway watch patterns list the same files; scripts/engine-assets.test.mjs
 # fails if they drift apart.
-RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref"
-BINARIES="fairy-stockfish-xiangqi fairy-stockfish-duck-xiangqi fairy-stockfish-atomic-xiangqi stockfish pikafish-jieqi pikafish"
+RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref ab-jchess.ref katago-jungle.ref"
+BINARIES="fairy-stockfish-xiangqi fairy-stockfish-duck-xiangqi fairy-stockfish-atomic-xiangqi stockfish pikafish-jieqi pikafish ab-jchess katago-jungle"
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
@@ -59,6 +76,9 @@ recipe_hash() {
   {
     echo "recipe-version=$RECIPE_VERSION"
     echo "arch=$ARCH"
+    echo "abj-arch=$ABJ_ARCH"
+    echo "kata-cmake=$KATA_CMAKE_FLAGS"
+    echo "pikafish-net=$PIKAFISH_NET_SHA256"
     for input in $RECIPE_INPUTS; do
       case "$input" in
         *.ref) echo "$input=$(pin "$input")" ;;
@@ -127,9 +147,31 @@ build() {
   ref=$(pin pikafish.ref)
   log "pikafish @ $ref"
   fetch_source "$work/pikafish" https://github.com/official-pikafish/Pikafish.git "$ref"
+  # Placed before make, so its net.sh finds it and skips master-net.
+  curl -fsSL --proto =https --tlsv1.2 --retry 3 -o "$work/pikafish/src/pikafish.nnue" "$PIKAFISH_NET_URL"
+  net_pinned "$work/pikafish/src/pikafish.nnue"
   sf_make "$work/pikafish/src"
   cp "$work/pikafish/src/pikafish" "$bin/pikafish"
   cp "$work/pikafish/src/pikafish.nnue" "$bin/pikafish.nnue"
+
+  # The binary only: its net is fetched from the author's release by
+  # railpack.json and never packaged here (ab-jchess.ref says why).
+  ref=$(pin ab-jchess.ref)
+  log "ab-jchess @ $ref (lxsgx23/AB-JChess, $ABJ_ARCH, clang)"
+  fetch_source "$work/ab-jchess" https://github.com/lxsgx23/AB-JChess.git "$ref"
+  make -C "$work/ab-jchess/src" -j"$JOBS" ARCH="$ABJ_ARCH" COMP=clang EXTRALDFLAGS=-static build >/dev/null
+  cp "$work/ab-jchess/src/AB-JChess" "$bin/ab-jchess"
+
+  # The binary only, stripped (74 MB of debug info otherwise): its net is fetched
+  # from Kouza's Dandelion release by railpack.json and never packaged here
+  # (katago-jungle.ref says why). Needs cmake, libeigen3-dev and zlib1g-dev.
+  ref=$(pin katago-jungle.ref)
+  log "katago-jungle @ $ref (hzyhhzy/KataGomo AnimalChess2025, Eigen, avx2)"
+  fetch_source "$work/katago-jungle" https://github.com/hzyhhzy/KataGomo.git "$ref"
+  # shellcheck disable=SC2086
+  cmake -S "$work/katago-jungle/cpp" -B "$work/katago-jungle/build" $KATA_CMAKE_FLAGS >/dev/null
+  cmake --build "$work/katago-jungle/build" -j"$JOBS" >/dev/null
+  strip -o "$bin/katago-jungle" "$work/katago-jungle/build/katago"
 
   chmod +x "$bin"/*
   rm -rf "$work"
@@ -143,6 +185,29 @@ uci_ok() {
   echo uci | "$1" | grep -q "$3" && log "$2 ok" || die "$2: no '$3' in the uci reply"
 }
 
+# net_pinned <net>: the file is the net PIKAFISH_NET_SHA256 names.
+net_pinned() {
+  got=$(sha256 "$1" | cut -c1-64)
+  [ "$got" = "$PIKAFISH_NET_SHA256" ] || die "pikafish.nnue is $got, not the pinned $PIKAFISH_NET_SHA256"
+}
+
+# net_search_ok <binary> <net> <label>: the binary loads <net> and searches.
+# `uci` alone never touches the net; Pikafish loads it on `isready` and exits 1
+# on a net it cannot read, which is how a bad net passed this gate on 10-02.
+net_search_ok() {
+  out=$(mktemp)
+  {
+    printf 'uci\nsetoption name EvalFile value %s\nisready\nposition startpos\ngo nodes 20000\n' "$2"
+    i=0
+    until grep -q '^bestmove' "$out" || [ "$i" -ge 300 ]; do sleep 0.1; i=$((i + 1)); done
+    echo quit
+  } | "$1" > "$out" 2>&1 || true
+  best=$(grep '^bestmove' "$out" | tail -1 || true)
+  err=$(grep 'ERROR' "$out" | head -1 || true)
+  rm -f "$out"
+  [ -n "$best" ] && log "$3 ok (net loads, $best)" || die "$3: no bestmove with its net: ${err:-no output}"
+}
+
 # perft_ok <binary> <ini> <variant> <position> <nodes> <label>: FSF agrees with
 # the kernel's own legal-move count. A binary that plays a different game does
 # not crash, it just plays a different game (see the .ref files for why each
@@ -151,6 +216,26 @@ perft_ok() {
   printf 'uci\nsetoption name VariantPath value %s\nsetoption name UCI_Variant value %s\nucinewgame\nposition %s\nisready\ngo perft 1\n' \
     "$2" "$3" "$4" | "$1" | grep -q "Nodes searched: $5" && log "$6 ok (perft 1 = $5)" ||
     die "$6: perft(1) is not $5 for '$4'"
+}
+
+# search_ok <binary> <ini> <variant> <fen> <move> <other move> <depth> <score> <label>:
+# searched to <depth> against one alternative, <move> still scores <score> at the
+# last depth. Perft proves the move generator; this proves the search keeps what
+# the generator gave it. Stdin stays open until `bestmove`, because EOF stops
+# the search.
+search_ok() {
+  out=$(mktemp)
+  {
+    printf 'uci\nsetoption name VariantPath value %s\nsetoption name UCI_Variant value %s\nsetoption name MultiPV value 2\nucinewgame\nposition fen %s\ngo depth %s searchmoves %s %s\n' \
+      "$2" "$3" "$4" "$7" "$5" "$6"
+    i=0
+    until grep -q '^bestmove' "$out" || [ "$i" -ge 600 ]; do sleep 0.1; i=$((i + 1)); done
+    echo quit
+  } | "$1" > "$out"
+  last=$(grep "^info depth $7 .* pv $5" "$out" | tail -1 || true)
+  rm -f "$out"
+  echo "$last" | grep -q "score $8 " && log "$9 ok ($5 scores $8 at depth $7)" ||
+    die "$9: $5 does not score '$8' at depth $7: ${last:-no depth $7 line}"
 }
 
 verify() {
@@ -163,13 +248,26 @@ verify() {
   perft_ok "$bin/fairy-stockfish-duck-xiangqi" "$ini/duck-xiangqi.ini" duckxiangqi startpos 2554 duck-xiangqi-opening
   perft_ok "$bin/fairy-stockfish-duck-xiangqi" "$ini/duck-xiangqi.ini" duckxiangqi 'fen 9/4k4/9/9/9/4*4/P8/9/4K4/9 w - - 0 1' 430 duck-xiangqi-facing
   perft_ok "$bin/fairy-stockfish-duck-xiangqi" "$ini/duck-xiangqi.ini" duckxiangqi 'fen 9/4k4/9/9/9/9/P8/9/4K4/*8 w - - 0 1' 431 duck-xiangqi-flight
+  # #468: lifting the duck off the file loses the general to the flying capture.
+  # The pre-fix binary scores it +3.6 from depth 6 up (pseudo_legal dropped the
+  # capture from the TT); perft passes on both.
+  search_ok "$bin/fairy-stockfish-duck-xiangqi" "$ini/duck-xiangqi.ini" duckxiangqi \
+    '5c3/3k5/9/2P6/9/2n6/3*5/9/9/3K5 b - - 0 1' f10a10,a10e1 d9e9,e9d2 10 'mate -1' duck-xiangqi-flying-search
   perft_ok "$bin/fairy-stockfish-atomic-xiangqi" "$ini/atomic-xiangqi.ini" atomicxiangqi startpos 44 atomic-xiangqi-opening
   perft_ok "$bin/fairy-stockfish-atomic-xiangqi" "$ini/atomic-xiangqi.ini" atomicxiangqi 'fen 3ak4/3r5/9/9/9/9/9/3C5/9/4K4 w - - 0 1' 3 atomic-xiangqi-shot
   perft_ok "$bin/fairy-stockfish-atomic-xiangqi" "$ini/atomic-xiangqi.ini" atomicxiangqi 'fen 3ak4/9/9/9/9/9/9/3R5/9/4K4 w - - 0 1' 4 atomic-xiangqi-blast
   uci_ok "$bin/stockfish" stockfish 'id name Stockfish'
   uci_ok "$bin/pikafish-jieqi" pikafish-jieqi uciok
   test -s "$bin/pikafish.nnue" || die "pikafish.nnue is missing or empty"
+  net_pinned "$bin/pikafish.nnue"
   uci_ok "$bin/pikafish" pikafish uciok
+  net_search_ok "$bin/pikafish" "$bin/pikafish.nnue" pikafish-search
+  uci_ok "$bin/ab-jchess" ab-jchess 'id name AB JChess'
+  # GTP, not UCI, and nothing to search without its net (the railpack net step
+  # loads it and plays a move); here the build must be the Eigen one with AVX2.
+  "$bin/katago-jungle" version | grep -q 'Using Eigen(CPU) backend' &&
+    "$bin/katago-jungle" version | grep -q 'Compiled with AVX2' &&
+    log "katago-jungle ok" || die "katago-jungle: not an Eigen AVX2 build of KataGo"
   log "verified $(tag) in $bin"
 }
 
@@ -180,7 +278,9 @@ package() {
   {
     echo "tag=$(tag)"
     echo "arch=$ARCH"
+    echo "abj-arch=$ABJ_ARCH"
     echo "recipe-version=$RECIPE_VERSION"
+    echo "pikafish-net=sha256:$PIKAFISH_NET_SHA256"
     for input in $RECIPE_INPUTS; do
       case "$input" in
         *.ref) echo "$input=$(pin "$input")" ;;

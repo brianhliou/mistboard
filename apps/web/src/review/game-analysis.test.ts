@@ -94,6 +94,35 @@ describe('computeGameAnalysis', () => {
   });
 });
 
+// AB-JChess cp are on a steeper curve than PikaJieQi's (#482): the same -60cp drop is ~5.5
+// win points on lila's curve and ~14.4 on AB's. The stored engineId says which applies, so
+// a jieqi game analysed by AB must be graded on AB's curve and an older one on lila's.
+describe('engine-specific win curve', () => {
+  const abId = 'ab-jchess-jieqi-analysis@1+1ae95ca6+abjchess-20260911+nodes50000+consistent-win1';
+  const pikaId = 'pikafish-jieqi-analysis@0.4.0+e75cee3a+history1+nodes500000+consistent1';
+
+  it('grades an AB-JChess analysis on its own curve', () => {
+    const ab = computeGameAnalysis({ ...evals([0, -60]), engineId: abId });
+    expect(ab.moves[0]?.judgment).toBe('mistake');
+    const pika = computeGameAnalysis({ ...evals([0, -60]), engineId: pikaId });
+    expect(pika.moves[0]?.judgment).toBe('inaccuracy');
+    // Accuracy follows the same curve: the steeper one costs more.
+    expect(ab.red.accuracy).toBeLessThan(pika.red.accuracy);
+  });
+
+  it('keeps the curve through the best-played regrade and the decision merge', () => {
+    const ab = computeGameAnalysis({ ...evals([0, -60, -60, -60]), engineId: abId });
+    const regraded = regradeBestPlayed(ab, new Set([3]));
+    expect(regraded.moves[0]?.judgment).toBe('mistake');
+    const merged = mergeDecisionAnalysis(ab, new Map());
+    const pikaMerged = mergeDecisionAnalysis(
+      computeGameAnalysis({ ...evals([0, -60, -60, -60]), engineId: pikaId }),
+      new Map(),
+    );
+    expect(merged.red.accuracy).toBeLessThan(pikaMerged.red.accuracy);
+  });
+});
+
 describe('mergeDecisionAnalysis', () => {
   it('re-grades a reveal ply luck-free: a blundered choice now counts, a lucky crater does not', () => {
     // Red's ply-1 reveal realized as a crater (0 -> -600), which the base leaves unjudged. The

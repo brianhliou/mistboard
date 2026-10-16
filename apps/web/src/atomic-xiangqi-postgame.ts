@@ -18,6 +18,7 @@ import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
+import { reviewMoveClocks } from './review/move-clocks.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -156,7 +157,7 @@ function renderPostgame(root: HTMLElement, postgame: AtomicXiangqiPostgameRespon
 
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'atomic-xiangqi',
+    gameSpecId: ATOMIC_XIANGQI_SPEC_ID,
     variantName: variantDisplayLabel(ATOMIC_XIANGQI_SPEC_ID),
     game: postgame.game,
     status,
@@ -172,6 +173,7 @@ function renderPostgame(root: HTMLElement, postgame: AtomicXiangqiPostgameRespon
     details,
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
+    moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
     // Name the seats at the board. The meta card carries the pairing too, but
     // it sits below the fold on a normal viewport, so without these a reader
     // sees a board and has to scroll past it to learn who is playing.

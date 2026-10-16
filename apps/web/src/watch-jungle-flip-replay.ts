@@ -7,8 +7,11 @@
 import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
 import { type JungleFlipPlayerView, jungleFlipLastMoverInk } from '@mistboard/game';
+import { flipSeatInk } from './flip-seat-ink.js';
 import {
   animateJungleFlipBoardMove,
+  type JungleFlipBoardArrow,
+  type JungleFlipBoardMarker,
   type JungleFlipRenderBoard,
   renderJungleFlipBoardSvg,
 } from './jungle-flip-render.js';
@@ -20,6 +23,7 @@ import {
   viewAtPly,
 } from './live-jungle-flip-postgame.js';
 import type { ReplayHandle } from './replay.js';
+import { watchJungleFlipMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 
 export type JungleFlipWatchReplayOptions = TenantWatchReplayOptions;
@@ -45,22 +49,27 @@ export function mountJungleFlipWatchReplay(
     viewEntries: () => [{ key: 'truth', label: t('watch.truth') }],
     viewAtPly,
     paneKind: () => 'truth',
-    renderBoard: (view) =>
+    renderBoard: (view, _orientation, _key, overlay) =>
       renderJungleFlipBoardSvg(view.board as JungleFlipRenderBoard, {
         lastMove: view.lastMove ?? null,
         lastMoveInk: jungleFlipLastMoverInk(view),
+        arrows: overlay.arrows as readonly JungleFlipBoardArrow[],
+        markers: overlay.glyphs as readonly JungleFlipBoardMarker[],
       }),
     // One-ply steps glide: forward animates the newly rendered view's lastMove,
     // a back step reverse-animates the move the previous ply carried. A flip is a
     // self-move and animateJungleFlipBoardMove no-ops on it.
-    animateMove: (boardEl, view, prevView, direction, orientation) => {
+    animateMove: (boardEl, view, prevView, direction) => {
       const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
       if (!move) return;
-      animateJungleFlipBoardMove(boardEl, move, orientation, { reverse: direction === 'back' });
+      animateJungleFlipBoardMove(boardEl, move, { reverse: direction === 'back' });
     },
+    // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+    moveSound: watchJungleFlipMoveSound,
     fillCaptures: () => {},
     reveal: { hiddenKey: 'truth', truthKey: 'revealed' },
     resultLabel: (result, postgame) => jungleFlipResultLabel(result, postgame.view.firstColor),
     seatLabel: (seat, postgame) => jungleFlipSeatInkLabel(seat, postgame.view.firstColor),
+    seatInk: (seat, postgame) => flipSeatInk(seat, postgame.view.firstColor ?? null),
   });
 }

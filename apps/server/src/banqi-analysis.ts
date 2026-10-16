@@ -13,12 +13,12 @@
 import {
   applyBanqiMove,
   type BanqiColor,
-  type BanqiDeal,
   type BanqiGameState,
   type BanqiMove,
   type BanqiPieceRole,
   type BanqiSeat,
-  createInitialBanqiState,
+  type BanqiStoredSetup,
+  createBanqiStateFromSetup,
   winPercent,
 } from '@mistboard/game';
 import { BANQI_ENGINE_VERSION, evaluateBanqiFenNodes } from './banqi-engine.js';
@@ -128,21 +128,21 @@ export function banqiAnalysisRepetitionWindow(
 /**
  * Reconstruct every ply from the per-game DEAL + move list and evaluate it (red-seat POV).
  * Ply 0 is the initial position; ply k is the position after k moves. Reconstruction uses
- * the SAME kernel the live game did (createInitialBanqiState(deal) + applyBanqiMove), so
+ * the SAME kernel and rules the live game did (createBanqiStateFromSetup + applyBanqiMove), so
  * flip-reveals reproduce exactly (a flip is a move with from === to, revealing the deal's
  * tile deterministically). `evaluate` is injectable so tests drive the sweep without an
  * engine.
  */
 export async function analyzeBanqiPostgame(
   moves: readonly BanqiMove[],
-  deal: BanqiDeal,
+  setup: BanqiStoredSetup,
   evaluate: (
     state: BanqiGameState,
     repetitionWindow?: BanqiRepetitionWindow,
   ) => Promise<BanqiPositionEval> = evaluateBanqiPosition,
   progress?: AnalysisProgressStore<SweepPlyEval>,
 ): Promise<BanqiGameAnalysis> {
-  let state = createInitialBanqiState('analysis', deal);
+  let state = createBanqiStateFromSetup('analysis', setup);
   const states: BanqiGameState[] = [state];
   for (const move of moves) {
     state = applyBanqiMove(state, move);
@@ -191,9 +191,9 @@ const liveAnalysisCache: BanqiAnalysisCache = {
 export async function resolveBanqiAnalysis(
   roomId: string,
   moves: readonly BanqiMove[],
-  deal: BanqiDeal,
+  setup: BanqiStoredSetup,
   cache: BanqiAnalysisCache = liveAnalysisCache,
-  analyze?: (moves: readonly BanqiMove[], deal: BanqiDeal) => Promise<BanqiGameAnalysis>,
+  analyze?: (moves: readonly BanqiMove[], setup: BanqiStoredSetup) => Promise<BanqiGameAnalysis>,
   computeIfMissing = true,
 ): Promise<BanqiGameAnalysis | null> {
   const engineId = BANQI_ANALYSIS_ENGINE_ID;
@@ -211,8 +211,8 @@ export async function resolveBanqiAnalysis(
     computeIfMissing,
     compute: async () => {
       const analysis = analyze
-        ? await analyze(moves, deal)
-        : await analyzeBanqiPostgame(moves, deal, undefined, progress ?? undefined);
+        ? await analyze(moves, setup)
+        : await analyzeBanqiPostgame(moves, setup, undefined, progress ?? undefined);
       return analysis.plies;
     },
     validate: (series) => {
@@ -428,11 +428,11 @@ async function poolMeanWin(
  */
 export async function analyzeBanqiDecisions(
   moves: readonly BanqiMove[],
-  deal: BanqiDeal,
+  setup: BanqiStoredSetup,
   deps: BanqiDecisionDeps = liveDecisionDeps,
   progress?: AnalysisProgressStore<BanqiDecision>,
 ): Promise<BanqiDecision[]> {
-  let state = createInitialBanqiState('analysis', deal);
+  let state = createBanqiStateFromSetup('analysis', setup);
   let repetitionWindow: BanqiRepetitionWindow = {
     fen: banqiStateToEngineFen(state),
     moves: [],
@@ -527,9 +527,9 @@ export type BanqiDecisionsResult = { engineId: string; depth: number; decisions:
 export async function resolveBanqiDecisions(
   roomId: string,
   moves: readonly BanqiMove[],
-  deal: BanqiDeal,
+  setup: BanqiStoredSetup,
   cache: BanqiDecisionsCache = liveDecisionsCache,
-  analyze?: (moves: readonly BanqiMove[], deal: BanqiDeal) => Promise<BanqiDecision[]>,
+  analyze?: (moves: readonly BanqiMove[], setup: BanqiStoredSetup) => Promise<BanqiDecision[]>,
   computeIfMissing = true,
 ): Promise<BanqiDecisionsResult | null> {
   const engineId = BANQI_DECISIONS_ENGINE_ID;
@@ -545,8 +545,8 @@ export async function resolveBanqiDecisions(
     computeIfMissing,
     compute: () =>
       analyze
-        ? analyze(moves, deal)
-        : analyzeBanqiDecisions(moves, deal, undefined, progress ?? undefined),
+        ? analyze(moves, setup)
+        : analyzeBanqiDecisions(moves, setup, undefined, progress ?? undefined),
     validate: (series) => {
       // A scoreless engine makes every position eval null, so every win% collapses to 50
       // (best === played === realized). Never cache that; a fixed engine recomputes.

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { scheduleDarkXiangqiLifecycleTimers } from '../src/server-ws-dark-xiangqi.js';
+import { TENANT_LIVE_GAME_NO_SEAT_REASON } from '../src/variant-tenant/ws.js';
 import {
   connectClient,
   startTestServer,
@@ -101,7 +102,7 @@ test('Dark Xiangqi room create + websocket loop is flag-gated and redacted', asy
       await copiedClientId.closed;
       assert.equal(copiedClientId.isClosed(), true);
       assert.equal(copiedClientId.closeCode(), 1008);
-      assert.equal(copiedClientId.closeReason(), 'private room');
+      assert.equal(copiedClientId.closeReason(), TENANT_LIVE_GAME_NO_SEAT_REASON);
     });
 
     redReclaim.send({ type: 'move', from: 'b3', to: 'b4' });

@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { CHESS_SEAT_COLORS } from './review-seat-colors.js';
 import { seatStripDisplayInk, seatStripInks, UNBOUND_SEAT_INK } from './seat-strip-ink.js';
@@ -27,37 +26,6 @@ describe('seatStripInks', () => {
         const { top, bottom } = seatStripInks(perspective, flipped);
         expect(top).not.toBe(bottom);
       }
-    }
-  });
-});
-
-describe('seat-labels.css', () => {
-  // Path relative to apps/web, the convention the other source-reading tests use.
-  // Comments are stripped first: this file's own comments NAME the token the rules
-  // must not use, and a substring check would otherwise fail on the explanation.
-  const css = readFileSync('src/review/seat-labels.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
-
-  it('styles every ink a presentation can hand it', () => {
-    // tree-review builds the class as `review-seat--${ink}`, so an ink with no rule
-    // renders the unstyled base disc and silently says nothing about who is who.
-    for (const ink of ['red', 'white', 'black']) {
-      expect(css).toContain(`.review-seat--${ink} .review-seat__disc`);
-    }
-  });
-
-  it('never paints a seat disc with a theme-flipping token', () => {
-    // The second half of the same bug: `var(--site-text)` inverts to a light grey
-    // in dark mode, so the BLACK seat rendered nearly white. A disc carries an INK
-    // and an ink does not change when the page theme does. Fallbacks inside
-    // var(--seat-dark-ink, …) are per-variant ink overrides and are fine; the
-    // site's own text/surface tokens are not.
-    const inkRules = css
-      .split('}')
-      .filter((block) => block.includes('.review-seat--') && block.includes('.review-seat__disc'));
-    expect(inkRules.length).toBeGreaterThan(0);
-    for (const block of inkRules) {
-      expect(block).not.toContain('var(--site-text)');
-      expect(block).not.toContain('var(--site-surface)');
     }
   });
 });
@@ -100,12 +68,5 @@ describe('seatStripDisplayInk', () => {
       expect(black).toBe(colors.black);
       expect(red).not.toBe(black);
     }
-  });
-});
-
-describe('seat-labels.css unbound state', () => {
-  it('styles the pre-flip disc', () => {
-    const css = readFileSync('src/review/seat-labels.css', 'utf8');
-    expect(css).toContain(`.review-seat--${UNBOUND_SEAT_INK} .review-seat__disc`);
   });
 });

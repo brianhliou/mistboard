@@ -19,9 +19,10 @@
  * game); at equal composition, standard xiangqi outranks other variants on the
  * cross-variant 'top' channel; within a tier, the most recently active room.
  * Hysteresis: the currently featured room keeps the board while it is still
- * live and its tier is unbeaten, so recency alone never yanks a game
- * mid-broadcast. EvE never appears here — engine-vs-engine games run headless
- * in the worker and reach TV only as completed games.
+ * live, still moving (LIVE_TV_STALL_MS), and its tier is unbeaten, so recency
+ * alone never yanks a game mid-broadcast. EvE never appears here —
+ * engine-vs-engine games run headless in the worker and reach TV only as
+ * completed games.
  */
 
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
@@ -76,10 +77,51 @@ export async function liveWatchPayloadForFeatured(
   return builder(featured.roomId);
 }
 
-// A live game with no event in this window is dormant (an idle correspondence
-// game, an abandoned room the sweeps have not reaped yet) and does not belong
-// on the hero board.
+// A live game with no event in this window is dormant (an abandoned room the
+// sweeps have not reaped yet) and does not belong on the hero board.
+// Correspondence never does, fresh or not (see isCorrespondence). A live clock still ticking toward its flag overrides it
+// (see clockStillRunning).
 export const LIVE_TV_FRESH_WINDOW_MS = 10 * 60 * 1000;
+
+// A live (non-correspondence) clock that is running and has not yet flagged
+// means the game ends on the board soon, by a move or by the flag, so it is
+// not dormant however long the mover has sat. Until 2026-10-03 the window
+// above alone decided: a 10+5 jungle game whose guest walked away left the
+// feed at last-move + 10:00, 8 s before the flag, the homepage board's load
+// of the finished record 404'd, and it hard-swapped to a 2-hour-old game.
+function clockStillRunning(clock: unknown, timeControl: unknown, now: number): boolean {
+  if (isCorrespondence(timeControl)) return false;
+  const live = clock as {
+    activeColor?: string | null;
+    remainingMs?: Record<string, number>;
+    runningSince?: number | null;
+  } | null;
+  if (!live?.activeColor || typeof live.runningSince !== 'number') return false;
+  const remaining = live.remainingMs?.[live.activeColor];
+  return typeof remaining === 'number' && now - live.runningSince < remaining;
+}
+
+// A live game with no MOVE in this long has been walked away from, and must not
+// hold the featured board while its clock runs down to the flag (2026-10-08:
+// four abandoned 2-19 ply games each froze the homepage for ~10 minutes). It
+// stays a candidate (the clock rule above still owns "is it live"); the
+// election just skips it, sticky pick included. Slower paces scale the bar so a
+// thinking player is not dropped: see liveTvStallMs.
+export const LIVE_TV_STALL_MS = 60 * 1000;
+
+// Three average moves' worth of thinking at this pace (the 40-move estimate of
+// estimatedTimeControlSeconds: initial/40 + increment per move), never below
+// LIVE_TV_STALL_MS. 10+5 stays at 60 s; 30+0 gets 135 s; untimed gets the floor.
+export function liveTvStallMs(timeControl: unknown): number {
+  const tc = timeControl as { initialMs?: number; incrementMs?: number } | null;
+  const initialMs = typeof tc?.initialMs === 'number' ? tc.initialMs : 0;
+  const incrementMs = typeof tc?.incrementMs === 'number' ? tc.incrementMs : 0;
+  return Math.max(LIVE_TV_STALL_MS, 3 * (initialMs / 40 + incrementMs));
+}
+
+function isStalled(candidate: LiveTvCandidate, now: number): boolean {
+  return now - candidate.lastMoveAt > liveTvStallMs(candidate.timeControl);
+}
 
 // A game earns the hero board only once BOTH sides have moved. The gate reads
 // the state's moveNumber, which every variant starts at 1 and advances after
@@ -88,6 +130,10 @@ export const LIVE_TV_FRESH_WINDOW_MS = 10 * 60 * 1000;
 // abandoned at that point strands the homepage on an all-face-down board
 // (2026-08-27: the hero sat on a one-flip banqi room after both guests left).
 export const LIVE_TV_MIN_MOVE_NUMBER = 2;
+
+function isMoveEvent(event: { type: string }): boolean {
+  return event.type === 'move-played' || event.type === 'move';
+}
 
 // A candidate's `ply` is the number of plies PLAYED (move events), the same
 // count the tenant runtime stamps on client events, and it is what followers
@@ -98,9 +144,20 @@ export const LIVE_TV_MIN_MOVE_NUMBER = 2;
 function pliesPlayed(events: readonly { type: string }[]): number {
   let ply = 0;
   for (const event of events) {
-    if (event.type === 'move-played' || event.type === 'move') ply += 1;
+    if (isMoveEvent(event)) ply += 1;
   }
   return ply;
+}
+
+// When the last move was played (room start when none has been). Not the last
+// event: seat joins, reconnects and clock pauses append events too, and none of
+// them moves the board.
+export function lastMoveAt(events: readonly { type: string; at?: number }[]): number | null {
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index]!;
+    if (isMoveEvent(event) && typeof event.at === 'number') return event.at;
+  }
+  return firstEventAt(events);
 }
 
 export type LiveTvComposition = 'pvp' | 'pve';
@@ -129,6 +186,8 @@ export type LiveTvCandidate = {
   rated: boolean;
   startedAt: number | null;
   lastActivityAt: number;
+  // The last move's time (see lastMoveAt); the stall rule reads this.
+  lastMoveAt: number;
   timeControl: unknown;
   clock: unknown;
 };
@@ -263,14 +322,22 @@ function finishCandidate(args: {
   // code path this module has not vetted, so refuse rather than mislabel.
   if (args.players.every((player) => player.isEngine)) return null;
   if (args.moveNumber < LIVE_TV_MIN_MOVE_NUMBER) return null;
+  if (isCorrespondence(args.timeControl)) return null;
   const lastActivityAt = latestEventAt(args.events);
-  if (lastActivityAt === null || args.now - lastActivityAt > LIVE_TV_FRESH_WINDOW_MS) return null;
+  if (lastActivityAt === null) return null;
+  if (
+    args.now - lastActivityAt > LIVE_TV_FRESH_WINDOW_MS &&
+    !clockStillRunning(args.clock, args.timeControl, args.now)
+  ) {
+    return null;
+  }
   return {
     channelId: args.channelId,
     clock: args.clock,
     composition: args.players.some((player) => player.isEngine) ? 'pve' : 'pvp',
     gameSpecId: args.gameSpecId,
     lastActivityAt,
+    lastMoveAt: lastMoveAt(args.events) ?? lastActivityAt,
     players: args.players,
     ply: pliesPlayed(args.events),
     rated: args.rated,
@@ -278,6 +345,12 @@ function finishCandidate(args: {
     startedAt: firstEventAt(args.events),
     timeControl: args.timeControl,
   };
+}
+
+// The hero board is a live TV (lichess parity): a correspondence game moves
+// once a day, so it reads as a frozen board even right after a move.
+function isCorrespondence(timeControl: unknown): boolean {
+  return Boolean((timeControl as { daysPerMove?: number } | null)?.daysPerMove);
 }
 
 function latestEventAt(events: readonly { at?: number }[]): number | null {
@@ -320,11 +393,13 @@ function tier(candidate: LiveTvCandidate): number {
 export function electLiveTvFeatured(
   channelId: string,
   candidates: LiveTvCandidate[],
+  now: number,
 ): LiveTvCandidate | null {
-  const pool =
-    channelId === LIVE_TV_TOP_CHANNEL_ID
-      ? candidates
-      : candidates.filter((candidate) => candidate.channelId === channelId);
+  const pool = candidates.filter(
+    (candidate) =>
+      (channelId === LIVE_TV_TOP_CHANNEL_ID || candidate.channelId === channelId) &&
+      !isStalled(candidate, now),
+  );
   if (pool.length === 0) {
     featuredRoomByChannel.delete(channelId);
     return null;
@@ -339,9 +414,9 @@ export function electLiveTvFeatured(
   const current = currentRoomId
     ? pool.find((candidate) => candidate.roomId === currentRoomId)
     : undefined;
-  // Keep the currently featured game while it is still a live candidate and a
-  // strictly better tier has not appeared — recency alone never switches the
-  // board mid-game.
+  // Keep the currently featured game while it is still a live, unstalled
+  // candidate and a strictly better tier has not appeared — recency alone never
+  // switches the board mid-game.
   const chosen = current && tier(current) >= tier(best) ? current : best;
   featuredRoomByChannel.set(channelId, chosen.roomId);
   return chosen;

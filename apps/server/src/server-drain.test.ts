@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
+import { createClock, type GameEvent, replayGameEvents } from '@mistboard/game';
 import type { WebSocket } from 'ws';
+import type { RoomManagerContext } from './room-manager.js';
 import { createDrainController } from './server-drain.js';
+import { pauseActiveRoomsOnShutdown } from './server-lifecycle.js';
 import type { Room } from './server-types.js';
 import { clientFixture, gameProjectionFixture, roomFixture } from './test-builders.js';
 import { registerVariantTenant } from './variant-tenant/registry.js';
@@ -147,6 +150,7 @@ test('drain controller counts live variant-tenant games alongside chess rooms', 
       throw new Error('unexpected ws attach in drain test');
     },
     clearRuntimeTimers: () => {},
+    pauseOnShutdown: async () => 0,
     clearRooms: () => {},
     http: {
       matchesCreateRequest: () => false,
@@ -340,6 +344,7 @@ test('drain broadcasts reach variant-tenant room clients', async () => {
       throw new Error('unexpected ws attach in drain test');
     },
     clearRuntimeTimers: () => {},
+    pauseOnShutdown: async () => 0,
     clearRooms: () => {},
     http: {
       matchesCreateRequest: () => false,
@@ -448,4 +453,199 @@ test('a cancel that names no owner still cancels an owned drain', async () => {
 
   assert.equal(cancel.status, 200);
   assert.equal(drain.isDraining(), false);
+});
+
+function loggedKinds(calls: readonly { arguments: unknown[] }[]): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = [];
+  for (const call of calls) {
+    const line = call.arguments[0];
+    if (typeof line !== 'string' || !line.startsWith('{')) continue;
+    out.push(JSON.parse(line) as Record<string, unknown>);
+  }
+  return out;
+}
+
+// A drain whose deadline passes without a restart used to end silently: the
+// server stopped refusing games, but no client was told, so every open tab kept
+// "Update pending" until a reload. The lapse now broadcasts the cancel and
+// closes the drain's summary.
+test('a lapsed drain tells clients and closes its summary as lapsed', async (t) => {
+  const log = t.mock.method(console, 'log', () => {});
+  const sent: string[] = [];
+  const socket = {
+    send(message: string) {
+      sent.push(message);
+    },
+  } as unknown as WebSocket;
+  const room = roomFixture({ clients: [clientFixture({ socket })] });
+  const drain = createDrainController({
+    drainWindowDefaultMs: 1000,
+    drainWindowMaxMs: 2000,
+    rooms: new Map([[room.id, room]]),
+  });
+
+  await drain.handleRequest(request({ body: { windowMs: 20 } }), captureResponse(), '/admin/drain');
+  await new Promise((resolve) => setTimeout(resolve, 60));
+
+  assert.equal(drain.isDraining(), false);
+  assert.deepEqual(JSON.parse(sent.at(-1)!) as Record<string, unknown>, {
+    type: 'server_restart_cancelled',
+  });
+  const summary = loggedKinds(log.mock.calls).find((entry) => entry.kind === 'drain_summary');
+  assert.equal(summary?.outcome, 'lapsed');
+  assert.equal(summary?.committed, false);
+});
+
+test('a cancelled drain summary counts the creates it refused, by route', async (t) => {
+  const log = t.mock.method(console, 'log', () => {});
+  const drain = createDrainController({
+    drainWindowDefaultMs: 1000,
+    drainWindowMaxMs: 2000,
+    rooms: new Map(),
+  });
+
+  drain.noteRefusedCreate('/api/rooms'); // before any drain: not counted
+  await drain.handleRequest(
+    request({ body: { windowMs: 1500 } }),
+    captureResponse(),
+    '/admin/drain',
+  );
+  drain.noteRefusedCreate('/api/rooms');
+  drain.noteRefusedCreate('/api/rooms');
+  drain.noteRefusedCreate('/api/xiangqi/rooms/xq_0a1b2c3d-4e5f/join');
+  await drain.handleRequest(request(), captureResponse(), '/admin/drain/cancel');
+
+  const summary = loggedKinds(log.mock.calls).find((entry) => entry.kind === 'drain_summary');
+  assert.equal(summary?.outcome, 'cancelled');
+  assert.equal(summary?.refusedCreates, 3);
+  assert.deepEqual(summary?.refusedByRoute, {
+    '/api/rooms': 2,
+    '/api/xiangqi/rooms/:id/join': 1,
+  });
+});
+
+test('shutdown closes a committed drain, and a shutdown with no drain says so', async (t) => {
+  const log = t.mock.method(console, 'log', () => {});
+  const drain = createDrainController({
+    drainWindowDefaultMs: 1000,
+    drainWindowMaxMs: 2000,
+    rooms: new Map(),
+  });
+
+  await drain.handleRequest(
+    request({ body: { windowMs: 1500 } }),
+    captureResponse(),
+    '/admin/drain',
+  );
+  await drain.handleRequest(
+    request({ body: { phase: 'restarting' } }),
+    captureResponse(),
+    '/admin/drain',
+  );
+  await drain.finalizeOnShutdown();
+
+  const logged = loggedKinds(log.mock.calls);
+  const summary = logged.find((entry) => entry.kind === 'drain_summary');
+  assert.equal(summary?.outcome, 'shutdown');
+  assert.equal(summary?.committed, true);
+  assert.equal(typeof summary?.commitWaitMs, 'number');
+  assert.equal(
+    logged.some((entry) => entry.kind === 'shutdown_without_drain'),
+    false,
+  );
+
+  await drain.finalizeOnShutdown();
+  assert.equal(
+    loggedKinds(log.mock.calls).some((entry) => entry.kind === 'shutdown_without_drain'),
+    true,
+  );
+});
+
+// #559 step 1. Refusing creates protects games that are still running; once the
+// count has reached zero and the restart is committed, the minutes left are the
+// build of the pushed commit, and refusing then only turned players away.
+test('a pending drain refuses creates; a committed restart lets them through again', async () => {
+  const live = playingRoom('step1-live');
+  const drain = createDrainController({
+    drainWindowDefaultMs: 60_000,
+    drainWindowMaxMs: 60_000,
+    rooms: new Map([[live.id, live]]),
+  });
+  assert.equal(drain.refusesCreate(), false, 'no drain: nothing is refused');
+
+  await drain.handleRequest(request(), captureResponse(), '/admin/drain');
+  assert.equal(drain.refusesCreate(), true, 'pending with a live game: refused');
+
+  live.projection.state.status = { type: 'finished', winner: 'white', reason: 'checkmate' };
+  const committed = captureResponse();
+  await drain.handleRequest(request({ body: { phase: 'restarting' } }), committed, '/admin/drain');
+  assert.equal(committed.status, 200);
+  assert.equal(drain.isDraining(), true, 'the drain window (and its banner) stays open');
+  assert.equal(drain.restartPhase(), 'restarting');
+  assert.equal(drain.refusesCreate(), false, 'committed: creates are open');
+});
+
+// A game made between the commit and the SIGTERM is an ordinary live room. It
+// must not send the release back into a wait (a repeat commit stays a 200), and
+// the shutdown must pause it like every other room so the new build resumes it.
+// Once the shutdown has begun, creates are refused again: a room made after the
+// pause walk would carry a running clock through the restart.
+test('a game created after the restart commit is paused at shutdown and holds nothing up', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const rooms = new Map<string, Room>();
+  const drain = createDrainController({
+    drainWindowDefaultMs: 60_000,
+    drainWindowMaxMs: 60_000,
+    rooms,
+  });
+  await drain.handleRequest(request(), captureResponse(), '/admin/drain');
+  const first = captureResponse();
+  await drain.handleRequest(request({ body: { phase: 'restarting' } }), first, '/admin/drain');
+  assert.equal(first.status, 200);
+
+  // The create the committed drain let through: both seats taken, clock armed.
+  assert.equal(drain.refusesCreate(), false);
+  const id = 'step1-after-commit';
+  const now = Date.now();
+  const events: GameEvent[] = [
+    { type: 'room-created', at: now - 2_000, roomId: id, variant: 'dark-chess' },
+    { type: 'seat-assigned', at: now - 1_900, roomId: id, clientId: 'w', seat: 'white' },
+    { type: 'seat-assigned', at: now - 1_800, roomId: id, clientId: 'b', seat: 'black' },
+    {
+      type: 'clock-started',
+      at: now - 1_000,
+      roomId: id,
+      clock: {
+        ...createClock(now - 1_000, 60_000, 0),
+        activeColor: 'white',
+        runningSince: now - 1_000,
+      },
+    },
+  ];
+  const room = roomFixture({ id, events, projection: replayGameEvents(events) });
+  rooms.set(id, room);
+  assert.equal(drain.activeGameCount(), 1);
+
+  const again = captureResponse();
+  await drain.handleRequest(request({ body: { phase: 'restarting' } }), again, '/admin/drain');
+  assert.equal(again.status, 200, 'a repeat commit does not 409 on the game it let in');
+  assert.equal(responseJson(again).idempotent, true);
+
+  // The shutdown sequence from index.ts: close the drain, then pause every room.
+  await drain.finalizeOnShutdown();
+  assert.equal(drain.refusesCreate(), true, 'creates close once the shutdown starts');
+  const ctx: RoomManagerContext = {
+    send() {},
+    recordPersistenceError() {},
+    pveBuiltinEngineClientId: 'builtin-random-legal',
+    pveEngineMoveDelayMs: 0,
+    liveEngineTimeoutMs: 3_000,
+    liveClockInitialMs: 180_000,
+    liveClockIncrementMs: 2_000,
+  };
+  await pauseActiveRoomsOnShutdown(rooms.values(), ctx);
+  assert.equal(room.projection.paused, true);
+  assert.equal(room.projection.pauseReason, 'shutdown');
+  assert.equal(room.projection.state.clock?.runningSince, null, 'its clock is frozen');
+  assert.equal(drain.activeGameCount(), 0, 'and it no longer counts toward any gate');
 });

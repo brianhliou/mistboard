@@ -10,7 +10,7 @@ This model is meant to be explicit rather than implicit: contributors should kno
 
 The source code is available under AGPL-3.0-or-later. Users may inspect, run, modify, and fork the code under the license terms. Note that AGPL extends copyleft to network use — operators of modified hosted instances must make their source available to users.
 
-The project intends to keep the Fog of War rules, protocol work, engine research, and benchmark artifacts public where doing so does not compromise security, privacy, or competitive integrity.
+The project intends to keep the game rules, protocol work, engine research, and benchmark artifacts public where doing so does not compromise security, privacy, or competitive integrity.
 
 For product direction, licensing, branding, reference, roadmap, and monetization boundaries, see `docs/project-direction.md`.
 
@@ -56,9 +56,8 @@ The maintainer may consider:
 
 The default product rule remains:
 
-> Does this make Mistboard a more trustworthy, serious place to play, study,
-> rank, or build engines for dark chess and future hidden-information
-> games?
+> Does this make Mistboard a more trustworthy place to play, study, rank, or
+> build engines for xiangqi and its variants?
 
 If not, the work is deferred unless it clearly advances one of the documented strategic tracks.
 

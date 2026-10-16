@@ -11,6 +11,13 @@
 // validateXiangqiBroadcastSourceUrl per entry and records source_disallowed for
 // anything off the allowlist. The fail-closed property lives at the leaves.
 
+import type { XiangqiBroadcastBoard } from '@mistboard/game';
+import {
+  type DpxqPairing,
+  dpxqPairingBoard,
+  pairingBoardNumber,
+  pairingSourceBoardId,
+} from './xiangqi-broadcast-dpxq-pairings.js';
 import type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
 
 export const XIANGQI_BROADCAST_DISCOVERY_SCHEME = 'mistboard-discover:';
@@ -27,6 +34,8 @@ export type DiscoveredBoard = {
    * round, so this stays optional.
    */
   roundNumber?: number;
+  /** The table the source lists the game at (台次), when it says. */
+  table?: number;
   plies?: number;
 };
 
@@ -34,6 +43,22 @@ export type DiscoveryProviderInput = {
   config: URLSearchParams;
   fetchImpl: XiangqiBroadcastSourceFetch;
   timeoutMs: number;
+  /**
+   * Rounds whose stored boards are all finished. A provider that reads one
+   * page per round may skip these; the latest round is always read.
+   */
+  settledRounds?: ReadonlySet<number>;
+  /**
+   * Source URLs the store already holds as finished games. A settled round
+   * that still lists a record outside this set is read again: its stored
+   * boards may all be results-only pairings, which are finished without
+   * moves, and the record needs its pairing to land on that board.
+   */
+  completeUrls?: ReadonlySet<string>;
+  /** Pause between a provider's own page fetches (dpxq 503s on bursts). */
+  spacingMs?: number;
+  /** Pause before a provider's one retry of a fetch that failed transiently. */
+  retryBackoffMs?: number;
 };
 
 export type DiscoveryProvider = {
@@ -44,9 +69,18 @@ export type DiscoveryProvider = {
    * see buildStatedRoundManifestSources.
    */
   readonly statesRounds?: boolean;
-  discover(
-    input: DiscoveryProviderInput,
-  ): Promise<{ ok: true; boards: DiscoveredBoard[] } | { ok: false; message: string }>;
+  discover(input: DiscoveryProviderInput): Promise<
+    | {
+        ok: true;
+        boards: DiscoveredBoard[];
+        /** Every pairing the source lists, moves or not (dpxq round pages),
+         *  with the page that lists it. */
+        pairings?: Array<DpxqPairing & { pageUrl: string }>;
+      }
+    /** `quiet`: an expected empty state, not a fault (a tour whose source
+     *  has published nothing yet). The poller decides whether it stays quiet. */
+    | { ok: false; message: string; quiet?: true }
+  >;
 };
 
 export type DiscoverySource = {
@@ -214,6 +248,22 @@ export type DiscoveryManifestSource = {
   roundId: string;
   roundName?: string;
   boardNumber: number;
+  /**
+   * The board id to file the page's game under instead of the one the
+   * converter derives: a record that belongs to a listed pairing takes the
+   * pairing's id, so the results-only board it replaces is extended in place.
+   */
+  sourceBoardId?: string;
+  /**
+   * A board with no page to fetch: a pairing and its result, from the round
+   * page `url` names. The poller applies it as it is.
+   */
+  resultsOnly?: XiangqiBroadcastBoard;
+  /**
+   * A stored board to remove, with nothing to fetch: a table's aggregate row
+   * (`r07t01`) whose per-game boards (`r07t01g1`..) replace it.
+   */
+  retireBoardId?: string;
 };
 
 export type DiscoveryManifestBuild =
@@ -300,6 +350,86 @@ export function buildDiscoveryManifestSources(input: {
 
 export type SeededRound = { id: string; name?: string };
 
+/** What the poller already holds, enough to tell a listed pairing's board
+ *  apart from a record stored before pairings were read. */
+export type StoredBoardRef = {
+  id: string;
+  /** `r07t01`, `r07t01g2` for a pairing's board; a converter id otherwise. */
+  sourceBoardId?: string;
+  roundNumber?: number;
+  sourceUrl?: string;
+  red: { name: string; federation?: string };
+  black: { name: string; federation?: string };
+  status: string;
+  result: string;
+  plies: number;
+  details?: XiangqiBroadcastBoard['details'];
+};
+
+/**
+ * Rounds a provider that reads a page per round may skip: every stored board
+ * in them is finished, so a finished event costs one page a poll.
+ *
+ * Except a team league round still holding a moveless board keyed by table
+ * alone (`r01t02`) once the tour holds match-keyed boards (`r02m01t01`): it was
+ * stored before games were keyed by match, so each of its boards is whichever
+ * match's game at that table was read last. Its page must be read once more
+ * for the match-keyed boards that retire it (2026 women's league round 1: six
+ * collided boards for 19 games, settled, so the retirement never ran).
+ */
+/**
+ * The source pages the store already holds in full, so discovery can leave
+ * them out. A page counts only when every board read from it is complete,
+ * carries details and has moves: a WXF round article is one page for the
+ * whole round, and counting it done on its first finished game froze the
+ * rest of the round at whatever it had when that game ended. A dpxq record
+ * page is one board, so for it this is the old per-board rule.
+ */
+export function completeSourceUrls(
+  boards: ReadonlyArray<{
+    sourceUrl?: string | undefined;
+    status: string;
+    details?: unknown;
+    plies: number;
+  }>,
+): Set<string> {
+  const done = new Set<string>();
+  const open = new Set<string>();
+  for (const board of boards) {
+    if (!board.sourceUrl) continue;
+    // A complete board stored before game details existed is read once more
+    // so its match, table and date arrive; after that it is final. A
+    // results-only board has no moves to read, so its source never counts.
+    if (board.status === 'complete' && board.details && board.plies > 0) {
+      done.add(board.sourceUrl);
+    } else {
+      open.add(board.sourceUrl);
+    }
+  }
+  for (const url of open) done.delete(url);
+  return done;
+}
+
+export function settledStatedRounds(stored: readonly StoredBoardRef[]): Set<number> {
+  const byRound = new Map<number, StoredBoardRef[]>();
+  for (const row of stored) {
+    if (row.roundNumber === undefined) continue;
+    const rows = byRound.get(row.roundNumber) ?? [];
+    rows.push(row);
+    byRound.set(row.roundNumber, rows);
+  }
+  const tourByMatch = stored.some((row) => /^r\d+m\d+t\d+/.test(row.sourceBoardId ?? ''));
+  const settled = new Set<number>();
+  for (const [roundNumber, rows] of byRound) {
+    if (!rows.every((row) => row.status === 'complete')) continue;
+    const collided =
+      tourByMatch &&
+      rows.some((row) => row.plies === 0 && /^r\d+t\d+(?:g\d+)?$/.test(row.sourceBoardId ?? ''));
+    if (!collided) settled.add(roundNumber);
+  }
+  return settled;
+}
+
 export type StatedRoundManifestBuild =
   | {
       ok: true;
@@ -307,13 +437,35 @@ export type StatedRoundManifestBuild =
       droppedForCap: number;
       /** Boards already stored complete; nothing on the source can change them. */
       skippedComplete: number;
-      /** Boards whose stated round has no seeded round to land in. */
-      droppedUnscheduled: number;
+      /** Round numbers the source stated that had no seeded round; each is
+       *  filed under `<tourSlug>-r<NN>` and created by the import. */
+      roundsAdded: number[];
     }
   | { ok: false; message: string; quiet?: true };
 
 /** The poller keys its quiet path off this exact message, like NO_ACTIVE_ROUND_MESSAGE. */
 export const NOTHING_NEW_MESSAGE = 'every listed board is already imported';
+
+function sameSide(
+  a: { name: string; federation?: string },
+  b: { name: string; federation?: string },
+): boolean {
+  return a.name === b.name && (a.federation ?? '') === (b.federation ?? '');
+}
+
+/** A stored results-only board already says what the pairing says. */
+function pairingUnchanged(stored: StoredBoardRef, board: XiangqiBroadcastBoard): boolean {
+  return (
+    stored.plies === 0 &&
+    sameSide(stored.red, board.red) &&
+    sameSide(stored.black, board.black) &&
+    stored.status === board.status &&
+    stored.result === board.result &&
+    (stored.details?.table ?? null) === (board.details?.table ?? null) &&
+    (stored.details?.game ?? null) === (board.details?.game ?? null) &&
+    (stored.details?.kind ?? null) === (board.details?.kind ?? null)
+  );
+}
 
 /**
  * Manifest for a source whose boards each state their own round.
@@ -333,17 +485,31 @@ export const NOTHING_NEW_MESSAGE = 'every listed board is already imported';
  * keep re-fetching the ones stored live, and drop boards for rounds the
  * schedule never seeded rather than guess. Board numbers are the row's rank
  * among its round's rows in the source's own order.
+ *
+ * Pairings (dpxq round pages) add a board for every table, records or not.
+ * A pairing and its record are one board: the record is matched to the
+ * pairing by the record link on the pairing's row, else by round and table
+ * from the game list, and is filed under the pairing's id
+ * (`<round>-r07t05`), so the results-only board is extended in place when the
+ * moves arrive instead of sitting beside them. Results-only boards go first
+ * in the manifest, so the record that extends one is applied after it. Two guards keep tours imported
+ * before pairings were read from growing twins: a record already stored under
+ * another id keeps that id and covers its pairing, and a stored game with the
+ * pairing's two players in its round covers it too.
  */
 export function buildStatedRoundManifestSources(input: {
   source: DiscoverySource;
   boards: readonly DiscoveredBoard[];
   rounds: readonly SeededRound[];
   completeUrls: ReadonlySet<string>;
+  pairings?: readonly (DpxqPairing & { pageUrl: string })[];
+  stored?: readonly StoredBoardRef[];
 }): StatedRoundManifestBuild {
   const byEvent = input.source.event
     ? input.boards.filter((board) => (board.event ?? '').includes(input.source.event as string))
     : [...input.boards];
-  if (byEvent.length === 0) {
+  const pairings = input.pairings ?? [];
+  if (byEvent.length === 0 && pairings.length === 0) {
     return {
       ok: false,
       message: input.source.event
@@ -357,52 +523,192 @@ export function buildStatedRoundManifestSources(input: {
     const number = roundNumberFromRoundId(round.id);
     if (number !== undefined && !roundsByNumber.has(number)) roundsByNumber.set(number, round);
   }
+  const roundsAdded = new Set<number>();
+  const roundFor = (roundNumber: number): SeededRound => {
+    let round = roundsByNumber.get(roundNumber);
+    if (!round) {
+      // The source states the round, so this is not a guess. A league is
+      // seeded a stage at a time (the 2026 men's league had rounds 1-5 when
+      // stage two was still unannounced); dropping later rounds meant nothing
+      // landed until someone re-seeded by hand.
+      round = {
+        id: `${input.source.tourSlug}-r${String(roundNumber).padStart(2, '0')}`,
+        name: `Round ${roundNumber}`,
+      };
+      roundsByNumber.set(roundNumber, round);
+      roundsAdded.add(roundNumber);
+    }
+    return round;
+  };
+  const common = (round: SeededRound) => ({
+    tourSlug: input.source.tourSlug,
+    roundId: round.id,
+    ...(input.source.tourName ? { tourName: input.source.tourName } : {}),
+    ...(round.name ? { roundName: round.name } : {}),
+  });
 
+  const stored = input.stored ?? [];
+  const storedById = new Map(stored.map((board) => [board.id, board]));
+  const storedByUrl = new Map<string, StoredBoardRef>();
+  for (const board of stored) if (board.sourceUrl) storedByUrl.set(board.sourceUrl, board);
+  const pairingBoardId = (pairing: DpxqPairing) =>
+    `${input.source.tourSlug}-${roundFor(pairing.roundNumber).id}-${pairingSourceBoardId(pairing)}`;
+
+  // Record ↔ pairing. The row's own link first; the game list's round and
+  // table only for a table that played one game (a multi-game table's rows
+  // each link their record, and its game-list rows carry no table).
+  const pairingByRecordId = new Map<string, DpxqPairing>();
+  for (const pairing of pairings) {
+    if (pairing.recordIds.length === 1) pairingByRecordId.set(pairing.recordIds[0]!, pairing);
+  }
+  // A team league's table number repeats in every match, so it names no
+  // single pairing there: its records match by their row's link only.
+  const singleGameTables = new Map<string, DpxqPairing>();
+  for (const pairing of pairings) {
+    if (pairing.game !== undefined || pairing.match !== undefined) continue;
+    singleGameTables.set(`${pairing.roundNumber}:${pairing.table}`, pairing);
+  }
+  const recordId = (url: string) => url.match(/view_m_(\d+)\.html/i)?.[1];
+  const pairingForRecord = (board: DiscoveredBoard): DpxqPairing | undefined => {
+    const id = recordId(board.url);
+    const linked = id ? pairingByRecordId.get(id) : undefined;
+    if (linked) return linked;
+    if (board.roundNumber === undefined || board.table === undefined) return undefined;
+    const byTable = singleGameTables.get(`${board.roundNumber}:${board.table}`);
+    // A table whose row links a different record is not this game.
+    if (!byTable || (id && byTable.recordIds.length > 0 && !byTable.recordIds.includes(id))) {
+      return undefined;
+    }
+    return byTable;
+  };
+
+  const covered = new Set<DpxqPairing>();
   const rankInRound = new Map<number, number>();
   const candidates: DiscoveryManifestSource[] = [];
   let skippedComplete = 0;
-  let droppedUnscheduled = 0;
   for (const board of byEvent) {
     if (board.roundNumber === undefined) {
       return { ok: false, message: `listed board ${board.url} states no round` };
     }
     const rank = (rankInRound.get(board.roundNumber) ?? 0) + 1;
     rankInRound.set(board.roundNumber, rank);
-    const round = roundsByNumber.get(board.roundNumber);
-    if (!round) {
-      droppedUnscheduled += 1;
-      continue;
-    }
+    const round = roundFor(board.roundNumber);
+    const pairing = pairingForRecord(board);
+    const storedRecord = storedByUrl.get(board.url);
+    // A record stored before its pairing was read keeps its id: re-keying it
+    // would leave the old row beside the new one.
+    const pin =
+      pairing && !(storedRecord && storedRecord.id !== pairingBoardId(pairing))
+        ? pairingSourceBoardId(pairing)
+        : undefined;
+    // A pinned record still gets its results-only board below, applied first:
+    // if the page fetch fails (dpxq times out and 503s in bursts) the table
+    // is there with its result, and the record extends it when it lands.
+    if (pairing && !pin) covered.add(pairing);
     if (input.completeUrls.has(board.url)) {
       skippedComplete += 1;
       continue;
     }
     candidates.push({
       url: board.url,
-      tourSlug: input.source.tourSlug,
-      roundId: round.id,
-      boardNumber: rank,
-      ...(input.source.tourName ? { tourName: input.source.tourName } : {}),
-      ...(round.name ? { roundName: round.name } : {}),
+      ...common(round),
+      boardNumber: pairing ? pairingBoardNumber(pairing) : (board.table ?? rank),
+      ...(pin ? { sourceBoardId: pin } : {}),
     });
   }
 
-  if (candidates.length === 0) {
-    if (skippedComplete > 0) {
-      return { ok: false, message: NOTHING_NEW_MESSAGE, quiet: true };
-    }
-    return {
-      ok: false,
-      message: `${droppedUnscheduled} listed board(s) state rounds the schedule has not seeded`,
-    };
+  const resultsOnly: DiscoveryManifestSource[] = [];
+  for (const pairing of pairings) {
+    if (covered.has(pairing)) continue;
+    const round = roundFor(pairing.roundNumber);
+    const board = dpxqPairingBoard({
+      tourSlug: input.source.tourSlug,
+      roundId: round.id,
+      pairing,
+      sourceUrl: pairing.pageUrl,
+    });
+    const existing = storedById.get(board.id);
+    if (existing && (existing.plies > 0 || pairingUnchanged(existing, board))) continue;
+    // A game already stored in this round between the same two players (a
+    // record imported before pairings were read) is this pairing.
+    const twin = stored.some(
+      (row) =>
+        row.id !== board.id &&
+        row.plies > 0 &&
+        row.roundNumber === pairing.roundNumber &&
+        row.red.name === pairing.red.name &&
+        row.black.name === pairing.black.name,
+    );
+    if (twin) continue;
+    resultsOnly.push({
+      url: pairing.pageUrl,
+      ...common(round),
+      boardNumber: pairingBoardNumber(pairing),
+      resultsOnly: board,
+    });
   }
 
+  // A table that played several games first lists one aggregate row with the
+  // match score, then a row per game. An aggregate stored from a read in
+  // between is not a game, so once the table's per-game boards are stored or
+  // listed it is retired. Read from what is stored as well as from the page:
+  // a finished round's page is not read again, and the boards are what count.
+  const tablesWithGames = new Set<string>();
+  for (const pairing of pairings) {
+    if (pairing.game === undefined) continue;
+    const table = pairingSourceBoardId({
+      roundNumber: pairing.roundNumber,
+      table: pairing.table,
+      ...(pairing.match ? { match: pairing.match } : {}),
+    });
+    tablesWithGames.add(`${pairing.roundNumber}:${table}`);
+  }
+  for (const row of stored) {
+    const table = row.sourceBoardId?.match(/^(r\d+(?:m\d+)?t\d+)g\d+$/)?.[1];
+    if (table && row.roundNumber !== undefined) tablesWithGames.add(`${row.roundNumber}:${table}`);
+  }
+  // A team league round read before its games were keyed by match holds
+  // boards keyed by table alone, each one some match's game at that table.
+  // Once the round's match-keyed boards are listed or stored they are the
+  // round, and every table-keyed results-only board in it is retired.
+  const roundsByMatch = new Set<number>();
+  for (const pairing of pairings) {
+    if (pairing.match !== undefined) roundsByMatch.add(pairing.roundNumber);
+  }
+  for (const row of stored) {
+    if (row.roundNumber !== undefined && /^r\d+m\d+t\d+/.test(row.sourceBoardId ?? '')) {
+      roundsByMatch.add(row.roundNumber);
+    }
+  }
+  const retirements: DiscoveryManifestSource[] = [];
+  for (const row of stored) {
+    if (row.plies > 0 || row.roundNumber === undefined || !row.sourceBoardId) continue;
+    const aggregate =
+      /^r\d+(?:m\d+)?t\d+$/.test(row.sourceBoardId) &&
+      tablesWithGames.has(`${row.roundNumber}:${row.sourceBoardId}`);
+    const unmatched =
+      /^r\d+t\d+(?:g\d+)?$/.test(row.sourceBoardId) && roundsByMatch.has(row.roundNumber);
+    if (!aggregate && !unmatched) continue;
+    retirements.push({
+      url: row.sourceUrl ?? row.id,
+      ...common(roundFor(row.roundNumber)),
+      boardNumber: row.details?.table ?? 1,
+      retireBoardId: row.id,
+    });
+  }
+
+  if (candidates.length === 0 && resultsOnly.length === 0 && retirements.length === 0) {
+    return { ok: false, message: NOTHING_NEW_MESSAGE, quiet: true };
+  }
+
+  // The cap bounds page fetches; a results-only board fetches nothing.
   const kept = candidates.slice(0, input.source.maxBoards);
   return {
     ok: true,
-    sources: kept,
+    // Retirements last: the per-game boards they defer to land first.
+    sources: [...resultsOnly, ...kept, ...retirements],
     droppedForCap: candidates.length - kept.length,
     skippedComplete,
-    droppedUnscheduled,
+    roundsAdded: [...roundsAdded].sort((a, b) => a - b),
   };
 }

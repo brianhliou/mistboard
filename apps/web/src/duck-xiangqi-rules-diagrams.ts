@@ -30,6 +30,8 @@ import {
   XQ_BOARD_W,
   xqBoardSvg,
   xqCoord,
+  xqPieceDrawSize,
+  xqPieceShape,
   xqPieceSize,
   xqPoint,
   xqSvg,
@@ -90,6 +92,9 @@ function duckOverlay(
   const { file, rank } = xqCoord(square as XiangqiSquare);
   const { x, y } = xqPoint(file, rank, 'red', x0, y0 + BOARD_Y_OFFSET);
   const size = xqPieceSize();
+  // The duck is drawn at the board pieces' size and shape, so it matches the discs
+  // (or squares) beside it; the ring keeps the mark size.
+  const drawn = xqPieceDrawSize();
   // The ring says "this is where it just landed", the same job the board's
   // last-move marker does in a live game. Drawn UNDER the duck so the art stays
   // the thing you look at.
@@ -99,8 +104,8 @@ function duckOverlay(
   return [
     ring,
     `<g aria-label="duck">`,
-    `<g transform="translate(${x - size / 2},${y - size / 2}) scale(${size / 100})">`,
-    duckPieceMarks(activeXiangqiPieceSet),
+    `<g transform="translate(${x - drawn / 2},${y - drawn / 2}) scale(${drawn / 100})">`,
+    duckPieceMarks(activeXiangqiPieceSet, xqPieceShape()),
     `</g>`,
     `</g>`,
   ].join('');

@@ -17,7 +17,9 @@ import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
   JIEQI_PIECE_PX,
   type JieqiBoardArrow,
+  type JieqiBoardMarker,
   jieqiArrowSvg,
+  jieqiMarkerSvg,
   jieqiPieceGhostSvg,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
@@ -39,7 +41,7 @@ export interface JieqiInteractiveBoard {
   render(view: JieqiPlayerView | null, perspective: JieqiColor): void;
   clearSelection(): void;
   setArrows(arrows: readonly JieqiBoardArrow[]): void;
-  setMarkers(): void;
+  setMarkers(markers: readonly JieqiBoardMarker[]): void;
 }
 
 export function createJieqiInteractiveBoard(
@@ -48,6 +50,7 @@ export function createJieqiInteractiveBoard(
   let selectedSquare: JieqiSquare | null = null;
   let draggingFrom: JieqiSquare | null = null;
   let arrows: readonly JieqiBoardArrow[] = [];
+  let markers: readonly JieqiBoardMarker[] = [];
 
   function render(view: JieqiPlayerView | null, perspective: JieqiColor): void {
     if (!view) {
@@ -66,6 +69,7 @@ export function createJieqiInteractiveBoard(
       legalMoves,
       draggingFrom,
       arrows,
+      markers,
     });
   }
 
@@ -74,6 +78,18 @@ export function createJieqiInteractiveBoard(
     const layer = opts.board.querySelector('.xq-live-arrows');
     if (layer) {
       layer.innerHTML = arrows.map((arrow) => jieqiArrowSvg(arrow, opts.getPerspective())).join('');
+    }
+  }
+
+  // The review's move glyph (?!, ?, ??) and best-move ring: patched in place
+  // like the arrows, and kept across renders.
+  function setMarkers(next: readonly JieqiBoardMarker[]): void {
+    markers = next;
+    const layer = opts.board.querySelector('.jieqi-board-markers');
+    if (layer) {
+      layer.innerHTML = markers
+        .map((marker) => jieqiMarkerSvg(marker, opts.getPerspective()))
+        .join('');
     }
   }
 
@@ -161,5 +177,5 @@ export function createJieqiInteractiveBoard(
     },
   });
 
-  return { render, clearSelection, setArrows, setMarkers: () => {} };
+  return { render, clearSelection, setArrows, setMarkers };
 }

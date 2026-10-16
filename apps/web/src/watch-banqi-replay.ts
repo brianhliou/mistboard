@@ -4,6 +4,8 @@
 // surface (no per-color triptych) and there is no fog to pass to the renderer.
 import type { BanqiPlayerView } from '@mistboard/game';
 import { banqiResultLabel, seatInkLabel } from './banqi-result-label.js';
+import { boardCoordinatesEnabled } from './display-preferences.js';
+import { flipSeatInk } from './flip-seat-ink.js';
 import {
   type BanqiPostgameResponse,
   type BanqiPostgameViewKey,
@@ -14,12 +16,15 @@ import {
 } from './live-banqi-postgame.js';
 import {
   animateBanqiBoardMove,
+  type BanqiBoardArrow,
+  type BanqiBoardMarker,
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
 import type { ReplayHandle } from './replay.js';
 import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { watchBanqiMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
@@ -53,7 +58,12 @@ export function mountBanqiWatchReplay(
       viewAtPly: postgameViewAtPly,
       paneKind,
       // Symmetric board: no fog/perspective to apply.
-      renderBoard: (view, orientation) => renderBanqiBoardSvg(view, orientation),
+      renderBoard: (view, orientation, _key, overlay) =>
+        renderBanqiBoardSvg(view, orientation, {
+          arrows: overlay.arrows as readonly BanqiBoardArrow[],
+          markers: overlay.glyphs as readonly BanqiBoardMarker[],
+          coordinates: boardCoordinatesEnabled(),
+        }),
       // One-ply steps glide: forward animates the newly rendered view's lastMove,
       // a back step reverse-animates the move the previous ply carried.
       animateMove: (boardEl, view, prevView, direction) => {
@@ -63,6 +73,8 @@ export function mountBanqiWatchReplay(
       },
       // The same grouped pool the live room draws (review/captured-pool.ts); every
       // banqi capture has a known identity, so no hidden renderer is needed.
+      // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+      moveSound: watchBanqiMoveSound,
       fillCaptures: (host, view, owner) => {
         const pieceSet = readStoredXiangqiPieceSet();
         fillCapturedPoolWith(host, view.captured, owner, (entry) =>
@@ -73,6 +85,7 @@ export function mountBanqiWatchReplay(
       // result is seat-keyed, so translate it to the bound ink for display.
       resultLabel: (result, postgame) => banqiResultLabel(result, postgame.view.firstColor),
       seatLabel: (seat, postgame) => seatInkLabel(seat, postgame.view.firstColor),
+      seatInk: (seat, postgame) => flipSeatInk(seat, postgame.view.firstColor ?? null),
     },
   );
 }

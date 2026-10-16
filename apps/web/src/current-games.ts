@@ -1,120 +1,108 @@
-// /games — current games (lichess's "Current games"): every game in progress
-// right now, live and correspondence, across every variant, as a grid of cards.
+// /games — current games (lichess's "Current games"), laid out as a board wall:
+// every game in progress right now, live and correspondence, across every
+// variant, plus the open correspondence seeks, as board cards in one "Playing
+// now" wall, with the most recent finished games below so the page never reads
+// as dead. Built for low liquidity: no variant or player filters, since a
+// handful of games needs no narrowing; each card's kind (live, correspondence,
+// open seek) is its coloured top edge and tag (current-games.css [data-kind]).
 //
 // Data: GET /api/games/current (see apps/server/src/current-games.ts). Open
 // specs arrive with a board payload and mount the same live tenant renderer
 // the homepage TV uses (mountShowcaseBoard in live mode, payload override);
-// masked and sealed specs arrive as cards only, so nothing about a hidden
-// position is ever on this page. Clocks tick client-side from the server
-// snapshot; correspondence cards count down to the seat-on-move's deadline.
+// masked and sealed specs arrive as cards only and get the misty tile, so
+// nothing about a hidden position is ever on this page. Clocks tick
+// client-side from the server snapshot; correspondence cards count down to the
+// seat-on-move's deadline with a thin bar of the move's allowance left. Open
+// seeks draw the variant's starting position (seek-card.ts).
 //
-// At Mistboard's liquidity the empty state IS the page most of the day, so it
-// is designed: open correspondence seeks (the way to make a game exist) and the
-// most recent finished games, with a link to the database.
+// Just finished: /api/watch's public replay pool across every variant, without
+// the Featured channel's 20-ply bar (curated=0), so a game that leaves the wall
+// lands here however short it was. When a card leaves the wall the pool is
+// re-read on every poll until that game shows up (or FINISH_WAIT_MS passes: a
+// private game never will), and tiles are keyed by room, so a new finish slides
+// in at the front without redrawing the boards already on screen. Final
+// positions are drawn by the same showcase renderer /watch's queue preview
+// uses, in its default compact view. Open-information variants, the fog
+// variants (a finished room is open to spectators, so the final board is
+// revealed) and jieqi and banqi (face-down pieces face-down) draw a board
+// (finishedTileKind); concealed hands keep the misty tile. Two rows first, "Show more" adds rows from the pool
+// already loaded, and a board mounts only when its tile nears the viewport.
+//
+// Load order: the seeks, the current games, the finished pool and the board
+// renderer's code are all requested at once; none waits on another.
+//
+// Pure logic (sections, urgency, tile kinds) lives in current-games-model.ts.
 
 import './current-games.css';
-import './account-profile.css';
+import type { GameEvent } from '@mistboard/game';
+import {
+  type BoardSeat,
+  type CurrentGame,
+  type CurrentGamePlayer,
+  type CurrentGamesResponse,
+  deadlineFractionLeft,
+  FINISHED_BOARD_BOTTOM_SEAT,
+  FINISHED_BOARD_POV,
+  FINISHED_POOL_URL,
+  finishedBoardTenantPov,
+  finishedPoolDue,
+  finishedTileKind,
+  isLowClock,
+  liveCardShowsHands,
+  liveTileKind,
+  seatsTopToBottom,
+  settleAwaitingFinish,
+  splitSections,
+} from './current-games-model.js';
+import { watchQueueResultLabel } from './finished-result-label.js';
+import { type FlipSeat, payloadFirstColor, seatInkForVariant } from './flip-seat-ink.js';
 import {
   displayLiveName,
+  displayParticipantName,
   type FeaturedGame,
+  matchupSeats,
   namesMatchupLabel,
+  terminationLabel,
   variantDisplayLabel,
-  watchChannelLabel,
 } from './game-display.js';
-import { timeControlLabelForGame } from './game-meta.js';
+import { gameMetaForGame, timeControlLabelForGame } from './game-meta.js';
 import { t } from './i18n/catalog.js';
+import { currentLocale } from './i18n/locale.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
-import { buildProfileGameRow } from './profile-ui.js';
+import { formatGameTime, profileGameHref } from './profile-ui.js';
 import type { ReplayHandle } from './replay.js';
+import { seatDiscClass, seatDiscEl } from './seat-disc.js';
+import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
+import { buildKindBadge, buildSeekCard } from './seek-card.js';
+import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildNav, buildNotice } from './site-shell.js';
-import { buildUiIcon } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
-import type { VariantMiniId } from './variant-mini-boards.js';
+import { seatInkFamily } from './variant-seat-label.js';
+import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 import { formatClock, formatDayClock } from './web-utils.js';
 
 const POLL_MS = 5_000;
 const HIDDEN_POLL_MS = 30_000;
 const CLOCK_TICK_MS = 250;
-const RECENT_GAMES_LIMIT = 10;
-const CHANNEL_ALL = 'all';
+// Two rows of final positions at desktop width; "Show more" adds this many again.
+const FINISHED_PAGE = 12;
+// The finished feed is re-read at most this often; the 5 s poll re-renders from cache.
+const FINISHED_TTL_MS = 60_000;
+// How long a game that left the wall is waited for in the finished pool.
+const FINISH_WAIT_MS = 30_000;
+// Start a finished board's fetch a little before its tile scrolls into view.
+const FINISHED_MOUNT_MARGIN = '300px';
 
-type CurrentGamePlayer = {
-  color: string;
-  name: string | null;
-  // Linkable seat identity, at most one set: `handle` for a signed-in account,
-  // `botId` for a first-party bot. Both null for guests and for raw engine
-  // versions, neither of which has a public page.
-  handle: string | null;
-  botId?: string | null;
-  isEngine: boolean;
-};
-
-type CurrentGameClock = {
-  activeColor: string | null;
-  remainingMs: Record<string, number>;
-  asOf: number;
-  running: boolean;
-};
-
-type CurrentGame = {
-  roomId: string;
-  gameSpecId: string;
-  channelId: string | null;
-  composition: 'pvp' | 'pve';
-  observe: 'open' | 'masked' | 'sealed';
-  players: CurrentGamePlayer[];
-  ply: number;
-  rated: boolean;
-  startedAt: number | null;
-  lastActivityAt: number | null;
-  timeControl: { initialMs: number; incrementMs: number; daysPerMove?: number } | null;
-  timeClass: 'bullet' | 'blitz' | 'rapid' | 'classical' | 'correspondence' | null;
-  clock: CurrentGameClock | null;
-  deadline: { seat: string; dueAt: string } | null;
-  url: string;
-  payload?: Record<string, unknown>;
-};
-
-type CurrentGamesChannel = {
-  id: string;
-  label: string;
-  family: string;
-  gameSpecIds: string[];
-  count: number;
-};
-
-type CurrentGamesResponse = {
-  channel: string;
-  channels: CurrentGamesChannel[];
-  games: CurrentGame[];
-  now: string;
-  total: number;
-};
-
-type CorrespondenceSeek = {
+export type CorrespondenceSeek = {
   id: string;
   gameSpecId: string;
   daysPerMove: number;
   creatorName: string | null;
-};
-
-// Same marker map the /watch rail uses (watch-route.ts); duplicated rather than
-// imported so this page does not pull the 2,000-line watch module into its chunk.
-const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
-  'dark-chess': 'dark-chess',
-  xiangqi: 'xiangqi',
-  'dark-xiangqi': 'dark-xiangqi',
-  'fortress-xiangqi': 'fortress-xiangqi',
-  jieqi: 'jieqi',
-  banqi: 'banqi',
-  jungle: 'jungle',
-  'jungle-flip': 'jungle-flip',
-  // Duck Xiangqi. Present in watch-route.ts's copy of this map since the
-  // channel was added; missing here, which would have rendered an empty marker
-  // slot for duck rows the moment the server flag turned on. The two maps are
-  // duplicated deliberately (see above) and so drift exactly like this.
-  'duck-xiangqi': 'duck-xiangqi',
-  'atomic-xiangqi': 'atomic-xiangqi',
+  creatorHandle?: string | null;
+  rated?: boolean;
+  isMine?: boolean;
+  // Move order the poster picked: 'first' | 'second' | 'random'.
+  preferredColor?: string;
 };
 
 type CardState = {
@@ -122,63 +110,113 @@ type CardState = {
   root: HTMLElement;
   boardRoot: HTMLElement;
   clockEls: Record<string, HTMLElement>;
+  bar: HTMLElement | null;
+  meta: HTMLElement;
   // Client time the clock snapshot arrived; the tick drains from here.
   clockReceivedAt: number;
   handle: ReplayHandle | null;
   mounting: Promise<void> | null;
   payload: Record<string, unknown> | null;
+  // A flip game's bound ink, read from the last board payload. The server sends
+  // a payload only when the ply moved, so this persists between polls.
+  firstColor: FlipSeat | null;
   shownPly: number;
 };
+
+type SectionEls = { root: HTMLElement; grid: HTMLElement; aside: HTMLElement };
 
 export async function mountCurrentGames(root: HTMLElement): Promise<void> {
   root.classList.add('landing-page', 'current-games-page');
   root.replaceChildren(buildNav());
 
+  // Everything the page needs, requested together: the seeks and the finished
+  // pool used to wait on the current-games fetch, and the board code on all three.
+  const seeksRequest = fetchSeeks();
+  const finishedRequest = fetchFinished();
+  void import('./showcase-board.js').catch(() => undefined);
+
   const shell = document.createElement('main');
   shell.className = 'site-section current-games-shell';
 
+  // ---- header -------------------------------------------------------------
   const header = document.createElement('header');
-  header.className = 'current-games-header';
+  header.className = 'current-games-header current-games-hero';
+  const titleBlock = document.createElement('div');
+  titleBlock.className = 'current-games-titleblock';
+  const titleRow = document.createElement('div');
+  titleRow.className = 'current-games-titlerow';
   const heading = document.createElement('h1');
   heading.className = 'site-section-heading';
   heading.textContent = t('games.heading');
+  const pill = document.createElement('span');
+  pill.className = 'current-games-pill';
+  pill.setAttribute('aria-live', 'polite');
+  pill.hidden = true;
+  titleRow.append(heading, pill);
   const subtitle = document.createElement('p');
   subtitle.className = 'current-games-subtitle';
   subtitle.textContent = t('games.subtitle');
-  const countLine = document.createElement('p');
-  countLine.className = 'current-games-count';
-  countLine.setAttribute('aria-live', 'polite');
-  header.append(heading, subtitle, countLine);
+  titleBlock.append(titleRow, subtitle);
+  header.append(titleBlock, buildActions());
 
-  const layout = document.createElement('div');
-  layout.className = 'current-games-layout';
-  const rail = document.createElement('nav');
-  rail.className = 'current-games-rail';
-  rail.setAttribute('aria-label', t('games.allChannels'));
-  const mainCol = document.createElement('div');
-  mainCol.className = 'current-games-main';
-  const gridHost = document.createElement('section');
-  gridHost.className = 'current-games-grid-host';
+  // ---- sections -------------------------------------------------------------
   const emptyHost = document.createElement('section');
   emptyHost.className = 'current-games-empty-host';
   emptyHost.hidden = true;
-  const recentHost = document.createElement('section');
-  recentHost.className = 'current-games-recent';
-  mainCol.append(gridHost, emptyHost, recentHost);
-  layout.append(rail, mainCol);
-  shell.append(header, layout);
+  const playing = buildSection('playing', t('games.playingNow'));
+  playing.root.hidden = true;
+  const finished = buildSection('finished', t('games.justFinished'));
+  finished.root.hidden = true;
+  finished.grid.className = 'current-games-finished-grid';
+  finished.aside.append(
+    moreLink('/games/search', t('games.searchAll')),
+    moreLink('/data', t('games.downloadData')),
+  );
+  const showMore = document.createElement('button');
+  showMore.type = 'button';
+  showMore.className = 'current-games-show-more';
+  showMore.textContent = t('games.showMore');
+  showMore.hidden = true;
+  finished.root.append(showMore);
+
+  shell.append(header, emptyHost, playing.root, finished.root);
   root.append(shell);
 
-  const grid = document.createElement('div');
-  grid.className = 'current-games-grid';
-  gridHost.append(grid);
-
   const cards = new Map<string, CardState>();
-  let channel = readChannel();
+  const seekCards = new Map<string, HTMLElement>();
   let destroyed = false;
   let pollTimer: number | null = null;
   let lastResponse: CurrentGamesResponse | null = null;
-  let emptyRendered = false;
+  let seeks: CorrespondenceSeek[] | null = null;
+  let finishedCache: {
+    at: number;
+    games: FeaturedGame[];
+    pending: Promise<FeaturedGame[]> | null;
+  } = { at: Date.now(), games: [], pending: finishedRequest };
+  let finishedShown = FINISHED_PAGE;
+  // The tiles on screen, by room, so a pool change moves or adds tiles rather
+  // than redrawing every board.
+  const finishedTiles = new Map<string, { tile: HTMLElement; handle: ReplayHandle | null }>();
+  let finishedKey = '';
+  // Games that just left the wall, until they appear in the pool (or give up).
+  const awaitingFinish = new Map<string, number>();
+  const boardObserver =
+    typeof IntersectionObserver === 'function'
+      ? new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              boardObserver?.unobserve(entry.target);
+              const host = entry.target as HTMLElement;
+              const game = pendingBoards.get(host);
+              pendingBoards.delete(host);
+              if (game) void mountFinishedBoard(host, game);
+            }
+          },
+          { rootMargin: FINISHED_MOUNT_MARGIN },
+        )
+      : null;
+  const pendingBoards = new Map<HTMLElement, FeaturedGame>();
 
   const abort = new AbortController();
   const isConnected = (): boolean => !destroyed && root.isConnected;
@@ -192,12 +230,9 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       .join(',');
 
   async function fetchCurrent(): Promise<CurrentGamesResponse | null> {
-    const params = new URLSearchParams();
-    if (channel !== CHANNEL_ALL) params.set('channel', channel);
     const known = knownParam();
-    if (known) params.set('known', known);
-    const query = params.toString();
-    const response = await fetch(`/api/games/current${query ? `?${query}` : ''}`).catch(() => null);
+    const query = known ? `?${new URLSearchParams({ known }).toString()}` : '';
+    const response = await fetch(`/api/games/current${query}`).catch(() => null);
     if (!response?.ok) return null;
     return (await response.json().catch(() => null)) as CurrentGamesResponse | null;
   }
@@ -208,15 +243,14 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     if (!isConnected()) return;
     if (!data) {
       if (!lastResponse) {
-        gridHost.replaceChildren(buildNotice(t('games.feedUnavailable'), t('games.subtitle')));
+        playing.root.hidden = false;
+        playing.grid.replaceChildren(buildNotice(t('games.feedUnavailable'), t('games.subtitle')));
       }
       schedulePoll();
       return;
     }
     lastResponse = data;
-    renderRail(rail, data, channel);
-    renderCount(countLine, data.total);
-    await reconcile(data.games);
+    render();
     schedulePoll();
   }
 
@@ -226,88 +260,125 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     pollTimer = window.setTimeout(() => void refresh(), document.hidden ? HIDDEN_POLL_MS : POLL_MS);
   }
 
+  function render(): void {
+    const data = lastResponse;
+    if (!data) return;
+    renderPill(pill, data.total);
+    reconcile(data.games);
+    renderEmpty(data.games.length === 0);
+    void renderFinished();
+  }
+
   // ---- cards ------------------------------------------------------------
 
-  async function reconcile(games: CurrentGame[]): Promise<void> {
+  function reconcile(games: CurrentGame[]): void {
     const seen = new Set<string>();
     for (const game of games) {
       seen.add(game.roomId);
       const existing = cards.get(game.roomId);
-      if (existing) {
-        updateCard(existing, game);
-      } else {
-        const card = createCard(game);
-        cards.set(game.roomId, card);
-      }
+      if (existing) updateCard(existing, game);
+      else cards.set(game.roomId, createCard(game));
     }
     for (const [roomId, card] of cards) {
       if (seen.has(roomId)) continue;
+      awaitingFinish.set(roomId, Date.now() + FINISH_WAIT_MS);
       card.handle?.destroy();
       card.root.remove();
       cards.delete(roomId);
     }
-    // Keep server order: rebuild the grid's child order from the response.
-    const ordered = games.map((game) => cards.get(game.roomId)!.root);
-    grid.replaceChildren(...ordered);
-    if (games.length === 0) {
-      if (!emptyRendered) {
-        emptyRendered = true;
-        await renderEmptyState(emptyHost);
-      }
-      // The seeks and CTAs are channel-independent; only the headline says
-      // whether it is this channel or the whole site that is quiet.
-      const entry =
-        channel === CHANNEL_ALL
-          ? null
-          : (lastResponse?.channels.find((entry) => entry.id === channel) ?? null);
-      const label = entry ? watchChannelLabel(entry) : null;
-      const title = emptyHost.querySelector<HTMLElement>('.current-games-empty h2');
-      if (title) title.textContent = label ? t('games.noneInChannel', { label }) : t('games.none');
-      emptyHost.hidden = false;
-      gridHost.hidden = true;
-    } else {
-      emptyHost.hidden = true;
-      gridHost.hidden = false;
+    // Live first (people, then bots), then correspondence by deadline, then the
+    // seeks waiting for a second player. A card already in place is moved only
+    // when the order changed, so a live board is not detached on every poll.
+    const sections = splitSections(games);
+    const order = [
+      ...sections.live.map((game) => cards.get(game.roomId)!.root),
+      ...sections.correspondence.map((game) => cards.get(game.roomId)!.root),
+      ...seekCardList(),
+    ];
+    const current = [...playing.grid.children];
+    if (current.length !== order.length || current.some((el, i) => el !== order[i])) {
+      playing.grid.replaceChildren(...order);
     }
-    // Board mounts happen after the grid is on screen so a slow renderer
+    playing.root.hidden = order.length === 0;
+    // Board mounts happen after the cards are on screen so a slow renderer
     // import never blocks the cards' text from appearing.
     for (const game of games) {
       const card = cards.get(game.roomId);
-      if (card && game.payload) void showBoard(card, game.payload);
+      if (card && game.payload && liveTileKind(game) === 'board') {
+        void showBoard(card, game.payload);
+      }
     }
   }
 
+  // One card per open seek, built once: its start board is drawn on creation
+  // and must not be redrawn on every poll.
+  function seekCardList(): HTMLElement[] {
+    const list = seeks ?? [];
+    const live = new Set(list.map((seek) => seek.id));
+    for (const id of [...seekCards.keys()]) if (!live.has(id)) seekCards.delete(id);
+    return list.map((seek) => {
+      let card = seekCards.get(seek.id);
+      if (!card) {
+        card = buildGamesSeekCard(seek);
+        seekCards.set(seek.id, card);
+      }
+      return card;
+    });
+  }
+
   function createCard(game: CurrentGame): CardState {
+    const correspondence = game.timeClass === 'correspondence';
     const article = document.createElement('article');
     article.className = 'current-game-card';
     article.dataset.roomId = game.roomId;
     article.dataset.observe = game.observe;
+    article.dataset.kind = correspondence ? 'correspondence' : 'live';
 
-    const link = document.createElement('a');
-    link.className = 'current-game-link';
-    link.href = game.url;
-    link.setAttribute('aria-label', t('games.watchGame', { matchup: matchupLabel(game) }));
+    // The card is a box with a stretched overlay link rather than one big <a>:
+    // the player names inside are profile links, and an <a> inside an <a> is
+    // invalid (same pattern as the profile game rows).
+    const open = document.createElement('a');
+    open.className = 'current-game-open';
+    open.href = game.url;
+    open.setAttribute('aria-label', t('games.watchGame', { matchup: matchupLabel(game) }));
 
     const [top, bottom] = seatOrder(game);
     const clockEls: Record<string, HTMLElement> = {};
-    const topRow = buildSeatRow(game, top, clockEls);
+    const firstColor = payloadFirstColor(game.payload);
+    const ink = (seat: CurrentGamePlayer | null): string | null =>
+      seat ? seatInkForVariant(game.gameSpecId, seat.color, firstColor) : null;
+    const topRow = buildSeatRow(top, clockEls, ink(top));
     const boardRoot = document.createElement('div');
     boardRoot.className = 'current-game-board';
     renderBoardPlaceholder(boardRoot, game);
-    const bottomRow = buildSeatRow(game, bottom, clockEls);
-    link.append(topRow, boardRoot, bottomRow);
+    const bottomRow = buildSeatRow(bottom, clockEls, ink(bottom));
+    article.append(open, topRow, boardRoot, bottomRow);
+    stampSeatInkFamily(article, game.gameSpecId);
+
+    let bar: HTMLElement | null = null;
+    if (correspondence) {
+      const track = document.createElement('div');
+      track.className = 'current-game-bar';
+      track.setAttribute('aria-hidden', 'true');
+      bar = document.createElement('span');
+      track.append(bar);
+      article.append(track);
+    }
 
     const meta = document.createElement('div');
     meta.className = 'current-game-meta';
-    meta.textContent = metaLine(game);
-    article.append(link, meta);
+    renderMeta(meta, game);
+    article.append(meta);
 
     const card: CardState = {
+      bar,
       boardRoot,
       clockEls,
       clockReceivedAt: Date.now(),
+      firstColor,
       game,
       handle: null,
+      meta,
       mounting: null,
       payload: null,
       root: article,
@@ -321,8 +392,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     card.game = game;
     card.clockReceivedAt = Date.now();
     card.root.dataset.observe = game.observe;
-    const meta = card.root.querySelector<HTMLElement>('.current-game-meta');
-    if (meta) meta.textContent = metaLine(game);
+    renderMeta(card.meta, game);
     tickCard(card, Date.now());
   }
 
@@ -330,6 +400,13 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
   // Serialized per card so a slow mount and a fast poll cannot interleave.
   function showBoard(card: CardState, payload: Record<string, unknown>): Promise<void> {
     card.payload = payload;
+    // A flip game binds its inks on the opening flip, which only the board
+    // payload carries; repaint the circles the first time it does.
+    const firstColor = payloadFirstColor(payload);
+    if (firstColor && firstColor !== card.firstColor) {
+      card.firstColor = firstColor;
+      paintSeatDiscs(card.root, card.game.gameSpecId, firstColor);
+    }
     const run = async (): Promise<void> => {
       if (!isConnected() || !cards.has(card.game.roomId)) return;
       const { mountShowcaseBoard } = await import('./showcase-board.js');
@@ -343,7 +420,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
           card.game.roomId,
           {
             autoplay: false,
-            hideReserve: true,
+            hideReserve: !liveCardShowsHands(card.game.gameSpecId),
             live: true,
             loadPostgameOverride: async (roomId) =>
               card.payload && roomId === card.game.roomId
@@ -371,6 +448,146 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     return card.mounting;
   }
 
+  // ---- empty state ---------------------------------------------------------
+
+  // A quiet line when nothing is in play; open seeks still fill the wall below.
+  function renderEmpty(nothingInPlay: boolean): void {
+    if (!nothingInPlay) {
+      emptyHost.hidden = true;
+      return;
+    }
+    const notice = document.createElement('div');
+    notice.className = 'current-games-empty';
+    const title = document.createElement('h2');
+    title.textContent = t('games.none');
+    const body = document.createElement('p');
+    body.textContent = t('games.noneBody');
+    notice.append(title, body);
+    emptyHost.replaceChildren(notice);
+    emptyHost.hidden = false;
+  }
+
+  // ---- just finished -------------------------------------------------------
+
+  async function renderFinished(): Promise<void> {
+    if (finishedCache.pending) {
+      const fetched = await finishedCache.pending;
+      if (!isConnected()) return;
+      finishedCache = { at: Date.now(), games: fetched, pending: null };
+      settleAwaitingFinish(awaitingFinish, fetched, Date.now());
+    } else if (
+      finishedPoolDue(Date.now() - finishedCache.at, awaitingFinish.size, POLL_MS, FINISHED_TTL_MS)
+    ) {
+      // Re-read in the background; this render keeps the cached pool.
+      const pending = fetchFinished();
+      finishedCache = { ...finishedCache, pending };
+      void pending.then((games) => {
+        finishedCache = { at: Date.now(), games, pending: null };
+        settleAwaitingFinish(awaitingFinish, games, Date.now());
+        if (isConnected()) void renderFinished();
+      });
+    }
+    const pool = finishedCache.games;
+    const shown = pool.slice(0, finishedShown);
+    showMore.hidden = shown.length >= pool.length;
+    const key = shown.map((game) => game.roomId).join(',');
+    if (key === finishedKey) return;
+    finishedKey = key;
+    finished.root.hidden = shown.length === 0;
+    const keep = new Set(shown.map((game) => game.roomId));
+    for (const [roomId, entry] of finishedTiles) {
+      if (keep.has(roomId)) continue;
+      entry.handle?.destroy();
+      const host = entry.tile.querySelector<HTMLElement>('.current-game-board');
+      if (host) {
+        boardObserver?.unobserve(host);
+        pendingBoards.delete(host);
+      }
+      entry.tile.remove();
+      finishedTiles.delete(roomId);
+    }
+    // Tiles already drawn keep their boards; a game that just finished, or a
+    // "Show more" page, is built and slotted into its place in the order.
+    shown.forEach((game, index) => {
+      const existing = finishedTiles.get(game.roomId);
+      const tile = existing?.tile ?? buildFinishedTile(game);
+      const at = finished.grid.children[index] ?? null;
+      if (at !== tile) finished.grid.insertBefore(tile, at);
+      if (existing) return;
+      finishedTiles.set(game.roomId, { tile, handle: null });
+      if (finishedTileKind(game.variant) !== 'board') return;
+      const host = tile.querySelector<HTMLElement>('.current-game-board');
+      if (!host) return;
+      if (boardObserver) {
+        pendingBoards.set(host, game);
+        boardObserver.observe(host);
+      } else {
+        void mountFinishedBoard(host, game);
+      }
+    });
+  }
+
+  showMore.addEventListener(
+    'click',
+    () => {
+      finishedShown += FINISHED_PAGE;
+      void renderFinished();
+    },
+    { signal: abort.signal },
+  );
+
+  // A tile replaced while its board loaded (a pool refresh) is off the page by
+  // the time the mount resolves; its handle is destroyed rather than kept.
+  async function mountFinishedBoard(host: HTMLElement, game: FeaturedGame): Promise<void> {
+    try {
+      const { mountShowcaseBoard } = await import('./showcase-board.js');
+      if (!isConnected() || !host.isConnected) return;
+      const [first, second] = matchupSeats(game);
+      const tenantPov = finishedBoardTenantPov(game.variant);
+      host.replaceChildren();
+      const handle = await mountShowcaseBoard(
+        host,
+        specIdForShowcaseVariant(game.variant),
+        game.roomId,
+        {
+          autoplay: false,
+          hideReserve: true,
+          loaderForId: apiEventLoader,
+          metadataByRoomId: { [game.roomId]: gameMetaForGame(game) },
+          namesByRoomId: {
+            [game.roomId]: {
+              first: displayParticipantName(game, first),
+              second: displayParticipantName(game, second),
+            },
+          },
+          onLoadError: () => true,
+          pov: FINISHED_BOARD_POV,
+          revealOnFinish: true,
+          // A finished fog game is open to spectators: draw it with the fog off
+          // (Fog Xiangqi; Fog Chess reveals through revealOnFinish).
+          ...(tenantPov ? { tenantPov } : {}),
+        },
+      );
+      if (!isConnected() || !host.isConnected) {
+        handle.destroy();
+        return;
+      }
+      const entry = finishedTiles.get(game.roomId);
+      if (!entry?.tile.contains(host)) {
+        handle.destroy();
+        return;
+      }
+      entry.handle = handle;
+      handle.jumpToPly?.(handle.plyCount?.() ?? game.plyCount);
+      // The names were placed for the expected orientation; the mounted board
+      // has the final word.
+      placeFinishedSeats(entry.tile, handle.bottomSeat?.() ?? FINISHED_BOARD_BOTTOM_SEAT);
+    } catch (err) {
+      console.warn('[current-games] finished board failed', err);
+      host.replaceChildren(buildFogTile(variantDisplayLabel(game.variant), null));
+    }
+  }
+
   // ---- clocks -----------------------------------------------------------
 
   const clockTimer = window.setInterval(() => {
@@ -380,27 +597,6 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
 
   // ---- lifecycle --------------------------------------------------------
 
-  rail.addEventListener(
-    'click',
-    (event) => {
-      const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[data-channel]');
-      if (!link) return;
-      event.preventDefault();
-      channel = link.dataset.channel ?? CHANNEL_ALL;
-      writeChannel(channel);
-      if (lastResponse) renderRail(rail, lastResponse, channel);
-      void refresh();
-    },
-    { signal: abort.signal },
-  );
-  window.addEventListener(
-    'popstate',
-    () => {
-      channel = readChannel();
-      void refresh();
-    },
-    { signal: abort.signal },
-  );
   document.addEventListener(
     'visibilitychange',
     () => {
@@ -416,11 +612,18 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     window.clearInterval(clockTimer);
     if (pollTimer !== null) window.clearTimeout(pollTimer);
     for (const card of cards.values()) card.handle?.destroy();
+    for (const entry of finishedTiles.values()) entry.handle?.destroy();
+    boardObserver?.disconnect();
     observer.disconnect();
   });
   observer.observe(document.body, { childList: true, subtree: true });
 
-  void renderRecentGames(recentHost);
+  // The current games render as soon as they land; the seeks join the wall when
+  // theirs does (usually first: it is the smaller read).
+  void seeksRequest.then((list) => {
+    seeks = list;
+    if (isConnected() && lastResponse) render();
+  });
   await refresh();
 }
 
@@ -428,71 +631,54 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
 // Rendering helpers
 // ---------------------------------------------------------------------------
 
-function readChannel(): string {
-  return new URLSearchParams(window.location.search).get('channel') ?? CHANNEL_ALL;
+function buildActions(): HTMLElement {
+  const actions = document.createElement('div');
+  actions.className = 'current-games-actions';
+  const play = document.createElement('a');
+  play.className = 'current-games-cta';
+  play.href = '/play';
+  play.textContent = t('games.playNow');
+  const post = document.createElement('a');
+  post.className = 'current-games-cta is-secondary';
+  post.href = '/correspondence';
+  post.textContent = t('games.postAGame');
+  actions.append(play, post);
+  return actions;
 }
 
-function writeChannel(channel: string): void {
-  const url = new URL(window.location.href);
-  if (channel === CHANNEL_ALL) url.searchParams.delete('channel');
-  else url.searchParams.set('channel', channel);
-  window.history.pushState(null, '', url);
+function buildSection(kind: string, title: string): SectionEls {
+  const root = document.createElement('section');
+  root.className = 'current-games-section';
+  root.dataset.section = kind;
+  const head = document.createElement('div');
+  head.className = 'current-games-section-head';
+  const h2 = document.createElement('h2');
+  h2.textContent = title;
+  const aside = document.createElement('div');
+  aside.className = 'current-games-section-aside';
+  head.append(h2, aside);
+  const grid = document.createElement('div');
+  grid.className = 'current-games-grid';
+  root.append(head, grid);
+  return { aside, grid, root };
 }
 
-function renderCount(el: HTMLElement, total: number): void {
-  el.textContent =
-    total === 1 ? t('games.countOne', { count: total }) : t('games.countMany', { count: total });
-}
-
-function renderRail(root: HTMLElement, data: CurrentGamesResponse, active: string): void {
-  root.replaceChildren();
-  const all = railLink(CHANNEL_ALL, t('games.allChannels'), data.total, active === CHANNEL_ALL);
-  all
-    .querySelector('.current-games-rail-thumb')
-    ?.append(buildUiIcon('featured-channel', 'current-games-rail-crown'));
-  root.append(all);
-  for (const channel of data.channels) {
-    const channelLabel = watchChannelLabel(channel);
-    const link = railLink(channel.id, channelLabel, channel.count, active === channel.id);
-    const miniId = CHANNEL_MINI_BY_ID[channel.id];
-    const thumb = link.querySelector<HTMLElement>('.current-games-rail-thumb');
-    if (thumb && miniId) {
-      thumb.classList.add('notranslate');
-      thumb.setAttribute('translate', 'no');
-      thumb.innerHTML = renderVariantMarker(miniId, {
-        size: 112,
-        label: `${channelLabel} marker`,
-      });
-    }
-    if (channel.count === 0) link.classList.add('is-quiet');
-    root.append(link);
-  }
-}
-
-function railLink(channelId: string, label: string, count: number, active: boolean): HTMLElement {
+function moreLink(href: string, label: string): HTMLAnchorElement {
   const link = document.createElement('a');
-  link.className = 'current-games-rail-link';
-  link.dataset.channel = channelId;
-  link.href =
-    channelId === CHANNEL_ALL ? '/games' : `/games?channel=${encodeURIComponent(channelId)}`;
-  const text = document.createElement('span');
-  text.className = 'current-games-rail-text';
-  const name = document.createElement('span');
-  name.className = 'current-games-rail-name';
-  name.textContent = label;
-  const countEl = document.createElement('span');
-  countEl.className = 'current-games-rail-count';
-  countEl.textContent = String(count);
-  text.append(name, countEl);
-  const thumb = document.createElement('span');
-  thumb.className = 'current-games-rail-thumb';
-  thumb.setAttribute('aria-hidden', 'true');
-  link.append(text, thumb);
-  if (active) {
-    link.classList.add('active');
-    link.setAttribute('aria-current', 'page');
-  }
+  link.className = 'current-games-more-link';
+  link.href = href;
+  link.textContent = label;
   return link;
+}
+
+function renderPill(el: HTMLElement, total: number): void {
+  el.replaceChildren();
+  const dot = document.createElement('span');
+  dot.className = 'current-games-pill-dot';
+  dot.setAttribute('aria-hidden', 'true');
+  el.append(dot, document.createTextNode(t('games.inPlay', { count: total })));
+  el.classList.toggle('is-quiet', total === 0);
+  el.hidden = false;
 }
 
 // First mover (red / white) sits at the bottom, the way the player's own room
@@ -506,15 +692,20 @@ function seatOrder(game: CurrentGame): [CurrentGamePlayer | null, CurrentGamePla
   return [second, first];
 }
 
-function buildSeatRow(
-  game: CurrentGame,
+// `ink` is the colour the seat plays (seatInkForVariant), drawn as the shared
+// seat disc /watch uses; null is a flip game before its flip, a dashed ring.
+export function buildSeatRow(
   player: CurrentGamePlayer | null,
   clockEls: Record<string, HTMLElement>,
+  ink: string | null,
 ): HTMLElement {
   const row = document.createElement('div');
   row.className = 'current-game-seat';
   if (player) row.dataset.color = player.color;
-  row.append(
+  const who = document.createElement('span');
+  who.className = 'current-game-seat-who';
+  if (player) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
+  who.append(
     playerNameEl(
       displayLiveName(player?.name, t('games.guest')),
       profileTargetFor(player),
@@ -525,47 +716,94 @@ function buildSeatRow(
     const badge = document.createElement('span');
     badge.className = 'current-game-bot';
     badge.textContent = t('games.bot');
-    row.append(badge);
+    who.append(badge);
   }
   const clock = document.createElement('span');
   clock.className = 'current-game-seat-clock';
-  row.append(clock);
+  row.append(who, clock);
   if (player) clockEls[player.color] = clock;
-  void game;
   return row;
+}
+
+// Recolour a card's seat discs once a flip game's opening flip is known. The
+// rows are keyed by seat (data-color); the ink each seat plays follows the flip.
+export function paintSeatDiscs(
+  root: HTMLElement,
+  variant: string,
+  firstColor: FlipSeat | null,
+): void {
+  for (const row of root.querySelectorAll<HTMLElement>('.current-game-seat[data-color]')) {
+    const disc = row.querySelector<HTMLElement>('.current-game-seat-disc');
+    const seat = row.dataset.color;
+    if (!disc || !seat) continue;
+    disc.className = seatDiscClass(
+      seatInkForVariant(variant, seat, firstColor),
+      'current-game-seat-disc',
+    );
+  }
+  stampSeatInkFamily(root, variant);
+}
+
+// The Jungle family paints its second ink blue through this ancestor stamp.
+function stampSeatInkFamily(root: HTMLElement, variant: string): void {
+  const family = seatInkFamily(variant);
+  if (family) root.dataset.seatInkFamily = family;
+  else delete root.dataset.seatInkFamily;
 }
 
 function tickCard(card: CardState, now: number): void {
   const { game } = card;
+  const correspondence = game.timeClass === 'correspondence';
   for (const [color, el] of Object.entries(card.clockEls)) {
-    el.textContent = clockText(game, color, card.clockReceivedAt, now);
-    el.classList.toggle(
-      'is-active',
-      game.timeClass === 'correspondence'
-        ? game.deadline?.seat === color
-        : game.clock?.activeColor === color && game.clock.running,
-    );
+    if (correspondence) {
+      const onMove = game.deadline?.seat === color;
+      el.textContent = onMove
+        ? t('games.deadline', { time: formatDayClock(Date.parse(game.deadline!.dueAt) - now) })
+        : '';
+      el.classList.toggle('is-deadline', onMove);
+      el.hidden = !onMove;
+      continue;
+    }
+    const remaining = clockRemaining(game, color, card.clockReceivedAt, now);
+    el.hidden = remaining === null;
+    if (remaining === null) continue;
+    el.textContent = formatClock(remaining);
+    el.classList.toggle('is-active', game.clock?.activeColor === color && !!game.clock?.running);
+    el.classList.toggle('is-low', isLowClock(remaining, game.timeControl?.initialMs));
+  }
+  if (card.bar) {
+    const fraction = deadlineFractionLeft(game, now);
+    card.bar.style.width = `${Math.round((fraction ?? 0) * 1000) / 10}%`;
   }
 }
 
-function clockText(game: CurrentGame, color: string, receivedAt: number, now: number): string {
-  if (game.timeClass === 'correspondence') {
-    if (!game.deadline || game.deadline.seat !== color) return '';
-    return formatDayClock(Date.parse(game.deadline.dueAt) - now);
-  }
+function clockRemaining(
+  game: CurrentGame,
+  color: string,
+  receivedAt: number,
+  now: number,
+): number | null {
   const clock = game.clock;
-  if (!clock) return '';
+  if (!clock) return null;
   const base = clock.remainingMs[color];
-  if (base === undefined) return '';
-  const drained = clock.running && clock.activeColor === color ? base - (now - receivedAt) : base;
-  return formatClock(drained);
+  if (base === undefined) return null;
+  return clock.running && clock.activeColor === color
+    ? Math.max(0, base - (now - receivedAt))
+    : base;
 }
 
+// The tile shown where a board is not (yet) drawn. A hidden-information game
+// gets the misty tile for its whole life on this page; an open game shows its
+// variant marker until the live renderer mounts.
 function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): void {
+  if (liveTileKind(game) === 'fog') {
+    root.replaceChildren(buildFogTile(variantDisplayLabel(game.gameSpecId), t('games.inTheFog')));
+    return;
+  }
   root.replaceChildren();
   const tile = document.createElement('div');
   tile.className = 'current-game-hidden';
-  const miniId = game.channelId ? CHANNEL_MINI_BY_ID[game.channelId] : undefined;
+  const miniId = game.channelId ? WATCH_CHANNEL_MINI_IDS[game.channelId] : undefined;
   if (miniId) {
     const marker = document.createElement('span');
     marker.className = 'current-game-hidden-marker notranslate';
@@ -576,17 +814,62 @@ function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): void {
   }
   const label = document.createElement('span');
   label.className = 'current-game-hidden-label';
-  label.textContent =
-    game.observe === 'open' ? variantDisplayLabel(game.gameSpecId) : t('games.hiddenWhileLive');
+  label.textContent = variantDisplayLabel(game.gameSpecId);
   tile.append(label);
   root.append(tile);
 }
 
+const FOG_WAVES =
+  '<svg viewBox="0 0 44 30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 8c6-5 12 5 19 0s13-5 19 0M3 16c6-5 12 5 19 0s13-5 19 0M3 24c6-5 12 5 19 0s13-5 19 0"/></svg>';
+
+function buildFogTile(variant: string, note: string | null): HTMLElement {
+  const tile = document.createElement('div');
+  tile.className = 'current-game-fog';
+  const waves = document.createElement('span');
+  waves.className = 'current-game-fog-waves';
+  waves.innerHTML = FOG_WAVES;
+  const name = document.createElement('span');
+  name.className = 'current-game-fog-variant';
+  name.textContent = variant;
+  tile.append(waves, name);
+  if (note) {
+    const text = document.createElement('span');
+    text.className = 'current-game-fog-note';
+    text.textContent = note;
+    tile.append(text);
+  }
+  return tile;
+}
+
+function renderMeta(root: HTMLElement, game: CurrentGame): void {
+  const chip = document.createElement('span');
+  chip.className = 'current-game-chip';
+  chip.textContent = variantDisplayLabel(game.gameSpecId);
+  const parts: string[] = [];
+  if (game.timeClass === 'correspondence') {
+    const days = game.timeControl?.daysPerMove ?? 0;
+    const cadence = days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days });
+    // Marked exactly like a live game since correspondence can be rated (2026-10-02).
+    parts.push(cadence, game.rated ? t('games.rated') : t('games.casual'));
+  } else {
+    const label = game.timeControl ? timeControlLabelForGame(asFeaturedGame(game)) : null;
+    parts.push(
+      [label, game.rated ? t('games.rated') : t('games.casual')].filter(Boolean).join(' '),
+    );
+  }
+  parts.push(t('games.moveCount', { count: game.ply }));
+  const text = document.createElement('span');
+  text.textContent = parts.join(' · ');
+  root.replaceChildren(
+    buildKindBadge(game.timeClass === 'correspondence' ? 'correspondence' : 'live'),
+    chip,
+    text,
+  );
+}
+
 function matchupLabel(game: CurrentGame): string {
-  const [top, bottom] = seatOrder(game);
-  const a = displayLiveName(bottom?.name, t('games.guest'));
-  const b = displayLiveName(top?.name, t('games.guest'));
-  return namesMatchupLabel(a, b);
+  const { first, second } = namesFor(game);
+  return namesMatchupLabel(first, second);
 }
 
 function namesFor(game: CurrentGame): { first: string; second: string } {
@@ -595,22 +878,6 @@ function namesFor(game: CurrentGame): { first: string; second: string } {
     first: displayLiveName(bottom?.name, t('games.guest')),
     second: displayLiveName(top?.name, t('games.guest')),
   };
-}
-
-function metaLine(game: CurrentGame): string {
-  const parts: string[] = [variantDisplayLabel(game.gameSpecId)];
-  if (game.timeClass === 'correspondence') {
-    const days = game.timeControl?.daysPerMove ?? 0;
-    parts.push(days === 1 ? t('games.oneDayPerMove') : t('games.daysPerMove', { count: days }));
-    parts.push(t('games.correspondence'));
-  } else {
-    const label = game.timeControl ? timeControlLabelForGame(asFeaturedGame(game)) : null;
-    if (label) parts.push(label);
-    parts.push(t('games.live'));
-  }
-  parts.push(game.rated ? t('games.rated') : t('games.casual'));
-  parts.push(t('games.moveCount', { count: game.ply }));
-  return parts.join(' · ');
 }
 
 function asFeaturedGame(game: CurrentGame): FeaturedGame {
@@ -629,72 +896,44 @@ function asFeaturedGame(game: CurrentGame): FeaturedGame {
 }
 
 // ---------------------------------------------------------------------------
-// Empty state + recent games
+// Seeks + finished games
 // ---------------------------------------------------------------------------
 
-async function renderEmptyState(host: HTMLElement): Promise<void> {
-  host.replaceChildren();
-  const notice = document.createElement('section');
-  notice.className = 'current-games-empty';
-  const title = document.createElement('h2');
-  title.textContent = t('games.none');
-  const body = document.createElement('p');
-  body.textContent = t('games.noneBody');
-  const actions = document.createElement('div');
-  actions.className = 'current-games-actions';
-  const play = document.createElement('a');
-  play.className = 'current-games-cta';
-  play.href = '/play';
-  play.textContent = t('games.playNow');
-  const post = document.createElement('a');
-  post.className = 'current-games-cta is-secondary';
-  post.href = '/correspondence';
-  post.textContent = t('games.postAGame');
-  actions.append(play, post);
-  notice.append(title, body, actions);
-  host.append(notice);
-
-  const seeks = await fetchSeeks();
-  if (seeks === null) return;
-  const section = document.createElement('section');
-  section.className = 'current-games-seeks';
-  const heading = document.createElement('h2');
-  heading.textContent = t('games.openSeeks');
-  section.append(heading);
-  if (seeks.length === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'current-games-muted';
-    empty.textContent = t('games.noOpenSeeks');
-    section.append(empty);
-  } else {
-    const list = document.createElement('ol');
-    list.className = 'current-games-seek-list';
-    for (const seek of seeks) {
-      const item = document.createElement('li');
-      const link = document.createElement('a');
-      link.className = 'current-games-seek';
-      link.href = '/correspondence';
-      const who = document.createElement('span');
-      who.className = 'current-games-seek-name';
-      who.textContent = displayLiveName(seek.creatorName, t('games.anonymous'));
-      const what = document.createElement('span');
-      what.className = 'current-games-seek-detail';
-      what.textContent = `${variantDisplayLabel(seek.gameSpecId)} · ${
-        seek.daysPerMove === 1
-          ? t('games.oneDayPerMove')
-          : t('games.daysPerMove', { count: seek.daysPerMove })
-      }`;
-      link.append(who, what);
-      item.append(link);
-      list.append(item);
-    }
-    section.append(list);
-  }
-  host.append(section);
+// Your own seek leads to /correspondence, where it is managed. Someone else's
+// is accepted right on the card (seek-accept.ts) and lands in the room; the card
+// already shows its terms, so it no longer opens the /challenge page.
+export function buildGamesSeekCard(
+  seek: CorrespondenceSeek,
+  options: { signedIn?: boolean; navigate?: (url: string) => void } = {},
+): HTMLElement {
+  if (seek.isMine) return buildSeekCard(seek, { href: '/correspondence' });
+  const status = document.createElement('p');
+  status.className = 'current-game-seek-status';
+  status.setAttribute('role', 'status');
+  status.hidden = true;
+  const action = buildSeekAcceptAction({
+    className: 'current-game-seek-accept',
+    navigate: options.navigate,
+    seek,
+    signedIn: options.signedIn,
+    status,
+    surface: 'games',
+  });
+  const side = accepterColorLabel(seek.gameSpecId, seek.preferredColor);
+  // A picked side: the board turns to the seat you would take, which sits at
+  // the bottom. Random keeps the first side with the poster below.
+  const seat = accepterSide(seek.preferredColor);
+  return buildSeekCard(seek, {
+    action,
+    details: side ? [side] : [],
+    href: null,
+    side: seat ?? undefined,
+    status,
+    waitingAtBottom: seat !== null,
+  });
 }
 
-// null = the seek board is unavailable (correspondence disabled, or an error):
-// render nothing rather than a broken section.
+// null = the seek board is unavailable (correspondence disabled, or an error).
 async function fetchSeeks(): Promise<CorrespondenceSeek[] | null> {
   const response = await fetch('/api/correspondence/seeks').catch(() => null);
   if (!response?.ok) return null;
@@ -702,21 +941,96 @@ async function fetchSeeks(): Promise<CorrespondenceSeek[] | null> {
   return body?.seeks ?? null;
 }
 
-async function renderRecentGames(host: HTMLElement): Promise<void> {
-  const response = await fetch('/api/watch?channel=top').catch(() => null);
-  if (!response?.ok) return;
+async function fetchFinished(): Promise<FeaturedGame[]> {
+  const response = await fetch(FINISHED_POOL_URL).catch(() => null);
+  if (!response?.ok) return [];
   const body = (await response.json().catch(() => null)) as { unlocked?: FeaturedGame[] } | null;
-  const games = (body?.unlocked ?? []).slice(0, RECENT_GAMES_LIMIT);
-  if (games.length === 0) return;
-  host.replaceChildren();
-  const heading = document.createElement('h2');
-  heading.textContent = t('games.recentGames');
-  const list = document.createElement('ol');
-  list.className = 'profile-game-list current-games-recent-list';
-  for (const game of games) list.append(buildProfileGameRow(game, { neutral: true }));
-  const more = document.createElement('a');
-  more.className = 'current-games-search-link';
-  more.href = '/games/search';
-  more.textContent = t('games.searchAll');
-  host.append(heading, list, more);
+  return body?.unlocked ?? [];
+}
+
+async function apiEventLoader(roomId: string): Promise<GameEvent[]> {
+  const resp = await fetch(`/api/games/${encodeURIComponent(roomId)}/events`);
+  if (!resp.ok) throw new Error(`failed to load events for ${roomId}: ${resp.status}`);
+  const data = (await resp.json()) as { events: GameEvent[] };
+  return data.events;
+}
+
+// A finished card: the player names above and below the final position, each
+// on the side of the board their pieces start from, so a long name gets the
+// card's full width; then the result and when it ended.
+export function buildFinishedTile(game: FeaturedGame): HTMLElement {
+  const locale = currentLocale();
+  const [first, second] = matchupSeats(game);
+  const firstName = displayParticipantName(game, first);
+  const secondName = displayParticipantName(game, second);
+  const matchup = namesMatchupLabel(firstName, secondName);
+  const tile = document.createElement('a');
+  tile.className = 'current-game-finished';
+  tile.dataset.roomId = game.roomId;
+  tile.href = profileGameHref(game);
+  tile.setAttribute('aria-label', t('games.finishedGame', { matchup }));
+  const board = document.createElement('div');
+  board.className = 'current-game-board';
+  if (finishedTileKind(game.variant) === 'fog') {
+    board.append(buildFogTile(variantDisplayLabel(game.variant), null));
+  } else {
+    board.classList.add('is-loading');
+  }
+  const line = document.createElement('span');
+  line.className = 'current-game-finished-line';
+  const result = document.createElement('span');
+  result.className = 'current-game-result';
+  result.textContent = watchQueueResultLabel(game);
+  const reason = terminationLabel(game.termination);
+  if (reason) result.title = reason;
+  const when = document.createElement('span');
+  when.className = 'current-game-finished-when';
+  when.textContent = formatGameTime(game.endedAt, locale);
+  line.append(result, when);
+  tile.append(
+    finishedSeatRow(game, 'first', first, firstName),
+    board,
+    finishedSeatRow(game, 'second', second, secondName),
+    line,
+  );
+  stampSeatInkFamily(tile, game.variant);
+  placeFinishedSeats(tile, FINISHED_BOARD_BOTTOM_SEAT);
+  return tile;
+}
+
+function finishedSeatRow(
+  game: FeaturedGame,
+  seat: BoardSeat,
+  color: string,
+  name: string,
+): HTMLElement {
+  const row = document.createElement('span');
+  row.className = 'current-game-finished-seat';
+  row.dataset.seat = seat;
+  row.dataset.color = color;
+  row.title = name;
+  const label = document.createElement('span');
+  label.className = 'current-game-finished-seat-name';
+  label.textContent = name;
+  row.append(
+    seatDiscEl(
+      seatInkForVariant(game.variant, color, game.firstColor ?? null),
+      'current-game-seat-disc',
+    ),
+    label,
+  );
+  return row;
+}
+
+// Puts the bottom seat's name under the board and the other one over it.
+export function placeFinishedSeats(tile: HTMLElement, bottomSeat: BoardSeat): void {
+  const board = tile.querySelector<HTMLElement>(':scope > .current-game-board');
+  const rows = (['first', 'second'] as const).map((seat) =>
+    tile.querySelector<HTMLElement>(`:scope > .current-game-finished-seat[data-seat="${seat}"]`),
+  );
+  const [first, second] = rows;
+  if (!board || !first || !second) return;
+  const [top, bottom] = seatsTopToBottom([first, second], bottomSeat);
+  if (board.previousElementSibling !== top) board.before(top);
+  if (board.nextElementSibling !== bottom) board.after(bottom);
 }

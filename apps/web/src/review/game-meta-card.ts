@@ -1,7 +1,8 @@
 // Shared game meta card (lichess/playstrategy-style), used by the live room's
 // left rail AND the review pages' left rail so both surfaces read identically:
 //
-//   [glyph]  5+0 • Casual • Xiangqi
+//   [marker] Xiangqi
+//            5+0 • Casual
 //            3 days ago
 //   ● red player (2203)            1
 //   ○ black player (2166)          0
@@ -21,6 +22,7 @@ import './game-meta-card.css';
 import { t } from '../i18n/catalog.js';
 import { type ProfileTarget, playerNameEl } from '../profile-link.js';
 import { timeAgo } from '../relative-time.js';
+import { seatDiscEl } from '../seat-disc.js';
 import { renderVariantMarker } from '../variant-markers.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 
@@ -84,15 +86,20 @@ export function seatResultScores(
 
 export type GameMetaCardConfig = {
   /** Finalized variant marker for the icon box (the site-wide icon language:
-   *  picker, watch rail, puzzles, profile). Wins over `glyph` when set. */
+   *  picker, watch rail, puzzles, profile). Omitted, the card has no icon box.
+   *  There is deliberately no free-text glyph alternative: a stand-in glyph
+   *  ('象', '🦆') is how a room read differently from every other surface. */
   markerId?: VariantMiniId;
-  /** Variant glyph for the icon box (e.g. '象', '♔', '☗', '虎'). Fallback for
-   *  variants without a finalized marker. */
-  glyph?: string;
   /** "5+0 • Casual" style segments; falsy segments are skipped. */
   headline: Array<string | null | undefined>;
+  /** Makes the headline text a link (a broadcast game's event page). */
+  headlineHref?: string;
   /** Accented trailing headline segment (the variant name). */
   variantName?: string;
+  /** Makes the variant name a link (its rules page). */
+  variantHref?: string | null;
+  /** Opens that link in a new tab: a live room must not be left by a stray click. */
+  variantHrefNewTab?: boolean;
   /** Subline under the headline (e.g. "3 days ago", "Waiting for opponent"). */
   subline?: string | null;
   players?: GameMetaPlayer[];
@@ -107,21 +114,6 @@ export type GameMetaCard = {
   setStatus(text: string | null): void;
 };
 
-// Colors whose player disc renders dark; everything else renders light. Chess
-// white/black and xiangqi red/black both map correctly.
-const DARK_COLORS = new Set(['black', 'blue']);
-
-// Ink-disc tint. 'red' gets a filled RED disc (so red-vs-black variants — xiangqi,
-// jungle, fortress, banqi, jieqi, … — read as red/black, not hollow/black); dark
-// inks fill dark; everything else (white) is the hollow light disc. `null` is a
-// flip variant before its opening flip: no ink is bound, so tint nothing rather
-// than guessing.
-function discToneClass(color: string | null): string {
-  if (color === null) return 'game-meta-card__disc--unbound';
-  if (color === 'red') return 'game-meta-card__disc--red';
-  return DARK_COLORS.has(color) ? 'game-meta-card__disc--dark' : 'game-meta-card__disc--light';
-}
-
 export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
   const el = document.createElement('section');
   el.className = 'game-meta-card';
@@ -134,29 +126,47 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
     icon.setAttribute('aria-hidden', 'true');
     icon.innerHTML = renderVariantMarker(config.markerId, { size: 40 });
     head.append(icon);
-  } else if (config.glyph) {
-    const icon = document.createElement('span');
-    icon.className = 'game-meta-card__icon';
-    icon.textContent = config.glyph;
-    icon.setAttribute('aria-hidden', 'true');
-    head.append(icon);
   }
   const headText = document.createElement('div');
   headText.className = 'game-meta-card__head-text';
+  // The variant is the title line; the time control and mode sit under it.
+  // Run together on one line ("1 day per move • Casual • Jieqi") the headline
+  // wrapped in a ~190px rail, and long names ("Crazyhouse Xiangqi") always did.
+  const title = document.createElement('p');
+  title.className = 'game-meta-card__title';
   const headline = document.createElement('p');
   headline.className = 'game-meta-card__headline';
   const segments = config.headline.filter((segment): segment is string => Boolean(segment));
-  headline.append(document.createTextNode(segments.join(' • ')));
+  // With no variant name the headline itself is the title.
+  const segmentsHost = config.variantName ? headline : title;
+  if (config.headlineHref && segments.length > 0) {
+    const link = document.createElement('a');
+    link.className = 'game-meta-card__headline-link';
+    link.href = config.headlineHref;
+    link.textContent = segments.join(' • ');
+    segmentsHost.append(link);
+  } else if (segments.length > 0) {
+    segmentsHost.append(document.createTextNode(segments.join(' • ')));
+  }
   if (config.variantName) {
-    if (segments.length > 0) headline.append(document.createTextNode(' • '));
-    const variant = document.createElement('span');
+    const variant = document.createElement(config.variantHref ? 'a' : 'span');
     variant.className = 'game-meta-card__variant';
+    if (variant instanceof HTMLAnchorElement && config.variantHref) {
+      variant.classList.add('game-meta-card__variant-link');
+      variant.href = config.variantHref;
+      if (config.variantHrefNewTab) {
+        variant.target = '_blank';
+        variant.rel = 'noopener';
+      }
+    }
     variant.textContent = config.variantName;
-    headline.append(variant);
+    title.append(variant);
   }
   const subline = document.createElement('p');
   subline.className = 'game-meta-card__subline';
-  headText.append(headline, subline);
+  headText.append(title);
+  if (headline.childNodes.length > 0) headText.append(headline);
+  headText.append(subline);
   head.append(headText);
 
   const playersEl = document.createElement('div');
@@ -178,10 +188,9 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
     for (const player of players) {
       const row = document.createElement('div');
       row.className = 'game-meta-card__player';
-      const disc = document.createElement('span');
-      disc.className = `game-meta-card__disc ${discToneClass(player.color)}`;
-      disc.setAttribute('aria-hidden', 'true');
-      row.append(disc);
+      // A null color is a flip variant before its opening flip: the shared disc
+      // draws the unbound ring rather than guessing.
+      row.append(seatDiscEl(player.color, 'game-meta-card__disc'));
       if (player.isEngine) {
         const bot = document.createElement('span');
         bot.className = 'game-meta-card__bot';

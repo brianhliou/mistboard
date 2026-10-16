@@ -31,10 +31,20 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
+type FollowerEntry = {
+  handle: string | null;
+  displayName: string;
+  title?: string | null;
+  createdAt: string;
+};
+
 function stubFetch(opts: {
   signedIn?: boolean;
   entries?: FollowingEntry[];
   total?: number;
+  followers?: FollowerEntry[];
+  followersTotal?: number;
+  onFollowersFetch?: (url: string) => void;
   onDelete?: (url: string) => void;
 }): void {
   const signedIn = opts.signedIn ?? true;
@@ -46,6 +56,13 @@ function stubFetch(opts: {
     if (init?.method === 'DELETE' && url.includes('/follow')) {
       opts.onDelete?.(url);
       return Promise.resolve(json({ relation: { following: false, blocked: false } }));
+    }
+    if (url.includes('/api/relations/followers')) {
+      opts.onFollowersFetch?.(url);
+      const followers = opts.followers ?? [];
+      return Promise.resolve(
+        json({ entries: followers, total: opts.followersTotal ?? followers.length }),
+      );
     }
     if (url.includes('/api/relations/following')) {
       const entries = opts.entries ?? [];
@@ -160,6 +177,98 @@ describe('following page', () => {
     expect(deletes).toEqual(['/api/users/conan/follow']);
     expect(root.querySelector('.following-row')).toBeNull();
     expect(root.querySelector('.following-empty')).not.toBeNull();
+  });
+});
+
+describe('followers tab', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: memoryStorage(),
+    });
+    window.history.replaceState(null, '', '/following?tab=followers');
+    document.body.replaceChildren();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const follower = (over: Partial<FollowerEntry> = {}): FollowerEntry => ({
+    handle: 'conan',
+    displayName: 'Conan',
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    ...over,
+  });
+
+  it('lists who follows the viewer, linking only linkable profiles', async () => {
+    const fetched: string[] = [];
+    stubFetch({
+      followers: [follower(), follower({ handle: null, displayName: 'Quiet One', title: 'xgm' })],
+      onFollowersFetch: (url) => fetched.push(url),
+    });
+    const root = await mount();
+
+    expect(fetched).toEqual(['/api/relations/followers?offset=0&limit=50']);
+    const rows = [...root.querySelectorAll('.follower-row')];
+    expect(rows.map((row) => row.querySelector('.following-player-name')?.textContent)).toEqual([
+      'Conan',
+      'Quiet One',
+    ]);
+    expect(rows[0]?.querySelector('a.following-player-link')?.getAttribute('href')).toBe(
+      '/@/conan',
+    );
+    // A private follower: named (with their title), but no link anywhere in the row.
+    expect(rows[1]?.querySelector('a')).toBeNull();
+    expect(rows[1]?.querySelector('.title-badge')?.textContent).toBe('XGM');
+    expect(rows[0]?.querySelector('.follower-since')?.textContent).toBe('3 hours ago');
+    // Followers carry no unfollow button: that action belongs to the Following tab.
+    expect(root.querySelector('.following-unfollow')).toBeNull();
+    expect(root.querySelector('.following-sub')?.textContent).toBe('2 players');
+  });
+
+  it('marks the Followers tab current and links both tabs', async () => {
+    stubFetch({ followers: [follower()] });
+    const root = await mount();
+    const tabs = [...root.querySelectorAll<HTMLAnchorElement>('.following-tab')];
+    expect(tabs.map((tab) => [tab.textContent, tab.getAttribute('href')])).toEqual([
+      ['Following', '/following'],
+      ['Followers', '/following?tab=followers'],
+    ]);
+    expect(tabs[1]?.getAttribute('aria-current')).toBe('page');
+    expect(tabs[0]?.hasAttribute('aria-current')).toBe(false);
+  });
+
+  it('shows the followers empty state', async () => {
+    stubFetch({ followers: [] });
+    const root = await mount();
+    expect(root.querySelector('.following-table')).toBeNull();
+    expect(root.querySelector('.following-empty')?.textContent).toBe('Nobody follows you yet.');
+  });
+
+  it('pages further followers on Load more', async () => {
+    const fetched: string[] = [];
+    stubFetch({
+      followers: [follower()],
+      followersTotal: 2,
+      onFollowersFetch: (url) => fetched.push(url),
+    });
+    const root = await mount();
+    root.querySelector<HTMLButtonElement>('.following-load-more')?.click();
+    await flushDom();
+    expect(fetched[1]).toBe('/api/relations/followers?offset=1&limit=50');
+  });
+
+  it('keeps the Following tab as the default view', async () => {
+    window.history.replaceState(null, '', '/following');
+    const fetched: string[] = [];
+    stubFetch({ entries: [entry()], onFollowersFetch: (url) => fetched.push(url) });
+    const root = await mount();
+    expect(fetched).toEqual([]);
+    expect(root.querySelectorAll('.following-row')).toHaveLength(1);
+    expect(root.querySelector('.following-tab[aria-current="page"]')?.textContent).toBe(
+      'Following',
+    );
   });
 });
 

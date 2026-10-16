@@ -56,11 +56,17 @@ export function primaryNavItems(): NavItem[] {
   ];
 }
 
-// Top-nav Community dropdown (lichess-aligned order): Players (the leaderboard),
-// Coaches (the verified-coach directory), Friends (your following list), Forum,
-// Blog (the articles surface). Teams is deliberately deferred. Kept distinct
-// from communityRailItems(): the dropdown is the wide social entry, the rail is
-// the leaderboard/bots sub-nav.
+// Top-nav Community dropdown (lichess-aligned order): Leaderboard, Pro players
+// (the broadcast player pages at /players), Bots (the bot roster), Friends (your
+// following list), Forum, Blog (the articles surface). Teams is deliberately
+// deferred. Kept distinct from communityRailItems(): the dropdown is the wide
+// social entry, the rail is the leaderboard/bots sub-nav.
+//
+// The leaderboard entry was labelled "Players" until 2026-10-14, when Pro
+// players joined the menu: two "Players" entries pointing at /player and
+// /players would read as one page listed twice. Pro players and Bots had pages
+// but no menu path (Bots only in the rail, Pro players nowhere). Rating stats
+// stays rail-only: it is a one-variant histogram, not a destination.
 //
 // The Discord invite was here from 2026-08-27 and was pulled on 2026-08-28,
 // then out of the homepage footer and the forum home on 2026-08-31: not
@@ -75,8 +81,9 @@ export function primaryNavItems(): NavItem[] {
 // Correspondence is here because the page has existed since correspondence
 // shipped but was reachable ONLY from the notification bell (which shows only
 // when a game already needs your move) and a footer link on the page itself, so
-// a player with several games in flight had no menu path to them. Signed-in
-// only, so it costs a visitor nothing.
+// a player with several games in flight had no menu path to them. Shown to
+// everyone since 2026-10-02: a signed-out visitor lands on the page's explainer
+// and the open seeks, which is how anyone finds out correspondence exists.
 export function playNavItems(): NavItem[] {
   return [
     { label: 'Lobby', labelKey: 'nav.lobby', href: '/' },
@@ -84,14 +91,15 @@ export function playNavItems(): NavItem[] {
       label: 'Correspondence',
       labelKey: 'nav.correspondence',
       href: '/correspondence',
-      signedInOnly: true,
     },
   ];
 }
 
 export function communityNavItems(): NavItem[] {
   return [
-    { label: 'Players', labelKey: 'nav.players', href: '/player' },
+    { label: 'Leaderboard', labelKey: 'nav.leaderboard', href: '/player' },
+    { label: 'Pro players', labelKey: 'nav.proPlayers', href: '/players' },
+    { label: 'Bots', labelKey: 'nav.bots', href: '/bots' },
     { label: 'Friends', labelKey: 'nav.friends', href: '/following', signedInOnly: true },
     { label: 'Forum', labelKey: 'nav.forum', href: '/forum' },
     { label: 'Blog', labelKey: 'nav.blog', href: '/blog' },
@@ -105,8 +113,6 @@ export function communityRailItems(): NavItem[] {
     { label: 'Leaderboard', labelKey: 'nav.leaderboard', href: '/player' },
     { label: 'Rating stats', labelKey: 'nav.ratingStats', href: '/player/rating-stats' },
     { label: 'Online bots', labelKey: 'nav.onlineBots', href: '/bots' },
-    // The professionals in the broadcast archive (lichess: "FIDE players").
-    { label: 'Pro players', labelKey: 'nav.proPlayers', href: '/players' },
   ];
 }
 
@@ -154,11 +160,13 @@ export function adminNavItems(): NavItem[] {
 // (streamers, video) to list.
 export function watchNavItems(): NavItem[] {
   return [
+    // Tournament broadcasts lead the menu (lichess's order): the top events,
+    // live and archived, are the headline thing to watch.
+    { label: 'Broadcasts', labelKey: 'nav.broadcasts', href: '/broadcast/xiangqi' },
     { label: 'Mistboard TV', labelKey: 'nav.tv', href: '/watch' },
     // Every game in progress right now, live and correspondence (lichess's
     // "Current games"). Distinct from the finished-games database under Tools.
     { label: 'Current games', labelKey: 'nav.currentGames', href: '/games' },
-    { label: 'Broadcasts', labelKey: 'nav.broadcasts', href: '/broadcast/xiangqi' },
     // Streamers appears only once the curated directory has someone in it.
     // Deriving the link from the data means an empty /streamer is never
     // reachable from the nav, and seeding the first entry needs no second edit.

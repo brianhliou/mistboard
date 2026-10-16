@@ -4,8 +4,11 @@ import serveHandler from 'serve-handler';
 import { articleIsRetired } from './article-meta.js';
 import { type HttpApiContext, handleApiRequest } from './http-api.js';
 import { INDEXNOW_KEY, isIndexNowKeyRequest } from './indexnow.js';
+import { serveBroadcastBoardOgImage } from './og-broadcast.js';
+import { isCardAspect } from './og-card-board.js';
 import { serveAnyGameOgImage } from './og-game-tenant.js';
-import { serveArticleOgImage, serveStudyOgImage } from './og-image.js';
+import { isArticleOgLang, serveArticleOgImage, serveStudyOgImage } from './og-image.js';
+import { servePlayerOgImage } from './og-player.js';
 import { servePositionOgImage } from './og-position.js';
 import * as persistence from './persistence.js';
 import { RequestBodyTooLargeError } from './routes/lib.js';
@@ -28,11 +31,15 @@ import {
   servePrerenderedPage,
   serveRulesIndexPage,
   serveSitemap,
+  serveSitemapIndex,
   serveSpaShellWithRoutePreloads,
   serveStudyPage,
+  sitemapSectionFromPath,
 } from './server-static-pages.js';
 import type { LobbyTicket, Room } from './server-types.js';
+import { UnreplayableTenantGameError } from './variant-tenant/replay-guard.js';
 import { viewerCountryCookie, viewerCountryFromRequest } from './viewer-country.js';
+import { xShortLinkRedirect } from './x-short-links.js';
 import { broadcastViewers } from './xiangqi-broadcast-viewers.js';
 
 export type PersistenceHealthEntry = {
@@ -62,6 +69,7 @@ type ServerHttpHandlerOptions = {
     rated?: boolean,
     options?: {
       randomSeating?: boolean;
+      lobbyMatch?: boolean;
       engineColor?: 'white' | 'black';
       engineReservationId?: string;
       creatorPreference?: 'white' | 'black';
@@ -124,20 +132,32 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     // WASM threads, which need SharedArrayBuffer and therefore cross-origin
     // isolation. Send COOP/COEP on exactly the review document routes (set here,
     // before the various index.html handlers below, which only writeHead a
-    // content-type and so preserve these). credentialless keeps our same-origin
-    // bundle/engine assets working without forcing CORP on every subresource,
-    // and leaves the rest of the site (patron's Stripe redirect, etc.)
-    // non-isolated. See docs-private/analysis-board-track.md.
+    // content-type and so preserve these), leaving the rest of the site
+    // (patron's Stripe redirect, etc.) non-isolated. See
+    // docs-private/analysis-board-track.md.
+    //
+    // COEP is require-corp, for every browser (#276). It was credentialless
+    // until 2026-10-14, and WebKit does not implement credentialless: it ignores
+    // the header, so every iPhone/iPad browser and desktop Safari stayed
+    // un-isolated and could never start the engine. require-corp isolates all
+    // three engines. It is one policy rather than a WebKit-only one on purpose:
+    // the SPA keeps this COEP across pushState navigations, so a cross-origin
+    // no-cors subresource anywhere on the site is blocked unless it sends CORP,
+    // and with one policy that breakage shows up in Chrome during development
+    // instead of only on the phones nobody tests on. The cross-origin loads the
+    // site makes all pass: posthog-js loads its extras with crossorigin=anonymous
+    // (us-assets answers ACAO *), and the Cloudflare beacon and YouTube
+    // thumbnails send CORP: cross-origin. server-http.test.ts pins the header.
     if (isReviewShellRoute(pathname)) {
       response.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-      response.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+      response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
     }
 
     // Ceval engines run as dedicated workers (Fairy-Stockfish additionally as
     // emscripten pthreads). A dedicated worker only becomes cross-origin
     // isolated (and can accept the SharedArrayBuffer memory the main thread
     // hands it) when its OWN script response carries COEP; the document's
-    // credentialless header does not extend to it, so the worker spawns
+    // header does not extend to it, so the worker spawns
     // un-isolated and dies (pthreads: an opaque "pthread sent an error";
     // Chrome on COEP documents: ERR_BLOCKED_BY_RESPONSE before the script
     // runs). Serve ALL vendored engine assets (/engine/<pkg>/<file>) with
@@ -161,6 +181,17 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
 
+    // Vite's build output (/assets/<name>-<hash>.<ext>) names every file by its
+    // content, so a changed file is a new URL. With no Cache-Control the edge
+    // applied its 4h default and browsers revalidated each chunk on every
+    // visit, a round trip per file through a possibly distant edge. Only a
+    // successful response is marked: a 404 for a chunk asked of an instance
+    // that does not have it yet (a deploy swap) must not be pinned for a year.
+    // HTML, feeds and the sitemap keep their own (absent) headers.
+    if (isHashedBuildAssetPath(pathname)) {
+      setHeaderOnSuccess(response, 'Cache-Control', 'public, max-age=31536000, immutable');
+    }
+
     // Page navigations carry the viewer's country (Cloudflare's CF-IPCountry)
     // to the client as a readable cookie, so the nav can skip links that are
     // dead ends there (Discord in mainland China). setHeader survives the
@@ -174,6 +205,15 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     if (url === '/health') {
       void handleHealthRequest(options, response);
       return;
+    }
+
+    // Count the creates a drain turns away. Every create route answers 503
+    // server_draining while draining, so the status is the signal and no route
+    // has to remember to report itself.
+    if (request.method === 'POST' && options.drainController.isDraining()) {
+      response.once('finish', () => {
+        if (response.statusCode === 503) options.drainController.noteRefusedCreate(pathname);
+      });
     }
 
     if (pathname === '/admin/drain' || pathname === '/admin/drain/cancel') {
@@ -195,29 +235,9 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     }
 
     if (url.startsWith('/api/')) {
-      void handleApiRequest(buildApiContext(options), request, response).catch((err) => {
-        // An oversized body is a client error, not a server fault: answering 500
-        // sends the caller hunting a nonexistent bug (it cost a real debugging
-        // session on the studies API), so map it to 413 and skip the error log.
-        const tooLarge = err instanceof RequestBodyTooLargeError;
-        if (!tooLarge) {
-          console.error(
-            JSON.stringify({
-              level: 'error',
-              kind: 'api_handler_failure',
-              url,
-              error: (err as Error).message,
-              at: Date.now(),
-            }),
-          );
-        }
-        if (!response.headersSent) {
-          response.writeHead(tooLarge ? 413 : 500, { 'content-type': 'application/json' });
-          response.end(
-            JSON.stringify({ error: tooLarge ? 'request_body_too_large' : 'internal_error' }),
-          );
-        }
-      });
+      void handleApiRequest(buildApiContext(options), request, response).catch((err) =>
+        answerApiFailure(response, url, err),
+      );
       return;
     }
 
@@ -257,6 +277,47 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // /og/broadcast/board/:id.png: a broadcast game's card (#454).
+    const broadcastOgMatch = pathname.match(/^\/og\/broadcast\/board\/([^/]+)\.png$/);
+    if (broadcastOgMatch && persistence.isInitialized()) {
+      void serveBroadcastBoardOgImage(
+        decodeURIComponent(broadcastOgMatch[1]!),
+        response,
+        options.staticDir,
+      ).catch((err: Error) => {
+        console.warn('broadcast og render failed', err.message);
+        if (!response.headersSent) {
+          response.writeHead(302, { location: '/og-image.png' });
+          response.end();
+        }
+      });
+      return;
+    }
+
+    // /og/player/:slug.png: a player page's card (#458).
+    const playerOgMatch = pathname.match(/^\/og\/player\/([^/]+)\.png$/);
+    if (playerOgMatch && persistence.isInitialized()) {
+      let slug: string | null = null;
+      try {
+        slug = decodeURIComponent(playerOgMatch[1]!);
+      } catch {
+        slug = null;
+      }
+      if (!slug) {
+        response.writeHead(302, { location: '/og-image.png' });
+        response.end();
+        return;
+      }
+      void servePlayerOgImage(slug, response, options.staticDir).catch((err: Error) => {
+        console.warn('player og render failed', err.message);
+        if (!response.headersSent) {
+          response.writeHead(302, { location: '/og-image.png' });
+          response.end();
+        }
+      });
+      return;
+    }
+
     // /og/study/:studyId.png and /og/study/:studyId/:chapterId.png. The chapter
     // form is what makes a shared composition preview as its own diagram; the
     // study form falls back to its first chapter.
@@ -281,6 +342,31 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     if (articleOgMatch) {
       const slug = decodeURIComponent(articleOgMatch[1]!);
       const meta = ARTICLE_META[slug];
+      // ?aspect=16x9|4x3|1x1 asks for the JSON-LD shapes; anything else is a
+      // 400, never quietly the wide card under a URL that promised a square.
+      // ?lang=zh-hans|zh-hant asks for a zh page's card (hanzi pieces, the
+      // page's zh title); English is the absent parameter, so anything else is
+      // a 400 too, never quietly mapped to the nearest language.
+      const query = new URLSearchParams(url.slice(pathname.length));
+      const aspectParam = query.get('aspect');
+      if (aspectParam !== null && !isCardAspect(aspectParam)) {
+        response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
+        response.end('aspect must be 16x9, 4x3 or 1x1');
+        return;
+      }
+      const langParam = query.get('lang');
+      if (langParam !== null && !isArticleOgLang(langParam)) {
+        response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
+        response.end('lang must be zh-hans or zh-hant');
+        return;
+      }
+      const aspect = aspectParam ?? undefined;
+      const lang = langParam ?? undefined;
+      if ((aspect || lang) && !meta) {
+        response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+        response.end('no such article');
+        return;
+      }
       if (meta) {
         void serveArticleOgImage({
           slug,
@@ -288,11 +374,20 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
           kind: meta.kind,
           response,
           staticDir: options.staticDir,
+          ...(aspect ? { aspect } : {}),
+          ...(lang ? { lang } : {}),
+          ...(meta.zhTitles ? { zhTitles: meta.zhTitles } : {}),
         }).catch((err: Error) => {
           console.warn('article og render failed', err.message);
           if (!response.headersSent) {
-            response.writeHead(302, { location: '/og-image.png' });
-            response.end();
+            // An aspect or zh URL must not answer with the wide site card.
+            if (aspect || lang) {
+              response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
+              response.end('render failed');
+            } else {
+              response.writeHead(302, { location: '/og-image.png' });
+              response.end();
+            }
           }
         });
       } else {
@@ -304,9 +399,7 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
 
     if (pathname === '/robots.txt') {
       response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
-      response.end(
-        `User-agent: *\nAllow: /\nDisallow: /database\nDisallow: /engines\nDisallow: /accounts\nSitemap: ${options.publicHost}/sitemap.xml\n`,
-      );
+      response.end(robotsTxt(options.publicHost));
       return;
     }
 
@@ -318,10 +411,17 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     }
 
     if (pathname === '/sitemap.xml') {
+      serveSitemapIndex({ response, publicHost: options.publicHost });
+      return;
+    }
+
+    const sitemapSection = sitemapSectionFromPath(pathname);
+    if (sitemapSection) {
       void serveSitemap({
         response,
         publicHost: options.publicHost,
         staticDir: options.staticDir,
+        section: sitemapSection,
       }).catch(() => {
         response.writeHead(500);
         response.end();
@@ -464,6 +564,15 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // Short links for X posts (x-short-links.ts): a 302 so a slug can be
+    // repointed, and no-store so neither the edge nor a browser pins the hop.
+    const xShortLinkTarget = xShortLinkRedirect(pathname);
+    if (xShortLinkTarget) {
+      response.writeHead(302, { location: xShortLinkTarget, 'cache-control': 'no-store' });
+      response.end();
+      return;
+    }
+
     // Renamed page routes (see legacyPageRedirect): one permanent hop to the
     // canonical path so published links and crawler-cached URLs do not 404.
     // The games database's old filter links (/games?player=...) hop to
@@ -556,6 +665,22 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // One month of the announcement archive, prerendered like /feed. A month
+    // with no page (a typo, or one gone stale) gets the client shell, which
+    // renders the month from the bundle or falls back to /feed.
+    const newsMonth = /^\/feed\/(\d{4}-\d{2})$/.exec(pathname)?.[1];
+    if (newsMonth) {
+      void servePrerenderedPage({
+        response,
+        staticDir: options.staticDir,
+        file: `feed-${newsMonth}.html` as const,
+      }).catch(() => {
+        request.url = '/';
+        void serveHandler(request, response, { public: options.staticDir });
+      });
+      return;
+    }
+
     // The changelog, prerendered: the committed CHANGELOG.md is the whole page.
     if (pathname === '/changelog') {
       void servePrerenderedPage({
@@ -565,6 +690,22 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       }).catch(() => {
         request.url = '/';
         void serveHandler(request, response, { public: options.staticDir });
+      });
+      return;
+    }
+
+    // A month the changelog no longer shows in full, prerendered as its own
+    // page. A month without one is on /changelog itself (the latest two) or not
+    // in the log at all; either way the anchor there is the answer.
+    const changelogMonth = /^\/changelog\/(\d{4}-\d{2})$/.exec(pathname)?.[1];
+    if (changelogMonth) {
+      void servePrerenderedPage({
+        response,
+        staticDir: options.staticDir,
+        file: `changelog-${changelogMonth}.html` as const,
+      }).catch(() => {
+        response.writeHead(302, { location: `/changelog#${changelogMonth}` });
+        response.end();
       });
       return;
     }
@@ -665,11 +806,97 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
   };
 }
 
+// /api/data/ holds the /data page's monthly and collection downloads: gzip
+// files that are built on first request in the live web process and can run to
+// tens of MB. Crawlers follow the page's links to them, so they are kept off.
+// The rest of /api stays crawlable on purpose: the client-rendered pages
+// (game reviews, broadcasts, /games, /data's own listing at GET /api/data) load
+// their content from /api, and a search engine that renders the page needs those
+// fetches to see it. Every rule here is a path prefix, longest match wins.
+/**
+ * The API's catch-all: what a handler that threw answers.
+ *
+ * - A stored game the current rules no longer replay (a variant's rules
+ *   changed under it) is gone for good, not missing: 410 retired_rules, not
+ *   404 or 500, so its page can say why (the profile row says the same, see
+ *   replayable-games.ts markUnavailableGames). The replay guard already warned
+ *   once for the room (variant-tenant/replay-guard.ts), so nothing is logged
+ *   here.
+ * - An oversized body is a client error, not a server fault: answering 500
+ *   sends the caller hunting a nonexistent bug (it cost a real debugging
+ *   session on the studies API), so it maps to 413 and skips the error log.
+ * - Anything else is a 500 with an error log.
+ */
+export function answerApiFailure(
+  response: Pick<ServerResponse, 'headersSent' | 'writeHead' | 'end'>,
+  url: string,
+  err: unknown,
+): void {
+  if (err instanceof UnreplayableTenantGameError) {
+    if (!response.headersSent) {
+      response.writeHead(410, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ error: 'retired_rules' }));
+    }
+    return;
+  }
+  const tooLarge = err instanceof RequestBodyTooLargeError;
+  if (!tooLarge) {
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        kind: 'api_handler_failure',
+        url,
+        error: (err as Error).message,
+        at: Date.now(),
+      }),
+    );
+  }
+  if (!response.headersSent) {
+    response.writeHead(tooLarge ? 413 : 500, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({ error: tooLarge ? 'request_body_too_large' : 'internal_error' }));
+  }
+}
+
+export function robotsTxt(publicHost: string): string {
+  return [
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /database',
+    'Disallow: /engines',
+    'Disallow: /accounts',
+    'Disallow: /api/data/',
+    `Sitemap: ${publicHost}/sitemap.xml`,
+    '',
+  ].join('\n');
+}
+
 // Vendored ceval engine assets live at /engine/<pkg>/<file> (fairy-stockfish,
 // misty-*, and any future engine). The deeper segment is what distinguishes
 // them from the /engine/:id admin document, which must stay non-isolated.
 export function isIsolatedEngineAssetPath(pathname: string): boolean {
   return /^\/engine\/[^/]+\//.test(pathname);
+}
+
+// A Vite build chunk: /assets/<name>-<hash>.<ext>, the hash 8 base64url
+// characters (Vite's default naming; vite.config.ts sets no override, and every
+// file the build writes under dist/assets carries one). Nothing else writes
+// into /assets (copyPublicDir is off), so the hash check is a second guard
+// rather than the only one.
+export function isHashedBuildAssetPath(pathname: string): boolean {
+  return /^\/assets\/[^/]+-[A-Za-z0-9_-]{8}\.[A-Za-z0-9]+$/.test(pathname);
+}
+
+// Set a header only if the response turns out to be a success (2xx or 304).
+// The static handler decides the status after this point, so the decision is
+// made at writeHead, which Node also calls for an implicit header flush.
+export function setHeaderOnSuccess(response: ServerResponse, name: string, value: string): void {
+  const writeHead = response.writeHead.bind(response) as (...args: unknown[]) => ServerResponse;
+  response.writeHead = ((statusCode: number, ...rest: unknown[]) => {
+    if ((statusCode >= 200 && statusCode < 300) || statusCode === 304) {
+      response.setHeader(name, value);
+    }
+    return writeHead(statusCode, ...rest);
+  }) as ServerResponse['writeHead'];
 }
 
 // A page navigation is an extensionless GET/HEAD whose Accept header asks for
@@ -721,7 +948,7 @@ function buildApiContext(options: ServerHttpHandlerOptions): HttpApiContext {
     releaseLiveEngineReservation: options.releaseLiveEngineReservation,
     abandonRoom: options.abandonRoom,
     inMemoryGameSummary: options.inMemoryGameSummary,
-    isDraining: options.drainController.isDraining,
+    refusesCreate: options.drainController.refusesCreate,
     drainDeadlineMs: options.drainController.drainDeadlineMs,
     restartPhase: options.drainController.restartPhase,
     activeGameCount: options.drainController.activeGameCount,

@@ -1,7 +1,7 @@
 /**
  * Jungle registry entry. Owns the tenant's live-room map, the room-factory binding,
  * and hydration. PvP, live-clock only at this checkpoint (PvE bot + correspondence
- * come later). Matchmaking is casual random-seat (unrated). Imported for side
+ * come later). Matchmaking is random-seat, rated or casual. Imported for side
  * effects by variant-tenant/register-tenants.ts.
  */
 
@@ -23,15 +23,18 @@ import {
   clearJungleRuntimeTimers,
   handleJungleWebSocketConnection,
   type JungleLiveRoom,
+  jungleWs,
 } from './server-ws-jungle.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 
 export const jungleRooms = new Map<string, JungleLiveRoom>();
 
@@ -39,6 +42,8 @@ export async function createJungleRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: JungleCreatorPreference,
   engine?: JungleRoomEngineSeat,
+  // Lobby seeks and rated friend rooms (POST /api/rooms PvP); PvE never rates.
+  rated = false,
 ): Promise<JungleLiveRoomCreation> {
   return createJungleLiveRoom(
     {
@@ -52,6 +57,7 @@ export async function createJungleRoom(
     timeControl,
     creatorPreference,
     engine,
+    rated,
   );
 }
 
@@ -63,6 +69,26 @@ export async function getOrLoadJungleRoom(roomId: string): Promise<JungleLiveRoo
   );
   return room as JungleLiveRoom | null;
 }
+
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const jungleCorrespondence = tenantCorrespondenceBinding(jungleTenant, {
+  factoryContext: () => ({
+    rooms: jungleRooms as unknown as Map<string, JungleRuntimeRoom>,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, jungleTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(jungleTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(
+      jungleTenant,
+      jungleRooms as unknown as Map<string, JungleRuntimeRoom>,
+      roomId,
+    ),
+  lifecycleCtx: jungleWs.lifecycleCtx,
+});
 
 registerVariantTenant({
   kind: jungleTenant.kind,
@@ -77,10 +103,11 @@ registerVariantTenant({
   isEngineClientId: jungleTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => jungleTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(jungleTenant),
   errorPrefix: 'jungle',
   enabled: jungleTenant.enabled,
   rooms: jungleRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(jungleRooms.values()),
+  activeGameCount: () => countActiveTenantGames(jungleRooms.values(), jungleTenant),
   getOrLoadRoom: (roomId) => getOrLoadJungleRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>
     handleJungleWebSocketConnection(
@@ -94,17 +121,20 @@ registerVariantTenant({
       room as unknown as JungleLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearJungleRuntimeTimers(room as unknown as JungleLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(jungleTenant, jungleRooms.values(), jungleWs.lifecycleCtx, at),
   clearRooms: () => jungleRooms.clear(),
   http: {
     matchesCreateRequest: requestsJungle,
-    handleCreate: (ctx, _request, response, body) =>
-      handleJungleCreate({ ...ctx, createJungleRoom }, response, body),
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleJungleCreate({ ...ctx, createJungleRoom }, response, body, accountUser),
   },
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createJungleRoom(timeControl, 'random');
+    createRoom: async (timeControl, rated) => {
+      const created = await createJungleRoom(timeControl, 'random', undefined, rated);
       if (!created.ok) throw new Error(`jungle_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },
@@ -119,6 +149,5 @@ registerVariantTenant({
     analysis: { engineId: JUNGLE_ANALYSIS_ENGINE_ID, depth: JUNGLE_ANALYSIS_DEPTH },
     fen: jungleStateToEngineFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...jungleCorrespondence,
 });

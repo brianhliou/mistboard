@@ -15,10 +15,11 @@ export interface BoardDragHandlers {
   // The persistent container that holds the `[data-square]` hit elements. Its
   // inner SVG is replaced on every render, but the container itself stays.
   board: HTMLElement;
-  // Size of the floating ghost piece. A NUMBER is read as the board SVG's own
-  // viewBox units and scaled to the rendered board (a phone renders the same
-  // viewBox much smaller, and an unscaled ghost is visibly bigger than the piece
-  // it was lifted from). A FUNCTION returns CSS pixels and is used as given.
+  // Fallback size of the floating ghost piece, used only when the lifted piece
+  // cannot be measured (see sourcePieceSizePx). A NUMBER is read as the board
+  // SVG's own viewBox units and scaled to the rendered board (a phone renders the
+  // same viewBox much smaller, and an unscaled ghost is visibly bigger than the
+  // piece it was lifted from). A FUNCTION returns CSS pixels and is used as given.
   ghostSizePx: number | (() => number);
   // A click (tap) on `square` — the existing click-to-move handler.
   onSquareClick: (square: string) => void;
@@ -52,6 +53,25 @@ function ghostSizePx(handlers: BoardDragHandlers): number {
   const size = handlers.ghostSizePx;
   if (typeof size === 'function') return size(); // already CSS pixels
   return size * boardSvgScale(handlers.board);
+}
+
+// The lifted piece's on-screen size in CSS pixels, read from the board itself so
+// the ghost matches it whatever piece set, token size or board geometry drew it
+// (#471: a per-surface constant drifted and the ghost shrank in the hand). The
+// piece is the nested <svg> heading the square's keyed `[data-piece-square]`
+// slot, the same markup the ghost mounts, so its declared width times the
+// slot's board-to-screen scale is the ghost's box. Null when the slot holds
+// something else (a jungle token <g>) or the board has no layout yet (jsdom):
+// the caller's declared size is used then.
+function sourcePieceSizePx(board: HTMLElement, square: string): number | null {
+  const slot = board.querySelector(`[data-piece-square="${square}"]`);
+  const piece = slot?.firstElementChild;
+  if (!slot || !piece || piece.localName !== 'svg') return null;
+  const units = Number(piece.getAttribute('width'));
+  const ctm = (slot as SVGGraphicsElement).getScreenCTM?.();
+  if (!(units > 0) || !ctm) return null;
+  const px = units * Math.hypot(ctm.a, ctm.b);
+  return px > 0 ? px : null;
 }
 
 function squareOf(target: EventTarget | null): string | null {
@@ -97,9 +117,13 @@ export function installBoardDrag(handlers: BoardDragHandlers): void {
     const startX = event.clientX;
     const startY = event.clientY;
     let dragging = false;
+    // Measured now, before onDragStart re-renders the board with the origin
+    // emptied and the piece gone.
+    const sourceSize = sourcePieceSizePx(handlers.board, from);
     // Ghost state is per-drag, never per-install: one shared reference lets a
     // second drag overwrite the first and strand its node in <body> forever.
     let ghost: HTMLDivElement | null = null;
+    let ghostSize = 0;
 
     const removeGhost = (): void => {
       ghost?.remove();
@@ -107,9 +131,8 @@ export function installBoardDrag(handlers: BoardDragHandlers): void {
     };
     const positionGhost = (x: number, y: number): void => {
       if (!ghost) return;
-      const size = ghostSizePx(handlers);
-      ghost.style.left = `${x - size / 2}px`;
-      ghost.style.top = `${y - size / 2}px`;
+      ghost.style.left = `${x - ghostSize / 2}px`;
+      ghost.style.top = `${y - ghostSize / 2}px`;
     };
     const detach = (): void => {
       document.removeEventListener('pointermove', onMove);
@@ -135,11 +158,11 @@ export function installBoardDrag(handlers: BoardDragHandlers): void {
         handlers.onDragStart(from);
         const html = handlers.ghostHtml(from);
         if (html) {
-          const size = ghostSizePx(handlers);
+          ghostSize = sourceSize ?? ghostSizePx(handlers);
           ghost = document.createElement('div');
           ghost.className = 'board-drag-ghost';
-          ghost.style.width = `${size}px`;
-          ghost.style.height = `${size}px`;
+          ghost.style.width = `${ghostSize}px`;
+          ghost.style.height = `${ghostSize}px`;
           ghost.innerHTML = html;
           document.body.append(ghost);
         }

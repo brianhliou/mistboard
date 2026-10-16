@@ -1,0 +1,448 @@
+{
+  "engineId": "ab-jchess-jieqi-decisions@2+1ae95ca6+abjchess-20260911+nodes20000+mpv100000+d4-mover",
+  "depth": 16,
+  "decisions": [
+    {
+      "ply": 1,
+      "mover": "red",
+      "bestWin": 56.89309963826083,
+      "playedWin": 56.89309963826083,
+      "candidates": [
+        {
+          "win": 56.89309963826083,
+          "move": "i3i4",
+          "played": true
+        },
+        {
+          "win": 50.1641334916709,
+          "move": "g3g4"
+        },
+        {
+          "win": 49.786586652625054,
+          "move": "c0a2"
+        },
+        {
+          "win": 48.80293450398011,
+          "move": "b2b9"
+        }
+      ],
+      "playedRank": 1,
+      "realizedWin": 50.24624800903676
+    },
+    {
+      "ply": 2,
+      "mover": "black",
+      "bestWin": 55.66219234595245,
+      "playedWin": 49.573231424289325,
+      "candidates": [
+        {
+          "win": 55.66219234595245,
+          "move": "i6i5"
+        },
+        {
+          "win": 49.573231424289325,
+          "move": "g6g5",
+          "played": true
+        },
+        {
+          "win": 49.343498664384924,
+          "move": "c9e7"
+        }
+      ],
+      "playedRank": 2,
+      "realizedWin": 49.75375199096324
+    },
+    {
+      "ply": 3,
+      "mover": "red",
+      "bestWin": 50.0351586648754,
+      "playedWin": 50.0351586648754,
+      "candidates": [
+        {
+          "win": 50.0351586648754,
+          "move": "g0e2",
+          "played": true
+        },
+        {
+          "win": 49.542725779044595,
+          "move": "g0i2"
+        },
+        {
+          "win": 49.38447210894498,
+          "move": "h0i2"
+        }
+      ],
+      "playedRank": 1,
+      "realizedWin": 50.73869624816471
+    },
+    {
+      "ply": 4,
+      "mover": "black",
+      "bestWin": 48.85717470158103,
+      "playedWin": 48.85717470158103,
+      "candidates": [
+        {
+          "win": 48.85717470158103,
+          "move": "i6i5",
+          "played": true
+        },
+        {
+          "win": 48.34746807922441,
+          "move": "b9a7"
+        },
+        {
+          "win": 48.03101875048434,
+          "move": "g5c5"
+        },
+        {
+          "win": 46.910823991408826,
+          "move": "h7h0"
+        }
+      ],
+      "playedRank": 1,
+      "realizedWin": 50.492484072757705
+    },
+    {
+      "ply": 5,
+      "mover": "red",
+      "bestWin": 49.4886288972621,
+      "playedWin": 49.4886288972621,
+      "candidates": [
+        {
+          "win": 49.4886288972621,
+          "move": "e3e4",
+          "played": true
+        },
+        {
+          "win": 49.128892373019696,
+          "move": "c3c4"
+        },
+        {
+          "win": 48.9587856829781,
+          "move": "g3g4"
+        },
+        {
+          "win": 47.60975212918055,
+          "move": "f0e1"
+        }
+      ],
+      "playedRank": 1,
+      "realizedWin": 50.24624800903676
+    },
+    {
+      "ply": 7,
+      "mover": "red",
+      "bestWin": 50.24624800903676,
+      "playedWin": 49.05661825685365,
+      "candidates": [
+        {
+          "win": 50.24624800903676,
+          "move": "i4g2"
+        },
+        {
+          "win": 49.05661825685365,
+          "move": "a3a4",
+          "played": true
+        },
+        {
+          "win": 49.01544066450864,
+          "move": "c3c4"
+        }
+      ],
+      "playedRank": 2,
+      "realizedWin": 51.47707009792475
+    },
+    {
+      "ply": 8,
+      "mover": "black",
+      "bestWin": 49.82942421467463,
+      "playedWin": 48.54191702318778,
+      "candidates": [
+        {
+          "win": 49.82942421467463,
+          "move": "c9e7"
+        },
+        {
+          "win": 48.80732381175478,
+          "move": "c6c5"
+        },
+        {
+          "win": 48.54191702318778,
+          "move": "c9a7",
+          "played": true
+        },
+        {
+          "win": 48.333990334918916,
+          "move": "b9c7"
+        }
+      ],
+      "playedRank": 3,
+      "realizedWin": 48.03101875048434
+    },
+    {
+      "ply": 10,
+      "mover": "black",
+      "bestWin": 45.21471840111059,
+      "playedWin": 43.51562970414207,
+      "candidates": [
+        {
+          "win": 45.21471840111059,
+          "move": "b7b0"
+        },
+        {
+          "win": 45.06698178561813,
+          "move": "h7h0"
+        },
+        {
+          "win": 43.51562970414207,
+          "move": "b9a7",
+          "played": true
+        }
+      ],
+      "playedRank": 3,
+      "realizedWin": 44.11737039363468
+    },
+    {
+      "ply": 11,
+      "mover": "red",
+      "bestWin": 54.26096335046109,
+      "playedWin": 54.25718900668409,
+      "candidates": [
+        {
+          "win": 54.26096335046109,
+          "move": "b0c2"
+        },
+        {
+          "win": 54.25718900668409,
+          "move": "g3g4",
+          "played": true
+        },
+        {
+          "win": 53.71624708267164,
+          "move": "h2h6"
+        },
+        {
+          "win": 53.69430646692583,
+          "move": "h0f1"
+        }
+      ],
+      "playedRank": 2,
+      "realizedWin": 52.70610310955568
+    },
+    {
+      "ply": 12,
+      "mover": "black",
+      "bestWin": 45.66229439501471,
+      "playedWin": 44.96420959049728,
+      "candidates": [
+        {
+          "win": 45.66229439501471,
+          "move": "c6c5"
+        },
+        {
+          "win": 44.96420959049728,
+          "move": "h7h3",
+          "played": true
+        },
+        {
+          "win": 43.28305370944699,
+          "move": "g9e7"
+        },
+        {
+          "win": 42.427066232949485,
+          "move": "f9e8"
+        }
+      ],
+      "playedRank": 2,
+      "realizedWin": 42.184598796331564
+    },
+    {
+      "ply": 13,
+      "mover": "red",
+      "bestWin": 56.674012386949855,
+      "playedWin": 56.61530998147223,
+      "candidates": [
+        {
+          "win": 56.674012386949855,
+          "move": "b0c2"
+        },
+        {
+          "win": 56.61530998147223,
+          "move": "c3c4",
+          "played": true
+        },
+        {
+          "win": 55.72201252976326,
+          "move": "b2b5"
+        }
+      ],
+      "playedRank": 2,
+      "realizedWin": 55.39639909973442
+    },
+    {
+      "ply": 14,
+      "mover": "black",
+      "bestWin": 50.04886305632811,
+      "playedWin": 42.38812993126372,
+      "candidates": [
+        {
+          "win": 50.04886305632811,
+          "move": "b7b0"
+        },
+        {
+          "win": 42.38812993126372,
+          "move": "d9e8",
+          "played": true
+        },
+        {
+          "win": 41.62559797897174,
+          "move": "f9e8"
+        }
+      ],
+      "playedRank": 2,
+      "realizedWin": 45.579075025177644
+    },
+    {
+      "ply": 17,
+      "mover": "red",
+      "bestWin": 64.84707649717524,
+      "playedWin": 64.84707649717524,
+      "candidates": [
+        {
+          "win": 64.84707649717524,
+          "move": "i0i5",
+          "played": true
+        },
+        {
+          "win": 51.365340167332086,
+          "move": "d0e1"
+        },
+        {
+          "win": 50.784851409998836,
+          "move": "h0g2"
+        }
+      ],
+      "playedRank": 1,
+      "realizedWin": 65.48099712613276
+    },
+    {
+      "ply": 18,
+      "mover": "black",
+      "bestWin": 33.048298102862894,
+      "playedWin": 33.048298102862894,
+      "candidates": [
+        {
+          "win": 33.048298102862894,
+          "move": "i9i5",
+          "played": true
+        },
+        {
+          "win": 31.416299456007053,
+          "move": "b7b3"
+        },
+        {
+          "win": 31.048561246566386,
+          "move": "e9d9"
+        }
+      ],
+      "playedRank": 1,
+      "realizedWin": 36.32120241240477
+    },
+    {
+      "ply": 19,
+      "mover": "red",
+      "bestWin": 64.03563287584609,
+      "playedWin": 64.03563287584609,
+      "candidates": [
+        {
+          "win": 64.03563287584609,
+          "move": "d0e1",
+          "played": true
+        },
+        {
+          "win": 63.83335702103731,
+          "move": "h2h9"
+        },
+        {
+          "win": 63.461600784347304,
+          "move": "f0e1"
+        }
+      ],
+      "playedRank": 1,
+      "realizedWin": 65.03436271498722
+    },
+    {
+      "ply": 23,
+      "mover": "red",
+      "bestWin": 71.41163035769704,
+      "playedWin": 70.69753844901061,
+      "candidates": [
+        {
+          "win": 71.41163035769704,
+          "move": "c0a2"
+        },
+        {
+          "win": 70.69753844901061,
+          "move": "h2h9",
+          "played": true
+        },
+        {
+          "win": 68.46931199752807,
+          "move": "b0a2"
+        }
+      ],
+      "playedRank": 2,
+      "realizedWin": 63.90630892200559
+    },
+    {
+      "ply": 25,
+      "mover": "red",
+      "bestWin": 74.18846222629534,
+      "playedWin": 72.80139272166093,
+      "candidates": [
+        {
+          "win": 74.18846222629534,
+          "move": "h0g2"
+        },
+        {
+          "win": 72.80139272166093,
+          "move": "h0i2",
+          "played": true
+        },
+        {
+          "win": 63.450672350946114,
+          "move": "e1f2"
+        }
+      ],
+      "playedRank": 2,
+      "realizedWin": 68.52812596860173
+    },
+    {
+      "ply": 27,
+      "mover": "red",
+      "bestWin": 69.78857183052679,
+      "playedWin": 35.31213757701778,
+      "candidates": [
+        {
+          "win": 69.78857183052679,
+          "move": "e1d0"
+        },
+        {
+          "win": 67.45638387540161,
+          "move": "e1f2"
+        },
+        {
+          "win": 66.58556900337172,
+          "move": "e1d2"
+        },
+        {
+          "win": 35.31213757701778,
+          "move": "b2d2",
+          "played": true
+        }
+      ],
+      "playedRank": 4,
+      "realizedWin": 2.782266363965391e-7
+    }
+  ]
+}

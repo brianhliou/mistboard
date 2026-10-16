@@ -22,6 +22,7 @@ export {
   isPieceAnimationPreference,
   isPlayDisabled,
   isProfileVisibility,
+  isUserIdPlayDisabled,
   userExists,
   userIdForHandle,
 } from './persistence-accounts.js';
@@ -80,7 +81,12 @@ export type {
   BotRatingSnapshot,
   BotRatingSource,
 } from './persistence-bots.js';
-export { getPublicBotForPlay, getPublicBotProfile, listPublicBots } from './persistence-bots.js';
+export {
+  getBotGamesPage,
+  getPublicBotForPlay,
+  getPublicBotProfile,
+  listPublicBots,
+} from './persistence-bots.js';
 export type { ChatLineRecord, ChatModerationStatus, ChatReportRecord } from './persistence-chat.js';
 export {
   activeChatTimeout,
@@ -110,21 +116,33 @@ export {
 } from './persistence-correspondence-digest.js';
 export type {
   CorrespondenceSeekListing,
+  CorrespondenceSeekOutcome,
   CorrespondenceSeekRecord,
   SeekColorPreference,
+  SeekExpiryNotice,
+  SeekOutcomeKind,
   SeekVisibility,
 } from './persistence-correspondence-seeks.js';
 export {
+  CORRESPONDENCE_SEEK_TTL_MS,
+  closeCorrespondenceSeek,
   correspondenceStartRecipient,
   countOpenSeeksForUser,
   createCorrespondenceSeek,
   deleteCorrespondenceSeek,
   deleteExpiredCorrespondenceSeeks,
+  findOpenDuplicatePublicSeek,
   getCorrespondenceSeek,
   getCorrespondenceSeekListing,
+  getCorrespondenceSeekOutcome,
+  hasSeekExpiryNotice,
   listChallengesForUser,
   listOpenCorrespondenceSeeks,
   listOutgoingSeeksForUser,
+  markSeekExpiryNoticesSeen,
+  recordCorrespondenceSeekTaken,
+  SEEK_EXPIRY_NOTICE_WINDOW_DAYS,
+  unseenSeekExpiryNotices,
 } from './persistence-correspondence-seeks.js';
 export { close, init, isInitialized, probeDb } from './persistence-db.js';
 export type {
@@ -259,8 +277,10 @@ export {
   listGameDebugArtifactPayloads,
   listGameDebugArtifactSummaries,
   listRoomLifecycleAudit,
+  listRoomLifecycleAuditByKinds,
   loadRoom,
   loadRoomEvents,
+  loadRoomsEvents,
   recordGameDebugArtifact,
   recordGameStart,
   recordRoomLifecycleAudit,
@@ -296,11 +316,13 @@ export {
   gameFacets,
   getEngineProfile,
   getGameFavoriteState,
+  getGameSummaries,
   getGameSummary,
   listCompletedGames,
   listCorpusGames,
   listEngineVersionStats,
   listFavoriteGames,
+  listImportedGameOriginEvents,
   listRecentEveGames,
   listRecentPublicGames,
   listShowcaseGames,
@@ -359,10 +381,18 @@ export {
   getLeaderboardSummary,
   getMostActivePlayers,
 } from './persistence-leaderboards.js';
+export type { LobbyActivityEvent } from './persistence-lobby-activity.js';
+export {
+  cachedLobbyActivity,
+  listLobbyActivity,
+  resetLobbyActivityCacheForTests,
+} from './persistence-lobby-activity.js';
 export type {
   ForumWatchNotification,
+  NewFollowerNotification,
   NotificationWatermarkKind,
   UnreadWatchedForumTopics,
+  UnseenNewFollowers,
 } from './persistence-notifications.js';
 export {
   countIncomingChallenges,
@@ -370,7 +400,9 @@ export {
   FORUM_UNREAD_WINDOW_DAYS,
   isNotificationWatermarkKind,
   markNotificationsSeen,
+  notificationsSeenAt,
   unreadWatchedForumTopics,
+  unseenNewFollowers,
 } from './persistence-notifications.js';
 export type {
   PatronStanding,
@@ -395,6 +427,8 @@ export {
 } from './persistence-practice.js';
 export type {
   ProfileBucketRating,
+  ProfileGameFilters,
+  ProfileGameResultFilter,
   ProfileRatingHistory,
   ProfileRatingHistoryPoint,
   PublicProfileUser,
@@ -406,6 +440,8 @@ export {
   getUserGamesPage,
   getUserProfileByHandle,
   getUserRatingHistory,
+  isProfileGameResultFilter,
+  listRecentFinishedCorrespondenceGames,
   updateUserAccountPreference,
   updateUserDmPolicy,
   updateUserLocale,
@@ -417,6 +453,8 @@ export {
 export type { PuzzleStreakOptions } from './persistence-puzzle-streak.js';
 export { getPuzzleStreak } from './persistence-puzzle-streak.js';
 export type {
+  FollowerListEntry,
+  FollowerListPage,
   FollowResult,
   RelationListEntry,
   RelationListPage,
@@ -431,6 +469,7 @@ export {
   followUser,
   hasBlock,
   hasFollow,
+  listFollowers,
   listFollowingIds,
   listRelations,
   unblockUser,
@@ -478,9 +517,15 @@ export type {
   PublicStatsDay,
   PublicStatsMode,
   PublicStatsWeek,
+  SiteGameTotals,
   SiteStats,
 } from './persistence-site-stats.js';
-export { getPublicSiteStats, getSiteStats } from './persistence-site-stats.js';
+export {
+  getPublicSiteStats,
+  getRecentCountedGamesByVariant,
+  getSiteGameTotals,
+  getSiteStats,
+} from './persistence-site-stats.js';
 export { rememberStatsExcludedDevice } from './persistence-stats-excluded-devices.js';
 export type {
   AddChapterResult,
@@ -527,6 +572,14 @@ export {
   updateChapterTree,
   updateStudyMeta,
 } from './persistence-studies.js';
+export type { StudyChapterAnalysisRecord } from './persistence-study-analysis.js';
+export {
+  analysedBroadcastBoards,
+  analysedStudyChapterIds,
+  getStudyChapterAnalysis,
+  getStudyChapterAnalysisForRead,
+  saveStudyChapterAnalysis,
+} from './persistence-study-analysis.js';
 export type { VariantGrant, VariantPlayer } from './persistence-variant-access.js';
 export {
   ALLOWLISTED_GAME_SPEC_IDS,
@@ -558,18 +611,24 @@ export {
   applyXiangqiBroadcastBoardUpdateOn,
   backfillXiangqiBroadcastTranslations,
   deleteXiangqiBroadcastTour,
+  extendXiangqiBroadcastTourEndsAt,
   getXiangqiBroadcastBoard,
   getXiangqiBroadcastTour,
   importXiangqiBroadcastPack,
   importXiangqiBroadcastPackOn,
   listAggregatableXiangqiBroadcastGames,
   listXiangqiBroadcastBoards,
+  listXiangqiBroadcastFinalEvals,
   listXiangqiBroadcastRounds,
   listXiangqiBroadcastScheduledTours,
   listXiangqiBroadcastSyncLogs,
+  listXiangqiBroadcastTourSourcesOn,
   listXiangqiBroadcastTours,
+  nextUnanalysedXiangqiBroadcastBoard,
   queryCompletedXiangqiBroadcastBoards,
   recordXiangqiBroadcastSyncLog,
+  retireSupersededXiangqiBroadcastAggregate,
+  retireSupersededXiangqiBroadcastAggregateOn,
   setXiangqiBroadcastTourSchedule,
 } from './persistence-xiangqi-broadcasts.js';
 export type {

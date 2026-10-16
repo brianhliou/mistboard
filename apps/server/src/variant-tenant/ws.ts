@@ -49,11 +49,14 @@ import {
   offerTenantRematch,
   type TenantRematchContext,
 } from './rematch.js';
+import { registeredTenantRematchContext } from './rematch-context.js';
 import {
   expireTenantClock,
   type TenantSnapshotPayload,
   tenantClockRemainingMs,
+  tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
+  tenantRoomOffersRematch,
   tenantSnapshotPayload,
 } from './runtime.js';
 import {
@@ -68,7 +71,11 @@ import type {
   TenantSeat,
   VariantTenant,
 } from './tenant.js';
-import { tenantSeatMayAct } from './tenant.js';
+import { TENANT_SERVER_ONLY_EVENT_TYPES, tenantSeatMayAct } from './tenant.js';
+
+// WebSocket close reason for a visitor with no seat at a live game whose class
+// shows spectators nothing while it is played (room-chrome.ts reads it).
+export const TENANT_LIVE_GAME_NO_SEAT_REASON = 'live game, no seat';
 
 export type TenantLiveClient<C extends string> = {
   debugRequested: false;
@@ -95,20 +102,11 @@ export type TenantLiveRoom<
   clients: Set<TenantLiveClient<C>>;
 };
 
-export type TenantWebSocketContext<
-  Kind extends string,
-  C extends string,
-  M,
-  State extends TenantGameStateLike<C>,
-  Spec extends string = string,
-> = {
+export type TenantWebSocketContext = {
   wsMessageLimit: number;
   wsMessageWindowMs: number;
   // Latency-sample observability region tag; 'global' when omitted.
   defaultRoomRegion?: string;
-  // Rematch is a capability: tenants without a rematch flow (Dark Xiangqi)
-  // omit it and rematch:* messages are ignored.
-  rematch?: TenantRematchContext<Kind, C, M, State, Spec, TenantLiveClient<C>>;
 };
 
 export type TenantWsRuntime<
@@ -120,7 +118,7 @@ export type TenantWsRuntime<
   Spec extends string = string,
 > = {
   handleConnection(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     socket: WebSocket,
     request: IncomingMessage,
     room: TenantLiveRoom<Kind, C, M, State, Spec>,
@@ -162,6 +160,19 @@ export function createTenantWsRuntime<
   type LiveRoom = TenantLiveRoom<Kind, C, M, State, Spec>;
   type LiveClient = TenantLiveClient<C>;
 
+  // Rematch is on by default for every tenant (tenantRoomOffersRematch says
+  // which rooms; tenant.rematch opts a tenant out), built from the registry so
+  // no registration has to forward a context (rematch-context.ts).
+  function rematchContextFor(
+    room: LiveRoom,
+  ): TenantRematchContext<Kind, C, M, State, Spec, LiveClient> | null {
+    if (!tenantRoomOffersRematch(tenant, room)) return null;
+    return registeredTenantRematchContext<Kind, C, M, State, Spec, LiveClient>(
+      room.id,
+      sendPayload,
+    );
+  }
+
   const eventWriterCtx: TenantEventWriterContext<Kind, C, M, State, Spec> = {
     scheduleLifecycleTimers: (room) => scheduleLifecycleTimers(room as LiveRoom),
     scheduleEngineMove: (room) => scheduleEngineMove(room as LiveRoom),
@@ -177,11 +188,15 @@ export function createTenantWsRuntime<
   }
 
   function scheduleEngineMove(room: LiveRoom): void {
+    // A paused game takes no moves, and an engine move refused mid-think reads
+    // to the engine loop as a failure it answers by resigning the bot's seat.
+    // The resume event runs this again once the clock is back.
+    if (room.projection.paused) return;
     options.scheduleEngineMove?.(lifecycleCtx, room);
   }
 
   async function handleConnection(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     socket: WebSocket,
     request: IncomingMessage,
     room: LiveRoom,
@@ -221,6 +236,17 @@ export function createTenantWsRuntime<
         isDebugViewAuthorized(request);
       if (assignment.reason === 'private room' && observable) {
         joinAsSpectator(ctx, socket, room, clientId, accountUser?.id ?? null);
+        return;
+      }
+      // A full room whose class refuses live spectators (fog, concealed hands)
+      // while the game is still being played. 'private room' read to the room
+      // page as "this room is not active", which is false and sent the visitor
+      // off to create an invite. The reason says only that the game is live and
+      // this connection holds no seat: no board, no moves, no seat identities,
+      // and no frame at all before the close. An aborted room keeps 'private
+      // room', because "not active" is true for it.
+      if (assignment.reason === 'private room' && room.projection.state.status.type === 'playing') {
+        socket.close(1008, TENANT_LIVE_GAME_NO_SEAT_REASON);
         return;
       }
       socket.close(1008, assignment.reason);
@@ -277,6 +303,10 @@ export function createTenantWsRuntime<
       type: 'hello',
       clientId: client.id,
       ...(assignment.seatToken ? { seatToken: assignment.seatToken } : {}),
+      // The seat's own per-ply views, so a reload can step back through a live
+      // hidden-info game. Hello only: it never rides a broadcast snapshot
+      // (O(plies) views per client per move).
+      ...tenantLiveHistoryExtras(tenant, room, client),
     });
     broadcastSnapshot(room);
     // PvE: once the human takes the empty seat, the engine (if it holds the
@@ -285,7 +315,8 @@ export function createTenantWsRuntime<
     scheduleEngineMove(room);
     // A player reconnecting after a rematch was finalized (while they were
     // offline) still gets routed to the new swapped-color room.
-    if (ctx.rematch) maybeReplayTenantRematchRedirect(ctx.rematch, room, client);
+    const rematch = rematchContextFor(room);
+    if (rematch) maybeReplayTenantRematchRedirect(rematch, room, client);
 
     socket.on('message', (raw) => {
       if (
@@ -318,7 +349,7 @@ export function createTenantWsRuntime<
   // other or a player), no engine scheduling, no rematch redirect replay. The
   // hello carries no seatToken. handleMessage enforces the read-only contract.
   function joinAsSpectator(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     socket: WebSocket,
     room: LiveRoom,
     clientId: string,
@@ -341,6 +372,10 @@ export function createTenantWsRuntime<
       ...transportSnapshotPayload(room, client),
       type: 'hello',
       clientId: client.id,
+      // A live spectator's per-ply public views where the visibility class
+      // shows spectators a board (hidden-identity: banqi, flip jungle); never
+      // for a 'dark' room (tenantLiveHistoryExtras gates on roomViewPolicy).
+      ...tenantLiveHistoryExtras(tenant, room, client),
     });
     // A spectator arriving doesn't change canonical state, but the connected-
     // client count did; keep observers' snapshots consistent.
@@ -368,7 +403,7 @@ export function createTenantWsRuntime<
   }
 
   async function handleMessage(
-    ctx: TenantWebSocketContext<Kind, C, M, State, Spec>,
+    ctx: TenantWebSocketContext,
     room: LiveRoom,
     client: LiveClient,
     raw: string,
@@ -429,17 +464,20 @@ export function createTenantWsRuntime<
       return;
     }
     if (message.type === 'rematch:offer') {
-      if (!ctx.rematch) return;
-      offerTenantRematch(tenant, ctx.rematch, room, client);
-      await finalizeTenantRematchIfReady(tenant, ctx.rematch, room);
+      const rematch = rematchContextFor(room);
+      if (!rematch) return;
+      offerTenantRematch(tenant, rematch, room, client);
+      await finalizeTenantRematchIfReady(tenant, rematch, room);
       return;
     }
     if (message.type === 'rematch:cancel') {
-      if (ctx.rematch) cancelTenantRematch(tenant, ctx.rematch, room, client);
+      const rematch = rematchContextFor(room);
+      if (rematch) cancelTenantRematch(tenant, rematch, room, client);
       return;
     }
     if (message.type === 'rematch:decline') {
-      if (ctx.rematch) declineTenantRematch(tenant, ctx.rematch, room, client);
+      const rematch = rematchContextFor(room);
+      if (rematch) declineTenantRematch(tenant, rematch, room, client);
       return;
     }
     if (message.type !== 'move') return;
@@ -447,6 +485,8 @@ export function createTenantWsRuntime<
     if (move === null) return;
     const status = room.projection.state.status;
     if (status.type !== 'playing') return;
+    // Paused by a server stop: the clock is frozen until the players are back.
+    if (room.projection.paused) return;
     // No moves until both seats are filled (a fresh room starts in `playing`, so
     // a seated player could otherwise move before the opponent/engine joined).
     for (const color of tenant.colors) {
@@ -587,11 +627,15 @@ export function createTenantWsRuntime<
       }
       const snapshot = transportSnapshotPayload(room, client);
       const { events: _events, ...base } = snapshot;
-      const clientEvent = tenant.visibility.clientEventFor(
-        event,
-        client.seat,
-        tenantPlyAtEventIndex(room.events, seq),
-      );
+      // Pause bookkeeping never reaches a client; the frame still carries the
+      // snapshot, whose clock is what stops or restarts on screen.
+      const clientEvent = TENANT_SERVER_ONLY_EVENT_TYPES.has(event.type)
+        ? null
+        : tenant.visibility.clientEventFor(
+            event,
+            client.seat,
+            tenantPlyAtEventIndex(room.events, seq),
+          );
       sendPayload(client, {
         ...base,
         type: 'event-appended',

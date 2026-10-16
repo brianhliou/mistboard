@@ -6,12 +6,14 @@ import type { DrawShape } from 'chessground/draw';
 import type * as cg from 'chessground/types';
 import { readAccountPreferences } from './account-preferences.js';
 import {
+  analyticsTimeClass,
   classifyTimeControl,
   createGameLifecycleTracker,
   gameSpecAnalyticsProps,
   roomModeAnalyticsProps,
 } from './analytics.js';
 import { chessgroundAnimation } from './board-anim.js';
+import { setReplayAnalysisHref } from './game-table.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import {
   boardHighlightClasses,
@@ -20,6 +22,7 @@ import {
   legalDests,
   squareFileIndex,
 } from './live-board.js';
+import { flippedBottom } from './live-board-flip.js';
 import { renderCaptures as renderCaptureRows } from './live-captures.js';
 import {
   renderClocks as renderClockRows,
@@ -34,7 +37,14 @@ import {
 import { createLiveLayout, setLiveLayoutGameSpec } from './live-layout.js';
 import { createLiveLifecycleEffects, type LiveLifecycleEffects } from './live-lifecycle-effects.js';
 import { renderReplay, resetMoveListState } from './live-move-list.js';
-import { captureFogView, initReplay, isLive, resetReplayState } from './live-replay.js';
+import {
+  captureFogView,
+  currentReplayIndex,
+  initReplay,
+  isLive,
+  resetReplayState,
+  snapshotToPly,
+} from './live-replay.js';
 import {
   renderRoomActions as renderRoomActionRows,
   shouldShowPostGameRoomActions as shouldShowPostGameRoomActionRows,
@@ -60,8 +70,10 @@ import {
   seatLabel,
 } from './live-status.js';
 import { currentCaptures, currentView } from './live-view.js';
+import { renderGameResult, resultScore } from './postgame-panel.js';
 import { createGameMetaCard, seatResultScores } from './review/game-meta-card.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
+import { localizedRulesHref } from './variant-public-surfaces.js';
 import { activeLiveShellTenant, liveShellTenants } from './variant-tenant/live-shell.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import { variantMiniIdForRawVariant } from './variants.js';
@@ -141,7 +153,8 @@ export function render(): void {
   // mismatched perspective if the server state was captured before the seat was
   // confirmed. Spectators fall back to the view's perspective.
   const nextOrientation = isColor(liveState.seat) ? liveState.seat : (view?.perspective ?? 'white');
-  orientation = nextOrientation;
+  // The viewer's flip (live-board-flip.ts) turns the board, not the seat.
+  orientation = flippedBottom(nextOrientation);
 
   if (liveState.debugRequested) refs.roomMeta.innerHTML = roomMetaHtml();
   renderBoardStatus(view);
@@ -200,8 +213,9 @@ function trackGameLifecycle(view: PlayerView | null): void {
     ...roomModeAnalyticsProps(liveState.roomMode),
     initialMs: view.clock?.initialMs ?? null,
     incrementMs: view.clock?.incrementMs ?? null,
-    time_class:
-      view.clock != null ? classifyTimeControl(view.clock.initialMs, view.clock.incrementMs) : null,
+    time_class: analyticsTimeClass(view.clock, {
+      correspondence: liveState.roomMode === 'correspondence',
+    }),
   };
   const outcome =
     statusType === 'finished'
@@ -220,6 +234,8 @@ function trackGameLifecycle(view: PlayerView | null): void {
 function renderActionStatus(view: PlayerView | null): void {
   refs.actionStatus.replaceChildren();
   refs.actionSection.hidden = false;
+  renderResult(view);
+  renderAnalysisLink(view);
   // While the player is mid-game we keep this panel hidden and let the board +
   // clocks carry the state. A reconnect only un-hides it once it has escalated
   // to the 'banner' tier; below that the own-seat presence dot is the signal, so
@@ -227,6 +243,18 @@ function renderActionStatus(view: PlayerView | null): void {
   // connectionNoticeMode().
   const showBanner = connectionNoticeMode() === 'banner';
   if (view?.status.type === 'playing' && isLive() && isColor(liveState.seat) && !showBanner) {
+    refs.actionSection.hidden = true;
+    return;
+  }
+  // A finished or aborted game says so in the result block at the end of the
+  // move list; the notice would repeat it between the list and the actions.
+  // A dropped socket does not bring it back (the game is over and reconnects on
+  // its own); only a refused or moved session does.
+  if (
+    (view?.status.type === 'finished' || view?.status.type === 'aborted') &&
+    liveState.connectionState !== 'rejected' &&
+    liveState.connectionState !== 'displaced'
+  ) {
     refs.actionSection.hidden = true;
     return;
   }
@@ -264,6 +292,46 @@ function renderActionStatus(view: PlayerView | null): void {
   refs.actionStatus.append(notice);
 }
 
+// "Checkmate • White is victorious": the meta card's status line, and the
+// result block's summary at the end of the move list. The reason goes through
+// the same keyed phrases as live-status.
+function finishedStatusLine(status: Extract<PlayerView['status'], { type: 'finished' }>): string {
+  const reason = reasonPhraseLabel(status.reason);
+  return status.winner
+    ? t('result.colorVictorious', {
+        color: status.winner === 'white' ? t('setup.white') : t('setup.black'),
+        reason: `${reason.charAt(0).toUpperCase()}${reason.slice(1)}`,
+      })
+    : t('result.drawByReason', { reason });
+}
+
+// The toolbar microscope: the review at the move on screen, finished games only.
+function renderAnalysisLink(view: PlayerView | null): void {
+  if (view?.status.type !== 'finished' && liveState.state?.status.type !== 'finished') {
+    setReplayAnalysisHref(refs.actionSection, null);
+    return;
+  }
+  const index = currentReplayIndex();
+  const ply = liveState.state?.variant === 'dark-chess' ? snapshotToPly(index) : index;
+  const base = `/game/${encodeURIComponent(liveState.room)}`;
+  setReplayAnalysisHref(refs.actionSection, isLive() ? base : `${base}?ply=${ply}`);
+}
+
+// The result at the end of the move list (postgame-panel.ts); null clears it.
+function renderResult(view: PlayerView | null): void {
+  const status = view?.status;
+  if (status?.type === 'finished') {
+    renderGameResult(refs.actionSection, {
+      score: resultScore(status.winner === null ? null : status.winner === 'white' ? 0 : 1),
+      summary: finishedStatusLine(status),
+    });
+  } else if (status?.type === 'aborted') {
+    renderGameResult(refs.actionSection, { score: null, summary: t('live.statusGameAborted') });
+  } else {
+    renderGameResult(refs.actionSection, null);
+  }
+}
+
 // Lichess-style meta card (mirrors the tenant room-chrome renderMeta): time
 // control + mode headline, variant name, seats as player rows, stateful
 // bottom line. Degraded-connection detail moves to a small trailing row.
@@ -276,15 +344,7 @@ function renderGameInfo(view: PlayerView | null): void {
   let subline: string | null = null;
   let statusLine: string | null = null;
   if (status?.type === 'finished') {
-    // The reason used to render its own wire value here ('king captured' via a
-    // dash strip); it now goes through the same keyed phrases as live-status.
-    const reason = reasonPhraseLabel(status.reason);
-    statusLine = status.winner
-      ? t('result.colorVictorious', {
-          color: status.winner === 'white' ? t('setup.white') : t('setup.black'),
-          reason: `${reason.charAt(0).toUpperCase()}${reason.slice(1)}`,
-        })
-      : t('result.drawByReason', { reason });
+    statusLine = finishedStatusLine(status);
   } else if (status?.type === 'aborted') {
     statusLine = t('live.statusGameAborted');
   } else if (status?.type === 'playing') {
@@ -300,12 +360,14 @@ function renderGameInfo(view: PlayerView | null): void {
   );
 
   const card = createGameMetaCard({
-    // Same finalized marker the picker/watch/review surfaces use; the ♔ glyph
-    // stays only as the fallback for a variant string we can't map.
+    // Same finalized marker the picker/watch/review surfaces use.
     markerId: metaMarkerId(view) ?? undefined,
-    glyph: '♔',
     headline: [timeLabel, modeEntry ? modeEntry[1] : t('live.modeCasual')],
     variantName: fmt,
+    variantHref: localizedRulesHref(
+      view?.variant ?? liveState.state?.variant ?? liveState.variantRequested ?? 'dark-chess',
+    ),
+    variantHrefNewTab: true,
     subline,
     players: seats.map((color, index) => {
       const colorName = color === 'white' ? t('setup.white') : t('setup.black');
@@ -318,7 +380,7 @@ function renderGameInfo(view: PlayerView | null): void {
     status: statusLine,
   });
   refs.gameInfo.replaceChildren(card.el);
-  // Connection only surfaces when degraded — green-path "Connected · 1ms" is noise.
+  // Connection only surfaces when degraded; a green-path "Connected" row is noise.
   // The wrapper carries the .game-info styling the row expects (the region
   // itself no longer has it, so it can't mangle the meta card).
   if (liveState.connectionState !== 'connected') {
@@ -405,10 +467,6 @@ function modeDetailEntry(): [string, string] | null {
 
 function connectionDetailLabel(): string | null {
   switch (liveState.connectionState) {
-    case 'connected':
-      return liveState.latencyMs !== null
-        ? t('live.connConnectedWithLatency', { latency: liveState.latencyMs })
-        : t('live.connConnected');
     case 'connecting':
       return t('live.statusConnecting');
     case 'reconnecting':

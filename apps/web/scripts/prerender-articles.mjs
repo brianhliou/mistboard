@@ -2,7 +2,9 @@
 //
 // Runs AFTER `vite build`, against the hashed `dist/index.html` shell. For each
 // published article it renders the real client renderer (buildArticlePage) under
-// happy-dom, bakes the resulting <main> into #app, injects per-route meta from
+// happy-dom, bakes the nav and the resulting <main> into #app with the route
+// classes mountArticle sets (the frame the client mounts, so nothing jumps on
+// takeover, #557), injects per-route meta from
 // articles-data (single source of truth), and writes dist/blog/<slug>.html.
 //
 // The server serves these files for /blog/<slug>; the client SPA still boots
@@ -16,12 +18,6 @@ import { createServer } from 'vite';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(__dirname, '..', 'dist');
-// Mirrors ARTICLE_OG_IMAGE_VERSION in apps/server/src/og-image.ts (the server
-// cannot be imported from the web build). Scrapers hold a card under its URL
-// with a year-long immutable max-age, so the LOOK of the card can only change
-// behind a new ?v=; og-image.test.ts pins the two numbers to each other.
-const ARTICLE_OG_IMAGE_VERSION = 2;
-
 const host = process.env.MISTBOARD_HOST ?? 'https://mistboard.com';
 
 // --- happy-dom globals (Node 26: some globals are read-only getters) ---------
@@ -206,7 +202,8 @@ const ROUTE_PRELOADS = [
     pattern: '^/(?:about|source|contact|patron|faq|terms|privacy|feed|news)$',
     module: 'src/pages-static.ts',
   },
-  { pattern: '^/changelog$', module: 'src/changelog-page.ts' },
+  { pattern: '^/feed/\\d{4}-\\d{2}$', module: 'src/pages-static.ts' },
+  { pattern: '^/changelog(?:/\\d{4}-\\d{2})?$', module: 'src/changelog-page.ts' },
 ];
 
 async function writeRoutePreloadManifest(manifest, shellHtml) {
@@ -349,15 +346,19 @@ const server = await createServer({
 });
 
 try {
-  const { buildArticlePage } = await server.ssrLoadModule('/src/articles.ts');
+  const { ARTICLE_ROUTE_CLASS, renderArticlePageShellForPrerender } =
+    await server.ssrLoadModule('/src/pages-static.ts');
   const { articles } = await server.ssrLoadModule('/src/articles-data.ts');
   const { isArticleTranslationPublished, translateArticle } =
     await server.ssrLoadModule('/src/article-i18n.ts');
-  const { rulesSlugPublicSurfaceEnabled } = await server.ssrLoadModule(
-    '/src/variant-public-surfaces.ts',
-  );
+  const { articleIsNoindex } = await server.ssrLoadModule('/src/variant-public-surfaces.ts');
   const { articleIsLive, articleGoesLiveAt } = await server.ssrLoadModule(
     '/src/articles/publish-time.ts',
+  );
+  // Card URLs (the ?v= and which slugs have aspect cards) mirror the server's
+  // renderer; og-image.test.ts pins the mirror.
+  const { articleOgImageUrl, articleStructuredDataImage } = await server.ssrLoadModule(
+    '/src/article-og-image.ts',
   );
 
   // en + the two zh scripts. urlPrefix feeds canonical/hreflang URLs; htmlLang
@@ -422,6 +423,8 @@ try {
     { en: 'jieqi-platform', vi: 'co-up' },
     { en: 'jieqi-openings', vi: 'khai-cuoc-co-up' },
     { en: 'jieqi', vi: 'luat-co-up' },
+    { en: 'pikafish', vi: 'choi-co-tuong-voi-may' },
+    { en: 'lai-ly-huynh', vi: 'lai-ly-huynh-co-tuong' },
   ];
 
   // Scheduled posts (published, dated in the future at build time) are left
@@ -469,56 +472,157 @@ try {
       console.log(`${label}: ${list.map((s) => `${s.slug} (${s.liveAt})`).join(', ')}`);
     }
   }
+
+  // The player pages' reference data for the server (issue #458): the CXA
+  // points and rating lists and the title tags live in the web app
+  // (src/players/), and the server, which writes each player page's title,
+  // description, crawler body and share card, cannot import web code. It reads
+  // this file instead (apps/server/src/player-reference.ts), so the lists stay
+  // single-sourced here. Only each player's latest entry: that is all a title
+  // or a description names.
+  const { CXA_POINTS, CXA_POINTS_LISTS } = await server.ssrLoadModule('/src/players/cxa-points.ts');
+  const { CXA_RATINGS, CXA_LISTS } = await server.ssrLoadModule('/src/players/cxa-ratings.ts');
+  const { PLAYER_PROFILES } = await server.ssrLoadModule('/src/players/profiles.ts');
+  const { playerTitleFor, titledNames } = await server.ssrLoadModule(
+    '/src/players/player-title.ts',
+  );
+  const { CXA_NAME_ALIASES } = await server.ssrLoadModule('/src/players/cxa-coverage.ts');
+  // Keyed by the archive's spelling where the CXA list prints a variant one
+  // (players/cxa-coverage.ts), since the server looks players up by that.
+  const archiveName = (name) => CXA_NAME_ALIASES[name] ?? name;
+  const playerPoints = {};
+  for (const [name, entries] of Object.entries(CXA_POINTS)) {
+    const last = entries[entries.length - 1];
+    if (!last) continue;
+    const list = CXA_POINTS_LISTS.find((l) => l.id === last.list);
+    playerPoints[archiveName(name)] = {
+      points: last.points,
+      rank: last.rank,
+      group: last.group,
+      of: list ? (last.group === 'men' ? list.men : list.women) : null,
+      listDate: list?.date ?? null,
+    };
+  }
+  const playerRatings = {};
+  const playerTitlesByName = {};
+  for (const [name, entries] of Object.entries(CXA_RATINGS)) {
+    const last = entries[entries.length - 1];
+    if (!last) continue;
+    const list = CXA_LISTS.find((l) => l.id === last.list);
+    playerRatings[archiveName(name)] = {
+      rating: last.rating,
+      rank: last.rank,
+      of: list?.size ?? null,
+      listLabel: list?.label ?? last.list,
+    };
+  }
+  // Every name a title source knows (the CXA grades, the WXF list, the 等级分
+  // lists), each through the same precedence and sanctions rule the pages use.
+  for (const name of titledNames()) {
+    const archived = archiveName(name);
+    const title = playerTitleFor({ name: archived });
+    if (title) playerTitlesByName[archived] = title;
+  }
+  // The match-fixing rulings' one sentence per named player (players/sanctions.ts).
+  const { SANCTIONS, sanctionSentence } = await server.ssrLoadModule('/src/players/sanctions.ts');
+  const playerSanctions = {};
+  for (const [name, sanction] of Object.entries(SANCTIONS)) {
+    playerSanctions[name] = sanctionSentence(sanction);
+  }
+  const playerTitlesBySlug = {};
+  for (const [slug, profile] of Object.entries(PLAYER_PROFILES)) {
+    if (profile.title) playerTitlesBySlug[slug] = profile.title;
+  }
+  await fs.writeFile(
+    resolve(distDir, 'players-reference.json'),
+    `${JSON.stringify({
+      points: playerPoints,
+      ratings: playerRatings,
+      titlesByName: playerTitlesByName,
+      titlesBySlug: playerTitlesBySlug,
+      sanctions: playerSanctions,
+    })}\n`,
+    'utf-8',
+  );
+  console.log(
+    `players reference: ${Object.keys(playerPoints).length} on the points list, ${Object.keys(playerRatings).length} rated, ${Object.keys(playerTitlesByName).length} titled`,
+  );
+
   const published = articles.filter((a) => articleIsLive(a, builtAt));
   const publishedBySlug = new Map(published.map((a) => [a.slug, a]));
-  const crossLanguageAlternates = new Map();
+  // Every page of a translation group emits the SAME alternate set, built from
+  // the group's English page: English (x-default), its zh renderings when
+  // published, and each published content-language partner. The pairs used to
+  // be expanded per page, so /blog/co-up named only itself and English and
+  // called itself x-default while /blog/jieqi-platform named four pages with
+  // itself as x-default. Google reads a group whose members disagree as no
+  // group (2026-09-25).
+  const englishRootOf = new Map();
+  const partnersOfRoot = new Map();
   for (const pair of CROSS_LANGUAGE_PAIRS) {
-    for (const [langA, slugA] of Object.entries(pair)) {
-      const partners = Object.entries(pair)
-        .filter(([langB]) => langB !== langA)
-        .map(([langB, slugB]) => ({ lang: langB, slug: slugB }))
-        .filter((partner) => publishedBySlug.has(partner.slug));
-      if (partners.length > 0) crossLanguageAlternates.set(slugA, partners);
-    }
+    if (!publishedBySlug.has(pair.en)) continue;
+    const partners = Object.entries(pair)
+      .filter(([lang]) => lang !== 'en')
+      .map(([lang, partnerSlug]) => ({ lang, slug: partnerSlug }))
+      .filter((partner) => publishedBySlug.has(partner.slug));
+    if (partners.length === 0) continue;
+    partnersOfRoot.set(pair.en, partners);
+    for (const partner of partners) englishRootOf.set(partner.slug, pair.en);
   }
+  const articleUrl = (target) =>
+    `${host}/${target.kind === 'rules' ? 'rules' : 'blog'}/${encodeURIComponent(target.slug)}`;
+  const translationGroupLinks = (article) => {
+    const root = publishedBySlug.get(englishRootOf.get(article.slug) ?? article.slug) ?? article;
+    const rootBase = root.kind === 'rules' ? 'rules' : 'blog';
+    const rootSlug = encodeURIComponent(root.slug);
+    return [
+      `<link rel="alternate" hreflang="${root.sourceLang ?? 'en'}" href="${articleUrl(root)}" />`,
+      ...(isArticleTranslationPublished(root.slug)
+        ? [
+            `<link rel="alternate" hreflang="zh-Hans" href="${host}/zh-hans/${rootBase}/${rootSlug}" />`,
+            `<link rel="alternate" hreflang="zh-Hant" href="${host}/zh-hant/${rootBase}/${rootSlug}" />`,
+          ]
+        : []),
+      ...(partnersOfRoot.get(root.slug) ?? []).map(
+        (partner) =>
+          `<link rel="alternate" hreflang="${partner.lang}" href="${articleUrl(publishedBySlug.get(partner.slug))}" />`,
+      ),
+      `<link rel="alternate" hreflang="x-default" href="${articleUrl(root)}" />`,
+    ].join('');
+  };
   let count = 0;
+  // Alternate links as written, by page path, for the group check below.
+  const emittedAlternates = new Map();
 
   for (const article of published) {
     const slug = encodeURIComponent(article.slug);
     // Rules docs are canonical under /rules/<slug>, everything else /blog/<slug>.
     const base = article.kind === 'rules' ? 'rules' : 'blog';
-    // OG card stays English for all variants for now (the card renderer has no
-    // CJK font; baking zh titles would render tofu). Localized variants and
-    // hreflang alternates exist only after the article crosses the explicit
-    // translation publication boundary.
-    const imageUrl = `${host}/og/article/${slug}.png?v=${ARTICLE_OG_IMAGE_VERSION}`;
+    // Localized variants and hreflang alternates exist only after the article
+    // crosses the explicit translation publication boundary.
+    // og:image stays the wide card; the JSON-LD offers 16:9, 4:3 and 1:1 too,
+    // because Google crops the wide one to a square in places and cuts its
+    // caption (src/article-og-image.ts). A zh page of a page whose card is a
+    // xiangqi-family board gets its own script's card (hanzi pieces, the zh
+    // title as caption, ?lang=); every other page's card stays English, so
+    // both URLs are per language below.
     const translationPublished = isArticleTranslationPublished(article.slug);
-    const selfHreflang = article.sourceLang ?? 'en';
-    const hreflang = [
-      `<link rel="alternate" hreflang="${selfHreflang}" href="${host}/${base}/${slug}" />`,
-      ...(translationPublished
-        ? [
-            `<link rel="alternate" hreflang="zh-Hans" href="${host}/zh-hans/${base}/${slug}" />`,
-            `<link rel="alternate" hreflang="zh-Hant" href="${host}/zh-hant/${base}/${slug}" />`,
-          ]
-        : []),
-      ...(crossLanguageAlternates.get(article.slug) ?? []).map((partner) => {
-        const partnerArticle = publishedBySlug.get(partner.slug);
-        const partnerBase = partnerArticle.kind === 'rules' ? 'rules' : 'blog';
-        return `<link rel="alternate" hreflang="${partner.lang}" href="${host}/${partnerBase}/${encodeURIComponent(partner.slug)}" />`;
-      }),
-      `<link rel="alternate" hreflang="x-default" href="${host}/${base}/${slug}" />`,
-    ].join('');
+    const hreflang = translationGroupLinks(article);
 
     const localeVariants = variantsFor(article);
     const articleVariants = translationPublished ? localeVariants : localeVariants.slice(0, 1);
     for (const v of articleVariants) {
       const localized = v.lang ? translateArticle(article, v.lang) : article;
-      const main = buildArticlePage(article.slug, v.lang ?? undefined);
+      const appInner = await renderArticlePageShellForPrerender(article.slug, v.lang);
       const url = `${host}${v.urlPrefix}/${base}/${slug}`;
+      const imageUrl = articleOgImageUrl(host, article.slug, v.lang);
+      const structuredImage = articleStructuredDataImage(host, article.slug, v.lang);
       let html = shell
         .replace('<html lang="en">', `<html lang="${v.htmlLang}">`)
-        .replace('<div id="app"></div>', `<div id="app">${main.outerHTML}</div>`);
+        .replace(
+          '<div id="app"></div>',
+          `<div id="app" class="${ARTICLE_ROUTE_CLASS}">${appInner}</div>`,
+        );
       html = injectPageMeta(html, {
         // seoTitle drives the document title and, through injectPageMeta, the
         // og/twitter titles — all the places a stranger meets the page cold. The
@@ -538,7 +642,7 @@ try {
         inLanguage: v.htmlLang,
         headline: localized.title,
         description: localized.summary,
-        image: imageUrl,
+        image: structuredImage,
         author: { '@type': 'Organization', name: 'Mistboard' },
         publisher: { '@type': 'Organization', name: 'Mistboard' },
         mainEntityOfPage: { '@type': 'WebPage', '@id': url },
@@ -585,20 +689,29 @@ try {
       // language relationship; the canonical consolidates query-param, SPA-shell,
       // and trailing-slash variants of THIS url into a single indexed page.
       const canonical = `<link rel="canonical" href="${url}" />`;
-      const robots =
-        article.kind === 'rules' && !rulesSlugPublicSurfaceEnabled(article.slug)
-          ? '<meta name="robots" content="noindex, follow" />'
-          : '';
+      // The shell carries the one robots tag (max-image-preview:large); a
+      // noindex page replaces it rather than adding a second.
+      if (articleIsNoindex(article)) {
+        const shellRobots = /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/;
+        if (!shellRobots.test(html)) {
+          throw new Error('prerender: the shell lost its robots tag; noindex has nothing to set');
+        }
+        html = html.replace(shellRobots, '<meta name="robots" content="noindex, follow" />');
+      }
       const localeLinks = v.lang ? (localePreloadLinks[v.lang] ?? '') : '';
       const rssLink = article.kind === 'rules' ? '' : BLOG_RSS_LINK;
       html = html.replace(
         '</head>',
-        `${robots}${canonical}${hreflang}${rssLink}${ldScript}${articleAssetLinks}${localeLinks}</head>`,
+        `${canonical}${hreflang}${rssLink}${ldScript}${articleAssetLinks}${localeLinks}</head>`,
       );
 
       const dir = resolve(distDir, ...(v.langDir ? [v.langDir, base] : [base]));
       await fs.mkdir(dir, { recursive: true });
       await fs.writeFile(resolve(dir, `${article.slug}.html`), html, 'utf-8');
+      emittedAlternates.set(
+        `${v.urlPrefix}/${base}/${article.slug}`,
+        (html.match(/<link rel="alternate" hreflang=[^>]*>/g) ?? []).join(''),
+      );
       count += 1;
       console.log(`prerendered ${v.urlPrefix}/${base}/${article.slug} (lang=${v.htmlLang})`);
     }
@@ -606,6 +719,33 @@ try {
   console.log(
     `done: ${count} page(s) across ${published.length} article(s); localized variants require publication lock`,
   );
+
+  // Every member of a translation group must carry the English page's alternate
+  // set, read from the HTML actually written. The per-page expansion this
+  // replaced was locally correct on each page and inconsistent across the
+  // group, which nothing noticed for three weeks (2026-09-25), so the build
+  // fails on a mismatch instead.
+  const groupMismatches = [];
+  for (const [rootSlug, partners] of partnersOfRoot) {
+    const root = publishedBySlug.get(rootSlug);
+    const rootPath = (prefix) =>
+      `${prefix}/${root.kind === 'rules' ? 'rules' : 'blog'}/${root.slug}`;
+    const expected = emittedAlternates.get(rootPath(''));
+    const members = [
+      ...(isArticleTranslationPublished(rootSlug) ? ['/zh-hans', '/zh-hant'].map(rootPath) : []),
+      ...partners.map((partner) => {
+        const partnerArticle = publishedBySlug.get(partner.slug);
+        return `/${partnerArticle.kind === 'rules' ? 'rules' : 'blog'}/${partnerArticle.slug}`;
+      }),
+    ];
+    for (const member of members) {
+      if (emittedAlternates.get(member) !== expected)
+        groupMismatches.push(`${member} vs ${rootPath('')}`);
+    }
+  }
+  if (groupMismatches.length > 0) {
+    throw new Error(`translation group alternates disagree: ${groupMismatches.join('; ')}`);
+  }
 
   // Homepage: bake the static landing shell so crawlers, no-JS clients, and
   // first paint get real content (heading, play panel, article links, footer)
@@ -622,6 +762,11 @@ try {
   // before this the path served a directory listing of dist/, and the site had
   // no Chinese URL for the page that matters most to a Chinese search.
   const { renderLandingShellForPrerender } = await server.ssrLoadModule('/src/landing.ts');
+  const { homeStructuredDataScripts } = await server.ssrLoadModule('/src/home-structured-data.ts');
+  // The English home keeps the description index.html already carries; the
+  // JSON-LD repeats each page's own description rather than a second copy.
+  const shellDescription = shell.match(/<meta\s+name="description"\s+content="([^"]*)"/)?.[1];
+  if (!shellDescription) throw new Error('shell index.html has no meta description');
   const homeVariants = [
     { path: '/', file: 'home.html', htmlLang: 'en', meta: null },
     {
@@ -631,7 +776,7 @@ try {
       meta: {
         title: '中国象棋在线 · 免费对弈与分析 | Mistboard',
         description:
-          '免费在线下中国象棋：与人对弈或挑战电脑，服务器判规，皮卡鱼在浏览器里分析，残局题目，以及从第一步开始的课程。不用注册。',
+          '免费在线下中国象棋：与人对弈或挑战电脑，服务器严格判规，皮卡鱼在浏览器里帮你分析，还有残局题目和从第一步开始的课程。不用注册。',
       },
     },
     {
@@ -639,9 +784,9 @@ try {
       file: 'zh-hant-home.html',
       htmlLang: 'zh-Hant',
       meta: {
-        title: '中國象棋線上 · 免費對弈與分析 | Mistboard',
+        title: '象棋線上 · 免費對弈與分析 | Mistboard',
         description:
-          '免費線上下中國象棋：與人對弈或挑戰電腦，伺服器判規，皮卡魚在瀏覽器裡分析，殘局題目，以及從第一步開始的課程。免註冊。',
+          '免費線上下象棋（中國象棋）：與人對弈或挑戰電腦，伺服器判規，皮卡魚在瀏覽器裡分析，殘局題目，以及從第一步開始的課程。免註冊。',
       },
     },
   ];
@@ -666,46 +811,106 @@ try {
         url,
       });
     }
+    const homeLd = homeStructuredDataScripts({
+      inLanguage: variant.htmlLang,
+      url,
+      description: variant.meta?.description ?? shellDescription,
+    });
     homeHtml = homeHtml.replace(
       '</head>',
-      `<link rel="canonical" href="${url}" />${homeHreflang}${landingAssetLinks}</head>`,
+      `<link rel="canonical" href="${url}" />${homeHreflang}${homeLd}${landingAssetLinks}</head>`,
     );
     await fs.writeFile(resolve(distDir, variant.file), homeHtml, 'utf-8');
     console.log(`prerendered ${variant.path} (${variant.file}, lang=${variant.htmlLang})`);
   }
   win.happyDOM.setURL(host);
 
-  // /blog: the post index. Authored data only, so the baked DOM is the page a
-  // reader gets. It has been in the sitemap all along while answering with the
-  // empty shell, which is worse than not being listed.
-  const { renderArticlesIndexShellForPrerender } =
-    await server.ssrLoadModule('/src/pages-static.ts');
-  const blogIndexInner = await renderArticlesIndexShellForPrerender();
-  let blogIndexHtml = shell.replace(
-    '<div id="app"></div>',
-    `<div id="app" class="landing-page articles-route">${blogIndexInner}</div>`,
-  );
-  // Full meta, not a title-only replace: servePrerenderedPage returns this file
-  // as-is and never runs the server's own injection, so anything left alone
-  // here ships the homepage's copy. Same strings as ARTICLES_INDEX_META.en in
-  // apps/server/src/server-static-pages.ts, which covers the fallback path.
-  blogIndexHtml = injectPageMeta(blogIndexHtml, {
-    title: 'Articles | Mistboard',
-    description: 'Long-form writing on original strategy games, rules, and engine research.',
-    url: `${host}/blog`,
-  });
-  blogIndexHtml = blogIndexHtml.replace(
-    '</head>',
-    `<link rel="canonical" href="${host}/blog" />${BLOG_RSS_LINK}${articleAssetLinks}</head>`,
-  );
-  await fs.writeFile(resolve(distDir, 'blog.html'), blogIndexHtml, 'utf-8');
-  console.log('prerendered /blog (blog.html)');
+  // /blog, /zh-hans/blog, /zh-hant/blog: the post index, once per interface
+  // language. Authored data only, so the baked DOM is the page a reader gets.
+  // Each was in the sitemap while answering with the empty shell, which is
+  // worse than not being listed. The DOM points at the URL the page is served
+  // from while it bakes, as the homepage does, so a widget that reads
+  // currentLocale() itself gets the right language.
+  const {
+    renderArticlesIndexShellForPrerender,
+    articlesIndexPrerenderHead,
+    renderRulesIndexShellForPrerender,
+    rulesIndexPrerenderHead,
+  } = await server.ssrLoadModule('/src/pages-static.ts');
+  for (const v of baseVariants) {
+    const head = articlesIndexPrerenderHead(host, v.lang);
+    win.happyDOM.setURL(head.url);
+    const blogIndexInner = await renderArticlesIndexShellForPrerender(v.lang);
+    let blogIndexHtml = shell
+      .replace('<html lang="en">', `<html lang="${v.htmlLang}">`)
+      .replace(
+        '<div id="app"></div>',
+        `<div id="app" class="landing-page articles-route">${blogIndexInner}</div>`,
+      );
+    // Full meta, not a title-only replace: the server returns this file as-is
+    // and never runs its own injection, so anything left alone here ships the
+    // homepage's copy.
+    blogIndexHtml = injectPageMeta(blogIndexHtml, {
+      title: head.title,
+      description: head.description,
+      url: head.url,
+    });
+    const localeLinks = v.lang ? (localePreloadLinks[v.lang] ?? '') : '';
+    blogIndexHtml = blogIndexHtml.replace(
+      '</head>',
+      `${head.headLinks}${BLOG_RSS_LINK}${articleAssetLinks}${localeLinks}</head>`,
+    );
+    const file = v.langDir
+      ? resolve(distDir, v.langDir, 'blog.html')
+      : resolve(distDir, 'blog.html');
+    await fs.mkdir(dirname(file), { recursive: true });
+    await fs.writeFile(file, blogIndexHtml, 'utf-8');
+    console.log(`prerendered ${v.urlPrefix}/blog (${v.langDir ? `${v.langDir}/` : ''}blog.html)`);
+  }
+
+  // /rules, /zh-hans/rules, /zh-hant/rules: the rules landing, once per
+  // interface language, same shape as the blog indexes above. All three were in
+  // the sitemap answering with the 4.9KB shell (no canonical, no hreflang, no
+  // text) until 2026-10-02. rules.html sits beside the rules/ directory of
+  // docs; the server routes /rules before the static handler, so the two never
+  // collide.
+  for (const v of baseVariants) {
+    const head = rulesIndexPrerenderHead(host, v.lang);
+    win.happyDOM.setURL(head.url);
+    const rulesIndexInner = await renderRulesIndexShellForPrerender(v.lang);
+    let rulesIndexHtml = shell
+      .replace('<html lang="en">', `<html lang="${v.htmlLang}">`)
+      .replace(
+        '<div id="app"></div>',
+        `<div id="app" class="landing-page articles-route rules-route">${rulesIndexInner}</div>`,
+      );
+    rulesIndexHtml = injectPageMeta(rulesIndexHtml, {
+      title: head.title,
+      description: head.description,
+      url: head.url,
+    });
+    const localeLinks = v.lang ? (localePreloadLinks[v.lang] ?? '') : '';
+    rulesIndexHtml = rulesIndexHtml.replace(
+      '</head>',
+      `${head.headLinks}${articleAssetLinks}${localeLinks}</head>`,
+    );
+    const file = v.langDir
+      ? resolve(distDir, v.langDir, 'rules.html')
+      : resolve(distDir, 'rules.html');
+    await fs.mkdir(dirname(file), { recursive: true });
+    await fs.writeFile(file, rulesIndexHtml, 'utf-8');
+    console.log(`prerendered ${v.urlPrefix}/rules (${v.langDir ? `${v.langDir}/` : ''}rules.html)`);
+  }
+  win.happyDOM.setURL(host);
 
   // blog/feed.xml: the posts as RSS, alongside the announcement feed at
   // /feed.xml. Published blog posts only, newest first; rules docs are
-  // reference pages, not posts, and drafts are not public.
+  // reference pages, not posts, and drafts are not public. An unlisted or
+  // noindex post is served by URL only, so it is not announced here either.
   const blogFeedEntries = published
-    .filter((entry) => entry.kind === 'article')
+    .filter(
+      (entry) => entry.kind === 'article' && entry.showInIndex !== false && entry.noindex !== true,
+    )
     .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
   await fs.mkdir(resolve(distDir, 'blog'), { recursive: true });
   await fs.writeFile(
@@ -727,10 +932,14 @@ try {
     '<div id="app"></div>',
     `<div id="app" class="landing-page">${leaderboardInner}</div>`,
   );
-  leaderboardHtml = leaderboardHtml.replace(
-    /<title>[^<]*<\/title>/,
-    '<title>Players · Mistboard</title>',
-  );
+  // Full meta, as for /learn and /puzzles: a title-only replace shipped the
+  // homepage's description here. Same copy as SPA_ROUTE_META['/player'].
+  leaderboardHtml = injectPageMeta(leaderboardHtml, {
+    title: 'Xiangqi Leaderboard | Mistboard',
+    description:
+      'The highest rated players on Mistboard, by game and time control. Rated games are played between signed-in accounts in xiangqi, jieqi, banqi, Jungle and more.',
+    url: `${host}/player`,
+  });
   leaderboardHtml = leaderboardHtml.replace(
     '</head>',
     `<link rel="canonical" href="${host}/player" />${leaderboardAssetLinks}</head>`,
@@ -765,6 +974,30 @@ try {
   await fs.writeFile(resolve(distDir, 'feed.html'), newsHtml, 'utf-8');
   console.log('prerendered /feed (feed.html)');
 
+  // /feed/YYYY-MM: every month with an entry, the latest ones included, served
+  // by the server's /feed/:month route.
+  const { newsMonthIds } = await server.ssrLoadModule('/src/news-page.ts');
+  const { formatMonth: formatNewsMonth } = await server.ssrLoadModule('/src/month-label.ts');
+  const newsMonths = newsMonthIds();
+  for (const monthId of newsMonths) {
+    const label = formatNewsMonth(monthId, 'en');
+    let monthHtml = shell.replace(
+      '<div id="app"></div>',
+      `<div id="app" class="landing-page news-route">${renderNewsShellForPrerender(monthId)}</div>`,
+    );
+    monthHtml = injectPageMeta(monthHtml, {
+      title: `Updates: ${label} | Mistboard`,
+      description: `Every Mistboard announcement from ${label}: new variants, articles, features and changes to the site.`,
+      url: `${host}/feed/${monthId}`,
+    });
+    monthHtml = monthHtml.replace(
+      '</head>',
+      `<link rel="canonical" href="${host}/feed/${monthId}" />${newsAssetLinks}</head>`,
+    );
+    await fs.writeFile(resolve(distDir, `feed-${monthId}.html`), monthHtml, 'utf-8');
+  }
+  console.log(`prerendered ${newsMonths.length} /feed/YYYY-MM month pages`);
+
   // /changelog: CHANGELOG.md inlined at build time and rendered through the
   // same page module the client mounts, so the baked DOM is the page. Same
   // copy as SPA_ROUTE_META['/changelog'] for the fallback shell.
@@ -776,7 +1009,7 @@ try {
     `<div id="app" class="landing-page changelog-route">${changelogInner}</div>`,
   );
   changelogHtml = injectPageMeta(changelogHtml, {
-    title: 'Changelog | Mistboard',
+    title: 'Changelog: Every Change, Month by Month | Mistboard',
     description:
       'Every change to mistboard.com, month by month, newest first: playing, learning, watching, community, the site, removals and fixes, each linking its commit.',
     url: `${host}/changelog`,
@@ -787,6 +1020,30 @@ try {
   );
   await fs.writeFile(resolve(distDir, 'changelog.html'), changelogHtml, 'utf-8');
   console.log('prerendered /changelog (changelog.html)');
+
+  // /changelog/YYYY-MM: every month older than the ones /changelog shows in
+  // full gets its own page, served by the server's /changelog/:month route.
+  const { changelogArchiveMonthIds, formatMonth } =
+    await server.ssrLoadModule('/src/changelog-page.ts');
+  const archiveMonths = changelogArchiveMonthIds();
+  for (const monthId of archiveMonths) {
+    const label = formatMonth(monthId, 'en');
+    let monthHtml = shell.replace(
+      '<div id="app"></div>',
+      `<div id="app" class="landing-page changelog-route">${renderChangelogShellForPrerender(monthId)}</div>`,
+    );
+    monthHtml = injectPageMeta(monthHtml, {
+      title: `Changelog: ${label} | Mistboard`,
+      description: `Every change to mistboard.com in ${label}: playing, learning, watching, community, the site, removals and fixes, each linking its commit.`,
+      url: `${host}/changelog/${monthId}`,
+    });
+    monthHtml = monthHtml.replace(
+      '</head>',
+      `<link rel="canonical" href="${host}/changelog/${monthId}" />${changelogAssetLinks}</head>`,
+    );
+    await fs.writeFile(resolve(distDir, `changelog-${monthId}.html`), monthHtml, 'utf-8');
+  }
+  console.log(`prerendered ${archiveMonths.length} /changelog/YYYY-MM month pages`);
 
   // feed.xml: the same archive as RSS 2.0, so the announcements are followable
   // without opening the site. Gated by the same public-surface filter as the

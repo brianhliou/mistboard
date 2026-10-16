@@ -5,7 +5,8 @@
 export const OG_WIDTH = 1200;
 export const OG_HEIGHT = 630;
 
-export const OG_FONT = "'Noto Sans', system-ui, -apple-system, Helvetica, Arial, sans-serif";
+export const OG_FONT =
+  "'Noto Sans', 'Noto Sans SC', system-ui, -apple-system, Helvetica, Arial, sans-serif";
 
 export function escapeXml(s: string): string {
   return s

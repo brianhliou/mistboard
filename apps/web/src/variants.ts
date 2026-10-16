@@ -11,6 +11,7 @@
 import {
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -26,11 +27,10 @@ import {
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
-  atomicXiangqiEnabled,
   banqiEnabled,
+  crazyhouseXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
-  fortressXiangqiEnabled,
   jieqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
@@ -58,9 +58,8 @@ export interface VariantDef {
   miniId: VariantMiniId;
 }
 
-const fortressXiangqiOn = fortressXiangqiEnabled();
 const duckXiangqiOn = duckXiangqiEnabled();
-const atomicXiangqiOn = atomicXiangqiEnabled();
+const crazyhouseXiangqiOn = crazyhouseXiangqiEnabled();
 const xiangqiOn = xiangqiEnabled();
 const jieqiOn = jieqiEnabled();
 const banqiOn = banqiEnabled();
@@ -71,6 +70,7 @@ const darkChessSpec = gameSpecForId(DARK_CHESS_SPEC_ID);
 const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
 const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
 const atomicXiangqiSpec = gameSpecForId(ATOMIC_XIANGQI_SPEC_ID);
+const crazyhouseXiangqiSpec = gameSpecForId(CRAZYHOUSE_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
 const darkXiangqiSpec = gameSpecForId(DARK_XIANGQI_SPEC_ID);
 const jieqiSpec = gameSpecForId(JIEQI_SPEC_ID);
@@ -80,18 +80,27 @@ const jungleFlipSpec = gameSpecForId(JUNGLE_FLIP_SPEC_ID);
 
 // Marker coverage is broader than the rated/current variant registry: the play
 // picker can surface casual tenants, and rules/articles can reference variants
-// that are not leaderboard rows.
-const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
+// that are not leaderboard rows. Exhaustive over GameSpecId: a new spec does not
+// compile until it names its marker, or says null on purpose (a spec that is
+// never shown as a variant). variant-markers.test.ts holds every live spec
+// outside that null list to a marker file on disk.
+const VARIANT_MINI_BY_GAME_SPEC: Record<GameSpecId, VariantMiniId | null> = {
   [DARK_CHESS_SPEC_ID]: 'dark-chess',
   [FORTRESS_XIANGQI_SPEC_ID]: 'fortress-xiangqi',
   [DUCK_XIANGQI_SPEC_ID]: 'duck-xiangqi',
   [ATOMIC_XIANGQI_SPEC_ID]: 'atomic-xiangqi',
+  [CRAZYHOUSE_XIANGQI_SPEC_ID]: 'crazyhouse-xiangqi',
   [XIANGQI_SPEC_ID]: 'xiangqi',
   [DARK_XIANGQI_SPEC_ID]: 'dark-xiangqi',
   [JIEQI_SPEC_ID]: 'jieqi',
   [BANQI_SPEC_ID]: 'banqi',
   [JUNGLE_SPEC_ID]: 'jungle',
   [JUNGLE_FLIP_SPEC_ID]: 'jungle-flip',
+  // Behind a server flag and a per-account grant; no variant surface shows it.
+  mahjong: null,
+  'xiangqi-mahjong': null,
+  // Study-only (game-specs.ts): never playable, so never a variant marker.
+  chess: null,
 };
 
 // Public variants lead in the shared CANONICAL_VARIANT_ORDER (packages/game);
@@ -137,30 +146,6 @@ export const VARIANTS: VariantDef[] = [
     onLeaderboard: banqiOn,
     onProfile: banqiOn,
   },
-  // Atomic: xiangqi where a capture explodes. Launched casual and rating-ready
-  // on the same terms as duck (migration 147); the lobby seek can be rated.
-  {
-    id: currentRatingVariantForSpec(ATOMIC_XIANGQI_SPEC_ID),
-    gameSpecId: atomicXiangqiSpec.id,
-    apiParam: ATOMIC_XIANGQI_SPEC_ID,
-    label: atomicXiangqiSpec.publicName,
-    miniId: 'atomic-xiangqi',
-    enabled: false,
-    onLeaderboard: atomicXiangqiOn,
-    onProfile: atomicXiangqiOn,
-  },
-  // Full Fog Xiangqi (9x10): launched PvP-first (no bot, no open-seek lobby),
-  // rating-ready like Jieqi/Banqi, and paired directly with Fog Chess.
-  {
-    id: currentRatingVariantForSpec(DARK_XIANGQI_SPEC_ID),
-    gameSpecId: darkXiangqiSpec.id,
-    apiParam: DARK_XIANGQI_SPEC_ID,
-    label: darkXiangqiSpec.publicName,
-    miniId: 'dark-xiangqi',
-    enabled: false,
-    onLeaderboard: darkXiangqiOn,
-    onProfile: darkXiangqiOn,
-  },
   // Duck: xiangqi plus Duck Chess's shared blocker. Launched casual and
   // rating-ready on the same terms as Fortress; the lobby seek stays unrated
   // (registration.ts) until the pool has games in it.
@@ -174,16 +159,29 @@ export const VARIANTS: VariantDef[] = [
     onLeaderboard: duckXiangqiOn,
     onProfile: duckXiangqiOn,
   },
-  // Fortress: the authored open-information xiangqi product variant.
+  // Crazyhouse: xiangqi with captures to hand and drops. Rated through the
+  // lobby seek on the duck and atomic terms (migration 158).
   {
-    id: currentRatingVariantForSpec(FORTRESS_XIANGQI_SPEC_ID),
-    gameSpecId: fortressXiangqiSpec.id,
-    apiParam: FORTRESS_XIANGQI_SPEC_ID,
-    label: fortressXiangqiSpec.publicName,
-    miniId: 'fortress-xiangqi',
+    id: currentRatingVariantForSpec(CRAZYHOUSE_XIANGQI_SPEC_ID),
+    gameSpecId: crazyhouseXiangqiSpec.id,
+    apiParam: CRAZYHOUSE_XIANGQI_SPEC_ID,
+    label: crazyhouseXiangqiSpec.publicName,
+    miniId: 'crazyhouse-xiangqi',
     enabled: false,
-    onLeaderboard: fortressXiangqiOn,
-    onProfile: fortressXiangqiOn,
+    onLeaderboard: crazyhouseXiangqiOn,
+    onProfile: crazyhouseXiangqiOn,
+  },
+  // Full Fog Xiangqi (9x10): launched PvP-first (no bot, no open-seek lobby),
+  // rating-ready like Jieqi/Banqi, and paired directly with Fog Chess.
+  {
+    id: currentRatingVariantForSpec(DARK_XIANGQI_SPEC_ID),
+    gameSpecId: darkXiangqiSpec.id,
+    apiParam: DARK_XIANGQI_SPEC_ID,
+    label: darkXiangqiSpec.publicName,
+    miniId: 'dark-xiangqi',
+    enabled: false,
+    onLeaderboard: darkXiangqiOn,
+    onProfile: darkXiangqiOn,
   },
   {
     id: currentRatingVariantForSpec(DARK_CHESS_SPEC_ID),
@@ -217,6 +215,33 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: jungleFlipOn,
     onProfile: jungleFlipOn,
+  },
+  // Retired 2026-10-11, so off the canonical order and at the tail: the
+  // entries stay so labels and finished games resolve, and no rating surface
+  // lists them. Fortress: the authored open-information xiangqi variant.
+  {
+    id: currentRatingVariantForSpec(FORTRESS_XIANGQI_SPEC_ID),
+    gameSpecId: fortressXiangqiSpec.id,
+    apiParam: FORTRESS_XIANGQI_SPEC_ID,
+    label: fortressXiangqiSpec.publicName,
+    miniId: 'fortress-xiangqi',
+    enabled: false,
+    // Retired 2026-10-11: the pool's ratings are kept, not shown.
+    onLeaderboard: false,
+    onProfile: false,
+  },
+  // Atomic: xiangqi where a capture explodes. Launched casual and rating-ready
+  // on the same terms as duck (migration 147); the lobby seek can be rated.
+  {
+    id: currentRatingVariantForSpec(ATOMIC_XIANGQI_SPEC_ID),
+    gameSpecId: atomicXiangqiSpec.id,
+    apiParam: ATOMIC_XIANGQI_SPEC_ID,
+    label: atomicXiangqiSpec.publicName,
+    miniId: 'atomic-xiangqi',
+    enabled: false,
+    // Retired 2026-10-11: the pool's ratings are kept, not shown.
+    onLeaderboard: false,
+    onProfile: false,
   },
 ];
 

@@ -48,6 +48,8 @@ export const ZH_HANS_CONTENT = {
   'videos.previousVideos': '上一个视频',
   'videos.moreVideos': '更多视频',
   'articles.heading': '文章',
+  'articles.latest': '最新动态',
+  'articles.deepDives': '象棋深度文章',
   'articles.read': '阅读',
   'articles.intro': '原创策略游戏的文章、规则说明与引擎工作。',
   'articles.allArticles': '全部文章',
@@ -75,6 +77,8 @@ export const ZH_HANS_CONTENT = {
   'rules.allRules': '全部规则',
   'rules.kind': '规则',
   'rules.navigation': '规则导航',
+  'rules.translateIssue': '看到翻译问题？',
+  'rules.translateIssueLink': '帮我们审阅一页',
   'news.heading': '新闻',
   'news.feedHeading': 'Mistboard 更新',
   'news.intro': 'Mistboard 的发布、状态更新和公告。',
@@ -117,38 +121,27 @@ export const ZH_HANS_CONTENT = {
   'contact.networkError': '网络错误。请重试。',
   'about.heading': '关于 Mistboard',
   'about.lede':
-    'Mistboard 是一个免费的开源平台，让国际象棋玩家学习中国象棋，也是我们打造的原创策略游戏的家。',
+    'Mistboard 是一个免费开源的中国象棋对弈与研究平台，读中文和不读中文的棋手坐在同一张棋盘前；这里也是我们打造的原创策略游戏的家。',
   'about.whyHeading': '为什么做这个网站',
   'about.whyBody':
-    '这里的中国象棋指象棋及其传统近亲：揭棋和暗棋。多数在线对弈的地方默认你已经识得汉字。Mistboard 为不识汉字的国际象棋玩家而建：棋子以图标显示，在看懂車或砲之前就能辨认；规则和文章直接以英文撰写，而非翻译而来；入门课程从第一步开始，并把每个棋子与它相似的国际象棋棋子对照讲解。基础之外，网站也具备强手所期待的一切：引擎、从真实对局挖掘的战术题、分析棋盘、对局数据库和赛事直播。',
+    '这里的中国象棋指象棋及其传统近亲：揭棋和暗棋。下这些棋的人大多读中文，关于它们的文字也大多是中文。Mistboard 是一张两边都能坐下的棋盘：网站有英文、简体和繁体三种版本，对局、题目和大厅都是同一个，上海的玩家和多伦多的玩家坐在同一张棋桌前。对说英语的玩家来说，棋子以图标显示，在看懂車或砲之前就能辨认；规则和文章直接以英文撰写，而非翻译而来；入门课程把每个棋子与它相似的国际象棋棋子对照讲解。基础之外：引擎、从真实对局挖掘的战术题、分析棋盘、对局数据库和赛事直播。',
   'about.darkChessHeading': 'Mistboard 在做什么',
   'about.darkChessBody':
-    '在传统棋类旁边，是 Mistboard 自己发明的游戏。鸭子象棋在棋盘上加入一只不属于任何一方的鸭子。迷雾象棋隐藏你的棋子无法到达的所有点位。堡垒象棋在更小的棋盘上进行，被吃的棋子可以重新落回棋盘，并新增一枚棋子：宝藏。每个游戏都从人们熟悉的棋盘出发，只改动一处，并配有清晰的规则页面和服务器执行的对局。更多游戏正在设计中。斗兽棋、翻翻棋和迷雾国际象棋也已上线。',
+    '在传统棋类旁边，是我们自己设计的游戏。鸭子象棋在棋盘上加入一只不属于任何一方的鸭子。迷雾象棋隐藏你的棋子无法到达的所有点位。疯狂屋象棋把被吃的棋子交到吃子一方手里，可以再打入棋盘，士和象则从开局就在手中。每个游戏都从人们熟悉的棋盘出发，改动尽量少，并配有清晰的规则页面和服务器执行的对局。更多游戏正在设计中。斗兽棋、翻翻棋和迷雾国际象棋也已上线。',
   'about.playStudyHeading': '对弈与研究',
   'about.playStudyBody':
     '通过链接开始对局，加入大厅，或在支持的游戏中对战引擎。对局结束后，可以从任一玩家视角复盘，也可以在规则允许时查看完整棋盘。规则和文章会介绍怎么玩，也会解释这些变体为什么成立。',
   'about.trustHeading': '以设计建立信任',
   'about.trustBody':
-    'Mistboard 把规则执行视为产品的一部分。服务器拥有完整局面，只把每位玩家允许看到的视角发送给对应浏览器。隐藏信息实时对局不能观战；完整真相复盘只在对局结束后开放。',
+    '在迷雾对局中，你的浏览器根本收不到你看不见的棋子，所以页面里没有藏着任何可以挖出来的东西。进行中的迷雾对局不能观战。揭棋和暗棋的观众看到的是棋盘的实际样子，暗子仍然背面朝上。对局结束后，所有棋盘都会完整开放复盘。',
   'about.enginesHeading': '引擎与认真对弈',
   'about.enginesBody':
-    'Mistboard 托管并开发支持变体的引擎。当游戏包含隐藏信息时，引擎会收到和人类玩家一样的受限视角，因此引擎对局既能作为对手，也能作为研究材料。',
+    'Mistboard 为各个变体运行引擎，没有现成引擎的就自己开发，比如迷雾国际象棋的 Misty。在隐藏棋子的对局中，引擎看到的和坐在同一位置的人类玩家一样，不多一分。',
   'about.openSourceHeading': '开源基础',
   'about.openSourcePrefix': 'Mistboard 以 AGPL-3.0-or-later 发布在 ',
   'about.openSourceMiddle':
-    '。规则、可见性边界、复盘模型和公开网站代码都可以检查。欢迎贡献、报告 bug 和提交文章草稿。许可和第三方鸣谢见 ',
+    '。任何人都可以阅读规则代码、决定每位玩家能看到什么的代码，以及网站的其余部分。欢迎报告 bug、提交修复和文章草稿。许可和第三方鸣谢见 ',
   'about.openSourceSuffix': '。',
-  'about.activityHeading': '玩家对局活动',
-  'about.activityIntro':
-    'Mistboard 会把完成的对局保存为持久复盘记录。这些统计只计算面向玩家的对局：玩家对玩家和玩家对引擎。',
-  'about.activityLoading': '正在加载活动统计...',
-  'about.activityUnavailable': '持久化存储离线时，活动统计不可用。',
-  'about.activitySummaryTotal': '已记录 {total} 局面向玩家的完成对局',
-  'about.activitySummaryRecent': '，其中过去 30 天有 {count} 局',
-  'about.activityChartHeading': '面向玩家对局累计数',
-  'about.activityNoGames': '还没有记录完成的对局。',
-  'about.activityChartLabel': '{count} 局完成对局随时间变化',
-  'about.activityFullStats': '完整统计',
   'stats.heading': '统计',
   'stats.lede':
     '这里的对局量。计入人与人或人与引擎之间已完成的对局；引擎对引擎的比赛和测试对局不计入。',
@@ -165,7 +158,6 @@ export const ZH_HANS_CONTENT = {
   'stats.byMode': '按模式统计',
   'stats.unavailableHeading': '统计暂不可用',
   'stats.unavailableBody': '无法加载统计数据，请稍后再试。',
-  'about.modeSplit': '模式分布',
   'about.modePvp': '玩家对玩家',
   'about.modePve': '玩家对引擎',
   'source.heading': '源代码',
@@ -179,6 +171,29 @@ export const ZH_HANS_CONTENT = {
   'source.chessground': 'chessground：棋盘交互和棋子渲染，GPL-3.0-or-later。',
   'source.chessops': 'chessops：国际象棋规则基础组件，GPL-3.0-or-later。',
   'source.stockfish': 'Stockfish：研究和引擎 worker 流程的可选引擎/运行时依赖，GPL 系列。',
+  'source.abJchess':
+    'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）：本站最强的揭棋机器人，GPL-3.0；其神经网络经作者许可使用。',
+  'source.katagomo':
+    'KataGomo，作者 hzyhhzy：斗兽棋版 KataGo（AnimalChess2025 分支），本站最强的斗兽棋机器人，MIT；经作者许可使用。',
+  'source.katago': 'KataGo，作者 lightvector：KataGomo 所基于的引擎，MIT。',
+  'source.dandelion':
+    'Dandelion 4，作者 Kouza（lxsgx23）：本站最强斗兽棋机器人的神经网络来源，从其发布页获取，不在本站转存。',
+  'source.chessdb': '象棋云库（chessdb.cn）：象棋分析棋盘和练习中的残局精确结果。',
+  'source.pieceSetLacquer':
+    '亮漆棋子：PlayOK 绘制，Sebastian Pipping 制作 SVG，取自 pychess-variants，CC0 1.0。',
+  'source.pieceSetWood':
+    '木质棋子：Kadagaden 的“gmchess style wood piece set”，CC BY 4.0。已修改：重新居中，背面为去掉文字的将帅棋子。',
+  'source.pieceSetWoodLicense': 'CC BY 4.0 许可协议',
+  'source.pieceSetBook':
+    '棋书棋子：字形取自 Andrew West 的 BabelStone Xiangqi Colour 字体，SIL Open Font License 1.1。',
+  'source.pieceSetBrush':
+    '毛笔棋子：pychess-variants 的 hnzw 棋子，作者 gbtami 及贡献者，AGPL-3.0。',
+  'source.pieceSetClerical':
+    '隶书棋子：pychess-variants 的 lishuw 棋子，作者 gbtami 及贡献者，AGPL-3.0。',
+  'source.pikafish':
+    '皮卡鱼（Pikafish），作者皮卡鱼开发团队：本站象棋最高等级的皮卡鱼机器人，也是象棋对局、研习和直播分析以及浏览器内分析棋盘所用的引擎，GPL-3.0。其神经网络权重另有授权协议。',
+  'source.pikafishSite': 'pikafish.com',
+  'source.pikafishWeightsLicense': '权重协议',
   'source.projectIdentity': '项目身份',
   'source.identityAssets':
     'Mistboard 名称、标志、mistboard.com 域名、托管服务身份和官方活动都是受控项目资产。',
@@ -186,9 +201,23 @@ export const ZH_HANS_CONTENT = {
     'AGPL 允许 fork，但 fork 应使用不同名称，并避免暗示自己是官方 Mistboard 服务。',
   'source.identityForksBrand': 'Fork 和衍生项目应展示自己的公开品牌、域名和托管服务身份。',
   'faq.heading': '常见问题',
+  'faq.playWebQuestion': '有网页版吗？需要下载吗？',
+  'faq.playWebAnswer':
+    'Mistboard 就是网页版。打开浏览器就能下棋，电脑和手机都可以，无需下载或安装。',
+  'faq.playComputerQuestion': '可以和电脑下吗？',
+  'faq.playComputerAnswer':
+    '可以。人机对战有八个难度等级，从入门到很强，最强的对手是皮卡鱼（Pikafish）引擎。',
+  'faq.playBotsLink': '挑选等级',
+  'faq.playFriendQuestion': '怎么和朋友下？',
+  'faq.playFriendAnswer': '开始对局时选择和朋友对弈，把链接发给朋友，对方打开链接就能入座。',
+  'faq.playOtherQuestion': '还有哪些玩法？',
+  'faq.playOtherAnswer':
+    '揭棋、暗棋、斗兽棋、翻翻棋，以及我们设计的游戏：疯狂屋象棋、鸭子象棋和迷雾象棋。',
+  'faq.playReviewQuestion': '下完可以复盘吗？',
+  'faq.playReviewAnswer': '可以。象棋对局结束后可以进入复盘，引擎会标出决定胜负的几步。',
   'faq.darkChessQuestion': 'Mistboard 上可以玩什么？',
   'faq.darkChessPrefix':
-    'Mistboard 托管国际象棋、象棋、将棋、斗兽棋及相关棋类中的原创策略游戏和严肃变体。有些是公开信息游戏；有些使用迷雾或隐藏身份。',
+    '以中国象棋为主：象棋及其传统近亲揭棋和暗棋。旁边是我们设计的游戏，例如疯狂屋象棋、鸭子象棋和迷雾象棋，还有斗兽棋和迷雾国际象棋。有些是公开信息游戏；有些用迷雾或背面朝下的棋子隐藏信息。',
   'faq.rulesReference': '规则参考',
   'faq.darkChessSuffix': '列出了当前游戏。',
   'faq.accountQuestion': '我需要账号吗？',
@@ -201,16 +230,15 @@ export const ZH_HANS_CONTENT = {
   'faq.contactSuffix': '发送消息。如果是关于某局对局，请附上房间链接。',
   'faq.cheatingQuestion': 'Mistboard 如何防作弊？',
   'faq.cheatingPrefix':
-    'Mistboard 的设计不会把隐藏棋盘放在对手浏览器里等人揭开。服务器拥有完整局面，计算每位玩家的合法视角，并且只通过网络发送该玩家允许看到的受限视角。代码是',
+    '无论哪种棋、是否计分，借助引擎或他人帮助、滥用账号都违反公平竞赛规则。在隐藏棋子的游戏里，服务器还保存完整棋盘，只把每位玩家可以看到的部分发给他，所以页面里没有东西可挖。代码是',
   'faq.openSource': '开源的',
-  'faq.cheatingSuffix':
-    '，所以这个信任边界可以被检查。外部协助、账号滥用，以及试图绕过迷雾过滤器仍然违反公平竞赛规则。',
+  'faq.cheatingSuffix': '，任何人都可以检查。',
   'faq.enginesQuestion': 'Mistboard 引擎会看到完整棋盘吗？',
   'faq.enginesAnswer':
-    '不会。引擎只会收到所玩游戏允许它知道的信息。在隐藏信息游戏中，这意味着它拿到和人类玩家一样的受限视角；真实棋盘只留在服务器端用于裁定。',
+    '不会。在隐藏棋子的对局中，引擎看到的和坐在同一位置的人类玩家一样。完整棋盘只留在服务器上，用来判定着法和结果。',
   'faq.liveWatchQuestion': '我可以观看实时对局吗？',
   'faq.liveWatchAnswer':
-    '公开信息的对局（包括象棋）可以在观战页实时观看。隐藏信息的对局在进行中不能观战，这样没有人能在对局中把完整棋盘告诉玩家。任何对局结束后，都可以从任一方视角，或在完整揭示状态下复盘。',
+    '大多数对局都可以在观战页实时观看。揭棋和暗棋的观众看到的就是棋盘的实际样子，背面朝下的棋子也一样。迷雾对局在进行中不能观战，这样没有人能在对局中把完整棋盘告诉玩家。任何对局结束后，都可以从任一方视角，或在完整揭示状态下复盘。',
   'faq.libraryQuestion': '棋谱库里的对局从哪里来？',
   'faq.libraryAnswer':
     '四个来源：我们自己重新录入的公有领域古谱、经主办方同意转播的比赛、从公开棋谱库取得并在页面上注明出处的个别赛事，以及在本站下的对局。我们不转载其他网站的棋谱库。别处有规模很大的象棋数据库，复制过来并不难。那些是建库的人的成果，所以我们先征求同意。这样棋谱库会比原本可以达到的规模小，但里面每一局的来源都说得清楚。',
@@ -218,7 +246,7 @@ export const ZH_HANS_CONTENT = {
     '开局库另外使用了一份获授权的匿名网络对局数据，所以它统计的局数比棋谱库列出的要多。',
   'faq.ratedQuestion': '计分对局如何运作？',
   'faq.ratedAnswer':
-    '计分对局是支持排行榜变体中需要账号的人类对人类对局。Beta 期间，评分校准时排行榜可能是临时的。引擎对局和休闲对局不计分。',
+    '计分对局在两位已登录的玩家之间进行，仅限设有排行榜的变体。计分对局仍处于 Beta 阶段，评分在稳定下来之前可能波动较大。引擎对局和休闲对局不计分。',
   'terms.heading': '使用条款',
   'terms.intro':
     'Mistboard 是一个免费的开源爱好项目。这些是使用 mistboard.com 托管网站的基本规则。随着项目成长，这些规则会变化；本页始终是当前版本。',
@@ -272,14 +300,14 @@ export const ZH_HANS_CONTENT = {
     'Mistboard 是一个免费的开源爱好项目。本页说明我们在 mistboard.com 托管网站上收集什么。随着项目成长，本页会变化；本页始终是当前版本。',
   'privacy.collectHeading': '我们收集什么',
   'privacy.collectBody':
-    '汇总分析数据、你下过的对局，以及如果你创建账号，你的用户名和邮箱。你的浏览器会在本地存储中保存一个随机标识，以便把你未登录时下的对局在统计中计为同一位访客；它不是 Cookie，不会离开本站，也不会展示给其他玩家。围绕计分对局，为保持诚实公平，我们会收集更多数据。',
+    '分析数据、你下过的对局，以及如果你创建账号，你的用户名和邮箱。我们使用 PostHog 做分析：它会按浏览器记录你访问的页面和在页面上的操作，如果你登录，这些记录会关联到你的账号。你的浏览器会在本地存储中保存一个随机标识，以便把你未登录时下的对局在统计中计为同一位访客；它不是 Cookie，不会离开本站，也不会展示给其他玩家。围绕计分对局，为保持诚实公平，我们会收集更多数据。',
   'privacy.noDoHeading': '我们不会做什么',
   'privacy.noDoBody':
     '没有广告。我们不出售你的数据。不录制你的屏幕。我们尊重 Do Not Track。休闲对局不需要账号。',
   'privacy.publicGamesHeading': '你的对局是公开的',
-  'privacy.publicGamesPrefix': '已结束对局按 ',
+  'privacy.publicGamesPrefix': '已结束的对局是公开的，并按月发布在',
   'privacy.ccByLink': 'CC BY 4.0',
-  'privacy.publicGamesSuffix': ' 发布。',
+  'privacy.publicGamesSuffix': ' 许可。',
   'privacy.promisesHeading': '我们承诺什么，以及不承诺什么',
   'privacy.promisesBody':
     '我们承诺把隐藏信息保留在服务器端，并告诉你我们收集什么。我们不承诺你的数据、账号或评分能在开发期间保留。它们可能会在不另行通知的情况下改变或消失。不要把任何你承受不起丢失的东西放在 Mistboard 上。',
@@ -293,7 +321,7 @@ export const ZH_HANS_CONTENT = {
   'patron.perkTitle': '赞助包含什么',
   'patron.perk':
     '赞助者的资料页上会有一个小红心徽章：订阅期间一直保留，单次付款则每 5 美元保留一个月。它不解锁功能，也不带来对局上的优势。',
-  'patron.supportLine': 'Mistboard 由一个人开发和运营。',
+  'patron.supportLine': 'Mistboard 靠赞助会员维持运营。',
   'patron.donate': '订阅',
   'patron.donateOnce': '单次付款',
   'patron.manage': '管理你的订阅',
@@ -301,10 +329,10 @@ export const ZH_HANS_CONTENT = {
   'patron.patronUntil': '你的赞助者身份有效至 {date}。谢谢。',
   'patron.signInFirst': '登录后继续',
   'patron.unavailable': '结账还没开放，不会产生任何扣款。请稍后再来。',
+  'patron.currencyNote': '价格以美元标示，结账时会换算成你所在地区的货币。',
   'patron.checkoutError': '发起结账时出了问题，请重试。',
   'patron.transparencyTitle': 'Mistboard 如何运转',
-  'patron.transparency':
-    'Mistboard 由一个人开发和运营。没有广告，没有投资人，也不出售数据。订阅用来支付服务器和开发时间。',
+  'patron.transparency': '没有广告，没有投资人，也不出售数据。订阅用来支付服务器和开发时间。',
   'patron.faqTitle': '常见问题',
   'patron.faqPerkQuestion': '有赞助者专属的内容吗？',
   'patron.faqPerkAnswer':
@@ -316,7 +344,7 @@ export const ZH_HANS_CONTENT = {
     '随时可以从本页打开账单管理页面来调整方案或取消。周期性扣款会在当前周期结束时停止。如果扣款有误，或者你想要回最近一笔付款，请在扣款后 30 天内联系我们，我们会退款。',
   'patron.faqPayQuestion': '可以用哪些方式付款？',
   'patron.faqPayAnswer':
-    '按月订阅支持银行卡。单次付款支持银行卡、支付宝和微信支付。所有金额均以美元计。',
+    '按月订阅支持银行卡。单次付款支持银行卡、支付宝和微信支付。价格以美元定价，结账时会以你所在地区的货币显示，你也可以选择用美元支付。',
   'patron.termsPrefix': '扣款、取消和退款的规定见',
   'patron.termsLink': '使用条款',
   'patron.termsSuffix': '。',
@@ -324,10 +352,10 @@ export const ZH_HANS_CONTENT = {
   'developers.heading': '开发者',
   'apiDocs.heading': 'API 文档',
   'contribute.intro':
-    'Mistboard 是免费开源的，由一个人公开开发。要做的事还有很多，无论你写不写代码，都有很多种帮忙的方式。',
+    'Mistboard 是免费开源的，公开开发。要做的事还有很多，无论你写不写代码，都有很多种帮忙的方式。',
   'contribute.playHeading': '下棋并给出反馈',
   'contribute.playBody':
-    '眼下你能做的最有用的事，就是下棋，然后告诉我们哪里坏了、哪里别扭。真实对局暴露规则漏洞、含糊之处和缺失功能的速度，比任何其他方式都快。',
+    '眼下你能做的最有用的事，就是下棋，然后告诉我们哪里坏了、哪里别扭。真实对局暴露规则漏洞、含糊之处和缺失功能的速度，比任何其他方式都快。我们设计的新游戏也需要试玩。',
   'contribute.reportHeading': '报告问题、提出想法',
   'contribute.reportPrefix': '发现了问题，或者有什么想法？可以在 ',
   'contribute.reportMiddle': ' 上开一个 issue，或者通过',
@@ -338,11 +366,111 @@ export const ZH_HANS_CONTENT = {
     ' 上。你可以认领一个开放的 issue，或者直接提交 pull request。源码页面列出了代码仓库，以及 Mistboard 所依赖的库。',
   'contribute.translateHeading': '帮忙翻译',
   'contribute.translateBody':
-    'Mistboard 以英文为主，简体中文和繁体中文都只译了一部分。如果你能改进某条翻译，或者想开启一门新语言，欢迎提交 issue 或 pull request。',
+    'Mistboard 提供英文、简体中文和繁体中文。中文是机器翻译的，还没有母语读者校对过。如果你会下棋、能读中文，欢迎帮我们审阅一页，规则页或者一节课都可以，把棋手不会这样说的地方标出来：一个术语、一个开局名称、一句读起来像翻译的话。一页不到一小时，之后没有任何义务。',
+  'contribute.translateStartPrefix': '想开始的话，请发邮件到 ',
+  'contribute.translateStartMiddle':
+    '，用一句话说说你怎么下棋，以及想先看规则页还是课程。如果你愿意署名，我们会把你的名字加到',
+  'contribute.translateThanksLink': '致谢页面',
+  'contribute.translateStartSuffix': '。',
   'contribute.supportHeading': '支持这个项目',
   'contribute.supportPrefix': '服务器和开发都要花钱。如果你想帮 Mistboard 保持免费、无广告，可以',
   'contribute.supportLink': '赞助 Mistboard',
   'contribute.supportSuffix': '。哪怕一点也有用，而且下棋从来不需要付费。',
+  'contribute.crossLinkPrefix': '如果你有观众、赛事或引擎，请看',
+  'contribute.crossLinkSuffix': '。',
+  'contribute.crossLinkOr': '或',
+  'creators.heading': '与我们合作',
+  'creators.intro':
+    'Mistboard 是一个免费、开源、无广告的网站，提供中国象棋和原创策略游戏，支持中文和英文。我们希望与愿意把这项棋类带给更多人的棋手、内容作者和主办方合作。',
+  'creators.playersHeading': '有等级称号的棋手和教练',
+  'creators.playersPrefix': '经过认证的称号徽章，以及一个',
+  'creators.playersCoachLink': '教练页面',
+  'creators.playersBody':
+    '，学生直接联系你、直接付费给你，我们不抽取任何佣金。你的评注研究可以署名登上首页，文章以你的名字发表，审阅我们的课程和题目也会注明你的贡献。可以先进行',
+  'creators.playersVerifyLink': '称号认证',
+  'creators.playersOr': '，或',
+  'creators.playersLink': '了解我们为有称号棋手提供什么',
+  'creators.playersSuffix': '。',
+  'creators.videoHeading': '内容作者和主播',
+  'creators.gamesLead': '对局检索。',
+  'creators.gamesPrefix': '我们按你的主题，按布局、棋手或赛事，从顶级比赛和我们的',
+  'creators.gamesLink': '转播存档',
+  'creators.gamesSuffix': '中找出合适的对局。',
+  'creators.analysisLead': '现成的分析。',
+  'creators.analysisPrefix': '每盘棋都整理成一个',
+  'creators.analysisLink': '研究',
+  'creators.analysisSuffix': '，附引擎分析并标注关键时刻，可以直接在镜头前讲解。',
+  'creators.streamLead': '直播准备。',
+  'creators.streamBody':
+    '可嵌入 OBS 的棋盘、按你选择的强度对弈的机器人，开播前我们和你一起做一次技术检查。',
+  'creators.videoClose': '你的内容归你所有。',
+  'creators.eventsHeading': '赛事主办方、俱乐部和协会',
+  'creators.eventsBody':
+    '我们免费转播赛事：赛事页面、每盘棋的分析，以及可以嵌入你自己网站的棋盘。把棋谱文件发给我们，页面由我们制作并发布。',
+  'creators.eventsLink': '查看当前转播',
+  'creators.eventsSuffix': '。',
+  'creators.writersHeading': '作者和排局作者',
+  'creators.writersBody': '以你的名字发表文章和布局指南，署名发表排局作品。',
+  'creators.enginesHeading': '引擎作者',
+  'creators.enginesBody':
+    '我们把强引擎作为网站上的机器人提供服务，注明作者，并在我们的机器人梯队中评定等级分。',
+  'creators.enginesChampionsPrefix': '在公开对抗赛中击败冠军的引擎会夺得头衔：请看',
+  'creators.enginesChampionsLink': '引擎冠军',
+  'creators.enginesChampionsSuffix': '。',
+  'creators.contactHeading': '联系',
+  'creators.contactPrefix': '请使用',
+  'creators.contactLink': '联系表单',
+  'creators.contactSuffix': '。告诉我们你是谁、在做什么，并附上你的频道、赛事或个人资料链接。',
+  'creators.crossLinkPrefix': '想用其他方式帮忙，比如报告问题、翻译或写代码？请看',
+  'creators.crossLinkSuffix': '。',
+  'champions.heading': '引擎冠军',
+  'champions.intro':
+    '每个游戏都有一位现任冠军引擎。它就是你在网站上对弈的机器人，并署上作者的名字。任何引擎都可以在公开对抗赛中挑战冠军头衔。',
+  'champions.aboutJieqi':
+    '作者 Huorongrong 和 Laoxu（Kouza）：带有自己神经网络的 Pikafish 分叉。在本站每步 4 秒，4 线程。',
+  'champions.aboutJunglePrefix':
+    '作者 hzyhhzy，网络来自 Kouza：自我对弈训练的神经网络。在本站每步 150 次访问；',
+  'champions.aboutJungleSuffix': '（每步 500 万节点）是它下面较容易的机器人。',
+  'champions.championBadge': '冠军',
+  'champions.statWins': '胜',
+  'champions.statDraws': '和',
+  'champions.statLosses': '负',
+  'champions.barLabel': '{wins} 胜，{draws} 和，{losses} 负',
+  'champions.tookJieqi': '2026-09-30 从皮卡鱼第 8 级手中夺得头衔，共 400 局，得分 0.64。',
+  'champions.tookJungle':
+    '2026-09-22 从 MistyJungle 手中夺得头衔，共 200 局，每步 1,000 次访问，一局未负。',
+  'champions.readMatch': '阅读比赛报道',
+  'champions.seeGames': '查看对局',
+  'champions.playChampion': '与冠军对弈',
+  'champions.openHeading': '待争头衔',
+  'champions.openIntro':
+    '其他所有有机器人的游戏。你对弈的机器人持有头衔，直到有挑战者在对抗赛中击败它；目前还没有挑战者下过头衔赛。',
+  'champions.heldBy': '持有者',
+  'champions.openBadge': '头衔待争',
+  'champions.challengeCta': '挑战此头衔',
+  'champions.enginePikafish': '皮卡鱼',
+  'champions.engineFairyStockfish8': 'Fairy-Stockfish 第 8 级',
+  'champions.writeUpLink': '文章',
+  'champions.gamesLink': '对局',
+  'champions.linkSeparator': '、',
+  'champions.parenOpen': '（',
+  'champions.parenClose': '）。',
+  'champions.historyHeading': '头衔历史',
+  'champions.historyJieqi':
+    '2026-09-30，揭棋：Huorongrong 和 Laoxu（Kouza）的 AB-JChess 从皮卡鱼第 8 级手中夺得头衔，400 局 248-136-16，得分 0.64',
+  'champions.historyJungle':
+    '2026-09-22，斗兽棋：hzyhhzy 的 KataGo-AnimalChess（网络来自 Kouza）从 MistyJungle 手中夺得头衔，每步 1,000 次访问，200 局 82 胜 0 负 118 和',
+  'champions.challengeHeading': '挑战头衔',
+  'champions.ruleMatch':
+    '与冠军对弈 200 局，每种颜色各 100 局，双方都使用冠军每步的时间或节点预算，在同一台机器上进行，公开随机种子。对抗赛可以延长到 200 局以上。',
+  'champions.ruleScore': '得分达到 0.55 或更高（约 +35 Elo）即夺得头衔。',
+  'champions.ruleRun': '我们会在收到提交后两周内进行对抗赛，无论结果如何都会公布。',
+  'champions.ruleSubmitPrefix':
+    '提交方式：把 Linux x86-64 二进制文件或权重文件、准确的命令行，以及你自己的对抗赛记录，通过',
+  'champions.ruleSubmitIssueLink': 'GitHub issue',
+  'champions.ruleSubmitMiddle': '或',
+  'champions.ruleSubmitContactLink': '联系表单',
+  'champions.ruleSubmitSuffix': '发给我们。',
   'thanks.heading': '致谢',
   'thanks.intro':
     'Mistboard 站在许多人和项目的开源工作之上，也站在每一位下棋、报告问题、帮它变得更好的人之上。',
@@ -354,4 +482,93 @@ export const ZH_HANS_CONTENT = {
   'thanks.openSourceLink': '源码',
   'thanks.openSourceSuffix': '页面列出了 Mistboard 依赖的项目及其许可证。',
   'thanks.stubNote': '这个页面今后会扩展成一份更完整的致谢名单。',
+  'data.colMonth': '月份',
+  'data.colGames': '对局',
+  'data.colDownload': '下载',
+  'data.colHash': 'SHA-256',
+  'data.builtNote': '文件在第一次有人下载时生成；之后这里会显示它的大小和 SHA-256。',
+  'data.allVariantsNote': '每月一个包含全部变体的 JSONL 文件；每一行都注明了变体。',
+  'data.copy': '复制',
+  'data.copied': '已复制',
+  'data.copyFailed': '请按 Ctrl+C',
+  'data.copyHash': '复制 {format} 的 SHA-256',
+  'data.copyCitation': '复制署名',
+  'data.licenseBody':
+    '署名即注明 Mistboard 并链接到对局数据页面，上面那一行就够了。引擎对局下载还需保留其对局显示的署名。',
+  'privacy.publicGamesMiddle': '供下载，采用 ',
+  'data.aboutLink': '文件里有什么、许可，以及隐藏棋子如何呈现',
+  'data.backToData': '返回对局数据',
+  'data.aboutSubtitle': '月度文件包含什么、如何署名，以及哪些不包含在内。',
+  'data.heading': '对局数据',
+  'data.subtitle': '在 Mistboard 下完的每一盘对局，每个变体每月一个文件。按 CC BY 4.0 免费使用。',
+  'data.variantsLabel': '变体',
+  'data.allVariants': '全部变体',
+  'data.unavailable': '无法加载对局数据',
+  'data.gamesOne': '{count} 盘对局',
+  'data.gamesMany': '{count} 盘对局',
+  'data.countOneMonth': '{months} 个月，{games}',
+  'data.countManyMonths': '{months} 个月，{games}',
+  'data.noMonths': '还没有已结束且有对局的月份。',
+  'data.currentMonthNote': '{month}结束后会加入。',
+  'data.downloadLabel': '下载 {format}：{file}',
+  'data.aboutHeading': '关于数据',
+  'data.formatsHeading': '格式',
+  'data.formatJsonl':
+    'JSONL：每行一盘对局，gzip 压缩。每一行与该对局页面上单独下载的 JSON 完全相同。字段：',
+  'data.fieldGame': '对局编号及其在 Mistboard 上的页面。',
+  'data.fieldVariant':
+    '变体编号，以及 pvp（人对人）、pve（人对机器人），或在机器人对局文件中的 eve（机器人对机器人）。',
+  'data.fieldPlayers': '各方在对局页面上显示的名字，按颜色区分。设为私密的座位显示为 Anonymous。',
+  'data.fieldTimeControl':
+    '初始时间和每步加时（毫秒），并附 5+3 这样的标签；不限时则为 null。按每步固定用时进行的引擎对局附 movetime_ms。',
+  'data.fieldTimes': '对局开始和结束的时间，ISO 8601 格式，UTC。',
+  'data.fieldResult': '获胜颜色或和棋，以及对局如何结束：将死、超时、认输等。',
+  'data.fieldPlies':
+    '按顺序列出每一步：走子方、uci 格式的着法、该变体有记谱法时的 san（否则为 null），以及每步之后双方的剩余时间。在揭棋、暗棋和翻翻棋中，翻开棋子的着法还带有 revealed，揭棋中吃掉暗子的着法带有 captured_hidden，两者都是颜色加兵种。',
+  'data.fieldInk': '仅暗棋和翻翻棋：先手翻出的颜色。',
+  'data.fieldDeal':
+    '本站下的揭棋、暗棋和翻翻棋对局：开局的暗子布局，以写明每枚暗子的 FEN 表示。引擎对局没有此字段。',
+  'data.fieldOrigin': '仅引擎对局下载：赛事、署名，以及始终未揭开的棋子所在的格子。',
+  'data.formatMoves':
+    'uci 着法是坐标：h2e2 是走子，@c3 是翻开一枚暗子，R@d4 是从手中打入（疯狂屋象棋），b3e3@e6 是一回合鸭子象棋，最后是鸭子的落点。',
+  'data.formatPgn':
+    'PGN：用于着法能写成可独立重放文本的变体：迷雾国际象棋用 SAN，象棋和原子象棋用 WXF，迷雾象棋和揭棋用 ICCS 坐标，暗棋用 ICGA 记谱法，翻翻棋用坐标。对局之间空一行，并带有 Site（对局页面）、MistboardVariant、MistboardTermination 和 License 标签。其他变体只提供 JSONL。',
+  'data.licenseHeading': '许可',
+  'data.licensePrefix': '这些文件按 ',
+  'data.licenseSuffix':
+    ' 发布。可用于任何用途，商业或非商业皆可，只要注明 Mistboard 并链接到对局数据页面，例如：',
+  'data.citation': 'Game data from Mistboard, https://mistboard.com/data, CC BY 4.0.',
+  'data.includedHeading': '包含哪些对局',
+  'data.included':
+    '自 2026 年 6 月起在本站下完的每一盘对局：人对人或人对机器人，计分或休闲，登录或以访客身份。对局按结束时所在的月份（UTC）归档。',
+  'data.excluded':
+    '不包含：中止的对局和双方都还没走棋就结束的对局、运营和测试本站的账号下的对局、非公开对局、机器人对局（它们有单独的文件），以及引擎对局等导入的对局。当月结束后才会加入。',
+  'data.hiddenHeading': '隐藏信息',
+  'data.hiddenFog':
+    '已结束的迷雾对局不再隐藏任何信息，所以文件包含双方的每一步，与对局结束后页面上显示的一致。当时每位玩家能看到什么并未保存；可以由着法和开源游戏代码中的视野规则推出。',
+  'data.hiddenFlip':
+    '揭棋、暗棋和翻翻棋开局时棋子背面朝上。它们的文件写明每次翻开的是什么棋子，所以下载的对局只凭着法就能重放，两种格式都可以。',
+  'data.hiddenReveal':
+    '着法带有翻开的棋子。在 PGN 中，着法翻开的棋子写在 = 之后，红方大写，黑方小写，所以任何 PGN 读取器都会把它当作着法的一部分：揭棋如 e3e4=R，翻翻棋如 @c3=E。揭棋吃掉暗子时再加 x= 和被吃的棋子：b0b7=Cx=n。字母沿用各自 FEN 的字母：揭棋 R 车、N 马、B 相、A 仕、C 炮、P 兵；翻翻棋 R 鼠、C 猫、D 狗、W 狼、P 豹、T 虎、L 狮、E 象。',
+  'data.hiddenBanqi':
+    '暗棋 PGN 依照 Chen、Shen 和 Hsu 的记谱法（ICGA Journal，2010）：b4-b2 是走子；论文中写作 d8(P) 的翻子，这里写作 d8=P，因为 PGN 会把括号读成变着。字母沿用论文：K 帅、G 仕、M 相、R 车、N 马、C 炮、P 兵。它的棋盘是 4 列 8 行，所以本站坐标要互换：本站的 a 到 h 列是 ICGA 的第 1 到 8 行，本站的第 1 到 4 行是 ICGA 的 a 到 d 列。JSON 保留本站坐标。',
+  'data.hiddenBanqiLetters':
+    '注意 G：在暗棋着法中它是仕，在暗棋 FEN 中却是帅。FEN 的字母为 G 帅、A 仕、E 相、R 车、H 马、C 炮、S 兵。',
+  'data.hiddenDeal':
+    '有暗子布局时会一并提供。本站的每盘对局在开始时就把棋子全部发好，所以其 JSON 带有 deal_fen，PGN 带有 DealFEN 标签：在该变体的 FEN 后加第六个字段，按棋盘顺序（从最上一行开始）写出每枚暗子。FEN 标签是背面朝上的初始局面。着法中的每次翻开都与布局一致，两个 FEN 都使用本站的坐标和字母。',
+  'data.hiddenNeverRevealed':
+    '引擎对局下载没有暗子布局。对局自己的裁判程序在棋子翻开时才决定它是什么，所以对局结束时仍是暗子的棋子从未有过身份：origin.never_revealed 列出它们所在的格子，任何文件都不会为它们写出棋子。它们的着法带有每一次翻开，所以同样可以重放。',
+  'data.hiddenReplayer':
+    '开源游戏代码中有一个参考重放器 replayHiddenPieceRecord，可以从任一文件重建对局，并逐一核对翻开的棋子与布局。',
+  'data.filesHeading': '文件与校验和',
+  'data.filesBuilt':
+    '文件在第一次有人下载时由数据库生成，之后不再改变。文件生成后，对局数据页面会显示它的大小和 SHA-256，可以用 sha256sum 校验下载。',
+  'data.filesHosting':
+    '文件由本站直接提供。当某个月的文件超过约 100 MB，或下载流量开始产生费用时，会迁移到对象存储（Cloudflare R2）。',
+  'privacy.downloadsLink': '对局数据页面',
+  'data.engineHeading': '机器人对局',
+  'data.engineNote':
+    '本站自己的机器人之间的对局，每天几盘。它们有单独的文件，从不出现在上面的文件中。',
+  'data.engineAbout':
+    '本站每天安排几盘自己的机器人之间的对局，就是你可以对战的那些机器人，涵盖多个变体，并在本站自己的服务器上进行。这些对局发布在单独的月度文件中，位于对局数据页面的“机器人对局”下，mode 为 eve。它们从不出现在人类对局的文件中，也不计入本站的统计或等级分。揭棋机器人对局和本站其他对局一样在开局时发牌，因此带有 deal_fen。',
 } satisfies Partial<Record<ContentI18nKey, string>>;

@@ -11,7 +11,12 @@ import {
 } from '@mistboard/game';
 import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import { BOARD_LASTMOVE_MARKER_SELECTOR } from './board-lastmove.js';
-import { boardCornerRadius, tokenPieceSize } from './board-metrics.js';
+import {
+  boardCornerRadius,
+  roundPieceBox,
+  tokenPieceSize,
+  XIANGQI_PIECE_OUTLINE_SHARE,
+} from './board-metrics.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -21,7 +26,14 @@ import {
   svgBoardGlyphMarker,
 } from './svg-board-marker.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
-import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
+import {
+  renderXiangqiPieceGlyphed,
+  type XiangqiPieceSet,
+  type XiangqiPieceShape,
+  xiangqiNeutralBackMarks,
+  xiangqiPieceShadowEnabled,
+  xiangqiPieceShadowMarks,
+} from './xiangqi-piece-sets.js';
 
 // Bespoke SVG renderer for the banqi board, drawn as the bottom HALF of a xiangqi
 // board in its natural HORIZONTAL orientation: 8 files run left-to-right, 4 ranks
@@ -41,14 +53,29 @@ const FILES = 8; // cells across (9 vertical lines / files a..i)
 const RANKS = 4; // cells down (5 horizontal lines / ranks 1..5, river at the top)
 const CELL = 64;
 const MARGIN = 28;
-const PIECE_SIZE = tokenPieceSize(CELL);
+// Banqi's piece look (Brian, 2026-10-14): a disc on every banqi board, never the
+// grid boards' rounded square, its outer edge at 92% of the cell (not the 98% of
+// the xiangqi family: banqi pieces sit in cells side by side, so they keep a gap).
+// The box a piece is drawn in is cell x 0.92 / 0.948, since the outline ends at
+// 94.8 of its 100-unit box. Face-down backs match the faces' outer size and shape.
+export const BANQI_PIECE_SHAPE: XiangqiPieceShape = 'disc';
+export const BANQI_PIECE_REACH = 0.92;
+/** The box a banqi piece is drawn in on a board of this cell. */
+export function banqiPieceDrawSize(cell: number): number {
+  return roundPieceBox((cell * BANQI_PIECE_REACH) / XIANGQI_PIECE_OUTLINE_SHARE);
+}
+const PIECE_SIZE = banqiPieceDrawSize(CELL);
+/** Half the piece's outer edge, the radius a mark ON the piece's edge uses. */
+const PIECE_EDGE_R = (CELL * BANQI_PIECE_REACH) / 2;
+/** The layout piece size the engine marker was tuned on. */
+const MARK_PIECE_SIZE = tokenPieceSize(CELL);
 const WIDTH = MARGIN * 2 + FILES * CELL;
 const HEIGHT = MARGIN * 2 + RANKS * CELL;
 const HIT_HALF = CELL / 2 - 1;
 // Engine candidate marker. Was sharing the last-move ring's radius, which tied an
 // unrelated mark to that ring's geometry; the other boards size it from the piece
 // like their selection ring, so do the same here.
-const ENGINE_MARKER_RADIUS = PIECE_SIZE / 2 + 6;
+const ENGINE_MARKER_RADIUS = MARK_PIECE_SIZE / 2 + 6;
 // Last move: banqi TINTS THE CELL instead of ringing the piece, and this is the
 // one board on which that is the right call.
 //
@@ -88,9 +115,15 @@ export type BanqiBoardRenderOptions = {
   // Board moves of the selected piece (flips excluded — a face-down tile is
   // clicked directly to flip, so it needs no target dot).
   legalMoves?: readonly BanqiMove[];
+  // Moves of the selected piece that the 長捉 rule forbids (view.forbiddenMoves):
+  // each destination gets a red cross where its dot would be. Interactive only.
+  forbiddenMoves?: readonly BanqiMove[];
   pieceSet?: XiangqiPieceSet;
   // While dragging, render the origin as a dim source shadow.
   draggingFrom?: BanqiSquare | null;
+  // Coordinate labels (the site-wide Board coordinates setting, #308): callers
+  // pass boardCoordinatesEnabled(); authored diagrams leave it off.
+  coordinates?: boolean;
 };
 
 export interface BanqiBoardArrow extends SvgBoardArrowStyle {
@@ -119,8 +152,9 @@ export function banqiPieceGhostSvg(
     x: 0,
     y: 0,
     size: PIECE_SIZE,
+    shape: BANQI_PIECE_SHAPE,
   });
-  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
+  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
 }
 
 // A line intersection. `fileLine` 0..8 runs left→right (file a at the left);
@@ -182,11 +216,44 @@ function gridLines(): string {
   return parts.join('');
 }
 
+/** The jade back's radius in a piece box of `size`: its outer edge (r plus half its
+ *  2-unit stroke, .banqi-back > circle) lands where a face's outline ends, 47.4 of
+ *  the 100-unit box. */
+export function banqiFaceDownRadius(size: number): number {
+  return Math.round((size * 0.474 - 1) * 100) / 100;
+}
+
 // A uniform face-down disc: one colour, a single ring, no glyph (the deal is
-// hidden from both). A flat disc with no inner ring keeps the back clean.
-function faceDownDisc(cx: number, cy: number, className = 'banqi-back'): string {
-  const r = PIECE_SIZE * 0.46;
-  return [`<g class="${className}">`, `<circle cx="${cx}" cy="${cy}" r="${r}"/>`, `</g>`].join('');
+// hidden from both). A flat disc with no inner ring keeps the back clean. A
+// piece set whose own back is the same for both sides (wood, brush, clerical)
+// draws that back instead; a set whose backs differ by colour keeps the disc,
+// since a banqi tile must not tell its colour.
+function faceDownDisc(
+  cx: number,
+  cy: number,
+  pieceSet: XiangqiPieceSet,
+  className = 'banqi-back',
+): string {
+  const marks = xiangqiNeutralBackMarks(pieceSet);
+  // The same disc shadow as the revealed pieces (xiangqiPieceShadowMarks).
+  const shadowOn = xiangqiPieceShadowEnabled();
+  if (marks) {
+    const x = cx - PIECE_SIZE / 2;
+    const y = cy - PIECE_SIZE / 2;
+    // The asset backs are normalised to a radius-45 disc, like the faces.
+    const shadow = shadowOn ? xiangqiPieceShadowMarks(45) : '';
+    const overflowAttr = shadow ? ' overflow="visible"' : '';
+    return `<g class="${className}"><svg x="${x}" y="${y}" width="${PIECE_SIZE}" height="${PIECE_SIZE}"${overflowAttr} viewBox="0 0 100 100">${shadow}${marks}</svg></g>`;
+  }
+  const r = banqiFaceDownRadius(PIECE_SIZE);
+  // The disc's outer edge includes its 2-unit stroke (.banqi-back > circle).
+  const shadow = shadowOn ? xiangqiPieceShadowMarks(r + 1, cx, cy, PIECE_SIZE) : '';
+  return [
+    `<g class="${className}">`,
+    shadow,
+    `<circle cx="${cx}" cy="${cy}" r="${r}"/>`,
+    `</g>`,
+  ].join('');
 }
 
 function pieceLayer(
@@ -200,7 +267,7 @@ function pieceLayer(
     const dragSource = square === draggingFrom;
     const { x, y } = cellCenter(square);
     const pieceSvg = entry.faceDown
-      ? faceDownDisc(x, y, dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back')
+      ? faceDownDisc(x, y, pieceSet, dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back')
       : renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
           ariaLabel: `${entry.color} ${entry.role}`,
           className: dragSource ? 'banqi-piece banqi-drag-source' : 'banqi-piece',
@@ -208,6 +275,7 @@ function pieceLayer(
           x: x - PIECE_SIZE / 2,
           y: y - PIECE_SIZE / 2,
           size: PIECE_SIZE,
+          shape: BANQI_PIECE_SHAPE,
         });
     return `<g class="banqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
   }).join('');
@@ -256,11 +324,21 @@ function selectionRing(selection: BanqiSquare | null): string {
 }
 
 // A capturable piece is outlined in the hint green: the ring sits ON the
-// piece's own edge (PIECE_SIZE/2), wide enough to replace its outline. A ring
+// piece's own edge (PIECE_EDGE_R), wide enough to replace its outline. A ring
 // outside the piece would cross into the neighbouring cell, since a piece
-// fills 90% of its cell. Same radius in the static and interactive layers.
-const CAPTURE_RING_R = PIECE_SIZE / 2;
+// fills 92% of its cell. Same radius in the static and interactive layers.
+const CAPTURE_RING_R = PIECE_EDGE_R;
 const HINT_DOT_R = 10;
+// Half the arm span of the 長捉 cross: a little wider than the dot it replaces, so
+// it reads as a mark rather than a smudge, still well inside the empty cell.
+const FORBIDDEN_CROSS_HALF = 9;
+
+// A red cross where a legal-move dot would be: the move exists, but the 長捉 rule
+// forbids it right now. Chase moves are quiet, so the cell is always empty.
+function forbiddenCross(x: number, y: number): string {
+  const h = FORBIDDEN_CROSS_HALF;
+  return `<path class="banqi-hint-forbidden" d="M${x - h} ${y - h}L${x + h} ${y + h}M${x + h} ${y - h}L${x - h} ${y + h}"/>`;
+}
 
 // Drawn ABOVE the piece layer, where the interactive hit layer draws the same
 // marks: a capture ring sits around the target piece, and under the pieces it
@@ -314,7 +392,11 @@ function lastMoveMarkers(view: BanqiPlayerView): string {
   );
 }
 
-function hitLayerWithTargets(moves: readonly BanqiMove[], view?: BanqiPlayerView): string {
+function hitLayerWithTargets(
+  moves: readonly BanqiMove[],
+  view?: BanqiPlayerView,
+  forbiddenMoves: readonly BanqiMove[] = [],
+): string {
   const targets = new Map<BanqiSquare, { capture: boolean }>();
   if (view) {
     for (const move of moves) {
@@ -322,9 +404,13 @@ function hitLayerWithTargets(moves: readonly BanqiMove[], view?: BanqiPlayerView
       targets.set(move.to, { capture: !!occupant && !occupant.faceDown });
     }
   }
+  const forbidden = new Set(forbiddenMoves.map((move) => move.to));
   return ALL_BANQI_SQUARES.map((square) => {
     const { x, y } = cellCenter(square);
     const target = targets.get(square);
+    if (!target && forbidden.has(square)) {
+      return `<g data-square="${square}" data-forbidden-move="true" class="banqi-hit banqi-hit--forbidden">${forbiddenCross(x, y)}<rect x="${x - HIT_HALF}" y="${y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}"/></g>`;
+    }
     const marker = target
       ? target.capture
         ? `<circle class="banqi-hint-capture" cx="${x}" cy="${y}" r="${CAPTURE_RING_R}"/>`
@@ -335,6 +421,32 @@ function hitLayerWithTargets(moves: readonly BanqiMove[], view?: BanqiPlayerView
       : '';
     return `<g data-square="${square}" class="banqi-hit${target ? ' banqi-hit--target' : ''}">${hover}${marker}<rect x="${x - HIT_HALF}" y="${y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}"/></g>`;
   }).join('');
+}
+
+// Coordinates (#308), in the move list's own names: files a-h left to right
+// along the bottom, ranks 1-4 bottom to top up the left side, so "b3-b2" or
+// "a4" in the score sheet is read straight off the board. Banqi shows one board
+// to both seats, so the labels never flip. They sit in the frame margin, which
+// a piece never reaches (it stops 3 units inside its cell), so nothing resizes
+// when the setting flips.
+export function banqiCoordinateLabels(): string {
+  const size = 15;
+  const bottomY = HEIGHT - MARGIN / 2;
+  const leftX = MARGIN / 2;
+  const parts: string[] = [];
+  for (let file = 0; file < FILES; file += 1) {
+    const { x } = cellCenter(`${'abcdefgh'[file]}1` as BanqiSquare);
+    parts.push(coordLabel(x, bottomY, 'abcdefgh'[file] ?? '', size));
+  }
+  for (let rank = 1; rank <= RANKS; rank += 1) {
+    const { y } = cellCenter(`a${rank}` as BanqiSquare);
+    parts.push(coordLabel(leftX, y, String(rank), size));
+  }
+  return `<g class="banqi-coords" aria-hidden="true">${parts.join('')}</g>`;
+}
+
+function coordLabel(x: number, y: number, text: string, size: number): string {
+  return `<text class="banqi-coord" x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${size}">${text}</text>`;
 }
 
 // `perspective` is accepted for call-site parity with the other variants, but
@@ -348,17 +460,23 @@ export function renderBanqiBoardSvg(
   const moves = options.selectedSquare
     ? (options.legalMoves ?? []).filter((m) => m.from === options.selectedSquare)
     : [];
+  const forbiddenMoves = options.selectedSquare
+    ? (options.forbiddenMoves ?? []).filter(
+        (m) => m.from === options.selectedSquare && m.to !== m.from,
+      )
+    : [];
   return `
     <svg class="banqi-board" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Banqi board">
       <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${boardCornerRadius(WIDTH)}"/>
       <g class="banqi-grid">${gridLines()}</g>
+      ${options.coordinates ? banqiCoordinateLabels() : ''}
       ${lastMoveMarkers(view)}
       ${selectionRing(options.selectedSquare ?? null)}
       ${pieceLayer(view, pieceSet, options.draggingFrom ?? null)}
       ${options.interactive ? '' : moveHints(view, moves)}
       <g class="banqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map(banqiMarkerSvg).join('')}</g>
       <g class="banqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${(options.arrows ?? []).map(banqiArrowSvg).join('')}</g>
-      ${options.interactive ? hitLayerWithTargets(moves, view) : ''}
+      ${options.interactive ? hitLayerWithTargets(moves, view, forbiddenMoves) : ''}
     </svg>
   `;
 }
@@ -386,6 +504,13 @@ export const BANQI_BOARD_CSS = `
       filter: drop-shadow(0 14px 36px rgba(37, 31, 24, 0.18));
     }
     .banqi-board-bg { fill: var(--mini-xq-board-bg, #f0d6a4); }
+    .banqi-coord {
+      fill: color-mix(in srgb, var(--mini-xq-grid, #5b4a32) 72%, transparent);
+      font-weight: 700;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
     .banqi-grid line {
       stroke: var(--mini-xq-grid, #5b4a32);
       stroke-width: 1.5;
@@ -396,6 +521,17 @@ export const BANQI_BOARD_CSS = `
     .banqi-hint-capture {
       fill: none; stroke: rgba(31, 111, 91, 0.85); stroke-width: 4.5; pointer-events: none;
     }
+    /* The 長捉 cross. The board surface keeps its wood colour in both site themes
+       (it follows the board theme, not light/dark), so one red reads on all of
+       them; the token lets a board theme override it. */
+    .banqi-hint-forbidden {
+      fill: none;
+      stroke: var(--banqi-forbidden-mark, rgba(178, 34, 28, 0.85));
+      stroke-width: 4;
+      stroke-linecap: round;
+      pointer-events: none;
+    }
+    .banqi-hit.banqi-hit--forbidden rect { cursor: not-allowed; }
     .banqi-target-hover {
       fill: rgba(31, 111, 91, 0.3);
       opacity: 0;
@@ -439,10 +575,12 @@ export const BANQI_BOARD_CSS = `
     }
     .banqi-lastmove-flip.banqi-lastmove--red { stroke: rgba(143, 26, 20, 0.36); }
     .banqi-lastmove-flip.banqi-lastmove--black { stroke: rgba(11, 23, 35, 0.44); }
-    .banqi-piece { pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2)); }
-    .banqi-back { pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3)); }
+    /* The disc shadow is drawn into each piece and back (xiangqiPieceShadowMarks). */
+    .banqi-piece { pointer-events: none; }
+    .banqi-back { pointer-events: none; }
     .banqi-drag-source { opacity: 0.34; }
-    .banqi-back circle { fill: #2f8f6b; stroke: #184a38; stroke-width: 2; }
+    /* The disc only: the shadow's circles sit inside a group of their own. */
+    .banqi-back > circle { fill: #2f8f6b; stroke: #184a38; stroke-width: 2; }
     .banqi-hit rect { fill: transparent; cursor: pointer; }
   `;
 

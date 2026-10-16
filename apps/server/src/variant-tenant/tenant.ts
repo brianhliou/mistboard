@@ -46,6 +46,70 @@ export type TenantGameStateLike<C extends string> = {
 // race, ...) never pass through here — they come out of rules.applyMove.
 export type TenantEndReason = 'timeout' | 'resignation' | 'abandonment';
 
+// Endings an OUTSIDE referee declared, for games played off-site and imported
+// (engine-match-import.ts): a lab referee that adjudicates threefold repetition,
+// which the site's own kernels deliberately do not. Never produced by a live
+// room; only a tenant that implements rules.adjudicate accepts the event.
+export const TENANT_ADJUDICATION_REASONS = ['repetition'] as const;
+export type TenantAdjudicationReason = (typeof TENANT_ADJUDICATION_REASONS)[number];
+
+export function isTenantAdjudicationReason(value: unknown): value is TenantAdjudicationReason {
+  return (TENANT_ADJUDICATION_REASONS as readonly unknown[]).includes(value);
+}
+
+/**
+ * Where an IMPORTED game came from, carried on its room-created event and shown
+ * on its review page: the event it was played in, and who to credit for the
+ * engine that played it. Public (unlike `setup`). A live room never has one.
+ */
+export type TenantGameOrigin = {
+  kind: 'imported';
+  /** Event name, e.g. "AB-JChess vs PikaJieQi · 4 s · 2026-09". */
+  event: string;
+  credit?: {
+    /** The credited work as named by its authors, e.g. "AB-JChess". */
+    work: string;
+    /** Author names exactly as written; the page joins them per locale. */
+    authors: string[];
+    url?: string;
+    /** The authors agreed to the games being published here. */
+    permission?: boolean;
+  };
+  /** The fixed think time per move the source played at (an engine match run
+   *  at `go movetime`), in ms. Such a game has no clock, so its pages show this
+   *  where a live game shows its time control. */
+  movetimeMs?: number;
+};
+
+export function isTenantGameOrigin(value: unknown): value is TenantGameOrigin {
+  if (typeof value !== 'object' || value === null) return false;
+  const origin = value as Record<string, unknown>;
+  if (origin.kind !== 'imported' || typeof origin.event !== 'string' || !origin.event) {
+    return false;
+  }
+  if (
+    origin.movetimeMs !== undefined &&
+    !(
+      typeof origin.movetimeMs === 'number' &&
+      Number.isInteger(origin.movetimeMs) &&
+      origin.movetimeMs > 0
+    )
+  ) {
+    return false;
+  }
+  if (origin.credit === undefined) return true;
+  if (typeof origin.credit !== 'object' || origin.credit === null) return false;
+  const credit = origin.credit as Record<string, unknown>;
+  return (
+    typeof credit.work === 'string' &&
+    Array.isArray(credit.authors) &&
+    credit.authors.every((author) => typeof author === 'string') &&
+    (credit.url === undefined ||
+      (typeof credit.url === 'string' && /^https:\/\//.test(credit.url))) &&
+    (credit.permission === undefined || typeof credit.permission === 'boolean')
+  );
+}
+
 /**
  * A move the game will make FOR a seat when a wait runs out, and the absolute
  * time that happens.
@@ -91,6 +155,11 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       // setup MUST strip this in visibility.clientEventFor — it is never sent to
       // a client. Tenants without createSetup never set it.
       setup?: unknown;
+      // Imported games only (engine-match-import.ts): event, credit, movetime.
+      origin?: TenantGameOrigin;
+      // Created by a lobby match (routes/lobby.ts), not an invite link. Public.
+      // Durable so a hydrated room keeps its no-show window and its client copy.
+      lobbyMatch?: boolean;
     }
   | { type: 'seat-assigned'; at: number; roomId: string; clientId: string; seat: C }
   // Accepted in event logs only for tenants with wire.acceptsSeatVacated
@@ -114,7 +183,53 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       reason: AbortReason;
       clock?: TenantClockState<C>;
     }
-  | { type: 'seat-forfeited'; at: number; roomId: string; color: C; clock?: TenantClockState<C> };
+  | { type: 'seat-forfeited'; at: number; roomId: string; color: C; clock?: TenantClockState<C> }
+  // An imported game's ending as its own referee declared it, where the kernel
+  // would not have ended the game itself (a lab threefold repetition). Written
+  // only by the importer; no client message produces it.
+  | {
+      type: 'game-adjudicated';
+      at: number;
+      roomId: string;
+      winner: C | null;
+      reason: TenantAdjudicationReason;
+    }
+  // Server bookkeeping, never sent to a client (tenantEventsForClient and the
+  // live broadcast drop them): the server stopped with this game live, so its
+  // clock froze at `at` instead of charging the outage to the side to move.
+  // `clock` is the frozen snapshot; `activeColor` is who was on move, which
+  // the frozen clock no longer says (a frozen clock and a not-yet-armed one
+  // look the same), and the resume needs it to restart the right clock.
+  | {
+      type: 'clock-paused';
+      at: number;
+      roomId: string;
+      reason: TenantPauseReason;
+      activeColor: C | null;
+      clock: TenantClockState<C>;
+    }
+  | {
+      type: 'clock-resumed';
+      at: number;
+      roomId: string;
+      reason: TenantResumeReason;
+      clock: TenantClockState<C>;
+    };
+
+// 'shutdown': the server was told to stop. 'orphaned': it died without saying
+// so, found on hydration by the gap since the last event.
+export type TenantPauseReason = 'shutdown' | 'orphaned';
+// 'players-returned': every human seat, or the human on move, is connected
+// again. 'grace-elapsed':
+// the wait ran out with a seat still empty, and that seat's clock runs.
+export type TenantResumeReason = 'players-returned' | 'grace-elapsed';
+
+// Event types that stay on the server: the persisted log keeps them as the
+// replay source of truth, and no client (live, reconnect or review) sees them.
+export const TENANT_SERVER_ONLY_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'clock-paused',
+  'clock-resumed',
+]);
 
 // Wire-side event: move-played gains its 1-based ply so clients can sequence.
 export type TenantClientEvent<C extends string, M, Spec extends string = string> =
@@ -134,6 +249,10 @@ export type TenantProjection<
   seats: Partial<Record<C, string>>;
   clock?: TenantClockState<C>;
   timeControl?: RoomTimeControl;
+  // Set while the game is paused by a server stop: when it paused and who was
+  // on move. Moves are refused and no clock or engine timer runs until a
+  // clock-resumed event clears it.
+  paused?: { at: number; activeColor: C | null };
 };
 
 export type TenantClientRef<C extends string> = {
@@ -204,6 +323,11 @@ export type TenantRuntimeRoom<
   // Fires the tenant's pendingAction. Distinct from the forfeit timer: that one
   // ends the game, this one continues it.
   actionTimer: ReturnType<typeof setTimeout> | null;
+  // While paused by a server stop: resumes the clock when the grace window
+  // runs out with a seat still empty. Optional so rooms built before pauses
+  // existed need no new field; absent reads as no timer.
+  resumeTimer?: ReturnType<typeof setTimeout> | null;
+  resumeDeadline?: number | null;
   forfeitSeat: C | null;
   gameEndRecorded: boolean;
   /**
@@ -261,6 +385,15 @@ export type VariantTenant<
   // index, so a tenant with more than two seats cannot be silently mis-read.
   colors: readonly C[];
   /**
+   * Mutual-confirm PvP rematch (rematch.ts) is ON by default for every tenant:
+   * a finished two-seat PvP live room carries the offer flags in its snapshot
+   * (tenantRoomOffersRematch) and the ws runtime opens the new room through the
+   * registration's lobby factory (rematch-context.ts). A tenant that cannot
+   * rematch says why here; variant-tenant-rematch.test.ts holds every
+   * registered tenant to one or the other.
+   */
+  rematch?: { optOut: string };
+  /**
    * Start the clock on the very first move rather than after the first
    * go-around.
    *
@@ -315,6 +448,9 @@ export type VariantTenant<
     // tables of more than two: there is no "the other player" to hand it to.
     // Omitting it on such a tenant makes the forfeit throw rather than guess.
     finishNoWinner?(state: State, reason: TenantEndReason): State;
+    // Optional: end the game as an outside referee declared (the game-adjudicated
+    // event, imported games only). A tenant without it rejects that event.
+    adjudicate?(state: State, winner: C | null, reason: TenantAdjudicationReason): State;
     abort(state: State, reason: AbortReason): State;
     isColor(value: unknown): value is C;
     isMove(value: unknown): value is M;
@@ -399,6 +535,25 @@ export type VariantTenant<
     // everything for them, and roomViewPolicy('open', …) is 'truth' at every
     // status regardless.
     truthView?(state: State, events: readonly TenantRoomEvent<C, M, Spec>[]): View;
+    // A viewer's own per-ply views (ply 0 = the start position, through the
+    // current ply) while the game is LIVE: exactly the views viewForClient
+    // served that viewer at each ply. Clients of hidden-info tenants cannot
+    // rebuild these from their redacted log (a fog seat sees no opponent move;
+    // a flip variant's deal is a server secret), so without it a reload could
+    // not step back through the game. The runtime sends it only in the hello
+    // of a connection to a playing room (tenantLiveHistoryExtras): a seat after
+    // its token or account is authenticated, a spectator only when the
+    // visibility class shows a live spectator a board at all ('dark' does not).
+    // Return [] for a viewer who gets none (a fog tenant's spectator). Never
+    // truth, never another seat's view.
+    //
+    // Optional and fail-closed: a tenant without it sends nothing. Perfect-info
+    // tenants do not need it: they rebuild per-ply views from their full log.
+    // tenantPerPlyViews (runtime.ts) is the generic builder.
+    liveHistory?(
+      events: readonly TenantRoomEvent<C, M, Spec>[],
+      viewer: TenantSeat<C>,
+    ): Array<{ ply: number; view: View }>;
   };
   engine?: {
     // Required declaration of how the live engine preserves history-dependent terminal

@@ -1,4 +1,10 @@
-import { createUser, getPublicSiteStats, getSiteStats } from './persistence.js';
+import {
+  createUser,
+  getPublicSiteStats,
+  getRecentCountedGamesByVariant,
+  getSiteGameTotals,
+  getSiteStats,
+} from './persistence.js';
 import {
   assert,
   definePersistenceTests,
@@ -68,6 +74,11 @@ definePersistenceTests('site stats', () => {
     }
 
     const stats = await getPublicSiteStats({ now });
+    // The homepage's two-count read agrees with /stats on the same data.
+    assert.deepEqual(await getSiteGameTotals({ now }), {
+      totalCompletedGames: stats.totalCompletedGames,
+      last30dCompletedGames: stats.last30dCompletedGames,
+    });
 
     assert.equal(stats.generatedAt, now.toISOString());
     // The excluded operator is not a registered account here.
@@ -159,6 +170,107 @@ definePersistenceTests('site stats', () => {
       completedGames: 1,
       cumulativeGames: 1,
     });
+  });
+
+  test('public stats leave out every game in a retired variant', async () => {
+    // fortress-xiangqi is retired (runtimeStatus 'retired' in GAME_SPECS): its
+    // games stay in the table and in the admin totals but leave every public
+    // number, eve row included, while the live xiangqi game counts.
+    const now = new Date('2026-10-11T12:00:00.000Z');
+    const ended = new Date('2026-10-10T12:00:00.000Z');
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(
+        `INSERT INTO games
+           (room_id, variant, result, termination, ply_count, started_at, ended_at,
+            white_client, black_client, white_name, black_name, mode, status, visibility)
+         VALUES
+           ('retired-fortress-pvp', 'fortress-xiangqi', 'red-wins', 'resignation', 30, $1, $1,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
+           ('retired-atomic-pve', 'atomic-xiangqi', 'red-wins', 'resignation', 30, $1, $1,
+            'human', 'engine', NULL, NULL, 'pve', 'completed', 'public'),
+           ('retired-fortress-eve', 'fortress-xiangqi', 'draw', 'truncated', 40, $1, $1,
+            'engine:red', 'engine:black', NULL, NULL, 'eve', 'completed', 'public'),
+           ('live-xiangqi-pvp', 'xiangqi', 'red-wins', 'resignation', 30, $1, $1,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public')`,
+        [ended],
+      );
+    } finally {
+      await client.end();
+    }
+
+    const stats = await getPublicSiteStats({ now });
+    assert.equal(stats.totalCompletedGames, 1);
+    assert.equal(stats.last30dCompletedGames, 1);
+    assert.equal(stats.publicGames, 1);
+    assert.deepEqual(stats.modeTotals, { pvp: 1, pve: 0, eve: 0 });
+    assert.deepEqual(stats.variantTotals, [{ variant: 'xiangqi', count: 1 }]);
+    assert.deepEqual(
+      stats.weeklyCompletedGames.filter((w) => w.completedGames > 0),
+      [{ weekStart: '2026-10-05', completedGames: 1 }],
+    );
+    assert.deepEqual(
+      stats.weeklyByVariant.map((v) => [v.variant, v.total]),
+      [['xiangqi', 1]],
+    );
+    assert.equal(stats.dailyCompletedGames.at(-1)?.cumulativeGames, 1);
+    assert.equal(
+      stats.dailyCompletedGames.reduce((sum, d) => sum + d.completedGames, 0),
+      1,
+    );
+    assert.deepEqual(
+      stats.variantDaily.map((v) => [v.variant, v.total]),
+      [['xiangqi', 1]],
+    );
+    assert.deepEqual(await getSiteGameTotals({ now }), {
+      totalCompletedGames: 1,
+      last30dCompletedGames: 1,
+    });
+    assert.deepEqual(await getRecentCountedGamesByVariant(28, { now }), [
+      { variant: 'xiangqi', count: 1 },
+    ]);
+
+    // The admin totals are a separate path and still see every game.
+    const admin = await getSiteStats();
+    assert.equal(admin.gamesByVariant['fortress-xiangqi'], 2);
+    assert.equal(admin.gamesByVariant['atomic-xiangqi'], 1);
+  });
+
+  test('getRecentCountedGamesByVariant counts counted games ended inside the window', async () => {
+    const now = new Date('2026-09-30T12:00:00.000Z');
+    const inside = new Date('2026-09-20T12:00:00.000Z');
+    const outside = new Date('2026-08-20T12:00:00.000Z');
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(
+        `INSERT INTO games
+           (room_id, variant, result, termination, ply_count, started_at, ended_at,
+            white_client, black_client, white_name, black_name, mode, status, visibility)
+         VALUES
+           ('order-jieqi-1', 'jieqi', 'red-wins', 'resignation', 30, $1, $1,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
+           ('order-jieqi-2', 'jieqi', 'red-wins', 'resignation', 30, $1, $1,
+            'human', 'engine', NULL, NULL, 'pve', 'completed', 'public'),
+           ('order-banqi-1', 'banqi', 'red-wins', 'resignation', 30, $1, $1,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
+           ('order-banqi-old', 'banqi', 'red-wins', 'resignation', 30, $2, $2,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
+           ('order-banqi-old-2', 'banqi', 'red-wins', 'resignation', 30, $2, $2,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
+           ('order-xiangqi-eve', 'xiangqi', 'draw', 'truncated', 40, $1, $1,
+            'engine:red', 'engine:black', NULL, NULL, 'eve', 'completed', 'public')`,
+        [inside, outside],
+      );
+    } finally {
+      await client.end();
+    }
+    const rows = await getRecentCountedGamesByVariant(28, { now });
+    assert.deepEqual(rows, [
+      { variant: 'jieqi', count: 2 },
+      { variant: 'banqi', count: 1 },
+    ]);
   });
 
   test('getSiteStats counts accounts and their recent growth', async () => {

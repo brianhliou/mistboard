@@ -4,10 +4,12 @@ import {
   buildLandingPlayPanel,
   buildLobbyRequestsWindow,
   type LandingRoomSetup,
+  landingPlayDeepLinkAccepts,
   maybeOpenPlayDeepLink,
   roomCreationRequestBody,
   setRoomNavigator,
 } from './landing-play.js';
+import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
 
@@ -16,14 +18,16 @@ import { setResolvedSignedIn } from './signed-in-state.js';
 const BASELINE_PICKER_SPECS = [
   'jieqi',
   'banqi',
-  'atomic-xiangqi',
-  'dark-xiangqi',
   'duck-xiangqi',
-  'fortress-xiangqi',
+  'crazyhouse-xiangqi',
+  'dark-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',
 ];
+
+// /api/live-stats reads are shared through a module cache; start each test cold.
+beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('landing play panel', () => {
   beforeEach(() => {
@@ -181,20 +185,20 @@ describe('landing play panel', () => {
       [...options[0]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
         (image) => image.getAttribute('src'),
       ),
-    ).toEqual(['/piece-sets/jungle/dobutsu/red-elephant.png']);
+    ).toEqual(['/piece-sets/jungle/dobutsu/red-elephant.png?v=2']);
     expect(
       [...options[1]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
         (image) => image.getAttribute('src'),
       ),
     ).toEqual([
-      '/piece-sets/jungle/dobutsu/red-elephant.png',
-      '/piece-sets/jungle/dobutsu/black-elephant.png',
+      '/piece-sets/jungle/dobutsu/red-elephant.png?v=2',
+      '/piece-sets/jungle/dobutsu/black-elephant.png?v=2',
     ]);
     expect(
       [...options[2]!.querySelectorAll<HTMLImageElement>('.landing-color-piece.jungle')].map(
         (image) => image.getAttribute('src'),
       ),
-    ).toEqual(['/piece-sets/jungle/dobutsu/black-elephant.png']);
+    ).toEqual(['/piece-sets/jungle/dobutsu/black-elephant.png?v=2']);
   });
 
   it('localizes the open lobby requests window', async () => {
@@ -273,10 +277,10 @@ describe('landing play panel', () => {
     expect(visibleVariantPickerSpecs()).toEqual(BASELINE_PICKER_SPECS);
     expect(selectedVariantSpec()).toBe('dark-chess');
 
-    selectModalVariant('fortress-xiangqi');
+    selectModalVariant('crazyhouse-xiangqi');
 
     expect(activeSetupSection()).toBe('time');
-    expect(selectedVariantSpec()).toBe('fortress-xiangqi');
+    expect(selectedVariantSpec()).toBe('crazyhouse-xiangqi');
   });
 
   it('opens a first-time player on the flagship variant, not the fog one', () => {
@@ -429,6 +433,32 @@ describe('landing play panel', () => {
     });
   }
 
+  // Fortress and Atomic Xiangqi retired on 2026-10-11. An old "play the
+  // computer" link (the brianhliou.com post) still opens setup, but on another
+  // variant: the dialog never names a retired one, and the server would refuse
+  // it anyway (410 retired_game_spec).
+  it('never starts a retired variant from its old deep link', async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/atomic_link' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    setRoomNavigator(() => {});
+    window.history.replaceState(null, '', '/?play=computer&gameSpecId=atomic-xiangqi');
+
+    maybeOpenPlayDeepLink([]);
+    expect(document.querySelector('.landing-setup-overlay')).not.toBeNull();
+
+    clickModalButton('Start game');
+    await flushPromises();
+
+    expect(roomPostBody(fetchSpy)).toMatchObject({ mode: 'pve' });
+    expect(roomPostBody(fetchSpy)).not.toMatchObject({ gameSpecId: 'atomic-xiangqi' });
+    expect(landingPlayDeepLinkAccepts('atomic-xiangqi')).toBe(false);
+    expect(landingPlayDeepLinkAccepts('fortress-xiangqi')).toBe(false);
+  });
+
   it('keeps the coin flip on Challenge a friend, where it is the fairness rule', () => {
     vi.stubGlobal(
       'fetch',
@@ -439,6 +469,46 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Challenge a friend');
     expect(selectedModalColor()).toBe('Random');
+  });
+
+  // Brian's playtest (2026-10-02): the postgame "Challenge a friend" opened on
+  // Black, the side his last friend dialog remembered. The postgame link asks
+  // for the coin flip explicitly, and the stored pick must not override it.
+  it('opens the postgame friend link on Random over a remembered side', () => {
+    window.localStorage.setItem(
+      'mistboard:setup:pvp',
+      JSON.stringify({ gameSpecId: 'xiangqi', preferredColor: 'black' }),
+    );
+    window.history.replaceState(null, '', '/?play=friend&variant=xiangqi');
+    maybeOpenPlayDeepLink([]);
+    // The remembered pick still wins on a plain friend link.
+    expect(selectedModalColor()).toBe('Black');
+    document.querySelector('.landing-setup-overlay')?.remove();
+
+    window.history.replaceState(null, '', '/?play=friend&variant=xiangqi&side=random');
+    maybeOpenPlayDeepLink([]);
+    expect(selectedModalColor()).toBe('Random');
+    expect(window.location.search).toBe('');
+  });
+
+  it('a friend link offers Rated to a signed-in player and asks a guest to sign in', () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(true);
+    window.history.replaceState(null, '', '/?play=friend&variant=xiangqi');
+    maybeOpenPlayDeepLink([]);
+    const ratedOption = () =>
+      [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find((button) =>
+        button.textContent?.startsWith('Rated'),
+      );
+    expect(ratedOption()?.textContent).toBe('Rated');
+    expect(ratedOption()?.disabled).toBe(false);
+    document.querySelector('.landing-setup-overlay')?.remove();
+
+    setResolvedSignedIn(false);
+    window.history.replaceState(null, '', '/?play=friend&variant=xiangqi');
+    maybeOpenPlayDeepLink([]);
+    expect(ratedOption()?.textContent).toBe('Ratedsign in');
+    expect(ratedOption()?.disabled).toBe(true);
   });
 
   // Sides are variant-declared, so an untouched default must not persist as if it
@@ -536,6 +606,7 @@ describe('landing play panel', () => {
       mode: 'pvp',
       gameSpecId: 'banqi',
       timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+      rated: false,
       preferredColor: 'black',
     });
     expect(window.location.pathname).toBe('/room/bq_home');
@@ -552,13 +623,16 @@ describe('landing play panel', () => {
     document.body.append(panel);
 
     openPlaySetup(panel, 'Play a bot');
-    // Pick the strongest xiangqi engine (the default is level 4)...
+    // Pick the strongest xiangqi engine (a newcomer's default is level 2)...
     selectModalVariant('xiangqi');
     selectModalEngine('fairy-stockfish-xiangqi-level-8');
-    // ...then visit Jieqi (one public bot since consolidation, so the bot row
-    // disappears entirely)...
+    // ...then visit Jieqi and pick its level 5 (its own ladder; a newcomer's
+    // default is level 2)...
     selectModalVariant('jieqi');
-    expect(document.querySelector<HTMLElement>('[data-setup-section="engine"]')?.hidden).toBe(true);
+    expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!.value).toBe(
+      'pikafish-jieqi-level-2',
+    );
+    selectModalEngine('pikafish-jieqi-level-5');
     // ...and back to xiangqi: the earlier pick must survive the round-trip.
     selectModalVariant('xiangqi');
     expect(document.querySelector<HTMLElement>('[data-setup-section="engine"]')?.hidden).toBe(
@@ -567,6 +641,47 @@ describe('landing play panel', () => {
     expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!.value).toBe(
       'fairy-stockfish-xiangqi-level-8',
     );
+    // ...and jieqi keeps its own pick too.
+    selectModalVariant('jieqi');
+    expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!.value).toBe(
+      'pikafish-jieqi-level-5',
+    );
+  });
+
+  // The setup dialog opens a newcomer on the same rung the homepage offers
+  // (landing-bot-policy first-game levels), and a level remembered from a
+  // homepage one-click start (stored as the bot id) is kept.
+  it('opens a newcomer on the homepage first-game level and keeps a remembered one', () => {
+    vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
+    vi.stubEnv('VITE_JIEQI_ENABLED', 'true');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const botSelect = () => document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!;
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Play a bot');
+    selectModalVariant('xiangqi');
+    expect(botSelect().value).toBe('fairy-stockfish-xiangqi-level-2');
+    selectModalVariant('jieqi');
+    expect(botSelect().value).toBe('pikafish-jieqi-level-2');
+
+    document.body.replaceChildren();
+    window.localStorage.setItem(
+      'mistboard:setup:pve',
+      JSON.stringify({
+        engineIdByGameSpec: { xiangqi: 'fairy-stockfish-level-6', jieqi: 'pikafish-level-5' },
+      }),
+    );
+    const returning = buildLandingPlayPanel([]);
+    document.body.append(returning);
+    openPlaySetup(returning, 'Play a bot');
+    selectModalVariant('xiangqi');
+    expect(botSelect().value).toBe('fairy-stockfish-xiangqi-level-6');
+    selectModalVariant('jieqi');
+    expect(botSelect().value).toBe('pikafish-jieqi-level-5');
   });
 
   it('makes the last-played engine sticky across reopening the setup dialog', async () => {
@@ -596,13 +711,12 @@ describe('landing play panel', () => {
   });
 
   // The fog engines' per-move floor outruns a 1s or 2s increment and they lose
-  // on time in long games (#283), so bot games there are pinned to the slowest
-  // pace. The pin is PvE-only: the same variant keeps all three paces against a
-  // human.
-  it('pins Fog Chess bot games to 5+5 and starts them there', async () => {
+  // on time in long games (#283), so bot games there need a 5s increment. The
+  // floor is PvE-only: the same variant keeps every pace against a human.
+  it('offers Fog Chess bot games 5+5 and 10+5 and starts them at 10+5', async () => {
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/pinned' });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/floored' });
       return jsonResponse({}, { status: 404 });
     });
     vi.stubGlobal('fetch', fetchSpy);
@@ -612,20 +726,19 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Play a bot');
     selectModalVariant('dark-chess');
-    expect(visibleModalTimeControls()).toEqual(['5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['5 + 5', '10 + 5']);
 
-    // The stored/house default is 3+2, which the pin hides: starting without
-    // touching the picker must still send the pinned pace, not the hidden one.
+    // Starting without touching the picker sends the bot default.
     clickModalButton('Start game');
     await flushPromises();
 
     expect(roomPostBody(fetchSpy)).toMatchObject({
       mode: 'pve',
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
     });
   });
 
-  it('pins Fog Xiangqi bot games to 5+5 as well', () => {
+  it('offers Fog Xiangqi bot games 5+5 and 10+5 as well', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
@@ -636,7 +749,28 @@ describe('landing play panel', () => {
     openPlaySetup(panel, 'Play a bot');
     selectModalVariant('dark-xiangqi');
 
-    expect(visibleModalTimeControls()).toEqual(['5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['5 + 5', '10 + 5']);
+  });
+
+  it('starts every bot game at 10+5 when the player has not picked a pace', async () => {
+    vi.stubEnv('VITE_BANQI_ENABLED', 'true');
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/bot_default' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    setRoomNavigator(() => {});
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    // Banqi keeps 3+2 for human games; its bot game still opens on 10+5.
+    openPlaySetup(panel, 'Play a bot');
+    selectModalVariant('banqi');
+    const selected = document.querySelector<HTMLButtonElement>(
+      '.landing-time-presets:not(.landing-correspondence-presets) button.selected',
+    );
+    expect(selected?.textContent?.trim()).toBe('10 + 5');
   });
 
   it('leaves human fog games on every pace', () => {
@@ -655,7 +789,7 @@ describe('landing play panel', () => {
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
-  it('offers 1+1 for Fortress Xiangqi', () => {
+  it('offers 1+1 for Crazyhouse Xiangqi', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
@@ -664,7 +798,7 @@ describe('landing play panel', () => {
     document.body.append(panel);
 
     openPlaySetup(panel, 'Challenge a friend');
-    selectModalVariant('fortress-xiangqi');
+    selectModalVariant('crazyhouse-xiangqi');
 
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
@@ -687,11 +821,11 @@ describe('landing play panel', () => {
     clickModalButton('Correspondence');
     expect(visibleCorrespondenceOptions()).toEqual(['1 day', '3 days', '7 days']);
 
-    // Other fog variants (Dark Xiangqi) don't carry correspondence yet — dark
-    // chess only — so the toggle disappears and the picker falls back to real time.
+    // Every variant carries correspondence since 2026-10-02: switching to Fog
+    // Xiangqi keeps the toggle and the chosen segment.
     selectModalVariant('dark-xiangqi');
-    expect(correspondenceToggleVisible()).toBe(false);
-    expect(visibleCorrespondenceOptions()).toEqual([]);
+    expect(correspondenceToggleVisible()).toBe(true);
+    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '3 days', '7 days']);
 
     // Find opponent offers it too (submitting posts an open seek to the board).
     openPlaySetup(panel, 'Find opponent');
@@ -764,9 +898,166 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Find opponent');
 
-    expect(document.body.textContent).toContain('Ratedcoming soon');
+    expect(document.body.textContent).toContain('Ratedsign in');
+    expect(document.body.textContent).not.toContain('coming soon');
     // Signed out is casual, so xiangqi's casual-only 10+5 rung shows here.
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
+  });
+
+  it('offers Rated on a friend game and creates the room rated', async () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(true);
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/jq_friend' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    setRoomNavigator(() => {});
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+    selectModalVariant('jieqi');
+
+    const rated = [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find(
+      (button) => button.textContent?.startsWith('Rated'),
+    );
+    expect(rated?.textContent).toBe('Rated');
+    expect(rated?.disabled).toBe(false);
+    // Like Find opponent (and lichess challenges): a signed-in player starts on Rated,
+    // and Rated narrows the clocks to the rated ones.
+    expect(rated?.getAttribute('aria-checked')).toBe('true');
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+
+    clickModalTimeControl('3 + 2');
+    [...document.querySelectorAll('button')]
+      .find((candidate) => candidate.textContent === 'Create room')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushPromises();
+
+    expect(roomPostBody(fetchSpy)).toMatchObject({
+      mode: 'pvp',
+      gameSpecId: 'jieqi',
+      rated: true,
+      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+    });
+  });
+
+  it('sends a casual friend game as casual', async () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(true);
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/bq_friend' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    setRoomNavigator(() => {});
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+    selectModalVariant('banqi');
+    clickModalButton('Casual');
+    [...document.querySelectorAll('button')]
+      .find((candidate) => candidate.textContent === 'Create room')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushPromises();
+
+    expect(roomPostBody(fetchSpy)).toMatchObject({
+      mode: 'pvp',
+      gameSpecId: 'banqi',
+      rated: false,
+    });
+  });
+
+  it('asks a signed-out player to sign in for a rated friend game', () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(false);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+
+    const rated = [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find(
+      (button) => button.textContent?.startsWith('Rated'),
+    );
+    expect(rated?.textContent).toBe('Ratedsign in');
+    expect(rated?.disabled).toBe(true);
+  });
+
+  it("a bot dialog's Rated switches the player to Find opponent, rated, with a note", () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0, requests: [] })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Play a bot');
+    selectModalVariant('jieqi');
+    expect(document.querySelector('.landing-setup-notice')).toBeNull();
+    const rated = [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')].find(
+      (button) => button.textContent?.startsWith('Rated'),
+    );
+    // Shown plainly and clickable; the bot game itself stays casual.
+    expect(rated?.textContent).toBe('Rated');
+    expect(rated?.disabled).toBe(false);
+    expect(rated?.getAttribute('aria-checked')).toBe('false');
+
+    rated?.click();
+
+    expect(document.querySelectorAll('.landing-setup-overlay')).toHaveLength(1);
+    expect(document.querySelector('.landing-setup-start')?.textContent).toBe('Find opponent');
+    expect(selectedVariantSpec()).toBe('jieqi');
+    expect(document.querySelector('.landing-setup-notice')?.textContent).toBe(
+      'Rated games are against people, so we switched to Find opponent.',
+    );
+    const ratedAfter = [
+      ...document.querySelectorAll<HTMLButtonElement>('.landing-start-option'),
+    ].find((button) => button.textContent === 'Rated');
+    expect(ratedAfter?.getAttribute('aria-checked')).toBe('true');
+    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5']);
+  });
+
+  it('a signed-out player who picks Rated in a bot dialog is sent to sign in', () => {
+    setRatedModeEnabled(true);
+    setResolvedSignedIn(false);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Play a bot');
+    [...document.querySelectorAll<HTMLButtonElement>('.landing-start-option')]
+      .find((button) => button.textContent === 'Rated')
+      ?.click();
+
+    expect(window.location.href).toContain('/account?tab=login');
+  });
+
+  it('keeps "coming soon" only while the rated switch is off', () => {
+    setRatedModeEnabled(false);
+    setResolvedSignedIn(true);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Find opponent');
+
+    expect(document.body.textContent).toContain('Ratedcoming soon');
   });
 
   it('hides Dark Mini Xiangqi from the browse picker even with its flags on', () => {
@@ -1127,6 +1418,29 @@ describe('roomCreationRequestBody — jungle PvE bots', () => {
     const body = roomCreationRequestBody('pve', setupFor('jungle'), 'misty-jungle-level-2');
     expect(body.mode).toBe('pve');
     expect(body.engineId).toBe('misty-jungle-level-2');
+  });
+});
+
+describe('roomCreationRequestBody — variant fails closed', () => {
+  const setup = (gameSpecId: string): LandingRoomSetup => ({
+    gameSpecId: gameSpecId as LandingRoomSetup['gameSpecId'],
+    rated: false,
+    timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+    preferredColor: 'random',
+  });
+
+  // Regression: an unlisted variant fell through to dark chess, so the bot
+  // game asked for a fog chess room with the xiangqi mahjong bot (400).
+  it('sends xiangqi-mahjong for a Xiangqi Mahjong bot game', () => {
+    const body = roomCreationRequestBody('pve', setup('xiangqi-mahjong'), 'xiangqi-mahjong-bot');
+    expect(body.gameSpecId).toBe('xiangqi-mahjong');
+    expect(body.engineId).toBe('xiangqi-mahjong-bot');
+  });
+
+  it('throws for a variant it has no mapping for instead of sending dark chess', () => {
+    expect(() => roomCreationRequestBody('pve', setup('no-such-variant'), 'misty')).toThrow(
+      /no game spec mapping/,
+    );
   });
 });
 

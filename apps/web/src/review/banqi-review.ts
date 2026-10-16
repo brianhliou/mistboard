@@ -7,7 +7,6 @@
 // per-game rather than held as a module constant.
 
 import {
-  type BanqiDeal,
   type BanqiGameState,
   type BanqiMove,
   type BanqiPlayerView,
@@ -18,7 +17,7 @@ import {
 import { createBanqiInteractiveBoard } from '../banqi-board.js';
 import type { BanqiBoardArrow, BanqiBoardMarker } from '../live-banqi-render.js';
 import { animateBanqiBoardMove } from '../live-banqi-render.js';
-import { makeBanqiTreeAdapter } from './banqi-tree-adapter.js';
+import { type BanqiReviewStart, makeBanqiTreeAdapter } from './banqi-tree-adapter.js';
 import {
   bestMoveArrowWithParser,
   bestMoveMarkerWithParser,
@@ -133,15 +132,16 @@ function makeBanqiPresentation(
   };
 }
 
-/** `deal` is the recovered postgame deal, or null for a surface that roots the
- *  tree at a parsed position (`config.root`, the analysis board): a null deal
- *  with no root throws at mount, never a silently different deal. */
+/** `start` is the recovered postgame deal plus the rules the game was played under,
+ *  or null for a surface that roots the tree at a parsed position (`config.root`,
+ *  the analysis board): a null start with no root throws at mount, never a
+ *  silently different deal. */
 export function mountBanqiReview(
   root: HTMLElement,
   gameId: string,
-  deal: BanqiDeal | null,
+  start: BanqiReviewStart | null,
   config: BanqiReviewConfig,
 ): BanqiReviewHandle {
-  const adapter = makeBanqiTreeAdapter(gameId, deal);
+  const adapter = makeBanqiTreeAdapter(gameId, start);
   return mountTreeReview(root, makeBanqiPresentation(adapter), config);
 }

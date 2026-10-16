@@ -5,7 +5,9 @@
 // a cursor marks the current ply. Win% (bounded, mate-aware) is used instead of
 // raw cp so mates don't spike the axis.
 import { winPercent } from '@mistboard/game';
+import '../seat-disc-ink.css';
 import './advantage-chart.css';
+import { attachChartScrub, createChartTip, showChartTip } from './chart-scrub.js';
 import { formatEval } from './engine/eval-format.js';
 import type { GamePhases, PlyEval } from './game-analysis.js';
 import { type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
@@ -23,6 +25,11 @@ const PAD_Y = 4;
  *  cursor at ply 0 or at the final ply draws inside the frame instead of losing
  *  half its stroke to the edge. */
 const EDGE_INSET = 0.6;
+
+/** Han, kana and hangul: scripts that stand upright in vertical writing. */
+const CJK = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
+/** A one-line phase label's 4px left margin plus 2px clear of the next divider. */
+const PHASE_LABEL_INSET = 6;
 
 /** Unique clip-path ids per mounted chart (re-mounts must not collide). */
 let chartInstance = 0;
@@ -59,15 +66,22 @@ export function createAdvantageChart(
     /** Phase boundaries → vertical dividers + rotated Opening/Middlegame/Endgame
      *  labels (lichess). Omitted or empty = no phase chrome. */
     phases?: GamePhases;
+    /** The three phase labels in the page's language (an article in Chinese).
+     *  Omitted = English, which is what every review surface shows. */
+    phaseLabels?: { opening: string; middlegame: string; endgame: string };
     /** Move text for the position at `ply` (e.g. "12... h10-i10"), shown in the
      *  hover readout above the eval. Omitted = the readout shows the eval alone. */
     moveLabel?: (ply: number) => string | null;
+    /** Win-curve constant of the engine that produced `evals` (winPercentK of the
+     *  analysis engineId). Omitted = lila's curve. */
+    winK?: number;
   },
 ): AdvantageChart {
   const maxPly = Math.max(1, evals.length - 1);
   const xOf = (ply: number) => (ply / maxPly) * VIEW_W;
   const yFor = (win: number) => PAD_Y + (1 - win / 100) * (VIEW_H - 2 * PAD_Y);
-  const yOf = (e: PlyEval) => yFor(winPercent(e.cp, e.mate));
+  const winOf = (e: PlyEval) => winPercent(e.cp, e.mate, opts.winK);
+  const yOf = (e: PlyEval) => yFor(winOf(e));
 
   const el = document.createElement('section');
   el.className = 'advantage-chart';
@@ -176,12 +190,23 @@ export function createAdvantageChart(
   // non-uniformly (preserveAspectRatio none), so rotated SVG text would distort.
   // A game with no detected middlegame gets no phase chrome at all.
   if (opts.phases?.middle && opts.phases.middle <= maxPly) {
-    const marks: { ply: number; label: string }[] = [{ ply: 0, label: 'Opening' }];
-    marks.push({ ply: opts.phases.middle, label: 'Middlegame' });
+    const names = opts.phaseLabels ?? {
+      opening: 'Opening',
+      middlegame: 'Middlegame',
+      endgame: 'Endgame',
+    };
+    const marks: { ply: number; label: string }[] = [{ ply: 0, label: names.opening }];
+    marks.push({ ply: opts.phases.middle, label: names.middlegame });
     if (opts.phases.end && opts.phases.end <= maxPly) {
-      marks.push({ ply: opts.phases.end, label: 'Endgame' });
+      marks.push({ ply: opts.phases.end, label: names.endgame });
     }
-    for (const mark of marks) {
+    // Chinese stands upright in vertical-rl and stacks one character per line
+    // (開 over 局), so a CJK label is set horizontally on one line instead. A
+    // horizontal label can be wider than its phase's span; it is hidden then
+    // (fitPhaseLabels), never wrapped. The rotated English labels are unchanged.
+    const oneLine = marks.some((mark) => CJK.test(mark.label));
+    const lineLabels: { label: HTMLElement; from: number; to: number }[] = [];
+    for (const [i, mark] of marks.entries()) {
       if (mark.ply > 0) {
         axis.append(
           svg('line', {
@@ -197,7 +222,26 @@ export function createAdvantageChart(
       label.className = 'advantage-chart__phase-label';
       label.style.left = `${((mark.ply / maxPly) * 100).toFixed(2)}%`;
       label.textContent = mark.label;
+      if (oneLine) {
+        label.classList.add('advantage-chart__phase-label--line');
+        lineLabels.push({
+          label,
+          from: mark.ply / maxPly,
+          to: (marks[i + 1]?.ply ?? maxPly) / maxPly,
+        });
+      }
       plot.append(label);
+    }
+    if (lineLabels.length > 0 && typeof ResizeObserver === 'function') {
+      const fitPhaseLabels = (): void => {
+        const width = plot.getBoundingClientRect().width;
+        if (width === 0) return; // not laid out yet (offscreen, a test)
+        for (const { label, from, to } of lineLabels) {
+          const need = label.getBoundingClientRect().width + PHASE_LABEL_INSET;
+          label.style.visibility = need <= (to - from) * width ? '' : 'hidden';
+        }
+      };
+      new ResizeObserver(fitPhaseLabels).observe(plot);
     }
   }
 
@@ -241,9 +285,7 @@ export function createAdvantageChart(
 
   // Hover readout (lichess: the chart scrubs under the pointer and names the move
   // it is over, so you can read the game's shape without clicking through it).
-  const tip = document.createElement('div');
-  tip.className = 'advantage-chart__tip';
-  tip.hidden = true;
+  const tip = createChartTip('advantage-chart__tip');
   plot.append(tip);
 
   // Legend (hidden until the luck overlay is set): explains solid vs dashed.
@@ -255,34 +297,24 @@ export function createAdvantageChart(
     '<span class="advantage-chart__legend-item"><span class="advantage-chart__legend-swatch advantage-chart__legend-swatch--ghost"></span>If reveals ran average</span>';
   el.append(legend);
 
-  /** Nearest ply under a client x, or null when the chart has no layout yet
-   *  (offscreen, or a jsdom test). */
-  function plyAtClientX(clientX: number): number | null {
-    const box = chart.getBoundingClientRect();
-    if (box.width === 0) return null;
-    const frac = Math.max(0, Math.min(1, (clientX - box.left) / box.width));
-    return Math.round(frac * maxPly);
-  }
-
-  el.addEventListener('click', (event) => {
-    const ply = plyAtClientX(event.clientX);
-    if (ply != null) opts.onJump(ply);
-  });
-
   /** `selectedPly` is where the board actually is; the cursor borrows it while a
    *  pointer is over the chart and gets it back on the way out. Without the
    *  split, a hover would silently redefine "current ply" and the cursor would
    *  come to rest wherever the pointer happened to leave. */
-  chart.addEventListener('pointermove', (event) => {
-    const ply = plyAtClientX(event.clientX);
-    if (ply == null) return;
-    moveCursor(ply);
-    showTip(ply);
-  });
-  chart.addEventListener('pointerleave', () => {
-    moveCursor(selectedPly);
-    tip.hidden = true;
-    dot.classList.remove('advantage-chart__dot--on');
+  attachChartScrub({
+    surface: chart,
+    clickTarget: el,
+    plyAt: (fraction) => Math.round(fraction * maxPly),
+    onHover: (ply) => {
+      moveCursor(ply);
+      showTip(ply);
+    },
+    onLeave: () => {
+      moveCursor(selectedPly);
+      tip.hidden = true;
+      dot.classList.remove('advantage-chart__dot--on');
+    },
+    onJump: opts.onJump,
   });
 
   function showTip(ply: number): void {
@@ -295,27 +327,14 @@ export function createAdvantageChart(
     // Same formatter as the move list's eval column right beside the chart: two
     // readings of one number must not disagree about its scale.
     const score = formatEval(point.cp, point.mate);
-    const move = opts.moveLabel?.(ply) ?? null;
-    tip.replaceChildren();
-    if (move) {
-      const label = document.createElement('span');
-      label.className = 'advantage-chart__tip-move';
-      label.textContent = move;
-      tip.append(label);
-    }
-    const value = document.createElement('span');
-    value.className = 'advantage-chart__tip-eval';
-    value.textContent = score;
-    tip.append(value);
-    tip.hidden = false;
-    // Anchor to the cursor, and slide the box back over itself as it approaches
-    // the right edge so it stays inside the frame without a measure-and-clamp.
-    const bias = ply / maxPly;
-    tip.style.left = `${(bias * 100).toFixed(3)}%`;
-    tip.style.transform = `translateX(${(-bias * 100).toFixed(1)}%)`;
-    // Sit in the half the curve is NOT in. Pinned to the top, the readout covered
-    // the very peaks it was there to explain.
-    tip.classList.toggle('advantage-chart__tip--low', yOf(point) < VIEW_H / 2);
+    showChartTip(tip, {
+      move: opts.moveLabel?.(ply) ?? null,
+      value: score,
+      at: ply / maxPly,
+      // Sit in the half the curve is NOT in. Pinned to the top, the readout
+      // covered the very peaks it was there to explain.
+      low: yOf(point) < VIEW_H / 2,
+    });
   }
 
   let selectedPly = 0;
@@ -343,7 +362,7 @@ export function createAdvantageChart(
     const ghostPoints: string[] = [];
     for (const e of evals) {
       cumulative += redLuckByPly.get(e.ply) ?? 0;
-      const ghostWin = Math.max(0, Math.min(100, winPercent(e.cp, e.mate) - cumulative));
+      const ghostWin = Math.max(0, Math.min(100, winOf(e) - cumulative));
       ghostPoints.push(`${xOf(e.ply).toFixed(1)},${yFor(ghostWin).toFixed(1)}`);
     }
     ghostLine.setAttribute('points', ghostPoints.join(' '));

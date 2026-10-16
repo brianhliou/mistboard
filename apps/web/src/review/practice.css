@@ -244,6 +244,37 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
+/* Guest only, after a solve: a quiet line under the controls, not a banner. The
+   display lives on :not([hidden]) so the hidden attribute still hides it. */
+.practice__save-prompt:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.45rem 14px 0.6rem;
+  border-top: 1px solid var(--site-border-soft, var(--site-border));
+  font-size: 0.85rem;
+}
+.practice__save-prompt-link {
+  flex: 1 1 auto;
+  color: var(--site-accent, var(--site-text));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.practice__save-prompt-close {
+  flex: 0 0 auto;
+  padding: 0 0.3rem;
+  border: 0;
+  background: none;
+  color: var(--site-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.practice__save-prompt-close:hover {
+  color: var(--site-text);
+}
+
 .practice__side[data-state="failed"] .practice__coach-strip {
   background: rgba(185, 28, 28, 0.25);
   color: #ef6461;

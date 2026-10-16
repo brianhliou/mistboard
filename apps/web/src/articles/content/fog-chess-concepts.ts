@@ -47,7 +47,7 @@ export const darkChessConceptsArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              'The goal is not perfect certainty. A good fog chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.',
+              'The goal is not perfect certainty. A good Fog Chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.',
           },
         ],
       },
@@ -139,7 +139,7 @@ export const darkChessConceptsArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              "In regular chess, castling choices are judged in public. In fog chess, your opponent often does not know where your king is unless a scout has seen it, a move has revealed it, or castling itself gives the position away.",
+              "In regular chess, castling choices are judged in public. In Fog Chess, your opponent often does not know where your king is unless a scout has seen it, a move has revealed it, or castling itself gives the position away.",
           },
           {
             kind: 'paragraph',
@@ -238,7 +238,7 @@ export const darkChessConceptsArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              "Cluster by what would change your decision, not by what is merely different. Two worlds that point to the same best move are one world for your purposes, so collapse them. Two that demand opposite moves are the split worth naming. Most of fog chess is this: reducing a cloud you cannot count to the two or three buckets you can actually plan against.",
+              "Cluster by what would change your decision, not by what is merely different. Two worlds that point to the same best move are one world for your purposes, so collapse them. Two that demand opposite moves are the split worth naming. Most of Fog Chess is this: reducing a cloud you cannot count to the two or three buckets you can actually plan against.",
           },
         ],
       },

@@ -55,23 +55,38 @@ describe('analysis page', () => {
 // at its own URL but is not OFFERED, so nothing advertises it before it
 // launches.
 //
-// That branch is real and still in analysis-catalog.ts, but it is currently
-// UNREACHABLE from a test: duck xiangqi was the last unlaunched analysis
-// variant, and it launched. Asserting "some variant is absent" would now pass
-// by naming any string at all. What is left is the half that does hold, across
-// every variant in the catalog. When the next unlaunched variant lands, restore
-// a case that pins it by name.
+// The retired variants pin the hidden half by name: Fortress and Atomic
+// Xiangqi (retired 2026-10-11) are absent from the picker on any other board
+// and present on their own, so a finished game's analysis link still opens.
 describe('analysis variant picker', () => {
-  it('offers every launched variant, from any board', async () => {
+  it('offers every listed variant, from any board, and not the retired ones', async () => {
     const root = document.createElement('div');
     document.body.append(root);
     try {
       await mountAnalysisPage(root, 'xiangqi');
       const select = root.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
       const offered = [...(select?.options ?? [])].map((option) => option.value);
-      expect(offered).toEqual(ANALYSIS_VARIANTS.map((variant) => variant.id));
+      const retired = ['fortress-xiangqi', 'atomic-xiangqi'];
+      for (const id of retired) expect(offered).not.toContain(id);
+      expect(offered).toEqual(
+        ANALYSIS_VARIANTS.map((variant) => variant.id).filter((id) => !retired.includes(id)),
+      );
     } finally {
       root.remove();
+    }
+  });
+
+  it('keeps a retired variant selected on its own board', async () => {
+    for (const id of ['fortress-xiangqi', 'atomic-xiangqi'] as const) {
+      const root = document.createElement('div');
+      document.body.append(root);
+      try {
+        await mountAnalysisPage(root, id);
+        const select = root.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
+        expect(select?.value).toBe(id);
+      } finally {
+        root.remove();
+      }
     }
   });
 

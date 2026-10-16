@@ -9,11 +9,13 @@
 import { BANQI_SPEC_ID } from '@mistboard/game';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setPostHogInstance } from '../analytics.js';
+import { resetTrackedGameStartsForTests } from '../game-start-source.js';
 import type { LiveRefs } from '../live-state.js';
 import {
   createTenantLiveClient,
   type TenantLiveClient,
   type TenantLiveClientConfig,
+  type TenantLiveClientContext,
   type TenantLiveEvent,
   type TenantLiveFrame,
   type TenantMoveListRenderContext,
@@ -32,18 +34,15 @@ type TView = TenantWebView<TColor> & {
 };
 
 const tenant: WebVariantTenant<TColor> = {
-  displayName: 'Testline',
+  displayName: 'variant.xiangqi.name',
   colors: ['red', 'blue'],
   isColor: (value): value is TColor => value === 'red' || value === 'blue',
   oppositeColor: (color) => (color === 'red' ? 'blue' : 'red'),
   enabled: () => enabledFlag,
   reviewUrl: (roomId) => `/testline/game/${roomId}`,
-  reasonPhrase: () => 'the rules',
-  disabledTitle: 'Testline disabled',
-  disabledBody: 'off',
-  rejectedBody: 'rejected',
-  spectatorBody: 'watching',
-  selectInstruction: 'pick',
+  reasonPhrase: () => 'result.gameRules',
+  spectatorBody: 'live.spectatorFullBoard',
+  selectInstruction: 'live.selectPieceThenDestination',
 };
 
 let enabledFlag = true;
@@ -218,6 +217,108 @@ describe('tenant live-client core', () => {
     expect(h.client.state.forfeitDeadline).toBeNull();
   });
 
+  it('learns a lobby room from the frame and keeps knowing it', () => {
+    // The server sends lobbyMatch only on lobby rooms; the chrome reads it to
+    // drop the invite prompt for a room that has no friend to invite.
+    const h = createHarness();
+    h.feedHello({});
+    expect(h.client.state.lobbyMatch).toBe(false);
+    h.feedSnapshot({ lobbyMatch: true });
+    expect(h.client.state.lobbyMatch).toBe(true);
+    h.feedSnapshot({});
+    expect(h.client.state.lobbyMatch).toBe(true);
+  });
+
+  // Driven through the real frame, not a chrome ctx: the earlier fix keyed on
+  // roomMode 'correspondence', which a test ctx could inject but no tenant ever
+  // reports (they narrow roomMode to pve/pvp), so prod still showed the invite.
+  // Prod, 2026-10-06: a jieqi correspondence game, both accounts seated, Red
+  // had moved, Black offline -> "Invite opponent" and "aborting in 86390s".
+  describe('invite window, from the wire', () => {
+    const DAY_MS = 86_400_000;
+    function correspondenceFrame(
+      overrides: Partial<TenantLiveFrame<TColor, TView>> = {},
+    ): Partial<TenantLiveFrame<TColor, TView>> {
+      return {
+        seat: 'red',
+        seats: { red: 'c-red', blue: 'c-blue' },
+        connectedSeats: { red: true, blue: false },
+        timeControl: { initialMs: DAY_MS, incrementMs: 0, daysPerMove: 1 },
+        // What jieqi-tenant.ts sends for every human room, correspondence too.
+        roomMode: 'pvp',
+        state: view({ status: { type: 'playing', turn: 'blue' }, moveNumber: 1 }),
+        abortDeadline: Date.now() + 86_390_000,
+        events: [moveEvent('red', 'c4', 'c5', 1)],
+        ...overrides,
+      };
+    }
+
+    function panelText(h: Harness): { status: string; actions: string; controls: string } {
+      const refs = h.refs();
+      return {
+        status: refs.actionSection.hidden ? '' : (refs.actionStatus.textContent ?? ''),
+        actions: refs.roomActions.textContent ?? '',
+        controls: refs.gameControls.textContent ?? '',
+      };
+    }
+
+    it('shows no invite in a correspondence game whose seats are both taken', () => {
+      const h = createHarness();
+      h.feedHello(correspondenceFrame());
+      const text = panelText(h);
+      expect(text.status).not.toContain('Invite opponent');
+      expect(text.status).not.toContain('Copy the invite link');
+      expect(text.actions).not.toContain('Copy invite');
+    });
+
+    it('counts the correspondence first-move window as a duration, not seconds', () => {
+      const h = createHarness();
+      h.feedHello(correspondenceFrame());
+      const { controls } = panelText(h);
+      // One unit: the space is non-breaking so the column never splits it.
+      expect(controls).toContain('Waiting for first move, aborting in 23h\u00a059m');
+      expect(controls).not.toMatch(/\d{3,}s/);
+    });
+
+    it('keeps the invite for a friend room until the friend takes the seat', () => {
+      const h = createHarness();
+      h.feedHello({
+        seat: 'red',
+        seats: { red: 'c-red' },
+        connectedSeats: { red: true, blue: false },
+        timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+        state: view({ moveNumber: 1 }),
+      });
+      expect(panelText(h).status).toContain('Invite opponent');
+      expect(panelText(h).actions).toContain('Copy invite');
+
+      // The friend sits down, then their tab drops: the seat is held.
+      h.feedSnapshot({
+        seat: 'red',
+        seats: { red: 'c-red', blue: 'c-blue' },
+        connectedSeats: { red: true, blue: false },
+        state: view({ moveNumber: 1 }),
+      });
+      expect(panelText(h).status).not.toContain('Invite opponent');
+      expect(panelText(h).actions).not.toContain('Copy invite');
+    });
+
+    it('shows no invite in a rated lobby pairing', () => {
+      const h = createHarness();
+      h.feedHello({
+        seat: 'red',
+        seats: { red: 'c-red' },
+        connectedSeats: { red: true, blue: false },
+        lobbyMatch: true,
+        rated: true,
+        timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+        state: view({ moveNumber: 1 }),
+      });
+      expect(panelText(h).status).not.toContain('Invite opponent');
+      expect(panelText(h).actions).not.toContain('Copy invite');
+    });
+  });
+
   it('drives the shared lifecycle frame from viewer-safe room state', () => {
     const h = createHarness();
     h.feedHello({
@@ -255,10 +356,15 @@ describe('tenant live-client core', () => {
     });
     const rows = [...h.refs().moveList.querySelectorAll('li')];
     expect(rows).toHaveLength(1);
-    // Number cell stays a span; both played plies are jump buttons.
+    // Number cell stays a span. A cold hello holds one snapshot (ply 2), so
+    // only that ply is a jump button; ply 1 is played text with nowhere to go,
+    // and a button there was a dead click.
     expect(rows[0].querySelector('span')?.textContent).toBe('1.');
-    const cells = [...rows[0].querySelectorAll('button.move-jump')];
-    expect(cells.map((cell) => cell.textContent)).toEqual(['a1-a2', 'b1-b2']);
+    const cells = [...rows[0].querySelectorAll('.test-move-row__move')];
+    expect(cells.map((cell) => [cell.tagName, cell.textContent])).toEqual([
+      ['SPAN', 'a1-a2'],
+      ['BUTTON', 'b1-b2'],
+    ]);
   });
 
   it('scrubs to the clicked ply from the move list', () => {
@@ -350,6 +456,34 @@ describe('tenant live-client core', () => {
     h.feedHello({});
     expect(h.client.send({ type: 'move', from: 'a1', to: 'a2' })).toBe(true);
     expect(h.sent).toContainEqual({ type: 'move', from: 'a1', to: 'a2' });
+  });
+});
+
+describe('board flip (toolbar button + f)', () => {
+  function flipHarness(flippable: boolean) {
+    let ctx: TenantLiveClientContext<TColor, TView> | null = null;
+    const h = createHarness({ flippable, setup: (c) => (ctx = c) });
+    h.feedSnapshot({});
+    if (!ctx) throw new Error('setup did not run');
+    const flip = document.querySelector<HTMLButtonElement>('[data-replay-flip]');
+    return { ctx: ctx as TenantLiveClientContext<TColor, TView>, flip };
+  }
+
+  it('turns the board over and back for a flippable room', () => {
+    const { ctx, flip } = flipHarness(true);
+    expect(ctx.orientation()).toBe('red');
+    expect(flip?.hidden).toBe(false);
+    flip?.click();
+    expect(ctx.orientation()).toBe('blue');
+    flip?.click();
+    expect(ctx.orientation()).toBe('red');
+  });
+
+  it('offers no flip in a room that has not opted in', () => {
+    const { ctx, flip } = flipHarness(false);
+    expect(flip?.hidden).toBe(true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', bubbles: true }));
+    expect(ctx.orientation()).toBe('red');
   });
 });
 
@@ -721,6 +855,10 @@ describe('tenant game lifecycle analytics', () => {
 
   beforeEach(() => {
     capture.mockReset();
+    // game_started fires once per game id per browser (#437); the harness
+    // reuses one id, so each case starts from a browser that has seen none.
+    globalThis.localStorage?.clear();
+    resetTrackedGameStartsForTests();
     setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
   });
 
@@ -747,10 +885,19 @@ describe('tenant game lifecycle analytics', () => {
       initialMs: 5 * 60_000,
       incrementMs: 5_000,
       time_class: 'rapid',
-      // Unknown on this stack, never guessed: the legacy stack reports a real
-      // value and a fabricated one here would silently pool with it.
-      rated: null,
+      rated: false,
     });
+  });
+
+  it('carries the room rated flag on game_started so rated starts can be counted', () => {
+    const h = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    h.feedHello({
+      state: view({ status: { type: 'playing', turn: 'red' } }),
+      timeControl: { initialMs: 3 * 60_000, incrementMs: 2_000 },
+      rated: true,
+    });
+    expect(named('game_started')).toHaveLength(1);
+    expect(named('game_started')[0][1]).toMatchObject({ rated: true, time_class: 'blitz' });
   });
 
   it('emits game_finished once, with the winner and reason', () => {

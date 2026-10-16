@@ -59,11 +59,93 @@ describe('Banqi watch replay', () => {
     root.querySelector<HTMLButtonElement>('[aria-label="下一手"]')?.click();
     expect(root.textContent).toContain('第 1 / 1 手 - 紅方獲勝');
   });
+
+  // The homepage TV's seat discs. Banqi seats are move-order slots, so the disc
+  // must paint the ink the opening flip bound, not the seat id: when the first
+  // mover flips a black piece, the first seat plays Black.
+  it('compact seat discs paint the bound ink, the dashed ring before the flip, and nothing unasked', async () => {
+    const discs = (root: HTMLElement): Record<string, string> =>
+      Object.fromEntries(
+        [...root.querySelectorAll<HTMLElement>('.showcase-seat')].map((row) => [
+          row.querySelector('.showcase-seat-name')?.textContent ?? '',
+          row.querySelector('.seat-disc')?.className ?? 'none',
+        ]),
+      );
+    const names = { bq_disc: { first: 'FirstMover', second: 'SecondMover' } };
+    const mount = async (firstColor: BanqiSeat | null, seatDiscs: boolean) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => jsonResponse(postgameFixture('bq_disc', firstColor))),
+      );
+      const root = document.createElement('div');
+      const handle = await mountBanqiWatchReplay(root, 'bq_disc', {
+        autoplay: false,
+        compact: true,
+        namesByRoomId: names,
+        seatDiscs,
+      });
+      const result = discs(root);
+      handle.destroy();
+      return result;
+    };
+
+    expect(await mount('black', true)).toEqual({
+      FirstMover: 'seat-disc seat-disc--black',
+      SecondMover: 'seat-disc seat-disc--red',
+    });
+    expect(await mount('red', true)).toEqual({
+      FirstMover: 'seat-disc seat-disc--red',
+      SecondMover: 'seat-disc seat-disc--black',
+    });
+    expect(await mount(null, true)).toEqual({
+      FirstMover: 'seat-disc seat-disc--unbound',
+      SecondMover: 'seat-disc seat-disc--unbound',
+    });
+    // Other compact hosts (current-games cards, /watch queue previews) style the
+    // seat rows themselves; an unasked disc would shift their layout.
+    expect(await mount('black', false)).toEqual({ FirstMover: 'none', SecondMover: 'none' });
+  });
+
+  it('live follow: the rings bind to the flipped ink when the next frame lands', async () => {
+    const discs = (root: HTMLElement): string[] =>
+      [...root.querySelectorAll<HTMLElement>('.showcase-seat')].map(
+        (row) =>
+          `${row.querySelector('.showcase-seat-name')?.textContent}:${row.querySelector('.seat-disc')?.className.replace('seat-disc seat-disc--', '')}`,
+      );
+    const frame = (firstColor: BanqiSeat | null): BanqiPostgameResponse => {
+      const fixture = postgameFixture('bq_live', firstColor);
+      return {
+        ...fixture,
+        game: { ...fixture.game, result: 'in-progress', termination: 'in-progress' },
+      };
+    };
+    let current = frame(null);
+    const root = document.createElement('div');
+    const handle = await mountBanqiWatchReplay(root, 'bq_live', {
+      autoplay: false,
+      compact: true,
+      live: true,
+      seatDiscs: true,
+      loadPostgameOverride: async () => ({ ok: true, postgame: current }),
+      namesByRoomId: { bq_live: { first: 'FirstMover', second: 'SecondMover' } },
+    });
+    // No flip yet: nobody owns a colour, so both seats wear the dashed ring.
+    expect(discs(root)).toEqual(['SecondMover:unbound', 'FirstMover:unbound']);
+
+    // The first mover flips a black piece; the homepage reloads the live handle.
+    current = frame('black');
+    await handle.loadGame('bq_live');
+    expect(discs(root)).toEqual(['SecondMover:red', 'FirstMover:black']);
+    handle.destroy();
+  });
 });
 
 // A minimal one-ply fixture: red flips a1 (revealing a chariot); only the truth
 // surface is present, matching banqi's symmetric postgame (no per-color views).
-function postgameFixture(roomId: string): BanqiPostgameResponse {
+function postgameFixture(
+  roomId: string,
+  firstColor: BanqiSeat | null = 'red',
+): BanqiPostgameResponse {
   const startBoard: BanqiPlayerBoard = {
     a1: { faceDown: true },
     h4: { color: 'black', role: 'general', faceDown: false },
@@ -105,7 +187,7 @@ function postgameFixture(roomId: string): BanqiPostgameResponse {
       { type: 'move-played', at: 2, color: 'red', move, ply: 1 },
       { type: 'seat-resigned', at: 3, color: 'black', winner: 'red' },
     ],
-    view: view('red', movedBoard, move, finished, 1),
+    view: { ...view('red', movedBoard, move, finished, 1), firstColor },
     views: { truth: view('red', movedBoard, move, finished, 1) },
     history: {
       truth: [

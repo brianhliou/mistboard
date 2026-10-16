@@ -11,19 +11,50 @@
 // take as little of their surface, and know as little about their readers, as it
 // can.
 
+import type { EmbedPov } from '@mistboard/game';
 import '../app-base.css';
 import '../articles.css';
 import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
 import { mountBanqiReplayBoard } from '../banqi-replay-board.js';
-import { chessChapterToReplaySpec, mountChessReplayBoard } from '../chess-study-replay.js';
+import {
+  chessChapterToReplaySpec,
+  mountChessReplayBoard,
+  replayChess,
+} from '../chess-study-replay.js';
+import {
+  mountCrazyhouseXiangqiReplayBoard,
+  replayCrazyhouseXiangqiLine,
+} from '../crazyhouse-xiangqi-replay-board.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
+import { seatInkForVariant } from '../flip-seat-ink.js';
+import {
+  mountFortressXiangqiReplayBoard,
+  replayFortressXiangqiLine,
+} from '../fortress-xiangqi-replay-board.js';
+import { t } from '../i18n/catalog.js';
+import { mountJieqiReplayBoard, replayJieqiLine } from '../jieqi-replay-board.js';
+import { mountJungleFlipReplayBoard, replayJungleFlipLine } from '../jungle-flip-replay-board.js';
+import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
 import { mountJungleReplayBoard } from '../jungle-replay-board.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
 import { reviewResultLabel } from '../review/game-review-meta.js';
+import { chapterAnnotations } from '../study-chapter-annotations.js';
+import { displayEventName } from '../study-chapter-games.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
+import { seatInkFamily } from '../variant-seat-label.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
-import { mountXiangqiReplayBoard, xiangqiResultLabel } from '../xiangqi-replay.js';
-import { embedRailWidthPx, mountEmbedCard } from './embed-card.js';
+import {
+  mountXiangqiReplayBoard,
+  resultFromFinalPosition,
+  xiangqiResultLabel,
+} from '../xiangqi-replay.js';
+import {
+  embedColumnAspect,
+  embedPovPicker,
+  embedRailWidthPx,
+  mountEmbedCard,
+  type SolutionHiddenLabels,
+} from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
 import './embed.css';
 
@@ -42,7 +73,7 @@ function note(root: HTMLElement, message: string): void {
 export async function mountEmbedStudy(
   root: HTMLElement,
   route: EmbedStudyRoute,
-  options: { startPly?: number | null } = {},
+  options: ChapterEmbedOptions = {},
 ): Promise<void> {
   document.body.classList.add('embed-body');
   // A hook on the ROOT, not just the body. :root in app-base.css paints the page
@@ -73,6 +104,13 @@ export async function mountEmbedStudy(
     note(root, 'This chapter is not available.');
     return;
   }
+  // A problem's chapter name and comments tend to say the answer ("Two checks
+  // from one move"), so a hidden-solution frame is titled by the study and the
+  // chapter's number until the reveal; the number keeps several frames on one
+  // page apart. The tab title is only seen on a direct visit; it stays neutral.
+  const neutralTitle = payload.study?.name ?? 'Study';
+  const chapterNumber = (payload.chapters ?? []).indexOf(chapter) + 1;
+  const hidden = options.hideSolution === true;
   await mountChapterEmbed(
     root,
     {
@@ -80,23 +118,66 @@ export async function mountEmbedStudy(
       text: `${chapter.name ?? 'Study'} · mistboard.com`,
     },
     chapter,
-    options,
+    hidden
+      ? {
+          ...options,
+          solutionHiddenLabels: {
+            header: t('replay.solutionHiddenHeader', { study: neutralTitle, n: chapterNumber }),
+            credit: `${neutralTitle} · mistboard.com`,
+          },
+        }
+      : options,
   );
+  if (hidden) document.title = `${neutralTitle} · Mistboard`;
 }
 
 export type EmbedCredit = { href: string; text: string };
+
+/** Where a chapter opens: the ply, and for fog chess which seat's view. */
+export type ChapterEmbedOptions = {
+  startPly?: number | null;
+  pov?: EmbedPov | null;
+  /** Cover the sheet and result until the reader asks (`?solution=hidden`). */
+  hideSolution?: boolean;
+  /** With hideSolution: the header and credit line shown until the reveal, in
+   *  place of the chapter name, which often names the idea. */
+  solutionHiddenLabels?: SolutionHiddenLabels;
+  /** The line embed's `arrows=1`: the move played from the opening frame
+   *  (`startPly`), drawn as an arrow on that frame only. Drawn by the jieqi
+   *  board; the other boards ignore it. */
+  openingMoveArrow?: boolean;
+  /** The line embed's `arrow=<move>`: the move drawn on the opening frame in
+   *  place of the one played from it. */
+  openingArrowMove?: string;
+};
+
+function solutionCardOptions(options: ChapterEmbedOptions): {
+  hideSolution: boolean;
+  solutionHiddenLabels?: SolutionHiddenLabels;
+} {
+  if (options.hideSolution !== true) return { hideSolution: false };
+  return {
+    hideSolution: true,
+    ...(options.solutionHiddenLabels ? { solutionHiddenLabels: options.solutionHiddenLabels } : {}),
+  };
+}
 
 /** The variants this card can draw. A chapter of any other variant is refused
  *  by name: the old fallthrough drew it on the xiangqi board, which is how a
  *  jungle chapter once rendered as a xiangqi position with jungle squares
  *  ringed on it. */
-const CHAPTER_EMBED_VARIANTS = new Set([
+export const CHAPTER_EMBED_VARIANTS: ReadonlySet<string> = new Set([
   'xiangqi',
   'duck-xiangqi',
   'atomic-xiangqi',
+  'fortress-xiangqi',
+  'crazyhouse-xiangqi',
+  'jieqi',
   'banqi',
   'jungle',
+  'jungle-flip',
   'chess',
+  'dark-chess',
 ]);
 
 /**
@@ -108,14 +189,14 @@ export async function mountChapterEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const variant = chapter.variant ?? 'xiangqi';
   if (!CHAPTER_EMBED_VARIANTS.has(variant)) {
     note(root, `A ${variant} game cannot be framed yet.`);
     return;
   }
-  if (variant === 'chess') {
+  if (variant === 'chess' || variant === 'dark-chess') {
     await mountChessEmbed(root, credit, chapter, options);
     return;
   }
@@ -125,6 +206,22 @@ export async function mountChapterEmbed(
   }
   if (variant === 'jungle') {
     await mountJungleEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'jungle-flip') {
+    await mountJungleFlipEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'fortress-xiangqi') {
+    await mountFortressXiangqiEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'crazyhouse-xiangqi') {
+    await mountCrazyhouseXiangqiEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'jieqi') {
+    await mountJieqiEmbed(root, credit, chapter, options);
     return;
   }
   const spec = studyChapterToReplaySpec(chapter);
@@ -141,12 +238,23 @@ export async function mountChapterEmbed(
   const isAtomic = chapter.variant === 'atomic-xiangqi';
   const copy = replayStepperCopy(undefined, 'xiangqi');
   await mountEmbedCard(root, {
-    header: spec.title ? `${spec.title} · ${spec.event}` : spec.event,
+    // A Chinese import stores its Event in Chinese; the header reads it in
+    // the page's language, as the study page does (study-chapter-games.ts).
+    header: spec.title
+      ? `${spec.title} · ${displayEventName(spec.event)}`
+      : displayEventName(spec.event),
     seats: {
       first: { name: spec.red, ink: 'red' },
       second: { name: spec.black, ink: 'black' },
     },
-    result: xiangqiResultLabel(spec.resultText, copy),
+    // A game record says who won in its tags; a composition says it on the
+    // board, so an untagged chapter reads the result off its last position.
+    result: xiangqiResultLabel(
+      spec.resultText.trim() && spec.resultText.trim() !== '*'
+        ? spec.resultText
+        : resultFromFinalPosition(spec),
+      copy,
+    ),
     credit: {
       href: credit.href,
       text: credit.text,
@@ -162,6 +270,7 @@ export async function mountChapterEmbed(
     // Clamped by the card against the real ply count, so an out-of-range
     // deep link opens at the end rather than on nothing.
     startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
     mountBoard: async (host, hooks) =>
       isDuck
         ? mountDuckXiangqiReplayBoard(
@@ -203,7 +312,7 @@ async function mountBanqiEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const rootFen = chapter.root?.rootFen;
   if (!rootFen) {
@@ -219,7 +328,7 @@ async function mountBanqiEmbed(
     node = played;
   }
   const tags = chapter.tags ?? {};
-  const event = tags.event ?? chapter.name ?? 'Study';
+  const event = tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study');
   // The tags' result is seat-keyed (1-0 is the first mover), and a seat's ink
   // is whatever the first flip turned up, so the label names the seat.
   const result =
@@ -246,6 +355,7 @@ async function mountBanqiEmbed(
     aspect: boardAspectForSpec('banqi'),
     railWidthPx: embedRailWidthPx('banqi'),
     startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
     mountBoard: async (host, hooks) =>
       mountBanqiReplayBoard(host, { rootFen, moves, perspective: 'red' }, hooks),
   });
@@ -273,16 +383,21 @@ async function mountJungleEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const rootFen = chapter.root?.rootFen;
   if (!rootFen) {
     note(root, 'This chapter has no position to show.');
     return;
   }
-  const moves = mainlineTokens(chapter);
+  // Jungle is perfect information, so the chapter's whole argument rides
+  // along, as on the study page: glyphs on the sheet and the board, verdicts,
+  // comments, each move's first sideline (steppable), and the drawn shapes.
+  const { moves, glyphs, notes, lines, assessments, shapes } = chapterAnnotations(chapter);
+  // A shape drawn on the start position is a hint, often the answer's arrow.
+  if (options.hideSolution) delete shapes[0];
   const tags = chapter.tags ?? {};
-  const event = tags.event ?? chapter.name ?? 'Study';
+  const event = tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study');
   const result =
     tags.result === '1-0'
       ? reviewResultLabel('red-wins', 'jungle')
@@ -305,8 +420,219 @@ async function mountJungleEmbed(
     aspect: boardAspectForSpec('jungle'),
     railWidthPx: embedRailWidthPx('jungle'),
     startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
     mountBoard: async (host, hooks) =>
-      mountJungleReplayBoard(host, { rootFen, moves, perspective: 'red' }, hooks),
+      mountJungleReplayBoard(
+        host,
+        {
+          rootFen,
+          moves,
+          perspective: chapter.orientation === 'black' ? 'black' : 'red',
+          glyphs,
+          notes,
+          lines,
+          assessments,
+          shapes,
+        },
+        hooks,
+      ),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+type ResultToken = 'red-wins' | 'black-wins' | 'draw';
+
+/** A chapter's result tag as a seat-keyed token (1-0 is the first mover), or
+ *  null when the tag is absent or says the game did not finish. */
+function tagResultToken(tag: string | undefined): ResultToken | null {
+  if (tag === '1-0') return 'red-wins';
+  if (tag === '0-1') return 'black-wins';
+  if (tag === '1/2-1/2') return 'draw';
+  return null;
+}
+
+/** The ending read off the last replayed position, for a chapter with no
+ *  result tag (the engine-game studies carry none): the kernel knows a mate or
+ *  a draw when the line reaches one. Null when the line stops mid-game. */
+function statusResultToken(status: {
+  type: string;
+  winner?: 'red' | 'black' | null;
+}): ResultToken | null {
+  if (status.type !== 'finished') return null;
+  if (status.winner === 'red') return 'red-wins';
+  if (status.winner === 'black') return 'black-wins';
+  return 'draw';
+}
+
+// Fortress Xiangqi is its own branch for the duck reason: a drop (`N@f4`) is
+// not an ICCS move, and the board is 7x8 with both hands beside it, which the
+// xiangqi board cannot draw. The chapter may carry no rootFen: the engine-game
+// studies start from the standard position and store only the moves.
+async function mountFortressXiangqiEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: ChapterEmbedOptions,
+): Promise<void> {
+  const line = replayFortressXiangqiLine(chapter.root?.rootFen, mainlineTokens(chapter));
+  if (!line) {
+    note(root, 'This chapter has no position to show.');
+    return;
+  }
+  const tags = chapter.tags ?? {};
+  const final = line.states[line.states.length - 1]!;
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  await mountEmbedCard(root, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: { name: tags.red ?? 'Red', ink: 'red' },
+      second: { name: tags.black ?? 'Black', ink: 'black' },
+    },
+    result: token ? reviewResultLabel(token, 'fortress-xiangqi') : '',
+    credit: { href: credit.href, text: credit.text },
+    // The hands ride above and below the board and scale with it, so the column
+    // the card sizes is taller than the board alone by both bands.
+    aspect: embedColumnAspect('fortress-xiangqi'),
+    railWidthPx: embedRailWidthPx('fortress-xiangqi'),
+    startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
+    mountBoard: async (host, hooks) =>
+      mountFortressXiangqiReplayBoard(host, line, { perspective: 'red' }, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+// Crazyhouse Xiangqi is its own branch for the fortress reason: a drop (`P@e5`)
+// is not an ICCS move, so the xiangqi spec conversion would end the mainline at
+// the first one, and the hands need drawing beside the board. A chapter made on
+// the analysis board carries no rootFen: it starts from the standard position.
+async function mountCrazyhouseXiangqiEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: ChapterEmbedOptions,
+): Promise<void> {
+  const line = replayCrazyhouseXiangqiLine(chapter.root?.rootFen, mainlineTokens(chapter));
+  if (!line) {
+    note(root, 'This chapter has no position to show.');
+    return;
+  }
+  const tags = chapter.tags ?? {};
+  const final = line.states[line.states.length - 1]!;
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  await mountEmbedCard(root, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: { name: tags.red ?? 'Red', ink: 'red' },
+      second: { name: tags.black ?? 'Black', ink: 'black' },
+    },
+    result: token ? reviewResultLabel(token, 'crazyhouse-xiangqi') : '',
+    credit: { href: credit.href, text: credit.text },
+    aspect: embedColumnAspect('crazyhouse-xiangqi'),
+    railWidthPx: embedRailWidthPx('crazyhouse-xiangqi'),
+    startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
+    mountBoard: async (host, hooks) =>
+      mountCrazyhouseXiangqiReplayBoard(host, line, { perspective: 'red' }, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+// Jieqi is its own branch for the banqi reason: the moves only replay against
+// the deal, which rides in the root's sixth FEN field; the xiangqi board would
+// start every dark piece as the piece its square begins with. The seats own a
+// fixed ink from move one (unlike banqi), so they are the inks. The chapter's
+// argument rides along as on the jungle embed: glyphs on the sheet and the
+// board, verdicts, comments, each move's first sideline (replayed against the
+// same deal, steppable), the drawn shapes and the chapter's orientation.
+async function mountJieqiEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: ChapterEmbedOptions,
+): Promise<void> {
+  const { moves, glyphs, notes, lines, assessments, shapes } = chapterAnnotations(chapter);
+  // A shape drawn on the start position is a hint, often the answer's arrow.
+  if (options.hideSolution) delete shapes[0];
+  const line = replayJieqiLine(chapter.root?.rootFen, moves);
+  if (!line) {
+    note(root, 'This chapter has no dealt position to show.');
+    return;
+  }
+  const tags = chapter.tags ?? {};
+  const final = line.states[line.states.length - 1]!;
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  await mountEmbedCard(root, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: { name: tags.red ?? 'Red', ink: 'red' },
+      second: { name: tags.black ?? 'Black', ink: 'black' },
+    },
+    result: token ? reviewResultLabel(token, 'jieqi') : '',
+    credit: { href: credit.href, text: credit.text },
+    aspect: boardAspectForSpec('jieqi'),
+    railWidthPx: embedRailWidthPx('jieqi'),
+    startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
+    mountBoard: async (host, hooks) =>
+      mountJieqiReplayBoard(
+        host,
+        line,
+        {
+          perspective: chapter.orientation === 'black' ? 'black' : 'red',
+          glyphs,
+          notes,
+          lines,
+          assessments,
+          shapes,
+          openingArrowPly: options.openingMoveArrow === true ? (options.startPly ?? 0) : undefined,
+          openingArrowMove: options.openingArrowMove,
+        },
+        hooks,
+      ),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+// Flip Jungle is banqi's shape on a 4x4: a dealt root, flips spelled as a
+// self-move, and seats that are move order until the first flip binds an ink.
+// The replayed line knows which ink that was, so the seat discs and the result
+// name the colour on the board rather than "first seat".
+async function mountJungleFlipEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: ChapterEmbedOptions,
+): Promise<void> {
+  const line = replayJungleFlipLine(chapter.root?.rootFen, mainlineTokens(chapter));
+  if (!line) {
+    note(root, 'This chapter has no dealt position to show.');
+    return;
+  }
+  const tags = chapter.tags ?? {};
+  const final = line.states[line.states.length - 1]!;
+  const firstColor = final.firstColor ?? null;
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  await mountEmbedCard(root, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: {
+        name: tags.red ?? 'First seat',
+        ink: seatInkForVariant('jungle-flip', 'red', firstColor),
+      },
+      second: {
+        name: tags.black ?? 'Second seat',
+        ink: seatInkForVariant('jungle-flip', 'black', firstColor),
+      },
+    },
+    result: token ? jungleFlipResultLabel(token, firstColor) : '',
+    credit: { href: credit.href, text: credit.text },
+    inkFamily: seatInkFamily('jungle-flip'),
+    aspect: boardAspectForSpec('jungle-flip'),
+    railWidthPx: embedRailWidthPx('jungle-flip'),
+    startPly: options.startPly ?? 0,
+    ...solutionCardOptions(options),
+    mountBoard: async (host, hooks) => mountJungleFlipReplayBoard(host, line, hooks),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }
@@ -315,11 +641,16 @@ async function mountJungleEmbed(
 // conversion: that conversion re-spells UCI as ICCS (ranks 0-9), which reads
 // "e2e4" as a legal xiangqi token and lands every chess move on the wrong
 // rank. The chess board replays the tree's own UCI against the chess kernel.
+//
+// A fog chess chapter takes the same branch on the fog chess kernel, drawn as
+// the revealed truth board: a chapter is a finished record its author chose to
+// publish, shown the way a finished room and the study page's primary board
+// show it. The per-seat fogged views stay the study page's.
 async function mountChessEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const spec = chessChapterToReplaySpec(chapter);
   if (!spec) {
@@ -329,10 +660,31 @@ async function mountChessEmbed(
   // Chapter tags are the lowercase whitelist routes/studies.ts stores: `red` is
   // the first mover's seat (White here), as on every other variant.
   const tags = chapter.tags ?? {};
-  const event = tags.event ?? chapter.name ?? 'Study';
-  const result = tags.result && tags.result !== '*' ? tags.result : '';
+  const event = tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study');
+  // A PGN result tag reads as the localized winner line, as on every other
+  // variant; a game that ended off the board (resignation, forfeit) has only
+  // the tag to say how it ended. Any other tag text is shown as written.
+  const tagged = tagResultToken(tags.result);
+  const result = tagged
+    ? reviewResultLabel(tagged === 'red-wins' ? 'white-wins' : tagged, spec.variant)
+    : tags.result && tags.result !== '*'
+      ? tags.result
+      : spec.variant === 'dark-chess'
+        ? darkChessEndingLabel(spec)
+        : '';
+  // A fog chess chapter carries the White / Truth / Black picker the review
+  // board has, so a reader can see what each side saw at any move.
+  let board: ReturnType<typeof mountChessReplayBoard> | null = null;
+  const pov = spec.variant === 'dark-chess' ? (options.pov ?? 'truth') : 'truth';
+  const picker =
+    spec.variant === 'dark-chess'
+      ? embedPovPicker(pov, { first: t('setup.white'), second: t('setup.black') }, (next) =>
+          board?.setPov(next),
+        )
+      : null;
   await mountEmbedCard(root, {
     header: event,
+    ...(picker ? { headerControls: picker } : {}),
     seats: {
       first: { name: tags.red ?? 'White', ink: 'white' },
       second: { name: tags.black ?? 'Black', ink: 'black' },
@@ -345,7 +697,25 @@ async function mountChessEmbed(
     aspect: boardAspectForSpec('chess'),
     railWidthPx: embedRailWidthPx('chess'),
     startPly: options.startPly ?? 0,
-    mountBoard: async (host, hooks) => mountChessReplayBoard(host, spec, hooks),
+    ...solutionCardOptions(options),
+    mountBoard: async (host, hooks) => {
+      board = mountChessReplayBoard(host, spec, hooks);
+      board.setPov(pov);
+      return board;
+    },
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+/** A fog chess chapter's ending read off its last position, for a chapter with
+ *  no result tag (the Misty self-play studies carry none): a king capture or a
+ *  kernel draw is on the board, so the card can say it. Empty when the line
+ *  stops mid-game. */
+function darkChessEndingLabel(spec: NonNullable<ReturnType<typeof chessChapterToReplaySpec>>) {
+  const { states } = replayChess(spec);
+  const status = states[states.length - 1]?.status;
+  if (status?.type !== 'finished') return '';
+  if (status.winner === 'white') return reviewResultLabel('white-wins', 'dark-chess');
+  if (status.winner === 'black') return reviewResultLabel('black-wins', 'dark-chess');
+  return reviewResultLabel('draw', 'dark-chess');
 }

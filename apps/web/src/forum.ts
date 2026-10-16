@@ -5,6 +5,7 @@ import {
   embedTargetFromUrl,
   OEMBED_ENDPOINT,
 } from '@mistboard/game';
+import { autosizeEmbedFrame } from './embed/embed-autosize.js';
 import { appendForumLocale, translationNeeded } from './forum-language.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
@@ -1748,6 +1749,7 @@ async function hydrateForumEmbed(figure: HTMLElement, embed: ForumEmbed): Promis
   iframe.setAttribute('loading', 'lazy');
   iframe.title = frame.title;
   iframe.style.aspectRatio = `${frame.width} / ${frame.height}`;
+  autosizeEmbedFrame(iframe);
   figure.replaceChildren(iframe);
   figure.classList.add('forum-embed-live');
 }

@@ -68,7 +68,13 @@ export function buildLiveRoomChat(roomId: string): HTMLElement {
     title: t('study.chatRoom'),
     apiUrl: playerChatApiUrl(roomId),
     fallback: { apiUrl: gameChatApiUrl(roomId), title: t('review.spectatorRoom') },
-    resizable: true,
+    // No drag separator in the live room (Brian, 2026-10-02: "a handle that does
+    // nothing"). The room's rail is capped at the board's height and the chat
+    // flex-fills it (live-review.css), and that rule outranks the manual-height
+    // class, so a drag changed nothing. Even working, it could only shrink the
+    // chat off the board line the room aligns it to. Review and study rails
+    // keep it: there a drag does resize the room.
+    resizable: false,
   });
 }
 
@@ -84,6 +90,21 @@ export function buildStudyChat(studyId: string): HTMLElement {
     // chat was the one call site that never asked for it, so a study reader had
     // no way to give a busy thread more room.
     resizable: true,
+  });
+}
+
+/**
+ * A broadcast event's room (lichess's relay chat): one per event, shared by
+ * its boards grid and every board, so the conversation stays put while a
+ * reader moves between boards.
+ */
+export function buildBroadcastChat(tourSlug: string): HTMLElement {
+  return buildGameChat(tourSlug, {
+    ariaLabel: 'Broadcast chat',
+    live: false,
+    pollMs: POLL_MS,
+    title: t('broadcast.chatRoom'),
+    apiUrl: `/api/chat/broadcast/${encodeURIComponent(tourSlug)}`,
   });
 }
 
@@ -105,7 +126,7 @@ function buildGameChat(roomId: string, options: GameChatOptions): HTMLElement {
 
   const footer = document.createElement('div');
   footer.className = 'review-spectator-chat__footer';
-  renderStatus(footer, 'Loading chat...');
+  renderStatus(footer, t('live.chatLoading'));
 
   panel.append(header, feed, footer);
   if (options.resizable) attachChatResize(panel);
@@ -150,7 +171,7 @@ async function hydrateGameChat(
     result = await fetchGameChat(session.apiUrl);
   }
   if (!result.state || !Array.isArray(result.state.lines)) {
-    renderStatus(ui.footer, 'Chat is unavailable.');
+    renderStatus(ui.footer, t('live.chatUnavailable'));
     return;
   }
   renderRoom(session, ui, known, result.state);
@@ -220,7 +241,7 @@ function renderFooter(
     return;
   }
   if (state.timeoutUntil) {
-    renderStatus(footer, 'You are temporarily timed out from chat.');
+    renderStatus(footer, t('live.chatTimedOut'));
     return;
   }
   const signIn = document.createElement('a');

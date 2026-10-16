@@ -34,7 +34,10 @@ export function postGameInviteButton(variant: string | undefined): HTMLElement |
   if (!variant || !canOfferPostGameInvite(variant)) return null;
   const link = document.createElement('a');
   link.className = 'room-invite-friend';
-  link.href = localizedHref(`/?play=friend&variant=${encodeURIComponent(variant)}`);
+  // side=random: a friend challenge from the postgame row starts on the coin
+  // flip, not on whatever side the player last picked in the friend dialog
+  // (Brian finished a bot game as Red and the dialog opened on Black).
+  link.href = localizedHref(`/?play=friend&variant=${encodeURIComponent(variant)}&side=random`);
   link.textContent = t('live.challengeFriend');
   return link;
 }

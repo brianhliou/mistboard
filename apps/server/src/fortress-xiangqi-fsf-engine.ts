@@ -44,7 +44,10 @@ export const FORTRESS_XIANGQI_DEFAULT_ENGINE_ID = 'fairy-stockfish-fortress-xian
 //        on the slow prod vCPU (~2.4s) instead of being cut short at 2s.
 // 0.3.0: eight-level ladder (the xiangqi FSF level shape); the retired
 //        amateur/strong/very-strong tiers stay resolvable as legacy tiers.
-export const FORTRESS_XIANGQI_ENGINE_VERSION = '0.3.0';
+// 0.3.1: the .ini sets nMoveRule = 0. The kernel has no no-capture draw; FSF's
+//        default drew at 100 quiet plies and shrank evals toward 0 before it
+//        (#472).
+export const FORTRESS_XIANGQI_ENGINE_VERSION = '0.3.1';
 
 export type FortressXiangqiEngineTier = {
   id: string;

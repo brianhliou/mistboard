@@ -22,7 +22,7 @@ export const BANQI_SAMPLE_GAME: {
   black: 'Human',
   event: 'Human vs engine',
   result:
-    'Black is up material — five pieces to three — but cannot touch Red’s elephant, the highest piece left, while it picks off Black’s pieces one by one. Black resigns. In Banqi, rank beats raw material.',
+    'Black is up material (five pieces to three) but cannot touch Red’s elephant, the highest piece left, while it picks off Black’s pieces one by one. Black resigns. In banqi, rank beats raw material.',
   // The 32-tile deal in ALL_BANQI_SQUARES order (a1, b1, … h1, a2, … h4):
   // createInitialBanqiState places deal[i] face-down on square i, and a flip
   // reveals it. So Red's a1 corner is really a horse, b1 a black chariot, etc.

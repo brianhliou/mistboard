@@ -126,42 +126,65 @@ describe('bot pages', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders featured and Fairy-Stockfish opponents with one uniform card UI', async () => {
+  // The page is for "play xiangqi against the computer": the ladder leads, named
+  // by level, Pikafish is its top rung, the first-timer level says Start here,
+  // and Misty (no xiangqi) follows under Other games.
+  it('leads with the xiangqi ladder by level, Pikafish on top, Misty after', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(rosterPayload()));
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
 
     await mountBots(root);
 
+    expect(root.querySelector('h1')?.textContent).toBe('Play xiangqi against the computer');
     expect(
       [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
-    ).toEqual(['Featured opponents', 'Fairy-Stockfish ladder']);
+    ).toEqual(['Xiangqi, level by level', 'Other games']);
     // Community rail is shared with /player; Online bots is the active entry.
     expect(root.querySelector('.community-rail a[aria-current="page"]')?.textContent).toBe(
       'Online bots',
     );
 
-    const featuredNames = [
-      ...root.querySelectorAll(
-        '.bot-roster-section:first-of-type .profile-summary-card .profile-summary-card-name',
-      ),
-    ].map((el) => el.textContent);
-    expect(featuredNames).toEqual(['Misty', 'Pikafish']);
-    expect(
-      root.querySelector<HTMLAnchorElement>('.profile-summary-card .profile-summary-card-name')
-        ?.href,
-    ).toContain('/bot/misty');
-    expect(root.textContent).toContain('Searches hidden positions');
-    expect(root.querySelector('.profile-summary-card-rating-value')?.textContent).toBe('1,812');
-    expect(root.querySelector('.profile-summary-card-footer')?.textContent).toContain('12 games');
+    const sectionNames = (index: number) =>
+      [
+        ...root.querySelectorAll(
+          `.bot-roster-section:nth-of-type(${index}) .profile-summary-card .profile-summary-card-name`,
+        ),
+      ].map((el) => el.textContent);
+    expect(sectionNames(1)).toEqual([
+      ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => `Level ${level}`),
+      'Pikafish',
+    ]);
+    expect(sectionNames(2)).toEqual(['Misty']);
+    // The stored bios are English-only; the page carries its own localized lines.
+    expect(root.textContent).toContain("Mistboard's own engine for Fog Chess");
+    expect(root.textContent).not.toContain('Searches hidden positions');
+    const mistyCard = root.querySelector('.profile-summary-card[data-bot-id="misty"]');
+    expect(mistyCard?.querySelector('.profile-summary-card-rating-value')?.textContent).toBe(
+      '1,812',
+    );
+    expect(mistyCard?.querySelector('.profile-summary-card-footer')?.textContent).toContain(
+      '12 games',
+    );
+
+    const badge = (botId: string) =>
+      root.querySelector(
+        `.profile-summary-card[data-bot-id="${botId}"] .profile-summary-card-badge`,
+      )?.textContent;
+    expect(badge('fairy-stockfish-level-2')).toBe('Start here');
+    expect(badge('fairy-stockfish-level-1')).toBe('BOT');
+    expect(badge('pikafish')).toBe('Strongest');
+    // Each rung leads with one filled Play xiangqi button.
+    const primary = root.querySelector(
+      '.profile-summary-card[data-bot-id="fairy-stockfish-level-1"] .profile-summary-card-action',
+    );
+    expect(primary?.textContent).toBe('Play Xiangqi');
+    expect(primary?.classList.contains('profile-summary-card-action-primary')).toBe(true);
 
     const ladderCards = [
       ...root.querySelectorAll('.profile-summary-card[data-bot-id^="fairy-stockfish-level-"]'),
     ];
     expect(ladderCards).toHaveLength(8);
-    expect(
-      ladderCards.map((card) => card.querySelector('.profile-summary-card-name')?.textContent),
-    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8].map((level) => `Fairy-Stockfish Level ${level}`));
     expect(
       ladderCards.map((card) =>
         card.querySelector<HTMLAnchorElement>('.profile-summary-card-name')?.getAttribute('href'),
@@ -170,7 +193,7 @@ describe('bot pages', () => {
     for (const card of ladderCards) {
       expect(card.getAttribute('data-subject-kind')).toBe('bot');
       expect(card.querySelector('.profile-summary-card-avatar')).not.toBeNull();
-      expect(card.querySelector('.profile-summary-card-bio')).not.toBeNull();
+      expect(card.querySelector('.profile-summary-card-bio')).toBeNull();
       expect(card.querySelector('.profile-summary-card-actions')).not.toBeNull();
       expect(card.querySelector('.profile-summary-card-footer')).not.toBeNull();
     }
@@ -450,6 +473,61 @@ describe('bot pages', () => {
     railRow('xiangqi')?.click();
     expect(counts()).toEqual(['64Games here', '50-14-0Record here', '2Variants']);
     expect(gameLinks()).toEqual(['/xiangqi/game/room_x1']);
+  });
+
+  it('pages older games of the selected variant past the profile cap (#550)', async () => {
+    const game = (index: number) => ({
+      roomId: `room_x${index}`,
+      variant: 'xiangqi',
+      mode: 'pve',
+      rated: false,
+      result: 'white-wins',
+      termination: 'checkmate',
+      plyCount: 30,
+      whiteName: 'Pikafish',
+      blackName: 'challenger',
+      corpusId: null,
+      endedAt: '2026-07-01T00:00:00.000Z',
+      playerColor: 'white',
+    });
+    const firstPage = Array.from({ length: 10 }, (_, index) => game(12 - index));
+    const profile = pikafish({
+      recordsByGameSpecId: {
+        xiangqi: { games: 12, wins: 12, losses: 0, draws: 0 },
+        jieqi: { games: 0, wins: 0, losses: 0, draws: 0 },
+      },
+      gamesByGameSpecId: { xiangqi: firstPage, jieqi: [] },
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse({ bot: profile }))
+      .mockResolvedValueOnce(jsonResponse({ games: [game(2), game(1)] }));
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+
+    await mountBotProfile(root, 'pikafish');
+
+    const rows = () => root.querySelectorAll('.bot-profile-games .profile-game-row-open').length;
+    expect(rows()).toBe(10);
+    const more = root.querySelector<HTMLButtonElement>(
+      '.bot-profile-games .profile-games-more-btn',
+    );
+    expect(more).not.toBeNull();
+
+    more?.click();
+    await flushPromises();
+    await flushPromises();
+
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe(
+      '/api/bots/pikafish/games?variant=xiangqi&offset=10&limit=15',
+    );
+    expect(rows()).toBe(12);
+    // Every game of the variant is on the page, so the control goes away.
+    expect(root.querySelector('.bot-profile-games .profile-games-more')).toBeNull();
+
+    // A variant with nothing past the first page never offers the control.
+    root.querySelector<HTMLElement>('.bot-rating-row[data-game-spec-id="jieqi"]')?.click();
+    expect(root.querySelector('.bot-profile-games .profile-games-more-btn')).toBeNull();
   });
 
   it('names the variant when the selected one has no games, and never shows lifetime numbers under it', async () => {

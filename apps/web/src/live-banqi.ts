@@ -17,6 +17,7 @@
 // the captured pool groups by bound ink, not by seat name.
 
 import type {
+  BanqiChaseRule,
   BanqiColor,
   BanqiGameStatus,
   BanqiMove,
@@ -24,11 +25,19 @@ import type {
   BanqiSeat,
   BanqiSquare,
 } from '@mistboard/game';
-import { banqiHiddenPool } from '@mistboard/game';
 import './live-xiangqi.css';
+import { banqiFaceDownAtEnd, banqiRevealOdds } from './banqi-reveal-odds.js';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { banqiEnabled } from './feature-flags.js';
 import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
-import { banqiClickResult } from './live-banqi-interaction.js';
+import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
+import { t } from './i18n/catalog.js';
+import {
+  type BanqiChaseBubble,
+  createBanqiChaseBubble,
+  noticeReadMs,
+} from './live-banqi-chase-bubble.js';
+import { banqiClickResult, banqiForbiddenMove } from './live-banqi-interaction.js';
 import {
   animateBanqiBoardMove,
   BANQI_PIECE_PX,
@@ -36,6 +45,7 @@ import {
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
+import { rebuildFinishedBanqiHistory } from './live-banqi-replay-history.js';
 import {
   maybePlayBanqiSnapshotSound,
   resetBanqiSoundState,
@@ -58,7 +68,12 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import { adoptLiveHistory } from './variant-tenant/live-history.js';
+import type {
+  TenantReasonKey,
+  TenantSeatKey,
+  WebVariantTenant,
+} from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
@@ -82,6 +97,11 @@ export type BanqiWireView = {
   firstColor: BanqiColor | null;
   moveNumber: number;
   lastMove?: BanqiMove;
+  // The 長捉 rule the game is played under; absent on a pre-rule game (rule off).
+  chaseRule?: BanqiChaseRule;
+  // The seat to move's board moves the 長捉 rule forbids right now; absent when
+  // none, on the other seat's view, and for spectators.
+  forbiddenMoves?: BanqiMove[];
 };
 
 type BanqiMoveEvent = TenantMovePlayed<BanqiSeat, BanqiMove>;
@@ -95,6 +115,13 @@ let annotations: BoardAnnotations | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
 // only the floating ghost shows). Null when not dragging.
 let draggingFrom: BanqiSquare | null = null;
+// The move the player tried that the 長捉 rule forbids: its ply and the cross's
+// square. The notice is a bubble on the board over that square, up until the
+// next selection, a move, a ply change, a click elsewhere, or noticeReadMs.
+// Null when no notice is up.
+let chaseNotice: { ply: number; square: BanqiSquare; from: BanqiSquare | null } | null = null;
+let chaseNoticeTimer: ReturnType<typeof setTimeout> | null = null;
+let chaseBubble: BanqiChaseBubble | null = null;
 // Snapshot extras that ride the frame (read by the chrome + play-again body).
 let roomMode: 'pve' | 'pvp' = 'pvp';
 let pveEngineId: string | null = null;
@@ -110,10 +137,10 @@ export function banqiSeatInk(seat: BanqiSeat, view: BanqiWireView | null): Banqi
 // A seat's player label. Banqi's seat names are NOT colors, so labeling by seat shows the
 // engine as "Red" even when it flipped black. Label by the bound ink once the flip
 // assigns it, else by move order ("First"/"Second") — colors do not exist pre-flip.
-function banqiSeatLabel(seat: BanqiSeat): string {
+function banqiSeatLabel(seat: BanqiSeat): TenantSeatKey {
   const ink = banqiLiveSeatInk(seat);
-  if (ink) return ink === 'red' ? 'Red' : 'Black';
-  return seat === 'red' ? 'First' : 'Second';
+  if (ink) return ink === 'red' ? 'setup.red' : 'setup.black';
+  return seat === 'red' ? 'setup.first' : 'setup.second';
 }
 
 // The ink for the CURRENT live view — what the meta card's player disc renders.
@@ -122,20 +149,15 @@ function banqiLiveSeatInk(seat: BanqiSeat): BanqiColor | null {
 }
 
 const banqiWebTenant: WebVariantTenant<BanqiSeat> = {
-  displayName: 'Banqi',
-  metaMarkerId: 'banqi',
-  metaGlyph: '象',
+  displayName: 'variant.banqi.name',
   colors: ['red', 'black'],
   isColor: isBanqiSeat,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
   enabled: banqiEnabled,
   reviewUrl: (roomId) => `/banqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: banqiReasonPhrase,
-  disabledTitle: 'Banqi disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Banqi room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching without private information.',
-  selectInstruction: 'Tap a face-down tile to flip it, or select one of your pieces to move.',
+  spectatorBody: 'live.spectatorNoPrivateInfo',
+  selectInstruction: 'live.selectBanqi',
   // Banqi colors are assigned by the opening flip; label players by ink (or move order
   // before the flip), and surface the opening "to move" before the clock arms.
   seatLabel: banqiSeatLabel,
@@ -174,6 +196,7 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
   resetState: () => {
     selectedSquare = null;
     draggingFrom = null;
+    clearChaseNotice();
     roomMode = 'pvp';
     pveEngineId = null;
   },
@@ -199,7 +222,9 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     const undone = pending.prevView?.lastMove;
     if (undone) animateBanqiBoardMove(liveRefs.board, undone, { reverse: true });
   },
-  renderExtras: (refs, view) => renderCapturedPools(refs, view),
+  renderExtras: (refs, view) => {
+    renderCapturedPools(refs, view);
+  },
   onDisabled: (refs) => {
     // renderCapturedPools ran before the enabled guard in the original, so it
     // paints even when the flag is off; then the selection clears.
@@ -208,8 +233,10 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
   },
   setup: (ctx) => {
     core = ctx;
+    chaseBubble = createBanqiChaseBubble(ctx.refs.board);
     installBanqiBoardStyles();
     installBanqiBoardInteraction(ctx.refs);
+    placeHiddenPoolUnderBoard(ctx.refs);
     // Repaint when the viewer changes their xiangqi piece set in settings — the
     // board and captured pool both render from the stored set, so a live game
     // must hot-reload it (mirrors the chess family's boardAppearanceChangedEvent
@@ -221,6 +248,7 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
       clearSelection: () => {
         selectedSquare = null;
         draggingFrom = null;
+        clearChaseNotice();
         if (core) renderBoard(core.refs, core.displayedView());
       },
     });
@@ -240,28 +268,48 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     positionKey: replayPositionKey,
     plyForView: (view, ctx) => replayPlyForView(view, ctx.positionChanged, ctx.latestPly),
   },
+  // A FINISHED room: its truth view plus the public move log recover the deal,
+  // so a cold join or reload gets every ply back (live-banqi-replay-history).
+  // A LIVE room cannot replay its log (the deal is a server secret), so it
+  // adopts the per-ply masked views the server sent in this viewer's hello
+  // (variant-tenant/live-history); face-down tiles stay masked in every ply.
+  replayHistory: {
+    rebuild: ({ events, view, state, frame }) => {
+      const moves = events.filter(isBanqiMoveEvent).map((event) => event.move);
+      return (
+        rebuildFinishedBanqiHistory(
+          moves,
+          view,
+          isBanqiSeat(state.seat) ? state.seat : view.perspective,
+        ) ??
+        // A LIVE room: the hello carries this viewer's own per-ply masked views
+        // (server-built; a spectator's are the public board), installed as sent.
+        adoptLiveHistory(frame.liveHistory, view, moves.length)
+      );
+    },
+  },
 });
 
 export function bootstrapBanqiLiveRoom(): void {
   client.bootstrap();
 }
 
-function banqiReasonPhrase(reason: string): string {
+function banqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'stalemate':
-      return 'no legal move';
+      return 'result.noLegalMove';
     case 'no-progress':
-      return 'no progress';
+      return 'result.noProgress';
     case 'repetition':
-      return 'repetition';
+      return 'result.repetition';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 
@@ -283,20 +331,60 @@ function renderBoard(liveRefs: LiveRefs, view: BanqiWireView | null): void {
     interactive: true,
     selectedSquare,
     draggingFrom,
+    coordinates: boardCoordinatesEnabled(),
     // A face-down tile is clicked directly to flip, so the renderer wants only
     // the selected piece's board moves (it already excludes self-move flips).
     legalMoves: selectedSquare
       ? view.legalMoves.filter((move) => move.from === selectedSquare && move.to !== move.from)
       : [],
+    forbiddenMoves: selectedSquare ? (view.forbiddenMoves ?? []) : [],
   });
   // Click + drag are delegated to the persistent board container once at mount
   // (installBanqiBoardInteraction), so they survive these innerHTML re-renders.
+  syncChaseNotice(view);
+}
+
+// The 長捉 bubble rides the board: a new ply, a finished game or a step back
+// into the replay ends it; otherwise it re-anchors to the redrawn cross.
+function syncChaseNotice(view: BanqiWireView): void {
+  if (!chaseNotice) return;
+  if (view.status.type !== 'playing' || view.ply !== chaseNotice.ply || !core?.replay.isLive()) {
+    clearChaseNotice();
+    return;
+  }
+  chaseBubble?.sync();
+}
+
+function showChaseNotice(view: BanqiWireView, square: BanqiSquare, from: BanqiSquare | null): void {
+  chaseNotice = { ply: view.ply, square, from };
+  if (chaseNoticeTimer) clearTimeout(chaseNoticeTimer);
+  chaseNoticeTimer = setTimeout(
+    () => {
+      chaseNoticeTimer = null;
+      clearChaseNotice();
+    },
+    noticeReadMs(t('live.banqiChaseForbidden')),
+  );
+}
+
+function clearChaseNotice(): void {
+  if (chaseNoticeTimer) clearTimeout(chaseNoticeTimer);
+  chaseNoticeTimer = null;
+  chaseNotice = null;
+  chaseBubble?.clear();
 }
 
 function handleSquareClick(view: BanqiWireView, square: BanqiSquare): void {
   if (!core?.replay.isLive() || core.connection() !== 'connected') return;
   const result = banqiClickResult(view, core.state.seat, selectedSquare, square);
   if (result.kind === 'noop') return;
+  if (result.kind === 'forbidden') {
+    // Nothing is sent: the selection stays so the cross stays in view, and the
+    // bubble over it says why the move did not happen.
+    showChaseNotice(view, square, selectedSquare);
+    return;
+  }
+  clearChaseNotice();
   if (result.kind === 'select') {
     selectedSquare = result.square;
     return;
@@ -331,6 +419,9 @@ function installBanqiBoardInteraction(liveRefs: LiveRefs): void {
       if (!view) return;
       handleSquareClick(view, square as BanqiSquare);
       renderBoard(liveRefs, view);
+      // Shown after the render so it anchors to the cross just drawn.
+      if (chaseNotice)
+        chaseBubble?.show(chaseNotice.square, chaseNotice.from, t('live.banqiChaseForbidden'));
     },
     canDragFrom: (square) => canDragBanqiPiece(square as BanqiSquare),
     ghostHtml: (square) => {
@@ -370,13 +461,21 @@ function dropBanqiPiece(liveRefs: LiveRefs, from: BanqiSquare, to: BanqiSquare |
       : undefined;
   if (move && view && core) {
     selectedSquare = null;
+    clearChaseNotice();
     if (core.send({ type: 'move', from: move.from, to: move.to })) {
       playSound(soundForOwnBanqiMove(view, move));
     }
+  } else if (to && view && banqiForbiddenMove(view, from, to)) {
+    // Dropped on a 長捉 cross: keep the piece selected and say why.
+    selectedSquare = from;
+    showChaseNotice(view, to, from);
   } else {
     selectedSquare = null;
+    clearChaseNotice();
   }
   if (core?.state.view) renderBoard(liveRefs, core.state.view);
+  if (chaseNotice)
+    chaseBubble?.show(chaseNotice.square, chaseNotice.from, t('live.banqiChaseForbidden'));
 }
 
 // ── Material: captured pools + the face-down pool ────────────────────────────
@@ -391,7 +490,8 @@ function dropBanqiPiece(liveRefs: LiveRefs, from: BanqiSquare, to: BanqiSquare |
 // has unrevealed: public arithmetic (start minus revealed minus captured) that
 // the player would otherwise do by hand.
 function renderCapturedPools(liveRefs: LiveRefs, view: BanqiWireView | null): void {
-  renderBanqiMaterial(liveRefs, view, view ? viewerInkFor(view) : null);
+  const moves = (core?.state.events ?? []).filter(isBanqiMoveEvent).map((event) => event.move);
+  renderBanqiMaterial(liveRefs, view, view ? viewerInkFor(view) : null, moves);
 }
 
 // The viewer's INK (glyph colour), once the first flip binds it. Falls back to
@@ -406,10 +506,15 @@ function viewerInkFor(view: BanqiWireView): BanqiColor | null {
 // extraction rationale as live-banqi-render / live-banqi-interaction. `viewerInk`
 // is null before the opening flip binds it: nothing can have been captured yet,
 // and the pool rows fall back to red-then-black since no seat owns an ink.
+//
+// `moves` is the room's move log. A finished room's truth view has every tile
+// face up, which would empty the tally (#544); the log recovers which tiles were
+// still face-down when play ended, and the tally keeps showing those.
 export function renderBanqiMaterial(
   slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
   view: BanqiWireView | null,
   viewerInk: BanqiColor | null,
+  moves: readonly BanqiMove[] = [],
 ): void {
   slots.capturesTop.replaceChildren();
   slots.capturesBottom.replaceChildren();
@@ -429,31 +534,43 @@ export function renderBanqiMaterial(
   // Rows follow the board: the opponent's ink on top, the viewer's below.
   const top: BanqiColor = viewerInk === 'black' ? 'red' : viewerInk === 'red' ? 'black' : 'red';
   const bottom: BanqiColor = top === 'red' ? 'black' : 'red';
-  const pool = banqiHiddenPool(view);
+  const finished = view.status.type === 'finished';
+  const poolView = finished ? banqiFaceDownAtEnd(view, moves) : view;
+  if (!poolView) return;
+  const odds = banqiRevealOdds(poolView);
   renderHiddenPoolPanel(
     slots.hiddenPool,
     [
-      { color: top, label: banqiInkLabel(top), side: pool[top] },
-      { color: bottom, label: banqiInkLabel(bottom), side: pool[bottom] },
+      { color: top, label: banqiInkLabel(top), side: odds.pool[top] },
+      { color: bottom, label: banqiInkLabel(bottom), side: odds.pool[bottom] },
     ],
     glyph,
+    // While the game is on, each disc carries its reveal odds (#542); a finished
+    // game's tally is a record of what stayed hidden, so it carries none.
+    finished
+      ? { caption: t('live.faceDownAtEnd') }
+      : view.status.type === 'playing'
+        ? { caption: t('live.revealOdds.couldBe', { count: odds.total }), odds }
+        : {},
   );
 }
 
 function banqiInkLabel(ink: BanqiColor): string {
-  return ink === 'red' ? 'Red' : 'Black';
+  return t(ink === 'red' ? 'setup.red' : 'setup.black');
 }
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────
 
-// Banqi's view carries its own ply count, so the live ply is just view.ply while
-// playing; a finished frame appends a final ply only when the position changed.
+// Banqi's view carries its own ply count, which is the move count whether the
+// game is playing or over. Counting from what this client happened to capture
+// filed a cold join's finished view as ply 1 (it had captured nothing), and a
+// resignation's reveal as a ply past the last move.
 function replayPlyForView(
   view: BanqiWireView,
   positionChanged: boolean,
   latestPly: number,
 ): number {
-  if (view.status.type === 'playing') return view.ply;
+  if (view.status.type === 'playing' || view.status.type === 'finished') return view.ply;
   if (positionChanged && view.lastMove) return latestPly + 1;
   return latestPly;
 }

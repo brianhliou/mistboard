@@ -24,6 +24,11 @@ import { attachBoardResizeGrip, restoreBoardScale } from '../board-resize.js';
 import { variantDisplayLabel } from '../game-display.js';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import { currentLocale } from '../i18n/locale.js';
+import {
+  type PracticePositionGoal,
+  parsePracticePositionParams,
+  practicePositionHref,
+} from '../practice-position-params.js';
 import { buildNav } from '../site-shell.js';
 import { installBoardDrag } from '../variant-tenant/board-drag.js';
 // The intersection boards (xiangqi, dark-xiangqi, jungle, jungle-flip) take
@@ -249,6 +254,12 @@ export function mountEditorPage(
   validation.className = 'editor-error editor-validation';
   validation.hidden = true;
   ctaCard.append(analysisLink, validation);
+
+  // Xiangqi only: hand the position to /practice/position and play it out
+  // against the engine, as the endgames page does for its own positions. The
+  // learner picks the goal and the side; nothing is guessed from the material.
+  const practice = variant === 'xiangqi' ? buildPracticeHandOff() : null;
+  if (practice) ctaCard.append(practice.box);
 
   rightRail.append(
     turnCard,
@@ -636,6 +647,53 @@ export function mountEditorPage(
     }
   }
 
+  function buildPracticeHandOff(): {
+    box: HTMLElement;
+    goal: HTMLSelectElement;
+    side: HTMLSelectElement;
+    link: HTMLAnchorElement;
+  } {
+    const box = document.createElement('div');
+    box.className = 'editor-practice';
+    const choice = (
+      id: string,
+      labelKey: I18nKey,
+      options: [string, I18nKey][],
+    ): [HTMLLabelElement, HTMLSelectElement] => {
+      const label = document.createElement('label');
+      label.className = 'editor-practice__label';
+      label.htmlFor = id;
+      label.textContent = t(labelKey);
+      const select = document.createElement('select');
+      select.id = id;
+      select.className = 'editor-select';
+      for (const [value, key] of options) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = t(key);
+        select.append(option);
+      }
+      select.addEventListener('change', () => renderFenAndLink());
+      return [label, select];
+    };
+    const [goalLabel, goal] = choice('editor-practice-goal', 'editor.practiceGoal', [
+      ['mate', 'editor.practiceGoalMate'],
+      ['draw', 'editor.practiceGoalDraw'],
+    ]);
+    const [sideLabel, side] = choice('editor-practice-side', 'editor.practiceSide', [
+      ['red', 'editor.practiceSideRed'],
+      ['black', 'editor.practiceSideBlack'],
+    ]);
+    const link = document.createElement('a');
+    link.className = 'editor-btn editor-practice-link';
+    link.textContent = t('editor.practicePlay');
+    link.addEventListener('click', (event) => {
+      if (link.getAttribute('aria-disabled') === 'true') event.preventDefault();
+    });
+    box.append(goalLabel, goal, sideLabel, side, link);
+    return { box, goal, side, link };
+  }
+
   function renderFenAndLink(): string {
     const fen = spec.toFen(model);
     fenInput.value = fen;
@@ -652,6 +710,21 @@ export function mountEditorPage(
     else analysisLink.removeAttribute('tabindex');
     validation.hidden = error === null;
     validation.textContent = error ?? '';
+    if (practice) {
+      const goal = practice.goal.value as PracticePositionGoal;
+      const side = practice.side.value === 'black' ? 'black' : 'red';
+      const href = practicePositionHref(canonical ?? fen, goal, side);
+      practice.link.href = href;
+      // The practice page's own reader decides, so a position it would refuse
+      // (a finished one included) is never offered as playable here.
+      const playable =
+        error === null &&
+        parsePracticePositionParams(new URL(href, window.location.origin).searchParams).ok;
+      practice.link.setAttribute('aria-disabled', playable ? 'false' : 'true');
+      practice.link.classList.toggle('is-disabled', !playable);
+      if (playable) practice.link.removeAttribute('tabindex');
+      else practice.link.setAttribute('tabindex', '-1');
+    }
     // The pool status line doubles as the mismatch marker on the dealt variants.
     poolStatus.classList.toggle('is-error', problem !== null);
     return fen;

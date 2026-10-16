@@ -16,6 +16,7 @@ import { sendEngineAlertNotification } from './engine-alert-email.js';
 import {
   atomicXiangqiEnabled,
   banqiEnabled,
+  crazyhouseXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
@@ -23,9 +24,10 @@ import {
   jungleFlipEnabled,
   xiangqiEnabled,
 } from './feature-flags.js';
-import { pikaJieqiPath } from './jieqi-engine.js';
+import { abJchessNetPath, abJchessPath, pikaJieqiPath } from './jieqi-engine.js';
 import { jungleEnginePath } from './jungle-engine.js';
 import { jungleFlipEnginePath } from './jungle-flip-engine.js';
+import { katagoJungleEnginePath, katagoJungleNetPath } from './jungle-katago-engine.js';
 import { logger } from './obs.js';
 import { fairyStockfishPath } from './uci-engine-harness.js';
 import { pikafishXiangqiPath } from './xiangqi-pikafish-engine.js';
@@ -59,6 +61,14 @@ const ENGINE_PROBES: readonly EngineProbe[] = [
     resolvePath: fairyStockfishPath,
   },
   {
+    // The shared stock binary, like fortress: crazyhouse xiangqi is a custom
+    // variants.ini over the built-in xiangqi, no patch.
+    variant: 'crazyhouse-xiangqi',
+    binary: 'fairy-stockfish',
+    enabled: crazyhouseXiangqiEnabled,
+    resolvePath: fairyStockfishPath,
+  },
+  {
     // Its OWN binary, not the shared Fairy-Stockfish: stock FSF cannot play this
     // variant at all (MAX_MOVES = 1024 against a 4,901-turn peak), so
     // duckXiangqiFsfPath deliberately has no fallback and this probe reports a
@@ -77,12 +87,36 @@ const ENGINE_PROBES: readonly EngineProbe[] = [
     resolvePath: atomicXiangqiFsfPath,
   },
   { variant: 'jieqi', binary: 'pikafish-jieqi', enabled: jieqiEnabled, resolvePath: pikaJieqiPath },
+  {
+    // The top slot's engine and its net (fetched from the author's release by
+    // railpack.json). Missing either one hides the slot (abJchessAvailable) rather
+    // than failing the jieqi ladder.
+    variant: 'jieqi',
+    binary: 'ab-jchess',
+    enabled: jieqiEnabled,
+    resolvePath: () => {
+      abJchessNetPath();
+      return abJchessPath();
+    },
+  },
   { variant: 'banqi', binary: 'banqi-engine', enabled: banqiEnabled, resolvePath: banqiEnginePath },
   {
     variant: 'jungle',
     binary: 'jungle-engine',
     enabled: jungleEnabled,
     resolvePath: jungleEnginePath,
+  },
+  {
+    // The top jungle seat's engine and its net (fetched from Kouza's Dandelion
+    // release by railpack.json). Missing either one hides the seat
+    // (katagoJungleAvailable) rather than failing the jungle ladder.
+    variant: 'jungle',
+    binary: 'katago-jungle',
+    enabled: jungleEnabled,
+    resolvePath: () => {
+      katagoJungleNetPath();
+      return katagoJungleEnginePath();
+    },
   },
   {
     variant: 'jungle-flip',
@@ -97,6 +131,27 @@ export type EngineBootCheckResult = {
   present: string[];
   missing: Array<{ variant: string; binary: string; error: string }>;
 };
+
+/**
+ * The enabled engines this box cannot run right now, with no logging or alerting:
+ * the daily readout's view of the same probes the boot check alerts on. An upstream
+ * net download that soft-failed at build time (scripts/fetch-abjchess-net.sh) shows
+ * up here as the AB-JChess probe for as long as the image lacks it.
+ */
+export function missingEngineBinaries(
+  probes: readonly EngineProbe[] = ENGINE_PROBES,
+): Array<{ variant: string; binary: string }> {
+  const missing: Array<{ variant: string; binary: string }> = [];
+  for (const probe of probes) {
+    if (!probe.enabled()) continue;
+    try {
+      probe.resolvePath();
+    } catch {
+      missing.push({ variant: probe.variant, binary: probe.binary });
+    }
+  }
+  return missing;
+}
 
 type BootLogger = {
   info: (obj: object, msg?: string) => void;

@@ -22,6 +22,7 @@ import {
   type DuckXiangqiBoardPhase,
   duckXiangqiBoardSvg,
   duckXiangqiClickResult,
+  installDuckXiangqiDrag,
   installDuckXiangqiGhost,
 } from './duck-xiangqi-board.js';
 // The xiangqi surface stylesheets. WITHOUT THESE the board ground, palace
@@ -29,7 +30,17 @@ import {
 // correct and the page looks broken.
 import './live-xiangqi.css';
 import './duck-xiangqi.css';
+import { duckPlacementCue, enterDuckGame } from './duck-xiangqi-intro.js';
+import {
+  playDuckQuack,
+  preloadDuckQuack,
+  quackForFrameEvent,
+  quackForOwnTurn,
+} from './duck-xiangqi-quack.js';
+import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 import { duckXiangqiEnabled } from './feature-flags.js';
+import { t } from './i18n/catalog.js';
+import { finishBadgesForResult, generalSquareIn } from './live-finish-badges.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
@@ -39,15 +50,15 @@ import {
   drawnBoardOverlays,
   installBoardAnnotations,
 } from './variant-tenant/board-annotations.js';
-import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
   type TenantLiveClientContext,
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
+import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
 
 type DuckMoveEvent = TenantMovePlayed<DuckXiangqiColor, DuckXiangqiTurn>;
 
@@ -55,18 +66,27 @@ let core: TenantLiveClientContext<DuckXiangqiColor, DuckXiangqiPlayerView> | nul
 // The whole two-phase turn, in one variable. `piece` is the ordinary state;
 // `duck` means a piece move is chosen, shown optimistically, and NOT yet sent.
 let phase: DuckXiangqiBoardPhase = { kind: 'piece', selected: null };
+// The point a drag has lifted its piece (or the duck) off, drawn empty while
+// the ghost follows the pointer.
+let lifted: DuckXiangqiSquare | null = null;
 let annotations: BoardAnnotations | null = null;
 let roomMode: 'pvp' | 'pve' = 'pvp';
 let forfeitDeadline: number | null = null;
 let lastStatusType: string | null = null;
+// The duck square the live board last drew, so the board is told to play the
+// landing exactly once when it moves. Lives here, in the room's own state and
+// reset with it, not in the renderer: replay and postgame boards share that.
+let lastDrawnDuck: DuckXiangqiSquare | null = null;
+// Whether this room is one of the browser's first duck games, which get the full
+// placement card (duck-xiangqi-intro.ts). Decided once per room.
+let introGame: { room: string; intro: boolean } | null = null;
 
 function isDuckColor(value: unknown): value is DuckXiangqiColor {
   return value === 'red' || value === 'black';
 }
 
 const duckWebTenant: WebVariantTenant<DuckXiangqiColor> = {
-  displayName: 'Duck Xiangqi',
-  metaGlyph: '🦆',
+  displayName: 'variant.duckXiangqi.name',
   colors: ['red', 'black'],
   isColor: isDuckColor,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
@@ -76,18 +96,35 @@ const duckWebTenant: WebVariantTenant<DuckXiangqiColor> = {
   // postgame, which 403s on a tenant event log.
   reviewUrl: (roomId) => `/duck-xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: duckReasonPhrase,
-  disabledTitle: 'Duck Xiangqi disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Duck Xiangqi room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching the full board.',
-  selectInstruction: 'Move a piece, then place the duck on any empty point.',
+  spectatorBody: 'live.spectatorFullBoard',
+  selectInstruction: 'live.selectDuck',
+  // The compact placement cue: the mover's own chip reads "place duck" while the
+  // duck half of the turn is pending.
+  turnChipLabel: (seat) => {
+    const view = core?.state.view;
+    if (!view || phase.kind !== 'duck' || seat !== core?.state.seat || !canInteract(view)) {
+      return null;
+    }
+    return 'live.duckPlaceChip';
+  },
 };
 
 const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, DuckXiangqiTurn>({
   tenant: duckWebTenant,
   gameSpecId: DUCK_XIANGQI_SPEC_ID,
   defaultRoomId: 'dkx_dev',
+  flippable: true,
   boardClass: 'duck-xiangqi-live-board',
+  finishBadges: (view, previous) =>
+    view.status.type === 'finished'
+      ? finishBadgesForResult({
+          colors: duckWebTenant.colors,
+          winner: view.status.winner,
+          reason: view.status.reason,
+          // A captured general is gone from the final board: badge where it stood.
+          generalSquare: (color) => generalSquareIn([view.board, previous?.board], color),
+        })
+      : [],
   chrome: {
     roomMode: () => roomMode,
     forfeitDeadline: () => forfeitDeadline,
@@ -109,13 +146,17 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
     ) {
       playSound('move');
     }
+    if (quackForFrameEvent(event, frame.seat)) playDuckQuack();
     maybePlayTerminalSound();
   },
   resetState: () => {
     phase = { kind: 'piece', selected: null };
+    lifted = null;
     roomMode = 'pvp';
     forfeitDeadline = null;
     lastStatusType = null;
+    lastDrawnDuck = null;
+    introGame = null;
   },
   renderBoard: (refs, view) => {
     reconcileInteractionState(core?.state.view ?? null);
@@ -150,7 +191,7 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    notate: duckTurnLabel,
+    notate: duckXiangqiTurnLabel,
     isMoveEvent: isDuckMoveEvent,
   },
   replayCapture: {
@@ -212,12 +253,19 @@ function renderBoard(liveRefs: LiveRefs, view: DuckXiangqiPlayerView | null): vo
   // Right-click arrows and circles. `installBoardAnnotations` below captures the
   // gesture, but the shapes only exist on screen if each render draws them.
   const drawn = drawnBoardOverlays<DuckXiangqiSquare>(annotations?.shapes() ?? []);
+  // Land once, live only: scrubbing the replay moves the duck too, and that is
+  // reading a game, not watching a duck arrive.
+  const live = core?.replay.isLive() ?? true;
+  const duckLanded = live && !!view.duck && lastDrawnDuck !== null && view.duck !== lastDrawnDuck;
+  if (live) lastDrawnDuck = view.duck ?? null;
   liveRefs.board.innerHTML = duckXiangqiBoardSvg(view, orientationFor(view), {
     interactive: true,
     phase,
     targets: targetsForPhase(view),
     arrows: drawn.arrows,
     markers: drawn.markers,
+    duckLanded,
+    lifted,
   });
 }
 
@@ -234,6 +282,13 @@ function renderPhaseNotice(liveRefs: LiveRefs, view: DuckXiangqiPlayerView | nul
   // visible at all - the section is `hidden` in the markup, so appending to it
   // rendered a notice nobody could see. Same shape as the fortress check notice.
   if (!view || phase.kind !== 'duck' || !canInteract(view)) return;
+  // A player new to the variant gets the card; everyone else gets the chip
+  // (`turnChipLabel` above), which says the same thing without taking space.
+  // This seat has placed the duck once per completed full move.
+  const room = core?.state.room ?? '';
+  if (introGame?.room !== room) introGame = { room, intro: enterDuckGame(room) };
+  const placementIndex = Math.max(0, view.moveNumber - 1);
+  if (duckPlacementCue({ introGame: introGame.intro, placementIndex }) !== 'card') return;
   liveRefs.actionSection.hidden = false;
   liveRefs.actionStatus.replaceChildren();
   const notice = document.createElement('div');
@@ -241,9 +296,9 @@ function renderPhaseNotice(liveRefs: LiveRefs, view: DuckXiangqiPlayerView | nul
   // a player has seen this exact card say "Invite opponent" a minute earlier.
   notice.className = 'action-notice pending';
   const strong = document.createElement('strong');
-  strong.textContent = 'Now place the duck';
+  strong.textContent = t('live.duckPlaceTitle');
   const body = document.createElement('p');
-  body.textContent = 'Any empty point. Your move is not sent until you do.';
+  body.textContent = t('live.duckPlaceBody');
   notice.append(strong, body);
   liveRefs.actionStatus.append(notice);
 }
@@ -251,6 +306,7 @@ function renderPhaseNotice(liveRefs: LiveRefs, view: DuckXiangqiPlayerView | nul
 // ── Interaction ──────────────────────────────────────────────────────────────
 
 function installBoardInteraction(liveRefs: LiveRefs): void {
+  preloadDuckQuack();
   annotations = installBoardAnnotations({
     board: liveRefs.board,
     gameId: () => annotationOwner(core?.state.view),
@@ -265,7 +321,9 @@ function installBoardInteraction(liveRefs: LiveRefs): void {
     board: liveRefs.board,
     active: () => {
       const view = core?.state.view;
-      return !!view && phase.kind === 'duck' && canInteract(view);
+      // Not while the duck itself is being dragged: the drag ghost is under the
+      // pointer and the snap disc marks the point, as for a dragged piece.
+      return !!view && phase.kind === 'duck' && lifted === null && canInteract(view);
     },
     isTarget: (square) => {
       const view = core?.state.view;
@@ -273,21 +331,31 @@ function installBoardInteraction(liveRefs: LiveRefs): void {
     },
     perspective: () => orientationFor(core?.state.view ?? null),
     // Mirrors the renderer's own default: this client never passes a layout.
-    layout: () => 'intersection',
+    layout: () => readStoredXiangqiBoardLayout(),
     pieceSet: () => undefined,
   });
-  installBoardDrag({
+  // Drag and click share one rule set: a drag resolves through the same click
+  // handler, so dropping a piece arms phase two and dropping the duck ends it.
+  installDuckXiangqiDrag({
     board: liveRefs.board,
-    ghostSizePx: 0,
-    onSquareClick: (square) => handleSquareClick(square as DuckXiangqiSquare),
-    // Click-only while the variant is hidden. Dragging a piece would have to
-    // ARM phase two rather than complete a move, which is a different gesture
-    // from every other board here; getting that wrong is worse than not having
-    // it, and it is purely additive later.
-    canDragFrom: () => false,
-    ghostHtml: () => null,
-    onDragStart: () => {},
-    onDrop: () => {},
+    view: () => {
+      const view = core?.state.view;
+      return view && canInteract(view) ? view : null;
+    },
+    seat: () => (isDuckColor(core?.state.seat) ? core.state.seat : null),
+    phase: () => phase,
+    setPhase: (next) => {
+      phase = next;
+    },
+    targets: () => {
+      const view = core?.state.view;
+      return view ? targetsForPhase(view) : [];
+    },
+    lift: (square) => {
+      lifted = square;
+      if (core?.state.view) renderBoard(liveRefs, core.state.view);
+    },
+    click: handleSquareClick,
   });
 }
 
@@ -326,6 +394,7 @@ function handleSquareClick(square: DuckXiangqiSquare): void {
         ...(result.turn.duckTo === null ? {} : { duckTo: result.turn.duckTo }),
       });
       playSound('move');
+      if (quackForOwnTurn(result.turn)) playDuckQuack();
       phase = { kind: 'piece', selected: null };
       break;
     case 'noop':
@@ -388,21 +457,13 @@ function maybePlayTerminalSound(): void {
   lastStatusType = status;
 }
 
-function duckTurnLabel(move: DuckXiangqiTurn): string {
-  // `x…#` is a general capture, which ends the game and is the one turn with no
-  // duck placement.
-  return move.duckTo === null
-    ? `${move.from}x${move.to}#`
-    : `${move.from}-${move.to}@${move.duckTo}`;
-}
-
 function isDuckMoveEvent(event: TenantLiveEvent): event is DuckMoveEvent {
   return (event as { type?: unknown }).type === 'move-played';
 }
 
 function orientationFor(view: DuckXiangqiPlayerView | null): DuckXiangqiColor {
-  const seat = core?.state.seat;
-  if (isDuckColor(seat)) return seat;
+  // The core's orientation carries the viewer's flip.
+  if (core) return core.orientation();
   return view?.perspective ?? 'red';
 }
 
@@ -428,17 +489,23 @@ function replayPositionKey(view: DuckXiangqiPlayerView): string {
   return JSON.stringify({ board, duck: view.duck ?? null, moveNumber: view.moveNumber });
 }
 
-function duckReasonPhrase(reason: string): string {
+export function duckReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'general-captured':
-      return 'general captured';
+      return 'result.generalCapture';
     case 'stalemate':
-      return 'no legal turn';
+      return 'result.noLegalTurn';
     case 'progress':
-      return '60 moves without a capture';
+      return 'result.sixtyMovesNoCapture';
     case 'repetition':
-      return 'threefold repetition';
+      return 'result.threefoldRepetition';
+    case 'timeout':
+      return 'result.timeout';
+    case 'resignation':
+      return 'result.resignation';
+    case 'abandonment':
+      return 'result.abandonment';
     default:
-      return reason.replace(/-/g, ' ');
+      return 'result.gameRules';
   }
 }

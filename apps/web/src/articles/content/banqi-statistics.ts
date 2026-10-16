@@ -57,6 +57,8 @@ export const banqiStatisticsArticle: Article = {
     },
     {
       kind: 'table',
+      compact: true,
+      wrap: true,
       headers: ['200 games, MistyBanqi against itself at 10M nodes', 'value'],
       rows: [
         ['decided', '168 (84%)'],
@@ -169,7 +171,7 @@ export const banqiStatisticsArticle: Article = {
           kind: 'embed',
           path: '/embed/study/FsA5sowX/F8fezAhm',
           title: 'Banqi: an engine game under the competition rules',
-          aspect: [702, 440],
+          aspect: [702, 446],
         } as ArticleBlock,
         {
           kind: 'paragraph',

@@ -1,10 +1,10 @@
 // Live multiplayer room client for Atomic Xiangqi (9x10, open information, a
 // capture is an explosion). The standard xiangqi live client with three
 // differences: the board rings the points the last explosion cleared, the
-// check notice says what check means here, and the move list is coordinate
-// pairs (the WXF formatter replays a game through the standard kernel, which
-// does not explode). Everything else is live-xiangqi.ts: the intersection
-// board, click/drag, sounds, replay capture.
+// check notice says what check means here, and the move list replays through
+// the atomic kernel (formatAtomicXiangqiMoves), so labels and their +/# follow
+// the explosion rather than the standard rules. Everything else is
+// live-xiangqi.ts: the intersection board, click/drag, sounds, replay capture.
 
 import {
   ATOMIC_XIANGQI_SPEC_ID,
@@ -13,8 +13,10 @@ import {
   type AtomicXiangqiPlayerView,
   type AtomicXiangqiSquare,
   applyAtomicXiangqiMove,
+  atomicXiangqiCheckedGeneral,
   coordOf,
   createInitialAtomicXiangqiState,
+  formatAtomicXiangqiMoves,
   getAtomicXiangqiPlayerView,
 } from '@mistboard/game';
 import './live-xiangqi.css';
@@ -29,10 +31,12 @@ import {
   markAtomicXiangqiBlastHost,
 } from './atomic-xiangqi-board.js';
 import { atomicXiangqiEnabled } from './feature-flags.js';
+import { t } from './i18n/catalog.js';
 import {
   maybePlayAtomicXiangqiSnapshotSound,
   soundForOwnAtomicXiangqiMove,
 } from './live-atomic-xiangqi-sound.js';
+import { finishBadgesForResult, generalSquareIn } from './live-finish-badges.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { resetXiangqiSoundState } from './live-xiangqi-sound.js';
@@ -60,10 +64,14 @@ import {
   xiangqiPieceGhostSvg,
 } from './xiangqi-board.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
+import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 
 type AtomicMoveEvent = TenantMovePlayed<AtomicXiangqiColor, AtomicXiangqiMove>;
 
 let core: TenantLiveClientContext<AtomicXiangqiColor, AtomicXiangqiPlayerView> | null = null;
+// Snapshot extras that ride the frame (read by the chrome + play-again body).
+let roomMode: 'pve' | 'pvp' = 'pvp';
+let pveEngineId: string | null = null;
 let selectedSquare: AtomicXiangqiSquare | null = null;
 let draggingFrom: AtomicXiangqiSquare | null = null;
 let annotations: BoardAnnotations | null = null;
@@ -75,20 +83,15 @@ let detonatedKey: string | null = null;
 let cancelCapture: (() => void) | null = null;
 
 const atomicXiangqiWebTenant: WebVariantTenant<AtomicXiangqiColor> = {
-  displayName: 'Atomic Xiangqi',
-  metaMarkerId: 'xiangqi',
-  metaGlyph: '象',
+  displayName: 'variant.atomicXiangqi.name',
   colors: ['red', 'black'],
   isColor: isXiangqiColor,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
   enabled: atomicXiangqiEnabled,
   reviewUrl: (roomId) => `/atomic-xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: atomicXiangqiReasonPhrase,
-  disabledTitle: 'Atomic Xiangqi disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Atomic Xiangqi room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching the full board.',
-  selectInstruction: 'Select one of your pieces, then choose a destination.',
+  spectatorBody: 'live.spectatorFullBoard',
+  selectInstruction: 'live.selectPieceThenDestination',
 };
 
 const client = createTenantLiveClient<
@@ -99,13 +102,25 @@ const client = createTenantLiveClient<
   tenant: atomicXiangqiWebTenant,
   gameSpecId: ATOMIC_XIANGQI_SPEC_ID,
   defaultRoomId: 'axq_dev',
+  flippable: true,
   boardClass: 'xiangqi-live-board',
+  // The server sends roomMode + the bot's engine id on every frame; before
+  // 2026-09-30 this client ignored them, so a finished bot game read as PvP and
+  // its "Play again" opened a friend room instead of the same bot.
+  chrome: {
+    roomMode: () => roomMode,
+  },
   playAgainRequestBody: (state) => ({
-    mode: 'pvp',
+    mode: roomMode,
     gameSpecId: ATOMIC_XIANGQI_SPEC_ID,
     preferredColor: 'random',
+    ...(roomMode === 'pve' && pveEngineId ? { engineId: pveEngineId } : {}),
     ...(state.timeControl ? { timeControl: state.timeControl } : {}),
   }),
+  onFrame: (frame) => {
+    if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
+    if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
+  },
   onSnapshotApplied: () => {
     if (core) maybePlayAtomicXiangqiSnapshotSound(core.state.view, core.state.seat);
   },
@@ -114,12 +129,26 @@ const client = createTenantLiveClient<
   },
   resetSounds: resetXiangqiSoundState,
   resetState: () => {
+    roomMode = 'pvp';
+    pveEngineId = null;
     selectedSquare = null;
     draggingFrom = null;
     detonatedKey = null;
   },
   renderBoard,
   renderExtras: renderCheckStatus,
+  finishBadges: (view, previous) =>
+    view.status.type === 'finished'
+      ? finishBadgesForResult({
+          colors: atomicXiangqiWebTenant.colors,
+          winner: view.status.winner,
+          reason: view.status.reason,
+          // A captured general is gone from the final board: badge where it stood.
+          generalSquare: (color) => generalSquareIn([view.board, previous?.board], color),
+        })
+      : [],
+  // Let the blast and its ghosts finish before the badges land.
+  finishBadgeDelayMs: 650,
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
@@ -152,6 +181,8 @@ const client = createTenantLiveClient<
         if (core) renderBoard(core.refs, core.displayedView());
       },
     });
+    // The theme gear changes the notation mid-game; relabel the list in place.
+    window.addEventListener(xiangqiNotationChangedEvent, () => ctx.renderAll());
   },
   moveList: {
     rowClass: 'move-row xiangqi-move-row',
@@ -159,6 +190,9 @@ const client = createTenantLiveClient<
     listClass: 'xiangqi-move-list',
     masked: false,
     notate: (move) => `${move.from}-${move.to}`,
+    // The reader's notation, as on the replay and review pages, written against
+    // the atomic kernel so `+`/`#` follow atomic's check and blast rules.
+    notateLine: (moves) => formatAtomicXiangqiMoves(moves, currentXiangqiNotationStyle()),
     isMoveEvent: isAtomicMoveEvent,
   },
   replayCapture: {
@@ -226,13 +260,14 @@ function renderBoard(liveRefs: LiveRefs, view: AtomicXiangqiPlayerView | null): 
     draggingFrom,
     arrows: drawn.arrows,
     markers: [...atomicXiangqiBlastMarkers(view, { fresh }), ...drawn.markers],
+    checkSquare: atomicXiangqiCheckedGeneral(view.board, view.status),
   });
   if (fresh && atomicXiangqiCaptureAnimates(view)) {
     cancelCapture = animateAtomicXiangqiCapture(liveRefs.board, view, perspective);
   }
 }
 
-// The fortress notice, with this game's meaning of check: the perspective's
+// The check notice, with this game's meaning of check: the perspective's
 // general can be removed next move, by capture or by a blast beside it.
 function renderCheckStatus(liveRefs: LiveRefs, view: AtomicXiangqiPlayerView | null): void {
   if (view?.status.type !== 'playing' || !view.inCheck || !core?.replay.isLive()) return;
@@ -241,7 +276,7 @@ function renderCheckStatus(liveRefs: LiveRefs, view: AtomicXiangqiPlayerView | n
   const notice = document.createElement('div');
   notice.className = 'action-notice danger';
   const title = document.createElement('strong');
-  title.textContent = 'Check';
+  title.textContent = t('live.checkTitle');
   const body = document.createElement('p');
   body.textContent = atomicXiangqiCheckBody(
     view.perspective,

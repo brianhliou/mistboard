@@ -8,7 +8,7 @@
 // chunk extracted from the live shell has to import them itself.
 import './live-xiangqi.css';
 import './atomic-xiangqi.css';
-import type { AtomicXiangqiPlayerView } from '@mistboard/game';
+import { type AtomicXiangqiPlayerView, atomicXiangqiCheckedGeneral } from '@mistboard/game';
 import {
   animateAtomicXiangqiCapture,
   atomicXiangqiBlastMarkers,
@@ -22,20 +22,36 @@ import {
   postgameViewAtPly,
 } from './atomic-xiangqi-postgame.js';
 import { replayAtomicXiangqiNotation } from './atomic-xiangqi-replay.js';
-import type { ReplayHandle } from './replay.js';
+import type { ReplayBoardOverlay, ReplayHandle } from './replay.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { watchAtomicXiangqiMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
-import { xiangqiBoardSvg } from './xiangqi-board.js';
+import {
+  animateXiangqiBoardMove,
+  type XiangqiBoardArrow,
+  type XiangqiBoardMarker,
+  xiangqiBoardSvg,
+} from './xiangqi-board.js';
 
 export type AtomicXiangqiWatchReplayOptions = TenantWatchReplayOptions;
 
-function boardSvg(view: AtomicXiangqiPlayerView, orientation: 'red' | 'black', fresh: boolean) {
+function boardSvg(
+  view: AtomicXiangqiPlayerView,
+  orientation: 'red' | 'black',
+  fresh: boolean,
+  overlay: ReplayBoardOverlay,
+) {
   return xiangqiBoardSvg(view, orientation, {
     interactive: false,
     selectedSquare: null,
     draggingFrom: null,
     coordinates: false,
-    markers: atomicXiangqiBlastMarkers(view, { fresh }),
+    arrows: overlay.arrows as readonly XiangqiBoardArrow[],
+    markers: [
+      ...atomicXiangqiBlastMarkers(view, { fresh }),
+      ...(overlay.glyphs as readonly XiangqiBoardMarker[]),
+    ],
+    checkSquare: atomicXiangqiCheckedGeneral(view.board, view.status),
   });
 }
 
@@ -45,6 +61,8 @@ export function mountAtomicXiangqiWatchReplay(
   options: AtomicXiangqiWatchReplayOptions,
 ): Promise<ReplayHandle> {
   let cancelCapture: (() => void) | null = null;
+  // The overlay of the last repaint, so the capture repaint below keeps it.
+  let lastOverlay: ReplayBoardOverlay = { arrows: [], glyphs: [] };
   return mountTenantWatchReplay<AtomicXiangqiPostgameResponse, AtomicXiangqiPlayerView, 'truth'>(
     root,
     roomId,
@@ -59,7 +77,12 @@ export function mountAtomicXiangqiWatchReplay(
       paneKind: () => 'truth',
       // A repaint that is not a one-ply step (a jump, a resize, an appearance
       // change) shows the discs without the burst, as the live room does.
-      renderBoard: (view, orientation) => boardSvg(view, orientation, false),
+      renderBoard: (view, orientation, _key, overlay) => {
+        lastOverlay = overlay;
+        return boardSvg(view, orientation, false, overlay);
+      },
+      // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+      moveSound: watchAtomicXiangqiMoveSound,
       fillCaptures: () => {},
       // Algebraic labels from the atomic kernel: the standard formatter would
       // read the wrong board after the first explosion. A record the kernel
@@ -76,15 +99,21 @@ export function mountAtomicXiangqiWatchReplay(
         }
       },
       // A forward step onto a capture repaints with the fresh aftermath and
-      // plays the detonation; a back step, or a quiet move, keeps the plain
-      // repaint the generic already did.
-      animateMove: (boardEl, view, _prevView, direction, orientation) => {
+      // plays the detonation (the capturer is gone, so nothing glides). A quiet
+      // move glides forward, and a back step glides the previous ply's move
+      // home, on the plain repaint the generic already did.
+      animateMove: (boardEl, view, prevView, direction, orientation) => {
         cancelCapture?.();
         cancelCapture = null;
         markAtomicXiangqiBlastHost(boardEl, view);
-        if (direction !== 'forward' || !atomicXiangqiCaptureAnimates(view)) return;
-        boardEl.innerHTML = boardSvg(view, orientation, true);
-        cancelCapture = animateAtomicXiangqiCapture(boardEl, view, orientation);
+        if (direction === 'forward' && atomicXiangqiCaptureAnimates(view)) {
+          boardEl.innerHTML = boardSvg(view, orientation, true, lastOverlay);
+          cancelCapture = animateAtomicXiangqiCapture(boardEl, view, orientation);
+          return;
+        }
+        const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
+        if (move)
+          animateXiangqiBoardMove(boardEl, move, orientation, { reverse: direction === 'back' });
       },
     },
   );

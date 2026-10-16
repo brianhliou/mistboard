@@ -5,15 +5,20 @@ import { join } from 'node:path';
 import test, { after } from 'node:test';
 import { firstPartyBotEngineFor } from './first-party-bots.js';
 import {
+  ABJCHESS_JIEQI_ENGINE_VERSION,
   buildJieqiAnalysisCommands,
   buildJieqiGoCommand,
   buildJieqiLiveCommands,
   buildJieqiLiveInitCommands,
+  JIEQI_ABJCHESS_ENGINE_ID,
   JIEQI_DEFAULT_ENGINE_ID,
+  JIEQI_ENGINE_VERSION,
   JIEQI_PLAYABLE_ENGINES,
   jieqiAnalysisResourceOptions,
   jieqiEngineMove,
   jieqiEngineTierFor,
+  jieqiEngineVersion,
+  pickSkillMove,
   pikafishJieqiWarmSessionStats,
 } from './jieqi-engine.js';
 
@@ -60,10 +65,10 @@ test('the tier ladder stays ordered weakest-first', () => {
     [...depths].sort((a, b) => a - b),
     depths,
   );
-  assert.equal(
-    JIEQI_PLAYABLE_ENGINES.at(-1)?.id,
-    JIEQI_DEFAULT_ENGINE_ID,
-    'and the strongest rung is the one served',
+  assert.deepEqual(
+    JIEQI_PLAYABLE_ENGINES.slice(-2).map((t) => t.id),
+    [JIEQI_DEFAULT_ENGINE_ID, JIEQI_ABJCHESS_ENGINE_ID],
+    'level 8 (the create-route default) sits under the AB-JChess top slot',
   );
 });
 
@@ -157,6 +162,12 @@ test('analysis resource options ignore the live env knobs', () => {
       'setoption name Hash value 256',
       'setoption name Threads value 1',
     ]);
+    // AB-JChess analysis: a smaller fixed table (its budgets are tens of thousands of
+    // nodes), still a literal and still one thread.
+    assert.deepEqual(jieqiAnalysisResourceOptions('ab-jchess'), [
+      'setoption name Hash value 64',
+      'setoption name Threads value 1',
+    ]);
   } finally {
     if (prevHash === undefined) delete process.env.MISTBOARD_PIKAFISH_JIEQI_HASH_MB;
     else process.env.MISTBOARD_PIKAFISH_JIEQI_HASH_MB = prevHash;
@@ -234,4 +245,95 @@ test('the live block is the session handshake followed by position and go', () =
   assert.equal(commands.at(-2), `position fen ${FEN} moves h2e2`);
   assert.equal(commands.at(-1), buildJieqiGoCommand({ movetimeMs: 4_000 }));
   assert.equal(buildJieqiGoCommand({ movetimeMs: 1_200, depth: 10 }), 'go depth 10 movetime 1200');
+});
+
+test('the draw guard re-search restricts the root with searchmoves, last on the go line', () => {
+  // Both engines' UCI parsers read every token after `searchmoves` as a move.
+  assert.equal(
+    buildJieqiGoCommand({ movetimeMs: 2_000, depth: 13, searchMoves: ['a6a5', 'b0c2'] }),
+    'go depth 13 movetime 2000 searchmoves a6a5 b0c2',
+  );
+  assert.equal(buildJieqiGoCommand({ movetimeMs: 2_000, searchMoves: [] }), 'go movetime 2000');
+});
+
+test('pickSkillMove: full strength among near-equal moves, weak levels drift to worse ones', () => {
+  const line = (index: number, move: string, cp: number) => ({
+    index,
+    move,
+    cp,
+    mate: null,
+    depth: 5,
+    pv: [move],
+    bound: null,
+  });
+  const table = [
+    line(1, 'a0a1', 50),
+    line(2, 'b0b1', 40),
+    line(3, 'c0c1', -150),
+    line(4, 'd0d1', -400),
+  ];
+  // Skill 20 with no random push keeps the top move: 50 beats 40 + 80*10/128.
+  assert.equal(pickSkillMove(table, 20, () => 0)?.move, 'a0a1');
+  // Skill -9 (weakness 138 > 128): the deterministic push outweighs the loss, so the
+  // worst candidate scores highest. This is Stockfish's own rule, not a bug.
+  assert.equal(pickSkillMove(table, -9, () => 0)?.move, 'd0d1');
+  // Only the first four lines are candidates, and an empty table has no pick.
+  assert.equal(pickSkillMove([], 3), null);
+  assert.equal(pickSkillMove([line(1, 'e3e4', 0)], -9)?.move, 'e3e4');
+});
+
+test('pickSkillMove: a forced mate outranks centipawns before the push', () => {
+  const mateLine = {
+    index: 1,
+    move: 'h2e2',
+    cp: null,
+    mate: 2,
+    depth: 5,
+    pv: ['h2e2'],
+    bound: null,
+  };
+  const quiet = { index: 2, move: 'a3a4', cp: 30, mate: null, depth: 5, pv: ['a3a4'], bound: null };
+  assert.equal(pickSkillMove([mateLine, quiet], 16, () => 0)?.move, 'h2e2');
+});
+
+test('the ladder is eight levels, Lichess-shaped, with level 8 the full-strength tier', () => {
+  const pikafish = JIEQI_PLAYABLE_ENGINES.filter((t) => t.engine === undefined);
+  assert.equal(pikafish.length, 8);
+  assert.deepEqual(
+    pikafish.map((t) => t.skill ?? null),
+    [-9, -5, -1, 3, 7, 11, 16, null],
+  );
+  assert.ok(JIEQI_PLAYABLE_ENGINES.every((t) => !t.retired));
+  assert.equal(jieqiEngineTierFor('pikafish-jieqi-amateur')?.retired, true);
+});
+
+// The top slot (2026-10) is a different binary: its seat, artifacts and catalog
+// entry must name AB-JChess's own build, and its handshake must load its net, or a
+// session parked for PikaJieQi could serve it (sessions key on bin + handshake).
+test('the AB-JChess top slot runs its own build at full strength and records its own version', () => {
+  const tier = jieqiEngineTierFor(JIEQI_ABJCHESS_ENGINE_ID);
+  assert.ok(tier);
+  assert.equal(tier.engine, 'ab-jchess');
+  assert.equal(tier.skill, undefined);
+  assert.equal(tier.depth, undefined);
+  assert.equal(tier.movetimeMs, jieqiEngineTierFor(JIEQI_DEFAULT_ENGINE_ID)?.movetimeMs);
+  assert.equal(jieqiEngineVersion(JIEQI_ABJCHESS_ENGINE_ID), ABJCHESS_JIEQI_ENGINE_VERSION);
+  assert.equal(jieqiEngineVersion(JIEQI_DEFAULT_ENGINE_ID), JIEQI_ENGINE_VERSION);
+  assert.equal(firstPartyBotEngineFor('ab-jchess', 'jieqi'), JIEQI_ABJCHESS_ENGINE_ID);
+});
+
+test('the AB-JChess handshake loads its net from MISTBOARD_ABJCHESS_NET; PikaJieQi loads none', () => {
+  const saved = process.env.MISTBOARD_ABJCHESS_NET;
+  process.env.MISTBOARD_ABJCHESS_NET = process.execPath; // any file that exists
+  try {
+    assert.ok(
+      buildJieqiLiveInitCommands('ab-jchess').includes(
+        `setoption name EvalFile value ${process.execPath}`,
+      ),
+    );
+    assert.ok(!buildJieqiLiveInitCommands().some((line) => line.includes('EvalFile')));
+  } finally {
+    if (saved === undefined) delete process.env.MISTBOARD_ABJCHESS_NET;
+    else process.env.MISTBOARD_ABJCHESS_NET = saved;
+  }
 });

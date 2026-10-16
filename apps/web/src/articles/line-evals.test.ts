@@ -23,6 +23,11 @@ type Annotation = { line?: string; lineEval?: string; note?: string };
 type Board = { spec: { iccs: string; annotations?: { byPly: Record<string, Annotation> } } };
 
 const annotated = articles
+  // A content-language translation (deriveTranslation, `sourceLang` set) copies
+  // its source's boards verbatim and is measured under the SOURCE's slug, so it
+  // is checked through the source; keyed by its own slug it finds nothing.
+  // lai-ly-huynh-co-tuong was the first translated page with engine lines.
+  .filter((article) => !article.sourceLang)
   .map((article) => ({
     slug: article.slug,
     // Intro boards first, then sections: the order the page renders and the

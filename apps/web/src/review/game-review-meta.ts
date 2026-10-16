@@ -20,6 +20,7 @@
 // Everything else (time control, casual/rated, time-ago, players, marker, spectator
 // room) is plain envelope data and lives here so it can't drift between variants.
 
+import type { GameSpecId } from '@mistboard/game';
 import {
   brandedEngineName,
   type GameOutcome,
@@ -28,8 +29,11 @@ import {
   terminationLabel,
 } from '../game-display.js';
 import { t } from '../i18n/catalog.js';
+import { currentLocale } from '../i18n/locale.js';
 import { profileTargetFor } from '../profile-link.js';
-import type { VariantMiniId } from '../variant-mini-boards.js';
+import { correspondenceLabelFromMs } from '../replay-meta.js';
+import { localizedRulesHrefForRoom } from '../variant-public-surfaces.js';
+import { variantMiniIdForGameSpec } from '../variants.js';
 import {
   createGameMetaCard,
   type GameMetaPlayer,
@@ -69,14 +73,27 @@ export type ReviewMetaGame = {
    *  scored onto the player rows as 1 / 0 / ½. Every postgame envelope carries
    *  it; optional so surfaces that hand-build a partial game object still fit. */
   result?: string | null;
+  /** 'imported' for a game played elsewhere: no spectator room (nobody watched
+   *  it here), and `origin` names the event and credits the source. */
+  mode?: string;
+  origin?: ReviewGameOrigin;
+};
+
+/** An imported game's event and credit, as the server's room-created `origin`. */
+export type ReviewGameOrigin = {
+  event: string;
+  credit?: { work: string; authors: string[]; url?: string; permission?: boolean };
+  /** A clockless game the source played at a fixed think time per move (an
+   *  engine match), in ms: the header shows it in place of "Untimed". */
+  movetimeMs?: number;
 };
 
 export type ReviewMetaConfig = {
-  /** Finalized variant marker id (usually === GameSpecId; translate spec →
-   *  VariantMiniId before calling where they differ). */
-  markerId?: VariantMiniId;
-  /** Glyph fallback for variants without a finalized marker. */
-  glyph?: string;
+  /** The game's spec. The card's icon is that spec's variant marker
+   *  (variants.ts), so a review page cannot name a different marker or a
+   *  free-text glyph: a duck emoji and a family 'xiangqi' marker on Crazyhouse
+   *  were both hand-picked here before. */
+  gameSpecId: GameSpecId;
   /** Accented trailing headline segment, e.g. 'Xiangqi', 'Flip Jungle'. */
   variantName: string;
   game: ReviewMetaGame;
@@ -91,23 +108,73 @@ export type ReviewMetaConfig = {
 export type ReviewMeta = {
   /** Pass as `metaCard` to mountReviewLayout / createReviewScaffold. */
   metaCard: HTMLElement;
-  /** Pass as `details` — the spectator-room panel below the meta card. */
-  details: HTMLElement;
+  /** Pass as `details` — the spectator-room panel below the meta card; absent for
+   *  an imported game, which had no spectators here. */
+  details: HTMLElement | undefined;
 };
 
 /** Build the standardized review left column (meta card + spectator room). */
 export function buildReviewMeta(config: ReviewMetaConfig): ReviewMeta {
   const { game } = config;
   const card = createGameMetaCard({
-    markerId: config.markerId,
-    glyph: config.glyph,
+    markerId: variantMiniIdForGameSpec(config.gameSpecId) ?? undefined,
     headline: [reviewTimeControlLabel(game), game.rated ? t('watch.rated') : t('watch.casual')],
     variantName: config.variantName,
+    variantHref: localizedRulesHrefForRoom(game.roomId),
     subline: timeAgoLabel(game.endedAt),
     players: reviewMetaPlayers(game.players, config.seatColors, game.result),
     status: config.status,
   });
-  return { metaCard: card.el, details: buildSpectatorChat(game.roomId) };
+  if (game.origin) card.el.append(reviewOriginBlock(game.origin));
+  return {
+    metaCard: card.el,
+    details: game.mode === 'imported' ? undefined : buildSpectatorChat(game.roomId),
+  };
+}
+
+/** Event line + credit line for an imported game. The event is plain text: the
+ *  games search filters by event for standard xiangqi only, so there is no page
+ *  to link it to yet. Names stay exactly as the source wrote them; only the
+ *  connecting words are translated. */
+export function reviewOriginBlock(origin: ReviewGameOrigin): HTMLElement {
+  const block = document.createElement('div');
+  block.className = 'game-meta-card__origin';
+  const event = document.createElement('p');
+  event.className = 'game-meta-card__origin-event';
+  event.textContent = t('replay.originEvent', { event: origin.event });
+  block.append(event);
+  const credit = origin.credit;
+  if (credit) {
+    const line = document.createElement('p');
+    line.className = 'game-meta-card__origin-credit';
+    const text = t('replay.originCredit', {
+      work: credit.work,
+      authors: joinNames(credit.authors),
+    });
+    if (credit.url) {
+      const link = document.createElement('a');
+      link.href = credit.url;
+      link.rel = 'noopener';
+      link.target = '_blank';
+      link.textContent = text;
+      line.append(link);
+    } else {
+      line.append(document.createTextNode(text));
+    }
+    if (credit.permission) {
+      line.append(document.createTextNode(t('replay.originPermission')));
+    }
+    block.append(line);
+  }
+  return block;
+}
+
+function joinNames(names: readonly string[]): string {
+  try {
+    return new Intl.ListFormat(currentLocale(), { type: 'conjunction' }).format(names);
+  } catch {
+    return names.join(', ');
+  }
 }
 
 /** Map persisted participants into meta-card player rows (engine → BOT tag).
@@ -147,11 +214,13 @@ export function reviewMetaPlayers(
 
 /** "5:00+0" / "Untimed" from the envelope's millisecond time control. Reads the
  *  flat `initialMs`/`incrementMs` first, falling back to a nested `timeControl`
- *  object (the shape a few variant envelopes use). */
+ *  object (the shape a few variant envelopes use). A clockless imported game
+ *  that ran at a fixed time per move reads "4 s a move" (origin.movetimeMs). */
 export function reviewTimeControlLabel(game: {
   initialMs?: number | null;
   incrementMs?: number | null;
   timeControl?: Record<string, unknown> | null;
+  origin?: Pick<ReviewGameOrigin, 'movetimeMs'> | null;
 }): string {
   const nested = (game.timeControl ?? null) as {
     initialMs?: number | null;
@@ -159,8 +228,26 @@ export function reviewTimeControlLabel(game: {
   } | null;
   const initialMs = game.initialMs ?? nested?.initialMs ?? null;
   const incrementMs = game.incrementMs ?? nested?.incrementMs ?? null;
-  if (initialMs === null && incrementMs === null) return t('watch.untimed');
+  if (initialMs === null && incrementMs === null) {
+    const movetimeMs = game.origin?.movetimeMs;
+    if (typeof movetimeMs === 'number' && movetimeMs > 0) {
+      return t('watch.movetime', { seconds: movetimeSecondsLabel(movetimeMs) });
+    }
+    return t('watch.untimed');
+  }
+  const correspondence = correspondenceLabelFromMs(initialMs, incrementMs);
+  if (correspondence) return correspondence;
   return `${clockLabel(initialMs ?? 0)}+${Math.round((incrementMs ?? 0) / 1000)}`;
+}
+
+/** 4000 → "4", 1500 → "1.5", in the page locale's digits. */
+function movetimeSecondsLabel(movetimeMs: number): string {
+  const seconds = Math.round(movetimeMs / 100) / 10;
+  try {
+    return new Intl.NumberFormat(currentLocale(), { maximumFractionDigits: 1 }).format(seconds);
+  } catch {
+    return String(seconds);
+  }
 }
 
 /** Generic outcome word for the fixed-color variants (red/black/white + draw).

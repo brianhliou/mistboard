@@ -253,7 +253,7 @@ test('stated rounds file each board under the seeded round with that number', ()
   );
   assert.equal(built.sources[0]?.tourName, 'Cup');
   assert.equal(built.skippedComplete, 0);
-  assert.equal(built.droppedUnscheduled, 0);
+  assert.deepEqual(built.roundsAdded, []);
 });
 
 // Records arrive on dpxq days after the round, so a schedule window would have
@@ -284,6 +284,45 @@ test('boards already stored complete leave the manifest but keep their rank', ()
   assert.equal(built.skippedComplete, 2);
 });
 
+// 2026 Asian individual men, round 7 table 1: dpxq listed the playoff as one
+// aggregate row (stored as r07t01), then a row per game. Round 7 is finished,
+// so its page is not read again; the stored per-game boards are what retire
+// the aggregate. A moveless table with no game boards, and a game, stay.
+test('a stored table aggregate is retired once its per-game boards are stored', () => {
+  const ref = (sourceBoardId: string, plies: number, game?: number) => ({
+    id: `cup-cup-r01-${sourceBoardId}`,
+    sourceBoardId,
+    roundNumber: 1,
+    sourceUrl: plies > 0 ? `http://x/${sourceBoardId}` : 'http://www.dpxq.com/hldcg/round_1_1.html',
+    red: { name: '冯家俊' },
+    black: { name: '王禹博' },
+    status: 'complete',
+    result: '1/2-1/2',
+    plies,
+    details: { table: Number(sourceBoardId.match(/t(\d+)/)![1]), ...(game ? { game } : {}) },
+  });
+  const built = buildStatedRoundManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
+    boards: [stated('1', 1)],
+    rounds: SEEDED,
+    completeUrls: new Set([stated('1', 1).url]),
+    stored: [
+      ref('r01t01', 0),
+      ref('r01t01g1', 109, 1),
+      ref('r01t01g2', 150, 2),
+      ref('r01t01g3', 119, 3),
+      ref('r01t02', 0),
+      ref('r01t03', 80),
+    ],
+  });
+  assert.equal(built.ok, true, built.ok ? '' : built.message);
+  if (!built.ok) return;
+  assert.deepEqual(
+    built.sources.map((s) => [s.retireBoardId, s.roundId, s.boardNumber]),
+    [['cup-cup-r01-r01t01', 'cup-r01', 1]],
+  );
+});
+
 test('a list with nothing new is quiet, not an error', () => {
   const built = buildStatedRoundManifestSources({
     source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
@@ -297,30 +336,26 @@ test('a list with nothing new is quiet, not an error', () => {
   assert.equal(built.quiet, true);
 });
 
-test('boards for rounds the schedule never seeded are dropped and counted, not guessed', () => {
+test('a stated round the schedule never seeded is created, not dropped', () => {
+  // The 2026 men's league was seeded rounds 1-5; stage two's rounds arrive
+  // stated (第09轮) and must land without a hand re-seed.
   const built = buildStatedRoundManifestSources({
     source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
-    boards: [stated('1', 1), stated('9', 9)],
+    boards: [stated('1', 1), stated('9', 9), stated('10', 9)],
     rounds: SEEDED,
     completeUrls: new Set(),
   });
   assert.equal(built.ok, true);
   if (!built.ok) return;
   assert.deepEqual(
-    built.sources.map((s) => s.roundId),
-    ['cup-r01'],
+    built.sources.map((s) => [s.roundId, s.roundName, s.boardNumber]),
+    [
+      ['cup-r01', 'Round 1', 1],
+      ['cup-r09', 'Round 9', 1],
+      ['cup-r09', 'Round 9', 2],
+    ],
   );
-  assert.equal(built.droppedUnscheduled, 1);
-
-  const onlyUnseeded = buildStatedRoundManifestSources({
-    source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
-    boards: [stated('9', 9)],
-    rounds: SEEDED,
-    completeUrls: new Set(),
-  });
-  assert.equal(onlyUnseeded.ok, false);
-  if (onlyUnseeded.ok) return;
-  assert.equal(onlyUnseeded.quiet, undefined);
+  assert.deepEqual(built.roundsAdded, [9]);
 });
 
 test('a board that states no round fails the whole build closed', () => {

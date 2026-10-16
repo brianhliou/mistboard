@@ -1,4 +1,10 @@
-import { XIANGQI_SPEC_ID, type XiangqiPuzzle } from '@mistboard/game';
+import {
+  createInitialXiangqiState,
+  legacyPositionRepetitionKey,
+  positionRepetitionKey,
+  XIANGQI_SPEC_ID,
+  type XiangqiPuzzle,
+} from '@mistboard/game';
 import type { ElephantChessPilotGame } from './elephantchess-pilot-manifest.js';
 import { buildElephantChessPilotManifest } from './elephantchess-pilot-manifest.js';
 import { getPool } from './persistence-db.js';
@@ -861,9 +867,18 @@ definePersistenceTests('xiangqi puzzle mining', () => {
     const games = Array.from({ length: 16 }, (_, index) => pilotGame(100 + index));
     await seedEligibleGames(games);
     const engineProfile = { engine: 'pikafish-test', binarySha256: 'e'.repeat(64) };
-    const sharedPositionKey = 'xiangqi-cross-run-shared-position';
+    // The first run stored its key in the spelling used before 2026-10 (role
+    // initials, chariot and cannon both `c`); the second uses the current one.
+    // They name the same position, so the guard must still match them.
+    const currentKey = positionRepetitionKey(createInitialXiangqiState('crossrun'));
+    const legacyKey = legacyPositionRepetitionKey(currentKey);
+    assert.notEqual(legacyKey, currentKey);
 
-    const publishOneCandidate = async (seed: string, gameOffset: number): Promise<string> => {
+    const publishOneCandidate = async (
+      seed: string,
+      gameOffset: number,
+      positionKey: string,
+    ): Promise<string> => {
       const manifest = buildElephantChessPilotManifest(games.slice(gameOffset, gameOffset + 8), {
         importBatchId: BATCH_ID,
         seed,
@@ -876,7 +891,7 @@ definePersistenceTests('xiangqi puzzle mining', () => {
         runId: run.id,
         historicalGameId,
         postBlunderPly,
-        positionKey: sharedPositionKey,
+        positionKey,
         trigger: 'eval-swing',
         scanEvidence: { beforeCp: 400, afterCp: 60, scanNodes: 60_000 },
       });
@@ -919,7 +934,7 @@ definePersistenceTests('xiangqi puzzle mining', () => {
       return run.id;
     };
 
-    const firstRunId = await publishOneCandidate('crossrun-first-v1', 0);
+    const firstRunId = await publishOneCandidate('crossrun-first-v1', 0, legacyKey);
     const firstPlan = await planXiangqiPuzzlePublication(getPool(), firstRunId);
     assert.equal(firstPlan.eligibleCandidates, 1);
     const firstPublished = await publishXiangqiPuzzlePublication({
@@ -933,7 +948,7 @@ definePersistenceTests('xiangqi puzzle mining', () => {
     // Same position, different source game, different run. Run-scoped
     // positionDuplicateCount cannot see the first run, so only the cross-run
     // guard stops this.
-    const secondRunId = await publishOneCandidate('crossrun-second-v1', 8);
+    const secondRunId = await publishOneCandidate('crossrun-second-v1', 8, currentKey);
     await assert.rejects(
       planXiangqiPuzzlePublication(getPool(), secondRunId),
       /repeats a position already published as puzzle/,

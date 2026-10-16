@@ -34,7 +34,27 @@ export interface PracticeEval {
   mate: number | null;
   /** Engine UCI of the best move here; the defender plays this. */
   bestUci: string | null;
+  /**
+   * The exact game-theoretic result of this position, from an endgame tablebase,
+   * in the same point of view as the score. Absent or null whenever there is no
+   * EXACT answer: an outage, an uncovered position, a half-solved one. Never a
+   * guess, so its absence must never be read as a draw.
+   */
+  exact?: { result: PracticeExactResult } | null;
+  /**
+   * The exact result when it is still on its way (a tablebase round trip), in
+   * the same point of view; `exact` is then absent. The runner hands the board
+   * to the learner without waiting for it and waits only where the answer is
+   * read: grading a move, or a goal check the answer could change. Resolves to
+   * null on any failure, never rejects into a verdict.
+   */
+  exactLater?: Promise<{ result: PracticeExactResult } | null>;
 }
+
+export type PracticeExactResult = 'win' | 'draw' | 'loss';
+
+/** What the tablebase said about the learner's last move, when it graded it. */
+export type PracticeTablebaseOutcome = 'keepsWin' | 'holdsDraw' | 'throwsWin' | 'loses';
 
 export type PracticePhase =
   /** Waiting on the engine (opening evaluation, or the defender thinking). */
@@ -71,6 +91,14 @@ export interface PracticeView {
    * whole move. Null when no hint has been asked for, or none is available.
    */
   hint: { level: 'origin'; uci: string } | { level: 'move'; uci: string } | null;
+  /**
+   * Who graded the last learner move. 'tablebase' when the positions before
+   * and after it both had an exact result, and then `tablebase` says what the
+   * move did; 'engine' otherwise (the win% curve, as always). Null before the
+   * first graded move.
+   */
+  graded: 'tablebase' | 'engine' | null;
+  tablebase: PracticeTablebaseOutcome | null;
 }
 
 export interface PracticeConfig<M, T> {
@@ -108,6 +136,12 @@ export interface PracticeConfig<M, T> {
    * against a fake engine with nothing attached.
    */
   onMovePlayed?(move: M, parentTruth: T, by: 'learner' | 'defender'): void;
+  /**
+   * The defender's reply lands no sooner than this many ms after the learner's
+   * move did (lichess practice pauses the same way). Measured from the learner's
+   * move, so a slow evaluation does not add to it. 0 / absent = no pause.
+   */
+  minReplyDelayMs?: number;
 }
 
 export interface PracticeSession<M, T> {
@@ -139,6 +173,9 @@ interface Frame<T> {
    *  reset restore it by restoring the frame, with no separate bookkeeping to
    *  fall out of step with the board. */
   moves: readonly string[];
+  /** Settles once a pending exact result (`exactLater`) has been folded into
+   *  `evaluation.exact`; null when nothing is pending. */
+  exactReady?: Promise<void> | null;
 }
 
 export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): PracticeSession<M, T> {
@@ -153,6 +190,8 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
   let phase: PracticePhase = 'thinking';
   let verdict: PracticeVerdict | null = null;
   let hintLevel = 0;
+  let graded: PracticeView['graded'] = null;
+  let tablebaseOutcome: PracticeTablebaseOutcome | null = null;
 
   /** Flip a side-to-move-POV evaluation into the learner's POV. */
   function toLearnerPov(raw: PracticeEval, truth: T): PracticeEval {
@@ -162,26 +201,60 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
       cp: raw.cp === null ? null : -raw.cp,
       mate: raw.mate === null ? null : -raw.mate,
       bestUci: raw.bestUci,
+      exact: raw.exact ? { result: flipExact(raw.exact.result) } : null,
     };
   }
 
   async function evaluateInto(target: Frame<T>): Promise<void> {
-    const raw = await config.evaluate(target.truth);
-    target.evaluation = toLearnerPov(raw, target.truth);
+    const { exactLater, ...raw } = await config.evaluate(target.truth);
+    const evaluation = toLearnerPov(raw, target.truth);
+    target.evaluation = evaluation;
+    target.exactReady = null;
+    if (exactLater) {
+      // Folded in when it arrives; the learner is not held for it.
+      const flip = config.sideToMove(target.truth) !== config.learner;
+      target.exactReady = exactLater.then(
+        (exact) => {
+          evaluation.exact = exact
+            ? { result: flip ? flipExact(exact.result) : exact.result }
+            : null;
+        },
+        () => {
+          evaluation.exact = null;
+        },
+      );
+    }
   }
 
-  function adjudicate(): PracticeOutcome {
+  async function exactSettled(target: Frame<T>): Promise<void> {
+    if (target.exactReady) await target.exactReady;
+  }
+
+  function adjudicate(assumeExactDraw = false): PracticeOutcome {
+    // An exact draw is level, whatever the engine's number says: a depth-16
+    // search can read a book draw as -5, and "hold the draw" would then end in
+    // defeat on a position the tablebase proves held.
+    const exactDraw = assumeExactDraw || frame.evaluation?.exact?.result === 'draw';
     return evaluatePracticeGoal({
       goal: config.goal,
       movesPlayed: frame.movesPlayed,
-      cp: frame.evaluation?.cp ?? null,
-      mate: frame.evaluation?.mate ?? null,
+      cp: exactDraw ? 0 : (frame.evaluation?.cp ?? null),
+      mate: exactDraw ? null : (frame.evaluation?.mate ?? null),
       termination: config.termination(frame.truth, config.learner),
     });
   }
 
-  /** Settle the outcome at the current frame; returns true when the run ended. */
-  function settle(): boolean {
+  /**
+   * Settle the outcome at the current frame; returns true when the run ended.
+   * The exact result only enters the goal check as "an exact draw is level", so
+   * a pending one is waited for only when that could change the outcome; any
+   * other time the learner gets the board before the tablebase answers.
+   */
+  async function settle(): Promise<boolean> {
+    const current = frame;
+    if (current.exactReady && adjudicate(false) !== adjudicate(true)) {
+      await exactSettled(current);
+    }
     const outcome = adjudicate();
     if (outcome === 'success') {
       phase = 'success';
@@ -226,6 +299,12 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     return false;
   }
 
+  /** Hold the defender's reply until `minReplyDelayMs` after the learner moved. */
+  async function replyPause(movedAt: number): Promise<void> {
+    const remaining = (config.minReplyDelayMs ?? 0) - (Date.now() - movedAt);
+    if (remaining > 0) await new Promise<void>((resolve) => setTimeout(resolve, remaining));
+  }
+
   async function start(): Promise<void> {
     phase = 'thinking';
     await evaluateInto(frame);
@@ -233,7 +312,7 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     if (config.sideToMove(frame.truth) !== config.learner) {
       if (await playDefender()) return;
     }
-    if (settle()) return;
+    if (await settle()) return;
     phase = 'play';
   }
 
@@ -257,7 +336,12 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     // Announced before the search, not after it: this is the moment the learner
     // let go of the piece.
     config.onMovePlayed?.(move, before.truth, 'learner');
+    const movedAt = Date.now();
     await evaluateInto(frame);
+    // The grade reads an exact result on both sides of the move; the learner was
+    // handed the board without waiting for the one before it, so it is awaited
+    // here, after their move is already on the board.
+    await Promise.all([exactSettled(before), exactSettled(frame)]);
 
     const winAfter =
       frame.evaluation === null ? null : winPercent(frame.evaluation.cp, frame.evaluation.mate);
@@ -267,12 +351,38 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     verdict =
       winBefore === null || winAfter === null ? 'good' : practiceJudgment(winBefore, winAfter);
 
-    // A move that ends the game in the learner's favour is never a failure,
-    // however the curve reads it: delivering mate can look like a huge swing.
+    // An exact result on BOTH sides of the move outranks the curve: the
+    // tablebase knows whether the move kept the result, where a depth-16
+    // search only estimates it.
+    const exact = tablebaseGrade(before.evaluation?.exact, frame.evaluation?.exact);
+    graded = exact ? 'tablebase' : 'engine';
+    tablebaseOutcome = exact;
+
+    // A move that ends the game in a result the goal accepts is never a failure,
+    // however the curve reads it: delivering mate can look like a huge swing,
+    // and a finished position has no evaluation at all, so a move that completes
+    // a repetition draw read as leaving the drawing band and failed a held draw.
     const termination = config.termination(frame.truth, config.learner);
-    if (termination === 'learner-wins') {
+    if (termination !== 'none' && adjudicate() === 'success') {
       verdict = 'good';
       phase = 'success';
+      return verdict;
+    }
+
+    if (exact) {
+      if (exact === 'throwsWin' || exact === 'loses') {
+        verdict = exact === 'loses' ? 'blunder' : 'mistake';
+        previous = before;
+        phase = 'failed';
+        return verdict;
+      }
+      // Kept the win or held the draw: a pass, whatever the curve made of it.
+      verdict = 'good';
+      if (await settle()) return verdict;
+      await replyPause(movedAt);
+      if (await playDefender()) return verdict;
+      if (await settle()) return verdict;
+      phase = 'play';
       return verdict;
     }
 
@@ -298,10 +408,11 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     // position routinely produces a double-digit drop that means nothing here.
     if (verdict === 'mistake' || verdict === 'blunder') verdict = 'inaccuracy';
 
-    if (settle()) return verdict;
+    if (await settle()) return verdict;
 
+    await replyPause(movedAt);
     if (await playDefender()) return verdict;
-    if (settle()) return verdict;
+    if (await settle()) return verdict;
     phase = 'play';
     return verdict;
   }
@@ -317,6 +428,8 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     frame = previous;
     previous = null;
     verdict = null;
+    graded = null;
+    tablebaseOutcome = null;
     hintLevel = 0;
     phase = 'play';
   }
@@ -325,6 +438,8 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     frame = { truth: config.initialTruth, evaluation: null, movesPlayed: 0, moves: [] };
     previous = null;
     verdict = null;
+    graded = null;
+    tablebaseOutcome = null;
     hintLevel = 0;
     await start();
   }
@@ -344,6 +459,8 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
       awaitingMove: phase === 'play',
       moves: frame.moves,
       hint: hintView,
+      graded,
+      tablebase: tablebaseOutcome,
     };
   }
 
@@ -356,4 +473,31 @@ export function createPracticeSession<M, T>(config: PracticeConfig<M, T>): Pract
     retry,
     reset,
   };
+}
+
+function flipExact(result: PracticeExactResult): PracticeExactResult {
+  return result === 'win' ? 'loss' : result === 'loss' ? 'win' : 'draw';
+}
+
+/**
+ * The tablebase's verdict on a learner move, both sides in the learner's point
+ * of view; null when either side is not exact, or when the pair is not a
+ * learner's choice the table can grade (already lost before the move, or a
+ * "gain" that perfect information makes impossible and so means the two
+ * lookups disagree).
+ */
+export function tablebaseGrade(
+  before: PracticeEval['exact'],
+  after: PracticeEval['exact'],
+): PracticeTablebaseOutcome | null {
+  if (!before || !after) return null;
+  if (before.result === 'win') {
+    if (after.result === 'win') return 'keepsWin';
+    return after.result === 'draw' ? 'throwsWin' : 'loses';
+  }
+  if (before.result === 'draw') {
+    if (after.result === 'draw') return 'holdsDraw';
+    return after.result === 'loss' ? 'loses' : null;
+  }
+  return null;
 }

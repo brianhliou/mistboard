@@ -3,6 +3,7 @@ import {
   censusDeployGate,
   countDeployGatingRooms,
   type DeployGateCensus,
+  type DrainCreate,
   mergeDeployGateCensus,
 } from './deploy-gate.js';
 import { recordRoomLifecycleAuditSafe } from './room-lifecycle-audit.js';
@@ -15,6 +16,8 @@ import {
   variantTenantDeployGateCensus,
 } from './variant-tenant/registry.js';
 
+export type { DrainCreate };
+
 export type DrainController = {
   activeGameCount(): number;
   deployGateCensus(): DeployGateCensus;
@@ -25,7 +28,19 @@ export type DrainController = {
     response: ServerResponse,
     pathname: string,
   ): Promise<void>;
+  // A drain window is open (the "Update pending" / "restarting now" banner is
+  // up). Not the same question as whether a create is refused: see
+  // refusesCreate.
   isDraining(): boolean;
+  // Whether a create of this kind gets 503 server_draining right now. Every
+  // create route asks this, not isDraining (#559).
+  refusesCreate(create?: DrainCreate): boolean;
+  // A request the drain turned away (a 503 on a create route). Counted into the
+  // drain's summary so a release that blocked players shows how many.
+  noteRefusedCreate(pathname: string): void;
+  // SIGTERM arrived. Closes the open drain's summary as 'shutdown', or records
+  // that the server went down with no drain at all.
+  finalizeOnShutdown(): Promise<void>;
 };
 
 export type DrainControllerOptions = {
@@ -44,6 +59,71 @@ type DrainState = {
   owner: string | null;
 };
 
+// One drain from activation to its end, summarized as a single
+// 'drain_summary' audit row. Everything else about a drain is a point event;
+// this is the row that answers "what did that deploy cost players".
+type DrainSession = {
+  activatedAt: number;
+  windowMs: number;
+  owner: string | null;
+  activeGamesAtStart: number;
+  peakActiveGames: number;
+  committedAt: number | null;
+  refusedCreates: number;
+  refusedByRoute: Record<string, number>;
+  lapseTimer: ReturnType<typeof setTimeout> | null;
+};
+
+export type DrainOutcome = 'cancelled' | 'lapsed' | 'shutdown';
+
+export type DrainSummaryPayload = {
+  outcome: DrainOutcome;
+  activatedAt: number;
+  endedAt: number;
+  durationMs: number;
+  windowMs: number;
+  owner: string | null;
+  committed: boolean;
+  commitWaitMs: number | null;
+  activeGamesAtStart: number;
+  peakActiveGames: number;
+  activeGamesAtEnd: number;
+  refusedCreates: number;
+  refusedByRoute: Record<string, number>;
+};
+
+// Route key for the refused-create tally: the path with ids collapsed, so the
+// payload stays a handful of keys however many rooms were asked for.
+export function refusedRouteKey(pathname: string): string {
+  return pathname
+    .split('/')
+    .map((segment) => (/\d/.test(segment) && segment.length > 8 ? ':id' : segment))
+    .join('/');
+}
+
+export function drainSummaryPayload(
+  session: Omit<DrainSession, 'lapseTimer'>,
+  outcome: DrainOutcome,
+  endedAt: number,
+  activeGamesAtEnd: number,
+): DrainSummaryPayload {
+  return {
+    outcome,
+    activatedAt: session.activatedAt,
+    endedAt,
+    durationMs: endedAt - session.activatedAt,
+    windowMs: session.windowMs,
+    owner: session.owner,
+    committed: session.committedAt !== null,
+    commitWaitMs: session.committedAt === null ? null : session.committedAt - session.activatedAt,
+    activeGamesAtStart: session.activeGamesAtStart,
+    peakActiveGames: Math.max(session.peakActiveGames, activeGamesAtEnd),
+    activeGamesAtEnd,
+    refusedCreates: session.refusedCreates,
+    refusedByRoute: session.refusedByRoute,
+  };
+}
+
 export type DrainPhase = 'pending' | 'restarting';
 
 const drainRateLimit = 10;
@@ -52,9 +132,91 @@ const drainRateWindowMs = 60_000;
 export function createDrainController(options: DrainControllerOptions): DrainController {
   const drainState: DrainState = { phase: null, restartAt: null, owner: null };
   const drainRateBuckets = new Map<string, number[]>();
+  let session: DrainSession | null = null;
+  let shuttingDown = false;
+
+  async function closeSession(outcome: DrainOutcome, endedAt: number): Promise<void> {
+    const closing = session;
+    if (!closing) return;
+    session = null;
+    if (closing.lapseTimer) clearTimeout(closing.lapseTimer);
+    const payload = drainSummaryPayload(closing, outcome, endedAt, activeGameCount());
+    console.log(JSON.stringify({ level: 'info', kind: 'drain_summary', ...payload, at: endedAt }));
+    await recordRoomLifecycleAuditSafe({ kind: 'drain_summary', atMs: endedAt, payload });
+  }
+
+  // The deadline passed with no restart: the drain stops refusing games on its
+  // own (isDraining reads the clock), but nothing told the clients, so every
+  // open tab kept its "Update pending" banner until a reload. Say so, and
+  // close the summary as lapsed.
+  function armLapse(forSession: DrainSession, restartAt: number): void {
+    forSession.lapseTimer = setTimeout(
+      () => {
+        if (session !== forSession) return;
+        drainState.phase = null;
+        drainState.restartAt = null;
+        drainState.owner = null;
+        broadcastDrainCancel(options.rooms);
+        void closeSession('lapsed', Date.now());
+      },
+      Math.max(0, restartAt - Date.now()),
+    );
+    forSession.lapseTimer.unref?.();
+  }
+
+  function noteRefusedCreate(pathname: string): void {
+    if (!session) return;
+    session.refusedCreates += 1;
+    const key = refusedRouteKey(pathname);
+    session.refusedByRoute[key] = (session.refusedByRoute[key] ?? 0) + 1;
+  }
+
+  async function finalizeOnShutdown(): Promise<void> {
+    // From here on every create is refused, drain or not. The shutdown pauses
+    // the rooms that exist when it starts; a room created after that walk
+    // would keep a running clock into the restart. The refusal is the same
+    // 503 server_draining the client already retries through (#478).
+    shuttingDown = true;
+    if (session) {
+      await closeSession('shutdown', Date.now());
+      return;
+    }
+    // No drain open: a plain push, a crash-restart, or Railway moving the
+    // container. Worth its own row, since nothing held the deploy for games.
+    const activeGames = activeGameCount();
+    console.log(
+      JSON.stringify({
+        level: 'warn',
+        kind: 'shutdown_without_drain',
+        activeGames,
+        at: Date.now(),
+      }),
+    );
+    await recordRoomLifecycleAuditSafe({
+      kind: 'shutdown_without_drain',
+      atMs: Date.now(),
+      payload: { activeGames, rooms: options.rooms.size },
+    });
+  }
 
   function isDraining(): boolean {
     return drainState.restartAt !== null && drainState.restartAt > Date.now();
+  }
+
+  // Creates are refused only while the drain is still waiting for live games.
+  // Once the count has reached zero and the restart is committed (the
+  // "restarting now" notice), the remaining minutes are the build of the
+  // pushed commit, and refusing creates then protected nobody (#559 step 1).
+  // A game made in that window is an ordinary live room: the shutdown pauses
+  // it with every other room and the new build resumes it, and the release
+  // does not look at the count again after the commit.
+  //
+  // A resumable PvE create is let through for the whole drain (step 2).
+  function refusesCreate(create: DrainCreate = {}): boolean {
+    if (shuttingDown) return true;
+    if (!isDraining()) return false;
+    if (drainState.phase === 'restarting') return false;
+    return create.resumablePve !== true;
   }
 
   function drainDeadlineMs(): number | null {
@@ -77,7 +239,11 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
   // Since safe-deploy BLOCKS when its window expires with games still active,
   // that made releases impossible rather than merely slow.
   function activeGameCount(): number {
-    return variantTenantActiveGameCount() + countDeployGatingRooms(options.rooms.values());
+    const count = variantTenantActiveGameCount() + countDeployGatingRooms(options.rooms.values());
+    // safe-deploy reads this through /api/server-status every 30s, so the
+    // open drain's peak is sampled on the same beat the release watches.
+    if (session && count > session.peakActiveGames) session.peakActiveGames = count;
+    return count;
   }
 
   // The same walk, keeping what was skipped and why, so a stalled deploy (or a
@@ -171,6 +337,7 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
           at: cancelledAt,
         }),
       );
+      await closeSession('cancelled', cancelledAt);
       writeJson(response, 200, { ok: true, draining: false });
       return;
     }
@@ -181,15 +348,20 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
         writeJson(response, 409, { error: 'drain_not_active' });
         return;
       }
+      const idempotent = drainState.phase === 'restarting';
       const activeGames = activeGameCount();
-      if (activeGames !== 0) {
+      // A repeat commit stays a 200: once committed, creates are open again,
+      // so games made since are expected and paused at shutdown like any
+      // other. Re-checking the count here would turn them into a 409 and put
+      // a committed release back into a wait for games it already let in.
+      if (!idempotent && activeGames !== 0) {
         writeJson(response, 409, { error: 'active_games_remaining', activeGames });
         return;
       }
-      const idempotent = drainState.phase === 'restarting';
       drainState.phase = 'restarting';
       if (!idempotent) broadcastRestartNow(options.rooms);
       const committedAt = Date.now();
+      if (session && session.committedAt === null) session.committedAt = committedAt;
       await recordRoomLifecycleAuditSafe({
         kind: 'drain_restart_committed',
         atMs: committedAt,
@@ -248,6 +420,23 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
     drainState.phase = 'pending';
     drainState.restartAt = activatedAt + windowMs;
     drainState.owner = typeof body.owner === 'string' ? body.owner : null;
+    // A lapsed-but-unclosed session cannot exist (the lapse timer closes it),
+    // so any session here is stale state from a drain that ended some other
+    // way; close it before opening the next.
+    await closeSession('lapsed', activatedAt);
+    const activeAtStart = activeGameCount();
+    session = {
+      activatedAt,
+      windowMs,
+      owner: drainState.owner,
+      activeGamesAtStart: activeAtStart,
+      peakActiveGames: activeAtStart,
+      committedAt: null,
+      refusedCreates: 0,
+      refusedByRoute: {},
+      lapseTimer: null,
+    };
+    armLapse(session, drainState.restartAt);
     broadcastDrainSchedule(options.rooms, drainState.restartAt);
     await recordRoomLifecycleAuditSafe({
       kind: 'drain_activated',
@@ -284,8 +473,11 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
     activeGameCount,
     deployGateCensus,
     drainDeadlineMs,
+    finalizeOnShutdown,
     handleRequest,
     isDraining,
+    noteRefusedCreate,
+    refusesCreate,
     restartPhase,
   };
 }

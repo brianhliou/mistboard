@@ -61,6 +61,9 @@ async function createRoom(config, baseUrl, timeoutMs) {
       // Human black makes the engine red, so the smoke proves the opening
       // engine move and can still clean up with a pregame abort.
       preferredColor: 'black',
+      // Only the top-bot rows name an engine; the variant rows smoke whatever a
+      // bare create resolves to.
+      ...(config.engineId ? { engineId: config.engineId } : {}),
       // No pace named on purpose. The smoke cares that the engine moves, not
       // about the clock, and the server owns which pace an engine may play:
       // pinned variants resolve to their pin (the fog engines cannot honor the
@@ -77,9 +80,20 @@ async function createRoom(config, baseUrl, timeoutMs) {
     return { skipped: true, reason: body.error };
   }
   if (response.status !== 201 || typeof body?.roomId !== 'string') {
-    throw new Error(`room creation failed: ${response.status} ${JSON.stringify(body)}`);
+    throw new Error(roomCreationFailure(config, response.status, body));
   }
   return body;
+}
+
+// A top-bot row whose engine the box cannot run gets `invalid_engine` (the slot
+// is hidden), and a bare "400 invalid_engine" names nothing to fix. The config's
+// `unavailableCause` says what is missing and where to look. Exported for tests.
+export function roomCreationFailure(config, status, body) {
+  const raw = `room creation failed: ${status} ${JSON.stringify(body)}`;
+  if (status === 400 && body?.error === 'invalid_engine' && config.unavailableCause) {
+    return `${config.label} slot unavailable: ${config.unavailableCause} (${raw})`;
+  }
+  return raw;
 }
 
 // Pure per-message decision logic, exported for tests. Given the config, the

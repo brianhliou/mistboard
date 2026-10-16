@@ -56,6 +56,7 @@
 // scripts/variant-lab/patches/, which the lab's perft gate ties to this kernel
 // at every rule point.
 
+import { checkSubjectColor } from './check-subject.js';
 import type { AbortReason } from './types.js';
 import type {
   XiangqiBoard,
@@ -356,6 +357,24 @@ export function isAtomicXiangqiGeneralInCheck(
   const rules = atomicXiangqiKernel.rules;
   const enemy = oppositeAtomicXiangqiColor(color);
   return generalAttacked(board, color, rules) || canRemoveGeneral(board, enemy, color, rules);
+}
+
+/**
+ * The general the board should show in check, or null: the side facing the
+ * move (checkSubjectColor) when atomic's check holds for it, a blast beside
+ * the general included. Reads only the board, so a client view is enough.
+ */
+export function atomicXiangqiCheckedGeneral(
+  board: AtomicXiangqiBoard,
+  status: AtomicXiangqiGameStatus,
+): AtomicXiangqiSquare | null {
+  const color = checkSubjectColor(status);
+  if (!color) return null;
+  const general = Object.entries(board).find(
+    ([, piece]) => piece?.color === color && piece.role === 'general',
+  )?.[0] as AtomicXiangqiSquare | undefined;
+  if (!general) return null;
+  return isAtomicXiangqiGeneralInCheck(board, color) ? general : null;
 }
 
 // ── View ───────────────────────────────────────────────────────────────────

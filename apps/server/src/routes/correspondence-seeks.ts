@@ -1,14 +1,28 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { DARK_CHESS_SPEC_ID, DAY_MS } from '@mistboard/game';
+import {
+  DARK_CHESS_SPEC_ID,
+  DAY_MS,
+  isCorrespondenceRatedSpec,
+  isOfficialCorrespondenceTimeControl,
+  isRetiredGameSpec,
+  type RoomTimeControl,
+} from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
 import {
   type CorrespondenceStartNotice,
   notifyCorrespondenceStart,
 } from './../correspondence-start-email.js';
-import { correspondenceEnabled } from './../feature-flags.js';
-import type { SeekColorPreference, SeekVisibility, UserAccount } from './../persistence.js';
+import { correspondenceEnabled, correspondenceRatedEnabled } from './../feature-flags.js';
+import { logger } from './../obs.js';
+import type {
+  CorrespondenceSeekOutcome,
+  SeekColorPreference,
+  SeekVisibility,
+  UserAccount,
+} from './../persistence.js';
 import * as persistence from './../persistence.js';
+import { notifySeekPosted, type SeekAlertNotice } from './../seek-alert-email.js';
 import { correspondenceTenantForSpecId } from './../variant-tenant/registry.js';
 import {
   CORRESPONDENCE_ELIGIBLE_SPECS,
@@ -39,7 +53,8 @@ export function parseSeekColorPreference(value: unknown): SeekColorPreference | 
 const MAX_OPEN_SEEKS_PER_USER = 6;
 
 // How long a challenge (private seek: direct or link) stays live before the
-// sweep reclaims it. Public board seeks never expire. A week is long enough for
+// sweep reclaims it. Public board seeks lapse on their own, longer clock
+// (persistence.CORRESPONDENCE_SEEK_TTL_MS, read-time from created_at). A week is long enough for
 // a shared "play me" link to reach a friend, short enough that dead links do not
 // accrete (lichess uses 1 day open / 2 weeks direct; one window is simpler).
 const CHALLENGE_TTL_MS = 7 * DAY_MS;
@@ -50,6 +65,36 @@ const CHALLENGE_TTL_MS = 7 * DAY_MS;
 export function parseSeekVisibility(value: unknown): SeekVisibility | undefined {
   if (value === undefined || value === null) return undefined;
   return value === 'public' || value === 'private' ? value : undefined;
+}
+
+/**
+ * Rated correspondence (2026-10-02): why a rated seek on these terms is refused, or null
+ * when it may be rated. One gate for both create and accept, so a seek that was legal
+ * when posted but whose terms stopped qualifying (the flag turned off, the spec left the
+ * rated set) is refused at accept rather than silently seated casual.
+ *   - the rated switches: MISTBOARD_RATED_ENABLED, as the live lobby, AND
+ *     MISTBOARD_CORRESPONDENCE_RATED_ENABLED (off by default; feature-flags.ts). Off,
+ *     a rated post is REFUSED (403 rated_disabled), never stored casual, and a rated
+ *     seek posted while it was on cannot be accepted;
+ *   - isCorrespondenceRatedSpec: correspondence-eligible AND an active rating pool;
+ *   - an official days-per-move allowance: a compressed dev allowance has no pool
+ *     (bucketForGame would never rate it), so calling it rated would be a lie.
+ */
+export function ratedSeekError(
+  gameSpecId: string,
+  timeControl: RoomTimeControl,
+  enabled: boolean = correspondenceRatedEnabled(),
+): 'rated_disabled' | 'rated_unsupported_spec' | 'rated_unsupported_time_control' | null {
+  if (!enabled) return 'rated_disabled';
+  if (!isCorrespondenceRatedSpec(gameSpecId)) return 'rated_unsupported_spec';
+  if (!isOfficialCorrespondenceTimeControl(timeControl)) return 'rated_unsupported_time_control';
+  return null;
+}
+
+function ratedSeekErrorStatus(error: NonNullable<ReturnType<typeof ratedSeekError>>): number {
+  if (error === 'rated_disabled') return 403;
+  if (error === 'rated_unsupported_spec') return 501;
+  return 400;
 }
 
 // Pure accept gate, shared by the accept route and its tests. Returns the error
@@ -97,6 +142,63 @@ export function challengeViewModel(
   };
 }
 
+/** Why a /challenge/<id> link no longer opens, as the landing page shows it. */
+export type SeekGoneReason = 'taken' | 'withdrawn' | 'declined' | 'expired';
+
+export type SeekGoneView = {
+  reason: SeekGoneReason;
+  // Taken only: the game the accept created, and who took it.
+  roomId?: string;
+  accepterName?: string | null;
+  // Taken only: the viewer plays in that game (creator or accepter), so the page
+  // offers "Open game" rather than "Watch".
+  youPlay?: boolean;
+};
+
+/**
+ * Pure: what a closed seek's outcome (migration 165) may tell this viewer, or null
+ * when it must stay a plain 404. A public board seek was offered to everyone, so
+ * its fate is public. A private one (a direct or link challenge) is told only to
+ * the people involved: its creator, its named target, and whoever took it. A
+ * stranger holding a private link learns nothing, exactly as before #527.
+ */
+export function seekGoneView(
+  outcome: Pick<
+    CorrespondenceSeekOutcome,
+    | 'outcome'
+    | 'creatorUserId'
+    | 'targetUserId'
+    | 'visibility'
+    | 'roomId'
+    | 'accepterUserId'
+    | 'accepterName'
+  >,
+  viewerUserId: string,
+): SeekGoneView | null {
+  const isPublic = outcome.visibility === 'public' && outcome.targetUserId === null;
+  const youPlay = viewerUserId === outcome.creatorUserId || viewerUserId === outcome.accepterUserId;
+  const involved = youPlay || viewerUserId === outcome.targetUserId;
+  if (!isPublic && !involved) return null;
+  switch (outcome.outcome) {
+    case 'taken':
+      if (!outcome.roomId) return null;
+      return {
+        reason: 'taken',
+        roomId: outcome.roomId,
+        accepterName: outcome.accepterName,
+        youPlay,
+      };
+    case 'cancelled':
+      return { reason: 'withdrawn' };
+    case 'declined':
+      return { reason: 'declined' };
+    case 'expired':
+      return { reason: 'expired' };
+    default:
+      return null;
+  }
+}
+
 /** The ONE request these routes serve without an account: reading the public
  *  board. Kept as a named predicate (and pinned by tests) so the anonymous
  *  surface is a single line to audit rather than an implicit branch order —
@@ -118,12 +220,22 @@ export function allowsAnonymousAccess(pathname: string, method: string): boolean
 //   POST   /api/correspondence/seeks/:id/accept  accept → create + seat a game
 //   POST   /api/correspondence/seeks/:id/decline decline a directed challenge
 //   DELETE /api/correspondence/seeks/:id         cancel your own seek
+//   POST   /api/correspondence/quick-pair         homepage button: own seek, else accept, else post
 export async function tryHandle(
   ctx: HttpApiContext,
   request: IncomingMessage,
   response: ServerResponse,
   pathname: string,
 ): Promise<boolean> {
+  if (pathname === QUICK_PAIR_PATH) {
+    if (!requireMethod(request, response, 'POST')) return true;
+    if (!requirePersistence(response)) return true;
+    const user = await currentAccountUser(request);
+    const body = user ? await readJsonBody(request) : {};
+    const result = await quickPairResult(user, body, defaultQuickPairDeps(ctx));
+    writeJson(response, result.status, result.body);
+    return true;
+  }
   if (
     pathname !== '/api/correspondence/seeks' &&
     !pathname.startsWith('/api/correspondence/seeks/')
@@ -207,8 +319,10 @@ export function openSeekPayload(
     daysPerMove: number;
     preferredColor: string;
     creatorName: string | null;
+    creatorHandle?: string | null;
     createdAt: Date;
     creatorUserId: string;
+    rated?: boolean;
   },
   viewerUserId: string | null,
 ): Record<string, unknown> {
@@ -217,7 +331,11 @@ export function openSeekPayload(
     gameSpecId: seek.gameSpecId,
     daysPerMove: seek.daysPerMove,
     preferredColor: seek.preferredColor,
+    rated: seek.rated === true,
     creatorName: seek.creatorName,
+    // Linkable handle (null for a closed/private account): the client links the
+    // name only when this is present, never from the display name.
+    creatorHandle: seek.creatorHandle ?? null,
     createdAt: seek.createdAt.toISOString(),
     isMine: viewerUserId !== null && seek.creatorUserId === viewerUserId,
   };
@@ -242,7 +360,11 @@ async function listIncomingChallenges(
       gameSpecId: seek.gameSpecId,
       daysPerMove: seek.daysPerMove,
       preferredColor: seek.preferredColor,
+      rated: seek.rated === true,
       challengerName: seek.creatorName,
+      challengerHandle: seek.creatorHandle ?? null,
+      // A directed challenge always stores its own expiry; the card shows it.
+      expiresAt: seek.expiresAt?.toISOString() ?? null,
       createdAt: seek.createdAt.toISOString(),
     })),
   });
@@ -264,9 +386,11 @@ async function listOutgoingChallenges(
       gameSpecId: seek.gameSpecId,
       daysPerMove: seek.daysPerMove,
       preferredColor: seek.preferredColor,
+      rated: seek.rated === true,
       visibility: seek.visibility,
       // Present only for a directed challenge; a link challenge has no target.
       targetName: seek.targetName,
+      targetHandle: seek.targetHandle ?? null,
       // The share URL for a link challenge, so a creator can re-copy a link they
       // already sent. Public board posts have no private URL.
       challengeUrl:
@@ -278,34 +402,64 @@ async function listOutgoingChallenges(
   return true;
 }
 
+/** A route's answer before it is written: lets quick-pair reuse the post and
+ *  accept paths (every gate, the race, the start email) without a socket. */
+export type SeekRouteResult = { status: number; body: Record<string, unknown> };
+
 async function createSeek(
   ctx: HttpApiContext,
   user: UserAccount,
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<boolean> {
+  const body = await readJsonBody(request);
+  const result = await createSeekResult(ctx, user, body, 'board');
+  writeJson(response, result.status, result.body);
+  return true;
+}
+
+async function createSeekResult(
+  ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
+  user: UserAccount,
+  body: Record<string, unknown>,
+  source: SeekAlertNotice['source'],
+): Promise<SeekRouteResult> {
   // Per-account play lock (126). Correspondence never reaches seat assignment
   // through a socket the way a live room does, so posting a seek and accepting
   // one are their own enforcement points. Declining and cancelling stay open: a
   // locked account must still be able to clear challenges aimed at it.
   if (persistence.isPlayDisabled(user)) {
-    writeJson(response, 403, { error: 'play_disabled' });
-    return true;
+    return { status: 403, body: { error: 'play_disabled' } };
   }
-  const body = await readJsonBody(request);
   const gameSpecId = typeof body.gameSpecId === 'string' ? body.gameSpecId : DARK_CHESS_SPEC_ID;
+  // A retired variant takes no new games: the same 410 the request gate gives.
+  if (isRetiredGameSpec(gameSpecId)) {
+    return { status: 410, body: { error: 'retired_game_spec' } };
+  }
   // Fork-6 fail-closed allowlist — the same set the create route enforces.
   if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(gameSpecId)) {
-    writeJson(response, 501, { error: 'correspondence_unsupported_spec' });
-    return true;
+    return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
+  }
+  // A variant whose server flag is off cannot back a game: refuse the seek now,
+  // not at accept time after the row is gone.
+  if (correspondenceTenantForSpecId(gameSpecId)?.enabled() === false) {
+    return { status: 404, body: { error: 'variant_disabled' } };
   }
   const timeControl = parseCorrespondenceTimeControl(body.daysPerMove);
   const daysPerMove = timeControl?.daysPerMove;
   if (!timeControl || daysPerMove === undefined) {
-    writeJson(response, 400, { error: 'invalid_days_per_move' });
-    return true;
+    return { status: 400, body: { error: 'invalid_days_per_move' } };
   }
   const preferredColor = parseSeekColorPreference(body.preferredColor) ?? 'random';
+  // Casual unless the body says exactly `rated: true`; a rated request that cannot be
+  // honoured is refused, never quietly downgraded to casual.
+  const rated = body.rated === true;
+  if (rated) {
+    const ratedError = ratedSeekError(gameSpecId, timeControl);
+    if (ratedError) {
+      return { status: ratedSeekErrorStatus(ratedError), body: { error: ratedError } };
+    }
+  }
 
   // Challenge dimensions. A target forces a private, directed seek; otherwise
   // visibility defaults to the public board.
@@ -318,8 +472,7 @@ async function createSeek(
     if (targetHandle) {
       targetUserId = await persistence.userIdForHandle(targetHandle);
       if (!targetUserId) {
-        writeJson(response, 404, { error: 'target_not_found' });
-        return true;
+        return { status: 404, body: { error: 'target_not_found' } };
       }
     }
   }
@@ -328,35 +481,64 @@ async function createSeek(
 
   if (targetUserId) {
     if (targetUserId === user.id) {
-      writeJson(response, 400, { error: 'cannot_challenge_self' });
-      return true;
+      return { status: 400, body: { error: 'cannot_challenge_self' } };
     }
     if (!(await persistence.userExists(targetUserId))) {
-      writeJson(response, 404, { error: 'target_not_found' });
-      return true;
+      return { status: 404, body: { error: 'target_not_found' } };
     }
     // The target blocking the challenger hides the challenge entirely, mirroring
     // the inbox send gate — the challenger cannot reach someone who blocked them.
     if (await persistence.hasBlock(targetUserId, user.id)) {
-      writeJson(response, 403, { error: 'challenge_blocked' });
-      return true;
+      return { status: 403, body: { error: 'challenge_blocked' } };
     }
   }
 
-  if (ctx.isDraining()) {
-    writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
-    return true;
+  if (ctx.refusesCreate()) {
+    return { status: 503, body: { error: 'server_draining', restartAt: ctx.drainDeadlineMs() } };
+  }
+  // The same board offer posted twice returns the live one instead of stacking a
+  // duplicate row. Checked before the cap so a player at the limit re-posting an
+  // offer they already have gets it back rather than a refusal. Best-effort under
+  // concurrency like the cap: two simultaneous posts can still both insert.
+  if (visibility === 'public' && !targetUserId) {
+    const existing = await persistence.findOpenDuplicatePublicSeek({
+      creatorUserId: user.id,
+      gameSpecId,
+      daysPerMove,
+      preferredColor,
+      rated,
+    });
+    if (existing) {
+      return {
+        status: 200,
+        body: {
+          seek: {
+            id: existing.id,
+            gameSpecId: existing.gameSpecId,
+            daysPerMove: existing.daysPerMove,
+            preferredColor: existing.preferredColor,
+            rated: existing.rated === true,
+            targetUserId: null,
+            visibility: existing.visibility,
+            expiresAt: existing.expiresAt ? existing.expiresAt.toISOString() : null,
+          },
+          challengeUrl: null,
+          existing: true,
+        },
+      };
+    }
   }
   // Cap is best-effort under concurrency (no unique constraint); a racing pair of
   // creates could both pass at exactly the limit. Acceptable for a spam bound.
   const open = await persistence.countOpenSeeksForUser(user.id);
   if (open >= MAX_OPEN_SEEKS_PER_USER) {
-    writeJson(response, 409, { error: 'seek_limit_reached', limit: MAX_OPEN_SEEKS_PER_USER });
-    return true;
+    return { status: 409, body: { error: 'seek_limit_reached', limit: MAX_OPEN_SEEKS_PER_USER } };
   }
-  // Private challenges lapse after the TTL; public board seeks stand until
-  // accepted or cancelled.
-  const expiresAt = visibility === 'private' ? new Date(Date.now() + CHALLENGE_TTL_MS) : null;
+  // Private challenges store their expiry; a public board seek stores none and
+  // lapses CORRESPONDENCE_SEEK_TTL_MS after posting, computed at read time.
+  const now = Date.now();
+  const expiresAt = visibility === 'private' ? new Date(now + CHALLENGE_TTL_MS) : null;
+  const effectiveExpiresAt = expiresAt ?? new Date(now + persistence.CORRESPONDENCE_SEEK_TTL_MS);
   const id = `seek_${randomUUID()}`;
   await persistence.createCorrespondenceSeek({
     id,
@@ -367,23 +549,38 @@ async function createSeek(
     targetUserId,
     visibility,
     expiresAt,
+    rated,
   });
-  writeJson(response, 201, {
-    seek: {
-      id,
+  // A public board post is the one a stranger has to find in time: tell the
+  // operator (no-op unless MISTBOARD_SEEK_ALERT_EMAIL is set). Never awaited.
+  if (visibility === 'public') {
+    notifySeekPosted({
+      seekId: id,
       gameSpecId,
       daysPerMove,
-      preferredColor,
-      targetUserId,
-      visibility,
-      expiresAt: expiresAt ? expiresAt.toISOString() : null,
+      creatorName: user.displayName || user.handle || null,
+      source,
+    });
+  }
+  return {
+    status: 201,
+    body: {
+      seek: {
+        id,
+        gameSpecId,
+        daysPerMove,
+        preferredColor,
+        rated,
+        targetUserId,
+        visibility,
+        expiresAt: effectiveExpiresAt.toISOString(),
+      },
+      // The shareable "play me" URL: the accept page keyed by the unguessable id.
+      // Present for off-board seeks (link + directed challenges); the public board
+      // surfaces its own seeks without a private link.
+      challengeUrl: visibility === 'private' ? `/challenge/${encodeURIComponent(id)}` : null,
     },
-    // The shareable "play me" URL: the accept page keyed by the unguessable id.
-    // Present for off-board seeks (link + directed challenges); the public board
-    // surfaces its own seeks without a private link.
-    challengeUrl: visibility === 'private' ? `/challenge/${encodeURIComponent(id)}` : null,
-  });
-  return true;
+  };
 }
 
 /**
@@ -399,12 +596,13 @@ async function createSeek(
  */
 export function correspondenceStartNoticeFor(
   roomId: string,
-  seek: { creatorUserId: string; daysPerMove: number },
+  seek: { creatorUserId: string; daysPerMove: number; gameSpecId: string },
   accepter: { displayName: string; handle: string },
   creatorSide: 'first' | 'second',
 ): CorrespondenceStartNotice {
   return {
     roomId,
+    gameSpecId: seek.gameSpecId,
     creatorUserId: seek.creatorUserId,
     accepterName: accepter.displayName || accepter.handle,
     creatorOnMove: creatorSide === 'first',
@@ -418,45 +616,73 @@ async function acceptSeek(
   seekId: string,
   response: ServerResponse,
 ): Promise<boolean> {
+  const result = await acceptSeekResult(ctx, user, seekId);
+  writeJson(response, result.status, result.body);
+  return true;
+}
+
+async function acceptSeekResult(
+  ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
+  user: UserAccount,
+  seekId: string,
+): Promise<SeekRouteResult> {
   if (persistence.isPlayDisabled(user)) {
-    writeJson(response, 403, { error: 'play_disabled' });
-    return true;
+    return { status: 403, body: { error: 'play_disabled' } };
   }
-  if (ctx.isDraining()) {
-    writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
-    return true;
+  if (ctx.refusesCreate()) {
+    return { status: 503, body: { error: 'server_draining', restartAt: ctx.drainDeadlineMs() } };
   }
   const seek = await persistence.getCorrespondenceSeek(seekId);
   if (!seek) {
-    writeJson(response, 404, { error: 'seek_not_found' });
-    return true;
+    return { status: 404, body: { error: 'seek_not_found' } };
   }
   const gateError = challengeAcceptError(seek, user.id);
   if (gateError) {
-    writeJson(response, gateError === 'cannot_accept_own_seek' ? 409 : 403, { error: gateError });
-    return true;
+    return {
+      status: gateError === 'cannot_accept_own_seek' ? 409 : 403,
+      body: { error: gateError },
+    };
   }
-  // A lapsed challenge is gone: refuse it even before the sweep reclaims the row.
+  // A lapsed challenge or board seek is gone: refuse it even before the sweep
+  // reclaims the row. expiresAt is the effective expiry, board TTL included.
   if (seek.expiresAt && seek.expiresAt.getTime() <= Date.now()) {
-    writeJson(response, 410, { error: 'challenge_expired' });
-    return true;
+    return { status: 410, body: { error: 'challenge_expired' } };
+  }
+  // A seek posted before its variant retired cannot start a game now; the row
+  // lapses on its own TTL like any other unanswered seek.
+  if (isRetiredGameSpec(seek.gameSpecId)) {
+    return { status: 410, body: { error: 'retired_game_spec' } };
   }
   if (!CORRESPONDENCE_ELIGIBLE_SPECS.has(seek.gameSpecId)) {
-    writeJson(response, 501, { error: 'correspondence_unsupported_spec' });
-    return true;
+    return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
   }
   const timeControl = parseCorrespondenceTimeControl(seek.daysPerMove);
   if (!timeControl) {
-    writeJson(response, 500, { error: 'invalid_seek' });
-    return true;
+    return { status: 500, body: { error: 'invalid_seek' } };
+  }
+  // Variant switched off since the seek was posted: keep the row (it accepts
+  // again once the flag is back) instead of consuming it for a 404.
+  if (correspondenceTenantForSpecId(seek.gameSpecId)?.enabled() === false) {
+    return { status: 404, body: { error: 'variant_disabled' } };
+  }
+  // A rated seek re-passes the rated gate at accept (the terms may have stopped
+  // qualifying since it was posted), and both players must be free to play: the
+  // accepter's lock is checked above, the creator's here, because accepting seats them.
+  if (seek.rated) {
+    const ratedError = ratedSeekError(seek.gameSpecId, timeControl);
+    if (ratedError) {
+      return { status: ratedSeekErrorStatus(ratedError), body: { error: ratedError } };
+    }
+    if (await persistence.isUserIdPlayDisabled(seek.creatorUserId)) {
+      return { status: 409, body: { error: 'opponent_play_disabled' } };
+    }
   }
   // The DB decides the race: deleteCorrespondenceSeek removes the row once, so
   // exactly one of two simultaneous accepters proceeds to create the game; the
   // loser gets 409 and the row is already gone.
   const won = await persistence.deleteCorrespondenceSeek(seekId);
   if (!won) {
-    writeJson(response, 409, { error: 'seek_taken' });
-    return true;
+    return { status: 409, body: { error: 'seek_taken' } };
   }
   // Which tenant backs this spec's correspondence rooms. Fail-closed twice over: the spec
   // already passed CORRESPONDENCE_ELIGIBLE_SPECS above, and a spec whose tenant offers no
@@ -464,8 +690,7 @@ async function acceptSeek(
   const tenant = correspondenceTenantForSpecId(seek.gameSpecId);
   const createGame = tenant?.createCorrespondenceGameForSeek ?? null;
   if (!createGame) {
-    writeJson(response, 501, { error: 'correspondence_unsupported_spec' });
-    return true;
+    return { status: 501, body: { error: 'correspondence_unsupported_spec' } };
   }
   // Creator's side is honored; the accepter takes the other (random → coin flip). Move
   // order, not color: the tenant maps first/second onto its own colors, so this path stays
@@ -481,27 +706,195 @@ async function acceptSeek(
     timeControl,
     first: { userId: creatorSide === 'first' ? seek.creatorUserId : user.id },
     second: { userId: creatorSide === 'second' ? seek.creatorUserId : user.id },
+    rated: seek.rated === true,
   });
   if (!created.ok) {
     // The seek row is already deleted, so a failure here is a rare persistence
     // error rather than a lost race — surface it; the creator can re-post.
     const status = created.error === 'disabled' ? 404 : 503;
-    writeJson(response, status, { error: created.error });
-    return true;
+    return { status: status, body: { error: created.error } };
   }
+  // A dead link to this seek can now say who took it and link the game (#527).
+  // Awaited but never fatal: the seated game is the durable outcome, so a failed
+  // write costs only the nicer dead-link copy, never the accept.
+  await persistence
+    .recordCorrespondenceSeekTaken({ seek, roomId: created.room.id, accepterUserId: user.id })
+    .catch((err: unknown) => {
+      logger.warn(
+        { err, seekId, roomId: created.room.id },
+        'correspondence accept: outcome write failed',
+      );
+    });
   // The creator posted this seek and left; nothing else will tell them it was
   // taken. Fire-and-forget on purpose: the seated game is the durable outcome,
   // so a mail provider outage must never turn a successful accept into an error
   // for the accepter, who is right here watching this response.
   notifyCorrespondenceStart(correspondenceStartNoticeFor(created.room.id, seek, user, creatorSide));
-  writeJson(response, 201, {
-    roomId: created.room.id,
-    url: `/room/${encodeURIComponent(created.room.id)}`,
-    // The tenant's own color for the side the accepter took (white/black, red/black, ...).
-    seat: created.seats[accepterSide],
-    gameSpecId: created.room.gameSpecId,
+  const roomRated = created.room.rated === true;
+  if ((seek.rated === true) !== roomRated) {
+    // Unreachable while the conformance test holds (every isCorrespondenceRatedSpec
+    // factory honours `rated`); logged loudly because the game already exists.
+    logger.error(
+      { roomId: created.room.id, gameSpecId: seek.gameSpecId, seekRated: seek.rated, roomRated },
+      'correspondence accept: room rated flag does not match the seek',
+    );
+  }
+  return {
+    status: 201,
+    body: {
+      roomId: created.room.id,
+      url: `/room/${encodeURIComponent(created.room.id)}`,
+      // The tenant's own color for the side the accepter took (white/black, red/black, ...).
+      seat: created.seats[accepterSide],
+      gameSpecId: created.room.gameSpecId,
+      rated: roomRated,
+    },
+  };
+}
+
+// ── Quick pair (homepage jieqi correspondence button, 2026-10-03) ─────────────
+// One click for "give me a correspondence game": return the caller's own open
+// seek if they already have one, else take the oldest open seek someone else
+// posted on the same terms, else post one. Every step goes through the same
+// post and accept paths as the board (gates, the delete-once race, the start
+// email, the operator alert), so the button cannot pair a game the board could
+// not. Restricted to the one offer the test needs: casual jieqi, 1 day a move.
+export const QUICK_PAIR_PATH = '/api/correspondence/quick-pair';
+export const QUICK_PAIR_TERMS = { gameSpecId: 'jieqi', daysPerMove: 1 } as const;
+// Bounds the walk past seeks that vanish under us (taken, cancelled, expired).
+const QUICK_PAIR_MAX_ACCEPT_ATTEMPTS = 5;
+// Accept failures that mean "this seek is gone or not for you, try the next".
+// Anything else (draining, play lock, a persistence error) is the answer.
+const QUICK_PAIR_SKIPPABLE_ACCEPT_ERRORS = new Set([
+  'seek_taken',
+  'seek_not_found',
+  'challenge_expired',
+  'cannot_accept_own_seek',
+  'not_your_challenge',
+  'opponent_play_disabled',
+]);
+
+type QuickPairSeek = {
+  id: string;
+  creatorUserId: string;
+  gameSpecId: string;
+  daysPerMove: number;
+  rated?: boolean;
+  visibility: SeekVisibility;
+  targetUserId: string | null;
+  createdAt: Date;
+};
+
+export type QuickPairDeps = {
+  correspondenceEnabled: () => boolean;
+  variantEnabled: (gameSpecId: string) => boolean;
+  /** The caller's own live seeks, any visibility. */
+  listOwnSeeks: (userId: string) => Promise<QuickPairSeek[]>;
+  /** The live public board, any order. */
+  listBoardSeeks: () => Promise<QuickPairSeek[]>;
+  accept: (user: UserAccount, seekId: string) => Promise<SeekRouteResult>;
+  post: (user: UserAccount, body: Record<string, unknown>) => Promise<SeekRouteResult>;
+};
+
+function defaultQuickPairDeps(ctx: HttpApiContext): QuickPairDeps {
+  return {
+    correspondenceEnabled,
+    variantEnabled: (gameSpecId) =>
+      !isRetiredGameSpec(gameSpecId) &&
+      correspondenceTenantForSpecId(gameSpecId)?.enabled() === true,
+    listOwnSeeks: (userId) => persistence.listOutgoingSeeksForUser(userId),
+    listBoardSeeks: () => persistence.listOpenCorrespondenceSeeks(),
+    accept: (user, seekId) => acceptSeekResult(ctx, user, seekId),
+    post: (user, body) => createSeekResult(ctx, user, body, 'quick-pair'),
+  };
+}
+
+function isQuickPairOffer(seek: QuickPairSeek): boolean {
+  return (
+    seek.gameSpecId === QUICK_PAIR_TERMS.gameSpecId &&
+    seek.daysPerMove === QUICK_PAIR_TERMS.daysPerMove &&
+    seek.rated !== true &&
+    seek.visibility === 'public' &&
+    seek.targetUserId === null
+  );
+}
+
+export async function quickPairResult(
+  user: UserAccount | null,
+  body: Record<string, unknown>,
+  deps: QuickPairDeps,
+): Promise<SeekRouteResult> {
+  if (!deps.correspondenceEnabled()) {
+    return { status: 404, body: { error: 'correspondence_disabled' } };
+  }
+  if (!user) return { status: 401, body: { error: 'not_signed_in' } };
+  if (
+    body.gameSpecId !== QUICK_PAIR_TERMS.gameSpecId ||
+    body.daysPerMove !== QUICK_PAIR_TERMS.daysPerMove ||
+    (body.rated !== undefined && body.rated !== false)
+  ) {
+    return { status: 400, body: { error: 'quick_pair_unsupported' } };
+  }
+  if (!deps.variantEnabled(QUICK_PAIR_TERMS.gameSpecId)) {
+    return { status: 404, body: { error: 'variant_disabled' } };
+  }
+  if (persistence.isPlayDisabled(user)) {
+    return { status: 403, body: { error: 'play_disabled' } };
+  }
+
+  // 1. Already waiting: hand back the open seek instead of stacking another.
+  const own = (await deps.listOwnSeeks(user.id)).find(isQuickPairOffer);
+  if (own) return quickPairSeekAnswer(own.id, true);
+
+  // 2. Someone else is waiting: take the oldest offer first (it has waited longest).
+  const candidates = (await deps.listBoardSeeks())
+    .filter((seek) => isQuickPairOffer(seek) && seek.creatorUserId !== user.id)
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    .slice(0, QUICK_PAIR_MAX_ACCEPT_ATTEMPTS);
+  for (const seek of candidates) {
+    const accepted = await deps.accept(user, seek.id);
+    if (accepted.status === 201) {
+      const roomId = String(accepted.body.roomId);
+      return {
+        status: 201,
+        body: {
+          kind: 'game',
+          roomId,
+          gameUrl: String(accepted.body.url),
+          gameSpecId: accepted.body.gameSpecId,
+          daysPerMove: QUICK_PAIR_TERMS.daysPerMove,
+        },
+      };
+    }
+    if (!QUICK_PAIR_SKIPPABLE_ACCEPT_ERRORS.has(String(accepted.body.error))) return accepted;
+  }
+
+  // 3. Nobody is waiting: post the offer on the public board.
+  const posted = await deps.post(user, {
+    gameSpecId: QUICK_PAIR_TERMS.gameSpecId,
+    daysPerMove: QUICK_PAIR_TERMS.daysPerMove,
+    preferredColor: 'random',
+    visibility: 'public',
+    rated: false,
   });
-  return true;
+  const seek = posted.body.seek as { id?: unknown } | undefined;
+  if ((posted.status === 201 || posted.status === 200) && typeof seek?.id === 'string') {
+    return quickPairSeekAnswer(seek.id, posted.status === 200);
+  }
+  return posted;
+}
+
+function quickPairSeekAnswer(seekId: string, existing: boolean): SeekRouteResult {
+  return {
+    status: existing ? 200 : 201,
+    body: {
+      kind: 'seek',
+      seekId,
+      existing,
+      gameSpecId: QUICK_PAIR_TERMS.gameSpecId,
+      daysPerMove: QUICK_PAIR_TERMS.daysPerMove,
+    },
+  };
 }
 
 // The challenge landing page's read: enough to render "X challenged you to Y"
@@ -514,7 +907,10 @@ async function viewSeek(
 ): Promise<boolean> {
   const seek = await persistence.getCorrespondenceSeekListing(seekId);
   if (!seek) {
-    writeJson(response, 404, { error: 'seek_not_found' });
+    // Gone: say why when this viewer may know (#527), else the plain 404.
+    const gone = await seekGoneFor(seekId, user.id);
+    if (gone) writeJson(response, 410, { error: 'seek_gone', ...gone });
+    else writeJson(response, 404, { error: 'seek_not_found' });
     return true;
   }
   const view = challengeViewModel(seek, user.id, Date.now());
@@ -527,8 +923,10 @@ async function viewSeek(
     gameSpecId: seek.gameSpecId,
     daysPerMove: seek.daysPerMove,
     preferredColor: seek.preferredColor,
+    rated: seek.rated === true,
     visibility: seek.visibility,
     challengerName: seek.creatorName,
+    challengerHandle: seek.creatorHandle ?? null,
     isMine: view.isMine,
     canAccept: view.canAccept,
     canDecline: view.canDecline,
@@ -536,6 +934,15 @@ async function viewSeek(
     expiresAt: seek.expiresAt ? seek.expiresAt.toISOString() : null,
   });
   return true;
+}
+
+// A closed seek's outcome row first (migration 165); then the 161 expiry notice,
+// which only a public board seek ever has, for seeks swept before outcomes existed.
+async function seekGoneFor(seekId: string, viewerUserId: string): Promise<SeekGoneView | null> {
+  const outcome = await persistence.getCorrespondenceSeekOutcome(seekId);
+  if (outcome) return seekGoneView(outcome, viewerUserId);
+  if (await persistence.hasSeekExpiryNotice(seekId)) return { reason: 'expired' };
+  return null;
 }
 
 // The named target rejecting a directed challenge: deletes the seek. A link
@@ -554,7 +961,8 @@ async function declineChallenge(
     writeJson(response, 403, { error: 'not_your_challenge' });
     return true;
   }
-  await persistence.deleteCorrespondenceSeek(seekId);
+  // Target-scoped delete plus the 'declined' outcome, in one statement.
+  await persistence.closeCorrespondenceSeek(seekId, 'declined', user.id);
   writeJson(response, 200, { ok: true });
   return true;
 }
@@ -564,8 +972,9 @@ async function cancelSeek(
   seekId: string,
   response: ServerResponse,
 ): Promise<boolean> {
-  // Owner-scoped: deletes only when the seek belongs to this account.
-  const deleted = await persistence.deleteCorrespondenceSeek(seekId, user.id);
+  // Owner-scoped: deletes only when the seek belongs to this account, and records
+  // the 'cancelled' outcome in the same statement.
+  const deleted = await persistence.closeCorrespondenceSeek(seekId, 'cancelled', user.id);
   if (!deleted) {
     writeJson(response, 404, { error: 'seek_not_found' });
     return true;

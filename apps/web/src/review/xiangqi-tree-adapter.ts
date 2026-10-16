@@ -8,6 +8,7 @@
 // which returns the truth + per-POV triptych (length 3).
 
 import {
+  ARBITER_ADJUDICATED_DRAWS,
   applyStandardXiangqiMove,
   createInitialXiangqiState,
   formatXiangqiMove,
@@ -63,4 +64,37 @@ export const xiangqiTreeAdapter: VariantTreeAdapter<
   // moves need no disambiguation); an off-position token is rejected by addMove on
   // rebuild, not here. Returns null for a token that isn't two valid squares.
   fromUci: (uci) => fsfUciToXiangqiSquares(uci),
+};
+
+/**
+ * A played record runs past the two draws an arbiter decides (repetition and
+ * the progress clock): they are claimed or called, never automatic, so a
+ * tournament game can go on for dozens of plies after our kernel would have
+ * stopped it. 2026 league round 6 board 7 hit the kernel's threefold at ply 199
+ * and Red won at ply 211; the review showed a "truncated import" and a draw.
+ * Checkmate and stalemate stay terminal. The side to move is the opposite of
+ * whoever made the last move, read off the board.
+ */
+export function resumeAdjudicatedDraw(truth: XiangqiGameState): XiangqiGameState {
+  if (
+    truth.status.type !== 'finished' ||
+    !ARBITER_ADJUDICATED_DRAWS.has(truth.status.reason) ||
+    !truth.lastMove
+  ) {
+    return truth;
+  }
+  const mover = truth.board[truth.lastMove.to]?.color;
+  if (!mover) return truth;
+  return { ...truth, status: { type: 'playing', turn: mover === 'red' ? 'black' : 'red' } };
+}
+
+/** The adapter for a played record (a broadcast or archive game): the same
+ *  hooks, resumed past an arbiter-adjudicated draw before every one. */
+export const xiangqiRecordTreeAdapter: typeof xiangqiTreeAdapter = {
+  ...xiangqiTreeAdapter,
+  isLegal: (truth, move) => xiangqiTreeAdapter.isLegal(resumeAdjudicatedDraw(truth), move),
+  applyMove: (truth, move) => applyStandardXiangqiMove(resumeAdjudicatedDraw(truth), move),
+  project: (truth) => xiangqiTreeAdapter.project(resumeAdjudicatedDraw(truth)),
+  moveLabel: (move, parentTruth) =>
+    xiangqiTreeAdapter.moveLabel(move, resumeAdjudicatedDraw(parentTruth)),
 };

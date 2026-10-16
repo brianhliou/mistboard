@@ -27,12 +27,20 @@ import type pg from 'pg';
 import { getPool, withTransaction } from './persistence-db.js';
 import type { XiangqiGameSort } from './persistence-historical-xiangqi.js';
 import {
+  normalizeXiangqiBroadcastPollMode,
+  type XiangqiBroadcastPollMode,
+  xiangqiBroadcastPollState,
+} from './xiangqi-broadcast-poll-window.js';
+import {
   translatedXiangqiBroadcastBoard,
   translatedXiangqiBroadcastRound,
   translatedXiangqiBroadcastTour,
 } from './xiangqi-broadcast-translate.js';
 
 export type StoredXiangqiBroadcastTour = XiangqiBroadcastTour & {
+  /** The operator's setting: auto (the event window), on, or off. */
+  pollMode: XiangqiBroadcastPollMode;
+  /** Derived at read time: whether the scheduler polls this tour now. */
   pollEnabled: boolean;
   pollIntervalMs: number;
   createdAt: Date;
@@ -42,8 +50,18 @@ export type StoredXiangqiBroadcastTour = XiangqiBroadcastTour & {
 export type XiangqiBroadcastTourSchedule = {
   slug: string;
   sourceUrl: string | null;
-  pollEnabled: boolean;
+  pollMode: XiangqiBroadcastPollMode;
   pollIntervalMs: number;
+  /** The event's first and last day, ISO in the event's offset. `auto` polls
+   *  from 12 h before the start to 7 days after the end; the scheduler slows
+   *  down once the end has passed. See xiangqi-broadcast-poll-window.ts. */
+  startsAt: string | null;
+  endsAt: string | null;
+  /** When the tour was seeded: a backfill's poll tail runs from here. */
+  createdAt?: string;
+  /** Whether the tour holds any board; set by the scheduler's listing, where
+   *  `false` earns the daily late tail past the window. */
+  hasBoards?: boolean;
 };
 
 export type XiangqiBroadcastBoardSearchFilters = {
@@ -57,6 +75,7 @@ export type XiangqiBroadcastBoardSearchFilters = {
   plyMin?: number;
   plyMax?: number;
   limit?: number;
+  offset?: number;
 };
 
 export type XiangqiBroadcastBoardSearchItem = {
@@ -132,7 +151,9 @@ export type XiangqiBroadcastBoardUpdateStatus =
   | 'unchanged'
   | 'extended'
   | 'updated'
-  | 'corrected';
+  | 'corrected'
+  /** Removed: a table's aggregate row whose per-game boards replace it. */
+  | 'retired';
 
 export type XiangqiBroadcastBoardUpdateResult =
   | {
@@ -159,6 +180,7 @@ type TourRow = {
   starts_at: Date | null;
   ends_at: Date | null;
   poll_enabled: boolean;
+  poll_mode: string;
   poll_interval_ms: number;
   payload: XiangqiBroadcastTour;
   created_at: Date;
@@ -237,10 +259,25 @@ function optionalString(value: string | undefined): string | null {
   return value ?? null;
 }
 
+function scheduleFromRow(row: TourRow): XiangqiBroadcastTourSchedule {
+  return {
+    slug: row.slug,
+    sourceUrl: row.source_url,
+    pollMode: normalizeXiangqiBroadcastPollMode(row.poll_mode),
+    pollIntervalMs: row.poll_interval_ms,
+    // The payload keeps the event's offset; the column is the fallback.
+    startsAt: row.payload.startsAt ?? row.starts_at?.toISOString() ?? null,
+    endsAt: row.payload.endsAt ?? row.ends_at?.toISOString() ?? null,
+    createdAt: row.created_at.toISOString(),
+  };
+}
+
 function tourFromRow(row: TourRow): StoredXiangqiBroadcastTour {
+  const schedule = scheduleFromRow(row);
   return {
     ...row.payload,
-    pollEnabled: row.poll_enabled,
+    pollMode: schedule.pollMode,
+    pollEnabled: xiangqiBroadcastPollState({ ...schedule, now: Date.now() }).polling,
     pollIntervalMs: row.poll_interval_ms,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -438,6 +475,114 @@ async function retireRekeyedTwin(client: Queryable, board: XiangqiBroadcastBoard
   }
 }
 
+// A results-only board (a round page's pairing, `r07t05`) is filed under its
+// pairing's id, and the poller files a record it can match to the pairing
+// under that same id, so the moves extend it in place. A record it could not
+// match (no link on the pairing's row, no table on the game list) arrives
+// under its own id; this retires the results-only board it duplicates: same
+// tour and round, same two players in the same colours, no moves. One row,
+// so a table that played the same colours twice keeps its other game.
+async function retireResultsOnlyTwin(
+  client: Queryable,
+  board: XiangqiBroadcastBoard,
+): Promise<void> {
+  if (board.moves.length === 0) return;
+  const { rows } = await client.query<{ id: string }>(
+    `DELETE FROM xiangqi_broadcast_boards
+      WHERE id = (
+        SELECT id FROM xiangqi_broadcast_boards
+         WHERE tour_slug = $1 AND round_id = $2
+           AND red->>'name' = $3 AND black->>'name' = $4
+           AND ply_count = 0 AND id <> $5
+           AND source_board_id ~ '^r[0-9]+t[0-9]+(g[0-9]+)?$'
+         ORDER BY source_board_id
+         LIMIT 1)
+      RETURNING id`,
+    [board.tourSlug, board.roundId, board.red.name, board.black.name, board.id],
+  );
+  for (const row of rows) {
+    await appendSyncLog(client, {
+      tourSlug: board.tourSlug,
+      roundId: board.roundId,
+      boardId: board.id,
+      sourceBoardId: board.sourceBoardId,
+      severity: 'info',
+      kind: 'rekeyed',
+      message: `retired ${row.id}: its record arrived as ${board.id}`,
+      payload: { retiredBoardId: row.id, sourceUrl: board.sourceUrl ?? null },
+    });
+  }
+}
+
+// A table that plays more than one game in a round (a playoff: 慢棋, 快棋,
+// 超快棋) first shows on dpxq's round page as one aggregate row carrying the
+// match score, and only later as a row per game. A poll that read the page in
+// between stored the aggregate as a results-only board (`r07t01`); the
+// per-game boards (`r07t01g1`..) later landed beside it, and standings scored
+// the aggregate as one more game. Retire it once a per-game board of the same
+// table is stored: only a moveless aggregate-shaped board, and only while a
+// game board of its table exists in the same round, so a failed fetch of the
+// games leaves the aggregate standing until they land.
+//
+// The same step retires a team league's table-keyed board (`r01t02`, from a
+// read before games were keyed by match) once the round holds a match-keyed
+// board (`r01m03t02`): its table number named some match's game, whichever
+// was read last. Again only moveless, and only while the replacement exists.
+export async function retireSupersededXiangqiBroadcastAggregateOn(
+  client: Queryable,
+  input: { tourSlug: string; roundId: string; boardId: string },
+): Promise<XiangqiBroadcastBoardUpdateResult> {
+  const { rows } = await client.query<{ id: string; source_board_id: string; by_match: boolean }>(
+    `DELETE FROM xiangqi_broadcast_boards AS agg
+      WHERE agg.id = $1 AND agg.tour_slug = $2 AND agg.round_id = $3
+        AND agg.ply_count = 0
+        AND (
+          (agg.source_board_id ~ '^r[0-9]+(m[0-9]+)?t[0-9]+$'
+            AND EXISTS (
+              SELECT 1 FROM xiangqi_broadcast_boards AS game
+               WHERE game.round_id = agg.round_id
+                 AND game.source_board_id ~ ('^' || agg.source_board_id || 'g[0-9]+$')))
+          OR (agg.source_board_id ~ '^r[0-9]+t[0-9]+(g[0-9]+)?$'
+            AND EXISTS (
+              SELECT 1 FROM xiangqi_broadcast_boards AS game
+               WHERE game.round_id = agg.round_id
+                 AND game.source_board_id ~ '^r[0-9]+m[0-9]+t[0-9]+')))
+      RETURNING agg.id, agg.source_board_id,
+        NOT EXISTS (
+          SELECT 1 FROM xiangqi_broadcast_boards AS game
+           WHERE game.round_id = agg.round_id
+             AND game.source_board_id ~ ('^' || agg.source_board_id || 'g[0-9]+$')) AS by_match`,
+    [input.boardId, input.tourSlug, input.roundId],
+  );
+  const row = rows[0];
+  // Nothing matched: already retired, or its games are not stored yet.
+  if (!row) return { ok: true, boardId: input.boardId, status: 'unchanged', plyCount: 0 };
+  await dropBroadcastAnalysis(client, row.id);
+  await appendSyncLog(client, {
+    tourSlug: input.tourSlug,
+    roundId: input.roundId,
+    boardId: row.id,
+    sourceBoardId: row.source_board_id,
+    severity: 'info',
+    kind: 'superseded',
+    message: row.by_match
+      ? `retired ${row.id}: the round's match-keyed boards replace its table-keyed row`
+      : `retired ${row.id}: the table's per-game boards replace its aggregate row`,
+    payload: { retiredBoardId: row.id },
+  });
+  return { ok: true, boardId: row.id, status: 'retired', plyCount: 0 };
+}
+
+export async function retireSupersededXiangqiBroadcastAggregate(input: {
+  tourSlug: string;
+  roundId: string;
+  boardId: string;
+}): Promise<XiangqiBroadcastBoardUpdateResult> {
+  return await withTransaction((client) =>
+    retireSupersededXiangqiBroadcastAggregateOn(client, input),
+  );
+}
+
 async function appendSyncLog(
   client: Queryable,
   input: {
@@ -534,16 +679,32 @@ function isMovePrefix(prefix: readonly XiangqiMove[], value: readonly XiangqiMov
   return movesEqual(prefix, value.slice(0, prefix.length));
 }
 
-function boardTagsEqual(
-  a: Pick<XiangqiBroadcastBoard, 'red' | 'black' | 'status' | 'result' | 'sourceUrl'>,
-  b: Pick<XiangqiBroadcastBoard, 'red' | 'black' | 'status' | 'result' | 'sourceUrl'>,
-): boolean {
+/**
+ * A board's stored whole-game analysis describes the moves it was run on, and
+ * game_analysis saves are insert-once, so a record whose moves change (a late
+ * upload extending it, an operator correction) would keep the old evals for
+ * good. Every row under its key goes, progress checkpoints included; the
+ * sweep analyses it again once it is finished.
+ */
+async function dropBroadcastAnalysis(client: Queryable, boardId: string): Promise<void> {
+  await client.query(`DELETE FROM game_analysis WHERE room_id = $1`, [`broadcast:${boardId}`]);
+}
+
+type BoardTags = Pick<
+  XiangqiBroadcastBoard,
+  'red' | 'black' | 'status' | 'result' | 'sourceUrl' | 'details'
+>;
+
+function boardTagsEqual(a: BoardTags, b: BoardTags): boolean {
   return (
     JSON.stringify(a.red) === JSON.stringify(b.red) &&
     JSON.stringify(a.black) === JSON.stringify(b.black) &&
     a.status === b.status &&
     a.result === b.result &&
-    a.sourceUrl === b.sourceUrl
+    a.sourceUrl === b.sourceUrl &&
+    // The game's details arrive on a re-read of a board stored before they
+    // existed; same moves, new details is an update, not a duplicate.
+    JSON.stringify(a.details ?? null) === JSON.stringify(b.details ?? null)
   );
 }
 
@@ -614,6 +775,7 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
     const existing = await getBoardById(client, board.id);
     if (!existing) {
       await retireRekeyedTwin(client, board);
+      await retireResultsOnlyTwin(client, board);
       await upsertBoard(client, board, replay.plies, replay.finalStatus);
       return { ok: true, boardId: board.id, status: 'created', plyCount: replay.plies };
     }
@@ -628,6 +790,7 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
 
     if (isMovePrefix(existing.moves, board.moves)) {
       await upsertBoard(client, board, replay.plies, replay.finalStatus);
+      await dropBroadcastAnalysis(client, board.id);
       return { ok: true, boardId: board.id, status: 'extended', plyCount: replay.plies };
     }
 
@@ -637,6 +800,7 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
 
     if (options.allowCorrection) {
       await upsertBoard(client, board, replay.plies, replay.finalStatus);
+      await dropBroadcastAnalysis(client, board.id);
       await appendSyncLog(client, {
         tourSlug: board.tourSlug,
         roundId: board.roundId,
@@ -841,7 +1005,9 @@ function buildCompletedBoardSearchWhere(filters: XiangqiBroadcastBoardSearchFilt
   clause: string;
   values: unknown[];
 } {
-  const conditions: string[] = [`boards.result <> '*'`];
+  // A results-only board (a pairing with no published moves) is a result,
+  // not a game record: the games database and the study curator list games.
+  const conditions: string[] = [`boards.result <> '*'`, 'boards.ply_count > 0'];
   const values: unknown[] = [];
   const bind = (value: unknown): string => {
     values.push(value);
@@ -894,6 +1060,7 @@ export async function queryCompletedXiangqiBroadcastBoards(
   filters: XiangqiBroadcastBoardSearchFilters,
 ): Promise<XiangqiBroadcastBoardSearchPage> {
   const limit = Math.max(1, Math.min(filters.limit ?? 200, 200));
+  const offset = Math.max(0, filters.offset ?? 0);
   const { clause, values } = buildCompletedBoardSearchWhere(filters);
 
   const countResult = await getPool().query<{ total: number }>(
@@ -907,7 +1074,7 @@ export async function queryCompletedXiangqiBroadcastBoards(
   const total = countResult.rows[0]?.total ?? 0;
   if (total === 0) return { boards: [], total: 0 };
 
-  const pageValues = [...values, limit];
+  const pageValues = [...values, limit, offset];
   const { rows } = await getPool().query<BoardSearchRow>(
     `SELECT boards.id,
             boards.tour_slug,
@@ -932,7 +1099,7 @@ export async function queryCompletedXiangqiBroadcastBoards(
      JOIN xiangqi_broadcast_rounds rounds ON rounds.id = boards.round_id
      WHERE ${clause}
      ORDER BY ${broadcastOrderBy(filters.sort)}
-     LIMIT $${pageValues.length}`,
+     LIMIT $${pageValues.length - 1} OFFSET $${pageValues.length}`,
     pageValues,
   );
   const boards = rows.map((row) => ({
@@ -1010,6 +1177,7 @@ export async function listAggregatableXiangqiBroadcastGames(opts: {
      JOIN xiangqi_broadcast_tours tours ON tours.slug = boards.tour_slug
      JOIN xiangqi_broadcast_rounds rounds ON rounds.id = boards.round_id
      WHERE boards.result <> '*'
+       AND boards.ply_count > 0
        AND boards.id > $1
      ORDER BY boards.id ASC
      LIMIT $2`,
@@ -1038,37 +1206,140 @@ export async function getXiangqiBroadcastBoard(
 
 export async function setXiangqiBroadcastTourSchedule(
   slug: string,
-  schedule: { pollEnabled: boolean; pollIntervalMs: number },
+  schedule: { pollMode: XiangqiBroadcastPollMode; pollIntervalMs: number },
 ): Promise<XiangqiBroadcastTourSchedule | null> {
+  // poll_enabled is written only so a rollback past migration 150 reads a
+  // sane value; nothing here reads it.
   const { rows } = await getPool().query<TourRow>(
     `UPDATE xiangqi_broadcast_tours
-        SET poll_enabled = $2, poll_interval_ms = $3, updated_at = now()
+        SET poll_mode = $2, poll_enabled = ($2 = 'on'), poll_interval_ms = $3,
+            updated_at = now()
       WHERE slug = $1
       RETURNING *`,
-    [slug, schedule.pollEnabled, schedule.pollIntervalMs],
+    [slug, schedule.pollMode, schedule.pollIntervalMs],
   );
   const row = rows[0];
-  if (!row) return null;
-  return {
+  return row ? scheduleFromRow(row) : null;
+}
+
+/**
+ * The newest finished board with no stored whole-game analysis under
+ * (engineId, depth), for the broadcast analysis sweep. Newest first, so the
+ * round readers are opening fills before the archive. `skip` holds boards this
+ * process already failed on, so one bad record cannot stall the sweep.
+ */
+export async function nextUnanalysedXiangqiBroadcastBoard(input: {
+  engineId: string;
+  depth: number;
+  maxPlies: number;
+  skip: readonly string[];
+  /** Tours whose boards go first (the top grade), then the rest, each by
+   *  most recently updated. */
+  preferTourSlugs?: readonly string[];
+}): Promise<StoredXiangqiBroadcastBoard | null> {
+  const { rows } = await getPool().query<BoardRow>(
+    `SELECT b.* FROM xiangqi_broadcast_boards b
+      WHERE b.status = 'complete'
+        AND b.ply_count BETWEEN 1 AND $3
+        AND NOT (b.id = ANY($4::text[]))
+        AND NOT EXISTS (
+          SELECT 1 FROM game_analysis g
+           WHERE g.room_id = 'broadcast:' || b.id AND g.engine_id = $1 AND g.depth = $2
+        )
+      ORDER BY (b.tour_slug = ANY($5::text[])) DESC, b.updated_at DESC, b.id
+      LIMIT 1`,
+    [
+      input.engineId,
+      input.depth,
+      input.maxPlies,
+      [...input.skip],
+      [...(input.preferTourSlugs ?? [])],
+    ],
+  );
+  return rows[0] ? boardFromRow(rows[0]) : null;
+}
+
+/** The final-position eval of each board's stored analysis, for the round
+ *  grid's gauge: the last ply's score, Red's point of view. */
+export async function listXiangqiBroadcastFinalEvals(input: {
+  boardIds: readonly string[];
+  engineId: string;
+  depth: number;
+}): Promise<Map<string, { cp: number | null; mate: number | null }>> {
+  const evals = new Map<string, { cp: number | null; mate: number | null }>();
+  if (input.boardIds.length === 0) return evals;
+  const { rows } = await getPool().query<{
+    room_id: string;
+    last: { cp?: number | null; mate?: number | null } | null;
+  }>(
+    `SELECT room_id, plies -> (jsonb_array_length(plies) - 1) AS last
+       FROM game_analysis
+      WHERE room_id = ANY($1::text[]) AND engine_id = $2 AND depth = $3`,
+    [input.boardIds.map((id) => `broadcast:${id}`), input.engineId, input.depth],
+  );
+  for (const row of rows) {
+    if (!row.last) continue;
+    evals.set(row.room_id.slice('broadcast:'.length), {
+      cp: typeof row.last.cp === 'number' ? row.last.cp : null,
+      mate: typeof row.last.mate === 'number' ? row.last.mate : null,
+    });
+  }
+  return evals;
+}
+
+/** Every tour's source and end date, for the dpxq index sweep (which ones
+ *  we already relay, and whose end date dpxq has since moved). */
+export async function listXiangqiBroadcastTourSourcesOn(
+  client: Queryable,
+): Promise<Array<{ slug: string; sourceUrl: string | null; endsAt: string | null }>> {
+  const { rows } = await client.query<Pick<TourRow, 'slug' | 'source_url' | 'ends_at'>>(
+    `SELECT slug, source_url, ends_at FROM xiangqi_broadcast_tours ORDER BY slug`,
+  );
+  return rows.map((row) => ({
     slug: row.slug,
     sourceUrl: row.source_url,
-    pollEnabled: row.poll_enabled,
-    pollIntervalMs: row.poll_interval_ms,
-  };
+    endsAt: row.ends_at?.toISOString() ?? null,
+  }));
+}
+
+/**
+ * Move a tour's end date later, column and payload together (readers
+ * reconstruct the tour from the payload; see upsertTour). Never earlier: the
+ * guard is in the WHERE so two sweeps racing cannot shorten it either.
+ * Returns whether the row moved.
+ */
+export async function extendXiangqiBroadcastTourEndsAt(
+  slug: string,
+  endsAt: string,
+): Promise<boolean> {
+  const { rowCount } = await getPool().query(
+    `UPDATE xiangqi_broadcast_tours
+        SET ends_at = $2::timestamptz,
+            -- $3 is the same value as text: a reuse of $2 would render
+            -- Postgres's own timestamp format into the payload.
+            payload = jsonb_set(payload, '{endsAt}', to_jsonb($3::text)),
+            updated_at = now()
+      WHERE slug = $1 AND (ends_at IS NULL OR ends_at < $2::timestamptz)`,
+    [slug, endsAt, endsAt],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function listXiangqiBroadcastScheduledTours(): Promise<
   XiangqiBroadcastTourSchedule[]
 > {
-  const { rows } = await getPool().query<TourRow>(
-    `SELECT * FROM xiangqi_broadcast_tours WHERE poll_enabled ORDER BY slug`,
+  // Every tour that could poll; the scheduler applies each one's window
+  // (xiangqiBroadcastPollState), so the rule lives in one place.
+  const { rows } = await getPool().query<TourRow & { has_boards: boolean }>(
+    `SELECT tour.*,
+            EXISTS (
+              SELECT 1 FROM xiangqi_broadcast_boards AS board WHERE board.tour_slug = tour.slug
+            ) AS has_boards
+       FROM xiangqi_broadcast_tours AS tour
+      WHERE tour.poll_mode <> 'off' AND tour.source_url IS NOT NULL
+      ORDER BY tour.slug`,
   );
-  return rows.map((row) => ({
-    slug: row.slug,
-    sourceUrl: row.source_url,
-    pollEnabled: row.poll_enabled,
-    pollIntervalMs: row.poll_interval_ms,
-  }));
+  return rows.map((row) => ({ ...scheduleFromRow(row), hasBoards: row.has_boards }));
 }
 
 export type XiangqiBroadcastTranslationBackfillChange = {

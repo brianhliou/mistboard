@@ -13,7 +13,25 @@
  * The public board is exactly visibility='public' AND targetUserId IS NULL.
  */
 
+import { DAY_MS } from '@mistboard/game';
 import { getPool } from './persistence-db.js';
+
+/**
+ * How long a public board seek stays live, counted from created_at. Board seeks
+ * store no expires_at; the lapse is computed at read time (seekExpirySql), so it
+ * covers rows posted before the rule existed and moves with this one constant.
+ * Before it, prod's board was two identical month-old posts from one player.
+ */
+export const CORRESPONDENCE_SEEK_TTL_MS = 14 * DAY_MS;
+
+// The instant a seek stops being live, as SQL: a challenge's own expires_at, or
+// for a board seek (expires_at NULL) created_at plus the board TTL. Every read,
+// the cap, the accept gate (through getCorrespondenceSeek) and the sweep use
+// this one expression, so "expired" cannot mean different things in different
+// places. The interpolated value is a numeric constant, never request input.
+export function seekExpirySql(alias = ''): string {
+  return `COALESCE(${alias}expires_at, ${alias}created_at + interval '${CORRESPONDENCE_SEEK_TTL_MS} milliseconds')`;
+}
 
 /**
  * Which side the creator wants, expressed as MOVE ORDER rather than a color, so one seek
@@ -36,21 +54,30 @@ export type CorrespondenceSeekRecord = {
   // null → open seek / link challenge; set → direct challenge to that account.
   targetUserId: string | null;
   visibility: SeekVisibility;
-  // null → never expires (public board seek); a timestamp → a challenge that is
-  // swept away and refused once past.
+  // On create: null → a public board seek, which lapses CORRESPONDENCE_SEEK_TTL_MS
+  // after created_at; a timestamp → a challenge's own expiry. On read: always the
+  // effective expiry (seekExpirySql), refused and swept once past.
   expiresAt: Date | null;
+  // Casual (false/absent) or rated (migration 160). Carried into the room the
+  // accept creates; the route admits true only for isCorrespondenceRatedSpec.
+  // Always set on read.
+  rated?: boolean;
 };
 
 export type CorrespondenceSeekListing = CorrespondenceSeekRecord & {
   creatorName: string | null;
+  // The creator's handle, so a client can link the name to /@/<handle>. Null when
+  // the account is closed or its profile is private (linkableHandleSql), so
+  // "handle present => link" stays fail-closed on every surface that reads it.
+  creatorHandle: string | null;
   createdAt: Date;
 };
 
 export async function createCorrespondenceSeek(seek: CorrespondenceSeekRecord): Promise<void> {
   await getPool().query(
     `INSERT INTO correspondence_seeks
-       (id, creator_user_id, game_spec_id, days_per_move, preferred_color, target_user_id, visibility, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+       (id, creator_user_id, game_spec_id, days_per_move, preferred_color, target_user_id, visibility, expires_at, rated)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
     [
       seek.id,
       seek.creatorUserId,
@@ -60,6 +87,7 @@ export async function createCorrespondenceSeek(seek: CorrespondenceSeekRecord): 
       seek.targetUserId,
       seek.visibility,
       seek.expiresAt,
+      seek.rated === true,
     ],
   );
 }
@@ -75,15 +103,28 @@ export async function countOpenSeeksForUser(userId: string): Promise<number> {
     // and the player had no way to see or clear the row blocking them.
     `SELECT COUNT(*)::text AS count FROM correspondence_seeks
       WHERE creator_user_id = $1
-        AND (expires_at IS NULL OR expires_at > now())`,
+        AND ${seekExpirySql()} > now()`,
     [userId],
   );
   return Number(rows[0]?.count ?? '0');
 }
 
+/**
+ * A user's handle only when their profile may be linked: an open account whose
+ * profile is not private. The same rule the postgame participant rows and the
+ * lobby activity feed apply (persistence-games.ts, persistence-lobby-activity.ts),
+ * so a name links on the correspondence pages exactly when it links elsewhere.
+ * The display name is unaffected; only the link is withheld.
+ */
+export function linkableHandleSql(alias: string): string {
+  return `CASE WHEN ${alias}.closed_at IS NULL AND ${alias}.profile_visibility <> 'private'
+               THEN ${alias}.handle END`;
+}
+
 const SEEK_COLUMNS = `s.id, s.creator_user_id, s.game_spec_id, s.days_per_move, s.preferred_color,
-            s.target_user_id, s.visibility, s.expires_at,
-            COALESCE(u.display_name, u.handle) AS creator_name, s.created_at`;
+            s.target_user_id, s.visibility, ${seekExpirySql('s.')} AS expires_at, s.rated,
+            COALESCE(u.display_name, u.handle) AS creator_name,
+            ${linkableHandleSql('u')} AS creator_handle, s.created_at`;
 
 type SeekListingRow = {
   id: string;
@@ -94,13 +135,17 @@ type SeekListingRow = {
   target_user_id: string | null;
   visibility: SeekVisibility;
   expires_at: Date | null;
+  rated: boolean;
   creator_name: string | null;
+  creator_handle: string | null;
   created_at: Date;
 };
 
 /** A seek the caller created, plus the recipient's name for a directed one. */
 export type OutgoingCorrespondenceSeek = CorrespondenceSeekListing & {
   targetName: string | null;
+  // Linkable handle of a directed challenge's recipient (linkableHandleSql).
+  targetHandle: string | null;
 };
 
 function toListing(row: SeekListingRow): CorrespondenceSeekListing {
@@ -113,7 +158,9 @@ function toListing(row: SeekListingRow): CorrespondenceSeekListing {
     targetUserId: row.target_user_id,
     visibility: row.visibility,
     expiresAt: row.expires_at,
+    rated: row.rated,
     creatorName: row.creator_name,
+    creatorHandle: row.creator_handle,
     createdAt: row.created_at,
   };
 }
@@ -127,11 +174,48 @@ export async function listOpenCorrespondenceSeeks(
      FROM correspondence_seeks s
      JOIN users u ON u.id = s.creator_user_id
      WHERE s.visibility = 'public' AND s.target_user_id IS NULL
+       AND ${seekExpirySql('s.')} > now()
      ORDER BY s.created_at DESC
      LIMIT $1`,
     [limit],
   );
   return rows.map(toListing);
+}
+
+// The creator's own still-live board seek with exactly these terms, if any.
+// Posting the same offer twice used to stack identical rows on the board; the
+// create route returns this one instead. Same liveness rule as the cap, so a
+// lapsed duplicate never blocks a fresh post.
+export async function findOpenDuplicatePublicSeek(seek: {
+  creatorUserId: string;
+  gameSpecId: string;
+  daysPerMove: number;
+  preferredColor: SeekColorPreference;
+  rated?: boolean;
+}): Promise<CorrespondenceSeekListing | null> {
+  const { rows } = await getPool().query<SeekListingRow>(
+    `SELECT ${SEEK_COLUMNS}
+     FROM correspondence_seeks s
+     JOIN users u ON u.id = s.creator_user_id
+     WHERE s.creator_user_id = $1
+       AND s.game_spec_id = $2
+       AND s.days_per_move = $3
+       AND s.preferred_color = $4
+       AND s.rated = $5
+       AND s.visibility = 'public' AND s.target_user_id IS NULL
+       AND ${seekExpirySql('s.')} > now()
+     ORDER BY s.created_at DESC
+     LIMIT 1`,
+    [
+      seek.creatorUserId,
+      seek.gameSpecId,
+      seek.daysPerMove,
+      seek.preferredColor,
+      seek.rated === true,
+    ],
+  );
+  const row = rows[0];
+  return row ? toListing(row) : null;
 }
 
 // "Challenges to me" — the directed challenges awaiting a specific user, newest
@@ -145,7 +229,7 @@ export async function listChallengesForUser(
      FROM correspondence_seeks s
      JOIN users u ON u.id = s.creator_user_id
      WHERE s.target_user_id = $1
-       AND (s.expires_at IS NULL OR s.expires_at > now())
+       AND ${seekExpirySql('s.')} > now()
      ORDER BY s.created_at DESC
      LIMIT $2`,
     [targetUserId, limit],
@@ -165,31 +249,142 @@ export async function listOutgoingSeeksForUser(
   creatorUserId: string,
   limit = 100,
 ): Promise<OutgoingCorrespondenceSeek[]> {
-  const { rows } = await getPool().query<SeekListingRow & { target_name: string | null }>(
+  const { rows } = await getPool().query<
+    SeekListingRow & { target_name: string | null; target_handle: string | null }
+  >(
     `SELECT ${SEEK_COLUMNS},
-            COALESCE(t.display_name, t.handle) AS target_name
+            COALESCE(t.display_name, t.handle) AS target_name,
+            ${linkableHandleSql('t')} AS target_handle
      FROM correspondence_seeks s
      JOIN users u ON u.id = s.creator_user_id
      LEFT JOIN users t ON t.id = s.target_user_id
      WHERE s.creator_user_id = $1
-       AND (s.expires_at IS NULL OR s.expires_at > now())
+       AND ${seekExpirySql('s.')} > now()
      ORDER BY s.created_at DESC
      LIMIT $2`,
     [creatorUserId, limit],
   );
-  return rows.map((row) => ({ ...toListing(row), targetName: row.target_name }));
+  return rows.map((row) => ({
+    ...toListing(row),
+    targetName: row.target_name,
+    targetHandle: row.target_handle,
+  }));
 }
 
-// Housekeeping: drop challenges whose expiry has passed. Correctness never
+// Housekeeping: drop seeks and challenges whose expiry has passed. Correctness never
 // depends on this running (accept refuses an expired seek and lists filter it
 // out); it just keeps the table from accreting dead links. Returns the count
 // removed. Runs on the deadline sweeper's interval.
+//
+// A public board seek that lapses also leaves its creator one bell notice
+// (migration 161), written by the same statement that deletes it: the INSERT
+// reads the DELETE's RETURNING rows, so the two commit together or not at all.
+// A crash cannot drop the notice after the seek is gone, or send it while the
+// seek survives to be swept again. A seek deleted by an accept or a cancel first
+// is simply not returned here, so it never notifies; seek_id as the notice's
+// primary key backs this up if two sweepers ever race. Link and direct
+// challenges carry their own expires_at and are deleted without a notice, and a
+// closed or play-locked creator gets nothing.
 export async function deleteExpiredCorrespondenceSeeks(now: Date = new Date()): Promise<number> {
-  const result = await getPool().query(
-    `DELETE FROM correspondence_seeks WHERE expires_at IS NOT NULL AND expires_at <= $1`,
+  const { rows } = await getPool().query<{ deleted: number }>(
+    `WITH expired AS (
+       DELETE FROM correspondence_seeks WHERE ${seekExpirySql()} <= $1
+       RETURNING id, creator_user_id, game_spec_id, days_per_move, preferred_color,
+                 rated, created_at, visibility, target_user_id
+     ),
+     outcomes AS (
+       -- Every lapsed seek, private challenges included, so a dead link can say
+       -- "Expired" (migration 165). Same statement as the delete, like the notice.
+       INSERT INTO correspondence_seek_outcomes
+         (seek_id, outcome, creator_user_id, target_user_id, visibility, at)
+       SELECT e.id, 'expired', e.creator_user_id, e.target_user_id, e.visibility, $1
+       FROM expired e
+       ON CONFLICT (seek_id) DO NOTHING
+     ),
+     noticed AS (
+       INSERT INTO correspondence_seek_expiry_notices
+         (seek_id, user_id, game_spec_id, days_per_move, preferred_color, rated,
+          posted_at, expired_at)
+       SELECT e.id, e.creator_user_id, e.game_spec_id, e.days_per_move, e.preferred_color,
+              e.rated, e.created_at, $1
+       FROM expired e
+       JOIN users u ON u.id = e.creator_user_id
+       WHERE e.visibility = 'public' AND e.target_user_id IS NULL
+         AND u.closed_at IS NULL
+         AND u.play_disabled_at IS NULL
+       ON CONFLICT (seek_id) DO NOTHING
+     )
+     -- A data-modifying CTE runs to completion whether or not the outer query
+     -- reads it, so the notices and outcomes are written even though only the
+     -- count is.
+     SELECT (SELECT count(*) FROM expired)::int AS deleted`,
     [now],
   );
-  return result.rowCount ?? 0;
+  return rows[0]?.deleted ?? 0;
+}
+
+/** A board seek that lapsed unanswered, as the creator's bell shows it. */
+export type SeekExpiryNotice = {
+  seekId: string;
+  gameSpecId: string;
+  daysPerMove: number;
+  preferredColor: SeekColorPreference;
+  rated: boolean;
+  expiredAt: Date;
+};
+
+// Unseen notices older than this drop off the bell by themselves.
+export const SEEK_EXPIRY_NOTICE_WINDOW_DAYS = 30;
+
+// This account's unseen expired-seek notices, newest first, capped by the
+// caller, plus the uncapped total for the badge.
+export async function unseenSeekExpiryNotices(
+  userId: string,
+  options: { limit?: number } = {},
+): Promise<{ total: number; notices: SeekExpiryNotice[] }> {
+  const limit = Math.max(1, Math.min(20, Math.floor(options.limit ?? 5)));
+  const { rows } = await getPool().query<{
+    seek_id: string;
+    game_spec_id: string;
+    days_per_move: number;
+    preferred_color: SeekColorPreference;
+    rated: boolean;
+    expired_at: Date;
+    total: number;
+  }>(
+    `SELECT seek_id, game_spec_id, days_per_move, preferred_color, rated, expired_at,
+            (count(*) OVER ())::int AS total
+     FROM correspondence_seek_expiry_notices
+     WHERE user_id = $1
+       AND seen_at IS NULL
+       AND expired_at > now() - make_interval(days => $2::int)
+     ORDER BY expired_at DESC, seek_id ASC
+     LIMIT $3::int`,
+    [userId, SEEK_EXPIRY_NOTICE_WINDOW_DAYS, limit],
+  );
+  return {
+    total: rows[0]?.total ?? 0,
+    notices: rows.map((row) => ({
+      seekId: row.seek_id,
+      gameSpecId: row.game_spec_id,
+      daysPerMove: row.days_per_move,
+      preferredColor: row.preferred_color,
+      rated: row.rated,
+      expiredAt: row.expired_at,
+    })),
+  };
+}
+
+// Opening the bell is the read receipt: every unseen notice leaves the panel.
+export async function markSeekExpiryNoticesSeen(
+  userId: string,
+  at: Date = new Date(),
+): Promise<void> {
+  await getPool().query(
+    `UPDATE correspondence_seek_expiry_notices SET seen_at = $2
+     WHERE user_id = $1 AND seen_at IS NULL`,
+    [userId, at],
+  );
 }
 
 // One seek by id with the creator's display name — the accept/challenge landing
@@ -218,9 +413,10 @@ export async function getCorrespondenceSeek(id: string): Promise<CorrespondenceS
     target_user_id: string | null;
     visibility: SeekVisibility;
     expires_at: Date | null;
+    rated: boolean;
   }>(
     `SELECT id, creator_user_id, game_spec_id, days_per_move, preferred_color,
-            target_user_id, visibility, expires_at
+            target_user_id, visibility, ${seekExpirySql()} AS expires_at, rated
      FROM correspondence_seeks WHERE id = $1`,
     [id],
   );
@@ -235,6 +431,7 @@ export async function getCorrespondenceSeek(id: string): Promise<CorrespondenceS
     targetUserId: row.target_user_id,
     visibility: row.visibility,
     expiresAt: row.expires_at,
+    rated: row.rated,
   };
 }
 
@@ -252,6 +449,131 @@ export async function deleteCorrespondenceSeek(id: string, ownerUserId?: string)
   return (result.rowCount ?? 0) > 0;
 }
 
+// ── Outcomes (migration 165, #527) ─────────────────────────────────────────────
+// Every way a seek leaves correspondence_seeks leaves one row saying why, so a
+// dead /challenge/<id> link can say what happened instead of "no longer open".
+
+export type SeekOutcomeKind = 'taken' | 'cancelled' | 'declined' | 'expired';
+
+/** What happened to a closed seek, with the seek's parties kept for the privacy gate. */
+export type CorrespondenceSeekOutcome = {
+  seekId: string;
+  outcome: SeekOutcomeKind;
+  creatorUserId: string;
+  targetUserId: string | null;
+  visibility: SeekVisibility;
+  roomId: string | null;
+  accepterUserId: string | null;
+  // The accepter's display name (handle when unset); null unless taken.
+  accepterName: string | null;
+  at: Date;
+};
+
+/**
+ * Record that an accept seated a game for this seek. Called after the room exists,
+ * so a failed create leaves no "taken" row pointing at nothing. The first outcome
+ * for a seek wins; a second write is a no-op.
+ */
+export async function recordCorrespondenceSeekTaken(input: {
+  seek: Pick<CorrespondenceSeekRecord, 'id' | 'creatorUserId' | 'targetUserId' | 'visibility'>;
+  roomId: string;
+  accepterUserId: string;
+  at?: Date;
+}): Promise<void> {
+  await getPool().query(
+    `INSERT INTO correspondence_seek_outcomes
+       (seek_id, outcome, creator_user_id, target_user_id, visibility, room_id, accepter_user_id, at)
+     VALUES ($1, 'taken', $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (seek_id) DO NOTHING`,
+    [
+      input.seek.id,
+      input.seek.creatorUserId,
+      input.seek.targetUserId,
+      input.seek.visibility,
+      input.roomId,
+      input.accepterUserId,
+      input.at ?? new Date(),
+    ],
+  );
+}
+
+/**
+ * Withdraw (the creator) or decline (a direct challenge's target) a seek: deletes
+ * the row and records why in one statement, so the outcome exists exactly when the
+ * delete happened. Returns whether a row was removed; the scope column makes the
+ * delete owner- or target-scoped, never open to anyone else.
+ */
+export async function closeCorrespondenceSeek(
+  id: string,
+  outcome: 'cancelled' | 'declined',
+  actorUserId: string,
+): Promise<boolean> {
+  // Fixed per outcome, never request input.
+  const scopeColumn = outcome === 'cancelled' ? 'creator_user_id' : 'target_user_id';
+  const { rows } = await getPool().query<{ deleted: number }>(
+    `WITH closed AS (
+       DELETE FROM correspondence_seeks WHERE id = $1 AND ${scopeColumn} = $2
+       RETURNING id, creator_user_id, target_user_id, visibility
+     ),
+     recorded AS (
+       INSERT INTO correspondence_seek_outcomes
+         (seek_id, outcome, creator_user_id, target_user_id, visibility)
+       SELECT id, $3, creator_user_id, target_user_id, visibility FROM closed
+       ON CONFLICT (seek_id) DO NOTHING
+     )
+     SELECT (SELECT count(*) FROM closed)::int AS deleted`,
+    [id, actorUserId, outcome],
+  );
+  return (rows[0]?.deleted ?? 0) > 0;
+}
+
+export async function getCorrespondenceSeekOutcome(
+  seekId: string,
+): Promise<CorrespondenceSeekOutcome | null> {
+  const { rows } = await getPool().query<{
+    seek_id: string;
+    outcome: SeekOutcomeKind;
+    creator_user_id: string;
+    target_user_id: string | null;
+    visibility: SeekVisibility;
+    room_id: string | null;
+    accepter_user_id: string | null;
+    accepter_name: string | null;
+    at: Date;
+  }>(
+    `SELECT o.seek_id, o.outcome, o.creator_user_id, o.target_user_id, o.visibility,
+            o.room_id, o.accepter_user_id, COALESCE(a.display_name, a.handle) AS accepter_name,
+            o.at
+     FROM correspondence_seek_outcomes o
+     LEFT JOIN users a ON a.id = o.accepter_user_id
+     WHERE o.seek_id = $1`,
+    [seekId],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    seekId: row.seek_id,
+    outcome: row.outcome,
+    creatorUserId: row.creator_user_id,
+    targetUserId: row.target_user_id,
+    visibility: row.visibility,
+    roomId: row.room_id,
+    accepterUserId: row.accepter_user_id,
+    accepterName: row.accepter_name,
+    at: row.at,
+  };
+}
+
+/** Whether the sweep left an expiry notice (161) for this seek: only ever a public
+ *  board seek, so the fact is public. Covers seeks swept before migration 165. */
+export async function hasSeekExpiryNotice(seekId: string): Promise<boolean> {
+  const { rows } = await getPool().query(
+    'SELECT 1 FROM correspondence_seek_expiry_notices WHERE seek_id = $1',
+    [seekId],
+  );
+  return rows.length > 0;
+}
+
 /**
  * The seek creator's mailbox, for the "your seek was accepted" email
  * (correspondence-start-email.ts). Returns null when the account is gone or
@@ -265,14 +587,14 @@ export async function deleteCorrespondenceSeek(id: string, ownerUserId?: string)
  */
 export async function correspondenceStartRecipient(
   userId: string,
-): Promise<{ email: string } | null> {
-  const { rows } = await getPool().query<{ email: string }>(
-    `SELECT email FROM users
+): Promise<{ email: string; locale: string | null } | null> {
+  const { rows } = await getPool().query<{ email: string; locale: string | null }>(
+    `SELECT email, locale FROM users
      WHERE id = $1
        AND email IS NOT NULL
        AND closed_at IS NULL
        AND COALESCE((account_preferences->>'correspondenceStartEmail')::boolean, true)`,
     [userId],
   );
-  return rows[0] ? { email: rows[0].email } : null;
+  return rows[0] ? { email: rows[0].email, locale: rows[0].locale } : null;
 }

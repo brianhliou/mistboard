@@ -5,12 +5,20 @@
   gap: clamp(14px, 2vw, 24px);
   align-content: start;
   min-height: calc(100vh - 54px);
-  padding: clamp(14px, 2vw, 28px) clamp(12px, 2vw, 28px) clamp(28px, 4vw, 56px);
+  padding: clamp(14px, 2vw, 28px) clamp(12px, 2vw, 28px) clamp(12px, 1vw, 14px);
   /* Transparent so the single page gradient on #app (anchored at the very top,
      shared with the nav) shows through continuously. Painting --site-stage-bg
      here restarts a fresh gradient at the stage's top edge, which butts the
      nav's warm top against the stage's lighter body and reads as a hard seam. */
   background: transparent;
+}
+
+/* The footer sits one band gap below the last band: the stage's own gap is
+   the space above it, so the shared footer's page margin would stack a second
+   one (96px above the links at 1440 wide, 70px below; now ~40 and ~28). */
+.landing-stage > .landing-footer {
+  margin-top: 0;
+  padding-top: 16px;
 }
 
 .landing-demo {
@@ -39,9 +47,9 @@
      initial screen): event banners + the game viewer (left), the tall tabbed
      lobby panel (center, the focal element), the single Play button + activity
      stats (right). Band 2: daily puzzle (left), forum topics (center), top
-     players (right). Bands 3-4: the blog row then the learn row in the center,
-     flanked by the News feed (left) and Top studies (right), each spanning both
-     rows. */
+     studies (right). Bands 3-4: the blog row then the deep-dives row in the center,
+     flanked by the News feed (left) and the lobby chat (right), each spanning
+     both rows. */
   /* lila proportions: the lobby is the dominant element (lila's app is 66% of a
      34%/1fr grid). Center takes the free space (1fr) while the side rails hold
      a tight 280-340px, so the panel reads as the focal block, not a co-equal
@@ -51,11 +59,16 @@
     minmax(280px, var(--landing-rail-width));
   grid-template-areas:
     "left   panel  play"
-    "puzzle forum  chat"
-    "news   blogs  studies"
-    "news   learn  studies";
+    "puzzle forum  studies"
+    "news   blogs  chat"
+    "news   dives  chat";
+  /* The play panel's tab strip, fixed so the play rail can drop by exactly
+     this much and start level with the panel's card (2026-10-11). */
+  --landing-lobby-tabs-height: 40px;
   --landing-col-gap: clamp(10px, 0.9vw, 15px);
-  --landing-row-gap: clamp(14px, 1.8vw, 24px);
+  /* Rows sit as close as columns: the three bands read as one page, not
+     three stacked sections (Brian, 2026-10-14; was 14-24px). */
+  --landing-row-gap: var(--landing-col-gap);
   column-gap: var(--landing-col-gap);
   row-gap: var(--landing-row-gap);
   align-items: start;
@@ -197,37 +210,6 @@
   height: 100%;
 }
 
-/* Drop reserve: one narrow column on the outer edge, both hands stacked. */
-.home-puzzle-reserve {
-  flex: 0 0 auto;
-  align-self: center;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.home-puzzle-widget .home-puzzle-hand {
-  --drop-mini-hand-piece-size: 26px;
-  --drop-mini-hand-tile-size: calc(var(--drop-mini-hand-piece-size) + 6px);
-  --drop-mini-hand-band-height: calc(var(--drop-mini-hand-piece-size) + 14px);
-  height: auto;
-  min-height: 0;
-  padding: 0;
-}
-
-.home-puzzle-hand .drop-mini-reserve-row {
-  flex-direction: column;
-  flex-wrap: nowrap;
-  width: auto;
-  min-height: 0;
-  gap: 5px;
-}
-
-.home-puzzle-hand .drop-mini-reserve-piece {
-  border-color: color-mix(in srgb, var(--site-border-soft) 64%, transparent);
-  background: color-mix(in srgb, var(--site-panel) 58%, transparent);
-}
-
 /* Captions inside the box, dressed as the viewer's seat rows one band up: the
    same line box, type size and weight as a seat name, left-aligned with the same
    4px inset, so the two boards read as one column of board + text bands. (They
@@ -268,10 +250,12 @@
   min-width: 0;
 }
 
-/* Play column (band 1, right): tagline, the single Play button, activity stats,
-   centred against the lobby panel inside .landing-play-center (which takes the
-   column's free height); the event spotlight, when there is one, sits at the
-   column's bottom edge (2026-09-20). */
+/* Play column (band 1, right): tagline and summary, the single Play button and
+   the activity stats top-aligned with the lobby panel on one gap; the event
+   spotlight pinned to the column's bottom edge, level with the panel's bottom,
+   so an event never moves the Play button. The top group used to centre against
+   the panel, which with the summary line added left four different gaps down
+   the rail (2026-09-25). */
 .landing-play-column {
   grid-area: play;
   display: flex;
@@ -281,11 +265,34 @@
   min-width: 0;
 }
 
+.landing-play-column > .landing-event-banners {
+  margin-top: auto;
+}
+
+.landing-lobby-board > .pp-tabs {
+  box-sizing: border-box;
+  height: var(--landing-lobby-tabs-height);
+}
+
+/* Beside the panel (two and three columns), the rail starts below the tab
+   strip so the tagline's cap height lines up with the card's top edge, not
+   with the tabs (Brian, 2026-10-11). Single column stacks, so no offset. */
+@media (min-width: 960px) {
+  .landing-play-column {
+    padding-top: var(--landing-lobby-tabs-height);
+  }
+
+  .landing-play-intro .landing-about {
+    text-box-trim: trim-start;
+    text-box-edge: cap alphabetic;
+  }
+}
+
 .landing-play-center {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: clamp(12px, 1.6vw, 18px);
   min-width: 0;
 }
@@ -303,7 +310,7 @@
 }
 
 /* Band-2 center column: forum topics, sharing the band's box height with the
-   puzzle and the chat so the row reads as one strip. */
+   puzzle and Top studies so the row reads as one strip. */
 .landing-forum-column {
   grid-area: forum;
   display: flex;
@@ -311,8 +318,10 @@
   min-width: 0;
 }
 
-/* Band-2 right rail: the lobby chat, stretched to the band's shared height so
-   the puzzle / forum / chat strip lines up top AND bottom. */
+/* Bands 3-4 right rail: the lobby chat, spanning the blog and deep-dives rows like
+   News on the left (the stretch lives in the desktop block). It traded places
+   with Top studies 2026-09-26: the band-2 slot is the only one of the three that
+   starts above a desktop fold, and a quiet chat there read as an empty site. */
 .landing-chat-column {
   grid-area: chat;
   display: flex;
@@ -321,11 +330,11 @@
   min-width: 0;
 }
 
-/* Bands 3-4 side rails: News (left) and Top studies (right) each span the blog
-   and learn rows on desktop, so their boxes stretch from the blog row's top edge
-   to the learn row's bottom edge (the stretch itself lives in the desktop block;
-   stacked, the boxes keep their own fixed height). News scrolls inside its box;
-   Top studies fits whole rows to it (site-box-fit.ts). */
+/* Bands 3-4 left rail: News spans the blog and deep-dives rows on desktop, so its box
+   stretches from the blog row's top edge to the deep-dives row's bottom edge (the
+   stretch itself lives in the desktop block; stacked, the box keeps its own
+   fixed height) and scrolls inside. Band-2 right rail: Top studies, stretched to
+   the band's shared height and fitting whole rows to it (site-box-fit.ts). */
 .landing-news-column {
   grid-area: news;
   display: flex;
@@ -772,6 +781,11 @@
   color: var(--site-accent-strong);
 }
 
+.landing-lobby-join:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .landing-lobby-join.is-mine {
   opacity: 0.55;
   cursor: default;
@@ -1124,141 +1138,44 @@
   line-height: 1.35;
 }
 
-/* Band 4: the learn row mirrors the blog row (same centered center-column
-   area, three compact cards per view), so the two strips read as a matched pair.
-   Only the thumbnail contents and the one-line blurb differ. */
-.landing-learn-row {
-  grid-area: learn;
-  /* The learn row pairs with the blog strip above it, so it sits tighter than
-     the band-to-band row-gap: pull it up by (row-gap - col-gap) so the gap to the
-     blog row matches the inter-column gap. */
+/* Band 4: the deep-dives row is the blog row's carousel again, in its own
+   grid area, pulled up against the blog row like the learn row it replaced. */
+.landing-dives-row {
+  grid-area: dives;
   margin-top: calc(var(--landing-col-gap) - var(--landing-row-gap));
 }
 
-.landing-learn-row .landing-learn-card {
-  flex-basis: calc((100% - 2 * var(--landing-carousel-gap)) / 3);
+/* Each row's label line: the label, and on the first row a link to the blog
+   index at the right, like the forum and studies boxes' "More »". */
+.landing-row-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-/* A portrait board inside a landscape frame: the frame takes the board's own
-   wood colour, so the diagram reads as one tile edge to edge instead of a small
-   board floating on the panel grey. The board's rounded corners disappear into
-   the same fill. The video card and the manual card's empty state override
-   this below and via .is-empty. */
-.landing-learn-row .landing-learn-card-thumb {
-  background: var(--xq-diagram-bg, #d9bd82);
-}
-
-.landing-learn-card-thumb .articles-index-card-thumb {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  /* The index wrapper paints its own panel grey and inset ring; both would
-     frame the board inside the wood field. */
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.landing-learn-card-thumb .articles-index-card-thumb svg {
-  max-width: 100%;
-  max-height: 100%;
-}
-
-.landing-learn-row .landing-learn-card-title {
-  margin: 7px 0 2px;
-  padding: 0 9px;
-  font-size: 12.5px;
-  line-height: 1.35;
-}
-
-/* One-line blurb under the title: what the card leads to. Ellipsized. */
-.landing-learn-card-blurb {
-  display: block;
-  margin: 0 0 9px;
-  padding: 0 9px;
-  overflow: hidden;
+.landing-row-more {
   color: var(--site-muted);
-  font-size: 11px;
-  line-height: 1.3;
+  font-size: 12px;
+  text-decoration: none;
   white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
-/* The one video card (our episode) keeps the video grammar inside the learn
-   card frame: photographic still, play glyph, duration pill, Mistboard badge.
-   The thumb keeps the base card's 8:5 frame so it is dimensionally identical to
-   the board cards beside it; the still is object-fit: cover. Dark fill shows
-   only while the still loads or if it 404s — a video-frame placeholder, not the
-   blog row's light panel. Scoped past the base thumb rule so it wins regardless
-   of source order. */
-.landing-learn-row .landing-video-card-thumb {
-  background: #0e120f;
+.landing-row-more:hover,
+.landing-row-more:focus-visible {
+  color: var(--site-accent-strong);
 }
 
-.landing-video-card-img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Play glyph badge, centered — the at-a-glance "this is a video" cue. */
-.landing-video-card-play {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  transform: translate(-50%, -50%);
-  border-radius: 999px;
-  background: color-mix(in srgb, #0b0f0c 62%, transparent);
-  color: #ffffff;
-  font-size: 15px;
-  /* Nudge the triangle glyph toward optical center of the circle. */
-  padding-left: 3px;
-  backdrop-filter: blur(2px);
-  transition:
-    background 120ms ease,
-    transform 120ms ease;
-}
-
-.landing-video-card:hover .landing-video-card-play {
-  background: var(--site-accent);
-  transform: translate(-50%, -50%) scale(1.06);
-}
-
-/* Duration pill, bottom-right — YouTube grammar. */
-.landing-video-card-duration {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  z-index: 1;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: color-mix(in srgb, #0b0f0c 78%, transparent);
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.1;
-}
-
-/* First-party badge, top-left — mirrors the /videos "Mistboard" tag. */
-.landing-video-card-badge {
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  z-index: 1;
-  padding: 3px 7px 4px;
-  border-radius: var(--site-radius) 0 7px 0;
-  background: color-mix(in srgb, var(--site-accent) 92%, transparent);
-  color: #ffffff;
-  font-size: 10px;
+/* Row labels: quiet, so the cards stay the subject. */
+.landing-row-label {
+  margin: 0;
+  padding: 0 2px;
+  color: var(--site-muted);
+  font-size: 12px;
   font-weight: 600;
-  line-height: 1.1;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .landing-carousel {
@@ -2137,6 +2054,24 @@
   color: var(--site-accent);
 }
 
+/* theme.css boxes the homepage clock rows in dark mode (panel fill, and on a
+   finished game an accent fill plus a 4px inset bar on the winner) at up to
+   (1,6,0), above the unboxed rows above. Without this the chess seats wore
+   pills in dark mode while every tenant seat stayed plain text. */
+:root[data-effective-theme="dark"]
+  .landing-page
+  #landing-replay.replay-compact
+  :is(
+    .replay-layout-single-white .replay-pane-white,
+    .replay-layout-single-black .replay-pane-black
+  )
+  .replay-clock-row {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+
 @media (min-width: 1241px) {
   /* ── Band-1 bottom alignment ─────────────────────────────────────────────────
      The three band-1 columns share one bottom edge: the play rail already
@@ -2181,32 +2116,31 @@
     aspect-ratio: auto;
   }
 
-  /* The chat box takes the same band-2 height instead of its standalone one, so
-     puzzle / forum / chat share both edges. */
-  .landing-chat-column > .landing-chat-mount:not(:empty),
-  .landing-chat-column .landing-chat {
-    height: 100%;
-    min-height: 0;
-  }
-
-  /* ── Bands 3-4 side rails ────────────────────────────────────────────────────
-     News and Top studies span the blog + learn rows and fill the spanned area:
-     top-aligned with the blog row, bottom-aligned with the learn row, the News
-     body scrolling inside and Top studies fitting whole rows to the box. The
-     boxes are taken out of flow (absolute in the stretched
-     rail) so their long timelines contribute NOTHING to the auto row heights —
-     in flow they would inflate rows 3-4 and tear the blog row away from the
-     learn row. */
+  /* ── Stretched boxes ─────────────────────────────────────────────────────────
+     News and the chat span the blog + deep-dives rows and fill the spanned area:
+     top-aligned with the blog row, bottom-aligned with the deep-dives row, each body
+     scrolling inside. Top studies fills band 2 beside the puzzle and forum,
+     fitting whole rows to the box. All three are taken out of flow (absolute in
+     the stretched column) so their own content contributes NOTHING to the auto
+     row heights: in flow a long timeline would inflate rows 3-4 and tear the
+     blog row away from the deep-dives row. */
   .landing-news-column,
+  .landing-chat-column,
   .landing-studies-column {
     position: relative;
   }
 
   .landing-news-column .landing-announcements,
+  .landing-chat-column > .landing-chat-mount:not(:empty),
   .landing-studies-column .landing-community-widget {
     position: absolute;
     inset: 0;
     height: auto;
+    min-height: 0;
+  }
+
+  .landing-chat-column .landing-chat {
+    height: 100%;
     min-height: 0;
   }
 
@@ -2356,7 +2290,7 @@
   /* Two columns (lichess's middle band: the lobby app plus one side column).
      The left rail folds into the right one: the center keeps the lobby panel
      with the forum and chat under it, the rail carries the Play button, the
-     viewer, the daily puzzle and Top studies, and the blog row, the learn row
+     viewer, the daily puzzle and Top studies, and the blog row, the deep-dives row
      and News span both. Both columns scale with the window (a fixed 340px rail
      beside a fluid center read as the center alone resizing): the rail is a
      viewport fraction, re-sourced into the rail-width token so the viewer and
@@ -2372,9 +2306,9 @@
       "panel play"
       "panel left"
       "forum puzzle"
-      "chat  studies"
+      "studies chat"
       "blogs blogs"
-      "learn learn"
+      "dives dives"
       "news  news";
     --landing-puzzle-board-height: calc(var(--landing-rail-width) * 612 / 552);
     --landing-lower-widget-height: calc(
@@ -2425,8 +2359,8 @@
 
 @media (max-width: 959px) {
   /* Collapse to one column: Play button + activity, the lobby panel, banners +
-     viewer, then the band-2 widgets (puzzle, forum, chat), the blog row, the
-     learn row, and the two side-rail boxes (studies, news). */
+     viewer, then the band-2 widgets (puzzle, forum, studies), the blog row, the
+     deep-dives row, and the two side-rail boxes (chat, news). */
   .landing-demo {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -2435,10 +2369,10 @@
       "left"
       "puzzle"
       "forum"
-      "chat"
-      "blogs"
-      "learn"
       "studies"
+      "blogs"
+      "dives"
+      "chat"
       "news";
     max-width: 640px;
   }
@@ -2525,10 +2459,6 @@
   .landing-articles-row .landing-article-card {
     flex-basis: calc((100% - var(--landing-carousel-gap)) / 2);
   }
-
-  .landing-learn-row .landing-learn-card {
-    flex-basis: calc((100% - var(--landing-carousel-gap)) / 2);
-  }
 }
 
 /* ── Mobile landing coherence ──────────────────────────────────────────────── */
@@ -2570,9 +2500,13 @@
 
    Sized as a fraction of the reserve's OWN width rather than a container query:
    this strip is a sibling of the pane, not a descendant, so `cqw` never resolves
-   here (the note above). The reserve is width:100% of the board column, so
-   `flex: 1 1 0` across seven slots lands each within a few percent of a board
-   piece at any board size, and tracks it on resize.
+   here (the note above). The reserve is width:100% of the board column, the
+   same width as the board, so a percentage basis tracks the board's piece size
+   at any board size and on resize. A board piece is ~11.2% of the board's width
+   (38px on a 340px board); --showcase-slot holds a pocket disc just under that.
+   It used to be `flex: 1 1 0`, which split the row by the slot count instead:
+   six Crazyhouse slots came out ~53px, each pocket disc bigger than the pieces
+   on the board it sat beside, and seven Fortress slots ~45px.
 
    The band grows a little taller than the old 34px. That is the trade the fixed
    height was avoiding, and it is safe now: seven slots is a constant, so the row
@@ -2580,6 +2514,7 @@
    there rather than adding one. */
 .showcase-widget .replay-layout-solo .showcase-reserve.drop-mini-reserve-strip--all-roles {
   --showcase-slot-gap: 3px;
+  --showcase-slot: 10.5%;
 
   height: auto;
   min-height: 0;
@@ -2600,7 +2535,7 @@
   .replay-layout-solo
   .showcase-reserve.drop-mini-reserve-strip--all-roles
   .drop-mini-reserve-piece {
-  flex: 1 1 0;
+  flex: 0 1 var(--showcase-slot);
   min-width: 0;
   width: auto;
   height: auto;
@@ -2618,10 +2553,64 @@
   height: 100%;
 }
 
+/* Fortress draws a narrower board (516 wide, fewer files), so its pieces are a
+   larger share of the width: ~12.6% (43px on a 340px board). Match its discs to
+   that board the same way. */
+.showcase-widget
+  .replay-layout-solo
+  .showcase-board-row:has(.fxq-board)
+  .showcase-reserve.drop-mini-reserve-strip--all-roles {
+  --showcase-slot: 11.6%;
+}
+
 /* Line art on a disc needs more than lichess's 0.1 to register at this size. */
 .showcase-widget
   .replay-layout-solo
   .showcase-reserve.drop-mini-reserve-strip--all-roles
   .drop-mini-reserve-piece.is-empty {
   opacity: 0.24;
+}
+
+.landing-play-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.landing-play-intro .landing-about {
+  margin: 0;
+}
+
+/* The separator is a fixed-width box at the head of each item after the first;
+   the list sits one separator to the left inside a clipping paragraph, so a ·
+   that starts a wrapped line is cut off and none is left dangling at a line
+   end (2026-10-11). The first item pads in by the same width to stay flush. */
+.landing-play-summary {
+  --landing-play-summary-sep-width: 1.2em;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--site-muted, var(--site-text));
+}
+
+.landing-play-summary-list {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 2px;
+  margin-left: calc(-1 * var(--landing-play-summary-sep-width));
+}
+
+.landing-play-summary-item {
+  white-space: nowrap;
+}
+
+.landing-play-summary-item:first-child {
+  padding-left: var(--landing-play-summary-sep-width);
+}
+
+.landing-play-summary-sep {
+  display: inline-block;
+  width: var(--landing-play-summary-sep-width);
+  text-align: center;
 }

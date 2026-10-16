@@ -548,6 +548,12 @@ export async function listStudiesForOwner(ownerId: string, q?: string): Promise<
   }));
 }
 
+/** The largest page the study browse routes serve. The paged lists below
+ *  accept one row more, so a route can fetch a full page plus the sentinel
+ *  row that says another page exists (#450: clamping the sentinel away left
+ *  hasMore false at limit=50 with studies unreachable). */
+export const STUDY_PAGE_MAX = 50;
+
 /** Public studies, most recently updated first. Likes used to lead the order,
  *  but with a handful of likes on the whole site that key pinned the first
  *  studies ever liked above everything published since; recency is the honest
@@ -559,7 +565,7 @@ export async function listTopPublicStudies(
   offset = 0,
 ): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
-  const bounded = Math.max(1, Math.min(limit, 50));
+  const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX + 1));
   const filter = nameFilter(q, 2);
   const params: unknown[] = [bounded];
   if (filter.value !== undefined) params.push(filter.value);
@@ -585,7 +591,10 @@ export async function listTopPublicStudies(
       WHERE s.visibility = 'public'
         AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
       GROUP BY s.id, u.handle, u.display_name
-      ORDER BY s.updated_at DESC, s.id
+      -- Newest first by creation, not by last edit: an edit to an old study
+      -- (a fixed comment, a new translation) must not put it back at the top
+      -- of "Latest studies".
+      ORDER BY s.created_at DESC, s.id
       LIMIT $1 OFFSET ${offsetParam}`,
     params,
   );
@@ -600,7 +609,7 @@ export async function listFeaturedStudies(
   offset = 0,
 ): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
-  const bounded = Math.max(1, Math.min(limit, 50));
+  const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX + 1));
   const filter = nameFilter(q, 2);
   const params: unknown[] = [bounded];
   if (filter.value !== undefined) params.push(filter.value);
@@ -703,7 +712,7 @@ export async function listFavoriteStudies(
   q?: string,
 ): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
-  const bounded = Math.max(1, Math.min(limit, 50));
+  const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX));
   const filter = nameFilter(q, 3);
   const params: unknown[] = [userId, bounded];
   if (filter.value !== undefined) params.push(filter.value);

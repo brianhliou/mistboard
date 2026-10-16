@@ -1,6 +1,6 @@
 import './study-thumbnails.css';
 import { parseStandardXiangqiFen } from '@mistboard/game';
-import { FINAL_VARIANT_MARKERS, renderVariantMarker } from './variant-markers.js';
+import { isVariantMarkerId, renderVariantMarker } from './variant-markers.js';
 
 // A study card's thumbnail, in precedence order:
 //
@@ -78,7 +78,7 @@ export function buildStudyThumbnail(
       return el;
     }
   }
-  if (hasVariantMarker(previewBoard.variant)) {
+  if (isVariantMarkerId(previewBoard.variant)) {
     return frame(
       className,
       'study-thumbnail--variant',
@@ -145,8 +145,4 @@ function xiangqiBoardSvg(fen: string): string | null {
     discs.join(''),
     `</svg>`,
   ].join('');
-}
-
-function hasVariantMarker(variant: string): variant is keyof typeof FINAL_VARIANT_MARKERS {
-  return variant in FINAL_VARIANT_MARKERS;
 }

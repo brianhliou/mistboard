@@ -1,0 +1,28 @@
+{
+  "slug": "ab-jchess-vs-pikajieqi-4s-2026-09",
+  "eventName": "AB-JChess vs PikaJieQi · 4 s · 2026-09",
+  "variant": "jieqi",
+  "runStartedAt": "2026-09-30T18:52:33Z",
+  "runEndedAt": "2026-09-30T19:16:59Z",
+  "engines": {
+    "A": {
+      "name": "AB-JChess",
+      "engineId": "ab-jchess-jieqi",
+      "engineVersion": "abj-0.2b-net-20260911"
+    },
+    "B": {
+      "name": "PikaJieQi",
+      "engineId": "pikafish-jieqi-strongest",
+      "engineVersion": "pikafish-jieqi-wasm e75cee3a"
+    }
+  },
+  "credit": {
+    "work": "AB-JChess",
+    "authors": [
+      "Huorongrong",
+      "Laoxu (Kouza)"
+    ],
+    "url": "https://github.com/lxsgx23/AB-JChess",
+    "permission": true
+  }
+}

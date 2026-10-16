@@ -74,3 +74,11 @@ describe('renderJieqiBoardSvg', () => {
     expect(red).not.toBe(black);
   });
 });
+
+describe('jieqi start markers', () => {
+  it('marks the 14 standard points the face-down pieces are dealt onto', () => {
+    const view = getJieqiPlayerView(createInitialJieqiState('jq-start-marks'), 'red');
+    const svg = renderJieqiBoardSvg(view);
+    expect(svg.split('class="xq-live-start-mark"').length - 1).toBe(14);
+  });
+});

@@ -416,9 +416,10 @@ function buildComposer(
 
   const input = document.createElement('textarea');
   input.className = 'inbox-input';
-  input.rows = 2;
+  input.rows = 1;
   input.maxLength = 5000;
   input.placeholder = t('inbox.composerPlaceholder', {}, locale);
+  input.addEventListener('input', () => fitComposerInput(input));
 
   const send = document.createElement('button');
   send.type = 'submit';
@@ -461,6 +462,7 @@ function buildComposer(
       knownIds.add(data.message.id);
       appendMessages(feed, [data.message], locale);
       input.value = '';
+      fitComposerInput(input);
       void loadThreads(state).then(() => renderThreadContent(threadContent, handle, locale, state));
     } catch {
       status.textContent = t('inbox.sendFailed', {}, locale);
@@ -473,6 +475,22 @@ function buildComposer(
 
   form.append(input, send, status);
   return form;
+}
+
+// The composer grows with its text up to COMPOSER_MAX_HEIGHT, then scrolls.
+// Past one line it drops the pill shape: a 999px radius clips the corners of
+// a multi-line message and leaves no room for the scrollbar.
+const COMPOSER_MAX_HEIGHT = 220;
+const COMPOSER_SINGLE_LINE_HEIGHT = 60;
+
+export function fitComposerInput(input: HTMLTextAreaElement): void {
+  input.style.height = 'auto';
+  // border-box sizing: scrollHeight covers padding but not the border.
+  const border = input.offsetHeight - input.clientHeight;
+  const height = Math.min(input.scrollHeight + border, COMPOSER_MAX_HEIGHT);
+  if (height > 0) input.style.height = `${height}px`;
+  input.classList.toggle('is-multiline', height > COMPOSER_SINGLE_LINE_HEIGHT);
+  input.style.overflowY = input.scrollHeight + border > COMPOSER_MAX_HEIGHT ? 'auto' : 'hidden';
 }
 
 function buildDeleteControl(handle: string, locale: Locale): HTMLElement {

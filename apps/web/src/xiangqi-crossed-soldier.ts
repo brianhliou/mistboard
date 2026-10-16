@@ -8,7 +8,7 @@
 // river test itself belongs to the kernel (hasCrossedRiver), so this only adds
 // the role check and gives the renderers a single name to import.
 //
-// Only the `international` and `international-flat` piece sets have crossed art;
+// Only the `international` piece set has crossed art;
 // the rest ignore the flag, which is why passing it is always safe.
 
 import { fortressXiangqiCrossedRiver, hasCrossedRiver, type XiangqiColor } from '@mistboard/game';

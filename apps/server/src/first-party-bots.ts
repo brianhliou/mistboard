@@ -10,6 +10,10 @@
 //   - Pikafish         — the boss: full-strength Pikafish for xiangqi + jieqi.
 //   - Fairy-Stockfish Level 1..8 — the ladder, one bot per level, each playing
 //                        xiangqi, fortress xiangqi, duck xiangqi and atomic xiangqi.
+//   - Pikafish Level 1..7 — the jieqi ladder (2026-09-29, migration 151); its
+//                        level 8 is Pikafish itself.
+//   - AB-JChess / KataGo — top slots named for their engines (migrations 152,
+//                        159): the strongest jieqi and jungle engines we know of.
 // Retired rosters (pre-merge Misty and
 // Pikafish tiers) stay resolvable through `legacyBotIds` and
 // `attributionEngineIds` so old rooms, replays, and game attribution keep their
@@ -21,6 +25,9 @@ export type FirstPartyBotProfile = {
   /** gameSpecId -> engine id currently fronted for that variant. */
   engines: Readonly<Record<string, string>>;
   defaultGameSpecId: string;
+  /** The rung on a numbered ladder; absent for a named slot (Misty, Pikafish,
+   *  AB-JChess, KataGo), which is always the top of its ladder. */
+  ladderLevel?: number;
   /** Retired engine ids whose games attribute to this bot. */
   attributionEngineIds?: readonly string[];
   /** Pre-consolidation bot ids that must keep resolving (old rooms' pveBotId,
@@ -31,6 +38,17 @@ export type FirstPartyBotProfile = {
 export const MISTY_DARK_CHESS_ACTIVE_ENGINE_ID = 'python-v2-v1.6';
 
 const FAIRY_STOCKFISH_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+const PIKAFISH_JIEQI_LEVELS = [1, 2, 3, 4, 5, 6, 7] as const;
+
+function pikafishJieqiLevelProfile(level: number): FirstPartyBotProfile {
+  return {
+    id: `pikafish-level-${level}`,
+    displayName: `Pikafish Level ${level}`,
+    engines: { jieqi: `pikafish-jieqi-level-${level}` },
+    defaultGameSpecId: 'jieqi',
+    ladderLevel: level,
+  };
+}
 
 // The three retired fortress tiers were absorbed into the matching ladder
 // levels by ordinal position (the migration-056/075 convention): amateur ->
@@ -62,8 +80,12 @@ function fairyStockfishLevelProfile(level: number): FirstPartyBotProfile {
       'fortress-xiangqi': `fairy-stockfish-fortress-xiangqi-level-${level}`,
       'duck-xiangqi': `fairy-stockfish-duck-xiangqi-level-${level}`,
       'atomic-xiangqi': `fairy-stockfish-atomic-xiangqi-level-${level}`,
+      // Admin playtest: the server seats only admins and grant holders, and the
+      // public bot surfaces leave hidden specs out (routes/bots.ts).
+      'crazyhouse-xiangqi': `fairy-stockfish-crazyhouse-xiangqi-level-${level}`,
     },
     defaultGameSpecId: 'xiangqi',
+    ladderLevel: level,
     legacyBotIds: [`fairy-stockfish-xiangqi-level-${level}`, ...(legacy ? [legacy.botId] : [])],
     ...(legacy ? { attributionEngineIds: [legacy.engineId] } : {}),
   };
@@ -135,6 +157,23 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     ],
   },
   ...FAIRY_STOCKFISH_LEVELS.map(fairyStockfishLevelProfile),
+  ...PIKAFISH_JIEQI_LEVELS.map(pikafishJieqiLevelProfile),
+  // The top jieqi slot above Pikafish Level 8 (migration 152): named for its engine,
+  // not a level number, so a stronger engine can replace it later.
+  {
+    id: 'ab-jchess',
+    displayName: 'AB-JChess',
+    engines: { jieqi: 'ab-jchess-jieqi' },
+    defaultGameSpecId: 'jieqi',
+  },
+  // The top jungle slot above Misty (migration 159): KataGo-AnimalChess, which won
+  // the jungle challenge (#434). Named for its engine, like AB-JChess.
+  {
+    id: 'katago',
+    displayName: 'KataGo',
+    engines: { jungle: 'katago-jungle' },
+    defaultGameSpecId: 'jungle',
+  },
 ];
 
 const botByEngineId = new Map<string, FirstPartyBotProfile>();
@@ -157,6 +196,26 @@ for (const bot of FIRST_PARTY_BOT_PROFILES) {
 
 export function firstPartyBotForId(botId: string): FirstPartyBotProfile | null {
   return botById.get(botId) ?? null;
+}
+
+// Both numbered ladders top out at Level 8: Fairy-Stockfish Level 8, and for
+// the jieqi ladder, whose numbered rungs stop at 7, Pikafish itself.
+const LADDER_TOP_LEVEL = Math.max(...FAIRY_STOCKFISH_LEVELS);
+
+/**
+ * Whether a bot id is the top of its ladder: a named slot (no level), or the
+ * highest numbered level. Canonical ids only; a pre-consolidation id names an
+ * old tier, not today's top. The homepage chat announces wins over these bots
+ * and no others (Brian, 2026-10-08: a win line should not feel easily earned).
+ */
+export function isTopOfLadderBot(botId: string): boolean {
+  const bot = botById.get(botId);
+  if (!bot || bot.id !== botId) return false;
+  return bot.ladderLevel === undefined || bot.ladderLevel === LADDER_TOP_LEVEL;
+}
+
+export function topOfLadderBotIds(): string[] {
+  return FIRST_PARTY_BOT_PROFILES.map((bot) => bot.id).filter(isTopOfLadderBot);
 }
 
 export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile | null {

@@ -13,6 +13,7 @@ import { initLiveSound, playSound } from '../live-sound.js';
 import { isLikelySignedIn } from '../signed-in-state.js';
 import { buildNav } from '../site-shell.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
+import { buildTileMapCard, type TileMapRibbon } from '../tile-map.js';
 import {
   createXiangqiInteractiveBoard,
   type XiangqiBoardArrow,
@@ -616,38 +617,30 @@ function buildLearnMapMain(progress: LearnProgress, signedIn: boolean): HTMLElem
 
 function buildLearnStageTile(progress: LearnProgress, stage: LearnStage): HTMLElement {
   const state = stageState(progress, stage);
-  const tile = document.createElement('a');
-  tile.className = `learn-xq-tile learn-xq-tile--${state}`;
-  tile.href = `#/${stage.key}`;
-  const illus = document.createElement('div');
-  illus.className = 'learn-xq-tile-illus';
-  illus.innerHTML = stageIllustration(stage, 56);
-  const text = document.createElement('div');
-  text.className = 'learn-xq-tile-text';
-  const title = document.createElement('h3');
-  title.textContent = learnCopy(stage.title);
-  const subtitle = document.createElement('p');
-  subtitle.textContent = learnCopy(stage.subtitle);
-  text.append(title, subtitle);
-  tile.append(illus, text);
+  const scores = stageScores(progress, stage.key);
+  const solved = scores.filter((score) => score > 0).length;
   // Folded corner ribbon (lichess anatomy): stars once done, progress text
   // while ongoing, nothing on locked (future) stages.
-  if (state !== 'future') {
-    const wrap = document.createElement('div');
-    wrap.className = 'learn-xq-ribbon-wrap';
-    const ribbon = document.createElement('div');
-    ribbon.className = `learn-xq-ribbon learn-xq-ribbon--${state}`;
-    if (state === 'done') {
-      ribbon.innerHTML = starIcons(starsOfRank(stageRank(stage, stageScores(progress, stage.key))));
-    } else {
-      const done = stageScores(progress, stage.key).filter((score) => score > 0).length;
-      ribbon.textContent =
-        done > 0 ? `${done} / ${stage.levels.length}` : learnCopy('learn.xiangqi.play');
-    }
-    wrap.append(ribbon);
-    tile.append(wrap);
+  let ribbon: TileMapRibbon | undefined;
+  if (state === 'done') {
+    ribbon = { variant: 'done', html: starIcons(starsOfRank(stageRank(stage, scores))) };
+  } else if (state === 'ongoing') {
+    ribbon = {
+      variant: 'ongoing',
+      text: solved > 0 ? `${solved} / ${stage.levels.length}` : learnCopy('learn.xiangqi.play'),
+    };
   }
-  return tile;
+  return buildTileMapCard({
+    href: `#/${stage.key}`,
+    state,
+    // A glyph fills its box edge to edge where a piece disc does not, so it
+    // draws smaller to sit in the same 60px tile.
+    illustration: stageIllustration(stage, stage.illustration.piece ? 46 : 36),
+    title: learnCopy(stage.title),
+    subtitle: learnCopy(stage.subtitle),
+    ...(ribbon ? { ribbon } : {}),
+    progress: stage.levels.length === 0 ? 0 : solved / stage.levels.length,
+  });
 }
 
 function buildLearnWhatNextSection(signedIn: boolean): HTMLElement {
@@ -662,30 +655,29 @@ function buildLearnWhatNextSection(signedIn: boolean): HTMLElement {
   grid.className = 'learn-xq-tile-grid';
   for (const item of WHAT_NEXT_TILES) {
     const done = item.doneWhenSignedIn === true && signedIn;
-    const tile = document.createElement('a');
-    tile.className = `learn-xq-tile learn-xq-tile--${done ? 'done' : 'link'}`;
-    tile.href = item.href;
-    tile.innerHTML = `
-        <div class="learn-xq-tile-illus learn-xq-tile-glyph">${item.glyph}</div>
-        <div class="learn-xq-tile-text"><h3>${learnCopy(item.title)}</h3><p>${learnCopy(item.subtitle)}</p></div>`;
-    // Same anatomy a finished stage uses: the folded corner ribbon is what
-    // actually reads as "done" on this page, since the done and link tints are
-    // the same colour.
-    if (done) {
-      const wrap = document.createElement('div');
-      wrap.className = 'learn-xq-ribbon-wrap';
-      const ribbon = document.createElement('div');
-      ribbon.className = 'learn-xq-ribbon learn-xq-ribbon--done';
-      // Labelled, not decorative: a bare check character is what a screen
-      // reader would otherwise announce, and it is the only thing on the tile
-      // that says the visitor has already done this.
-      ribbon.setAttribute('role', 'img');
-      ribbon.setAttribute('aria-label', 'Completed');
-      ribbon.innerHTML = '<span class="learn-xq-check">✓</span>';
-      wrap.append(ribbon);
-      tile.append(wrap);
-    }
-    grid.append(tile);
+    grid.append(
+      buildTileMapCard({
+        href: item.href,
+        state: done ? 'done' : 'link',
+        illustration: item.glyph,
+        illustrationClass: 'learn-xq-tile-glyph',
+        title: learnCopy(item.title),
+        subtitle: learnCopy(item.subtitle),
+        // Same anatomy a finished stage uses: the folded corner ribbon is what
+        // reads as "done" on this card. Labelled, not decorative: a bare check
+        // character is what a screen reader would otherwise announce, and it is
+        // the only thing on the tile that says the visitor has already done this.
+        ...(done
+          ? {
+              ribbon: {
+                variant: 'done' as const,
+                html: '<span class="learn-xq-check">✓</span>',
+                label: 'Completed',
+              },
+            }
+          : {}),
+      }),
+    );
   }
   section.append(heading, copy, grid);
   return section;

@@ -5,14 +5,18 @@ import {
   type GameSpecId,
   isRetiredGameSpec,
 } from '@mistboard/game';
-import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
+import { localizedHref } from './i18n/locale.js';
+import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
 // One public-surface switch per game spec. This controls discoverable UI:
 // rules rails/tiles, homepage article cards, homepage News, and /feed entries.
 // Direct URLs can stay reachable for review/backcompat; they are not listings.
 const VARIANT_PUBLIC_SURFACE_ENABLED = {
   'dark-chess': true,
-  'fortress-xiangqi': true,
+  // Retired 2026-10-11 (Brian): off the rails, tiles, News and feed;
+  // /rules/fortress-xiangqi stays up by URL, unindexed (the server's
+  // NON_INDEXED_ARTICLE_SLUGS), as /rules/shogi4 does.
+  'fortress-xiangqi': false,
   xiangqi: true,
   'dark-xiangqi': true,
   jieqi: true,
@@ -23,11 +27,14 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   // proven against an independent implementation, the SCORING is not proven at
   // all, and a listing would invite people to trust numbers nobody has read.
   mahjong: false,
+  'xiangqi-mahjong': false,
   'duck-xiangqi': true,
-  // Listed 2026-09-17: the rules page sits in the rails and tiles with the
-  // other xiangqi variants. The play menu is a separate switch (the tenant
-  // registry's offerInMenu), still hidden.
-  'atomic-xiangqi': true,
+  // Unlisted 2026-10-06 while the rules were reworked, retired 2026-10-11: off
+  // the rails, tiles, News and feed; /rules/atomic-xiangqi stays up by URL,
+  // unindexed (the server's NON_INDEXED_ARTICLE_SLUGS). Listed 2026-09-17 to
+  // 2026-10-06.
+  'atomic-xiangqi': false,
+  'crazyhouse-xiangqi': true,
   // Study-only: no rules page, no tile, no feed entry. Chess studies are
   // reachable by their own URLs and the study picker, nothing lists the game.
   chess: false,
@@ -35,7 +42,10 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
 
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
 // Reachable by URL, unlisted and unindexed: /rules/shogi4 is linked from
-// outside the site and stays up, but is not a Mistboard variant.
+// outside the site and stays up, but is not a Mistboard variant. The server's
+// NON_INDEXED_ARTICLE_SLUGS carries the same slugs (articles-meta-sync.test.ts
+// holds the two together). /rules/crazyhouse-xiangqi was held here for polish
+// on 2026-10-02 and went public the same day (Brian).
 const HIDDEN_RULES_SLUGS = new Set(['shogi4']);
 const RULES_GAME_SPEC_BY_SLUG: Record<string, GameSpecId> = {
   'fog-chess': 'dark-chess',
@@ -55,16 +65,25 @@ export function variantPublicSurfaceEnabled(id: GameSpecId): boolean {
   return VARIANT_PUBLIC_SURFACE_ENABLED[id];
 }
 
-/**
- * A rules page whose variant is retired (runtimeStatus 'retired' in
- * packages/game).
- * The server answers 410 for these paths; the client renders not-found rather
- * than the article, so a client-side navigation cannot show a page the server
- * has declared gone. Derived from the spec's own status: no second list.
- */
-export function rulesSlugRetired(slug: string): boolean {
-  const gameSpecId = RULES_GAME_SPEC_BY_SLUG[slug] ?? slug;
-  return isRetiredGameSpec(gameSpecId);
+/** The listed `/rules/<slug>` page for a game spec id off the wire, or null
+ *  when the variant has no public rules page (study-only, unlisted, retired,
+ *  unknown). The forward direction of RULES_GAME_SPEC_BY_SLUG. */
+export function rulesHrefForGameSpec(id: string): string | null {
+  if (!isGameSpecId(id) || !variantPublicSurfaceEnabled(id) || isRetiredGameSpec(id)) return null;
+  const aliased = Object.entries(RULES_GAME_SPEC_BY_SLUG).find(([, specId]) => specId === id);
+  return `/rules/${aliased?.[0] ?? id}`;
+}
+
+/** rulesHrefForGameSpec in the page locale, for a meta card's variant link. */
+export function localizedRulesHref(gameSpecId: string | null | undefined): string | null {
+  const href = gameSpecId ? rulesHrefForGameSpec(gameSpecId) : null;
+  return href ? localizedHref(href) : null;
+}
+
+/** The same link for a room id, resolved by its tenant's prefix (review pages
+ *  know the room, not the spec). */
+export function localizedRulesHrefForRoom(roomId: string): string | null {
+  return localizedRulesHref(webVariantTenantForRoomId(roomId)?.gameSpecId);
 }
 
 export function rulesSlugPublicSurfaceEnabled(slug: string): boolean {
@@ -72,6 +91,19 @@ export function rulesSlugPublicSurfaceEnabled(slug: string): boolean {
   if (RULES_SLUGS_NOT_A_SPEC.has(slug)) return true;
   const gameSpecId = RULES_GAME_SPEC_BY_SLUG[slug] ?? slug;
   return !isGameSpecId(gameSpecId) || variantPublicSurfaceEnabled(gameSpecId);
+}
+
+/** Whether a published page carries `noindex, follow`: a rules page whose
+ *  variant is off the public surfaces, or any article marked `noindex`. The
+ *  prerenderer stamps it and the server's sitemap mirrors it
+ *  (articleIsIndexable; articles-meta-sync.test.ts holds the two together). */
+export function articleIsNoindex(article: {
+  kind: string;
+  slug: string;
+  noindex?: boolean;
+}): boolean {
+  if (article.noindex === true) return true;
+  return article.kind === 'rules' && !rulesSlugPublicSurfaceEnabled(article.slug);
 }
 
 export function rulesHrefPublicSurfaceEnabled(href: string | undefined): boolean {

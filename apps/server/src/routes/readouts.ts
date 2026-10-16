@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getBuildInfo } from '../build-info.js';
+import { missingEngineBinaries } from '../engine-boot-check.js';
 import {
   type MistboardReadoutTrigger,
   renderMistboardReadoutMarkdown,
@@ -17,6 +18,7 @@ import {
   listMistboardReadoutSummaries,
 } from '../persistence-mistboard-readout.js';
 import { sendReadoutEmail } from '../readout-email.js';
+import { defaultXiangqiBroadcastFetch } from '../xiangqi-broadcast-fetch.js';
 import { type HttpApiContext, isHttpAdminSession, readJsonBody, writeJson } from './lib.js';
 
 type ReadoutRouteDependencies = {
@@ -26,6 +28,9 @@ type ReadoutRouteDependencies = {
   list: typeof listMistboardReadoutSummaries;
   email: typeof sendReadoutEmail;
   now: () => Date;
+  // The serving box's own engine probes; the readout runs in this process, so
+  // it sees exactly what a player's room would.
+  missingEngines: typeof missingEngineBinaries;
 };
 
 const defaultDependencies: ReadoutRouteDependencies = {
@@ -35,6 +40,7 @@ const defaultDependencies: ReadoutRouteDependencies = {
   list: listMistboardReadoutSummaries,
   email: sendReadoutEmail,
   now: () => new Date(),
+  missingEngines: missingEngineBinaries,
 };
 
 const READOUT_PATHS = [
@@ -65,6 +71,7 @@ export async function readoutGenerateForApi(
     trigger,
     now,
     dryRun: body.dryRun === true,
+    dpxqIndexFetch: defaultXiangqiBroadcastFetch,
     runtime: {
       revision: getBuildInfo().revision,
       activeGames: ctx.activeGameCount?.() ?? 0,
@@ -72,6 +79,7 @@ export async function readoutGenerateForApi(
       persistence: persistence.isInitialized() ? 'enabled' : 'disabled',
       persistenceErrors: ctx.persistenceHealth?.() ?? { count1m: 0, lastAt: null },
       ...broadcastViewersRuntime(ctx),
+      missingEngines: deps.missingEngines(),
     },
   });
   // Fire and forget, like the engine alerts: a mail provider having a bad day

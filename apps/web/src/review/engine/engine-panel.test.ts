@@ -19,13 +19,26 @@ describe('createEnginePanel onLines', () => {
   it('does not tell an unsupported browser to reload', () => {
     // happy-dom is not cross-origin isolated, so this exercises the unsupported
     // branch. The old copy ("needs a cross-origin-isolated reload") was a dead
-    // end on Safari, which does not implement COEP: credentialless and so never
-    // isolates on these routes however many times you reload.
+    // end: a browser that cannot isolate does not start isolating on reload.
     const panel = createEnginePanel({ variant: 'xiangqi' });
     const text = panel.el.textContent ?? '';
     expect(text).toContain('unavailable in this browser');
     expect(text.toLowerCase()).not.toContain('reload');
     panel.dispose();
+  });
+
+  it('tells Chrome on an iPhone it is the platform, not Safari', () => {
+    const ua = vi
+      .spyOn(navigator, 'userAgent', 'get')
+      .mockReturnValue(
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/139.0.7258.76 Mobile/15E148 Safari/604.1',
+      );
+    const panel = createEnginePanel({ variant: 'xiangqi' });
+    const text = panel.el.textContent ?? '';
+    expect(text).toContain('needs iOS or iPadOS 15.2');
+    expect(text).not.toContain('Safari');
+    panel.dispose();
+    ua.mockRestore();
   });
 
   it('does not feed arrows from setPosition while the engine is unsupported/off', () => {
@@ -159,6 +172,26 @@ describe('createEnginePanel flip-game opening scores', () => {
       vi.useRealTimers();
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe('createEnginePanel engine name', () => {
+  it('links Pikafish to its home page where xiangqi analyses on its net', () => {
+    const panel = createEnginePanel({ variant: 'xiangqi' });
+    const link = panel.el.querySelector<HTMLAnchorElement>('.engine-panel__name a');
+    expect(link?.textContent).toBe('Pikafish');
+    expect(link?.getAttribute('href')).toBe('https://pikafish.com/');
+    expect(link?.target).toBe('_blank');
+    expect(link?.rel).toContain('noopener');
+    panel.dispose();
+  });
+
+  it('keeps a plain label for engines other than Pikafish', () => {
+    const panel = createEnginePanel({ variant: 'fortressxiangqi' });
+    const name = panel.el.querySelector('.engine-panel__name');
+    expect(name?.querySelector('a')).toBeNull();
+    expect(name?.textContent).not.toBe('Pikafish');
+    panel.dispose();
   });
 });
 

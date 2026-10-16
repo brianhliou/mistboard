@@ -4,10 +4,20 @@ import https from 'node:https';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin, type ResolvedConfig } from 'vitest/config';
+import {
+  DEV_PUBLIC_STUDIES_ORIGIN,
+  localStudyMissing,
+  PUBLIC_STUDY_REQUEST_HEADERS,
+  publicStudiesEnabled,
+  publicStudyFallbackUrl,
+} from './src/dev-study-fallback';
 import { INCLUDE_DEV_PUBLIC_ARTIFACTS_ENV, shouldCopyPublicAsset } from './src/public-assets';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DEV_API_URL = process.env.MISTBOARD_DEV_API_URL ?? 'http://localhost:3001';
+const DEV_PUBLIC_STUDIES = publicStudiesEnabled(process.env);
+const DEV_PUBLIC_STUDIES_FROM =
+  process.env.MISTBOARD_DEV_PUBLIC_STUDIES_ORIGIN ?? DEV_PUBLIC_STUDIES_ORIGIN;
 const FEEDBACK_FILE = resolve(
   __dirname,
   '..',
@@ -29,6 +39,35 @@ function devWebSocketUrlForApiUrl(apiUrl: string): string | null {
   } catch {
     return null;
   }
+}
+
+// Cross-origin isolate the dev server so the review board's local engines
+// (Fairy-Stockfish, Pikafish, PikaJieQi WASM threads) can allocate a
+// SharedArrayBuffer. require-corp, the same COEP prod sends: WebKit ignores
+// credentialless, so a credentialless dev server can never show the engine on
+// iPhone/iPad or Safari (#276). In prod the server scopes these headers to the
+// review routes (server-http.ts); here they cover every response, which is
+// stricter.
+//
+// A middleware, not `server.headers`: Vite's static handler answers a
+// revalidation with a bare 304 that drops `server.headers`, and WebKit judges a
+// worker's COEP from that 304. Fairy-Stockfish spawns its pthread workers one
+// after another from the same URL, so the second spawn revalidated, came back
+// without COEP, and was refused ("Worker load was blocked by
+// Cross-Origin-Embedder-Policy"): the engine never started in WebKit on dev,
+// while prod, whose 304s carry the headers, was fine. Headers set here survive
+// every later writeHead, 304 included.
+function crossOriginIsolationPlugin(): Plugin {
+  return {
+    name: 'mistboard-cross-origin-isolation',
+    configureServer(server) {
+      server.middlewares.use((_req, res, next) => {
+        res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+        res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+        next();
+      });
+    },
+  };
 }
 
 function annotationsApiPlugin(): Plugin {
@@ -106,7 +145,14 @@ function devApiProxyPlugin(): Plugin {
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (!req.url?.startsWith('/api/')) {
+        // /og/ too: the per-game images the Share & export tab downloads are
+        // drawn by the server, which owns that path in production. /x/ is the
+        // server's short-link redirect (x-short-links.ts), same reason.
+        if (
+          !req.url?.startsWith('/api/') &&
+          !req.url?.startsWith('/og/') &&
+          !req.url?.startsWith('/x/')
+        ) {
           next();
           return;
         }
@@ -126,6 +172,17 @@ function devApiProxyPlugin(): Plugin {
             },
           },
           (proxyRes) => {
+            // A study the local server lacks is read from the public site, so
+            // an article's study embeds preview locally (dev-study-fallback.ts:
+            // anonymous GET of public studies only; a local study always wins).
+            const publicUrl = DEV_PUBLIC_STUDIES
+              ? publicStudyFallbackUrl(req.method, req.url, DEV_PUBLIC_STUDIES_FROM)
+              : null;
+            if (publicUrl && localStudyMissing(proxyRes.statusCode ?? 502)) {
+              proxyRes.resume();
+              void servePublicStudy(publicUrl, res);
+              return;
+            }
             res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
             proxyRes.pipe(res);
           },
@@ -138,6 +195,24 @@ function devApiProxyPlugin(): Plugin {
       });
     },
   };
+}
+
+/** Answer a local study read with the public site's copy, headers trimmed to
+ *  the body's type and marked so a reader of the network tab can tell. */
+async function servePublicStudy(url: string, res: http.ServerResponse) {
+  try {
+    const upstream = await fetch(url, { headers: { ...PUBLIC_STUDY_REQUEST_HEADERS } });
+    const body = Buffer.from(await upstream.arrayBuffer());
+    res.writeHead(upstream.status, {
+      'content-type': upstream.headers.get('content-type') ?? 'application/json',
+      'cache-control': 'no-store',
+      'x-mistboard-dev-source': new URL(url).origin,
+    });
+    res.end(body);
+  } catch {
+    if (!res.headersSent) res.writeHead(502, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ error: 'dev_public_study_failed' }));
+  }
 }
 
 function copyFilteredPublicDirPlugin(): Plugin {
@@ -174,17 +249,12 @@ export default defineConfig(({ command }) => {
       : null;
 
   return {
-    plugins: [annotationsApiPlugin(), devApiProxyPlugin(), copyFilteredPublicDirPlugin()],
-    // Cross-origin isolate the dev server so the review board's local engine
-    // (Fairy-Stockfish WASM) can allocate a SharedArrayBuffer. `credentialless`
-    // keeps cross-origin subresources loading without needing CORP. In prod the
-    // server scopes the same headers to the analysis routes (see server-http.ts).
-    server: {
-      headers: {
-        'Cross-Origin-Opener-Policy': 'same-origin',
-        'Cross-Origin-Embedder-Policy': 'credentialless',
-      },
-    },
+    plugins: [
+      crossOriginIsolationPlugin(),
+      annotationsApiPlugin(),
+      devApiProxyPlugin(),
+      copyFilteredPublicDirPlugin(),
+    ],
     build: {
       copyPublicDir: false,
       // Emitted to dist/.vite/manifest.json; the prerender step reads it to bake

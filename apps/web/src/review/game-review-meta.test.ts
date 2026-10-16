@@ -20,6 +20,30 @@ describe('reviewTimeControlLabel', () => {
     expect(reviewTimeControlLabel({})).toBe('Untimed');
   });
 
+  it('shows an imported engine match its fixed time per move instead of untimed', () => {
+    const origin = { event: 'AB-JChess vs PikaJieQi', movetimeMs: 4000 };
+    expect(reviewTimeControlLabel({ initialMs: null, incrementMs: null, origin })).toBe(
+      '4 s a move',
+    );
+    expect(reviewTimeControlLabel({ origin: { movetimeMs: 1500 } })).toBe('1.5 s a move');
+    // A clock, where there is one, still wins; no movetime is still untimed.
+    expect(reviewTimeControlLabel({ initialMs: 300_000, incrementMs: 0, origin })).toBe('5:00+0');
+    expect(reviewTimeControlLabel({ origin: { event: 'x' } as { movetimeMs?: number } })).toBe(
+      'Untimed',
+    );
+  });
+
+  it('translates the fixed time per move', async () => {
+    const { ensureLocaleCatalog } = await import('../i18n/catalog.js');
+    await ensureLocaleCatalog('zh-Hans');
+    window.history.pushState(null, '', '/zh-hans/');
+    try {
+      expect(reviewTimeControlLabel({ origin: { movetimeMs: 4000 } })).toBe('每步 4 秒');
+    } finally {
+      window.history.pushState(null, '', '/');
+    }
+  });
+
   it('falls back to a nested timeControl object when the flat fields are absent', () => {
     expect(reviewTimeControlLabel({ timeControl: { initialMs: 300_000, incrementMs: 3000 } })).toBe(
       '5:00+3',
@@ -222,7 +246,7 @@ describe('labelize', () => {
 describe('buildReviewMeta', () => {
   it('renders a meta card + spectator room from the envelope', () => {
     const { metaCard, details } = buildReviewMeta({
-      markerId: 'xiangqi',
+      gameSpecId: 'xiangqi',
       variantName: 'Xiangqi',
       status: 'Red wins by Checkmate',
       game: {
@@ -243,12 +267,52 @@ describe('buildReviewMeta', () => {
     expect(metaCard.textContent).toContain('Xiangqi');
     expect(metaCard.textContent).toContain('Alice');
     expect(metaCard.textContent).toContain('Red wins by Checkmate');
-    expect(details.classList.contains('review-spectator-chat')).toBe(true);
+    expect(details?.classList.contains('review-spectator-chat')).toBe(true);
+  });
+
+  it('shows an imported game its event and credit, engine tags, and no spectator room', () => {
+    const { metaCard, details } = buildReviewMeta({
+      gameSpecId: 'jieqi',
+      variantName: 'Jieqi',
+      status: 'Checkmate • Red is victorious',
+      game: {
+        roomId: 'jq_ab-jchess-vs-pikajieqi-4s-2026-09-366',
+        mode: 'imported',
+        result: 'red-wins',
+        players: [
+          { color: 'red', name: 'AB-JChess', kind: 'engine' },
+          { color: 'black', name: 'PikaJieQi', kind: 'engine' },
+        ],
+        origin: {
+          event: 'AB-JChess vs PikaJieQi · 4 s · 2026-09',
+          credit: {
+            work: 'AB-JChess',
+            authors: ['Huorongrong', 'Laoxu (Kouza)'],
+            url: 'https://github.com/lxsgx23/AB-JChess',
+            permission: true,
+          },
+        },
+      },
+    });
+    expect(details).toBeUndefined();
+    const origin = metaCard.querySelector('.game-meta-card__origin');
+    expect(origin?.textContent).toContain('Event: AB-JChess vs PikaJieQi · 4 s · 2026-09');
+    const link = origin?.querySelector('a');
+    expect(link?.textContent).toBe('AB-JChess by Huorongrong and Laoxu (Kouza)');
+    expect(link?.getAttribute('href')).toBe('https://github.com/lxsgx23/AB-JChess');
+    expect(origin?.textContent).toContain('played here with their permission');
+    expect(origin?.textContent).not.toContain('\u2014');
+    expect(
+      reviewMetaPlayers([
+        { color: 'red', name: 'AB-JChess', kind: 'engine' },
+        { color: 'black', name: 'PikaJieQi', kind: 'engine' },
+      ]).map((row) => row.isEngine),
+    ).toEqual([true, true]);
   });
 
   it('marks the winning row and scores both seats from the envelope result', () => {
     const { metaCard } = buildReviewMeta({
-      markerId: 'xiangqi',
+      gameSpecId: 'xiangqi',
       variantName: 'Xiangqi',
       status: 'Checkmate • Red is victorious',
       game: {
@@ -272,7 +336,7 @@ describe('buildReviewMeta', () => {
 
   it('scores a draw on both rows and marks neither as the winner', () => {
     const { metaCard } = buildReviewMeta({
-      markerId: 'xiangqi',
+      gameSpecId: 'xiangqi',
       variantName: 'Xiangqi',
       status: 'Draw • no progress',
       game: {

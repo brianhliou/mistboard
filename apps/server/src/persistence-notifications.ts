@@ -15,33 +15,96 @@
 // so putting them on the row every session-load fetches would add width to the
 // hottest query in the app for no reader.
 
+import { linkableHandleSql, seekExpirySql } from './persistence-correspondence-seeks.js';
 import { getPool } from './persistence-db.js';
+import { visibleFollowerSql } from './persistence-relations.js';
 
-export type NotificationWatermarkKind = 'followers' | 'forum-replies';
+// 'correspondence-finished' (167) marks games that ended since the player last
+// looked: the /correspondence page's "New" tag and the bell's "your game ended"
+// rows read it, and opening either advances it.
+export type NotificationWatermarkKind = 'followers' | 'forum-replies' | 'correspondence-finished';
 
 const WATERMARK_COLUMNS: Record<NotificationWatermarkKind, string> = {
   followers: 'followers_seen_at',
   'forum-replies': 'forum_replies_seen_at',
+  'correspondence-finished': 'correspondence_finished_seen_at',
 };
 
 export function isNotificationWatermarkKind(value: unknown): value is NotificationWatermarkKind {
-  return value === 'followers' || value === 'forum-replies';
+  return typeof value === 'string' && Object.hasOwn(WATERMARK_COLUMNS, value);
 }
 
-// Follows pointed AT this user since they last opened the bell. Count only:
-// nothing here exposes which accounts they are, which keeps 069's "no public
-// followers list" posture intact.
-export async function countNewFollowers(userId: string): Promise<number> {
-  const { rows } = await getPool().query<{ count: string }>(
-    `SELECT count(*)::text AS count
-     FROM user_relations r
-     JOIN users u ON u.id = $1
-     WHERE r.target_id = $1
-       AND r.relation = 'follow'
-       AND r.created_at > u.followers_seen_at`,
+// The watermark itself, or null for an unknown account.
+export async function notificationsSeenAt(
+  userId: string,
+  kind: NotificationWatermarkKind,
+): Promise<Date | null> {
+  // Column name from the closed map, as in markNotificationsSeen.
+  const column = WATERMARK_COLUMNS[kind];
+  const { rows } = await getPool().query<{ seen_at: Date }>(
+    `SELECT ${column} AS seen_at FROM users WHERE id = $1`,
     [userId],
   );
-  return Number(rows[0]?.count ?? 0);
+  return rows[0]?.seen_at ?? null;
+}
+
+// Follows pointed AT this user since they last opened the bell. Only the
+// followed account ever reads this (the private Followers list, 2026-10-08),
+// and it counts exactly the accounts that list would show (visibleFollowerSql).
+export async function countNewFollowers(userId: string): Promise<number> {
+  return (await unseenNewFollowers(userId, { limit: 1 })).total;
+}
+
+export type NewFollowerNotification = {
+  // Null unless the follower's profile may be linked (linkableHandleSql).
+  handle: string | null;
+  displayName: string;
+  followedAt: Date;
+};
+
+export type UnseenNewFollowers = {
+  // Every unseen follow; the badge counts these.
+  total: number;
+  // The newest of them, capped by the caller, for one bell row each.
+  followers: NewFollowerNotification[];
+};
+
+// The bell's new-follower rows: follows since the followers watermark, newest
+// first, filtered like the Followers list so a row never names someone the
+// list hides (blocked or closed accounts).
+export async function unseenNewFollowers(
+  userId: string,
+  options: { limit?: number } = {},
+): Promise<UnseenNewFollowers> {
+  const limit = Math.max(1, Math.min(20, Math.floor(options.limit ?? 5)));
+  const { rows } = await getPool().query<{
+    handle: string | null;
+    display_name: string;
+    created_at: Date;
+    total: number;
+  }>(
+    `SELECT ${linkableHandleSql('f')} AS handle,
+            COALESCE(NULLIF(f.display_name, ''), f.handle) AS display_name,
+            r.created_at, (count(*) OVER ())::int AS total
+     FROM user_relations r
+     JOIN users u ON u.id = $1
+     JOIN users f ON f.id = r.actor_id
+     WHERE r.target_id = $1
+       AND r.relation = 'follow'
+       AND r.created_at > u.followers_seen_at
+       AND ${visibleFollowerSql('r', 'f')}
+     ORDER BY r.created_at DESC, f.handle ASC
+     LIMIT $2::int`,
+    [userId, limit],
+  );
+  return {
+    total: rows[0]?.total ?? 0,
+    followers: rows.map((row) => ({
+      handle: row.handle,
+      displayName: row.display_name,
+      followedAt: row.created_at,
+    })),
+  };
 }
 
 export type ForumWatchNotification = {
@@ -156,13 +219,15 @@ export async function unreadWatchedForumTopics(
 
 // Directed correspondence challenges still awaiting this user's answer. Live
 // state, not a feed: an unanswered challenge stays counted until it is accepted,
-// declined, or expires.
+// declined, or expires. Same live filter as listChallengesForUser (the
+// /correspondence "Challenges for you" list the bell links to), so the badge
+// never counts a challenge the list leaves out.
 export async function countIncomingChallenges(userId: string): Promise<number> {
   const { rows } = await getPool().query<{ count: string }>(
     `SELECT count(*)::text AS count
      FROM correspondence_seeks
      WHERE target_user_id = $1
-       AND (expires_at IS NULL OR expires_at > now())`,
+       AND ${seekExpirySql()} > now()`,
     [userId],
   );
   return Number(rows[0]?.count ?? 0);

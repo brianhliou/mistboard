@@ -18,6 +18,7 @@ import { parseArgs } from 'node:util';
 import pg from 'pg';
 import { atomicXiangqiTenant } from './atomic-xiangqi-tenant.js';
 import { banqiTenant } from './banqi-tenant.js';
+import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
@@ -39,6 +40,7 @@ const TENANTS: any[] = [
   fortressXiangqiTenant,
   duckXiangqiTenant,
   atomicXiangqiTenant,
+  crazyhouseXiangqiTenant,
   darkXiangqiTenant,
   xiangqiTenant,
 ];

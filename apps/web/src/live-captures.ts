@@ -1,5 +1,6 @@
 import type { Color, PieceRole, PlayerView } from '@mistboard/game';
 import { captureRow } from './capture-render.js';
+import { flippedBottom } from './live-board-flip.js';
 import { type LiveRefs, liveState } from './live-state.js';
 import { currentCaptures } from './live-view.js';
 import { isColor, oppositeColor } from './web-utils.js';
@@ -16,16 +17,17 @@ export function renderCaptures(refs: CaptureRefs, view: PlayerView | null): void
 
   const tally = currentCaptures();
   const seat = isColor(liveState.seat) ? liveState.seat : null;
-  const bottomCapturer = seat ?? view.perspective;
+  // The strips follow the board, so the viewer's flip moves them with it.
+  const bottomCapturer = flippedBottom(seat ?? view.perspective);
   const topCapturer = oppositeColor(bottomCapturer);
   const knownLosses = seat ? knownLostRoles(view, seat) : null;
+  // The opponent's haul is the seat's known losses (fog hides the captures
+  // themselves), whichever strip it is drawn in.
+  const haul = (capturer: Color) =>
+    knownLosses && seat && capturer === oppositeColor(seat) ? knownLosses : tally[capturer];
 
-  renderCaptureStrip(
-    refs.capturesTop,
-    knownLosses && seat && topCapturer === oppositeColor(seat) ? knownLosses : tally[topCapturer],
-    oppositeColor(topCapturer),
-  );
-  renderCaptureStrip(refs.capturesBottom, tally[bottomCapturer], oppositeColor(bottomCapturer));
+  renderCaptureStrip(refs.capturesTop, haul(topCapturer), oppositeColor(topCapturer));
+  renderCaptureStrip(refs.capturesBottom, haul(bottomCapturer), oppositeColor(bottomCapturer));
 }
 
 function clearCaptureStrip(strip: HTMLDivElement): void {

@@ -12,6 +12,7 @@ import { test } from 'node:test';
 import {
   applyJieqiMove,
   createInitialJieqiState,
+  createJieqiDeal,
   getJieqiLegalMoves,
   JIEQI_SPEC_ID,
   type JieqiMove,
@@ -19,7 +20,13 @@ import {
 } from '@mistboard/game';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { JIEQI_DEFAULT_ENGINE_ID } from './jieqi-engine.js';
-import { getJieqiClientView, jieqiClientEventFor, jieqiTenant } from './jieqi-tenant.js';
+import {
+  getJieqiClientView,
+  jieqiClientEventFor,
+  jieqiDealRng,
+  jieqiLiveCheckMarks,
+  jieqiTenant,
+} from './jieqi-tenant.js';
 import { createTenantRuntimeRoom, replayTenantEvents } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 
@@ -36,6 +43,36 @@ test('jieqi room creation mints and persists a server-secret deal', () => {
   assert.ok(setup, 'room-created carries the deal');
   assert.equal(setup.red.length, 15);
   assert.equal(setup.black.length, 15);
+});
+
+// The dev deal seed (scripts/jieqi-state-gallery.mjs) pins the deal on a dev
+// pair only. Production-like runtimes must keep the crypto deal whatever the
+// environment says, or the deal of every live game becomes guessable.
+test('MISTBOARD_DEV_JIEQI_DEAL_SEED pins the deal on a dev runtime only', () => {
+  const dealWith = (env: Record<string, string | undefined>) =>
+    JSON.stringify(createJieqiDeal(jieqiDealRng(env)));
+  const seeded = { MISTBOARD_DEV_JIEQI_DEAL_SEED: '7' };
+  assert.equal(dealWith(seeded), dealWith(seeded), 'same seed, same deal');
+  assert.notEqual(dealWith(seeded), dealWith({ MISTBOARD_DEV_JIEQI_DEAL_SEED: '8' }));
+
+  for (const prodLike of [
+    { NODE_ENV: 'production' },
+    { RAILWAY_ENVIRONMENT: 'production' },
+    { RAILWAY_ENVIRONMENT_NAME: 'production' },
+    { RAILWAY_SERVICE_NAME: 'web' },
+  ]) {
+    const env = { ...seeded, ...prodLike };
+    // Crypto deals: three in a row never all match the seeded one.
+    const deals = [dealWith(env), dealWith(env), dealWith(env)];
+    assert.ok(
+      deals.some((deal) => deal !== dealWith(seeded)) && new Set(deals).size > 1,
+      `seed ignored under ${JSON.stringify(prodLike)}`,
+    );
+  }
+  for (const bad of ['', ' ', 'abc', '-1', '1.5', '4294967296', '99999999999']) {
+    const deals = new Set([1, 2, 3].map(() => dealWith({ MISTBOARD_DEV_JIEQI_DEAL_SEED: bad })));
+    assert.ok(deals.size > 1, `malformed seed "${bad}" falls back to crypto`);
+  }
 });
 
 test('the deal is stripped from room-created before any client sees it', () => {
@@ -148,6 +185,55 @@ test('jieqi snapshot marks a human-vs-human room as roomMode:pvp (no engine id)'
   assert.deepEqual(jieqiSnapshotExtrasFor('human-1', 'human-2'), { roomMode: 'pvp' });
 });
 
+// The live move list's + / # come from the server (a move event carries no
+// reveal, so the client cannot replay check). 3.Cxb10 lands a cannon behind
+// the d10 advisor with the c10 elephant gone: check.
+function checkingLineEvents(): TenantRoomEvent<'red' | 'black', JieqiMove, typeof JIEQI_SPEC_ID>[] {
+  const roomId = 'jq_check';
+  const line: Array<['red' | 'black', JieqiMove]> = [
+    ['red', { from: 'e1', to: 'e2' }],
+    ['black', { from: 'c10', to: 'e8' }],
+    ['red', { from: 'b3', to: 'b10' }],
+  ];
+  return [
+    { type: 'room-created', at: 1, roomId, gameSpecId: JIEQI_SPEC_ID, setup: STANDARD_JIEQI_DEAL },
+    { type: 'seat-assigned', at: 2, roomId, clientId: 'h1', seat: 'red' },
+    { type: 'seat-assigned', at: 3, roomId, clientId: 'h2', seat: 'black' },
+    ...line.map(([color, move], i) => ({
+      type: 'move-played' as const,
+      at: 4 + i,
+      roomId,
+      color,
+      move,
+    })),
+  ];
+}
+
+test('jieqi live check marks name each checking ply, extending as the room grows', () => {
+  const events = checkingLineEvents();
+  const room = { events: events.slice(0, 5) };
+  assert.deepEqual(jieqiLiveCheckMarks(room), ['', '']);
+  room.events = events;
+  assert.deepEqual(jieqiLiveCheckMarks(room), ['', '', '+']);
+});
+
+test('jieqi snapshot carries checkMarks only once a move has given check', () => {
+  const snapshotExtras = jieqiTenant.wire?.snapshotExtras;
+  assert.ok(snapshotExtras);
+  const events = checkingLineEvents();
+  const quiet = events.slice(0, 5);
+  const before = snapshotExtras(
+    { events: quiet, projection: replayTenantEvents(jieqiTenant, quiet) } as never,
+    { seat: 'spectator' } as never,
+  );
+  assert.equal('checkMarks' in before, false);
+  const after = snapshotExtras(
+    { events, projection: replayTenantEvents(jieqiTenant, events) } as never,
+    { seat: 'spectator' } as never,
+  );
+  assert.deepEqual(after.checkMarks, ['', '', '+']);
+});
+
 // The valid GameTermination values, kept in sync with the games_termination_check
 // CHECK constraint. A termination() output outside this set throws at the DB write,
 // silently dropping the finished game. Jieqi's no-capture draw clock spells its reason
@@ -171,6 +257,7 @@ const VALID_GAME_TERMINATIONS = new Set([
   'progress-clock',
   'truncated',
   'race',
+  'chasing',
 ]);
 
 test('every jieqi kernel end reason maps to a persistable GameTermination', () => {
@@ -183,6 +270,8 @@ test('every jieqi kernel end reason maps to a persistable GameTermination', () =
     'timeout',
     'resignation',
     'abandonment',
+    'repetition',
+    'chasing',
   ];
   for (const reason of jieqiEndReasons) {
     const mapped = jieqiTenant.persistence.termination(reason);

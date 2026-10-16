@@ -5,9 +5,11 @@
 // is closed while the engine is thinking.
 
 import {
+  applyStandardXiangqiMove,
   endgameEntryState,
   getStandardXiangqiLegalMoves,
   type PracticeGoal,
+  parseStandardXiangqiFen,
   XIANGQI_ENDGAME_CORPUS,
   type XiangqiGameState,
   xiangqiMoveToFsfUci,
@@ -71,6 +73,7 @@ function mount(
     goal,
     orientation: row.turn,
     evaluate,
+    replyDelayMs: 0,
     title: 'Basic endgames',
     summary: row.attacker,
   });
@@ -108,6 +111,7 @@ test('the concept prose is rendered when the chapter supplies one', async () => 
     goal: MATE,
     orientation: row.turn,
     evaluate: steady(700),
+    replyDelayMs: 0,
     brief: 'Tempo decides it.',
   });
   await handle.ready();
@@ -257,6 +261,7 @@ test("a solve is reported once, with the learner's move count", async () => {
     goal: { kind: 'win', centipawns: 600 },
     orientation: row.turn,
     evaluate: steady(900),
+    replyDelayMs: 0,
     onSolved: (moves) => solves.push(moves),
   });
   await handle.ready();
@@ -279,6 +284,7 @@ test('a solve is not re-reported when the learner restarts and solves again', as
     goal: { kind: 'win', centipawns: 600 },
     orientation: row.turn,
     evaluate: steady(900),
+    replyDelayMs: 0,
     onSolved: (moves) => solves.push(moves),
   });
   await handle.ready();
@@ -303,6 +309,7 @@ test('a failure is reported once per attempt, with its verdict', async () => {
     goal: MATE,
     orientation: row.turn,
     evaluate: collapsing(900, 0),
+    replyDelayMs: 0,
     onFailed: (verdict, moves) => failures.push({ verdict, moves }),
   });
   await handle.ready();
@@ -333,6 +340,7 @@ test('the learner sees their own move while the engine is still thinking', async
     initialTruth: endgameEntryState(row),
     goal: MATE,
     orientation: row.turn,
+    replyDelayMs: 0,
     evaluate: async (truth) => {
       shownAtSearch.push(host.querySelectorAll('.practice__move').length);
       return engine(truth);
@@ -349,4 +357,136 @@ test('the learner sees their own move while the engine is still thinking', async
   // search and then jumps two plies at once -- so the click the learner just
   // heard describes a board they cannot see yet.
   expect(shownAtSearch[0], "the learner's move is painted before the search").toBe(1);
+});
+
+test("the engine's reply is on the board while the position after it is still being evaluated", async () => {
+  // The defender's sound fires as its ply lands; the evaluation of the position
+  // after it waits on a tablebase round trip. The board must show the reply in
+  // the same task as the sound, not after that round trip.
+  const row = entry('soldier-vs-bare-general');
+  const host = document.createElement('div');
+  const engine = steady(700);
+  const boardSquares = () =>
+    [...host.querySelectorAll<HTMLElement>('.gamebook__board [data-piece-square]')]
+      .map((el) => el.dataset.pieceSquare)
+      .sort()
+      .join(',');
+  const truthSquares = (truth: XiangqiGameState) =>
+    Object.entries(truth.board)
+      .filter(([, piece]) => piece)
+      .map(([square]) => square)
+      .sort()
+      .join(',');
+  // Per search: did the board already show the position being searched?
+  const boardMatchedAtSearch: boolean[] = [];
+  const handle = mountXiangqiPractice(host, {
+    initialTruth: endgameEntryState(row),
+    goal: MATE,
+    orientation: row.turn,
+    replyDelayMs: 0,
+    evaluate: async (truth) => {
+      boardMatchedAtSearch.push(boardSquares() === truthSquares(truth));
+      return engine(truth);
+    },
+  });
+  await handle.ready();
+  boardMatchedAtSearch.length = 0;
+
+  const move = getStandardXiangqiLegalMoves(endgameEntryState(row))[0]!;
+  await handle.play(move);
+
+  expect(boardMatchedAtSearch, "learner's move, then the engine's reply").toEqual([true, true]);
+});
+
+// A guest's solve is not saved, so the panel offers sign-in after one: quietly,
+// once a solve has happened, never for a signed-in learner, and not again in
+// this tab once dismissed.
+async function mountForSavePrompt(guestSignInHref?: () => string | undefined) {
+  const row = entry('soldier-vs-bare-general');
+  const host = document.createElement('div');
+  const handle = mountXiangqiPractice(host, {
+    initialTruth: endgameEntryState(row),
+    goal: { kind: 'win', centipawns: 600 },
+    orientation: row.turn,
+    evaluate: steady(900),
+    replyDelayMs: 0,
+    ...(guestSignInHref ? { guestSignInHref } : {}),
+  });
+  await handle.ready();
+  const prompt = () => host.querySelector<HTMLElement>('.practice__save-prompt');
+  const solve = async () => {
+    await handle.play(getStandardXiangqiLegalMoves(endgameEntryState(row))[0]!);
+    expect(handle.view().phase, 'the fake must actually reach success').toBe('success');
+  };
+  return { host, prompt, solve };
+}
+
+test('a guest is offered sign-in after a solve, not before', async () => {
+  window.sessionStorage.clear();
+  const href = '/account?tab=login&referrer=%2Fstudy%2Fabc%2Fch1';
+  const { prompt, solve } = await mountForSavePrompt(() => href);
+  expect(prompt()?.hidden, 'nothing before a solve').toBe(true);
+  await solve();
+  expect(prompt()?.hidden).toBe(false);
+  expect(prompt()?.textContent).toContain('Sign in to keep your progress');
+  expect(prompt()?.querySelector('a')?.getAttribute('href')).toBe(href);
+});
+
+test('a signed-in learner is never offered sign-in', async () => {
+  window.sessionStorage.clear();
+  const { prompt, solve } = await mountForSavePrompt(() => undefined);
+  await solve();
+  expect(prompt()?.hidden).toBe(true);
+});
+
+test('a dismissed sign-in prompt stays dismissed for the session', async () => {
+  window.sessionStorage.clear();
+  const first = await mountForSavePrompt(() => '/account?tab=login');
+  await first.solve();
+  first.prompt()?.querySelector<HTMLButtonElement>('.practice__save-prompt-close')?.click();
+  expect(first.prompt()?.hidden).toBe(true);
+
+  const next = await mountForSavePrompt(() => '/account?tab=login');
+  await next.solve();
+  expect(next.prompt()?.hidden, 'not again after dismissal').toBe(true);
+  window.sessionStorage.clear();
+});
+
+test('a draw the engine reads as lost ends the run and is reported as a failure', async () => {
+  // Chapter hc6LmrOG/MyIZ3XSd (chariot vs the full defence, "draw in 15"),
+  // learner Black. The engine reads the learner's start as unclear (-120) and
+  // the position after their move as lost (-400), with no tablebase answer:
+  // the goal check ends the run in defeat. That ending used to report nothing,
+  // so a draw chapter could log starts and never an outcome.
+  const parsed = parseStandardXiangqiFen('2b1ka3/4a4/4b4/9/9/4R4/9/9/9/4K4 r - - 0 1');
+  if (!parsed.ok) throw new Error('bad fen');
+  const failures: { verdict: string; moves: number }[] = [];
+  const host = document.createElement('div');
+  const handle = mountXiangqiPractice(host, {
+    initialTruth: parsed.state,
+    goal: { kind: 'draw', moves: 15 },
+    orientation: 'black',
+    evaluate: async (truth) => {
+      if (truth.status.type !== 'playing') return { cp: null, mate: null, bestUci: null };
+      const redCp = truth.status.turn === 'red' ? 400 : 120;
+      const best = getStandardXiangqiLegalMoves(truth)[0];
+      return {
+        cp: truth.status.turn === 'red' ? redCp : -redCp,
+        mate: null,
+        bestUci: best ? xiangqiMoveToFsfUci(best) : null,
+      };
+    },
+    replyDelayMs: 0,
+    onFailed: (verdict, moves) => failures.push({ verdict, moves }),
+  });
+  await handle.ready();
+  expect(handle.view().phase).toBe('play');
+  // The defender opened with its first legal move; reply from there.
+  const opened = applyStandardXiangqiMove(
+    parsed.state,
+    getStandardXiangqiLegalMoves(parsed.state)[0]!,
+  );
+  await handle.play(getStandardXiangqiLegalMoves(opened)[0]!);
+  expect(handle.view().phase, 'the fake must actually end the run').toBe('defeat');
+  expect(failures).toEqual([{ verdict: 'defeat', moves: 1 }]);
 });

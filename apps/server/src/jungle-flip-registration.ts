@@ -1,12 +1,14 @@
 /**
  * Flip Jungle registry entry. Owns the tenant's live-room map, the room-factory
  * binding, and hydration. PvP + PvE (Tier-B MistyJungleFlip UCI engine);
- * matchmaking is casual random-seat (unrated). Imported for side effects by
+ * matchmaking is random-seat, rated or casual. Imported for side effects by
  * variant-tenant/register-tenants.ts.
  */
 
 import {
   jungleFlipInkForSeat,
+  jungleFlipPlyReveal,
+  jungleFlipStateToDealtFen,
   jungleFlipStateToEngineFen,
   type RoomTimeControl,
 } from '@mistboard/game';
@@ -26,15 +28,18 @@ import {
   clearJungleFlipRuntimeTimers,
   handleJungleFlipWebSocketConnection,
   type JungleFlipLiveRoom,
+  jungleFlipWs,
 } from './server-ws-jungle-flip.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 
 export const jungleFlipRooms = new Map<string, JungleFlipLiveRoom>();
 
@@ -42,6 +47,8 @@ export async function createJungleFlipRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: JungleFlipCreatorPreference,
   engine?: JungleFlipRoomEngineSeat,
+  // Lobby seeks and rated friend rooms (POST /api/rooms PvP); PvE never rates.
+  rated = false,
 ): Promise<JungleFlipLiveRoomCreation> {
   return createJungleFlipLiveRoom(
     {
@@ -55,6 +62,7 @@ export async function createJungleFlipRoom(
     timeControl,
     creatorPreference,
     engine,
+    rated,
   );
 }
 
@@ -66,6 +74,26 @@ export async function getOrLoadJungleFlipRoom(roomId: string): Promise<JungleFli
   );
   return room as JungleFlipLiveRoom | null;
 }
+
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const jungleFlipCorrespondence = tenantCorrespondenceBinding(jungleFlipTenant, {
+  factoryContext: () => ({
+    rooms: jungleFlipRooms as unknown as Map<string, JungleFlipRuntimeRoom>,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, jungleFlipTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(jungleFlipTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(
+      jungleFlipTenant,
+      jungleFlipRooms as unknown as Map<string, JungleFlipRuntimeRoom>,
+      roomId,
+    ),
+  lifecycleCtx: jungleFlipWs.lifecycleCtx,
+});
 
 registerVariantTenant({
   kind: jungleFlipTenant.kind,
@@ -84,10 +112,11 @@ registerVariantTenant({
   isEngineClientId: jungleFlipTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => jungleFlipTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(jungleFlipTenant),
   errorPrefix: 'jungle_flip',
   enabled: jungleFlipTenant.enabled,
   rooms: jungleFlipRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(jungleFlipRooms.values()),
+  activeGameCount: () => countActiveTenantGames(jungleFlipRooms.values(), jungleFlipTenant),
   getOrLoadRoom: (roomId) => getOrLoadJungleFlipRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>
     handleJungleFlipWebSocketConnection(
@@ -101,27 +130,40 @@ registerVariantTenant({
       room as unknown as JungleFlipLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearJungleFlipRuntimeTimers(room as unknown as JungleFlipLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      jungleFlipTenant,
+      jungleFlipRooms.values(),
+      jungleFlipWs.lifecycleCtx,
+      at,
+    ),
   clearRooms: () => jungleFlipRooms.clear(),
   http: {
     matchesCreateRequest: requestsJungleFlip,
-    handleCreate: (ctx, _request, response, body) =>
-      handleJungleFlipCreate({ ...ctx, createJungleFlipRoom }, response, body),
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleJungleFlipCreate({ ...ctx, createJungleFlipRoom }, response, body, accountUser),
   },
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createJungleFlipRoom(timeControl, 'random');
+    createRoom: async (timeControl, rated) => {
+      const created = await createJungleFlipRoom(timeControl, 'random', undefined, rated);
       if (!created.ok) throw new Error(`jungle_flip_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },
   },
-  // JSON only. As in banqi, results are by SEAT and the first seat's bound ink
-  // rides along.
+  // As in banqi, results are by SEAT and the first seat's bound ink rides
+  // along; each flip names what it turned over and the deal rides along (#484).
   export: tenantExportBinding(jungleFlipTenant, {
     gameRouteBase: '/jungle-flip/game',
     uci: flipOrBoardMoveUci,
     firstMoverInk: (state) => state.firstColor,
+    hiddenPieces: {
+      variant: 'jungle-flip',
+      reveal: jungleFlipPlyReveal,
+      dealFen: jungleFlipStateToDealtFen,
+    },
   }),
   // Final position only: a flip swings the eval by luck (VariantTenantCard).
   card: tenantCardBinding(jungleFlipTenant, {
@@ -130,6 +172,5 @@ registerVariantTenant({
     fen: jungleFlipStateToEngineFen,
     seatInk: jungleFlipInkForSeat,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...jungleFlipCorrespondence,
 });

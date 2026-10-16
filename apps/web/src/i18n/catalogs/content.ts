@@ -46,6 +46,8 @@ export const EN_CONTENT = {
   'videos.previousVideos': 'Previous videos',
   'videos.moreVideos': 'More videos',
   'articles.heading': 'Articles',
+  'articles.latest': 'Latest',
+  'articles.deepDives': 'Xiangqi deep dives',
   'articles.read': 'Read',
   'articles.intro': 'Essays, rules notes, and engine work for original strategy games.',
   'articles.allArticles': 'All articles',
@@ -60,7 +62,7 @@ export const EN_CONTENT = {
   'articles.tableOfContents': 'Table of contents',
   'articles.status.draft': 'Draft',
   'articles.status.outline': 'Outline',
-  'articles.tldr': 'TL;DR',
+  'articles.tldr': 'In short',
   'articles.readNext': 'Read next',
   'articles.playThisGame': 'Play {game}',
   'articles.playVsComputer': 'Play the computer',
@@ -74,6 +76,8 @@ export const EN_CONTENT = {
   'rules.allRules': 'All rules',
   'rules.kind': 'Rules',
   'rules.navigation': 'Rules navigation',
+  'rules.translateIssue': 'See a translation problem?',
+  'rules.translateIssueLink': 'Help us review a page',
   'news.heading': 'News',
   'news.feedHeading': 'Mistboard updates',
   'news.intro': 'Releases, status updates, and announcements from Mistboard.',
@@ -100,7 +104,7 @@ export const EN_CONTENT = {
   'patron.perkTitle': 'What Patron support includes',
   'patron.perk':
     'Patrons get a small heart badge on their profile: for as long as a subscription runs, or one month for every $5 of a one-time payment. It does not unlock features or gameplay advantages.',
-  'patron.supportLine': 'Mistboard is built and run by one person.',
+  'patron.supportLine': 'Patrons keep Mistboard running.',
   'patron.donate': 'Subscribe',
   'patron.donateOnce': 'Pay once',
   'patron.manage': 'Manage your subscription',
@@ -108,6 +112,7 @@ export const EN_CONTENT = {
   'patron.patronUntil': 'You are a Patron until {date}. Thank you.',
   'patron.signInFirst': 'Sign in to continue',
   'patron.unavailable': 'Checkout is not open yet, so nothing is charged. Check back soon.',
+  'patron.currencyNote': 'Prices are in US dollars. Checkout shows them in your local currency.',
   'patron.checkoutError': 'Something went wrong starting checkout. Please try again.',
   'patron.transparencyTitle': 'How Mistboard runs',
   // Deliberately carries no itemised running cost. A page that names the monthly
@@ -116,7 +121,7 @@ export const EN_CONTENT = {
   // 2026-08 (docs-private/patron-track.md). The measured figure still lives in
   // docs-private/COSTS.md; keep it there, not here.
   'patron.transparency':
-    'Mistboard is built and run by one person. There are no ads, no investors, and no data sales. Subscriptions pay for the servers and the development time.',
+    'There are no ads, no investors, and no data sales. Subscriptions pay for the servers and the development time.',
   'patron.faqTitle': 'Questions',
   'patron.faqPerkQuestion': 'Is anything Patron-only?',
   'patron.faqPerkAnswer':
@@ -129,7 +134,7 @@ export const EN_CONTENT = {
     'Open the billing portal from this page anytime to change your plan or cancel. Recurring billing stops at the end of the current period. If you were charged by mistake, or you want a recent payment back, contact us within 30 days of the charge and we will refund it.',
   'patron.faqPayQuestion': 'Which ways can I pay?',
   'patron.faqPayAnswer':
-    'Monthly takes cards. A one-time payment takes cards, Alipay and WeChat Pay. Everything is charged in US dollars.',
+    'Monthly takes cards. A one-time payment takes cards, Alipay and WeChat Pay. Prices are set in US dollars; checkout shows them in your local currency, and you can choose to pay in US dollars instead.',
   'patron.termsPrefix': 'Billing, cancellation, and refunds are covered in the ',
   'patron.termsLink': 'Terms of Use',
   'patron.termsSuffix': '.',
@@ -162,39 +167,27 @@ export const EN_CONTENT = {
   'contact.networkError': 'Network error. Try again.',
   'about.heading': 'About Mistboard',
   'about.lede':
-    'Mistboard is a free, open-source place for chess players to learn Chinese chess, and home to the original strategy games we build.',
+    "Mistboard is a free, open-source place to play and study Chinese chess, one board for players who read Chinese and players who don't. It is also home to the original strategy games we build.",
   'about.whyHeading': 'Why this site exists',
   'about.whyBody':
-    "Chinese chess here means xiangqi and its traditional relatives, Jieqi and Banqi. Most places to play them online assume you already read Chinese. Mistboard is built for the chess player who doesn't: pieces render as icons you can identify before you can read 車 or 砲, rules and articles are written in English rather than translated into it, and a beginner course starts from the first move and explains each piece against the chess piece it resembles. Past the basics the site carries what a strong player expects: engines, tactics puzzles mined from real games, an analysis board, a games database, and tournament broadcasts.",
+    'Chinese chess here means xiangqi and its traditional relatives, jieqi and banqi. Most people who play them read Chinese, and most of what is written about them is in Chinese. Mistboard is one board for both sides of that line. The site runs in English, Simplified and Traditional Chinese on the same games, puzzles and lobby, so a player in Shanghai and a player in Toronto sit down at the same table. For English speakers, pieces render as icons you can identify before you can read 車 or 砲, rules and articles are written in English rather than translated into it, and a beginner course explains each piece against the chess piece it resembles. Past the basics: engines, tactics puzzles mined from real games, an analysis board, a games database, and tournament broadcasts.',
   'about.darkChessHeading': 'What Mistboard builds',
   'about.darkChessBody':
-    'Beside the traditional games sit the ones Mistboard invents. Duck Xiangqi puts a duck on the board that belongs to neither side. Fog Xiangqi hides every point your pieces cannot reach. Fortress plays on a smaller board where captured pieces return as drops, with one new piece, the Treasure. Each starts from a board people already know and changes one thing, and each gets a clear rules page and server-enforced play. More are in design. Jungle Chess, Flip Jungle, and Fog Chess are live too.',
+    "Beside the traditional games sit the ones we design. Duck Xiangqi puts a duck on the board that belongs to neither side. Fog Xiangqi hides every point your pieces cannot reach. Crazyhouse Xiangqi puts every captured piece into the capturer's hand to drop back in, and advisors and elephants start the game in hand. Each starts from a board people already know and changes as little as it can, and each gets a clear rules page and server-enforced play. More are in design. Jungle Chess, Flip Jungle, and Fog Chess are live too.",
   'about.playStudyHeading': 'Play and study',
   'about.playStudyBody':
     "Start a game over a link, join the lobby, or play an engine where one is available. Afterward, review the game from either player's perspective or with the full board revealed when the rules allow it. Rules and articles cover both how to play and why the variants work.",
   'about.trustHeading': 'Trust by design',
   'about.trustBody':
-    'Mistboard treats rules enforcement as part of the product. The server owns the full game state and sends each browser only the view that player is allowed to see. Hidden-information live games are not spectatable; full-truth review unlocks only after a game has finished.',
+    "In Fog games your browser never receives the pieces you can't see, so there is nothing hidden on the page to dig out. A live Fog game can't be watched. In jieqi and banqi, spectators see the board as it lies, face-down pieces and all. Every board opens up for review once the game ends.",
   'about.enginesHeading': 'Engines and serious play',
   'about.enginesBody':
-    'Mistboard hosts and develops engines for supported variants. When a game hides information, engines receive the same redacted view a human player receives, making engine games useful both as opponents and as research artifacts.',
+    'Mistboard runs engines for its variants and builds its own where none existed, like Misty for Fog Chess. In a hidden-piece game the engine sees what a human in its seat would see, and nothing more.',
   'about.openSourceHeading': 'Open source foundation',
   'about.openSourcePrefix': 'Mistboard is published under AGPL-3.0-or-later on ',
   'about.openSourceMiddle':
-    '. The rules, visibility boundary, replay model, and public site code are inspectable. Contributions, bug reports, and article drafts are welcome. See ',
+    '. Anyone can read the rules code, the code that decides what each player sees, and the rest of the site. Bug reports, fixes and article drafts are welcome. See ',
   'about.openSourceSuffix': ' for license and third-party credits.',
-  'about.activityHeading': 'Player game activity',
-  'about.activityIntro':
-    'Mistboard tracks completed games as durable replay records. These totals count player-facing games: player vs player and player vs engine.',
-  'about.activityLoading': 'Loading activity totals...',
-  'about.activityUnavailable':
-    'Activity totals are unavailable while persistent storage is offline.',
-  'about.activitySummaryTotal': '{total} player-facing completed games tracked',
-  'about.activitySummaryRecent': ', including {count} in the last 30 days',
-  'about.activityChartHeading': 'Cumulative player-facing games',
-  'about.activityNoGames': 'No completed games have been recorded yet.',
-  'about.activityChartLabel': '{count} completed games over time',
-  'about.activityFullStats': 'Full statistics',
   'stats.heading': 'Statistics',
   'stats.lede':
     'How much gets played here. Games between people or against the bots, counted when they finish; engine matches and test games are left out.',
@@ -211,7 +204,6 @@ export const EN_CONTENT = {
   'stats.byMode': 'Games by mode',
   'stats.unavailableHeading': 'Statistics unavailable',
   'stats.unavailableBody': 'Could not load statistics. Try again shortly.',
-  'about.modeSplit': 'Mode split',
   'about.modePvp': 'Player vs player',
   'about.modePve': 'Player vs engine',
   'source.heading': 'Source code',
@@ -226,6 +218,30 @@ export const EN_CONTENT = {
   'source.chessops': 'chessops: chess rules primitives, GPL-3.0-or-later.',
   'source.stockfish':
     'Stockfish: optional engine/runtime dependency for research and engine-worker flows, GPL family.',
+  'source.abJchess':
+    "AB-JChess by Huorongrong and Laoxu (Kouza): the top jieqi bot, GPL-3.0; its neural network is used with the authors' permission.",
+  'source.katagomo':
+    "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
+  'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
+  'source.dandelion':
+    "Dandelion 4 by Kouza (lxsgx23): the source of the top jungle bot's neural network, fetched from its release and never re-hosted.",
+  'source.chessdb':
+    'chessdb.cn, the Chinese Chess Cloud Database: exact endgame results in the xiangqi analysis board and practice.',
+  'source.pieceSetLacquer':
+    'Lacquer pieces: art by PlayOK, SVG by Sebastian Pipping, from pychess-variants, CC0 1.0.',
+  'source.pieceSetWood':
+    'Wood pieces: "gmchess style wood piece set" by Kadagaden, CC BY 4.0. Modified: re-centred, and the face-down back is the general with its character removed.',
+  'source.pieceSetWoodLicense': 'CC BY 4.0 license',
+  'source.pieceSetBook':
+    'Book pieces: glyphs from BabelStone Xiangqi Colour by Andrew West, SIL Open Font License 1.1.',
+  'source.pieceSetBrush':
+    'Brush pieces: the hnzw set from pychess-variants, by gbtami and contributors, AGPL-3.0.',
+  'source.pieceSetClerical':
+    'Clerical pieces: the lishuw set from pychess-variants, by gbtami and contributors, AGPL-3.0.',
+  'source.pikafish':
+    'Pikafish by the Pikafish developers: the Pikafish bot at the top of the xiangqi levels, and the engine behind xiangqi game, study and broadcast analysis and the in-browser analysis board, GPL-3.0. Its neural network weights carry their own license.',
+  'source.pikafishSite': 'pikafish.com',
+  'source.pikafishWeightsLicense': 'Weights license',
   'source.projectIdentity': 'Project identity',
   'source.identityAssets':
     'The Mistboard name, logo, mistboard.com domain, hosted service identity, and official events are controlled project assets.',
@@ -237,10 +253,10 @@ export const EN_CONTENT = {
   'developers.heading': 'Developers',
   'apiDocs.heading': 'API',
   'contribute.intro':
-    'Mistboard is free and open source, built in the open by one person. There is a lot to do and many ways to help, whether or not you write code.',
+    'Mistboard is free and open source, built in the open. There is a lot to do and many ways to help, whether or not you write code.',
   'contribute.playHeading': 'Play and give feedback',
   'contribute.playBody':
-    'The most useful thing you can do right now is play, then tell us what broke or felt wrong. Real games surface rule bugs, unclear moments, and missing features faster than anything else.',
+    'The most useful thing you can do right now is play, then tell us what broke or felt wrong. Real games surface rule bugs, unclear moments, and missing features faster than anything else. New games we design need play-testers too.',
   'contribute.reportHeading': 'Report bugs and suggest ideas',
   'contribute.reportPrefix': 'Found a bug or have an idea? Open an issue on ',
   'contribute.reportMiddle': ', or reach us through the ',
@@ -251,12 +267,120 @@ export const EN_CONTENT = {
     '. Pick up an open issue, or open a pull request. See the source code page for the repository and the libraries Mistboard builds on.',
   'contribute.translateHeading': 'Help with translations',
   'contribute.translateBody':
-    'Mistboard is English-first, with partial Simplified Chinese and Traditional Chinese. If you can improve a translation or start a new language, open an issue or a pull request.',
+    "Mistboard runs in English, Simplified Chinese and Traditional Chinese. The Chinese is machine-translated, and no native reader has checked it yet. If you play and read Chinese, review one page for us, a rules page or a lesson, and mark anything a player wouldn't say: a term, an opening name, a sentence that sounds translated. A page takes under an hour, with no commitment after it.",
+  'contribute.translateStartPrefix': 'To start, email ',
+  'contribute.translateStartMiddle':
+    " with one line on how you play and whether you'd like a rules page or a lesson first. If you want credit, we add your name to the ",
+  'contribute.translateThanksLink': 'thanks page',
+  'contribute.translateStartSuffix': '.',
   'contribute.supportHeading': 'Support the project',
   'contribute.supportPrefix':
     'Servers and development cost money. If you want to help keep Mistboard free and ad-free, you can ',
   'contribute.supportLink': 'support Mistboard',
   'contribute.supportSuffix': '. Every bit helps, and it is never required to play.',
+  'contribute.crossLinkPrefix': 'Have an audience, an event or an engine? See ',
+  'contribute.crossLinkSuffix': '.',
+  'contribute.crossLinkOr': ' or ',
+  'creators.heading': 'Work with us',
+  'creators.intro':
+    'Mistboard is a free, open-source site for Chinese chess and original strategy games, in English and Chinese, with no ads. We work with players, creators and organizers who want to bring the game to more people.',
+  'creators.playersHeading': 'Titled players and coaches',
+  'creators.playersPrefix': 'A verified title badge, and a ',
+  'creators.playersCoachLink': 'coaching page',
+  'creators.playersBody':
+    ' where students contact and pay you directly. We take no commission. Annotated studies that can lead the homepage under your name, articles under your byline, and credited review of our lessons and puzzles. Start with ',
+  'creators.playersVerifyLink': 'title verification',
+  'creators.playersOr': ', or ',
+  'creators.playersLink': 'read what we offer titled players',
+  'creators.playersSuffix': '.',
+  'creators.videoHeading': 'Creators and streamers',
+  'creators.gamesLead': 'Game research.',
+  'creators.gamesPrefix':
+    'We find games for your topic, by opening, player or event, from top competitions and our ',
+  'creators.gamesLink': 'broadcast archive',
+  'creators.gamesSuffix': '.',
+  'creators.analysisLead': 'Prepared analysis.',
+  'creators.analysisPrefix': 'Each game comes as a ',
+  'creators.analysisLink': 'study',
+  'creators.analysisSuffix':
+    ' with engine analysis and the critical moments annotated, ready to present on screen.',
+  'creators.streamLead': 'Stream setup.',
+  'creators.streamBody':
+    'A board you can embed in OBS, a bot opponent at the level you choose, and a technical check with us before you go live.',
+  'creators.videoClose': 'Your content remains yours.',
+  'creators.eventsHeading': 'Event organizers, clubs and federations',
+  'creators.eventsBody':
+    'We broadcast events at no cost: an event page, analysis of every game, and boards you can embed on your own site. Send us the game files and we build and publish the page. ',
+  'creators.eventsLink': 'See current broadcasts',
+  'creators.eventsSuffix': '.',
+  'creators.writersHeading': 'Writers and composers',
+  'creators.writersBody':
+    'Articles and opening guides under your name, and endgame compositions published with credit.',
+  'creators.enginesHeading': 'Engine authors',
+  'creators.enginesBody':
+    'We serve strong engines as bots on the site, credited by name, and rate them against our bot ladder.',
+  'creators.enginesChampionsPrefix':
+    ' An engine that beats the champion in a public match takes its title: see the ',
+  'creators.enginesChampionsLink': 'engine champions',
+  'creators.enginesChampionsSuffix': '.',
+  'creators.contactHeading': 'Contact',
+  'creators.contactPrefix': 'Use the ',
+  'creators.contactLink': 'contact form',
+  'creators.contactSuffix':
+    '. Tell us who you are and what you are working on, with a link to your channel, event or profile.',
+  'creators.crossLinkPrefix':
+    'Want to help in other ways, like reporting bugs, translating or writing code? See ',
+  'creators.crossLinkSuffix': '.',
+  'champions.heading': 'Engine champions',
+  'champions.intro':
+    'Each game has one reigning champion engine. It is the bot you play on the site, credited by name. Any engine can challenge for the title in a public match.',
+  'champions.aboutJieqi':
+    'By Huorongrong and Laoxu (Kouza): a Pikafish fork with its own neural network. It plays here at 4 s a move on 4 threads.',
+  'champions.aboutJunglePrefix':
+    'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move; ',
+  'champions.aboutJungleSuffix': ', at 5M nodes a move, is the easier bot below it.',
+  'champions.championBadge': 'Champion',
+  'champions.statWins': 'wins',
+  'champions.statDraws': 'draws',
+  'champions.statLosses': 'losses',
+  'champions.barLabel': '{wins} wins, {draws} draws, {losses} losses',
+  'champions.tookJieqi':
+    'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, a 0.64 score.',
+  'champions.tookJungle':
+    'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
+  'champions.readMatch': 'Read the match',
+  'champions.seeGames': 'See the games',
+  'champions.playChampion': 'Play the champion',
+  'champions.openHeading': 'Open titles',
+  'champions.openIntro':
+    'Every other game with a bot. The bot you play holds the title until a challenger beats it in a match, and no challenger has played one yet.',
+  'champions.heldBy': 'Held by',
+  'champions.openBadge': 'Title open',
+  'champions.challengeCta': 'Challenge for this title',
+  'champions.enginePikafish': 'Pikafish',
+  'champions.engineFairyStockfish8': 'Fairy-Stockfish Level 8',
+  'champions.writeUpLink': 'write-up',
+  'champions.gamesLink': 'games',
+  'champions.linkSeparator': ', ',
+  'champions.parenOpen': ' (',
+  'champions.parenClose': ').',
+  'champions.historyHeading': 'Title history',
+  'champions.historyJieqi':
+    '2026-09-30, Jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), took the title from Pikafish Level 8, 248-136-16 over 400 games, a 0.64 score',
+  'champions.historyJungle':
+    '2026-09-22, Jungle Chess: KataGo-AnimalChess, by hzyhhzy with a network from Kouza, took the title from MistyJungle, 82-0 with 118 draws over 200 games at 1,000 visits a move',
+  'champions.challengeHeading': 'Challenge for a title',
+  'champions.ruleMatch':
+    "200 games against the champion, 100 as each color, with the champion's time or node budget per move for both engines, on one machine, with the seed published. A match may be extended past 200 games.",
+  'champions.ruleScore': 'A score of 0.55 or better (about +35 Elo) takes the title.',
+  'champions.ruleRun':
+    'We run the match within two weeks of a submission and post the result either way.',
+  'champions.ruleSubmitPrefix':
+    'To submit, send a Linux x86-64 binary or a weights file, the exact command line and your own match log, as an ',
+  'champions.ruleSubmitIssueLink': 'issue on GitHub',
+  'champions.ruleSubmitMiddle': ' or through the ',
+  'champions.ruleSubmitContactLink': 'contact form',
+  'champions.ruleSubmitSuffix': '.',
   'thanks.heading': 'Thank you',
   'thanks.intro':
     'Mistboard stands on open-source work by many people and projects, and on everyone who plays, reports bugs, and helps it get better.',
@@ -269,9 +393,25 @@ export const EN_CONTENT = {
   'thanks.openSourceSuffix': ' page lists the projects and licenses Mistboard depends on.',
   'thanks.stubNote': 'This page will grow into a fuller list of credits over time.',
   'faq.heading': 'FAQ',
+  'faq.playWebQuestion': 'Is there a web version? Do I need to download anything?',
+  'faq.playWebAnswer':
+    'Mistboard is the web version. Open it in a browser on a computer or a phone and play; there is nothing to download or install.',
+  'faq.playComputerQuestion': 'Can I play against the computer?',
+  'faq.playComputerAnswer':
+    'Yes. There are eight levels, from beginner to strong, and the strongest opponent is the Pikafish engine.',
+  'faq.playBotsLink': 'Choose a level',
+  'faq.playFriendQuestion': 'How do I play a friend?',
+  'faq.playFriendAnswer':
+    'Start a game, choose a friend as the opponent, and send them the link. They open it and take the other seat.',
+  'faq.playOtherQuestion': 'What else can I play?',
+  'faq.playOtherAnswer':
+    'Jieqi and banqi, Jungle Chess and Flip Jungle, and the games we design: Crazyhouse Xiangqi, Duck Xiangqi and Fog Xiangqi.',
+  'faq.playReviewQuestion': 'Can I review a game afterwards?',
+  'faq.playReviewAnswer':
+    'Yes. A finished xiangqi game opens in review, where the engine marks the moves that decided it.',
   'faq.darkChessQuestion': 'What games are on Mistboard?',
   'faq.darkChessPrefix':
-    'Mistboard hosts original strategy games and serious variants across chess, xiangqi, Jungle, and related families. Some are open-information; some use fog or hidden identities. The ',
+    'Chinese chess first: xiangqi and its traditional relatives, jieqi and banqi. Beside them sit the games we design, such as Crazyhouse Xiangqi, Duck Xiangqi and Fog Xiangqi, plus Jungle Chess and Fog Chess. Some are open-information; some hide pieces under fog or face down. The ',
   'faq.rulesReference': 'rules reference',
   'faq.darkChessSuffix': ' lists the current games.',
   'faq.accountQuestion': 'Do I need an account?',
@@ -284,16 +424,15 @@ export const EN_CONTENT = {
   'faq.contactSuffix': ". Include the room link if it's about a specific game.",
   'faq.cheatingQuestion': 'How does Mistboard prevent cheating?',
   'faq.cheatingPrefix':
-    "Mistboard is built so the hidden board is not sitting in your opponent's browser waiting to be uncovered. The server owns the full position, computes each player's legal view, and sends only that redacted view over the wire. The code is ",
+    "Getting help from an engine or another person, or abusing accounts, breaks the fair-play rules in every game, rated or casual. In hidden-piece games the server also keeps the full board and sends each player only what they're allowed to see, so there is nothing to dig out of the page. The code is ",
   'faq.openSource': 'open source',
-  'faq.cheatingSuffix':
-    ', so this trust boundary can be inspected. Outside assistance, account abuse, and attempts to break the fog filter are still fair-play violations.',
+  'faq.cheatingSuffix': ', so anyone can check.',
   'faq.enginesQuestion': 'Do Mistboard engines see the full board?',
   'faq.enginesAnswer':
-    'No. Engines only receive the information allowed by the game they are playing. In hidden-information games, that means the same redacted view a human player receives; the true board stays server-side for adjudication.',
+    'No. In a hidden-piece game the engine sees what a human in its seat would see. The full board stays on the server, which uses it to judge moves and results.',
   'faq.liveWatchQuestion': 'Can I watch a live game?',
   'faq.liveWatchAnswer':
-    'Open-information games, xiangqi included, can be watched live from Watch. Hidden-information games are not spectatable while they are in progress, so no one can feed a player the full board mid-game. Once any game finishes, anyone can replay it from either side or with the full board revealed.',
+    'Most games can be watched live from Watch. In jieqi and banqi, spectators see the board as it lies, face-down pieces and all. Fog games cannot be watched while they are in progress, so no one can feed a player the full board mid-game. Once any game finishes, anyone can replay it from either side or with the full board revealed.',
   'faq.libraryQuestion': 'Where do the games in the library come from?',
   'faq.libraryAnswer':
     "Four places: public-domain classical manuals we re-encode ourselves, tournaments we broadcast with the organizer's agreement, single events whose records we take from a public archive and credit on the page, and games played here. We do not republish another site's archive. Large xiangqi databases exist elsewhere, and copying one would be easy. They belong to the operators who built them, so we ask first. That keeps the library smaller than it could be, and keeps every game in it accounted for.",
@@ -301,7 +440,7 @@ export const EN_CONTENT = {
     'The opening explorer also draws on a licensed dataset of anonymous online games, which is why its numbers cover more games than the library lists.',
   'faq.ratedQuestion': 'How does rated play work?',
   'faq.ratedAnswer':
-    'Rated play is account-backed human-vs-human play in supported ladder variants. During beta, ladders may be provisional while ratings calibrate. Engine games and casual games do not count.',
+    'Rated games are between two signed-in players, in the variants that have a ladder. While rated play is in beta, ratings can move more than usual as they settle. Engine games and casual games do not count.',
   'terms.heading': 'Terms of Use',
   'terms.intro':
     'Mistboard is a free, open-source hobby project. These are the basic rules for using the hosted site at mistboard.com. They will change as the project grows; this page is always the current version.',
@@ -355,23 +494,120 @@ export const EN_CONTENT = {
     'Mistboard is a free, open-source hobby project. This page describes what we collect on the hosted site at mistboard.com. It will change as the project grows; this page is always the current version.',
   'privacy.collectHeading': 'What we collect',
   'privacy.collectBody':
-    'Aggregate analytics, the games you play, and, if you make an account, your handle and email. Your browser keeps a random id in its local storage so games you play without an account can be counted as one visitor in our statistics; it is not a cookie, never leaves this site, and is not shown to other players. We collect more around rated play to keep it honest.',
+    'Analytics, the games you play, and, if you make an account, your handle and email. We use PostHog for analytics: it keeps a per-browser history of the pages you visit and what you do on them, linked to your account if you sign in. Your browser keeps a random id in its local storage so games you play without an account can be counted as one visitor in our statistics; it is not a cookie, never leaves this site, and is not shown to other players. We collect more around rated play to keep it honest.',
   'privacy.noDoHeading': "What we don't do",
   'privacy.noDoBody':
     "No ads. We don't sell your data. No recordings of your screen. We respect Do Not Track. Casual play needs no account.",
   'privacy.publicGamesHeading': 'Your games are public',
-  'privacy.publicGamesPrefix': 'Finished games are published under ',
+  'privacy.publicGamesPrefix':
+    'Finished games are public and are published in monthly downloads on the ',
   'privacy.ccByLink': 'CC BY 4.0',
   'privacy.publicGamesSuffix': '.',
   'privacy.promisesHeading': "What we promise, and don't",
   'privacy.promisesBody':
     "We promise to keep hidden information hidden on the server and to tell you what we collect. We don't promise your data, account, or rating survives development. It can change or disappear without notice. Don't put anything on Mistboard you can't afford to lose.",
+  'data.colMonth': 'Month',
+  'data.colGames': 'Games',
+  'data.colDownload': 'Download',
+  'data.colHash': 'SHA-256',
+  'data.builtNote':
+    'A file is built the first time anyone downloads it; its size and SHA-256 show here after that.',
+  'data.allVariantsNote': 'Every variant in one JSONL file per month; each line names its variant.',
+  'data.copy': 'Copy',
+  'data.copied': 'Copied',
+  'data.copyFailed': 'Press ctrl+C',
+  'data.copyHash': 'Copy the {format} SHA-256',
+  'data.copyCitation': 'Copy the credit line',
+  'data.licenseBody':
+    'Crediting means naming Mistboard and linking to the game data page; the line above is enough. An engine match download also keeps the credit its games show.',
+  'privacy.publicGamesMiddle': ' under ',
+  'data.aboutLink': "What's in the files, the license, and how hidden pieces appear",
+  'data.backToData': 'Back to game data',
+  'data.aboutSubtitle': 'What the monthly files hold, how to credit them, and what is left out.',
+  'data.heading': 'Game data',
+  'data.subtitle':
+    'Every finished game played on Mistboard, one file per variant per month. Free to use under CC BY 4.0.',
+  'data.variantsLabel': 'Variants',
+  'data.allVariants': 'All variants',
+  'data.unavailable': 'The game data could not be loaded',
+  'data.gamesOne': '{count} game',
+  'data.gamesMany': '{count} games',
+  'data.countOneMonth': '{games} in {months} month',
+  'data.countManyMonths': '{games} in {months} months',
+  'data.noMonths': 'No finished month has games yet.',
+  'data.currentMonthNote': '{month} is added when the month ends.',
+  'data.downloadLabel': 'Download {format}: {file}',
+  'data.aboutHeading': 'About the data',
+  'data.formatsHeading': 'Formats',
+  'data.formatJsonl':
+    "JSONL: one game per line, gzip compressed. Each line is the same JSON as that game's own download on its game page. Fields:",
+  'data.fieldGame': "The game's id and its page on Mistboard.",
+  'data.fieldVariant':
+    'The variant id, and pvp (people against people), pve (a person against a bot) or, in the engine game files, eve (a bot against a bot).',
+  'data.fieldPlayers':
+    'The name each seat shows on the game page, keyed by color. A seat set to private reads Anonymous.',
+  'data.fieldTimeControl':
+    'Starting time and increment in milliseconds with a label such as 5+3; null when untimed. An engine match played at a fixed time per move carries movetime_ms.',
+  'data.fieldTimes': 'When the game started and ended, ISO 8601 in UTC.',
+  'data.fieldResult':
+    'The winning color or draw, and how the game ended: checkmate, timeout, resignation and so on.',
+  'data.fieldPlies':
+    "Every move in order: the mover, the move as uci, san where the variant has a notation (otherwise null), and each side's clock after the move. In Jieqi, Banqi and Flip Jungle a move that turned a piece over also has revealed, and a Jieqi move that captured a face-down piece has captured_hidden, each a color and a role.",
+  'data.fieldInk': 'Banqi and Flip Jungle only: the color the first player turned up.',
+  'data.fieldDeal':
+    'Jieqi, Banqi and Flip Jungle games played on the site: the starting deal, as a FEN that names every face-down piece. Engine matches have none.',
+  'data.fieldOrigin':
+    'Engine match downloads only: the event, the credit, and any squares whose piece was never revealed.',
+  'data.formatMoves':
+    'A uci move is coordinates: h2e2 moves a piece, @c3 turns over a face-down piece, R@d4 drops a piece from hand (Crazyhouse Xiangqi), and b3e3@e6 is a Duck Xiangqi turn with the duck square last.',
+  'data.formatPgn':
+    'PGN, for the variants whose moves can be written so the text replays on its own: SAN for Fog Chess, WXF for Xiangqi and Atomic Xiangqi, ICCS coordinates for Fog Xiangqi and Jieqi, ICGA notation for Banqi, and coordinates for Flip Jungle. Games are separated by a blank line and carry Site (the game page), MistboardVariant, MistboardTermination and License tags. The other variants are JSONL only.',
+  'data.licenseHeading': 'License',
+  'data.licensePrefix': 'The files are published under ',
+  'data.licenseSuffix':
+    '. Use them for anything, commercial or not, as long as you credit Mistboard and link to the game data page, for example:',
+  'data.citation': 'Game data from Mistboard, https://mistboard.com/data, CC BY 4.0.',
+  'data.includedHeading': 'What is included',
+  'data.included':
+    'Every finished game played on the site since June 2026, people against people or against the bots, rated and casual, signed in or as a guest. A game is filed under the month it ended, in UTC.',
+  'data.excluded':
+    'Left out: aborted games and games that ended before both sides moved, games played by the accounts that run and test the site, games that are not public, engine games (they have files of their own), and imported games such as engine matches. The current month is added once it ends.',
+  'data.hiddenHeading': 'Hidden information',
+  'data.hiddenFog':
+    'A finished fog game hides nothing, so its file holds every move of both sides, as the game page shows once the game is over. What each player could see at the time is not stored; it follows from the moves and the visibility rules in the open-source game code.',
+  'data.hiddenFlip':
+    'Jieqi, Banqi and Flip Jungle start with pieces face down. Their files say what every reveal turned out to be, so a downloaded game replays from its moves alone, in either format.',
+  'data.hiddenReveal':
+    "Moves carry reveals. In PGN the piece a move turned over follows it after =, upper case for red and lower case for black, so any PGN reader keeps it as part of the move: e3e4=R in Jieqi, @c3=E in Flip Jungle. A Jieqi capture of a face-down piece adds x= and the captured piece: b0b7=Cx=n. The letters are each FEN's own: Jieqi R chariot, N horse, B elephant, A advisor, C cannon, P soldier; Flip Jungle R rat, C cat, D dog, W wolf, P leopard, T tiger, L lion, E elephant.",
+  'data.hiddenBanqi':
+    "Banqi PGN follows the notation of Chen, Shen and Hsu (ICGA Journal, 2010): b4-b2 moves a piece, and a flip the paper writes d8(P) is written d8=P here, because PGN reads parentheses as a side line. The letters are the paper's: K king, G guard, M minister, R rook, N knight, C cannon, P pawn. Its board is 4 columns by 8 rows, so the site's coordinates swap: site files a to h are ICGA rows 1 to 8, and site ranks 1 to 4 are ICGA columns a to d. JSON keeps the site's coordinates.",
+  'data.hiddenBanqiLetters':
+    'Careful with G: in Banqi moves it is a guard, but in the Banqi FEN it is the general. The FEN letters are G general, A advisor, E elephant, R chariot, H horse, C cannon, S soldier.',
+  'data.hiddenDeal':
+    "The deal is included when there is one. Every game played on the site is dealt in full when it starts, so its JSON has deal_fen and its PGN a DealFEN tag: the variant's FEN with a sixth field naming each face-down piece in board order, top rank first. The FEN tag is the face-down start. Every reveal in the moves matches the deal, and both FENs use the site's coordinates and letters.",
+  'data.hiddenNeverRevealed':
+    "Engine match downloads have no deal. The match's own referee decided each piece when it was turned over, so a piece still face down at the end never had an identity: origin.never_revealed lists those squares, and no file names a piece for them. Their moves carry every reveal, so they replay the same way.",
+  'data.hiddenReplayer':
+    'The open-source game code has a reference replayer, replayHiddenPieceRecord, that rebuilds a game from either file and checks every reveal against the deal.',
+  'data.filesHeading': 'Files and checksums',
+  'data.filesBuilt':
+    'A file is built from the database the first time anyone downloads it and never changes after that. Its size and SHA-256 appear on the game data page once it exists, so a download can be checked with sha256sum.',
+  'data.filesHosting':
+    "The site serves the files itself. They move to object storage (Cloudflare R2) once a month's file passes about 100 MB, or once download bandwidth starts to cost money.",
+  'privacy.downloadsLink': 'game data page',
+  'data.engineHeading': 'Engine games',
+  'data.engineNote':
+    "Games the site's own bots play each other, a few a day. They have files of their own and are never in the files above.",
+  'data.engineAbout':
+    "The site schedules a few games a day between its own bots, the same bots you can play, in several variants, and plays them on its own servers. They are published in their own monthly files, under Engine games on the game data page, with mode eve. They are never in the files of games people played, and they are not counted in the site's statistics or ratings. A Jieqi engine game is dealt like any other game on the site, so it has deal_fen.",
 } as const;
 
 export type ContentI18nKey = keyof typeof EN_CONTENT;
 
 export const CRITICAL_CONTENT_I18N_KEYS = [
   'articles.heading',
+  'articles.deepDives',
+  'articles.latest',
   'articles.read',
   'articles.intro',
   'articles.allArticles',
@@ -446,16 +682,6 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'about.openSourcePrefix',
   'about.openSourceMiddle',
   'about.openSourceSuffix',
-  'about.activityHeading',
-  'about.activityIntro',
-  'about.activityLoading',
-  'about.activityUnavailable',
-  'about.activitySummaryTotal',
-  'about.activitySummaryRecent',
-  'about.activityChartHeading',
-  'about.activityNoGames',
-  'about.activityChartLabel',
-  'about.activityFullStats',
   'stats.heading',
   'stats.lede',
   'stats.gamesPlayed',
@@ -471,7 +697,6 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'stats.byMode',
   'stats.unavailableHeading',
   'stats.unavailableBody',
-  'about.modeSplit',
   'about.modePvp',
   'about.modePve',
   'source.heading',
@@ -484,11 +709,36 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.chessground',
   'source.chessops',
   'source.stockfish',
+  'source.abJchess',
+  'source.katagomo',
+  'source.katago',
+  'source.dandelion',
+  'source.chessdb',
+  'source.pieceSetLacquer',
+  'source.pieceSetWood',
+  'source.pieceSetWoodLicense',
+  'source.pieceSetBook',
+  'source.pieceSetBrush',
+  'source.pieceSetClerical',
+  'source.pikafish',
+  'source.pikafishSite',
+  'source.pikafishWeightsLicense',
   'source.projectIdentity',
   'source.identityAssets',
   'source.identityForksName',
   'source.identityForksBrand',
   'faq.heading',
+  'faq.playWebQuestion',
+  'faq.playWebAnswer',
+  'faq.playComputerQuestion',
+  'faq.playComputerAnswer',
+  'faq.playBotsLink',
+  'faq.playFriendQuestion',
+  'faq.playFriendAnswer',
+  'faq.playOtherQuestion',
+  'faq.playOtherAnswer',
+  'faq.playReviewQuestion',
+  'faq.playReviewAnswer',
   'faq.darkChessQuestion',
   'faq.darkChessPrefix',
   'faq.rulesReference',
@@ -560,4 +810,70 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'privacy.publicGamesSuffix',
   'privacy.promisesHeading',
   'privacy.promisesBody',
+  'data.colMonth',
+  'data.colGames',
+  'data.colDownload',
+  'data.colHash',
+  'data.builtNote',
+  'data.allVariantsNote',
+  'data.copy',
+  'data.copied',
+  'data.copyFailed',
+  'data.copyHash',
+  'data.copyCitation',
+  'data.licenseBody',
+  'privacy.publicGamesMiddle',
+  'data.aboutLink',
+  'data.backToData',
+  'data.aboutSubtitle',
+  'data.heading',
+  'data.subtitle',
+  'data.variantsLabel',
+  'data.allVariants',
+  'data.unavailable',
+  'data.gamesOne',
+  'data.gamesMany',
+  'data.countOneMonth',
+  'data.countManyMonths',
+  'data.noMonths',
+  'data.currentMonthNote',
+  'data.downloadLabel',
+  'data.aboutHeading',
+  'data.formatsHeading',
+  'data.formatJsonl',
+  'data.fieldGame',
+  'data.fieldVariant',
+  'data.fieldPlayers',
+  'data.fieldTimeControl',
+  'data.fieldTimes',
+  'data.fieldResult',
+  'data.fieldPlies',
+  'data.fieldInk',
+  'data.fieldDeal',
+  'data.fieldOrigin',
+  'data.formatMoves',
+  'data.formatPgn',
+  'data.licenseHeading',
+  'data.licensePrefix',
+  'data.licenseSuffix',
+  'data.citation',
+  'data.includedHeading',
+  'data.included',
+  'data.excluded',
+  'data.hiddenHeading',
+  'data.hiddenFog',
+  'data.hiddenFlip',
+  'data.hiddenReveal',
+  'data.hiddenBanqi',
+  'data.hiddenBanqiLetters',
+  'data.hiddenDeal',
+  'data.hiddenNeverRevealed',
+  'data.hiddenReplayer',
+  'data.filesHeading',
+  'data.filesBuilt',
+  'data.filesHosting',
+  'privacy.downloadsLink',
+  'data.engineHeading',
+  'data.engineNote',
+  'data.engineAbout',
 ] as const satisfies readonly ContentI18nKey[];

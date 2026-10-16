@@ -14,17 +14,24 @@ import type {
 } from '@mistboard/game';
 import type { AtomicXiangqiReplaySpec } from '../atomic-xiangqi-replay.js';
 import type { ChessReplaySpec } from '../chess-replay.js';
-import type { Locale } from '../i18n/locale.js';
-import type { PlayerTitle } from '../player-titles.js';
+import type { CrazyhouseXiangqiReplaySpec } from '../crazyhouse-xiangqi-replay.js';
 import type { DuckXiangqiReplaySpec } from '../duck-xiangqi-replay.js';
 import type { FortressXiangqiReplaySpec } from '../fortress-xiangqi-replay.js';
+import type { StepGameSetModule } from '../article-game-set.js';
 import type { HordeXiangqiReplaySpec } from '../horde-xiangqi-replay.js';
+import type { Locale } from '../i18n/locale.js';
 import type { JieqiReplaySpec } from '../jieqi-replay.js';
+import type { PlayerTitle } from '../player-titles.js';
 import type { XiangqiReplaySpec } from '../xiangqi-replay.js';
 
 export type ParagraphBlock = { kind: 'paragraph'; text: string };
 
 export type SubHeadingBlock = { kind: 'sub-heading'; text: string };
+
+// An editorial note set apart from the body: a corrections invitation, a
+// sourcing remark. One short paragraph with the same inline markdown as a
+// paragraph ([text](href), **bold**, `code`), drawn as a quiet bordered aside.
+export type NoteBlock = { kind: 'note'; text: string };
 
 // Inline SVG composition of 1, 2, or 3 boards. Renderer wraps the composer
 // output in an <svg> with the given canvas dimensions and background.
@@ -172,6 +179,14 @@ export type FortressXiangqiReplayBlock = {
   caption?: string;
 };
 
+// Crazyhouse Xiangqi analogue: the 9x10 board plus both hands, stepped through
+// board moves and drops (Fairy-Stockfish tokens) against the real kernel.
+export type CrazyhouseXiangqiReplayBlock = {
+  kind: 'crazyhouse-xiangqi-replay';
+  spec: CrazyhouseXiangqiReplaySpec;
+  caption?: string;
+};
+
 // Duck Xiangqi analogue: the 9x10 board plus the shared duck, stepped through a
 // turn list against the real kernel. A token carries BOTH halves of a turn
 // (`b1c3@c8`) because a turn is a piece move and a duck placement; the duck half
@@ -255,12 +270,45 @@ export type RawSvgStepperStep = {
   // String, or a render thunk re-run on xiangqi appearance change (see RawSvgBlock).
   svg: string | (() => string);
   narrative?: string;
+  /** The move that led to this step ("Cxb10"). When every step after the first
+   *  names one, the card's rail is a score sheet and the narrative is the
+   *  note under the move. */
+  move?: string;
+  /** The squares the move into this step went from and to, from the generator's
+   *  own move data (never parsed from `move`). The card glides the piece slot
+   *  keyed by these squares (board-piece-slot.ts); from === to (a flip) and a
+   *  step without one only repaint. Needs the block's `gameSpecId`. */
+  motion?: { from: string; to: string };
 };
 
 export type RawSvgStepperBlock = {
   kind: 'raw-svg-stepper';
   steps: RawSvgStepperStep[];
-  header?: { players: string; event: string };   // optional title above the frame (engine-game style)
+  /** The variant the board shows, whose visibility decides whether a step may
+   *  glide: only 'open' and 'hidden-identity' do. A fog board, an unknown id or
+   *  none at all stays static. An article-only open variant (Benedict, Anti
+   *  Xiangqi) names the board it is drawn on. */
+  gameSpecId?: GameSpecId;
+  header?: { players: string; event: string }; // optional title above the frame (engine-game style)
+  /** Seat rows above and below the board, as in the study embed. */
+  seats?: {
+    first: { name: string; ink: string | null };
+    second: { name: string; ink: string | null };
+  };
+  /** The result foot under the score sheet. */
+  result?: string;
+  caption?: string;
+};
+
+// Many games behind one step card with a picker. The records load on demand
+// (`load`, a dynamic import, so they get their own chunk); they carry template
+// keys and arguments, and `strings` holds the English templates here in the
+// article, where the translator reaches them.
+export type StepGameSetBlock = {
+  kind: 'step-game-set';
+  load: () => Promise<StepGameSetModule>;
+  strings: Record<string, string>;
+  title?: string;
   caption?: string;
 };
 
@@ -292,6 +340,11 @@ export type EmbedBlock = {
   caption?: string;
   /** Frame aspect as [width, height]; defaults to the embed contract's 760x700. */
   aspect?: [number, number];
+  /** A study or line embed opens on the start position with the score sheet,
+   *  its comments and the result covered, so the reader tries the problem
+   *  first; a button or the first step forward reveals them. Rides to the
+   *  frame as `?solution=hidden`. */
+  hideSolution?: boolean;
 };
 
 /**
@@ -320,7 +373,26 @@ export type TableBlock = {
   caption?: string;
   /** Emphasise a row (a result worth reading twice). Zero-indexed into `rows`. */
   highlightRows?: number[];
+  /** The first column names each row (a piece, a rule): set bold and kept on
+   *  one line, so the prose columns do the wrapping. */
+  keyColumn?: boolean;
+  /** Cells wrap instead of the table scrolling sideways. Tables default to
+   *  nowrap, which suits numbers; a table of names and events does not fit a
+   *  phone column on one line per cell. */
+  wrap?: boolean;
+  /** On a phone: tight gutters (10px instead of 28px) and 13px text, for a
+   *  short-celled table (a record by event: name, dates, W, D, L) that must
+   *  fit a phone column with no cell on two lines and no sideways scroll. */
+  compact?: boolean;
+  /** A small board leading each row (an endgame table's positions), one per
+   *  row in `rows` order. `svg` is a diagram thunk like a raw-svg block's, so it
+   *  follows the reader's piece set and board layout; `label` is the diagram's
+   *  accessible name. On a phone the table becomes one card per row: the board
+   *  on the left, the cells stacked beside it. */
+  rowDiagrams?: TableRowDiagram[];
 };
+
+export type TableRowDiagram = { svg: () => string; label: string };
 
 // A raster figure in an article body (product screenshots, photos). `src` is a
 // path under apps/web/public, same convention as ImageArticleThumbnail; the SVG
@@ -328,13 +400,19 @@ export type TableBlock = {
 export type ImageFigureBlock = {
   kind: 'image-figure';
   src: string;
+  // The same figure taken in the dark theme (a site screenshot). When set, the
+  // reader sees whichever matches their site theme, not their OS setting.
+  darkSrc?: string;
   alt: string;
   caption?: string;
+  // 'article-figure-full' lets the image fill the column instead of the
+  // default 560px cap.
   className?: string;
 };
 
 export type ArticleBlock =
   | ParagraphBlock
+  | NoteBlock
   | TableBlock
   | FaqBlock
   | ImageFigureBlock
@@ -346,9 +424,11 @@ export type ArticleBlock =
   | RawSvgBlock
   | SvgRowBlock
   | RawSvgStepperBlock
+  | StepGameSetBlock
   | XiangqiReplayBlock
   | ChessReplayBlock
   | FortressXiangqiReplayBlock
+  | CrazyhouseXiangqiReplayBlock
   | DuckXiangqiReplayBlock
   | HordeXiangqiReplayBlock
   | AtomicXiangqiReplayBlock
@@ -399,12 +479,12 @@ export type ImageArticleThumbnail = {
   // a client route (e.g. '/blog'): use '/article-thumbs/misty.jpg'.
   src: string;
   alt?: string;
+  // CSS object-position for the cover crop, when the subject is off centre:
+  // a portrait in a landscape card keeps the face with 'center 12%'.
+  position?: string;
 };
 
-export type ArticleThumbnail =
-  | BoardArticleThumbnail
-  | SvgArticleThumbnail
-  | ImageArticleThumbnail;
+export type ArticleThumbnail = BoardArticleThumbnail | SvgArticleThumbnail | ImageArticleThumbnail;
 
 type ArticleBase = {
   slug: string;
@@ -416,6 +496,13 @@ type ArticleBase = {
   // is a reference for a game we do not host yet.
   playableOnMistboard?: boolean;
   title: string;
+  /**
+   * The homepage card's title when `title` does not fit there on one line
+   * (about 186px of 12.5px Roboto, the card's width on a wide desktop).
+   * `home-card-titles.test.ts` measures every card and fails on a title that
+   * would wrap. A translated article needs this string in both zh dictionaries.
+   */
+  cardTitle?: string;
   /**
    * Document <title> when it should differ from the on-page h1, which `title`
    * still drives. Exists because a variant's brand name and its search name can
@@ -460,9 +547,23 @@ type ArticleBase = {
     title?: PlayerTitle;
   };
   showSummaryOnPage?: boolean;
-  // Non-variant guest pages only. Variant rules listings are controlled in
-  // variant-public-surfaces.ts so one switch covers every public rail/widget.
+  // false keeps an indexed page out of the listings (rules rail and index,
+  // article index, homepage cards) while its URL and search presence stay:
+  // guest pages (shogi4) and rules pages deliberately de-ranked from the rail
+  // (chess). Hiding a whole variant from public surfaces, or
+  // an unindexed rules page, is variant-public-surfaces.ts instead.
   showInIndex?: boolean;
+  // true serves the page by URL only: off every listing (index, homepage rows,
+  // related ring) like showInIndex: false, out of /blog/feed.xml and the
+  // sitemap, and stamped `noindex, follow` in every language. For a post whose
+  // subject is gone but whose inbound links should still land (the Atomic
+  // Xiangqi launch post, retired 2026-10-11). The server's
+  // NON_INDEXED_ARTICLE_SLUGS must carry the same slug (articles-meta-sync.test.ts).
+  noindex?: boolean;
+  // Which homepage row the card sits in. Unset is the general row, so a new
+  // article lands on the homepage with no second edit; 'deep-dives' moves it to
+  // the row beneath (player pages and game deep dives).
+  homeRow?: 'deep-dives';
   status: 'outline' | 'draft' | 'published';
   audience: string;
   // ISO-8601 dates (YYYY-MM-DD). When present, rendered in the article meta.
@@ -470,6 +571,10 @@ type ArticleBase = {
   updatedAt?: string;
   tldr?: string[];
   intro?: ArticleBlock[];
+  // Card art, drawn in the 16:10 card media under a date pill (top left) and a
+  // star (top right). Half a xiangqi board goes through xqHalfBoardThumbnailSvg
+  // (articles/diagrams.ts): five whole ranks cut mid-river, corners checked
+  // against the tags. Judge any new card with `npm run articles:cards`.
   thumbnail?: ArticleThumbnail;
   // Which appearance family this article's diagrams belong to. Drives the
   // Settings board/piece pickers while the article is open (xiangqi diagrams

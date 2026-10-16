@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { XiangqiBroadcastBoard } from '@mistboard/game';
+import type { XiangqiBroadcastBoard, XiangqiBroadcastTour } from '@mistboard/game';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
+import { getPool } from './persistence-db.js';
+import { getGameAnalysis, saveGameAnalysis } from './persistence-game-analysis.js';
 import {
   assert,
   definePersistenceTests,
@@ -13,14 +15,18 @@ import {
   applyXiangqiBroadcastBoardUpdate,
   backfillXiangqiBroadcastTranslations,
   deleteXiangqiBroadcastTour,
+  extendXiangqiBroadcastTourEndsAt,
   getXiangqiBroadcastBoard,
   getXiangqiBroadcastTour,
   importXiangqiBroadcastPack,
   listXiangqiBroadcastBoards,
+  listXiangqiBroadcastFinalEvals,
   listXiangqiBroadcastRounds,
   listXiangqiBroadcastScheduledTours,
   listXiangqiBroadcastSyncLogs,
+  listXiangqiBroadcastTourSourcesOn,
   listXiangqiBroadcastTours,
+  nextUnanalysedXiangqiBroadcastBoard,
   queryCompletedXiangqiBroadcastBoards,
   setXiangqiBroadcastTourSchedule,
 } from './persistence-xiangqi-broadcasts.js';
@@ -28,6 +34,7 @@ import {
   xiangqiBroadcastBoardStreamForApi,
   xiangqiBroadcastRoundStreamForApi,
 } from './routes/xiangqi-broadcasts.js';
+import { dpxqPairingBoard, parseDpxqRoundPage } from './xiangqi-broadcast-dpxq-pairings.js';
 import {
   pollXiangqiBroadcastSourceOnce,
   type XiangqiBroadcastSourceFetch,
@@ -343,6 +350,405 @@ definePersistenceTests('xiangqi broadcasts', () => {
     const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: fullBoard.tourSlug });
     const rekeyLog = logs.find((log) => log.kind === 'rekeyed');
     assert.equal(rekeyLog?.payload.retiredBoardId, legacy.id);
+  });
+
+  test('a dpxq tour with no records yet polls quietly; an unreachable list still logs', async () => {
+    // Every event looks like this before its first round: the list page
+    // answers and is empty. It is not a fault, so no sync log every poll.
+    const slug = 'asian-2026-men-empty';
+    const sourceUrl = `mistboard-discover://dpxq-tour?tour=12526&tourSlug=${slug}`;
+    await importXiangqiBroadcastPack({
+      tour: {
+        schema: 'mistboard.xiangqi.broadcast.v1',
+        slug,
+        name: '2026年第21届亚洲象棋个人锦标赛 男子组',
+        sourceUrl,
+      },
+      rounds: [],
+      boards: [],
+    });
+    const poll = (pages: Record<string, string>) =>
+      pollXiangqiBroadcastSourceOnce({
+        sourceUrl,
+        tourSlug: slug,
+        fetchImpl: multiSourceFetch(pages),
+        sourcePolicy: { allowedHosts: ['www.dpxq.com'], allowLocal: false },
+      });
+
+    const empty = await poll({
+      'http://www.dpxq.com/hldcg/movelist_12526.html': '<table></table>',
+    });
+    assert.equal(empty.ok, false);
+    assert.match(empty.ok ? '' : empty.message, /lists no game records yet/);
+    assert.deepEqual(await listXiangqiBroadcastSyncLogs({ tourSlug: slug }), []);
+
+    const unreachable = await poll({});
+    assert.equal(unreachable.ok, false);
+    const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: slug });
+    assert.equal(logs.length, 1);
+    assert.match(logs[0]?.message ?? '', /unreachable/);
+  });
+
+  test('a dpxq tour poll files every paired table; a record extends its results-only board', async () => {
+    // The 2024 Asian individual championship, men (dpxq tour 9503): round
+    // pages for rounds 1 and 7, the game list's records for those rounds.
+    const dpxqFixture = (name: string) =>
+      readFileSync(fileURLToPath(new URL(`../fixtures/dpxq/${name}`, import.meta.url)), 'utf-8');
+    const slug = 'asian-2024-men';
+    const sourceUrl = `mistboard-discover://dpxq-tour?tour=9503&tourSlug=${slug}`;
+    await importXiangqiBroadcastPack({
+      tour: {
+        schema: 'mistboard.xiangqi.broadcast.v1',
+        slug,
+        name: '2024年第20届亚洲象棋个人锦标赛 男子组',
+        sourceUrl,
+      },
+      rounds: [],
+      boards: [],
+    });
+    const pages: Record<string, string> = {
+      'http://www.dpxq.com/hldcg/round_9503.html': dpxqFixture(
+        'round_9503-asian-2024-men-r07.html',
+      ),
+      'http://www.dpxq.com/hldcg/round_9503_1.html': dpxqFixture(
+        'round_9503_1-asian-2024-men-r01.html',
+      ),
+      'http://www.dpxq.com/hldcg/movelist_9503.html': dpxqFixture(
+        'movelist_9503-asian-2024-men-r01-r07.html',
+      ),
+    };
+    for (const id of ['128342', '128343', '131470', '131471']) {
+      pages[`http://www.dpxq.com/hldcg/search/view_m_${id}.html`] = dpxqFixture(
+        `view_m_${id}-asian-2024.html`,
+      );
+    }
+    const fetched: string[] = [];
+    const pageFetch = multiSourceFetch(pages);
+    const poll = () =>
+      pollXiangqiBroadcastSourceOnce({
+        sourceUrl,
+        tourSlug: slug,
+        fetchImpl: async (url, init) => {
+          fetched.push(url);
+          return await pageFetch(url, init);
+        },
+        sourcePolicy: { allowedHosts: ['www.dpxq.com'], allowLocal: false },
+      });
+
+    const first = await poll();
+    assert.equal(first.ok, true, first.ok ? '' : first.message);
+    const rounds = await listXiangqiBroadcastRounds(slug);
+    assert.deepEqual(
+      rounds.map((round) => round.id),
+      [`${slug}-r01`, `${slug}-r07`],
+    );
+    const r01 = await listXiangqiBroadcastBoards(`${slug}-r01`);
+    const r07 = await listXiangqiBroadcastBoards(`${slug}-r07`);
+    assert.equal(r01.length, 15, 'every table of round 1');
+    assert.equal(r07.length, 16, 'every table of round 7, the final as its two games');
+    const withMoves = [...r01, ...r07].filter((board) => board.moves.length > 0);
+    assert.deepEqual(withMoves.map((board) => board.sourceBoardId).sort(), [
+      'r01t13',
+      'r01t15',
+      'r07t01g1',
+      'r07t01g2',
+    ]);
+    const t02 = r07.find((board) => board.sourceBoardId === 'r07t02')!;
+    assert.equal(t02.status, 'complete');
+    assert.equal(t02.result, '1-0');
+    assert.equal(t02.red.name, '郑彦隆');
+    assert.equal(t02.red.federation, '中国香港');
+    assert.equal(t02.sourceUrl, 'http://www.dpxq.com/hldcg/round_9503_7.html');
+    // The records did not rename the tour after their event tag.
+    assert.equal(
+      (await getXiangqiBroadcastTour(slug))?.name,
+      '2024年第20届亚洲象棋个人锦标赛 男子组',
+    );
+
+    // Nothing changed: quiet. Round 1 is settled (every board finished) and
+    // is not fetched again; rounds 2-6 hold nothing yet and still are.
+    fetched.length = 0;
+    const second = await poll();
+    assert.equal(second.ok, false);
+    assert.equal(second.ok ? '' : second.message, 'every listed board is already imported');
+    const roundPages = fetched.filter((url) => url.includes('round_'));
+    assert.equal(roundPages[0], 'http://www.dpxq.com/hldcg/round_9503.html');
+    assert.equal(roundPages.includes('http://www.dpxq.com/hldcg/round_9503_1.html'), false);
+    assert.equal(roundPages.length, 6);
+    assert.equal(
+      fetched.some((url) => url.includes('view_m_')),
+      false,
+      'records are final',
+    );
+    assert.equal((await listXiangqiBroadcastBoards(`${slug}-r07`)).length, 16);
+
+    // The games database lists games, not results.
+    const listed = await queryCompletedXiangqiBroadcastBoards({ event: '亚洲' });
+    assert.equal(listed.total, 4);
+
+    // A record filed under the pairing's id extends the results-only board.
+    const moves = withMoves.find((board) => board.sourceBoardId === 'r01t13')!.moves;
+    const extended = await applyXiangqiBroadcastBoardUpdate({
+      ...t02,
+      moves: moves.slice(0, 6),
+      sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_1.html',
+    });
+    assert.equal(extended.ok ? extended.status : extended.kind, 'extended');
+
+    // A record that arrives under its own id retires the results-only twin.
+    const t03 = r07.find((board) => board.sourceBoardId === 'r07t03')!;
+    const twin = await applyXiangqiBroadcastBoardUpdate({
+      ...t03,
+      id: `${slug}-${slug}-r07-bunmatched`,
+      sourceBoardId: 'bunmatched',
+      moves: moves.slice(0, 4),
+      sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_2.html',
+    });
+    assert.equal(twin.ok ? twin.status : twin.kind, 'created');
+    const after = (await listXiangqiBroadcastBoards(`${slug}-r07`)).map((board) => board.id);
+    assert.equal(after.includes(t03.id), false, 'results-only twin retired');
+    assert.equal(after.length, 16);
+  });
+
+  test('a table aggregate stored before its per-game rows is retired when they land', async () => {
+    // The 2026 Asian championship, men, round 7 table 1: dpxq first listed the
+    // playoff as one aggregate row, a poll stored it as r07t01, and the
+    // per-game rows landed beside it; standings scored it as a fourth game.
+    // Replayed on the 2024 final: poll 1 reads the round page before its
+    // per-game rows and records exist, poll 2 reads it after.
+    const dpxqFixture = (name: string) =>
+      readFileSync(fileURLToPath(new URL(`../fixtures/dpxq/${name}`, import.meta.url)), 'utf-8');
+    const slug = 'asian-2024-men-playoff';
+    const sourceUrl = `mistboard-discover://dpxq-tour?tour=9503&tourSlug=${slug}`;
+    await importXiangqiBroadcastPack({
+      tour: {
+        schema: 'mistboard.xiangqi.broadcast.v1',
+        slug,
+        name: '2024年第20届亚洲象棋个人锦标赛 男子组',
+        sourceUrl,
+      },
+      rounds: [],
+      boards: [],
+    });
+    const full: Record<string, string> = {
+      'http://www.dpxq.com/hldcg/round_9503.html': dpxqFixture(
+        'round_9503-asian-2024-men-r07.html',
+      ),
+      'http://www.dpxq.com/hldcg/round_9503_1.html': dpxqFixture(
+        'round_9503_1-asian-2024-men-r01.html',
+      ),
+      'http://www.dpxq.com/hldcg/movelist_9503.html': dpxqFixture(
+        'movelist_9503-asian-2024-men-r01-r07.html',
+      ),
+    };
+    for (const id of ['128342', '128343', '131470', '131471']) {
+      full[`http://www.dpxq.com/hldcg/search/view_m_${id}.html`] = dpxqFixture(
+        `view_m_${id}-asian-2024.html`,
+      );
+    }
+    const dropLines = (html: string, pattern: RegExp) =>
+      html
+        .split('\n')
+        .filter((line) => !pattern.test(line))
+        .join('\n');
+    const early = {
+      ...full,
+      'http://www.dpxq.com/hldcg/round_9503.html': dropLines(
+        full['http://www.dpxq.com/hldcg/round_9503.html']!,
+        /class="duojun"/,
+      ),
+      'http://www.dpxq.com/hldcg/movelist_9503.html': dropLines(
+        full['http://www.dpxq.com/hldcg/movelist_9503.html']!,
+        /第07轮/,
+      ),
+    };
+    const poll = (pages: Record<string, string>) =>
+      pollXiangqiBroadcastSourceOnce({
+        sourceUrl,
+        tourSlug: slug,
+        fetchImpl: multiSourceFetch(pages),
+        sourcePolicy: { allowedHosts: ['www.dpxq.com'], allowLocal: false },
+      });
+    const r07Ids = async () =>
+      (await listXiangqiBroadcastBoards(`${slug}-r07`)).map((board) => board.sourceBoardId).sort();
+
+    const first = await poll(early);
+    assert.equal(first.ok, true, first.ok ? '' : first.message);
+    assert.equal((await r07Ids()).includes('r07t01'), true, 'the aggregate stored as a board');
+
+    const second = await poll(full);
+    assert.equal(second.ok, true, second.ok ? '' : second.message);
+    const ids = await r07Ids();
+    assert.equal(ids.includes('r07t01'), false, 'the aggregate is retired');
+    assert.deepEqual(
+      ids.filter((id) => id.startsWith('r07t01')),
+      ['r07t01g1', 'r07t01g2'],
+    );
+    assert.equal(ids.length, 16);
+    if (second.ok) {
+      assert.deepEqual(
+        second.updates.flatMap((u) => (u.ok && u.status === 'retired' ? [u.boardId] : [])),
+        [`${slug}-${slug}-r07-r07t01`],
+      );
+    }
+    const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: slug });
+    assert.equal(logs.filter((log) => log.kind === 'superseded').length, 1);
+
+    // Retired once: the next poll has nothing to do.
+    const third = await poll(full);
+    assert.equal(third.ok ? 'ok' : third.message, 'every listed board is already imported');
+  });
+
+  test('a team league round stored by table alone is re-filed by match, the old boards retired', async () => {
+    // The 2026 women's league (dpxq 12776) round 1: 19 games in five matches,
+    // no records. Keyed by round and table, prod held six boards, each the
+    // last match's game at that table. Replayed: the six as stored, then a
+    // poll that keys by match.
+    const dpxqFixture = (name: string) =>
+      readFileSync(fileURLToPath(new URL(`../fixtures/dpxq/${name}`, import.meta.url)), 'utf-8');
+    const slug = 'womens-league-2026';
+    const sourceUrl = `mistboard-discover://dpxq-tour?tour=12776&tourSlug=${slug}`;
+    const roundPage = dpxqFixture('round_12776_1-womens-league-2026-r01.html');
+    const roundId = `${slug}-r01`;
+    const parsed = parseDpxqRoundPage(roundPage)!;
+    // The old key: the last pairing read at each table wins.
+    const byTable = new Map<number, (typeof parsed.pairings)[number]>();
+    for (const pairing of parsed.pairings) byTable.set(pairing.table, pairing);
+    const stale = [...byTable.values()].map(({ match, matchName, order, ...pairing }) =>
+      dpxqPairingBoard({
+        tourSlug: slug,
+        roundId,
+        pairing,
+        sourceUrl: 'http://www.dpxq.com/hldcg/round_12776_1.html',
+      }),
+    );
+    assert.equal(stale.length, 6);
+    await importXiangqiBroadcastPack({
+      tour: {
+        schema: 'mistboard.xiangqi.broadcast.v1',
+        slug,
+        name: '2026年全国象棋女子甲级联赛',
+        sourceUrl,
+      },
+      rounds: [
+        {
+          schema: 'mistboard.xiangqi.broadcast.v1',
+          id: roundId,
+          tourSlug: slug,
+          name: 'Round 1',
+          sourceUrl: 'http://www.dpxq.com/hldcg/round_12776_1.html',
+        },
+      ],
+      boards: stale,
+    });
+    const page1Only = roundPage.replace(/最新对阵<\/a>\(\d+\)/, '最新对阵</a>(1)');
+    const poll = () =>
+      pollXiangqiBroadcastSourceOnce({
+        sourceUrl,
+        tourSlug: slug,
+        fetchImpl: multiSourceFetch({
+          'http://www.dpxq.com/hldcg/round_12776.html': page1Only,
+          'http://www.dpxq.com/hldcg/round_12776_1.html': page1Only,
+          'http://www.dpxq.com/hldcg/movelist_12776.html': '<html><body></body></html>',
+        }),
+        sourcePolicy: { allowedHosts: ['www.dpxq.com'], allowLocal: false },
+      });
+
+    const first = await poll();
+    assert.equal(first.ok, true, first.ok ? '' : first.message);
+    const boards = await listXiangqiBroadcastBoards(roundId);
+    const ids = boards.map((board) => board.sourceBoardId);
+    assert.equal(boards.length, 19, 'every game of the round, the six table-keyed boards retired');
+    assert.equal(
+      ids.some((id) => /^r01t/.test(id)),
+      false,
+    );
+    const tangDan = boards.find((board) => board.red.name === '唐丹')!;
+    assert.equal(tangDan.sourceBoardId, 'r01m03t01');
+    assert.equal(tangDan.result, '1-0');
+    assert.equal(tangDan.details?.match, '北京棋院-浙江泰顺队');
+    const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: slug });
+    assert.equal(logs.filter((log) => log.kind === 'superseded').length, 6);
+
+    const second = await poll();
+    assert.equal(second.ok ? 'ok' : second.message, 'every listed board is already imported');
+  });
+
+  test('the same league as prod held it: latest round paired by team only, round 1 settled', async () => {
+    // Prod after 2026-10-03: dpxq's latest round page was round 10, paired by
+    // team with no individual table, and round 1's six collided boards were all
+    // complete, so the round counted as settled. Every poll answered "lists no
+    // game records yet" and the six boards stayed until 10-10.
+    const dpxqFixture = (name: string) =>
+      readFileSync(fileURLToPath(new URL(`../fixtures/dpxq/${name}`, import.meta.url)), 'utf-8');
+    const slug = 'womens-league-2026-prod';
+    const sourceUrl = `mistboard-discover://dpxq-tour?tour=12776&tourSlug=${slug}`;
+    const roundOnePage = dpxqFixture('round_12776_1-womens-league-2026-r01.html');
+    const parsed = parseDpxqRoundPage(roundOnePage)!;
+    const byTable = new Map<number, (typeof parsed.pairings)[number]>();
+    for (const pairing of parsed.pairings) byTable.set(pairing.table, pairing);
+    const stale = [...byTable.values()].map(({ match, matchName, order, ...pairing }) =>
+      dpxqPairingBoard({
+        tourSlug: slug,
+        roundId: `${slug}-r01`,
+        pairing,
+        sourceUrl: 'http://www.dpxq.com/hldcg/round_12776_1.html',
+      }),
+    );
+    await importXiangqiBroadcastPack({
+      tour: {
+        schema: 'mistboard.xiangqi.broadcast.v1',
+        slug,
+        name: '2026年全国象棋女子甲级联赛',
+        sourceUrl,
+      },
+      rounds: [1, 2].map((n) => ({
+        schema: 'mistboard.xiangqi.broadcast.v1' as const,
+        id: `${slug}-r0${n}`,
+        tourSlug: slug,
+        name: `Round ${n}`,
+      })),
+      boards: stale,
+    });
+    const poll = () =>
+      pollXiangqiBroadcastSourceOnce({
+        sourceUrl,
+        tourSlug: slug,
+        fetchImpl: multiSourceFetch({
+          'http://www.dpxq.com/hldcg/round_12776.html': dpxqFixture(
+            'round_12776-womens-league-2026-latest-r10.html',
+          ),
+          'http://www.dpxq.com/hldcg/round_12776_1.html': roundOnePage,
+          'http://www.dpxq.com/hldcg/round_12776_2.html': dpxqFixture(
+            'round_12776_2-womens-league-2026-r02.html',
+          ),
+          'http://www.dpxq.com/hldcg/movelist_12776.html': '<html><body></body></html>',
+        }),
+        sourcePolicy: { allowedHosts: ['www.dpxq.com'], allowLocal: false },
+      });
+    const ids = async (round: number) =>
+      (await listXiangqiBroadcastBoards(`${slug}-r0${round}`)).map((b) => b.sourceBoardId);
+
+    // Round 2 lands keyed by match; round 1 is still settled for this pass.
+    const first = await poll();
+    assert.equal(first.ok, true, first.ok ? '' : first.message);
+    assert.equal((await ids(2)).length, 16);
+    assert.ok((await ids(2)).every((id) => /^r02m\d+t\d+$/.test(id)));
+
+    // The tour is now keyed by match, so round 1 is read again and re-filed.
+    const second = await poll();
+    assert.equal(second.ok, true, second.ok ? '' : second.message);
+    const roundOne = await ids(1);
+    assert.equal(roundOne.length, 19);
+    assert.equal(
+      roundOne.some((id) => /^r01t/.test(id)),
+      false,
+    );
+    const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: slug });
+    assert.equal(logs.filter((log) => log.kind === 'superseded').length, 6);
+
+    const third = await poll();
+    assert.equal(third.ok ? 'ok' : third.message, 'every listed board is already imported');
   });
 
   test('explicit correction can replace a non-prefix legal board update', async () => {
@@ -718,6 +1124,15 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(found.boards[0]?.blackNameEn, 'Zheng Weitong');
     assert.equal(found.boards[0]?.roundNameEn, 'Round 1');
     assert.match(found.boards[0]?.tourNameEn ?? '', /Cup$/);
+
+    // The /games search walks this lane page by page, so an offset skips rows
+    // while the total still counts the whole filtered set.
+    const skipped = await queryCompletedXiangqiBroadcastBoards({
+      player: 'Wang Tianyi',
+      offset: 1,
+    });
+    assert.deepEqual(skipped.boards, []);
+    assert.equal(skipped.total, 1);
   });
 
   test('translate-backfill recomputes cached English names without re-importing', async () => {
@@ -834,41 +1249,266 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(logs[0]?.payload.manifestUrl, 'https://fixture.invalid/manifest.json');
   });
 
-  test('tour poll schedules persist and list only enabled tours', async () => {
+  test('tour poll modes persist, default to auto, and off drops a tour from the schedule', async () => {
     const pack = await fixturePack();
     await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
 
-    assert.deepEqual(await listXiangqiBroadcastScheduledTours(), []);
+    // A new tour is auto: listed for the scheduler, which applies its window.
+    const listed = await listXiangqiBroadcastScheduledTours();
+    const createdAt = listed[0]?.createdAt;
+    assert.equal(typeof createdAt, 'string');
+    assert.deepEqual(listed, [
+      {
+        slug: '2025-wxc-sample',
+        sourceUrl: 'https://www.wxf-xiangqi.org/',
+        pollMode: 'auto',
+        pollIntervalMs: 30_000,
+        startsAt: '2025-09-21T00:00:00.000Z',
+        endsAt: '2025-09-27T00:00:00.000Z',
+        createdAt,
+        hasBoards: false,
+      },
+    ]);
+    // Its first board is what ends the scheduler's late tail (#493).
+    await importXiangqiBroadcastPack(pack);
+    assert.equal((await listXiangqiBroadcastScheduledTours())[0]?.hasBoards, true);
+    // The 2025 fixture event is long past, but the tour was seeded just now:
+    // a backfill polls for the tail counted from its creation.
+    const fresh = await getXiangqiBroadcastTour('2025-wxc-sample');
+    assert.equal(fresh?.pollMode, 'auto');
+    assert.equal(fresh?.pollEnabled, true);
+    // Seeded more than the tail ago, auto stops polling it.
+    await getPool().query(
+      `UPDATE xiangqi_broadcast_tours SET created_at = now() - interval '8 days' WHERE slug = $1`,
+      ['2025-wxc-sample'],
+    );
+    assert.equal((await getXiangqiBroadcastTour('2025-wxc-sample'))?.pollEnabled, false);
 
     const updated = await setXiangqiBroadcastTourSchedule('2025-wxc-sample', {
-      pollEnabled: true,
+      pollMode: 'on',
       pollIntervalMs: 15_000,
     });
-    assert.deepEqual(updated, {
-      slug: '2025-wxc-sample',
-      sourceUrl: 'https://www.wxf-xiangqi.org/',
-      pollEnabled: true,
-      pollIntervalMs: 15_000,
-    });
-
-    const scheduled = await listXiangqiBroadcastScheduledTours();
-    assert.equal(scheduled.length, 1);
-    assert.equal(scheduled[0]?.slug, '2025-wxc-sample');
+    assert.equal(updated?.pollMode, 'on');
+    assert.equal(updated?.pollIntervalMs, 15_000);
 
     const tour = await getXiangqiBroadcastTour('2025-wxc-sample');
+    assert.equal(tour?.pollMode, 'on');
     assert.equal(tour?.pollEnabled, true);
     assert.equal(tour?.pollIntervalMs, 15_000);
+    // The retired column follows `on` so a rollback reads a sane value.
+    const legacy = await getPool().query<{ poll_enabled: boolean }>(
+      `SELECT poll_enabled FROM xiangqi_broadcast_tours WHERE slug = $1`,
+      ['2025-wxc-sample'],
+    );
+    assert.equal(legacy.rows[0]?.poll_enabled, true);
 
     // Re-importing the pack must not clobber the operator's schedule.
     await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
-    assert.equal((await getXiangqiBroadcastTour('2025-wxc-sample'))?.pollEnabled, true);
+    assert.equal((await getXiangqiBroadcastTour('2025-wxc-sample'))?.pollMode, 'on');
+
+    await setXiangqiBroadcastTourSchedule('2025-wxc-sample', {
+      pollMode: 'off',
+      pollIntervalMs: 15_000,
+    });
+    assert.deepEqual(await listXiangqiBroadcastScheduledTours(), []);
 
     assert.equal(
       await setXiangqiBroadcastTourSchedule('missing-tour', {
-        pollEnabled: true,
+        pollMode: 'on',
         pollIntervalMs: 15_000,
       }),
       null,
+    );
+  });
+
+  test('migration 150 keeps polling tours on only inside their window, the rest auto', async () => {
+    const sql = readFileSync(
+      fileURLToPath(new URL('../migrations/150_xiangqi_broadcast_poll_mode.sql', import.meta.url)),
+      'utf-8',
+    );
+    const update = sql.slice(sql.indexOf('UPDATE xiangqi_broadcast_tours'));
+    const pack = await fixturePack();
+    const {
+      startsAt: _startsAt,
+      endsAt: _endsAt,
+      ...undatedTour
+    } = pack.tour as XiangqiBroadcastTour;
+    const hour = 60 * 60_000;
+    const now = Date.now();
+    const iso = (offsetMs: number) => new Date(now + offsetMs).toISOString();
+    const cases: Array<{
+      slug: string;
+      enabled: boolean;
+      startsAt: string | null;
+      endsAt: string | null;
+      expected: 'auto' | 'on';
+    }> = [
+      // Polling and live: stays on.
+      {
+        slug: 'm-live',
+        enabled: true,
+        startsAt: iso(-24 * hour),
+        endsAt: iso(24 * hour),
+        expected: 'on',
+      },
+      // Polling, ended a day ago (inside the 7-day tail): stays on.
+      {
+        slug: 'm-tail',
+        enabled: true,
+        startsAt: iso(-72 * hour),
+        endsAt: iso(-24 * hour),
+        expected: 'on',
+      },
+      // Polling, starts in 6 h (inside the 12 h lead): stays on.
+      {
+        slug: 'm-lead',
+        enabled: true,
+        startsAt: iso(6 * hour),
+        endsAt: iso(48 * hour),
+        expected: 'on',
+      },
+      // Polling with no dates: auto would never poll it, so on.
+      { slug: 'm-undated', enabled: true, startsAt: null, endsAt: null, expected: 'on' },
+      // Polling, ended a week ago: auto (the window is closed either way).
+      {
+        slug: 'm-old',
+        enabled: true,
+        startsAt: iso(-240 * hour),
+        endsAt: iso(-168 * hour),
+        expected: 'auto',
+      },
+      // Polling, a week away: auto (it opens by itself).
+      {
+        slug: 'm-soon',
+        enabled: true,
+        startsAt: iso(168 * hour),
+        endsAt: iso(240 * hour),
+        expected: 'auto',
+      },
+      // Off and upcoming: auto, so it turns on by itself.
+      {
+        slug: 'm-off-soon',
+        enabled: false,
+        startsAt: iso(168 * hour),
+        endsAt: iso(240 * hour),
+        expected: 'auto',
+      },
+      // Off and live: auto, which polls it now.
+      {
+        slug: 'm-off-live',
+        enabled: false,
+        startsAt: iso(-24 * hour),
+        endsAt: iso(24 * hour),
+        expected: 'auto',
+      },
+    ];
+    for (const entry of cases) {
+      await importXiangqiBroadcastPack({
+        tour: {
+          ...undatedTour,
+          slug: entry.slug,
+          ...(entry.startsAt ? { startsAt: entry.startsAt } : {}),
+          ...(entry.endsAt ? { endsAt: entry.endsAt } : {}),
+        },
+        rounds: [],
+        boards: [],
+      });
+      await getPool().query(
+        `UPDATE xiangqi_broadcast_tours
+            SET poll_enabled = $2, poll_mode = 'auto', starts_at = $3, ends_at = $4
+          WHERE slug = $1`,
+        [entry.slug, entry.enabled, entry.startsAt, entry.endsAt],
+      );
+    }
+    await getPool().query(update);
+    const { rows } = await getPool().query<{ slug: string; poll_mode: string }>(
+      `SELECT slug, poll_mode FROM xiangqi_broadcast_tours WHERE slug LIKE 'm-%' ORDER BY slug`,
+    );
+    const actual = Object.fromEntries(rows.map((row) => [row.slug, row.poll_mode]));
+    for (const entry of cases) {
+      assert.equal(actual[entry.slug], entry.expected, entry.slug);
+    }
+  });
+
+  test('the analysis sweep finds finished boards without analysis, and a move change drops a stored one', async () => {
+    const pack = await fixturePack();
+    const fullBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;
+    await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
+    const partial: XiangqiBroadcastBoard = {
+      ...fullBoard,
+      status: 'complete',
+      moves: fullBoard.moves.slice(0, 2),
+    };
+    await applyXiangqiBroadcastBoardUpdate(partial);
+    const query = { engineId: 'engine@1', depth: 12, maxPlies: 300, skip: [] as string[] };
+
+    assert.equal((await nextUnanalysedXiangqiBroadcastBoard(query))?.id, fullBoard.id);
+    assert.equal(
+      await nextUnanalysedXiangqiBroadcastBoard({ ...query, skip: [fullBoard.id] }),
+      null,
+    );
+    // The top events go first, and a board outside them is still found.
+    assert.equal(
+      (await nextUnanalysedXiangqiBroadcastBoard({ ...query, preferTourSlugs: ['another-tour'] }))
+        ?.id,
+      fullBoard.id,
+    );
+    assert.equal(
+      (
+        await nextUnanalysedXiangqiBroadcastBoard({
+          ...query,
+          preferTourSlugs: [fullBoard.tourSlug],
+        })
+      )?.id,
+      fullBoard.id,
+    );
+
+    await saveGameAnalysis(`broadcast:${fullBoard.id}`, 'engine@1', 12, [
+      { ply: 0, cp: 20, mate: null, best: null },
+      { ply: 2, cp: -310, mate: null, best: null },
+    ]);
+    assert.equal(await nextUnanalysedXiangqiBroadcastBoard(query), null);
+    assert.deepEqual(
+      await listXiangqiBroadcastFinalEvals({
+        boardIds: [fullBoard.id],
+        engineId: 'engine@1',
+        depth: 12,
+      }),
+      new Map([[fullBoard.id, { cp: -310, mate: null }]]),
+    );
+
+    // A late upload extends the record: the evals no longer describe it.
+    const extended = await applyXiangqiBroadcastBoardUpdate({
+      ...partial,
+      moves: fullBoard.moves.slice(0, 4),
+    });
+    assert.equal(extended.ok ? extended.status : extended.kind, 'extended');
+    assert.equal(await getGameAnalysis(`broadcast:${fullBoard.id}`, 'engine@1', 12), null);
+    assert.equal((await nextUnanalysedXiangqiBroadcastBoard(query))?.id, fullBoard.id);
+  });
+
+  test('an end date only ever moves later, in the column and the payload together', async () => {
+    const pack = await fixturePack();
+    await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
+
+    // The fixture ends 2025-09-27; dpxq extending a league to its next stage.
+    assert.equal(
+      await extendXiangqiBroadcastTourEndsAt('2025-wxc-sample', '2025-11-30T23:59:59+08:00'),
+      true,
+    );
+    const moved = await getXiangqiBroadcastTour('2025-wxc-sample');
+    assert.equal(moved?.endsAt, '2025-11-30T23:59:59+08:00');
+    const [listed] = await listXiangqiBroadcastTourSourcesOn(getPool());
+    assert.equal(listed?.endsAt, '2025-11-30T15:59:59.000Z');
+
+    // Earlier is refused, so a row dpxq shortened by mistake cannot cut polling.
+    assert.equal(
+      await extendXiangqiBroadcastTourEndsAt('2025-wxc-sample', '2025-10-01T23:59:59+08:00'),
+      false,
+    );
+    assert.equal(
+      (await getXiangqiBroadcastTour('2025-wxc-sample'))?.endsAt,
+      '2025-11-30T23:59:59+08:00',
     );
   });
 

@@ -29,7 +29,6 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BANQI_ENGINE_VERSION, BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
 import { type EngineConfig, knownEngineIds, loadEngine } from './engine-registry.js';
-import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
 import { JUNGLE_FLIP_ENGINE_VERSION, JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
 
 type TierSyncCase = {
@@ -44,18 +43,6 @@ type TierSyncCase = {
 // list (see the exemptions below) a row here would only echo the generator, so
 // only the hand-written entries are covered.
 const TIER_SYNC_CASES: readonly TierSyncCase[] = [
-  ...JIEQI_PLAYABLE_ENGINES.map(
-    (tier): TierSyncCase => ({
-      family: 'jieqi',
-      engineId: tier.id,
-      config: {
-        kind: 'pikafish',
-        movetime_ms: tier.movetimeMs,
-        // Absent on the top tier, which runs uncapped depth.
-        ...(tier.depth === undefined ? {} : { depth: tier.depth }),
-      },
-    }),
-  ),
   ...BANQI_PLAYABLE_ENGINES.map(
     (tier): TierSyncCase => ({
       family: 'banqi',
@@ -128,10 +115,12 @@ const TIER_BACKED_CONFIG_KINDS: ReadonlySet<EngineConfig['kind']> = new Set([
   'pikafish-xiangqi',
   'banqi-uci',
   'jungle-flip-uci',
+  'jungle-uci',
+  'katago-gtp',
 ]);
 
 // Families the registry GENERATES from their tier list (Object.fromEntries over
-// XIANGQI_FSF_PLAYABLE_ENGINES / XIANGQI_ALL_ENGINE_TIERS). Drift is
+// XIANGQI_FSF_PLAYABLE_ENGINES / XIANGQI_ALL_ENGINE_TIERS / JIEQI_ALL_ENGINE_TIERS). Drift is
 // structurally impossible there, and a case above would restate the generator
 // rather than check it.
 const GENERATED_FROM_TIER_TABLE: ReadonlySet<string> = new Set([
@@ -139,7 +128,16 @@ const GENERATED_FROM_TIER_TABLE: ReadonlySet<string> = new Set([
   'fairy-stockfish-fortress-xiangqi',
   'fairy-stockfish-duck-xiangqi',
   'fairy-stockfish-atomic-xiangqi',
+  'fairy-stockfish-crazyhouse-xiangqi',
   'pikafish-xiangqi',
+  // The jieqi ladder (2026-09-29), retired tiers included, and the AB-JChess top
+  // slot above it (2026-10), generated from the same table.
+  'pikafish-jieqi',
+  'ab-jchess',
+  // The jungle Rust tiers (#488), generated from JUNGLE_RUST_TIER_LIST, and the
+  // KataGo top seat above them (2026-10), from KATAGO_JUNGLE_TIER_LIST.
+  'misty-jungle',
+  'katago-jungle',
 ]);
 
 // Retired entries kept only so old game records still resolve through

@@ -14,7 +14,8 @@
 //                                   and the PGN reader speak ("h2e2" for h3-e3).
 //   flip        "@<square>"         a face-down tile turned over in place (banqi,
 //                                   flip jungle; the event has from === to). The
-//                                   identity it reveals is not part of the move.
+//                                   identity it reveals rides beside the move in
+//                                   `revealed` (hidden-piece-record.ts).
 //   drop        "<ROLE>@<square>"   a piece placed from hand (fortress xiangqi),
 //                                   role letter as in the fortress puzzle labels.
 //   duck turn   "<from><to>@<duck>" both halves of a Duck Xiangqi turn, e.g.
@@ -23,14 +24,21 @@
 //                                   board move alone.
 // `san` is null unless the tenant has a real notation for the ply (xiangqi
 // WXF). Clocks-after ride under `<color>_clock_ms_after` for each tenant color.
+// Hidden-piece tenants (jieqi, banqi, jungle-flip) add `revealed` and
+// `captured_hidden` to a ply that turned a piece over or captured a face-down
+// one, and `deal_fen` to a game that had a real deal (#484).
 
 import {
   exportFormatsForVariant,
   type FortressXiangqiMove,
-  fortressXiangqiPuzzleMoveLabel,
+  fortressXiangqiMoveToFsfUci,
   type GameEvent,
   type GameExportFormat,
-  isFortressXiangqiDropMove,
+  type HiddenPieceIdentity,
+  type HiddenPieceReveal,
+  type HiddenPieceVariant,
+  maybeGameSpecForId,
+  writeHiddenPiecePgn,
 } from '@mistboard/game';
 import { buildGamePgn, buildGamePublicationJson } from './game-export.js';
 import {
@@ -47,6 +55,7 @@ import {
   SCHEMA_VERSION,
   SITE_NAME,
   timeControlFromSummary,
+  withMovetime,
 } from './game-export-shared.js';
 import type { RecentEveGameRecord } from './persistence.js';
 import { postgamePlayers } from './routes/lib.js';
@@ -58,8 +67,13 @@ import {
   type VariantTenantRegistration,
   variantTenantForRoomId,
 } from './variant-tenant/registry.js';
-import { isTenantEventLog, replayTenantEvents } from './variant-tenant/runtime.js';
+import {
+  applyTenantEvent,
+  isTenantEventLog,
+  replayTenantEvents,
+} from './variant-tenant/runtime.js';
 import type {
+  TenantGameOrigin,
   TenantGameStateLike,
   TenantRoomEvent,
   VariantTenant,
@@ -89,11 +103,10 @@ export function duckXiangqiExportUci(move: { from: string; to: string; duckTo: s
   return move.duckTo === null ? boardMoveUci(move) : `${boardMoveUci(move)}${flipUci(move.duckTo)}`;
 }
 
-// Fortress: drops reuse the puzzle label ("R@d4"); board moves drop the dash.
+// Fortress: the engine's own UCI, drops as "R@d4" and board moves without the
+// dash (the same strings the retired puzzle label produced).
 export function fortressXiangqiExportUci(move: FortressXiangqiMove): string {
-  return isFortressXiangqiDropMove(move)
-    ? fortressXiangqiPuzzleMoveLabel(move)
-    : boardMoveUci(move);
+  return fortressXiangqiMoveToFsfUci(move);
 }
 
 // --- registration binding ------------------------------------------------------
@@ -106,9 +119,48 @@ export type TenantExportOptions<M, State> = {
   san?: (moves: readonly M[]) => readonly (string | null)[];
   // Flip variants: read the ink the first-mover seat bound, off the final state.
   firstMoverInk?: (state: State) => string | null;
+  // Hidden-identity variants: squares per color still holding a piece whose
+  // identity the game never determined (see TenantExportGame.neverRevealed).
+  neverRevealed?: (state: State) => Record<string, string[]> | null;
   // Tenants with an honest movetext notation bind the PGN writer here.
   writePgn?: (moves: readonly M[]) => NonNullable<TenantExportGame['writePgn']>;
+  // Hidden-piece tenants (jieqi, banqi, jungle-flip): how a ply's reveals read
+  // off the position before it, and the start as the variant's dealt FEN. The
+  // binding then writes the reveals into every ply, the deal when it is real,
+  // and the hidden-piece PGN (hidden-piece-record.ts).
+  hiddenPieces?: {
+    variant: HiddenPieceVariant;
+    reveal: (before: State, move: M) => HiddenPieceReveal;
+    dealFen: (start: State) => string;
+  };
 };
+
+// A game's deal is real when the room was dealt by this site: a room-created
+// `setup` and no import `origin`. An imported match's referee drew each
+// identity when the piece was turned over, so the deal stored for it fills the
+// never-revealed squares with a completion nobody played; it is never exported.
+function exportedDealFen<State>(
+  created: { setup?: unknown; origin?: unknown } | undefined,
+  start: State,
+  dealFen: (start: State) => string,
+): string | null {
+  if (!created || created.setup === undefined || created.origin) return null;
+  const fen = dealFen(start);
+  // `?` marks an identity the source never determined (jieqi-fen.ts). A site
+  // deal never has one; refuse rather than export a partial deal.
+  return fen.includes('?') ? null : fen;
+}
+
+function revealFields(reveal: HiddenPieceReveal | null): {
+  revealed?: HiddenPieceIdentity;
+  capturedHidden?: HiddenPieceIdentity;
+} {
+  if (!reveal) return {};
+  return {
+    ...(reveal.revealed ? { revealed: reveal.revealed } : {}),
+    ...(reveal.capturedHidden ? { capturedHidden: reveal.capturedHidden } : {}),
+  };
+}
 
 // Build a registration's export capability from its tenant. Validation and
 // replay are the tenant's own (isTenantEventLog + replayTenantEvents, exactly
@@ -138,20 +190,58 @@ export function tenantExportBinding<
       );
       const moves = moveEvents.map((event) => event.move);
       const labels = options.san ? options.san(moves) : null;
+      // Hidden-piece tenants read each ply's reveals off the position before it,
+      // replaying the log exactly as replayTenantEvents does.
+      const hidden = options.hiddenPieces;
+      const reveals: (HiddenPieceReveal | null)[] = [];
+      let start: State | null = null;
+      if (hidden) {
+        let step = replayTenantEvents(tenant, events.slice(0, 1));
+        start = step.state;
+        for (const event of events.slice(1)) {
+          if (event.type === 'move-played') reveals.push(hidden.reveal(step.state, event.move));
+          step = applyTenantEvent(tenant, step, event);
+        }
+      }
+      const created = events[0]?.type === 'room-created' ? events[0] : undefined;
+      const dealFen = hidden && start ? exportedDealFen(created, start, hidden.dealFen) : null;
       const plies: TenantExportPly[] = moveEvents.map((event, index) => ({
         ply: index + 1,
         mover: event.color,
         uci: options.uci(event.move),
         san: labels?.[index] ?? null,
         clockMsAfter: event.clock ? { ...event.clock.remainingMs } : null,
+        ...revealFields(reveals[index] ?? null),
       }));
+      const hiddenPgn: TenantExportGame['writePgn'] | undefined = hidden
+        ? (tags, result) =>
+            writeHiddenPiecePgn({
+              variant: hidden.variant,
+              tags,
+              result,
+              dealFen,
+              plies: plies.map((ply) => ({
+                uci: ply.uci,
+                revealed: ply.revealed ?? null,
+                captured_hidden: ply.capturedHidden ?? null,
+              })),
+            })
+        : undefined;
+      const writePgn = options.writePgn ? options.writePgn(moves) : hiddenPgn;
       return {
         colors: tenant.colors,
         plies,
         ...(options.firstMoverInk
           ? { firstMoverInk: options.firstMoverInk(projection.state) }
           : {}),
-        ...(options.writePgn ? { writePgn: options.writePgn(moves) } : {}),
+        ...(events[0]?.type === 'room-created' && events[0].origin
+          ? { origin: events[0].origin }
+          : {}),
+        ...(options.neverRevealed
+          ? { neverRevealed: options.neverRevealed(projection.state) }
+          : {}),
+        ...(dealFen ? { dealFen } : {}),
+        ...(writePgn ? { writePgn } : {}),
       };
     },
   };
@@ -164,6 +254,10 @@ export type TenantPublicationPly = {
   mover: string;
   uci: string;
   san: string | null;
+  // Hidden-piece variants only, and only on a ply that did it: the piece this
+  // move turned over, and the face-down piece it captured (jieqi).
+  revealed?: HiddenPieceIdentity;
+  captured_hidden?: HiddenPieceIdentity;
 } & Record<`${string}_clock_ms_after`, number | null>;
 
 // Same top-level shape as the chess GamePublication; `players` and the per-ply
@@ -185,6 +279,22 @@ export type TenantGamePublication = {
   // Flip variants only: which ink the first-mover seat played (results are
   // recorded by seat).
   first_mover_ink?: string | null;
+  // Hidden-piece variants only, when the game had a real deal (every site game,
+  // never an imported one): the start as the variant's dealt FEN, the public FEN
+  // plus a sixth field naming each face-down piece in board order.
+  deal_fen?: string;
+  // Imported games only (a game played elsewhere, e.g. an off-site engine match):
+  //   event: the event it was played in;
+  //   credit: the credited work, its authors (as written) and link;
+  //   never_revealed: per color, the squares of pieces still face-down at the
+  //     end whose identity the source NEVER determined (it dealt at reveal
+  //     time). No export states an identity for them; they are unknown, not
+  //     hidden. Absent when every identity was determined.
+  origin?: {
+    event: string;
+    credit: NonNullable<TenantGameOrigin['credit']> | null;
+    never_revealed?: Record<string, string[]>;
+  };
   plies: TenantPublicationPly[];
 };
 
@@ -220,9 +330,28 @@ function publicationPlies(game: TenantExportGame): TenantPublicationPly[] {
       mover: ply.mover,
       uci: ply.uci,
       san: ply.san,
+      ...(ply.revealed ? { revealed: { ...ply.revealed } } : {}),
+      ...(ply.capturedHidden ? { captured_hidden: { ...ply.capturedHidden } } : {}),
       ...clocks,
     } as TenantPublicationPly;
   });
+}
+
+function publicationOrigin(game: TenantExportGame): NonNullable<TenantGamePublication['origin']> {
+  const origin = game.origin!;
+  const neverRevealed = game.neverRevealed;
+  const hasUnknown = neverRevealed && Object.values(neverRevealed).some((s) => s.length > 0);
+  return {
+    event: origin.event,
+    credit: origin.credit ?? null,
+    ...(hasUnknown
+      ? {
+          never_revealed: Object.fromEntries(
+            Object.entries(neverRevealed).map(([color, squares]) => [color, [...squares]]),
+          ),
+        }
+      : {}),
+  };
 }
 
 export function buildTenantGamePublicationJson(
@@ -244,7 +373,7 @@ export function buildTenantGamePublicationJson(
     },
     variant: summary.variant,
     mode: summary.mode,
-    time_control: timeControlFromSummary(summary),
+    time_control: withMovetime(timeControlFromSummary(summary), game.origin?.movetimeMs),
     players,
     started_at: summary.startedAt.toISOString(),
     ended_at: summary.endedAt.toISOString(),
@@ -253,17 +382,19 @@ export function buildTenantGamePublicationJson(
     ply_count: game.plies.length,
     license: LICENSE,
     ...(game.firstMoverInk !== undefined ? { first_mover_ink: game.firstMoverInk } : {}),
+    ...(game.dealFen ? { deal_fen: game.dealFen } : {}),
+    ...(game.origin ? { origin: publicationOrigin(game) } : {}),
     plies: publicationPlies(game),
   };
 }
 
 // --- PGN -----------------------------------------------------------------------
 
-function pgnVariantName(variant: string): string {
-  if (variant === 'xiangqi') return 'Xiangqi';
-  if (variant === 'dark-xiangqi') return 'Fog Xiangqi';
-  if (variant === 'atomic-xiangqi') return 'Atomic Xiangqi';
-  return variant;
+// The PGN Variant tag is the variant's public name from the game-spec registry,
+// so a newly launched variant's tag cannot be missed (a hand-kept list fell back
+// to the raw id for four of them). The raw id only for a string that is no spec.
+export function pgnVariantName(variant: string): string {
+  return maybeGameSpecForId(variant)?.publicName ?? variant;
 }
 
 // PGN player tags are the color words capitalized: Red / Black.
@@ -293,7 +424,7 @@ export function buildTenantGamePgn(
     Result: result,
     Variant: pgnVariantName(summary.variant),
     MistboardVariant: summary.variant,
-    TimeControl: timeControlFromSummary(summary).label,
+    TimeControl: withMovetime(timeControlFromSummary(summary), game.origin?.movetimeMs).label,
     Termination: pgnStandardTermination(termination),
     MistboardTermination: termination,
     License: LICENSE,

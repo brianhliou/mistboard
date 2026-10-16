@@ -1,4 +1,5 @@
 import { JUNGLE_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import {
   isJunglePlayableEngineClientId,
   JUNGLE_PLAYABLE_ENGINE_ID,
@@ -13,14 +14,15 @@ import {
 // move-order seat — 'red' = first mover (and the red pieces), 'black' = second.
 export type JungleCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createJungleRoom(
     timeControl?: RoomTimeControl,
     creatorPreference?: 'red' | 'black' | 'random',
     engine?: { engineId: string; seat: 'red' | 'black'; botId?: string },
+    rated?: boolean,
   ): Promise<
-    | { ok: true; room: { id: string; gameSpecId: string } }
+    | { ok: true; room: { id: string; gameSpecId: string; rated: boolean } }
     | { ok: false; error: 'jungle_disabled' | 'persistence_failure' | 'room_id_collision' }
   >;
 };
@@ -42,13 +44,14 @@ const jungleRoute = createTenantRoomsRoute<
     // PLAYABLE, not "is an engine": this is a create-time allowlist, so it must reject
     // the retired level-1/level-3 ids that the tenant runtime still recognises for
     // finished games. See server-jungle-engine.ts for why the two predicates differ.
+    // The KataGo top seat passes only where its binary, net and config resolve.
     isEngineClientId: isJunglePlayableEngineClientId,
     seats: JUNGLE_SEATS,
   },
-  // PvP + PvE (the in-process Misty Jungle engine). Rated is still unsupported.
-  rated: { kind: 'reject-as-surface' },
-  createRoom: (ctx, { timeControl, preferredColor, engine }) =>
-    ctx.createJungleRoom(timeControl, preferredColor, engine),
+  // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):
+  // PvP may be rated wherever Find opponent is; PvE never is.
+  createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
+    ctx.createJungleRoom(timeControl, preferredColor, engine, rated),
 });
 
 export const requestsJungle = jungleRoute.matchesCreateRequest;

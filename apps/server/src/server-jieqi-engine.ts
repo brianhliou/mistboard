@@ -29,10 +29,12 @@ import {
   resolveValidatedEngineMove,
 } from './engine-move-guard.js';
 import { budgetForMove } from './engine-time-budget.js';
+import { guardJieqiRuleEnding, type JieqiDrawGuardResult } from './jieqi-draw-guard.js';
 import {
   isJieqiEngineClientId,
   JIEQI_ENGINE_VERSION,
   jieqiEngineTierFor,
+  jieqiEngineVersion,
   jieqiLiveEngineMove,
   pikafishJieqiWarmSessionStats,
 } from './jieqi-engine.js';
@@ -86,6 +88,10 @@ function bothSeatsFilled(room: JieqiEngineRoom): boolean {
 
 function engineToMove(room: JieqiEngineRoom, seat: JieqiColor): boolean {
   const status = room.projection.state.status;
+  // A paused room is not the engine's turn: a search that lands (or fails)
+  // after the shutdown pause must neither move nor resign. The resume
+  // reschedules the engine, which searches again on the restored room.
+  if (room.projection.paused) return false;
   return status.type === 'playing' && status.turn === seat && bothSeatsFilled(room);
 }
 
@@ -109,18 +115,30 @@ function jieqiEngineRepWindow(
   moves: string[];
   gameMoves: string[];
 } {
-  const events = room.events as readonly JieqiEvent[];
+  return jieqiEngineWindowFromEvents(room.events as readonly JieqiEvent[], seat, () =>
+    jieqiStateToPikafishFen(room.projection.state, { viewer: seat }),
+  );
+}
+
+/** The same window from an event log alone: the live room and the EvE loop (the
+ *  jieqi EvE adapter) share it, so a rated bot sees exactly what a served one does.
+ *  `fallbackFen` covers a log without its room-created event. */
+export function jieqiEngineWindowFromEvents(
+  events: readonly JieqiEvent[],
+  seat: JieqiColor,
+  fallbackFen: () => string,
+): {
+  fen: string;
+  moves: string[];
+  gameMoves: string[];
+} {
   const gameMoves: string[] = [];
   for (const event of events) {
     if (event.type === 'move-played') gameMoves.push(jieqiMoveToPikafishUci(event.move));
   }
   const created = events[0];
   if (created?.type !== 'room-created') {
-    return {
-      fen: jieqiStateToPikafishFen(room.projection.state, { viewer: seat }),
-      moves: [],
-      gameMoves,
-    };
+    return { fen: fallbackFen(), moves: [], gameMoves };
   }
   let proj = replayTenantEvents(jieqiTenant, [created]);
   let startState = proj.state;
@@ -172,8 +190,50 @@ export function scheduleJieqiEngineMove(ctx: JieqiEngineContext, room: JieqiEngi
 export type JieqiEngineMoveProvider = (
   engineId: string,
   fen: string,
-  opts: { movetimeMs?: number; moves?: readonly string[]; newGame?: boolean },
+  opts: {
+    movetimeMs?: number;
+    budgetAfterWait?: (waitedMs: number) => number;
+    moves?: readonly string[];
+    newGame?: boolean;
+    /** The draw guard's re-search: restrict the root to these moves. */
+    searchMoves?: readonly string[];
+  },
 ) => Promise<UciEval>;
+
+/**
+ * One live move's think time: the shared clock allocator under the tier's movetime.
+ * `waitedMs` is time the move already spent queued for an engine slot, which came off
+ * the bot's clock, so it is taken off the remaining clock before allocating.
+ */
+export function jieqiLiveMoveBudgetMs(input: {
+  ceilingMs: number;
+  remainingMs: number | null;
+  incrementMs: number;
+  waitedMs?: number;
+}): number {
+  const { ceilingMs, remainingMs, incrementMs, waitedMs = 0 } = input;
+  return budgetForMove({
+    remainingMs: remainingMs === null ? null : Math.max(0, remainingMs - waitedMs),
+    incrementMs,
+    ceilingMs,
+    reserveMs: CLOCK_SAFETY_MS,
+    floorMs: MIN_MOVETIME_MS,
+  }).computeBudgetMs;
+}
+
+/**
+ * The draw guard's re-search budget: half of what the clock allocator would give a
+ * fresh move once the first search's time is off the clock. Half, because the
+ * re-search is the second search on one turn and runs over a narrowed root.
+ */
+export function jieqiDrawGuardBudgetMs(input: {
+  ceilingMs: number;
+  remainingMs: number | null;
+  incrementMs: number;
+  waitedMs: number;
+}): number {
+  return Math.max(MIN_MOVETIME_MS, Math.floor(jieqiLiveMoveBudgetMs(input) / 2));
+}
 
 export async function playJieqiEngineMoveIfReady(
   ctx: JieqiEngineContext,
@@ -197,20 +257,18 @@ export async function playJieqiEngineMoveIfReady(
   // tier's search DEPTH (set inside jieqiLiveEngineMove); this movetime is the
   // latency ceiling + time-pressure guard. Existing ceiling preserved —
   // behavior-neutral for untimed play; adds increment awareness + graceful shrink.
-  const { computeBudgetMs: movetimeMs } = budgetForMove({
-    remainingMs,
-    incrementMs,
-    ceilingMs: tier.movetimeMs,
-    reserveMs: CLOCK_SAFETY_MS,
-    floorMs: MIN_MOVETIME_MS,
-  });
+  const budgetInput = { ceilingMs: tier.movetimeMs, remainingMs, incrementMs };
+  const movetimeMs = jieqiLiveMoveBudgetMs(budgetInput);
+  const budgetAfterWait = (waitedMs: number) => jieqiLiveMoveBudgetMs({ ...budgetInput, waitedMs });
 
   // Engine-move boundary contract (see engine-move-guard.ts): bounded retries,
   // validate every output against the kernel, FAIL CLOSED (resign + page) rather
   // than silently substituting a threat-blind legal move.
   const startedAt = Date.now();
   const newGame = gameMoves.length <= 1;
+  const stateAtTurn = room.projection.state;
   let lastSearch: UciEval | null = null;
+  let guard: JieqiDrawGuardResult | null = null;
   const {
     chosen: validated,
     attempts,
@@ -218,9 +276,31 @@ export async function playJieqiEngineMoveIfReady(
   } = await resolveValidatedEngineMove<JieqiMove>({
     maxAttempts: ENGINE_MOVE_MAX_ATTEMPTS,
     requestMove: async () => {
-      const search = await moveProvider(engineId, fen, { movetimeMs, moves, newGame });
+      const search = await moveProvider(engineId, fen, {
+        movetimeMs,
+        budgetAfterWait,
+        moves,
+        newGame,
+      });
       lastSearch = search;
-      return search.best;
+      // The engines search under xiangqi's chase rule; ours draws a chase. Keep a
+      // bot that scores a win from stepping into a rule draw (jieqi-draw-guard.ts).
+      guard = await guardJieqiRuleEnding({
+        state: stateAtTurn,
+        search,
+        research: (searchMoves) => {
+          const elapsedMs = Date.now() - startedAt;
+          const budget = (waitedMs: number) =>
+            jieqiDrawGuardBudgetMs({ ...budgetInput, waitedMs: elapsedMs + waitedMs });
+          return moveProvider(engineId, fen, {
+            movetimeMs: budget(0),
+            budgetAfterWait: budget,
+            moves,
+            searchMoves,
+          });
+        },
+      });
+      return guard.best;
     },
     validate: (uci) => {
       const parsed = pikafishUciToJieqiMove(uci);
@@ -252,7 +332,7 @@ export async function playJieqiEngineMoveIfReady(
       variant: 'jieqi',
       roomId: room.id,
       engineId,
-      engineVersion: JIEQI_ENGINE_VERSION,
+      engineVersion: jieqiEngineVersion(engineId) ?? JIEQI_ENGINE_VERSION,
       movetimeMs,
       tier: { movetimeMs: tier.movetimeMs },
       ply: gameMoves.length,
@@ -284,6 +364,22 @@ export async function playJieqiEngineMoveIfReady(
   }
 
   reportEngineMoveOk();
+  // Assigned inside requestMove, which control-flow narrowing does not follow.
+  const drawGuard = guard as JieqiDrawGuardResult | null;
+  if (drawGuard?.reason) {
+    logger.info(
+      {
+        kind: 'jieqi_engine_draw_guard',
+        room_id: room.id,
+        engine_id: engineId,
+        ply: gameMoves.length,
+        reason: drawGuard.reason,
+        replaced: drawGuard.replaced,
+        detail: drawGuard.detail,
+      },
+      'Jieqi draw guard judged the engine move',
+    );
+  }
   logger.info(
     {
       kind: 'jieqi_engine_move_ok',
@@ -316,7 +412,7 @@ export async function playJieqiEngineMoveIfReady(
       variant: 'jieqi',
       roomId: room.id,
       engineId,
-      engineVersion: JIEQI_ENGINE_VERSION,
+      engineVersion: jieqiEngineVersion(engineId) ?? JIEQI_ENGINE_VERSION,
       seat,
       ply: gameMoves.length,
       budgetMs: movetimeMs,
@@ -326,12 +422,17 @@ export async function playJieqiEngineMoveIfReady(
         movetimeMs: tier.movetimeMs,
         ...(tier.depth === undefined ? {} : { depth: tier.depth }),
       },
+      // The engine's own search: with guard_replaced, `engine_move` is the move the
+      // guard turned down and `guard_detail` carries the re-search that replaced it.
       search: lastSearch,
       thinkTimeMs: Date.now() - startedAt,
       attempts,
       move: jieqiMoveToPikafishUci(validated),
       fen,
       legalCount: getJieqiLegalMoves(room.projection.state).length,
+      guardReplaced: drawGuard?.replaced ?? false,
+      guardReason: drawGuard?.reason ?? null,
+      guardDetail: drawGuard?.detail ?? null,
     }),
   );
   const seq = await ctx.appendEvent(room, event);

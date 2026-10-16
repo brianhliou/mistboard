@@ -1,4 +1,5 @@
 import { type RoomTimeControl, XIANGQI_SPEC_ID } from '@mistboard/game';
+import type { DrainCreate } from '../deploy-gate.js';
 import { isXiangqiEngineClientId, XIANGQI_DEFAULT_ENGINE_ID } from './../server-xiangqi-engine.js';
 import {
   createTenantRoomsRoute,
@@ -11,7 +12,7 @@ import {
 // stays casual.
 export type XiangqiCreateContext = {
   databaseRequired: boolean;
-  isDraining(): boolean;
+  refusesCreate(create?: DrainCreate): boolean;
   drainDeadlineMs(): number | null;
   createXiangqiRoom(
     timeControl?: RoomTimeControl,
@@ -41,7 +42,8 @@ const xiangqiRoute = createTenantRoomsRoute<
     isEngineClientId: isXiangqiEngineClientId,
     seats: XIANGQI_SEATS,
   },
-  rated: { kind: 'account-gated' },
+  // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):
+  // PvP may be rated wherever Find opponent is; PvE never is.
   createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
     ctx.createXiangqiRoom(timeControl, preferredColor, rated, engine),
 });

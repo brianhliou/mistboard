@@ -20,10 +20,12 @@ function candidate(
 ): DeadlineWarningCandidate {
   return {
     roomId,
+    gameSpecId: 'xiangqi',
     allowanceMs,
     dueAt: new Date(now.getTime() + remainingMs),
     recipientEmail: `${roomId}@example.com`,
     recipientUserId: `user-${roomId}`,
+    recipientLocale: null,
     opponentName: 'Opponent',
   };
 }

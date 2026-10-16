@@ -1,266 +1,846 @@
+/* /correspondence inbox (correspondence.ts). Boards, the misty tile, the
+   placeholder and the variant chip reuse the /games wall's classes from
+   current-games.css; everything here is the inbox's own layout. */
+
 .correspondence-shell {
-  max-width: 720px;
+  width: 100%;
+  /* The homepage's width (landing.css): the cards get the whole row now that
+     Start a game is a bar above them. The signed-out pitch keeps 1180px. */
+  max-width: 1360px;
   margin: 0 auto;
   padding: 28px 16px 64px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 28px;
+  box-sizing: border-box;
 }
 
 .correspondence-header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
 .correspondence-header h1 {
   margin: 0;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 400;
   color: var(--site-heading);
 }
 
 .correspondence-subtitle {
   margin: 0;
+  max-width: 62ch;
   color: var(--site-muted);
-  font-size: 14px;
+  font-size: 0.9rem;
 }
 
-.correspondence-group {
+/* Start a game, full width under the header; the card sections follow. */
+.correspondence-top {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.correspondence-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.correspondence-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* A display rule on the section would otherwise beat the hidden attribute. */
+.correspondence-section[hidden],
+.correspondence-empty[hidden] {
+  display: none;
+}
+
+.correspondence-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.correspondence-section-head h2,
+.correspondence-start h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.correspondence-count {
+  font-size: 0.82rem;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.correspondence-panel {
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+}
+
+.correspondence-quiet {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 0.88rem;
+}
+
+/* Recently finished: the profile's own game rows (account-profile.css), in one
+   bordered panel like the profile Games tab. */
+.correspondence-finished-list {
+  overflow: hidden;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+}
+
+.correspondence-finished-foot a {
+  color: var(--site-accent);
+}
+
+.correspondence-quiet-panel,
+.correspondence-empty p {
+  margin: 0;
+  padding: 16px;
+  color: var(--site-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* ---- Card grids (your seeks, your move, waiting, open seeks) --------------------
+   Every list is the site's game card (current-games.css .current-game-card);
+   these rules only size the grids and add the inbox's own lines. */
+
+.correspondence-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr));
+  gap: 14px;
+}
+
+.correspondence-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 0.8rem;
+  color: var(--site-muted);
+}
+
+/* Play your move sits above the card-wide link, like the seat's profile link. */
+.correspondence-card-play {
+  position: relative;
+  z-index: 2;
+  align-self: stretch;
+  min-height: 36px;
+}
+
+/* Under a day left: the site's warning tokens (amber), not the clock's red. */
+.correspondence-game-card[data-urgency="urgent"] .current-game-seat-clock.is-deadline,
+.correspondence-game-card[data-urgency="due"] .current-game-seat-clock.is-deadline {
+  background: var(--site-warning-bg);
+  color: var(--site-warning-text);
+  box-shadow: inset 0 0 0 1px var(--site-warning-border);
+}
+
+.correspondence-game-card[data-urgency="urgent"] .current-game-bar span,
+.correspondence-game-card[data-urgency="due"] .current-game-bar span {
+  background: var(--site-warning-border);
+}
+
+/* A seek card's button pair (your Copy link and Cancel, a challenge's Accept
+   and Decline): split the card's action row evenly. */
+.correspondence-own-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.correspondence-own-actions .correspondence-ghost {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+}
+
+.correspondence-own-target {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.correspondence-own-target-name {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.correspondence-row-error {
+  font-size: 0.78rem;
+  color: var(--site-warning-text);
+}
+
+.correspondence-row-error[hidden] {
+  display: none;
+}
+
+/* ---- Buttons ----------------------------------------------------------------------- */
+
+.correspondence-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--site-accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.correspondence-btn:hover {
+  filter: brightness(1.06);
+}
+
+.correspondence-btn:focus-visible,
+.correspondence-ghost:focus-visible,
+.correspondence-seg button:focus-visible {
+  outline: 2px solid var(--site-accent-strong);
+  outline-offset: 2px;
+}
+
+.correspondence-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.correspondence-ghost {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--site-border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--site-text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.correspondence-ghost:hover {
+  border-color: var(--site-accent);
+  color: var(--site-heading);
+}
+
+.correspondence-ghost.is-quiet {
+  color: var(--site-muted);
+  font-weight: 400;
+}
+
+.correspondence-ghost:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---- Start a game ------------------------------------------------------------------- */
+
+/* A bar: the heading, then the controls in one row on a desktop with Post seek
+   at its end, wrapping at medium widths; the helper line and the post status
+   sit under the row. A phone stacks it (max-width: 640px below). */
+.correspondence-start {
+  padding: 14px 18px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.correspondence-group-heading {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 700;
+.correspondence-start-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+}
+
+.correspondence-start-form > .correspondence-field {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+
+.correspondence-start-form > .correspondence-field:first-child {
+  flex: 1.4 1 200px;
+}
+
+.correspondence-start-form > .correspondence-btn {
+  flex: none;
+  align-self: flex-end;
+  min-height: 40px;
+}
+
+/* Under the row, whatever wrapped: shown after the button though the DOM keeps
+   them before it, so a phone (stacked, below) reads the hint before posting. */
+.correspondence-start-form > .correspondence-hint,
+.correspondence-start-form > .correspondence-form-status {
+  order: 1;
+  flex: 1 1 100%;
+}
+
+.correspondence-seg button {
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .correspondence-start-form {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .correspondence-start-form > .correspondence-field,
+  .correspondence-start-form > .correspondence-field:first-child {
+    flex: none;
+  }
+
+  .correspondence-start-form > .correspondence-hint,
+  .correspondence-start-form > .correspondence-form-status {
+    order: 0;
+    flex: none;
+  }
+
+  .correspondence-start-form > .correspondence-btn {
+    align-self: flex-start;
+  }
+
+  /* On a phone your games come first once you have any; the form follows,
+     as it did when it was a side column. With no games it stays on top. */
+  .correspondence-shell.has-games > .correspondence-top {
+    order: 1;
+  }
+}
+
+.correspondence-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.correspondence-field[hidden] {
+  display: none;
+}
+
+.correspondence-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
   color: var(--site-muted);
 }
 
-.correspondence-list {
+.correspondence-seg {
+  display: flex;
+  border: 1px solid var(--site-border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.correspondence-seg button {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.correspondence-seg button + button {
+  border-left: 1px solid var(--site-border);
+}
+
+.correspondence-seg button:hover {
+  color: var(--site-heading);
+}
+
+.correspondence-seg button.is-on {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  font-weight: 600;
+}
+
+.correspondence-input {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 7px;
+  background: var(--site-panel);
+  color: var(--site-text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.correspondence-select-wrap {
+  position: relative;
+  display: flex;
+}
+
+/* The native arrow differs per browser; one drawn chevron matches the
+   segmented rows beside it. */
+.correspondence-select-wrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 13px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--site-muted);
+  border-bottom: 1.5px solid var(--site-muted);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.correspondence-select {
+  flex: 1;
+  min-width: 0;
+  padding-right: 34px;
+  appearance: none;
+  -webkit-appearance: none;
+  color: var(--site-heading);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.correspondence-select:hover {
+  border-color: var(--site-accent-strong);
+}
+
+.correspondence-select:focus-visible {
+  outline: 2px solid var(--site-accent-strong);
+  outline-offset: 2px;
+}
+
+/* 16px keeps iOS from zooming the page when the picker opens. */
+@media (max-width: 640px) {
+  .correspondence-select {
+    font-size: 1rem;
+  }
+}
+
+.correspondence-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--site-muted);
+}
+
+.correspondence-form-status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--site-accent-strong);
+}
+
+.correspondence-form-status.is-error {
+  color: var(--site-warning-text);
+}
+
+.correspondence-form-status[hidden] {
+  display: none;
+}
+
+/* ---- Your own Fog Chess board (the seat's PlayerView) --------------------------- */
+
+.correspondence-seat-board {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.correspondence-seat-board svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Signed out: the pitch --------------------------------------------------------- */
+
+.correspondence-shell.is-signed-out {
+  max-width: 1180px;
+  gap: 48px;
+}
+
+.correspondence-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 32px 56px;
+  padding: 36px;
+  border: 1px solid var(--site-border);
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 90% at 0% 0%, var(--site-accent-soft) 0%, transparent 55%),
+    var(--site-panel);
+}
+
+.correspondence-hero-copy {
+  flex: 1 1 380px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.correspondence-eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--site-accent-strong);
+}
+
+.correspondence-hero-title {
+  margin: 0;
+  font-size: clamp(2.1rem, 5vw, 3.4rem);
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--site-heading);
+}
+
+.correspondence-hero-pitch {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 1.08rem;
+  line-height: 1.55;
+  color: var(--site-text);
+}
+
+.correspondence-signedout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.correspondence-signedout-actions .correspondence-btn,
+.correspondence-signedout-actions .correspondence-ghost {
+  min-height: 46px;
+  padding: 0 22px;
+  font-size: 0.95rem;
+}
+
+.correspondence-hero-facts {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.correspondence-row {
+.correspondence-hero-facts li {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--site-border);
+  color: var(--site-muted);
+  font-size: 0.82rem;
+}
+
+.correspondence-hero-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--site-muted);
+}
+
+.correspondence-hero-board {
+  flex: 0 1 340px;
+  min-width: 0;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.correspondence-hero-board-host {
+  aspect-ratio: 9 / 10;
+  border-radius: 10px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+
+.correspondence-static-board {
+  width: 100%;
+  height: 100%;
+}
+
+.correspondence-static-board svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.correspondence-hero-caption {
+  font-size: 0.82rem;
+  color: var(--site-muted);
+  text-align: center;
+}
+
+.correspondence-hero-caption a {
+  color: var(--site-link);
+  text-decoration: none;
+}
+
+.correspondence-hero-caption a:hover {
+  text-decoration: underline;
+}
+
+/* Every correspondence game in play, as a board grid like /games. */
+.correspondence-showcase-grid {
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius);
-  background: var(--site-surface);
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  gap: 18px;
+}
+
+.correspondence-showcase-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
   color: inherit;
   text-decoration: none;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease;
 }
 
-.correspondence-row:hover {
-  border-color: var(--site-border);
-  background: var(--site-surface-raised, var(--site-surface));
+.correspondence-showcase-card:hover,
+.correspondence-showcase-card:focus-visible {
+  border-color: var(--site-accent);
 }
 
-.correspondence-row.is-your-move {
-  border-color: #b6d6c8;
-  box-shadow: inset 3px 0 0 var(--site-accent);
-}
-
-.correspondence-opponent {
+.correspondence-showcase-names {
   font-weight: 600;
+  font-size: 0.9rem;
   color: var(--site-heading);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.correspondence-turn {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--site-muted);
-}
-
-.correspondence-row.is-your-move .correspondence-turn {
-  color: var(--site-accent);
-}
-
-.correspondence-deadline {
+.correspondence-showcase-due {
+  font-size: 0.8rem;
+  color: var(--site-accent-strong);
   font-variant-numeric: tabular-nums;
-  font-size: 13px;
-  color: var(--site-muted);
-  white-space: nowrap;
 }
 
-.correspondence-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 28px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius);
-  background: var(--site-surface);
-}
-
-.correspondence-empty h2 {
+.correspondence-seek-error {
   margin: 0;
-  font-size: 16px;
-  color: var(--site-heading);
+  font-size: 0.78rem;
 }
 
-.correspondence-empty p {
-  margin: 0;
-  color: var(--site-muted);
-  font-size: 14px;
-}
-
-.correspondence-cta {
-  display: inline-flex;
-  align-items: center;
-  margin-top: 8px;
-  padding: 8px 16px;
-  border-radius: var(--site-radius);
-  background: var(--site-accent);
-  color: #fff;
-  font-weight: 600;
-  font-size: 14px;
-  text-decoration: none;
-}
-
-.correspondence-cta:hover {
-  filter: brightness(1.05);
-}
-
-.correspondence-seekboard {
-  border-top: 1px solid var(--site-border-soft);
-  padding-top: 20px;
-}
-
-/* The CTA base was written for <a>; normalize it for the board's <button>s. */
-.correspondence-post-form button.correspondence-cta,
-.correspondence-seek-action {
-  margin-top: 0;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.correspondence-seek-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-/* "Post a game" is a secondary trigger, not a second green primary. */
-.correspondence-seek-toggle {
-  flex-shrink: 0;
-  padding: 6px 14px;
-  border-radius: var(--site-radius);
-  border: 1px solid var(--site-border-soft);
-  background: var(--site-surface);
-  color: var(--site-heading);
-  font-weight: 600;
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.correspondence-seek-toggle:hover {
-  border-color: var(--site-border);
-}
-
-.correspondence-seek-toggle.is-open {
-  border-color: var(--site-accent);
-  color: var(--site-accent);
-}
-
-.correspondence-post-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-/* `display: flex` above and the UA's `[hidden] { display: none }` have the same
-   specificity, so source order decided it and the form rendered even though the
-   script sets form.hidden = true. The "Post a game" toggle was inert and the
-   form was permanently expanded. Restate the hidden case after the display rule. */
-.correspondence-post-form[hidden] {
+.correspondence-seek-error[hidden] {
   display: none;
 }
 
-.correspondence-post-field {
-  padding: 8px 10px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius);
-  background: var(--site-surface);
-  color: inherit;
-  font-size: 14px;
-  font-family: inherit;
+/* How it works: three numbered steps. */
+.correspondence-how {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.correspondence-post-error {
+.correspondence-how h2,
+.correspondence-first h2 {
   margin: 0;
-  flex-basis: 100%;
-  color: var(--site-danger, #c0392b);
-  font-size: 13px;
-}
-
-.correspondence-seek-empty {
-  margin: 0;
-  padding: 16px 14px;
-  border: 1px dashed var(--site-border-soft);
-  border-radius: var(--site-radius);
-  color: var(--site-muted);
-  font-size: 14px;
-}
-
-.correspondence-seek-action {
-  padding: 6px 14px;
-  font-size: 13px;
-}
-
-.correspondence-seek-action.is-cancel {
-  background: transparent;
-  color: var(--site-muted);
-  border: 1px solid var(--site-border-soft);
-}
-
-.correspondence-seek-action.is-cancel:hover {
-  filter: none;
-  border-color: var(--site-border);
+  font-size: 1.35rem;
+  font-weight: 600;
   color: var(--site-heading);
 }
 
-.correspondence-seek-action:disabled {
-  opacity: 0.6;
-  cursor: default;
+.correspondence-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  gap: 16px;
 }
 
-.correspondence-friend-link {
+.correspondence-step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  background: var(--site-panel);
+}
+
+.correspondence-step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.correspondence-step h3 {
   margin: 4px 0 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.correspondence-step p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
   color: var(--site-muted);
-  font-size: 13px;
 }
 
-.correspondence-friend-link a {
-  color: var(--site-accent);
-  text-decoration: none;
+/* Nothing in play: an invitation, not an empty box. */
+.correspondence-first {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  padding: 24px;
 }
 
-.correspondence-friend-link a:hover {
-  text-decoration: underline;
+.correspondence-first > div {
+  flex: 1 1 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.correspondence-first p {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--site-muted);
+  line-height: 1.5;
+}
+
+.correspondence-first .correspondence-btn {
+  align-self: center;
+  min-height: 46px;
+  padding: 0 22px;
+}
+
+@media (max-width: 520px) {
+  .correspondence-header h1 {
+    font-size: 1.6rem;
+  }
+
+  /* Two cards a row on a phone in every list, like the signed-out showcase
+     wall: one full-width board per game made the page a long scroll. The
+     seat rows wrap and the buttons go full width so they still fit. */
+  .correspondence-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .correspondence-grid .current-game-card {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .correspondence-grid .current-game-seat {
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    min-height: 0;
+    font-size: 0.78rem;
+  }
+
+  .correspondence-grid .current-game-seat-clock.is-deadline {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+  }
+
+  .correspondence-grid .current-game-seat.is-empty-seat {
+    padding: 2px 4px;
+    text-align: center;
+  }
+
+  .correspondence-grid .current-game-seat-waiting {
+    font-size: 0.72rem;
+  }
+
+  .correspondence-grid .current-game-meta {
+    font-size: 0.72rem;
+  }
+
+  .correspondence-grid .correspondence-ghost {
+    min-height: 30px;
+    padding: 0 6px;
+    font-size: 0.75rem;
+  }
+
+  .correspondence-grid .correspondence-card-play {
+    min-height: 34px;
+    padding: 0 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  .correspondence-hero {
+    padding: 22px 18px;
+  }
+
+  .correspondence-signedout-actions > * {
+    flex: 1 1 140px;
+  }
+
+  .correspondence-signedout-actions .correspondence-btn,
+  .correspondence-signedout-actions .correspondence-ghost {
+    padding: 0 12px;
+    white-space: nowrap;
+  }
+
+  .correspondence-hero-board {
+    flex-basis: 100%;
+    max-width: 300px;
+  }
+
+  /* Two boards a row on a phone, so the wall stays a wall. */
+  .correspondence-showcase-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .correspondence-showcase-card {
+    padding: 8px;
+  }
+
+  .correspondence-btn,
+  .correspondence-start-form > .correspondence-btn {
+    align-self: stretch;
+  }
 }

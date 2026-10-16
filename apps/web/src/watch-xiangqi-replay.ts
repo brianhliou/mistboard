@@ -8,13 +8,19 @@ import './live-xiangqi.css';
 import {
   formatXiangqiMoves,
   type StandardXiangqiPlayerView,
+  standardXiangqiCheckedGeneral,
   type XiangqiMove,
 } from '@mistboard/game';
 import { renderXiangqiBoardSvg } from './live-xiangqi.js';
 import type { ReplayHandle } from './replay.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { watchXiangqiMoveSound } from './watch-move-sound.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
-import { animateXiangqiBoardMove } from './xiangqi-board.js';
+import {
+  animateXiangqiBoardMove,
+  type XiangqiBoardArrow,
+  type XiangqiBoardMarker,
+} from './xiangqi-board.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import {
   loadXiangqiPostgame,
@@ -50,9 +56,16 @@ export function mountXiangqiWatchReplay(
     viewAtPly: postgameViewAtPly,
     paneKind,
     // Open information: one truth board, no fog mask.
-    renderBoard: (view, orientation) => renderXiangqiBoardSvg(view, orientation),
+    renderBoard: (view, orientation, _key, overlay) =>
+      renderXiangqiBoardSvg(view, orientation, {
+        arrows: overlay.arrows as readonly XiangqiBoardArrow[],
+        markers: overlay.glyphs as readonly XiangqiBoardMarker[],
+        checkSquare: standardXiangqiCheckedGeneral(view.board, view.status),
+      }),
     // Standard Xiangqi's wire view carries no captured-pool, so there is nothing
     // to render in the per-pane capture strips.
+    // Spectator cue: the mover's own-move sound (watch-move-sound.ts).
+    moveSound: watchXiangqiMoveSound,
     fillCaptures: () => {},
     // The reader's notation, replayed from the opening (a live game always
     // starts there); an unreplayable line degrades to coordinates inside.

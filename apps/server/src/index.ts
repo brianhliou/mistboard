@@ -5,6 +5,7 @@ import pg from 'pg';
 import { WebSocketServer } from 'ws';
 // Populates the VariantTenant registry (one registration module per variant).
 import './variant-tenant/register-tenants.js';
+import { type BotVsBotScheduler, startBotVsBotScheduler } from './bot-vs-bot-scheduler.js';
 import { darkXiangqiRooms } from './dark-xiangqi-registration.js';
 import { MISTY_DARK_CHESS_ACTIVE_ENGINE_ID } from './first-party-bots.js';
 import { prewarmJieqiEngine } from './jieqi-engine.js';
@@ -35,6 +36,7 @@ import {
 } from './server-lifecycle.js';
 import {
   releaseLiveEngineReservation,
+  releaseLiveEngineSeatsOnShutdown,
   reserveHydratedLiveEngineSeat,
   reserveLiveEngineSeat,
 } from './server-live-engine-reservations.js';
@@ -56,7 +58,10 @@ import {
   registeredVariantTenants,
   setVariantTenantFallbackRoomLookup,
 } from './variant-tenant/registry.js';
-import { type BotVsBotScheduler, startBotVsBotScheduler } from './xiangqi-bot-vs-bot-scheduler.js';
+import {
+  type BroadcastAnalysisSweep,
+  startBroadcastAnalysisSweep,
+} from './xiangqi-broadcast-analysis.js';
 import {
   startXiangqiBroadcastScheduler,
   type XiangqiBroadcastScheduler,
@@ -215,6 +220,7 @@ let wss: WebSocketServer | null = null;
 let deadlineSweeper: TenantDeadlineSweeper | null = null;
 let patronExpirySweeper: PatronExpirySweeper | null = null;
 let studyCurator: StudyCurator | null = null;
+let broadcastAnalysisSweep: BroadcastAnalysisSweep | null = null;
 let broadcastScheduler: XiangqiBroadcastScheduler | null = null;
 let botVsBotScheduler: BotVsBotScheduler | null = null;
 let shuttingDown = false;
@@ -250,6 +256,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
     // Always started; the tick no-ops unless MISTBOARD_STUDY_CURATOR_ENABLED=true.
     studyCurator = startStudyCurator();
     broadcastScheduler = startXiangqiBroadcastScheduler();
+    broadcastAnalysisSweep = startBroadcastAnalysisSweep();
     // Always started; the tick no-ops unless MISTBOARD_BOT_VS_BOT_ENABLED=true,
     // so ops can flip generation on/off without a restart.
     botVsBotScheduler = startBotVsBotScheduler();
@@ -335,11 +342,54 @@ export function installShutdownHandlers(): void {
   }
 }
 
+// Pause every tenant's live games (xiangqi and the rest of the tenant stack),
+// the counterpart of pauseActiveRoomsOnShutdown for chess rooms. One failing
+// tenant must not stop the others from pausing.
+async function pauseTenantRoomsForShutdown(at: number): Promise<void> {
+  for (const registration of registeredVariantTenants()) {
+    try {
+      await registration.pauseOnShutdown(at);
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          kind: 'tenant_pause_on_shutdown_failure',
+          tenant: registration.kind,
+          error: (err as Error).message,
+          at: Date.now(),
+        }),
+      );
+    }
+  }
+}
+
+// Every room is paused and its timers cleared, so no engine turn starts after
+// this; hand the engine-worker seats back so the next server can reserve its
+// own (#567). Never throws: a failed release is logged and the TTL frees it.
+async function releaseEngineSeatsForShutdown(): Promise<void> {
+  const holders: Array<{ id: string; engineReservationId?: string | null }> = [...rooms.values()];
+  for (const registration of registeredVariantTenants()) {
+    holders.push(...registration.rooms.values());
+  }
+  const { released, failed } = await releaseLiveEngineSeatsOnShutdown(holders);
+  if (released + failed === 0) return;
+  console.log(
+    JSON.stringify({
+      level: failed > 0 ? 'warn' : 'info',
+      kind: 'shutdown_engine_seats_released',
+      released,
+      failed,
+      at: Date.now(),
+    }),
+  );
+}
+
 // Tear down for tests / hot restart. Mirrors shutdown() but does NOT call
 // process.exit, so the runner stays alive across tests.
 export async function stopServer(): Promise<void> {
   if (!server || !wss) return;
   await pauseActiveRoomsOnShutdown(rooms.values(), roomMgrCtx);
+  await pauseTenantRoomsForShutdown(Date.now());
   for (const room of rooms.values()) {
     clearRoomRuntimeTimers(room, { clearPendingVacates: true });
   }
@@ -348,12 +398,15 @@ export async function stopServer(): Promise<void> {
       registration.clearRuntimeTimers(room);
     }
   }
+  await releaseEngineSeatsForShutdown();
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();
   deadlineSweeper = null;
   patronExpirySweeper?.stop();
   studyCurator?.stop();
   studyCurator = null;
+  broadcastAnalysisSweep?.stop();
+  broadcastAnalysisSweep = null;
   patronExpirySweeper = null;
   broadcastScheduler?.stop();
   broadcastScheduler = null;
@@ -540,6 +593,7 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
   }, shutdownGraceMs);
   forceExit.unref();
 
+  await drainController.finalizeOnShutdown();
   await recordRoomLifecycleAuditSafe({
     kind: 'server_shutdown_requested',
     atMs: shutdownAt,
@@ -551,6 +605,7 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
   });
 
   await pauseActiveRoomsOnShutdown(rooms.values(), roomMgrCtx);
+  await pauseTenantRoomsForShutdown(Date.now());
 
   for (const room of rooms.values()) {
     clearRoomRuntimeTimers(room);
@@ -560,12 +615,15 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
       registration.clearRuntimeTimers(room);
     }
   }
+  await releaseEngineSeatsForShutdown();
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();
   deadlineSweeper = null;
   patronExpirySweeper?.stop();
   studyCurator?.stop();
   studyCurator = null;
+  broadcastAnalysisSweep?.stop();
+  broadcastAnalysisSweep = null;
   patronExpirySweeper = null;
   broadcastScheduler?.stop();
   broadcastScheduler = null;

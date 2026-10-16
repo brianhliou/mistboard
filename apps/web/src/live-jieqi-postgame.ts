@@ -19,17 +19,20 @@ import { reviewSeatProfiles } from './profile-link.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
-import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
+import {
+  buildReviewMeta,
+  type ReviewGameOrigin,
+  reviewOutcomeLine,
+} from './review/game-review-meta.js';
 import {
   fetchCachedJieqiDecisions,
-  type JieqiDecisionSummary,
+  jieqiDecisionOverlay,
   requestJieqiDecisions,
 } from './review/jieqi-decisions.js';
 import { mountJieqiReview } from './review/jieqi-review.js';
 import { recoverJieqiDeal } from './review/jieqi-tree-adapter.js';
-import { formatJieqiBestMove } from './review/move-advice.js';
+import { reviewMoveClocks } from './review/move-clocks.js';
 import { analysisHref, editorHref } from './review/position-links.js';
-import type { DecisionOverlay } from './review/tree-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 
@@ -70,6 +73,8 @@ export type JieqiPostgameResponse = {
       rating: number | null;
       kind: 'account' | 'guest' | 'engine';
     }>;
+    /** Imported games only: the event and the source's credit. */
+    origin?: ReviewGameOrigin;
   };
   state: {
     status: JieqiGameStatus;
@@ -83,7 +88,8 @@ export type JieqiPostgameResponse = {
     color?: JieqiColor;
     move?: JieqiMove;
     ply?: number;
-    winner?: JieqiColor;
+    // null on a game-adjudicated draw (imported lab games).
+    winner?: JieqiColor | null;
     reason?: string;
   }>;
   view: JieqiPlayerView;
@@ -181,7 +187,7 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
 
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
-    markerId: 'jieqi',
+    gameSpecId: JIEQI_SPEC_ID,
     variantName: variantDisplayLabel(JIEQI_SPEC_ID),
     game: postgame.game,
     status,
@@ -197,13 +203,21 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     details,
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
+    moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
     // Name the seats at the board. The meta card carries the pairing too, but it
     // sits below the fold on a normal viewport, so without these a reader sees a
     // board and has to scroll past it to learn who is playing.
     seatLabels: true,
     players: playerNames,
     playerProfiles: reviewSeatProfiles(gamePlayers),
-    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
+    // A link can name a move (?ply=34), as on the xiangqi review. Without it the
+    // page always opened on the final position and dropped the link's ply.
+    urlPly: true,
+    // An imported game's seats are off-site engines with no record here, so
+    // there is no crosstable to show.
+    ...(postgame.game.mode === 'imported'
+      ? {}
+      : crosstableConfig(postgame.game.roomId, postgame.game.players)),
     // Position hand-offs. The analysis link carries the DEALT fen (the exact
     // reveals of this game continue there); the editor link carries only the
     // public fen (it edits what is visible).
@@ -231,42 +245,12 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     decisions: {
       fetchCached: () =>
         fetchCachedJieqiDecisions(postgame.game.roomId).then((summary) =>
-          summary ? toDecisionOverlay(summary) : null,
+          summary ? jieqiDecisionOverlay(summary) : null,
         ),
       canRun: isLikelySignedIn(),
-      run: () => requestJieqiDecisions(postgame.game.roomId).then(toDecisionOverlay),
+      run: () => requestJieqiDecisions(postgame.game.roomId).then(jieqiDecisionOverlay),
     },
   });
-}
-
-// Adapt the jieqi-specific decomposition summary to the review's variant-agnostic overlay shape.
-function toDecisionOverlay(summary: JieqiDecisionSummary): DecisionOverlay {
-  return {
-    byPly: new Map(
-      [...summary.byPly].map(([ply, view]) => [
-        ply,
-        {
-          judgment: view.judgment,
-          accuracy: view.accuracy,
-          luck: view.luck,
-          playedRank: view.playedRank,
-          // Format at the variant seam: the review layer is variant-agnostic and must never
-          // see engine UCI. Same formatter the "… was best." advice line uses.
-          ...(view.candidates?.length
-            ? {
-                candidates: view.candidates.map((candidate) => ({
-                  label: formatJieqiBestMove(candidate.move),
-                  win: candidate.win,
-                  ...(candidate.played ? { played: true } : {}),
-                })),
-              }
-            : {}),
-        },
-      ]),
-    ),
-    red: { reveals: summary.red.reveals, decisionAccuracy: summary.red.decisionAccuracy },
-    black: { reveals: summary.black.reveals, decisionAccuracy: summary.black.decisionAccuracy },
-  };
 }
 
 // Exported for the watch-replay surface to reuse the per-ply view selection,

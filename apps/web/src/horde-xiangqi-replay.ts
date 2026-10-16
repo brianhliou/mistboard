@@ -22,10 +22,14 @@ import {
   XQ_BOARD_H,
   XQ_BOARD_W,
   xqBoardSvg,
+  xqCoord,
+  xqPoint,
   xqSvg,
   xqVisionDemoState,
 } from './articles/diagrams.js';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import './live-xiangqi.css';
+import { createStepCard } from './article-step-card.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 
@@ -109,135 +113,80 @@ export function mountHordeXiangqiReplay(
   const total = moves.length;
   const notes = spec.notes ?? {};
 
-  host.classList.add('xq-replay', 'stepper', 'notranslate');
+  host.classList.add('notranslate');
   host.setAttribute('translate', 'no');
-  host.tabIndex = 0;
 
-  const header = document.createElement('div');
-  header.className = 'xq-replay-header';
-  const headerPlayers = document.createElement('div');
-  headerPlayers.textContent = `${spec.red}${copy.firstRole} vs ${spec.black}${copy.secondRole}`;
-  const headerEvent = document.createElement('div');
-  headerEvent.className = 'xq-replay-header-event';
-  headerEvent.textContent = spec.event;
-  header.append(headerPlayers, headerEvent);
+  /**
+   * Glide the piece of a one-ply step after the repaint: forward slides the
+   * piece on `to` in from `from`, a back step slides the piece on `from` home.
+   * Offsets are differences of two diagram points, so the board's origin and
+   * layout (intersection or cell) cancel out.
+   */
+  function glide(board: HTMLElement, move: XiangqiMove, reverse: boolean): void {
+    const duration = pieceAnimationDurationMs();
+    if (duration <= 0) return;
+    const settle = reverse ? move.from : move.to;
+    const origin = reverse ? move.to : move.from;
+    const slot = board.querySelector(`[data-piece-square="${settle}"]`);
+    if (!slot) return;
+    const o = xqCoord(origin);
+    const t = xqCoord(settle);
+    const from = xqPoint(o.file, o.rank, perspective, 0, 0);
+    const to = xqPoint(t.file, t.rank, perspective, 0, 0);
+    glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  }
 
-  const frame = document.createElement('div');
-  frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq replay-pane';
-  const board = document.createElement('div');
-  board.className = 'dkx-replay-board';
-  frame.append(board);
-
-  const controls = document.createElement('div');
-  controls.className = 'stepper-controls';
-  const mkButton = (label: string, aria: string) => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'stepper-button';
-    b.setAttribute('aria-label', aria);
-    b.textContent = label;
-    return b;
-  };
-  const first = mkButton('⏮', copy.firstMove);
-  const prev = mkButton('←', copy.previousMove);
-  prev.classList.add('stepper-button-prev');
-  const counter = document.createElement('span');
-  counter.className = 'stepper-counter';
-  const next = mkButton('→', copy.nextMove);
-  next.classList.add('stepper-button-next');
-  const last = mkButton('⏭', copy.lastMove);
-  controls.append(first, prev, counter, next, last);
-
-  const slider = document.createElement('input');
-  slider.type = 'range';
-  slider.className = 'xq-replay-slider dkx-replay-slider';
-  slider.min = '0';
-  slider.max = String(total);
-  slider.step = '1';
-  slider.setAttribute('aria-label', copy.sliderLabel);
-
-  const narrative = document.createElement('div');
-  narrative.className = 'stepper-narrative';
-
-  host.append(header, frame, controls, slider, narrative);
-
-  let index = 0;
-  function render(): void {
+  function paint(board: HTMLElement, index: number, from: number | null): void {
     const state = states[index]!;
     const lastMove = index ? moves[index - 1]! : null;
     board.innerHTML = xqSvg(
       XQ_BOARD_W,
-      XQ_BOARD_H + 34,
+      // The board alone, no label band above it: the card's seat rows frame it.
+      XQ_BOARD_H + 8,
       xqBoardSvg({
         state: xqVisionDemoState(`horde-replay-${index}`, state.board),
         x: 0,
-        y: 0,
+        y: -24,
         label: '',
         perspective,
         arrows: lastMove ? [{ from: lastMove.from, to: lastMove.to }] : undefined,
         veteranSoldiers: spec.veteran,
       }),
     );
-    counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
-    first.disabled = index === 0;
-    prev.disabled = index === 0;
-    next.disabled = index === total;
-    last.disabled = index === total;
-    slider.value = String(index);
-    const note = notes[index];
-    if (index === 0) {
-      narrative.textContent = note ?? copy.intro;
-    } else if (index === total) {
-      narrative.textContent = note ? `${note} ${spec.resultText}` : spec.resultText;
-    } else {
-      const mover = index % 2 === 1 ? copy.first : copy.second;
-      const move = `${copy.movePrefix(Math.ceil(index / 2))} · ${mover}: ${lastMove!.from}-${lastMove!.to}`;
-      narrative.textContent = note ? `${move}. ${note}` : move;
+    if (from !== null && Math.abs(index - from) === 1) {
+      const forward = index > from;
+      const move = moves[(forward ? index : from) - 1];
+      if (move) glide(board, move, !forward);
     }
   }
 
-  function goto(target: number): void {
-    const clamped = Math.max(0, Math.min(total, target));
-    if (clamped !== index) {
-      index = clamped;
-      render();
-    }
-  }
-  const onFirst = () => goto(0);
-  const onPrev = () => goto(index - 1);
-  const onNext = () => goto(index + 1);
-  const onLast = () => goto(total);
-  const onSlider = () => goto(Number(slider.value));
-  first.addEventListener('click', onFirst);
-  prev.addEventListener('click', onPrev);
-  next.addEventListener('click', onNext);
-  last.addEventListener('click', onLast);
-  slider.addEventListener('input', onSlider);
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === 'ArrowLeft') {
-      onPrev();
-      e.preventDefault();
-    } else if (e.key === 'ArrowRight') {
-      onNext();
-      e.preventDefault();
-    }
-  };
-  host.addEventListener('keydown', onKey);
-  window.addEventListener(xiangqiAppearanceChangedEvent, render);
-
-  render();
+  const card = createStepCard(
+    { lang: options.lang, title: spec.event },
+    {
+      count: total + 1,
+      paint,
+      moves: moves.map((move, i) => ({
+        label: `${move.from}-${move.to}`,
+        ...(notes[i + 1] ? { note: notes[i + 1] } : {}),
+      })),
+      intro: notes[0] ?? copy.intro,
+      seats: {
+        first: { name: `${spec.red}${copy.firstRole}`, ink: 'red' },
+        second: { name: `${spec.black}${copy.secondRole}`, ink: 'black' },
+      },
+      result: spec.resultText,
+    },
+  );
+  host.replaceChildren(card.el);
+  const onAppearance = (): void => card.repaint();
+  window.addEventListener(xiangqiAppearanceChangedEvent, onAppearance);
 
   return {
     destroy(): void {
-      first.removeEventListener('click', onFirst);
-      prev.removeEventListener('click', onPrev);
-      next.removeEventListener('click', onNext);
-      last.removeEventListener('click', onLast);
-      slider.removeEventListener('input', onSlider);
-      host.removeEventListener('keydown', onKey);
-      window.removeEventListener(xiangqiAppearanceChangedEvent, render);
+      window.removeEventListener(xiangqiAppearanceChangedEvent, onAppearance);
+      card.destroy();
       host.replaceChildren();
-      host.classList.remove('xq-replay', 'stepper', 'notranslate');
+      host.classList.remove('notranslate');
       host.removeAttribute('translate');
     },
   };

@@ -8,6 +8,13 @@ import {
   type AtomicXiangqiEngineTier,
 } from '../atomic-xiangqi-fsf-engine.js';
 import {
+  CRAZYHOUSE_XIANGQI_FSF_ENGINE_VERSION,
+  CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES,
+  CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_ID,
+  CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_VERSION,
+  type CrazyhouseXiangqiEngineTier,
+} from '../crazyhouse-xiangqi-fsf-engine.js';
+import {
   DUCK_XIANGQI_FSF_ENGINE_REF,
   DUCK_XIANGQI_FSF_ENGINE_VERSION,
   DUCK_XIANGQI_PLAYABLE_ENGINES,
@@ -22,7 +29,17 @@ import {
   FORTRESS_XIANGQI_RANDOM_ENGINE_VERSION,
   type FortressXiangqiEngineTier,
 } from '../fortress-xiangqi-fsf-engine.js';
-import { JIEQI_ENGINE_VERSION } from '../jieqi-engine.js';
+import {
+  ABJCHESS_JIEQI_ENGINE_VERSION,
+  JIEQI_ALL_ENGINE_TIERS,
+  JIEQI_ENGINE_VERSION,
+  JIEQI_RANDOM_ENGINE_ID,
+  JIEQI_RANDOM_ENGINE_VERSION,
+  JIEQI_SKILL_MULTIPV,
+  type JieqiEngineTier,
+} from '../jieqi-engine.js';
+import { JUNGLE_RUST_ENGINE_VERSION, JUNGLE_RUST_TIER_LIST } from '../jungle-engine.js';
+import { KATAGO_JUNGLE_ENGINE_VERSION, KATAGO_JUNGLE_TIER_LIST } from '../jungle-katago-engine.js';
 import {
   XIANGQI_FSF_ENGINE_REF,
   XIANGQI_FSF_ENGINE_VERSION,
@@ -757,6 +774,37 @@ function atomicXiangqiFsfConfigHash(tier: AtomicXiangqiEngineTier): string {
   return `fsf-atomic-xiangqi-${ATOMIC_XIANGQI_FSF_ENGINE_VERSION}-${ATOMIC_XIANGQI_FSF_ENGINE_REF}-skill-${tier.skill}-nodes-${tier.nodes}`;
 }
 
+// Crazyhouse Xiangqi FSF ladder (crazyhouse-xiangqi-fsf-engine.ts). The stock
+// largeboard binary, so like fortress the hash names the build version (bumped
+// on any .ini or tier change), skill and node budget; there is no ref or patch.
+const CRAZYHOUSE_XIANGQI_FSF_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES.map((tier) => [
+    tier.id,
+    {
+      id: tier.id as EngineId,
+      engineId: 'fairy-stockfish-crazyhouse-xiangqi',
+      engineName: 'Fairy-Stockfish',
+      name: tier.name,
+      kind: 'container',
+      gameSpecId: 'crazyhouse-xiangqi',
+      configHash: crazyhouseXiangqiFsfConfigHash(tier),
+      playSignature: crazyhouseXiangqiFsfConfigHash(tier),
+      config: {
+        kind: 'fairy-stockfish',
+        skill: tier.skill,
+        movetime_ms: tier.movetimeMs,
+        nodes: tier.nodes,
+      },
+      notes:
+        'Fairy-Stockfish Crazyhouse Xiangqi rung: stochastic Skill Level ladder anchored by a node budget, classical eval on the stock build with the custom variants.ini.',
+    } satisfies EngineDefinition,
+  ]),
+);
+
+function crazyhouseXiangqiFsfConfigHash(tier: CrazyhouseXiangqiEngineTier): string {
+  return `fsf-crazyhouse-xiangqi-${CRAZYHOUSE_XIANGQI_FSF_ENGINE_VERSION}-skill-${tier.skill}-nodes-${tier.nodes}`;
+}
+
 // Random-mover floors for the other xiangqi-family ladders, same role as the
 // standard one below: 0-Elo anchor, EvE-only, never player-facing.
 const VARIANT_RANDOM_ENGINES: Record<string, EngineDefinition> = {
@@ -785,6 +833,19 @@ const VARIANT_RANDOM_ENGINES: Record<string, EngineDefinition> = {
     config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
     notes:
       'Uniformly-random legal-move Atomic Xiangqi bot. Calibration floor / 0-Elo anchor; EvE-only, not player-facing.',
+  } satisfies EngineDefinition,
+  [CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_ID]: {
+    id: CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-crazyhouse-xiangqi',
+    engineName: 'Random Mover',
+    name: 'Random Mover',
+    kind: 'builtin',
+    gameSpecId: 'crazyhouse-xiangqi',
+    configHash: `random-legal-crazyhouse-xiangqi-${CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_VERSION}`,
+    playSignature: `random-legal-crazyhouse-xiangqi-${CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_VERSION}`,
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes:
+      'Uniformly-random legal-move Crazyhouse Xiangqi bot. Calibration floor / 0-Elo anchor; EvE-only, not player-facing.',
   } satisfies EngineDefinition,
   [DUCK_XIANGQI_RANDOM_ENGINE_ID]: {
     id: DUCK_XIANGQI_RANDOM_ENGINE_ID,
@@ -858,55 +919,65 @@ function xiangqiFsfConfigHash(tier: XiangqiFsfEngineTier): string {
   return `fsf-xiangqi-${XIANGQI_FSF_ENGINE_VERSION}-${XIANGQI_FSF_ENGINE_REF}-skill-${tier.skill}-${search}${evalTag}`;
 }
 
-// Jieqi (揭棋) PvE engines — the Pikafish jieqi branch driven as a UCI subprocess
-// (Tier-B, server-jieqi-engine.ts). LAUNCH uses the no-net `jieqi_old` classical
-// build (clean GPL-3, no net-licensing problem). Unlike the FSF ladder, jieqi_old
-// has NO Skill Level / UCI_Elo knob (verified absent from its UCI options), so the
-// tiers vary by search DEPTH/time (like banqi-uci), not skill. The OPERATIVE search
-// params live in jieqi-engine.ts (JIEQI_ENGINE_TIERS); the `config` values here are
-// catalog metadata kept in sync. Not added to PROD_PLAYABLE_ENGINE_IDS yet — gated
-// until the vertical ships.
+// Jieqi (揭棋) PvE engines — the Pikafish jieqi_old build driven as a UCI subprocess
+// (Tier-B, server-jieqi-engine.ts). jieqi_old has NO Skill Level knob, so the ladder
+// applies Stockfish's pick rule to a MultiPV table server-side (pickSkillMove). Entries
+// derive from the tier table in jieqi-engine.ts so the catalog cannot drift from what
+// plays. Level 8 and the two retired tiers keep their historical hashes: their play is
+// unchanged, and a new hash would split their game history from their rating.
+function jieqiConfigHash(tier: JieqiEngineTier): string {
+  if (tier.engine === 'ab-jchess') {
+    return `ab-jchess-${ABJCHESS_JIEQI_ENGINE_VERSION}-movetime-${tier.movetimeMs}`;
+  }
+  if (tier.id === 'pikafish-jieqi-strongest') {
+    return `pikafish-jieqi-${JIEQI_ENGINE_VERSION}-movetime-4000`;
+  }
+  if (tier.retired) return tier.id;
+  return `pikafish-jieqi-${JIEQI_ENGINE_VERSION}-skill-${tier.skill}-depth-${tier.depth}-movetime-${tier.movetimeMs}`;
+}
+
 const JIEQI_ENGINES: Record<string, EngineDefinition> = {
-  'pikafish-jieqi-amateur': {
-    id: 'pikafish-jieqi-amateur',
-    engineId: 'pikafish-jieqi',
-    engineName: 'PikaJieQi',
-    name: 'PikaJieQi - Amateur',
-    kind: 'container',
+  ...Object.fromEntries(
+    JIEQI_ALL_ENGINE_TIERS.map((tier) => [
+      tier.id,
+      {
+        id: tier.id as EngineId,
+        engineId: tier.engine === 'ab-jchess' ? 'ab-jchess' : 'pikafish-jieqi',
+        engineName: tier.engine === 'ab-jchess' ? 'AB-JChess' : 'PikaJieQi',
+        name: tier.name,
+        kind: 'container',
+        gameSpecId: 'jieqi',
+        configHash: jieqiConfigHash(tier),
+        playSignature: jieqiConfigHash(tier),
+        config: {
+          kind: 'pikafish',
+          ...(tier.depth === undefined ? {} : { depth: tier.depth }),
+          ...(tier.skill === undefined ? {} : { skill: tier.skill }),
+          movetime_ms: tier.movetimeMs,
+        },
+        notes: tier.retired
+          ? 'Retired pre-ladder Jieqi tier (depth cap only); resolvable for history.'
+          : tier.engine === 'ab-jchess'
+            ? "Jieqi top slot: AB-JChess 0.2b (lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)) on its 20260911 NNUE, 4000ms, Hash 256. The net is fetched from the author's release at build time, never re-hosted."
+            : tier.skill === undefined
+              ? 'Jieqi Level 8: full-strength PikaJieQi (jieqi_old, classical eval), no depth cap, 4000ms, Hash 256.'
+              : `Jieqi ladder rung: Stockfish Skill Level ${tier.skill} over a ${JIEQI_SKILL_MULTIPV}-line MultiPV, depth ${tier.depth}, ${tier.movetimeMs}ms.`,
+      } satisfies EngineDefinition,
+    ]),
+  ),
+  [JIEQI_RANDOM_ENGINE_ID]: {
+    id: JIEQI_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-jieqi',
+    engineName: 'Random Mover',
+    name: 'Random Mover',
+    kind: 'builtin',
     gameSpecId: 'jieqi',
-    configHash: 'pikafish-jieqi-amateur',
-    playSignature: 'pikafish-jieqi-amateur',
-    config: { kind: 'pikafish', depth: 4, movetime_ms: 800 },
+    configHash: `random-legal-jieqi-${JIEQI_RANDOM_ENGINE_VERSION}`,
+    playSignature: `random-legal-jieqi-${JIEQI_RANDOM_ENGINE_VERSION}`,
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
     notes:
-      'Jieqi PikaJieQi (jieqi_old, no-net classical eval) — depth-capped (4) to a beatable amateur level.',
-  },
-  'pikafish-jieqi-strong': {
-    id: 'pikafish-jieqi-strong',
-    engineId: 'pikafish-jieqi',
-    engineName: 'PikaJieQi',
-    name: 'PikaJieQi - Strong',
-    kind: 'container',
-    gameSpecId: 'jieqi',
-    configHash: 'pikafish-jieqi-strong',
-    playSignature: 'pikafish-jieqi-strong',
-    config: { kind: 'pikafish', depth: 10, movetime_ms: 1200 },
-    notes: 'Default Jieqi PikaJieQi tier — depth-capped (10), solid strength.',
-  },
-  'pikafish-jieqi-strongest': {
-    id: 'pikafish-jieqi-strongest',
-    engineId: 'pikafish-jieqi',
-    engineName: 'PikaJieQi',
-    name: 'PikaJieQi - Strongest',
-    kind: 'container',
-    gameSpecId: 'jieqi',
-    // Versioned so the 0.2.0 serving config (4000ms + Hash 256 / Threads 2) is not
-    // conflated with the 2500ms single-threaded 16MB-hash definition it replaced.
-    configHash: `pikafish-jieqi-${JIEQI_ENGINE_VERSION}-movetime-4000`,
-    playSignature: `pikafish-jieqi-${JIEQI_ENGINE_VERSION}-movetime-4000`,
-    config: { kind: 'pikafish', movetime_ms: 4000 },
-    notes:
-      'Top Jieqi PikaJieQi tier and the one every jieqi PvE game is served by — no depth cap, 4000ms, Hash 256 / Threads 2 (see jieqiLiveResourceOptions).',
-  },
+      'Uniformly-random legal-move Jieqi bot. Calibration floor / 0-Elo anchor; EvE-only, not player-facing.',
+  } satisfies EngineDefinition,
 };
 
 // Standard Xiangqi profiles share the exact tier source used by live PvE. This
@@ -1044,6 +1115,62 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
   },
 };
 
+// MistyJungle (Jungle): the Rust tiers prod serves (jungle-engine.ts), registered so
+// the EvE runner can load them for the bot-vs-bot scheduler's jungle games (#488).
+// Generated from the tier table, so the catalog cannot drift from what plays; the
+// hash names the build and the node budget, the banqi convention.
+const JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  JUNGLE_RUST_TIER_LIST.map((tier) => {
+    // The names server-jungle-engine.ts shows: the offered tier is Misty herself.
+    const level = tier.id.replace('misty-jungle-level-', '');
+    const name = tier.id === 'misty-jungle-level-2' ? 'Misty' : `Misty Jungle level ${level}`;
+    const signature = `misty-jungle-${JUNGLE_RUST_ENGINE_VERSION}-nodes-${tier.nodes}`;
+    return [
+      tier.id,
+      {
+        id: tier.id as EngineId,
+        engineId: 'misty-jungle',
+        engineName: 'MistyJungle',
+        name,
+        kind: 'container',
+        gameSpecId: 'jungle',
+        configHash: signature,
+        playSignature: signature,
+        config: { kind: 'jungle-uci', nodes: tier.nodes, movetime_ms: tier.movetimeCapMs },
+        notes: `MistyJungle ${JUNGLE_RUST_ENGINE_VERSION} Rust UCI engine, ${tier.nodes} nodes under a ${tier.movetimeCapMs} ms cap.`,
+      } satisfies EngineDefinition,
+    ];
+  }),
+);
+
+// KataGo-AnimalChess (Jungle): the top seat (#434), registered so the EvE runner
+// can pair it with Misty for the scheduler's jungle games. Generated from its tier
+// table; the hash names the KataGomo commit, the net and the visit budget.
+const KATAGO_JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  KATAGO_JUNGLE_TIER_LIST.map((tier) => {
+    const signature = `katago-jungle-${KATAGO_JUNGLE_ENGINE_VERSION}-visits-${tier.visits}`;
+    return [
+      tier.id,
+      {
+        id: tier.id as EngineId,
+        engineId: 'katago-jungle',
+        engineName: 'KataGo-AnimalChess',
+        name: 'KataGo',
+        kind: 'container',
+        gameSpecId: 'jungle',
+        configHash: signature,
+        playSignature: signature,
+        config: { kind: 'katago-gtp', visits: tier.visits, movetime_ms: tier.movetimeCapMs },
+        notes:
+          `KataGo-AnimalChess (hzyhhzy/KataGomo AnimalChess2025, MIT, on lightvector's KataGo) ` +
+          `with Kouza's b10c384 net from Dandelion 4, ${tier.visits} visits per stage under a ` +
+          `${tier.movetimeCapMs} ms cap. The net is fetched from Dandelion's release at build ` +
+          'time, never re-hosted.',
+      } satisfies EngineDefinition,
+    ];
+  }),
+);
+
 const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BUILTIN_ENGINES,
   ...PYTHON_ENGINES,
@@ -1052,11 +1179,14 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...FORTRESS_XIANGQI_FSF_ENGINES,
   ...DUCK_XIANGQI_FSF_ENGINES,
   ...ATOMIC_XIANGQI_FSF_ENGINES,
+  ...CRAZYHOUSE_XIANGQI_FSF_ENGINES,
   ...VARIANT_RANDOM_ENGINES,
   ...JIEQI_ENGINES,
   ...XIANGQI_ENGINES,
   ...BANQI_ENGINES,
   ...JUNGLE_FLIP_ENGINES,
+  ...JUNGLE_ENGINES,
+  ...KATAGO_JUNGLE_ENGINES,
 };
 
 /**

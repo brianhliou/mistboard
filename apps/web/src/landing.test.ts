@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   fetchPlayableEnginesOnce,
   loadPlayableEnginesWithRetry,
@@ -6,10 +6,14 @@ import {
   shouldUseBundledShowcaseDemos,
   watchHrefForTvGame,
 } from './landing.js';
+import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 
 const ROSTER = [
   { id: 'python-v2-v1.0', name: 'Misty 1.0', familyName: 'Misty', kind: 'container' },
 ];
+
+// /api/live-stats reads are shared through a module cache; start each test cold.
+beforeEach(() => resetLiveStatsCacheForTests());
 
 describe('playable engines loading', () => {
   afterEach(() => {
@@ -111,6 +115,38 @@ describe('landing shell', () => {
     expect(shouldUseBundledShowcaseDemos('?demo=engine-v2-g0000')).toBe(true);
   });
 
+  it('bakes no admin menu into the signed-out prerender, in any language', async () => {
+    // The prerender is what crawlers index; a hidden admin menu still put
+    // 管理 / 数据库 / 运营简报 / 转播运维 into the Chinese home page's HTML.
+    const { ensureLocaleCatalog } = await import('./i18n/catalog.js');
+    try {
+      for (const path of ['/', '/zh-hans', '/zh-hant']) {
+        window.history.replaceState(null, '', path);
+        if (path !== '/') await ensureLocaleCatalog(path === '/zh-hans' ? 'zh-Hans' : 'zh-Hant');
+        const html = renderLandingShellForPrerender();
+        expect(html).toContain('site-nav-links');
+        expect(html, path).not.toContain('data-admin-only');
+        for (const label of [
+          'Admin',
+          'Readouts',
+          'Broadcast ops',
+          '管理',
+          '运营简报',
+          '營運簡報',
+          '转播运维',
+          '轉播運維',
+          'href="/database"',
+          'href="/readouts"',
+          'href="/broadcast/xiangqi/ops"',
+        ]) {
+          expect(html, `${path}: ${label}`).not.toContain(label);
+        }
+      }
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
   it('keeps the grid-area hooks the homepage band CSS keys on', () => {
     // landing.css places the bands via these class names (grid-areas
     // left/panel/play, puzzle/forum/chat, news/blogs+learn/studies); renaming
@@ -131,10 +167,27 @@ describe('landing shell', () => {
     // Bands 3-4 side rails: News (left) and Top studies (right) span both rows.
     expect(demo?.querySelector(':scope > .landing-news-column')).not.toBeNull();
     expect(demo?.querySelector(':scope > .landing-studies-column')).not.toBeNull();
-    // Band 4: the learn row sits in its own grid-area beneath the blog row.
-    const learnRow = demo?.querySelector(':scope > .landing-learn-row');
-    expect(learnRow).not.toBeNull();
-    expect(learnRow?.querySelectorAll('.landing-learn-card').length).toBeGreaterThan(0);
+    // Band 4: the deep-dives row sits in its own grid-area beneath the blog row,
+    // and the player pages are in it, not in the blog row above.
+    const deepDives = demo?.querySelector(':scope > .landing-dives-row');
+    expect(deepDives).not.toBeNull();
+    expect(
+      deepDives?.querySelector('.landing-article-card[href="/blog/yin-sheng"]'),
+    ).not.toBeNull();
+    expect(
+      demo?.querySelector(
+        ':scope > .landing-articles-row:not(.landing-dives-row) .landing-article-card[href="/blog/yin-sheng"]',
+      ),
+    ).toBeNull();
+    expect(deepDives?.querySelector('.landing-row-label')?.textContent).toBe('Xiangqi deep dives');
+    // The first row is labelled too, and its label line links to the blog index.
+    const latest = demo?.querySelector(':scope > .landing-articles-row:not(.landing-dives-row)');
+    expect(latest?.querySelector('.landing-row-label')?.textContent).toBe('Latest');
+    expect(
+      latest?.querySelector('.landing-row-header a.landing-row-more')?.getAttribute('href'),
+    ).toBe('/blog');
+    expect(deepDives?.querySelector('.landing-row-more')).toBeNull();
+    expect(demo?.querySelector('.landing-learn-row')).toBeNull();
     expect(demo?.querySelector('.landing-left-column .landing-board-column')).not.toBeNull();
     // The support/store pair left the homepage (patronage stays in the nav).
     expect(demo?.querySelector('.landing-support-row')).toBeNull();
@@ -168,10 +221,16 @@ describe('landing shell', () => {
     expect(wrap.querySelector('.landing-forum-column .landing-forum')).not.toBeNull();
     // Top studies moved down to the bands-3/4 right rail; chat took its band-2 slot.
     expect(wrap.querySelector('.landing-studies-column .landing-study-widget')).not.toBeNull();
-    // One play action only, and it is the primary unified entry.
+    // One primary action, the unified Play button; the only other tile is the
+    // correspondence card (2026-10-03), which the prerendered shell carries in
+    // its offer state so the rail reserves its space before hydration.
     const actions = wrap.querySelectorAll('.landing-play-column .landing-play-action');
-    expect(actions.length).toBe(1);
+    expect(actions.length).toBe(2);
     expect(actions[0]?.classList.contains('landing-play-action-primary')).toBe(true);
+    const card = wrap.querySelector('.landing-play-stack > .landing-corr-card');
+    expect(card).toBe(actions[1]);
+    expect(card?.getAttribute('data-state')).toBe('start');
+    expect(card?.previousElementSibling?.classList.contains('landing-activity')).toBe(true);
   });
 
   it('links only the About Mistboard tagline tail', () => {
@@ -182,11 +241,11 @@ describe('landing shell', () => {
     const link = about?.querySelector<HTMLAnchorElement>('a[href="/about"]');
 
     expect(about?.textContent).toBe(
-      'Chinese chess for chess players, and original strategy games. Free and open source. About Mistboard...',
+      'Chinese chess and original strategy games. Free and open source. About Mistboard...',
     );
     expect(link?.textContent).toBe('About Mistboard...');
     expect(about?.childNodes[0]?.textContent).toBe(
-      'Chinese chess for chess players, and original strategy games. Free and open source. ',
+      'Chinese chess and original strategy games. Free and open source. ',
     );
   });
 });

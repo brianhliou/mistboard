@@ -172,8 +172,9 @@ export function videoThumbUrl(video: VideoEntry): string {
   if (video.thumbnailUrl) return video.thumbnailUrl;
   switch (video.source) {
     case 'youtube':
-      // no-cors image load: fine under dev's COEP credentialless and in prod
-      // (where /videos carries no COEP at all). hqdefault ships 4:3 letterboxed.
+      // no-cors image load: img.youtube.com sends CORP: cross-origin, so it
+      // passes dev's site-wide COEP require-corp and a review page's (the SPA
+      // keeps that COEP across pushState). hqdefault ships 4:3 letterboxed.
       return `https://img.youtube.com/vi/${encodeURIComponent(video.id)}/hqdefault.jpg`;
     case 'mistboard':
       return video.thumbnailUrl;

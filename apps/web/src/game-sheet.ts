@@ -55,7 +55,7 @@ export function gameSheetVariants(): GameSheetVariant[] {
         (tenant) => tenant.watch && tenant.gameRouteBase && SHEET_LIVE_SPECS.has(tenant.gameSpecId),
       )
       .map((tenant) => ({
-        label: tenant.pageTitle,
+        label: t(tenant.pageTitleKey),
         channel: tenant.gameSpecId,
         routeBase: tenant.gameRouteBase!,
         gameSpecId: tenant.gameSpecId as GameSpecId,

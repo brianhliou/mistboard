@@ -16,6 +16,15 @@ export const ABORT_WINDOW_MS = 30_000;
 // the durable guest-prestart policy default so the two agree.
 export const JOIN_WINDOW_MS = 15 * 60_000;
 
+// The join window for a room the LOBBY made, anchored to the room's creation.
+// Both players were already waiting when the lobby paired them and each tab is
+// redirected the moment it learns of the match, so an opponent who has not
+// connected within this window is not coming (their tab closed or their phone
+// slept while they sought). Unlike an invite room, a lobby room aborts on this
+// window even while the other player sits in it: there is nobody to invite.
+// Prod, 2026-10-02: a jieqi joiner waited alone under "copy the invite link".
+export const LOBBY_NO_SHOW_ABORT_MS = 30_000;
+
 // How long a disconnected player has to return before forfeiting an
 // in-progress game (post-move-1). Reconnecting within the window cancels it.
 // Only reachable while PVP_DISCONNECT_FORFEIT_ENABLED is true; PvE never

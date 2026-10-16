@@ -5,6 +5,8 @@
 // never graded). Counterpart to game-analysis.ts; kept separate as a heavier, opt-in tier.
 import { accuracyPercent, type MoveJudgment, moveJudgment } from '@mistboard/game';
 import { postAnalysisJob } from './analysis-job-poll.js';
+import type { DecisionOverlay } from './analysis-marks.js';
+import { formatJieqiBestMove } from './move-advice-text.js';
 
 /** One reveal ply's decomposition, all win% from the MOVER's POV (mirrors the server shape). */
 export type JieqiDecision = {
@@ -142,4 +144,38 @@ export async function requestJieqiDecisions(roomId: string): Promise<JieqiDecisi
     errorPrefix: 'decisions_request_failed',
   });
   return summarizeDecisions(body.decisions);
+}
+
+/** Adapt the jieqi decomposition summary to the review's variant-agnostic overlay shape.
+ *  Shared by the postgame review and the game embed so the two name, rank and draw a
+ *  reveal's alternatives identically. */
+export function jieqiDecisionOverlay(summary: JieqiDecisionSummary): DecisionOverlay {
+  return {
+    byPly: new Map(
+      [...summary.byPly].map(([ply, view]) => [
+        ply,
+        {
+          judgment: view.judgment,
+          accuracy: view.accuracy,
+          luck: view.luck,
+          playedRank: view.playedRank,
+          // Format at the variant seam: the review layer is variant-agnostic and never
+          // shows engine UCI. Same formatter the "… was best." advice line uses. The raw
+          // move rides along only for drawing the arrow.
+          ...(view.candidates?.length
+            ? {
+                candidates: view.candidates.map((candidate) => ({
+                  label: formatJieqiBestMove(candidate.move),
+                  win: candidate.win,
+                  uci: candidate.move,
+                  ...(candidate.played ? { played: true } : {}),
+                })),
+              }
+            : {}),
+        },
+      ]),
+    ),
+    red: { reveals: summary.red.reveals, decisionAccuracy: summary.red.decisionAccuracy },
+    black: { reveals: summary.black.reveals, decisionAccuracy: summary.black.decisionAccuracy },
+  };
 }

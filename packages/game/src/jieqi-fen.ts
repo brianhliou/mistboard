@@ -42,7 +42,6 @@ import {
   type DealtFenParseOptions,
   isNonNegativeInteger,
   parsePoolField,
-  sameMultiset,
   shuffleWithRng,
 } from './dealt-fen.js';
 import {
@@ -180,7 +179,10 @@ export function pikafishUciToJieqiMove(uci: string): JieqiMove | null {
 // optional sixth `hidden` field pins the deal: one role char per dark piece in
 // BOARD ORDER (rank 10 first, files a..i), UPPER for a red (X) square and lower
 // for a black (x) square, or `-` when nothing is dark. A public FEN samples each
-// side's dark identities from that side's pool.
+// side's dark identities from that side's pool. A `?` in the hidden field is a
+// piece whose identity is UNKNOWN (an imported game that never revealed it): it
+// is sampled from what that side's pool has left after the named pieces, and
+// stays marked unknown, so it re-serializes as `?` rather than as the sample.
 
 const ROLE_FOR_CHAR = new Map<string, JieqiPieceRole>(
   (Object.entries(RED_ROLE_CHAR) as [JieqiPieceRole, string][]).map(([role, ch]) => [ch, role]),
@@ -206,11 +208,29 @@ function hiddenField(board: JieqiBoard): string {
     for (let file = 0; file <= 8; file += 1) {
       const piece = board[squareOf(file, rank)];
       if (!piece?.faceDown) continue;
+      if (piece.unknown) {
+        out += '?';
+        continue;
+      }
       const ch = RED_ROLE_CHAR[piece.role];
       out += piece.color === 'red' ? ch : ch.toLowerCase();
     }
   }
   return out === '' ? '-' : out;
+}
+
+// `pool` minus every role in `take` (null if `take` is not a sub-multiset).
+function withoutRoles(
+  pool: readonly JieqiPieceRole[],
+  take: readonly JieqiPieceRole[],
+): JieqiPieceRole[] | null {
+  const rest = [...pool];
+  for (const role of take) {
+    const index = rest.indexOf(role);
+    if (index < 0) return null;
+    rest.splice(index, 1);
+  }
+  return rest;
 }
 
 /** Pikafish FEN + the sixth `hidden` field: the exact deal, reproducible on reload. */
@@ -371,9 +391,14 @@ export function parseJieqiFen(
       };
     }
     const given: Record<JieqiColor, JieqiPieceRole[]> = { red: [], black: [] };
+    const unknownSquares: Record<JieqiColor, JieqiSquare[]> = { red: [], black: [] };
     for (let i = 0; i < chars.length; i += 1) {
       const ch = chars[i]!;
       const { square, color } = darkSquares[i]!;
+      if (ch === '?') {
+        unknownSquares[color].push(square);
+        continue;
+      }
       const role = ROLE_FOR_CHAR.get(ch.toUpperCase());
       if (!role || role === 'general') return { ok: false, error: `Unknown hidden piece "${ch}".` };
       const chColor: JieqiColor = ch === ch.toUpperCase() ? 'red' : 'black';
@@ -386,18 +411,29 @@ export function parseJieqiFen(
       given[color].push(role);
       identities.set(square, role);
     }
+    const unknown = new Set<JieqiSquare>();
     for (const color of ['red', 'black'] as const) {
-      if (!sameMultiset(given[color], poolList[color])) {
+      const rest = withoutRoles(poolList[color], given[color]);
+      if (!rest || rest.length !== unknownSquares[color].length) {
         return {
           ok: false,
           error: `The hidden field does not match the ${color} pool: the same pieces must appear in both.`,
         };
       }
+      const roles = shuffleWithRng(rest, options.rng ?? Math.random);
+      unknownSquares[color].forEach((square, i) => {
+        identities.set(square, roles[i]!);
+        unknown.add(square);
+      });
     }
-    sampled = false;
+    sampled = unknown.size > 0;
+    for (const { square, color } of darkSquares) {
+      board[square] = { color, role: identities.get(square)!, faceDown: true };
+      if (unknown.has(square)) board[square]!.unknown = true;
+    }
   }
   for (const { square, color } of darkSquares) {
-    board[square] = { color, role: identities.get(square)!, faceDown: true };
+    board[square] ??= { color, role: identities.get(square)!, faceDown: true };
   }
 
   return {

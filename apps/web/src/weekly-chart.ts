@@ -27,6 +27,9 @@ export type WeeklyChartOptions = {
   // the tooltip says so.
   partialLast?: boolean;
   locale?: Locale;
+  // The collapsed table of the same numbers under the chart. On by default;
+  // admins copy from it. The public /stats page leaves it off.
+  table?: boolean;
 };
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -210,7 +213,7 @@ export function buildWeeklyChart(options: WeeklyChartOptions): HTMLElement {
   svg.addEventListener('pointermove', onMove);
   svg.addEventListener('pointerleave', hideHover);
 
-  figure.append(buildTable(weeks, series, locale));
+  if (options.table !== false) figure.append(buildTable(weeks, series, locale));
   return figure;
 }
 

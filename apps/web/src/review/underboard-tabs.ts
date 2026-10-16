@@ -9,7 +9,8 @@
 // xiangqi tree surface and the generalized tree controller share it unchanged.
 
 import { t } from '../i18n/catalog.js';
-import { type ReviewSeatColors, reviewColorForSeat } from './review-seat-colors.js';
+import { createMoveTimesChart, type MoveTimesChart } from './move-times-chart.js';
+import type { ReviewSeatColors } from './review-seat-colors.js';
 
 export type UnderboardOptions = {
   /** Include the "Computer analysis" tab. False for surfaces with no whole-game
@@ -30,6 +31,9 @@ export type UnderboardOptions = {
   /** Per-ply elapsed milliseconds (index 0 = ply 1). Present + non-empty → a
    *  "Move times" tab renders a per-move bar chart. */
   moveTimes?: number[];
+  /** A prebuilt Move times chart (the tree review's, wired to the board for its
+   *  cursor, hover readout and click-to-jump). Wins over `moveTimes`. */
+  moveTimesChart?: MoveTimesChart;
   /** Visual ink for first/second-seat move bars in flip variants. */
   seatColors?: ReviewSeatColors;
   /** Present = show the Crosstable tab; the names label its stub. */
@@ -41,6 +45,9 @@ export type UnderboardOptions = {
    *  when the variant has no engine FEN (the fog reviews), so the row is
    *  omitted rather than shown empty. */
   shareFenInput?: HTMLInputElement;
+  /** The Share link's field, when its caller keeps it current (a review that
+   *  mirrors the position into the URL). */
+  shareUrlInput?: HTMLInputElement;
   /** Live move-export textarea, refreshed by the caller on every navigation. */
   shareMovesInput: HTMLTextAreaElement;
   gameUrl: string;
@@ -77,12 +84,13 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
   if (opts.provenance) {
     tabDefs.push({ id: 'info', label: t('underboard.gameInfo'), body: opts.provenance });
   }
-  if (opts.moveTimes && opts.moveTimes.length > 0) {
-    tabDefs.push({
-      id: 'times',
-      label: t('underboard.moveTimes'),
-      body: moveTimesBody(opts.moveTimes, opts.seatColors),
-    });
+  const moveTimesChart =
+    opts.moveTimesChart ??
+    (opts.moveTimes && opts.moveTimes.length > 0
+      ? createMoveTimesChart(opts.moveTimes, { seatColors: opts.seatColors })
+      : null);
+  if (moveTimesChart) {
+    tabDefs.push({ id: 'times', label: t('underboard.moveTimes'), body: moveTimesChart.el });
   }
   if (opts.players) {
     tabDefs.push({
@@ -94,7 +102,13 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
   tabDefs.push({
     id: 'share',
     label: t('underboard.shareExport'),
-    body: shareExportBody(opts.shareFenInput, opts.shareMovesInput, opts.gameUrl, opts.shareExtra),
+    body: shareExportBody(
+      opts.shareFenInput,
+      opts.shareMovesInput,
+      opts.gameUrl,
+      opts.shareExtra,
+      opts.shareUrlInput,
+    ),
   });
 
   const panel = document.createElement('section');
@@ -193,30 +207,6 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
   return panel;
 }
 
-// Per-move time bars (lichess "Move times"): odd plies belong to the first seat,
-// even plies to the second. Heights scale to the slowest move.
-function moveTimesBody(times: number[], seatColors?: ReviewSeatColors): HTMLElement {
-  const body = document.createElement('div');
-  const chart = document.createElement('div');
-  chart.className = 'review-move-times';
-  const max = Math.max(1, ...times);
-  for (let i = 0; i < times.length; i += 1) {
-    const seat = i % 2 === 0 ? 'red' : 'black'; // ply 1 belongs to the first-mover seat
-    const color = reviewColorForSeat(seat, seatColors);
-    const col = document.createElement('div');
-    col.className = `review-move-times__bar review-move-times__bar--${color}`;
-    col.style.height = `${Math.max(2, Math.round((times[i]! / max) * 100))}%`;
-    col.title = `Move ${i + 1}: ${formatDuration(times[i]!)}`;
-    chart.append(col);
-  }
-  const total = times.reduce((sum, t) => sum + t, 0);
-  const caption = document.createElement('p');
-  caption.className = 'review-move-times__caption';
-  caption.textContent = `Total move time ${formatDuration(total)}`;
-  body.append(chart, caption);
-  return body;
-}
-
 function crosstableBody(players: { red?: string; black?: string }, lazy: boolean): HTMLElement {
   const body = document.createElement('div');
   const note = document.createElement('p');
@@ -239,6 +229,7 @@ function shareExportBody(
   movesInput: HTMLTextAreaElement,
   gameUrl: string,
   extra?: readonly HTMLElement[],
+  sharedUrlInput?: HTMLInputElement,
 ): HTMLElement {
   const body = document.createElement('div');
   const grid = document.createElement('div');
@@ -250,10 +241,10 @@ function shareExportBody(
     grid.append(shareRow('FEN', fenInput));
   }
 
-  const urlInput = document.createElement('input');
+  const urlInput = sharedUrlInput ?? document.createElement('input');
   urlInput.className = 'review-share__field';
   urlInput.readOnly = true;
-  urlInput.value = gameUrl;
+  if (!urlInput.value) urlInput.value = gameUrl;
   grid.append(shareRow('Share', urlInput));
 
   movesInput.className = 'review-share__field review-share__field--moves';
@@ -266,7 +257,10 @@ function shareExportBody(
   return body;
 }
 
-function shareRow(label: string, field: HTMLInputElement | HTMLTextAreaElement): HTMLElement {
+export function shareRow(
+  label: string,
+  field: HTMLInputElement | HTMLTextAreaElement,
+): HTMLElement {
   const row = document.createElement('div');
   row.className = 'review-share__row';
   const name = document.createElement('span');
@@ -287,14 +281,6 @@ function shareRow(label: string, field: HTMLInputElement | HTMLTextAreaElement):
   });
   row.append(name, field, copy);
   return row;
-}
-
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.round(ms / 1000);
-  if (totalSeconds < 60) return `${totalSeconds}s`;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }
 
 export type DownloadLink = { text: string; href: string; filename: string };

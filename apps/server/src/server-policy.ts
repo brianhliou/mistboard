@@ -6,6 +6,7 @@ import {
   maybeGameSpecForId,
   replayGameEvents,
   type VisibilityRulesId,
+  xiangqiEndgamePracticeRouteFromPath,
 } from '@mistboard/game';
 
 // Visibility rule: a finished game is public via replay endpoints; a LIVE game
@@ -168,6 +169,27 @@ export function canServeLiveBoard(gameSpecId: string): boolean {
   return liveObservePolicy(spec.visibility, spec.id) === 'open';
 }
 
+// The homepage TV channel airs a finished game on a delay (from its end, for its
+// recorded length) only when the game could never be shown live: a fog/sealed
+// variant. A live-capable variant already had its chance on the live board, so
+// after the fact it only ever shows frozen. `variant` is the persisted
+// games.variant string ('fog' is the pre-rename Fog Chess value). An unknown
+// variant answers false: the client treats "not airable" as the safe state (a
+// frozen final position), so this fails closed.
+export function airsOnDelay(variant: string): boolean {
+  const spec = maybeGameSpecForId(variant === 'fog' ? 'dark-chess' : variant);
+  if (!spec) return false;
+  return !canServeLiveBoard(spec.id);
+}
+
+// Tag each /api/games/showcase entry with whether the homepage TV may air it on
+// a delay. The client reads a missing field as false.
+export function withDelayedAir<T extends { variant: string }>(
+  games: readonly T[],
+): Array<T & { delayedAir: boolean }> {
+  return games.map((game) => ({ ...game, delayedAir: airsOnDelay(game.variant) }));
+}
+
 // What a room serves a given client, keyed on the spec's visibility class and
 // the game's status. This is the executable form of the signed-off matrix in
 // docs-private/spectator-visibility-matrix.md, and it is the ONE place that
@@ -243,6 +265,11 @@ export function legacyPageRedirect(pathname: string): string | null {
   // internal link points there); /news served the identical page, so the pair
   // read as duplicates to a crawler. One permanent hop, no canonical tag.
   if (normalized === '/news') return '/feed';
+  // The engine page moved from brianhliou.com/challenges/ as /challenges and
+  // was renamed /champions the same day (2026-10-07): one reigning engine per
+  // game. Each language keeps its prefix.
+  const challenges = /^(\/zh-hans|\/zh-hant)?\/challenges$/.exec(normalized);
+  if (challenges) return `${challenges[1] ?? ''}/champions`;
   return null;
 }
 
@@ -297,7 +324,10 @@ export function isEmbedRoute(pathname: string): boolean {
     // it, so nothing stored is read: the page shows only what the embedder
     // typed. The variant list is the client's (EMBED_LINE_VARIANTS); an
     // unknown one gets the embed shell and a refusal there.
-    /^\/embed\/line\/[a-z-]{1,32}$/.test(normalized)
+    /^\/embed\/line\/[a-z-]{1,32}$/.test(normalized) ||
+    // One relayed professional game: the same moves and names the public
+    // broadcast page shows, nothing hidden (xiangqi is open information).
+    /^\/embed\/broadcast\/xiangqi\/board\/[A-Za-z0-9_-]{1,160}$/.test(normalized)
   );
 }
 
@@ -340,7 +370,17 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/terms' ||
     normalized === '/privacy' ||
     normalized === '/contribute' ||
+    normalized === '/creators' ||
+    normalized === '/champions' ||
+    normalized === '/zh-hans/champions' ||
+    normalized === '/zh-hant/champions' ||
+    // Renamed to /champions; legacyPageRedirect 301s these before the SPA
+    // fallback, and main.ts still takes them (like /news).
+    normalized === '/challenges' ||
+    normalized === '/zh-hans/challenges' ||
+    normalized === '/zh-hant/challenges' ||
     normalized === '/changelog' ||
+    /^\/changelog\/\d{4}-\d{2}$/.test(normalized) ||
     normalized === '/developers' ||
     normalized === '/api-docs' ||
     normalized === '/thanks' ||
@@ -358,6 +398,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/leaderboard' ||
     normalized === '/news' ||
     normalized === '/feed' ||
+    /^\/feed\/\d{4}-\d{2}$/.test(normalized) ||
     normalized === '/forum' ||
     normalized === '/forum/reports' ||
     normalized === '/forum/etiquette' ||
@@ -376,6 +417,9 @@ export function isClientRoute(pathname: string): boolean {
     // detail path (/historical-xiangqi/game/:id) is unchanged and still below.
     normalized === '/games' ||
     normalized === '/games/search' ||
+    // Monthly game downloads (apps/web/src/data-page.ts; the files are /api/data).
+    normalized === '/data' ||
+    normalized === '/data/about' ||
     // Import: paste a game, land on the analysis board. Mints nothing, so it
     // needs no server route of its own beyond being served the SPA shell.
     normalized === '/import' ||
@@ -383,6 +427,8 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/accounts' ||
     normalized === '/readouts' ||
     normalized === '/bots' ||
+    normalized === '/zh-hans/bots' ||
+    normalized === '/zh-hant/bots' ||
     normalized === '/blog' ||
     normalized === '/zh-hans/blog' ||
     normalized === '/zh-hant/blog' ||
@@ -396,6 +442,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized.startsWith('/forum/redirect/post/') ||
     normalized === '/players' ||
     /^\/players\/[^/]+$/.test(normalized) ||
+    /^\/players\/teams\/[^/]+$/.test(normalized) ||
     normalized === '/broadcast/xiangqi' ||
     normalized === '/broadcast/xiangqi/ops' ||
     /^\/broadcast\/xiangqi\/(?!board$)[^/]+$/.test(normalized) ||
@@ -413,6 +460,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized.startsWith('/fortress-xiangqi/game/') ||
     normalized.startsWith('/duck-xiangqi/game/') ||
     normalized.startsWith('/atomic-xiangqi/game/') ||
+    normalized.startsWith('/crazyhouse-xiangqi/game/') ||
     normalized.startsWith('/game/') ||
     // Study browse index (/study) + persisted study chapters. The study pages
     // serves the review SPA shell + mounts the ceval engine, so it is also a
@@ -420,6 +468,19 @@ export function isClientRoute(pathname: string): boolean {
     // The practice index is a plain client page: it lists curated studies and
     // mounts no board, so unlike /study/:id it is not a review-shell route.
     normalized === '/practice' ||
+    // The shelf in Chinese: the page and its zh catalogue shipped with the
+    // English URL alone, and /zh-hans/practice 404'd (2026-10-07).
+    normalized === '/zh-hans/practice' ||
+    normalized === '/zh-hant/practice' ||
+    // Practice from any position (?fen=&goal=&side=): the endgames page and the
+    // board editor link here. It mounts the ceval engine, so it is also a
+    // review-shell route below. The query is read fail-closed by the client.
+    normalized === '/practice/position' ||
+    // One shelf exercise by set slug and position (/practice/endgames-horse/
+    // horse-vs-advisor): the client looks the chapter up in this database and
+    // replaces the URL with /study/:id/:chapter, so article links survive a
+    // reseed and work off prod (#521). Only real set/position pairs are routes.
+    xiangqiEndgamePracticeRouteFromPath(normalized) !== null ||
     normalized === '/study' ||
     /^\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(normalized) ||
     // Locale-prefixed study permalinks (/zh-hans/study/:id) serve the same SPA
@@ -495,11 +556,12 @@ export function isNoindexRoute(pathname: string): boolean {
 // is fixed at document-load time and client-side pushState navigation between
 // puzzles does not re-request the document, so whichever puzzle URL the user
 // first loads must already carry the headers for the post-completion engine to
-// run. COEP is `credentialless` (see server-http), so isolating the puzzle page
-// does not force CORP on its cross-origin subresources.
+// run. COEP is `require-corp` (see server-http), so a cross-origin subresource
+// on any of these pages must be CORS-loaded or send CORP.
 //
 // Keep the single optional variant segment in sync with the /<variant>/game/
-// tenants in isClientRoute above.
+// tenants in isClientRoute above; apps/web/src/variant-registry-sync.test.ts
+// fails for any tenant postgame or review route this does not isolate.
 export function isReviewShellRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (
@@ -510,8 +572,19 @@ export function isReviewShellRoute(pathname: string): boolean {
     // so both need the COOP/COEP headers or SharedArrayBuffer silently goes away
     // on the localized URL only.
     /^(?:\/(?:zh-hans|zh-hant))?\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(normalized) ||
+    // Practice from a position runs the engine against the learner, so it needs
+    // SharedArrayBuffer like a study practice chapter does.
+    normalized === '/practice/position' ||
     normalized === '/puzzles' ||
-    /^\/puzzles\/[^/]+$/.test(normalized)
+    /^\/puzzles\/[^/]+$/.test(normalized) ||
+    // A finished broadcast board is a review with the ceval engine, and it opens
+    // in place from its event page (pushState, no reload), so every broadcast
+    // reader page must be isolated, not just the board URL: isolation is fixed
+    // when the document loads. The operator console keeps a plain document.
+    // Missing entirely until 2026-09-23: the local engine told Chrome readers
+    // "Safari cannot run it yet" on every broadcast board in prod.
+    (/^\/broadcast\/xiangqi(?:\/.*)?$/.test(normalized) &&
+      !/^\/broadcast\/xiangqi\/ops(?:\/|$)/.test(normalized))
   );
 }
 
@@ -597,6 +670,24 @@ export function allowedWebSocketOrigins(
   const configured = parseCsvEnv(env.MISTBOARD_ALLOWED_ORIGINS);
   if (configured.length > 0) return new Set(configured);
   return host ? new Set([`https://${host}`]) : new Set();
+}
+
+// The site's own pages, which read GET /api/ping from the socket host (a
+// different origin) so the account dropdown times the path games take.
+const SITE_ORIGINS = ['https://mistboard.com', 'https://www.mistboard.com'];
+
+// The Access-Control-Allow-Origin value for a cross-origin /api/ping: the
+// request's origin echoed when it is the site or an origin the socket already
+// accepts, else null (no header, so the browser withholds the response). Never
+// paired with Allow-Credentials: the probe sends no cookies.
+export function pingCorsAllowOrigin(
+  origin: string | undefined,
+  host: string | undefined,
+  env: RuntimeEnv = process.env,
+): string | null {
+  if (!origin) return null;
+  if (SITE_ORIGINS.includes(origin)) return origin;
+  return allowedWebSocketOrigins(host, env).has(origin) ? origin : null;
 }
 
 export function recordMessageTimestamp(

@@ -18,8 +18,10 @@ import { reviewOpenedProps, track } from '../analytics.js';
 import { attachBoardResizeGrip, currentBoardScale, restoreBoardScale } from '../board-resize.js';
 import { createGameFavoriteButton } from '../game-favorite.js';
 import { t } from '../i18n/catalog.js';
+import { installMoveNavKeyboard } from '../move-nav-bar.js';
 import { createReviewControls, REVIEW_MENU_ICONS } from './review-controls.js';
 import { type BoardStageHandle, type BoardStageSlot, createBoardStage } from './review-stage.js';
+import '../seat-disc-ink.css';
 import './review-shell.css';
 import { createReviewShell } from './review-shell.js';
 
@@ -61,6 +63,9 @@ export type ReviewLayoutAdapter = {
   enginePanel?: HTMLElement;
   analysisSummary?: HTMLElement;
   underboard?: HTMLElement;
+  /** The underboard sits below the fold rather than shrinking the board (see
+   *  the scaffold option of the same name). */
+  underboardOverflows?: boolean;
   /** Eval gauge (thin vertical bar) — gets its own grid column between the
    *  board and the tools rail (lichess's gauge area). Hidden on col1. */
   gauge?: HTMLElement;
@@ -98,6 +103,12 @@ export type ReviewLayoutAdapter = {
 const NAV_AND_PADDING_PX = 122; // site nav + shell top/bottom padding
 const VIEWPORT_CHROME_PX = 108;
 const RAILS_AND_GUTTERS_PX = 640;
+// Where a full-page review's cluster starts (site nav + shell top padding): an
+// embedded review below a taller host header gives the difference back.
+const EMBED_BASE_TOP_PX = 76;
+const EMBED_MIN_BOARD_H_PX = 440;
+// Matches the embedded shell's two-column container query (review-shell.css).
+const EMBED_TWO_COLUMN_MIN_PX = 640;
 const PRIMARY_LABEL_PX = 30;
 const STACK_GAP_PX = 16;
 const SECONDARY_LABEL_PX = 24;
@@ -121,6 +132,10 @@ type SizingInput = {
 };
 
 export type ReviewScaffoldConfig = SizingInput & {
+  /** Stops the resize work when the review is destroyed. */
+  signal?: AbortSignal;
+  /** Board and moves only, inside a host page's column (review-shell.ts). */
+  embedded?: boolean;
   /** Product surface using the shared scaffold. Analysis and game reviews share
    *  the same board/rail alignment contract; studies keep their document UI. */
   reviewSurface: ReviewSurface;
@@ -256,7 +271,7 @@ export function createReviewScaffold(
     favoriteGameId && !config.metaCard
       ? reviewActionsWithFavorite(config.actions, favoriteGameId)
       : config.actions;
-  const left = infoRail({ ...config, actions });
+  const left = config.embedded ? [] : infoRail({ ...config, actions });
   // Right rail, lichess order: material-top · [analyse table: engine panel ·
   // move list · advice · navigation] · summary · material-bottom. The analyse
   // table is ONE visually connected box (lichess's analyse tools) whose bottom
@@ -274,7 +289,8 @@ export function createReviewScaffold(
   // the bottom of the column, and unfused controls left a dead gap between the box
   // and the board line. There the controls become the box's last strip, and the box
   // bottom lands on the board bottom. Fusing requires no rail panel: the opening
-  // explorer overlays railMain and would cover controls fused inside it.
+  // explorer opens as the box's bottom section and would split fused controls
+  // from the board line.
   // Material rows change where the controls belong. With a pocket, the box that
   // tracks the board is [top pocket · moves · bottom pocket] and the controls sit
   // BELOW it (lichess crazyhouse), so fusing them into the moves strip would
@@ -290,10 +306,12 @@ export function createReviewScaffold(
       fuseNavigation ? config.navigation : null,
     ].filter((el): el is HTMLElement => el != null),
   );
-  // The rail panel (opening explorer) OVERLAYS the moves region rather than
-  // pushing it: a positioned wrapper holds railMain, and the panel absolutely
-  // fills it when open, scrolling on its own. Navigation stays a sibling below,
-  // so the scrub controls remain usable with the explorer open.
+  // The rail panel (opening explorer) is the bottom section of the moves box: a
+  // wrapper holds railMain and the panel, keeps the box's board-height footprint
+  // while the panel is open, and the panel (capped, scrolling on its own) takes
+  // its share from the move list (review-shell.css .review-rail-overlay).
+  // Navigation stays a sibling below, so the scrub controls remain usable with
+  // the explorer open.
   const railMainWrap = document.createElement('div');
   railMainWrap.className = 'review-rail-mainwrap';
   railMainWrap.append(railMain);
@@ -328,6 +346,17 @@ export function createReviewScaffold(
     ].filter((el): el is HTMLElement => el != null),
   );
   const center = config.underboard ? centerColumn(stage.el, config.underboard) : stage.el;
+  // Phone stack (col1): the center column and the right rail dissolve and each
+  // piece takes its own row, so the arrows sit right under the board instead of
+  // after the underboard and the whole move list (review-shell.css "col1 stack").
+  markCol1Areas({
+    board: stage.el,
+    nav: fuseNavigation ? undefined : config.navigation,
+    moves: boardTrackingBox,
+    extra: config.railFooter,
+    under: config.underboard,
+    summary: config.analysisSummary,
+  });
 
   const shell = createReviewShell({
     ariaLabel: config.ariaLabel,
@@ -337,7 +366,9 @@ export function createReviewScaffold(
     left,
     center,
     right,
+    embedded: config.embedded,
   });
+  shell.querySelector('.review-shell__cluster')?.classList.add(COL1_STACK_CLASS);
   if (config.gauge) {
     const cluster = shell.querySelector<HTMLElement>('.review-shell__cluster');
     if (cluster) {
@@ -389,9 +420,13 @@ export function createReviewScaffold(
     refit();
   }
 
-  setTimeout(refit, 60);
-  setTimeout(refit, 260);
-  window.addEventListener('resize', refit);
+  const signal = config.signal;
+  const refitUnlessDestroyed = () => {
+    if (!signal?.aborted) refit();
+  };
+  setTimeout(refitUnlessDestroyed, 60);
+  setTimeout(refitUnlessDestroyed, 260);
+  window.addEventListener('resize', refit, signal ? { signal } : undefined);
   if (typeof ResizeObserver !== 'undefined') {
     let lastViewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
     const observer = new ResizeObserver(() => {
@@ -400,6 +435,7 @@ export function createReviewScaffold(
       refit();
     });
     observer.observe(stage.el);
+    signal?.addEventListener('abort', () => observer.disconnect(), { once: true });
   }
 
   return { stage, refit, setBoardAspect, railFooter };
@@ -452,6 +488,7 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
     secondaryWidthPx: adapter.secondaryWidthPx,
     boardMaxPx: adapter.boardMaxPx,
     underboard: adapter.underboard,
+    underboardOverflows: adapter.underboardOverflows,
     enginePanel: adapter.enginePanel,
     moves: adapter.moves,
     moveComment: adapter.moveComment,
@@ -494,85 +531,9 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
 }
 
 // Global playback keys (arrows anywhere on the page, lichess-style), ignoring
-// typing targets. Shared by the linear scrubber and the tree nav.
-export function installReviewKeyboard(
-  handlers: {
-    stepBack(): void;
-    stepForward(): void;
-    toStart(): void;
-    toEnd(): void;
-    /** Optional: `f` flips the board. Surfaces without a flip (Mistboard TV,
-     *  whose only orientation control is the fog POV toggle) omit it, and `f`
-     *  keeps its default behavior there. */
-    flip?(): void;
-    /** Optional: when this returns false the whole listener stands down for that
-     *  keypress, so arrows keep scrolling the page on a surface with nothing to
-     *  step through (TV's live-follow board owns no ply). */
-    enabled?(): boolean;
-    /** Optional: dismiss a transient chooser (the tree surface's variation picker). */
-    escape?(): void;
-    /** Optional: `a` toggles the engine's on-board arrows (lichess parity). Only
-     *  the tree surface draws them, so the linear controller omits this. */
-    toggleArrows?(): void;
-    /** Optional: Space plays the current local engine's top move. Returns false
-     *  while the engine is off or has no legal fresh result, preserving normal
-     *  Space behavior in those states. */
-    playBestMove?(): boolean;
-  },
-  /** Optional abort signal to remove the listener (e.g. when a surface re-mounts). */
-  signal?: AbortSignal,
-): void {
-  document.addEventListener(
-    'keydown',
-    (event) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      if (handlers.enabled && !handlers.enabled()) return;
-      const target = event.target as HTMLElement | null;
-      if (
-        target &&
-        (target.isContentEditable ||
-          target.tagName === 'INPUT' ||
-          target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT')
-      ) {
-        return;
-      }
-      if (event.key === 'ArrowLeft') {
-        event.preventDefault();
-        handlers.stepBack();
-      } else if (event.key === 'ArrowRight') {
-        event.preventDefault();
-        handlers.stepForward();
-      } else if (event.key === 'ArrowUp' || event.key === 'Home') {
-        event.preventDefault();
-        handlers.toStart();
-      } else if (event.key === 'ArrowDown' || event.key === 'End') {
-        event.preventDefault();
-        handlers.toEnd();
-      } else if ((event.key === 'f' || event.key === 'F') && handlers.flip) {
-        event.preventDefault();
-        handlers.flip();
-      } else if ((event.key === 'a' || event.key === 'A') && handlers.toggleArrows) {
-        event.preventDefault();
-        handlers.toggleArrows();
-      } else if (
-        (event.key === ' ' || event.code === 'Space') &&
-        !event.repeat &&
-        handlers.playBestMove &&
-        // Let focused controls keep native Space activation (notably the engine
-        // switch and settings gear). Inputs/selects already returned above.
-        !target?.closest('button, a, [role="button"]') &&
-        handlers.playBestMove()
-      ) {
-        event.preventDefault();
-      } else if (event.key === 'Escape' && handlers.escape) {
-        event.preventDefault();
-        handlers.escape();
-      }
-    },
-    { signal },
-  );
-}
+// typing targets. The one move-nav key map lives with the bar (move-nav-bar.ts,
+// #523); this name stays for the review surfaces and TV that install it.
+export const installReviewKeyboard = installMoveNavKeyboard;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Board sizing (viewport-fill). Shared by every scaffold consumer.
@@ -592,19 +553,36 @@ function fitPrimaryToViewport(
       : null;
     // Below-the-fold underboards (lichess analyse chart) don't shrink the board:
     // they contribute 0 to the height budget and the page scrolls to them.
+    // On the phone stack the underboard sits below the arrows and the moves,
+    // so it never shares the board's screen and must not shrink it either.
+    const stacked = col1Stacked(stageEl);
     const underboardPx =
-      underboard && !opts?.underboardOverflows
+      underboard && !opts?.underboardOverflows && !stacked
         ? underboard.getBoundingClientRect().height + STACK_GAP_PX
         : 0;
     const cluster = stageEl.closest<HTMLElement>('.review-shell__cluster');
+    // An embedded review starts below its host's header, not under the site
+    // nav, so the board fits the height left beneath that header, never less
+    // than a readable board.
+    // One column (a phone) scrolls past the header to a full-width board.
+    const embeddedShell = cluster?.closest<HTMLElement>('.review-shell--embedded');
+    const hostHeaderPx =
+      cluster && embeddedShell && embeddedShell.clientWidth >= EMBED_TWO_COLUMN_MIN_PX
+        ? Math.round(
+            Math.min(
+              Math.max(0, cluster.getBoundingClientRect().top + window.scrollY - EMBED_BASE_TOP_PX),
+              Math.max(0, window.innerHeight - VIEWPORT_CHROME_PX - EMBED_MIN_BOARD_H_PX),
+            ),
+          )
+        : 0;
     if (cluster) {
       const baseChrome = Number(cluster.dataset.uniBaseChrome ?? '0') || 0;
       cluster.style.setProperty(
         '--uni-board-chrome-h',
-        `${baseChrome + Math.round(underboardPx)}px`,
+        `${baseChrome + Math.round(underboardPx) + hostHeaderPx}px`,
       );
     }
-    const available = window.innerHeight - VIEWPORT_CHROME_PX - underboardPx;
+    const available = window.innerHeight - VIEWPORT_CHROME_PX - underboardPx - hostHeaderPx;
     const slot = stageEl.querySelector<HTMLElement>('.review-stage__slot--primary');
     if (available <= 0 || !slot) return;
     const visibleStageRows = [...stageEl.children].filter(
@@ -626,7 +604,9 @@ function fitPrimaryToViewport(
     const nonBoardChrome = Math.max(0, contentHeight - boardWidth / aspect);
     const centerEl = stageEl.closest<HTMLElement>('.review-shell__center');
     const gaugePx = stageEl.querySelector('.review-eval-bar') ? EVAL_GAUGE_PX : 0;
-    const measuredCap = centerEl ? centerEl.getBoundingClientRect().width - gaugePx : 0;
+    // A dissolved center column has no box (width 0): the cluster is the column.
+    const columnEl = stacked ? cluster : centerEl;
+    const measuredCap = columnEl ? columnEl.getBoundingClientRect().width - gaugePx : 0;
     const widthCap =
       measuredCap > 0 ? measuredCap : Math.max(240, window.innerWidth - RAILS_AND_GUTTERS_PX);
     const targetBoardWidth = Math.floor(
@@ -742,6 +722,41 @@ function deferredRailGroup(children: HTMLElement[]): HTMLElement {
   const group = railGroup(children);
   group.classList.add('review-rail-group--deferred');
   return group;
+}
+
+/** Cluster class that opts a scaffold into the col1 phone stack. Only the
+ *  scaffold sets it: the live room and /watch share the cluster classes but put
+ *  other things in the rails, and dissolving those scrambles their stack. */
+export const COL1_STACK_CLASS = 'review-shell__cluster--col1-stack';
+
+/** The rows of the col1 phone stack, top to bottom. review-shell.css gives each
+ *  one an `order`; the left rail's groups follow as `side` and `aside`. */
+export const COL1_AREAS = [
+  'board',
+  'nav',
+  'moves',
+  'extra',
+  'under',
+  'side',
+  'summary',
+  'aside',
+] as const;
+
+/** The areas the scaffold tags; `side` and `aside` are the left rail's groups,
+ *  placed by their own classes. */
+type Col1Area = Exclude<(typeof COL1_AREAS)[number], 'side' | 'aside'>;
+
+function markCol1Areas(pieces: Partial<Record<Col1Area, HTMLElement>>): void {
+  for (const [area, el] of Object.entries(pieces)) {
+    if (el) el.dataset.col1Area = area;
+  }
+}
+
+/** True when the phone stack has dissolved the center column, so the board is
+ *  a row of its own and nothing beside or under it shares its height budget. */
+function col1Stacked(stageEl: HTMLElement): boolean {
+  const center = stageEl.closest<HTMLElement>('.review-shell__center');
+  return Boolean(center && getComputedStyle(center).display === 'contents');
 }
 
 function centerColumn(stageEl: HTMLElement, underboard: HTMLElement): HTMLElement {

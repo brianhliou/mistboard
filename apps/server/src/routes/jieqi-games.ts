@@ -18,7 +18,7 @@ import {
   resolveJieqiAnalysis,
   resolveJieqiDecisions,
 } from './../jieqi-analysis.js';
-import { jieqiEngineBinaryAvailable } from './../jieqi-engine.js';
+import { jieqiAnalysisEngineAvailable } from './../jieqi-engine.js';
 import { jieqiRooms } from './../jieqi-registration.js';
 import type { JieqiEvent, JieqiProjection } from './../jieqi-runtime.js';
 import { jieqiTenant } from './../jieqi-tenant.js';
@@ -60,7 +60,8 @@ type JieqiPostgameTerminal =
   | { type: 'clock-expired'; at: number; color: JieqiColor; winner: JieqiColor }
   | { type: 'seat-resigned'; at: number; color: JieqiColor; winner: JieqiColor }
   | { type: 'seat-forfeited'; at: number; color: JieqiColor; winner: JieqiColor }
-  | { type: 'game-aborted'; at: number; reason: string };
+  | { type: 'game-aborted'; at: number; reason: string }
+  | { type: 'game-adjudicated'; at: number; winner: JieqiColor | null; reason: string };
 
 // Injectable so the route can be unit-tested without a live database, mirroring
 // the Dark Mini Xiangqi route.
@@ -89,7 +90,7 @@ export function clearJieqiWatchPostgameCache(): void {
 
 // Computer analysis (Layer 1): fixed-strength eval of every ply, red-seat POV, cached +
 // coalesced. Decision-vs-luck decomposition (Layer 2): the heavier, opt-in tier on top —
-// per REVEAL ply it returns {best, played, realized} EVs (mover POV) so the client can
+// per chance ply (a reveal or a face-down capture) it returns {best, played, realized} EVs (mover POV) so the client can
 // split the swing into decision quality vs luck. Jieqi hides face-down IDENTITIES, so
 // reconstruction needs the per-game DEAL (events[0].setup) — we replay the raw event log
 // (which retains the server-secret deal), not the client payload. Gates/envelopes: the
@@ -100,16 +101,21 @@ const handleAnalysisRoutes = createGameAnalysisRoutes({
   variantLabel: 'Jieqi',
   enabled: jieqiEnabled,
   requiresPersistence: true,
-  // Fail closed, not open: the analysis engine is the PikaJieQi binary ONLY. A missing
-  // binary is a broken deploy, so surface it (alertable log + 503) instead of a weaker eval.
-  engineBinary: { available: jieqiEngineBinaryAvailable, label: 'PikaJieQi binary' },
+  // Fail closed, not open: analysis runs on AB-JChess when its binary and net resolve,
+  // else on PikaJieQi (jieqiAnalysisEngine). With neither present the deploy is broken,
+  // so surface it (alertable log + 503) instead of a weaker eval.
+  engineBinary: {
+    available: jieqiAnalysisEngineAvailable,
+    label: 'jieqi analysis engine (AB-JChess or PikaJieQi)',
+  },
   loadInputs: loadFinishedJieqiGameInputs,
   countPlies: (inputs) => inputs.moves.length,
   resolveAnalysis: (roomId, inputs, computeIfMissing) =>
     resolveJieqiAnalysis(roomId, inputs.moves, inputs.deal, undefined, undefined, computeIfMissing),
-  // Mark the REVEAL (chance) plies so the client leaves them unjudged. Unlike banqi's
-  // from===to flip, a jieqi reveal is a normal move of a face-down piece, so we detect it by
-  // replaying the deal (jieqiChancePlies), not by move shape.
+  // Mark the chance plies (a reveal, or a capture of a face-down piece) so the client leaves
+  // them unjudged on the chart and grades them from the decisions layer. Unlike banqi's
+  // from===to flip, both are normal moves, so we detect them by replaying the deal
+  // (jieqiChancePlies), not by move shape.
   analysisExtras: (inputs) => ({ chancePlies: jieqiChancePlies(inputs.moves, inputs.deal) }),
   resolveDecisions: (roomId, inputs, computeIfMissing) =>
     resolveJieqiDecisions(
@@ -356,9 +362,12 @@ export async function jieqiPostgameForApi(
   // identity is known to the server here. Redaction happens below per view.
   const projection = replayTenantEvents(jieqiTenant, events);
   if (projection.state.status.type !== 'finished') return null;
+  // An imported game names its event and credits its source (engine-match-import.ts).
+  const created = events[0];
+  const origin = created?.type === 'room-created' ? created.origin : undefined;
 
   return {
-    game: postgameGameSummary(game),
+    game: { ...postgameGameSummary(game), ...(origin ? { origin } : {}) },
     state: {
       status: projection.state.status,
       moveNumber: projection.state.moveNumber,
@@ -455,6 +464,10 @@ function jieqiPostgameTimeline(
     }
     if (event.type === 'game-aborted') {
       timeline.push({ type: event.type, at: event.at, reason: event.reason });
+      continue;
+    }
+    if (event.type === 'game-adjudicated') {
+      timeline.push({ type: event.type, at: event.at, winner: event.winner, reason: event.reason });
     }
   }
   return timeline;

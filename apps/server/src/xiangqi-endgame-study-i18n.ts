@@ -76,6 +76,19 @@ const MATERIAL: Record<EndgameStudyLang, Record<string, string>> = {
     'A chariot with all four defensive pieces': '车士象全',
     'A chariot and all four defensive pieces': '车士象全',
     'Two horses and all four defensive pieces': '双马士象全',
+    // the 象棋残局 page rows (2026-10)
+    'One soldier on the last rank': '一个底兵',
+    'One unadvanced soldier': '一个高兵',
+    'A high and a low soldier': '高低兵',
+    'Two cannons': '双炮',
+    'Two cannons and an advisor': '双炮仕',
+    'One advisor, the winning exception': '单士（巧胜局面）',
+    'A cannon beside its general': '单炮，守在将旁',
+    'One soldier across the river': '一个过河卒',
+    'All four defensive pieces, both elephants on the edge': '士象全，双象在边',
+    'A cannon and two advisors': '炮双士',
+    'A cannon and two advisors, both advisors at home': '炮双士，双士都在底线',
+    'A bare chariot, Red holding the middle file': '单车，红方车占中路',
   },
   'zh-Hant': {
     // attackers
@@ -124,6 +137,19 @@ const MATERIAL: Record<EndgameStudyLang, Record<string, string>> = {
     'A chariot with all four defensive pieces': '車士象全',
     'A chariot and all four defensive pieces': '車士象全',
     'Two horses and all four defensive pieces': '雙馬士象全',
+    // the 象棋残局 page rows (2026-10)
+    'One soldier on the last rank': '一個底兵',
+    'One unadvanced soldier': '一個高兵',
+    'A high and a low soldier': '高低兵',
+    'Two cannons': '雙砲',
+    'Two cannons and an advisor': '雙砲仕',
+    'One advisor, the winning exception': '單士（巧勝局面）',
+    'A cannon beside its general': '單砲，守在將旁',
+    'One soldier across the river': '一個過河卒',
+    'All four defensive pieces, both elephants on the edge': '士象全，雙象在邊',
+    'A cannon and two advisors': '砲雙士',
+    'A cannon and two advisors, both advisors at home': '砲雙士，雙士都在底線',
+    'A bare chariot, Red holding the middle file': '單車，紅方車佔中路',
   },
 };
 

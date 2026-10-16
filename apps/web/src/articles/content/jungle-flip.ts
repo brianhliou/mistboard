@@ -1,4 +1,3 @@
-import { JUNGLE_FLIP_SAMPLE_GAME } from '../../jungle-flip-sample-game.js';
 import {
   JUNGLE_FLIP_CAPTURE,
   JUNGLE_FLIP_ELEPHANT_STUCK,
@@ -10,14 +9,14 @@ import {
   JUNGLE_RANK_LADDER,
   playClosing,
 } from '../diagrams.js';
-import type { Article } from '../types.js';
+import type { Article, ArticleBlock } from '../types.js';
 
 export const jungleFlipArticle: Article = {
   slug: 'jungle-flip',
   kind: 'rules',
   title: 'Flip Jungle Rules (Flip Dou Shou Qi)',
   summary:
-    'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down, you flip to reveal, and equal ranks trade off the board. Play it free in your browser.',
+    'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-30',
@@ -123,19 +122,23 @@ export const jungleFlipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'This engine game shows two equal-rank trades: first the Lions, then the Elephants. Blue wins after Red’s last animal leaves the board.',
+          text: 'MistyJungleFlip against itself at three times the strength the site’s bot plays at. The first flip turns up red, so the first player is Red. The cats meet and trade off on move 10, a red rat takes Blue’s elephant on move 24, and on move 28 the two lions trade off too, which leaves Blue with no move. Red wins.',
         },
         {
-          kind: 'jungle-flip-replay',
-          spec: {
-            red: JUNGLE_FLIP_SAMPLE_GAME.red,
-            black: JUNGLE_FLIP_SAMPLE_GAME.black,
-            event: JUNGLE_FLIP_SAMPLE_GAME.event,
-            outcome: JUNGLE_FLIP_SAMPLE_GAME.outcome,
-            resultText: JUNGLE_FLIP_SAMPLE_GAME.result,
-            deal: JUNGLE_FLIP_SAMPLE_GAME.deal,
-            moves: JUNGLE_FLIP_SAMPLE_GAME.moves,
-          },
+          kind: 'embed',
+          path: '/embed/study/uKxJ60mN/8mQHGAqc',
+          title: 'Flip Jungle: an engine game, Red wins on move 28',
+          // Width-bound at the 702px column: the 4x4 board beside the move sheet,
+          // plus seat rows, controls, header and credit.
+          aspect: [702, 641],
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: 'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.',
         },
       ],
     },
@@ -156,11 +159,12 @@ export const jungleFlipArticle: Article = {
     },
     playClosing({
       heading: 'Play on Mistboard',
-      lead: 'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+      lead: 'When an animal takes an enemy of the same rank, both leave the board. No account needed.',
       playLabel: 'Play vs computer',
       playHref: '/?play=computer&gameSpecId=jungle-flip',
       secondary: [
         { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=jungle-flip', emphasis: 'secondary' },
+        { label: 'Twenty engine games', href: '/study/uKxJ60mN', emphasis: 'secondary' },
       ],
     }),
   ],

@@ -14,14 +14,24 @@ import type {
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
+import { broadcastEmbedCode } from './xiangqi-broadcast-embed-code.js';
+import {
+  type BroadcastPgnInput,
+  broadcastGamePgn,
+  broadcastPgnFileName,
+  pgnDataHref,
+} from './xiangqi-broadcast-pgn.js';
 import './game-shell.css';
 import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
 import './xiangqi-postgame.css';
 import { t } from './i18n/catalog.js';
+import type { ProfileTarget } from './profile-link.js';
+import { fetchCachedGameAnalysis } from './review/game-analysis.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
-import { downloadRow } from './review/underboard-tabs.js';
+import { downloadRow, shareRow } from './review/underboard-tabs.js';
 import { buildXiangqiClientAnalysisSource } from './review/xiangqi-client-analysis.js';
+import type { XiangqiAnalysisSource } from './review/xiangqi-review.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildNav } from './site-shell.js';
@@ -46,16 +56,25 @@ export type BroadcastReviewInput = {
     tour: { name: string; nameEn?: string };
     round: { name: string; nameEn?: string; startsAt?: string };
   } | null;
+  /** Each side's player page slug, when the player has one (the board API
+   *  resolves them against the player index). */
+  playerSlugs?: { red: string | null; black: string | null };
 };
 
 export function mountBroadcastBoardReview(
   root: HTMLElement,
   data: BroadcastReviewInput,
-  opts: { rail?: HTMLElement | null; context?: BroadcastReviewInput['context'] } = {},
-): void {
+  opts: {
+    rail?: HTMLElement | null;
+    context?: BroadcastReviewInput['context'];
+    /** Board and moves only, in the event page's content column: the event
+     *  header and game list around it already name the event and the result. */
+    embedded?: boolean;
+  } = {},
+): { destroy(): void } {
   const context = opts.context ?? data.context ?? null;
   const moves = [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move);
-  const replay = buildXiangqiReplayFromMoves(moves);
+  const replay = buildXiangqiReplayFromMoves(moves, undefined, { record: true });
   const red = playerLabel(data.board.red);
   const black = playerLabel(data.board.black);
   const result = resultOf(data.board.result);
@@ -64,45 +83,112 @@ export function mountBroadcastBoardReview(
   const playedOn = context ? formatEventDateTime(context.round.startsAt) : null;
 
   document.title = `${red} vs ${black} · ${eventName ?? 'Mistboard'}`;
-  root.classList.add('landing-page', 'xiangqi-postgame-route', 'xqb-review-route');
+  if (!opts.embedded) {
+    root.classList.add('landing-page', 'xiangqi-postgame-route', 'xqb-review-route');
+  }
 
   const metaCard = createGameMetaCard({
     markerId: 'xiangqi',
-    glyph: '象',
     headline: [eventName ?? t('broadcast.eyebrow')],
+    // Lichess's board view names its event as the way back to the boards.
+    headlineHref: `/broadcast/xiangqi/${encodeURIComponent(
+      data.board.tourSlug,
+    )}/round/${encodeURIComponent(data.board.roundId)}`,
     variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
     subline: [roundName, `${t('broadcast.board')} ${data.board.boardNumber}`, playedOn]
       .filter(Boolean)
       .join(' · '),
-    players: [
-      { color: 'red', name: red },
-      { color: 'black', name: black },
-    ],
+    // The players are named in the strips above and below the board, the way
+    // lichess seats a broadcast game; the card keeps the event and the result.
     status: result.label,
   });
+  const slugs = data.playerSlugs;
+  const profileFor = (slug: string | null | undefined): ProfileTarget | null =>
+    slug ? { kind: 'player', slug } : null;
 
-  root.replaceChildren(buildNav());
-  mountXiangqiReview(root, {
+  // The game as PGN for a creator's own tools (#454), beside the JSON.
+  const pgnInput: BroadcastPgnInput = {
+    boardId: data.board.id,
+    red: data.board.red,
+    black: data.board.black,
+    result: data.board.result,
+    moves: [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move),
+    tour: context?.tour ?? null,
+    round: context?.round ?? null,
+    origin: window.location.origin,
+  };
+  if (opts.embedded) root.replaceChildren();
+  else root.replaceChildren(buildNav());
+  const review = mountXiangqiReview(root, {
+    embedded: opts.embedded,
     pageClassName: 'xiangqi-review',
     ariaLabel: t('broadcast.boardAriaLabel'),
     title: `${red} vs ${black}`,
     summary: `${result.label} · ${replay.maxPly} plies`,
     boardAriaLabel: t('broadcast.boardAriaLabel'),
-    metaCard: metaCard.el,
-    ...(opts.rail ? { details: opts.rail } : {}),
+    ...(opts.embedded ? {} : { metaCard: metaCard.el }),
+    ...(opts.rail && !opts.embedded ? { details: opts.rail } : {}),
     provenance: provenance(data, context),
     moves,
+    record: true,
     players: { red, black },
+    seatLabels: true,
+    playerProfiles: { red: profileFor(slugs?.red), black: profileFor(slugs?.black) },
+    seatDetails: { red: teamOf(data.board.red), black: teamOf(data.board.black) },
     result,
-    shareExtra: [downloadRow([exportLink(data.board.id)])],
+    // A link can name a move (?ply=34), for a creator's video description.
+    urlPly: true,
+    shareExtra: [
+      downloadRow([
+        {
+          text: 'PGN',
+          href: pgnDataHref(broadcastGamePgn(pgnInput)),
+          filename: broadcastPgnFileName(pgnInput),
+        },
+        exportLink(data.board.id),
+      ]),
+      embedRow(data.board.id, `${red} vs ${black} · Mistboard`),
+    ],
     studyExport: {
       variant: DEFAULT_STUDY_VARIANT,
       name: eventName ? `${red} vs ${black} (${eventName})` : `${red} vs ${black}`,
     },
-    // No room and no server sweep behind a relayed game: whole-game analysis is
-    // the shared client ceval sweep, the same as an archive game.
-    analysis: buildXiangqiClientAnalysisSource(replay),
+    // The server analyses every finished broadcast game once and stores it
+    // (xiangqi-broadcast-analysis.ts), so the review opens with the chart and
+    // the move marks already there, as a site game's does. Until the sweep
+    // reaches a game, the button runs the same sweep in the reader's browser.
+    analysis: broadcastAnalysisSource(data.board.id, replay),
   });
+  if (moves.length === 0) markNoRecord(root);
+  return review;
+}
+
+/**
+ * A finished game the source published with its result and no moves: the
+ * board view says so over the start position, as its card in the round grid
+ * does, so the empty board does not read as a page that failed to load.
+ */
+function markNoRecord(root: HTMLElement): void {
+  const wrap = root.querySelector<HTMLElement>('.review-board-host');
+  if (!wrap) return;
+  wrap.classList.add('xqb-review-no-record');
+  const stamp = document.createElement('p');
+  stamp.className = 'xqb-review-no-record-label';
+  stamp.textContent = t('broadcast.noRecord');
+  stamp.title = t('broadcast.resultOnlyHint');
+  wrap.append(stamp);
+}
+
+function broadcastAnalysisSource(
+  boardId: string,
+  replay: ReturnType<typeof buildXiangqiReplayFromMoves>,
+): XiangqiAnalysisSource | null {
+  const local = buildXiangqiClientAnalysisSource(replay);
+  if (!local) return null;
+  return {
+    ...local,
+    fetchCached: () => fetchCachedGameAnalysis('xiangqi-broadcasts', boardId),
+  };
 }
 
 function provenance(
@@ -156,6 +242,11 @@ function secondary(entity: { name: string; nameEn?: string }): string | null {
   return entity.nameEn?.trim() && entity.nameEn.trim() !== entity.name ? entity.name : null;
 }
 
+/** The player's team, English first, for the strip's muted line. */
+function teamOf(player: XiangqiBroadcastPlayerTag): string | undefined {
+  return player.federationEn?.trim() || player.federation?.trim() || undefined;
+}
+
 function playerLabel(player: XiangqiBroadcastPlayerTag): string {
   const name = primary(player);
   return player.title ? `${player.title} ${name}` : name;
@@ -182,6 +273,17 @@ function hostOf(href: string): string | null {
   } catch {
     return null;
   }
+}
+
+/** The game's iframe code, for a creator's own page (#454). */
+function embedRow(boardId: string, title: string): HTMLElement {
+  const code = document.createElement('textarea');
+  code.value = broadcastEmbedCode(boardId, title, window.location.origin);
+  code.rows = 2;
+  // Dressed like the Moves field above it: the row is built outside the tab.
+  code.className = 'review-share__field review-share__field--moves';
+  code.readOnly = true;
+  return shareRow(t('underboard.embed'), code);
 }
 
 function exportLink(boardId: string): { text: string; href: string; filename: string } {

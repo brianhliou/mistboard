@@ -12,7 +12,6 @@ import type {
   RoomTimeControl,
 } from '@mistboard/game';
 import { fortressXiangqiEngineFen } from '@mistboard/game';
-import { currentAccountUser } from './account-session.js';
 import {
   FORTRESS_XIANGQI_ANALYSIS_DEPTH,
   FORTRESS_XIANGQI_ANALYSIS_ENGINE_ID,
@@ -27,8 +26,10 @@ import {
 } from './routes/fortress-xiangqi-rooms.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleFortressXiangqiEngineMove } from './server-fortress-xiangqi-engine.js';
+import { tenantCorrespondenceBinding } from './variant-tenant/correspondence.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -36,7 +37,7 @@ import {
 } from './variant-tenant/registry.js';
 import type { TenantRoomEngineSeat } from './variant-tenant/room-factory.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
   clearTenantRuntimeTimers,
@@ -107,6 +108,22 @@ export function getOrLoadFortressXiangqiRoom(
   return getOrLoadTenantRoom(fortressXiangqiTenant, fortressXiangqiRooms, roomId);
 }
 
+// Correspondence (days-per-move): seek accept seats both accounts, the sweeper
+// enforces the durable deadline through the ws runtime (variant-tenant/correspondence.ts).
+const fortressXiangqiCorrespondence = tenantCorrespondenceBinding(fortressXiangqiTenant, {
+  factoryContext: () => ({
+    rooms: fortressXiangqiRooms,
+    isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, fortressXiangqiTenant.kind),
+    appendRoomEvent: persistence.appendRoomEvent,
+    isPersistenceEnabled: persistence.isInitialized,
+    recordPersistenceError: (roomId, seq, eventType, err) =>
+      recordTenantPersistenceError(fortressXiangqiTenant, roomId, seq, eventType, err),
+  }),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadTenantRoom(fortressXiangqiTenant, fortressXiangqiRooms, roomId),
+  lifecycleCtx: fortressXiangqiWs.lifecycleCtx,
+});
+
 registerVariantTenant({
   kind: fortressXiangqiTenant.kind,
   gameSpecId: fortressXiangqiTenant.gameSpecId,
@@ -120,10 +137,12 @@ registerVariantTenant({
   isEngineClientId: fortressXiangqiTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => fortressXiangqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(fortressXiangqiTenant),
   errorPrefix: 'fortress_xiangqi',
   enabled: fortressXiangqiTenant.enabled,
   rooms: fortressXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
-  activeGameCount: () => countActiveTenantGames(fortressXiangqiRooms.values()),
+  activeGameCount: () =>
+    countActiveTenantGames(fortressXiangqiRooms.values(), fortressXiangqiTenant),
   getOrLoadRoom: (roomId) =>
     getOrLoadFortressXiangqiRoom(roomId) as Promise<TenantManagedRoom | null>,
   attachWebSocket: (ctx, socket, request, room) =>
@@ -139,18 +158,24 @@ registerVariantTenant({
     ),
   clearRuntimeTimers: (room) =>
     clearTenantRuntimeTimers(room as unknown as FortressXiangqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      fortressXiangqiTenant,
+      fortressXiangqiRooms.values(),
+      fortressXiangqiWs.lifecycleCtx,
+      at,
+    ),
   clearRooms: () => fortressXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsFortressXiangqi,
-    handleCreate: async (ctx, request, response, body) => {
-      const accountUser = body.rated === true ? await currentAccountUser(request) : null;
-      await handleFortressXiangqiCreate(
+    // POST /api/rooms resolves the account for a rated request (registry.ts).
+    handleCreate: (ctx, _request, response, body, accountUser) =>
+      handleFortressXiangqiCreate(
         { ...ctx, createFortressXiangqiRoom },
         response,
         body,
         accountUser,
-      );
-    },
+      ),
   },
   lobby: {
     supportsRated: true,
@@ -174,6 +199,5 @@ registerVariantTenant({
     },
     fen: fortressXiangqiEngineFen,
   }),
-  sweepDueDeadline: null,
-  createCorrespondenceGameForSeek: null,
+  ...fortressXiangqiCorrespondence,
 });

@@ -13,9 +13,9 @@ describe('watch nav', () => {
     const { watchNavItems } = await import('./nav-items.js');
 
     expect(watchNavItems().map((item) => item.label)).toEqual([
+      'Broadcasts',
       'Mistboard TV',
       'Current games',
-      'Broadcasts',
       'Video library',
     ]);
   });
@@ -38,9 +38,9 @@ describe('watch nav', () => {
 
     const items = watchNavItems();
     expect(items.map((item) => item.label)).toEqual([
+      'Broadcasts',
       'Mistboard TV',
       'Current games',
-      'Broadcasts',
       'Streamers',
       'Video library',
     ]);
@@ -78,5 +78,25 @@ describe('tools nav', () => {
     const imported = toolsNavItems().find((item) => item.href === '/import');
     expect(imported?.label).toBe('Import game');
     expect(imported?.labelKey).toBe('nav.import');
+  });
+});
+
+describe('community nav', () => {
+  it('lists Leaderboard, Pro players and Bots ahead of the social entries', async () => {
+    const { communityNavItems } = await import('./nav-items.js');
+    expect(communityNavItems().map((item) => [item.labelKey, item.href])).toEqual([
+      ['nav.leaderboard', '/player'],
+      ['nav.proPlayers', '/players'],
+      ['nav.bots', '/bots'],
+      ['nav.friends', '/following'],
+      ['nav.forum', '/forum'],
+      ['nav.blog', '/blog'],
+    ]);
+  });
+
+  // "Players" for the leaderboard beside "Pro players" read as one page twice.
+  it('no longer labels the leaderboard "Players"', async () => {
+    const { communityNavItems } = await import('./nav-items.js');
+    expect(communityNavItems().some((item) => item.labelKey === 'nav.players')).toBe(false);
   });
 });

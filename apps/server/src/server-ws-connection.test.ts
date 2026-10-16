@@ -130,6 +130,7 @@ function resolverHarness(options: {
       throw new Error('unexpected ws attach in resolver test');
     },
     clearRuntimeTimers: () => {},
+    pauseOnShutdown: async () => 0,
     clearRooms: () => rooms.clear(),
     http: {
       matchesCreateRequest: () => false,

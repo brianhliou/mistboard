@@ -14,6 +14,7 @@
 //     inconsistent across browsers. Deltas are in viewBox user units, so CSS
 //     board sizing costs nothing.
 
+import { maybeGameSpecForId } from '@mistboard/game';
 import { readDisplayPreferences } from './display-preferences.js';
 
 const DISPLAY_PREFERENCES_CHANGE_EVENT = 'mistboard:display-preferences-change';
@@ -68,6 +69,18 @@ export function pieceAnimationDurationMs(opts?: { fog?: boolean }): number {
   }
   if (cachedDurationMs === null) cachedDurationMs = computeDurationMs();
   return cachedDurationMs;
+}
+
+/**
+ * May a step-through diagram of this variant glide its pieces? Decided by the
+ * variant's visibility, failing closed: only perfect information ('open') and
+ * public positions with hidden identities ('hidden-identity': banqi, jieqi)
+ * glide. Fog ('dark'), concealed hands, an unknown id and no id at all repaint
+ * only, so a diagram can never animate a path its variant would hide.
+ */
+export function variantDiagramGlides(gameSpecId: string | null | undefined): boolean {
+  const visibility = maybeGameSpecForId(gameSpecId)?.visibility;
+  return visibility === 'open' || visibility === 'hidden-identity';
 }
 
 /** Chessground animation config derived from the same preference. */

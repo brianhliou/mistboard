@@ -69,7 +69,10 @@ function parseArgs(values: string[]): CliArgs {
         break;
       case 'time-class': {
         const timeClass = parseRatingTimeClass(value);
-        if (!timeClass) throw new Error('--time-class must be bullet, blitz, or rapid');
+        // Bots have no correspondence ladder (bot_rating_snapshots is live-only).
+        if (!timeClass || timeClass === 'correspondence') {
+          throw new Error('--time-class must be bullet, blitz, or rapid');
+        }
         parsed.timeClass = timeClass;
         break;
       }

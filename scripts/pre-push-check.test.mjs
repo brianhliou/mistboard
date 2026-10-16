@@ -86,6 +86,24 @@ test('--json prints the same plan as data, for the release gate to reuse', () =>
   assert.deepEqual(broad.commands, [['npm', 'run', 'ci:quick']]);
 });
 
+// The release gate passes the committed change set with --files. Without a base,
+// the targeted plan ended in `verify --changed`, which re-reads the working tree:
+// a release tree is clean, so verify saw 0 files and ran no tests (2026-10-02,
+// b40cb193 shipped a broken web test that only hosted CI caught). With --base,
+// verify diffs the same range the release is about to push.
+test('--base makes the targeted plan verify the committed range', () => {
+  const base = '0123456789abcdef0123456789abcdef01234567';
+  const parsed = JSON.parse(
+    execFileSync(
+      process.execPath,
+      [script, '--plan', '--json', '--base', base, '--files', 'apps/web/src/main.ts'],
+      { cwd: join(scriptsDir, '..'), encoding: 'utf8' },
+    ),
+  );
+  assert.equal(parsed.kind, 'targeted');
+  assert.deepEqual(parsed.commands.at(-1), ['npm', 'run', 'verify', '--', '--since', base]);
+});
+
 test('the git hook blocks direct pushes to main in favor of the release path', () => {
   const env = { ...process.env };
   delete env.MISTBOARD_RELEASE_PUSH;

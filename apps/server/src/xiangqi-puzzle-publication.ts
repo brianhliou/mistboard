@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import {
+  legacyPositionRepetitionKey,
   validateStandardXiangqiPuzzle,
   XIANGQI_SPEC_ID,
   type XiangqiPuzzle,
@@ -172,10 +173,16 @@ export async function planXiangqiPuzzlePublication(
     // tactical position, reached in two different source games, ships twice as
     // two unrelated puzzles. Mined puzzles carry their candidate, so the
     // published position set is reachable without a new column.
+    // Runs before 2026-10 stored keys in the old spelling (chariot and cannon
+    // both `c`), so look a position up in both spellings.
     const publishingKeys = new Map<string, string>();
     for (const { entry } of items) {
       if (entry.candidate.status === 'published') continue;
       publishingKeys.set(entry.candidate.positionKey, entry.candidate.id);
+      publishingKeys.set(
+        legacyPositionRepetitionKey(entry.candidate.positionKey),
+        entry.candidate.id,
+      );
     }
     if (publishingKeys.size > 0) {
       const priorPositions = await db.query<{ position_key: string; puzzle_id: string }>(

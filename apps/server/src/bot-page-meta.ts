@@ -7,6 +7,7 @@
 // title. Same slot as the finished-game meta in serveSpaShellWithRoutePreloads:
 // resolved from persistence when it is up, generic shell otherwise.
 
+import { maybeGameSpecForId } from '@mistboard/game';
 import type { TenantGamePageMeta } from './og-game-tenant.js';
 import * as persistence from './persistence.js';
 
@@ -25,10 +26,14 @@ const GAME_NAMES: Record<string, string> = {
   'fortress-xiangqi': 'fortress xiangqi',
   'duck-xiangqi': 'duck xiangqi',
   'atomic-xiangqi': 'atomic xiangqi',
+  'crazyhouse-xiangqi': 'crazyhouse xiangqi',
 };
 
 function gameList(specIds: readonly string[]): string {
-  const names = specIds.map((id) => GAME_NAMES[id] ?? id);
+  // An admin-playtest spec (publicSurface 'hidden') is not named in a public title.
+  const names = specIds
+    .filter((id) => maybeGameSpecForId(id)?.publicSurface !== 'hidden')
+    .map((id) => GAME_NAMES[id] ?? id);
   if (names.length <= 1) return names[0] ?? '';
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
 }

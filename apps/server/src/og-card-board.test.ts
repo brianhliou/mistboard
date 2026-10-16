@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import {
+  artHref,
   boardSize,
   CARD_BOARD_HEIGHT,
   CARD_BOARD_MAX_WIDTH,
@@ -12,6 +13,7 @@ import {
   resetCardArt,
 } from './og-card-board.js';
 import { resolvePositionOg, startPositionFen } from './og-position.js';
+import { OG_CARD_ZOOM, pngSize } from './og-raster.js';
 
 // The web's public/ dir carries the same piece art dist does (Vite copies it),
 // so the tests can load the real files without a build.
@@ -75,11 +77,81 @@ test('with the site art loaded, the international set draws; without it, the gly
   assert.equal(art.size, cardArtPaths().length, 'every art file the cards need is in web/public');
   const withArt = renderBoardCard(board('xiangqi'), art, { title: ['Xiangqi'] });
   assert.ok(withArt.includes('data:image/png;base64,'), 'PNG art embedded');
-  assert.ok(withArt.includes('fill="#fef0d7" stroke="#c30d0d"'), 'international red disc');
+  assert.ok(
+    withArt.includes('fill="#fef0d7" stroke="#202427"'),
+    'international disc: one dark ring on both sides',
+  );
+  assert.ok(!withArt.includes('stroke="#c30d0d"'), 'no red ring on the international set');
   const glyphs = renderBoardCard(board('xiangqi'), new Map(), { title: ['Xiangqi'] });
   assert.ok(!glyphs.includes('data:image/png'), 'no art, no image');
   assert.ok(glyphs.includes('<path d='), 'baked glyph paths instead');
   resetCardArt();
+});
+
+/** Every embedded art image on a card: the PNG's pixel width and the width it
+ *  lands at in the rasterised card (its SVG width, times the scale of the
+ *  piece() group it sits in, times the raster zoom). */
+function embeddedArt(svg: string): { png: number; drawn: number }[] {
+  const out: { png: number; drawn: number }[] = [];
+  const image = /<image href="data:image\/png;base64,([A-Za-z0-9+/=]+)"[^>]*? width="([\d.]+)"/g;
+  for (const m of svg.matchAll(image)) {
+    const before = svg.slice(Math.max(0, m.index - 400), m.index);
+    const group = /scale\(([\d.]+)\)">(?:<circle[^>]*\/>)?$/.exec(before);
+    const scale = group ? Number(group[1]) : 1;
+    out.push({
+      png: pngSize(Buffer.from(m[1]!, 'base64')).width,
+      drawn: Number(m[2]) * scale * OG_CARD_ZOOM,
+    });
+  }
+  return out;
+}
+
+// The jieqi game card shipped stair-stepped pieces (2026-10-08): the 1024 px art
+// went into resvg whole and was shrunk ~9x in one bicubic step, which skips most
+// source pixels. Each image must come from a halving within 2x of its output.
+test('card art is embedded within 2x of the size it is drawn at, on every family', async () => {
+  resetCardArt();
+  const art = await loadCardArt(WEB_PUBLIC);
+  const players = {
+    top: { name: 'Black', ink: 'black' as const, score: '0' },
+    bottom: { name: 'Red', ink: 'red' as const, score: '1' },
+    variant: 'Card',
+  };
+  const cards: [Parameters<typeof startPositionFen>[0], string?][] = [
+    ['xiangqi'],
+    ['jieqi'],
+    ['jungle'],
+    // Banqi starts face-down; a mid-game position has revealed tiles (the
+    // width-capped 8x4 grid draws the largest pieces of any card).
+    ['banqi', 'X1X2r1X/2XGX1X1/X1s1XX1X/1XXX2XX r A2E2R1H2C1S3a1e1h1c1 3 12'],
+  ];
+  for (const [variant, fen] of cards) {
+    const resolved = resolvePositionOg(variant, fen ?? startPositionFen(variant));
+    assert.ok(resolved, `${variant} resolves`);
+    const svg = renderBoardCard(resolved.board, art, { players });
+    const images = embeddedArt(svg);
+    assert.ok(images.length > 0, `${variant}: art embedded`);
+    for (const { png, drawn } of images) {
+      assert.ok(
+        png >= drawn,
+        `${variant}: ${png} px art drawn at ${drawn.toFixed(0)} px is upscaled`,
+      );
+      assert.ok(png < 2 * drawn, `${variant}: ${png} px art drawn at ${drawn.toFixed(0)} px`);
+    }
+  }
+  resetCardArt();
+});
+
+test('artHref picks the smallest halving at least as large as the output', () => {
+  const levels = [1024, 512, 256, 128, 64].map((px) => ({ px, uri: `u${px}` }));
+  const art = new Map([['a.png', levels]]);
+  const at = (units: number) => artHref(art, 'a.png', units);
+  assert.equal(at(60), 'u128', '120 px out: the 128 halving');
+  assert.equal(at(64), 'u128', 'exactly 128 px out');
+  assert.equal(at(65), 'u256');
+  assert.equal(at(10), 'u64', 'never below the smallest level');
+  assert.equal(at(900), 'u1024', 'past the source: the source');
+  assert.equal(artHref(art, 'missing.png', 60), undefined);
 });
 
 test('a jieqi face-down piece is the live back disc with no art and no glyph', async () => {
@@ -137,4 +209,76 @@ test('a chess game card seats black at the top and white at the bottom behind th
   assert.match(svg, />Fog Chess<\/text>/);
   // Two kings in the column (cburnett paths), not xiangqi generals.
   assert.ok(!svg.includes('international/'), 'no xiangqi art on a chess card');
+});
+
+// Brian, on the banqi square card (2026-10-11): "the brown outline curvature is
+// not aligned with the lighter board color corner rounding". The outline is a
+// stroke inset by half its width over a rounded fill; with the fill's own rx
+// the two curves are not concentric and the fill pokes out at every corner.
+// Any inset stroked rect on a board must round at the fill's rx less its inset.
+// Concentric was not enough: a fill ending on the same outer edge as the stroke
+// antialiases there too and still showed a light sliver on the curve ("I'm
+// still seeing the light color of the board"), so the fill must end under the
+// stroke's centre line, where the stroke's outer half covers its soft edge.
+test('an inset board outline rounds concentric with the fill under it', () => {
+  const num = (attrs: string, name: string) => {
+    const m = new RegExp(`\\b${name}="([\\d.]+)"`).exec(attrs);
+    return m ? Number(m[1]) : undefined;
+  };
+  const cases: [Parameters<typeof startPositionFen>[0], string?][] = [
+    ['xiangqi'],
+    ['banqi'],
+    ['banqi', 'X1X2r1X/2XGX1X1/X1s1XX1X/1XXX2XX r A2E2R1H2C1S3a1e1h1c1 3 12'],
+    ['jungle'],
+    ['jungle-flip'],
+  ];
+  let outlines = 0;
+  for (const [variant, fen] of cases) {
+    const b = board(variant, fen);
+    const svg = renderBoardCard(b, new Map(), { title: ['Card'] });
+    // Board-sized rects only: jungle tokens are rounded squares with a ring too.
+    const half = boardSize(b).width / 2;
+    const rects = [...svg.matchAll(/<rect ([^>]*)\/>/g)]
+      .map((m) => m[1]!)
+      .filter((r) => (num(r, 'width') ?? 0) > half);
+    const fill = rects.find((r) => !r.includes('fill="none"') && num(r, 'rx') !== undefined);
+    assert.ok(fill, `${variant}: rounded board fill`);
+    const fillRx = num(fill, 'rx')!;
+    for (const r of rects.filter((r) => r.includes('fill="none"') && num(r, 'rx') !== undefined)) {
+      const inset = num(r, 'x')!;
+      const sw = num(r, 'stroke-width')!;
+      assert.ok(Math.abs(inset - sw / 2) < 1e-9, `${variant}: outline inset by half its stroke`);
+      assert.ok(
+        Math.abs(num(fill, 'x')! - inset) < 1e-9,
+        `${variant}: fill edge ${num(fill, 'x')} should sit under the stroke centre ${inset}`,
+      );
+      assert.ok(
+        Math.abs(num(r, 'rx')! - fillRx) < 1e-9,
+        `${variant}: outline rx ${num(r, 'rx')} should match the fill's ${fillRx}`,
+      );
+      outlines += 1;
+    }
+  }
+  assert.ok(outlines >= 2, 'the banqi cards carry an outline to check');
+});
+
+// The zh rules pages' cards (lang=zh-hant|zh-hans) draw the site's traditional
+// set: the cream double-ring disc with the baked character outline, as the live
+// board does for a zh reader. No figurine art may leak in from the
+// international set, even with every art file loaded.
+test('the traditional card draws character discs and no international art', async () => {
+  const art = await loadCardArt(WEB_PUBLIC);
+  for (const [variant, fen] of [
+    ['xiangqi', undefined],
+    ['banqi', 'X1X2r1X/2XGX1X1/X1s1XX1X/1XXX2XX r A2E2R1H2C1S3a1e1h1c1 3 12'],
+  ] as const) {
+    const b = board(variant, fen);
+    const international = renderBoardCard(b, art, { title: ['Card'] });
+    const traditional = renderBoardCard(b, art, { title: ['Card'] }, 'traditional');
+    assert.match(international, /<image /, `${variant}: the default card carries the art`);
+    assert.doesNotMatch(traditional, /<image /, `${variant}: no art in the traditional card`);
+    // Both inner rings (r=38) per revealed piece, red and black inks both present.
+    assert.match(traditional, /r="38" fill="none" stroke="#b91c1c"/);
+    assert.match(traditional, /r="38" fill="none" stroke="#1f2937"/);
+  }
 });

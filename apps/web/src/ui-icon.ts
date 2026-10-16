@@ -13,6 +13,7 @@ import {
   Heart,
   type IconNode,
   Info,
+  Mail,
   Megaphone,
   MessagesSquare,
   Newspaper,
@@ -34,6 +35,7 @@ export type UiIconName =
   | 'announcement-status'
   | 'announcement-update'
   | 'challenge-friend'
+  | 'correspondence'
   | 'create-topic'
   | 'event-broadcast'
   | 'event-tournament'
@@ -46,7 +48,8 @@ export type UiIconName =
   | 'play-game'
   | 'player-human'
   | 'store'
-  | 'support';
+  | 'support'
+  | 'title-champion';
 
 // Semantic app concept → Lucide glyph. Keep the mapping here, not at call sites,
 // so the icon language is swappable in one place.
@@ -56,6 +59,7 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   'announcement-status': Info,
   'announcement-update': Sparkles,
   'challenge-friend': Swords,
+  correspondence: Mail,
   'create-topic': SquarePen,
   'event-broadcast': RadioTower,
   'event-tournament': Trophy,
@@ -72,6 +76,7 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   'player-human': User,
   store: Store,
   support: Heart,
+  'title-champion': Crown,
 };
 
 export function buildUiIcon(name: UiIconName, className = ''): SVGElement {

@@ -26,6 +26,7 @@ import {
 } from './engine/engine-arrows.js';
 import type { NodeShape } from './game-tree.js';
 import { jungleTreeAdapter } from './jungle-tree-adapter.js';
+import { formatJungleEngineMove } from './move-advice-text.js';
 import {
   mountTreeReview,
   type TreePresentation,
@@ -41,11 +42,8 @@ export type JungleReviewHandle = TreeReviewHandle;
 
 // Jungle engine UCI is already board coords (files a..g, 1-indexed ranks 1..9) with no
 // flips — so, unlike the flip variants, there is no rank offset: "d8d9" -> "d8-d9",
-// matching the move list's `${from}-${to}` label.
-function formatJungleEngineMove(uci: string): string {
-  if (uci.length < 4) return uci;
-  return `${uci.slice(0, 2)}-${uci.slice(2, 4)}`;
-}
+// matching the move list's `${from}-${to}` label. Shared with the game embed's marks
+// (move-advice-text.ts), so both surfaces write the same move.
 
 const junglePresentation: TreePresentation<
   JungleMove,

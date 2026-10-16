@@ -6,9 +6,18 @@
  * featured game per channel for the TV hero. The two share the room walk and
  * the visibility policy but differ on purpose:
  *
- * - No freshness window and no "has a board renderer" gate. A dormant
- *   correspondence game is still a game in progress; a variant without a live
- *   board renderer is still listed, as a card with no board.
+ * - No "has a board renderer" gate: a variant without a live board renderer is
+ *   still listed, as a card with no board.
+ * - Correspondence has no freshness window: a dormant days-per-move game is
+ *   still a game in progress. A LIVE game whose last move is older than its
+ *   time class's window (LIVE_STALE_AFTER_MS) is hidden, the way lichess TV and
+ *   current games drop a game on secondsSinceLastMove (#469): a player who
+ *   starts a new bot game without resigning the old one left the old one listed
+ *   until its clock flagged, up to ~10 min at 10+5, and the list ran ~3x real
+ *   activity. Hidden, not ended: the result is untouched and the game is listed
+ *   again on its next move. The deploy gate's 10-minute idle cutoff below still
+ *   applies on top; it is the drain's notion of "nobody is here", too long for
+ *   a list a visitor picks a game from.
  * - Correspondence rooms are hydrated from the durable room_deadlines index
  *   first, so a days-per-move game with nobody connected (and therefore no
  *   in-memory room) is still on the page.
@@ -40,7 +49,11 @@ import {
   variantTenantForRoomId,
 } from './variant-tenant/registry.js';
 import { listWatchChannels } from './watch-channels.js';
-import { hasLiveWatchPayloadBuilder, liveWatchPayloadForFeatured } from './watch-live.js';
+import {
+  hasLiveWatchPayloadBuilder,
+  lastMoveAt,
+  liveWatchPayloadForFeatured,
+} from './watch-live.js';
 
 export type CurrentGameObserve = 'open' | 'masked' | 'sealed';
 
@@ -88,6 +101,36 @@ export type CurrentGame = {
   deadline: { seat: string; dueAt: string } | null;
   url: string;
 };
+
+// How long a live game may go without a move before /games stops listing it,
+// by time class. Lichess's TV freshness windows (Tv.scala): 2 min for blitz, 5
+// for rapid, 8 for classical; bullet gets 1 min rather than lichess's 35 s
+// because our only bullet pace carries a 1 s increment (1+1) and the list is
+// polled, not pushed. An unclassified live game (no time control) gets the
+// classical window: nothing flags it, so the deploy gate's idle cutoff is the
+// only other bound.
+export const LIVE_STALE_AFTER_MS: Record<
+  Exclude<CurrentGameTimeClass, 'correspondence'>,
+  number
+> = {
+  bullet: 60_000,
+  blitz: 2 * 60_000,
+  rapid: 5 * 60_000,
+  classical: 8 * 60_000,
+};
+
+// A live game nobody has moved in for its class's window: the player has
+// almost certainly left (or opened another game) and the clock is running
+// down to a flag. Correspondence is never stale here.
+export function isStaleLiveGame(
+  timeClass: CurrentGameTimeClass | null,
+  lastMoveTime: number | null,
+  now: number,
+): boolean {
+  if (timeClass === 'correspondence') return false;
+  if (lastMoveTime === null) return false;
+  return now - lastMoveTime > LIVE_STALE_AFTER_MS[timeClass ?? 'classical'];
+}
 
 type EngineSeatPredicate = (clientId: string | undefined) => boolean;
 
@@ -276,6 +319,8 @@ function finishGame(args: {
   if (!spec) return null;
   const observe = liveObservePolicy(spec.visibility, spec.id);
   const timeControl = normalizeTimeControl(args.timeControl);
+  const timeClass = timeClassFor(timeControl);
+  if (isStaleLiveGame(timeClass, lastMoveAt(args.events), args.now)) return null;
   const deadline = args.deadlines.get(args.roomId) ?? null;
   return {
     channelId: args.channelId,
@@ -290,7 +335,7 @@ function finishGame(args: {
     rated: args.rated,
     roomId: args.roomId,
     startedAt: firstEventAt(args.events),
-    timeClass: timeClassFor(timeControl),
+    timeClass,
     timeControl,
     url: `/room/${encodeURIComponent(args.roomId)}`,
   };
@@ -392,6 +437,7 @@ export async function currentGameBoardPayload(
     composition: game.composition,
     gameSpecId: game.gameSpecId,
     lastActivityAt: game.lastActivityAt ?? 0,
+    lastMoveAt: game.lastActivityAt ?? 0,
     players: game.players.map((player) => ({
       color: player.color,
       isEngine: player.isEngine,

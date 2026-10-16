@@ -22,6 +22,7 @@ import {
   createJungleFlipDeal,
   getAtomicXiangqiLegalMoves,
   getBanqiLegalMoves,
+  getCrazyhouseXiangqiLegalMoves,
   getDuckXiangqiLegalTurns,
   getFortressXiangqiLegalMoves,
   getJieqiLegalMoves,
@@ -32,6 +33,7 @@ import {
 } from '@mistboard/game';
 import { atomicXiangqiTenant } from './atomic-xiangqi-tenant.js';
 import { banqiTenant } from './banqi-tenant.js';
+import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
@@ -93,6 +95,8 @@ const VARIANTS: VariantSpec[] = [
   { tenant: atomicXiangqiTenant, enumerate: (s) => getAtomicXiangqiLegalMoves(s) },
   { tenant: xiangqiTenant, enumerate: (s) => getStandardXiangqiLegalMoves(s) },
   { tenant: darkXiangqiTenant, enumerate: (s) => getXiangqiLegalMoves(s) },
+  // Board moves and drops together: a drop is a move like any other.
+  { tenant: crazyhouseXiangqiTenant, enumerate: (s) => getCrazyhouseXiangqiLegalMoves(s) },
 ];
 
 // Deterministic committed fixtures: a fixed base epoch keeps startedAt/endedAt

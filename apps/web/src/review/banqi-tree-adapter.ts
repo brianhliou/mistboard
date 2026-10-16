@@ -22,6 +22,7 @@ import {
   type BanqiGameState,
   type BanqiMove,
   type BanqiPlayerView,
+  type BanqiRules,
   type BanqiSquare,
   banqiSquareFromIndex,
   createInitialBanqiState,
@@ -55,6 +56,11 @@ export function recoverBanqiDeal(revealed: BanqiPlayerView): BanqiDeal {
   });
 }
 
+/** A finished game's start: the recovered deal and the rules it was played under
+ *  (banqiRulesFromView on the postgame view; a game from before the 長捉 rule has
+ *  it off, and replaying it under the rule could drop its chase moves). */
+export type BanqiReviewStart = { deal: BanqiDeal; rules: BanqiRules };
+
 /** Build a banqi tree adapter over a recovered deal. `mode: 'perfect-info'` — with
  *  the deal known, hidden-deal branching is deterministic and needs no server
  *  engine (there is no client ceval for banqi, so no engine bundle either). */
@@ -63,13 +69,13 @@ export function makeBanqiTreeAdapter(
   // Null when the caller roots the tree at a parsed position (TreeReviewConfig
   // `root`), in which case initialTruth is never consulted; asking anyway is a
   // wiring bug, so it throws rather than minting a deal the URL does not carry.
-  deal: BanqiDeal | null,
+  start: BanqiReviewStart | null,
 ): VariantTreeAdapter<BanqiMove, BanqiGameState, BanqiPlayerView> {
   return {
     mode: 'perfect-info',
     initialTruth: () => {
-      if (!deal) throw new Error('banqi tree adapter: no deal; mount with config.root');
-      return createInitialBanqiState(gameId, deal);
+      if (!start) throw new Error('banqi tree adapter: no deal; mount with config.root');
+      return createInitialBanqiState(gameId, start.deal, start.rules);
     },
     isLegal: (truth, move) => truth.status.type === 'playing' && isBanqiLegalMove(truth, move),
     // applyBanqiMove returns `state` unchanged on an illegal move; the tree only
