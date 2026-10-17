@@ -787,10 +787,14 @@ function ensureRefreshLoop(): void {
   });
 }
 
-const BELL_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`;
+// Bell drawn for the nav: knob, flared rim and a round clapper. The usual
+// arc clapper read as a stray "U" under the bell at 18px.
+const BELL_SHAPE =
+  '<path d="M12 2.75v1.75"/><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"/><circle cx="12" cy="21" r="1.6" fill="currentColor" stroke="none"/>';
+const BELL_ICON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BELL_SHAPE}</svg>`;
 
-// Row icons in the bell's own stroke style: 24px grid, 2px round strokes,
-// currentColor, drawn at 16px.
+// Row icons are line glyphs (the generic row gets the bell outline): 24px
+// grid, 2px round strokes, currentColor, drawn at 16px.
 const icon = (body: string): string =>
   `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${body}</svg>`;
 
@@ -812,5 +816,5 @@ const KIND_ICONS: Record<NotificationKind | 'generic', string> = {
   ),
   // A flag: the game is over.
   ended: icon('<path d="M4 22V4"/><path d="M4 4h12l-2 4 2 4H4"/>'),
-  generic: BELL_ICON.replace('width="18" height="18"', 'width="16" height="16"'),
+  generic: icon(BELL_SHAPE),
 };
