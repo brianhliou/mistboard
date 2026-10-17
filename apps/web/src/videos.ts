@@ -20,6 +20,8 @@ import { currentLocale, type Locale } from './i18n/locale.js';
 import { buildNav } from './site-shell.js';
 import {
   FIRST_PARTY_VIDEOS,
+  isShort,
+  isVideoLive,
   VIDEO_LANGUAGES,
   VIDEO_LEVELS,
   VIDEO_TAGS,
@@ -132,7 +134,22 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
   oursIntro.textContent = t('videos.ourIntro', {}, locale);
   const oursList = document.createElement('ul');
   oursList.className = 'videos-grid videos-ours-grid';
-  for (const video of FIRST_PARTY_VIDEOS) oursList.append(buildVideoCard(video, locale));
+  const live = FIRST_PARTY_VIDEOS.filter((video) => isVideoLive(video));
+  for (const video of live.filter((video) => !isShort(video)))
+    oursList.append(buildVideoCard(video, locale));
+  // Shorts get their own row: a 9:16 card in the 16:9 grid would set every
+  // row's height. Newest first, like the episodes.
+  const shorts = live.filter(isShort).reverse();
+  const shortsBlock: HTMLElement[] = [];
+  if (shorts.length) {
+    const shortsHeading = document.createElement('h3');
+    shortsHeading.className = 'videos-shorts-heading';
+    shortsHeading.textContent = t('videos.shortsHeading', {}, locale);
+    const shortsList = document.createElement('ul');
+    shortsList.className = 'videos-grid videos-shorts-grid';
+    for (const video of shorts) shortsList.append(buildVideoCard(video, locale));
+    shortsBlock.push(shortsHeading, shortsList);
+  }
   const subscribe = document.createElement('a');
   subscribe.className = 'videos-subscribe';
   subscribe.href = 'https://www.youtube.com/@Mistboard?sub_confirmation=1';
@@ -142,7 +159,7 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
   subscribe.addEventListener('click', () => {
     track('video_clicked', { kind: 'subscribe', source: 'youtube', video_key: null });
   });
-  ours.append(oursHeading, oursIntro, oursList, subscribe);
+  ours.append(oursHeading, oursIntro, oursList, ...shortsBlock, subscribe);
 
   // Which facet options actually exist in the data. Level always spans its full
   // ordered set; language, variant, and source facets render only when they
