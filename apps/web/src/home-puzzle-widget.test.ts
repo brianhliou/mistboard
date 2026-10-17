@@ -5,7 +5,7 @@ import {
   cachedHomeDailyPuzzle,
   loadHomeDailyPuzzle,
 } from './home-puzzle-widget.js';
-import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { setBoardCoordinatesPreference, xiangqiAppearanceChangedEvent } from './theme.js';
 
 describe('home puzzle widget', () => {
   afterEach(() => {
@@ -53,6 +53,24 @@ describe('home puzzle widget', () => {
     window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
 
     expect(widget?.innerHTML).not.toBe(traditionalMarkup);
+  });
+
+  it('follows the board coordinates setting like the viewer beside it', async () => {
+    // Brian, 2026-10-17: the viewer widget showed coordinates, the puzzle did not.
+    installMemoryLocalStorage();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(dailyBody(XIANGQI_PUZZLES[0]!))),
+    );
+    const widget = await buildHomePuzzleWidget();
+    const viewBox = (): string | null | undefined =>
+      widget?.querySelector('.xq-live-svg')?.getAttribute('viewBox');
+    // Off: no label gutter, so the viewBox starts at the board's own origin.
+    expect(viewBox()).toMatch(/^0 0 /);
+    setBoardCoordinatesPreference(true);
+    expect(viewBox()).toMatch(/^-\d/);
+    setBoardCoordinatesPreference(false);
+    expect(viewBox()).toMatch(/^0 0 /);
   });
 
   it('returns null when the daily puzzle endpoint is unavailable', async () => {

@@ -202,6 +202,21 @@
   justify-content: center;
 }
 
+/* Coordinates on: the label gutter makes the board 576:636 (564:636 square
+   grid). The board host clips, so the box and the shared band height take that
+   shape too, or the outer rank is cut off. */
+:root[data-board-coordinates="on"] .home-puzzle-box:has(.xq-live-svg--intersection) {
+  aspect-ratio: 576 / 636;
+}
+
+:root[data-board-coordinates="on"] .home-puzzle-widget-board:has(.xq-live-svg--cell) {
+  aspect-ratio: 564 / 636;
+}
+
+:root[data-board-coordinates="on"] .landing-demo {
+  --landing-puzzle-board-height: calc(var(--landing-rail-width) * 636 / 576);
+}
+
 .home-puzzle-widget-board svg {
   position: absolute;
   inset: 0;

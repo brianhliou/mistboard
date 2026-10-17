@@ -198,6 +198,17 @@
   width: min(100%, calc(var(--puzzle-surface-size) * 540 / 612));
 }
 
+/* Coordinates on: the label gutter reshapes the board (live-xiangqi.css). */
+:root[data-board-coordinates="on"] .puzzle-board .puzzle-xiangqi-board {
+  width: min(100%, calc(var(--puzzle-surface-size) * 576 / 636));
+}
+
+:root[data-board-coordinates="on"][data-xiangqi-board-layout="cell"]
+  .puzzle-board
+  .puzzle-xiangqi-board {
+  width: min(100%, calc(var(--puzzle-surface-size) * 564 / 636));
+}
+
 .puzzle-board-shell {
   width: min(100%, var(--puzzle-drop-surface-size));
   min-width: 360px;
