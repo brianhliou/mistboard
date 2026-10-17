@@ -1465,6 +1465,13 @@
   min-width: 8.5em;
 }
 
+/* At 8.5em the fixed-bot match table ran 15px past a 390px phone column. */
+@media (max-width: 600px) {
+  [data-article-slug="pikafish-reveal-bug"] .article-table td:first-child {
+    min-width: 6.5em;
+  }
+}
+
 /* Click-to-expand figures. The trigger is a button so the affordance is
    keyboard-reachable; it is styled to disappear so the figure still reads as a
    figure rather than as a control. */

@@ -121,67 +121,103 @@ export const pikafishRevealBugArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: 'In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, priced some of those bets far too well. It would turn over a piece that gets mated for most of what it could be, and rate the move as winning.',
-    },
-    {
-      kind: 'paragraph',
-      text: 'We found it on October 2, while writing the [AB-JChess post](/blog/ab-jchess). The fix is live for every level and for the engine you can run on the analysis board.',
+      text: 'In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, would turn over a piece that gets mated for most of what it could be and rate the move as winning. We caught it while writing the [AB-JChess post](/blog/ab-jchess). Two bugs caused it, and the fix is live for every level and for the engine you can run on the analysis board.',
     },
   ],
   sections: [
     {
-      heading: 'The bot averages a reveal over the pieces it could be',
+      heading: 'The bot called a move winning with a mate in its own line',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'On October 2 we had game 108 of the AB-JChess match open, to show how Pikafish judged a reveal. Pikafish, as Black, turned over the piece on d10 and moved it to e9, and rated the position 18.7 pawns in its favour. Its own best line had Red mating. A correct search cannot find a mate in its own best line and still call the position winning.',
+        },
+        gameEmbed('jq_ab-jchess-vs-pikajieqi-4s-2026-09-108', 23, 'Jieqi: Pikafish, as Black, is about to reveal on d10'),
+        {
+          kind: 'paragraph',
+          text: "Only an advisor on e9 stops the chariot's mate on f10, and an advisor was 1 of the 11 pieces it could have been. It was a chariot, and Black was mated next move. We took the examples out of that post the same day and went looking for the cause.",
+        },
+      ],
+    },
+    {
+      heading: 'For Black, the average took the best piece',
       blocks: [
         {
           kind: 'paragraph',
           text: 'When the bot considers a move that turns a piece over, it plays the move once for each piece the face-down one could be. It scores each, then averages the scores, weighted by how many of each piece are left. A reveal that wins if the piece is a chariot and gets mated if it is a soldier should score somewhere in between. Two bugs broke that average.',
         },
-      ],
-    },
-    {
-      heading: "For Black, the average took the best piece",
-      blocks: [
         {
           kind: 'paragraph',
           text: 'Before averaging, the code turns every score to one player\'s point of view. It picked the player from a setting that was never filled in, so it always assumed Red. For Red\'s reveals that was right. For Black\'s, the scores were upside down, and a rule meant to take the worst outcome, when the outcomes spread far apart, took the best one.',
         },
         {
           kind: 'paragraph',
-          text: 'That was the game the AB-JChess post first led with. Pikafish, as Black, turned over the piece on d10 and moved it to e9, rating the game nearly 19 pawns in its favour. Only an advisor on e9 stops the chariot\'s mate on f10, and an advisor was 1 of the 11 pieces it could have been. It was a chariot, and Black was mated next move.',
+          text: `The flip is in [misc.h, lines 360 to 366](${OLD}/misc.h#L360-L366), set from [search.cpp, line 1310](${OLD}/search.cpp#L1310) by asking whether the side to move is the "first side", a field [nothing ever assigns](${OLD}/position.h#L212). Game 108 was a Black reveal, so its scores went through the flip.`,
         },
-        gameEmbed('jq_ab-jchess-vs-pikajieqi-4s-2026-09-108', 23, 'Jieqi: Pikafish, as Black, is about to reveal on d10'),
       ],
     },
     {
-      heading: 'Scores the search cut short were averaged as exact',
+      heading: "Printing every piece's score found the second bug",
       blocks: [
         {
           kind: 'paragraph',
-          text: 'An engine saves time by giving up on a move once it knows the move is worse than the best one so far. It then returns a bound, which means "this much, or worse". That is safe when the next step is a comparison. The bot fed these bounds into the average as if they were exact scores, so a piece that gets mated could come back as "no better than +7" and count as +7.',
+          text: 'We printed the score of every piece the bot could turn over at a reveal. In one match game, three of the four were mated:',
+        },
+        {
+          kind: 'table',
+          headers: ['Searched as', 'Search score'],
+          rows: [
+            ['Piece 1, mated', '738'],
+            ['Piece 2, mated', '738'],
+            ['Piece 3, mated', '738'],
+            ['Piece 4', '792'],
+            ['Averaged', '745'],
+          ],
+          keyColumn: true,
+          compact: true,
+          highlightRows: [4],
+          caption:
+            '738 is the lower edge of the search window. Each mated piece came back as that edge, and the bot averaged it as a real score.',
         },
         {
           kind: 'paragraph',
-          text: 'In the first game of the AB-JChess post, the bot, as Red, turned over the piece on b3 and moved it to d3. Searched again with the old bot, the move rates more than eight pawns in Red\'s favour. Six times in ten that piece is a soldier or an elephant, and Black\'s cannon mates at once on h1. Averaged honestly, the move is worth about three pawns to Black. The fixed bot sees the mate and plays the advisor from e2 to f3, the move AB-JChess recommends.',
+          text: `An engine saves time by giving up on a move once it knows the move is worse than the best one so far. It then returns a bound, which means "this much, or worse". That is safe when the next step is a comparison. The bot fed these bounds into the average as if they were exact scores, and rated a move that gets mated for three of its four pieces as winning. Each piece is searched inside the window of the move above it, at [search.cpp, line 1462](${OLD}/search.cpp#L1462).`,
+        },
+        {
+          kind: 'paragraph',
+          text: "The same flaw hid a mate in the first game of the AB-JChess post. The bot, as Red, turned over the piece on b3 and moved it to d3. If that piece is a soldier or an elephant, Black's cannon mates at once on h1.",
         },
         gameEmbed('jq_23d2a761-b37d-4bf0-a786-3ce7edf7e0fd', 26, 'Jieqi: the bot is about to reveal on b3'),
+        {
+          kind: 'table',
+          headers: ['If b3 is', 'Share', 'For Red'],
+          rows: [
+            ['A chariot', '0.4', 'Wins'],
+            ['A soldier', '0.4', 'Mated'],
+            ['An elephant', '0.2', 'Mated'],
+            ['Old bot’s rating', '', '+8.6'],
+            ['Weighted by share', '', 'About −3.0'],
+          ],
+          keyColumn: true,
+          compact: true,
+          highlightRows: [4],
+          caption:
+            'Share is that piece’s part of what b3 could be, by count. Ratings are in pawns for Red, from a fresh search with the old bot.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Weighted honestly, Black is better. The fixed bot sees the mate and plays the advisor from e2 to f3, the move AB-JChess recommends.',
+        },
       ],
     },
     {
-      heading: 'Where the bugs are in the code',
+      heading: 'The fix drops the flip and searches a cut-short piece again',
       blocks: [
         {
           kind: 'paragraph',
           text: `Both are in our copy of Pikafish's jieqi branch. Simplified, the old code scored a reveal like this:`,
         },
         { kind: 'code', language: 'python', text: OLD_PSEUDOCODE },
-        {
-          kind: 'paragraph',
-          text: `The colour flip is in [misc.h, lines 360 to 366](${OLD}/misc.h#L360-L366), set from [search.cpp, line 1310](${OLD}/search.cpp#L1310) by asking whether the side to move is the "first side", a field [nothing ever assigns](${OLD}/position.h#L212). The window is the one at [search.cpp, line 1462](${OLD}/search.cpp#L1462): each piece is searched inside the window of the move above it, and a piece that gets mated comes back as the window's lower edge.`,
-        },
-        {
-          kind: 'paragraph',
-          text: 'We found the second one by printing every piece\'s score at a reveal. In one match game, three of the four pieces the bot could turn over were mated, and all three came back as exactly 738, the bottom of the window. The fourth scored 792. The bot averaged them to 745 and rated the move as winning.',
-        },
         { kind: 'code', language: 'python', text: NEW_PSEUDOCODE },
         {
           kind: 'paragraph',
@@ -194,11 +230,38 @@ export const pikafishRevealBugArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "Of the 71 moves that decided Pikafish's losses in the AB-JChess match, the old bot rated 16 at least five pawns better than they were. The fixed bot rates 3. It plays about as well as the old one, perhaps slightly weaker: in 600 quick games it won 264 and lost 300, and with four times the search per move it won 95 and lost 97 in 200.",
+          text: "We searched the 71 moves that decided Pikafish's losses in the AB-JChess match again with both bots, then played the fixed bot against the old one.",
+        },
+        {
+          kind: 'table',
+          headers: ['Moves', 'Count', 'Old bot', 'Fixed bot'],
+          rows: [
+            ['Decided a loss', '71', '16', '3'],
+            ['Controls', '30', '0', '0'],
+          ],
+          keyColumn: true,
+          compact: true,
+          caption:
+            'How many moves each bot rated at least five pawns better than they were, searched fresh at 2M nodes on one thread.',
+        },
+        {
+          kind: 'table',
+          headers: ['Fixed bot', 'Games', 'W-L-D', 'Elo'],
+          rows: [
+            ['Colour fix only', '200', '95-95-10', ''],
+            ['Shipped: colour fix, root re-search', '600', '264-300-36', '−21 [−48, +6]'],
+            ['Shipped, at 4M nodes a move', '200', '95-97-8', '−3 [−51, +44]'],
+            ['Re-search everywhere', '128', '', 'About −150'],
+          ],
+          keyColumn: true,
+          compact: true,
+          highlightRows: [1],
+          caption:
+            'The fixed bot against the old one, at 1M nodes a move unless noted. W-L-D is the fixed bot’s; the brackets are the Elo interval.',
         },
         {
           kind: 'paragraph',
-          text: 'The fix covers the move the bot is choosing. Deeper in its search the old averaging is still there, because fixing it everywhere made the bot about 150 Elo weaker.',
+          text: 'The fixed bot rates reveals close to their worth, and its strength is unchanged within the noise, perhaps slightly weaker: both intervals include zero. The fix covers only the move the bot is choosing. Deeper in its search the old averaging is still there, because re-searching everywhere cost about 150 Elo.',
         },
       ],
     },
@@ -219,7 +282,7 @@ export const pikafishRevealBugArticle: Article = {
       // errors of the per-game score (wins, draws and losses as given): the post
       // printed ±0.068 and ±0.067 for the 200-game rows; ±0.087 and ±0.126 for
       // the 100- and 50-game rows were derived the same way on 2026-10-16.
-      heading: 'An earlier audit tested the averaging on the buggy engine',
+      heading: 'A September audit ran on the buggy engine and missed it',
       blocks: [
         {
           kind: 'paragraph',
@@ -262,15 +325,6 @@ export const pikafishRevealBugArticle: Article = {
         {
           kind: 'paragraph',
           text: 'That conclusion came from the colour bug above. The fallback was meant to assume the worst, and as Black it assumed the best, so the test ran on an engine that was not doing it half the time. Since then [AB-JChess](/blog/ab-jchess) has beaten this engine 248-136-16 over 400 games and is now the top jieqi bot.',
-        },
-      ],
-    },
-    {
-      heading: 'A question about one move caught it',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text: "The AB-JChess post first used game 108 to show how Pikafish judged a reveal. What caught the bug was asking why the bot would play d10-e9 at all. A correct search cannot find a mate in its own best line and still call the position winning. We took the examples out of that post the same day.",
         },
         {
           kind: 'cta',

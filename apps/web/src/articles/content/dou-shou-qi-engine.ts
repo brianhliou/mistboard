@@ -72,7 +72,7 @@ export const douShouQiEngineArticle: Article = {
           'A standalone Rust engine with a small UCI-style protocol, usable from the command line or from Python via PyO3. Strength is a **node budget, not a clock**, so the same position returns the same move on any machine.',
         ),
         p(
-          'The stack is conventional: negamax alpha-beta with iterative deepening, a Zobrist transposition table, quiescence on captures and den-entries, and killer/history move ordering with PVS and late-move reductions, over a handcrafted evaluation that scores material, den races, traps, water, and mobility. That ordering-and-pruning polish was worth a measured +49 Elo at a fixed node budget.',
+          'The stack is conventional: negamax alpha-beta with iterative deepening, a Zobrist transposition table, quiescence on captures and den-entries, and killer/history move ordering with PVS and late-move reductions, over a handcrafted evaluation that scores material, distance to the enemy den, traps, water, and mobility. That ordering-and-pruning polish was worth a measured +49 Elo at a fixed node budget.',
         ),
         p(
           'The eval has to be exact before a learned correction can add anything. Dou Shou Qi is material-heavy but full of sharp exceptions: a rat stops an elephant, a trapped piece loses its rank, one step into the den ends the game.',
