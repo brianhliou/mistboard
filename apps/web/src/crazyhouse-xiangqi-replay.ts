@@ -177,7 +177,6 @@ export function mountCrazyhouseXiangqiReplay(
       interactive: false,
       selectedSquare: null,
       draggingFrom: null,
-      coordinates: false,
       ...crazyhouseXiangqiBoardMarks(view),
     });
     // One-ply steps glide (the embed board's rule); a jump repaints instantly,

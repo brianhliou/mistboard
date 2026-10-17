@@ -420,6 +420,21 @@ describe('appearance family gating', () => {
     }
   });
 
+  it('offers board coordinates in the gear, off by default, for a guest too', async () => {
+    // They were only on the account page, so a signed-out reader could not
+    // turn them on at all (2026-10-17).
+    await rebuildThemePanel();
+    const toggle = document.querySelector<HTMLInputElement>(
+      '[data-theme-control] .appearance-submenu[data-key="board"] [data-board-coordinates-toggle]',
+    );
+    expect(toggle?.checked).toBe(false);
+    toggle?.click();
+    expect(document.documentElement.dataset.boardCoordinates).toBe('on');
+    expect(
+      JSON.parse(localStorage.getItem('mistboard.displayPreferences.v1') ?? '{}').boardCoordinates,
+    ).toBe(true);
+  });
+
   it('swaps the real appearance menu into the buildAppearanceMenu facade placeholder', async () => {
     // account-nav embeds the menu synchronously; the facade returns an empty
     // .appearance-menu holder and replaces it once the lazy settings chunk

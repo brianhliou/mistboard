@@ -113,7 +113,6 @@ export function mountCrazyhouseXiangqiReplayBoard(
       interactive: false,
       selectedSquare: null,
       draggingFrom: null,
-      coordinates: false,
       ...crazyhouseXiangqiBoardMarks(view),
     });
     // The game room's pocket: a slot for every droppable role, the ones held
