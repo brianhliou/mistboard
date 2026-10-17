@@ -14,6 +14,11 @@
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import type { Move } from '@mistboard/game';
+import {
+  classifyKnownEngineFailure,
+  isTimeoutish,
+  withKnownEngineFailure,
+} from './engine-known-failures.js';
 import { defaultStockfishPath, engineDir, enginePython, engineScript } from './engine-paths.js';
 import { loadEngine } from './engines/registry.js';
 import { engineCounters, logger } from './obs.js';
@@ -64,6 +69,11 @@ interface PendingRequest {
   timeoutHandle: NodeJS.Timeout | null;
   /** Dispatch attempts so far (R1-recover: retry a transient failure once). */
   attempts: number;
+  /**
+   * Any attempt timed out. The timeout kills the worker, so the retry often
+   * fails as "worker N exited": the last error alone hides the timeout.
+   */
+  timedOut: boolean;
 }
 
 // R1-recover: a move that fails on one worker (crash / OOM / timeout / one-off
@@ -458,8 +468,16 @@ export class PythonPool {
   // dispatch timeout + the caller's outer watchdog bound the total time.
   private handleRequestFailure(req: PendingRequest, err: Error): void {
     req.attempts += 1;
+    if (isTimeoutish(err.message)) req.timedOut = true;
+    // A known signature (engine-known-failures.ts) is data, not a page: neither
+    // the retry warning nor the pool-error critical counts it. The turn handler
+    // counts it once, from the tag on the rejected error.
+    const knownFailure = classifyKnownEngineFailure({
+      gameSpecId: this.opts.gameSpecId,
+      timedOut: req.timedOut,
+    });
     if (!this.disposed && req.attempts < MAX_MOVE_ATTEMPTS) {
-      engineCounters.recordPythonPoolRetry();
+      if (!knownFailure) engineCounters.recordPythonPoolRetry();
       logger.warn(
         {
           kind: 'python_pool_move_retry',
@@ -468,6 +486,7 @@ export class PythonPool {
           attempt: req.attempts,
           max_attempts: MAX_MOVE_ATTEMPTS,
           error: err.message,
+          known_failure: knownFailure,
           ...payloadDiagnostics(req.payload),
         },
         'retrying move on a healthy worker',
@@ -480,6 +499,10 @@ export class PythonPool {
     }
     // Terminal: recovery exhausted (or pool disposed). NOW it's a hard pool
     // error (critical alert), distinct from a recovered blip (retry → warning).
+    if (knownFailure) {
+      req.reject(withKnownEngineFailure(err, knownFailure));
+      return;
+    }
     engineCounters.recordPythonPoolError({ timeout: isTimeoutish(err.message) });
     req.reject(err);
   }
@@ -580,6 +603,7 @@ export class PythonPool {
         reject: rejectPromise,
         timeoutHandle: null,
         attempts: 0,
+        timedOut: false,
       };
       this.queue.push(req);
       this.tryDispatch();
@@ -687,10 +711,6 @@ function numberOrNull(value: unknown): number | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
-}
-
-function isTimeoutish(error: string): boolean {
-  return /\b(timeout|timed out|abort)\b/i.test(error);
 }
 
 // Lazy-initialized singleton per engine_id. First chooseMove blocks on pool

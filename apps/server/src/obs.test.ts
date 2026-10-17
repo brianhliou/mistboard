@@ -208,3 +208,19 @@ test('infra alert fields page on memory and loop-lag breaches', () => {
     null,
   );
 });
+
+test('known engine failures are counted per signature and never raise an engine alert', () => {
+  const counters = new EngineCounters();
+  counters.recordKnownFailure('fog-xiangqi-belief-timeout');
+  counters.recordKnownFailure('fog-xiangqi-belief-timeout');
+  const snapshot = counters.snapshot();
+  assert.equal(snapshot.knownFailures, 2);
+  assert.equal(snapshot.knownFailuresDelta, 2);
+  assert.deepEqual(snapshot.knownFailuresBySignatureTick, { 'fog-xiangqi-belief-timeout': 2 });
+  assert.equal(engineAlertFields(snapshot), null);
+
+  const next = counters.snapshot();
+  assert.equal(next.knownFailures, 2, 'the total keeps counting');
+  assert.equal(next.knownFailuresDelta, 0);
+  assert.deepEqual(next.knownFailuresBySignatureTick, {});
+});

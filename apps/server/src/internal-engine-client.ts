@@ -7,6 +7,7 @@ import type {
   Move,
   Square,
 } from '@mistboard/game';
+import { type KnownEngineFailure, parseKnownEngineFailure } from './engine-known-failures.js';
 
 const ENGINE_TURN_PATH = '/internal/engine/turn';
 const ENGINE_OBSERVE_PATH = '/internal/engine/observe';
@@ -31,18 +32,22 @@ export class InternalEngineClientError extends Error {
   readonly diagnostics?: Record<string, unknown>;
   readonly status?: number;
   readonly timeoutMs?: number;
+  /** The worker's own classification of the failure (engine-known-failures.ts). */
+  readonly knownFailure?: KnownEngineFailure;
 
   constructor(
     readonly reason: InternalEngineClientErrorReason,
     message: string,
     options: {
       diagnostics?: Record<string, unknown>;
+      knownFailure?: KnownEngineFailure;
       status?: number;
       timeoutMs?: number;
     } = {},
   ) {
     super(message);
     this.diagnostics = options.diagnostics;
+    this.knownFailure = options.knownFailure;
     this.status = options.status;
     this.timeoutMs = options.timeoutMs;
   }
@@ -105,12 +110,14 @@ export async function requestEngineTurnAt(
       const bodyTail = (
         await readCappedText(response, ERROR_BODY_TAIL_CHARS * 4).catch(() => '')
       ).slice(-ERROR_BODY_TAIL_CHARS);
+      const knownFailure = knownFailureFromBody(bodyTail);
       throw new InternalEngineClientError(
         'http_error',
         `internal engine service returned HTTP ${response.status}`,
         {
           status: response.status,
           diagnostics: { status: response.status, bodyTail },
+          ...(knownFailure ? { knownFailure } : {}),
         },
       );
     }
@@ -420,6 +427,16 @@ function isAbortError(err: unknown): boolean {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
+}
+
+/** The worker's `known_failure` tag on an error body (engine-known-failures.ts). */
+function knownFailureFromBody(body: string): KnownEngineFailure | null {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    return isObject(parsed) ? parseKnownEngineFailure(parsed.known_failure) : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

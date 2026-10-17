@@ -2,6 +2,12 @@ import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { EngineTurnRequest, EngineTurnResponse, Move, Square } from '@mistboard/game';
 import { runDarkChessAnalysisJob } from './dark-chess-analysis-job.js';
+import {
+  classifyKnownEngineFailure,
+  isTimeoutish,
+  knownEngineFailureOf,
+  withKnownEngineFailure,
+} from './engine-known-failures.js';
 import { engineCounters, logger } from './obs.js';
 import { getPythonPool } from './python-pool.js';
 
@@ -66,7 +72,13 @@ export async function startEngineHttpService(
           },
           'engine HTTP request failed',
         );
-        writeJson(res, status, { error: status === 500 ? 'internal_error' : err.message });
+        // `known_failure` lets the web service tell a known signature from any
+        // other 500 (engine-known-failures.ts); the error text stays internal.
+        const knownFailure = knownEngineFailureOf(err);
+        writeJson(res, status, {
+          error: status === 500 ? 'internal_error' : err.message,
+          ...(knownFailure ? { known_failure: knownFailure } : {}),
+        });
       },
     );
   });
@@ -401,6 +413,28 @@ async function handleRequest(
     } catch (err) {
       const elapsedMs = Date.now() - startedAt;
       const error = err instanceof Error ? err.message : String(err);
+      // The pool tags a known signature; a watchdog timeout outside the pool is
+      // classified here from the request itself.
+      const knownFailure =
+        knownEngineFailureOf(err) ??
+        classifyKnownEngineFailure({
+          gameSpecId: request.gameSpecId,
+          timedOut: isTimeoutish(error),
+        });
+      if (knownFailure) {
+        engineCounters.recordKnownFailure(knownFailure);
+        logger.warn(
+          {
+            kind: 'engine_known_failure',
+            ...commonLog,
+            elapsed_ms: elapsedMs,
+            error,
+            known_failure: knownFailure,
+          },
+          'engine turn failed (known signature)',
+        );
+        throw err instanceof Error ? withKnownEngineFailure(err, knownFailure) : err;
+      }
       engineCounters.recordTurnFailed({
         elapsedMs,
         error,

@@ -12,6 +12,7 @@
 import { monitorEventLoopDelay } from 'node:perf_hooks';
 import pino, { type Logger } from 'pino';
 import { type EngineAlertEmailPayload, sendEngineAlertNotification } from './engine-alert-email.js';
+import { isTimeoutish, type KnownEngineFailure } from './engine-known-failures.js';
 
 const isProd = process.env.NODE_ENV === 'production' || !process.stdout.isTTY;
 const level = process.env.LOG_LEVEL ?? 'info';
@@ -57,6 +58,7 @@ export class EngineCounters {
   totalPythonPoolErrors = 0;
   totalPythonPoolTimeouts = 0;
   totalPythonPoolRetries = 0;
+  totalKnownFailures = 0;
   private lastEmittedMoves = 0;
   private lastEmittedFallbacks = 0;
   private lastEmittedMoveFailures = 0;
@@ -71,6 +73,8 @@ export class EngineCounters {
   private lastEmittedPythonPoolErrors = 0;
   private lastEmittedPythonPoolTimeouts = 0;
   private lastEmittedPythonPoolRetries = 0;
+  private lastEmittedKnownFailures = 0;
+  private knownFailuresTick = new Map<KnownEngineFailure, number>();
   private turnElapsedSamples: number[] = [];
   private turnQueueWaitSamples: number[] = [];
 
@@ -127,6 +131,14 @@ export class EngineCounters {
     this.totalPythonPoolRetries += 1;
   }
 
+  // A failure matching a known signature (engine-known-failures.ts). Counted
+  // INSTEAD of the counters that page, so it stays visible as data in the
+  // metrics line without emailing.
+  recordKnownFailure(signature: KnownEngineFailure): void {
+    this.totalKnownFailures += 1;
+    this.knownFailuresTick.set(signature, (this.knownFailuresTick.get(signature) ?? 0) + 1);
+  }
+
   private recordTurnTiming(input: {
     elapsedMs?: number | null;
     queueWaitMs?: number | null;
@@ -142,6 +154,9 @@ export class EngineCounters {
   snapshot(): {
     deadlineGuards: number;
     deadlineGuardsDelta: number;
+    knownFailures: number;
+    knownFailuresDelta: number;
+    knownFailuresBySignatureTick: Record<string, number>;
     moves: number;
     fallbacks: number;
     moveFailures: number;
@@ -208,6 +223,10 @@ export class EngineCounters {
     this.lastEmittedPythonPoolErrors = this.totalPythonPoolErrors;
     this.lastEmittedPythonPoolTimeouts = this.totalPythonPoolTimeouts;
     this.lastEmittedPythonPoolRetries = this.totalPythonPoolRetries;
+    const knownFailuresDelta = this.totalKnownFailures - this.lastEmittedKnownFailures;
+    this.lastEmittedKnownFailures = this.totalKnownFailures;
+    const knownFailuresBySignatureTick = Object.fromEntries(this.knownFailuresTick);
+    this.knownFailuresTick.clear();
     const rate = movesDelta > 0 ? fallbacksDelta / movesDelta : 0;
     const elapsedStats =
       this.turnElapsedSamples.length > 0 ? latencyStats(this.turnElapsedSamples) : null;
@@ -218,6 +237,9 @@ export class EngineCounters {
     return {
       deadlineGuards: this.totalTurnDeadlineGuards,
       deadlineGuardsDelta,
+      knownFailures: this.totalKnownFailures,
+      knownFailuresDelta,
+      knownFailuresBySignatureTick,
       moves: this.totalMoves,
       fallbacks: this.totalFallbacks,
       moveFailures: this.totalMoveFailures,
@@ -254,11 +276,6 @@ export class EngineCounters {
       turnsStartedDelta,
     };
   }
-}
-
-function isTimeoutish(error: string | null | undefined): boolean {
-  if (!error) return false;
-  return /\b(timeout|timed out|abort)\b/i.test(error);
 }
 
 export const engineCounters = new EngineCounters();
@@ -671,6 +688,9 @@ export function startObservability(sources: ObsSources, intervalMs = 5_000): () 
         engine_turn_timeouts_tick: engine.turnTimeoutsDelta,
         engine_turn_deadline_guards_total: engine.deadlineGuards,
         engine_turn_deadline_guards_tick: engine.deadlineGuardsDelta,
+        engine_known_failures_total: engine.knownFailures,
+        engine_known_failures_tick: engine.knownFailuresDelta,
+        engine_known_failures_by_signature_tick: engine.knownFailuresBySignatureTick,
         engine_turn_latency_samples_tick: engine.turnLatencySamples,
         engine_turn_elapsed_p50_ms: engine.turnElapsedP50,
         engine_turn_elapsed_p95_ms: engine.turnElapsedP95,
