@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   correspondenceTimeControl,
+  createXmjSetup,
   DAY_MS,
   XIANGQI_MAHJONG_SPEC_ID,
   type XmjMove,
@@ -231,10 +232,46 @@ function keysOf(value: unknown, into = new Set<string>()): Set<string> {
   return into;
 }
 
+/** The path of every array in `value` that equals `needle` tile for tile, indices as `[]`. */
+function pathsHolding(value: unknown, needle: string, path: string, into: string[] = []) {
+  if (Array.isArray(value)) {
+    if (JSON.stringify(value) === needle) into.push(path);
+    for (const item of value) pathsHolding(item, needle, `${path}[]`, into);
+  } else if (value !== null && typeof value === 'object') {
+    for (const [key, child] of Object.entries(value)) {
+      pathsHolding(child, needle, `${path}.${key}`, into);
+    }
+  }
+  return into;
+}
+
+/**
+ * The fields where a tile array may equal the other seat's live hand without
+ * being it: the viewer's own hand and its own discard and claim options (each
+ * checked against the viewer's own tiles below), and what the table already
+ * shows face up (discard rivers, melds, the tiles a claim laid down, the
+ * winning shapes of finished hands). Two seats can hold the same sorted hand
+ * (["rP","rP","bP","bP"] in a seat's own `hands` failed a full run on main,
+ * 2026-10-16), and a finished hand's pair can equal a two-tile hand, so a bare
+ * substring search false-alarms; the same array anywhere else is a leak.
+ */
+function ownOrPublic(seat: XmjSeat): RegExp {
+  return new RegExp(
+    [
+      `^snapshot\\.state\\.hands\\.${seat}$`,
+      '^snapshot\\.state\\.legal\\.(discard|claims\\[\\]\\.fromHand)$',
+      '^snapshot\\.state\\.(discards\\.(east|west)|melds\\.(east|west)\\[\\]\\.tiles)$',
+      '^snapshot\\.state\\.results\\[\\]\\.score\\.shape\\.(pair|meld)$',
+      '^(snapshot\\.)?events\\[\\]\\.move\\.fromHand$',
+    ].join('|'),
+  );
+}
+
 /** Nothing served to `seat` names the other hand, the live wall, or any wall of the match. */
 async function assertSeatSeesOnlyItsOwn(room: XmjRuntimeRoom, seat: XmjSeat, where: string) {
   const s = state(room);
   const other = OTHER[seat];
+  const own = s.match.hand.hands[seat === 'east' ? 0 : 1];
   const client = { id: room.seatTokens[seat]?.clientId ?? `client-${seat}`, seat, solo: false };
   const surfaces: Record<string, unknown> = {
     snapshot: tenantSnapshotPayload(tenant, room, client),
@@ -250,6 +287,20 @@ async function assertSeatSeesOnlyItsOwn(room: XmjRuntimeRoom, seat: XmjSeat, whe
   if (handLive) {
     const shown = (surfaces.snapshot as { state: XmjPlayerView }).state;
     assert.equal(shown.hands[other], null, `${where}: ${seat} sees ${other}'s hand`);
+    // The own-hand fields excused below hold the viewer's tiles, never the other's.
+    assert.deepEqual(shown.hands[seat], own, `${where}: ${seat}'s own hand`);
+    for (const tile of shown.legal.discard) {
+      assert.ok(own.includes(tile), `${where}: ${seat} may discard ${tile}, not in its hand`);
+    }
+    for (const claim of shown.legal.claims) {
+      assert.ok(
+        claim.fromHand.every((tile) => own.includes(tile)),
+        `${where}: ${seat} may claim with tiles not in its hand`,
+      );
+    }
+    if (shown.phase.type === 'discard' && shown.turn !== seat) {
+      assert.equal(shown.phase.drawn, null, `${where}: ${seat} sees the tile ${other} drew`);
+    }
   }
   for (const [name, payload] of Object.entries(surfaces)) {
     const keys = keysOf(payload);
@@ -264,59 +315,89 @@ async function assertSeatSeesOnlyItsOwn(room: XmjRuntimeRoom, seat: XmjSeat, whe
     for (const future of s.match.walls.slice(s.match.handIndex + 1)) {
       assert.ok(!json.includes(JSON.stringify(future)), `${where} ${name}/${seat}: a future wall`);
     }
-    if (handLive) {
+    if (handLive && s.match.hand.hands[other === 'east' ? 0 : 1].length > 0) {
+      // Every length, by field: a coincidence is excused only where the array
+      // is the viewer's own or already face up on the table.
       const concealed = s.match.hand.hands[other === 'east' ? 0 : 1];
-      // Longer than a meld: a hand of two or three tiles can equal, tile for
-      // tile, a pair or meld shown in an earlier hand's winning shape, which is
-      // public (a 1-in-6 false alarm on ["bP","bP"]). The null hand above
-      // covers the short hands.
-      if (concealed.length > 3) {
-        assert.ok(
-          !json.includes(JSON.stringify(concealed)),
-          `${where} ${name}/${seat}: ${other}'s concealed tiles`,
-        );
+      const allowed = ownOrPublic(seat);
+      for (const path of pathsHolding(payload, JSON.stringify(concealed), name)) {
+        assert.match(path, allowed, `${where} ${name}/${seat}: ${other}'s concealed tiles`);
       }
     }
   }
 }
 
-test('a whole correspondence match: the deadline names the seat that owes each move, and no seat sees the other hand or the wall', async () => {
-  try {
-    const room = await acceptSeek(3);
-    const ctx = { rooms: new Map() } as unknown as HttpApiContext;
-    let at = Date.now();
-    let steps = 0;
-    let deals = 0;
-    while (state(room).status.type === 'playing') {
-      assert.ok(steps < 2_000, 'the match must end');
-      steps += 1;
-      for (const seat of tenant.colors) await assertSeatSeesOnlyItsOwn(room, seat, `step ${steps}`);
-      // The public current-games card carries no board, so no tile.
-      const card = collectCurrentGames(ctx, at).find((entry) => entry.roomId === room.id);
-      if (card) {
-        assert.equal('payload' in card, false);
-        assert.equal(await currentGameBoardPayload(card), null);
+/** A mulberry32 stream, so a match is the same deal on every run. */
+function seeded(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** The accepted table rebuilt on seeded walls, in the live map under its own id. */
+async function seededTable(seed: number): Promise<XmjRuntimeRoom> {
+  const accepted = await acceptSeek(3);
+  const events = accepted.events.map((event) =>
+    event.type === 'room-created'
+      ? { ...event, setup: createXmjSetup(seeded(seed), { correspondence: true }) }
+      : event,
+  );
+  const hydrated = createTenantRuntimeRoomFromEvents(tenant, events as XmjEvent[]);
+  assert.ok(hydrated.ok);
+  const room = hydrated.room as XmjRuntimeRoom;
+  liveRooms().set(room.id, room as unknown as TenantManagedRoom);
+  return room;
+}
+
+// Fixed deals, so the match is the same on every run. Between them they reach
+// every excused coincidence: seed 7 deals both seats the same four-tile hand,
+// seed 12 a two-tile hand equal to a claim's tiles and a one-tile hand equal to
+// a discard river, seed 55 a finished hand's pair equal to a two-tile hand.
+for (const seed of [7, 12, 55]) {
+  test(`a whole correspondence match (seed ${seed}): the deadline names the seat that owes each move, and no seat sees the other hand or the wall`, async () => {
+    try {
+      const room = await seededTable(seed);
+      const ctx = { rooms: new Map() } as unknown as HttpApiContext;
+      let at = Date.now();
+      let steps = 0;
+      let deals = 0;
+      while (state(room).status.type === 'playing') {
+        assert.ok(steps < 2_000, 'the match must end');
+        steps += 1;
+        for (const seat of tenant.colors)
+          await assertSeatSeesOnlyItsOwn(room, seat, `step ${steps}`);
+        // The public current-games card carries no board, so no tile.
+        const card = collectCurrentGames(ctx, at).find((entry) => entry.roomId === room.id);
+        if (card) {
+          assert.equal('payload' in card, false);
+          assert.equal(await currentGameBoardPayload(card), null);
+        }
+        const s = state(room);
+        at += 1_000;
+        if (s.match.between) {
+          // No button: the deal is the runtime's, due at once.
+          for (const seat of tenant.colors) assert.equal(view(room, seat).legal.nextHand, false);
+          const pending = tenant.rules.pendingAction?.(s);
+          assert.ok(pending, 'between hands the runtime owes the deal');
+          assert.ok(pending.at <= at, 'due at once');
+          deals += 1;
+          play(room, { ...pending.move, at });
+          continue;
+        }
+        const move = nextMove(room, at);
+        assert.equal(deadlineSeat(room), move.by, `step ${steps}: the deadline names ${move.by}`);
+        play(room, { ...move, at });
       }
-      const s = state(room);
-      at += 1_000;
-      if (s.match.between) {
-        // No button: the deal is the runtime's, due at once.
-        for (const seat of tenant.colors) assert.equal(view(room, seat).legal.nextHand, false);
-        const pending = tenant.rules.pendingAction?.(s);
-        assert.ok(pending, 'between hands the runtime owes the deal');
-        assert.ok(pending.at <= at, 'due at once');
-        deals += 1;
-        play(room, { ...pending.move, at });
-        continue;
-      }
-      const move = nextMove(room, at);
-      assert.equal(deadlineSeat(room), move.by, `step ${steps}: the deadline names ${move.by}`);
-      play(room, { ...move, at });
+      assert.equal(state(room).status.type, 'finished');
+      assert.ok(deals >= 1, 'the match dealt past its first hand');
+      assert.equal(tenantDurableDeadlineFor(tenant, room), null, 'a finished table owes nothing');
+    } finally {
+      registration().clearRooms();
     }
-    assert.equal(state(room).status.type, 'finished');
-    assert.ok(deals >= 1, 'the match dealt past its first hand');
-    assert.equal(tenantDurableDeadlineFor(tenant, room), null, 'a finished table owes nothing');
-  } finally {
-    registration().clearRooms();
-  }
-});
+  });
+}
