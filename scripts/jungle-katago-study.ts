@@ -260,7 +260,7 @@ function compileJson(files: string[]): void {
     name: 'MistyJungle benchmark games, June 2026',
     i18n: BENCHMARK_STUDY_I18N,
     description:
-      'The games behind "Dou Shou Qi: Classical Search Beat the Learned Eval" on brianhliou.com: MistyJungle against the strongest classical engine it could be matched with, and against itself at 8M nodes. Played under the lengthwise-only tiger rule Mistboard used until September 2026; every move stays legal under the current rule.',
+      'The games behind "A Dou Shou Qi (Jungle Chess) Engine: Classical Search Beat the Learned Eval" on Mistboard\'s blog: MistyJungle against the strongest classical engine it could be matched with, and against itself at 8M nodes. Played under the lengthwise-only tiger rule Mistboard used until September 2026; every move stays legal under the current rule.',
     games,
   };
   writeFileSync(DATA, `${JSON.stringify(data, null, 2)}\n`);
