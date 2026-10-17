@@ -206,7 +206,7 @@ export const katagoJungleArticle: Article = {
         },
         {
           kind: 'paragraph',
-          // The records file is the brianhliou.com asset, copied to apps/web/public.
+          // The records file was copied from the brianhliou.com post's assets, since deleted there.
           text: 'All 200 games are in [one study](/study/0t8xpyv6), and the raw records are in [one file](/jungle-games/katago-vs-misty-2026-09-21.jsonl), a line of JSON per game.',
         },
       ],

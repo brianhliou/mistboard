@@ -4,11 +4,8 @@
 // look here once and every jungle surface follows.
 //
 // CANONICAL: this recipe + the in-app piece set (apps/web/public/.../dobutsu) are the
-// source of truth. The Dou Shou Qi blog widget (brianhliou.com,
-// assets/js/jungle-replay.js) is a DOWNSTREAM copy that should match these values.
-// Drop new piece art in public/, push it to the blog with `npm run publish:jungle-art`,
-// and verify both are aligned with `npm run check:jungle-art` (diffs this recipe against
-// the blog widget, and the blog's pieces against the canonical public set).
+// source of truth. No copy lives elsewhere: the jungle posts that drew a blog widget
+// moved to mistboard articles (2026-10), which render through this recipe.
 
 import {
   JUNGLE_JUMP_DIRS,
@@ -19,14 +16,13 @@ import {
 import { roundPieceBox } from './board-metrics.js';
 
 // The composition spec. Ratios are relative to the token's nominal size (a cell-sized
-// box); the blog uses CELL=48, so e.g. its 1.55px ring stroke is 1.55/48 ≈ 0.032.
+// box), so e.g. a 1.55px ring stroke at a 48px cell is 1.55/48 ≈ 0.032.
 //
 // 2026-10-14 (the grid-board piece look, Brian): a token is a rounded square, not a
 // disc. The cream face stops at the ring and the ring sits on the edge, 2.8 wide per
 // 46 of half-width with corners of 14 per 46, the same square the xiangqi family
 // draws on its grid boards. On a board the outer edge spans the whole cell
-// (jungleTokenSize; 98% until 2026-10-15, see JUNGLE_TOKEN_REACH). The blog widget still draws the old disc recipe, so
-// `check:jungle-art` reports the drift until it is ported.
+// (jungleTokenSize; 98% until 2026-10-15, see JUNGLE_TOKEN_REACH).
 export const JUNGLE_ART = {
   /** Cream face under every revealed animal, out to the ring. */
   discFill: '#fff2cf',
@@ -86,7 +82,7 @@ const PIECES_VERSION = 2;
 /** Cache-buster for board terrain PNGs; bump when board art in public/ changes. */
 const BOARD_VERSION = 2;
 
-/** Dobutsu animal cutout href (same masters as the blog's jungle-dobutsu-pieces). */
+/** Dobutsu animal cutout href. */
 export function jungleDobutsuPieceHref(color: JungleColor, role: JunglePieceRole): string {
   return `${PIECES_DIR}/${color}-${role}.png?v=${PIECES_VERSION}`;
 }
