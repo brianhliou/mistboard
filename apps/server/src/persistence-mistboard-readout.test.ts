@@ -1,5 +1,6 @@
 import { getPool } from './persistence-db.js';
 import {
+  collectDeploys,
   generateMistboardReadout,
   latestMistboardReadout,
 } from './persistence-mistboard-readout.js';
@@ -244,5 +245,55 @@ definePersistenceTests('Mistboard readout', () => {
     });
     assert.match(result.report.snapshotId, /^readout_dry_/);
     assert.equal(await latestMistboardReadout(), null);
+  });
+
+  test('deploys reads the week of drain summaries and keeps the disruptive ones', async () => {
+    const summary = (occurredAt: string, payload: Record<string, unknown>) =>
+      getPool().query(
+        `INSERT INTO room_lifecycle_audit (kind, occurred_at, build_revision, payload)
+         VALUES ('drain_summary', $1, 'rev-1', $2::jsonb)`,
+        [occurredAt, JSON.stringify(payload)],
+      );
+    const at = Date.parse('2026-10-16T21:34:00Z');
+    // Committed after 4 minutes, nobody refused: not disruptive.
+    await summary('2026-10-16T21:57:00Z', {
+      outcome: 'lapsed',
+      activatedAt: at,
+      endedAt: at + 900_000,
+      durationMs: 900_000,
+      committed: true,
+      commitWaitMs: 241_000,
+      refusedCreates: 0,
+    });
+    // Refused a create: disruptive however short.
+    await summary('2026-10-16T23:53:00Z', {
+      outcome: 'shutdown',
+      activatedAt: at + 8_000_000,
+      endedAt: at + 8_040_000,
+      durationMs: 40_000,
+      committed: true,
+      commitWaitMs: 31_000,
+      refusedCreates: 1,
+    });
+    // Outside the week.
+    await summary('2026-10-01T00:00:00Z', {
+      outcome: 'cancelled',
+      activatedAt: at - 20 * 86_400_000,
+      endedAt: at - 20 * 86_400_000 + 900_000,
+      durationMs: 900_000,
+      committed: false,
+      refusedCreates: 9,
+    });
+    await getPool().query(
+      `INSERT INTO room_lifecycle_audit (kind, occurred_at, payload) VALUES ('drain_restart_committed', $1, '{}'::jsonb)`,
+      ['2026-10-16T21:38:00Z'],
+    );
+
+    const deploys = await collectDeploys(getPool(), new Date('2026-10-17T17:23:00Z'));
+    assert.equal(deploys.drains, 2);
+    assert.deepEqual(
+      deploys.disruptive.map((drain) => [drain.heldMs, drain.refusedCreates, drain.buildRevision]),
+      [[31_000, 1, 'rev-1']],
+    );
   });
 });

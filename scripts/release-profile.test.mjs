@@ -6,6 +6,8 @@ import test from 'node:test';
 import {
   deployMs,
   failureClass,
+  heldMs,
+  holdRows,
   importTranscripts,
   parseDuration,
   parseTranscriptRelease,
@@ -198,4 +200,39 @@ test('the chart is one HTML page with a mark per release', () => {
   assert.equal((html.match(/<circle/g) ?? []).length, 1);
   assert.equal((html.match(/stroke="#b8443a"/g) ?? []).length, 1);
   assert.match(renderChart([]), /No records yet/);
+});
+
+// Brian, 2026-10-16: deploys must not leave players unable to start games for
+// 10 to 15 minutes. The profile shows each release's hold and flags long ones.
+test('heldMs reads the recorded hold, else the drain stage, else null', () => {
+  assert.equal(
+    heldMs({ drain: { heldMs: 239_000 }, stages: [{ label: 'production drain', ms: 241_268 }] }),
+    239_000,
+  );
+  assert.equal(heldMs({ stages: [{ label: 'production drain', ms: 241_268, ok: true }] }), 241_268);
+  assert.equal(heldMs({ stages: [{ label: 'git push release head', ms: 2000 }] }), null);
+});
+
+test('holdRows lists releases that drained and warns past five minutes', () => {
+  const rows = holdRows([
+    {
+      startedAt: '2026-10-16T21:34:00.000Z',
+      outcome: 'failed',
+      stages: [{ label: 'production drain', ms: 241_268 }],
+    },
+    { startedAt: '2026-10-16T23:34:00.000Z', outcome: 'ok', stages: [] },
+    {
+      startedAt: '2026-10-17T03:00:00.000Z',
+      outcome: 'ok',
+      drain: { heldMs: 6 * 60_000, refusedCreates: 2 },
+      stages: [{ label: 'production drain', ms: 6 * 60_000 }],
+    },
+  ]);
+  assert.deepEqual(
+    rows.map((row) => [row.startedAt.slice(11, 16), row.heldMs, row.refusedCreates, row.warn]),
+    [
+      ['21:34', 241_268, null, false],
+      ['03:00', 360_000, 2, true],
+    ],
+  );
 });

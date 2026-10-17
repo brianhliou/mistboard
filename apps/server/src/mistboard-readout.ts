@@ -136,8 +136,72 @@ export type MistboardReadoutFeedback = {
   recentPaths: Array<string | null>;
 };
 
+// Deploy drains, from the 'drain_summary' audit rows (server-drain.ts). A drain
+// refuses new games until the release commits its restart, so a long one is
+// players turned away (Brian, 2026-10-16: deploys must not stop people starting
+// games for 10 to 15 minutes). Optional so older snapshots still parse.
+export type MistboardReadoutDeployDrain = {
+  activatedAt: number;
+  endedAt: number;
+  outcome: string;
+  committed: boolean;
+  // How long new games were refused: up to the commit, or the whole drain when
+  // it never committed (cancelled or lapsed while still pending).
+  heldMs: number;
+  refusedCreates: number;
+  buildRevision: string | null;
+};
+
+export type MistboardReadoutDeploys = {
+  // Drains that ended in the collector's window.
+  windowDays: number;
+  drains: number;
+  // The ones that held creates past DEPLOY_HELD_CREATES_MS or refused any,
+  // oldest first.
+  disruptive: MistboardReadoutDeployDrain[];
+};
+
+export const DEPLOY_HELD_CREATES_MS = 5 * 60 * 1000;
+// Brian's own bound: past this a deploy is the disruption he asked about.
+const DEPLOY_HELD_CREATES_ACTION_MS = 10 * 60 * 1000;
+
+export function isDisruptiveDrain(
+  drain: Pick<MistboardReadoutDeployDrain, 'heldMs' | 'refusedCreates'>,
+): boolean {
+  return drain.heldMs > DEPLOY_HELD_CREATES_MS || drain.refusedCreates > 0;
+}
+
+/** A drain_summary audit payload as the readout reads it; null when malformed. */
+export function deployDrainFromSummary(
+  payload: Record<string, unknown>,
+  buildRevision: string | null,
+): MistboardReadoutDeployDrain | null {
+  const num = (key: string): number | null => {
+    const value = payload[key];
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  };
+  const activatedAt = num('activatedAt');
+  const endedAt = num('endedAt');
+  if (activatedAt === null || endedAt === null) return null;
+  const committed = payload.committed === true;
+  const commitWaitMs = num('commitWaitMs');
+  const heldMs =
+    committed && commitWaitMs !== null
+      ? commitWaitMs
+      : (num('durationMs') ?? endedAt - activatedAt);
+  return {
+    activatedAt,
+    endedAt,
+    outcome: typeof payload.outcome === 'string' ? payload.outcome : 'unknown',
+    committed,
+    heldMs,
+    refusedCreates: num('refusedCreates') ?? 0,
+    buildRevision,
+  };
+}
+
 export type MistboardReadoutCollectorError = {
-  section: 'product' | 'puzzles' | 'mining' | 'engines' | 'broadcasts' | 'feedback';
+  section: 'product' | 'puzzles' | 'mining' | 'engines' | 'broadcasts' | 'feedback' | 'deploys';
   code: 'collector_failed';
 };
 
@@ -176,6 +240,7 @@ export type MistboardReadoutV1 = {
   engines: MistboardReadoutEngines | null;
   broadcasts?: MistboardReadoutBroadcasts | null;
   feedback?: MistboardReadoutFeedback | null;
+  deploys?: MistboardReadoutDeploys | null;
   actions: MistboardReadoutAction[];
   collectorErrors: MistboardReadoutCollectorError[];
   trend: MistboardReadoutTrendPoint[];
@@ -193,6 +258,7 @@ export type MistboardReadoutFacts = {
   engines: MistboardReadoutEngines | null;
   broadcasts?: MistboardReadoutBroadcasts | null;
   feedback?: MistboardReadoutFeedback | null;
+  deploys?: MistboardReadoutDeploys | null;
   collectorErrors?: MistboardReadoutCollectorError[];
   trend?: MistboardReadoutTrendPoint[];
 };
@@ -257,6 +323,7 @@ export function buildMistboardReadout(input: {
     engines: input.facts.engines,
     broadcasts: input.facts.broadcasts ?? null,
     feedback: input.facts.feedback ?? null,
+    deploys: input.facts.deploys ?? null,
     actions,
     collectorErrors,
     trend: input.facts.trend ?? [],
@@ -278,6 +345,7 @@ function buildActions(
     ...operationsActions(facts, previousReport),
     ...missingEngineActions(runtime, previousReport),
     ...feedbackActions(facts.feedback ?? null, previousReport),
+    ...deployDisruptionActions(facts.deploys ?? null, previousReport),
   ];
   const quality = facts.puzzles;
   // A checkpoint is a level that never falls back: sessions only go up, so
@@ -629,6 +697,50 @@ function feedbackPathLabel(path: string | null): string {
   return /^\/[A-Za-z0-9/_.%-]{0,96}$/.test(bare) ? `\`${bare}\`` : 'an unlisted page';
 }
 
+// A drain is an event with its own end time, so the edge is the previous
+// readout's generation time: a disruptive drain is reported by the first
+// readout generated after it ended, and never again. With no previous readout,
+// or one whose deploys collector failed (so it reported nothing), every
+// disruptive drain in the window not already listed there is new.
+function deployDisruptionActions(
+  deploys: MistboardReadoutDeploys | null,
+  previousReport: MistboardReadoutV1 | null,
+): MistboardReadoutAction[] {
+  if (!deploys) return [];
+  const previousMissed =
+    !previousReport || previousReport.collectorErrors.some((error) => error.section === 'deploys');
+  const since = previousMissed ? null : Date.parse(previousReport.generatedAt);
+  const reported = new Set(
+    (previousReport?.deploys?.disruptive ?? []).map((drain) => drain.activatedAt),
+  );
+  const fresh = deploys.disruptive.filter((drain) =>
+    since === null || Number.isNaN(since)
+      ? !reported.has(drain.activatedAt)
+      : drain.endedAt > since,
+  );
+  if (fresh.length === 0) return [];
+  const worst = Math.max(...fresh.map((drain) => drain.heldMs));
+  const list = fresh
+    .map(
+      (drain) =>
+        `${new Date(drain.activatedAt).toISOString().slice(0, 16).replace('T', ' ')} UTC held ` +
+        `${(drain.heldMs / 60_000).toFixed(1)} min, ${drain.refusedCreates} refused (${drain.outcome})`,
+    )
+    .join('; ');
+  const plural = fresh.length === 1 ? '' : 's';
+  return [
+    {
+      code: 'deploy-held-creates',
+      severity: worst > DEPLOY_HELD_CREATES_ACTION_MS ? 'action' : 'watch',
+      dedupeKey: `deploy-held-creates:${fresh.map((drain) => drain.activatedAt).join(',')}`,
+      ownerIssue: null,
+      text:
+        `${fresh.length} deploy drain${plural} turned new games away: ${list}. ` +
+        'See /metrics deploy history and npm run release:profile.',
+    },
+  ];
+}
+
 // A schema-v1 snapshot carries no player count at all, so the runtime check is
 // load-bearing even though the type says otherwise.
 function previousPlayerCount(previousReport: MistboardReadoutV1 | null): number {
@@ -668,7 +780,8 @@ function readoutVerdict(
 // on their dedupeKey. New feedback is one: two days of arrivals are two
 // different messages, and collapsing the second into "same problem" would skip
 // the email and issue comment that are the whole point of the line.
-const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set(['feedback-new']);
+// A disruptive deploy is the same: each one is its own incident.
+const ALERT_PER_EVENT_CODES: ReadonlySet<string> = new Set(['feedback-new', 'deploy-held-creates']);
 
 function alertKey(
   verdict: MistboardReadoutVerdict,
@@ -824,6 +937,12 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
           : untracked === null
             ? ', dpxq index unreadable'
             : `, ${untracked.length} top event${untracked.length === 1 ? '' : 's'} on dpxq not relayed`),
+    );
+  }
+  if (report.deploys) {
+    lines.push(
+      `- Deploys: ${report.deploys.drains} drain${report.deploys.drains === 1 ? '' : 's'} in the last ${report.deploys.windowDays} days, ` +
+        `${report.deploys.disruptive.length} held new games over ${DEPLOY_HELD_CREATES_MS / 60_000} min or refused a create`,
     );
   }
   if (report.collectorErrors.length > 0) {

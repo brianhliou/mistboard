@@ -524,6 +524,33 @@ test('a cancelled drain summary counts the creates it refused, by route', async 
   });
 });
 
+// The release prints "new games held N min, M refused" from the commit reply,
+// so the reply carries the hold the drain has cost so far.
+test('the restart commit reports the hold it ends: wait and refused creates', async (t) => {
+  t.mock.method(console, 'log', () => {});
+  const drain = createDrainController({
+    drainWindowDefaultMs: 1000,
+    drainWindowMaxMs: 2000,
+    rooms: new Map(),
+  });
+
+  await drain.handleRequest(
+    request({ body: { windowMs: 1500 } }),
+    captureResponse(),
+    '/admin/drain',
+  );
+  drain.noteRefusedCreate('/api/rooms');
+  drain.noteRefusedCreate('/api/lobby/seeks');
+  const committed = captureResponse();
+  await drain.handleRequest(request({ body: { phase: 'restarting' } }), committed, '/admin/drain');
+
+  const body = responseJson(committed);
+  assert.equal(body.phase, 'restarting');
+  assert.equal(body.refusedCreates, 2);
+  assert.equal(typeof body.commitWaitMs, 'number');
+  assert.ok((body.commitWaitMs as number) >= 0);
+});
+
 test('shutdown closes a committed drain, and a shutdown with no drain says so', async (t) => {
   const log = t.mock.method(console, 'log', () => {});
   const drain = createDrainController({

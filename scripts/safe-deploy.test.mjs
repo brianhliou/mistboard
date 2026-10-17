@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -83,6 +85,49 @@ test('safe deploy cancels instead of allowing a deploy when games remain', async
   assert.equal(cancelled, true);
   assert.match(result.stderr, /deployment blocked/);
   assert.match(result.stderr, /drain cancelled/);
+});
+
+// release-prod reads the hold off this file for its "new games held" line.
+test('safe deploy writes what the hold cost to --result-file after the commit', async (t) => {
+  const server = createServer(async (request, response) => {
+    if (request.url === '/health') return json(response, 200, { ok: true });
+    if (request.url === '/api/server-status') {
+      return json(response, 200, { activeGames: 0, restartAt: null });
+    }
+    if (request.url === '/admin/drain') {
+      const body = JSON.parse(await requestBody(request));
+      return json(
+        response,
+        200,
+        body.phase === 'restarting'
+          ? { ok: true, phase: 'restarting', commitWaitMs: 4321, refusedCreates: 2 }
+          : { ok: true, phase: 'pending', restartAt: Date.now() + 1_000 },
+      );
+    }
+    json(response, 404, { error: 'not_found' });
+  });
+  const baseUrl = await listen(server);
+  t.after(() => server.close());
+  const resultFile = join(mkdtempSync(join(tmpdir(), 'safe-deploy-')), 'result.json');
+
+  const result = await runScript([
+    '--base-url',
+    baseUrl,
+    '--window-ms',
+    '1000',
+    '--poll-ms',
+    '5',
+    '--yes',
+    '--commit',
+    '--result-file',
+    resultFile,
+  ]);
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(JSON.parse(readFileSync(resultFile, 'utf8')), {
+    commitWaitMs: 4321,
+    refusedCreates: 2,
+  });
 });
 
 function listen(server) {

@@ -2,8 +2,15 @@
 // Push a production release only through the safe CI -> deploy -> smoke order.
 
 import { spawn, spawnSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir, hostname } from 'node:os';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { homedir, hostname, tmpdir } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import {
@@ -14,6 +21,7 @@ import {
 } from './lib/changelog-entry.mjs';
 import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
 import { describeDrainToken } from './lib/drain-token.mjs';
+import { formatHeldLines, heldSummary, postFailureDrainAction } from './lib/release-drain.mjs';
 import {
   acquireReleaseLock,
   DEFAULT_LOCK_TIMEOUT_MS,
@@ -101,6 +109,10 @@ const release = {
   drainOwner: `release-${hostname()}-${process.pid}-${Date.now().toString(36)}`,
   drainCommitted: false,
   drainRequired: false,
+  // Where safe-deploy writes what the hold cost ({commitWaitMs, refusedCreates}),
+  // and that cost once read: the "new games held" line and the release record.
+  drainResultFile: path.join(tmpdir(), `mistboard-release-drain-${process.pid}.json`),
+  drainHold: null,
   deployRequired: false,
   headRevision: null,
   // The revision production is expected to serve, which the revision wait, the
@@ -264,6 +276,8 @@ try {
         'scripts/safe-deploy.mjs',
         '--yes',
         '--commit',
+        '--result-file',
+        release.drainResultFile,
         ...safeDeployBaseArgs(),
       ]);
       release.drainCommitted = true;
@@ -312,9 +326,11 @@ try {
 
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.log(`release: ok in ${formatDuration(elapsedMs)}${adoptionSummary()}`);
+  reportDrainHold();
   writeReleaseRecord({ elapsedMs, outcome: 'ok' });
 } catch (error) {
-  cancelUnpublishedDrain();
+  await cancelDrainAfterFailure();
+  reportDrainHold();
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.error(`release: failed after ${formatDuration(elapsedMs)}${adoptionSummary()}`);
   console.error(error instanceof Error ? error.message : String(error));
@@ -1555,6 +1571,7 @@ function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
     pushedAt: release.pushedAt,
     ...(options.extraShip ? { extraShip: options.extraShip } : {}),
     shipWindow: release.shipWindow,
+    drain: release.drainHold,
     stages: release.stages,
     hostname: hostname(),
     cwd: releaseRoot,
@@ -1860,13 +1877,84 @@ function submitIndexNow({ deployRequired }) {
   }
 }
 
-function cancelUnpublishedDrain() {
-  if (!release.drainCommitted || release.pushCompleted) return;
-  console.error('release stopped before push completed; cancelling production drain');
+// A committed drain shows every player "Server restarting now" until the
+// server restarts, the drain is cancelled, or its window lapses. A release that
+// fails after the push may never get that restart (hosted CI red, or the
+// revision wait gave up), so it cancels its own drain on those paths too, not
+// only before the push (2026-10-16 21:46Z: the banner stayed up 11 minutes).
+async function cancelDrainAfterFailure() {
+  const productionRevision =
+    release.drainCommitted && release.pushCompleted ? await fetchProductionRevision() : null;
+  const action = postFailureDrainAction({
+    drainCommitted: release.drainCommitted,
+    pushCompleted: release.pushCompleted,
+    productionRevision,
+    expectedRevision: release.expectedRevision,
+  });
+  if (action === 'none') return;
+  if (action === 'none-deployed') {
+    console.error('production already serves the pushed revision; its restart ended the drain');
+    return;
+  }
+  console.error(
+    action === 'cancel-before-push'
+      ? 'release stopped before push completed; cancelling production drain'
+      : 'release failed after the push without seeing the deploy land; cancelling production ' +
+          'drain so the restart banner clears (a deploy that lands later still pauses and resumes rooms)',
+  );
   const command = ['node', 'scripts/safe-deploy.mjs', '--cancel', '--yes', ...safeDeployBaseArgs()];
   const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
   if (result.status !== 0) {
     console.error('warning: automatic drain cancellation failed; cancel /admin/drain manually');
+  }
+}
+
+// Production's build revision, or null when it cannot be read.
+async function fetchProductionRevision() {
+  const base = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '');
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(`${base}/api/server-status`, { signal: controller.signal });
+      if (!response.ok) return null;
+      const body = await response.json();
+      return typeof body?.build?.revision === 'string' ? body.build.revision : null;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return null;
+  }
+}
+
+// How long this release kept players from starting games, printed at the end
+// of every run that drained and kept in the release record.
+function reportDrainHold() {
+  const stage = release.stages.find((entry) => entry.label === 'production drain');
+  if (!stage) return;
+  let result = null;
+  try {
+    if (existsSync(release.drainResultFile)) {
+      result = JSON.parse(readFileSync(release.drainResultFile, 'utf8'));
+      rmSync(release.drainResultFile, { force: true });
+    }
+  } catch {
+    result = null;
+  }
+  const hold = heldSummary({
+    drainStageMs: stage.ms,
+    commitWaitMs: result?.commitWaitMs,
+    refusedCreates: result?.refusedCreates,
+  });
+  release.drainHold = {
+    heldMs: hold.heldMs,
+    commitWaitMs: result?.commitWaitMs ?? null,
+    refusedCreates: hold.refusedCreates,
+  };
+  for (const line of formatHeldLines(hold)) {
+    if (line.startsWith('WARN')) console.warn(line);
+    else console.log(line);
   }
 }
 
