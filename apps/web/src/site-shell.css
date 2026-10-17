@@ -751,3 +751,286 @@ a.site-nav-link[hidden],
     white-space: normal;
   }
 }
+
+/* Phone bar (600px and under, #576): one 52px row. Menu button at the left
+   edge, the logo and wordmark, then the account slot at the right edge (bell
+   and account, or Sign in), every control a 44px target. The links never show
+   on the bar; the menu button opens the full-screen site menu below instead of
+   the tablet drawer (site-shell.ts openSiteMenu). The two colours are the
+   phone design's; dark mode maps them onto the panel tokens. */
+:root {
+  --site-mobile-bar-bg: #fbf9f5;
+  --site-menu-chip-bg: #e3dccf;
+}
+
+:root[data-effective-theme="dark"] {
+  --site-mobile-bar-bg: var(--site-panel);
+  --site-menu-chip-bg: var(--site-panel-soft);
+}
+
+@media (max-width: 600px) {
+  .site-nav,
+  .site-nav.scrolled {
+    height: 52px;
+    min-height: 52px;
+    gap: 4px;
+    padding: 0 max(4px, env(safe-area-inset-right)) 0 max(4px, env(safe-area-inset-left));
+    background: var(--site-mobile-bar-bg);
+    border-bottom: 1px solid var(--site-border-soft);
+  }
+
+  .site-nav-toggle {
+    order: -1;
+    margin-left: 0;
+  }
+
+  .site-nav-brand {
+    gap: 8px;
+    min-width: 0;
+    min-height: 44px;
+    padding-block: 0;
+    padding-inline: 2px;
+  }
+
+  .site-nav-logo {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* The wordmark comes back on phones, as "Mistboard" at 19px bold. */
+  .site-nav .site-nav-brand .site-nav-brand-name {
+    display: inline;
+    color: var(--site-heading);
+    font-size: 19px;
+    font-weight: 700;
+    text-transform: capitalize;
+    white-space: nowrap;
+  }
+
+  .site-nav .site-nav-brand .site-nav-brand-suffix {
+    display: none;
+  }
+
+  .site-nav > .site-nav-account {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-left: auto;
+  }
+
+  .site-nav > .site-nav-account .site-nav-auth {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Signed out: a compact Sign in. Register stays one tap away on the sign-in
+     page's own tab, so the bar never needs a second row. */
+  .site-nav > .site-nav-account .site-nav-link-register {
+    display: none;
+  }
+
+  .site-nav > .site-nav-account .site-nav-link-signin {
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 14px;
+  }
+}
+
+html.site-menu-open,
+html.site-menu-open body {
+  overflow: hidden;
+}
+
+/* The full-screen site menu (phones). Appended to <body>, outside the bar, so
+   the bar's auto-hide transform never carries it. */
+.site-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  background: var(--site-mobile-bar-bg);
+  color: var(--site-text);
+}
+
+.site-menu-bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 52px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.site-menu-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--site-radius-sm);
+  background: none;
+  color: var(--site-text);
+  cursor: pointer;
+}
+
+.site-menu-close:hover,
+.site-menu-close:focus-visible {
+  background: var(--site-hover);
+}
+
+.site-menu-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding-inline: 2px;
+  color: var(--site-heading);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.site-menu-brand img {
+  width: 28px;
+  height: 28px;
+}
+
+.site-menu-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 16px 24px;
+}
+
+.site-menu-sections {
+  columns: 2;
+  column-gap: 20px;
+}
+
+.site-menu-sections[hidden],
+.site-menu-settings[hidden] {
+  display: none;
+}
+
+.site-menu-section {
+  break-inside: avoid;
+  margin: 0 0 18px;
+}
+
+.site-menu-heading {
+  margin: 0 0 2px;
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.site-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  color: var(--site-text);
+  font-size: 16px;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.site-menu-link[hidden] {
+  display: none;
+}
+
+.site-menu-link:hover,
+.site-menu-link:focus-visible {
+  color: var(--site-heading);
+  text-decoration: underline;
+}
+
+.site-menu-link.active {
+  color: var(--site-heading);
+  font-weight: 700;
+}
+
+.site-menu-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--site-brand-accent, var(--site-accent));
+}
+
+.site-menu-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: -8px 0 8px -4px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--site-radius-sm);
+  background: none;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.site-menu-back:hover,
+.site-menu-back:focus-visible {
+  background: var(--site-hover);
+  color: var(--site-text);
+}
+
+/* Three equal tiles, icon over label, so the row never wraps at 320px. */
+.site-menu-footer {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--site-border-soft);
+}
+
+.site-menu-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 60px;
+  padding: 6px 4px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--site-menu-chip-bg);
+  color: var(--site-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+}
+
+.site-menu-chip svg {
+  flex: none;
+}
+
+.site-menu-chip:hover,
+.site-menu-chip:focus-visible,
+.site-menu-chip[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--site-menu-chip-bg) 80%, var(--site-text));
+}
+
+.site-menu-chip[aria-pressed="true"] {
+  background: var(--site-brand-accent, var(--site-accent));
+  color: var(--site-brand-on-accent, var(--site-on-accent));
+}

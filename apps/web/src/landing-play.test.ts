@@ -99,6 +99,50 @@ describe('landing play panel', () => {
     expect(switcher?.textContent).toContain('大廳');
   });
 
+  it('phone quick row opens the setup dialog on the computer or the friend mode', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    // The primary Play button stays the panel's first action (desktop unchanged);
+    // the phone row follows it.
+    expect(panel.querySelector('.landing-play-action')?.classList).toContain(
+      'landing-play-action-primary',
+    );
+    const quick = [...panel.querySelectorAll<HTMLButtonElement>('.landing-play-quick-action')];
+    expect(quick.map((button) => [button.textContent, button.dataset.playMode])).toEqual([
+      ['Play the computer', 'pve'],
+      ['Play a friend', 'pvp'],
+    ]);
+
+    const selectedMode = () =>
+      document.querySelector<HTMLButtonElement>(
+        '.landing-setup-mode-switcher [aria-checked="true"]',
+      )?.dataset.playMode;
+
+    quick[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(selectedMode()).toBe('pve');
+    document.querySelector('.landing-setup-overlay')?.remove();
+
+    quick[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(selectedMode()).toBe('pvp');
+  });
+
+  it('localizes the phone quick row', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const panel = buildLandingPlayPanel([], { locale: 'zh-Hans' });
+    const labels = [...panel.querySelectorAll('.landing-play-quick-action')].map(
+      (button) => button.textContent,
+    );
+    expect(labels).toEqual(['与电脑对弈', '和朋友对弈']);
+  });
+
   it('localizes the play setup dialog shell', () => {
     vi.stubGlobal(
       'fetch',

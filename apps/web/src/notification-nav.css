@@ -184,3 +184,24 @@
   color: var(--site-heading);
   text-decoration: underline;
 }
+
+/* Phone bar (600px and under, #576): a 44px target, and the panel spans the
+   viewport under the 52px bar rather than hanging off the bell, which sits too
+   close to the right edge for a 320px panel to fit beside it. */
+@media (max-width: 600px) {
+  .site-nav .notif-nav-trigger {
+    width: 44px;
+    height: 44px;
+  }
+
+  .site-nav .notif-nav-panel {
+    position: fixed;
+    top: 52px;
+    right: 8px;
+    left: 8px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - 68px);
+    overflow-y: auto;
+  }
+}

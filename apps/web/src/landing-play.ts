@@ -392,12 +392,49 @@ export function buildLandingPlayPanel(
       source: 'hero',
     });
   });
-  panel.append(playButton);
+  panel.append(playButton, buildLandingPlayQuickRow(availableEngines, defaultEngineId, locale));
 
   if (options.showLobbyRequests) {
     panel.append(buildLobbyRequestsWindow(locale));
   }
   return panel;
+}
+
+// Phone only (landing.css shows it under 600px): the two opponent choices as
+// their own buttons under Play, since the phone home drops the variant rows that
+// carry them on desktop. Each opens the same setup dialog on its mode, with the
+// switcher still there to change mind.
+function buildLandingPlayQuickRow(
+  engines: PlayableEngine[],
+  engineId: string | undefined,
+  locale: Locale,
+): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'landing-play-quick';
+  const quick = (label: string, mode: 'pve' | 'pvp'): HTMLButtonElement => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'landing-play-quick-action';
+    button.dataset.playMode = mode;
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      openLandingSetupDialog({
+        engineId,
+        engines,
+        locale,
+        mode,
+        modeSwitcher: true,
+        source: 'hero',
+        ...(mode === 'pvp' ? { ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn() } : {}),
+      });
+    });
+    return button;
+  };
+  row.append(
+    quick(t('lobby.panelTabComputer', {}, locale), 'pve'),
+    quick(t('articles.playAFriend', {}, locale), 'pvp'),
+  );
+  return row;
 }
 
 type LandingPlayIcon = 'computer' | 'friend' | 'lobby' | 'play';

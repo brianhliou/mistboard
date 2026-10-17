@@ -22,7 +22,7 @@ import {
   writeSignedInHint,
   writeVariantGrantsHint,
 } from './signed-in-state.js';
-import { syncAdminNavMenus } from './site-shell.js';
+import { registerMenuLocaleSelectHandler, syncAdminNavMenus } from './site-shell.js';
 import {
   buildAppearanceMenu,
   gearIconSvg,
@@ -77,6 +77,11 @@ let userPromise: Promise<AuthUser | null> | null = null;
 let navObserver: MutationObserver | null = null;
 
 export function initializeAccountNav(): void {
+  // A language picked in the phone site menu persists to the account, as the
+  // profile dropdown's picker does; signed out, the menu's own redirect is all.
+  registerMenuLocaleSelectHandler((next) => {
+    if (cachedUser) void saveAccountLocalePreference(next);
+  });
   applyPendingSlots();
   void primeAccountNav();
   watchForNavChanges();

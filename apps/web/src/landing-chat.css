@@ -55,6 +55,41 @@
   background: var(--site-panel-soft);
 }
 
+/* Touch floor (#576): the 17px box was the home page's one hard tap-target
+   fail. On a coarse pointer the button itself is 44px (the audit and the finger
+   both measure the element), transparent, with the 17px box drawn inside it;
+   the negative margin gives back the extra size so the header keeps its height. */
+@media (pointer: coarse) {
+  .landing-chat-toggle {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    margin: -13.5px;
+    border: 0;
+    background: transparent;
+  }
+
+  .landing-chat-toggle::before {
+    content: "";
+    position: absolute;
+    inset: 13.5px;
+    box-sizing: border-box;
+    border: 2px solid var(--site-accent-strong);
+    border-radius: 4px;
+    background: var(--site-accent);
+  }
+
+  .landing-chat.is-chat-muted .landing-chat-toggle {
+    border: 0;
+    background: transparent;
+  }
+
+  .landing-chat.is-chat-muted .landing-chat-toggle::before {
+    border-color: var(--landing-chat-input-border);
+    background: var(--site-panel-soft);
+  }
+}
+
 .landing-chat .site-box-title {
   color: var(--landing-chat-title);
   font-size: 16px;
@@ -304,4 +339,12 @@ a.landing-chat-token:focus-visible {
 .landing-chat-event-text:focus-visible {
   text-decoration: underline;
   outline: none;
+}
+
+/* Phone home: chat is the last block before the footer, so keep it to about
+   five lines; older messages scroll inside it. */
+@media (max-width: 600px) {
+  .landing-chat {
+    --landing-chat-height: 208px;
+  }
 }

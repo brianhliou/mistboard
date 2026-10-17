@@ -321,3 +321,30 @@
     width: 100%;
   }
 }
+
+/* Phone bar (600px and under, #576): the account sits at the bar's right edge
+   as a 44px icon button. The handle drops (the panel names the account), the
+   panel opens toward the left from the right edge, and the pending placeholder
+   holds the same 44px square so the bar does not shift when auth resolves. */
+@media (max-width: 600px) {
+  .site-nav .account-nav-trigger {
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
+  .site-nav .account-nav-handle {
+    display: none;
+  }
+
+  .site-nav .account-nav-panel {
+    right: 0;
+    left: auto;
+  }
+
+  .site-nav .account-nav-pending {
+    width: 44px;
+    height: 44px;
+  }
+}

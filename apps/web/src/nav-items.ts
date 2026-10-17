@@ -189,6 +189,29 @@ export function utilityNavItems(): NavItem[] {
   return items;
 }
 
+export interface NavSection {
+  labelKey: I18nKey;
+  items: NavItem[];
+}
+
+// The phone site menu (site-shell.ts openSiteMenu): every destination the bar
+// carries, grouped into sections and composed from the same lists the bar
+// renders, so a link added to a dropdown reaches the phone menu with no second
+// edit. Puzzles joins Play and Support closes Community; the admin section is
+// appended by the shell for admins only, like the bar's admin menu. The order
+// is the reading order of a two-column flow: Play, Watch, Tools down the
+// first column, Learn and Community down the second.
+export function siteMenuSections(): NavSection[] {
+  const puzzles = primaryNavItems().find((item) => item.labelKey === 'nav.puzzles');
+  return [
+    { labelKey: 'nav.play', items: [...playNavItems(), ...(puzzles ? [puzzles] : [])] },
+    { labelKey: 'nav.watch', items: watchNavItems() },
+    { labelKey: 'nav.tools', items: toolsNavItems() },
+    { labelKey: 'nav.learn', items: learnNavItems() },
+    { labelKey: 'nav.community', items: [...communityNavItems(), donateNavItem()] },
+  ];
+}
+
 // Tools dropdown (lichess parity): the analysis board is the anchor tool, the
 // board editor sits beside it, and the games database closes the set the way
 // lichess's advanced search does, with Import beside them.

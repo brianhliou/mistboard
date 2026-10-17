@@ -6,6 +6,8 @@
 // tints to the surrounding text colour, so no per-theme asset variants.
 import {
   Bell,
+  BookMarked,
+  BookOpen,
   Bot,
   ChessKnight,
   Crown,
@@ -23,12 +25,14 @@ import {
   Newspaper,
   Puzzle,
   RadioTower,
+  ScanSearch,
   Sparkles,
   SquarePen,
   Store,
   Swords,
   TrendingUp,
   Trophy,
+  Tv,
   User,
   Users,
 } from 'lucide';
@@ -55,6 +59,10 @@ export type UiIconName =
   | 'featured-channel'
   | 'find-opponent'
   | 'forum-topic'
+  | 'home-analysis'
+  | 'home-rules'
+  | 'home-study'
+  | 'home-watch'
   | 'language'
   | 'notification'
   | 'play-engine'
@@ -88,6 +96,11 @@ const UI_ICON_NODES: Record<UiIconName, IconNode> = {
   'featured-channel': Crown,
   'find-opponent': Users,
   'forum-topic': MessagesSquare,
+  // The phone home's shortcut tiles (mobile pass #576).
+  'home-analysis': ScanSearch,
+  'home-rules': BookOpen,
+  'home-study': BookMarked,
+  'home-watch': Tv,
   // Globe, not Lucide's Languages: lichess's 文A mark is a glyph in their own
   // icon font (licon.Language, U+E06E), so there is nothing to import, and the
   // nearest Lucide equivalent is six strokes that turn to mush in an 18px row.
