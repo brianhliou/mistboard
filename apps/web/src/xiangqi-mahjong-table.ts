@@ -813,8 +813,10 @@ export interface XmjLogOptions {
   readonly results: readonly XmjViewResult[];
   /** The ply on show while scrubbing, or null when live. */
   readonly activePly: number | null;
-  /** Earlier hands the reader opened. */
+  /** Hands the reader opened. */
   readonly expanded: ReadonlySet<number>;
+  /** Hands the reader closed, the latest or the one holding the scrubbed ply included. */
+  readonly collapsed?: ReadonlySet<number>;
   /** Whether a row's ply can be shown (the client holds that snapshot). */
   readonly hasPly: (ply: number) => boolean;
   readonly pieceSet?: XiangqiPieceSet;
@@ -834,7 +836,14 @@ function logRowText(row: XmjLogRow, options: XmjLogOptions): string {
       }
       return you ? t('live.xmj.log.youDiscard') : t('live.xmj.log.nameDiscards', { name });
     case 'claim':
-      return you ? t('live.xmj.log.youClaim') : t('live.xmj.log.nameClaims', { name });
+      if (row.claim === 'chow') {
+        return you
+          ? t('live.xmj.log.youClaimSequence')
+          : t('live.xmj.log.nameClaimsSequence', { name });
+      }
+      return you
+        ? t('live.xmj.log.youClaimTriplet')
+        : t('live.xmj.log.nameClaimsTriplet', { name });
     case 'win':
       return you ? t('live.xmj.log.youWinOn') : t('live.xmj.log.nameWinsOn', { name });
     case 'self-draw':
@@ -848,10 +857,12 @@ function logRowText(row: XmjLogRow, options: XmjLogOptions): string {
  * The words on the left, the tile in a fixed column on the right, every row
  * alike (the win included), so the tiles read down the hand as one column.
  */
-function logRowHtml(row: XmjLogRow, options: XmjLogOptions): string {
+function logRowHtml(row: XmjLogRow, options: XmjLogOptions, winningTile: XmjTile | null): string {
   const words = `<span class="xmj-log__text">${logRowText(row, options)}</span>`;
-  const tile =
-    row.kind === 'self-draw' || row.kind === 'exhausted' ? '' : tileSpan(row.tile, 'xmj-tile--xs');
+  // A self-drawn win's tile is public once the hand is over; the hand's result
+  // carries it, since the move itself never named the drawn tile.
+  const shown = row.kind === 'self-draw' ? winningTile : row.kind === 'exhausted' ? null : row.tile;
+  const tile = shown ? tileSpan(shown, 'xmj-tile--xs') : '';
   return `${words}<span class="xmj-log__tile">${tile}</span>`;
 }
 
@@ -884,7 +895,7 @@ function logRowsHtml(hand: XmjLogHand, options: XmjLogOptions, activeRow: number
       const theirs = options.viewer !== null && 'seat' in row && row.seat !== options.viewer;
       const cls = `xmj-log__row${active ? ' active' : ''}${ends ? ' xmj-log__row--end' : ''}${theirs ? ' xmj-log__row--theirs' : ''}`;
       const number = numbers[index];
-      const text = `<span class="xmj-log__num">${number === null || number === undefined ? '' : `${number}.`}</span>${logRowHtml(row, options)}`;
+      const text = `<span class="xmj-log__num">${number === null || number === undefined ? '' : `${number}.`}</span>${logRowHtml(row, options, options.results[hand.hand - 1]?.winningTile ?? null)}`;
       // A row is a jump only when this client holds that position.
       return options.hasPly(row.ply)
         ? `<li><button type="button" class="${cls} move-jump" data-xmj-ply="${row.ply}">${text}</button></li>`
@@ -921,8 +932,29 @@ function activeRowPly(hands: readonly XmjLogHand[], activePly: number | null): n
 }
 
 /**
+ * A click on a hand's heading: flip it from what the reader saw. A hand open
+ * by default (the latest, or the one holding the scrubbed ply) closes through
+ * `collapsed`; any other opens through `expanded`.
+ */
+export function toggleXmjLogHand(
+  hand: number,
+  wasOpen: boolean,
+  expanded: Set<number>,
+  collapsed: Set<number>,
+): void {
+  if (wasOpen) {
+    expanded.delete(hand);
+    collapsed.add(hand);
+  } else {
+    collapsed.delete(hand);
+    expanded.add(hand);
+  }
+}
+
+/**
  * The log: the latest hand in full, each earlier hand one line that opens.
  * A hand holding the scrubbed ply opens by itself, so the highlight shows.
+ * Every heading folds, the latest hand's too.
  */
 export function xmjLogHtml(hands: readonly XmjLogHand[], options: XmjLogOptions): string {
   const activeRow = activeRowPly(hands, options.activePly);
@@ -934,11 +966,11 @@ export function xmjLogHtml(hands: readonly XmjLogHand[], options: XmjLogOptions)
       .map((hand, index) => {
         const latest = index === hands.length - 1;
         const holdsActive = hand.rows.some((row) => row.ply === activeRow);
-        const open = latest || holdsActive || options.expanded.has(hand.hand);
+        const open =
+          !options.collapsed?.has(hand.hand) &&
+          (latest || holdsActive || options.expanded.has(hand.hand));
         const summary = logSummary(hand, options);
-        const head = latest
-          ? `<div class="xmj-log__head">${summary}</div>`
-          : `<button type="button" class="xmj-log__head xmj-log__toggle" data-xmj-hand="${hand.hand}" aria-expanded="${open}">${summary}</button>`;
+        const head = `<button type="button" class="xmj-log__head xmj-log__toggle" data-xmj-hand="${hand.hand}" aria-expanded="${open}">${summary}</button>`;
         const rows = open
           ? `<ol class="xmj-log__rows">${logRowsHtml(hand, options, activeRow)}</ol>`
           : '';

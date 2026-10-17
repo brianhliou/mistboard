@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { type XmjLogMove, xmjHandLog } from './xiangqi-mahjong-log.js';
 import {
+  toggleXmjLogHand,
   XMJ_SCORING_HREF,
   type XmjTableOptions,
   xiangqiMahjongTableHtml,
@@ -631,7 +632,25 @@ describe('xiangqi mahjong table', () => {
       );
     const host = render();
     const toggles = [...host.querySelectorAll('.xmj-log__toggle')];
-    expect(toggles.length).toBe(hands.length - 1);
+    // Every hand's heading folds, the latest hand's too (it was a plain line).
+    expect(toggles.length).toBe(hands.length);
+    expect(toggles.at(-1)?.getAttribute('aria-expanded')).toBe('true');
+    const latest = hands.at(-1)?.hand ?? 0;
+    const expanded = new Set<number>();
+    const collapsed = new Set<number>();
+    toggleXmjLogHand(latest, true, expanded, collapsed);
+    const folded = render({ expanded, collapsed });
+    expect(folded.querySelectorAll('.xmj-log__rows').length).toBe(0);
+    expect(folded.querySelector(`[data-xmj-hand="${latest}"]`)?.getAttribute('aria-expanded')).toBe(
+      'false',
+    );
+    // The hand holding the scrubbed ply folds as well, and opens again.
+    const lastPly = hands.at(-1)?.rows.at(-1)?.ply ?? 0;
+    expect(
+      render({ expanded, collapsed, activePly: lastPly }).querySelectorAll('.xmj-log__rows').length,
+    ).toBe(0);
+    toggleXmjLogHand(latest, false, expanded, collapsed);
+    expect(render({ expanded, collapsed }).querySelectorAll('.xmj-log__rows').length).toBe(1);
     expect(toggles[0]?.textContent).toMatch(
       /^Hand 1(You|Bot), (self-draw|on a discard)\d+ points?$|^Hand 1No winner$/,
     );
@@ -669,7 +688,7 @@ describe('xiangqi mahjong table', () => {
       expect(texts.length).toBe(hands.reduce((sum, hand) => sum + hand.rows.length, 0));
       for (const text of texts) {
         expect(text).toMatch(
-          /^(You|Bot|Misty) (discards?|draws?, discards?|takes?|wins? on a discard|wins? by self-draw)$|^The wall ran out$/,
+          /^(You|Bot|Misty) (discards?|draws?, discards?|takes? for a (sequence|triplet)|wins? on a discard|wins? by self-draw)$|^The wall ran out$/,
         );
       }
     }
@@ -679,6 +698,42 @@ describe('xiangqi mahjong table', () => {
       const row = all.querySelector(`.xmj-log__row[data-xmj-ply="${winRow.ply}"]`);
       expect(row ? words(row) : '').toMatch(/ wins on a discard$/);
     }
+    // A claim says what it made, and a self-drawn win shows its tile once the
+    // hand is over (the move never named it; the hand's result does).
+    const made = doc(
+      `<ol>${xmjLogHtml(
+        [
+          {
+            hand: 1,
+            ended: true,
+            firstPly: 1,
+            lastPly: 4,
+            rows: [
+              { kind: 'claim', seat: 'west', claim: 'chow', tile: 'rC', ply: 2 },
+              { kind: 'claim', seat: 'east', claim: 'pung', tile: 'bP', ply: 3 },
+              { kind: 'self-draw', seat: 'west', ply: 4 },
+            ],
+          },
+        ],
+        {
+          names: NAMES,
+          viewer: null,
+          results: [
+            { dealer: 'east', winner: 'west', selfDrawn: true, score: null, winningTile: 'rP' },
+          ],
+          activePly: null,
+          expanded: new Set([1]),
+          hasPly: () => true,
+        },
+      )}</ol>`,
+    );
+    const madeRows = [...made.querySelectorAll('.xmj-log__row')];
+    expect(madeRows.map(words)).toEqual([
+      'Bot takes for a sequence',
+      'You takes for a triplet',
+      'Bot wins by self-draw',
+    ]);
+    expect(madeRows[2]?.querySelector('.xmj-log__tile .xmj-tile')).not.toBeNull();
     // A scrub into hand 1 opens it and marks the row.
     const first = hands[0]?.rows[0];
     const scrubbed = render({ activePly: first?.ply ?? 1 });

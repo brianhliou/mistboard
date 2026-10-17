@@ -3430,3 +3430,9 @@ a.article-meta-author:hover .article-meta-author-name {
   --eval-compare-b: #f0a25a;
   --eval-compare-gap: rgba(240, 162, 90, 0.18);
 }
+
+/* A #fragment or a contents link lands a section heading below the sticky
+   site nav (58px), not under it. */
+.article-page :is(h2, h3, h4)[id] {
+  scroll-margin-top: 72px;
+}

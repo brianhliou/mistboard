@@ -599,6 +599,8 @@ export interface XmjHandResult {
   readonly winner: XmjSeatIndex | null;
   readonly selfDrawn: boolean;
   readonly score: XmjScore | null;
+  /** The tile the hand was won on; public once the hand is over. */
+  readonly winningTile?: XmjTile;
 }
 
 export interface XmjMatchState {
@@ -650,6 +652,7 @@ export function xmjAdvance(match: XmjMatchState, hand: XmjHandState): XmjMatchSt
       winner: phase.winner,
       selfDrawn: phase.selfDrawn,
       score: phase.score,
+      winningTile: phase.winningTile,
     };
   }
   const results = [...match.results, result];

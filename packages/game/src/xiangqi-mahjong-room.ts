@@ -462,6 +462,8 @@ export interface XmjViewResult {
   readonly winner: XmjSeat | null;
   readonly selfDrawn: boolean;
   readonly score: XmjScore | null;
+  /** Public once the hand is over: a self-drawn win shows the tile it drew. */
+  readonly winningTile: XmjTile | null;
 }
 
 /** What this seat may do right now, so a client renders buttons and decides nothing. */
@@ -603,6 +605,7 @@ export function xmjViewFor(state: XmjRoomState, perspective: XmjSeat | 'spectato
       winner: result.winner === null ? null : xmjSeatName(result.winner),
       selfDrawn: result.selfDrawn,
       score: result.score,
+      winningTile: result.winningTile ?? null,
     })),
     legal: perspective === 'spectator' ? NO_ACTIONS : legalFor(state, perspective),
     correspondence: state.correspondence === true,

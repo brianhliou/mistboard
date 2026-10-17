@@ -22,7 +22,12 @@ import type { MoveList } from './review/move-list.js';
 import { syncMoveListScroll } from './variant-tenant/chrome-dom.js';
 import './xiangqi-mahjong.css';
 import { xmjHandLog } from './xiangqi-mahjong-log.js';
-import { xiangqiMahjongTableHtml, xmjHandsTableHtml, xmjLogHtml } from './xiangqi-mahjong-table.js';
+import {
+  toggleXmjLogHand,
+  xiangqiMahjongTableHtml,
+  xmjHandsTableHtml,
+  xmjLogHtml,
+} from './xiangqi-mahjong-table.js';
 import { xmjMoveSound } from './xiangqi-mahjong-terminal-sound.js';
 
 /** Autoplay step for a played-back match (no recorded pacing to follow). */
@@ -274,12 +279,14 @@ export function mountXiangqiMahjongWatchReplay(
 /**
  * The rail's move list: the room's own hand-by-hand log (xmjLogHtml), behind
  * the MoveList contract the TV rail drives. Earlier hands fold to a line that
- * opens; the hand holding the ply on the board opens by itself.
+ * opens; the hand holding the ply on the board opens by itself. Every heading
+ * folds, the latest hand's too.
  */
 class XmjMoveLog {
   readonly list: MoveList;
   private readonly el: HTMLOListElement;
   private readonly expanded = new Set<number>();
+  private readonly collapsed = new Set<number>();
   private activePly = 0;
 
   constructor(
@@ -295,8 +302,8 @@ class XmjMoveLog {
       if (!target) return;
       const hand = Number(target.dataset.xmjHand);
       if (Number.isInteger(hand) && hand > 0) {
-        if (this.expanded.has(hand)) this.expanded.delete(hand);
-        else this.expanded.add(hand);
+        const wasOpen = target.getAttribute('aria-expanded') === 'true';
+        toggleXmjLogHand(hand, wasOpen, this.expanded, this.collapsed);
         this.render(this.activePly);
         return;
       }
@@ -328,6 +335,7 @@ class XmjMoveLog {
       results: view?.results ?? [],
       activePly,
       expanded: this.expanded,
+      collapsed: this.collapsed,
       hasPly: (ply) => ply >= 0 && ply <= maxPly,
     });
     syncMoveListScroll(this.el, { live: activePly >= maxPly, plyCount: maxPly });

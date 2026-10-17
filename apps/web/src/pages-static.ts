@@ -316,6 +316,26 @@ export async function mountArticle(
     teardown: mountArticleContent(modules, articlePage),
   };
   if (rail) installRulesRailNavigation();
+  // The client builds the page after the load event, when the browser has
+  // already given up looking for the #fragment, so the mount scrolls to it.
+  scrollToLocationHash();
+}
+
+/** Scrolls the element the address's #fragment names into view; false when
+ *  there is no fragment or nothing on the page carries that id. */
+export function scrollToLocationHash(): boolean {
+  const raw = window.location.hash.slice(1);
+  if (!raw) return false;
+  let id = raw;
+  try {
+    id = decodeURIComponent(raw);
+  } catch {
+    // A malformed escape: look the id up as written.
+  }
+  const target = document.getElementById(id);
+  if (!target) return false;
+  target.scrollIntoView();
+  return true;
 }
 
 function applyArticleChrome(modules: ArticleModules, slug: string, lang?: ArticleLangOrNull): void {
@@ -452,8 +472,7 @@ function afterRulesSwap(): void {
   const path = window.location.pathname;
   // A page load counts one pageview (main.ts); a swap is a page too.
   track('$pageview', { path });
-  const id = decodeURIComponent(window.location.hash.slice(1));
-  if (id) document.getElementById(id)?.scrollIntoView();
+  scrollToLocationHash();
   void syncHeadFromPrerender(path);
 }
 
