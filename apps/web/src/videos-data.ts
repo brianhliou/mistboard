@@ -123,6 +123,10 @@ interface VideoBase {
    *  four-hour max-age, so re-uploading the same path leaves the CDN handing
    *  out the old bytes long after the deploy reports success. */
   thumbnailUrl?: string;
+  /** ISO instant the video goes public. Before it the entry is hidden, so a
+   *  Short scheduled on YouTube can be entered the day it is uploaded and shows
+   *  up here on its own when YouTube publishes it. */
+  publishAt?: string;
 }
 
 /** An external YouTube video. Watch URL + thumbnail derive from `id`. */
@@ -130,6 +134,8 @@ export interface YoutubeVideo extends VideoBase {
   source: 'youtube';
   /** YouTube video id (the `v` query parameter). */
   id: string;
+  /** A vertical Short: watched at /shorts/<id>, carded at 9:16. */
+  short?: true;
 }
 
 /** A first-party Mistboard-hosted video. Watch URL + thumbnail are explicit. */
@@ -160,7 +166,9 @@ export function videoKey(video: VideoEntry): string {
 export function videoWatchUrl(video: VideoEntry): string {
   switch (video.source) {
     case 'youtube':
-      return `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`;
+      return video.short
+        ? `https://www.youtube.com/shorts/${encodeURIComponent(video.id)}`
+        : `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`;
     case 'mistboard':
       return video.url;
   }
@@ -1080,11 +1088,28 @@ const MISTBOARD_CHANNEL_VIDEOS: readonly YoutubeVideo[] = [
   },
 ];
 
+/** Our puzzle Shorts (Elegant Pastime problems), oldest first. Each is entered
+ *  when it is scheduled on YouTube, with its own 9:16 thumbnail and the
+ *  `publishAt` YouTube will publish it at; the shelf shows it from then on. */
+const MISTBOARD_SHORTS: readonly YoutubeVideo[] = [];
+
 /** The curated catalogue: other people's videos, filtered and faceted by the
  *  page. Deliberately does NOT include our own episodes — they have their own
  *  shelf above it, and mixing them in would double-render every card and shift
  *  every count and facet the page derives from this list. */
 export const VIDEOS: readonly VideoEntry[] = [...YOUTUBE_VIDEOS, ...MISTBOARD_VIDEOS];
 
-/** Ours, newest first. Rendered above the catalogue, never inside it. */
-export const FIRST_PARTY_VIDEOS: readonly VideoEntry[] = MISTBOARD_CHANNEL_VIDEOS;
+/** Ours: the episodes, then the Shorts. Rendered above the catalogue, never
+ *  inside it; the shelf splits them by `short`. */
+export const FIRST_PARTY_VIDEOS: readonly VideoEntry[] = [
+  ...MISTBOARD_CHANNEL_VIDEOS,
+  ...MISTBOARD_SHORTS,
+];
+
+/** Whether a video is public at `now` (no `publishAt` means it always is). */
+export function isVideoLive(video: VideoEntry, now: number = Date.now()): boolean {
+  return video.publishAt === undefined || Date.parse(video.publishAt) <= now;
+}
+
+export const isShort = (video: VideoEntry): boolean =>
+  video.source === 'youtube' && video.short === true;

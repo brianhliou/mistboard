@@ -16,6 +16,8 @@ import {
 } from './videos.js';
 import {
   FIRST_PARTY_VIDEOS,
+  isShort,
+  isVideoLive,
   VIDEO_LANGUAGES,
   VIDEO_LEVELS,
   VIDEO_TAGS,
@@ -210,6 +212,42 @@ describe('source-dispatched watch + thumbnail', () => {
   });
 });
 
+describe('scheduled Shorts', () => {
+  const short: VideoEntry = {
+    source: 'youtube',
+    id: 'abcDEF12345',
+    short: true,
+    title: 'A Chinese Chess Puzzle',
+    author: 'Mistboard',
+    firstParty: true,
+    tags: ['basics'],
+    level: 'intro',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-10-16',
+    publishAt: '2026-10-21T16:00:00Z',
+  };
+
+  it('hides a Short until YouTube publishes it', () => {
+    expect(isVideoLive(short, Date.parse('2026-10-21T15:59:59Z'))).toBe(false);
+    expect(isVideoLive(short, Date.parse('2026-10-21T16:00:00Z'))).toBe(true);
+    expect(isVideoLive({ ...short, publishAt: undefined }, 0)).toBe(true);
+  });
+
+  it('links a Short to its Shorts player, not the watch page', () => {
+    expect(isShort(short)).toBe(true);
+    expect(videoWatchUrl(short)).toBe('https://www.youtube.com/shorts/abcDEF12345');
+  });
+
+  it('enters every first-party Short with its publish instant', () => {
+    // An entry without one would appear the moment it ships, before YouTube makes it public.
+    for (const video of FIRST_PARTY_VIDEOS.filter(isShort)) {
+      expect(video.publishAt, video.title).toMatch(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+      expect(video.thumbnailUrl, video.title).toBeTruthy();
+    }
+  });
+});
+
 describe('video card', () => {
   it('shelves our own episodes above the catalogue, never inside it', () => {
     // The library's job is to turn a visitor into a subscriber, so ours lead and
@@ -218,7 +256,9 @@ describe('video card', () => {
     // derives from that list.
     const root = mountAllLanguages();
     const ours = root.querySelectorAll('.videos-ours-grid .videos-card');
-    expect(ours.length).toBe(FIRST_PARTY_VIDEOS.length);
+    expect(ours.length).toBe(
+      FIRST_PARTY_VIDEOS.filter((v) => !isShort(v) && isVideoLive(v)).length,
+    );
     expect(ours.length).toBeGreaterThan(0);
     expect(root.querySelector('.videos-ours-grid .videos-source-badge')).not.toBeNull();
     for (const video of VIDEOS) expect(video.firstParty).not.toBe(true);

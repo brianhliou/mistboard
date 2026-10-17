@@ -267,6 +267,20 @@
   font-size: 13px;
 }
 
+.videos-shorts-heading {
+  margin: 20px 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.videos-shorts-grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.videos-shorts-grid .videos-thumb {
+  aspect-ratio: 9 / 16;
+}
+
 .videos-subscribe {
   display: inline-block;
   margin-top: 16px;
