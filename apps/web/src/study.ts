@@ -976,13 +976,17 @@ function renderStudy(
       // Empty eyebrow: the info card leads with the study name itself.
       eyebrow: '',
       title: localizedStudyName(study.name, study.i18n),
-      // The description is STUDY-level and the rail is the study column, so it
-      // belongs here under the study's own name. It spent a while in the
-      // underboard "About" tab, which is per-chapter: that printed the same 745
-      // characters under all 92 chapters of a manual, above the moves, and left
-      // the tab permanently open to hold it. Clamped, because it is reference
-      // rather than reading.
-      summary: localizedStudyDescription(study.description, study.i18n),
+      // The rail keeps only the compact title. The description is read in
+      // full under the board (Brian, 2026-10-16: the clamped copy behind "Show
+      // more" in the rail's top corner went unread). It sits at the foot of the
+      // underboard, after the tabs, rather than in the per-chapter About tab:
+      // that tab printed the same 745 characters above the moves of all 92
+      // chapters of a manual and had to stay open to hold it.
+      summary: '',
+      ...(() => {
+        const note = studyDescriptionBlock(study);
+        return note ? { underboardNote: note } : {};
+      })(),
       boardAriaLabel: `${studyVariantLabel(variant)} board`,
       // A chapter of a real game can now say who had which side. Without this
       // the only place identity could live was the chapter title, which cannot
@@ -1138,10 +1142,14 @@ function attachStudyTitleRow(
   const thumbnail = buildStudyThumbnail(studyId, 'study-page__thumbnail', 'eager');
 
   const summary = title.nextElementSibling;
-  const hasSummary =
+  const isSummary =
     summary instanceof HTMLElement &&
     (summary.classList.contains('review-info-card__summary') ||
       summary.classList.contains('gamebook__summary'));
+  // The review mount passes no summary (its description is under the board);
+  // the shell still prints the empty paragraph, which would hold a blank line.
+  if (isSummary && !summary.textContent?.trim()) summary.remove();
+  const hasSummary = isSummary && summary.isConnected;
   const copy = document.createElement('div');
   copy.className = 'study-page__title-copy';
   const row = document.createElement('div');
@@ -1256,6 +1264,25 @@ function statusSpan(isOwner: boolean): HTMLElement {
   status.dataset.state = 'saved';
   status.textContent = t('study.saved');
   return status;
+}
+
+/**
+ * The study's description, in full, for the foot of the underboard. Null when
+ * the study has none. Line breaks the author wrote are kept, and links are
+ * live, as in the chapter introduction.
+ */
+export function studyDescriptionBlock(
+  study: Pick<StudyDto, 'description' | 'i18n'>,
+): HTMLElement | null {
+  const text = localizedStudyDescription(study.description, study.i18n)?.trim();
+  if (!text) return null;
+  const block = document.createElement('section');
+  block.className = 'study-description';
+  const prose = document.createElement('p');
+  prose.className = 'study-description__text';
+  appendLinkedText(prose, text);
+  block.append(prose);
+  return block;
 }
 
 /** The underboard "About" tab: the study's own description, plus the favorite and
@@ -1401,7 +1428,12 @@ function likeButton(study: StudyDto): HTMLButtonElement {
     button.classList.toggle('is-liked', study.likedByViewer);
     button.textContent = `${study.likedByViewer ? '♥' : '♡'} ${study.likeCount}`;
     button.setAttribute('aria-pressed', String(study.likedByViewer));
-    button.setAttribute('aria-label', study.likedByViewer ? t('study.unlike') : t('study.like'));
+    // The heart is the reader's own like, and liked studies are their
+    // Favorites tab on /study. The star in the rail is a different control
+    // (admin curation into Staff picks); the tooltip says which is which.
+    const label = study.likedByViewer ? t('study.unlike') : t('study.like');
+    button.setAttribute('aria-label', label);
+    button.title = label;
   };
   render();
   button.addEventListener('click', () => {

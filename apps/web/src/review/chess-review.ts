@@ -9,6 +9,7 @@
 import type { Color, GameState, Move, PlayerView, Square } from '@mistboard/game';
 import { darkChessFen } from '@mistboard/game';
 import type { ChessBoardArrow, ChessBoardMarker } from '../dark-chess-render.js';
+import { animateChessBoardMove } from '../dark-chess-render.js';
 import { createDarkChessInteractiveBoard } from '../dark-chess-tree-board.js';
 import { chessTreeAdapter } from './chess-tree-adapter.js';
 import { formatDarkChessMove } from './dark-chess-review.js';
@@ -62,8 +63,8 @@ const chessPresentation: TreePresentation<
   // Review plays both sides: the interactive seat is the side to move.
   seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
   createBoard: (opts) => createDarkChessInteractiveBoard({ ...opts, fog: false }),
-  // The board re-renders on navigation; no glide animation.
-  animateMove: () => {},
+  // An open board (fog: false), so the glide the chess study embed uses.
+  animateMove: animateChessBoardMove,
   shapeToArrow: (s: NodeShape): ChessBoardArrow => ({
     from: s.orig as Square,
     to: (s.dest ?? s.orig) as Square,

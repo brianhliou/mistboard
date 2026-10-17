@@ -497,6 +497,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  surface uses it for the study's own description + favorite + errata, so those
    *  live under the board instead of crowding the left rail. */
   aboutTab?: { label: string; body: HTMLElement };
+  /** A block shown in full at the foot of the underboard, outside the tabs, so
+   *  no tab choice hides it. The study surface puts its description here. */
+  underboardNote?: HTMLElement;
   /** Extra rows for the Share & export tab. The study surface puts its PGN
    *  download here, with the other ways of getting the content out. */
   shareExtra?: HTMLElement[];
@@ -1755,6 +1758,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         ? underboardEl
         : undefined,
       importPanel?.el,
+      config.underboardNote,
     ),
     underboardOverflows: true,
     enginePanel: enginePanel?.el,
