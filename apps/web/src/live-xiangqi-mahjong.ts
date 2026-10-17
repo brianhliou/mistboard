@@ -40,6 +40,7 @@ import './xiangqi-mahjong.css';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { xmjHandLog } from './xiangqi-mahjong-log.js';
 import {
+  toggleXmjLogHand,
   XMJ_TILE_LOOKS,
   xiangqiMahjongTableHtml,
   xmjCountdown,
@@ -433,8 +434,9 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
 
 // ── The move list, one hand at a time ────────────────────────────────────────
 
-/** Earlier hands the reader opened in the move list. */
+/** Hands the reader opened, and closed, in the move list. */
 const openHands = new Set<number>();
+const closedHands = new Set<number>();
 let lastListCtx: TenantMoveListRenderContext<XmjSeat, XmjMove> | null = null;
 
 function renderMoveLog(ctx: TenantMoveListRenderContext<XmjSeat, XmjMove>): void {
@@ -452,6 +454,7 @@ function renderMoveLog(ctx: TenantMoveListRenderContext<XmjSeat, XmjMove>): void
     results: core?.state.view?.results ?? [],
     activePly: ctx.activePly,
     expanded: openHands,
+    collapsed: closedHands,
     hasPly: ctx.hasPly,
     pieceSet: readStoredXiangqiPieceSet(),
     tileLook: look,
@@ -467,8 +470,8 @@ function installMoveLogInteraction(list: HTMLElement): void {
     if (!target || !lastListCtx) return;
     const hand = Number(target.dataset.xmjHand);
     if (Number.isInteger(hand) && hand > 0) {
-      if (openHands.has(hand)) openHands.delete(hand);
-      else openHands.add(hand);
+      const wasOpen = target.getAttribute('aria-expanded') === 'true';
+      toggleXmjLogHand(hand, wasOpen, openHands, closedHands);
       renderMoveLog(lastListCtx);
       return;
     }
@@ -504,6 +507,7 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
     lastTableHtml = '';
     drawnCounts = null;
     openHands.clear();
+    closedHands.clear();
     roomMode = 'pve';
     forfeitDeadline = null;
     offsetSamples.length = 0;

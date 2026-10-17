@@ -813,8 +813,10 @@ export interface XmjLogOptions {
   readonly results: readonly XmjViewResult[];
   /** The ply on show while scrubbing, or null when live. */
   readonly activePly: number | null;
-  /** Earlier hands the reader opened. */
+  /** Hands the reader opened. */
   readonly expanded: ReadonlySet<number>;
+  /** Hands the reader closed, the latest or the one holding the scrubbed ply included. */
+  readonly collapsed?: ReadonlySet<number>;
   /** Whether a row's ply can be shown (the client holds that snapshot). */
   readonly hasPly: (ply: number) => boolean;
   readonly pieceSet?: XiangqiPieceSet;
@@ -921,8 +923,29 @@ function activeRowPly(hands: readonly XmjLogHand[], activePly: number | null): n
 }
 
 /**
+ * A click on a hand's heading: flip it from what the reader saw. A hand open
+ * by default (the latest, or the one holding the scrubbed ply) closes through
+ * `collapsed`; any other opens through `expanded`.
+ */
+export function toggleXmjLogHand(
+  hand: number,
+  wasOpen: boolean,
+  expanded: Set<number>,
+  collapsed: Set<number>,
+): void {
+  if (wasOpen) {
+    expanded.delete(hand);
+    collapsed.add(hand);
+  } else {
+    collapsed.delete(hand);
+    expanded.add(hand);
+  }
+}
+
+/**
  * The log: the latest hand in full, each earlier hand one line that opens.
  * A hand holding the scrubbed ply opens by itself, so the highlight shows.
+ * Every heading folds, the latest hand's too.
  */
 export function xmjLogHtml(hands: readonly XmjLogHand[], options: XmjLogOptions): string {
   const activeRow = activeRowPly(hands, options.activePly);
@@ -934,11 +957,11 @@ export function xmjLogHtml(hands: readonly XmjLogHand[], options: XmjLogOptions)
       .map((hand, index) => {
         const latest = index === hands.length - 1;
         const holdsActive = hand.rows.some((row) => row.ply === activeRow);
-        const open = latest || holdsActive || options.expanded.has(hand.hand);
+        const open =
+          !options.collapsed?.has(hand.hand) &&
+          (latest || holdsActive || options.expanded.has(hand.hand));
         const summary = logSummary(hand, options);
-        const head = latest
-          ? `<div class="xmj-log__head">${summary}</div>`
-          : `<button type="button" class="xmj-log__head xmj-log__toggle" data-xmj-hand="${hand.hand}" aria-expanded="${open}">${summary}</button>`;
+        const head = `<button type="button" class="xmj-log__head xmj-log__toggle" data-xmj-hand="${hand.hand}" aria-expanded="${open}">${summary}</button>`;
         const rows = open
           ? `<ol class="xmj-log__rows">${logRowsHtml(hand, options, activeRow)}</ol>`
           : '';

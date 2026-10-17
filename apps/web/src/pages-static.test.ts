@@ -20,6 +20,7 @@ import {
   renderRulesIndexShellForPrerender,
   rulesArticleRoute,
   rulesIndexPrerenderHead,
+  scrollToLocationHash,
 } from './pages-static.js';
 
 async function flushPromises(): Promise<void> {
@@ -482,7 +483,7 @@ describe('rules rail navigation', () => {
     const root = document.createElement('div');
     root.id = 'app';
     document.body.append(root);
-    const route = rulesArticleRoute(path);
+    const route = rulesArticleRoute(path.split('#')[0]!);
     await mountArticle(root, route!.slug, route!.lang);
     return root;
   }
@@ -506,6 +507,33 @@ describe('rules rail navigation', () => {
         el.remove();
       });
     window.history.replaceState(null, '', '/');
+  });
+
+  it('scrolls to the #fragment once the client has built the page', async () => {
+    const scrolled: string[] = [];
+    vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(function (this: Element) {
+      scrolled.push(this.id);
+    });
+    // The page is built after the load event, so the browser never finds the
+    // heading itself (rules/xiangqi-mahjong-32#adding-it-up opened at the top).
+    const probe = document.createElement('div');
+    document.body.append(probe);
+    await mountArticle(probe, 'banqi');
+    const id = probe.querySelector('main.article-page h2[id], main.article-page h3[id]')?.id;
+    probe.remove();
+    expect(id).toBeTruthy();
+    scrolled.length = 0;
+    const root = await mountRules(`/rules/banqi#${id}`);
+    expect(scrolled).toEqual([id]);
+    expect(root.querySelector(`#${id}`)).not.toBeNull();
+    // No fragment, or one naming nothing: no scroll.
+    scrolled.length = 0;
+    window.history.replaceState(null, '', '/rules/banqi#no-such-heading');
+    expect(scrollToLocationHash()).toBe(false);
+    window.history.replaceState(null, '', '/rules/banqi');
+    expect(scrollToLocationHash()).toBe(false);
+    expect(scrolled).toEqual([]);
+    vi.restoreAllMocks();
   });
 
   it('parses rules article paths with their locale', () => {

@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
 import { type XmjLogMove, xmjHandLog } from './xiangqi-mahjong-log.js';
 import {
+  toggleXmjLogHand,
   XMJ_SCORING_HREF,
   type XmjTableOptions,
   xiangqiMahjongTableHtml,
@@ -631,7 +632,25 @@ describe('xiangqi mahjong table', () => {
       );
     const host = render();
     const toggles = [...host.querySelectorAll('.xmj-log__toggle')];
-    expect(toggles.length).toBe(hands.length - 1);
+    // Every hand's heading folds, the latest hand's too (it was a plain line).
+    expect(toggles.length).toBe(hands.length);
+    expect(toggles.at(-1)?.getAttribute('aria-expanded')).toBe('true');
+    const latest = hands.at(-1)?.hand ?? 0;
+    const expanded = new Set<number>();
+    const collapsed = new Set<number>();
+    toggleXmjLogHand(latest, true, expanded, collapsed);
+    const folded = render({ expanded, collapsed });
+    expect(folded.querySelectorAll('.xmj-log__rows').length).toBe(0);
+    expect(folded.querySelector(`[data-xmj-hand="${latest}"]`)?.getAttribute('aria-expanded')).toBe(
+      'false',
+    );
+    // The hand holding the scrubbed ply folds as well, and opens again.
+    const lastPly = hands.at(-1)?.rows.at(-1)?.ply ?? 0;
+    expect(
+      render({ expanded, collapsed, activePly: lastPly }).querySelectorAll('.xmj-log__rows').length,
+    ).toBe(0);
+    toggleXmjLogHand(latest, false, expanded, collapsed);
+    expect(render({ expanded, collapsed }).querySelectorAll('.xmj-log__rows').length).toBe(1);
     expect(toggles[0]?.textContent).toMatch(
       /^Hand 1(You|Bot), (self-draw|on a discard)\d+ points?$|^Hand 1No winner$/,
     );
