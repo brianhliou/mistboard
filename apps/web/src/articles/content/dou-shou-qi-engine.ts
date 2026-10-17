@@ -45,7 +45,7 @@ export const douShouQiEngineArticle: Article = {
   },
   audience:
     'Engine builders and Jungle Chess players curious how a classical search engine measures up, and where learned evaluation and tablebases stop helping.',
-  readNext: ['katago-jungle', 'mistybanqi'],
+  readNext: ['katago-jungle', 'jungle-den-term', 'mistybanqi'],
   tldr: [
     'MistyJungle, a classical Rust engine for Dou Shou Qi (Jungle), scored W11-L2-D187 against the strongest open-source engine I could run, about +16 Elo.',
     'It matched exact four-piece tablebases on 779 of 800 positions with no win/draw/loss mistakes.',

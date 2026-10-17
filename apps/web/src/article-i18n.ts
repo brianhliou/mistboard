@@ -208,6 +208,7 @@ export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
   'lichess-analysis-accuracy': 'Moved from brianhliou.com in English; not yet translated.',
   // The Dou Shou Qi engine post, moved on 2026-10-16.
   'dou-shou-qi-engine': 'Moved from brianhliou.com in English; not yet translated.',
+  'jungle-den-term': 'Moved from brianhliou.com in English; not yet translated.',
 };
 
 const TRANSLATED_ARTICLE_SLUG_SET = new Set<string>(TRANSLATED_ARTICLE_SLUGS);
@@ -709,24 +710,32 @@ const ZH_HANS: Record<string, string> = {
   'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.':
     '电脑有多强，翻棋又决定了多少？[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精确残局库给它评分，并测出 512 倍的搜索量值多少。',
   'Misty has no idea of a den race': 'Misty 不懂冲兽穴竞速',
-  'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den. It never asks whether a runner heading for its own den gets there first; it finds out when the search reaches the den, about 12 plies out. In August we tried three ways to teach it, and all three came back null or negative.':
-    'Misty 对局面的评估是子力，加上每个棋子离对方兽穴距离的奖励。它从不去问奔向自己兽穴的对方棋子是否会先到；等搜索抵达兽穴时它才发现，那大约是 12 着之后。8 月我们试了三种办法教它，三种结果都是无效或负收益。',
-  'First, how often a race decides a game. Of 172 self-play games at Misty’s usual 5 million nodes, 52.9% ended in a repetition draw, 26.2% in a den entry and 20.9% in a no-progress draw. Only 4.7% were genuine races, won by a side that was level or behind ten plies out. The same test at 200k nodes reported 22%: weaker play inflates races about fivefold.':
-    '先看竞速多常决定对局。在 Misty 平常的 500 万节点下自我对弈 172 盘，52.9% 以重复和棋结束，26.2% 以进入兽穴结束，20.9% 以无进展和棋结束。只有 4.7% 是真正的竞速：胜方在十着之前持平或落后。同样的测试在 20 万节点下给出 22%：较弱的对弈会把竞速夸大约五倍。',
-  'Deeper search finds little more. Over those 8 races, 60 million nodes saw the loss at most 4 plies sooner than 5 million, and no sooner in 4 of them. A search extension near the dens scored +45 Elo when granted free, at 3.3 times the nodes; held to the same budget, it scored −15 and −12. A den-race term, comparing the two runners once per side, scored −3 and +9 at weights 10 and 25. Each of those matches was 300 colour-swapped pairs.':
-    '更深的搜索也找不到多少东西。在这 8 盘竞速里，6000 万节点比 500 万节点最多早 4 着看到败势，其中 4 盘一着也没有提前。兽穴附近的搜索延伸在免费给予时得到 +45 Elo，代价是 3.3 倍的节点；把预算固定后，它得到 −15 和 −12。专门的冲兽穴竞速评估项，每方各比较一次双方的奔袭棋子，在权重 10 和 25 下分别得到 −3 和 +9。每一场对抗都是 300 对换色对局。',
-  'Misty plays a race well enough when the search reaches it. In one self-play game under the old tiger rule, Red’s tiger took a wolf and stood in the d-file corridor beside Blue’s elephant. It could not jump sideways, so Blue did not hurry to take it. When the elephant stepped from d7 to d6, Red’s lion jumped from c3 to c7, into the square the elephant had left. The elephant took the tiger on d5, and the lion was three moves from a den Blue could not defend. Blue ended 13 points ahead and lost. Misty has no den-race term; depth found the line. Since 21 September the tiger jumps sideways, so the corridor no longer traps it.':
-    '搜索够得着时，Misty 照样能把竞速下好。在旧虎规则下的一盘自我对弈中，红方的虎吃掉一只狼，站进 d 路通道，就在蓝方的象旁边。它不能横向跳，所以蓝方不急着吃它。当象从 d7 走到 d6，红方的狮从 c3 跳到 c7，跳进象刚离开的格子。象在 d5 吃掉了虎，而狮离一个蓝方守不住的兽穴只差三步。蓝方最终领先 13 分，却输了。Misty 没有冲兽穴竞速评估项；是搜索深度找到了这条线。自 9 月 21 日起，虎可以横向跳，这条通道不再困得住它。',
-  'What did move Jungle Chess was two constants from the same games: a no-capture draw clock that ended games early, and a draw contempt near zero. Changing them took self-play from a quarter of games decided to about half. The lesson we kept: hold the search budget fixed, or you measure the budget. The 52 games are in [one study](/study/4UhOMlsE).':
-    '真正改变了斗兽棋对局的，是同一批对局里找到的两个常数：一个让对局过早结束的无吃子和棋计数，以及接近零的和棋轻视值。改掉它们后，自我对弈中分出胜负的对局从四分之一升到大约一半。我们留下的教训是：要把搜索预算固定住，否则测的只是预算。那 52 盘对局都收在[一个研究](/study/4UhOMlsE)里。',
+  // katago-jungle den paragraph, cut 2026-10-16 to link /blog/jungle-den-term: machine-drafted, not native-reviewed.
+  'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den, so it learns who wins a den race only when the search reaches the den. In August we tried three ways to teach it, and none helped once the search budget was held fixed; races decide only 4.7% of games at full strength. [Teaching our Jungle Chess engine the den race](/blog/jungle-den-term) has the matches, and a game where depth found the race on its own.':
+    'Misty 对局面的评估是子力，加上每个棋子离对方兽穴距离的奖励，所以冲兽穴竞速谁先到，它要等搜索抵达兽穴时才知道。8 月我们试了三种办法教它，一旦把搜索预算固定住，没有一种有帮助；在全力对弈中，竞速只决定 4.7% 的对局。[教斗兽棋引擎冲兽穴竞速](/blog/jungle-den-term)一文有完整的对抗结果，还有一盘靠搜索深度自己找到竞速的对局。',
   'An earlier audit tested the averaging on the buggy engine':
     '更早的一次审查，是在有漏洞的引擎上测试取平均的',
-  'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. The engine had already beaten ten nets distilled from its own evaluations, the best of them scoring 0.43. Each test played the changed engine against the shipped one, colours alternating, at equal time, with a referee dealing the hidden pieces so neither engine saw one.':
-    '9 月，我们测试了一份外部对同一引擎的源码审查，来自 [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai)。它的五项发现里，有两项值得下一场对抗来检验。在此之前，这个引擎已经赢过十个从它自身评估蒸馏出来的网络，其中最好的得分 0.43。每项测试都让改动后的引擎对阵已上线的引擎，轮换执色，用时相同，由裁判程序发放暗子，双方引擎都看不到暗子。',
-  'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. Fixing it alone scored 0.475 over 200 games at 500 ms a move (91-101-8). Retuning the 43 terms it touches, over 10,000 SPSA game pairs, scored 0.507 (96-93-11). Both are within noise: 200 games is ±0.07 at 95%, roughly ±50 Elo, so a change worth 10 Elo cannot be seen.':
-    '第一项是真实的评估漏洞：有一方的暗子从未被计入，所以红方威胁暗子能得分，黑方从来得不到。只修这个漏洞，每着 500 ms 下 200 盘得分 0.475（91-101-8）。再用 10,000 对 SPSA 对局重新调校它涉及的 43 项参数，得分 0.507（96-93-11）。两者都在噪声之内：200 盘在 95% 置信度下是 ±0.07，大约 ±50 Elo，所以价值 10 Elo 的改动根本看不出来。',
-  'The second was the averaging this page is about, a clamped weighted average with a fallback to the worst case. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. A replacement took the engine’s top four moves, searched each possible piece separately and played the best average. It scored 0.370 over 100 games (30-56-14) at 2.2 times the time, and 0.410 over 50 games (17-26-7) at 7 times. We concluded then that the worst-case fallback does useful work.':
-    '第二项就是本页讲的取平均：一个带上下限的加权平均，并在需要时退回最差结果。7 月，它曾选了一步真实胜率 64% 的翻子，放弃了胜率 97% 的稳妥着法。替代方案取引擎排名前四的着法，对每一种可能的棋子分别搜索，再走平均值最好的一步。它在 2.2 倍用时下 100 盘得分 0.370（30-56-14），在 7 倍用时下 50 盘得分 0.410（17-26-7）。我们当时的结论是：退回最差结果这一步确实有用。',
+  // pikafish-reveal-bug audit table and formula, re-cut 2026-10-16: machine-drafted, not native-reviewed.
+  'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. Each test played the changed engine against the shipped one, colours alternating, with a referee dealing the hidden pieces so neither engine saw one.':
+    '9 月，我们测试了一份外部对同一引擎的源码审查，来自 [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai)。它的五项发现里，有两项值得下一场对抗来检验。每项测试都让改动后的引擎对阵已上线的引擎，轮换执色，由裁判程序发放暗子，双方引擎都看不到暗子。',
+  'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. We fixed it, then retuned the 43 terms it touches over 10,000 SPSA game pairs.':
+    '第一项是真实的评估漏洞：有一方的暗子从未被计入，所以红方威胁暗子能得分，黑方从来得不到。我们修了这个漏洞，再用 10,000 对 SPSA 对局重新调校它涉及的 43 项参数。',
+  'The second was the averaging this page is about. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. The replacement priced each reveal by searching every possible piece separately:':
+    '第二项就是本页讲的取平均。7 月，它曾选了一步真实胜率 64% 的翻子，放弃了胜率 97% 的稳妥着法。替代方案给每步翻子定价的办法，是对每一种可能的棋子分别搜索：',
+  'piece: each piece the hidden one could be. s[piece]: the search score if it is that piece. count[piece]: how many of that piece are still face down. MAX_SPREAD: how far the average may sit above the worst case. win[move][piece]: the winning chance from a separate search.':
+    'piece：暗子可能是的每一种棋子。s[piece]：暗子是该棋子时的搜索分数。count[piece]：该棋子还有几个未翻开。MAX_SPREAD：平均值最多能比最差结果高出多少。win[move][piece]：单独搜索得出的胜率。',
+  Change: '改动',
+  'W-L-D': '胜-负-和',
+  '95% margin': '95% 误差',
+  Time: '用时',
+  'Fix the bug': '修复漏洞',
+  'Fix and retune': '修复并重新调校',
+  'Separate searches': '分别搜索',
+  'Separate searches, longer': '分别搜索，更长用时',
+  'Score is the changed engine’s against the shipped one, a draw counting half, so 0.500 is no change. Time is a multiple of the shipped engine’s.':
+    '得分是改动后的引擎对已上线引擎的得分，和棋算半分，所以 0.500 表示没有变化。用时是已上线引擎用时的倍数。',
+  'Neither evaluation change left its margin: at 200 games ±0.07 is roughly ±50 Elo, so a change worth 10 Elo cannot be seen. The separate searches lost clearly at 2.2 times the time, and at 7 times they still scored below even. We concluded then that the worst-case fallback does useful work.':
+    '两项评估改动都没有超出误差范围：200 盘的 ±0.07 大约是 ±50 Elo，所以价值 10 Elo 的改动根本看不出来。分别搜索在 2.2 倍用时下明显输了，在 7 倍用时下得分仍低于五五开。我们当时的结论是：退回最差结果这一步确实有用。',
   'That conclusion came from the colour bug above. The fallback was meant to assume the worst, and as Black it assumed the best, so the test ran on an engine that was not doing it half the time. Since then [AB-JChess](/blog/ab-jchess) has beaten this engine 248-136-16 over 400 games and is now the top jieqi bot.':
     '这个结论来自上面的颜色漏洞。退回这一步本该假设最坏情况，而执黑时它假设的是最好情况，所以那次测试用的引擎有一半时间根本没在这样做。此后 [AB-JChess](/blog/ab-jchess) 在 400 盘中以 248-136-16 战胜了这个引擎，现在是最强的揭棋电脑。',
   // duck-xiangqi, duck-xiangqi-strategy, misty blog merge (2026-10-07): machine-translated.
@@ -6792,24 +6801,32 @@ const ZH_HANT: Record<string, string> = {
   'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.':
     '電腦有多強，翻棋又決定了多少？[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精確殘局庫給它評分，並測出 512 倍的搜尋量值多少。',
   'Misty has no idea of a den race': 'Misty 不懂衝獸穴競速',
-  'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den. It never asks whether a runner heading for its own den gets there first; it finds out when the search reaches the den, about 12 plies out. In August we tried three ways to teach it, and all three came back null or negative.':
-    'Misty 對局面的評估是子力，加上每個棋子離對方獸穴距離的獎勵。它從不去問奔向自己獸穴的對方棋子是否會先到；等搜尋抵達獸穴時它才發現，那大約是 12 著之後。8 月我們試了三種辦法教它，三種結果都是無效或負收益。',
-  'First, how often a race decides a game. Of 172 self-play games at Misty’s usual 5 million nodes, 52.9% ended in a repetition draw, 26.2% in a den entry and 20.9% in a no-progress draw. Only 4.7% were genuine races, won by a side that was level or behind ten plies out. The same test at 200k nodes reported 22%: weaker play inflates races about fivefold.':
-    '先看競速多常決定對局。在 Misty 平常的 500 萬節點下自我對弈 172 盤，52.9% 以重複和棋結束，26.2% 以進入獸穴結束，20.9% 以無進展和棋結束。只有 4.7% 是真正的競速：勝方在十著之前持平或落後。同樣的測試在 20 萬節點下給出 22%：較弱的對弈會把競速誇大約五倍。',
-  'Deeper search finds little more. Over those 8 races, 60 million nodes saw the loss at most 4 plies sooner than 5 million, and no sooner in 4 of them. A search extension near the dens scored +45 Elo when granted free, at 3.3 times the nodes; held to the same budget, it scored −15 and −12. A den-race term, comparing the two runners once per side, scored −3 and +9 at weights 10 and 25. Each of those matches was 300 colour-swapped pairs.':
-    '更深的搜尋也找不到多少東西。在這 8 盤競速裡，6000 萬節點比 500 萬節點最多早 4 著看到敗勢，其中 4 盤一著也沒有提前。獸穴附近的搜尋延伸在免費給予時得到 +45 Elo，代價是 3.3 倍的節點；把預算固定後，它得到 −15 和 −12。專門的衝獸穴競速評估項，每方各比較一次雙方的奔襲棋子，在權重 10 和 25 下分別得到 −3 和 +9。每一場對抗都是 300 對換色對局。',
-  'Misty plays a race well enough when the search reaches it. In one self-play game under the old tiger rule, Red’s tiger took a wolf and stood in the d-file corridor beside Blue’s elephant. It could not jump sideways, so Blue did not hurry to take it. When the elephant stepped from d7 to d6, Red’s lion jumped from c3 to c7, into the square the elephant had left. The elephant took the tiger on d5, and the lion was three moves from a den Blue could not defend. Blue ended 13 points ahead and lost. Misty has no den-race term; depth found the line. Since 21 September the tiger jumps sideways, so the corridor no longer traps it.':
-    '搜尋夠得著時，Misty 照樣能把競速下好。在舊虎規則下的一盤自我對弈中，紅方的虎吃掉一隻狼，站進 d 路通道，就在藍方的象旁邊。它不能橫向跳，所以藍方不急著吃它。當象從 d7 走到 d6，紅方的獅從 c3 跳到 c7，跳進象剛離開的格子。象在 d5 吃掉了虎，而獅離一個藍方守不住的獸穴只差三步。藍方最終領先 13 分，卻輸了。Misty 沒有衝獸穴競速評估項；是搜尋深度找到了這條線。自 9 月 21 日起，虎可以橫向跳，這條通道不再困得住它。',
-  'What did move Jungle Chess was two constants from the same games: a no-capture draw clock that ended games early, and a draw contempt near zero. Changing them took self-play from a quarter of games decided to about half. The lesson we kept: hold the search budget fixed, or you measure the budget. The 52 games are in [one study](/study/4UhOMlsE).':
-    '真正改變了鬥獸棋對局的，是同一批對局裡找到的兩個常數：一個讓對局過早結束的無吃子和棋計數，以及接近零的和棋輕視值。改掉它們後，自我對弈中分出勝負的對局從四分之一升到大約一半。我們留下的教訓是：要把搜尋預算固定住，否則測的只是預算。那 52 盤對局都收在[一個研究](/study/4UhOMlsE)裡。',
+  // katago-jungle den paragraph, cut 2026-10-16 to link /blog/jungle-den-term: machine-drafted, not native-reviewed.
+  'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den, so it learns who wins a den race only when the search reaches the den. In August we tried three ways to teach it, and none helped once the search budget was held fixed; races decide only 4.7% of games at full strength. [Teaching our Jungle Chess engine the den race](/blog/jungle-den-term) has the matches, and a game where depth found the race on its own.':
+    'Misty 對局面的評估是子力，加上每個棋子離對方獸穴距離的獎勵，所以衝獸穴競速誰先到，它要等搜尋抵達獸穴時才知道。8 月我們試了三種辦法教它，一旦把搜尋預算固定住，沒有一種有幫助；在全力對弈中，競速只決定 4.7% 的對局。[教鬥獸棋引擎衝獸穴競速](/blog/jungle-den-term)一文有完整的對抗結果，還有一盤靠搜尋深度自己找到競速的對局。',
   'An earlier audit tested the averaging on the buggy engine':
     '更早的一次審查，是在有漏洞的引擎上測試取平均的',
-  'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. The engine had already beaten ten nets distilled from its own evaluations, the best of them scoring 0.43. Each test played the changed engine against the shipped one, colours alternating, at equal time, with a referee dealing the hidden pieces so neither engine saw one.':
-    '9 月，我們測試了一份外部對同一引擎的原始碼審查，來自 [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai)。它的五項發現裡，有兩項值得下一場對抗來檢驗。在此之前，這個引擎已經贏過十個從它自身評估蒸餾出來的網路，其中最好的得分 0.43。每項測試都讓改動後的引擎對陣已上線的引擎，輪換執色，用時相同，由裁判程式發放暗子，雙方引擎都看不到暗子。',
-  'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. Fixing it alone scored 0.475 over 200 games at 500 ms a move (91-101-8). Retuning the 43 terms it touches, over 10,000 SPSA game pairs, scored 0.507 (96-93-11). Both are within noise: 200 games is ±0.07 at 95%, roughly ±50 Elo, so a change worth 10 Elo cannot be seen.':
-    '第一項是真實的評估漏洞：有一方的暗子從未被計入，所以紅方威脅暗子能得分，黑方從來得不到。只修這個漏洞，每著 500 ms 下 200 盤得分 0.475（91-101-8）。再用 10,000 對 SPSA 對局重新調校它涉及的 43 項參數，得分 0.507（96-93-11）。兩者都在雜訊之內：200 盤在 95% 信賴水準下是 ±0.07，大約 ±50 Elo，所以價值 10 Elo 的改動根本看不出來。',
-  'The second was the averaging this page is about, a clamped weighted average with a fallback to the worst case. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. A replacement took the engine’s top four moves, searched each possible piece separately and played the best average. It scored 0.370 over 100 games (30-56-14) at 2.2 times the time, and 0.410 over 50 games (17-26-7) at 7 times. We concluded then that the worst-case fallback does useful work.':
-    '第二項就是本頁講的取平均：一個帶上下限的加權平均，並在需要時退回最差結果。7 月，它曾選了一步真實勝率 64% 的翻子，放棄了勝率 97% 的穩妥著法。替代方案取引擎排名前四的著法，對每一種可能的棋子分別搜尋，再走平均值最好的一步。它在 2.2 倍用時下 100 盤得分 0.370（30-56-14），在 7 倍用時下 50 盤得分 0.410（17-26-7）。我們當時的結論是：退回最差結果這一步確實有用。',
+  // pikafish-reveal-bug audit table and formula, re-cut 2026-10-16: machine-drafted, not native-reviewed.
+  'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. Each test played the changed engine against the shipped one, colours alternating, with a referee dealing the hidden pieces so neither engine saw one.':
+    '9 月，我們測試了一份外部對同一引擎的原始碼審查，來自 [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai)。它的五項發現裡，有兩項值得下一場對抗來檢驗。每項測試都讓改動後的引擎對陣已上線的引擎，輪換執色，由裁判程式發放暗子，雙方引擎都看不到暗子。',
+  'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. We fixed it, then retuned the 43 terms it touches over 10,000 SPSA game pairs.':
+    '第一項是真實的評估漏洞：有一方的暗子從未被計入，所以紅方威脅暗子能得分，黑方從來得不到。我們修了這個漏洞，再用 10,000 對 SPSA 對局重新調校它涉及的 43 項參數。',
+  'The second was the averaging this page is about. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. The replacement priced each reveal by searching every possible piece separately:':
+    '第二項就是本頁講的取平均。7 月，它曾選了一步真實勝率 64% 的翻子，放棄了勝率 97% 的穩妥著法。替代方案給每步翻子定價的辦法，是對每一種可能的棋子分別搜尋：',
+  'piece: each piece the hidden one could be. s[piece]: the search score if it is that piece. count[piece]: how many of that piece are still face down. MAX_SPREAD: how far the average may sit above the worst case. win[move][piece]: the winning chance from a separate search.':
+    'piece：暗子可能是的每一種棋子。s[piece]：暗子是該棋子時的搜尋分數。count[piece]：該棋子還有幾個未翻開。MAX_SPREAD：平均值最多能比最差結果高出多少。win[move][piece]：單獨搜尋得出的勝率。',
+  Change: '改動',
+  'W-L-D': '勝-負-和',
+  '95% margin': '95% 誤差',
+  Time: '用時',
+  'Fix the bug': '修復漏洞',
+  'Fix and retune': '修復並重新調校',
+  'Separate searches': '分別搜尋',
+  'Separate searches, longer': '分別搜尋，更長用時',
+  'Score is the changed engine’s against the shipped one, a draw counting half, so 0.500 is no change. Time is a multiple of the shipped engine’s.':
+    '得分是改動後的引擎對已上線引擎的得分，和棋算半分，所以 0.500 表示沒有變化。用時是已上線引擎用時的倍數。',
+  'Neither evaluation change left its margin: at 200 games ±0.07 is roughly ±50 Elo, so a change worth 10 Elo cannot be seen. The separate searches lost clearly at 2.2 times the time, and at 7 times they still scored below even. We concluded then that the worst-case fallback does useful work.':
+    '兩項評估改動都沒有超出誤差範圍：200 盤的 ±0.07 大約是 ±50 Elo，所以價值 10 Elo 的改動根本看不出來。分別搜尋在 2.2 倍用時下明顯輸了，在 7 倍用時下得分仍低於五五開。我們當時的結論是：退回最差結果這一步確實有用。',
   'That conclusion came from the colour bug above. The fallback was meant to assume the worst, and as Black it assumed the best, so the test ran on an engine that was not doing it half the time. Since then [AB-JChess](/blog/ab-jchess) has beaten this engine 248-136-16 over 400 games and is now the top jieqi bot.':
     '這個結論來自上面的顏色漏洞。退回這一步本該假設最壞情況，而執黑時它假設的是最好情況，所以那次測試用的引擎有一半時間根本沒在這樣做。此後 [AB-JChess](/blog/ab-jchess) 在 400 盤中以 248-136-16 戰勝了這個引擎，現在是最強的揭棋電腦。',
   // duck-xiangqi, duck-xiangqi-strategy, misty blog merge (2026-10-07): machine-translated.

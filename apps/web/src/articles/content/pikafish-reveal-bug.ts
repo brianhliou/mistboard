@@ -80,6 +80,18 @@ v = weighted_average(scores)
 if v - min(scores) > MAX_SPREAD:
     v = min(scores)`;
 
+// The September audit's two ways of pricing a reveal, in the vocabulary of
+// the pseudocode above (weighted_average, count[piece], MAX_SPREAD).
+const AUDIT_FORMULAS = `# Shipped: inside the search, each time a move turns over a piece
+v = weighted_average(s[piece], weight = count[piece])
+if v - min(s) > MAX_SPREAD:
+    v = min(s)              # fall back to the worst case
+
+# Replacement: at the root, when the top move is a reveal
+for move in top_four_moves:
+    v[move] = average(win[move][piece] for piece in pieces_it_could_be)
+play(argmax(v))`;
+
 // One game position, ply = moves already played, with the mover about to choose.
 function gameEmbed(roomId: string, ply: number, title: string): ArticleBlock {
   return {
@@ -102,7 +114,7 @@ export const pikafishRevealBugArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-03',
-  updatedAt: '2026-10-07',
+  updatedAt: '2026-10-16',
   thumbnail: { kind: 'svg', svg: REVEAL_BUG_THUMBNAIL },
   boardFamily: 'xiangqi',
   audience: 'People who play jieqi against the bot on Mistboard, and people who build jieqi engines.',
@@ -203,20 +215,49 @@ export const pikafishRevealBugArticle: Article = {
       // Folded in from the brianhliou.com post of 2026-09-22 ("Testing an Audit
       // of the Jieqi Engine"), which 301s here, keeping its October 7 correction.
       // The post put a 200-game match at "roughly ± 25 Elo"; ±0.07 around 0.5 is
-      // about ±50 Elo, corrected here.
+      // about ±50 Elo, corrected here. The table's margins are 1.96 standard
+      // errors of the per-game score (wins, draws and losses as given): the post
+      // printed ±0.068 and ±0.067 for the 200-game rows; ±0.087 and ±0.126 for
+      // the 100- and 50-game rows were derived the same way on 2026-10-16.
       heading: 'An earlier audit tested the averaging on the buggy engine',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. The engine had already beaten ten nets distilled from its own evaluations, the best of them scoring 0.43. Each test played the changed engine against the shipped one, colours alternating, at equal time, with a referee dealing the hidden pieces so neither engine saw one.',
+          text: 'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. Each test played the changed engine against the shipped one, colours alternating, with a referee dealing the hidden pieces so neither engine saw one.',
         },
         {
           kind: 'paragraph',
-          text: 'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. Fixing it alone scored 0.475 over 200 games at 500 ms a move (91-101-8). Retuning the 43 terms it touches, over 10,000 SPSA game pairs, scored 0.507 (96-93-11). Both are within noise: 200 games is ±0.07 at 95%, roughly ±50 Elo, so a change worth 10 Elo cannot be seen.',
+          text: 'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. We fixed it, then retuned the 43 terms it touches over 10,000 SPSA game pairs.',
         },
         {
           kind: 'paragraph',
-          text: 'The second was the averaging this page is about, a clamped weighted average with a fallback to the worst case. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. A replacement took the engine’s top four moves, searched each possible piece separately and played the best average. It scored 0.370 over 100 games (30-56-14) at 2.2 times the time, and 0.410 over 50 games (17-26-7) at 7 times. We concluded then that the worst-case fallback does useful work.',
+          text: 'The second was the averaging this page is about. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. The replacement priced each reveal by searching every possible piece separately:',
+        },
+        {
+          kind: 'code',
+          language: 'python',
+          text: AUDIT_FORMULAS,
+          caption:
+            'piece: each piece the hidden one could be. s[piece]: the search score if it is that piece. count[piece]: how many of that piece are still face down. MAX_SPREAD: how far the average may sit above the worst case. win[move][piece]: the winning chance from a separate search.',
+        },
+        {
+          kind: 'table',
+          headers: ['Change', 'Games', 'W-L-D', 'Score', '95% margin', 'Time'],
+          rows: [
+            ['Fix the bug', '200', '91-101-8', '0.475', '±0.07', '1.0×'],
+            ['Fix and retune', '200', '96-93-11', '0.507', '±0.07', '1.0×'],
+            ['Separate searches', '100', '30-56-14', '0.370', '±0.09', '2.2×'],
+            ['Separate searches, longer', '50', '17-26-7', '0.410', '±0.13', '7.0×'],
+          ],
+          keyColumn: true,
+          compact: true,
+          highlightRows: [2],
+          caption:
+            'Score is the changed engine’s against the shipped one, a draw counting half, so 0.500 is no change. Time is a multiple of the shipped engine’s.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Neither evaluation change left its margin: at 200 games ±0.07 is roughly ±50 Elo, so a change worth 10 Elo cannot be seen. The separate searches lost clearly at 2.2 times the time, and at 7 times they still scored below even. We concluded then that the worst-case fallback does useful work.',
         },
         {
           kind: 'paragraph',
