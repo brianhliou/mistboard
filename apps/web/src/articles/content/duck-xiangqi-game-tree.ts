@@ -122,18 +122,22 @@ export const duckXiangqiGameTreeArticle: Article = {
       ],
     },
     {
-      heading: 'The duck’s share of the tree grows as pieces come off',
+      heading: 'Most of the duck’s extra choices late in the game change nothing',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'To see past the opening, we had Fairy-Stockfish play 64 games of each against itself and counted the choices at every move. Xiangqi’s choices shrink as pieces come off the board. In Duck Xiangqi each capture also frees a point for the duck, so a turn stays nearly as wide as it was in the opening, and 200 half-moves in it has about 100 times the choices of a xiangqi move.',
+          text: 'To see past the opening, we had Fairy-Stockfish play 64 games of each against itself and counted the choices at every move. Xiangqi’s choices shrink as pieces come off the board. A Duck Xiangqi turn barely shrinks, because each capture frees another point for the duck, so 200 half-moves in it has about 100 times the choices of a xiangqi move.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Most of that is empty board. With fewer pieces left, more of the duck’s points sit off every path the opponent can use: at the start half the placements change nothing, and 200 half-moves in it is 70%. Count placements that leave the opponent the same replies once, as at the first move, and a turn falls from 1,310 distinct choices to about 500. Counted that way, Duck Xiangqi is about 25 times as wide as xiangqi in the opening and still about 25 times in the endgame. Some of what is left blocks a move nobody would play, so the choices that matter are fewer again.',
         },
         {
           kind: 'image-figure',
           ...fig('branching'),
-          alt: 'A line chart on a log scale. Duck Xiangqi stays between about 1,500 and 2,500 legal turns from ply 0 to ply 220. Xiangqi starts at 44 legal moves and falls to around 20 after ply 120. The gap is marked as about 50 times at ply 10 and about 100 times at ply 200.',
+          alt: 'A line chart on a log scale. Duck Xiangqi stays between about 1,500 and 2,500 legal turns from ply 0 to ply 220. A dashed line of distinct Duck Xiangqi turns starts at 1,310 and falls to about 500. Xiangqi starts at 44 legal moves and falls to around 20 after ply 120. The gap between xiangqi and the distinct turns is marked as about 25 times at ply 10 and again at ply 200.',
           caption:
-            'Legal turns at each ply in 64 games per variant that Fairy-Stockfish played against itself, on a log scale. Games end at different lengths, so fewer games feed the right side of the chart.',
+            'Legal turns at each ply in 64 games per variant that Fairy-Stockfish played against itself, on a log scale. The dashed line counts duck placements that leave the opponent the same replies once. Games end at different lengths, so fewer games feed the right side of the chart.',
         },
       ],
     },

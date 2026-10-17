@@ -14,7 +14,10 @@
 //
 // The branching chart reads scripts/data/duck-tree-figures.json: for each game,
 // one row [ply, p25, median, p75] of legal moves at that ply across 64
-// Fairy-Stockfish self-play games (100k nodes a move, NNUE off).
+// Fairy-Stockfish self-play games (100k nodes a move, NNUE off). duckDistinct is
+// the same quantiles of distinct Duck Xiangqi turns (placements that leave the
+// opponent the same replies counted once, as at move 1), from replaying those
+// games through the kernel (docs-private/tree-shape/distinct.mts).
 //
 // Output: apps/web/public/article-thumbs/duck-tree-{counts,branching}{,-dark}{,.zh-hans,.zh-hant}.svg.
 // Text uses a system font stack because web fonts do not load inside an <img>.
@@ -212,6 +215,7 @@ const L = {
     xAxis: 'Ply',
     lineX: 'Xiangqi',
     lineD: 'Duck Xiangqi',
+    lineDD: 'Duck Xiangqi, distinct',
     legend: 'Line: median of 64 games. Band: the middle half of the games.',
     times: (n) => `about ${n}×`,
   },
@@ -224,6 +228,7 @@ const L = {
     xAxis: '半回合',
     lineX: '象棋',
     lineD: '鸭子象棋',
+    lineDD: '鸭子象棋（不重复）',
     legend: '线：64 局的中位数。色带：中间一半的对局。',
     times: (n) => `约 ${n} 倍`,
   },
@@ -236,6 +241,7 @@ const L = {
     xAxis: '半回合',
     lineX: '象棋',
     lineD: '鴨子象棋',
+    lineDD: '鴨子象棋（不重複）',
     legend: '線：64 局的中位數。色帶：中間一半的對局。',
     times: (n) => `約 ${n} 倍`,
   },
@@ -306,7 +312,7 @@ function figureBranching(locale, theme) {
   parts.push(
     `<text x="20" y="${f1((m.t + H - m.b) / 2)}" font-size="14" fill="${c.muted}" text-anchor="middle" transform="rotate(-90 20 ${f1((m.t + H - m.b) / 2)})">${esc(t.yAxis)}</text>`,
   );
-  const draw = (rows, colour, label) => {
+  const draw = (rows, colour, label, dashed = false) => {
     const band = `M${rows.map(([p, lo]) => `${f1(sx(p))} ${f1(sy(Math.max(lo, yLo)))}`).join('L')}L${[
       ...rows,
     ]
@@ -315,7 +321,7 @@ function figureBranching(locale, theme) {
       .join('L')}Z`;
     parts.push(`<path d="${band}" fill="${colour}" opacity="0.18"/>`);
     parts.push(
-      `<path d="M${rows.map(([p, , med]) => `${f1(sx(p))} ${f1(sy(med))}`).join('L')}" fill="none" stroke="${colour}" stroke-width="2.5" stroke-linejoin="round"/>`,
+      `<path d="M${rows.map(([p, , med]) => `${f1(sx(p))} ${f1(sy(med))}`).join('L')}" fill="none" stroke="${colour}" stroke-width="2.5" stroke-linejoin="round"${dashed ? ' stroke-dasharray="7 5"' : ''}/>`,
     );
     const last = rows[rows.length - 1];
     parts.push(
@@ -323,18 +329,22 @@ function figureBranching(locale, theme) {
     );
   };
   draw(series.duck, c.rm, t.lineD);
+  draw(series.duckDistinct, c.rm, t.lineDD, true);
   draw(series.xiangqi, c.xiangqi, t.lineX);
-  // How many times wider a Duck Xiangqi turn is, early and late.
+  // How many times wider a distinct Duck Xiangqi turn is, early and late. The
+  // raw ratio grows (about 50x to 100x) only through placements that change nothing.
   const at = (rows, p) => rows.find((r) => r[0] === p)[2];
   for (const [p, n, lo, hi] of [
-    [10, 50, 40, 60],
-    [200, 100, 85, 115],
+    [10, 25, 20, 30],
+    [200, 25, 20, 30],
   ]) {
-    const ratio = at(series.duck, p) / at(series.xiangqi, p);
+    const ratio = at(series.duckDistinct, p) / at(series.xiangqi, p);
     if (ratio < lo || ratio > hi)
-      throw new Error(`ply ${p}: Duck Xiangqi is ${ratio.toFixed(1)}x, article says about ${n}x`);
+      throw new Error(
+        `ply ${p}: distinct Duck Xiangqi is ${ratio.toFixed(1)}x, article says about ${n}x`,
+      );
     const y1 = sy(at(series.xiangqi, p));
-    const y2 = sy(at(series.duck, p));
+    const y2 = sy(at(series.duckDistinct, p));
     parts.push(
       `<line x1="${f1(sx(p))}" x2="${f1(sx(p))}" y1="${f1(y1 - 8)}" y2="${f1(y2 + 8)}" stroke="${c.ink}" stroke-width="1.2" stroke-dasharray="3 3"/>`,
     );
