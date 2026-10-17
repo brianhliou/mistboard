@@ -2,8 +2,15 @@
 // Push a production release only through the safe CI -> deploy -> smoke order.
 
 import { spawn, spawnSync } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir, hostname } from 'node:os';
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { homedir, hostname, tmpdir } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import {
@@ -14,6 +21,7 @@ import {
 } from './lib/changelog-entry.mjs';
 import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
 import { describeDrainToken } from './lib/drain-token.mjs';
+import { formatHeldLines, heldSummary, postFailureDrainAction } from './lib/release-drain.mjs';
 import {
   acquireReleaseLock,
   DEFAULT_LOCK_TIMEOUT_MS,
@@ -23,6 +31,17 @@ import {
   readLock,
   releaseOnExit,
 } from './lib/release-lock.mjs';
+import {
+  DEFAULT_SHIP_WINDOW_HOURS,
+  describeShipWindow,
+  evaluateShipWindow,
+  lastProdPush,
+  parkedBranches,
+  parseBranchRefs,
+  parseExtraShipReason,
+  parseReleaseLog,
+  parseWindowHours,
+} from './lib/ship-window.mjs';
 import {
   DEFAULT_TEST_DATABASE_URL,
   isDatabaseReachable,
@@ -90,6 +109,10 @@ const release = {
   drainOwner: `release-${hostname()}-${process.pid}-${Date.now().toString(36)}`,
   drainCommitted: false,
   drainRequired: false,
+  // Where safe-deploy writes what the hold cost ({commitWaitMs, refusedCreates}),
+  // and that cost once read: the "new games held" line and the release record.
+  drainResultFile: path.join(tmpdir(), `mistboard-release-drain-${process.pid}.json`),
+  drainHold: null,
   deployRequired: false,
   headRevision: null,
   // The revision production is expected to serve, which the revision wait, the
@@ -103,6 +126,11 @@ const release = {
   planReason: null,
   productionRevision: null,
   pushCompleted: false,
+  // When the push reached the remote (ISO), the ship window's anchor for the
+  // next release (scripts/lib/ship-window.mjs). Null until the push succeeds.
+  pushedAt: null,
+  // The ship-window guard's decision for this run, or null when it did not run.
+  shipWindow: null,
   targetRevision: null,
   // The record this release appends to the release log at exit: every timed
   // stage with its duration, the gate it chose, the smoke tier, the CI run.
@@ -127,6 +155,11 @@ const release = {
 // first time a rare path reaches it (release-prod-structure.test.mjs).
 // confirmAncestor's answers, keyed pushed..tip.
 const ancestryCache = new Map();
+// The ship-window guard's estimate of whether this --push deploys, computed
+// once before the lock (see shipWindowApplies).
+let shipDeployEstimate = null;
+// readRemoteTip's answer: undefined until read, then { revision, committedAt } or null.
+let remoteTipCache;
 
 try {
   if (!options.plan) ensureCleanWorktree();
@@ -135,7 +168,13 @@ try {
   // fetches origin/main: a release that queued finds main moved by the one it
   // waited for, and the catch-up below has to see that move.
   if (options.push && !options.plan) {
+    // The ship window, checked before the lock and again once it is held (the
+    // release this one queued behind may have pushed meanwhile). Both run
+    // before the catch-up merge and the --changelog commit, so a refusal
+    // leaves the branch, CHANGELOG.md and the lock as they were.
+    enforceShipWindow('before the release lock');
     await takeReleaseLock();
+    enforceShipWindow('after taking the release lock');
     catchUpBeforeGate();
   }
   if (options.changelog.length > 0 && !options.plan) commitChangelog();
@@ -158,6 +197,12 @@ try {
   release.deployRequired = plan.deployRequired;
   release.planReason = plan.reason;
   release.productionRevision = plan.productionRevision;
+  // Backstop: the early guard estimated no deploy from this branch's own diff,
+  // but the plan against production says this push deploys (the merged-in main
+  // carried something undeployed). Check the window now, before the gate.
+  if (options.push && release.deployRequired && release.shipWindow === null) {
+    enforceShipWindow('after the deploy plan', { force: true, onRefuse: 'throw' });
+  }
 
   const ciPlan = planHostedCi({
     baseRevision: release.targetRevision,
@@ -231,6 +276,8 @@ try {
         'scripts/safe-deploy.mjs',
         '--yes',
         '--commit',
+        '--result-file',
+        release.drainResultFile,
         ...safeDeployBaseArgs(),
       ]);
       release.drainCommitted = true;
@@ -241,6 +288,7 @@ try {
     }
     runTimed('git push release head', pushCommand(release.headRevision));
     release.pushCompleted = true;
+    release.pushedAt = new Date().toISOString();
     enterPostPushWorkdir();
   } else {
     console.log('skip: git push (pass --push to publish the current commit)');
@@ -278,9 +326,11 @@ try {
 
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.log(`release: ok in ${formatDuration(elapsedMs)}${adoptionSummary()}`);
+  reportDrainHold();
   writeReleaseRecord({ elapsedMs, outcome: 'ok' });
 } catch (error) {
-  cancelUnpublishedDrain();
+  await cancelDrainAfterFailure();
+  reportDrainHold();
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.error(`release: failed after ${formatDuration(elapsedMs)}${adoptionSummary()}`);
   console.error(error instanceof Error ? error.message : String(error));
@@ -308,6 +358,7 @@ function parseArgs(args) {
     changelog: [],
     changelogSummary: null,
     ciWait: true,
+    extraShip: null,
     ciWorkflow: DEFAULT_CI_WORKFLOW,
     head: 'HEAD',
     help: false,
@@ -320,6 +371,7 @@ function parseArgs(args) {
     push: false,
     remote: DEFAULT_REMOTE,
     smoke: DEFAULT_SMOKE,
+    shipWindowHours: DEFAULT_SHIP_WINDOW_HOURS,
     smokeExplicit: false,
     targetBranch: DEFAULT_TARGET_BRANCH,
     timeoutMs: DEFAULT_TIMEOUT_MS,
@@ -335,8 +387,16 @@ function parseArgs(args) {
       parsed.changelogSummary = requiredValue(args, ++index, arg);
     } else if (arg === '--ci-workflow') {
       parsed.ciWorkflow = requiredValue(args, ++index, arg);
+    } else if (arg === '--extra-ship') {
+      // A string, never a bare flag: requiredValue rejects a missing or
+      // flag-shaped value, parseExtraShipReason a blank one.
+      const value = args[index + 1];
+      index += 1;
+      parsed.extraShip = parseExtraShipReason(value);
     } else if (arg === '--head') {
       parsed.head = requiredValue(args, ++index, arg);
+    } else if (arg === '--ship-window-hours') {
+      parsed.shipWindowHours = parseWindowHours(requiredValue(args, ++index, arg));
     } else if (arg === '--plan' || arg === '--dry-run') {
       parsed.plan = true;
     } else if (arg === '--lock-timeout-ms') {
@@ -386,6 +446,11 @@ function parseArgs(args) {
   }
   if (parsed.changelogSummary !== null && parsed.changelog.length === 0) {
     throw new Error('--changelog-summary needs at least one --changelog');
+  }
+  if (parsed.extraShip !== null && !parsed.push && !parsed.plan && !parsed.help) {
+    throw new Error(
+      '--extra-ship bypasses the ship window for a --push: pass --push, or --dry-run',
+    );
   }
 
   return parsed;
@@ -532,6 +597,21 @@ function runPlanModeAndExit() {
 
   const tier = resolveSmokeTier(release.headRevision, changedOverride);
   console.log(`smoke_tier: ${tier}`);
+
+  // What the ship-window guard would decide for a --push of this head now.
+  console.log('');
+  console.log('# ship window (dry run)');
+  // The same deploy estimate and window read a --push makes before the lock.
+  const verdict = readShipWindow();
+  printShipWindow(verdict);
+  const would = !shipWindowApplies()
+    ? 'not guarded (this push would not restart production)'
+    : verdict.decision === 'allow'
+      ? 'allow'
+      : verdict.decision === 'bypass'
+        ? `bypass (--extra-ship: ${options.extraShip})`
+        : 'refuse (pass --extra-ship "<reason>" for a production bug)';
+  console.log(`ship_window: ${would}`);
   process.exit(0);
 }
 
@@ -1466,9 +1546,7 @@ function recordStage(stage) {
 // cannot be written is a warning.
 function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
   if (options.plan) return;
-  const logPath =
-    process.env.MISTBOARD_RELEASE_LOG ||
-    path.join(homedir(), '.local', 'share', 'mistboard', 'releases.jsonl');
+  const logPath = releaseLogPath();
   const record = {
     v: 1,
     source: 'release',
@@ -1490,6 +1568,10 @@ function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
     gate: release.gate,
     smokeTier: release.smokeTier,
     push: options.push,
+    pushedAt: release.pushedAt,
+    ...(options.extraShip ? { extraShip: options.extraShip } : {}),
+    shipWindow: release.shipWindow,
+    drain: release.drainHold,
     stages: release.stages,
     hostname: hostname(),
     cwd: releaseRoot,
@@ -1504,6 +1586,158 @@ function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
         writeError instanceof Error ? writeError.message : String(writeError)
       })`,
     );
+  }
+}
+
+function releaseLogPath() {
+  return (
+    process.env.MISTBOARD_RELEASE_LOG ||
+    path.join(homedir(), '.local', 'share', 'mistboard', 'releases.jsonl')
+  );
+}
+
+// The ship window (scripts/lib/ship-window.mjs): a --push that deploys is
+// refused while the last production push is younger than --ship-window-hours
+// (default 4), unless --extra-ship "<reason>" names the production bug it
+// fixes; the reason lands in this run's release record. A refusal exits 3
+// before anything is written (onRefuse 'exit'); the post-plan backstop throws
+// instead, because by then a --changelog commit may exist and the failure
+// path has to report it.
+function enforceShipWindow(when, { force = false, onRefuse = 'exit' } = {}) {
+  // Re-read the remote each check: main may have moved while the lock queued.
+  remoteTipCache = undefined;
+  if (!force && !shipWindowApplies()) return;
+  const verdict = readShipWindow();
+  release.shipWindow = {
+    decision: verdict.decision,
+    checked: when,
+    windowHours: verdict.windowHours,
+    lastPushAt: verdict.last ? new Date(verdict.last.at).toISOString() : null,
+    lastPushSource: verdict.last?.source ?? null,
+    lastPushCwd: verdict.last?.cwd ?? null,
+    opensAt: verdict.opensAt === null ? null : new Date(verdict.opensAt).toISOString(),
+  };
+  printShipWindow(verdict);
+  if (verdict.decision === 'allow') return;
+  if (verdict.decision === 'bypass') {
+    console.log(`ship window: bypassed by --extra-ship (${options.extraShip}); logged`);
+    return;
+  }
+  const message =
+    `release refused ${when}: production was pushed less than ${verdict.windowHours}h ago. ` +
+    'Park this work (commit it on its branch) and batch it into the next ship, or pass ' +
+    '--extra-ship "<reason>" when it fixes a production bug.';
+  if (onRefuse === 'throw') {
+    throw new Error(
+      `${message}${
+        release.changelogCommit
+          ? ` The changelog commit ${shortRevision(release.changelogCommit)} stays on this branch; ` +
+            're-run later without --changelog.'
+          : ''
+      }`,
+    );
+  }
+  console.error(message);
+  process.exit(3);
+}
+
+function printShipWindow(verdict) {
+  const parked = verdict.decision === 'allow' ? [] : readParkedWork();
+  for (const line of describeShipWindow(verdict, { now: Date.now(), parked })) {
+    console.log(line);
+  }
+}
+
+// Whether this --push deploys, estimated before the lock from what the branch
+// adds over the remote main (the exact plan against production runs later,
+// after the catch-up merge; the backstop above covers a disagreement). An
+// estimate that cannot be made assumes a deploy.
+function shipWindowApplies() {
+  if (shipDeployEstimate === null) {
+    try {
+      const tip = readRemoteTip()?.revision;
+      const head = git(['rev-parse', '--verify', options.head]);
+      const base = tip ? git(['merge-base', tip, head]) : null;
+      if (base && revisionMatches(base, head)) {
+        shipDeployEstimate = {
+          deployRequired: false,
+          reason: 'head is already on the remote main',
+        };
+      } else {
+        const args = ['node', 'scripts/prod-smoke-plan.mjs', '--head', head];
+        if (base) args.push('--base', base);
+        const plan = parsePlan(runCapture('ship-window deploy estimate', args, { quiet: true }));
+        shipDeployEstimate = { deployRequired: plan.deployRequired, reason: plan.reason };
+      }
+    } catch (error) {
+      shipDeployEstimate = {
+        deployRequired: true,
+        reason: `estimate failed, assuming a deploy (${firstLine(
+          error instanceof Error ? error.message : String(error),
+        )})`,
+      };
+    }
+    if (!shipDeployEstimate.deployRequired) {
+      console.log(`ship window: not guarded (no deploy expected: ${shipDeployEstimate.reason})`);
+    }
+  }
+  return shipDeployEstimate.deployRequired;
+}
+
+function readShipWindow() {
+  let text = '';
+  try {
+    text = readFileSync(releaseLogPath(), 'utf8');
+  } catch {}
+  return evaluateShipWindow({
+    now: Date.now(),
+    last: lastProdPush({ records: parseReleaseLog(text), tip: readRemoteTip() }),
+    windowHours: options.shipWindowHours,
+    extraShip: options.extraShip,
+  });
+}
+
+// The remote main's tip and its committer date, the signal for a push from
+// outside this script. Cached for the run's pre-push checks (remoteTipCache);
+// null (with a warning) when the remote cannot be read, leaving the log as the
+// only source.
+function readRemoteTip() {
+  if (remoteTipCache !== undefined) return remoteTipCache;
+  try {
+    const revision = readRemoteTargetRevision();
+    if (!revision) {
+      remoteTipCache = null;
+      return null;
+    }
+    git(['fetch', '--quiet', options.remote, `refs/heads/${options.targetBranch}`]);
+    const committedAt = Date.parse(git(['log', '-1', '--format=%cI', revision]));
+    remoteTipCache = { revision, committedAt };
+  } catch (error) {
+    console.warn(
+      `warn: ship window could not read ${options.remote}/${options.targetBranch} (${firstLine(
+        error instanceof Error ? error.message : String(error),
+      )}); judging from the release log alone`,
+    );
+    remoteTipCache = null;
+  }
+  return remoteTipCache;
+}
+
+// Local agent/* branches with commits the remote main lacks, and their
+// worktrees: the work to batch into the next ship.
+function readParkedWork() {
+  try {
+    const base = readRemoteTip()?.revision ?? `${options.remote}/${options.targetBranch}`;
+    const refs = parseBranchRefs(
+      git(['for-each-ref', '--format=%(refname:short)%09%(worktreepath)', 'refs/heads/agent/']),
+    );
+    const entries = refs.map((ref) => ({
+      ...ref,
+      ahead: Number(git(['rev-list', '--count', `${base}..${ref.branch}`])),
+    }));
+    return parkedBranches(entries, { current: git(['rev-parse', '--abbrev-ref', 'HEAD']) });
+  } catch {
+    return [];
   }
 }
 
@@ -1643,13 +1877,84 @@ function submitIndexNow({ deployRequired }) {
   }
 }
 
-function cancelUnpublishedDrain() {
-  if (!release.drainCommitted || release.pushCompleted) return;
-  console.error('release stopped before push completed; cancelling production drain');
+// A committed drain shows every player "Server restarting now" until the
+// server restarts, the drain is cancelled, or its window lapses. A release that
+// fails after the push may never get that restart (hosted CI red, or the
+// revision wait gave up), so it cancels its own drain on those paths too, not
+// only before the push (2026-10-16 21:46Z: the banner stayed up 11 minutes).
+async function cancelDrainAfterFailure() {
+  const productionRevision =
+    release.drainCommitted && release.pushCompleted ? await fetchProductionRevision() : null;
+  const action = postFailureDrainAction({
+    drainCommitted: release.drainCommitted,
+    pushCompleted: release.pushCompleted,
+    productionRevision,
+    expectedRevision: release.expectedRevision,
+  });
+  if (action === 'none') return;
+  if (action === 'none-deployed') {
+    console.error('production already serves the pushed revision; its restart ended the drain');
+    return;
+  }
+  console.error(
+    action === 'cancel-before-push'
+      ? 'release stopped before push completed; cancelling production drain'
+      : 'release failed after the push without seeing the deploy land; cancelling production ' +
+          'drain so the restart banner clears (a deploy that lands later still pauses and resumes rooms)',
+  );
   const command = ['node', 'scripts/safe-deploy.mjs', '--cancel', '--yes', ...safeDeployBaseArgs()];
   const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
   if (result.status !== 0) {
     console.error('warning: automatic drain cancellation failed; cancel /admin/drain manually');
+  }
+}
+
+// Production's build revision, or null when it cannot be read.
+async function fetchProductionRevision() {
+  const base = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, '');
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+    try {
+      const response = await fetch(`${base}/api/server-status`, { signal: controller.signal });
+      if (!response.ok) return null;
+      const body = await response.json();
+      return typeof body?.build?.revision === 'string' ? body.build.revision : null;
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    return null;
+  }
+}
+
+// How long this release kept players from starting games, printed at the end
+// of every run that drained and kept in the release record.
+function reportDrainHold() {
+  const stage = release.stages.find((entry) => entry.label === 'production drain');
+  if (!stage) return;
+  let result = null;
+  try {
+    if (existsSync(release.drainResultFile)) {
+      result = JSON.parse(readFileSync(release.drainResultFile, 'utf8'));
+      rmSync(release.drainResultFile, { force: true });
+    }
+  } catch {
+    result = null;
+  }
+  const hold = heldSummary({
+    drainStageMs: stage.ms,
+    commitWaitMs: result?.commitWaitMs,
+    refusedCreates: result?.refusedCreates,
+  });
+  release.drainHold = {
+    heldMs: hold.heldMs,
+    commitWaitMs: result?.commitWaitMs ?? null,
+    refusedCreates: hold.refusedCreates,
+  };
+  for (const line of formatHeldLines(hold)) {
+    if (line.startsWith('WARN')) console.warn(line);
+    else console.log(line);
   }
 }
 
@@ -1791,7 +2096,7 @@ function printHelp() {
   node scripts/release-prod.mjs --plan-file apps/web/src/main.ts --plan-file scripts/build.mjs
 
 Order:
-  release lock -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> drain to zero when games are live -> optional git push -> hosted GitHub CI when matched -> production revision wait when deploying -> smoke
+  ship window -> release lock -> ship window again -> merge in origin/main if HEAD lacks it -> --changelog commit -> local ci:quick -> drain to zero when games are live -> optional git push -> hosted GitHub CI when matched -> production revision wait when deploying -> smoke
 
 Options:
   --push                   Push --head to origin/main. Drains production first
@@ -1814,6 +2119,19 @@ Options:
                            Needs --push, or --dry-run to preview.
   --changelog-summary <t>  The <summary> in that commit message. Default: HEAD's
                            subject without its type(scope): prefix.
+  --extra-ship "<reason>"  Bypass the ship window for a production bug. The
+                           reason is required and lands in this run's line of
+                           ~/.local/share/mistboard/releases.jsonl (extraShip).
+  --ship-window-hours <n>  The ship window, default ${DEFAULT_SHIP_WINDOW_HOURS}: a --push that
+                           deploys is refused (exit 3, before the lock, the
+                           catch-up merge or the --changelog commit) while the
+                           last production push is younger than this. The last
+                           push is read from the release log (a push that
+                           succeeded counts even if the release then failed)
+                           and from the remote tip's committer date when no
+                           logged release pushed it. The refusal lists the
+                           parked agent/* branches to batch into the next ship.
+                           --dry-run prints what the guard would decide.
   --lock-timeout-ms <ms>   How long --push queues behind another release on
                            this machine before failing, default ${DEFAULT_LOCK_TIMEOUT_MS}.
                            Lock file: ~/.local/share/mistboard/release.lock

@@ -387,6 +387,11 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
         phase: drainState.phase,
         restartAt: drainState.restartAt,
         idempotent,
+        // What the hold cost so far, for the release's own end-of-run line:
+        // creates are refused only before the commit, so these are final.
+        commitWaitMs:
+          session?.committedAt != null ? session.committedAt - session.activatedAt : null,
+        refusedCreates: session ? session.refusedCreates : null,
       });
       return;
     }

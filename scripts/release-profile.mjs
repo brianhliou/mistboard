@@ -33,6 +33,7 @@ import {
 } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { HELD_WARN_MS } from './lib/release-drain.mjs';
 
 export const DEFAULT_LOG = path.join(homedir(), '.local', 'share', 'mistboard', 'releases.jsonl');
 const TRANSCRIPT_DIR = path.join(
@@ -164,6 +165,32 @@ export function deployMs(record) {
   return liveAt > pushEnd ? liveAt - pushEnd : null;
 }
 
+// How long a release kept players from starting new games: the server's
+// commit wait when the release recorded it, else the drain stage's wall time
+// (creates are refused for all of it, passed or failed). Null: no drain ran.
+export function heldMs(record) {
+  const recorded = record.drain?.heldMs;
+  if (typeof recorded === 'number' && Number.isFinite(recorded)) return recorded;
+  const stage = (record.stages ?? []).find((s) => s.label === 'production drain');
+  return stage && Number.isFinite(stage.ms) ? stage.ms : null;
+}
+
+// One row per release that drained, oldest first, with a WARN line for each
+// that held new games past the threshold.
+export function holdRows(records) {
+  return records
+    .map((record) => ({ record, held: heldMs(record) }))
+    .filter(({ held }) => held !== null)
+    .map(({ record, held }) => ({
+      startedAt: record.startedAt,
+      outcome: record.outcome,
+      heldMs: held,
+      refusedCreates:
+        typeof record.drain?.refusedCreates === 'number' ? record.drain.refusedCreates : null,
+      warn: held > HELD_WARN_MS,
+    }));
+}
+
 // One name per way a release attempt dies, so the failure table reads as a
 // list of causes rather than of stage labels.
 export function failureClass(record) {
@@ -217,6 +244,34 @@ function printSummary(records, options) {
     }
   }
   console.log(`\nattempts per day: ${(s.count / Math.max(1, days)).toFixed(1)}`);
+  printHolds(records);
+}
+
+function printHolds(records) {
+  const rows = holdRows(records);
+  console.log(
+    `\nnew games held, per release that drained (${rows.length} of ${records.length}; ` +
+      `the others held nothing):`,
+  );
+  if (rows.length === 0) return;
+  console.log(
+    `  ${'started (UTC)'.padEnd(20)} ${'outcome'.padEnd(8)} ${'held min'.padStart(8)}  refused`,
+  );
+  for (const row of rows) {
+    console.log(
+      `  ${row.startedAt.slice(0, 16).replace('T', ' ').padEnd(20)} ${String(row.outcome).padEnd(8)} ${(
+        row.heldMs / 60_000
+      )
+        .toFixed(1)
+        .padStart(8)}  ${row.refusedCreates ?? '?'}`,
+    );
+  }
+  for (const row of rows.filter((r) => r.warn)) {
+    console.log(
+      `WARN: release ${row.startedAt} held new games ${(row.heldMs / 60_000).toFixed(1)} min ` +
+        `(over ${HELD_WARN_MS / 60_000} min)`,
+    );
+  }
 }
 
 function fmtQ(q) {

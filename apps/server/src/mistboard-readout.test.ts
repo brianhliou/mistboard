@@ -3,7 +3,10 @@ import test from 'node:test';
 import { buildElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import {
   buildMistboardReadout,
+  deployDrainFromSummary,
   ELEPHANTCHESS_PILOT_RUN_ID,
+  isDisruptiveDrain,
+  type MistboardReadoutDeployDrain,
   type MistboardReadoutFacts,
   type MistboardReadoutProduct,
   type MistboardReadoutRuntime,
@@ -563,6 +566,119 @@ test('new feedback on consecutive days alerts both days; a standing backlog does
   const c = reportWith(feedback(4), b);
   assert.equal(c.actions.length, 0);
   assert.equal(c.verdict, 'healthy');
+});
+
+// Brian, 2026-10-16: deploys must not stop people starting games for 10 to 15
+// minutes. A drain refuses creates until the release commits its restart.
+test('a drain summary reads as held creates: commit wait if committed, else the whole drain', () => {
+  const lapsedAfterCommit = deployDrainFromSummary(
+    {
+      outcome: 'lapsed',
+      activatedAt: 1_000,
+      endedAt: 900_000,
+      durationMs: 899_000,
+      committed: true,
+      commitWaitMs: 241_000,
+      refusedCreates: 0,
+    },
+    'f5ca706f',
+  );
+  assert.equal(lapsedAfterCommit?.heldMs, 241_000);
+  assert.equal(isDisruptiveDrain(lapsedAfterCommit!), false);
+
+  const cancelledPending = deployDrainFromSummary(
+    {
+      outcome: 'cancelled',
+      activatedAt: 0,
+      endedAt: 400_000,
+      durationMs: 400_000,
+      committed: false,
+    },
+    null,
+  );
+  assert.equal(cancelledPending?.heldMs, 400_000);
+  assert.equal(cancelledPending?.refusedCreates, 0);
+  assert.equal(isDisruptiveDrain(cancelledPending!), true);
+
+  assert.equal(isDisruptiveDrain({ heldMs: 30_000, refusedCreates: 1 }), true);
+  assert.equal(deployDrainFromSummary({ outcome: 'shutdown' }, null), null);
+});
+
+test('a disruptive deploy alerts in the first readout after it, once, each one its own alert', () => {
+  const drain = (at: string, heldMin: number, refused: number): MistboardReadoutDeployDrain => {
+    const activatedAt = Date.parse(at);
+    return {
+      activatedAt,
+      endedAt: activatedAt + heldMin * 60_000 + 1_000,
+      outcome: 'shutdown',
+      committed: true,
+      heldMs: heldMin * 60_000,
+      refusedCreates: refused,
+      buildRevision: 'abc123',
+    };
+  };
+  const facts = (disruptive: MistboardReadoutDeployDrain[], drains = disruptive.length) => ({
+    ...emptyFacts,
+    deploys: { windowDays: 7, drains, disruptive },
+  });
+  const at = (
+    now: string,
+    f: MistboardReadoutFacts,
+    previousReport?: ReturnType<typeof buildMistboardReadout>,
+  ) =>
+    buildMistboardReadout({
+      snapshotId: `readout_${now}`,
+      trigger: 'daily',
+      now: new Date(now),
+      runtime,
+      facts: f,
+      previousReport,
+    });
+
+  const quiet = at('2026-10-15T17:23:00Z', facts([], 3));
+  assert.equal(quiet.verdict, 'healthy');
+  assert.match(
+    renderMistboardReadoutMarkdown(quiet),
+    /- Deploys: 3 drains in the last 7 days, 0 held new games over 5 min or refused a create/,
+  );
+
+  const sixMinutes = drain('2026-10-16T09:00:00Z', 6, 0);
+  const day1 = at('2026-10-16T17:23:00Z', facts([sixMinutes], 4), quiet);
+  assert.equal(day1.verdict, 'watch');
+  assert.equal(day1.actions[0]?.code, 'deploy-held-creates');
+  assert.match(day1.actions[0]!.text, /2026-10-16 09:00 UTC held 6\.0 min, 0 refused/);
+
+  // Still in the window the next day, but already reported: quiet.
+  const day2 = at('2026-10-17T17:23:00Z', facts([sixMinutes], 4), day1);
+  assert.equal(day2.actions.length, 0);
+  assert.equal(day2.verdict, 'healthy');
+
+  // A second incident is a new alert, not "the same problem".
+  const refused = drain('2026-10-18T08:00:00Z', 1, 2);
+  const day3 = at('2026-10-18T17:23:00Z', facts([sixMinutes, refused]), day2);
+  assert.equal(day3.actions.length, 1);
+  assert.match(day3.actions[0]!.text, /^1 deploy drain turned new games away: 2026-10-18 08:00/);
+  const day4 = at(
+    '2026-10-19T17:23:00Z',
+    facts([sixMinutes, refused, drain('2026-10-19T08:00:00Z', 1, 1)]),
+    day3,
+  );
+  assert.equal(day4.actions[0]?.code, 'deploy-held-creates');
+  assert.notEqual(day4.alertKey, day3.alertKey);
+
+  // Past Brian's ten minutes it is an action, not a watch.
+  const long = at('2026-10-20T17:23:00Z', facts([drain('2026-10-20T08:00:00Z', 12, 5)]), day4);
+  assert.equal(long.verdict, 'action');
+
+  // After a failed deploys collector, nothing was reported: report what is new
+  // since the readout before it.
+  const failed = {
+    ...day1,
+    deploys: null,
+    collectorErrors: [{ section: 'deploys' as const, code: 'collector_failed' as const }],
+  };
+  const recovered = at('2026-10-17T17:23:00Z', facts([sixMinutes]), failed);
+  assert.equal(recovered.actions[0]?.code, 'deploy-held-creates');
 });
 
 test('the alert key holds steady while counters move under an unchanged problem', () => {

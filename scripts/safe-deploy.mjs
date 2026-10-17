@@ -26,6 +26,8 @@
 //                         cannot cancel a CONCURRENT release's drain and let it
 //                         deploy into live games. Omit it and a cancel takes
 //                         any drain, which is what a human at a terminal wants.
+//   --result-file <path>  on success, write {commitWaitMs, refusedCreates} as
+//                         JSON: what the hold cost, for the release's summary.
 //
 // Exit codes:
 //   0   drain complete, ready to deploy
@@ -35,6 +37,7 @@
 //   4   window elapsed with games still active (drain is cancelled)
 //   130 SIGINT — drain was cancelled
 
+import { writeFileSync } from 'node:fs';
 import {
   DRAIN_TOKEN_KEYCHAIN_FALLBACK,
   DRAIN_TOKEN_KEYCHAIN_SERVICE,
@@ -147,7 +150,16 @@ async function safeDeployFlow() {
 
   // 4. Decide outcome.
   if (remainingActive === 0) {
-    if (options.commit) await commitRestart();
+    const committed = options.commit ? await commitRestart() : null;
+    if (options.resultFile) {
+      writeFileSync(
+        options.resultFile,
+        `${JSON.stringify({
+          commitWaitMs: numberOrNull(committed?.commitWaitMs),
+          refusedCreates: numberOrNull(committed?.refusedCreates),
+        })}\n`,
+      );
+    }
     console.log(
       JSON.stringify({ ok: true, activeGames: 0, restartCommitted: options.commit === true }),
     );
@@ -205,6 +217,11 @@ async function commitRestart() {
       'restart-now notification unavailable on the current server; bootstrap release continuing',
     );
   }
+  return res.body;
+}
+
+function numberOrNull(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 async function cancelDrain() {
@@ -285,12 +302,13 @@ function parseArgs(argv) {
     else if (arg === '--commit') out.commit = true;
     else if (arg === '--cancel') out.cancel = true;
     else if (arg === '--owner') out.owner = argv[++i];
+    else if (arg === '--result-file') out.resultFile = argv[++i];
     else if (arg === '--force') {
       console.error('error: --force was removed. Use --yes only to skip confirmation.');
       process.exit(1);
     } else if (arg === '--help' || arg === '-h') {
       console.log(
-        'Usage: safe-deploy.mjs [--base-url URL] [--window-ms MS] [--poll-ms MS] [--yes] [--commit] [--cancel] [--owner ID]',
+        'Usage: safe-deploy.mjs [--base-url URL] [--window-ms MS] [--poll-ms MS] [--yes] [--commit] [--cancel] [--owner ID] [--result-file PATH]',
       );
       console.log(
         `Drain token: MISTBOARD_DRAIN_TOKEN, else keychain item "${DRAIN_TOKEN_KEYCHAIN_SERVICE}" ` +

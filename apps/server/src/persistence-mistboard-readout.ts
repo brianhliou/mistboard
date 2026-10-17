@@ -4,9 +4,12 @@ import type pg from 'pg';
 import { buildElephantChessPuzzleQualityReport } from './elephantchess-puzzle-quality-report.js';
 import {
   buildMistboardReadout,
+  deployDrainFromSummary,
   ELEPHANTCHESS_PILOT_RUN_ID,
+  isDisruptiveDrain,
   type MistboardReadoutBroadcasts,
   type MistboardReadoutCollectorError,
+  type MistboardReadoutDeploys,
   type MistboardReadoutEngines,
   type MistboardReadoutFacts,
   type MistboardReadoutFeedback,
@@ -259,6 +262,7 @@ export async function collectMistboardReadoutFacts(
       collectEngines(db, now),
       collectBroadcasts(db, extra.untrackedEvents),
       collectFeedback(db),
+      collectDeploys(db, now),
     ] as const),
     // Context, not a graded section: losing the trend line must not turn a
     // healthy readout into an unknown one.
@@ -271,6 +275,7 @@ export async function collectMistboardReadoutFacts(
     'engines',
     'broadcasts',
     'feedback',
+    'deploys',
   ];
   const collectorErrors = collectors.flatMap((result, index) =>
     result.status === 'rejected'
@@ -284,6 +289,7 @@ export async function collectMistboardReadoutFacts(
     engines: settledValue(collectors[3]),
     broadcasts: settledValue(collectors[4]),
     feedback: settledValue(collectors[5]),
+    deploys: settledValue(collectors[6]),
     collectorErrors,
     trend,
   };
@@ -552,6 +558,33 @@ async function collectFeedback(db: Queryable): Promise<MistboardReadoutFeedback>
   return {
     received: counts.rows[0]?.received ?? 0,
     recentPaths: recent.rows.map((row) => row.path),
+  };
+}
+
+// Drains that ended in the last week, from their one summary row each
+// (server-drain.ts writes it at shutdown, cancel or lapse).
+const DEPLOY_WINDOW_DAYS = 7;
+
+export async function collectDeploys(db: Queryable, now: Date): Promise<MistboardReadoutDeploys> {
+  const since = new Date(now.getTime() - DEPLOY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const { rows } = await db.query<{
+    payload: Record<string, unknown>;
+    build_revision: string | null;
+  }>(
+    `SELECT payload, build_revision
+     FROM room_lifecycle_audit
+     WHERE kind = 'drain_summary' AND occurred_at >= $1 AND occurred_at <= $2
+     ORDER BY occurred_at ASC, id ASC`,
+    [since, now],
+  );
+  const drains = rows.flatMap((row) => {
+    const drain = deployDrainFromSummary(row.payload ?? {}, row.build_revision);
+    return drain ? [drain] : [];
+  });
+  return {
+    windowDays: DEPLOY_WINDOW_DAYS,
+    drains: drains.length,
+    disruptive: drains.filter(isDisruptiveDrain),
   };
 }
 
