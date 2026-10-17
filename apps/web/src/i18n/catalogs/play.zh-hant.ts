@@ -619,7 +619,6 @@ export const ZH_HANT_PLAY = {
   'lobby.panelHarder': '更強的對手',
   'lobby.panelFaster': '更快的用時',
   'lobby.panelSlower': '更慢的用時',
-  'lobby.panelBotFallbackNote': '15 秒內無人加入？我們會提供電腦對手。',
   'lobby.panelRatedNote': '等級分對局：{clocks}。',
   'lobby.panelRatedSignIn': '登入後可下等級分對局',
   'lobby.panelOpenGames': '公開對局',

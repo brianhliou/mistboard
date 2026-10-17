@@ -650,7 +650,6 @@ export const EN_PLAY = {
   'lobby.panelHarder': 'Stronger opponent',
   'lobby.panelFaster': 'Faster clock',
   'lobby.panelSlower': 'Slower clock',
-  'lobby.panelBotFallbackNote': 'No one joins in 15 s? We offer a bot.',
   'lobby.panelRatedNote': 'Rated: {clocks}.',
   'lobby.panelRatedSignIn': 'Sign in to play rated',
   'lobby.panelOpenGames': 'Open games',

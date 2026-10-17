@@ -619,7 +619,6 @@ export const ZH_HANS_PLAY = {
   'lobby.panelHarder': '更强的对手',
   'lobby.panelFaster': '更快的用时',
   'lobby.panelSlower': '更慢的用时',
-  'lobby.panelBotFallbackNote': '15 秒内无人加入？我们会提供电脑对手。',
   'lobby.panelRatedNote': '等级分对局：{clocks}。',
   'lobby.panelRatedSignIn': '登录后可下等级分对局',
   'lobby.panelOpenGames': '公开对局',
