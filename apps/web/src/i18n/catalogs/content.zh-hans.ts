@@ -51,7 +51,6 @@ export const ZH_HANS_CONTENT = {
   'articles.latest': '最新动态',
   'articles.deepDives': '象棋深度文章',
   'articles.topicAll': '全部',
-  'articles.topicPlayers': '玩家',
   'articles.topicEngineering': '技术',
   'articles.topicsLabel': '主题',
   'articles.read': '阅读',

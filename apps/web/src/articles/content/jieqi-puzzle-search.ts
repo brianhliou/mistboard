@@ -324,7 +324,6 @@ export const jieqiPuzzleSearchArticle: Article = {
   slug: 'jieqi-puzzle-search',
   kind: 'article',
   publisher: 'mistboard',
-  topic: 'engineering',
   title: 'Looking for jieqi puzzles',
   seoTitle: 'Looking for jieqi puzzles: what 50 games turned up',
   summary:

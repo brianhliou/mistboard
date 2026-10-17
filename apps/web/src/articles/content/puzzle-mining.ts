@@ -77,7 +77,7 @@ export const puzzleMiningArticle: Article = {
   kind: 'article',
   publisher: 'mistboard',
   topic: 'engineering',
-  title: 'I built a xiangqi puzzle miner',
+  title: 'Mining puzzles from real games',
   seoTitle: 'How Mistboard mines xiangqi puzzles from real games',
   summary:
     'A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.',

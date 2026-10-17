@@ -51,7 +51,6 @@ export const ZH_HANT_CONTENT = {
   'articles.latest': '最新動態',
   'articles.deepDives': '象棋深度文章',
   'articles.topicAll': '全部',
-  'articles.topicPlayers': '玩家',
   'articles.topicEngineering': '技術',
   'articles.topicsLabel': '主題',
   'articles.read': '閱讀',

@@ -195,45 +195,37 @@ describe('blog index topic chips', () => {
   });
 });
 
-describe('blog index players and engineering chips', () => {
+describe('blog index engineering chip', () => {
   const slugsUnder = (topic: string | undefined): string[] =>
     visibleSlugs(buildArticlesIndex(undefined, 'mistboard', topic)).sort();
 
-  it('splits the blog into For players and Engineering once an engineering post exists', () => {
+  it('adds an Engineering chip once an engineering post exists', () => {
     useFixture(2, 2, 2);
     const index = buildArticlesIndex(undefined, 'mistboard');
     expect(chips(index).map((chip) => chip.textContent)).toEqual([
       'All',
-      'For players',
       'Engineering',
       'Xiangqi deep dives',
     ]);
     expect(chips(index).map((chip) => chip.getAttribute('href'))).toEqual([
       '/blog',
-      '/blog?topic=players',
       '/blog?topic=engineering',
       '/blog?topic=deep-dives',
     ]);
     expect(slugsUnder(undefined)).toHaveLength(6);
     expect(slugsUnder('engineering')).toEqual(['/blog/fixture-eng-0', '/blog/fixture-eng-1']);
-    expect(slugsUnder('players')).toEqual([
-      '/blog/fixture-dive-0',
-      '/blog/fixture-dive-1',
-      '/blog/fixture-plain-0',
-      '/blog/fixture-plain-1',
-    ]);
     expect(slugsUnder('deep-dives')).toEqual(['/blog/fixture-dive-0', '/blog/fixture-dive-1']);
   });
 
-  it('offers no For players chip while it would hold every post', () => {
+  it('offers no Engineering chip before the first engineering post', () => {
     useFixture(2, 3, 0);
     const labels = chips(buildArticlesIndex(undefined, 'mistboard')).map((c) => c.textContent);
     expect(labels).toEqual(['All', 'Xiangqi deep dives']);
-    // A shared ?topic=players link still lands on the whole list.
+    // An unknown ?topic= link, like the retired players chip, lands on the whole list.
     expect(slugsUnder('players')).toHaveLength(5);
   });
 
-  it('localizes the new chips', () => {
+  it('localizes the new chip', () => {
     useFixture(1, 1, 1);
     const hans = chips(buildArticlesIndex('zh-Hans', 'mistboard'));
     expect(hans.map((chip) => chip.getAttribute('href'))).toContain(
@@ -249,11 +241,14 @@ describe('blog index players and engineering chips', () => {
       .filter((article) => article.kind === 'article' && article.topic === 'engineering')
       .map((article) => `/blog/${article.slug}`)
       .sort();
-    expect(listedEngineering.length).toBeGreaterThan(0);
-    expect(listedEngineering).toContain('/blog/how-puzzle-mining-works');
+    expect(listedEngineering).toEqual([
+      '/blog/chariot-cannon-repetition-key',
+      '/blog/en-passant-under-fog',
+      '/blog/how-puzzle-mining-works',
+      '/blog/pikafish-reveal-bug',
+      '/blog/server-enforced-fog',
+      '/blog/unstyled-first-paint',
+    ]);
     expect(slugsUnder('engineering')).toEqual(listedEngineering);
-    const players = slugsUnder('players');
-    expect(players.some((slug) => listedEngineering.includes(slug))).toBe(false);
-    expect(players.length + listedEngineering.length).toBe(slugsUnder(undefined).length);
   });
 });

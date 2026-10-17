@@ -29,7 +29,6 @@ export const flipJungleSkillCeilingArticle: Article = {
   slug: 'flip-jungle-skill-ceiling',
   kind: 'article',
   publisher: 'mistboard',
-  topic: 'engineering',
   title: 'Flip Jungle: 512 times the search still loses 23% of games',
   cardTitle: "Flip Jungle's skill ceiling",
   seoTitle: 'Flip Jungle skill vs luck: 512× more search still loses 23% of games',
