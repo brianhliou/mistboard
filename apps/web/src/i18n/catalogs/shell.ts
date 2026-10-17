@@ -80,6 +80,11 @@ export const EN_SHELL = {
   'home.corrWaitingSubline': 'We email you when someone accepts.',
   'home.corrBusy': 'Finding you a game...',
   'home.corrFailed': 'Could not start a game. Try again.',
+  // Phone home (mobile pass #576): the TV strip over the board and the
+  // shortcut tiles under the Play buttons.
+  'home.tvLive': 'Live',
+  'home.phoneTilesAria': 'More on Mistboard',
+  'home.tileAnalysis': 'Analysis',
   'site.more': 'More »',
   'footer.about': 'About',
   'footer.stats': 'Statistics',
@@ -250,6 +255,9 @@ export const CRITICAL_SHELL_I18N_KEYS = [
   'home.corrWaitingSubline',
   'home.corrBusy',
   'home.corrFailed',
+  'home.tvLive',
+  'home.phoneTilesAria',
+  'home.tileAnalysis',
   'site.more',
   'footer.about',
   'footer.stats',
