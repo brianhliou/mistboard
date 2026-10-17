@@ -900,6 +900,16 @@
   background: transparent;
 }
 
+/* Touch floor (#576): every cell grows with the buttons so a row stays level. */
+@media (pointer: coarse) {
+  .move-list button,
+  .move-visible,
+  .move-placeholder,
+  .move-empty {
+    height: 40px;
+  }
+}
+
 .move-visible,
 .move-placeholder,
 .move-empty {

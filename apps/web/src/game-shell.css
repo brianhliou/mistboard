@@ -176,6 +176,13 @@
   cursor: pointer;
 }
 
+/* Touch floor (#576): a phone taps a move to scrub to it. */
+@media (pointer: coarse) {
+  .round-table__box .move-list button.move-jump {
+    min-height: 40px;
+  }
+}
+
 /* Kept well under the 16% the scrubbed ply uses: at 10% a hovered cell was
    near enough to the active one to read as "this is where I am". */
 .round-table__box .move-list button.move-jump:hover,

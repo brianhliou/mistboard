@@ -1163,6 +1163,13 @@
   line-height: 1.4;
 }
 
+/* Touch floor (#576): 18px of text, padded to a 40px target. */
+@media (pointer: coarse) {
+  .account-auth-principles summary {
+    padding-block: 11px;
+  }
+}
+
 .account-auth-principles-body {
   margin-top: 14px;
 }

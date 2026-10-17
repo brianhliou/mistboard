@@ -75,6 +75,17 @@
 .analysis-summary__stat--live {
   cursor: pointer;
 }
+/* Touch floor (#576): each row jumps to the next such move. */
+@media (pointer: coarse) {
+  .analysis-summary__stat {
+    min-height: 40px;
+    align-items: center;
+  }
+
+  .analysis-summary__learn {
+    min-height: 40px;
+  }
+}
 .analysis-summary__stat--live:focus-visible {
   outline: none;
 }
