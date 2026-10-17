@@ -76,6 +76,9 @@ Conventions:
 
 ### Learning and puzzles
 
+- Puzzles on a phone show the move arrows and a short move list under the board ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
+- "Teaching our Jungle Chess engine the den race bought nothing" is back as its own article, with corrected numbers and game 10 on the board ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
+- The Pikafish reveal-bug article now tells the investigation in order: the move that tipped us off, the two bugs with their evidence, the fix, and the results as tables ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
 - How MistyBanqi Plays and How It Was Built: the banqi engine article now carries the full build story (the self-play trap, the swapped cannon and chariot values, the AlphaZero test) and steps through three of its games against people as playable boards ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
 - A Dou Shou Qi (Jungle Chess) Engine: the MistyJungle build write-up moves here from brianhliou.com, with its six benchmark games as playable boards ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
 - The jieqi rules page and articles now point to AB-JChess, the strongest jieqi bot on the site ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
@@ -179,6 +182,8 @@ Conventions:
 
 ### Site
 
+- Bigger tap targets and form text that no longer zooms on phones ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
+- The local engine row is hidden in browsers that cannot run it ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
 - the notification bell is redrawn ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
 - The xiangqi analysis board and position editor have their own Chinese pages ([f23e9dfc](https://github.com/brianhliou/mistboard/commit/f23e9dfc))
 - the blog filters by topic (/blog?topic=deep-dives), and the homepage's deep dives row links there once it has more posts than it shows ([3a0dd19d](https://github.com/brianhliou/mistboard/commit/3a0dd19d))
@@ -235,6 +240,8 @@ Conventions:
 
 ### Fixed
 
+- The home page forum topics box no longer leaves empty space ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
+- Perpetual check in xiangqi, jieqi and Fortress xiangqi is judged over the whole repetition, so a player who only starts checking in the last round draws instead of losing ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
 - review pages no longer cut off the chat panel's corners and shadow, and linked player names keep their colour in game rooms ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
 - review pages write the time control the way the game room does (10+5) ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
 - Jieqi game data files and the jieqi platform article no longer show pieces that were never turned over or were captured face-down ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
