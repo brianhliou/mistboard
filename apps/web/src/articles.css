@@ -1450,6 +1450,31 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The audit's match table is read down its columns (score against score,
+   margin against margin), so every figure column sits right on tabular
+   digits and the decimal points line up. The bug table up top is prose that
+   wraps (wrap: true), so it keeps the default left alignment. */
+[data-article-slug="pikafish-reveal-bug"]
+  .article-table:not(.article-table-wrap)
+  :is(th, td):not(:first-child) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The row labels are phrases; letting them wrap keeps all six columns in the
+   text column instead of pushing Time off the edge. */
+[data-article-slug="pikafish-reveal-bug"] .article-table td:first-child {
+  white-space: normal;
+  min-width: 8.5em;
+}
+
+/* At 8.5em the fixed-bot match table ran 15px past a 390px phone column. */
+@media (max-width: 600px) {
+  [data-article-slug="pikafish-reveal-bug"] .article-table td:first-child {
+    min-width: 6.5em;
+  }
+}
+
 /* Click-to-expand figures. The trigger is a button so the affordance is
    keyboard-reachable; it is styled to disappear so the figure still reads as a
    figure rather than as a control. */

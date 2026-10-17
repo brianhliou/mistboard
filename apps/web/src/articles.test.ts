@@ -144,6 +144,8 @@ describe('article public listing gates', () => {
       // rule, so moving that date still moves two articles, it just moves one
       // of them somewhere this list cannot see.
       '/blog/how-puzzle-mining-works',
+      // Moved from brianhliou.com (2026-08-31) on 2026-10-16.
+      '/blog/jungle-den-term',
       '/blog/xiangqi-match-fixing',
       // The two champion articles, newest first. They shipped hours apart on
       // 2026-08-29 and are deliberately dated a day apart: two halves of one
@@ -345,6 +347,8 @@ describe('article public listing gates', () => {
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
       '/blog/how-puzzle-mining-works',
+      // Moved from brianhliou.com (2026-08-31) on 2026-10-16.
+      '/blog/jungle-den-term',
       '/blog/titled-players',
       '/blog/riverbank-cannon',
       '/blog/skill-vs-luck',

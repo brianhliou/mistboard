@@ -331,6 +331,12 @@
       "zh-hant": "鬥獸棋規則：玩法詳解與免費線上對弈"
     }
   },
+  "jungle-den-term": {
+    "title": "Teaching our Jungle Chess engine the den race bought nothing",
+    "kind": "article",
+    "description": "Misty, our Jungle Chess engine, has no idea of a den race. Three ways to teach it one came back null or negative: races decide 4.7% of games at full strength, and a 12 times deeper search sees the loss a median of one ply sooner.",
+    "status": "published"
+  },
   "jungle-flip": {
     "title": "Flip Jungle Rules (Flip Dou Shou Qi)",
     "kind": "rules",
