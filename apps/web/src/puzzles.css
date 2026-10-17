@@ -1085,6 +1085,33 @@
     grid-template-rows: auto minmax(180px, auto) minmax(160px, auto);
   }
 
+  /* Phone stack: board, arrows, a short move strip, then the feedback card,
+     the order the review boards took in e4823b2b. Before, the arrows came
+     after the 180px move list and the feedback card, a screen below the
+     board, so a phone could not step through the line and watch the board at
+     once. Scoped to the page: the embed lays out its own card (embed.css). */
+  .puzzles-shell .puzzle-side-panel {
+    grid-template-rows: none;
+  }
+
+  .puzzles-shell .puzzle-side-panel > .puzzle-actions {
+    order: -1;
+  }
+
+  .puzzles-shell .puzzle-trainer-panel {
+    grid-template-rows: auto minmax(160px, auto);
+  }
+
+  .puzzles-shell .puzzle-trainer-panel--analysis {
+    grid-template-rows: auto auto minmax(160px, auto);
+  }
+
+  /* The move strip: a few rows that scroll on their own; the list keeps the
+     current move in view (keepActivePuzzleMoveInView). */
+  .puzzles-shell .puzzle-move-list {
+    max-height: 140px;
+  }
+
   .puzzles-sidebar {
     order: 3;
     max-height: none;
