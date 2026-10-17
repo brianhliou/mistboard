@@ -40,7 +40,8 @@ export interface EnginePanel {
    *  search to grade a try). Fires onToggle like a click would; a no-op when
    *  the engine is unsupported in this browser or already in that state. */
   setOn(next: boolean): void;
-  /** Whether this browser can run the local engine at all (WebKit cannot: #276). */
+  /** Whether this browser can run the local engine at all (#276). When false
+   *  the panel's `el` is hidden: there is no engine row to show. */
   supported: boolean;
   dispose(): void;
 }
@@ -365,6 +366,10 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
 
   if (!supported) {
     toggle.disabled = true;
+    // Hide the whole row where the engine cannot run (#576): a disabled switch
+    // with an apology is a control the reader can never use. The copy below
+    // stays on the hidden node for anyone inspecting why it is absent.
+    el.hidden = true;
     // Do NOT promise a reload. The threaded engine needs cross-origin isolation,
     // which these routes request with COEP: require-corp (#276). Until
     // 2026-10-14 it was credentialless, which WebKit ignores, so no iPhone,

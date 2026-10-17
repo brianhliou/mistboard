@@ -12,6 +12,12 @@
   border-radius: var(--site-radius, 10px);
   background: var(--site-panel, var(--site-surface));
 }
+
+/* A browser that cannot run the engine gets no engine row at all (#576);
+   `display: flex` above would otherwise override [hidden]. */
+.engine-panel[hidden] {
+  display: none;
+}
 /* Head + settings wrapper: the dropdown's positioning context. */
 .engine-panel__top {
   position: relative;

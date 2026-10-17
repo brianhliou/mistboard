@@ -453,9 +453,13 @@ function renderPuzzleDetail(
     // Engine bar fuses onto the top of the move list (analyse-table shape);
     // the jump-out link sits below the scrub controls, centered. The column
     // grows past its fixed two-row shape, so let it scroll instead of clipping.
+    // A browser that cannot run the engine hides its row (engine-panel.ts), so
+    // the trainer keeps its two-row shape rather than an empty engine track.
     side.classList.add('puzzle-side-panel--analysis');
-    trainer.classList.add('puzzle-trainer-panel--analysis');
-    trainer.prepend(session.analysis.engineEl);
+    if (!session.analysis.engineEl.hidden) {
+      trainer.classList.add('puzzle-trainer-panel--analysis');
+      trainer.prepend(session.analysis.engineEl);
+    }
     side.append(session.analysis.openLinkEl);
     session.analysis.refresh(session, displayState, board);
   }
