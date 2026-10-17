@@ -12,15 +12,15 @@ import {
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  mountXiangqiMahjongPostgame,
   type XmjPostgameResponse,
   xmjInitialPly,
   xmjPostgameClockAt,
   xmjPostgameLastPly,
-  xmjPostgameNames,
-  xmjPostgameStatusLine,
-  xmjPostgameViewAt,
+  xmjRecordingFrame,
 } from './xiangqi-mahjong-postgame.js';
+
+// The review page is the live room (live-xiangqi-mahjong.ts) played back from
+// the finished-only route's per-ply views. These tests drive the real room.
 
 function seeded(seed: number): () => number {
   let x = seed;
@@ -81,19 +81,39 @@ function postgameFixture(): XmjPostgameResponse {
 const FIXTURE = postgameFixture();
 const LAST = xmjPostgameLastPly(FIXTURE);
 
+const TIMED: XmjPostgameResponse = {
+  ...FIXTURE,
+  state: { ...FIXTURE.state, timeControl: { initialMs: 600_000, incrementMs: 0 } },
+  // East loses a second a ply, west two.
+  history: FIXTURE.history.map((snapshot) => ({
+    ...snapshot,
+    clock: {
+      remainingMs: { east: 600_000 - snapshot.ply * 1000, west: 600_000 - snapshot.ply * 2000 },
+      active: snapshot.ply % 2 === 0 ? 'east' : 'west',
+    },
+  })),
+};
+
 describe('Xiangqi Mahjong review helpers', () => {
-  it('picks the snapshot at or before a ply, and opens at ?ply= clamped to the match', () => {
-    expect(xmjPostgameViewAt(FIXTURE, 0)).toBe(FIXTURE.history[0]?.view);
-    expect(xmjPostgameViewAt(FIXTURE, 3)).toBe(FIXTURE.history[3]?.view);
+  it('opens at ?ply= clamped to the match, and keeps the clock at or before a ply', () => {
     expect(xmjInitialPly('?ply=3', LAST)).toBe(3);
     expect(xmjInitialPly(`?ply=${LAST + 50}`, LAST)).toBe(LAST);
     expect(xmjInitialPly('?ply=-1', LAST)).toBe(LAST);
     expect(xmjInitialPly('', LAST)).toBe(LAST);
+    expect(xmjPostgameClockAt(TIMED, 3)?.remainingMs).toEqual({ east: 597_000, west: 594_000 });
+    expect(xmjPostgameClockAt(FIXTURE, 3)).toBeNull();
   });
 
-  it('names each seat by its player, a nameless guest by the room word', () => {
-    expect(xmjPostgameNames(FIXTURE.game.players)).toEqual({ east: 'alice', west: 'Guest' });
-    expect(xmjPostgameNames(undefined)).toEqual({ east: 'Guest', west: 'Guest' });
+  it('turns the match into the hello a spectator of the finished room gets', () => {
+    const frame = xmjRecordingFrame(TIMED);
+    expect(frame.seat).toBe('spectator');
+    expect(frame.state).toBe(TIMED.view);
+    // A nameless guest is left to the room's own guest word.
+    expect(frame.seatDisplayNames).toEqual({ east: 'alice' });
+    expect(frame.timeControl).toEqual({ initialMs: 600_000, incrementMs: 0 });
+    expect(frame.events).toHaveLength(LAST);
+    expect(frame.liveHistory).toHaveLength(LAST + 1);
+    expect(xmjRecordingFrame(FIXTURE).timeControl).toBeNull();
   });
 });
 
@@ -109,36 +129,52 @@ describe('Xiangqi Mahjong review page', () => {
     document.body.replaceChildren();
   });
 
-  it('steps through the match with both hands face up and nothing to act on', async () => {
-    const fetchSpy = vi.fn(async () => jsonResponse(FIXTURE));
+  /** Mounts the page as the router does, on a fresh room module. */
+  async function mount(postgame: unknown, status = 200): Promise<HTMLDivElement> {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) =>
+      String(input).startsWith('/api/xiangqi-mahjong/games/')
+        ? jsonResponse(postgame, status)
+        : jsonResponse({ error: 'not_found' }, 404),
+    );
     vi.stubGlobal('fetch', fetchSpy);
     const root = document.createElement('div');
+    root.id = 'app';
     document.body.append(root);
-
+    // The room client is a module singleton with document-level key handlers:
+    // a fresh module per test keeps one test's keys from stepping another's.
+    vi.resetModules();
+    const { mountXiangqiMahjongPostgame } = await import('./xiangqi-mahjong-postgame.js');
     mountXiangqiMahjongPostgame(root, 'xmj_review');
     await flushPromises();
-
     expect(fetchSpy).toHaveBeenCalledWith('/api/xiangqi-mahjong/games/xmj_review');
+    return root;
+  }
+
+  const key = (name: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
+
+  it('steps through the match with both hands face up and nothing to act on', async () => {
+    const root = await mount(FIXTURE);
     const board = root.querySelector('.xiangqi-mahjong-live-board');
     expect(board?.querySelector('.xmj-table')).not.toBeNull();
     // Every tile is face up; no seat's hand is a row of backs.
     expect(board?.querySelectorAll('.xmj-tile--back')).toHaveLength(0);
-    // A replay, not a seat: no discard taps, claims or a next-hand button.
+    // A replay, not a seat: no discard taps, claims, next hand or rematch.
     expect(board?.querySelector('[data-xmj-tile], [data-xmj-claim], [data-xmj-next]')).toBeNull();
+    expect(root.querySelector('.room-actions-row, .postgame-actions')).toBeNull();
+    expect(root.querySelector('.presence-dot')).toBeNull();
     expect(root.querySelector('.xmj-hands')).not.toBeNull();
     expect(root.querySelectorAll('.xmj-log .xmj-log__hand').length).toBe(
       FIXTURE.view.results.length,
     );
 
     // Home goes to the deal: both hands dealt, each concealed tile shown.
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
-    expect(new URLSearchParams(window.location.search).get('ply')).toBe('0');
+    key('Home');
     const deal = FIXTURE.history[0]!.view;
     const shown = root.querySelectorAll('.xmj-seat .xmj-concealed > .xmj-tile').length;
     expect(shown).toBe((deal.hands.east?.length ?? 0) + (deal.hands.west?.length ?? 0));
 
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-    expect(new URLSearchParams(window.location.search).get('ply')).toBe('1');
+    key('ArrowRight');
+    expect(root.querySelector('.xmj-log__row.active')?.getAttribute('data-xmj-ply')).toBe('1');
 
     // A log row jumps to its ply; End returns to the finished table.
     const row = [...root.querySelectorAll<HTMLElement>('.xmj-log [data-xmj-ply]')].find(
@@ -147,92 +183,62 @@ describe('Xiangqi Mahjong review page', () => {
     const target = row?.dataset.xmjPly;
     expect(target).toBeDefined();
     row?.click();
-    expect(new URLSearchParams(window.location.search).get('ply')).toBe(target);
     expect(root.querySelector('.xmj-log__row.active')?.getAttribute('data-xmj-ply')).toBe(target);
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
-    expect(window.location.search).toBe('');
+    key('End');
     expect(root.querySelector('.xmj-result')).not.toBeNull();
   });
 
-  it("sits in the room's game table with each seat's clock at the ply on show", async () => {
-    // A timed match: east loses a second a ply, west two.
-    const timed: XmjPostgameResponse = {
-      ...FIXTURE,
-      state: { ...FIXTURE.state, timeControl: { initialMs: 600_000, incrementMs: 0 } },
-      history: FIXTURE.history.map((snapshot) => ({
-        ...snapshot,
-        clock: {
-          remainingMs: { east: 600_000 - snapshot.ply * 1000, west: 600_000 - snapshot.ply * 2000 },
-          active: snapshot.ply % 2 === 0 ? 'east' : 'west',
-        },
-      })),
-    };
-    expect(xmjPostgameClockAt(timed, 3)?.remainingMs).toEqual({ east: 597_000, west: 594_000 });
-    expect(xmjPostgameClockAt(FIXTURE, 3)).toBeNull();
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse(timed)),
-    );
+  it("is the room's own layout, with each seat's clock at the ply on show", async () => {
     window.history.replaceState(null, '', '/xiangqi-mahjong/game/xmj_review?ply=3');
-    const root = document.createElement('div');
-    document.body.append(root);
-    mountXiangqiMahjongPostgame(root, 'xmj_review');
-    await flushPromises();
+    const root = await mount(TIMED);
     const table = root.querySelector('.review-shell__right .game-console');
-    expect(table?.querySelector('.round-table__box .move-list.xmj-log')).not.toBeNull();
+    expect(table?.querySelector('.move-list.xmj-log')).not.toBeNull();
+    // The room's resize grip comes with it.
+    expect(root.querySelector('.board-resize-grip')).not.toBeNull();
     const clock = (slot: string) =>
       table?.querySelector(`[data-clock-${slot}] .clock-time-row strong`)?.textContent;
-    const name = (slot: string) => table?.querySelector(`[data-player-${slot}] .clock-name`);
-    // West above, east below, as on the board.
-    expect(name('top')?.textContent).toBe('Guest');
-    expect(name('bottom')?.textContent).toBe('alice');
+    const name = (slot: string) =>
+      table?.querySelector(`[data-player-${slot}] .clock-name`)?.textContent;
+    // West above, east below, as on the table.
+    expect(name('top')).toBe('Guest');
+    expect(name('bottom')).toBe('alice');
     expect(clock('top')).toBe('09:54');
     expect(clock('bottom')).toBe('09:57');
     expect(table?.querySelector('[data-clock-top] .clock-time-row')?.classList).toContain('active');
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home' }));
+    key('Home');
     expect(clock('top')).toBe('10:00');
     // No seat disc on a wind-seated table.
     expect(root.querySelector('.game-meta-card__disc')).toBeNull();
   });
 
   it('shows no clock for a match that kept none', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse(FIXTURE)),
-    );
-    const root = document.createElement('div');
-    document.body.append(root);
-    mountXiangqiMahjongPostgame(root, 'xmj_review');
-    await flushPromises();
+    const root = await mount(FIXTURE);
     const rows = [...root.querySelectorAll<HTMLElement>('.game-console .clock-time-row')];
-    expect(rows.length).toBe(2);
-    expect(rows.every((row) => row.hidden)).toBe(true);
+    expect(rows.every((row) => row.hidden || row.closest('[hidden]') !== null)).toBe(true);
   });
 
   it('opens at the ply in the link', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse(FIXTURE)),
-    );
     window.history.replaceState(null, '', '/xiangqi-mahjong/game/xmj_review?ply=2');
-    const root = document.createElement('div');
-    document.body.append(root);
-    mountXiangqiMahjongPostgame(root, 'xmj_review');
-    await flushPromises();
+    const root = await mount(FIXTURE);
     const view = FIXTURE.history[2]!.view;
-    expect(root.querySelector('.xmj-seat--self .xmj-concealed')?.children.length).toBe(
-      view.hands.east?.length,
+    expect(root.querySelector('.xmj-log__row.active')?.getAttribute('data-xmj-ply')).toBe('2');
+    const shown = root.querySelectorAll('.xmj-seat .xmj-concealed > .xmj-tile').length;
+    expect(shown).toBe((view.hands.east?.length ?? 0) + (view.hands.west?.length ?? 0));
+  });
+
+  it('names the winner on the meta card the way the room does', async () => {
+    // The bot match is the kernel's: the winner is whoever its view says.
+    const status = FIXTURE.view.status;
+    const winner = status.type === 'finished' ? status.winner : null;
+    expect(winner === 'east' || winner === 'west').toBe(true);
+    const root = await mount(FIXTURE);
+    expect(root.querySelector('.game-meta-card__status')?.textContent).toBe(
+      `${winner === 'east' ? 'alice' : 'Guest'} wins on points`,
     );
   });
 
   it('says the game was not found when the server refuses (a live match)', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ error: 'not_found' }, 404)),
-    );
-    const root = document.createElement('div');
-    mountXiangqiMahjongPostgame(root, 'xmj_live');
-    await flushPromises();
+    const root = await mount({ error: 'not_found' }, 404);
     expect(root.textContent).toContain('Game not found');
     expect(root.querySelector('.xmj-table')).toBeNull();
   });
@@ -250,43 +256,3 @@ async function flushPromises(): Promise<void> {
   await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
-
-describe('xiangqi mahjong review result line', () => {
-  const names = { east: 'brianhliou', west: 'Misty' };
-
-  it('names the winner the way the room does, never a bare "Won"', () => {
-    expect(xmjPostgameStatusLine({ result: 'east-wins', termination: 'points' }, names)).toBe(
-      'brianhliou wins on points',
-    );
-    expect(xmjPostgameStatusLine({ result: 'west-wins', termination: 'resignation' }, names)).toBe(
-      'Misty wins by resignation',
-    );
-    expect(xmjPostgameStatusLine({ result: 'west-wins', termination: 'timeout' }, names)).toBe(
-      'Misty wins on time',
-    );
-    // A level match is stored as draw/draw; the room calls it a tie on points.
-    expect(xmjPostgameStatusLine({ result: 'draw', termination: 'draw' }, names)).toBe(
-      'Match drawn on points',
-    );
-  });
-
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    vi.unstubAllGlobals();
-    document.body.replaceChildren();
-  });
-
-  it('puts the winner line on the meta card', async () => {
-    vi.stubEnv('VITE_XIANGQI_MAHJONG_ENABLED', 'true');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse(FIXTURE)),
-    );
-    window.history.replaceState(null, '', '/xiangqi-mahjong/game/xmj_review');
-    const root = document.createElement('div');
-    document.body.append(root);
-    mountXiangqiMahjongPostgame(root, 'xmj_review');
-    await flushPromises();
-    expect(root.querySelector('.game-meta-card__status')?.textContent).toBe('alice wins on points');
-  });
-});

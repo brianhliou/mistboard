@@ -146,6 +146,26 @@ export type WebVariantTenant<C extends string> = {
   turnChipLabel?(seat: C): I18nKey | null;
 };
 
+/** A recorded clock at one ply of a finished match (the review page). */
+export type TenantRecordedClock<C extends string> = {
+  remainingMs: Record<C, number>;
+  // The seat whose clock ran after this ply, or null before the clock started.
+  active: C | null;
+  // The last ply: final times keep their tenths, and nobody is to move.
+  final: boolean;
+};
+
+/**
+ * A finished match replayed ply by ply in the room's own layout (the review
+ * page). Nobody is present at a recording: no presence dots and no room
+ * actions (rematch, new opponent, a link to the page itself). Its clocks are
+ * the recorded times at the ply on show, still (a replay clock is a label,
+ * never animated), or none for a match that kept no clock.
+ */
+export type TenantChromeRecording<C extends string> = {
+  clock: TenantRecordedClock<C> | null;
+};
+
 export type TenantChromeContext<C extends string> = {
   // The room's game spec, for the meta card's rules link.
   gameSpecId?: string;
@@ -193,6 +213,8 @@ export type TenantChromeContext<C extends string> = {
   // Optional suffix on the meta panel's Variant row (e.g. a time-control
   // label: "Jieqi · 5+5").
   variantDetail?(): string | null;
+  // The recording on show (the review page), or null/absent in a live room.
+  recording?(): TenantChromeRecording<C> | null;
 };
 
 // The instance API is fully variant-erased: every method reads through the
@@ -320,9 +342,24 @@ export function createTenantRoomChrome<C extends string>(
     refs.clockNote.textContent = '';
 
     const timeControl = ctx.timeControl();
-    const clock = ctx.clock();
+    const recording = ctx.recording?.() ?? null;
+    const recorded = recording?.clock ?? null;
+    const clock: TenantWebClock<C> | null | undefined = recording
+      ? recorded && timeControl
+        ? {
+            activeColor: recorded.final ? null : recorded.active,
+            incrementMs: timeControl.incrementMs,
+            initialMs: timeControl.initialMs,
+            remainingMs: recorded.remainingMs,
+            runningSince: null,
+          }
+        : null
+      : ctx.clock();
     const view = ctx.view();
     const orientation = ctx.orientation();
+    // Nobody sits at a recording, so no seat shows as present or away.
+    const presence = (color: C): HTMLElement[] =>
+      recording ? [] : [presenceDot(ctx.connectedSeats()[color] ?? false)];
     // The seats to render, bottom-most last.
     //
     // This was literally `[oppositeColor(orientation), orientation]`, a
@@ -336,8 +373,12 @@ export function createTenantRoomChrome<C extends string>(
         : [...tenant.colors.filter((color) => color !== orientation), orientation];
     // A finished game's clock is stopped (no active side, not running) but its
     // times are final, not pregame: render them as real clocks, not dimmed.
-    const ended = view?.status.type === 'finished' || view?.status.type === 'aborted';
-    const armed = !!clock && (clock.activeColor !== null || clock.runningSince !== null || ended);
+    const ended = recording
+      ? recorded?.final === true
+      : view?.status.type === 'finished' || view?.status.type === 'aborted';
+    const armed =
+      !!clock &&
+      (recording !== null || clock.activeColor !== null || clock.runningSince !== null || ended);
 
     if (!timeControl || !clock || !armed) {
       // Side to move before the clock arms (opt-in; clarifies the opener when seat names
@@ -353,7 +394,7 @@ export function createTenantRoomChrome<C extends string>(
         // fallback belong to the seat, not to the clock. Before this a room read
         // "Black", dot-less, until the clock armed and the same row became "You"
         // with a dot, mid-game.
-        playerLine.append(presenceDot(ctx.connectedSeats()[color] ?? false));
+        playerLine.append(...presence(color));
         // The seat label is a placeholder for an unnamed seat, so only a
         // server-supplied name carries the seat's profile link.
         playerLine.append(
@@ -394,7 +435,7 @@ export function createTenantRoomChrome<C extends string>(
     }
 
     const displayAt = ctx.isReplayLive() ? Date.now() : (clock.runningSince ?? Date.now());
-    const playing = view?.status.type === 'playing';
+    const playing = recording ? !ended : view?.status.type === 'playing';
     const activeColor = playing ? clock.activeColor : null;
     const humanColor = seatColor();
     // Flash fires once on the turn flip into the seated player's clock; skip the
@@ -416,7 +457,7 @@ export function createTenantRoomChrome<C extends string>(
         : 'clock-time-row';
       const playerLine = document.createElement('span');
       playerLine.className = isActive ? 'clock-player-line active' : 'clock-player-line';
-      playerLine.append(presenceDot(ctx.connectedSeats()[color] ?? false));
+      playerLine.append(...presence(color));
       // playerName falls back to 'You' / the seat label when the server has no
       // name for the seat; those name nobody, so they stay plain text.
       playerLine.append(
@@ -661,6 +702,8 @@ export function createTenantRoomChrome<C extends string>(
     const row = document.createElement('div');
     row.className = 'room-actions-row';
     const view = ctx.view();
+    // A recording is the review itself: nothing to rematch, nobody to invite.
+    if (ctx.recording?.()) return;
 
     if (view?.status.type === 'finished') {
       // Rematch / New opponent / Review game (postgame-panel.ts). Only a seated
