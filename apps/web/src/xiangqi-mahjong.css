@@ -17,16 +17,16 @@
  */
 
 /* The table's tiles scale with its width but its type and padding do not:
-   measured, its height is about 0.625 x width + 323px. So the board width is
-   (height budget - 405px) x 1.6, which fills a short laptop screen exactly
-   and grows on a tall one, where one fixed ratio overflowed the first and
-   wasted the second (Brian, 2026-10-16). The 410px reserve is that 405px plus
-   slack, and it holds the points table under the board. The move list gets a
+   measured, its height is about 0.69 x width + 302px. So the board width is
+   the height budget x 1.45, with 389px reserved (that 302px plus the points
+   table under the board), which fills a short laptop screen exactly and
+   grows on a tall one, where one fixed ratio overflowed the first and wasted
+   the second (Brian, 2026-10-16). The move list gets a
    wider rail than a board game's, so a row like "<name> draws, discards"
    stays on one line. */
 .live-route--xiangqi-mahjong {
-  --uni-board-aspect: 1.6;
-  --uni-board-chrome-h: 410px;
+  --uni-board-aspect: 1.45;
+  --uni-board-chrome-h: 389px;
   /* The height budget is the real bound (and the cluster's second one,
      below); 1040px only stops a very wide, very tall screen from drawing
      tiles past the point of use. 680px left a 4K full screen with small
@@ -42,8 +42,8 @@
 @media (min-width: 800px) {
   .live-route--xiangqi-mahjong .live-review__cluster .moves-panel {
     min-height: max(
-      calc(var(--uni-board-width) * 0.625 + 323px),
-      calc(var(--uni-board-width) * 0.9 + 157px)
+      calc(var(--uni-board-width) * 0.69 + 302px),
+      calc(var(--uni-board-width) * 0.957 + 154px)
     );
   }
 }
@@ -51,18 +51,18 @@
 @media (min-width: 1260px) {
   .live-route--xiangqi-mahjong .live-review__cluster .meta-panel {
     max-height: max(
-      calc(var(--uni-board-width) * 0.625 + 323px),
-      calc(var(--uni-board-width) * 0.9 + 157px)
+      calc(var(--uni-board-width) * 0.69 + 302px),
+      calc(var(--uni-board-width) * 0.957 + 154px)
     );
   }
 }
 
-/* Past about 600px wide the type and the wall grow with the tiles (below),
-   so the table measures about 0.9 x width + 157px and the 1.6 ratio would
-   overflow a tall screen; this second bound keeps the same 201px of page
-   under it. Declared here because the height budget lives on the cluster. */
+/* Past about 560px wide the type and the wall grow with the tiles (below),
+   so the table measures about 0.957 x width + 154px and the 1.45 ratio
+   would overflow a tall screen; this second bound keeps the same page under
+   it. Declared here because the height budget lives on the cluster. */
 .live-route--xiangqi-mahjong .live-review__cluster {
-  --uni-board-max: min(1040px, calc((var(--uni-board-h-budget) + 166px) / 0.9));
+  --uni-board-max: min(1040px, calc((var(--uni-board-h-budget) + 148px) / 0.957));
 }
 
 .live-route--xiangqi-mahjong .live-review__cluster .board-stage,
@@ -89,9 +89,9 @@
     --xmj-tile-w: calc(52 * var(--xmj-u));
     --xmj-tile-h: calc(68 * var(--xmj-u));
     --xmj-depth: calc(5 * var(--xmj-u));
-    --xmj-pond-w: calc(36 * var(--xmj-u));
-    --xmj-pond-h: calc(47 * var(--xmj-u));
-    --xmj-pond-gap: calc(4 * var(--xmj-u));
+    --xmj-pond-w: calc(44 * var(--xmj-u));
+    --xmj-pond-h: calc(58 * var(--xmj-u));
+    --xmj-pond-gap: calc(5 * var(--xmj-u));
     max-width: none;
   }
 
@@ -106,10 +106,15 @@
   /* The centre band and the wall grow with the table too, never below their
      laptop size: on a big screen they were the smallest things on it. */
   .live-route--xiangqi-mahjong .xmj-seat-row,
-  .live-route--xiangqi-mahjong .xmj-centre,
+  .live-route--xiangqi-mahjong .xmj-centre {
+    font-size: max(13px, calc(13 * var(--xmj-u)));
+  }
+
   .live-route--xiangqi-mahjong .xmj-hand-line,
   .live-route--xiangqi-mahjong .xmj-wall__count {
-    font-size: max(13px, calc(13 * var(--xmj-u)));
+    font-size: max(16px, calc(17 * var(--xmj-u)));
+    font-weight: 600;
+    opacity: 1;
   }
 
   .live-route--xiangqi-mahjong .xmj-message {
@@ -131,18 +136,18 @@
   }
 
   .live-route--xiangqi-mahjong .xmj-stack {
-    width: calc(17 * var(--xmj-u));
-    height: calc(30 * var(--xmj-u));
+    width: calc(24 * var(--xmj-u));
+    height: calc(42 * var(--xmj-u));
   }
 
   .live-route--xiangqi-mahjong .xmj-stack i {
-    width: calc(17 * var(--xmj-u));
-    height: calc(22 * var(--xmj-u));
-    border-radius: calc(3 * var(--xmj-u));
+    width: calc(24 * var(--xmj-u));
+    height: calc(31 * var(--xmj-u));
+    border-radius: calc(4 * var(--xmj-u));
   }
 
   .live-route--xiangqi-mahjong .xmj-stack i + i {
-    bottom: calc(9 * var(--xmj-u));
+    bottom: calc(12 * var(--xmj-u));
   }
 
   /* The result between hands lies over the same band and grows with it. */
