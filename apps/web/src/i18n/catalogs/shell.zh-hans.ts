@@ -179,9 +179,6 @@ export const ZH_HANS_SHELL = {
   'lag.networkExplain':
     '数据从你的设备到服务器再返回的往返时间，减去服务器处理的时间。这个数值偏高说明原因出在距离或你的网络连接，只影响你一个人。',
   'lag.unit': '毫秒',
-  'lag.compensationHeading': '延迟补偿',
-  'lag.compensationBody':
-    '在实时对局中，Mistboard 不会把网络延迟算进你的时钟。走掉的是你思考的时间，不是你的着法在路上花的时间。',
   'lag.unavailable': '目前无法测量。请检查网络连接并重新加载页面。',
   'prefs.boardLayout': '棋盘布局',
   'prefs.xiangqiBoardLayout': '标准象棋棋盘布局',

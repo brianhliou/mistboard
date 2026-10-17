@@ -112,9 +112,6 @@ export const EN_SHELL = {
   'lag.networkExplain':
     'The round trip from your device to the server and back, minus the server processing time. When this is high, the distance or your connection is the cause, and it affects only you.',
   'lag.unit': 'ms',
-  'lag.compensationHeading': 'Lag compensation',
-  'lag.compensationBody':
-    'During live games, Mistboard does not count network delay against your clock. The time that runs down is the time you spend thinking, not the time your moves spend traveling.',
   'lag.unavailable': 'Could not measure right now. Check your connection and reload the page.',
   'notFound.heading': 'Page not found',
   'notFound.lede': 'That page does not exist, or it has moved.',

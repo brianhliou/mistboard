@@ -179,9 +179,6 @@ export const ZH_HANT_SHELL = {
   'lag.networkExplain':
     '資料從你的裝置到伺服器再返回的往返時間，減去伺服器處理的時間。這個數值偏高代表原因出在距離或你的網路連線，只影響你一個人。',
   'lag.unit': '毫秒',
-  'lag.compensationHeading': '延遲補償',
-  'lag.compensationBody':
-    '在即時對局中，Mistboard 不會把網路延遲算進你的時鐘。走掉的是你思考的時間，不是你的著法在路上花的時間。',
   'lag.unavailable': '目前無法測量。請檢查網路連線並重新載入頁面。',
   'prefs.boardLayout': '棋盤佈局',
   'prefs.xiangqiBoardLayout': '標準象棋棋盤佈局',
