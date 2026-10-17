@@ -368,6 +368,44 @@ describe('tenant live-client core', () => {
     ]);
   });
 
+  it('labels a move from the view this client holds after it (notateWithView)', () => {
+    // The label names what stands on the destination after the move, or "none"
+    // when the client holds no view for that ply.
+    const moveList = {
+      rowClass: 'move-row test-move-row',
+      cellPrefix: 'test-move-row',
+      masked: false,
+      notate: (move: TMove) => `${move.from}-${move.to}`,
+      notateWithView: (move: TMove, after: TView | null) =>
+        `${move.to}:${after ? (after.squares[move.to] ?? '-') : 'none'}`,
+      isMoveEvent: isTestMoveEvent,
+    };
+    const labels = (h: Harness) =>
+      [...h.refs().moveList.querySelectorAll('.test-move-row__move')].map((c) => c.textContent);
+
+    // Played in front of this client: every ply has its own snapshot.
+    const live = createHarness({ moveList });
+    live.feedHello({ state: view({ squares: {} }) });
+    live.feedSnapshot({
+      events: [moveEvent('red', 'a1', 'a2', 1)],
+      state: view({ squares: { a2: 'red' } }),
+    });
+    live.feedSnapshot({
+      events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+      state: view({ squares: { a2: 'red', b2: 'blue' } }),
+    });
+    expect(labels(live)).toEqual(['a2:red', 'b2:blue']);
+
+    // A cold hello holds only the latest view: the earlier ply says so rather
+    // than reading a later board, and the latest ply reads the live view.
+    const cold = createHarness({ moveList });
+    cold.feedHello({
+      events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+      state: view({ squares: { a2: 'red', b2: 'blue' } }),
+    });
+    expect(labels(cold)).toEqual(['a2:none', 'b2:blue']);
+  });
+
   it('scrubs to the clicked ply from the move list', () => {
     const h = createHarness();
     // Fed ply by ply so the capture policy banks a snapshot per position: a

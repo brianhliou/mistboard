@@ -2,7 +2,7 @@
 // renderer (watch-tenant-replay.ts). Banqi is symmetric-information: the board is
 // public and only the deal is hidden, so the postgame ships a SINGLE truth
 // surface (no per-color triptych) and there is no fog to pass to the renderer.
-import type { BanqiPlayerView } from '@mistboard/game';
+import { type BanqiMove, type BanqiPlayerView, banqiMoveLabelOnBoard } from '@mistboard/game';
 import { renderBanqiMaterial } from './banqi-material.js';
 import { banqiResultLabel, seatInkLabel } from './banqi-result-label.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
@@ -26,7 +26,11 @@ import type { ReplayHandle } from './replay.js';
 import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { watchBanqiMoveSound } from './watch-move-sound.js';
-import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
+import {
+  mountTenantWatchReplay,
+  type TenantWatchReplayOptions,
+  tenantMoveLabelsFromViews,
+} from './watch-tenant-replay.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
@@ -57,6 +61,14 @@ export function mountBanqiWatchReplay(
       viewEntries: (postgame) =>
         postgameViewEntries(postgame).map((entry) => ({ key: entry.key, label: entry.label })),
       viewAtPly: postgameViewAtPly,
+      // The site's one banqi label (flip-move-label.ts): a flip names what it turned up,
+      // read off the replay's own view after it ("f2(C)"), never the generic "f2-f2".
+      moveLabels: (postgame) =>
+        tenantMoveLabelsFromViews(
+          postgame.timeline,
+          (ply) => postgameViewAtPly(postgame, 'truth', ply),
+          (move: BanqiMove, view) => banqiMoveLabelOnBoard(move, view?.board),
+        ),
       paneKind,
       // Symmetric board: no fog/perspective to apply.
       renderBoard: (view, orientation, _key, overlay) =>

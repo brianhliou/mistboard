@@ -1,6 +1,7 @@
 import {
   createInitialJungleFlipState,
   type JieqiSquare,
+  jungleFlipPieceLetter,
   jungleFlipStateToDealtFen,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -828,7 +829,9 @@ describe('mountEmbedStudy', () => {
     const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
       el.textContent?.trim(),
     );
-    expect(moves).toEqual(['a1', 'd4', 'b2']);
+    // Each flip names the animal the deal put under it.
+    const dealt = (sq: 'a1' | 'd4' | 'b2') => `${sq}(${jungleFlipPieceLetter(start.board[sq]!)})`;
+    expect(moves).toEqual([dealt('a1'), dealt('d4'), dealt('b2')]);
     const toEnd = [...root.querySelectorAll<HTMLButtonElement>('.embed-card-menu-item')].find(
       (item) => item.textContent === 'Jump to the end',
     );

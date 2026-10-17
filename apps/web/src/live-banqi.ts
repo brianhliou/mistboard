@@ -25,6 +25,7 @@ import type {
   BanqiSeat,
   BanqiSquare,
 } from '@mistboard/game';
+import { banqiMoveLabel, banqiMoveLabelOnBoard } from '@mistboard/game';
 import './live-xiangqi.css';
 import { renderBanqiMaterial } from './banqi-material.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
@@ -254,10 +255,12 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    // A flip (self-move) shows as the flipped square; a board move as from-to.
-    // The notation is per-move (never per-seat), so it rides the standard
-    // two-column move list keyed by seat.
-    notate: banqiMoveLabel,
+    // The site's one banqi label (flip-move-label.ts): "b1-b2", and a flip
+    // names the piece it turned up, read off this viewer's board after it
+    // ("f2(C)"). Per-move, never per-seat, so it rides the standard two-column
+    // move list keyed by seat.
+    notate: (move) => banqiMoveLabel(move, null),
+    notateWithView: (move, viewAfter) => banqiMoveLabelOnBoard(move, viewAfter?.board),
     isMoveEvent: isBanqiMoveEvent,
   },
   replayCapture: {
@@ -535,11 +538,6 @@ function replayPositionKey(view: BanqiWireView): string {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-// A flip (self-move) is shown as the flipped square; a board move as from-to.
-function banqiMoveLabel(move: BanqiMove): string {
-  return move.from === move.to ? `${move.from}↑` : `${move.from}-${move.to}`;
-}
 
 function isBanqiMoveEvent(event: TenantLiveEvent): event is BanqiMoveEvent {
   const move = (event as { move?: unknown }).move;

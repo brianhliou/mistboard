@@ -12,6 +12,7 @@ export * from './embed-contract.js';
 export * from './engine-protocol.js';
 export * from './events.js';
 export * from './export-formats.js';
+export * from './flip-move-label.js';
 export * from './game-specs.js';
 export * from './games-search.js';
 export * from './hidden-piece-record.js';

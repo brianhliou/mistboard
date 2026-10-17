@@ -381,6 +381,26 @@ function buildTenantMoveEntries(
   return entries;
 }
 
+// moveLabels from the board after each move, for a variant whose move means more than
+// its squares (a flip names what it turned up). Walks the timeline with the same skips
+// and ply numbering as buildTenantMoveEntries, so label i is entry i; viewAfter(ply) is
+// the replay's own view at that ply, so a label never says more than the board shows.
+export function tenantMoveLabelsFromViews<M, View>(
+  timeline: readonly { move?: M; ply?: number }[],
+  viewAfter: (ply: number) => View | null,
+  label: (move: M, viewAfter: View | null) => string,
+): string[] {
+  const labels: string[] = [];
+  for (const event of timeline) {
+    const move = event.move as { from?: unknown; to?: unknown } | undefined;
+    if (!move) continue;
+    if (typeof move.from !== 'string' && typeof move.to !== 'string') continue;
+    const ply = typeof event.ply === 'number' ? event.ply : labels.length + 1;
+    labels.push(label(event.move as M, viewAfter(ply)));
+  }
+  return labels;
+}
+
 // The played moves as board squares, numbered exactly as buildTenantMoveEntries numbers
 // them, so a ply here is the same ply on the score sheet.
 export function tenantPlayedMoves(

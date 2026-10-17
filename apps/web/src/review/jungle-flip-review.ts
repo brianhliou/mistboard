@@ -11,6 +11,7 @@ import {
   type JungleFlipMove,
   type JungleFlipPlayerView,
   type JungleFlipSeat,
+  jungleFlipMoveLabel,
   jungleFlipStateToEngineFen,
 } from '@mistboard/game';
 import { rectangularGridAspect } from '../board-metrics.js';
@@ -45,17 +46,11 @@ export type JungleFlipReviewConfig = TreeReviewConfig<JungleFlipMove, JungleFlip
 /** Handle returned by mountJungleFlipReview: snapshot the current tree to persist it. */
 export type JungleFlipReviewHandle = TreeReviewHandle;
 
-// Engine UCI uses 0-indexed ranks (a0..d3) with a flip as from===to; render it in board
-// coords for the MultiPV panel — a bare coord ("b3") for a flip, "b3-c3" for a move.
+// Engine UCI uses 0-indexed ranks (a0..d3) with a flip as from===to; the MultiPV panel shows
+// the move-list label (flip-move-label.ts). A flip in a line has not happened: "b3(?)".
 function formatJungleFlipEngineMove(uci: string): string {
-  if (uci.length < 4) return uci;
-  const toDisplay = (sq: string): string => {
-    const rank = Number(sq[1]);
-    return Number.isNaN(rank) ? sq : `${sq[0]}${rank + 1}`;
-  };
-  const from = toDisplay(uci.slice(0, 2));
-  const to = toDisplay(uci.slice(2, 4));
-  return from === to ? from : `${from}-${to}`;
+  const move = engineUciToJungleFlipMove(uci);
+  return move ? jungleFlipMoveLabel(move, null) : uci;
 }
 
 // No board-overlay layer, so the engine presentation omits that capability and the
