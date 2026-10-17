@@ -165,6 +165,8 @@ export function banqiTablebaseExplorer(): NonNullable<BanqiReviewConfig['explore
   return {
     el: panel.el,
     label: t('analysis.tablebase.title'),
+    // The 4x8 board is short, so the move list beside it has no room to share.
+    placement: 'below-rail',
     setTruth: (truth) => void panel.setState(truth),
     setActive: (active) => panel.setActive(active),
     onPlayMove: (handler) => panel.onPlayMove(handler),

@@ -510,6 +510,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
     el: HTMLElement;
     /** The menu row's label when the pane is not an opening book. */
     label?: string;
+    /** Where the pane sits: over the foot of the move list (the default), or
+     *  below the rail box, for a board too short to leave the move list any
+     *  room to share (banqi's 4x8). */
+    placement?: 'rail' | 'below-rail';
     setTruth(truth: Truth): void;
     /** Called with whether the explorer panel is open. */
     setActive(active: boolean): void;
@@ -1730,6 +1734,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     materialUpdate = presentation.material({ top: materialTop, bottom: materialBottom });
   }
 
+  const explorerBelowRail = config.explorer?.placement === 'below-rail';
   const scaffold = createReviewScaffold(root, {
     signal: mountAbort.signal,
     embedded: config.embedded,
@@ -1768,7 +1773,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     underboardOverflows: true,
     enginePanel: enginePanel?.el,
     moves: moveTree.el,
-    railPanel: config.explorer?.el,
+    railPanel: explorerBelowRail ? undefined : config.explorer?.el,
+    railBelow: explorerBelowRail ? config.explorer?.el : undefined,
     navigation: controls.el,
     analysisSummary: analysisSummaryEl,
     gauge: evalBar?.el,

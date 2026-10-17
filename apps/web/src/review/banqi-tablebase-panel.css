@@ -141,3 +141,10 @@
   line-height: 1.4;
   color: var(--site-muted);
 }
+
+/* Below the rail (banqi-review.ts placement), the pane is its own box rather
+   than the foot of the move list. */
+.bq-tablebase:not(.review-rail-overlay) {
+  border: 1px solid var(--site-border);
+  border-radius: 6px;
+}
