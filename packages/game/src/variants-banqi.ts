@@ -268,6 +268,14 @@ export function banqiCanCapture(attacker: BanqiPieceRole, target: BanqiPieceRole
 
 export const DEFAULT_NO_PROGRESS_PLY_LIMIT = 40;
 export const DEFAULT_REPETITION_DRAW_COUNT = 3;
+// Study and analysis boards play on past the no-progress clock (lichess's
+// analysis board does the same with the 50-move rule): the clock is a rule of
+// the game over the board, and a study that follows a long win needs the moves
+// after it. Repetition and the chase rule still apply. Live games, replays of
+// real games and their postgame review never use this.
+export const BANQI_STUDY_MOVE_OPTIONS: Readonly<BanqiApplyMoveOptions> = {
+  noProgressClockLimit: Number.POSITIVE_INFINITY,
+};
 // The 長捉 rule every new game is played under.
 export const BANQI_CHASE_RULE: BanqiChaseRule = 'repetition';
 

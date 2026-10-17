@@ -18,6 +18,7 @@
 import {
   ALL_BANQI_SQUARES,
   applyBanqiMove,
+  BANQI_STUDY_MOVE_OPTIONS,
   type BanqiDeal,
   type BanqiGameState,
   type BanqiMove,
@@ -80,7 +81,10 @@ export function makeBanqiTreeAdapter(
     isLegal: (truth, move) => truth.status.type === 'playing' && isBanqiLegalMove(truth, move),
     // applyBanqiMove returns `state` unchanged on an illegal move; the tree only
     // calls this after isLegal, so the successor is always the real move result.
-    applyMove: (truth, move) => applyBanqiMove(truth, move),
+    // A tree rooted at a parsed position (study, analysis board) plays on past
+    // the 40-move clock; a finished game's review keeps the rule it was played
+    // under.
+    applyMove: (truth, move) => applyBanqiMove(truth, move, start ? {} : BANQI_STUDY_MOVE_OPTIONS),
     project: (truth): ProjectedView<BanqiPlayerView>[] => [
       {
         key: 'truth',

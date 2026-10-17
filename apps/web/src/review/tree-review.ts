@@ -508,6 +508,8 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  stays variant-neutral: the caller owns the variant types and the lookup. */
   explorer?: {
     el: HTMLElement;
+    /** The menu row's label when the pane is not an opening book. */
+    label?: string;
     setTruth(truth: Truth): void;
     /** Called with whether the explorer panel is open. */
     setActive(active: boolean): void;
@@ -1383,7 +1385,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     signal: mountAbort.signal,
     // The book tool appears only when a corpus is behind it (see review-controls).
     ...(config.explorer
-      ? { onToggleExplorer: (open: boolean) => config.explorer?.setActive(open) }
+      ? {
+          onToggleExplorer: (open: boolean) => config.explorer?.setActive(open),
+          ...(config.explorer.label ? { explorerLabel: config.explorer.label } : {}),
+        }
       : {}),
     onFirst: () => go(ROOT_PATH),
     onPrevious: () => go(tree.stepBack(currentPath)),
