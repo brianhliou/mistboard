@@ -89,9 +89,9 @@ describe('board outer-outline policy', () => {
     // The jieqi and banqi rules pages no longer carry replay blocks (their
     // sample games are study embeds), so the Reveal replay is exercised on the
     // Vietnamese rules article's block and the Banqi replay on the one the
-    // MistyBanqi post holds.
+    // skill-vs-luck post holds (the MistyBanqi post's games are study embeds now).
     const reveal = findArticle('luat-co-up');
-    const flip = findArticle('mistybanqi');
+    const flip = findArticle('skill-vs-luck');
     const revealBlock =
       reveal && articleBlocks(reveal).find((block) => block.kind === 'jieqi-replay');
     const flipBlock = flip && articleBlocks(flip).find((block) => block.kind === 'banqi-replay');

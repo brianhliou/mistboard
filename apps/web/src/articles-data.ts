@@ -51,6 +51,7 @@ import { fortressXiangqiArticle } from './articles/content/fortress-xiangqi.js';
 import { jieqiArticle } from './articles/content/jieqi.js';
 import { jungleArticle } from './articles/content/jungle.js';
 import { jungleFlipArticle } from './articles/content/jungle-flip.js';
+import { douShouQiEngineArticle } from './articles/content/dou-shou-qi-engine.js';
 import { mahjongArticle } from './articles/content/mahjong.js';
 import { xiangqiMahjong32Article } from './articles/content/xiangqi-mahjong-32.js';
 import { puzzleMiningArticle } from './articles/content/puzzle-mining.js';
@@ -136,6 +137,7 @@ export const articles: Article[] = [
   banqiArticle,
   banqiStatisticsArticle,
   banqiEngineArticle,
+  douShouQiEngineArticle,
   banqiLuckArticle,
   banqiPerpetualChaseArticle,
   flipJungleSkillCeilingArticle,
