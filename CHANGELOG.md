@@ -76,6 +76,8 @@ Conventions:
 
 ### Learning and puzzles
 
+- How MistyBanqi Plays and How It Was Built: the banqi engine article now carries the full build story (the self-play trap, the swapped cannon and chariot values, the AlphaZero test) and steps through three of its games against people as playable boards ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
+- A Dou Shou Qi (Jungle Chess) Engine: the MistyJungle build write-up moves here from brianhliou.com, with its six benchmark games as playable boards ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
 - The jieqi rules page and articles now point to AB-JChess, the strongest jieqi bot on the site ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
 - New article, [Lichess Analysis: What a Million Nodes a Move Buys](/blog/lichess-analysis-accuracy): 300 games re-run at twenty times Lichess's analysis budget, and what the deeper search changes ([a254d56e](https://github.com/brianhliou/mistboard/commit/a254d56e))
 - Step-through boards in articles now slide the piece that moved (banqi chase, Benedict and Anti Xiangqi); fog of war boards stay still ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
@@ -110,6 +112,10 @@ Conventions:
 
 ### Watching and review
 
+- jieqi and chess studies and reviews glide pieces between moves ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
+- study game lists colour each result by the winning side ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
+- the study description reads in full under the board ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
+- the study heart and Staff picks star say what each does ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
 - Mistboard TV shows Jieqi captured pieces beside each player, with pieces taken face-down shown as backs ([a254d56e](https://github.com/brianhliou/mistboard/commit/a254d56e))
 - Mistboard TV shows captured pieces, hands and the face-down pool beside the board, as the game page does ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
 - hover or tap a ?!, ? or ?? mark to see what the move cost and the better move ([12461d24](https://github.com/brianhliou/mistboard/commit/12461d24))
@@ -173,6 +179,7 @@ Conventions:
 
 ### Site
 
+- the notification bell is redrawn ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
 - The xiangqi analysis board and position editor have their own Chinese pages ([f23e9dfc](https://github.com/brianhliou/mistboard/commit/f23e9dfc))
 - the blog filters by topic (/blog?topic=deep-dives), and the homepage's deep dives row links there once it has more posts than it shows ([3a0dd19d](https://github.com/brianhliou/mistboard/commit/3a0dd19d))
 - New look for the International pieces: one dark ring on both sides, larger pieces, rounded squares on the Square grid, and a clearer last-move mark on the grid ([a4820b25](https://github.com/brianhliou/mistboard/commit/a4820b25))
@@ -228,6 +235,11 @@ Conventions:
 
 ### Fixed
 
+- review pages no longer cut off the chat panel's corners and shadow, and linked player names keep their colour in game rooms ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
+- review pages write the time control the way the game room does (10+5) ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
+- Jieqi game data files and the jieqi platform article no longer show pieces that were never turned over or were captured face-down ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
+- a link to a section of a rules page or article now opens at that section, below the top bar ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
+- the Duck Xiangqi rules page credits Duck Chess as its source instead of calling it a Mistboard original ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
 - a finished Jieqi game no longer shows anyone a piece captured face-down or never revealed, on the game page, in downloads or on share cards ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
 - Jieqi game analysis is computed only from what both players saw ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
 - the puzzles page no longer jumps while the first puzzle loads ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
