@@ -223,6 +223,14 @@ a.landing-chat-token:focus-visible {
   padding: 7px 10px;
 }
 
+/* Touch floor (#576): 16px keeps iOS Safari from zooming the page on focus. */
+@media (pointer: coarse) {
+  .landing-chat-input {
+    min-height: 40px;
+    font-size: 16px;
+  }
+}
+
 .landing-chat-input::placeholder {
   color: var(--landing-chat-input-placeholder);
   opacity: 1;

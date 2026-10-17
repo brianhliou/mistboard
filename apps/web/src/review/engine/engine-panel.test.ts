@@ -3,7 +3,7 @@ import { createEnginePanel } from './engine-panel.js';
 import { createEvalBar } from './eval-bar.js';
 
 // happy-dom is not cross-origin isolated, so cevalSupported() is false here:
-// the panel mounts disabled and never touches the WASM engine. That still pins
+// the panel mounts hidden and disabled and never touches the WASM engine. That still pins
 // the arrow-feed contract on the clear path — onLines(null) fires whenever the
 // output clears, starting with the initial clearOutput() at construction.
 
@@ -16,7 +16,17 @@ describe('createEnginePanel onLines', () => {
     panel.dispose();
   });
 
-  it('does not tell an unsupported browser to reload', () => {
+  it('hides the whole engine row where the engine cannot run', () => {
+    // #576: a disabled switch with an explanation is a control the reader can
+    // never use, so an unsupported browser gets no engine row at all.
+    const panel = createEnginePanel({ variant: 'xiangqi' });
+    expect(panel.supported).toBe(false);
+    expect(panel.el.hidden).toBe(true);
+    expect(panel.el.dataset.engineSupported).toBe('false');
+    panel.dispose();
+  });
+
+  it('does not tell an unsupported browser to reload, even on the hidden row', () => {
     // happy-dom is not cross-origin isolated, so this exercises the unsupported
     // branch. The old copy ("needs a cross-origin-isolated reload") was a dead
     // end: a browser that cannot isolate does not start isolating on reload.

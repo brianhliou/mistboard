@@ -48,7 +48,7 @@ import {
   type UserPuzzleRating,
 } from './puzzles/api.js';
 import { feedbackPanel } from './puzzles/detail-panels.js';
-import { moveListPanel } from './puzzles/move-list.js';
+import { keepActivePuzzleMoveInView, moveListPanel } from './puzzles/move-list.js';
 import { renderQueuePanel } from './puzzles/queue-panel.js';
 import {
   allPuzzleBoardAdapters,
@@ -453,15 +453,20 @@ function renderPuzzleDetail(
     // Engine bar fuses onto the top of the move list (analyse-table shape);
     // the jump-out link sits below the scrub controls, centered. The column
     // grows past its fixed two-row shape, so let it scroll instead of clipping.
+    // A browser that cannot run the engine hides its row (engine-panel.ts), so
+    // the trainer keeps its two-row shape rather than an empty engine track.
     side.classList.add('puzzle-side-panel--analysis');
-    trainer.classList.add('puzzle-trainer-panel--analysis');
-    trainer.prepend(session.analysis.engineEl);
+    if (!session.analysis.engineEl.hidden) {
+      trainer.classList.add('puzzle-trainer-panel--analysis');
+      trainer.prepend(session.analysis.engineEl);
+    }
     side.append(session.analysis.openLinkEl);
     session.analysis.refresh(session, displayState, board);
   }
 
   boardPanel.append(board, side);
   host.append(boardPanel);
+  keepActivePuzzleMoveInView(side);
 
   // Right after a solve, hand focus to the next-puzzle button (one-shot) so
   // Enter or Space advances; on small screens this also scrolls the CTA into

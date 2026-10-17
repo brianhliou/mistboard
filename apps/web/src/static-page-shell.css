@@ -89,6 +89,15 @@
   font-weight: 400;
 }
 
+/* Touch floor (#576). */
+@media (pointer: coarse) {
+  .static-page-rail-link {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+  }
+}
+
 /* Generic prose for the newer static pages that do not carry a bespoke section
    stylesheet. about/source/faq/terms/privacy keep their own rules in
    pages-static.css. */

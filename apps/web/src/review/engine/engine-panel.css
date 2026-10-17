@@ -12,6 +12,12 @@
   border-radius: var(--site-radius, 10px);
   background: var(--site-panel, var(--site-surface));
 }
+
+/* A browser that cannot run the engine gets no engine row at all (#576);
+   `display: flex` above would otherwise override [hidden]. */
+.engine-panel[hidden] {
+  display: none;
+}
 /* Head + settings wrapper: the dropdown's positioning context. */
 .engine-panel__top {
   position: relative;
@@ -46,6 +52,18 @@
 .engine-panel__switch:disabled {
   opacity: 0.5;
   cursor: default;
+}
+/* Touch floor (#576): the pill stays 42x24; a transparent 8px border makes the
+   target 58x40 and the negative margin keeps the row where it was. The knob is
+   positioned against the padding box, so it does not move. */
+@media (pointer: coarse) {
+  .engine-panel__switch {
+    box-sizing: content-box;
+    margin: -8px;
+    border: 8px solid transparent;
+    border-radius: 20px;
+    background-clip: padding-box;
+  }
 }
 .engine-panel__switch-knob {
   position: absolute;
