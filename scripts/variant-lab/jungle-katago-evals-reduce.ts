@@ -27,7 +27,6 @@ import type {
 } from '../../apps/web/src/articles/katago-jungle-analysis.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const HOME = process.env.HOME ?? '';
 const argv = process.argv.slice(2);
 const all = (k: string): string[] => argv.flatMap((a, i) => (a === k ? [argv[i + 1]!] : []));
 const one = (k: string, d: string): string => all(k)[0] ?? d;
@@ -35,7 +34,7 @@ const one = (k: string, d: string): string => all(k)[0] ?? d;
 const GAMES_FILE = resolve(
   one(
     '--games-file',
-    `${HOME}/projects/brianhliou.com/assets/jungle-games/katago-vs-misty-2026-09-21.jsonl`,
+    resolve(HERE, '../../apps/web/public/jungle-games/katago-vs-misty-2026-09-21.jsonl'),
   ),
 );
 const OUT = resolve(

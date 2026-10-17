@@ -208,8 +208,8 @@ function compile(file: string): void {
   console.log(`${data.games.length} chapters -> ${DATA}`);
 }
 
-// The June 2026 benchmark games (brianhliou.com, "Dou Shou Qi: Classical Search
-// Beat the Learned Eval"): the site's own replay files, one JSON per game with
+// The June 2026 benchmark games ("Dou Shou Qi: Classical Search Beat the Learned
+// Eval", first on brianhliou.com, now /blog/dou-shou-qi-engine): the blog's replay files, one JSON per game with
 // `start`, `moves: [{uci}]`, the seats and a result line. Played under the
 // lengthwise-only tiger, and still legal under the sideways one (the change only
 // added moves), which the kernel replay below proves for each.
