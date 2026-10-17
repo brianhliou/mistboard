@@ -484,6 +484,36 @@ test('an engine seat fronted by a first-party bot is named after the bot, as the
   openRooms.delete('fko_bot');
 });
 
+// A chess-stack room seats the engine under its build id. The tile showed that
+// id ("python-v2-v1.6") where the room shows "Misty", because only the tenant
+// path went through the bot table.
+function chessRoomContext(pveBotId?: string): HttpApiContext {
+  const room = {
+    id: 'fog_chess_pve',
+    gameSpecId: 'dark-chess',
+    rated: false,
+    timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+    events: [{ type: 'move-played', at: NOW - 2_000 }],
+    projection: {
+      state: { status: { type: 'playing' }, moveNumber: 35 },
+      seats: { white: 'python-v2-v1.6', black: 'client-guest' },
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+    },
+    seatTokens: {},
+    ...(pveBotId ? { pveBotId } : {}),
+  };
+  return { rooms: new Map([[room.id, room]]) } as unknown as HttpApiContext;
+}
+
+test('a chess-stack engine seat is named after the bot that fronts it, not its build id', () => {
+  for (const pveBotId of [undefined, 'misty']) {
+    const [game] = collectCurrentGames(chessRoomContext(pveBotId), NOW);
+    const engine = game?.players.find((player) => player.isEngine);
+    assert.equal(engine?.name, 'Misty', `pveBotId=${pveBotId}`);
+    assert.equal(engine?.botId, 'misty', `pveBotId=${pveBotId}`);
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Classification and ordering.
 // ---------------------------------------------------------------------------
