@@ -534,6 +534,10 @@ export const EN_PLAY = {
   'live.xmj.nameWinsByAbandonment': '{name} wins by abandonment',
   'live.xmj.youWin': 'You win',
   'live.xmj.nameWins': '{name} wins',
+  // One hand's winner, on the result over the table. Its own pair because
+  // mahjong names a hand win differently from a match win (zh 胡牌, not 获胜).
+  'live.xmj.youWinHand': 'You win',
+  'live.xmj.nameWinsHand': '{name} wins',
   'live.xmj.drawnOnPoints': 'Match drawn on points',
   'live.xmj.discardTile': 'Discard {tile}',
   'live.xmj.tileName': '{ink} {piece}',

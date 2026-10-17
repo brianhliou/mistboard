@@ -510,6 +510,8 @@ export const ZH_HANS_PLAY = {
   'live.xmj.nameWinsByAbandonment': '{name}因对方弃局获胜',
   'live.xmj.youWin': '你获胜',
   'live.xmj.nameWins': '{name}获胜',
+  'live.xmj.youWinHand': '你胡牌',
+  'live.xmj.nameWinsHand': '{name}胡牌',
   'live.xmj.drawnOnPoints': '比赛积分打平',
   'live.xmj.discardTile': '打出{tile}',
   'live.xmj.tileName': '{ink}{piece}',

@@ -217,7 +217,7 @@ export function reviewMetaPlayers(
   }));
 }
 
-/** "5:00+0" / "Untimed" from the envelope's millisecond time control. Reads the
+/** "5+0" / "Untimed" from the envelope's millisecond time control. Reads the
  *  flat `initialMs`/`incrementMs` first, falling back to a nested `timeControl`
  *  object (the shape a few variant envelopes use). A clockless imported game
  *  that ran at a fixed time per move reads "4 s a move" (origin.movetimeMs). */
@@ -291,9 +291,12 @@ export function labelize(value: string): string {
     .join(' ');
 }
 
+// Whole minutes read as the room and the time-control picker write them ("10+5",
+// not "10:00+5"); only an odd start time keeps its seconds ("0:30+0").
 function clockLabel(ms: number): string {
   const totalSeconds = Math.max(0, Math.round(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
+  if (seconds === 0) return String(minutes);
   return `${minutes}:${String(seconds).padStart(2, '0')}`;
 }

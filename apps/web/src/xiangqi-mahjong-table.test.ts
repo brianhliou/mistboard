@@ -500,6 +500,35 @@ describe('xiangqi mahjong table', () => {
     expect(checked).toBeGreaterThan(0);
   });
 
+  it('calls a hand win 胡牌 in zh, never the match word 获胜/獲勝', async () => {
+    let current = state;
+    let won: ReturnType<typeof xmjViewFor> | null = null;
+    for (let steps = 0; current.status.type === 'playing' && steps < 5000; steps += 1) {
+      const view = xmjViewFor(current, 'east');
+      if (view.between && view.phase.type === 'won') {
+        won = view;
+        break;
+      }
+      current = botStep(current);
+    }
+    expect(won).not.toBeNull();
+    if (won?.phase.type !== 'won') return;
+    const expected = won.phase.winner === 'east' ? '你胡牌' : 'Bot胡牌';
+    for (const [path, locale] of [
+      ['/zh-hans/play', 'zh-Hans'],
+      ['/zh-hant/play', 'zh-Hant'],
+    ] as const) {
+      await ensureLocaleCatalog(locale);
+      window.history.pushState(null, '', path);
+      try {
+        const host = doc(xiangqiMahjongTableHtml(won, opts(true)));
+        expect(host.querySelector('.xmj-result__title')?.textContent).toBe(expected);
+      } finally {
+        window.history.pushState(null, '', '/');
+      }
+    }
+  });
+
   it('leads the result with the winner and the points, never tai, and lays it over the middle band', () => {
     let current = state;
     let results = 0;

@@ -18,6 +18,7 @@ import {
   xmjPostgameClockAt,
   xmjPostgameLastPly,
   xmjPostgameNames,
+  xmjPostgameStatusLine,
   xmjPostgameViewAt,
 } from './xiangqi-mahjong-postgame.js';
 
@@ -249,3 +250,43 @@ async function flushPromises(): Promise<void> {
   await Promise.resolve();
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
+
+describe('xiangqi mahjong review result line', () => {
+  const names = { east: 'brianhliou', west: 'Misty' };
+
+  it('names the winner the way the room does, never a bare "Won"', () => {
+    expect(xmjPostgameStatusLine({ result: 'east-wins', termination: 'points' }, names)).toBe(
+      'brianhliou wins on points',
+    );
+    expect(xmjPostgameStatusLine({ result: 'west-wins', termination: 'resignation' }, names)).toBe(
+      'Misty wins by resignation',
+    );
+    expect(xmjPostgameStatusLine({ result: 'west-wins', termination: 'timeout' }, names)).toBe(
+      'Misty wins on time',
+    );
+    // A level match is stored as draw/draw; the room calls it a tie on points.
+    expect(xmjPostgameStatusLine({ result: 'draw', termination: 'draw' }, names)).toBe(
+      'Match drawn on points',
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    document.body.replaceChildren();
+  });
+
+  it('puts the winner line on the meta card', async () => {
+    vi.stubEnv('VITE_XIANGQI_MAHJONG_ENABLED', 'true');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(FIXTURE)),
+    );
+    window.history.replaceState(null, '', '/xiangqi-mahjong/game/xmj_review');
+    const root = document.createElement('div');
+    document.body.append(root);
+    mountXiangqiMahjongPostgame(root, 'xmj_review');
+    await flushPromises();
+    expect(root.querySelector('.game-meta-card__status')?.textContent).toBe('alice wins on points');
+  });
+});

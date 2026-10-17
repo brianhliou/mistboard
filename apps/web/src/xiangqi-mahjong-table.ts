@@ -709,8 +709,8 @@ function resultHeadHtml(
   }
   const you = view.perspective === phase.winner;
   const who = you
-    ? t('live.xmj.youWin')
-    : t('live.xmj.nameWins', { name: escapeHtml(names[phase.winner]) });
+    ? t('live.xmj.youWinHand')
+    : t('live.xmj.nameWinsHand', { name: escapeHtml(names[phase.winner]) });
   const how = t(phase.selfDrawn ? 'live.xmj.handSelfDraw' : 'live.xmj.handDiscard', {
     hand: view.handNumber,
     hands: Math.max(view.handsInMatch, view.handNumber),

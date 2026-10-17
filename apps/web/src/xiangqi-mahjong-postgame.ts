@@ -8,7 +8,7 @@ import {
 import { shouldShowFinalClockTenths } from './account-preferences.js';
 import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 import { applyClockEmphasis, setClockFace } from './clock-emphasis.js';
-import { gameOutcome, variantDisplayLabel } from './game-display.js';
+import { variantDisplayLabel } from './game-display.js';
 import { createGameTable, moveListScroller } from './game-table.js';
 import { t } from './i18n/catalog.js';
 import './landing.css';
@@ -17,7 +17,7 @@ import { xiangqiMahjongEnabled } from './feature-flags.js';
 import { createMoveNavBar } from './move-nav-bar.js';
 import { handlePostgameReplayKeyboard } from './postgame-keyboard.js';
 import { type ProfileIdentity, playerNameEl, profileTargetFor } from './profile-link.js';
-import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
+import { buildReviewMeta } from './review/game-review-meta.js';
 import { createReviewShell } from './review/review-shell.js';
 import { buildNav } from './site-shell.js';
 import { formatClock } from './web-utils.js';
@@ -29,6 +29,7 @@ import {
   xmjFeltFromSearch,
   xmjHandsTableHtml,
   xmjLogHtml,
+  xmjResultLine,
   xmjTileLookFromSearch,
 } from './xiangqi-mahjong-table.js';
 
@@ -183,12 +184,25 @@ export function xmjPostgameNames(
   return { east: name('east'), west: name('west') };
 }
 
+/**
+ * The meta card's result line, worded as the room words it (xmjResultLine):
+ * the winner by name ("brianhliou wins on points"), never a bare "Won". The
+ * review has no viewer seat, so nobody reads as "You".
+ */
+export function xmjPostgameStatusLine(
+  game: Pick<XmjPostgameResponse['game'], 'result' | 'termination'>,
+  names: Readonly<Record<XmjSeat, string>>,
+): string {
+  const winner: XmjSeat | null =
+    game.result === 'east-wins' ? 'east' : game.result === 'west-wins' ? 'west' : null;
+  // The record stores a level match as 'draw'; the room's reason for it is 'tie'.
+  const reason = game.termination === 'draw' ? 'tie' : game.termination;
+  return xmjResultLine(winner, reason, null, (seat) => names[seat]);
+}
+
 function renderPostgame(root: HTMLElement, postgame: XmjPostgameResponse): void {
   const names = xmjPostgameNames(postgame.game.players);
-  const status = reviewOutcomeLine(
-    gameOutcome(postgame.game.result, XIANGQI_MAHJONG_SPEC_ID),
-    postgame.game.termination,
-  );
+  const status = xmjPostgameStatusLine(postgame.game, names);
   const { metaCard, details } = buildReviewMeta({
     gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
     variantName: variantDisplayLabel(XIANGQI_MAHJONG_SPEC_ID),
