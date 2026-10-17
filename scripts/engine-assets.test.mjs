@@ -87,7 +87,7 @@ test('railpack fetches the published engines, verifies them, and compiles none o
   );
 });
 
-test('the recipe builds and verifies the same eight binaries the image expects', () => {
+test('the recipe builds and verifies the same nine binaries the image expects', () => {
   const binaries = recipe.match(/^BINARIES="([^"]+)"$/m)[1].split(/\s+/);
   assert.deepEqual(binaries, [
     'fairy-stockfish-xiangqi',
@@ -98,6 +98,7 @@ test('the recipe builds and verifies the same eight binaries the image expects',
     'pikafish',
     'ab-jchess',
     'katago-jungle',
+    'jqe',
   ]);
   // Every binary is built with the ISA the container was measured for; AB-JChess
   // alone targets avx2 (its NNUE is its strength; ab-jchess.ref).
@@ -106,6 +107,32 @@ test('the recipe builds and verifies the same eight binaries the image expects',
   // KataGo-AnimalChess: the Eigen CPU backend with AVX2, linked static (katago-jungle.ref).
   assert.match(recipe, /^KATA_CMAKE_FLAGS=".*-DUSE_BACKEND=EIGEN .*-DUSE_AVX2=1 .*-static"$/m);
   assert.match(recipe, /echo "kata-cmake=\$KATA_CMAKE_FLAGS"/, 'the cmake flags are in the hash');
+});
+
+// jqe's net is MIT like its code (jqe.ref), so unlike AB-JChess's and KataGo's it
+// ships in our engines release: pinned by sha, packaged beside the binary, and
+// loaded by the verify gate, which also refuses a build that fell back to the
+// classical eval because the net did not load.
+test('the jqe net is pinned by hash, packaged with the binary, and loaded by verify', () => {
+  assert.match(recipe, /^JQE_NET=it014\.jqn$/m);
+  assert.match(
+    recipe,
+    /^JQE_NET_SHA256=f90bd44e8ee244405eb08eb4f784e3f156900f0691f651b5124d50032f8ba160$/m,
+  );
+  assert.match(recipe, /^JQE_CMAKE_FLAGS=".*-DJQE_NATIVE=OFF .*-march=haswell .*-static"$/m);
+  assert.match(recipe, /echo "jqe-cmake=\$JQE_CMAKE_FLAGS"/, 'the cmake flags are in the hash');
+  assert.match(recipe, /echo "jqe-net=\$JQE_NET_SHA256"/, 'the net sha is in the hash');
+  assert.match(recipe, /-czf "\$out\/\$ASSET" \$BINARIES pikafish\.nnue "\$JQE_NET"/);
+  assert.match(recipe, /jqe_search_ok "\$bin\/jqe" "\$bin\/\$JQE_NET"/);
+  assert.match(
+    recipe,
+    /EvalFile loaded/,
+    'verify wants the net loaded, not the classical fallback',
+  );
+  assert.match(
+    readFileSync(resolve(repoRoot, 'jqe.ref'), 'utf8').split('\n')[0],
+    /^331a6e612a038c4a04cf980f7b9482910fd50078$/,
+  );
 });
 
 // The KataGo-AnimalChess net has no release of its own; it ships inside Kouza's

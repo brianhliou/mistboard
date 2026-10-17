@@ -1,0 +1,20 @@
+331a6e612a038c4a04cf980f7b9482910fd50078
+# ^ The jqe commit the prod image runs (scripts/engine-assets.sh reads the first
+# line; this comment is ignored).
+#
+# jqe (https://github.com/devinokeefe/jieqi, MIT for the code and the nets, by
+# Devin O'Keefe) is a UCI jieqi engine with its own NNUE. It reads our redacted
+# FEN as is, `-` included for an empty pool. Measured against the AB-JChess pin at
+# our live 4 s/move, 4 threads, Hash 256 over 100 games: 71-4-25, +173 Elo
+# (mistboard-engine lab/jieqi-jqe-2026-10-16/modal_jqe_match.py).
+#
+# Unlike AB-JChess and KataGo, the net (engine/nets/it014.jqn at this commit,
+# sha256 pinned in engine-assets.sh JQE_NET_SHA256) is MIT, so it ships in our
+# engines release beside the binary. Moving this pin means re-checking which net
+# the commit carries and its sha.
+#
+# x86-64 only, built -march=haswell (engine-assets.sh JQE_CMAKE_FLAGS, the target
+# the match ran; prod web's EPYC has avx2 and bmi2) and linked static, so the
+# image's glibc does not matter. Bench at this commit: 45315 nodes.
+#
+# Served behind MISTBOARD_JQE_ENABLED (off): the slot waits on the author's OK.

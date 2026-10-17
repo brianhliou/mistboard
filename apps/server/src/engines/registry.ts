@@ -37,6 +37,7 @@ import {
   JIEQI_RANDOM_ENGINE_VERSION,
   JIEQI_SKILL_MULTIPV,
   type JieqiEngineTier,
+  JQE_JIEQI_ENGINE_VERSION,
 } from '../jieqi-engine.js';
 import { JUNGLE_RUST_ENGINE_VERSION, JUNGLE_RUST_TIER_LIST } from '../jungle-engine.js';
 import { KATAGO_JUNGLE_ENGINE_VERSION, KATAGO_JUNGLE_TIER_LIST } from '../jungle-katago-engine.js';
@@ -961,6 +962,9 @@ function jieqiConfigHash(tier: JieqiEngineTier): string {
   if (tier.engine === 'ab-jchess') {
     return `ab-jchess-${ABJCHESS_JIEQI_ENGINE_VERSION}-movetime-${tier.movetimeMs}`;
   }
+  if (tier.engine === 'jqe') {
+    return `jqe-${JQE_JIEQI_ENGINE_VERSION}-movetime-${tier.movetimeMs}`;
+  }
   if (tier.id === 'pikafish-jieqi-strongest') {
     return `pikafish-jieqi-${JIEQI_ENGINE_VERSION}-movetime-4000`;
   }
@@ -974,8 +978,9 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
       tier.id,
       {
         id: tier.id as EngineId,
-        engineId: tier.engine === 'ab-jchess' ? 'ab-jchess' : 'pikafish-jieqi',
-        engineName: tier.engine === 'ab-jchess' ? 'AB-JChess' : 'PikaJieQi',
+        engineId: tier.engine ?? 'pikafish-jieqi',
+        engineName:
+          tier.engine === 'ab-jchess' ? 'AB-JChess' : tier.engine === 'jqe' ? 'jqe' : 'PikaJieQi',
         name: tier.name,
         kind: 'container',
         gameSpecId: 'jieqi',
@@ -991,9 +996,11 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
           ? 'Retired pre-ladder Jieqi tier (depth cap only); resolvable for history.'
           : tier.engine === 'ab-jchess'
             ? "Jieqi top slot: AB-JChess 0.2b (lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)) on its 20260911 NNUE, 4000ms, Hash 256. The net is fetched from the author's release at build time, never re-hosted."
-            : tier.skill === undefined
-              ? 'Jieqi Level 8: full-strength PikaJieQi (jieqi_old, classical eval), no depth cap, 4000ms, Hash 256.'
-              : `Jieqi ladder rung: Stockfish Skill Level ${tier.skill} over a ${JIEQI_SKILL_MULTIPV}-line MultiPV, depth ${tier.depth}, ${tier.movetimeMs}ms.`,
+            : tier.engine === 'jqe'
+              ? "Jieqi, above AB-JChess: jqe 331a6e61 (devinokeefe/jieqi, MIT, by Devin O'Keefe) on its it014 NNUE, 4000ms, Hash 256. Code and net are MIT and ship in our engines release. Held behind MISTBOARD_JQE_ENABLED."
+              : tier.skill === undefined
+                ? 'Jieqi Level 8: full-strength PikaJieQi (jieqi_old, classical eval), no depth cap, 4000ms, Hash 256.'
+                : `Jieqi ladder rung: Stockfish Skill Level ${tier.skill} over a ${JIEQI_SKILL_MULTIPV}-line MultiPV, depth ${tier.depth}, ${tier.movetimeMs}ms.`,
       } satisfies EngineDefinition,
     ]),
   ),

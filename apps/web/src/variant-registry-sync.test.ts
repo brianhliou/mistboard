@@ -26,7 +26,7 @@ import {
   variantDefaultTimeControl,
 } from '@mistboard/game';
 import { crosstableReviewUrl } from '../../server/src/crosstable.js';
-import { JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
+import { JIEQI_JQE_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
 import {
   JUNGLE_PLAYABLE_ENGINE_ID,
   JUNGLE_PLAYABLE_ENGINE_IDS,
@@ -41,7 +41,7 @@ import {
 import type { FeaturedGame } from './game-display.js';
 import { reviewUrlForGame } from './game-meta.js';
 import { landingBotOffer } from './landing-bot-policy.js';
-import { webVariantTenants } from './variant-tenant/registry.js';
+import { jieqiEngineOptions, webVariantTenants } from './variant-tenant/registry.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
@@ -171,12 +171,20 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     const tenant = webTenants.find((candidate) => candidate.gameSpecId === 'jieqi');
     expect(tenant?.landing?.engineOptions, 'jieqi tenant must expose engineOptions').toBeTruthy();
     const options = tenant?.landing?.engineOptions ?? [];
-    expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
-      [...JIEQI_PLAYABLE_ENGINES].reverse().map((tier) => ({
-        id: tier.id,
-        name: tier.name,
-      })),
-    );
+    const serverLadder = [...JIEQI_PLAYABLE_ENGINES].reverse().map((tier) => ({
+      id: tier.id,
+      name: tier.name,
+    }));
+    const pick = (list: readonly { id: string; name: string }[]) =>
+      list.map((option) => ({ id: option.id, name: option.name }));
+    // This build has VITE_JQE_ENABLED unset: the picker is the ladder without jqe,
+    // exactly as before jqe existed, and AB-JChess still tops it.
+    expect(pick(options)).toEqual(serverLadder.filter((tier) => tier.id !== JIEQI_JQE_ENGINE_ID));
+    expect(options[0]?.id).toBe('ab-jchess-jieqi');
+    // With the flag on, jqe is the strongest entry and the rest is unchanged.
+    expect(pick(jieqiEngineOptions(true))).toEqual(serverLadder);
+    expect(jieqiEngineOptions(true)[0]).toMatchObject({ id: JIEQI_JQE_ENGINE_ID, name: 'jqe' });
+    expect(pick(jieqiEngineOptions(false))).toEqual(pick(options));
     expect(tenant?.landing?.defaultEngineId).toBe('pikafish-jieqi-level-2');
   });
 

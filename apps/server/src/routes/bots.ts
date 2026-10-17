@@ -2,7 +2,12 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { maybeGameSpecForId } from '@mistboard/game';
 import { isBotSpecPlayable, parsePublicBotId } from '../bot-profile-policy.js';
 import { firstPartyBotForId } from '../first-party-bots.js';
-import { abJchessAvailable, JIEQI_ABJCHESS_ENGINE_ID } from '../jieqi-engine.js';
+import {
+  abJchessAvailable,
+  JIEQI_ABJCHESS_ENGINE_ID,
+  JIEQI_JQE_ENGINE_ID,
+  jqeAvailable,
+} from '../jieqi-engine.js';
 import { KATAGO_JUNGLE_ENGINE_ID, katagoJungleAvailable } from '../jungle-katago-engine.js';
 import * as persistence from '../persistence.js';
 import type { BotProfile, BotProfilePage } from '../persistence-bots.js';
@@ -43,13 +48,16 @@ export function botPlayOptions(bot: BotPlayFields): BotPlayOption[] {
     if (!engineId) continue;
     // An engine the box cannot run is unplayable, not missing: AB-JChess and KataGo
     // need their binary and net (jieqi-engine.ts, jungle-katago-engine.ts), which a
-    // dev box usually lacks.
+    // dev box usually lacks. jqe also needs MISTBOARD_JQE_ENABLED, held off until its
+    // author's OK, so off it drops out of /api/bots and its profile 404s.
     const serveable =
       engineId === JIEQI_ABJCHESS_ENGINE_ID
         ? abJchessAvailable()
-        : engineId === KATAGO_JUNGLE_ENGINE_ID
-          ? katagoJungleAvailable()
-          : true;
+        : engineId === JIEQI_JQE_ENGINE_ID
+          ? jqeAvailable()
+          : engineId === KATAGO_JUNGLE_ENGINE_ID
+            ? katagoJungleAvailable()
+            : true;
     options.push({ gameSpecId, engineId, playable: isBotSpecPlayable(gameSpecId) && serveable });
   }
   return options;

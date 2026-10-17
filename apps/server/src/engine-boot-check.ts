@@ -24,7 +24,14 @@ import {
   jungleFlipEnabled,
   xiangqiEnabled,
 } from './feature-flags.js';
-import { abJchessNetPath, abJchessPath, pikaJieqiPath } from './jieqi-engine.js';
+import {
+  abJchessNetPath,
+  abJchessPath,
+  jqeEnabled,
+  jqeNetPath,
+  jqePath,
+  pikaJieqiPath,
+} from './jieqi-engine.js';
 import { jungleEnginePath } from './jungle-engine.js';
 import { jungleFlipEnginePath } from './jungle-flip-engine.js';
 import { katagoJungleEnginePath, katagoJungleNetPath } from './jungle-katago-engine.js';
@@ -97,6 +104,17 @@ const ENGINE_PROBES: readonly EngineProbe[] = [
     resolvePath: () => {
       abJchessNetPath();
       return abJchessPath();
+    },
+  },
+  {
+    // jqe above AB-JChess, binary and net from our engines release. Checked only
+    // while MISTBOARD_JQE_ENABLED is on, so a held bot never pages anyone.
+    variant: 'jieqi',
+    binary: 'jqe',
+    enabled: () => jieqiEnabled() && jqeEnabled(),
+    resolvePath: () => {
+      jqeNetPath();
+      return jqePath();
     },
   },
   { variant: 'banqi', binary: 'banqi-engine', enabled: banqiEnabled, resolvePath: banqiEnginePath },

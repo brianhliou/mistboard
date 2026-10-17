@@ -86,8 +86,12 @@ const BOT_GAMES_PAGE = 15;
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 // The jieqi ladder's level bots (2026-09-29); its top rung is Pikafish.
 const JIEQI_LADDER_BOT_ID_PREFIX = 'pikafish-level-';
-// The top jieqi slot above Pikafish (level 8); server first-party-bots.ts.
-const JIEQI_TOP_BOT_ID = 'ab-jchess';
+// The named jieqi slots above Pikafish (level 8), weakest first; server
+// first-party-bots.ts. jqe (2026-10-16) is listed only while the server serves it
+// (/api/bots drops it while MISTBOARD_JQE_ENABLED is off). An unknown slot sorts
+// first, so it never takes Strongest by accident.
+const JIEQI_TOP_BOT_ORDER = ['pikafish', 'ab-jchess', 'jqe'];
+const jieqiTopRank = (id: string): number => JIEQI_TOP_BOT_ORDER.indexOf(id);
 // The top jungle slot above Misty (2026-10, #434); server first-party-bots.ts.
 const JUNGLE_TOP_BOT_ID = 'katago';
 // The xiangqi bot that plays its worst move (2026-10-17): off the ladder, so it
@@ -278,13 +282,11 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
       bot.id !== XIANGQI_WORST_BOT_ID,
   );
   const topRungs = others.filter((bot) => playsGame(bot, 'xiangqi'));
-  // Pikafish (level 8) then the AB-JChess top slot, which alone reads Strongest.
+  // Pikafish (level 8), then the named slots above it; the last alone reads Strongest.
   const jieqiTopRungs = others
     .filter((bot) => playsGame(bot, 'jieqi'))
-    .sort((a, b) => Number(a.id === JIEQI_TOP_BOT_ID) - Number(b.id === JIEQI_TOP_BOT_ID));
-  const jieqiStrongestId = jieqiTopRungs.some((bot) => bot.id === JIEQI_TOP_BOT_ID)
-    ? JIEQI_TOP_BOT_ID
-    : jieqiTopRungs.at(-1)?.id;
+    .sort((a, b) => jieqiTopRank(a.id) - jieqiTopRank(b.id));
+  const jieqiStrongestId = jieqiTopRungs.at(-1)?.id;
   const otherGames = others.filter((bot) => !playsGame(bot, 'xiangqi') && !playsGame(bot, 'jieqi'));
   const community = bots.filter((bot) => bot.ownerType === 'user');
   const xiangqiCard = { ratingGameSpecId: 'xiangqi', primaryPlayGameSpecId: 'xiangqi' };
@@ -337,7 +339,7 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
             }),
             ...jieqiTopRungs.map((bot) =>
               // Pikafish is Level 8 here, named like the rungs below it; the
-              // AB-JChess slot above it keeps its own name, bio and badge.
+              // named slots above it (AB-JChess, jqe) keep their own name, bio and badge.
               bot.id !== 'pikafish'
                 ? buildBotSummaryCard(bot, {
                     ...jieqiCard,
@@ -376,7 +378,8 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
 // bio (undefined leaves the card's default in place).
 function systemBotBio(bot: BotProfile): string | undefined {
   if (bot.id === 'pikafish') return t('bots.pikafishBio');
-  if (bot.id === JIEQI_TOP_BOT_ID) return t('bots.abJchessBio');
+  if (bot.id === 'ab-jchess') return t('bots.abJchessBio');
+  if (bot.id === 'jqe') return t('bots.jqeBio');
   if (bot.id === JUNGLE_TOP_BOT_ID) return t('bots.katagoBio');
   if (bot.id === 'misty') return t('bots.mistyBio');
   return undefined;
