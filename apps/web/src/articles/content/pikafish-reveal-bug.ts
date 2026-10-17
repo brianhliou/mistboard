@@ -11,7 +11,8 @@ import type { Article, ArticleBlock } from '../types.js';
 //   +8.6; pool-weighted value -3.0 (chariot 0.4 wins; soldier 0.4 and elephant 0.2
 //   mated); fixed build plays e1f2 (e2-f3), AB-JChess's move.
 // - 71 decisive moves (fresh, 2M nodes, 1 thread): over-rated by 5+ pawns 16 -> 3;
-//   30 controls 0 -> 0. Self-play vs e75cee3a, 1M nodes/move: colour fix alone
+//   30 controls (moves from games Pikafish won) 0 -> 0. Self-play vs e75cee3a,
+//   1M nodes/move: colour fix alone
 //   95-95-10 (200); everywhere re-search -150 Elo (128 games); shipped root-only
 //   264-300-36 (600), -21 Elo [-48, +6]; at 4M nodes/move 95-97-8 (200), -3 [-51, +44]
 //   (the post quotes both).
@@ -58,9 +59,9 @@ const FIX = `${FORK}/commit/bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9`;
 
 const OLD_PSEUDOCODE = `# Before (simplified)
 for piece in pieces_it_could_be:
-    # cut short, this returns the window's edge
+    # bug two: cut short, this returns the window's edge
     s = -search(position_with(piece), window)
-    # set from a field nobody fills in
+    # bug one: set from a field nobody fills in
     if mover_is_black:
         s = -s
     scores.add(s, weight = count[piece])
@@ -72,7 +73,7 @@ if v - min(scores) > MAX_SPREAD:
 const NEW_PSEUDOCODE = `# After
 for piece in pieces_it_could_be:
     s = -search(position_with(piece), window)
-    # only a bound: search again for the score
+    # bug two fixed: only a bound, search again
     if at_root and s <= window.low:
         s = -search(position_with(piece), no_lower_limit)
     scores.add(s, weight = count[piece])
@@ -121,7 +122,18 @@ export const pikafishRevealBugArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: 'In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, would turn over a piece that gets mated for most of what it could be and rate the move as winning. We caught it while writing the [AB-JChess post](/blog/ab-jchess). Two bugs caused it, and the fix is live for every level and for the engine you can run on the analysis board.',
+      text: "In [jieqi](/rules/jieqi), turning over a face-down piece is a bet. You know which pieces it could be, and not which one it is. Our Pikafish bot, the engine behind Levels 1 to 8, would turn over a piece that gets mated for most of what it could be and rate the move as winning. We caught it while writing the [AB-JChess post](/blog/ab-jchess). Its reveal scoring had two separate bugs: for Black's reveals the scores were upside down, and for both colours a score the search had cut short was averaged as if it were exact. Both are fixed for every level and for the engine you can run on the analysis board.",
+    },
+    {
+      kind: 'table',
+      headers: ['Bug', 'Whose reveals', 'What went wrong', 'Shown by'],
+      rows: [
+        ['One: colour flip', 'Black’s', 'Scores upside down, so the worst-case rule took the best piece', 'Game 108, d10'],
+        ['Two: cut-short scores', 'Both', 'Bounds averaged as exact scores', 'The b3 reveal'],
+      ],
+      keyColumn: true,
+      compact: true,
+      wrap: true,
     },
   ],
   sections: [
@@ -135,12 +147,12 @@ export const pikafishRevealBugArticle: Article = {
         gameEmbed('jq_ab-jchess-vs-pikajieqi-4s-2026-09-108', 23, 'Jieqi: Pikafish, as Black, is about to reveal on d10'),
         {
           kind: 'paragraph',
-          text: "Only an advisor on e9 stops the chariot's mate on f10, and an advisor was 1 of the 11 pieces it could have been. It was a chariot, and Black was mated next move. We took the examples out of that post the same day and went looking for the cause.",
+          text: "Only an advisor on e9 stops the chariot's mate on f10, and an advisor was 1 of the 11 pieces it could have been. It was a chariot, and Black was mated next move. We took the examples out of that post the same day. This move led us to bug one, and looking further turned up bug two.",
         },
       ],
     },
     {
-      heading: 'For Black, the average took the best piece',
+      heading: 'Bug one: for Black, the average took the best piece',
       blocks: [
         {
           kind: 'paragraph',
@@ -157,7 +169,7 @@ export const pikafishRevealBugArticle: Article = {
       ],
     },
     {
-      heading: "Printing every piece's score found the second bug",
+      heading: 'Bug two: cut-short scores were averaged as exact',
       blocks: [
         {
           kind: 'paragraph',
@@ -185,7 +197,11 @@ export const pikafishRevealBugArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "The same flaw hid a mate in the first game of the AB-JChess post. The bot, as Red, turned over the piece on b3 and moved it to d3. If that piece is a soldier or an elephant, Black's cannon mates at once on h1.",
+          text: 'Bug two is independent of bug one: it hits both colours, and AB-JChess has it without bug one.',
+        },
+        {
+          kind: 'paragraph',
+          text: "Bug two alone hid a mate in the first game of the AB-JChess post. The bot, as Red, turned over the piece on b3 and moved it to d3. If that piece is a soldier or an elephant, Black's cannon mates at once on h1.",
         },
         gameEmbed('jq_23d2a761-b37d-4bf0-a786-3ce7edf7e0fd', 26, 'Jieqi: the bot is about to reveal on b3'),
         {
@@ -221,7 +237,7 @@ export const pikafishRevealBugArticle: Article = {
         { kind: 'code', language: 'python', text: NEW_PSEUDOCODE },
         {
           kind: 'paragraph',
-          text: `The colour flip is gone, and a piece whose score came back as a bound is searched again. The whole change is [one commit, 28 lines](${FIX}).`,
+          text: `Deleting the colour flip fixes bug one. Searching again any piece whose score came back as a bound fixes bug two. Both are in [one commit, 28 lines](${FIX}).`,
         },
       ],
     },
@@ -242,7 +258,7 @@ export const pikafishRevealBugArticle: Article = {
           keyColumn: true,
           compact: true,
           caption:
-            'How many moves each bot rated at least five pawns better than they were, searched fresh at 2M nodes on one thread.',
+            'How many moves each bot rated at least five pawns better than they were, searched fresh at 2M nodes on one thread. Controls are 30 moves from games Pikafish won.',
         },
         {
           kind: 'table',
@@ -261,16 +277,16 @@ export const pikafishRevealBugArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The fixed bot rates reveals close to their worth, and its strength is unchanged within the noise, perhaps slightly weaker: both intervals include zero. The fix covers only the move the bot is choosing. Deeper in its search the old averaging is still there, because re-searching everywhere cost about 150 Elo.',
+          text: 'The fixed bot rates reveals close to their worth, and its strength is unchanged within the noise, perhaps slightly weaker: both intervals include zero. The fix for bug two covers only the move the bot is choosing. Deeper in its search the old averaging is still there, because re-searching everywhere cost about 150 Elo.',
         },
       ],
     },
     {
-      heading: 'AB-JChess has the second flaw, and it rarely matters',
+      heading: 'AB-JChess has bug two, and it rarely matters',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'AB-JChess is built from Pikafish and averages reveals the same way. It has the cut-short flaw and not the colour one. Of the 60 reveals that decided its losses to our bot, it overrated 2.',
+          text: 'AB-JChess is built from Pikafish and averages reveals the same way, so it has bug two. Of the 60 reveals that decided its losses to our bot, it overrated 2.',
         },
       ],
     },
@@ -282,19 +298,15 @@ export const pikafishRevealBugArticle: Article = {
       // errors of the per-game score (wins, draws and losses as given): the post
       // printed ±0.068 and ±0.067 for the 200-game rows; ±0.087 and ±0.126 for
       // the 100- and 50-game rows were derived the same way on 2026-10-16.
-      heading: 'A September audit ran on the buggy engine and missed it',
+      heading: "Why a September test of this averaging doesn't stand",
       blocks: [
         {
           kind: 'paragraph',
-          text: 'In September we tested an outside source review of the same engine, from [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). Two of its five findings were worth a match. Each test played the changed engine against the shipped one, colours alternating, with a referee dealing the hidden pieces so neither engine saw one.',
+          text: "In September we tested replacing this averaging with a separate search for each piece, and kept the averaging. That test ran with bug one in place, so for Black the worst-case fallback it credited was taking the best case, and its verdict doesn't stand.",
         },
         {
           kind: 'paragraph',
-          text: 'The first finding was a real evaluation bug: one colour’s face-down pieces were never counted, so Red got credit for threatening them and Black never did. We fixed it, then retuned the 43 terms it touches over 10,000 SPSA game pairs.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'The second was the averaging this page is about. In July it had chosen a reveal with a true 64% chance of winning over a safe move at 97%. The replacement priced each reveal by searching every possible piece separately:',
+          text: 'The idea came from an outside review of the engine’s source, [iwestlin/jieqi-ai](https://github.com/iwestlin/jieqi-ai). In July the averaging had chosen a reveal with a true 64% chance of winning over a safe move at 97%. Each test played the changed engine against the shipped one, colours alternating, with a referee dealing the hidden pieces so neither engine saw one.',
         },
         {
           kind: 'code',
@@ -307,24 +319,24 @@ export const pikafishRevealBugArticle: Article = {
           kind: 'table',
           headers: ['Change', 'Games', 'W-L-D', 'Score', '95% margin', 'Time'],
           rows: [
-            ['Fix the bug', '200', '91-101-8', '0.475', '±0.07', '1.0×'],
-            ['Fix and retune', '200', '96-93-11', '0.507', '±0.07', '1.0×'],
             ['Separate searches', '100', '30-56-14', '0.370', '±0.09', '2.2×'],
             ['Separate searches, longer', '50', '17-26-7', '0.410', '±0.13', '7.0×'],
+            ['Evaluation bug fixed', '200', '91-101-8', '0.475', '±0.07', '1.0×'],
+            ['Evaluation bug fixed and retuned', '200', '96-93-11', '0.507', '±0.07', '1.0×'],
           ],
           keyColumn: true,
           compact: true,
-          highlightRows: [2],
+          highlightRows: [0],
           caption:
             'Score is the changed engine’s against the shipped one, a draw counting half, so 0.500 is no change. Time is a multiple of the shipped engine’s.',
         },
         {
           kind: 'paragraph',
-          text: 'Neither evaluation change left its margin: at 200 games ±0.07 is roughly ±50 Elo, so a change worth 10 Elo cannot be seen. The separate searches lost clearly at 2.2 times the time, and at 7 times they still scored below even. We concluded then that the worst-case fallback does useful work.',
+          text: 'The separate searches lost clearly at 2.2 times the time, and at 7 times they still scored below even. Since then [AB-JChess](/blog/ab-jchess) has beaten this engine 248-136-16 over 400 games and is now the top jieqi bot.',
         },
         {
           kind: 'paragraph',
-          text: 'That conclusion came from the colour bug above. The fallback was meant to assume the worst, and as Black it assumed the best, so the test ran on an engine that was not doing it half the time. Since then [AB-JChess](/blog/ab-jchess) has beaten this engine 248-136-16 over 400 games and is now the top jieqi bot.',
+          text: 'The last two rows are a separate bug, unrelated to the averaging: the same review found that one colour’s face-down pieces were never counted in the evaluation. We fixed it then and retuned the 43 terms it touches over 10,000 SPSA game pairs. Neither change left its margin: at 200 games ±0.07 is roughly ±50 Elo.',
         },
         {
           kind: 'cta',

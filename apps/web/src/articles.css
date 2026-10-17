@@ -1452,8 +1452,11 @@
 
 /* The audit's match table is read down its columns (score against score,
    margin against margin), so every figure column sits right on tabular
-   digits and the decimal points line up. */
-[data-article-slug="pikafish-reveal-bug"] .article-table :is(th, td):not(:first-child) {
+   digits and the decimal points line up. The bug table up top is prose that
+   wraps (wrap: true), so it keeps the default left alignment. */
+[data-article-slug="pikafish-reveal-bug"]
+  .article-table:not(.article-table-wrap)
+  :is(th, td):not(:first-child) {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
