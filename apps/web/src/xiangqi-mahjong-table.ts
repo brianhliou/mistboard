@@ -836,7 +836,14 @@ function logRowText(row: XmjLogRow, options: XmjLogOptions): string {
       }
       return you ? t('live.xmj.log.youDiscard') : t('live.xmj.log.nameDiscards', { name });
     case 'claim':
-      return you ? t('live.xmj.log.youClaim') : t('live.xmj.log.nameClaims', { name });
+      if (row.claim === 'chow') {
+        return you
+          ? t('live.xmj.log.youClaimSequence')
+          : t('live.xmj.log.nameClaimsSequence', { name });
+      }
+      return you
+        ? t('live.xmj.log.youClaimTriplet')
+        : t('live.xmj.log.nameClaimsTriplet', { name });
     case 'win':
       return you ? t('live.xmj.log.youWinOn') : t('live.xmj.log.nameWinsOn', { name });
     case 'self-draw':
@@ -850,10 +857,12 @@ function logRowText(row: XmjLogRow, options: XmjLogOptions): string {
  * The words on the left, the tile in a fixed column on the right, every row
  * alike (the win included), so the tiles read down the hand as one column.
  */
-function logRowHtml(row: XmjLogRow, options: XmjLogOptions): string {
+function logRowHtml(row: XmjLogRow, options: XmjLogOptions, winningTile: XmjTile | null): string {
   const words = `<span class="xmj-log__text">${logRowText(row, options)}</span>`;
-  const tile =
-    row.kind === 'self-draw' || row.kind === 'exhausted' ? '' : tileSpan(row.tile, 'xmj-tile--xs');
+  // A self-drawn win's tile is public once the hand is over; the hand's result
+  // carries it, since the move itself never named the drawn tile.
+  const shown = row.kind === 'self-draw' ? winningTile : row.kind === 'exhausted' ? null : row.tile;
+  const tile = shown ? tileSpan(shown, 'xmj-tile--xs') : '';
   return `${words}<span class="xmj-log__tile">${tile}</span>`;
 }
 
@@ -886,7 +895,7 @@ function logRowsHtml(hand: XmjLogHand, options: XmjLogOptions, activeRow: number
       const theirs = options.viewer !== null && 'seat' in row && row.seat !== options.viewer;
       const cls = `xmj-log__row${active ? ' active' : ''}${ends ? ' xmj-log__row--end' : ''}${theirs ? ' xmj-log__row--theirs' : ''}`;
       const number = numbers[index];
-      const text = `<span class="xmj-log__num">${number === null || number === undefined ? '' : `${number}.`}</span>${logRowHtml(row, options)}`;
+      const text = `<span class="xmj-log__num">${number === null || number === undefined ? '' : `${number}.`}</span>${logRowHtml(row, options, options.results[hand.hand - 1]?.winningTile ?? null)}`;
       // A row is a jump only when this client holds that position.
       return options.hasPly(row.ply)
         ? `<li><button type="button" class="${cls} move-jump" data-xmj-ply="${row.ply}">${text}</button></li>`
