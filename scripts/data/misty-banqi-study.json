@@ -1,12 +1,12 @@
 {
   "name": "MistyBanqi against people",
   "description": "Three games MistyBanqi, the site’s banqi bot, played against people on Mistboard, from the article How MistyBanqi Plays: a win that clears the board, a won position it draws by repetition, and a general one soldier hunts into the corner. Each chapter opens into its own deal; the notes say what the replay shows.",
-  "studyId": null,
+  "studyId": "4P6Di0tP",
   "games": [
     {
       "key": "win",
       "name": "Misty clears the board",
-      "chapterId": null,
+      "chapterId": "BRgLtDVe",
       "embedPly": 95,
       "red": "MistyBanqi",
       "black": "A player on Mistboard",
@@ -56,7 +56,7 @@
     {
       "key": "conversion",
       "name": "Up ten pieces to two, drawn by repetition",
-      "chapterId": null,
+      "chapterId": "G1ULot1C",
       "embedPly": 56,
       "red": "MistyBanqi",
       "black": "A player on Mistboard",
@@ -106,7 +106,7 @@
     {
       "key": "hunt",
       "name": "One soldier hunts the general into the corner",
-      "chapterId": null,
+      "chapterId": "ZFrZS00U",
       "embedPly": 44,
       "red": "MistyBanqi",
       "black": "A player on Mistboard",

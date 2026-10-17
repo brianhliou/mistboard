@@ -18,7 +18,7 @@ import type { Article, ArticleBlock } from '../types.js';
 // which holds the deals, moves and notes); misty-banqi-study.test.ts replays
 // them and checks the embeds below against the data file. The general hunt is
 // the same game (bq_e684b31b) the blog post stepped through.
-const STUDY_ID = 'STUDY_ID_PENDING';
+const STUDY_ID = '4P6Di0tP';
 
 function game(chapter: string, ply: number, title: string, caption?: string): ArticleBlock {
   return {
@@ -90,7 +90,7 @@ export const banqiEngineArticle: Article = {
           text:
             "MistyBanqi will beat most people, and it does it the way a classical engine does: by calculating captures several moves deep. Step through a game where it clears the board. Banqi swings with the flips, so it even fell behind on material early here, then worked its way back until the opponent had no piece left to move. Tiles flip to their dealt piece the first time they're turned over.",
         },
-        game('WIN_CHAPTER_PENDING', 95, 'MistyBanqi wins · the opponent is left with no piece to move'),
+        game('BRgLtDVe', 95, 'MistyBanqi wins · the opponent is left with no piece to move'),
         {
           kind: 'paragraph',
           text:
@@ -202,7 +202,7 @@ export const banqiEngineArticle: Article = {
             "Here is the same engine in a position it has completely won. It is up ten pieces to two, with nothing left to capture, and the only task is to walk the win home. It draws instead.",
         },
         game(
-          'CONVERSION_CHAPTER_PENDING',
+          'G1ULot1C',
           56,
           'Draw by repetition · MistyBanqi up 10 pieces to 2',
           'Played before October 2026, when every threefold repetition was a draw. The chase rule the site plays under now forbids the 64th move, so this board stops at move 63.',
@@ -237,7 +237,7 @@ export const banqiEngineArticle: Article = {
           'Watch a single enemy soldier hunt Misty’s general down the a-file. MistyBanqi has the black pieces. Its general is on b1, and the red soldier that will hunt it is on b4.',
         ),
         game(
-          'HUNT_CHAPTER_PENDING',
+          'ZFrZS00U',
           44,
           'One soldier hunts the general into the corner',
           'MistyBanqi (black) against a player on Mistboard, 18 June 2026, moves 44 to 58.',
