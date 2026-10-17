@@ -581,3 +581,26 @@ test('the web card-URL mirror carries the same version and wide-only slugs', asy
     'the prerender uses it',
   );
 });
+
+// ── Xiangqi Mahjong rules card ────────────────────────────────────────────────
+
+test('the Xiangqi Mahjong card shows a hand the rules kernel calls a win', async () => {
+  const { xmjWinShape } = await import('@mistboard/game');
+  const { XMJ_OG_HAND } = await import('./og-image.js');
+  assert.equal(XMJ_OG_HAND.length, 2, 'one set and a pair');
+  assert.deepEqual(
+    XMJ_OG_HAND.map((group) => group.length),
+    [3, 2],
+  );
+  assert.ok(xmjWinShape(XMJ_OG_HAND.flat(), []), 'the card hand is a win');
+});
+
+test('the Xiangqi Mahjong rules card renders wide only, at the card size', async () => {
+  const { pngSize } = await import('./og-raster.js');
+  const res = await getRoute('/og/article/xiangqi-mahjong-32.png?v=7');
+  assert.equal(res.status, 200);
+  assert.equal(res.headers['content-type'], 'image/png');
+  assert.deepEqual(pngSize(res.body), { width: 2400, height: 1260 });
+  const aspect = await getRoute('/og/article/xiangqi-mahjong-32.png?v=7&aspect=1x1');
+  assert.equal(aspect.status, 404);
+});

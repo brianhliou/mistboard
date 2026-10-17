@@ -22,4 +22,5 @@ export const WATCH_CHANNEL_MINI_IDS: Readonly<Record<string, VariantMiniId>> = {
   banqi: 'banqi',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
+  'xiangqi-mahjong': 'xiangqi-mahjong',
 };

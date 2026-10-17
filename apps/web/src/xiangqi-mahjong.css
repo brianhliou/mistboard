@@ -1361,8 +1361,25 @@ ol.xmj-log {
   color: var(--site-muted);
 }
 
+/* A fixed table takes its column widths from the first row, so the name
+   column's width sits on the header's empty corner cell: wide enough for a
+   whole handle beside six hands, ellipsized only on a phone. */
+.xmj-hands .xmj-hands__corner {
+  width: 28%;
+}
+
+@media (max-width: 480px) {
+  .xmj-hands .xmj-hands__corner {
+    width: 22%;
+  }
+
+  .xmj-hands th,
+  .xmj-hands td {
+    padding-inline: 2px;
+  }
+}
+
 .xmj-hands tbody th {
-  width: 22%;
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;

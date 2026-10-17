@@ -32,6 +32,7 @@ import {
   type TenantLiveClientContext,
   type TenantLiveEvent,
   type TenantMovePlayed,
+  type TenantRecording,
 } from './variant-tenant/live-client.js';
 import { adoptLiveHistory } from './variant-tenant/live-history.js';
 import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
@@ -151,8 +152,10 @@ const xmjWebTenant: WebVariantTenant<XmjSeat> = {
   oppositeColor: (seat) => (seat === 'east' ? 'west' : 'east'),
   seatMayAct: (view, seat) => xmjViewOffersAction(view as XmjPlayerView, seat),
   enabled: xiangqiMahjongEnabled,
-  // No review page exists, so no link: the postgame panel drops an empty href.
-  reviewUrl: () => '',
+  // The review page (xiangqi-mahjong-postgame.ts, this room played back): the
+  // whole match, move by move, every tile face up. Linked only once the match is finished; its API
+  // refuses a live match.
+  reviewUrl: (roomId) => `/xiangqi-mahjong/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: xmjReasonPhrase,
   seatPlayerName: xmjPlayerName,
   finishedLine: xmjFinishedLine,
@@ -610,4 +613,15 @@ function sendPass(ctx: TenantLiveClientContext<XmjSeat, XmjPlayerView>): void {
 
 export function bootstrapXiangqiMahjongLiveRoom(): void {
   client.bootstrap();
+}
+
+/**
+ * The review page (xiangqi-mahjong-postgame.ts): this room, played back from a
+ * finished match's recording instead of a socket. Every view in it is the
+ * server's review view (hands face up, finished matches only).
+ */
+export function bootstrapXiangqiMahjongRecording(
+  recording: TenantRecording<XmjSeat, XmjPlayerView>,
+): void {
+  client.bootstrap(recording);
 }

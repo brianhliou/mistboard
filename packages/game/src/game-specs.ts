@@ -220,7 +220,12 @@ export const CHESS_SPEC_ID = 'chess' satisfies GameSpecId;
 // support it"). Xiangqi and Fog Chess keep the first two places (the original
 // pair, and the pickers' default); the rest follow CANONICAL_VARIANT_ORDER.
 // Mahjong (four seats, account-allowlisted) and study-only chess stay out.
-export const CORRESPONDENCE_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
+//
+// This is the list of specs that CAN be played by correspondence. Which of them
+// are public (CORRESPONDENCE_ELIGIBLE_SPEC_IDS) and which only admit allowlisted
+// accounts (CORRESPONDENCE_ALLOWLISTED_SPEC_IDS) is decided by each spec's
+// publicSurface, the launch switch: both lists are derived below GAME_SPECS.
+const CORRESPONDENCE_PLAYABLE_SPEC_IDS: readonly GameSpecId[] = [
   XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JIEQI_SPEC_ID,
@@ -230,19 +235,20 @@ export const CORRESPONDENCE_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   DARK_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  // Two-seated (east, west), so it rides the generic two-seat seek factory.
+  XIANGQI_MAHJONG_SPEC_ID,
 ];
 
 // Specs that may ALSO be played by correspondence, but only by accounts the
 // per-account variant allowlist admits (variant_access_grants, migration 139), and
-// only casual. Kept apart from CORRESPONDENCE_ELIGIBLE_SPEC_IDS on purpose: that list
-// is public (the /correspondence copy names it, anonymous pickers offer it) and feeds
-// isCorrespondenceRatedSpec, and an allowlisted playtest variant must be neither. The
-// server admits a seek, challenge or accept on one of these only when every account
-// involved holds the grant (routes/correspondence-seeks.ts); the web pickers offer it
-// only to a signed-in account that looks granted. Xiangqi mahjong is two-seated
-// (east, west), so it rides the generic two-seat seek factory.
-export const CORRESPONDENCE_ALLOWLISTED_SPEC_IDS: readonly GameSpecId[] = [XIANGQI_MAHJONG_SPEC_ID];
-
+// only casual: the correspondence-playable specs still on the playtest allowlist.
+// Kept apart from CORRESPONDENCE_ELIGIBLE_SPEC_IDS on purpose: that list is public
+// (the /correspondence copy names it, anonymous pickers offer it) and feeds
+// isCorrespondenceRatedSpec, and an allowlisted playtest variant must be neither.
+// The server admits a seek, challenge or accept on one of these only when every
+// account involved holds the grant (routes/correspondence-seeks.ts); the web
+// pickers offer it only to a signed-in account that looks granted. Derived below
+// GAME_SPECS (deriveLaunchLists).
 export function isCorrespondenceAllowlistedSpec(id: string | null | undefined): boolean {
   return !!id && CORRESPONDENCE_ALLOWLISTED_SPEC_IDS.includes(id as GameSpecId);
 }
@@ -298,8 +304,9 @@ export function isStudyEligibleSpecId(value: string): value is GameSpecId {
 // Internal, retired, and deep-link-only specs remain valid GAME_SPECS but sort
 // after the live shelf. The xiangqi family leads in popularity/product order,
 // Fog Xiangqi bridges directly into Fog Chess, and the two Jungle games close
-// the shelf together.
-export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = [
+// the shelf together. This is the shelf in order; CANONICAL_VARIANT_ORDER
+// (derived below GAME_SPECS) is the part of it whose spec is public.
+const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
   // The Chinese-chess pillar first, in play order (2026-09-17 read: jieqi is
   // 59% of counted human games, xiangqi and banqi next), then the originals
   // (re-cut 2026-10-02 by Brian on 28 days of games started: duck 63, fog
@@ -318,6 +325,9 @@ export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = [
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  // Xiangqi Mahjong takes the last place on the shelf the day it launches;
+  // until then the launch switch (its publicSurface) keeps it out.
+  XIANGQI_MAHJONG_SPEC_ID,
   // Study-only chess is deliberately absent: it is on no shelf, and an unlisted
   // spec sorts last, which is where the study picker should offer it.
 ];
@@ -507,6 +517,13 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // room finishes when the match does. Migration 168 added the pool to the
     // user_ratings CHECK. The pool stays off the leaderboard and profiles while
     // the spec is allowlisted (persistence-variant-access.ts).
+    //
+    // LAUNCH SWITCH: publicSurface below. 'hidden' keeps it a playtest
+    // (allowlisted accounts only); 'casual' launches it, and every list that
+    // names a public variant follows (deriveLaunchLists below, the server's
+    // allowlist, rating pools, indexing and /stats, the web shelf, rules page,
+    // leaderboard and profile). launch-switch.test.ts checks they agree. The
+    // env gates (MISTBOARD_ / VITE_XIANGQI_MAHJONG_ENABLED) stay separate.
     id: XIANGQI_MAHJONG_SPEC_ID,
     publicName: 'Xiangqi Mahjong',
     family: 'mahjong',
@@ -703,6 +720,83 @@ export function maybeGameSpecForId(value: string | null | undefined): GameSpec |
 function canonicalGameSpecId(value: string | null | undefined): GameSpecId | null {
   return isGameSpecId(value) ? value : null;
 }
+
+// --- Launch: one switch per spec, every list derived from it ---
+
+/** A spec is public when its publicSurface is anything but 'hidden'. This is
+ *  the launch switch: the server's existing gates (bot pages, bot-vs-bot, the
+ *  bots API) already read publicSurface, and every list below derives from it,
+ *  so launching a variant is one edit to its GAME_SPECS entry. */
+export function isPublicGameSpec(id: string | null | undefined): boolean {
+  const spec = maybeGameSpecForId(id);
+  return spec !== null && spec.publicSurface !== 'hidden';
+}
+
+/** The predicate isPublicGameSpec over a different spec list: tests flip a
+ *  spec's switch in a copy of GAME_SPECS and derive every list from it. */
+export function publicSpecPredicate(
+  specs: readonly Pick<GameSpec, 'id' | 'publicSurface'>[],
+): (id: string) => boolean {
+  const publicIds = new Set<string>(
+    specs.filter((spec) => spec.publicSurface !== 'hidden').map((spec) => spec.id),
+  );
+  return (id) => publicIds.has(id);
+}
+
+/** Live specs whose games are a playtest while hidden: an account holding a
+ *  variant_access_grants row (migration 139) may play them before launch.
+ *  Hidden specs outside this list (study-only chess) admit nobody. */
+export const PLAYTEST_GAME_SPEC_IDS: readonly GameSpecId[] = [
+  MAHJONG_SPEC_ID,
+  XIANGQI_MAHJONG_SPEC_ID,
+];
+
+export type LaunchLists = {
+  /** CANONICAL_VARIANT_ORDER: the shelf's public specs, in shelf order. */
+  readonly canonicalVariantOrder: readonly GameSpecId[];
+  /** CORRESPONDENCE_ELIGIBLE_SPEC_IDS: correspondence for everyone. */
+  readonly correspondenceEligible: readonly GameSpecId[];
+  /** CORRESPONDENCE_ALLOWLISTED_SPEC_IDS: correspondence for granted accounts. */
+  readonly correspondenceAllowlisted: readonly GameSpecId[];
+  /** ALLOWLISTED_GAME_SPEC_IDS: playable only with a per-account grant. */
+  readonly allowlisted: readonly GameSpecId[];
+};
+
+/** Every launch-dependent list, from one predicate. Pure, so a test can derive
+ *  the launched state without editing GAME_SPECS. */
+export function deriveLaunchLists(isPublic: (id: GameSpecId) => boolean): LaunchLists {
+  const allowlisted = PLAYTEST_GAME_SPEC_IDS.filter((id) => !isPublic(id));
+  return {
+    canonicalVariantOrder: VARIANT_SHELF_ORDER.filter(isPublic),
+    correspondenceEligible: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter(isPublic),
+    correspondenceAllowlisted: CORRESPONDENCE_PLAYABLE_SPEC_IDS.filter((id) =>
+      allowlisted.includes(id),
+    ),
+    allowlisted,
+  };
+}
+
+const LAUNCH_LISTS = deriveLaunchLists(isPublicGameSpec);
+
+// Specs that may be played by correspondence (days-per-move), in display order. The
+// SINGLE source of truth shared by the server's fail-closed allowlist
+// (CORRESPONDENCE_ELIGIBLE_SPECS builds its Set from this) and the web variant pickers, so
+// the two can never drift. See CORRESPONDENCE_PLAYABLE_SPEC_IDS for the order and the
+// history. Whether a member may also be RATED by correspondence is
+// isCorrespondenceRatedSpec below.
+export const CORRESPONDENCE_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] =
+  LAUNCH_LISTS.correspondenceEligible;
+
+/** See isCorrespondenceAllowlistedSpec. */
+export const CORRESPONDENCE_ALLOWLISTED_SPEC_IDS: readonly GameSpecId[] =
+  LAUNCH_LISTS.correspondenceAllowlisted;
+
+/** Display order of the public shelf (see VARIANT_SHELF_ORDER). */
+export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = LAUNCH_LISTS.canonicalVariantOrder;
+
+/** Specs only an account with a variant grant may play (the server's
+ *  ALLOWLISTED_GAME_SPEC_IDS, persistence-variant-access.ts). */
+export const ALLOWLISTED_PLAYTEST_SPEC_IDS: readonly GameSpecId[] = LAUNCH_LISTS.allowlisted;
 
 export type LegacyLiveRoomSpecInput = {
   variant?: VariantId | string | null;

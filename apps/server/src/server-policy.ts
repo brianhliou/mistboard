@@ -151,6 +151,15 @@ export const HIDDEN_IDENTITY_LIVE_OBSERVE: Readonly<Record<string, LiveObservePo
   ),
 };
 
+// Concealed-hands specs whose tenant serves a spectator a table view with no
+// concealed tile in it (no hand, no drawn tile, no wall) until the hand ends:
+// Xiangqi Mahjong's xmjViewFor(state, 'spectator'), pinned by the spectator
+// golden-wire tests in xiangqi-mahjong-spectate.test.ts. Hong Kong mahjong has
+// no such view tested yet and stays sealed (fail-closed default).
+export const CONCEALED_HANDS_LIVE_OBSERVE: Readonly<Record<string, LiveObservePolicy>> = {
+  'xiangqi-mahjong': 'open',
+};
+
 export function liveObservePolicy(
   visibility: VisibilityRulesId,
   gameSpecId?: string,
@@ -164,12 +173,12 @@ export function liveObservePolicy(
     case 'dark':
       return 'sealed';
     case 'concealed-hands':
-      // Mahjong. A spectator could legitimately see the discards and the melds,
-      // which are public the moment they are made, so the eventual answer here
-      // is 'masked'. Until a masked view exists and has been tested, serve no
-      // live board at all: a concealed hand leaking to a spectator is the same
-      // class of failure as a fogged piece leaking, and this fails closed.
-      return 'sealed';
+      // A spectator may see the discards, the melds and the counts, which are
+      // public the moment they are made. A spec opens only once its tenant
+      // serves a spectator view built for that (CONCEALED_HANDS_LIVE_OBSERVE);
+      // every other one serves no live board, because a concealed hand leaking
+      // to a spectator is the same class of failure as a fogged piece leaking.
+      return (gameSpecId && CONCEALED_HANDS_LIVE_OBSERVE[gameSpecId]) || 'sealed';
   }
 }
 
@@ -225,6 +234,7 @@ export function roomViewPolicy(
   visibility: VisibilityRulesId,
   finished: boolean,
   seat: 'player' | 'spectator',
+  gameSpecId?: string,
 ): RoomViewPolicy {
   // Every visibility class opens fully at completion, for players and
   // spectators alike (Brian, 2026-09-06). Before this, the room never revealed
@@ -243,12 +253,11 @@ export function roomViewPolicy(
       return seat === 'player' ? 'own-view' : 'nothing';
     case 'concealed-hands':
       // Mahjong (added to the union after the matrix was signed). A live hand
-      // is the same class of secret as a fogged piece: the seat sees its own,
-      // a spectator sees nothing, matching liveObservePolicy's 'sealed'. The
-      // mahjong tenant declares no truthView, so the runtime fails closed
-      // before this row is consulted; the row exists so the switch stays
-      // total and a future truthView inherits the right live answer.
-      return seat === 'player' ? 'own-view' : 'nothing';
+      // is the same class of secret as a fogged piece: the seat sees its own.
+      // A spectator sees the public table (discards, melds, counts) only for a
+      // spec liveObservePolicy opens, and nothing otherwise, so the two agree.
+      if (seat === 'player') return 'own-view';
+      return liveObservePolicy(visibility, gameSpecId) === 'open' ? 'public-view' : 'nothing';
   }
 }
 
@@ -473,6 +482,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized.startsWith('/duck-xiangqi/game/') ||
     normalized.startsWith('/atomic-xiangqi/game/') ||
     normalized.startsWith('/crazyhouse-xiangqi/game/') ||
+    normalized.startsWith('/xiangqi-mahjong/game/') ||
     normalized.startsWith('/game/') ||
     // Study browse index (/study) + persisted study chapters. The study pages
     // serves the review SPA shell + mounts the ceval engine, so it is also a

@@ -6,6 +6,7 @@ import {
   DAYS_PER_MOVE_OPTIONS,
   GAME_SPECS,
   type GameSpecId,
+  isPublicGameSpec,
   isRetiredGameSpec,
   MAHJONG_SPEC_ID,
   RETIRED_GAME_SPEC_IDS,
@@ -23,6 +24,7 @@ import {
 } from './landing-play.js';
 import { panelPersonPaces } from './landing-play-panel.js';
 import { buildReviewMeta } from './review/game-review-meta.js';
+import { embedRendererKindForVariant } from './showcase-dispatch.js';
 import { STUDY_VARIANTS } from './study-catalog.js';
 import { gameSpecIdFromRulesSlug, rulesSlugForGameSpec } from './variant-public-surfaces.js';
 import {
@@ -212,19 +214,20 @@ describe('variant marker conformance', () => {
 // the bell, the database and featured cards all link a finished game. The
 // legacy /game/:id page reads only the chess-shell event log, so a tenant with
 // its own room client linked there is a dead page: Xiangqi Mahjong has no
-// postgame route and fell through to it. A tenant links its postgame route,
-// else its room when it says its finished room is the page (the server suite
-// pins what that shows a visitor), else /game/:id. Hong Kong mahjong still has
-// no finished-game page, and the server marks its rows unavailable.
+// postgame route and fell through to it. A tenant links its room when it says
+// its finished room is the page (the server suite pins what that shows a
+// visitor; Xiangqi Mahjong's room then offers its review page), else its
+// postgame route, else /game/:id. Hong Kong mahjong still has no finished-game
+// page, and the server marks its rows unavailable.
 describe('finished-game link conformance', () => {
   it('every tenant links a finished game to a page that mounts it', () => {
     for (const tenant of webVariantTenants()) {
       const roomId = `${tenant.roomIdPrefix}finished1`;
       const routeBase = tenant.gameRouteBase ?? tenant.reviewRouteBase;
-      const expected = routeBase
-        ? `${routeBase}/${roomId}`
-        : tenant.finishedGameOpensRoom
-          ? `/room/${roomId}`
+      const expected = tenant.finishedGameOpensRoom
+        ? `/room/${roomId}`
+        : routeBase
+          ? `${routeBase}/${roomId}`
           : `/game/${roomId}`;
       expect(finishedGameHref(roomId, tenant.gameSpecId), tenant.gameSpecId).toBe(expected);
       if (tenant.finishedGameOpensRoom) {
@@ -296,9 +299,10 @@ describe('rules link conformance', () => {
 // Launch-playbook rule 3: a surface a variant is left off is left off on
 // purpose and pinned, so it fails closed. Xiangqi Mahjong has no position an
 // analysis board, editor or study can hold (hands are concealed tiles, not a
-// board) and no TV channel (concealed hands, nothing a spectator can follow
-// live). Adding it to any of these is a product decision: change the pin with
-// it. Its homepage bot (Misty) and its web rating-grid row are in, each behind
+// board). Its TV channel exists (spectators see only the public table; server
+// xiangqi-mahjong-spectate.test.ts) but is listed only once the spec is public
+// (server xiangqi-mahjong-listing.test.ts). Adding it to any of these is a
+// product decision: change the pin with it. Its homepage bot (Misty) and its web rating-grid row are in, each behind
 // the same gate as the variant itself; pinned below.
 describe('Xiangqi Mahjong deliberate exclusions', () => {
   const XMJ = 'xiangqi-mahjong';
@@ -309,8 +313,22 @@ describe('Xiangqi Mahjong deliberate exclusions', () => {
     expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(XMJ);
   });
 
-  it('has no watch channel', () => {
-    expect(Object.keys(WATCH_CHANNEL_MINI_IDS)).not.toContain(XMJ);
+  // The review page (2026-10-16) replays a FINISHED match with every tile face
+  // up; it is a replay only, so analysis, editor and study stay out above. The
+  // room stays the finished game's link, and its Review button opens this page;
+  // the server refuses the page's API for a live match (hidden-info test in
+  // apps/server/src/routes/xiangqi-mahjong-games.test.ts).
+  it('has a review page for a finished match, reached from its room', () => {
+    const tenant = webVariantTenants().find((each) => each.gameSpecId === XMJ);
+    expect(tenant?.gameRouteBase).toBe('/xiangqi-mahjong/game');
+    expect(tenant?.mountPostgame).toBeDefined();
+    expect(tenant?.finishedGameOpensRoom).toBe(true);
+    expect(finishedGameHref('xmj_done', XMJ)).toBe('/room/xmj_done');
+  });
+
+  it('has a watch channel marker, and no game embed', () => {
+    expect(WATCH_CHANNEL_MINI_IDS[XMJ]).toBe(XMJ);
+    expect(embedRendererKindForVariant(XMJ)).toBeNull();
   });
 
   // The shelf lists it, but the Lobby rows, Quick Pairing chip and play panel
@@ -320,13 +338,16 @@ describe('Xiangqi Mahjong deliberate exclusions', () => {
     expect(LANDING_BOT_GAME_SPEC_IDS as readonly string[]).toContain(XMJ);
   });
 
-  // The rating-grid row follows the spec's public surface, not the web flag: the
-  // flag is on for the allowlisted playtest, while the server keeps the pool off
-  // every grid until launch. The launch commit flips this pin.
-  it('has a VARIANTS row, kept off the rating grids until launch', () => {
+  // The rating-grid row follows the launch switch (XMJ's publicSurface in
+  // packages/game/src/game-specs.ts), not the web flag: the flag is on for the
+  // allowlisted playtest, while the server keeps the pool off every grid until
+  // launch. The pin follows the switch, so launch needs no edit here
+  // (launch-switch.test.ts checks every other list against the same switch).
+  it('has a VARIANTS row, on the rating grids exactly when the switch is on', () => {
+    const launched = isPublicGameSpec(XMJ);
     const row = VARIANTS.find((variant) => variant.gameSpecId === XMJ);
     expect(row?.miniId).toBe('xiangqi-mahjong');
-    expect(leaderboardVariants.map((variant) => variant.gameSpecId)).not.toContain(XMJ);
-    expect(profileRatingVariants.map((variant) => variant.gameSpecId)).not.toContain(XMJ);
+    expect(leaderboardVariants.map((variant) => variant.gameSpecId).includes(XMJ)).toBe(launched);
+    expect(profileRatingVariants.map((variant) => variant.gameSpecId).includes(XMJ)).toBe(launched);
   });
 });

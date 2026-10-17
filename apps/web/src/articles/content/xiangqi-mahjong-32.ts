@@ -15,11 +15,10 @@ import {
 } from '../../xiangqi-mahjong-32-rules-diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
-// Unlisted while Brian reviews it: HIDDEN_RULES_SLUGS (web) and
-// NON_INDEXED_ARTICLE_SLUGS (server) keep it out of the rail, the /rules
-// index, the sitemap and search; it answers by URL. No gameSpecId on purpose:
-// listing then follows this slug, so the page stays unlisted when the variant
-// itself goes public. zh-Hans and zh-Hant are machine-drafted from the
+// Unlisted until launch: the variant's launch switch (publicSurface in
+// packages/game game-specs.ts) keeps it out of the rail, the /rules index, the
+// sitemap and search (web rulesSlugPublicSurfaceEnabled, server
+// NON_INDEXED_ARTICLE_SLUGS); it answers by URL. Flipping the switch lists it. zh-Hans and zh-Hant are machine-drafted from the
 // English signed off 2026-10-16 (article-i18n.ts); an English edit orphans
 // their keys and fails the coverage test until the dictionary follows.
 //

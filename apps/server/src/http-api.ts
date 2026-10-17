@@ -56,6 +56,7 @@ import * as usersRoute from './routes/users.js';
 import * as xiangqiBroadcastsRoute from './routes/xiangqi-broadcasts.js';
 import * as xiangqiExplorerRoute from './routes/xiangqi-explorer.js';
 import * as xiangqiGamesRoute from './routes/xiangqi-games.js';
+import * as xiangqiMahjongGamesRoute from './routes/xiangqi-mahjong-games.js';
 import * as xiangqiTablebaseRoute from './routes/xiangqi-tablebase.js';
 
 // Public re-exports: keep import sites in index.ts and elsewhere stable.
@@ -126,6 +127,7 @@ export const routes: RouteModule[] = [
   jungleGamesRoute,
   jungleFlipGamesRoute,
   banqiGamesRoute,
+  xiangqiMahjongGamesRoute,
   gamesRoute,
   relationsRoute,
   titlesRoute,

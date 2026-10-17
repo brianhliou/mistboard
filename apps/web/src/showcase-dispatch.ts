@@ -25,12 +25,15 @@ export function showcaseRendererKindForSpec(specId: string | null): ShowcaseRend
 // games.variant, or null when nothing can draw it. Fail-closed, unlike the
 // showcase resolver above: the chessground fallback is only for the chess
 // stack (legacy 'fog' rows and specs with a legacy live room), so a tenant
-// with no watch renderer (Xiangqi Mahjong, Hong Kong mahjong) or an unknown
+// with no watch renderer (Hong Kong mahjong) or an unknown
 // variant reads as not embeddable instead of mounting the chess board and
 // failing on its 403'd event log.
 export function embedRendererKindForVariant(variant: string): ShowcaseRendererKind | null {
   if (variant === 'fog') return 'chess';
   if (!isGameSpecId(variant)) return null;
+  // Xiangqi Mahjong has a TV renderer but no game embed yet: the embed card's
+  // seat rows and board overlay assume a two-colour board. Kept out on purpose.
+  if (variant === 'xiangqi-mahjong') return null;
   if (webVariantTenantForSpecId(variant)?.watch) return variant;
   return legacyLiveRoomForGameSpec(variant) ? 'chess' : null;
 }

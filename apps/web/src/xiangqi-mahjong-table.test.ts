@@ -10,6 +10,7 @@ import {
   xmjBotAction,
   xmjOrderedTiles,
   xmjPendingAction,
+  xmjReviewViewFor,
   xmjViewFor,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
@@ -443,6 +444,21 @@ describe('xiangqi mahjong table', () => {
     expect(backs.filter((back) => back.classList.contains('xmj-tile--drawn')).length).toBe(1);
   });
 
+  it('a review shows the tile just drawn face up, apart from the rest of the hand', () => {
+    const after = afterDiscard(['bP', 'bP', 'bA', 'rE']);
+    const drew = applyXmjMove(after, { by: 'west', at: 20_000, action: 'pass' });
+    const view = xmjReviewViewFor(drew);
+    const drawn = view.phase.type === 'discard' ? view.phase.drawn : null;
+    expect(drawn).not.toBeNull();
+    const host = doc(xiangqiMahjongTableHtml(view, opts(false)));
+    const tiles = [...host.querySelectorAll('.xmj-seat--opponent .xmj-concealed > .xmj-tile')];
+    expect(tiles).toHaveLength(view.hands.west?.length ?? -1);
+    expect(host.querySelectorAll('.xmj-tile--back')).toHaveLength(0);
+    expect(tiles.at(-1)?.classList.contains('xmj-tile--drawn')).toBe(true);
+    expect(tiles.at(-1)?.getAttribute('aria-label')).toBe(xmjTileName(drawn as XmjTile));
+    expect(host.querySelectorAll('.xmj-tile--drawn')).toHaveLength(1);
+  });
+
   it('lists the points of every hand for under the table, totals matching the match score', () => {
     let current = state;
     let checked = 0;
@@ -482,6 +498,35 @@ describe('xiangqi mahjong table', () => {
       current = botStep(current);
     }
     expect(checked).toBeGreaterThan(0);
+  });
+
+  it('calls a hand win 胡牌 in zh, never the match word 获胜/獲勝', async () => {
+    let current = state;
+    let won: ReturnType<typeof xmjViewFor> | null = null;
+    for (let steps = 0; current.status.type === 'playing' && steps < 5000; steps += 1) {
+      const view = xmjViewFor(current, 'east');
+      if (view.between && view.phase.type === 'won') {
+        won = view;
+        break;
+      }
+      current = botStep(current);
+    }
+    expect(won).not.toBeNull();
+    if (won?.phase.type !== 'won') return;
+    const expected = won.phase.winner === 'east' ? '你胡牌' : 'Bot胡牌';
+    for (const [path, locale] of [
+      ['/zh-hans/play', 'zh-Hans'],
+      ['/zh-hant/play', 'zh-Hant'],
+    ] as const) {
+      await ensureLocaleCatalog(locale);
+      window.history.pushState(null, '', path);
+      try {
+        const host = doc(xiangqiMahjongTableHtml(won, opts(true)));
+        expect(host.querySelector('.xmj-result__title')?.textContent).toBe(expected);
+      } finally {
+        window.history.pushState(null, '', '/');
+      }
+    }
   });
 
   it('leads the result with the winner and the points, never tai, and lays it over the middle band', () => {
@@ -614,6 +659,26 @@ describe('xiangqi mahjong table', () => {
     }
     // Passes and the steps between hands never show.
     expect(host.textContent).not.toMatch(/Pass|Ready/);
+    // Every row says a whole thing, for a player and for a spectator: a win on
+    // a discard used to read "Bot wins on", as if cut off before the tile.
+    const kinds = new Set(hands.flatMap((hand) => hand.rows.map((row) => row.kind)));
+    expect(kinds.has('discard')).toBe(true);
+    for (const viewer of ['east', null] as const) {
+      const all = render({ viewer, expanded: new Set(hands.map((hand) => hand.hand)) });
+      const texts = [...all.querySelectorAll('.xmj-log__row')].map(words);
+      expect(texts.length).toBe(hands.reduce((sum, hand) => sum + hand.rows.length, 0));
+      for (const text of texts) {
+        expect(text).toMatch(
+          /^(You|Bot|Misty) (discards?|draws?, discards?|takes?|wins? on a discard|wins? by self-draw)$|^The wall ran out$/,
+        );
+      }
+    }
+    const winRow = hands.flatMap((hand) => hand.rows).find((row) => row.kind === 'win');
+    if (winRow) {
+      const all = render({ viewer: null, expanded: new Set(hands.map((hand) => hand.hand)) });
+      const row = all.querySelector(`.xmj-log__row[data-xmj-ply="${winRow.ply}"]`);
+      expect(row ? words(row) : '').toMatch(/ wins on a discard$/);
+    }
     // A scrub into hand 1 opens it and marks the row.
     const first = hands[0]?.rows[0];
     const scrubbed = render({ activePly: first?.ply ?? 1 });

@@ -5,6 +5,7 @@ import {
   countedHumanGame,
   countedPublicGame,
   notRetiredVariant,
+  publicVariant,
 } from './persistence-counted-games.js';
 
 test('notRetiredVariant excludes every retired spec id, derived from the registry', () => {
@@ -25,7 +26,8 @@ test('notRetiredVariant is a no-op with nothing retired and refuses a non-id', (
 test('countedPublicGame is the counted-game filter plus the retired-variant exclusion', () => {
   const clause = countedPublicGame('g');
   assert.ok(clause.startsWith(countedHumanGame('g')));
-  assert.ok(clause.includes(notRetiredVariant('g')));
+  assert.ok(clause.includes(publicVariant('g')));
+  assert.ok(publicVariant('g').includes(notRetiredVariant('g').slice(0, -1)));
   // The admin and readout filter stays untouched.
   assert.ok(!countedHumanGame('g').includes('NOT IN'));
 });

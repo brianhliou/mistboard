@@ -18,6 +18,7 @@ import {
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
   gameSpecForId,
+  isPublicGameSpec,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -82,7 +83,7 @@ const xiangqiMahjongSpec = gameSpecForId(XIANGQI_MAHJONG_SPEC_ID);
 // Xiangqi Mahjong joins the rating grids when its spec goes public, read from
 // the spec rather than the web flag: before launch the flag is on for the
 // allowlisted playtest, and the server keeps the pool off every grid.
-const xiangqiMahjongPublic = xiangqiMahjongSpec.publicSurface !== 'hidden';
+const xiangqiMahjongPublic = isPublicGameSpec(XIANGQI_MAHJONG_SPEC_ID);
 
 // Marker coverage is broader than the rated/current variant registry: the play
 // picker can surface casual tenants, and rules/articles can reference variants

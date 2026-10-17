@@ -22,6 +22,7 @@ import {
   type TenantMovePlayed,
   type TenantPendingAnimation,
 } from './live-client.js';
+import { adoptLiveHistory } from './live-history.js';
 import { createTenantReplayController } from './replay-controller.js';
 import type { TenantWebView, WebVariantTenant } from './room-chrome.js';
 import type { TenantSocketClientOptions } from './socket-client.js';
@@ -949,5 +950,117 @@ describe('tenant game lifecycle analytics', () => {
     expect(named('game_started')).toHaveLength(1);
     expect(named('game_started')[0][1]).toMatchObject({ variant: 'not-a-real-spec' });
     expect(named('game_started')[0][1]).not.toHaveProperty('game_spec');
+  });
+});
+
+describe('tenant live client playing back a recording', () => {
+  // A review page is the room played back from a finished match's per-ply
+  // views instead of a socket (xiangqi-mahjong-postgame.ts).
+  function recorded() {
+    const plies = [0, 1, 2].map((ply) =>
+      view({ moveNumber: ply + 1, squares: { [`a${ply}`]: 'red' } }),
+    );
+    const final = view({
+      moveNumber: 3,
+      squares: { a2: 'red' },
+      status: { type: 'finished', winner: 'red', reason: 'no-moves' },
+    });
+    plies[2] = final;
+    const events: TenantLiveEvent[] = [
+      { type: 'move-played', color: 'red', move: { from: 'a0', to: 'a1' }, at: 1 },
+      { type: 'move-played', color: 'blue', move: { from: 'b0', to: 'b1' }, at: 2 },
+    ];
+    return { plies, final, events };
+  }
+
+  function playback(initialPly?: number) {
+    document.body.innerHTML = '<div id="app"></div>';
+    window.history.replaceState(null, '', '/testline/game/tst_done');
+    const { plies, final, events } = recorded();
+    const boardRenders: Array<TView | null> = [];
+    const socketFactory = vi.fn();
+    const client = createTenantLiveClient<TColor, TView, TMove>({
+      tenant,
+      gameSpecId: 'testline',
+      defaultRoomId: 'tst_dev',
+      boardClass: 'testline-live-board',
+      playAgainRequestBody: () => ({}),
+      renderBoard: (_refs, v) => boardRenders.push(v),
+      setup: () => {},
+      moveList: {
+        rowClass: 'move-row test-move-row',
+        cellPrefix: 'test-move-row',
+        masked: false,
+        notate: (move) => `${move.from}-${move.to}`,
+        isMoveEvent: isTestMoveEvent,
+      },
+      replayCapture: {
+        positionKey: (v) => JSON.stringify(v.squares),
+        plyForView: (_v, ctx) => ctx.events.filter(isTestMoveEvent).length,
+      },
+      replayHistory: {
+        rebuild: ({ frame, view: latest, events: log }) =>
+          adoptLiveHistory(frame.liveHistory, latest, log.filter(isTestMoveEvent).length, {
+            finished: true,
+            boardless: true,
+          }),
+      },
+      socketFactory,
+    });
+    client.bootstrap({
+      room: 'tst_done',
+      frame: {
+        type: 'hello',
+        seat: 'spectator',
+        seats: {},
+        state: final,
+        timeControl: { initialMs: 60_000, incrementMs: 0 },
+        events,
+        liveHistory: plies.map((each, ply) => ({ ply, view: each })),
+      },
+      ...(initialPly === undefined ? {} : { initialPly }),
+      clockAt: (ply) => ({
+        remainingMs: { red: 60_000 - ply * 1000, blue: 60_000 - ply * 2000 },
+        active: ply % 2 === 0 ? 'red' : 'blue',
+      }),
+    });
+    return { client, boardRenders, socketFactory, plies };
+  }
+
+  const clockText = (slot: 'top' | 'bottom') =>
+    document.querySelector(`[data-clock-${slot}] .clock-time-row strong`)?.textContent;
+
+  it('opens at the requested ply with the recorded clocks, and no socket', () => {
+    const { client, boardRenders, socketFactory, plies } = playback(1);
+    expect(socketFactory).not.toHaveBeenCalled();
+    expect(client.state.room).toBe('tst_done');
+    expect(client.connection()).toBe('connected');
+    expect(client.send({ type: 'move' })).toBe(false);
+    expect(boardRenders.at(-1)).toBe(plies[1]);
+    // Blue above, red below; blue's clock ran after ply 1. Still, not ticking.
+    expect(clockText('top')).toBe('00:58');
+    expect(clockText('bottom')).toBe('00:59');
+    expect(document.querySelector('[data-clock-top] .clock-time-row')?.classList).toContain(
+      'active',
+    );
+    expect(document.querySelector('.presence-dot')).toBeNull();
+  });
+
+  it('steps with the keyboard and ends on the final clocks, nobody to move', () => {
+    const { boardRenders, plies } = playback(0);
+    expect(boardRenders.at(-1)).toBe(plies[0]);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(boardRenders.at(-1)).toBe(plies[1]);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
+    expect(boardRenders.at(-1)).toBe(plies[2]);
+    expect(clockText('top')).toMatch(/^00:56/);
+    expect(document.querySelector('.clock-time-row.active')).toBeNull();
+  });
+
+  it('offers no rematch, no review link to itself and no invite', () => {
+    playback();
+    expect(document.querySelector('.room-actions-row, .postgame-actions')).toBeNull();
+    const analysis = document.querySelector<HTMLAnchorElement>('[data-replay-analysis]');
+    expect(analysis === null || analysis.hidden).toBe(true);
   });
 });

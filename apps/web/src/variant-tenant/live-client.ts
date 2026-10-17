@@ -50,6 +50,8 @@ import {
 } from './replay-controller.js';
 import {
   createTenantRoomChrome,
+  type TenantChromeRecording,
+  type TenantRecordedClock,
   type TenantRoomChrome,
   type TenantWebView,
   type WebVariantTenant,
@@ -59,6 +61,7 @@ import {
   type TenantConnectionState,
   type TenantSocketClient,
   type TenantSocketClientOptions,
+  type TenantSocketFrame,
 } from './socket-client.js';
 import { createTenantRematch } from './tenant-rematch.js';
 
@@ -331,8 +334,28 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
   socketFactory?(options: TenantSocketClientOptions): TenantSocketClient;
 };
 
+/**
+ * A finished match played back in the room's own layout (a review page), in
+ * place of a socket: the room as one hello frame, every ply's view in its
+ * liveHistory, already shaped by the server for whoever may read it. The
+ * client renders it read-only: no socket, no seat, no room actions, and the
+ * clocks are the recorded times at the ply on show.
+ */
+export type TenantRecording<C extends string, V> = {
+  /** The finished room this recording replays (the page URL is not a room URL). */
+  room: string;
+  /** Mount here instead of #app. */
+  root?: HTMLDivElement;
+  frame: TenantLiveFrame<C, V>;
+  /** Open at this ply instead of the end. */
+  initialPly?: number;
+  /** The recorded clocks after a ply, or null for a match that kept none. */
+  clockAt(ply: number): Omit<TenantRecordedClock<C>, 'final'> | null;
+};
+
 export type TenantLiveClient<C extends string, V> = {
-  bootstrap(): void;
+  /** Connect to the room in the URL, or play back a finished match read-only. */
+  bootstrap(recording?: TenantRecording<C, V>): void;
   state: TenantLiveState<C, V>;
   renderAll(): void;
   send(payload: unknown): boolean;
@@ -458,7 +481,19 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     lobbyMatch: () => state.lobbyMatch,
     rated: () => state.rated,
     ...(config.chrome?.variantDetail ? { variantDetail: config.chrome.variantDetail } : {}),
+    recording: recordingForChrome,
   });
+
+  // The recording on show, if this bootstrap is a playback (see TenantRecording).
+  let recording: TenantRecording<C, V> | null = null;
+
+  function recordingForChrome(): TenantChromeRecording<C> | null {
+    if (!recording) return null;
+    const latest = replay.latestPly();
+    const ply = replay.activePly() ?? latest;
+    const clock = recording.clockAt(ply);
+    return { clock: clock ? { ...clock, final: ply >= latest } : null };
+  }
 
   // ── Frame application ──────────────────────────────────────────────────────
 
@@ -552,13 +587,17 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
 
   // ── Bootstrap ──────────────────────────────────────────────────────────────
 
-  function bootstrap(): void {
-    const app = document.querySelector<HTMLDivElement>('#app');
+  function bootstrap(playback?: TenantRecording<C, V>): void {
+    const app = playback?.root ?? document.querySelector<HTMLDivElement>('#app');
     if (!app) throw new Error('missing #app');
+    recording = playback ?? null;
 
     const params = new URLSearchParams(window.location.search);
     const room =
-      roomIdFromPath(window.location.pathname) ?? params.get('room') ?? config.defaultRoomId;
+      playback?.room ??
+      roomIdFromPath(window.location.pathname) ??
+      params.get('room') ??
+      config.defaultRoomId;
     state.room = room;
     state.forfeitDeadline = null;
     state.abortDeadline = null;
@@ -581,7 +620,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     config.resetSounds?.();
     config.resetState?.();
 
-    if (params.get('reset') === '1') {
+    if (!playback && params.get('reset') === '1') {
       clearSeatTokenForRoom(room);
       params.delete('reset');
       const search = params.toString();
@@ -616,7 +655,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       orientation,
     });
 
-    const createSocket = config.socketFactory ?? createTenantSocketClient;
+    const createSocket = playback
+      ? (options: TenantSocketClientOptions) => recordingSource(options, playback.frame)
+      : (config.socketFactory ?? createTenantSocketClient);
     socket = createSocket({
       room,
       applyHello: (frame) => {
@@ -638,6 +679,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     });
     socket.connect();
     socket.startPing();
+    const initialPly = playback?.initialPly;
+    if (typeof initialPly === 'number' && initialPly < replay.latestPly()) {
+      replay.jumpToPly(Math.max(0, initialPly));
+    }
     window.setInterval(() => {
       chrome.tickClocks();
       chrome.tickCountdowns();
@@ -689,9 +734,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     lastDisplayedView = displayed;
     if (moveList.listClass) refs.moveList.classList.add(moveList.listClass);
     replay.renderShell(refs, renderAll);
+    // A recording is already the review: no link to the page it is on.
     setReplayAnalysisHref(
       refs.actionSection,
-      view?.status.type === 'finished'
+      view?.status.type === 'finished' && !recording
         ? `${tenant.reviewUrl(state.room)}?ply=${replay.activePly() ?? replay.latestPly()}`
         : null,
     );
@@ -983,4 +1029,33 @@ function brandSeatDisplayNames<C extends string>(
     branded[color] = brandedEngineName(name) ?? name;
   }
   return branded;
+}
+
+/**
+ * The socket a recording stands in for: the one hello frame on connect, then
+ * nothing. Nothing is sent from a recording, and it never disconnects.
+ */
+function recordingSource(
+  options: TenantSocketClientOptions,
+  frame: TenantSocketFrame,
+): TenantSocketClient {
+  let opened = false;
+  return {
+    connect() {
+      if (opened) return;
+      opened = true;
+      options.applyHello(frame);
+      options.render();
+    },
+    close() {},
+    reconnectNow() {},
+    send: () => false,
+    startPing() {},
+    connection: () => 'connected',
+    noticeTier: () => 'none',
+    closeReason: () => '',
+    clientId: () => '',
+    latencyMs: () => null,
+    reconnectAttempt: () => 0,
+  };
 }

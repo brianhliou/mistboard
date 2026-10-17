@@ -588,8 +588,12 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     watchMaxPly = handle.plyCount();
     watchPly = clampPly(startPly, watchMaxPly);
     const entries = handle.moveEntries?.() ?? [];
+    const ownLog = handle.moveLog?.() ?? null;
 
-    if (entries.length > 0) {
+    if (ownLog) {
+      moveList = ownLog;
+      watch.movesRoot.append(ownLog.el);
+    } else if (entries.length > 0) {
       moveList = createMoveList(entries);
       watch.movesRoot.append(moveList.el);
     }
