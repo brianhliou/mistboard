@@ -74,12 +74,6 @@
   display: none;
 }
 
-@media (max-width: 600px) {
-  .landing-footer {
-    padding: 18px 16px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .site-nav {
     transition: none;
@@ -523,6 +517,27 @@ a.site-nav-link[hidden],
 .landing-footer a:hover {
   color: var(--site-text);
   text-decoration: underline;
+}
+
+/* One line on phones (#576, Brian 2026-10-17): About, Terms, Privacy and the
+   identity line. The other links live in the site menu's Mistboard section
+   (buildHomeFooter marks them). After the base rules on purpose: the phone
+   padding used to sit above them and never applied. 16px gutters and 12px gaps
+   keep the row on one line down to about 360px; narrower, the identity line
+   wraps under the links. */
+@media (max-width: 600px) {
+  .landing-footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .landing-footer-links {
+    gap: 12px;
+  }
+
+  .landing-footer [data-phone-menu] {
+    display: none;
+  }
 }
 
 @media (max-width: 939px) {

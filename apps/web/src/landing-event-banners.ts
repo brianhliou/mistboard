@@ -34,16 +34,9 @@ export type EventBanner = {
 // not a feed.
 const EVENT_BANNERS: EventBanner[] = [];
 
-// Dev-only samples so the slot is visible while working on the homepage layout
-// on a pair with no tours seeded.
+// Dev-only sample so the slot is visible while working on the homepage layout
+// on a pair with no tours seeded. No arena sample: tournaments are not live yet.
 const DEV_SAMPLE_BANNERS: EventBanner[] = [
-  {
-    id: 'dev-sample-arena',
-    kind: 'tournament',
-    title: 'Fog Chess Weekly Arena',
-    subtitle: '17 players · playing right now',
-    href: '/watch',
-  },
   {
     id: 'dev-sample-broadcast',
     kind: 'broadcast',
