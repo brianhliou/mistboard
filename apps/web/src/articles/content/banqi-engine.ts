@@ -40,6 +40,7 @@ export const banqiEngineArticle: Article = {
   slug: 'mistybanqi',
   kind: 'article',
   publisher: 'mistboard',
+  topic: 'engineering',
   boardFamily: 'xiangqi',
   title: 'How MistyBanqi Plays and How It Was Built',
   cardTitle: 'How MistyBanqi Plays',

@@ -120,6 +120,7 @@ export const abJchessArticle: Article = {
   slug: 'ab-jchess',
   kind: 'article',
   publisher: 'mistboard',
+  topic: 'engineering',
   title: 'AB-JChess, a stronger jieqi bot',
   seoTitle: 'AB-JChess: the open-source jieqi engine that beat Pikafish 248 to 136',
   summary:

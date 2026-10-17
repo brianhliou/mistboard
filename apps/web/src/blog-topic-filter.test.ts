@@ -24,30 +24,49 @@ const realArticles = [...articles];
 const listed = (article: Article): boolean =>
   article.kind === 'article' &&
   article.publisher === 'mistboard' &&
-  article.status === 'published' &&
+  // Vitest runs as DEV, where drafts and scheduled posts list too.
   !article.sourceLang &&
   article.showInIndex !== false;
 const deepDiveBase = realArticles.find((a) => listed(a) && a.homeRow === 'deep-dives');
 const plainBase = realArticles.find((a) => listed(a) && !a.homeRow);
 
-function useFixture(deepDives: number, plain: number): void {
+// A clone with no topic, so a base that happens to be an engineering post
+// cannot leak its tag into the player-facing fixtures.
+function playerFacing(article: Article): Article {
+  if (article.kind !== 'article') return article;
+  const { topic: _topic, ...rest } = article;
+  return rest;
+}
+
+function useFixture(deepDives: number, plain: number, engineering = 0): void {
   if (!deepDiveBase || !plainBase) throw new Error('no listed deep dive or plain post to clone');
   const fixture: Article[] = [];
   for (let i = 0; i < deepDives; i += 1) {
     fixture.push({
-      ...deepDiveBase,
+      ...playerFacing(deepDiveBase),
       slug: `fixture-dive-${i}`,
       title: `Fixture dive ${i}`,
       publishedAt: `2026-09-${String(10 + i).padStart(2, '0')}`,
     });
   }
   for (let i = 0; i < plain; i += 1) {
-    const { homeRow: _homeRow, ...rest } = plainBase;
+    const { homeRow: _homeRow, ...rest } = playerFacing(plainBase);
     fixture.push({
       ...rest,
       slug: `fixture-plain-${i}`,
       title: `Fixture plain ${i}`,
       publishedAt: `2026-08-${String(10 + i).padStart(2, '0')}`,
+    });
+  }
+  for (let i = 0; i < engineering; i += 1) {
+    const { homeRow: _homeRow, ...rest } = playerFacing(plainBase);
+    if (rest.kind !== 'article') throw new Error('plain base is not a blog post');
+    fixture.push({
+      ...rest,
+      topic: 'engineering',
+      slug: `fixture-eng-${i}`,
+      title: `Fixture engineering ${i}`,
+      publishedAt: `2026-07-${String(10 + i).padStart(2, '0')}`,
     });
   }
   articles.splice(0, articles.length, ...fixture);
@@ -173,5 +192,68 @@ describe('blog index topic chips', () => {
     for (const topic of ARTICLE_TOPICS) {
       expect(articleTopicHref(topic.id, 'en')).toBe(`/blog?topic=${topic.id}`);
     }
+  });
+});
+
+describe('blog index players and engineering chips', () => {
+  const slugsUnder = (topic: string | undefined): string[] =>
+    visibleSlugs(buildArticlesIndex(undefined, 'mistboard', topic)).sort();
+
+  it('splits the blog into For players and Engineering once an engineering post exists', () => {
+    useFixture(2, 2, 2);
+    const index = buildArticlesIndex(undefined, 'mistboard');
+    expect(chips(index).map((chip) => chip.textContent)).toEqual([
+      'All',
+      'For players',
+      'Engineering',
+      'Xiangqi deep dives',
+    ]);
+    expect(chips(index).map((chip) => chip.getAttribute('href'))).toEqual([
+      '/blog',
+      '/blog?topic=players',
+      '/blog?topic=engineering',
+      '/blog?topic=deep-dives',
+    ]);
+    expect(slugsUnder(undefined)).toHaveLength(6);
+    expect(slugsUnder('engineering')).toEqual(['/blog/fixture-eng-0', '/blog/fixture-eng-1']);
+    expect(slugsUnder('players')).toEqual([
+      '/blog/fixture-dive-0',
+      '/blog/fixture-dive-1',
+      '/blog/fixture-plain-0',
+      '/blog/fixture-plain-1',
+    ]);
+    expect(slugsUnder('deep-dives')).toEqual(['/blog/fixture-dive-0', '/blog/fixture-dive-1']);
+  });
+
+  it('offers no For players chip while it would hold every post', () => {
+    useFixture(2, 3, 0);
+    const labels = chips(buildArticlesIndex(undefined, 'mistboard')).map((c) => c.textContent);
+    expect(labels).toEqual(['All', 'Xiangqi deep dives']);
+    // A shared ?topic=players link still lands on the whole list.
+    expect(slugsUnder('players')).toHaveLength(5);
+  });
+
+  it('localizes the new chips', () => {
+    useFixture(1, 1, 1);
+    const hans = chips(buildArticlesIndex('zh-Hans', 'mistboard'));
+    expect(hans.map((chip) => chip.getAttribute('href'))).toContain(
+      '/zh-hans/blog?topic=engineering',
+    );
+    expect(hans.map((chip) => chip.textContent)).not.toContain('Engineering');
+    for (const chip of hans) expect(chip.textContent).not.toMatch(/\u2014/);
+  });
+
+  it('shows exactly the tagged posts under Engineering on the real blog', () => {
+    const listedEngineering = realArticles
+      .filter((article) => listed(article) && article.kind === 'article')
+      .filter((article) => article.kind === 'article' && article.topic === 'engineering')
+      .map((article) => `/blog/${article.slug}`)
+      .sort();
+    expect(listedEngineering.length).toBeGreaterThan(0);
+    expect(listedEngineering).toContain('/blog/how-puzzle-mining-works');
+    expect(slugsUnder('engineering')).toEqual(listedEngineering);
+    const players = slugsUnder('players');
+    expect(players.some((slug) => listedEngineering.includes(slug))).toBe(false);
+    expect(players.length + listedEngineering.length).toBe(slugsUnder(undefined).length);
   });
 });

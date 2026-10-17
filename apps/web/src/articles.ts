@@ -186,9 +186,10 @@ export function buildArticlesIndex(
  * Topic filters on the blog index: `/blog?topic=<id>` narrows the one list in
  * place, so a topic is data (an id, its chip label, which posts it holds), never
  * a page of its own, and the canonical /blog stays the only URL search sees.
- * Add a topic by adding an entry here. The first one reuses the homepage row
- * tag, so a post tagged for the deep-dives row is in the deep-dives topic with
- * no second edit.
+ * Add a topic by adding an entry here; chips render in this order. Players and
+ * Engineering split the blog in two on the article's `topic` field (unset is a
+ * post for players). Deep dives reuses the homepage row tag, so a post tagged
+ * for the deep-dives row is in the deep-dives topic with no second edit.
  */
 export type ArticleTopic = {
   id: string;
@@ -196,7 +197,20 @@ export type ArticleTopic = {
   matches: (article: Article) => boolean;
 };
 
+const isEngineeringArticle = (article: Article): boolean =>
+  article.kind === 'article' && article.topic === 'engineering';
+
 export const ARTICLE_TOPICS: readonly ArticleTopic[] = [
+  {
+    id: 'players',
+    labelKey: 'articles.topicPlayers',
+    matches: (article) => !isEngineeringArticle(article),
+  },
+  {
+    id: 'engineering',
+    labelKey: 'articles.topicEngineering',
+    matches: isEngineeringArticle,
+  },
   {
     id: 'deep-dives',
     labelKey: 'articles.deepDives',
@@ -213,11 +227,17 @@ export function articleTopicFromSearch(search: string): string | null {
   return new URLSearchParams(search).get('topic');
 }
 
-// The topics that hold at least one of these posts. A topic with nothing in it
-// gets no chip, and a link to it falls back to All: a filter must never open on
-// an empty list while the posts exist one click away.
+// The topics that narrow these posts: at least one post, and not every one. A
+// topic with nothing in it gets no chip, and a link to it falls back to All: a
+// filter must never open on an empty list while the posts exist one click away.
+// A topic holding every post is All under another name (Players before the
+// first engineering post), so it gets no chip either.
 function articleTopicsWithPosts(entries: readonly Article[]): ArticleTopic[] {
-  return ARTICLE_TOPICS.filter((topic) => entries.some((article) => topic.matches(article)));
+  return ARTICLE_TOPICS.filter(
+    (topic) =>
+      entries.some((article) => topic.matches(article)) &&
+      !entries.every((article) => topic.matches(article)),
+  );
 }
 
 function buildArticleTopicChips(

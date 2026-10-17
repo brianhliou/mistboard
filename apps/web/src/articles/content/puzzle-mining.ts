@@ -76,6 +76,7 @@ export const puzzleMiningArticle: Article = {
   slug: 'how-puzzle-mining-works',
   kind: 'article',
   publisher: 'mistboard',
+  topic: 'engineering',
   title: 'I built a xiangqi puzzle miner',
   seoTitle: 'How Mistboard mines xiangqi puzzles from real games',
   summary:

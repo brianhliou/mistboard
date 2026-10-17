@@ -543,6 +543,12 @@
       "zh-hant": "馮家俊"
     }
   },
+  "unstyled-first-paint": {
+    "title": "Two pages that loaded as plain text",
+    "kind": "article",
+    "description": "The rules pages and the players pages both showed as bare text for a moment before snapping into their design. The causes were different, and the check written for the first passed the second.",
+    "status": "draft"
+  },
   "xiangqi": {
     "title": "Xiangqi Rules",
     "kind": "rules",

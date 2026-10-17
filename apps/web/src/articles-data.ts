@@ -29,6 +29,7 @@ import { solverAuditArticle } from './articles/content/solver-audit.js';
 import { jieqiBotWinsArticle } from './articles/content/jieqi-bot-wins.js';
 import { jieqiPuzzleSearchArticle } from './articles/content/jieqi-puzzle-search.js';
 import { oneThousandGamesArticle } from './articles/content/one-thousand-games.js';
+import { unstyledFirstPaintArticle } from './articles/content/unstyled-first-paint.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
 import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
 import { fogOpeningsArticle } from './articles/content/fog-openings.js';
@@ -92,6 +93,7 @@ export const articles: Article[] = [
   abJchessArticle,
   jieqiBotWinsArticle,
   oneThousandGamesArticle,
+  unstyledFirstPaintArticle,
   pikafishArticle,
   choiCoTuongVoiMayArticle,
   jieqiPlatformArticle,

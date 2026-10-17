@@ -30,6 +30,7 @@ export const douShouQiEngineArticle: Article = {
   slug: 'dou-shou-qi-engine',
   kind: 'article',
   publisher: 'mistboard',
+  topic: 'engineering',
   title: 'A Dou Shou Qi (Jungle Chess) Engine: Classical Search Beat the Learned Eval',
   cardTitle: 'A Dou Shou Qi Engine',
   summary:

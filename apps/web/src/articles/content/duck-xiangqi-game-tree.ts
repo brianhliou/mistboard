@@ -25,6 +25,7 @@ export const duckXiangqiGameTreeArticle: Article = {
   slug: 'duck-xiangqi-game-tree',
   kind: 'article',
   publisher: 'mistboard',
+  topic: 'engineering',
   boardFamily: 'xiangqi',
   title: 'One Duck Xiangqi move is worth two xiangqi moves',
   cardTitle: 'Duck Xiangqi’s game tree',
