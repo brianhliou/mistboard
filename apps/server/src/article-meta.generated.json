@@ -291,6 +291,12 @@
       "zh-hant": "戰勝我們揭棋電腦的 14 盤棋"
     }
   },
+  "jieqi-engines": {
+    "title": "Three jieqi engines, head to head",
+    "kind": "article",
+    "description": "How PikaJieQi, AB-JChess and jqe judge a face-down piece, what each evaluates positions with, and how they did against each other: jqe beat AB-JChess 71 to 25, and AB-JChess beat PikaJieQi 248 to 136.",
+    "status": "draft"
+  },
   "jieqi-openings": {
     "title": "What Strong Jieqi Players Believe About the Opening",
     "kind": "article",

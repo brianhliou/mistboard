@@ -164,6 +164,9 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
+      // The jieqi engines comparison, an undated draft held for jqe's author
+      // (sorts last until Brian dates it).
+      '/blog/jieqi-engines',
     ]);
   });
 
@@ -358,6 +361,9 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
+      // The jieqi engines comparison, an undated draft held for jqe's author
+      // (sorts last until Brian dates it).
+      '/blog/jieqi-engines',
     ]);
   });
 
