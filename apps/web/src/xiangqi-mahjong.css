@@ -27,9 +27,11 @@
 .live-route--xiangqi-mahjong {
   --uni-board-aspect: 1.6;
   --uni-board-chrome-h: 410px;
-  /* Past this the tiles stop gaining legibility and the move list loses the
-     width it needs for one line per row. */
-  --uni-board-max: 680px;
+  /* The height budget is the real bound (and the cluster's second one,
+     below); 1040px only stops a very wide, very tall screen from drawing
+     tiles past the point of use. 680px left a 4K full screen with small
+     tiles and a lot of empty page (Brian, 2026-10-16). */
+  --uni-board-max: 1040px;
   --uni-table-min: 300px;
   --uni-table-max: 360px;
 }
@@ -39,14 +41,28 @@
    both rails take its measured height instead and still line up with it. */
 @media (min-width: 800px) {
   .live-route--xiangqi-mahjong .live-review__cluster .moves-panel {
-    min-height: calc(var(--uni-board-width) * 0.625 + 323px);
+    min-height: max(
+      calc(var(--uni-board-width) * 0.625 + 323px),
+      calc(var(--uni-board-width) * 0.9 + 157px)
+    );
   }
 }
 
 @media (min-width: 1260px) {
   .live-route--xiangqi-mahjong .live-review__cluster .meta-panel {
-    max-height: calc(var(--uni-board-width) * 0.625 + 323px);
+    max-height: max(
+      calc(var(--uni-board-width) * 0.625 + 323px),
+      calc(var(--uni-board-width) * 0.9 + 157px)
+    );
   }
+}
+
+/* Past about 600px wide the type and the wall grow with the tiles (below),
+   so the table measures about 0.9 x width + 157px and the 1.6 ratio would
+   overflow a tall screen; this second bound keeps the same 201px of page
+   under it. Declared here because the height budget lives on the cluster. */
+.live-route--xiangqi-mahjong .live-review__cluster {
+  --uni-board-max: min(1040px, calc((var(--uni-board-h-budget) + 166px) / 0.9));
 }
 
 .live-route--xiangqi-mahjong .live-review__cluster .board-stage,
@@ -66,7 +82,8 @@
   }
 
   /* One unit per design pixel of a 560px table: tiles, discards and their
-     depth scale with the column; type and padding stay put. */
+     depth scale with the column; padding stays put, and type grows only
+     once the table is wider than 560px (below). */
   .live-route--xiangqi-mahjong .xmj-table {
     --xmj-u: calc(100cqw / 560);
     --xmj-tile-w: calc(52 * var(--xmj-u));
@@ -84,6 +101,90 @@
     --xmj-tile-w: calc(64 * var(--xmj-u));
     --xmj-tile-h: calc(84 * var(--xmj-u));
     --xmj-depth: calc(6 * var(--xmj-u));
+  }
+
+  /* The centre band and the wall grow with the table too, never below their
+     laptop size: on a big screen they were the smallest things on it. */
+  .live-route--xiangqi-mahjong .xmj-seat-row,
+  .live-route--xiangqi-mahjong .xmj-centre,
+  .live-route--xiangqi-mahjong .xmj-hand-line,
+  .live-route--xiangqi-mahjong .xmj-wall__count {
+    font-size: max(13px, calc(13 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-message {
+    font-size: max(15px, calc(15 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-message .xmj-tile--xs {
+    width: max(20px, calc(20 * var(--xmj-u)));
+    height: max(26px, calc(26 * var(--xmj-u)));
+    font-size: max(12px, calc(12 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-centre {
+    min-height: max(118px, calc(118 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-wall__stacks {
+    gap: calc(3 * var(--xmj-u));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-stack {
+    width: calc(17 * var(--xmj-u));
+    height: calc(30 * var(--xmj-u));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-stack i {
+    width: calc(17 * var(--xmj-u));
+    height: calc(22 * var(--xmj-u));
+    border-radius: calc(3 * var(--xmj-u));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-stack i + i {
+    bottom: calc(9 * var(--xmj-u));
+  }
+
+  /* The result between hands lies over the same band and grows with it. */
+  .live-route--xiangqi-mahjong .xmj-result,
+  .live-route--xiangqi-mahjong .xmj-result__sub,
+  .live-route--xiangqi-mahjong .xmj-result__foot {
+    font-size: max(13px, calc(13 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__title {
+    font-size: max(22px, calc(22 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__head > .xmj-result__title:only-child {
+    font-size: max(16px, calc(16 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__total b {
+    font-size: max(40px, calc(40 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__total span,
+  .live-route--xiangqi-mahjong .xmj-group__cap {
+    font-size: max(11px, calc(11 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-lines,
+  .live-route--xiangqi-mahjong .xmj-result__how {
+    font-size: max(12px, calc(12 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__how {
+    width: max(20px, calc(20 * var(--xmj-u)));
+    height: max(20px, calc(20 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-result__head {
+    max-width: max(420px, calc(420 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-scoring {
+    max-width: max(440px, calc(440 * var(--xmj-u)));
   }
 }
 
