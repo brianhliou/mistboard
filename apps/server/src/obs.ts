@@ -43,6 +43,12 @@ export interface ObsSources {
 // nothing surfaced — except a fallback rate that should be ~0 but was 1.0.
 // Watch the `engine_fallback_rate` and page when it's not near zero for any
 // engine that's supposed to play.
+// A known engine failure is data, not a page, until it stops being rare: this many
+// in an hour on one service warns once. The Fog Xiangqi belief timeout ran a few
+// a week when it was made known (2026-10-17).
+const KNOWN_FAILURE_SPIKE_THRESHOLD = 3;
+const KNOWN_FAILURE_SPIKE_WINDOW_MS = 60 * 60 * 1000;
+
 export class EngineCounters {
   totalMoves = 0;
   totalFallbacks = 0;
@@ -75,6 +81,8 @@ export class EngineCounters {
   private lastEmittedPythonPoolRetries = 0;
   private lastEmittedKnownFailures = 0;
   private knownFailuresTick = new Map<KnownEngineFailure, number>();
+  private knownFailureTimes: number[] = [];
+  private knownFailureSpikeOpen = false;
   private turnElapsedSamples: number[] = [];
   private turnQueueWaitSamples: number[] = [];
 
@@ -133,10 +141,24 @@ export class EngineCounters {
 
   // A failure matching a known signature (engine-known-failures.ts). Counted
   // INSTEAD of the counters that page, so it stays visible as data in the
-  // metrics line without emailing.
-  recordKnownFailure(signature: KnownEngineFailure): void {
+  // metrics line without emailing. A spike still warns (see snapshot).
+  recordKnownFailure(signature: KnownEngineFailure, nowMs = Date.now()): void {
     this.totalKnownFailures += 1;
     this.knownFailuresTick.set(signature, (this.knownFailuresTick.get(signature) ?? 0) + 1);
+    this.knownFailureTimes.push(nowMs);
+  }
+
+  // Known failures in the last hour, and whether that count just reached the
+  // spike threshold this tick. Edge-triggered: one warning per spike, re-armed
+  // once the hour count drops back below the threshold.
+  private knownFailureSpike(nowMs: number): { lastHour: number; spike: boolean } {
+    const cutoff = nowMs - KNOWN_FAILURE_SPIKE_WINDOW_MS;
+    this.knownFailureTimes = this.knownFailureTimes.filter((at) => at > cutoff);
+    const lastHour = this.knownFailureTimes.length;
+    const over = lastHour >= KNOWN_FAILURE_SPIKE_THRESHOLD;
+    const spike = over && !this.knownFailureSpikeOpen;
+    this.knownFailureSpikeOpen = over;
+    return { lastHour, spike };
   }
 
   private recordTurnTiming(input: {
@@ -151,12 +173,14 @@ export class EngineCounters {
     }
   }
 
-  snapshot(): {
+  snapshot(nowMs = Date.now()): {
     deadlineGuards: number;
     deadlineGuardsDelta: number;
     knownFailures: number;
     knownFailuresDelta: number;
     knownFailuresBySignatureTick: Record<string, number>;
+    knownFailuresLastHour: number;
+    knownFailureSpike: boolean;
     moves: number;
     fallbacks: number;
     moveFailures: number;
@@ -227,6 +251,8 @@ export class EngineCounters {
     this.lastEmittedKnownFailures = this.totalKnownFailures;
     const knownFailuresBySignatureTick = Object.fromEntries(this.knownFailuresTick);
     this.knownFailuresTick.clear();
+    const { lastHour: knownFailuresLastHour, spike: knownFailureSpike } =
+      this.knownFailureSpike(nowMs);
     const rate = movesDelta > 0 ? fallbacksDelta / movesDelta : 0;
     const elapsedStats =
       this.turnElapsedSamples.length > 0 ? latencyStats(this.turnElapsedSamples) : null;
@@ -240,6 +266,8 @@ export class EngineCounters {
       knownFailures: this.totalKnownFailures,
       knownFailuresDelta,
       knownFailuresBySignatureTick,
+      knownFailuresLastHour,
+      knownFailureSpike,
       moves: this.totalMoves,
       fallbacks: this.totalFallbacks,
       moveFailures: this.totalMoveFailures,
@@ -374,6 +402,21 @@ export type EngineAlertFields = {
   python_pool_timeouts_tick?: number;
   python_pool_retries_tick?: number;
 };
+
+// A known signature (engine-known-failures.ts) that is no longer rare may have a
+// new cause behind it. Its own alert kind, so the email throttle never folds it
+// into an unrelated engine warning: the spike is edge-triggered and would be lost.
+export function knownFailureSpikeAlert(
+  engine: EngineCounterSnapshot,
+): EngineAlertEmailPayload | null {
+  if (!engine.knownFailureSpike) return null;
+  return {
+    severity: 'warning',
+    alert_kind: 'engine_known_failure_spike',
+    engine_known_failures_last_hour: engine.knownFailuresLastHour,
+    threshold_per_hour: KNOWN_FAILURE_SPIKE_THRESHOLD,
+  };
+}
 
 export function engineAlertFields(engine: EngineCounterSnapshot): EngineAlertFields | null {
   const critical: EngineAlertFields = { severity: 'critical' };
@@ -629,6 +672,11 @@ export function startObservability(sources: ObsSources, intervalMs = 5_000): () 
       logAlert.call(logger, { kind: 'engine_alert', ...engineAlert }, 'engine alert');
       dispatchAlertEmail(engineAlert);
     }
+    const spikeAlert = knownFailureSpikeAlert(engine);
+    if (spikeAlert) {
+      logger.warn({ kind: 'engine_alert', ...spikeAlert }, 'engine alert');
+      dispatchAlertEmail(spikeAlert);
+    }
 
     // Infra alerts: box-level health (RSS / event-loop lag) the engine-move counters
     // don't cover. The variant PvE engines run on this process, so a saturated loop or
@@ -691,6 +739,7 @@ export function startObservability(sources: ObsSources, intervalMs = 5_000): () 
         engine_known_failures_total: engine.knownFailures,
         engine_known_failures_tick: engine.knownFailuresDelta,
         engine_known_failures_by_signature_tick: engine.knownFailuresBySignatureTick,
+        engine_known_failures_last_hour: engine.knownFailuresLastHour,
         engine_turn_latency_samples_tick: engine.turnLatencySamples,
         engine_turn_elapsed_p50_ms: engine.turnElapsedP50,
         engine_turn_elapsed_p95_ms: engine.turnElapsedP95,
