@@ -70,6 +70,7 @@ import {
   xiangqiMarkerSvg,
 } from '../xiangqi-board.js';
 import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
+import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import { duckXiangqiTreeAdapter } from './duck-xiangqi-tree-adapter.js';
 import type { NodeShape } from './game-tree.js';
 import {
@@ -93,17 +94,15 @@ function duckBoardLayout(): XiangqiBoardLayout {
 }
 
 /**
- * Board geometry with the coordinate gutter ZEROED, unconditionally.
- *
- * The hosts clip with overflow:hidden, so a board box reserved at the wrong
- * ratio eats the outer rank instead of letterboxing. Every other xiangqi-family
- * surface passes its geometry straight to xiangqiBoardAspect, which re-adds or
- * drops the gutter according to the reader's coordinates preference - correct
- * for a board that DRAWS coordinates when the preference is on. This one never
- * does (duck-xiangqi-board.ts hardcodes coordGutter: 0), so its ratio must not
- * move with that preference.
+ * The review board's width/height for the reader's layout and coordinates
+ * preference. The live geometry, gutter included: xiangqiBoardAspect drops the
+ * gutter when coordinates are off, exactly as the renderer does. The host clips,
+ * so this must match the SVG's viewBox. It was a gutterless geometry while the
+ * board drew no labels (until 2026-10-17).
  */
-const DUCK_BOARD_GEO = { ...LIVE_BOARD_GEO, coordGutter: 0 };
+export function duckXiangqiReviewBoardAspect(): number {
+  return xiangqiBoardAspect(LIVE_BOARD_GEO);
+}
 
 /** Config for a Duck Xiangqi review mount. */
 export type DuckXiangqiReviewConfig = TreeReviewConfig<DuckXiangqiTurn, DuckXiangqiGameState>;
@@ -312,12 +311,13 @@ const duckXiangqiPresentation: TreePresentation<
   boardHostClassName: 'dxq-postgame__board duck-xiangqi-live-board',
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
   defaultBoardAriaLabel: 'Duck Xiangqi board',
-  boardAspect: () => xiangqiBoardAspect(DUCK_BOARD_GEO),
+  boardAspect: () => duckXiangqiReviewBoardAspect(),
   // Pieces are rendered inline as SVG (renderXiangqiPiece reads the stored set),
-  // so a piece-set change needs a full re-render. No labels event: this board
-  // draws no coordinates, and its move labels are coordinate-only, so a notation
-  // display-mode change cannot alter anything on screen.
+  // so a piece-set change needs a full re-render; toggling coordinates fires the
+  // same event and changes the board's geometry. A notation change relabels the
+  // coordinates drawn on the board, as on the Crazyhouse Xiangqi review.
   appearanceEvent: xiangqiAppearanceChangedEvent,
+  labelsEvent: xiangqiNotationChangedEvent,
   boardCols: 9,
   perspective: (flipped) => (flipped ? 'black' : 'red'),
   // Review plays BOTH sides: the interactive seat is the side to move.

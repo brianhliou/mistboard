@@ -1152,9 +1152,9 @@ const DARK_CHESS_SPEC: EditorSpec = {
 // ── Duck Xiangqi ────────────────────────────────────────────────────────────
 //
 // The same 9x10 board, letters and geometry as standard xiangqi (it shares
-// XIANGQI_GRAMMAR and XIANGQI_GEOMETRY outright — duckXiangqiBoardSvg composes
-// the standard surface at coordGutter 0, which is what XIANGQI_LIVE_GEO already
-// describes). Everything below is about the one thing that differs: the duck.
+// XIANGQI_GRAMMAR and XIANGQI_GEOMETRY outright — the board is rendered with
+// coordinates forced off, i.e. at coordGutter 0, which is what XIANGQI_LIVE_GEO
+// already describes). Everything below is about the one thing that differs: the duck.
 
 /** The duck as the palette button draws it. `duckPieceMarks` is the SAME art the
  *  live board paints, in each piece set's own disc grammar, resolved the way
@@ -1238,11 +1238,15 @@ const DUCK_XIANGQI_SPEC: EditorSpec = {
     };
     // Render-only: no click layer, no targets, and the layout the editor's own
     // hit geometry read, so the transparent buttons land on the points.
+    // Coordinates forced off: the hit geometry (XIANGQI_LIVE_GEO) and the board
+    // aspect it sets reserve no label gutter, and the board follows the reader's
+    // coordinates preference by default since 2026-10-17.
     return duckXiangqiBoardSvg(view, perspective as XiangqiColor, {
       interactive: false,
       phase: { kind: 'piece', selected: null },
       targets: [],
       layout: readStoredXiangqiBoardLayout(),
+      coordinates: false,
     });
   },
   ghostSvg: (piece) =>

@@ -62,7 +62,6 @@ export function mountCrazyhouseXiangqiWatchReplay(
         interactive: false,
         selectedSquare: null,
         draggingFrom: null,
-        coordinates: false,
         ...crazyhouseXiangqiBoardMarks(view),
       }),
     // The hand IS the position: every droppable role in a fixed slot, ghosted

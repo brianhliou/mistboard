@@ -67,6 +67,7 @@ import {
   xiangqiPieceGhostSvg,
 } from './xiangqi-board.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
+import { xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 
 type CrazyhouseMoveEvent = TenantMovePlayed<CrazyhouseXiangqiColor, CrazyhouseXiangqiMove>;
 
@@ -180,6 +181,9 @@ const client = createTenantLiveClient<
     // Re-render the hands (they draw in the stored piece set) when the reader
     // changes their xiangqi appearance mid-game.
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
+    // The board draws coordinates in the reader's notation style when they are
+    // on, and the theme gear changes it mid-game, as the standard room handles.
+    window.addEventListener(xiangqiNotationChangedEvent, () => ctx.renderAll());
     installSelectionClickAway({
       roots: () => [core?.refs.board, core?.refs.capturesBottom],
       hasSelection: () => selectedSquare !== null || selectedDropRole !== null,
