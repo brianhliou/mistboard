@@ -26,7 +26,7 @@ import {
   variantDefaultTimeControl,
 } from '@mistboard/game';
 import { crosstableReviewUrl } from '../../server/src/crosstable.js';
-import { JIEQI_DEFAULT_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
+import { JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
 import {
   JUNGLE_PLAYABLE_ENGINE_ID,
   JUNGLE_PLAYABLE_ENGINE_IDS,
@@ -166,15 +166,14 @@ describe('web tenant registry <-> server tenant registry parity', () => {
 
   it('jieqi picker engine options mirror the server ladder', () => {
     // Hand mirror of JIEQI_PLAYABLE_ENGINES (apps/server/src/jieqi-engine.ts),
-    // strongest first. Level 8 is named like the rungs below it (its tier name
-    // is the pre-ladder 'PikaJieQi - Strongest'); the rest wear their tier names. Drift means a picker entry that cannot seat an engine.
+    // strongest first, each under its tier name. Drift means a picker entry that cannot seat an engine.
     const tenant = webTenants.find((candidate) => candidate.gameSpecId === 'jieqi');
     expect(tenant?.landing?.engineOptions, 'jieqi tenant must expose engineOptions').toBeTruthy();
     const options = tenant?.landing?.engineOptions ?? [];
     expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
       [...JIEQI_PLAYABLE_ENGINES].reverse().map((tier) => ({
         id: tier.id,
-        name: tier.id === JIEQI_DEFAULT_ENGINE_ID ? 'Pikafish Level 8' : tier.name,
+        name: tier.name,
       })),
     );
     expect(tenant?.landing?.defaultEngineId).toBe('pikafish-jieqi-level-2');
