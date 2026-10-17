@@ -49,6 +49,9 @@ export const EN_SHELL = {
   'nav.signIn': 'Sign in',
   'nav.register': 'Register',
   'nav.language': 'Language',
+  'nav.closeMenu': 'Close menu',
+  'nav.boardAndPieces': 'Board and pieces',
+  'nav.darkMode': 'Dark mode',
   'home.tagline':
     'Chinese chess and original strategy games. Free and open source. About Mistboard...',
   'home.playSummary':
@@ -223,6 +226,9 @@ export const CRITICAL_SHELL_I18N_KEYS = [
   'nav.signIn',
   'nav.register',
   'nav.language',
+  'nav.closeMenu',
+  'nav.boardAndPieces',
+  'nav.darkMode',
   'home.tagline',
   'home.playSummary',
   'home.supportTitle',
