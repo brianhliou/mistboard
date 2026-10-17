@@ -12,6 +12,7 @@ import {
   canonicalVariantOrderIndex,
   EMBED_DEFAULT_HEIGHT,
   EMBED_DEFAULT_WIDTH,
+  type GameSpecId,
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
@@ -96,6 +97,7 @@ import { type JieqiReplayController, mountJieqiReplay } from './jieqi-replay.js'
 import { type JungleFlipReplayController, mountJungleFlipReplay } from './jungle-flip-replay.js';
 import { type JungleReplayController, mountJungleReplay } from './jungle-replay.js';
 import { prependTitleBadge } from './player-titles.js';
+import { hasLikelyVariantGrant, variantGrantsResolvedEvent } from './signed-in-state.js';
 import {
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
@@ -2387,12 +2389,41 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
   return row;
 }
 
+/** The variant a play CTA opens (`/?play=…&gameSpecId=…`), or null. */
+function playCtaGameSpecId(href: string): GameSpecId | null {
+  if (ctaKindForHref(href) !== 'play') return null;
+  const id = new URLSearchParams(href.split('?')[1] ?? '').get('gameSpecId');
+  return id && isGameSpecId(id) ? id : null;
+}
+
+/** Whether this viewer can sit down at the variant a play CTA opens: a public
+ *  variant, or a playtest one the account is granted. Otherwise the play
+ *  dialog would silently fall back to xiangqi. Cosmetic: the server's seat
+ *  check is the gate. */
+function playCtaOpenToViewer(href: string): boolean {
+  const id = playCtaGameSpecId(href);
+  return id === null || variantPublicSurfaceEnabled(id) || hasLikelyVariantGrant(id);
+}
+
 function renderCtaBlock(block: CtaBlock): HTMLElement {
   const row = document.createElement('div');
   row.className = 'article-cta-row';
   if (block.layout) row.classList.add(`article-cta-row-${block.layout}`);
+  const gated = block.buttons.filter((btn) => !playCtaOpenToViewer(btn.href));
+  if (gated.length > 0) {
+    // A playtest variant's rules page: redraw once the account's real grants
+    // are in, so a player granted since their last visit gets the buttons.
+    window.addEventListener(
+      variantGrantsResolvedEvent,
+      () => {
+        if (row.isConnected) row.replaceWith(renderCtaBlock(block));
+      },
+      { once: true },
+    );
+  }
   for (const btn of block.buttons) {
     if (pointsAtHiddenArticle(btn.href)) continue;
+    if (gated.includes(btn)) continue;
     const a = document.createElement('a');
     a.className = `article-cta article-cta-${btn.emphasis ?? 'primary'}`;
     a.href = btn.href;
@@ -2420,6 +2451,17 @@ function renderCtaBlock(block: CtaBlock): HTMLElement {
       });
     });
     row.append(a);
+  }
+  if (gated.length > 0 && row.childElementCount === 0) {
+    row.classList.add('article-cta-row-playtest');
+    const note = document.createElement('p');
+    note.className = 'article-cta-playtest-note';
+    note.append(`${t('articles.playtestOnly', {}, currentLocale())} `);
+    const link = document.createElement('a');
+    link.href = localizedHref('/forum/feedback');
+    link.textContent = t('articles.playtestAsk', {}, currentLocale());
+    note.append(link);
+    row.append(note);
   }
   return row;
 }

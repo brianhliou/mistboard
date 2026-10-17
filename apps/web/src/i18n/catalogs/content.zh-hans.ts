@@ -71,6 +71,8 @@ export const ZH_HANS_CONTENT = {
   'articles.playThisGame': '下{game}',
   'articles.playVsComputer': '和电脑对弈',
   'articles.playAFriend': '和朋友对弈',
+  'articles.playtestOnly': '这个游戏目前在测试中，暂时只开放给受邀玩家。',
+  'articles.playtestAsk': '到论坛申请参加',
   'articles.notFoundTitle': '未找到文章',
   'articles.notFoundBody': '这篇文章还不存在。',
   'rules.heading': '规则',

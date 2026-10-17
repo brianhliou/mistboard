@@ -71,6 +71,8 @@ export const ZH_HANT_CONTENT = {
   'articles.playThisGame': '下{game}',
   'articles.playVsComputer': '和電腦對弈',
   'articles.playAFriend': '和朋友對弈',
+  'articles.playtestOnly': '這個遊戲目前在測試中，暫時只開放給受邀玩家。',
+  'articles.playtestAsk': '到論壇申請參加',
   'articles.notFoundTitle': '找不到文章',
   'articles.notFoundBody': '這篇文章還不存在。',
   'rules.heading': '規則',

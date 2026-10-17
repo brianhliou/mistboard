@@ -108,8 +108,18 @@ export function writeVariantGrantsHint(grants: readonly string[]): void {
   }
 }
 
+// Fired once account-nav has the account's real grants, so a surface drawn from
+// the hint (a rules page's Play buttons) can redraw for an account granted since
+// the hint was written.
+export const variantGrantsResolvedEvent = 'mb:variant-grants-resolved';
+
 export function setResolvedVariantGrants(grants: readonly string[] | undefined): void {
   resolvedVariantGrants = grants;
+  try {
+    window.dispatchEvent(new Event(variantGrantsResolvedEvent));
+  } catch {
+    // No window (tests outside a DOM): nothing is listening.
+  }
 }
 
 export function hasLikelyVariantGrant(gameSpecId: string): boolean {
