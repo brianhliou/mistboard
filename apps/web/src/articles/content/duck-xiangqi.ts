@@ -24,7 +24,7 @@ export const duckXiangqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-09',
-  updatedAt: '2026-10-07',
+  updatedAt: '2026-10-16',
   audience:
     'Xiangqi players, and Duck Chess players who want the xiangqi version stated precisely.',
   thumbnail: { kind: 'svg', svg: DUCK_XIANGQI_THUMBNAIL },
@@ -41,7 +41,7 @@ export const duckXiangqiArticle: Article = {
     } as ArticleBlock,
     {
       kind: 'paragraph',
-      text: 'Brian H. Liou adapted Duck Xiangqi to the 9 by 10 board in 2026 as a Mistboard original. Dr Tim Paulden invented [Duck Chess](https://duckchess.com) in 2016, and Jim Aikin had already put movable neutral stones on a chessboard in [Eight-Stone Chess](https://www.chessvariants.com/page/EightStoneChess) in 1999. Nobody had carried the idea across to xiangqi. The cannon is the piece that makes it strange: it captures only by jumping over something, and a duck placed anywhere is something, so every placement you make is a platform your opponent may fire over.',
+      text: 'Brian H. Liou designed Duck Xiangqi in 2026, bringing Dr Tim Paulden’s [Duck Chess](https://duckchess.com) (2016) to the xiangqi board. The idea of a movable neutral blocker goes back further, to Jim Aikin’s [Eight-Stone Chess](https://www.chessvariants.com/page/EightStoneChess) in 1999. The cannon is the piece that makes it strange: it captures only by jumping over something, and a duck placed anywhere is something, so every placement you make is a platform your opponent may fire over.',
     },
     {
       kind: 'paragraph',
