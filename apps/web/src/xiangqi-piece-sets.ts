@@ -258,12 +258,14 @@ export type XiangqiTileBacking = readonly [high: string, mid: string, low: strin
 
 // Each asset set's tile is one block of its own material, so the band under
 // the face and a turned-over tile's back are that material too: jade under a
-// wooden face reads as a plastic tile. Lacquer backs are black lacquer; the
+// wooden face reads as a plastic tile. Lacquer backs are gilt: the set's faces
+// are red and black lacquer, so a black back (or a cinnabar one, tried
+// 2026-10-16) merged with one colour's tiles into a single block. The
 // printed sets (book, brush, clerical) get a darker ground than their face,
 // so a back never reads as a blank face.
 const ASSET_TILE_BACKING: Readonly<Record<AssetXiangqiPieceSet, XiangqiTileBacking>> = {
   wood: ['#c98b4a', '#a4692f', '#78471c'],
-  lacquer: ['#4a3424', '#2f1f15', '#1b120c'],
+  lacquer: ['#d8b25a', '#b8903a', '#86661f'],
   book: ['#b8463a', '#96322a', '#6e231d'],
   brush: ['#a87556', '#87573c', '#623e2a'],
   clerical: ['#a87556', '#87573c', '#623e2a'],
