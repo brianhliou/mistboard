@@ -115,6 +115,8 @@ Conventions:
 
 ### Watching and review
 
+- /videos adds Master Zhang Qiang's opening lessons (Chinese, English subtitles) ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
+- an exact tablebase for the chariot-and-horse banqi ending, and a study of its 67-move win ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
 - jieqi and chess studies and reviews glide pieces between moves ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
 - study game lists colour each result by the winning side ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
 - the study description reads in full under the board ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
@@ -182,6 +184,10 @@ Conventions:
 
 ### Site
 
+- on phones, a one-row header and a full-screen menu with every page grouped by section ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
+- on phones, home leads with the live board and Play, and the footer's links move into the menu ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
+- on phones, game setup opens as a sheet with Start game always in reach ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
+- a Coordinates switch in the gear menu's Board panel, so guests can turn coordinates on ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
 - Bigger tap targets and form text that no longer zooms on phones ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
 - The local engine row is hidden in browsers that cannot run it ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
 - the notification bell is redrawn ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
@@ -240,6 +246,11 @@ Conventions:
 
 ### Fixed
 
+- live Fog Chess game cards name the bot Misty instead of its engine build id ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
+- Jieqi level 8 is named Pikafish Level 8 on engine game cards instead of PikaJieQi - Strongest ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
+- the right column no longer jumps when the last face-down piece is revealed in Banqi and Flip Jungle ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
+- banqi and Flip Jungle move lists name what each flip turned up (`f2(C)`), the same on every page; Mistboard TV no longer shows a flip as `f2-f2` ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
+- Crazyhouse Xiangqi and Duck Xiangqi boards show coordinates when the setting is on, like xiangqi and jieqi ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
 - The home page forum topics box no longer leaves empty space ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
 - Perpetual check in xiangqi, jieqi and Fortress xiangqi is judged over the whole repetition, so a player who only starts checking in the last round draws instead of losing ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
 - review pages no longer cut off the chat panel's corners and shadow, and linked player names keep their colour in game rooms ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
