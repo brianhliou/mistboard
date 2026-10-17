@@ -11,9 +11,9 @@ import {
   createInitialJieqiState,
   getJieqiPlayerView,
   type JieqiColor,
+  type JieqiDeal,
   type JieqiGameState,
   type JieqiMove,
-  type JieqiPieceRole,
   type JieqiSquare,
 } from '@mistboard/game';
 import type { ArticleLang } from './article-i18n.js';
@@ -33,8 +33,10 @@ export type JieqiReplaySpec = {
   // Shown on the final ply. The kernel reports the real result; this overrides the
   // narrative text there.
   resultText: string;
-  // Per-side hidden deal in jieqiHomeSquares order — reveals follow it.
-  deal: { red: JieqiPieceRole[]; black: JieqiPieceRole[] };
+  // Per-side deal in jieqiHomeSquares order; reveals follow it. A real site
+  // game passes its PUBLIC deal (jieqiPublicDeal): `undetermined` marks the
+  // pieces nobody may know, and they render as never revealed.
+  deal: JieqiDeal;
   // Space-separated concatenated-square moves (e.g. "b1c3 i7i6 c10e8 ..."), files
   // a-i and ranks 1-10, so each token splits into from/to with the square regex.
   moves: string;
