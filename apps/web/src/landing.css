@@ -2894,9 +2894,44 @@
     padding-right: 16px;
   }
 
+  /* Card: the thumbnail carries it, so it gets the width (200px, an 8:5 frame
+     125px tall); the title is two lines at most and the date sits under it as
+     plain muted text, never over the art. No star on phones. The thumb drops
+     out of positioning so the date anchors to the card instead, and its
+     overflow clip no longer applies to it. */
   .landing-demo .landing-articles-row .landing-article-card {
-    flex: 0 0 148px;
+    position: relative;
+    flex: 0 0 200px;
     scroll-snap-align: start;
+  }
+
+  .landing-demo .landing-articles-row .landing-article-card-thumb {
+    position: static;
+  }
+
+  .landing-demo .landing-articles-row .landing-article-card-star {
+    display: none;
+  }
+
+  .landing-demo .landing-articles-row .landing-article-card-title {
+    margin: 7px 0 24px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .landing-demo .landing-articles-row .landing-article-card-date {
+    top: auto;
+    bottom: 7px;
+    left: 10px;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--site-muted);
+    font-size: 11px;
+  }
+
+  .landing-demo .landing-articles-row .landing-article-card-date::before {
+    content: none;
   }
 
   .landing-demo .landing-articles-row .landing-carousel-nav {

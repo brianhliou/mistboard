@@ -31,6 +31,7 @@ export const EN_SHELL = {
   'nav.bots': 'Bots',
   'nav.tools': 'Tools',
   'nav.admin': 'Admin',
+  'nav.mistboard': 'Mistboard',
   'nav.database': 'Database',
   'nav.engines': 'Engines',
   'nav.accounts': 'Accounts',
@@ -50,7 +51,7 @@ export const EN_SHELL = {
   'nav.register': 'Register',
   'nav.language': 'Language',
   'nav.closeMenu': 'Close menu',
-  'nav.boardAndPieces': 'Board and pieces',
+  'nav.boardAndPieces': 'Pieces',
   'nav.darkMode': 'Dark mode',
   'home.tagline':
     'Chinese chess and original strategy games. Free and open source. About Mistboard...',

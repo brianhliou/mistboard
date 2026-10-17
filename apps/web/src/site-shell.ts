@@ -1,6 +1,6 @@
 import './site-shell.css';
 import type { AccountPreferences } from './account-preferences.js';
-import { type I18nKey, t } from './i18n/catalog.js';
+import { t } from './i18n/catalog.js';
 import {
   currentLocale,
   LOCALE_META,
@@ -12,6 +12,7 @@ import {
   adminNavItems,
   communityNavItems,
   donateNavItem,
+  footerNavItems,
   learnNavItems,
   type NavItem,
   type NavSection,
@@ -630,8 +631,7 @@ function buildSiteMenu(locale: Locale): HTMLElement {
   body.className = 'site-menu-body';
   const sectionsView = document.createElement('div');
   sectionsView.className = 'site-menu-sections';
-  const sections: NavSection[] = siteMenuSections();
-  if (isLikelyAdmin()) sections.push({ labelKey: 'nav.admin', items: adminNavItems() });
+  const sections: NavSection[] = siteMenuSections({ admin: isLikelyAdmin() });
   const path = currentPath();
   for (const section of sections) {
     const items = section.items.filter((item) => !isBlockedForViewer(item.blockedIn));
@@ -699,7 +699,7 @@ function buildSiteMenu(locale: Locale): HTMLElement {
     language.setAttribute('aria-expanded', 'true');
   });
 
-  // Board and pieces opens the settings list (board, pieces, sound, notation)
+  // Pieces opens the settings list (board, pieces, sound, notation)
   // rather than one sub-panel: on a phone the signed-out gear is not on the
   // bar, so this is the only path to the rest of those settings.
   const boardChip = siteMenuChip('board', BOARD_ICON, t('nav.boardAndPieces', {}, locale));
@@ -801,35 +801,17 @@ export function buildNotice(titleText: string, bodyText: string): HTMLElement {
 // fat footer: with our route count the columns read busier than the site is
 // (Brian, 2026-06-10).
 //
-// Every entry is an on-site page. `external`/`blockedIn` stay wired for the next
-// off-site link: the Discord invite was the last one to use them, until it came
-// out of the footer on 2026-08-31 (see nav-items.ts).
-const HOME_FOOTER_LINKS: ReadonlyArray<{
-  href: string;
-  labelKey: I18nKey;
-  external?: boolean;
-  blockedIn?: readonly string[];
-}> = [
-  { href: '/about', labelKey: 'footer.about' },
-  { href: '/stats', labelKey: 'footer.stats' },
-  { href: '/feed', labelKey: 'footer.news' },
-  { href: '/faq', labelKey: 'footer.faq' },
-  { href: '/patron', labelKey: 'footer.patron' },
-  { href: '/contact', labelKey: 'footer.contact' },
-  { href: '/source', labelKey: 'footer.source' },
-  { href: '/developers', labelKey: 'footer.developers' },
-  { href: '/data', labelKey: 'footer.data' },
-  { href: '/terms', labelKey: 'footer.terms' },
-  { href: '/privacy', labelKey: 'footer.privacy' },
-];
-
+// On phones it shrinks to one line (#576, Brian 2026-10-17): About, Terms,
+// Privacy and the identity line. The links marked data-phone-menu are hidden
+// there by site-shell.css and carried by the site menu's Mistboard section
+// instead; footerNavItems (nav-items.ts) is the one list behind both.
 export function buildHomeFooter(locale: Locale = currentLocale()): HTMLElement {
   const footer = document.createElement('footer');
   footer.className = 'landing-footer';
 
   const links = document.createElement('div');
   links.className = 'landing-footer-links';
-  for (const link of HOME_FOOTER_LINKS) {
+  for (const link of footerNavItems()) {
     if (isBlockedForViewer(link.blockedIn)) continue;
     const anchor = document.createElement('a');
     anchor.href = link.external ? link.href : localizedHref(link.href, locale);
@@ -838,6 +820,7 @@ export function buildHomeFooter(locale: Locale = currentLocale()): HTMLElement {
       anchor.target = '_blank';
       anchor.rel = 'noreferrer noopener';
     }
+    if (!link.phoneFooter) anchor.dataset.phoneMenu = '';
     links.append(anchor);
   }
 

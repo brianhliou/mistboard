@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setResolvedAdmin } from './signed-in-state.js';
 import {
@@ -8,6 +10,7 @@ import {
   isSiteMenuOpen,
   navPhoneMediaQuery,
   navTabletMediaQuery,
+  openSiteMenu,
   placeNavAccount,
   syncAdminNavMenus,
 } from './site-shell.js';
@@ -329,6 +332,91 @@ describe('site shell nav', () => {
   });
 });
 
+// The stylesheet is not applied under jsdom, so the phone footer is asserted
+// as CSS text: the one rule that hides the menu-bound links must sit inside the
+// phone query (the same 600px edge as navPhoneMediaQuery) and nowhere else.
+const siteShellCss = readFileSync(
+  ['src/site-shell.css', 'apps/web/src/site-shell.css']
+    .map((candidate) => resolve(process.cwd(), candidate))
+    .find((candidate) => existsSync(candidate)) as string,
+  'utf8',
+);
+
+function splitMediaBlocks(css: string, query: string): { inside: string; outside: string } {
+  const opener = `@media ${query} {`;
+  let inside = '';
+  let outside = '';
+  let cursor = 0;
+  for (;;) {
+    const start = css.indexOf(opener, cursor);
+    if (start < 0) break;
+    outside += css.slice(cursor, start);
+    let depth = 0;
+    let end = start + opener.length - 1;
+    for (; end < css.length; end += 1) {
+      if (css[end] === '{') depth += 1;
+      else if (css[end] === '}') {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    inside += css.slice(start, end + 1);
+    cursor = end + 1;
+  }
+  outside += css.slice(cursor);
+  return { inside, outside };
+}
+
+describe('site shell footer on phones', () => {
+  const ALL_FOOTER_HREFS = [
+    '/about',
+    '/stats',
+    '/feed',
+    '/faq',
+    '/patron',
+    '/contact',
+    '/source',
+    '/developers',
+    '/data',
+    '/terms',
+    '/privacy',
+  ];
+  const MENU_BOUND_HREFS = [
+    '/stats',
+    '/feed',
+    '/faq',
+    '/patron',
+    '/contact',
+    '/source',
+    '/developers',
+    '/data',
+  ];
+  const phone = splitMediaBlocks(siteShellCss, navPhoneMediaQuery);
+  const hideRule = /\.landing-footer \[data-phone-menu\]\s*\{\s*display:\s*none;?\s*\}/;
+
+  it('keeps About, Terms, Privacy and the identity line on the phone footer', () => {
+    const footer = buildHomeFooter();
+    const kept = [...footer.querySelectorAll<HTMLAnchorElement>('a:not([data-phone-menu])')];
+    expect(kept.map((a) => a.getAttribute('href'))).toEqual(['/about', '/terms', '/privacy']);
+    const moved = [...footer.querySelectorAll<HTMLAnchorElement>('a[data-phone-menu]')];
+    expect(moved.map((a) => a.getAttribute('href'))).toEqual(MENU_BOUND_HREFS);
+    expect(footer.querySelector('.landing-footer-identity')?.textContent).toBe(
+      '© 2026 Mistboard · AGPL-3.0',
+    );
+    expect(phone.inside).toMatch(hideRule);
+  });
+
+  it('still shows every footer link on desktop and tablet', () => {
+    const footer = buildHomeFooter();
+    expect([...footer.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(
+      ALL_FOOTER_HREFS,
+    );
+    // The hide rule exists, and only under the phone query.
+    expect(phone.inside).toMatch(hideRule);
+    expect(phone.outside).not.toContain('[data-phone-menu]');
+  });
+});
+
 describe('site shell geo-blocked links', () => {
   afterEach(() => {
     document.cookie = 'mb_cc=; Max-Age=0; Path=/';
@@ -500,13 +588,13 @@ describe('site shell phone menu', () => {
     }
   });
 
-  it('groups destinations into Play, Watch, Tools, Learn and Community, no admin for others', () => {
+  it('groups destinations into Play, Watch, Tools, Learn, Community and Mistboard, no admin for others', () => {
     const { toggle } = phoneNav();
     toggle.click();
     const headings = [
       ...(menuPanel()?.querySelectorAll<HTMLElement>('.site-menu-heading') ?? []),
     ].map((h) => h.textContent);
-    expect(headings).toEqual(['Play', 'Watch', 'Tools', 'Learn', 'Community']);
+    expect(headings).toEqual(['Play', 'Watch', 'Tools', 'Learn', 'Community', 'Mistboard']);
     const play = menuPanel()?.querySelector('.site-menu-section');
     expect(
       [...(play?.querySelectorAll<HTMLAnchorElement>('.site-menu-link') ?? [])].map((a) =>
@@ -515,6 +603,47 @@ describe('site shell phone menu', () => {
     ).toEqual(['/', '/correspondence', '/puzzles']);
     expect(menuPanel()?.querySelector('a[href="/patron"]')).not.toBeNull();
     expect(menuPanel()?.querySelector('a[href="/database"]')).toBeNull();
+  });
+
+  // The footer links a phone footer hides (data-phone-menu) must each be a row
+  // of the menu's last section, same label and href, so nothing is lost on a
+  // phone. Patron is the exception: Community's Support row already reaches it.
+  // Admin slots in before it, so Mistboard stays last for admins too.
+  it('ends with a Mistboard section carrying the links the phone footer hides', () => {
+    const rows = (scope: Element | null | undefined, selector: string) =>
+      [...(scope?.querySelectorAll<HTMLAnchorElement>(selector) ?? [])].map(
+        (a) => `${a.textContent} ${a.getAttribute('href')}`,
+      );
+    const footerMoved = rows(buildHomeFooter('zh-Hant'), 'a[data-phone-menu]');
+    expect(footerMoved.map((row) => row.split(' ').at(-1))).toEqual([
+      '/stats',
+      '/feed',
+      '/faq',
+      '/patron',
+      '/contact',
+      '/source',
+      '/developers',
+      '/data',
+    ]);
+
+    for (const admin of [false, true]) {
+      setResolvedAdmin(admin);
+      try {
+        const { toggle } = phoneNav();
+        openSiteMenu(toggle, 'zh-Hant');
+        const last = [...(menuPanel()?.querySelectorAll('.site-menu-section') ?? [])].at(-1);
+        expect(last?.querySelector('.site-menu-heading')?.textContent).toBe('Mistboard');
+        expect(rows(last, '.site-menu-link')).toEqual(
+          footerMoved.filter((row) => !row.endsWith(' /patron')),
+        );
+        expect(menuPanel()?.querySelectorAll('a[href="/patron"]')).toHaveLength(1);
+        if (admin) expect(menuPanel()?.querySelector('a[href="/database"]')).not.toBeNull();
+        closeSiteMenu({ restoreFocus: false });
+        document.body.innerHTML = '';
+      } finally {
+        setResolvedAdmin(undefined);
+      }
+    }
   });
 
   it('marks the current page bold with a dot', () => {
