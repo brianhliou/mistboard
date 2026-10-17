@@ -926,6 +926,45 @@ const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
     language: 'zh',
     addedAt: '2026-08-15',
   },
+  // Master Zhang Qiang at a demonstration board, opening theory in Mandarin with
+  // English subtitles (fan upload). Part 1 of each series; placed by hand as the
+  // reference for an authentic lesson (docs-private/youtube/reference-examples.md).
+  {
+    source: 'youtube',
+    id: 'T_klw-P7EW4',
+    title: 'Xiangqi Openings Series 01 part 1',
+    author: 'hk92jimmy',
+    durationMinutes: 9,
+    tags: ['openings'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-10-17',
+  },
+  {
+    source: 'youtube',
+    id: 'vYRGl811U2I',
+    title: 'Xiangqi Openings Series 02 part 1',
+    author: 'hk92jimmy',
+    durationMinutes: 11,
+    tags: ['openings'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-10-17',
+  },
+  {
+    source: 'youtube',
+    id: 'QZieZfhYHOM',
+    title: 'Xiangqi Openings Series 03 part 1',
+    author: 'hk92jimmy',
+    durationMinutes: 17,
+    tags: ['openings'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'zh',
+    addedAt: '2026-10-17',
+  },
   {
     source: 'youtube',
     id: 'ZHta2o0NOTw',
@@ -1091,7 +1130,40 @@ const MISTBOARD_CHANNEL_VIDEOS: readonly YoutubeVideo[] = [
 /** Our puzzle Shorts (Elegant Pastime problems), oldest first. Each is entered
  *  when it is scheduled on YouTube, with its own 9:16 thumbnail and the
  *  `publishAt` YouTube will publish it at; the shelf shows it from then on. */
-const MISTBOARD_SHORTS: readonly YoutubeVideo[] = [];
+const MISTBOARD_SHORTS: readonly YoutubeVideo[] = [
+  {
+    source: 'youtube',
+    id: 'Ga9OIOzhiNM',
+    short: true,
+    thumbnailUrl: '/video-thumbs/short-01-western-passes-v1.png',
+    title: 'A 450-Year-Old Chinese Chess Puzzle: Give Up Both Chariots, Mate in Six Checks',
+    author: 'Mistboard',
+    firstParty: true,
+    durationMinutes: 1,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-10-17',
+    publishAt: '2026-10-21T16:00:00Z',
+  },
+  {
+    source: 'youtube',
+    id: 'iHJtAa9C2OI',
+    short: true,
+    thumbnailUrl: '/video-thumbs/short-02-ram-hedge-v1.png',
+    title: 'The Ram Butts the Hedge: A Chinese Chess Puzzle in Nine Checks',
+    author: 'Mistboard',
+    firstParty: true,
+    durationMinutes: 1,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-10-17',
+    publishAt: '2026-10-24T16:00:00Z',
+  },
+];
 
 /** The curated catalogue: other people's videos, filtered and faceted by the
  *  page. Deliberately does NOT include our own episodes — they have their own
