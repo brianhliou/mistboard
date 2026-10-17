@@ -201,7 +201,7 @@ function compile(file: string): void {
     name: 'KataGo-AnimalChess vs MistyJungle',
     i18n: MATCH_STUDY_I18N,
     description:
-      "All 200 games in which KataGo-AnimalChess (hzyhhzy, Kouza), a self-play net for Dou Shou Qi, beat MistyJungle 82-0 with 118 draws at matched time per move, right after Mistboard gave the tiger the lion's sideways river jump. Eight named games first, then the rest, decisive games before draws. The harness and the records are linked from “KataGo, a stronger Jungle Chess bot” on Mistboard's blog.",
+      "All 200 games in which KataGo-AnimalChess (hzyhhzy, Kouza), a self-play net for Dou Shou Qi, beat MistyJungle 82-0 with 118 draws at matched time per move, right after Mistboard gave the tiger the lion's sideways river jump. Eight named games first, then the rest, decisive games before draws. The game records are linked from “KataGo, a stronger Jungle Chess bot” on Mistboard's blog.",
     games: pick.map(([g, why]) => describe(g, why)),
   };
   writeFileSync(DATA, `${JSON.stringify(data, null, 2)}\n`);
