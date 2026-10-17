@@ -704,10 +704,16 @@
   color: #b91c1c;
 }
 
-/* On the solid-green selected fill the glyph keeps its own ink (white king,
-   black king, red general) via the per-color rules above — selection only fills
-   the cell and whitens the label, so no selected-glyph override is needed. The
-   white king's stroke keeps it legible on green. */
+/* On the solid-green selected fill a character glyph turns white with its
+   label: red 帥 and black 將 both read poorly on green, and the label already
+   names the side. Image pieces (chess, jungle) keep their own art. */
+.landing-color-option.selected .landing-color-glyph,
+.landing-color-option.selected .landing-color-glyph.random .red,
+.landing-color-option.selected .landing-color-glyph.random .black {
+  color: #fff;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}
 
 /* Chips auto-balance to the number of *visible* options: 2 dark-chess presets
    split the row 50/50, 3 presets split 33/33/33 — no dead gap from a
@@ -1165,4 +1171,311 @@
   border-color: var(--site-accent);
   outline: 3px solid var(--site-focus);
   outline-offset: 2px;
+}
+
+/* Phone bottom sheet (mobile pass #576). openLandingSetupDialog adds these
+   classes only at the site header's phone breakpoint (600px), so tablet and
+   desktop keep the centred dialog above. The variant grid becomes one row
+   that opens a list, every choice is an open compact row, and Start sits in a
+   footer outside the scroller so it never leaves the screen. */
+html.landing-setup-open,
+html.landing-setup-open body {
+  overflow: hidden;
+}
+
+.landing-setup-overlay--sheet {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.landing-setup-sheet {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  /* Small/dynamic viewport units: 100vh on iOS includes the area under the
+     Safari toolbar, which is what hid Start. */
+  max-height: calc(100dvh - 12px);
+  overflow: hidden;
+  border-width: 1px 0 0;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -12px 40px rgba(10, 15, 13, 0.28);
+}
+
+.landing-setup-grabber {
+  flex: none;
+  width: 40px;
+  height: 5px;
+  margin: 8px auto 0;
+  border-radius: 999px;
+  background: var(--site-border);
+}
+
+.landing-setup-sheet .landing-setup-header {
+  position: relative;
+  flex: none;
+  min-height: 46px;
+  padding: 2px 52px;
+}
+
+.landing-setup-sheet .landing-setup-title {
+  font-size: 17px;
+}
+
+.landing-setup-sheet .landing-setup-close,
+.landing-setup-sheet-back {
+  position: absolute;
+  top: 50%;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--site-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.landing-setup-sheet .landing-setup-close {
+  right: 6px;
+}
+
+.landing-setup-sheet-back {
+  left: 6px;
+  font-size: 30px;
+}
+
+.landing-setup-sheet-back[hidden] {
+  display: none;
+}
+
+.landing-setup-sheet-back:focus-visible {
+  outline: 2px solid var(--site-focus);
+}
+
+.landing-setup-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 16px 10px;
+}
+
+.landing-setup-scroll[hidden],
+.landing-setup-footer[hidden],
+.landing-variant-picker[hidden] {
+  display: none;
+}
+
+.landing-setup-sheet .landing-setup-notice {
+  padding: 0 0 8px;
+}
+
+.landing-setup-sheet .landing-setup-accordion {
+  gap: 8px;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+
+.landing-setup-row {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.landing-setup-row[hidden] {
+  display: none;
+}
+
+.landing-setup-row-label {
+  color: var(--site-muted);
+  font-size: 11px;
+  font-weight: 780;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.landing-setup-row .landing-start-option {
+  min-height: 40px;
+  padding: 4px 6px;
+}
+
+.landing-setup-row .landing-time-presets {
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  overflow: hidden;
+}
+
+.landing-setup-row .landing-time-presets > .landing-start-option {
+  min-width: 0;
+  min-height: 40px;
+}
+
+.landing-setup-row .landing-time-mode {
+  margin-bottom: 4px;
+}
+
+/* Side choices sit glyph-beside-label so the row is as short as the others. */
+.landing-setup-row .landing-color-option {
+  flex-direction: row;
+  gap: 6px;
+}
+
+.landing-setup-row .landing-color-option .landing-color-glyph {
+  height: 24px;
+  font-size: 24px;
+}
+
+.landing-setup-row .landing-color-option .landing-color-glyph.xiangqi {
+  font-size: 17px;
+}
+
+.landing-setup-row .landing-color-option .landing-color-glyph.jungle,
+.landing-setup-row .landing-color-option .landing-color-glyph:has(.landing-color-piece) {
+  gap: 2px;
+  height: 28px;
+}
+
+.landing-setup-row .landing-color-piece.jungle,
+.landing-setup-row .landing-color-piece.chess {
+  width: 28px;
+  height: 28px;
+}
+
+.landing-setup-row .landing-color-glyph.random .landing-color-piece.jungle,
+.landing-setup-row .landing-color-glyph.random .landing-color-piece.chess {
+  width: 22px;
+  height: 22px;
+}
+
+.landing-setup-row .landing-engine-select {
+  min-height: 42px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  padding: 8px 40px 8px 12px;
+}
+
+.landing-variant-row,
+.landing-variant-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 12px 4px 8px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
+  color: var(--site-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 780;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.landing-variant-row-thumb,
+.landing-variant-option-thumb {
+  flex: none;
+  display: block;
+  width: 32px;
+  height: 32px;
+}
+
+.landing-variant-row-thumb svg,
+.landing-variant-option-thumb svg,
+.landing-variant-row-thumb .variant-marker,
+.landing-variant-option-thumb .variant-marker {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.landing-variant-row-name,
+.landing-variant-option-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.landing-variant-row-chevron {
+  flex: none;
+  color: var(--site-muted);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.landing-variant-row:focus-visible,
+.landing-variant-option:focus-visible {
+  border-color: var(--site-accent);
+  outline: 2px solid var(--site-focus);
+}
+
+.landing-variant-picker {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+.landing-variant-options {
+  display: grid;
+  gap: 6px;
+}
+
+.landing-variant-option.selected {
+  border-color: var(--site-accent);
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+  --variant-marker-color: var(--site-on-accent);
+}
+
+/* Hover only where a pointer hovers: a tap leaves :hover stuck on touch
+   screens, which painted a stray highlight on the last tapped variant. */
+@media (hover: hover) {
+  .landing-variant-option:hover:not(.selected):not(:disabled),
+  .landing-variant-row:hover {
+    background: color-mix(in srgb, var(--site-accent-soft) 70%, var(--site-panel) 30%);
+  }
+}
+
+.landing-variant-option-disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.landing-setup-footer {
+  flex: none;
+  border-top: 1px solid var(--site-border);
+  background: var(--site-panel);
+}
+
+.landing-setup-sheet .landing-setup-status {
+  padding: 8px 16px 0;
+}
+
+.landing-setup-sheet .landing-setup-actions {
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+/* A 320px phone has no room for Random's paired glyph beside its label; the
+   word alone says it. */
+@media (max-width: 360px) {
+  .landing-setup-row .landing-color-option .landing-color-glyph.random {
+    display: none;
+  }
 }
