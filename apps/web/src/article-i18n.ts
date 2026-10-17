@@ -204,6 +204,8 @@ export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
   'en-passant-under-fog': 'Moved from brianhliou.com in English; not yet translated.',
   'most-played-move': 'Moved from brianhliou.com in English; not yet translated.',
   'chess960-starting-positions': 'Moved from brianhliou.com in English; not yet translated.',
+  // The last chess post, moved on 2026-10-16 and reframed on the way.
+  'lichess-analysis-accuracy': 'Moved from brianhliou.com in English; not yet translated.',
   // The Dou Shou Qi engine post, moved on 2026-10-16.
   'dou-shou-qi-engine': 'Moved from brianhliou.com in English; not yet translated.',
 };
@@ -1133,8 +1135,8 @@ const ZH_HANS: Record<string, string> = {
   'AB-JChess, a stronger jieqi bot': 'AB-JChess：更强的揭棋电脑',
   'AB-JChess: the open-source jieqi engine that beat Pikafish 248 to 136':
     'AB-JChess：以 248 比 136 战胜皮卡鱼的开源揭棋引擎',
-  'An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games.':
-    '一个自带神经网络的开源揭棋引擎，现在排在皮卡鱼第 8 级之上。它在 400 盘中以 248 比 136 战胜全力的皮卡鱼。',
+  'AB-JChess, an open-source jieqi engine with its own neural network, now sits above Pikafish Level 8 on Mistboard. It beat full-strength Pikafish 248 to 136 in 400 games.':
+    'AB-JChess 是一个自带神经网络的开源揭棋引擎，现在在 Mistboard 上排在皮卡鱼第 8 级之上。它在 400 盘中以 248 比 136 战胜全力的皮卡鱼。',
   '[Jieqi](/rules/jieqi) on Mistboard has a new top bot. [AB-JChess](https://github.com/lxsgx23/AB-JChess) is an open-source jieqi engine by Huorongrong and Laoxu (Kouza), and we play it here with their permission. It sits above Pikafish Level 8, the bot people have been playing since August.':
     '[揭棋](/rules/jieqi)在 Mistboard 上有了新的最强电脑。[AB-JChess](https://github.com/lxsgx23/AB-JChess) 是由 Huorongrong 和 Laoxu（Kouza）开发的开源揭棋引擎，我们经作者许可在这里使用它。它排在皮卡鱼第 8 级之上，也就是棋友们从 8 月起一直在下的那个电脑。',
   'Play AB-JChess': '挑战 AB-JChess',
@@ -1226,8 +1228,8 @@ const ZH_HANS: Record<string, string> = {
   'Until August 23 the jieqi bot ran on a quicker setting than we meant it to, searching for a fraction of a second a move. It won 13 games in a row in early August anyway. Then it lost nine in three days, most likely all to one player, which is how we noticed. We moved it to full strength that night, and none of those nine games are counted above.':
     '8 月 23 日之前，揭棋电脑误用了一个比我们原意更快的设置，每步只搜索不到一秒。即便如此，它在 8 月上旬还是连赢了 13 盘。随后它三天里输了 9 盘，很可能都是输给同一位棋手，我们这才发现问题。当晚我们就把它调回全力，这 9 盘都没有计入上面的统计。',
   'What is next': '接下来',
-  'A stronger engine now sits above Level 8: AB-JChess, an open-source jieqi engine by Huorongrong and Laoxu (Kouza), which beat full-strength Pikafish in 248 of 400 games. Its story, and how it handles positions like these, follows next week.':
-    '现在第 8 级之上还有一个更强的引擎：AB-JChess，由 Huorongrong 和 Laoxu（Kouza）开发的开源揭棋引擎，400 盘中赢了全力的皮卡鱼 248 盘。它的故事，以及它在类似局面中的表现，下周再写。',
+  'A stronger engine now sits above Level 8: AB-JChess, an open-source jieqi engine by Huorongrong and Laoxu (Kouza), which beat full-strength Pikafish in 248 of 400 games. Its story, and how it handles positions like these, is in [the AB-JChess post](/blog/ab-jchess).':
+    '现在第 8 级之上还有一个更强的引擎：AB-JChess，由 Huorongrong 和 Laoxu（Kouza）开发的开源揭棋引擎，400 盘中赢了全力的皮卡鱼 248 盘。它的故事，以及它在类似局面中的表现，见 [AB-JChess 那篇文章](/blog/ab-jchess)。',
   'Jieqi rules': '揭棋规则',
   Guest: '访客',
   '@tonghuiqu': '@tonghuiqu',
@@ -2749,8 +2751,8 @@ const ZH_HANS: Record<string, string> = {
     '陆地上的老鼠可以吃大象，大象却永远不能吃老鼠。无需账户。',
   'When an animal takes an enemy of the same rank, both leave the board. No account needed.':
     '动物吃同等级的敌子时，两枚棋子一起离开棋盘。无需账户。',
-  'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does.':
-    'Mistboard 采用仅向吃子方揭示的规则。你吃掉一枚暗子时会得知它是什么，对手则永远不会知道。',
+  'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does. Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
+    'Mistboard 采用仅向吃子方揭示的规则。你吃掉一枚暗子时会得知它是什么，对手则永远不会知道。八个皮卡鱼等级之上是 [AB-JChess](/blog/ab-jchess)，本站最强的揭棋机器人。',
   'The generals may face each other here. A general that sees the other down a clear file can capture it. No account needed.':
     '这里允许将帅照面。一方将帅若在无阻挡的直线上看见对方，就可以直接擒获。无需账户。',
   'You can castle out of, through or into check, and nobody tells you when your king is attacked. No account needed.':
@@ -3928,8 +3930,8 @@ const ZH_HANS: Record<string, string> = {
   'The engine': '关于引擎',
   'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical alpha-beta search with a hand-written evaluation and no neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node, scoring a move as the average over each piece that tile could still be. It only ever sees the face-down board, and a test fails the build if a hidden identity ever leaks into what it is sent. [Pikafish itself](/blog/pikafish), at full strength for standard xiangqi, is on the site too.':
     'PikaJieQi 是开源象棋引擎 [Pikafish](https://github.com/official-pikafish/Pikafish) 揭棋分支的一个分叉。经典的 alpha-beta 搜索，配一套手写评估函数，没有神经网络。让它成为揭棋引擎而不是象棋引擎的地方在于：它把每一个暗子当作一个概率节点，一个着法的分数，是那个点上所有仍然可能的子分别算分之后的平均。它自始至终只看得到那张暗着的棋盘，只要有任何一个隐藏身份漏进发给它的数据里，就会有一个测试让构建失败。标准象棋的[皮卡鱼本尊](/blog/pikafish)也在站内，全力运行。',
-  "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish's strength lives in its neural network and jieqi has no good one: we trained a net and it never came out stronger than the hand-written evaluation, so this is an open problem rather than a chore nobody got round to. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like; the terms of the open challenge, and the prebuilt engine to beat, are at [brianhliou.com/challenges](https://brianhliou.com/challenges/).":
-    '它是能被打败的，本页最上面那盘棋就是它输的。你可以在[这些引擎对局](/study/wd6c7qvG)里看它自己和自己下。现代 Pikafish 的力量几乎全在它的神经网络里，而揭棋没有一张好网络：我们训练过一张，始终没有强过手写的评估函数，所以这是一个还没解决的问题，不是没人愿意干的杂活。如果你会训练网络，或者对揭棋熟到能指出它判断错在哪里，那是我们最想要的帮助；公开挑战的条件和可下载的引擎在 [brianhliou.com/challenges](https://brianhliou.com/challenges/)。',
+  "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish's strength lives in its neural network, and the net we trained for jieqi never came out stronger than the hand-written evaluation. The first jieqi network that did came from outside: [AB-JChess](/blog/ab-jchess), an open-source engine that beat PikaJieQi 248 to 136 in 400 games and has been the strongest bot on the site since October. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like; the terms of the open challenge, and the prebuilt engine to beat, are at [brianhliou.com/challenges](https://brianhliou.com/challenges/).":
+    '它是能被打败的，本页最上面那盘棋就是它输的。你可以在[这些引擎对局](/study/wd6c7qvG)里看它自己和自己下。现代 Pikafish 的力量几乎全在它的神经网络里，而我们为揭棋训练的网络始终没有强过手写的评估函数。第一张做到这一点的揭棋网络来自外部：[AB-JChess](/blog/ab-jchess)，一个开源引擎，400 盘中以 248 比 136 战胜 PikaJieQi，从十月起一直是本站最强的机器人。如果你会训练网络，或者对揭棋熟到能指出它判断错在哪里，那是我们最想要的帮助；公开挑战的条件和可下载的引擎在 [brianhliou.com/challenges](https://brianhliou.com/challenges/)。',
   'On Mistboard': '在 Mistboard 上',
   'Play the engine or a friend': '和引擎或朋友对弈',
   'Free, no account': '免费，不用账号',
@@ -3955,8 +3957,8 @@ const ZH_HANS: Record<string, string> = {
   'The flips are random; what you do with them is not. Your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.':
     '揭子是随机的，你拿它做什么不是。你的准确率只由你的选择算出来，所以揭得好不会把它抬高，揭得差也不会把它拉低。',
   'Can a computer play jieqi well?': '电脑下揭棋下得好吗？',
-  'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because jieqi has no good neural network yet: we trained one and it never came out stronger than the hand-written evaluation.':
-    '还行，但谈不上出色。我们这个会被强棋手打败，主要是因为揭棋还没有好用的神经网络：我们训练过一个，但它始终没有强过手写的评估函数。',
+  'Better since October. PikaJieQi, which judges positions by hand-written rules, can be beaten by a strong human. AB-JChess, the top bot on the site since then, judges them with a neural network and beat PikaJieQi 248 to 136 in 400 games.':
+    '十月以来好多了。PikaJieQi 靠手写规则判断局面，强棋手能赢它。AB-JChess 从那时起是本站最强的机器人，它用神经网络判断局面，400 盘中以 248 比 136 战胜 PikaJieQi。',
   'Can the engine see my hidden pieces?': '引擎看得到我的暗子吗？',
   'No. It gets the same face-down board you do and is never told the deal. A test fails the build if an identity ever leaks into what it is sent.':
     '看不到。它拿到的是和你一样的暗着的棋盘，从来不会被告知这一局是怎么摆的。只要有一个身份漏进发给它的数据里，就会有一个测试让构建失败。',
@@ -4975,8 +4977,8 @@ const ZH_HANS: Record<string, string> = {
   'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.':
     '不需要安装任何东西。Mistboard 在手机、平板或电脑的浏览器里直接运行。',
   'Can I play jieqi against an AI?': '揭棋可以和 AI 对弈吗？',
-  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because jieqi has no good neural network yet (we trained one and it never beat the hand-written evaluation), and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.':
-    '可以，有八个等级。引擎是按揭棋规则打了补丁的皮卡鱼（Pikafish）。它很强，但高手能赢它，主要因为揭棋还没有好用的神经网络（我们训练过一个，但它没能胜过手写的评估函数）；而且它看不到你的暗子：它拿到的是和你一样的背面朝上的棋盘，从不被告知底牌。',
+  'Yes, at eight levels and one stronger bot. Levels 1 to 8 run a Pikafish build patched for jieqi rules, which judges positions by hand-written rules, and a strong human can beat it. Above them is AB-JChess, an open-source engine with its own neural network, which beat Level 8 in 248 of 400 games. Neither can see your hidden pieces: each gets the same face-down board you do and is never told the deal.':
+    '可以，有八个等级，外加一个更强的机器人。第 1 到 8 级运行按揭棋规则打了补丁的皮卡鱼（Pikafish），它靠手写规则判断局面，高手能赢它。它们之上是 AB-JChess，一个自带神经网络的开源引擎，400 盘中赢了第 8 级 248 盘。两者都看不到你的暗子：它们拿到的都是和你一样背面朝上的棋盘，从不被告知底牌。',
   'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.':
     '同样的棋盘、同样的棋子、同样的将死目标。除将帅外的棋子开局全部洗匀背面朝上，第一步按所在起始位置的棋子走法走一次，然后翻开按真实身份行棋。翻开的士可以出九宫，翻开的象可以过河。',
   'Can a revealed advisor leave the palace, and can an elephant cross the river?':
@@ -5497,8 +5499,8 @@ const ZH_HANS: Record<string, string> = {
   'The opening explorer on Lichess shows you, for any position, what people played next and how it went. It can show you three databases (every rated game on Lichess, the masters, or one player), filtered by rating band, speed and year, and the masters filtered by era is the best free opening book there is. But the table a club player sees by default is the Lichess database at their own rating, and its top row is the most played move at their level. That row is the move most of us play, because everyone else did. I asked how often it is an inaccuracy.':
     'Lichess的开局局面浏览器会告诉你，在任意局面下人们接着走了什么、结果如何。它能显示三个数据库（Lichess上所有等级分对局、大师对局，或某一位棋手），可按分段、棋速和年份筛选，而按年代筛选的大师库是现有最好的免费开局库。但俱乐部棋手默认看到的那张表，是自己分段下的Lichess数据库，首行就是这个水平上最常走的一手。那一行是我们大多数人会走的一手，只因为别人都这么走。我想知道，它有多常是一步不精确。',
   'Where "most played" comes from': '「最常走」从何而来',
-  "Then every position went through Stockfish 18 at 20,000,000 nodes with three lines. The most played move is judged against the best move from the same search, by lila's own winning-chance formula, the one that decides what gets a `?!` on a Lichess report. A gap of 0.1 or more is an inaccuracy, 0.2 a mistake, 0.3 a blunder. Every flagged position then got a second 20M search with a different thread count, and 24 of 168 did not survive it; 144 did. That is the same noise floor the [last post](https://brianhliou.com/posts/lichess-analysis-accuracy/) found, and it is why one search is never the verdict here.":
-    '随后每个局面都用Stockfish 18在20,000,000节点下跑了三条变例。最常走的一手，是按同一次搜索给出的最佳着法来评判的，采用lila自己的获胜机会公式，也就是决定Lichess报告里哪一手会被标上`?!`的那个公式。差距达到0.1及以上算不精确，0.2算错着，0.3算漏着。每个被标记的局面又用不同线程数做了第二次20M搜索，168个里有24个没能通过；144个通过了。这和[上一篇](https://brianhliou.com/posts/lichess-analysis-accuracy/)发现的噪声底线一致，也正因如此，这里单次搜索从来不是定论。',
+  "Then every position went through Stockfish 18 at 20,000,000 nodes with three lines. The most played move is judged against the best move from the same search, by lila's own winning-chance formula, the one that decides what gets a `?!` on a Lichess report. A gap of 0.1 or more is an inaccuracy, 0.2 a mistake, 0.3 a blunder. Every flagged position then got a second 20M search with a different thread count, and 24 of 168 did not survive it; 144 did. That is the same noise floor the [last post](/blog/lichess-analysis-accuracy) found, and it is why one search is never the verdict here.":
+    '随后每个局面都用Stockfish 18在20,000,000节点下跑了三条变例。最常走的一手，是按同一次搜索给出的最佳着法来评判的，采用lila自己的获胜机会公式，也就是决定Lichess报告里哪一手会被标上`?!`的那个公式。差距达到0.1及以上算不精确，0.2算错着，0.3算漏着。每个被标记的局面又用不同线程数做了第二次20M搜索，168个里有24个没能通过；144个通过了。这和[上一篇](/blog/lichess-analysis-accuracy)发现的噪声底线一致，也正因如此，这里单次搜索从来不是定论。',
   'For each of the 144 I also pulled the masters database by era (before 2010, 2010 to 2017, since 2018), which is where the shapes come from.':
     '对这144个局面，我还按年代（2010年前、2010到2017年、2018年起）调取了大师数据库，下面的几种形态就是由此得来的。',
   'Four shapes': '四种形态',
@@ -7223,8 +7225,8 @@ const ZH_HANT: Record<string, string> = {
   'AB-JChess, a stronger jieqi bot': 'AB-JChess：更強的揭棋電腦',
   'AB-JChess: the open-source jieqi engine that beat Pikafish 248 to 136':
     'AB-JChess：以 248 比 136 戰勝皮卡魚的開源揭棋引擎',
-  'An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games.':
-    '一個自帶神經網路的開源揭棋引擎，現在排在皮卡魚第 8 級之上。它在 400 盤中以 248 比 136 戰勝全力的皮卡魚。',
+  'AB-JChess, an open-source jieqi engine with its own neural network, now sits above Pikafish Level 8 on Mistboard. It beat full-strength Pikafish 248 to 136 in 400 games.':
+    'AB-JChess 是一個自帶神經網路的開源揭棋引擎，現在在 Mistboard 上排在皮卡魚第 8 級之上。它在 400 盤中以 248 比 136 戰勝全力的皮卡魚。',
   '[Jieqi](/rules/jieqi) on Mistboard has a new top bot. [AB-JChess](https://github.com/lxsgx23/AB-JChess) is an open-source jieqi engine by Huorongrong and Laoxu (Kouza), and we play it here with their permission. It sits above Pikafish Level 8, the bot people have been playing since August.':
     '[揭棋](/rules/jieqi)在 Mistboard 上有了新的最強電腦。[AB-JChess](https://github.com/lxsgx23/AB-JChess) 是由 Huorongrong 和 Laoxu（Kouza）開發的開源揭棋引擎，我們經作者許可在這裡使用它。它排在皮卡魚第 8 級之上，也就是棋友們從 8 月起一直在下的那個電腦。',
   'Play AB-JChess': '挑戰 AB-JChess',
@@ -7316,8 +7318,8 @@ const ZH_HANT: Record<string, string> = {
   'Until August 23 the jieqi bot ran on a quicker setting than we meant it to, searching for a fraction of a second a move. It won 13 games in a row in early August anyway. Then it lost nine in three days, most likely all to one player, which is how we noticed. We moved it to full strength that night, and none of those nine games are counted above.':
     '8 月 23 日之前，揭棋電腦誤用了一個比我們原意更快的設定，每步只搜尋不到一秒。即便如此，它在 8 月上旬還是連贏了 13 盤。隨後它三天裡輸了 9 盤，很可能都是輸給同一位棋手，我們這才發現問題。當晚我們就把它調回全力，這 9 盤都沒有計入上面的統計。',
   'What is next': '接下來',
-  'A stronger engine now sits above Level 8: AB-JChess, an open-source jieqi engine by Huorongrong and Laoxu (Kouza), which beat full-strength Pikafish in 248 of 400 games. Its story, and how it handles positions like these, follows next week.':
-    '現在第 8 級之上還有一個更強的引擎：AB-JChess，由 Huorongrong 和 Laoxu（Kouza）開發的開源揭棋引擎，400 盤中贏了全力的皮卡魚 248 盤。它的故事，以及它在類似局面中的表現，下週再寫。',
+  'A stronger engine now sits above Level 8: AB-JChess, an open-source jieqi engine by Huorongrong and Laoxu (Kouza), which beat full-strength Pikafish in 248 of 400 games. Its story, and how it handles positions like these, is in [the AB-JChess post](/blog/ab-jchess).':
+    '現在第 8 級之上還有一個更強的引擎：AB-JChess，由 Huorongrong 和 Laoxu（Kouza）開發的開源揭棋引擎，400 盤中贏了全力的皮卡魚 248 盤。它的故事，以及它在類似局面中的表現，見 [AB-JChess 那篇文章](/blog/ab-jchess)。',
   'Jieqi rules': '揭棋規則',
   Guest: '訪客',
   '@tonghuiqu': '@tonghuiqu',
@@ -9795,8 +9797,8 @@ const ZH_HANT: Record<string, string> = {
   'The engine': '關於引擎',
   'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical alpha-beta search with a hand-written evaluation and no neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node, scoring a move as the average over each piece that tile could still be. It only ever sees the face-down board, and a test fails the build if a hidden identity ever leaks into what it is sent. [Pikafish itself](/blog/pikafish), at full strength for standard xiangqi, is on the site too.':
     'PikaJieQi 是開放原始碼象棋引擎 [Pikafish](https://github.com/official-pikafish/Pikafish) 揭棋分支的一個分支版本。經典的 alpha-beta 搜尋，配一套手寫評估函式，沒有類神經網路。讓它成為揭棋引擎而不是象棋引擎的地方在於：它把每一個暗子當作一個機率節點，一個著法的分數，是那個點上所有仍然可能的子分別算分之後的平均。它自始至終只看得到那張暗著的棋盤，只要有任何一個隱藏身分漏進發給它的資料裡，就會有一個測試讓建置失敗。標準象棋的[皮卡魚本尊](/blog/pikafish)也在站內，全力運行。',
-  "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish's strength lives in its neural network and jieqi has no good one: we trained a net and it never came out stronger than the hand-written evaluation, so this is an open problem rather than a chore nobody got round to. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like; the terms of the open challenge, and the prebuilt engine to beat, are at [brianhliou.com/challenges](https://brianhliou.com/challenges/).":
-    '它是能被打敗的，本頁最上面那盤棋就是它輸的。你可以在[這些引擎對局](/study/wd6c7qvG)裡看它自己和自己下。現代 Pikafish 的力量幾乎全在它的類神經網路裡，而揭棋沒有一張好網路：我們訓練過一張，始終沒有強過手寫的評估函式，所以這是一個還沒解決的問題，不是沒人願意幹的雜活。如果你會訓練網路，或者對揭棋熟到能指出它判斷錯在哪裡，那是我們最想要的幫助；公開挑戰的條件和可下載的引擎在 [brianhliou.com/challenges](https://brianhliou.com/challenges/)。',
+  "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish's strength lives in its neural network, and the net we trained for jieqi never came out stronger than the hand-written evaluation. The first jieqi network that did came from outside: [AB-JChess](/blog/ab-jchess), an open-source engine that beat PikaJieQi 248 to 136 in 400 games and has been the strongest bot on the site since October. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like; the terms of the open challenge, and the prebuilt engine to beat, are at [brianhliou.com/challenges](https://brianhliou.com/challenges/).":
+    '它是能被打敗的，本頁最上面那盤棋就是它輸的。你可以在[這些引擎對局](/study/wd6c7qvG)裡看它自己和自己下。現代 Pikafish 的力量幾乎全在它的類神經網路裡，而我們為揭棋訓練的網路始終沒有強過手寫的評估函式。第一張做到這一點的揭棋網路來自外部：[AB-JChess](/blog/ab-jchess)，一個開源引擎，400 盤中以 248 比 136 戰勝 PikaJieQi，從十月起一直是本站最強的機器人。如果你會訓練網路，或者對揭棋熟到能指出它判斷錯在哪裡，那是我們最想要的幫助；公開挑戰的條件和可下載的引擎在 [brianhliou.com/challenges](https://brianhliou.com/challenges/)。',
   'On Mistboard': '在 Mistboard 上',
   'Play the engine or a friend': '和引擎或朋友對弈',
   'Free, no account': '免費，不用帳號',
@@ -9822,8 +9824,8 @@ const ZH_HANT: Record<string, string> = {
   'The flips are random; what you do with them is not. Your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.':
     '揭子是隨機的，你拿它做什麼不是。你的準確率只由你的選擇算出來，所以揭得好不會把它抬高，揭得差也不會把它拉低。',
   'Can a computer play jieqi well?': '電腦下揭棋下得好嗎？',
-  'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because jieqi has no good neural network yet: we trained one and it never came out stronger than the hand-written evaluation.':
-    '還行，但談不上出色。我們這個會被強棋手打敗，主要是因為揭棋還沒有好用的類神經網路：我們訓練過一個，但它始終沒有強過手寫的評估函數。',
+  'Better since October. PikaJieQi, which judges positions by hand-written rules, can be beaten by a strong human. AB-JChess, the top bot on the site since then, judges them with a neural network and beat PikaJieQi 248 to 136 in 400 games.':
+    '十月以來好多了。PikaJieQi 靠手寫規則判斷局面，強棋手能贏它。AB-JChess 從那時起是本站最強的機器人，它用類神經網路判斷局面，400 盤中以 248 比 136 戰勝 PikaJieQi。',
   'Can the engine see my hidden pieces?': '引擎看得到我的暗子嗎？',
   'No. It gets the same face-down board you do and is never told the deal. A test fails the build if an identity ever leaks into what it is sent.':
     '看不到。它拿到的是和你一樣的暗著的棋盤，從來不會被告知這一局是怎麼擺的。只要有一個身分漏進發給它的資料裡，就會有一個測試讓建置失敗。',
@@ -10778,8 +10780,8 @@ const ZH_HANT: Record<string, string> = {
     '陸地上的老鼠可以吃大象，大象卻永遠不能吃老鼠。無需帳號。',
   'When an animal takes an enemy of the same rank, both leave the board. No account needed.':
     '動物吃同等級的敵子時，兩枚棋子一起離開棋盤。無需帳號。',
-  'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does.':
-    'Mistboard 採用僅向吃子方揭示的規則。你吃掉一枚暗子時會得知它是什麼，對手則永遠不會知道。',
+  'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does. Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.':
+    'Mistboard 採用僅向吃子方揭示的規則。你吃掉一枚暗子時會得知它是什麼，對手則永遠不會知道。八個皮卡魚等級之上是 [AB-JChess](/blog/ab-jchess)，本站最強的揭棋機器人。',
   'The generals may face each other here. A general that sees the other down a clear file can capture it. No account needed.':
     '這裡允許將帥照面。一方將帥若在無阻擋的直線上看見對方，就可以直接擒獲。無需帳號。',
   'You can castle out of, through or into check, and nobody tells you when your king is attacked. No account needed.':
@@ -10854,8 +10856,8 @@ const ZH_HANT: Record<string, string> = {
   'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.':
     '不需要安裝任何東西。Mistboard 在手機、平板或電腦的瀏覽器裡直接執行。',
   'Can I play jieqi against an AI?': '揭棋可以和 AI 對弈嗎？',
-  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because jieqi has no good neural network yet (we trained one and it never beat the hand-written evaluation), and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.':
-    '可以，有八個等級。引擎是按揭棋規則打了補丁的皮卡魚（Pikafish）。它很強，但高手能贏它，主要因為揭棋還沒有好用的類神經網路（我們訓練過一個，但它沒能勝過手寫的評估函數）；而且它看不到你的暗子：它拿到的是和你一樣背面朝上的棋盤，從不被告知底牌。',
+  'Yes, at eight levels and one stronger bot. Levels 1 to 8 run a Pikafish build patched for jieqi rules, which judges positions by hand-written rules, and a strong human can beat it. Above them is AB-JChess, an open-source engine with its own neural network, which beat Level 8 in 248 of 400 games. Neither can see your hidden pieces: each gets the same face-down board you do and is never told the deal.':
+    '可以，有八個等級，外加一個更強的機器人。第 1 到 8 級運行按揭棋規則打了補丁的皮卡魚（Pikafish），它靠手寫規則判斷局面，高手能贏它。它們之上是 AB-JChess，一個自帶類神經網路的開源引擎，400 盤中贏了第 8 級 248 盤。兩者都看不到你的暗子：它們拿到的都是和你一樣背面朝上的棋盤，從不被告知底牌。',
   'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.':
     '同樣的棋盤、同樣的棋子、同樣的將死目標。除將帥外的棋子開局全部洗勻背面朝上，第一步按所在起始位置的棋子走法走一次，然後翻開按真實身份行棋。翻開的士可以出九宮，翻開的象可以過河。',
   'Can a revealed advisor leave the palace, and can an elephant cross the river?':
@@ -11376,8 +11378,8 @@ const ZH_HANT: Record<string, string> = {
   'The opening explorer on Lichess shows you, for any position, what people played next and how it went. It can show you three databases (every rated game on Lichess, the masters, or one player), filtered by rating band, speed and year, and the masters filtered by era is the best free opening book there is. But the table a club player sees by default is the Lichess database at their own rating, and its top row is the most played move at their level. That row is the move most of us play, because everyone else did. I asked how often it is an inaccuracy.':
     'Lichess 的開局瀏覽器會告訴你，在任一局面下大家接著走了什麼、結果如何。它可以顯示三種資料庫（Lichess 上所有計分對局、大師對局，或某位棋手的對局），並可按分數段、棋速與年份篩選，而按年代篩選的大師資料庫是現有最好的免費開局書。但俱樂部棋手預設看到的表格，是自己分數段的 Lichess 資料庫，最上面一列就是該水準最多人下的著法。那一列是我們大多數人會走的著法，因為別人都這樣走。我想知道：它有多常是一個不精確？',
   'Where "most played" comes from': '「最多人下」是怎麼來的',
-  "Then every position went through Stockfish 18 at 20,000,000 nodes with three lines. The most played move is judged against the best move from the same search, by lila's own winning-chance formula, the one that decides what gets a `?!` on a Lichess report. A gap of 0.1 or more is an inaccuracy, 0.2 a mistake, 0.3 a blunder. Every flagged position then got a second 20M search with a different thread count, and 24 of 168 did not survive it; 144 did. That is the same noise floor the [last post](https://brianhliou.com/posts/lichess-analysis-accuracy/) found, and it is why one search is never the verdict here.":
-    '接著每個局面都用 Stockfish 18 以 20,000,000 節點、三條變例跑過。最多人下的著法，是以同一次搜尋得出的最佳著法為基準來評判，採用 lila 自己的取勝機會公式，也就是決定 Lichess 分析報告上何時標 `?!` 的那個公式。差距 0.1 以上算不精確，0.2 算錯著，0.3 算嚴重錯著。每個被標記的局面再以不同執行緒數做第二次 20M 搜尋，168 個中有 24 個沒能通過；144 個通過了。這正是[上一篇文章](https://brianhliou.com/posts/lichess-analysis-accuracy/)發現的同一個雜訊底線，也是為什麼本文從不以單次搜尋作為定論。',
+  "Then every position went through Stockfish 18 at 20,000,000 nodes with three lines. The most played move is judged against the best move from the same search, by lila's own winning-chance formula, the one that decides what gets a `?!` on a Lichess report. A gap of 0.1 or more is an inaccuracy, 0.2 a mistake, 0.3 a blunder. Every flagged position then got a second 20M search with a different thread count, and 24 of 168 did not survive it; 144 did. That is the same noise floor the [last post](/blog/lichess-analysis-accuracy) found, and it is why one search is never the verdict here.":
+    '接著每個局面都用 Stockfish 18 以 20,000,000 節點、三條變例跑過。最多人下的著法，是以同一次搜尋得出的最佳著法為基準來評判，採用 lila 自己的取勝機會公式，也就是決定 Lichess 分析報告上何時標 `?!` 的那個公式。差距 0.1 以上算不精確，0.2 算錯著，0.3 算嚴重錯著。每個被標記的局面再以不同執行緒數做第二次 20M 搜尋，168 個中有 24 個沒能通過；144 個通過了。這正是[上一篇文章](/blog/lichess-analysis-accuracy)發現的同一個雜訊底線，也是為什麼本文從不以單次搜尋作為定論。',
   'For each of the 144 I also pulled the masters database by era (before 2010, 2010 to 2017, since 2018), which is where the shapes come from.':
     '這 144 個局面我也按年代（2010 年之前、2010 到 2017、2018 年起）取了大師資料庫的資料，下面的分類就是從這裡來的。',
   'Four shapes': '四種型態',

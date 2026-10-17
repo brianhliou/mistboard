@@ -2,7 +2,7 @@
   "ab-jchess": {
     "title": "AB-JChess, a stronger jieqi bot",
     "kind": "article",
-    "description": "An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games.",
+    "description": "AB-JChess, an open-source jieqi engine with its own neural network, now sits above Pikafish Level 8 on Mistboard. It beat full-strength Pikafish 248 to 136 in 400 games.",
     "status": "published",
     "zhTitles": {
       "zh-hans": "AB-JChess：更强的揭棋电脑",
@@ -371,6 +371,12 @@
     "title": "Lại Lý Huynh",
     "kind": "article",
     "description": "Nhà vô địch cờ tướng thế giới đầu tiên không đến từ Trung Quốc, bất bại ở Thượng Hải và thắng trận chung kết khi cầm quân Đen. Hành trình lên ngôi và một năm sau đó, năm ván thắng trên bàn cờ, 38 ván được phân tích.",
+    "status": "published"
+  },
+  "lichess-analysis-accuracy": {
+    "title": "Lichess Analysis: What a Million Nodes a Move Buys",
+    "kind": "article",
+    "description": "Lichess analyses each move at a million nodes, about a second of one core. I re-ran 300 games at twenty times that to see what the budget trades away: the blunders hold, the inaccuracies move.",
     "status": "published"
   },
   "longest-forced-mates-xiangqi": {

@@ -35,6 +35,7 @@ import { fogOpeningsArticle } from './articles/content/fog-openings.js';
 import { enPassantUnderFogArticle } from './articles/content/en-passant-under-fog.js';
 import { mostPlayedMoveArticle } from './articles/content/most-played-move.js';
 import { chess960StartingPositionsArticle } from './articles/content/chess960-starting-positions.js';
+import { lichessAnalysisAccuracyArticle } from './articles/content/lichess-analysis-accuracy.js';
 import { jieqiOpeningsArticle } from './articles/content/jieqi-openings.js';
 import { khaiCuocCoUpArticle } from './articles/content/khai-cuoc-co-up.js';
 import { darkXiangqiArticle } from './articles/content/dark-xiangqi.js';
@@ -103,6 +104,7 @@ export const articles: Article[] = [
   enPassantUnderFogArticle,
   mostPlayedMoveArticle,
   chess960StartingPositionsArticle,
+  lichessAnalysisAccuracyArticle,
   jieqiOpeningsArticle,
   khaiCuocCoUpArticle,
   xiangqiArticle,

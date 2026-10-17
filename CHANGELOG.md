@@ -76,6 +76,8 @@ Conventions:
 
 ### Learning and puzzles
 
+- The jieqi rules page and articles now point to AB-JChess, the strongest jieqi bot on the site ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
+- New article, [Lichess Analysis: What a Million Nodes a Move Buys](/blog/lichess-analysis-accuracy): 300 games re-run at twenty times Lichess's analysis budget, and what the deeper search changes ([a254d56e](https://github.com/brianhliou/mistboard/commit/a254d56e))
 - Step-through boards in articles now slide the piece that moved (banqi chase, Benedict and Anti Xiangqi); fog of war boards stay still ([48b1258e](https://github.com/brianhliou/mistboard/commit/48b1258e))
 - Step-through boards in articles now slide the piece that moved (banqi chase, Benedict and Anti Xiangqi); fog of war boards stay still ([ba7d8d8a](https://github.com/brianhliou/mistboard/commit/ba7d8d8a))
 - Every game board in a blog article now has the engine's advantage chart under it; click the chart to jump to a move ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
@@ -108,6 +110,7 @@ Conventions:
 
 ### Watching and review
 
+- Mistboard TV shows Jieqi captured pieces beside each player, with pieces taken face-down shown as backs ([a254d56e](https://github.com/brianhliou/mistboard/commit/a254d56e))
 - Mistboard TV shows captured pieces, hands and the face-down pool beside the board, as the game page does ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
 - hover or tap a ?!, ? or ?? mark to see what the move cost and the better move ([12461d24](https://github.com/brianhliou/mistboard/commit/12461d24))
 - Game search can pick games played here against people or against bots ([9ffca9cf](https://github.com/brianhliou/mistboard/commit/9ffca9cf))
@@ -225,6 +228,9 @@ Conventions:
 
 ### Fixed
 
+- a finished Jieqi game no longer shows anyone a piece captured face-down or never revealed, on the game page, in downloads or on share cards ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
+- Jieqi game analysis is computed only from what both players saw ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
+- the puzzles page no longer jumps while the first puzzle loads ([4f480534](https://github.com/brianhliou/mistboard/commit/4f480534))
 - Crazyhouse Xiangqi now marks the general in check, and move lists show the elephant as E instead of B ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
 - The banqi bot now picks its best allowed move when the perpetual chase rule forbids its first choice ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
 - Hand-typed /game and /embed/game links to a Xiangqi Mahjong or mahjong game no longer show a broken page ([629657e2](https://github.com/brianhliou/mistboard/commit/629657e2))
@@ -360,6 +366,7 @@ Conventions:
 
 ### Technical
 
+- a connection can no longer take a bot's seat by naming the bot's id ([a254d56e](https://github.com/brianhliou/mistboard/commit/a254d56e))
 - World Xiangqi Federation results pages can now feed a broadcast, as a backup relay source ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - The site now deploys without the AB-JChess network when its authors' release cannot be reached, hiding that bot until a later build fetches it ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
 - Signups are now located to the visitor's country in analytics, not the Cloudflare edge ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))

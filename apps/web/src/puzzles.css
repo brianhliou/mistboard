@@ -81,31 +81,28 @@
   margin: 0;
 }
 
-/* The build-time explainer (renderPuzzlesShellForPrerender). Only ever visible
-   to crawlers, no-JS visitors, and the moment before the client mount replaces
-   it, so this stays deliberately plain. */
-.puzzles-intro-header .site-section-heading {
-  margin: 0 0 12px;
-}
-
+/* The build-time explainer (renderPuzzlesShellForPrerender). It bakes into the
+   sidebar slot of the trainer's own frame, so the page keeps the trainer's
+   geometry from first paint. Only ever read by crawlers, no-JS visitors, and
+   the moment before the queue panel replaces it, so this stays deliberately
+   plain. */
 .puzzles-intro {
-  max-width: 60ch;
-  line-height: 1.55;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .puzzles-intro-lead {
-  font-size: 15px;
+  margin: 0;
 }
 
-.puzzles-intro h2 {
-  font-size: 16px;
-  font-weight: 700;
-  margin: 20px 0 6px;
+/* Two classes: .puzzles-sidebar h2 further down zeroes the margin. */
+.puzzles-sidebar .puzzles-intro h2 {
+  margin: 16px 0 6px;
 }
 
 .puzzles-intro ul {
   margin: 0;
-  padding-left: 20px;
+  padding-left: 18px;
 }
 
 .puzzles-intro li {
@@ -113,7 +110,14 @@
 }
 
 .puzzles-intro-footer {
-  margin-top: 20px;
+  margin: 16px 0 0;
+}
+
+/* The board slot while the API answers (renderPendingBoard). It carries the
+   xiangqi board's classes, so its box is the painted board's box. */
+.puzzle-board .puzzle-board-placeholder {
+  background: var(--site-panel-soft);
+  box-shadow: none;
 }
 
 .puzzles-layout {
@@ -1084,6 +1088,12 @@
   .puzzles-sidebar {
     order: 3;
     max-height: none;
+  }
+
+  /* Stacked, the trainer panel sizes to its content; hold about its painted
+     height while it loads so the sidebar below starts where it will stay. */
+  .puzzle-board-panel--pending .puzzle-side-panel {
+    min-height: 400px;
   }
 }
 

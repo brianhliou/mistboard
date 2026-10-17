@@ -8,11 +8,11 @@
 //   node scripts/backfill-jieqi-analysis.mjs --regrade-decisions [--apply] [--limit N] [--concurrency N]
 //
 // --regrade-decisions recomputes the decisions blob of every finished jieqi game whose only
-// decisions row was written by an earlier decomposition algorithm (an id in
-// JIEQI_LEGACY_DECISIONS_ENGINE_IDS) and has no row under a current id. Dry by default: it
-// lists those games; --apply computes and writes them under the current id. The legacy row is
-// kept (harmless, and served only when no current row exists). The Layer-1 sweep is not
-// recomputed: its rows are algorithm-independent.
+// decisions rows were written by an earlier decomposition algorithm (any jieqi decisions id
+// that is not a current one) and has no row under a current id. Dry by default: it lists
+// those games; --apply computes and writes them under the current id. The old row is kept
+// (never served since d6: it was graded from the real deal). The Layer-1 sweep is not
+// recomputed here; a plain run warms it under the current analysis ids.
 //
 // Against prod, via the pattern that never prints the credential:
 //   railway run -s Postgres -- sh -c \
@@ -54,7 +54,6 @@ import {
   ABJCHESS_JIEQI_DECISIONS_ENGINE_ID,
   JIEQI_DECISION_DEPTH,
   JIEQI_DECISIONS_ENGINE_ID,
-  JIEQI_LEGACY_DECISIONS_ENGINE_IDS,
   resolveJieqiAnalysis,
   resolveJieqiDecisions,
 } from '../apps/server/dist/jieqi-analysis.js';
@@ -199,7 +198,8 @@ async function runRegrade() {
             array_agg(DISTINCT a.engine_id) AS legacy_ids
        FROM games g
        JOIN game_analysis a
-         ON a.room_id = g.room_id AND a.depth = $1 AND a.engine_id = ANY($2::text[])
+         ON a.room_id = g.room_id AND a.depth = $1 AND a.engine_id LIKE $2
+        AND a.engine_id <> ALL($3::text[])
       WHERE g.variant = 'jieqi' AND g.ended_at IS NOT NULL
         AND (${onlyRoom ? 'g.room_id = $4' : 'TRUE'})
         AND NOT EXISTS (
@@ -208,12 +208,7 @@ async function runRegrade() {
         )
       GROUP BY g.room_id, g.ply_count, g.result
       ORDER BY g.ply_count ASC`,
-    [
-      JIEQI_DECISION_DEPTH,
-      [...JIEQI_LEGACY_DECISIONS_ENGINE_IDS],
-      currentIds,
-      ...(onlyRoom ? [onlyRoom] : []),
-    ],
+    [JIEQI_DECISION_DEPTH, '%-jieqi-decisions@%', currentIds, ...(onlyRoom ? [onlyRoom] : [])],
   );
   const targets = limit ? stale.slice(0, limit) : stale;
   const totalPlies = targets.reduce((sum, r) => sum + (r.ply_count ?? 0), 0);

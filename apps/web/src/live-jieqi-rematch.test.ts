@@ -7,11 +7,10 @@ import {
   applyJieqiMove,
   createInitialJieqiState,
   getJieqiPlayerView,
+  getJieqiPublicView,
   type JieqiColor,
   type JieqiGameState,
   type JieqiMove,
-  jieqiTruthBoard,
-  jieqiTruthCaptures,
 } from '@mistboard/game';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JIEQI_SAMPLE_GAME } from './jieqi-sample-game.js';
@@ -66,13 +65,12 @@ function finishedState(): JieqiGameState {
   return { ...state, status: { type: 'finished', winner: 'red', reason: 'resignation' } };
 }
 
-function truthView(state: JieqiGameState): JieqiWireView {
-  return {
-    ...getJieqiPlayerView(state, 'red'),
-    board: jieqiTruthBoard(state),
-    captured: jieqiTruthCaptures(state),
-    legalMoves: [],
-  } as JieqiWireView;
+// What a finished room serves: the seat's own view, or the public one for a
+// spectator, never the deal.
+function servedView(state: JieqiGameState, seat: JieqiColor | 'spectator'): JieqiWireView {
+  return (
+    seat === 'spectator' ? getJieqiPublicView(state) : getJieqiPlayerView(state, seat)
+  ) as JieqiWireView;
 }
 
 const EVENTS: TenantLiveEvent[] = [
@@ -106,7 +104,7 @@ async function mountFinished(
     seat,
     seats: { red: 'c-red', black: 'c-black' },
     roomMode: 'pvp',
-    state: truthView(finishedState()),
+    state: servedView(finishedState(), seat),
     events: EVENTS,
     rematch: { offers: { red: false, black: false }, finalizedRoomId: null },
     ...extra,

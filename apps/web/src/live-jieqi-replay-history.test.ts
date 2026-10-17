@@ -24,11 +24,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { JIEQI_SAMPLE_GAME } from './jieqi-sample-game.js';
 import type { JieqiWireView } from './live-jieqi.js';
-import {
-  rebuildFinishedJieqiHistory,
-  rebuildLiveJieqiHistory,
-  recoverJieqiDealFromFinish,
-} from './live-jieqi-replay-history.js';
+import { rebuildLiveJieqiHistory } from './live-jieqi-replay-history.js';
 import type { TenantLiveEvent } from './variant-tenant/live-client.js';
 import type { TenantSocketClientOptions } from './variant-tenant/socket-client.js';
 
@@ -92,7 +88,8 @@ function resigned(state: JieqiGameState): JieqiGameState {
   return { ...state, status: { type: 'finished', winner: 'red', reason: 'resignation' } };
 }
 
-// What the server serves a finished room (jieqi-tenant getJieqiTruthView).
+// The full deal on a board: what a finished room served before 2026-10-16, and
+// must no longer be accepted as a seat's view.
 function truthView(state: JieqiGameState): JieqiWireView {
   return {
     ...getJieqiPlayerView(state, 'red'),
@@ -191,22 +188,36 @@ beforeEach(() => {
   );
 });
 
-describe('jieqi deal recovery from a finished room', () => {
-  it('recovers the dealt roles from the truth view and the move list', () => {
-    expect(STATES.at(-1)?.captures.length).toBeGreaterThan(0);
-    const deal = recoverJieqiDealFromFinish(MOVES, truthView(resigned(STATES.at(-1)!)));
-    expect(deal).toEqual(JIEQI_SAMPLE_GAME.deal);
+// Since 2026-10-16 a finished room serves each seat its own view and a
+// spectator the public one, never the deal (a dark capture stays known only to
+// its capturer, after the game too). The rebuild reads that view, so every ply
+// is what this viewer saw live, and the tip stays masked.
+describe('jieqi history from a finished room (hidden-info regression)', () => {
+  it('rebuilds every ply as this seat saw it, with only the captures it can name', () => {
+    const served = seatView(resigned(STATES[PLIES]!), 'black');
+    expect(served.captured.some((entry) => entry.role === null)).toBe(true);
+    const snapshots = rebuildLiveJieqiHistory(MOVES, served, 'black');
+    expect(snapshots).toHaveLength(PLIES + 1);
+    for (const [ply, snapshot] of (snapshots ?? []).entries()) {
+      const saw = getJieqiPlayerView(STATES[ply]!, 'black');
+      expect(snapshot.view.board).toEqual(saw.board);
+      expect(snapshot.view.captured).toEqual(saw.captured);
+    }
   });
 
-  it('refuses anything but a finished view (a live room keeps its secret deal)', () => {
-    const live = seatView(STATES.at(-1)!, 'red');
-    expect(rebuildFinishedJieqiHistory(MOVES, live, 'red')).toBeNull();
+  it('rebuilds a spectator from the public view', () => {
+    const served = getJieqiPublicView(resigned(STATES[PLIES]!)) as JieqiWireView;
+    const snapshots = rebuildLiveJieqiHistory(MOVES, served, null);
+    expect(snapshots).toHaveLength(PLIES + 1);
+    for (const [ply, snapshot] of (snapshots ?? []).entries()) {
+      expect(snapshot.view.captured).toEqual(getJieqiPublicView(STATES[ply]!).captured);
+    }
   });
 
-  it('drops a recovery whose replay does not reach the served board', () => {
-    const view = truthView(resigned(STATES.at(-1)!));
-    // A log one move short leaves the pieces where the board says they are not.
-    expect(rebuildFinishedJieqiHistory(MOVES.slice(0, -1), view, 'red')).toBeNull();
+  it('drops a truth view or a log that does not reach the served view', () => {
+    expect(rebuildLiveJieqiHistory(MOVES, truthView(resigned(STATES[PLIES]!)), 'red')).toBeNull();
+    const served = seatView(resigned(STATES[PLIES]!), 'red');
+    expect(rebuildLiveJieqiHistory(MOVES.slice(0, -1), served, 'red')).toBeNull();
   });
 });
 
@@ -216,7 +227,7 @@ describe('cold join to a finished jieqi room', () => {
     options.applyHello(
       frame('hello', {
         seat: 'spectator',
-        state: truthView(resigned(STATES[PLIES]!)),
+        state: getJieqiPublicView(resigned(STATES[PLIES]!)),
         events: [CREATED, ...moveEvents(PLIES), FINISHED],
       }),
     );
@@ -225,8 +236,8 @@ describe('cold join to a finished jieqi room', () => {
     expect(moveCells()).toHaveLength(PLIES);
     expect(document.querySelectorAll('li.xiangqi-move-row')).toHaveLength(Math.ceil(PLIES / 2));
     expect(reviewHref()).toBe(`/jieqi/game/${ROOM}?ply=${PLIES}`);
-    // The live tip is the server's fully revealed board.
-    expect(Object.values(boardOnScreen()).some((label) => label.includes('hidden'))).toBe(false);
+    // The tip is the board as played: a piece that never moved stays face-down.
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[PLIES]!));
 
     moveCells()[9]!.click(); // ply 10
     expect(boardOnScreen()).toEqual(expectedMasked(STATES[10]!));
@@ -241,7 +252,7 @@ describe('cold join to a finished jieqi room', () => {
     options.applySnapshot(
       frame('snapshot', {
         seat: 'black',
-        state: truthView(resigned(STATES[PLIES]!)),
+        state: seatView(resigned(STATES[PLIES]!), 'black'),
         events: [CREATED, ...moveEvents(PLIES), FINISHED],
       }),
     );

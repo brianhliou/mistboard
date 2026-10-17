@@ -35,8 +35,17 @@
 //   Until 2026-09-20 the own pool was the truth too, so the bot knew what it
 //   had lost the moment a human captured one of its dark pieces (its remaining
 //   dark pieces were revalued and its reveal odds sharpened): a rule violation
-//   against every human it played. `viewer` unset (analysis of finished games,
-//   the editor, exports) keeps both pools exact: those readers know everything.
+//   against every human it played.
+//
+//   `public` is the same argument applied to BOTH sides: each pool is that
+//   side's face-down pieces plus its pieces captured while dark, i.e. the set
+//   minus what that side revealed. Nobody but the capturer learns a dark
+//   capture, during the game or after it, so everything a client or a finished
+//   game's reader is sent uses this form (the review, the card image, the
+//   "analyse from here" link). The parser below accepts it: a public pool may
+//   exceed the dark squares, and the surplus is sampled as dark captures.
+//   Neither option set (the exact pool) is for the live server only: the
+//   kernel's own state, never a byte a reader receives.
 //
 import {
   type DealtFenParseOptions,
@@ -107,7 +116,8 @@ function boardField(board: JieqiBoard): string {
   return rows.join('/');
 }
 
-function restPiecesField(state: JieqiGameState, viewer?: JieqiColor): string {
+function restPiecesField(state: JieqiGameState, opts: JieqiFenOptions): string {
+  const { viewer } = opts;
   const counts = new Map<string, number>();
   const bump = (color: JieqiColor, role: JieqiPieceRole): void => {
     const key = `${color}:${role}`;
@@ -118,9 +128,10 @@ function restPiecesField(state: JieqiGameState, viewer?: JieqiColor): string {
   }
   // The viewer's own dark pieces that were captured while dark stay in its
   // pool: it was never told what they were (see the redaction argument above).
-  if (viewer) {
+  if (viewer || opts.public) {
     for (const capture of state.captures) {
-      if (capture.owner === viewer && !capture.revealedAtCapture) bump(viewer, capture.role);
+      if (capture.revealedAtCapture) continue;
+      if (opts.public || capture.owner === viewer) bump(capture.owner, capture.role);
     }
   }
   let out = '';
@@ -137,6 +148,9 @@ export type JieqiFenOptions = {
   /** The seat the FEN is for. Its own pool then carries only what that seat may
    *  know; unset means an all-knowing reader (finished-game analysis, editor). */
   viewer?: JieqiColor;
+  /** Both pools as a reader who saw no dark capture knows them: a side's dark
+   *  pieces captured face-down stay in its pool. Every finished-game surface. */
+  public?: boolean;
 };
 
 /** Encode canonical jieqi state as a redacted Pikafish-jieqi FEN for the engine. */
@@ -145,7 +159,7 @@ export function jieqiStateToPikafishFen(state: JieqiGameState, opts: JieqiFenOpt
   return [
     boardField(state.board),
     turn === 'red' ? 'w' : 'b',
-    restPiecesField(state, opts.viewer),
+    restPiecesField(state, opts),
     state.noCaptureClock,
     state.moveNumber,
   ].join(' ');
@@ -331,9 +345,13 @@ export function parseJieqiFen(
     pool.set(key, (pool.get(key) ?? 0) + n);
     poolTotal[color] += n;
   }
+  // A public pool (jieqiStateToPikafishFen `public`) also lists the side's
+  // pieces captured while dark, so it may exceed the dark squares; the dealt
+  // (6-field) form pins every identity and must match them exactly.
   for (const color of ['red', 'black'] as const) {
     const dark = darkSquares.filter((entry) => entry.color === color).length;
-    if (poolTotal[color] !== dark) {
+    const fits = hidden === undefined ? poolTotal[color] >= dark : poolTotal[color] === dark;
+    if (!fits) {
       return {
         ok: false,
         error: `The pool lists ${poolTotal[color]} hidden ${color} pieces but the board has ${dark} dark ${color} pieces.`,
@@ -380,6 +398,10 @@ export function parseJieqiFen(
       const roles = shuffleWithRng(poolList[color], rng);
       const squares = darkSquares.filter((entry) => entry.color === color);
       for (let i = 0; i < squares.length; i += 1) identities.set(squares[i]!.square, roles[i]!);
+      // A public pool's surplus: the side's pieces captured while dark.
+      for (const role of roles.slice(squares.length)) {
+        captures.push({ owner: color, role, revealedAtCapture: false });
+      }
     }
     sampled = true;
   } else {

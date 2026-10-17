@@ -195,7 +195,7 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish\'s strength lives in its neural network and jieqi has no good one: we trained a net and it never came out stronger than the hand-written evaluation, so this is an open problem rather than a chore nobody got round to. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like; the terms of the open challenge, and the prebuilt engine to beat, are at [brianhliou.com/challenges](https://brianhliou.com/challenges/).',
+            'It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish\'s strength lives in its neural network, and the net we trained for jieqi never came out stronger than the hand-written evaluation. The first jieqi network that did came from outside: [AB-JChess](/blog/ab-jchess), an open-source engine that beat PikaJieQi 248 to 136 in 400 games and has been the strongest bot on the site since October. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like; the terms of the open challenge, and the prebuilt engine to beat, are at [brianhliou.com/challenges](https://brianhliou.com/challenges/).',
         },
       ],
     },
@@ -248,7 +248,7 @@ export const jieqiPlatformArticle: Article = {
             {
               question: 'Can a computer play jieqi well?',
               answer:
-                'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because jieqi has no good neural network yet: we trained one and it never came out stronger than the hand-written evaluation.',
+                'Better since October. PikaJieQi, which judges positions by hand-written rules, can be beaten by a strong human. AB-JChess, the top bot on the site since then, judges them with a neural network and beat PikaJieQi 248 to 136 in 400 games.',
             },
             {
               question: 'Can the engine see my hidden pieces?',

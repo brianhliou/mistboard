@@ -6,20 +6,24 @@
 // The rule, one for all three:
 //
 // 1. Moves carry reveals. A move that turns a piece over names what it became,
-//    and a capture of a face-down piece (jieqi only; banqi and Flip Jungle can
-//    only capture a revealed piece) names what was captured. So a record
-//    replays from its moves alone, from the standard face-down start.
-// 2. The deal is optional. A site game is dealt in full when it is created, so
-//    its record also carries the deal as the variant's dealt FEN (the public
-//    FEN plus a sixth field naming every face-down piece). An imported engine
-//    match has no deal (its referee drew each identity when the piece was
-//    turned over), so its record has none, and nothing stands in for it.
+//    so a record replays from its moves alone, from the standard face-down
+//    start. A jieqi capture of a face-down piece names nothing (Brian's rule,
+//    2026-10-16: only its capturer ever learns it, after the game too); the
+//    replayer settles it on a role no later reveal needs.
+// 2. The deal is optional. Banqi and Flip Jungle site games are dealt in full
+//    when created, so their records also carry the deal as the variant's
+//    dealt FEN (the public FEN plus a sixth field naming every face-down
+//    piece). A jieqi record never does (the deal names every piece that was
+//    never revealed); nor does an imported engine match (its referee drew each
+//    identity when the piece was turned over).
 // 3. When a record has both, every reveal must agree with the deal. The
 //    replayer checks that at every ply.
 //
 // JSON (the per-game export and every /data line): each ply that turned a
-// piece over has `revealed: { color, role }`; each ply that captured a
-// face-down piece has `captured_hidden: { color, role }`. Roles are the
+// piece over has `revealed: { color, role }`. Records written before
+// 2026-10-16 may also have `captured_hidden: { color, role }` on a jieqi ply
+// that captured a face-down piece, and a jieqi `deal_fen`; the replayer still
+// reads both, and the exporter writes neither. Roles are the
 // variant's own role words (jieqi: chariot, horse, elephant, advisor, cannon,
 // soldier; banqi adds general; Flip Jungle: rat, cat, dog, wolf, leopard,
 // tiger, lion, elephant). `deal_fen` sits at the top level when the game had a
@@ -75,9 +79,11 @@ import {
   applyJieqiMove,
   createInitialJieqiState,
   type JieqiBoard,
+  type JieqiColor,
   type JieqiGameState,
   type JieqiMove,
   type JieqiPieceRole,
+  STANDARD_JIEQI_DEAL,
 } from './variants-jieqi.js';
 import {
   applyJungleFlipMove,
@@ -127,14 +133,15 @@ function identity(piece: { color: HiddenPieceColor; role: string }): HiddenPiece
   return { color: piece.color, role: piece.role };
 }
 
-/** A jieqi ply's reveals, read off the position before it. A piece whose
- *  identity was never determined (an imported game) is never named. */
+/** A jieqi ply's reveal, read off the position before it. A piece whose
+ *  identity was never determined (an imported game) is never named, and
+ *  neither is a face-down piece the move captures: only its capturer ever
+ *  learns that one, so no record does. */
 export function jieqiPlyReveal(before: JieqiGameState, move: JieqiMove): HiddenPieceReveal {
   const mover = before.board[move.from];
-  const victim = before.board[move.to];
   return {
     revealed: mover?.faceDown && !mover.unknown ? identity(mover) : null,
-    capturedHidden: victim?.faceDown && !victim.unknown ? identity(victim) : null,
+    capturedHidden: null,
   };
 }
 
@@ -472,6 +479,7 @@ function replayJieqi(record: HiddenPieceRecord): HiddenPieceReplayResult {
     return { ok: false, ply: 0, error: 'deal_fen leaves an identity open' };
   }
   let state = parsed.state;
+  const unnamed = jieqiUnnamedRoles(record);
   for (const [index, ply] of record.plies.entries()) {
     const n = index + 1;
     const fail = (error: string): Fail => ({ ok: false, ply: n, error });
@@ -493,15 +501,20 @@ function replayJieqi(record: HiddenPieceRecord): HiddenPieceReplayResult {
       board = next;
     }
     const victim = board[move.to];
-    if (Boolean(victim?.faceDown) !== Boolean(ply.captured_hidden)) {
-      return fail(
-        victim?.faceDown
-          ? 'captures a face-down piece and names nothing'
-          : 'names a hidden capture that is not one',
-      );
+    if (ply.captured_hidden && !victim?.faceDown) {
+      return fail('names a hidden capture that is not one');
     }
     if (ply.captured_hidden) {
       const next = settleIdentity(board, move.to, ply.captured_hidden, pinned, true);
+      if (typeof next === 'string') return fail(next);
+      board = next;
+    } else if (victim?.faceDown && !pinned) {
+      // An unnamed dark capture takes a role the record never names, so every
+      // later reveal still finds its piece face-down.
+      const role = unnamed[victim.color as JieqiColor].shift();
+      if (!role)
+        return fail(`captures a face-down ${victim.color} piece the record has no room for`);
+      const next = settleIdentity(board, move.to, { color: victim.color, role }, false, true);
       if (typeof next === 'string') return fail(next);
       board = next;
     }
@@ -514,10 +527,27 @@ function replayJieqi(record: HiddenPieceRecord): HiddenPieceReplayResult {
     ok: true,
     variant: 'jieqi',
     plies: record.plies.length,
-    finalFen: jieqiStateToPikafishFen(state),
+    finalFen: jieqiStateToPikafishFen(state, { public: true }),
     finalDealtFen: pinned ? jieqiStateToDealtFen(state) : null,
     status: state.status,
   };
+}
+
+// Per side, the standard set minus every role the record names (reveals and
+// any named capture): the identities of the pieces it never turned over.
+function jieqiUnnamedRoles(record: HiddenPieceRecord): Record<JieqiColor, JieqiPieceRole[]> {
+  const left: Record<JieqiColor, JieqiPieceRole[]> = {
+    red: [...STANDARD_JIEQI_DEAL.red],
+    black: [...STANDARD_JIEQI_DEAL.black],
+  };
+  for (const ply of record.plies) {
+    for (const named of [ply.revealed, ply.captured_hidden]) {
+      if (!named || (named.color !== 'red' && named.color !== 'black')) continue;
+      const index = left[named.color].indexOf(named.role as JieqiPieceRole);
+      if (index >= 0) left[named.color].splice(index, 1);
+    }
+  }
+  return left;
 }
 
 type FlipKernel<State, Board extends FaceDownBoard, Move> = {

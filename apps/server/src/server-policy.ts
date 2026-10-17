@@ -72,6 +72,18 @@ export function isServerEngineClient(clientId: string | undefined): boolean {
   );
 }
 
+// The ?client= id a socket names for itself. An engine seat holds no seat
+// token: its id is its credential, and engine ids are public (snapshot
+// `seats`, /api/games/current). So an id that reads as an engine is treated as
+// absent and the caller mints a random one; refusing the socket instead would
+// loop a browser that stored such an id, since it reuses any id that passes the
+// grammar. Engines take their seats server-side and never through this parse.
+export function parseNetworkClientId(value: string | null): string | null {
+  if (!value) return null;
+  if (!/^[a-zA-Z0-9:_-]{8,80}$/.test(value)) return null;
+  return isServerEngineClient(value) ? null : value;
+}
+
 // May a non-seated client join this room's socket? A finished game is public for
 // every spec (the replay/review surfaces already serve it). An IN-PROGRESS game is
 // observable exactly when Mistboard TV may broadcast it (canServeLiveBoard): the

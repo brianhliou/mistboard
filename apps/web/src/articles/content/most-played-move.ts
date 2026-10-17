@@ -6,11 +6,11 @@ import type { Article, ArticleBlock } from '../types.js';
 // text word for word as published there, except the method (now a table) and
 // the resources folded into one closing paragraph (2026-10-15). The ten boards
 // were already this site's study embeds (same study, same chapters, same titles). Links to
-// "What Lichess Analysis Misses", which stays on brianhliou.com, point there.
+// the Lichess analysis post point at its page here (moved 2026-10-16).
 
 const STUDY_ID = 'ibFQtGAL';
 const STUDY_HREF = `/study/${STUDY_ID}`;
-const LICHESS_ANALYSIS_POST = 'https://brianhliou.com/posts/lichess-analysis-accuracy/';
+const LICHESS_ANALYSIS_POST = '/blog/lichess-analysis-accuracy';
 
 // After 1.e4 e5 2.f4 d6: the King's Gambit position, the biggest miss by games.
 const KINGS_GAMBIT_D6 = (() => {
@@ -227,7 +227,7 @@ export const mostPlayedMoveArticle: Article = {
           ],
         },
         p(
-          `The harness is the one from [What Lichess Analysis Misses](${LICHESS_ANALYSIS_POST}), the previous post, on how the labels are made.`,
+          `The harness is the one from [Lichess Analysis: What a Million Nodes a Move Buys](${LICHESS_ANALYSIS_POST}), the previous post, on how the labels are made.`,
         ),
         {
           kind: 'cta',

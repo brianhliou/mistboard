@@ -173,7 +173,7 @@ export const jieqiArticle: Article = {
               {
                 question: 'Can I play jieqi against an AI?',
                 answer:
-                  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because jieqi has no good neural network yet (we trained one and it never beat the hand-written evaluation), and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.',
+                  'Yes, at eight levels and one stronger bot. Levels 1 to 8 run a Pikafish build patched for jieqi rules, which judges positions by hand-written rules, and a strong human can beat it. Above them is AB-JChess, an open-source engine with its own neural network, which beat Level 8 in 248 of 400 games. Neither can see your hidden pieces: each gets the same face-down board you do and is never told the deal.',
               },
               {
                 question: 'How is jieqi different from xiangqi?',
@@ -201,7 +201,7 @@ export const jieqiArticle: Article = {
       },
       playClosing({
         heading: 'Play on Mistboard',
-        lead: 'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does.',
+        lead: 'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does. Above the eight Pikafish levels sits [AB-JChess](/blog/ab-jchess), the strongest jieqi bot on the site.',
         playLabel: 'Play vs computer',
         playHref: '/?play=computer&gameSpecId=jieqi',
         secondary: [

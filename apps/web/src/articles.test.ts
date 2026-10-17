@@ -117,6 +117,8 @@ describe('article public listing gates', () => {
       '/blog/most-played-move',
       // The first player page, dated 2026-09-21.
       '/blog/yin-sheng',
+      // Moved from brianhliou.com (2026-09-20) on 2026-10-16, reframed on the way.
+      '/blog/lichess-analysis-accuracy',
       // The horde-xiangqi and anti-xiangqi write-ups are dated 2026-09-15 and
       // 2026-09-13, and this index is ordered by date alone. The atomic-xiangqi
       // launch note (2026-09-16) is served by URL only since the variant retired.
@@ -334,6 +336,7 @@ describe('article public listing gates', () => {
       '/blog/banqi-statistics',
       '/blog/pikafish',
       '/blog/most-played-move',
+      '/blog/lichess-analysis-accuracy',
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
       '/blog/en-passant-under-fog',
