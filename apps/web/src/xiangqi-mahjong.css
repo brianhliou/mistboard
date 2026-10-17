@@ -141,7 +141,6 @@
   }
 
   .live-route--xiangqi-mahjong .xmj-stack i {
-    width: calc(24 * var(--xmj-u));
     height: calc(31 * var(--xmj-u));
     border-radius: calc(4 * var(--xmj-u));
   }
@@ -713,15 +712,22 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
+/* The labels either side keep their size, so on a narrow table the stacks
+   give up width (never height) rather than push "Wall N" out of the band.
+   Each stack's tiles take its width, so a width rule sets one property. */
 .xmj-wall__stacks {
   display: inline-flex;
   gap: 2px;
+  min-width: 0;
 }
 
 .xmj-stack {
   position: relative;
+  flex: 0 1 auto;
+  min-width: 5px;
   width: 12px;
   height: 21px;
 }
@@ -731,7 +737,7 @@
   left: 0;
   bottom: 2px;
   box-sizing: border-box;
-  width: 12px;
+  width: 100%;
   height: 15px;
   border-radius: 2px;
   background: linear-gradient(160deg, var(--xmj-jade-high), var(--xmj-jade-low));
@@ -1334,8 +1340,7 @@ ol.xmj-log {
     margin-left: 8px;
   }
 
-  .xmj-stack,
-  .xmj-stack i {
+  .xmj-stack {
     width: 9px;
   }
 
@@ -1399,7 +1404,6 @@ ol.xmj-log {
 }
 
 .xmj-size--big .xmj-stack i {
-  width: 18px;
   height: 23px;
   border-radius: 3px;
 }
@@ -1419,8 +1423,7 @@ ol.xmj-log {
     gap: 1px;
   }
 
-  .xmj-size--big .xmj-stack,
-  .xmj-size--big .xmj-stack i {
+  .xmj-size--big .xmj-stack {
     width: 12px;
   }
 }
