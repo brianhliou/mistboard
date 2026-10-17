@@ -249,11 +249,10 @@ test('jqe: perpetual check loses, and outranks the no-capture clock', () => {
 });
 
 // The repeated position stands at plies 1, 5 and 9. Red checks on both of its
-// moves in 5..9 but moved quietly in 1..5. jqe (after Pikafish's rule_judge)
-// judges the whole stretch from the first occurrence and draws. Our kernel
-// judges only the last cycle, so red loses; xiangqiPerpetualCheckLoser
-// (variants-xiangqi-standard.ts) does the same. Pinned as current behaviour.
-test('jqe: uneven cycles, red checks only in the last one', () => {
+// moves in 5..9 but moved quietly in 1..5. The whole stretch from the first
+// occurrence is judged, as in jqe, Pikafish's rule_judge and Fairy-Stockfish,
+// so red did not check on every move and the repetition draws.
+test('jqe: uneven cycles, red checks only in the last one, draws', () => {
   const start = tracked(pos({ e0: '.', d0: 'K', d9: '.', e9: 'k', e7: 'R' }, 'black'));
   const end = playAll(start, [
     'e9f9',
@@ -267,5 +266,5 @@ test('jqe: uneven cycles, red checks only in the last one', () => {
     'e9f9',
   ]);
   assert.deepEqual(end.status, { type: 'finished', winner: null, reason: 'repetition' });
-  assert.equal(jieqiPerpetualCheckLoser(end), 'red', 'jqe would draw this');
+  assert.equal(jieqiPerpetualCheckLoser(end), null);
 });
