@@ -18,6 +18,7 @@ import {
   type JungleFlipMove,
   type JungleFlipPlayerView,
   type JungleFlipSquare,
+  jungleFlipMoveLabel,
   jungleFlipSquareFromIndex,
 } from '@mistboard/game';
 import type { ProjectedView, VariantTreeAdapter } from './game-tree.js';
@@ -70,10 +71,9 @@ export function makeJungleFlipTreeAdapter(
         ),
       },
     ],
-    // A flip (self-move) reads as the bare square ("a1"); a board move/capture keeps the dash
-    // ("a1-b2"). The absence of a dash unambiguously marks a flip, and dropping the " flip" word
-    // frees the move-list cell so the notation never truncates next to the decision glyph + luck badge.
-    moveLabel: (move) => (move.from === move.to ? move.from : `${move.from}-${move.to}`),
+    // The site's one Flip Jungle label (flip-move-label.ts): "a1-b2" for a move, "a1(E)" for a
+    // flip, named from the parent's truth, whose face-down tile already holds its dealt identity.
+    moveLabel: (move, parentTruth) => jungleFlipMoveLabel(move, parentTruth.board[move.from]),
     moveKey: (move) => `${move.from}${move.to}`,
     toEngineUci: (move) => `${move.from}${move.to}`,
     fromUci: (uci) => {

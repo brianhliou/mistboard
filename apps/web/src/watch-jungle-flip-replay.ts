@@ -6,7 +6,12 @@
 // the rail draws the room's material (jungle-flip-material.ts) via railMaterial.
 import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
-import { type JungleFlipPlayerView, jungleFlipLastMoverInk } from '@mistboard/game';
+import {
+  type JungleFlipMove,
+  type JungleFlipPlayerView,
+  jungleFlipLastMoverInk,
+  jungleFlipMoveLabelOnBoard,
+} from '@mistboard/game';
 import { flipSeatInk } from './flip-seat-ink.js';
 import { renderJungleFlipMaterial } from './jungle-flip-material.js';
 import {
@@ -25,7 +30,11 @@ import {
 } from './live-jungle-flip-postgame.js';
 import type { ReplayHandle } from './replay.js';
 import { watchJungleFlipMoveSound } from './watch-move-sound.js';
-import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
+import {
+  mountTenantWatchReplay,
+  type TenantWatchReplayOptions,
+  tenantMoveLabelsFromViews,
+} from './watch-tenant-replay.js';
 
 export type JungleFlipWatchReplayOptions = TenantWatchReplayOptions;
 
@@ -49,6 +58,14 @@ export function mountJungleFlipWatchReplay(
     maxPly: replayMaxPly,
     viewEntries: () => [{ key: 'truth', label: t('watch.truth') }],
     viewAtPly,
+    // The site's one Flip Jungle label (flip-move-label.ts): a flip names the animal it
+    // turned up, read off the replay's own view after it ("a1(E)"), never "a1-a1".
+    moveLabels: (postgame) =>
+      tenantMoveLabelsFromViews(
+        postgame.timeline,
+        (ply) => viewAtPly(postgame, 'truth', ply),
+        (move: JungleFlipMove, view) => jungleFlipMoveLabelOnBoard(move, view?.board),
+      ),
     paneKind: () => 'truth',
     renderBoard: (view, _orientation, _key, overlay) =>
       renderJungleFlipBoardSvg(view.board as JungleFlipRenderBoard, {

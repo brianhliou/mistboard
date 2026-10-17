@@ -9,6 +9,7 @@ import {
   type BanqiGameState,
   type BanqiMove,
   type BanqiSquare,
+  banqiMoveLabelOnBoard,
   getBanqiPlayerView,
   parseBanqiFen,
 } from '@mistboard/game';
@@ -31,11 +32,6 @@ const TOKEN = /^([a-h][1-4])([a-h][1-4])$/;
 function tokenToMove(token: string): BanqiMove | null {
   const m = TOKEN.exec(token);
   return m ? { from: m[1] as BanqiSquare, to: m[2] as BanqiSquare } : null;
-}
-
-/** The label the review sheet uses: a flip is its square, a move is from-to. */
-export function banqiMoveLabel(move: BanqiMove): string {
-  return move.from === move.to ? move.from : `${move.from}-${move.to}`;
 }
 
 export function mountBanqiReplayBoard(
@@ -66,7 +62,7 @@ export function mountBanqiReplayBoard(
     if (next === before) break;
     states.push(next);
     played.push(move);
-    labels.push(banqiMoveLabel(move));
+    labels.push(banqiMoveLabelOnBoard(move, next.board));
   }
   const total = labels.length;
   const perspective = spec.perspective ?? 'red';

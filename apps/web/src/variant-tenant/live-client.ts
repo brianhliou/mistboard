@@ -163,7 +163,7 @@ export type TenantMoveListRenderContext<C extends string, M> = {
   hasPly(ply: number): boolean;
 };
 
-export type TenantMoveListConfig<C extends string, M> = {
+export type TenantMoveListConfig<C extends string, M, V = unknown> = {
   /** Class list for each move row (e.g. 'move-row xiangqi-move-row'). */
   rowClass: string;
   /** Class prefix for the number/cell spans (e.g. 'xiangqi-move-row'). */
@@ -188,6 +188,15 @@ export type TenantMoveListConfig<C extends string, M> = {
    * information tenants only: a fog client holds no true line to replay.
    */
   notateLine?(moves: readonly M[]): string[];
+  /**
+   * OPTIONAL label from the board after the move: the view this client holds
+   * for that ply (its replay snapshot, or the live view for the latest ply),
+   * null when it holds none. For a move whose meaning shows only on the
+   * board after it (a flip names the piece it turned up). The view is one the
+   * server already sent this viewer, so a label can never say more than the
+   * board did. Used ahead of `notate` for every ply notateLine does not cover.
+   */
+  notateWithView?(move: M, viewAfter: V | null): string;
   isMoveEvent(event: TenantLiveEvent): event is TenantMovePlayed<C, M>;
   /** Optional banner row above the list (e.g. the parachute bounce note). */
   banner?(): { className: string; text: string } | null;
@@ -320,7 +329,7 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
    * reserve is bound to the bottom strip, stays off.
    */
   flippable?: boolean;
-  moveList: TenantMoveListConfig<C, M>;
+  moveList: TenantMoveListConfig<C, M, V>;
   replayCapture: TenantReplayCaptureConfig<V>;
   replayHistory?: TenantReplayHistoryConfig<C, V>;
   chrome?: {
@@ -981,10 +990,19 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       if (ply > plyCount) return;
       const fullMove = Math.floor((ply - 1) / 2) + 1;
       const row = rows.get(fullMove) ?? ({ fullMove } as MoveRow);
-      row[event.color] = (lineLabels[index] ?? moveList.notate(event.move)) as MoveRow[C];
+      row[event.color] = (lineLabels[index] ??
+        (moveList.notateWithView
+          ? moveList.notateWithView(event.move, viewAfterPly(ply, index === moves.length - 1))
+          : moveList.notate(event.move))) as MoveRow[C];
       rows.set(fullMove, row);
     });
     return [...rows.values()].sort((a, b) => a.fullMove - b.fullMove);
+  }
+
+  // The view after a ply: its replay snapshot, else the live view when the ply
+  // is the latest (a move event renders before its own snapshot is captured).
+  function viewAfterPly(ply: number, latestMove: boolean): V | null {
+    return replay.viewAtPly(ply) ?? (latestMove ? state.view : null);
   }
 
   function eventPly(event: TenantMovePlayed<C, M>, fallbackIndex: number): number {

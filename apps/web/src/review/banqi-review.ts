@@ -11,6 +11,7 @@ import {
   type BanqiMove,
   type BanqiPlayerView,
   type BanqiSeat,
+  banqiMoveLabel,
   banqiStateToEngineFen,
   engineUciToBanqiMove,
 } from '@mistboard/game';
@@ -48,18 +49,11 @@ export type BanqiReviewConfig = TreeReviewConfig<BanqiMove, BanqiGameState, Banq
 /** Handle returned by mountBanqiReview: snapshot the current tree to persist it. */
 export type BanqiReviewHandle = TreeReviewHandle;
 
-/** Engine PV move (redacted engine UCI, e.g. "a0b0" or a flip "e0e0") -> display coords.
- *  A flip renders as a bare coordinate ("e1"), matching the move-list notation; a move as
- *  "from-to" ("a1-b1"). Ranks are 0-indexed in engine UCI, 1-indexed on the board. */
+/** Engine PV move (redacted engine UCI, e.g. "a0b0" or a flip "e0e0") -> the move-list label
+ *  (flip-move-label.ts). A flip in a line has not happened, so it names no piece: "e1(?)". */
 function formatBanqiEngineMove(uci: string): string {
-  if (uci.length < 4) return uci;
-  const toDisplay = (sq: string): string => {
-    const rank = Number(sq[1]);
-    return Number.isNaN(rank) ? sq : `${sq[0]}${rank + 1}`;
-  };
-  const from = toDisplay(uci.slice(0, 2));
-  const to = toDisplay(uci.slice(2, 4));
-  return from === to ? from : `${from}-${to}`;
+  const move = engineUciToBanqiMove(uci);
+  return move ? banqiMoveLabel(move, null) : uci;
 }
 
 // The banqi renderer has no board-overlay layer, so the engine presentation omits

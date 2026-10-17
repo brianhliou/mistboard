@@ -27,6 +27,8 @@ describe('Banqi watch replay', () => {
     expect(root.textContent).toContain('Ply 0 / 1');
     // Banqi is symmetric → a single Truth pane (not the jieqi triptych).
     expect(root.querySelectorAll('.banqi-board')).toHaveLength(1);
+    // The /watch move list names what the opening flip turned up, never the self-move "a1-a1".
+    expect(handle.moveEntries?.().map((entry) => entry.label)).toEqual(['a1(R)']);
 
     root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
     expect(root.textContent).toContain('Ply 1 / 1 - Red wins');

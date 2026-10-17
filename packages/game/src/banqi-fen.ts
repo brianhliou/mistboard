@@ -39,6 +39,7 @@ import {
   BANQI_PIECE_COUNTS,
   BANQI_WIDTH,
   type BanqiBoard,
+  type BanqiColor,
   type BanqiGameState,
   type BanqiMove,
   type BanqiPiece,
@@ -71,6 +72,11 @@ const POOL_ROLES: readonly BanqiPieceRole[] = [
 
 function pieceChar(piece: BanqiPiece): string {
   if (piece.faceDown) return 'X'; // ink hidden too — a single symbol, no colour
+  return banqiPieceLetter(piece);
+}
+
+/** A piece's FEN letter by its identity: upper case red, lower case black. */
+export function banqiPieceLetter(piece: { color: BanqiColor; role: BanqiPieceRole }): string {
   const ch = RED_ROLE_CHAR[piece.role];
   return piece.color === 'red' ? ch : ch.toLowerCase();
 }
