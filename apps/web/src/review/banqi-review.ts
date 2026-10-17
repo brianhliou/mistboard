@@ -15,8 +15,10 @@ import {
   engineUciToBanqiMove,
 } from '@mistboard/game';
 import { createBanqiInteractiveBoard } from '../banqi-board.js';
+import { t } from '../i18n/catalog.js';
 import type { BanqiBoardArrow, BanqiBoardMarker } from '../live-banqi-render.js';
 import { animateBanqiBoardMove } from '../live-banqi-render.js';
+import { createBanqiTablebasePanel } from './banqi-tablebase-panel.js';
 import { type BanqiReviewStart, makeBanqiTreeAdapter } from './banqi-tree-adapter.js';
 import {
   bestMoveArrowWithParser,
@@ -25,6 +27,7 @@ import {
   engineMarkersFromLinesWithParser,
 } from './engine/engine-arrows.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
+import { hoverArrowStyle } from './hover-arrow.js';
 import { formatFlipVariantBestMove } from './move-advice.js';
 import {
   mountTreeReview,
@@ -36,7 +39,11 @@ import {
 /** Config for a banqi review mount. Truth-typed so a caller can root the tree
  *  at a parsed dealt position (`root`) and read the current truth back from the
  *  position hand-off hooks (`analyseFromHere`, `boardEditorHref`). */
-export type BanqiReviewConfig = TreeReviewConfig<BanqiMove, BanqiGameState>;
+export type BanqiReviewConfig = TreeReviewConfig<BanqiMove, BanqiGameState, BanqiBoardArrow> & {
+  /** Show the exact endgame table (review/banqi-tablebase-panel.ts) in the
+   *  book pane for covered, all face-up endgames. Defaults to on. */
+  tablebasePanel?: boolean;
+};
 
 /** Handle returned by mountBanqiReview: snapshot the current tree to persist it. */
 export type BanqiReviewHandle = TreeReviewHandle;
@@ -143,5 +150,35 @@ export function mountBanqiReview(
   config: BanqiReviewConfig,
 ): BanqiReviewHandle {
   const adapter = makeBanqiTreeAdapter(gameId, start);
-  return mountTreeReview(root, makeBanqiPresentation(adapter), config);
+  // Banqi has no opening book, so the book pane holds the endgame tablebase,
+  // on every banqi review surface (game review, analysis, study). It is closed
+  // until the reader opens it, and invisible on any position it does not
+  // cover, which is every position with a face-down tile.
+  const explorer =
+    config.explorer ?? (config.tablebasePanel === false ? undefined : banqiTablebaseExplorer());
+  return mountTreeReview(root, makeBanqiPresentation(adapter), { ...config, explorer });
+}
+
+/** The tablebase panel in the shape of the tree-review explorer slot. */
+export function banqiTablebaseExplorer(): NonNullable<BanqiReviewConfig['explorer']> {
+  const panel = createBanqiTablebasePanel();
+  return {
+    el: panel.el,
+    label: t('analysis.tablebase.title'),
+    // The 4x8 board is short, so the move list beside it has no room to share.
+    placement: 'below-rail',
+    setTruth: (truth) => void panel.setState(truth),
+    setActive: (active) => panel.setActive(active),
+    onPlayMove: (handler) => panel.onPlayMove(handler),
+    onHoverMove: (handler) =>
+      panel.onHoverMove((move, result) => handler(banqiHoverArrow(move, result))),
+  };
+}
+
+/** The board preview for a hovered tablebase row, inked by its result. */
+export function banqiHoverArrow(
+  move: BanqiMove | null,
+  result: 'win' | 'draw' | 'loss' | null,
+): BanqiBoardArrow | null {
+  return move ? { from: move.from, to: move.to, ...hoverArrowStyle(result ?? 'book') } : null;
 }

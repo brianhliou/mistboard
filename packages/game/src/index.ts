@@ -1,6 +1,7 @@
 export * from './achievements.js';
 export * from './analysis.js';
 export * from './atomic-xiangqi-notation.js';
+export * from './banqi-endgame-tablebase.js';
 export * from './banqi-fen.js';
 export * from './bughouse.js';
 export * from './bughouse-engine-protocol.js';
