@@ -294,11 +294,28 @@ try {
     console.log('skip: git push (pass --push to publish the current commit)');
   }
 
+  // A red hosted CI run after the push no longer skips the revision wait and
+  // smoke: web auto-deploys on push whatever CI says, so the live site needs
+  // checking most exactly then. The release still fails, after the smoke.
+  // 2026-10-17: a Postgres image pull limit failed three CI jobs before any
+  // test ran, and the live-site checks had to be run by hand.
+  let ciRed = null;
   if (release.ciRequired && options.ciWait) {
-    const verified = await timedStage('hosted CI wait', () =>
-      waitForGithubCi({ headRevision: release.headRevision }),
-    );
-    if (verified.tip !== release.headRevision) settleExpectedRevision(verified);
+    try {
+      const verified = await timedStage('hosted CI wait', () =>
+        waitForGithubCi({ headRevision: release.headRevision }),
+      );
+      if (verified.tip !== release.headRevision) settleExpectedRevision(verified);
+    } catch (error) {
+      if (!release.pushCompleted || !error?.ciRed) throw error;
+      ciRed = error;
+      const { revision, adopted } = error.ciRed;
+      if (revision !== release.headRevision) settleExpectedRevision({ tip: revision, adopted });
+      console.error(`hosted CI failed after the push: ${error.message}`);
+      console.error(
+        'production deploys regardless; running the revision wait and smoke before failing',
+      );
+    }
   } else if (!release.ciRequired) {
     console.log(`skip: hosted CI wait (${release.ciReason})`);
   } else {
@@ -319,6 +336,13 @@ try {
     deployRequired: release.deployRequired,
     headRevision: release.expectedRevision,
   });
+
+  if (ciRed) {
+    console.error(
+      `production serves ${shortRevision(release.expectedRevision)} and its smoke passed; the release fails on hosted CI`,
+    );
+    throw ciRed;
+  }
 
   announceNews({ deployRequired: release.deployRequired });
 
@@ -752,7 +776,11 @@ async function waitForGithubCi({ headRevision }) {
       const tip = superseded && isAncestor === true ? superseded : revision;
       return { revision, tip, adopted };
     }
-    if (decision.outcome === 'fail') throw new Error(decision.message);
+    if (decision.outcome === 'fail') {
+      // Tagged so the caller can tell a red run, which production deploys
+      // anyway, from a wait that never ended.
+      throw Object.assign(new Error(decision.message), { ciRed: { revision, adopted } });
+    }
     if (decision.outcome === 'adopt') {
       console.log(`attempt ${attempt}: ${decision.message}`);
       console.log(

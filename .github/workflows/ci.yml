@@ -223,24 +223,15 @@ jobs:
   integration:
     name: Server integration
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:16-alpine
-        env:
-          POSTGRES_USER: bichess
-          POSTGRES_PASSWORD: bichess
-          POSTGRES_DB: bichess
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
       TEST_DATABASE_URL: postgres://bichess:bichess@localhost:5432/bichess
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/postgres
+        with:
+          user: bichess
+          password: bichess
+          database: bichess
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -266,24 +257,15 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:16-alpine
-        env:
-          POSTGRES_USER: bichess
-          POSTGRES_PASSWORD: bichess
-          POSTGRES_DB: bichess
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
       TEST_DATABASE_URL: postgres://bichess:bichess@localhost:5432/bichess
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/postgres
+        with:
+          user: bichess
+          password: bichess
+          database: bichess
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -307,22 +289,14 @@ jobs:
     needs: [browser-smoke-plan]
     if: needs.browser-smoke-plan.outputs.run_browser_smoke == 'true'
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:16-alpine
-        env:
-          POSTGRES_USER: mistboard
-          POSTGRES_PASSWORD: mistboard
-          POSTGRES_DB: mistboard
-        ports:
-          - 5435:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@v7
+      - uses: ./.github/actions/postgres
+        with:
+          user: mistboard
+          password: mistboard
+          database: mistboard
+          port: "5435"
       - uses: actions/setup-node@v7
         with:
           node-version: 22
