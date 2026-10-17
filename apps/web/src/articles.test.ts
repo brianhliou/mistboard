@@ -241,7 +241,7 @@ describe('article public listing gates', () => {
     expect(index.querySelector('a[href="/zh-hans/blog/mistybanqi"]')).not.toBeNull();
     expect(index.querySelector('a[href="/zh-hans/blog/misty"]')).not.toBeNull();
     expect(index.querySelector('a[href="/zh-hans/blog/server-enforced-fog"]')).not.toBeNull();
-    expect(text).toContain('MistyBanqi 是怎么下棋的');
+    expect(text).toContain('MistyBanqi 怎么下棋，又是怎么做出来的');
     expect(text).toContain('Misty 是怎么下棋的');
     expect(text).toContain('用服务器端真实局面实现迷雾国际象棋');
   });

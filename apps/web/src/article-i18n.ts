@@ -2108,7 +2108,7 @@ const ZH_HANS: Record<string, string> = {
     '这就是 Mistboard 守住的界线：对局期间，浏览器端没有可以揭开的真实局面；对局结束后，则有公开记录可供检查。',
 
   // -- How MistyBanqi Plays (engine article) --
-  'How MistyBanqi Plays': 'MistyBanqi 是怎么下棋的',
+  'How MistyBanqi Plays and How It Was Built': 'MistyBanqi 怎么下棋，又是怎么做出来的',
   // seoTitle: outside articleProse, so the localized <title> needs its own entry.
   'Banqi Engine: How MistyBanqi Plays and How It Was Built':
     '暗棋引擎：MistyBanqi 怎么下棋，又是怎么做出来的',
@@ -8395,7 +8395,7 @@ const ZH_HANT: Record<string, string> = {
     '這就是 Mistboard 守住的界線：對局期間，瀏覽器端沒有可以揭開的真實局面；對局結束後，則有公開紀錄可供檢查。',
 
   // -- How MistyBanqi Plays (engine article) --
-  'How MistyBanqi Plays': 'MistyBanqi 是怎麼下棋的',
+  'How MistyBanqi Plays and How It Was Built': 'MistyBanqi 怎麼下棋，又是怎麼做出來的',
   // seoTitle: outside articleProse, so the localized <title> needs its own entry.
   'Banqi Engine: How MistyBanqi Plays and How It Was Built':
     '暗棋引擎：MistyBanqi 怎麼下棋，又是怎麼做出來的',

@@ -41,7 +41,7 @@ export const banqiEngineArticle: Article = {
   kind: 'article',
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
-  title: 'How MistyBanqi Plays',
+  title: 'How MistyBanqi Plays and How It Was Built',
   seoTitle: 'Banqi Engine: How MistyBanqi Plays and How It Was Built',
   summary:
     'MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.',

@@ -406,13 +406,13 @@
     }
   },
   "mistybanqi": {
-    "title": "How MistyBanqi Plays",
+    "title": "How MistyBanqi Plays and How It Was Built",
     "kind": "article",
     "description": "MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "MistyBanqi 是怎么下棋的",
-      "zh-hant": "MistyBanqi 是怎麼下棋的"
+      "zh-hans": "MistyBanqi 怎么下棋，又是怎么做出来的",
+      "zh-hant": "MistyBanqi 怎麼下棋，又是怎麼做出來的"
     }
   },
   "most-played-move": {
