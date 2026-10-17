@@ -65,7 +65,7 @@ describe('banqi tablebase panel', () => {
     // Best first: the two wins lead, the fastest on top.
     expect(list.slice(0, 2).every((row) => row.dataset.result === 'win')).toBe(true);
     expect(list[0]?.querySelector('.bq-tablebase__distance')?.textContent).toMatch(
-      /^Wins in 67 · next capture in \d+40-move draw$/,
+      /^Wins in 67 · next capture in \d+draw by 40-move rule$/,
     );
     // Every win from here is a draw over the board, and is marked.
     for (const row of wins) expect(row.dataset.clockDraw).toBe('');

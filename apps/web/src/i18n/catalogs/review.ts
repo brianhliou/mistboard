@@ -557,7 +557,7 @@ export const EN_REVIEW = {
   'analysis.banqiTablebase.nextCapture': 'next capture in {count}',
   'analysis.banqiTablebase.keepWin': '{count} of {total} moves keep the win',
   'analysis.banqiTablebase.holdDraw': '{count} of {total} moves hold the draw',
-  'analysis.banqiTablebase.clockDraw': '40-move draw',
+  'analysis.banqiTablebase.clockDraw': 'draw by 40-move rule',
   'analysis.banqiTablebase.clockDrawTitle':
     'With best play no capture comes before the 40-move rule ends the game, so this result is a draw over the board.',
   'analysis.banqiTablebase.positionClockDraw':

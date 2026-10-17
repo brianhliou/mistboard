@@ -3,7 +3,7 @@
  * and soldier (black), every piece face up, black to move. The tablebase
  * (apps/web/public/tablebase/banqi, written by
  * scripts/banqi-tablebase/endgame-table.ts --export) says black wins in 67
- * moves, but the first capture is 45 moves away, so banqi's 40-move rule draws
+ * moves, but the first capture comes after 44 moves, so banqi's 40-move rule draws
  * it over the board.
  *
  * Every line is read from the shipped tables (packages/game
@@ -117,6 +117,10 @@ function pieceName(piece: BanqiPiece): string {
   return `${piece.color === 'red' ? "red's" : "black's"} ${piece.role}`;
 }
 
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
 function ink(color: string): string {
   return color === 'red' ? 'Red' : 'Black';
 }
@@ -155,17 +159,19 @@ function chain(
 }
 
 /** Comments on each capture in a line: who took what, and what is left. */
-function captureComments(steps: readonly Step[], offset = 0): Map<number, string> {
+function captureComments(steps: readonly Step[]): Map<number, string> {
   const out = new Map<number, string>();
   steps.forEach((step, i) => {
     if (!step.row.capture) return;
-    const text = captureText(step);
+    // No move number: the comment sits on the move, and the move list numbers
+    // pairs of turns, so a turn count would point at the wrong row.
+    const text = capitalize(captureText(step));
     if (step.after.status.type !== 'playing') {
       const loser = step.before.board[step.move.to]?.color ?? 'red';
       const left = Object.values(step.after.board).some((piece) => piece?.color === loser);
       out.set(
         i,
-        `Move ${i + 1 + offset}: ${text}, and ${loser} has ${left ? 'no move' : 'nothing'} left. ${ink(loser === 'red' ? 'black' : 'red')} wins.`,
+        `${text}, and ${loser} has ${left ? 'no move' : 'nothing'} left. ${ink(loser === 'red' ? 'black' : 'red')} wins.`,
       );
       return;
     }
@@ -174,7 +180,7 @@ function captureComments(steps: readonly Step[], offset = 0): Map<number, string
       after.result === 'draw'
         ? 'The position is a draw.'
         : `${ink(after.result === 'win' ? after.moverInk : after.moverInk === 'red' ? 'black' : 'red')} wins in ${after.dtm} more.`;
-    out.set(i, `Move ${i + 1 + offset}: ${text}. The 40-move clock starts again. ${verdict}`);
+    out.set(i, `${text}. The 40-move clock starts again. ${verdict}`);
   });
   return out;
 }
@@ -198,6 +204,8 @@ function buildChapter() {
   const firstCapture = line.findIndex((step) => step.row.capture);
   if (firstCapture < limit)
     throw new Error(`a capture on move ${firstCapture + 1}, inside the clock`);
+  // The study description names this number.
+  if (firstCapture + 1 !== 44) throw new Error(`the first capture moved to ${firstCapture + 1}`);
   const comments = captureComments(line);
 
   // Move 40: where a real game ends.
@@ -205,7 +213,7 @@ function buildChapter() {
   const clockAnswer = answerOf(atClock.after, false);
   comments.set(
     limit - 1,
-    `Move ${limit} without a capture: in a real game the 40-move rule ends it here as a draw. The study board plays on to show the rest of the win. Black still wins in ${clockAnswer.dtm} more moves, and the first capture comes on move ${firstCapture + 1}.`,
+    `${limit} moves without a capture: in a real game the 40-move rule ends it here as a draw. The study board plays on to show the rest of the win. Black still wins in ${clockAnswer.dtm} more moves, and the first capture comes ${firstCapture + 1 - limit} moves later.`,
   );
 
   // The first position on the line where exactly one move keeps the win.
@@ -259,7 +267,7 @@ function buildChapter() {
         annotations: {
           comments: [
             {
-              text: `Black has chariot, horse and soldier against red's chariot and horse, every piece face up, black to move. Played without the clock this is a win for black in ${rootAnswer.dtm} moves, counting each player's turn as one move. Only ${rootWins} of the ${rootAnswer.rows.length} legal moves keep it. In tablebase terms the position has DTZ ${rootAnswer.dtz}: with best play from both sides the next capture is ${rootAnswer.dtz} moves away, and banqi's 40-move rule draws the game after 40 moves without a capture. So over the board this is a draw. Black's soldier can take only a general or a soldier, so here it blocks squares and never captures. The mainline is black's fastest win against red's longest defence; open the Tablebase pane from the board menu to see every move graded.`,
+              text: `Black has chariot, horse and soldier against red's chariot and horse, all face up, black to move. Without the 40-move rule black wins in ${rootAnswer.dtm} moves (each player's turn counts as one), and only ${rootWins} of the ${rootAnswer.rows.length} moves keep it. But the first capture comes after ${firstCapture + 1} moves, so over the board this is a draw. Black's soldier takes only generals and soldiers, so here it just blocks squares.`,
             },
           ],
         },
@@ -384,7 +392,7 @@ async function main(): Promise<void> {
   const created = await session.post('/api/studies', {
     name: STUDY_NAME,
     description:
-      'An exact banqi endgame, solved by a tablebase: black wins in 67 moves, but the first capture is 45 moves away, so the 40-move rule makes it a draw over the board. The whole win in one line, with a note where the clock runs out and a position where only one move keeps it.',
+      'An exact banqi endgame, solved by a tablebase: black wins in 67 moves, but the first capture comes after 44 moves, so the 40-move rule makes it a draw over the board. The whole win in one line, with a note where the clock runs out and a position where only one move keeps it.',
     visibility,
     chapter,
   });
