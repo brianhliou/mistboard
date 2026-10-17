@@ -61,6 +61,7 @@ export const ZH_HANS_PLAY = {
   'lobby.corrYourGames': '我的通信对局 →',
   'lobby.corrComingSoon': '通信对局即将推出。',
   'setup.close': '关闭设置',
+  'setup.back': '返回',
   'setup.gameGroup': '游戏类别',
   'setup.chess': '国际象棋',
   'setup.xiangqi': '象棋',
