@@ -269,6 +269,41 @@ test('mutual perpetual check stays a draw', () => {
   assert.equal(xiangqiPerpetualCheckLoser(state.moveLog ?? [], start), null);
 });
 
+test('perpetual check is judged over the whole repetition, not the last lap', () => {
+  // The repeated position (black general f10, red chariot e8, red to move)
+  // stands after plies 1, 5 and 9. Red checks on both of its moves in the last
+  // lap but moved quietly in the first, so red did not check on every move of
+  // the repetition and the draw stands (Pikafish rule_judge, Fairy-Stockfish).
+  const start = playingState(
+    {
+      d1: { color: 'red', role: 'general' },
+      e10: { color: 'black', role: 'general' },
+      e8: { color: 'red', role: 'chariot' },
+    },
+    { turn: 'black' },
+  );
+  const moves: XiangqiMove[] = [
+    { from: 'e10', to: 'f10' },
+    { from: 'e8', to: 'e7' }, // quiet
+    { from: 'f10', to: 'f9' },
+    { from: 'e7', to: 'e8' }, // quiet
+    { from: 'f9', to: 'f10' },
+    { from: 'e8', to: 'f8' }, // check
+    { from: 'f10', to: 'e10' },
+    { from: 'f8', to: 'e8' }, // check
+    { from: 'e10', to: 'f10' },
+  ];
+
+  let state = start;
+  for (const move of moves) {
+    assert.ok(isStandardXiangqiLegalMove(state, move), `${move.from}->${move.to} should be legal`);
+    state = applyStandardXiangqiMove(state, move);
+  }
+  assert.equal(state.status.type, 'finished');
+  if (state.status.type === 'finished') assert.equal(state.status.reason, 'repetition');
+  assert.equal(xiangqiPerpetualCheckLoser(state.moveLog ?? [], start), null);
+});
+
 test('a check-free repetition is not adjudicated as perpetual check', () => {
   const start = playingState({
     e1: { color: 'red', role: 'general' },

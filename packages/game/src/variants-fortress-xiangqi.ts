@@ -821,9 +821,13 @@ export function fortressXiangqiPerpetualCheckLoser(
   const repeatedKey = plies[plies.length - 1]!.key;
   const occurrences = plies.flatMap((ply, i) => (ply.key === repeatedKey ? [i] : []));
   if (occurrences.length < 2) return null;
-  // The cycle that closed the repetition: moves after the 2nd-to-last occurrence
-  // through the last occurrence.
-  const cycle = plies.slice(occurrences[occurrences.length - 2]! + 1, occurrences.at(-1)! + 1);
+  // Judge every move from the first of the three occurrences through the last,
+  // as Pikafish and Fairy-Stockfish do: a side loses only if it checked on all
+  // of its moves across the whole repetition, not just the final lap. When the
+  // first occurrence is the starting position it is not in plies, so the
+  // window then runs from the first ply.
+  const start = occurrences.length >= 3 ? occurrences.at(-3)! + 1 : 0;
+  const cycle = plies.slice(start, occurrences.at(-1)! + 1);
   const perpetualBy = (color: FortressXiangqiColor): boolean => {
     const own = cycle.filter((ply) => ply.mover === color);
     return own.length > 0 && own.every((ply) => ply.gaveCheck);
