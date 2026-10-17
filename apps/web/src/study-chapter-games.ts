@@ -219,10 +219,29 @@ export function chapterEventGroups(
 }
 
 /**
+ * The tone of a game row's result chip. With a focus player it is that
+ * player's side (win, draw, loss). Without one (a match, an engine gauntlet
+ * where both names sit in every game) it is the winning seat, painted in that
+ * seat's ink: `red` is the tag's first seat and `black` the second, whatever
+ * the family calls them. Null when the result is unknown.
+ */
+export type ChapterResultTone = 'win' | 'draw' | 'loss' | 'red' | 'black';
+
+export function chapterResultTone(
+  chapter: GameChapter,
+  focus: string | null,
+): ChapterResultTone | null {
+  const outcome = gameOutcome(chapter.tags?.result);
+  if (!outcome) return null;
+  if (focus) return focusResult(chapter, focus);
+  return outcome;
+}
+
+/**
  * The rail row for a game chapter: "Red vs Black" with the winner in a
- * stronger weight, the date (and round) under it, and a result chip. With a
- * focus player the chip is coloured from that player's side; otherwise it is
- * neutral. Null for a chapter that is not a game, which keeps its name.
+ * stronger weight, the date (and round) under it, and a result chip coloured
+ * by `chapterResultTone`. Null for a chapter that is not a game, which keeps
+ * its name.
  */
 export function buildChapterGameRow(
   chapter: GameChapter,
@@ -272,8 +291,7 @@ export function buildChapterGameRow(
   if (outcome) {
     const chip = document.createElement('span');
     chip.className = 'study-game-line__result';
-    const side = focus ? focusResult(chapter, focus) : null;
-    chip.dataset.outcome = side ?? 'neutral';
+    chip.dataset.outcome = chapterResultTone(chapter, focus) ?? 'neutral';
     chip.textContent = resultLabel(outcome);
     row.append(chip);
   }

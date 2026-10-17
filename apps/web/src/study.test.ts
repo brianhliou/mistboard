@@ -72,6 +72,20 @@ describe('study creator workspace', () => {
       'Share & export',
     ]);
 
+    // The description reads in full under the board, outside every tab, and
+    // the rail keeps only the title: no clamped copy and no Show more.
+    const description = root.querySelector<HTMLElement>(
+      '.review-underboard-stack .study-description',
+    );
+    expect(description?.textContent).toBe('Attacking patterns on the central file.');
+    expect(description?.closest('.review-underboard-panel')).toBeNull();
+    expect(root.querySelector('.study-page__title-copy .review-info-card__summary')).toBeNull();
+    expect(root.querySelector('.review-info-card__summary')).toBeNull();
+    expect(root.querySelector('.study-page__summary-toggle')).toBeNull();
+    expect(
+      root.querySelector('.study-page__title-copy .review-info-card__title')?.textContent,
+    ).toBe('Cannon manual');
+
     root.querySelector<HTMLButtonElement>('.study-chapters__settings')?.click();
     const studyDialog = document.querySelector<HTMLDialogElement>(
       'dialog[data-study-dialog="study-settings"]',
@@ -138,12 +152,18 @@ describe('study creator workspace', () => {
     expect(root.querySelector('.review-shell--study')).not.toBeNull();
 
     expect(root.querySelector('.study-chapters__settings')).toBeNull();
+    // An admin sees both the heart and the star; the tooltips say they differ:
+    // the heart is the reader's own like (their Favorites), the star curates.
+    const like = root.querySelector<HTMLButtonElement>('.study-actions__like');
+    expect(like?.title).toBe('Like this study and save it to your Favorites');
+    expect(like?.getAttribute('aria-label')).toBe(like?.title);
     const feature = root.querySelector<HTMLButtonElement>('.study-chapters__featured');
-    expect(feature?.getAttribute('aria-label')).toBe('Feature in Staff picks');
+    expect(feature?.getAttribute('aria-label')).toBe('Feature in Staff picks (admins only)');
+    expect(root.querySelector('.study-description')).toBeNull();
     feature?.click();
 
     await vi.waitFor(() => expect(feature?.getAttribute('aria-pressed')).toBe('true'));
-    expect(feature?.getAttribute('aria-label')).toBe('Remove from Staff picks');
+    expect(feature?.getAttribute('aria-label')).toBe('Remove from Staff picks (admins only)');
     const railStatus = root.querySelector<HTMLElement>('.study-chapters__status');
     expect(railStatus?.textContent).toBe('Featured');
     // The admin's readout opens as the hidden viewer one; curating must reveal it.

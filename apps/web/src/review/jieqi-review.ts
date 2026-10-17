@@ -16,7 +16,7 @@ import {
 } from '@mistboard/game';
 import { createJieqiInteractiveBoard } from '../jieqi-board.js';
 import type { JieqiBoardArrow, JieqiBoardMarker } from '../live-jieqi-render.js';
-import { JIEQI_GEO, jieqiPieceGhostSvg } from '../live-jieqi-render.js';
+import { animateJieqiBoardMove, JIEQI_GEO, jieqiPieceGhostSvg } from '../live-jieqi-render.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
@@ -124,8 +124,9 @@ function makeJieqiPresentation(
       opts.signal?.addEventListener('abort', detachCard, { once: true });
       return board;
     },
-    // No glide animation wired for jieqi yet; the board re-renders on nav.
-    animateMove: () => {},
+    // The same glide the replay, TV and embed boards use. A face-down piece
+    // keeps its slot through the move, so it glides like a revealed one.
+    animateMove: animateJieqiBoardMove,
     shapeToArrow: (s: NodeShape): JieqiBoardArrow => ({
       from: s.orig as JieqiBoardArrow['from'],
       to: (s.dest ?? s.orig) as JieqiBoardArrow['to'],
