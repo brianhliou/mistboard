@@ -68,6 +68,8 @@ describe('article public listing gates', () => {
       '/blog/banqi-chariot-endgame',
       // Helpmates in xiangqi (composed helpmates in two), 2026-10-20.
       '/blog/helpmates-in-xiangqi',
+      // The General Blunder challenge (draw it, then make it win), 2026-10-19.
+      '/blog/general-blunder-challenge',
       // The fifth player page, the 2022 women's world champion Zuo Wenjing,
       // scheduled for 2026-10-16 (DEV shows it early for review).
       '/blog/zuo-wenjing',
@@ -327,6 +329,7 @@ describe('article public listing gates', () => {
     expect(hrefs).toEqual([
       '/blog/banqi-chariot-endgame',
       '/blog/helpmates-in-xiangqi',
+      '/blog/general-blunder-challenge',
       '/blog/fortress-and-atomic-xiangqi-on-hold',
       '/blog/banqi-perpetual-chase',
       '/blog/jieqi-puzzle-search',

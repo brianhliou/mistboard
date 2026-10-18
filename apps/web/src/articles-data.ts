@@ -70,6 +70,7 @@ import { xiangqiWorldChampionshipArticle } from './articles/content/xiangqi-worl
 import { xiangqiArticle } from './articles/content/xiangqi.js';
 import { xiangqiEndgamesArticle } from './articles/content/xiangqi-endgames.js';
 import { helpmatesInXiangqiArticle } from './articles/content/helpmates-in-xiangqi.js';
+import { generalBlunderChallengeArticle } from './articles/content/general-blunder-challenge.js';
 import { longestForcedMatesXiangqiArticle } from './articles/content/longest-forced-mates-xiangqi.js';
 import { yinShengArticle } from './articles/content/yin-sheng.js';
 import { caoYanleiArticle } from './articles/content/cao-yanlei.js';
@@ -81,6 +82,7 @@ import { zuoWenjingArticle } from './articles/content/zuo-wenjing.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  generalBlunderChallengeArticle,
   helpmatesInXiangqiArticle,
   fortressAndAtomicXiangqiOnHoldArticle,
   jieqiPuzzleSearchArticle,

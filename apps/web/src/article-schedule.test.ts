@@ -9,6 +9,13 @@ import { articles } from './articles-data.js';
 // Dates before each rule are history and are left alone.
 const ONE_A_DAY_FROM = '2026-10-10';
 const TUESDAY_FRIDAY_FROM = '2026-10-17';
+// Off-day dates Brian approved one at a time, with the day and his reason. Each
+// still counts against the one-a-day test.
+const OFF_DAY_EXCEPTIONS: Readonly<Record<string, string>> = {
+  // Brian, 2026-10-17: pull the challenge up next to the bot it is about, which
+  // shipped that evening; Monday had no article, and the next free slot was 11-03.
+  'general-blunder-challenge': '2026-10-19',
+};
 
 function publishedDays(from: string): [slug: string, day: string][] {
   return articles
@@ -33,7 +40,7 @@ describe('article schedule', () => {
 
   it('publishes only on a Tuesday or a Friday', () => {
     const offDay = publishedDays(TUESDAY_FRIDAY_FROM).filter(
-      ([, day]) => weekday(day) !== 2 && weekday(day) !== 5,
+      ([slug, day]) => weekday(day) !== 2 && weekday(day) !== 5 && OFF_DAY_EXCEPTIONS[slug] !== day,
     );
     expect(offDay, 'date it the next free Tuesday or Friday').toEqual([]);
   });

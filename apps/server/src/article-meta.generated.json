@@ -251,6 +251,16 @@
       "zh-hant": "堡壘象棋規則"
     }
   },
+  "general-blunder-challenge": {
+    "title": "Can you make General Blunder win?",
+    "kind": "article",
+    "description": "General Blunder is a xiangqi bot that plays its worst move every turn, so beating it is easy. Two challenges for anyone who wants more: get a draw, then make it win.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "你能让 General Blunder 赢吗？",
+      "zh-hant": "你能讓 General Blunder 贏嗎？"
+    }
+  },
   "helpmates-in-xiangqi": {
     "title": "Helpmates in Xiangqi",
     "kind": "article",
