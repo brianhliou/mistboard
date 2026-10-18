@@ -266,6 +266,7 @@ Conventions:
 
 ### Fixed
 
+- The homepage xiangqi bot picker starts at General Blunder, below Level 1 ([17041338](https://github.com/brianhliou/mistboard/commit/17041338))
 - A puzzle opened by its short code now points search engines at the same page as its full link, so each puzzle is indexed once ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - The banqi bot and review engine play to the game's own no-progress draw limit ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - Tapping Next quickly in an article or study embed on an iPhone no longer zooms the page ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
