@@ -91,10 +91,12 @@ function cryptoRng(): number {
 }
 
 // The persisted room-created setup is the deal plus the rules the room was created
-// under (BanqiSetup: since the 長捉 rule shipped, 2026-10, new rooms record
-// `chaseRule`). A room created before it stored the bare deal array and replays
-// with the rule off, so its moves and its repetition draw replay as played
-// (readBanqiSetup fails closed: no stamp means the old rules). createInitialBanqiState
+// under (BanqiSetup: since the 長捉 rule shipped, 2026-10-09, new rooms record
+// `chaseRule`; since 2026-10-17 also `noProgressLimit`, 60 plies). A room created
+// before the 長捉 rule stored the bare deal array and replays with the rule off and
+// the 40-ply limit; a room from between the two has no `noProgressLimit` and
+// replays at 40. So its moves and its draws replay as played (readBanqiSetup fails
+// closed: no stamp means the old rules). createInitialBanqiState
 // validates the deal (throws on a corrupt multiset). An absent setup is only the
 // runtime's throwaway seed projection; it gets the standard deal and current rules.
 
@@ -219,7 +221,7 @@ export const banqiTenant: BanqiTenant = {
       if (winner === 'black') return 'black-wins';
       return 'draw';
     },
-    // The kernel spells the 40-ply no-progress draw 'no-progress'; the canonical
+    // The kernel spells the no-progress draw 'no-progress'; the canonical
     // GameTermination value (shared with xiangqi, and the
     // only one the games_termination_check CHECK accepts) is 'progress-clock'.
     // Translate it — a blind cast launders the invalid string past TS and only

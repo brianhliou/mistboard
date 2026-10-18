@@ -83,8 +83,8 @@ export function makeBanqiTreeAdapter(
     // applyBanqiMove returns `state` unchanged on an illegal move; the tree only
     // calls this after isLegal, so the successor is always the real move result.
     // A tree rooted at a parsed position (study, analysis board) plays on past
-    // the 40-move clock; a finished game's review keeps the rule it was played
-    // under.
+    // the no-progress clock; a finished game's review keeps the rules it was
+    // played under (initialTruth stamps them, 40 or 60 plies).
     applyMove: (truth, move) => applyBanqiMove(truth, move, start ? {} : BANQI_STUDY_MOVE_OPTIONS),
     project: (truth): ProjectedView<BanqiPlayerView>[] => [
       {

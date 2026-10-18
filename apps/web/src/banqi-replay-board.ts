@@ -42,7 +42,7 @@ function tokenToMove(token: string): BanqiMove | null {
 
 /** The chapter's line through the kernel, as far as the kernel accepts; a
  *  token it refuses ends the line there rather than drawing a position that
- *  never happened. A study chapter plays on past the 40-move clock, like the
+ *  never happened. A study chapter plays on past the no-progress clock, like the
  *  study board it embeds. */
 export function replayBanqiLine(spec: Pick<BanqiReplayBoardSpec, 'rootFen' | 'moves'>): {
   states: BanqiGameState[];

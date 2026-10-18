@@ -16,8 +16,10 @@ import {
   banqiTablebaseSlot,
   banqiTablebaseTableFromBytes,
   banqiTablebaseUrl,
+  DEFAULT_NO_PROGRESS_PLY_LIMIT,
   decodeBanqiTablebaseSlot,
   decodeBanqiTablebaseValue,
+  LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT,
   parseBanqiFen,
   probeBanqiTablebase,
   readBanqiTablebase,
@@ -176,12 +178,12 @@ test('not covered: a face-down tile, unknown material, an unbound opening, a fin
 });
 
 test('move rows: the root has exactly the kernel moves, best first, matching the position', () => {
-  const answer = readBanqiTablebase(stateOf(ROOT), table);
+  const answer = readBanqiTablebase(stateOf(ROOT), table, LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT);
   assert.ok(answer);
   assert.equal(answer.result, 'win');
   assert.equal(answer.dtm, 67);
   assert.equal(answer.dtz, 45);
-  // DTZ 45 against a 40-ply clock at 0: the win is a draw over the board.
+  // DTZ 45 against the old 40-ply clock at 0: the win is a draw over the board.
   assert.equal(answer.clockDraw, true);
   const best = answer.rows[0];
   assert.ok(best);
@@ -195,9 +197,31 @@ test('move rows: the root has exactly the kernel moves, best first, matching the
   assert.equal(captureNow ? 1 : fastest, 45);
   for (const row of answer.rows) if (row.result === 'win') assert.equal(row.clockDraw, true);
   // Same position with a clock of 30: the same moves, the same marks.
-  const late = readBanqiTablebase({ ...stateOf(ROOT), noProgressClock: 30 }, table);
+  const late = readBanqiTablebase(
+    { ...stateOf(ROOT), noProgressClock: 30 },
+    table,
+    LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT,
+  );
   assert.ok(late);
   assert.equal(late.rows.length, answer.rows.length);
+});
+
+test("the clock is the position's own game's limit: 60 now, 40 for an older game", () => {
+  // A position with no stamp (a FEN, a study) plays under the current limit, and
+  // DTZ 45 fits inside 60: the win stands over the board.
+  const current = readBanqiTablebase(stateOf(ROOT), table);
+  assert.ok(current);
+  assert.equal(DEFAULT_NO_PROGRESS_PLY_LIMIT, 60);
+  assert.equal(current.result, 'win');
+  assert.equal(current.dtz, 45);
+  assert.equal(current.clockDraw, false);
+  // A position from a game created under the 40-ply limit keeps it.
+  const old = readBanqiTablebase(
+    { ...stateOf(ROOT), noProgressLimit: LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT },
+    table,
+  );
+  assert.ok(old);
+  assert.equal(old.clockDraw, true);
 });
 
 test('a short win inside the clock is not marked', () => {
@@ -206,9 +230,9 @@ test('a short win inside the clock is not marked', () => {
   assert.equal(answer.result, 'win');
   assert.equal(answer.dtm, 23);
   assert.equal(answer.clockDraw, false);
-  // With 38 plies already on the clock the same win needs 23 and has 2 left.
+  // With 58 plies already on the 60-ply clock the same win needs 23 and has 2 left.
   const late = readBanqiTablebase(
-    { ...stateOf('7r/8/2s5/2R5 b - 0 1'), noProgressClock: 38 },
+    { ...stateOf('7r/8/2s5/2R5 b - 0 1'), noProgressClock: 58 },
     table,
   );
   assert.ok(late);

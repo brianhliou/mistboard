@@ -29,8 +29,8 @@ import {
   type BanqiTablebaseResult,
   type BanqiTablebaseRow,
   type BanqiTablebaseTable,
+  banqiNoProgressLimitOf,
   banqiTablebaseKeysFor,
-  DEFAULT_NO_PROGRESS_PLY_LIMIT,
   readBanqiTablebase,
 } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
@@ -89,13 +89,16 @@ export function createBanqiTablebasePanel(
         const table = loaded[i];
         if (table) tables.set(key, table);
       });
-      // Past the clock (study and analysis boards only) the rule has already
-      // drawn the game, so the rows carry the plain results and no clock tags.
-      const pastClock = state.noProgressClock >= DEFAULT_NO_PROGRESS_PLY_LIMIT;
+      // The clock is the game's own limit: 40 for a game created before
+      // 2026-10-17, 60 since, and 60 on a study or analysis board. Past it (study
+      // and analysis boards only) the rule has already drawn the game, so the
+      // rows carry the plain results and no clock tags.
+      const limit = banqiNoProgressLimitOf(state);
+      const pastClock = state.noProgressClock >= limit;
       const data = readBanqiTablebase(
         state,
         (key) => tables.get(key),
-        pastClock ? Number.POSITIVE_INFINITY : DEFAULT_NO_PROGRESS_PLY_LIMIT,
+        pastClock ? Number.POSITIVE_INFINITY : limit,
       );
       if (!data) return false;
       render(state, data);
@@ -131,12 +134,14 @@ export function createBanqiTablebasePanel(
       summary.textContent = count;
       parts.push(summary);
     }
-    if (state.noProgressClock >= DEFAULT_NO_PROGRESS_PLY_LIMIT) {
+    const limit = banqiNoProgressLimitOf(state);
+    if (state.noProgressClock >= limit) {
       // Only a study or analysis board gets here: it plays on past the clock.
       const note = document.createElement('div');
       note.className = 'bq-tablebase__note';
       note.textContent = t('analysis.banqiTablebase.pastClock', {
-        count: state.noProgressClock - DEFAULT_NO_PROGRESS_PLY_LIMIT,
+        limit,
+        count: state.noProgressClock - limit,
       });
       parts.push(note);
     } else if (data.clockDraw && data.dtz !== null) {
@@ -144,7 +149,8 @@ export function createBanqiTablebasePanel(
       note.className = 'bq-tablebase__note';
       note.textContent = t('analysis.banqiTablebase.positionClockDraw', {
         count: data.dtz,
-        left: DEFAULT_NO_PROGRESS_PLY_LIMIT - state.noProgressClock,
+        limit,
+        left: limit - state.noProgressClock,
       });
       parts.push(note);
     }
@@ -153,7 +159,7 @@ export function createBanqiTablebasePanel(
     table.className = 'bq-tablebase__table';
     table.append(
       ...data.rows.map((row) =>
-        moveRow(row, {
+        moveRow(row, limit, {
           play: (move) => playMove?.(move),
           hover: (move, result) => hoverMove?.(move, result),
         }),
@@ -161,7 +167,7 @@ export function createBanqiTablebasePanel(
     );
     const foot = document.createElement('p');
     foot.className = 'bq-tablebase__foot';
-    foot.textContent = t('analysis.banqiTablebase.footnote');
+    foot.textContent = t('analysis.banqiTablebase.footnote', { limit });
     el.replaceChildren(...parts, table, foot);
     el.hidden = false;
   }
@@ -223,6 +229,7 @@ function keepCount(data: BanqiTablebaseAnswer): string | null {
 
 function moveRow(
   row: BanqiTablebaseRow,
+  limit: number,
   handlers: {
     play: (move: BanqiMove) => void;
     hover: (move: BanqiMove | null, result: BanqiTablebaseResult | null) => void;
@@ -260,8 +267,8 @@ function moveRow(
   if (row.clockDraw) {
     const clock = document.createElement('span');
     clock.className = 'bq-tablebase__clock';
-    clock.textContent = t('analysis.banqiTablebase.clockDraw');
-    clock.title = t('analysis.banqiTablebase.clockDrawTitle');
+    clock.textContent = t('analysis.banqiTablebase.clockDraw', { limit });
+    clock.title = t('analysis.banqiTablebase.clockDrawTitle', { limit });
     distance.append(clock);
   }
 

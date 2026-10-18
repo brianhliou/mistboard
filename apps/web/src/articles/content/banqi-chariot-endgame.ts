@@ -15,7 +15,8 @@ import type { Article, ArticleBlock } from '../types.js';
 // rebirthfox333's point (40 plies too short for two against three, "90-something
 // moves") is from their message to Brian, 2026-10-16
 // (docs-private/content/rebirthfox-reply-2026-10-16.md); credited by name with
-// Brian's yes, 2026-10-17.
+// Brian's yes, 2026-10-17. The rule moved from 40 to 60 on this finding (Brian,
+// 2026-10-17: "fine we can change it"); the article reads 40 as the old rule.
 // Research and the literature read: docs-private/research/
 // banqi-liangzisan-endgame-2026-10.md. The study is @mistboard's unlisted
 // A2yA4Rc2, seeded 2026-10-17 from the same line; its board carries the
@@ -35,7 +36,7 @@ export const banqiChariotEndgameArticle: Article = {
   cardTitle: 'A Solved Banqi Endgame',
   seoTitle: 'Banqi Endgame: Chariot and Horse vs Chariot, Horse and Soldier',
   summary:
-    'A Mistboard player told us our 40-move draw rule is too short for the endings where three pieces beat two. We solved one: a chariot, horse and soldier beat a chariot and horse in 67 moves, and can’t force a capture in the first 40. The win is in a study, move by move, with the tablebase beside the board.',
+    'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one: a chariot, horse and soldier beat a chariot and horse in 67 moves, and nothing is captured in the first 43. Banqi on Mistboard now draws at 60 moves. The win is in a study, move by move, with the tablebase beside the board.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-30',
@@ -43,15 +44,15 @@ export const banqiChariotEndgameArticle: Article = {
   thumbnail: { kind: 'svg', svg: BANQI_ENDGAME_THUMBNAIL },
   readNext: ['banqi', 'banqi-perpetual-chase', 'mistybanqi'],
   tldr: [
-    'A player told us our 40-move draw rule is too short for this ending, and the tablebase agrees: red wins in 67 moves with best play, but can’t force a capture in the first 40, so under our rule the game is drawn.',
+    'A player told us our 40-move draw rule was too short for this ending, and the tablebase agreed: red wins in 67 moves with best play, but nothing is captured until move 44, so the old rule drew the game. Banqi on Mistboard now draws after 60 moves without a capture or a flip.',
     'The study plays the win with the tablebase beside the board: every legal move in every position, and whether it wins, draws or loses.',
-    'Two chariots alone are decided by whether the steps between them are odd or even, and every other piece is a spare move that flips it. Red has two spare moves to black’s one, and wins by running down black’s.',
+    'Two chariots alone are decided by whether the steps between them are odd or even, and every other piece is a spare move that flips it. Red has two spare moves to black’s one, and wins by trading horses so that only red has one left.',
   ],
   intro: [
     {
       kind: 'paragraph',
       text:
-        'In October rebirthfox333, a [banqi](/rules/banqi) player on Mistboard, told us our draw rule was too short. Mistboard draws a game after 40 moves without a capture or a flip. They pointed to the endings where three pieces beat two, and said the win can take ninety-something moves. If that was true, our rule was turning won games into draws.',
+        'In October rebirthfox333, a [banqi](/rules/banqi) player on Mistboard, told us our draw rule was too short. Mistboard drew a game after 40 moves without a capture or a flip. They pointed to the endings where three pieces beat two, and said the win can take ninety-something moves. If that was true, our rule was turning won games into draws.',
     },
     {
       kind: 'paragraph',
@@ -65,7 +66,7 @@ export const banqiChariotEndgameArticle: Article = {
     } as ArticleBlock,
     {
       kind: 'paragraph',
-      text: '**The rule is too short. Red wins in 67 moves, but can’t force a capture until move 45.** Our rule draws the game at move 40.',
+      text: '**The rule was too short. Red wins in 67 moves, but with best play nothing is captured until move 44.** The old rule drew the game at move 40.',
     },
   ],
   sections: [
@@ -102,30 +103,28 @@ export const banqiChariotEndgameArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'A move by any other piece leaves the count alone and hands the turn over, so it flips who has the odd count. Red has two of these spare moves to black’s one, so red can always answer black’s with one of its own. Red’s plan is to take away black’s spare move, the horse, and that is what takes so long: black’s horse comes off on move 45.',
+            'A move by any other piece leaves the count alone and hands the turn over, so it flips who has the odd count. Red has two of these spare moves to black’s one, so red can always answer black’s with one of its own. Red’s plan is to trade horses, which leaves black with no spare move and red with its soldier. Setting up the trade is what takes so long: black’s chariot takes red’s horse on move 44, and red’s chariot takes black’s horse on move 45.',
         },
       ],
     },
     {
-      heading: 'A 60-move rule is long enough',
+      heading: 'Banqi on Mistboard now draws at 60 moves',
       blocks: [
         {
           kind: 'paragraph',
           text:
-            'Red needs 45 moves to force a capture, so our 40-move rule draws the game first. A rule set used for computer banqi programs in Taiwan ([PDF](' +
+            'With best play nothing is captured for 43 moves, so the old 40-move rule drew a game that red wins. A rule set used for computer banqi programs in Taiwan ([PDF](' +
             NTU_RULES +
-            ')) allows 60. The longest stretch of the winning line without a capture is 43 moves, so under 60 red can play the win out.',
+            ')) allows 60, enough for red to play the whole win out. That is our rule now: a new banqi game draws after 60 moves without a capture or a flip, and a game already under way when the rule changed keeps 40. The rule was turning won games into draws, and in this ending it no longer does.',
         },
-      ],
-    },
-    {
-      heading: 'The last spare move wins',
-      blocks: [
         {
-          kind: 'paragraph',
-          text:
-            'rebirthfox333 was right: our 40-move rule is too short for this ending. Two chariots are decided by the count, and every other piece is a spare move that flips it. Red has two spare moves to black’s one, so red wins. It takes 67 moves because black’s one, the horse, has to be run down first.',
-        },
+          kind: 'cta',
+          buttons: [
+            { label: 'Play Banqi', href: '/?play=computer&gameSpecId=banqi', emphasis: 'primary' },
+            { label: 'Open the study', href: `/study/${STUDY}`, emphasis: 'secondary' },
+            { label: 'Banqi rules', href: '/rules/banqi', emphasis: 'secondary' },
+          ],
+        } as ArticleBlock,
       ],
     },
   ],

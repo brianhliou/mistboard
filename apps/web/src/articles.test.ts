@@ -889,7 +889,8 @@ describe('rules variant sidebar', () => {
     expect(pageText).toContain(
       'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier',
     );
-    expect(pageText).toContain('40 plies (single moves) with no flip or capture');
+    expect(pageText).toContain('60 plies (single moves) with no flip or capture');
+    expect(pageText).toContain('keeps the 40-ply limit it began under');
     expect(pageText).toContain('threefold repetition');
     expect(pageText).toContain('On your turn you do exactly one of two things.');
     expect(pageText).toContain('it captures by jumping, not by stepping');

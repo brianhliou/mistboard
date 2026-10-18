@@ -13,6 +13,11 @@
  * so the whole 67-move win is one chapter, with a comment at move 40 where a
  * real game would have ended.
  *
+ * The study is about the 40-move rule banqi played under until 2026-10-17 (now
+ * 60), so it grades against LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT explicitly. Under
+ * 60 this win (first capture at move 44) would not be a draw. Note the study
+ * board's own tablebase panel judges a parsed position by the current 60.
+ *
  * Local dev only (dev sign-in codes): it refuses any base that is not
  * localhost.
  *
@@ -39,8 +44,8 @@ import {
   banqiStateToEngineFen,
   banqiTablebaseTableFromBytes,
   banqiTablebaseUrl,
-  DEFAULT_NO_PROGRESS_PLY_LIMIT,
   isBanqiLegalMove,
+  LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT,
   parseBanqiFen,
   readBanqiTablebase,
 } from '@mistboard/game';
@@ -49,7 +54,7 @@ import { resolveExistingStudy } from './seed-study-idempotency.js';
 const ROOT_FEN = '8/7R/hS6/2H4r r - 0 1';
 const STUDY_NAME = 'Banqi endgame: chariot and horse against chariot, horse and soldier';
 const STUDY_DESCRIPTION =
-  'An exact banqi endgame, solved by a tablebase: red wins in 67 moves, but the first capture comes after 44 moves, so the 40-move rule makes it a draw over the board. The whole win in one line, with a note where the clock runs out and a position where only one move keeps it.';
+  'An exact banqi endgame, solved by a tablebase: red wins in 67 moves, but the first capture comes after 44 moves, so banqi’s old 40-move rule drew it over the board; Mistboard now allows 60. The whole win in one line, with a note where the clock runs out and a position where only one move keeps it.';
 
 const PUBLIC = resolve(dirname(fileURLToPath(import.meta.url)), '../../web/public');
 const tables = new Map<string, BanqiTablebaseTable>();
@@ -75,7 +80,7 @@ function answerOf(state: BanqiGameState, clock = true): BanqiTablebaseAnswer {
   const answer = readBanqiTablebase(
     state,
     table,
-    clock ? DEFAULT_NO_PROGRESS_PLY_LIMIT : Number.POSITIVE_INFINITY,
+    clock ? LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT : Number.POSITIVE_INFINITY,
   );
   if (!answer) throw new Error(`${banqiStateToEngineFen(state)}: not covered`);
   return answer;
@@ -185,13 +190,13 @@ function captureComments(steps: readonly Step[]): Map<number, string> {
       after.result === 'draw'
         ? 'The position is a draw.'
         : `${ink(after.result === 'win' ? after.moverInk : after.moverInk === 'black' ? 'red' : 'black')} wins in ${after.dtm} more.`;
-    out.set(i, `${text}. The 40-move clock starts again. ${verdict}`);
+    out.set(i, `${text}. The move clock starts again. ${verdict}`);
   });
   return out;
 }
 
 function buildChapter() {
-  const limit = DEFAULT_NO_PROGRESS_PLY_LIMIT;
+  const limit = LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT;
   const root = stateOf(ROOT_FEN);
   const rootAnswer = answerOf(root);
   if (rootAnswer.dtm !== 67 || rootAnswer.dtz !== 45 || !rootAnswer.clockDraw) {
@@ -218,7 +223,7 @@ function buildChapter() {
   const clockAnswer = answerOf(atClock.after, false);
   comments.set(
     limit - 1,
-    `${limit} moves without a capture: in a real game the 40-move rule ends it here as a draw. The study board plays on to show the rest of the win. Red still wins in ${clockAnswer.dtm} more moves, and the first capture comes ${firstCapture + 1 - limit} moves later.`,
+    `${limit} moves without a capture: under the old 40-move rule a real game ended here as a draw. Banqi on Mistboard now allows 60, and the study board plays on to show the rest of the win. Red still wins in ${clockAnswer.dtm} more moves, and the first capture comes ${firstCapture + 1 - limit} moves later.`,
   );
 
   // The first position on the line where exactly one move keeps the win.
@@ -272,7 +277,7 @@ function buildChapter() {
         annotations: {
           comments: [
             {
-              text: `Red has chariot, horse and soldier against black's chariot and horse, all face up, red to move. Without the 40-move rule red wins in ${rootAnswer.dtm} moves (each player's turn counts as one), and only ${rootWins} of the ${rootAnswer.rows.length} moves keep it. But the first capture comes after ${firstCapture + 1} moves, so over the board this is a draw. Red's soldier takes only generals and soldiers, so here it just blocks squares.`,
+              text: `Red has chariot, horse and soldier against black's chariot and horse, all face up, red to move. Red wins in ${rootAnswer.dtm} moves (each player's turn counts as one), and only ${rootWins} of the ${rootAnswer.rows.length} moves keep it. The first capture comes after ${firstCapture + 1} moves, so banqi’s old 40-move rule drew this over the board; Mistboard now draws at 60, which leaves room for the whole win. Red's soldier takes only generals and soldiers, so here it just blocks squares.`,
             },
           ],
         },

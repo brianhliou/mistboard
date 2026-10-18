@@ -53,8 +53,8 @@ export function endgameState(fen: string): BanqiGameState {
   return parsed.state;
 }
 
-/** The position after `plies` moves of `line` from `fen`, with the 40-ply
- *  clock off (the clock would end the main line at ply 40). */
+/** The position after `plies` moves of `line` from `fen`, with the no-progress
+ *  clock off (the old 40-ply clock would end the main line at ply 40). */
 export function endgameStateAt(fen: string, line: readonly BanqiMove[], plies: number): BanqiGameState {
   let state = endgameState(fen);
   for (const move of line.slice(0, plies)) state = applyBanqiMove(state, move, BANQI_STUDY_MOVE_OPTIONS);

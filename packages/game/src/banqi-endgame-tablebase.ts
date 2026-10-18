@@ -32,8 +32,8 @@ import {
   type BanqiMove,
   type BanqiPieceRole,
   banqiMoverInk,
+  banqiNoProgressLimitOf,
   banqiSquareIndex,
-  DEFAULT_NO_PROGRESS_PLY_LIMIT,
   getBanqiLegalMoves,
 } from './variants-banqi.js';
 
@@ -314,11 +314,12 @@ function childOf(
 }
 
 /** The exact answer for a covered position, or null when it is not covered or
- *  a table it needs is not in hand (`tables` returns undefined for those). */
+ *  a table it needs is not in hand (`tables` returns undefined for those).
+ *  `noProgressLimit` defaults to the limit the position's own game plays under. */
 export function readBanqiTablebase(
   state: BanqiGameState,
   tables: (key: string) => BanqiTablebaseTable | undefined,
-  noProgressLimit: number = DEFAULT_NO_PROGRESS_PLY_LIMIT,
+  noProgressLimit: number = banqiNoProgressLimitOf(state),
 ): BanqiTablebaseAnswer | null {
   const probe = probeBanqiTablebase(state);
   const moverInk = banqiMoverInk(state);

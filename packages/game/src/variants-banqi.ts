@@ -145,6 +145,10 @@ export type BanqiGameState = {
   // The 長捉 rule. undefined = the current rule ('repetition'); null = off (no
   // forbidden moves, every threefold repetition draws), for older games.
   chaseRule?: BanqiChaseRule | null;
+  // Plies without a capture or flip that draw the game. undefined = the current
+  // limit (DEFAULT_NO_PROGRESS_PLY_LIMIT); games created before 2026-10-17 carry
+  // LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT. Read it through banqiNoProgressLimitOf.
+  noProgressLimit?: number;
 };
 
 // ── Player view (symmetric mask; same board for both seats + spectators) ──────
@@ -180,6 +184,11 @@ export type BanqiPlayerView = {
   // from its deal passes it back as BanqiRules (banqiRulesFromView). Absent means
   // the rule is off, so a game created before it shipped replays as it was played.
   chaseRule?: BanqiChaseRule;
+  // The no-progress limit this game is played under (plies without a capture or
+  // flip). Always set by the kernel's views; public (a rule, not a secret). A view
+  // without it reads as LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT (banqiRulesFromView), so
+  // a game created before the limit changed replays as it was played.
+  noProgressLimit?: number;
   // The board moves the 長捉 rule takes away from this seat right now (see
   // "Perpetual chase"), so the client can mark them instead of silently not
   // offering them. Present only on the seat to move's own view, and only when
@@ -266,7 +275,12 @@ export function banqiCanCapture(attacker: BanqiPieceRole, target: BanqiPieceRole
 
 // ── Canonical constants (§7) ─────────────────────────────────────────────────
 
-export const DEFAULT_NO_PROGRESS_PLY_LIMIT = 40;
+// The no-progress draw: plies (one player's turn each) without a capture or a
+// flip. 60 for every game created since 2026-10-17; it was 40 before, and a game
+// created then keeps 40 (stamped in its setup, see BanqiRules). The limit a given
+// game plays under is banqiNoProgressLimitOf(state), never this constant.
+export const DEFAULT_NO_PROGRESS_PLY_LIMIT = 60;
+export const LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT = 40;
 export const DEFAULT_REPETITION_DRAW_COUNT = 3;
 // Study and analysis boards play on past the no-progress clock (lichess's
 // analysis board does the same with the 50-move rule): the clock is a rule of
@@ -359,48 +373,70 @@ export function oppositeBanqiSeat(seat: BanqiSeat): BanqiSeat {
 // Rules are stamped per game, not read from today's constants: a stored game is
 // its event log replayed through this kernel, and applyBanqiMove ignores a move
 // the rules call illegal, so a game played before a rule change must replay under
-// the rules it was played with. The 長捉 rule (2026-10) is the first such rule.
+// the rules it was played with. The 長捉 rule (2026-10-09) is the first such rule;
+// the 60-ply no-progress limit (2026-10-17, was 40) is the second.
 
 /** Rule parameters for one game. Omitted fields take the current defaults. */
 export type BanqiRules = {
   /** 長捉 rule; null = off (rooms created before the rule shipped). */
   chaseRule?: BanqiChaseRule | null;
+  /** No-progress draw limit in plies; 40 for rooms created before 2026-10-17. */
+  noProgressLimit?: number;
 };
 
 /** The rules every stored game created before the 長捉 rule was played under. */
-export const LEGACY_BANQI_RULES: Readonly<Required<BanqiRules>> = { chaseRule: null };
+export const LEGACY_BANQI_RULES: Readonly<Required<BanqiRules>> = {
+  chaseRule: null,
+  noProgressLimit: LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT,
+};
 
 /**
- * The server-secret room-created setup for a room created since the 長捉 rule
- * shipped: the deal plus the rule the room is played under. A room created before
- * it stored the bare deal array (BanqiDeal), which reads as LEGACY_BANQI_RULES.
+ * The server-secret room-created setup: the deal plus the rules the room is played
+ * under. A room created before the 長捉 rule stored the bare deal array (BanqiDeal),
+ * which reads as LEGACY_BANQI_RULES. A room created between the 長捉 rule and the
+ * 60-ply limit stored `{ deal, chaseRule }` with no `noProgressLimit`, which reads
+ * as the 40-ply limit.
  */
-export type BanqiSetup = { deal: BanqiDeal; chaseRule: BanqiChaseRule | null };
+export type BanqiSetup = {
+  deal: BanqiDeal;
+  chaseRule: BanqiChaseRule | null;
+  noProgressLimit: number;
+};
 
 /** What a room-created event may hold: a current setup or a pre-rule bare deal. */
 export type BanqiStoredSetup = BanqiSetup | BanqiDeal;
 
 /** A fresh setup for a new room: a random deal under the current rules. */
 export function createBanqiSetup(rng: () => number): BanqiSetup {
-  return { deal: createBanqiDeal(rng), chaseRule: BANQI_CHASE_RULE };
+  return {
+    deal: createBanqiDeal(rng),
+    chaseRule: BANQI_CHASE_RULE,
+    noProgressLimit: DEFAULT_NO_PROGRESS_PLY_LIMIT,
+  };
+}
+
+/** A stored limit, failing closed: only the current limit is read as itself;
+ *  anything missing or unknown is the 40-ply limit every older room played. */
+function readNoProgressLimit(value: unknown): number {
+  return value === DEFAULT_NO_PROGRESS_PLY_LIMIT ? value : LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT;
 }
 
 /**
  * Read a stored setup, failing closed: a bare deal array, or a setup object whose
- * rule is missing or unknown, is a pre-rule game (chase rule off), never the
- * current rule. Only an absent setup (no stored game: tests, the runtime's seed
- * projection) gets the current defaults.
+ * rule is missing or unknown, is a pre-rule game (chase rule off, 40-ply limit),
+ * never the current rule. Only an absent setup (no stored game: tests, the
+ * runtime's seed projection) gets the current defaults.
  */
 export function readBanqiSetup(setup: unknown): { deal?: BanqiDeal; rules: BanqiRules } {
   if (setup === undefined || setup === null) return { rules: {} };
   if (Array.isArray(setup)) return { deal: setup as BanqiDeal, rules: { ...LEGACY_BANQI_RULES } };
   if (typeof setup === 'object') {
-    const candidate = setup as { deal?: unknown; chaseRule?: unknown };
+    const candidate = setup as { deal?: unknown; chaseRule?: unknown; noProgressLimit?: unknown };
     const chaseRule: BanqiChaseRule | null =
       candidate.chaseRule === 'repetition' ? candidate.chaseRule : null;
     return {
       ...(Array.isArray(candidate.deal) ? { deal: candidate.deal as BanqiDeal } : {}),
-      rules: { chaseRule },
+      rules: { chaseRule, noProgressLimit: readNoProgressLimit(candidate.noProgressLimit) },
     };
   }
   return { rules: { ...LEGACY_BANQI_RULES } };
@@ -415,10 +451,21 @@ export function createBanqiStateFromSetup(gameId: string, setup: unknown): Banqi
 /**
  * The rules a finished game's view says it was played under, for a client that
  * replays it from the deal. A view without a known `chaseRule` is a game with the
- * rule off (fail closed: never replay an old game under the new rule).
+ * rule off, and one without a known `noProgressLimit` plays to 40 plies (fail
+ * closed: never replay an old game under the new rules).
  */
-export function banqiRulesFromView(view: Pick<BanqiPlayerView, 'chaseRule'>): BanqiRules {
-  return { chaseRule: view.chaseRule === 'repetition' ? view.chaseRule : null };
+export function banqiRulesFromView(
+  view: Pick<BanqiPlayerView, 'chaseRule' | 'noProgressLimit'>,
+): BanqiRules {
+  return {
+    chaseRule: view.chaseRule === 'repetition' ? view.chaseRule : null,
+    noProgressLimit: readNoProgressLimit(view.noProgressLimit),
+  };
+}
+
+/** The no-progress limit `state` is played under (plies without a capture or flip). */
+export function banqiNoProgressLimitOf(state: Pick<BanqiGameState, 'noProgressLimit'>): number {
+  return state.noProgressLimit ?? DEFAULT_NO_PROGRESS_PLY_LIMIT;
 }
 
 /**
@@ -449,6 +496,7 @@ export function createInitialBanqiState(
     repCounts: {},
     captures: [],
     ...(rules.chaseRule !== undefined ? { chaseRule: rules.chaseRule } : {}),
+    ...(rules.noProgressLimit !== undefined ? { noProgressLimit: rules.noProgressLimit } : {}),
   };
 }
 
@@ -790,7 +838,8 @@ export function applyBanqiMove(
   if (state.status.type !== 'playing') return state;
   if (!isBanqiLegalMove(state, move)) return state;
 
-  const limit = opts.noProgressClockLimit ?? DEFAULT_NO_PROGRESS_PLY_LIMIT;
+  // The game's own limit (stamped at creation), unless a study board lifts it.
+  const limit = opts.noProgressClockLimit ?? banqiNoProgressLimitOf(state);
   const repLimit = opts.repetitionDrawCount ?? DEFAULT_REPETITION_DRAW_COUNT;
 
   const board: BanqiBoard = { ...state.board };
@@ -887,6 +936,7 @@ export function getBanqiPlayerView(state: BanqiGameState, seat: BanqiSeat): Banq
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,
     ...chaseRuleViewField(state),
+    noProgressLimit: banqiNoProgressLimitOf(state),
     ...forbiddenMovesViewField(state, seat),
   };
 }
@@ -925,5 +975,6 @@ export function banqiTruthView(state: BanqiGameState): BanqiPlayerView {
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,
     ...chaseRuleViewField(state),
+    noProgressLimit: banqiNoProgressLimitOf(state),
   };
 }
