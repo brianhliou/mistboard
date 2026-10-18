@@ -1189,7 +1189,7 @@
 }
 
 .landing-carousel-track {
-  --landing-carousel-gap: clamp(10px, 1.4vw, 16px);
+  --landing-carousel-gap: clamp(6px, 0.6vw, 8px);
   display: flex;
   gap: var(--landing-carousel-gap);
   transition: transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
