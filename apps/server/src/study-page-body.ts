@@ -16,7 +16,7 @@
 // discarded milliseconds after the client boots, so its only jobs are to be
 // crawlable, to be honest about what the study contains, and to be small.
 
-import type { StudyChapterRecord, StudyWithChapters } from './persistence-studies.js';
+import type { StudyChapterRecord, StudyRecord, StudyWithChapters } from './persistence-studies.js';
 
 export type StudyPageLocale = 'en' | 'zh-Hans' | 'zh-Hant';
 
@@ -243,4 +243,28 @@ function renderChapterBody(params: {
     parts.push(`<p>${escapeHtml(comment)}</p>`);
   }
   return `<main>${parts.join('')}</main>`;
+}
+
+// The study list (/study). Until 2026-10-17 it served the empty shell with no
+// canonical, so the one page that links every study gave a crawler nothing to
+// follow. This lists the same studies sitemap-studies.xml does, each with its
+// English title and chapter count; the client's mountStudyIndex() clears the
+// root before it draws the tabs and cards.
+export type StudyIndexEntry = Pick<StudyRecord, 'id' | 'name' | 'i18n'> & { chapterCount: number };
+
+export const STUDY_INDEX_PATH = '/study';
+
+export function renderStudyIndexBody(studies: readonly StudyIndexEntry[]): string {
+  const items = studies.map((study) => {
+    const name = localizedField(study.name, study.i18n, 'en', 'name');
+    const href = `/study/${encodeURIComponent(study.id)}`;
+    return `<li><a href="${escapeHtml(href)}">${escapeHtml(name)}</a> · ${escapeHtml(LABELS.en.chapters(study.chapterCount))}</li>`;
+  });
+  return (
+    '<main><h1>Xiangqi studies</h1>' +
+    '<p>Public studies on Mistboard: annotated xiangqi games, classical endgame compositions, ' +
+    'opening lines and puzzles, each on an interactive board with its moves and commentary.</p>' +
+    (items.length > 0 ? `<ul>${items.join('')}</ul>` : '') +
+    '</main>'
+  );
 }
