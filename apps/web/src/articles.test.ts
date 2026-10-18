@@ -66,6 +66,9 @@ describe('article public listing gates', () => {
       // A solved banqi endgame (chariot and horse against chariot, horse and
       // soldier), scheduled for 2026-10-30 (DEV shows it early for review).
       '/blog/banqi-chariot-endgame',
+      // The unstyled first-paint engineering post, scheduled for 2026-10-23
+      // (DEV shows it early for review).
+      '/blog/unstyled-first-paint',
       // Helpmates in xiangqi (composed helpmates in two), 2026-10-20.
       '/blog/helpmates-in-xiangqi',
       // The General Blunder challenge (draw it, then make it win), 2026-10-19.
@@ -171,8 +174,6 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
-      // The unstyled-first-paint engineering draft, undated (DEV only).
-      '/blog/unstyled-first-paint',
     ]);
   });
 
@@ -328,6 +329,7 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
       '/blog/banqi-chariot-endgame',
+      '/blog/unstyled-first-paint',
       '/blog/helpmates-in-xiangqi',
       '/blog/general-blunder-challenge',
       '/blog/fortress-and-atomic-xiangqi-on-hold',
@@ -371,8 +373,6 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
-      // The unstyled-first-paint engineering draft, undated (DEV only).
-      '/blog/unstyled-first-paint',
     ]);
   });
 
