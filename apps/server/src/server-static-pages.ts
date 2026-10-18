@@ -627,6 +627,16 @@ async function liveGameMeta(pathname: string): Promise<TenantGamePageMeta | null
   );
 }
 
+// Text the server writes into #app for a crawler that runs no script (/players,
+// /bots, /study/:id). It is plain markup with none of the page's classes, and
+// the client replaces it on mount, so painted it read as a bare text page that
+// then snapped into the real one (Brian, 2026-10-17, on /players). The wrapper
+// keeps it in the HTML but out of the first paint (app-base.css); the reveal
+// after a few seconds covers a script that never runs.
+export function crawlerCopyRoot(body: string): string {
+  return `<div id="app"><div class="crawler-copy">${body}</div></div>`;
+}
+
 export async function serveSpaShellWithRoutePreloads(params: {
   response: ServerResponse;
   staticDir: string;
@@ -731,7 +741,7 @@ export async function serveSpaShellWithRoutePreloads(params: {
     player?.body ??
     STATIC_ROUTE_BODIES[params.pathname.replace(/\/+$/, '') || '/'] ??
     (await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null));
-  if (body) html = html.replace('<div id="app"></div>', `<div id="app">${body}</div>`);
+  if (body) html = html.replace('<div id="app"></div>', crawlerCopyRoot(body));
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
   return true;
@@ -894,12 +904,12 @@ export async function serveStudyPage(params: {
         `title="Mistboard study chapter">`;
       html = html.replace('</head>', `${discovery}</head>`);
     }
-    // Bake the text into the shell so a crawler (and first paint) gets real
-    // content instead of an empty #app. mountStudy() replaceChildren()s the root
+    // Bake the text into the shell so a crawler gets real content instead of
+    // an empty #app. mountStudy() replaceChildren()s the root
     // on boot, so this markup never coexists with the client render.
     html = html.replace(
       '<div id="app"></div>',
-      `<div id="app">${renderStudyBody({ study, chapter, locale, localePath })}</div>`,
+      crawlerCopyRoot(renderStudyBody({ study, chapter, locale, localePath })),
     );
   } else {
     // An unlisted study (or one that is gone) gets none of the above, so the
