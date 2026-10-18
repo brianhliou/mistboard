@@ -285,11 +285,23 @@ describe('landing bot ladder (homepage play panel)', () => {
 
   // These ids must exist in apps/server/src/first-party-bots.ts for the variant,
   // or the one-click create fails. Pinned here because the web cannot import it.
-  it('walks xiangqi Fairy-Stockfish 1-8, then full-strength Pikafish', () => {
+  it('walks xiangqi from General Blunder through Fairy-Stockfish 1-8 to full-strength Pikafish', () => {
     expect(ids('xiangqi')).toEqual([
+      'general-blunder',
       ...Array.from({ length: 8 }, (_, i) => `fairy-stockfish-level-${i + 1}`),
       'pikafish',
     ]);
+  });
+
+  it('names General Blunder, and finds it from the setup dialog engine id', () => {
+    const ladder = landingBotLadder('xiangqi');
+    expect(ladder[0]).toMatchObject({
+      botId: 'general-blunder',
+      level: null,
+      name: 'General Blunder',
+    });
+    expect(landingBotLadderIndex(ladder, 'fairy-stockfish-xiangqi-worst')).toBe(0);
+    expect(landingBotLadderIndex(ladder, 'general-blunder')).toBe(0);
   });
 
   it('walks jieqi Pikafish Levels 1-8 (Level 8 is the pikafish bot), then AB-JChess', () => {

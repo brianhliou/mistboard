@@ -388,6 +388,15 @@ export function landingBotLadder(
       net: gameSpecId === XIANGQI_SPEC_ID && i + 1 === 8 ? 'nnue' : null,
     }));
     if (gameSpecId === XIANGQI_SPEC_ID) {
+      // General Blunder plays its worst move (2026-10-17): off the ladder, so
+      // it sits below Level 1, as on /bots, and is named rather than numbered.
+      levels.unshift({
+        botId: 'general-blunder',
+        level: null,
+        name: 'General Blunder',
+        engine: 'Fairy-Stockfish',
+        net: null,
+      });
       levels.push({
         botId: 'pikafish',
         level: null,
@@ -486,6 +495,8 @@ export function landingBotLadderIndex(
         ? 'ab-jchess'
         : remembered === 'katago-jungle'
           ? 'katago'
-          : null;
+          : remembered === 'fairy-stockfish-xiangqi-worst'
+            ? 'general-blunder'
+            : null;
   return botId ? ladder.findIndex((rung) => rung.botId === botId) : -1;
 }
