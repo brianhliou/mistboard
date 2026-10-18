@@ -416,6 +416,8 @@ export const EN_PLAY = {
   'live.rematchDeclined': 'Your opponent declined the rematch.',
   'live.reviewGame': 'Review game',
   'live.reviewThisMove': 'Review from this move',
+  'live.roomInfo': 'Game info and chat',
+  'live.roomInfoClose': 'Close',
   'live.newDebugRoom': 'New Debug Room',
   'live.copyInviteLink': 'Copy invite link',
   'live.linkCopied': 'Link copied!',

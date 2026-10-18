@@ -1,7 +1,7 @@
 import './game-shell.css';
 import { t } from './i18n/catalog.js';
 import { createMoveNavBar, syncMoveNavMenu } from './move-nav-bar.js';
-import { REPLAY_ICON_ANALYSIS, REPLAY_ICON_FLIP } from './replay-icons.js';
+import { REPLAY_ICON_ANALYSIS, REPLAY_ICON_FLIP, REPLAY_ICON_INFO } from './replay-icons.js';
 
 export type GameTableRefs = {
   actionSection: HTMLElement;
@@ -41,6 +41,31 @@ export function moveListScroller(list: HTMLElement): HTMLElement {
 }
 
 /**
+ * Scroll offsets that centre `target` in `scroller` on both axes. The room's
+ * move window scrolls vertically beside the board and, on a phone (600px and
+ * under, live-review.css), sideways as a one-line strip under it; whichever axis
+ * does not overflow is clamped back to 0 by the browser.
+ */
+export function centeredScrollOffsets(
+  scroller: { scrollTop: number; scrollLeft: number; clientHeight: number; clientWidth: number },
+  scrollerRect: Pick<DOMRect, 'top' | 'left'>,
+  targetRect: Pick<DOMRect, 'top' | 'left' | 'height' | 'width'>,
+): { top: number; left: number } {
+  const dy = targetRect.top - scrollerRect.top - (scroller.clientHeight - targetRect.height) / 2;
+  const dx = targetRect.left - scrollerRect.left - (scroller.clientWidth - targetRect.width) / 2;
+  return {
+    top: Math.max(0, scroller.scrollTop + dy),
+    left: Math.max(0, scroller.scrollLeft + dx),
+  };
+}
+
+/** Follow the latest move: the end of the list on both axes (see above). */
+export function scrollMoveListToEnd(scroller: HTMLElement): void {
+  scroller.scrollTop = scroller.scrollHeight;
+  scroller.scrollLeft = scroller.scrollWidth;
+}
+
+/**
  * Points the bar menu's Analyse row at the review page, or hides it (null) while
  * the game is still being played. `anchor` is any element inside the console.
  */
@@ -67,6 +92,20 @@ export function setReplayFlipHandler(anchor: HTMLElement, onFlip: (() => void) |
   if (!button) return;
   button.hidden = onFlip === null;
   button.onclick = onFlip;
+  syncMoveNavMenu(button);
+}
+
+/**
+ * Shows the bar menu's game info and chat row and runs `onOpen` on press, or
+ * hides it (null) where the card and chat sit on the page (wider screens).
+ */
+export function setRoomInfoHandler(anchor: HTMLElement, onOpen: (() => void) | null): void {
+  const button = anchor
+    .closest('.game-console')
+    ?.querySelector<HTMLButtonElement>('[data-room-info]');
+  if (!button) return;
+  button.hidden = onOpen === null;
+  button.onclick = onOpen;
   syncMoveNavMenu(button);
 }
 
@@ -141,6 +180,14 @@ export function createGameTable(opts: { navMenu?: boolean } = {}): GameTable {
         icon: REPLAY_ICON_ANALYSIS,
         href: '',
         dataset: { replayAnalysis: '' },
+        hidden: true,
+      },
+      {
+        // Phone room only (live-layout.ts): the game card and chat leave the
+        // page for a sheet so the room fits one screen.
+        label: t('live.roomInfo'),
+        icon: REPLAY_ICON_INFO,
+        dataset: { roomInfo: '' },
         hidden: true,
       },
     ],

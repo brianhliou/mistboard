@@ -398,6 +398,8 @@ export const ZH_HANS_PLAY = {
   'live.rematchDeclined': '对手拒绝了再战。',
   'live.reviewGame': '复盘',
   'live.reviewThisMove': '从这一步复盘',
+  'live.roomInfo': '对局信息和聊天',
+  'live.roomInfoClose': '关闭',
   'live.newDebugRoom': '新建调试房间',
   'live.copyInviteLink': '复制邀请链接',
   'live.linkCopied': '链接已复制！',

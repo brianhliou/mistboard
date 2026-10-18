@@ -398,6 +398,8 @@ export const ZH_HANT_PLAY = {
   'live.rematchDeclined': '對手拒絕了再戰。',
   'live.reviewGame': '覆盤',
   'live.reviewThisMove': '從這一步復盤',
+  'live.roomInfo': '對局資訊和聊天',
+  'live.roomInfoClose': '關閉',
   'live.newDebugRoom': '新增除錯房間',
   'live.copyInviteLink': '複製邀請連結',
   'live.linkCopied': '連結已複製！',
