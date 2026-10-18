@@ -38,7 +38,10 @@
 //       { "op": "delete-study", "expect": "DUPLICATE (delete) …" }
 // A `tree` is a SerializedTree, inline or a path relative to the plan file.
 // `order` must name every chapter the study has at that point in the plan.
-// `add` takes optional chapter `tags` (red, black, result, event, date, …).
+// `add` takes optional chapter `tags` (red, black, result, event, date, …), and
+// `"gamebook": true` makes the chapter a guess-the-move lesson: the reader plays
+// the chapter's orientation side along the mainline, the other side's replies
+// play themselves, and a sideline the reader tries shows its own comment.
 // A `rename`'s `i18n` sets the name for each locale it lists, keeping the
 // chapter's other locales; `expect` refuses a chapter not named that now.
 //
@@ -70,6 +73,7 @@ import {
   reorderStudyChapters,
   type StudyVisibility,
   type StudyWithChapters,
+  setChapterGamebook,
   updateChapterTree,
   updateStudyMeta,
 } from './persistence-studies.js';
@@ -106,6 +110,9 @@ export type StudyEditOp =
       tags?: Record<string, string>;
       /** The chapter's translation overlay, e.g. { "zh-Hans": { "name": "…", "tags": { … } } }. */
       i18n?: Record<string, unknown>;
+      /** A gamebook (guess-the-move) chapter, the same flag the study page's
+       *  lesson toggle sets. Absent or false: a plain chapter. */
+      gamebook?: boolean;
     }
   | { op: 'delete'; chapter: string }
   | { op: 'order'; chapters: string[] }
@@ -295,11 +302,25 @@ export function checkPlan(
           if (refs.has(op.ref)) throw new Error(`op ${i + 1}: ref "${op.ref}" used twice`);
           refs.add(op.ref);
         }
+        if (op.gamebook !== undefined && typeof op.gamebook !== 'boolean') {
+          throw new Error(`op ${i + 1}: gamebook must be true or false`);
+        }
+        if (
+          op.orientation !== undefined &&
+          op.orientation !== 'red' &&
+          op.orientation !== 'black'
+        ) {
+          throw new Error(`op ${i + 1}: orientation "${op.orientation}"`);
+        }
         const plies = tree(op.tree, i);
         const id = op.ref === undefined ? `new${i + 1}` : `ref:${op.ref}`;
         names.set(id, op.name);
         order.push(id);
-        lines.push(`add "${op.name}" (${variant}, ${plies} plies)`);
+        const extras = [
+          ...(op.orientation === undefined ? [] : [`as ${op.orientation}`]),
+          ...(op.gamebook ? ['gamebook'] : []),
+        ];
+        lines.push(`add "${op.name}" (${[variant, `${plies} plies`, ...extras].join(', ')})`);
         return;
       }
       case 'delete': {
@@ -463,6 +484,9 @@ export async function applyPlan(
             ...(op.i18n === undefined ? {} : { i18n: op.i18n }),
           }),
         );
+        if (added.ok && op.gamebook) {
+          must(`gamebook ${op.name}`, await setChapterGamebook(added.chapter.id, owner, true));
+        }
         if (added.ok && op.ref !== undefined) refIds.set(op.ref, added.chapter.id);
         if (added.ok) console.log(`added ${added.chapter.id} "${added.chapter.name}"`);
         break;

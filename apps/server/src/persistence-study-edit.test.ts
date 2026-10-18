@@ -50,7 +50,14 @@ definePersistenceTests('study edit', () => {
             description: 'new',
             i18n: { 'zh-Hans': { name: '种子二', description: '新' } },
           },
-          { op: 'add', ref: 'two', name: 'Two', tree: tree('h3e3', 'h10g8') },
+          {
+            op: 'add',
+            ref: 'two',
+            name: 'Two',
+            orientation: 'black',
+            gamebook: true,
+            tree: tree('h3e3', 'h10g8'),
+          },
           { op: 'add', ref: 'three', name: 'Three', tree: tree('c4c5') },
           { op: 'tree', chapter: first, tree: tree('b3e3', 'b10c8') },
           { op: 'rename', chapter: first, name: 'One, replayed' },
@@ -68,6 +75,15 @@ definePersistenceTests('study edit', () => {
       ['Three', 'One, replayed', 'Two'],
     );
     assert.deepEqual(after.chapters[1]!.root, tree('b3e3', 'b10c8'));
+    // `gamebook: true` makes a guess-the-move chapter; an add without it stays a plain one.
+    assert.deepEqual(
+      after.chapters.map((c) => [c.name, c.orientation, c.gamebook]),
+      [
+        ['Three', 'red', false],
+        ['One, replayed', 'red', false],
+        ['Two', 'black', true],
+      ],
+    );
 
     const second = await getStudyById(study.id);
     await applyPlan(
