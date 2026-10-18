@@ -231,6 +231,16 @@ export const EN_CONTENT = {
   'source.chessops': 'chessops: chess rules primitives, GPL-3.0-or-later.',
   'source.stockfish':
     'Stockfish: optional engine/runtime dependency for research and engine-worker flows, GPL family.',
+  'source.fairyStockfish':
+    'Fairy-Stockfish by Fabian Fichter and contributors: the xiangqi bot levels below Pikafish and the Duck Xiangqi bot, GPL-3.0.',
+  'source.pikafishJieqi':
+    "Pikafish's jieqi branch, with Mistboard's patches: the jieqi bots and jieqi analysis, GPL-3.0.",
+  'source.chessPieceSets':
+    'Chess pieces from lichess: Cburnett by Colin M.L. Burnett and Merida by Armando Hernandez Marroquin, GPL-2.0-or-later; Chessnut by Alexis Luengas, Apache 2.0; Fantasy by Maurizio Monge, MIT; Letter by usolando, AGPL-3.0.',
+  'source.sounds':
+    'Sounds: the Futuristic, NES, Piano and SFX sets from lichess by Enigmahack, AGPL-3.0; the Wood set by el_boss, the game-end jingles by Kenney and the Duck Xiangqi quack by D4XX, all CC0.',
+  'source.fonts':
+    'Fonts: Noto Sans and Noto Sans CJK, SIL Open Font License 1.1; Roboto, Apache 2.0.',
   'source.abJchess':
     "AB-JChess by Huorongrong and Laoxu (Kouza): the top jieqi bot, GPL-3.0; its neural network is used with the authors' permission.",
   'source.katagomo':
@@ -396,15 +406,68 @@ export const EN_CONTENT = {
   'champions.ruleSubmitSuffix': '.',
   'thanks.heading': 'Thank you',
   'thanks.intro':
-    'Mistboard stands on open-source work by many people and projects, and on everyone who plays, reports bugs, and helps it get better.',
-  'thanks.playersHeading': 'Players and contributors',
+    "Much of Mistboard rests on other people's work: the engines you play against, the games and photos other sites let us show, and the players who told us what was broken. This page thanks them by name.",
+  'thanks.enginesHeading': 'The engines you play',
+  'thanks.pikafishAuthors': 'The Pikafish developers',
+  'thanks.pikafishBody':
+    "The strongest xiangqi bot here and the engine behind all of the site's xiangqi analysis. Its jieqi branch runs the jieqi bots and jieqi analysis.",
+  'thanks.fairyStockfishAuthors': 'Fabian Fichter and the Fairy-Stockfish contributors',
+  'thanks.fairyStockfishBody':
+    'Plays the xiangqi bot levels below Pikafish and the Duck Xiangqi bot.',
+  'thanks.abJchessAuthors': 'Huorongrong and Laoxu',
+  'thanks.abJchessBody': 'The top jieqi bot. Its authors let us use its neural network.',
+  'thanks.katagomoAuthor': 'KataGomo by hzyhhzy',
+  'thanks.katagoAuthor': 'KataGo by lightvector',
+  'thanks.dandelionAuthor': 'Dandelion 4 network by Kouza',
+  'thanks.katagoBody':
+    "The top Jungle bot: hzyhhzy's Jungle version of KataGo, playing with the Dandelion 4 network, run here with their permission.",
+  'thanks.communityBotBy': 'A bot from a community developer.',
+  'thanks.statGames': 'games on Mistboard',
+  'thanks.statRating': '{variant} rating',
+  'thanks.statUnrated': 'not rated yet',
+  'thanks.enginesAskPrefix':
+    'If you have written an engine for one of our variants, we can run it here as a bot with your name on it and its own page. ',
+  'thanks.enginesAskLink': 'Get in touch',
+  'thanks.enginesAskSuffix': '.',
+  'thanks.chessdbName': 'chessdb.cn',
+  'thanks.chessdbBody':
+    'The Chinese Chess Cloud Database gives the exact endgame results in the xiangqi analysis board and practice.',
+  'thanks.sourcesHeading': 'Games, data and photos',
+  'thanks.dpxqName': 'dpxq.com',
+  'thanks.dpxqBody':
+    'The tournament games in our broadcasts and the classical manuals in our studies. Its operator also spotted a round we had missed.',
+  'thanks.xiangqiqipuName': 'xiangqiqipu.com',
+  'thanks.xiangqiqipuBody':
+    "75 of the photos on our player pages, used with the owner's permission.",
+  'thanks.pressName': 'Photographers and news agencies',
+  'thanks.pressBody': "The other player photos, each credited on its player's page.",
+  'thanks.elephantChessName': 'ElephantChess',
+  'thanks.elephantChessBody':
+    'The amateur games our puzzles are mined from, which they publish as open monthly datasets.',
+  'thanks.jimPngName': 'Jim Png',
+  'thanks.jimPngBody':
+    'The English names we give xiangqi openings follow the glossaries on his site, xqinenglish.com.',
+  'thanks.playersHeading': 'Players and feedback',
   'thanks.playersBody':
-    'Thank you to everyone who plays a game, files a bug, suggests an idea, or supports the project. Mistboard gets sharper every time you do.',
-  'thanks.openSourceHeading': 'Open-source projects',
-  'thanks.openSourcePrefix': 'Mistboard is built on open-source libraries and tools. The ',
+    'Thank you to the people who played here early, when there was little to play, and to everyone whose report led to a fix.',
+  'thanks.playersAskPrefix':
+    'If you reported something that got fixed and your name is missing, or you would rather it came off, ',
+  'thanks.playersAskLink': 'tell us',
+  'thanks.playersAskSuffix': '.',
+  'thanks.lichessHeading': 'Lichess',
+  'thanks.lichessLead':
+    'Mistboard is the design of lichess applied to xiangqi and its variants. When we did not know how something should work, we looked at how lichess does it, and most of the time we built the same thing.',
+  'thanks.lichessTook':
+    'From lichess we took the lobby and rated play with Glicko-2, the shape of the game room, the broadcast and pro players pages, the rule for mate puzzles, the changelog and this page, and the board code under our chess boards.',
+  'thanks.lichessCloseLink': 'Lichess',
+  'thanks.lichessCloseMiddle':
+    " is free, carries no ads and is open source, run as a nonprofit on its players' donations. Thank you to Thibault Duplessis, who started it, and to ",
+  'thanks.lichessCloseBuildersLink': 'everyone who builds it',
+  'thanks.lichessCloseSuffix': '.',
+  'thanks.openSourcePrefix':
+    'Licenses for everything above, and for the libraries the site runs on, are on the ',
   'thanks.openSourceLink': 'source code',
-  'thanks.openSourceSuffix': ' page lists the projects and licenses Mistboard depends on.',
-  'thanks.stubNote': 'This page will grow into a fuller list of credits over time.',
+  'thanks.openSourceSuffix': ' page.',
   'faq.heading': 'FAQ',
   'faq.playWebQuestion': 'Is there a web version? Do I need to download anything?',
   'faq.playWebAnswer':
