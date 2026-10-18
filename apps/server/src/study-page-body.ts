@@ -245,25 +245,55 @@ function renderChapterBody(params: {
   return `<main>${parts.join('')}</main>`;
 }
 
-// The study list (/study). Until 2026-10-17 it served the empty shell with no
-// canonical, so the one page that links every study gave a crawler nothing to
-// follow. This lists the same studies sitemap-studies.xml does, each with its
-// English title and chapter count; the client's mountStudyIndex() clears the
-// root before it draws the tabs and cards.
+// The study list (/study, /zh-hans/study, /zh-hant/study). Until 2026-10-17 it
+// served the empty shell with no canonical, so the one page that links every
+// study gave a crawler nothing to follow, and the Chinese lists did not exist.
+// This lists the same studies sitemap-studies.xml does, each with its title in
+// the page's locale and its chapter count, linking the same-locale study page;
+// the client's mountStudyIndex() clears the root before it draws the tabs and
+// cards.
 export type StudyIndexEntry = Pick<StudyRecord, 'id' | 'name' | 'i18n'> & { chapterCount: number };
 
-export const STUDY_INDEX_PATH = '/study';
+/** The three study list URLs, each with the locale it renders in. */
+export const STUDY_INDEX_PAGES: Readonly<
+  Record<string, { locale: StudyPageLocale; localePath: string }>
+> = {
+  '/study': { locale: 'en', localePath: '' },
+  '/zh-hans/study': { locale: 'zh-Hans', localePath: '/zh-hans' },
+  '/zh-hant/study': { locale: 'zh-Hant', localePath: '/zh-hant' },
+};
 
-export function renderStudyIndexBody(studies: readonly StudyIndexEntry[]): string {
+const STUDY_INDEX_COPY: Record<StudyPageLocale, { heading: string; intro: string }> = {
+  en: {
+    heading: 'Studies',
+    intro:
+      'Public studies on Mistboard: annotated games of xiangqi and its variants, classical endgame compositions, opening lines and puzzles, each on an interactive board with its moves and commentary.',
+  },
+  'zh-Hans': {
+    heading: '研习',
+    intro:
+      'Mistboard 上的公开研习：象棋及其变体的带注解对局、古典残局排局、开局变着和题目，每一项都在互动棋盘上呈现，附着法和讲解。',
+  },
+  'zh-Hant': {
+    heading: '研習',
+    intro:
+      'Mistboard 上的公開研習：象棋及其變體的帶註解對局、古典殘局排局、開局變著和題目，每一項都在互動棋盤上呈現，附著法和講解。',
+  },
+};
+
+export function renderStudyIndexBody(
+  studies: readonly StudyIndexEntry[],
+  page: { locale: StudyPageLocale; localePath: string } = { locale: 'en', localePath: '' },
+): string {
+  const { locale, localePath } = page;
+  const copy = STUDY_INDEX_COPY[locale];
   const items = studies.map((study) => {
-    const name = localizedField(study.name, study.i18n, 'en', 'name');
-    const href = `/study/${encodeURIComponent(study.id)}`;
-    return `<li><a href="${escapeHtml(href)}">${escapeHtml(name)}</a> · ${escapeHtml(LABELS.en.chapters(study.chapterCount))}</li>`;
+    const name = localizedField(study.name, study.i18n, locale, 'name');
+    const href = `${localePath}/study/${encodeURIComponent(study.id)}`;
+    return `<li><a href="${escapeHtml(href)}">${escapeHtml(name)}</a> · ${escapeHtml(LABELS[locale].chapters(study.chapterCount))}</li>`;
   });
   return (
-    '<main><h1>Xiangqi studies</h1>' +
-    '<p>Public studies on Mistboard: annotated xiangqi games, classical endgame compositions, ' +
-    'opening lines and puzzles, each on an interactive board with its moves and commentary.</p>' +
+    `<main><h1>${escapeHtml(copy.heading)}</h1><p>${escapeHtml(copy.intro)}</p>` +
     (items.length > 0 ? `<ul>${items.join('')}</ul>` : '') +
     '</main>'
   );

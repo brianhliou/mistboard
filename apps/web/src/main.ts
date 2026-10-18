@@ -423,7 +423,9 @@ const studyBaseId = /^(?:\/(?:zh-hans|zh-hant))?\/study\/([A-Za-z0-9]+)$/.exec(p
 const studyChapterRoute = studyChapterRouteFromPath(path);
 const studyId = studyBaseId ?? studyChapterRoute?.studyId ?? null;
 const studyChapterId = studyChapterRoute?.chapterId ?? null;
-const wantsStudyIndex = path === '/study';
+// Locale-prefixed too (/zh-hans/study): the prefix alone sets the locale, and
+// the list's links go to the same-locale study pages.
+const wantsStudyIndex = path === '/study' || path === '/zh-hans/study' || path === '/zh-hant/study';
 // Locale-prefixed too, like the course: localeFromPath() picks the language.
 const wantsPractice =
   path === '/practice' || path === '/zh-hans/practice' || path === '/zh-hant/practice';

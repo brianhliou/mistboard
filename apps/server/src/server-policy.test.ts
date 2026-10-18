@@ -805,11 +805,20 @@ test('locale-prefixed study permalinks are client routes AND review-shell routes
   }
 });
 
+test('the study list is a route in all three locales, and not a review shell', () => {
+  for (const path of ['/study', '/zh-hans/study', '/zh-hant/study']) {
+    assert.equal(isClientRoute(path), true, `${path} should serve the SPA shell`);
+    assert.equal(isReviewShellRoute(path), false, `${path} mounts no engine`);
+  }
+});
+
 test('a bogus locale prefix on a study path is not a route', () => {
   for (const path of [
     '/fr/study/Ab12cd',
     '/zh/study/Ab12cd',
-    '/zh-hans/study/',
+    '/fr/study',
+    '/zh/study',
+    '/zh-hans/studies',
     '/study/Ab12cd/Xy34ef/extra',
   ]) {
     assert.equal(isClientRoute(path), false, `${path} should not match`);

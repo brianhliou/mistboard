@@ -35,7 +35,7 @@ import {
   chapterPageMeta,
   renderStudyBody,
   renderStudyIndexBody,
-  STUDY_INDEX_PATH,
+  STUDY_INDEX_PAGES,
 } from './study-page-body.js';
 
 export { ARTICLE_META, canonicalArticleBase };
@@ -305,10 +305,27 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     htmlLang: 'zh-Hant',
     localeGroup: '/practice',
   },
+  // The study list in three languages; the zh lists were added 2026-10-17
+  // (each study already had its /zh-hans/study/:id page, but no list linked them).
   '/study': {
     title: 'Xiangqi Studies | Mistboard',
     description:
       'Browse public xiangqi (Chinese chess) studies: annotated games, classical endgame compositions, and opening lines on an interactive board.',
+    localeGroup: '/study',
+  },
+  '/zh-hans/study': {
+    title: '象棋研习：带注解对局与古典排局 | Mistboard',
+    description:
+      '浏览公开的象棋（中国象棋）研习：带注解的对局、古典残局排局和开局变着，全部在互动棋盘上呈现。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/study',
+  },
+  '/zh-hant/study': {
+    title: '象棋研習：帶註解對局與古典排局 | Mistboard',
+    description:
+      '瀏覽公開的象棋（中國象棋）研習：帶註解的對局、古典殘局排局和開局變著，全部在互動棋盤上呈現。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/study',
   },
   '/feed': {
     title: 'Updates and Announcements | Mistboard',
@@ -772,17 +789,16 @@ export async function serveSpaShellWithRoutePreloads(params: {
       `<link rel="canonical" href="${params.publicHost}${canonicalPath}"></head>`,
     );
   }
-  // The study list: a self canonical with no query (?tab= and ?q= pick a view
-  // of the one list) and a body linking every study sitemap-studies.xml lists.
-  if (params.pathname === STUDY_INDEX_PATH) {
-    if (params.publicHost) {
-      html = html.replace(
-        '</head>',
-        `<link rel="canonical" href="${params.publicHost}${STUDY_INDEX_PATH}"></head>`,
-      );
-    }
+  // The study list, in each locale: its locale group above writes the self
+  // canonical with no query (?tab= and ?q= pick a view of the one list) and the
+  // alternates; the body links every study sitemap-studies.xml lists.
+  const studyIndexPage = STUDY_INDEX_PAGES[params.pathname];
+  if (studyIndexPage) {
     const studies = await (params.listPublicStudies ?? listEveryPublicStudy)().catch(() => []);
-    html = html.replace('<div id="app"></div>', crawlerCopyRoot(renderStudyIndexBody(studies)));
+    html = html.replace(
+      '<div id="app"></div>',
+      crawlerCopyRoot(renderStudyIndexBody(studies, studyIndexPage)),
+    );
   }
   if (noindex) {
     html = setRobotsMeta(html, 'noindex, follow');
@@ -1110,6 +1126,8 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/zh-hans/editor/xiangqi',
   '/zh-hant/editor/xiangqi',
   '/study',
+  '/zh-hans/study',
+  '/zh-hant/study',
   '/games',
   '/games/search',
   '/data',

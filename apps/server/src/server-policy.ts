@@ -504,6 +504,8 @@ export function isClientRoute(pathname: string): boolean {
     // reseed and work off prod (#521). Only real set/position pairs are routes.
     xiangqiEndgamePracticeRouteFromPath(normalized) !== null ||
     normalized === '/study' ||
+    normalized === '/zh-hans/study' ||
+    normalized === '/zh-hant/study' ||
     /^\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(normalized) ||
     // Locale-prefixed study permalinks (/zh-hans/study/:id) serve the same SPA
     // shell with localized meta; without these they would 404.
