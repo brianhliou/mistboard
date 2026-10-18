@@ -799,12 +799,8 @@ export function buildNotice(titleText: string, bodyText: string): HTMLElement {
 // and the register form independently surfaces Terms + Privacy so signup still
 // has an assent surface. One quiet row, deliberately NOT a lichess-style grouped
 // fat footer: with our route count the columns read busier than the site is
-// (Brian, 2026-06-10).
-//
-// On phones it shrinks to one line (#576, Brian 2026-10-17): About, Terms,
-// Privacy and the identity line. The links marked data-phone-menu are hidden
-// there by site-shell.css and carried by the site menu's Mistboard section
-// instead; footerNavItems (nav-items.ts) is the one list behind both.
+// (Brian, 2026-06-10). Four links since 2026-10-17, the same on every width:
+// footerNavItems (nav-items.ts).
 export function buildHomeFooter(locale: Locale = currentLocale()): HTMLElement {
   const footer = document.createElement('footer');
   footer.className = 'landing-footer';
@@ -820,7 +816,6 @@ export function buildHomeFooter(locale: Locale = currentLocale()): HTMLElement {
       anchor.target = '_blank';
       anchor.rel = 'noreferrer noopener';
     }
-    if (!link.phoneFooter) anchor.dataset.phoneMenu = '';
     links.append(anchor);
   }
 

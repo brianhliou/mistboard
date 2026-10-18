@@ -320,10 +320,6 @@ describe('site shell nav', () => {
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/zh-hant/rules"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/zh-hant/blog"]')).toBeNull();
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/about"]')?.textContent).toBe('關於');
-    // The announcement archive joined the footer 2026-08-27, when it stopped
-    // being a noindexed dead end. It is not a content path, so it keeps its
-    // bare href under a zh locale.
-    expect(footer.querySelector<HTMLAnchorElement>('a[href="/feed"]')?.textContent).toBe('更新');
     expect(footer.querySelector<HTMLAnchorElement>('a[href="/contact"]')?.textContent).toBe('聯絡');
     // The Discord invite left the footer on 2026-08-31 (see nav-items.ts): the
     // room is not ready to be promoted.
@@ -332,9 +328,7 @@ describe('site shell nav', () => {
   });
 });
 
-// The stylesheet is not applied under jsdom, so the phone footer is asserted
-// as CSS text: the one rule that hides the menu-bound links must sit inside the
-// phone query (the same 600px edge as navPhoneMediaQuery) and nowhere else.
+// The stylesheet is not applied under jsdom, so phone rules are asserted as CSS text.
 const siteShellCss = readFileSync(
   ['src/site-shell.css', 'apps/web/src/site-shell.css']
     .map((candidate) => resolve(process.cwd(), candidate))
@@ -342,78 +336,21 @@ const siteShellCss = readFileSync(
   'utf8',
 );
 
-function splitMediaBlocks(css: string, query: string): { inside: string; outside: string } {
-  const opener = `@media ${query} {`;
-  let inside = '';
-  let outside = '';
-  let cursor = 0;
-  for (;;) {
-    const start = css.indexOf(opener, cursor);
-    if (start < 0) break;
-    outside += css.slice(cursor, start);
-    let depth = 0;
-    let end = start + opener.length - 1;
-    for (; end < css.length; end += 1) {
-      if (css[end] === '{') depth += 1;
-      else if (css[end] === '}') {
-        depth -= 1;
-        if (depth === 0) break;
-      }
-    }
-    inside += css.slice(start, end + 1);
-    cursor = end + 1;
-  }
-  outside += css.slice(cursor);
-  return { inside, outside };
-}
-
-describe('site shell footer on phones', () => {
-  const ALL_FOOTER_HREFS = [
-    '/about',
-    '/stats',
-    '/feed',
-    '/faq',
-    '/patron',
-    '/contact',
-    '/source',
-    '/developers',
-    '/data',
-    '/terms',
-    '/privacy',
-  ];
-  const MENU_BOUND_HREFS = [
-    '/stats',
-    '/feed',
-    '/faq',
-    '/patron',
-    '/contact',
-    '/source',
-    '/developers',
-    '/data',
-  ];
-  const phone = splitMediaBlocks(siteShellCss, navPhoneMediaQuery);
-  const hideRule = /\.landing-footer \[data-phone-menu\]\s*\{\s*display:\s*none;?\s*\}/;
-
-  it('keeps About, Terms, Privacy and the identity line on the phone footer', () => {
+describe('site shell footer', () => {
+  // The footer is the way into the /about rail: four links and the identity
+  // line, the same on every width, so no phone-only hide rule.
+  it('carries About, Contact, Terms, Privacy and the identity line on every width', () => {
     const footer = buildHomeFooter();
-    const kept = [...footer.querySelectorAll<HTMLAnchorElement>('a:not([data-phone-menu])')];
-    expect(kept.map((a) => a.getAttribute('href'))).toEqual(['/about', '/terms', '/privacy']);
-    const moved = [...footer.querySelectorAll<HTMLAnchorElement>('a[data-phone-menu]')];
-    expect(moved.map((a) => a.getAttribute('href'))).toEqual(MENU_BOUND_HREFS);
+    expect([...footer.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual([
+      '/about',
+      '/contact',
+      '/terms',
+      '/privacy',
+    ]);
     expect(footer.querySelector('.landing-footer-identity')?.textContent).toBe(
       '© 2026 Mistboard · AGPL-3.0',
     );
-    expect(phone.inside).toMatch(hideRule);
-  });
-
-  it('still shows every footer link on desktop and tablet', () => {
-    const footer = buildHomeFooter();
-    expect([...footer.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(
-      ALL_FOOTER_HREFS,
-    );
-    // The hide rule exists, and only under the phone query.
-    expect(phone.inside).toMatch(hideRule);
-    expect(phone.outside).not.toContain('[data-phone-menu]');
+    expect(siteShellCss).not.toContain('[data-phone-menu]');
   });
 });
 
@@ -605,27 +542,10 @@ describe('site shell phone menu', () => {
     expect(menuPanel()?.querySelector('a[href="/database"]')).toBeNull();
   });
 
-  // The footer links a phone footer hides (data-phone-menu) must each be a row
-  // of the menu's last section, same label and href, so nothing is lost on a
-  // phone. Patron is the exception: Community's Support row already reaches it.
-  // Admin slots in before it, so Mistboard stays last for admins too.
-  it('ends with a Mistboard section carrying the links the phone footer hides', () => {
-    const rows = (scope: Element | null | undefined, selector: string) =>
-      [...(scope?.querySelectorAll<HTMLAnchorElement>(selector) ?? [])].map(
-        (a) => `${a.textContent} ${a.getAttribute('href')}`,
-      );
-    const footerMoved = rows(buildHomeFooter('zh-Hant'), 'a[data-phone-menu]');
-    expect(footerMoved.map((row) => row.split(' ').at(-1))).toEqual([
-      '/stats',
-      '/feed',
-      '/faq',
-      '/patron',
-      '/contact',
-      '/source',
-      '/developers',
-      '/data',
-    ]);
-
+  // The info pages a phone reaches from any page close the menu. Patron is
+  // not among them: Community's Support row already reaches it. Admin slots in
+  // before it, so Mistboard stays last for admins too.
+  it('ends with a Mistboard section of the info pages', () => {
     for (const admin of [false, true]) {
       setResolvedAdmin(admin);
       try {
@@ -633,9 +553,11 @@ describe('site shell phone menu', () => {
         openSiteMenu(toggle, 'zh-Hant');
         const last = [...(menuPanel()?.querySelectorAll('.site-menu-section') ?? [])].at(-1);
         expect(last?.querySelector('.site-menu-heading')?.textContent).toBe('Mistboard');
-        expect(rows(last, '.site-menu-link')).toEqual(
-          footerMoved.filter((row) => !row.endsWith(' /patron')),
-        );
+        expect(
+          [...(last?.querySelectorAll<HTMLAnchorElement>('.site-menu-link') ?? [])].map((a) =>
+            a.getAttribute('href'),
+          ),
+        ).toEqual(['/stats', '/feed', '/faq', '/contact', '/source', '/developers', '/data']);
         expect(menuPanel()?.querySelectorAll('a[href="/patron"]')).toHaveLength(1);
         if (admin) expect(menuPanel()?.querySelector('a[href="/database"]')).not.toBeNull();
         closeSiteMenu({ restoreFocus: false });

@@ -1723,6 +1723,47 @@ describe('forum pages', () => {
     );
   });
 
+  it('links @handle mentions to the player profile', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.startsWith('/api/forum/topics/topic_strategy')) {
+        return json({
+          topic: {
+            ...topic,
+            posts: [
+              {
+                id: 'post_1',
+                author: { handle: 'alice', displayName: 'Alice' },
+                bodyText:
+                  '(thanks @rebirthfox333). Ask @bob_2-x, not me@example.com or https://x.test/@carol',
+                createdAt: '2026-06-01T00:00:00.000Z',
+                updatedAt: '2026-06-01T00:00:00.000Z',
+              },
+            ],
+          },
+        });
+      }
+      if (url.startsWith('/api/auth/me')) return json({ user: null });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForumTopic } = await import('./forum.js');
+
+    await mountForumTopic(root, 'topic_strategy');
+
+    const mentions = Array.from(
+      root.querySelectorAll<HTMLAnchorElement>('.forum-post-body a.forum-mention'),
+    );
+    expect(mentions.map((a) => [a.textContent, a.getAttribute('href')])).toEqual([
+      ['@rebirthfox333', '/@/rebirthfox333'],
+      ['@bob_2-x', '/@/bob_2-x'],
+    ]);
+    expect(mentions[0]?.target).toBe('');
+    expect(root.querySelector('.forum-post-body')?.textContent).toBe(
+      '(thanks @rebirthfox333). Ask @bob_2-x, not me@example.com or https://x.test/@carol',
+    );
+  });
+
   it('keeps hidden posts as deleted tombstones with stable anchors', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
