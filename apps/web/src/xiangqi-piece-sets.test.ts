@@ -13,6 +13,7 @@ import {
   RETIRED_XIANGQI_PIECE_SETS,
   renderXiangqiPieceGlyphed,
   XIANGQI_PIECE_SETS,
+  xiangqiBanqiBackMarks,
   xiangqiGlyph,
   xiangqiNeutralBackMarks,
   xiangqiPieceDiscShadow,
@@ -255,7 +256,7 @@ describe('asset piece sets', () => {
   // The cache-busting ?v= per set; brush and clerical went to 2 when their
   // baked disc shadow came out (2026-10-08).
   const ASSET_VERSIONS: Record<AssetXiangqiPieceSet, number> = {
-    lacquer: 1,
+    lacquer: 2,
     wood: 1,
     book: 1,
     brush: 2,
@@ -349,6 +350,24 @@ describe('asset piece sets', () => {
         `/piece-sets/xiangqi/${set}/red-back.svg?v=${ASSET_VERSIONS[set]}`,
       ]);
     }
+  });
+
+  it('turns banqi tiles over to one back per set, the same for both sides', () => {
+    expect(xiangqiBanqiBackMarks('traditional')).toBeNull();
+    expect(xiangqiBanqiBackMarks('international')).toBeNull();
+    expect(xiangqiBanqiBackMarks('wood')).toBe(xiangqiNeutralBackMarks('wood'));
+    for (const set of ['brush', 'clerical'] as const) {
+      const marks = xiangqiBanqiBackMarks(set) ?? '';
+      expect(marks).toContain(xiangqiNeutralBackMarks(set) ?? 'missing');
+      expect(marks).toContain('fill="#5a3018"');
+    }
+    const lacquer = xiangqiBanqiBackMarks('lacquer') ?? '';
+    expect(hrefs(lacquer)).toEqual(['/piece-sets/xiangqi/lacquer/banqi-back.svg?v=2']);
+    expect(fileExists(hrefs(lacquer)[0]!)).toBe(true);
+    const book = xiangqiBanqiBackMarks('book') ?? '';
+    expect(book).not.toMatch(/red-|black-/);
+    expect(book).toContain('fill="#FFD438"');
+    expect(book).not.toMatch(/#FF0000|#000000/i);
   });
 });
 
