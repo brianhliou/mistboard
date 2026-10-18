@@ -22,7 +22,7 @@ import {
 
 export const XIANGQI_WORST_ENGINE_ID = 'fairy-stockfish-xiangqi-worst';
 // Bump on any change to the pick rule, budget or engine config.
-export const XIANGQI_WORST_ENGINE_VERSION = 'worst-v1';
+export const XIANGQI_WORST_ENGINE_VERSION = 'worst-v2';
 
 // Above any xiangqi position's legal move count; the engine caps MultiPV at the
 // root move count anyway.
@@ -31,9 +31,10 @@ const ALL_ROOT_MOVES = 128;
 export type XiangqiWorstEngineTier = {
   id: typeof XIANGQI_WORST_ENGINE_ID;
   name: string;
-  // Node budget across all root lines: 300k reaches depth 8-9 on every one of
-  // the 44 opening moves (local M-series, 2026-10-17), deep enough to see the
-  // opponent's short mates.
+  // Node budget across all root lines. Replaying a 28-move game against an 8M
+  // reference (local M-series, 2026-10-17): 300k found the worst move on 64% of
+  // turns in ~0.45s, 1M on 75% in ~1.5s, 2M on 73% in ~3s. 1M is the knee, and
+  // its pace also reads as a bot thinking rather than one firing back.
   nodes: number;
   movetimeMs: number;
   kind: 'worst';
@@ -42,8 +43,9 @@ export type XiangqiWorstEngineTier = {
 const WORST_TIER: XiangqiWorstEngineTier = {
   id: XIANGQI_WORST_ENGINE_ID,
   name: 'General Blunder',
-  nodes: 300_000,
-  movetimeMs: 1_500,
+  nodes: 1_000_000,
+  // Ceiling over the node budget, with room for prod's slower cores.
+  movetimeMs: 3_000,
   kind: 'worst',
 };
 
