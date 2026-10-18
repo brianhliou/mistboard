@@ -1,13 +1,36 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setResolvedAdmin } from './signed-in-state.js';
 import {
   buildHomeFooter,
   buildNav,
+  closeSiteMenu,
   fitNavBrand,
+  isSiteMenuOpen,
+  navPhoneMediaQuery,
   navTabletMediaQuery,
+  openSiteMenu,
   placeNavAccount,
   syncAdminNavMenus,
 } from './site-shell.js';
+import { setSiteThemePreference } from './theme.js';
+
+type Viewport = 'desktop' | 'tablet' | 'phone';
+const originalMatchMedia = window.matchMedia;
+function stubViewport(viewport: Viewport): void {
+  window.matchMedia = ((query: string) =>
+    ({
+      matches:
+        (query === navTabletMediaQuery && viewport === 'tablet') ||
+        (query === navPhoneMediaQuery && viewport === 'phone'),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    }) as unknown as MediaQueryList) as typeof window.matchMedia;
+}
 
 describe('site shell nav', () => {
   afterEach(() => {
@@ -309,6 +332,91 @@ describe('site shell nav', () => {
   });
 });
 
+// The stylesheet is not applied under jsdom, so the phone footer is asserted
+// as CSS text: the one rule that hides the menu-bound links must sit inside the
+// phone query (the same 600px edge as navPhoneMediaQuery) and nowhere else.
+const siteShellCss = readFileSync(
+  ['src/site-shell.css', 'apps/web/src/site-shell.css']
+    .map((candidate) => resolve(process.cwd(), candidate))
+    .find((candidate) => existsSync(candidate)) as string,
+  'utf8',
+);
+
+function splitMediaBlocks(css: string, query: string): { inside: string; outside: string } {
+  const opener = `@media ${query} {`;
+  let inside = '';
+  let outside = '';
+  let cursor = 0;
+  for (;;) {
+    const start = css.indexOf(opener, cursor);
+    if (start < 0) break;
+    outside += css.slice(cursor, start);
+    let depth = 0;
+    let end = start + opener.length - 1;
+    for (; end < css.length; end += 1) {
+      if (css[end] === '{') depth += 1;
+      else if (css[end] === '}') {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    inside += css.slice(start, end + 1);
+    cursor = end + 1;
+  }
+  outside += css.slice(cursor);
+  return { inside, outside };
+}
+
+describe('site shell footer on phones', () => {
+  const ALL_FOOTER_HREFS = [
+    '/about',
+    '/stats',
+    '/feed',
+    '/faq',
+    '/patron',
+    '/contact',
+    '/source',
+    '/developers',
+    '/data',
+    '/terms',
+    '/privacy',
+  ];
+  const MENU_BOUND_HREFS = [
+    '/stats',
+    '/feed',
+    '/faq',
+    '/patron',
+    '/contact',
+    '/source',
+    '/developers',
+    '/data',
+  ];
+  const phone = splitMediaBlocks(siteShellCss, navPhoneMediaQuery);
+  const hideRule = /\.landing-footer \[data-phone-menu\]\s*\{\s*display:\s*none;?\s*\}/;
+
+  it('keeps About, Terms, Privacy and the identity line on the phone footer', () => {
+    const footer = buildHomeFooter();
+    const kept = [...footer.querySelectorAll<HTMLAnchorElement>('a:not([data-phone-menu])')];
+    expect(kept.map((a) => a.getAttribute('href'))).toEqual(['/about', '/terms', '/privacy']);
+    const moved = [...footer.querySelectorAll<HTMLAnchorElement>('a[data-phone-menu]')];
+    expect(moved.map((a) => a.getAttribute('href'))).toEqual(MENU_BOUND_HREFS);
+    expect(footer.querySelector('.landing-footer-identity')?.textContent).toBe(
+      '© 2026 Mistboard · AGPL-3.0',
+    );
+    expect(phone.inside).toMatch(hideRule);
+  });
+
+  it('still shows every footer link on desktop and tablet', () => {
+    const footer = buildHomeFooter();
+    expect([...footer.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(
+      ALL_FOOTER_HREFS,
+    );
+    // The hide rule exists, and only under the phone query.
+    expect(phone.inside).toMatch(hideRule);
+    expect(phone.outside).not.toContain('[data-phone-menu]');
+  });
+});
+
 describe('site shell geo-blocked links', () => {
   afterEach(() => {
     document.cookie = 'mb_cc=; Max-Age=0; Path=/';
@@ -329,24 +437,13 @@ describe('site shell geo-blocked links', () => {
 });
 
 describe('site shell nav account placement', () => {
-  const originalMatchMedia = window.matchMedia;
   afterEach(() => {
     document.body.innerHTML = '';
     window.matchMedia = originalMatchMedia;
   });
 
-  function stubViewport(tablet: boolean): void {
-    window.matchMedia = ((query: string) =>
-      ({
-        matches: query === navTabletMediaQuery && tablet,
-        media: query,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-      }) as unknown as MediaQueryList) as typeof window.matchMedia;
-  }
-
-  it('keeps the account slot inside the utilities on desktop and phones', () => {
-    stubViewport(false);
+  it('keeps the account slot inside the utilities on desktop', () => {
+    stubViewport('desktop');
     const nav = buildNav();
     const account = nav.querySelector<HTMLElement>('.site-nav-account');
     expect(account?.parentElement?.classList.contains('site-nav-utilities')).toBe(true);
@@ -354,7 +451,7 @@ describe('site shell nav account placement', () => {
   });
 
   it('moves the account slot onto the bar beside the hamburger on tablets, and back', () => {
-    stubViewport(true);
+    stubViewport('tablet');
     const nav = buildNav();
     const account = nav.querySelector<HTMLElement>('.site-nav-account');
     expect(account?.parentElement).toBe(nav);
@@ -363,10 +460,235 @@ describe('site shell nav account placement', () => {
     // opening the menu.
     expect(nav.querySelector('.site-nav-collapse .site-nav-auth')).toBeNull();
 
-    stubViewport(false);
+    stubViewport('desktop');
     placeNavAccount(nav);
     expect(account?.parentElement?.classList.contains('site-nav-utilities')).toBe(true);
     expect(nav.querySelector('.site-nav-utilities')?.firstElementChild).toBe(account);
+  });
+
+  it('puts the account slot last on the phone bar, out of the folded links, and back', () => {
+    stubViewport('phone');
+    const nav = buildNav();
+    const account = nav.querySelector<HTMLElement>('.site-nav-account');
+    expect(account?.parentElement).toBe(nav);
+    expect(nav.lastElementChild).toBe(account);
+    expect(nav.querySelector('.site-nav-collapse .site-nav-auth')).toBeNull();
+    expect(account?.querySelector('.site-nav-link-signin')).not.toBeNull();
+
+    stubViewport('desktop');
+    placeNavAccount(nav);
+    expect(account?.parentElement?.classList.contains('site-nav-utilities')).toBe(true);
+  });
+});
+
+describe('site shell phone menu', () => {
+  afterEach(() => {
+    closeSiteMenu({ restoreFocus: false });
+    document.body.innerHTML = '';
+    window.matchMedia = originalMatchMedia;
+    window.history.replaceState(null, '', '/');
+    try {
+      window.localStorage.clear();
+    } catch {}
+  });
+
+  function phoneNav(): { nav: HTMLElement; toggle: HTMLButtonElement } {
+    stubViewport('phone');
+    const nav = buildNav();
+    document.body.append(nav);
+    const toggle = nav.querySelector<HTMLButtonElement>('.site-nav-toggle');
+    if (!toggle) throw new Error('missing toggle');
+    return { nav, toggle };
+  }
+
+  const menuPanel = () => document.querySelector<HTMLElement>('.site-menu');
+
+  it('opens and closes from the menu button, with aria-expanded, focus and scroll lock', () => {
+    const { nav, toggle } = phoneNav();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(menuPanel()).toBeNull();
+
+    toggle.click();
+    const panel = menuPanel();
+    expect(panel).not.toBeNull();
+    expect(isSiteMenuOpen()).toBe(true);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.getAttribute('aria-controls')).toBe(panel?.id);
+    expect(panel?.getAttribute('role')).toBe('dialog');
+    expect(panel?.getAttribute('aria-modal')).toBe('true');
+    // Outside the bar, so the bar's auto-hide transform never moves it.
+    expect(panel?.parentElement).toBe(document.body);
+    expect(nav.contains(panel)).toBe(false);
+    // Phones never use the drawer.
+    expect(nav.classList.contains('nav-open')).toBe(false);
+    expect(document.activeElement).toBe(panel?.querySelector('.site-menu-close'));
+    expect(document.documentElement.classList.contains('site-menu-open')).toBe(true);
+
+    panel?.querySelector<HTMLButtonElement>('.site-menu-close')?.click();
+    expect(menuPanel()).toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(toggle);
+    expect(document.documentElement.classList.contains('site-menu-open')).toBe(false);
+
+    // The button itself toggles too.
+    toggle.click();
+    expect(menuPanel()).not.toBeNull();
+    toggle.click();
+    expect(menuPanel()).toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('closes on Escape and returns focus to the menu button', () => {
+    const { toggle } = phoneNav();
+    toggle.click();
+    expect(menuPanel()).not.toBeNull();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(menuPanel()).toBeNull();
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(toggle);
+    expect(document.documentElement.classList.contains('site-menu-open')).toBe(false);
+  });
+
+  it('keeps the tablet drawer on tablets', () => {
+    stubViewport('tablet');
+    const nav = buildNav();
+    document.body.append(nav);
+    nav.querySelector<HTMLButtonElement>('.site-nav-toggle')?.click();
+    expect(nav.classList.contains('nav-open')).toBe(true);
+    expect(menuPanel()).toBeNull();
+  });
+
+  // The source of truth is the desktop bar itself: every href it renders (menu
+  // titles, panel items, Puzzles, Support, and the admin menu for an admin)
+  // must be reachable from the phone menu.
+  it('carries every destination on the desktop bar, admin included', () => {
+    setResolvedAdmin(true);
+    try {
+      stubViewport('desktop');
+      const desktop = buildNav();
+      const barHrefs = new Set(
+        [...desktop.querySelectorAll<HTMLAnchorElement>('.site-nav-links a[href]')].map((a) =>
+          a.getAttribute('href'),
+        ),
+      );
+      expect(barHrefs.size).toBeGreaterThan(20);
+      expect(barHrefs.has('/database')).toBe(true);
+
+      const { toggle } = phoneNav();
+      toggle.click();
+      const menuHrefs = new Set(
+        [...(menuPanel()?.querySelectorAll<HTMLAnchorElement>('.site-menu-link') ?? [])].map((a) =>
+          a.getAttribute('href'),
+        ),
+      );
+      const missing = [...barHrefs].filter((href) => !menuHrefs.has(href));
+      expect(missing).toEqual([]);
+    } finally {
+      setResolvedAdmin(undefined);
+    }
+  });
+
+  it('groups destinations into Play, Watch, Tools, Learn, Community and Mistboard, no admin for others', () => {
+    const { toggle } = phoneNav();
+    toggle.click();
+    const headings = [
+      ...(menuPanel()?.querySelectorAll<HTMLElement>('.site-menu-heading') ?? []),
+    ].map((h) => h.textContent);
+    expect(headings).toEqual(['Play', 'Watch', 'Tools', 'Learn', 'Community', 'Mistboard']);
+    const play = menuPanel()?.querySelector('.site-menu-section');
+    expect(
+      [...(play?.querySelectorAll<HTMLAnchorElement>('.site-menu-link') ?? [])].map((a) =>
+        a.getAttribute('href'),
+      ),
+    ).toEqual(['/', '/correspondence', '/puzzles']);
+    expect(menuPanel()?.querySelector('a[href="/patron"]')).not.toBeNull();
+    expect(menuPanel()?.querySelector('a[href="/database"]')).toBeNull();
+  });
+
+  // The footer links a phone footer hides (data-phone-menu) must each be a row
+  // of the menu's last section, same label and href, so nothing is lost on a
+  // phone. Patron is the exception: Community's Support row already reaches it.
+  // Admin slots in before it, so Mistboard stays last for admins too.
+  it('ends with a Mistboard section carrying the links the phone footer hides', () => {
+    const rows = (scope: Element | null | undefined, selector: string) =>
+      [...(scope?.querySelectorAll<HTMLAnchorElement>(selector) ?? [])].map(
+        (a) => `${a.textContent} ${a.getAttribute('href')}`,
+      );
+    const footerMoved = rows(buildHomeFooter('zh-Hant'), 'a[data-phone-menu]');
+    expect(footerMoved.map((row) => row.split(' ').at(-1))).toEqual([
+      '/stats',
+      '/feed',
+      '/faq',
+      '/patron',
+      '/contact',
+      '/source',
+      '/developers',
+      '/data',
+    ]);
+
+    for (const admin of [false, true]) {
+      setResolvedAdmin(admin);
+      try {
+        const { toggle } = phoneNav();
+        openSiteMenu(toggle, 'zh-Hant');
+        const last = [...(menuPanel()?.querySelectorAll('.site-menu-section') ?? [])].at(-1);
+        expect(last?.querySelector('.site-menu-heading')?.textContent).toBe('Mistboard');
+        expect(rows(last, '.site-menu-link')).toEqual(
+          footerMoved.filter((row) => !row.endsWith(' /patron')),
+        );
+        expect(menuPanel()?.querySelectorAll('a[href="/patron"]')).toHaveLength(1);
+        if (admin) expect(menuPanel()?.querySelector('a[href="/database"]')).not.toBeNull();
+        closeSiteMenu({ restoreFocus: false });
+        document.body.innerHTML = '';
+      } finally {
+        setResolvedAdmin(undefined);
+      }
+    }
+  });
+
+  it('marks the current page bold with a dot', () => {
+    window.history.replaceState(null, '', '/puzzles/some-puzzle');
+    const { toggle } = phoneNav();
+    toggle.click();
+    const current = menuPanel()?.querySelectorAll<HTMLAnchorElement>('[aria-current="page"]');
+    expect([...(current ?? [])].map((a) => a.getAttribute('href'))).toEqual(['/puzzles']);
+    expect(current?.[0]?.classList.contains('active')).toBe(true);
+    expect(current?.[0]?.querySelector('.site-menu-dot')).not.toBeNull();
+  });
+
+  it('offers language, board and pieces, and dark mode chips; dark mode toggles the theme', () => {
+    const { toggle } = phoneNav();
+    setSiteThemePreference('light');
+    toggle.click();
+    const chips = [
+      ...(menuPanel()?.querySelectorAll<HTMLButtonElement>('.site-menu-footer .site-menu-chip') ??
+        []),
+    ];
+    expect(chips.map((chip) => chip.dataset.siteMenuChip)).toEqual(['language', 'board', 'dark']);
+    expect(chips[0]?.textContent).toBe('English');
+    const dark = chips[2];
+    expect(dark?.getAttribute('aria-pressed')).toBe('false');
+    dark?.click();
+    expect(document.documentElement.dataset.effectiveTheme).toBe('dark');
+    expect(dark?.getAttribute('aria-pressed')).toBe('true');
+    dark?.click();
+    expect(document.documentElement.dataset.effectiveTheme).toBe('light');
+    expect(dark?.getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('swaps the sections for the settings view from a chip, and back', () => {
+    const { toggle } = phoneNav();
+    toggle.click();
+    const sections = menuPanel()?.querySelector<HTMLElement>('.site-menu-sections');
+    const settings = menuPanel()?.querySelector<HTMLElement>('.site-menu-settings');
+    menuPanel()?.querySelector<HTMLButtonElement>('[data-site-menu-chip="language"]')?.click();
+    expect(sections?.hidden).toBe(true);
+    expect(settings?.hidden).toBe(false);
+    const back = settings?.querySelector<HTMLButtonElement>('.site-menu-back');
+    expect(document.activeElement).toBe(back);
+    back?.click();
+    expect(sections?.hidden).toBe(false);
+    expect(settings?.hidden).toBe(true);
   });
 });
 

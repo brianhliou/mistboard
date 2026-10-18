@@ -588,6 +588,20 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
   return holder;
 }
 
+// The same drill-in menu, opened straight to one view (a category key such as
+// 'language' or 'board', or 'root'). For surfaces that open a single category
+// from their own button, like the phone site menu's footer chips; it resolves
+// once the lazy settings chunk has landed, so the menu never flashes the root.
+export async function buildAppearanceMenuAt(
+  view: string,
+  options: AppearanceMenuOptions = {},
+): Promise<HTMLElement> {
+  const mod = await loadThemeSettingsPanel();
+  const menu = mod.buildAppearanceMenu(options);
+  showAppearanceView(menu, view, options.onViewChange);
+  return menu;
+}
+
 // Drill state lives in the DOM (data-view + hidden), so multiple mounted menus
 // (mobile + desktop nav, gear + dropdown) stay independent.
 export function showAppearanceView(

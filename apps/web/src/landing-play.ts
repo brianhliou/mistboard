@@ -54,6 +54,7 @@ import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-fl
 import { postThroughRestart } from './room-create-retry.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
 import { isLikelySignedIn } from './signed-in-state.js';
+import { navPhoneMediaQuery } from './site-shell.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
 import { variantSupportsPve } from './variant-public-surfaces.js';
@@ -362,6 +363,24 @@ export function closeActiveLandingDialog(): void {
   activeDialogClose?.();
 }
 
+// What had focus when the setup dialog first opened, so closing it hands focus
+// back. A mode switch closes and reopens the dialog; that swap keeps the
+// original opener and the page's scroll lock instead of bouncing either.
+let setupDialogOpener: HTMLElement | null = null;
+let setupDialogReopening = false;
+const SETUP_SCROLL_LOCK_CLASS = 'landing-setup-open';
+
+/** At phone width (the site header's own breakpoint) the setup dialog is a
+ *  bottom sheet: one variant row that opens a list, every choice expanded as a
+ *  compact row, Start pinned in a footer. Tablet and desktop keep the centred
+ *  dialog with the variant grid. */
+function isPhoneSetupViewport(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia(navPhoneMediaQuery).matches;
+}
+
+const SETUP_FOCUSABLE_SELECTOR =
+  'button:not([disabled]), select:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+
 export function buildLandingPlayPanel(
   engines: PlayableEngine[],
   options: { locale?: Locale; showLobbyRequests?: boolean } = {},
@@ -392,12 +411,49 @@ export function buildLandingPlayPanel(
       source: 'hero',
     });
   });
-  panel.append(playButton);
+  panel.append(playButton, buildLandingPlayQuickRow(availableEngines, defaultEngineId, locale));
 
   if (options.showLobbyRequests) {
     panel.append(buildLobbyRequestsWindow(locale));
   }
   return panel;
+}
+
+// Phone only (landing.css shows it under 600px): the two opponent choices as
+// their own buttons under Play, since the phone home drops the variant rows that
+// carry them on desktop. Each opens the same setup dialog on its mode, with the
+// switcher still there to change mind.
+function buildLandingPlayQuickRow(
+  engines: PlayableEngine[],
+  engineId: string | undefined,
+  locale: Locale,
+): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'landing-play-quick';
+  const quick = (label: string, mode: 'pve' | 'pvp'): HTMLButtonElement => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'landing-play-quick-action';
+    button.dataset.playMode = mode;
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      openLandingSetupDialog({
+        engineId,
+        engines,
+        locale,
+        mode,
+        modeSwitcher: true,
+        source: 'hero',
+        ...(mode === 'pvp' ? { ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn() } : {}),
+      });
+    });
+    return button;
+  };
+  row.append(
+    quick(t('lobby.panelTabComputer', {}, locale), 'pve'),
+    quick(t('articles.playAFriend', {}, locale), 'pvp'),
+  );
+  return row;
 }
 
 type LandingPlayIcon = 'computer' | 'friend' | 'lobby' | 'play';
@@ -1679,8 +1735,21 @@ function defaultLandingGameSpecId(
 
 export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const locale = choice.locale ?? currentLocale();
+  if (!setupDialogReopening) {
+    const active = document.activeElement;
+    setupDialogOpener =
+      active instanceof HTMLElement &&
+      active !== document.body &&
+      !active.closest('.landing-setup-overlay')
+        ? active
+        : null;
+  }
   const existing = document.querySelector('.landing-setup-overlay');
   existing?.remove();
+  const phone = isPhoneSetupViewport();
+  // The sheet covers most of a phone screen; the page behind it must not move
+  // under a swipe (iOS scrolls the document when an inner scroller hits its end).
+  document.documentElement.classList.toggle(SETUP_SCROLL_LOCK_CLASS, phone);
 
   const storedPreference = loadSetupPreference(choice.mode);
   const wantsCorrespondence = choice.initialTimeMode === 'correspondence';
@@ -1804,7 +1873,21 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
 
   const header = document.createElement('div');
   header.className = 'landing-setup-header';
+  // The sheet's variant list replaces the setup rows in place; its back control
+  // sits where a phone puts one, at the header's leading edge.
+  const sheetBackButton = phone ? document.createElement('button') : null;
+  if (sheetBackButton) {
+    sheetBackButton.type = 'button';
+    sheetBackButton.className = 'landing-setup-sheet-back';
+    sheetBackButton.setAttribute('aria-label', t('setup.back', {}, locale));
+    sheetBackButton.textContent = '‹';
+    sheetBackButton.hidden = true;
+    header.append(sheetBackButton);
+  }
   header.append(heading, closeButton);
+  let variantPicker: HTMLElement | null = null;
+  let setVariantPickerOpen = (_open: boolean) => {};
+  let variantPickerOpen = false;
 
   // Unified-entry opponent picker (Bot / A friend / Lobby). It lives in
   // the setup row sequence near the end, after game type. Each mode renders a
@@ -1841,7 +1924,94 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // option set is mode-aware because PvE can show non-engine variants as
   // disabled cards instead of hiding them entirely.
   const variantSelectable = variantOptions.length > 1;
-  if (variantSelectable) {
+  if (variantSelectable && phone) {
+    // Phone: one row naming the current variant. Tapping it swaps the sheet's
+    // rows for the full list (same order, same Soon rule as the grid), so the
+    // nine-tile grid no longer pushes every other choice below the fold.
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'landing-variant-row';
+    row.setAttribute('aria-haspopup', 'true');
+    row.setAttribute('aria-expanded', 'false');
+    row.setAttribute('aria-controls', 'landing-variant-picker');
+    const rowThumb = document.createElement('span');
+    rowThumb.className = 'landing-variant-row-thumb';
+    rowThumb.setAttribute('aria-hidden', 'true');
+    const rowName = document.createElement('span');
+    rowName.className = 'landing-variant-row-name';
+    const rowChevron = document.createElement('span');
+    rowChevron.className = 'landing-variant-row-chevron';
+    rowChevron.setAttribute('aria-hidden', 'true');
+    rowChevron.textContent = '›';
+    row.append(rowThumb, rowName, rowChevron);
+
+    const picker = document.createElement('div');
+    picker.className = 'landing-variant-picker';
+    picker.id = 'landing-variant-picker';
+    picker.hidden = true;
+    const list = document.createElement('div');
+    list.className = 'landing-variant-options';
+    list.setAttribute('role', 'radiogroup');
+    list.setAttribute('aria-label', t('setup.variant', {}, locale));
+    const options = new Map<LandingGameSpecId, HTMLButtonElement>();
+    for (const { gameSpecId, label } of variantOptions) {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = 'landing-variant-option';
+      option.setAttribute('role', 'radio');
+      option.dataset.gameSpec = gameSpecId;
+      const pveDisabled = choice.mode === 'pve' && !landingVariantSupportsPve(gameSpecId);
+      if (pveDisabled) {
+        option.disabled = true;
+        option.classList.add('landing-variant-option-disabled');
+        option.setAttribute('aria-disabled', 'true');
+        option.title = t('setup.noComputerOpponentYet', { variant: label }, locale);
+      }
+      const miniId = variantMiniIdForGameSpec(gameSpecId);
+      const thumb = document.createElement('span');
+      thumb.className = 'landing-variant-option-thumb';
+      if (miniId) {
+        thumb.innerHTML = renderVariantMarker(miniId, { size: 100, label: `${label} marker` });
+      }
+      const name = document.createElement('span');
+      name.className = 'landing-variant-option-name';
+      name.textContent = label;
+      option.append(thumb, name);
+      if (pveDisabled) {
+        const badge = document.createElement('span');
+        badge.className = 'landing-variant-card-badge';
+        badge.textContent = t('setup.soon', {}, locale);
+        option.append(badge);
+      } else {
+        option.addEventListener('click', () => {
+          selectedGameSpecId = gameSpecId;
+          syncVariantControls();
+          syncGameSpecificSections();
+          setVariantPickerOpen(false);
+        });
+      }
+      options.set(gameSpecId, option);
+      list.append(option);
+    }
+    picker.append(list);
+    variantPicker = picker;
+    row.addEventListener('click', () => setVariantPickerOpen(true));
+    syncVariantControls = () => {
+      for (const [specId, option] of options) {
+        const on = specId === selectedGameSpecId;
+        option.classList.toggle('selected', on);
+        option.setAttribute('aria-checked', on ? 'true' : 'false');
+      }
+      const label = variantLabelForGameSpec(selectedGameSpecId, locale);
+      const miniId = variantMiniIdForGameSpec(selectedGameSpecId);
+      rowThumb.innerHTML = miniId ? renderVariantMarker(miniId, { size: 100, label: '' }) : '';
+      rowName.textContent = label;
+      row.setAttribute('aria-label', `${t('setup.variant', {}, locale)}: ${label}`);
+      row.setAttribute('aria-expanded', variantPickerOpen ? 'true' : 'false');
+    };
+    syncVariantControls();
+    variantSection.append(row);
+  } else if (variantSelectable) {
     // A visual radiogroup of variant cards (marker + name) replaces the old
     // native <select>, so the picker doubles as a showcase of what's playable.
     const grid = document.createElement('div');
@@ -2134,11 +2304,38 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     document.removeEventListener('keydown', onKeyDown);
     overlay.remove();
     if (activeDialogClose === close) activeDialogClose = null;
+    if (setupDialogReopening) return;
+    document.documentElement.classList.remove(SETUP_SCROLL_LOCK_CLASS);
+    const opener = setupDialogOpener;
+    setupDialogOpener = null;
+    if (opener?.isConnected) opener.focus({ preventScroll: true });
   };
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') close();
+    if (event.key === 'Escape') {
+      if (variantPickerOpen) setVariantPickerOpen(false);
+      else close();
+      return;
+    }
+    // The sheet is modal on a phone: Tab cycles inside it rather than walking
+    // into the page it covers.
+    if (event.key === 'Tab' && phone) {
+      const focusable = [...dialog.querySelectorAll<HTMLElement>(SETUP_FOCUSABLE_SELECTOR)].filter(
+        (el) => !el.closest('[hidden]'),
+      );
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !dialog.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !dialog.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
   };
-  closeButton.addEventListener('click', close);
+  closeButton.addEventListener('click', () => close());
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) close();
   });
@@ -2296,30 +2493,16 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       return localizeSetupLabel(capabilities.secondLabel, locale);
     return t('setup.random', {}, locale);
   };
+  // A phone gets every choice as an open, compact row (there is room once the
+  // variant grid is a single row); larger screens keep the accordion.
+  const buildSetupSection = phone ? buildSetupRowSection : buildSetupAccordionPanel;
   const setupSections = [
-    buildSetupAccordionSection(
-      'variant',
-      t('setup.variant', {}, locale),
-      variantSection,
-      variantSummary,
-    ),
-    buildSetupAccordionSection(
-      'time',
-      t('setup.timeControl', {}, locale),
-      timeSection,
-      timeSummary,
-    ),
+    buildSetupSection('variant', t('setup.variant', {}, locale), variantSection, variantSummary),
+    buildSetupSection('time', t('setup.timeControl', {}, locale), timeSection, timeSummary),
     ...(colorSection
-      ? [
-          buildSetupAccordionSection(
-            'side',
-            t('setup.side', {}, locale),
-            colorSection,
-            colorSummary,
-          ),
-        ]
+      ? [buildSetupSection('side', t('setup.side', {}, locale), colorSection, colorSummary)]
       : []),
-    buildSetupAccordionSection(
+    buildSetupSection(
       'gameType',
       t('setup.gameType', {}, locale),
       ratingSection.section,
@@ -2327,7 +2510,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     ),
     ...(modeSwitcher
       ? [
-          buildSetupAccordionSection(
+          buildSetupSection(
             'opponent',
             t('play.opponentLabel', {}, locale),
             modeSwitcher,
@@ -2337,7 +2520,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       : []),
     ...(engineSection
       ? [
-          buildSetupAccordionSection(
+          buildSetupSection(
             'engine',
             t('setup.engine', {}, locale),
             engineSection.section,
@@ -2363,6 +2546,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       const hidden = isSectionHidden(section.content);
       const active = section.id === openSetupSectionId && !hidden;
       section.wrapper.hidden = hidden;
+      if (!section.button || !section.panel || !section.value) continue;
       section.wrapper.classList.toggle('active', active);
       section.button.setAttribute('aria-expanded', active ? 'true' : 'false');
       section.panel.hidden = !active;
@@ -2387,7 +2571,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     }
   };
   for (const section of setupSections) {
-    section.button.addEventListener('click', () => openSetupSection(section.id));
+    section.button?.addEventListener('click', () => openSetupSection(section.id));
   }
   syncSetupAccordion();
 
@@ -2397,20 +2581,112 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   accordion.className = 'landing-setup-accordion';
   accordion.append(...setupSections.map((section) => section.wrapper));
   actions.append(startButton);
-  dialog.append(header);
-  if (choice.notice) {
-    const notice = document.createElement('p');
+  const notice = choice.notice ? document.createElement('p') : null;
+  if (notice) {
     notice.className = 'landing-setup-notice';
     notice.setAttribute('role', 'status');
-    notice.textContent = choice.notice;
-    dialog.append(notice);
+    notice.textContent = choice.notice ?? '';
   }
-  dialog.append(accordion);
-  dialog.append(status, actions);
+  if (phone) {
+    assembleSetupSheet({
+      overlay,
+      dialog,
+      header,
+      heading,
+      backButton: sheetBackButton,
+      body: [...(notice ? [notice] : []), accordion],
+      picker: variantPicker,
+      footer: [status, actions],
+      locale,
+      onPickerToggle: (open, setOpen) => {
+        variantPickerOpen = open;
+        setVariantPickerOpen = setOpen;
+        syncVariantControls();
+      },
+    });
+  } else {
+    dialog.append(header);
+    if (notice) dialog.append(notice);
+    dialog.append(accordion);
+    dialog.append(status, actions);
+  }
   overlay.append(dialog);
   document.body.append(overlay);
   activeDialogClose = close;
   startButton.focus();
+}
+
+/** Lays the setup dialog out as a phone bottom sheet: grabber, header, a
+ *  scroller holding the setup rows, the variant list (hidden until the variant
+ *  row opens it), and a footer with Start that never scrolls away. */
+function assembleSetupSheet(parts: {
+  overlay: HTMLElement;
+  dialog: HTMLElement;
+  header: HTMLElement;
+  heading: HTMLElement;
+  backButton: HTMLButtonElement | null;
+  body: HTMLElement[];
+  picker: HTMLElement | null;
+  footer: HTMLElement[];
+  locale: Locale;
+  onPickerToggle: (open: boolean, setOpen: (open: boolean) => void) => void;
+}): void {
+  const { overlay, dialog, header, heading, backButton, picker, locale } = parts;
+  overlay.classList.add('landing-setup-overlay--sheet');
+  dialog.classList.add('landing-setup-sheet');
+
+  const grabber = document.createElement('div');
+  grabber.className = 'landing-setup-grabber';
+  grabber.setAttribute('aria-hidden', 'true');
+
+  const scroll = document.createElement('div');
+  scroll.className = 'landing-setup-scroll';
+  scroll.append(...parts.body);
+
+  const footer = document.createElement('div');
+  footer.className = 'landing-setup-footer';
+  footer.append(...parts.footer);
+
+  const title = heading.textContent ?? '';
+  const setOpen = (open: boolean) => {
+    if (!picker) return;
+    picker.hidden = !open;
+    scroll.hidden = open;
+    footer.hidden = open;
+    if (backButton) backButton.hidden = !open;
+    heading.textContent = open ? t('setup.variant', {}, locale) : title;
+    parts.onPickerToggle(open, setOpen);
+    if (open) {
+      picker.scrollTop = 0;
+      const selected = picker.querySelector<HTMLElement>('.landing-variant-option.selected');
+      selected?.scrollIntoView?.({ block: 'nearest' });
+      selected?.focus({ preventScroll: true });
+    } else {
+      dialog.querySelector<HTMLElement>('.landing-variant-row')?.focus({ preventScroll: true });
+    }
+  };
+  parts.onPickerToggle(false, setOpen);
+  backButton?.addEventListener('click', () => setOpen(false));
+
+  dialog.append(grabber, header, scroll);
+  if (picker) dialog.append(picker);
+  dialog.append(footer);
+
+  // iOS Safari ignores overflow:hidden on the page for touch scrolling, so a
+  // swipe that starts outside a scroller, or on one with nothing left to
+  // scroll, would drag the page behind the sheet. Cancel those moves; a
+  // scroller with room keeps its native momentum scroll.
+  overlay.addEventListener(
+    'touchmove',
+    (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const scroller = target?.closest<HTMLElement>(
+        '.landing-setup-scroll, .landing-variant-picker',
+      );
+      if (!scroller || scroller.scrollHeight <= scroller.clientHeight) event.preventDefault();
+    },
+    { passive: false },
+  );
 }
 
 // Close the open setup dialog and reopen it in another mode, keeping the
@@ -2423,19 +2699,24 @@ function reopenSetupDialogInMode(
   extra: Pick<LandingPlayChoice, 'initialRated' | 'notice'> = {},
 ): void {
   const locale = choice.locale ?? currentLocale();
-  closeActiveLandingDialog();
-  openLandingSetupDialog({
-    engineId: choice.engineId,
-    engines: choice.engines,
-    initialGameSpecId: gameSpecId,
-    locale,
-    mode,
-    modeSwitcher: true,
-    source: 'mode-switch',
-    // Friend and Find opponent rate alike; bot games never do.
-    ratedDisabled: mode === 'pve' ? undefined : !isRatedModeEnabled() || !isLikelySignedIn(),
-    ...extra,
-  });
+  setupDialogReopening = true;
+  try {
+    closeActiveLandingDialog();
+    openLandingSetupDialog({
+      engineId: choice.engineId,
+      engines: choice.engines,
+      initialGameSpecId: gameSpecId,
+      locale,
+      mode,
+      modeSwitcher: true,
+      source: 'mode-switch',
+      // Friend and Find opponent rate alike; bot games never do.
+      ratedDisabled: mode === 'pve' ? undefined : !isRatedModeEnabled() || !isLikelySignedIn(),
+      ...extra,
+    });
+  } finally {
+    setupDialogReopening = false;
+  }
 }
 
 // The days-per-move options offered at the long end of the time-control picker
@@ -3067,20 +3348,42 @@ function setupSectionLabel(text: string): HTMLSpanElement {
   return label;
 }
 
-function buildSetupAccordionSection(
+type SetupSection = {
+  button: HTMLButtonElement | null;
+  content: HTMLElement;
+  id: string;
+  panel: HTMLElement | null;
+  value: HTMLElement | null;
+  valueText: () => string;
+  wrapper: HTMLElement;
+};
+
+/** Phone row: the label above its control, always open. */
+function buildSetupRowSection(
   id: string,
   label: string,
   content: HTMLElement,
   valueText: () => string,
-): {
-  button: HTMLButtonElement;
-  content: HTMLElement;
-  id: string;
-  panel: HTMLElement;
-  value: HTMLElement;
-  valueText: () => string;
-  wrapper: HTMLElement;
-} {
+): SetupSection {
+  const leadingLabel = content.firstElementChild;
+  if (leadingLabel?.classList.contains('landing-setup-label')) leadingLabel.remove();
+
+  const wrapper = document.createElement('section');
+  wrapper.className = 'landing-setup-row';
+  wrapper.dataset.setupSection = id;
+  const title = document.createElement('span');
+  title.className = 'landing-setup-row-label';
+  title.textContent = label;
+  wrapper.append(title, content);
+  return { button: null, content, id, panel: null, value: null, valueText, wrapper };
+}
+
+function buildSetupAccordionPanel(
+  id: string,
+  label: string,
+  content: HTMLElement,
+  valueText: () => string,
+): SetupSection {
   const leadingLabel = content.firstElementChild;
   if (leadingLabel?.classList.contains('landing-setup-label')) leadingLabel.remove();
 

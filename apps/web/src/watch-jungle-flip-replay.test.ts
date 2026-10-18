@@ -23,6 +23,8 @@ describe('Flip Jungle watch replay', () => {
     // Seat 'red' (first mover) bound the navy ink, so 'red-wins' reads "Blue wins".
     expect(root.textContent).toContain('Blue wins');
     expect(root.querySelectorAll('svg.jungle-flip-live-svg')).toHaveLength(1);
+    // The /watch move list names the animal the opening flip turned up, never "a1-a1".
+    expect(handle.moveEntries?.().map((entry) => entry.label)).toEqual(['a1(r)']);
     // Hidden identities → a Reveal control is present.
     const reveal = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
       (el) => el.textContent === 'Reveal',

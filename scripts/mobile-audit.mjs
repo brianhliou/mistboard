@@ -19,13 +19,19 @@
 //   npm run mobile:audit -- --list                        # the page list
 //   npm run mobile:audit -- --strict                      # exit 1 on any fail
 //   npm run mobile:audit -- --path study=/study/abc       # a page's URL on a local pair
+//   npm run mobile:audit -- --device iphone --sheet       # every screen on one page
+//   npm run mobile:audit -- --device iphone --sheet --notes notes.json
 //
 // Output: tmp/mobile-audit/<stamp>/report.md and report.json (+ shots/).
+// --sheet takes full-page shots (capped at three screens) and writes
+// sheet.html beside them: every page in one view, fold marked, findings under
+// each, plus any reviewer notes ({ "<page>": "text" }). Publish the stamp
+// directory as one artifact and republish it after the next run.
 // Not wired into CI or the release gate (2026-10-14): the first run is a
 // backlog, not a baseline. Page list ranked by PostHog mobile pageviews,
 // 30 days to 2026-10-14 (docs-private/mobile-audit-2026-10.md).
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { devices, webkit } from '@playwright/test';
@@ -39,6 +45,7 @@ import {
   TAP_TARGET_MIN,
   TINY_TEXT_PX,
 } from './lib/mobile-audit-rules.mjs';
+import { renderSheet } from './lib/mobile-audit-sheet.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -121,6 +128,14 @@ export const PAGES = [
   { name: 'games-search', template: 'games', path: '/games/search' },
   { name: 'play', template: 'play/room', path: '/play' },
   { name: 'blog-index', template: 'article', path: '/blog' },
+  // Added 2026-10-17 for the one-page sheet: menu destinations with no rank
+  // in the 10-14 pageview list.
+  { name: 'bots', template: 'bot', path: '/bots' },
+  { name: 'study-index', template: 'study', path: '/study' },
+  { name: 'forum', template: 'forum', path: '/forum' },
+  { name: 'leaderboard', template: 'leaderboard', path: '/leaderboard' },
+  { name: 'learn', template: 'learn', path: '/learn/xiangqi' },
+  { name: 'profile', template: 'profile', path: '/@/mistboard' },
 ];
 
 function parseArgs(argv) {
@@ -129,6 +144,8 @@ function parseArgs(argv) {
     only: null,
     devices: ['iphone', 'android'],
     shots: false,
+    sheet: false,
+    notes: null,
     strict: false,
     list: false,
     concurrency: 3,
@@ -158,6 +175,10 @@ function parseArgs(argv) {
       for (const d of args.devices)
         if (!DEVICES[d]) throw new Error(`unknown device ${d} (iphone, android, all)`);
     } else if (a === '--shots') args.shots = true;
+    else if (a === '--sheet') {
+      args.sheet = true;
+      args.shots = true;
+    } else if (a === '--notes') args.notes = next();
     else if (a === '--strict') args.strict = true;
     else if (a === '--list') args.list = true;
     else if (a === '--concurrency')
@@ -182,7 +203,8 @@ function parseArgs(argv) {
 function readHelp() {
   return [
     'npm run mobile:audit -- [--base URL] [--only a,b] [--device iphone|android|all]',
-    '                        [--shots] [--strict] [--list] [--concurrency N] [--settle-ms MS]',
+    '                        [--shots] [--sheet [--notes file.json]] [--strict] [--list]',
+    '                        [--concurrency N] [--settle-ms MS]',
     '                        [--path <page>=/path ...]   (override a page URL, e.g. on a local pair)',
     '',
     'Pages:',
@@ -233,7 +255,23 @@ async function auditPage(context, base, page, args, shotsDir, deviceKey) {
     });
     const judged = judgePage(measured, { boardPage: Boolean(page.board) });
     let shot = null;
-    if (shotsDir) {
+    let shotFile = null;
+    let shotHeight = null;
+    if (shotsDir && args.sheet) {
+      // CSS pixels and JPEG keep a 30-page sheet a few MB; three screens is
+      // enough to judge what follows the fold without a 20-screen article.
+      shotFile = `${deviceKey}-${page.name}.jpg`;
+      shot = join(shotsDir, shotFile);
+      shotHeight = Math.min(measured.docHeight ?? viewport.height, viewport.height * 3);
+      await tab.screenshot({
+        path: shot,
+        fullPage: true,
+        clip: { x: 0, y: 0, width: viewport.width, height: shotHeight },
+        scale: 'css',
+        type: 'jpeg',
+        quality: 80,
+      });
+    } else if (shotsDir) {
       shot = join(shotsDir, `${deviceKey}-${page.name}.png`);
       await tab.screenshot({ path: shot });
     }
@@ -246,6 +284,10 @@ async function auditPage(context, base, page, args, shotsDir, deviceKey) {
       ...judged,
       measured,
       shot,
+      shotFile,
+      shotHeight,
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
     };
   } catch (error) {
     return {
@@ -363,6 +405,16 @@ async function main() {
   );
   const md = renderMarkdown(base, results, startedAt);
   await writeFile(join(outDir, 'report.md'), `${md}\n`);
+
+  if (args.sheet) {
+    const notes = args.notes ? JSON.parse(await readFile(args.notes, 'utf8')) : {};
+    for (const d of args.devices) {
+      const html = renderSheet({ base: base.origin, startedAt, results, device: d, notes });
+      const name = args.devices.length > 1 ? `sheet-${d}.html` : 'sheet.html';
+      await writeFile(join(outDir, name), html);
+      console.log(`sheet: ${join(outDir, name)}`);
+    }
+  }
 
   const fails = results.filter((r) => r.verdict === 'fail').length;
   const warns = results.filter((r) => r.verdict === 'warn').length;

@@ -212,11 +212,11 @@ export const BENCHMARK_STUDY_I18N: Record<Script, { name: string; description: s
   'zh-Hans': {
     name: 'MistyJungle 基准对局，2026 年 6 月',
     description:
-      'brianhliou.com 上《斗兽棋：传统搜索击败学习型评估》一文所用的对局：MistyJungle 对上它能匹配到的最强传统引擎，以及它以每着 800 万节点自我对弈。对局采用 Mistboard 在 2026 年 9 月之前使用的虎只能纵向跳河的规则；按现行规则，每一步依然合法。',
+      'Mistboard 博客上《斗兽棋引擎：传统搜索击败学习型评估》一文所用的对局：MistyJungle 对上它能匹配到的最强传统引擎，以及它以每着 800 万节点自我对弈。对局采用 Mistboard 在 2026 年 9 月之前使用的虎只能纵向跳河的规则；按现行规则，每一步依然合法。',
   },
   'zh-Hant': {
     name: 'MistyJungle 基準對局，2026 年 6 月',
     description:
-      'brianhliou.com 上《鬥獸棋：傳統搜尋擊敗學習型評估》一文所用的對局：MistyJungle 對上牠能匹配到的最強傳統引擎，以及牠以每著 800 萬節點自我對弈。對局採用 Mistboard 在 2026 年 9 月之前使用的虎只能縱向跳河的規則；按現行規則，每一步依然合法。',
+      'Mistboard 網誌上《鬥獸棋引擎：傳統搜尋擊敗學習型評估》一文所用的對局：MistyJungle 對上牠能匹配到的最強傳統引擎，以及牠以每著 800 萬節點自我對弈。對局採用 Mistboard 在 2026 年 9 月之前使用的虎只能縱向跳河的規則；按現行規則，每一步依然合法。',
   },
 };

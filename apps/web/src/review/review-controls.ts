@@ -28,6 +28,9 @@ export type ReviewControlsOptions = {
    *  last time (#534, explorer-pref.ts); this is called with that remembered
    *  state while the bar is built. */
   onToggleExplorer?(open: boolean): void;
+  /** The book row's label, for a surface whose pane holds something other
+   *  than an opening book (banqi's tablebase). Defaults to "Opening explorer". */
+  explorerLabel?: string;
 };
 
 export type ReviewControls = {
@@ -42,7 +45,7 @@ export function createReviewControls(opts: ReviewControlsOptions): ReviewControl
     let explorerOpen = explorerOpenPreferred();
     // Right after Flip: the two things a reader reaches for most.
     menuItems.splice(Math.min(1, menuItems.length), 0, {
-      label: t('underboard.explorer'),
+      label: opts.explorerLabel ?? t('underboard.explorer'),
       icon: REVIEW_MENU_ICONS.book,
       dataset: { reviewExplorer: '' },
       pressed: () => explorerOpen,

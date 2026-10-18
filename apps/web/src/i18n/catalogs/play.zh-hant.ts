@@ -61,6 +61,7 @@ export const ZH_HANT_PLAY = {
   'lobby.corrYourGames': '我的通信對局 →',
   'lobby.corrComingSoon': '通信對局即將推出。',
   'setup.close': '關閉設定',
+  'setup.back': '返回',
   'setup.gameGroup': '遊戲類別',
   'setup.chess': '西洋棋',
   'setup.xiangqi': '象棋',

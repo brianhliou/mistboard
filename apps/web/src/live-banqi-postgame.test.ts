@@ -90,12 +90,12 @@ describe('Banqi postgame page', () => {
     expect(row).not.toBeNull();
     expect(row?.querySelector('.review-move-list__number')?.textContent).toBe('1');
     const firstMove = row?.querySelector<HTMLButtonElement>('.review-move-list__move');
-    expect(firstMove?.querySelector('.review-move-list__san')?.textContent).toBe('a1');
+    expect(firstMove?.querySelector('.review-move-list__san')?.textContent).toBe('a1(g)');
     // Opens at the final ply (the flip is the mainline tip): the highlighted current
     // cell is that flip move. (The tree move list highlights via --current, not the
     // linear list's data-ply.)
     const current = root.querySelector('.review-move-list__move--current');
-    expect(current?.querySelector('.review-move-list__san')?.textContent).toBe('a1');
+    expect(current?.querySelector('.review-move-list__san')?.textContent).toBe('a1(g)');
     // Server-side computer analysis underboard is wired: a signed-out visitor sees the
     // sign-in CTA (the account-gated compute button) rather than nothing.
     const analyseLink = root.querySelector<HTMLAnchorElement>('.xiangqi-review__analyse');

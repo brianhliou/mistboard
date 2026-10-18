@@ -22,7 +22,11 @@ import type {
   JungleFlipSeat,
   JungleFlipSquare,
 } from '@mistboard/game';
-import { jungleFlipLastMoverInk } from '@mistboard/game';
+import {
+  jungleFlipLastMoverInk,
+  jungleFlipMoveLabel,
+  jungleFlipMoveLabelOnBoard,
+} from '@mistboard/game';
 import './live-xiangqi.css';
 import { jungleFlipEnabled } from './feature-flags.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
@@ -219,8 +223,11 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    // A flip (self-move) shows as the flipped square; a board move as from-to.
-    notate: jungleFlipMoveLabel,
+    // The site's one Flip Jungle label (flip-move-label.ts): "a1-b1", and a
+    // flip names the animal it turned up, read off this viewer's board after
+    // it ("a1(E)").
+    notate: (move) => jungleFlipMoveLabel(move, null),
+    notateWithView: (move, viewAfter) => jungleFlipMoveLabelOnBoard(move, viewAfter?.board),
     isMoveEvent: isJungleFlipMoveEvent,
   },
   replayCapture: {
@@ -441,11 +448,6 @@ function handleSquareClick(view: JungleFlipWireView, square: JungleFlipSquare): 
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-// A flip (self-move) is shown as the flipped square; a board move as from-to.
-function jungleFlipMoveLabel(move: JungleFlipMove): string {
-  return move.from === move.to ? `${move.from}↑` : `${move.from}-${move.to}`;
-}
 
 function isJungleFlipMoveEvent(event: TenantLiveEvent): event is JungleFlipMoveEvent {
   const move = (event as { move?: unknown }).move;

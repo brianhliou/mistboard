@@ -5,9 +5,11 @@
 // like mountAtomicXiangqiReplayBoard.
 import {
   applyBanqiMove,
+  BANQI_STUDY_MOVE_OPTIONS,
   type BanqiGameState,
   type BanqiMove,
   type BanqiSquare,
+  banqiMoveLabelOnBoard,
   getBanqiPlayerView,
   parseBanqiFen,
 } from '@mistboard/game';
@@ -32,11 +34,6 @@ function tokenToMove(token: string): BanqiMove | null {
   return m ? { from: m[1] as BanqiSquare, to: m[2] as BanqiSquare } : null;
 }
 
-/** The label the review sheet uses: a flip is its square, a move is from-to. */
-export function banqiMoveLabel(move: BanqiMove): string {
-  return move.from === move.to ? move.from : `${move.from}-${move.to}`;
-}
-
 export function mountBanqiReplayBoard(
   host: HTMLElement,
   spec: BanqiReplayBoardSpec,
@@ -52,7 +49,8 @@ export function mountBanqiReplayBoard(
   const parsed = parseBanqiFen(spec.rootFen);
   if (!parsed.ok) throw new Error(`banqi replay: ${parsed.error}`);
   // Replay as far as the kernel accepts; a token it refuses ends the line
-  // there rather than drawing a position that never happened.
+  // there rather than drawing a position that never happened. A study chapter
+  // plays on past the 40-move clock, like the study board it embeds.
   const states: BanqiGameState[] = [parsed.state];
   const labels: string[] = [];
   const played: BanqiMove[] = [];
@@ -60,11 +58,11 @@ export function mountBanqiReplayBoard(
     const move = tokenToMove(token);
     if (!move) break;
     const before = states[states.length - 1];
-    const next = applyBanqiMove(before, move);
+    const next = applyBanqiMove(before, move, BANQI_STUDY_MOVE_OPTIONS);
     if (next === before) break;
     states.push(next);
     played.push(move);
-    labels.push(banqiMoveLabel(move));
+    labels.push(banqiMoveLabelOnBoard(move, next.board));
   }
   const total = labels.length;
   const perspective = spec.perspective ?? 'red';

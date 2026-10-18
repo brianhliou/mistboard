@@ -1869,3 +1869,14 @@
     border-bottom: 1px solid var(--site-border);
   }
 }
+
+/* A panel below the rail box (review-layout.ts railBelow): it takes its own
+   height and the rail box keeps the board's. */
+.review-shell__right > .review-rail-below {
+  flex: none;
+}
+@media (min-width: 800px) {
+  .review-shell__right:has(> .review-rail-below:not([hidden])) > .review-rail-group {
+    flex: none;
+  }
+}

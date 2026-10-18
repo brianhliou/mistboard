@@ -202,7 +202,14 @@ describe('landing shell', () => {
     wrap.innerHTML = renderLandingShellForPrerender();
 
     const leftColumn = wrap.querySelector('.landing-left-column');
-    expect(leftColumn?.firstElementChild?.classList.contains('landing-viewer-column')).toBe(true);
+    // The phone-only TV strip (display: none above 600px) heads the rail; the
+    // viewer is the first thing tablet and desktop paint.
+    expect(leftColumn?.firstElementChild?.classList.contains('landing-tv-strip')).toBe(true);
+    expect(
+      leftColumn?.firstElementChild?.nextElementSibling?.classList.contains(
+        'landing-viewer-column',
+      ),
+    ).toBe(true);
     expect(leftColumn?.querySelector('.landing-event-banners')).toBeNull();
     // The event-banner slot (collapses via CSS when empty) is the play column's
     // last child, after the centred tagline/button/stats group, so it sits at

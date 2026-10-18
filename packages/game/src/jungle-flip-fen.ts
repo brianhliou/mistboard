@@ -40,6 +40,7 @@ import {
   JUNGLE_FLIP_HEIGHT,
   JUNGLE_FLIP_WIDTH,
   type JungleFlipBoard,
+  type JungleFlipColor,
   type JungleFlipGameState,
   type JungleFlipMove,
   type JungleFlipPiece,
@@ -78,6 +79,14 @@ const POOL_ROLES: readonly JungleFlipPieceRole[] = [
 
 function pieceChar(piece: JungleFlipPiece): string {
   if (piece.faceDown) return 'X'; // ink hidden too — a single symbol, no colour
+  return jungleFlipPieceLetter(piece);
+}
+
+/** A piece's FEN letter by its identity: upper case red, lower case black. */
+export function jungleFlipPieceLetter(piece: {
+  color: JungleFlipColor;
+  role: JungleFlipPieceRole;
+}): string {
   const ch = RED_ROLE_CHAR[piece.role];
   return piece.color === 'red' ? ch : ch.toLowerCase();
 }

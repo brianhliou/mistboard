@@ -1,8 +1,13 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import type { JunglePieceRole } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
   framedTokenSvg,
   JUNGLE_ART,
   JUNGLE_TOKEN_REACH,
+  jungleBoardAssetHref,
+  jungleDobutsuPieceHref,
   jungleFaceDownDiscSvg,
   jungleTokenSize,
 } from './jungle-art.js';
@@ -65,5 +70,38 @@ describe('jungle tokens', () => {
       JUNGLE_TOKEN_REACH,
       3,
     );
+  });
+});
+
+// Every href the jungle renderers draw resolves to a file in public/ (carried over
+// from scripts/check-jungle-art.mjs when its blog checks were retired).
+describe('jungle art assets', () => {
+  const PUBLIC = path.resolve(__dirname, '../public');
+  const file = (href: string) => path.join(PUBLIC, href.split('?')[0] ?? '');
+  const ROLES: JunglePieceRole[] = [
+    'rat',
+    'cat',
+    'dog',
+    'wolf',
+    'leopard',
+    'tiger',
+    'lion',
+    'elephant',
+  ];
+
+  it('has every piece for both sides', () => {
+    for (const color of ['red', 'black'] as const) {
+      for (const role of ROLES) {
+        expect(existsSync(file(jungleDobutsuPieceHref(color, role))), `${color}-${role}`).toBe(
+          true,
+        );
+      }
+    }
+  });
+
+  it('has every board tile', () => {
+    for (const tile of ['grass', 'water', 'den', 'trap', 'flip-board']) {
+      expect(existsSync(file(jungleBoardAssetHref(tile))), tile).toBe(true);
+    }
   });
 });
