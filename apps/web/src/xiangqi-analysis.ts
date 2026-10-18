@@ -111,6 +111,11 @@ export function mountXiangqiAnalysis(
   root.replaceChildren(...(opts.nav === false ? [] : [buildNav()]));
   mountXiangqiReview(root, {
     reviewSurface: 'analysis',
+    // The embed (nav: false) keeps the plain stack: it lives in someone
+    // else's page, which owns the screen's foot.
+    ...(opts.nav === false
+      ? {}
+      : { phoneAnalysisBar: { variantName: variantDisplayLabel(XIANGQI_SPEC_ID) } }),
     pageClassName: 'xiangqi-review',
     ariaLabel: 'Xiangqi analysis',
     eyebrow: 'Analysis',

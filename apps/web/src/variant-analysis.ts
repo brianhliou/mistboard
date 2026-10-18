@@ -176,6 +176,7 @@ export async function mountVariantAnalysisPage(
 
   const base = {
     reviewSurface: 'analysis' as const,
+    phoneAnalysisBar: { variantName: label },
     pageClassName: `${id}-review`,
     ariaLabel: `${label} analysis`,
     title: `${label} analysis`,
