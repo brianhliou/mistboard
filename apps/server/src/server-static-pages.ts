@@ -316,14 +316,14 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/zh-hans/study': {
     title: '象棋研习：带注解对局与古典排局 | Mistboard',
     description:
-      '浏览公开的象棋（中国象棋）研习：带注解的对局、古典残局排局和开局变着，全部在互动棋盘上呈现。',
+      '浏览公开的象棋（中国象棋）及其变体研习：带注解的对局、古典残局排局、开局变着和题目，全部在互动棋盘上呈现，并附有完整着法与评注。',
     htmlLang: 'zh-Hans',
     localeGroup: '/study',
   },
   '/zh-hant/study': {
     title: '象棋研習：帶註解對局與古典排局 | Mistboard',
     description:
-      '瀏覽公開的象棋（中國象棋）研習：帶註解的對局、古典殘局排局和開局變著，全部在互動棋盤上呈現。',
+      '瀏覽公開的象棋（中國象棋）及其變體研習：帶註解的對局、古典殘局排局、開局變著和題目，全部在互動棋盤上呈現，並附有完整著法與評註。',
     htmlLang: 'zh-Hant',
     localeGroup: '/study',
   },

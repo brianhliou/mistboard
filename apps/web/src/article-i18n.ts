@@ -290,7 +290,7 @@ const ZH_HANS: Record<string, string> = {
   'Pages loading as plain text': '以纯文本加载的页面',
   'Fixing a flash of unstyled content on prerendered pages': '修复预渲染页面上的无样式内容闪烁',
   'The rules pages and the players pages both showed as bare text for a moment before snapping into their design. The causes were different, and the check written for the first passed the second.':
-    '规则页和棋手页在呈现出正式设计之前，都会先以光秃秃的文字显示片刻。两者的原因不同，而为第一种情况写的检查放过了第二种。',
+    '规则页和棋手页在呈现出正式设计之前，都会先以光秃秃的文字显示片刻。两者的原因不同，而为第一种情况写的检查却放过了第二种。',
   'The rules pages painted unstyled because their layout CSS came with a script the page loaded later. Each page now links that CSS itself, and a build check fails any page missing a stylesheet its markup needs.':
     '规则页先以无样式的状态绘制，是因为它的版面 CSS 跟着一个稍后才加载的脚本一起到来。现在每个页面都自己链接这些 CSS，构建时的检查会让任何缺少其标记所需样式表的页面构建失败。',
   'The players pages had another cause: the server writes a plain copy of the page for search engines, and that copy showed until the real page replaced it.':
@@ -6368,7 +6368,7 @@ const ZH_HANT: Record<string, string> = {
   'Pages loading as plain text': '以純文字載入的頁面',
   'Fixing a flash of unstyled content on prerendered pages': '修復預渲染頁面上的無樣式內容閃爍',
   'The rules pages and the players pages both showed as bare text for a moment before snapping into their design. The causes were different, and the check written for the first passed the second.':
-    '規則頁和棋手頁在呈現出正式設計之前，都會先以光禿禿的文字顯示片刻。兩者的原因不同，而為第一種情況寫的檢查放過了第二種。',
+    '規則頁和棋手頁在呈現出正式設計之前，都會先以光禿禿的文字顯示片刻。兩者的原因不同，而為第一種情況寫的檢查卻放過了第二種。',
   'The rules pages painted unstyled because their layout CSS came with a script the page loaded later. Each page now links that CSS itself, and a build check fails any page missing a stylesheet its markup needs.':
     '規則頁先以無樣式的狀態繪製，是因為它的版面 CSS 跟著一個稍後才載入的腳本一起到來。現在每個頁面都自己連結這些 CSS，建置時的檢查會讓任何缺少其標記所需樣式表的頁面建置失敗。',
   'The players pages had another cause: the server writes a plain copy of the page for search engines, and that copy showed until the real page replaced it.':
