@@ -262,13 +262,13 @@
     }
   },
   "how-puzzle-mining-works": {
-    "title": "I built a xiangqi puzzle miner",
+    "title": "Mining puzzles from real games",
     "kind": "article",
     "description": "A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "我做了一个象棋题目挖掘器",
-      "zh-hant": "我做了一個象棋題目挖掘器"
+      "zh-hans": "从真实对局中挖掘象棋题目",
+      "zh-hant": "從真實對局中挖掘象棋題目"
     }
   },
   "jieqi": {
@@ -542,6 +542,12 @@
       "zh-hans": "冯家俊",
       "zh-hant": "馮家俊"
     }
+  },
+  "unstyled-first-paint": {
+    "title": "Two pages that loaded as plain text",
+    "kind": "article",
+    "description": "The rules pages and the players pages both showed as bare text for a moment before snapping into their design. The causes were different, and the check written for the first passed the second.",
+    "status": "draft"
   },
   "xiangqi": {
     "title": "Xiangqi Rules",

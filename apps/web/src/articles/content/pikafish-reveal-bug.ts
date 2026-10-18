@@ -107,6 +107,7 @@ export const pikafishRevealBugArticle: Article = {
   slug: 'pikafish-reveal-bug',
   kind: 'article',
   publisher: 'mistboard',
+  topic: 'engineering',
   title: 'Our Pikafish jieqi bot misjudged its reveals',
   cardTitle: 'Pikafish misjudged its reveals',
   seoTitle: 'A bug in the Pikafish jieqi bot: how it misjudged turning over a piece',
