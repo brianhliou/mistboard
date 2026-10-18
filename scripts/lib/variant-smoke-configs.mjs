@@ -144,6 +144,19 @@ export const VARIANT_SMOKE_CONFIGS = {
     defaultTimeoutMs: 40_000,
     engineSeat: { equals: 'pikafish-xiangqi-level-8' },
   },
+  // General Blunder (2026-10-17): Fairy-Stockfish over every root move, playing
+  // the worst one. Its own warm session and pick path, so the ladder row above
+  // does not reach it.
+  'xiangqi-worst': {
+    name: 'xiangqi-worst',
+    label: 'Xiangqi General Blunder',
+    usage: 'npm run prod:smoke:xiangqi-worst -- [options]',
+    gameSpecId: 'xiangqi',
+    engineId: 'fairy-stockfish-xiangqi-worst',
+    // 1M nodes under a 3s ceiling. Measured healthy locally: ~1.5s.
+    defaultTimeoutMs: 40_000,
+    engineSeat: { equals: 'fairy-stockfish-xiangqi-worst' },
+  },
   'jieqi-abjchess': {
     name: 'jieqi-abjchess',
     label: 'Jieqi AB-JChess',

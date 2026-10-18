@@ -223,6 +223,7 @@ test('variant configs: every entry is complete and self-consistent', () => {
     'jungle-flip': 'jungle-flip',
     xiangqi: 'xiangqi',
     'xiangqi-pikafish': 'xiangqi',
+    'xiangqi-worst': 'xiangqi',
     'jieqi-abjchess': 'jieqi',
     'jungle-katago': 'jungle',
   };

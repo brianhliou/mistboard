@@ -1351,6 +1351,11 @@ async function runSmoke({ deployRequired, headRevision }) {
       command: npmCommand('prod:smoke:xiangqi-pikafish', baseArgs()),
     },
     {
+      label: 'prod Xiangqi General Blunder smoke',
+      tag: 'xiangqi-worst',
+      command: npmCommand('prod:smoke:xiangqi-worst', baseArgs()),
+    },
+    {
       label: 'prod Jieqi AB-JChess smoke',
       tag: 'jieqi-abjchess',
       command: npmCommand('prod:smoke:jieqi-abjchess', baseArgs()),
