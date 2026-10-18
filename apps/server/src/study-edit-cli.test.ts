@@ -166,6 +166,45 @@ test('describes a valid plan in order, tracking chapters it adds and deletes', (
   ]);
 });
 
+test('an add names its orientation and a gamebook flag, and refuses bad values', () => {
+  assert.deepEqual(
+    checkPlan(
+      study(),
+      plan([
+        {
+          op: 'add',
+          ref: 'g',
+          name: 'Find the move',
+          orientation: 'black',
+          gamebook: true,
+          tree: line(2),
+        },
+        { op: 'add', ref: 'h', name: 'Plain', gamebook: false, tree: line(3) },
+      ]),
+    ),
+    [
+      'add "Find the move" (duck-xiangqi, 2 plies, as black, gamebook)',
+      'add "Plain" (duck-xiangqi, 3 plies)',
+    ],
+  );
+  assert.throws(
+    () =>
+      checkPlan(
+        study(),
+        plan([{ op: 'add', ref: 'g', name: 'x', gamebook: 'yes' as never, tree: line(2) }]),
+      ),
+    /gamebook must be true or false/,
+  );
+  assert.throws(
+    () =>
+      checkPlan(
+        study(),
+        plan([{ op: 'add', ref: 'g', name: 'x', orientation: 'white' as never, tree: line(2) }]),
+      ),
+    /orientation "white"/,
+  );
+});
+
 test('a study op names the locales its i18n replaces, and refuses an overlay that would wipe them', () => {
   const zh = { 'zh-Hans': { name: '六局' }, 'zh-Hant': { name: '六局' } };
   assert.deepEqual(checkPlan(study(), plan([{ op: 'study', i18n: zh }])), [
