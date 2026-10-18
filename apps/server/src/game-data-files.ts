@@ -39,6 +39,7 @@ import {
   GAME_EXPORT_FORMATS,
   type GameExportFormat,
   isGameExportVariant,
+  isPublicGameSpec,
 } from '@mistboard/game';
 import { LICENSE, SCHEMA_VERSION } from './game-export-shared.js';
 import { resolveGameExport } from './game-export-tenant.js';
@@ -75,11 +76,20 @@ function isWithheldVariant(variant: string): boolean {
   return Object.hasOwn(DATA_WITHHELD_VARIANTS, variant);
 }
 
+/** Offered on /data: not withheld, and public. A hidden or retired variant
+ *  (Fortress and Atomic Xiangqi, 2026-10-17) leaves the rail, the counts and
+ *  every monthly file built from now on; its games keep their single-game
+ *  export. */
+function isOfferedVariant(variant: string): boolean {
+  return !isWithheldVariant(variant) && isPublicGameSpec(variant);
+}
+
 /** The variants a monthly file can be built for: the single-game export table
- *  minus DATA_WITHHELD_VARIANTS, in the site's rail order (play menu, rules,
- *  /games). The all-variants file holds exactly these. */
+ *  minus DATA_WITHHELD_VARIANTS and the variants that are not public, in the
+ *  site's rail order (play menu, rules, /games). The all-variants file holds
+ *  exactly these. */
 export const DATA_VARIANTS: readonly string[] = Object.keys(GAME_EXPORT_FORMATS)
-  .filter((variant) => !isWithheldVariant(variant))
+  .filter(isOfferedVariant)
   .sort((a, b) => canonicalIndex(a) - canonicalIndex(b));
 
 /**
@@ -98,7 +108,7 @@ export function dataFormatsForVariant(variant: string): DataFileFormat[] {
 /** A monthly file's variant key: an offered export-table variant, or 'all'. Nothing else. */
 export function isDataVariantKey(variant: string): boolean {
   return (
-    variant === ALL_VARIANTS_KEY || (isGameExportVariant(variant) && !isWithheldVariant(variant))
+    variant === ALL_VARIANTS_KEY || (isGameExportVariant(variant) && isOfferedVariant(variant))
   );
 }
 
