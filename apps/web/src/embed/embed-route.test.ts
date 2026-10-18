@@ -10,6 +10,7 @@ import {
   embedPovFromSearch,
   embedPuzzleRouteFromPath,
   embedRouteFromPath,
+  embedTablebaseFromSearch,
   isEmbedTvPath,
 } from './embed-route.js';
 
@@ -87,6 +88,13 @@ describe('embed query parameters', () => {
     expect(embedChannelFromSearch('')).toBe('top');
     expect(embedChannelFromSearch('?channel=../x')).toBe('top');
     expect(embedChannelFromSearch('?channel=Xiangqi')).toBe('top');
+  });
+
+  it('reads tablebase=1 and nothing else', () => {
+    expect(embedTablebaseFromSearch('?ply=0&tablebase=1')).toBe(true);
+    expect(embedTablebaseFromSearch('?tablebase=true')).toBe(false);
+    expect(embedTablebaseFromSearch('?tablebase=0')).toBe(false);
+    expect(embedTablebaseFromSearch('')).toBe(false);
   });
 
   it('reads pov=white|black|truth and nothing else', () => {

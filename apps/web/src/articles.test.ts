@@ -63,6 +63,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // A solved banqi endgame (chariot and horse against chariot, horse and
+      // soldier), scheduled for 2026-10-30 (DEV shows it early for review).
+      '/blog/banqi-chariot-endgame',
       // Helpmates in xiangqi (composed helpmates in two), 2026-10-20.
       '/blog/helpmates-in-xiangqi',
       // The fifth player page, the 2022 women's world champion Zuo Wenjing,
@@ -322,6 +325,7 @@ describe('article public listing gates', () => {
     // (blog/concept) article without a homeRow appears, newest first, with no
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
+      '/blog/banqi-chariot-endgame',
       '/blog/helpmates-in-xiangqi',
       '/blog/fortress-and-atomic-xiangqi-on-hold',
       '/blog/banqi-perpetual-chase',
@@ -889,7 +893,8 @@ describe('rules variant sidebar', () => {
     expect(pageText).toContain(
       'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier',
     );
-    expect(pageText).toContain('40 plies (single moves) with no flip or capture');
+    expect(pageText).toContain('60 plies (single moves) with no flip or capture');
+    expect(pageText).toContain('keeps the 40-ply limit it began under');
     expect(pageText).toContain('threefold repetition');
     expect(pageText).toContain('On your turn you do exactly one of two things.');
     expect(pageText).toContain('it captures by jumping, not by stepping');

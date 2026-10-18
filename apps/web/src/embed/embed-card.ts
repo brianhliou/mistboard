@@ -153,6 +153,9 @@ export type EmbedCardOptions = {
    *  place of options.header and options.credit.text (a chapter name that
    *  names the idea). The real ones come back with the sheet. */
   solutionHiddenLabels?: SolutionHiddenLabels;
+  /** A pane under the card (a banqi chapter's tablebase). It must keep one
+   *  height whatever it shows: the board is fitted to the room it leaves. */
+  belowCard?: HTMLElement;
   mountBoard: (
     host: HTMLElement,
     hooks: { onPlyChange: (ply: number, maxPly: number) => void },
@@ -165,6 +168,13 @@ export type EmbedCard = {
   /** Mount the board again in place and return to the ply it was on: how a
    *  board that fixes its view at mount (a game's fog panes) changes view. */
   remountBoard: () => Promise<void>;
+  /** Mount the board again for lines that changed under it (a reader playing
+   *  their own moves from a study's tablebase): the sheet is rebuilt from the
+   *  new board's moves and the card lands on a mainline ply or a sideline move. */
+  reloadLine: (at: { ply: number } | { atPly: number; cursor: number }) => Promise<void>;
+  /** Show `cursor` moves into the sideline under mainline ply `atPly`, as a
+   *  click on that move in the sheet's branch does. */
+  jumpToLine: (atPly: number, cursor: number) => void;
   /** Mark moves on the score sheet: a glyph after the move and a note under it (the
    *  stored analysis's "?? … was best."), keyed by ply. Kept across sheet rebuilds. */
   setAnnotations: (byPly: ReadonlyMap<number, EmbedSheetAnnotation>) => void;
@@ -407,8 +417,11 @@ export async function mountEmbedCard(
   credit.target = '_blank';
   credit.rel = 'noopener';
   credit.textContent = hiddenLabels?.credit ?? options.credit.text;
-  frame.append(header, card, credit);
+  const below = options.belowCard ?? null;
+  frame.append(header, card, ...(below ? [below] : []), credit);
   root.replaceChildren(frame);
+  // The pane under the card and its gap, out of the board's room.
+  const belowHeight = (): number => (below ? below.offsetHeight + FRAME_GAP_PX : 0);
 
   let handle: EmbedBoardHandle | null = null;
   let moveList: MoveList | null = null;
@@ -515,7 +528,8 @@ export async function mountEmbedCard(
     const rect = frame.getBoundingClientRect();
     const box = {
       width: rect.width,
-      height: rect.height - header.offsetHeight - credit.offsetHeight - 2 * FRAME_GAP_PX,
+      height:
+        rect.height - header.offsetHeight - credit.offsetHeight - 2 * FRAME_GAP_PX - belowHeight(),
     };
     if (box.width <= 0 || box.height <= 0) return;
     const stacked = box.width < STACK_BELOW_PX;
@@ -545,15 +559,20 @@ export async function mountEmbedCard(
   const reportHeight = (): void => {
     const rect = frame.getBoundingClientRect();
     if (rect.width <= 0) return;
-    if (rect.width < STACK_BELOW_PX) {
+    const stacked = rect.width < STACK_BELOW_PX;
+    // A pane under the card is height the host's phone rule knows nothing
+    // about, so a card with one reports its height stacked too.
+    if (stacked && !below) {
       postHeight(null);
       return;
     }
-    const box = naturalBoxHeight(rect.width, aspect, false, options.railWidthPx);
+    const box = naturalBoxHeight(rect.width, aspect, stacked, options.railWidthPx);
     // The window beyond the frame element is the frame's own padding.
     const chrome = window.innerHeight - rect.height;
     postHeight(
-      Math.ceil(box + header.offsetHeight + credit.offsetHeight + 2 * FRAME_GAP_PX + chrome),
+      Math.ceil(
+        box + header.offsetHeight + credit.offsetHeight + 2 * FRAME_GAP_PX + belowHeight() + chrome,
+      ),
     );
   };
   fitBoard();
@@ -684,6 +703,26 @@ export async function mountEmbedCard(
     });
     return remounting;
   };
+  const reloadLine: EmbedCard['reloadLine'] = (at) => {
+    remounting = remounting.then(async () => {
+      handle?.destroy?.();
+      line = null;
+      handle = await options.mountBoard(boardHost, { onPlyChange });
+      rowsForBottom = null;
+      maxPly = handle.plyCount?.() ?? sheetEntries().length;
+      rebuildSheet();
+      if ('atPly' in at) {
+        // Land on the position before the reader's move, then step onto it, so
+        // the move they just played glides in like any other step.
+        if (at.cursor > 1) jumpLine(at.atPly, at.cursor - 1);
+        else if (handle.jumpToPly) jump(at.atPly - 1);
+        return jumpLine(at.atPly, at.cursor);
+      }
+      if (handle.jumpToPly) jump(at.ply);
+      onPlyChange(handle.jumpToPly ? currentPly : clampPly(at.ply), maxPly);
+    });
+    return remounting;
+  };
 
   return {
     frame,
@@ -691,6 +730,8 @@ export async function mountEmbedCard(
       return handle as EmbedBoardHandle;
     },
     remountBoard,
+    reloadLine,
+    jumpToLine: jumpLine,
     setAnnotations: (byPly) => {
       annotations = byPly;
       rebuildSheet();

@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-30 (banqi chariot endgame article) ── 残局库 follows analysis.tablebase.title; a move is 步 as in banqi-perpetual-chase.
+  'A solved banqi endgame: chariot and horse against chariot, horse and soldier.':
+    '一个已解的暗棋残局：车马对车马卒。',
+  'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.':
+    '一位 Mistboard 棋手告诉我们，在三子胜两子的残局里，我们原来的 40 步和棋规则太短。我们用残局库解出了其中一个：红方 67 步取胜，但直到第 44 步才有子被吃。文章逐步演示这盘胜局，棋盘下方列出每一步合法着法的结果，你也可以自己走其中任何一步。',
   // ── 2026-10-17 (phone redesign) ── 菜单 / 开始对局 follow shell nav.menu and play setup.startGame.
   'Mistboard is rebuilt for phones.': 'Mistboard 为手机重新设计。',
   "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. A game now fits one screen with no scrolling: the board, both clocks, the moves and the action bar stay in view, and game info and chat open from the menu in the bar. On a computer nothing changes.":
@@ -507,6 +512,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-30 (banqi chariot endgame article) ── 殘局庫 follows analysis.tablebase.title; a move is 步 as in banqi-perpetual-chase.
+  'A solved banqi endgame: chariot and horse against chariot, horse and soldier.':
+    '一個已解的暗棋殘局：車馬對車馬卒。',
+  'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.':
+    '一位 Mistboard 棋手告訴我們，在三子勝兩子的殘局裡，我們原來的 40 步和棋規則太短。我們用殘局庫解出了其中一個：紅方 67 步取勝，但直到第 44 步才有子被吃。文章逐步演示這盤勝局，棋盤下方列出每一步合法著法的結果，你也可以自己走其中任何一步。',
   // ── 2026-10-17 (phone redesign) ── 選單 / 開始對局 follow shell nav.menu and play setup.startGame.
   'Mistboard is rebuilt for phones.': 'Mistboard 為手機重新設計。',
   "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. A game now fits one screen with no scrolling: the board, both clocks, the moves and the action bar stay in view, and game info and chat open from the menu in the bar. On a computer nothing changes.":

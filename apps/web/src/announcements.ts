@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-30',
+    kind: 'article',
+    headline: 'A solved banqi endgame: chariot and horse against chariot, horse and soldier.',
+    body: 'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.',
+    href: '/blog/banqi-chariot-endgame',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-10-17',
     kind: 'update',
     headline: 'Mistboard is rebuilt for phones.',

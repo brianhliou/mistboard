@@ -1,8 +1,8 @@
 /**
- * Seed the banqi endgame study: chariot and horse (red) against chariot, horse
- * and soldier (black), every piece face up, black to move. The tablebase
+ * Seed the banqi endgame study: chariot and horse (black) against chariot, horse
+ * and soldier (red), every piece face up, red to move. The tablebase
  * (apps/web/public/tablebase/banqi, written by
- * scripts/banqi-tablebase/endgame-table.ts --export) says black wins in 67
+ * scripts/banqi-tablebase/endgame-table.ts --export) says red wins in 67
  * moves, but the first capture comes after 44 moves, so banqi's 40-move rule draws
  * it over the board.
  *
@@ -13,14 +13,22 @@
  * so the whole 67-move win is one chapter, with a comment at move 40 where a
  * real game would have ended.
  *
+ * The study is about the 40-move rule banqi played under until 2026-10-17 (now
+ * 60), so it grades against LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT explicitly. Under
+ * 60 this win (first capture at move 44) would not be a draw. Note the study
+ * board's own tablebase panel judges a parsed position by the current 60.
+ *
  * Local dev only (dev sign-in codes): it refuses any base that is not
  * localhost.
  *
  *   npx tsx apps/server/src/seed-banqi-endgame-study.ts \
  *     --email you@example.com [--base http://127.0.0.1:3001] \
  *     [--visibility public|unlisted|private] [--replace] [--dry-run]
+ *
+ * `--out <file>` writes the study's name, description and chapter as JSON
+ * instead, for a `study:edit` plan (how the prod copy is made and replaced).
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gunzipSync } from 'node:zlib';
@@ -36,15 +44,17 @@ import {
   banqiStateToEngineFen,
   banqiTablebaseTableFromBytes,
   banqiTablebaseUrl,
-  DEFAULT_NO_PROGRESS_PLY_LIMIT,
   isBanqiLegalMove,
+  LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT,
   parseBanqiFen,
   readBanqiTablebase,
 } from '@mistboard/game';
 import { resolveExistingStudy } from './seed-study-idempotency.js';
 
-const ROOT_FEN = '8/7r/Hs6/2h4R b - 0 1';
+const ROOT_FEN = '8/7R/hS6/2H4r r - 0 1';
 const STUDY_NAME = 'Banqi endgame: chariot and horse against chariot, horse and soldier';
+const STUDY_DESCRIPTION =
+  'An exact banqi endgame, solved by a tablebase: red wins in 67 moves, but the first capture comes after 44 moves, so banqi’s old 40-move rule drew it over the board; Mistboard now allows 60. The whole win in one line, with a note where the clock runs out and a position where only one move keeps it.';
 
 const PUBLIC = resolve(dirname(fileURLToPath(import.meta.url)), '../../web/public');
 const tables = new Map<string, BanqiTablebaseTable>();
@@ -70,7 +80,7 @@ function answerOf(state: BanqiGameState, clock = true): BanqiTablebaseAnswer {
   const answer = readBanqiTablebase(
     state,
     table,
-    clock ? DEFAULT_NO_PROGRESS_PLY_LIMIT : Number.POSITIVE_INFINITY,
+    clock ? LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT : Number.POSITIVE_INFINITY,
   );
   if (!answer) throw new Error(`${banqiStateToEngineFen(state)}: not covered`);
   return answer;
@@ -114,7 +124,7 @@ function play(state: BanqiGameState, row: BanqiTablebaseRow): Step {
 }
 
 function pieceName(piece: BanqiPiece): string {
-  return `${piece.color === 'red' ? "red's" : "black's"} ${piece.role}`;
+  return `${piece.color === 'black' ? "black's" : "red's"} ${piece.role}`;
 }
 
 function capitalize(text: string): string {
@@ -122,7 +132,7 @@ function capitalize(text: string): string {
 }
 
 function ink(color: string): string {
-  return color === 'red' ? 'Red' : 'Black';
+  return color === 'black' ? 'Black' : 'Red';
 }
 
 function captureText(step: Step): string {
@@ -167,11 +177,11 @@ function captureComments(steps: readonly Step[]): Map<number, string> {
     // pairs of turns, so a turn count would point at the wrong row.
     const text = capitalize(captureText(step));
     if (step.after.status.type !== 'playing') {
-      const loser = step.before.board[step.move.to]?.color ?? 'red';
+      const loser = step.before.board[step.move.to]?.color ?? 'black';
       const left = Object.values(step.after.board).some((piece) => piece?.color === loser);
       out.set(
         i,
-        `${text}, and ${loser} has ${left ? 'no move' : 'nothing'} left. ${ink(loser === 'red' ? 'black' : 'red')} wins.`,
+        `${text}, and ${loser} has ${left ? 'no move' : 'nothing'} left. ${ink(loser === 'black' ? 'red' : 'black')} wins.`,
       );
       return;
     }
@@ -179,14 +189,14 @@ function captureComments(steps: readonly Step[]): Map<number, string> {
     const verdict =
       after.result === 'draw'
         ? 'The position is a draw.'
-        : `${ink(after.result === 'win' ? after.moverInk : after.moverInk === 'red' ? 'black' : 'red')} wins in ${after.dtm} more.`;
-    out.set(i, `${text}. The 40-move clock starts again. ${verdict}`);
+        : `${ink(after.result === 'win' ? after.moverInk : after.moverInk === 'black' ? 'red' : 'black')} wins in ${after.dtm} more.`;
+    out.set(i, `${text}. The move clock starts again. ${verdict}`);
   });
   return out;
 }
 
 function buildChapter() {
-  const limit = DEFAULT_NO_PROGRESS_PLY_LIMIT;
+  const limit = LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT;
   const root = stateOf(ROOT_FEN);
   const rootAnswer = answerOf(root);
   if (rootAnswer.dtm !== 67 || rootAnswer.dtz !== 45 || !rootAnswer.clockDraw) {
@@ -213,7 +223,7 @@ function buildChapter() {
   const clockAnswer = answerOf(atClock.after, false);
   comments.set(
     limit - 1,
-    `${limit} moves without a capture: in a real game the 40-move rule ends it here as a draw. The study board plays on to show the rest of the win. Black still wins in ${clockAnswer.dtm} more moves, and the first capture comes ${firstCapture + 1 - limit} moves later.`,
+    `${limit} moves without a capture: under the old 40-move rule a real game ended here as a draw. Banqi on Mistboard now allows 60, and the study board plays on to show the rest of the win. Red still wins in ${clockAnswer.dtm} more moves, and the first capture comes ${firstCapture + 1 - limit} moves later.`,
   );
 
   // The first position on the line where exactly one move keeps the win.
@@ -240,7 +250,7 @@ function buildChapter() {
         annotations: {
           comments: [
             {
-              text: `The best of the other ${others.length} moves, and it ${verdict}. Every move but ${pick.move.from}-${pick.move.to} lets red hold.`,
+              text: `The best of the other ${others.length} moves, and it ${verdict}. Every move but ${pick.move.from}-${pick.move.to} lets black hold.`,
             },
           ],
         },
@@ -249,11 +259,11 @@ function buildChapter() {
     ]);
   }
   const before = comments.get(pickIndex - 1);
-  const prompt = `Black to move has ${pickAnswer.rows.length} legal moves here and exactly one keeps the win. Find it before looking at the Tablebase pane.`;
+  const prompt = `Red to move has ${pickAnswer.rows.length} legal moves here and exactly one keeps the win. Find it before looking at the Tablebase pane.`;
   comments.set(pickIndex - 1, before ? `${before} ${prompt}` : prompt);
   comments.set(
     pickIndex,
-    `The only winning move. Black wins in ${(pickAnswer.dtm ?? 1) - 1} more moves from here.`,
+    `The only winning move. Red wins in ${(pickAnswer.dtm ?? 1) - 1} more moves from here.`,
   );
 
   const chapter = {
@@ -267,7 +277,7 @@ function buildChapter() {
         annotations: {
           comments: [
             {
-              text: `Black has chariot, horse and soldier against red's chariot and horse, all face up, black to move. Without the 40-move rule black wins in ${rootAnswer.dtm} moves (each player's turn counts as one), and only ${rootWins} of the ${rootAnswer.rows.length} moves keep it. But the first capture comes after ${firstCapture + 1} moves, so over the board this is a draw. Black's soldier takes only generals and soldiers, so here it just blocks squares.`,
+              text: `Red has chariot, horse and soldier against black's chariot and horse, all face up, red to move. Red wins in ${rootAnswer.dtm} moves (each player's turn counts as one), and only ${rootWins} of the ${rootAnswer.rows.length} moves keep it. The first capture comes after ${firstCapture + 1} moves, so banqi’s old 40-move rule drew this over the board; Mistboard now draws at 60, which leaves room for the whole win. Red's soldier takes only generals and soldiers, so here it just blocks squares.`,
             },
           ],
         },
@@ -362,6 +372,12 @@ async function main(): Promise<void> {
   const visibility = typeof args.visibility === 'string' ? args.visibility : 'unlisted';
   const { chapter, facts } = buildChapter();
   console.log(JSON.stringify(facts));
+  if (typeof args.out === 'string') {
+    const study = { name: STUDY_NAME, description: STUDY_DESCRIPTION, chapter };
+    writeFileSync(args.out, `${JSON.stringify(study, null, 2)}\n`);
+    console.log(`wrote ${args.out}`);
+    return;
+  }
   if (args['dry-run'] === true) {
     const say = (n: SerializedNode, at: number) => {
       for (const comment of n.annotations?.comments ?? []) console.log(`  [${at}] ${comment.text}`);
@@ -391,8 +407,7 @@ async function main(): Promise<void> {
 
   const created = await session.post('/api/studies', {
     name: STUDY_NAME,
-    description:
-      'An exact banqi endgame, solved by a tablebase: black wins in 67 moves, but the first capture comes after 44 moves, so the 40-move rule makes it a draw over the board. The whole win in one line, with a note where the clock runs out and a position where only one move keeps it.',
+    description: STUDY_DESCRIPTION,
     visibility,
     chapter,
   });

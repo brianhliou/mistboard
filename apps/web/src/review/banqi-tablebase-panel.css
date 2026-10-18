@@ -39,6 +39,20 @@
   color: var(--site-text);
 }
 
+.bq-tablebase__mover {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--site-text);
+}
+.bq-tablebase__mover-disc {
+  --seat-disc-size: 9px;
+  align-self: center;
+}
+
 .bq-tablebase__verdict {
   flex: 1 1 auto;
   min-width: 0;
@@ -147,4 +161,11 @@
 .bq-tablebase:not(.review-rail-overlay) {
   border: 1px solid var(--site-border);
   border-radius: 6px;
+}
+
+/* The move the line plays next, in a study embed (embed-study-page.ts): shaded,
+   with an inset bar in the text colour. */
+.bq-tablebase__row--line {
+  background: var(--site-zebra);
+  box-shadow: inset 3px 0 0 var(--site-text);
 }

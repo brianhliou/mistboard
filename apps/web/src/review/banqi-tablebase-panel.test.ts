@@ -7,6 +7,7 @@ import {
   type BanqiTablebaseTable,
   banqiTablebaseTableFromBytes,
   banqiTablebaseUrl,
+  LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT,
   parseBanqiFen,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -30,9 +31,13 @@ function position(fen: string): BanqiGameState {
 }
 
 // Chariot and horse (red) against chariot, horse and soldier (black), black to
-// move: black wins in 67 plies, but the first capture is 45 away, so the
-// 40-move rule draws it over the board.
+// move: black wins in 67 plies, but the first capture is 45 away, so the old
+// 40-move rule draws it over the board and the 60-move rule does not.
 const ROOT = '8/7r/Hs6/2h4R b - 0 1';
+// The same position in a game created before 2026-10-17 (the 40-ply limit).
+function legacy(state: BanqiGameState): BanqiGameState {
+  return { ...state, noProgressLimit: LEGACY_BANQI_NO_PROGRESS_PLY_LIMIT };
+}
 // Chariot and soldier against chariot, black to move: a 23-ply win.
 const SHORT = '7r/8/2s5/2R5 b - 0 1';
 
@@ -50,11 +55,15 @@ describe('banqi tablebase panel', () => {
     const panel = createBanqiTablebasePanel(diskLoad);
     document.body.append(panel.el);
     panel.setActive(true);
-    expect(await panel.setState(position(ROOT))).toBe(true);
+    expect(await panel.setState(legacy(position(ROOT)))).toBe(true);
 
     expect(panel.el.hidden).toBe(false);
     expect(panel.el.querySelector('.bq-tablebase__title')?.textContent).toBe('Tablebase');
     expect(panel.el.querySelector('.bq-tablebase__verdict')?.textContent).toBe('Black wins in 67');
+    // Every row's result is the mover's, so the head names the mover with its disc.
+    const mover = panel.el.querySelector('.bq-tablebase__mover');
+    expect(mover?.textContent).toBe('Black to move');
+    expect(mover?.querySelector('.seat-disc--black')).not.toBeNull();
     const list = rows(panel.el);
     expect(list).toHaveLength(9);
     const wins = list.filter((row) => row.dataset.result === 'win');
@@ -78,6 +87,26 @@ describe('banqi tablebase panel', () => {
     expect(panel.el.textContent).not.toContain('—');
   });
 
+  it("judges the clock by the game's own limit: 60 on a new game or a study board", async () => {
+    const panel = createBanqiTablebasePanel(diskLoad);
+    panel.setActive(true);
+    // DTZ 45 fits inside 60 plies: the same win is a win over the board.
+    expect(await panel.setState(position(ROOT))).toBe(true);
+    expect(panel.el.querySelector('[data-clock-draw]')).toBeNull();
+    expect(panel.el.querySelector('.bq-tablebase__note')).toBeNull();
+    expect(panel.el.querySelector('.bq-tablebase__foot')?.textContent).toContain(
+      'The 60-move rule is left out except where a row is marked.',
+    );
+    // 20 plies already on the clock leave 40, short of the 45 the capture needs.
+    expect(await panel.setState(position('8/7r/Hs6/2h4R b - 20 1'))).toBe(true);
+    expect(rows(panel.el)[0]?.querySelector('.bq-tablebase__distance')?.textContent).toMatch(
+      /draw by 60-move rule$/,
+    );
+    expect(panel.el.querySelector('.bq-tablebase__note')?.textContent).toBe(
+      'The next capture is 45 moves away with best play, and the 60-move rule ends the game in 40, so over the board this is a draw.',
+    );
+  });
+
   it('leaves a short win unmarked', async () => {
     const panel = createBanqiTablebasePanel(diskLoad);
     panel.setActive(true);
@@ -90,9 +119,14 @@ describe('banqi tablebase panel', () => {
   it('past the clock (study board only): says the rule has drawn it and drops the row tags', async () => {
     const panel = createBanqiTablebasePanel(diskLoad);
     panel.setActive(true);
-    expect(await panel.setState(position('8/7r/Hs6/2h4R b - 43 1'))).toBe(true);
+    expect(await panel.setState(position('8/7r/Hs6/2h4R b - 63 1'))).toBe(true);
     expect(panel.el.querySelector('.bq-tablebase__verdict')?.textContent).toBe('Black wins in 67');
     expect(panel.el.querySelector('[data-clock-draw]')).toBeNull();
+    expect(panel.el.querySelector('.bq-tablebase__note')?.textContent).toBe(
+      'The 60-move rule has already drawn this game over the board (3 moves ago). The study board plays on so the line can be followed.',
+    );
+    // An older game's review keeps its own 40-ply limit.
+    expect(await panel.setState(legacy(position('8/7r/Hs6/2h4R b - 43 1')))).toBe(true);
     expect(panel.el.querySelector('.bq-tablebase__note')?.textContent).toBe(
       'The 40-move rule has already drawn this game over the board (3 moves ago). The study board plays on so the line can be followed.',
     );

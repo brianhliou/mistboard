@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   createInitialJungleFlipState,
   type JieqiSquare,
@@ -5,6 +8,7 @@ import {
   jungleFlipStateToDealtFen,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ENDGAME_LINE, ENDGAME_ROOT_FEN } from '../articles/banqi-endgame-diagrams.js';
 import { JUNGLE_ART } from '../jungle-art.js';
 import { jieqiMarkerSvg } from '../live-jieqi-render.js';
 import { STUDY_VARIANTS } from '../study-catalog.js';
@@ -77,6 +81,9 @@ function expectedBadge(square: string, text: string, perspective: 'red' | 'black
   );
   return badgeAt(svg, '.probe');
 }
+
+// The shipped banqi tablebase files (public/tablebase/banqi/v1).
+const PUBLIC = resolve(dirname(fileURLToPath(import.meta.url)), '../../public');
 
 function stubFetch(status: number, body: unknown) {
   vi.stubGlobal('fetch', async () => ({
@@ -852,6 +859,143 @@ describe('mountEmbedStudy', () => {
     expect(root.querySelector('.embed-card-result')?.textContent).toBe(
       firstInk === 'red' ? 'Red wins' : 'Blue wins',
     );
+    root.remove();
+  });
+
+  it('reads an untagged banqi chapter’s winner off its last position', async () => {
+    // The tablebase study carries no result tag: its line ends on red's
+    // chariot taking black's last piece, and the result foot says so.
+    const chapter = (id: string, moves: readonly string[]) => ({
+      id,
+      name: 'The long win',
+      orientation: 'red',
+      variant: 'banqi',
+      root: { rootFen: ENDGAME_ROOT_FEN, root: chainTree([...moves]) },
+    });
+    const line = ENDGAME_LINE.map((move) => `${move.from}${move.to}`);
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [chapter('BqWin123', line), chapter('BqMid123', line.slice(0, 3))],
+    });
+    const won = document.createElement('div');
+    await mountEmbedStudy(won, { studyId: 's', chapterId: 'BqWin123' });
+    expect(won.querySelectorAll('.review-move-list__move')).toHaveLength(67);
+    expect(won.querySelector('.embed-card-result')?.textContent).toBe('Red wins');
+    const mid = document.createElement('div');
+    await mountEmbedStudy(mid, { studyId: 's', chapterId: 'BqMid123' });
+    expect(mid.querySelector('.embed-card-result')?.textContent).toBe('');
+  });
+
+  it('tablebase=1 puts the table under a banqi board: the line’s move is marked, a hovered row is an arrow, and any other row starts a sideline under the move it left', async () => {
+    const line = ENDGAME_LINE.map((move) => `${move.from}${move.to}`);
+    const body = {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'BqWin123',
+          name: 'The long win',
+          orientation: 'red',
+          variant: 'banqi',
+          root: { rootFen: ENDGAME_ROOT_FEN, root: chainTree(line) },
+        },
+      ],
+    };
+    // The study read answers JSON; the table files come off disk.
+    vi.stubGlobal('fetch', async (url: string) => {
+      if (String(url).includes('/tablebase/banqi/')) {
+        const bytes = readFileSync(`${PUBLIC}${String(url)}`);
+        const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+        return { ok: true, status: 200, arrayBuffer: async () => buffer };
+      }
+      return { ok: true, status: 200, json: async () => body };
+    });
+    const plain = document.createElement('div');
+    await mountEmbedStudy(plain, { studyId: 's', chapterId: 'BqWin123' });
+    expect(plain.querySelector('.embed-tablebase')).toBeNull();
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(
+      root,
+      { studyId: 's', chapterId: 'BqWin123' },
+      { startPly: 0, tablebase: true },
+    );
+    const pane = root.querySelector<HTMLElement>('.embed-tablebase');
+    expect(pane).not.toBeNull();
+    await vi.waitFor(() => expect(pane?.querySelectorAll('.bq-tablebase__row')).toHaveLength(9));
+    const marked = [...(pane?.querySelectorAll<HTMLElement>('.bq-tablebase__row--line') ?? [])];
+    expect(marked.map((row) => row.dataset.move)).toEqual([line[0]]);
+    expect(marked[0]?.dataset.result).toBe('win');
+    expect(pane?.querySelector('.bq-tablebase__mover')?.textContent).toBe('Red to move');
+    // A set-up position binds the inks from the start, so the seats say which is which.
+    expect(
+      [...root.querySelectorAll('.embed-card-seat-name')].map((name) => name.textContent),
+    ).toEqual(['Black', 'Red']);
+    // Hovering a row draws its move on the board; leaving clears it.
+    const arrows = () =>
+      root.querySelectorAll(
+        '.banqi-board-arrows path, .banqi-board-arrows line, .banqi-board-arrows g > *',
+      ).length;
+    expect(arrows()).toBe(0);
+    marked[0]?.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(arrows()).toBeGreaterThan(0);
+    marked[0]?.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(arrows()).toBe(0);
+    // Clicking the line's row steps the card forward one move; the table
+    // follows and marks the next one.
+    marked[0]?.click();
+    await vi.waitFor(() =>
+      expect(
+        [...root.querySelectorAll<HTMLElement>('.bq-tablebase__row--line')].map(
+          (row) => row.dataset.move,
+        ),
+      ).toEqual([line[1]]),
+    );
+    expect(root.querySelector('.embed-card-status')?.textContent).toMatch(/^1 \//);
+    expect(pane?.querySelector('.bq-tablebase__mover')?.textContent).toBe('Black to move');
+    const current = () =>
+      root.querySelector('.review-move-list__line-move--current')?.textContent ?? null;
+
+    // Any other row plays too: the chapter's moves stay on the sheet, and the
+    // reader's hang under the move they left from as a sideline.
+    const other = [...root.querySelectorAll<HTMLElement>('.bq-tablebase__row')].find(
+      (row) => row.dataset.move !== line[1],
+    );
+    const otherMove = other?.dataset.move ?? '';
+    other?.click();
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.review-move-list__line-move')).toHaveLength(1),
+    );
+    expect(root.querySelectorAll('.review-move-list__move')).toHaveLength(line.length);
+    expect(current()).toBe(`${otherMove.slice(0, 2)}-${otherMove.slice(2)}`);
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Red wins');
+    // The table answers the new position, and a row there extends the sideline.
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.bq-tablebase__row').length).toBeGreaterThan(0),
+    );
+    expect(root.querySelector('.bq-tablebase__row--line')).toBeNull();
+    root.querySelector<HTMLElement>('.bq-tablebase__row')?.click();
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.review-move-list__line-move')).toHaveLength(2),
+    );
+    // Back a step stays in the sideline, and the table marks the move ahead.
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.bq-tablebase__row--line')).toHaveLength(1),
+    );
+    expect(current()).toBe(`${otherMove.slice(0, 2)}-${otherMove.slice(2)}`);
+
+    // Any of the chapter's own moves returns to it.
+    root.querySelectorAll<HTMLElement>('.review-move-list__move')[0]?.click();
+    await vi.waitFor(() =>
+      expect(
+        [...root.querySelectorAll<HTMLElement>('.bq-tablebase__row--line')].map(
+          (row) => row.dataset.move,
+        ),
+      ).toEqual([line[1]]),
+    );
+    expect(current()).toBeNull();
+    expect(root.querySelectorAll('.review-move-list__line-move')).toHaveLength(2);
     root.remove();
   });
 

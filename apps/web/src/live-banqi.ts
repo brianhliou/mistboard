@@ -96,6 +96,9 @@ export type BanqiWireView = {
   lastMove?: BanqiMove;
   // The 長捉 rule the game is played under; absent on a pre-rule game (rule off).
   chaseRule?: BanqiChaseRule;
+  // The no-progress limit (plies without a capture or flip) the game draws at:
+  // 60 since 2026-10-17; absent or 40 on an older game.
+  noProgressLimit?: number;
   // The seat to move's board moves the 長捉 rule forbids right now; absent when
   // none, on the other seat's view, and for spectators.
   forbiddenMoves?: BanqiMove[];

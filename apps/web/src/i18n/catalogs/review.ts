@@ -557,15 +557,15 @@ export const EN_REVIEW = {
   'analysis.banqiTablebase.nextCapture': 'next capture in {count}',
   'analysis.banqiTablebase.keepWin': '{count} of {total} moves keep the win',
   'analysis.banqiTablebase.holdDraw': '{count} of {total} moves hold the draw',
-  'analysis.banqiTablebase.clockDraw': 'draw by 40-move rule',
+  'analysis.banqiTablebase.clockDraw': 'draw by {limit}-move rule',
   'analysis.banqiTablebase.clockDrawTitle':
-    'With best play no capture comes before the 40-move rule ends the game, so this result is a draw over the board.',
+    'With best play no capture comes before the {limit}-move rule ends the game, so this result is a draw over the board.',
   'analysis.banqiTablebase.positionClockDraw':
-    'The next capture is {count} moves away with best play, and the 40-move rule ends the game in {left}, so over the board this is a draw.',
+    'The next capture is {count} moves away with best play, and the {limit}-move rule ends the game in {left}, so over the board this is a draw.',
   'analysis.banqiTablebase.pastClock':
-    'The 40-move rule has already drawn this game over the board ({count} moves ago). The study board plays on so the line can be followed.',
+    'The {limit}-move rule has already drawn this game over the board ({count} moves ago). The study board plays on so the line can be followed.',
   'analysis.banqiTablebase.footnote':
-    'Exact results with best play from both sides, counting the moves of both players. The 40-move rule is left out except where a row is marked. Repetition and chase rules cannot change a win.',
+    'Exact results with best play from both sides, counting the moves of both players. The {limit}-move rule is left out except where a row is marked. Repetition and chase rules cannot change a win.',
   'practice.tablebase.keepsWin': 'Good. The tablebase says this keeps the win.',
   'practice.tablebase.holdsDraw': 'Good. The tablebase says this holds the draw.',
   'practice.tablebase.throwsWin':
