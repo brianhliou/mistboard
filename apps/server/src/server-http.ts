@@ -235,6 +235,9 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     }
 
     if (url.startsWith('/api/')) {
+      // Crawlers fetch the API while rendering client pages, so robots.txt
+      // must not block it; the header keeps the JSON itself out of the index.
+      response.setHeader('x-robots-tag', 'noindex');
       void handleApiRequest(buildApiContext(options), request, response).catch((err) =>
         answerApiFailure(response, url, err),
       );
