@@ -34,6 +34,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-10-17, not native-reviewed, from the English signed
+  // off that day. Code blocks keep their English source; only captions translate.
+  'unstyled-first-paint',
+  // Machine-drafted 2026-10-17, not native-reviewed, from the English signed
   // off that day. Terms follow banqi-perpetual-chase and banqi-statistics
   // (将 士 象 车 马 炮 卒 / 將 士 象 車 馬 砲 卒; a move is 步); tablebase is
   // analysis.tablebase.title (残局库 / 殘局庫); the 40-move rule is 40 步规则.
@@ -239,6 +242,62 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // unstyled-first-paint: machine-drafted 2026-10-17, not native-reviewed.
+  ENGINEERING: '工程',
+  UNSTYLED: '无样式',
+  'TWO FLASHES, TWO CAUSES': '两次闪烁，两个原因',
+  'Two pages that loaded as plain text': '两个以纯文本加载的页面',
+  'Pages loading as plain text': '以纯文本加载的页面',
+  'Fixing a flash of unstyled content on prerendered pages': '修复预渲染页面上的无样式内容闪烁',
+  'The rules pages and the players pages both showed as bare text for a moment before snapping into their design. The causes were different, and the check written for the first passed the second.':
+    '规则页和棋手页在呈现出正式设计之前，都会先以光秃秃的文字显示片刻。两者的原因不同，而为第一种情况写的检查放过了第二种。',
+  'The rules pages painted unstyled because their layout CSS came with a script the page loaded later. Each page now links that CSS itself, and a build check fails any page missing a stylesheet its markup needs.':
+    '规则页先以无样式的状态绘制，是因为它的版面 CSS 跟着一个稍后才加载的脚本一起到来。现在每个页面都自己链接这些 CSS，构建时的检查会让任何缺少其标记所需样式表的页面构建失败。',
+  'The players pages had another cause: the server writes a plain copy of the page for search engines, and that copy showed until the real page replaced it.':
+    '棋手页的原因不同：服务器会为搜索引擎写一份页面的纯文本副本，在真正的页面取代它之前，显示的一直是这份副本。',
+  'The build check passed the players pages. It only read pages the build writes, and it worked by matching class names, which the copy had none of.':
+    '构建检查放过了棋手页。它只读取构建时生成的页面，而且靠比对 class 名称来工作，而那份副本一个 class 名称也没有。',
+  'The copy is now hidden until the real page draws, and a second check reads every kind of page on the live site.':
+    '现在这份副本会一直隐藏，直到真正的页面绘制出来；第二个检查会读取线上网站的每一种页面。',
+  'For a moment after you opened a [rules page](/rules), you saw the headings, paragraphs and sidebar links as plain text, with no layout. Then the page snapped into its real design. The [players page](/players) did the same. The two flashes looked alike and had different causes, and the check we wrote after the first one passed the second.':
+    '打开一个[规则页](/rules)之后的片刻，你看到的标题、段落和侧栏链接都是纯文本，没有任何版面。随后页面才突然变成它真正的设计。[棋手页](/players)也是如此。两次闪烁看起来一样，原因却不同，而我们在第一次之后写的检查放过了第二次。',
+  'The rules pages: the stylesheet came with the script': '规则页：样式表跟着脚本一起来',
+  'Mistboard builds every rules page and blog post ahead of time as a complete HTML file, so readers and search engines get the text without waiting for a script. The site is built with Vite, which splits the CSS for each piece of code out beside that code. The article layout lived with the articles code, and the page loads that code only after it starts.':
+    'Mistboard 会预先把每个规则页和博客文章构建成完整的 HTML 文件，这样读者和搜索引擎不必等脚本就能拿到文字。网站用 Vite 构建，Vite 会把每段代码用到的 CSS 拆出来，放在那段代码旁边。文章版面跟着文章代码走，而页面要等启动之后才加载那段代码。',
+  'So the HTML arrived complete but linked only the site-wide stylesheets. The browser painted the text with those, fetched the articles code, and only then got the rules that lay out an article. Every click in the rules sidebar was a full page load, so a reader saw the flash on every page.':
+    '所以 HTML 到达时内容完整，却只链接了全站通用的样式表。浏览器先用这些样式表绘制文字，再去获取文章代码，然后才拿到排版文章的规则。规则页侧栏里的每次点击都是一次完整的页面加载，所以读者每翻一页都会看到闪烁。',
+  'A recording of the xiangqi rules page loading before the fix. The sidebar shows as a bulleted list of links and the article text runs the full width with no layout, then the page snaps into its two-column design.':
+    '修复之前象棋规则页加载过程的录像。侧栏显示为一串带圆点的链接，文章文字铺满整个宽度，没有版面，随后页面突然变成两栏设计。',
+  'The xiangqi rules page before the fix, recorded on a slowed connection and CPU so the flash lasts long enough to see.':
+    '修复之前的象棋规则页，在放慢的网络和 CPU 上录制，让闪烁持续得足够久，看得清楚。',
+  'The build now links the article stylesheets in each page it writes, in the order Vite would load them. The xiangqi rules page went from four stylesheets to 24:':
+    '现在构建会在它生成的每个页面里链接文章样式表，顺序与 Vite 加载它们的顺序相同。象棋规则页的样式表从四个变成了 24 个：',
+  'The head of the xiangqi rules page, with the hashes trimmed from the file names.':
+    '象棋规则页的 head 部分，文件名里的哈希值已删去。',
+  'A check runs after it: for each page, it collects the class names in the markup and looks for a rule, in any stylesheet the page does not link, that would match them. A hit fails the build and names the page and the stylesheet.':
+    '之后会运行一个检查：对每个页面，它收集标记里的 class 名称，再在该页面没有链接的样式表里，寻找能匹配这些名称的规则。只要找到一条，构建就会失败，并指出是哪个页面、哪个样式表。',
+  'The build check, slightly simplified.': '构建检查，略有简化。',
+  'All 188 pages passed. Sidebar clicks also stopped reloading the page; they swap the article in place.':
+    '188 个页面全部通过。侧栏点击也不再重新加载页面，而是就地替换文章。',
+  'The players pages: a copy for search engines': '棋手页：写给搜索引擎的副本',
+  "A day later the players page flashed the same way. The players pages are written by the server on each request, so the build never sees them. For crawlers that run no script, the server puts a plain copy of the content in the page: every listed player, each with a team, points and a link. The script draws the real page and removes the copy when it starts. Until then the copy was on screen, with none of the page's layout.":
+    '一天后，棋手页以同样的方式闪烁。棋手页是服务器在每次请求时生成的，所以构建永远看不到它们。为了不运行脚本的爬虫，服务器会在页面里放一份内容的纯文本副本：列出的每位棋手，各带队伍、积分和一个链接。脚本启动时会绘制真正的页面并移除这份副本。在那之前，屏幕上显示的就是这份副本，完全没有页面的版面。',
+  'A recording of the players page loading before the fix. A long numbered list of player names, teams and points fills the screen as plain text, then the site header appears and the real players page loads in its place.':
+    '修复之前棋手页加载过程的录像。一长串带编号的棋手姓名、队伍和积分以纯文本铺满屏幕，随后网站页首出现，真正的棋手页在原处加载出来。',
+  'The players page before the fix, on the same slowed connection. The plain list is the copy written for search engines.':
+    '修复之前的棋手页，使用同样放慢的网络。那份纯文本列表就是写给搜索引擎的副本。',
+  'The build check missed it twice over. It reads the files the build writes, and these pages are assembled later. And when we pointed the same logic at the live pages, it passed them anyway, because it matches class names in the markup against stylesheet rules and the copy had no class names. In the code above, `used` came back empty, so no rule passed the `every` test and the page reported nothing missing. The [bots page](/bots) and every shared study carried the same kind of copy and flashed the same way.':
+    '构建检查在两个层面上都漏掉了它。它读取的是构建时写出的文件，而这些页面是之后才组装的。而当我们把同样的逻辑用在线上页面时，它照样放行，因为它是拿标记里的 class 名称去比对样式表规则，而那份副本没有任何 class 名称。在上面的代码里，`used` 返回为空，所以没有一条规则能通过 `every` 判断，页面也就报告没有缺少任何东西。[机器人页](/bots)和每个分享的研习都带有同类副本，也以同样的方式闪烁。',
+  'The fix, and a check for both': '修复，以及一个能同时抓到两者的检查',
+  "The copy stays in the HTML, since crawlers that run no script still need it. The server now wraps it in one element that the site's base stylesheet keeps hidden. If the script has not replaced it after four seconds, a CSS animation shows it, so a reader whose script never runs still gets the text. If the page fails to start, the script puts the copy back and shows it at once.":
+    '副本仍然留在 HTML 里，因为不运行脚本的爬虫仍然需要它。现在服务器把它包在一个元素里，由网站的基础样式表保持隐藏。如果四秒后脚本还没有取代它，一段 CSS 动画会把它显示出来，所以脚本始终没有运行的读者仍然能看到文字。如果页面启动失败，脚本会把副本放回去并立即显示。',
+  "The whole fix, in the site's base stylesheet.": '完整的修复，位于网站的基础样式表中。',
+  'The second check reads the live site: two pages of each kind in the sitemap, plus the pages the sitemap leaves out. It flags a page missing a stylesheet its markup needs, and a page whose content has no class names and no hiding wrapper. Its test feeds it the old players page, which it has to flag. Run against the site before the fix, it flagged 14 pages across the players, team, bots and study pages in all three languages.':
+    '第二个检查读取线上网站：网站地图里每种页面各取两个，再加上网站地图漏掉的页面。它会标出缺少其标记所需样式表的页面，以及内容既没有 class 名称、也没有隐藏外层的页面。它的测试会喂给它旧版的棋手页，它必须把这一页标出来。在修复之前对网站运行时，它在三种语言的棋手、队伍、机器人和研习页面中标出了 14 个页面。',
+  "The second check's test for a bare copy, slightly simplified.":
+    '第二个检查中判断裸露副本的部分，略有简化。',
+  'The first check missed the players pages because it asked a question they could not answer: whether the classes in a page were styled. A page with no classes gives no answer, and the check read silence as a pass. The second check asks what both flashes had in common, whether any content reaches the screen before its styling does.':
+    '第一个检查漏掉了棋手页，因为它问的是这些页面无法回答的问题：页面里的 class 是否都有样式。一个没有 class 的页面给不出任何答案，而检查把沉默当成了通过。第二个检查问的是两次闪烁的共同点：是否有任何内容比它的样式更早出现在屏幕上。',
   // jieqi-puzzle-search: machine-drafted 2026-10-10, not native-reviewed. Terms follow ab-jchess and jieqi-bot-wins (暗子, 翻子, 暗吃, 胜率, 访客, 皮卡鱼); 题目 for puzzle as in how-puzzle-mining-works.
   'Looking for jieqi puzzles': '在揭棋里找题目',
   'We searched 2,939 positions from 50 jieqi games for puzzles. 58 had one clearly best move and 15 of those turned on a hidden piece. None of the 15 passed the rules our xiangqi puzzles go through, and we stopped looking.':
@@ -6225,6 +6284,62 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // unstyled-first-paint: machine-drafted 2026-10-17, not native-reviewed.
+  ENGINEERING: '工程',
+  UNSTYLED: '無樣式',
+  'TWO FLASHES, TWO CAUSES': '兩次閃爍，兩個原因',
+  'Two pages that loaded as plain text': '兩個以純文字載入的頁面',
+  'Pages loading as plain text': '以純文字載入的頁面',
+  'Fixing a flash of unstyled content on prerendered pages': '修復預渲染頁面上的無樣式內容閃爍',
+  'The rules pages and the players pages both showed as bare text for a moment before snapping into their design. The causes were different, and the check written for the first passed the second.':
+    '規則頁和棋手頁在呈現出正式設計之前，都會先以光禿禿的文字顯示片刻。兩者的原因不同，而為第一種情況寫的檢查放過了第二種。',
+  'The rules pages painted unstyled because their layout CSS came with a script the page loaded later. Each page now links that CSS itself, and a build check fails any page missing a stylesheet its markup needs.':
+    '規則頁先以無樣式的狀態繪製，是因為它的版面 CSS 跟著一個稍後才載入的腳本一起到來。現在每個頁面都自己連結這些 CSS，建置時的檢查會讓任何缺少其標記所需樣式表的頁面建置失敗。',
+  'The players pages had another cause: the server writes a plain copy of the page for search engines, and that copy showed until the real page replaced it.':
+    '棋手頁的原因不同：伺服器會為搜尋引擎寫一份頁面的純文字副本，在真正的頁面取代它之前，顯示的一直是這份副本。',
+  'The build check passed the players pages. It only read pages the build writes, and it worked by matching class names, which the copy had none of.':
+    '建置檢查放過了棋手頁。它只讀取建置時產生的頁面，而且靠比對 class 名稱來運作，而那份副本一個 class 名稱也沒有。',
+  'The copy is now hidden until the real page draws, and a second check reads every kind of page on the live site.':
+    '現在這份副本會一直隱藏，直到真正的頁面繪製出來；第二個檢查會讀取線上網站的每一種頁面。',
+  'For a moment after you opened a [rules page](/rules), you saw the headings, paragraphs and sidebar links as plain text, with no layout. Then the page snapped into its real design. The [players page](/players) did the same. The two flashes looked alike and had different causes, and the check we wrote after the first one passed the second.':
+    '打開一個[規則頁](/rules)之後的片刻，你看到的標題、段落和側欄連結都是純文字，沒有任何版面。隨後頁面才突然變成它真正的設計。[棋手頁](/players)也是如此。兩次閃爍看起來一樣，原因卻不同，而我們在第一次之後寫的檢查放過了第二次。',
+  'The rules pages: the stylesheet came with the script': '規則頁：樣式表跟著腳本一起來',
+  'Mistboard builds every rules page and blog post ahead of time as a complete HTML file, so readers and search engines get the text without waiting for a script. The site is built with Vite, which splits the CSS for each piece of code out beside that code. The article layout lived with the articles code, and the page loads that code only after it starts.':
+    'Mistboard 會預先把每個規則頁和部落格文章建置成完整的 HTML 檔案，這樣讀者和搜尋引擎不必等腳本就能拿到文字。網站用 Vite 建置，Vite 會把每段程式碼用到的 CSS 拆出來，放在那段程式碼旁邊。文章版面跟著文章程式碼走，而頁面要等啟動之後才載入那段程式碼。',
+  'So the HTML arrived complete but linked only the site-wide stylesheets. The browser painted the text with those, fetched the articles code, and only then got the rules that lay out an article. Every click in the rules sidebar was a full page load, so a reader saw the flash on every page.':
+    '所以 HTML 到達時內容完整，卻只連結了全站通用的樣式表。瀏覽器先用這些樣式表繪製文字，再去取得文章程式碼，然後才拿到排版文章的規則。規則頁側欄裡的每次點擊都是一次完整的頁面載入，所以讀者每翻一頁都會看到閃爍。',
+  'A recording of the xiangqi rules page loading before the fix. The sidebar shows as a bulleted list of links and the article text runs the full width with no layout, then the page snaps into its two-column design.':
+    '修復之前象棋規則頁載入過程的錄影。側欄顯示為一串帶圓點的連結，文章文字鋪滿整個寬度，沒有版面，隨後頁面突然變成兩欄設計。',
+  'The xiangqi rules page before the fix, recorded on a slowed connection and CPU so the flash lasts long enough to see.':
+    '修復之前的象棋規則頁，在放慢的網路和 CPU 上錄製，讓閃爍持續得夠久，看得清楚。',
+  'The build now links the article stylesheets in each page it writes, in the order Vite would load them. The xiangqi rules page went from four stylesheets to 24:':
+    '現在建置會在它產生的每個頁面裡連結文章樣式表，順序與 Vite 載入它們的順序相同。象棋規則頁的樣式表從四個變成了 24 個：',
+  'The head of the xiangqi rules page, with the hashes trimmed from the file names.':
+    '象棋規則頁的 head 部分，檔名裡的雜湊值已刪去。',
+  'A check runs after it: for each page, it collects the class names in the markup and looks for a rule, in any stylesheet the page does not link, that would match them. A hit fails the build and names the page and the stylesheet.':
+    '之後會執行一個檢查：對每個頁面，它收集標記裡的 class 名稱，再在該頁面沒有連結的樣式表裡，尋找能比對這些名稱的規則。只要找到一條，建置就會失敗，並指出是哪個頁面、哪個樣式表。',
+  'The build check, slightly simplified.': '建置檢查，略有簡化。',
+  'All 188 pages passed. Sidebar clicks also stopped reloading the page; they swap the article in place.':
+    '188 個頁面全部通過。側欄點擊也不再重新載入頁面，而是就地替換文章。',
+  'The players pages: a copy for search engines': '棋手頁：寫給搜尋引擎的副本',
+  "A day later the players page flashed the same way. The players pages are written by the server on each request, so the build never sees them. For crawlers that run no script, the server puts a plain copy of the content in the page: every listed player, each with a team, points and a link. The script draws the real page and removes the copy when it starts. Until then the copy was on screen, with none of the page's layout.":
+    '一天後，棋手頁以同樣的方式閃爍。棋手頁是伺服器在每次請求時產生的，所以建置永遠看不到它們。為了不執行腳本的爬蟲，伺服器會在頁面裡放一份內容的純文字副本：列出的每位棋手，各帶隊伍、積分和一個連結。腳本啟動時會繪製真正的頁面並移除這份副本。在那之前，螢幕上顯示的就是這份副本，完全沒有頁面的版面。',
+  'A recording of the players page loading before the fix. A long numbered list of player names, teams and points fills the screen as plain text, then the site header appears and the real players page loads in its place.':
+    '修復之前棋手頁載入過程的錄影。一長串帶編號的棋手姓名、隊伍和積分以純文字鋪滿螢幕，隨後網站頁首出現，真正的棋手頁在原處載入出來。',
+  'The players page before the fix, on the same slowed connection. The plain list is the copy written for search engines.':
+    '修復之前的棋手頁，使用同樣放慢的網路。那份純文字列表就是寫給搜尋引擎的副本。',
+  'The build check missed it twice over. It reads the files the build writes, and these pages are assembled later. And when we pointed the same logic at the live pages, it passed them anyway, because it matches class names in the markup against stylesheet rules and the copy had no class names. In the code above, `used` came back empty, so no rule passed the `every` test and the page reported nothing missing. The [bots page](/bots) and every shared study carried the same kind of copy and flashed the same way.':
+    '建置檢查在兩個層面上都漏掉了它。它讀取的是建置時寫出的檔案，而這些頁面是之後才組裝的。而當我們把同樣的邏輯用在線上頁面時，它照樣放行，因為它是拿標記裡的 class 名稱去比對樣式表規則，而那份副本沒有任何 class 名稱。在上面的程式碼裡，`used` 傳回為空，所以沒有一條規則能通過 `every` 判斷，頁面也就回報沒有缺少任何東西。[機器人頁](/bots)和每個分享的研習都帶有同類副本，也以同樣的方式閃爍。',
+  'The fix, and a check for both': '修復，以及一個能同時抓到兩者的檢查',
+  "The copy stays in the HTML, since crawlers that run no script still need it. The server now wraps it in one element that the site's base stylesheet keeps hidden. If the script has not replaced it after four seconds, a CSS animation shows it, so a reader whose script never runs still gets the text. If the page fails to start, the script puts the copy back and shows it at once.":
+    '副本仍然留在 HTML 裡，因為不執行腳本的爬蟲仍然需要它。現在伺服器把它包在一個元素裡，由網站的基礎樣式表保持隱藏。如果四秒後腳本還沒有取代它，一段 CSS 動畫會把它顯示出來，所以腳本始終沒有執行的讀者仍然能看到文字。如果頁面啟動失敗，腳本會把副本放回去並立即顯示。',
+  "The whole fix, in the site's base stylesheet.": '完整的修復，位於網站的基礎樣式表中。',
+  'The second check reads the live site: two pages of each kind in the sitemap, plus the pages the sitemap leaves out. It flags a page missing a stylesheet its markup needs, and a page whose content has no class names and no hiding wrapper. Its test feeds it the old players page, which it has to flag. Run against the site before the fix, it flagged 14 pages across the players, team, bots and study pages in all three languages.':
+    '第二個檢查讀取線上網站：網站地圖裡每種頁面各取兩個，再加上網站地圖漏掉的頁面。它會標出缺少其標記所需樣式表的頁面，以及內容既沒有 class 名稱、也沒有隱藏外層的頁面。它的測試會餵給它舊版的棋手頁，它必須把這一頁標出來。在修復之前對網站執行時，它在三種語言的棋手、隊伍、機器人和研習頁面中標出了 14 個頁面。',
+  "The second check's test for a bare copy, slightly simplified.":
+    '第二個檢查中判斷裸露副本的部分，略有簡化。',
+  'The first check missed the players pages because it asked a question they could not answer: whether the classes in a page were styled. A page with no classes gives no answer, and the check read silence as a pass. The second check asks what both flashes had in common, whether any content reaches the screen before its styling does.':
+    '第一個檢查漏掉了棋手頁，因為它問的是這些頁面無法回答的問題：頁面裡的 class 是否都有樣式。一個沒有 class 的頁面給不出任何答案，而檢查把沉默當成了通過。第二個檢查問的是兩次閃爍的共同點：是否有任何內容比它的樣式更早出現在螢幕上。',
   // xiangqi-mahjong-32: machine-drafted 2026-10-16 from the signed-off English. Terms follow the live table (live.xmj.*): 台, 面子, 將眼, 莊家, 胡, 自摸, 吃, 碰, 流局; tile names per colour, black cannon 砲 as on the tile faces.
   'Xiangqi Mahjong Rules (32 tiles)': '象棋麻將規則（32 張）',
   'The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the points each one scores.':

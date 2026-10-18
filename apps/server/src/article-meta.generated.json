@@ -557,7 +557,11 @@
     "title": "Two pages that loaded as plain text",
     "kind": "article",
     "description": "The rules pages and the players pages both showed as bare text for a moment before snapping into their design. The causes were different, and the check written for the first passed the second.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "两个以纯文本加载的页面",
+      "zh-hant": "兩個以純文字載入的頁面"
+    }
   },
   "xiangqi": {
     "title": "Xiangqi Rules",
