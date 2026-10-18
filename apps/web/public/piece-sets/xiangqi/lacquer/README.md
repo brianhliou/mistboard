@@ -19,3 +19,6 @@
   removed, its `viewBox` cropped to a square inside the rim
   (`tile/<color>-face.svg`, from the general). Derived, never edited by hand;
   `apps/web/src/asset-tile-glyphs.test.ts` re-derives them.
+- Banqi face-down tile (2026-10-17): `banqi-back.svg` is `black-back.svg`
+  unchanged with a mother-of-pearl flower and ring drawn on it by Mistboard,
+  one look for both sides.

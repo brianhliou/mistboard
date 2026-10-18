@@ -77,8 +77,7 @@ import type { JungleFlipRenderBoard } from '../jungle-flip-render.js';
 import { jungleFlipPieceGhostSvg, renderJungleFlipBoardSvg } from '../jungle-flip-render.js';
 import { junglePieceGhostSvg, renderJungleBoardSvg } from '../jungle-render.js';
 import {
-  BANQI_PIECE_PX,
-  banqiFaceDownRadius,
+  banqiFaceDownGhostSvg,
   banqiPieceGhostSvg,
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
@@ -717,11 +716,6 @@ const BANQI_DEALT: DealtRules = {
 // live-banqi-render.ts: CELL 64, MARGIN 28, rank 4 at the top, no flip.
 const BANQI_GEOMETRY = cellGeometry(8, 4, 64, 28, false, 62);
 
-function faceDownDiscSvg(className: string, size: number): string {
-  const r = banqiFaceDownRadius(size);
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g class="${className}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}"/></g></svg>`;
-}
-
 const BANQI_TILE: EditorPaletteEntry = {
   piece: { faceDown: true, color: null },
   labelKey: 'editor.faceDownTile',
@@ -779,7 +773,7 @@ const BANQI_SPEC: EditorSpec = {
   },
   ghostSvg: (piece) =>
     piece.faceDown
-      ? faceDownDiscSvg('banqi-back', BANQI_PIECE_PX)
+      ? banqiFaceDownGhostSvg()
       : banqiPieceGhostSvg({
           color: piece.color as XiangqiColor,
           role: piece.role as BanqiPieceRole,

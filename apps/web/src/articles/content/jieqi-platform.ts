@@ -41,7 +41,7 @@ const JIEQI_DISC_ROW = [0, 1, 2, 3, 4, 5, 6]
     return [
       `<circle cx="${64 + i * 32}" cy="172" r="12" `,
       `fill="${red ? '#a95f4a' : '#2f7d62'}" `,
-      `stroke="${red ? '#6f342c' : '#174536'}" stroke-width="2"/>`,
+      `stroke="${red ? '#553025' : '#174536'}" stroke-width="2"/>`,
     ].join('');
   })
   .join('');

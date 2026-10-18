@@ -500,7 +500,9 @@ const BACK_STROKE = 3;
 
 function pieceBackMark(color: XiangqiColor, shape: XiangqiPieceShape = 'disc'): string {
   const fill = color === 'red' ? '#a95f4a' : '#2f7d62';
-  const stroke = color === 'red' ? '#6f342c' : '#174536';
+  // Each outline about half its fill's brightness, so the red back's edge
+  // reads as firmly as the green one's (Brian, 2026-10-17).
+  const stroke = color === 'red' ? '#553025' : '#174536';
   return xiangqiPieceFrameOutline(
     shape,
     PIECE_EDGE,
@@ -605,7 +607,7 @@ type AssetSetSpec = {
 };
 
 const ASSET_SETS: Record<AssetXiangqiPieceSet, AssetSetSpec> = {
-  lacquer: { version: 1, ink: { red: '#ffffff', black: '#ffffff' }, neutralBack: null },
+  lacquer: { version: 2, ink: { red: '#ffffff', black: '#ffffff' }, neutralBack: null },
   wood: { version: 1, ink: { red: '#ae1d04', black: '#1e1e1a' }, neutralBack: 'red' },
   book: { version: 1, ink: { red: '#ff0000', black: '#000000' }, neutralBack: null },
   brush: { version: 2, ink: { red: '#ff0000', black: '#005500' }, neutralBack: 'red' },
@@ -643,6 +645,31 @@ export function xiangqiNeutralBackMarks(set: XiangqiPieceSet): string | null {
   if (!isAssetPieceSet(set)) return null;
   const color = ASSET_SETS[set].neutralBack;
   return color ? assetImageMark(assetPieceHref(set, color, 'back')) : null;
+}
+
+/**
+ * A banqi face-down tile in the 100-unit piece box, one look for both sides
+ * (Brian, 2026-10-17): wood its own grain back; brush and clerical their own
+ * back darkened, so it never passes for a blank face; lacquer black lacquer
+ * with a mother-of-pearl flower (its own file, so the inlay's gradient stays
+ * out of the board's inline SVGs); the book its own yellow
+ * back ringed in brown, neither side's colour.
+ * Null for the sets Mistboard draws, whose banqi disc is the Mahjong jade.
+ */
+export function xiangqiBanqiBackMarks(set: XiangqiPieceSet): string | null {
+  if (!isAssetPieceSet(set)) return null;
+  if (set === 'wood') return xiangqiNeutralBackMarks(set);
+  if (set === 'brush' || set === 'clerical') {
+    return `${xiangqiNeutralBackMarks(set)}<circle cx="50" cy="50" r="45" fill="#5a3018" opacity="0.35"/>`;
+  }
+  if (set === 'lacquer') {
+    return assetImageMark(
+      `/piece-sets/xiangqi/lacquer/banqi-back.svg?v=${ASSET_SETS.lacquer.version}`,
+    );
+  }
+  // The book's own back (its yellow disc, ring 40.5 to 45) with a ring in
+  // neither side's colour, red or black (Brian, 2026-10-17).
+  return `<circle cx="50" cy="50" r="45" fill="#FFD438"/><circle cx="50" cy="50" r="42.75" fill="none" stroke="#5a3a1a" stroke-width="4.5"/>`;
 }
 
 /**
