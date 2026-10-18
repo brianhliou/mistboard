@@ -48,6 +48,8 @@ const { mountCrazyhouseXiangqiReplayBoard, replayCrazyhouseXiangqiLine } = await
 );
 const { mountCrazyhouseXiangqiWatchReplay } = await import('./watch-crazyhouse-xiangqi-replay.js');
 const { mountDuckXiangqiWatchReplay } = await import('./watch-duck-xiangqi-replay.js');
+const { EDITOR_VARIANT_IDS } = await import('./editor/editor-catalog.js');
+const { EDITOR_SPECS } = await import('./editor/editor-specs.js');
 const { duckXiangqiReviewBoardAspect } = await import('./review/duck-xiangqi-review.js');
 type DuckXiangqiPostgameResponse = import('./duck-xiangqi-postgame.js').DuckXiangqiPostgameResponse;
 type CrazyhouseXiangqiPostgameResponse =
@@ -430,3 +432,31 @@ async function flushPromises(): Promise<void> {
     await Promise.resolve();
   }
 }
+
+// The editor lays transparent click targets over the board from its own
+// geometry, so the board it draws must sit in exactly that frame. Six editors
+// drew the coordinate gutter while their geometry reserved none, which slid the
+// points out from under the targets toward the edges (found 2026-10-17, once
+// the gear made coordinates reachable for guests).
+describe('the position editor board stays under its click layer', () => {
+  for (const on of [false, true]) {
+    for (const layout of ['intersection', 'cell'] as const) {
+      it(`matches the hit frame with coordinates ${on ? 'on' : 'off'}, ${layout} layout`, () => {
+        setCoordinates(on);
+        window.history.replaceState(null, '', `/?xqLayout=${layout}`);
+        const bad: string[] = [];
+        for (const id of EDITOR_VARIANT_IDS) {
+          const spec = EDITOR_SPECS[id];
+          for (const flipped of [false, true]) {
+            const svg = spec.renderSvg({ ...spec.start(), flipped }, spec.colors[flipped ? 1 : 0]);
+            const box = spec.geometry.viewBox(flipped);
+            const got = /viewBox="([^"]+)"/.exec(svg)?.[1];
+            const want = `${box.minX} ${box.minY} ${box.width} ${box.height}`;
+            if (got !== want) bad.push(`${id} flipped=${flipped} svg=${got} geo=${want}`);
+          }
+        }
+        expect(bad).toEqual([]);
+      });
+    }
+  }
+});
