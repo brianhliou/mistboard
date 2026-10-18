@@ -519,12 +519,9 @@ a.site-nav-link[hidden],
   text-decoration: underline;
 }
 
-/* One line on phones (#576, Brian 2026-10-17): About, Terms, Privacy and the
-   identity line. The other links live in the site menu's Mistboard section
-   (buildHomeFooter marks them). After the base rules on purpose: the phone
-   padding used to sit above them and never applied. 16px gutters and 12px gaps
-   keep the row on one line down to about 360px; narrower, the identity line
-   wraps under the links. */
+/* Phones keep the same four links (Brian 2026-10-17). After the base rules on
+   purpose: the phone padding used to sit above them and never applied. Where
+   the row runs out of width, the identity line wraps, centred, under the links. */
 @media (max-width: 600px) {
   .landing-footer {
     padding-left: 16px;
@@ -533,10 +530,6 @@ a.site-nav-link[hidden],
 
   .landing-footer-links {
     gap: 12px;
-  }
-
-  .landing-footer [data-phone-menu] {
-    display: none;
   }
 }
 

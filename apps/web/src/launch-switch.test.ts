@@ -19,13 +19,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const XMJ = XIANGQI_MAHJONG_SPEC_ID;
 const XMJ_RULES_SLUG = 'xiangqi-mahjong-32';
 
-type PublicStats = Parameters<typeof import('./metrics.js').weeklyVariantSeries>[0];
+type PublicStats = Parameters<typeof import('./metrics.js').publicVariantEntries>[0];
 
 const STATS_WITH_XMJ_GAMES = {
-  weeklyCompletedGames: [{ weekStart: '2026-10-12', completedGames: 3 }],
-  weeklyByVariant: [
-    { variant: 'xiangqi', total: 2, weeks: [{ weekStart: '2026-10-12', completedGames: 2 }] },
-    { variant: XMJ, total: 1, weeks: [{ weekStart: '2026-10-12', completedGames: 1 }] },
+  variantTotals: [
+    { variant: 'xiangqi', count: 2 },
+    { variant: XMJ, count: 1 },
   ],
 } as unknown as PublicStats;
 
@@ -40,9 +39,9 @@ async function xmjListedOnWeb(): Promise<Record<string, boolean>> {
     'rules page listed and indexed': surfaces.rulesSlugPublicSurfaceEnabled(XMJ_RULES_SLUG),
     leaderboard: variants.leaderboardVariants.some((v) => v.gameSpecId === XMJ),
     'profile rating card': variants.profileRatingVariants.some((v) => v.gameSpecId === XMJ),
-    '/stats per-variant chart': metrics
-      .weeklyVariantSeries(STATS_WITH_XMJ_GAMES, 'en')
-      .some((series) => series.key === XMJ),
+    '/stats variant breakdown':
+      // xiangqi is always listed, so a second row is XMJ.
+      metrics.publicVariantEntries(STATS_WITH_XMJ_GAMES, 'en').length === 2,
   };
 }
 

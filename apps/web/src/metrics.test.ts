@@ -207,18 +207,9 @@ describe('metrics page', () => {
     expect(root.textContent).toContain('Player vs player');
     expect(root.textContent).not.toContain('Bot vs bot');
 
-    // The variant chips sit on the weekly chart and swap its series in place.
-    const chipLabels = [...root.querySelectorAll('.stats-chart-chip')].map((n) => n.textContent);
-    expect(chipLabels).toEqual(['All games', 'Xiangqi', 'Fog Xiangqi']);
-    const fogChip = [...root.querySelectorAll<HTMLButtonElement>('.stats-chart-chip')].find(
-      (chip) => chip.textContent === 'Fog Xiangqi',
-    );
-    fogChip?.click();
-    expect(weekly?.querySelector('.weekly-chart-line')?.getAttribute('points')).not.toBe(
-      allGamesLine,
-    );
-    expect(weekly?.querySelector('.weekly-chart-table')).toBeNull();
-    expect(weekly?.querySelector('.stats-weekly-so-far')?.textContent).toBe('1 so far this week');
+    // One line, all games: no variant chips (the breakdown below carries the split).
+    expect(weekly?.querySelector('.stats-chart-filter')).toBeNull();
+    expect(root.querySelector('.stats-chart-chip')).toBeNull();
 
     const variantSection = [...root.querySelectorAll('.metrics-section')].find((s) =>
       s.querySelector('.metrics-section-heading')?.textContent?.includes('Games by variant'),

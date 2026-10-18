@@ -2021,6 +2021,14 @@ a.forum-post-author-name:focus-visible {
   padding: 18px;
 }
 
+/* The active tab sits a layer up to cover the textarea's top border, which
+   also hid the focus ring under it; a focused textarea comes above the tab. */
+.forum-body-composer textarea:focus,
+.forum-reply-form textarea:focus {
+  position: relative;
+  z-index: 2;
+}
+
 .forum-composer-preview,
 .forum-reply-preview {
   overflow: auto;

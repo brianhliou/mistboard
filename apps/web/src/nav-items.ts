@@ -194,30 +194,33 @@ export interface NavSection {
   items: NavItem[];
 }
 
-// A homepage footer link (site-shell.ts buildHomeFooter). `phoneFooter` marks
-// the few that stay on the one-line phone footer; on phones (600px and under)
-// every other link is hidden there and lives in the site menu's Mistboard
-// section instead (siteMenuSections), so both surfaces read this one list.
-export interface FooterNavItem extends NavItem {
-  phoneFooter?: boolean;
+// The homepage footer (site-shell.ts buildHomeFooter), the same on every width.
+// It is the way into the /about rail, not a second copy of it: About opens the
+// rail, which lists every info page (Brian, 2026-10-17, cut from 11 links; Patron
+// has its own button in the bar). A new info page goes in the rail, not here.
+// `external`/`blockedIn` stay wired for an off-site link: the Discord invite
+// was the last one to use them (see the note above DISCORD_INVITE_URL).
+export function footerNavItems(): NavItem[] {
+  return [
+    { label: 'About', labelKey: 'footer.about', href: '/about' },
+    { label: 'Contact', labelKey: 'footer.contact', href: '/contact' },
+    { label: 'Terms', labelKey: 'footer.terms', href: '/terms' },
+    { label: 'Privacy', labelKey: 'footer.privacy', href: '/privacy' },
+  ];
 }
 
-// Every entry is an on-site page. `external`/`blockedIn` stay wired for the
-// next off-site link: the Discord invite was the last one to use them, until it
-// came out of the footer on 2026-08-31 (see the note above DISCORD_INVITE_URL).
-export function footerNavItems(): FooterNavItem[] {
+// The phone site menu's closing Mistboard section: the info pages a phone
+// reaches from any page (the footer is on the homepage only). Patron is
+// already Community's Support row, so it is not listed twice.
+export function mistboardMenuItems(): NavItem[] {
   return [
-    { label: 'About', labelKey: 'footer.about', href: '/about', phoneFooter: true },
     { label: 'Statistics', labelKey: 'footer.stats', href: '/stats' },
     { label: 'Updates', labelKey: 'footer.news', href: '/feed' },
     { label: 'FAQ', labelKey: 'footer.faq', href: '/faq' },
-    { label: 'Patron', labelKey: 'footer.patron', href: '/patron' },
     { label: 'Contact', labelKey: 'footer.contact', href: '/contact' },
     { label: 'Source', labelKey: 'footer.source', href: '/source' },
     { label: 'Developers', labelKey: 'footer.developers', href: '/developers' },
     { label: 'Game data', labelKey: 'footer.data', href: '/data' },
-    { label: 'Terms', labelKey: 'footer.terms', href: '/terms', phoneFooter: true },
-    { label: 'Privacy', labelKey: 'footer.privacy', href: '/privacy', phoneFooter: true },
   ];
 }
 
@@ -227,8 +230,8 @@ export function footerNavItems(): FooterNavItem[] {
 // edit. Puzzles joins Play and Support closes Community; Admin follows for
 // admins only, like the bar's admin menu. The order is the reading order of a
 // two-column flow: Play, Watch, Tools down the first column, Learn and
-// Community down the second. Mistboard always closes the menu: the footer
-// links the phone footer drops (footerNavItems), so a phone reaches them all.
+// Community down the second. Mistboard always closes the menu
+// (mistboardMenuItems).
 export function siteMenuSections({ admin = false }: { admin?: boolean } = {}): NavSection[] {
   const puzzles = primaryNavItems().find((item) => item.labelKey === 'nav.puzzles');
   return [
@@ -238,11 +241,7 @@ export function siteMenuSections({ admin = false }: { admin?: boolean } = {}): N
     { labelKey: 'nav.learn', items: learnNavItems() },
     { labelKey: 'nav.community', items: [...communityNavItems(), donateNavItem()] },
     ...(admin ? [{ labelKey: 'nav.admin' as const, items: adminNavItems() }] : []),
-    {
-      labelKey: 'nav.mistboard',
-      // Patron is already Community's Support row; listing it twice reads as two pages.
-      items: footerNavItems().filter((item) => !item.phoneFooter && item.href !== '/patron'),
-    },
+    { labelKey: 'nav.mistboard', items: mistboardMenuItems() },
   ];
 }
 

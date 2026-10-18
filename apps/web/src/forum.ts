@@ -1761,11 +1761,32 @@ function appendLinkedText(parent: HTMLElement, text: string): void {
     const rawUrl = match[0];
     const start = match.index ?? 0;
     const { urlText, trailingText } = trimLinkedUrl(rawUrl);
-    if (start > cursor) parent.append(document.createTextNode(text.slice(cursor, start)));
+    if (start > cursor) appendMentionedText(parent, text.slice(cursor, start));
     const link = forumPostLink(urlText);
     parent.append(link ?? document.createTextNode(urlText));
     if (trailingText) parent.append(document.createTextNode(trailingText));
     cursor = start + rawUrl.length;
+  }
+  if (cursor < text.length) appendMentionedText(parent, text.slice(cursor));
+}
+
+// An @handle in prose links to that player's profile, the way lichess's forum
+// does. The handle must not follow a word character, so an email address stays
+// text; URLs are linked before this runs, so an @ inside one is never touched.
+// No lookup: a handle that names nobody opens the profile page's not-found.
+const MENTION_PATTERN = /(?<![\w@/.])@([a-zA-Z0-9_-]{1,40})(?![\w-])/g;
+
+function appendMentionedText(parent: HTMLElement, text: string): void {
+  let cursor = 0;
+  for (const match of text.matchAll(MENTION_PATTERN)) {
+    const start = match.index ?? 0;
+    if (start > cursor) parent.append(document.createTextNode(text.slice(cursor, start)));
+    const link = document.createElement('a');
+    link.className = 'forum-mention';
+    link.href = `/@/${encodeURIComponent(match[1])}`;
+    link.textContent = match[0];
+    parent.append(link);
+    cursor = start + match[0].length;
   }
   if (cursor < text.length) parent.append(document.createTextNode(text.slice(cursor)));
 }
