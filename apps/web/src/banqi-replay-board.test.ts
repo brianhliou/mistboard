@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment happy-dom
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ENDGAME_LINE, ENDGAME_ROOT_FEN } from './articles/banqi-endgame-diagrams.js';
 import { mountBanqiReplayBoard } from './banqi-replay-board.js';

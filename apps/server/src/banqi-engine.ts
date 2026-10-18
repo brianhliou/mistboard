@@ -32,7 +32,7 @@ import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js
 // Bump this only together with the railpack pin. Better still, stop bumping it by hand:
 // engine_boot_check already spawns each binary at startup, so it could assert the
 // handshake matches this string and turn a silent provenance lie into a loud boot failure.
-export const BANQI_ENGINE_VERSION = '0.2.6';
+export const BANQI_ENGINE_VERSION = '0.2.7';
 export const BANQI_DEFAULT_ENGINE_ID = 'misty-banqi';
 
 export type BanqiEngineTier = {
