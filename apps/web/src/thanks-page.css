@@ -1,0 +1,173 @@
+/* /thanks engine list: one ruled row per engine, the way rating lists print
+   them, with its games and rating here at the right. */
+.static-prose /* A section wrapper drops the last paragraph's margin; restore the gap
+   before the licence line. */
+.thanks-lichess {
+  margin-bottom: 1rem;
+}
+
+.thanks-engines {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--site-border);
+}
+
+.static-prose .thanks-engine {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  gap: 0 18px;
+  align-items: start;
+  margin: 0;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--site-border);
+}
+
+.static-prose .thanks-engine-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel-soft);
+  --variant-marker-color: var(--site-heading);
+}
+
+.static-prose .thanks-engine-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.static-prose .thanks-engine-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.static-prose .thanks-engine-name a {
+  color: var(--site-heading);
+  text-decoration: none;
+}
+
+.static-prose .thanks-engine-name a:hover {
+  color: var(--site-accent);
+}
+
+.static-prose .thanks-engine-by {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--site-muted);
+}
+
+.static-prose .thanks-engine-by a {
+  color: inherit;
+}
+
+.static-prose .thanks-engine-by a:hover {
+  color: var(--site-accent);
+}
+
+.static-prose .thanks-engine-body {
+  margin: 2px 0 0;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.static-prose .thanks-engine-variants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.static-prose .thanks-engine-variants li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--site-muted);
+}
+
+.static-prose .thanks-engine-stats {
+  /* Explicit tracks keep the column's width while the numbers load, so the
+     text beside it does not reflow when they arrive. */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(6.5rem, max-content));
+  gap: 20px;
+  margin: 2px 0 0;
+  text-align: right;
+}
+
+.static-prose .thanks-engine-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.static-prose .thanks-engine-stat dd {
+  margin: 0;
+  min-height: 1.25em;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-heading);
+}
+
+.static-prose .thanks-engine-stat dt {
+  font-size: 12.5px;
+  line-height: 1.35;
+  white-space: nowrap;
+  color: var(--site-muted);
+}
+
+@media (max-width: 640px) {
+  .static-prose .thanks-engine {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 0 14px;
+  }
+
+  .static-prose .thanks-engine-mark {
+    width: 44px;
+    height: 44px;
+  }
+
+  .static-prose .thanks-engine-stats {
+    grid-column: 2;
+    justify-content: start;
+    margin-top: 12px;
+    text-align: left;
+  }
+}
+
+/* Sources: the linked name on its own line, what they did under it. */
+.static-prose .thanks-credits {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--site-text);
+}
+
+.static-prose .thanks-credits li {
+  margin: 0;
+}
+
+.static-prose .thanks-credit-name {
+  display: block;
+  font-weight: 600;
+}
+
+.static-prose .thanks-credit-body {
+  display: block;
+}
