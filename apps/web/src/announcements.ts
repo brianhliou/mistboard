@@ -46,7 +46,7 @@ const baseAnnouncements: Announcement[] = [
     date: '2026-10-17',
     kind: 'update',
     headline: 'Mistboard is rebuilt for phones.',
-    body: "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. On a computer nothing changes.",
+    body: "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. A game now fits one screen with no scrolling: the board, both clocks, the moves and the action bar stay in view, and game info and chat open from the menu in the bar. On a computer nothing changes.",
     href: '/?play=computer&gameSpecId=xiangqi',
     cta: 'Play xiangqi',
   },
