@@ -41,7 +41,11 @@ import { type ProfileTarget, playerNameEl, profileTargetFor } from './profile-li
 import './landing-play-panel.css';
 import { fetchLiveStats } from './live-stats-client.js';
 import { rememberedPveEngine } from './pve-memory.js';
-import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
+import {
+  isCorrespondenceRatedModeEnabled,
+  isRatedModeEnabled,
+  onRatedModeChange,
+} from './rated-flag.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -232,7 +236,7 @@ export function buildPlayPanel(
 ): HTMLElement {
   const stored = readStored();
   const signedIn = isLikelySignedIn();
-  const ratedAvailable = isRatedModeEnabled();
+  let ratedAvailable = isRatedModeEnabled();
   let tab: PanelTab = stored.tab ?? 'computer';
   let mode: PersonMode = stored.mode === 'rated' && signedIn && ratedAvailable ? 'rated' : 'casual';
   let openRequests: OpenLobbyRequest[] = [];
@@ -619,7 +623,12 @@ export function buildPlayPanel(
   modeSwitch.append(casualBtn, ratedBtn);
   const note = document.createElement('span');
   note.className = 'pp-note';
-  control.append(ratedAvailable ? modeSwitch : document.createElement('span'), note);
+  const modeSlot = document.createElement('span');
+  control.append(modeSlot, note);
+  const renderModeSlot = (): void => {
+    modeSlot.replaceChildren(...(ratedAvailable ? [modeSwitch] : []));
+  };
+  renderModeSlot();
 
   const personScroll = document.createElement('div');
   personScroll.className = 'pp-scroll';
@@ -662,7 +671,7 @@ export function buildPlayPanel(
             { clocks: RATED_TIME_CONTROLS.map((tc) => compactLabel(tc.id)).join(', ') },
             locale,
           )
-        : t('lobby.panelBotFallbackNote', {}, locale);
+        : '';
   };
   casualBtn.addEventListener('click', () => {
     if (mode === 'casual') return;
@@ -795,7 +804,11 @@ export function buildPlayPanel(
       let index = personPace.get(`${mode}:${gameSpecId}`);
       if (index === undefined || index >= paces.length) {
         const fromSaved = paces.findIndex((p) => paceKey(p) === savedKey);
-        const fallback = paces.findIndex((p) => p.kind === 'live' && p.id === '5m5');
+        // A day per move first, where the variant plays by correspondence: an
+        // open seek waits for someone instead of timing out to a bot offer.
+        const day = paces.findIndex((p) => p.kind === 'days' && p.days === 1);
+        const live = paces.findIndex((p) => p.kind === 'live' && p.id === '5m5');
+        const fallback = day >= 0 ? day : live;
         index = fromSaved >= 0 ? fromSaved : fallback >= 0 ? fallback : 0;
       }
       let at = index;
@@ -921,6 +934,18 @@ export function buildPlayPanel(
   renderFeatures();
   renderPerson();
   selectTab(tab, false);
+
+  // The rated switch comes from /api/server-status, which usually answers
+  // after the homepage builds this panel: show Casual/Rated when it lands.
+  const stopRatedSync = onRatedModeChange(() => {
+    stopRatedSync();
+    ratedAvailable = isRatedModeEnabled();
+    if (readStored().mode === 'rated' && signedIn && ratedAvailable && !searching) mode = 'rated';
+    if (!ratedAvailable) mode = 'casual';
+    renderModeSlot();
+    renderFeatures();
+    renderPerson();
+  });
 
   if (options.hydrate !== false) {
     const refreshLobby = async (): Promise<void> => {
