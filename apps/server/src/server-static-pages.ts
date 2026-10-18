@@ -28,6 +28,7 @@ import {
   type PlayerPage,
   playerSitemapEntries,
 } from './player-pages.js';
+import { puzzleById } from './routes/puzzles.js';
 import { isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
 import {
@@ -595,6 +596,33 @@ const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
 // read to a crawler as another URL for it.
 const QUERY_FREE_CANONICAL_PATTERNS: readonly RegExp[] = [/^\/puzzles\/[^/]+$/];
 
+const PUZZLE_DEEP_LINK = /^\/puzzles\/([^/]+)$/;
+
+// /puzzles/:idOrShortCode reaches one puzzle by its full id or by its short
+// code (Puzzle #bMpKA), so the query-free path alone left two self canonicals
+// per puzzle. Both name the full-id URL: the form the client pushes and the
+// short-code link in the info card points at (puzzles.ts, queue-panel.ts).
+// An unknown puzzle, or a lookup that throws, keeps the query-free path.
+async function puzzleCanonicalPath(
+  canonicalPath: string | null,
+  lookupPuzzleId: (idOrShortCode: string) => Promise<string | null>,
+): Promise<string | null> {
+  const match = canonicalPath ? PUZZLE_DEEP_LINK.exec(canonicalPath) : null;
+  if (!match) return canonicalPath;
+  let idOrShortCode: string;
+  try {
+    idOrShortCode = decodeURIComponent(match[1]!);
+  } catch {
+    return canonicalPath;
+  }
+  const id = await lookupPuzzleId(idOrShortCode).catch(() => null);
+  return id ? `/puzzles/${encodeURIComponent(id)}` : canonicalPath;
+}
+
+async function livePuzzleId(idOrShortCode: string): Promise<string | null> {
+  return (await puzzleById(idOrShortCode))?.id ?? null;
+}
+
 function queryFreeCanonicalPath(pathname: string): string | null {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ||
@@ -660,6 +688,9 @@ export async function serveSpaShellWithRoutePreloads(params: {
   playerPage?: (pathname: string) => Promise<PlayerPage | null>;
   /** Override the broadcast-page lookup (tests); the default reads persistence. */
   broadcastPage?: (pathname: string) => Promise<BroadcastPage | null>;
+  /** Override the puzzle id-or-short-code lookup (tests); the default is the
+   *  one /api/puzzles/:id uses. */
+  puzzleId?: (idOrShortCode: string) => Promise<string | null>;
 }): Promise<boolean> {
   const links = await routePreloadLinksForPath(params);
   // A player, team or the players index (#458, player-pages.ts): its own meta,
@@ -688,7 +719,10 @@ export async function serveSpaShellWithRoutePreloads(params: {
   const spaMeta = SPA_ROUTE_META[params.pathname];
   const routeMeta = positionMeta ?? spaMeta;
   const noindex = isNoindexRoute(params.pathname) || player?.noindex === true;
-  const canonicalPath = queryFreeCanonicalPath(params.pathname);
+  const canonicalPath = await puzzleCanonicalPath(
+    queryFreeCanonicalPath(params.pathname),
+    params.puzzleId ?? livePuzzleId,
+  );
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
   // the robots tag. Only bail when we would add nothing over the plain static

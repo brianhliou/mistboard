@@ -4,6 +4,8 @@ import type { ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { puzzleShortCode, type XiangqiPuzzle } from '@mistboard/game';
+import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { resetArticleScheduleCache } from './article-schedule.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
 import type { RecentEveGameRecord, StudyWithChapters } from './persistence.js';
@@ -1432,6 +1434,58 @@ test('a puzzle deep link names itself as canonical, with no query string', async
     );
     assert.doesNotMatch(response.body, /noindex/, pathname);
   }
+});
+
+// A puzzle answers at /puzzles/<id> and /puzzles/<short code>; until
+// 2026-10-17 each named itself, so Google saw two self-canonical pages per
+// puzzle. Both now name the full-id URL the client links to, through the same
+// lookup /api/puzzles/:id uses (the seed store here: persistence is off).
+test('a puzzle linked by id or by short code names the full-id URL as canonical', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const puzzle = (loadSeedPuzzleRegistry('xiangqi') as readonly XiangqiPuzzle[])[0]!;
+  const code = puzzleShortCode(puzzle.id);
+  assert.notEqual(code, puzzle.id);
+  const expected = `<link rel="canonical" href="https://mistboard.com/puzzles/${encodeURIComponent(puzzle.id)}">`;
+  for (const pathname of [`/puzzles/${puzzle.id}`, `/puzzles/${code}`, `/puzzles/${code}/`]) {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      search: '?utm_source=reddit&utm_medium=social',
+      publicHost: 'https://mistboard.com',
+      playerPage: async () => null,
+      broadcastPage: async () => null,
+    });
+    assert.equal(response.status, 200, pathname);
+    const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+    assert.deepEqual(canonicals, [expected], pathname);
+    assert.doesNotMatch(response.body, /utm_source/, pathname);
+  }
+});
+
+test('a puzzle lookup that throws keeps the query-free self canonical', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+  await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/puzzles/bMpKA',
+    search: '?utm_source=x',
+    publicHost: 'https://mistboard.com',
+    playerPage: async () => null,
+    broadcastPage: async () => null,
+    puzzleId: async () => {
+      throw new Error('store down');
+    },
+  });
+  assert.equal(response.status, 200);
+  const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+  assert.deepEqual(canonicals, [
+    '<link rel="canonical" href="https://mistboard.com/puzzles/bMpKA">',
+  ]);
 });
 
 // --- tenant game pages (/<tenant>/game/:id, /room/:id) ------------------------
