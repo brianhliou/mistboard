@@ -129,6 +129,42 @@ describe('bot pages', () => {
   // The page is for "play xiangqi against the computer": the ladder leads, named
   // by level, Pikafish is its top rung, the first-timer level says Start here,
   // and Misty (no xiangqi) follows under Other games.
+  // General Blunder plays xiangqi but is off the ladder: it goes below Level 1,
+  // never in the top-rung slot that reads Strongest.
+  it('puts General Blunder below Level 1, not as a top rung', async () => {
+    const payload = rosterPayload();
+    payload.bots.push(
+      pikafish({
+        id: 'general-blunder',
+        displayName: 'General Blunder',
+        bio: 'Plays the worst move it can find.',
+        activeEngineId: 'fairy-stockfish-xiangqi-worst',
+        supportedGameSpecIds: ['xiangqi'],
+        playOptions: [
+          { gameSpecId: 'xiangqi', engineId: 'fairy-stockfish-xiangqi-worst', playable: true },
+        ],
+      }),
+    );
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(payload));
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+
+    await mountBots(root);
+
+    const names = [
+      ...root.querySelectorAll(
+        '.bot-roster-section:nth-of-type(1) .profile-summary-card .profile-summary-card-name',
+      ),
+    ].map((el) => el.textContent);
+    expect(names[0]).toBe('General Blunder');
+    expect(names.at(-1)).toBe('Pikafish');
+    expect(
+      root.querySelector(
+        '.profile-summary-card[data-bot-id="general-blunder"] .profile-summary-card-badge',
+      )?.textContent,
+    ).not.toBe('Strongest');
+  });
+
   it('leads with the xiangqi ladder by level, Pikafish on top, Misty after', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(rosterPayload()));
     const root = document.createElement('div');

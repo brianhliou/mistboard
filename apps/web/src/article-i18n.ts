@@ -1917,7 +1917,7 @@ const ZH_HANS: Record<string, string> = {
   // replay.moves, 半回合 is the ply the riverbank article uses, 复核 for the
   // second engine pass. 厘兵 is a coinage for centipawn and the article defines
   // it in place, which is why that paragraph must not be cut in translation.
-  'I built a xiangqi puzzle miner': '我做了一个象棋题目挖掘器',
+  'Mining puzzles from real games': '从真实对局中挖掘象棋题目',
   'A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.':
     '一个挖掘器：读入真实的象棋对局，找出人们下错的着法，保留那些恰好只有一步棋能赢的局面。大约每九个漏着里有一个能留下来。下面是算法、代码，以及它留下和丢掉的一些例子。',
   'Mistboard needed xiangqi puzzles and I could not find a corpus to use, so I wrote a miner. It reads real games, finds the moments somebody threw the game away, and keeps the positions where exactly one move wins.':
@@ -8074,7 +8074,7 @@ const ZH_HANT: Record<string, string> = {
   // the coverage test requires the two to stay parallel in length and to carry
   // an identical ASCII token stream (the counts, Pikafish, FEN, the squares,
   // the markdown link and the ** markers).
-  'I built a xiangqi puzzle miner': '我做了一個象棋題目挖掘器',
+  'Mining puzzles from real games': '從真實對局中挖掘象棋題目',
   'A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.':
     '一個挖掘器：讀入真實的象棋對局，找出人們下錯的著法，保留那些恰好只有一步棋能贏的局面。大約每九個漏著裡有一個能留下來。下面是算法、代碼，以及它留下和丟掉的一些例子。',
   'Mistboard needed xiangqi puzzles and I could not find a corpus to use, so I wrote a miner. It reads real games, finds the moments somebody threw the game away, and keeps the positions where exactly one move wins.':

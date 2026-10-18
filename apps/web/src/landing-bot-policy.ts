@@ -136,6 +136,7 @@ export function pveEngineIdForRememberedPick(gameSpecId: string, id: string): st
   if (gameSpecId === JUNGLE_SPEC_ID) return id === 'katago' ? 'katago-jungle' : id;
   if (gameSpecId === XIANGQI_SPEC_ID) {
     if (id === 'pikafish') return 'pikafish-xiangqi-level-8';
+    if (id === 'general-blunder') return 'fairy-stockfish-xiangqi-worst';
     const level = fairyStockfishLevel(id);
     return level === null ? id : `${XIANGQI_ENGINE_ID_PREFIX}${level}`;
   }

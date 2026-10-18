@@ -108,6 +108,9 @@ export function buildBroadcastChat(tourSlug: string): HTMLElement {
   });
 }
 
+/** Fired (bubbling) from a chat panel when a poll brings in lines. */
+export const CHAT_LINES_EVENT = 'mistboard:chat-lines';
+
 function buildGameChat(roomId: string, options: GameChatOptions): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'review-spectator-chat';
@@ -225,6 +228,10 @@ function startPolling(
     if (!state) return;
     const incoming = state.lines.filter((line) => !known.has(line.id)).slice(-VISIBLE_LINES);
     appendLines(ui.feed, incoming, known, state, session.apiUrl);
+    // The phone room keeps the chat in a closed sheet and marks ☰ unread.
+    if (incoming.length > 0) {
+      panel.dispatchEvent(new CustomEvent(CHAT_LINES_EVENT, { bubbles: true }));
+    }
   }, options.pollMs);
 }
 

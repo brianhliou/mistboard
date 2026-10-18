@@ -5,7 +5,7 @@ import { fallbackPlayableEngines } from './landing-play.js';
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { navPhoneMediaQuery } from './site-shell.js';
 
-// The phone home ends after the blog strip: live event banners and the chat
+// The phone home ends after the two article strips: live event banners and the chat
 // room, then the footer. Everything else is never built there, so it never
 // fetches (mobile pass #576).
 describe('phone home widget set', () => {
@@ -22,7 +22,6 @@ describe('phone home widget set', () => {
     '.landing-puzzle-column',
     '.landing-forum-column',
     '.landing-studies-column',
-    '.landing-dives-row',
     '.landing-news-column',
   ];
 
@@ -74,11 +73,15 @@ describe('phone home widget set', () => {
         url,
       ).toBe(false);
     }
-    // What the phone home keeps: TV, Play with its two buttons, tiles, event
+    // What the phone home keeps: TV, Play with its two buttons, tiles, both
+    // article rows, event
     // banners, the chat room and the footer.
     expect(stage.el.querySelector('.landing-tv-strip')).not.toBeNull();
     expect(stage.el.querySelector('.landing-play-quick')).not.toBeNull();
     expect(stage.el.querySelector('.landing-phone-tiles')).not.toBeNull();
+    // Both article rows: the newest posts, then the deep dives (2026-10-17).
+    expect(stage.el.querySelector('.landing-articles-row:not(.landing-dives-row)')).not.toBeNull();
+    expect(stage.el.querySelector('.landing-dives-row .landing-article-card')).not.toBeNull();
     expect(stage.el.querySelector('.landing-event-banners')).not.toBeNull();
     expect(stage.el.querySelector('.landing-chat-column .landing-chat-mount')).not.toBeNull();
     expect(stage.el.querySelector(':scope > .landing-demo + *')).not.toBeNull();

@@ -475,6 +475,8 @@ const NOINDEX_ROUTE_SAMPLES = [
   '/following',
   '/correspondence',
   '/challenge/abc123',
+  '/xiangqi/game/abc123',
+  '/jungle-flip/game/abc123',
 ];
 
 // A noindex route that is not a client route never reaches the shell handler
@@ -526,6 +528,17 @@ test('the announcement archive is indexable and answers on one URL', () => {
   assert.equal(isNoindexRoute('/feed/2026-09'), false);
   assert.equal(isClientRoute('/feed/2026-9'), false);
   assert.equal(isClientRoute('/feed/anything'), false);
+});
+
+// Site-played finished games had no canonical and served indexable until
+// 2026-10-17; the archive's games are real events and stay indexable.
+test('a site-played game page is noindexed; an archive game and the lists are not', () => {
+  for (const route of ['/xiangqi/game/x1', '/jungle-flip/game/x1', '/jieqi/game/x1/']) {
+    assert.equal(isNoindexRoute(route), true, route);
+  }
+  for (const route of ['/historical-xiangqi/game/x1', '/games', '/games/search', '/xiangqi']) {
+    assert.equal(isNoindexRoute(route), false, route);
+  }
 });
 
 test('isNoindexRoute ignores a trailing slash', () => {

@@ -26,6 +26,11 @@ Conventions:
 
 ### Playing
 
+- on phones the game room fits one screen with no scrolling: board, both clocks, the moves and the action bar stay in view, captured pieces sit on each player's line, game info and chat open from the ☰ menu, and the first-move countdown shows as a bubble on the board ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- xiangqi games now show the pieces each player has captured beside their clock ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- General Blunder, a xiangqi bot that plays the worst move it can find, so a checkmate or a free piece is usually waiting for you ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- Banqi now draws after 60 moves without a capture or a flip, up from 40; games already under way keep 40 ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- Play a person opens on a day per move, and the Casual/Rated switch shows on a first visit ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - Xiangqi Mahjong's table grows with your screen, with bigger tiles in your hand, resizes with the grip, and its move list fits one line per hand ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
 - Xiangqi and jieqi bots now take a moment to think before replying, longer in complex positions and quick when the move is obvious ([3a0dd19d](https://github.com/brianhliou/mistboard/commit/3a0dd19d))
 - International pieces have smooth edges, with one even line width on the chariot, advisor and cannon ([cd5acfaa](https://github.com/brianhliou/mistboard/commit/cd5acfaa))
@@ -115,6 +120,7 @@ Conventions:
 
 ### Watching and review
 
+- Banqi studies can show the endgame tablebase under the board; click a move to play it ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - /videos adds Master Zhang Qiang's opening lessons (Chinese, English subtitles) ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
 - an exact tablebase for the chariot-and-horse banqi ending, and a study of its 67-move win ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
 - jieqi and chess studies and reviews glide pieces between moves ([91aaa9d6](https://github.com/brianhliou/mistboard/commit/91aaa9d6))
@@ -184,6 +190,12 @@ Conventions:
 
 ### Site
 
+- /thanks rebuilt: a row per engine with its games and rating here, a lichess section, and the sources it credits; /source now lists Fairy-Stockfish, the jieqi Pikafish branch, chess pieces, sounds and fonts ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- the blog has an Engineering filter for posts on how the site, bots and puzzle miner were built ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- player, team and tournament pages end with a line for the people on them to ask us for a change ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- homepage article cards sit closer together and are a touch larger ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- the phone homepage shows the deep-dives row again ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- /data lists only the variants you can play ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - on phones, a one-row header and a full-screen menu with every page grouped by section ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
 - on phones, home leads with the live board and Play, and the footer's links move into the menu ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
 - on phones, game setup opens as a sheet with Start game always in reach ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
@@ -246,6 +258,12 @@ Conventions:
 
 ### Fixed
 
+- with board coordinates on, clicks in the position editors land on the square you pressed ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- the homepage puzzle of the day and the puzzle page boards show coordinates when the setting is on ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- player, team, bot and study pages no longer flash as plain text before they load ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- the lag page no longer claims that network delay is kept off your clock ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- Tournament broadcast pages now load with their own heading, results and links for search engines, so Google lists each event, round and game instead of folding them together as duplicates ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- The study list at /study now loads with a link to every public study, so search engines can find each one ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - live Fog Chess game cards name the bot Misty instead of its engine build id ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
 - Jieqi level 8 is named Pikafish Level 8 on engine game cards instead of PikaJieQi - Strongest ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
 - the right column no longer jumps when the last face-down piece is revealed in Banqi and Flip Jungle ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))

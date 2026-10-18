@@ -564,7 +564,21 @@ export function isNoindexRoute(pathname: string): boolean {
     normalized.startsWith('/inbox/') ||
     normalized === '/following' ||
     normalized === '/correspondence' ||
-    normalized.startsWith('/challenge/')
+    normalized.startsWith('/challenge/') ||
+    isSitePlayedGamePage(normalized)
+  );
+}
+
+// A finished game played on the site (/<variant>/game/:id) is one board under
+// a "<name> vs <name>" title, thousands of them, most against a bot: thin and
+// near-identical to a crawler, and none is in a sitemap. They served with no
+// canonical and indexable until 2026-10-17, the way the bare /game/:id did
+// until SEO backlog D8 (serveGamePage). `follow` keeps the player links.
+// The archive (/historical-xiangqi/game/:id) is a record of real events and
+// stays indexable.
+function isSitePlayedGamePage(normalized: string): boolean {
+  return (
+    /^\/[a-z0-9-]+\/game\/[^/]+$/.test(normalized) && !normalized.startsWith('/historical-xiangqi/')
   );
 }
 

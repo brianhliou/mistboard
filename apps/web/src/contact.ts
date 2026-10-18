@@ -20,11 +20,34 @@ export interface ContactView {
   applyAuth: (user: AuthUser | null) => void;
 }
 
+// `?about=` names the page a message is about (the rights note under player,
+// team and broadcast pages links here with it). Only a same-site path is
+// taken: one leading slash, no scheme, host or backslash, URL characters
+// only, at most 200 long. Anything else is dropped, never sent.
+const ABOUT_MAX_LENGTH = 200;
+const ABOUT_PATH_PATTERN = /^\/(?!\/)[A-Za-z0-9\-._~!$&'()*+,;=:@%/]*$/;
+
+export function contactAboutPath(search: string): string | null {
+  const about = new URLSearchParams(search).get('about');
+  if (about === null || about.length > ABOUT_MAX_LENGTH) return null;
+  return ABOUT_PATH_PATTERN.test(about) ? about : null;
+}
+
+function readablePath(path: string): string {
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
+}
+
 export function buildContact(
   initialUser: AuthUser | null,
   initialSignedInHint: boolean,
   locale: Locale = currentLocale(),
+  search: string = window.location.search,
 ): ContactView {
+  const about = contactAboutPath(search);
   // Three initial states: confirmed user (cached object → render real banner),
   // hinted signed-in (boolean only → render placeholder banner), or anon.
   const initialSignedIn = initialUser !== null || initialSignedInHint;
@@ -62,6 +85,13 @@ export function buildContact(
   const form = document.createElement('form');
   form.className = 'contact-form';
   form.noValidate = true;
+
+  // The page the message is about, shown so the sender sees what we will see.
+  const aboutNote = about ? document.createElement('p') : null;
+  if (aboutNote && about) {
+    aboutNote.className = 'contact-about';
+    aboutNote.textContent = t('contact.aboutPage', { path: readablePath(about) }, locale);
+  }
 
   const messageLabel = document.createElement('label');
   messageLabel.className = 'contact-field';
@@ -208,7 +238,9 @@ export function buildContact(
           body: JSON.stringify({
             message,
             email: signedIn ? null : emailInput.value.trim() || null,
-            path: window.location.pathname,
+            // The feedback row's one page field: the contact page, and the
+            // page the message is about when it came from a rights note.
+            path: about ? `${window.location.pathname}?about=${about}` : window.location.pathname,
             website: honeypotInput.value,
           }),
         });
@@ -237,6 +269,6 @@ export function buildContact(
 
   // The form sits straight on the page panel: a bordered card inside the
   // panel read as boxes in boxes.
-  section.append(heading, intro, forumNote, replyNote, form);
+  section.append(heading, intro, forumNote, replyNote, ...(aboutNote ? [aboutNote] : []), form);
   return { el: section, applyAuth };
 }

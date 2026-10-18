@@ -28,6 +28,9 @@ export type FirstPartyBotProfile = {
   /** The rung on a numbered ladder; absent for a named slot (Misty, Pikafish,
    *  AB-JChess, KataGo), which is always the top of its ladder. */
   ladderLevel?: number;
+  /** A bot that is no rung of its variant's strength ladder (the worst-move bot):
+   *  bot-vs-bot pairing never seats it and a win over it is never announced. */
+  offLadder?: true;
   /** Retired engine ids whose games attribute to this bot. */
   attributionEngineIds?: readonly string[];
   /** Pre-consolidation bot ids that must keep resolving (old rooms' pveBotId,
@@ -168,6 +171,14 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     engines: { jieqi: 'ab-jchess-jieqi' },
     defaultGameSpecId: 'jieqi',
   },
+  // The worst-move xiangqi bot (migration 174): below the ladder, not on it.
+  {
+    id: 'general-blunder',
+    displayName: 'General Blunder',
+    engines: { xiangqi: 'fairy-stockfish-xiangqi-worst' },
+    defaultGameSpecId: 'xiangqi',
+    offLadder: true,
+  },
   // The top jungle slot above Misty (migration 159): KataGo-AnimalChess, which won
   // the jungle challenge (#434). Named for its engine, like AB-JChess.
   {
@@ -212,7 +223,7 @@ const LADDER_TOP_LEVEL = Math.max(...FAIRY_STOCKFISH_LEVELS);
  */
 export function isTopOfLadderBot(botId: string): boolean {
   const bot = botById.get(botId);
-  if (!bot || bot.id !== botId) return false;
+  if (!bot || bot.id !== botId || bot.offLadder) return false;
   return bot.ladderLevel === undefined || bot.ladderLevel === LADDER_TOP_LEVEL;
 }
 

@@ -169,6 +169,8 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
+      // The unstyled-first-paint engineering draft, undated (DEV only).
+      '/blog/unstyled-first-paint',
     ]);
   });
 
@@ -366,6 +368,8 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
+      // The unstyled-first-paint engineering draft, undated (DEV only).
+      '/blog/unstyled-first-paint',
     ]);
   });
 

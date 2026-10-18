@@ -23,6 +23,7 @@ import {
   XIANGQI_SPEC_ID,
   type XiangqiColor,
   type XiangqiMove,
+  type XiangqiPieceRole,
   type XiangqiSquare,
 } from '@mistboard/game';
 import './live-xiangqi.css';
@@ -35,6 +36,7 @@ import {
   resetXiangqiSoundState,
   soundForOwnXiangqiMove,
 } from './live-xiangqi-sound.js';
+import { fillCapturedPoolWith } from './review/captured-pool.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   annotationOwner,
@@ -59,7 +61,9 @@ import {
   xiangqiClickResult,
   xiangqiPieceGhostSvg,
 } from './xiangqi-board.js';
+import { xiangqiCapturedFromBoard } from './xiangqi-captures.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
+import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 // Board SVG + click decision are canonical in xiangqi-board.ts; re-exported here
 // for the existing importers of this module.
@@ -164,6 +168,7 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
     draggingFrom = null;
   },
   renderBoard,
+  renderExtras: renderCaptureStrips,
   // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate — own
   // moves already re-rendered synchronously at input time, so animating the
   // server echo would double-play them. Spectators see both sides glide.
@@ -267,6 +272,24 @@ export function bootstrapXiangqiLiveRoom(): void {
 }
 
 // ── Rendering ────────────────────────────────────────────────────────────────
+
+// Each seat's strip shows the pieces that player captured (top strip = the
+// bottom side's lost pieces), as in the jieqi and Fog rooms. Read off the
+// displayed board, so a scrub back shows the captures as they stood then.
+function renderCaptureStrips(liveRefs: LiveRefs, view: StandardXiangqiPlayerView | null): void {
+  liveRefs.capturesTop.replaceChildren();
+  liveRefs.capturesBottom.replaceChildren();
+  liveRefs.capturesTop.classList.remove('has-captures');
+  liveRefs.capturesBottom.classList.remove('has-captures');
+  if (!view) return;
+  const bottom = core?.orientation() ?? view.perspective;
+  const top: XiangqiColor = bottom === 'red' ? 'black' : 'red';
+  const captured = xiangqiCapturedFromBoard(view.board);
+  const glyph = (piece: { color: XiangqiColor; role: XiangqiPieceRole }) =>
+    renderXiangqiPiece(piece, { ariaLabel: `${piece.color} ${piece.role}` });
+  fillCapturedPoolWith(liveRefs.capturesTop, captured, bottom, glyph);
+  fillCapturedPoolWith(liveRefs.capturesBottom, captured, top, glyph);
+}
 
 function renderBoard(liveRefs: LiveRefs, view: StandardXiangqiPlayerView | null): void {
   liveRefs.board.className = 'board xiangqi-live-board';

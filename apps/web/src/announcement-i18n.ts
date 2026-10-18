@@ -41,9 +41,14 @@ const ZH_HANS: Record<string, string> = {
   'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.':
     '一位 Mistboard 棋手告诉我们，在三子胜两子的残局里，我们原来的 40 步和棋规则太短。我们用残局库解出了其中一个：红方 67 步取胜，但直到第 44 步才有子被吃。文章逐步演示这盘胜局，棋盘下方列出每一步合法着法的结果，你也可以自己走其中任何一步。',
   // ── 2026-10-17 (phone redesign) ── 菜单 / 开始对局 follow shell nav.menu and play setup.startGame.
+  'Meet General Blunder, a xiangqi bot that tries to lose.':
+    '认识 General Blunder：一个想输棋的象棋机器人。',
+  'General Blunder is a strong engine playing backwards: it checks every move and plays the one that is worst for itself. Most turns a checkmate or a free piece is waiting for you, so it is a good first opponent and a fast way to practise spotting mates. Can you find them all?':
+    'General Blunder 是一个反着下的强引擎：它检查每一步棋，然后走对自己最差的那一步。大多数回合都有一步将杀或一个白送的棋子等着你，所以它很适合做你的第一个对手，也能让你快速练习找杀。你能全部找到吗？',
+  'Play General Blunder': '与 General Blunder 对弈',
   'Mistboard is rebuilt for phones.': 'Mistboard 为手机重新设计。',
-  "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. On a computer nothing changes.":
-    '在手机上，网站顶部现在只占一行，菜单全屏打开，所有页面按栏目分组。首页先显示正在进行的棋盘和下棋入口，对局设置从底部滑出，“开始对局”始终在手边，页脚的链接都移进了菜单。电脑上的样子不变。',
+  "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. A game now fits one screen with no scrolling: the board, both clocks, the moves and the action bar stay in view, and game info and chat open from the menu in the bar. On a computer nothing changes.":
+    '在手机上，网站顶部现在只占一行，菜单全屏打开，所有页面按栏目分组。首页先显示正在进行的棋盘和下棋入口，对局设置从底部滑出，“开始对局”始终在手边，页脚的链接都移进了菜单。对局现在一屏装下，不用滚动：棋盘、双方的钟、着法和操作栏都在视野内，对局信息和聊天从操作栏的菜单打开。电脑上的样子不变。',
   // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡垒象棋 / 原子象棋 / 疯狂屋象棋 / 打入 follow the launch entries.
   'Fortress and Atomic Xiangqi are back on the drawing board.': '堡垒象棋和原子象棋回到设计阶段。',
   'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.':
@@ -518,9 +523,14 @@ const ZH_HANT: Record<string, string> = {
   'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.':
     '一位 Mistboard 棋手告訴我們，在三子勝兩子的殘局裡，我們原來的 40 步和棋規則太短。我們用殘局庫解出了其中一個：紅方 67 步取勝，但直到第 44 步才有子被吃。文章逐步演示這盤勝局，棋盤下方列出每一步合法著法的結果，你也可以自己走其中任何一步。',
   // ── 2026-10-17 (phone redesign) ── 選單 / 開始對局 follow shell nav.menu and play setup.startGame.
+  'Meet General Blunder, a xiangqi bot that tries to lose.':
+    '認識 General Blunder：一個想輸棋的象棋機器人。',
+  'General Blunder is a strong engine playing backwards: it checks every move and plays the one that is worst for itself. Most turns a checkmate or a free piece is waiting for you, so it is a good first opponent and a fast way to practise spotting mates. Can you find them all?':
+    'General Blunder 是一個反著下的強引擎：它檢查每一步棋，然後走對自己最差的那一步。大多數回合都有一步將殺或一個白送的棋子等著你，所以它很適合做你的第一個對手，也能讓你快速練習找殺。你能全部找到嗎？',
+  'Play General Blunder': '與 General Blunder 對弈',
   'Mistboard is rebuilt for phones.': 'Mistboard 為手機重新設計。',
-  "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. On a computer nothing changes.":
-    '在手機上，網站頂部現在只佔一行，選單全螢幕打開，所有頁面按欄目分組。首頁先顯示正在進行的棋盤和下棋入口，對局設定從底部滑出，「開始對局」始終在手邊，頁尾的連結都移進了選單。電腦上的樣子不變。',
+  "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. A game now fits one screen with no scrolling: the board, both clocks, the moves and the action bar stay in view, and game info and chat open from the menu in the bar. On a computer nothing changes.":
+    '在手機上，網站頂部現在只佔一行，選單全螢幕打開，所有頁面按欄目分組。首頁先顯示正在進行的棋盤和下棋入口，對局設定從底部滑出，「開始對局」始終在手邊，頁尾的連結都移進了選單。對局現在一屏裝下，不用捲動：棋盤、雙方的鐘、著法和操作列都在視野內，對局資訊和聊天從操作列的選單打開。電腦上的樣子不變。',
   // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡壘象棋 / 原子象棋 / 瘋狂屋象棋 / 打入 follow the launch entries.
   'Fortress and Atomic Xiangqi are back on the drawing board.': '堡壘象棋和原子象棋回到設計階段。',
   'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.':

@@ -28,6 +28,13 @@
   margin: -4px 0 20px;
 }
 
+.contact-section .contact-about {
+  font-size: 13px;
+  color: var(--site-muted);
+  margin: -8px 0 16px;
+  overflow-wrap: anywhere;
+}
+
 .contact-form {
   display: flex;
   flex-direction: column;

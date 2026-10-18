@@ -202,6 +202,21 @@
   justify-content: center;
 }
 
+/* Coordinates on: the label gutter makes the board 576:636 (564:636 square
+   grid). The board host clips, so the box and the shared band height take that
+   shape too, or the outer rank is cut off. */
+:root[data-board-coordinates="on"] .home-puzzle-box:has(.xq-live-svg--intersection) {
+  aspect-ratio: 576 / 636;
+}
+
+:root[data-board-coordinates="on"] .home-puzzle-widget-board:has(.xq-live-svg--cell) {
+  aspect-ratio: 564 / 636;
+}
+
+:root[data-board-coordinates="on"] .landing-demo {
+  --landing-puzzle-board-height: calc(var(--landing-rail-width) * 636 / 576);
+}
+
 .home-puzzle-widget-board svg {
   position: absolute;
   inset: 0;
@@ -1189,7 +1204,7 @@
 }
 
 .landing-carousel-track {
-  --landing-carousel-gap: clamp(10px, 1.4vw, 16px);
+  --landing-carousel-gap: clamp(6px, 0.6vw, 8px);
   display: flex;
   gap: var(--landing-carousel-gap);
   transition: transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -2695,13 +2710,17 @@
     order: 4;
   }
 
-  .landing-demo .landing-event-banners {
+  .landing-demo .landing-dives-row {
     order: 5;
+  }
+
+  .landing-demo .landing-event-banners {
+    order: 6;
     margin-top: 0;
   }
 
   .landing-demo .landing-chat-column {
-    order: 6;
+    order: 7;
   }
 
   /* The phone home ends here: a phone mount never builds the widgets below
@@ -2713,7 +2732,6 @@
   .landing-demo .landing-puzzle-column,
   .landing-demo .landing-forum-column,
   .landing-demo .landing-studies-column,
-  .landing-demo .landing-dives-row,
   .landing-demo .landing-news-column {
     display: none;
   }
@@ -2869,7 +2887,7 @@
 
   /* Blog rows: a strip the thumb swipes, bleeding off the right edge, in place
      of the auto-rotating carousel (its transform is pinned off). */
-  .landing-demo .landing-articles-row:not(.landing-dives-row) {
+  .landing-demo .landing-articles-row {
     margin-top: 12px;
   }
 

@@ -776,10 +776,9 @@ export function buildLandingStage(
   // carousel filled with articles tagged homeRow: 'deep-dives' (player pages,
   // game deep dives), no age cut. It replaced the learn row (learn-row.ts) on
   // 2026-10-01: one learn_card_clicked in two weeks against 177 homepage
-  // visitors. ──
-  const deepDives = phone
-    ? null
-    : buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale, { row: 'deep-dives' });
+  // visitors. Phones build it too (Brian, 2026-10-17): the articles are bundled,
+  // so it costs no fetch. ──
+  const deepDives = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale, { row: 'deep-dives' });
   deepDives?.classList.add('landing-articles-row', 'landing-dives-row');
 
   // ── Bands 3-4 side rails: the News feed on the left (its full history stays at

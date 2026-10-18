@@ -44,6 +44,11 @@
 
 /* The uncertain side's "N taken unseen": its own fact, so a pill at the end of
    the label line rather than more grey text. */
+/* The short "N face-down" lead is the phone room's; elsewhere the sentence. */
+.reveal-odds-row__lead--short {
+  display: none;
+}
+
 .reveal-odds-row__note {
   flex: 0 0 auto;
   margin-left: auto;
@@ -129,5 +134,122 @@
      never moves it. */
   .live-review__cluster .game-console > .reveal-odds-row[data-over] {
     display: none;
+  }
+}
+
+/* Phone room (600px and under, #576): each side gets ONE compact full-width
+   line under the viewer's seat, viewer's first, so the board, both clocks, the
+   move strip and the action bar still fit the first screen (the stacked desktop
+   rows took about 143px and pushed the bar 159px below a 390x664 fold). Nothing
+   is dropped: each line keeps "N face-down", the taken-unseen pill, every piece
+   with its count badge and its percentage under it, and the same accessible
+   names. Two halves on one shared line clipped the last piece even at 390px,
+   so the sides no longer share. A line still too long scrolls sideways on its
+   own. The board's height budget (live-review.css) gives up exactly these two
+   lines while the odds show. Specificity (0,4,0) beats the 799px rules above regardless of
+   bundle order. */
+@media (max-width: 600px) {
+  .review-shell__cluster.live-review__cluster:has(.reveal-odds-row:not([data-over])) {
+    --phone-room-extra: calc(2 * var(--phone-room-odds));
+  }
+
+  .review-shell__cluster.live-review__cluster {
+    --phone-room-odds: 40px;
+  }
+
+  /* A zero-height line break before the odds line: the seat row's captured
+     tray has a zero flex basis, so without it the viewer's half would ride up
+     beside the clock. Order 33 and first in the box, so it lands just before
+     the viewer's half. */
+  .review-shell__cluster.live-review__cluster:has(.reveal-odds-row:not([data-over]))::before {
+    content: "";
+    order: 33;
+    flex: 0 0 100%;
+    height: 0;
+    margin: 0;
+  }
+
+  .review-shell__cluster.live-review__cluster .game-console > .reveal-odds-row {
+    --reveal-chip: 22px;
+
+    display: flex;
+    /* A line each, so the seat row before them cannot take one beside it. */
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+    box-sizing: border-box;
+    height: var(--phone-room-odds);
+    min-height: 0;
+    margin: 0;
+    padding: 0 6px 0 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    /* Its content must not widen the page (see .game-table-moves). */
+    contain: inline-size;
+    scrollbar-width: none;
+  }
+
+  /* Finished: the blank lines go (the 799px rule's (0,4,0) loses to the line
+     rule above), and the board's budget already took them back. */
+  .review-shell__cluster.live-review__cluster .game-console > .reveal-odds-row[data-over] {
+    display: none;
+  }
+
+  .review-shell__cluster.live-review__cluster .game-console > .reveal-odds-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The opponent's line, after a hairline. */
+  .review-shell__cluster.live-review__cluster .game-console > .reveal-odds-row--top {
+    border-top: 1px solid var(--site-border-soft);
+  }
+
+  .review-shell__cluster.live-review__cluster .reveal-odds-row__head {
+    flex: none;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+  }
+
+  /* "N face-down" on one line in place of the sentence, which squeezed onto
+     three tiny lines at this width. */
+  .review-shell__cluster.live-review__cluster .reveal-odds-row__lead {
+    display: none;
+  }
+
+  .review-shell__cluster.live-review__cluster .reveal-odds-row__lead--short {
+    display: block;
+    /* One width on both lines, so the two sides' pieces line up. */
+    min-width: 10ch;
+    font-size: 12px;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .review-shell__cluster.live-review__cluster .reveal-odds-row__note {
+    margin-left: 0;
+    padding: 0 5px;
+    font-size: 9.5px;
+    line-height: 1.3;
+  }
+
+  .review-shell__cluster.live-review__cluster .reveal-odds-row__pieces {
+    flex: none;
+    gap: 4px;
+  }
+
+  .review-shell__cluster.live-review__cluster .reveal-odds-chip .captures-count-badge {
+    min-width: 13px;
+    height: 13px;
+    font-size: 9px;
+    right: -4px;
+    bottom: -2px;
+  }
+
+  .review-shell__cluster.live-review__cluster .reveal-odds-chip__pct {
+    font-size: 11px;
+    line-height: 1.15;
   }
 }

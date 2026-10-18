@@ -572,3 +572,23 @@ body:has(
 html {
   scrollbar-gutter: stable;
 }
+
+/* The server's crawler copy in #app (crawlerCopyRoot in server-static-pages.ts:
+   /players, /bots, /study/:id) is plain text the client replaces on mount.
+   Kept out of the first paint so it never shows as a bare page before the
+   real one; shown after 4s in case the script never runs, and at once when a
+   failed mount puts it back (server-render-fallback.ts). */
+.crawler-copy {
+  animation: crawler-copy-reveal 0s 4s both;
+}
+#app[data-server-render="restored"] .crawler-copy {
+  animation: none;
+}
+@keyframes crawler-copy-reveal {
+  from {
+    visibility: hidden;
+  }
+  to {
+    visibility: visible;
+  }
+}

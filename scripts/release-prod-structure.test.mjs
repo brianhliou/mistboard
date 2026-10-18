@@ -52,3 +52,22 @@ test('release-prod re-reads the active game count right before the push', () => 
   assert.match(between, /await fetchActiveGameCount\(\)/);
   assert.match(between, /requireUsableDrainToken\(/);
 });
+
+// Web deploys on push whatever hosted CI says. A red run used to end the
+// release before the revision wait and smoke, so nothing checked the site that
+// was already serving the new code (2026-10-17: a Postgres image pull limit
+// failed three jobs before any test ran; the live checks were run by hand).
+test('release-prod still waits for the revision and smokes after a red CI run', () => {
+  const file = path.join(path.dirname(fileURLToPath(import.meta.url)), 'release-prod.mjs');
+  const source = readFileSync(file, 'utf8');
+  assert.match(source, /throw Object\.assign\(new Error\(decision\.message\), \{ ciRed:/);
+  const ciWait = source.indexOf("timedStage('hosted CI wait'");
+  const revisionWait = source.indexOf("runTimed('production revision wait'");
+  const smoke = source.indexOf('await runSmoke({');
+  const rethrow = source.indexOf('throw ciRed;');
+  assert.ok(ciWait > 0 && revisionWait > ciWait && smoke > revisionWait && rethrow > smoke);
+  const handler = source.slice(ciWait, revisionWait);
+  assert.match(handler, /if \(!release\.pushCompleted \|\| !error\?\.ciRed\) throw error;/);
+  assert.match(handler, /ciRed = error;/);
+  assert.ok(source.indexOf('announceNews(') > rethrow, 'News and IndexNow stay behind a green CI');
+});

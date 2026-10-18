@@ -43,6 +43,7 @@ export type EngineId =
   | `fairy-stockfish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   // Uniformly-random legal-move xiangqi bot (calibration floor / 0-Elo anchor)
   | 'random-legal-xiangqi'
+  | 'fairy-stockfish-xiangqi-worst'
   // Fairy-Stockfish (Fortress Xiangqi ladder) + its random floor
   | `fairy-stockfish-fortress-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   | 'random-legal-fortress-xiangqi'
