@@ -9,7 +9,7 @@ const EMPTY_SHELL =
   '<html lang="en"><head><title>Mistboard</title><meta name="robots" content="max-image-preview:large" /></head><body><div id="app"></div></body></html>';
 
 const SERVED =
-  '<html lang="en"><head><title>Round 2 | Mistboard</title><link rel="canonical" href="https://mistboard.com/broadcast/xiangqi/t/round/t-r02"></head><body><div id="app"><main><h1>Round 2 · <span lang="zh">五羊杯</span></h1><a href="/broadcast/xiangqi/board/b1">1-0</a></main></div></body></html>';
+  '<html lang="en"><head><title>Round 2 | Mistboard</title><link rel="canonical" href="https://mistboard.com/broadcast/xiangqi/t/round/t-r02"></head><body><div id="app"><div class="crawler-copy"><main><h1>Round 2 · <span lang="zh">五羊杯</span></h1><a href="/broadcast/xiangqi/board/b1">1-0</a></main></div></div></body></html>';
 
 test('an empty shell on a broadcast, player or study URL fails', () => {
   const facts = serverHtmlFacts(EMPTY_SHELL);

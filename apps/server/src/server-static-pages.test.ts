@@ -1404,7 +1404,10 @@ test('/games names itself as canonical without its query and carries a heading',
   });
   const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
   assert.deepEqual(canonicals, ['<link rel="canonical" href="https://mistboard.com/games">']);
-  assert.match(response.body, /<div id="app"><main><h1>Current games<\/h1>/);
+  assert.match(
+    response.body,
+    /<div id="app"><div class="crawler-copy"><main><h1>Current games<\/h1>/,
+  );
 });
 
 test('a puzzle deep link names itself as canonical, with no query string', async () => {
