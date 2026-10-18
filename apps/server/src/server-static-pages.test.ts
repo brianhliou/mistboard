@@ -1789,7 +1789,10 @@ test('a route body is served inside the app root', async () => {
       pathname === '/zh-hans/bots' ? '<main><h1>和电脑下象棋</h1></main>' : null,
   });
   assert.equal(served, true);
-  assert.match(response.body, /<div id="app"><main><h1>和电脑下象棋<\/h1><\/main><\/div>/);
+  assert.match(
+    response.body,
+    /<div id="app"><div class="crawler-copy"><main><h1>和电脑下象棋<\/h1><\/main><\/div><\/div>/,
+  );
   assert.match(response.body, /<title>象棋人机对战 · 八个等级与皮卡鱼 \| Mistboard<\/title>/);
 });
 
@@ -1831,7 +1834,10 @@ test('a player page gets its meta, canonical link and body; an unknown one is no
     response.body,
     /property="og:image" content="https:\/\/mistboard\.com\/og\/player\/meng-fanrui\.png\?v=1&amp;k=abc"/,
   );
-  assert.match(response.body, /<div id="app"><main><h1>Meng Fanrui<\/h1><\/main><\/div>/);
+  assert.match(
+    response.body,
+    /<div id="app"><div class="crawler-copy"><main><h1>Meng Fanrui<\/h1><\/main><\/div><\/div>/,
+  );
   assert.doesNotMatch(response.body, /noindex/);
 
   const unknown = captureResponse();
