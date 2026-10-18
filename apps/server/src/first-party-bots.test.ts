@@ -183,4 +183,6 @@ test('the top of each ladder is a named slot or the highest numbered level', () 
   assert.equal(isTopOfLadderBot('pikafish-xiangqi-level-1'), false);
   assert.equal(isTopOfLadderBot('fairy-stockfish-xiangqi-level-8'), false);
   assert.equal(isTopOfLadderBot('not-a-bot'), false);
+  // A bot off the ladder is never its top, however unnumbered.
+  assert.equal(isTopOfLadderBot('generous-general'), false);
 });

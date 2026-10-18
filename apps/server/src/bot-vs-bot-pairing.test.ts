@@ -81,9 +81,9 @@ test('each variant ladder is the engines its first-party bots play, and only its
   ]) {
     const ladder = botLadderFor(variant);
     assert.ok(ladder, variant);
-    const fronted = FIRST_PARTY_BOT_PROFILES.map((bot) => bot.engines[variant]).filter(
-      (id): id is string => typeof id === 'string',
-    );
+    const fronted = FIRST_PARTY_BOT_PROFILES.filter((bot) => !bot.offLadder)
+      .map((bot) => bot.engines[variant])
+      .filter((id): id is string => typeof id === 'string');
     // Every offered bot is on the ladder...
     for (const id of fronted) assert.ok(ladder.includes(id), `${variant}: ${id} missing`);
     // ...and every rung is one.
@@ -93,6 +93,8 @@ test('each variant ladder is the engines its first-party bots play, and only its
     }
     assert.deepEqual(new Set(ladder), new Set(fronted), variant);
   }
+  // The worst-move bot is a first-party bot but never a rung.
+  assert.ok(!botLadderFor('xiangqi')!.includes('fairy-stockfish-xiangqi-worst'));
   // No ladder, no fallback: a variant without one answers null, not xiangqi's.
   assert.equal(botLadderFor('jungle-flip'), null);
   assert.equal(botLadderFor('crossroads-chess'), null);
