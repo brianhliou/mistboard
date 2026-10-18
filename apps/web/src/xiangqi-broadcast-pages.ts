@@ -6,6 +6,7 @@
 
 import './xiangqi-broadcast.css';
 import { t } from './i18n/catalog.js';
+import { localizedHref } from './i18n/locale.js';
 import { CXA_POINTS } from './players/cxa-points.js';
 import { CXA_RATINGS } from './players/cxa-ratings.js';
 import { playerTitleFor } from './players/player-title.js';
@@ -54,6 +55,23 @@ export function broadcastSectionLayout(
   layout.append(broadcastRail(active), panel);
   main.append(layout);
   return main;
+}
+
+/**
+ * The small print at the foot of every player, team and broadcast event page:
+ * a person on the page, an organiser or a rights holder can ask for a change
+ * or a removal. The link carries the page's own path to the contact form as
+ * `?about=`, so the message arrives labelled with the page it is about.
+ * One element for all of them, so every page says it the same way.
+ */
+export function rightsContactNote(path: string = window.location.pathname): HTMLElement {
+  const note = document.createElement('p');
+  note.className = 'xqb-rights-note';
+  const link = document.createElement('a');
+  link.href = localizedHref(`/contact?about=${encodeURIComponent(path)}`);
+  link.textContent = t('contact.rightsLink');
+  note.append(t('contact.rightsPrefix'), link, t('contact.rightsSuffix'));
+  return note;
 }
 
 export type BroadcastPlayerRef = { name: string; nameEn?: string; title?: string };

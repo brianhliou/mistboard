@@ -251,6 +251,25 @@
   color: var(--site-heading);
 }
 
+/* The rights small print at the foot of player, team and event pages: the
+   records credit's voice, one quiet paragraph after everything else. */
+.xqb-rights-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--site-muted);
+}
+
+.xqb-rights-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.xqb-rights-note a:hover {
+  color: var(--site-heading);
+}
+
 .xqb-card-board {
   box-shadow: 0 6px 18px rgba(37, 31, 24, 0.12);
   border-radius: 10px;

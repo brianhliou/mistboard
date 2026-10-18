@@ -123,6 +123,11 @@ export const ZH_HANS_CONTENT = {
   'contact.dailyLimit': '已达到每日限制。登录后可无限回复，或明天再试。',
   'contact.sendFailed': '发送失败。请重试，如果一直失败可以改用邮箱。',
   'contact.networkError': '网络错误。请重试。',
+  'contact.rightsPrefix':
+    '你出现在这个页面上，或者你是这项赛事的主办方、拥有其中对局的权利？如果想修改或删除这里的任何内容，请',
+  'contact.rightsLink': '联系我们',
+  'contact.rightsSuffix': '，我们会处理。',
+  'contact.aboutPage': '相关页面：{path}',
   'about.heading': '关于 Mistboard',
   'about.lede':
     'Mistboard 是一个免费开源的中国象棋对弈与研究平台，读中文和不读中文的棋手坐在同一张棋盘前；这里也是我们打造的原创策略游戏的家。',

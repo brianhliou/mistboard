@@ -50,7 +50,11 @@ import {
 } from './players/xiangqiqipu-photos.js';
 import { seatDiscEl } from './seat-disc.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
-import { type BroadcastRailItem, broadcastSectionLayout } from './xiangqi-broadcast-pages.js';
+import {
+  type BroadcastRailItem,
+  broadcastSectionLayout,
+  rightsContactNote,
+} from './xiangqi-broadcast-pages.js';
 
 export type PlayerEventRecord = {
   tourSlug: string;
@@ -123,7 +127,9 @@ export async function mountXiangqiPlayer(root: HTMLElement, slug: string): Promi
       `/api/xiangqi/players/${encodeURIComponent(slug)}`,
     );
     document.title = `${displayName(data.player)} · Mistboard`;
-    root.replaceChildren(buildNav(), renderPlayer(data.player, data.boards).main);
+    const page = renderPlayer(data.player, data.boards);
+    page.append(rightsContactNote(playerHref(data.player)));
+    root.replaceChildren(buildNav(), page.main);
   } catch (err) {
     renderError(root, err);
   }
@@ -146,7 +152,9 @@ export async function mountXiangqiTeam(root: HTMLElement, key: string): Promise<
     const team = teamsOf(data.players).find((entry) => entry.key === key);
     if (!team) throw new Error('No team by that name');
     document.title = `${teamLabel(team)} · Mistboard`;
-    root.replaceChildren(buildNav(), renderTeam(team).main);
+    const page = renderTeam(team);
+    page.append(rightsContactNote(teamHref(team.key)));
+    root.replaceChildren(buildNav(), page.main);
   } catch (err) {
     renderError(root, err);
   }

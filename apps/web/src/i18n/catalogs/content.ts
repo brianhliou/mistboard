@@ -170,6 +170,13 @@ export const EN_CONTENT = {
     'Daily limit reached. Sign in for unlimited replies, or try again tomorrow.',
   'contact.sendFailed': "Couldn't send. Try again, or email if it keeps failing.",
   'contact.networkError': 'Network error. Try again.',
+  // The small print under every player, team and broadcast page. Approved
+  // English, verbatim; "contact us" is the link to /contact?about=<page>.
+  'contact.rightsPrefix':
+    'Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, ',
+  'contact.rightsLink': 'contact us',
+  'contact.rightsSuffix': " and we'll take care of it.",
+  'contact.aboutPage': 'About: {path}',
   'about.heading': 'About Mistboard',
   'about.lede':
     "Mistboard is a free, open-source place to play and study Chinese chess, one board for players who read Chinese and players who don't. It is also home to the original strategy games we build.",
@@ -675,6 +682,10 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'contact.dailyLimit',
   'contact.sendFailed',
   'contact.networkError',
+  'contact.rightsPrefix',
+  'contact.rightsLink',
+  'contact.rightsSuffix',
+  'contact.aboutPage',
   'about.heading',
   'about.lede',
   'about.whyHeading',

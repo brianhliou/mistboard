@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   currentSeason,
   displayName,
@@ -7,6 +7,10 @@ import {
   latestPoints,
   matchesFilter,
   matchesQuery,
+  mountXiangqiPlayer,
+  mountXiangqiPlayersIndex,
+  mountXiangqiTeam,
+  mountXiangqiTeamsIndex,
   playerGroup,
   playerTitle,
   recordText,
@@ -208,5 +212,76 @@ describe('player pages', () => {
     };
     const loser = player({ name: '乙', nameEn: 'Yi', games: 2 });
     expect(sortPlayers([listed, loser], 'score').map((p) => p.name)).toEqual(['乙', '何文哲']);
+  });
+});
+
+describe('rights note', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const RIGHTS_TEXT =
+    "Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, contact us and we'll take care of it.";
+
+  const zhejiang = {
+    ...player({ name: '尹昇', nameEn: 'Yin Sheng', games: 0 }),
+    federation: '浙江',
+    federationEn: 'Zhejiang',
+  };
+
+  function stubPlayersApi(): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const url = String(input);
+        const body = url.endsWith('/api/xiangqi/players')
+          ? { players: [zhejiang] }
+          : { player: zhejiang, boards: [] };
+        return { ok: true, status: 200, json: async () => body } as Response;
+      }),
+    );
+  }
+
+  function note(root: HTMLElement): HTMLElement {
+    const notes = root.querySelectorAll<HTMLElement>('.xqb-rights-note');
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.textContent).toBe(RIGHTS_TEXT);
+    expect(notes[0]?.querySelector('a')?.textContent).toBe('contact us');
+    return notes[0]!;
+  }
+
+  it('ends a player page with a contact link about that player page', async () => {
+    stubPlayersApi();
+    const root = document.createElement('div');
+    await mountXiangqiPlayer(root, 'yin-sheng');
+    expect(note(root).querySelector('a')?.getAttribute('href')).toBe(
+      '/contact?about=%2Fplayers%2Fyin-sheng',
+    );
+    // At the foot of the page's column, after every section.
+    expect(root.querySelector('.xqp-column')?.lastElementChild?.className).toBe('xqb-rights-note');
+  });
+
+  it('ends a team page with a contact link about that team page', async () => {
+    stubPlayersApi();
+    const key = teamKey(zhejiang);
+    if (!key) throw new Error('fixture has no team key');
+    const root = document.createElement('div');
+    await mountXiangqiTeam(root, key);
+    expect(note(root).querySelector('a')?.getAttribute('href')).toBe(
+      `/contact?about=${encodeURIComponent(`/players/teams/${key}`)}`,
+    );
+  });
+
+  it('leaves the players and teams indexes without one', async () => {
+    stubPlayersApi();
+    const players = document.createElement('div');
+    await mountXiangqiPlayersIndex(players);
+    expect(players.querySelector('.xqp-board')).not.toBeNull();
+    expect(players.querySelector('.xqb-rights-note')).toBeNull();
+
+    const teams = document.createElement('div');
+    await mountXiangqiTeamsIndex(teams);
+    expect(teams.querySelector('.xqp-board')).not.toBeNull();
+    expect(teams.querySelector('.xqb-rights-note')).toBeNull();
   });
 });
