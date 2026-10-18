@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { renderSheet } from './lib/mobile-audit-sheet.mjs';
+import { markUnchanged, renderSheet } from './lib/mobile-audit-sheet.mjs';
 
 const base = 'https://mistboard.com';
 
@@ -68,4 +68,63 @@ test('reviewer notes and page text are escaped', () => {
   });
   assert.match(html, /Play &lt;b&gt;first&lt;\/b&gt;/);
   assert.doesNotMatch(html, /<img onerror/);
+});
+
+test('a compared sheet pairs each screen with its baseline, changed first', () => {
+  const after = markUnchanged(
+    [row({ layout: 'a' }), row({ page: 'forum', shotFile: 'iphone-forum.jpg', layout: 'b2' })],
+    [
+      row({ layout: 'a', shotFile: 'before-iphone-home.jpg' }),
+      row({ page: 'forum', layout: 'b1', shotFile: 'before-iphone-forum.jpg' }),
+    ],
+  );
+  const html = renderSheet({
+    base: 'http://127.0.0.1:3360',
+    startedAt: 's',
+    results: after,
+    beforeBase: base,
+    beforeResults: [
+      row({ shotFile: 'before-iphone-home.jpg' }),
+      row({ page: 'forum', shotFile: 'before-iphone-forum.jpg' }),
+    ],
+  });
+  assert.match(html, /<title>Before and after<\/title>/);
+  assert.ok(html.indexOf('<h2>forum') < html.indexOf('<h2>home'), 'changed screen leads');
+  assert.match(html, /shots\/before-iphone-forum\.jpg[\s\S]*shots\/iphone-forum\.jpg/);
+  assert.match(html, /<h2>home <span class="badge same">unchanged/);
+  assert.match(html, /<h2>forum <span class="badge diff">changed/);
+});
+
+// Planted failure: a screen whose fingerprint is missing on either side must
+// show as changed. If this passes as unchanged, a crashed fingerprint would
+// hide every screen from review.
+test('a missing fingerprint never counts as unchanged', () => {
+  const [both, oneSide] = markUnchanged(
+    [row({ layout: null }), row({ page: 'forum', layout: 'x' })],
+    [row({ layout: null }), row({ page: 'forum', layout: undefined })],
+  );
+  assert.equal(both.unchanged, false);
+  assert.equal(oneSide.unchanged, false);
+});
+
+test('a page missing from the baseline run still gets an after shot', () => {
+  const html = renderSheet({
+    base,
+    startedAt: 's',
+    results: [row()],
+    beforeBase: base,
+    beforeResults: [],
+  });
+  assert.match(html, /not in the baseline run/);
+  assert.match(html, /shots\/iphone-home\.jpg/);
+});
+
+test('a desktop shot carries no phone verdict line', () => {
+  const html = renderSheet({
+    base,
+    startedAt: 's',
+    results: [row({ device: 'desktop', verdict: 'shot', findings: [], viewportWidth: 1280 })],
+  });
+  assert.match(html, /<title>Desktop screens<\/title>/);
+  assert.doesNotMatch(html, /No rule findings/);
 });
