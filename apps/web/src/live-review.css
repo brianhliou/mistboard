@@ -1094,7 +1094,68 @@
   }
 
   .live-route--banqi .review-shell__cluster.live-review__cluster {
-    --phone-room-pool: 120px;
+    --phone-room-pool: 80px;
+  }
+
+  /* Banqi's reveal odds in jieqi's phone style (Brian, 2026-10-17): a 40px
+     line per ink, the viewer's first, small discs with the chance under each.
+     The "N face-down could be" caption stays for screen readers only; every
+     tile draws from one pool, so the chances already carry the count. */
+  .live-review__cluster .hidden-pool--odds:not(:empty) {
+    --reveal-chip: 22px;
+
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .live-review__cluster .hidden-pool--odds .hidden-pool__caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .live-review__cluster .hidden-pool--odds .hidden-pool__row {
+    flex-wrap: nowrap;
+    height: 40px;
+    gap: 4px;
+  }
+
+  /* The caption is a div too, so the bottom ink's row is the last of type:
+     it goes first, and the opponent's line takes the hairline above it. */
+  .live-review__cluster .hidden-pool--odds .hidden-pool__row:last-of-type {
+    order: -1;
+  }
+
+  .live-review__cluster .hidden-pool--odds .hidden-pool__row:not(:last-of-type) {
+    border-top: 1px solid var(--site-border-soft);
+  }
+
+  .live-review__cluster .hidden-pool--odds .hidden-pool__label {
+    min-width: 3.4em;
+    font-size: 12px;
+  }
+
+  .live-review__cluster .hidden-pool--odds .hidden-pool__pieces .review-capture-piece {
+    flex-basis: var(--reveal-chip);
+    width: var(--reveal-chip);
+    height: var(--reveal-chip);
+  }
+
+  .live-review__cluster .hidden-pool--odds .captures-count-badge {
+    min-width: 13px;
+    height: 13px;
+    font-size: 9px;
+    right: -4px;
+    bottom: -2px;
+  }
+
+  .live-review__cluster .hidden-pool--odds .reveal-odds-chip__pct {
+    font-size: 11px;
+    line-height: 1.15;
   }
 
   /* After the game: Rematch and the three links as a 2x2 grid of compact

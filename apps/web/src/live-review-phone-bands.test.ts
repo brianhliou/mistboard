@@ -157,4 +157,23 @@ describe('phone room bands', () => {
     expect(seat).toContain('flex-grow: 1;');
     expect(seat).toContain('max-width: none;');
   });
+
+  // Brian, 2026-10-17: banqi's odds take jieqi's one line per side, the
+  // viewer's ink first, so the pool gives the board 40px back.
+  it('gives banqi odds one 40px line per side, the viewer first', () => {
+    expect(
+      rule(
+        '.live-route--banqi .review-shell__cluster.live-review__cluster {\n    --phone-room-pool',
+      ),
+    ).toContain('--phone-room-pool: 80px;');
+    expect(rule('.live-review__cluster .hidden-pool--odds .hidden-pool__row {')).toContain(
+      'height: 40px;',
+    );
+    expect(
+      rule('.live-review__cluster .hidden-pool--odds .hidden-pool__row:last-of-type'),
+    ).toContain('order: -1;');
+    expect(rule('.live-review__cluster .hidden-pool--odds .hidden-pool__caption')).toContain(
+      'clip-path: inset(50%);',
+    );
+  });
 });
