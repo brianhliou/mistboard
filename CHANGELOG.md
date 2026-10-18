@@ -81,6 +81,8 @@ Conventions:
 
 ### Learning and puzzles
 
+- The study list now has Chinese pages at /zh-hans/study and /zh-hant/study, linking each study's Chinese page, and its heading is now Studies ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
+- The General Blunder challenge, an article with two goals against the bot that tries to lose: draw it, then make it win ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - Puzzles on a phone show the move arrows and a short move list under the board ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
 - "Teaching our Jungle Chess engine the den race bought nothing" is back as its own article, with corrected numbers and game 10 on the board ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
 - The Pikafish reveal-bug article now tells the investigation in order: the move that tipped us off, the two bugs with their evidence, the fix, and the results as tables ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
@@ -179,6 +181,8 @@ Conventions:
 
 ### Community
 
+- The homepage chat shows only messages from people; bot wins and new studies no longer appear in it ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
+- Typing @handle in a forum post links to that player's profile ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - achievements get their own page per player, with win tiers at 10, 50, 100 and 500 ([12461d24](https://github.com/brianhliou/mistboard/commit/12461d24))
 - rating stats has bullet, blitz and rapid choices, and says so when a pool has no rated games ([3d14b10d](https://github.com/brianhliou/mistboard/commit/3d14b10d))
 - The homepage chat announces only wins over a top bot, one line per player a day ([105d81c7](https://github.com/brianhliou/mistboard/commit/105d81c7))
@@ -190,6 +194,10 @@ Conventions:
 
 ### Site
 
+- Banqi face-down tiles take each piece set's own material, and the red Jieqi back has a darker outline ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
+- The statistics page shows one weekly games chart without variant filters ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
+- The homepage footer is now About, Contact, Terms and Privacy; the rest live on the About page and in the phone menu ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
+- The banqi marker is four dark discs ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - /thanks rebuilt: a row per engine with its games and rating here, a lichess section, and the sources it credits; /source now lists Fairy-Stockfish, the jieqi Pikafish branch, chess pieces, sounds and fonts ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - the blog has an Engineering filter for posts on how the site, bots and puzzle miner were built ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - player, team and tournament pages end with a line for the people on them to ask us for a change ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
@@ -258,6 +266,10 @@ Conventions:
 
 ### Fixed
 
+- A puzzle opened by its short code now points search engines at the same page as its full link, so each puzzle is indexed once ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
+- The banqi bot and review engine play to the game's own no-progress draw limit ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
+- Tapping Next quickly in an article or study embed on an iPhone no longer zooms the page ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
+- The forum post box shows its focus outline above the Write tab ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - with board coordinates on, clicks in the position editors land on the square you pressed ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - the homepage puzzle of the day and the puzzle page boards show coordinates when the setting is on ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - player, team, bot and study pages no longer flash as plain text before they load ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
