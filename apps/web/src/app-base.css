@@ -435,6 +435,24 @@
   display: none !important;
 }
 
+/* iOS Safari reads two quick taps as a zoom, so stepping a study or article
+   embed with Next, Next, Next zoomed the page in mid-game. `manipulation`
+   drops only double-tap zoom: pinch zoom and scrolling stay. Set on the root
+   (it reaches the board surfaces) and again on the controls, because a tap
+   inside a scrolling move list resolves against that scroller, not the root.
+   tap-zoom-guard.test.ts keeps it here. */
+html,
+button,
+a,
+input,
+select,
+textarea,
+label,
+summary,
+[role="button"] {
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
   /* lichess's base. Only reaches text that sets no size of its own, which is
