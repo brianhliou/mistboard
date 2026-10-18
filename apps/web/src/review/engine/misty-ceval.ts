@@ -30,7 +30,9 @@ import type {
 // COEP/CORP on /engine/<pkg>/ assets (2026-07-16); fresh keys pick the headers up.
 // -tiger-jump: the misty-jungle wasm was rebuilt with the tiger's sideways river jump
 // (#430, 2026-09-21); a cached old wasm would analyse a different game than the bot plays.
-const MISTY_ASSET_VERSION = '0.2.6-tiger-jump';
+// -banqi-limit: the misty-banqi wasm was rebuilt to take the game's no-progress draw
+// limit (analyze_with_limit / set_no_progress_limit, 2026-10-17).
+const MISTY_ASSET_VERSION = '0.2.6-banqi-limit';
 
 interface MistyEngineConfig {
   /** Public base path of the vendored wasm build. */
@@ -84,6 +86,12 @@ export function mistyEngineName(variant: CevalVariant): string | null {
 interface PendingAnalyze {
   resolve: (json: string) => void;
   reject: (err: Error) => void;
+}
+
+/** The worker message field for a game's no-progress limit; absent when the caller set
+ *  none, so the engine keeps its own default. Only the banqi worker reads it. */
+function limitField(noProgressLimit: number | undefined): { noProgressLimit?: number } {
+  return noProgressLimit === undefined ? {} : { noProgressLimit };
 }
 
 /** A CevalHandle backed by a Misty wasm engine running in a dedicated module worker. */
@@ -161,7 +169,7 @@ export class MistyCeval implements CevalHandle {
     if (effort === 'infinite') {
       return await this.evaluateContinuous(req, fen, multiPv, myToken);
     }
-    const json = await this.send(fen, nodes, multiPv);
+    const json = await this.send(fen, nodes, multiPv, req.noProgressLimit);
     if (this.token !== myToken) {
       // A newer evaluate superseded us; return an empty update rather than stale lines.
       return { depth: 0, seldepth: 0, nodes: 0, nps: 0, lines: [] };
@@ -194,6 +202,7 @@ export class MistyCeval implements CevalHandle {
           reset ? fen : undefined,
           CONTINUOUS_SLICE_NODES,
           multiPv,
+          req.noProgressLimit,
         );
         reset = false;
         if (this.token !== token) break;
@@ -207,13 +216,25 @@ export class MistyCeval implements CevalHandle {
     }
   }
 
-  private send(fen: string, nodes: number, multipv: number): Promise<string> {
+  private send(
+    fen: string,
+    nodes: number,
+    multipv: number,
+    noProgressLimit: number | undefined,
+  ): Promise<string> {
     const worker = this.worker;
     if (!worker) return Promise.reject(new Error('misty-ceval: worker not ready'));
     const id = this.nextId++;
     return new Promise<string>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      worker.postMessage({ type: 'analyze', id, fen, nodes, multipv });
+      worker.postMessage({
+        type: 'analyze',
+        id,
+        fen,
+        nodes,
+        multipv,
+        ...limitField(noProgressLimit),
+      });
     });
   }
 
@@ -222,13 +243,22 @@ export class MistyCeval implements CevalHandle {
     fen: string | undefined,
     nodes: number,
     multipv: number,
+    noProgressLimit: number | undefined,
   ): Promise<string> {
     const worker = this.worker;
     if (!worker) return Promise.reject(new Error('misty-ceval: worker not ready'));
     const id = this.nextId++;
     return new Promise<string>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      worker.postMessage({ type: 'step', id, sessionId, fen, nodes, multipv });
+      worker.postMessage({
+        type: 'step',
+        id,
+        sessionId,
+        fen,
+        nodes,
+        multipv,
+        ...limitField(noProgressLimit),
+      });
     });
   }
 

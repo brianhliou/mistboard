@@ -12,6 +12,7 @@ import {
   type BanqiPlayerView,
   type BanqiSeat,
   banqiMoveLabel,
+  banqiNoProgressLimitOf,
   banqiStateToEngineFen,
   engineUciToBanqiMove,
 } from '@mistboard/game';
@@ -81,6 +82,9 @@ function makeBanqiPresentation(
       positionMode: 'fen',
       fen: banqiStateToEngineFen,
       canEvaluatePosition: (truth) => truth.status.type === 'playing',
+      // The game's own draw limit, so the engine does not score plies 40-60 of a
+      // 60-ply game as already drawn.
+      noProgressLimit: banqiNoProgressLimitOf,
       formatPvMove: formatBanqiEngineMove,
       moveFromEngineUci: engineUciToBanqiMove,
       engineArrowsFromLines: (lines) =>
