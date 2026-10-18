@@ -18,6 +18,7 @@ import {
   type BanqiPieceRole,
   type BanqiSeat,
   type BanqiStoredSetup,
+  banqiNoProgressLimitOf,
   createBanqiStateFromSetup,
   winPercent,
 } from '@mistboard/game';
@@ -85,6 +86,7 @@ export async function evaluateBanqiPosition(
     nodes: BANQI_ANALYSIS_NODES,
     movetimeCapMs: BANQI_ANALYSIS_MOVETIME_CAP_MS,
     moves: repetitionWindow.moves,
+    noProgressLimit: banqiNoProgressLimitOf(state),
   });
   return {
     cp: evaluation.cp == null ? null : evaluation.cp * sign,
@@ -286,20 +288,25 @@ export type BanqiDecisionDeps = {
   ) => Promise<{ cp: number | null; mate: number | null }>;
 };
 
-const liveDecisionDeps: BanqiDecisionDeps = {
-  bestMove: (fen, repetitionWindow) =>
-    evaluateBanqiFenNodes(repetitionWindow?.fen ?? fen, {
-      nodes: BANQI_DECISION_NODES,
-      movetimeCapMs: BANQI_DECISION_MOVETIME_CAP_MS,
-      moves: repetitionWindow?.moves,
-    }).then((e) => e.best),
-  evalPosition: (fen, repetitionWindow) =>
-    evaluateBanqiFenNodes(repetitionWindow?.fen ?? fen, {
-      nodes: BANQI_DECISION_NODES,
-      movetimeCapMs: BANQI_DECISION_MOVETIME_CAP_MS,
-      moves: repetitionWindow?.moves,
-    }).then((e) => ({ cp: e.cp, mate: e.mate })),
-};
+/** The live engine deps for one game, searched under that game's no-progress limit. */
+function liveDecisionDeps(noProgressLimit: number): BanqiDecisionDeps {
+  return {
+    bestMove: (fen, repetitionWindow) =>
+      evaluateBanqiFenNodes(repetitionWindow?.fen ?? fen, {
+        nodes: BANQI_DECISION_NODES,
+        movetimeCapMs: BANQI_DECISION_MOVETIME_CAP_MS,
+        moves: repetitionWindow?.moves,
+        noProgressLimit,
+      }).then((e) => e.best),
+    evalPosition: (fen, repetitionWindow) =>
+      evaluateBanqiFenNodes(repetitionWindow?.fen ?? fen, {
+        nodes: BANQI_DECISION_NODES,
+        movetimeCapMs: BANQI_DECISION_MOVETIME_CAP_MS,
+        moves: repetitionWindow?.moves,
+        noProgressLimit,
+      }).then((e) => ({ cp: e.cp, mate: e.mate })),
+  };
+}
 
 function banqiRepetitionWindowAfterMove(
   state: BanqiGameState,
@@ -429,10 +436,11 @@ async function poolMeanWin(
 export async function analyzeBanqiDecisions(
   moves: readonly BanqiMove[],
   setup: BanqiStoredSetup,
-  deps: BanqiDecisionDeps = liveDecisionDeps,
+  injectedDeps?: BanqiDecisionDeps,
   progress?: AnalysisProgressStore<BanqiDecision>,
 ): Promise<BanqiDecision[]> {
   let state = createBanqiStateFromSetup('analysis', setup);
+  const deps = injectedDeps ?? liveDecisionDeps(banqiNoProgressLimitOf(state));
   let repetitionWindow: BanqiRepetitionWindow = {
     fen: banqiStateToEngineFen(state),
     moves: [],

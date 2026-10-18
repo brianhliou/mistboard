@@ -29,7 +29,7 @@ Conventions:
 - on phones the game room fits one screen with no scrolling: board, both clocks, the moves and the action bar stay in view, captured pieces sit on each player's line, game info and chat open from the ☰ menu, and the first-move countdown shows as a bubble on the board ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - xiangqi games now show the pieces each player has captured beside their clock ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - General Blunder, a xiangqi bot that plays the worst move it can find, so a checkmate or a free piece is usually waiting for you ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
-- Banqi now draws after 60 moves without a capture or a flip, up from 40; games already under way keep 40 ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
+- Banqi now draws after 60 turns (30 each) without a capture or a flip, up from 40; games already under way keep 40 ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - Play a person opens on a day per move, and the Casual/Rated switch shows on a first visit ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - Xiangqi Mahjong's table grows with your screen, with bigger tiles in your hand, resizes with the grip, and its move list fits one line per hand ([0de59972](https://github.com/brianhliou/mistboard/commit/0de59972))
 - Xiangqi and jieqi bots now take a moment to think before replying, longer in complex positions and quick when the move is obvious ([3a0dd19d](https://github.com/brianhliou/mistboard/commit/3a0dd19d))

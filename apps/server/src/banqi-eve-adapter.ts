@@ -15,6 +15,7 @@ import {
   type BanqiGameState,
   type BanqiMove,
   type BanqiSeat,
+  banqiNoProgressLimitOf,
   createBanqiSetup,
   getBanqiForbiddenChaseMoves,
   getBanqiLegalMoves,
@@ -89,6 +90,7 @@ export const banqiEveAdapter: VariantEveAdapter<
       movetimeCapMs: opts.movetimeMs,
       moves: window.moves,
       searchMoves,
+      noProgressLimit: banqiNoProgressLimitOf(state),
     });
   },
   requiredCapability: 'banqi_engine',

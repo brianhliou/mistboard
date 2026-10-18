@@ -54,7 +54,7 @@ import { resolveExistingStudy } from './seed-study-idempotency.js';
 const ROOT_FEN = '8/7R/hS6/2H4r r - 0 1';
 const STUDY_NAME = 'Banqi endgame: chariot and horse against chariot, horse and soldier';
 const STUDY_DESCRIPTION =
-  'An exact banqi endgame, solved by a tablebase: red wins in 67 moves, but the first capture comes after 44 moves, so banqi’s old 40-move rule drew it over the board; Mistboard now allows 60. The whole win in one line, with a note where the clock runs out and a position where only one move keeps it.';
+  'An exact banqi endgame, solved by a tablebase: red wins in 67 moves, but the first capture comes after 44 moves, so banqi’s old 40-move rule drew it over the board; Mistboard now allows 60. The whole win in one line, with a note where the old clock ran out and a position where only one move keeps it.';
 
 const PUBLIC = resolve(dirname(fileURLToPath(import.meta.url)), '../../web/public');
 const tables = new Map<string, BanqiTablebaseTable>();

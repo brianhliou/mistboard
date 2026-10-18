@@ -174,6 +174,9 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
   /** Whether the local engine can search this truth. FEN-per-position engines
    *  expect at least one legal root move, so terminal positions are suppressed. */
   canEvaluatePosition?(truth: Truth): boolean;
+  /** The no-progress draw limit `truth` is played under, for a `'fen'` engine whose
+   *  search scores that draw (banqi: 60, or 40 for a game created before 2026-10-17). */
+  noProgressLimit?(truth: Truth): number;
   /** Prettify a PV move (engine UCI) for the engine panel. */
   formatPvMove(uci: string): string;
   /** Decode the engine's UCI dialect into the board/tree move dialect. Omit when
@@ -1947,7 +1950,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     if (enginePanel) {
       const searchable = presentation.engine?.canEvaluatePosition?.(node.truth) ?? true;
       if (presentation.engine?.positionMode === 'fen') {
-        enginePanel.setPosition([], presentation.engine.fen(node.truth), searchable);
+        enginePanel.setPosition(
+          [],
+          presentation.engine.fen(node.truth),
+          searchable,
+          presentation.engine.noProgressLimit?.(node.truth),
+        );
       } else {
         enginePanel.setPosition(uciTo(node), engineBaseFen, searchable);
       }

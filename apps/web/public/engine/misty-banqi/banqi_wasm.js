@@ -40,6 +40,14 @@ export class AnalysisSession {
         return this;
     }
     /**
+     * Set the game's no-capture-no-flip draw limit in plies (default 40). Call it before
+     * the first `step`.
+     * @param {number} limit
+     */
+    set_no_progress_limit(limit) {
+        wasm.analysissession_set_no_progress_limit(this.__wbg_ptr, limit);
+    }
+    /**
      * @param {number} nodes
      * @returns {string}
      */
@@ -77,6 +85,30 @@ export function analyze(fen, nodes, multipv) {
         const ptr0 = passStringToWasm0(fen, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.analyze(ptr0, len0, nodes, multipv);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * `analyze` under the game's no-capture-no-flip draw limit in plies (`analyze` uses 40).
+ * Mistboard games created from 2026-10-17 draw at 60, older ones at 40.
+ * @param {string} fen
+ * @param {number} nodes
+ * @param {number} multipv
+ * @param {number} no_progress_limit
+ * @returns {string}
+ */
+export function analyze_with_limit(fen, nodes, multipv, no_progress_limit) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(fen, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.analyze_with_limit(ptr0, len0, nodes, multipv, no_progress_limit);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);

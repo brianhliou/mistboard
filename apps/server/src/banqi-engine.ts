@@ -14,6 +14,7 @@
 
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { DEFAULT_NO_PROGRESS_PLY_LIMIT } from '@mistboard/game';
 import { logger } from './obs.js';
 import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
 
@@ -31,7 +32,7 @@ import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js
 // Bump this only together with the railpack pin. Better still, stop bumping it by hand:
 // engine_boot_check already spawns each binary at startup, so it could assert the
 // handshake matches this string and turn a silent provenance lie into a loud boot failure.
-export const BANQI_ENGINE_VERSION = '0.2.6';
+export const BANQI_ENGINE_VERSION = '0.2.7';
 export const BANQI_DEFAULT_ENGINE_ID = 'misty-banqi';
 
 export type BanqiEngineTier = {
@@ -227,7 +228,41 @@ export type BanqiEngineOptions = {
   movetimeCapMs?: number;
   moves?: readonly string[];
   searchMoves?: readonly string[];
+  /** The game's no-progress draw limit (banqiNoProgressLimitOf(state)); a rule, so public.
+   *  Absent = the current limit, which is right only for a fresh game. */
+  noProgressLimit?: number;
 };
+
+/** The first MistyBanqi that reads `setoption name NoProgressLimit` (misty-banqi v0.2.7). */
+export const BANQI_NO_PROGRESS_LIMIT_MIN_VERSION = '0.2.7';
+
+function engineVersionAtLeast(version: string, min: string): boolean {
+  const a = version.split('.').map(Number);
+  const b = min.split('.').map(Number);
+  for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
+    const x = a[i] ?? 0;
+    const y = b[i] ?? 0;
+    if (x !== y) return x > y;
+  }
+  return true;
+}
+
+/**
+ * The engine options a game's rules set. The engine's draw clock limit defaults to 40
+ * (the pre-2026-10-17 rule), so a 60-ply game that sent nothing would have its bot score
+ * plies 40-60 as already drawn. Gated on the pinned engine version: the harness fails a
+ * search whose `setoption` names an option the engine does not advertise
+ * (validateConfiguredUciOptions), so an engine older than 0.2.7 gets no option line and
+ * plays to its built-in 40, as it did before. Bumping BANQI_ENGINE_VERSION with the
+ * railpack pin turns the line on.
+ */
+export function buildBanqiOptionCommands(
+  noProgressLimit: number = DEFAULT_NO_PROGRESS_PLY_LIMIT,
+  engineVersion: string = BANQI_ENGINE_VERSION,
+): string[] {
+  if (!engineVersionAtLeast(engineVersion, BANQI_NO_PROGRESS_LIMIT_MIN_VERSION)) return [];
+  return [`setoption name NoProgressLimit value ${noProgressLimit}`];
+}
 
 export function buildBanqiPositionCommand(fen: string, moves: readonly string[] = []): string {
   return moves.length > 0 ? `position fen ${fen} moves ${moves.join(' ')}` : `position fen ${fen}`;
@@ -262,6 +297,7 @@ export async function banqiLiveEngineMove(
       movetimeCapMs: opts.movetimeCapMs ?? tier.movetimeCapMs,
       moves: opts.moves,
       searchMoves: opts.searchMoves,
+      noProgressLimit: opts.noProgressLimit,
     });
   } finally {
     release();
@@ -336,6 +372,7 @@ export async function banqiEngineSearch(
   // Node budget = CPU-independent strength; movetime cap bounds latency (halt at whichever first).
   const commands = [
     'uci',
+    ...buildBanqiOptionCommands(opts.noProgressLimit),
     'ucinewgame',
     'isready',
     position,
@@ -365,10 +402,16 @@ export async function banqiEngineSearch(
 // redacted (as-played info-state) FEN is sent as-is — the engine never sees a hidden id.
 export async function evaluateBanqiFenNodes(
   fen: string,
-  opts: { nodes: number; movetimeCapMs: number; moves?: readonly string[] },
+  opts: {
+    nodes: number;
+    movetimeCapMs: number;
+    moves?: readonly string[];
+    noProgressLimit: number;
+  },
 ): Promise<UciEval> {
   const commands = [
     'uci',
+    ...buildBanqiOptionCommands(opts.noProgressLimit),
     'ucinewgame',
     'isready',
     buildBanqiPositionCommand(fen, opts.moves),

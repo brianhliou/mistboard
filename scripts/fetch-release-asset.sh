@@ -16,8 +16,8 @@ name=${2:?asset name}
 # name -> repo, tag, sha256, mode (exec: an executable; data: a non-empty file)
 case "$name" in
   banqi-engine)
-    repo=brianhliou/misty-banqi tag=v0.2.6 mode=exec
-    sha=02688c45ba7b809b8adffc28bc605ee168ca0b0364d542c7c7c4384103dd7e6a ;;
+    repo=brianhliou/misty-banqi tag=v0.2.7 mode=exec
+    sha=8ceda19822aa01cafd2006854a9916fe889da8ad184146b18d7904840a322a63 ;;
   jungle-flip-engine)
     repo=brianhliou/misty-flip-jungle tag=v0.5.1 mode=exec
     sha=56952ea87ee9465a55b70f2159ed83048a6235dd469a757bd1931ddd69d82a44 ;;
