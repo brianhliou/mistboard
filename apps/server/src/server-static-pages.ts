@@ -29,7 +29,12 @@ import {
 } from './player-pages.js';
 import { isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
-import { chapterPageMeta, renderStudyBody } from './study-page-body.js';
+import {
+  chapterPageMeta,
+  renderStudyBody,
+  renderStudyIndexBody,
+  STUDY_INDEX_PATH,
+} from './study-page-body.js';
 
 export { ARTICLE_META, canonicalArticleBase };
 
@@ -617,6 +622,9 @@ export async function serveSpaShellWithRoutePreloads(params: {
   /** The request's query string ('?…' or ''), read by the position routes. */
   search?: string;
   publicHost?: string;
+  /** Override the study list's public studies (tests); the default is the
+   *  sitemap's own read, so the list page and sitemap-studies.xml agree. */
+  listPublicStudies?: () => Promise<persistence.PublicStudySummary[]>;
   /** Override the finished-game meta lookup (tests); the default reads persistence. */
   gameMeta?: (pathname: string) => Promise<TenantGamePageMeta | null>;
   /** Override the server-rendered route body (tests); the default reads persistence. */
@@ -693,6 +701,21 @@ export async function serveSpaShellWithRoutePreloads(params: {
     html = html.replace(
       '</head>',
       `<link rel="canonical" href="${params.publicHost}${canonicalPath}"></head>`,
+    );
+  }
+  // The study list: a self canonical with no query (?tab= and ?q= pick a view
+  // of the one list) and a body linking every study sitemap-studies.xml lists.
+  if (params.pathname === STUDY_INDEX_PATH) {
+    if (params.publicHost) {
+      html = html.replace(
+        '</head>',
+        `<link rel="canonical" href="${params.publicHost}${STUDY_INDEX_PATH}"></head>`,
+      );
+    }
+    const studies = await (params.listPublicStudies ?? listEveryPublicStudy)().catch(() => []);
+    html = html.replace(
+      '<div id="app"></div>',
+      `<div id="app">${renderStudyIndexBody(studies)}</div>`,
     );
   }
   if (noindex) {
