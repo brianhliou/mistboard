@@ -593,6 +593,19 @@
       var(--phone-room-post, 0px) -
       var(--uni-board-chrome-h, 0px)
     );
+    /* The board's unsnapped height: its width (the page, or the budget times
+       the aspect when the budget binds) over the aspect. */
+    --phone-room-board-h: calc(
+      min(
+        100vw,
+        var(--uni-board-h-budget) *
+        var(--uni-board-aspect, 1) *
+        var(--uni-board-scale, 1)
+      ) /
+      var(--uni-board-aspect, 1)
+    );
+    /* What a width-bound board leaves of its budget. */
+    --phone-room-slack: max(0px, calc(var(--uni-board-h-budget) - var(--phone-room-board-h)));
     gap: 0;
     align-items: stretch;
   }
@@ -619,8 +632,17 @@
     margin: 0;
   }
 
+  /* The stage snaps its width down to 8px steps, so the board came out 3-6px
+     short of its budget and the shortfall fell below the bar: the bar sat
+     3px higher in jieqi than in banqi (Brian, 2026-10-17). The board's block
+     keeps the unsnapped height and centres the board in it, so the bar ends
+     every room on the same line. */
   .live-review__cluster > .review-shell__center {
     flex-basis: 100%;
+    box-sizing: border-box;
+    height: calc(var(--phone-room-board-h) + var(--uni-board-chrome-h, 0px));
+    align-items: center;
+    justify-content: center;
   }
 
   /* The stage snaps its width down to 8px steps (styles.css); centre the few
@@ -648,6 +670,17 @@
     flex-basis: auto;
     padding: 0 8px 0 12px;
     font-size: 15px;
+    /* A long name gives way (ellipsis) before the captured pieces do: with an
+       even share, "Pikafish Level 2" pushed a jieqi haul under the clock's
+       edge (Brian, 2026-10-17). */
+    flex-shrink: 10;
+    min-width: 92px;
+  }
+
+  /* The lit clock already says whose move it is; the pill cost the seat line
+     70px the captured pieces need. */
+  .live-review__cluster .clock-to-move {
+    display: none;
   }
 
   /* Captured pieces stay on the seat line: at 320px a long haul wrapped into a
@@ -658,7 +691,7 @@
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    flex-basis: 0;
+    flex-basis: auto;
     min-width: 0;
     overflow-x: auto;
     overflow-y: hidden;
@@ -677,6 +710,14 @@
   .review-shell__cluster.live-review__cluster:has(.drop-pocket) {
     --phone-room-pocket: 36px;
     --phone-room-extra: calc(2 * (var(--phone-room-pocket) + 6px));
+  }
+
+  /* With the pieces on their own line, the name fills its seat line up to
+     the clock, or the gap showed the page tone between them. */
+  .review-shell__cluster.live-review__cluster:has(.drop-pocket)
+  :is(.round-table__player--top, .round-table__player--bottom) {
+    flex-grow: 1;
+    max-width: none;
   }
 
   .live-review__cluster .drop-pocket .drop-mini-reserve-row {
@@ -726,9 +767,36 @@
     font-weight: 700;
   }
 
-  :root .live-review__cluster .clocks.clock-slot div.clock-time-row.active.has-bar::after {
-    background: var(--site-on-accent, #fff);
-    opacity: 0.6;
+  /* Time left runs the full width of the seat line, along the edge it shares
+     with the board (Brian, 2026-10-17: extend the bar "horizontally through
+     the page"). The tab leaves that 3px edge unpainted so the bar reads past
+     its fill; the tab ends on the page's right edge, so 100vw back from there
+     is the left edge. */
+  :root .live-review__cluster [data-clock-top] div.clock-time-row.has-bar {
+    box-sizing: border-box;
+    border-bottom: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  :root .live-review__cluster [data-clock-bottom] div.clock-time-row.has-bar {
+    box-sizing: border-box;
+    border-top: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  :root .live-review__cluster .clocks.clock-slot div.clock-time-row.has-bar::after {
+    left: auto;
+    right: 0;
+    width: 100vw;
+    z-index: 1;
+  }
+
+  :root .live-review__cluster [data-clock-top] div.clock-time-row.has-bar::after {
+    bottom: -3px;
+  }
+
+  :root .live-review__cluster [data-clock-bottom] div.clock-time-row.has-bar::after {
+    top: -3px;
   }
 
   /* A flagging clock stays red over the active fill. */
@@ -907,19 +975,13 @@
      (budget minus board width over aspect, the .board-shell width rule above)
      goes above the strip, so the two rows sit on the bottom edge. */
   .live-review__cluster .game-table-moves {
-    margin-top: max(
-      0px,
-      calc(
-        var(--uni-board-h-budget) -
-        min(
-          100vw,
-          var(--uni-board-h-budget) *
-          var(--uni-board-aspect, 1) *
-          var(--uni-board-scale, 1)
-        ) /
-        var(--uni-board-aspect, 1)
-      )
-    );
+    margin-top: var(--phone-room-slack);
+  }
+
+  /* Before the first move the strip is empty: no tone of its own, or it read
+     as a stray band under the board (Brian, 2026-10-17). */
+  .live-review__cluster .game-table-moves:not(:has(.move-list > *)) {
+    background: transparent;
   }
 
   /* The game card and the chat open as a sheet from the bar's ☰
@@ -992,6 +1054,35 @@
     margin: 0 12px;
     overflow-y: auto;
     box-sizing: border-box;
+  }
+
+  /* A width-bound board (banqi's strip) leaves room below it; the pool sits in
+     the middle of it rather than under the board with a gap below (Brian,
+     2026-10-17). */
+  .review-shell__cluster.live-review__cluster .hidden-pool:not(:empty) {
+    margin-top: calc(var(--phone-room-slack) / 2);
+    border-top: 0;
+  }
+
+  .review-shell__cluster.live-review__cluster:has(.hidden-pool:not(:empty)) .game-table-moves {
+    margin-top: calc(var(--phone-room-slack) / 2);
+  }
+
+  /* One slot per kind of piece, so a full row spans the line instead of
+     bunching at the left, and a thinned row keeps its slots. */
+  .live-review__cluster .hidden-pool__pieces {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    gap: 0;
+  }
+
+  .live-review__cluster .hidden-pool__pieces > .hidden-pool__chip {
+    flex: 0 0 calc(100% / var(--phone-room-pool-kinds, 7));
+    justify-content: center;
+  }
+
+  .live-route--jungle-flip .review-shell__cluster.live-review__cluster {
+    --phone-room-pool-kinds: 8;
   }
 
   .live-review__cluster .hidden-pool:empty {

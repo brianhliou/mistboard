@@ -46,8 +46,13 @@ describe('phone room bands', () => {
 
   it('ends the screen with the moves strip and the bar (no page scroll)', () => {
     const moves = rule('.live-review__cluster .game-table-moves {\n    margin-top');
-    expect(moves).toContain('var(--uni-board-h-budget)');
-    expect(moves).toContain('var(--uni-board-aspect, 1)');
+    expect(moves).toContain('var(--phone-room-slack)');
+    const cluster = rule('.review-shell__cluster.live-review__cluster {\n    --phone-room-band');
+    expect(cluster).toContain('--phone-room-board-h: calc(');
+    expect(cluster).toContain('var(--uni-board-aspect, 1)');
+    expect(cluster).toContain(
+      '--phone-room-slack: max(0px, calc(var(--uni-board-h-budget) - var(--phone-room-board-h)));',
+    );
     expect(rule('main.shell:has(.live-review__cluster)')).toContain('padding-bottom: 0;');
   });
 
@@ -68,7 +73,7 @@ describe('phone room bands', () => {
     );
     expect(rule('.live-review__cluster .hidden-pool:empty')).toContain('display: none;');
     expect(
-      rule('.review-shell__cluster.live-review__cluster:has(.hidden-pool:not(:empty))'),
+      rule('.review-shell__cluster.live-review__cluster:has(.hidden-pool:not(:empty)) {'),
     ).toContain('--phone-room-extra: var(--phone-room-pool, 96px);');
   });
 
@@ -103,5 +108,53 @@ describe('phone room bands', () => {
     );
     expect(at).toBeGreaterThan(0);
     expect(phoneOdds.slice(at, phoneOdds.indexOf('}', at))).toContain('display: none;');
+  });
+
+  // Found by Brian on the phone (2026-10-17): the stage snaps down to 8px
+  // steps, so the board came out 3-6px short and the bar sat at a different
+  // height per variant. The board's block keeps the unsnapped height.
+  it('gives the board block its unsnapped height, so every bar ends on the same line', () => {
+    expect(
+      rule('.live-review__cluster > .review-shell__center {\n    flex-basis: 100%;'),
+    ).toContain('height: calc(var(--phone-room-board-h) + var(--uni-board-chrome-h, 0px));');
+  });
+
+  it('runs the time bar the full width of the seat line', () => {
+    expect(
+      rule('.live-review__cluster .clocks.clock-slot div.clock-time-row.has-bar::after'),
+    ).toContain('width: 100vw;');
+    expect(rule('.live-review__cluster [data-clock-top] div.clock-time-row.has-bar {')).toContain(
+      'border-bottom: 3px solid transparent;',
+    );
+    expect(
+      rule('.live-review__cluster [data-clock-bottom] div.clock-time-row.has-bar {'),
+    ).toContain('border-top: 3px solid transparent;');
+  });
+
+  it('lets a long name give way before the captured pieces', () => {
+    const seat = rule(
+      '.live-review__cluster .round-table__player--top,\n  .live-review__cluster .round-table__player--bottom {\n    display: flex;',
+    );
+    expect(seat).toContain('flex-shrink: 10;');
+    expect(rule('.live-review__cluster .clock-to-move')).toContain('display: none;');
+  });
+
+  it('centres the face-down pool in the room a width-bound board leaves', () => {
+    expect(
+      rule('.review-shell__cluster.live-review__cluster .hidden-pool:not(:empty) {'),
+    ).toContain('margin-top: calc(var(--phone-room-slack) / 2);');
+    expect(
+      rule(
+        '.review-shell__cluster.live-review__cluster:has(.hidden-pool:not(:empty)) .game-table-moves',
+      ),
+    ).toContain('margin-top: calc(var(--phone-room-slack) / 2);');
+  });
+
+  it('lets a drop variant name fill its seat line up to the clock', () => {
+    const seat = rule(
+      '.review-shell__cluster.live-review__cluster:has(.drop-pocket)\n  :is(.round-table__player--top, .round-table__player--bottom) {',
+    );
+    expect(seat).toContain('flex-grow: 1;');
+    expect(seat).toContain('max-width: none;');
   });
 });
