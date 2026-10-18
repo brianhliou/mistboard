@@ -328,7 +328,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         // Below the ladder: plays the worst move it finds (XIANGQI_PICKER_ENGINES).
         {
           id: 'fairy-stockfish-xiangqi-worst',
-          name: 'Generous General',
+          name: 'General Blunder',
           familyName: 'Fairy-Stockfish',
           kind: 'container',
         },

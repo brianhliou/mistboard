@@ -173,8 +173,8 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
   },
   // The worst-move xiangqi bot (migration 174): below the ladder, not on it.
   {
-    id: 'generous-general',
-    displayName: 'Generous General',
+    id: 'general-blunder',
+    displayName: 'General Blunder',
     engines: { xiangqi: 'fairy-stockfish-xiangqi-worst' },
     defaultGameSpecId: 'xiangqi',
     offLadder: true,

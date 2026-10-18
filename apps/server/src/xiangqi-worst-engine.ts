@@ -41,7 +41,7 @@ export type XiangqiWorstEngineTier = {
 
 const WORST_TIER: XiangqiWorstEngineTier = {
   id: XIANGQI_WORST_ENGINE_ID,
-  name: 'Generous General',
+  name: 'General Blunder',
   nodes: 300_000,
   movetimeMs: 1_500,
   kind: 'worst',
