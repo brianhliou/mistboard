@@ -2695,13 +2695,17 @@
     order: 4;
   }
 
-  .landing-demo .landing-event-banners {
+  .landing-demo .landing-dives-row {
     order: 5;
+  }
+
+  .landing-demo .landing-event-banners {
+    order: 6;
     margin-top: 0;
   }
 
   .landing-demo .landing-chat-column {
-    order: 6;
+    order: 7;
   }
 
   /* The phone home ends here: a phone mount never builds the widgets below
@@ -2713,7 +2717,6 @@
   .landing-demo .landing-puzzle-column,
   .landing-demo .landing-forum-column,
   .landing-demo .landing-studies-column,
-  .landing-demo .landing-dives-row,
   .landing-demo .landing-news-column {
     display: none;
   }
@@ -2869,7 +2872,7 @@
 
   /* Blog rows: a strip the thumb swipes, bleeding off the right edge, in place
      of the auto-rotating carousel (its transform is pinned off). */
-  .landing-demo .landing-articles-row:not(.landing-dives-row) {
+  .landing-demo .landing-articles-row {
     margin-top: 12px;
   }
 
