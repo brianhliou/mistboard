@@ -42,6 +42,18 @@ describe('opening explorer preference (#534)', () => {
     expect(explorerOpenPreferred()).toBe(false);
   });
 
+  it('opens for a link that asks (?explorer=open) without writing the preference', () => {
+    window.history.replaceState(null, '', '/study/s?explorer=open');
+    try {
+      expect(explorerOpenPreferred()).toBe(true);
+      expect(storageValues.has(KEY)).toBe(false);
+      window.history.replaceState(null, '', '/study/s?explorer=closed');
+      expect(explorerOpenPreferred()).toBe(false);
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
   it('falls back to closed when storage is unavailable (Safari private mode throws)', () => {
     const original = Object.getOwnPropertyDescriptor(window, 'localStorage');
     Object.defineProperty(window, 'localStorage', {

@@ -34,6 +34,7 @@ import {
   readBanqiTablebase,
 } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
+import { seatDiscEl } from '../seat-disc.js';
 import { type BanqiTablebaseLoader, loadBanqiTablebase } from './banqi-tablebase-client.js';
 
 export type BanqiTablebasePanel = {
@@ -109,10 +110,18 @@ export function createBanqiTablebasePanel(
     const title = document.createElement('span');
     title.className = 'bq-tablebase__title';
     title.textContent = t('analysis.tablebase.title');
+    // Every row's Win / Draw / Loss is the mover's, so the head says who that is.
+    const mover = document.createElement('span');
+    mover.className = 'bq-tablebase__mover';
+    const moverLabel = document.createElement('span');
+    moverLabel.textContent = t('puzzle.toMove', {
+      color: t(data.moverInk === 'red' ? 'replay.red' : 'replay.black'),
+    });
+    mover.append(seatDiscEl(data.moverInk, 'bq-tablebase__mover-disc'), moverLabel);
     const verdict = document.createElement('span');
     verdict.className = 'bq-tablebase__verdict';
     verdict.textContent = positionVerdict(data);
-    head.append(title, verdict);
+    head.append(title, mover, verdict);
 
     const parts: HTMLElement[] = [head];
     const count = keepCount(data);

@@ -8,6 +8,7 @@ import {
   embedPovFromSearch,
   embedRouteFromPath,
   embedSolutionHiddenFromSearch,
+  embedTablebaseFromSearch,
   embedThemeFromSearch,
 } from './embed/embed-route.js';
 import './board-fog.css';
@@ -929,9 +930,16 @@ if (replaySample) {
   const studyPov = embedPovFromSearch(window.location.search);
   // `?solution=hidden` covers the sheet until the reader asks: a problem chapter.
   const hideSolution = embedSolutionHiddenFromSearch(window.location.search);
+  // `?tablebase=1` puts a banqi chapter's endgame table under the board.
+  const tablebase = embedTablebaseFromSearch(window.location.search);
   void mountOrReport(() =>
     import('./embed/embed-study-page.js').then(({ mountEmbedStudy }) =>
-      mountEmbedStudy(appRoot, studyRoute, { startPly: studyPly, pov: studyPov, hideSolution }),
+      mountEmbedStudy(appRoot, studyRoute, {
+        startPly: studyPly,
+        pov: studyPov,
+        hideSolution,
+        tablebase,
+      }),
     ),
   );
 } else if (embedRoute?.kind === 'game') {

@@ -13,12 +13,23 @@
 
 const STORAGE_KEY = 'mistboard:review:explorer';
 
-/** True only when the reader last left the book open. Storage can be
- *  unavailable (private windows, blocked site data), so every access is guarded
- *  and falls back to closed rather than throwing during a mount. */
+/** True when the reader last left the book open, or the link asked for it
+ *  (`?explorer=open`, an article pointing at a study's tablebase). The link
+ *  opens it for that page view only and never writes the preference. Storage
+ *  can be unavailable (private windows, blocked site data), so every access is
+ *  guarded and falls back to closed rather than throwing during a mount. */
 export function explorerOpenPreferred(): boolean {
+  if (explorerOpenRequested()) return true;
   try {
     return localStorage.getItem(STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function explorerOpenRequested(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).get('explorer') === 'open';
   } catch {
     return false;
   }

@@ -33,6 +33,11 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-17, not native-reviewed, from the English signed
+  // off that day. Terms follow banqi-perpetual-chase and banqi-statistics
+  // (将 士 象 车 马 炮 卒 / 將 士 象 車 馬 砲 卒; a move is 步); tablebase is
+  // analysis.tablebase.title (残局库 / 殘局庫); the 40-move rule is 40 步规则.
+  'banqi-chariot-endgame',
   // Machine-drafted 2026-10-16, not native-reviewed, from the English signed
   // off that day. Terms follow the live table's live.xmj.* strings (台, 面子,
   // 將眼, 莊家, 自摸, 流局); tile labels name each colour's piece (帥/將, 炮/砲).
@@ -368,6 +373,50 @@ const ZH_HANS: Record<string, string> = {
   'Which tile: c1-a3, Red to move': '翻哪一枚：c1-a3，红方走',
   'average 36%': '平均 36%',
   'Looking for jieqi puzzles: what 50 games turned up': '在揭棋里找题目：50 盘对局找到了什么',
+  // banqi-chariot-endgame: machine-drafted 2026-10-17, not native-reviewed, from the English signed off that day. Piece names follow banqi-statistics (将 士 象 车 马 炮 卒); a move is 步, distance between pieces is 格, a spare move is 闲着; tablebase is 残局库; the endings are named stronger side first (车马卒对车马).
+  'A Solved Banqi Endgame: Chariot and Horse Against Chariot, Horse and Soldier':
+    '一个完全解出的暗棋残局：车马卒对车马',
+  'A Solved Banqi Endgame': '完全解出的暗棋残局',
+  'Banqi Endgame: Chariot and Horse vs Chariot, Horse and Soldier': '暗棋残局：车马卒对车马',
+  'A Mistboard player told us our 40-move draw rule is too short for the endings where three pieces beat two. We solved one: a chariot, horse and soldier beat a chariot and horse in 67 moves, and can’t force a capture in the first 40. The win is in a study, move by move, with the tablebase beside the board.':
+    '一位 Mistboard 玩家告诉我们，对三子胜两子的残局来说，我们的 40 步和棋规则太短了。我们解出了其中一个：车马卒用 67 步胜车马，却没法在前 40 步之内保证吃到子。整个赢法放在一份研究里，一步一步走，棋盘旁边附有残局库。',
+  'Banqi players who reach endgames, and anyone curious how a solved endgame reads.':
+    '会下到残局的暗棋玩家，以及想知道一个完全解出的残局读起来是什么样子的人。',
+  'A player told us our 40-move draw rule is too short for this ending, and the tablebase agrees: red wins in 67 moves with best play, but can’t force a capture in the first 40, so under our rule the game is drawn.':
+    '一位玩家告诉我们，对这个残局来说，我们的 40 步和棋规则太短了，残局库也这么说：双方都走最佳着法时，红方 67 步取胜，但没法在前 40 步之内保证吃到子，所以按我们的规则这盘棋判和。',
+  'The study plays the win with the tablebase beside the board: every legal move in every position, and whether it wins, draws or loses.':
+    '研究把赢法完整走一遍，棋盘旁边附有残局库：每个局面的每一步合法着法，以及这步是赢、和还是输。',
+  'Two chariots alone are decided by whether the steps between them are odd or even, and every other piece is a spare move that flips it. Red has two spare moves to black’s one, and wins by running down black’s.':
+    '只剩两个车时，胜负取决于两车之间的距离是奇数还是偶数，而其他每个棋子都能走闲着，把奇偶倒过来。红方有两个能走闲着的子，黑方只有一个，红方把黑方那一个追上吃掉就赢了。',
+  'In October rebirthfox333, a [banqi](/rules/banqi) player on Mistboard, told us our draw rule was too short. Mistboard draws a game after 40 moves without a capture or a flip. They pointed to the endings where three pieces beat two, and said the win can take ninety-something moves. If that was true, our rule was turning won games into draws.':
+    '十月，Mistboard 上的[暗棋](/rules/banqi)玩家 rebirthfox333 告诉我们，我们的和棋规则太短了。Mistboard 在连续 40 步没有吃子或翻子之后判和。对方举了三子胜两子的残局为例，说这种棋要赢可能得走九十多步。如果真是这样，我们的规则就是在把赢棋判成和棋。',
+  'So we solved one of them with a tablebase, a program that works out every position of an ending exactly. Red has a chariot, a horse and a soldier, black has a chariot and a horse, and every piece is face up. A move here is one player’s turn.':
+    '于是我们用残局库解出了其中一个。残局库是一种程序，能把一个残局的每个局面都精确算出来。红方有车、马、卒，黑方有车、马，所有棋子都已翻开。这里的一步指一方走一次。',
+  'Red to move. No position with these pieces gives red a longer win.':
+    '红方走。这组子力的所有局面里，没有一个让红方赢得比这更久。',
+  'RED TO MOVE AND WIN': '红先胜',
+  '**The rule is too short. Red wins in 67 moves, but can’t force a capture until move 45.** Our rule draws the game at move 40.':
+    '**规则太短了。红方 67 步取胜，但要到第 45 步才能保证吃到子。**我们的规则在第 40 步就判和了。',
+  'The tablebase answers every position': '每个局面，残局库都有答案',
+  'Banqi endgame: chariot and horse against chariot, horse and soldier': '暗棋残局：车马卒对车马',
+  'Best play for both sides, move by move.': '双方的最佳着法，一步一步走。',
+  'Under the board, the tablebase lists every legal move in the position shown, whether it wins, draws or loses for the side to move (named at the top of the table), and in how many moves. The shaded row is the move the line plays. Hover any row to see its move on the board, or click it to play it and keep going from there. Your moves appear in the move list as a branch under the move you left from, and clicking any of the game’s moves takes you back.':
+    '棋盘下方，残局库列出当前局面的每一步合法着法，标明这步对走棋方（写在表格顶端）是赢、和还是输，以及要几步。有底色的那一行就是主线走的着法。把鼠标移到任一行上，可以在棋盘上看到那步棋；点击它就会走出这步，并从那里接着下。你走的着法会作为分支，出现在着法列表中你离开主线的那一步下面；点击主线里的任何一步都能回去。',
+  'Red wins by running black out of spare moves': '红方耗尽黑方的闲着取胜',
+  'Pieces in banqi move one step along a rank or file, and a piece takes one of equal or lower rank, so two chariots can take each other. Count the steps between them. Every chariot move changes the count by one, and a capture needs a count of one. If it is your move and the count is odd, it is even on every turn your opponent gets, so they can never take you and you can walk toward them. The tablebase agrees for all 992 ways to place two chariots alone.':
+    '暗棋的棋子每次横走或直走一格，可以吃同级或更低级的棋子，所以两个车可以互吃。数一数两车之间的距离，也就是横竖走几格才能到对方的位置。车每走一步，距离就加一或减一；要吃子，距离必须是一。如果轮到你走时距离是奇数，那么每次轮到对手走时距离都是偶数，所以对手永远吃不到你，你可以一路逼近。只剩两个车的全部 992 种摆法，残局库给出的结论都一样。',
+  'Black to move in both. Black loses four steps apart (c2 to f3) and wins three steps apart (c2 to e3).':
+    '两图都是黑方走。相距四格（c2 到 f3）黑方负，相距三格（c2 到 e3）黑方胜。',
+  'FOUR STEPS APART: BLACK LOSES': '相距四格：黑方负',
+  'THREE STEPS APART: BLACK WINS': '相距三格：黑方胜',
+  'A move by any other piece leaves the count alone and hands the turn over, so it flips who has the odd count. Red has two of these spare moves to black’s one, so red can always answer black’s with one of its own. Red’s plan is to take away black’s spare move, the horse, and that is what takes so long: black’s horse comes off on move 45.':
+    '其他棋子走一步，距离不变，却把走棋权交给了对方，于是轮到哪一方时距离是奇数，就倒了过来。红方有两个能走这种闲着的子，黑方只有一个，所以黑方每走一步闲着，红方都能用自己的闲着回应。红方的计划是拿掉黑方走闲着的子，也就是那个马，而费时的正是这一步：黑方的马到第 45 步才被吃掉。',
+  'A 60-move rule is long enough': '60 步规则就够长了',
+  'Red needs 45 moves to force a capture, so our 40-move rule draws the game first. A rule set used for computer banqi programs in Taiwan ([PDF](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2021/hwks/rules.pdf)) allows 60. The longest stretch of the winning line without a capture is 43 moves, so under 60 red can play the win out.':
+    '红方要 45 步才能保证吃到子，所以我们的 40 步规则会先判和。台湾电脑暗棋程序使用的一套规则（[PDF](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2021/hwks/rules.pdf)）允许 60 步。整条赢棋路线中，最长一段连续不吃子的着法是 43 步，所以在 60 步的规则下，红方可以把这盘赢棋下完。',
+  'The last spare move wins': '最后的闲着决定胜负',
+  'rebirthfox333 was right: our 40-move rule is too short for this ending. Two chariots are decided by the count, and every other piece is a spare move that flips it. Red has two spare moves to black’s one, so red wins. It takes 67 moves because black’s one, the horse, has to be run down first.':
+    'rebirthfox333 说得对：对这个残局来说，我们的 40 步规则太短了。两个车的胜负由距离的奇偶决定，其他每个棋子都能走闲着，把奇偶倒过来。红方有两个能走闲着的子，黑方只有一个，所以红方赢。之所以要走 67 步，是因为黑方唯一的那个马必须先被追上吃掉。',
   // banqi-perpetual-chase: machine-drafted 2026-10-11, not native-reviewed. Piece names follow banqi-statistics (将 士 象 车 马 炮 卒); a ply is 步.
   'The Perpetual Chase Rule in Banqi': '暗棋长捉规则',
   'Perpetual Chase in Banqi': '暗棋的长捉',
@@ -6513,6 +6562,50 @@ const ZH_HANT: Record<string, string> = {
   'Which tile: c1-a3, Red to move': '翻哪一枚：c1-a3，紅方走',
   'average 36%': '平均 36%',
   'Looking for jieqi puzzles: what 50 games turned up': '在揭棋裡找題目：50 盤對局找到了什麼',
+  // banqi-chariot-endgame: machine-drafted 2026-10-17, not native-reviewed, from the English signed off that day. Taiwan forms: 將 士 象 車 馬 砲 卒, 著法, 程式, 滑鼠, 列 for a table row; a move is 步, distance between pieces is 格, a spare move is 閒著; tablebase is 殘局庫; the endings are named stronger side first (車馬卒對車馬).
+  'A Solved Banqi Endgame: Chariot and Horse Against Chariot, Horse and Soldier':
+    '一個完全解出的暗棋殘局：車馬卒對車馬',
+  'A Solved Banqi Endgame': '完全解出的暗棋殘局',
+  'Banqi Endgame: Chariot and Horse vs Chariot, Horse and Soldier': '暗棋殘局：車馬卒對車馬',
+  'A Mistboard player told us our 40-move draw rule is too short for the endings where three pieces beat two. We solved one: a chariot, horse and soldier beat a chariot and horse in 67 moves, and can’t force a capture in the first 40. The win is in a study, move by move, with the tablebase beside the board.':
+    '一位 Mistboard 玩家告訴我們，對三子勝兩子的殘局來說，我們的 40 步和棋規則太短了。我們解出了其中一個：車馬卒用 67 步勝車馬，卻沒辦法在前 40 步之內確保吃到子。整個贏法放在一份研究裡，一步一步走，棋盤旁邊附有殘局庫。',
+  'Banqi players who reach endgames, and anyone curious how a solved endgame reads.':
+    '會下到殘局的暗棋玩家，以及想知道一個完全解出的殘局讀起來是什麼樣子的人。',
+  'A player told us our 40-move draw rule is too short for this ending, and the tablebase agrees: red wins in 67 moves with best play, but can’t force a capture in the first 40, so under our rule the game is drawn.':
+    '一位玩家告訴我們，對這個殘局來說，我們的 40 步和棋規則太短了，殘局庫也這麼說：雙方都走最佳著法時，紅方 67 步取勝，但沒辦法在前 40 步之內確保吃到子，所以按我們的規則這盤棋判和。',
+  'The study plays the win with the tablebase beside the board: every legal move in every position, and whether it wins, draws or loses.':
+    '研究把贏法完整走一遍，棋盤旁邊附有殘局庫：每個局面的每一步合法著法，以及這步是贏、和還是輸。',
+  'Two chariots alone are decided by whether the steps between them are odd or even, and every other piece is a spare move that flips it. Red has two spare moves to black’s one, and wins by running down black’s.':
+    '只剩兩個車時，勝負取決於兩車之間的距離是奇數還是偶數，而其他每個棋子都能走閒著，把奇偶倒過來。紅方有兩個能走閒著的子，黑方只有一個，紅方把黑方那一個追上吃掉就贏了。',
+  'In October rebirthfox333, a [banqi](/rules/banqi) player on Mistboard, told us our draw rule was too short. Mistboard draws a game after 40 moves without a capture or a flip. They pointed to the endings where three pieces beat two, and said the win can take ninety-something moves. If that was true, our rule was turning won games into draws.':
+    '十月，Mistboard 上的[暗棋](/rules/banqi)玩家 rebirthfox333 告訴我們，我們的和棋規則太短了。Mistboard 在連續 40 步沒有吃子或翻子之後判和。對方舉了三子勝兩子的殘局為例，說這種棋要贏可能得走九十多步。如果真是這樣，我們的規則就是在把贏棋判成和棋。',
+  'So we solved one of them with a tablebase, a program that works out every position of an ending exactly. Red has a chariot, a horse and a soldier, black has a chariot and a horse, and every piece is face up. A move here is one player’s turn.':
+    '於是我們用殘局庫解出了其中一個。殘局庫是一種程式，能把一個殘局的每個局面都精確算出來。紅方有車、馬、卒，黑方有車、馬，所有棋子都已翻開。這裡的一步指一方走一次。',
+  'Red to move. No position with these pieces gives red a longer win.':
+    '紅方走。這組子力的所有局面裡，沒有一個讓紅方贏得比這更久。',
+  'RED TO MOVE AND WIN': '紅先勝',
+  '**The rule is too short. Red wins in 67 moves, but can’t force a capture until move 45.** Our rule draws the game at move 40.':
+    '**規則太短了。紅方 67 步取勝，但要到第 45 步才能確保吃到子。**我們的規則在第 40 步就判和了。',
+  'The tablebase answers every position': '每個局面，殘局庫都有答案',
+  'Banqi endgame: chariot and horse against chariot, horse and soldier': '暗棋殘局：車馬卒對車馬',
+  'Best play for both sides, move by move.': '雙方的最佳著法，一步一步走。',
+  'Under the board, the tablebase lists every legal move in the position shown, whether it wins, draws or loses for the side to move (named at the top of the table), and in how many moves. The shaded row is the move the line plays. Hover any row to see its move on the board, or click it to play it and keep going from there. Your moves appear in the move list as a branch under the move you left from, and clicking any of the game’s moves takes you back.':
+    '棋盤下方，殘局庫列出目前局面的每一步合法著法，標明這步對走棋方（寫在表格頂端）是贏、和還是輸，以及要幾步。有底色的那一列就是主線走的著法。把滑鼠移到任一列上，可以在棋盤上看到那步棋；點一下就會走出這步，並從那裡接著下。你走的著法會以分支的形式，出現在著法列表中你離開主線的那一步下面；點選主線裡的任何一步都能回去。',
+  'Red wins by running black out of spare moves': '紅方耗盡黑方的閒著取勝',
+  'Pieces in banqi move one step along a rank or file, and a piece takes one of equal or lower rank, so two chariots can take each other. Count the steps between them. Every chariot move changes the count by one, and a capture needs a count of one. If it is your move and the count is odd, it is even on every turn your opponent gets, so they can never take you and you can walk toward them. The tablebase agrees for all 992 ways to place two chariots alone.':
+    '暗棋的棋子每次橫走或直走一格，可以吃同級或更低級的棋子，所以兩個車可以互吃。數一數兩車之間的距離，也就是橫豎走幾格才能到對方的位置。車每走一步，距離就加一或減一；要吃子，距離必須是一。如果輪到你走時距離是奇數，那麼每次輪到對手走時距離都是偶數，所以對手永遠吃不到你，你可以一路逼近。只剩兩個車的全部 992 種擺法，殘局庫給出的結論都一樣。',
+  'Black to move in both. Black loses four steps apart (c2 to f3) and wins three steps apart (c2 to e3).':
+    '兩圖都是黑方走。相距四格（c2 到 f3）黑方負，相距三格（c2 到 e3）黑方勝。',
+  'FOUR STEPS APART: BLACK LOSES': '相距四格：黑方負',
+  'THREE STEPS APART: BLACK WINS': '相距三格：黑方勝',
+  'A move by any other piece leaves the count alone and hands the turn over, so it flips who has the odd count. Red has two of these spare moves to black’s one, so red can always answer black’s with one of its own. Red’s plan is to take away black’s spare move, the horse, and that is what takes so long: black’s horse comes off on move 45.':
+    '其他棋子走一步，距離不變，卻把走棋權交給了對方，於是輪到哪一方時距離是奇數，就倒了過來。紅方有兩個能走這種閒著的子，黑方只有一個，所以黑方每走一步閒著，紅方都能用自己的閒著回應。紅方的計畫是拿掉黑方走閒著的子，也就是那個馬，而費時的正是這一步：黑方的馬到第 45 步才被吃掉。',
+  'A 60-move rule is long enough': '60 步規則就夠長了',
+  'Red needs 45 moves to force a capture, so our 40-move rule draws the game first. A rule set used for computer banqi programs in Taiwan ([PDF](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2021/hwks/rules.pdf)) allows 60. The longest stretch of the winning line without a capture is 43 moves, so under 60 red can play the win out.':
+    '紅方要 45 步才能確保吃到子，所以我們的 40 步規則會先判和。台灣電腦暗棋程式使用的一套規則（[PDF](https://homepage.iis.sinica.edu.tw/~tshsu/tcg/2021/hwks/rules.pdf)）允許 60 步。整條贏棋路線中，最長一段連續不吃子的著法是 43 步，所以在 60 步的規則下，紅方可以把這盤贏棋下完。',
+  'The last spare move wins': '最後的閒著決定勝負',
+  'rebirthfox333 was right: our 40-move rule is too short for this ending. Two chariots are decided by the count, and every other piece is a spare move that flips it. Red has two spare moves to black’s one, so red wins. It takes 67 moves because black’s one, the horse, has to be run down first.':
+    'rebirthfox333 說得對：對這個殘局來說，我們的 40 步規則太短了。兩個車的勝負由距離的奇偶決定，其他每個棋子都能走閒著，把奇偶倒過來。紅方有兩個能走閒著的子，黑方只有一個，所以紅方贏。之所以要走 67 步，是因為黑方唯一的那個馬必須先被追上吃掉。',
   // banqi-perpetual-chase: machine-drafted 2026-10-11, not native-reviewed. Piece names follow banqi-statistics (將 士 象 車 馬 砲 卒); a ply is 步.
   'The Perpetual Chase Rule in Banqi': '暗棋長捉規則',
   'Perpetual Chase in Banqi': '暗棋的長捉',

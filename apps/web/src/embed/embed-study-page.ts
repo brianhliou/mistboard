@@ -11,11 +11,16 @@
 // take as little of their surface, and know as little about their readers, as it
 // can.
 
-import type { EmbedPov } from '@mistboard/game';
+import type { BanqiGameState, BanqiMove, EmbedPov } from '@mistboard/game';
 import '../app-base.css';
 import '../articles.css';
 import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
-import { mountBanqiReplayBoard } from '../banqi-replay-board.js';
+import {
+  mountBanqiReplayBoard,
+  replayBanqiLine,
+  replayBanqiLineFrom,
+} from '../banqi-replay-board.js';
+import { banqiResultLabel } from '../banqi-result-label.js';
 import {
   chessChapterToReplaySpec,
   mountChessReplayBoard,
@@ -36,8 +41,11 @@ import { mountJieqiReplayBoard, replayJieqiLine } from '../jieqi-replay-board.js
 import { mountJungleFlipReplayBoard, replayJungleFlipLine } from '../jungle-flip-replay-board.js';
 import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
 import { mountJungleReplayBoard } from '../jungle-replay-board.js';
+import type { BanqiBoardArrow } from '../live-banqi-render.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
+import { createBanqiTablebasePanel } from '../review/banqi-tablebase-panel.js';
 import { reviewResultLabel } from '../review/game-review-meta.js';
+import { hoverArrowStyle } from '../review/hover-arrow.js';
 import { chapterAnnotations } from '../study-chapter-annotations.js';
 import { displayEventName } from '../study-chapter-games.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
@@ -149,6 +157,8 @@ export type ChapterEmbedOptions = {
   /** The line embed's `arrow=<move>`: the move drawn on the opening frame in
    *  place of the one played from it. */
   openingArrowMove?: string;
+  /** `?tablebase=1`: a banqi chapter shows its endgame table under the board. */
+  tablebase?: boolean;
 };
 
 function solutionCardOptions(options: ChapterEmbedOptions): {
@@ -329,23 +339,70 @@ async function mountBanqiEmbed(
   }
   const tags = chapter.tags ?? {};
   const event = tags.event ? displayEventName(tags.event) : (chapter.name ?? 'Study');
-  // The tags' result is seat-keyed (1-0 is the first mover), and a seat's ink
-  // is whatever the first flip turned up, so the label names the seat.
-  const result =
-    tags.result === '1-0'
-      ? 'First seat wins'
-      : tags.result === '0-1'
-        ? 'Second seat wins'
-        : tags.result === '1/2-1/2'
-          ? 'Draw'
-          : '';
-  await mountEmbedCard(root, {
+  // The tags' result is seat-keyed (1-0 is the first mover); an untagged
+  // chapter (the tablebase study carries none) reads it off its last
+  // position. The replayed line knows which ink the first flip bound, so the
+  // label names the colour, falling back to the seat before any flip.
+  const line = replayBanqiLine({ rootFen, moves });
+  const final = line.states.at(-1);
+  const token = tagResultToken(tags.result) ?? (final ? statusResultToken(final.status) : null);
+  const result = token ? banqiResultLabel(token, final?.firstColor ?? null) : '';
+  const firstInk = final?.firstColor ?? null;
+  const secondInk = firstInk === null ? null : firstInk === 'red' ? 'black' : 'red';
+  const inkName = (ink: 'red' | 'black'): string =>
+    t(ink === 'red' ? 'replay.red' : 'replay.black');
+  // With the table (?tablebase=1) the reader may play any row. Their moves hang
+  // off the chapter as sidelines, keyed by the mainline ply they replace, so
+  // the sheet lists them as a branch under the move they left from and a click
+  // on any of the chapter's moves returns to it.
+  const readerLines = new Map<number, string[]>();
+  // What the board shows: a mainline ply, or `cursor` moves into a sideline.
+  let at: { ply: number } | { atPly: number; cursor: number } = { ply: 0 };
+  let board: ReturnType<typeof mountBanqiReplayBoard> | null = null;
+  let card: Awaited<ReturnType<typeof mountEmbedCard>> | null = null;
+  const tablebase = options.tablebase
+    ? banqiEmbedTablebase({
+        position: () => {
+          if ('ply' in at) return { state: line.states[at.ply] ?? null, next: moves[at.ply] };
+          const sideline = readerLines.get(at.atPly) ?? [];
+          const from = line.states[at.atPly - 1];
+          const replayed = from ? replayBanqiLineFrom(from, sideline) : null;
+          return { state: replayed?.states[at.cursor] ?? null, next: sideline[at.cursor] };
+        },
+        previewArrow: (arrow) => board?.previewArrow(arrow),
+        play: (move) => {
+          const token = `${move.from}${move.to}`;
+          if ('ply' in at) {
+            const ply = at.ply;
+            if (moves[ply] === token) return board?.jumpToPly(ply + 1);
+            // Past the chapter's last move there is no move to hang a branch on.
+            if (ply >= moves.length) return;
+            if (readerLines.get(ply + 1)?.[0] === token) return card?.jumpToLine(ply + 1, 1);
+            readerLines.set(ply + 1, [token]);
+            return void card?.reloadLine({ atPly: ply + 1, cursor: 1 });
+          }
+          const { atPly, cursor } = at;
+          const sideline = readerLines.get(atPly) ?? [];
+          if (sideline[cursor] === token) return card?.jumpToLine(atPly, cursor + 1);
+          readerLines.set(atPly, [...sideline.slice(0, cursor), token]);
+          return void card?.reloadLine({ atPly, cursor: cursor + 1 });
+        },
+      })
+    : null;
+  card = await mountEmbedCard(root, {
     header: event,
     // The seats are the first and second mover; the ink each plays is bound by
-    // the first flip, so the seat rows carry the seat, not a colour.
+    // the first flip. Once it is (a set-up position is bound from the start),
+    // an untagged seat is named by its ink, so the reader can tell who is red.
     seats: {
-      first: { name: tags.red ?? 'First seat', ink: 'red' },
-      second: { name: tags.black ?? 'Second seat', ink: 'black' },
+      first: {
+        name: tags.red ?? (firstInk ? inkName(firstInk) : 'First seat'),
+        ink: firstInk ?? 'red',
+      },
+      second: {
+        name: tags.black ?? (secondInk ? inkName(secondInk) : 'Second seat'),
+        ink: secondInk ?? 'black',
+      },
     },
     result,
     credit: {
@@ -356,10 +413,65 @@ async function mountBanqiEmbed(
     railWidthPx: embedRailWidthPx('banqi'),
     startPly: options.startPly ?? 0,
     ...solutionCardOptions(options),
-    mountBoard: async (host, hooks) =>
-      mountBanqiReplayBoard(host, { rootFen, moves, perspective: 'red' }, hooks),
+    ...(tablebase ? { belowCard: tablebase.el } : {}),
+    mountBoard: async (host, hooks) => {
+      board = mountBanqiReplayBoard(
+        host,
+        { rootFen, moves, perspective: 'red', lines: readerLines },
+        {
+          onPlyChange: (ply, maxPly) => {
+            at = { ply };
+            hooks.onPlyChange(ply, maxPly);
+            tablebase?.show();
+          },
+          onLineChange: (atPly, cursor) => {
+            at = { atPly, cursor };
+            tablebase?.show();
+          },
+        },
+      );
+      return board;
+    },
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+/** The endgame table under a banqi chapter's board (`?tablebase=1`): the
+ *  position the board shows, with the line's next move there marked. Hovering
+ *  a row draws its move on the board in the study's hover colours; clicking
+ *  one plays it. The pane keeps one height (embed.css), since the card fits
+ *  the board to the room it leaves. */
+function banqiEmbedTablebase(hooks: {
+  /** The position on the board, and the next move of the line it is on. */
+  position: () => { state: BanqiGameState | null; next: string | undefined };
+  previewArrow: (arrow: BanqiBoardArrow | null) => void;
+  play: (move: BanqiMove) => void;
+}): { el: HTMLElement; show: () => void } {
+  const panel = createBanqiTablebasePanel();
+  panel.onHoverMove((move, result) =>
+    hooks.previewArrow(
+      move ? { from: move.from, to: move.to, ...hoverArrowStyle(result ?? 'book') } : null,
+    ),
+  );
+  panel.onPlayMove(hooks.play);
+  panel.setActive(true);
+  const el = document.createElement('div');
+  el.className = 'embed-tablebase';
+  el.append(panel.el);
+  let shown = 0;
+  return {
+    el,
+    show: () => {
+      const mine = ++shown;
+      const { state, next } = hooks.position();
+      void panel.setState(state).then((showing) => {
+        if (!showing || !next || shown !== mine) return;
+        panel.el
+          .querySelector(`.bq-tablebase__row[data-move="${next}"]`)
+          ?.classList.add('bq-tablebase__row--line');
+      });
+    },
+  };
 }
 
 // A jungle chapter is its own branch for the banqi reason: `a1b1` is not xiangqi

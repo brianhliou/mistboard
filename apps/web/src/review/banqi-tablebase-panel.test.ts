@@ -55,6 +55,10 @@ describe('banqi tablebase panel', () => {
     expect(panel.el.hidden).toBe(false);
     expect(panel.el.querySelector('.bq-tablebase__title')?.textContent).toBe('Tablebase');
     expect(panel.el.querySelector('.bq-tablebase__verdict')?.textContent).toBe('Black wins in 67');
+    // Every row's result is the mover's, so the head names the mover with its disc.
+    const mover = panel.el.querySelector('.bq-tablebase__mover');
+    expect(mover?.textContent).toBe('Black to move');
+    expect(mover?.querySelector('.seat-disc--black')).not.toBeNull();
     const list = rows(panel.el);
     expect(list).toHaveLength(9);
     const wins = list.filter((row) => row.dataset.result === 'win');

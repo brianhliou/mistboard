@@ -49,6 +49,16 @@
       "zh-hant": "暗棋規則：玩法詳解與免費線上對弈"
     }
   },
+  "banqi-chariot-endgame": {
+    "title": "A Solved Banqi Endgame: Chariot and Horse Against Chariot, Horse and Soldier",
+    "kind": "article",
+    "description": "A Mistboard player told us our 40-move draw rule is too short for the endings where three pieces beat two. We solved one: a chariot, horse and soldier beat a chariot and horse in 67 moves, and can’t force a capture in the first 40. The win is in a study, move by move, with the tablebase beside the board.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "一个完全解出的暗棋残局：车马卒对车马",
+      "zh-hant": "一個完全解出的暗棋殘局：車馬卒對車馬"
+    }
+  },
   "banqi-perpetual-chase": {
     "title": "The Perpetual Chase Rule in Banqi",
     "kind": "article",
