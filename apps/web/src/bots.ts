@@ -90,6 +90,9 @@ const JIEQI_LADDER_BOT_ID_PREFIX = 'pikafish-level-';
 const JIEQI_TOP_BOT_ID = 'ab-jchess';
 // The top jungle slot above Misty (2026-10, #434); server first-party-bots.ts.
 const JUNGLE_TOP_BOT_ID = 'katago';
+// The xiangqi bot that plays its worst move (2026-10-17): off the ladder, so it
+// sits below Level 1 rather than reading as a top rung.
+const XIANGQI_WORST_BOT_ID = 'general-blunder';
 
 // /bots is the page for "play xiangqi against the computer" (象棋人机对战), in
 // all three interface languages (/zh-hans/bots, /zh-hant/bots): the heading
@@ -267,9 +270,12 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
   const jieqiLadder = system
     .filter((bot) => bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX))
     .sort((a, b) => ladderLevel(a) - ladderLevel(b));
+  const worst = system.filter((bot) => bot.id === XIANGQI_WORST_BOT_ID);
   const others = system.filter(
     (bot) =>
-      !bot.id.startsWith(LADDER_BOT_ID_PREFIX) && !bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX),
+      !bot.id.startsWith(LADDER_BOT_ID_PREFIX) &&
+      !bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX) &&
+      bot.id !== XIANGQI_WORST_BOT_ID,
   );
   const topRungs = others.filter((bot) => playsGame(bot, 'xiangqi'));
   // Pikafish (level 8) then the AB-JChess top slot, which alone reads Strongest.
@@ -289,6 +295,9 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
       title: t('bots.ladderTitle'),
       intro: t('bots.ladderIntro'),
       rows: [
+        ...worst.map((bot) =>
+          buildBotSummaryCard(bot, { ...xiangqiCard, subtitle: t('bots.firstParty') }),
+        ),
         ...ladder.map((bot) => {
           const level = ladderLevel(bot);
           return buildBotSummaryCard(bot, {
