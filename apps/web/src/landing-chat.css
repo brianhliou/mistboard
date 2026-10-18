@@ -318,29 +318,6 @@ a.landing-chat-token:focus-visible {
   outline: none;
 }
 
-/* Activity rows (server-derived: wins, new studies). Muted and marked with a
-   thin accent rule so a human line reads as a person against them. */
-.landing-chat-event {
-  padding-left: 6px;
-  border-left: 2px solid color-mix(in srgb, var(--site-accent) 55%, transparent);
-}
-
-.landing-chat-event-text {
-  color: color-mix(in srgb, var(--landing-chat-text) 82%, transparent);
-  text-decoration: none;
-}
-
-.landing-chat-event-text strong {
-  font-weight: 600;
-  color: var(--landing-chat-text);
-}
-
-.landing-chat-event-text:hover,
-.landing-chat-event-text:focus-visible {
-  text-decoration: underline;
-  outline: none;
-}
-
 /* Phone home: chat is the last block before the footer, so keep it to about
    five lines; older messages scroll inside it. */
 @media (max-width: 600px) {

@@ -111,9 +111,9 @@ export async function countOpenSeeksForUser(userId: string): Promise<number> {
 
 /**
  * A user's handle only when their profile may be linked: an open account whose
- * profile is not private. The same rule the postgame participant rows and the
- * lobby activity feed apply (persistence-games.ts, persistence-lobby-activity.ts),
- * so a name links on the correspondence pages exactly when it links elsewhere.
+ * profile is not private. The same rule the postgame participant rows apply
+ * (persistence-games.ts), so a name links on the correspondence pages exactly
+ * when it links elsewhere.
  * The display name is unaffected; only the link is withheld.
  */
 export function linkableHandleSql(alias: string): string {
