@@ -325,6 +325,13 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
           familyName: 'Fairy-Stockfish',
           kind: 'container',
         },
+        // Below the ladder: plays the worst move it finds (XIANGQI_PICKER_ENGINES).
+        {
+          id: 'fairy-stockfish-xiangqi-worst',
+          name: 'General Blunder',
+          familyName: 'Fairy-Stockfish',
+          kind: 'container',
+        },
       ],
       // A device with no remembered xiangqi engine is a newcomer: the same
       // first-game rung the homepage offers (landing-bot-policy).

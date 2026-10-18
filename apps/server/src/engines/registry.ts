@@ -52,6 +52,11 @@ import {
   XIANGQI_RANDOM_ENGINE_ID,
   XIANGQI_RANDOM_ENGINE_VERSION,
 } from '../xiangqi-random-engine.js';
+import {
+  XIANGQI_WORST_ENGINE_ID,
+  XIANGQI_WORST_ENGINE_VERSION,
+  xiangqiWorstEngineTierFor,
+} from '../xiangqi-worst-engine.js';
 import { BUILTIN_ENGINES } from './builtin/index.js';
 import type { EngineClientId, EngineDefinition, EngineId } from './types.js';
 
@@ -881,6 +886,33 @@ const XIANGQI_RANDOM_ENGINES: Record<string, EngineDefinition> = {
   } satisfies EngineDefinition,
 };
 
+// The worst-move bot: Fairy-Stockfish on the CC0 net scores every root move and
+// the bot plays the lowest (xiangqi-worst-engine.ts). Player-facing, not a rung.
+const XIANGQI_WORST_TIER = xiangqiWorstEngineTierFor(XIANGQI_WORST_ENGINE_ID)!;
+const XIANGQI_WORST_HASH = `fsf-xiangqi-${XIANGQI_FSF_ENGINE_VERSION}-${XIANGQI_FSF_ENGINE_REF}-${XIANGQI_WORST_ENGINE_VERSION}-nodes-${XIANGQI_WORST_TIER.nodes}-${XIANGQI_FSF_NNUE_NET.replace(/\.nnue$/, '')}`;
+const XIANGQI_WORST_ENGINES: Record<string, EngineDefinition> = {
+  [XIANGQI_WORST_ENGINE_ID]: {
+    id: XIANGQI_WORST_ENGINE_ID,
+    engineId: 'fairy-stockfish-xiangqi',
+    engineName: 'Fairy-Stockfish',
+    name: XIANGQI_WORST_TIER.name,
+    kind: 'container',
+    gameSpecId: 'xiangqi',
+    configHash: XIANGQI_WORST_HASH,
+    playSignature: XIANGQI_WORST_HASH,
+    config: {
+      kind: 'fairy-stockfish',
+      // Full strength (FSF's default): the weakness is the pick, not the search.
+      skill: 20,
+      movetime_ms: XIANGQI_WORST_TIER.movetimeMs,
+      nodes: XIANGQI_WORST_TIER.nodes,
+      nnue: XIANGQI_FSF_NNUE_NET,
+    },
+    notes:
+      'Fairy-Stockfish on the CC0 xiangqi net over every root move (MultiPV), playing the lowest-scoring one: the worst move it can find. A beginner opponent, not a ladder rung.',
+  } satisfies EngineDefinition,
+};
+
 const XIANGQI_FSF_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
   XIANGQI_FSF_PLAYABLE_ENGINES.map((tier) => [
     tier.id,
@@ -1176,6 +1208,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...PYTHON_ENGINES,
   ...XIANGQI_FSF_ENGINES,
   ...XIANGQI_RANDOM_ENGINES,
+  ...XIANGQI_WORST_ENGINES,
   ...FORTRESS_XIANGQI_FSF_ENGINES,
   ...DUCK_XIANGQI_FSF_ENGINES,
   ...ATOMIC_XIANGQI_FSF_ENGINES,

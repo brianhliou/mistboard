@@ -155,6 +155,10 @@ const fsfPool = new UciEnginePool({
   queueTimeoutMessage: 'fairy-stockfish-xiangqi concurrency queue timed out',
 });
 
+// The worst-move bot (xiangqi-worst-engine.ts) runs this binary too, so it
+// shares the cap.
+export const xiangqiFsfLivePool = fsfPool;
+
 // Parked engine processes between moves; the pool above still caps how many
 // searches run at once, so live sessions never exceed its slots.
 const warmSessions = new UciWarmSessionCache({ name: 'xiangqi-fsf' });

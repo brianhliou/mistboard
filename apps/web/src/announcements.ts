@@ -51,6 +51,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-18',
+    kind: 'release',
+    headline: 'Meet General Blunder, a xiangqi bot that tries to lose.',
+    body: 'General Blunder is a strong engine playing backwards: it checks every move and plays the one that is worst for itself. Most turns a checkmate or a free piece is waiting for you, so it is a good first opponent and a fast way to practise spotting mates. Can you find them all?',
+    href: '/bot/general-blunder',
+    cta: 'Play General Blunder',
+  },
+  {
     date: '2026-10-17',
     kind: 'update',
     headline: 'Mistboard is rebuilt for phones.',

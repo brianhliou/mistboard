@@ -35,6 +35,7 @@ import {
 import { registeredVariantTenants } from '../../server/src/variant-tenant/registry.js';
 import {
   XIANGQI_DEFAULT_ENGINE_ID,
+  XIANGQI_PICKER_ENGINES,
   XIANGQI_PUBLIC_ENGINES,
 } from '../../server/src/xiangqi-engine-catalog.js';
 import type { FeaturedGame } from './game-display.js';
@@ -144,7 +145,7 @@ describe('web tenant registry <-> server tenant registry parity', () => {
 
   it('xiangqi picker engine options mirror the server engine catalog', () => {
     // The web engineOptions list is a hand-maintained mirror of the server's
-    // XIANGQI_PUBLIC_ENGINES (apps/server/src/xiangqi-engine-catalog.ts): the
+    // XIANGQI_PICKER_ENGINES (apps/server/src/xiangqi-engine-catalog.ts): the
     // ids ride the create payload straight into the server's engine-id gate, so
     // drift means a picker entry that cannot seat an engine. The picker orders
     // strongest-first; the server table orders weakest-first.
@@ -152,7 +153,7 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     expect(tenant?.landing?.engineOptions, 'xiangqi tenant must expose engineOptions').toBeTruthy();
     const options = tenant?.landing?.engineOptions ?? [];
     expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
-      [...XIANGQI_PUBLIC_ENGINES].reverse().map((tier) => ({ id: tier.id, name: tier.name })),
+      [...XIANGQI_PICKER_ENGINES].reverse().map((tier) => ({ id: tier.id, name: tier.name })),
     );
     // The picker's newcomer default is the homepage first-game rung
     // (landing-bot-policy), not the server's fallback for a create request that
