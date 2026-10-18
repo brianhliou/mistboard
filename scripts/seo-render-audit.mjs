@@ -104,7 +104,7 @@ export function serverHtmlFacts(html) {
 // Pages the server renders for a crawler (broadcast-pages.ts, player-pages.ts,
 // the study pages), with or without a locale prefix.
 const SERVER_RENDERED_PAGE =
-  /^(?:\/zh-han[st])?\/(?:broadcast\/xiangqi(?:\/|$)|players(?:\/|$)|study\/)/;
+  /^(?:\/zh-han[st])?\/(?:broadcast\/xiangqi(?:\/|$)|players(?:\/|$)|study(?:\/|$))/;
 
 /** Failures for a 200 response's server HTML; empty when it is fine. */
 export function serverHtmlFailures(pathname, facts) {

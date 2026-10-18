@@ -21,6 +21,7 @@ test('an empty shell on a broadcast, player or study URL fails', () => {
     '/broadcast/xiangqi/t/round/t-r02',
     '/broadcast/xiangqi/board/b1',
     '/players/wang-tianyi',
+    '/study',
     '/study/S1',
     '/zh-hans/study/S1',
   ]) {

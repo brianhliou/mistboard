@@ -748,10 +748,7 @@ export async function serveSpaShellWithRoutePreloads(params: {
       );
     }
     const studies = await (params.listPublicStudies ?? listEveryPublicStudy)().catch(() => []);
-    html = html.replace(
-      '<div id="app"></div>',
-      `<div id="app">${renderStudyIndexBody(studies)}</div>`,
-    );
+    html = html.replace('<div id="app"></div>', crawlerCopyRoot(renderStudyIndexBody(studies)));
   }
   if (noindex) {
     html = setRobotsMeta(html, 'noindex, follow');

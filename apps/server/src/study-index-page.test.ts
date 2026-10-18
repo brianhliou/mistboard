@@ -73,7 +73,10 @@ test('/study serves a self canonical, an h1 and a link to every listed study', a
   assert.equal(html.match(/rel="canonical"/g)?.length, 1);
   assert.match(html, /<link rel="canonical" href="https:\/\/mistboard\.com\/study">/);
   assert.match(html, /<title>Xiangqi Studies \| Mistboard<\/title>/);
-  assert.match(html, /<div id="app"><main><h1>Xiangqi studies<\/h1><p>[^<]+<\/p>/);
+  assert.match(
+    html,
+    /<div id="app"><div class="crawler-copy"><main><h1>Xiangqi studies<\/h1><p>[^<]+<\/p>/,
+  );
   assert.match(html, /<a href="\/study\/abc123">Secrets Within the Tangerine<\/a> · 40 chapters/);
   assert.match(html, /<a href="\/study\/def456">Riverbank &lt;basics&gt;<\/a> · 1 chapter</);
   assert.equal(html.match(/<a href="\/study\//g)?.length, FIXTURE.length);
