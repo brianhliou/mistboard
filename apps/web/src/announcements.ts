@@ -44,6 +44,14 @@ export type Announcement = {
 const baseAnnouncements: Announcement[] = [
   {
     date: '2026-10-17',
+    kind: 'release',
+    headline: 'Meet General Blunder, a xiangqi bot that tries to lose.',
+    body: 'General Blunder is a strong engine playing backwards: it checks every move and plays the one that is worst for itself. Most turns a checkmate or a free piece is waiting for you, so it is a good first opponent and a fast way to practise spotting mates. Can you find them all?',
+    href: '/bot/general-blunder',
+    cta: 'Play General Blunder',
+  },
+  {
+    date: '2026-10-17',
     kind: 'update',
     headline: 'Mistboard is rebuilt for phones.',
     body: "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. On a computer nothing changes.",

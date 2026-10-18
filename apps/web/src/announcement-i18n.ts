@@ -36,6 +36,11 @@ export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
   // ── 2026-10-17 (phone redesign) ── 菜单 / 开始对局 follow shell nav.menu and play setup.startGame.
+  'Meet General Blunder, a xiangqi bot that tries to lose.':
+    '认识 General Blunder：一个想输棋的象棋机器人。',
+  'General Blunder is a strong engine playing backwards: it checks every move and plays the one that is worst for itself. Most turns a checkmate or a free piece is waiting for you, so it is a good first opponent and a fast way to practise spotting mates. Can you find them all?':
+    'General Blunder 是一个反着下的强引擎：它检查每一步棋，然后走对自己最差的那一步。大多数回合都有一步将杀或一个白送的棋子等着你，所以它很适合做你的第一个对手，也能让你快速练习找杀。你能全部找到吗？',
+  'Play General Blunder': '与 General Blunder 对弈',
   'Mistboard is rebuilt for phones.': 'Mistboard 为手机重新设计。',
   "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. On a computer nothing changes.":
     '在手机上，网站顶部现在只占一行，菜单全屏打开，所有页面按栏目分组。首页先显示正在进行的棋盘和下棋入口，对局设置从底部滑出，“开始对局”始终在手边，页脚的链接都移进了菜单。电脑上的样子不变。',
@@ -508,6 +513,11 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   // ── 2026-10-17 (phone redesign) ── 選單 / 開始對局 follow shell nav.menu and play setup.startGame.
+  'Meet General Blunder, a xiangqi bot that tries to lose.':
+    '認識 General Blunder：一個想輸棋的象棋機器人。',
+  'General Blunder is a strong engine playing backwards: it checks every move and plays the one that is worst for itself. Most turns a checkmate or a free piece is waiting for you, so it is a good first opponent and a fast way to practise spotting mates. Can you find them all?':
+    'General Blunder 是一個反著下的強引擎：它檢查每一步棋，然後走對自己最差的那一步。大多數回合都有一步將殺或一個白送的棋子等著你，所以它很適合做你的第一個對手，也能讓你快速練習找殺。你能全部找到嗎？',
+  'Play General Blunder': '與 General Blunder 對弈',
   'Mistboard is rebuilt for phones.': 'Mistboard 為手機重新設計。',
   "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. On a computer nothing changes.":
     '在手機上，網站頂部現在只佔一行，選單全螢幕打開，所有頁面按欄目分組。首頁先顯示正在進行的棋盤和下棋入口，對局設定從底部滑出，「開始對局」始終在手邊，頁尾的連結都移進了選單。電腦上的樣子不變。',
