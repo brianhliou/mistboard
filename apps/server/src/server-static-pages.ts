@@ -10,6 +10,7 @@ import {
 } from './article-schedule.js';
 import { botPageMeta } from './bot-page-meta.js';
 import { botsDirectoryBody } from './bots-page-body.js';
+import { type BroadcastPage, liveBroadcastPage } from './broadcast-pages.js';
 import { broadcastPageMeta } from './og-broadcast.js';
 import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
 import { articleOgImageUrl, GAME_OG_IMAGE_VERSION, STUDY_OG_IMAGE_VERSION } from './og-image.js';
@@ -574,11 +575,27 @@ export async function routePreloadLinksForPath(params: {
 // /watch?channel=…&game=… is the one watch page tuned to a channel or game, and
 // each combination crawled as its own URL (SEO backlog D8). They canonicalise to
 // the bare path.
-const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set(['/watch']);
+const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set(['/watch', '/games']);
+
+// Client routes whose list is live (it changes by the minute, so nothing in it
+// is worth baking) but whose page still needs a heading and its links for a
+// crawler that does not run the bundle. The client clears the root on mount.
+const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
+  '/games':
+    '<main><h1>Current games</h1><p>Every xiangqi (Chinese chess) and variant game in progress on Mistboard right now: live games with clocks, and correspondence games waiting on a move.</p><ul><li><a href="/watch">Watch live games</a></li><li><a href="/games/search">Search finished games</a></li><li><a href="/broadcast/xiangqi">Xiangqi tournament broadcasts</a></li><li><a href="/">Play a game</a></li></ul></main>',
+};
+
+// A puzzle deep link (/puzzles/:idOrShortCode) is its own page, and served
+// with no canonical until 2026-10-17, so each ?utm= or share-tracking copy
+// read to a crawler as another URL for it.
+const QUERY_FREE_CANONICAL_PATTERNS: readonly RegExp[] = [/^\/puzzles\/[^/]+$/];
 
 function queryFreeCanonicalPath(pathname: string): string | null {
   const normalized = pathname.replace(/\/+$/, '') || '/';
-  return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ? normalized : null;
+  return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ||
+    QUERY_FREE_CANONICAL_PATTERNS.some((pattern) => pattern.test(normalized))
+    ? normalized
+    : null;
 }
 
 /** hreflang links for a route that exists at '', '/zh-hans' and '/zh-hant',
@@ -633,15 +650,23 @@ export async function serveSpaShellWithRoutePreloads(params: {
   routeBody?: (pathname: string) => Promise<string | null>;
   /** Override the player-page lookup (tests); the default reads persistence. */
   playerPage?: (pathname: string) => Promise<PlayerPage | null>;
+  /** Override the broadcast-page lookup (tests); the default reads persistence. */
+  broadcastPage?: (pathname: string) => Promise<BroadcastPage | null>;
 }): Promise<boolean> {
   const links = await routePreloadLinksForPath(params);
   // A player, team or the players index (#458, player-pages.ts): its own meta,
   // a canonical link and a crawler body, from one read of the archive. A name
   // the archive does not know keeps the generic meta and is kept out of the
   // index, the way an unlisted study is.
-  const player = await (
+  const playerPage = await (
     params.playerPage ?? ((pathname: string) => livePlayerPage(pathname, params.staticDir))
   )(params.pathname).catch(() => null);
+  // A broadcast index, event, round or game (broadcast-pages.ts) rides the same
+  // slot: before 2026-10-17 all 195 sitemap-broadcasts URLs served an empty
+  // #app with no canonical, and Google folded them as duplicates.
+  const player =
+    playerPage ??
+    (await (params.broadcastPage ?? liveBroadcastPage)(params.pathname).catch(() => null));
   // A tenant game page (/<tenant>/game/:id, /room/:id) names a finished game:
   // its own title, description, canonical review URL and card (#368). Needs
   // persistence; without it (or for a live game) the route keeps its generic
@@ -714,6 +739,7 @@ export async function serveSpaShellWithRoutePreloads(params: {
   // the root on mount, so the two never show together.
   const body =
     player?.body ??
+    STATIC_ROUTE_BODIES[params.pathname.replace(/\/+$/, '') || '/'] ??
     (await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null));
   if (body) html = html.replace('<div id="app"></div>', crawlerCopyRoot(body));
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -746,7 +772,8 @@ export async function serveGamePage(params: {
   // site's own testing games under one repeated title; they served indexable
   // (SEO backlog D8, 2026-09-17 Search Console read). The page still serves and
   // still previews when shared. Tenant games live at /<variant>/game/:id and go
-  // through serveSpaShellWithRoutePreloads, not here, so they are unaffected.
+  // through serveSpaShellWithRoutePreloads, which noindexes them the same way
+  // since 2026-10-17 (isNoindexRoute).
   html = setRobotsMeta(html, 'noindex, follow');
 
   // /game/:id bypasses the isClientRoute shell path, so bake the route's chunk

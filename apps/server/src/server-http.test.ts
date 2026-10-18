@@ -109,6 +109,35 @@ test('robots.txt keeps crawlers off the data downloads and nothing else under /a
   assert.ok(lines.includes('Sitemap: https://mistboard.com/sitemap.xml'));
 });
 
+// Search Console listed 133 /api/games/* and /api/xiangqi/broadcasts URLs as
+// "Crawled - currently not indexed" (2026-10-17). robots.txt can't block them
+// (pages render from them), so the header keeps the JSON out of the index.
+test('every /api response carries x-robots-tag noindex; pages do not', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), '<!doctype html><title>x</title>', 'utf-8');
+  await writeFile(join(staticDir, 'home.html'), '<!doctype html><title>home</title>', 'utf-8');
+  const handler = createHttpRequestHandler({
+    staticDir,
+    publicHost: 'https://mistboard.com',
+    drainController: { isDraining: () => false },
+  } as unknown as Parameters<typeof createHttpRequestHandler>[0]);
+  const server = createServer(handler);
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    for (const path of ['/api/games/no-such-game', '/api/xiangqi/broadcasts', '/api/nope']) {
+      const api = await fetch(`${base}${path}`);
+      assert.equal(api.headers.get('x-robots-tag'), 'noindex', path);
+      await api.text();
+    }
+    const page = await fetch(`${base}/`, { headers: { accept: 'text/html' } });
+    assert.equal(page.headers.get('x-robots-tag'), null);
+    await page.text();
+  } finally {
+    await new Promise<void>((done) => server.close(() => done()));
+  }
+});
+
 test('hashed build assets: only Vite-named files under /assets qualify', () => {
   assert.equal(isHashedBuildAssetPath('/assets/index-CkdYnPwB.js'), true);
   assert.equal(isHashedBuildAssetPath('/assets/account-profile-C4OBlOPq.css'), true);

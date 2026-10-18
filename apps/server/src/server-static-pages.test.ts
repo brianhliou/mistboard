@@ -1332,6 +1332,105 @@ test('a variant analysis link with a FEN gets its own title, og:url, and a posit
   assert.match(response.body, /<div id="app"><\/div>/);
 });
 
+// --- broadcast pages, /games, puzzle deep links -------------------------------
+
+// Until 2026-10-17 every URL of sitemap-broadcasts.xml served the empty shell:
+// no canonical, no heading, nothing in #app, and Search Console folded them as
+// duplicates of one another.
+test('a broadcast round serves its canonical and a crawlable body with an h1 and game links', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const path = '/broadcast/xiangqi/2026-wuyang-cup/round/2026-wuyang-cup-r02';
+  const response = captureResponse();
+  const served = await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: `${path}/`,
+    search: '?utm_source=x',
+    publicHost: 'https://mistboard.com',
+    playerPage: async () => null,
+    gameMeta: async () => null,
+    broadcastPage: async (pathname) =>
+      pathname.startsWith(path)
+        ? {
+            meta: {
+              title: 'Round 2 · 32nd Five Rams Cup | Mistboard',
+              description: 'Round 2 of the 32nd Five Rams Cup.',
+              urlPath: path,
+            },
+            body: '<main><h1>Round 2 · 32nd Five Rams Cup</h1><ol><li><a href="/broadcast/xiangqi/board/b1">1-0</a></li></ol></main>',
+          }
+        : null,
+  });
+  assert.equal(served, true);
+  const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+  assert.deepEqual(canonicals, [`<link rel="canonical" href="https://mistboard.com${path}">`]);
+  assert.match(response.body, /<title>Round 2 · 32nd Five Rams Cup \| Mistboard<\/title>/);
+  const app = /<div id="app">(.*?)<\/div><\/body>/.exec(response.body)?.[1] ?? '';
+  assert.match(app, /<h1>Round 2 · 32nd Five Rams Cup<\/h1>/);
+  assert.match(app, /<a href="\/broadcast\/xiangqi\/board\/b1">/);
+  assert.doesNotMatch(response.body, /noindex/);
+});
+
+test('an unknown broadcast id is noindexed and gets no canonical', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+  await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/broadcast/xiangqi/board/no-such-board',
+    publicHost: 'https://mistboard.com',
+    playerPage: async () => null,
+    gameMeta: async () => null,
+    broadcastPage: async () => ({ noindex: true }),
+  });
+  assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+  assert.doesNotMatch(response.body, /rel="canonical"/);
+});
+
+test('/games names itself as canonical without its query and carries a heading', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+  await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/games/',
+    search: '?variant=jieqi',
+    publicHost: 'https://mistboard.com',
+    playerPage: async () => null,
+    broadcastPage: async () => null,
+  });
+  const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+  assert.deepEqual(canonicals, ['<link rel="canonical" href="https://mistboard.com/games">']);
+  assert.match(response.body, /<div id="app"><main><h1>Current games<\/h1>/);
+});
+
+test('a puzzle deep link names itself as canonical, with no query string', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  for (const pathname of ['/puzzles/pz_abc123', '/puzzles/pz_abc123/']) {
+    const response = captureResponse();
+    await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      search: '?utm_source=reddit&utm_medium=social',
+      publicHost: 'https://mistboard.com',
+      playerPage: async () => null,
+      broadcastPage: async () => null,
+    });
+    const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+    assert.deepEqual(
+      canonicals,
+      ['<link rel="canonical" href="https://mistboard.com/puzzles/pz_abc123">'],
+      pathname,
+    );
+    assert.doesNotMatch(response.body, /noindex/, pathname);
+  }
+});
+
 // --- tenant game pages (/<tenant>/game/:id, /room/:id) ------------------------
 
 test('a finished tenant game page gets its pairing as title, the review URL as og:url, and its card', async () => {
@@ -1368,8 +1467,15 @@ test('a finished tenant game page gets its pairing as title, the review URL as o
       /<meta property="og:image" content="https:\/\/mistboard\.com\/og\/game\/jq_x\.png\?v=1">/,
     );
     assert.match(response.body, /<div id="app"><\/div>/);
-    // Only the bare /game/:id (Fog Chess) replay is noindexed (SEO D8).
-    assert.doesNotMatch(response.body, /noindex/, pathname);
+    // A site-played game page is noindexed like the bare /game/:id (SEO D8,
+    // widened 2026-10-17), and carries no canonical beside the robots tag. The
+    // room URL is the live surface and is left alone.
+    if (pathname === '/jieqi/game/jq_x') {
+      assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+    } else {
+      assert.doesNotMatch(response.body, /noindex/, pathname);
+    }
+    assert.doesNotMatch(response.body, /rel="canonical"/, pathname);
   }
 
   // A live room (no finished game) keeps the generic shell meta: the room's
