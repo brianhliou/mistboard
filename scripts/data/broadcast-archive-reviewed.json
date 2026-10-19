@@ -1,0 +1,27 @@
+{
+  "events": [
+    {
+      "tour": {
+        "schema": "mistboard.xiangqi.broadcast.v1",
+        "slug": "2026-us-qitian-cup",
+        "name": "2026 5th USA Qitian Cup Team Championship Invitational",
+        "location": "Monterey Park, California",
+        "sourceUrl": "https://www.iqipu.com/events/2443",
+        "startsAt": "2026-07-04T00:00:00-07:00",
+        "endsAt": "2026-07-04T23:59:59-07:00"
+      },
+      "roundSourceUrl": "https://elephantchess.io/database/event?id=QJt8kEFWgEnY",
+      "iqipuEventUrl": "https://www.iqipu.com/events/2443",
+      "expectedGames": 24,
+      "expectedRounds": 3,
+      "teamSection": "团体赛",
+      "sourceExceptions": [
+        {
+          "sourceBoardId": "iqipu--FJIhWl5AAJL9A",
+          "pairingId": "QY1tB5LE1DIi",
+          "reason": "Reviewed 2026-10-19: these records share 119 mirrored mainline plies. The secondary record ends at ply 120 and labels the colours/results in reverse; retain iqipu game Zhao Jianhua vs Jian Meng, 1-0, 147 legal plies. Use only the secondary listing round 2. Six distinct team pairings each contain four records."
+        }
+      ]
+    }
+  ]
+}
