@@ -28,6 +28,7 @@
 // the server's) never fail the run.
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
 
 const GOOGLEBOT_UA =
@@ -73,12 +74,39 @@ function rebase(url, base) {
   return `${base}${parsed.pathname}${parsed.search}`;
 }
 
-async function sitemapUrls(base, name, limit) {
-  const res = await fetch(`${base}/sitemap-${name}.xml`);
-  if (!res.ok) throw new Error(`sitemap-${name}.xml returned ${res.status}`);
-  const xml = await res.text();
-  const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => rebase(m[1], base));
-  return limit > 0 ? urls.slice(0, limit) : urls;
+export async function sitemapUrls(
+  base,
+  name,
+  limit,
+  { fetchImpl = fetch, wait = delay, timeoutMs = 15_000 } = {},
+) {
+  const filename = `sitemap-${name}.xml`;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    let retryable = true;
+    try {
+      // The deadline covers the response body too, with a fresh signal on
+      // every attempt. Transient runner/network failures should get a short,
+      // bounded retry; a broken sitemap must still fail the audit.
+      const res = await fetchImpl(`${base}/${filename}`, {
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (!res.ok) {
+        retryable = res.status === 429 || res.status >= 500;
+        await res.body?.cancel();
+        throw new Error(`${filename} returned ${res.status}`);
+      }
+      const xml = await res.text();
+      const urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => rebase(m[1], base));
+      return limit > 0 ? urls.slice(0, limit) : urls;
+    } catch (error) {
+      if (!retryable) throw error;
+      if (attempt === 3) {
+        throw new Error(`${filename} could not be fetched after 3 attempts`, { cause: error });
+      }
+      console.warn(`Retrying ${filename} after attempt ${attempt}/3`);
+      await wait(attempt * 1000);
+    }
+  }
 }
 
 function baseTitle(title) {
@@ -160,6 +188,10 @@ async function auditUrl(browser, url, args) {
   });
   const page = await context.newPage();
   const pageErrors = [];
+  let navigations = 0;
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) navigations += 1;
+  });
   page.on('pageerror', (err) => pageErrors.push(err.message));
   if (args.blockLazyChunks) {
     await page.route('**/*.js', (route) => {
@@ -185,7 +217,13 @@ async function auditUrl(browser, url, args) {
     .catch((err) => ({ evaluateError: err.message }));
   await context.close();
 
-  Object.assign(result, { renderedTitle: rendered.title, h1: rendered.h1, pageErrors });
+  Object.assign(result, {
+    renderedTitle: rendered.title,
+    h1: rendered.h1,
+    pageErrors,
+    navigations,
+  });
+  if (navigations > 2) result.failures.push(`reload loop: ${navigations} document navigations`);
   if (rendered.evaluateError) result.failures.push(`evaluate: ${rendered.evaluateError}`);
   // With chunks blocked, a client-only page has nothing else to show: that is
   // the known gap (prerender it to close), not a regression.

@@ -1,7 +1,8 @@
 // Shared recovery for stale Vite chunks. A tab can keep an older entry bundle
 // across a deploy, then discover that a lazily imported hashed chunk no longer
 // exists. Reload once to fetch the current entry bundle and its chunk map; cap
-// the attempt in sessionStorage so a genuinely missing asset cannot reload-loop.
+// the attempt per entry bundle in sessionStorage so a genuinely missing asset
+// cannot reload-loop, while a later deployment can still recover.
 const CHUNK_RELOAD_FLAG = 'mistboard.chunkReloadAttempted';
 let reloadStorageBlocked = false;
 
@@ -17,7 +18,7 @@ export function isChunkLoadError(err: unknown): boolean {
 
 function chunkReloadState(): 'not_attempted' | 'already_attempted' | 'storage_unavailable' {
   try {
-    return sessionStorage.getItem(CHUNK_RELOAD_FLAG) !== null
+    return sessionStorage.getItem(CHUNK_RELOAD_FLAG) === entryBundlePath()
       ? 'already_attempted'
       : 'not_attempted';
   } catch {
@@ -27,6 +28,16 @@ function chunkReloadState(): 'not_attempted' | 'already_attempted' | 'storage_un
   }
 }
 
+function entryBundlePath(): string {
+  // The entry's content hash changes on deploy even when this shared module
+  // does not. Paths exclude query strings and fragments from stored values.
+  const entry = document.querySelector<HTMLScriptElement>('script[type="module"][src]');
+  return new URL(entry?.src ?? import.meta.url).pathname;
+}
+
+// Only an explicit user retry resets the cap. A successful route mount can
+// finish before optional imports (friends, locale, etc.) fail; clearing here
+// after every mount used to re-arm recovery on each newly loaded document.
 export function clearChunkReloadAttempt(): void {
   // A concurrent successful mount must not re-arm recovery before an already
   // requested reload actually leaves this document.
@@ -40,12 +51,12 @@ export function clearChunkReloadAttempt(): void {
 }
 
 // Claims the single session-capped reload attempt: true exactly once per
-// session (until a successful mount clears the flag), false when the attempt
-// was already spent or storage is unavailable.
+// entry bundle (until an explicit retry clears the flag), false when the
+// attempt was already spent or storage is unavailable.
 function markChunkReloadAttempt(): boolean {
   if (reloadPending || chunkReloadState() !== 'not_attempted') return false;
   try {
-    sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1');
+    sessionStorage.setItem(CHUNK_RELOAD_FLAG, entryBundlePath());
     reloadStorageBlocked = false;
   } catch {
     reloadStorageBlocked = true;

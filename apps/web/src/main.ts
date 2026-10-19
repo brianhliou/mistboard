@@ -1125,7 +1125,6 @@ async function mountOrReport(run: () => Promise<void>): Promise<void> {
     await localeReady;
     await run();
     serverRender.keepTitle(currentLocale());
-    clearChunkReloadAttempt();
   } catch (err) {
     console.error(err);
     // A prerendered page is complete without the client: put it back rather
