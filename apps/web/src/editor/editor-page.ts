@@ -108,25 +108,33 @@ export function mountEditorPage(
   paletteTop.className = 'editor-palette editor-palette--top';
   const boardWrap = document.createElement('div');
   boardWrap.className = 'editor-board';
+  const boardSlot = document.createElement('div');
+  boardSlot.className = 'editor-board-slot';
+  boardSlot.append(boardWrap);
   const boardSvg = document.createElement('div');
   boardSvg.className = 'editor-board__svg';
   const hits = document.createElement('div');
   hits.className = 'editor-board__hits';
   boardWrap.append(boardSvg, hits);
-  // Same corner grip and the same persisted --uni-board-scale as the analysis
-  // and game boards: the board opens at its viewport fit (no vertical scroll)
-  // and the user's chosen size carries across every board surface.
+  // Desktop shares the analysis/game board resize preference. Phone CSS fits
+  // the remaining screen space instead and hides the resize grip.
   restoreBoardScale();
   attachBoardResizeGrip(boardWrap, boardWrap);
   const paletteBottom = document.createElement('div');
   paletteBottom.className = 'editor-palette editor-palette--bottom';
+  const paletteStrip = document.createElement('div');
+  paletteStrip.className = 'editor-palette-strip';
+  paletteStrip.append(paletteTop, paletteBottom);
   const brushes = document.createElement('div');
   brushes.className = 'editor-brushes';
   brushes.setAttribute('aria-label', t('editor.brushes'));
+  const toolbar = document.createElement('div');
+  toolbar.className = 'editor-toolbar';
+  toolbar.append(brushes);
   const noticeEl = document.createElement('p');
   noticeEl.className = 'editor-notice';
   noticeEl.setAttribute('role', 'status');
-  centre.append(paletteTop, boardWrap, paletteBottom, brushes, noticeEl);
+  centre.append(paletteStrip, boardSlot, toolbar, noticeEl);
 
   const rightRail = document.createElement('aside');
   rightRail.className = 'editor-rail editor-rail--right';
@@ -270,8 +278,63 @@ export function mountEditorPage(
     ...(poolCard ? [poolCard] : []),
     ctaCard,
   );
+  // Phones keep the canvas and both palettes on one screen. The existing
+  // settings are lent to a modal, preserving their listeners and current state.
+  const toolsDialog = document.createElement('dialog');
+  toolsDialog.className = 'editor-tools-sheet';
+  toolsDialog.id = 'editor-tools-sheet';
+  toolsDialog.setAttribute('aria-labelledby', 'editor-tools-title');
+  const toolsHeader = document.createElement('header');
+  toolsHeader.className = 'editor-tools-sheet__header';
+  const toolsTitle = document.createElement('h2');
+  toolsTitle.id = 'editor-tools-title';
+  toolsTitle.textContent = t('nav.tools');
+  const closeTools = button(t('live.roomInfoClose'), () => toolsDialog.close());
+  toolsHeader.append(toolsTitle, closeTools);
+  const toolsBody = document.createElement('div');
+  toolsBody.className = 'editor-tools-sheet__body';
+  toolsDialog.append(toolsHeader, toolsBody);
+  const mobileActions = document.createElement('div');
+  mobileActions.className = 'editor-mobile-actions';
+  const toolsButton = button(t('nav.tools'), () => {
+    toolsBody.append(rightRail);
+    toolsDialog.showModal();
+    toolsButton.setAttribute('aria-expanded', 'true');
+  });
+  toolsButton.classList.add('editor-tools-button');
+  toolsButton.setAttribute('aria-controls', toolsDialog.id);
+  toolsButton.setAttribute('aria-haspopup', 'dialog');
+  toolsButton.setAttribute('aria-expanded', 'false');
+  toolsDialog.addEventListener('close', () => {
+    page.append(rightRail);
+    toolsButton.setAttribute('aria-expanded', 'false');
+  });
+  toolsDialog.addEventListener('click', (event) => {
+    if (event.target !== toolsDialog) return;
+    const rect = toolsDialog.getBoundingClientRect();
+    if (
+      event.clientX < rect.left ||
+      event.clientX > rect.right ||
+      event.clientY < rect.top ||
+      event.clientY > rect.bottom
+    )
+      toolsDialog.close();
+  });
+  const mobileAnalysisLink = document.createElement('a');
+  mobileAnalysisLink.className = 'editor-btn editor-btn--primary editor-mobile-analysis-link';
+  mobileAnalysisLink.textContent = t('editor.analysisBoard');
+  mobileAnalysisLink.addEventListener('click', (event) => {
+    if (mobileAnalysisLink.getAttribute('aria-disabled') === 'true') event.preventDefault();
+  });
+  const mobileValidation = document.createElement('p');
+  mobileValidation.className = 'editor-error editor-mobile-validation';
+  mobileValidation.setAttribute('role', 'status');
+  mobileValidation.hidden = true;
+  mobileActions.append(toolsButton, mobileAnalysisLink);
+  toolbar.append(mobileActions);
+  centre.append(mobileValidation);
   page.append(leftRail, centre, rightRail);
-  root.append(page);
+  root.append(page, toolsDialog);
 
   // ── Interaction ─────────────────────────────────────────────────────────
   document.addEventListener('pointermove', (event) => {
@@ -560,14 +623,27 @@ export function mountEditorPage(
       const heading = document.createElement('h4');
       heading.className = 'editor-pool__color';
       heading.textContent = t(COLOR_LABEL_KEY[color]);
-      group.append(heading);
+      const groupHeader = document.createElement('div');
+      groupHeader.className = 'editor-pool__header';
+      const remainingLabel = document.createElement('span');
+      remainingLabel.textContent = t('editor.remaining');
+      const capturedLabel = document.createElement('span');
+      capturedLabel.textContent = t('editor.captured');
+      groupHeader.append(heading, remainingLabel, capturedLabel);
+      group.append(groupHeader);
       for (const row of rows.filter((entry) => entry.color === color)) {
         const line = document.createElement('div');
         line.className = 'editor-pool__row';
         line.dataset.role = row.role;
         const name = document.createElement('span');
         name.className = 'editor-pool__role';
-        name.textContent = t(roleKey(spec, row.role));
+        const icon = document.createElement('span');
+        icon.className = 'editor-pool__piece';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.innerHTML = spec.ghostSvg({ faceDown: false, color, role: row.role });
+        const roleName = document.createElement('span');
+        roleName.textContent = t(roleKey(spec, row.role));
+        name.append(icon, roleName);
         const remaining = document.createElement('span');
         remaining.className = 'editor-pool__remaining';
         remaining.title = t('editor.remaining');
@@ -704,13 +780,17 @@ export function mountEditorPage(
     const canonical = result.ok && !problem ? result.fen : null;
     // The href always carries the editor's FEN so the link is inspectable; the
     // control itself is inert until the variant parser accepts the position.
-    analysisLink.href = analysisHref(variant, canonical ?? fen);
-    analysisLink.setAttribute('aria-disabled', error ? 'true' : 'false');
-    analysisLink.classList.toggle('is-disabled', error !== null);
-    if (error) analysisLink.setAttribute('tabindex', '-1');
-    else analysisLink.removeAttribute('tabindex');
+    for (const link of [analysisLink, mobileAnalysisLink]) {
+      link.href = analysisHref(variant, canonical ?? fen);
+      link.setAttribute('aria-disabled', error ? 'true' : 'false');
+      link.classList.toggle('is-disabled', error !== null);
+      if (error) link.setAttribute('tabindex', '-1');
+      else link.removeAttribute('tabindex');
+    }
     validation.hidden = error === null;
     validation.textContent = error ?? '';
+    mobileValidation.hidden = error === null;
+    mobileValidation.textContent = error ?? '';
     if (practice) {
       const goal = practice.goal.value as PracticePositionGoal;
       const side = practice.side.value === 'black' ? 'black' : 'red';
