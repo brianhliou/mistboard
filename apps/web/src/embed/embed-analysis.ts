@@ -188,6 +188,8 @@ export function embedAnalysisVariant(specId: string): EmbedAnalysisVariant | nul
 }
 
 export type EmbedAnalysis = {
+  /** One stored best move per judged ply. Chance moves have no invented continuation. */
+  bestMoves: Map<number, string>;
   /** Per-ply glyph and advice for the score sheet. */
   annotations: Map<number, EmbedMoveAnnotation>;
   /** What the board draws at `ply` (lichess's convention, shared with the review): the
@@ -240,7 +242,10 @@ export function embedAnalysisFromMarks(
   played: readonly PlayedSquares[] = [],
 ): EmbedAnalysis {
   const annotations = new Map<number, EmbedMoveAnnotation>();
+  const bestMoves = new Map<number, string>();
   for (const [ply, mark] of marks) {
+    const best = mark.better?.kind === 'move' ? mark.better.uci : mark.better?.moves[0]?.uci;
+    if (best) bestMoves.set(ply, best);
     if (!mark.suffix && !mark.comment) continue;
     annotations.set(ply, {
       ...(mark.suffix ? { suffix: mark.suffix, suffixClass: mark.suffixClass } : {}),
@@ -263,5 +268,5 @@ export function embedAnalysisFromMarks(
         : [];
     return { arrows, glyphs };
   };
-  return { annotations, overlayAtPly };
+  return { annotations, overlayAtPly, bestMoves };
 }

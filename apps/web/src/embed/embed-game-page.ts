@@ -216,6 +216,7 @@ export async function mountEmbedGame(
   // better move on the board. Fetched alongside the board (a GET of the cache, never a
   // compute); until it lands, and when there is none, the embed is the plain replay.
   let analysis: EmbedAnalysis | null = null;
+  let boardHost: HTMLElement | null = null;
   let eventsPromise: Promise<GameEvent[]> | null = null;
   const events = (): Promise<GameEvent[]> => {
     eventsPromise ??= loadEvents(roomId);
@@ -256,6 +257,7 @@ export async function mountEmbedGame(
       startPly: options.startPly ?? null,
       inkFamily: seatInkFamily(game.variant),
       mountBoard: async (host, hooks) => {
+        boardHost = host;
         const handle = await mountBoard(host, specId, roomId, {
           metadataByRoomId,
           namesByRoomId: { [roomId]: names },
@@ -278,6 +280,22 @@ export async function mountEmbedGame(
   const loaded = await analysisLoad;
   if (loaded && card) {
     analysis = loaded;
+    if (specId === 'jieqi' && boardHost) {
+      const { installJieqiEmbedLines } = await import('./embed-jieqi-lines.js');
+      const unknownReveals = await installJieqiEmbedLines(
+        boardHost,
+        card.handle,
+        roomId,
+        loaded.bestMoves,
+        pov === 'black' ? 'black' : 'red',
+      ).catch(() => new Set<number>());
+      for (const ply of unknownReveals) {
+        const mark = loaded.annotations.get(ply);
+        if (mark)
+          mark.note =
+            `${mark.note ?? ''} This piece was never revealed, so this alternative cannot be replayed.`.trim();
+      }
+    }
     card.setAnnotations(loaded.annotations);
     card.handle.setBoardOverlay?.(loaded.overlayAtPly);
   }

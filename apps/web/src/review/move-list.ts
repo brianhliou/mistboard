@@ -235,7 +235,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     button.type = 'button';
     button.className = 'review-move-list__move';
     button.dataset.ply = String(entry.ply);
-    // san holds the move text (+ any glyph); eval sits right-aligned (tree-view style).
+    // Keep the glyph outside the label's overflow box so it cannot be ellipsized.
     const san = document.createElement('span');
     san.className = 'review-move-list__san';
     san.textContent = entry.label;
@@ -243,18 +243,18 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     evalEl.className = 'review-move-list__eval';
     if (entry.assessment) evalEl.textContent = entry.assessment;
     button.append(san, evalEl);
-    if (entry.suffix) appendGlyph(san, entry.suffix, entry.suffixClass);
+    if (entry.suffix) appendGlyph(button, entry.suffix, entry.suffixClass);
     button.addEventListener('click', () => onJump?.(entry.ply));
     cellsByPly.set(entry.ply, button);
     return button;
   }
 
-  function appendGlyph(san: HTMLElement, suffix: string, suffixClass?: string): void {
+  function appendGlyph(cell: HTMLElement, suffix: string, suffixClass?: string): void {
     const glyph = document.createElement('span');
     glyph.className = 'review-move-list__suffix';
     if (suffixClass) glyph.classList.add(`review-move--${suffixClass}`);
     glyph.textContent = ` ${suffix}`;
-    san.append(glyph);
+    cell.querySelector('.review-move-list__eval')!.before(glyph);
   }
 
   function update(currentPly: number, jump: (ply: number) => void): void {
@@ -277,11 +277,10 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
 
   function annotate(byPly: Map<number, MoveAnnotation>): void {
     for (const [ply, cell] of cellsByPly) {
-      const san = cell.querySelector<HTMLElement>('.review-move-list__san');
       const evalEl = cell.querySelector<HTMLElement>('.review-move-list__eval');
       cell.querySelector('.review-move-list__suffix')?.remove();
       const ann = byPly.get(ply);
-      if (ann?.suffix && san) appendGlyph(san, ann.suffix, ann.suffixClass);
+      if (ann?.suffix) appendGlyph(cell, ann.suffix, ann.suffixClass);
       if (evalEl) evalEl.textContent = ann?.eval ?? '';
     }
   }

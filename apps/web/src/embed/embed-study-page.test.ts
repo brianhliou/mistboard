@@ -212,7 +212,9 @@ describe('mountEmbedStudy', () => {
     await mountEmbedStudy(root, { studyId: 's', chapterId: 'DIavcvsA' });
     const moves = Array.from(root.querySelectorAll('button.review-move-list__move'));
     expect(
-      moves.map((m) => m.querySelector('.review-move-list__san')?.textContent?.trim()),
+      moves.map((m) =>
+        `${m.querySelector('.review-move-list__san')?.textContent ?? ''}${m.querySelector('.review-move-list__suffix')?.textContent ?? ''}`.trim(),
+      ),
     ).toEqual(['Nf3 ?!', 'exf4', 'd4']);
     // The played move's comment, then the sideline as SAN with its verdict and
     // its own comment.
@@ -421,7 +423,9 @@ describe('mountEmbedStudy', () => {
     expect(root.querySelector('.jungle-replay-board')?.innerHTML).toContain('g2');
     const moves = Array.from(root.querySelectorAll('button.review-move-list__move'));
     expect(
-      moves.map((m) => m.querySelector('.review-move-list__san')?.textContent?.trim()),
+      moves.map((m) =>
+        `${m.querySelector('.review-move-list__san')?.textContent ?? ''}${m.querySelector('.review-move-list__suffix')?.textContent ?? ''}`.trim(),
+      ),
     ).toEqual(['a1-b1', 'a9-b9', 'g1-g2 ??', 'g9-g8']);
     const branch = root.querySelector<HTMLElement>('.review-move-list__branch');
     expect(branch?.dataset.atPly).toBe('3');
@@ -724,7 +728,9 @@ describe('mountEmbedStudy', () => {
     expect(badgeAt(board(), '.xq-marker--inaccuracy')).toEqual(expectedBadge('g5', '?!', 'black'));
     const moves = Array.from(root.querySelectorAll('button.review-move-list__move'));
     expect(
-      moves.map((m) => m.querySelector('.review-move-list__san')?.textContent?.trim()),
+      moves.map((m) =>
+        `${m.querySelector('.review-move-list__san')?.textContent ?? ''}${m.querySelector('.review-move-list__suffix')?.textContent ?? ''}`.trim(),
+      ),
     ).toEqual(['i4-i5', 'a7-a6', 'g4-g5 ?!', 'g7-g6 ?', 'c4-c5', 'h8-h1']);
     // The verdict on the ?! move's own position, in the sheet's eval slot.
     expect(

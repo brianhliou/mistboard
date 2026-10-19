@@ -1191,6 +1191,27 @@
   gap: 4px 10px;
 }
 
+/* Close-ups teach the badge palette without shrinking an entire board. */
+.article-figure-row.article-piece-marks {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.article-figure-row.article-piece-marks--grades {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.article-piece-marks > .article-figure > svg {
+  max-width: 160px;
+  margin-inline: auto;
+}
+
+@media (max-width: 640px) {
+  .article-figure-row.article-piece-marks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 /* Single xiangqi board: cap at its natural width instead of stretching to
    fill the article column. The SVG carries its natural width as the inline
    --xq-svg-width custom property. */
@@ -2298,22 +2319,24 @@
   border: 0;
   background: transparent;
   min-height: 360px;
-  /* No viewport cap: the article column bounds the width, so the aspect
-     ratio bounds the height, and a cap only puts a scrollbar inside the
-     widget on short screens. */
+  /* Wide embeds take their natural height. The narrow layout below reserves
+     room for the site's header so the board and move list fit together. */
 }
 
-/* Below 560px the widget stacks (embed.css: its frame query at 543px of
-   content, plus 8px of padding each side), so the board and the move list
+/* In a narrow article column the board and move list
    share ONE column. The block's aspect is the side-by-side shape: kept on a
    phone it gave a 390px screen a 316x360 frame, a 200px board, seat names cut
    to one letter and two rows of moves. Stacked, the height follows the width
    instead: the board takes the column (a 9x10 board is ~1.1x as tall as it is
    wide) and ~300px carries the header, both seat rows, the controls and a few
-   rows of moves. An explicit height turns off the inline aspect-ratio. */
+   rows of moves. The viewport cap keeps the entire widget usable on short
+   phones; the embed shrinks its board and retains an independently scrolling
+   move list. An explicit height turns off the inline aspect-ratio. */
 @container article-embed (max-width: 559px) {
   .article-embed-frame {
     height: calc(100cqi * 1.12 + 300px);
+    max-height: calc(100svh - 80px);
+    scroll-margin-block: 72px 8px;
   }
 }
 

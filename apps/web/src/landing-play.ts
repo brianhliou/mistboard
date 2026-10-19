@@ -81,6 +81,8 @@ type LandingSetupSource = 'hero' | 'deep-link' | 'correspondence' | 'mode-switch
 
 export type LandingPlayChoice = {
   engineId?: string;
+  /** An explicit article/tutorial pick, ahead of the remembered bot for this opening. */
+  initialEngineId?: string;
   engines?: PlayableEngine[];
   initialGameSpecId?: LandingGameSpecId;
   locale?: Locale;
@@ -1676,20 +1678,30 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
       break;
     }
     case 'engine':
-    case 'computer':
+    case 'computer': {
+      const initialGameSpecId = deepLinkInitialVariant(
+        params.get('gameSpecId') ?? params.get('variant'),
+        'pve',
+      );
+      const requestedEngine = params.get('engineId');
+      const offeredEngines = initialGameSpecId
+        ? webVariantTenantForSpecId(initialGameSpecId)?.landing?.engineOptions
+        : undefined;
+      // Only a bot offered by the explicitly linked variant can override a
+      // remembered choice. Stale and cross-variant ids leave that choice alone.
+      const initialEngineId = offeredEngines?.find((engine) => engine.id === requestedEngine)?.id;
       openLandingSetupDialog({
         engineId: defaultEngineId,
+        initialEngineId,
         engines: availableEngines,
-        initialGameSpecId: deepLinkInitialVariant(
-          params.get('gameSpecId') ?? params.get('variant'),
-          'pve',
-        ),
+        initialGameSpecId,
         locale,
         source: 'deep-link',
         mode: 'pve',
         modeSwitcher: true,
       });
       break;
+    }
     default:
       return;
   }
@@ -1698,6 +1710,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
   params.delete('gameSpecId');
   params.delete('variant');
   params.delete('side');
+  params.delete('engineId');
   const query = params.toString();
   const url = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
   window.history.replaceState(null, '', url);
@@ -1829,6 +1842,9 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   }
   if (storedPreference.engineId && !engineByGameSpec.has(selectedGameSpecId)) {
     engineByGameSpec.set(selectedGameSpecId, storedPreference.engineId);
+  }
+  if (choice.initialEngineId) {
+    engineByGameSpec.set(selectedGameSpecId, choice.initialEngineId);
   }
   let selectedEngineId =
     engineByGameSpec.get(selectedGameSpecId) ?? storedPreference.engineId ?? choice.engineId;

@@ -74,6 +74,7 @@
 }
 /* Per-move position eval (Red POV), right-aligned like lichess tree view. */
 .review-move-list__eval {
+  margin-left: auto;
   flex: 0 0 auto;
   font-size: 11px;
   font-variant-numeric: tabular-nums;

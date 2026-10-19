@@ -4089,66 +4089,112 @@ const ZH_HANS: Record<string, string> = {
   '[Guancha](https://www.guancha.cn/sports/2025_01_12_761863.shtml)':
     '[观察者网](https://www.guancha.cn/sports/2025_01_12_761863.shtml)',
   'The fullest timeline of the affair': '事件最完整的时间线',
+  // Review refinements, 2026-10-19.
+  'Sign in to request full-game analysis, then try different moves from your own game.':
+    '登录后请求整盘分析，再从自己的对局中尝试不同着法。',
+  'Open [the full review](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf) to play through alternative moves. New to jieqi? Read the [rules](/rules/jieqi), or explore [how strong players approach the opening](/blog/jieqi-openings).':
+    '打开[完整复盘](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf)，亲自走走其他变化。刚接触揭棋？先看[规则](/rules/jieqi)，或了解[高手如何处理开局](/blog/jieqi-openings)。',
+  'This brings Lichess-style engine review to a game with hidden pieces and luck. We adapt [Lichess’s accuracy and move-grading methods](https://lichess.org/page/accuracy) to jieqi, measuring the quality of your decisions separately from what each reveal gave you.':
+    '把 Lichess 式引擎复盘带到有暗子和运气的游戏中。我们把 [Lichess 的准确率和着法评分方法](https://lichess.org/page/accuracy)用于揭棋，分别衡量你的决定质量和每次揭子的结果。',
+  'Move-quality marks grade the choice, independently of the reveal.':
+    '着法质量标记评价选择，与揭子结果无关。',
+  'No warning': '无警示',
+  Inaccuracy: '不精确',
+  Mistake: '失误',
+  Blunder: '严重失误',
+  'Violet dice mean an unlucky reveal, grey means close to the expected outcome, and teal means lucky. More pips and a deeper colour mean a bigger swing.':
+    '紫色骰子表示揭得不走运，灰色表示接近预期，青绿色表示幸运。点数越多、颜色越深，影响越大。',
+  'Illustrative examples. The same revealed piece can be lucky or unlucky depending on the position.':
+    '示意图。同一种揭出的棋子，在不同局面下可能幸运，也可能不幸。',
+  'Very unlucky': '非常不幸',
+  Unlucky: '不走运',
+  'About average': '接近平均',
+  Lucky: '幸运',
+  'Very lucky': '非常幸运',
+  'Try a different line from your game': '从自己的对局中尝试新变化',
+  'Return to a position in your review and play a different move on the board. Your variation appears alongside the original game. Switch on the browser engine to compare continuations from that position, with no server queue. You are exploring the game you just played, with its actual reveals.':
+    '在复盘中回到某个局面，直接在棋盘上走另一步。新变化会显示在原对局旁边。开启浏览器引擎，即可从该局面比较后续走法，无需排队。你探索的是刚下过的那盘棋，以及其中实际揭出的棋子。',
+  'Try an alternative from your own game and compare it with the original continuation.':
+    '从自己的对局中尝试另一条变化，与原来的走法比较。',
+  'A variation from the finished Jieqi game, with the browser engine enabled in its review.':
+    '已结束的揭棋对局中的一条变化，复盘页面已开启浏览器引擎。',
+  'Pikafish has eight levels. The seven easier levels limit its search and let it choose weaker moves; Level 8 uses the full search budget. We measure the steps by playing the bots against one another and against a random-move baseline. [How we built the ladder](/blog/jieqi-bot-wins) explains the levels.':
+    'Pikafish 分为八级。前七级限制搜索，并允许引擎选择较弱着法；第 8 级使用完整搜索预算。我们通过机器人之间以及与随机走棋基准的对局，测量各级的实力。[等级如何建立](/blog/jieqi-bot-wins)介绍了这些级别。',
+  '[AB-JChess](/bot/ab-jchess) earned its place above Pikafish by winning their 400-game match, 248 to 136. [Read about that champion](/blog/ab-jchess), or see the [current bots and ratings](/bots) for the latest challengers. Every bot plays from the information its side is allowed to see; it is never given the hidden deal.':
+    '[AB-JChess](/bot/ab-jchess) 在 400 盘对抗中以 248 比 136 获胜，取得高于 Pikafish 的位置。可以[了解这位冠军](/blog/ab-jchess)，或查看[当前机器人和等级分](/bots)，认识最新挑战者。每个机器人只能使用自己这一方有权看到的信息，绝不会获得隐藏的暗子布局。',
+  'Explore your own games': '探索自己的对局',
+  'Browser engine, no queue': '浏览器引擎，无需排队',
+  // Platform guide refresh, 2026-10-19.
+  'Play Level 1 or invite a friend, with no account needed for casual games.':
+    '从 1 级开始，或邀请朋友；休闲对局无需账号。',
+  'Full-game analysis grades your moves and measures reveal luck separately.':
+    '整盘分析为你的着法评分，并单独衡量揭子的运气。',
+  'Play jieqi against a computer or a friend, then review the game to see where your decisions helped and where the flips went your way.':
+    '和电脑或朋友下一盘揭棋，再复盘看看哪些决定帮了你，哪些揭子带来了好运。',
+  'Start with Level 1 and choose your pace in setup. To play a friend, create a room, click **Copy invite**, and send them the link. Casual games need no account.':
+    '从 1 级开始，在设置里选择用时。和朋友下棋时，先创建房间，点击**复制邀请**，再把链接发给对方。休闲对局无需账号。',
+  'Step through a real game. Plain discs are still face-down; a piece reveals its identity the first time it moves.':
+    '逐步回放一盘真实对局。纯色圆片仍是暗子；棋子第一次移动时才揭开身份。',
+  'Jieqi: a guest beats Pikafish in 73 moves': '揭棋：访客在 73 回合战胜 Pikafish',
+  '1. Finish a game and open Review game': '1. 下完一盘，打开复盘',
+  'When a game ends, click **Review game** below the move list. You can step through the whole game, revisit a position, and try a different continuation.':
+    '对局结束后，点击棋谱下方的**复盘**。你可以逐步回看整盘棋，回到某个局面，尝试不同的后续着法。',
+  'The game above has ended. Review game opens its replay and analysis page.':
+    '上面的对局已经结束。点击复盘，即可打开回放和分析页面。',
+  'The finished Jieqi game with the Review game button below the result.':
+    '已结束的揭棋对局，结果下方显示复盘按钮。',
+  '2. Request computer analysis': '2. 请求引擎分析',
+  'Open the **Computer analysis** tab, then click **Request computer analysis**. Sign in to request a new analysis; anyone can read one that is already available. It may take a few minutes to finish.':
+    '打开**引擎分析**标签，再点击**请求引擎分析**。请求新的分析需要登录；已有分析任何人都能查看。分析可能需要几分钟。',
+  'Request analysis once to get a graph, accuracy scores, and move annotations.':
+    '请求一次分析，即可获得走势曲线、准确率和着法注解。',
+  'The Jieqi review page with its Computer analysis tab and Request computer analysis button.':
+    '揭棋复盘页面，显示引擎分析标签和请求引擎分析按钮。',
+  '3. Find the moves to learn from': '3. 找到值得学习的着法',
+  'The graph shows how the game changed. Each player gets an accuracy score, and inaccuracies, mistakes, and blunders are marked in the move list. Select a marked move to see the better move the engine recommends.':
+    '曲线显示整盘棋的局势变化。每位棋手都有准确率，棋谱会标出不精确、失误和严重失误。选中被标记的一步，就能看到引擎推荐的更好着法。',
+  'One game, graded move by move. Click the graph or move list to revisit a turning point.':
+    '同一盘棋，逐步评分。点击曲线或棋谱，回到局势转折的地方。',
+  'The analysed Jieqi game, showing the advantage graph, player accuracy, and marked moves.':
+    '已分析的揭棋对局，显示优势曲线、双方准确率和着法标记。',
+  'Good decisions and lucky flips are different': '好决定和好手气是两回事',
+  'A move can be a good choice and still reveal an unlucky piece. The move-quality glyph grades your choice before the reveal. The die badge shows how much better or worse the revealed piece was than the pieces you could have drawn.':
+    '一步棋可以选得很好，却揭出不走运的棋子。着法质量符号评价揭子前的选择；骰子标记表示这次揭出的棋子，比其他可能揭出的棋子好或差多少。',
+  'The glyph judges the decision; the die describes the reveal. Both appear by the piece and in the move list.':
+    '符号评价决定，骰子说明揭子的结果。两者都会显示在棋子旁和棋谱里。',
+  'A Jieqi position with a move-quality glyph and a reveal-luck die badge beside the moved piece, plus advice for a better move.':
+    '揭棋局面：移动后的棋子旁有着法质量符号和揭子运气骰子，棋谱中显示更好的着法。',
+  'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates. Your accuracy measures the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
+    '当另一步明显更好时，复盘会给出最佳着法建议。你可以开启候选着法，探索更多选择。准确率只衡量决定，所以揭得幸运不会抬高它，揭得不幸也不会拉低它。',
+  'The same decision and luck marks on a phone.': '手机上也有同样的决定和运气标记。',
+  'The same Jieqi review on a phone, with move-quality and reveal-luck annotations.':
+    '手机上的同一盘揭棋复盘，显示着法质量和揭子运气注解。',
+  'Sign in to request; available to all to read': '登录后请求，任何人都可查看',
+  'Xiangqi with every piece except the general face-down. A piece moves as whatever normally starts on its square, then turns over and keeps that identity. It is also known as cờ úp in Vietnamese.':
+    '除了将帅之外，每个子都翻扣的象棋。暗子按它所在位置原本的棋子走，揭开后一直保持该身份。越南语也称 cờ úp。',
+  'Yes. Mistboard offers a range of bot strengths, from beginner levels to strong engines. Start with Level 1, then choose a harder opponent as you improve.':
+    '可以。Mistboard 提供从入门等级到强力引擎的多种难度。先从 1 级开始，进步后再选择更难的对手。',
+  'No. It receives only the information its side is allowed to see. It is never told the hidden deal.':
+    '看不到。它只收到自己这一方有权知道的信息，绝不会获得隐藏的暗子布局。',
+  'Here, against the engine or a friend. Casual games need no account and nothing to install. You can replay finished games freely; sign in to request full-game engine analysis.':
+    '就在这里，和引擎或朋友下棋。休闲对局无需账号，也不用安装软件。下完可以自由回放；登录后即可请求整盘引擎分析。',
+  'HIDDEN PIECES, OPEN BOARD': '身份隐藏，棋盘公开',
   // Jieqi platform page. Machine-drafted 2026-09-03 and not native-reviewed,
   // shipped on the standard set on 2026-08-29: a translation does not wait for a
   // read that is not coming. Locked the same day its English copy published, so
   // any later English edit orphans a key here and fails the coverage test.
   'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.':
     '免费和揭棋AI（皮卡鱼、AB-JChess）或朋友下揭棋，不用注册账号；下完还能复盘，分析会把你自己的选择和运气分开计算。',
-  'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.':
-    '揭棋就是把每个子都翻扣过去的[象棋](/rules/xiangqi)。暗子按它所在那个点原本摆的子走，走完就翻开，之后一直是翻出来的那个子。开局时你不知道任何一个子是什么，连自己的也不知道。[规则页](/rules/jieqi)有详细说明。',
-  'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).':
-    '这是一门年轻的棋，出自香港和广东，最近二三十年主要在华人和越南棋手之间传开。至于开局到底该走什么，见[强手眼中的揭棋开局](/blog/jieqi-openings)。',
   'Play the engine': '和引擎下',
   'Play a friend': '和朋友下',
-  'Plain discs are still face-down. Each one turns over the first time it moves and is stuck with whatever it turns out to be.':
-    '素面的圆子仍然是暗子。每个子第一次走动时翻开，翻出什么就是什么，再也换不掉。',
-  'Mistboard · 5+5 casual': 'Mistboard · 5+5 非计分',
-  'Black delivers checkmate on move 73.': '黑方在第 73 回合将死。',
-  'That is [a real game on this site](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf), not a demo, and every screenshot below comes from it.':
-    '那是[本站的一盘真实对局](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf)，不是演示，下面每一张截图都来自这盘棋。',
-  'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link.':
-    '在[象棋在线对弈](/zh-hans)首页用 1+1、3+2 或 5+5 和引擎下，或者把链接发给朋友。',
   'Review your games': '复盘你的对局',
-  'Ask for analysis on a finished game and the review separates what you chose from what you drew, which is the part a chess site has no reason to do. You also get the usual: a graph of the whole game, an accuracy score for each player, and every inaccuracy, mistake and blunder marked with the move that was better. It runs on our servers and takes a few minutes.':
-    '对下完的棋点一次分析，复盘会把你选的和你揭到的分开来讲，这一块是国际象棋网站没有理由去做的。常规的东西也都有：整盘棋的优势曲线、双方各自的准确率，以及每一个不准确、失误和严重失误，都标出更好的着法。分析在我们的服务器上跑，要几分钟。',
-  'The game above, graded.': '还是上面那盘棋，评过分了。',
-  'A game summary: the advantage graph swinging back and forth across the game, beside accuracy cards reading Pikafish 86 percent with thirteen inaccuracies, two mistakes and one blunder, and Guest 91 percent with six inaccuracies, two mistakes and one blunder.':
-    '一份对局总结：优势曲线在整盘棋里来回摆动，旁边是准确率卡片，Pikafish 86%，十三个不准确、两个失误、一个严重失误；Guest 91%，六个不准确、两个失误、一个严重失误。',
-  'It tells you how lucky each flip was': '它会告诉你每次揭子运气有多好',
-  'Half your moves turn a piece over, and you never know what you are turning over. So the engine works out what each piece that tile could have been would have been worth, and compares it to what you actually got. The gap is your luck on that flip.':
-    '你有一半的着法是在翻子，而翻之前你并不知道翻的是什么。所以引擎会算出那个点上每一种可能的子分别值多少，再和你实际翻到的比一比。差出来的那一块，就是你这一揭的运气。',
-  'Move 19 played the 39% move when 52% was there, so it is marked. Move 21 played the best one and still got a +43% gift from the flip.':
-    '第 19 回合走了 39% 的着法，而当时有 52% 的可走，所以被标了出来。第 21 回合走的是最佳着法，同时还从揭子里白拿了 +43%。',
-  'A jieqi review move list. Move 19 is a flip carrying a dice badge reading minus 21 percent, above four ranked candidate moves at 52, 39, 34 and 29 percent with the played move marked second. Move 21 carries plus 43 percent, move 21 for black plus 6 percent, and move 22 minus 10 percent.':
-    '一份揭棋复盘的着法列表。第 19 回合是一次揭子，带着一个写着 -21% 的骰子标记，下面是四个排好序的候选着法，分别为 52%、39%、34% 和 29%，实战着法排在第二。第 21 回合是 +43%，黑方第 21 回合是 +6%，第 22 回合是 -10%。',
-  'The percentage on each move is what it was worth before you flipped, averaged over every piece that tile could have been. The dice is what the flip actually gave you on top of that. So a move can be the best choice available and still come with a large plus or minus beside it: the first number is your decision, the second is the draw.':
-    '每个着法旁边的百分数，是你揭开之前它值多少，按那个点上每一种可能的子取平均。骰子则是这一揭在此之外实际给了你多少。所以一个着法可以既是当时最好的选择，旁边又挂着一个很大的正数或负数：第一个数是你的决定，第二个数是你抽到的签。',
-  'When your move is the top one, you chose well. Moves are only marked as mistakes when a better one was on the list.':
-    '只要你走的是排第一的那个，你就选对了。只有当列表里存在更好的着法时，一个着法才会被标成失误。',
-  'Your accuracy is then built from the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
-    '准确率只由这些选择算出来，所以揭得好不会把它抬高，揭得差也不会把它拉低。',
-  'And it runs in your browser': '而且它就在你的浏览器里跑',
-  'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued and nothing is sent anywhere. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.':
-    '分析棋盘把同一个引擎放在你自己的机器上跑，你摆一条变化，它就把最佳着法画在棋盘上。不用排队，什么都不会传出去。[引擎是开源的](https://github.com/brianhliou/pikafish-jieqi-wasm)，所以这里的某个数字如果看着不对，你可以直接去读算出它的那段代码。',
-  'Running in a browser tab.': '就在一个浏览器标签页里跑。',
-  'The analysis board with the local engine switched on: PikaJieQi at depth 18 and 335,000 nodes per second, three candidate lines each with an evaluation, and arrows for each drawn on the jieqi board.':
-    '打开本地引擎后的分析棋盘：PikaJieQi 深度 18，每秒 335,000 个节点，三条候选变化各带一个评分，并在揭棋棋盘上分别画出箭头。',
-  'Open the analysis board': '打开分析棋盘',
   'The engine': '关于引擎',
-  'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical alpha-beta search with a hand-written evaluation and no neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node, scoring a move as the average over each piece that tile could still be. It only ever sees the face-down board, and a test fails the build if a hidden identity ever leaks into what it is sent. [Pikafish itself](/blog/pikafish), at full strength for standard xiangqi, is on the site too.':
-    'PikaJieQi 是开源象棋引擎 [Pikafish](https://github.com/official-pikafish/Pikafish) 揭棋分支的一个分叉。经典的 alpha-beta 搜索，配一套手写评估函数，没有神经网络。让它成为揭棋引擎而不是象棋引擎的地方在于：它把每一个暗子当作一个概率节点，一个着法的分数，是那个点上所有仍然可能的子分别算分之后的平均。它自始至终只看得到那张暗着的棋盘，只要有任何一个隐藏身份漏进发给它的数据里，就会有一个测试让构建失败。标准象棋的[皮卡鱼本尊](/blog/pikafish)也在站内，全力运行。',
-  "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish's strength lives in its neural network, and the net we trained for jieqi never came out stronger than the hand-written evaluation. The first jieqi network that did came from outside: [AB-JChess](/blog/ab-jchess), an open-source engine that beat PikaJieQi 248 to 136 in 400 games and has been the strongest bot on the site since October. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like; the terms of the open challenge, and the prebuilt engine to beat, are at [brianhliou.com/challenges](https://brianhliou.com/challenges/).":
-    '它是能被打败的，本页最上面那盘棋就是它输的。你可以在[这些引擎对局](/study/wd6c7qvG)里看它自己和自己下。现代 Pikafish 的力量几乎全在它的神经网络里，而我们为揭棋训练的网络始终没有强过手写的评估函数。第一张做到这一点的揭棋网络来自外部：[AB-JChess](/blog/ab-jchess)，一个开源引擎，400 盘中以 248 比 136 战胜 PikaJieQi，从十月起一直是本站最强的机器人。如果你会训练网络，或者对揭棋熟到能指出它判断错在哪里，那是我们最想要的帮助；公开挑战的条件和可下载的引擎在 [brianhliou.com/challenges](https://brianhliou.com/challenges/)。',
   'On Mistboard': '在 Mistboard 上',
   'Play the engine or a friend': '和引擎或朋友对弈',
   'Free, no account': '免费，不用账号',
   'Full-game analysis': '整盘分析',
-  'Every finished game': '每一盘下完的棋',
   'Luck measured separately': '运气单独算',
   'Every flip priced': '每一次揭子都定价',
-  'Engine in your browser': '引擎在你的浏览器里',
-  'No queue, no account': '不排队，不用账号',
   'Studies with your own deals': '用自己的暗子布局做研习',
   Yes: '有',
   'Open-source engine': '开源引擎',
@@ -4156,8 +4202,6 @@ const ZH_HANS: Record<string, string> = {
   'Open, signed in': '开放，需登录',
   'Common questions': '常见问题',
   'What is jieqi?': '揭棋是什么？',
-  'Xiangqi with every piece except the general face-down. A piece moves as whatever normally starts on its square, then turns over and keeps that identity. It is called cờ úp in Vietnamese and 揭棋 in Chinese.':
-    '就是除了将帅之外每个子都翻扣过去的象棋。暗子按它所在那个点原本摆的子走，走完翻开，之后一直是那个子。越南语叫 cờ úp，中文叫揭棋。',
   'How is jieqi different from xiangqi?': '揭棋和象棋差在哪里？',
   'Same board, same pieces, same moves, same goal. You just do not know which piece is which, so about half your moves flip one over and find out.':
     '同一张棋盘、同样的子、同样的走法、同样的目标。只是你不知道哪个子是哪个，所以大约一半的着法是翻开一个子看看。',
@@ -4165,17 +4209,11 @@ const ZH_HANS: Record<string, string> = {
   'The flips are random; what you do with them is not. Your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.':
     '揭子是随机的，你拿它做什么不是。你的准确率只由你的选择算出来，所以揭得好不会把它抬高，揭得差也不会把它拉低。',
   'Can a computer play jieqi well?': '电脑下揭棋下得好吗？',
-  'Better since October. PikaJieQi, which judges positions by hand-written rules, can be beaten by a strong human. AB-JChess, the top bot on the site since then, judges them with a neural network and beat PikaJieQi 248 to 136 in 400 games.':
-    '十月以来好多了。PikaJieQi 靠手写规则判断局面，强棋手能赢它。AB-JChess 从那时起是本站最强的机器人，它用神经网络判断局面，400 盘中以 248 比 136 战胜 PikaJieQi。',
   'Can the engine see my hidden pieces?': '引擎看得到我的暗子吗？',
-  'No. It gets the same face-down board you do and is never told the deal. A test fails the build if an identity ever leaks into what it is sent.':
-    '看不到。它拿到的是和你一样的暗着的棋盘，从来不会被告知这一局是怎么摆的。只要有一个身份漏进发给它的数据里，就会有一个测试让构建失败。',
   'Is the shuffle fair?': '洗子公平吗？',
   'The deal is random, made on the server, and told to nobody: not you, not your opponent, not the engine.':
     '这一局怎么摆是随机的，在服务器上定，并且不告诉任何人：不告诉你，不告诉你的对手，也不告诉引擎。',
   'Where can I play jieqi online for free?': '哪里可以免费在线下揭棋？',
-  'Here, against the engine or a friend. No account, nothing to install, and you can review the game with engine analysis afterwards.':
-    '就在这里，和引擎或者朋友下。不用账号，什么都不用装，下完还能用引擎分析复盘。',
   'Start playing': '开始下棋',
   'Play Jieqi Online, with Engine Analysis': '在线下揭棋，带引擎分析',
   // Replay outcome lines. These sit directly under the replay header and were
@@ -4183,7 +4221,6 @@ const ZH_HANS: Record<string, string> = {
   // read a spec's title, event and resultText but not its outcome. The jieqi
   // rules page has been serving this line in English on both zh pages since it
   // was locked.
-  'Black wins by checkmate · 73 moves': '黑方将死获胜 · 73 回合',
   // -- Duck Xiangqi --
   'Duck Xiangqi Rules': '鸭子象棋规则',
   'Duck Xiangqi Rules: Duck Chess Meets Xiangqi': '鸭子象棋规则：当鸭子国际象棋遇上象棋',
@@ -5657,7 +5694,6 @@ const ZH_HANS: Record<string, string> = {
   // -- Index card words, 2026-10-01. textCard (articles/text-card.ts) looks its
   // lines up here; renderArticleThumbnail swaps any other card's words. --
   'GAMES PLAYED': '盘棋已下完',
-  'EVERY PIECE FACE DOWN': '每枚棋子都背面朝下',
   XIANGQI: '象棋',
   JIEQI: '揭棋',
   'JUNGLE CHESS': '斗兽棋',
@@ -10151,66 +10187,112 @@ const ZH_HANT: Record<string, string> = {
   '[Guancha](https://www.guancha.cn/sports/2025_01_12_761863.shtml)':
     '[觀察者網](https://www.guancha.cn/sports/2025_01_12_761863.shtml)',
   'The fullest timeline of the affair': '事件最完整的時間線',
+  // Review refinements, 2026-10-19.
+  'Sign in to request full-game analysis, then try different moves from your own game.':
+    '登錄後請求整盤分析，再從自己的對局中嘗試不同著法。',
+  'Open [the full review](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf) to play through alternative moves. New to jieqi? Read the [rules](/rules/jieqi), or explore [how strong players approach the opening](/blog/jieqi-openings).':
+    '打開[完整復盤](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf)，親自走走其他變化。剛接觸揭棋？先看[規則](/rules/jieqi)，或瞭解[高手如何處理開局](/blog/jieqi-openings)。',
+  'This brings Lichess-style engine review to a game with hidden pieces and luck. We adapt [Lichess’s accuracy and move-grading methods](https://lichess.org/page/accuracy) to jieqi, measuring the quality of your decisions separately from what each reveal gave you.':
+    '把 Lichess 式引擎復盤帶到有暗子和運氣的遊戲中。我們把 [Lichess 的準確率和著法評分方法](https://lichess.org/page/accuracy)用於揭棋，分別衡量你的決定質量和每次揭子的結果。',
+  'Move-quality marks grade the choice, independently of the reveal.':
+    '著法質量標記評價選擇，與揭子結果無關。',
+  'No warning': '無警示',
+  Inaccuracy: '不精確',
+  Mistake: '失誤',
+  Blunder: '嚴重失誤',
+  'Violet dice mean an unlucky reveal, grey means close to the expected outcome, and teal means lucky. More pips and a deeper colour mean a bigger swing.':
+    '紫色骰子表示揭得不走運，灰色表示接近預期，青綠色表示幸運。點數越多、顏色越深，影響越大。',
+  'Illustrative examples. The same revealed piece can be lucky or unlucky depending on the position.':
+    '示意圖。同一種揭出的棋子，在不同局面下可能幸運，也可能不幸。',
+  'Very unlucky': '非常不幸',
+  Unlucky: '不走運',
+  'About average': '接近平均',
+  Lucky: '幸運',
+  'Very lucky': '非常幸運',
+  'Try a different line from your game': '從自己的對局中嘗試新變化',
+  'Return to a position in your review and play a different move on the board. Your variation appears alongside the original game. Switch on the browser engine to compare continuations from that position, with no server queue. You are exploring the game you just played, with its actual reveals.':
+    '在復盤中回到某個局面，直接在棋盤上走另一步。新變化會顯示在原對局旁邊。開啓瀏覽器引擎，即可從該局面比較後續走法，無需排隊。你探索的是剛下過的那盤棋，以及其中實際揭出的棋子。',
+  'Try an alternative from your own game and compare it with the original continuation.':
+    '從自己的對局中嘗試另一條變化，與原來的走法比較。',
+  'A variation from the finished Jieqi game, with the browser engine enabled in its review.':
+    '已結束的揭棋對局中的一條變化，復盤頁面已開啓瀏覽器引擎。',
+  'Pikafish has eight levels. The seven easier levels limit its search and let it choose weaker moves; Level 8 uses the full search budget. We measure the steps by playing the bots against one another and against a random-move baseline. [How we built the ladder](/blog/jieqi-bot-wins) explains the levels.':
+    'Pikafish 分為八級。前七級限制搜索，並允許引擎選擇較弱著法；第 8 級使用完整搜索預算。我們通過機器人之間以及與隨機走棋基準的對局，測量各級的實力。[等級如何建立](/blog/jieqi-bot-wins)介紹了這些級別。',
+  '[AB-JChess](/bot/ab-jchess) earned its place above Pikafish by winning their 400-game match, 248 to 136. [Read about that champion](/blog/ab-jchess), or see the [current bots and ratings](/bots) for the latest challengers. Every bot plays from the information its side is allowed to see; it is never given the hidden deal.':
+    '[AB-JChess](/bot/ab-jchess) 在 400 盤對抗中以 248 比 136 獲勝，取得高於 Pikafish 的位置。可以[瞭解這位冠軍](/blog/ab-jchess)，或查看[當前機器人和等級分](/bots)，認識最新挑戰者。每個機器人只能使用自己這一方有權看到的信息，絕不會獲得隱藏的暗子佈局。',
+  'Explore your own games': '探索自己的對局',
+  'Browser engine, no queue': '瀏覽器引擎，無需排隊',
+  // Platform guide refresh, 2026-10-19.
+  'Play Level 1 or invite a friend, with no account needed for casual games.':
+    '從 1 級開始，或邀請朋友；休閒對局無需賬號。',
+  'Full-game analysis grades your moves and measures reveal luck separately.':
+    '整盤分析為你的著法評分，並單獨衡量揭子的運氣。',
+  'Play jieqi against a computer or a friend, then review the game to see where your decisions helped and where the flips went your way.':
+    '和電腦或朋友下一盤揭棋，再復盤看看哪些決定幫了你，哪些揭子帶來了好運。',
+  'Start with Level 1 and choose your pace in setup. To play a friend, create a room, click **Copy invite**, and send them the link. Casual games need no account.':
+    '從 1 級開始，在設置里選擇用時。和朋友下棋時，先創建房間，點擊**複製邀請**，再把鏈接發給對方。休閒對局無需賬號。',
+  'Step through a real game. Plain discs are still face-down; a piece reveals its identity the first time it moves.':
+    '逐步回放一盤真實對局。純色圓片仍是暗子；棋子第一次移動時才揭開身份。',
+  'Jieqi: a guest beats Pikafish in 73 moves': '揭棋：訪客在 73 回合戰勝 Pikafish',
+  '1. Finish a game and open Review game': '1. 下完一盤，打開復盤',
+  'When a game ends, click **Review game** below the move list. You can step through the whole game, revisit a position, and try a different continuation.':
+    '對局結束後，點擊棋譜下方的**覆盤**。你可以逐步回看整盤棋，回到某個局面，嘗試不同的後續著法。',
+  'The game above has ended. Review game opens its replay and analysis page.':
+    '上面的對局已經結束。點擊復盤，即可打開回放和分析頁面。',
+  'The finished Jieqi game with the Review game button below the result.':
+    '已結束的揭棋對局，結果下方顯示復盤按鈕。',
+  '2. Request computer analysis': '2. 請求引擎分析',
+  'Open the **Computer analysis** tab, then click **Request computer analysis**. Sign in to request a new analysis; anyone can read one that is already available. It may take a few minutes to finish.':
+    '打開**引擎分析**標籤，再點擊**請求引擎分析**。請求新的分析需要登錄；已有分析任何人都能查看。分析可能需要幾分鐘。',
+  'Request analysis once to get a graph, accuracy scores, and move annotations.':
+    '請求一次分析，即可獲得走勢曲線、準確率和著法註解。',
+  'The Jieqi review page with its Computer analysis tab and Request computer analysis button.':
+    '揭棋復盤頁面，顯示引擎分析標籤和請求引擎分析按鈕。',
+  '3. Find the moves to learn from': '3. 找到值得學習的著法',
+  'The graph shows how the game changed. Each player gets an accuracy score, and inaccuracies, mistakes, and blunders are marked in the move list. Select a marked move to see the better move the engine recommends.':
+    '曲線顯示整盤棋的局勢變化。每位棋手都有準確率，棋譜會標出不精確、失誤和嚴重失誤。選中被標記的一步，就能看到引擎推薦的更好著法。',
+  'One game, graded move by move. Click the graph or move list to revisit a turning point.':
+    '同一盤棋，逐步評分。點擊曲線或棋譜，回到局勢轉折的地方。',
+  'The analysed Jieqi game, showing the advantage graph, player accuracy, and marked moves.':
+    '已分析的揭棋對局，顯示優勢曲線、雙方準確率和著法標記。',
+  'Good decisions and lucky flips are different': '好決定和好手氣是兩回事',
+  'A move can be a good choice and still reveal an unlucky piece. The move-quality glyph grades your choice before the reveal. The die badge shows how much better or worse the revealed piece was than the pieces you could have drawn.':
+    '一步棋可以選得很好，卻揭出不走運的棋子。著法質量符號評價揭子前的選擇；骰子標記表示這次揭出的棋子，比其他可能揭出的棋子好或差多少。',
+  'The glyph judges the decision; the die describes the reveal. Both appear by the piece and in the move list.':
+    '符號評價決定，骰子說明揭子的結果。兩者都會顯示在棋子旁和棋譜里。',
+  'A Jieqi position with a move-quality glyph and a reveal-luck die badge beside the moved piece, plus advice for a better move.':
+    '揭棋局面：移動後的棋子旁有著法質量符號和揭子運氣骰子，棋譜中顯示更好的著法。',
+  'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates. Your accuracy measures the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
+    '當另一步明顯更好時，復盤會給出最佳著法建議。你可以開啓候選著法，探索更多選擇。準確率只衡量決定，所以揭得幸運不會抬高它，揭得不幸也不會拉低它。',
+  'The same decision and luck marks on a phone.': '手機上也有同樣的決定和運氣標記。',
+  'The same Jieqi review on a phone, with move-quality and reveal-luck annotations.':
+    '手機上的同一盤揭棋復盤，顯示著法質量和揭子運氣註解。',
+  'Sign in to request; available to all to read': '登錄後請求，任何人都可查看',
+  'Xiangqi with every piece except the general face-down. A piece moves as whatever normally starts on its square, then turns over and keeps that identity. It is also known as cờ úp in Vietnamese.':
+    '除了將帥之外，每個子都翻扣的象棋。暗子按它所在位置原本的棋子走，揭開後一直保持該身份。越南語也稱 cờ úp。',
+  'Yes. Mistboard offers a range of bot strengths, from beginner levels to strong engines. Start with Level 1, then choose a harder opponent as you improve.':
+    '可以。Mistboard 提供從入門等級到強力引擎的多種難度。先從 1 級開始，進步後再選擇更難的對手。',
+  'No. It receives only the information its side is allowed to see. It is never told the hidden deal.':
+    '看不到。它只收到自己這一方有權知道的信息，絕不會獲得隱藏的暗子佈局。',
+  'Here, against the engine or a friend. Casual games need no account and nothing to install. You can replay finished games freely; sign in to request full-game engine analysis.':
+    '就在這裡，和引擎或朋友下棋。休閒對局無需賬號，也不用安裝軟件。下完可以自由回放；登錄後即可請求整盤引擎分析。',
+  'HIDDEN PIECES, OPEN BOARD': '身份隱藏，棋盤公開',
   // Jieqi platform page. Machine-drafted 2026-09-03 and not native-reviewed,
   // shipped on the standard set on 2026-08-29: a translation does not wait for a
   // read that is not coming. Locked the same day its English copy published, so
   // any later English edit orphans a key here and fails the coverage test.
   'Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.':
     '免費和揭棋AI（皮卡魚、AB-JChess）或朋友下揭棋，不用註冊帳號；下完還能複盤，分析會把你自己的選擇和運氣分開計算。',
-  'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.':
-    '揭棋就是把每個子都翻扣過去的[象棋](/rules/xiangqi)。暗子按它所在那個點原本擺的子走，走完就翻開，之後一直是翻出來的那個子。開局時你不知道任何一個子是什麼，連自己的也不知道。[規則頁](/rules/jieqi)有詳細說明。',
-  'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).':
-    '這是一門年輕的棋，出自香港和廣東，最近二三十年主要在華人和越南棋手之間傳開。至於開局到底該走什麼，見[強手眼中的揭棋開局](/blog/jieqi-openings)。',
   'Play the engine': '和引擎下',
   'Play a friend': '和朋友下',
-  'Plain discs are still face-down. Each one turns over the first time it moves and is stuck with whatever it turns out to be.':
-    '素面的圓子仍然是暗子。每個子第一次走動時翻開，翻出什麼就是什麼，再也換不掉。',
-  'Mistboard · 5+5 casual': 'Mistboard · 5+5 非計分',
-  'Black delivers checkmate on move 73.': '黑方在第 73 回合將死。',
-  'That is [a real game on this site](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf), not a demo, and every screenshot below comes from it.':
-    '那是[本站的一盤真實對局](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf)，不是演示，下面每一張截圖都來自這盤棋。',
-  'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link.':
-    '在[象棋線上對弈](/zh-hant)首頁用 1+1、3+2 或 5+5 和引擎下，或者把連結發給朋友。',
   'Review your games': '複盤你的對局',
-  'Ask for analysis on a finished game and the review separates what you chose from what you drew, which is the part a chess site has no reason to do. You also get the usual: a graph of the whole game, an accuracy score for each player, and every inaccuracy, mistake and blunder marked with the move that was better. It runs on our servers and takes a few minutes.':
-    '對下完的棋點一次分析，複盤會把你選的和你揭到的分開來講，這一塊是西洋棋網站沒有理由去做的。常規的東西也都有：整盤棋的優勢曲線、雙方各自的準確率，以及每一個不準確、失誤和嚴重失誤，都標出更好的著法。分析在我們的伺服器上跑，要幾分鐘。',
-  'The game above, graded.': '還是上面那盤棋，評過分了。',
-  'A game summary: the advantage graph swinging back and forth across the game, beside accuracy cards reading Pikafish 86 percent with thirteen inaccuracies, two mistakes and one blunder, and Guest 91 percent with six inaccuracies, two mistakes and one blunder.':
-    '一份對局總結：優勢曲線在整盤棋裡來回擺動，旁邊是準確率卡片，Pikafish 86%，十三個不準確、兩個失誤、一個嚴重失誤；Guest 91%，六個不準確、兩個失誤、一個嚴重失誤。',
-  'It tells you how lucky each flip was': '它會告訴你每次揭子運氣有多好',
-  'Half your moves turn a piece over, and you never know what you are turning over. So the engine works out what each piece that tile could have been would have been worth, and compares it to what you actually got. The gap is your luck on that flip.':
-    '你有一半的著法是在翻子，而翻之前你並不知道翻的是什麼。所以引擎會算出那個點上每一種可能的子分別值多少，再和你實際翻到的比一比。差出來的那一塊，就是你這一揭的運氣。',
-  'Move 19 played the 39% move when 52% was there, so it is marked. Move 21 played the best one and still got a +43% gift from the flip.':
-    '第 19 回合走了 39% 的著法，而當時有 52% 的可走，所以被標了出來。第 21 回合走的是最佳著法，同時還從揭子裡白拿了 +43%。',
-  'A jieqi review move list. Move 19 is a flip carrying a dice badge reading minus 21 percent, above four ranked candidate moves at 52, 39, 34 and 29 percent with the played move marked second. Move 21 carries plus 43 percent, move 21 for black plus 6 percent, and move 22 minus 10 percent.':
-    '一份揭棋複盤的著法列表。第 19 回合是一次揭子，帶著一個寫著 -21% 的骰子標記，下面是四個排好序的候選著法，分別為 52%、39%、34% 和 29%，實戰著法排在第二。第 21 回合是 +43%，黑方第 21 回合是 +6%，第 22 回合是 -10%。',
-  'The percentage on each move is what it was worth before you flipped, averaged over every piece that tile could have been. The dice is what the flip actually gave you on top of that. So a move can be the best choice available and still come with a large plus or minus beside it: the first number is your decision, the second is the draw.':
-    '每個著法旁邊的百分數，是你揭開之前它值多少，按那個點上每一種可能的子取平均。骰子則是這一揭在此之外實際給了你多少。所以一個著法可以既是當時最好的選擇，旁邊又掛著一個很大的正數或負數：第一個數是你的決定，第二個數是你抽到的籤。',
-  'When your move is the top one, you chose well. Moves are only marked as mistakes when a better one was on the list.':
-    '只要你走的是排第一的那個，你就選對了。只有當列表裡存在更好的著法時，一個著法才會被標成失誤。',
-  'Your accuracy is then built from the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
-    '準確率只由這些選擇算出來，所以揭得好不會把它抬高，揭得差也不會把它拉低。',
-  'And it runs in your browser': '而且它就在你的瀏覽器裡跑',
-  'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued and nothing is sent anywhere. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.':
-    '分析棋盤把同一個引擎放在你自己的機器上跑，你擺一條變化，它就把最佳著法畫在棋盤上。不用排隊，什麼都不會傳出去。[引擎是開放原始碼的](https://github.com/brianhliou/pikafish-jieqi-wasm)，所以這裡的某個數字如果看著不對，你可以直接去讀算出它的那段程式碼。',
-  'Running in a browser tab.': '就在一個瀏覽器分頁裡跑。',
-  'The analysis board with the local engine switched on: PikaJieQi at depth 18 and 335,000 nodes per second, three candidate lines each with an evaluation, and arrows for each drawn on the jieqi board.':
-    '打開本機引擎後的分析棋盤：PikaJieQi 深度 18，每秒 335,000 個節點，三條候選變化各帶一個評分，並在揭棋棋盤上分別畫出箭頭。',
-  'Open the analysis board': '打開分析棋盤',
   'The engine': '關於引擎',
-  'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical alpha-beta search with a hand-written evaluation and no neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node, scoring a move as the average over each piece that tile could still be. It only ever sees the face-down board, and a test fails the build if a hidden identity ever leaks into what it is sent. [Pikafish itself](/blog/pikafish), at full strength for standard xiangqi, is on the site too.':
-    'PikaJieQi 是開放原始碼象棋引擎 [Pikafish](https://github.com/official-pikafish/Pikafish) 揭棋分支的一個分支版本。經典的 alpha-beta 搜尋，配一套手寫評估函式，沒有類神經網路。讓它成為揭棋引擎而不是象棋引擎的地方在於：它把每一個暗子當作一個機率節點，一個著法的分數，是那個點上所有仍然可能的子分別算分之後的平均。它自始至終只看得到那張暗著的棋盤，只要有任何一個隱藏身分漏進發給它的資料裡，就會有一個測試讓建置失敗。標準象棋的[皮卡魚本尊](/blog/pikafish)也在站內，全力運行。',
-  "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish's strength lives in its neural network, and the net we trained for jieqi never came out stronger than the hand-written evaluation. The first jieqi network that did came from outside: [AB-JChess](/blog/ab-jchess), an open-source engine that beat PikaJieQi 248 to 136 in 400 games and has been the strongest bot on the site since October. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like; the terms of the open challenge, and the prebuilt engine to beat, are at [brianhliou.com/challenges](https://brianhliou.com/challenges/).":
-    '它是能被打敗的，本頁最上面那盤棋就是它輸的。你可以在[這些引擎對局](/study/wd6c7qvG)裡看它自己和自己下。現代 Pikafish 的力量幾乎全在它的類神經網路裡，而我們為揭棋訓練的網路始終沒有強過手寫的評估函式。第一張做到這一點的揭棋網路來自外部：[AB-JChess](/blog/ab-jchess)，一個開源引擎，400 盤中以 248 比 136 戰勝 PikaJieQi，從十月起一直是本站最強的機器人。如果你會訓練網路，或者對揭棋熟到能指出它判斷錯在哪裡，那是我們最想要的幫助；公開挑戰的條件和可下載的引擎在 [brianhliou.com/challenges](https://brianhliou.com/challenges/)。',
   'On Mistboard': '在 Mistboard 上',
   'Play the engine or a friend': '和引擎或朋友對弈',
   'Free, no account': '免費，不用帳號',
   'Full-game analysis': '整盤分析',
-  'Every finished game': '每一盤下完的棋',
   'Luck measured separately': '運氣單獨算',
   'Every flip priced': '每一次揭子都定價',
-  'Engine in your browser': '引擎在你的瀏覽器裡',
-  'No queue, no account': '不排隊，不用帳號',
   'Studies with your own deals': '用自己的暗子佈局做研習',
   Yes: '有',
   'Open-source engine': '開放原始碼引擎',
@@ -10218,8 +10300,6 @@ const ZH_HANT: Record<string, string> = {
   'Open, signed in': '開放，需登入',
   'Common questions': '常見問題',
   'What is jieqi?': '揭棋是什麼？',
-  'Xiangqi with every piece except the general face-down. A piece moves as whatever normally starts on its square, then turns over and keeps that identity. It is called cờ úp in Vietnamese and 揭棋 in Chinese.':
-    '就是除了將帥之外每個子都翻扣過去的象棋。暗子按它所在那個點原本擺的子走，走完翻開，之後一直是那個子。越南語叫 cờ úp，中文叫揭棋。',
   'How is jieqi different from xiangqi?': '揭棋和象棋差在哪裡？',
   'Same board, same pieces, same moves, same goal. You just do not know which piece is which, so about half your moves flip one over and find out.':
     '同一張棋盤、同樣的子、同樣的走法、同樣的目標。只是你不知道哪個子是哪個，所以大約一半的著法是翻開一個子看看。',
@@ -10227,17 +10307,11 @@ const ZH_HANT: Record<string, string> = {
   'The flips are random; what you do with them is not. Your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.':
     '揭子是隨機的，你拿它做什麼不是。你的準確率只由你的選擇算出來，所以揭得好不會把它抬高，揭得差也不會把它拉低。',
   'Can a computer play jieqi well?': '電腦下揭棋下得好嗎？',
-  'Better since October. PikaJieQi, which judges positions by hand-written rules, can be beaten by a strong human. AB-JChess, the top bot on the site since then, judges them with a neural network and beat PikaJieQi 248 to 136 in 400 games.':
-    '十月以來好多了。PikaJieQi 靠手寫規則判斷局面，強棋手能贏它。AB-JChess 從那時起是本站最強的機器人，它用類神經網路判斷局面，400 盤中以 248 比 136 戰勝 PikaJieQi。',
   'Can the engine see my hidden pieces?': '引擎看得到我的暗子嗎？',
-  'No. It gets the same face-down board you do and is never told the deal. A test fails the build if an identity ever leaks into what it is sent.':
-    '看不到。它拿到的是和你一樣的暗著的棋盤，從來不會被告知這一局是怎麼擺的。只要有一個身分漏進發給它的資料裡，就會有一個測試讓建置失敗。',
   'Is the shuffle fair?': '洗子公平嗎？',
   'The deal is random, made on the server, and told to nobody: not you, not your opponent, not the engine.':
     '這一局怎麼擺是隨機的，在伺服器上定，並且不告訴任何人：不告訴你，不告訴你的對手，也不告訴引擎。',
   'Where can I play jieqi online for free?': '哪裡可以免費線上下揭棋？',
-  'Here, against the engine or a friend. No account, nothing to install, and you can review the game with engine analysis afterwards.':
-    '就在這裡，和引擎或者朋友下。不用帳號，什麼都不用裝，下完還能用引擎分析複盤。',
   'Start playing': '開始下棋',
   'Play Jieqi Online, with Engine Analysis': '線上下揭棋，附引擎分析',
   // Replay outcome lines. These sit directly under the replay header and were
@@ -10245,7 +10319,6 @@ const ZH_HANT: Record<string, string> = {
   // read a spec's title, event and resultText but not its outcome. The jieqi
   // rules page has been serving this line in English on both zh pages since it
   // was locked.
-  'Black wins by checkmate · 73 moves': '黑方將死獲勝 · 73 回合',
   // -- Duck Xiangqi --
   'Duck Xiangqi Rules': '鴨子象棋規則',
   'Duck Xiangqi Rules: Duck Chess Meets Xiangqi': '鴨子象棋規則：當鴨子國際象棋遇上象棋',
@@ -11731,7 +11804,6 @@ const ZH_HANT: Record<string, string> = {
   // -- Index card words, 2026-10-01. textCard (articles/text-card.ts) looks its
   // lines up here; renderArticleThumbnail swaps any other card's words. --
   'GAMES PLAYED': '盤棋已下完',
-  'EVERY PIECE FACE DOWN': '每枚棋子都背面朝下',
   XIANGQI: '象棋',
   JIEQI: '揭棋',
   'JUNGLE CHESS': '鬥獸棋',

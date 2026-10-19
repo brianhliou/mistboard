@@ -616,6 +616,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `articles-data.ts` | Article content (large; content not code) |
 | `article-server-meta.ts` | Renders the server's `article-meta.generated.json` from `articles-data.ts` (title, kind, summary as description, status); used by `articles-meta-sync.test.ts` and `npm run articles:meta` |
 | `article-i18n.ts` | Article localization strings and language helpers |
+| `articles/jieqi-platform-marks.ts` | Piece close-ups for the Jieqi platform guide, using the shared review glyph and reveal-luck renderers and the reader's selected piece set |
 | `article-replay-analysis.ts` | Precomputed advantage-chart analysis for article game boards with no `boardId`: files in `articles/analysis/<record hash>.json`, lazily globbed (one chunk each). `article-replay-analysis-coverage.ts` classifies every `xq-replay` board (archive / file / not a game); `article-replay-analysis.test.ts` fails when a game has neither. Written by `scripts/article-chart-analysis.mjs` |
 | `i18n/catalog.ts` | Shared client UI translation registry and `t()` helper: English is statically bundled (the fallback and compile-time key authority), zh catalogs live in a MUTABLE locale registry filled by `ensureLocaleCatalog(locale)`, which dynamic-imports one lazy chunk per locale (`i18n/locales/*`) so English-only visitors never download them; after the bootstrap await, `t()` stays synchronous |
 | `i18n/catalogs/shell.ts` | Navigation, site-shell, appearance, connection, homepage-widget, and error-state translation strings (English, the key authority) |
@@ -1209,6 +1210,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/data-page.ts` | _needs a one-line description_ |
 | `apps/web/src/embed-code.ts` | _needs a one-line description_ |
 | `apps/web/src/embed/embed-analysis.ts` | _needs a one-line description_ |
+| `apps/web/src/embed/embed-jieqi-lines.ts` | Play cached best-move alternatives in Jieqi game embeds using the public deal and shared replay board |
 | `apps/web/src/embed/embed-broadcast-page.ts` | _needs a one-line description_ |
 | `apps/web/src/embed/embed-line-page.ts` | _needs a one-line description_ |
 | `apps/web/src/fortress-xiangqi-replay-board.ts` | _needs a one-line description_ |

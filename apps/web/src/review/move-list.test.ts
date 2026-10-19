@@ -53,6 +53,8 @@ describe('createMoveList', () => {
     const suffix = ml.el.querySelector('.review-move-list__suffix');
     expect(suffix?.textContent).toContain('+2.1');
     expect(suffix?.classList.contains('review-move--blunder')).toBe(true);
+    expect(suffix?.parentElement?.className).toBe('review-move-list__move');
+    expect(ml.el.querySelector('.review-move-list__san')?.textContent).toBe('a-b');
   });
 
   it('annotate adds per-ply glyphs after construction', () => {

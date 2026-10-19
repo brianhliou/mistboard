@@ -509,6 +509,9 @@ body.embed-body {
   flex: 1;
   max-height: none;
   gap: 1px;
+  /* Panning the score sheet, including at its ends, must not move the host
+     article and carry the board out of view. The page scrolls outside it. */
+  overscroll-behavior-y: contain;
 }
 
 /* A score sheet, the study's: number, then the two moves in fixed halves, so
@@ -537,6 +540,13 @@ body.embed-body {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--site-heading, inherit);
+  gap: 0;
+}
+
+.embed-card-moves .review-move-list__san {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
 }
 
 .embed-card-moves .review-move-list__move:hover {

@@ -477,6 +477,58 @@ describe('landing play panel', () => {
     });
   }
 
+  it('preselects a linked bot over the remembered one without starting a game', () => {
+    const fetchSpy = vi.fn(async (_input: RequestInfo | URL) =>
+      jsonResponse({ playing: 0, online: 0 }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    window.localStorage.setItem(
+      'mistboard:setup:pve',
+      JSON.stringify({ engineIdByGameSpec: { jieqi: 'pikafish-jieqi-level-5' } }),
+    );
+    window.history.replaceState(
+      null,
+      '',
+      '/?play=computer&gameSpecId=jieqi&engineId=pikafish-jieqi-level-1&utm_source=article',
+    );
+
+    maybeOpenPlayDeepLink([]);
+
+    expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')?.value).toBe(
+      'pikafish-jieqi-level-1',
+    );
+    expect(window.location.search).toBe('?utm_source=article');
+    expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/rooms')).toBe(false);
+    expect(
+      JSON.parse(window.localStorage.getItem('mistboard:setup:pve')!).engineIdByGameSpec.jieqi,
+    ).toBe('pikafish-jieqi-level-5');
+  });
+
+  it.each(['unknown-bot', 'fairy-stockfish-xiangqi-level-1'])(
+    'ignores an unavailable linked bot %s and keeps the remembered choice',
+    (engineId) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+      );
+      window.localStorage.setItem(
+        'mistboard:setup:pve',
+        JSON.stringify({ engineIdByGameSpec: { jieqi: 'pikafish-jieqi-level-5' } }),
+      );
+      window.history.replaceState(
+        null,
+        '',
+        `/?play=computer&gameSpecId=jieqi&engineId=${engineId}`,
+      );
+
+      maybeOpenPlayDeepLink([]);
+
+      expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')?.value).toBe(
+        'pikafish-jieqi-level-5',
+      );
+    },
+  );
+
   // Fortress and Atomic Xiangqi retired on 2026-10-11. An old "play the
   // computer" link (the brianhliou.com post) still opens setup, but on another
   // variant: the dialog never names a retired one, and the server would refuse
