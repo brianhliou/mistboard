@@ -194,6 +194,7 @@ Conventions:
 
 ### Site
 
+- A clearer Mistboard mission connecting cultures through Chinese chess and original strategy games, with the long-term vision for engine challenges, clubs and international events ([981f42d7](https://github.com/brianhliou/mistboard/commit/981f42d7))
 - Banqi face-down tiles take each piece set's own material, and the red Jieqi back has a darker outline ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - The statistics page shows one weekly games chart without variant filters ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - The homepage footer is now About, Contact, Terms and Privacy; the rest live on the About page and in the phone menu ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
@@ -266,6 +267,8 @@ Conventions:
 
 ### Fixed
 
+- Homepage News icons no longer block page loading, and stylesheet loading failures use bounded asset recovery ([981f42d7](https://github.com/brianhliou/mistboard/commit/981f42d7))
+- Jieqi Level 8 keeps its difficulty label on live game viewers ([981f42d7](https://github.com/brianhliou/mistboard/commit/981f42d7))
 - The homepage xiangqi bot picker starts at General Blunder, below Level 1 ([17041338](https://github.com/brianhliou/mistboard/commit/17041338))
 - A puzzle opened by its short code now points search engines at the same page as its full link, so each puzzle is indexed once ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - The banqi bot and review engine play to the game's own no-progress draw limit ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
