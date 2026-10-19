@@ -19,9 +19,8 @@
 //      ships the OLD engine silently. We compare the cachebust SHA against the
 //      engine repo's origin/main HEAD and refuse (or --bump) on mismatch.
 //   2. `railway up --service engine-worker` — the actual deploy (no auto-deploy).
-//      Uploads the LOCAL working tree, so stash uncommitted WIP first if it
-//      would ship (web content / server code). railway up over a RED CI is on
-//      you — run this only after CI is green.
+//      Uploads the LOCAL working tree. Uncommitted files are refused; CI is
+//      guarded below by exact-SHA engine CI and a clean-tree check.
 //   3. Boot-health verify — R1-prevent makes the worker self-test (one real
 //      move) before `ready` and REFUSE to come up if it can't serve. We poll
 //      the deploy logs for `engine_warmup_ok` + `selftest ok` and FAIL on
@@ -33,10 +32,25 @@
 //   node scripts/deploy-engine-worker.mjs --bump       # rewrite cachebust → engine HEAD (then commit + push)
 //
 // Exit codes: 0 ok · 1 config/usage · 2 cachebust mismatch · 3 deploy failed
-//   · 4 boot-health failed/timeout
+//   · 4 boot-health failed/timeout · 5 engine CI not green
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import {
+  appendDeployment,
+  baselineMatchesDeployment,
+  checkEngineCi,
+  commandOutput,
+  compareEngine,
+  compareWorker,
+  journalPath,
+  lockDeployment,
+  newDeploymentId,
+  printDeploymentPlan,
+  readBaseline,
+} from './lib/engine-deploy-plan.mjs';
 
 const SERVICE = 'engine-worker';
 // The prod Railway project. `railway up` resolves its target from the CLI's
@@ -54,119 +68,207 @@ const RAILPACK = 'railpack.json';
 const HEALTH_TIMEOUT_MS = Number.parseInt(process.env.DEPLOY_HEALTH_TIMEOUT_MS ?? '900000', 10);
 const HEALTH_POLL_MS = 20_000;
 
-const opts = parseArgs(process.argv.slice(2));
-if (opts.help) {
-  printHelp();
-  process.exit(0);
-}
-
-const cachebust = readCachebust();
-const engineSha = engineHeadSha();
-const engineRef = readEngineDeployRef();
-const cachebustMatch =
-  cachebust.sha !== null &&
-  (engineSha.startsWith(cachebust.sha) || cachebust.sha.startsWith(engineSha));
-const engineRefMatch =
-  engineRef === ENGINE_REF || engineSha.startsWith(engineRef) || engineRef.startsWith(engineSha);
-const match = cachebustMatch && engineRefMatch;
-
-console.log('# deploy-engine-worker');
-console.log(`engine ${ENGINE_REF} HEAD: ${engineSha}`);
-console.log(`railpack cachebust:        ${cachebust.raw}`);
-console.log(`engine.ref:                ${engineRef}`);
-console.log(
-  `cachebust matches engine: ${cachebustMatch ? 'yes' : 'NO — engine changed but cachebust not bumped'}`,
-);
-console.log(
-  `engine.ref matches engine: ${engineRefMatch ? 'yes' : 'NO — build would checkout a different private engine'}`,
-);
-
-if (opts.bump) {
-  if (cachebustMatch && engineRefMatch) {
-    console.log('bump: skipped (cachebust and engine.ref already at engine HEAD)');
-  } else {
-    if (!cachebustMatch) bumpCachebust(engineSha);
-    if (!engineRefMatch) bumpEngineRef(engineSha);
-    console.log(
-      `bump: railpack.json cachebust + ${ENGINE_REF_FILE} -> ${engineSha} (commit + push before deploying)`,
-    );
+export function main(args = process.argv.slice(2)) {
+  const opts = parseArgs(args);
+  if (opts.help) {
+    printHelp();
+    return 0;
   }
-  process.exit(0);
+  const cachebust = readCachebust();
+  const engineSha = engineHeadSha();
+  const engineRef = readEngineDeployRef();
+  const cachebustMatch = cachebust.sha !== null && engineSha.startsWith(cachebust.sha);
+  const engineRefMatch = engineSha.startsWith(engineRef);
+
+  console.log('# deploy-engine-worker');
+  console.log(`engine ${ENGINE_REF} HEAD: ${engineSha}`);
+  console.log(`railpack cachebust:        ${cachebust.raw}`);
+  console.log(`engine.ref:                ${engineRef}`);
+  console.log(`cachebust matches engine: ${cachebustMatch ? 'yes' : 'NO'}`);
+  console.log(`engine.ref matches engine: ${engineRefMatch ? 'yes' : 'NO'}`);
+
+  if (opts.bump) {
+    if (cachebustMatch && engineRefMatch) console.log('bump: skipped (both pins already match)');
+    else {
+      if (!cachebustMatch) bumpCachebust(engineSha);
+      if (!engineRefMatch) bumpEngineRef(engineSha);
+      console.log(
+        `bump: ${RAILPACK}/${ENGINE_REF_FILE} -> ${engineSha} (commit + push before deploying)`,
+      );
+    }
+    return 0;
+  }
+  if (!cachebustMatch || !engineRefMatch) {
+    console.error('Refusing: engine.ref and the cachebust must pin the current engine SHA.');
+    console.error('Run --bump, then commit and push the pins before deploying.');
+    return 2;
+  }
+
+  let ci;
+  try {
+    ci = checkEngineCi(engineSha);
+  } catch (error) {
+    if (!opts.overrideReason) throw error;
+    ci = { passed: false, run: null, description: 'CI lookup unavailable' };
+  }
+  if (!ci.passed && !opts.overrideReason) {
+    console.error(`Refusing engine deployment: CI ${ci.description}. ${ci.run?.url ?? ''}`);
+    console.error('An urgent fix may use --override-engine-ci "<reason>"; the override is logged.');
+    return 5;
+  }
+
+  const mistboardSha = commandOutput('git', ['rev-parse', 'HEAD']);
+  const file = journalPath();
+  const record = {
+    engineSha,
+    mistboardSha,
+    ci,
+    overrideReason: opts.overrideReason || null,
+    worktree: process.cwd(),
+  };
+  let unlock;
+  let attemptStarted = false;
+  try {
+    if (opts.deploy) {
+      assertLinkedToProdProject();
+      assertCleanCandidate(mistboardSha);
+      unlock = lockDeployment(file, record);
+    }
+    let baseline = readBaseline(file, opts);
+    if (baseline?.deploymentId && !baselineMatchesDeployment(baseline, railwayDeployments())) {
+      console.log('The latest Railway deployment differs from the journal or is not healthy.');
+      baseline = null;
+    }
+    const engineChanges = baseline ? compareEngine(baseline.engineSha, engineSha) : null;
+    const workerChanges = baseline ? compareWorker(baseline.mistboardSha, mistboardSha) : null;
+    printDeploymentPlan({ ...record, baseline, engineChanges, workerChanges });
+    if (!opts.deploy) {
+      console.log('\ncheck-only. Re-run with --deploy to ship + verify boot health.');
+      return 0;
+    }
+    if (!baseline)
+      throw new Error('Deployment needs a verified baseline; the running changes are unknown.');
+    assertCleanCandidate(mistboardSha);
+    const previousDeployments = railwayDeployments();
+    const startedAt = new Date().toISOString();
+    appendDeployment(file, { ...record, baseline, status: 'started', startedAt });
+    attemptStarted = true;
+    console.log(`\n$ command railway up --service ${SERVICE} --detach`);
+    const up = railway(['up', '--service', SERVICE, '--detach'], { inherit: true });
+    if (up.status !== 0) {
+      appendDeployment(file, { ...record, status: 'upload-failed', startedAt });
+      attemptStarted = false;
+      console.error('deploy: railway up failed; verify the running revision before retrying.');
+      return 3;
+    }
+    console.log('\n# boot-health (waiting for self-test + warmup)');
+    const deploymentId = newDeploymentId(railwayDeployments(), previousDeployments);
+    const healthy = pollBootHealth(startedAt, deploymentId);
+    appendDeployment(file, {
+      ...record,
+      deploymentId,
+      status: healthy ? 'healthy' : 'boot-failed',
+      startedAt,
+    });
+    attemptStarted = false;
+    if (!healthy) {
+      console.error('boot-health: FAILED or timed out. Verify the running pins before retrying.');
+      return 4;
+    }
+    console.log(`boot-health: OK. Both deployment SHAs recorded in ${file}.`);
+    return 0;
+  } catch (error) {
+    if (attemptStarted) appendDeployment(file, { ...record, status: 'unknown' });
+    throw error;
+  } finally {
+    unlock?.();
+  }
 }
 
-if (!match) {
-  const reason = !engineRefMatch
-    ? `${ENGINE_REF_FILE} points at ${engineRef}, so Railpack would checkout a different private engine than ${ENGINE_REF} HEAD ${engineSha}.`
-    : cachebust.sha === null
-      ? 'the cachebust line has no engine SHA, so Railway may reuse an old private-engine clone.'
-      : 'the engine changed but the cachebust still points at the old SHA, so the engine-worker would re-deploy the OLD engine.';
-  console.error(`\nRefusing: ${reason}`);
-  console.error('Run with --bump, then');
-  console.error(`commit + push railpack.json/${ENGINE_REF_FILE}, then re-run with --deploy.`);
-  process.exit(2);
+function assertCleanCandidate(sha) {
+  if (commandOutput('git', ['status', '--porcelain', '--untracked-files=normal'])) {
+    throw new Error('Deployment uploads this directory: commit or remove uncommitted files first.');
+  }
+  if (commandOutput('git', ['rev-parse', 'HEAD']) !== sha) {
+    throw new Error('Mistboard HEAD changed during preflight; run the checks again.');
+  }
 }
 
-if (!opts.deploy) {
-  console.log('\ncheck-only. Re-run with --deploy to ship + verify boot health.');
-  process.exit(0);
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  try {
+    process.exitCode = main();
+  } catch (error) {
+    console.error(`deploy: ${error.message}`);
+    process.exitCode = 1;
+  }
 }
-
-// --- deploy ---
-assertLinkedToProdProject();
-
-console.log(`\n$ railway up --service ${SERVICE} --detach`);
-const up = railway(['up', '--service', SERVICE, '--detach'], { inherit: true });
-if (up.status !== 0) {
-  console.error('deploy: railway up failed');
-  process.exit(3);
-}
-
-// --- boot-health verify ---
-console.log('\n# boot-health (waiting for self-test + warmup; R1-prevent)');
-const healthy = pollBootHealth();
-if (!healthy) {
-  console.error('boot-health: FAILED or timed out — check the build/deploy logs.');
-  console.error('A refused boot (boot_warmup_failed) means the worker could not serve;');
-  console.error('the previous healthy deploy keeps serving (R1-prevent fail-safe).');
-  process.exit(4);
-}
-console.log('boot-health: OK — worker self-tested and is serving.');
-process.exit(0);
 
 // ---------------------------------------------------------------------------
 
-function pollBootHealth() {
+function pollBootHealth(startIso, deploymentId) {
   const deadline = Date.now() + HEALTH_TIMEOUT_MS;
   // Markers only count if newer than now — don't match a prior boot's logs.
-  const startIso = new Date().toISOString();
   while (Date.now() < deadline) {
     sleep(HEALTH_POLL_MS);
-    const logs = railwayLogsTail();
+    const logs = railwayLogsTail(startIso, deploymentId);
     const failed = logs.find(
       (l) => l.includes('boot_warmup_failed') || /engine_alert.*critical/.test(l),
     );
     if (failed) {
-      console.error(`  saw failure: ${failed.slice(0, 200)}`);
+      console.error('  saw worker boot failure marker');
       return false;
     }
     const complete = logs.filter((l) => l > startIso && /engine_warmup_complete/.test(l));
     if (complete.length > 0) {
-      console.log(`  ${complete.length} complete warmup marker(s) since ${startIso}`);
-      return true;
+      const latest = railwayDeployments()[0];
+      if (latest?.id !== deploymentId)
+        throw new Error('Another worker deployment superseded this upload.');
+      if (latest.status === 'SUCCESS') {
+        console.log(
+          `  ${complete.length} complete warmup marker(s) since ${startIso}; Railway SUCCESS`,
+        );
+        return true;
+      }
     }
     console.log(`  …still booting (${Math.round((deadline - Date.now()) / 1000)}s left)`);
   }
   return false;
 }
 
-function railwayLogsTail() {
-  // railway logs streams; bound it with a line cap (head closes the pipe).
-  const res = spawnSync('sh', ['-c', `railway logs --service ${SERVICE} 2>&1 | head -300`], {
-    env: railwayEnv(),
-    encoding: 'utf8',
-    timeout: 60_000,
-  });
-  return (res.stdout ?? '').split('\n');
+function railwayDeployments() {
+  const result = railway(['deployment', 'list', '--service', SERVICE, '--json', '--limit', '10']);
+  if (result.status !== 0) throw new Error('Cannot read Railway deployment metadata.');
+  const deployments = JSON.parse(result.stdout);
+  if (
+    !Array.isArray(deployments) ||
+    deployments.some((deployment) => typeof deployment.id !== 'string')
+  ) {
+    throw new Error('Invalid Railway deployment metadata.');
+  }
+  return deployments;
+}
+
+function railwayLogsTail(startIso, deploymentId) {
+  // Exact deployment + bounded JSON logs: an older warmup cannot certify this upload.
+  const result = railway([
+    'logs',
+    deploymentId,
+    '--service',
+    SERVICE,
+    '--since',
+    startIso,
+    '--lines',
+    '300',
+    '--json',
+  ]);
+  if (result.status !== 0) throw new Error('Cannot read the new worker deployment logs.');
+  return result.stdout
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const entry = JSON.parse(line);
+      return `${entry.timestamp} ${entry.message}`;
+    });
 }
 
 /**
@@ -210,7 +312,9 @@ function assertLinkedToProdProject() {
 }
 
 function railway(args, { inherit = false } = {}) {
-  return spawnSync('railway', args, {
+  const scoped =
+    args[0] === 'status' ? args : [...args, '--project', PROJECT_ID, '--environment', 'production'];
+  return spawnSync('railway', scoped, {
     env: railwayEnv(),
     encoding: 'utf8',
     stdio: inherit ? 'inherit' : 'pipe',
@@ -223,6 +327,8 @@ function railwayEnv() {
   // session ("Unauthorized") — drop it so the CLI uses the logged-in session.
   const env = { ...process.env };
   delete env.RAILWAY_API_TOKEN;
+  env.RAILWAY_CALLER = 'skill:use-railway@1.2.2';
+  env.RAILWAY_AGENT_SESSION ||= `engine-worker-deploy-${process.pid}`;
   return env;
 }
 
@@ -270,7 +376,7 @@ function engineHeadSha() {
     console.error(`unexpected ls-remote output: ${res.stdout}`);
     process.exit(1);
   }
-  return sha.slice(0, 7);
+  return sha;
 }
 
 function sleep(ms) {
@@ -278,16 +384,28 @@ function sleep(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-function parseArgs(args) {
+export function parseArgs(args) {
   const o = { deploy: false, bump: false, help: false };
-  for (const a of args) {
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
     if (a === '--deploy') o.deploy = true;
     else if (a === '--bump') o.bump = true;
     else if (a === '--help' || a === '-h') o.help = true;
-    else {
-      console.error(`unknown argument: ${a}`);
-      process.exit(1);
-    }
+    else if (['--override-engine-ci', '--baseline-engine', '--baseline-mistboard'].includes(a)) {
+      const value = args[++i];
+      if (!value || value.startsWith('--') || /[\r\n]/.test(value) || !value.trim())
+        throw new Error(`${a} requires a value.`);
+      const key = {
+        '--override-engine-ci': 'overrideReason',
+        '--baseline-engine': 'baselineEngine',
+        '--baseline-mistboard': 'baselineMistboard',
+      }[a];
+      if (o[key]) throw new Error(`Duplicate ${a}.`);
+      o[key] = value.trim();
+    } else throw new Error(`Unknown argument: ${a}`);
+  }
+  if (o.bump && (o.deploy || o.overrideReason || o.baselineEngine || o.baselineMistboard)) {
+    throw new Error('--bump must run separately from deployment checks.');
   }
   return o;
 }
@@ -295,12 +413,16 @@ function parseArgs(args) {
 function printHelp() {
   console.log(
     [
-      'Deploy the engine-worker (cachebust gate + railway up + R1-prevent boot-health).',
+      'Deploy engine-worker: pins + exact-SHA CI + change summary + boot-health journal.',
       '',
       'Usage:',
       '  node scripts/deploy-engine-worker.mjs            check-only (default)',
       '  node scripts/deploy-engine-worker.mjs --deploy   deploy + verify boot health',
-      '  node scripts/deploy-engine-worker.mjs --bump     rewrite cachebust → engine HEAD',
+      '  node scripts/deploy-engine-worker.mjs --bump     rewrite both pins to engine HEAD',
+      '  --baseline-engine <full-sha> --baseline-mistboard <full-sha>',
+      '      Required for the first deploy, or after an interrupted/failed/manual deploy.',
+      '  --override-engine-ci "<reason>"  urgent CI exception, recorded with the deployment',
+      '  Journal: <shared-git-dir>/engine-worker-deployments.jsonl',
     ].join('\n'),
   );
 }
