@@ -1,6 +1,107 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { serverHtmlFacts, serverHtmlFailures } from './seo-render-audit.mjs';
+import { serverHtmlFacts, serverHtmlFailures, sitemapUrls } from './seo-render-audit.mjs';
+
+const SITEMAP =
+  '<urlset><url><loc>https://mistboard.com/faq</loc></url><url><loc>https://mistboard.com/source</loc></url></urlset>';
+
+test('a transient sitemap network failure retries, rebases and respects the limit', async (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const waits = [];
+  const signals = [];
+  const urls = await sitemapUrls('http://localhost:3000', 'pages', 1, {
+    fetchImpl: async (url, { signal }) => {
+      assert.equal(url, 'http://localhost:3000/sitemap-pages.xml');
+      signals.push(signal);
+      if (signals.length === 1) throw new TypeError('fetch failed');
+      return new Response(SITEMAP);
+    },
+    wait: async (ms) => waits.push(ms),
+  });
+  assert.deepEqual(urls, ['http://localhost:3000/faq']);
+  assert.deepEqual(waits, [1000]);
+  assert.notEqual(signals[0], signals[1]);
+});
+
+test('sitemap rate limits and server errors retry with bounded backoff', async (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const responses = [new Response('', { status: 429 }), new Response('', { status: 503 })];
+  const waits = [];
+  const urls = await sitemapUrls('https://mistboard.com', 'pages', 0, {
+    fetchImpl: async () => responses.shift() ?? new Response(SITEMAP),
+    wait: async (ms) => waits.push(ms),
+  });
+  assert.equal(urls.length, 2);
+  assert.deepEqual(waits, [1000, 2000]);
+});
+
+test('a permanently missing sitemap fails immediately', async () => {
+  let calls = 0;
+  await assert.rejects(
+    sitemapUrls('https://mistboard.com', 'pages', 0, {
+      fetchImpl: async () => {
+        calls += 1;
+        return new Response('', { status: 404 });
+      },
+      wait: async () => assert.fail('a 404 must not retry'),
+    }),
+    /sitemap-pages.xml returned 404/,
+  );
+  assert.equal(calls, 1);
+});
+
+test('persistent sitemap network failure still fails after exactly three attempts', async (t) => {
+  t.mock.method(console, 'warn', () => {});
+  const failure = new TypeError('fetch failed');
+  let calls = 0;
+  const waits = [];
+  await assert.rejects(
+    sitemapUrls('https://mistboard.com', 'pages', 0, {
+      fetchImpl: async () => {
+        calls += 1;
+        throw failure;
+      },
+      wait: async (ms) => waits.push(ms),
+    }),
+    (error) => {
+      assert.match(error.message, /sitemap-pages.xml could not be fetched after 3 attempts/);
+      assert.equal(error.cause, failure);
+      return true;
+    },
+  );
+  assert.equal(calls, 3);
+  assert.deepEqual(waits, [1000, 2000]);
+});
+
+test('the sitemap deadline also bounds a stalled response body', async (t) => {
+  t.mock.method(console, 'warn', () => {});
+  // AbortSignal.timeout uses an unref'ed timer; keep this isolated test alive
+  // while its simulated response bodies wait for the real deadline.
+  const keepAlive = setInterval(() => {}, 1000);
+  let calls = 0;
+  try {
+    await assert.rejects(
+      sitemapUrls('https://mistboard.com', 'pages', 0, {
+        timeoutMs: 10,
+        fetchImpl: async (_url, { signal }) => {
+          calls += 1;
+          return {
+            ok: true,
+            text: () =>
+              new Promise((_resolve, reject) => {
+                signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+              }),
+          };
+        },
+        wait: async () => {},
+      }),
+      (error) => error.cause?.name === 'TimeoutError',
+    );
+    assert.equal(calls, 3);
+  } finally {
+    clearInterval(keepAlive);
+  }
+});
 
 // The shell prod served for every broadcast URL until 2026-10-17: a title, no
 // canonical, nothing in #app. The audit passed it, because the client drew a
