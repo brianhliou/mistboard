@@ -1,10 +1,10 @@
 // Illustrative close-ups, drawn by the same piece/badge renderers as review.
 // They explain the visual scale; they are not extra analysed game positions.
-import { svgBoardLuckMark } from '../board-luck-mark.js';
-import { svgBoardGlyphMarker } from '../svg-board-marker.js';
-import { readStoredXiangqiPieceSet } from '../xiangqi-appearance-storage.js';
-import { renderXiangqiPieceGlyphed } from '../xiangqi-piece-sets.js';
-import type { SvgRowBlock } from './types.js';
+import { svgBoardLuckMark } from '../../board-luck-mark.js';
+import { svgBoardGlyphMarker } from '../../svg-board-marker.js';
+import { readStoredXiangqiPieceSet } from '../../xiangqi-appearance-storage.js';
+import { renderXiangqiPieceGlyphed } from '../../xiangqi-piece-sets.js';
+import type { SvgRowBlock } from '../types.js';
 
 function closeUp(title: string, mark: string): string {
   const piece = renderXiangqiPieceGlyphed(

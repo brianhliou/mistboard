@@ -59,6 +59,19 @@ describe('rendered figures carry translated labels', () => {
     expect(labels).toContain('THẾ BAN ĐẦU ĐÃ XÁO');
     expect(labels).not.toContain('FOUR OPENINGS, ONE MOVE EACH');
   });
+
+  it.each([
+    ['jieqi-platform', 'en', 'Very unlucky', 'No warning'],
+    ['jieqi-platform', 'zh-Hans', '非常不幸', '无警示'],
+    ['jieqi-platform', 'zh-Hant', '非常不幸', '無警示'],
+    ['co-up', 'en', 'Rất không may', 'Không cảnh báo'],
+    ['co-up', 'zh-Hant', 'Rất không may', 'Không cảnh báo'],
+  ] as const)('keeps %s close-up labels in their article language under %s', (slug, lang, luck, grade) => {
+    const page = buildArticlePage(slug, lang === 'en' ? undefined : lang);
+    const titles = [...page.querySelectorAll('.article-piece-marks svg title')].map((n) => n.textContent);
+    expect(titles).toContain(luck);
+    expect(titles).toContain(grade);
+  });
 });
 
 describe('index cards carry translated words', () => {
@@ -82,7 +95,7 @@ describe('index cards carry translated words', () => {
     // Whatever interface the reader saved: a zh one must not flip the layout.
     for (const locale of ['en', 'zh-Hant'] as const) {
       const markup = typeof svg === 'function' ? svg(locale) : svg;
-      expect(svgTextLabels(markup), locale).toEqual(['CỜ TƯỚNG', 'CỜ ÚP', 'MỌI QUÂN ĐỀU ÚP']);
+      expect(svgTextLabels(markup), locale).toEqual(['CỜ TƯỚNG', 'CỜ ÚP', 'QUÂN ÚP, BÀN CỜ MỞ']);
     }
   });
 });

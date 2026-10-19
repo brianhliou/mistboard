@@ -1,6 +1,6 @@
 import type { Locale } from '../../i18n/locale.js';
 import { textCard } from '../text-card.js';
-import { JIEQI_GRADE_EXAMPLES, JIEQI_LUCK_EXAMPLES } from '../jieqi-platform-marks.js';
+import { JIEQI_GRADE_EXAMPLES, JIEQI_LUCK_EXAMPLES } from './jieqi-platform-marks.js';
 import type { Article } from '../types.js';
 
 // The platform introduction is also the structural source for /blog/co-up.
