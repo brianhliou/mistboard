@@ -1,0 +1,68 @@
+name: Broadcast archive audit
+
+on:
+  schedule:
+    - cron: "17 17 * * 1"
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "Archive years to inventory (comma-separated)"
+        type: string
+        default: "2026,2025,2019"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: broadcast-archive-audit
+  cancel-in-progress: false
+
+jobs:
+  prepare-review:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ARCHIVE_YEARS: ${{ inputs.years || '2026,2025,2019' }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/ensure-packages-built.mjs
+      - name: Read public current coverage
+        run: >-
+          curl --fail --silent --show-error --max-time 30
+          -A 'Mozilla/5.0 (compatible; MistboardArchive/1.0; +https://mistboard.com)'
+          https://mistboard.com/api/xiangqi/broadcasts
+          -o "$RUNNER_TEMP/broadcast-existing.json"
+      - name: Inventory archives
+        run: >-
+          npm run broadcast:archive -- catalog
+          --years "$ARCHIVE_YEARS" --pages 6
+          --existing-index "$RUNNER_TEMP/broadcast-existing.json"
+          --cache "$RUNNER_TEMP/broadcast-archive-cache"
+          --out "$RUNNER_TEMP/broadcast-archive-review/catalog"
+      - name: Prepare the reviewed event batch
+        run: >-
+          npm run broadcast:archive -- prepare
+          --manifest scripts/data/broadcast-archive-reviewed.json
+          --existing-index "$RUNNER_TEMP/broadcast-existing.json" --skip-existing
+          --cache "$RUNNER_TEMP/broadcast-archive-cache"
+          --out "$RUNNER_TEMP/broadcast-archive-review/packs"
+      - name: Write the review summary
+        if: always()
+        run: |
+          if test -f "$RUNNER_TEMP/broadcast-archive-review/catalog/catalog-summary.md"; then
+            cat "$RUNNER_TEMP/broadcast-archive-review/catalog/catalog-summary.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          printf '\nNo database writes, publication or outreach.\n' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: broadcast-archive-review
+          path: ${{ runner.temp }}/broadcast-archive-review
+          if-no-files-found: warn
+          retention-days: 30

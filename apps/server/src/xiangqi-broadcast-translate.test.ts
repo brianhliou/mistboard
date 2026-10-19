@@ -388,8 +388,13 @@ test('North American Championship players take their own spelling, matched by wh
   assert.equal(tag('李铭坚', '纽约2').nameEn, 'Henry Li');
   assert.equal(tag('黎日光', 'Katy').nameEn, 'Nhat Quang Le');
   assert.equal(tag('谢光平', 'UsCentralVietnamese').nameEn, 'Ben Ta');
-  // Unconfirmed spelling stays pinyin.
-  assert.equal(tag('范志', '洛杉矶').nameEn, 'Fan Zhi');
+  // LA's own bilingual roster supplies these spellings.
+  assert.equal(tag('范志', '洛杉矶').nameEn, 'Fan Chi');
+  assert.equal(tag('廖建国', '洛杉矶').nameEn, 'Lien The Quoc');
+  assert.equal(tag('阮友科', '洛杉矶').nameEn, 'Nguyen Huu Khoa');
+  assert.equal(tag('沈浩', '洛杉矶').nameEn, 'Shen Hao');
+  assert.equal(tag('阮文', '休斯顿').nameEn, 'Van Nguyen');
+  assert.equal(tag('黎日', '休斯顿').nameEn, 'Nhat Le');
   // Latin names pass through with no nameEn.
   assert.equal(tag('Son X Nguyen', '金州').nameEn, undefined);
   // The same Chinese name on a mainland team keeps pinyin: the match is the

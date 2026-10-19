@@ -490,3 +490,57 @@ Load smoke:
   prove WXF on one selected event page.
 - Defer comments and annotations until the import, live simulation, sync log,
   and viewer loops are stable.
+
+## Archive discovery and batch preparation
+
+The live scheduler refreshes configured tours. Its dpxq index monitor flags
+recent major events, but does not enumerate every historical archive or seed
+every event it finds. An archive inventory is a separate job from polling an
+event's moves. In particular, July's 2026 Qitian Cup was outside the monitor's
+30-day lookback and major-series name filter.
+
+`npm run broadcast:archive` adds offline readers for iqipu's public event/game
+pages and ElephantChess's public event lists and move records. It has two modes:
+
+```sh
+# Save the public current-coverage response first, without any account token.
+curl --fail -A 'Mozilla/5.0' https://mistboard.com/api/xiangqi/broadcasts \
+  -o /tmp/broadcast-existing.json
+
+npm run broadcast:archive -- catalog --years 2026,2025,2019 --pages 6 \
+  --existing-index /tmp/broadcast-existing.json --out /tmp/archive-review
+
+npm run broadcast:archive -- prepare \
+  --manifest scripts/data/broadcast-archive-reviewed.json \
+  --existing-index /tmp/broadcast-existing.json --out /tmp/archive-packs
+```
+
+The catalog records source counts and exact-name coverage matches. An unmatched
+name is a review candidate, not proof of a missing event: archives split and
+combine sections differently and often have duplicate uploads. Source counts
+are not unique-game counts. The first reviewed batch is the LA-hosted July 4
+Qitian Cup: 24 games, three rounds, four teams, 45+20. Its manifest pins the
+event identity, expected game/round counts, source URLs and any reviewed source
+discrepancy. Add reviewed events to that list to prepare several in one run.
+
+Preparation validates legal replay and initial positions, recognizes identical
+games reflected left-to-right, joins round metadata by played moves rather
+than guessed name transliterations, and preserves source credits. A missing
+round, conflicting result, ambiguous duplicate or mismatched game count stops
+that event and appears in `batch-report.json`. Other events can still prepare.
+No database or publication write occurs. Source upload dates and unstated round
+start times are omitted. Existing tour slugs are rejected; the scheduled job's
+explicit `--skip-existing` records them as already tracked without modifying
+them. Review the batch report before using the ordinary fixture-pack importer.
+
+The two LA sources agree on 23 reflected mainlines. A reviewed exception keeps
+iqipu's full 147-ply Zhao Jianhua–Jian Meng game: the secondary record shares
+119 plies, ends early, and reverses player labels. It supplies only round 2.
+This exception is explicit in the manifest; fuzzy matching is never automatic.
+
+`.github/workflows/broadcast-archive-audit.yml` inventories the selected archive
+years weekly and on manual dispatch, prepares the reviewed list, and saves a
+compact summary plus detailed artifacts for 30 days. It uses public reads and
+has no database credentials, publication step or outreach step. The workflow
+becomes active when the change lands on main. Local caches expire after six
+hours for indexes and event lists, and seven days for individual move records.

@@ -197,8 +197,8 @@ const FEDERATION_PLAYER_NAMES = new Map<string, string>([
   // 2026 10th North American Championship (Houston): the entry list in the
   // host's special issue (houstonxiangqi.org, 北美锦标赛特刊电子版, p. 32), which
   // prints each player's English and Chinese names side by side. North
-  // American players write the given name first, and so do these. 范志 is
-  // listed as "Klevestakt Makspringer" and stays pinyin until confirmed.
+  // American players write the given name first, and so do these. Later
+  // organiser rosters supersede an entry when they identify its spelling.
   ['NA:王安泰', 'Antai Wang'],
   ['NA:胡全', 'Michael Hu'],
   ['NA:罗健文', 'Kean Mun Loh'],
@@ -207,7 +207,17 @@ const FEDERATION_PLAYER_NAMES = new Map<string, string>([
   ['NA:谢文川', 'Richard Tse'],
   ['NA:林年浩', 'Jimmy Lin'],
   ['NA:张文鑫', 'Wenxin Zhang'],
-  ['NA:廖建国', 'Lien Quoc'],
+  // LA organiser's bilingual 2026-10-10 roster, gdchess article 18617,
+  // supersedes the earlier Houston entry spelling for its own president.
+  ['NA:廖建国', 'Lien The Quoc'],
+  ['NA:范志', 'Fan Chi'],
+  ['NA:阮友科', 'Nguyen Huu Khoa'],
+  ['NA:沈浩', 'Shen Hao'],
+  // Qitian Cup organiser report (gdchess 18319) names Van Nguyen's 3/3;
+  // the three winning records identify him as 阮文. The independent
+  // ElephantChess round listing calls the source's 黎日 "NHAT LE".
+  ['NA:阮文', 'Van Nguyen'],
+  ['NA:黎日', 'Nhat Le'],
   ['NA:黎英豪', 'Anh Hao Le'],
   ['NA:彭铂', 'Bo Peng'],
   ['NA:彭佳文', 'Oscar Peng'],

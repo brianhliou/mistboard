@@ -232,6 +232,9 @@ Edit task → find file → open only that file.
 | `xiangqi-broadcast-source-policy.ts` | Xiangqi broadcast source URL safety policy: local-dev allowance, production allowed-host checks, credential/protocol rejection, and private-address guards |
 | `xiangqi-broadcast-sim.ts` | Local xiangqi broadcast simulator core: tape frames, fake-source snapshots, and DB tape runner |
 | `xiangqi-broadcast-wxf-dhtmlxq.ts` | WXF/DhtmlXQ real-source adapter: parses WXF tournament HTML iframe payloads, decodes DhtmlXQ coordinate move lists, validates replay, and emits canonical xiangqi broadcast snapshots |
+| `xiangqi-broadcast-archive.ts` | Offline iqipu and ElephantChess archive readers: source catalogs, legal move conversion, mirror-aware duplicate identity and exact round joins with explicit reviewed exceptions |
+| `prepare-xiangqi-broadcast-archives.ts` | `broadcast:archive` CLI: cached, paced source inventory and batch fixture-pack preparation; compares existing coverage and never writes to the database |
+| `xiangqi-broadcast-archive.test.ts` | Archive parser and reconciliation regressions: missing public payloads, non-standard starts, mirrored records, source conflicts, duplicates and reviewed exceptions |
 | `import-corpus.ts` | CLI: import FoW game corpus |
 | `worker.ts` | Background worker entry point for async engine game execution |
 | `feedback-notify.ts` | Email notification on feedback submission |

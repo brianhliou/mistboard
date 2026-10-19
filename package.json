@@ -36,6 +36,7 @@
     "db:poll:xiangqi-broadcast": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run poll:xiangqi-broadcast --workspace @mistboard/server --",
     "db:simulate:xiangqi-broadcast": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run simulate:xiangqi-broadcast --workspace @mistboard/server --",
     "source:xiangqi-broadcast": "npm run source:xiangqi-broadcast --workspace @mistboard/server --",
+    "broadcast:archive": "tsx apps/server/src/prepare-xiangqi-broadcast-archives.ts",
     "db:test:ensure": "node scripts/ensure-test-database.mjs",
     "test:persistent": "node scripts/run-persistent-tests.mjs",
     "smoke:xiangqi-broadcast": "node scripts/xiangqi-broadcast-local-smoke.mjs",
