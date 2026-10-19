@@ -4,6 +4,7 @@ import https from 'node:https';
 import { dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin, type ResolvedConfig } from 'vitest/config';
+import { posthogSourcemaps } from './scripts/posthog-sourcemaps.mjs';
 import {
   DEV_PUBLIC_STUDIES_ORIGIN,
   localStudyMissing,
@@ -254,8 +255,10 @@ export default defineConfig(({ command }) => {
       annotationsApiPlugin(),
       devApiProxyPlugin(),
       copyFilteredPublicDirPlugin(),
+      ...posthogSourcemaps({ command, cwd: __dirname }),
     ],
     build: {
+      sourcemap: 'hidden',
       copyPublicDir: false,
       // Emitted to dist/.vite/manifest.json; the prerender step reads it to bake
       // route-chunk CSS + modulepreload links into the prerendered pages, so

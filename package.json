@@ -164,6 +164,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.6",
+    "@jridgewell/trace-mapping": "0.3.31",
     "@playwright/test": "^1.62.1",
     "concurrently": "10.0.4",
     "madge": "8.0.0",
