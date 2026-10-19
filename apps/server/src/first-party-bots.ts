@@ -24,6 +24,8 @@ export type FirstPartyBotProfile = {
   displayName: string;
   /** gameSpecId -> engine id currently fronted for that variant. */
   engines: Readonly<Record<string, string>>;
+  /** A seat's difficulty label when the shared profile name omits its rung. */
+  seatNamesByEngineId?: Readonly<Record<string, string>>;
   defaultGameSpecId: string;
   /** A bot that is no rung of its variant's strength ladder (the worst-move bot):
    *  bot-vs-bot pairing never seats it. */
@@ -127,6 +129,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       xiangqi: 'pikafish-xiangqi-level-8',
       jieqi: 'pikafish-jieqi-strongest',
     },
+    seatNamesByEngineId: { 'pikafish-jieqi-strongest': 'Pikafish Level 8' },
     defaultGameSpecId: 'xiangqi',
     attributionEngineIds: [
       'pikafish-xiangqi-level-1',
@@ -213,7 +216,8 @@ export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile |
 /**
  * The public name of an engine seat, the same on every live surface (room
  * wire, /games, /watch, the homepage TV): the first-party bot fronting it,
- * which is the name the player picked in setup, else the engine's own name.
+ * with its engine-specific difficulty label when needed to match setup,
+ * else the engine's own name.
  * The room resolved the bot first and the feeds resolved the tier name only,
  * so one jieqi game read "Pikafish" in the room and "PikaJieQi - Strongest" on
  * its tile.
@@ -224,7 +228,7 @@ export function liveSeatEngineName(
   engineName: () => string,
 ): string {
   const bot = pveBotId ? firstPartyBotForId(pveBotId) : firstPartyBotForEngine(engineClientId);
-  return bot?.displayName ?? engineName();
+  return bot?.seatNamesByEngineId?.[engineClientId] ?? bot?.displayName ?? engineName();
 }
 
 // games.variant values that name the same spec as a bot's engine-map key. The

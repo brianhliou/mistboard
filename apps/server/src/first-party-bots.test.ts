@@ -8,8 +8,11 @@ import {
   firstPartyBotEngineFor,
   firstPartyBotForEngine,
   firstPartyBotForId,
+  liveSeatEngineName,
+  liveSeatProfileIdentity,
 } from './first-party-bots.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
+import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
 import { XIANGQI_PLAYABLE_ENGINES } from './xiangqi-engine-catalog.js';
 
 test('the merged Misty identity fronts every house variant', () => {
@@ -67,6 +70,39 @@ test('the merged Pikafish identity fronts xiangqi and jieqi', () => {
   ]) {
     assert.equal(firstPartyBotForEngine(engineId)?.id, 'pikafish', engineId);
   }
+});
+
+test('live Jieqi seats keep every ladder label while linking to the bot identity', () => {
+  for (const tier of JIEQI_PLAYABLE_ENGINES) {
+    const bot = firstPartyBotForEngine(tier.id);
+    assert.ok(bot, tier.id);
+    for (const pveBotId of [undefined, bot.id, ...(bot.legacyBotIds ?? [])]) {
+      assert.equal(
+        liveSeatEngineName(tier.id, pveBotId, () => tier.name),
+        tier.name,
+      );
+      assert.deepEqual(liveSeatProfileIdentity(tier.id, null, pveBotId), { botId: bot.id });
+    }
+  }
+});
+
+test('live seat labels preserve other bot brands, historical tiers and unknown engines', () => {
+  assert.equal(
+    liveSeatEngineName('pikafish-xiangqi-level-8', 'pikafish', () => 'Tier'),
+    'Pikafish',
+  );
+  assert.equal(
+    liveSeatEngineName('pikafish-jieqi-amateur', 'pikafish', () => 'Old tier'),
+    'Pikafish',
+  );
+  assert.equal(
+    liveSeatEngineName('python-v2-v1.6', 'misty', () => 'Misty 1.6'),
+    'Misty',
+  );
+  assert.equal(
+    liveSeatEngineName('unregistered', undefined, () => 'Custom engine'),
+    'Custom engine',
+  );
 });
 
 test('each Fairy-Stockfish level plays xiangqi, fortress and duck through one identity', () => {

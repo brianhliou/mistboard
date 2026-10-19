@@ -51,7 +51,8 @@ function fakeRegistration(args: {
       legacyVariants: [args.channelId],
     },
     isEngineClientId: (clientId: string | undefined) =>
-      clientId?.startsWith(FAKE_ENGINE_PREFIX) ?? false,
+      clientId === 'pikafish-jieqi-strongest' ||
+      (clientId?.startsWith(FAKE_ENGINE_PREFIX) ?? false),
     engineDisplayName: (clientId: string) => `Engine ${clientId.slice(FAKE_ENGINE_PREFIX.length)}`,
     enabled: () => true,
     rooms: args.rooms,
@@ -463,6 +464,23 @@ test('engine seats are labelled through the tenant display name, PvE composition
   const human = game?.players.find((player) => !player.isEngine);
   assert.equal(human?.name, 'Ada');
   assert.equal(human?.handle, 'ada');
+});
+
+test('current games keep the Jieqi Pikafish Level 8 label and shared profile link', () => {
+  for (const pveBotId of [undefined, 'pikafish', 'pika-jieqi-strongest']) {
+    hiddenRooms.set(
+      'fkh_level8',
+      tenantRoom({
+        id: 'fkh_level8',
+        seats: { black: 'pikafish-jieqi-strongest', red: 'client-a' },
+        pveBotId,
+      }),
+    );
+    const [game] = collectCurrentGames(context(), NOW);
+    const engineSeat = game?.players.find((player) => player.isEngine);
+    assert.equal(engineSeat?.name, 'Pikafish Level 8');
+    assert.equal(engineSeat?.botId, 'pikafish');
+  }
 });
 
 test('an engine seat fronted by a first-party bot is named after the bot, as the room names it', () => {
