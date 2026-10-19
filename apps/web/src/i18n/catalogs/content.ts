@@ -180,26 +180,29 @@ export const EN_CONTENT = {
   'contact.aboutPage': 'About: {path}',
   'about.heading': 'About Mistboard',
   'about.lede':
-    "Mistboard is a free, open-source place to play and study Chinese chess, one board for players who read Chinese and players who don't. It is also home to the original strategy games we build.",
-  'about.whyHeading': 'Why this site exists',
+    "Mistboard is a free, open-source place to play and study Chinese chess, and home to the original strategy games we build. Players who read Chinese and players who don't sit at the same board.",
+  'about.whyHeading': 'A world stage for Chinese chess',
   'about.whyBody':
-    'Chinese chess here means xiangqi and its traditional relatives, jieqi and banqi. Most people who play them read Chinese, and most of what is written about them is in Chinese. Mistboard is one board for both sides of that line. The site runs in English, Simplified and Traditional Chinese on the same games, puzzles and lobby, so a player in Shanghai and a player in Toronto sit down at the same table. For English speakers, pieces render as icons you can identify before you can read 車 or 砲, rules and articles are written in English rather than translated into it, and a beginner course explains each piece against the chess piece it resembles. Past the basics: engines, tactics puzzles mined from real games, an analysis board, a games database, and tournament broadcasts.',
-  'about.darkChessHeading': 'What Mistboard builds',
+    'Chinese chess here means xiangqi and its traditional relatives, jieqi and banqi. Mistboard runs in English, Simplified Chinese and Traditional Chinese, so a player in Shanghai and a player in Toronto can sit down at the same table. Pieces can render as icons you recognize before you can read 車 or 砲, and a beginner course starts from the first move. Our mission is to bring people together across cultures through Chinese chess and original strategy games.',
+  'about.darkChessHeading': 'New games from familiar boards',
   'about.darkChessBody':
-    "Beside the traditional games sit the ones we design. Duck Xiangqi puts a duck on the board that belongs to neither side. Fog Xiangqi hides every point your pieces cannot reach. Crazyhouse Xiangqi puts every captured piece into the capturer's hand to drop back in, and advisors and elephants start the game in hand. Each starts from a board people already know and changes as little as it can, and each gets a clear rules page and server-enforced play. More are in design. Jungle Chess, Flip Jungle, and Fog Chess are live too.",
-  'about.playStudyHeading': 'Play and study',
+    'Duck Xiangqi puts a duck on the board that belongs to neither player. Fog Xiangqi hides every point your pieces cannot reach. Crazyhouse Xiangqi lets you drop captured pieces back onto the board. Each starts with a familiar game and changes its decisions. We give each game clear rules and server-enforced play. Over time, we want other creators to develop and test their games with players here too.',
+  'about.playStudyHeading': 'Play, study and teach',
   'about.playStudyBody':
-    "Start a game over a link, join the lobby, or play an engine where one is available. Afterward, review the game from either player's perspective or with the full board revealed when the rules allow it. Rules and articles cover both how to play and why the variants work.",
-  'about.trustHeading': 'Trust by design',
+    'Challenge a friend over a link, find an opponent in the lobby or play against a computer. Work through puzzles mined from real games, study a tournament game move by move or review your own game afterward. Lessons, studies and broadcasts give players ways to learn from each other and teach what they know.',
+  'about.trustHeading': 'Built with players, open to inspection',
   'about.trustBody':
-    "In Fog games your browser never receives the pieces you can't see, so there is nothing hidden on the page to dig out. A live Fog game can't be watched. In jieqi and banqi, spectators see the board as it lies, face-down pieces and all. Every board opens up for review once the game ends.",
-  'about.enginesHeading': 'Engines and serious play',
+    'Our standard is a board that responds promptly and makes the next action clear. We use AI in development to act quickly on bugs and player suggestions. The rules are open to inspection, and fair play is enforced by the server: in Fog games, your browser never receives the pieces you cannot see. Computer opponents play with the information a human in their seat would have.',
+  'about.enginesHeading': 'Build the next challenger',
   'about.enginesBody':
-    'Mistboard runs engines for its variants and builds its own where none existed, like Misty for Fog Chess. In a hidden-piece game the engine sees what a human in its seat would see, and nothing more.',
-  'about.openSourceHeading': 'Open source foundation',
+    'Engine authors can challenge for titles in public matches on Mistboard. We want to grow that into an arena where anyone can bring an engine and compete under clear rules, with games and results others can examine. Further ahead are competitions on newly invented strategy games, where people and AI agents must develop approaches to games they have never played before.',
+  'about.communityHeading': 'Clubs, tournaments and cultural exchange',
+  'about.communityBody':
+    'We want a Washington Xiangqi club and in-person tournaments whose games can be followed and studied on Mistboard. From there, we want to work with clubs, teachers and sporting or cultural institutions in China and elsewhere on exchanges and international events.',
+  'about.openSourceHeading': 'Free and open source',
   'about.openSourcePrefix': 'Mistboard is published under AGPL-3.0-or-later on ',
   'about.openSourceMiddle':
-    '. Anyone can read the rules code, the code that decides what each player sees, and the rest of the site. Bug reports, fixes and article drafts are welcome. See ',
+    '. You can inspect how the games work, contribute improvements and build on the code. Players, teachers and engine authors all have a part in what Mistboard becomes. See ',
   'about.openSourceSuffix': ' for license and third-party credits.',
   'stats.heading': 'Statistics',
   'stats.lede':
@@ -276,7 +279,7 @@ export const EN_CONTENT = {
   'developers.heading': 'Developers',
   'apiDocs.heading': 'API',
   'contribute.intro':
-    'Mistboard is free and open source, built in the open. There is a lot to do and many ways to help, whether or not you write code.',
+    'Help build a future for Chinese chess and original strategy games. Mistboard is free and open source, and players, teachers, game creators and engine authors can all contribute. Start with something you care about improving.',
   'contribute.playHeading': 'Play and give feedback',
   'contribute.playBody':
     'The most useful thing you can do right now is play, then tell us what broke or felt wrong. Real games surface rule bugs, unclear moments, and missing features faster than anything else. New games we design need play-testers too.',
@@ -306,7 +309,7 @@ export const EN_CONTENT = {
   'contribute.crossLinkOr': ' or ',
   'creators.heading': 'Work with us',
   'creators.intro':
-    'Mistboard is a free, open-source site for Chinese chess and original strategy games, in English and Chinese, with no ads. We work with players, creators and organizers who want to bring the game to more people.',
+    'Help bring Chinese chess to a world stage. Mistboard connects play and study with broadcasts, original games and engine challenges. We want to work with players, teachers, creators and organizers across languages, online and in person. The site is free, open source and ad-free.',
   'creators.playersHeading': 'Titled players and coaches',
   'creators.playersPrefix': 'A verified title badge, and a ',
   'creators.playersCoachLink': 'coaching page',
@@ -763,6 +766,8 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'about.trustBody',
   'about.enginesHeading',
   'about.enginesBody',
+  'about.communityHeading',
+  'about.communityBody',
   'about.openSourceHeading',
   'about.openSourcePrefix',
   'about.openSourceMiddle',

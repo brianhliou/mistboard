@@ -130,9 +130,9 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     localeGroup: '/bots',
   },
   '/about': {
-    title: 'About Mistboard | Chinese Chess (Xiangqi) in English',
+    title: 'About Mistboard | Chinese Chess and the Future of Strategy Games',
     description:
-      'A free, open-source place to play xiangqi (Chinese chess) in English, built for serious play. What the site is, and who it is for.',
+      'Bringing people together across cultures through Chinese chess and original strategy games. Free, open-source play, study, broadcasts and engine challenges.',
   },
   '/faq': {
     title: 'Frequently Asked Questions | Mistboard',
@@ -187,12 +187,12 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/contribute': {
     title: 'How to Contribute | Mistboard',
     description:
-      'Mistboard is free and open source. Ways to help, whether or not you write code: play and give feedback, report bugs, help translate, or improve the code.',
+      'Help build a future for Chinese chess and original strategy games. Contribute as a player, teacher, translator, game creator or engine author.',
   },
   '/creators': {
     title: 'Work With Us: Creators and Players | Mistboard',
     description:
-      'Work with Mistboard: titled players and coaches, creators and streamers, event organizers and clubs, writers and composers, and engine authors.',
+      'Bring Chinese chess to a world stage with Mistboard. Work with us on teaching, broadcasts, original games and engine challenges across languages.',
   },
   // One reigning champion engine per game, moved from
   // brianhliou.com/challenges/ (and its zh copies) on 2026-10-07; /challenges

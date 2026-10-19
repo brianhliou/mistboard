@@ -97,7 +97,7 @@ describe('static pages', () => {
     mountAbout(root);
 
     expect(root.querySelector('h1')?.textContent).toBe('關於 Mistboard');
-    expect(root.textContent).toContain('以設計建立信任');
+    expect(root.textContent).toContain('與玩家共建，規則可供檢驗');
     expect(root.textContent).not.toContain('玩家對局活動');
   });
 

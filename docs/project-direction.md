@@ -1,5 +1,34 @@
 # Project Direction
 
+## Mission
+
+**Bring people together across cultures through Chinese chess and original
+strategy games.**
+
+We want Chinese chess to have a world stage. Someone arriving for a first game
+should be able to find a teacher, follow a tournament and become part of the
+game's future. A creator should be able to contribute a game, an engine or a
+way to help others understand what happens on the board.
+
+Mistboard's long-term ambition is an international institution connecting
+players and game creators with engine builders, teachers and event organizers.
+That includes local clubs and in-person tournaments, professional broadcasts
+and cultural exchanges. We are working toward a Washington Xiangqi club as a
+local starting point. Partnerships with clubs and sporting or cultural
+institutions in China and elsewhere could connect that local work to
+international events.
+
+The technical ambition includes public engine challenges and, eventually,
+competitions on new abstract strategy games where humans and AI agents can
+develop and compare approaches. Reproducible results and clear rules should
+make each challenge useful to the next person who builds on it.
+
+These are long-term ambitions. Current play, tools and contribution paths are
+described below; future events and partnerships are not existing affiliations
+or services.
+
+## The Product Today
+
 Mistboard is a free, open-source place to play and study Chinese chess and the
 original strategy games built on it. Chinese chess here means xiangqi and its
 traditional relatives, Jieqi and Banqi. Beside them sit Mistboard's own games
@@ -12,8 +41,10 @@ Chinese, with live and rated play, analysis, broadcasts, puzzles, and teaching.
 Hidden-information games (Fog of War, Jieqi, Banqi, Flip Jungle) are the
 platform's hardest correctness test.
 
-> Goal: the trustworthy open-source place to play, study, rank, and build engines
-> for xiangqi and its variants.
+The product standard is responsive boards, clear controls and quick improvements
+from player feedback. We use AI in development to act on bugs and suggestions.
+Free access and open rules let players, teachers and engine builders use and
+inspect the same games.
 
 This document defines the public product, licensing, branding, and reference
 boundaries for contributors.
@@ -35,6 +66,11 @@ server must enforce what each player is allowed to know. The primary work:
 - a public engine protocol, public baselines, and a first-party engine track
 
 Other features earn their place only when they strengthen core play.
+
+The mission also gives teaching, broadcasts and engine challenges a lasting
+purpose: they help people take part in the games. The wider vision informs
+which projects we choose; a new game, event or partnership still needs its own
+agreed scope.
 
 ## Engine Identity
 

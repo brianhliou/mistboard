@@ -531,6 +531,17 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
 
   const engineHeading = aboutSubheading(t('about.enginesHeading', {}, locale));
   const engineP = aboutParagraph([t('about.enginesBody', {}, locale)]);
+  engineP.append(
+    ' ',
+    aboutLink(t('champions.heading', {}, locale), localizedHref('/champions', locale)),
+  );
+
+  const communityHeading = aboutSubheading(t('about.communityHeading', {}, locale));
+  const communityP = aboutParagraph([t('about.communityBody', {}, locale)]);
+  communityP.append(
+    ' ',
+    aboutLink(t('creators.heading', {}, locale), localizedHref('/creators', locale)),
+  );
 
   const oss1Heading = aboutSubheading(t('about.openSourceHeading', {}, locale));
   const oss1P = aboutParagraph([
@@ -554,6 +565,8 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     fairnessP,
     engineHeading,
     engineP,
+    communityHeading,
+    communityP,
     oss1Heading,
     oss1P,
   );
