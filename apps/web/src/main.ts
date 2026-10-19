@@ -23,6 +23,7 @@ import {
 } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import {
+  chunkLoadFailureContext,
   chunkReloadPending,
   clearChunkReloadAttempt,
   installGlobalChunkLoadRecovery,
@@ -1139,7 +1140,11 @@ async function mountOrReport(run: () => Promise<void>): Promise<void> {
     // friendly "Page failed to load" panel below is the ONLY trace of a broken
     // route (e.g. a stale /game/<tenant-id> link 403ing on the chess shell) —
     // handled errors never reach posthog's automatic $exception hook.
-    captureException(err, { context: 'route_mount', path: window.location.pathname });
+    captureException(err, {
+      context: 'route_mount',
+      path: window.location.pathname,
+      ...chunkLoadFailureContext(err),
+    });
     if (serverRender.present) return;
     appRoot.replaceChildren();
     appRoot.classList.add('landing-page');
