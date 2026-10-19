@@ -27,6 +27,7 @@
     "posthog-js": "^1.409.0"
   },
   "devDependencies": {
+    "@posthog/rollup-plugin": "1.6.1",
     "@resvg/resvg-js": "^2.6.2",
     "happy-dom": "^20.11.1",
     "shogiops": "^0.21.0",
