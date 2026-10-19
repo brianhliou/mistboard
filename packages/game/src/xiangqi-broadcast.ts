@@ -420,10 +420,10 @@ export function xiangqiBroadcastVariant(): typeof XIANGQI_SPEC_ID {
  * Where a tour's or round's records came from, derived from the provenance each
  * board already carries.
  *
- * NOT `tour.sourceUrl`, which is a POLL TARGET: the poller re-anchors it every
- * run, it has to be a page carrying move data, and for a tour imported from an
- * archive there is no URL shape that says "all of this came from there". A
- * credit is editorial and must not depend on any of that.
+ * Board provenance determines who gets credit. `tour.sourceUrl` is normally
+ * a poll target, so it cannot establish provenance by itself; when it names
+ * a public page on the credited source, it can give the reader a specific
+ * event to open. dpxq's discovery targets use the reviewed tour mapping.
  *
  * Shared because both surfaces need the same answer: the web client renders it
  * under a round's boards, and the tour API derives it server-side because the
@@ -494,8 +494,9 @@ export function dpxqTourIdForTour(tour: {
 
 /**
  * The credit links the page a reader can check the records against: the
- * tour's own dpxq page when the records came from dpxq and we know the tour,
- * else the source's site.
+ * tour's own dpxq page when known, otherwise a public tour URL on the same
+ * source as the records. Fall back to the source's site when no such page
+ * is available; never send one provider's credit to another provider.
  */
 export function broadcastRecordsCredit(
   boards: readonly { sourceUrl?: string }[],
@@ -518,5 +519,22 @@ export function broadcastRecordsCredit(
   const [entry] = [...origins.entries()];
   const [host, origin] = entry!;
   const dpxqTour = host === 'dpxq.com' && tour ? dpxqTourIdForTour(tour) : null;
-  return { host, href: dpxqTour ? dpxqTourPageUrl(dpxqTour) : origin };
+  if (dpxqTour) return { host, href: dpxqTourPageUrl(dpxqTour) };
+  if (tour?.sourceUrl) {
+    try {
+      const page = new URL(tour.sourceUrl);
+      if (
+        (page.protocol === 'http:' || page.protocol === 'https:') &&
+        page.host.replace(/^www\./, '') === host &&
+        !page.username &&
+        !page.password &&
+        (page.pathname !== '/' || page.search !== '')
+      ) {
+        return { host, href: page.href };
+      }
+    } catch {
+      // Invalid poll targets cannot replace the known source's site link.
+    }
+  }
+  return { host, href: origin };
 }
