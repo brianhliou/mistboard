@@ -638,6 +638,44 @@ describe('broadcastRecordsCredit', () => {
     expect(broadcastRecordsCredit([{}, {}])).toBeNull();
   });
 
+  it('links the iqipu event while retaining its host as the visible credit', () => {
+    expect(
+      broadcastRecordsCredit(
+        [
+          { sourceUrl: 'https://www.iqipu.com/game/games/kzBbRIf9AAJOvw' },
+          { sourceUrl: 'https://www.iqipu.com/game/games/nt2C_zgjAAJbQg' },
+        ],
+        { slug: '2026-us-qitian-cup', sourceUrl: 'https://www.iqipu.com/events/2443' },
+      ),
+    ).toEqual({ host: 'iqipu.com', href: 'https://www.iqipu.com/events/2443' });
+  });
+
+  it('preserves the event query when the source identifies an event by query string', () => {
+    expect(
+      broadcastRecordsCredit([{ sourceUrl: 'https://elephantchess.io/game?id=record' }], {
+        slug: '2026-us-qitian-cup',
+        sourceUrl: 'https://elephantchess.io/database/event?id=QJt8kEFWgEnY',
+      }),
+    ).toEqual({
+      host: 'elephantchess.io',
+      href: 'https://elephantchess.io/database/event?id=QJt8kEFWgEnY',
+    });
+  });
+
+  it.each([
+    'https://elephantchess.io/database/event?id=QJt8kEFWgEnY',
+    'mistboard-discover://iqipu-event?id=2443',
+    'javascript:alert(1)',
+    'not a url',
+  ])('does not use an unrelated or unreadable tour target: %s', (sourceUrl) => {
+    expect(
+      broadcastRecordsCredit([{ sourceUrl: 'https://www.iqipu.com/game/games/record' }], {
+        slug: '2026-us-qitian-cup',
+        sourceUrl,
+      }),
+    ).toEqual({ host: 'iqipu.com', href: 'https://www.iqipu.com' });
+  });
+
   // A mixed-origin round would need a list, and crediting only the first source
   // would be worse than crediting none.
   it('says nothing when boards come from more than one origin', () => {
