@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- The phone board editor fits one screen, with both piece colours and a Tools sheet for settings ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - on phones the game room fits one screen with no scrolling: board, both clocks, the moves and the action bar stay in view, captured pieces sit on each player's line, game info and chat open from the ☰ menu, and the first-move countdown shows as a bubble on the board ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - xiangqi games now show the pieces each player has captured beside their clock ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - General Blunder, a xiangqi bot that plays the worst move it can find, so a checkmate or a free piece is usually waiting for you ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
@@ -81,6 +82,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- Refresh the Jieqi platform guide with review walkthroughs, theme-matched figures and playable stored alternatives in Jieqi game embeds ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - The study list now has Chinese pages at /zh-hans/study and /zh-hant/study, linking each study's Chinese page, and its heading is now Studies ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - The General Blunder challenge, an article with two goals against the bot that tries to lose: draw it, then make it win ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - Puzzles on a phone show the move arrows and a short move list under the board ([e2666cca](https://github.com/brianhliou/mistboard/commit/e2666cca))
@@ -267,6 +269,8 @@ Conventions:
 
 ### Fixed
 
+- Broadcast source credits link to the specific event page when available ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
+- Prevent repeated page reloads when an optional JavaScript file cannot load ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - Homepage News icons no longer block page loading, and stylesheet loading failures use bounded asset recovery ([981f42d7](https://github.com/brianhliou/mistboard/commit/981f42d7))
 - Jieqi Level 8 keeps its difficulty label on live game viewers ([981f42d7](https://github.com/brianhliou/mistboard/commit/981f42d7))
 - The homepage xiangqi bot picker starts at General Blunder, below Level 1 ([17041338](https://github.com/brianhliou/mistboard/commit/17041338))
@@ -430,6 +434,11 @@ Conventions:
 
 ### Technical
 
+- Add reviewed batch preparation and weekly coverage audits for tournament archives ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
+- Add records-speed checks for comparing completed broadcast game availability across sources ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
+- Resolve production error reports to original source files with private source maps ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
+- Engine-worker deployments verify engine CI and list included engine and worker changes ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
+- Add before-and-after phone and desktop review sheets to the mobile audit ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - a connection can no longer take a bot's seat by naming the bot's id ([a254d56e](https://github.com/brianhliou/mistboard/commit/a254d56e))
 - World Xiangqi Federation results pages can now feed a broadcast, as a backup relay source ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - The site now deploys without the AB-JChess network when its authors' release cannot be reached, hiding that bot until a later build fetches it ([500d8548](https://github.com/brianhliou/mistboard/commit/500d8548))
