@@ -22,6 +22,7 @@ import {
 import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 import { t } from './i18n/catalog.js';
 import { initLiveSound, playSound } from './live-sound.js';
+import { createMoveNavBar, type MoveNavBar } from './move-nav-bar.js';
 import {
   clonePuzzleState,
   isPuzzleComplete,
@@ -49,7 +50,8 @@ import {
 } from './puzzles/api.js';
 import { feedbackPanel } from './puzzles/detail-panels.js';
 import { keepActivePuzzleMoveInView, moveListPanel } from './puzzles/move-list.js';
-import { renderQueuePanel } from './puzzles/queue-panel.js';
+import { puzzlePhoneMenuHead, puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
+import { type QueuePanelProps, renderQueuePanel } from './puzzles/queue-panel.js';
 import {
   allPuzzleBoardAdapters,
   type PuzzleVariant,
@@ -150,7 +152,7 @@ export async function mountPuzzles(
   });
 
   const renderControls = (): void => {
-    renderQueuePanel(controls, {
+    const props: QueuePanelProps = {
       queue: queueSummaries(),
       selectedId,
       solvedIds,
@@ -189,7 +191,11 @@ export async function mountPuzzles(
         saveRatedEnabled(enabled);
         renderControls();
       },
-    });
+    };
+    renderQueuePanel(controls, props);
+    // The phone ☰ sheet reads the same props; repaint it if it is open.
+    phoneMenu.props = props;
+    phoneMenu.refresh?.();
   };
 
   const clearAutoNextTimer = (): void => {
@@ -391,6 +397,12 @@ function renderPuzzleDetail(
   navigation: PuzzleNavigation,
   onSolved: (id: string) => void,
 ): void {
+  const reopenMenu = phoneMenu.open;
+  // Focus inside the open sheet survives the rebuild (a revealed solution
+  // re-renders once per animated move): the same element when it is lent
+  // again (the engine panel), else the row with the same key, else the sheet.
+  const sheetFocus = reopenMenu ? phoneMenuFocus() : null;
+  resetPhoneMenu();
   host.replaceChildren();
 
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
@@ -441,7 +453,21 @@ function renderPuzzleDetail(
     }),
   );
   const actions = actionPanel(session, renderSession);
-  side.append(trainer, actions);
+  const phoneBar = puzzlePhoneMoveNav(
+    puzzleScrubBounds(session),
+    (action) => scrubPuzzle(session, renderSession, action),
+    {
+      // Phone only (the bar is hidden elsewhere). The engine row and the
+      // analysis link are lent in while the sheet is open, read at open time
+      // so they show up once the puzzle is complete; the header and the
+      // settings rows are built for the sheet from the sidebar's props.
+      blocks: () => [session.analysis?.engineEl, session.analysis?.openLinkEl],
+      head: () => (phoneMenu.props ? puzzlePhoneMenuHead(phoneMenu.props) : null),
+      rows: () => (phoneMenu.props ? puzzlePhoneMenuRows(phoneMenu.props) : []),
+      signal: phoneMenu.abort?.signal,
+    },
+  );
+  side.append(trainer, actions, phoneBar.el);
 
   // Post-completion engine analysis (adapters with a client engine): once the
   // puzzle is over (solved or its solution revealed), surface the local-engine
@@ -462,15 +488,30 @@ function renderPuzzleDetail(
     }
     side.append(session.analysis.openLinkEl);
     session.analysis.refresh(session, displayState, board);
+    if (!session.analysis.engineEl.hidden) {
+      trainer.querySelector('.puzzle-moves')?.prepend(puzzleEvalChip(session.analysis.engineEl));
+    }
   }
 
   boardPanel.append(board, side);
   host.append(boardPanel);
   keepActivePuzzleMoveInView(side);
+  // A re-render while the menu is open (a step from the bar's own arrows, a
+  // vote) keeps it open on the new bar.
+  // Focus stays where it is: only a ☰ press moves it into the sheet.
+  if (reopenMenu) {
+    phoneMenu.restoring = true;
+    phoneBar.openMenu();
+    phoneMenu.restoring = false;
+    if (sheetFocus) restorePhoneMenuFocus(phoneBar, sheetFocus);
+  }
 
   // Right after a solve, hand focus to the next-puzzle button (one-shot) so
-  // Enter or Space advances; on small screens this also scrolls the CTA into
-  // view, where the side panel sits below the board.
+  // Enter or Space advances; on small screens the CTA is then scrolled just
+  // into view at the bottom edge, where the side panel sits below the board. A
+  // bare focus() centres it instead, which on a phone took the board and its
+  // arrows off the top of the screen right when you might step back through
+  // the line (focusPuzzleNext).
   //
   // Not inside an embed. body.embed-body hides the document's overflow, so a
   // focus scroll there is a ONE-WAY door: it moved scrollTop to the bottom of
@@ -480,13 +521,19 @@ function renderPuzzleDetail(
   if (session.focusNext) {
     session.focusNext = false;
     const embedded = document.documentElement.dataset.embed !== undefined;
-    host
-      .querySelector<HTMLButtonElement>('[data-puzzle-next="true"]')
-      ?.focus({ preventScroll: embedded });
+    const nextButton = host.querySelector<HTMLButtonElement>('[data-puzzle-next="true"]');
+    if (nextButton) focusPuzzleNext(nextButton, embedded);
   }
 }
 
-type PuzzleScrub = 'first' | 'previous' | 'next' | 'last';
+/** Focus the next-puzzle button without the browser's centring scroll; outside
+ *  an embed, scroll it only as far as the nearest edge. */
+export function focusPuzzleNext(button: HTMLElement, embedded: boolean): void {
+  button.focus({ preventScroll: true });
+  if (!embedded) button.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+}
+
+export type PuzzleScrub = 'first' | 'previous' | 'next' | 'last';
 
 // Move the replay cursor. Shared by the arrow buttons and the keyboard handler
 // so both animate identically. No-op while a submission is in flight or when the
@@ -526,11 +573,201 @@ function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: 
   }
 }
 
+function puzzleScrubBounds(session: PuzzleSession): { atStart: boolean; atEnd: boolean } {
+  return {
+    atStart: session.viewPly <= 0 || session.submitting,
+    atEnd: session.viewPly >= session.playedMoves.length || session.submitting,
+  };
+}
+
+/**
+ * The page's phone stepper: the shared move-nav bar the review, analysis, study
+ * and broadcast boards put under the board (e4823b2b), with its ☰ menu as a
+ * bottom sheet over the board, flush on the bar so ☰ stays in reach to close
+ * it. The phone page fits one screen (board, bar, move strip, prompt strip), so
+ * what used to follow the prompt strip lives in the sheet: a header and
+ * one-line setting rows built for it (puzzles/phone-menu.ts), and between them
+ * the engine panel (once the puzzle is over) and the analysis link, lent in
+ * while it is open and put back when it closes, so they are rendered once. ☰,
+ * Escape or a tap outside closes it; ☰ moves focus into the sheet and closing
+ * hands it back to ☰. puzzles.css shows the bar only in the page's stacked
+ * layout (980px and below) and hides `.puzzle-actions` there, so desktop and
+ * the embed card keep their own arrows.
+ */
+export function puzzlePhoneMoveNav(
+  bounds: { atStart: boolean; atEnd: boolean },
+  onScrub: (action: PuzzleScrub) => void,
+  menu: {
+    blocks: () => readonly (HTMLElement | null | undefined)[];
+    head?: () => HTMLElement | null;
+    rows?: () => readonly HTMLElement[];
+    signal?: AbortSignal;
+  },
+): MoveNavBar {
+  const content = document.createElement('div');
+  content.className = 'puzzle-phone-menu';
+  content.tabIndex = -1;
+  content.setAttribute('role', 'dialog');
+  content.setAttribute('aria-label', t('review.navMenu'));
+  const headSlot = document.createElement('div');
+  headSlot.className = 'puzzle-pm-head-slot';
+  const rowsSlot = document.createElement('div');
+  rowsSlot.className = 'puzzle-pm-rows';
+  content.append(headSlot, rowsSlot);
+
+  // Rebuilt on open and on every sidebar render while open (a toggle flips
+  // the props); a focused switch keeps focus across the rebuild.
+  const paint = (): void => {
+    const active = document.activeElement;
+    const focusedKey =
+      active instanceof HTMLElement && rowsSlot.contains(active) ? active.dataset.puzzleMenu : '';
+    const head = menu.head?.();
+    headSlot.replaceChildren(...(head ? [head] : []));
+    rowsSlot.replaceChildren(...(menu.rows?.() ?? []));
+    if (focusedKey) {
+      rowsSlot
+        .querySelector<HTMLElement>(`[data-puzzle-menu="${focusedKey}"]`)
+        ?.focus({ preventScroll: true });
+    }
+  };
+
+  const bar = createMoveNavBar({
+    className: 'puzzle-move-nav',
+    menuPlacement: 'up',
+    menuContent: content,
+    signal: menu.signal,
+    onFirst: () => onScrub('first'),
+    onPrev: () => onScrub('previous'),
+    onNext: () => onScrub('next'),
+    onLast: () => onScrub('last'),
+    onMenuToggle: (open) => {
+      phoneMenu.open = open;
+      if (!open) {
+        const hadFocus = content.contains(document.activeElement);
+        phoneMenu.refresh = null;
+        returnPhoneMenuLoans();
+        headSlot.replaceChildren();
+        rowsSlot.replaceChildren();
+        if (hadFocus) bar.menuButton?.focus({ preventScroll: true });
+        return;
+      }
+      paint();
+      for (const block of menu.blocks()) lendToPhoneMenu(block, rowsSlot);
+      phoneMenu.refresh = paint;
+      fitPhoneMenu(bar);
+      if (!phoneMenu.restoring) content.focus({ preventScroll: true });
+    },
+  });
+  bar.setBounds(bounds);
+  return bar;
+}
+
+type PhoneMenuLoan = { el: HTMLElement; mark: Comment };
+
+// Page-level, because renderSession rebuilds the bar on every render: the open
+// state survives the rebuild, the loans go home before the old bar is dropped,
+// and the old bar's page listeners are aborted. `props` is the sidebar's last
+// render, which the sheet's rows are built from.
+const phoneMenu: {
+  open: boolean;
+  restoring: boolean;
+  loans: PhoneMenuLoan[];
+  abort: AbortController | null;
+  evalSync: MutationObserver | null;
+  props: QueuePanelProps | null;
+  refresh: (() => void) | null;
+} = {
+  open: false,
+  restoring: false,
+  loans: [],
+  abort: null,
+  evalSync: null,
+  props: null,
+  refresh: null,
+};
+
+type PhoneMenuFocus = { el: HTMLElement; key: string };
+
+function phoneMenuFocus(): PhoneMenuFocus | null {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || !active.closest('.puzzle-phone-menu')) return null;
+  return { el: active, key: active.dataset.puzzleMenu ?? '' };
+}
+
+function restorePhoneMenuFocus(bar: MoveNavBar, focus: PhoneMenuFocus): void {
+  const content = bar.menu?.querySelector<HTMLElement>('.puzzle-phone-menu');
+  if (!content) return;
+  const target =
+    (content.contains(focus.el) ? focus.el : null) ??
+    (focus.key ? content.querySelector<HTMLElement>(`[data-puzzle-menu="${focus.key}"]`) : null) ??
+    content;
+  target.focus({ preventScroll: true });
+}
+
+/** Before the detail host is replaced: loans home, old listeners off. */
+function resetPhoneMenu(): void {
+  returnPhoneMenuLoans();
+  phoneMenu.open = false;
+  phoneMenu.refresh = null;
+  phoneMenu.abort?.abort();
+  phoneMenu.abort = new AbortController();
+  phoneMenu.evalSync?.disconnect();
+  phoneMenu.evalSync = null;
+}
+
+/** Lend a page block into the sheet, just before `before`. */
+function lendToPhoneMenu(el: HTMLElement | null | undefined, before: HTMLElement): void {
+  if (!el || el.hidden || before.parentElement?.contains(el)) return;
+  const mark = document.createComment('puzzle-phone-menu');
+  el.replaceWith(mark);
+  before.before(el);
+  phoneMenu.loans.push({ el, mark });
+}
+
+function returnPhoneMenuLoans(): void {
+  // A mark whose home was rebuilt is dropped: the render re-places that block.
+  for (const { el, mark } of phoneMenu.loans.splice(0)) {
+    if (mark.isConnected) mark.replaceWith(el);
+    else mark.remove();
+  }
+}
+
+/** The menu opens up over the board; keep it under the site bar. */
+function fitPhoneMenu(bar: MoveNavBar): void {
+  if (!bar.menu || !bar.el.isConnected) return;
+  const navBottom = document.querySelector('.site-nav')?.getBoundingClientRect().bottom ?? 0;
+  const room = bar.el.getBoundingClientRect().top - navBottom - 8;
+  bar.menu.style.maxHeight = room > 120 ? `${Math.floor(room)}px` : '';
+}
+
+/**
+ * The engine's score on the move strip while the engine runs: on the phone the
+ * engine panel waits in the ☰ menu, so the strip mirrors its eval label.
+ */
+export function puzzleEvalChip(engineEl: HTMLElement): HTMLElement {
+  const chip = document.createElement('span');
+  chip.className = 'puzzle-eval-chip';
+  const sync = (): void => {
+    chip.hidden = !engineEl.classList.contains('engine-panel--on');
+    chip.textContent = engineEl.querySelector('.engine-panel__eval')?.textContent ?? '';
+  };
+  sync();
+  phoneMenu.evalSync?.disconnect();
+  phoneMenu.evalSync = new MutationObserver(sync);
+  phoneMenu.evalSync.observe(engineEl, {
+    attributes: true,
+    attributeFilter: ['class'],
+    characterData: true,
+    childList: true,
+    subtree: true,
+  });
+  return chip;
+}
+
 function actionPanel(session: PuzzleSession, renderSession: () => void): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'puzzle-actions';
-  const atStart = session.viewPly <= 0 || session.submitting;
-  const atEnd = session.viewPly >= session.playedMoves.length || session.submitting;
+  const { atStart, atEnd } = puzzleScrubBounds(session);
 
   const scrub = (action: PuzzleScrub) => () => scrubPuzzle(session, renderSession, action);
   const first = actionButton(
@@ -868,6 +1105,7 @@ function puzzlePieceCount(state: PuzzleState): number {
 }
 
 function renderStatus(host: HTMLElement, message: string): void {
+  resetPhoneMenu();
   const status = document.createElement('p');
   status.className = 'puzzles-status';
   status.textContent = message;
@@ -983,6 +1221,7 @@ function buildPuzzlesFrame(): {
 // carries the xiangqi board's classes so its box is the board's box; it is the
 // only surfaced trainer, and a deep link to another variant settles once.
 function renderPendingBoard(host: HTMLElement, message: string | null): void {
+  resetPhoneMenu();
   const panel = document.createElement('div');
   panel.className = 'puzzle-board-panel puzzle-board-panel--pending';
   const board = document.createElement('div');
