@@ -1,7 +1,8 @@
 // Shared core of xiangqi relative move notation (WXF + Chinese).
 //
 // Both notations describe a move relative to the mover: which piece (by file,
-// or front/rear when stacked), which direction (advance / retreat / traverse),
+// front/rear when stacked, or in WXF a front-first number for a soldier in a
+// 3-5 stack), which direction (advance / retreat / traverse),
 // and an argument that is a destination FILE for pieces that change file when
 // moving vertically (horse/elephant/advisor) or a RANK COUNT for straight
 // movers (chariot/cannon/soldier/general). File numbers run 1-9 from each
@@ -27,7 +28,12 @@ import { getStandardXiangqiLegalMoves } from './variants-xiangqi-standard.js';
 
 export type RelativeSelector =
   | { kind: 'file'; wxfFile: number }
-  | { kind: 'tandem'; end: 'front' | 'rear' };
+  | { kind: 'tandem'; end: 'front' | 'rear' }
+  // WXF only: the Nth soldier from the front of a 3-5 soldier stack on wxfFile.
+  | { kind: 'ordinal'; index: number; wxfFile: number };
+
+/** WXF numbers soldiers from the front, in place of the letter, from this stack size. */
+export const WXF_ORDINAL_MIN_STACK = 3;
 
 export interface RelativeMoveSpec {
   role: XiangqiPieceRole;
@@ -65,6 +71,18 @@ export function resolveRelativeMove(
   if (spec.selector.kind === 'file') {
     const wanted = spec.selector.wxfFile;
     candidates = sources.filter((sq) => wxfFileNumber(coordOf(sq).file, color) === wanted);
+  } else if (spec.selector.kind === 'ordinal') {
+    const wanted = spec.selector.wxfFile;
+    const stack = sources
+      .filter((sq) => wxfFileNumber(coordOf(sq).file, color) === wanted)
+      .sort((a, b) =>
+        forwardUp ? coordOf(b).rank - coordOf(a).rank : coordOf(a).rank - coordOf(b).rank,
+      );
+    const pick =
+      spec.role === 'soldier' && stack.length >= WXF_ORDINAL_MIN_STACK
+        ? stack[spec.selector.index - 1]
+        : undefined;
+    candidates = pick ? [pick] : [];
   } else {
     // Tandem: the file holding >=2 of this role, ordered front (nearest enemy) to rear.
     const byFile = new Map<number, XiangqiSquare[]>();
@@ -118,20 +136,25 @@ export const WXF_LETTER_TO_ROLE: Record<string, XiangqiPieceRole> = {
   C: 'cannon',
   P: 'soldier',
 };
-// normal <letter><file 1-9><op><arg 1-9>, or tandem <+|-><letter><op><arg>.
-export const WXF_TOKEN = /^(?:([kaebhnrcp])([1-9])|([+-])([kaebhnrcp]))([+\-.=])([1-9])$/i;
+// normal <letter><file 1-9><op><arg 1-9>, tandem <+|-><letter><op><arg>, or a
+// soldier in a 3-5 stack: <ordinal 1-5 from the front><file><op><arg> (25=4).
+export const WXF_TOKEN =
+  /^(?:([kaebhnrcp])([1-9])|([+-])([kaebhnrcp])|([1-5])([1-9]))([+\-.=])([1-9])$/i;
 
 export function parseWxfToken(token: string): RelativeMoveSpec | null {
   const match = WXF_TOKEN.exec(token);
   if (!match) return null;
-  const role = WXF_LETTER_TO_ROLE[(match[1] ?? match[4]!).toUpperCase()];
+  const letter = match[1] ?? match[4];
+  const role = letter ? WXF_LETTER_TO_ROLE[letter.toUpperCase()] : 'soldier';
   if (!role) return null;
   const selector: RelativeSelector = match[1]
     ? { kind: 'file', wxfFile: Number(match[2]) }
-    : { kind: 'tandem', end: match[3] === '+' ? 'front' : 'rear' };
-  const opChar = match[5]!;
+    : match[3]
+      ? { kind: 'tandem', end: match[3] === '+' ? 'front' : 'rear' }
+      : { kind: 'ordinal', index: Number(match[5]), wxfFile: Number(match[6]) };
+  const opChar = match[7]!;
   const op = opChar === '=' ? '.' : (opChar as '+' | '-' | '.');
-  return { role, selector, op, arg: Number(match[6]) };
+  return { role, selector, op, arg: Number(match[8]) };
 }
 
 // --- Chinese token grammar ---------------------------------------------------
