@@ -26,21 +26,28 @@ export function moveListPanel(session: PuzzleSession): HTMLElement {
 }
 
 /**
- * Scroll the move list (not the page) so the active ply's row is visible. The
- * list is rebuilt on every render, which resets its scroll, and on a phone it
- * is a 140px strip (puzzles.css), so a later ply would otherwise sit out of
- * sight while the arrows step to it. Call after the list is in the document.
+ * Scroll the move list (not the page) so the active ply is visible. The list is
+ * rebuilt on every render, which resets its scroll, and on a phone it is a
+ * one-line strip that scrolls sideways (puzzles.css), so a later ply would
+ * otherwise sit out of sight while the arrows step to it. Handles both axes:
+ * the desktop column scrolls down. Call after the list is in the document.
  */
 export function keepActivePuzzleMoveInView(root: ParentNode): void {
   const list = root.querySelector<HTMLElement>('.puzzle-move-list');
-  const row = list
-    ?.querySelector('.puzzle-move-cell--active')
-    ?.closest<HTMLElement>('.puzzle-move-item');
-  if (!list || !row) return;
+  const cell = list?.querySelector<HTMLElement>('.puzzle-move-cell--active');
+  const row = cell?.closest<HTMLElement>('.puzzle-move-item');
+  if (!list || !cell || !row) return;
   const listBox = list.getBoundingClientRect();
   const rowBox = row.getBoundingClientRect();
   if (rowBox.bottom > listBox.bottom) list.scrollTop += rowBox.bottom - listBox.bottom;
   else if (rowBox.top < listBox.top) list.scrollTop -= listBox.top - rowBox.top;
+  // The phone's one-line strip scrolls sideways: bring the active ply in from
+  // either edge with a little room, so it never sits clipped at the right.
+  const cellBox = cell.getBoundingClientRect();
+  const room = 12;
+  if (cellBox.right > listBox.right - room) list.scrollLeft += cellBox.right - listBox.right + room;
+  else if (cellBox.left < listBox.left + room && list.scrollLeft > 0)
+    list.scrollLeft = Math.max(0, list.scrollLeft - (listBox.left + room - cellBox.left));
 }
 
 // The opponent's move that set up the puzzle (the mined blunder), if the initial

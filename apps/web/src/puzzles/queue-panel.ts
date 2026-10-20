@@ -216,11 +216,11 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   host.append(infoCard, ratingCard, themesCard, settingsCard);
 }
 
-function variantLabel(variant: PuzzleVariant): string {
+export function variantLabel(variant: PuzzleVariant): string {
   return t(puzzleBoardAdapter(variant).labelKey);
 }
 
-function parseVariantFilter(value: string): PuzzleVariant {
+export function parseVariantFilter(value: string): PuzzleVariant {
   return isPuzzleVariant(value) ? value : XIANGQI_SPEC_ID;
 }
 
@@ -334,7 +334,7 @@ function puzzleInfoDivider(): HTMLHRElement {
 // deterministic hash of the puzzle id (unlike the old queue position, which
 // shuffled every visit). The code links to the puzzle's canonical full-id URL;
 // hand-typing /puzzles/<code> also resolves (see resolveToFullPuzzleId).
-function puzzleCodeLine(puzzle: PuzzleSummary): HTMLSpanElement {
+export function puzzleCodeLine(puzzle: PuzzleSummary): HTMLSpanElement {
   const line = document.createElement('span');
   line.append(t('puzzle.label'));
   const link = document.createElement('a');
@@ -346,7 +346,7 @@ function puzzleCodeLine(puzzle: PuzzleSummary): HTMLSpanElement {
   return line;
 }
 
-function tagsPanel(puzzle: Pick<PuzzleSummary, 'themes' | 'motifs'>): HTMLElement {
+export function tagsPanel(puzzle: Pick<PuzzleSummary, 'themes' | 'motifs'>): HTMLElement {
   const tags = document.createElement('div');
   tags.className = 'puzzle-tags';
   // Named kill patterns lead: the Chinese name is the name, the English
@@ -379,7 +379,7 @@ function themeLabel(theme: string): string {
     .join(' ');
 }
 
-function goalLabel(puzzle: Pick<PuzzleSummary, 'goal' | 'solutionPlyCount'>): string {
+export function goalLabel(puzzle: Pick<PuzzleSummary, 'goal' | 'solutionPlyCount'>): string {
   if (puzzle.goal.type === 'checkmate') {
     return t('puzzle.mateIn', { count: Math.ceil(puzzle.solutionPlyCount / 2) });
   }
