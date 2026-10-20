@@ -602,6 +602,18 @@ export async function buildAppearanceMenuAt(
   return menu;
 }
 
+// One picker on its own, for the phone bar's quick buttons (#575): the language
+// list or the xiangqi piece-set tiles, the same components the drill-in menu
+// shows, with no menu around them. onPick runs after a choice is applied.
+export type QuickPickerKind = 'language' | 'pieces';
+export async function buildQuickPickerAt(
+  kind: QuickPickerKind,
+  options: { onPick?: () => void } = {},
+): Promise<HTMLElement> {
+  const mod = await loadThemeSettingsPanel();
+  return mod.buildQuickPicker(kind, options);
+}
+
 // Drill state lives in the DOM (data-view + hidden), so multiple mounted menus
 // (mobile + desktop nav, gear + dropdown) stay independent.
 export function showAppearanceView(

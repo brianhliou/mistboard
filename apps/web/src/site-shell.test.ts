@@ -1,12 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setResolvedAdmin } from './signed-in-state.js';
 import {
   buildHomeFooter,
   buildNav,
+  closeQuickPicker,
   closeSiteMenu,
   fitNavBrand,
+  isQuickPickerOpen,
   isSiteMenuOpen,
   navPhoneMediaQuery,
   navTabletMediaQuery,
@@ -14,7 +16,12 @@ import {
   placeNavAccount,
   syncAdminNavMenus,
 } from './site-shell.js';
-import { setSiteThemePreference } from './theme.js';
+import {
+  readStoredXiangqiPieceSet,
+  setSiteThemePreference,
+  setXiangqiPieceSetPreference,
+} from './theme.js';
+import { xiangqiPieceTilePreview } from './xiangqi-piece-sets.js';
 
 type Viewport = 'desktop' | 'tablet' | 'phone';
 const originalMatchMedia = window.matchMedia;
@@ -420,6 +427,7 @@ describe('site shell nav account placement', () => {
 
 describe('site shell phone menu', () => {
   afterEach(() => {
+    closeQuickPicker({ restoreFocus: false });
     closeSiteMenu({ restoreFocus: false });
     document.body.innerHTML = '';
     window.matchMedia = originalMatchMedia;
@@ -578,39 +586,157 @@ describe('site shell phone menu', () => {
     expect(current?.[0]?.querySelector('.site-menu-dot')).not.toBeNull();
   });
 
-  it('offers language, board and pieces, and dark mode chips; dark mode toggles the theme', () => {
+  it('ends with the link sections: no settings chip row at the bottom of the menu', () => {
     const { toggle } = phoneNav();
-    setSiteThemePreference('light');
     toggle.click();
-    const chips = [
-      ...(menuPanel()?.querySelectorAll<HTMLButtonElement>('.site-menu-footer .site-menu-chip') ??
-        []),
-    ];
-    expect(chips.map((chip) => chip.dataset.siteMenuChip)).toEqual(['language', 'board', 'dark']);
-    expect(chips[0]?.textContent).toBe('English');
-    const dark = chips[2];
+    expect(menuPanel()?.querySelector('.site-menu-footer')).toBeNull();
+    expect(menuPanel()?.querySelector('[data-site-menu-chip]')).toBeNull();
+    expect(menuPanel()?.lastElementChild?.classList.contains('site-menu-body')).toBe(true);
+  });
+
+  it('puts language, pieces and dark mode between the brand and the menu button', () => {
+    const { nav } = phoneNav();
+    const quick = nav.querySelector<HTMLElement>(':scope > .site-nav-quick');
+    expect(quick?.previousElementSibling?.classList.contains('site-nav-brand')).toBe(true);
+    const buttons = [...(quick?.querySelectorAll<HTMLButtonElement>('button') ?? [])];
+    expect(buttons.map((b) => b.dataset.siteNavQuick)).toEqual(['language', 'pieces', 'dark']);
+    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual([
+      'Language: English',
+      'Pieces',
+      'Dark mode',
+    ]);
+    // The account slot still ends the phone bar.
+    expect(nav.lastElementChild?.classList.contains('site-nav-account')).toBe(true);
+  });
+
+  it('localizes the quick control labels from the existing strings', () => {
+    stubViewport('phone');
+    const nav = buildNav('zh-Hant');
+    document.body.append(nav);
+    const labels = [...nav.querySelectorAll<HTMLButtonElement>('.site-nav-quick button')].map((b) =>
+      b.getAttribute('aria-label'),
+    );
+    expect(labels[0]?.startsWith('語言: ')).toBe(true);
+    expect(labels.slice(1)).toEqual(['棋子', '深色模式']);
+    expect(labels.join(' ')).not.toContain('\u2014');
+  });
+
+  it('opens the language list straight away in a dropdown under the bar; Escape closes it', async () => {
+    const { nav } = phoneNav();
+    const language = nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="language"]');
+    language?.click();
+    const panel = nav.querySelector<HTMLElement>('.site-nav-quick-panel');
+    expect(panel?.dataset.siteNavQuickPanel).toBe('language');
+    expect(panel?.getAttribute('role')).toBe('dialog');
+    expect(language?.getAttribute('aria-expanded')).toBe('true');
+    expect(language?.getAttribute('aria-controls')).toBe(panel?.id);
+    // No settings list and no site menu: the options themselves.
+    expect(isSiteMenuOpen()).toBe(false);
+    await vi.waitFor(() =>
+      expect(panel?.querySelectorAll('.appearance-language-option').length).toBeGreaterThan(1),
+    );
+    expect(panel?.querySelector('.appearance-menu-root')).toBeNull();
+    expect(document.activeElement?.getAttribute('aria-checked')).toBe('true');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(isQuickPickerOpen()).toBe(false);
+    expect(nav.querySelector('.site-nav-quick-panel')).toBeNull();
+    expect(language?.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(language);
+  });
+
+  it('closes the dropdown on an outside tap and on a second tap of its button', async () => {
+    const { nav } = phoneNav();
+    const language = nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="language"]');
+    language?.click();
+    expect(isQuickPickerOpen()).toBe(true);
+    document.body.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    expect(isQuickPickerOpen()).toBe(false);
+    language?.click();
+    expect(isQuickPickerOpen()).toBe(true);
+    language?.click();
+    expect(isQuickPickerOpen()).toBe(false);
+    // One dropdown at a time: opening Pieces replaces Language.
+    language?.click();
+    nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="pieces"]')?.click();
+    expect(nav.querySelectorAll('.site-nav-quick-panel').length).toBe(1);
+    expect(nav.querySelector<HTMLElement>('.site-nav-quick-panel')?.dataset.siteNavQuickPanel).toBe(
+      'pieces',
+    );
+    expect(language?.getAttribute('aria-expanded')).toBe('false');
+    closeQuickPicker({ restoreFocus: false });
+  });
+
+  it('shows the piece-set tiles from the pieces button; a pick applies, closes and redraws the icon', async () => {
+    stubMemoryStorage();
+    setXiangqiPieceSetPreference('international');
+    const { nav } = phoneNav();
+    const pieces = nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="pieces"]');
+    pieces?.click();
+    const panel = nav.querySelector<HTMLElement>('.site-nav-quick-panel');
+    await vi.waitFor(() =>
+      expect(panel?.querySelectorAll('[data-theme-tile="xqpiece"]').length).toBeGreaterThan(1),
+    );
+    expect(isSiteMenuOpen()).toBe(false);
+    expect(panel?.querySelector('.appearance-menu-root')).toBeNull();
+    expect(
+      panel
+        ?.querySelector('[data-theme-tile="xqpiece"][aria-checked="true"]')
+        ?.getAttribute('data-id'),
+    ).toBe('international');
+    panel
+      ?.querySelector<HTMLButtonElement>('[data-theme-tile="xqpiece"][data-id="traditional"]')
+      ?.click();
+    expect(readStoredXiangqiPieceSet()).toBe('traditional');
+    expect(isQuickPickerOpen()).toBe(false);
+    expect(nav.querySelector<HTMLElement>('.site-nav-quick-piece')?.dataset.pieceSet).toBe(
+      'traditional',
+    );
+    expect(document.activeElement).toBe(pieces);
+  });
+
+  it('reaches the rest of the settings from the pieces dropdown', async () => {
+    const { nav } = phoneNav();
+    nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="pieces"]')?.click();
+    const panel = nav.querySelector<HTMLElement>('.site-nav-quick-panel');
+    await vi.waitFor(() => expect(panel?.querySelector('.site-nav-quick-more')).not.toBeNull());
+    expect(panel?.querySelector('.site-nav-quick-more')?.textContent).toBe('Settings');
+    panel?.querySelector<HTMLButtonElement>('.site-nav-quick-more')?.click();
+    expect(isQuickPickerOpen()).toBe(false);
+    expect(isSiteMenuOpen()).toBe(true);
+    expect(menuPanel()?.querySelector<HTMLElement>('.site-menu-sections')?.hidden).toBe(true);
+    expect(menuPanel()?.querySelector<HTMLElement>('.site-menu-settings')?.hidden).toBe(false);
+  });
+
+  it("draws the reader's red general on the pieces button and follows a set change", () => {
+    // Serialized through the DOM so both sides close their tags the same way.
+    const tileMark = (set: 'international' | 'traditional') => {
+      const holder = document.createElement('span');
+      holder.innerHTML = xiangqiPieceTilePreview(set).markup;
+      return holder.innerHTML;
+    };
+    stubMemoryStorage();
+    setXiangqiPieceSetPreference('international');
+    const { nav } = phoneNav();
+    const slot = nav.querySelector<HTMLElement>('.site-nav-quick-piece');
+    expect(slot?.dataset.pieceSet).toBe('international');
+    expect(slot?.innerHTML).toBe(tileMark('international'));
+    setXiangqiPieceSetPreference('traditional');
+    expect(slot?.dataset.pieceSet).toBe('traditional');
+    expect(slot?.innerHTML).toBe(tileMark('traditional'));
+  });
+
+  it('toggles dark mode from the moon and shows the state', () => {
+    setSiteThemePreference('light');
+    const { nav } = phoneNav();
+    const dark = nav.querySelector<HTMLButtonElement>('[data-site-nav-quick="dark"]');
     expect(dark?.getAttribute('aria-pressed')).toBe('false');
     dark?.click();
     expect(document.documentElement.dataset.effectiveTheme).toBe('dark');
     expect(dark?.getAttribute('aria-pressed')).toBe('true');
-    dark?.click();
-    expect(document.documentElement.dataset.effectiveTheme).toBe('light');
+    // A theme set elsewhere (the settings view) re-syncs the bar's moon.
+    setSiteThemePreference('light');
     expect(dark?.getAttribute('aria-pressed')).toBe('false');
-  });
-
-  it('swaps the sections for the settings view from a chip, and back', () => {
-    const { toggle } = phoneNav();
-    toggle.click();
-    const sections = menuPanel()?.querySelector<HTMLElement>('.site-menu-sections');
-    const settings = menuPanel()?.querySelector<HTMLElement>('.site-menu-settings');
-    menuPanel()?.querySelector<HTMLButtonElement>('[data-site-menu-chip="language"]')?.click();
-    expect(sections?.hidden).toBe(true);
-    expect(settings?.hidden).toBe(false);
-    const back = settings?.querySelector<HTMLButtonElement>('.site-menu-back');
-    expect(document.activeElement).toBe(back);
-    back?.click();
-    expect(sections?.hidden).toBe(false);
-    expect(settings?.hidden).toBe(true);
+    expect(isSiteMenuOpen()).toBe(false);
   });
 });
 
@@ -656,3 +782,21 @@ describe('site shell nav wordmark fit', () => {
     expect(nav.dataset.brand).toBeUndefined();
   });
 });
+
+// The test DOM has no working localStorage; the stored piece set needs one.
+function stubMemoryStorage(): void {
+  const values = new Map<string, string>();
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      get length() {
+        return values.size;
+      },
+      clear: () => values.clear(),
+      getItem: (key: string) => values.get(key) ?? null,
+      key: (index: number) => [...values.keys()][index] ?? null,
+      removeItem: (key: string) => values.delete(key),
+      setItem: (key: string, value: string) => values.set(key, value),
+    } satisfies Storage,
+  });
+}

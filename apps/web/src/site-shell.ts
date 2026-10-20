@@ -23,8 +23,17 @@ import {
   watchNavItems,
 } from './nav-items.js';
 import { isLikelyAdmin, isLikelySignedIn } from './signed-in-state.js';
-import { buildAppearanceMenuAt, setSiteThemePreference } from './theme.js';
+import {
+  buildAppearanceMenuAt,
+  buildQuickPickerAt,
+  type QuickPickerKind,
+  readStoredXiangqiPieceSet,
+  setSiteThemePreference,
+  siteThemeChangedEvent,
+  xiangqiAppearanceChangedEvent,
+} from './theme.js';
 import { isBlockedForViewer } from './viewer-geo.js';
+import { type XiangqiPieceSet, xiangqiPieceTilePreview } from './xiangqi-piece-sets.js';
 
 export const GITHUB_URL = 'https://github.com/brianhliou/mistboard';
 
@@ -162,7 +171,7 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
 
   ensureNavDismiss();
   ensureNavAutoHide();
-  nav.append(brand, toggle, collapse);
+  nav.append(brand, buildNavQuickControls(locale), toggle, collapse);
   placeNavAccount(nav);
   ensureNavAccountPlacement();
   observeNavBrandFit(nav);
@@ -319,8 +328,10 @@ function ensureNavAutoHide(): void {
     if (!nav) return;
     const y = scrollY();
     nav.classList.toggle('scrolled', y > 0);
-    if (y > lastY + 10) nav.classList.add('hide');
-    else if (y <= clamp(lastY - 20, 0, maxScroll())) nav.classList.remove('hide');
+    if (y > lastY + 10) {
+      nav.classList.add('hide');
+      closeQuickPicker({ restoreFocus: false });
+    } else if (y <= clamp(lastY - 20, 0, maxScroll())) nav.classList.remove('hide');
     else return;
     lastY = Math.max(0, y);
   };
@@ -358,6 +369,183 @@ function ensureNavDismiss(): void {
         closeNavMenu(menu);
       }
     }
+  });
+}
+
+// Phone bar quick controls (#575): language, pieces and dark mode as three
+// icons between the brand and the account slot, in place of the chip row that
+// sat at the bottom of the site menu. Language and Pieces open their picker
+// straight away in a dropdown under the bar (the language list, the piece-set
+// tiles); dark mode toggles in place. Hidden above the phone breakpoint
+// (site-shell.css), where the bar has the gear and the account menu instead.
+function buildNavQuickControls(locale: Locale): HTMLElement {
+  const group = document.createElement('div');
+  group.className = 'site-nav-quick';
+
+  const quickButton = (key: string, label: string): HTMLButtonElement => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'site-nav-quick-button';
+    button.dataset.siteNavQuick = key;
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    return button;
+  };
+
+  const languageName = LOCALE_META[locale]?.displayName;
+  const language = quickButton(
+    'language',
+    languageName
+      ? `${t('nav.language', {}, locale)}: ${languageName}`
+      : t('nav.language', {}, locale),
+  );
+  language.innerHTML = QUICK_GLOBE_ICON;
+  language.setAttribute('aria-haspopup', 'dialog');
+  language.setAttribute('aria-expanded', 'false');
+  language.addEventListener('click', () => toggleQuickPicker(language, 'language', locale));
+
+  // The red general of the reader's own xiangqi set, the same mark the Pieces
+  // picker tiles draw, so the button previews the choice it opens.
+  const pieces = quickButton('pieces', t('nav.boardAndPieces', {}, locale));
+  const piece = document.createElement('span');
+  piece.className = 'site-nav-quick-piece';
+  piece.setAttribute('aria-hidden', 'true');
+  pieces.append(piece);
+  renderQuickPiece(piece);
+  pieces.setAttribute('aria-haspopup', 'dialog');
+  pieces.setAttribute('aria-expanded', 'false');
+  pieces.addEventListener('click', () => toggleQuickPicker(pieces, 'pieces', locale));
+
+  const dark = quickButton('dark', t('nav.darkMode', {}, locale));
+  dark.innerHTML = QUICK_MOON_ICON;
+  syncQuickDark(dark);
+  dark.addEventListener('click', () => {
+    const isDark = document.documentElement.dataset.effectiveTheme === 'dark';
+    setSiteThemePreference(isDark ? 'light' : 'dark');
+    syncQuickDark(dark);
+  });
+
+  group.append(language, pieces, dark);
+  ensureNavQuickSync();
+  return group;
+}
+
+// The quick picker dropdown: one at a time, a child of the bar so it rides
+// under it (full width on a phone), closed by an outside tap, Escape, a pick,
+// or the bar hiding on scroll.
+type OpenQuickPicker = {
+  panel: HTMLElement;
+  button: HTMLButtonElement;
+  teardown: () => void;
+};
+let openQuickPickerState: OpenQuickPicker | null = null;
+
+export function isQuickPickerOpen(): boolean {
+  return openQuickPickerState !== null;
+}
+
+function toggleQuickPicker(button: HTMLButtonElement, kind: QuickPickerKind, locale: Locale): void {
+  const wasThis = openQuickPickerState?.button === button;
+  closeQuickPicker({ restoreFocus: false });
+  if (wasThis) return;
+
+  const panel = document.createElement('div');
+  panel.className = 'site-nav-quick-panel';
+  panel.id = `site-nav-quick-panel-${kind}`;
+  panel.dataset.siteNavQuickPanel = kind;
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute(
+    'aria-label',
+    kind === 'language' ? t('nav.language', {}, locale) : t('nav.boardAndPieces', {}, locale),
+  );
+  (button.closest<HTMLElement>('.site-nav') ?? document.body).append(panel);
+  button.setAttribute('aria-expanded', 'true');
+  button.setAttribute('aria-controls', panel.id);
+
+  const onPointerDown = (event: Event) => {
+    const target = event.target as Node | null;
+    if (target && (panel.contains(target) || button.contains(target))) return;
+    closeQuickPicker({ restoreFocus: false });
+  };
+  const onKeydown = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    closeQuickPicker();
+  };
+  document.addEventListener('pointerdown', onPointerDown, true);
+  document.addEventListener('keydown', onKeydown);
+  openQuickPickerState = {
+    panel,
+    button,
+    teardown: () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('keydown', onKeydown);
+    },
+  };
+
+  void buildQuickPickerAt(kind, { onPick: () => closeQuickPicker() })
+    .then((picker) => {
+      if (openQuickPickerState?.panel !== panel) return;
+      panel.append(picker);
+      // Pieces is the one picker with settings beside it (board, sound,
+      // notation, device theme); with the gear off the phone bar, this row is
+      // the way to them.
+      if (kind === 'pieces') panel.append(buildQuickMoreSettings(button, locale));
+      panel.querySelector<HTMLElement>('[aria-checked="true"], button')?.focus();
+    })
+    .catch((err) => console.warn('quick picker failed to load', err));
+}
+
+function buildQuickMoreSettings(button: HTMLButtonElement, locale: Locale): HTMLButtonElement {
+  const more = document.createElement('button');
+  more.type = 'button';
+  more.className = 'site-nav-quick-more';
+  more.textContent = t('account.settings', {}, locale);
+  more.addEventListener('click', () => {
+    closeQuickPicker({ restoreFocus: false });
+    openSiteMenu(button, locale, { view: 'root', includeLanguage: false });
+  });
+  return more;
+}
+
+export function closeQuickPicker({ restoreFocus = true }: { restoreFocus?: boolean } = {}): void {
+  const state = openQuickPickerState;
+  if (!state) return;
+  openQuickPickerState = null;
+  state.teardown();
+  state.panel.remove();
+  state.button.setAttribute('aria-expanded', 'false');
+  state.button.removeAttribute('aria-controls');
+  if (restoreFocus) state.button.focus();
+}
+
+function renderQuickPiece(slot: HTMLElement): void {
+  const set: XiangqiPieceSet = readStoredXiangqiPieceSet();
+  if (slot.dataset.pieceSet === set) return;
+  slot.dataset.pieceSet = set;
+  slot.innerHTML = xiangqiPieceTilePreview(set).markup;
+}
+
+function syncQuickDark(button: HTMLElement): void {
+  button.setAttribute(
+    'aria-pressed',
+    document.documentElement.dataset.effectiveTheme === 'dark' ? 'true' : 'false',
+  );
+}
+
+// Bound once for the document (route swaps rebuild the nav): a set picked in
+// the settings view, another tab, or an OS theme flip re-syncs every bar.
+let navQuickSyncBound = false;
+function ensureNavQuickSync(): void {
+  if (navQuickSyncBound || typeof window === 'undefined') return;
+  navQuickSyncBound = true;
+  window.addEventListener(xiangqiAppearanceChangedEvent, () => {
+    for (const slot of document.querySelectorAll<HTMLElement>('.site-nav-quick-piece'))
+      renderQuickPiece(slot);
+  });
+  window.addEventListener(siteThemeChangedEvent, () => {
+    for (const button of document.querySelectorAll<HTMLElement>('[data-site-nav-quick="dark"]'))
+      syncQuickDark(button);
   });
 }
 
@@ -512,8 +700,9 @@ function currentPath(): string {
 // ---------------------------------------------------------------------------
 // Phone site menu (#576). On phones the hamburger opens a full-screen panel in
 // place of the tablet drawer: every bar destination grouped into sections
-// (siteMenuSections, plus Admin for admins), and a footer of chips for
-// language, board and piece settings, and dark mode. The panel is built on open
+// (siteMenuSections, plus Admin for admins). Language and board and piece
+// settings open in the same panel from the bar's quick controls (#575), which
+// replaced the chip row this menu used to end with. The panel is built on open
 // and appended to <body>, not the nav: the bar's auto-hide translates the nav
 // off screen, which would carry a fixed child with it.
 
@@ -537,20 +726,27 @@ let openSiteMenuState: OpenSiteMenuState | null = null;
 const SVG_ATTRS =
   'xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"';
 const CLOSE_ICON = `<svg ${SVG_ATTRS} width="24" height="24"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
-const GLOBE_ICON = `<svg ${SVG_ATTRS} width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>`;
-const BOARD_ICON = `<svg ${SVG_ATTRS} width="18" height="18"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>`;
-const MOON_ICON = `<svg ${SVG_ATTRS} width="18" height="18"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>`;
+const QUICK_GLOBE_ICON = `<svg ${SVG_ATTRS} width="20" height="20"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>`;
+const QUICK_MOON_ICON = `<svg ${SVG_ATTRS} width="20" height="20"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>`;
+
+// A settings view to open the menu on (a drill-in key of the appearance menu,
+// or 'root' for its list), instead of the link sections.
+export type SiteMenuView = { view: string; includeLanguage: boolean };
 
 export function isSiteMenuOpen(): boolean {
   return openSiteMenuState !== null;
 }
 
-export function openSiteMenu(toggle: HTMLElement, locale: Locale = currentLocale()): void {
+export function openSiteMenu(
+  toggle: HTMLElement,
+  locale: Locale = currentLocale(),
+  initialView?: SiteMenuView,
+): void {
   if (openSiteMenuState) {
     closeSiteMenu();
     return;
   }
-  const panel = buildSiteMenu(locale);
+  const { panel, showSettings } = buildSiteMenu(locale);
   document.body.append(panel);
   document.documentElement.classList.add('site-menu-open');
   toggle.setAttribute('aria-expanded', 'true');
@@ -566,6 +762,7 @@ export function openSiteMenu(toggle: HTMLElement, locale: Locale = currentLocale
   document.addEventListener('keydown', onKeydown);
   openSiteMenuState = { panel, toggle, onKeydown };
   panel.querySelector<HTMLElement>('.site-menu-close')?.focus();
+  if (initialView) showSettings(initialView.view, initialView.includeLanguage);
 }
 
 export function closeSiteMenu({ restoreFocus = true }: { restoreFocus?: boolean } = {}): void {
@@ -598,7 +795,10 @@ function trapSiteMenuFocus(panel: HTMLElement, event: KeyboardEvent): void {
   }
 }
 
-function buildSiteMenu(locale: Locale): HTMLElement {
+function buildSiteMenu(locale: Locale): {
+  panel: HTMLElement;
+  showSettings: (view: string, includeLanguage: boolean) => void;
+} {
   const panel = document.createElement('div');
   panel.className = 'site-menu';
   panel.id = 'site-menu';
@@ -659,8 +859,6 @@ function buildSiteMenu(locale: Locale): HTMLElement {
     }
   });
 
-  const footer = document.createElement('div');
-  footer.className = 'site-menu-footer';
   const showSettings = (view: string, includeLanguage: boolean) => {
     const back = document.createElement('button');
     back.type = 'button';
@@ -670,8 +868,6 @@ function buildSiteMenu(locale: Locale): HTMLElement {
       settingsView.hidden = true;
       settingsView.replaceChildren();
       sectionsView.hidden = false;
-      for (const chip of footer.querySelectorAll('[data-site-menu-chip]'))
-        chip.setAttribute('aria-expanded', 'false');
     });
     settingsView.replaceChildren(back);
     sectionsView.hidden = true;
@@ -687,44 +883,8 @@ function buildSiteMenu(locale: Locale): HTMLElement {
       .catch((err) => console.warn('site menu settings failed to load', err));
   };
 
-  const language = siteMenuChip(
-    'language',
-    GLOBE_ICON,
-    LOCALE_META[locale]?.displayName ?? t('nav.language', {}, locale),
-  );
-  language.setAttribute('aria-label', `${t('nav.language', {}, locale)}: ${language.textContent}`);
-  language.setAttribute('aria-expanded', 'false');
-  language.addEventListener('click', () => {
-    showSettings('language', true);
-    language.setAttribute('aria-expanded', 'true');
-  });
-
-  // Pieces opens the settings list (board, pieces, sound, notation)
-  // rather than one sub-panel: on a phone the signed-out gear is not on the
-  // bar, so this is the only path to the rest of those settings.
-  const boardChip = siteMenuChip('board', BOARD_ICON, t('nav.boardAndPieces', {}, locale));
-  boardChip.setAttribute('aria-expanded', 'false');
-  boardChip.addEventListener('click', () => {
-    showSettings('root', false);
-    boardChip.setAttribute('aria-expanded', 'true');
-  });
-
-  const dark = siteMenuChip('dark', MOON_ICON, t('nav.darkMode', {}, locale));
-  const syncDark = () =>
-    dark.setAttribute(
-      'aria-pressed',
-      document.documentElement.dataset.effectiveTheme === 'dark' ? 'true' : 'false',
-    );
-  syncDark();
-  dark.addEventListener('click', () => {
-    const isDark = document.documentElement.dataset.effectiveTheme === 'dark';
-    setSiteThemePreference(isDark ? 'light' : 'dark');
-    syncDark();
-  });
-
-  footer.append(language, boardChip, dark);
-  panel.append(bar, body, footer);
-  return panel;
+  panel.append(bar, body);
+  return { panel, showSettings };
 }
 
 function siteMenuLink(item: NavItem, locale: Locale, path: string): HTMLAnchorElement {
@@ -752,18 +912,6 @@ function siteMenuLink(item: NavItem, locale: Locale, path: string): HTMLAnchorEl
     link.append(dot);
   }
   return link;
-}
-
-function siteMenuChip(key: string, icon: string, label: string): HTMLButtonElement {
-  const chip = document.createElement('button');
-  chip.type = 'button';
-  chip.className = 'site-menu-chip';
-  chip.dataset.siteMenuChip = key;
-  chip.innerHTML = icon;
-  const text = document.createElement('span');
-  text.textContent = label;
-  chip.append(text);
-  return chip;
 }
 
 export function buildLoadingState(label: string): HTMLElement {

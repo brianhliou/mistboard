@@ -23,6 +23,7 @@ import {
   type AppearanceMenuOptions,
   type BoardFamily,
   formatVolume,
+  type QuickPickerKind,
   readEffectiveSoundVolume,
   readStoredSiteTheme,
   readStoredSoundMuted,
@@ -98,6 +99,30 @@ export function populateThemeControlPanel(
     status.element,
   );
   return status;
+}
+
+// The phone bar's quick pickers (#575, through buildQuickPickerAt in theme.ts):
+// the language list and the piece-set tile grid, built by the same field
+// builders as the drill-in menu so the two never drift apart.
+export function buildQuickPicker(
+  kind: QuickPickerKind,
+  options: { onPick?: () => void } = {},
+): HTMLElement {
+  const locale = currentLocale();
+  if (kind === 'language') return createLanguageField(locale, () => options.onPick?.());
+  return createTileField(
+    'xqpiece',
+    t('prefs.pieces', {}, locale),
+    t('prefs.xiangqiPieceSet', {}, locale),
+    XIANGQI_PIECE_SETS.map((s) => ({ id: s.id, label: t(s.labelKey, {}, locale) })),
+    readStoredXiangqiPieceSet(),
+    (set) => {
+      setXiangqiPieceSetPreference(set);
+      options.onPick?.();
+    },
+    undefined,
+    false,
+  );
 }
 
 // The appearance controls as a lichess-style drill-in menu: a compact list of
