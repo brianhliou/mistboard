@@ -96,19 +96,63 @@ test('stacked pieces take front/rear tandem selectors', () => {
   assert.equal(formatXiangqiMove(state, frontTraverse, 'chinese-simplified'), '前车平五');
 });
 
-test('middle of a three-stack falls back to coordinate (grammar has no 中)', () => {
-  // Three red soldiers stacked on file h, all across the river (a red soldier
-  // on its own half off a starting file is unreachable and the FEN parser
-  // rejects it); the middle one moves sideways.
-  const state = stateFromFen('3k5/9/7P1/7P1/7P1/9/9/9/9/4K4 r');
+// Three red soldiers stacked on file h (red file 2), all across the river (a
+// red soldier on its own half off a starting file is unreachable and the FEN
+// parser rejects it).
+const THREE_STACK = '3k5/9/7P1/7P1/7P1/9/9/9/9/4K4 r';
+
+test('WXF numbers every soldier in a three-stack, front first, in place of the letter', () => {
+  const state = stateFromFen(THREE_STACK);
+  // WXF: with 3-5 soldiers on one file the letter is dropped and the soldiers
+  // are numbered from the front, the file following as usual (25=4).
+  const cases: [XiangqiMove, string][] = [
+    [{ from: 'h8', to: 'g8' }, '12.3'],
+    [{ from: 'h8', to: 'h9' }, '12+1'],
+    [{ from: 'h7', to: 'g7' }, '22.3'],
+    [{ from: 'h7', to: 'i7' }, '22.1'],
+    [{ from: 'h6', to: 'g6' }, '32.3'],
+  ];
+  for (const [move, label] of cases) {
+    assert.equal(formatXiangqiMove(state, move, 'wxf'), label);
+    assert.deepEqual(resolveXiangqiMoveInFormat(label, state, 'wxf'), move, label);
+  }
+  // A record written in the numbered form imports as WXF.
+  const imported = importXiangqiGame('22.3 K4+1', { initialState: state });
+  assert.equal(imported.error, undefined);
+  assert.equal(imported.format, 'wxf');
+  assert.deepEqual(imported.moves, [
+    { from: 'h7', to: 'g7' },
+    { from: 'd10', to: 'd9' },
+  ]);
+
+  // Black numbers from its own front, the lowest rank, on its own file count.
+  const black = stateFromFen('3k5/9/9/9/9/1p7/1p7/1p7/9/4K4 b');
+  assert.equal(formatXiangqiMove(black, { from: 'b3', to: 'a3' }, 'wxf'), '12.1');
+  assert.equal(formatXiangqiMove(black, { from: 'b4', to: 'c4' }, 'wxf'), '22.3');
+  assert.equal(formatXiangqiMove(black, { from: 'b3', to: 'b2' }, 'wxf'), '12+1');
+});
+
+test('a three-stack beside a second stacked file is still nameable in WXF', () => {
+  // The numbered form carries its file, so another stacked file does not make
+  // it ambiguous; the two-stack itself still has no unique fileless form.
+  const state = stateFromFen('3k5/9/7P1/3P3P1/3P3P1/9/9/9/9/4K4 r');
+  assert.equal(formatXiangqiMove(state, { from: 'h7', to: 'i7' }, 'wxf'), '22.1');
+  assert.equal(formatXiangqiMove(state, { from: 'd7', to: 'd8' }, 'wxf'), 'd7-d8');
+});
+
+test('the Chinese styles keep 前/后 for a three-stack and fall back for its middle', () => {
+  // Chinese 中 is unverified for this grammar (#289), so the middle soldier
+  // stays a coordinate there.
+  const state = stateFromFen(THREE_STACK);
 
   const middle: XiangqiMove = { from: 'h7', to: 'g7' };
   assert.equal(describeXiangqiRelativeMove(state, middle), null);
   assert.equal(formatXiangqiMove(state, middle, 'chinese-simplified'), 'h7-g7');
 
   const front: XiangqiMove = { from: 'h8', to: 'g8' };
-  assert.equal(formatXiangqiMove(state, front, 'wxf'), '+P.3');
   assert.equal(formatXiangqiMove(state, front, 'chinese-simplified'), '前兵平三');
+  // Older WXF records that wrote the ends of a three-stack as +P/-P still import.
+  assert.deepEqual(resolveXiangqiMoveInFormat('+P.3', state, 'wxf'), front);
 });
 
 test('two stacked files of the same role fall back to coordinate', () => {
