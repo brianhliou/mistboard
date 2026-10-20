@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Xiangqi notation numbers three to five soldiers on one file the WXF way instead of switching to coordinates ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
 - The phone board editor fits one screen, with both piece colours and a Tools sheet for settings ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - on phones the game room fits one screen with no scrolling: board, both clocks, the moves and the action bar stay in view, captured pieces sit on each player's line, game info and chat open from the ☰ menu, and the first-move countdown shows as a bubble on the board ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - xiangqi games now show the pieces each player has captured beside their clock ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
@@ -82,6 +83,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- On phones the puzzle page fits one screen, with the puzzle details, engine and settings in a menu that slides up from the arrow bar ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
 - Refresh the Jieqi platform guide with review walkthroughs, theme-matched figures and playable stored alternatives in Jieqi game embeds ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - The study list now has Chinese pages at /zh-hans/study and /zh-hant/study, linking each study's Chinese page, and its heading is now Studies ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - The General Blunder challenge, an article with two goals against the bot that tries to lose: draw it, then make it win ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
@@ -196,6 +198,7 @@ Conventions:
 
 ### Site
 
+- On phones, language, piece set and dark mode now sit in the top bar, one tap each ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
 - A clearer Mistboard mission connecting cultures through Chinese chess and original strategy games, with the long-term vision for engine challenges, clubs and international events ([981f42d7](https://github.com/brianhliou/mistboard/commit/981f42d7))
 - Banqi face-down tiles take each piece set's own material, and the red Jieqi back has a darker outline ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - The statistics page shows one weekly games chart without variant filters ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
@@ -434,6 +437,7 @@ Conventions:
 
 ### Technical
 
+- Every response now carries nosniff and an explicit referrer policy ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
 - Add reviewed batch preparation and weekly coverage audits for tournament archives ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - Add records-speed checks for comparing completed broadcast game availability across sources ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - Resolve production error reports to original source files with private source maps ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
