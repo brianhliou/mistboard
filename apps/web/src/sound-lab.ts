@@ -23,14 +23,7 @@ import {
   resetLiveSoundState,
 } from './live-sound.js';
 import { liveState, type RoomMode, type SoundKind } from './live-state.js';
-import {
-  readStoredSoundSet,
-  SOUND_SETS,
-  type SoundFileSpec,
-  soundFileUrl,
-  storeSoundSet,
-  WOOD_DRAW_CANDIDATES,
-} from './sound-sets.js';
+import { readStoredSoundSet, SOUND_SETS, storeSoundSet } from './sound-sets.js';
 
 const KINDS: SoundKind[] = [
   'move',
@@ -86,7 +79,6 @@ export function mountSoundLab(root: HTMLElement): void {
     hint,
     buildSetPicker(),
     buildSoundBoard(),
-    buildDrawCandidates(),
     buildLifecyclePreview(),
     buildPlaythrough(),
   );
@@ -142,57 +134,6 @@ function buildSoundBoard(): HTMLElement {
   }
   section.append(grid);
   return section;
-}
-
-// #530: the Wood draw read as a loss. Each candidate plays as the live
-// controller would play it in the Wood set (rate, gain, the set's 0.8 master),
-// beside the loss for comparison. The live mapping is in sound-sets.ts.
-function buildDrawCandidates(): HTMLElement {
-  const section = document.createElement('section');
-  const title = document.createElement('h2');
-  title.textContent = 'Wood draw candidates';
-  const note = document.createElement('p');
-  note.textContent = 'The first is the provisional draw. Compare each with the loss.';
-  note.style.color = 'var(--site-muted)';
-  const grid = document.createElement('div');
-  grid.style.display = 'flex';
-  grid.style.gap = '8px';
-  grid.style.flexWrap = 'wrap';
-  const entries = [
-    ...WOOD_DRAW_CANDIDATES,
-    { id: 'loss', label: 'Wood loss (for comparison)', spec: { file: 'loss.ogg' } },
-  ];
-  for (const candidate of entries) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'landing-cta-secondary';
-    button.dataset.drawCandidate = candidate.id;
-    button.textContent = candidate.label;
-    button.addEventListener('click', () => playWoodSpec(candidate.spec));
-    grid.append(button);
-  }
-  section.append(title, note, grid);
-  return section;
-}
-
-let labAudio: AudioContext | null = null;
-
-function playWoodSpec(spec: SoundFileSpec): void {
-  const resolved = soundFileUrl('wood', spec);
-  labAudio ??= new AudioContext();
-  const audio = labAudio;
-  void fetch(resolved.file)
-    .then((response) => response.arrayBuffer())
-    .then((data) => audio.decodeAudioData(data))
-    .then((buffer) => {
-      const source = audio.createBufferSource();
-      source.buffer = buffer;
-      source.playbackRate.value = resolved.rate ?? 1;
-      const gain = audio.createGain();
-      gain.gain.value = (resolved.gain ?? 1) * 0.8;
-      source.connect(gain).connect(audio.destination);
-      source.start();
-    });
 }
 
 type LifecyclePreview = {

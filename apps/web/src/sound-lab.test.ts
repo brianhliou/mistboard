@@ -39,16 +39,6 @@ describe('sound lab lifecycle preview', () => {
     expect(playSound).toHaveBeenCalledWith(sound);
   });
 
-  it('lists every Wood draw candidate beside the loss (#530)', () => {
-    const root = document.createElement('div');
-    document.body.append(root);
-    mountSoundLab(root);
-    const ids = [...root.querySelectorAll<HTMLElement>('[data-draw-candidate]')].map(
-      (button) => button.dataset.drawCandidate,
-    );
-    expect(ids).toEqual(['piano', 'win-slow', 'board-start', 'old', 'loss']);
-  });
-
   it('previews the spectator-neutral finish without inventing a sound', () => {
     const root = document.createElement('div');
     document.body.append(root);

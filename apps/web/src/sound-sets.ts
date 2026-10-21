@@ -44,42 +44,7 @@ export type SoundFileSpec = {
   // two asymmetric kinds (capture vs captured).
   rate?: number;
   gain?: number;
-  // Borrow the file from another set's folder (the wood draw, #530).
-  fromSet?: SoundSetId;
 };
-
-// Wood draw candidates (#530): Kenney's pizzicato 12 (`draw.ogg`, the old
-// draw) sat on top of pizzicato 01 (`loss.ogg`): spectrum correlation +0.92,
-// so a draw read as a loss. Each candidate is built from audio already in the
-// repo; /sound-lab plays them side by side. Correlation with loss.ogg, measured
-// 2026-10-20 (spectrum / pitch class): piano +0.75 / -0.27, win slowed +0.92 /
-// -0.03, board start +0.56 / +0.27 (percussive, so pitch class means little).
-export const WOOD_DRAW_CANDIDATES: ReadonlyArray<{
-  id: string;
-  label: string;
-  spec: SoundFileSpec;
-}> = [
-  {
-    id: 'piano',
-    label: "Piano set's Draw (two soft notes)",
-    spec: { file: 'Draw.mp3', fromSet: 'piano', gain: 0.9 },
-  },
-  {
-    id: 'win-slow',
-    label: 'Wood win, slowed to 0.84',
-    spec: { file: 'win.ogg', rate: 0.84 },
-  },
-  {
-    id: 'board-start',
-    label: 'Wood board start, a touch lower and louder',
-    spec: { file: 'start.mp3', rate: 0.9, gain: 1.5 },
-  },
-  { id: 'old', label: 'Old draw (pizzicato 12)', spec: { file: 'draw.ogg' } },
-];
-
-// Provisional pick: the piano Draw, the most distinct from loss in both
-// measures. Brian picks the keeper in /sound-lab.
-const WOOD_DRAW = WOOD_DRAW_CANDIDATES[0].spec;
 
 // One mapping for all file sets — every set ships the same eight files.
 const FILE_BY_KIND: Partial<Record<SoundKind, SoundFileSpec>> = {
@@ -127,17 +92,13 @@ const WOOD_FILE_BY_KIND: Partial<Record<SoundKind, SoundFileSpec>> = {
   'game-start': { file: 'start.mp3' },
   win: { file: 'win.ogg' },
   lose: { file: 'loss.ogg' },
-  draw: WOOD_DRAW,
+  draw: { file: 'draw.ogg' },
 };
 
 export function soundFileFor(set: SoundSetId, kind: SoundKind): SoundFileSpec | null {
   if (isSynthesizedSet(set)) return null;
   const spec = (set === 'wood' ? WOOD_FILE_BY_KIND : FILE_BY_KIND)[kind];
-  return spec ? soundFileUrl(set, spec) : null;
-}
-
-export function soundFileUrl(set: SoundSetId, spec: SoundFileSpec): SoundFileSpec {
-  return { ...spec, file: `/sound/${spec.fromSet ?? set}/${spec.file}` };
+  return spec ? { ...spec, file: `/sound/${set}/${spec.file}` } : null;
 }
 
 export function readStoredSoundSet(): SoundSetId {

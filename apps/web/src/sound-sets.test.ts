@@ -2,14 +2,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { SoundKind } from './live-state.js';
-import {
-  DEFAULT_SOUND_SET,
-  isSynthesizedSet,
-  SOUND_SETS,
-  soundFileFor,
-  soundFileUrl,
-  WOOD_DRAW_CANDIDATES,
-} from './sound-sets.js';
+import { DEFAULT_SOUND_SET, isSynthesizedSet, SOUND_SETS, soundFileFor } from './sound-sets.js';
 
 const ALL_KINDS: SoundKind[] = [
   'move',
@@ -66,19 +59,8 @@ describe('sound set registry', () => {
     expect(soundFileFor('wood', 'lose')).toEqual({
       file: '/sound/wood/loss.ogg',
     });
-  });
-
-  // #530: pizzicato 12 sounded like the loss. The draw now borrows the piano
-  // set's Draw until Brian picks a keeper from the candidates in /sound-lab.
-  it('gives the Wood draw a file that is not the loss, and keeps every candidate on disk', () => {
-    const draw = soundFileFor('wood', 'draw');
-    expect(draw?.file).toBe('/sound/piano/Draw.mp3');
-    expect(draw?.file).not.toBe(soundFileFor('wood', 'lose')?.file);
-    expect(WOOD_DRAW_CANDIDATES.length).toBeGreaterThanOrEqual(3);
-    for (const candidate of WOOD_DRAW_CANDIDATES) {
-      const { file } = soundFileUrl('wood', candidate.spec);
-      const path = resolve(__dirname, '..', 'public', file.replace(/^\//, ''));
-      expect(existsSync(path), `${candidate.id} -> ${file} missing on disk`).toBe(true);
-    }
+    expect(soundFileFor('wood', 'draw')).toEqual({
+      file: '/sound/wood/draw.ogg',
+    });
   });
 });
