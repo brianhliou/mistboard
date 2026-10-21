@@ -212,4 +212,10 @@ describe('figures render', () => {
       expect(svg()).toMatch(/^<svg[\s\S]*<\/svg>$/);
     }
   });
+
+  it('the card thumbnail shows the position with no move arrow', () => {
+    const svg = BANQI_ENDGAME_THUMBNAIL();
+    expect(svg).not.toContain('<marker');
+    expect(svg).not.toContain('marker-end');
+  });
 });

@@ -13,7 +13,8 @@ import { articles } from './articles-data.js';
 // went out excused by an opt-out entry its own session wrote. Now the row reads
 // every listed editorial article, and this test replays each one's publish
 // moment against the production row to prove it shows there: the general row
-// for an untagged article, the deep-dives row for one tagged homeRow.
+// for an untagged article, the deep-dives row for one tagged homeRow. An
+// engineering post shows in neither: the homepage is for players (2026-10-21).
 
 // What the row can ever show: published editorial articles in the interface's
 // own language that are not opted out of the index or marked noindex
@@ -34,10 +35,37 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+const isEngineering = (article: (typeof articles)[number]): boolean =>
+  article.kind === 'article' && article.topic === 'engineering';
+
+function rowsAt(publishedAt: string) {
+  const liveAt = articleGoesLiveAt(publishedAt);
+  const now = new Date(liveAt + HOUR_MS);
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(now);
+  vi.stubEnv('DEV', false);
+  return {
+    liveAt,
+    latest: buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, 'en', { now, row: 'latest' }),
+    deepDives: buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, 'en', { now, row: 'deep-dives' }),
+  };
+}
+
 describe('the homepage article row', () => {
   it.each(
     listable
-      .filter((article) => article.publishedAt)
+      .filter((article) => article.publishedAt && isEngineering(article))
+      .map((article) => [article.slug, article] as const),
+  )('keeps the engineering post %s off both homepage rows', (slug, article) => {
+    const { latest, deepDives } = rowsAt(String(article.publishedAt));
+    const card = `.landing-article-card[href="/blog/${slug}"]`;
+    expect(latest?.querySelector(card) ?? null).toBeNull();
+    expect(deepDives?.querySelector(card) ?? null).toBeNull();
+  });
+
+  it.each(
+    listable
+      .filter((article) => article.publishedAt && !isEngineering(article))
       .map((article) => [article.slug, article] as const),
   )('shows %s on the homepage on the day it goes live', (slug, article) => {
     const liveAt = articleGoesLiveAt(String(article.publishedAt));

@@ -202,15 +202,16 @@ describe('blog index engineering chip', () => {
   it('adds an Engineering chip once an engineering post exists', () => {
     useFixture(2, 2, 2);
     const index = buildArticlesIndex(undefined, 'mistboard');
+    // Deep dives before Engineering: the blog is for players first (2026-10-21).
     expect(chips(index).map((chip) => chip.textContent)).toEqual([
       'All',
-      'Engineering',
       'Xiangqi deep dives',
+      'Engineering',
     ]);
     expect(chips(index).map((chip) => chip.getAttribute('href'))).toEqual([
       '/blog',
-      '/blog?topic=engineering',
       '/blog?topic=deep-dives',
+      '/blog?topic=engineering',
     ]);
     expect(slugsUnder(undefined)).toHaveLength(6);
     expect(slugsUnder('engineering')).toEqual(['/blog/fixture-eng-0', '/blog/fixture-eng-1']);
@@ -250,5 +251,32 @@ describe('blog index engineering chip', () => {
       '/blog/unstyled-first-paint',
     ]);
     expect(slugsUnder('engineering')).toEqual(listedEngineering);
+  });
+});
+
+describe('homepage article rows and engineering posts', () => {
+  const slugs = (row: HTMLElement | null): string[] =>
+    [...(row?.querySelectorAll<HTMLAnchorElement>('a.landing-article-card') ?? [])].map(
+      (card) => card.getAttribute('href') ?? '',
+    );
+  const ALL = { maxAgeDays: Number.POSITIVE_INFINITY };
+
+  it('keeps engineering posts out of the latest row, which holds the other player posts', () => {
+    useFixture(2, 2, 2);
+    const latest = slugs(buildHomeArticleCards(20, 'en', { ...ALL, row: 'latest' }));
+    expect(latest.filter((href) => href.includes('fixture-eng'))).toEqual([]);
+    expect(latest.filter((href) => href.includes('fixture-'))).toEqual([
+      '/blog/fixture-plain-1',
+      '/blog/fixture-plain-0',
+    ]);
+  });
+
+  it('keeps an engineering post out of the deep-dives row even if it is tagged for it', () => {
+    useFixture(2, 0, 0);
+    const [dive] = articles;
+    if (dive?.kind !== 'article') throw new Error('fixture dive is not a blog post');
+    articles.push({ ...dive, topic: 'engineering', slug: 'fixture-eng-dive' });
+    const dives = slugs(buildHomeArticleCards(20, 'en', { ...ALL, row: 'deep-dives' }));
+    expect(dives).toEqual(['/blog/fixture-dive-1', '/blog/fixture-dive-0']);
   });
 });

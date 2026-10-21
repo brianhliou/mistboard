@@ -40,6 +40,7 @@ import {
   type CurrentGame,
   type CurrentGamePlayer,
   type CurrentGamesResponse,
+  cardSeatName,
   deadlineFractionLeft,
   FINISHED_BOARD_BOTTOM_SEAT,
   FINISHED_BOARD_POV,
@@ -712,13 +713,14 @@ export function buildSeatRow(
   const who = document.createElement('span');
   who.className = 'current-game-seat-who';
   if (player && ink !== false) who.append(seatDiscEl(ink, 'current-game-seat-disc'));
-  who.append(
-    playerNameEl(
-      displayLiveName(player?.name, t('games.guest')),
-      profileTargetFor(player),
-      'current-game-seat-name',
-    ),
+  const fullName = displayLiveName(player?.name, t('games.guest'));
+  const nameEl = playerNameEl(
+    player?.isEngine ? cardSeatName(fullName) : fullName,
+    profileTargetFor(player),
+    'current-game-seat-name',
   );
+  nameEl.title = fullName;
+  who.append(nameEl);
   if (player?.isEngine) {
     const badge = document.createElement('span');
     badge.className = 'current-game-bot';
@@ -1018,7 +1020,7 @@ function finishedSeatRow(
   row.title = name;
   const label = document.createElement('span');
   label.className = 'current-game-finished-seat-name';
-  label.textContent = name;
+  label.textContent = cardSeatName(name);
   if (variantSeatsHaveInk(game.variant)) {
     row.append(
       seatDiscEl(

@@ -202,14 +202,14 @@ const isEngineeringArticle = (article: Article): boolean =>
 
 export const ARTICLE_TOPICS: readonly ArticleTopic[] = [
   {
-    id: 'engineering',
-    labelKey: 'articles.topicEngineering',
-    matches: isEngineeringArticle,
-  },
-  {
     id: 'deep-dives',
     labelKey: 'articles.deepDives',
     matches: (article) => article.homeRow === 'deep-dives',
+  },
+  {
+    id: 'engineering',
+    labelKey: 'articles.topicEngineering',
+    matches: isEngineeringArticle,
   },
 ];
 
@@ -535,6 +535,8 @@ export type HomeArticleCardOptions = {
    * Which homepage row to build. 'latest' (the default) is every article with no
    * homeRow plus the newest announcement; 'deep-dives' is the articles tagged
    * for it, with no age cut, since a player page does not go stale in 60 days.
+   * Engineering posts are in neither row: the homepage is for players, and those
+   * posts live under the blog's Engineering chip (Brian, 2026-10-21).
    */
   row?: HomeArticleRow;
 };
@@ -557,6 +559,7 @@ export function buildHomeArticleCards(
   const row = options.row ?? 'latest';
   const articleItems = articles
     .filter((article) => isArticleListedInThisEnv(article) && article.kind !== 'rules')
+    .filter((article) => !isEngineeringArticle(article))
     .filter((article) => (article.homeRow ?? 'latest') === row)
     .sort((a, b) => tieRank(a) - tieRank(b) || compareArticlesNewestFirst(a, b))
     .map<HomeCardItem>((article, index) => ({
@@ -723,7 +726,6 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
     date.textContent = formatCardDate(dateIso, locale);
     thumb.append(date);
   }
-  thumb.append(articleCardStarBadge('landing-article-card-star'));
 
   const title = document.createElement('strong');
   title.className = 'landing-article-card-title';
@@ -731,14 +733,6 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
 
   link.append(thumb, title);
   return link;
-}
-
-function articleCardStarBadge(className: string): HTMLSpanElement {
-  const star = document.createElement('span');
-  star.className = className;
-  star.setAttribute('aria-hidden', 'true');
-  star.textContent = '★';
-  return star;
 }
 
 function landingAnnouncementCard(announcement: Announcement, locale: Locale): HTMLElement {
@@ -1105,7 +1099,7 @@ function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement |
   const list = document.createElement('ul');
   list.className = 'articles-index-list article-footer-list';
   for (const entry of related) {
-    list.append(articleCard(entry, cardLang, { showStarBadge: false }));
+    list.append(articleCard(entry, cardLang));
   }
 
   footer.append(heading, list);
@@ -2694,15 +2688,7 @@ function renderStaticBoardsBlock(block: StaticBoardsBlock): HTMLElement {
 // spec on each pending wrap and consume it in mountArticleThumbnails.
 const pendingThumbnails = new WeakMap<HTMLElement, ArticleThumbnail>();
 
-function articleCard(
-  baseArticle: Article,
-  lang?: ArticleLang,
-  // The star is an index affordance: one per card in a long grid, repeating
-  // often enough that it reads as texture. Three of them in a row at the foot
-  // of an article read as a rating or a "featured" mark instead, and they are
-  // neither, so the footer opts out rather than hiding them in CSS.
-  options: { showStarBadge?: boolean } = {},
-): HTMLLIElement {
+function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
   const locale = articleLocale(lang);
   const articleLang = publishedArticleLang(baseArticle.slug, lang);
   const article = articleLang ? translateArticle(baseArticle, articleLang) : baseArticle;
@@ -2730,10 +2716,6 @@ function articleCard(
     date.className = 'articles-index-card-over-image articles-index-card-date';
     date.textContent = formatCardDate(dateIso, locale);
     thumb.append(date);
-  }
-
-  if (options.showStarBadge ?? true) {
-    thumb.append(articleCardStarBadge('articles-index-card-over-image articles-index-card-author'));
   }
 
   if (isArticleStatusBadge(article.status)) {
