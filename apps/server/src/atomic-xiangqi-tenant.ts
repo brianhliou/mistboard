@@ -119,6 +119,7 @@ const ATOMIC_XIANGQI_TERMINATION: Record<string, persistence.GameTermination> = 
   timeout: 'timeout',
   resignation: 'resignation',
   abandonment: 'abandonment',
+  agreement: 'draw',
 };
 
 export const atomicXiangqiTenant: AtomicXiangqiTenantType = {
@@ -133,6 +134,7 @@ export const atomicXiangqiTenant: AtomicXiangqiTenantType = {
     applyMove: applyAtomicXiangqiMove,
     isLegalMove: isAtomicXiangqiLegalMove,
     finish: finishAtomicXiangqiGame,
+    finishDraw: (state) => finishAtomicXiangqiGame(state, null, 'agreement'),
     abort: (state, reason: AbortReason) => abortAtomicXiangqiGame(state, reason),
     isColor: isAtomicXiangqiColor,
     isMove: isAtomicXiangqiMove,

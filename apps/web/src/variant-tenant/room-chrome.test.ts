@@ -66,6 +66,9 @@ type CtxOverrides = Partial<{
   roomMode: string;
   playAgainRequestBody: Record<string, unknown>;
   gameSpecId: string;
+  drawOffer: Color | null;
+  drawOfferCooldown: number;
+  sent: unknown[];
 }>;
 
 function chromeHarness(
@@ -95,13 +98,21 @@ function chromeHarness(
     rematchControls: () => null,
     lobbyMatch: () => overrides.lobbyMatch ?? false,
     rated: () => overrides.rated ?? false,
+    drawOffer: () => overrides.drawOffer ?? null,
+    drawOfferCooldown: () => overrides.drawOfferCooldown ?? 0,
     ...(overrides.variantDetail !== undefined
       ? { variantDetail: () => overrides.variantDetail ?? null }
       : {}),
   };
   const refs = refsFixture();
   const chrome = createTenantRoomChrome(tenantOverride, ctx);
-  chrome.setRenderTarget(refs, { reconnectNow: () => {}, sendSocket: () => true });
+  chrome.setRenderTarget(refs, {
+    reconnectNow: () => {},
+    sendSocket: (payload) => {
+      overrides.sent?.push(payload);
+      return true;
+    },
+  });
   return { chrome, refs };
 }
 
@@ -854,6 +865,93 @@ describe('tenant room chrome meta card names', () => {
   });
 });
 
+// #530: draw offers in person-against-person rooms.
+describe('tenant room chrome draw offers', () => {
+  const afterMoveOne = playingView({ moveNumber: 2 });
+  const buttons = (refs: LiveRefs) =>
+    [...refs.gameControls.querySelectorAll('button')].map((button) => ({
+      text: button.textContent,
+      disabled: button.disabled,
+    }));
+
+  it('offers a draw after move one and sends draw:offer', () => {
+    const sent: unknown[] = [];
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, sent });
+    chrome.renderGameControls();
+    const offer = [...refs.gameControls.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Offer draw',
+    );
+    expect(offer).toBeDefined();
+    offer?.click();
+    expect(sent).toEqual([{ type: 'draw:offer' }]);
+  });
+
+  it('shows no draw button before move one or against a bot', () => {
+    for (const overrides of [{}, { view: afterMoveOne, roomMode: 'pve' }]) {
+      const { chrome, refs } = chromeHarness(overrides);
+      chrome.renderGameControls();
+      expect(refs.gameControls.textContent).not.toContain('draw');
+    }
+  });
+
+  it('shows no draw button before move one where Resign replaces Abort', () => {
+    // A tenant with no abort renders Resign from the first move; the server
+    // still refuses an offer until both sides have moved.
+    const noAbort: WebVariantTenant<Color> = { ...tenant, userAbort: false };
+    const { chrome, refs } = chromeHarness({ view: playingView({ moveNumber: 1 }) }, noAbort);
+    chrome.renderGameControls();
+    expect(refs.gameControls.textContent).toContain('Resign');
+    expect(refs.gameControls.textContent).not.toContain('draw');
+  });
+
+  it('shows no draw button in a tenant that opts out', () => {
+    const optOut: WebVariantTenant<Color> = { ...tenant, drawOffers: false };
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOffer: 'red' }, optOut);
+    chrome.renderGameControls();
+    expect(refs.gameControls.textContent).toContain('Resign');
+    expect(refs.gameControls.textContent).not.toContain('draw');
+  });
+
+  it('shows the offerer a disabled pending button', () => {
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOffer: 'white' });
+    chrome.renderGameControls();
+    expect(buttons(refs)).toContainEqual({ text: 'Draw offered', disabled: true });
+  });
+
+  it('lets the other seat accept or decline', () => {
+    const sent: unknown[] = [];
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOffer: 'red', sent });
+    chrome.renderGameControls();
+    expect(refs.gameControls.textContent).toContain('Your opponent offers a draw');
+    for (const button of refs.gameControls.querySelectorAll('button')) {
+      if (button.textContent === 'Accept draw' || button.textContent === 'Decline') button.click();
+    }
+    expect(sent).toEqual([{ type: 'draw:accept' }, { type: 'draw:decline' }]);
+  });
+
+  it('disables the offer while the decline cooldown runs', () => {
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOfferCooldown: 4 });
+    chrome.renderGameControls();
+    const offer = [...refs.gameControls.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Offer draw',
+    );
+    expect(offer?.disabled).toBe(true);
+    expect(offer?.title).toBe('You can offer a draw again in 4 moves');
+  });
+
+  it('names an agreed draw in the finished notice', () => {
+    const { chrome, refs } = chromeHarness({
+      view: {
+        id: 'test_room',
+        status: { type: 'finished', winner: null, reason: 'agreement' },
+        moveNumber: 20,
+      },
+    });
+    chrome.renderMeta();
+    expect(refs.gameInfo.textContent).toContain('agreement');
+  });
+});
+
 // #427: the room was English end to end for zh visitors with every suite green.
 // Render the whole chrome in each zh locale and read it back for Latin words.
 describe('tenant room chrome in Chinese', () => {
@@ -898,6 +996,29 @@ describe('tenant room chrome in Chinese', () => {
         resigned.refs.actionStatus.textContent ?? '',
         resigned.refs.roomActions.textContent ?? '',
       );
+
+      for (const draw of [
+        { drawOffer: 'red' as const },
+        { drawOffer: 'white' as const },
+        { drawOfferCooldown: 3 },
+        { drawOfferCooldown: 1 },
+      ]) {
+        const offered = chromeHarness({ view: playingView({ moveNumber: 2 }), ...draw });
+        offered.chrome.renderGameControls();
+        texts.push(
+          offered.refs.gameControls.textContent ?? '',
+          ...[...offered.refs.gameControls.querySelectorAll('button')].map((b) => b.title),
+        );
+      }
+      const agreed = chromeHarness({
+        view: {
+          id: 'test_room',
+          status: { type: 'finished', winner: null, reason: 'agreement' },
+          moveNumber: 9,
+        },
+      });
+      agreed.chrome.renderMeta();
+      texts.push(agreed.refs.gameInfo.textContent ?? '');
 
       const spectator = chromeHarness({ seat: 'spectator', connectionState: 'reconnecting' });
       spectator.chrome.renderActionStatus();

@@ -1,6 +1,7 @@
 import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 import { createGameTable } from './game-table.js';
 import { attachAbortCountdownBubble } from './live-abort-bubble.js';
+import { attachDrawOfferBubble } from './live-draw-offer-bubble.js';
 import { attachRoomInfoSheet } from './live-room-sheet.js';
 import './live-lifecycle-effects.css';
 import type { LiveRefs } from './live-state.js';
@@ -119,6 +120,8 @@ export function createLiveLayout(
     attachBoardResizeGrip(boardStage, boardStage);
     // Phone room: the abort countdown shows over the board, not as a line.
     attachAbortCountdownBubble(gameTable.refs.gameControls, boardStage);
+    // Every viewport: the opponent's draw offer shows over the board (#530).
+    attachDrawOfferBubble(gameTable.refs.gameControls, boardStage);
   }
 
   const roomMeta = target.querySelector<HTMLParagraphElement>('[data-room-meta]');

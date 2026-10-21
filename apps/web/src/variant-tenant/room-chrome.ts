@@ -89,6 +89,12 @@ export type WebVariantTenant<C extends string> = {
   // move (the server tenant's userAbort). No Abort button; Resign is offered
   // from the first move instead, beside the no-show countdown.
   userAbort?: false;
+  // Optional: false where the server tenant has no rules.finishDraw, so the room
+  // offers no draw (#530). Xiangqi mahjong opts out: its result is a points
+  // count. Two-seat tenants offer draws by default; a table of more than two
+  // never does. The server test 'every two-seat tenant finishes a draw' names
+  // the server-side exceptions, so the two stay in step.
+  drawOffers?: false;
   // Mirrors the server tenant's ratedPregameTimeoutForfeits: in a rated room the
   // first-move countdown is a loss for the seat that owes the move, not an abort.
   ratedPregameTimeoutForfeits?: true;
@@ -210,6 +216,10 @@ export type TenantChromeContext<C extends string> = {
   lobbyMatch(): boolean;
   // Whether the room is rated (snapshot `rated`); optional so a test ctx may omit it.
   rated?(): boolean;
+  // The seat with a draw offer pending, and the viewer's own moves left before
+  // it may offer again after a decline (#530). Optional so a test ctx may omit them.
+  drawOffer?(): C | null;
+  drawOfferCooldown?(): number;
   // Optional suffix on the meta panel's Variant row (e.g. a time-control
   // label: "Jieqi · 5+5").
   variantDetail?(): string | null;
@@ -267,6 +277,8 @@ export function createTenantRoomChrome<C extends string>(
   }
 
   function reasonText(reason: string): string {
+    // An agreed draw (#530) ends a game the same way in every variant.
+    if (reason === 'agreement') return t('result.agreement');
     return t(tenant.reasonPhrase(reason));
   }
 
@@ -1063,6 +1075,7 @@ export function createTenantRoomChrome<C extends string>(
       banner.textContent = forfeitCountdownText();
       children.push(banner);
     }
+    children.push(...drawControls(view));
     const resign = document.createElement('button');
     resign.type = 'button';
     resign.className = 'danger';
@@ -1084,6 +1097,51 @@ export function createTenantRoomChrome<C extends string>(
     children.push(resign);
     refs.gameControls.replaceChildren(...children);
     refs.gameControlsSection.hidden = false;
+  }
+
+  // Draw offers (#530): person against person only, so never against a bot.
+  // The server holds the rules (one offer at a time, the decline cooldown);
+  // this only shows the state it sent and the buttons that fit it.
+  function drawControls(view: TenantWebView<C>): HTMLElement[] {
+    if (tenant.drawOffers === false || tenant.colors.length !== 2) return [];
+    if (ctx.roomMode() === 'pve') return [];
+    // The server refuses an offer before both sides have moved (handleDraw),
+    // the same line where Abort gives way to Resign.
+    if (view.moveNumber < 2) return [];
+    const seat = seatColor();
+    if (seat === null) return [];
+    const button = (label: string, payload: { type: string } | null): HTMLButtonElement => {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.textContent = label;
+      if (payload) el.addEventListener('click', () => sendSocket(payload));
+      else el.disabled = true;
+      return el;
+    };
+    const offer = ctx.drawOffer?.() ?? null;
+    if (offer === seat) return [button(t('live.drawOffered'), null)];
+    if (offer !== null) {
+      const note = document.createElement('span');
+      note.className = 'draw-offer-note';
+      // live-draw-offer-bubble.ts mirrors this line onto the board.
+      note.dataset.drawOfferNote = '';
+      note.textContent = t('live.opponentOffersDraw');
+      return [
+        note,
+        button(t('live.acceptDraw'), { type: 'draw:accept' }),
+        button(t('live.declineDraw'), { type: 'draw:decline' }),
+      ];
+    }
+    const cooldown = ctx.drawOfferCooldown?.() ?? 0;
+    if (cooldown > 0) {
+      const blocked = button(t('live.offerDraw'), null);
+      blocked.title =
+        cooldown === 1
+          ? t('live.drawOfferCooldownOne')
+          : t('live.drawOfferCooldown', { moves: cooldown });
+      return [blocked];
+    }
+    return [button(t('live.offerDraw'), { type: 'draw:offer' })];
   }
 
   // Driven by the 100ms tick loop so the abort/forfeit countdowns advance

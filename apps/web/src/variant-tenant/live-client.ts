@@ -127,6 +127,11 @@ export type TenantLiveState<C extends string, V> = {
   // sends). Until 2026-10-02 nothing read it, so every tenant room's meta card said
   // Casual, rated lobby games and rated correspondence alike.
   rated: boolean;
+  // The seat with a draw offer pending (snapshot `drawOffer`, sent only while
+  // one is), and how many of this seat's own moves remain before it may offer
+  // again after a decline (`drawOfferCooldown`, sent only to that seat).
+  drawOffer: C | null;
+  drawOfferCooldown: number;
 };
 
 // Everything a tenant's interaction/setup code needs from the core. Handed to
@@ -392,6 +397,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     forfeitDeadline: null,
     lobbyMatch: false,
     rated: false,
+    drawOffer: null,
+    drawOfferCooldown: 0,
   };
 
   let socket: TenantSocketClient | null = null;
@@ -489,6 +496,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       config.chrome?.rematchControls ?? ((sendSocket) => rematch?.controls(sendSocket) ?? null),
     lobbyMatch: () => state.lobbyMatch,
     rated: () => state.rated,
+    drawOffer: () => state.drawOffer,
+    drawOfferCooldown: () => state.drawOfferCooldown,
     ...(config.chrome?.variantDetail ? { variantDetail: config.chrome.variantDetail } : {}),
     recording: recordingForChrome,
   });
@@ -534,6 +543,13 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     // a room never stops being a lobby room.
     if (frame.lobbyMatch === true) state.lobbyMatch = true;
     if (typeof frame.rated === 'boolean') state.rated = frame.rated;
+    // Every frame carries the whole room state, so an absent field means no
+    // offer is pending (a move lapsed it, or it was answered).
+    const drawOffer = frame.drawOffer as { from?: unknown } | undefined;
+    state.drawOffer =
+      typeof drawOffer?.from === 'string' && tenant.isColor(drawOffer.from) ? drawOffer.from : null;
+    state.drawOfferCooldown =
+      typeof frame.drawOfferCooldown === 'number' ? frame.drawOfferCooldown : 0;
     if (frame.events) state.events = frame.events;
     rematch?.applyFrame(frame.rematch);
     config.onFrame?.(frame);
@@ -612,6 +628,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.abortDeadline = null;
     state.lobbyMatch = false;
     state.rated = false;
+    state.drawOffer = null;
+    state.drawOfferCooldown = 0;
     lastCapturedView = null;
     lastCapturedKey = null;
     pendingLiveAnimation = null;

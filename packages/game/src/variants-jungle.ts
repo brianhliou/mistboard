@@ -83,7 +83,9 @@ export type JungleGameEndReason =
   | 'repetition' // threefold position repetition
   | 'timeout'
   | 'resignation'
-  | 'abandonment';
+  | 'abandonment'
+  // Both players agreed a draw (an accepted draw offer).
+  | 'agreement';
 
 export type JungleGameStatus =
   | { type: 'playing'; turn: JungleColor }

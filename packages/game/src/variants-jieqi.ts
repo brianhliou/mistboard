@@ -91,6 +91,8 @@ export type JieqiGameEndReason =
   | 'timeout'
   | 'resignation'
   | 'abandonment'
+  // Both players agreed a draw (an accepted draw offer).
+  | 'agreement'
   // Third occurrence of a position (games created with `repetition: true`), or
   // an imported lab game whose own referee declared a threefold draw.
   | 'repetition'

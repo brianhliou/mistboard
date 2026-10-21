@@ -1,0 +1,41 @@
+/* The opponent's draw offer as a board bubble (live-draw-offer-bubble.ts).
+   Same dark glass as the abort and banqi chase bubbles: the board keeps its
+   own colours in both site themes, so the bubble does too. It sits on the
+   middle of the board, takes no tap, and moves nothing around the board. */
+.draw-offer-bubble {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  z-index: 16;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(300px, var(--draw-bubble-board-max, 90%));
+  padding: 6px 11px;
+  border-radius: 9px;
+  color: #fbf6ec;
+  background: rgb(28 24 20 / 88%);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 28%);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  text-wrap: pretty;
+  pointer-events: none;
+  animation: draw-offer-bubble-in 160ms ease-out both;
+}
+
+@keyframes draw-offer-bubble-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .draw-offer-bubble {
+    animation: none;
+  }
+}

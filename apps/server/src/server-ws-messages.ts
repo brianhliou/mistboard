@@ -39,6 +39,9 @@ const knownClientMessageTypes = new Set([
   'rematch:offer',
   'rematch:cancel',
   'rematch:decline',
+  'draw:offer',
+  'draw:accept',
+  'draw:decline',
 ]);
 
 export function isKnownClientMessageType(type: string): boolean {

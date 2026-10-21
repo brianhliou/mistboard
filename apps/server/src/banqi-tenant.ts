@@ -171,6 +171,10 @@ export const banqiTenant: BanqiTenant = {
       ...state,
       status: { type: 'finished', winner, reason },
     }),
+    finishDraw: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'agreement' },
+    }),
     abort: (state, reason: AbortReason) => ({
       ...state,
       status: { type: 'aborted', reason },
@@ -227,7 +231,11 @@ export const banqiTenant: BanqiTenant = {
     // Translate it — a blind cast launders the invalid string past TS and only
     // fails at the DB write, silently dropping every no-progress draw.
     termination: (reason: string): persistence.GameTermination =>
-      reason === 'no-progress' ? 'progress-clock' : (reason as persistence.GameTermination),
+      reason === 'no-progress'
+        ? 'progress-clock'
+        : reason === 'agreement'
+          ? 'draw'
+          : (reason as persistence.GameTermination),
     logKindPrefix: 'banqi',
     logLabel: 'Banqi',
   },
