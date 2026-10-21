@@ -33,6 +33,11 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-21, not native-reviewed, from the English signed
+  // off that day. Terms follow longest-forced-mates-xiangqi and helpmates (困毙 /
+  // 困斃 for xiangqi stalemate, 逼和 for chess's, 半回合 a ply, 合作杀 / 合作殺),
+  // 迷雾国际象棋 for fog of war, 研究 for a study, 萨姆·劳埃德 as in helpmates.
+  'shortest-stalemate-xiangqi',
   // Machine-drafted 2026-10-17, not native-reviewed, from the English signed
   // off that day. The bot keeps its English name, as in its News entry and bot
   // page; checkmate is 将死, a draw 和棋, the rules page 规则页.
@@ -246,6 +251,46 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困毙 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作杀, 萨姆·劳埃德); 迷雾国际象棋 for fog of war; 研究 for a study.
+  'The Shortest Xiangqi Stalemate We Know': '我们所知最短的象棋困毙',
+  'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':
+    '已知最短的象棋困毙：21个半回合',
+  'In xiangqi a side with no legal move loses. The shortest stalemate we know takes 21 plies: after Red’s 11th move, Black has eight pieces and none of them can move.':
+    '在象棋里，无着可走的一方判负。我们所知最短的困毙只要21个半回合：红方走完第11步后，黑方还有八个子，却没有一个子走得动。',
+  'Black’s own pieces and one red chariot wall in most of its army, and two red cannons pin the three pieces that could still move.':
+    '黑方自己的棋子和一辆红车堵住了黑方大部分子力，两门红炮又牵制住仍能走动的三个子。',
+  'A computer search found it, and it can miss shorter lines. No stalemate is possible in under 9 plies, so 9 to 20 is still open.':
+    '这是电脑搜索找到的，而这种搜索可能漏掉更短的着法。少于9个半回合不可能形成困毙，所以9到20个半回合之间仍无定论。',
+  'In chess, a player who is not in check and has no legal move is stalemated, and the game is drawn. In [xiangqi](/rules/xiangqi) that player has lost, the same as if mated. So how quickly can a game end that way? We count in plies, one move by one side, so 21 plies ends on Red’s 11th move.':
+    '在国际象棋里，没有被将军却无着可走的一方被逼和，对局算和棋。在[象棋](/rules/xiangqi)里，这一方就输了，和被将死一样，这叫困毙。那么，一盘棋最快能多快以这种方式结束？我们按半回合计数，一方走一步算一个半回合，所以21个半回合结束于红方的第11步。',
+  'Sam Loyd stalemated Black on the tenth move in chess':
+    '国际象棋里，萨姆·劳埃德第十步就逼和了黑方',
+  'Chess has a famous answer. In Sam Loyd’s ten-move game, Black still has ten pieces, the queen and both rooks among them, and none of them can move. [Oz Problems](https://www.ozproblems.com/walkabout/walkabout2021/feb27) has the history.':
+    '国际象棋有一个著名的答案。在萨姆·劳埃德的十步棋局里，黑方还有十个子，其中包括后和两个车，却没有一个能动。[Oz Problems](https://www.ozproblems.com/walkabout/walkabout2021/feb27) 介绍了它的来历。',
+  'Sam Loyd’s ten-move stalemate': '萨姆·劳埃德的十步逼和',
+  'Fog of war is harder. There you see only the squares your pieces reach, and a king may step into check, so a side is stuck only when nothing can move at all. In Sven’s 2011 TalkChess game, Black ran out of moves after 63 plies; we found a route to the same final position in 35. Both are in [this study](/study/Yj0X1pDy).':
+    '迷雾国际象棋更难。在那里你只能看到自己棋子能到达的格子，王也可以走进被将军的位置，所以只有一个子都动不了时，一方才算被困住。在 Sven 2011年发在 TalkChess 上的对局里，黑方在63个半回合后无棋可走；我们找到了一条只用35个半回合就到达同一终局的路线。两局都在[这个研究](/study/Yj0X1pDy)里。',
+  'Nanao Okumura stalemated Red with all sixteen pieces on the board':
+    'Nanao Okumura 困毙了十六个子全在盘上的红方',
+  'Nanao Okumura posted an earlier xiangqi stalemate on Zhihu in 2019, built for a different record: after 136 plies Red still has all sixteen pieces, and none of them can move. Black lost nine and took nothing. Chinese-language sites mostly blocked our search, so shorter published games may exist. We found a route to his final position in 116 plies, the fewest possible; it is the last chapter of [the study](/study/ls3xEcX3/FuXbQg6L).':
+    'Nanao Okumura 2019年在知乎上发表过一盘更早的象棋困毙，追求的是另一项纪录：136个半回合后，红方十六个子一个不少，却没有一个能动。黑方丢了九个子，一个也没吃。中文网站大多挡住了我们的搜索，所以可能还有更短的已发表对局。我们找到了一条只用116个半回合就到达他这个终局的路线，这是可能的最少半回合数；这盘棋是[这个研究](/study/ls3xEcX3/FuXbQg6L)的最后一章。',
+  'Nanao Okumura’s 136-ply stalemate': 'Nanao Okumura 的136个半回合困毙',
+  'Black is stalemated after 21 plies, held mostly by its own pieces':
+    '黑方在21个半回合后被困毙，困住它的主要是自己的棋子',
+  'Two red cannons hold the pieces that could move. The one on e7 looks at the general through Black’s chariot and cannon, and the one on b10 through an elephant and an advisor. The chariot, the cannon and that elephant each have a move, and each of those moves leaves the general in check. Everything else is boxed in by its own pieces or by the red chariot on h9. Red took eight pieces on the way, Black one.':
+    '两门红炮牵制着本来能动的子。e7的炮隔着黑方的车和炮对着将，b10的炮隔着一只象和一个士对着将。车、炮和那只象各有一步可走，但每一步都会让将被将军。其余的子不是被自己的棋子堵住，就是被h9的红车封住。一路上红方吃了八个子，黑方吃了一个。',
+  'Black stalemated in 21 plies': '黑方21个半回合被困毙',
+  'A computer search found it by keeping the most cramped positions':
+    '电脑搜索只保留最局促的局面，由此找到了它',
+  'Both sides play toward one goal, stalemating Black, as in a [helpmate](/blog/helpmates-in-xiangqi). Every line is far too many to search past a few moves, so after each move the search keeps a fixed number of positions, the ones where Black has the fewest legal moves, and drops the rest. Each black piece that can still move counts heavily against a position. The search stops at the first position where Black is to move, has no legal move and is not in check.':
+    '双方朝同一个目标走棋：困毙黑方，就像[合作杀](/blog/helpmates-in-xiangqi)那样。走过几步之后，全部着法就多到无法逐一搜索，所以每走一步，搜索只保留固定数量的局面，即黑方合法着法最少的那些，其余全部丢弃。黑方每有一个还能动的子，局面的评分就要重重扣分。搜索停在第一个这样的局面：轮到黑方走，黑方没有合法着法，且没有被将军。',
+  'Dropping positions is what makes it fast, and it is also why it can miss a shorter line. Run the other way, it stalemated Red in 22 plies, which is in [the study](/study/ls3xEcX3) with the others.':
+    '丢弃局面让搜索变快，也正因如此它可能漏掉更短的着法。反过来运行，它在22个半回合内困毙了红方，这盘棋和其他几盘一起收在[这个研究](/study/ls3xEcX3)里。',
+  'No stalemate is possible in under 9 plies': '少于9个半回合不可能形成困毙',
+  'A search of every line proves that no game stalemates Black within 7 plies, and none stalemates Red within 8. So a stalemate shorter than ours, if one exists, takes 9 to 20 plies. Find one, or prove there is none, and post it in the forum.':
+    '对所有着法的完全搜索证明，没有任何对局能在7个半回合内困毙黑方，也没有任何对局能在8个半回合内困毙红方。所以比我们更短的困毙如果存在，需要9到20个半回合。找到一个，或者证明它不存在，然后发到论坛上。',
+  'Shortest stalemates in xiangqi': '象棋最短困毙',
+  'Post a shorter one': '发一个更短的',
   // -- Can you make General Blunder win? (general-blunder-challenge): machine-drafted 2026-10-17, not native-reviewed. --
   'Can you make General Blunder win?': '你能让 General Blunder 赢吗？',
   'Make General Blunder win': '让 General Blunder 赢',
@@ -1136,6 +1181,7 @@ const ZH_HANS: Record<string, string> = {
   // Homepage card titles (`cardTitle`), 2026-10-03: the article's own zh
   // title cut to fit the card, machine-drafted, not native-reviewed.
   'Pikafish misjudged its reveals': '皮卡鱼误判了翻子',
+  'A 21-Ply Xiangqi Stalemate': '21个半回合的象棋困毙',
   'KataGo, a stronger Jungle bot': 'KataGo：更强的斗兽棋电脑',
   '14 wins against our jieqi bot': '战胜我们揭棋电脑的 14 盘棋',
   'How Strong Players Open Jieqi': '高手眼中的揭棋开局',
@@ -6411,6 +6457,46 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困斃 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作殺, 薩姆·勞埃德, 著法, 搜尋, 電腦); 迷霧國際象棋 for fog of war; 研究 for a study.
+  'The Shortest Xiangqi Stalemate We Know': '我們所知最短的象棋困斃',
+  'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':
+    '已知最短的象棋困斃：21個半回合',
+  'In xiangqi a side with no legal move loses. The shortest stalemate we know takes 21 plies: after Red’s 11th move, Black has eight pieces and none of them can move.':
+    '在象棋裡，無著可走的一方判負。我們所知最短的困斃只要21個半回合：紅方走完第11步後，黑方還有八個子，卻沒有一個子走得動。',
+  'Black’s own pieces and one red chariot wall in most of its army, and two red cannons pin the three pieces that could still move.':
+    '黑方自己的棋子和一輛紅車堵住了黑方大部分子力，兩門紅炮又牽制住仍能走動的三個子。',
+  'A computer search found it, and it can miss shorter lines. No stalemate is possible in under 9 plies, so 9 to 20 is still open.':
+    '這是電腦搜尋找到的，而這種搜尋可能漏掉更短的著法。少於9個半回合不可能形成困斃，所以9到20個半回合之間仍無定論。',
+  'In chess, a player who is not in check and has no legal move is stalemated, and the game is drawn. In [xiangqi](/rules/xiangqi) that player has lost, the same as if mated. So how quickly can a game end that way? We count in plies, one move by one side, so 21 plies ends on Red’s 11th move.':
+    '在國際象棋裡，沒有被將軍卻無著可走的一方被逼和，對局算和棋。在[象棋](/rules/xiangqi)裡，這一方就輸了，和被將死一樣，這叫困斃。那麼，一盤棋最快能多快以這種方式結束？我們按半回合計數，一方走一步算一個半回合，所以21個半回合結束於紅方的第11步。',
+  'Sam Loyd stalemated Black on the tenth move in chess':
+    '國際象棋裡，薩姆·勞埃德第十步就逼和了黑方',
+  'Chess has a famous answer. In Sam Loyd’s ten-move game, Black still has ten pieces, the queen and both rooks among them, and none of them can move. [Oz Problems](https://www.ozproblems.com/walkabout/walkabout2021/feb27) has the history.':
+    '國際象棋有一個著名的答案。在薩姆·勞埃德的十步棋局裡，黑方還有十個子，其中包括后和兩個車，卻沒有一個能動。[Oz Problems](https://www.ozproblems.com/walkabout/walkabout2021/feb27) 介紹了它的來歷。',
+  'Sam Loyd’s ten-move stalemate': '薩姆·勞埃德的十步逼和',
+  'Fog of war is harder. There you see only the squares your pieces reach, and a king may step into check, so a side is stuck only when nothing can move at all. In Sven’s 2011 TalkChess game, Black ran out of moves after 63 plies; we found a route to the same final position in 35. Both are in [this study](/study/Yj0X1pDy).':
+    '迷霧國際象棋更難。在那裡你只能看到自己棋子能到達的格子，王也可以走進被將軍的位置，所以只有一個子都動不了時，一方才算被困住。在 Sven 2011年發在 TalkChess 上的對局裡，黑方在63個半回合後無棋可走；我們找到了一條只用35個半回合就到達同一終局的路線。兩局都在[這個研究](/study/Yj0X1pDy)裡。',
+  'Nanao Okumura stalemated Red with all sixteen pieces on the board':
+    'Nanao Okumura 困斃了十六個子全在盤上的紅方',
+  'Nanao Okumura posted an earlier xiangqi stalemate on Zhihu in 2019, built for a different record: after 136 plies Red still has all sixteen pieces, and none of them can move. Black lost nine and took nothing. Chinese-language sites mostly blocked our search, so shorter published games may exist. We found a route to his final position in 116 plies, the fewest possible; it is the last chapter of [the study](/study/ls3xEcX3/FuXbQg6L).':
+    'Nanao Okumura 2019年在知乎上發表過一盤更早的象棋困斃，追求的是另一項紀錄：136個半回合後，紅方十六個子一個不少，卻沒有一個能動。黑方丟了九個子，一個也沒吃。中文網站大多擋住了我們的搜尋，所以可能還有更短的已發表對局。我們找到了一條只用116個半回合就到達他這個終局的路線，這是可能的最少半回合數；這盤棋是[這個研究](/study/ls3xEcX3/FuXbQg6L)的最後一章。',
+  'Nanao Okumura’s 136-ply stalemate': 'Nanao Okumura 的136個半回合困斃',
+  'Black is stalemated after 21 plies, held mostly by its own pieces':
+    '黑方在21個半回合後被困斃，困住它的主要是自己的棋子',
+  'Two red cannons hold the pieces that could move. The one on e7 looks at the general through Black’s chariot and cannon, and the one on b10 through an elephant and an advisor. The chariot, the cannon and that elephant each have a move, and each of those moves leaves the general in check. Everything else is boxed in by its own pieces or by the red chariot on h9. Red took eight pieces on the way, Black one.':
+    '兩門紅炮牽制著本來能動的子。e7的炮隔著黑方的車和炮對著將，b10的炮隔著一隻象和一個士對著將。車、炮和那隻象各有一步可走，但每一步都會讓將被將軍。其餘的子不是被自己的棋子堵住，就是被h9的紅車封住。一路上紅方吃了八個子，黑方吃了一個。',
+  'Black stalemated in 21 plies': '黑方21個半回合被困斃',
+  'A computer search found it by keeping the most cramped positions':
+    '電腦搜尋只保留最侷促的局面，由此找到了它',
+  'Both sides play toward one goal, stalemating Black, as in a [helpmate](/blog/helpmates-in-xiangqi). Every line is far too many to search past a few moves, so after each move the search keeps a fixed number of positions, the ones where Black has the fewest legal moves, and drops the rest. Each black piece that can still move counts heavily against a position. The search stops at the first position where Black is to move, has no legal move and is not in check.':
+    '雙方朝同一個目標走棋：困斃黑方，就像[合作殺](/blog/helpmates-in-xiangqi)那樣。走過幾步之後，全部著法就多到無法逐一搜尋，所以每走一步，搜尋只保留固定數量的局面，即黑方合法著法最少的那些，其餘全部丟棄。黑方每有一個還能動的子，局面的評分就要重重扣分。搜尋停在第一個這樣的局面：輪到黑方走，黑方沒有合法著法，且沒有被將軍。',
+  'Dropping positions is what makes it fast, and it is also why it can miss a shorter line. Run the other way, it stalemated Red in 22 plies, which is in [the study](/study/ls3xEcX3) with the others.':
+    '丟棄局面讓搜尋變快，也正因如此它可能漏掉更短的著法。反過來執行，它在22個半回合內困斃了紅方，這盤棋和其他幾盤一起收在[這個研究](/study/ls3xEcX3)裡。',
+  'No stalemate is possible in under 9 plies': '少於9個半回合不可能形成困斃',
+  'A search of every line proves that no game stalemates Black within 7 plies, and none stalemates Red within 8. So a stalemate shorter than ours, if one exists, takes 9 to 20 plies. Find one, or prove there is none, and post it in the forum.':
+    '對所有著法的完全搜尋證明，沒有任何對局能在7個半回合內困斃黑方，也沒有任何對局能在8個半回合內困斃紅方。所以比我們更短的困斃如果存在，需要9到20個半回合。找到一個，或者證明它不存在，然後發到論壇上。',
+  'Shortest stalemates in xiangqi': '象棋最短困斃',
+  'Post a shorter one': '發一個更短的',
   // -- Can you make General Blunder win? (general-blunder-challenge): machine-drafted 2026-10-17, not native-reviewed. --
   'Can you make General Blunder win?': '你能讓 General Blunder 贏嗎？',
   'Make General Blunder win': '讓 General Blunder 贏',
@@ -7503,6 +7589,7 @@ const ZH_HANT: Record<string, string> = {
   // Homepage card titles (`cardTitle`), 2026-10-03: the article's own zh
   // title cut to fit the card, machine-drafted, not native-reviewed.
   'Pikafish misjudged its reveals': '皮卡魚誤判了翻子',
+  'A 21-Ply Xiangqi Stalemate': '21個半回合的象棋困斃',
   'KataGo, a stronger Jungle bot': 'KataGo：更強的鬥獸棋電腦',
   '14 wins against our jieqi bot': '戰勝我們揭棋電腦的 14 盤棋',
   'How Strong Players Open Jieqi': '高手眼中的揭棋開局',
