@@ -1810,6 +1810,133 @@ describe('forum pages', () => {
     expect(tombstone?.querySelector('.forum-moderation-actions')).toBeNull();
   });
 
+  // Phone forum (#576, mock "Forum A"): a "Forum" head with search and New
+  // topic, a chip row led by Latest, and the latest topics across categories.
+  it('renders the phone head, chips and latest topics at phone width', async () => {
+    stubPhoneViewport(true);
+    const fetchedUrls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      fetchedUrls.push(url);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url.startsWith('/api/forum/topics')) return json({ topics: [topic] });
+      if (url.startsWith('/api/auth/me')) return json({ user: playerUser });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForum } = await import('./forum.js');
+
+    await mountForum(root);
+
+    const head = root.querySelector('.forum-phone-head');
+    expect(head?.querySelector('h1.forum-phone-title')?.textContent).toBe('Forum');
+    expect(head?.querySelector('.forum-phone-search-toggle')?.getAttribute('aria-label')).toBe(
+      'Search the forum',
+    );
+    const newTopic = head?.querySelector<HTMLButtonElement>('button.forum-phone-new-topic');
+    expect(newTopic?.textContent).toBe('New topic');
+    expect(newTopic?.getAttribute('aria-expanded')).toBe('false');
+
+    const chips = Array.from(root.querySelectorAll<HTMLAnchorElement>('.forum-phone-chip'));
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      'Latest',
+      'General Games Discussion',
+      'Mistboard Feedback',
+      'Game analysis',
+      'Off-Topic Discussion',
+    ]);
+    expect(chips[0]?.getAttribute('href')).toBe('/forum');
+    expect(chips[0]?.getAttribute('aria-current')).toBe('page');
+    expect(chips.slice(1).some((chip) => chip.hasAttribute('aria-current'))).toBe(false);
+
+    expect(fetchedUrls).toContain('/api/forum/topics?limit=26&offset=0&locale=en');
+    const latest = root.querySelector('.forum-phone-latest');
+    expect(latest?.querySelector('.forum-topic-title')?.textContent).toBe('Scouting the center');
+    const meta = latest?.querySelector('.forum-topic-row-phone-meta')?.textContent ?? '';
+    expect(meta).toContain('General Games Discussion');
+    expect(meta).toContain('1 reply');
+    // The desktop header and category table stay in the DOM, hidden by CSS.
+    expect(root.querySelector('.forum-category-index')?.classList).toContain('forum-desktop-only');
+
+    // Opening the phone composer reports the state on its toggle.
+    newTopic?.click();
+    const composer = root.querySelector<HTMLElement>('.forum-topic-composer');
+    expect(composer?.hidden).toBe(false);
+    expect(newTopic?.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('does not fetch the latest topics on a wider screen', async () => {
+    stubPhoneViewport(false);
+    const fetchedUrls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      fetchedUrls.push(url);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url.startsWith('/api/forum/topics')) return json({ topics: [topic] });
+      if (url.startsWith('/api/auth/me')) return json({ user: playerUser });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForum } = await import('./forum.js');
+
+    await mountForum(root);
+
+    expect(fetchedUrls.some((url) => url.startsWith('/api/forum/topics'))).toBe(false);
+    expect(root.querySelector('.forum-phone-latest .forum-topic-row')).toBeNull();
+    expect(root.querySelector('.forum-category-index')).not.toBeNull();
+  });
+
+  it('offers a signed-out phone reader a sign-in link instead of New topic', async () => {
+    stubPhoneViewport(true);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url.startsWith('/api/forum/topics')) return json({ topics: [topic] });
+      if (url.startsWith('/api/auth/me')) return json({ user: null });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForum } = await import('./forum.js');
+
+    await mountForum(root);
+
+    const action = root.querySelector<HTMLElement>('.forum-phone-new-topic');
+    expect(action?.tagName).toBe('A');
+    expect(action?.textContent).toBe('Sign in to post');
+    expect(action?.getAttribute('href')).toBe('/account?tab=login');
+    expect(root.querySelector('.forum-topic-composer')).toBeNull();
+  });
+
+  it('marks the current category chip on a phone category page', async () => {
+    stubPhoneViewport(true);
+    window.history.pushState(null, '', '/forum/general-discussion');
+    const fetchedUrls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      fetchedUrls.push(url);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url.startsWith('/api/forum/topics')) return json({ topics: [topic] });
+      if (url.startsWith('/api/auth/me')) return json({ user: playerUser });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForum } = await import('./forum.js');
+
+    await mountForum(root);
+
+    // A category page reads only its own topics, never the cross-category list.
+    expect(fetchedUrls.filter((url) => url.startsWith('/api/forum/topics'))).toEqual([
+      '/api/forum/topics?category=general-discussion&limit=26&offset=0&locale=en',
+    ]);
+    const current = root.querySelector('.forum-phone-chip[aria-current="page"]');
+    expect(current?.textContent).toBe('General Games Discussion');
+    // Both composer toggles (desktop and phone) report the same state.
+    root.querySelector<HTMLButtonElement>('button.forum-phone-new-topic')?.click();
+    const toggles = Array.from(root.querySelectorAll('[data-forum-composer-toggle]'));
+    expect(toggles.length).toBe(2);
+    expect(toggles.every((toggle) => toggle.getAttribute('aria-expanded') === 'true')).toBe(true);
+  });
+
   it('renders the dedicated forum etiquette page', async () => {
     const root = document.createElement('div');
     const { mountForumEtiquette } = await import('./forum.js');
@@ -1830,6 +1957,17 @@ describe('forum pages', () => {
     expect(contact).toBeTruthy();
   });
 });
+
+function stubPhoneViewport(phone: boolean): void {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: phone && query === '(max-width: 600px)',
+    media: query,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+  }));
+}
 
 function json(body: unknown): Response {
   return new Response(JSON.stringify(body), {

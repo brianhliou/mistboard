@@ -1094,3 +1094,374 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Phone study chrome (#576), built in study-phone.ts: a one-line chapter bar
+ * under the site header, a labelled bottom dock, a half sheet of chapters and
+ * an Info sheet. Hidden everywhere but the phone query, so tablet and desktop
+ * are unchanged. */
+.study-phone-bar,
+.study-phone-dock {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .study-phone-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 3px 16px 2px;
+    background: var(--site-panel-soft, var(--site-panel));
+    border-bottom: 1px solid var(--site-border-soft);
+  }
+  .study-phone-bar__titles {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .study-phone-bar__chapter {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--site-text);
+  }
+  /* The pill stays 28px so the bar does not cost the board height; the
+     invisible ::after widens the tap area to 44px. */
+  .study-phone__pill {
+    position: relative;
+    flex: 0 0 auto;
+    min-width: 64px;
+    height: 28px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--site-text) 11%, transparent);
+    color: var(--site-text);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+  }
+  .study-phone__pill::after {
+    content: "";
+    position: absolute;
+    inset: -8px -4px;
+  }
+  .study-phone__pill:focus-visible,
+  .study-phone-dock__button:focus-visible,
+  .study-sheet__icon-button:focus-visible,
+  .study-sheet__link:focus-visible {
+    outline: 2px solid var(--site-accent);
+    outline-offset: 2px;
+  }
+
+  .study-phone-dock {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    display: flex;
+    height: calc(60px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--site-panel, var(--site-bg));
+    border-top: 1px solid var(--site-border-soft);
+  }
+  /* The dock's room is padding inside the page root, not on body: the root is
+   * border-box with a full-height floor, so this keeps it to one screen. */
+  :has(> .study-phone-dock) {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+  .study-phone-dock__button {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--site-text);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .study-phone-dock__button[hidden] {
+    display: none;
+  }
+  .study-phone-dock__button:disabled {
+    color: var(--site-muted);
+    opacity: 0.5;
+    cursor: default;
+  }
+  .study-phone-dock__button[data-mode="chapter"] {
+    color: var(--site-accent);
+  }
+  .study-phone-dock__icon {
+    font-size: 20px;
+    line-height: 1;
+  }
+  .study-phone-dock__label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The top seat row hangs 26px above the board (position: absolute); with
+   * the chapter bar right above the board it sat over the bar. Give it its
+   * own row, as the mock's player row. */
+  .review-shell--study .review-stage:has(.review-seat--top) {
+    margin-top: 28px;
+  }
+
+  /* The About tab's Source is one long unbroken URL; it pushed the page to
+   * ~820px and scrolled it sideways. */
+  .study-about__game dd {
+    overflow-wrap: anywhere;
+  }
+
+  /* One screen, no scroll: board, its seat rows, one row of moves, the dock.
+   * The title card, About and Share, description and chat are in the Info
+   * sheet (lent on open); the dock's Back and Next drive the hidden band. */
+  .review-shell.review-shell--study {
+    padding-top: 4px;
+    padding-bottom: 0;
+  }
+  .review-shell--study .review-shell__cluster--col1-stack {
+    row-gap: 4px;
+  }
+  .review-shell.review-shell--study .review-shell__left > *,
+  .review-shell--study [data-col1-area="under"],
+  .review-shell--study .review-rail-main > .move-nav-bar--band,
+  .review-shell--study .review-rail-main > .engine-panel:not(.engine-panel--on) {
+    display: none;
+  }
+  /* Turned on from the Info sheet, the engine's card stays below the moves. */
+  .review-shell--study .review-rail-main > .engine-panel {
+    order: 1;
+    border-top: 1px solid var(--site-border);
+  }
+  /* The move strip: one row that scrolls sideways, the current move kept in
+   * view (study-phone.ts bindMoveNav). Same strip as the analysis board. */
+  .review-shell--study .review-rail-main .review-move-list {
+    padding: 0 8px;
+  }
+  .review-shell--study .review-rail-main .review-move-list .review-move-list__rows {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 2px;
+    height: 44px;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+  .review-shell--study .review-rail-main .review-move-list__row {
+    display: contents;
+  }
+  .review-shell--study .review-rail-main .review-move-list__rows > li:not(.review-move-list__row) {
+    flex: none;
+    max-width: 70vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .review-shell--study .review-rail-main .review-move-list__number {
+    flex: none;
+    padding: 0 0 0 6px;
+  }
+  .review-shell--study .review-rail-main .review-move-list__move {
+    flex: none;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 8px;
+    border-radius: 6px;
+  }
+  .review-shell--study .review-rail-main .review-move-list__move--empty {
+    display: none;
+  }
+}
+
+html.study-sheet-open,
+html.study-sheet-open body {
+  overflow: hidden;
+}
+.study-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 94;
+  background: rgba(20, 18, 15, 0.45);
+}
+.study-sheet {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  height: min(470px, calc(100dvh - 72px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-radius: 16px 16px 0 0;
+  background: var(--site-panel, var(--site-bg));
+  color: var(--site-text);
+  box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.22);
+}
+.study-sheet__grabber {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 5px;
+  margin: 8px auto 2px;
+  border-radius: 3px;
+  background: var(--site-border);
+}
+.study-sheet__head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px 8px 16px;
+}
+.study-sheet__title {
+  flex: 1 1 auto;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.study-sheet__icon-button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--site-text);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.study-sheet__icon-button[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--site-text) 10%, transparent);
+}
+.study-sheet__search {
+  flex: 0 0 auto;
+  margin: 0 16px 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 8px);
+  background: var(--site-bg);
+  color: var(--site-text);
+  font: inherit;
+  font-size: 16px;
+}
+.study-sheet__search[hidden],
+.study-sheet__empty[hidden],
+.study-sheet__row[hidden],
+.study-sheet__group[hidden] {
+  display: none;
+}
+.study-sheet__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  border-top: 1px solid var(--site-border-soft);
+}
+.study-sheet__group {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--site-muted);
+  background: var(--site-panel-soft, var(--site-surface, var(--site-bg)));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.study-sheet__row {
+  border-bottom: 1px solid var(--site-border-soft);
+}
+.study-sheet__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  padding: 6px 16px;
+  color: var(--site-text);
+  text-decoration: none;
+}
+.study-sheet__row.is-current .study-sheet__link {
+  background: color-mix(in srgb, var(--site-accent) 10%, var(--site-panel, var(--site-bg)));
+  box-shadow: inset 3px 0 0 var(--site-accent);
+}
+.study-sheet__num {
+  flex: 0 0 auto;
+  min-width: 1.6em;
+  color: var(--site-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.study-sheet__row.is-current .study-sheet__num {
+  color: var(--site-accent);
+  font-weight: 700;
+}
+.study-sheet__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.study-sheet__link .study-game-line {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.study-info-sheet {
+  height: min(560px, calc(100dvh - 72px));
+}
+.study-info-sheet__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 12px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--site-border-soft);
+}
+/* The chapter list has its own sheet, and the sheet's heading is the title. */
+.study-info-sheet .study-chapters,
+.study-info-sheet .review-info-card__title {
+  display: none;
+}
+.study-info-sheet__body > * {
+  flex: none;
+}
+.study-info-sheet .review-spectator-chat {
+  height: auto;
+  min-height: 160px;
+}
+.study-sheet__empty {
+  margin: 0;
+  padding: 16px;
+  color: var(--site-muted);
+  font-size: 14px;
+}
