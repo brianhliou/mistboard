@@ -17,7 +17,6 @@ import {
   BANQI_ENGINE_THUMB_H,
   BANQI_CELL,
   BANQI_ENGINE_THUMB_Y,
-  banqiArrow,
   banqiBoardGrid,
   banqiCellCenter,
   banqiPiecesFromView,
@@ -67,10 +66,6 @@ function cell(square: BanqiSquare): { col: number; row: number } {
 
 function title(text: string): string {
   return `<text x="${BANQI_BOARD_W / 2}" y="14" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">${text}</text>`;
-}
-
-function arrow(from: BanqiSquare, to: BanqiSquare, y0: number, id: string): string {
-  return banqiArrow(cell(from), cell(to), 0, y0, id, 14);
 }
 
 // The steps between two pieces as one solid arrow along the squares between
@@ -137,7 +132,8 @@ export const BANQI_ENDGAME_PARITY_ODD = () =>
 // ── 2. The position ─────────────────────────────────────────────────────────
 export const BANQI_ENDGAME_ROOT = () => figure(endgameState(ENDGAME_ROOT_FEN), 'RED TO MOVE AND WIN');
 
-// Card art: the position, full board, with the line's first move (c1-c2).
+// Card art: the position, full board, with no arrow. The first move drawn on a
+// small card read as clutter, and giving away the move spoils the study (2026-10-21).
 export const BANQI_ENDGAME_THUMBNAIL = () =>
   xqSvg(
     BANQI_BOARD_W,
@@ -145,6 +141,5 @@ export const BANQI_ENDGAME_THUMBNAIL = () =>
     [
       banqiBoardGrid(0, BANQI_ENGINE_THUMB_Y),
       banqiPiecesFromView(getBanqiPlayerView(endgameState(ENDGAME_ROOT_FEN), 'red'), 0, BANQI_ENGINE_THUMB_Y),
-      arrow('c1', 'c2', BANQI_ENGINE_THUMB_Y, 'bq-endgame-thumb'),
     ].join(''),
   );
