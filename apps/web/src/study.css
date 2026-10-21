@@ -1127,7 +1127,10 @@
     line-height: 1.3;
     color: var(--site-text);
   }
+  /* The pill stays 28px so the bar does not cost the board height; the
+     invisible ::after widens the tap area to 44px. */
   .study-phone__pill {
+    position: relative;
     flex: 0 0 auto;
     min-width: 64px;
     height: 28px;
@@ -1141,6 +1144,11 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     cursor: pointer;
+  }
+  .study-phone__pill::after {
+    content: "";
+    position: absolute;
+    inset: -8px -4px;
   }
   .study-phone__pill:focus-visible,
   .study-phone-dock__button:focus-visible,

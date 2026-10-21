@@ -2525,10 +2525,10 @@ a.forum-post-author-name:focus-visible {
 
   .forum-phone-chip {
     display: inline-grid;
-    height: 36px;
+    height: 44px;
     flex: none;
     place-items: center;
-    border-radius: 18px;
+    border-radius: 22px;
     background: var(--forum-chip-bg);
     color: var(--forum-heading);
     font-size: 14px;
