@@ -126,7 +126,18 @@ export function serverHtmlFacts(html) {
   // An empty #app means the client draws the whole page: nothing to fall back
   // to when a chunk fails, and nothing for a crawler that does not run it.
   const prerendered = html !== '' && !/<div id="app">\s*<\/div>/.test(html);
-  return { title, noindex, canonical, h1, prerendered };
+  const htmlLang = html.match(/<html[^>]*\slang="([^"]*)"/i)?.[1] || null;
+  return { title, noindex, canonical, h1, prerendered, htmlLang };
+}
+
+/** Failures when the client changes the language <html lang> declares. The
+ *  vi pages shipped lang="vi" and the client's locale init reset it to "en", so
+ *  the rendered page Google indexes said it was English (2026-10-21). Case is
+ *  not a change: BCP 47 tags compare case-insensitively. */
+export function htmlLangFailures(serverLang, renderedLang) {
+  if (!serverLang || !renderedLang) return [];
+  if (serverLang.toLowerCase() === renderedLang.toLowerCase()) return [];
+  return [`html lang changed: "${serverLang}" -> "${renderedLang}"`];
 }
 
 // Pages the server renders for a crawler (broadcast-pages.ts, player-pages.ts,
@@ -211,6 +222,7 @@ async function auditUrl(browser, url, args) {
     .evaluate(() => ({
       title: document.title,
       h1: document.querySelector('h1')?.textContent?.trim() ?? null,
+      lang: document.documentElement.lang,
       errorPanel: document.querySelector('.app-error-panel') !== null,
       appText: (document.querySelector('#app')?.textContent ?? '').trim().length,
     }))
@@ -235,6 +247,9 @@ async function auditUrl(browser, url, args) {
     if (rendered.appText === 0) result.failures.push('#app is empty');
   }
   if (!rendered.h1) result.warnings.push('no h1');
+  if (!rendered.evaluateError) {
+    result.failures.push(...htmlLangFailures(server.htmlLang, rendered.lang));
+  }
   const renderedBase = baseTitle(rendered.title);
   const serverBase = baseTitle(server.title);
   // A placeholder the client put there is a regression; one the server sends

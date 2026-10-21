@@ -458,21 +458,13 @@ try {
 
   // Cross-language alternates. The zh variants below are URL-prefixed renderings of
   // ONE article, so their hreflang is derived. A Vietnamese page is a SEPARATE
-  // article (the settled language policy keeps INTERFACE locales at en/zh-Hans/
-  // zh-Hant while leaving CONTENT languages open), so nothing derives the relation
-  // between /blog/jieqi-platform and /blog/co-up. It has to be declared, or the two
-  // pages compete instead of reinforcing each other.
+  // article, so the pairs are declared in src/articles/language-pairs.ts, which
+  // also feeds the visible link between partners (articles.ts).
   //
   // Declared once per pair and expanded both ways, so the two directions cannot
   // drift apart. An alternate is only emitted when the partner is actually
   // published: pointing Google at a draft is pointing it at a 404.
-  const CROSS_LANGUAGE_PAIRS = [
-    { en: 'jieqi-platform', vi: 'co-up' },
-    { en: 'jieqi-openings', vi: 'khai-cuoc-co-up' },
-    { en: 'jieqi', vi: 'luat-co-up' },
-    { en: 'pikafish', vi: 'choi-co-tuong-voi-may' },
-    { en: 'lai-ly-huynh', vi: 'lai-ly-huynh-co-tuong' },
-  ];
+  const { CROSS_LANGUAGE_PAIRS } = await server.ssrLoadModule('/src/articles/language-pairs.ts');
 
   // Scheduled posts (published, dated in the future at build time) are left
   // out of every baked surface and listed in article-schedule.json instead, so

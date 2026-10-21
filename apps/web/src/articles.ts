@@ -16,6 +16,7 @@ import {
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
+import { LANGUAGE_ENDONYMS, languagePartnersOf } from './articles/language-pairs.js';
 import { articleIsLive } from './articles/publish-time.js';
 import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
@@ -907,8 +908,9 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   if (articleLang) main.dataset.articleLang = articleLang;
   // The chrome follows the UI language (articleLocale), so <html lang> can say
   // zh-Hant over an English article. The article's own text says what it is,
-  // for screen readers, browser translate and hyphenation.
-  const contentLang: Locale = articleLang ?? 'en';
+  // for screen readers, browser translate and hyphenation. A Vietnamese page
+  // is its own article (sourceLang), not a rendering, and says so.
+  const contentLang: string = articleLang ?? article.sourceLang ?? 'en';
 
   // The sheet is the page's single anchoring panel; both rails sit beside
   // it directly on the page background (pychess grammar).
@@ -969,6 +971,20 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
       )}`;
     }
     metaRow.append(dates);
+  }
+  // The page's other language, named in that language. A Vietnamese page is
+  // left out of the blog index by design, so this link is the only crawlable
+  // path to it (articles/language-pairs.ts).
+  for (const partner of languagePartnersOf(base.slug)) {
+    const target = findArticle(partner.slug);
+    if (!target || !isArticleVisibleInThisEnv(target)) continue;
+    const link = document.createElement('a');
+    link.className = 'article-meta-language';
+    link.href = `/${target.kind === 'rules' ? 'rules' : 'blog'}/${encodeURIComponent(target.slug)}`;
+    link.hreflang = partner.lang;
+    link.lang = partner.lang;
+    link.textContent = LANGUAGE_ENDONYMS[partner.lang];
+    metaRow.append(link);
   }
   if (metaRow.childElementCount > 0) header.append(metaRow);
 
