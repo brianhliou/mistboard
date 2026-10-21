@@ -981,8 +981,24 @@ export function tenantSnapshotPayload<
       : {}),
     // The seat's own moves left before it may offer again, to that seat only.
     ...tenantDrawCooldownFor(room.projection, client.seat),
+    // The plies at which a draw was offered, for the move list's "½?" mark
+    // (lichess). Ply counts only, which every viewer already saw live; only
+    // when there was an offer, so every other room's wire is unchanged.
+    ...tenantDrawOfferPlies(room.events),
     ...(tenant.wire?.snapshotExtras?.(room, client) ?? {}),
   };
+}
+
+export function tenantDrawOfferPlies(events: readonly { type: string }[]): {
+  drawOfferPlies?: number[];
+} {
+  const plies: number[] = [];
+  let ply = 0;
+  for (const event of events) {
+    if (event.type === 'move-played') ply += 1;
+    else if (event.type === 'draw-offered' && ply > 0 && plies.at(-1) !== ply) plies.push(ply);
+  }
+  return plies.length > 0 ? { drawOfferPlies: plies } : {};
 }
 
 function tenantDrawCooldownFor<C extends string>(

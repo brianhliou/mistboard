@@ -183,6 +183,14 @@
   }
 }
 
+/* "½?" after a move: a draw was offered there (#530, lichess's mark). */
+.round-table__box .move-list .move-draw-offer {
+  margin-left: 4px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--site-muted);
+}
+
 /* Kept well under the 16% the scrubbed ply uses: at 10% a hovered cell was
    near enough to the active one to read as "this is where I am". */
 .round-table__box .move-list button.move-jump:hover,
@@ -515,14 +523,16 @@
   }
 }
 
-/* In-game controls (Abort / Resign): the lichess in-game action row. Every
-   action spans the column, sharing the row equally when there are several,
-   in the same flat uppercase skin as the postgame actions (.postgame-actions)
-   that replace them when the game ends, so the column does not jump from a
-   small centred button to full-width rows (Brian, 2026-10-02). The
-   abort/forfeit countdown is a muted line above them. */
+/* In-game controls (#530, the lichess action row): icon buttons sharing the
+   column under the move list, ½ to offer a draw and a flag to resign (an X
+   to abort before move two), neutral and the height of the move-nav buttons
+   beside them. A press opens a one-line question in place (✗ prompt ✓)
+   instead of a modal; the opponent's offer takes the same line. The row
+   still spans the column like the postgame actions that replace it, so the
+   column does not jump when the game ends (Brian, 2026-10-02). The
+   abort/forfeit countdown is a muted line above it. */
 .round-table__row:has(> .game-controls) {
-  padding: 6px 8px;
+  padding: 4px 8px;
 }
 
 .game-controls {
@@ -544,21 +554,32 @@
 
 .game-controls button {
   flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
-  min-height: 34px;
+  height: 38px;
   border: 0;
   border-radius: var(--site-radius-sm);
   background: transparent;
   color: var(--site-text);
-  padding: 6px 12px;
+  padding: 0 12px;
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-align: center;
+  line-height: 1;
   outline: 0;
+}
+
+.game-controls button svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.game-controls__glyph {
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .game-controls button:hover:not(:disabled),
@@ -571,12 +592,80 @@
   box-shadow: inset 0 0 0 2px var(--site-focus);
 }
 
+.game-controls button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 /* Resign / Abort end the game: neutral at rest like lichess's flag, the
    danger tone only under the pointer. */
 .game-controls button.danger:hover:not(:disabled),
 .game-controls button.danger:focus-visible {
   background: color-mix(in srgb, var(--clock-emerg-border) 30%, transparent);
   color: var(--clock-emerg-text);
+}
+
+/* Our own offer is out: a quiet line where ½ was. */
+.game-controls__pending {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 38px;
+  font-size: 13px;
+  color: var(--site-muted);
+  white-space: nowrap;
+}
+
+/* The question line: ✗, the prompt, ✓ (lichess's yes/no pair). */
+.game-controls__question {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.game-controls__question > button {
+  flex: 0 0 48px;
+}
+
+.game-controls__prompt {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--site-heading);
+}
+
+.game-controls__question > .game-controls__yes {
+  color: var(--site-accent-strong, var(--site-accent));
+}
+
+.game-controls__question > .game-controls__yes:hover,
+.game-controls__question > .game-controls__yes:focus-visible {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong, var(--site-accent));
+}
+
+.game-controls__question > .game-controls__no {
+  color: var(--clock-emerg-text);
+}
+
+.game-controls__question > .game-controls__no:hover,
+.game-controls__question > .game-controls__no:focus-visible {
+  background: color-mix(in srgb, var(--clock-emerg-border) 30%, transparent);
+  color: var(--clock-emerg-text);
+}
+
+/* Touch floor, as on the move-nav bar. */
+@media (pointer: coarse) {
+  .game-controls button {
+    height: 44px;
+  }
 }
 
 .confirm-dialog {

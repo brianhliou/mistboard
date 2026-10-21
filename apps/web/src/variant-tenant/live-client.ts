@@ -28,6 +28,7 @@ import {
 } from '../analytics.js';
 import { brandedEngineName } from '../game-display.js';
 import { isFlipShortcut, setReplayAnalysisHref, setReplayFlipHandler } from '../game-table.js';
+import { t } from '../i18n/catalog.js';
 import {
   createLiveFinishBadges,
   type FinishBadge,
@@ -132,6 +133,9 @@ export type TenantLiveState<C extends string, V> = {
   // again after a decline (`drawOfferCooldown`, sent only to that seat).
   drawOffer: C | null;
   drawOfferCooldown: number;
+  // The plies at which a draw was offered (snapshot `drawOfferPlies`), for the
+  // move list's "½?" mark.
+  drawOfferPlies: ReadonlySet<number>;
 };
 
 // Everything a tenant's interaction/setup code needs from the core. Handed to
@@ -399,6 +403,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     rated: false,
     drawOffer: null,
     drawOfferCooldown: 0,
+    drawOfferPlies: new Set(),
   };
 
   let socket: TenantSocketClient | null = null;
@@ -550,6 +555,11 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       typeof drawOffer?.from === 'string' && tenant.isColor(drawOffer.from) ? drawOffer.from : null;
     state.drawOfferCooldown =
       typeof frame.drawOfferCooldown === 'number' ? frame.drawOfferCooldown : 0;
+    state.drawOfferPlies = new Set(
+      Array.isArray(frame.drawOfferPlies)
+        ? frame.drawOfferPlies.filter((ply): ply is number => Number.isInteger(ply))
+        : [],
+    );
     if (frame.events) state.events = frame.events;
     rematch?.applyFrame(frame.rematch);
     config.onFrame?.(frame);
@@ -630,6 +640,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.rated = false;
     state.drawOffer = null;
     state.drawOfferCooldown = 0;
+    state.drawOfferPlies = new Set();
     lastCapturedView = null;
     lastCapturedKey = null;
     pendingLiveAnimation = null;
@@ -984,6 +995,14 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       .filter(Boolean)
       .join(' ');
     cell.textContent = played ? (text ?? '...') : '';
+    // A draw was offered after this move (lichess's "½?").
+    if (played && state.drawOfferPlies.has(ply)) {
+      const mark = document.createElement('span');
+      mark.className = 'move-draw-offer';
+      mark.title = t('live.drawOffered');
+      mark.textContent = '½?';
+      cell.append(mark);
+    }
     if (cell instanceof HTMLButtonElement) {
       cell.type = 'button';
       cell.title = `Move ${Math.ceil(ply / 2)}`;

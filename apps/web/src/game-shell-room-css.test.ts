@@ -46,8 +46,16 @@ describe('in-game action row', () => {
     // Resign was a small centred button above full-width postgame rows.
     const body = rule('.game-controls button');
     expect(body).toContain('flex: 1 1 0;');
-    expect(body).toContain('text-transform: uppercase;');
     expect(body).not.toContain('width: auto');
     expect(rule('.game-controls')).not.toContain('justify-content: center');
+  });
+
+  it('draws icon buttons at the move-nav height, not uppercase words (#530)', () => {
+    // The uppercase labels wrapped and overlapped once the draw offer joined
+    // the row; lichess draws ½ and a flag at the height of the arrows.
+    const body = rule('.game-controls button');
+    expect(body).toContain('height: 38px;');
+    expect(body).not.toContain('text-transform: uppercase');
+    expect(rule('.game-controls__question')).toContain('flex: 1 1 100%;');
   });
 });

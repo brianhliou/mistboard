@@ -45,6 +45,7 @@ import {
   appendTenantRuntimeEvent,
   createTenantRuntimeRoomFromEvents,
   DRAW_OFFER_COOLDOWN_MOVES,
+  tenantDrawOfferPlies,
   tenantSnapshotPayload,
 } from './variant-tenant/runtime.js';
 import type { VariantTenant } from './variant-tenant/tenant.js';
@@ -232,15 +233,19 @@ for (const tenant of HIDDEN_INFO_TENANTS) {
     const [first, second] = tenant.colors;
     const viewers = [first, second, 'spectator'];
     const before = new Map(viewers.map((seat) => [seat, serializedFor(tenant, room, seat)]));
-    for (const frame of before.values()) assert.equal('drawOffer' in frame, false);
+    for (const frame of before.values()) {
+      assert.equal('drawOffer' in frame, false);
+      assert.equal('drawOfferPlies' in frame, false);
+    }
 
     append(tenant, room, { type: 'draw-offered', at: 60_000, roomId, color: first });
     assert.deepEqual(room.projection.drawOffer, { from: first });
     for (const seat of viewers) {
       const after = serializedFor(tenant, room, seat);
       assert.deepEqual(after.drawOffer, { from: first }, `${seat}: the offer names a seat only`);
+      assert.deepEqual(after.drawOfferPlies, [4], `${seat}: the mark is a ply count only`);
       assert.deepEqual(
-        without(after, 'drawOffer'),
+        without(after, 'drawOffer', 'drawOfferPlies'),
         before.get(seat),
         `${seat}: the rest of the payload is byte for byte what it was`,
       );
@@ -260,10 +265,38 @@ for (const tenant of HIDDEN_INFO_TENANTS) {
       assert.equal('drawOffer' in after, false);
       if (seat === first) assert.equal(after.drawOfferCooldown, DRAW_OFFER_COOLDOWN_MOVES);
       else assert.equal('drawOfferCooldown' in after, false, `${seat}: never sees a cooldown`);
-      assert.deepEqual(without(after, 'drawOfferCooldown'), before.get(seat));
+      // The move list keeps the mark after the offer is gone.
+      assert.deepEqual(after.drawOfferPlies, [4]);
+      assert.deepEqual(without(after, 'drawOfferCooldown', 'drawOfferPlies'), before.get(seat));
     }
   });
 }
+
+test('draw: the move list marks each offer at the ply it was made', () => {
+  const move = { type: 'move-played' };
+  const offer = { type: 'draw-offered' };
+  assert.deepEqual(tenantDrawOfferPlies([]), {}, 'no offer, no field');
+  assert.deepEqual(tenantDrawOfferPlies([move, move, move]), {});
+  assert.deepEqual(
+    tenantDrawOfferPlies([
+      { type: 'room-created' },
+      move,
+      move,
+      offer,
+      { type: 'draw-declined' },
+      move,
+      move,
+      move,
+      move,
+      move,
+      offer,
+      move,
+    ]),
+    { drawOfferPlies: [2, 7] },
+  );
+  // Offers before the first move never pass the server; one mark per ply.
+  assert.deepEqual(tenantDrawOfferPlies([offer, move, offer, offer]), { drawOfferPlies: [1] });
+});
 
 // ── Correspondence ──────────────────────────────────────────────────────────
 

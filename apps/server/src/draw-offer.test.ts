@@ -282,12 +282,13 @@ test('draw: Fog Xiangqi sends no draw event to any client and only the offering 
   assert.equal(offerFrame.type, 'event-appended');
   assert.equal('event' in offerFrame, false, 'the draw event itself never ships');
   assert.deepEqual(offerFrame.drawOffer, { from: 'red' }, 'the field is the seat and nothing else');
+  assert.deepEqual(offerFrame.drawOfferPlies, [3], 'the move-list mark is a ply count');
   // Nothing else in the frame differs from what black already held: the same
   // board, the same keys bar the event (absent) and the offer (added).
   assert.deepEqual(offerFrame.state, beforeOffer.state, 'the board half is unchanged');
   const keys = (frame: Record<string, unknown>) =>
     Object.keys(frame)
-      .filter((key) => key !== 'event' && key !== 'drawOffer')
+      .filter((key) => key !== 'event' && key !== 'drawOffer' && key !== 'drawOfferPlies')
       .sort();
   assert.deepEqual(keys(offerFrame), keys(beforeOffer));
 

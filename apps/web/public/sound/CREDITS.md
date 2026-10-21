@@ -15,7 +15,10 @@ released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
 Its terminal cues are from
 [Kenney's Music Jingles](https://www.kenney.nl/assets/music-jingles), also
 released under CC0 1.0: `win.ogg` is pizzicato 02, `loss.ogg` is pizzicato 01,
-and `draw.ogg` is pizzicato 12.
+and `draw.ogg` is pizzicato 12. The Wood set's draw cue borrows the piano
+set's `piano/Draw.mp3` (lichess, AGPLv3+, above) since 2026-10-20: pizzicato
+12 sounded too close to the loss. `draw.ogg` stays as a candidate in
+`/sound-lab`.
 
 The Duck Xiangqi quack (`duck/quack.mp3`) is
 [D4XX](https://freesound.org/people/D4XX/)'s "Ducks"

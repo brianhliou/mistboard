@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { writeAccountPreference } from '../account-preferences.js';
 import type { LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
 import {
@@ -778,7 +779,9 @@ describe('tenant room chrome lobby rooms', () => {
         noAbort,
       );
       chrome.renderGameControls();
-      const labels = [...refs.gameControls.querySelectorAll('button')].map((b) => b.textContent);
+      const labels = [...refs.gameControls.querySelectorAll('button')].map((b) =>
+        b.getAttribute('aria-label'),
+      );
       expect(labels).toEqual(['Resign']);
       // The no-show countdown stays: a first mover who never moves still aborts.
       expect(refs.gameControls.textContent).toContain('Make your first move, aborting in');
@@ -786,9 +789,9 @@ describe('tenant room chrome lobby rooms', () => {
     // The default keeps Abort.
     const { chrome, refs } = chromeHarness({ view: playingView({ moveNumber: 0 }) });
     chrome.renderGameControls();
-    expect([...refs.gameControls.querySelectorAll('button')].map((b) => b.textContent)).toEqual([
-      'Abort',
-    ]);
+    expect(
+      [...refs.gameControls.querySelectorAll('button')].map((b) => b.getAttribute('aria-label')),
+    ).toEqual(['Abort']);
   });
 
   it('warns of a loss, not an abort, on a rated first move where the tenant forfeits it', () => {
@@ -865,32 +868,120 @@ describe('tenant room chrome meta card names', () => {
   });
 });
 
-// #530: draw offers in person-against-person rooms.
-describe('tenant room chrome draw offers', () => {
+// #530: the lichess action row. Icon buttons (½, the flag), a question in
+// place of the modal, and the opponent's offer on the same line.
+describe('tenant room chrome action row', () => {
   const afterMoveOne = playingView({ moveNumber: 2 });
-  const buttons = (refs: LiveRefs) =>
+  const labels = (refs: LiveRefs) =>
     [...refs.gameControls.querySelectorAll('button')].map((button) => ({
-      text: button.textContent,
+      label: button.getAttribute('aria-label'),
       disabled: button.disabled,
     }));
+  const action = (refs: LiveRefs, name: string) => {
+    const el = refs.gameControls.querySelector<HTMLButtonElement>(`[data-game-action="${name}"]`);
+    if (!el) throw new Error(`no ${name} button`);
+    return el;
+  };
+  const question = (refs: LiveRefs) =>
+    refs.gameControls.querySelector<HTMLElement>('.game-controls__question');
+  // Focus needs the row in the document.
+  const mounted = (harness: ReturnType<typeof chromeHarness>) => {
+    document.body.append(harness.refs.gameControls);
+    return harness;
+  };
 
-  it('offers a draw after move one and sends draw:offer', () => {
+  afterEach(() => {
+    writeAccountPreference('confirmGameActions', true);
+    document.body.replaceChildren();
+  });
+
+  it('draws ½ and a flag with localized names, not uppercase words', () => {
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne });
+    chrome.renderGameControls();
+    expect(labels(refs)).toEqual([
+      { label: 'Offer draw', disabled: false },
+      { label: 'Resign', disabled: false },
+    ]);
+    expect(action(refs, 'draw').title).toBe('Offer draw');
+    expect(action(refs, 'resign').title).toBe('Resign');
+    expect(action(refs, 'resign').querySelector('svg')).not.toBeNull();
+    expect(refs.gameControls.textContent).toBe('½');
+  });
+
+  it('asks before resigning in place, focuses the check, and sends on it', () => {
+    const sent: unknown[] = [];
+    const { chrome, refs } = mounted(chromeHarness({ view: afterMoveOne, sent }));
+    chrome.renderGameControls();
+    action(refs, 'resign').click();
+    expect(sent).toEqual([]);
+    expect(document.querySelector('dialog')).toBeNull();
+    expect(question(refs)?.textContent).toBe('Resign this game?');
+    expect(labels(refs).map((b) => b.label)).toEqual(['Cancel', 'Resign']);
+    expect(document.activeElement).toBe(action(refs, 'confirm-yes'));
+    // A frame re-renders the row; the question and the focus survive it.
+    chrome.renderGameControls();
+    expect(question(refs)?.textContent).toBe('Resign this game?');
+    expect(document.activeElement).toBe(action(refs, 'confirm-yes'));
+    action(refs, 'confirm-yes').click();
+    expect(sent).toEqual([{ type: 'resign' }]);
+    expect(question(refs)).toBeNull();
+  });
+
+  it('cancels the question with the X or Escape and hands focus back', () => {
+    const sent: unknown[] = [];
+    const { chrome, refs } = mounted(chromeHarness({ view: afterMoveOne, sent }));
+    chrome.renderGameControls();
+    action(refs, 'resign').click();
+    action(refs, 'confirm-no').click();
+    expect(question(refs)).toBeNull();
+    expect(document.activeElement).toBe(action(refs, 'resign'));
+    action(refs, 'draw').click();
+    question(refs)?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(question(refs)).toBeNull();
+    expect(document.activeElement).toBe(action(refs, 'draw'));
+    expect(sent).toEqual([]);
+  });
+
+  it('asks before offering a draw, then sends draw:offer', () => {
     const sent: unknown[] = [];
     const { chrome, refs } = chromeHarness({ view: afterMoveOne, sent });
     chrome.renderGameControls();
-    const offer = [...refs.gameControls.querySelectorAll('button')].find(
-      (button) => button.textContent === 'Offer draw',
-    );
-    expect(offer).toBeDefined();
-    offer?.click();
+    action(refs, 'draw').click();
+    expect(sent).toEqual([]);
+    expect(question(refs)?.textContent).toBe('Offer a draw?');
+    action(refs, 'confirm-yes').click();
     expect(sent).toEqual([{ type: 'draw:offer' }]);
+  });
+
+  it('asks before aborting, for the side to move only', () => {
+    const sent: unknown[] = [];
+    const { chrome, refs } = chromeHarness({ sent });
+    chrome.renderGameControls();
+    action(refs, 'abort').click();
+    expect(question(refs)?.textContent).toBe('Abort this game?');
+    action(refs, 'confirm-yes').click();
+    expect(sent).toEqual([{ type: 'abort' }]);
+    const waiting = chromeHarness({ seat: 'red' });
+    waiting.chrome.renderGameControls();
+    expect(labels(waiting.refs)).toEqual([]);
+  });
+
+  it('acts at once when the player turned confirmations off', () => {
+    writeAccountPreference('confirmGameActions', false);
+    const sent: unknown[] = [];
+    const { chrome, refs } = chromeHarness({ view: afterMoveOne, sent });
+    chrome.renderGameControls();
+    action(refs, 'draw').click();
+    action(refs, 'resign').click();
+    expect(sent).toEqual([{ type: 'draw:offer' }, { type: 'resign' }]);
+    expect(question(refs)).toBeNull();
   });
 
   it('shows no draw button before move one or against a bot', () => {
     for (const overrides of [{}, { view: afterMoveOne, roomMode: 'pve' }]) {
       const { chrome, refs } = chromeHarness(overrides);
       chrome.renderGameControls();
-      expect(refs.gameControls.textContent).not.toContain('draw');
+      expect(refs.gameControls.querySelector('[data-game-action="draw"]')).toBeNull();
     }
   });
 
@@ -900,43 +991,56 @@ describe('tenant room chrome draw offers', () => {
     const noAbort: WebVariantTenant<Color> = { ...tenant, userAbort: false };
     const { chrome, refs } = chromeHarness({ view: playingView({ moveNumber: 1 }) }, noAbort);
     chrome.renderGameControls();
-    expect(refs.gameControls.textContent).toContain('Resign');
-    expect(refs.gameControls.textContent).not.toContain('draw');
+    expect(labels(refs).map((b) => b.label)).toEqual(['Resign']);
   });
 
   it('shows no draw button in a tenant that opts out', () => {
     const optOut: WebVariantTenant<Color> = { ...tenant, drawOffers: false };
     const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOffer: 'red' }, optOut);
     chrome.renderGameControls();
-    expect(refs.gameControls.textContent).toContain('Resign');
-    expect(refs.gameControls.textContent).not.toContain('draw');
+    expect(labels(refs).map((b) => b.label)).toEqual(['Resign']);
+    expect(question(refs)).toBeNull();
   });
 
-  it('shows the offerer a disabled pending button', () => {
+  it('shows the offerer a quiet pending line where ½ was, beside the flag', () => {
     const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOffer: 'white' });
     chrome.renderGameControls();
-    expect(buttons(refs)).toContainEqual({ text: 'Draw offered', disabled: true });
+    expect(refs.gameControls.querySelector('[data-draw-pending]')?.textContent).toBe(
+      'Draw offered',
+    );
+    expect(labels(refs).map((b) => b.label)).toEqual(['Resign']);
   });
 
-  it('lets the other seat accept or decline', () => {
+  it("puts the opponent's offer on one line: decline, the words, accept", () => {
     const sent: unknown[] = [];
     const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOffer: 'red', sent });
     chrome.renderGameControls();
-    expect(refs.gameControls.textContent).toContain('Your opponent offers a draw');
-    for (const button of refs.gameControls.querySelectorAll('button')) {
-      if (button.textContent === 'Accept draw' || button.textContent === 'Decline') button.click();
-    }
+    expect(question(refs)?.textContent).toBe('Your opponent offers a draw');
+    expect(labels(refs).map((b) => b.label)).toEqual(['Decline draw', 'Accept draw']);
+    action(refs, 'accept').click();
+    action(refs, 'decline').click();
     expect(sent).toEqual([{ type: 'draw:accept' }, { type: 'draw:decline' }]);
   });
 
-  it('disables the offer while the decline cooldown runs', () => {
+  it("closes an open draw question when the opponent's offer arrives", () => {
+    const overrides: CtxOverrides = { view: afterMoveOne };
+    const { chrome, refs } = chromeHarness(overrides);
+    chrome.renderGameControls();
+    action(refs, 'draw').click();
+    expect(question(refs)?.dataset.gameQuestion).toBe('draw');
+    overrides.drawOffer = 'red';
+    chrome.renderGameControls();
+    expect(question(refs)?.dataset.gameQuestion).toBe('draw-offer');
+  });
+
+  it('disables ½ while the decline cooldown runs, and says why', () => {
     const { chrome, refs } = chromeHarness({ view: afterMoveOne, drawOfferCooldown: 4 });
     chrome.renderGameControls();
-    const offer = [...refs.gameControls.querySelectorAll('button')].find(
-      (button) => button.textContent === 'Offer draw',
-    );
-    expect(offer?.disabled).toBe(true);
-    expect(offer?.title).toBe('You can offer a draw again in 4 moves');
+    expect(action(refs, 'draw').disabled).toBe(true);
+    expect(action(refs, 'draw').title).toBe('You can offer a draw again in 4 moves');
+    const one = chromeHarness({ view: afterMoveOne, drawOfferCooldown: 1 });
+    one.chrome.renderGameControls();
+    expect(action(one.refs, 'draw').title).toBe('You can offer a draw again after your next move');
   });
 
   it('names an agreed draw in the finished notice', () => {
@@ -1007,7 +1111,24 @@ describe('tenant room chrome in Chinese', () => {
         offered.chrome.renderGameControls();
         texts.push(
           offered.refs.gameControls.textContent ?? '',
-          ...[...offered.refs.gameControls.querySelectorAll('button')].map((b) => b.title),
+          ...[...offered.refs.gameControls.querySelectorAll('button')].flatMap((b) => [
+            b.title,
+            b.getAttribute('aria-label') ?? '',
+          ]),
+        );
+      }
+      // Each in-place question, and the names on its buttons.
+      for (const name of ['draw', 'resign']) {
+        const asking = chromeHarness({ view: playingView({ moveNumber: 2 }) });
+        asking.chrome.renderGameControls();
+        asking.refs.gameControls
+          .querySelector<HTMLButtonElement>(`[data-game-action="${name}"]`)
+          ?.click();
+        texts.push(
+          asking.refs.gameControls.textContent ?? '',
+          ...[...asking.refs.gameControls.querySelectorAll('button')].map(
+            (b) => b.getAttribute('aria-label') ?? '',
+          ),
         );
       }
       const agreed = chromeHarness({

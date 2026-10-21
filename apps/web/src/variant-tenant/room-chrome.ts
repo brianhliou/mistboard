@@ -1,8 +1,8 @@
 /**
  * Generic live-room chrome for variant tenants hosted in the shared live shell:
  * two-seat clocks (pregame + armed + turn flash + 100ms tick), abort/forfeit
- * countdowns, the action-status notice, game controls (abort/resign with
- * confirm), and the room-action row (review / rematch / play-again / invite /
+ * countdowns, the action-status notice, game controls (abort/resign/draw with
+ * an in-place confirm), and the room-action row (review / rematch / play-again / invite /
  * home). Extracted from the first web tenant room; strings and DOM structure
  * are behavior the room-chrome vitest suite pins.
  *
@@ -21,8 +21,12 @@ import {
 } from '../account-preferences.js';
 import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { applyClockEmphasis, setClockFace } from '../clock-emphasis.js';
-import { openConfirmDialog } from '../confirm-dialog.js';
 import { variantSeatsHaveInk } from '../flip-seat-ink.js';
+import {
+  GAME_ACTION_ICON_CHECK,
+  GAME_ACTION_ICON_CROSS,
+  GAME_ACTION_ICON_FLAG,
+} from '../game-action-icons.js';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
@@ -248,6 +252,26 @@ export type TenantRoomChrome = {
   tickCountdowns(): void;
 };
 
+// The actions the row asks about before sending (#530).
+type ConfirmAction = 'resign' | 'abort' | 'draw';
+const CONFIRM_PAYLOAD: Record<ConfirmAction, { type: string }> = {
+  resign: { type: 'resign' },
+  abort: { type: 'abort' },
+  draw: { type: 'draw:offer' },
+};
+const CONFIRM_PROMPT: Record<ConfirmAction, I18nKey> = {
+  resign: 'live.resignTitle',
+  abort: 'live.abortTitle',
+  draw: 'live.offerDrawConfirm',
+};
+const CONFIRM_LABEL: Record<ConfirmAction, I18nKey> = {
+  resign: 'live.resign',
+  abort: 'live.abort',
+  draw: 'live.offerDraw',
+};
+// Offer draw is the half point, as on lichess: a glyph, not a drawn mark.
+const DRAW_GLYPH = '<span class="game-controls__glyph" aria-hidden="true">½</span>';
+
 export function createTenantRoomChrome<C extends string>(
   tenant: WebVariantTenant<C>,
   ctx: TenantChromeContext<C>,
@@ -259,6 +283,10 @@ export function createTenantRoomChrome<C extends string>(
   // Previous active clock color across full clock renders, used to flash the
   // seated player's clock on the turn flip (mirrors the chess clock).
   let lastActiveClockColor: C | null = null;
+  // The in-place question the player opened on the action row, and the
+  // control to focus after the next rebuild of that row.
+  let pendingConfirm: ConfirmAction | null = null;
+  let focusNext: string | null = null;
 
   function seatColor(): C | null {
     const seat = ctx.seat();
@@ -307,6 +335,8 @@ export function createTenantRoomChrome<C extends string>(
   function resetState(): void {
     playAgainStatus = 'idle';
     lastActiveClockColor = null;
+    pendingConfirm = null;
+    focusNext = null;
   }
 
   // Hide/clear the chess-only panels of the shared live shell so a tenant room
@@ -1010,55 +1040,41 @@ export function createTenantRoomChrome<C extends string>(
     return t('live.roomWaitingOpponent');
   }
 
+  // The in-game action row (#530, lichess shape): icon buttons under the move
+  // list, ½ to offer a draw and a flag to resign (an X to abort before move
+  // two). With the "confirm game actions" preference on, a press turns the
+  // row into a one-line question in place (✗ prompt ✓) instead of a modal; an
+  // opponent's offer takes the same line. The row is rebuilt on every render,
+  // so the open question lives here and focus is carried across rebuilds.
   function renderGameControls(): void {
     if (!refs) return;
+    const active = document.activeElement;
+    const focusedAction =
+      active instanceof HTMLElement && refs.gameControls.contains(active)
+        ? (active.dataset.gameAction ?? null)
+        : null;
     refs.gameControls.replaceChildren();
     refs.gameControlsSection.hidden = true;
     const view = ctx.view();
-    if (view?.status.type !== 'playing' || seatColor() === null) return;
-
-    const children: HTMLElement[] = [];
-    const isSideToMove = view.status.turn === ctx.seat();
-
-    if (view.moveNumber < 2 && tenant.userAbort !== false) {
-      // The abort countdown shows to both seats (timing only, no board state) so
-      // the waiting side understands the pause; only the side to move gets the
-      // button.
-      if (ctx.abortDeadline() !== null) {
-        const countdown = document.createElement('span');
-        countdown.className = 'abort-countdown';
-        countdown.dataset.abortCountdown = '';
-        countdown.textContent = abortCountdownText(isSideToMove);
-        children.push(countdown);
-      }
-      if (isSideToMove) {
-        const abort = document.createElement('button');
-        abort.type = 'button';
-        abort.className = 'danger';
-        abort.textContent = t('live.abort');
-        abort.addEventListener('click', () => {
-          if (!readAccountPreferences().confirmGameActions) {
-            sendSocket({ type: 'abort' });
-            return;
-          }
-          openConfirmDialog({
-            title: t('live.abortTitle'),
-            body: t('live.abortRoomBody'),
-            confirmLabel: t('live.abort'),
-            cancelLabel: t('setup.cancel'),
-            confirmTone: 'danger',
-            onConfirm: () => sendSocket({ type: 'abort' }),
-          });
-        });
-        children.push(abort);
-      }
-      refs.gameControls.replaceChildren(...children);
-      refs.gameControlsSection.hidden = children.length === 0;
+    if (view?.status.type !== 'playing' || seatColor() === null) {
+      pendingConfirm = null;
       return;
     }
 
-    // A tenant with no abort still shows the no-show countdown before every
-    // seat has moved; Resign is the way out.
+    const children: HTMLElement[] = [];
+    const isSideToMove = view.status.turn === ctx.seat();
+    const abortPhase = view.moveNumber < 2 && tenant.userAbort !== false;
+    const draw = drawState(view);
+    // A question whose action stopped applying (the turn passed, an offer
+    // arrived, the game moved past abort) closes on its own.
+    if (pendingConfirm === 'abort' && !(abortPhase && isSideToMove)) pendingConfirm = null;
+    if (pendingConfirm === 'resign' && abortPhase) pendingConfirm = null;
+    if (pendingConfirm === 'draw' && draw.kind !== 'idle') pendingConfirm = null;
+
+    // The abort countdown shows to both seats (timing only, no board state) so
+    // the waiting side understands the pause. A tenant with no abort still
+    // shows the no-show countdown before every seat has moved; Resign is the
+    // way out there.
     if (view.moveNumber < 2 && ctx.abortDeadline() !== null) {
       const countdown = document.createElement('span');
       countdown.className = 'abort-countdown';
@@ -1068,80 +1084,204 @@ export function createTenantRoomChrome<C extends string>(
     }
     // Post-move-1: only the present winning seat receives forfeitDeadline, so
     // this banner always reads from the beneficiary's point of view.
-    if (ctx.forfeitDeadline() !== null) {
+    if (!abortPhase && ctx.forfeitDeadline() !== null) {
       const banner = document.createElement('span');
       banner.className = 'forfeit-countdown';
       banner.dataset.forfeitCountdown = '';
       banner.textContent = forfeitCountdownText();
       children.push(banner);
     }
-    children.push(...drawControls(view));
-    const resign = document.createElement('button');
-    resign.type = 'button';
-    resign.className = 'danger';
-    resign.textContent = t('live.resign');
-    resign.addEventListener('click', () => {
-      if (!readAccountPreferences().confirmGameActions) {
-        sendSocket({ type: 'resign' });
-        return;
+
+    if (pendingConfirm !== null) {
+      children.push(confirmQuestion(pendingConfirm));
+    } else if (draw.kind === 'incoming') {
+      children.push(
+        questionRow({
+          kind: 'draw-offer',
+          prompt: t('live.opponentOffersDraw'),
+          no: {
+            action: 'decline',
+            label: t('live.declineDraw'),
+            onClick: () => sendSocket({ type: 'draw:decline' }),
+          },
+          yes: {
+            action: 'accept',
+            label: t('live.acceptDraw'),
+            onClick: () => sendSocket({ type: 'draw:accept' }),
+          },
+        }),
+      );
+    } else if (abortPhase) {
+      // Only the side to move may abort.
+      if (isSideToMove) {
+        children.push(
+          actionButton('abort', t('live.abort'), GAME_ACTION_ICON_CROSS, () => ask('abort'), true),
+        );
       }
-      openConfirmDialog({
-        title: t('live.resignTitle'),
-        body: t('live.resignBody'),
-        confirmLabel: t('live.resign'),
-        cancelLabel: t('setup.cancel'),
-        confirmTone: 'danger',
-        onConfirm: () => sendSocket({ type: 'resign' }),
-      });
-    });
-    children.push(resign);
+    } else {
+      const drawEl = drawControl(draw);
+      if (drawEl) children.push(drawEl);
+      children.push(
+        actionButton('resign', t('live.resign'), GAME_ACTION_ICON_FLAG, () => ask('resign'), true),
+      );
+    }
+
     refs.gameControls.replaceChildren(...children);
-    refs.gameControlsSection.hidden = false;
+    refs.gameControlsSection.hidden = children.length === 0;
+
+    const focusTarget = focusNext ?? focusedAction;
+    focusNext = null;
+    if (focusTarget) {
+      refs.gameControls
+        .querySelector<HTMLElement>(`[data-game-action="${focusTarget}"]`)
+        ?.focus({ preventScroll: true });
+    }
   }
+
+  // The press on resign, abort or ½: the question in place, or the action at
+  // once when the player turned confirmations off.
+  function ask(action: ConfirmAction): void {
+    if (!readAccountPreferences().confirmGameActions) {
+      sendSocket(CONFIRM_PAYLOAD[action]);
+      return;
+    }
+    pendingConfirm = action;
+    focusNext = 'confirm-yes';
+    renderGameControls();
+  }
+
+  function confirmQuestion(action: ConfirmAction): HTMLElement {
+    const close = (refocus: string | null) => {
+      pendingConfirm = null;
+      focusNext = refocus;
+      renderGameControls();
+    };
+    return questionRow({
+      kind: action,
+      prompt: t(CONFIRM_PROMPT[action]),
+      no: { action: 'confirm-no', label: t('setup.cancel'), onClick: () => close(action) },
+      yes: {
+        action: 'confirm-yes',
+        label: t(CONFIRM_LABEL[action]),
+        onClick: () => {
+          sendSocket(CONFIRM_PAYLOAD[action]);
+          close(null);
+        },
+      },
+      onEscape: () => close(action),
+    });
+  }
+
+  type QuestionButton = { action: string; label: string; onClick: () => void };
+
+  // One line: ✗, the prompt, ✓. The ✓ sits at the end of the line, where the
+  // flag was, so a double press on the flag never lands on it by accident.
+  function questionRow(opts: {
+    kind: string;
+    prompt: string;
+    no: QuestionButton;
+    yes: QuestionButton;
+    onEscape?: () => void;
+  }): HTMLElement {
+    const row = document.createElement('div');
+    row.className = 'game-controls__question';
+    row.dataset.gameQuestion = opts.kind;
+    row.setAttribute('role', 'group');
+    row.setAttribute('aria-label', opts.prompt);
+    const no = actionButton(opts.no.action, opts.no.label, GAME_ACTION_ICON_CROSS, opts.no.onClick);
+    no.classList.add('game-controls__no');
+    const prompt = document.createElement('span');
+    prompt.className = 'game-controls__prompt';
+    prompt.textContent = opts.prompt;
+    const yes = actionButton(
+      opts.yes.action,
+      opts.yes.label,
+      GAME_ACTION_ICON_CHECK,
+      opts.yes.onClick,
+    );
+    yes.classList.add('game-controls__yes');
+    if (opts.yes.action === 'confirm-yes') yes.dataset.confirmYes = '';
+    row.append(no, prompt, yes);
+    const onEscape = opts.onEscape;
+    if (onEscape) {
+      row.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        onEscape();
+      });
+    }
+    return row;
+  }
+
+  // An icon button: the mark for the eye, the localized name for the pointer
+  // tooltip and the screen reader.
+  function actionButton(
+    action: string,
+    label: string,
+    icon: string,
+    onClick: (() => void) | null,
+    danger = false,
+  ): HTMLButtonElement {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = danger ? 'game-controls__action danger' : 'game-controls__action';
+    el.dataset.gameAction = action;
+    el.title = label;
+    el.setAttribute('aria-label', label);
+    el.innerHTML = icon;
+    if (onClick) el.addEventListener('click', onClick);
+    else el.disabled = true;
+    return el;
+  }
+
+  type DrawState =
+    | { kind: 'none' }
+    | { kind: 'idle' }
+    | { kind: 'pending' }
+    | { kind: 'incoming' }
+    | { kind: 'cooldown'; moves: number };
 
   // Draw offers (#530): person against person only, so never against a bot.
   // The server holds the rules (one offer at a time, the decline cooldown);
-  // this only shows the state it sent and the buttons that fit it.
-  function drawControls(view: TenantWebView<C>): HTMLElement[] {
-    if (tenant.drawOffers === false || tenant.colors.length !== 2) return [];
-    if (ctx.roomMode() === 'pve') return [];
+  // this only reads the state it sent.
+  function drawState(view: TenantWebView<C>): DrawState {
+    if (tenant.drawOffers === false || tenant.colors.length !== 2) return { kind: 'none' };
+    if (ctx.roomMode() === 'pve') return { kind: 'none' };
     // The server refuses an offer before both sides have moved (handleDraw),
     // the same line where Abort gives way to Resign.
-    if (view.moveNumber < 2) return [];
+    if (view.moveNumber < 2) return { kind: 'none' };
     const seat = seatColor();
-    if (seat === null) return [];
-    const button = (label: string, payload: { type: string } | null): HTMLButtonElement => {
-      const el = document.createElement('button');
-      el.type = 'button';
-      el.textContent = label;
-      if (payload) el.addEventListener('click', () => sendSocket(payload));
-      else el.disabled = true;
-      return el;
-    };
+    if (seat === null) return { kind: 'none' };
     const offer = ctx.drawOffer?.() ?? null;
-    if (offer === seat) return [button(t('live.drawOffered'), null)];
-    if (offer !== null) {
-      const note = document.createElement('span');
-      note.className = 'draw-offer-note';
-      // live-draw-offer-bubble.ts mirrors this line onto the board.
-      note.dataset.drawOfferNote = '';
-      note.textContent = t('live.opponentOffersDraw');
-      return [
-        note,
-        button(t('live.acceptDraw'), { type: 'draw:accept' }),
-        button(t('live.declineDraw'), { type: 'draw:decline' }),
-      ];
-    }
+    if (offer === seat) return { kind: 'pending' };
+    if (offer !== null) return { kind: 'incoming' };
     const cooldown = ctx.drawOfferCooldown?.() ?? 0;
-    if (cooldown > 0) {
-      const blocked = button(t('live.offerDraw'), null);
-      blocked.title =
-        cooldown === 1
-          ? t('live.drawOfferCooldownOne')
-          : t('live.drawOfferCooldown', { moves: cooldown });
-      return [blocked];
+    if (cooldown > 0) return { kind: 'cooldown', moves: cooldown };
+    return { kind: 'idle' };
+  }
+
+  function drawControl(draw: DrawState): HTMLElement | null {
+    if (draw.kind === 'pending') {
+      // The offer is out: a quiet line where ½ was, until the other side
+      // answers or a move withdraws it.
+      const pending = document.createElement('span');
+      pending.className = 'game-controls__pending';
+      pending.dataset.drawPending = '';
+      pending.textContent = t('live.drawOffered');
+      return pending;
     }
-    return [button(t('live.offerDraw'), { type: 'draw:offer' })];
+    if (draw.kind === 'cooldown') {
+      const blocked = actionButton('draw', t('live.offerDraw'), DRAW_GLYPH, null);
+      blocked.title =
+        draw.moves === 1
+          ? t('live.drawOfferCooldownOne')
+          : t('live.drawOfferCooldown', { moves: draw.moves });
+      return blocked;
+    }
+    if (draw.kind === 'idle') {
+      return actionButton('draw', t('live.offerDraw'), DRAW_GLYPH, () => ask('draw'));
+    }
+    return null;
   }
 
   // Driven by the 100ms tick loop so the abort/forfeit countdowns advance
