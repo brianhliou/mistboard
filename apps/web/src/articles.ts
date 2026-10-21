@@ -2241,9 +2241,11 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   const headRow = document.createElement('tr');
   if (diagrams) headRow.append(document.createElement('th'));
   const highlightCols = new Set(block.highlightColumns ?? []);
+  const nowrapCols = new Set(block.nowrapColumns ?? []);
   block.headers.forEach((h, col) => {
     const th = document.createElement('th');
-    if (highlightCols.has(col)) th.className = 'article-table-col-emphasis';
+    if (highlightCols.has(col)) th.classList.add('article-table-col-emphasis');
+    if (nowrapCols.has(col)) th.classList.add('article-table-nowrap');
     appendRichText(th, h);
     headRow.append(th);
   });
@@ -2256,7 +2258,8 @@ function renderTableBlock(block: TableBlock): HTMLElement {
     if (diagrams) tr.append(renderTableRowDiagram(diagrams[i]));
     row.forEach((cell, col) => {
       const td = document.createElement('td');
-      if (highlightCols.has(col)) td.className = 'article-table-col-emphasis';
+      if (highlightCols.has(col)) td.classList.add('article-table-col-emphasis');
+      if (nowrapCols.has(col)) td.classList.add('article-table-nowrap');
       // Cells take the same inline markdown as paragraphs. They rendered as raw
       // textContent until 2026-08-27, so a [label](/href) in a cell showed its
       // own brackets.

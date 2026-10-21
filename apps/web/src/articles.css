@@ -1496,6 +1496,17 @@
   }
 }
 
+/* The match-fixing tables lead with a name in English and Chinese. On a phone
+   the four-column who's-who cannot hold that on one line, so the name may break
+   between the two, never inside either: the English names carry a no-break
+   space and keep-all holds the Chinese together. */
+@media (max-width: 600px) {
+  [data-article-slug="xiangqi-match-fixing"] .article-table-key-column td:first-child {
+    white-space: normal;
+    word-break: keep-all;
+  }
+}
+
 /* Click-to-expand figures. The trigger is a button so the affordance is
    keyboard-reachable; it is styled to disappear so the figure still reads as a
    figure rather than as a control. */
@@ -2402,6 +2413,15 @@
 .article-table-key-column td:first-child {
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* Desktop only: on a phone column a four-column table cannot hold its short
+   values on one line without scrolling sideways, and two lines beat a hidden
+   column. */
+@media (min-width: 601px) {
+  .article-table .article-table-nowrap {
+    white-space: nowrap;
+  }
 }
 
 .article-table-row-emphasis td {
