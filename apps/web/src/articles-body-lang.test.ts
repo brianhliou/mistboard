@@ -52,4 +52,40 @@ describe('article content language', () => {
     const page = buildArticlePage(SLUG, 'zh-Hans');
     expect(page.querySelector('.article-body')?.getAttribute('lang')).toBe('zh-Hans');
   });
+
+  it('marks a Vietnamese article lang="vi", not the en it is derived from', () => {
+    useUiLocale('en');
+    const page = buildArticlePage('lai-ly-huynh-co-tuong');
+    expect(page.querySelector('.article-title')?.getAttribute('lang')).toBe('vi');
+    expect(page.querySelector('.article-body')?.getAttribute('lang')).toBe('vi');
+  });
+});
+
+// A Vietnamese page is left out of the blog index by design, so the link
+// between the two pages of a pair is the only crawlable path to it; until
+// 2026-10-21 /blog/lai-ly-huynh-co-tuong had none (articles/language-pairs.ts).
+describe('cross-language link', () => {
+  it('links the English article to its Vietnamese page, named in Vietnamese', () => {
+    useUiLocale('en');
+    const link =
+      buildArticlePage('lai-ly-huynh').querySelector<HTMLAnchorElement>('.article-meta-language');
+    expect(link?.getAttribute('href')).toBe('/blog/lai-ly-huynh-co-tuong');
+    expect(link?.getAttribute('hreflang')).toBe('vi');
+    expect(link?.textContent).toBe('Tiếng Việt');
+  });
+
+  it('links the Vietnamese page back to English', () => {
+    useUiLocale('en');
+    const link =
+      buildArticlePage('lai-ly-huynh-co-tuong').querySelector<HTMLAnchorElement>(
+        '.article-meta-language',
+      );
+    expect(link?.getAttribute('href')).toBe('/blog/lai-ly-huynh');
+    expect(link?.textContent).toBe('English');
+  });
+
+  it('draws no language link on an article without a partner', () => {
+    useUiLocale('en');
+    expect(buildArticlePage(SLUG).querySelector('.article-meta-language')).toBeNull();
+  });
 });

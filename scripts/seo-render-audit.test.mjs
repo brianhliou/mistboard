@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { serverHtmlFacts, serverHtmlFailures, sitemapUrls } from './seo-render-audit.mjs';
+import {
+  htmlLangFailures,
+  serverHtmlFacts,
+  serverHtmlFailures,
+  sitemapUrls,
+} from './seo-render-audit.mjs';
 
 const SITEMAP =
   '<urlset><url><loc>https://mistboard.com/faq</loc></url><url><loc>https://mistboard.com/source</loc></url></urlset>';
@@ -158,4 +163,18 @@ test('a canonical alone, a noindexed unknown id, or another section passes', () 
   // Known blind spot: client-only pages outside these sections are not held to
   // the rule (the rendered-DOM checks cover them).
   assert.deepEqual(serverHtmlFailures('/watch', serverHtmlFacts(EMPTY_SHELL)), []);
+});
+
+test('a client that changes <html lang> fails the audit; case alone does not', () => {
+  const server = serverHtmlFacts(
+    '<!doctype html><html lang="vi"><head><title>Lại Lý Huynh</title></head><body><div id="app"><h1>Lại Lý Huynh</h1></div></body></html>',
+  );
+  assert.equal(server.htmlLang, 'vi');
+  // The planted failure: what /blog/lai-ly-huynh-co-tuong did until 2026-10-21.
+  assert.deepEqual(htmlLangFailures(server.htmlLang, 'en'), ['html lang changed: "vi" -> "en"']);
+  assert.deepEqual(htmlLangFailures(server.htmlLang, 'vi'), []);
+  assert.deepEqual(htmlLangFailures('zh-Hans', 'zh-hans'), []);
+  // Nothing to compare: a page without lang is not this check's finding.
+  assert.deepEqual(htmlLangFailures(null, 'en'), []);
+  assert.equal(serverHtmlFacts('<html><body></body></html>').htmlLang, null);
 });

@@ -3258,6 +3258,17 @@ a.article-meta-author:hover .article-meta-author-name {
   text-decoration: underline;
 }
 
+/* The page's other language (articles/language-pairs.ts), named in that
+   language: a quiet link in the meta row, beside the dates. */
+.article-meta-language {
+  color: inherit;
+  font-weight: 600;
+}
+
+.article-meta-language:hover {
+  text-decoration: underline;
+}
+
 /* FAQ blocks. A <dl>, so the question is a label for its answer rather than a
    heading in the document outline; these styles give it the weight a heading
    would have carried without putting it in the on-this-page rail. */

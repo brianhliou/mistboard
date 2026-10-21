@@ -393,6 +393,27 @@ describe('prerendered article page', () => {
       expect(baked).toEqual(mounted);
     },
   );
+
+  // The prerender ships a Vietnamese page as <html lang="vi">; locale init then
+  // resets <html lang> to the UI locale ("en"), and until 2026-10-21 the mount
+  // left it there, so the rendered page said it was English.
+  it('keeps <html lang="vi"> on a Vietnamese article and gives the next article the UI locale back', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, json: async () => ({}) })),
+    );
+    const root = document.createElement('div');
+    root.id = 'app';
+    document.body.append(root);
+    document.documentElement.lang = 'en';
+    window.history.replaceState(null, '', '/blog/lai-ly-huynh-co-tuong');
+    await mountArticle(root, 'lai-ly-huynh-co-tuong');
+    expect(document.documentElement.lang).toBe('vi');
+
+    window.history.replaceState(null, '', '/blog/lai-ly-huynh');
+    await mountArticle(root, 'lai-ly-huynh');
+    expect(document.documentElement.lang).toBe('en');
+  });
 });
 
 // /rules, /zh-hans/rules and /zh-hant/rules sat in the sitemap answering with
