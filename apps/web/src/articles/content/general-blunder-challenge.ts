@@ -1,14 +1,20 @@
+import { xqHalfBoardThumbnailSvg, xqVisionDemoState } from '../diagrams.js';
 import type { Article } from '../types.js';
 
-// Card art: the challenge in two words on the board colour, the same pattern as
-// the one-thousand-games card. 320x200 is the card's 16/10 media box.
-const GENERAL_BLUNDER_CHALLENGE_THUMBNAIL = [
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" aria-label="Make it win: the General Blunder challenge">',
-  '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
-  '<text x="160" y="112" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="52" font-weight="800" letter-spacing="-1" fill="#2b2118">Make it win</text>',
-  '<text x="160" y="150" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="13" font-weight="600" letter-spacing="2.4" fill="#5a4626" opacity="0.8">THE GENERAL BLUNDER CHALLENGE</text>',
-  '</svg>',
-].join('');
+// Card art: the challenge as a question over the mate it asks for, Black's
+// chariots on c1 and g2 closing Red's general on e1. The headline template of
+// xqHalfBoardThumbnailSvg.
+const GENERAL_BLUNDER_CHALLENGE_THUMBNAIL = xqHalfBoardThumbnailSvg({
+  state: xqVisionDemoState('general-blunder-challenge-thumb', {
+    e1: { color: 'red', role: 'general' },
+    c1: { color: 'black', role: 'chariot' },
+    g2: { color: 'black', role: 'chariot' },
+  }),
+  half: 'bottom',
+  perspective: 'red',
+  headline: 'Can you lose?',
+  ariaLabel: "Can you lose? Black's two chariots checkmate Red's general",
+});
 
 // A test game from 2026-10-17: a scripted opponent choosing uniformly among its
 // legal moves (Red) against General Blunder at its live budget (Black), played
