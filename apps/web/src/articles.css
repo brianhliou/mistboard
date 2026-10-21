@@ -196,7 +196,7 @@
 }
 
 /* Blur on a pseudo-element, not on the badge: same compositor misregistration
-   as the landing cards (see .landing-article-card-star::before in landing.css).
+   as the landing cards (see .landing-article-card-date::before in landing.css).
    Background and backdrop-filter on one element put the badge in its own
    composited layer whose rounded clip can land a pixel off the card's, leaking
    a crescent of raw thumbnail around the outer corner. */
@@ -212,21 +212,6 @@
 .articles-index-card-date {
   left: -1px;
   border-radius: var(--site-radius) 0 7px 0;
-}
-
-.articles-index-card-author {
-  right: -1px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 19px;
-  padding: 0;
-  border-radius: 0 var(--site-radius) 0 7px;
-  color: #d4932c;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1;
 }
 
 .articles-index-card-status {
