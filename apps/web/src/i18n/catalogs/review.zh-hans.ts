@@ -109,6 +109,7 @@ export const ZH_HANS_REVIEW = {
   'study.chatPlaceholder': '聊天请保持友善！',
   'study.aboutTab': '简介',
   'study.gameEvent': '赛事',
+  'study.ownedBy': '研究作者',
   'study.gameDate': '日期',
   'study.gameResult': '结果',
   'study.gameSource': '来源',

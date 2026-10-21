@@ -588,6 +588,7 @@ export const EN_REVIEW = {
   // giving readers a route to report it is part of being trustworthy about it.
   'study.aboutTab': 'About',
   'study.gameEvent': 'Event',
+  'study.ownedBy': 'Study by',
   'study.gameDate': 'Date',
   'study.gameResult': 'Result',
   'study.gameSource': 'Source',

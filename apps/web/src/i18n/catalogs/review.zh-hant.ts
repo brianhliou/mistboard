@@ -109,6 +109,7 @@ export const ZH_HANT_REVIEW = {
   'study.chatPlaceholder': '聊天請保持友善！',
   'study.aboutTab': '簡介',
   'study.gameEvent': '賽事',
+  'study.ownedBy': '研究作者',
   'study.gameDate': '日期',
   'study.gameResult': '結果',
   'study.gameSource': '來源',
