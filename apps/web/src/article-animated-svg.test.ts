@@ -107,3 +107,25 @@ describe('table highlightColumns', () => {
     expect(marked).toEqual(['TH:2', 'TD:', 'TD:3']);
   });
 });
+
+describe('table nowrapColumns', () => {
+  it('keeps the named columns on one line beside an emphasised one', () => {
+    const figure = renderBlock({
+      kind: 'table',
+      headers: ['Person', 'Role', 'Ban'],
+      rows: [['Wang Tianyi', 'Bought and sold games', 'Life']],
+      wrap: true,
+      highlightColumns: [2],
+      nowrapColumns: [2],
+    });
+    const kept = [...figure.querySelectorAll('.article-table-nowrap')].map(
+      (cell) => `${cell.tagName}:${cell.textContent}`,
+    );
+    expect(kept).toEqual(['TH:Ban', 'TD:Life']);
+    expect(
+      figure
+        .querySelector('td.article-table-nowrap')
+        ?.classList.contains('article-table-col-emphasis'),
+    ).toBe(true);
+  });
+});

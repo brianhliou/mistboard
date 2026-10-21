@@ -408,6 +408,11 @@ export type TableBlock = {
   /** Emphasise a column (the hand that decided a match). Zero-indexed into
    *  `headers` and each row's cells. */
   highlightColumns?: number[];
+  /** Columns kept on one line in a `wrap` table (a ban length, an amount, an
+   *  event name), so the even split of the width never breaks a short value
+   *  and only the prose columns wrap. Desktop only: on a phone they wrap rather
+   *  than scroll the table sideways. Zero-indexed into `headers`. */
+  nowrapColumns?: number[];
 };
 
 export type TableRowDiagram = { svg: () => string; label: string };
