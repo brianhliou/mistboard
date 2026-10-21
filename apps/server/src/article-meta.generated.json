@@ -527,7 +527,11 @@
     "title": "The Shortest Xiangqi Stalemate We Know",
     "kind": "article",
     "description": "In xiangqi a side with no legal move loses. The shortest stalemate we know takes 21 plies: after Red’s 11th move, Black has eight pieces and none of them can move.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "我们所知最短的象棋困毙",
+      "zh-hant": "我們所知最短的象棋困斃"
+    }
   },
   "skill-vs-luck": {
     "title": "Separating Skill from Luck in Flip Games",

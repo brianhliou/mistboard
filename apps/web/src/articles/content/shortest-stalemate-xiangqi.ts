@@ -17,7 +17,7 @@ import type { Article, ArticleBlock } from '../types.js';
 // Black stalemated after 21 plies. It is chapter hedraozx of the study
 // "Shortest stalemates in xiangqi" (prod study ls3xEcX3), beside the 22-ply Red
 // line (DD5Zk33u, only linked here) and Nanao Okumura's 136-ply game (36PazYZl,
-// Zhihu, 2019). shortest-stalemate-xiangqi.test.ts replays the line and checks
+// Zhihu, 2019) and our 116-ply route to his position (FuXbQg6L). shortest-stalemate-xiangqi.test.ts replays the line and checks
 // the stalemate. It is kept in 0-based ICCS (ranks 0-9), the form the analysis
 // board's ?moves= sniffer reads, and converted to the site's 1-based squares
 // for the card art. Loyd's game is its own plain-chess study (peM4ujrr), so its
@@ -26,6 +26,10 @@ const STUDY_ID = 'ls3xEcX3';
 const STUDY = `/study/${STUDY_ID}`;
 const BLACK_CHAPTER_ID = 'hedraozx';
 const NANAO_CHAPTER_ID = '36PazYZl';
+// The same final position reached in 116 plies, the fewest possible: every red
+// piece's empty-board distance to its square, like pieces matched, sums to 58
+// moves, and this line meets that floor.
+const NANAO_116_CHAPTER_ID = 'FuXbQg6L';
 const FOG_STUDY_ID = 'Yj0X1pDy';
 const LOYD_STUDY_ID = 'peM4ujrr';
 const LOYD_CHAPTER_ID = 'E0EQ89xy';
@@ -76,6 +80,7 @@ export const shortestStalemateXiangqiArticle: Article = {
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
   title: 'The Shortest Xiangqi Stalemate We Know',
+  cardTitle: 'A 21-Ply Xiangqi Stalemate',
   seoTitle: 'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies',
   summary:
     'In xiangqi a side with no legal move loses. The shortest stalemate we know takes 21 plies: after Red’s 11th move, Black has eight pieces and none of them can move.',
@@ -121,7 +126,7 @@ export const shortestStalemateXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Nanao Okumura posted an earlier xiangqi stalemate on Zhihu in 2019, built for a different record: after 136 plies Red still has all sixteen pieces, and none of them can move. Black lost nine and took nothing. Chinese-language sites mostly blocked our search, so shorter published games may exist.',
+          text: `Nanao Okumura posted an earlier xiangqi stalemate on Zhihu in 2019, built for a different record: after 136 plies Red still has all sixteen pieces, and none of them can move. Black lost nine and took nothing. Chinese-language sites mostly blocked our search, so shorter published games may exist. We found a route to his final position in 116 plies, the fewest possible; it is the last chapter of [the study](${STUDY}/${NANAO_116_CHAPTER_ID}).`,
         },
         {
           kind: 'embed',
