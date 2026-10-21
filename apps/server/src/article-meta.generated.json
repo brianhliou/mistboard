@@ -523,6 +523,12 @@
       "zh-hant": "Shogi4（4×4 將棋）規則"
     }
   },
+  "shortest-stalemate-xiangqi": {
+    "title": "The Shortest Xiangqi Stalemate We Know",
+    "kind": "article",
+    "description": "In xiangqi a side with no legal move loses. The shortest stalemate we know takes 21 plies: after Red’s 11th move, Black has eight pieces and none of them can move.",
+    "status": "published"
+  },
   "skill-vs-luck": {
     "title": "Separating Skill from Luck in Flip Games",
     "kind": "article",

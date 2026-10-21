@@ -40,6 +40,10 @@ const ZH_HANS: Record<string, string> = {
     '一个已解的暗棋残局：车马对车马卒。',
   'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.':
     '一位 Mistboard 棋手告诉我们，在三子胜两子的残局里，我们原来的 40 步和棋规则太短。我们用残局库解出了其中一个：红方 67 步取胜，但直到第 44 步才有子被吃。文章逐步演示这盘胜局，棋盘下方列出每一步合法着法的结果，你也可以自己走其中任何一步。',
+  // ── 2026-10-27 (shortest xiangqi stalemate article) ── 困毙 and 半回合 follow the article (and longest-forced-mates-xiangqi).
+  'The shortest xiangqi stalemate we know: 21 plies.': '我们所知最短的象棋困毙：21 个半回合。',
+  'In xiangqi a side with no legal move loses. The shortest stalemate we know leaves Black with eight pieces and nothing to play after Red’s 11th move. No stalemate is possible in under 9 plies, so 9 to 20 is open.':
+    '在象棋里，无着可走的一方判负。我们所知最短的困毙里，红方走完第 11 步后，黑方还有八个子，却一步棋也走不了。少于 9 个半回合不可能形成困毙，所以 9 到 20 个半回合仍无定论。',
   // ── 2026-10-17 (phone redesign) ── 菜单 / 开始对局 follow shell nav.menu and play setup.startGame.
   'Meet General Blunder, a xiangqi bot that tries to lose.':
     '认识 General Blunder：一个想输棋的象棋机器人。',
@@ -522,6 +526,10 @@ const ZH_HANT: Record<string, string> = {
     '一個已解的暗棋殘局：車馬對車馬卒。',
   'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.':
     '一位 Mistboard 棋手告訴我們，在三子勝兩子的殘局裡，我們原來的 40 步和棋規則太短。我們用殘局庫解出了其中一個：紅方 67 步取勝，但直到第 44 步才有子被吃。文章逐步演示這盤勝局，棋盤下方列出每一步合法著法的結果，你也可以自己走其中任何一步。',
+  // ── 2026-10-27 (shortest xiangqi stalemate article) ── 困斃 and 半回合 follow the article (and longest-forced-mates-xiangqi).
+  'The shortest xiangqi stalemate we know: 21 plies.': '我們所知最短的象棋困斃：21 個半回合。',
+  'In xiangqi a side with no legal move loses. The shortest stalemate we know leaves Black with eight pieces and nothing to play after Red’s 11th move. No stalemate is possible in under 9 plies, so 9 to 20 is open.':
+    '在象棋裡，無著可走的一方判負。我們所知最短的困斃裡，紅方走完第 11 步後，黑方還有八個子，卻一步棋也走不了。少於 9 個半回合不可能形成困斃，所以 9 到 20 個半回合仍無定論。',
   // ── 2026-10-17 (phone redesign) ── 選單 / 開始對局 follow shell nav.menu and play setup.startGame.
   'Meet General Blunder, a xiangqi bot that tries to lose.':
     '認識 General Blunder：一個想輸棋的象棋機器人。',

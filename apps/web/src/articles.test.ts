@@ -66,6 +66,9 @@ describe('article public listing gates', () => {
       // A solved banqi endgame (chariot and horse against chariot, horse and
       // soldier), scheduled for 2026-10-30 (DEV shows it early for review).
       '/blog/banqi-chariot-endgame',
+      // The shortest xiangqi stalemate we found, scheduled for 2026-10-27
+      // (DEV shows it early for review).
+      '/blog/shortest-stalemate-xiangqi',
       // The unstyled first-paint engineering post, scheduled for 2026-10-23
       // (DEV shows it early for review).
       '/blog/unstyled-first-paint',
@@ -329,6 +332,7 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
       '/blog/banqi-chariot-endgame',
+      '/blog/shortest-stalemate-xiangqi',
       '/blog/unstyled-first-paint',
       '/blog/helpmates-in-xiangqi',
       '/blog/general-blunder-challenge',
