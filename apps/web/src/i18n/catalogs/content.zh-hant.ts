@@ -447,7 +447,7 @@ export const ZH_HANT_CONTENT = {
   'creators.crossLinkSuffix': '。',
   'champions.heading': '引擎冠軍',
   'champions.intro':
-    '每個遊戲都有一位現任冠軍引擎。它就是你在網站上對弈的機器人，並署上作者的名字。任何引擎都可以在公開對抗賽中挑戰冠軍頭銜。',
+    '每個遊戲都有一位現任冠軍引擎：網站上最強的機器人，並署上作者的名字。它下面還有更容易的機器人和級別。任何引擎都可以在公開對抗賽中挑戰冠軍頭銜。我們也希望託管更多引擎供你對弈，而不只是冠軍；想提供引擎，請按下面的提交步驟。',
   'champions.aboutJieqi':
     '作者 Huorongrong 和 Laoxu（Kouza）：帶有自己神經網路的 Pikafish 分叉。在本站每步 4 秒，4 執行緒。',
   'champions.aboutJunglePrefix':
@@ -466,7 +466,7 @@ export const ZH_HANT_CONTENT = {
   'champions.playChampion': '與冠軍對弈',
   'champions.openHeading': '待爭頭銜',
   'champions.openIntro':
-    '其他所有有機器人的遊戲。你對弈的機器人持有頭銜，直到有挑戰者在對抗賽中擊敗它；目前還沒有挑戰者下過頭銜賽。',
+    '其他所有有機器人的遊戲。網站上最強的機器人持有頭銜，直到有挑戰者在對抗賽中擊敗它；目前還沒有挑戰者下過頭銜賽。',
   'champions.heldBy': '持有者',
   'champions.openBadge': '頭銜待爭',
   'champions.challengeCta': '挑戰此頭銜',
