@@ -111,7 +111,7 @@ const ZH_HANS: Record<string, string> = {
   'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.':
     '以前揭棋只有连续 120 个半回合没有吃子才自动判和，输棋的一方可以一直将军拖到和棋。现在同一局面第三次出现时对局结束。在重复循环中每一步都将军的一方判负，与象棋相同；其他重复局面判和。规则更新前开始的对局仍按旧规则进行。',
   // ── 2026-10-06 (master-game charts; Tony Fung; jieqi correspondence) ── 优势图 / 评注 / 准确率 / 研习 /
-  // 直播档案 / 揭棋通信对局 follow the review catalog, nav, the tony-fung-ga-zen article and home.corrTitle.
+  // 直播档案 / 揭棋通信对局 follow the review catalog, nav, the tony-fung-ga-zen article and the retired homepage card.
   "Master games now show the engine's advantage chart.": '大师对局现在显示引擎的优势图。',
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研习中，对局章节现在一打开就显示优势图、着法评注和准确率，和对局复盘一样。从摆好的局面开始的章节（例如排局）没有优势图。在棋手页面上，如果棋盘上的对局在直播档案里，棋盘下方会显示它的优势图：点击优势图可以跳到任意一步，也可以在棋盘菜单里隐藏它。',
@@ -593,7 +593,7 @@ const ZH_HANT: Record<string, string> = {
   'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.':
     '以前揭棋只有連續 120 個半回合沒有吃子才自動判和，輸棋的一方可以一直將軍拖到和棋。現在同一局面第三次出現時對局結束。在重複循環中每一步都將軍的一方判負，與象棋相同；其他重複局面判和。規則更新前開始的對局仍按舊規則進行。',
   // ── 2026-10-06 (master-game charts; Tony Fung; jieqi correspondence) ── 優勢圖 / 評註 / 準確率 / 研習 /
-  // 直播檔案 / 揭棋通信對局 follow the review catalog, nav, the tony-fung-ga-zen article and home.corrTitle.
+  // 直播檔案 / 揭棋通信對局 follow the review catalog, nav, the tony-fung-ga-zen article and the retired homepage card.
   "Master games now show the engine's advantage chart.": '大師對局現在顯示引擎的優勢圖。',
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研習中，對局章節現在一打開就顯示優勢圖、著法評註和準確率，和對局復盤一樣。從擺好的局面開始的章節（例如排局）沒有優勢圖。在棋手頁面上，如果棋盤上的對局在直播檔案裡，棋盤下方會顯示它的優勢圖：點擊優勢圖可以跳到任意一步，也可以在棋盤選單裡隱藏它。',

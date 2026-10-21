@@ -2727,7 +2727,6 @@
      (buildLandingStage `phone`), so they never fetch or poll. This rule only
      keeps the prerendered desktop shell, painted before the script mounts, from
      showing them for a moment, and tidies a desktop mount narrowed past 600px. */
-  .landing-demo .landing-corr-card,
   .landing-demo .landing-activity,
   .landing-demo .landing-puzzle-column,
   .landing-demo .landing-forum-column,
