@@ -280,8 +280,7 @@ const ZH_HANS: Record<string, string> = {
   'Play General Blunder': '与 General Blunder 对弈',
   'So can you make a bot that tries to lose win? The rules allow it: positions exist where every move General Blunder has would beat you, and in one of those it has to play one. Whether a person can walk a real game there, against a bot that sees the trap and tries to dodge it, is the open question. We will add the first game that does it to this page.':
     '那么，你能让一个想输的机器人赢吗？规则允许：存在这样的局面，General Blunder 的每一步都会击败你，而在这样的局面里它必须走其中一步。一个人能否在真实对局中把棋引到那里，同时面对一个看得出陷阱并设法躲开的机器人，这是悬而未决的问题。第一盘做到的棋局，我们会加到这一页上。',
-  'Make it win': '让它赢',
-  'THE GENERAL BLUNDER CHALLENGE': 'GENERAL BLUNDER 挑战',
+  'Can you lose?': '你能输掉吗？',
   // unstyled-first-paint: machine-drafted 2026-10-17, not native-reviewed.
   ENGINEERING: '工程',
   UNSTYLED: '无样式',
@@ -6446,8 +6445,7 @@ const ZH_HANT: Record<string, string> = {
   'Play General Blunder': '與 General Blunder 對弈',
   'So can you make a bot that tries to lose win? The rules allow it: positions exist where every move General Blunder has would beat you, and in one of those it has to play one. Whether a person can walk a real game there, against a bot that sees the trap and tries to dodge it, is the open question. We will add the first game that does it to this page.':
     '那麼，你能讓一個想輸的機器人贏嗎？規則允許：存在這樣的局面，General Blunder 的每一步都會擊敗你，而在這樣的局面裡它必須走其中一步。一個人能否在真實對局中把棋引到那裡，同時面對一個看得出陷阱並設法躲開的機器人，這是懸而未決的問題。第一盤做到的棋局，我們會加到這一頁上。',
-  'Make it win': '讓它贏',
-  'THE GENERAL BLUNDER CHALLENGE': 'GENERAL BLUNDER 挑戰',
+  'Can you lose?': '你能輸掉嗎？',
   // unstyled-first-paint: machine-drafted 2026-10-17, not native-reviewed.
   ENGINEERING: '工程',
   UNSTYLED: '無樣式',
