@@ -559,6 +559,10 @@
 .study-about__row:empty {
   display: none;
 }
+.study-about__owner {
+  color: var(--site-muted);
+  font-size: 0.85rem;
+}
 .study-about__visibility {
   padding: 0.2rem 0.5rem;
   border: 1px solid var(--site-border-soft);

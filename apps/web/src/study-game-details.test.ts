@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { gameDetails } from './study.js';
+import { gameDetails, studyOwnerByline } from './study.js';
 
 // A chapter of a real game carries PGN-style tags: who had Red, who had Black,
 // the event, the date, the result, the source. The study page rendered exactly
@@ -62,5 +62,20 @@ describe('chapter game details in the About tab', () => {
       const el = gameDetails(chapter({ site }));
       expect(el.querySelector('a'), `${site} became a link`).toBeNull();
     }
+  });
+});
+
+describe('study owner in the About tab', () => {
+  it('names the owner and links to their profile', () => {
+    const el = studyOwnerByline({ owner: { handle: 'mistboard', displayName: 'Mistboard' } });
+    expect(el?.textContent).toBe('Study by Mistboard');
+    expect(el?.querySelector('a')?.getAttribute('href')).toBe('/@/mistboard');
+  });
+
+  it('falls back to the handle, and renders nothing without an owner', () => {
+    const el = studyOwnerByline({ owner: { handle: 'a b', displayName: '' } });
+    expect(el?.textContent).toBe('Study by @a b');
+    expect(el?.querySelector('a')?.getAttribute('href')).toBe('/@/a%20b');
+    expect(studyOwnerByline({})).toBeNull();
   });
 });
