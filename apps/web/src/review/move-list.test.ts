@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createMoveList } from './move-list.js';
+import { createMoveList, createScrollRevealer } from './move-list.js';
 
 describe('createMoveList', () => {
   it('pairs entries two-per-row with a number per pair', () => {
@@ -112,5 +112,62 @@ describe('createMoveList', () => {
     const second = moves[1]!;
     expect(second.querySelector('.review-move-list__eval')?.textContent).toBe('-2.1');
     expect(second.querySelector('.review-move-list__suffix')?.textContent).toContain('??');
+  });
+});
+
+describe('createScrollRevealer (#608)', () => {
+  function scroller() {
+    const outer = document.createElement('div');
+    const list = document.createElement('ol');
+    list.style.overflowY = 'auto';
+    const cell = document.createElement('button');
+    const row = document.createElement('li');
+    row.append(cell);
+    list.append(row);
+    outer.append(list);
+    document.body.append(outer);
+    // 100px tall box over 1000px of rows; the cell sits 300px down.
+    Object.defineProperty(list, 'clientHeight', { configurable: true, value: 100 });
+    Object.defineProperty(list, 'scrollHeight', { configurable: true, value: 1000 });
+    list.getBoundingClientRect = () => ({ top: 0, bottom: 100 }) as DOMRect;
+    cell.getBoundingClientRect = () =>
+      ({ top: 300 - list.scrollTop, bottom: 320 - list.scrollTop }) as DOMRect;
+    return { outer, list, cell };
+  }
+
+  it('scrolls the list to the cell and resolves its scrollers once, not every step', () => {
+    const { outer, list, cell } = scroller();
+    const reveal = createScrollRevealer(list);
+    const style = vi.spyOn(window, 'getComputedStyle');
+
+    reveal(cell);
+    expect(list.scrollTop).toBe(220);
+    const firstWalk = style.mock.calls.length;
+    expect(firstWalk).toBeGreaterThan(0);
+
+    list.scrollTop = 0;
+    reveal(cell);
+    reveal(cell);
+    expect(list.scrollTop).toBe(220);
+    // The forced style read that each arrow key paid for is gone after the first.
+    expect(style.mock.calls.length).toBe(firstWalk);
+
+    // A resize can cross a breakpoint that changes which element scrolls.
+    window.dispatchEvent(new Event('resize'));
+    reveal(cell);
+    expect(style.mock.calls.length).toBeGreaterThan(firstWalk);
+    style.mockRestore();
+    outer.remove();
+  });
+
+  it('never scrolls the page: no inner scroller means no scroll at all', () => {
+    const { outer, list, cell } = scroller();
+    list.style.overflowY = 'visible';
+    const reveal = createScrollRevealer(list);
+    reveal(cell);
+    expect(list.scrollTop).toBe(0);
+    expect(document.body.scrollTop).toBe(0);
+    expect(document.documentElement.scrollTop).toBe(0);
+    outer.remove();
   });
 });

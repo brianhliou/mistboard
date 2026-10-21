@@ -88,10 +88,11 @@
 .review-move-list__move:hover {
   background: var(--site-surface);
 }
+/* No bold: a heavier weight re-wraps the label, so each step reflowed the list
+   (#608). The filled accent and white text carry the mark in both themes. */
 .review-move-list__move--current {
   background: var(--site-accent, #3b73c4);
   color: #fff;
-  font-weight: 700;
 }
 .review-move-list__move--current:hover {
   background: var(--site-accent, #3b73c4);
@@ -226,7 +227,6 @@
 .review-move-list__line-move--current {
   background: var(--site-accent, #3b73c4);
   color: #fff;
-  font-weight: 700;
 }
 .review-move-list__line-number {
   font-size: 9.5px;

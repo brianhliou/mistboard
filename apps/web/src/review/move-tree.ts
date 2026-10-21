@@ -11,7 +11,7 @@
 // board uses this. Both share the review-move-list CSS vocabulary.
 
 import type { GameTree, GameTreeNode, TreePath } from './game-tree.js';
-import { revealInScroller } from './move-list.js';
+import { createScrollRevealer } from './move-list.js';
 import './move-list.css';
 import './move-tree.css';
 
@@ -131,6 +131,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
   const rows = document.createElement('ol');
   rows.className = 'review-move-list__rows';
   panel.append(rows);
+  const reveal = createScrollRevealer(rows);
   // When the list's box shrinks (the opening explorer opening below it, or its
   // rows landing and growing it), keep the current move in view; otherwise the
   // highlighted ply sits below the fold until the next step. Shrinks only, so a
@@ -143,7 +144,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
       lastHeight = height;
       if (!shrank) return;
       const current = rows.querySelector<HTMLElement>('.review-move-list__move--current');
-      if (current) revealInScroller(current);
+      if (current) reveal(current);
     }).observe(rows);
   }
 
@@ -395,6 +396,7 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
 
   function rebuild(): void {
     cells = new Map();
+    currentCell = undefined;
     rows.replaceChildren();
     const main = tree.root.children[0];
     if (!main) {
@@ -419,15 +421,20 @@ export function createMoveTree<M, T, V>(tree: GameTree<M, T, V>, opts: MoveTreeO
     }
   }
 
+  // The cell carrying the current class, so a step clears that one cell instead
+  // of toggling every cell in a long game (#608). A rebuild makes fresh cells
+  // without the class, so it resets this; the next setCurrent marks the new one.
+  let currentCell: HTMLButtonElement | undefined;
+
   function setCurrent(path: TreePath): void {
-    const key = pathKey(path);
-    let current: HTMLButtonElement | undefined;
-    for (const [cellKey, cell] of cells) {
-      const isCurrent = cellKey === key;
-      cell.classList.toggle('review-move-list__move--current', isCurrent);
-      if (isCurrent) current = cell;
+    const current = cells.get(pathKey(path));
+    if (currentCell && currentCell !== current) {
+      currentCell.classList.remove('review-move-list__move--current');
     }
-    if (current) revealInScroller(current);
+    currentCell = current;
+    if (!current) return;
+    current.classList.add('review-move-list__move--current');
+    reveal(current);
   }
 
   function annotate(byPathKey: Map<string, MoveTreeAnnotation>): void {
