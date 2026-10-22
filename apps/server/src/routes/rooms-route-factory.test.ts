@@ -189,6 +189,45 @@ test('factory: rejects an unknown PvE engine id', async () => {
   });
 });
 
+test('factory: a held engine answers <x>_disabled, an unservable one invalid_engine', async () => {
+  await withFlag(BANQI_FLAG, 'true', async () => {
+    const route = (held: boolean) =>
+      createTenantRoomsRoute<
+        TenantRoomCreateBaseContext,
+        'red' | 'black' | 'random',
+        'red' | 'black'
+      >({
+        gameSpecId: BANQI_SPEC_ID,
+        errorPrefix: 'banqi',
+        hasDisabledFlag: true,
+        preferredColors: ['red', 'black', 'random'],
+        engine: {
+          kind: 'seated',
+          defaultEngineId: GOOD_ENGINE,
+          // The held engine is never servable: its flag is off, or its binary is gone.
+          isEngineClientId: (id) => id === GOOD_ENGINE,
+          heldEngineError: (id) => (held && id === 'held-engine' ? 'held_disabled' : undefined),
+          seats: SEATS,
+        },
+        createRoom: () => {
+          throw new Error('a refused engine must not reach createRoom');
+        },
+      });
+    const request = { gameSpecId: BANQI_SPEC_ID, mode: 'pve', engineId: 'held-engine' };
+
+    const held = captureResponse();
+    await route(true).handleCreate(baseCtx, held, request);
+    assert.equal(held.status, 404);
+    assert.deepEqual(json(held), { error: 'held_disabled' });
+
+    // Flag on but nothing to run: the smoke must fail here, not skip.
+    const missing = captureResponse();
+    await route(false).handleCreate(baseCtx, missing, request);
+    assert.equal(missing.status, 400);
+    assert.deepEqual(json(missing), { error: 'invalid_engine' });
+  });
+});
+
 test('factory: rejects an invalid time control before room creation', async () => {
   await withFlag(BANQI_FLAG, 'true', async () => {
     const spy: { params?: TenantRoomCreateParams<'red' | 'black' | 'random', 'red' | 'black'> } =

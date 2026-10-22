@@ -1361,6 +1361,11 @@ async function runSmoke({ deployRequired, headRevision }) {
       command: npmCommand('prod:smoke:jieqi-abjchess', baseArgs()),
     },
     {
+      label: 'prod Jieqi jqe smoke',
+      tag: 'jieqi-jqe',
+      command: npmCommand('prod:smoke:jieqi-jqe', baseArgs()),
+    },
+    {
       label: 'prod Jungle KataGo smoke',
       tag: 'jungle-katago',
       command: npmCommand('prod:smoke:jungle-katago', baseArgs()),
