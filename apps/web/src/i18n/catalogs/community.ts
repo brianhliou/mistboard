@@ -584,12 +584,14 @@ export const EN_COMMUNITY = {
   'bots.abJchessBio':
     'An open-source jieqi engine with its own neural network, by Huorongrong and Laoxu (Kouza). Played here with their permission.',
   'bots.jqeBio':
-    "An open-source jieqi engine with its own neural network, by Devin O'Keefe. Played here with his permission.",
+    "An open-source jieqi engine by Devin O'Keefe, with its own neural network trained on self-play. It took the top spot from AB-JChess 0.2d, winning 171 games, losing 114 and drawing 15 in our 300-game match. It thinks 4 seconds a move. Played here with his permission.",
   'bots.katagoBio':
     "The strongest Jungle Chess engine we know of: hzyhhzy's KataGomo, built on lightvector's KataGo, with the neural network from Kouza's Dandelion 4. Played here with permission.",
   'bots.katagoCreditKatagomo': 'KataGomo by hzyhhzy',
   'bots.katagoCreditKatago': 'KataGo by lightvector',
   'bots.katagoCreditNet': "Neural network: Kouza's Dandelion 4",
+  'bots.jqeCredit': "jqe by Devin O'Keefe",
+  'bots.abJchessCredit': 'AB-JChess by Huorongrong and Laoxu (Kouza)',
   'bots.mistyBio':
     "Mistboard's own engine for Fog Chess, Fog Xiangqi, banqi, Jungle Chess and Flip Jungle.",
   'bots.firstParty': 'First-party bot',
@@ -634,6 +636,8 @@ export const CRITICAL_COMMUNITY_I18N_KEYS = [
   'bots.katagoCreditKatagomo',
   'bots.katagoCreditKatago',
   'bots.katagoCreditNet',
+  'bots.jqeCredit',
+  'bots.abJchessCredit',
   'bots.mistyBio',
   'bots.firstParty',
   'bots.gameCountOne',

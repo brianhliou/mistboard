@@ -391,6 +391,12 @@ function systemBotBio(bot: BotProfile): string | undefined {
 type BotCredit = { label: string; href: string };
 
 export function botCredits(botId: string): BotCredit[] {
+  if (botId === 'jqe') {
+    return [{ label: t('bots.jqeCredit'), href: 'https://github.com/devinokeefe/jieqi' }];
+  }
+  if (botId === 'ab-jchess') {
+    return [{ label: t('bots.abJchessCredit'), href: 'https://github.com/lxsgx23/AB-JChess' }];
+  }
   if (botId !== JUNGLE_TOP_BOT_ID) return [];
   return [
     {
@@ -617,10 +623,13 @@ function buildBotSideInfo(bot: BotProfile, gameSpecId: string): HTMLElement {
   const side = document.createElement('aside');
   side.className = 'profile-overview-side';
 
-  if (bot.bio.trim().length > 0) {
+  // The roster card's localized bio, so the page and the card say the same thing in
+  // every locale; other bots keep their stored bio.
+  const bioText = systemBotBio(bot) ?? bot.bio;
+  if (bioText.trim().length > 0) {
     const bio = document.createElement('p');
     bio.className = 'profile-side-line profile-side-bio';
-    bio.textContent = bot.bio;
+    bio.textContent = bioText;
     side.append(bio);
   }
   const credits = botCredits(bot.id);
@@ -631,11 +640,8 @@ function buildBotSideInfo(bot: BotProfile, gameSpecId: string): HTMLElement {
   // Sits directly under "Published rating", which is an engine-ladder number.
   // Same disambiguation as the header counts: say which population this counts.
   side.append(buildBotSideStat('Record here', recordLabel(botRecordFor(bot, gameSpecId))));
-
-  const engineId = playOptionsFor(bot).find(
-    (candidate) => candidate.gameSpecId === gameSpecId,
-  )?.engineId;
-  if (engineId) side.append(buildBotSideStat('Engine', engineId));
+  // No engine id here: it is an internal name (jqe-jieqi, pikafish-jieqi-level-8), and
+  // the credits above already say whose engine it is.
   return side;
 }
 

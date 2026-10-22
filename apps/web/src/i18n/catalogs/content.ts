@@ -245,9 +245,9 @@ export const EN_CONTENT = {
   'source.fonts':
     'Fonts: Noto Sans and Noto Sans CJK, SIL Open Font License 1.1; Roboto, Apache 2.0.',
   'source.abJchess':
-    "AB-JChess by Huorongrong and Laoxu (Kouza): the top jieqi bot, GPL-3.0; its neural network is used with the authors' permission.",
+    "AB-JChess by Huorongrong and Laoxu (Kouza): a jieqi engine, GPL-3.0; its neural network is used with the authors' permission.",
   'source.jqe':
-    "jqe by Devin O'Keefe: a jieqi engine with its own neural network, MIT; played here with the author's permission.",
+    "jqe by Devin O'Keefe: the top jieqi bot, with its own neural network, MIT; played here with the author's permission.",
   'source.katagomo':
     "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
   'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',

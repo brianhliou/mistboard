@@ -185,8 +185,9 @@ export const ZH_HANS_CONTENT = {
   'source.chessops': 'chessops：国际象棋规则基础组件，GPL-3.0-or-later。',
   'source.stockfish': 'Stockfish：研究和引擎 worker 流程的可选引擎/运行时依赖，GPL 系列。',
   'source.abJchess':
-    'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）：本站最强的揭棋机器人，GPL-3.0；其神经网络经作者许可使用。',
-  'source.jqe': "jqe，作者 Devin O'Keefe：自带神经网络的揭棋引擎，MIT；经作者许可在本站使用。",
+    'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）：揭棋引擎，GPL-3.0；其神经网络经作者许可使用。',
+  'source.jqe':
+    "jqe，作者 Devin O'Keefe：本站最强的揭棋机器人，自带神经网络，MIT；经作者许可在本站使用。",
   'source.katagomo':
     'KataGomo，作者 hzyhhzy：斗兽棋版 KataGo（AnimalChess2025 分支），本站最强的斗兽棋机器人，MIT；经作者许可使用。',
   'source.katago': 'KataGo，作者 lightvector：KataGomo 所基于的引擎，MIT。',
