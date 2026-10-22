@@ -7,6 +7,7 @@ import {
   JIEQI_DEFAULT_ENGINE_ID,
   JIEQI_JQE_ENGINE_ID,
   jqeAvailable,
+  jqeEnabled,
 } from './../jieqi-engine.js';
 import {
   createTenantRoomsRoute,
@@ -51,6 +52,8 @@ const jieqiRoute = createTenantRoomsRoute<
       isJieqiEngineClientId(engineId) &&
       (engineId !== JIEQI_ABJCHESS_ENGINE_ID || abJchessAvailable()) &&
       (engineId !== JIEQI_JQE_ENGINE_ID || jqeAvailable()),
+    heldEngineError: (engineId) =>
+      engineId === JIEQI_JQE_ENGINE_ID && !jqeEnabled() ? 'jqe_disabled' : undefined,
     seats: JIEQI_SEATS,
   },
   // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):

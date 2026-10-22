@@ -225,6 +225,7 @@ test('variant configs: every entry is complete and self-consistent', () => {
     'xiangqi-pikafish': 'xiangqi',
     'xiangqi-worst': 'xiangqi',
     'jieqi-abjchess': 'jieqi',
+    'jieqi-jqe': 'jieqi',
     'jungle-katago': 'jungle',
   };
   assert.deepEqual(Object.keys(VARIANT_SMOKE_CONFIGS).sort(), Object.keys(expected).sort());

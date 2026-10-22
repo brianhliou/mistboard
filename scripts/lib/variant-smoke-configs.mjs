@@ -170,6 +170,21 @@ export const VARIANT_SMOKE_CONFIGS = {
     unavailableCause:
       'the server has no AB-JChess binary or net. The build skips the net when the download from the authors\' release fails or its sha256 does not match; search the web build log for "abjchess-net: WARNING", then redeploy once their release answers',
   },
+  // jqe (2026-10-22): above AB-JChess, its own binary and net. Held behind
+  // MISTBOARD_JQE_ENABLED: off, the server answers 404 `jqe_disabled` and this row
+  // skips; on, a missing binary or net is `invalid_engine` and fails it.
+  'jieqi-jqe': {
+    name: 'jieqi-jqe',
+    label: 'Jieqi jqe',
+    usage: 'npm run prod:smoke:jieqi-jqe -- [options]',
+    gameSpecId: 'jieqi',
+    engineId: 'jqe-jieqi',
+    // 4s movetime behind the jieqi hard timeout, one retry.
+    defaultTimeoutMs: 60_000,
+    engineSeat: { equals: 'jqe-jieqi' },
+    unavailableCause:
+      'MISTBOARD_JQE_ENABLED is on but the server has no jqe binary or net; check the engines release assets (jqe, it014.jqn) in the web build log',
+  },
   'jungle-katago': {
     name: 'jungle-katago',
     label: 'Jungle KataGo',
