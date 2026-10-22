@@ -51,6 +51,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-22',
+    kind: 'release',
+    headline: 'Meet jqe, the new top jieqi bot.',
+    body: 'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.',
+    href: '/bot/jqe',
+    cta: 'Play jqe',
+  },
+  {
     date: '2026-10-18',
     kind: 'release',
     headline: 'Meet General Blunder, a xiangqi bot that tries to lose.',

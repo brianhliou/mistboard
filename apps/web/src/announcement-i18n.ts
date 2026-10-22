@@ -40,6 +40,11 @@ const ZH_HANS: Record<string, string> = {
     '一个已解的暗棋残局：车马对车马卒。',
   'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.':
     '一位 Mistboard 棋手告诉我们，在三子胜两子的残局里，我们原来的 40 步和棋规则太短。我们用残局库解出了其中一个：红方 67 步取胜，但直到第 44 步才有子被吃。文章逐步演示这盘胜局，棋盘下方列出每一步合法着法的结果，你也可以自己走其中任何一步。',
+  // ── 2026-10-22 (jqe) ── 电脑 / 级 / 研究 follow the AB-JChess entry and the longest-forced-mates entry.
+  'Meet jqe, the new top jieqi bot.': '认识 jqe：新的最强揭棋电脑。',
+  'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':
+    'jqe 是 Devin O’Keefe 开发的开源揭棋引擎。它与此前的最强电脑 AB-JChess 对弈 300 盘，171 胜、15 和、114 负。它现在排在 AB-JChess 上面一级，AB-JChess 继续保留。整场比赛的每一盘棋都收在一个研究里。',
+  'Play jqe': '与 jqe 对弈',
   // ── 2026-10-17 (phone redesign) ── 菜单 / 开始对局 follow shell nav.menu and play setup.startGame.
   'Meet General Blunder, a xiangqi bot that tries to lose.':
     '认识 General Blunder：一个想输棋的象棋机器人。',
@@ -522,6 +527,11 @@ const ZH_HANT: Record<string, string> = {
     '一個已解的暗棋殘局：車馬對車馬卒。',
   'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.':
     '一位 Mistboard 棋手告訴我們，在三子勝兩子的殘局裡，我們原來的 40 步和棋規則太短。我們用殘局庫解出了其中一個：紅方 67 步取勝，但直到第 44 步才有子被吃。文章逐步演示這盤勝局，棋盤下方列出每一步合法著法的結果，你也可以自己走其中任何一步。',
+  // ── 2026-10-22 (jqe) ── 電腦 / 級 / 研究 follow the AB-JChess entry and the longest-forced-mates entry.
+  'Meet jqe, the new top jieqi bot.': '認識 jqe：新的最強揭棋電腦。',
+  'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':
+    'jqe 是 Devin O’Keefe 開發的開源揭棋引擎。它與此前的最強電腦 AB-JChess 對弈 300 盤，171 勝、15 和、114 負。它現在排在 AB-JChess 上面一級，AB-JChess 繼續保留。整場比賽的每一盤棋都收在一個研究裡。',
+  'Play jqe': '與 jqe 對弈',
   // ── 2026-10-17 (phone redesign) ── 選單 / 開始對局 follow shell nav.menu and play setup.startGame.
   'Meet General Blunder, a xiangqi bot that tries to lose.':
     '認識 General Blunder：一個想輸棋的象棋機器人。',
