@@ -412,6 +412,12 @@ describe('bot pages', () => {
     expect(credit?.textContent).toBe("jqe by Devin O'Keefe");
     expect(credit?.href).toBe('https://github.com/devinokeefe/jieqi');
     expect(side?.textContent).not.toContain('jqe-jieqi');
+    // Match results are against one network, so the page names it.
+    const stats = [...(side?.querySelectorAll('.profile-side-stat') ?? [])].map((stat) => [
+      stat.querySelector('.profile-side-stat-label')?.textContent,
+      stat.querySelector('.profile-side-stat-value')?.textContent,
+    ]);
+    expect(stats).toContainEqual(['Version', 'it014 (network)']);
   });
 
   it('describes an eve-anchor sample as engine games, never as rated games or a time class', async () => {

@@ -408,6 +408,16 @@ export function botCredits(botId: string): BotCredit[] {
   ];
 }
 
+// The version a bot plays, for bots whose strength depends on which one it is:
+// match results and the ladder are against this version, not the engine in
+// general. jqe has no release numbers, so its network names it. Keep in step
+// with ab-jchess.ref and jqe.ref.
+export function botVersion(botId: string): string | undefined {
+  if (botId === 'jqe') return 'it014 (network)';
+  if (botId === 'ab-jchess') return '0.2d';
+  return undefined;
+}
+
 function buildBotCredits(credits: readonly BotCredit[]): HTMLElement {
   const list = document.createElement('ul');
   list.className = 'profile-side-links bot-profile-credits';
@@ -634,6 +644,8 @@ function buildBotSideInfo(bot: BotProfile, gameSpecId: string): HTMLElement {
   }
   const credits = botCredits(bot.id);
   if (credits.length > 0) side.append(buildBotCredits(credits));
+  const version = botVersion(bot.id);
+  if (version) side.append(buildBotSideStat('Version', version));
 
   const rating = botRatings(bot).find((candidate) => candidate.gameSpecId === gameSpecId);
   if (rating) side.append(buildBotSideStat('Published rating', ratingLabel(rating)));
