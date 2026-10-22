@@ -995,7 +995,7 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
         notes: tier.retired
           ? 'Retired pre-ladder Jieqi tier (depth cap only); resolvable for history.'
           : tier.engine === 'ab-jchess'
-            ? "Jieqi top slot: AB-JChess 0.2b (lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)) on its 20260911 NNUE, 4000ms, Hash 256. The net is fetched from the author's release at build time, never re-hosted."
+            ? "Jieqi top slot: AB-JChess 0.2d (lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)) on its 20261010 NNUE, 4000ms, Hash 256. The net is fetched from the author's release at build time, never re-hosted."
             : tier.engine === 'jqe'
               ? "Jieqi, above AB-JChess: jqe 331a6e61 (devinokeefe/jieqi, MIT, by Devin O'Keefe) on its it014 NNUE, 4000ms, Hash 256. Code and net are MIT and ship in our engines release. Held behind MISTBOARD_JQE_ENABLED."
               : tier.skill === undefined

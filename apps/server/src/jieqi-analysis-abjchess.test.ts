@@ -112,7 +112,7 @@ function keyedCache<T>(): {
 
 test('AB-JChess computes new analysis when its binary and net resolve, PikaJieQi otherwise', async () => {
   const bin = join(fixtureDir, 'ab-jchess');
-  const net = join(fixtureDir, 'abjchess-20260911.nnue');
+  const net = join(fixtureDir, 'abjchess-20261010.nnue');
   writeFileSync(bin, '');
   writeFileSync(net, '');
   await withEnv({ MISTBOARD_ABJCHESS_PATH: bin, MISTBOARD_ABJCHESS_NET: net }, () => {
@@ -141,14 +141,14 @@ test('the two engines file under different ids, and the AB ids name its ref and 
     // The client picks AB's win curve off this prefix (winPercentK).
     assert.match(id, /^ab-jchess-/);
     assert.ok(id.includes(ABJCHESS_ENGINE_REF), `${id} carries the binary ref`);
-    assert.ok(id.includes('abjchess-20260911'), `${id} carries the net, so a new net re-keys`);
+    assert.ok(id.includes('abjchess-20261010'), `${id} carries the net, so a new net re-keys`);
   }
   assert.equal(ABJCHESS_JIEQI_ANALYSIS_PROFILE.winK, ABJCHESS_WIN_PCT_K);
   assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.winK, WIN_PCT_K);
 });
 
 test('an AB-JChess analysis session loads its net on a single-threaded fixed table', async () => {
-  const net = join(fixtureDir, 'abjchess-20260911.nnue');
+  const net = join(fixtureDir, 'abjchess-20261010.nnue');
   writeFileSync(net, '');
   await withEnv({ MISTBOARD_ABJCHESS_NET: net }, () => {
     const commands = buildJieqiAnalysisInitCommands('ab-jchess');

@@ -506,6 +506,6 @@ export function landingBotLadderIndex(
             ? 'katago'
             : remembered === 'fairy-stockfish-xiangqi-worst'
               ? 'general-blunder'
-            : null;
+              : null;
   return botId ? ladder.findIndex((rung) => rung.botId === botId) : -1;
 }

@@ -80,7 +80,7 @@ test('every Pikafish rung is named by its level, level 8 included', () => {
   // Level 8 kept its pre-ladder name 'PikaJieQi - Strongest', which every
   // engine game card showed beside 'Pikafish Level 7'.
   assert.deepEqual(
-    JIEQI_PLAYABLE_ENGINES.filter((t) => t.engine !== 'ab-jchess').map((t) => t.name),
+    JIEQI_PLAYABLE_ENGINES.filter((t) => t.engine === undefined).map((t) => t.name),
     [1, 2, 3, 4, 5, 6, 7, 8].map((level) => `Pikafish Level ${level}`),
   );
 });

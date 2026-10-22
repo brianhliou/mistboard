@@ -4,7 +4,7 @@
 # The authors allowed site use on the terms that we fetch the net from their
 # release and never re-host it (lxsgx23/AB-JChess#1), so it is not in our
 # engines tarball (scripts/engine-assets.sh builds the binary only). This
-# downloads their v0.2b zip, checks the zip's and the net's sha256, extracts the
+# downloads their v0.2d zip, checks the zip's and the net's sha256, extracts the
 # net, and loads it in the fetched binary before the image is kept.
 #
 # Soft-fail on the upstream (2026-10-06): a failed download or a checksum
@@ -25,10 +25,10 @@
 set -eu
 
 bin=${1:?bindir}
-url=https://github.com/lxsgx23/AB-JChess/releases/download/v0.2b/0.2b_bmi2.zip
-zip_sha=6cb9cfe44946e5e4494643d32ae6352f7240c7e43d0ecbb4a437b04d7c388b03
-net=abjchess-20260911.nnue
-net_sha=7a229d324e50d2b0acf3e5878a8f876b96a24b75d16c8492a3c3bf8e1418d944
+url=https://github.com/lxsgx23/AB-JChess/releases/download/v0.2d/0.2d_bmi2.zip
+zip_sha=01d3d539b1d3c50371132401d70c441364ae1c2e9d6e4121f83143f2fe1b3a4e
+net=abjchess-20261010.nnue
+net_sha=05c13ac64f5b8ede77cfdc408d399d1f235564ba0999e2c768bebaeedb1db761
 
 log() { echo "abjchess-net: $*"; }
 die() { echo "abjchess-net: $*" >&2; exit 1; }

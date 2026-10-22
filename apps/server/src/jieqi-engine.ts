@@ -49,20 +49,20 @@ export const JIEQI_ENGINE_VERSION = '0.3.3';
 // and checks its sha256 (his terms: never re-hosted). The version names the source
 // release and the net, since either one changes its play.
 export const JIEQI_ABJCHESS_ENGINE_ID = 'ab-jchess-jieqi';
-export const ABJCHESS_JIEQI_ENGINE_VERSION = 'abj-0.2b-net-20260911';
-export const ABJCHESS_NET_FILE = 'abjchess-20260911.nnue';
+export const ABJCHESS_JIEQI_ENGINE_VERSION = 'abj-0.2d-net-20261010';
+export const ABJCHESS_NET_FILE = 'abjchess-20261010.nnue';
 // jqe (github.com/devinokeefe/jieqi, MIT, by Devin O'Keefe): a UCI jieqi engine with
-// its own NNUE, above AB-JChess at the top of the ladder (+173 Elo over 100 games at
-// 4 s/move, jqe.ref). Its net is MIT too, so it ships in our engines release beside the
-// binary (engine-assets.sh). The slot is held behind MISTBOARD_JQE_ENABLED until the
-// author's OK: off, nothing offers, seats or schedules it (jqeAvailable).
+// its own NNUE, above AB-JChess at the top of the ladder (+67 Elo over 300 games
+// against AB-JChess 0.2d at 4 s/move, jqe.ref). Its net is MIT too, so it ships in
+// our engines release beside the binary (engine-assets.sh). The slot is held behind
+// MISTBOARD_JQE_ENABLED until launch: off, nothing offers, seats or schedules it (jqeAvailable).
 export const JIEQI_JQE_ENGINE_ID = 'jqe-jieqi';
 export const JQE_JIEQI_ENGINE_VERSION = 'jqe-331a6e61-net-it014';
 export const JQE_NET_FILE = 'it014.jqn';
 // Short form of ab-jchess.ref, the AB-JChess commit the prod image builds. Part of the
 // AB analysis cache keys for the same reason PIKAFISH_JIEQI_ENGINE_REF is part of the
 // PikaJieQi ones (see below); jieqi-engine-ref.test.ts keeps the two in step.
-export const ABJCHESS_ENGINE_REF = '1ae95ca6';
+export const ABJCHESS_ENGINE_REF = 'fe35d87c';
 // ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
 // (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the two paths are
 // independent, so a live-play change must not invalidate cached sweeps. Bump this one only
@@ -338,7 +338,7 @@ export function pikaJieqiPath(): string {
 }
 
 // AB-JChess and its net. No dev fallback under ~/projects/tools: the checkout there is
-// 0.1b, which searches the start position on an empty pool field. Locally, build 0.2b
+// 0.1b, which searches the start position on an empty pool field. Locally, build 0.2d
 // (ab-jchess.ref) and point MISTBOARD_ABJCHESS_PATH at it.
 export function abJchessPath(): string {
   const explicit = process.env.MISTBOARD_ABJCHESS_PATH;

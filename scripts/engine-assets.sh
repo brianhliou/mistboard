@@ -168,8 +168,8 @@ build() {
   ref=$(pin ab-jchess.ref)
   log "ab-jchess @ $ref (lxsgx23/AB-JChess, $ABJ_ARCH, clang)"
   fetch_source "$work/ab-jchess" https://github.com/lxsgx23/AB-JChess.git "$ref"
-  make -C "$work/ab-jchess/src" -j"$JOBS" ARCH="$ABJ_ARCH" COMP=clang EXTRALDFLAGS=-static build >/dev/null
-  cp "$work/ab-jchess/src/AB-JChess" "$bin/ab-jchess"
+  make -C "$work/ab-jchess/abjchess/src" -j"$JOBS" ARCH="$ABJ_ARCH" COMP=clang EXTRALDFLAGS=-static build >/dev/null
+  cp "$work/ab-jchess/abjchess/src/AB-JChess" "$bin/ab-jchess"
 
   # The binary only, stripped (74 MB of debug info otherwise): its net is fetched
   # from Kouza's Dandelion release by railpack.json and never packaged here
