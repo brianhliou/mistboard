@@ -364,9 +364,9 @@ export const EN_CONTENT = {
     'Each game has one reigning champion engine. It is the bot you play on the site, credited by name. Any engine can challenge for the title in a public match.',
   'champions.aboutJieqi':
     'By Huorongrong and Laoxu (Kouza): a Pikafish fork with its own neural network. It plays here at 4 s a move on 4 threads.',
-  'champions.aboutJunglePrefix':
-    'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move; ',
-  'champions.aboutJungleSuffix': ', at 5M nodes a move, is the easier bot below it.',
+  'champions.aboutJungle':
+    'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move.',
+  'champions.sourceLink': 'Source code',
   'champions.championBadge': 'Champion',
   'champions.statWins': 'wins',
   'champions.statDraws': 'draws',
@@ -374,6 +374,10 @@ export const EN_CONTENT = {
   'champions.barLabel': '{wins} wins, {draws} draws, {losses} losses',
   'champions.tookJieqi':
     'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, a 0.64 score.',
+  'champions.aboutJqe':
+    "By Devin O'Keefe: an open-source engine with its own neural network, trained on self-play. It plays here at 4 s a move on 4 threads.",
+  'champions.tookJqe':
+    'Took the title from AB-JChess 0.2d on 2026-10-21, over 300 games, a 0.60 score.',
   'champions.tookJungle':
     'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
   'champions.readMatch': 'Read the match',
@@ -392,9 +396,12 @@ export const EN_CONTENT = {
   'champions.linkSeparator': ', ',
   'champions.parenOpen': ' (',
   'champions.parenClose': ').',
+  'champions.lineEnd': '.',
   'champions.historyHeading': 'Title history',
   'champions.historyJieqi':
     '2026-09-30, Jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), took the title from Pikafish Level 8, 248-136-16 over 400 games, a 0.64 score',
+  'champions.historyJqe':
+    "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, a 0.60 score",
   'champions.historyJungle':
     '2026-09-22, Jungle Chess: KataGo-AnimalChess, by hzyhhzy with a network from Kouza, took the title from MistyJungle, 82-0 with 118 draws over 200 games at 1,000 visits a move',
   'champions.challengeHeading': 'Challenge for a title',

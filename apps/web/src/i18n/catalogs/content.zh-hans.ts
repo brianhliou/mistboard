@@ -452,9 +452,15 @@ export const ZH_HANS_CONTENT = {
     '每个游戏都有一位现任冠军引擎。它就是你在网站上对弈的机器人，并署上作者的名字。任何引擎都可以在公开对抗赛中挑战冠军头衔。',
   'champions.aboutJieqi':
     '作者 Huorongrong 和 Laoxu（Kouza）：带有自己神经网络的 Pikafish 分叉。在本站每步 4 秒，4 线程。',
-  'champions.aboutJunglePrefix':
-    '作者 hzyhhzy，网络来自 Kouza：自我对弈训练的神经网络。在本站每步 150 次访问；',
-  'champions.aboutJungleSuffix': '（每步 500 万节点）是它下面较容易的机器人。',
+  'champions.aboutJungle':
+    '作者 hzyhhzy，网络来自 Kouza：自我对弈训练的神经网络。在本站每步 150 次访问。',
+  'champions.sourceLink': '源代码',
+  'champions.aboutJqe':
+    "作者 Devin O'Keefe：开源引擎，带有自己的神经网络，通过自我对弈训练。在本站每步 4 秒，4 线程。",
+  'champions.tookJqe': '2026-10-21 从 AB-JChess 0.2d 手中夺得头衔，共 300 局，得分 0.60。',
+  'champions.historyJqe':
+    "2026-10-21，揭棋：Devin O'Keefe 的 jqe 从 AB-JChess 0.2d 手中夺得头衔，300 局 171-114-15，得分 0.60",
+  'champions.lineEnd': '。',
   'champions.championBadge': '冠军',
   'champions.statWins': '胜',
   'champions.statDraws': '和',

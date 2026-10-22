@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildChampions, CHAMPIONS, OPEN_TITLES, TITLE_HISTORY, TITLES } from './champions-page.js';
 import { mountContribute } from './contribute-page.js';
 import { mountCreators } from './creators-page.js';
@@ -118,9 +118,44 @@ describe('/champions', () => {
       'See the games /study/0t8xpyv6',
       'Play the champion /bot/katago',
     ]);
+    // Each champion links its engine's source, and no card plugs another bot.
+    expect(hrefs(card('jieqi') as HTMLElement)).toContain('https://github.com/lxsgx23/AB-JChess');
     expect(hrefs(card('jungle') as HTMLElement)).toContain(
-      'https://github.com/brianhliou/misty-jungle',
+      'https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025',
     );
+    expect(card('jungle').querySelector('.champions-about')?.textContent).not.toContain('Misty');
+  });
+
+  // jqe reigns only in a build that offers it (VITE_JQE_ENABLED); until its
+  // write-up and games are published the card links only to the bot.
+  it('hands the jieqi title to jqe when jqe is on, keeping AB-JChess in the history', async () => {
+    vi.stubEnv('VITE_JQE_ENABLED', 'true');
+    vi.resetModules();
+    try {
+      const { buildChampions: build } = await import('./champions-page.js');
+      const page = build('en');
+      const jieqi = page.querySelector<HTMLElement>('[data-game="jieqi"]')!;
+      expect(jieqi.querySelector('h3')?.textContent).toBe('jqe');
+      expect(
+        [...jieqi.querySelectorAll('.champions-stats dd')].map((dd) => dd.textContent),
+      ).toEqual(['171', '15', '114']);
+      expect(
+        [...jieqi.querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(
+          (a) => `${a.textContent} ${a.getAttribute('href')}`,
+        ),
+      ).toEqual(['Play the champion /bot/jqe']);
+      expect(hrefs(jieqi)).toContain('https://github.com/devinokeefe/jieqi');
+      const lines = [...page.querySelectorAll('.champions-list li')].map(
+        (li) => li.textContent ?? '',
+      );
+      expect(lines[0]).toBe(
+        "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, a 0.60 score.",
+      );
+      expect(lines[1]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
   });
 
   it('lists the title history newest first, then the challenge rules', () => {
