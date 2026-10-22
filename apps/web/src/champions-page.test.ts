@@ -127,7 +127,7 @@ describe('/champions', () => {
   });
 
   // jqe reigns only in a build that offers it (VITE_JQE_ENABLED); until its
-  // write-up and games are published the card links only to the bot.
+  // write-up is published the card links to the bot and the match games.
   it('hands the jieqi title to jqe when jqe is on, keeping AB-JChess in the history', async () => {
     vi.stubEnv('VITE_JQE_ENABLED', 'true');
     vi.resetModules();
@@ -143,13 +143,13 @@ describe('/champions', () => {
         [...jieqi.querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(
           (a) => `${a.textContent} ${a.getAttribute('href')}`,
         ),
-      ).toEqual(['Play the champion /bot/jqe']);
+      ).toEqual(['See the games /study/3RQbr51i', 'Play the champion /bot/jqe']);
       expect(hrefs(jieqi)).toContain('https://github.com/devinokeefe/jieqi');
       const lines = [...page.querySelectorAll('.champions-list li')].map(
         (li) => li.textContent ?? '',
       );
       expect(lines[0]).toBe(
-        "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, scoring 60%.",
+        "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, scoring 60% (games).",
       );
       expect(lines[1]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
     } finally {
