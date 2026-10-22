@@ -5,6 +5,8 @@ import {
   isJieqiEngineClientId,
   JIEQI_ABJCHESS_ENGINE_ID,
   JIEQI_DEFAULT_ENGINE_ID,
+  JIEQI_JQE_ENGINE_ID,
+  jqeAvailable,
 } from './../jieqi-engine.js';
 import {
   createTenantRoomsRoute,
@@ -43,10 +45,12 @@ const jieqiRoute = createTenantRoomsRoute<
     kind: 'seated',
     defaultEngineId: JIEQI_DEFAULT_ENGINE_ID,
     // The AB-JChess slot needs its binary and net (a dev box usually has neither);
-    // refusing here beats a room that aborts at its first engine move.
+    // refusing here beats a room that aborts at its first engine move. jqe also needs
+    // MISTBOARD_JQE_ENABLED, held off until its author's OK.
     isEngineClientId: (engineId) =>
       isJieqiEngineClientId(engineId) &&
-      (engineId !== JIEQI_ABJCHESS_ENGINE_ID || abJchessAvailable()),
+      (engineId !== JIEQI_ABJCHESS_ENGINE_ID || abJchessAvailable()) &&
+      (engineId !== JIEQI_JQE_ENGINE_ID || jqeAvailable()),
     seats: JIEQI_SEATS,
   },
   // Rated friend rooms follow the lobby (rooms-route.ts gateRatedRoomRequest):

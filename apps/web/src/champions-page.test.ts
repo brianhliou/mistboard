@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildChampions, CHAMPIONS, OPEN_TITLES, TITLE_HISTORY, TITLES } from './champions-page.js';
 import { mountContribute } from './contribute-page.js';
 import { mountCreators } from './creators-page.js';
@@ -99,7 +99,7 @@ describe('/champions', () => {
     // A zero count draws no segment.
     expect(card('jungle').querySelectorAll('.champions-bar > span')).toHaveLength(2);
     expect(card('jieqi').querySelector('.champions-took')?.textContent).toBe(
-      'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, a 0.64 score.',
+      'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, scoring 64%.',
     );
     expect(card('jungle').querySelector('.champions-took')?.textContent).toContain(
       'from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move',
@@ -118,9 +118,44 @@ describe('/champions', () => {
       'See the games /study/0t8xpyv6',
       'Play the champion /bot/katago',
     ]);
+    // Each champion links its engine's source, and no card plugs another bot.
+    expect(hrefs(card('jieqi') as HTMLElement)).toContain('https://github.com/lxsgx23/AB-JChess');
     expect(hrefs(card('jungle') as HTMLElement)).toContain(
-      'https://github.com/brianhliou/misty-jungle',
+      'https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025',
     );
+    expect(card('jungle').querySelector('.champions-about')?.textContent).not.toContain('Misty');
+  });
+
+  // jqe reigns only in a build that offers it (VITE_JQE_ENABLED); until its
+  // write-up and games are published the card links only to the bot.
+  it('hands the jieqi title to jqe when jqe is on, keeping AB-JChess in the history', async () => {
+    vi.stubEnv('VITE_JQE_ENABLED', 'true');
+    vi.resetModules();
+    try {
+      const { buildChampions: build } = await import('./champions-page.js');
+      const page = build('en');
+      const jieqi = page.querySelector<HTMLElement>('[data-game="jieqi"]')!;
+      expect(jieqi.querySelector('h3')?.textContent).toBe('jqe');
+      expect(
+        [...jieqi.querySelectorAll('.champions-stats dd')].map((dd) => dd.textContent),
+      ).toEqual(['171', '15', '114']);
+      expect(
+        [...jieqi.querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(
+          (a) => `${a.textContent} ${a.getAttribute('href')}`,
+        ),
+      ).toEqual(['Play the champion /bot/jqe']);
+      expect(hrefs(jieqi)).toContain('https://github.com/devinokeefe/jieqi');
+      const lines = [...page.querySelectorAll('.champions-list li')].map(
+        (li) => li.textContent ?? '',
+      );
+      expect(lines[0]).toBe(
+        "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, scoring 60%.",
+      );
+      expect(lines[1]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
   });
 
   it('lists the title history newest first, then the challenge rules', () => {
@@ -138,7 +173,7 @@ describe('/champions', () => {
     }
     const body = page.textContent ?? '';
     expect(body).toContain('A match may be extended past 200 games.');
-    expect(body).toContain('A score of 0.55 or better (about +35 Elo) takes the title.');
+    expect(body).toContain('Scoring 55% or better (about +35 Elo) takes the title.');
     expect(body).toContain('within two weeks of a submission and post the result either way');
     // The "What has been tried" section is gone (Brian, 2026-10-07).
     expect(body).not.toMatch(/What has been tried|ten nets|CLAP_CDC/);

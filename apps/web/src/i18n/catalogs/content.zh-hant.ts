@@ -185,7 +185,9 @@ export const ZH_HANT_CONTENT = {
   'source.chessops': 'chessops：國際象棋規則基礎元件，GPL-3.0-or-later。',
   'source.stockfish': 'Stockfish：研究和引擎 worker 流程的可選引擎/執行時依賴，GPL 系列。',
   'source.abJchess':
-    'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）：本站最強的揭棋機器人，GPL-3.0；其神經網路經作者許可使用。',
+    'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）：揭棋引擎，GPL-3.0；其神經網路經作者許可使用。',
+  'source.jqe':
+    "jqe，作者 Devin O'Keefe：本站最強的揭棋機器人，自帶神經網路，MIT；經作者許可在本站使用。",
   'source.katagomo':
     'KataGomo，作者 hzyhhzy：鬥獸棋版 KataGo（AnimalChess2025 分支），本站最強的鬥獸棋機器人，MIT；經作者許可使用。',
   'source.katago': 'KataGo，作者 lightvector：KataGomo 所基於的引擎，MIT。',
@@ -450,15 +452,21 @@ export const ZH_HANT_CONTENT = {
     '每個遊戲都有一位現任冠軍引擎：網站上最強的機器人，並署上作者的名字。它下面還有更容易的機器人和級別。任何引擎都可以在公開對抗賽中挑戰冠軍頭銜。我們也希望託管更多引擎供你對弈，而不只是冠軍；想提供引擎，請按下面的提交步驟。',
   'champions.aboutJieqi':
     '作者 Huorongrong 和 Laoxu（Kouza）：帶有自己神經網路的 Pikafish 分叉。在本站每步 4 秒，4 執行緒。',
-  'champions.aboutJunglePrefix':
-    '作者 hzyhhzy，網路來自 Kouza：自我對弈訓練的神經網路。在本站每步 150 次訪問；',
-  'champions.aboutJungleSuffix': '（每步 500 萬節點）是它下面較容易的機器人。',
+  'champions.aboutJungle':
+    '作者 hzyhhzy，網路來自 Kouza：自我對弈訓練的神經網路。在本站每步 150 次訪問。',
+  'champions.sourceLink': '原始碼',
+  'champions.aboutJqe':
+    "作者 Devin O'Keefe：開源引擎，帶有自己的神經網路，透過自我對弈訓練。在本站每步 4 秒，4 執行緒。",
+  'champions.tookJqe': '2026-10-21 從 AB-JChess 0.2d 手中奪得頭銜，共 300 局，得分率 60%。',
+  'champions.historyJqe':
+    "2026-10-21，揭棋：Devin O'Keefe 的 jqe 從 AB-JChess 0.2d 手中奪得頭銜，300 局 171-114-15，得分率 60%",
+  'champions.lineEnd': '。',
   'champions.championBadge': '冠軍',
   'champions.statWins': '勝',
   'champions.statDraws': '和',
   'champions.statLosses': '負',
   'champions.barLabel': '{wins} 勝，{draws} 和，{losses} 負',
-  'champions.tookJieqi': '2026-09-30 從皮卡魚第 8 級手中奪得頭銜，共 400 局，得分 0.64。',
+  'champions.tookJieqi': '2026-09-30 從皮卡魚第 8 級手中奪得頭銜，共 400 局，得分率 64%。',
   'champions.tookJungle':
     '2026-09-22 從 MistyJungle 手中奪得頭銜，共 200 局，每步 1,000 次訪問，一局未負。',
   'champions.readMatch': '閱讀比賽報導',
@@ -479,13 +487,13 @@ export const ZH_HANT_CONTENT = {
   'champions.parenClose': '）。',
   'champions.historyHeading': '頭銜歷史',
   'champions.historyJieqi':
-    '2026-09-30，揭棋：Huorongrong 和 Laoxu（Kouza）的 AB-JChess 從皮卡魚第 8 級手中奪得頭銜，400 局 248-136-16，得分 0.64',
+    '2026-09-30，揭棋：Huorongrong 和 Laoxu（Kouza）的 AB-JChess 從皮卡魚第 8 級手中奪得頭銜，400 局 248-136-16，得分率 64%',
   'champions.historyJungle':
     '2026-09-22，鬥獸棋：hzyhhzy 的 KataGo-AnimalChess（網路來自 Kouza）從 MistyJungle 手中奪得頭銜，每步 1,000 次訪問，200 局 82 勝 0 負 118 和',
   'champions.challengeHeading': '挑戰頭銜',
   'champions.ruleMatch':
     '與冠軍對弈 200 局，每種顏色各 100 局，雙方都使用冠軍每步的時間或節點預算，在同一台機器上進行，公開隨機種子。對抗賽可以延長到 200 局以上。',
-  'champions.ruleScore': '得分達到 0.55 或更高（約 +35 Elo）即奪得頭銜。',
+  'champions.ruleScore': '得分率達到 55% 或更高（約 +35 Elo）即奪得頭銜。',
   'champions.ruleRun': '我們會在收到提交後兩週內進行對抗賽，無論結果如何都會公布。',
   'champions.ruleSubmitPrefix':
     '提交方式：把 Linux x86-64 二進位檔或權重檔、準確的命令列，以及你自己的對抗賽記錄，透過',

@@ -323,6 +323,22 @@ describe('landing bot ladder (homepage play panel)', () => {
     ]);
   });
 
+  it('puts jqe above AB-JChess only where /api/bots reports it playable', () => {
+    const jieqi = (playable: string[]) =>
+      landingBotLadder('jieqi', new Set(playable)).map((rung) => rung.botId);
+    // Flag off (the server never lists jqe): the ladder is unchanged.
+    expect(jieqi([])).toEqual(ids('jieqi'));
+    expect(jieqi(['ab-jchess'])).toEqual(ids('jieqi'));
+    expect(jieqi(['jqe'])).toEqual([...ids('jieqi'), 'jqe']);
+    const ladder = landingBotLadder('jieqi', new Set(['jqe']));
+    expect(ladder.at(-1)).toMatchObject({ name: 'jqe', engine: 'jqe', net: 'nnue', level: null });
+    expect(ladder[landingBotLadderIndex(ladder, 'jqe-jieqi')]?.botId).toBe('jqe');
+    expect(pveEngineIdForRememberedPick('jieqi', 'jqe')).toBe('jqe-jieqi');
+    // A remembered jqe is a returning player, like AB-JChess.
+    expect(jieqiPrimaryLevel('jqe')).toBe(4);
+    expect(jieqiPrimaryLevel('jqe-jieqi')).toBe(4);
+  });
+
   it('gives the other Fairy-Stockfish variants eight levels and no named top', () => {
     for (const spec of ['duck-xiangqi', 'crazyhouse-xiangqi']) {
       expect(ids(spec)).toEqual(

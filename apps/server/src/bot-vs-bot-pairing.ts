@@ -19,7 +19,7 @@ import { BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
 import { CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES } from './crazyhouse-xiangqi-fsf-engine.js';
 import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
-import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
+import { JIEQI_JQE_ENGINE_ID, JIEQI_PLAYABLE_ENGINES, jqeEnabled } from './jieqi-engine.js';
 import { JUNGLE_PLAYABLE_ENGINE_IDS } from './server-jungle-engine.js';
 import { XIANGQI_PUBLIC_ENGINES } from './xiangqi-engine-catalog.js';
 
@@ -43,7 +43,12 @@ export function xiangqiBotLadder(): string[] {
 // play scheduled games, so every published game shows a bot as prod serves it.
 const BOT_LADDERS: Readonly<Record<string, () => string[]>> = {
   xiangqi: xiangqiBotLadder,
-  jieqi: () => JIEQI_PLAYABLE_ENGINES.map((engine) => engine.id),
+  // jqe tops the jieqi ladder only while MISTBOARD_JQE_ENABLED is on (held until its
+  // author's OK), so no scheduled game publishes a bot players cannot pick.
+  jieqi: () =>
+    JIEQI_PLAYABLE_ENGINES.map((engine) => engine.id).filter(
+      (id) => id !== JIEQI_JQE_ENGINE_ID || jqeEnabled(),
+    ),
   'fortress-xiangqi': () => FORTRESS_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   'duck-xiangqi': () => DUCK_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
   'atomic-xiangqi': () => ATOMIC_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),

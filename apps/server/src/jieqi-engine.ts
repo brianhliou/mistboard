@@ -49,12 +49,20 @@ export const JIEQI_ENGINE_VERSION = '0.3.3';
 // and checks its sha256 (his terms: never re-hosted). The version names the source
 // release and the net, since either one changes its play.
 export const JIEQI_ABJCHESS_ENGINE_ID = 'ab-jchess-jieqi';
-export const ABJCHESS_JIEQI_ENGINE_VERSION = 'abj-0.2b-net-20260911';
-export const ABJCHESS_NET_FILE = 'abjchess-20260911.nnue';
+export const ABJCHESS_JIEQI_ENGINE_VERSION = 'abj-0.2d-net-20261010';
+export const ABJCHESS_NET_FILE = 'abjchess-20261010.nnue';
+// jqe (github.com/devinokeefe/jieqi, MIT, by Devin O'Keefe): a UCI jieqi engine with
+// its own NNUE, above AB-JChess at the top of the ladder (+67 Elo over 300 games
+// against AB-JChess 0.2d at 4 s/move, jqe.ref). Its net is MIT too, so it ships in
+// our engines release beside the binary (engine-assets.sh). The slot is held behind
+// MISTBOARD_JQE_ENABLED until launch: off, nothing offers, seats or schedules it (jqeAvailable).
+export const JIEQI_JQE_ENGINE_ID = 'jqe-jieqi';
+export const JQE_JIEQI_ENGINE_VERSION = 'jqe-331a6e61-net-it014';
+export const JQE_NET_FILE = 'it014.jqn';
 // Short form of ab-jchess.ref, the AB-JChess commit the prod image builds. Part of the
 // AB analysis cache keys for the same reason PIKAFISH_JIEQI_ENGINE_REF is part of the
 // PikaJieQi ones (see below); jieqi-engine-ref.test.ts keeps the two in step.
-export const ABJCHESS_ENGINE_REF = '1ae95ca6';
+export const ABJCHESS_ENGINE_REF = 'fe35d87c';
 // ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
 // (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the two paths are
 // independent, so a live-play change must not invalidate cached sweeps. Bump this one only
@@ -104,8 +112,11 @@ export type JieqiEngineTier = {
   // offered or rated.
   retired?: boolean;
   // The binary behind the tier; omitted = PikaJieQi.
-  engine?: 'ab-jchess';
+  engine?: JieqiLiveEngine;
 };
+
+/** The non-PikaJieQi binaries a live tier can run. */
+export type JieqiLiveEngine = 'ab-jchess' | 'jqe';
 
 // The ladder (2026-09-29): Lichess's Stockfish level table, the same one the xiangqi
 // Fairy-Stockfish ladder copies (xiangqi-fsf-engine.ts): skill -9..16, depth 5/5/5/5/5/8/13,
@@ -146,6 +157,14 @@ const JIEQI_ENGINE_TIERS: readonly JieqiEngineTier[] = [
     name: 'AB-JChess',
     movetimeMs: 4_000,
     engine: 'ab-jchess',
+  },
+  {
+    // jqe above AB-JChess, on the same budget (4000ms, Hash 256, the same threads): the
+    // settings its 100-game match against AB-JChess ran. Full strength.
+    id: JIEQI_JQE_ENGINE_ID,
+    name: 'jqe',
+    movetimeMs: 4_000,
+    engine: 'jqe',
   },
   // Pre-ladder tiers (depth caps only), never offered after the Pikafish consolidation.
   {
@@ -200,7 +219,9 @@ export const JIEQI_RANDOM_ENGINE_ID = 'random-legal-jieqi';
 export const JIEQI_RANDOM_ENGINE_VERSION = 'random-legal-v1';
 
 /** Everything offered, weakest first: levels 1-7, level 8 (JIEQI_DEFAULT_ENGINE_ID),
- *  then the AB-JChess top slot. */
+ *  the AB-JChess slot, then jqe on top. jqe is listed whether or not its flag is on
+ *  (the catalog resolves it for history); every surface that offers or schedules a
+ *  bot asks jqeAvailable() or jqeEnabled() first. */
 export const JIEQI_PLAYABLE_ENGINES: readonly JieqiEngineTier[] = JIEQI_ENGINE_TIERS.filter(
   (tier) => !tier.retired,
 );
@@ -235,9 +256,23 @@ const abJchessLivePool = new UciEnginePool({
   queueTimeoutMessage: 'ab-jchess concurrency queue timed out',
 });
 
+// jqe gets its own two slots for the same reason AB-JChess does: a 4 s search must
+// never queue a ladder move, nor an AB one.
+export const JQE_LIVE_QUEUE_TIMEOUT_MS = 20_000;
+const jqeLivePool = new UciEnginePool({
+  name: 'jqe-live',
+  maxProcessesEnvVar: 'MISTBOARD_JQE_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_JQE_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 2,
+  defaultQueueTimeoutMs: JQE_LIVE_QUEUE_TIMEOUT_MS,
+  queueTimeoutMessage: 'jqe concurrency queue timed out',
+});
+
 /** The live-move pool a tier's binary runs in. */
-export function jieqiLivePool(engine?: 'ab-jchess'): UciEnginePool {
-  return engine === 'ab-jchess' ? abJchessLivePool : enginePool;
+export function jieqiLivePool(engine?: JieqiLiveEngine): UciEnginePool {
+  if (engine === 'ab-jchess') return abJchessLivePool;
+  if (engine === 'jqe') return jqeLivePool;
+  return enginePool;
 }
 
 // Dedicated ANALYSIS pool: whole-game sweeps and decisions fan-outs acquire here,
@@ -303,7 +338,7 @@ export function pikaJieqiPath(): string {
 }
 
 // AB-JChess and its net. No dev fallback under ~/projects/tools: the checkout there is
-// 0.1b, which searches the start position on an empty pool field. Locally, build 0.2b
+// 0.1b, which searches the start position on an empty pool field. Locally, build 0.2d
 // (ab-jchess.ref) and point MISTBOARD_ABJCHESS_PATH at it.
 export function abJchessPath(): string {
   const explicit = process.env.MISTBOARD_ABJCHESS_PATH;
@@ -341,6 +376,58 @@ export function abJchessNetPath(): string {
     );
   }
   return found;
+}
+
+// jqe and its net: the engines release puts both in /app/bin. No dev fallback; jqe
+// builds on x86-64 only, so locally point MISTBOARD_JQE_PATH at a wrapper that runs the
+// released binary (docker --platform linux/amd64) and MISTBOARD_JQE_NET at the net.
+export function jqePath(): string {
+  const explicit = process.env.MISTBOARD_JQE_PATH;
+  if (explicit) {
+    const resolved = resolve(explicit);
+    if (!existsSync(resolved)) {
+      throw new Error(`MISTBOARD_JQE_PATH points at ${resolved} but the binary does not exist`);
+    }
+    return resolved;
+  }
+  for (const candidate of [resolve(process.cwd(), 'bin', 'jqe'), '/app/bin/jqe']) {
+    if (existsSync(candidate)) return candidate;
+  }
+  throw new Error('jqe binary not found. Set MISTBOARD_JQE_PATH.');
+}
+
+export function jqeNetPath(): string {
+  const explicit = process.env.MISTBOARD_JQE_NET;
+  const candidates = explicit
+    ? [resolve(explicit)]
+    : [resolve(process.cwd(), 'bin', JQE_NET_FILE), `/app/bin/${JQE_NET_FILE}`];
+  const found = candidates.find((candidate) => existsSync(candidate));
+  if (!found) {
+    throw new Error(
+      `jqe net ${JQE_NET_FILE} not found (${candidates.join(', ')}). Set MISTBOARD_JQE_NET.`,
+    );
+  }
+  return found;
+}
+
+/** The jqe slot's flag, read on every call (off unless MISTBOARD_JQE_ENABLED is 1 or
+ *  true): held off until the author's OK. */
+export function jqeEnabled(): boolean {
+  const flag = process.env.MISTBOARD_JQE_ENABLED?.trim().toLowerCase();
+  return flag === '1' || flag === 'true';
+}
+
+/** True when the flag is on and both the jqe binary and its net resolve; the slot is
+ *  offered and seated only then. */
+export function jqeAvailable(): boolean {
+  if (!jqeEnabled()) return false;
+  try {
+    jqePath();
+    jqeNetPath();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** True when both the AB-JChess binary and its net resolve; the top slot is offered only then. */
@@ -637,7 +724,9 @@ export function isJieqiEngineClientId(clientId: string | undefined): boolean {
 export function jieqiEngineVersion(clientId: string | undefined): string | null {
   const tier = jieqiEngineTierFor(clientId);
   if (!tier) return null;
-  return tier.engine === 'ab-jchess' ? ABJCHESS_JIEQI_ENGINE_VERSION : JIEQI_ENGINE_VERSION;
+  if (tier.engine === 'ab-jchess') return ABJCHESS_JIEQI_ENGINE_VERSION;
+  if (tier.engine === 'jqe') return JQE_JIEQI_ENGINE_VERSION;
+  return JIEQI_ENGINE_VERSION;
 }
 
 // `moves`: the quiet plies since the last irreversible move (capture OR reveal), with `fen`
@@ -658,7 +747,7 @@ export type JieqiEngineOptions = {
   /** Uniform [0,1) source for the skill pick; injectable for deterministic tests. */
   rng?: () => number;
   /** The binary (JieqiEngineTier.engine); omitted = PikaJieQi. */
-  engine?: 'ab-jchess';
+  engine?: JieqiLiveEngine;
   /** Restrict the root to these moves (UCI `go … searchmoves`); the draw guard's
    *  re-search (jieqi-draw-guard.ts). Omitted or empty = every legal move. */
   searchMoves?: readonly string[];
@@ -761,10 +850,14 @@ export async function jieqiLiveEngineMove(
 }
 
 /** The `uci` … `isready` handshake a live session is spawned with. Hash and Threads are
- *  set here, once per process lifetime; AB-JChess loads its net here too. */
-export function buildJieqiLiveInitCommands(engine?: 'ab-jchess'): string[] {
+ *  set here, once per process lifetime; AB-JChess and jqe load their nets here too. */
+export function buildJieqiLiveInitCommands(engine?: JieqiLiveEngine): string[] {
   const net =
-    engine === 'ab-jchess' ? [`setoption name EvalFile value ${abJchessNetPath()}`] : netOption();
+    engine === 'ab-jchess'
+      ? [`setoption name EvalFile value ${abJchessNetPath()}`]
+      : engine === 'jqe'
+        ? [`setoption name EvalFile value ${jqeNetPath()}`]
+        : netOption();
   return ['uci', ...net, ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
 }
 
@@ -800,10 +893,22 @@ export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {
 // exact cost this cache exists to keep off the move path.
 const warmSessions = new UciWarmSessionCache({ name: 'pikafish-jieqi', idleTtlMs: 60 * 60_000 });
 
-function jieqiLiveSessionSpec(engine?: 'ab-jchess') {
-  return engine === 'ab-jchess'
-    ? { bin: abJchessPath(), initCommands: buildJieqiLiveInitCommands(engine), name: 'ab-jchess' }
-    : { bin: pikaJieqiPath(), initCommands: buildJieqiLiveInitCommands(), name: 'pikafish-jieqi' };
+function jieqiLiveSessionSpec(engine?: JieqiLiveEngine) {
+  if (engine === 'ab-jchess') {
+    return {
+      bin: abJchessPath(),
+      initCommands: buildJieqiLiveInitCommands(engine),
+      name: 'ab-jchess',
+    };
+  }
+  if (engine === 'jqe') {
+    return { bin: jqePath(), initCommands: buildJieqiLiveInitCommands(engine), name: 'jqe' };
+  }
+  return {
+    bin: pikaJieqiPath(),
+    initCommands: buildJieqiLiveInitCommands(),
+    name: 'pikafish-jieqi',
+  };
 }
 
 export async function jieqiEngineMove(

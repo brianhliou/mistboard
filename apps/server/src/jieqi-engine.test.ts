@@ -13,11 +13,15 @@ import {
   JIEQI_ABJCHESS_ENGINE_ID,
   JIEQI_DEFAULT_ENGINE_ID,
   JIEQI_ENGINE_VERSION,
+  JIEQI_JQE_ENGINE_ID,
   JIEQI_PLAYABLE_ENGINES,
+  JQE_JIEQI_ENGINE_VERSION,
   jieqiAnalysisResourceOptions,
   jieqiEngineMove,
   jieqiEngineTierFor,
   jieqiEngineVersion,
+  jqeAvailable,
+  jqeEnabled,
   pickSkillMove,
   pikafishJieqiWarmSessionStats,
 } from './jieqi-engine.js';
@@ -66,8 +70,8 @@ test('the tier ladder stays ordered weakest-first', () => {
     depths,
   );
   assert.deepEqual(
-    JIEQI_PLAYABLE_ENGINES.slice(-2).map((t) => t.id),
-    [JIEQI_DEFAULT_ENGINE_ID, JIEQI_ABJCHESS_ENGINE_ID],
+    JIEQI_PLAYABLE_ENGINES.slice(-3).map((t) => t.id),
+    [JIEQI_DEFAULT_ENGINE_ID, JIEQI_ABJCHESS_ENGINE_ID, JIEQI_JQE_ENGINE_ID],
     'level 8 (the create-route default) sits under the AB-JChess top slot',
   );
 });
@@ -76,7 +80,7 @@ test('every Pikafish rung is named by its level, level 8 included', () => {
   // Level 8 kept its pre-ladder name 'PikaJieQi - Strongest', which every
   // engine game card showed beside 'Pikafish Level 7'.
   assert.deepEqual(
-    JIEQI_PLAYABLE_ENGINES.filter((t) => t.engine !== 'ab-jchess').map((t) => t.name),
+    JIEQI_PLAYABLE_ENGINES.filter((t) => t.engine === undefined).map((t) => t.name),
     [1, 2, 3, 4, 5, 6, 7, 8].map((level) => `Pikafish Level ${level}`),
   );
 });
@@ -344,5 +348,63 @@ test('the AB-JChess handshake loads its net from MISTBOARD_ABJCHESS_NET; PikaJie
   } finally {
     if (saved === undefined) delete process.env.MISTBOARD_ABJCHESS_NET;
     else process.env.MISTBOARD_ABJCHESS_NET = saved;
+  }
+});
+
+// jqe (2026-10) sits above AB-JChess on its own binary and net, held behind a flag
+// until its author's OK. The tier exists either way (so the catalog and the EvE
+// adapter know it); the flag decides whether anything may offer or seat it.
+test('the jqe top slot runs its own build at 4 s and records its own version', () => {
+  const tier = jieqiEngineTierFor(JIEQI_JQE_ENGINE_ID);
+  assert.ok(tier);
+  assert.equal(tier.engine, 'jqe');
+  assert.equal(tier.name, 'jqe');
+  assert.equal(tier.skill, undefined);
+  assert.equal(tier.depth, undefined);
+  assert.equal(tier.movetimeMs, 4_000);
+  assert.equal(jieqiEngineVersion(JIEQI_JQE_ENGINE_ID), JQE_JIEQI_ENGINE_VERSION);
+  assert.equal(firstPartyBotEngineFor('jqe', 'jieqi'), JIEQI_JQE_ENGINE_ID);
+});
+
+test('the jqe handshake loads its net from MISTBOARD_JQE_NET', () => {
+  withEnv({ MISTBOARD_JQE_NET: process.execPath }, () => {
+    const init = buildJieqiLiveInitCommands('jqe');
+    assert.ok(init.includes(`setoption name EvalFile value ${process.execPath}`));
+    assert.ok(!buildJieqiLiveInitCommands().some((line) => line.includes('EvalFile')));
+  });
+});
+
+test('jqe is off unless MISTBOARD_JQE_ENABLED is set, and unavailable without its binary and net', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'jqe-flag-'));
+  try {
+    const bin = join(dir, 'jqe');
+    const net = join(dir, 'it014.jqn');
+    writeFileSync(bin, '#!/bin/sh\n');
+    chmodSync(bin, 0o755);
+    writeFileSync(net, '');
+    withEnv(
+      { MISTBOARD_JQE_ENABLED: undefined, MISTBOARD_JQE_PATH: bin, MISTBOARD_JQE_NET: net },
+      () => {
+        assert.equal(jqeEnabled(), false);
+        assert.equal(jqeAvailable(), false, 'off by default even with both files present');
+      },
+    );
+    withEnv({ MISTBOARD_JQE_ENABLED: '0', MISTBOARD_JQE_PATH: bin, MISTBOARD_JQE_NET: net }, () => {
+      assert.equal(jqeAvailable(), false);
+    });
+    withEnv({ MISTBOARD_JQE_ENABLED: '1', MISTBOARD_JQE_PATH: bin, MISTBOARD_JQE_NET: net }, () => {
+      assert.equal(jqeEnabled(), true);
+      assert.equal(jqeAvailable(), true);
+    });
+    withEnv(
+      {
+        MISTBOARD_JQE_ENABLED: '1',
+        MISTBOARD_JQE_PATH: bin,
+        MISTBOARD_JQE_NET: join(dir, 'missing.jqn'),
+      },
+      () => assert.equal(jqeAvailable(), false, 'a missing net keeps the slot closed'),
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });

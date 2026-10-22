@@ -5,6 +5,7 @@ import './pages-static.css';
 import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
 import { track } from './analytics.js';
 import { buildContact } from './contact.js';
+import { jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { applyDocumentLocale, currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { isLikelySignedIn } from './signed-in-state.js';
@@ -638,6 +639,11 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ),
     // Its authors asked for a credit with a link (lxsgx23/AB-JChess#1).
     linkLine(t('source.abJchess', {}, locale), 'https://github.com/lxsgx23/AB-JChess'),
+    // jqe (MIT, devinokeefe/jieqi), credited with a link like AB-JChess, in the same
+    // VITE_JQE_ENABLED build that offers it.
+    ...(jqeEnabled()
+      ? [linkLine(t('source.jqe', {}, locale), 'https://github.com/devinokeefe/jieqi')]
+      : []),
     // The top jungle bot (#434): engine, the engine it is built on, and the net's
     // source, each linked; hzyhhzy agreed to it running here credited (hzyhhzy/KataGomo#12).
     linkLine(

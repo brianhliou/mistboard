@@ -44,6 +44,13 @@ export function xiangqiMahjongEnabled(): boolean {
   return import.meta.env.VITE_XIANGQI_MAHJONG_ENABLED === 'true';
 }
 
+// jqe, the jieqi bot above AB-JChess. Off by default and never on in dev: the
+// server holds the engine behind MISTBOARD_JQE_ENABLED until its author's OK, and
+// this build flag only adds it to the jieqi picker and the landing ladder.
+export function jqeEnabled(): boolean {
+  return import.meta.env.VITE_JQE_ENABLED === 'true';
+}
+
 // Crazyhouse Xiangqi renderer. Launched: always on, like fortress and atomic
 // (the server MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED flag remains the runtime
 // kill-switch for room creation).

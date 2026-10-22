@@ -26,6 +26,7 @@ on:
       - pikafish.ref
       - ab-jchess.ref
       - katago-jungle.ref
+      - jqe.ref
       - scripts/engine-assets.sh
       - .github/workflows/build-engines.yml
 
@@ -59,7 +60,8 @@ jobs:
             echo "yes=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # KataGo-AnimalChess builds with CMake against Eigen and a static zlib.
+      # KataGo-AnimalChess builds with CMake against Eigen and a static zlib; jqe
+      # builds with CMake too.
       - name: Build dependencies
         if: steps.published.outputs.yes != 'true'
         run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends cmake libeigen3-dev zlib1g-dev

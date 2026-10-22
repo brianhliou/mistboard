@@ -374,13 +374,44 @@ describe('bot pages', () => {
     expect(root.querySelector('.bot-rating-spotlight-title')?.textContent).toBe(
       'Play against Misty',
     );
-    expect(root.querySelector('.profile-overview-side')?.textContent).toContain('python-v2-v1.5');
+    // The engine id is an internal name; the page never prints it.
+    expect(root.querySelector('.profile-overview-side')?.textContent).not.toContain(
+      'python-v2-v1.5',
+    );
 
     // Recent games ride the same tab card and game rows.
     expect(root.querySelector('.profile-tab[aria-selected="true"]')?.textContent).toBe(
       'Recent games',
     );
     expect(root.querySelectorAll('.profile-game-list .profile-game-row')).toHaveLength(1);
+  });
+
+  it("credits jqe's author with a link and shows the localized bio, not the stored one", async () => {
+    const profile = misty({
+      id: 'jqe',
+      displayName: 'jqe',
+      bio: 'Stored bio: github.com/devinokeefe/jieqi',
+      activeEngineId: 'jqe-jieqi',
+      defaultGameSpecId: 'jieqi',
+      supportedGameSpecIds: ['jieqi'],
+      playOptions: [{ gameSpecId: 'jieqi', engineId: 'jqe-jieqi', playable: true }],
+      rating: null,
+      ratings: [],
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+
+    await mountBotProfile(root, 'jqe');
+
+    const side = root.querySelector('.profile-overview-side');
+    expect(side?.querySelector('.profile-side-bio')?.textContent).toContain(
+      "An open-source jieqi engine by Devin O'Keefe",
+    );
+    const credit = side?.querySelector<HTMLAnchorElement>('.bot-profile-credits a');
+    expect(credit?.textContent).toBe("jqe by Devin O'Keefe");
+    expect(credit?.href).toBe('https://github.com/devinokeefe/jieqi');
+    expect(side?.textContent).not.toContain('jqe-jieqi');
   });
 
   it('describes an eve-anchor sample as engine games, never as rated games or a time class', async () => {

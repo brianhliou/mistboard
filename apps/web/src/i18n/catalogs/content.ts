@@ -245,7 +245,9 @@ export const EN_CONTENT = {
   'source.fonts':
     'Fonts: Noto Sans and Noto Sans CJK, SIL Open Font License 1.1; Roboto, Apache 2.0.',
   'source.abJchess':
-    "AB-JChess by Huorongrong and Laoxu (Kouza): the top jieqi bot, GPL-3.0; its neural network is used with the authors' permission.",
+    "AB-JChess by Huorongrong and Laoxu (Kouza): a jieqi engine, GPL-3.0; its neural network is used with the authors' permission.",
+  'source.jqe':
+    "jqe by Devin O'Keefe: the top jieqi bot, with its own neural network, MIT; played here with the author's permission.",
   'source.katagomo':
     "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
   'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
@@ -362,16 +364,20 @@ export const EN_CONTENT = {
     'Each game has one reigning champion engine: the strongest bot you can play here, credited by name. Easier bots and levels sit below it. Any engine can challenge for the title in a public match. We also want to host other engines as bots you can play, not only champions; to offer one, use the submission steps below.',
   'champions.aboutJieqi':
     'By Huorongrong and Laoxu (Kouza): a Pikafish fork with its own neural network. It plays here at 4 s a move on 4 threads.',
-  'champions.aboutJunglePrefix':
-    'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move; ',
-  'champions.aboutJungleSuffix': ', at 5M nodes a move, is the easier bot below it.',
+  'champions.aboutJungle':
+    'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move.',
+  'champions.sourceLink': 'Source code',
   'champions.championBadge': 'Champion',
   'champions.statWins': 'wins',
   'champions.statDraws': 'draws',
   'champions.statLosses': 'losses',
   'champions.barLabel': '{wins} wins, {draws} draws, {losses} losses',
   'champions.tookJieqi':
-    'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, a 0.64 score.',
+    'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, scoring 64%.',
+  'champions.aboutJqe':
+    "By Devin O'Keefe: an open-source engine with its own neural network, trained on self-play. It plays here at 4 s a move on 4 threads.",
+  'champions.tookJqe':
+    'Took the title from AB-JChess 0.2d on 2026-10-21, over 300 games, scoring 60%.',
   'champions.tookJungle':
     'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
   'champions.readMatch': 'Read the match',
@@ -390,15 +396,18 @@ export const EN_CONTENT = {
   'champions.linkSeparator': ', ',
   'champions.parenOpen': ' (',
   'champions.parenClose': ').',
+  'champions.lineEnd': '.',
   'champions.historyHeading': 'Title history',
   'champions.historyJieqi':
-    '2026-09-30, Jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), took the title from Pikafish Level 8, 248-136-16 over 400 games, a 0.64 score',
+    '2026-09-30, Jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), took the title from Pikafish Level 8, 248-136-16 over 400 games, scoring 64%',
+  'champions.historyJqe':
+    "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, scoring 60%",
   'champions.historyJungle':
     '2026-09-22, Jungle Chess: KataGo-AnimalChess, by hzyhhzy with a network from Kouza, took the title from MistyJungle, 82-0 with 118 draws over 200 games at 1,000 visits a move',
   'champions.challengeHeading': 'Challenge for a title',
   'champions.ruleMatch':
     "200 games against the champion, 100 as each color, with the champion's time or node budget per move for both engines, on one machine, with the seed published. A match may be extended past 200 games.",
-  'champions.ruleScore': 'A score of 0.55 or better (about +35 Elo) takes the title.',
+  'champions.ruleScore': 'Scoring 55% or better (about +35 Elo) takes the title.',
   'champions.ruleRun':
     'We run the match within two weeks of a submission and post the result either way.',
   'champions.ruleSubmitPrefix':
@@ -800,6 +809,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.chessops',
   'source.stockfish',
   'source.abJchess',
+  'source.jqe',
   'source.katagomo',
   'source.katago',
   'source.dandelion',

@@ -169,6 +169,15 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     engines: { jieqi: 'ab-jchess-jieqi' },
     defaultGameSpecId: 'jieqi',
   },
+  // jqe above AB-JChess (migration 175), named for its engine like AB-JChess. Its
+  // engine is held behind MISTBOARD_JQE_ENABLED, so off it is unplayable and the
+  // public bot surfaces drop it (routes/bots.ts botPlayOptions).
+  {
+    id: 'jqe',
+    displayName: 'jqe',
+    engines: { jieqi: 'jqe-jieqi' },
+    defaultGameSpecId: 'jieqi',
+  },
   // The worst-move xiangqi bot (migration 174): below the ladder, not on it.
   {
     id: 'general-blunder',
