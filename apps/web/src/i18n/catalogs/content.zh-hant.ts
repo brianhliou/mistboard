@@ -457,16 +457,16 @@ export const ZH_HANT_CONTENT = {
   'champions.sourceLink': '原始碼',
   'champions.aboutJqe':
     "作者 Devin O'Keefe：開源引擎，帶有自己的神經網路，透過自我對弈訓練。在本站每步 4 秒，4 執行緒。",
-  'champions.tookJqe': '2026-10-21 從 AB-JChess 0.2d 手中奪得頭銜，共 300 局，得分 0.60。',
+  'champions.tookJqe': '2026-10-21 從 AB-JChess 0.2d 手中奪得頭銜，共 300 局，得分率 60%。',
   'champions.historyJqe':
-    "2026-10-21，揭棋：Devin O'Keefe 的 jqe 從 AB-JChess 0.2d 手中奪得頭銜，300 局 171-114-15，得分 0.60",
+    "2026-10-21，揭棋：Devin O'Keefe 的 jqe 從 AB-JChess 0.2d 手中奪得頭銜，300 局 171-114-15，得分率 60%",
   'champions.lineEnd': '。',
   'champions.championBadge': '冠軍',
   'champions.statWins': '勝',
   'champions.statDraws': '和',
   'champions.statLosses': '負',
   'champions.barLabel': '{wins} 勝，{draws} 和，{losses} 負',
-  'champions.tookJieqi': '2026-09-30 從皮卡魚第 8 級手中奪得頭銜，共 400 局，得分 0.64。',
+  'champions.tookJieqi': '2026-09-30 從皮卡魚第 8 級手中奪得頭銜，共 400 局，得分率 64%。',
   'champions.tookJungle':
     '2026-09-22 從 MistyJungle 手中奪得頭銜，共 200 局，每步 1,000 次訪問，一局未負。',
   'champions.readMatch': '閱讀比賽報導',
@@ -487,13 +487,13 @@ export const ZH_HANT_CONTENT = {
   'champions.parenClose': '）。',
   'champions.historyHeading': '頭銜歷史',
   'champions.historyJieqi':
-    '2026-09-30，揭棋：Huorongrong 和 Laoxu（Kouza）的 AB-JChess 從皮卡魚第 8 級手中奪得頭銜，400 局 248-136-16，得分 0.64',
+    '2026-09-30，揭棋：Huorongrong 和 Laoxu（Kouza）的 AB-JChess 從皮卡魚第 8 級手中奪得頭銜，400 局 248-136-16，得分率 64%',
   'champions.historyJungle':
     '2026-09-22，鬥獸棋：hzyhhzy 的 KataGo-AnimalChess（網路來自 Kouza）從 MistyJungle 手中奪得頭銜，每步 1,000 次訪問，200 局 82 勝 0 負 118 和',
   'champions.challengeHeading': '挑戰頭銜',
   'champions.ruleMatch':
     '與冠軍對弈 200 局，每種顏色各 100 局，雙方都使用冠軍每步的時間或節點預算，在同一台機器上進行，公開隨機種子。對抗賽可以延長到 200 局以上。',
-  'champions.ruleScore': '得分達到 0.55 或更高（約 +35 Elo）即奪得頭銜。',
+  'champions.ruleScore': '得分率達到 55% 或更高（約 +35 Elo）即奪得頭銜。',
   'champions.ruleRun': '我們會在收到提交後兩週內進行對抗賽，無論結果如何都會公布。',
   'champions.ruleSubmitPrefix':
     '提交方式：把 Linux x86-64 二進位檔或權重檔、準確的命令列，以及你自己的對抗賽記錄，透過',

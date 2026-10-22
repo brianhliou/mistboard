@@ -373,11 +373,11 @@ export const EN_CONTENT = {
   'champions.statLosses': 'losses',
   'champions.barLabel': '{wins} wins, {draws} draws, {losses} losses',
   'champions.tookJieqi':
-    'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, a 0.64 score.',
+    'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, scoring 64%.',
   'champions.aboutJqe':
     "By Devin O'Keefe: an open-source engine with its own neural network, trained on self-play. It plays here at 4 s a move on 4 threads.",
   'champions.tookJqe':
-    'Took the title from AB-JChess 0.2d on 2026-10-21, over 300 games, a 0.60 score.',
+    'Took the title from AB-JChess 0.2d on 2026-10-21, over 300 games, scoring 60%.',
   'champions.tookJungle':
     'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
   'champions.readMatch': 'Read the match',
@@ -399,15 +399,15 @@ export const EN_CONTENT = {
   'champions.lineEnd': '.',
   'champions.historyHeading': 'Title history',
   'champions.historyJieqi':
-    '2026-09-30, Jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), took the title from Pikafish Level 8, 248-136-16 over 400 games, a 0.64 score',
+    '2026-09-30, Jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), took the title from Pikafish Level 8, 248-136-16 over 400 games, scoring 64%',
   'champions.historyJqe':
-    "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, a 0.60 score",
+    "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, scoring 60%",
   'champions.historyJungle':
     '2026-09-22, Jungle Chess: KataGo-AnimalChess, by hzyhhzy with a network from Kouza, took the title from MistyJungle, 82-0 with 118 draws over 200 games at 1,000 visits a move',
   'champions.challengeHeading': 'Challenge for a title',
   'champions.ruleMatch':
     "200 games against the champion, 100 as each color, with the champion's time or node budget per move for both engines, on one machine, with the seed published. A match may be extended past 200 games.",
-  'champions.ruleScore': 'A score of 0.55 or better (about +35 Elo) takes the title.',
+  'champions.ruleScore': 'Scoring 55% or better (about +35 Elo) takes the title.',
   'champions.ruleRun':
     'We run the match within two weeks of a submission and post the result either way.',
   'champions.ruleSubmitPrefix':
