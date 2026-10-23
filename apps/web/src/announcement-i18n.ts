@@ -35,6 +35,12 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-24 (play Brian by correspondence) ── 通信对局 / 休闲 / 对弈 follow the play catalog's host card.
+  'Play a correspondence game against Brian, who builds Mistboard.':
+    '与 Mistboard 的开发者 Brian 下一盘通信对局。',
+  'A person, not a bot. Start a casual game from one card on the correspondence page: pick a variant and a side, and each of you has two days per move. Sign in to play.':
+    '对手是真人，不是电脑。在通信对局页面的一张卡片上开始一盘休闲对局：选好变体和执子方，双方每步各有两天时间。登录后即可对弈。',
+  'Play Brian': '与 Brian 对弈',
   // ── 2026-10-30 (banqi chariot endgame article) ── 残局库 follows analysis.tablebase.title; a move is 步 as in banqi-perpetual-chase.
   'A solved banqi endgame: chariot and horse against chariot, horse and soldier.':
     '一个已解的暗棋残局：车马对车马卒。',
@@ -526,6 +532,12 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-24 (play Brian by correspondence) ── 通信對局 / 休閒 / 對弈 follow the play catalog's host card.
+  'Play a correspondence game against Brian, who builds Mistboard.':
+    '與 Mistboard 的開發者 Brian 下一盤通信對局。',
+  'A person, not a bot. Start a casual game from one card on the correspondence page: pick a variant and a side, and each of you has two days per move. Sign in to play.':
+    '對手是真人，不是電腦。在通信對局頁面的一張卡片上開始一盤休閒對局：選好變體和執子方，雙方每步各有兩天時間。登入後即可對弈。',
+  'Play Brian': '與 Brian 對弈',
   // ── 2026-10-30 (banqi chariot endgame article) ── 殘局庫 follows analysis.tablebase.title; a move is 步 as in banqi-perpetual-chase.
   'A solved banqi endgame: chariot and horse against chariot, horse and soldier.':
     '一個已解的暗棋殘局：車馬對車馬卒。',

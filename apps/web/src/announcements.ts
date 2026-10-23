@@ -59,6 +59,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-24',
+    kind: 'release',
+    headline: 'Play a correspondence game against Brian, who builds Mistboard.',
+    body: 'A person, not a bot. Start a casual game from one card on the correspondence page: pick a variant and a side, and each of you has two days per move. Sign in to play.',
+    href: '/correspondence',
+    cta: 'Play Brian',
+  },
+  {
     date: '2026-10-22',
     kind: 'release',
     headline: 'Meet jqe, the new top jieqi bot.',
