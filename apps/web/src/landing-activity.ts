@@ -17,8 +17,8 @@ import { fetchLiveStats } from './live-stats-client.js';
 
 // "N games in play" links to the current-games page (lichess does the same).
 // The two agree by construction: /api/live-stats counts rooms by the deploy
-// gate's in-play rule plus the active correspondence index, and /games lists
-// exactly that set.
+// gate's in-play rule and /games's stale-move window (isStaleLiveRoom), plus
+// the active correspondence index, and /games lists that set.
 const CURRENT_GAMES_HREF = '/games';
 
 export const ACTIVITY_POLL_MS = 15_000;
