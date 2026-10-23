@@ -308,6 +308,16 @@
   white-space: nowrap;
 }
 
+/* Play the host: the Start a game bar's shape, with its one line of terms
+   under the heading and, signed out, a sign-in button sized to its text. */
+.correspondence-host > .correspondence-hint {
+  margin: 0;
+}
+
+.correspondence-host-signin {
+  align-self: flex-start;
+}
+
 @media (max-width: 640px) {
   .correspondence-start-form {
     flex-direction: column;

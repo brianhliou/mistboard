@@ -16,6 +16,7 @@ import {
   correspondenceTimeControl,
   createXmjSetup,
   DAY_MS,
+  type DaysPerMove,
   XIANGQI_MAHJONG_SPEC_ID,
   type XmjMove,
   type XmjPlayerView,
@@ -58,7 +59,7 @@ function liveRooms(): Map<string, TenantManagedRoom> {
   return registration().rooms as Map<string, TenantManagedRoom>;
 }
 
-async function acceptSeek(daysPerMove: 1 | 3 | 7 = 3): Promise<XmjRuntimeRoom> {
+async function acceptSeek(daysPerMove: DaysPerMove = 3): Promise<XmjRuntimeRoom> {
   const create = registration().createCorrespondenceGameForSeek;
   assert.ok(create);
   const created = await create({

@@ -21,6 +21,7 @@ import * as botsRoute from './routes/bots.js';
 import * as chatRoute from './routes/chat.js';
 import * as coachesRoute from './routes/coaches.js';
 import * as correspondenceGamesRoute from './routes/correspondence-games.js';
+import * as correspondenceHostRoute from './routes/correspondence-host.js';
 import * as correspondenceSeeksRoute from './routes/correspondence-seeks.js';
 import * as crazyhouseXiangqiGamesRoute from './routes/crazyhouse-xiangqi-games.js';
 import * as currentGamesRoute from './routes/current-games.js';
@@ -108,6 +109,7 @@ export const routes: RouteModule[] = [
   // and no other module claims that prefix.
   adminGameArtifactsRoute,
   correspondenceGamesRoute,
+  correspondenceHostRoute,
   correspondenceSeeksRoute,
   // Ahead of gamesRoute: /api/games/current must not fall into /api/games/:id.
   currentGamesRoute,

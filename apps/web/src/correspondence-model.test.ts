@@ -337,7 +337,7 @@ describe('start form prefill (the bell\'s "post it again" link)', () => {
 
   it('drops anything the form does not offer', () => {
     expect(parseStartFormPrefill('')).toBeNull();
-    expect(parseStartFormPrefill('?gameSpecId=not-a-game&days=2&side=white')).toBeNull();
+    expect(parseStartFormPrefill('?gameSpecId=not-a-game&days=5&side=white')).toBeNull();
     expect(
       parseStartFormPrefill(`?gameSpecId=${CORRESPONDENCE_ELIGIBLE_SPEC_IDS[0]}&days=5`),
     ).toEqual({

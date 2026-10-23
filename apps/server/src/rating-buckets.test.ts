@@ -119,7 +119,7 @@ test('parseRatingVariant keeps legacy leaderboard API params stable', () => {
 });
 
 test('a rated correspondence game buckets into its variant pool under its OWN time class', () => {
-  for (const days of [1, 3, 7] as const) {
+  for (const days of [1, 2, 3, 7] as const) {
     const tc = correspondenceTimeControl(days);
     assert.deepEqual(
       bucketForGame({ variant: XIANGQI_SPEC_ID, initialMs: tc.initialMs, incrementMs: 0 }),

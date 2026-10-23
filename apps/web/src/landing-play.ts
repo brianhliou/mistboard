@@ -7,6 +7,8 @@ import {
   canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
+  DAYS_PER_MOVE_OPTIONS,
+  DEFAULT_DAYS_PER_MOVE,
   DUCK_XIANGQI_SPEC_ID,
   defaultEngineTimeControl,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -2739,10 +2741,12 @@ function reopenSetupDialogInMode(
 // (openLandingSetupDialog). Selecting one routes the submit to the correspondence
 // path — a private room (Challenge a friend) or an open seek (Find opponent) —
 // instead of the real-time create.
-const CORRESPONDENCE_DAY_OPTIONS: { days: number }[] = [{ days: 1 }, { days: 3 }, { days: 7 }];
+const CORRESPONDENCE_DAY_OPTIONS: { days: number }[] = DAYS_PER_MOVE_OPTIONS.map((days) => ({
+  days,
+}));
 // Pre-selected day-chip when the player first flips to the Correspondence segment,
 // so the Start button is immediately valid (mirrors lichess defaulting its slider).
-const DEFAULT_CORRESPONDENCE_DAYS = 3;
+const DEFAULT_CORRESPONDENCE_DAYS: number = DEFAULT_DAYS_PER_MOVE;
 
 function dayOptionLabel(days: number, locale: Locale): string {
   return days === 1 ? t('setup.oneDay', {}, locale) : t('setup.days', { count: days }, locale);
@@ -2812,7 +2816,11 @@ async function createCorrespondenceFromPlay(
     if (failure.error === 'correspondence_requires_account') {
       status.append('Correspondence games need an account. ', accountLink('Sign in'), ' first.');
     } else if (failure.error === 'invalid_days_per_move') {
-      status.textContent = 'Pick 1, 3, or 7 days per move.';
+      status.textContent = t(
+        'setup.invalidDaysPerMove',
+        { list: DAYS_PER_MOVE_OPTIONS.join(' / ') },
+        locale,
+      );
     } else if (failure.error === 'server_draining') {
       status.textContent = t('setup.serverRestartTimeout', {}, locale);
     } else {
@@ -2884,7 +2892,11 @@ async function postCorrespondenceSeekFromPlay(
     if (failure.error === 'not_signed_in' || failure.error === 'correspondence_requires_account') {
       status.append('Correspondence games need an account. ', accountLink('Sign in'), ' first.');
     } else if (failure.error === 'invalid_days_per_move') {
-      status.textContent = 'Pick 1, 3, or 7 days per move.';
+      status.textContent = t(
+        'setup.invalidDaysPerMove',
+        { list: DAYS_PER_MOVE_OPTIONS.join(' / ') },
+        locale,
+      );
     } else if (failure.error === 'seek_limit_reached') {
       status.textContent = 'You already have the most open games allowed. Cancel one first.';
     } else if (failure.error === 'server_draining') {

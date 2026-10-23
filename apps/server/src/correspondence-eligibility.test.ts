@@ -82,7 +82,7 @@ test('correspondence never becomes a LIVE rated pace — it rates only in its ow
   // 2026-10-02: rated correspondence exists, but in a separate 'correspondence' pool per
   // variant (rating-buckets.ts). The live allowlist must still never admit a
   // days-per-move allowance, or a correspondence game could land on a live ladder.
-  for (const daysPerMove of [1, 3, 7]) {
+  for (const daysPerMove of [1, 2, 3, 7]) {
     assert.equal(
       isOfficialTimeControl({ initialMs: daysPerMove * 86_400_000, incrementMs: 0, daysPerMove }),
       false,

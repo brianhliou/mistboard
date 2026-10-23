@@ -915,20 +915,20 @@ describe('landing play panel', () => {
     expect(correspondenceToggleVisible()).toBe(true);
     expect(visibleCorrespondenceOptions()).toEqual([]); // hidden until the segment is active
     clickModalButton('Correspondence');
-    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '3 days', '7 days']);
+    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '2 days', '3 days', '7 days']);
 
     // Every variant carries correspondence since 2026-10-02: switching to Fog
     // Xiangqi keeps the toggle and the chosen segment.
     selectModalVariant('dark-xiangqi');
     expect(correspondenceToggleVisible()).toBe(true);
-    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '3 days', '7 days']);
+    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '2 days', '3 days', '7 days']);
 
     // Find opponent offers it too (submitting posts an open seek to the board).
     openPlaySetup(panel, 'Find opponent');
     selectModalVariant('dark-chess');
     expect(correspondenceToggleVisible()).toBe(true);
     clickModalButton('Correspondence');
-    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '3 days', '7 days']);
+    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '2 days', '3 days', '7 days']);
   });
 
   it('an untouched pace follows the variant; a chosen one sticks across variants', () => {
