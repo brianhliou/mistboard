@@ -602,11 +602,12 @@ export function watchHrefForTvGame(mode: LandingTvMode, roomId: string): string 
 }
 
 // `phone` builds the phone home (mobile pass #576): the TV board, Play with its
-// two opponent buttons, the shortcut tiles, the blog strip, live event banners
-// and the chat room, then the footer. The lobby panel, activity box,
-// correspondence card, daily puzzle, forum topics, top studies, deep dives and
-// News are not built at all there, so none of them fetches, polls or opens a
-// socket on a phone. The prerender always bakes the full desktop shell.
+// two opponent buttons and the games-played line under them (back 2026-10-23),
+// the shortcut tiles, the blog strip and the chat room, then the footer. The
+// lobby panel, correspondence card, event banners (until the broadcast pages
+// work on a phone, Brian 2026-10-23), daily puzzle, forum topics, top studies
+// and News are not built at all there, so none of them fetches, polls or opens
+// a socket on a phone. The prerender always bakes the full desktop shell.
 export function buildLandingStage(
   engines: PlayableEngine[],
   opts: { skipLiveWidgets?: boolean; phone?: boolean } = {},
@@ -689,10 +690,7 @@ export function buildLandingStage(
   // Button then the activity box render their frame synchronously (placeholder /
   // skeleton rows) so the column reserves its footprint from first paint; the
   // prerendered shell carries the same frames, hydration skipped.
-  playStack.append(playPanel);
-  if (!phone) {
-    playStack.append(buildLandingActivity({ hydrate: !opts.skipLiveWidgets }));
-  }
+  playStack.append(playPanel, buildLandingActivity({ hydrate: !opts.skipLiveWidgets }));
   // The page's single (small) h1: the about tagline at the top of the right rail.
   const about = document.createElement('h1');
   about.className = 'landing-about';
@@ -739,11 +737,14 @@ export function buildLandingStage(
   const playCenter = document.createElement('div');
   playCenter.className = 'landing-play-center';
   playCenter.append(playIntro, playStack);
-  const eventBanners = buildLandingEventBanners();
-  void loadBroadcastBanners(eventBanners, locale);
   const playColumn = document.createElement('div');
   playColumn.className = 'landing-play-column';
-  playColumn.append(playCenter, eventBanners);
+  playColumn.append(playCenter);
+  if (!phone) {
+    const eventBanners = buildLandingEventBanners();
+    void loadBroadcastBanners(eventBanners, locale);
+    playColumn.append(eventBanners);
+  }
 
   // ── Band 2: forum topics (center) and Top studies (right) beside the daily
   // puzzle. Studies took this slot back from the chat 2026-09-26 (it held it

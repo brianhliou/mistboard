@@ -69,6 +69,35 @@
           ?.setAttribute("content", resolved === "dark" ? "#121615" : "#ebefee");
       })();
     </script>
+    <script>
+      // The homepage's games-played line starts its read here, beside the
+      // download of the page's own script, and writes the total into the
+      // prerendered page as soon as both are there, so a visitor sees the
+      // number instead of a dash for the half second the script takes to
+      // load. live-stats-client.ts adopts this read; the mounted widget then
+      // renders the full line.
+      (() => {
+        const path = window.location.pathname.replace(/\/+$/, "").toLowerCase();
+        if (path !== "" && path !== "/zh-hans" && path !== "/zh-hant") return;
+        const read = fetch("/api/live-stats", { headers: { accept: "application/json" } })
+          .then((resp) => (resp.ok ? resp.json() : null))
+          .catch(() => null);
+        window.__mistboardLiveStats = read;
+        const fill = (data) => {
+          const total = data?.totalCompletedGames;
+          const value = document.querySelector(".landing-activity-value");
+          if (typeof total !== "number" || value?.textContent !== "–") return;
+          value.textContent = new Intl.NumberFormat("en-US").format(total);
+        };
+        read.then((data) => {
+          if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => fill(data), { once: true });
+          } else {
+            fill(data);
+          }
+        });
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

@@ -14,10 +14,11 @@ describe('phone home widget set', () => {
     '/api/puzzles/daily', // puzzle of the day
     '/api/forum/topics', // active forum topics
     '/api/studies/public', // latest studies
+    '/api/xiangqi/broadcasts', // event banners
   ];
   const DESKTOP_ONLY_SELECTORS = [
     '.landing-lobby-panel',
-    '.landing-activity',
+    '.landing-event-banners',
     '.landing-puzzle-column',
     '.landing-forum-column',
     '.landing-studies-column',
@@ -60,6 +61,18 @@ describe('phone home widget set', () => {
 
   it('on a phone, mounts none of the widgets below the blog strip and fetches none of their data', async () => {
     stubViewport(true);
+    fetchSpy.mockImplementation(async (url: unknown) =>
+      String(url).startsWith('/api/live-stats')
+        ? new Response(
+            JSON.stringify({
+              playing: 0,
+              totalCompletedGames: 4_888,
+              last30dCompletedGames: 4_267,
+            }),
+            { status: 200, headers: { 'content-type': 'application/json' } },
+          )
+        : new Response('', { status: 503 }),
+    );
     const stage = buildLandingStage(fallbackPlayableEngines());
     await flush();
 
@@ -72,16 +85,15 @@ describe('phone home widget set', () => {
         url,
       ).toBe(false);
     }
-    // What the phone home keeps: TV, Play with its two buttons, tiles, both
-    // article rows, event
-    // banners, the chat room and the footer.
+    // What the phone home keeps: TV, Play with its two buttons and the
+    // games-played line, tiles, both article rows, the chat room and the footer.
     expect(stage.el.querySelector('.landing-tv-strip')).not.toBeNull();
     expect(stage.el.querySelector('.landing-play-quick')).not.toBeNull();
     expect(stage.el.querySelector('.landing-phone-tiles')).not.toBeNull();
     // Both article rows: the newest posts, then the deep dives (2026-10-17).
     expect(stage.el.querySelector('.landing-articles-row:not(.landing-dives-row)')).not.toBeNull();
     expect(stage.el.querySelector('.landing-dives-row .landing-article-card')).not.toBeNull();
-    expect(stage.el.querySelector('.landing-event-banners')).not.toBeNull();
+    expect(stage.el.querySelector('.landing-activity-value')?.textContent).toBe('4,888');
     expect(stage.el.querySelector('.landing-chat-column .landing-chat-mount')).not.toBeNull();
     expect(stage.el.querySelector(':scope > .landing-demo + *')).not.toBeNull();
   });
