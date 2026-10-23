@@ -284,6 +284,14 @@ export const EN_PLAY = {
   'correspondence.daysPerMoveLabel': 'Days per move',
   'correspondence.seekLimitReached': 'You can have up to {limit} open games at once.',
   'correspondence.couldNotPostGame': 'Could not post that game. Try again.',
+  'correspondence.seekTileTitle': 'Post a seek',
+  'correspondence.seekTileBody':
+    'It stays open until another player accepts it, here or in the lobby. Or make a link to send a friend.',
+  'correspondence.seekTileButton': 'New seek',
+  'correspondence.hostTileBody':
+    'The person who builds Mistboard. {days} days per move, and the game starts right away.',
+  'correspondence.hostTileButton': 'Play',
+  'correspondence.dialogClose': 'Close',
   'correspondence.hostTitle': 'Play {name}, who builds Mistboard',
   'correspondence.hostBody':
     'A casual game at {days} days per move against the person who builds the site. Pick a variant and a side, and the game starts right away.',

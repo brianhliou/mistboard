@@ -342,6 +342,13 @@ export const ZH_HANT_PLAY = {
   'correspondence.daysPerMoveLabel': '每步天數',
   'correspondence.seekLimitReached': '你最多可以同時有 {limit} 盤公開對局。',
   'correspondence.couldNotPostGame': '無法發布該對局，請重試。',
+  'correspondence.seekTileTitle': '發布求戰',
+  'correspondence.seekTileBody':
+    '求戰會一直留在這裡和大廳，直到有棋手接受。也可以產生連結傳給朋友。',
+  'correspondence.seekTileButton': '新建求戰',
+  'correspondence.hostTileBody': 'Mistboard 的開發者。每步 {days} 天，對局立即開始。',
+  'correspondence.hostTileButton': '對弈',
+  'correspondence.dialogClose': '關閉',
   'correspondence.hostTitle': '與 Mistboard 的開發者 {name} 對弈',
   'correspondence.hostBody':
     '與本站開發者下一盤休閒對局，每步 {days} 天。選擇變體和執子方，對局立即開始。',

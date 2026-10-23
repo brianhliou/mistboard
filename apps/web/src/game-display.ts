@@ -229,7 +229,7 @@ export function displayLiveName(name: string | null | undefined, fallback: strin
 
 // Correspondence seeks store a side as MOVE ORDER ('first'/'second'), variant-neutral, so
 // one seek board serves every eligible variant. These map that axis back to the words a
-// player recognises: chess is White/Black, the xiangqi family and Jungle Red/Black. Banqi
+// player recognises: chess is White/Black, the xiangqi family Red/Black, Jungle Red/Blue. Banqi
 // and Flip Jungle seat 'red'/'black' but a player's colour is decided by the first flip,
 // so their sides are First/Second, as the play menu labels them. Fail-safe: an unknown spec
 // falls back to White/Black rather than throwing (worst case a wrong color WORD on the
@@ -248,7 +248,7 @@ export function firstMoverColorName(gameSpecId: string): string {
 
 export function secondMoverColorName(gameSpecId: string): string {
   if (maybeGameSpecForId(gameSpecId)?.family === 'mahjong') return t('live.seatWest');
-  return isFlipSeatVariant(gameSpecId) ? t('setup.second') : t('setup.black');
+  return isFlipSeatVariant(gameSpecId) ? t('setup.second') : seatColorWord(gameSpecId, 'black');
 }
 
 // Catalog name key per spec. Exhaustive over GameSpecId on purpose: a new

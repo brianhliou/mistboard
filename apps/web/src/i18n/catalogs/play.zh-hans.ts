@@ -342,6 +342,13 @@ export const ZH_HANS_PLAY = {
   'correspondence.daysPerMoveLabel': '每步天数',
   'correspondence.seekLimitReached': '你最多可以同时有 {limit} 盘公开对局。',
   'correspondence.couldNotPostGame': '无法发布该对局，请重试。',
+  'correspondence.seekTileTitle': '发布求战',
+  'correspondence.seekTileBody':
+    '求战会一直留在这里和大厅，直到有棋手接受。也可以生成链接发给朋友。',
+  'correspondence.seekTileButton': '新建求战',
+  'correspondence.hostTileBody': 'Mistboard 的开发者。每步 {days} 天，对局立即开始。',
+  'correspondence.hostTileButton': '对弈',
+  'correspondence.dialogClose': '关闭',
   'correspondence.hostTitle': '与 Mistboard 的开发者 {name} 对弈',
   'correspondence.hostBody':
     '与本站开发者下一盘休闲对局，每步 {days} 天。选择变体和执子方，对局立即开始。',

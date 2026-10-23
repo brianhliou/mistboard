@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildHostCard, fetchHostInfo, type HostInfo } from './correspondence.js';
+import {
+  buildHostCard,
+  buildHostLauncher,
+  fetchHostInfo,
+  type HostInfo,
+} from './correspondence.js';
 
 // The /correspondence "Play the host" card (2026-10-23): one button that starts a
 // casual game against the site owner, from GET/POST /api/correspondence/host.
@@ -35,9 +40,9 @@ describe('correspondence host card', () => {
 
   it('names the host and the terms', () => {
     const card = buildHostCard(info());
-    expect(card.querySelector('h2')?.textContent).toBe('Play Brian, who builds Mistboard');
+    expect(card.querySelector('h2')?.textContent).toBe('Play Brian H. Liou, who builds Mistboard');
     expect(card.textContent).toContain('2 days per move');
-    expect(card.querySelector('button[type="submit"]')?.textContent).toBe('Play Brian');
+    expect(card.querySelector('button[type="submit"]')?.textContent).toBe('Play Brian H. Liou');
   });
 
   it('offers only the variants the server says the host plays', () => {
@@ -78,7 +83,7 @@ describe('correspondence host card', () => {
     const status = card.querySelector<HTMLElement>('.correspondence-form-status');
     expect(status?.hidden).toBe(false);
     expect(status?.textContent).toBe(
-      'You already have 2 games going with Brian. Finish one to start another.',
+      'You already have 2 games going with Brian H. Liou. Finish one to start another.',
     );
     expect(card.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
   });
@@ -87,7 +92,7 @@ describe('correspondence host card', () => {
     const card = buildHostCard(info({ canPlay: false, reason: 'host_full' }));
     expect(card.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
     expect(card.querySelector('.correspondence-form-status')?.textContent).toBe(
-      'Brian has 15 games going, the most at once. Try again in a few days.',
+      'Brian H. Liou has 15 games going, the most at once. Try again in a few days.',
     );
   });
 
@@ -118,5 +123,38 @@ describe('correspondence host card', () => {
       }),
     );
     expect(await fetchHostInfo()).toBeNull();
+  });
+});
+
+// The signed-in page shows the offer as a tile; its form opens in a dialog
+// (2026-10-23: the two full-width forms filled the first screen).
+describe('correspondence host tile', () => {
+  it('names the host by full name and opens the form in a dialog', () => {
+    const { tile } = buildHostLauncher(info());
+    expect(tile.querySelector('h2')?.textContent).toBe('Play Brian H. Liou');
+    expect(tile.querySelector('img.correspondence-host-photo')).not.toBeNull();
+    const dialog = tile.querySelector('dialog');
+    expect(dialog?.open).toBe(false);
+    tile.querySelector<HTMLButtonElement>(':scope > .correspondence-btn')?.click();
+    expect(dialog?.open).toBe(true);
+    expect(dialog?.querySelector('form')).not.toBeNull();
+  });
+
+  it('says why on the tile, button off, when the host is full', () => {
+    const { tile } = buildHostLauncher(info({ canPlay: false, reason: 'host_full' }));
+    expect(tile.querySelector<HTMLButtonElement>(':scope > .correspondence-btn')?.disabled).toBe(
+      true,
+    );
+    expect(tile.querySelector('.correspondence-launcher-text')?.textContent).toContain(
+      'Brian H. Liou has 15 games going',
+    );
+  });
+
+  it('tells the host it is them, button off', () => {
+    const { tile } = buildHostLauncher(info({ isHost: true, canPlay: false }));
+    expect(tile.querySelector<HTMLButtonElement>(':scope > .correspondence-btn')?.disabled).toBe(
+      true,
+    );
+    expect(tile.textContent).toContain('This is you.');
   });
 });

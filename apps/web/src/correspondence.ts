@@ -282,17 +282,38 @@ function buildSignedIn(
     top.append(soon);
   } else {
     // A link can carry the form's terms (the bell's "post it again" row for a
-    // lapsed seek); the form opens set to them and scrolls into view.
+    // lapsed seek); the form opens in its dialog, set to them.
     const prefill = parseStartFormPrefill(location.search, webVariantOfferedInMenu);
-    const startForm = buildStartForm(refreshChallenges, prefill);
-    top.append(startForm);
-    if (hostInfo) top.append(buildHostCard(hostInfo));
+    let seekLauncher: Launcher | null = null;
+    // A posted seek closes the dialog: it shows up in your seeks at the top of
+    // the page, which is the confirmation.
+    const startForm = buildStartForm(() => {
+      refreshChallenges();
+      seekLauncher?.close();
+    }, prefill);
+    const formHeading = startForm.querySelector('h2');
+    if (formHeading) formHeading.textContent = t('correspondence.seekTileTitle');
+    const formStatus = startForm.querySelector<HTMLElement>('.correspondence-form-status');
+    seekLauncher = buildLauncher({
+      title: t('correspondence.seekTileTitle'),
+      body: t('correspondence.seekTileBody'),
+      buttonLabel: t('correspondence.seekTileButton'),
+      panel: startForm,
+      onOpen: () => {
+        if (formStatus) formStatus.hidden = true;
+      },
+    });
+    const tiles = document.createElement('div');
+    tiles.className = 'correspondence-launchers';
+    tiles.append(seekLauncher.tile);
+    if (hostInfo) tiles.append(buildHostLauncher(hostInfo).tile);
+    top.append(tiles);
     // Open seeks follow your own games.
     main.append(seekHost);
     refreshChallenges();
     if (prefill) {
       requestAnimationFrame(() => {
-        if (startForm.isConnected) startForm.scrollIntoView({ block: 'start' });
+        if (seekLauncher?.tile.isConnected) seekLauncher.open();
       });
     }
   }
@@ -965,6 +986,11 @@ export type HostInfo = {
   reason?: 'player_limit_reached' | 'host_full' | null;
 };
 
+// The offer is Brian by name: the card reads his full name and photo, not
+// whatever the host account's display name says.
+const HOST_NAME = 'Brian H. Liou';
+const HOST_PHOTO = '/brand/brian-h-liou.jpg';
+
 /** The host offer, or null while it is off (404) or unreachable. */
 export async function fetchHostInfo(): Promise<HostInfo | null> {
   try {
@@ -983,7 +1009,7 @@ function hostRefusalText(
   info: HostInfo,
   limit: number | undefined,
 ): string {
-  const name = info.host.displayName;
+  const name = HOST_NAME;
   switch (code) {
     case 'player_limit_reached':
       return t('correspondence.hostPlayerLimit', { name, limit: limit ?? info.limits.perPlayer });
@@ -1007,7 +1033,7 @@ export function buildHostCard(info: HostInfo, options: HostCardOptions = {}): HT
     ((url: string) => {
       window.location.href = url;
     });
-  const name = info.host.displayName;
+  const name = HOST_NAME;
   const panel = document.createElement('section');
   panel.className = 'correspondence-panel correspondence-start correspondence-host';
   const heading = document.createElement('h2');
@@ -1015,7 +1041,13 @@ export function buildHostCard(info: HostInfo, options: HostCardOptions = {}): HT
   const body = document.createElement('p');
   body.className = 'correspondence-hint';
   body.textContent = t('correspondence.hostBody', { days: info.daysPerMove });
-  panel.append(heading, body);
+  const text = document.createElement('div');
+  text.className = 'correspondence-host-text';
+  text.append(heading, body);
+  const intro = document.createElement('div');
+  intro.className = 'correspondence-host-intro';
+  intro.append(buildHostPhoto(), text);
+  panel.append(intro);
 
   if (!info.signedIn) {
     const signIn = document.createElement('a');
@@ -1574,6 +1606,100 @@ function seekColorLabel(gameSpecId: string, color: SeekPreferredColor): string {
   if (color === 'second')
     return t('correspondence.playsColor', { color: secondMoverColorName(gameSpecId) });
   return t('correspondence.eitherColor');
+}
+
+function buildHostPhoto(): HTMLImageElement {
+  const photo = document.createElement('img');
+  photo.className = 'correspondence-host-photo';
+  photo.src = HOST_PHOTO;
+  photo.alt = '';
+  photo.width = 56;
+  photo.height = 56;
+  return photo;
+}
+
+// ---------------------------------------------------------------------------
+// Start tiles
+// ---------------------------------------------------------------------------
+
+// Two ways to start a game, each a small tile whose form opens in a dialog: as
+// two full-width forms they filled the first screen and pushed your games below
+// it (Brian, 2026-10-23).
+export type Launcher = { tile: HTMLElement; open: () => void; close: () => void };
+
+function buildLauncher(opts: {
+  title: string;
+  body: string;
+  buttonLabel: string;
+  panel: HTMLElement;
+  photo?: boolean;
+  disabled?: boolean;
+  onOpen?: () => void;
+}): Launcher {
+  const tile = document.createElement('section');
+  tile.className = 'correspondence-panel correspondence-launcher';
+  if (opts.photo) tile.append(buildHostPhoto());
+  const text = document.createElement('div');
+  text.className = 'correspondence-launcher-text';
+  const heading = document.createElement('h2');
+  heading.textContent = opts.title;
+  const body = document.createElement('p');
+  body.className = 'correspondence-hint';
+  body.textContent = opts.body;
+  text.append(heading, body);
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'correspondence-btn';
+  button.textContent = opts.buttonLabel;
+  button.disabled = opts.disabled === true;
+
+  // The dialog lives inside the tile, so it goes when the page re-renders, and
+  // closing it keeps the form's choices for the next open.
+  const dialog = document.createElement('dialog');
+  dialog.className = 'correspondence-dialog';
+  const closeButton = document.createElement('button');
+  closeButton.type = 'button';
+  closeButton.className = 'correspondence-dialog-close';
+  closeButton.setAttribute('aria-label', t('correspondence.dialogClose'));
+  closeButton.textContent = '\u00d7';
+  const close = (): void => {
+    if (dialog.open) dialog.close();
+  };
+  closeButton.addEventListener('click', close);
+  // The dialog has no padding of its own, so a click on it is a click on the backdrop.
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) close();
+  });
+  dialog.append(closeButton, opts.panel);
+
+  const open = (): void => {
+    opts.onOpen?.();
+    if (dialog.open) return;
+    // showModal is missing in some test environments; an open dialog still shows the form.
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else dialog.setAttribute('open', '');
+  };
+  button.addEventListener('click', open);
+  tile.append(text, button, dialog);
+  return { tile, open, close };
+}
+
+// The host tile says why it cannot start a game (caps, or you are the host)
+// on the tile itself, with its button off, rather than inside the dialog.
+export function buildHostLauncher(info: HostInfo): Launcher {
+  const name = HOST_NAME;
+  let body = t('correspondence.hostTileBody', { days: info.daysPerMove });
+  if (info.isHost) body = t('correspondence.hostIsYou');
+  else if (info.canPlay === false)
+    body = hostRefusalText(info.reason ?? undefined, info, undefined);
+  return buildLauncher({
+    title: t('correspondence.hostPlay', { name }),
+    body,
+    buttonLabel: t('correspondence.hostTileButton'),
+    panel: buildHostCard(info),
+    photo: true,
+    disabled: info.isHost === true || info.canPlay === false,
+  });
 }
 
 // ---------------------------------------------------------------------------
