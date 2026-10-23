@@ -314,7 +314,7 @@
   "jieqi-engines": {
     "title": "Three jieqi engines, head to head",
     "kind": "article",
-    "description": "How PikaJieQi, AB-JChess and jqe judge a face-down piece, what each evaluates positions with, and how they did against each other: jqe beat AB-JChess 71 to 25, and AB-JChess beat PikaJieQi 248 to 136.",
+    "description": "How PikaJieQi, AB-JChess and jqe judge a face-down piece, what each evaluates positions with, and how they did against each other: jqe, the top jieqi bot on the site, beat AB-JChess 0.2d 171 to 114 over 300 games.",
     "status": "draft"
   },
   "jieqi-openings": {
