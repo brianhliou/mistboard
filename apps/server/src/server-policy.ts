@@ -504,6 +504,8 @@ export function isClientRoute(pathname: string): boolean {
     // reseed and work off prod (#521). Only real set/position pairs are routes.
     xiangqiEndgamePracticeRouteFromPath(normalized) !== null ||
     normalized === '/study' ||
+    normalized === '/zh-hans/study' ||
+    normalized === '/zh-hant/study' ||
     /^\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(normalized) ||
     // Locale-prefixed study permalinks (/zh-hans/study/:id) serve the same SPA
     // shell with localized meta; without these they would 404.
@@ -564,7 +566,21 @@ export function isNoindexRoute(pathname: string): boolean {
     normalized.startsWith('/inbox/') ||
     normalized === '/following' ||
     normalized === '/correspondence' ||
-    normalized.startsWith('/challenge/')
+    normalized.startsWith('/challenge/') ||
+    isSitePlayedGamePage(normalized)
+  );
+}
+
+// A finished game played on the site (/<variant>/game/:id) is one board under
+// a "<name> vs <name>" title, thousands of them, most against a bot: thin and
+// near-identical to a crawler, and none is in a sitemap. They served with no
+// canonical and indexable until 2026-10-17, the way the bare /game/:id did
+// until SEO backlog D8 (serveGamePage). `follow` keeps the player links.
+// The archive (/historical-xiangqi/game/:id) is a record of real events and
+// stays indexable.
+function isSitePlayedGamePage(normalized: string): boolean {
+  return (
+    /^\/[a-z0-9-]+\/game\/[^/]+$/.test(normalized) && !normalized.startsWith('/historical-xiangqi/')
   );
 }
 

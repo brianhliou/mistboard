@@ -41,6 +41,7 @@ const ALLOWED: Record<string, Reason> = {
   'xiangqi-broadcast-ops.ts': 'admin',
   // content with its own gate, or English by design
   'announcements.ts': 'content', // announcement-i18n.coverage.test.ts
+  'landing-bot-policy.ts': 'content', // bot and engine names (Fairy-Stockfish, General Blunder), English in every locale like Pikafish
   'anti-xiangqi-article-diagrams.ts': 'content', // generated step notes; article-i18n.coverage.test.ts
   'horde-xiangqi-article-diagrams.ts': 'content', // generated table cells and step notes; article-i18n.coverage.test.ts
   'players/ecco-english.ts': 'content', // the English opening-name table itself

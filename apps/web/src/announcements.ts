@@ -43,6 +43,46 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-30',
+    kind: 'article',
+    headline: 'A solved banqi endgame: chariot and horse against chariot, horse and soldier.',
+    body: 'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.',
+    href: '/blog/banqi-chariot-endgame',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-10-27',
+    kind: 'article',
+    headline: 'The shortest xiangqi stalemate we know: 21 plies.',
+    body: 'In xiangqi a side with no legal move loses. The shortest stalemate we know leaves Black with eight pieces and nothing to play after Red’s 11th move. No stalemate is possible in under 9 plies, so 9 to 20 is open.',
+    href: '/blog/shortest-stalemate-xiangqi',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-10-22',
+    kind: 'release',
+    headline: 'Meet jqe, the new top jieqi bot.',
+    body: 'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.',
+    href: '/bot/jqe',
+    cta: 'Play jqe',
+  },
+  {
+    date: '2026-10-18',
+    kind: 'release',
+    headline: 'Meet General Blunder, a xiangqi bot that tries to lose.',
+    body: 'General Blunder is a strong engine playing backwards: it checks every move and plays the one that is worst for itself. Most turns a checkmate or a free piece is waiting for you, so it is a good first opponent and a fast way to practise spotting mates. Can you find them all?',
+    href: '/bot/general-blunder',
+    cta: 'Play General Blunder',
+  },
+  {
+    date: '2026-10-17',
+    kind: 'update',
+    headline: 'Mistboard is rebuilt for phones.',
+    body: "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. A game now fits one screen with no scrolling: the board, both clocks, the moves and the action bar stay in view, and game info and chat open from the menu in the bar. On a computer nothing changes.",
+    href: '/?play=computer&gameSpecId=xiangqi',
+    cta: 'Play xiangqi',
+  },
+  {
     date: '2026-10-15',
     kind: 'update',
     headline: 'A new look for the International pieces.',

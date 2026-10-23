@@ -100,8 +100,11 @@ const LADDER_PREFIX = 'fairy-stockfish-level-';
 // The jieqi ladder (Pikafish Level 1..7; Pikafish is its top rung) and the level a
 // first-timer is given (web landing-bot-policy JIEQI_FIRST_GAME_LEVEL).
 const JIEQI_LADDER_PREFIX = 'pikafish-level-';
-// The top jieqi slot above Pikafish (level 8); first-party-bots.ts.
-const JIEQI_TOP_BOT_ID = 'ab-jchess';
+// The named jieqi slots above Pikafish (level 8), weakest first; first-party-bots.ts.
+// jqe sits above AB-JChess, and is listed only while its engine is enabled.
+const JIEQI_TOP_BOT_ORDER = ['pikafish', 'ab-jchess', 'jqe'];
+// An unknown named slot sorts first, so it never takes "strongest" by accident.
+const jieqiTopRank = (id: string): number => JIEQI_TOP_BOT_ORDER.indexOf(id);
 const JIEQI_FIRST_GAME_LEVEL = 2;
 // The level a first-timer is given (web landing-bot-policy XIANGQI_FIRST_GAME_LEVEL).
 const FIRST_GAME_LEVEL = 2;
@@ -158,10 +161,10 @@ export async function botsDirectoryBody(
     return `<li><a href="${botHref(bot.id)}">${escapeHtml(copy.level(level))}</a>${note}</li>`;
   });
   if (jieqiRungs.length > 0) {
-    // Pikafish (level 8) then the AB-JChess top slot, which alone reads strongest.
+    // Pikafish (level 8), then the named slots above it; the last alone reads strongest.
     const tops = others
       .filter((candidate) => playsGame(candidate, 'jieqi'))
-      .sort((a, b) => Number(a.id === JIEQI_TOP_BOT_ID) - Number(b.id === JIEQI_TOP_BOT_ID));
+      .sort((a, b) => jieqiTopRank(a.id) - jieqiTopRank(b.id));
     tops.forEach((bot, index) => {
       const note = index === tops.length - 1 ? ` · ${escapeHtml(copy.strongest)}` : '';
       // Pikafish is Level 8 here, named like the rungs below it.

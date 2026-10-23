@@ -475,6 +475,8 @@ const NOINDEX_ROUTE_SAMPLES = [
   '/following',
   '/correspondence',
   '/challenge/abc123',
+  '/xiangqi/game/abc123',
+  '/jungle-flip/game/abc123',
 ];
 
 // A noindex route that is not a client route never reaches the shell handler
@@ -526,6 +528,17 @@ test('the announcement archive is indexable and answers on one URL', () => {
   assert.equal(isNoindexRoute('/feed/2026-09'), false);
   assert.equal(isClientRoute('/feed/2026-9'), false);
   assert.equal(isClientRoute('/feed/anything'), false);
+});
+
+// Site-played finished games had no canonical and served indexable until
+// 2026-10-17; the archive's games are real events and stay indexable.
+test('a site-played game page is noindexed; an archive game and the lists are not', () => {
+  for (const route of ['/xiangqi/game/x1', '/jungle-flip/game/x1', '/jieqi/game/x1/']) {
+    assert.equal(isNoindexRoute(route), true, route);
+  }
+  for (const route of ['/historical-xiangqi/game/x1', '/games', '/games/search', '/xiangqi']) {
+    assert.equal(isNoindexRoute(route), false, route);
+  }
 });
 
 test('isNoindexRoute ignores a trailing slash', () => {
@@ -792,11 +805,20 @@ test('locale-prefixed study permalinks are client routes AND review-shell routes
   }
 });
 
+test('the study list is a route in all three locales, and not a review shell', () => {
+  for (const path of ['/study', '/zh-hans/study', '/zh-hant/study']) {
+    assert.equal(isClientRoute(path), true, `${path} should serve the SPA shell`);
+    assert.equal(isReviewShellRoute(path), false, `${path} mounts no engine`);
+  }
+});
+
 test('a bogus locale prefix on a study path is not a route', () => {
   for (const path of [
     '/fr/study/Ab12cd',
     '/zh/study/Ab12cd',
-    '/zh-hans/study/',
+    '/fr/study',
+    '/zh/study',
+    '/zh-hans/studies',
     '/study/Ab12cd/Xy34ef/extra',
   ]) {
     assert.equal(isClientRoute(path), false, `${path} should not match`);

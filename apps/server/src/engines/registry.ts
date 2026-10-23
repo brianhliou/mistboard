@@ -37,6 +37,7 @@ import {
   JIEQI_RANDOM_ENGINE_VERSION,
   JIEQI_SKILL_MULTIPV,
   type JieqiEngineTier,
+  JQE_JIEQI_ENGINE_VERSION,
 } from '../jieqi-engine.js';
 import { JUNGLE_RUST_ENGINE_VERSION, JUNGLE_RUST_TIER_LIST } from '../jungle-engine.js';
 import { KATAGO_JUNGLE_ENGINE_VERSION, KATAGO_JUNGLE_TIER_LIST } from '../jungle-katago-engine.js';
@@ -52,6 +53,11 @@ import {
   XIANGQI_RANDOM_ENGINE_ID,
   XIANGQI_RANDOM_ENGINE_VERSION,
 } from '../xiangqi-random-engine.js';
+import {
+  XIANGQI_WORST_ENGINE_ID,
+  XIANGQI_WORST_ENGINE_VERSION,
+  xiangqiWorstEngineTierFor,
+} from '../xiangqi-worst-engine.js';
 import { BUILTIN_ENGINES } from './builtin/index.js';
 import type { EngineClientId, EngineDefinition, EngineId } from './types.js';
 
@@ -881,6 +887,33 @@ const XIANGQI_RANDOM_ENGINES: Record<string, EngineDefinition> = {
   } satisfies EngineDefinition,
 };
 
+// The worst-move bot: Fairy-Stockfish on the CC0 net scores every root move and
+// the bot plays the lowest (xiangqi-worst-engine.ts). Player-facing, not a rung.
+const XIANGQI_WORST_TIER = xiangqiWorstEngineTierFor(XIANGQI_WORST_ENGINE_ID)!;
+const XIANGQI_WORST_HASH = `fsf-xiangqi-${XIANGQI_FSF_ENGINE_VERSION}-${XIANGQI_FSF_ENGINE_REF}-${XIANGQI_WORST_ENGINE_VERSION}-nodes-${XIANGQI_WORST_TIER.nodes}-${XIANGQI_FSF_NNUE_NET.replace(/\.nnue$/, '')}`;
+const XIANGQI_WORST_ENGINES: Record<string, EngineDefinition> = {
+  [XIANGQI_WORST_ENGINE_ID]: {
+    id: XIANGQI_WORST_ENGINE_ID,
+    engineId: 'fairy-stockfish-xiangqi',
+    engineName: 'Fairy-Stockfish',
+    name: XIANGQI_WORST_TIER.name,
+    kind: 'container',
+    gameSpecId: 'xiangqi',
+    configHash: XIANGQI_WORST_HASH,
+    playSignature: XIANGQI_WORST_HASH,
+    config: {
+      kind: 'fairy-stockfish',
+      // Full strength (FSF's default): the weakness is the pick, not the search.
+      skill: 20,
+      movetime_ms: XIANGQI_WORST_TIER.movetimeMs,
+      nodes: XIANGQI_WORST_TIER.nodes,
+      nnue: XIANGQI_FSF_NNUE_NET,
+    },
+    notes:
+      'Fairy-Stockfish on the CC0 xiangqi net over every root move (MultiPV), playing the lowest-scoring one: the worst move it can find. A beginner opponent, not a ladder rung.',
+  } satisfies EngineDefinition,
+};
+
 const XIANGQI_FSF_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
   XIANGQI_FSF_PLAYABLE_ENGINES.map((tier) => [
     tier.id,
@@ -929,6 +962,9 @@ function jieqiConfigHash(tier: JieqiEngineTier): string {
   if (tier.engine === 'ab-jchess') {
     return `ab-jchess-${ABJCHESS_JIEQI_ENGINE_VERSION}-movetime-${tier.movetimeMs}`;
   }
+  if (tier.engine === 'jqe') {
+    return `jqe-${JQE_JIEQI_ENGINE_VERSION}-movetime-${tier.movetimeMs}`;
+  }
   if (tier.id === 'pikafish-jieqi-strongest') {
     return `pikafish-jieqi-${JIEQI_ENGINE_VERSION}-movetime-4000`;
   }
@@ -942,8 +978,9 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
       tier.id,
       {
         id: tier.id as EngineId,
-        engineId: tier.engine === 'ab-jchess' ? 'ab-jchess' : 'pikafish-jieqi',
-        engineName: tier.engine === 'ab-jchess' ? 'AB-JChess' : 'PikaJieQi',
+        engineId: tier.engine ?? 'pikafish-jieqi',
+        engineName:
+          tier.engine === 'ab-jchess' ? 'AB-JChess' : tier.engine === 'jqe' ? 'jqe' : 'PikaJieQi',
         name: tier.name,
         kind: 'container',
         gameSpecId: 'jieqi',
@@ -958,10 +995,12 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
         notes: tier.retired
           ? 'Retired pre-ladder Jieqi tier (depth cap only); resolvable for history.'
           : tier.engine === 'ab-jchess'
-            ? "Jieqi top slot: AB-JChess 0.2b (lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)) on its 20260911 NNUE, 4000ms, Hash 256. The net is fetched from the author's release at build time, never re-hosted."
-            : tier.skill === undefined
-              ? 'Jieqi Level 8: full-strength PikaJieQi (jieqi_old, classical eval), no depth cap, 4000ms, Hash 256.'
-              : `Jieqi ladder rung: Stockfish Skill Level ${tier.skill} over a ${JIEQI_SKILL_MULTIPV}-line MultiPV, depth ${tier.depth}, ${tier.movetimeMs}ms.`,
+            ? "Jieqi top slot: AB-JChess 0.2d (lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)) on its 20261010 NNUE, 4000ms, Hash 256. The net is fetched from the author's release at build time, never re-hosted."
+            : tier.engine === 'jqe'
+              ? "Jieqi, above AB-JChess: jqe 331a6e61 (devinokeefe/jieqi, MIT, by Devin O'Keefe) on its it014 NNUE, 4000ms, Hash 256. Code and net are MIT and ship in our engines release. Held behind MISTBOARD_JQE_ENABLED."
+              : tier.skill === undefined
+                ? 'Jieqi Level 8: full-strength PikaJieQi (jieqi_old, classical eval), no depth cap, 4000ms, Hash 256.'
+                : `Jieqi ladder rung: Stockfish Skill Level ${tier.skill} over a ${JIEQI_SKILL_MULTIPV}-line MultiPV, depth ${tier.depth}, ${tier.movetimeMs}ms.`,
       } satisfies EngineDefinition,
     ]),
   ),
@@ -1033,8 +1072,8 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
     // the hash names what DECIDES play — the build and the strength dial. The movetime
     // cap is a latency backstop that must not bind (see banqi-engine.ts), so it stays
     // out of the identity while remaining recorded in `config`.
-    configHash: 'misty-banqi-0.2.6-nodes-3500000',
-    playSignature: 'misty-banqi-0.2.6-nodes-3500000',
+    configHash: 'misty-banqi-0.2.7-nodes-3500000',
+    playSignature: 'misty-banqi-0.2.7-nodes-3500000',
     config: { kind: 'banqi-uci', nodes: 3_500_000, movetime_ms: 8_000 },
     notes:
       'MistyBanqi 0.2.4 — v0.2.1 gen_danger general-safety eval term (proximity+escape-aware, ' +
@@ -1176,6 +1215,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...PYTHON_ENGINES,
   ...XIANGQI_FSF_ENGINES,
   ...XIANGQI_RANDOM_ENGINES,
+  ...XIANGQI_WORST_ENGINES,
   ...FORTRESS_XIANGQI_FSF_ENGINES,
   ...DUCK_XIANGQI_FSF_ENGINES,
   ...ATOMIC_XIANGQI_FSF_ENGINES,

@@ -50,6 +50,7 @@ export const EN_CONTENT = {
   'articles.latest': 'Latest',
   'articles.deepDives': 'Xiangqi deep dives',
   'articles.topicAll': 'All',
+  'articles.topicEngineering': 'Engineering',
   'articles.topicsLabel': 'Topics',
   'articles.read': 'Read',
   'articles.intro': 'Essays, rules notes, and engine work for original strategy games.',
@@ -70,6 +71,8 @@ export const EN_CONTENT = {
   'articles.playThisGame': 'Play {game}',
   'articles.playVsComputer': 'Play the computer',
   'articles.playAFriend': 'Play a friend',
+  'articles.playtestOnly': 'This game is in testing and open to invited players for now.',
+  'articles.playtestAsk': 'Ask on the forum to join',
   'articles.notFoundTitle': 'Article not found',
   'articles.notFoundBody': "This article doesn't exist yet.",
   'rules.heading': 'Rules',
@@ -168,28 +171,38 @@ export const EN_CONTENT = {
     'Daily limit reached. Sign in for unlimited replies, or try again tomorrow.',
   'contact.sendFailed': "Couldn't send. Try again, or email if it keeps failing.",
   'contact.networkError': 'Network error. Try again.',
+  // The small print under every player, team and broadcast page. Approved
+  // English, verbatim; "contact us" is the link to /contact?about=<page>.
+  'contact.rightsPrefix':
+    'Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, ',
+  'contact.rightsLink': 'contact us',
+  'contact.rightsSuffix': " and we'll take care of it.",
+  'contact.aboutPage': 'About: {path}',
   'about.heading': 'About Mistboard',
   'about.lede':
-    "Mistboard is a free, open-source place to play and study Chinese chess, one board for players who read Chinese and players who don't. It is also home to the original strategy games we build.",
-  'about.whyHeading': 'Why this site exists',
+    "Mistboard is a free, open-source place to play and study Chinese chess, and home to the original strategy games we build. Players who read Chinese and players who don't sit at the same board.",
+  'about.whyHeading': 'A world stage for Chinese chess',
   'about.whyBody':
-    'Chinese chess here means xiangqi and its traditional relatives, jieqi and banqi. Most people who play them read Chinese, and most of what is written about them is in Chinese. Mistboard is one board for both sides of that line. The site runs in English, Simplified and Traditional Chinese on the same games, puzzles and lobby, so a player in Shanghai and a player in Toronto sit down at the same table. For English speakers, pieces render as icons you can identify before you can read 車 or 砲, rules and articles are written in English rather than translated into it, and a beginner course explains each piece against the chess piece it resembles. Past the basics: engines, tactics puzzles mined from real games, an analysis board, a games database, and tournament broadcasts.',
-  'about.darkChessHeading': 'What Mistboard builds',
+    'Chinese chess here means xiangqi and its traditional relatives, jieqi and banqi. Mistboard runs in English, Simplified Chinese and Traditional Chinese, so a player in Shanghai and a player in Toronto can sit down at the same table. Pieces can render as icons you recognize before you can read 車 or 砲, and a beginner course starts from the first move. Our mission is to bring people together across cultures through Chinese chess and original strategy games.',
+  'about.darkChessHeading': 'New games from familiar boards',
   'about.darkChessBody':
-    "Beside the traditional games sit the ones we design. Duck Xiangqi puts a duck on the board that belongs to neither side. Fog Xiangqi hides every point your pieces cannot reach. Crazyhouse Xiangqi puts every captured piece into the capturer's hand to drop back in, and advisors and elephants start the game in hand. Each starts from a board people already know and changes as little as it can, and each gets a clear rules page and server-enforced play. More are in design. Jungle Chess, Flip Jungle, and Fog Chess are live too.",
-  'about.playStudyHeading': 'Play and study',
+    'Duck Xiangqi puts a duck on the board that belongs to neither player. Fog Xiangqi hides every point your pieces cannot reach. Crazyhouse Xiangqi lets you drop captured pieces back onto the board. Each starts with a familiar game and changes its decisions. We give each game clear rules and server-enforced play. Over time, we want other creators to develop and test their games with players here too.',
+  'about.playStudyHeading': 'Play, study and teach',
   'about.playStudyBody':
-    "Start a game over a link, join the lobby, or play an engine where one is available. Afterward, review the game from either player's perspective or with the full board revealed when the rules allow it. Rules and articles cover both how to play and why the variants work.",
-  'about.trustHeading': 'Trust by design',
+    'Challenge a friend over a link, find an opponent in the lobby or play against a computer. Work through puzzles mined from real games, study a tournament game move by move or review your own game afterward. Lessons, studies and broadcasts give players ways to learn from each other and teach what they know.',
+  'about.trustHeading': 'Built with players, open to inspection',
   'about.trustBody':
-    "In Fog games your browser never receives the pieces you can't see, so there is nothing hidden on the page to dig out. A live Fog game can't be watched. In jieqi and banqi, spectators see the board as it lies, face-down pieces and all. Every board opens up for review once the game ends.",
-  'about.enginesHeading': 'Engines and serious play',
+    'Our standard is a board that responds promptly and makes the next action clear. We use AI in development to act quickly on bugs and player suggestions. The rules are open to inspection, and fair play is enforced by the server: in Fog games, your browser never receives the pieces you cannot see. Computer opponents play with the information a human in their seat would have.',
+  'about.enginesHeading': 'Build the next challenger',
   'about.enginesBody':
-    'Mistboard runs engines for its variants and builds its own where none existed, like Misty for Fog Chess. In a hidden-piece game the engine sees what a human in its seat would see, and nothing more.',
-  'about.openSourceHeading': 'Open source foundation',
+    'Engine authors can challenge for titles in public matches on Mistboard. We want to grow that into an arena where anyone can bring an engine and compete under clear rules, with games and results others can examine. Further ahead are competitions on newly invented strategy games, where people and AI agents must develop approaches to games they have never played before.',
+  'about.communityHeading': 'Clubs, tournaments and cultural exchange',
+  'about.communityBody':
+    'We want a Washington Xiangqi club and in-person tournaments whose games can be followed and studied on Mistboard. From there, we want to work with clubs, teachers and sporting or cultural institutions in China and elsewhere on exchanges and international events.',
+  'about.openSourceHeading': 'Free and open source',
   'about.openSourcePrefix': 'Mistboard is published under AGPL-3.0-or-later on ',
   'about.openSourceMiddle':
-    '. Anyone can read the rules code, the code that decides what each player sees, and the rest of the site. Bug reports, fixes and article drafts are welcome. See ',
+    '. You can inspect how the games work, contribute improvements and build on the code. Players, teachers and engine authors all have a part in what Mistboard becomes. See ',
   'about.openSourceSuffix': ' for license and third-party credits.',
   'stats.heading': 'Statistics',
   'stats.lede':
@@ -221,8 +234,20 @@ export const EN_CONTENT = {
   'source.chessops': 'chessops: chess rules primitives, GPL-3.0-or-later.',
   'source.stockfish':
     'Stockfish: optional engine/runtime dependency for research and engine-worker flows, GPL family.',
+  'source.fairyStockfish':
+    'Fairy-Stockfish by Fabian Fichter and contributors: the xiangqi bot levels below Pikafish and the Duck Xiangqi bot, GPL-3.0.',
+  'source.pikafishJieqi':
+    "Pikafish's jieqi branch, with Mistboard's patches: the jieqi bots and jieqi analysis, GPL-3.0.",
+  'source.chessPieceSets':
+    'Chess pieces from lichess: Cburnett by Colin M.L. Burnett and Merida by Armando Hernandez Marroquin, GPL-2.0-or-later; Chessnut by Alexis Luengas, Apache 2.0; Fantasy by Maurizio Monge, MIT; Letter by usolando, AGPL-3.0.',
+  'source.sounds':
+    'Sounds: the Futuristic, NES, Piano and SFX sets from lichess by Enigmahack, AGPL-3.0; the Wood set by el_boss, the game-end jingles by Kenney and the Duck Xiangqi quack by D4XX, all CC0.',
+  'source.fonts':
+    'Fonts: Noto Sans and Noto Sans CJK, SIL Open Font License 1.1; Roboto, Apache 2.0.',
   'source.abJchess':
-    "AB-JChess by Huorongrong and Laoxu (Kouza): the top jieqi bot, GPL-3.0; its neural network is used with the authors' permission.",
+    "AB-JChess by Huorongrong and Laoxu (Kouza): a jieqi engine, GPL-3.0; its neural network is used with the authors' permission.",
+  'source.jqe':
+    "jqe by Devin O'Keefe: the top jieqi bot, with its own neural network, MIT; played here with the author's permission.",
   'source.katagomo':
     "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
   'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
@@ -256,7 +281,7 @@ export const EN_CONTENT = {
   'developers.heading': 'Developers',
   'apiDocs.heading': 'API',
   'contribute.intro':
-    'Mistboard is free and open source, built in the open. There is a lot to do and many ways to help, whether or not you write code.',
+    'Help build a future for Chinese chess and original strategy games. Mistboard is free and open source, and players, teachers, game creators and engine authors can all contribute. Start with something you care about improving.',
   'contribute.playHeading': 'Play and give feedback',
   'contribute.playBody':
     'The most useful thing you can do right now is play, then tell us what broke or felt wrong. Real games surface rule bugs, unclear moments, and missing features faster than anything else. New games we design need play-testers too.',
@@ -286,7 +311,7 @@ export const EN_CONTENT = {
   'contribute.crossLinkOr': ' or ',
   'creators.heading': 'Work with us',
   'creators.intro':
-    'Mistboard is a free, open-source site for Chinese chess and original strategy games, in English and Chinese, with no ads. We work with players, creators and organizers who want to bring the game to more people.',
+    'Help bring Chinese chess to a world stage. Mistboard connects play and study with broadcasts, original games and engine challenges. We want to work with players, teachers, creators and organizers across languages, online and in person. The site is free, open source and ad-free.',
   'creators.playersHeading': 'Titled players and coaches',
   'creators.playersPrefix': 'A verified title badge, and a ',
   'creators.playersCoachLink': 'coaching page',
@@ -336,19 +361,23 @@ export const EN_CONTENT = {
   'creators.crossLinkSuffix': '.',
   'champions.heading': 'Engine champions',
   'champions.intro':
-    'Each game has one reigning champion engine. It is the bot you play on the site, credited by name. Any engine can challenge for the title in a public match.',
+    'Each game has one reigning champion engine: the strongest bot you can play here, credited by name. Easier bots and levels sit below it. Any engine can challenge for the title in a public match. We also want to host other engines as bots you can play, not only champions; to offer one, use the submission steps below.',
   'champions.aboutJieqi':
     'By Huorongrong and Laoxu (Kouza): a Pikafish fork with its own neural network. It plays here at 4 s a move on 4 threads.',
-  'champions.aboutJunglePrefix':
-    'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move; ',
-  'champions.aboutJungleSuffix': ', at 5M nodes a move, is the easier bot below it.',
+  'champions.aboutJungle':
+    'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move.',
+  'champions.sourceLink': 'Source code',
   'champions.championBadge': 'Champion',
   'champions.statWins': 'wins',
   'champions.statDraws': 'draws',
   'champions.statLosses': 'losses',
   'champions.barLabel': '{wins} wins, {draws} draws, {losses} losses',
   'champions.tookJieqi':
-    'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, a 0.64 score.',
+    'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, scoring 64%.',
+  'champions.aboutJqe':
+    "By Devin O'Keefe: an open-source engine with its own neural network, trained on self-play. It plays here at 4 s a move on 4 threads.",
+  'champions.tookJqe':
+    'Took the title from AB-JChess 0.2d on 2026-10-21, over 300 games, scoring 60%.',
   'champions.tookJungle':
     'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
   'champions.readMatch': 'Read the match',
@@ -356,7 +385,7 @@ export const EN_CONTENT = {
   'champions.playChampion': 'Play the champion',
   'champions.openHeading': 'Open titles',
   'champions.openIntro':
-    'Every other game with a bot. The bot you play holds the title until a challenger beats it in a match, and no challenger has played one yet.',
+    'Every other game with a bot. The strongest bot on the site holds the title until a challenger beats it in a match. No challenger has played one yet.',
   'champions.heldBy': 'Held by',
   'champions.openBadge': 'Title open',
   'champions.challengeCta': 'Challenge for this title',
@@ -367,15 +396,18 @@ export const EN_CONTENT = {
   'champions.linkSeparator': ', ',
   'champions.parenOpen': ' (',
   'champions.parenClose': ').',
+  'champions.lineEnd': '.',
   'champions.historyHeading': 'Title history',
   'champions.historyJieqi':
-    '2026-09-30, Jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), took the title from Pikafish Level 8, 248-136-16 over 400 games, a 0.64 score',
+    '2026-09-30, Jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), took the title from Pikafish Level 8, 248-136-16 over 400 games, scoring 64%',
+  'champions.historyJqe':
+    "2026-10-21, Jieqi: jqe, by Devin O'Keefe, took the title from AB-JChess 0.2d, 171-114-15 over 300 games, scoring 60%",
   'champions.historyJungle':
     '2026-09-22, Jungle Chess: KataGo-AnimalChess, by hzyhhzy with a network from Kouza, took the title from MistyJungle, 82-0 with 118 draws over 200 games at 1,000 visits a move',
   'champions.challengeHeading': 'Challenge for a title',
   'champions.ruleMatch':
     "200 games against the champion, 100 as each color, with the champion's time or node budget per move for both engines, on one machine, with the seed published. A match may be extended past 200 games.",
-  'champions.ruleScore': 'A score of 0.55 or better (about +35 Elo) takes the title.',
+  'champions.ruleScore': 'Scoring 55% or better (about +35 Elo) takes the title.',
   'champions.ruleRun':
     'We run the match within two weeks of a submission and post the result either way.',
   'champions.ruleSubmitPrefix':
@@ -386,15 +418,68 @@ export const EN_CONTENT = {
   'champions.ruleSubmitSuffix': '.',
   'thanks.heading': 'Thank you',
   'thanks.intro':
-    'Mistboard stands on open-source work by many people and projects, and on everyone who plays, reports bugs, and helps it get better.',
-  'thanks.playersHeading': 'Players and contributors',
+    "Much of Mistboard rests on other people's work: the engines you play against, the games and photos other sites let us show, and the players who told us what was broken. This page thanks them by name.",
+  'thanks.enginesHeading': 'The engines you play',
+  'thanks.pikafishAuthors': 'The Pikafish developers',
+  'thanks.pikafishBody':
+    "The strongest xiangqi bot here and the engine behind all of the site's xiangqi analysis. Its jieqi branch runs the jieqi bots and jieqi analysis.",
+  'thanks.fairyStockfishAuthors': 'Fabian Fichter and the Fairy-Stockfish contributors',
+  'thanks.fairyStockfishBody':
+    'Plays the xiangqi bot levels below Pikafish and the Duck Xiangqi bot.',
+  'thanks.abJchessAuthors': 'Huorongrong and Laoxu',
+  'thanks.abJchessBody': 'The top jieqi bot. Its authors let us use its neural network.',
+  'thanks.katagomoAuthor': 'KataGomo by hzyhhzy',
+  'thanks.katagoAuthor': 'KataGo by lightvector',
+  'thanks.dandelionAuthor': 'Dandelion 4 network by Kouza',
+  'thanks.katagoBody':
+    "The top Jungle bot: hzyhhzy's Jungle version of KataGo, playing with the Dandelion 4 network, run here with their permission.",
+  'thanks.communityBotBy': 'A bot from a community developer.',
+  'thanks.statGames': 'games on Mistboard',
+  'thanks.statRating': '{variant} rating',
+  'thanks.statUnrated': 'not rated yet',
+  'thanks.enginesAskPrefix':
+    'If you have written an engine for one of our variants, we can run it here as a bot with your name on it and its own page. ',
+  'thanks.enginesAskLink': 'Get in touch',
+  'thanks.enginesAskSuffix': '.',
+  'thanks.chessdbName': 'chessdb.cn',
+  'thanks.chessdbBody':
+    'The Chinese Chess Cloud Database gives the exact endgame results in the xiangqi analysis board and practice.',
+  'thanks.sourcesHeading': 'Games, data and photos',
+  'thanks.dpxqName': 'dpxq.com',
+  'thanks.dpxqBody':
+    'The tournament games in our broadcasts and the classical manuals in our studies. Its operator also spotted a round we had missed.',
+  'thanks.xiangqiqipuName': 'xiangqiqipu.com',
+  'thanks.xiangqiqipuBody':
+    "75 of the photos on our player pages, used with the owner's permission.",
+  'thanks.pressName': 'Photographers and news agencies',
+  'thanks.pressBody': "The other player photos, each credited on its player's page.",
+  'thanks.elephantChessName': 'ElephantChess',
+  'thanks.elephantChessBody':
+    'The amateur games our puzzles are mined from, which they publish as open monthly datasets.',
+  'thanks.jimPngName': 'Jim Png',
+  'thanks.jimPngBody':
+    'The English names we give xiangqi openings follow the glossaries on his site, xqinenglish.com.',
+  'thanks.playersHeading': 'Players and feedback',
   'thanks.playersBody':
-    'Thank you to everyone who plays a game, files a bug, suggests an idea, or supports the project. Mistboard gets sharper every time you do.',
-  'thanks.openSourceHeading': 'Open-source projects',
-  'thanks.openSourcePrefix': 'Mistboard is built on open-source libraries and tools. The ',
+    'Thank you to the people who played here early, when there was little to play, and to everyone whose report led to a fix.',
+  'thanks.playersAskPrefix':
+    'If you reported something that got fixed and your name is missing, or you would rather it came off, ',
+  'thanks.playersAskLink': 'tell us',
+  'thanks.playersAskSuffix': '.',
+  'thanks.lichessHeading': 'Lichess',
+  'thanks.lichessLead':
+    'Mistboard is the design of lichess applied to xiangqi and its variants. When we did not know how something should work, we looked at how lichess does it, and most of the time we built the same thing.',
+  'thanks.lichessTook':
+    'From lichess we took the lobby and rated play with Glicko-2, the shape of the game room, the broadcast and pro players pages, the rule for mate puzzles, the changelog and this page, and the board code under our chess boards.',
+  'thanks.lichessCloseLink': 'Lichess',
+  'thanks.lichessCloseMiddle':
+    " is free, carries no ads and is open source, run as a nonprofit on its players' donations. Thank you to Thibault Duplessis, who started it, and to ",
+  'thanks.lichessCloseBuildersLink': 'everyone who builds it',
+  'thanks.lichessCloseSuffix': '.',
+  'thanks.openSourcePrefix':
+    'Licenses for everything above, and for the libraries the site runs on, are on the ',
   'thanks.openSourceLink': 'source code',
-  'thanks.openSourceSuffix': ' page lists the projects and licenses Mistboard depends on.',
-  'thanks.stubNote': 'This page will grow into a fuller list of credits over time.',
+  'thanks.openSourceSuffix': ' page.',
   'faq.heading': 'FAQ',
   'faq.playWebQuestion': 'Is there a web version? Do I need to download anything?',
   'faq.playWebAnswer':
@@ -611,6 +696,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'articles.heading',
   'articles.deepDives',
   'articles.topicAll',
+  'articles.topicEngineering',
   'articles.topicsLabel',
   'articles.latest',
   'articles.read',
@@ -632,6 +718,8 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'articles.playThisGame',
   'articles.playVsComputer',
   'articles.playAFriend',
+  'articles.playtestOnly',
+  'articles.playtestAsk',
   'articles.notFoundTitle',
   'articles.notFoundBody',
   'rules.heading',
@@ -671,6 +759,10 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'contact.dailyLimit',
   'contact.sendFailed',
   'contact.networkError',
+  'contact.rightsPrefix',
+  'contact.rightsLink',
+  'contact.rightsSuffix',
+  'contact.aboutPage',
   'about.heading',
   'about.lede',
   'about.whyHeading',
@@ -683,6 +775,8 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'about.trustBody',
   'about.enginesHeading',
   'about.enginesBody',
+  'about.communityHeading',
+  'about.communityBody',
   'about.openSourceHeading',
   'about.openSourcePrefix',
   'about.openSourceMiddle',
@@ -715,6 +809,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.chessops',
   'source.stockfish',
   'source.abJchess',
+  'source.jqe',
   'source.katagomo',
   'source.katago',
   'source.dandelion',

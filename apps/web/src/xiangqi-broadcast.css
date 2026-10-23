@@ -251,6 +251,25 @@
   color: var(--site-heading);
 }
 
+/* The rights small print at the foot of player, team and event pages: the
+   records credit's voice, one quiet paragraph after everything else. */
+.xqb-rights-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--site-muted);
+}
+
+.xqb-rights-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.xqb-rights-note a:hover {
+  color: var(--site-heading);
+}
+
 .xqb-card-board {
   box-shadow: 0 6px 18px rgba(37, 31, 24, 0.12);
   border-radius: 10px;
@@ -840,6 +859,15 @@
   cursor: pointer;
 }
 
+/* Touch floor (#576): 16px keeps iOS from zooming on focus, and a native
+   select needs an explicit height (WebKit ignores min-height on it). */
+@media (pointer: coarse) {
+  .xqb-round-select {
+    height: 40px;
+    font-size: 16px;
+  }
+}
+
 .xqb-round-select:hover,
 .xqb-round-select:focus-visible {
   border-color: color-mix(in srgb, var(--site-accent) 42%, var(--site-border-soft));
@@ -1020,6 +1048,12 @@
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .xqb-tab {
+    min-height: 40px;
+  }
 }
 
 .xqb-tab:hover,
@@ -1915,6 +1949,18 @@
   transition: transform 120ms ease;
 }
 
+/* Touch floor (#576): the 30x16 switch keeps its look; a transparent 12px
+   border makes the target 54x40 and the negative margin keeps the row. The
+   knob sits against the padding box, so it does not move. */
+@media (pointer: coarse) {
+  .xqb-gauge-toggle input {
+    box-sizing: content-box;
+    margin: -12px;
+    border: 12px solid transparent;
+    background-clip: padding-box;
+  }
+}
+
 .xqb-gauge-toggle input:checked {
   background: var(--site-accent);
 }
@@ -2338,6 +2384,13 @@ a.xqb-standings-name:focus-visible {
 .xqb-pager-button:focus-visible {
   background: color-mix(in srgb, var(--site-text) 10%, transparent);
   color: var(--site-accent-strong);
+}
+
+@media (pointer: coarse) {
+  .xqb-pager-button {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 .xqb-pager-button:disabled {

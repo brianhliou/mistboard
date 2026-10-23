@@ -9,6 +9,11 @@
  * move that repeated a position a third time would be refused, so the rest of the
  * log would replay onto the wrong board.
  *
+ * The no-progress draw went from 40 plies to 60 on 2026-10-17. A room created
+ * since records `noProgressLimit: 60`; every older room (bare deal, or a 10-09
+ * setup without the field) replays at 40, so a game drawn by the clock replays
+ * to its stored draw instead of playing on.
+ *
  * Both fixtures are real games from prod (deal + move list only):
  *   REPETITION_DRAW  bot chases until threefold, drawn at ply 34.
  *   LONG_HUMAN_CHASE the human's general herds a cannon 8 moves running around
@@ -28,6 +33,7 @@ import {
   type BanqiSquare,
   banqiRulesFromView,
   createBanqiStateFromSetup,
+  DEFAULT_NO_PROGRESS_PLY_LIMIT,
   getBanqiForbiddenChaseMoves,
   getBanqiPlayerView,
   readBanqiSetup,
@@ -111,22 +117,36 @@ function eventLog(roomId: string, setup: unknown, played: readonly BanqiMove[]):
   return events;
 }
 
+// A room created between the 長捉 rule (10-09) and the 60-ply limit (10-17).
 const NEW_RULES = (d: BanqiDeal) => ({ deal: d, chaseRule: BANQI_CHASE_RULE });
+// A room created since 2026-10-17.
+const LIMIT_60_RULES = (d: BanqiDeal) => ({
+  deal: d,
+  chaseRule: BANQI_CHASE_RULE,
+  noProgressLimit: DEFAULT_NO_PROGRESS_PLY_LIMIT,
+});
+const OLD = { chaseRule: null, noProgressLimit: 40 };
 
 test('a stored setup without a stamp reads as the old rules; a new setup carries its rule', () => {
-  assert.deepEqual(readBanqiSetup(REPETITION_DRAW.deal).rules, { chaseRule: null });
+  assert.deepEqual(readBanqiSetup(REPETITION_DRAW.deal).rules, OLD);
   assert.deepEqual(readBanqiSetup(NEW_RULES(REPETITION_DRAW.deal)).rules, {
     chaseRule: BANQI_CHASE_RULE,
+    noProgressLimit: 40,
+  });
+  assert.deepEqual(readBanqiSetup(LIMIT_60_RULES(REPETITION_DRAW.deal)).rules, {
+    chaseRule: BANQI_CHASE_RULE,
+    noProgressLimit: 60,
   });
   // Fail closed: a setup object with a missing or unknown rule is old rules too,
   // and so is the count stamp an unshipped build once wrote.
-  assert.deepEqual(readBanqiSetup({ deal: REPETITION_DRAW.deal }).rules, { chaseRule: null });
-  assert.deepEqual(readBanqiSetup({ deal: REPETITION_DRAW.deal, chaseRule: 'x' }).rules, {
-    chaseRule: null,
-  });
-  assert.deepEqual(readBanqiSetup({ deal: REPETITION_DRAW.deal, chaseLimit: 7 }).rules, {
-    chaseRule: null,
-  });
+  assert.deepEqual(readBanqiSetup({ deal: REPETITION_DRAW.deal }).rules, OLD);
+  assert.deepEqual(readBanqiSetup({ deal: REPETITION_DRAW.deal, chaseRule: 'x' }).rules, OLD);
+  assert.deepEqual(readBanqiSetup({ deal: REPETITION_DRAW.deal, chaseLimit: 7 }).rules, OLD);
+  // An unknown limit is the old limit, never the current one.
+  assert.deepEqual(
+    readBanqiSetup({ deal: REPETITION_DRAW.deal, chaseRule: 'x', noProgressLimit: 99 }).rules,
+    OLD,
+  );
   // No stored setup at all (the runtime's seed projection) gets the current rules.
   assert.deepEqual(readBanqiSetup(undefined).rules, {});
 });
@@ -185,6 +205,28 @@ test('a long herding chase replays every stored move under either rule set', () 
   assert.deepEqual(stamped.state.status, legacy.state.status);
 });
 
+test('a game drawn by the 40-ply clock replays to its draw; under the 60-ply limit it plays on', () => {
+  // The bare deal and the 10-09 setup both replay to the stored clock draw.
+  for (const setup of [LONG_HUMAN_CHASE.deal, NEW_RULES(LONG_HUMAN_CHASE.deal)]) {
+    const old = replayTenantEvents(
+      banqiTenant,
+      eventLog('bq_clock_old', setup, LONG_HUMAN_CHASE.moves),
+    );
+    assert.equal(old.state.ply, 172);
+    assert.equal(old.state.noProgressClock, 40);
+    assert.deepEqual(old.state.status, { type: 'finished', winner: null, reason: 'no-progress' });
+  }
+  // The same log stamped with the 60-ply limit: ply 172 is 40 quiet plies in,
+  // and the game goes on. This is the rewrite the stamp prevents.
+  const stamped = replayTenantEvents(
+    banqiTenant,
+    eventLog('bq_clock_60', LIMIT_60_RULES(LONG_HUMAN_CHASE.deal), LONG_HUMAN_CHASE.moves),
+  );
+  assert.equal(stamped.state.ply, 172);
+  assert.equal(stamped.state.noProgressClock, 40);
+  assert.equal(stamped.state.status.type, 'playing');
+});
+
 test('a new room applies the rule: its state and every view carry it', () => {
   const events = eventLog(
     'bq_new',
@@ -199,9 +241,44 @@ test('a new room applies the rule: its state and every view carry it', () => {
     events,
   );
   assert.equal(view.chaseRule, BANQI_CHASE_RULE);
-  assert.deepEqual(banqiRulesFromView(view), { chaseRule: BANQI_CHASE_RULE });
+  assert.deepEqual(banqiRulesFromView(view), { chaseRule: BANQI_CHASE_RULE, noProgressLimit: 40 });
   const truth = banqiTenant.visibility.truthView?.(projection.state, events);
   assert.equal(truth?.chaseRule, BANQI_CHASE_RULE);
+  assert.equal(truth?.noProgressLimit, 40);
+});
+
+test('a room created since 2026-10-17 carries the 60-ply limit in its state and every view', () => {
+  const events = eventLog(
+    'bq_new60',
+    LIMIT_60_RULES(REPETITION_DRAW.deal),
+    REPETITION_DRAW.moves.slice(0, 4),
+  );
+  const projection = replayTenantEvents(banqiTenant, events);
+  assert.equal(projection.state.noProgressLimit, 60);
+  const red = banqiTenant.visibility.viewForClient(
+    projection.state,
+    { id: 'a', seat: 'red', solo: false },
+    events,
+  );
+  const spectator = banqiTenant.visibility.viewForClient(
+    projection.state,
+    { id: 's', seat: 'spectator', solo: false },
+    events,
+  );
+  for (const view of [red, spectator]) {
+    assert.equal(view.noProgressLimit, 60);
+    assert.deepEqual(banqiRulesFromView(view), {
+      chaseRule: BANQI_CHASE_RULE,
+      noProgressLimit: 60,
+    });
+  }
+  assert.equal(banqiTenant.visibility.truthView?.(projection.state, events)?.noProgressLimit, 60);
+  // A view from an older server (no field) replays at 40, never at 60.
+  const { noProgressLimit: _dropped, ...withoutLimit } = red;
+  assert.deepEqual(banqiRulesFromView(withoutLimit), {
+    chaseRule: BANQI_CHASE_RULE,
+    noProgressLimit: 40,
+  });
 });
 
 test("an old room's views carry no rule, so a client replays it with the rule off", () => {
@@ -212,7 +289,8 @@ test("an old room's views carry no rule, so a client replays it with the rule of
   const view = getBanqiPlayerView(projection.state, 'red');
   assert.ok(!('chaseRule' in view), 'no chaseRule key on a legacy view');
   assert.ok(!('chasedSquare' in view), 'the chase bookkeeping never reaches a view');
-  assert.deepEqual(banqiRulesFromView(view), { chaseRule: null });
+  assert.equal(view.noProgressLimit, 40);
+  assert.deepEqual(banqiRulesFromView(view), OLD);
 });
 
 test('postgame analysis replays the stored setup under its own rules', async () => {
@@ -230,4 +308,5 @@ test('postgame analysis replays the stored setup under its own rules', async () 
   const chase = await analyzeBanqiPostgame(LONG_HUMAN_CHASE.moves, LONG_HUMAN_CHASE.deal, evaluate);
   assert.equal(chase.plies.length, 173);
   assert.equal(evaluated.includes(171), true);
+  assert.equal(evaluated.includes(172), false, 'ply 172 is the stored 40-ply clock draw');
 });

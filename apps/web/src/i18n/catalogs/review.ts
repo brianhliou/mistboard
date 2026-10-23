@@ -549,6 +549,23 @@ export const EN_REVIEW = {
   'analysis.tablebase.credit': 'chessdb.cn',
   'analysis.tablebase.creditTitle':
     'Exact endgame results from the Chinese Chess Cloud Database (chessdb.cn).',
+  // Banqi tablebase (review/banqi-tablebase-panel.ts). English only for now;
+  // counts are moves by either player (one move is one turn).
+  'analysis.banqiTablebase.sideWinsIn': '{side} wins in {count}',
+  'analysis.banqiTablebase.winsIn': 'Wins in {count}',
+  'analysis.banqiTablebase.losesIn': 'Loses in {count}',
+  'analysis.banqiTablebase.nextCapture': 'next capture in {count}',
+  'analysis.banqiTablebase.keepWin': '{count} of {total} moves keep the win',
+  'analysis.banqiTablebase.holdDraw': '{count} of {total} moves hold the draw',
+  'analysis.banqiTablebase.clockDraw': 'draw by {limit}-move rule',
+  'analysis.banqiTablebase.clockDrawTitle':
+    'With best play no capture comes before the {limit}-move rule ends the game, so this result is a draw over the board.',
+  'analysis.banqiTablebase.positionClockDraw':
+    'The next capture is {count} moves away with best play, and the {limit}-move rule ends the game in {left}, so over the board this is a draw.',
+  'analysis.banqiTablebase.pastClock':
+    'The {limit}-move rule has already drawn this game over the board ({count} moves ago). The study board plays on so the line can be followed.',
+  'analysis.banqiTablebase.footnote':
+    'Exact results with best play from both sides, counting the moves of both players. The {limit}-move rule is left out except where a row is marked. Repetition and chase rules cannot change a win.',
   'practice.tablebase.keepsWin': 'Good. The tablebase says this keeps the win.',
   'practice.tablebase.holdsDraw': 'Good. The tablebase says this holds the draw.',
   'practice.tablebase.throwsWin':
@@ -571,6 +588,7 @@ export const EN_REVIEW = {
   // giving readers a route to report it is part of being trustworthy about it.
   'study.aboutTab': 'About',
   'study.gameEvent': 'Event',
+  'study.ownedBy': 'Study by',
   'study.gameDate': 'Date',
   'study.gameResult': 'Result',
   'study.gameSource': 'Source',
@@ -669,6 +687,17 @@ export const EN_REVIEW = {
   'study.chapterNameAria': 'Chapter name',
   'study.add': 'Add',
   'study.chapters': 'Chapters',
+  'study.phone.chapterPill': 'Chapter {index} of {total}. Show all chapters',
+  'study.phone.back': 'Back',
+  'study.phone.next': 'Next',
+  'study.phone.nextChapter': 'Next chapter',
+  'study.phone.previousMove': 'Previous move',
+  'study.phone.nextMove': 'Next move',
+  'study.phone.searchChapters': 'Search chapters',
+  'study.phone.noChapterMatch': 'No chapter matches.',
+  'study.phone.closeChapters': 'Close chapters',
+  'study.phone.info': 'Info',
+  'study.phone.closeInfo': 'Close study info',
   'study.chapterSettings': 'Chapter settings',
   'study.studySettings': 'Study settings',
   'study.featureIn': 'Feature in Staff picks (admins only)',
@@ -798,6 +827,16 @@ export const EN_REVIEW = {
   'review.navMenu': 'Menu',
   'review.menuStudy': 'Study',
   'review.clearMoves': 'Clear moves',
+  'analysis.barTools': 'Tools',
+  'analysis.barEngine': 'Engine',
+  'analysis.barEngineOn': 'Engine on',
+  'analysis.barEngineOff': 'Engine off',
+  'analysis.barFlip': 'Flip',
+  'analysis.barBack': 'Back',
+  'analysis.barDepth': 'depth {depth}',
+  'analysis.closeTools': 'Done',
+  'analysis.sideToMove': '{side} to move',
+  'analysis.editPosition': 'Edit position',
   'review.setDefaultView': 'Set as default view',
   'review.revealIdentities': 'Reveal identities',
   'review.hideIdentities': 'Hide identities',

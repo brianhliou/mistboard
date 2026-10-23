@@ -1,44 +1,65 @@
 // Shared recovery for stale Vite chunks. A tab can keep an older entry bundle
 // across a deploy, then discover that a lazily imported hashed chunk no longer
 // exists. Reload once to fetch the current entry bundle and its chunk map; cap
-// the attempt in sessionStorage so a genuinely missing asset cannot reload-loop.
+// the attempt per entry bundle in sessionStorage so a genuinely missing asset
+// cannot reload-loop, while a later deployment can still recover.
 const CHUNK_RELOAD_FLAG = 'mistboard.chunkReloadAttempted';
+let reloadStorageBlocked = false;
 
 export function isChunkLoadError(err: unknown): boolean {
   const message = err instanceof Error ? err.message : String(err);
   return (
     message.includes('Failed to fetch dynamically imported module') || // Chromium
     message.includes('error loading dynamically imported module') || // Firefox
-    message.includes('Importing a module script failed') // Safari
+    message.includes('Importing a module script failed') || // Safari
+    message.includes('Unable to preload CSS for ') // Vite stylesheet dependency
   );
 }
 
-function chunkReloadAlreadyAttempted(): boolean {
+function chunkReloadState(): 'not_attempted' | 'already_attempted' | 'storage_unavailable' {
   try {
-    return sessionStorage.getItem(CHUNK_RELOAD_FLAG) !== null;
+    return sessionStorage.getItem(CHUNK_RELOAD_FLAG) === entryBundlePath()
+      ? 'already_attempted'
+      : 'not_attempted';
   } catch {
     // Storage unavailable (private mode, etc.): treat as already tried so we
     // fall through to a stable error state instead of risking a reload loop.
-    return true;
+    return 'storage_unavailable';
   }
 }
 
+function entryBundlePath(): string {
+  // The entry's content hash changes on deploy even when this shared module
+  // does not. Paths exclude query strings and fragments from stored values.
+  const entry = document.querySelector<HTMLScriptElement>('script[type="module"][src]');
+  return new URL(entry?.src ?? import.meta.url).pathname;
+}
+
+// Only an explicit user retry resets the cap. A successful route mount can
+// finish before optional imports (friends, locale, etc.) fail; clearing here
+// after every mount used to re-arm recovery on each newly loaded document.
 export function clearChunkReloadAttempt(): void {
+  // A concurrent successful mount must not re-arm recovery before an already
+  // requested reload actually leaves this document.
+  if (reloadPending) return;
   try {
     sessionStorage.removeItem(CHUNK_RELOAD_FLAG);
+    reloadStorageBlocked = false;
   } catch {
     // No-op when storage is unavailable.
   }
 }
 
 // Claims the single session-capped reload attempt: true exactly once per
-// session (until a successful mount clears the flag), false when the attempt
-// was already spent or storage is unavailable.
+// entry bundle (until an explicit retry clears the flag), false when the
+// attempt was already spent or storage is unavailable.
 function markChunkReloadAttempt(): boolean {
-  if (chunkReloadAlreadyAttempted()) return false;
+  if (reloadPending || chunkReloadState() !== 'not_attempted') return false;
   try {
-    sessionStorage.setItem(CHUNK_RELOAD_FLAG, '1');
+    sessionStorage.setItem(CHUNK_RELOAD_FLAG, entryBundlePath());
+    reloadStorageBlocked = false;
   } catch {
+    reloadStorageBlocked = true;
     return false;
   }
   return true;
@@ -46,6 +67,32 @@ function markChunkReloadAttempt(): boolean {
 
 export function shouldReloadForChunkLoadError(err: unknown): boolean {
   return isChunkLoadError(err) && markChunkReloadAttempt();
+}
+
+// Only unrecovered failures reach reporting. These fields distinguish blocked
+// storage from an exhausted retry without guessing from browser identity or
+// dropping possible player errors. Never include an asset's query or fragment.
+export function chunkLoadFailureContext(
+  err: unknown,
+): Record<string, string | number | boolean | null> {
+  if (!isChunkLoadError(err)) return {};
+  const message = err instanceof Error ? err.message : String(err);
+  const asset = message.match(/https?:\/\/[^\s]+|\/assets\/[^\s]+/)?.[0];
+  let assetPath: string | null = null;
+  if (asset) {
+    try {
+      assetPath = new URL(asset, location.href).pathname;
+    } catch {
+      // Browser messages without a valid URL still carry the recovery state.
+    }
+  }
+  return {
+    asset_path: assetPath,
+    asset_reload_state: reloadStorageBlocked ? 'storage_unavailable' : chunkReloadState(),
+    asset_browser_online: navigator.onLine,
+    asset_document_age_ms: Math.round(performance.now()),
+    asset_document_visibility: document.visibilityState,
+  };
 }
 
 // True from the moment this page commits to a stale-chunk reload until the
@@ -72,8 +119,7 @@ export function reloadForChunkLoadError(err: unknown): boolean {
 // where no per-mount guard wraps the dynamic import. Vite emits
 // `vite:preloadError` on window whenever a dynamic-import chunk or one of its
 // preloaded deps fails to load, so the event itself is the stale-chunk signal;
-// no message sniffing is needed (CSS preload failures carry a message
-// isChunkLoadError would not match). Shares the per-mount guards' one-shot
+// no message sniffing is needed. Shares the per-mount guards' one-shot
 // session cap, so the two layers can never combine into a reload loop. Once the
 // one-shot is spent the event is left alone and Vite rethrows to the import()
 // caller (e.g. mountOrReport's error panel). While the one-shot is in flight,
@@ -83,6 +129,10 @@ export function installGlobalChunkLoadRecovery(
   reload: () => void = () => location.reload(),
 ): () => void {
   const onPreloadError = (event: Event): void => {
+    if (reloadPending) {
+      event.preventDefault();
+      return;
+    }
     if (!markChunkReloadAttempt()) return;
     reloadPending = true;
     event.preventDefault();

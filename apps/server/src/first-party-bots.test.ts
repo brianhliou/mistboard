@@ -8,10 +8,11 @@ import {
   firstPartyBotEngineFor,
   firstPartyBotForEngine,
   firstPartyBotForId,
-  isTopOfLadderBot,
-  topOfLadderBotIds,
+  liveSeatEngineName,
+  liveSeatProfileIdentity,
 } from './first-party-bots.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
+import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
 import { XIANGQI_PLAYABLE_ENGINES } from './xiangqi-engine-catalog.js';
 
 test('the merged Misty identity fronts every house variant', () => {
@@ -69,6 +70,39 @@ test('the merged Pikafish identity fronts xiangqi and jieqi', () => {
   ]) {
     assert.equal(firstPartyBotForEngine(engineId)?.id, 'pikafish', engineId);
   }
+});
+
+test('live Jieqi seats keep every ladder label while linking to the bot identity', () => {
+  for (const tier of JIEQI_PLAYABLE_ENGINES) {
+    const bot = firstPartyBotForEngine(tier.id);
+    assert.ok(bot, tier.id);
+    for (const pveBotId of [undefined, bot.id, ...(bot.legacyBotIds ?? [])]) {
+      assert.equal(
+        liveSeatEngineName(tier.id, pveBotId, () => tier.name),
+        tier.name,
+      );
+      assert.deepEqual(liveSeatProfileIdentity(tier.id, null, pveBotId), { botId: bot.id });
+    }
+  }
+});
+
+test('live seat labels preserve other bot brands, historical tiers and unknown engines', () => {
+  assert.equal(
+    liveSeatEngineName('pikafish-xiangqi-level-8', 'pikafish', () => 'Tier'),
+    'Pikafish',
+  );
+  assert.equal(
+    liveSeatEngineName('pikafish-jieqi-amateur', 'pikafish', () => 'Old tier'),
+    'Pikafish',
+  );
+  assert.equal(
+    liveSeatEngineName('python-v2-v1.6', 'misty', () => 'Misty 1.6'),
+    'Misty',
+  );
+  assert.equal(
+    liveSeatEngineName('unregistered', undefined, () => 'Custom engine'),
+    'Custom engine',
+  );
 });
 
 test('each Fairy-Stockfish level plays xiangqi, fortress and duck through one identity', () => {
@@ -164,23 +198,4 @@ test('bot seats without an engine id attribute by (bot, variant) through the cur
   // No (bot, variant) pair maps to two engines.
   const keys = rows.map((row) => `${row.botId}\u0000${row.variant}`);
   assert.equal(new Set(keys).size, keys.length);
-});
-
-test('the top of each ladder is a named slot or the highest numbered level', () => {
-  assert.deepEqual(topOfLadderBotIds().sort(), [
-    'ab-jchess',
-    'fairy-stockfish-level-8',
-    'katago',
-    'misty',
-    'pikafish',
-  ]);
-  // Lower rungs never count, and neither does the jieqi ladder's Level 7: its
-  // Level 8 is Pikafish itself.
-  for (const id of ['fairy-stockfish-level-7', 'fairy-stockfish-level-4', 'pikafish-level-7']) {
-    assert.equal(isTopOfLadderBot(id), false, id);
-  }
-  // A pre-consolidation id names an old tier, and an unknown id is no bot.
-  assert.equal(isTopOfLadderBot('pikafish-xiangqi-level-1'), false);
-  assert.equal(isTopOfLadderBot('fairy-stockfish-xiangqi-level-8'), false);
-  assert.equal(isTopOfLadderBot('not-a-bot'), false);
 });

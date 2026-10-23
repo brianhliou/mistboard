@@ -198,6 +198,17 @@
   width: min(100%, calc(var(--puzzle-surface-size) * 540 / 612));
 }
 
+/* Coordinates on: the label gutter reshapes the board (live-xiangqi.css). */
+:root[data-board-coordinates="on"] .puzzle-board .puzzle-xiangqi-board {
+  width: min(100%, calc(var(--puzzle-surface-size) * 576 / 636));
+}
+
+:root[data-board-coordinates="on"][data-xiangqi-board-layout="cell"]
+  .puzzle-board
+  .puzzle-xiangqi-board {
+  width: min(100%, calc(var(--puzzle-surface-size) * 564 / 636));
+}
+
 .puzzle-board-shell {
   width: min(100%, var(--puzzle-drop-surface-size));
   min-width: 360px;
@@ -601,6 +612,12 @@
   overflow-wrap: anywhere;
 }
 
+/* The engine's score on the phone's move strip (puzzleEvalChip); desktop and
+   the embed show the engine panel itself. */
+.puzzle-eval-chip {
+  display: none;
+}
+
 .puzzle-moves {
   display: grid;
   grid-template-rows: 1fr;
@@ -919,6 +936,13 @@
   outline-offset: -2px;
 }
 
+/* The shared move-nav bar (puzzlePhoneMoveNav) is the stacked layout's
+   stepper only; desktop keeps .puzzle-actions. Two classes so this wins over
+   move-nav-bar.css's display: grid whatever the bundle order. */
+.puzzle-side-panel > .puzzle-move-nav {
+  display: none;
+}
+
 .puzzle-actions {
   display: grid;
   grid-template-columns: repeat(4, 48px);
@@ -1039,35 +1063,41 @@
 }
 
 @media (max-width: 980px) {
+  /* Stacked, the solving view is Lichess's phone shape: the board edge to edge
+     right under the site bar, the arrows under it, then one prompt strip
+     (turn, feedback, hint / solution, Next puzzle), so the whole task sits on
+     the first screen. The "Puzzles" h1 stays visually hidden as on desktop
+     (.puzzles-header above): a 35px heading plus 28px of padding pushed the
+     prompt a screen down. In portrait the page is exactly one screen (the
+     portrait block below); the details, rating, themes, settings and the
+     post-solve engine wait in the bar's ☰ menu (puzzlePhoneMoveNav). */
   .puzzles-shell {
     display: grid;
-    gap: 16px;
-    grid-template-rows: auto auto;
+    gap: 0;
+    grid-template-rows: auto;
     height: auto;
-    padding: 28px 16px 56px;
+    padding: 0 0 56px;
     overflow: visible;
-  }
-
-  .puzzles-header {
-    position: static;
-    display: flex;
-    flex-wrap: wrap;
-    align-items: end;
-    justify-content: space-between;
-    gap: 12px;
-    width: auto;
-    height: auto;
-    overflow: visible;
-    clip-path: none;
-    white-space: normal;
   }
 
   .puzzles-layout {
     grid-template-columns: minmax(0, 1fr);
+    row-gap: 0;
   }
 
   .puzzle-board {
     order: 1;
+  }
+
+  /* Edge to edge: no corner to round against the screen edge, no shadow. */
+  .puzzles-shell .puzzle-board {
+    --board-corner-radius: 0px;
+  }
+
+  .puzzles-shell .puzzle-board .puzzle-xiangqi-board,
+  .puzzles-shell .puzzle-board .jungle-live-svg,
+  .puzzles-shell .puzzle-board .mini-xq-board {
+    box-shadow: none;
   }
 
   .puzzle-side-panel {
@@ -1085,23 +1115,661 @@
     grid-template-rows: auto minmax(180px, auto) minmax(160px, auto);
   }
 
-  .puzzles-sidebar {
-    order: 3;
+  /* Phone stack: board, arrows, a short move strip, then the feedback card,
+     the order the review boards took in e4823b2b. Before, the arrows came
+     after the 180px move list and the feedback card, a screen below the
+     board, so a phone could not step through the line and watch the board at
+     once. Scoped to the page: the embed lays out its own card (embed.css). */
+  .puzzles-shell .puzzle-side-panel {
+    grid-template-rows: none;
+    gap: 0;
+  }
+
+  /* Post-solve analysis capped the column at the board's height with its own
+     scroll (desktop's shape); stacked, it flows with the page. */
+  .puzzles-shell .puzzle-side-panel--analysis {
     max-height: none;
+    overflow: visible;
+  }
+
+  .puzzles-shell .puzzle-side-panel > .puzzle-actions {
+    display: none;
+  }
+
+  /* The review boards' bar, full width under the full-width board. */
+  .puzzles-shell .puzzle-side-panel > .puzzle-move-nav {
+    display: grid;
+    order: -1;
+  }
+
+  /* One card, full width: the prompt strip on top, the move strip under it. */
+  .puzzles-shell .puzzle-trainer-panel,
+  .puzzles-shell .puzzle-trainer-panel--analysis {
+    grid-template-rows: none;
+    border-inline: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .puzzles-shell .puzzle-trainer-panel > .puzzle-feedback,
+  .puzzles-shell .puzzle-trainer-panel > .puzzle-solved-panel {
+    border-top: 1px solid var(--site-border-soft);
+    border-bottom: 0;
+  }
+
+  /* The prompt strip, unsolved: the side's general, "Red to move" over "Find
+     the best move.", then Hint / Solution (and Skip after a miss) in one row.
+     The copy wrapper dissolves so the buttons can take the full width. */
+  .puzzles-shell .puzzle-feedback {
+    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-areas:
+      "icon title"
+      "icon body"
+      "assist assist";
+    column-gap: 10px;
+    row-gap: 0;
+    align-content: center;
+    padding: 6px 12px;
+  }
+
+  .puzzles-shell .puzzle-feedback-copy {
+    display: contents;
+  }
+
+  .puzzles-shell .puzzle-feedback-icon {
+    grid-area: icon;
+    width: 32px;
+    height: 32px;
+  }
+
+  .puzzles-shell .puzzle-feedback-title {
+    grid-area: title;
+    font-size: 16px;
+    line-height: 1.2;
+  }
+
+  .puzzles-shell .puzzle-feedback-body {
+    grid-area: body;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.3;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* One row in every state: after a miss Skip joins as a third equal button
+     and long labels wrap to two lines inside the 44px floor, so the strip
+     never grows a row and pushes the buttons off a 568px screen. */
+  .puzzles-shell .puzzle-assist-row {
+    grid-area: assist;
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .puzzles-shell .puzzle-assist-row > .puzzle-feedback-skip {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-top: 0;
+    padding-inline: 6px;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  /* The prompt strip, solved or revealed: the title and the thumbs share a
+     row, Next puzzle fills the row under it, in the spot Hint and Solution
+     held. */
+  .puzzles-shell .puzzle-solved-panel {
+    grid-template-rows: none;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "title vote"
+      "cta cta";
+    align-content: center;
+    row-gap: 4px;
+    padding-bottom: 6px;
+    text-align: left;
+  }
+
+  .puzzles-shell .puzzle-solved-panel h2 {
+    grid-area: title;
+    align-self: center;
+    padding: 0 12px;
+    font-size: 18px;
+  }
+
+  .puzzles-shell .puzzle-solved-feedback {
+    grid-area: vote;
+    gap: 8px;
+    min-height: 44px;
+    padding: 2px 8px 0 0;
+    border-top: 0;
+  }
+
+  .puzzles-shell .puzzle-vote-prompt {
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .puzzles-shell .puzzle-vote-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .puzzles-shell .puzzle-continue-button {
+    grid-area: cta;
+    width: auto;
+    min-height: 44px;
+    margin-inline: 8px;
+    font-size: 15px;
+  }
+
+  /* The move strip: one line that scrolls sideways inside itself, the moves
+     as "1. e1+ e9 2. ..." with the current ply kept in view
+     (keepActivePuzzleMoveInView), and the engine's score at its start while
+     the engine runs (puzzleEvalChip). */
+  .puzzles-shell .puzzle-moves {
+    display: flex;
+    align-items: center;
+    height: 34px;
+    box-sizing: border-box;
+  }
+
+  .puzzles-shell .puzzle-move-list {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 2px;
+    align-self: stretch;
+    min-width: 0;
+    max-height: none;
+    padding: 0 12px 0 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    /* Moves scrolled past the start fade out beside the eval chip instead of
+       stopping on a hard edge against it. */
+    mask-image: linear-gradient(to right, transparent, #000 12px);
+  }
+
+  .puzzles-shell .puzzle-move-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .puzzles-shell .puzzle-move-empty,
+  .puzzles-shell .puzzle-move-item {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 2px;
+    min-height: 0;
+    padding: 0;
+    border-bottom: 0;
+    white-space: nowrap;
+  }
+
+  .puzzles-shell .puzzle-move-number {
+    padding-inline: 4px 0;
+    font-size: 13px;
+  }
+
+  .puzzles-shell .puzzle-move-red,
+  .puzzles-shell .puzzle-move-black {
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 26px;
+    overflow-wrap: normal;
+  }
+
+  .puzzles-shell .puzzle-move-red:empty,
+  .puzzles-shell .puzzle-move-black:empty {
+    display: none;
+  }
+
+  .puzzles-shell .puzzle-move-cell--active {
+    display: block;
+    align-self: center;
+    margin: 0;
+  }
+
+  .puzzles-shell .puzzle-eval-chip:not([hidden]) {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    height: 24px;
+    margin-left: 8px;
+    padding: 0 8px;
+    border-radius: 999px;
+    background: var(--site-heading);
+    color: var(--site-panel);
+    font-size: 13px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  /* Behind ☰: the engine panel and the analysis link after a solve are lent
+     into the bar's sheet while it is open (puzzlePhoneMoveNav) and hidden in
+     the page meanwhile; the details / rating / themes / settings column is
+     rebuilt as the sheet's own rows (puzzles/phone-menu.ts), so the page copy
+     stays hidden. A page with no puzzle to show (an empty variant) keeps the
+     column, since it holds the variant picker and there is no bar. */
+  .puzzles-shell .puzzle-trainer-panel > .engine-panel,
+  .puzzles-shell .puzzle-side-panel > .puzzle-analysis-open-link,
+  .puzzles-shell .puzzles-layout > .puzzles-sidebar {
+    display: none;
+  }
+
+  .puzzles-shell .puzzles-layout:has(> .puzzle-detail > .puzzles-status) > .puzzles-sidebar {
+    display: grid;
+    margin-top: 16px;
+    padding-inline: 16px;
+  }
+
+  /* The ☰ sheet (puzzlePhoneMoveNav, puzzles/phone-menu.ts): a bottom sheet
+     sitting flush on the bar, over the board, with the analysis Tools sheet's
+     shape: rounded top, one header block, then one-line rows (label left,
+     control right, 48px) split by hairlines, no cards inside. fitPhoneMenu
+     caps it under the site bar; every state fits that at 320x568, and only
+     the engine settings sub-view may scroll. */
+  .puzzles-shell .puzzle-move-nav .move-nav-menu {
+    bottom: 100%;
+    border: 0;
+    border-top: 1px solid var(--site-border);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.22);
+    overscroll-behavior: contain;
+  }
+
+  .puzzles-shell .puzzle-move-nav .move-nav-menu__grid:empty {
+    display: none;
+  }
+
+  .puzzles-shell .puzzle-phone-menu {
+    display: flex;
+    flex-direction: column;
+    padding: 0 16px 2px;
+    color: var(--site-text);
+    font-size: 15px;
+    line-height: 1.25;
+    text-align: left;
+  }
+
+  .puzzles-shell .puzzle-phone-menu:focus {
+    outline: none;
+  }
+
+  .puzzles-shell .puzzle-pm-head {
+    display: grid;
+    gap: 2px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--site-border);
+  }
+
+  .puzzles-shell .puzzle-pm-head__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .puzzles-shell .puzzle-pm-head__title {
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .puzzles-shell .puzzle-pm-head__title .puzzle-code-link {
+    color: inherit;
+  }
+
+  .puzzles-shell .puzzle-pm-head__status {
+    flex: 0 0 auto;
+    color: var(--site-muted);
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .puzzles-shell .puzzle-pm-head__status--solved {
+    color: var(--site-accent);
+    font-weight: 600;
+  }
+
+  .puzzles-shell .puzzle-pm-head__line {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--site-muted);
+    font-size: 13px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* One line, never wrapped, so the header's height is fixed and the sheet
+     fits 320x568: a long game source ellipsizes. */
+  .puzzles-shell .puzzle-pm-head__source {
+    display: flex;
+    flex-wrap: nowrap;
+    column-gap: 12px;
+  }
+
+  .puzzles-shell .puzzle-pm-head__source > * {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .puzzles-shell .puzzle-pm-head__source .puzzle-source-player {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .puzzles-shell .puzzle-phone-menu .puzzle-pm-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--site-border);
+    color: var(--site-text);
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.25;
+  }
+
+  .puzzles-shell .puzzle-pm-rows > .puzzle-pm-row:last-child {
+    border-bottom: 0;
+  }
+
+  .puzzles-shell .puzzle-pm-row__text {
+    display: grid;
+    flex: 1 1 auto;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .puzzles-shell .puzzle-pm-row__label {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .puzzles-shell .puzzle-pm-row__sub {
+    overflow: hidden;
+    color: var(--site-muted);
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .puzzles-shell .puzzle-pm-row__rating {
+    color: var(--site-text);
+    font-weight: 700;
+  }
+
+  /* One switch look in the sheet: the rows' switches take the engine
+     switch's size and accent, so the engine row does not read as a
+     different control. */
+  .puzzles-shell .puzzle-phone-menu .puzzle-toggle-switch {
+    width: 42px;
+  }
+
+  .puzzles-shell .puzzle-phone-menu .puzzle-toggle input:checked + .puzzle-toggle-switch {
+    background: var(--site-accent, #237960);
+  }
+
+  .puzzles-shell .puzzle-phone-menu .puzzle-toggle input:checked + .puzzle-toggle-switch::after {
+    transform: translateX(18px);
+  }
+
+  .puzzles-shell .puzzle-pm-row--themes > .puzzle-pm-row__label {
+    flex: 0 0 auto;
+  }
+
+  /* Tags right-aligned, at most two lines; past that they clip. */
+  .puzzles-shell .puzzle-pm-row--themes > .puzzle-tags {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    gap: 4px;
+    min-width: 0;
+    max-height: 42px;
+  }
+
+  /* Slimmer chips than the sidebar's, so two lines fit the 48px row. */
+  .puzzles-shell .puzzle-pm-row--themes .puzzle-tag {
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+
+  /* The engine panel, lent in, is one row: [Pikafish / status] … [eval]
+     [gear] [switch]. Its lines stay out of the sheet; the gear opens a
+     sub-view (its settings in the flow, then the lines) that hides the rows
+     below it. */
+  .puzzles-shell .puzzle-phone-menu > .engine-panel {
+    border: 0;
+    border-bottom: 1px solid var(--site-border);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .engine-panel .engine-panel__head {
+    gap: 12px;
+    min-height: 48px;
+    padding: 2px 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .engine-panel .engine-panel__id {
+    order: 0;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .engine-panel .engine-panel__name {
+    font-size: 15px;
+    font-weight: 400;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .engine-panel .engine-panel__sub {
+    font-size: 12px;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .engine-panel .engine-panel__eval {
+    order: 1;
+    min-width: 0;
+    font-size: 16px;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .engine-panel .engine-panel__gear {
+    order: 2;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .engine-panel .engine-panel__switch {
+    order: 3;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .engine-panel .engine-panel__settings {
+    position: static;
+    padding: 4px 0 12px;
+    border-bottom: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .engine-panel .engine-panel__lines {
+    display: none;
+  }
+
+  .puzzles-shell
+    .puzzle-phone-menu
+    > .engine-panel--on:has(.engine-panel__gear[aria-expanded="true"])
+    .engine-panel__lines:not(:empty) {
+    display: flex;
+    padding: 0 0 10px;
+  }
+
+  .puzzles-shell
+    .puzzle-phone-menu:has(> .engine-panel .engine-panel__gear[aria-expanded="true"])
+    > :is(.puzzle-analysis-open-link, .puzzle-pm-rows) {
+    display: none;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .engine-panel:has(.engine-panel__gear[aria-expanded="true"]) {
+    border-bottom: 0;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .puzzle-analysis-open-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    padding: 0;
+    border-bottom: 1px solid var(--site-border);
+    color: var(--site-text);
+    font-size: 15px;
+    text-align: left;
+  }
+
+  .puzzles-shell .puzzle-phone-menu > .puzzle-analysis-open-link::after {
+    flex: 0 0 auto;
+    width: 7px;
+    height: 7px;
+    margin-right: 6px;
+    border-top: 2px solid var(--site-muted);
+    border-right: 2px solid var(--site-muted);
+    transform: rotate(45deg);
+    content: "";
   }
 
   /* Stacked, the trainer panel sizes to its content; hold about its painted
-     height while it loads so the sidebar below starts where it will stay. */
+     height while it loads so what follows starts where it will stay. */
   .puzzle-board-panel--pending .puzzle-side-panel {
     min-height: 400px;
   }
 }
 
-@media (max-width: 520px) {
-  .puzzles-shell {
-    padding-top: 22px;
+/* Portrait: exactly one screen, no page scroll in any state (Brian,
+   2026-10-20: "the whole scrolling, vertically scrolling is just still ugly").
+   The page is a column the height of the viewport: the site bar, then the
+   board taking whatever is left, then fixed rows for the bar (46px), the move
+   strip (34px) and the prompt strip (100px in every state, so a miss or a
+   solve never moves the board). The board sizes from its own box (a size
+   container), edge to edge where the height allows and narrower, centred, on
+   a short screen. Landscape keeps the scrolling stack: there a one-screen
+   budget would shrink the board to a stamp. */
+@media (max-width: 980px) and (orientation: portrait) {
+  .puzzles-page {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow: hidden;
   }
 
+  .puzzles-page > .site-nav {
+    flex: none;
+  }
+
+  .puzzles-page > .puzzles-shell {
+    --puzzle-stack-chrome: 180px;
+    --puzzle-prompt-height: 100px;
+    --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - var(--puzzle-stack-chrome)));
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 0;
+    height: auto;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .puzzles-shell .puzzles-layout {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    min-height: 0;
+  }
+
+  .puzzles-shell .puzzle-board {
+    flex: 1 1 0;
+    align-content: center;
+    min-height: 0;
+    container-type: size;
+  }
+
+  /* Tall phones: the board area stops at the height of a full-width board and
+     sits at the top, so the controls follow it directly and the spare height
+     falls below the page's last row rather than around the board. */
+  .puzzles-shell .puzzle-board:has(.puzzle-xiangqi-board) {
+    align-content: start;
+    max-height: calc(100vw * 636 / 564);
+  }
+
+  .puzzles-shell .puzzle-board .puzzle-xiangqi-board {
+    width: min(100cqw, calc(100cqh * 552 / 612));
+    min-width: 0;
+  }
+
+  :root[data-xiangqi-board-layout="cell"] .puzzles-shell .puzzle-board .puzzle-xiangqi-board {
+    width: min(100cqw, calc(100cqh * 540 / 612));
+  }
+
+  :root[data-board-coordinates="on"] .puzzles-shell .puzzle-board .puzzle-xiangqi-board {
+    width: min(100cqw, calc(100cqh * 576 / 636));
+  }
+
+  :root[data-board-coordinates="on"][data-xiangqi-board-layout="cell"]
+    .puzzles-shell
+    .puzzle-board
+    .puzzle-xiangqi-board {
+    width: min(100cqw, calc(100cqh * 564 / 636));
+  }
+
+  .puzzles-shell .puzzle-board .jungle-live-svg {
+    max-width: 100cqw;
+    max-height: 100cqh;
+  }
+
+  .puzzles-shell .puzzle-board .mini-xq-board,
+  .puzzles-shell .puzzle-board-shell {
+    min-width: 0;
+    max-width: 100cqw;
+    max-height: 100cqh;
+  }
+
+  .puzzles-shell .puzzle-side-panel {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+  }
+
+  .puzzles-shell .puzzle-trainer-panel,
+  .puzzles-shell .puzzle-trainer-panel--analysis {
+    display: flex;
+    flex-direction: column;
+    border-block: 0;
+    overflow: visible;
+  }
+
+  .puzzles-shell .puzzle-trainer-panel > .puzzle-feedback,
+  .puzzles-shell .puzzle-trainer-panel > .puzzle-solved-panel {
+    box-sizing: border-box;
+    height: var(--puzzle-prompt-height);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .puzzle-board-panel--pending .puzzle-side-panel {
+    min-height: var(--puzzle-stack-chrome);
+  }
+}
+
+@media (max-width: 520px) {
   .puzzle-board .puzzle-xiangqi-board,
   .puzzle-board-shell {
     min-width: 0;

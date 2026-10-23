@@ -138,7 +138,12 @@ export function renderPoolRow(
   const lead = document.createElement('span');
   lead.className = 'reveal-odds-row__lead';
   lead.textContent = t('live.revealOdds.couldBe', { count: side.faceDown });
-  head.append(lead);
+  // The phone room's one-line odds strip has no room for the sentence, so it
+  // shows "N face-down" instead (CSS picks one; the host's aria-label says it).
+  const short = document.createElement('span');
+  short.className = 'reveal-odds-row__lead reveal-odds-row__lead--short';
+  short.textContent = t('live.revealOdds.faceDownCount', { count: side.faceDown });
+  head.append(lead, short);
   if (side.takenUnseen > 0) {
     const note = document.createElement('span');
     note.className = 'reveal-odds-row__note';

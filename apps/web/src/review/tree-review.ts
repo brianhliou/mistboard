@@ -40,6 +40,7 @@ import {
   type MarkBetter,
   type MarkGrade,
 } from './analysis-marks.js';
+import { type AnalysisPhoneBar, createAnalysisPhoneBar } from './analysis-phone-bar.js';
 import { createAnalysisSummary, type SummaryJudgment } from './analysis-summary.js';
 import { createAnnotationEditor } from './annotations-editor.js';
 // Brush colours for the node's user-drawn shapes. Imported here, not only
@@ -174,6 +175,9 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
   /** Whether the local engine can search this truth. FEN-per-position engines
    *  expect at least one legal root move, so terminal positions are suppressed. */
   canEvaluatePosition?(truth: Truth): boolean;
+  /** The no-progress draw limit `truth` is played under, for a `'fen'` engine whose
+   *  search scores that draw (banqi: 60, or 40 for a game created before 2026-10-17). */
+  noProgressLimit?(truth: Truth): number;
   /** Prettify a PV move (engine UCI) for the engine panel. */
   formatPvMove(uci: string): string;
   /** Decode the engine's UCI dialect into the board/tree move dialect. Omit when
@@ -376,6 +380,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Shared scaffold role. Postgame is the default; standalone analysis and
    *  studies opt into their distinct roles at their route-level mount. */
   reviewSurface?: ReviewSurface;
+  /** The standalone analysis page's phone chrome (analysis-phone-bar.ts): an
+   *  engine bar over the board, an info row and a labelled bottom bar below
+   *  600px. Off for embeds and every other surface. */
+  phoneAnalysisBar?: { variantName: string };
   /** Root the tree at a hand-set position (a FEN-seeded composition) instead of
    *  the variant's standard start. `truth` seeds the tree root; `fen` is the
    *  canonical FEN persisted with a serialized tree (SerializedTree.rootFen).
@@ -508,6 +516,12 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  stays variant-neutral: the caller owns the variant types and the lookup. */
   explorer?: {
     el: HTMLElement;
+    /** The menu row's label when the pane is not an opening book. */
+    label?: string;
+    /** Where the pane sits: over the foot of the move list (the default), or
+     *  below the rail box, for a board too short to leave the move list any
+     *  room to share (banqi's 4x8). */
+    placement?: 'rail' | 'below-rail';
     setTruth(truth: Truth): void;
     /** Called with whether the explorer panel is open. */
     setActive(active: boolean): void;
@@ -937,6 +951,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // list) + a per-move luck readout (the advice line) + a two-number summary block.
   let decisionOverlay: DecisionOverlay | null = null;
   let engineLines: CevalLine[] | null = null;
+  // The analysis page's phone chrome; built after the controls, but the engine
+  // callbacks below reach it, so it is declared with the engine state.
+  let phoneBar: AnalysisPhoneBar | null = null;
   // Retro mode ("Learn from your mistakes"), open or not. Declared up here with
   // the engine state because the engine panel's constructor fires onLines
   // synchronously, and that callback reads it.
@@ -1119,10 +1136,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
             // The retro grader reads the same stream the panel renders; it may
             // navigate (a verdict jumps back), so it runs before the repaint.
             retro?.onEngineLines(lines);
+            phoneBar?.syncEngine();
             paintOverlays();
           },
           onToggle: (on) => {
             engineOn = on;
+            phoneBar?.setEngineOn(on);
             paintOverlays();
           },
           arrowsSupported: engineOverlaysSupported,
@@ -1383,7 +1402,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     signal: mountAbort.signal,
     // The book tool appears only when a corpus is behind it (see review-controls).
     ...(config.explorer
-      ? { onToggleExplorer: (open: boolean) => config.explorer?.setActive(open) }
+      ? {
+          onToggleExplorer: (open: boolean) => config.explorer?.setActive(open),
+          ...(config.explorer.label ? { explorerLabel: config.explorer.label } : {}),
+        }
       : {}),
     onFirst: () => go(ROOT_PATH),
     onPrevious: () => go(tree.stepBack(currentPath)),
@@ -1725,6 +1747,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     materialUpdate = presentation.material({ top: materialTop, bottom: materialBottom });
   }
 
+  const explorerBelowRail = config.explorer?.placement === 'below-rail';
   const scaffold = createReviewScaffold(root, {
     signal: mountAbort.signal,
     embedded: config.embedded,
@@ -1763,7 +1786,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     underboardOverflows: true,
     enginePanel: enginePanel?.el,
     moves: moveTree.el,
-    railPanel: config.explorer?.el,
+    railPanel: explorerBelowRail ? undefined : config.explorer?.el,
+    railBelow: explorerBelowRail ? config.explorer?.el : undefined,
     navigation: controls.el,
     analysisSummary: analysisSummaryEl,
     gauge: evalBar?.el,
@@ -1772,6 +1796,43 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     showBoardMaterial: Boolean(presentation.material),
     onPromote: () => render(),
   });
+
+  // Phone analysis chrome (#576): engine bar above the board, info row under
+  // it, labelled bottom bar. CSS shows it below 600px only; the arrow strip and
+  // the engine card it stands in for stay in the DOM for wider screens.
+  if (config.phoneAnalysisBar && !config.embedded) {
+    const flipItem = menuItems[0];
+    phoneBar = createAnalysisPhoneBar({
+      signal: mountAbort.signal,
+      engine: enginePanel,
+      variantName: config.phoneAnalysisBar.variantName,
+      onFlip: () => flipBoard(),
+      onBack: () => go(tree.stepBack(currentPath)),
+      onNext: () => {
+        if (retro?.preventGoingToNextMove()) return;
+        go(tree.stepForward(currentPath));
+      },
+      // Flip has its own button on the bar; the sheet carries the rest.
+      toolsItems: () => controls.menuItems.filter((item) => item !== flipItem),
+      importPanel: importPanel?.el ?? null,
+      metaCard: config.metaCard ?? null,
+    });
+    const stageEl = scaffold.stage.el;
+    stageEl.before(phoneBar.engineBar);
+    stageEl.after(phoneBar.info);
+    root.append(phoneBar.bar, phoneBar.sheet);
+    root.classList.add('has-analysis-phone-bar');
+    const { bar, sheet } = phoneBar;
+    mountAbort.signal.addEventListener(
+      'abort',
+      () => {
+        root.classList.remove('has-analysis-phone-bar');
+        bar.remove();
+        sheet.remove();
+      },
+      { once: true },
+    );
+  }
 
   function go(path: TreePath): void {
     closeVariationPicker();
@@ -1936,7 +1997,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     if (enginePanel) {
       const searchable = presentation.engine?.canEvaluatePosition?.(node.truth) ?? true;
       if (presentation.engine?.positionMode === 'fen') {
-        enginePanel.setPosition([], presentation.engine.fen(node.truth), searchable);
+        enginePanel.setPosition(
+          [],
+          presentation.engine.fen(node.truth),
+          searchable,
+          presentation.engine.noProgressLimit?.(node.truth),
+        );
       } else {
         enginePanel.setPosition(uciTo(node), engineBaseFen, searchable);
       }
@@ -1966,6 +2032,25 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     commentPanelEl.hidden = !authoredComment;
     moveTree.setCurrent(currentPath);
     controls.setBounds({ atStart: currentPath.length === 0, atEnd: node.children.length === 0 });
+    if (phoneBar) {
+      const seat = view ? presentation.seatFor(view) : null;
+      phoneBar.sync({
+        sideToMove:
+          seat == null
+            ? null
+            : inkWord(
+                seatStripDisplayInk(
+                  String(seat),
+                  config.seatColors,
+                  config.seatInkBindsOnFlip ?? false,
+                ),
+              ),
+        atStart: currentPath.length === 0,
+        atEnd: node.children.length === 0,
+        editorHref: config.boardEditorHref ? config.boardEditorHref(node.truth) : null,
+      });
+      phoneBar.revealCurrentMove(moveTree.el);
+    }
     // Opening statistics follow the board like every other per-node panel.
     config.explorer?.setTruth(node.truth);
     // Live-refresh the Share tab's FEN + move export for the current node/line.
@@ -2599,6 +2684,16 @@ function createImportPanel(
   }
   el.append(foot);
   return { el, fenInput, movesInput, editorLink };
+}
+
+/** The side-to-move word for the phone info row; null where no colour word is
+ *  true yet (a flip variant's seat before the first reveal binds it). */
+function inkWord(ink: string): string | null {
+  if (ink === 'red') return t('setup.red');
+  if (ink === 'black') return t('setup.black');
+  if (ink === 'white') return t('setup.white');
+  if (ink === 'blue') return t('setup.blue');
+  return null;
 }
 
 function truncationNotice(legal: number): HTMLElement {

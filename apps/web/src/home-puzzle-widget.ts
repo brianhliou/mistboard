@@ -116,14 +116,9 @@ function renderHomePuzzleBox(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement {
     // The standard 9x10 board renders from the solver's perspective; no reserve.
     box.append(
       homePuzzleBoardSurface(
-        renderXiangqiBoardSvg(
-          getStandardXiangqiPlayerView(puzzle.initial, turn),
-          turn,
-          // A thumbnail that links to the puzzle, not a board anyone plays on.
-          // Suppressing the labels also keeps the box's authored aspect ratio
-          // right: the host clips, and the gutter is a different rectangle.
-          { coordinates: false },
-        ),
+        // Follows the coordinates setting like the viewer above it; landing.css
+        // gives the box the gutter's shape while the labels are on.
+        renderXiangqiBoardSvg(getStandardXiangqiPlayerView(puzzle.initial, turn), turn),
       ),
     );
     return box;

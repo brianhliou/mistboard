@@ -403,7 +403,14 @@ const REJECTABLE_EVENT_TYPES = new Set([
   'game-adjudicated',
   'clock-paused',
   'clock-resumed',
+  'draw-offered',
+  'draw-declined',
+  'draw-agreed',
 ]);
+
+// After a declined draw offer, the offerer's own moves before it may offer
+// again (#530). Lichess counts 20 plies, which is ten of your own moves.
+export const DRAW_OFFER_COOLDOWN_MOVES = 10;
 
 /**
  * Did the projection accept this event? Only meaningful for the types above.
@@ -606,7 +613,7 @@ export function applyTenantEvent<
     const prevMoveNumber = projection.state.moveNumber;
     const nextState = tenant.rules.applyMove(projection.state, event.move);
     return {
-      ...projection,
+      ...drawStateAfterMove(projection, event.color),
       clock:
         event.clock ??
         nextTenantClockForMove(
@@ -679,7 +686,58 @@ export function applyTenantEvent<
     const { paused: _paused, ...rest } = projection;
     return { ...rest, clock: event.clock };
   }
+  if (
+    event.type === 'draw-offered' ||
+    event.type === 'draw-declined' ||
+    event.type === 'draw-agreed'
+  ) {
+    const finishDraw = tenant.rules.finishDraw;
+    if (status.type !== 'playing' || projection.paused || !finishDraw) return projection;
+    const pending = projection.drawOffer;
+    const { drawOffer: _offer, ...rest } = projection;
+    if (event.type === 'draw-offered') {
+      if (pending) return projection;
+      if ((projection.drawCooldown?.[event.color] ?? 0) > 0) return projection;
+      return { ...projection, drawOffer: { from: event.color } };
+    }
+    // Answering takes an offer from the other side; your own is not yours to answer.
+    if (!pending || pending.from === event.color) return projection;
+    if (event.type === 'draw-declined') {
+      return {
+        ...rest,
+        drawCooldown: { ...projection.drawCooldown, [pending.from]: DRAW_OFFER_COOLDOWN_MOVES },
+      };
+    }
+    return {
+      ...rest,
+      clock: event.clock ?? freezeTenantClock(projection.clock, event.at),
+      state: finishDraw(projection.state),
+    };
+  }
   return projection;
+}
+
+// The draw fields after `mover` plays: an offer from the other side lapses (a
+// move is the answer), the mover's own offer stands, and the mover's cooldown
+// counts down one. Fields with nothing in them are left off, so a game that
+// never sees an offer keeps the projection shape it always had.
+function drawStateAfterMove<
+  C extends string,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+>(projection: TenantProjection<C, State, Spec>, mover: C): TenantProjection<C, State, Spec> {
+  if (!projection.drawOffer && !projection.drawCooldown) return projection;
+  const { drawOffer, drawCooldown, ...rest } = projection;
+  const keptOffer = drawOffer?.from === mover ? drawOffer : undefined;
+  const cooldown: Partial<Record<C, number>> = { ...drawCooldown };
+  const left = (cooldown[mover] ?? 0) - 1;
+  if (left > 0) cooldown[mover] = left;
+  else delete cooldown[mover];
+  return {
+    ...rest,
+    ...(keptOffer ? { drawOffer: keptOffer } : {}),
+    ...(Object.keys(cooldown).length > 0 ? { drawCooldown: cooldown } : {}),
+  };
 }
 
 /**
@@ -915,8 +973,41 @@ export function tenantSnapshotPayload<
           },
         }
       : {}),
+    // A pending draw offer (#530): which seat offered, nothing else, and only
+    // while the game is on, so every other room's wire is unchanged. The draw
+    // events themselves never ship (TENANT_SERVER_ONLY_EVENT_TYPES).
+    ...(room.projection.state.status.type === 'playing' && room.projection.drawOffer
+      ? { drawOffer: { from: room.projection.drawOffer.from } }
+      : {}),
+    // The seat's own moves left before it may offer again, to that seat only.
+    ...tenantDrawCooldownFor(room.projection, client.seat),
+    // The plies at which a draw was offered, for the move list's "½?" mark
+    // (lichess). Ply counts only, which every viewer already saw live; only
+    // when there was an offer, so every other room's wire is unchanged.
+    ...tenantDrawOfferPlies(room.events),
     ...(tenant.wire?.snapshotExtras?.(room, client) ?? {}),
   };
+}
+
+export function tenantDrawOfferPlies(events: readonly { type: string }[]): {
+  drawOfferPlies?: number[];
+} {
+  const plies: number[] = [];
+  let ply = 0;
+  for (const event of events) {
+    if (event.type === 'move-played') ply += 1;
+    else if (event.type === 'draw-offered' && ply > 0 && plies.at(-1) !== ply) plies.push(ply);
+  }
+  return plies.length > 0 ? { drawOfferPlies: plies } : {};
+}
+
+function tenantDrawCooldownFor<C extends string>(
+  projection: { drawCooldown?: Partial<Record<C, number>>; state: { status: { type: string } } },
+  seat: TenantSeat<C>,
+): { drawOfferCooldown?: number } {
+  if (seat === 'spectator' || projection.state.status.type !== 'playing') return {};
+  const left = projection.drawCooldown?.[seat] ?? 0;
+  return left > 0 ? { drawOfferCooldown: left } : {};
 }
 
 /**
@@ -1310,6 +1401,16 @@ export function isTenantEvent<
     return (
       (event.reason === 'players-returned' || event.reason === 'grace-elapsed') &&
       isTenantClockState(tenant, event.clock)
+    );
+  }
+  if (event.type === 'draw-offered' || event.type === 'draw-declined') {
+    return tenant.rules.finishDraw !== undefined && tenant.rules.isColor(event.color);
+  }
+  if (event.type === 'draw-agreed') {
+    return (
+      tenant.rules.finishDraw !== undefined &&
+      tenant.rules.isColor(event.color) &&
+      (event.clock === undefined || isTenantClockState(tenant, event.clock))
     );
   }
   return false;

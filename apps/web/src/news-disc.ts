@@ -82,42 +82,66 @@ const MARKS: Record<NewsDiscMark, (ink: string) => string> = {
     `</g>`,
 };
 
-export function newsDiscSvg(kind: AnnouncementKind): string {
+function discBackground(): string {
+  return `<circle cx="50" cy="50" r="46" fill="${CREAM}" stroke="${RING}" stroke-width="2.8"/>`;
+}
+
+function discContents(kind: AnnouncementKind): string {
   const mark = newsDiscMarkForKind(kind);
   const ink = INK[newsDiscInkForKind(kind)];
-  return (
-    `<svg class="landing-news-disc landing-news-disc-${mark}" viewBox="0 0 100 100" aria-hidden="true" focusable="false" data-mark="${mark}">` +
-    `<circle cx="50" cy="50" r="46" fill="${CREAM}" stroke="${RING}" stroke-width="2.8"/>` +
-    MARKS[mark](ink) +
-    '</svg>'
-  );
+  return discBackground() + MARKS[mark](ink);
+}
+
+function discAttributes(mark: NewsDiscMark | 'more'): Record<string, string> {
+  return {
+    class: `landing-news-disc landing-news-disc-${mark}`,
+    viewBox: '0 0 100 100',
+    'aria-hidden': 'true',
+    focusable: 'false',
+    'data-mark': mark,
+  };
+}
+
+function discSvg(mark: NewsDiscMark | 'more', contents: string): string {
+  const attrs = Object.entries(discAttributes(mark))
+    .map(([name, value]) => `${name}="${value}"`)
+    .join(' ');
+  return `<svg ${attrs}>${contents}</svg>`;
+}
+
+export function newsDiscSvg(kind: AnnouncementKind): string {
+  return discSvg(newsDiscMarkForKind(kind), discContents(kind));
 }
 
 // The timeline's terminal disc: three dots in black ink, the row that leads
 // to the full archive on /feed.
-export function newsMoreDiscSvg(): string {
+function moreDiscContents(): string {
   const ink = INK.black;
   return (
-    '<svg class="landing-news-disc landing-news-disc-more" viewBox="0 0 100 100" aria-hidden="true" focusable="false" data-mark="more">' +
-    `<circle cx="50" cy="50" r="46" fill="${CREAM}" stroke="${RING}" stroke-width="2.8"/>` +
-    `<circle cx="30" cy="50" r="6.5" fill="${ink}"/><circle cx="50" cy="50" r="6.5" fill="${ink}"/><circle cx="70" cy="50" r="6.5" fill="${ink}"/>` +
-    '</svg>'
+    discBackground() +
+    `<circle cx="30" cy="50" r="6.5" fill="${ink}"/><circle cx="50" cy="50" r="6.5" fill="${ink}"/><circle cx="70" cy="50" r="6.5" fill="${ink}"/>`
   );
 }
 
-function parseSvg(markup: string): SVGSVGElement {
-  // Constant markup with no user input, so a template parse is safe here.
-  const template = document.createElement('template');
-  template.innerHTML = markup;
-  const svg = template.content.firstElementChild;
-  if (!(svg instanceof SVGSVGElement)) throw new Error('news disc did not parse as svg');
+export function newsMoreDiscSvg(): string {
+  return discSvg('more', moreDiscContents());
+}
+
+function buildDisc(mark: NewsDiscMark | 'more', contents: string): SVGSVGElement {
+  // Create the root in the SVG namespace directly. Parsing an HTML template
+  // then checking its constructor made a decorative icon abort the entire
+  // homepage in two Chrome sessions. No constructor identity check is needed.
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  for (const [name, value] of Object.entries(discAttributes(mark))) svg.setAttribute(name, value);
+  // All children are constant authored shapes, with no user input.
+  svg.innerHTML = contents;
   return svg;
 }
 
 export function buildNewsDisc(kind: AnnouncementKind): SVGSVGElement {
-  return parseSvg(newsDiscSvg(kind));
+  return buildDisc(newsDiscMarkForKind(kind), discContents(kind));
 }
 
 export function buildNewsMoreDisc(): SVGSVGElement {
-  return parseSvg(newsMoreDiscSvg());
+  return buildDisc('more', moreDiscContents());
 }

@@ -21,18 +21,27 @@
 
 import type { DuckXiangqiPlayerView, DuckXiangqiSquare, DuckXiangqiTurn } from '@mistboard/game';
 import {
+  BOARD_LASTMOVE_OVER_GROUP_ATTRS,
+  type BoardLastMoveLayer,
+  boardLastMoveCellMarksSvg,
+  boardLastMoveMarkersSvg,
+  boardLastMovePiece,
+} from './board-lastmove.js';
+import { tokenPieceSize } from './board-metrics.js';
+import { installBoardDrag } from './variant-tenant/board-drag.js';
+import {
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
   type XiangqiBoardLayout,
 } from './xiangqi-appearance-storage.js';
 import {
   LIVE_BOARD_GEO,
-  LIVE_BOARD_SURFACE,
   mountedXiangqiBoardLayout,
   XIANGQI_LIVE_PIECE_SIZE,
   type XiangqiBoardArrow,
   type XiangqiBoardMarker,
   xiangqiArrowSvg,
+  xiangqiLiveBoardFrame,
   xiangqiMarkerSvg,
   xiangqiPieceGhostSvg,
 } from './xiangqi-board.js';
@@ -52,24 +61,6 @@ import {
   xiangqiPieceSetShape,
   xiangqiPieceShapeForLayout,
 } from './xiangqi-piece-sets.js';
-
-// This board draws no coordinate labels, so it must not reserve their gutter -
-// the standard board swaps the same way when labels are off. Leaving it in put
-// a band of dead space around the grid.
-const DUCK_SURFACE = {
-  ...LIVE_BOARD_SURFACE,
-  geo: { ...LIVE_BOARD_SURFACE.geo, coordGutter: 0 },
-};
-
-import {
-  BOARD_LASTMOVE_OVER_GROUP_ATTRS,
-  type BoardLastMoveLayer,
-  boardLastMoveCellMarksSvg,
-  boardLastMoveMarkersSvg,
-  boardLastMovePiece,
-} from './board-lastmove.js';
-import { tokenPieceSize } from './board-metrics.js';
-import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 type Color = 'red' | 'black';
@@ -111,6 +102,16 @@ export type DuckXiangqiBoardState = {
    * board's look) so the player can see where it came from.
    */
   lifted?: DuckXiangqiSquare | null;
+  /**
+   * The standard board's tri-state (XiangqiBoardSvgState.coordinates): absent
+   * follows the reader's boardCoordinates preference, `false` forces the labels
+   * and their gutter off, `true` forces them on. The surface and labels come
+   * from `xiangqiLiveBoardFrame`, so this board reserves the gutter, draws the
+   * labels and reports the viewBox exactly as a xiangqi board does. It pinned
+   * the gutter off and drew none until 2026-10-17 (Brian: "The board should be
+   * aligned with xiangqi and jieqi").
+   */
+  coordinates?: boolean;
 };
 
 /**
@@ -436,7 +437,12 @@ export function duckXiangqiBoardSvg(
   // defaulted to 'intersection' and no caller passed one, so 'Square grid' never
   // reached Duck Xiangqi even though the page CSS already sized for it.
   const layout = state.layout ?? readStoredXiangqiBoardLayout();
-  const vb = xiangqiBoardViewBox(layout, DUCK_SURFACE.geo);
+  // The duck sits on the same points either way: the gutter only widens the
+  // viewBox outward, so the duck, targets and hit areas need no adjustment.
+  const { surface, coords } = xiangqiLiveBoardFrame(perspective, layout, {
+    coordinates: state.coordinates,
+  });
+  const vb = xiangqiBoardViewBox(layout, surface.geo);
   const viewBox = `${vb.minX} ${vb.minY} ${vb.width} ${vb.height}`;
   const selected = state.phase.kind === 'piece' ? state.phase.selected : null;
   const selectionSvg = selected
@@ -480,10 +486,11 @@ export function duckXiangqiBoardSvg(
   return `
     <svg class="xq-live-svg xq-live-svg--${layout} dkx-live-svg xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
       <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
-      <g class="xq-live-grid">${xiangqiSurfaceGrid(DUCK_SURFACE, layout)}${xiangqiSurfaceStartMarkers(DUCK_SURFACE, perspective, layout)}</g>
-      <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(DUCK_SURFACE, perspective, layout)}</g>
-      <g class="xq-live-palace">${xiangqiSurfacePalace(DUCK_SURFACE, perspective, layout)}</g>
-      <g class="xq-live-river" aria-hidden="true" pointer-events="none">${xiangqiSurfaceRiver(DUCK_SURFACE, perspective, layout)}</g>
+      <g class="xq-live-grid">${xiangqiSurfaceGrid(surface, layout)}${xiangqiSurfaceStartMarkers(surface, perspective, layout)}</g>
+      <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>
+      <g class="xq-live-palace">${xiangqiSurfacePalace(surface, perspective, layout)}</g>
+      <g class="xq-live-river" aria-hidden="true" pointer-events="none">${xiangqiSurfaceRiver(surface, perspective, layout)}</g>
+      <g class="xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>
       <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, layout, 'under', state.pieceSet)}</g>
       <g class="xq-live-selection">${selectionSvg}</g>
       <g class="dkx-live-targets">${state.interactive ? targetLayer(state.targets, state.phase, perspective, layout, duckAnywhere, shown.board) : ''}</g>

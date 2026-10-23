@@ -1332,6 +1332,9 @@ a.forum-post-author-name:focus-visible {
   --forum-shadow: rgba(0, 0, 0, 0.12);
   --forum-input-bg: hsl(37, 12%, 97%);
   --forum-input-border: hsl(37, 8%, 82%);
+  --forum-chip-bg: hsl(39, 22%, 85%);
+  --forum-chip-active-bg: hsl(36, 9%, 11%);
+  --forum-chip-active-text: hsl(40, 33%, 97%);
   --site-accent: var(--forum-link);
   --site-accent-strong: var(--forum-link-hover);
   --site-bg: var(--forum-page-bg);
@@ -1386,6 +1389,9 @@ a.forum-post-author-name:focus-visible {
   --forum-shadow: rgba(0, 0, 0, 0.28);
   --forum-input-bg: #211f1c;
   --forum-input-border: #45413b;
+  --forum-chip-bg: #38352f;
+  --forum-chip-active-bg: #d9d6cf;
+  --forum-chip-active-text: #1f1d1a;
   --site-focus: hsla(165, 56%, 40%, 0.26);
 }
 
@@ -2021,6 +2027,14 @@ a.forum-post-author-name:focus-visible {
   padding: 18px;
 }
 
+/* The active tab sits a layer up to cover the textarea's top border, which
+   also hid the focus ring under it; a focused textarea comes above the tab. */
+.forum-body-composer textarea:focus,
+.forum-reply-form textarea:focus {
+  position: relative;
+  z-index: 2;
+}
+
 .forum-composer-preview,
 .forum-reply-preview {
   overflow: auto;
@@ -2364,5 +2378,337 @@ a.forum-post-author-name:focus-visible {
 
   .forum-reply-footer button {
     width: 100%;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Phone forum (#576, mock "Forum A"). 600px and under only; tablet and desktop
+   keep everything above. The index and category pages swap their headers and
+   the category table for a "Forum" title row, a scrolling chip row (Latest,
+   then each category) and a flat list of topic rows; the thread page keeps its
+   DOM and is restyled into the same flat, full-bleed language.
+   ------------------------------------------------------------------------- */
+
+.forum-topic-row-phone-meta {
+  display: none;
+}
+
+@media (min-width: 601px) {
+  .forum-phone-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .forum-desktop-only {
+    display: none !important;
+  }
+
+  .forum-route {
+    --site-nav-bg: var(--forum-panel-bg);
+    --site-page-gradient: var(--forum-panel-bg);
+  }
+
+  .forum-route .site-nav {
+    border-bottom-color: var(--forum-border);
+  }
+
+  .forum-route .forum-shell {
+    width: 100%;
+    padding: 0 0 40px;
+  }
+
+  .forum-route .forum-panel {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .forum-phone-head {
+    border-bottom: 1px solid var(--forum-border-soft);
+  }
+
+  .forum-phone-title-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 14px 10px 8px 16px;
+  }
+
+  .forum-phone-title {
+    margin: 0 auto 0 0;
+    color: var(--forum-heading);
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    line-height: 1.2;
+  }
+
+  .forum-phone-icon-button {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: var(--forum-heading);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .forum-phone-icon-button[aria-expanded="true"] {
+    background: var(--forum-chip-bg);
+  }
+
+  .forum-phone-search-icon {
+    width: 21px;
+    height: 21px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  .forum-phone-reports {
+    display: inline-grid;
+    min-height: 44px;
+    place-items: center;
+    color: var(--forum-link);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 8px;
+    text-decoration: none;
+  }
+
+  .forum-phone-new-topic {
+    display: inline-grid;
+    height: 40px;
+    flex: none;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    background: var(--forum-create);
+    color: var(--forum-panel-bg);
+    cursor: pointer;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 14px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .forum-phone-new-topic:hover,
+  .forum-phone-new-topic:focus-visible {
+    background: var(--forum-create-hover);
+    color: var(--forum-panel-bg);
+  }
+
+  .forum-phone-search {
+    padding: 0 16px 10px;
+  }
+
+  .forum-phone-chips {
+    position: relative;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 16px 12px;
+    scrollbar-width: none;
+  }
+
+  .forum-phone-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .forum-phone-chip {
+    display: inline-grid;
+    height: 44px;
+    flex: none;
+    place-items: center;
+    border-radius: 22px;
+    background: var(--forum-chip-bg);
+    color: var(--forum-heading);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 0 14px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .forum-phone-chip[aria-current="page"] {
+    background: var(--forum-chip-active-bg);
+    color: var(--forum-chip-active-text);
+  }
+
+  /* Topic rows: title over one muted meta line, the whole row one tap target. */
+  .forum-route .forum-topic-list,
+  .forum-route .forum-topic-list-empty {
+    border: 0;
+    border-radius: 0;
+  }
+
+  .forum-route .forum-topic-row,
+  .forum-route .forum-topic-row:nth-child(odd):not(.forum-topic-list-header) {
+    position: relative;
+    display: block;
+    min-height: 0;
+    border: 0;
+    border-bottom: 1px solid var(--forum-border-soft);
+    background: var(--forum-panel-bg);
+    padding: 11px 16px;
+  }
+
+  .forum-route .forum-topic-row:not(.forum-topic-list-header):hover,
+  .forum-route .forum-topic-row:not(.forum-topic-list-header):focus-within {
+    background: var(--forum-row-alt-bg);
+  }
+
+  .forum-route .forum-topic-list-header,
+  .forum-route .forum-topic-row-replies,
+  .forum-route .forum-topic-row-latest,
+  .forum-route .forum-topic-flags {
+    display: none;
+  }
+
+  .forum-route .forum-topic-row-main {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .forum-route .forum-topic-title-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    align-items: baseline;
+  }
+
+  .forum-route .forum-topic-title {
+    color: var(--forum-heading);
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .forum-route .forum-topic-title::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+  }
+
+  .forum-route .forum-topic-page-links {
+    position: relative;
+    z-index: 1;
+  }
+
+  .forum-topic-row-phone-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    color: var(--forum-muted);
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .forum-topic-phone-flag {
+    color: var(--forum-link);
+    font-weight: 700;
+  }
+
+  .forum-route .forum-panel > .forum-pager {
+    padding: 12px 16px;
+  }
+
+  .forum-route .forum-topic-composer {
+    border-bottom: 1px solid var(--forum-border-soft);
+    padding: 16px;
+  }
+
+  /* Thread page. */
+  .forum-route .forum-topic-panel .forum-panel-header {
+    min-height: 0;
+    gap: 6px;
+    padding: 12px 16px 14px;
+  }
+
+  .forum-route .forum-topic-title-row {
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    align-items: flex-start;
+  }
+
+  .forum-route .forum-topic-panel .forum-panel-back {
+    width: 32px;
+    height: 32px;
+    margin-left: -8px;
+  }
+
+  .forum-route .forum-topic-panel .forum-back-chevron {
+    width: 22px;
+    height: 22px;
+  }
+
+  .forum-route .forum-panel-header-topic .site-section-heading {
+    flex: 1 1 calc(100% - 40px);
+    color: var(--forum-heading);
+    font-family: inherit;
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+    line-height: 1.25;
+  }
+
+  /* Watch / Translate / Report wrap under the title, lined up with it. */
+  .forum-route .forum-topic-title-row > button {
+    min-height: 32px;
+  }
+
+  .forum-route .forum-topic-title-row > button:first-of-type {
+    margin-left: 28px;
+  }
+
+  .forum-route .forum-topic-panel .forum-sub {
+    margin-left: 28px;
+    font-size: 13px;
+  }
+
+  .forum-route .forum-post {
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .forum-route .forum-post-author {
+    border-bottom: 0;
+    padding: 4px 8px;
+  }
+
+  .forum-route .forum-post-author-name {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .forum-route .forum-post-header {
+    gap: 6px 10px;
+  }
+
+  /* No hover on a phone: Quote / Edit / Report are always visible. */
+  .forum-route .forum-post-actions {
+    opacity: 1;
+  }
+
+  .forum-route .forum-post-body {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .forum-route .forum-topic-panel .forum-reply-form,
+  .forum-route .forum-topic-panel > .forum-auth-box,
+  .forum-route .forum-topic-panel > .forum-moderation-box {
+    padding: 16px;
   }
 }

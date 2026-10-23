@@ -91,6 +91,8 @@ export type JieqiGameEndReason =
   | 'timeout'
   | 'resignation'
   | 'abandonment'
+  // Both players agreed a draw (an accepted draw offer).
+  | 'agreement'
   // Third occurrence of a position (games created with `repetition: true`), or
   // an imported lab game whose own referee declared a threefold draw.
   | 'repetition'
@@ -692,9 +694,9 @@ export function applyJieqiMove(
 
 /**
  * Jieqi wins and losses follow xiangqi, so a perpetual check loses. When a game
- * has just ended on 'repetition', take the cycle that closed it (the plies after
- * the second-to-last occurrence of the repeated position, through the last) and
- * name the side that gave check on every one of its own moves in it. Mutual
+ * has just ended on 'repetition', take every ply from the first of the three
+ * occurrences of the repeated position through the last, and name the side
+ * that gave check on every one of its own moves in that span. Mutual
  * perpetual check and check-free cycles return null: the draw stands. Mirrors
  * xiangqiPerpetualCheckLoser; perpetual chase is not covered, as there.
  */
@@ -704,7 +706,9 @@ export function jieqiPerpetualCheckLoser(state: JieqiGameState): JieqiColor | nu
   const repeatedKey = log[log.length - 1]!.key;
   const occurrences = log.flatMap((entry, i) => (entry.key === repeatedKey ? [i] : []));
   if (occurrences.length < 3) return null;
-  const cycle = log.slice(occurrences[occurrences.length - 2]! + 1, occurrences.at(-1)! + 1);
+  // Every move from the first of the three occurrences through the last, as in
+  // xiangqiPerpetualCheckLoser.
+  const cycle = log.slice(occurrences.at(-3)! + 1, occurrences.at(-1)! + 1);
   const perpetualBy = (color: JieqiColor): boolean => {
     const own = cycle.filter((entry) => entry.mover === color);
     return own.length > 0 && own.every((entry) => entry.gaveCheck === true);

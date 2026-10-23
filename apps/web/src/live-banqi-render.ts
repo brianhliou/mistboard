@@ -30,7 +30,7 @@ import {
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
   type XiangqiPieceShape,
-  xiangqiNeutralBackMarks,
+  xiangqiBanqiBackMarks,
   xiangqiPieceShadowEnabled,
   xiangqiPieceShadowMarks,
 } from './xiangqi-piece-sets.js';
@@ -157,6 +157,13 @@ export function banqiPieceGhostSvg(
   return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
 }
 
+// The editor's ghost for a face-down tile: the same back the board draws.
+export function banqiFaceDownGhostSvg(pieceSet?: XiangqiPieceSet): string {
+  const set = pieceSet ?? readStoredXiangqiPieceSet();
+  const c = PIECE_SIZE / 2;
+  return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" overflow="visible" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${faceDownDisc(c, c, set)}</svg>`;
+}
+
 // A line intersection. `fileLine` 0..8 runs left→right (file a at the left);
 // `rankLine` 0..4 runs top→bottom (the river edge at the top, rank 1 at the
 // bottom).
@@ -224,17 +231,17 @@ export function banqiFaceDownRadius(size: number): number {
 }
 
 // A uniform face-down disc: one colour, a single ring, no glyph (the deal is
-// hidden from both). A flat disc with no inner ring keeps the back clean. A
-// piece set whose own back is the same for both sides (wood, brush, clerical)
-// draws that back instead; a set whose backs differ by colour keeps the disc,
-// since a banqi tile must not tell its colour.
+// hidden from both). A flat disc with no inner ring keeps the back clean. The
+// photo and printed sets draw the back their Xiangqi Mahjong tiles show
+// (xiangqiBanqiBackMarks), one look for both sides since a banqi tile must not
+// tell its colour; Mistboard's own sets keep this jade disc, as Mahjong does.
 function faceDownDisc(
   cx: number,
   cy: number,
   pieceSet: XiangqiPieceSet,
   className = 'banqi-back',
 ): string {
-  const marks = xiangqiNeutralBackMarks(pieceSet);
+  const marks = xiangqiBanqiBackMarks(pieceSet);
   // The same disc shadow as the revealed pieces (xiangqiPieceShadowMarks).
   const shadowOn = xiangqiPieceShadowEnabled();
   if (marks) {

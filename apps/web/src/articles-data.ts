@@ -12,6 +12,7 @@ import { banqiArticle } from './articles/content/banqi.js';
 import { banqiStatisticsArticle } from './articles/content/banqi-statistics.js';
 import { banqiEngineArticle } from './articles/content/banqi-engine.js';
 import { banqiLuckArticle } from './articles/content/banqi-luck.js';
+import { banqiChariotEndgameArticle } from './articles/content/banqi-chariot-endgame.js';
 import { banqiPerpetualChaseArticle } from './articles/content/banqi-perpetual-chase.js';
 import { chessArticle } from './articles/content/chess.js';
 import { choiCoTuongVoiMayArticle } from './articles/content/choi-co-tuong-voi-may.js';
@@ -30,6 +31,7 @@ import { solverAuditArticle } from './articles/content/solver-audit.js';
 import { jieqiBotWinsArticle } from './articles/content/jieqi-bot-wins.js';
 import { jieqiPuzzleSearchArticle } from './articles/content/jieqi-puzzle-search.js';
 import { oneThousandGamesArticle } from './articles/content/one-thousand-games.js';
+import { unstyledFirstPaintArticle } from './articles/content/unstyled-first-paint.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
 import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
 import { fogOpeningsArticle } from './articles/content/fog-openings.js';
@@ -53,6 +55,7 @@ import { jieqiArticle } from './articles/content/jieqi.js';
 import { jungleArticle } from './articles/content/jungle.js';
 import { jungleFlipArticle } from './articles/content/jungle-flip.js';
 import { douShouQiEngineArticle } from './articles/content/dou-shou-qi-engine.js';
+import { jungleDenTermArticle } from './articles/content/jungle-den-term.js';
 import { mahjongArticle } from './articles/content/mahjong.js';
 import { xiangqiMahjong32Article } from './articles/content/xiangqi-mahjong-32.js';
 import { puzzleMiningArticle } from './articles/content/puzzle-mining.js';
@@ -68,6 +71,8 @@ import { xiangqiWorldChampionshipArticle } from './articles/content/xiangqi-worl
 import { xiangqiArticle } from './articles/content/xiangqi.js';
 import { xiangqiEndgamesArticle } from './articles/content/xiangqi-endgames.js';
 import { helpmatesInXiangqiArticle } from './articles/content/helpmates-in-xiangqi.js';
+import { shortestStalemateXiangqiArticle } from './articles/content/shortest-stalemate-xiangqi.js';
+import { generalBlunderChallengeArticle } from './articles/content/general-blunder-challenge.js';
 import { longestForcedMatesXiangqiArticle } from './articles/content/longest-forced-mates-xiangqi.js';
 import { yinShengArticle } from './articles/content/yin-sheng.js';
 import { caoYanleiArticle } from './articles/content/cao-yanlei.js';
@@ -79,6 +84,8 @@ import { zuoWenjingArticle } from './articles/content/zuo-wenjing.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  shortestStalemateXiangqiArticle,
+  generalBlunderChallengeArticle,
   helpmatesInXiangqiArticle,
   fortressAndAtomicXiangqiOnHoldArticle,
   jieqiPuzzleSearchArticle,
@@ -93,6 +100,7 @@ export const articles: Article[] = [
   abJchessArticle,
   jieqiBotWinsArticle,
   oneThousandGamesArticle,
+  unstyledFirstPaintArticle,
   pikafishArticle,
   choiCoTuongVoiMayArticle,
   jieqiPlatformArticle,
@@ -140,8 +148,10 @@ export const articles: Article[] = [
   banqiStatisticsArticle,
   banqiEngineArticle,
   douShouQiEngineArticle,
+  jungleDenTermArticle,
   banqiLuckArticle,
   banqiPerpetualChaseArticle,
+  banqiChariotEndgameArticle,
   flipJungleSkillCeilingArticle,
   puzzleMiningArticle,
   puzzleTwoAnswersArticle,

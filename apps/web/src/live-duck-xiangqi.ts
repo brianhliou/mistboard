@@ -59,6 +59,7 @@ import {
 import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import { xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 
 type DuckMoveEvent = TenantMovePlayed<DuckXiangqiColor, DuckXiangqiTurn>;
 
@@ -172,6 +173,9 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
     setBoardFamily('xiangqi');
     installBoardInteraction(ctx.refs);
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
+    // The board draws coordinates in the reader's notation style when they are
+    // on, and the theme gear changes it mid-game, as the standard room handles.
+    window.addEventListener(xiangqiNotationChangedEvent, () => ctx.renderAll());
     installSelectionClickAway({
       roots: () => [core?.refs.board],
       hasSelection: () => {

@@ -134,6 +134,8 @@ const GENERATED_FROM_TIER_TABLE: ReadonlySet<string> = new Set([
   // slot above it (2026-10), generated from the same table.
   'pikafish-jieqi',
   'ab-jchess',
+  // jqe above AB-JChess (2026-10-16), the same table.
+  'jqe',
   // The jungle Rust tiers (#488), generated from JUNGLE_RUST_TIER_LIST, and the
   // KataGo top seat above them (2026-10), from KATAGO_JUNGLE_TIER_LIST.
   'misty-jungle',

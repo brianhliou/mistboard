@@ -8,6 +8,7 @@
 // preference setters this panel calls — the panel is a dumb view over that API.
 import { trackLocaleChanged, trackNotationChanged } from './analytics.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import {
   currentLocale,
@@ -22,6 +23,7 @@ import {
   type AppearanceMenuOptions,
   type BoardFamily,
   formatVolume,
+  type QuickPickerKind,
   readEffectiveSoundVolume,
   readStoredSiteTheme,
   readStoredSoundMuted,
@@ -31,6 +33,7 @@ import {
   readStoredXiangqiStartMarkers,
   readXiangqiBoardChoice,
   type SiteTheme,
+  setBoardCoordinatesPreference,
   setSiteThemePreference,
   setSoundSetPreference,
   setSoundVolumePreference,
@@ -96,6 +99,30 @@ export function populateThemeControlPanel(
     status.element,
   );
   return status;
+}
+
+// The phone bar's quick pickers (#575, through buildQuickPickerAt in theme.ts):
+// the language list and the piece-set tile grid, built by the same field
+// builders as the drill-in menu so the two never drift apart.
+export function buildQuickPicker(
+  kind: QuickPickerKind,
+  options: { onPick?: () => void } = {},
+): HTMLElement {
+  const locale = currentLocale();
+  if (kind === 'language') return createLanguageField(locale, () => options.onPick?.());
+  return createTileField(
+    'xqpiece',
+    t('prefs.pieces', {}, locale),
+    t('prefs.xiangqiPieceSet', {}, locale),
+    XIANGQI_PIECE_SETS.map((s) => ({ id: s.id, label: t(s.labelKey, {}, locale) })),
+    readStoredXiangqiPieceSet(),
+    (set) => {
+      setXiangqiPieceSetPreference(set);
+      options.onPick?.();
+    },
+    undefined,
+    false,
+  );
 }
 
 // The appearance controls as a lichess-style drill-in menu: a compact list of
@@ -171,6 +198,9 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
       createXiangqiPieceShadowField(locale),
     );
   }
+  // Coordinates are every board's, not xiangqi's, so they sit outside the gate.
+  // Until 2026-10-17 they lived only on the account page, out of a guest's reach.
+  boardBody.push(createBoardCoordinatesField(locale));
   addCategory('board', t('prefs.board', {}, locale), boardBody);
 
   // Pieces carries XIANGQI ONLY (2026-07-26). Chess ships one set, so there is no
@@ -506,6 +536,22 @@ function createXiangqiPieceShadowField(locale: Locale): HTMLLabelElement {
   input.addEventListener('change', () => setXiangqiPieceShadowPreference(input.checked));
   const text = document.createElement('span');
   text.textContent = t('prefs.pieceShadow', {}, locale);
+  field.append(input, text);
+  return field;
+}
+
+// Board coordinates, the same preference the account page sets. The setter
+// stamps the root attribute the board aspect rules read and re-renders boards.
+function createBoardCoordinatesField(locale: Locale): HTMLLabelElement {
+  const field = document.createElement('label');
+  field.className = 'theme-control-check-field board-coordinates-field';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.dataset.boardCoordinatesToggle = '';
+  input.checked = boardCoordinatesEnabled();
+  input.addEventListener('change', () => setBoardCoordinatesPreference(input.checked));
+  const text = document.createElement('span');
+  text.textContent = t('prefs.coordinates', {}, locale);
   field.append(input, text);
   return field;
 }

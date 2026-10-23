@@ -66,6 +66,7 @@ import {
 import { darkChessPieceGhostSvg, renderDarkChessBoardSvg } from '../dark-chess-render.js';
 import { duckXiangqiBoardSvg } from '../duck-xiangqi-board.js';
 import {
+  FXQ_GEO,
   fortressXiangqiPieceGhostSvg,
   installFortressXiangqiBoardStyles,
   renderFortressXiangqiBoardSvg,
@@ -76,14 +77,14 @@ import type { JungleFlipRenderBoard } from '../jungle-flip-render.js';
 import { jungleFlipPieceGhostSvg, renderJungleFlipBoardSvg } from '../jungle-flip-render.js';
 import { junglePieceGhostSvg, renderJungleBoardSvg } from '../jungle-render.js';
 import {
-  BANQI_PIECE_PX,
-  banqiFaceDownRadius,
+  banqiFaceDownGhostSvg,
   banqiPieceGhostSvg,
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
 } from '../live-banqi-render.js';
 import {
   installJieqiBoardStyles,
+  JIEQI_GEO,
   jieqiPieceGhostSvg,
   renderJieqiBoardSvg,
 } from '../live-jieqi-render.js';
@@ -292,35 +293,6 @@ function boardFromRecord(
   return board;
 }
 
-/** Ranks 1..N, files a.., pieces on the line crossings; `mirrorFiles` says whether
- *  the renderer mirrors files as well as ranks for the second colour. */
-function intersectionGeometry(
-  files: number,
-  ranks: number,
-  cell: number,
-  margin: number,
-  mirrorFiles: boolean,
-  hit: number,
-): EditorGeometry {
-  const box = {
-    minX: 0,
-    minY: 0,
-    width: margin * 2 + (files - 1) * cell,
-    height: margin * 2 + (ranks - 1) * cell,
-  };
-  return {
-    viewBox: () => box,
-    center: (square, flipped) => {
-      const file = fileOf(square);
-      const rank = rankOf(square);
-      const col = flipped && mirrorFiles ? files - 1 - file : file;
-      const row = flipped ? rank - 1 : ranks - rank;
-      return { x: margin + col * cell, y: margin + row * cell };
-    },
-    hit,
-  };
-}
-
 /** Pieces in cell centres (the grid boards + banqi); `flips` says whether the
  *  renderer rotates the board for the second colour at all. */
 function cellGeometry(
@@ -490,18 +462,26 @@ const XIANGQI_LIVE_GEO: XiangqiBoardGeometry = {
   riverGap: 12,
 };
 
-const XIANGQI_GEOMETRY: EditorGeometry = {
-  viewBox: () => xiangqiBoardViewBox(readStoredXiangqiBoardLayout(), XIANGQI_LIVE_GEO),
-  center: (square, flipped) =>
-    xiangqiBoardPoint(
-      fileOf(square),
-      rankOf(square),
-      flipped ? 'black' : 'red',
-      readStoredXiangqiBoardLayout(),
-      XIANGQI_LIVE_GEO,
-    ),
-  hit: 54,
-};
+// Hit geometry for a board drawn by the shared xiangqi geometry: it follows the
+// stored layout (points or squares) and reserves no coordinate gutter, so the
+// renderer is called with coordinates forced off to match.
+function xiangqiLayoutGeometry(geo: XiangqiBoardGeometry, hit: number): EditorGeometry {
+  const flat: XiangqiBoardGeometry = { ...geo, coordGutter: 0 };
+  return {
+    viewBox: () => xiangqiBoardViewBox(readStoredXiangqiBoardLayout(), flat),
+    center: (square, flipped) =>
+      xiangqiBoardPoint(
+        fileOf(square),
+        rankOf(square),
+        flipped ? 'black' : 'red',
+        readStoredXiangqiBoardLayout(),
+        flat,
+      ),
+    hit,
+  };
+}
+
+const XIANGQI_GEOMETRY = xiangqiLayoutGeometry(XIANGQI_LIVE_GEO, 54);
 
 function xiangqiBoardOf(model: EditorModel): XiangqiBoard {
   const board: XiangqiBoard = {};
@@ -550,7 +530,10 @@ function xiangqiSpec(id: 'xiangqi' | 'dark-xiangqi' | 'atomic-xiangqi'): EditorS
         status: { type: 'playing', turn: xiangqiTurn(model) },
         moveNumber: 1,
       };
-      return renderXiangqiBoardSvg(view, perspective as XiangqiColor);
+      // Coordinates forced off: the hit geometry (XIANGQI_LIVE_GEO) reserves
+      // no label gutter, so a gutter here would slide the board out from under
+      // the click layer (variant-board-coords.test.ts checks every editor).
+      return renderXiangqiBoardSvg(view, perspective as XiangqiColor, { coordinates: false });
     },
     ghostSvg: (piece) =>
       piece.faceDown
@@ -599,7 +582,7 @@ const JIEQI_DEALT: DealtRules = {
   style: 'all',
 };
 
-const JIEQI_GEOMETRY = intersectionGeometry(9, 10, 72, 42, true, 62);
+const JIEQI_GEOMETRY = xiangqiLayoutGeometry(JIEQI_GEO, 62);
 
 function jieqiHome(color: EditorColor): ReadonlySet<string> {
   return new Set<string>(jieqiHomeSquares(color as XiangqiColor));
@@ -667,7 +650,8 @@ const JIEQI_SPEC: EditorSpec = {
       status: { type: 'playing', turn: xiangqiTurn(model) },
       moveNumber: 1,
     };
-    return renderJieqiBoardSvg(view, perspective as XiangqiColor);
+    // Coordinates forced off, as on the xiangqi editor: no gutter in the hit geometry.
+    return renderJieqiBoardSvg(view, perspective as XiangqiColor, { coordinates: false });
   },
   ghostSvg: (piece) =>
     jieqiPieceGhostSvg(
@@ -732,11 +716,6 @@ const BANQI_DEALT: DealtRules = {
 // live-banqi-render.ts: CELL 64, MARGIN 28, rank 4 at the top, no flip.
 const BANQI_GEOMETRY = cellGeometry(8, 4, 64, 28, false, 62);
 
-function faceDownDiscSvg(className: string, size: number): string {
-  const r = banqiFaceDownRadius(size);
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g class="${className}"><circle cx="${size / 2}" cy="${size / 2}" r="${r}"/></g></svg>`;
-}
-
 const BANQI_TILE: EditorPaletteEntry = {
   piece: { faceDown: true, color: null },
   labelKey: 'editor.faceDownTile',
@@ -794,7 +773,7 @@ const BANQI_SPEC: EditorSpec = {
   },
   ghostSvg: (piece) =>
     piece.faceDown
-      ? faceDownDiscSvg('banqi-back', BANQI_PIECE_PX)
+      ? banqiFaceDownGhostSvg()
       : banqiPieceGhostSvg({
           color: piece.color as XiangqiColor,
           role: piece.role as BanqiPieceRole,
@@ -1008,8 +987,7 @@ const FORTRESS_SPEC: EditorSpec = {
   openingTurn: false,
   dealt: null,
   grammar: FORTRESS_GRAMMAR,
-  // fortress-xiangqi-render.ts: 7x8 intersections, CELL 72, MARGIN 42, mirrored for black.
-  geometry: intersectionGeometry(7, 8, 72, 42, true, 62),
+  geometry: xiangqiLayoutGeometry(FXQ_GEO, 62),
   palette: (color) => rolePalette(color, FORTRESS_ROLES),
   tileEntry: null,
   duckEntry: null,
@@ -1048,7 +1026,10 @@ const FORTRESS_SPEC: EditorSpec = {
       status: { type: 'playing', turn: xiangqiTurn(model) },
       moveNumber: 1,
     };
-    return renderFortressXiangqiBoardSvg(view, perspective as XiangqiColor);
+    // Coordinates forced off, as on the xiangqi editor: no gutter in the hit geometry.
+    return renderFortressXiangqiBoardSvg(view, perspective as XiangqiColor, {
+      coordinates: false,
+    });
   },
   ghostSvg: (piece) =>
     piece.faceDown
@@ -1152,9 +1133,9 @@ const DARK_CHESS_SPEC: EditorSpec = {
 // ── Duck Xiangqi ────────────────────────────────────────────────────────────
 //
 // The same 9x10 board, letters and geometry as standard xiangqi (it shares
-// XIANGQI_GRAMMAR and XIANGQI_GEOMETRY outright — duckXiangqiBoardSvg composes
-// the standard surface at coordGutter 0, which is what XIANGQI_LIVE_GEO already
-// describes). Everything below is about the one thing that differs: the duck.
+// XIANGQI_GRAMMAR and XIANGQI_GEOMETRY outright — the board is rendered with
+// coordinates forced off, i.e. at coordGutter 0, which is what XIANGQI_LIVE_GEO
+// already describes). Everything below is about the one thing that differs: the duck.
 
 /** The duck as the palette button draws it. `duckPieceMarks` is the SAME art the
  *  live board paints, in each piece set's own disc grammar, resolved the way
@@ -1238,11 +1219,15 @@ const DUCK_XIANGQI_SPEC: EditorSpec = {
     };
     // Render-only: no click layer, no targets, and the layout the editor's own
     // hit geometry read, so the transparent buttons land on the points.
+    // Coordinates forced off: the hit geometry (XIANGQI_LIVE_GEO) and the board
+    // aspect it sets reserve no label gutter, and the board follows the reader's
+    // coordinates preference by default since 2026-10-17.
     return duckXiangqiBoardSvg(view, perspective as XiangqiColor, {
       interactive: false,
       phase: { kind: 'piece', selected: null },
       targets: [],
       layout: readStoredXiangqiBoardLayout(),
+      coordinates: false,
     });
   },
   ghostSvg: (piece) =>

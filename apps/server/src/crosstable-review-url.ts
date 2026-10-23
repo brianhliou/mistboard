@@ -1,7 +1,7 @@
-// The review URL for a finished room, split out of crosstable.ts so modules
-// on the persistence side (persistence-lobby-activity.ts) can use it without
-// importing crosstable.ts, which imports routes/lib.ts and from there
-// account-session.ts and persistence.ts: a cycle the dependency check refuses.
+// The review URL for a finished room, split out of crosstable.ts so a module
+// on the persistence side can use it without importing crosstable.ts, which
+// imports routes/lib.ts and from there account-session.ts and persistence.ts:
+// a cycle the dependency check refuses.
 import { DARK_CHESS_SPEC_ID } from '@mistboard/game';
 import {
   type VariantTenantRegistration,

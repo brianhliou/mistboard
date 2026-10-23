@@ -137,7 +137,8 @@ function fakeRegistration(args: {
       legacyVariants: [args.channelId],
     },
     isEngineClientId: (clientId: string | undefined) =>
-      clientId?.startsWith(FAKE_ENGINE_PREFIX) ?? false,
+      clientId === 'pikafish-jieqi-strongest' ||
+      (clientId?.startsWith(FAKE_ENGINE_PREFIX) ?? false),
     enabled: () => true,
     rooms: args.rooms,
     activeGameCount: () => 0,
@@ -402,6 +403,21 @@ test('an engine seat labels the game pve and surfaces the engine client id', () 
   assert.equal(candidates[0]!.composition, 'pve');
   const engineSeat = candidates[0]!.players.find((player) => player.isEngine);
   assert.equal(engineSeat?.name, `${FAKE_ENGINE_PREFIX}l4`);
+});
+
+test('homepage TV names the Jieqi top Pikafish rung Level 8, retaining its profile link', () => {
+  for (const pveBotId of [undefined, 'pikafish', 'pika-jieqi-strongest']) {
+    const room = tenantRoom({
+      id: 'fkh_level8',
+      seats: { black: 'pikafish-jieqi-strongest', red: 'client-a' },
+    });
+    room.pveBotId = pveBotId;
+    hiddenRooms.set(room.id, room);
+    const [candidate] = collectLiveTvCandidates(context(), NOW);
+    const engineSeat = candidate?.players.find((player) => player.isEngine);
+    assert.equal(engineSeat?.name, 'Pikafish Level 8');
+    assert.equal(engineSeat?.botId, 'pikafish');
+  }
 });
 
 test('elector: pvp outranks pve; hysteresis holds within a tier; pool empty clears', () => {

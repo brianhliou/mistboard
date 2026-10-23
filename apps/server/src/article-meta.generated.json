@@ -49,6 +49,16 @@
       "zh-hant": "暗棋規則：玩法詳解與免費線上對弈"
     }
   },
+  "banqi-chariot-endgame": {
+    "title": "A Solved Banqi Endgame: Chariot and Horse Against Chariot, Horse and Soldier",
+    "kind": "article",
+    "description": "A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one: a chariot, horse and soldier beat a chariot and horse in 67 moves, and nothing is captured in the first 43. Banqi on Mistboard now draws at 60 moves. The win is in a study, move by move, with the tablebase beside the board.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "一个完全解出的暗棋残局：车马卒对车马",
+      "zh-hant": "一個完全解出的暗棋殘局：車馬卒對車馬"
+    }
+  },
   "banqi-perpetual-chase": {
     "title": "The Perpetual Chase Rule in Banqi",
     "kind": "article",
@@ -241,6 +251,16 @@
       "zh-hant": "堡壘象棋規則"
     }
   },
+  "general-blunder-challenge": {
+    "title": "Can you make General Blunder win?",
+    "kind": "article",
+    "description": "General Blunder is a xiangqi bot that plays its worst move every turn, so beating it is easy. Two challenges for anyone who wants more: get a draw, then make it win.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "你能让 General Blunder 赢吗？",
+      "zh-hant": "你能讓 General Blunder 贏嗎？"
+    }
+  },
   "helpmates-in-xiangqi": {
     "title": "Helpmates in Xiangqi",
     "kind": "article",
@@ -262,13 +282,13 @@
     }
   },
   "how-puzzle-mining-works": {
-    "title": "I built a xiangqi puzzle miner",
+    "title": "Mining puzzles from real games",
     "kind": "article",
     "description": "A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "我做了一个象棋题目挖掘器",
-      "zh-hant": "我做了一個象棋題目挖掘器"
+      "zh-hans": "从真实对局中挖掘象棋题目",
+      "zh-hant": "從真實對局中挖掘象棋題目"
     }
   },
   "jieqi": {
@@ -337,6 +357,12 @@
       "zh-hant": "鬥獸棋規則：玩法詳解與免費線上對弈"
     }
   },
+  "jungle-den-term": {
+    "title": "Teaching our Jungle Chess engine the den race bought nothing",
+    "kind": "article",
+    "description": "Misty, our Jungle Chess engine, has no idea of a den race. Three ways to teach it one came back null or negative: races decide 4.7% of games at full strength, and a 12 times deeper search sees the loss a median of one ply sooner.",
+    "status": "published"
+  },
   "jungle-flip": {
     "title": "Flip Jungle Rules (Flip Dou Shou Qi)",
     "kind": "rules",
@@ -376,7 +402,7 @@
   "lai-ly-huynh-co-tuong": {
     "title": "Lại Lý Huynh",
     "kind": "article",
-    "description": "Nhà vô địch cờ tướng thế giới đầu tiên không đến từ Trung Quốc, bất bại ở Thượng Hải và thắng trận chung kết khi cầm quân Đen. Hành trình lên ngôi và một năm sau đó, năm ván thắng trên bàn cờ, 38 ván được phân tích.",
+    "description": "Lại Lý Huynh, nhà vô địch cờ tướng thế giới đầu tiên không đến từ Trung Quốc, bất bại ở Thượng Hải và thắng trận chung kết khi cầm quân Đen. Hành trình lên ngôi và một năm sau đó, năm ván thắng trên bàn cờ, 38 ván được phân tích.",
     "status": "published"
   },
   "lichess-analysis-accuracy": {
@@ -503,6 +529,16 @@
       "zh-hant": "Shogi4（4×4 將棋）規則"
     }
   },
+  "shortest-stalemate-xiangqi": {
+    "title": "The Shortest Xiangqi Stalemate We Know",
+    "kind": "article",
+    "description": "In xiangqi a side with no legal move loses. The shortest stalemate we know takes 21 plies: after Red’s 11th move, Black has eight pieces and none of them can move.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "我们所知最短的象棋困毙",
+      "zh-hant": "我們所知最短的象棋困斃"
+    }
+  },
   "skill-vs-luck": {
     "title": "Separating Skill from Luck in Flip Games",
     "kind": "article",
@@ -541,6 +577,16 @@
     "zhTitles": {
       "zh-hans": "冯家俊",
       "zh-hant": "馮家俊"
+    }
+  },
+  "unstyled-first-paint": {
+    "title": "Two pages that loaded as plain text",
+    "kind": "article",
+    "description": "The rules pages and the players pages both showed as bare text for a moment before snapping into their design. The causes were different, and the check written for the first passed the second.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "两个以纯文本加载的页面",
+      "zh-hant": "兩個以純文字載入的頁面"
     }
   },
   "xiangqi": {
@@ -586,7 +632,7 @@
   "xiangqi-match-fixing": {
     "title": "The Xiangqi Match-Fixing Case",
     "kind": "article",
-    "description": "Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.",
+    "description": "Wang Tianyi, China’s top-rated xiangqi player from 2014 to 2023, was banned for life in 2024 and sentenced to 2 years 9 months for bribery. Why he, Zheng Weitong and 47 others were sanctioned, the 12 games prosecutors named, and where the banned players are now.",
     "status": "published",
     "zhTitles": {
       "zh-hans": "象棋假棋案",

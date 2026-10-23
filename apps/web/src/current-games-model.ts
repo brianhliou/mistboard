@@ -60,6 +60,16 @@ export type CurrentGamesResponse = {
   total: number;
 };
 
+// ---- Seat names -------------------------------------------------------------
+
+// A card's seat line has room for about 130px beside the BOT tag and the clock,
+// and "Fairy-Stockfish Level 8" needs 147, so its level was cut to an ellipsis
+// (2026-10-21). On the cards only, the engine goes by its usual short name; the
+// full name stays in the tooltip, and bot and game pages keep it.
+export function cardSeatName(name: string): string {
+  return name.replace(/^Fairy-Stockfish(?= Level \d+$)/, 'FSF');
+}
+
 // ---- Sections ---------------------------------------------------------------
 
 export type CurrentGameSections<T> = { live: T[]; correspondence: T[] };

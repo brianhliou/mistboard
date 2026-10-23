@@ -35,6 +35,29 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-30 (banqi chariot endgame article) ── 残局库 follows analysis.tablebase.title; a move is 步 as in banqi-perpetual-chase.
+  'A solved banqi endgame: chariot and horse against chariot, horse and soldier.':
+    '一个已解的暗棋残局：车马对车马卒。',
+  'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.':
+    '一位 Mistboard 棋手告诉我们，在三子胜两子的残局里，我们原来的 40 步和棋规则太短。我们用残局库解出了其中一个：红方 67 步取胜，但直到第 44 步才有子被吃。文章逐步演示这盘胜局，棋盘下方列出每一步合法着法的结果，你也可以自己走其中任何一步。',
+  // ── 2026-10-27 (shortest xiangqi stalemate article) ── 困毙 and 半回合 follow the article (and longest-forced-mates-xiangqi).
+  'The shortest xiangqi stalemate we know: 21 plies.': '我们所知最短的象棋困毙：21 个半回合。',
+  'In xiangqi a side with no legal move loses. The shortest stalemate we know leaves Black with eight pieces and nothing to play after Red’s 11th move. No stalemate is possible in under 9 plies, so 9 to 20 is open.':
+    '在象棋里，无着可走的一方判负。我们所知最短的困毙里，红方走完第 11 步后，黑方还有八个子，却一步棋也走不了。少于 9 个半回合不可能形成困毙，所以 9 到 20 个半回合仍无定论。',
+  // ── 2026-10-22 (jqe) ── 电脑 / 级 / 研究 follow the AB-JChess entry and the longest-forced-mates entry.
+  'Meet jqe, the new top jieqi bot.': '认识 jqe：新的最强揭棋电脑。',
+  'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':
+    'jqe 是 Devin O’Keefe 开发的开源揭棋引擎。它与此前的最强电脑 AB-JChess 对弈 300 盘，171 胜、15 和、114 负。它现在排在 AB-JChess 上面一级，AB-JChess 继续保留。整场比赛的每一盘棋都收在一个研究里。',
+  'Play jqe': '与 jqe 对弈',
+  // ── 2026-10-17 (phone redesign) ── 菜单 / 开始对局 follow shell nav.menu and play setup.startGame.
+  'Meet General Blunder, a xiangqi bot that tries to lose.':
+    '认识 General Blunder：一个想输棋的象棋机器人。',
+  'General Blunder is a strong engine playing backwards: it checks every move and plays the one that is worst for itself. Most turns a checkmate or a free piece is waiting for you, so it is a good first opponent and a fast way to practise spotting mates. Can you find them all?':
+    'General Blunder 是一个反着下的强引擎：它检查每一步棋，然后走对自己最差的那一步。大多数回合都有一步将杀或一个白送的棋子等着你，所以它很适合做你的第一个对手，也能让你快速练习找杀。你能全部找到吗？',
+  'Play General Blunder': '与 General Blunder 对弈',
+  'Mistboard is rebuilt for phones.': 'Mistboard 为手机重新设计。',
+  "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. A game now fits one screen with no scrolling: the board, both clocks, the moves and the action bar stay in view, and game info and chat open from the menu in the bar. On a computer nothing changes.":
+    '在手机上，网站顶部现在只占一行，菜单全屏打开，所有页面按栏目分组。首页先显示正在进行的棋盘和下棋入口，对局设置从底部滑出，“开始对局”始终在手边，页脚的链接都移进了菜单。对局现在一屏装下，不用滚动：棋盘、双方的钟、着法和操作栏都在视野内，对局信息和聊天从操作栏的菜单打开。电脑上的样子不变。',
   // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡垒象棋 / 原子象棋 / 疯狂屋象棋 / 打入 follow the launch entries.
   'Fortress and Atomic Xiangqi are back on the drawing board.': '堡垒象棋和原子象棋回到设计阶段。',
   'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.':
@@ -97,7 +120,7 @@ const ZH_HANS: Record<string, string> = {
   'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.':
     '以前揭棋只有连续 120 个半回合没有吃子才自动判和，输棋的一方可以一直将军拖到和棋。现在同一局面第三次出现时对局结束。在重复循环中每一步都将军的一方判负，与象棋相同；其他重复局面判和。规则更新前开始的对局仍按旧规则进行。',
   // ── 2026-10-06 (master-game charts; Tony Fung; jieqi correspondence) ── 优势图 / 评注 / 准确率 / 研习 /
-  // 直播档案 / 揭棋通信对局 follow the review catalog, nav, the tony-fung-ga-zen article and home.corrTitle.
+  // 直播档案 / 揭棋通信对局 follow the review catalog, nav, the tony-fung-ga-zen article and the retired homepage card.
   "Master games now show the engine's advantage chart.": '大师对局现在显示引擎的优势图。',
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研习中，对局章节现在一打开就显示优势图、着法评注和准确率，和对局复盘一样。从摆好的局面开始的章节（例如排局）没有优势图。在棋手页面上，如果棋盘上的对局在直播档案里，棋盘下方会显示它的优势图：点击优势图可以跳到任意一步，也可以在棋盘菜单里隐藏它。',
@@ -503,6 +526,29 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-30 (banqi chariot endgame article) ── 殘局庫 follows analysis.tablebase.title; a move is 步 as in banqi-perpetual-chase.
+  'A solved banqi endgame: chariot and horse against chariot, horse and soldier.':
+    '一個已解的暗棋殘局：車馬對車馬卒。',
+  'A Mistboard player told us our 40-move draw rule was too short for the endings where three pieces beat two. We solved one with a tablebase: red wins in 67 moves, but nothing is captured until move 44. Step through the win with every legal move’s result under the board, and play any of them yourself.':
+    '一位 Mistboard 棋手告訴我們，在三子勝兩子的殘局裡，我們原來的 40 步和棋規則太短。我們用殘局庫解出了其中一個：紅方 67 步取勝，但直到第 44 步才有子被吃。文章逐步演示這盤勝局，棋盤下方列出每一步合法著法的結果，你也可以自己走其中任何一步。',
+  // ── 2026-10-27 (shortest xiangqi stalemate article) ── 困斃 and 半回合 follow the article (and longest-forced-mates-xiangqi).
+  'The shortest xiangqi stalemate we know: 21 plies.': '我們所知最短的象棋困斃：21 個半回合。',
+  'In xiangqi a side with no legal move loses. The shortest stalemate we know leaves Black with eight pieces and nothing to play after Red’s 11th move. No stalemate is possible in under 9 plies, so 9 to 20 is open.':
+    '在象棋裡，無著可走的一方判負。我們所知最短的困斃裡，紅方走完第 11 步後，黑方還有八個子，卻一步棋也走不了。少於 9 個半回合不可能形成困斃，所以 9 到 20 個半回合仍無定論。',
+  // ── 2026-10-22 (jqe) ── 電腦 / 級 / 研究 follow the AB-JChess entry and the longest-forced-mates entry.
+  'Meet jqe, the new top jieqi bot.': '認識 jqe：新的最強揭棋電腦。',
+  'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':
+    'jqe 是 Devin O’Keefe 開發的開源揭棋引擎。它與此前的最強電腦 AB-JChess 對弈 300 盤，171 勝、15 和、114 負。它現在排在 AB-JChess 上面一級，AB-JChess 繼續保留。整場比賽的每一盤棋都收在一個研究裡。',
+  'Play jqe': '與 jqe 對弈',
+  // ── 2026-10-17 (phone redesign) ── 選單 / 開始對局 follow shell nav.menu and play setup.startGame.
+  'Meet General Blunder, a xiangqi bot that tries to lose.':
+    '認識 General Blunder：一個想輸棋的象棋機器人。',
+  'General Blunder is a strong engine playing backwards: it checks every move and plays the one that is worst for itself. Most turns a checkmate or a free piece is waiting for you, so it is a good first opponent and a fast way to practise spotting mates. Can you find them all?':
+    'General Blunder 是一個反著下的強引擎：它檢查每一步棋，然後走對自己最差的那一步。大多數回合都有一步將殺或一個白送的棋子等著你，所以它很適合做你的第一個對手，也能讓你快速練習找殺。你能全部找到嗎？',
+  'Play General Blunder': '與 General Blunder 對弈',
+  'Mistboard is rebuilt for phones.': 'Mistboard 為手機重新設計。',
+  "On a phone the site now has a one-row header and a full-screen menu with every page grouped by section. Home opens on the live board and Play, game setup slides up as a sheet with Start game always in reach, and the footer's links live in the menu. A game now fits one screen with no scrolling: the board, both clocks, the moves and the action bar stay in view, and game info and chat open from the menu in the bar. On a computer nothing changes.":
+    '在手機上，網站頂部現在只佔一行，選單全螢幕打開，所有頁面按欄目分組。首頁先顯示正在進行的棋盤和下棋入口，對局設定從底部滑出，「開始對局」始終在手邊，頁尾的連結都移進了選單。對局現在一屏裝下，不用捲動：棋盤、雙方的鐘、著法和操作列都在視野內，對局資訊和聊天從操作列的選單打開。電腦上的樣子不變。',
   // ── 2026-10-13 (Fortress and Atomic on hold) ── 堡壘象棋 / 原子象棋 / 瘋狂屋象棋 / 打入 follow the launch entries.
   'Fortress and Atomic Xiangqi are back on the drawing board.': '堡壘象棋和原子象棋回到設計階段。',
   'Both are on hold while we redesign them: no new games, but finished games still replay and the rules pages stay up. Fortress needs a smaller xiangqi that keeps the feel of the full game without drops taking over. Atomic needs a cannon that follows the same rule as every other piece. Until then, drops live in Crazyhouse Xiangqi.':
@@ -565,7 +611,7 @@ const ZH_HANT: Record<string, string> = {
   'Jieqi used to draw only after 120 plies without a capture, so a losing player could check forever and wait. Now the third repetition of a position ends the game. A player who gave check on every move of the cycle loses, as in xiangqi; any other repetition is a draw. Games started before the change keep the old rules.':
     '以前揭棋只有連續 120 個半回合沒有吃子才自動判和，輸棋的一方可以一直將軍拖到和棋。現在同一局面第三次出現時對局結束。在重複循環中每一步都將軍的一方判負，與象棋相同；其他重複局面判和。規則更新前開始的對局仍按舊規則進行。',
   // ── 2026-10-06 (master-game charts; Tony Fung; jieqi correspondence) ── 優勢圖 / 評註 / 準確率 / 研習 /
-  // 直播檔案 / 揭棋通信對局 follow the review catalog, nav, the tony-fung-ga-zen article and home.corrTitle.
+  // 直播檔案 / 揭棋通信對局 follow the review catalog, nav, the tony-fung-ga-zen article and the retired homepage card.
   "Master games now show the engine's advantage chart.": '大師對局現在顯示引擎的優勢圖。',
   "Game chapters in Mistboard's own xiangqi studies now open with the advantage chart, the move marks and accuracy, as in a game review. Chapters set up from a position, such as compositions, have no chart. On the player pages, a board whose game is in the broadcast archive has the chart under it: click it to jump to any move, or hide it from the board menu.":
     'Mistboard 自己的象棋研習中，對局章節現在一打開就顯示優勢圖、著法評註和準確率，和對局復盤一樣。從擺好的局面開始的章節（例如排局）沒有優勢圖。在棋手頁面上，如果棋盤上的對局在直播檔案裡，棋盤下方會顯示它的優勢圖：點擊優勢圖可以跳到任意一步，也可以在棋盤選單裡隱藏它。',

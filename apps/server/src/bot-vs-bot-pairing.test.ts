@@ -8,6 +8,7 @@ import {
   xiangqiBotLadder,
 } from './bot-vs-bot-pairing.js';
 import { FIRST_PARTY_BOT_PROFILES, firstPartyBotForEngine } from './first-party-bots.js';
+import { JIEQI_ABJCHESS_ENGINE_ID, JIEQI_JQE_ENGINE_ID } from './jieqi-engine.js';
 
 const LADDER = ['r0', 'r1', 'r2', 'r3', 'r4', 'r5', 'r6', 'r7', 'r8']; // 9 rungs
 
@@ -81,9 +82,10 @@ test('each variant ladder is the engines its first-party bots play, and only its
   ]) {
     const ladder = botLadderFor(variant);
     assert.ok(ladder, variant);
-    const fronted = FIRST_PARTY_BOT_PROFILES.map((bot) => bot.engines[variant]).filter(
-      (id): id is string => typeof id === 'string',
-    );
+    // jqe is held behind MISTBOARD_JQE_ENABLED (off here); the test below covers it.
+    const fronted = FIRST_PARTY_BOT_PROFILES.filter((bot) => !bot.offLadder)
+      .map((bot) => bot.engines[variant])
+      .filter((id): id is string => typeof id === 'string' && id !== JIEQI_JQE_ENGINE_ID);
     // Every offered bot is on the ladder...
     for (const id of fronted) assert.ok(ladder.includes(id), `${variant}: ${id} missing`);
     // ...and every rung is one.
@@ -93,8 +95,27 @@ test('each variant ladder is the engines its first-party bots play, and only its
     }
     assert.deepEqual(new Set(ladder), new Set(fronted), variant);
   }
+  // The worst-move bot is a first-party bot but never a rung.
+  assert.ok(!botLadderFor('xiangqi')!.includes('fairy-stockfish-xiangqi-worst'));
   // No ladder, no fallback: a variant without one answers null, not xiangqi's.
   assert.equal(botLadderFor('jungle-flip'), null);
   assert.equal(botLadderFor('crossroads-chess'), null);
   assert.equal(botLadderFor('constructor'), null);
+});
+
+test('the jieqi EvE ladder schedules jqe only while MISTBOARD_JQE_ENABLED is on, above AB-JChess', () => {
+  const prior = process.env.MISTBOARD_JQE_ENABLED;
+  try {
+    delete process.env.MISTBOARD_JQE_ENABLED;
+    const off = botLadderFor('jieqi')!;
+    assert.ok(!off.includes(JIEQI_JQE_ENGINE_ID));
+    assert.equal(off.at(-1), JIEQI_ABJCHESS_ENGINE_ID);
+    process.env.MISTBOARD_JQE_ENABLED = '1';
+    const on = botLadderFor('jieqi')!;
+    assert.deepEqual(on.slice(-2), [JIEQI_ABJCHESS_ENGINE_ID, JIEQI_JQE_ENGINE_ID]);
+    assert.deepEqual(on.slice(0, -1), off);
+  } finally {
+    if (prior === undefined) delete process.env.MISTBOARD_JQE_ENABLED;
+    else process.env.MISTBOARD_JQE_ENABLED = prior;
+  }
 });

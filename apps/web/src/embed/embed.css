@@ -509,6 +509,9 @@ body.embed-body {
   flex: 1;
   max-height: none;
   gap: 1px;
+  /* Panning the score sheet, including at its ends, must not move the host
+     article and carry the board out of view. The page scrolls outside it. */
+  overscroll-behavior-y: contain;
 }
 
 /* A score sheet, the study's: number, then the two moves in fixed halves, so
@@ -537,6 +540,13 @@ body.embed-body {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--site-heading, inherit);
+  gap: 0;
+}
+
+.embed-card-moves .review-move-list__san {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
 }
 
 .embed-card-moves .review-move-list__move:hover {
@@ -1221,4 +1231,41 @@ body.embed-body {
 .embed-card .embed-board .raw-svg-stepper-frame-xq > .xq-article-svg[data-xq-layout="single"],
 .embed-card .embed-board .article-figure-xq > .xq-article-svg[data-xq-layout="single"] {
   width: 100%;
+}
+
+/* A banqi chapter's endgame table under the card (?tablebase=1,
+   embed-study-page.ts). ONE height whatever the position shows: the card fits
+   the board to the room left over (embed-card.ts belowCard), so a pane that
+   grew with its rows would shrink the board on every step. Rows past the box
+   scroll inside it. */
+.embed-tablebase {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  height: 240px;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  border-radius: 10px;
+  background: var(--site-panel, transparent);
+  overflow: hidden;
+}
+.embed-tablebase .bq-tablebase {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+/* One box, the card's: the panel's own border inside it read as cards within
+   cards. Above the panel's border rule (0,2,0) whatever the bundle order. */
+.embed-frame .embed-tablebase .bq-tablebase {
+  border: 0;
+  border-radius: 0;
+}
+/* The study page carries the footnote; here it would cost three rows. */
+.embed-tablebase .bq-tablebase__foot {
+  display: none;
+}
+@container embed-frame (min-width: 520px) {
+  .embed-tablebase .bq-tablebase__table {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 12px;
+  }
 }

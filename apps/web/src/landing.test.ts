@@ -202,7 +202,14 @@ describe('landing shell', () => {
     wrap.innerHTML = renderLandingShellForPrerender();
 
     const leftColumn = wrap.querySelector('.landing-left-column');
-    expect(leftColumn?.firstElementChild?.classList.contains('landing-viewer-column')).toBe(true);
+    // The phone-only TV strip (display: none above 600px) heads the rail; the
+    // viewer is the first thing tablet and desktop paint.
+    expect(leftColumn?.firstElementChild?.classList.contains('landing-tv-strip')).toBe(true);
+    expect(
+      leftColumn?.firstElementChild?.nextElementSibling?.classList.contains(
+        'landing-viewer-column',
+      ),
+    ).toBe(true);
     expect(leftColumn?.querySelector('.landing-event-banners')).toBeNull();
     // The event-banner slot (collapses via CSS when empty) is the play column's
     // last child, after the centred tagline/button/stats group, so it sits at
@@ -225,16 +232,11 @@ describe('landing shell', () => {
     expect(wrap.querySelector('.landing-forum-column .landing-forum')).not.toBeNull();
     // Top studies moved down to the bands-3/4 right rail; chat took its band-2 slot.
     expect(wrap.querySelector('.landing-studies-column .landing-study-widget')).not.toBeNull();
-    // One primary action, the unified Play button; the only other tile is the
-    // correspondence card (2026-10-03), which the prerendered shell carries in
-    // its offer state so the rail reserves its space before hydration.
+    // One action, the unified Play button (the 2026-10-03 correspondence card
+    // was removed 2026-10-20).
     const actions = wrap.querySelectorAll('.landing-play-column .landing-play-action');
-    expect(actions.length).toBe(2);
+    expect(actions.length).toBe(1);
     expect(actions[0]?.classList.contains('landing-play-action-primary')).toBe(true);
-    const card = wrap.querySelector('.landing-play-stack > .landing-corr-card');
-    expect(card).toBe(actions[1]);
-    expect(card?.getAttribute('data-state')).toBe('start');
-    expect(card?.previousElementSibling?.classList.contains('landing-activity')).toBe(true);
   });
 
   it('links only the About Mistboard tagline tail', () => {

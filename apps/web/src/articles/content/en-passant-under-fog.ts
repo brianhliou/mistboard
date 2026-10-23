@@ -22,6 +22,7 @@ export const enPassantUnderFogArticle: Article = {
   slug: 'en-passant-under-fog',
   kind: 'article',
   publisher: 'mistboard',
+  topic: 'engineering',
   title: 'An En Passant Bug Under Fog',
   // Homepage card only (the full title wraps at the 186px card budget).
   cardTitle: 'En Passant Under Fog',

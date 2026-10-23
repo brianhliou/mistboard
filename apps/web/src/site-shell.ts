@@ -1,20 +1,39 @@
 import './site-shell.css';
 import type { AccountPreferences } from './account-preferences.js';
-import { type I18nKey, t } from './i18n/catalog.js';
-import { currentLocale, type Locale, localizedHref, stripLocalePrefix } from './i18n/locale.js';
+import { t } from './i18n/catalog.js';
+import {
+  currentLocale,
+  LOCALE_META,
+  type Locale,
+  localizedHref,
+  stripLocalePrefix,
+} from './i18n/locale.js';
 import {
   adminNavItems,
   communityNavItems,
   donateNavItem,
+  footerNavItems,
   learnNavItems,
   type NavItem,
+  type NavSection,
   playNavItems,
   primaryNavItems,
+  siteMenuSections,
   toolsNavItems,
   watchNavItems,
 } from './nav-items.js';
 import { isLikelyAdmin, isLikelySignedIn } from './signed-in-state.js';
+import {
+  buildAppearanceMenuAt,
+  buildQuickPickerAt,
+  type QuickPickerKind,
+  readStoredXiangqiPieceSet,
+  setSiteThemePreference,
+  siteThemeChangedEvent,
+  xiangqiAppearanceChangedEvent,
+} from './theme.js';
 import { isBlockedForViewer } from './viewer-geo.js';
+import { type XiangqiPieceSet, xiangqiPieceTilePreview } from './xiangqi-piece-sets.js';
 
 export const GITHUB_URL = 'https://github.com/brianhliou/mistboard';
 
@@ -119,8 +138,8 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
 
   // The account slot (signed-out links, or the account menu once account-nav
   // mounts) sits in a container that placeNavAccount() can move: inside the
-  // utilities on desktop and phones, up on the bar beside the hamburger on
-  // tablets, so signing in never needs the drawer opened first.
+  // utilities on desktop, up on the bar beside the hamburger on tablets, and at
+  // the right edge of the bar on phones, so signing in never needs a menu.
   const account = document.createElement('div');
   account.className = 'site-nav-account';
   account.append(buildSignedOutAccountLinks(locale));
@@ -137,6 +156,11 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   toggle.setAttribute('aria-label', t('nav.menu', {}, locale));
   for (let i = 0; i < 3; i++) toggle.append(document.createElement('span'));
   toggle.addEventListener('click', () => {
+    // Phones open the full-screen site menu; tablets keep the drawer below.
+    if (isPhoneNav()) {
+      openSiteMenu(toggle, locale);
+      return;
+    }
     const open = nav.classList.toggle('nav-open');
     toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
@@ -147,7 +171,7 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
 
   ensureNavDismiss();
   ensureNavAutoHide();
-  nav.append(brand, toggle, collapse);
+  nav.append(brand, buildNavQuickControls(locale), toggle, collapse);
   placeNavAccount(nav);
   ensureNavAccountPlacement();
   observeNavBrandFit(nav);
@@ -213,15 +237,25 @@ function observeNavBrandFit(nav: HTMLElement): void {
   for (const el of [nav, links, utilities]) if (el) observer.observe(el);
 }
 
-// Tablets (601 to 939px) get the phone bar (hamburger, drawer) but have room
-// for the account slot beside the toggle; phones do not, and desktop shows the
-// utilities inline anyway. CSS cannot reparent, so the slot's container moves
+// Tablets (601 to 939px) get the hamburger and drawer but have room for the
+// account slot beside the toggle; phones (below) put it at the bar's right
+// edge, and desktop shows the utilities inline anyway. CSS cannot reparent, so the slot's container moves
 // on the media query. account-nav.ts finds the slot through the nav, not the
 // utilities, so it mounts wherever the container currently sits.
 export const navTabletMediaQuery = '(min-width: 601px) and (max-width: 939px)';
 
 function isTabletNav(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia(navTabletMediaQuery).matches;
+}
+
+// Phones (600px and under) get the one-row 52px bar: menu button, brand, then
+// the account slot (bell + account, or Sign in) at the right edge, and the
+// full-screen site menu instead of the drawer. The 600 edge pairs with the
+// tablet query above; site-shell.css keys the phone bar on the same width.
+export const navPhoneMediaQuery = '(max-width: 600px)';
+
+function isPhoneNav(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia(navPhoneMediaQuery).matches;
 }
 
 export function placeNavAccount(nav: HTMLElement): void {
@@ -231,6 +265,10 @@ export function placeNavAccount(nav: HTMLElement): void {
   if (!account || !toggle || !utilities) return;
   if (isTabletNav()) {
     if (account.nextElementSibling !== toggle) toggle.before(account);
+  } else if (isPhoneNav()) {
+    // Last on the bar, so it sits at the right edge; CSS moves the toggle to
+    // the left edge with `order`.
+    if (account.parentElement !== nav || account.nextElementSibling) nav.append(account);
   } else if (account.parentElement !== utilities) {
     utilities.prepend(account);
   }
@@ -242,9 +280,15 @@ let navAccountPlacementBound = false;
 function ensureNavAccountPlacement(): void {
   if (navAccountPlacementBound || typeof window.matchMedia !== 'function') return;
   navAccountPlacementBound = true;
-  window.matchMedia(navTabletMediaQuery).addEventListener('change', () => {
+  const place = () => {
     const nav = document.querySelector<HTMLElement>('.site-nav');
     if (nav) placeNavAccount(nav);
+  };
+  window.matchMedia(navTabletMediaQuery).addEventListener('change', place);
+  window.matchMedia(navPhoneMediaQuery).addEventListener('change', (event) => {
+    place();
+    // The site menu is a phone surface; widening past it closes the menu.
+    if (!event.matches) closeSiteMenu({ restoreFocus: false });
   });
 }
 
@@ -284,8 +328,10 @@ function ensureNavAutoHide(): void {
     if (!nav) return;
     const y = scrollY();
     nav.classList.toggle('scrolled', y > 0);
-    if (y > lastY + 10) nav.classList.add('hide');
-    else if (y <= clamp(lastY - 20, 0, maxScroll())) nav.classList.remove('hide');
+    if (y > lastY + 10) {
+      nav.classList.add('hide');
+      closeQuickPicker({ restoreFocus: false });
+    } else if (y <= clamp(lastY - 20, 0, maxScroll())) nav.classList.remove('hide');
     else return;
     lastY = Math.max(0, y);
   };
@@ -323,6 +369,183 @@ function ensureNavDismiss(): void {
         closeNavMenu(menu);
       }
     }
+  });
+}
+
+// Phone bar quick controls (#575): language, pieces and dark mode as three
+// icons between the brand and the account slot, in place of the chip row that
+// sat at the bottom of the site menu. Language and Pieces open their picker
+// straight away in a dropdown under the bar (the language list, the piece-set
+// tiles); dark mode toggles in place. Hidden above the phone breakpoint
+// (site-shell.css), where the bar has the gear and the account menu instead.
+function buildNavQuickControls(locale: Locale): HTMLElement {
+  const group = document.createElement('div');
+  group.className = 'site-nav-quick';
+
+  const quickButton = (key: string, label: string): HTMLButtonElement => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'site-nav-quick-button';
+    button.dataset.siteNavQuick = key;
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    return button;
+  };
+
+  const languageName = LOCALE_META[locale]?.displayName;
+  const language = quickButton(
+    'language',
+    languageName
+      ? `${t('nav.language', {}, locale)}: ${languageName}`
+      : t('nav.language', {}, locale),
+  );
+  language.innerHTML = QUICK_GLOBE_ICON;
+  language.setAttribute('aria-haspopup', 'dialog');
+  language.setAttribute('aria-expanded', 'false');
+  language.addEventListener('click', () => toggleQuickPicker(language, 'language', locale));
+
+  // The red general of the reader's own xiangqi set, the same mark the Pieces
+  // picker tiles draw, so the button previews the choice it opens.
+  const pieces = quickButton('pieces', t('nav.boardAndPieces', {}, locale));
+  const piece = document.createElement('span');
+  piece.className = 'site-nav-quick-piece';
+  piece.setAttribute('aria-hidden', 'true');
+  pieces.append(piece);
+  renderQuickPiece(piece);
+  pieces.setAttribute('aria-haspopup', 'dialog');
+  pieces.setAttribute('aria-expanded', 'false');
+  pieces.addEventListener('click', () => toggleQuickPicker(pieces, 'pieces', locale));
+
+  const dark = quickButton('dark', t('nav.darkMode', {}, locale));
+  dark.innerHTML = QUICK_MOON_ICON;
+  syncQuickDark(dark);
+  dark.addEventListener('click', () => {
+    const isDark = document.documentElement.dataset.effectiveTheme === 'dark';
+    setSiteThemePreference(isDark ? 'light' : 'dark');
+    syncQuickDark(dark);
+  });
+
+  group.append(language, pieces, dark);
+  ensureNavQuickSync();
+  return group;
+}
+
+// The quick picker dropdown: one at a time, a child of the bar so it rides
+// under it (full width on a phone), closed by an outside tap, Escape, a pick,
+// or the bar hiding on scroll.
+type OpenQuickPicker = {
+  panel: HTMLElement;
+  button: HTMLButtonElement;
+  teardown: () => void;
+};
+let openQuickPickerState: OpenQuickPicker | null = null;
+
+export function isQuickPickerOpen(): boolean {
+  return openQuickPickerState !== null;
+}
+
+function toggleQuickPicker(button: HTMLButtonElement, kind: QuickPickerKind, locale: Locale): void {
+  const wasThis = openQuickPickerState?.button === button;
+  closeQuickPicker({ restoreFocus: false });
+  if (wasThis) return;
+
+  const panel = document.createElement('div');
+  panel.className = 'site-nav-quick-panel';
+  panel.id = `site-nav-quick-panel-${kind}`;
+  panel.dataset.siteNavQuickPanel = kind;
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute(
+    'aria-label',
+    kind === 'language' ? t('nav.language', {}, locale) : t('nav.boardAndPieces', {}, locale),
+  );
+  (button.closest<HTMLElement>('.site-nav') ?? document.body).append(panel);
+  button.setAttribute('aria-expanded', 'true');
+  button.setAttribute('aria-controls', panel.id);
+
+  const onPointerDown = (event: Event) => {
+    const target = event.target as Node | null;
+    if (target && (panel.contains(target) || button.contains(target))) return;
+    closeQuickPicker({ restoreFocus: false });
+  };
+  const onKeydown = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    closeQuickPicker();
+  };
+  document.addEventListener('pointerdown', onPointerDown, true);
+  document.addEventListener('keydown', onKeydown);
+  openQuickPickerState = {
+    panel,
+    button,
+    teardown: () => {
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('keydown', onKeydown);
+    },
+  };
+
+  void buildQuickPickerAt(kind, { onPick: () => closeQuickPicker() })
+    .then((picker) => {
+      if (openQuickPickerState?.panel !== panel) return;
+      panel.append(picker);
+      // Pieces is the one picker with settings beside it (board, sound,
+      // notation, device theme); with the gear off the phone bar, this row is
+      // the way to them.
+      if (kind === 'pieces') panel.append(buildQuickMoreSettings(button, locale));
+      panel.querySelector<HTMLElement>('[aria-checked="true"], button')?.focus();
+    })
+    .catch((err) => console.warn('quick picker failed to load', err));
+}
+
+function buildQuickMoreSettings(button: HTMLButtonElement, locale: Locale): HTMLButtonElement {
+  const more = document.createElement('button');
+  more.type = 'button';
+  more.className = 'site-nav-quick-more';
+  more.textContent = t('account.settings', {}, locale);
+  more.addEventListener('click', () => {
+    closeQuickPicker({ restoreFocus: false });
+    openSiteMenu(button, locale, { view: 'root', includeLanguage: false });
+  });
+  return more;
+}
+
+export function closeQuickPicker({ restoreFocus = true }: { restoreFocus?: boolean } = {}): void {
+  const state = openQuickPickerState;
+  if (!state) return;
+  openQuickPickerState = null;
+  state.teardown();
+  state.panel.remove();
+  state.button.setAttribute('aria-expanded', 'false');
+  state.button.removeAttribute('aria-controls');
+  if (restoreFocus) state.button.focus();
+}
+
+function renderQuickPiece(slot: HTMLElement): void {
+  const set: XiangqiPieceSet = readStoredXiangqiPieceSet();
+  if (slot.dataset.pieceSet === set) return;
+  slot.dataset.pieceSet = set;
+  slot.innerHTML = xiangqiPieceTilePreview(set).markup;
+}
+
+function syncQuickDark(button: HTMLElement): void {
+  button.setAttribute(
+    'aria-pressed',
+    document.documentElement.dataset.effectiveTheme === 'dark' ? 'true' : 'false',
+  );
+}
+
+// Bound once for the document (route swaps rebuild the nav): a set picked in
+// the settings view, another tab, or an OS theme flip re-syncs every bar.
+let navQuickSyncBound = false;
+function ensureNavQuickSync(): void {
+  if (navQuickSyncBound || typeof window === 'undefined') return;
+  navQuickSyncBound = true;
+  window.addEventListener(xiangqiAppearanceChangedEvent, () => {
+    for (const slot of document.querySelectorAll<HTMLElement>('.site-nav-quick-piece'))
+      renderQuickPiece(slot);
+  });
+  window.addEventListener(siteThemeChangedEvent, () => {
+    for (const button of document.querySelectorAll<HTMLElement>('[data-site-nav-quick="dark"]'))
+      syncQuickDark(button);
   });
 }
 
@@ -474,6 +697,223 @@ function currentPath(): string {
   return window.location.pathname.replace(/\/+$/, '') || '/';
 }
 
+// ---------------------------------------------------------------------------
+// Phone site menu (#576). On phones the hamburger opens a full-screen panel in
+// place of the tablet drawer: every bar destination grouped into sections
+// (siteMenuSections, plus Admin for admins). Language and board and piece
+// settings open in the same panel from the bar's quick controls (#575), which
+// replaced the chip row this menu used to end with. The panel is built on open
+// and appended to <body>, not the nav: the bar's auto-hide translates the nav
+// off screen, which would carry a fixed child with it.
+
+type MenuLocaleSelectHandler = (locale: Locale) => void;
+let menuLocaleSelectHandler: MenuLocaleSelectHandler | null = null;
+
+// account-nav registers the signed-in handler that saves a language picked
+// here to the account (the account's locale otherwise wins on the next load).
+// A registration rather than an import, to keep site-shell free of account-nav.
+export function registerMenuLocaleSelectHandler(handler: MenuLocaleSelectHandler | null): void {
+  menuLocaleSelectHandler = handler;
+}
+
+interface OpenSiteMenuState {
+  panel: HTMLElement;
+  toggle: HTMLElement;
+  onKeydown: (event: KeyboardEvent) => void;
+}
+let openSiteMenuState: OpenSiteMenuState | null = null;
+
+const SVG_ATTRS =
+  'xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"';
+const CLOSE_ICON = `<svg ${SVG_ATTRS} width="24" height="24"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
+const QUICK_GLOBE_ICON = `<svg ${SVG_ATTRS} width="20" height="20"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>`;
+const QUICK_MOON_ICON = `<svg ${SVG_ATTRS} width="20" height="20"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>`;
+
+// A settings view to open the menu on (a drill-in key of the appearance menu,
+// or 'root' for its list), instead of the link sections.
+export type SiteMenuView = { view: string; includeLanguage: boolean };
+
+export function isSiteMenuOpen(): boolean {
+  return openSiteMenuState !== null;
+}
+
+export function openSiteMenu(
+  toggle: HTMLElement,
+  locale: Locale = currentLocale(),
+  initialView?: SiteMenuView,
+): void {
+  if (openSiteMenuState) {
+    closeSiteMenu();
+    return;
+  }
+  const { panel, showSettings } = buildSiteMenu(locale);
+  document.body.append(panel);
+  document.documentElement.classList.add('site-menu-open');
+  toggle.setAttribute('aria-expanded', 'true');
+  toggle.setAttribute('aria-controls', panel.id);
+  const onKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeSiteMenu();
+    } else if (event.key === 'Tab') {
+      trapSiteMenuFocus(panel, event);
+    }
+  };
+  document.addEventListener('keydown', onKeydown);
+  openSiteMenuState = { panel, toggle, onKeydown };
+  panel.querySelector<HTMLElement>('.site-menu-close')?.focus();
+  if (initialView) showSettings(initialView.view, initialView.includeLanguage);
+}
+
+export function closeSiteMenu({ restoreFocus = true }: { restoreFocus?: boolean } = {}): void {
+  const state = openSiteMenuState;
+  if (!state) return;
+  openSiteMenuState = null;
+  document.removeEventListener('keydown', state.onKeydown);
+  state.panel.remove();
+  document.documentElement.classList.remove('site-menu-open');
+  state.toggle.setAttribute('aria-expanded', 'false');
+  if (restoreFocus) state.toggle.focus();
+}
+
+function trapSiteMenuFocus(panel: HTMLElement, event: KeyboardEvent): void {
+  const focusable = [
+    ...panel.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), select, [tabindex]:not([tabindex="-1"])',
+    ),
+  ].filter((el) => !el.closest('[hidden]'));
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (!first || !last) return;
+  const active = document.activeElement;
+  if (event.shiftKey && (active === first || !panel.contains(active))) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && (active === last || !panel.contains(active))) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function buildSiteMenu(locale: Locale): {
+  panel: HTMLElement;
+  showSettings: (view: string, includeLanguage: boolean) => void;
+} {
+  const panel = document.createElement('div');
+  panel.className = 'site-menu';
+  panel.id = 'site-menu';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-modal', 'true');
+  panel.setAttribute('aria-label', t('nav.menu', {}, locale));
+
+  const bar = document.createElement('div');
+  bar.className = 'site-menu-bar';
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'site-menu-close';
+  close.setAttribute('aria-label', t('nav.closeMenu', {}, locale));
+  close.innerHTML = CLOSE_ICON;
+  close.addEventListener('click', () => closeSiteMenu());
+  const brand = document.createElement('a');
+  brand.className = 'site-menu-brand';
+  brand.href = '/';
+  const logo = document.createElement('img');
+  logo.src = '/logo-mark.png';
+  logo.alt = '';
+  logo.width = 28;
+  logo.height = 28;
+  const name = document.createElement('span');
+  name.textContent = 'Mistboard';
+  brand.append(logo, name);
+  bar.append(close, brand);
+
+  const body = document.createElement('div');
+  body.className = 'site-menu-body';
+  const sectionsView = document.createElement('div');
+  sectionsView.className = 'site-menu-sections';
+  const sections: NavSection[] = siteMenuSections({ admin: isLikelyAdmin() });
+  const path = currentPath();
+  for (const section of sections) {
+    const items = section.items.filter((item) => !isBlockedForViewer(item.blockedIn));
+    if (items.length === 0) continue;
+    const group = document.createElement('section');
+    group.className = 'site-menu-section';
+    const heading = document.createElement('h2');
+    heading.className = 'site-menu-heading';
+    heading.textContent = t(section.labelKey, {}, locale);
+    group.append(heading);
+    for (const item of items) group.append(siteMenuLink(item, locale, path));
+    sectionsView.append(group);
+  }
+
+  const settingsView = document.createElement('div');
+  settingsView.className = 'site-menu-settings';
+  settingsView.hidden = true;
+
+  body.append(sectionsView, settingsView);
+  // Following a link leaves the page; close first so a back-forward cache
+  // restore never shows the menu still open.
+  body.addEventListener('click', (event) => {
+    if ((event.target as Element | null)?.closest?.('.site-menu-section a[href]')) {
+      closeSiteMenu({ restoreFocus: false });
+    }
+  });
+
+  const showSettings = (view: string, includeLanguage: boolean) => {
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'site-menu-back';
+    back.textContent = `‹ ${t('nav.menu', {}, locale)}`;
+    back.addEventListener('click', () => {
+      settingsView.hidden = true;
+      settingsView.replaceChildren();
+      sectionsView.hidden = false;
+    });
+    settingsView.replaceChildren(back);
+    sectionsView.hidden = true;
+    settingsView.hidden = false;
+    back.focus();
+    void buildAppearanceMenuAt(view, {
+      includeLanguage,
+      onLocaleSelect: (next) => menuLocaleSelectHandler?.(next),
+    })
+      .then((menu) => {
+        if (!settingsView.hidden && back.isConnected) settingsView.append(menu);
+      })
+      .catch((err) => console.warn('site menu settings failed to load', err));
+  };
+
+  panel.append(bar, body);
+  return { panel, showSettings };
+}
+
+function siteMenuLink(item: NavItem, locale: Locale, path: string): HTMLAnchorElement {
+  const link = document.createElement('a');
+  link.className = 'site-menu-link';
+  link.href = item.external ? item.href : localizedHref(item.href, locale);
+  const label = document.createElement('span');
+  label.textContent = t(item.labelKey, {}, locale);
+  link.append(label);
+  if (item.external) {
+    link.target = '_blank';
+    link.rel = 'noreferrer noopener';
+    return link;
+  }
+  if (item.signedInOnly) {
+    link.dataset.signedInOnly = '';
+    link.hidden = !isLikelySignedIn();
+  }
+  if (pathMatchesNavItem(path, item.href)) {
+    link.classList.add('active');
+    link.setAttribute('aria-current', 'page');
+    const dot = document.createElement('span');
+    dot.className = 'site-menu-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    link.append(dot);
+  }
+  return link;
+}
+
 export function buildLoadingState(label: string): HTMLElement {
   const section = document.createElement('main');
   section.className = 'site-loading';
@@ -507,37 +947,15 @@ export function buildNotice(titleText: string, bodyText: string): HTMLElement {
 // and the register form independently surfaces Terms + Privacy so signup still
 // has an assent surface. One quiet row, deliberately NOT a lichess-style grouped
 // fat footer: with our route count the columns read busier than the site is
-// (Brian, 2026-06-10).
-//
-// Every entry is an on-site page. `external`/`blockedIn` stay wired for the next
-// off-site link: the Discord invite was the last one to use them, until it came
-// out of the footer on 2026-08-31 (see nav-items.ts).
-const HOME_FOOTER_LINKS: ReadonlyArray<{
-  href: string;
-  labelKey: I18nKey;
-  external?: boolean;
-  blockedIn?: readonly string[];
-}> = [
-  { href: '/about', labelKey: 'footer.about' },
-  { href: '/stats', labelKey: 'footer.stats' },
-  { href: '/feed', labelKey: 'footer.news' },
-  { href: '/faq', labelKey: 'footer.faq' },
-  { href: '/patron', labelKey: 'footer.patron' },
-  { href: '/contact', labelKey: 'footer.contact' },
-  { href: '/source', labelKey: 'footer.source' },
-  { href: '/developers', labelKey: 'footer.developers' },
-  { href: '/data', labelKey: 'footer.data' },
-  { href: '/terms', labelKey: 'footer.terms' },
-  { href: '/privacy', labelKey: 'footer.privacy' },
-];
-
+// (Brian, 2026-06-10). Four links since 2026-10-17, the same on every width:
+// footerNavItems (nav-items.ts).
 export function buildHomeFooter(locale: Locale = currentLocale()): HTMLElement {
   const footer = document.createElement('footer');
   footer.className = 'landing-footer';
 
   const links = document.createElement('div');
   links.className = 'landing-footer-links';
-  for (const link of HOME_FOOTER_LINKS) {
+  for (const link of footerNavItems()) {
     if (isBlockedForViewer(link.blockedIn)) continue;
     const anchor = document.createElement('a');
     anchor.href = link.external ? link.href : localizedHref(link.href, locale);

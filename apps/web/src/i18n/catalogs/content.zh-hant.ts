@@ -51,6 +51,7 @@ export const ZH_HANT_CONTENT = {
   'articles.latest': '最新動態',
   'articles.deepDives': '象棋深度文章',
   'articles.topicAll': '全部',
+  'articles.topicEngineering': '技術',
   'articles.topicsLabel': '主題',
   'articles.read': '閱讀',
   'articles.intro': '原創策略遊戲的文章、規則說明與引擎工作。',
@@ -71,6 +72,8 @@ export const ZH_HANT_CONTENT = {
   'articles.playThisGame': '下{game}',
   'articles.playVsComputer': '和電腦對弈',
   'articles.playAFriend': '和朋友對弈',
+  'articles.playtestOnly': '這個遊戲目前在測試中，暫時只開放給受邀玩家。',
+  'articles.playtestAsk': '到論壇申請參加',
   'articles.notFoundTitle': '找不到文章',
   'articles.notFoundBody': '這篇文章還不存在。',
   'rules.heading': '規則',
@@ -121,28 +124,36 @@ export const ZH_HANT_CONTENT = {
   'contact.dailyLimit': '已達每日限制。登入後可不限次數回覆，或明天再試。',
   'contact.sendFailed': '送出失敗。請重試，如果一直失敗可以改用信箱。',
   'contact.networkError': '網路錯誤。請重試。',
+  'contact.rightsPrefix':
+    '你出現在這個頁面上，或者你是這項賽事的主辦方、擁有其中對局的權利？如果想修改或刪除這裡的任何內容，請',
+  'contact.rightsLink': '聯絡我們',
+  'contact.rightsSuffix': '，我們會處理。',
+  'contact.aboutPage': '相關頁面：{path}',
   'about.heading': '關於 Mistboard',
   'about.lede':
-    'Mistboard 是一個免費開源的象棋對弈與研究平台，讀中文和不讀中文的棋手坐在同一張棋盤前；這裡也是我們打造的原創策略遊戲的家。',
-  'about.whyHeading': '為什麼做這個網站',
+    'Mistboard 是免費、開源的象棋對弈與學習網站，也提供我們設計的原創策略遊戲。看得懂中文與看不懂中文的玩家，都能在同一張棋盤上對弈。',
+  'about.whyHeading': '讓象棋走上世界舞台',
   'about.whyBody':
-    '這裡說的象棋，包括象棋本身及其傳統近親：揭棋和暗棋。下這些棋的人大多讀中文，關於它們的文字也大多是中文。Mistboard 是一張兩邊都能坐下的棋盤：網站有英文、簡體和繁體三種版本，對局、題目和大廳都是同一個，台北的玩家和多倫多的玩家坐在同一張棋桌前。對說英語的玩家來說，棋子以圖示顯示，在看懂車或砲之前就能辨認；規則和文章直接以英文撰寫，而非翻譯而來；入門課程把每個棋子與它相似的西洋棋棋子對照講解。基礎之外：引擎、從真實對局挖掘的戰術題、分析棋盤、對局資料庫和賽事直播。',
-  'about.darkChessHeading': 'Mistboard 在做什麼',
+    '這裡的中國棋類包括象棋及其近親揭棋和暗棋。Mistboard 支援英文、簡體中文和繁體中文，讓上海的玩家與多倫多的玩家可以坐在同一張棋盤前。棋子可以顯示為容易辨認的圖示，不認識「車」或「砲」也能下棋，入門課程則從第一步開始教。我們的使命是透過象棋與原創策略遊戲，連結不同文化背景的人。',
+  'about.darkChessHeading': '從熟悉的棋盤創造新遊戲',
   'about.darkChessBody':
-    '在傳統棋類旁邊，是我們自己設計的遊戲。鴨子象棋在棋盤上加入一隻不屬於任何一方的鴨子。迷霧象棋隱藏你的棋子無法到達的所有點位。瘋狂屋象棋把被吃的棋子交到吃子一方手裡，可以再打入棋盤，士和象則從開局就在手中。每個遊戲都從人們熟悉的棋盤出發，改動盡量少，並配有清晰的規則頁面和伺服器執行的對局。更多遊戲正在設計中。鬥獸棋、翻翻棋和迷霧國際象棋也已上線。',
-  'about.playStudyHeading': '對弈與研究',
+    '鴨子象棋在棋盤上放入一隻不屬於任何一方的鴨子。迷霧象棋隱藏你的棋子無法到達的格點。瘋狂屋象棋讓你把吃到的棋子重新放回棋盤。這些遊戲都從熟悉的規則出發，改變玩家需要做的決策。每一種都有清楚的規則，由伺服器執行。我們也希望其他創作者將來能在這裡與玩家一起開發、測試自己的遊戲。',
+  'about.playStudyHeading': '對弈、研究與教學',
   'about.playStudyBody':
-    '透過連結開始對局，加入大廳，或在支援的遊戲中對戰引擎。對局結束後，可以從任一玩家視角復盤，也可以在規則允許時查看完整棋盤。規則和文章會介紹怎麼玩，也會解釋這些變體為什麼成立。',
-  'about.trustHeading': '以設計建立信任',
+    '用連結邀請朋友對弈，在大廳尋找對手，或挑戰電腦。練習從真實對局中擷取的戰術題，逐步研究一盤比賽，或在結束後複盤自己的對局。課程、研習和賽事直播，讓玩家能夠互相學習，也把自己的經驗教給別人。',
+  'about.trustHeading': '與玩家共建，規則可供檢驗',
   'about.trustBody':
-    '在迷霧對局中，你的瀏覽器根本收不到你看不見的棋子，所以頁面裡沒有藏著任何可以挖出來的東西。進行中的迷霧對局不能觀戰。揭棋和暗棋的觀眾看到的是棋盤的實際樣子，暗子仍然背面朝上。對局結束後，所有棋盤都會完整開放復盤。',
-  'about.enginesHeading': '引擎與認真對弈',
+    '我們的標準是棋盤回應即時、下一步操作清楚。我們在開發中使用 AI，迅速處理問題和玩家建議。規則公開，任何人都可以檢查；公平對弈由伺服器執行：在迷霧遊戲中，瀏覽器根本不會收到你看不見的棋子。電腦對手也只能取得同一位置上的人類玩家有權知道的資訊。',
+  'about.enginesHeading': '打造下一個挑戰者',
   'about.enginesBody':
-    'Mistboard 為各個變體運行引擎，沒有現成引擎的就自己開發，比如迷霧國際象棋的 Misty。在隱藏棋子的對局中，引擎看到的和坐在同一位置的人類玩家一樣，不多一分。',
-  'about.openSourceHeading': '開源基礎',
+    '引擎作者可以在 Mistboard 的公開比賽中爭奪冠軍頭銜。我們希望把它發展為一個競技場，讓任何人都能帶來自己的引擎，在清楚的規則下比賽，對局和結果可供他人檢查。更長遠地，我們希望為新創造的策略遊戲舉辦比賽，讓人類和 AI 智能體為從未玩過的遊戲開發新的方法。',
+  'about.communityHeading': '俱樂部、比賽與文化交流',
+  'about.communityBody':
+    '我們希望建立華盛頓州象棋俱樂部，舉辦線下比賽，讓大家能在 Mistboard 上觀看和研究這些對局。在此基礎上，我們希望與中國及其他地方的俱樂部、教師、體育和文化機構合作，開展交流與國際賽事。',
+  'about.openSourceHeading': '免費且開源',
   'about.openSourcePrefix': 'Mistboard 以 AGPL-3.0-or-later 發布在 ',
   'about.openSourceMiddle':
-    '。任何人都可以閱讀規則程式碼、決定每位玩家能看到什麼的程式碼，以及網站的其餘部分。歡迎回報 bug、提交修正和文章草稿。授權與第三方鳴謝見 ',
+    '。你可以查看遊戲如何運作、貢獻改進，也可以基於程式碼繼續開發。玩家、教師和引擎作者都能參與塑造 Mistboard 的未來。授權與第三方鳴謝見 ',
   'about.openSourceSuffix': '。',
   'stats.heading': '統計',
   'stats.lede':
@@ -174,7 +185,9 @@ export const ZH_HANT_CONTENT = {
   'source.chessops': 'chessops：國際象棋規則基礎元件，GPL-3.0-or-later。',
   'source.stockfish': 'Stockfish：研究和引擎 worker 流程的可選引擎/執行時依賴，GPL 系列。',
   'source.abJchess':
-    'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）：本站最強的揭棋機器人，GPL-3.0；其神經網路經作者許可使用。',
+    'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）：揭棋引擎，GPL-3.0；其神經網路經作者許可使用。',
+  'source.jqe':
+    "jqe，作者 Devin O'Keefe：本站最強的揭棋機器人，自帶神經網路，MIT；經作者許可在本站使用。",
   'source.katagomo':
     'KataGomo，作者 hzyhhzy：鬥獸棋版 KataGo（AnimalChess2025 分支），本站最強的鬥獸棋機器人，MIT；經作者許可使用。',
   'source.katago': 'KataGo，作者 lightvector：KataGomo 所基於的引擎，MIT。',
@@ -196,6 +209,15 @@ export const ZH_HANT_CONTENT = {
     '皮卡魚（Pikafish），作者皮卡魚開發團隊：本站象棋最高等級的皮卡魚機器人，也是象棋對局、研習和直播分析以及瀏覽器內分析棋盤所用的引擎，GPL-3.0。其神經網路權重另有授權協議。',
   'source.pikafishSite': 'pikafish.com',
   'source.pikafishWeightsLicense': '權重協議',
+  'source.fairyStockfish':
+    'Fairy-Stockfish，作者 Fabian Fichter 及貢獻者：皮卡魚以下的各級象棋機器人和鴨子象棋機器人，GPL-3.0。',
+  'source.pikafishJieqi': '皮卡魚的揭棋分支，含 Mistboard 的修補：揭棋機器人和揭棋分析，GPL-3.0。',
+  'source.chessPieceSets':
+    '國際象棋棋子取自 lichess：Cburnett，作者 Colin M.L. Burnett；Merida，作者 Armando Hernandez Marroquin，GPL-2.0-or-later；Chessnut，作者 Alexis Luengas，Apache 2.0；Fantasy，作者 Maurizio Monge，MIT；Letter，作者 usolando，AGPL-3.0。',
+  'source.sounds':
+    '音效：Futuristic、NES、Piano 和 SFX 音效取自 lichess，作者 Enigmahack，AGPL-3.0；Wood 音效作者 el_boss，終局音效作者 Kenney，鴨子象棋的鴨叫作者 D4XX，皆為 CC0。',
+  'source.fonts':
+    '字型：Noto Sans 和 Noto Sans CJK，SIL Open Font License 1.1；Roboto，Apache 2.0。',
   'source.projectIdentity': '專案身份',
   'source.identityAssets':
     'Mistboard 名稱、標誌、mistboard.com 網域、託管服務身份和官方活動都是受控專案資產。',
@@ -354,7 +376,7 @@ export const ZH_HANT_CONTENT = {
   'developers.heading': '開發者',
   'apiDocs.heading': 'API 文件',
   'contribute.intro':
-    'Mistboard 是免費開源的，公開開發。要做的事還有很多，無論你寫不寫程式，都有很多種幫忙的方式。',
+    '一起為象棋和原創策略遊戲創造未來。Mistboard 免費且開源，玩家、教師、遊戲創作者和引擎作者都可以參與。從一件你在意、想改進的事開始。',
   'contribute.playHeading': '下棋並給出回饋',
   'contribute.playBody':
     '眼下你能做的最有用的事，就是下棋，然後告訴我們哪裡壞了、哪裡彆扭。真實對局暴露規則漏洞、含糊之處和缺失功能的速度，比任何其他方式都快。我們設計的新遊戲也需要試玩。',
@@ -383,7 +405,7 @@ export const ZH_HANT_CONTENT = {
   'contribute.crossLinkOr': '或',
   'creators.heading': '與我們合作',
   'creators.intro':
-    'Mistboard 是一個免費、開源、無廣告的網站，提供象棋和原創策略遊戲，支援中文和英文。我們希望與願意把這項棋類帶給更多人的棋手、內容創作者和主辦方合作。',
+    '一起把象棋帶上世界舞台。Mistboard 將對弈和研究與賽事直播、原創遊戲和引擎挑戰賽連結起來。我們希望跨越語言，在線上和線下與棋手、教師、創作者及主辦方合作。網站免費、開源、無廣告。',
   'creators.playersHeading': '有等級稱號的棋手和教練',
   'creators.playersPrefix': '經過認證的稱號徽章，以及一個',
   'creators.playersCoachLink': '教練頁面',
@@ -427,18 +449,24 @@ export const ZH_HANT_CONTENT = {
   'creators.crossLinkSuffix': '。',
   'champions.heading': '引擎冠軍',
   'champions.intro':
-    '每個遊戲都有一位現任冠軍引擎。它就是你在網站上對弈的機器人，並署上作者的名字。任何引擎都可以在公開對抗賽中挑戰冠軍頭銜。',
+    '每個遊戲都有一位現任冠軍引擎：網站上最強的機器人，並署上作者的名字。它下面還有更容易的機器人和級別。任何引擎都可以在公開對抗賽中挑戰冠軍頭銜。我們也希望託管更多引擎供你對弈，而不只是冠軍；想提供引擎，請按下面的提交步驟。',
   'champions.aboutJieqi':
     '作者 Huorongrong 和 Laoxu（Kouza）：帶有自己神經網路的 Pikafish 分叉。在本站每步 4 秒，4 執行緒。',
-  'champions.aboutJunglePrefix':
-    '作者 hzyhhzy，網路來自 Kouza：自我對弈訓練的神經網路。在本站每步 150 次訪問；',
-  'champions.aboutJungleSuffix': '（每步 500 萬節點）是它下面較容易的機器人。',
+  'champions.aboutJungle':
+    '作者 hzyhhzy，網路來自 Kouza：自我對弈訓練的神經網路。在本站每步 150 次訪問。',
+  'champions.sourceLink': '原始碼',
+  'champions.aboutJqe':
+    "作者 Devin O'Keefe：開源引擎，帶有自己的神經網路，透過自我對弈訓練。在本站每步 4 秒，4 執行緒。",
+  'champions.tookJqe': '2026-10-21 從 AB-JChess 0.2d 手中奪得頭銜，共 300 局，得分率 60%。',
+  'champions.historyJqe':
+    "2026-10-21，揭棋：Devin O'Keefe 的 jqe 從 AB-JChess 0.2d 手中奪得頭銜，300 局 171-114-15，得分率 60%",
+  'champions.lineEnd': '。',
   'champions.championBadge': '冠軍',
   'champions.statWins': '勝',
   'champions.statDraws': '和',
   'champions.statLosses': '負',
   'champions.barLabel': '{wins} 勝，{draws} 和，{losses} 負',
-  'champions.tookJieqi': '2026-09-30 從皮卡魚第 8 級手中奪得頭銜，共 400 局，得分 0.64。',
+  'champions.tookJieqi': '2026-09-30 從皮卡魚第 8 級手中奪得頭銜，共 400 局，得分率 64%。',
   'champions.tookJungle':
     '2026-09-22 從 MistyJungle 手中奪得頭銜，共 200 局，每步 1,000 次訪問，一局未負。',
   'champions.readMatch': '閱讀比賽報導',
@@ -446,7 +474,7 @@ export const ZH_HANT_CONTENT = {
   'champions.playChampion': '與冠軍對弈',
   'champions.openHeading': '待爭頭銜',
   'champions.openIntro':
-    '其他所有有機器人的遊戲。你對弈的機器人持有頭銜，直到有挑戰者在對抗賽中擊敗它；目前還沒有挑戰者下過頭銜賽。',
+    '其他所有有機器人的遊戲。網站上最強的機器人持有頭銜，直到有挑戰者在對抗賽中擊敗它；目前還沒有挑戰者下過頭銜賽。',
   'champions.heldBy': '持有者',
   'champions.openBadge': '頭銜待爭',
   'champions.challengeCta': '挑戰此頭銜',
@@ -459,13 +487,13 @@ export const ZH_HANT_CONTENT = {
   'champions.parenClose': '）。',
   'champions.historyHeading': '頭銜歷史',
   'champions.historyJieqi':
-    '2026-09-30，揭棋：Huorongrong 和 Laoxu（Kouza）的 AB-JChess 從皮卡魚第 8 級手中奪得頭銜，400 局 248-136-16，得分 0.64',
+    '2026-09-30，揭棋：Huorongrong 和 Laoxu（Kouza）的 AB-JChess 從皮卡魚第 8 級手中奪得頭銜，400 局 248-136-16，得分率 64%',
   'champions.historyJungle':
     '2026-09-22，鬥獸棋：hzyhhzy 的 KataGo-AnimalChess（網路來自 Kouza）從 MistyJungle 手中奪得頭銜，每步 1,000 次訪問，200 局 82 勝 0 負 118 和',
   'champions.challengeHeading': '挑戰頭銜',
   'champions.ruleMatch':
     '與冠軍對弈 200 局，每種顏色各 100 局，雙方都使用冠軍每步的時間或節點預算，在同一台機器上進行，公開隨機種子。對抗賽可以延長到 200 局以上。',
-  'champions.ruleScore': '得分達到 0.55 或更高（約 +35 Elo）即奪得頭銜。',
+  'champions.ruleScore': '得分率達到 55% 或更高（約 +35 Elo）即奪得頭銜。',
   'champions.ruleRun': '我們會在收到提交後兩週內進行對抗賽，無論結果如何都會公布。',
   'champions.ruleSubmitPrefix':
     '提交方式：把 Linux x86-64 二進位檔或權重檔、準確的命令列，以及你自己的對抗賽記錄，透過',
@@ -475,15 +503,60 @@ export const ZH_HANT_CONTENT = {
   'champions.ruleSubmitSuffix': '發給我們。',
   'thanks.heading': '致謝',
   'thanks.intro':
-    'Mistboard 站在許多人和專案的開源工作之上，也站在每一位下棋、回報問題、幫它變得更好的人之上。',
-  'thanks.playersHeading': '玩家與貢獻者',
+    'Mistboard 的很多部分建立在別人的工作之上：你對弈的引擎、其他網站允許我們展示的棋譜和照片，以及告訴我們哪裡出了問題的玩家。這一頁按名字感謝他們。',
+  'thanks.enginesHeading': '你對弈的引擎',
+  'thanks.pikafishAuthors': '皮卡魚開發團隊',
+  'thanks.pikafishBody':
+    '本站最強的象棋機器人，也是全站象棋分析所用的引擎。它的揭棋分支驅動揭棋機器人和揭棋分析。',
+  'thanks.fairyStockfishAuthors': 'Fabian Fichter 和 Fairy-Stockfish 的貢獻者',
+  'thanks.fairyStockfishBody': '下皮卡魚以下的各級象棋機器人和鴨子象棋機器人。',
+  'thanks.abJchessAuthors': 'Huorongrong 和 Laoxu',
+  'thanks.abJchessBody': '本站最強的揭棋機器人。作者允許我們使用它的神經網路。',
+  'thanks.katagomoAuthor': 'KataGomo，作者 hzyhhzy',
+  'thanks.katagoAuthor': 'KataGo，作者 lightvector',
+  'thanks.dandelionAuthor': 'Dandelion 4 神經網路，作者 Kouza',
+  'thanks.katagoBody':
+    '本站最強的鬥獸棋機器人：hzyhhzy 的鬥獸棋版 KataGo，使用 Dandelion 4 神經網路，經作者許可在本站執行。',
+  'thanks.communityBotBy': '來自社群開發者的機器人。',
+  'thanks.statGames': 'Mistboard 上的對局',
+  'thanks.statRating': '{variant}等級分',
+  'thanks.statUnrated': '尚無等級分',
+  'thanks.enginesAskPrefix':
+    '如果你為我們的某個棋種寫過引擎，我們可以把它作為機器人在這裡執行，署上你的名字，並有它自己的頁面。',
+  'thanks.enginesAskLink': '聯絡我們',
+  'thanks.enginesAskSuffix': '。',
+  'thanks.sourcesHeading': '棋譜、資料和照片',
+  'thanks.dpxqName': 'dpxq.com',
+  'thanks.dpxqBody': '我們直播中的賽事對局和研習中的古譜。站長還發現了一輪我們漏掉的比賽。',
+  'thanks.xiangqiqipuName': 'xiangqiqipu.com',
+  'thanks.xiangqiqipuBody': '我們棋手頁面上的 75 張照片，經站長許可使用。',
+  'thanks.pressName': '攝影師和新聞機構',
+  'thanks.pressBody': '其餘的棋手照片，每張都在對應棋手的頁面上註明出處。',
+  'thanks.elephantChessName': 'ElephantChess',
+  'thanks.elephantChessBody': '我們題目所挖掘的業餘對局，他們以每月公開資料集的形式發布。',
+  'thanks.chessdbName': 'chessdb.cn',
+  'thanks.chessdbBody': '象棋雲庫為象棋分析棋盤和練習提供殘局的精確結果。',
+  'thanks.jimPngName': 'Jim Png',
+  'thanks.jimPngBody': '我們給象棋開局起的英文名稱，參照他的網站 xqinenglish.com 上的術語表。',
+  'thanks.playersHeading': '玩家與回饋',
   'thanks.playersBody':
-    '感謝每一位下過一局棋、回報過一個問題、提過一個想法、支持過這個專案的人。你們每做一次，Mistboard 就更鋒利一分。',
-  'thanks.openSourceHeading': '開源專案',
-  'thanks.openSourcePrefix': 'Mistboard 建立在開源的函式庫和工具之上。',
+    '感謝早期來這裡下棋的人，那時還沒什麼可玩的；也感謝每一位回報問題並促成修復的人。',
+  'thanks.playersAskPrefix': '如果你回報的問題已經修復，但這裡沒有你的名字，或者你希望把名字撤下，',
+  'thanks.playersAskLink': '請告訴我們',
+  'thanks.playersAskSuffix': '。',
+  'thanks.lichessHeading': 'Lichess',
+  'thanks.lichessLead':
+    'Mistboard 是把 lichess 的設計用在象棋及其變體上。每當我們不知道某樣東西該怎麼做，就去看 lichess 是怎麼做的，大多數時候我們做的是同樣的東西。',
+  'thanks.lichessTook':
+    '我們從 lichess 學來了大廳和使用 Glicko-2 的計分對局、對局室的版面、直播和職業棋手頁面、殺棋題的規則、更新日誌和這個頁面，以及我們國際象棋棋盤底下的棋盤程式碼。',
+  'thanks.lichessCloseLink': 'Lichess',
+  'thanks.lichessCloseMiddle':
+    ' 免費、沒有廣告、開源，由非營利組織靠玩家捐款營運。感謝創辦它的 Thibault Duplessis，也感謝',
+  'thanks.lichessCloseBuildersLink': '每一位參與建設它的人',
+  'thanks.lichessCloseSuffix': '。',
+  'thanks.openSourcePrefix': '以上所有內容以及本站所用的函式庫的授權條款，都列在',
   'thanks.openSourceLink': '原始碼',
-  'thanks.openSourceSuffix': '頁面列出了 Mistboard 依賴的專案及其授權條款。',
-  'thanks.stubNote': '這個頁面今後會擴展成一份更完整的致謝名單。',
+  'thanks.openSourceSuffix': '頁面上。',
   'data.colMonth': '月份',
   'data.colGames': '對局',
   'data.colDownload': '下載',

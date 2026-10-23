@@ -232,6 +232,32 @@
   visibility: hidden;
 }
 
+/* Touch floor (#576) without moving the row (#573 owns its design): the drawn
+   box stays 20-22 x 24px, a transparent border (8px top and bottom, 10px at the
+   sides) makes the target at least 40px square, a negative margin hands the
+   space back, and the rim moves to an inset shadow, which paints inside the
+   padding box. The radius is elliptical so the drawn corner stays 4px. */
+@media (pointer: coarse) {
+  .pp-step-btn {
+    box-sizing: content-box;
+    margin: -8px -10px;
+    border-width: 8px 10px;
+    border-style: solid;
+    border-color: transparent;
+    border-radius: 14px / 12px;
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px var(--site-border-soft);
+  }
+
+  .pp-step-btn:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 1px var(--site-accent);
+  }
+
+  .pp-tab {
+    min-height: 40px;
+  }
+}
+
 .pp-step-value {
   display: flex;
   flex: 1;
@@ -304,6 +330,14 @@
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
+}
+
+/* Touch floor (#576); after the base rule so it wins. The act cell spans both
+   lines of the row, so the taller button does not grow the row. */
+@media (pointer: coarse) {
+  .pp-act {
+    height: 40px;
+  }
 }
 
 .pp-row:hover .pp-act,

@@ -88,7 +88,7 @@ export function renderBanqiMaterial<V extends BanqiMaterialView>(
     // game's tally is a record of what stayed hidden, so it carries none.
     finished
       ? { caption: t('live.faceDownAtEnd') }
-      : view.status.type === 'playing'
+      : view.status.type === 'playing' && odds.total > 0
         ? { caption: t('live.revealOdds.couldBe', { count: odds.total }), odds }
         : {},
   );

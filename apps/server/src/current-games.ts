@@ -233,8 +233,15 @@ function gameFromChessRoom(
       handle: null,
       botId: null,
       isEngine,
-      name: token?.userDisplayName ?? token?.userHandle ?? (isEngine ? clientId : null),
-      ...liveSeatProfileIdentity(isEngine ? clientId : null, token?.userHandle ?? null),
+      name:
+        token?.userDisplayName ??
+        token?.userHandle ??
+        (isEngine ? liveSeatEngineName(clientId, room.pveBotId, () => clientId) : null),
+      ...liveSeatProfileIdentity(
+        isEngine ? clientId : null,
+        token?.userHandle ?? null,
+        room.pveBotId,
+      ),
     });
   }
   return finishGame({

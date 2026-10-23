@@ -31,8 +31,14 @@ export interface EnginePanel {
   /** Push the current position. Without `initialFen` the moves replay from the
    *  standard start position; pass `initialFen` to analyse a mid-game base
    *  position (e.g. a puzzle) with `movesUci` applied on top. `searchable`
-   *  is false for a terminal position whose engine has no move to search. */
-  setPosition(movesUci: string[], initialFen?: string, searchable?: boolean): void;
+   *  is false for a terminal position whose engine has no move to search.
+   *  `noProgressLimit` is the game's no-progress draw limit, for engines that score it. */
+  setPosition(
+    movesUci: string[],
+    initialFen?: string,
+    searchable?: boolean,
+    noProgressLimit?: number,
+  ): void;
   /** Drive the arrow toggle from outside the popover (the `a` shortcut), keeping
    *  the checkbox in sync. Fires onShowArrowsChange like a click would. */
   setShowArrows(next: boolean): void;
@@ -40,7 +46,8 @@ export interface EnginePanel {
    *  search to grade a try). Fires onToggle like a click would; a no-op when
    *  the engine is unsupported in this browser or already in that state. */
   setOn(next: boolean): void;
-  /** Whether this browser can run the local engine at all (WebKit cannot: #276). */
+  /** Whether this browser can run the local engine at all (#276). When false
+   *  the panel's `el` is hidden: there is no engine row to show. */
   supported: boolean;
   dispose(): void;
 }
@@ -219,6 +226,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   let currentMoves: string[] = [];
   let currentFen: string | undefined;
   let currentSearchable = true;
+  let currentNoProgressLimit: number | undefined;
   // Side to move at the base position: startpos is Red, but an initialFen (a
   // mid-game puzzle position) may hand the engine a Black-to-move base. Read it
   // from the FEN's turn token so the eval normalises scores to the right POV.
@@ -284,6 +292,9 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       .evaluate({
         movesUci: moves,
         initialFen: currentFen,
+        ...(currentNoProgressLimit !== undefined
+          ? { noProgressLimit: currentNoProgressLimit }
+          : {}),
         multiPv,
         effort,
         onUpdate: (update) => render(update, side),
@@ -293,9 +304,15 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
       });
   }
 
-  function setPosition(movesUci: string[], initialFen?: string, searchable: boolean = true): void {
+  function setPosition(
+    movesUci: string[],
+    initialFen?: string,
+    searchable: boolean = true,
+    noProgressLimit?: number,
+  ): void {
     currentMoves = movesUci;
     currentFen = initialFen;
+    currentNoProgressLimit = noProgressLimit;
     currentSearchable = searchable;
     currentBaseSide = initialFen?.split(' ')[1] === 'b' ? 'black' : 'red';
     currentPerspective = isUnboundFlipPosition(opts.variant, initialFen) ? 'first-player' : 'bound';
@@ -365,6 +382,10 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
 
   if (!supported) {
     toggle.disabled = true;
+    // Hide the whole row where the engine cannot run (#576): a disabled switch
+    // with an apology is a control the reader can never use. The copy below
+    // stays on the hidden node for anyone inspecting why it is absent.
+    el.hidden = true;
     // Do NOT promise a reload. The threaded engine needs cross-origin isolation,
     // which these routes request with COEP: require-corp (#276). Until
     // 2026-10-14 it was credentialless, which WebKit ignores, so no iPhone,

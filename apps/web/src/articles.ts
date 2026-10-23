@@ -12,9 +12,11 @@ import {
   canonicalVariantOrderIndex,
   EMBED_DEFAULT_HEIGHT,
   EMBED_DEFAULT_WIDTH,
+  type GameSpecId,
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
+import { LANGUAGE_ENDONYMS, languagePartnersOf } from './articles/language-pairs.js';
 import { articleIsLive } from './articles/publish-time.js';
 import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
@@ -96,6 +98,7 @@ import { type JieqiReplayController, mountJieqiReplay } from './jieqi-replay.js'
 import { type JungleFlipReplayController, mountJungleFlipReplay } from './jungle-flip-replay.js';
 import { type JungleReplayController, mountJungleReplay } from './jungle-replay.js';
 import { prependTitleBadge } from './player-titles.js';
+import { hasLikelyVariantGrant, variantGrantsResolvedEvent } from './signed-in-state.js';
 import {
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
@@ -184,9 +187,9 @@ export function buildArticlesIndex(
  * Topic filters on the blog index: `/blog?topic=<id>` narrows the one list in
  * place, so a topic is data (an id, its chip label, which posts it holds), never
  * a page of its own, and the canonical /blog stays the only URL search sees.
- * Add a topic by adding an entry here. The first one reuses the homepage row
- * tag, so a post tagged for the deep-dives row is in the deep-dives topic with
- * no second edit.
+ * Add a topic by adding an entry here; chips render in this order. Engineering
+ * holds the posts tagged `topic: 'engineering'` (unset is a post for players). Deep dives reuses the homepage row tag, so a post tagged
+ * for the deep-dives row is in the deep-dives topic with no second edit.
  */
 export type ArticleTopic = {
   id: string;
@@ -194,11 +197,19 @@ export type ArticleTopic = {
   matches: (article: Article) => boolean;
 };
 
+const isEngineeringArticle = (article: Article): boolean =>
+  article.kind === 'article' && article.topic === 'engineering';
+
 export const ARTICLE_TOPICS: readonly ArticleTopic[] = [
   {
     id: 'deep-dives',
     labelKey: 'articles.deepDives',
     matches: (article) => article.homeRow === 'deep-dives',
+  },
+  {
+    id: 'engineering',
+    labelKey: 'articles.topicEngineering',
+    matches: isEngineeringArticle,
   },
 ];
 
@@ -211,11 +222,17 @@ export function articleTopicFromSearch(search: string): string | null {
   return new URLSearchParams(search).get('topic');
 }
 
-// The topics that hold at least one of these posts. A topic with nothing in it
-// gets no chip, and a link to it falls back to All: a filter must never open on
-// an empty list while the posts exist one click away.
+// The topics that narrow these posts: at least one post, and not every one. A
+// topic with nothing in it gets no chip, and a link to it falls back to All: a
+// filter must never open on an empty list while the posts exist one click away.
+// A topic holding every post is All under another name, so it gets no chip
+// either.
 function articleTopicsWithPosts(entries: readonly Article[]): ArticleTopic[] {
-  return ARTICLE_TOPICS.filter((topic) => entries.some((article) => topic.matches(article)));
+  return ARTICLE_TOPICS.filter(
+    (topic) =>
+      entries.some((article) => topic.matches(article)) &&
+      !entries.every((article) => topic.matches(article)),
+  );
 }
 
 function buildArticleTopicChips(
@@ -518,6 +535,8 @@ export type HomeArticleCardOptions = {
    * Which homepage row to build. 'latest' (the default) is every article with no
    * homeRow plus the newest announcement; 'deep-dives' is the articles tagged
    * for it, with no age cut, since a player page does not go stale in 60 days.
+   * Engineering posts are in neither row: the homepage is for players, and those
+   * posts live under the blog's Engineering chip (Brian, 2026-10-21).
    */
   row?: HomeArticleRow;
 };
@@ -540,6 +559,7 @@ export function buildHomeArticleCards(
   const row = options.row ?? 'latest';
   const articleItems = articles
     .filter((article) => isArticleListedInThisEnv(article) && article.kind !== 'rules')
+    .filter((article) => !isEngineeringArticle(article))
     .filter((article) => (article.homeRow ?? 'latest') === row)
     .sort((a, b) => tieRank(a) - tieRank(b) || compareArticlesNewestFirst(a, b))
     .map<HomeCardItem>((article, index) => ({
@@ -706,7 +726,6 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
     date.textContent = formatCardDate(dateIso, locale);
     thumb.append(date);
   }
-  thumb.append(articleCardStarBadge('landing-article-card-star'));
 
   const title = document.createElement('strong');
   title.className = 'landing-article-card-title';
@@ -714,14 +733,6 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
 
   link.append(thumb, title);
   return link;
-}
-
-function articleCardStarBadge(className: string): HTMLSpanElement {
-  const star = document.createElement('span');
-  star.className = className;
-  star.setAttribute('aria-hidden', 'true');
-  star.textContent = '★';
-  return star;
 }
 
 function landingAnnouncementCard(announcement: Announcement, locale: Locale): HTMLElement {
@@ -891,8 +902,9 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   if (articleLang) main.dataset.articleLang = articleLang;
   // The chrome follows the UI language (articleLocale), so <html lang> can say
   // zh-Hant over an English article. The article's own text says what it is,
-  // for screen readers, browser translate and hyphenation.
-  const contentLang: Locale = articleLang ?? 'en';
+  // for screen readers, browser translate and hyphenation. A Vietnamese page
+  // is its own article (sourceLang), not a rendering, and says so.
+  const contentLang: string = articleLang ?? article.sourceLang ?? 'en';
 
   // The sheet is the page's single anchoring panel; both rails sit beside
   // it directly on the page background (pychess grammar).
@@ -953,6 +965,20 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
       )}`;
     }
     metaRow.append(dates);
+  }
+  // The page's other language, named in that language. A Vietnamese page is
+  // left out of the blog index by design, so this link is the only crawlable
+  // path to it (articles/language-pairs.ts).
+  for (const partner of languagePartnersOf(base.slug)) {
+    const target = findArticle(partner.slug);
+    if (!target || !isArticleVisibleInThisEnv(target)) continue;
+    const link = document.createElement('a');
+    link.className = 'article-meta-language';
+    link.href = `/${target.kind === 'rules' ? 'rules' : 'blog'}/${encodeURIComponent(target.slug)}`;
+    link.hreflang = partner.lang;
+    link.lang = partner.lang;
+    link.textContent = LANGUAGE_ENDONYMS[partner.lang];
+    metaRow.append(link);
   }
   if (metaRow.childElementCount > 0) header.append(metaRow);
 
@@ -1073,7 +1099,7 @@ function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement |
   const list = document.createElement('ul');
   list.className = 'articles-index-list article-footer-list';
   for (const entry of related) {
-    list.append(articleCard(entry, cardLang, { showStarBadge: false }));
+    list.append(articleCard(entry, cardLang));
   }
 
   footer.append(heading, list);
@@ -2225,9 +2251,11 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   const headRow = document.createElement('tr');
   if (diagrams) headRow.append(document.createElement('th'));
   const highlightCols = new Set(block.highlightColumns ?? []);
+  const nowrapCols = new Set(block.nowrapColumns ?? []);
   block.headers.forEach((h, col) => {
     const th = document.createElement('th');
-    if (highlightCols.has(col)) th.className = 'article-table-col-emphasis';
+    if (highlightCols.has(col)) th.classList.add('article-table-col-emphasis');
+    if (nowrapCols.has(col)) th.classList.add('article-table-nowrap');
     appendRichText(th, h);
     headRow.append(th);
   });
@@ -2240,7 +2268,8 @@ function renderTableBlock(block: TableBlock): HTMLElement {
     if (diagrams) tr.append(renderTableRowDiagram(diagrams[i]));
     row.forEach((cell, col) => {
       const td = document.createElement('td');
-      if (highlightCols.has(col)) td.className = 'article-table-col-emphasis';
+      if (highlightCols.has(col)) td.classList.add('article-table-col-emphasis');
+      if (nowrapCols.has(col)) td.classList.add('article-table-nowrap');
       // Cells take the same inline markdown as paragraphs. They rendered as raw
       // textContent until 2026-08-27, so a [label](/href) in a cell showed its
       // own brackets.
@@ -2387,12 +2416,41 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
   return row;
 }
 
+/** The variant a play CTA opens (`/?play=…&gameSpecId=…`), or null. */
+function playCtaGameSpecId(href: string): GameSpecId | null {
+  if (ctaKindForHref(href) !== 'play') return null;
+  const id = new URLSearchParams(href.split('?')[1] ?? '').get('gameSpecId');
+  return id && isGameSpecId(id) ? id : null;
+}
+
+/** Whether this viewer can sit down at the variant a play CTA opens: a public
+ *  variant, or a playtest one the account is granted. Otherwise the play
+ *  dialog would silently fall back to xiangqi. Cosmetic: the server's seat
+ *  check is the gate. */
+function playCtaOpenToViewer(href: string): boolean {
+  const id = playCtaGameSpecId(href);
+  return id === null || variantPublicSurfaceEnabled(id) || hasLikelyVariantGrant(id);
+}
+
 function renderCtaBlock(block: CtaBlock): HTMLElement {
   const row = document.createElement('div');
   row.className = 'article-cta-row';
   if (block.layout) row.classList.add(`article-cta-row-${block.layout}`);
+  const gated = block.buttons.filter((btn) => !playCtaOpenToViewer(btn.href));
+  if (gated.length > 0) {
+    // A playtest variant's rules page: redraw once the account's real grants
+    // are in, so a player granted since their last visit gets the buttons.
+    window.addEventListener(
+      variantGrantsResolvedEvent,
+      () => {
+        if (row.isConnected) row.replaceWith(renderCtaBlock(block));
+      },
+      { once: true },
+    );
+  }
   for (const btn of block.buttons) {
     if (pointsAtHiddenArticle(btn.href)) continue;
+    if (gated.includes(btn)) continue;
     const a = document.createElement('a');
     a.className = `article-cta article-cta-${btn.emphasis ?? 'primary'}`;
     a.href = btn.href;
@@ -2420,6 +2478,17 @@ function renderCtaBlock(block: CtaBlock): HTMLElement {
       });
     });
     row.append(a);
+  }
+  if (gated.length > 0 && row.childElementCount === 0) {
+    row.classList.add('article-cta-row-playtest');
+    const note = document.createElement('p');
+    note.className = 'article-cta-playtest-note';
+    note.append(`${t('articles.playtestOnly', {}, currentLocale())} `);
+    const link = document.createElement('a');
+    link.href = localizedHref('/forum/feedback');
+    link.textContent = t('articles.playtestAsk', {}, currentLocale());
+    note.append(link);
+    row.append(note);
   }
   return row;
 }
@@ -2619,15 +2688,7 @@ function renderStaticBoardsBlock(block: StaticBoardsBlock): HTMLElement {
 // spec on each pending wrap and consume it in mountArticleThumbnails.
 const pendingThumbnails = new WeakMap<HTMLElement, ArticleThumbnail>();
 
-function articleCard(
-  baseArticle: Article,
-  lang?: ArticleLang,
-  // The star is an index affordance: one per card in a long grid, repeating
-  // often enough that it reads as texture. Three of them in a row at the foot
-  // of an article read as a rating or a "featured" mark instead, and they are
-  // neither, so the footer opts out rather than hiding them in CSS.
-  options: { showStarBadge?: boolean } = {},
-): HTMLLIElement {
+function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
   const locale = articleLocale(lang);
   const articleLang = publishedArticleLang(baseArticle.slug, lang);
   const article = articleLang ? translateArticle(baseArticle, articleLang) : baseArticle;
@@ -2655,10 +2716,6 @@ function articleCard(
     date.className = 'articles-index-card-over-image articles-index-card-date';
     date.textContent = formatCardDate(dateIso, locale);
     thumb.append(date);
-  }
-
-  if (options.showStarBadge ?? true) {
-    thumb.append(articleCardStarBadge('articles-index-card-over-image articles-index-card-author'));
   }
 
   if (isArticleStatusBadge(article.status)) {

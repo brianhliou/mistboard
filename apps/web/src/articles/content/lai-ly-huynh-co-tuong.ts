@@ -31,7 +31,7 @@ export const LAI_LY_HUYNH_CO_TUONG_VI: Record<string, string> = {
   'Lại Lý Huynh 赖理兄, the world xiangqi champion: games and analysis':
     'Lại Lý Huynh, nhà vô địch cờ tướng thế giới: các ván đấu và phân tích',
   'The first world champion from outside China, unbeaten in Shanghai and winner of the final with black. His title run and the year since, five wins on the board, 38 games analysed.':
-    'Nhà vô địch cờ tướng thế giới đầu tiên không đến từ Trung Quốc, bất bại ở Thượng Hải và thắng trận chung kết khi cầm quân Đen. Hành trình lên ngôi và một năm sau đó, năm ván thắng trên bàn cờ, 38 ván được phân tích.',
+    'Lại Lý Huynh, nhà vô địch cờ tướng thế giới đầu tiên không đến từ Trung Quốc, bất bại ở Thượng Hải và thắng trận chung kết khi cầm quân Đen. Hành trình lên ngôi và một năm sau đó, năm ván thắng trên bàn cờ, 38 ván được phân tích.',
   'English-speaking xiangqi players, and Vietnamese fans who want his games in one place with analysis.':
     'Người hâm mộ cờ tướng Việt Nam muốn xem các ván đấu của anh ở cùng một nơi, kèm phân tích.',
   'Lại Lý Huynh at the board.': 'Lại Lý Huynh bên bàn cờ.',
@@ -49,7 +49,7 @@ export const LAI_LY_HUYNH_CO_TUONG_VI: Record<string, string> = {
     'Trang này kể về năm đầu tiên anh khoác áo nhà vô địch: hành trình lên ngôi, một năm sau đó, và năm ván thắng của anh trên bàn cờ. Tôi đã cho 38 ván đấu cá nhân mà chúng tôi có chạy qua cùng hệ thống phân tích bằng engine mà Mistboard dùng cho chính các ván cờ của bạn.',
 
   // How he plays
-  'How he plays': 'Lối chơi của anh',
+  'How he plays': 'Lối chơi của Lại Lý Huynh',
   '**He wins with black.** Five of his six wins in Shanghai came with the black pieces, the side that moves second, the final among them. Across the 38 individual games we hold he won eight with black and three with red. With red he mostly draws, thirteen of his eighteen red games.':
     '**Anh thắng bằng quân Đen.** Năm trong sáu trận thắng của anh ở Thượng Hải đến khi cầm quân Đen, bên đi sau, trong đó có trận chung kết. Trong 38 ván đấu cá nhân mà chúng tôi có, anh thắng tám ván khi cầm quân Đen và ba ván khi cầm quân Đỏ. Cầm quân Đỏ, anh chủ yếu hòa: mười ba trong mười tám ván.',
   '**He opens with the Cross-Palace Cannon.** In eleven of his eighteen red games his first move slid a cannon across to the far side of his own palace. It is a quieter start than the central cannon, and it leaves the game to be won later.':
@@ -60,7 +60,7 @@ export const LAI_LY_HUYNH_CO_TUONG_VI: Record<string, string> = {
     '**Anh học từ những kỳ thủ giỏi nhất Trung Quốc.** “Giải Giáp A cho tôi một cơ hội học hỏi rất quý giá,” anh nói với Dương Thành Vãn Báo (羊城晚报) hồi tháng 2. “Tôi vừa được thi đấu, vừa được học cách các kỳ thủ hàng đầu Trung Quốc chơi cờ.” Anh tập luyện với engine từ năm 2005.',
 
   // The world title
-  'The world title': 'Ngôi vô địch thế giới',
+  'The world title': 'Lại Lý Huynh vô địch cờ tướng thế giới 2025',
   "He had been one game from the title before. In Houston in 2023 he reached the final against Meng Chen, drew the slow game and lost the rapid tiebreak. Two years later the championship ran in Shanghai from 22 to 27 September, eight rounds and then a final between the top two. He won five and drew three, against Yin Sheng on the first day, Meng Fanrui and Malaysia's Li Dezhi, and finished level with Yin Sheng on 13 points.":
     'Anh từng chỉ cách ngôi vô địch một ván. Tại Houston năm 2023, anh vào chung kết gặp Mạnh Thần, hòa ván cờ chậm rồi thua ở loạt cờ nhanh phân định. Hai năm sau, giải vô địch diễn ra ở Thượng Hải từ ngày 22 đến 27 tháng 9, gồm tám vòng đấu rồi một trận chung kết giữa hai người dẫn đầu. Anh thắng năm, hòa ba, các ván hòa là trước Doãn Thăng ngay ngày đầu tiên, Mạnh Phồn Duệ và Li Dezhi của Malaysia, và kết thúc với 13 điểm, bằng Doãn Thăng.',
   'His world championship, round by round.': 'Hành trình vô địch thế giới của anh, qua từng vòng.',
@@ -129,11 +129,11 @@ export const LAI_LY_HUYNH_CO_TUONG_VI: Record<string, string> = {
   "Cao Yanlei vs Lại Lý Huynh, 5 January 2026, game 8 of the match. The board opens after red's 15th move, with Lại to play as black.":
     'Tào Nham Lỗi gặp Lại Lý Huynh, 5 tháng 1 năm 2026, ván 8 của trận đấu. Bàn cờ mở ra sau nước thứ 15 của Đỏ, đến lượt Lại Lý Huynh cầm quân Đen.',
   "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions. In February it gave its first wildcard to Lại, and he reached the final. In the semi-final he beat Zhao Panwei, the opponent Cao Yanlei found hardest all year, winning the first game with red and drawing the second. Zhao's horse jumped forward on move 17; Lại's horses came forward and Zhao resigned after move 40. Cheng Yudong beat him in the final, a draw and then a loss. The [whole event](/broadcast/xiangqi/2026-wuyang-cup) is in the broadcast archive.":
-    'Ngũ Dương Bôi ở Quảng Châu (五羊杯) là giải mời các nhà vô địch quốc gia của Trung Quốc. Tháng 2 năm nay, giải lần đầu trao suất đặc cách, cho Lại Lý Huynh, và anh vào tới chung kết. Ở bán kết, anh hạ Triệu Phàn Vỹ, đối thủ mà Tào Nham Lỗi thấy khó chơi nhất cả năm, thắng ván đầu khi cầm quân Đỏ và hòa ván thứ hai. Mã của Triệu Phàn Vỹ nhảy lên ở nước 17; hai con mã của Lại Lý Huynh tiến lên và Triệu Phàn Vỹ xin thua sau nước 40. Ở chung kết, anh thua Trình Vũ Đông sau một ván hòa và một ván thua. [Toàn bộ giải đấu](/broadcast/xiangqi/2026-wuyang-cup) có trong kho lưu trữ giải đấu.',
+    'Ngũ Dương Bôi ở Quảng Châu (五羊杯) là giải mời các nhà vô địch quốc gia của Trung Quốc. Tháng 2 năm nay, giải lần đầu trao suất đặc cách, cho Lại Lý Huynh, và anh vào tới chung kết. Ở bán kết, anh hạ Triệu Phàn Vĩ, đối thủ mà Tào Nham Lỗi thấy khó chơi nhất cả năm, thắng ván đầu khi cầm quân Đỏ và hòa ván thứ hai. Mã của Triệu Phàn Vĩ nhảy lên ở nước 17; hai con mã của Lại Lý Huynh tiến lên và Triệu Phàn Vĩ xin thua sau nước 40. Ở chung kết, anh thua Trình Vũ Đông sau một ván hòa và một ván thua. [Toàn bộ giải đấu](/broadcast/xiangqi/2026-wuyang-cup) có trong kho lưu trữ giải đấu.',
   '2026 Five Rams Cup, semi-final': 'Ngũ Dương Bôi 2026, bán kết',
   '1-0': '1-0',
   "Lại Lý Huynh vs Zhao Panwei, 28 February 2026, Five Rams Cup semi-final, game 1. The board opens after black's 17th move, with Lại to move.":
-    'Lại Lý Huynh gặp Triệu Phàn Vỹ, 28 tháng 2 năm 2026, bán kết Ngũ Dương Bôi, ván 1. Bàn cờ mở ra sau nước thứ 17 của Đen, đến lượt Lại Lý Huynh đi.',
+    'Lại Lý Huynh gặp Triệu Phàn Vĩ, 28 tháng 2 năm 2026, bán kết Ngũ Dương Bôi, ván 1. Bàn cờ mở ra sau nước thứ 17 của Đen, đến lượt Lại Lý Huynh đi.',
   '"Since I won the world championship, more people in Vietnam follow xiangqi," he said in Guangzhou, "and more of them have started playing."':
     '“Từ khi tôi vô địch thế giới, ở Việt Nam có nhiều người theo dõi cờ tướng hơn,” anh nói ở Quảng Châu, “và cũng nhiều người bắt đầu chơi cờ hơn.”',
 
@@ -147,7 +147,7 @@ export const LAI_LY_HUYNH_CO_TUONG_VI: Record<string, string> = {
   // Player names on the replay boards (spec red/black)
   'Yin Sheng': 'Doãn Thăng',
   'Cao Yanlei': 'Tào Nham Lỗi',
-  'Zhao Panwei': 'Triệu Phàn Vỹ',
+  'Zhao Panwei': 'Triệu Phàn Vĩ',
 };
 
 export const laiLyHuynhCoTuongArticle = deriveTranslation(laiLyHuynhArticle, {

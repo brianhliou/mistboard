@@ -26,7 +26,7 @@ import {
   variantDefaultTimeControl,
 } from '@mistboard/game';
 import { crosstableReviewUrl } from '../../server/src/crosstable.js';
-import { JIEQI_DEFAULT_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
+import { JIEQI_JQE_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
 import {
   JUNGLE_PLAYABLE_ENGINE_ID,
   JUNGLE_PLAYABLE_ENGINE_IDS,
@@ -35,12 +35,13 @@ import {
 import { registeredVariantTenants } from '../../server/src/variant-tenant/registry.js';
 import {
   XIANGQI_DEFAULT_ENGINE_ID,
+  XIANGQI_PICKER_ENGINES,
   XIANGQI_PUBLIC_ENGINES,
 } from '../../server/src/xiangqi-engine-catalog.js';
 import type { FeaturedGame } from './game-display.js';
 import { reviewUrlForGame } from './game-meta.js';
 import { landingBotOffer } from './landing-bot-policy.js';
-import { webVariantTenants } from './variant-tenant/registry.js';
+import { jieqiEngineOptions, webVariantTenants } from './variant-tenant/registry.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
@@ -144,7 +145,7 @@ describe('web tenant registry <-> server tenant registry parity', () => {
 
   it('xiangqi picker engine options mirror the server engine catalog', () => {
     // The web engineOptions list is a hand-maintained mirror of the server's
-    // XIANGQI_PUBLIC_ENGINES (apps/server/src/xiangqi-engine-catalog.ts): the
+    // XIANGQI_PICKER_ENGINES (apps/server/src/xiangqi-engine-catalog.ts): the
     // ids ride the create payload straight into the server's engine-id gate, so
     // drift means a picker entry that cannot seat an engine. The picker orders
     // strongest-first; the server table orders weakest-first.
@@ -152,7 +153,7 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     expect(tenant?.landing?.engineOptions, 'xiangqi tenant must expose engineOptions').toBeTruthy();
     const options = tenant?.landing?.engineOptions ?? [];
     expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
-      [...XIANGQI_PUBLIC_ENGINES].reverse().map((tier) => ({ id: tier.id, name: tier.name })),
+      [...XIANGQI_PICKER_ENGINES].reverse().map((tier) => ({ id: tier.id, name: tier.name })),
     );
     // The picker's newcomer default is the homepage first-game rung
     // (landing-bot-policy), not the server's fallback for a create request that
@@ -166,17 +167,24 @@ describe('web tenant registry <-> server tenant registry parity', () => {
 
   it('jieqi picker engine options mirror the server ladder', () => {
     // Hand mirror of JIEQI_PLAYABLE_ENGINES (apps/server/src/jieqi-engine.ts),
-    // strongest first. Level 8 is named like the rungs below it (its tier name
-    // is the pre-ladder 'PikaJieQi - Strongest'); the rest wear their tier names. Drift means a picker entry that cannot seat an engine.
+    // strongest first, each under its tier name. Drift means a picker entry that cannot seat an engine.
     const tenant = webTenants.find((candidate) => candidate.gameSpecId === 'jieqi');
     expect(tenant?.landing?.engineOptions, 'jieqi tenant must expose engineOptions').toBeTruthy();
     const options = tenant?.landing?.engineOptions ?? [];
-    expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
-      [...JIEQI_PLAYABLE_ENGINES].reverse().map((tier) => ({
-        id: tier.id,
-        name: tier.id === JIEQI_DEFAULT_ENGINE_ID ? 'Pikafish Level 8' : tier.name,
-      })),
-    );
+    const serverLadder = [...JIEQI_PLAYABLE_ENGINES].reverse().map((tier) => ({
+      id: tier.id,
+      name: tier.name,
+    }));
+    const pick = (list: readonly { id: string; name: string }[]) =>
+      list.map((option) => ({ id: option.id, name: option.name }));
+    // This build has VITE_JQE_ENABLED unset: the picker is the ladder without jqe,
+    // exactly as before jqe existed, and AB-JChess still tops it.
+    expect(pick(options)).toEqual(serverLadder.filter((tier) => tier.id !== JIEQI_JQE_ENGINE_ID));
+    expect(options[0]?.id).toBe('ab-jchess-jieqi');
+    // With the flag on, jqe is the strongest entry and the rest is unchanged.
+    expect(pick(jieqiEngineOptions(true))).toEqual(serverLadder);
+    expect(jieqiEngineOptions(true)[0]).toMatchObject({ id: JIEQI_JQE_ENGINE_ID, name: 'jqe' });
+    expect(pick(jieqiEngineOptions(false))).toEqual(pick(options));
     expect(tenant?.landing?.defaultEngineId).toBe('pikafish-jieqi-level-2');
   });
 

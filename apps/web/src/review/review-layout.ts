@@ -161,6 +161,11 @@ export type ReviewScaffoldConfig = SizingInput & {
    *  explorer). Sits directly above navigation, so the tool that toggles it is
    *  adjacent to what it opens. */
   railPanel?: HTMLElement;
+  /** Panel in the right column below the rail box (moves and navigation),
+   *  leaving the box itself as it is. Banqi's tablebase sits here: its short
+   *  board leaves the move list no room to share. On a phone it follows the
+   *  move list. */
+  railBelow?: HTMLElement;
   analysisSummary?: HTMLElement;
   /** Controls pinned to the bottom of the right rail (e.g. a Reveal toggle). */
   railFooter?: HTMLElement;
@@ -360,7 +365,15 @@ export function createReviewScaffold(
 
   const shell = createReviewShell({
     ariaLabel: config.ariaLabel,
-    pageClassName: [config.pageClassName, `review-shell--${config.reviewSurface}`]
+    // `review-shell--pocket` stands in for `.review-shell:has(.review-rail-pocketbox)`:
+    // a :has() whose subject is the whole shell re-matched all of its descendants
+    // on every board rebuild (#608). The pocket box is built only here and never
+    // removed, so the class is set once with it.
+    pageClassName: [
+      config.pageClassName,
+      `review-shell--${config.reviewSurface}`,
+      hasPocketBox ? 'review-shell--pocket' : null,
+    ]
       .filter(Boolean)
       .join(' '),
     left,
@@ -369,6 +382,11 @@ export function createReviewScaffold(
     embedded: config.embedded,
   });
   shell.querySelector('.review-shell__cluster')?.classList.add(COL1_STACK_CLASS);
+  if (config.railBelow) {
+    config.railBelow.classList.add('review-rail-below');
+    config.railBelow.dataset.col1Area = 'extra';
+    shell.querySelector('.review-shell__right')?.append(config.railBelow);
+  }
   if (config.gauge) {
     const cluster = shell.querySelector<HTMLElement>('.review-shell__cluster');
     if (cluster) {

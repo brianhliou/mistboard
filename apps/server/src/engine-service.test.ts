@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { EngineTurnRequest, Move } from '@mistboard/game';
+import { withKnownEngineFailure } from './engine-known-failures.js';
 import { engineTurnPoolPayload, startEngineHttpService } from './engine-service.js';
+import { engineCounters } from './obs.js';
 
 const legalMove: Move = { from: 'e2', to: 'e4' };
 const xiangqiLegalMove = { from: 'i10', to: 'i9' } as unknown as Move;
@@ -231,6 +233,87 @@ test('engine HTTP service exposes unauthenticated health check', async () => {
   }
 });
 
+// Known failure signatures (engine-known-failures.ts) are counted, not paged: the
+// worker names the signature in its 500 body and leaves the turns-failed counter
+// (a critical alert on the next obs tick) alone.
+async function failTurn(
+  request: EngineTurnRequest,
+  thrown: Error,
+): Promise<{ status: number; body: unknown; turnsFailed: number; knownFailures: number }> {
+  const service = await startEngineHttpService({
+    port: 0,
+    token: 'test-token',
+    handler: async () => {
+      throw thrown;
+    },
+  });
+  const turnsFailedBefore = engineCounters.totalTurnsFailed;
+  const knownBefore = engineCounters.totalKnownFailures;
+  try {
+    const reservationId = await reserveSeat(service.port, {
+      color: request.color,
+      engineId: request.engineId,
+    });
+    const response = await fetch(engineUrl(service.port), {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+        'x-mistboard-engine-reservation-id': reservationId,
+      },
+      body: JSON.stringify(request),
+    });
+    return {
+      status: response.status,
+      body: await response.json(),
+      turnsFailed: engineCounters.totalTurnsFailed - turnsFailedBefore,
+      knownFailures: engineCounters.totalKnownFailures - knownBefore,
+    };
+  } finally {
+    await service.close();
+  }
+}
+
+test('a pool-tagged Fog Xiangqi failure answers 500 with known_failure and does not page', async () => {
+  // The incident's last error: the retry landed on the worker the timeout killed.
+  const thrown = withKnownEngineFailure(
+    new Error('worker 0 exited code=null'),
+    'fog-xiangqi-belief-timeout',
+  );
+  const result = await failTurn(fogRequest, thrown);
+  assert.equal(result.status, 500);
+  assert.deepEqual(result.body, {
+    error: 'internal_error',
+    known_failure: 'fog-xiangqi-belief-timeout',
+  });
+  assert.equal(result.turnsFailed, 0);
+  assert.equal(result.knownFailures, 1);
+});
+
+test('a Fog Xiangqi timeout outside the pool is classified by the turn handler', async () => {
+  const result = await failTurn(fogRequest, new Error('pool request timeout 60000ms'));
+  assert.deepEqual(result.body, {
+    error: 'internal_error',
+    known_failure: 'fog-xiangqi-belief-timeout',
+  });
+  assert.equal(result.turnsFailed, 0);
+  assert.equal(result.knownFailures, 1);
+});
+
+test('the same timeout on another variant still counts as a failed turn', async () => {
+  const result = await failTurn(sampleRequest, new Error('pool request timeout 60000ms'));
+  assert.deepEqual(result.body, { error: 'internal_error' });
+  assert.equal(result.turnsFailed, 1);
+  assert.equal(result.knownFailures, 0);
+});
+
+test('a Fog Xiangqi crash with no timeout still counts as a failed turn', async () => {
+  const result = await failTurn(fogRequest, new Error('worker 0 exited code=1'));
+  assert.deepEqual(result.body, { error: 'internal_error' });
+  assert.equal(result.turnsFailed, 1);
+  assert.equal(result.knownFailures, 0);
+});
+
 const sampleRequest: EngineTurnRequest = {
   protocolVersion: '1',
   gameId: 'game-1',
@@ -256,6 +339,8 @@ const sampleXiangqiRequest: EngineTurnRequest = {
   legalMoves: [xiangqiLegalMove],
   observationTranscript: [],
 };
+
+const fogRequest: EngineTurnRequest = { ...sampleXiangqiRequest, gameSpecId: 'dark-xiangqi' };
 
 function engineUrl(port: number): string {
   return `http://127.0.0.1:${port}/internal/engine/turn`;

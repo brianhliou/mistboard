@@ -33,7 +33,7 @@ export const banqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-15',
-  updatedAt: '2026-09-21',
+  updatedAt: '2026-10-17',
   audience:
     'Experienced banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
   thumbnail: { kind: 'svg', svg: BANQI_RULES_THUMBNAIL },
@@ -174,7 +174,7 @@ export const banqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.',
+          text: 'Mistboard draws a game two ways: 60 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly. A game started before 17 October 2026 keeps the 40-ply limit it began under.',
         },
         {
           kind: 'paragraph',
@@ -191,7 +191,7 @@ export const banqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Mistboard plays the standard Taiwanese game, the one used in computer competition and on the main banqi sites in Taiwan. The draw rules come from the competition rules of Chen, Shen and Hsu (ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. A common house rule lets a cannon also fire at a face-down tile, often played together with chain captures. That is a side variant, not the standard game, and it is not played here: a cannon only captures revealed enemy pieces. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.',
+          text: 'Mistboard plays the standard Taiwanese game, the one used in computer competition and on the main banqi sites in Taiwan. The draw rules come from the competition rules of Chen, Shen and Hsu (ICGA Journal, 2010): the no-progress clock and the repetition draw above. Those rules set the clock at 40 plies. Mistboard moved it to 60 in October 2026, because some won endings need more than 40 plies to force the next capture. A common house rule lets a cannon also fire at a face-down tile, often played together with chain captures. That is a side variant, not the standard game, and it is not played here: a cannon only captures revealed enemy pieces. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.',
         },
       ],
     },

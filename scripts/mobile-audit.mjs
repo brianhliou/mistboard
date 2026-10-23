@@ -19,13 +19,25 @@
 //   npm run mobile:audit -- --list                        # the page list
 //   npm run mobile:audit -- --strict                      # exit 1 on any fail
 //   npm run mobile:audit -- --path study=/study/abc       # a page's URL on a local pair
+//   npm run mobile:audit -- --device iphone --sheet       # every screen on one page
+//   npm run mobile:audit -- --device iphone --sheet --notes notes.json
+//   npm run mobile:audit -- --base http://127.0.0.1:3360 --before https://mistboard.com \
+//     --device iphone,desktop --sheet --only home,forum   # before/after pairs
+//
+// --before loads the same paths on a second build (main, usually prod) and
+// pairs each screen with its baseline on the sheet, changed screens first.
+// "desktop" is a 1280px Chromium window; the phone rules do not judge it.
 //
 // Output: tmp/mobile-audit/<stamp>/report.md and report.json (+ shots/).
+// --sheet takes full-page shots (capped at three screens) and writes
+// sheet.html beside them: every page in one view, fold marked, findings under
+// each, plus any reviewer notes ({ "<page>": "text" }). Publish the stamp
+// directory as one artifact and republish it after the next run.
 // Not wired into CI or the release gate (2026-10-14): the first run is a
 // backlog, not a baseline. Page list ranked by PostHog mobile pageviews,
 // 30 days to 2026-10-14 (docs-private/mobile-audit-2026-10.md).
 
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { devices, webkit } from '@playwright/test';
@@ -39,6 +51,7 @@ import {
   TAP_TARGET_MIN,
   TINY_TEXT_PX,
 } from './lib/mobile-audit-rules.mjs';
+import { layoutFingerprint, markUnchanged, renderSheet } from './lib/mobile-audit-sheet.mjs';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -46,6 +59,12 @@ export const DEVICES = {
   // Mobile p50 viewport on the site is 393px wide, p10 360px (PostHog, 30d).
   iphone: { name: 'iPhone 13 (WebKit)', engine: 'webkit', descriptor: devices['iPhone 13'] },
   android: { name: 'Galaxy S8 (Chromium)', engine: 'chromium', descriptor: devices['Galaxy S8'] },
+  desktop: {
+    name: 'Desktop 1280 (Chromium)',
+    engine: 'chromium',
+    descriptor: devices['Desktop Chrome'],
+    phone: false,
+  },
 };
 
 // Finished games come from the live recent-games feed, so the list never
@@ -121,6 +140,14 @@ export const PAGES = [
   { name: 'games-search', template: 'games', path: '/games/search' },
   { name: 'play', template: 'play/room', path: '/play' },
   { name: 'blog-index', template: 'article', path: '/blog' },
+  // Added 2026-10-17 for the one-page sheet: menu destinations with no rank
+  // in the 10-14 pageview list.
+  { name: 'bots', template: 'bot', path: '/bots' },
+  { name: 'study-index', template: 'study', path: '/study' },
+  { name: 'forum', template: 'forum', path: '/forum' },
+  { name: 'leaderboard', template: 'leaderboard', path: '/leaderboard' },
+  { name: 'learn', template: 'learn', path: '/learn/xiangqi' },
+  { name: 'profile', template: 'profile', path: '/@/mistboard' },
 ];
 
 function parseArgs(argv) {
@@ -129,6 +156,9 @@ function parseArgs(argv) {
     only: null,
     devices: ['iphone', 'android'],
     shots: false,
+    sheet: false,
+    notes: null,
+    before: null,
     strict: false,
     list: false,
     concurrency: 3,
@@ -154,10 +184,15 @@ function parseArgs(argv) {
       );
     else if (a === '--device') {
       const v = next();
-      args.devices = v === 'all' ? ['iphone', 'android'] : v.split(',').map((s) => s.trim());
+      args.devices = v === 'all' ? Object.keys(DEVICES) : v.split(',').map((s) => s.trim());
       for (const d of args.devices)
-        if (!DEVICES[d]) throw new Error(`unknown device ${d} (iphone, android, all)`);
+        if (!DEVICES[d]) throw new Error(`unknown device ${d} (iphone, android, desktop, all)`);
     } else if (a === '--shots') args.shots = true;
+    else if (a === '--sheet') {
+      args.sheet = true;
+      args.shots = true;
+    } else if (a === '--notes') args.notes = next();
+    else if (a === '--before') args.before = next();
     else if (a === '--strict') args.strict = true;
     else if (a === '--list') args.list = true;
     else if (a === '--concurrency')
@@ -181,8 +216,9 @@ function parseArgs(argv) {
 
 function readHelp() {
   return [
-    'npm run mobile:audit -- [--base URL] [--only a,b] [--device iphone|android|all]',
-    '                        [--shots] [--strict] [--list] [--concurrency N] [--settle-ms MS]',
+    'npm run mobile:audit -- [--base URL] [--only a,b] [--device iphone|android|desktop|all]',
+    '                        [--shots] [--sheet [--notes file.json] [--before URL]] [--strict] [--list]',
+    '                        [--concurrency N] [--settle-ms MS]',
     '                        [--path <page>=/path ...]   (override a page URL, e.g. on a local pair)',
     '',
     'Pages:',
@@ -199,8 +235,9 @@ const BOARD_NAV_SELECTOR =
 // PostHog, direct or through a same-origin /ingest proxy.
 const ANALYTICS_HOST = /posthog|\/ingest\//i;
 
-async function auditPage(context, base, page, args, shotsDir, deviceKey) {
+async function auditPage(context, base, page, args, shotsDir, deviceKey, prefix = '') {
   const viewport = DEVICES[deviceKey].descriptor.viewport;
+  const phone = DEVICES[deviceKey].phone !== false;
   const path = args.paths.get(page.name) ?? page.path ?? (await page.resolve(base));
   if (!path)
     return {
@@ -231,9 +268,29 @@ async function auditPage(context, base, page, args, shotsDir, deviceKey) {
       deviceWidth: viewport.width,
       deviceHeight: viewport.height,
     });
-    const judged = judgePage(measured, { boardPage: Boolean(page.board) });
+    const judged = phone
+      ? judgePage(measured, { boardPage: Boolean(page.board) })
+      : { verdict: 'shot', findings: [] };
     let shot = null;
-    if (shotsDir) {
+    let shotFile = null;
+    let shotHeight = null;
+    let layout = null;
+    if (shotsDir && args.sheet) {
+      // CSS pixels and JPEG keep a 30-page sheet a few MB; three screens is
+      // enough to judge what follows the fold without a 20-screen article.
+      shotFile = `${prefix}${deviceKey}-${page.name}.jpg`;
+      shot = join(shotsDir, shotFile);
+      shotHeight = Math.min(measured.docHeight ?? viewport.height, viewport.height * 3);
+      layout = await tab.evaluate(layoutFingerprint, { maxHeight: shotHeight }).catch(() => null);
+      await tab.screenshot({
+        path: shot,
+        fullPage: true,
+        clip: { x: 0, y: 0, width: viewport.width, height: shotHeight },
+        scale: 'css',
+        type: 'jpeg',
+        quality: 80,
+      });
+    } else if (shotsDir) {
       shot = join(shotsDir, `${deviceKey}-${page.name}.png`);
       await tab.screenshot({ path: shot });
     }
@@ -246,6 +303,11 @@ async function auditPage(context, base, page, args, shotsDir, deviceKey) {
       ...judged,
       measured,
       shot,
+      shotFile,
+      shotHeight,
+      layout,
+      viewportWidth: viewport.width,
+      viewportHeight: viewport.height,
     };
   } catch (error) {
     return {
@@ -260,7 +322,7 @@ async function auditPage(context, base, page, args, shotsDir, deviceKey) {
   }
 }
 
-async function runDevice(deviceKey, base, pages, args, shotsDir) {
+async function runDevice(deviceKey, base, pages, args, shotsDir, prefix = '') {
   const device = DEVICES[deviceKey];
   const browser = device.engine === 'webkit' ? await webkit.launch() : await launchChromium();
   const { defaultBrowserType: _ignored, ...descriptor } = device.descriptor;
@@ -286,7 +348,7 @@ async function runDevice(deviceKey, base, pages, args, shotsDir) {
     while (queue.length) {
       const p = queue.shift();
       const context = await newContext();
-      const r = await auditPage(context, base, p, args, shotsDir, deviceKey);
+      const r = await auditPage(context, base, p, args, shotsDir, deviceKey, prefix);
       await context.close().catch(() => {});
       process.stdout.write(
         `  ${deviceKey.padEnd(8)} ${p.name.padEnd(18)} ${r.skipped ? 'skip' : r.error ? 'ERROR' : r.verdict}\n`,
@@ -340,9 +402,17 @@ async function main() {
     return;
   }
   const base = resolveBaseUrl(args.base);
-  const pages = args.only ? PAGES.filter((p) => args.only.has(p.name)) : PAGES;
+  // A --path name the list doesn't have is a page of its own (a forum
+  // thread, a new route), audited after the listed ones.
+  const extra = [...args.paths]
+    .filter(([name]) => !PAGES.some((p) => p.name === name))
+    .map(([name, path]) => ({ name, template: 'extra', path }));
+  const all = [...PAGES, ...extra];
+  const pages = args.only
+    ? all.filter((p) => args.only.has(p.name) || p.template === 'extra')
+    : all;
   if (args.only) {
-    const unknown = [...args.only].filter((n) => !PAGES.some((p) => p.name === n));
+    const unknown = [...args.only].filter((n) => !all.some((p) => p.name === n));
     if (unknown.length)
       throw new Error(`unknown page(s): ${unknown.join(', ')} (--list shows them)`);
   }
@@ -357,12 +427,47 @@ async function main() {
   const results = [];
   for (const d of args.devices) results.push(...(await runDevice(d, base, pages, args, shotsDir)));
 
+  // The baseline loads the paths the branch run resolved, so a page picked
+  // from the recent-games feed is the same game on both builds.
+  let beforeBase = null;
+  let beforeResults = null;
+  if (args.before && args.sheet) {
+    beforeBase = resolveBaseUrl(args.before);
+    console.log(`baseline: ${beforeBase.origin}`);
+    beforeResults = [];
+    for (const d of args.devices) {
+      const paths = new Map(
+        results.filter((r) => r.device === d && r.url).map((r) => [r.page, r.url]),
+      );
+      const beforeArgs = { ...args, paths: new Map([...args.paths, ...paths]) };
+      beforeResults.push(
+        ...(await runDevice(d, beforeBase, pages, beforeArgs, shotsDir, 'before-')),
+      );
+    }
+  }
+  const sheetResults = beforeResults ? markUnchanged(results, beforeResults) : results;
+
   await writeFile(
     join(outDir, 'report.json'),
     `${JSON.stringify({ base: base.origin, startedAt, results }, null, 2)}\n`,
   );
   const md = renderMarkdown(base, results, startedAt);
   await writeFile(join(outDir, 'report.md'), `${md}\n`);
+
+  if (args.sheet) {
+    const notes = args.notes ? JSON.parse(await readFile(args.notes, 'utf8')) : {};
+    // One page for every device, so a review is one link.
+    const html = renderSheet({
+      base: base.origin,
+      startedAt,
+      results: sheetResults,
+      notes,
+      beforeBase: beforeBase?.origin ?? null,
+      beforeResults,
+    });
+    await writeFile(join(outDir, 'sheet.html'), html);
+    console.log(`sheet: ${join(outDir, 'sheet.html')}`);
+  }
 
   const fails = results.filter((r) => r.verdict === 'fail').length;
   const warns = results.filter((r) => r.verdict === 'warn').length;

@@ -91,7 +91,9 @@ test('every engine family of a PvE variant is smoked, not just the default one',
       .filter((engineId): engineId is string => typeof engineId === 'string')
       .map(engineFamily),
   );
-  assert.ok(families.get('xiangqi')?.size === 2, 'expected two xiangqi engine families');
+  // Fairy-Stockfish ladder, Pikafish Level 8, and General Blunder (the
+  // worst-move bot, 2026-10-17).
+  assert.ok(families.get('xiangqi')?.size === 3, 'expected three xiangqi engine families');
   const unsmoked: string[] = [];
   for (const [spec, specFamilies] of families) {
     const unpinned = [...specFamilies].filter((family) => !pinned.has(family));

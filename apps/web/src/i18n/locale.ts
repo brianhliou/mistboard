@@ -192,8 +192,8 @@ export type LocaleSwitchNavigation = { kind: 'navigate'; href: string } | { kind
 
 // How the language switcher should leave the page once the new locale is
 // stored. Only the routes isContentPath lists (home, /rules, /blog,
-// /learn/xiangqi, /practice, /bots, /champions, /videos, study permalinks and
-// the xiangqi analysis board and editor) carry a locale prefix, so on every
+// /learn/xiangqi, /practice, /bots, /champions, /videos, the study list and its
+// permalinks, the xiangqi analysis board and editor) carry a locale prefix, so on every
 // other route localizedHref hands back the current URL unchanged. Assigning an identical
 // URL to location.href normally reloads, but when the URL carries a fragment
 // (/feed#id, /learn#/stage, /api-docs#tag) the browser treats it as a
@@ -246,7 +246,8 @@ function isContentPath(pathname: string): boolean {
     // Engine champions, moved from brianhliou.com with its zh pages.
     pathname === '/champions' ||
     pathname === '/videos' ||
-    // Study permalinks (/zh-hans/study/:id); bare /study has no zh route.
+    // The study list and its permalinks (/zh-hans/study, /zh-hans/study/:id).
+    pathname === '/study' ||
     pathname.startsWith('/study/') ||
     // 象棋AI分析 and 摆残局: the xiangqi board and editor have zh URLs; the
     // other variants' boards and the bare /analysis alias do not.

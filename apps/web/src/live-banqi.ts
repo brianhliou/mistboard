@@ -25,6 +25,7 @@ import type {
   BanqiSeat,
   BanqiSquare,
 } from '@mistboard/game';
+import { banqiMoveLabel, banqiMoveLabelOnBoard } from '@mistboard/game';
 import './live-xiangqi.css';
 import { renderBanqiMaterial } from './banqi-material.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
@@ -95,6 +96,9 @@ export type BanqiWireView = {
   lastMove?: BanqiMove;
   // The 長捉 rule the game is played under; absent on a pre-rule game (rule off).
   chaseRule?: BanqiChaseRule;
+  // The no-progress limit (plies without a capture or flip) the game draws at:
+  // 60 since 2026-10-17; absent or 40 on an older game.
+  noProgressLimit?: number;
   // The seat to move's board moves the 長捉 rule forbids right now; absent when
   // none, on the other seat's view, and for spectators.
   forbiddenMoves?: BanqiMove[];
@@ -254,10 +258,12 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    // A flip (self-move) shows as the flipped square; a board move as from-to.
-    // The notation is per-move (never per-seat), so it rides the standard
-    // two-column move list keyed by seat.
-    notate: banqiMoveLabel,
+    // The site's one banqi label (flip-move-label.ts): "b1-b2", and a flip
+    // names the piece it turned up, read off this viewer's board after it
+    // ("f2(C)"). Per-move, never per-seat, so it rides the standard two-column
+    // move list keyed by seat.
+    notate: (move) => banqiMoveLabel(move, null),
+    notateWithView: (move, viewAfter) => banqiMoveLabelOnBoard(move, viewAfter?.board),
     isMoveEvent: isBanqiMoveEvent,
   },
   replayCapture: {
@@ -535,11 +541,6 @@ function replayPositionKey(view: BanqiWireView): string {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-// A flip (self-move) is shown as the flipped square; a board move as from-to.
-function banqiMoveLabel(move: BanqiMove): string {
-  return move.from === move.to ? `${move.from}↑` : `${move.from}-${move.to}`;
-}
 
 function isBanqiMoveEvent(event: TenantLiveEvent): event is BanqiMoveEvent {
   const move = (event as { move?: unknown }).move;

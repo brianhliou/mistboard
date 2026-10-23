@@ -51,7 +51,8 @@ function fakeRegistration(args: {
       legacyVariants: [args.channelId],
     },
     isEngineClientId: (clientId: string | undefined) =>
-      clientId?.startsWith(FAKE_ENGINE_PREFIX) ?? false,
+      clientId === 'pikafish-jieqi-strongest' ||
+      (clientId?.startsWith(FAKE_ENGINE_PREFIX) ?? false),
     engineDisplayName: (clientId: string) => `Engine ${clientId.slice(FAKE_ENGINE_PREFIX.length)}`,
     enabled: () => true,
     rooms: args.rooms,
@@ -465,6 +466,23 @@ test('engine seats are labelled through the tenant display name, PvE composition
   assert.equal(human?.handle, 'ada');
 });
 
+test('current games keep the Jieqi Pikafish Level 8 label and shared profile link', () => {
+  for (const pveBotId of [undefined, 'pikafish', 'pika-jieqi-strongest']) {
+    hiddenRooms.set(
+      'fkh_level8',
+      tenantRoom({
+        id: 'fkh_level8',
+        seats: { black: 'pikafish-jieqi-strongest', red: 'client-a' },
+        pveBotId,
+      }),
+    );
+    const [game] = collectCurrentGames(context(), NOW);
+    const engineSeat = game?.players.find((player) => player.isEngine);
+    assert.equal(engineSeat?.name, 'Pikafish Level 8');
+    assert.equal(engineSeat?.botId, 'pikafish');
+  }
+});
+
 test('an engine seat fronted by a first-party bot is named after the bot, as the room names it', () => {
   // The room wire resolves the bot profile first; the tile used to resolve the
   // tier name only, so one game read "Pikafish" in the room and
@@ -482,6 +500,36 @@ test('an engine seat fronted by a first-party bot is named after the bot, as the
   assert.equal(engine?.name, 'Pikafish');
   assert.equal(engine?.botId, 'pikafish');
   openRooms.delete('fko_bot');
+});
+
+// A chess-stack room seats the engine under its build id. The tile showed that
+// id ("python-v2-v1.6") where the room shows "Misty", because only the tenant
+// path went through the bot table.
+function chessRoomContext(pveBotId?: string): HttpApiContext {
+  const room = {
+    id: 'fog_chess_pve',
+    gameSpecId: 'dark-chess',
+    rated: false,
+    timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+    events: [{ type: 'move-played', at: NOW - 2_000 }],
+    projection: {
+      state: { status: { type: 'playing' }, moveNumber: 35 },
+      seats: { white: 'python-v2-v1.6', black: 'client-guest' },
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+    },
+    seatTokens: {},
+    ...(pveBotId ? { pveBotId } : {}),
+  };
+  return { rooms: new Map([[room.id, room]]) } as unknown as HttpApiContext;
+}
+
+test('a chess-stack engine seat is named after the bot that fronts it, not its build id', () => {
+  for (const pveBotId of [undefined, 'misty']) {
+    const [game] = collectCurrentGames(chessRoomContext(pveBotId), NOW);
+    const engine = game?.players.find((player) => player.isEngine);
+    assert.equal(engine?.name, 'Misty', `pveBotId=${pveBotId}`);
+    assert.equal(engine?.botId, 'misty', `pveBotId=${pveBotId}`);
+  }
 });
 
 // ---------------------------------------------------------------------------

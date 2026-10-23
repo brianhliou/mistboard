@@ -401,12 +401,6 @@ export {
   getLeaderboardSummary,
   getMostActivePlayers,
 } from './persistence-leaderboards.js';
-export type { LobbyActivityEvent } from './persistence-lobby-activity.js';
-export {
-  cachedLobbyActivity,
-  listLobbyActivity,
-  resetLobbyActivityCacheForTests,
-} from './persistence-lobby-activity.js';
 export type {
   ForumWatchNotification,
   NewFollowerNotification,

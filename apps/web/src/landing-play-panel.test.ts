@@ -38,6 +38,12 @@ function clickNext(el: HTMLElement, which: 'level' | 'clock', times = 1): void {
   }
 }
 
+// Person rows open on a day per move; a test of the live search picks 5+5 the
+// way a returning visitor's saved pace does.
+function rememberLivePace(): void {
+  localStorage.setItem('mistboard.playPanel.v1', JSON.stringify({ people: { xiangqi: '5m5' } }));
+}
+
 // /api/live-stats reads are shared through a module cache; start each test cold.
 beforeEach(() => resetLiveStatsCacheForTests());
 
@@ -351,6 +357,7 @@ describe('homepage play panel', () => {
 
   it('shows a waiting player on top and counts open games on the person tab', async () => {
     vi.useFakeTimers();
+    rememberLivePace();
     vi.stubGlobal(
       'fetch',
       vi.fn(async (input: string) => {
@@ -391,6 +398,7 @@ describe('homepage play panel', () => {
 
   it('does not offer you your own seek while you wait', async () => {
     vi.useFakeTimers();
+    rememberLivePace();
     const mine = {
       gameSpecId: 'xiangqi',
       rated: false,
@@ -432,6 +440,30 @@ describe('homepage play panel', () => {
     );
     rated?.click();
     expect(window.location.href).toContain('/account?tab=login');
+  });
+
+  it('shows Casual/Rated once /api/server-status turns rated on after the panel is built', () => {
+    const board = buildPlayPanel('en', { hydrate: false });
+    expect(board.querySelectorAll('.pp-mode-btn')).toHaveLength(0);
+    setRatedModeEnabled(true);
+    const labels = [...board.querySelectorAll('.pp-mode-btn')].map((el) => el.textContent);
+    expect(labels).toEqual(['Casual', 'Rated']);
+  });
+
+  it('opens a person row on a day per move, with no bot-offer note', () => {
+    const board = buildPlayPanel('en', { hydrate: false });
+    const person = row(board, 'xiangqi', 'person');
+    expect(person.querySelector('.pp-step-clock .pp-step-value')?.textContent).toBe('1d/move');
+    expect(board.querySelector('.pp-note')?.textContent).toBe('');
+    // Rated has no days while rated correspondence is held, so it opens on 5+5.
+    setResolvedSignedIn(true);
+    setRatedModeEnabled(true);
+    const signedIn = buildPlayPanel('en', { hydrate: false });
+    [...signedIn.querySelectorAll<HTMLButtonElement>('.pp-mode-btn')]
+      .find((el) => el.textContent === 'Rated')!
+      .click();
+    const rated = row(signedIn, 'xiangqi', 'person');
+    expect(rated.querySelector('.pp-step-clock .pp-step-value')?.textContent).toBe('5+5');
   });
 
   it('narrows rated to the rated clocks; days per move are rated where correspondence rates', () => {
@@ -515,6 +547,7 @@ describe('homepage play panel', () => {
 
     beforeEach(() => {
       vi.useFakeTimers();
+      rememberLivePace();
     });
     afterEach(async () => {
       await withdrawLobbySeeks();
@@ -541,7 +574,10 @@ describe('homepage play panel', () => {
     it('withdraws the seek before Play again starts its game', async () => {
       localStorage.setItem(
         'mistboard.playPanel.v1',
-        JSON.stringify({ last: { gameSpecId: 'jieqi', botId: 'pikafish-level-5', tc: '10m5' } }),
+        JSON.stringify({
+          last: { gameSpecId: 'jieqi', botId: 'pikafish-level-5', tc: '10m5' },
+          people: { xiangqi: '5m5' },
+        }),
       );
       const net = lobbyFetch();
       const board = buildPlayPanel('en', { hydrate: false });

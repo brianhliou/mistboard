@@ -107,3 +107,19 @@
   color: color-mix(in srgb, var(--site-muted) 70%, transparent);
   padding-right: 2px;
 }
+
+/* Stacked home (one column, landing.css max-width: 959px): no band neighbour
+   sets this box's height, so it sizes to its rows, capped at four topics. The
+   fixed 20em box held two topics and 80px of empty space on a phone, with no
+   room for a third (#574); zh titles and excerpts wrap differently, so a fixed
+   height never fits both languages. From 960px the box shares its band's
+   height and fitRows() picks the count. */
+@media (max-width: 959px) {
+  .landing-forum {
+    height: auto;
+  }
+
+  .landing-forum .site-box-body > .landing-forum-topic:nth-child(n + 5) {
+    display: none;
+  }
+}

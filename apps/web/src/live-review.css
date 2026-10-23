@@ -555,3 +555,726 @@
     overflow: hidden;
   }
 }
+
+/* Phone room (600px and under, #576, design: phone-mockups Room). The col1
+   stack above becomes the app-shaped room: edge-to-edge bands, nothing boxed.
+     opponent seat band: dot, name, material, clock block flush right
+     board, full width
+     viewer seat band
+     (jieqi's reveal odds, one line: live-jieqi-reveal-odds.css)
+     (forfeit countdown, status notice, room actions, clocks note: own lines;
+     the abort countdown is a bubble over the board: live-abort-bubble.ts)
+     move strip: one line of moves, scrolling sideways, current move a pill
+     action bar: Resign/Abort + the move-nav arrows and menu
+     then the face-down pool, the replay label, the game-meta card, extras
+   The board's height budget leaves room for the header and the four bands, so
+   board, both clocks, strip and bar share the first screen on a 390x664 phone.
+   Tablet and desktop never see these rules. */
+@media (max-width: 600px) {
+  /* Edge to edge: the page's side gutter moves onto the text items instead. */
+  main.shell:has(.live-review__cluster) {
+    padding-top: 0;
+    align-content: start;
+    padding-inline: 0;
+    padding-bottom: 0;
+  }
+
+  .review-shell__cluster.live-review__cluster {
+    --phone-room-band: 44px;
+    --phone-room-bar: 48px;
+    --phone-room-header: 52px;
+    --uni-board-h-budget: calc(
+      100svh -
+      var(--phone-room-header) -
+      3 *
+      var(--phone-room-band) -
+      var(--phone-room-bar) -
+      var(--phone-room-extra, 0px) -
+      var(--phone-room-post, 0px) -
+      var(--uni-board-chrome-h, 0px)
+    );
+    /* The board's unsnapped height: its width (the page, or the budget times
+       the aspect when the budget binds) over the aspect. */
+    --phone-room-board-h: calc(
+      min(
+        100vw,
+        var(--uni-board-h-budget) *
+        var(--uni-board-aspect, 1) *
+        var(--uni-board-scale, 1)
+      ) /
+      var(--uni-board-aspect, 1)
+    );
+    /* What a width-bound board leaves of its budget. */
+    --phone-room-slack: max(0px, calc(var(--uni-board-h-budget) - var(--phone-room-board-h)));
+    gap: 0;
+    align-items: stretch;
+  }
+
+  /* Text items keep the 12px side gutter the page no longer gives them. */
+  .live-review__cluster > *,
+  .live-review__cluster .moves-panel > *,
+  .live-review__cluster .game-console > *,
+  .live-review__cluster .round-table__box > * {
+    flex-basis: calc(100% - 24px);
+    margin: 8px 12px 0;
+  }
+
+  /* --- Bands: full width, no gutter. --- */
+  .live-review__cluster > .review-shell__center,
+  .live-review__cluster .round-table__player--top,
+  .live-review__cluster .round-table__player--bottom,
+  .live-review__cluster .captures-strip-top,
+  .live-review__cluster .captures-strip-bottom,
+  .live-review__cluster [data-clock-top],
+  .live-review__cluster [data-clock-bottom],
+  .live-review__cluster .game-table-moves,
+  .live-review__cluster .move-nav-bar {
+    margin: 0;
+  }
+
+  /* The stage snaps its width down to 8px steps, so the board came out 3-6px
+     short of its budget and the shortfall fell below the bar: the bar sat
+     3px higher in jieqi than in banqi (Brian, 2026-10-17). The board's block
+     keeps the unsnapped height and centres the board in it, so the bar ends
+     every room on the same line. */
+  .live-review__cluster > .review-shell__center {
+    flex-basis: 100%;
+    box-sizing: border-box;
+    height: calc(var(--phone-room-board-h) + var(--uni-board-chrome-h, 0px));
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* The stage snaps its width down to 8px steps (styles.css); centre the few
+     px it gives back instead of leaving them all on the right. */
+  .live-review__cluster .board-shell > .board-stage {
+    justify-self: center;
+  }
+
+  /* Seat bands: one 44px line on the bar tone; the clock block fills its
+     height at the right edge. */
+  .live-review__cluster .round-table__player--top,
+  .live-review__cluster .round-table__player--bottom,
+  .live-review__cluster .captures-strip-top:not(.drop-mini-reserve-strip),
+  .live-review__cluster .captures-strip-bottom:not(.drop-mini-reserve-strip),
+  .live-review__cluster [data-clock-top],
+  .live-review__cluster [data-clock-bottom] {
+    min-height: var(--phone-room-band);
+    background: var(--site-mobile-bar-bg, var(--site-panel));
+  }
+
+  .live-review__cluster .round-table__player--top,
+  .live-review__cluster .round-table__player--bottom {
+    display: flex;
+    align-items: center;
+    flex-basis: auto;
+    padding: 0 8px 0 12px;
+    font-size: 15px;
+    /* A long name gives way (ellipsis) before the captured pieces do: with an
+       even share, "Pikafish Level 2" pushed a jieqi haul under the clock's
+       edge (Brian, 2026-10-17). */
+    flex-shrink: 10;
+    min-width: 92px;
+  }
+
+  /* The lit clock already says whose move it is; the pill cost the seat line
+     70px the captured pieces need. */
+  .live-review__cluster .clock-to-move {
+    display: none;
+  }
+
+  /* Captured pieces stay on the seat line: at 320px a long haul wrapped into a
+     column that pushed the moves and the bar below the fold, so it scrolls
+     sideways instead. */
+  .live-review__cluster .captures-strip-top:not(.drop-mini-reserve-strip),
+  .live-review__cluster .captures-strip-bottom:not(.drop-mini-reserve-strip) {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    flex-basis: auto;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .live-review__cluster .captures-strip-top:not(.drop-mini-reserve-strip) > *,
+  .live-review__cluster .captures-strip-bottom:not(.drop-mini-reserve-strip) > * {
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+  }
+
+  /* Drop pockets (crazyhouse xiangqi) are a line of their own outside each
+     seat line: a fixed slot so their height is known, and the board's budget
+     gives up both lines while they are mounted. */
+  .review-shell__cluster.live-review__cluster:has(.drop-pocket) {
+    --phone-room-pocket: 36px;
+    --phone-room-extra: calc(2 * (var(--phone-room-pocket) + 6px));
+  }
+
+  /* With the pieces on their own line, the name fills its seat line up to
+     the clock, or the gap showed the page tone between them. */
+  .review-shell__cluster.live-review__cluster:has(.drop-pocket)
+  :is(.round-table__player--top, .round-table__player--bottom) {
+    flex-grow: 1;
+    max-width: none;
+  }
+
+  .live-review__cluster .drop-pocket .drop-mini-reserve-row {
+    --pocket-slot: var(--phone-room-pocket, 36px);
+  }
+
+  /* The clock keeps the right edge when no captured strip fills the line
+     between it and the name (drop pockets live on their own line). */
+  .live-review__cluster [data-clock-top],
+  .live-review__cluster [data-clock-bottom] {
+    display: flex;
+    flex-basis: auto;
+    margin-left: auto;
+  }
+
+  /* The clock block. :root plus the slot classes clear theme.css's dark
+     repaint of every `.clocks div` (four classes there, five here). */
+  :root .live-review__cluster .clocks.clock-slot div.clock-time-row {
+    flex: 1 0 auto;
+    justify-items: center;
+    align-content: center;
+    width: auto;
+    min-width: 104px;
+    min-height: var(--phone-room-band);
+    padding: 0 12px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: var(--site-menu-chip-bg, var(--site-panel-soft));
+    color: var(--site-heading);
+    animation: none;
+  }
+
+  :root .live-review__cluster .clocks.clock-slot div.clock-time-row strong {
+    min-width: 0;
+    color: inherit;
+    font-size: 26px;
+    text-align: center;
+  }
+
+  :root .live-review__cluster .clocks.clock-slot div.clock-time-row.active {
+    background: var(--site-accent);
+    color: var(--site-on-accent, #fff);
+  }
+
+  :root .live-review__cluster .clocks.clock-slot div.clock-time-row.active strong {
+    font-weight: 700;
+  }
+
+  /* Time left runs the full width of the seat line, along the edge it shares
+     with the board (Brian, 2026-10-17: extend the bar "horizontally through
+     the page"). The tab leaves that 3px edge unpainted so the bar reads past
+     its fill; the tab ends on the page's right edge, so 100vw back from there
+     is the left edge. */
+  :root .live-review__cluster [data-clock-top] div.clock-time-row.has-bar {
+    box-sizing: border-box;
+    border-bottom: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  :root .live-review__cluster [data-clock-bottom] div.clock-time-row.has-bar {
+    box-sizing: border-box;
+    border-top: 3px solid transparent;
+    background-clip: padding-box;
+  }
+
+  :root .live-review__cluster .clocks.clock-slot div.clock-time-row.has-bar::after {
+    left: auto;
+    right: 0;
+    width: 100vw;
+    z-index: 1;
+  }
+
+  :root .live-review__cluster [data-clock-top] div.clock-time-row.has-bar::after {
+    bottom: -3px;
+  }
+
+  :root .live-review__cluster [data-clock-bottom] div.clock-time-row.has-bar::after {
+    top: -3px;
+  }
+
+  /* A flagging clock stays red over the active fill. */
+  :root .live-review__cluster .clocks.clock-slot div.clock-time-row.emerg {
+    background: var(--clock-emerg-bg);
+    color: var(--clock-emerg-text);
+  }
+
+  :root .live-review__cluster .clocks.clock-slot div.clock-time-row.emerg.has-bar::after {
+    background: var(--clock-emerg-text);
+  }
+
+  /* --- Lines between the viewer's seat and the strip (each only when it has
+     something to say). --- */
+  .live-review__cluster [data-game-controls-section]:not([hidden]),
+  .live-review__cluster [data-game-controls-section]:not([hidden]) > .game-controls {
+    display: contents;
+  }
+
+  .live-review__cluster .game-controls > :is(.abort-countdown, .forfeit-countdown) {
+    order: 35;
+    flex: 0 0 calc(100% - 24px);
+    margin: 6px 12px 0;
+    padding: 0;
+  }
+
+  .live-review__cluster .clocks-pregame-note {
+    order: 35;
+  }
+
+  .live-review__cluster [data-action-section] {
+    order: 35;
+  }
+
+  .live-review__cluster .round-table__row:has(> .room-actions) {
+    order: 36;
+  }
+
+  /* --- Move strip: the list on one line, scrolling sideways; scroll-follow
+     keeps the latest (or scrubbed) move in view (game-table.ts). --- */
+  .live-review__cluster .replay-console {
+    display: contents;
+  }
+
+  .live-review__cluster .game-table-moves {
+    order: 45;
+    flex-basis: 100%;
+    display: flex;
+    align-items: center;
+    height: var(--phone-room-band);
+    max-height: none;
+    padding: 0 8px;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    /* Its one long line of moves must not count toward the page's min-content
+       width: main.shell sizes its grid column from content, and a long game
+       widened the whole page past the phone. */
+    contain: inline-size;
+    scrollbar-width: none;
+    white-space: nowrap;
+    background: var(--site-menu-chip-bg, var(--site-panel-soft));
+  }
+
+  .live-review__cluster .game-table-moves::-webkit-scrollbar {
+    display: none;
+  }
+
+  .live-review__cluster .round-table__box .game-table-moves > .move-list {
+    display: flex;
+    flex: none;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    background: none;
+    font-size: 15px;
+  }
+
+  .live-review__cluster .round-table__box .move-list > .move-row {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0;
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .live-review__cluster .move-list > .move-row > :first-child:not(button) {
+    width: auto;
+    min-width: 0;
+    padding: 0 2px 0 4px;
+    background: none;
+    color: var(--site-muted);
+  }
+
+  .live-review__cluster .round-table__box .move-list > .move-row > button {
+    width: auto;
+    height: 36px;
+    min-height: 36px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: var(--site-radius-sm, 6px);
+    box-shadow: none;
+  }
+
+  /* The current move is a dark pill: the scrubbed ply, else (live) the last
+     move played. */
+  :root .live-review__cluster .round-table__box .move-list > .move-row > button.active,
+  :root
+    .live-review__cluster
+    .round-table__box
+    .move-list:not(:has(button.active))
+    > .move-row:last-child
+    > button:nth-last-child(1 of button:not(:empty)) {
+    background: var(--site-heading);
+    color: var(--site-panel, var(--site-surface));
+    font-weight: 600;
+  }
+
+  .live-review__cluster .game-table-moves > .game-result {
+    flex: none;
+    margin: 0 4px;
+    padding: 0;
+    border: 0;
+    white-space: nowrap;
+  }
+
+  /* --- Action bar: ½ and the flag (or Abort) beside the move-nav arrows, one
+     band. --- */
+  .live-review__cluster .game-controls > :is(button, .game-controls__pending) {
+    order: 46;
+    flex: 0 0 auto;
+    min-height: var(--phone-room-bar);
+    margin: 0;
+    padding: 0 16px;
+    border-top: 1px solid var(--site-border-soft);
+    border-radius: 0;
+    background: var(--site-mobile-bar-bg, var(--site-panel));
+  }
+
+  .live-review__cluster .game-controls > .game-controls__pending {
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  /* A question (a confirm, or the opponent's offer) takes its own line above
+     the arrows, which wrap to the full width below it. */
+  .live-review__cluster .game-controls > .game-controls__question {
+    order: 46;
+    flex: 1 1 100%;
+    min-height: var(--phone-room-band);
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--site-border-soft);
+    background: var(--site-mobile-bar-bg, var(--site-panel));
+  }
+
+  .live-review__cluster .game-controls__question > button {
+    flex: 0 0 56px;
+    align-self: stretch;
+    height: auto;
+    border-radius: 0;
+  }
+
+  /* The extra line comes out of the slack above the strip, so the board does
+     not move and the room stays one screen. */
+  .live-review__cluster:has(.game-controls__question) .game-table-moves {
+    margin-top: max(0px, calc(var(--phone-room-slack) - var(--phone-room-band)));
+  }
+
+  .review-shell__cluster.live-review__cluster:has(.hidden-pool:not(:empty)):has(
+      .game-controls__question
+    )
+    .game-table-moves {
+    margin-top: max(0px, calc(var(--phone-room-slack) / 2 - var(--phone-room-band)));
+  }
+
+  .live-review__cluster .move-nav-bar {
+    order: 47;
+    flex: 1 1 0;
+    /* Shares its line with Resign/Abort while the game is on; once those are
+       gone, this keeps it from riding up beside the moves strip at 0px wide. */
+    min-width: 60%;
+    border-bottom: 0;
+    background: var(--site-mobile-bar-bg, var(--site-panel));
+  }
+
+  .live-review__cluster .move-nav-bar > .move-nav-bar__button {
+    height: calc(var(--phone-room-bar) - 1px);
+  }
+
+  /* The bar sits at the bottom of the room, so its menu rises. */
+  .live-review__cluster .move-nav-menu--down {
+    top: auto;
+    bottom: calc(100% + 4px);
+  }
+
+  .live-review__cluster .replay-meta {
+    order: 48;
+    flex: 0 0 calc(100% - 24px);
+    margin: 6px 12px 0;
+  }
+
+  /* --- One screen, no scroll (Brian, 2026-10-17). The moves strip and the bar
+     end the screen: the height a width-bound board leaves inside its budget
+     (budget minus board width over aspect, the .board-shell width rule above)
+     goes above the strip, so the two rows sit on the bottom edge. */
+  .live-review__cluster .game-table-moves {
+    margin-top: var(--phone-room-slack);
+  }
+
+  /* Before the first move the strip is empty: no tone of its own, or it read
+     as a stray band under the board (Brian, 2026-10-17). */
+  .live-review__cluster .game-table-moves:not(:has(.move-list > *)) {
+    background: transparent;
+  }
+
+  /* The game card and the chat open as a sheet from the bar's ☰
+     (live-room-sheet.ts); the page has no room for them. */
+  .review-shell__cluster.live-review__cluster > .meta-panel {
+    display: none;
+  }
+
+  .review-shell__cluster.live-review__cluster[data-room-sheet="open"] > .meta-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--phone-room-bar) + var(--phone-room-band));
+    max-height: 70svh;
+    margin: 0;
+    padding: 8px 12px 12px;
+    overflow-y: auto;
+    border-top: 1px solid var(--site-border-soft);
+    border-radius: 12px 12px 0 0;
+    background: var(--site-panel);
+    box-shadow: 0 -8px 24px rgb(0 0 0 / 0.18);
+  }
+
+  .live-review__cluster .meta-panel > .meta-panel__close {
+    display: block;
+    align-self: flex-end;
+    min-height: 36px;
+    padding: 0 12px;
+    border: 0;
+    background: none;
+    color: var(--site-text-muted, inherit);
+    font: inherit;
+  }
+
+  .live-review__cluster[data-room-sheet="open"] .review-spectator-chat--live {
+    flex: 0 0 auto;
+    height: 240px;
+    min-height: 0;
+    max-height: none;
+  }
+
+  /* A chat line came in while the sheet was closed. */
+  .live-review__cluster[data-chat-unread] .move-nav-bar__menu-button,
+  .live-review__cluster[data-chat-unread] [data-room-info] {
+    position: relative;
+  }
+
+  .live-review__cluster[data-chat-unread] .move-nav-bar__menu-button::after,
+  .live-review__cluster[data-chat-unread] [data-room-info]::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--site-accent, #c0392b);
+  }
+
+  /* Face-down pools (banqi, flip jungle) sit under the bottom seat at a fixed
+     height that the board's budget gives up, so the room still fits. */
+  .live-review__cluster .hidden-pool:not(:empty) {
+    order: 44;
+    flex: 0 0 calc(100% - 24px);
+    height: var(--phone-room-pool, 96px);
+    margin: 0 12px;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  /* A width-bound board (banqi's strip) leaves room below it; the pool sits in
+     the middle of it rather than under the board with a gap below (Brian,
+     2026-10-17). */
+  .review-shell__cluster.live-review__cluster .hidden-pool:not(:empty) {
+    margin-top: calc(var(--phone-room-slack) / 2);
+    border-top: 0;
+  }
+
+  .review-shell__cluster.live-review__cluster:has(.hidden-pool:not(:empty)) .game-table-moves {
+    margin-top: calc(var(--phone-room-slack) / 2);
+  }
+
+  /* One slot per kind of piece, so a full row spans the line instead of
+     bunching at the left, and a thinned row keeps its slots. */
+  .live-review__cluster .hidden-pool__pieces {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    gap: 0;
+  }
+
+  .live-review__cluster .hidden-pool__pieces > .hidden-pool__chip {
+    flex: 0 0 calc(100% / var(--phone-room-pool-kinds, 7));
+    justify-content: center;
+  }
+
+  .live-route--jungle-flip .review-shell__cluster.live-review__cluster {
+    --phone-room-pool-kinds: 8;
+  }
+
+  .live-review__cluster .hidden-pool:empty {
+    display: none;
+  }
+
+  .review-shell__cluster.live-review__cluster:has(.hidden-pool:not(:empty)) {
+    --phone-room-extra: var(--phone-room-pool, 96px);
+  }
+
+  .live-route--banqi .review-shell__cluster.live-review__cluster {
+    --phone-room-pool: 80px;
+  }
+
+  /* Banqi's reveal odds in jieqi's phone style (Brian, 2026-10-17): a 40px
+     line per ink, the viewer's first, small discs with the chance under each.
+     The "N face-down could be" caption stays for screen readers only; every
+     tile draws from one pool, so the chances already carry the count. */
+  .live-review__cluster .hidden-pool--odds:not(:empty) {
+    --reveal-chip: 22px;
+
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .live-review__cluster .hidden-pool--odds .hidden-pool__caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .live-review__cluster .hidden-pool--odds .hidden-pool__row {
+    flex-wrap: nowrap;
+    height: 40px;
+    gap: 4px;
+  }
+
+  /* The caption is a div too, so the bottom ink's row is the last of type:
+     it goes first, and the opponent's line takes the hairline above it. */
+  .live-review__cluster .hidden-pool--odds .hidden-pool__row:last-of-type {
+    order: -1;
+  }
+
+  .live-review__cluster .hidden-pool--odds .hidden-pool__row:not(:last-of-type) {
+    border-top: 1px solid var(--site-border-soft);
+  }
+
+  .live-review__cluster .hidden-pool--odds .hidden-pool__label {
+    min-width: 3.4em;
+    font-size: 12px;
+  }
+
+  .live-review__cluster .hidden-pool--odds .hidden-pool__pieces .review-capture-piece {
+    flex-basis: var(--reveal-chip);
+    width: var(--reveal-chip);
+    height: var(--reveal-chip);
+  }
+
+  .live-review__cluster .hidden-pool--odds .captures-count-badge {
+    min-width: 13px;
+    height: 13px;
+    font-size: 9px;
+    right: -4px;
+    bottom: -2px;
+  }
+
+  .live-review__cluster .hidden-pool--odds .reveal-odds-chip__pct {
+    font-size: 11px;
+    line-height: 1.15;
+  }
+
+  /* After the game: Rematch and the three links as a 2x2 grid of compact
+     buttons, a fixed height the board gives up, so the finished room still
+     ends on the moves strip and the bar. */
+  .review-shell__cluster.live-review__cluster:has(.postgame-actions) {
+    --phone-room-post: 96px;
+  }
+
+  .live-review__cluster .round-table__row:has(.postgame-actions) {
+    flex: 0 0 calc(100% - 24px);
+    height: calc(var(--phone-room-post) - 8px);
+    margin: 4px 12px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .live-review__cluster .postgame-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .live-review__cluster .round-table__box .postgame-actions > :is(a, button),
+  .live-review__cluster .postgame-actions > :is(a, button) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    width: 100%;
+    height: 40px;
+    min-height: 0;
+    margin: 0;
+    padding: 0 8px;
+    box-sizing: border-box;
+    font-size: 12px;
+    line-height: 1.15;
+    text-align: center;
+    white-space: normal;
+    border: 1px solid var(--site-border-soft);
+    border-radius: var(--site-radius, 10px);
+  }
+
+  /* Rematch keeps its brand slab but drops to the grid's 40px (the desktop
+     rule is (0,4,1) and sets 52px plus a gap under it). */
+  .review-shell__cluster.live-review__cluster
+    .round-table__box
+    .postgame-actions
+    > button.postgame-actions__rematch,
+  .review-shell__cluster.live-review__cluster .round-table__box .postgame-actions__rematch button {
+    height: 40px;
+    min-height: 0;
+    margin: 0;
+    font-size: 13px;
+  }
+
+  /* A two-player rematch offer (note plus Accept/Decline) takes the whole
+     first line, the note beside its buttons, so the grid stays two rows. */
+  .live-review__cluster .postgame-actions > .room-rematch {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    min-width: 0;
+  }
+
+  .live-review__cluster .postgame-actions > .room-rematch .room-rematch-note {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .live-review__cluster .postgame-actions > .room-rematch .room-rematch-buttons {
+    display: flex;
+    flex: 1 1 auto;
+    gap: 8px;
+  }
+}
+
+/* The sheet's close button exists only in the phone room. */
+.meta-panel__close {
+  display: none;
+}

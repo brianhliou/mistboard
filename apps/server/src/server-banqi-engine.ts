@@ -17,6 +17,7 @@ import {
   type BanqiGameState,
   type BanqiMove,
   type BanqiSeat,
+  banqiNoProgressLimitOf,
   getBanqiForbiddenChaseMoves,
   getBanqiLegalMoves,
   isBanqiLegalMove,
@@ -144,6 +145,7 @@ export type BanqiEngineMoveProvider = (
     movetimeCapMs?: number;
     moves?: readonly string[];
     searchMoves?: readonly string[];
+    noProgressLimit: number;
   },
 ) => Promise<UciEval>;
 
@@ -231,6 +233,9 @@ export async function playBanqiEngineMoveIfReady(
         movetimeCapMs,
         moves,
         searchMoves,
+        // The game's own draw limit (60, or 40 for a room created before 2026-10-17):
+        // without it the engine assumes 40 and plays the last 20 plies as already drawn.
+        noProgressLimit: banqiNoProgressLimitOf(state),
       });
       lastSearch = search;
       return search.best;

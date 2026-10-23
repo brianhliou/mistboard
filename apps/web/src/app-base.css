@@ -435,6 +435,24 @@
   display: none !important;
 }
 
+/* iOS Safari reads two quick taps as a zoom, so stepping a study or article
+   embed with Next, Next, Next zoomed the page in mid-game. `manipulation`
+   drops only double-tap zoom: pinch zoom and scrolling stay. Set on the root
+   (it reaches the board surfaces) and again on the controls, because a tap
+   inside a scrolling move list resolves against that scroller, not the root.
+   tap-zoom-guard.test.ts keeps it here. */
+html,
+button,
+a,
+input,
+select,
+textarea,
+label,
+summary,
+[role="button"] {
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
   /* lichess's base. Only reaches text that sets no size of its own, which is
@@ -571,4 +589,24 @@ body:has(
    unaffected. */
 html {
   scrollbar-gutter: stable;
+}
+
+/* The server's crawler copy in #app (crawlerCopyRoot in server-static-pages.ts:
+   /players, /bots, /study/:id) is plain text the client replaces on mount.
+   Kept out of the first paint so it never shows as a bare page before the
+   real one; shown after 4s in case the script never runs, and at once when a
+   failed mount puts it back (server-render-fallback.ts). */
+.crawler-copy {
+  animation: crawler-copy-reveal 0s 4s both;
+}
+#app[data-server-render="restored"] .crawler-copy {
+  animation: none;
+}
+@keyframes crawler-copy-reveal {
+  from {
+    visibility: hidden;
+  }
+  to {
+    visibility: visible;
+  }
 }

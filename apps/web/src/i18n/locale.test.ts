@@ -161,6 +161,9 @@ describe('locale helpers', () => {
     );
     expect(localizedHref('/videos', 'zh-Hans')).toBe('/zh-hans/videos');
     expect(localizedHref('/study/Ab12cd', 'zh-Hant')).toBe('/zh-hant/study/Ab12cd');
+    expect(localizedHref('/study', 'zh-Hans')).toBe('/zh-hans/study');
+    expect(localizedHref('/study?tab=staff', 'zh-Hant')).toBe('/zh-hant/study?tab=staff');
+    expect(localizedHref('/zh-hans/study', 'en')).toBe('/study');
     // Only xiangqi has zh board URLs; other variants and the alias stay English.
     expect(localizedHref('/analysis/banqi?fen=abc', 'zh-Hans')).toBe('/analysis/banqi?fen=abc');
     expect(localizedHref('/editor/jieqi', 'zh-Hans')).toBe('/editor/jieqi');

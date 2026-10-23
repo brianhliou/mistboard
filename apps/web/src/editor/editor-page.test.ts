@@ -54,6 +54,48 @@ function buttonNamed(el: HTMLElement, text: string): HTMLButtonElement {
 }
 
 describe('editor page', () => {
+  it('lends the same settings to Tools and restores them on close without losing edits', () => {
+    const el = mount('jieqi');
+    const rail = el.querySelector<HTMLElement>('.editor-rail--right')!;
+    const field = fenField(el);
+    const dialog = el.querySelector<HTMLDialogElement>('.editor-tools-sheet')!;
+    buttonNamed(el, 'Tools').click();
+    expect(dialog.open).toBe(true);
+    expect(dialog.querySelector('.editor-rail--right')).toBe(rail);
+    expect(fenField(dialog)).toBe(field);
+    buttonNamed(el, 'Flip board').click();
+    expect(el.querySelector('.editor-palette--bottom')?.getAttribute('data-color')).toBe('black');
+    buttonNamed(el, 'Close').click();
+    expect(dialog.open).toBe(false);
+    // Native close events are queued by browsers; dispatching it also makes
+    // the restoration assertion deterministic in happy-dom.
+    dialog.dispatchEvent(new Event('close'));
+    expect(rail.parentElement).toBe(el.querySelector('.editor-page'));
+    expect(fenField(el)).toBe(field);
+    expect(buttonNamed(el, 'Tools').getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('keeps the phone analysis hand-off and error in sync with the desktop controls', () => {
+    const el = mount('jieqi');
+    const desktop = el.querySelector<HTMLAnchorElement>('.editor-analysis-link')!;
+    const phone = el.querySelector<HTMLAnchorElement>('.editor-mobile-analysis-link')!;
+    expect(phone.href).toBe(desktop.href);
+    expect(phone.getAttribute('aria-disabled')).toBe('false');
+    brush(el, 'delete').click();
+    square(el, 'e1').click();
+    expect(phone.getAttribute('aria-disabled')).toBe('true');
+    expect(phone.getAttribute('tabindex')).toBe('-1');
+    expect(phone.href).toBe(desktop.href);
+    expect(el.querySelector<HTMLElement>('.editor-mobile-validation')!.hidden).toBe(false);
+    expect(el.querySelector('.editor-mobile-validation')!.textContent).toBe(
+      el.querySelector('.editor-validation')!.textContent,
+    );
+    buttonNamed(el, 'Start position').click();
+    expect(phone.getAttribute('aria-disabled')).toBe('false');
+    expect(phone.hasAttribute('tabindex')).toBe(false);
+    expect(el.querySelector<HTMLElement>('.editor-mobile-validation')!.hidden).toBe(true);
+  });
+
   for (const variant of EDITOR_VARIANTS) {
     it(`mounts the ${variant.id} editor`, () => {
       const el = mount(variant.id);
@@ -211,6 +253,43 @@ describe('editor page', () => {
     plus.click();
     expect(status.textContent).toBe('1 face-down tiles on board, pool has 30 pieces');
     expect(fenField(el).value).toBe('8/8/8/GX6 r A2E2R2H2C2S5g1a2e2r2h2c2s4 0 1');
+  });
+
+  it('jieqi: revealed pieces cannot expand the standard set passed to analysis', () => {
+    // A late-game position: one general per side, all other pieces captured.
+    // The editor permits temporary construction states, but analysis must not
+    // accept a third chariot just because the palette can paint one.
+    const el = mount('jieqi', '4k4/9/9/9/9/9/9/9/9/3K5 w R0A0C0P0N0B0r0a0c0p0n0b0 0 1');
+    const link = el.querySelector<HTMLAnchorElement>('.editor-analysis-link')!;
+    expect(link.getAttribute('aria-disabled')).toBe('false');
+    palette(el, 'red', 'chariot').click();
+    square(el, 'a5').click();
+    square(el, 'b5').click();
+    expect(link.getAttribute('aria-disabled')).toBe('false');
+    square(el, 'c5').click();
+    expect(link.getAttribute('aria-disabled')).toBe('true');
+    expect(el.querySelector('.editor-validation')!.textContent).toContain('Too many red chariots');
+    brush(el, 'delete').click();
+    square(el, 'c5').click();
+    expect(link.getAttribute('aria-disabled')).toBe('false');
+  });
+
+  it('jieqi: a face-down brush restores an unknown piece, not a chosen hidden identity', () => {
+    const el = mount('jieqi');
+    const initial = fenField(el).value;
+    const link = el.querySelector<HTMLAnchorElement>('.editor-analysis-link')!;
+    brush(el, 'delete').click();
+    square(el, 'a1').click();
+    expect(link.getAttribute('aria-disabled')).toBe('true');
+    palette(el, 'red', 'face-down').click();
+    square(el, 'a1').click();
+    expect(fenField(el).value).toBe(initial);
+    // Five public fields: identities are sampled from the standard pool only
+    // when the parser creates the analysis position's six-field dealt FEN.
+    expect(fenField(el).value.split(' ')).toHaveLength(5);
+    const analysisFen = new URL(link.href).searchParams.get('fen')!;
+    expect(analysisFen.split(' ')).toHaveLength(6);
+    expect(link.getAttribute('aria-disabled')).toBe('false');
   });
 
   it('banqi: the board never flips', () => {

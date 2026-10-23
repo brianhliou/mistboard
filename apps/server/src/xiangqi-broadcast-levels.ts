@@ -60,6 +60,9 @@ export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroad
   '2026-tianchang-cup': 'B',
   '2026-xintai-cup': 'B',
   '2026-baizuishan-cup': 'B',
+  // LA-hosted four-club invitational. Former North American champions play,
+  // but this mixed club field does not qualify new professional player pages.
+  '2026-us-qitian-cup': 'B',
   // The M0 fixture pack (packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample),
   // graded so the persistence tests can exercise the gate; it never reaches prod.
   '2025-wxc-sample': 'A',

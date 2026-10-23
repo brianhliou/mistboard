@@ -268,6 +268,15 @@ definePersistenceTests('chat', () => {
       assert.equal(Array.isArray(payload.lines), true);
       assert.equal(payload.canPost, false);
       assert.equal(payload.viewerHandle, null);
+      // People only (2026-10-17): no derived activity rows ride along.
+      assert.equal('events' in payload, false);
+      assert.deepEqual(Object.keys(payload).sort(), [
+        'canPost',
+        'canReport',
+        'isAdmin',
+        'lines',
+        'viewerHandle',
+      ]);
 
       const post = captureResponse();
       await tryHandleChatRoute(

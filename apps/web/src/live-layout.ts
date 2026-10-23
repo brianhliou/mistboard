@@ -1,5 +1,7 @@
 import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 import { createGameTable } from './game-table.js';
+import { attachAbortCountdownBubble } from './live-abort-bubble.js';
+import { attachRoomInfoSheet } from './live-room-sheet.js';
 import './live-lifecycle-effects.css';
 import type { LiveRefs } from './live-state.js';
 import './seat-disc-ink.css';
@@ -98,6 +100,10 @@ export function createLiveLayout(
   if (!chatHost) throw new Error('missing live room chat host');
   chatHost.replaceWith(buildLiveRoomChat(options.roomId));
 
+  const cluster = target.querySelector<HTMLElement>('.live-review__cluster');
+  const metaPanel = target.querySelector<HTMLElement>('.meta-panel');
+  if (cluster && metaPanel) attachRoomInfoSheet(cluster, metaPanel, gameTable.refs.gameControls);
+
   // The room rides the shared site nav (brand + Watch/Leaderboard + Learn +
   // account), prepended as an element so its dropdown and mobile toggle wire
   // up; account-nav.ts hydrates it via its body MutationObserver like every
@@ -109,7 +115,11 @@ export function createLiveLayout(
   // the board-stage corner (board-stage width == board width in the room).
   restoreBoardScale();
   const boardStage = target.querySelector<HTMLElement>('.board-stage');
-  if (boardStage) attachBoardResizeGrip(boardStage, boardStage);
+  if (boardStage) {
+    attachBoardResizeGrip(boardStage, boardStage);
+    // Phone room: the abort countdown shows over the board, not as a line.
+    attachAbortCountdownBubble(gameTable.refs.gameControls, boardStage);
+  }
 
   const roomMeta = target.querySelector<HTMLParagraphElement>('[data-room-meta]');
   const gameInfo = target.querySelector<HTMLDivElement>('[data-game-info]');

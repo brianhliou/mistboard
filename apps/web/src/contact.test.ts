@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildContact } from './contact.js';
+import { buildContact, contactAboutPath } from './contact.js';
 
 describe('contact page', () => {
   afterEach(() => {
@@ -53,7 +53,65 @@ describe('contact page', () => {
 
     expect(view.el.querySelector('.contact-status')?.textContent).toBe('謝謝，訊息已收到。');
   });
+
+  it('sends a same-site ?about= path with the message and shows it above the form', async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) =>
+      jsonResponse({ ok: true }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/contact');
+    const view = buildContact(null, false, 'en', '?about=%2Fplayers%2Fyin-sheng');
+    document.body.append(view.el);
+
+    expect(view.el.querySelector('.contact-about')?.textContent).toBe('About: /players/yin-sheng');
+    await sendMessage(view.el);
+
+    expect(sentPath(fetchMock)).toBe('/contact?about=/players/yin-sheng');
+    window.history.replaceState(null, '', '/');
+  });
+
+  it.each([
+    ['protocol-relative', '//evil.com'],
+    ['absolute URL', 'https://x'],
+    ['scheme', 'javascript:alert(1)'],
+    ['backslash host', '/\\evil.com'],
+    ['overlong', `/${'a'.repeat(200)}`],
+  ])('drops a %s ?about= and sends only the page path', async (_label, about) => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) =>
+      jsonResponse({ ok: true }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.replaceState(null, '', '/contact');
+    const view = buildContact(null, false, 'en', `?about=${encodeURIComponent(about)}`);
+    document.body.append(view.el);
+
+    expect(view.el.querySelector('.contact-about')).toBeNull();
+    await sendMessage(view.el);
+
+    expect(sentPath(fetchMock)).toBe('/contact');
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('takes an about path of exactly 200 characters, and none without the parameter', () => {
+    const longest = `/${'a'.repeat(199)}`;
+    expect(contactAboutPath(`?about=${encodeURIComponent(longest)}`)).toBe(longest);
+    expect(contactAboutPath('')).toBeNull();
+    expect(contactAboutPath('?about=')).toBeNull();
+  });
 });
+
+async function sendMessage(root: HTMLElement): Promise<void> {
+  const message = root.querySelector<HTMLTextAreaElement>('textarea[name="message"]');
+  if (!message) throw new Error('missing message field');
+  message.value = 'please take my photo down';
+  submitContactForm();
+  await flushDom();
+}
+
+function sentPath(fetchMock: { mock: { calls: Array<[string, RequestInit?]> } }): unknown {
+  const init = fetchMock.mock.calls[0]?.[1];
+  return JSON.parse(String(init?.body)).path;
+}
 
 function submitContactForm(): void {
   const form = document.querySelector<HTMLFormElement>('form.contact-form');

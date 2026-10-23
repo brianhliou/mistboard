@@ -92,6 +92,14 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     const url = request.url ?? '/';
     const pathname = url.split('?', 1)[0] ?? '/';
 
+    // Hardening headers on every response, embeds included (#290). nosniff only
+    // bites a script or stylesheet served under a non-matching type, which
+    // serve-handler's extension map never produces. The referrer policy is the
+    // browsers' own default, sent explicitly so no UA falls back to leaking full
+    // URLs (study ids, room ids) to outbound links.
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
     // Framing policy. Every route on this site was frameable by anyone, which
     // is a clickjacking surface on every authenticated page: a hostile site
     // could overlay /account/settings or a challenge accept and harvest the
@@ -235,6 +243,9 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     }
 
     if (url.startsWith('/api/')) {
+      // Crawlers fetch the API while rendering client pages, so robots.txt
+      // must not block it; the header keeps the JSON itself out of the index.
+      response.setHeader('x-robots-tag', 'noindex');
       void handleApiRequest(buildApiContext(options), request, response).catch((err) =>
         answerApiFailure(response, url, err),
       );

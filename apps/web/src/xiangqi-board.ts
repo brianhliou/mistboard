@@ -208,6 +208,41 @@ export interface XiangqiBoardArrow extends SvgBoardArrowStyle {
   to: XiangqiSquare;
 }
 
+/** The live board's surface (gutter reserved or not) and its coordinate-label
+ *  markup, for the tri-state `coordinates` option above. Exported so a board
+ *  that composes this surface with its own layers (Duck Xiangqi) follows the
+ *  reader's preference by the same rule rather than re-deciding it: Duck
+ *  Xiangqi pinned the gutter off and drew no labels at all until 2026-10-17.
+ *
+ *  The gutter is reclaimed when labels are off, so a reader who never turns
+ *  coordinates on sees exactly the board they saw before this shipped. The
+ *  trade is that the board resizes when the setting changes -- which happens
+ *  once, in settings, where a reflow is expected. Points do not move either
+ *  way: the gutter widens the viewBox outward. */
+export function xiangqiLiveBoardFrame(
+  perspective: XiangqiColor,
+  layout: XiangqiBoardLayout,
+  options: Pick<XiangqiBoardSvgState, 'coordinates' | 'coordinateStyle'> = {},
+): { surface: XiangqiSurfaceConfig; coords: string } {
+  const showCoords = options.coordinates ?? readDisplayPreferences().boardCoordinates;
+  if (!showCoords) {
+    return { surface: { ...LIVE_BOARD_SURFACE, geo: LIVE_BOARD_GEO_NO_COORDS }, coords: '' };
+  }
+  return {
+    surface: LIVE_BOARD_SURFACE,
+    coords: xiangqiSurfaceCoords(
+      LIVE_BOARD_SURFACE,
+      perspective,
+      layout,
+      xiangqiCoordLabels(
+        options.coordinateStyle ?? currentXiangqiNotationStyle(),
+        FILE_COUNT,
+        RANK_COUNT,
+      ),
+    ),
+  };
+}
+
 /** Full board SVG with interaction state. The live room (live-xiangqi.ts) calls
  *  this directly with its own selection/drag state; render-only surfaces go
  *  through renderXiangqiBoardSvg above. */
@@ -217,28 +252,9 @@ export function xiangqiBoardSvg(
   state: XiangqiBoardSvgState,
 ): string {
   const layout = state.layout ?? readStoredXiangqiBoardLayout();
-  // The gutter is reclaimed when labels are off, so a reader who never turns
-  // coordinates on sees exactly the board they saw before this shipped. The
-  // trade is that the board resizes when the setting changes -- which happens
-  // once, in settings, where a reflow is expected.
-  const showCoords = state.coordinates ?? readDisplayPreferences().boardCoordinates;
-  const surface = showCoords
-    ? LIVE_BOARD_SURFACE
-    : { ...LIVE_BOARD_SURFACE, geo: LIVE_BOARD_GEO_NO_COORDS };
+  const { surface, coords } = xiangqiLiveBoardFrame(perspective, layout, state);
   const vb = xiangqiBoardViewBox(layout, surface.geo);
   const viewBox = `${vb.minX} ${vb.minY} ${vb.width} ${vb.height}`;
-  const coords = showCoords
-    ? xiangqiSurfaceCoords(
-        LIVE_BOARD_SURFACE,
-        perspective,
-        layout,
-        xiangqiCoordLabels(
-          state.coordinateStyle ?? currentXiangqiNotationStyle(),
-          FILE_COUNT,
-          RANK_COUNT,
-        ),
-      )
-    : '';
   // Both destination marks trace the piece actually drawn: the square grid's
   // ring its outline (the asset sets keep their disc there), the intersection
   // band the outside of its disc.

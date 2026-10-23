@@ -41,6 +41,13 @@ ABJ_ARCH=x86-64-avx2
 # with AVX2/FMA (its net is its strength, like AB-JChess), linked static, and
 # without libzip, which only selfplay uses (katago-jungle.ref).
 KATA_CMAKE_FLAGS="-DUSE_BACKEND=EIGEN -DUSE_AVX2=1 -DCMAKE_BUILD_TYPE=Release -DNO_GIT_REVISION=1 -DZLIB_USE_STATIC_LIBS=ON -DLIBZIP_LIBRARY=OFF -DCMAKE_EXE_LINKER_FLAGS=-static"
+# jqe is CMake too: -march=haswell (the build its 100-game match ran; prod web's
+# EPYC has avx2/bmi2) instead of -march=native, linked static (jqe.ref).
+JQE_CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Release -DJQE_NATIVE=OFF -DCMAKE_CXX_FLAGS=-march=haswell -DCMAKE_EXE_LINKER_FLAGS=-static"
+# jqe's net, engine/nets/it014.jqn at the jqe.ref commit. MIT like the code, so
+# unlike AB-JChess's and KataGo's it is packaged here, pinned by hash.
+JQE_NET=it014.jqn
+JQE_NET_SHA256=f90bd44e8ee244405eb08eb4f784e3f156900f0691f651b5124d50032f8ba160
 ASSET="engines-$ARCH.tar.gz"
 RELEASE_REPO=brianhliou/mistboard
 # Pikafish's `make build` downloads official-pikafish/Networks `master-net`, a
@@ -55,8 +62,8 @@ PIKAFISH_NET_URL=https://github.com/$RELEASE_REPO/releases/download/pikafish-net
 # Every file whose content decides the binaries. The workflow's push paths and
 # the Railway watch patterns list the same files; scripts/engine-assets.test.mjs
 # fails if they drift apart.
-RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref ab-jchess.ref katago-jungle.ref"
-BINARIES="fairy-stockfish-xiangqi fairy-stockfish-duck-xiangqi fairy-stockfish-atomic-xiangqi stockfish pikafish-jieqi pikafish ab-jchess katago-jungle"
+RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref ab-jchess.ref katago-jungle.ref jqe.ref"
+BINARIES="fairy-stockfish-xiangqi fairy-stockfish-duck-xiangqi fairy-stockfish-atomic-xiangqi stockfish pikafish-jieqi pikafish ab-jchess katago-jungle jqe"
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
@@ -79,6 +86,8 @@ recipe_hash() {
     echo "abj-arch=$ABJ_ARCH"
     echo "kata-cmake=$KATA_CMAKE_FLAGS"
     echo "pikafish-net=$PIKAFISH_NET_SHA256"
+    echo "jqe-cmake=$JQE_CMAKE_FLAGS"
+    echo "jqe-net=$JQE_NET_SHA256"
     for input in $RECIPE_INPUTS; do
       case "$input" in
         *.ref) echo "$input=$(pin "$input")" ;;
@@ -159,8 +168,8 @@ build() {
   ref=$(pin ab-jchess.ref)
   log "ab-jchess @ $ref (lxsgx23/AB-JChess, $ABJ_ARCH, clang)"
   fetch_source "$work/ab-jchess" https://github.com/lxsgx23/AB-JChess.git "$ref"
-  make -C "$work/ab-jchess/src" -j"$JOBS" ARCH="$ABJ_ARCH" COMP=clang EXTRALDFLAGS=-static build >/dev/null
-  cp "$work/ab-jchess/src/AB-JChess" "$bin/ab-jchess"
+  make -C "$work/ab-jchess/abjchess/src" -j"$JOBS" ARCH="$ABJ_ARCH" COMP=clang EXTRALDFLAGS=-static build >/dev/null
+  cp "$work/ab-jchess/abjchess/src/AB-JChess" "$bin/ab-jchess"
 
   # The binary only, stripped (74 MB of debug info otherwise): its net is fetched
   # from Kouza's Dandelion release by railpack.json and never packaged here
@@ -172,6 +181,17 @@ build() {
   cmake -S "$work/katago-jungle/cpp" -B "$work/katago-jungle/build" $KATA_CMAKE_FLAGS >/dev/null
   cmake --build "$work/katago-jungle/build" -j"$JOBS" >/dev/null
   strip -o "$bin/katago-jungle" "$work/katago-jungle/build/katago"
+
+  # The binary and its net (MIT, packaged; jqe.ref). x86-64 only.
+  ref=$(pin jqe.ref)
+  log "jqe @ $ref (devinokeefe/jieqi, haswell)"
+  fetch_source "$work/jqe" https://github.com/devinokeefe/jieqi.git "$ref"
+  # shellcheck disable=SC2086
+  cmake -S "$work/jqe/engine" -B "$work/jqe/engine/build" $JQE_CMAKE_FLAGS >/dev/null
+  cmake --build "$work/jqe/engine/build" -j"$JOBS" --target jqe >/dev/null
+  strip -o "$bin/jqe" "$work/jqe/engine/build/jqe"
+  cp "$work/jqe/engine/nets/$JQE_NET" "$bin/$JQE_NET"
+  jqe_net_pinned "$bin/$JQE_NET"
 
   chmod +x "$bin"/*
   rm -rf "$work"
@@ -189,6 +209,31 @@ uci_ok() {
 net_pinned() {
   got=$(sha256 "$1" | cut -c1-64)
   [ "$got" = "$PIKAFISH_NET_SHA256" ] || die "pikafish.nnue is $got, not the pinned $PIKAFISH_NET_SHA256"
+}
+
+# jqe_net_pinned <net>: the file is the net JQE_NET_SHA256 names.
+jqe_net_pinned() {
+  got=$(sha256 "$1" | cut -c1-64)
+  [ "$got" = "$JQE_NET_SHA256" ] || die "$JQE_NET is $got, not the pinned $JQE_NET_SHA256"
+}
+
+# jqe_search_ok <binary> <net>: jqe loads its net and searches the jieqi deal
+# position. Without a net it falls back to a classical eval and still answers,
+# so the gate wants its own "EvalFile loaded" line as well as a bestmove.
+jqe_search_ok() {
+  out=$(mktemp)
+  {
+    printf 'uci\nsetoption name EvalFile value %s\nisready\nposition fen xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w A2B2N2R2C2P5a2b2n2r2c2p5 0 1\ngo nodes 20000\n' "$2"
+    i=0
+    until grep -q '^bestmove' "$out" || [ "$i" -ge 300 ]; do sleep 0.1; i=$((i + 1)); done
+    echo quit
+  } | "$1" > "$out" 2>&1 || true
+  best=$(grep '^bestmove' "$out" | tail -1 || true)
+  loaded=$(grep 'EvalFile loaded' "$out" | head -1 || true)
+  err=$(grep 'EvalFile load failed' "$out" | head -1 || true)
+  rm -f "$out"
+  [ -n "$loaded" ] || die "jqe-search: the net did not load: ${err:-no EvalFile line}"
+  [ -n "$best" ] && log "jqe-search ok (net loads, $best)" || die "jqe-search: no bestmove with its net"
 }
 
 # net_search_ok <binary> <net> <label>: the binary loads <net> and searches.
@@ -268,6 +313,10 @@ verify() {
   "$bin/katago-jungle" version | grep -q 'Using Eigen(CPU) backend' &&
     "$bin/katago-jungle" version | grep -q 'Compiled with AVX2' &&
     log "katago-jungle ok" || die "katago-jungle: not an Eigen AVX2 build of KataGo"
+  uci_ok "$bin/jqe" jqe 'id name jqe'
+  test -s "$bin/$JQE_NET" || die "$JQE_NET is missing or empty"
+  jqe_net_pinned "$bin/$JQE_NET"
+  jqe_search_ok "$bin/jqe" "$bin/$JQE_NET"
   log "verified $(tag) in $bin"
 }
 
@@ -281,6 +330,8 @@ package() {
     echo "abj-arch=$ABJ_ARCH"
     echo "recipe-version=$RECIPE_VERSION"
     echo "pikafish-net=sha256:$PIKAFISH_NET_SHA256"
+    echo "jqe-cmake=$JQE_CMAKE_FLAGS"
+    echo "jqe-net=sha256:$JQE_NET_SHA256"
     for input in $RECIPE_INPUTS; do
       case "$input" in
         *.ref) echo "$input=$(pin "$input")" ;;
@@ -289,7 +340,7 @@ package() {
     done
   } > "$out/MANIFEST"
   # shellcheck disable=SC2086
-  tar -C "$bin" -czf "$out/$ASSET" $BINARIES pikafish.nnue
+  tar -C "$bin" -czf "$out/$ASSET" $BINARIES pikafish.nnue "$JQE_NET"
   (cd "$out" && sha256 "$ASSET" > SHA256SUMS)
   log "packaged $out/$ASSET ($(du -h "$out/$ASSET" | cut -f1))"
 }

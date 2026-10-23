@@ -17,6 +17,7 @@
 // (jieqi-engine.ts, jungle-katago-engine.ts, jungle-engine.ts). TITLES is in
 // CANONICAL_VARIANT_ORDER (champions-page.test.ts checks it against VARIANTS).
 
+import { jqeEnabled } from './feature-flags.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
@@ -42,9 +43,11 @@ export function mountChampions(root: HTMLElement): void {
 
 type Part = string | Node;
 
+// Either link may be missing while it is unpublished (jqe's write-up is the
+// 2026-11-03 article); the card and the history line show only the ones there are.
 type TitleMatch = {
-  writeUpHref: string;
-  gamesHref: string;
+  writeUpHref?: string;
+  gamesHref?: string;
 };
 
 // The match in which the reigning champion took the title, from its side.
@@ -53,6 +56,8 @@ type Reign = TitleMatch & {
   draws: number;
   losses: number;
   tookKey: I18nKey;
+  // The engine's own repository, linked after the about line.
+  sourceHref: string;
   about: (locale: Locale) => Part[];
 };
 
@@ -68,9 +73,11 @@ type Title = {
   reign?: Reign;
 };
 
-const MISTY_JUNGLE_REPO = 'https://github.com/brianhliou/misty-jungle';
-
 const JIEQI_MATCH: TitleMatch = { writeUpHref: '/blog/ab-jchess', gamesHref: '/data' };
+// jqe took the jieqi title from AB-JChess 0.2d (mistboard-engine lab/jieqi-match,
+// run jqe-vs-abj-0.2d, 2026-10-21). It reigns only once jqe is the bot you play,
+// so the swap rides VITE_JQE_ENABLED with the jieqi picker.
+const JQE_MATCH: TitleMatch = { gamesHref: '/study/3RQbr51i' };
 const JUNGLE_MATCH: TitleMatch = {
   writeUpHref: '/blog/katago-jungle',
   gamesHref: '/study/0t8xpyv6',
@@ -83,6 +90,40 @@ const FAIRY_STOCKFISH_L8 = {
   botHref: '/bot/fairy-stockfish-level-8',
 } as const;
 
+const JIEQI_AB_JCHESS: Title = {
+  gameId: 'jieqi',
+  nameKey: 'variant.jieqi.name',
+  holder: 'AB-JChess',
+  botHref: '/bot/ab-jchess',
+  reign: {
+    ...JIEQI_MATCH,
+    // AB-JChess won 248, lost 136, drew 16 (the write-up; a 0.64 score).
+    wins: 248,
+    draws: 16,
+    losses: 136,
+    tookKey: 'champions.tookJieqi',
+    sourceHref: 'https://github.com/lxsgx23/AB-JChess',
+    about: (locale) => [t('champions.aboutJieqi', {}, locale)],
+  },
+};
+
+const JIEQI_JQE: Title = {
+  gameId: 'jieqi',
+  nameKey: 'variant.jieqi.name',
+  holder: 'jqe',
+  botHref: '/bot/jqe',
+  reign: {
+    ...JQE_MATCH,
+    // jqe won 171, lost 114, drew 15 over 150 paired deals (a 0.595 score).
+    wins: 171,
+    draws: 15,
+    losses: 114,
+    tookKey: 'champions.tookJqe',
+    sourceHref: 'https://github.com/devinokeefe/jieqi',
+    about: (locale) => [t('champions.aboutJqe', {}, locale)],
+  },
+};
+
 export const TITLES: readonly Title[] = [
   {
     gameId: 'xiangqi',
@@ -91,21 +132,7 @@ export const TITLES: readonly Title[] = [
     holderKey: 'champions.enginePikafish',
     botHref: '/bot/pikafish',
   },
-  {
-    gameId: 'jieqi',
-    nameKey: 'variant.jieqi.name',
-    holder: 'AB-JChess',
-    botHref: '/bot/ab-jchess',
-    reign: {
-      ...JIEQI_MATCH,
-      // AB-JChess won 248, lost 136, drew 16 (the write-up; a 0.64 score).
-      wins: 248,
-      draws: 16,
-      losses: 136,
-      tookKey: 'champions.tookJieqi',
-      about: (locale) => [t('champions.aboutJieqi', {}, locale)],
-    },
-  },
+  jqeEnabled() ? JIEQI_JQE : JIEQI_AB_JCHESS,
   { gameId: 'banqi', nameKey: 'variant.banqi.name', ...MISTY },
   { gameId: 'duck-xiangqi', nameKey: 'variant.duckXiangqi.name', ...FAIRY_STOCKFISH_L8 },
   {
@@ -126,11 +153,8 @@ export const TITLES: readonly Title[] = [
       draws: 118,
       losses: 0,
       tookKey: 'champions.tookJungle',
-      about: (locale) => [
-        t('champions.aboutJunglePrefix', {}, locale),
-        proseExternalLink('MistyJungle', MISTY_JUNGLE_REPO),
-        t('champions.aboutJungleSuffix', {}, locale),
-      ],
+      sourceHref: 'https://github.com/hzyhhzy/KataGomo/tree/AnimalChess2025',
+      about: (locale) => [t('champions.aboutJungle', {}, locale)],
     },
   },
   { gameId: 'jungle-flip', nameKey: 'variant.jungleFlip.name', ...MISTY },
@@ -141,6 +165,7 @@ export const OPEN_TITLES = TITLES.filter((title) => !title.reign);
 
 // One line per title change, newest first.
 export const TITLE_HISTORY: ReadonlyArray<TitleMatch & { textKey: I18nKey }> = [
+  ...(jqeEnabled() ? [{ ...JQE_MATCH, textKey: 'champions.historyJqe' as const }] : []),
   { ...JIEQI_MATCH, textKey: 'champions.historyJieqi' },
   { ...JUNGLE_MATCH, textKey: 'champions.historyJungle' },
 ];
@@ -180,14 +205,23 @@ function button(label: string, href: string): HTMLAnchorElement {
   return a;
 }
 
-// "<text> (write-up, games)." for the history list.
+// "<text> (write-up, games)." for the history list, with only the links that exist.
 function matchLine(locale: Locale, textKey: I18nKey, match: TitleMatch): Part[] {
+  const links: Part[] = [];
+  if (match.writeUpHref) {
+    links.push(
+      proseLink(t('champions.writeUpLink', {}, locale), localizedHref(match.writeUpHref, locale)),
+    );
+  }
+  if (match.gamesHref) {
+    if (links.length > 0) links.push(t('champions.linkSeparator', {}, locale));
+    links.push(proseLink(t('champions.gamesLink', {}, locale), match.gamesHref));
+  }
+  if (links.length === 0) return [t(textKey, {}, locale), t('champions.lineEnd', {}, locale)];
   return [
     t(textKey, {}, locale),
     t('champions.parenOpen', {}, locale),
-    proseLink(t('champions.writeUpLink', {}, locale), localizedHref(match.writeUpHref, locale)),
-    t('champions.linkSeparator', {}, locale),
-    proseLink(t('champions.gamesLink', {}, locale), match.gamesHref),
+    ...links,
     t('champions.parenClose', {}, locale),
   ];
 }
@@ -242,8 +276,10 @@ function heroCard(title: Title, reign: Reign, locale: Locale): HTMLElement {
   ]);
 
   const actions = el('div', 'champions-actions', [
-    button(t('champions.readMatch', {}, locale), localizedHref(reign.writeUpHref, locale)),
-    button(t('champions.seeGames', {}, locale), reign.gamesHref),
+    ...(reign.writeUpHref
+      ? [button(t('champions.readMatch', {}, locale), localizedHref(reign.writeUpHref, locale))]
+      : []),
+    ...(reign.gamesHref ? [button(t('champions.seeGames', {}, locale), reign.gamesHref)] : []),
     button(t('champions.playChampion', {}, locale), title.botHref),
   ]);
 
@@ -251,7 +287,11 @@ function heroCard(title: Title, reign: Reign, locale: Locale): HTMLElement {
     head,
     scoreBlock(reign, locale),
     el('p', 'champions-took', [t(reign.tookKey, {}, locale)]),
-    el('p', 'champions-about', reign.about(locale)),
+    el('p', 'champions-about', [
+      ...reign.about(locale),
+      ' ',
+      proseExternalLink(t('champions.sourceLink', {}, locale), reign.sourceHref),
+    ]),
     actions,
   );
   return card;

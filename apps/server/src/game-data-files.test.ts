@@ -214,6 +214,34 @@ test('engine-game files have their own paths, keys and names, and fail closed th
   );
 });
 
+test('hidden and retired variants are off /data: no rail entry, no count, no file', () => {
+  for (const variant of ['fortress-xiangqi', 'atomic-xiangqi']) {
+    assert.ok(!DATA_VARIANTS.includes(variant), variant);
+    assert.deepEqual(
+      parseDataFilePath(`/api/data/monthly/2026-09/${variant}.jsonl.gz`),
+      { ok: false, status: 404, error: 'unknown_variant' },
+      variant,
+    );
+  }
+  const listing = buildDataListing({
+    counts: [
+      { month: '2026-09', variant: 'xiangqi', games: 10 },
+      { month: '2026-09', variant: 'fortress-xiangqi', games: 12 },
+      { month: '2026-09', variant: 'atomic-xiangqi', games: 5 },
+    ],
+    engineCounts: [{ month: '2026-09', variant: 'atomic-xiangqi', games: 40 }],
+    stored: [],
+    collections: [],
+    now: NOW,
+  });
+  assert.deepEqual(listing.variants, ['xiangqi']);
+  assert.deepEqual(
+    listing.months.map((month) => [month.month, month.games, month.variants.map((v) => v.variant)]),
+    [['2026-09', 10, ['xiangqi']]],
+  );
+  assert.deepEqual(listing.engineMonths, []);
+});
+
 test('engine games are listed in their own months, never folded into the human ones', () => {
   const listing = buildDataListing({
     counts: [{ month: '2026-09', variant: 'xiangqi', games: 10 }],

@@ -408,6 +408,11 @@ export type TableBlock = {
   /** Emphasise a column (the hand that decided a match). Zero-indexed into
    *  `headers` and each row's cells. */
   highlightColumns?: number[];
+  /** Columns kept on one line in a `wrap` table (a ban length, an amount, an
+   *  event name), so the even split of the width never breaks a short value
+   *  and only the prose columns wrap. Desktop only: on a phone they wrap rather
+   *  than scroll the table sideways. Zero-indexed into `headers`. */
+  nowrapColumns?: number[];
 };
 
 export type TableRowDiagram = { svg: () => string; label: string };
@@ -611,9 +616,16 @@ export type Article = ArticleBase &
         // authors are introduced later.
         publisher: 'mistboard' | 'community';
         // Author-chosen "Read next" slugs, in order. The footer defaults to a
-        // date ring because the schema has no topic field; a platform page
-        // whose neighbours by date are unrelated variants can name its own.
-        // Missing or unlisted slugs are skipped and the ring fills the rest.
+        // date ring because `topic` is too coarse to pick neighbours by; a
+        // platform page whose neighbours by date are unrelated variants can
+        // name its own. Missing or unlisted slugs are skipped and the ring
+        // fills the rest.
         readNext?: string[];
+        // Who the post is written for. 'engineering' is a post about how the
+        // site, a bot, an engine, a solver or the puzzle miner was built or
+        // measured, or a bug in one; unset is a post for players (how to play,
+        // rules, history, players, results). Drives the /blog?topic= chips
+        // (ARTICLE_TOPICS in articles.ts), so a reader can keep one kind.
+        topic?: 'engineering';
       }
   );

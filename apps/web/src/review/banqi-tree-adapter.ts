@@ -18,12 +18,14 @@
 import {
   ALL_BANQI_SQUARES,
   applyBanqiMove,
+  BANQI_STUDY_MOVE_OPTIONS,
   type BanqiDeal,
   type BanqiGameState,
   type BanqiMove,
   type BanqiPlayerView,
   type BanqiRules,
   type BanqiSquare,
+  banqiMoveLabel,
   banqiSquareFromIndex,
   createInitialBanqiState,
   getBanqiPlayerView,
@@ -80,7 +82,10 @@ export function makeBanqiTreeAdapter(
     isLegal: (truth, move) => truth.status.type === 'playing' && isBanqiLegalMove(truth, move),
     // applyBanqiMove returns `state` unchanged on an illegal move; the tree only
     // calls this after isLegal, so the successor is always the real move result.
-    applyMove: (truth, move) => applyBanqiMove(truth, move),
+    // A tree rooted at a parsed position (study, analysis board) plays on past
+    // the no-progress clock; a finished game's review keeps the rules it was
+    // played under (initialTruth stamps them, 40 or 60 plies).
+    applyMove: (truth, move) => applyBanqiMove(truth, move, start ? {} : BANQI_STUDY_MOVE_OPTIONS),
     project: (truth): ProjectedView<BanqiPlayerView>[] => [
       {
         key: 'truth',
@@ -96,10 +101,9 @@ export function makeBanqiTreeAdapter(
         ),
       },
     ],
-    // A flip (self-move) reads as the bare square ("e2"); a board move/capture as "e2-e3". The
-    // absence of a dash unambiguously marks a flip, and dropping the " flip" word keeps the move
-    // notation from truncating next to the decision glyph + luck badge in the move-list cell.
-    moveLabel: (move) => (move.from === move.to ? move.from : `${move.from}-${move.to}`),
+    // The site's one banqi label (flip-move-label.ts): "e2-e3" for a move, "e2(C)" for a flip,
+    // named from the parent's truth, whose face-down tile already holds its dealt identity.
+    moveLabel: (move, parentTruth) => banqiMoveLabel(move, parentTruth.board[move.from]),
     // No client engine → no UCI dialect to honor: a from+to concatenation is a
     // stable, reversible key (a flip is "e2e2") for the NodeId + sibling dedup.
     moveKey: (move) => `${move.from}${move.to}`,

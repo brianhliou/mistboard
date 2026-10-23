@@ -1671,12 +1671,15 @@
    each other across a gap. The board keeps its rounded LEFT (page) edge and the
    pockets keep their rounded RIGHT (page) edge; only the facing corners change.
 
-   Scoped with :has() to surfaces that actually mount a pocket. Every review
-   surface now squares its right edge on the shared perimeter above, so this rule
-   is a belt-and-braces for any surface that mounts a pocket without picking up
-   one of those three classes. */
-.review-shell:has(.review-rail-pocketbox) .review-stage__slot--primary > :first-child,
-.review-shell:has(.review-rail-pocketbox) .review-stage__slot--primary > :first-child > svg {
+   Scoped by .review-shell--pocket, which the scaffold sets on the shell when it
+   mounts a pocket box (review-layout.ts). Not :has(): a :has() whose subject is the
+   shell re-matched every descendant on each board rebuild, about 21 ms a move step
+   on a long game (#608; review-css-has-guard.test.ts). Every review surface now
+   squares its right edge on the shared perimeter above, so this rule is a
+   belt-and-braces for any surface that mounts a pocket without picking up one of
+   those three classes. */
+.review-shell--pocket .review-stage__slot--primary > :first-child,
+.review-shell--pocket .review-stage__slot--primary > :first-child > svg {
   border-start-end-radius: 0;
   border-end-end-radius: 0;
 }
@@ -1867,5 +1870,16 @@
     order: -1;
     border-top: 0;
     border-bottom: 1px solid var(--site-border);
+  }
+}
+
+/* A panel below the rail box (review-layout.ts railBelow): it takes its own
+   height and the rail box keeps the board's. */
+.review-shell__right > .review-rail-below {
+  flex: none;
+}
+@media (min-width: 800px) {
+  .review-shell__right:has(> .review-rail-below:not([hidden])) > .review-rail-group {
+    flex: none;
   }
 }

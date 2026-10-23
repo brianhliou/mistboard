@@ -356,7 +356,7 @@ export function buildDarkXiangqiGameSummary(room: DarkXiangqiTenantRoom): persis
     variant: DARK_XIANGQI_SPEC_ID,
     mode,
     result: darkXiangqiResult(status.winner),
-    termination: status.reason as persistence.GameTermination,
+    termination: darkXiangqiTenant.persistence.termination(status.reason),
     plyCount: moveEvents.length,
     startedAt: new Date(firstAt),
     endedAt: new Date(lastAt),
@@ -406,6 +406,10 @@ export const darkXiangqiTenant: DarkXiangqiTenant = {
     finish: (state, winner, reason) => ({
       ...state,
       status: { type: 'finished', winner, reason },
+    }),
+    finishDraw: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'agreement' },
     }),
     abort: (state, reason: AbortReason) => ({
       ...state,
@@ -457,7 +461,8 @@ export const darkXiangqiTenant: DarkXiangqiTenant = {
   },
   persistence: {
     resultForWinner: darkXiangqiResult,
-    termination: (reason: string) => reason as persistence.GameTermination,
+    termination: (reason: string) =>
+      reason === 'agreement' ? 'draw' : (reason as persistence.GameTermination),
     buildGameSummary: buildDarkXiangqiGameSummary,
     logKindPrefix: 'dark_xiangqi',
     logLabel: 'Dark Xiangqi',

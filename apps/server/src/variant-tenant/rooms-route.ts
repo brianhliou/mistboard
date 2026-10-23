@@ -116,6 +116,10 @@ export type TenantEnginePolicy<Seat extends string> =
       kind: 'seated';
       defaultEngineId: string;
       isEngineClientId(engineId: string): boolean;
+      // A known engine held off by its own launch flag answers 404 `<x>_disabled`
+      // instead of `invalid_engine`, the same signal a disabled variant gives, so the
+      // release smoke skips a held bot and still fails one whose binary is missing.
+      heldEngineError?(engineId: string): `${string}_disabled` | undefined;
       seats: readonly [Seat, Seat];
     };
 
@@ -314,6 +318,11 @@ export function createTenantRoomsRoute<
         typeof body.engineId === 'string' && body.engineId.length > 0
           ? body.engineId
           : enginePolicy.defaultEngineId;
+      const heldError = enginePolicy.heldEngineError?.(engineId);
+      if (heldError) {
+        writeJson(response, 404, { error: heldError });
+        return;
+      }
       if (!enginePolicy.isEngineClientId(engineId)) {
         writeJson(response, 400, { error: 'invalid_engine' });
         return;

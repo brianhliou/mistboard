@@ -54,6 +54,7 @@ import {
   fetchBroadcastCalendar,
   mountXiangqiBroadcastAbout,
   mountXiangqiBroadcastCalendar,
+  rightsContactNote,
   topBroadcastPlayers,
 } from './xiangqi-broadcast-pages.js';
 import {
@@ -489,7 +490,7 @@ export async function mountXiangqiBroadcastBoard(
     };
     const paintShell = (): void => {
       if (!context) {
-        root.replaceChildren(buildNav(), body);
+        root.replaceChildren(buildNav(), body, rightsContactNote());
         return;
       }
       const shellContext = context;
@@ -1173,7 +1174,8 @@ function renderEventShell(
     if (boardOpen) matchBoardHeight(side, content);
     else pinEventSide(side);
   }
-  main.append(layout);
+  // The page's own path: the tour, round or board URL the reader is on.
+  main.append(layout, rightsContactNote());
   return main;
 }
 

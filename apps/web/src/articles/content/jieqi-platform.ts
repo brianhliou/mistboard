@@ -1,30 +1,12 @@
 import type { Locale } from '../../i18n/locale.js';
 import { textCard } from '../text-card.js';
-import { JIEQI_PLATFORM_GAME } from '../../jieqi-platform-game.js';
-import type { Article, ArticleBlock } from '../types.js';
+import { JIEQI_GRADE_EXAMPLES, JIEQI_LUCK_EXAMPLES } from './jieqi-platform-marks.js';
+import type { Article } from '../types.js';
 
-// Platform page for jieqi, and the source document the Vietnamese co-up page is
-// translated from. Written for a player, not an engineer: the replay and the three
-// screenshots do the selling, and the copy says what a thing does and stops.
-//
-// Cut hard on purpose, roughly in half. Every mechanism sentence that survived
-// earns its place by answering a question a player would actually ask; the ones
-// that explained how the software works were the ones that went.
-//
-// Facts checked against the code and against prod rather than assumed: three
-// casual time controls (registry `timePresetIds`), the lobby lists the bot as
-// Pikafish while the analysis panel names the engine PikaJieQi, /analysis has no
-// auth gate, jieqi is in STUDY_ELIGIBLE_SPEC_IDS, and /study is a live route
-// (/studies is not). Jieqi's spec carries `rated: true` but
-// `publicSurface: 'casual'`, so the rating pool exists while games are not
-// actually rated: the page promises no ladder.
-//
-// The opening replay and every figure come from jq_96f40ebb, one 146-ply game the
-// engine lost. Keeping them from a single game is deliberate: a reader steps
-// through it up top, then meets the same game in the graph and the flip table
-// instead of re-orienting each time. Figures are captured from CACHED analysis, so
-// a change to JIEQI_ANALYSIS_DEPTH invalidates them (the cache key carries depth)
-// and they have to be re-shot. That has already bitten once.
+// The platform introduction is also the structural source for /blog/co-up.
+// Keep its translated dictionaries in sync. Game screenshots use the same public game;
+// separate close-ups illustrate the badge palette. Fresh analysis is computed from its public deal, never old caches
+// that predate the hidden-information boundary.
 
 // Text card (text-card.ts) with one departure: the disc row, the only element
 // that says what jieqi IS. Four cards of pure type in one index read as one card,
@@ -41,7 +23,7 @@ const JIEQI_DISC_ROW = [0, 1, 2, 3, 4, 5, 6]
     return [
       `<circle cx="${64 + i * 32}" cy="172" r="12" `,
       `fill="${red ? '#a95f4a' : '#2f7d62'}" `,
-      `stroke="${red ? '#6f342c' : '#174536'}" stroke-width="2"/>`,
+      `stroke="${red ? '#553025' : '#174536'}" stroke-width="2"/>`,
     ].join('');
   })
   .join('');
@@ -52,9 +34,9 @@ const JIEQI_PLATFORM_THUMBNAIL = (locale?: Locale): string =>
       palette: 'xiangqi',
       eyebrow: 'XIANGQI',
       lead: 'JIEQI',
-      tagline: 'EVERY PIECE FACE DOWN',
+      tagline: 'HIDDEN PIECES, OPEN BOARD',
       art: JIEQI_DISC_ROW,
-      ariaLabel: 'A card reading Jieqi, every piece face down, over a row of face-down pieces',
+      ariaLabel: 'A Jieqi card with a row of face-down pieces',
     },
     locale,
   );
@@ -71,53 +53,40 @@ export const jieqiPlatformArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-03',
+  updatedAt: '2026-10-19',
+  tldr: [
+    'Play Level 1 or invite a friend, with no account needed for casual games.',
+    'Full-game analysis grades your moves and measures reveal luck separately.',
+    'Sign in to request full-game analysis, then try different moves from your own game.',
+  ],
   audience: 'Jieqi players looking for somewhere to play and review their games.',
   thumbnail: { kind: 'svg', svg: JIEQI_PLATFORM_THUMBNAIL },
   intro: [
     {
       kind: 'paragraph',
-      text:
-        'Jieqi is [xiangqi](/rules/xiangqi) with every piece face-down. A piece moves as whatever normally starts on its square, then flips and keeps that identity for the rest of the game. You begin without knowing what anything is, including your own pieces. The [rules page](/rules/jieqi) has the details.',
+      text: 'Play jieqi against a computer or a friend, then review the game to see where your decisions helped and where the flips went your way.',
     },
     {
-      kind: 'paragraph',
-      text:
-        'It is a young game, out of Hong Kong and Guangdong, and it has spread over the last couple of decades mostly among Chinese and Vietnamese players. For what to actually open with, see [what strong players believe about the opening](/blog/jieqi-openings).',
-    },
-    {
-      // A reader who arrived from a "play jieqi" search wants a board, not an
-      // argument. Everything below still earns its place for whoever scrolls; it
-      // should not be the toll they pay to reach a button.
       kind: 'cta',
       buttons: [
-        { label: 'Play the engine', href: '/?play=computer&gameSpecId=jieqi', emphasis: 'primary' },
+        { label: 'Play the engine', href: '/?play=computer&gameSpecId=jieqi&engineId=pikafish-jieqi-level-1', emphasis: 'primary' },
         { label: 'Play a friend', href: '/?play=friend&gameSpecId=jieqi', emphasis: 'secondary' },
       ],
     },
     {
-      kind: 'jieqi-replay',
-      spec: {
-        red: JIEQI_PLATFORM_GAME.red,
-        black: JIEQI_PLATFORM_GAME.black,
-        event: JIEQI_PLATFORM_GAME.event,
-        outcome: JIEQI_PLATFORM_GAME.outcome,
-        resultText: JIEQI_PLATFORM_GAME.result,
-        deal: JIEQI_PLATFORM_GAME.deal,
-        moves: JIEQI_PLATFORM_GAME.moves,
-        perspective: 'black',
-      },
-      caption:
-        'Plain discs are still face-down. Each one turns over the first time it moves and is stuck with whatever it turns out to be.',
-    } as ArticleBlock,
-    {
       kind: 'paragraph',
-      text:
-        'That is [a real game on this site](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf), not a demo, and every screenshot below comes from it.',
+      text: 'Start with Level 1 and choose your pace in setup. To play a friend, create a room, click **Copy invite**, and send them the link. Casual games need no account.',
+    },
+    {
+      kind: 'embed',
+      path: '/embed/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf?ply=0&pov=black',
+      title: 'Jieqi: a guest beats Pikafish in 73 moves',
+      aspect: [702, 696],
+      caption: 'Step through a real game. Plain discs are still face-down; a piece reveals its identity the first time it moves.',
     },
     {
       kind: 'paragraph',
-      text:
-        'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link.',
+      text: 'Open [the full review](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf) to play through alternative moves. New to jieqi? Read the [rules](/rules/jieqi), or explore [how strong players approach the opening](/blog/jieqi-openings).',
     },
   ],
   sections: [
@@ -126,61 +95,85 @@ export const jieqiPlatformArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text:
-            'Ask for analysis on a finished game and the review separates what you chose from what you drew, which is the part a chess site has no reason to do. You also get the usual: a graph of the whole game, an accuracy score for each player, and every inaccuracy, mistake and blunder marked with the move that was better. It runs on our servers and takes a few minutes.',
+          text: 'This brings Lichess-style engine review to a game with hidden pieces and luck. We adapt [Lichess’s accuracy and move-grading methods](https://lichess.org/page/accuracy) to jieqi, measuring the quality of your decisions separately from what each reveal gave you.',
         },
-        {
-          kind: 'image-figure',
-          src: '/article-thumbs/jieqi-accuracy-summary.png',
-          alt: 'A game summary: the advantage graph swinging back and forth across the game, beside accuracy cards reading Pikafish 86 percent with thirteen inaccuracies, two mistakes and one blunder, and Guest 91 percent with six inaccuracies, two mistakes and one blunder.',
-          caption: 'The game above, graded.',
-        } as ArticleBlock,
-        { kind: 'sub-heading', text: 'It tells you how lucky each flip was' },
+        { kind: 'sub-heading', text: '1. Finish a game and open Review game' },
         {
           kind: 'paragraph',
-          text:
-            'Half your moves turn a piece over, and you never know what you are turning over. So the engine works out what each piece that tile could have been would have been worth, and compares it to what you actually got. The gap is your luck on that flip.',
+          text: 'When a game ends, click **Review game** below the move list. You can step through the whole game, revisit a position, and try a different continuation.',
         },
         {
           kind: 'image-figure',
-          src: '/article-thumbs/jieqi-reveal-candidates.png',
+          src: '/article-thumbs/jieqi-review-finish.png',
+          darkSrc: '/article-thumbs/jieqi-review-finish-dark.png',
+          alt: 'The finished Jieqi game with the Review game button below the result.',
+          caption: 'The game above has ended. Review game opens its replay and analysis page.',
+        },
+        { kind: 'sub-heading', text: '2. Request computer analysis' },
+        {
+          kind: 'paragraph',
+          text: 'Open the **Computer analysis** tab, then click **Request computer analysis**. Sign in to request a new analysis; anyone can read one that is already available. It may take a few minutes to finish.',
+        },
+        {
+          kind: 'image-figure',
+          src: '/article-thumbs/jieqi-review-request.png',
+          darkSrc: '/article-thumbs/jieqi-review-request-dark.png',
+          alt: 'The Jieqi review page with its Computer analysis tab and Request computer analysis button.',
+          caption: 'Request analysis once to get a graph, accuracy scores, and move annotations.',
+        },
+        { kind: 'sub-heading', text: '3. Find the moves to learn from' },
+        {
+          kind: 'paragraph',
+          text: 'The graph shows how the game changed. Each player gets an accuracy score, and inaccuracies, mistakes, and blunders are marked in the move list. Select a marked move to see the better move the engine recommends.',
+        },
+        {
+          kind: 'image-figure',
+          src: '/article-thumbs/jieqi-review-analysis.png',
+          darkSrc: '/article-thumbs/jieqi-review-analysis-dark.png',
+          alt: 'The analysed Jieqi game, showing the advantage graph, player accuracy, and marked moves.',
+          caption: 'One game, graded move by move. Click the graph or move list to revisit a turning point.',
+        },
+        { kind: 'sub-heading', text: 'Good decisions and lucky flips are different' },
+        {
+          kind: 'paragraph',
+          text: 'A move can be a good choice and still reveal an unlucky piece. The move-quality glyph grades your choice before the reveal. The die badge shows how much better or worse the revealed piece was than the pieces you could have drawn.',
+        },
+        JIEQI_GRADE_EXAMPLES,
+        {
+          kind: 'paragraph',
+          text: 'Violet dice mean an unlucky reveal, grey means close to the expected outcome, and teal means lucky. More pips and a deeper colour mean a bigger swing.',
+        },
+        JIEQI_LUCK_EXAMPLES,
+        {
+          kind: 'image-figure',
+          src: '/article-thumbs/jieqi-review-marks.png',
+          darkSrc: '/article-thumbs/jieqi-review-marks-dark.png',
+          alt: 'A Jieqi position with a move-quality glyph and a reveal-luck die badge beside the moved piece, plus advice for a better move.',
+          caption: 'The glyph judges the decision; the die describes the reveal. Both appear by the piece and in the move list.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'When a different move was significantly better, the review shows that best move as advice. You can turn on alternatives to explore more candidates. Your accuracy measures the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.',
+        },
+        {
+          kind: 'image-figure',
+          src: '/article-thumbs/jieqi-review-mobile.png',
+          darkSrc: '/article-thumbs/jieqi-review-mobile-dark.png',
           className: 'article-figure--tall',
-          alt: 'A jieqi review move list. Move 19 is a flip carrying a dice badge reading minus 21 percent, above four ranked candidate moves at 52, 39, 34 and 29 percent with the played move marked second. Move 21 carries plus 43 percent, move 21 for black plus 6 percent, and move 22 minus 10 percent.',
-          caption:
-            'Move 19 played the 39% move when 52% was there, so it is marked. Move 21 played the best one and still got a +43% gift from the flip.',
-        } as ArticleBlock,
-        {
-          kind: 'paragraph',
-          text:
-            'The percentage on each move is what it was worth before you flipped, averaged over every piece that tile could have been. The dice is what the flip actually gave you on top of that. So a move can be the best choice available and still come with a large plus or minus beside it: the first number is your decision, the second is the draw.',
+          alt: 'The same Jieqi review on a phone, with move-quality and reveal-luck annotations.',
+          caption: 'The same decision and luck marks on a phone.',
         },
+        { kind: 'sub-heading', text: 'Try a different line from your game' },
         {
           kind: 'paragraph',
-          text:
-            'When your move is the top one, you chose well. Moves are only marked as mistakes when a better one was on the list.',
-        } as ArticleBlock,
-        {
-          kind: 'paragraph',
-          text:
-            'Your accuracy is then built from the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.',
-        },
-        { kind: 'sub-heading', text: 'And it runs in your browser' },
-        {
-          kind: 'paragraph',
-          text:
-            'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued and nothing is sent anywhere. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.',
+          text: 'Return to a position in your review and play a different move on the board. Your variation appears alongside the original game. Switch on the browser engine to compare continuations from that position, with no server queue. You are exploring the game you just played, with its actual reveals.',
         },
         {
           kind: 'image-figure',
-          src: '/article-thumbs/jieqi-local-engine.png',
-          alt: 'The analysis board with the local engine switched on: PikaJieQi at depth 18 and 335,000 nodes per second, three candidate lines each with an evaluation, and arrows for each drawn on the jieqi board.',
-          caption: 'Running in a browser tab.',
-        } as ArticleBlock,
-        {
-          kind: 'cta',
-          buttons: [
-            { label: 'Open the analysis board', href: '/analysis/jieqi', emphasis: 'primary' },
-          ],
+          src: '/article-thumbs/jieqi-review-variation.png',
+          darkSrc: '/article-thumbs/jieqi-review-variation-dark.png',
+          alt: 'A variation from the finished Jieqi game, with the browser engine enabled in its review.',
+          caption: 'Try an alternative from your own game and compare it with the original continuation.',
         },
       ],
     },
@@ -189,13 +182,11 @@ export const jieqiPlatformArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text:
-            'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical alpha-beta search with a hand-written evaluation and no neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node, scoring a move as the average over each piece that tile could still be. It only ever sees the face-down board, and a test fails the build if a hidden identity ever leaks into what it is sent. [Pikafish itself](/blog/pikafish), at full strength for standard xiangqi, is on the site too.',
+          text: 'Pikafish has eight levels. The seven easier levels limit its search and let it choose weaker moves; Level 8 uses the full search budget. We measure the steps by playing the bots against one another and against a random-move baseline. [How we built the ladder](/blog/jieqi-bot-wins) explains the levels.',
         },
         {
           kind: 'paragraph',
-          text:
-            'It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish\'s strength lives in its neural network, and the net we trained for jieqi never came out stronger than the hand-written evaluation. The first jieqi network that did came from outside: [AB-JChess](/blog/ab-jchess), an open-source engine that beat PikaJieQi 248 to 136 in 400 games and has been the strongest bot on the site since October. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like; the terms of the open challenge, and the prebuilt engine to beat, are at [brianhliou.com/challenges](https://brianhliou.com/challenges/).',
+          text: '[AB-JChess](/bot/ab-jchess) earned its place above Pikafish by winning their 400-game match, 248 to 136. [Read about that champion](/blog/ab-jchess), or see the [current bots and ratings](/bots) for the latest challengers. Every bot plays from the information its side is allowed to see; it is never given the hidden deal.',
         },
       ],
     },
@@ -214,9 +205,9 @@ export const jieqiPlatformArticle: Article = {
           headers: ['', 'On Mistboard'],
           rows: [
             ['Play the engine or a friend', 'Free, no account'],
-            ['Full-game analysis', 'Every finished game'],
+            ['Full-game analysis', 'Sign in to request; available to all to read'],
             ['Luck measured separately', 'Every flip priced'],
-            ['Engine in your browser', 'No queue, no account'],
+            ['Explore your own games', 'Browser engine, no queue'],
             ['Studies with your own deals', 'Yes'],
             ['Open-source engine', 'Yes'],
             ['Rated ladder', 'Open, signed in'],
@@ -233,7 +224,7 @@ export const jieqiPlatformArticle: Article = {
             {
               question: 'What is jieqi?',
               answer:
-                'Xiangqi with every piece except the general face-down. A piece moves as whatever normally starts on its square, then turns over and keeps that identity. It is called cờ úp in Vietnamese and 揭棋 in Chinese.',
+                'Xiangqi with every piece except the general face-down. A piece moves as whatever normally starts on its square, then turns over and keeps that identity. It is also known as cờ úp in Vietnamese.',
             },
             {
               question: 'How is jieqi different from xiangqi?',
@@ -248,12 +239,12 @@ export const jieqiPlatformArticle: Article = {
             {
               question: 'Can a computer play jieqi well?',
               answer:
-                'Better since October. PikaJieQi, which judges positions by hand-written rules, can be beaten by a strong human. AB-JChess, the top bot on the site since then, judges them with a neural network and beat PikaJieQi 248 to 136 in 400 games.',
+                'Yes. Mistboard offers a range of bot strengths, from beginner levels to strong engines. Start with Level 1, then choose a harder opponent as you improve.',
             },
             {
               question: 'Can the engine see my hidden pieces?',
               answer:
-                'No. It gets the same face-down board you do and is never told the deal. A test fails the build if an identity ever leaks into what it is sent.',
+                'No. It receives only the information its side is allowed to see. It is never told the hidden deal.',
             },
             {
               question: 'Is the shuffle fair?',
@@ -263,7 +254,7 @@ export const jieqiPlatformArticle: Article = {
             {
               question: 'Where can I play jieqi online for free?',
               answer:
-                'Here, against the engine or a friend. No account, nothing to install, and you can review the game with engine analysis afterwards.',
+                'Here, against the engine or a friend. Casual games need no account and nothing to install. You can replay finished games freely; sign in to request full-game engine analysis.',
             },
           ],
         },
@@ -272,13 +263,12 @@ export const jieqiPlatformArticle: Article = {
     {
       heading: 'Start playing',
       blocks: [
-
         {
           kind: 'cta',
           buttons: [
             {
               label: 'Play the engine',
-              href: '/?play=computer&gameSpecId=jieqi',
+              href: '/?play=computer&gameSpecId=jieqi&engineId=pikafish-jieqi-level-1',
               emphasis: 'primary',
             },
             { label: 'Play a friend', href: '/?play=friend&gameSpecId=jieqi', emphasis: 'secondary' },

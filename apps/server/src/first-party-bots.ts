@@ -24,10 +24,12 @@ export type FirstPartyBotProfile = {
   displayName: string;
   /** gameSpecId -> engine id currently fronted for that variant. */
   engines: Readonly<Record<string, string>>;
+  /** A seat's difficulty label when the shared profile name omits its rung. */
+  seatNamesByEngineId?: Readonly<Record<string, string>>;
   defaultGameSpecId: string;
-  /** The rung on a numbered ladder; absent for a named slot (Misty, Pikafish,
-   *  AB-JChess, KataGo), which is always the top of its ladder. */
-  ladderLevel?: number;
+  /** A bot that is no rung of its variant's strength ladder (the worst-move bot):
+   *  bot-vs-bot pairing never seats it. */
+  offLadder?: true;
   /** Retired engine ids whose games attribute to this bot. */
   attributionEngineIds?: readonly string[];
   /** Pre-consolidation bot ids that must keep resolving (old rooms' pveBotId,
@@ -46,7 +48,6 @@ function pikafishJieqiLevelProfile(level: number): FirstPartyBotProfile {
     displayName: `Pikafish Level ${level}`,
     engines: { jieqi: `pikafish-jieqi-level-${level}` },
     defaultGameSpecId: 'jieqi',
-    ladderLevel: level,
   };
 }
 
@@ -85,7 +86,6 @@ function fairyStockfishLevelProfile(level: number): FirstPartyBotProfile {
       'crazyhouse-xiangqi': `fairy-stockfish-crazyhouse-xiangqi-level-${level}`,
     },
     defaultGameSpecId: 'xiangqi',
-    ladderLevel: level,
     legacyBotIds: [`fairy-stockfish-xiangqi-level-${level}`, ...(legacy ? [legacy.botId] : [])],
     ...(legacy ? { attributionEngineIds: [legacy.engineId] } : {}),
   };
@@ -129,6 +129,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       xiangqi: 'pikafish-xiangqi-level-8',
       jieqi: 'pikafish-jieqi-strongest',
     },
+    seatNamesByEngineId: { 'pikafish-jieqi-strongest': 'Pikafish Level 8' },
     defaultGameSpecId: 'xiangqi',
     attributionEngineIds: [
       'pikafish-xiangqi-level-1',
@@ -168,6 +169,23 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     engines: { jieqi: 'ab-jchess-jieqi' },
     defaultGameSpecId: 'jieqi',
   },
+  // jqe above AB-JChess (migration 175), named for its engine like AB-JChess. Its
+  // engine is held behind MISTBOARD_JQE_ENABLED, so off it is unplayable and the
+  // public bot surfaces drop it (routes/bots.ts botPlayOptions).
+  {
+    id: 'jqe',
+    displayName: 'jqe',
+    engines: { jieqi: 'jqe-jieqi' },
+    defaultGameSpecId: 'jieqi',
+  },
+  // The worst-move xiangqi bot (migration 174): below the ladder, not on it.
+  {
+    id: 'general-blunder',
+    displayName: 'General Blunder',
+    engines: { xiangqi: 'fairy-stockfish-xiangqi-worst' },
+    defaultGameSpecId: 'xiangqi',
+    offLadder: true,
+  },
   // The top jungle slot above Misty (migration 159): KataGo-AnimalChess, which won
   // the jungle challenge (#434). Named for its engine, like AB-JChess.
   {
@@ -200,26 +218,6 @@ export function firstPartyBotForId(botId: string): FirstPartyBotProfile | null {
   return botById.get(botId) ?? null;
 }
 
-// Both numbered ladders top out at Level 8: Fairy-Stockfish Level 8, and for
-// the jieqi ladder, whose numbered rungs stop at 7, Pikafish itself.
-const LADDER_TOP_LEVEL = Math.max(...FAIRY_STOCKFISH_LEVELS);
-
-/**
- * Whether a bot id is the top of its ladder: a named slot (no level), or the
- * highest numbered level. Canonical ids only; a pre-consolidation id names an
- * old tier, not today's top. The homepage chat announces wins over these bots
- * and no others (Brian, 2026-10-08: a win line should not feel easily earned).
- */
-export function isTopOfLadderBot(botId: string): boolean {
-  const bot = botById.get(botId);
-  if (!bot || bot.id !== botId) return false;
-  return bot.ladderLevel === undefined || bot.ladderLevel === LADDER_TOP_LEVEL;
-}
-
-export function topOfLadderBotIds(): string[] {
-  return FIRST_PARTY_BOT_PROFILES.map((bot) => bot.id).filter(isTopOfLadderBot);
-}
-
 export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile | null {
   return botByEngineId.get(engineId) ?? null;
 }
@@ -227,7 +225,8 @@ export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile |
 /**
  * The public name of an engine seat, the same on every live surface (room
  * wire, /games, /watch, the homepage TV): the first-party bot fronting it,
- * which is the name the player picked in setup, else the engine's own name.
+ * with its engine-specific difficulty label when needed to match setup,
+ * else the engine's own name.
  * The room resolved the bot first and the feeds resolved the tier name only,
  * so one jieqi game read "Pikafish" in the room and "PikaJieQi - Strongest" on
  * its tile.
@@ -238,7 +237,7 @@ export function liveSeatEngineName(
   engineName: () => string,
 ): string {
   const bot = pveBotId ? firstPartyBotForId(pveBotId) : firstPartyBotForEngine(engineClientId);
-  return bot?.displayName ?? engineName();
+  return bot?.seatNamesByEngineId?.[engineClientId] ?? bot?.displayName ?? engineName();
 }
 
 // games.variant values that name the same spec as a bot's engine-map key. The

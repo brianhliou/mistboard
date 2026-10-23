@@ -144,6 +144,17 @@ test('a rename carries locale names, checks the name it expects, and keeps other
   );
 });
 
+test('a rename can replace the tags, and refuses tags it would drop', () => {
+  const s = study();
+  const rename = (tags: unknown) => plan([{ op: 'rename', chapter: 'a', name: 'x', tags }]);
+  assert.deepEqual(checkPlan(s, rename({ red: 'AB-JChess 0.2d', black: ' jqe it014 ' })), [
+    'rename a: "Game 1" -> "x" tags red "AB-JChess 0.2d", black "jqe it014"',
+  ]);
+  for (const tags of [{}, { white: 'x' }, { red: 'x', player: 'y' }, ['red'], { red: ' ' }]) {
+    assert.throws(() => checkPlan(s, rename(tags)), /tags .*not kept/);
+  }
+});
+
 test('describes a valid plan in order, tracking chapters it adds and deletes', () => {
   const lines = checkPlan(
     study(),
@@ -164,6 +175,45 @@ test('describes a valid plan in order, tracking chapters it adds and deletes', (
     'add "Game 7" (duck-xiangqi, 9 plies)',
     'order: "Game 7", "Game 6", "Game 2"',
   ]);
+});
+
+test('an add names its orientation and a gamebook flag, and refuses bad values', () => {
+  assert.deepEqual(
+    checkPlan(
+      study(),
+      plan([
+        {
+          op: 'add',
+          ref: 'g',
+          name: 'Find the move',
+          orientation: 'black',
+          gamebook: true,
+          tree: line(2),
+        },
+        { op: 'add', ref: 'h', name: 'Plain', gamebook: false, tree: line(3) },
+      ]),
+    ),
+    [
+      'add "Find the move" (duck-xiangqi, 2 plies, as black, gamebook)',
+      'add "Plain" (duck-xiangqi, 3 plies)',
+    ],
+  );
+  assert.throws(
+    () =>
+      checkPlan(
+        study(),
+        plan([{ op: 'add', ref: 'g', name: 'x', gamebook: 'yes' as never, tree: line(2) }]),
+      ),
+    /gamebook must be true or false/,
+  );
+  assert.throws(
+    () =>
+      checkPlan(
+        study(),
+        plan([{ op: 'add', ref: 'g', name: 'x', orientation: 'white' as never, tree: line(2) }]),
+      ),
+    /orientation "white"/,
+  );
 });
 
 test('a study op names the locales its i18n replaces, and refuses an overlay that would wipe them', () => {

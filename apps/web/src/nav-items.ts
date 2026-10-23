@@ -189,6 +189,62 @@ export function utilityNavItems(): NavItem[] {
   return items;
 }
 
+export interface NavSection {
+  labelKey: I18nKey;
+  items: NavItem[];
+}
+
+// The homepage footer (site-shell.ts buildHomeFooter), the same on every width.
+// It is the way into the /about rail, not a second copy of it: About opens the
+// rail, which lists every info page (Brian, 2026-10-17, cut from 11 links; Patron
+// has its own button in the bar). A new info page goes in the rail, not here.
+// `external`/`blockedIn` stay wired for an off-site link: the Discord invite
+// was the last one to use them (see the note above DISCORD_INVITE_URL).
+export function footerNavItems(): NavItem[] {
+  return [
+    { label: 'About', labelKey: 'footer.about', href: '/about' },
+    { label: 'Contact', labelKey: 'footer.contact', href: '/contact' },
+    { label: 'Terms', labelKey: 'footer.terms', href: '/terms' },
+    { label: 'Privacy', labelKey: 'footer.privacy', href: '/privacy' },
+  ];
+}
+
+// The phone site menu's closing Mistboard section: the info pages a phone
+// reaches from any page (the footer is on the homepage only). Patron is
+// already Community's Support row, so it is not listed twice.
+export function mistboardMenuItems(): NavItem[] {
+  return [
+    { label: 'Statistics', labelKey: 'footer.stats', href: '/stats' },
+    { label: 'Updates', labelKey: 'footer.news', href: '/feed' },
+    { label: 'FAQ', labelKey: 'footer.faq', href: '/faq' },
+    { label: 'Contact', labelKey: 'footer.contact', href: '/contact' },
+    { label: 'Source', labelKey: 'footer.source', href: '/source' },
+    { label: 'Developers', labelKey: 'footer.developers', href: '/developers' },
+    { label: 'Game data', labelKey: 'footer.data', href: '/data' },
+  ];
+}
+
+// The phone site menu (site-shell.ts openSiteMenu): every destination the bar
+// carries, grouped into sections and composed from the same lists the bar
+// renders, so a link added to a dropdown reaches the phone menu with no second
+// edit. Puzzles joins Play and Support closes Community; Admin follows for
+// admins only, like the bar's admin menu. The order is the reading order of a
+// two-column flow: Play, Watch, Tools down the first column, Learn and
+// Community down the second. Mistboard always closes the menu
+// (mistboardMenuItems).
+export function siteMenuSections({ admin = false }: { admin?: boolean } = {}): NavSection[] {
+  const puzzles = primaryNavItems().find((item) => item.labelKey === 'nav.puzzles');
+  return [
+    { labelKey: 'nav.play', items: [...playNavItems(), ...(puzzles ? [puzzles] : [])] },
+    { labelKey: 'nav.watch', items: watchNavItems() },
+    { labelKey: 'nav.tools', items: toolsNavItems() },
+    { labelKey: 'nav.learn', items: learnNavItems() },
+    { labelKey: 'nav.community', items: [...communityNavItems(), donateNavItem()] },
+    ...(admin ? [{ labelKey: 'nav.admin' as const, items: adminNavItems() }] : []),
+    { labelKey: 'nav.mistboard', items: mistboardMenuItems() },
+  ];
+}
+
 // Tools dropdown (lichess parity): the analysis board is the anchor tool, the
 // board editor sits beside it, and the games database closes the set the way
 // lichess's advanced search does, with Import beside them.

@@ -8,6 +8,9 @@
 Mistboard is a free, open-source place to play and study Chinese chess, and
 home to the original strategy games we build.
 
+**Our mission is to bring people together across cultures through Chinese chess
+and original strategy games.**
+
 Chinese chess here means xiangqi and its traditional relatives, Jieqi and Banqi.
 The site runs in English, Simplified Chinese, and Traditional Chinese. Pieces
 can render as icons you can identify before you can read 車 or 砲, and a
@@ -19,8 +22,16 @@ from a board people already know and changes one thing, and each gets a rules
 page and server-enforced play. Jungle Chess, Flip Jungle, and Fog Chess are
 live too.
 
-The goal is a trustworthy open-source place to play, study, rank, and build
-engines for xiangqi and its variants.
+Our standard is responsive boards, clear controls and quick improvements from
+player feedback. We use AI in development to act on bugs and suggestions.
+The code is open to inspection, including the rules that decide what each
+player and computer opponent is allowed to see.
+
+Engine authors can challenge for titles in public matches. Longer term, we
+want an arena for contributed engines and new strategy games, including
+competitions for AI agents. We also want the games here to connect to clubs,
+in-person tournaments and international events, beginning with a Washington
+Xiangqi club and exchanges with Chinese and international clubs and teachers.
 
 Mistboard is independent. It is not affiliated with lichess, chess.com, or any
 other chess platform.

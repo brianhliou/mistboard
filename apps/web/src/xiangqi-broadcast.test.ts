@@ -424,6 +424,29 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     window.history.replaceState(null, '', '/');
   });
 
+  it('ends the event page with the rights note, linked to contact about this page', async () => {
+    stubFetchJson(() => ROUND);
+    stubEventSource();
+    window.history.replaceState(null, '', '/broadcast/xiangqi/t/round/r');
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const notes = root.querySelectorAll('.xqb-rights-note');
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.textContent).toBe(
+      "Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, contact us and we'll take care of it.",
+    );
+    const link = notes[0]?.querySelector('a');
+    expect(link?.textContent).toBe('contact us');
+    expect(link?.getAttribute('href')).toBe(
+      `/contact?about=${encodeURIComponent('/broadcast/xiangqi/t/round/r')}`,
+    );
+    // The last thing on the page, after the event layout.
+    expect(root.querySelector('.xqb-event')?.lastElementChild).toBe(notes[0]);
+    window.history.replaceState(null, '', '/');
+  });
+
   it('renders English primary with the Chinese preserved as a secondary line', async () => {
     stubFetchJson(() => ROUND);
     stubEventSource();
@@ -613,6 +636,44 @@ describe('broadcastRecordsCredit', () => {
 
   it('says nothing when the boards are ours', () => {
     expect(broadcastRecordsCredit([{}, {}])).toBeNull();
+  });
+
+  it('links the iqipu event while retaining its host as the visible credit', () => {
+    expect(
+      broadcastRecordsCredit(
+        [
+          { sourceUrl: 'https://www.iqipu.com/game/games/kzBbRIf9AAJOvw' },
+          { sourceUrl: 'https://www.iqipu.com/game/games/nt2C_zgjAAJbQg' },
+        ],
+        { slug: '2026-us-qitian-cup', sourceUrl: 'https://www.iqipu.com/events/2443' },
+      ),
+    ).toEqual({ host: 'iqipu.com', href: 'https://www.iqipu.com/events/2443' });
+  });
+
+  it('preserves the event query when the source identifies an event by query string', () => {
+    expect(
+      broadcastRecordsCredit([{ sourceUrl: 'https://elephantchess.io/game?id=record' }], {
+        slug: '2026-us-qitian-cup',
+        sourceUrl: 'https://elephantchess.io/database/event?id=QJt8kEFWgEnY',
+      }),
+    ).toEqual({
+      host: 'elephantchess.io',
+      href: 'https://elephantchess.io/database/event?id=QJt8kEFWgEnY',
+    });
+  });
+
+  it.each([
+    'https://elephantchess.io/database/event?id=QJt8kEFWgEnY',
+    'mistboard-discover://iqipu-event?id=2443',
+    'javascript:alert(1)',
+    'not a url',
+  ])('does not use an unrelated or unreadable tour target: %s', (sourceUrl) => {
+    expect(
+      broadcastRecordsCredit([{ sourceUrl: 'https://www.iqipu.com/game/games/record' }], {
+        slug: '2026-us-qitian-cup',
+        sourceUrl,
+      }),
+    ).toEqual({ host: 'iqipu.com', href: 'https://www.iqipu.com' });
   });
 
   // A mixed-origin round would need a list, and crediting only the first source
@@ -955,6 +1016,18 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     await mountXiangqiBroadcastIndex(root);
     expect(root.querySelector('.xqb-featured-zone h2')?.textContent).toBe('Ongoing');
   });
+
+  it('carries no rights note: the index is a list of events, not one', async () => {
+    stubFetchJson(() => ({
+      tours: [
+        indexEntry({ slug: 'cup', name: 'Cup', live: false, updatedAt: '2026-09-01T10:00:00Z' }),
+      ],
+    }));
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastIndex(root);
+    expect(root.querySelector('main')).not.toBeNull();
+    expect(root.querySelector('.xqb-rights-note')).toBeNull();
+  });
 });
 
 describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
@@ -1081,6 +1154,24 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     expect(arrows.length).toBeGreaterThan(0);
     expect(root.querySelector('.xq-arrow--pv1')).not.toBeNull();
     // Arrows are drawn in our squares: PV1 runs h10 -> g8 (not Pikafish's h9g7).
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('ends a game page with the rights note about that game', async () => {
+    stubFetchJson((url) =>
+      url.includes('/api/xiangqi/broadcasts/boards/') ? BOARD_RESPONSE : ROUND,
+    );
+    stubEventSource();
+    window.history.replaceState(null, '', '/broadcast/xiangqi/board/t-r-b1');
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastBoard(root, 't-r-b1');
+
+    const notes = root.querySelectorAll('.xqb-rights-note');
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.querySelector('a')?.getAttribute('href')).toBe(
+      '/contact?about=%2Fbroadcast%2Fxiangqi%2Fboard%2Ft-r-b1',
+    );
     window.history.replaceState(null, '', '/');
   });
 

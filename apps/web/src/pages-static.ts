@@ -5,8 +5,9 @@ import './pages-static.css';
 import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
 import { track } from './analytics.js';
 import { buildContact } from './contact.js';
+import { jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
-import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import { applyDocumentLocale, currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
@@ -350,6 +351,13 @@ function applyArticleChrome(modules: ArticleModules, slug: string, lang?: Articl
   // seoTitle, as the prerender uses: the display title here would replace the
   // search title Google indexes the moment the client mounts.
   if (article) document.title = `${article.seoTitle ?? article.title} | Mistboard`;
+  // A Vietnamese page is its own article, and the prerender ships it as
+  // <html lang="vi">. Locale init had already reset that to the UI locale
+  // ("en": the interface does not speak Vietnamese), so the rendered page told
+  // Google it was English (2026-10-21). Any other article takes the UI locale
+  // back, which an in-place rules swap away from a vi page needs.
+  if (article?.sourceLang) document.documentElement.lang = article.sourceLang;
+  else applyDocumentLocale(currentLocale());
 }
 
 /** Mounts the widgets, TOC tracking and thumbnails of everything in the page
@@ -531,6 +539,17 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
 
   const engineHeading = aboutSubheading(t('about.enginesHeading', {}, locale));
   const engineP = aboutParagraph([t('about.enginesBody', {}, locale)]);
+  engineP.append(
+    ' ',
+    aboutLink(t('champions.heading', {}, locale), localizedHref('/champions', locale)),
+  );
+
+  const communityHeading = aboutSubheading(t('about.communityHeading', {}, locale));
+  const communityP = aboutParagraph([t('about.communityBody', {}, locale)]);
+  communityP.append(
+    ' ',
+    aboutLink(t('creators.heading', {}, locale), localizedHref('/creators', locale)),
+  );
 
   const oss1Heading = aboutSubheading(t('about.openSourceHeading', {}, locale));
   const oss1P = aboutParagraph([
@@ -554,6 +573,8 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     fairnessP,
     engineHeading,
     engineP,
+    communityHeading,
+    communityP,
     oss1Heading,
     oss1P,
   );
@@ -610,8 +631,19 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     textLine(t('source.chessground', {}, locale)),
     textLine(t('source.chessops', {}, locale)),
     textLine(t('source.stockfish', {}, locale)),
+    // The xiangqi ladder below Pikafish and the Duck Xiangqi bot run upstream
+    // Fairy-Stockfish builds (fairy-stockfish-*.ref); uncredited until 2026-10-17.
+    linkLine(
+      t('source.fairyStockfish', {}, locale),
+      'https://github.com/fairy-stockfish/Fairy-Stockfish',
+    ),
     // Its authors asked for a credit with a link (lxsgx23/AB-JChess#1).
     linkLine(t('source.abJchess', {}, locale), 'https://github.com/lxsgx23/AB-JChess'),
+    // jqe (MIT, devinokeefe/jieqi), credited with a link like AB-JChess, in the same
+    // VITE_JQE_ENABLED build that offers it.
+    ...(jqeEnabled()
+      ? [linkLine(t('source.jqe', {}, locale), 'https://github.com/devinokeefe/jieqi')]
+      : []),
     // The top jungle bot (#434): engine, the engine it is built on, and the net's
     // source, each linked; hzyhhzy agreed to it running here credited (hzyhhzy/KataGomo#12).
     linkLine(
@@ -627,6 +659,12 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     // its home page and the NNUE weights license (no commercial use without
     // permission), in the reader's language where pikafish.com has one.
     pikafishCreditLine(locale),
+    // Our patched jieqi_old branch (pikafish-jieqi.ref); GPL, so the link is the
+    // fork that carries our patches.
+    linkLine(
+      t('source.pikafishJieqi', {}, locale),
+      'https://github.com/brianhliou/pikafish-jieqi-wasm/tree/jieqi_old-mistboard',
+    ),
     // The five third-party xiangqi piece sets (2026-10-08); sources and licences
     // sit beside the files in public/piece-sets/xiangqi/<id>/README.md. Wood is
     // CC BY 4.0, so its credit names the author and links the licence.
@@ -635,6 +673,14 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     linkLine(t('source.pieceSetBook', {}, locale), PIECE_SET_SOURCE_URLS.book),
     linkLine(t('source.pieceSetBrush', {}, locale), PIECE_SET_SOURCE_URLS.brush),
     linkLine(t('source.pieceSetClerical', {}, locale), PIECE_SET_SOURCE_URLS.clerical),
+    // Chess pieces, sounds and fonts were credited only in public/*/CREDITS.md,
+    // which nothing links to (2026-10-17).
+    linkLine(
+      t('source.chessPieceSets', {}, locale),
+      'https://github.com/lichess-org/lila/tree/master/public/piece',
+    ),
+    linkLine(t('source.sounds', {}, locale), 'https://github.com/lichess-org/lila'),
+    textLine(t('source.fonts', {}, locale)),
   ]);
 
   const identity = sourceBlock(t('source.projectIdentity', {}, locale), [

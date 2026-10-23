@@ -43,6 +43,7 @@ export type EngineId =
   | `fairy-stockfish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   // Uniformly-random legal-move xiangqi bot (calibration floor / 0-Elo anchor)
   | 'random-legal-xiangqi'
+  | 'fairy-stockfish-xiangqi-worst'
   // Fairy-Stockfish (Fortress Xiangqi ladder) + its random floor
   | `fairy-stockfish-fortress-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   | 'random-legal-fortress-xiangqi'
@@ -63,6 +64,8 @@ export type EngineId =
   | 'pikafish-jieqi-strongest'
   // AB-JChess (Jieqi): the top slot above level 8
   | 'ab-jchess-jieqi'
+  // jqe (Jieqi): above AB-JChess, held behind MISTBOARD_JQE_ENABLED
+  | 'jqe-jieqi'
   // Pikafish (standard Xiangqi)
   | `pikafish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   | 'pikafish-xiangqi-amateur'

@@ -46,6 +46,7 @@ import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 import type { TenantLiveRoom } from './variant-tenant/ws.js';
 import {
   isXiangqiEngineClientId,
+  isXiangqiWorstEngine,
   type XiangqiEngineTier,
   xiangqiEngineTierFor,
   xiangqiEngineVersion,
@@ -248,7 +249,7 @@ export async function playXiangqiEngineMoveIfReady(
   reportEngineMoveOk();
   let chosen: XiangqiMove = validated;
   const legalMoves = getStandardXiangqiLegalMoves(room.projection.state);
-  const guarded = guardXiangqiEngineMove(room.projection.state, chosen, legalMoves);
+  const guarded = guardXiangqiEngineMoveFor(engineId, room.projection.state, chosen, legalMoves);
   if (guarded !== chosen) {
     logger.warn(
       {
@@ -431,6 +432,18 @@ export function legalMoveForUci(
  * Replace a move that lets the opponent win on the immediate reply with any legal
  * move that does not — a cheap king-safety backstop matching the Fortress loop.
  */
+// The worst-move bot is meant to walk into the losses the guard prevents.
+export function guardXiangqiEngineMoveFor(
+  engineId: string,
+  state: XiangqiGameState,
+  chosen: XiangqiMove,
+  legalMoves: readonly XiangqiMove[],
+): XiangqiMove {
+  return isXiangqiWorstEngine(engineId)
+    ? chosen
+    : guardXiangqiEngineMove(state, chosen, legalMoves);
+}
+
 export function guardXiangqiEngineMove(
   state: XiangqiGameState,
   chosen: XiangqiMove,

@@ -8,6 +8,7 @@ import {
   embedPovFromSearch,
   embedRouteFromPath,
   embedSolutionHiddenFromSearch,
+  embedTablebaseFromSearch,
   embedThemeFromSearch,
 } from './embed/embed-route.js';
 import './board-fog.css';
@@ -22,6 +23,7 @@ import {
 } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import {
+  chunkLoadFailureContext,
   chunkReloadPending,
   clearChunkReloadAttempt,
   installGlobalChunkLoadRecovery,
@@ -422,7 +424,9 @@ const studyBaseId = /^(?:\/(?:zh-hans|zh-hant))?\/study\/([A-Za-z0-9]+)$/.exec(p
 const studyChapterRoute = studyChapterRouteFromPath(path);
 const studyId = studyBaseId ?? studyChapterRoute?.studyId ?? null;
 const studyChapterId = studyChapterRoute?.chapterId ?? null;
-const wantsStudyIndex = path === '/study';
+// Locale-prefixed too (/zh-hans/study): the prefix alone sets the locale, and
+// the list's links go to the same-locale study pages.
+const wantsStudyIndex = path === '/study' || path === '/zh-hans/study' || path === '/zh-hant/study';
 // Locale-prefixed too, like the course: localeFromPath() picks the language.
 const wantsPractice =
   path === '/practice' || path === '/zh-hans/practice' || path === '/zh-hant/practice';
@@ -929,9 +933,16 @@ if (replaySample) {
   const studyPov = embedPovFromSearch(window.location.search);
   // `?solution=hidden` covers the sheet until the reader asks: a problem chapter.
   const hideSolution = embedSolutionHiddenFromSearch(window.location.search);
+  // `?tablebase=1` puts a banqi chapter's endgame table under the board.
+  const tablebase = embedTablebaseFromSearch(window.location.search);
   void mountOrReport(() =>
     import('./embed/embed-study-page.js').then(({ mountEmbedStudy }) =>
-      mountEmbedStudy(appRoot, studyRoute, { startPly: studyPly, pov: studyPov, hideSolution }),
+      mountEmbedStudy(appRoot, studyRoute, {
+        startPly: studyPly,
+        pov: studyPov,
+        hideSolution,
+        tablebase,
+      }),
     ),
   );
 } else if (embedRoute?.kind === 'game') {
@@ -1114,7 +1125,6 @@ async function mountOrReport(run: () => Promise<void>): Promise<void> {
     await localeReady;
     await run();
     serverRender.keepTitle(currentLocale());
-    clearChunkReloadAttempt();
   } catch (err) {
     console.error(err);
     // A prerendered page is complete without the client: put it back rather
@@ -1129,7 +1139,11 @@ async function mountOrReport(run: () => Promise<void>): Promise<void> {
     // friendly "Page failed to load" panel below is the ONLY trace of a broken
     // route (e.g. a stale /game/<tenant-id> link 403ing on the chess shell) —
     // handled errors never reach posthog's automatic $exception hook.
-    captureException(err, { context: 'route_mount', path: window.location.pathname });
+    captureException(err, {
+      context: 'route_mount',
+      path: window.location.pathname,
+      ...chunkLoadFailureContext(err),
+    });
     if (serverRender.present) return;
     appRoot.replaceChildren();
     appRoot.classList.add('landing-page');

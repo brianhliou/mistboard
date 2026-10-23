@@ -105,7 +105,7 @@ const CRAZYHOUSE_XIANGQI_LEVEL = 4;
 // position around ply 27 and next-day return was 14/91 (2026-10-06). So a
 // device with no remembered jieqi bot gets Level 2, which /bots marks "Start
 // here"; a remembered Pikafish level is kept; any other remembered engine
-// (full-strength Pikafish, AB-JChess) is a returning player and gets Level 4.
+// (full-strength Pikafish, AB-JChess, jqe) is a returning player and gets Level 4.
 export const JIEQI_FIRST_GAME_LEVEL = 2;
 const JIEQI_RETURNING_LEVEL = 4;
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
@@ -136,12 +136,14 @@ export function pveEngineIdForRememberedPick(gameSpecId: string, id: string): st
   if (gameSpecId === JUNGLE_SPEC_ID) return id === 'katago' ? 'katago-jungle' : id;
   if (gameSpecId === XIANGQI_SPEC_ID) {
     if (id === 'pikafish') return 'pikafish-xiangqi-level-8';
+    if (id === 'general-blunder') return 'fairy-stockfish-xiangqi-worst';
     const level = fairyStockfishLevel(id);
     return level === null ? id : `${XIANGQI_ENGINE_ID_PREFIX}${level}`;
   }
   if (gameSpecId !== JIEQI_SPEC_ID) return id;
   if (id === 'pikafish') return 'pikafish-jieqi-strongest';
   if (id === 'ab-jchess') return 'ab-jchess-jieqi';
+  if (id === 'jqe') return 'jqe-jieqi';
   const level = /^pikafish-level-(\d+)$/.exec(id)?.[1];
   return level ? `pikafish-jieqi-level-${level}` : id;
 }
@@ -336,7 +338,8 @@ function positiveModulo(value: number, divisor: number): number {
 // Every public bot a variant can be played against, weakest first, so the
 // stepper walks the real ladder: xiangqi's Fairy-Stockfish Levels 1-8 then
 // full-strength Pikafish; jieqi's Pikafish Levels 1-8 (Level 8 is the
-// `pikafish` bot, the strongest Pikafish setting), then AB-JChess; the other
+// `pikafish` bot, the strongest Pikafish setting), then AB-JChess, then jqe where
+// the server can seat it; the other
 // Fairy-Stockfish variants Levels 1-8; jungle Misty then KataGo; the other
 // house-built variants a single Misty (no stepper). Mirrors the server roster in
 // apps/server/src/first-party-bots.ts; a rung the server cannot serve fails the
@@ -345,18 +348,19 @@ export type LandingBotRung = {
   botId: string;
   /** Ladder level when the rung is a numbered level; null for a named bot. */
   level: number | null;
-  /** Display name for a named rung (Pikafish, AB-JChess, Misty). */
+  /** Display name for a named rung (Pikafish, AB-JChess, jqe, Misty). */
   name: string;
   /** The engine family behind the rung, shown under the level. */
-  engine: 'Fairy-Stockfish' | 'Pikafish' | 'AB-JChess' | 'KataGo' | 'Misty';
+  engine: 'Fairy-Stockfish' | 'Pikafish' | 'AB-JChess' | 'jqe' | 'KataGo' | 'Misty';
   /** The trained net it evaluates with, shown as a tag under the name. NNUE:
    *  xiangqi Fairy-Stockfish Level 8 (the official xiangqi net), xiangqi
-   *  Pikafish and AB-JChess; the jieqi Pikafish levels run classical, its jieqi
+   *  Pikafish, AB-JChess and jqe; the jieqi Pikafish levels run classical, its jieqi
    *  branch has never had weights. KataGo plays a ResNet under MCTS, which is a
    *  neural net but not an NNUE, so it gets the general tag. */
   net: 'nnue' | 'neural' | null;
-  /** The engine needs a binary and net the server box may lack (KataGo), so the
-   *  rung is offered only where GET /api/bots reports it playable. */
+  /** The engine needs a binary and net the server box may lack (KataGo), or a flag
+   *  that is off (jqe, MISTBOARD_JQE_ENABLED), so the rung is offered only where
+   *  GET /api/bots reports it playable. */
   gated?: boolean;
 };
 
@@ -387,6 +391,15 @@ export function landingBotLadder(
       net: gameSpecId === XIANGQI_SPEC_ID && i + 1 === 8 ? 'nnue' : null,
     }));
     if (gameSpecId === XIANGQI_SPEC_ID) {
+      // General Blunder plays its worst move (2026-10-17): off the ladder, so
+      // it sits below Level 1, as on /bots, and is named rather than numbered.
+      levels.unshift({
+        botId: 'general-blunder',
+        level: null,
+        name: 'General Blunder',
+        engine: 'Fairy-Stockfish',
+        net: null,
+      });
       levels.push({
         botId: 'pikafish',
         level: null,
@@ -398,7 +411,7 @@ export function landingBotLadder(
     return levels;
   }
   if (gameSpecId === JIEQI_SPEC_ID) {
-    return [
+    const rungs: LandingBotRung[] = [
       ...Array.from({ length: JIEQI_LADDER_TOP_LEVEL }, (_, i) => ({
         botId: `pikafish-level-${i + 1}`,
         level: i + 1,
@@ -416,7 +429,11 @@ export function landingBotLadder(
         net: null,
       },
       { botId: 'ab-jchess', level: null, name: 'AB-JChess', engine: 'AB-JChess', net: 'nnue' },
+      // jqe (2026-10-16) above AB-JChess: held behind the server's MISTBOARD_JQE_ENABLED
+      // until its author's OK, so off, /api/bots never lists it and the rung is left off.
+      { botId: 'jqe', level: null, name: 'jqe', engine: 'jqe', net: 'nnue', gated: true },
     ];
+    return rungs.filter((rung) => !rung.gated || playable.has(rung.botId));
   }
   const misty: LandingBotRung = {
     botId: 'misty',
@@ -483,8 +500,12 @@ export function landingBotLadderIndex(
       ? 'pikafish'
       : remembered === 'ab-jchess-jieqi'
         ? 'ab-jchess'
-        : remembered === 'katago-jungle'
-          ? 'katago'
-          : null;
+        : remembered === 'jqe-jieqi'
+          ? 'jqe'
+          : remembered === 'katago-jungle'
+            ? 'katago'
+            : remembered === 'fairy-stockfish-xiangqi-worst'
+              ? 'general-blunder'
+              : null;
   return botId ? ladder.findIndex((rung) => rung.botId === botId) : -1;
 }

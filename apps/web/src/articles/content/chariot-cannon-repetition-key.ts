@@ -57,6 +57,7 @@ export const chariotCannonRepetitionKeyArticle: Article = {
   slug: 'chariot-cannon-repetition-key',
   kind: 'article',
   publisher: 'mistboard',
+  topic: 'engineering',
   title: 'Chariot and cannon both start with C',
   cardTitle: 'Chariot and cannon, both C',
   seoTitle: 'A xiangqi threefold repetition bug: the chariot and the cannon shared a key',

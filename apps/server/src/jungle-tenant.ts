@@ -109,6 +109,10 @@ export const jungleTenant: JungleTenant = {
       ...state,
       status: { type: 'finished', winner, reason },
     }),
+    finishDraw: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'agreement' },
+    }),
     abort: (state, reason: AbortReason) => ({
       ...state,
       status: { type: 'aborted', reason },
@@ -157,6 +161,7 @@ export const jungleTenant: JungleTenant = {
       if (reason === 'den-entered') return 'race';
       if (reason === 'pieces-captured') return 'no-legal-moves';
       if (reason === 'no-progress') return 'progress-clock';
+      if (reason === 'agreement') return 'draw';
       return reason as persistence.GameTermination;
     },
     logKindPrefix: 'jungle',

@@ -201,15 +201,15 @@ function compile(file: string): void {
     name: 'KataGo-AnimalChess vs MistyJungle',
     i18n: MATCH_STUDY_I18N,
     description:
-      "All 200 games in which KataGo-AnimalChess (hzyhhzy, Kouza), a self-play net for Dou Shou Qi, beat MistyJungle 82-0 with 118 draws at matched time per move, right after Mistboard gave the tiger the lion's sideways river jump. Eight named games first, then the rest, decisive games before draws. The harness and the records are linked from the post on brianhliou.com.",
+      "All 200 games in which KataGo-AnimalChess (hzyhhzy, Kouza), a self-play net for Dou Shou Qi, beat MistyJungle 82-0 with 118 draws at matched time per move, right after Mistboard gave the tiger the lion's sideways river jump. Eight named games first, then the rest, decisive games before draws. The game records are linked from “KataGo, a stronger Jungle Chess bot” on Mistboard's blog.",
     games: pick.map(([g, why]) => describe(g, why)),
   };
   writeFileSync(DATA, `${JSON.stringify(data, null, 2)}\n`);
   console.log(`${data.games.length} chapters -> ${DATA}`);
 }
 
-// The June 2026 benchmark games (brianhliou.com, "Dou Shou Qi: Classical Search
-// Beat the Learned Eval"): the site's own replay files, one JSON per game with
+// The June 2026 benchmark games ("Dou Shou Qi: Classical Search Beat the Learned
+// Eval", first on brianhliou.com, now /blog/dou-shou-qi-engine): the blog's replay files, one JSON per game with
 // `start`, `moves: [{uci}]`, the seats and a result line. Played under the
 // lengthwise-only tiger, and still legal under the sideways one (the change only
 // added moves), which the kernel replay below proves for each.
@@ -260,7 +260,7 @@ function compileJson(files: string[]): void {
     name: 'MistyJungle benchmark games, June 2026',
     i18n: BENCHMARK_STUDY_I18N,
     description:
-      'The games behind "Dou Shou Qi: Classical Search Beat the Learned Eval" on brianhliou.com: MistyJungle against the strongest classical engine it could be matched with, and against itself at 8M nodes. Played under the lengthwise-only tiger rule Mistboard used until September 2026; every move stays legal under the current rule.',
+      'The games behind "A Dou Shou Qi (Jungle Chess) Engine: Classical Search Beat the Learned Eval" on Mistboard\'s blog: MistyJungle against the strongest classical engine it could be matched with, and against itself at 8M nodes. Played under the lengthwise-only tiger rule Mistboard used until September 2026; every move stays legal under the current rule.',
     games,
   };
   writeFileSync(DATA, `${JSON.stringify(data, null, 2)}\n`);

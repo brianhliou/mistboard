@@ -28,6 +28,7 @@ import {
 } from '../analytics.js';
 import { brandedEngineName } from '../game-display.js';
 import { isFlipShortcut, setReplayAnalysisHref, setReplayFlipHandler } from '../game-table.js';
+import { t } from '../i18n/catalog.js';
 import {
   createLiveFinishBadges,
   type FinishBadge,
@@ -127,6 +128,14 @@ export type TenantLiveState<C extends string, V> = {
   // sends). Until 2026-10-02 nothing read it, so every tenant room's meta card said
   // Casual, rated lobby games and rated correspondence alike.
   rated: boolean;
+  // The seat with a draw offer pending (snapshot `drawOffer`, sent only while
+  // one is), and how many of this seat's own moves remain before it may offer
+  // again after a decline (`drawOfferCooldown`, sent only to that seat).
+  drawOffer: C | null;
+  drawOfferCooldown: number;
+  // The plies at which a draw was offered (snapshot `drawOfferPlies`), for the
+  // move list's "½?" mark.
+  drawOfferPlies: ReadonlySet<number>;
 };
 
 // Everything a tenant's interaction/setup code needs from the core. Handed to
@@ -163,7 +172,7 @@ export type TenantMoveListRenderContext<C extends string, M> = {
   hasPly(ply: number): boolean;
 };
 
-export type TenantMoveListConfig<C extends string, M> = {
+export type TenantMoveListConfig<C extends string, M, V = unknown> = {
   /** Class list for each move row (e.g. 'move-row xiangqi-move-row'). */
   rowClass: string;
   /** Class prefix for the number/cell spans (e.g. 'xiangqi-move-row'). */
@@ -188,6 +197,15 @@ export type TenantMoveListConfig<C extends string, M> = {
    * information tenants only: a fog client holds no true line to replay.
    */
   notateLine?(moves: readonly M[]): string[];
+  /**
+   * OPTIONAL label from the board after the move: the view this client holds
+   * for that ply (its replay snapshot, or the live view for the latest ply),
+   * null when it holds none. For a move whose meaning shows only on the
+   * board after it (a flip names the piece it turned up). The view is one the
+   * server already sent this viewer, so a label can never say more than the
+   * board did. Used ahead of `notate` for every ply notateLine does not cover.
+   */
+  notateWithView?(move: M, viewAfter: V | null): string;
   isMoveEvent(event: TenantLiveEvent): event is TenantMovePlayed<C, M>;
   /** Optional banner row above the list (e.g. the parachute bounce note). */
   banner?(): { className: string; text: string } | null;
@@ -320,7 +338,7 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
    * reserve is bound to the bottom strip, stays off.
    */
   flippable?: boolean;
-  moveList: TenantMoveListConfig<C, M>;
+  moveList: TenantMoveListConfig<C, M, V>;
   replayCapture: TenantReplayCaptureConfig<V>;
   replayHistory?: TenantReplayHistoryConfig<C, V>;
   chrome?: {
@@ -383,6 +401,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     forfeitDeadline: null,
     lobbyMatch: false,
     rated: false,
+    drawOffer: null,
+    drawOfferCooldown: 0,
+    drawOfferPlies: new Set(),
   };
 
   let socket: TenantSocketClient | null = null;
@@ -480,6 +501,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       config.chrome?.rematchControls ?? ((sendSocket) => rematch?.controls(sendSocket) ?? null),
     lobbyMatch: () => state.lobbyMatch,
     rated: () => state.rated,
+    drawOffer: () => state.drawOffer,
+    drawOfferCooldown: () => state.drawOfferCooldown,
     ...(config.chrome?.variantDetail ? { variantDetail: config.chrome.variantDetail } : {}),
     recording: recordingForChrome,
   });
@@ -525,6 +548,18 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     // a room never stops being a lobby room.
     if (frame.lobbyMatch === true) state.lobbyMatch = true;
     if (typeof frame.rated === 'boolean') state.rated = frame.rated;
+    // Every frame carries the whole room state, so an absent field means no
+    // offer is pending (a move lapsed it, or it was answered).
+    const drawOffer = frame.drawOffer as { from?: unknown } | undefined;
+    state.drawOffer =
+      typeof drawOffer?.from === 'string' && tenant.isColor(drawOffer.from) ? drawOffer.from : null;
+    state.drawOfferCooldown =
+      typeof frame.drawOfferCooldown === 'number' ? frame.drawOfferCooldown : 0;
+    state.drawOfferPlies = new Set(
+      Array.isArray(frame.drawOfferPlies)
+        ? frame.drawOfferPlies.filter((ply): ply is number => Number.isInteger(ply))
+        : [],
+    );
     if (frame.events) state.events = frame.events;
     rematch?.applyFrame(frame.rematch);
     config.onFrame?.(frame);
@@ -603,6 +638,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.abortDeadline = null;
     state.lobbyMatch = false;
     state.rated = false;
+    state.drawOffer = null;
+    state.drawOfferCooldown = 0;
+    state.drawOfferPlies = new Set();
     lastCapturedView = null;
     lastCapturedKey = null;
     pendingLiveAnimation = null;
@@ -957,6 +995,14 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       .filter(Boolean)
       .join(' ');
     cell.textContent = played ? (text ?? '...') : '';
+    // A draw was offered after this move (lichess's "½?").
+    if (played && state.drawOfferPlies.has(ply)) {
+      const mark = document.createElement('span');
+      mark.className = 'move-draw-offer';
+      mark.title = t('live.drawOffered');
+      mark.textContent = '½?';
+      cell.append(mark);
+    }
     if (cell instanceof HTMLButtonElement) {
       cell.type = 'button';
       cell.title = `Move ${Math.ceil(ply / 2)}`;
@@ -981,10 +1027,19 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       if (ply > plyCount) return;
       const fullMove = Math.floor((ply - 1) / 2) + 1;
       const row = rows.get(fullMove) ?? ({ fullMove } as MoveRow);
-      row[event.color] = (lineLabels[index] ?? moveList.notate(event.move)) as MoveRow[C];
+      row[event.color] = (lineLabels[index] ??
+        (moveList.notateWithView
+          ? moveList.notateWithView(event.move, viewAfterPly(ply, index === moves.length - 1))
+          : moveList.notate(event.move))) as MoveRow[C];
       rows.set(fullMove, row);
     });
     return [...rows.values()].sort((a, b) => a.fullMove - b.fullMove);
+  }
+
+  // The view after a ply: its replay snapshot, else the live view when the ply
+  // is the latest (a move event renders before its own snapshot is captured).
+  function viewAfterPly(ply: number, latestMove: boolean): V | null {
+    return replay.viewAtPly(ply) ?? (latestMove ? state.view : null);
   }
 
   function eventPly(event: TenantMovePlayed<C, M>, fallbackIndex: number): number {

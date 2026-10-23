@@ -264,6 +264,15 @@ export function embedSolutionHiddenFromSearch(search: string): boolean {
   return new URLSearchParams(search).get('solution') === 'hidden';
 }
 
+/**
+ * `?tablebase=1` on a banqi study embed: the endgame tablebase under the board,
+ * following the ply, with a link to the study for moves off the line. Other
+ * variants ignore it.
+ */
+export function embedTablebaseFromSearch(search: string): boolean {
+  return new URLSearchParams(search).get('tablebase') === '1';
+}
+
 /** An embed path with `solution=hidden` added, for a host (an article's embed
  *  block) that frames a problem without its answer. Keeps any query and hash. */
 export function embedPathWithSolutionHidden(path: string): string {

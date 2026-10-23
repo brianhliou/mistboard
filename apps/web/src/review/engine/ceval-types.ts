@@ -79,6 +79,9 @@ export interface CevalRequest {
   /** User-selected effort. `maxDepth` remains available for fixed-depth
    * programmatic sweeps and takes precedence when supplied. */
   effort?: CevalEffort;
+  /** Plies without a capture or flip that draw the game, for engines whose search
+   *  scores that draw (MistyBanqi). A rule, so public. Omit for the engine's default. */
+  noProgressLimit?: number;
   /** Progressive callback fired as depth increases (throttled). */
   onUpdate?: (update: CevalUpdate) => void;
 }

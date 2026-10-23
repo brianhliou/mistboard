@@ -129,6 +129,42 @@ describe('bot pages', () => {
   // The page is for "play xiangqi against the computer": the ladder leads, named
   // by level, Pikafish is its top rung, the first-timer level says Start here,
   // and Misty (no xiangqi) follows under Other games.
+  // General Blunder plays xiangqi but is off the ladder: it goes below Level 1,
+  // never in the top-rung slot that reads Strongest.
+  it('puts General Blunder below Level 1, not as a top rung', async () => {
+    const payload = rosterPayload();
+    payload.bots.push(
+      pikafish({
+        id: 'general-blunder',
+        displayName: 'General Blunder',
+        bio: 'Plays the worst move it can find.',
+        activeEngineId: 'fairy-stockfish-xiangqi-worst',
+        supportedGameSpecIds: ['xiangqi'],
+        playOptions: [
+          { gameSpecId: 'xiangqi', engineId: 'fairy-stockfish-xiangqi-worst', playable: true },
+        ],
+      }),
+    );
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(payload));
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+
+    await mountBots(root);
+
+    const names = [
+      ...root.querySelectorAll(
+        '.bot-roster-section:nth-of-type(1) .profile-summary-card .profile-summary-card-name',
+      ),
+    ].map((el) => el.textContent);
+    expect(names[0]).toBe('General Blunder');
+    expect(names.at(-1)).toBe('Pikafish');
+    expect(
+      root.querySelector(
+        '.profile-summary-card[data-bot-id="general-blunder"] .profile-summary-card-badge',
+      )?.textContent,
+    ).not.toBe('Strongest');
+  });
+
   it('leads with the xiangqi ladder by level, Pikafish on top, Misty after', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(rosterPayload()));
     const root = document.createElement('div');
@@ -338,13 +374,50 @@ describe('bot pages', () => {
     expect(root.querySelector('.bot-rating-spotlight-title')?.textContent).toBe(
       'Play against Misty',
     );
-    expect(root.querySelector('.profile-overview-side')?.textContent).toContain('python-v2-v1.5');
+    // The engine id is an internal name; the page never prints it.
+    expect(root.querySelector('.profile-overview-side')?.textContent).not.toContain(
+      'python-v2-v1.5',
+    );
 
     // Recent games ride the same tab card and game rows.
     expect(root.querySelector('.profile-tab[aria-selected="true"]')?.textContent).toBe(
       'Recent games',
     );
     expect(root.querySelectorAll('.profile-game-list .profile-game-row')).toHaveLength(1);
+  });
+
+  it("credits jqe's author with a link and shows the localized bio, not the stored one", async () => {
+    const profile = misty({
+      id: 'jqe',
+      displayName: 'jqe',
+      bio: 'Stored bio: github.com/devinokeefe/jieqi',
+      activeEngineId: 'jqe-jieqi',
+      defaultGameSpecId: 'jieqi',
+      supportedGameSpecIds: ['jieqi'],
+      playOptions: [{ gameSpecId: 'jieqi', engineId: 'jqe-jieqi', playable: true }],
+      rating: null,
+      ratings: [],
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+
+    await mountBotProfile(root, 'jqe');
+
+    const side = root.querySelector('.profile-overview-side');
+    expect(side?.querySelector('.profile-side-bio')?.textContent).toContain(
+      "An open-source jieqi engine by Devin O'Keefe",
+    );
+    const credit = side?.querySelector<HTMLAnchorElement>('.bot-profile-credits a');
+    expect(credit?.textContent).toBe("jqe by Devin O'Keefe");
+    expect(credit?.href).toBe('https://github.com/devinokeefe/jieqi');
+    expect(side?.textContent).not.toContain('jqe-jieqi');
+    // Match results are against one network, so the page names it.
+    const stats = [...(side?.querySelectorAll('.profile-side-stat') ?? [])].map((stat) => [
+      stat.querySelector('.profile-side-stat-label')?.textContent,
+      stat.querySelector('.profile-side-stat-value')?.textContent,
+    ]);
+    expect(stats).toContainEqual(['Version', 'it014 (network)']);
   });
 
   it('describes an eve-anchor sample as engine games, never as rated games or a time class', async () => {

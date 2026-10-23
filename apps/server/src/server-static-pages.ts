@@ -10,6 +10,7 @@ import {
 } from './article-schedule.js';
 import { botPageMeta } from './bot-page-meta.js';
 import { botsDirectoryBody } from './bots-page-body.js';
+import { type BroadcastPage, liveBroadcastPage } from './broadcast-pages.js';
 import { broadcastPageMeta } from './og-broadcast.js';
 import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
 import { articleOgImageUrl, GAME_OG_IMAGE_VERSION, STUDY_OG_IMAGE_VERSION } from './og-image.js';
@@ -27,9 +28,15 @@ import {
   type PlayerPage,
   playerSitemapEntries,
 } from './player-pages.js';
+import { puzzleById } from './routes/puzzles.js';
 import { isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
-import { chapterPageMeta, renderStudyBody } from './study-page-body.js';
+import {
+  chapterPageMeta,
+  renderStudyBody,
+  renderStudyIndexBody,
+  STUDY_INDEX_PAGES,
+} from './study-page-body.js';
 
 export { ARTICLE_META, canonicalArticleBase };
 
@@ -123,9 +130,9 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     localeGroup: '/bots',
   },
   '/about': {
-    title: 'About Mistboard | Chinese Chess (Xiangqi) in English',
+    title: 'About Mistboard | Chinese Chess and the Future of Strategy Games',
     description:
-      'A free, open-source place to play xiangqi (Chinese chess) in English, built for serious play. What the site is, and who it is for.',
+      'Bringing people together across cultures through Chinese chess and original strategy games. Free, open-source play, study, broadcasts and engine challenges.',
   },
   '/faq': {
     title: 'Frequently Asked Questions | Mistboard',
@@ -180,12 +187,12 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/contribute': {
     title: 'How to Contribute | Mistboard',
     description:
-      'Mistboard is free and open source. Ways to help, whether or not you write code: play and give feedback, report bugs, help translate, or improve the code.',
+      'Help build a future for Chinese chess and original strategy games. Contribute as a player, teacher, translator, game creator or engine author.',
   },
   '/creators': {
     title: 'Work With Us: Creators and Players | Mistboard',
     description:
-      'Work with Mistboard: titled players and coaches, creators and streamers, event organizers and clubs, writers and composers, and engine authors.',
+      'Bring Chinese chess to a world stage with Mistboard. Work with us on teaching, broadcasts, original games and engine challenges across languages.',
   },
   // One reigning champion engine per game, moved from
   // brianhliou.com/challenges/ (and its zh copies) on 2026-10-07; /challenges
@@ -193,20 +200,20 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/champions': {
     title: 'Engine Champions | Mistboard',
     description:
-      'The reigning champion engine for jieqi, banqi, Jungle Chess and Flip Jungle: the bot you play on Mistboard, the title history, and how any engine can challenge for the title in a public match.',
+      'The reigning champion engine for jieqi, banqi, Jungle Chess and Flip Jungle: the strongest bot on Mistboard, the title history, and how any engine can challenge for the title in a public match.',
     localeGroup: '/champions',
   },
   '/zh-hans/champions': {
     title: '引擎冠军与挑战赛 | Mistboard',
     description:
-      '揭棋、暗棋、斗兽棋和翻翻棋的现任冠军引擎：就是你在 Mistboard 上对弈的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。',
+      '揭棋、暗棋、斗兽棋和翻翻棋的现任冠军引擎：Mistboard 上最强的机器人，附头衔历史，以及任何引擎如何在公开对抗赛中挑战头衔。',
     htmlLang: 'zh-Hans',
     localeGroup: '/champions',
   },
   '/zh-hant/champions': {
     title: '引擎冠軍與挑戰賽 | Mistboard',
     description:
-      '揭棋、暗棋、鬥獸棋和翻翻棋的現任冠軍引擎：就是你在 Mistboard 上對弈的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。',
+      '揭棋、暗棋、鬥獸棋和翻翻棋的現任冠軍引擎：Mistboard 上最強的機器人，附頭銜歷史，以及任何引擎如何在公開對抗賽中挑戰頭銜。',
     htmlLang: 'zh-Hant',
     localeGroup: '/champions',
   },
@@ -298,10 +305,27 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     htmlLang: 'zh-Hant',
     localeGroup: '/practice',
   },
+  // The study list in three languages; the zh lists were added 2026-10-17
+  // (each study already had its /zh-hans/study/:id page, but no list linked them).
   '/study': {
     title: 'Xiangqi Studies | Mistboard',
     description:
       'Browse public xiangqi (Chinese chess) studies: annotated games, classical endgame compositions, and opening lines on an interactive board.',
+    localeGroup: '/study',
+  },
+  '/zh-hans/study': {
+    title: '象棋研习：带注解对局与古典排局 | Mistboard',
+    description:
+      '浏览公开的象棋（中国象棋）及其变体研习：带注解的对局、古典残局排局、开局变着和题目，全部在互动棋盘上呈现，并附有完整着法与评注。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/study',
+  },
+  '/zh-hant/study': {
+    title: '象棋研習：帶註解對局與古典排局 | Mistboard',
+    description:
+      '瀏覽公開的象棋（中國象棋）及其變體研習：帶註解的對局、古典殘局排局、開局變著和題目，全部在互動棋盤上呈現，並附有完整著法與評註。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/study',
   },
   '/feed': {
     title: 'Updates and Announcements | Mistboard',
@@ -574,11 +598,54 @@ export async function routePreloadLinksForPath(params: {
 // /watch?channel=…&game=… is the one watch page tuned to a channel or game, and
 // each combination crawled as its own URL (SEO backlog D8). They canonicalise to
 // the bare path.
-const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set(['/watch']);
+const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set(['/watch', '/games']);
+
+// Client routes whose list is live (it changes by the minute, so nothing in it
+// is worth baking) but whose page still needs a heading and its links for a
+// crawler that does not run the bundle. The client clears the root on mount.
+const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
+  '/games':
+    '<main><h1>Current games</h1><p>Every xiangqi (Chinese chess) and variant game in progress on Mistboard right now: live games with clocks, and correspondence games waiting on a move.</p><ul><li><a href="/watch">Watch live games</a></li><li><a href="/games/search">Search finished games</a></li><li><a href="/broadcast/xiangqi">Xiangqi tournament broadcasts</a></li><li><a href="/">Play a game</a></li></ul></main>',
+};
+
+// A puzzle deep link (/puzzles/:idOrShortCode) is its own page, and served
+// with no canonical until 2026-10-17, so each ?utm= or share-tracking copy
+// read to a crawler as another URL for it.
+const QUERY_FREE_CANONICAL_PATTERNS: readonly RegExp[] = [/^\/puzzles\/[^/]+$/];
+
+const PUZZLE_DEEP_LINK = /^\/puzzles\/([^/]+)$/;
+
+// /puzzles/:idOrShortCode reaches one puzzle by its full id or by its short
+// code (Puzzle #bMpKA), so the query-free path alone left two self canonicals
+// per puzzle. Both name the full-id URL: the form the client pushes and the
+// short-code link in the info card points at (puzzles.ts, queue-panel.ts).
+// An unknown puzzle, or a lookup that throws, keeps the query-free path.
+async function puzzleCanonicalPath(
+  canonicalPath: string | null,
+  lookupPuzzleId: (idOrShortCode: string) => Promise<string | null>,
+): Promise<string | null> {
+  const match = canonicalPath ? PUZZLE_DEEP_LINK.exec(canonicalPath) : null;
+  if (!match) return canonicalPath;
+  let idOrShortCode: string;
+  try {
+    idOrShortCode = decodeURIComponent(match[1]!);
+  } catch {
+    return canonicalPath;
+  }
+  const id = await lookupPuzzleId(idOrShortCode).catch(() => null);
+  return id ? `/puzzles/${encodeURIComponent(id)}` : canonicalPath;
+}
+
+async function livePuzzleId(idOrShortCode: string): Promise<string | null> {
+  return (await puzzleById(idOrShortCode))?.id ?? null;
+}
 
 function queryFreeCanonicalPath(pathname: string): string | null {
   const normalized = pathname.replace(/\/+$/, '') || '/';
-  return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ? normalized : null;
+  return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ||
+    QUERY_FREE_CANONICAL_PATTERNS.some((pattern) => pattern.test(normalized))
+    ? normalized
+    : null;
 }
 
 /** hreflang links for a route that exists at '', '/zh-hans' and '/zh-hant',
@@ -610,6 +677,16 @@ async function liveGameMeta(pathname: string): Promise<TenantGamePageMeta | null
   );
 }
 
+// Text the server writes into #app for a crawler that runs no script (/players,
+// /bots, /study/:id). It is plain markup with none of the page's classes, and
+// the client replaces it on mount, so painted it read as a bare text page that
+// then snapped into the real one (Brian, 2026-10-17, on /players). The wrapper
+// keeps it in the HTML but out of the first paint (app-base.css); the reveal
+// after a few seconds covers a script that never runs.
+export function crawlerCopyRoot(body: string): string {
+  return `<div id="app"><div class="crawler-copy">${body}</div></div>`;
+}
+
 export async function serveSpaShellWithRoutePreloads(params: {
   response: ServerResponse;
   staticDir: string;
@@ -617,21 +694,35 @@ export async function serveSpaShellWithRoutePreloads(params: {
   /** The request's query string ('?…' or ''), read by the position routes. */
   search?: string;
   publicHost?: string;
+  /** Override the study list's public studies (tests); the default is the
+   *  sitemap's own read, so the list page and sitemap-studies.xml agree. */
+  listPublicStudies?: () => Promise<persistence.PublicStudySummary[]>;
   /** Override the finished-game meta lookup (tests); the default reads persistence. */
   gameMeta?: (pathname: string) => Promise<TenantGamePageMeta | null>;
   /** Override the server-rendered route body (tests); the default reads persistence. */
   routeBody?: (pathname: string) => Promise<string | null>;
   /** Override the player-page lookup (tests); the default reads persistence. */
   playerPage?: (pathname: string) => Promise<PlayerPage | null>;
+  /** Override the broadcast-page lookup (tests); the default reads persistence. */
+  broadcastPage?: (pathname: string) => Promise<BroadcastPage | null>;
+  /** Override the puzzle id-or-short-code lookup (tests); the default is the
+   *  one /api/puzzles/:id uses. */
+  puzzleId?: (idOrShortCode: string) => Promise<string | null>;
 }): Promise<boolean> {
   const links = await routePreloadLinksForPath(params);
   // A player, team or the players index (#458, player-pages.ts): its own meta,
   // a canonical link and a crawler body, from one read of the archive. A name
   // the archive does not know keeps the generic meta and is kept out of the
   // index, the way an unlisted study is.
-  const player = await (
+  const playerPage = await (
     params.playerPage ?? ((pathname: string) => livePlayerPage(pathname, params.staticDir))
   )(params.pathname).catch(() => null);
+  // A broadcast index, event, round or game (broadcast-pages.ts) rides the same
+  // slot: before 2026-10-17 all 195 sitemap-broadcasts URLs served an empty
+  // #app with no canonical, and Google folded them as duplicates.
+  const player =
+    playerPage ??
+    (await (params.broadcastPage ?? liveBroadcastPage)(params.pathname).catch(() => null));
   // A tenant game page (/<tenant>/game/:id, /room/:id) names a finished game:
   // its own title, description, canonical review URL and card (#368). Needs
   // persistence; without it (or for a live game) the route keeps its generic
@@ -645,7 +736,10 @@ export async function serveSpaShellWithRoutePreloads(params: {
   const spaMeta = SPA_ROUTE_META[params.pathname];
   const routeMeta = positionMeta ?? spaMeta;
   const noindex = isNoindexRoute(params.pathname) || player?.noindex === true;
-  const canonicalPath = queryFreeCanonicalPath(params.pathname);
+  const canonicalPath = await puzzleCanonicalPath(
+    queryFreeCanonicalPath(params.pathname),
+    params.puzzleId ?? livePuzzleId,
+  );
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
   // the robots tag. Only bail when we would add nothing over the plain static
@@ -695,6 +789,17 @@ export async function serveSpaShellWithRoutePreloads(params: {
       `<link rel="canonical" href="${params.publicHost}${canonicalPath}"></head>`,
     );
   }
+  // The study list, in each locale: its locale group above writes the self
+  // canonical with no query (?tab= and ?q= pick a view of the one list) and the
+  // alternates; the body links every study sitemap-studies.xml lists.
+  const studyIndexPage = STUDY_INDEX_PAGES[params.pathname];
+  if (studyIndexPage) {
+    const studies = await (params.listPublicStudies ?? listEveryPublicStudy)().catch(() => []);
+    html = html.replace(
+      '<div id="app"></div>',
+      crawlerCopyRoot(renderStudyIndexBody(studies, studyIndexPage)),
+    );
+  }
   if (noindex) {
     html = setRobotsMeta(html, 'noindex, follow');
   }
@@ -704,8 +809,9 @@ export async function serveSpaShellWithRoutePreloads(params: {
   // the root on mount, so the two never show together.
   const body =
     player?.body ??
+    STATIC_ROUTE_BODIES[params.pathname.replace(/\/+$/, '') || '/'] ??
     (await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null));
-  if (body) html = html.replace('<div id="app"></div>', `<div id="app">${body}</div>`);
+  if (body) html = html.replace('<div id="app"></div>', crawlerCopyRoot(body));
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
   return true;
@@ -736,7 +842,8 @@ export async function serveGamePage(params: {
   // site's own testing games under one repeated title; they served indexable
   // (SEO backlog D8, 2026-09-17 Search Console read). The page still serves and
   // still previews when shared. Tenant games live at /<variant>/game/:id and go
-  // through serveSpaShellWithRoutePreloads, not here, so they are unaffected.
+  // through serveSpaShellWithRoutePreloads, which noindexes them the same way
+  // since 2026-10-17 (isNoindexRoute).
   html = setRobotsMeta(html, 'noindex, follow');
 
   // /game/:id bypasses the isClientRoute shell path, so bake the route's chunk
@@ -867,12 +974,12 @@ export async function serveStudyPage(params: {
         `title="Mistboard study chapter">`;
       html = html.replace('</head>', `${discovery}</head>`);
     }
-    // Bake the text into the shell so a crawler (and first paint) gets real
-    // content instead of an empty #app. mountStudy() replaceChildren()s the root
+    // Bake the text into the shell so a crawler gets real content instead of
+    // an empty #app. mountStudy() replaceChildren()s the root
     // on boot, so this markup never coexists with the client render.
     html = html.replace(
       '<div id="app"></div>',
-      `<div id="app">${renderStudyBody({ study, chapter, locale, localePath })}</div>`,
+      crawlerCopyRoot(renderStudyBody({ study, chapter, locale, localePath })),
     );
   } else {
     // An unlisted study (or one that is gone) gets none of the above, so the
@@ -1019,6 +1126,8 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/zh-hans/editor/xiangqi',
   '/zh-hant/editor/xiangqi',
   '/study',
+  '/zh-hans/study',
+  '/zh-hant/study',
   '/games',
   '/games/search',
   '/data',
