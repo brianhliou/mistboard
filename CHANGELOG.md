@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Signed-in players can start a casual correspondence game against Brian, who builds Mistboard, from one card on /correspondence (2 days per move) ([65b82f75](https://github.com/brianhliou/mistboard/commit/65b82f75))
 - jqe, an open-source jieqi engine by Devin O'Keefe, is the new top jieqi bot, one level above AB-JChess ([1cd1fa44](https://github.com/brianhliou/mistboard/commit/1cd1fa44))
 - Offer, accept or decline a draw in any game against another person, rated and correspondence included ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - The top jieqi bot, AB-JChess, moves to its newer 0.2d version, about 50 Elo stronger in our tests ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
@@ -86,6 +87,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- The classical opening manuals are public: the Plum Blossom Manual and its family, the Eighteen Variations of the Golden Roc, Unrivaled Since Leaving the Cave, the Secret in the Tangerine handicap games and the Forest of Affairs, 235 full games ([65b82f75](https://github.com/brianhliou/mistboard/commit/65b82f75))
 - Study pages now name the study's owner in the About tab ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - On phones the puzzle page fits one screen, with the puzzle details, engine and settings in a menu that slides up from the arrow bar ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
 - Refresh the Jieqi platform guide with review walkthroughs, theme-matched figures and playable stored alternatives in Jieqi game embeds ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
@@ -202,6 +204,7 @@ Conventions:
 
 ### Site
 
+- On a phone, the homepage shows how many games have been played, without a placeholder dash while it loads; tournament rows stay on desktop until the broadcast pages work on phones ([65b82f75](https://github.com/brianhliou/mistboard/commit/65b82f75))
 - Analysis boards and studies fit one phone screen, with a bottom bar and sheets for tools, chapters and study info, and the forum and study list get phone layouts ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - The blog lists Xiangqi deep dives before Engineering, engineering posts no longer appear on the homepage, and article cards drop the corner star ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - On phones, language, piece set and dark mode now sit in the top bar, one tap each ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
@@ -279,6 +282,9 @@ Conventions:
 
 ### Fixed
 
+- The Horde Xiangqi results tables fit a phone without scrolling sideways ([65b82f75](https://github.com/brianhliou/mistboard/commit/65b82f75))
+- The homepage's games-in-play count matches the games listed on /games ([65b82f75](https://github.com/brianhliou/mistboard/commit/65b82f75))
+- Jungle's second side reads Blue, not Black, on the correspondence forms ([65b82f75](https://github.com/brianhliou/mistboard/commit/65b82f75))
 - Stepping through a long game's moves with the arrow keys no longer lags ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - Vietnamese articles now tell search engines they are Vietnamese and link to their English version, and back ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - Bot names on the current games page no longer get cut off ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
@@ -447,6 +453,7 @@ Conventions:
 
 ### Technical
 
+- Parked jieqi engines from a burst of games now close after 10 idle minutes, cutting the server's idle memory ([65b82f75](https://github.com/brianhliou/mistboard/commit/65b82f75))
 - Updated a page-sanitizing library with security fixes ([1cd1fa44](https://github.com/brianhliou/mistboard/commit/1cd1fa44))
 - Every response now carries nosniff and an explicit referrer policy ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
 - Add reviewed batch preparation and weekly coverage audits for tournament archives ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
