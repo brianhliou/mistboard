@@ -144,6 +144,17 @@ test('a rename carries locale names, checks the name it expects, and keeps other
   );
 });
 
+test('a rename can replace the tags, and refuses tags it would drop', () => {
+  const s = study();
+  const rename = (tags: unknown) => plan([{ op: 'rename', chapter: 'a', name: 'x', tags }]);
+  assert.deepEqual(checkPlan(s, rename({ red: 'AB-JChess 0.2d', black: ' jqe it014 ' })), [
+    'rename a: "Game 1" -> "x" tags red "AB-JChess 0.2d", black "jqe it014"',
+  ]);
+  for (const tags of [{}, { white: 'x' }, { red: 'x', player: 'y' }, ['red'], { red: ' ' }]) {
+    assert.throws(() => checkPlan(s, rename(tags)), /tags .*not kept/);
+  }
+});
+
 test('describes a valid plan in order, tracking chapters it adds and deletes', () => {
   const lines = checkPlan(
     study(),

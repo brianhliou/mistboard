@@ -44,6 +44,8 @@
 // play themselves, and a sideline the reader tries shows its own comment.
 // A `rename`'s `i18n` sets the name for each locale it lists, keeping the
 // chapter's other locales; `expect` refuses a chapter not named that now.
+// Its optional `tags` replace the chapter's tags whole (red, black, result, …),
+// so a plan can put versions on player names after the chapter exists.
 //
 // A plan may make the study instead of naming one: `create` in place of
 // `study`, owned by a site handle, with its first chapter; `ops` then run on
@@ -74,6 +76,7 @@ import {
   type StudyVisibility,
   type StudyWithChapters,
   setChapterGamebook,
+  setChapterTags,
   updateChapterTree,
   updateStudyMeta,
 } from './persistence-studies.js';
@@ -99,6 +102,8 @@ export type StudyEditOp =
       /** The name the chapter must have now, so a plan written against one
        *  copy of a study cannot rename the wrong chapter in another. */
       expect?: string;
+      /** The chapter's whole new tag set; tags it leaves out are cleared. */
+      tags?: unknown;
     }
   | { op: 'tree'; chapter: string; tree: unknown }
   | {
@@ -147,6 +152,24 @@ export function editableOwners(allowOwner?: string): readonly string[] {
   if (!/^[A-Za-z0-9_-]+$/.test(handle))
     throw new Error(`--allow-owner: bad handle "${allowOwner}"`);
   return SITE_OWNED_HANDLES.includes(handle) ? SITE_OWNED_HANDLES : [...SITE_OWNED_HANDLES, handle];
+}
+
+// " tags red \"…\", black \"…\"" for the dry run. Tags replace the whole set, so a
+// key the sanitizer would drop is refused rather than silently clearing a tag.
+function renameTags(op: { tags?: unknown }, i: number): string {
+  if (op.tags === undefined) return '';
+  const tags = parseChapterTags(op.tags);
+  const given =
+    op.tags && typeof op.tags === 'object' && !Array.isArray(op.tags) ? Object.keys(op.tags) : [];
+  const dropped = given.filter((key) => !(key in tags));
+  if (given.length === 0 || dropped.length > 0) {
+    throw new Error(
+      `op ${i + 1}: tags ${dropped.length ? `"${dropped.join('", "')}" ` : ''}not kept`,
+    );
+  }
+  return ` tags ${Object.entries(tags)
+    .map(([key, value]) => `${key} "${value}"`)
+    .join(', ')}`;
 }
 
 /** The chapter's overlay with each locale's name set from a rename's `i18n`. */
@@ -283,7 +306,9 @@ export function checkPlan(
         const locales = Object.entries(op.i18n ?? {})
           .map(([locale, entry]) => ` ${locale} "${entry.name}"`)
           .join('');
-        lines.push(`rename ${op.chapter}: "${current}" -> "${op.name}"${locales}`);
+        lines.push(
+          `rename ${op.chapter}: "${current}" -> "${op.name}"${locales}${renameTags(op, i)}`,
+        );
         names.set(op.chapter, op.name);
         return;
       }
@@ -464,6 +489,9 @@ export async function applyPlan(
         const chapter = study.chapters.find((c) => c.id === op.chapter);
         const i18n = op.i18n === undefined ? undefined : renamedI18n(chapter?.i18n ?? {}, op.i18n);
         must(op.chapter, await renameChapter(op.chapter, owner, op.name.trim(), i18n));
+        if (op.tags !== undefined) {
+          must(op.chapter, await setChapterTags(op.chapter, owner, parseChapterTags(op.tags)));
+        }
         break;
       }
       case 'tree':

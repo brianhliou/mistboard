@@ -70,6 +70,19 @@ function mainCheckout() {
   return path.dirname(common);
 }
 
+function descendants(pid) {
+  let children = [];
+  try {
+    children = execFileSync('pgrep', ['-P', String(pid)], { encoding: 'utf8' })
+      .split('\n')
+      .filter(Boolean)
+      .map(Number);
+  } catch {
+    // pgrep exits 1 when there are none.
+  }
+  return children.flatMap((child) => [...descendants(child), child]);
+}
+
 function freePort() {
   return new Promise((resolve, reject) => {
     const server = net.createServer();
@@ -126,7 +139,17 @@ async function outer(command) {
     stdio: 'ignore',
   });
   const close = () => {
-    if (tunnel.exitCode === null) tunnel.kill('SIGTERM');
+    if (tunnel.exitCode !== null) return;
+    // `railway connect` runs `ssh -N` in its own process group, and the ssh
+    // outlives a SIGTERM to its parent. Every leftover holds a Railway SSH
+    // session until new ones are refused ("Close an existing session").
+    for (const pid of [...descendants(tunnel.pid), tunnel.pid]) {
+      try {
+        process.kill(pid, 'SIGTERM');
+      } catch {
+        // Already gone.
+      }
+    }
   };
   process.once('SIGINT', close);
   process.once('SIGTERM', close);
