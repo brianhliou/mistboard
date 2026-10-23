@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- jqe, an open-source jieqi engine by Devin O'Keefe, is the new top jieqi bot, one level above AB-JChess ([1cd1fa44](https://github.com/brianhliou/mistboard/commit/1cd1fa44))
 - Offer, accept or decline a draw in any game against another person, rated and correspondence included ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - The top jieqi bot, AB-JChess, moves to its newer 0.2d version, about 50 Elo stronger in our tests ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - Xiangqi notation numbers three to five soldiers on one file the WXF way instead of switching to coordinates ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
@@ -446,6 +447,7 @@ Conventions:
 
 ### Technical
 
+- Updated a page-sanitizing library with security fixes ([1cd1fa44](https://github.com/brianhliou/mistboard/commit/1cd1fa44))
 - Every response now carries nosniff and an explicit referrer policy ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
 - Add reviewed batch preparation and weekly coverage audits for tournament archives ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - Add records-speed checks for comparing completed broadcast game availability across sources ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
