@@ -1223,9 +1223,20 @@ export type UciWarmSessionCacheStats = {
  * Idle sessions are `unref()`d so they never hold the process open, and are
  * closed after `idleTtlMs` so a rung nobody plays does not keep 100 MB of hash
  * and net resident forever.
+ *
+ * With `extraIdleTtlMs` set, a key keeps ONE session on the long TTL and closes
+ * the copies a burst left behind sooner. Reuse is then most-recent-first: the
+ * default oldest-first order hands the parked copies out in turn, so a single
+ * game's moves alternate between them and keep every copy a burst spawned
+ * resident for as long as anyone plays (jieqi on prod, 2026-10-23: four parked
+ * PikaJieQi/AB-JChess/jqe processes, ~600 MB each, behind one or two games).
+ * Most-recent-first leaves the extras untouched, so they age out.
  */
 export class UciWarmSessionCache {
+  // Parked sessions per key, in the order they were parked (last = most recent).
   private readonly idle = new Map<string, Array<{ session: UciEngineSession; since: number }>>();
+  // Sessions lent out per key right now: while one is, every parked copy is an extra.
+  private readonly lent = new Map<string, number>();
   private readonly sweeper: ReturnType<typeof setInterval>;
   private spawned = 0;
   private reused = 0;
@@ -1238,9 +1249,19 @@ export class UciWarmSessionCache {
       idleTtlMs?: number;
       /** Parked sessions kept per key beyond which the oldest is closed. Default 2. */
       maxIdlePerKey?: number;
+      /**
+       * Close a parked session that is NOT its key's most recently used one this
+       * long after its last request. Setting it also switches reuse to most
+       * recent first (see the class comment). Unset: every parked session lives
+       * `idleTtlMs` and reuse stays oldest first.
+       */
+      extraIdleTtlMs?: number;
     },
   ) {
-    const ttl = config.idleTtlMs ?? 10 * 60_000;
+    const ttl = Math.min(
+      config.idleTtlMs ?? 10 * 60_000,
+      config.extraIdleTtlMs ?? Number.POSITIVE_INFINITY,
+    );
     this.sweeper = setInterval(() => this.sweep(), Math.max(1_000, Math.min(60_000, ttl / 2)));
     this.sweeper.unref();
   }
@@ -1253,7 +1274,8 @@ export class UciWarmSessionCache {
    */
   async withSession<T>(spec: WarmSessionSpec, fn: (session: UciEngineSession) => Promise<T>) {
     const key = `${spec.bin}\n${spec.initCommands.join('\n')}`;
-    const parked = this.idle.get(key)?.shift();
+    const list = this.idle.get(key);
+    const parked = this.config.extraIdleTtlMs === undefined ? list?.shift() : list?.pop();
     let session: UciEngineSession;
     if (parked && !parked.session.failed) {
       session = parked.session;
@@ -1269,12 +1291,17 @@ export class UciWarmSessionCache {
       });
       this.spawned += 1;
     }
+    this.lent.set(key, (this.lent.get(key) ?? 0) + 1);
     let result: T;
     try {
       result = await fn(session);
     } catch (err) {
       this.discard(session);
       throw err;
+    } finally {
+      const out = (this.lent.get(key) ?? 1) - 1;
+      if (out > 0) this.lent.set(key, out);
+      else this.lent.delete(key);
     }
     if (session.failed) {
       this.discard(session);
@@ -1316,10 +1343,15 @@ export class UciWarmSessionCache {
   }
 
   private sweep(): void {
+    const now = Date.now();
     const ttl = this.config.idleTtlMs ?? 10 * 60_000;
-    const cutoff = Date.now() - ttl;
+    const extraTtl = this.config.extraIdleTtlMs ?? ttl;
     for (const [key, list] of this.idle) {
+      // The most recently parked session is the key's warm one, unless a session of
+      // this key is out on a request right now (that one is the warm one then).
+      const warm = this.lent.has(key) ? undefined : list.at(-1);
       const keep = list.filter((entry) => {
+        const cutoff = now - (entry === warm ? ttl : extraTtl);
         if (entry.since >= cutoff && !entry.session.failed) return true;
         this.discard(entry.session);
         return false;
