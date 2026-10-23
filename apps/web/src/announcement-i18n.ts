@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-23 (batch 4 manuals) ── 书名沿用研究页的中文名。
+  'The classical opening manuals are online.': '经典布局古谱已上线。',
+  "The Plum Blossom Manual and six books in its family, the Eighteen Variations of the Golden Roc, Unrivaled Since Leaving the Cave, the handicap games of Secret in the Tangerine, and the two games in the Forest of Affairs, usually counted as the oldest recorded xiangqi games, join the shelf. Two hundred and thirty-five full games from the opening position, each labelled with the book's own opening name. Positions come from dpxq.com and are credited on every chapter.":
+    '《梅花谱》及其同系六部（《梅花泉》、《崇本堂梅花谱》、《梅花变法谱》、《吴氏梅花谱》、《无双品梅花谱》、《反梅花谱》），《金鹏十八变》，《自出洞来无敌手》，《橘中秘》的让子局，以及《事林广记》中一般认为是现存最早象棋棋谱的两局，一同上架。新增二百三十五局全局，均从开局走起，每局标注书中原有的布局名称。棋谱来源为 dpxq.com，每局均注明出处。',
   // ── 2026-10-30 (banqi chariot endgame article) ── 残局库 follows analysis.tablebase.title; a move is 步 as in banqi-perpetual-chase.
   'A solved banqi endgame: chariot and horse against chariot, horse and soldier.':
     '一个已解的暗棋残局：车马对车马卒。',
@@ -526,6 +530,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-23 (batch 4 manuals) ── 書名沿用研究頁的中文名。
+  'The classical opening manuals are online.': '經典布局古譜已上線。',
+  "The Plum Blossom Manual and six books in its family, the Eighteen Variations of the Golden Roc, Unrivaled Since Leaving the Cave, the handicap games of Secret in the Tangerine, and the two games in the Forest of Affairs, usually counted as the oldest recorded xiangqi games, join the shelf. Two hundred and thirty-five full games from the opening position, each labelled with the book's own opening name. Positions come from dpxq.com and are credited on every chapter.":
+    '《梅花譜》及其同系六部（《梅花泉》、《崇本堂梅花譜》、《梅花變法譜》、《吳氏梅花譜》、《無雙品梅花譜》、《反梅花譜》），《金鵬十八變》，《自出洞來無敵手》，《橘中秘》的讓子局，以及《事林廣記》中一般認為是現存最早象棋棋譜的兩局，一同上架。新增二百三十五局全局，均從開局走起，每局標註書中原有的佈局名稱。棋譜來源為 dpxq.com，每局均註明出處。',
   // ── 2026-10-30 (banqi chariot endgame article) ── 殘局庫 follows analysis.tablebase.title; a move is 步 as in banqi-perpetual-chase.
   'A solved banqi endgame: chariot and horse against chariot, horse and soldier.':
     '一個已解的暗棋殘局：車馬對車馬卒。',
