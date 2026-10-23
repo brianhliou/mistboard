@@ -14,6 +14,7 @@ import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   correspondenceTimeControl,
   DAY_MS,
+  type DaysPerMove,
   GAME_SPECS,
 } from '@mistboard/game';
 import {
@@ -61,7 +62,7 @@ function roomMap(registration: VariantTenantRegistration): Map<string, TenantMan
   return registration.rooms as Map<string, TenantManagedRoom>;
 }
 
-async function acceptSeek(specId: string, daysPerMove: 1 | 3 | 7 = 3) {
+async function acceptSeek(specId: string, daysPerMove: DaysPerMove = 3) {
   const registration = registrationFor(specId);
   const create = registration.createCorrespondenceGameForSeek;
   assert.ok(create);

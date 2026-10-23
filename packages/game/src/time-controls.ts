@@ -317,8 +317,11 @@ export function isOfficialTimeControl(tc: RoomTimeControl): boolean {
 // in its own 'correspondence' pool (officialCorrespondenceDays below), never a
 // live one.
 export const DAY_MS = 24 * 60 * 60 * 1000;
-export const DAYS_PER_MOVE_OPTIONS = [1, 3, 7] as const;
+export const DAYS_PER_MOVE_OPTIONS = [1, 2, 3, 7] as const;
 export type DaysPerMove = (typeof DAYS_PER_MOVE_OPTIONS)[number];
+// The pace a picker opens on. Named rather than read as an index so a new
+// option (2 days, added 2026-10-23) does not move every default with it.
+export const DEFAULT_DAYS_PER_MOVE: DaysPerMove = 3;
 
 export function correspondenceTimeControl(daysPerMove: DaysPerMove): RoomTimeControl {
   return { initialMs: daysPerMove * DAY_MS, incrementMs: 0, daysPerMove };

@@ -5,7 +5,7 @@ import {
   countedAuthor,
   countedHumanGame,
   countedPlayerSeat,
-  excludedSeatExists,
+  excludedFromStats,
   internalHumanGame,
   MIN_COUNTED_PLIES,
   preLaunchHumanGame,
@@ -122,7 +122,7 @@ const HUMAN_GAME = countedHumanGame('g');
 const PLAYER_SEAT = countedPlayerSeat('p');
 const SIGNED_IN_SEAT = countedAccountSeat('p');
 const INTERNAL_GAME = internalHumanGame('g');
-const EXCLUDED_SEAT = excludedSeatExists('g');
+const EXCLUDED_SEAT = excludedFromStats('g');
 const PRE_LAUNCH_GAME = preLaunchHumanGame('g');
 const SHORT_GAME = shortHumanGame('g');
 const SINCE_LAUNCH = sinceLaunch('g');

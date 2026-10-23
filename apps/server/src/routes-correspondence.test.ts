@@ -106,7 +106,7 @@ test('correspondence create requires an account', async () => {
 });
 
 test('correspondence create rejects off-menu allowances', async () => {
-  for (const daysPerMove of [2, 0, -1, 'three', undefined, 0.5]) {
+  for (const daysPerMove of [5, 0, -1, 'three', undefined, 0.5]) {
     const { response, captured } = fakeResponse();
     await handleCorrespondenceCreate(
       createContext(),

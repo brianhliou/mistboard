@@ -131,9 +131,10 @@ test('correspondenceTimeControl mirrors the allowance into initialMs', () => {
 
 test('isOfficialCorrespondenceTimeControl accepts only the official shapes', () => {
   assert.equal(isOfficialCorrespondenceTimeControl(correspondenceTimeControl(3)), true);
+  assert.equal(isOfficialCorrespondenceTimeControl(correspondenceTimeControl(2)), true);
   // Unknown day count.
   assert.equal(
-    isOfficialCorrespondenceTimeControl({ initialMs: 2 * DAY_MS, incrementMs: 0, daysPerMove: 2 }),
+    isOfficialCorrespondenceTimeControl({ initialMs: 5 * DAY_MS, incrementMs: 0, daysPerMove: 5 }),
     false,
   );
   // Allowance must mirror initialMs.
@@ -283,7 +284,7 @@ test('officialCorrespondenceDays recognises a stored correspondence pace and not
   // A compressed dev allowance, an increment, or a missing clock fail closed.
   assert.equal(officialCorrespondenceDays(900, 0), null);
   assert.equal(officialCorrespondenceDays(DAY_MS, 1_000), null);
-  assert.equal(officialCorrespondenceDays(2 * DAY_MS, 0), null);
+  assert.equal(officialCorrespondenceDays(5 * DAY_MS, 0), null);
   assert.equal(officialCorrespondenceDays(null, 0), null);
   assert.equal(officialCorrespondenceDays(DAY_MS, null), null);
 });
