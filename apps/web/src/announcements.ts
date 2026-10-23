@@ -59,6 +59,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-23',
+    kind: 'release',
+    headline: 'The classical opening manuals are online.',
+    body: "The Plum Blossom Manual and six books in its family, the Eighteen Variations of the Golden Roc, Unrivaled Since Leaving the Cave, the handicap games of Secret in the Tangerine, and the two games in the Forest of Affairs, usually counted as the oldest recorded xiangqi games, join the shelf. Two hundred and thirty-five full games from the opening position, each labelled with the book's own opening name. Positions come from dpxq.com and are credited on every chapter.",
+    href: '/study',
+    cta: 'Open the studies',
+  },
+  {
     date: '2026-10-22',
     kind: 'release',
     headline: 'Meet jqe, the new top jieqi bot.',
