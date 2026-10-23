@@ -17,8 +17,7 @@ export type GameStartSource =
   | 'lobby-seek'
   | 'quick-pair'
   | 'setup-dialog'
-  | 'engine-offer'
-  | 'home-correspondence';
+  | 'engine-offer';
 
 const KEY = 'mistboard.gameStartSource';
 // Long enough for a slow room create and a matchmaking wait to land; short
@@ -52,8 +51,8 @@ export function takeGameStartSource(now: number = Date.now()): GameStartSource |
 // A correspondence game starts for its seek's poster days after the click that
 // posted it, usually from an email, so the ten-minute session slot above cannot
 // carry the source. This one lives in localStorage for as long as a public seek
-// can (14 days) and is keyed to the variant, so a seek posted from the homepage
-// button labels the first correspondence game of that variant that starts here.
+// can (14 days) and is keyed to the variant, so a seek posted from an entry point
+// labels the first correspondence game of that variant that starts here.
 const CORRESPONDENCE_KEY = 'mistboard.correspondenceStartSource';
 const CORRESPONDENCE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1_000;
 

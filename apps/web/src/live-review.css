@@ -932,8 +932,9 @@
     white-space: nowrap;
   }
 
-  /* --- Action bar: Resign/Abort beside the move-nav arrows, one band. --- */
-  .live-review__cluster .game-controls > button {
+  /* --- Action bar: ½ and the flag (or Abort) beside the move-nav arrows, one
+     band. --- */
+  .live-review__cluster .game-controls > :is(button, .game-controls__pending) {
     order: 46;
     flex: 0 0 auto;
     min-height: var(--phone-room-bar);
@@ -942,6 +943,43 @@
     border-top: 1px solid var(--site-border-soft);
     border-radius: 0;
     background: var(--site-mobile-bar-bg, var(--site-panel));
+  }
+
+  .live-review__cluster .game-controls > .game-controls__pending {
+    padding: 0 10px;
+    font-size: 12px;
+  }
+
+  /* A question (a confirm, or the opponent's offer) takes its own line above
+     the arrows, which wrap to the full width below it. */
+  .live-review__cluster .game-controls > .game-controls__question {
+    order: 46;
+    flex: 1 1 100%;
+    min-height: var(--phone-room-band);
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid var(--site-border-soft);
+    background: var(--site-mobile-bar-bg, var(--site-panel));
+  }
+
+  .live-review__cluster .game-controls__question > button {
+    flex: 0 0 56px;
+    align-self: stretch;
+    height: auto;
+    border-radius: 0;
+  }
+
+  /* The extra line comes out of the slack above the strip, so the board does
+     not move and the room stays one screen. */
+  .live-review__cluster:has(.game-controls__question) .game-table-moves {
+    margin-top: max(0px, calc(var(--phone-room-slack) - var(--phone-room-band)));
+  }
+
+  .review-shell__cluster.live-review__cluster:has(.hidden-pool:not(:empty)):has(
+      .game-controls__question
+    )
+    .game-table-moves {
+    margin-top: max(0px, calc(var(--phone-room-slack) / 2 - var(--phone-room-band)));
   }
 
   .live-review__cluster .move-nav-bar {

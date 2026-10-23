@@ -396,7 +396,7 @@
   "lai-ly-huynh-co-tuong": {
     "title": "Lại Lý Huynh",
     "kind": "article",
-    "description": "Nhà vô địch cờ tướng thế giới đầu tiên không đến từ Trung Quốc, bất bại ở Thượng Hải và thắng trận chung kết khi cầm quân Đen. Hành trình lên ngôi và một năm sau đó, năm ván thắng trên bàn cờ, 38 ván được phân tích.",
+    "description": "Lại Lý Huynh, nhà vô địch cờ tướng thế giới đầu tiên không đến từ Trung Quốc, bất bại ở Thượng Hải và thắng trận chung kết khi cầm quân Đen. Hành trình lên ngôi và một năm sau đó, năm ván thắng trên bàn cờ, 38 ván được phân tích.",
     "status": "published"
   },
   "lichess-analysis-accuracy": {
@@ -523,6 +523,16 @@
       "zh-hant": "Shogi4（4×4 將棋）規則"
     }
   },
+  "shortest-stalemate-xiangqi": {
+    "title": "The Shortest Xiangqi Stalemate We Know",
+    "kind": "article",
+    "description": "In xiangqi a side with no legal move loses. The shortest stalemate we know takes 21 plies: after Red’s 11th move, Black has eight pieces and none of them can move.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "我们所知最短的象棋困毙",
+      "zh-hant": "我們所知最短的象棋困斃"
+    }
+  },
   "skill-vs-luck": {
     "title": "Separating Skill from Luck in Flip Games",
     "kind": "article",
@@ -616,7 +626,7 @@
   "xiangqi-match-fixing": {
     "title": "The Xiangqi Match-Fixing Case",
     "kind": "article",
-    "description": "Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.",
+    "description": "Wang Tianyi, China’s top-rated xiangqi player from 2014 to 2023, was banned for life in 2024 and sentenced to 2 years 9 months for bribery. Why he, Zheng Weitong and 47 others were sanctioned, the 12 games prosecutors named, and where the banned players are now.",
     "status": "published",
     "zhTitles": {
       "zh-hans": "象棋假棋案",

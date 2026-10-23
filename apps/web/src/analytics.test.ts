@@ -219,17 +219,17 @@ describe('correspondence game_started', () => {
   });
 
   it('labels the accepter from the session source and the poster from the long-lived one', () => {
-    rememberGameStartSource('home-correspondence');
+    rememberGameStartSource('lobby-seek');
     createGameLifecycleTracker().update({ statusType: 'playing', baseProps: corr });
-    expect(started()[0]?.[1].entry_source).toBe('home-correspondence');
+    expect(started()[0]?.[1].entry_source).toBe('lobby-seek');
 
     // The poster: no session source (they came from an email days later).
-    rememberCorrespondenceStartSource('home-correspondence', 'jieqi');
+    rememberCorrespondenceStartSource('lobby-seek', 'jieqi');
     createGameLifecycleTracker().update({
       statusType: 'playing',
       baseProps: { ...corr, gameId: 'jq_3' },
     });
-    expect(started()[1]?.[1].entry_source).toBe('home-correspondence');
+    expect(started()[1]?.[1].entry_source).toBe('lobby-seek');
     // Consumed: a later correspondence game is unlabeled.
     createGameLifecycleTracker().update({
       statusType: 'playing',
@@ -239,7 +239,7 @@ describe('correspondence game_started', () => {
   });
 
   it('does not hand the long-lived source to another variant or to a live game', () => {
-    rememberCorrespondenceStartSource('home-correspondence', 'jieqi');
+    rememberCorrespondenceStartSource('lobby-seek', 'jieqi');
     createGameLifecycleTracker().update({
       statusType: 'playing',
       baseProps: { ...corr, gameId: 'xq_1', game_spec: 'xiangqi' },

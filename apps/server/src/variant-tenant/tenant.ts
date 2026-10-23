@@ -214,7 +214,14 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       roomId: string;
       reason: TenantResumeReason;
       clock: TenantClockState<C>;
-    };
+    }
+  // Draw offers (#530), PvP only. `color` is the seat that acted: the offerer,
+  // the decliner, the accepter. Server-only like the pause pair: the snapshot's
+  // drawOffer field is what a client reads, so a fog client is sent the
+  // offering seat and nothing else.
+  | { type: 'draw-offered'; at: number; roomId: string; color: C }
+  | { type: 'draw-declined'; at: number; roomId: string; color: C }
+  | { type: 'draw-agreed'; at: number; roomId: string; color: C; clock?: TenantClockState<C> };
 
 // 'shutdown': the server was told to stop. 'orphaned': it died without saying
 // so, found on hydration by the gap since the last event.
@@ -229,6 +236,9 @@ export type TenantResumeReason = 'players-returned' | 'grace-elapsed';
 export const TENANT_SERVER_ONLY_EVENT_TYPES: ReadonlySet<string> = new Set([
   'clock-paused',
   'clock-resumed',
+  'draw-offered',
+  'draw-declined',
+  'draw-agreed',
 ]);
 
 // Wire-side event: move-played gains its 1-based ply so clients can sequence.
@@ -253,6 +263,12 @@ export type TenantProjection<
   // on move. Moves are refused and no clock or engine timer runs until a
   // clock-resumed event clears it.
   paused?: { at: number; activeColor: C | null };
+  // The pending draw offer, if any: one at a time. Cleared by an answer, by
+  // the end of the game, or by the offerer's opponent making a move.
+  drawOffer?: { from: C };
+  // After a decline, the offerer's own moves left before it may offer again.
+  // A seat is absent once its count reaches zero.
+  drawCooldown?: Partial<Record<C, number>>;
 };
 
 export type TenantClientRef<C extends string> = {
@@ -474,6 +490,10 @@ export type VariantTenant<
     // Optional: end the game as an outside referee declared (the game-adjudicated
     // event, imported games only). A tenant without it rejects that event.
     adjudicate?(state: State, winner: C | null, reason: TenantAdjudicationReason): State;
+    // Optional: end the game drawn by agreement (an accepted draw offer), with
+    // no winner and reason 'agreement'. A tenant without it rejects every draw
+    // event, so a table that cannot be drawn this way is never offered one.
+    finishDraw?(state: State): State;
     abort(state: State, reason: AbortReason): State;
     isColor(value: unknown): value is C;
     isMove(value: unknown): value is M;

@@ -18,7 +18,6 @@ describe('phone home widget set', () => {
   const DESKTOP_ONLY_SELECTORS = [
     '.landing-lobby-panel',
     '.landing-activity',
-    '.landing-corr-card',
     '.landing-puzzle-column',
     '.landing-forum-column',
     '.landing-studies-column',

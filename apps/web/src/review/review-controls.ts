@@ -36,6 +36,9 @@ export type ReviewControlsOptions = {
 export type ReviewControls = {
   el: HTMLElement;
   setBounds(state: { atStart: boolean; atEnd: boolean }): void;
+  /** The menu as shown, explorer toggle included (the phone Tools sheet
+   *  lists the same items). */
+  menuItems: readonly ReviewMenuItem[];
 };
 
 export function createReviewControls(opts: ReviewControlsOptions): ReviewControls {
@@ -68,7 +71,7 @@ export function createReviewControls(opts: ReviewControlsOptions): ReviewControl
     onLast: opts.onLast,
     ...(opts.signal ? { signal: opts.signal } : {}),
   });
-  return { el: bar.el, setBounds: bar.setBounds };
+  return { el: bar.el, setBounds: bar.setBounds, menuItems };
 }
 
 function lucideMarkup(icon: Parameters<typeof createElement>[0]): string {

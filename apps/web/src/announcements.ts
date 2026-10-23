@@ -51,6 +51,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-27',
+    kind: 'article',
+    headline: 'The shortest xiangqi stalemate we know: 21 plies.',
+    body: 'In xiangqi a side with no legal move loses. The shortest stalemate we know leaves Black with eight pieces and nothing to play after Red’s 11th move. No stalemate is possible in under 9 plies, so 9 to 20 is open.',
+    href: '/blog/shortest-stalemate-xiangqi',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-10-22',
     kind: 'release',
     headline: 'Meet jqe, the new top jieqi bot.',

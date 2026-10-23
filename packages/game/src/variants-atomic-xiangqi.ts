@@ -127,7 +127,9 @@ export type AtomicXiangqiGameEndReason =
   | 'progress-clock'
   | 'timeout'
   | 'resignation'
-  | 'abandonment';
+  | 'abandonment'
+  // Both players agreed a draw (an accepted draw offer).
+  | 'agreement';
 
 export type AtomicXiangqiGameStatus =
   | { type: 'playing'; turn: AtomicXiangqiColor }
@@ -253,7 +255,12 @@ function ruleStateOf(state: AtomicXiangqiGameState): XiangqiRuleState {
   if (state.status.type === 'finished') {
     // The kernel's reason vocabulary, for the fen/ply helpers only.
     const reason = state.status.reason;
-    if (reason === 'timeout' || reason === 'resignation' || reason === 'abandonment') {
+    if (
+      reason === 'timeout' ||
+      reason === 'resignation' ||
+      reason === 'abandonment' ||
+      reason === 'agreement'
+    ) {
       throw new Error(`atomic-xiangqi: a game ended by ${reason} has no rule state`);
     }
     return {

@@ -77,7 +77,9 @@ export type JungleFlipGameEndReason =
   | 'dead-position' // remaining material cannot force a win (insufficient material)
   | 'timeout'
   | 'resignation'
-  | 'abandonment';
+  | 'abandonment'
+  // Both players agreed a draw (an accepted draw offer).
+  | 'agreement';
 
 export type JungleFlipGameStatus =
   | { type: 'playing'; turn: JungleFlipSeat }

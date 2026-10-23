@@ -110,7 +110,9 @@ export type CrazyhouseXiangqiGameEndReason =
   | 'progress-clock'
   | 'timeout'
   | 'resignation'
-  | 'abandonment';
+  | 'abandonment'
+  // Both players agreed a draw (an accepted draw offer).
+  | 'agreement';
 
 export type CrazyhouseXiangqiGameStatus =
   | { type: 'playing'; turn: CrazyhouseXiangqiColor }

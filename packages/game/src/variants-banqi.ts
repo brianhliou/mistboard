@@ -102,7 +102,9 @@ export type BanqiGameEndReason =
   | 'repetition' // threefold position repetition
   | 'timeout'
   | 'resignation'
-  | 'abandonment';
+  | 'abandonment'
+  // Both players agreed a draw (an accepted draw offer).
+  | 'agreement';
 
 export type BanqiGameStatus =
   | { type: 'playing'; turn: BanqiSeat }

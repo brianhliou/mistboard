@@ -1308,29 +1308,11 @@
   line-height: 1.1;
 }
 
-.landing-article-card-star {
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 27px;
-  height: 18px;
-  border-radius: 0 var(--site-radius) 0 7px;
-  background: color-mix(in srgb, var(--site-panel) 86%, transparent);
-  color: var(--site-accent);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1;
-}
-
 /* The blur sits on a pseudo-element, not on the badge itself. A backdrop-filter
    element is composited into its own layer, and that layer's rounded clip can
    land up to a pixel off the card's at fractional device-pixel offsets, which
    is where the card's right edge lands (left edges hit integer device pixels,
-   which is why only the star corner leaked). With the background painted in the
+   which is why only the right-hand corner leaked). With the background painted in the
    main layer the misregistration is invisible; with background and blur
    together on the badge it drew a crescent of raw thumbnail around the outer
    corner. z-index: -1 keeps the pseudo above the badge's own background but
@@ -1338,8 +1320,7 @@
    Do not reach for isolation: isolate here, which forms a backdrop root and
    would limit the blur to the badge's own background in spec-following
    engines. */
-.landing-article-card-date::before,
-.landing-article-card-star::before {
+.landing-article-card-date::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -2727,7 +2708,6 @@
      (buildLandingStage `phone`), so they never fetch or poll. This rule only
      keeps the prerendered desktop shell, painted before the script mounts, from
      showing them for a moment, and tidies a desktop mount narrowed past 600px. */
-  .landing-demo .landing-corr-card,
   .landing-demo .landing-activity,
   .landing-demo .landing-puzzle-column,
   .landing-demo .landing-forum-column,
@@ -2925,10 +2905,6 @@
 
   .landing-demo .landing-articles-row .landing-article-card-thumb {
     position: static;
-  }
-
-  .landing-demo .landing-articles-row .landing-article-card-star {
-    display: none;
   }
 
   .landing-demo .landing-articles-row .landing-article-card-title {

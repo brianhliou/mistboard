@@ -300,6 +300,10 @@ export const jieqiTenant: JieqiTenant = {
       ...state,
       status: { type: 'finished', winner, reason },
     }),
+    finishDraw: (state) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason: 'agreement' },
+    }),
     // Imported lab games only (engine-match-import.ts): the lab referee draws a
     // threefold repetition, which this kernel deliberately does not adjudicate.
     adjudicate: (state, winner, reason) => ({
@@ -357,7 +361,11 @@ export const jieqiTenant: JieqiTenant = {
     // CHECK accepts) is 'progress-clock'. Translate it — a blind cast launders the
     // invalid string past TS and only fails at the DB write, silently dropping the game.
     termination: (reason: string): persistence.GameTermination =>
-      reason === 'no-capture-clock' ? 'progress-clock' : (reason as persistence.GameTermination),
+      reason === 'no-capture-clock'
+        ? 'progress-clock'
+        : reason === 'agreement'
+          ? 'draw'
+          : (reason as persistence.GameTermination),
     logKindPrefix: 'jieqi',
     logLabel: 'Jieqi',
   },

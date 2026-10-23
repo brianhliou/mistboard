@@ -512,6 +512,14 @@ export function createTenantWsRuntime<
       if (rematch) declineTenantRematch(tenant, rematch, room, client);
       return;
     }
+    if (
+      message.type === 'draw:offer' ||
+      message.type === 'draw:accept' ||
+      message.type === 'draw:decline'
+    ) {
+      await handleDraw(room, client, seat, message.type);
+      return;
+    }
     if (message.type !== 'move') return;
     const move = tenant.rules.moveFromMessage(message);
     if (move === null) return;
@@ -619,6 +627,45 @@ export function createTenantWsRuntime<
       client.socket.close(1011, 'persistence failure');
       return;
     }
+    broadcastEventAppended(room, event, seq);
+  }
+
+  // Draw offers (#530): PvP only, after both sides have moved (before that it is
+  // an abort), with both seats taken by people. The reducer holds the rest (one
+  // offer at a time, the decline cooldown, answering only the other side's
+  // offer), so a replayed log is judged by the same rules. Offering while the
+  // opponent's offer is pending is an accept.
+  async function handleDraw(
+    room: LiveRoom,
+    client: LiveClient,
+    seat: C,
+    kind: 'draw:offer' | 'draw:accept' | 'draw:decline',
+  ): Promise<void> {
+    if (!tenant.rules.finishDraw) return;
+    if (room.projection.state.status.type !== 'playing') return;
+    if (room.projection.state.moveNumber < 2) return;
+    for (const color of tenant.colors) {
+      const clientId = room.projection.seats[color];
+      if (!clientId || tenant.engine?.isEngineClientId(clientId)) return;
+    }
+    const pending = room.projection.drawOffer;
+    const crossing = kind === 'draw:offer' && pending !== undefined && pending.from !== seat;
+    const base = { at: Date.now(), roomId: room.id, color: seat };
+    const event: TenantRoomEvent<C, M, Spec> =
+      kind === 'draw:decline'
+        ? { type: 'draw-declined', ...base }
+        : kind === 'draw:accept' || crossing
+          ? { type: 'draw-agreed', ...base }
+          : { type: 'draw-offered', ...base };
+    let seq: number;
+    try {
+      seq = await appendTenantEvent(tenant, room, event, eventWriterCtx);
+    } catch (err) {
+      recordTenantPersistenceError(tenant, room.id, room.events.length, event.type, err as Error);
+      client.socket.close(1011, 'persistence failure');
+      return;
+    }
+    if (seq < 0) return;
     broadcastEventAppended(room, event, seq);
   }
 

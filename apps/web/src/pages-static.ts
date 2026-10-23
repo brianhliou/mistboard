@@ -7,7 +7,7 @@ import { track } from './analytics.js';
 import { buildContact } from './contact.js';
 import { jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
-import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
+import { applyDocumentLocale, currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
@@ -351,6 +351,13 @@ function applyArticleChrome(modules: ArticleModules, slug: string, lang?: Articl
   // seoTitle, as the prerender uses: the display title here would replace the
   // search title Google indexes the moment the client mounts.
   if (article) document.title = `${article.seoTitle ?? article.title} | Mistboard`;
+  // A Vietnamese page is its own article, and the prerender ships it as
+  // <html lang="vi">. Locale init had already reset that to the UI locale
+  // ("en": the interface does not speak Vietnamese), so the rendered page told
+  // Google it was English (2026-10-21). Any other article takes the UI locale
+  // back, which an in-place rules swap away from a vi page needs.
+  if (article?.sourceLang) document.documentElement.lang = article.sourceLang;
+  else applyDocumentLocale(currentLocale());
 }
 
 /** Mounts the widgets, TOC tracking and thumbnails of everything in the page

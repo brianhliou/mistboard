@@ -218,6 +218,43 @@ describe('mountXiangqiAnalysisPage', () => {
     root.remove();
   });
 
+  it('mounts the phone bar on the page and not in the embed (#576)', () => {
+    const root = freshRoot();
+    mountXiangqiAnalysis(root, [...OPENING]);
+    const bar = root.querySelector('.analysis-phone-bar');
+    expect(
+      [...(bar?.querySelectorAll<HTMLButtonElement>('[data-analysis-bar]') ?? [])].map(
+        (b) => b.dataset.analysisBar,
+      ),
+    ).toEqual(['tools', 'engine', 'flip', 'back', 'next']);
+    // happy-dom cannot run the engine, so the Engine button is hidden, as the
+    // engine card is.
+    expect(root.querySelector<HTMLButtonElement>('[data-analysis-bar="engine"]')?.hidden).toBe(
+      true,
+    );
+    // The last seeded move is current: Next is at the end, Back is live.
+    expect(root.querySelector<HTMLButtonElement>('[data-analysis-bar="next"]')?.disabled).toBe(
+      true,
+    );
+    expect(root.querySelector<HTMLButtonElement>('[data-analysis-bar="back"]')?.disabled).toBe(
+      false,
+    );
+    expect(root.querySelector('.analysis-phone-info')?.textContent).toContain('Black to move');
+    // Tools carries every menu item but Flip, which has its own button.
+    root.querySelector<HTMLButtonElement>('[data-analysis-bar="tools"]')?.click();
+    expect(
+      [...root.querySelectorAll('.analysis-tools-sheet__item')].map((b) => b.textContent?.trim()),
+    ).toEqual(['Opening explorer', 'Study', 'Clear moves', 'Board editor']);
+    // The FEN and moves boxes ride in the sheet while it is open.
+    expect(root.querySelector('.analysis-tools-sheet .review-import')).not.toBeNull();
+    root.remove();
+
+    const embed = freshRoot();
+    mountXiangqiAnalysis(embed, [...OPENING], { nav: false });
+    expect(embed.querySelector('.analysis-phone-bar')).toBeNull();
+    embed.remove();
+  });
+
   it('Board editor hands the current position to /editor/xiangqi', () => {
     const root = freshRoot();
     mountXiangqiAnalysis(root, [...OPENING]);

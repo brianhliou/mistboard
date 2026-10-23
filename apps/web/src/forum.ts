@@ -11,7 +11,13 @@ import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { prependTitleBadge } from './player-titles.js';
 import { formatDate, formatDateTime, timeAgo } from './relative-time.js';
-import { type AuthUser, buildNav, buildNotice, fetchCurrentUser } from './site-shell.js';
+import {
+  type AuthUser,
+  buildNav,
+  buildNotice,
+  fetchCurrentUser,
+  navPhoneMediaQuery,
+} from './site-shell.js';
 // The study overlay resolvers, reused rather than reimplemented: a forum category
 // and a study carry the same {locale: {name, description}} shape, and the
 // fallback contract (degrade one string at a time, never half a translation) is
@@ -208,8 +214,13 @@ export async function mountForum(root: HTMLElement): Promise<void> {
   let categories: ForumCategory[];
   let forumRows: ForumTopicSummary[] | ForumPostSearchPage;
   let user: AuthUser | null;
+  // The phone index (#576) lists the latest topics across every category under
+  // a row of category chips; the wider layout keeps the category table and
+  // never makes this request.
+  const phoneIndex = !searchQuery && !categoryFilter && isPhoneViewport();
+  let latestTopics: ForumTopicSummary[] | null = null;
   try {
-    [categories, forumRows, user] = await Promise.all([
+    [categories, forumRows, user, latestTopics] = await Promise.all([
       fetchForumCategories(),
       searchQuery
         ? searchForumPosts({
@@ -225,6 +236,7 @@ export async function mountForum(root: HTMLElement): Promise<void> {
             })
           : Promise.resolve([]),
       fetchCurrentUser().catch(() => null),
+      phoneIndex ? fetchLatestTopics() : Promise.resolve(null),
     ]);
   } catch {
     body.replaceChildren(buildNotice(t('forum.unavailable'), t('forum.couldNotLoad')));
@@ -244,6 +256,7 @@ export async function mountForum(root: HTMLElement): Promise<void> {
     : categories.find((category) => category.slug === categoryFilter);
 
   const panel = forumPanel();
+  let phoneHead: HTMLElement | null = null;
   if (searchQuery) {
     panel.append(searchPanelHeader(searchQuery));
   } else if (selectedCategory) {
@@ -254,12 +267,38 @@ export async function mountForum(root: HTMLElement): Promise<void> {
       composer.classList.add('forum-topic-composer');
       composer.hidden = true;
     }
-    panel.append(
-      categoryPanelHeader(selectedCategory, user, composer),
-      ...(composer ? [composer] : []),
-    );
+    const desktopHeader = categoryPanelHeader(selectedCategory, user, composer);
+    desktopHeader.classList.add('forum-desktop-only');
+    phoneHead = forumPhoneHead({
+      categories,
+      user,
+      activeSlug: selectedCategory.slug,
+      composer,
+    });
+    panel.append(phoneHead, desktopHeader, ...(composer ? [composer] : []));
   } else {
-    panel.append(forumHomeHeader(searchQuery, user), categoryIndex(categories));
+    const header = forumHomeHeader(searchQuery, user);
+    header.classList.add('forum-desktop-only');
+    const index = categoryIndex(categories);
+    index.classList.add('forum-desktop-only');
+    // The index has no category to start a topic in, so the phone composer
+    // opens with the category picker on the first one the reader may post in.
+    const composer =
+      user && categories.some((category) => canStartTopicInCategory(category, user))
+        ? newTopicForm(categories, user)
+        : null;
+    if (composer) {
+      composer.classList.add('forum-topic-composer', 'forum-phone-only');
+      composer.hidden = true;
+    }
+    phoneHead = forumPhoneHead({ categories, user, activeSlug: null, composer });
+    panel.append(
+      phoneHead,
+      header,
+      ...(composer ? [composer] : []),
+      index,
+      phoneLatestTopics(latestTopics),
+    );
   }
   // Set here rather than server-side: the locale is a stored client preference
   // (the forum route takes no /zh-hans prefix), so the server has no way to know
@@ -301,6 +340,7 @@ export async function mountForum(root: HTMLElement): Promise<void> {
         topicAutoPager({
           list,
           categorySlug: selectedCategory.slug,
+          showCategory: false,
           page: topicPage,
           renderedTopicIds: new Set(visibleTopics.map((topic) => topic.id)),
         }),
@@ -311,6 +351,7 @@ export async function mountForum(root: HTMLElement): Promise<void> {
   }
 
   body.replaceChildren(panel);
+  if (phoneHead) revealActiveChip(phoneHead);
 }
 
 export async function mountForumTopic(root: HTMLElement, topicId: string): Promise<void> {
@@ -707,15 +748,189 @@ function newTopicPanelAction(
   const label = document.createElement('span');
   label.textContent = t('forum.createNewTopic');
   button.append(buildUiIcon('create-topic', 'forum-create-topic-icon'), label);
+  wireComposerToggle(button, composer);
+  return button;
+}
+
+// One composer can have two toggles on a category page (the desktop "Create a
+// new topic" and the phone "New topic"); both report the same expanded state.
+function wireComposerToggle(button: HTMLButtonElement, composer: HTMLElement): void {
+  button.dataset.forumComposerToggle = '';
+  button.setAttribute('aria-expanded', 'false');
   button.addEventListener('click', () => {
     composer.hidden = !composer.hidden;
-    button.setAttribute('aria-expanded', String(!composer.hidden));
+    syncComposerToggles(composer);
     if (!composer.hidden) {
       composer.querySelector<HTMLInputElement>('input[name="title"]')?.focus();
     }
   });
-  button.setAttribute('aria-expanded', 'false');
-  return button;
+}
+
+function syncComposerToggles(composer: HTMLElement): void {
+  const panel = composer.closest('.forum-panel');
+  for (const toggle of panel?.querySelectorAll<HTMLElement>('[data-forum-composer-toggle]') ?? []) {
+    toggle.setAttribute('aria-expanded', String(!composer.hidden));
+  }
+}
+
+function isPhoneViewport(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia(navPhoneMediaQuery).matches;
+}
+
+/** Phone header (#576, mock "Forum A"): a "Forum" title with search and New
+ *  topic beside it, then a scrolling row of category chips led by Latest. Shown
+ *  on the index and on category pages at phone width only. */
+function forumPhoneHead(options: {
+  categories: ForumCategory[];
+  user: AuthUser | null;
+  activeSlug: string | null;
+  composer: HTMLElement | null;
+}): HTMLElement {
+  const head = document.createElement('div');
+  head.className = 'forum-phone-head forum-phone-only';
+
+  const titleRow = document.createElement('div');
+  titleRow.className = 'forum-phone-title-row';
+  const heading = document.createElement('h1');
+  heading.className = 'forum-phone-title';
+  heading.textContent = t('nav.forum');
+
+  const search = document.createElement('div');
+  search.className = 'forum-phone-search';
+  search.hidden = true;
+  search.append(forumSearchForm(null, { compact: true }));
+  const searchToggle = document.createElement('button');
+  searchToggle.type = 'button';
+  searchToggle.className = 'forum-phone-icon-button forum-phone-search-toggle';
+  searchToggle.setAttribute('aria-label', t('forum.searchTheForum'));
+  searchToggle.setAttribute('aria-expanded', 'false');
+  searchToggle.append(forumSearchIcon());
+  searchToggle.addEventListener('click', () => {
+    search.hidden = !search.hidden;
+    searchToggle.setAttribute('aria-expanded', String(!search.hidden));
+    if (!search.hidden) search.querySelector<HTMLInputElement>('input[name="q"]')?.focus();
+  });
+
+  titleRow.append(heading, searchToggle);
+  if (options.user?.accountRole === 'admin') {
+    const reports = document.createElement('a');
+    reports.className = 'forum-phone-reports';
+    reports.href = '/forum/reports';
+    reports.textContent = t('forum.reports');
+    titleRow.append(reports);
+  }
+  if (!options.user) {
+    const signIn = document.createElement('a');
+    signIn.className = 'forum-phone-new-topic';
+    signIn.href = '/account?tab=login';
+    signIn.textContent = t('forum.signInToPostLink');
+    titleRow.append(signIn);
+  } else if (options.composer) {
+    const create = document.createElement('button');
+    create.type = 'button';
+    create.className = 'forum-phone-new-topic';
+    create.textContent = t('forum.newTopic');
+    wireComposerToggle(create, options.composer);
+    titleRow.append(create);
+  }
+
+  head.append(titleRow, search, forumCategoryChips(options.categories, options.activeSlug));
+  return head;
+}
+
+function forumCategoryChips(categories: ForumCategory[], activeSlug: string | null): HTMLElement {
+  const nav = document.createElement('nav');
+  nav.className = 'forum-phone-chips';
+  nav.setAttribute('aria-label', t('forum.categoriesNav'));
+  const chip = (label: string, href: string, active: boolean): HTMLAnchorElement => {
+    const link = document.createElement('a');
+    link.className = 'forum-phone-chip';
+    link.href = href;
+    link.textContent = label;
+    if (active) link.setAttribute('aria-current', 'page');
+    return link;
+  };
+  nav.append(chip(t('forum.latest'), '/forum', activeSlug === null));
+  for (const category of categories) {
+    nav.append(chip(categoryLabel(category), categoryHref(category), category.slug === activeSlug));
+  }
+  return nav;
+}
+
+// Category names run long ("General Games Discussion"), so the chip row
+// scrolls; bring the current one into view without moving the page.
+function revealActiveChip(head: HTMLElement): void {
+  const nav = head.querySelector<HTMLElement>('.forum-phone-chips');
+  const active = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+  if (!nav || !active || typeof requestAnimationFrame !== 'function') return;
+  requestAnimationFrame(() => {
+    if (nav.scrollWidth <= nav.clientWidth) return;
+    nav.scrollLeft = Math.max(0, active.offsetLeft - 16);
+  });
+}
+
+function forumSearchIcon(): SVGSVGElement {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  svg.classList.add('forum-phone-search-icon');
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('cx', '11');
+  circle.setAttribute('cy', '11');
+  circle.setAttribute('r', '6.5');
+  const handle = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  handle.setAttribute('d', 'm16 16 4.5 4.5');
+  svg.append(circle, handle);
+  return svg;
+}
+
+/** The phone index's topic list: the latest topics across every category.
+ *  `topics` is null when this page was not loaded at phone width (or the read
+ *  failed); then the list loads the first time the viewport becomes a phone. */
+function phoneLatestTopics(topics: ForumTopicSummary[] | null): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'forum-phone-latest forum-phone-only';
+  const render = (rows: ForumTopicSummary[]) => {
+    const visible = rows.slice(0, topicListPageSize);
+    const list = topicList(visible, t('forum.noTopicsYet'), { showCategory: true });
+    wrap.replaceChildren(list);
+    if (rows.length > topicListPageSize && typeof IntersectionObserver === 'function') {
+      wrap.append(
+        topicAutoPager({
+          list,
+          categorySlug: null,
+          showCategory: true,
+          page: 1,
+          renderedTopicIds: new Set(visible.map((topic) => topic.id)),
+        }),
+      );
+    }
+  };
+  const load = async () => {
+    wrap.replaceChildren(statusPanel(t('forum.loading')));
+    const rows = await fetchLatestTopics();
+    if (rows) render(rows);
+    else wrap.replaceChildren(statusPanel(t('forum.couldNotLoad')));
+  };
+  if (topics) {
+    render(topics);
+  } else if (isPhoneViewport()) {
+    wrap.append(statusPanel(t('forum.couldNotLoad')));
+  } else if (typeof window.matchMedia === 'function') {
+    const query = window.matchMedia(navPhoneMediaQuery);
+    const onChange = () => {
+      if (!query.matches) return;
+      query.removeEventListener('change', onChange);
+      if (wrap.isConnected) void load();
+    };
+    query.addEventListener('change', onChange);
+  }
+  return wrap;
+}
+
+function fetchLatestTopics(): Promise<ForumTopicSummary[] | null> {
+  return fetchForumTopics({ limit: topicListPageSize + 1, offset: 0 }).catch(() => null);
 }
 
 function canStartTopicInCategory(category: ForumCategory, user: AuthUser | null): user is AuthUser {
@@ -944,7 +1159,9 @@ function topicPager(options: {
 
 function topicAutoPager(options: {
   list: HTMLElement;
-  categorySlug: string;
+  /** Null pages the cross-category Latest list on the phone index. */
+  categorySlug: string | null;
+  showCategory: boolean;
   page: number;
   renderedTopicIds: Set<string>;
 }): HTMLElement {
@@ -994,7 +1211,7 @@ function topicAutoPager(options: {
       for (const topic of rows.slice(0, topicListPageSize)) {
         if (options.renderedTopicIds.has(topic.id)) continue;
         options.renderedTopicIds.add(topic.id);
-        const row = topicRow(topic);
+        const row = topicRow(topic, { showCategory: options.showCategory });
         row.classList.add('forum-topic-row-appended');
         options.list.append(row);
       }
@@ -1008,7 +1225,12 @@ function topicAutoPager(options: {
         finish();
       }
     } catch {
-      // Fall back to pager links so navigation still works.
+      // Fall back to pager links so navigation still works. The Latest list has
+      // no paged URL of its own, so it just stops.
+      if (options.categorySlug === null) {
+        finish();
+        return;
+      }
       finish(
         topicPager({
           categorySlug: options.categorySlug,
@@ -1107,7 +1329,7 @@ function topicRow(topic: ForumTopicSummary, options: { showCategory?: boolean } 
   if (pageLinks) titleLine.append(pageLinks);
 
   if (flags.childElementCount > 0) main.append(flags);
-  main.append(titleLine);
+  main.append(titleLine, topicPhoneMeta(topic, options));
 
   const replies = document.createElement('span');
   replies.className = 'forum-topic-row-replies';
@@ -1135,6 +1357,48 @@ function topicRow(topic: ForumTopicSummary, options: { showCategory?: boolean } 
 
   row.append(main, replies, latestCell);
   return row;
+}
+
+// The phone row (#576) is a title over one muted line: category (on Latest),
+// replies, last activity. The desktop Replies and Last post columns and the
+// flag pills are hidden at that width, so pinned and locked ride in this line.
+function topicPhoneMeta(
+  topic: ForumTopicSummary,
+  options: { showCategory?: boolean } = {},
+): HTMLElement {
+  const meta = document.createElement('span');
+  meta.className = 'forum-topic-row-phone-meta';
+  const parts: HTMLElement[] = [];
+  const part = (text: string, className?: string): HTMLElement => {
+    const span = document.createElement('span');
+    if (className) span.className = className;
+    span.textContent = text;
+    parts.push(span);
+    return span;
+  };
+  if (topic.pinned) part(t('forum.pinned'), 'forum-topic-phone-flag');
+  if (topic.locked) part(t('forum.locked'), 'forum-topic-phone-flag');
+  if (options.showCategory) part(categoryLabel(topic.category));
+  part(replyCountLabel(replyCount(topic)));
+  const when = part(timeAgo(topic.lastPostAt));
+  when.title = formatDateTime(topic.lastPostAt);
+  for (const [index, node] of parts.entries()) {
+    if (index > 0) {
+      const dot = document.createElement('span');
+      dot.className = 'forum-topic-phone-sep';
+      dot.setAttribute('aria-hidden', 'true');
+      dot.textContent = '·';
+      meta.append(dot);
+    }
+    meta.append(node);
+  }
+  return meta;
+}
+
+function replyCountLabel(count: number): string {
+  if (count === 0) return t('forum.noReplies');
+  if (count === 1) return t('forum.replyCountOne');
+  return t('forum.replyCount', { count: formatCount(count) });
 }
 
 function topicInlinePageLinks(topic: ForumTopicSummary): HTMLElement | null {
@@ -1889,13 +2153,16 @@ function collapseTopicComposer(form: HTMLFormElement): void {
   const composer = form.closest<HTMLElement>('.forum-topic-composer');
   if (!composer) return;
   composer.hidden = true;
-  const toggle = composer
-    .closest('.forum-panel')
-    ?.querySelector<HTMLButtonElement>('.forum-panel-action-create');
-  if (toggle) {
-    toggle.setAttribute('aria-expanded', 'false');
-    toggle.focus();
-  }
+  syncComposerToggles(composer);
+  const toggles = [
+    ...(composer
+      .closest('.forum-panel')
+      ?.querySelectorAll<HTMLElement>('[data-forum-composer-toggle]') ?? []),
+  ];
+  // Only one toggle is on screen at a time; jsdom lays nothing out, so fall
+  // back to the first (the desktop one) there.
+  const toggle = toggles.find((node) => node.getClientRects().length > 0) ?? toggles[0];
+  toggle?.focus();
 }
 
 // Lichess-style "Important" callout at the head of the composer: points people

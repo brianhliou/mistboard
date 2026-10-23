@@ -361,7 +361,7 @@ export const EN_CONTENT = {
   'creators.crossLinkSuffix': '.',
   'champions.heading': 'Engine champions',
   'champions.intro':
-    'Each game has one reigning champion engine. It is the bot you play on the site, credited by name. Any engine can challenge for the title in a public match.',
+    'Each game has one reigning champion engine: the strongest bot you can play here, credited by name. Easier bots and levels sit below it. Any engine can challenge for the title in a public match. We also want to host other engines as bots you can play, not only champions; to offer one, use the submission steps below.',
   'champions.aboutJieqi':
     'By Huorongrong and Laoxu (Kouza): a Pikafish fork with its own neural network. It plays here at 4 s a move on 4 threads.',
   'champions.aboutJungle':
@@ -385,7 +385,7 @@ export const EN_CONTENT = {
   'champions.playChampion': 'Play the champion',
   'champions.openHeading': 'Open titles',
   'champions.openIntro':
-    'Every other game with a bot. The bot you play holds the title until a challenger beats it in a match, and no challenger has played one yet.',
+    'Every other game with a bot. The strongest bot on the site holds the title until a challenger beats it in a match. No challenger has played one yet.',
   'champions.heldBy': 'Held by',
   'champions.openBadge': 'Title open',
   'champions.challengeCta': 'Challenge for this title',

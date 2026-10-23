@@ -365,7 +365,15 @@ export function createReviewScaffold(
 
   const shell = createReviewShell({
     ariaLabel: config.ariaLabel,
-    pageClassName: [config.pageClassName, `review-shell--${config.reviewSurface}`]
+    // `review-shell--pocket` stands in for `.review-shell:has(.review-rail-pocketbox)`:
+    // a :has() whose subject is the whole shell re-matched all of its descendants
+    // on every board rebuild (#608). The pocket box is built only here and never
+    // removed, so the class is set once with it.
+    pageClassName: [
+      config.pageClassName,
+      `review-shell--${config.reviewSurface}`,
+      hasPocketBox ? 'review-shell--pocket' : null,
+    ]
       .filter(Boolean)
       .join(' '),
     left,

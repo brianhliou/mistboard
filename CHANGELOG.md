@@ -26,6 +26,8 @@ Conventions:
 
 ### Playing
 
+- Offer, accept or decline a draw in any game against another person, rated and correspondence included ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
+- The top jieqi bot, AB-JChess, moves to its newer 0.2d version, about 50 Elo stronger in our tests ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - Xiangqi notation numbers three to five soldiers on one file the WXF way instead of switching to coordinates ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
 - The phone board editor fits one screen, with both piece colours and a Tools sheet for settings ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - on phones the game room fits one screen with no scrolling: board, both clocks, the moves and the action bar stay in view, captured pieces sit on each player's line, game info and chat open from the ☰ menu, and the first-move countdown shows as a bubble on the board ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
@@ -83,6 +85,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- Study pages now name the study's owner in the About tab ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - On phones the puzzle page fits one screen, with the puzzle details, engine and settings in a menu that slides up from the arrow bar ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
 - Refresh the Jieqi platform guide with review walkthroughs, theme-matched figures and playable stored alternatives in Jieqi game embeds ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - The study list now has Chinese pages at /zh-hans/study and /zh-hant/study, linking each study's Chinese page, and its heading is now Studies ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
@@ -198,6 +201,8 @@ Conventions:
 
 ### Site
 
+- Analysis boards and studies fit one phone screen, with a bottom bar and sheets for tools, chapters and study info, and the forum and study list get phone layouts ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
+- The blog lists Xiangqi deep dives before Engineering, engineering posts no longer appear on the homepage, and article cards drop the corner star ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - On phones, language, piece set and dark mode now sit in the top bar, one tap each ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
 - A clearer Mistboard mission connecting cultures through Chinese chess and original strategy games, with the long-term vision for engine challenges, clubs and international events ([981f42d7](https://github.com/brianhliou/mistboard/commit/981f42d7))
 - Banqi face-down tiles take each piece set's own material, and the red Jieqi back has a darker outline ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
@@ -263,6 +268,7 @@ Conventions:
 
 ### Removed
 
+- The jieqi by correspondence card on the homepage; correspondence stays in the Play panel's Correspondence tab ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - the puzzles streak line under Success! ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - the crosstable "First game between" line ([493549c0](https://github.com/brianhliou/mistboard/commit/493549c0))
 - Fortress Xiangqi and Atomic Xiangqi are on hold for a redesign; finished games still replay ([8ca17ae7](https://github.com/brianhliou/mistboard/commit/8ca17ae7))
@@ -272,6 +278,9 @@ Conventions:
 
 ### Fixed
 
+- Stepping through a long game's moves with the arrow keys no longer lags ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
+- Vietnamese articles now tell search engines they are Vietnamese and link to their English version, and back ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
+- Bot names on the current games page no longer get cut off ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
 - Broadcast source credits link to the specific event page when available ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - Prevent repeated page reloads when an optional JavaScript file cannot load ([284b2473](https://github.com/brianhliou/mistboard/commit/284b2473))
 - Homepage News icons no longer block page loading, and stylesheet loading failures use bounded asset recovery ([981f42d7](https://github.com/brianhliou/mistboard/commit/981f42d7))

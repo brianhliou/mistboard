@@ -147,6 +147,8 @@ const xmjWebTenant: WebVariantTenant<XmjSeat> = {
   // Each seat sees its deal before its first move: no free redeal.
   userAbort: false,
   ratedPregameTimeoutForfeits: true,
+  // A points count, never a draw by agreement: the server tenant has no finishDraw.
+  drawOffers: false,
   displayName: 'variant.xiangqiMahjong.name',
   colors: XMJ_SEATS,
   isColor: isXmjSeat,

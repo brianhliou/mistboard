@@ -69,7 +69,9 @@ export type FortressXiangqiGameEndReason =
   | 'chasing'
   | 'timeout'
   | 'resignation'
-  | 'abandonment';
+  | 'abandonment'
+  // Both players agreed a draw (an accepted draw offer).
+  | 'agreement';
 
 export type FortressXiangqiGameStatus =
   | { type: 'playing'; turn: FortressXiangqiColor }

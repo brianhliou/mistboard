@@ -160,7 +160,9 @@ export type DuckXiangqiGameEndReason =
   | 'progress'
   | 'timeout'
   | 'resignation'
-  | 'abandonment';
+  | 'abandonment'
+  // Both players agreed a draw (an accepted draw offer).
+  | 'agreement';
 
 export type DuckXiangqiGameStatus =
   | { type: 'playing'; turn: DuckXiangqiColor }

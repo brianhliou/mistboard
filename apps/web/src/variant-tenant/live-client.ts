@@ -28,6 +28,7 @@ import {
 } from '../analytics.js';
 import { brandedEngineName } from '../game-display.js';
 import { isFlipShortcut, setReplayAnalysisHref, setReplayFlipHandler } from '../game-table.js';
+import { t } from '../i18n/catalog.js';
 import {
   createLiveFinishBadges,
   type FinishBadge,
@@ -127,6 +128,14 @@ export type TenantLiveState<C extends string, V> = {
   // sends). Until 2026-10-02 nothing read it, so every tenant room's meta card said
   // Casual, rated lobby games and rated correspondence alike.
   rated: boolean;
+  // The seat with a draw offer pending (snapshot `drawOffer`, sent only while
+  // one is), and how many of this seat's own moves remain before it may offer
+  // again after a decline (`drawOfferCooldown`, sent only to that seat).
+  drawOffer: C | null;
+  drawOfferCooldown: number;
+  // The plies at which a draw was offered (snapshot `drawOfferPlies`), for the
+  // move list's "½?" mark.
+  drawOfferPlies: ReadonlySet<number>;
 };
 
 // Everything a tenant's interaction/setup code needs from the core. Handed to
@@ -392,6 +401,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     forfeitDeadline: null,
     lobbyMatch: false,
     rated: false,
+    drawOffer: null,
+    drawOfferCooldown: 0,
+    drawOfferPlies: new Set(),
   };
 
   let socket: TenantSocketClient | null = null;
@@ -489,6 +501,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       config.chrome?.rematchControls ?? ((sendSocket) => rematch?.controls(sendSocket) ?? null),
     lobbyMatch: () => state.lobbyMatch,
     rated: () => state.rated,
+    drawOffer: () => state.drawOffer,
+    drawOfferCooldown: () => state.drawOfferCooldown,
     ...(config.chrome?.variantDetail ? { variantDetail: config.chrome.variantDetail } : {}),
     recording: recordingForChrome,
   });
@@ -534,6 +548,18 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     // a room never stops being a lobby room.
     if (frame.lobbyMatch === true) state.lobbyMatch = true;
     if (typeof frame.rated === 'boolean') state.rated = frame.rated;
+    // Every frame carries the whole room state, so an absent field means no
+    // offer is pending (a move lapsed it, or it was answered).
+    const drawOffer = frame.drawOffer as { from?: unknown } | undefined;
+    state.drawOffer =
+      typeof drawOffer?.from === 'string' && tenant.isColor(drawOffer.from) ? drawOffer.from : null;
+    state.drawOfferCooldown =
+      typeof frame.drawOfferCooldown === 'number' ? frame.drawOfferCooldown : 0;
+    state.drawOfferPlies = new Set(
+      Array.isArray(frame.drawOfferPlies)
+        ? frame.drawOfferPlies.filter((ply): ply is number => Number.isInteger(ply))
+        : [],
+    );
     if (frame.events) state.events = frame.events;
     rematch?.applyFrame(frame.rematch);
     config.onFrame?.(frame);
@@ -612,6 +638,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.abortDeadline = null;
     state.lobbyMatch = false;
     state.rated = false;
+    state.drawOffer = null;
+    state.drawOfferCooldown = 0;
+    state.drawOfferPlies = new Set();
     lastCapturedView = null;
     lastCapturedKey = null;
     pendingLiveAnimation = null;
@@ -966,6 +995,14 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       .filter(Boolean)
       .join(' ');
     cell.textContent = played ? (text ?? '...') : '';
+    // A draw was offered after this move (lichess's "½?").
+    if (played && state.drawOfferPlies.has(ply)) {
+      const mark = document.createElement('span');
+      mark.className = 'move-draw-offer';
+      mark.title = t('live.drawOffered');
+      mark.textContent = '½?';
+      cell.append(mark);
+    }
     if (cell instanceof HTMLButtonElement) {
       cell.type = 'button';
       cell.title = `Move ${Math.ceil(ply / 2)}`;

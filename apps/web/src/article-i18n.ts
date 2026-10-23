@@ -33,6 +33,11 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-21, not native-reviewed, from the English signed
+  // off that day. Terms follow longest-forced-mates-xiangqi and helpmates (困毙 /
+  // 困斃 for xiangqi stalemate, 逼和 for chess's, 半回合 a ply, 合作杀 / 合作殺),
+  // 迷雾国际象棋 for fog of war, 研究 for a study, 萨姆·劳埃德 as in helpmates.
+  'shortest-stalemate-xiangqi',
   // Machine-drafted 2026-10-17, not native-reviewed, from the English signed
   // off that day. The bot keeps its English name, as in its News entry and bot
   // page; checkmate is 将死, a draw 和棋, the rules page 规则页.
@@ -246,6 +251,46 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困毙 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作杀, 萨姆·劳埃德); 迷雾国际象棋 for fog of war; 研究 for a study.
+  'The Shortest Xiangqi Stalemate We Know': '我们所知最短的象棋困毙',
+  'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':
+    '已知最短的象棋困毙：21个半回合',
+  'In xiangqi a side with no legal move loses. The shortest stalemate we know takes 21 plies: after Red’s 11th move, Black has eight pieces and none of them can move.':
+    '在象棋里，无着可走的一方判负。我们所知最短的困毙只要21个半回合：红方走完第11步后，黑方还有八个子，却没有一个子走得动。',
+  'Black’s own pieces and one red chariot wall in most of its army, and two red cannons pin the three pieces that could still move.':
+    '黑方自己的棋子和一辆红车堵住了黑方大部分子力，两门红炮又牵制住仍能走动的三个子。',
+  'A computer search found it, and it can miss shorter lines. No stalemate is possible in under 9 plies, so 9 to 20 is still open.':
+    '这是电脑搜索找到的，而这种搜索可能漏掉更短的着法。少于9个半回合不可能形成困毙，所以9到20个半回合之间仍无定论。',
+  'In chess, a player who is not in check and has no legal move is stalemated, and the game is drawn. In [xiangqi](/rules/xiangqi) that player has lost, the same as if mated. So how quickly can a game end that way? We count in plies, one move by one side, so 21 plies ends on Red’s 11th move.':
+    '在国际象棋里，没有被将军却无着可走的一方被逼和，对局算和棋。在[象棋](/rules/xiangqi)里，这一方就输了，和被将死一样，这叫困毙。那么，一盘棋最快能多快以这种方式结束？我们按半回合计数，一方走一步算一个半回合，所以21个半回合结束于红方的第11步。',
+  'Sam Loyd stalemated Black on the tenth move in chess':
+    '国际象棋里，萨姆·劳埃德第十步就逼和了黑方',
+  'Chess has a famous answer. In Sam Loyd’s ten-move game, Black still has ten pieces, the queen and both rooks among them, and none of them can move. [Oz Problems](https://www.ozproblems.com/walkabout/walkabout2021/feb27) has the history.':
+    '国际象棋有一个著名的答案。在萨姆·劳埃德的十步棋局里，黑方还有十个子，其中包括后和两个车，却没有一个能动。[Oz Problems](https://www.ozproblems.com/walkabout/walkabout2021/feb27) 介绍了它的来历。',
+  'Sam Loyd’s ten-move stalemate': '萨姆·劳埃德的十步逼和',
+  'Fog of war is harder. There you see only the squares your pieces reach, and a king may step into check, so a side is stuck only when nothing can move at all. In Sven’s 2011 TalkChess game, Black ran out of moves after 63 plies; we found a route to the same final position in 35. Both are in [this study](/study/Yj0X1pDy).':
+    '迷雾国际象棋更难。在那里你只能看到自己棋子能到达的格子，王也可以走进被将军的位置，所以只有一个子都动不了时，一方才算被困住。在 Sven 2011年发在 TalkChess 上的对局里，黑方在63个半回合后无棋可走；我们找到了一条只用35个半回合就到达同一终局的路线。两局都在[这个研究](/study/Yj0X1pDy)里。',
+  'Nanao Okumura stalemated Red with all sixteen pieces on the board':
+    'Nanao Okumura 困毙了十六个子全在盘上的红方',
+  'Nanao Okumura posted an earlier xiangqi stalemate on Zhihu in 2019, built for a different record: after 136 plies Red still has all sixteen pieces, and none of them can move. Black lost nine and took nothing. Chinese-language sites mostly blocked our search, so shorter published games may exist. We found a route to his final position in 116 plies, the fewest possible; it is the last chapter of [the study](/study/ls3xEcX3/FuXbQg6L).':
+    'Nanao Okumura 2019年在知乎上发表过一盘更早的象棋困毙，追求的是另一项纪录：136个半回合后，红方十六个子一个不少，却没有一个能动。黑方丢了九个子，一个也没吃。中文网站大多挡住了我们的搜索，所以可能还有更短的已发表对局。我们找到了一条只用116个半回合就到达他这个终局的路线，这是可能的最少半回合数；这盘棋是[这个研究](/study/ls3xEcX3/FuXbQg6L)的最后一章。',
+  'Nanao Okumura’s 136-ply stalemate': 'Nanao Okumura 的136个半回合困毙',
+  'Black is stalemated after 21 plies, held mostly by its own pieces':
+    '黑方在21个半回合后被困毙，困住它的主要是自己的棋子',
+  'Two red cannons hold the pieces that could move. The one on e7 looks at the general through Black’s chariot and cannon, and the one on b10 through an elephant and an advisor. The chariot, the cannon and that elephant each have a move, and each of those moves leaves the general in check. Everything else is boxed in by its own pieces or by the red chariot on h9. Red took eight pieces on the way, Black one.':
+    '两门红炮牵制着本来能动的子。e7的炮隔着黑方的车和炮对着将，b10的炮隔着一只象和一个士对着将。车、炮和那只象各有一步可走，但每一步都会让将被将军。其余的子不是被自己的棋子堵住，就是被h9的红车封住。一路上红方吃了八个子，黑方吃了一个。',
+  'Black stalemated in 21 plies': '黑方21个半回合被困毙',
+  'A computer search found it by keeping the most cramped positions':
+    '电脑搜索只保留最局促的局面，由此找到了它',
+  'Both sides play toward one goal, stalemating Black, as in a [helpmate](/blog/helpmates-in-xiangqi). Every line is far too many to search past a few moves, so after each move the search keeps a fixed number of positions, the ones where Black has the fewest legal moves, and drops the rest. Each black piece that can still move counts heavily against a position. The search stops at the first position where Black is to move, has no legal move and is not in check.':
+    '双方朝同一个目标走棋：困毙黑方，就像[合作杀](/blog/helpmates-in-xiangqi)那样。走过几步之后，全部着法就多到无法逐一搜索，所以每走一步，搜索只保留固定数量的局面，即黑方合法着法最少的那些，其余全部丢弃。黑方每有一个还能动的子，局面的评分就要重重扣分。搜索停在第一个这样的局面：轮到黑方走，黑方没有合法着法，且没有被将军。',
+  'Dropping positions is what makes it fast, and it is also why it can miss a shorter line. Run the other way, it stalemated Red in 22 plies, which is in [the study](/study/ls3xEcX3) with the others.':
+    '丢弃局面让搜索变快，也正因如此它可能漏掉更短的着法。反过来运行，它在22个半回合内困毙了红方，这盘棋和其他几盘一起收在[这个研究](/study/ls3xEcX3)里。',
+  'No stalemate is possible in under 9 plies': '少于9个半回合不可能形成困毙',
+  'A search of every line proves that no game stalemates Black within 7 plies, and none stalemates Red within 8. So a stalemate shorter than ours, if one exists, takes 9 to 20 plies. Find one, or prove there is none, and post it in the forum.':
+    '对所有着法的完全搜索证明，没有任何对局能在7个半回合内困毙黑方，也没有任何对局能在8个半回合内困毙红方。所以比我们更短的困毙如果存在，需要9到20个半回合。找到一个，或者证明它不存在，然后发到论坛上。',
+  'Shortest stalemates in xiangqi': '象棋最短困毙',
+  'Post a shorter one': '发一个更短的',
   // -- Can you make General Blunder win? (general-blunder-challenge): machine-drafted 2026-10-17, not native-reviewed. --
   'Can you make General Blunder win?': '你能让 General Blunder 赢吗？',
   'Make General Blunder win': '让 General Blunder 赢',
@@ -280,8 +325,7 @@ const ZH_HANS: Record<string, string> = {
   'Play General Blunder': '与 General Blunder 对弈',
   'So can you make a bot that tries to lose win? The rules allow it: positions exist where every move General Blunder has would beat you, and in one of those it has to play one. Whether a person can walk a real game there, against a bot that sees the trap and tries to dodge it, is the open question. We will add the first game that does it to this page.':
     '那么，你能让一个想输的机器人赢吗？规则允许：存在这样的局面，General Blunder 的每一步都会击败你，而在这样的局面里它必须走其中一步。一个人能否在真实对局中把棋引到那里，同时面对一个看得出陷阱并设法躲开的机器人，这是悬而未决的问题。第一盘做到的棋局，我们会加到这一页上。',
-  'Make it win': '让它赢',
-  'THE GENERAL BLUNDER CHALLENGE': 'GENERAL BLUNDER 挑战',
+  'Can you lose?': '你能输掉吗？',
   // unstyled-first-paint: machine-drafted 2026-10-17, not native-reviewed.
   ENGINEERING: '工程',
   UNSTYLED: '无样式',
@@ -1137,6 +1181,7 @@ const ZH_HANS: Record<string, string> = {
   // Homepage card titles (`cardTitle`), 2026-10-03: the article's own zh
   // title cut to fit the card, machine-drafted, not native-reviewed.
   'Pikafish misjudged its reveals': '皮卡鱼误判了翻子',
+  'A 21-Ply Xiangqi Stalemate': '21个半回合的象棋困毙',
   'KataGo, a stronger Jungle bot': 'KataGo：更强的斗兽棋电脑',
   '14 wins against our jieqi bot': '战胜我们揭棋电脑的 14 盘棋',
   'How Strong Players Open Jieqi': '高手眼中的揭棋开局',
@@ -3864,8 +3909,6 @@ const ZH_HANS: Record<string, string> = {
     '2005年以来的十三位全国冠军中，有十人受到处罚，其中包括2014到2023年间等级分第一的王天一。',
   'A Hangzhou court convicted six grandmasters of bribery in September 2025. The charge was bribery, not gambling.':
     '2025年9月，杭州一家法院以行贿受贿判决六名特级大师有罪。罪名是行贿受贿，不是赌博。',
-  'Engine cheating is alleged in every account and charged in none. No result or title has been struck from the record.':
-    '各方说法都提到用软件作弊，但没有一项指控涉及。至今没有任何成绩或称号被撤销。',
   'This is our best reading of what has been published. If you know something here to be wrong or out of date, [tell us](/contact) and we will correct it.':
     '本页是我们对已公开报道的最佳解读。如果你知道其中有错误或已过时的内容，请[告诉我们](/contact)，我们会更正。',
   'Who’s who': '人物一览',
@@ -3873,36 +3916,9 @@ const ZH_HANS: Record<string, string> = {
     '下文反复出现的人物。禁赛是协会的处罚，禁止棋手参赛；徒刑是法院的判决。',
   Person: '人物',
   'Part in the case': '在案中的角色',
-  'Top-rated player 2014 to 2023; bought games': '2014至2023年等级分第一；买棋',
-  'Life ban; 2 years 9 months in prison': '终身禁赛；有期徒刑2年9个月',
-  'On the recorded calls; the go-between for most of Wang Tianyi’s payments':
-    '录音通话的一方；王天一大部分付款的中间人',
-  'Life ban; 1 year in prison': '终身禁赛；有期徒刑1年',
-  'The other voice on the recordings': '录音中的另一方',
-  'Banned 4 years 3 months; not charged': '禁赛4年3个月；未被起诉',
-  '2005 champion; one outlet reports he passed the recordings on':
-    '2005年冠军；有一家媒体报道录音由他转出',
-  'Life ban; 2 years 7 months in prison, appeal rejected': '终身禁赛；有期徒刑2年7个月，上诉被驳回',
   '2007 champion': '2007年冠军',
-  'Life ban; 4 years 9 months in prison, the longest term': '终身禁赛；有期徒刑4年9个月，刑期最长',
-  'Xie Jing 谢靖, Xu Chao 徐超': '谢靖、徐超',
-  '2013 and 2017 champions': '2013年和2017年冠军',
-  'Life bans; 2 years 6 months in prison each': '均终身禁赛；各判有期徒刑2年6个月',
-  'Veteran player; alleged engine cheating for years, then accused an official by name':
-    '老将；多年来指称对手用软件作弊，随后实名举报一名官员',
-  'Not sanctioned': '未受处罚',
-  'Joined Liu Dahua’s accusation': '与柳大华联名举报',
-  'Banned 3 years': '禁赛3年',
-  'Guo Liping 郭莉萍': '郭莉萍',
-  'Official at the sport administration, named in the accusation':
-    '棋牌运动管理中心官员，被举报点名',
-  'Left the post in December 2024; not charged': '2024年12月去职；未被起诉',
-  'Ban from competing': '禁赛处罚',
   'Prison term': '刑期',
   'The Xiangqi Match-Fixing Case': '象棋假棋案',
-  'Xiangqi Match-Fixing: 录音门, the Bans, and the Convictions': '象棋假棋案：录音门、禁赛与判决',
-  'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.':
-    '2024到2026年间，中国象棋协会因买棋卖棋处罚了49人，杭州一家法院以行贿受贿判决六名特级大师有罪。事情经过、为何有利可图、谁作出认定，以及哪些至今未获证实。',
   'Ten of the thirteen men who have won the Chinese national xiangqi championship since 2005 carry a published ruling against them, including every winner from 2010 to 2023. The man who was China’s top-rated player from 2014 to 2023 was banned for life and then convicted in court. This is how that happened, and what it does and does not establish.':
     '2005年以来夺得全国象棋个人赛冠军的十三人中，有十人已被公开处罚，其中包括2010到2023年间的每一位冠军。2014到2023年间等级分居全国第一的棋手先被终身禁赛，随后被法院判决有罪。以下是事情的经过，以及哪些已被认定、哪些没有。',
   'It is assembled from Chinese-language reporting, which carries far more of it than the English coverage does. Where something is alleged rather than found, or charged rather than decided, this page says so.':
@@ -3913,8 +3929,6 @@ const ZH_HANS: Record<string, string> = {
   'It was not a gambling case, though English write-ups often reach for the word. The charges are offering and accepting bribes as a non-state functionary, and no ruling or indictment describes betting.':
     '这不是赌博案，尽管英文报道常用这个词。指控的罪名是对非国家工作人员行贿罪和非国家工作人员受贿罪，没有任何处罚或起诉书提到下注。',
   'Why buying a game paid for itself': '买一盘棋为什么划算',
-  'Rating points were not just a ranking. Under the system in force at the time they fed appearance and per-game fees, which made them the number a professional was paid on. That produced an asymmetry: a top-rated player gained almost nothing from beating a weaker one and lost a great deal from slipping, while the weaker player earned so little that a fee for losing beat the result. On CCTV, the player Cai Yi 才溢 illustrated the gap as perhaps ¥20,000 a game for a marquee name in a sponsored team event against ¥4,000 for an ordinary master. That rating system was abolished on 30 January 2026 and replaced with a rolling 52-week ranking.':
-    '等级分不只是排名。在当时施行的制度下，它关系到出场费与对局费，也就成了职业棋手实际拿钱的依据。这带来一种不对称：等级分高的棋手赢下低分对手几乎没有收益，掉分却损失惨重；低分棋手所得本就微薄，输棋换来的报酬反而胜过战绩本身。棋手才溢在央视节目中举例说，有赞助的团体赛里，名将一盘或可得两万元，普通大师约四千元。该等级分制度已于2026年1月30日废止，改为按52周滚动计算的排名。',
   'The sport administration’s chess and card centre gave three motives in all: promotion through the grade titles, private division of prize money, and inflating the rating itself. Results were arranged to hit the norms for 特级大师, grandmaster, with players negotiating prices across a national individual championship, and in team events the same trade bought qualification as 运动健将, Master of Sport, which the coverage calls 搭便车, free-riding.':
     '国家体育总局棋牌运动管理中心共列出三项动机：晋升技术等级称号、私分奖金，以及提升等级分本身。为达到特级大师的标准，棋手在全国个人赛期间与多名对手谈价钱安排结果；在团体赛中，同样的交易被用来换取运动健将资格，报道称之为搭便车。',
   'Which is why paying to win a game you would probably have won anyway is not irrational. You are not buying the point. You are buying the rating that sets next season’s fee and the title that outlasts any single event, and against those, tens of thousands of yuan for one game is cheap.':
@@ -3940,21 +3954,13 @@ const ZH_HANS: Record<string, string> = {
   'The association published almost every name. Where a player also appears on the champion lists, his national title years are in the last column.':
     '协会公布了几乎每一个名字。若该棋手同时出现在冠军名单上，其全国冠军年份列在最后一栏。',
   Player: '棋手',
-  'National title': '全国冠军',
   'The 47 the association named. The other two were withheld because they were under 18 when the conduct occurred. Revocation of the technical grade title accompanies 19 of the 45 bans, not all of them.':
     '协会具名公布的47人。另外两人因涉案时未满18周岁而未公布姓名。45项禁赛中有19项同时撤销技术等级称号，并非全部。',
-  'Hao Jichao, whose recordings started the case, is in the four-year-three-month tier, and was never criminally charged: the sporting penalty is the only one he carries. Xu Chongfeng’s two-year ban ran out on 23 July 2026, and the shorter bans from the January batch will have ended before it.':
-    '录音出自郝继超之手，他被禁赛四年三个月，且从未被刑事追诉，所受的只有体育处罚。徐崇峰的两年禁赛已于2026年7月23日期满，而1月那批中更短的禁赛应当更早结束。',
   'Separately, the Shangcheng District People’s Court in Hangzhou convicted six grandmasters on 24 September 2025 of offering and accepting bribes as non-state functionaries, under Articles 163 and 164 of the criminal law. The Chinese press calls it the sport’s first criminal corruption case.':
     '另一条线上，杭州市上城区人民法院于2025年9月24日以对非国家工作人员行贿罪、非国家工作人员受贿罪判决六名特级大师有罪，依据刑法第163条与第164条。中文媒体称之为中国象棋反腐第一案。',
   Convicted: '被判刑者',
   'Reported from the 24 September 2025 verdict. The terms are 有期徒刑, fixed-term imprisonment; whether any was suspended has not been reported. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
     '据2025年9月24日宣判的报道整理。刑期均为有期徒刑，是否适用缓刑未见报道。判决书未公开：这些数字源自检方的指控，其中只有洪智一项另有作为法院结果的报道。王天一与赵鑫鑫另被并处罚金，金额从未公布。',
-  'The strongest player in the world was buying': '最强的棋手是买家',
-  'Wang Tianyi was China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
-    '王天一在2014到2023年间等级分居全国第一，被称为象棋第一人。检方指控他行贿22笔、合计94.2万元，受贿2笔、合计11.6万元。22笔中有19笔经由王跃飞。',
-  'Eight yuan paid for every one received. He was not a weak player selling games he would have lost: he was the best player in the world, buying them. He pleaded guilty, was banned for life a year before the verdict, and apologised publicly in October 2025.':
-    '每收一元，付出八元。他不是卖掉本就要输的棋的弱手，而是最强的棋手在买棋。他当庭认罪认罚，在宣判前一年已被终身禁赛，并于2025年10月公开致歉。',
   'Hong Zhi was the only one of the six who contested the charge. His appeal was rejected on 10 February 2026, and because he was taken into custody on sentencing day, roughly a year after Wang Tianyi, he will be released considerably later despite the shorter term.':
     '六人中只有洪智不认罪。他的上诉于2026年2月10日被驳回；由于他在宣判当日才被收押，比王天一晚约一年，尽管刑期较短，出狱时间反而晚得多。',
   'The cheating nobody charged': '无人指控的作弊',
@@ -3967,8 +3973,6 @@ const ZH_HANS: Record<string, string> = {
   'Tao Hanming, the 1994 champion, spoke out against software cheating in January 2016 and retracted the next day, saying he had spoken out of turn after drinking. A friend later told Jiemian the drink was cover for pressure. Which version to believe is the kind of thing a disciplinary finding settles, and none did.':
     '1994年的冠军陶汉明在2016年1月公开抨击软件作弊，次日又收回，称自己酒后失言。后来一位友人对界面新闻表示，酒是压力之下的托词。该信哪一种说法，本该由纪律认定来解决，而始终没有。',
   'No result has been struck from the record': '没有一项成绩被从记录中抹去',
-  'No ruling says which individual games were bought. What was revoked is the personal technical grade, the 特级大师 or 大师 rank, which is a title conferred on a player rather than a tournament result. No championship or team title appears to have been annulled, and the champion lists on this site are unchanged. Ratings are a special case: none were struck, but the whole rating system was abolished on 30 January 2026 and replaced.':
-    '没有任何处罚指明具体哪一盘棋被买。被撤销的是个人的技术等级称号，即特级大师或大师，那是授予棋手个人的头衔，而非赛事成绩。看不到任何冠军或团体名次被取消，本站的冠军名单也未作改动。等级分是个特例：并无个别分数被抹去，但整套等级分制度已于2026年1月30日废止并被取代。',
   'So the names stay on those pages with the finding beside them. Dropping them would assert something the rulings do not: that the games themselves were not real.':
     '因此这些名字仍留在那些页面上，旁边附着相应的认定。删掉他们，等于断言处罚并未认定的事：那些对局本身是假的。',
   'Where the sport is now': '这项运动如今的处境',
@@ -3981,28 +3985,16 @@ const ZH_HANS: Record<string, string> = {
   'All of it is Chinese-language reporting, listed so a reader who reads Chinese can check it rather than take our word for it.':
     '全部取自中文报道，在此列出，以便读得懂中文的读者自行核对，而不必只听我们的说法。',
   Source: '来源',
-  'What it carries': '所载内容',
-  'Several claims here rest on thinner ground than the rest, and the text says so where they appear: five of the six sentences trace to the prosecution rather than a released judgment, all of Liu Dahua’s testimony and the Xu Yinchuan quotation are single-sourced accounts, the route the recordings took to the internet is one outlet’s investigation, the officials’ departures are not officially tied to this case, and the absence of any annulled result is inferred from silence rather than stated in a ruling.':
-    '本页有几处依据较薄，正文中已在相应位置注明：六项刑期中有五项源自检方而非已公开的判决书；柳大华的全部证言与许银川那句引述均为单一来源；录音流入网络的经过出自一家媒体的调查；官员去职并未被官方与本案相联系；而没有成绩被取消这一点，是从无人提及推出的，并非哪份处罚写明。',
   // The three tables. Every cell is its own key, because deepTranslate matches
   // whole strings; the roster's player column drops the romanisation and keeps
   // the Chinese name, which is what the champion tables already do.
-  '~2012 onward': '2012年前后起',
   'Liu Dahua privately alleges engine cheating': '柳大华私下指认软件作弊',
   'April 2023': '2023年4月',
   'The Hao Jichao and Wang Yuefei recordings appear online': '郝继超与王跃飞的通话录音在网上流出',
   'July 2023': '2023年7月',
-  'The association opens a formal investigation and forms a task force':
-    '中国象棋协会立案调查并成立专案组',
   'August 2023': '2023年8月',
-  'Wang Tianyi withdraws from the Hangzhou Asian Games, citing health':
-    '王天一以身体原因退出杭州亚运会',
   '17 October 2023': '2023年10月17日',
-  'Liu Dahua makes a real-name accusation against a sport-administration official':
-    '柳大华实名举报体育总局一名官员',
   '24 July 2024': '2024年7月24日',
-  'The date the April 2026 bans run from; the January notice publishes none':
-    '2026年4月处罚的起算日；1月的通报未公布日期',
   '19 September 2024': '2024年9月19日',
   'First sanctions: Wang Tianyi and Wang Yuefei, life': '首批处罚：王天一、王跃飞终身禁赛',
   '12 January 2025': '2025年1月12日',
@@ -4012,65 +4004,13 @@ const ZH_HANS: Record<string, string> = {
   '13 April 2026': '2026年4月13日',
   'Third batch: 6 people': '第三批：6人',
   Life: '终身禁赛',
-  'Wang Yuefei 王跃飞': '王跃飞',
-  'Shen Peng 申鹏': '申鹏',
-  '8 years': '8年',
-  '7 years 6 months': '7年6个月',
-  'Sun Yiyang 孙逸阳': '孙逸阳',
-  '7 years': '7年',
-  'Zhao Jincheng 赵金成': '赵金成',
-  '6 years': '6年',
-  '5 years': '5年',
-  'Zhang Shenhong 张申宏': '张申宏',
-  '4 years 6 months': '4年6个月',
-  '4 years 3 months': '4年3个月',
-  'Hao Jichao 郝继超': '郝继超',
-  'Liu Junda 刘俊达': '刘俊达',
-  'Yu Yixiao 俞易肖': '俞易肖',
-  'Cheng Ming 程鸣': '程鸣',
-  'Zheng Yihong 郑一泓': '郑一泓',
-  '4 years': '4年',
-  'Dang Fei 党斐': '党斐',
-  '3 years': '3年',
-  'Li Shaogeng 李少庚': '李少庚',
-  'Zhao Dianyu 赵殿宇': '赵殿宇',
-  'Nie Tiewen 聂铁文': '聂铁文',
-  'Wu Junqiang 武俊强': '武俊强',
-  'Miao Liming 苗利明': '苗利明',
-  '2 years': '2年',
-  'Huang Zhufeng 黄竹风': '黄竹风',
-  'Sun Xinhao 孙昕昊': '孙昕昊',
-  'Yang Ming 杨铭': '杨铭',
-  'Xu Chongfeng 徐崇峰': '徐崇峰',
-  'Zhao Wei 赵玮': '赵玮',
-  '1 year': '1年',
-  'Lu Weitao 陆伟韬': '陆伟韬',
-  'Yang Hui 杨辉': '杨辉',
-  'Li Xiaolong 李小龙': '李小龙',
-  'Zheng Yuhang 郑宇航': '郑宇航',
-  'Ma Tianyue 马天越': '马天越',
-  'Li Aidong 李艾东': '李艾东',
-  'Wang Yuhang 王宇航': '王宇航',
-  '6 months': '6个月',
-  'Zhao Yanghe 赵旸鹤': '赵旸鹤',
-  'Cui Ge 崔革': '崔革',
-  'Xie Kui 谢岿': '谢岿',
-  'Zhao Ziyu 赵子雨': '赵子雨',
   'Cao Yanlei 曹岩磊': '曹岩磊',
   Reprimand: '通报批评',
-  'Huang Wenjun 黄文俊': '黄文俊',
-  'Cai Youguang 蔡佑广': '蔡佑广',
-  'Liang Yunlong 梁运龙': '梁运龙',
-  '4 years 9 months': '4年9个月',
-  '2 years 9 months': '2年9个月',
-  '2 years 7 months': '2年7个月',
-  '2 years 6 months': '2年6个月',
   '[Xinhua](https://www.news.cn/sports/20260413/5a609df239414cb1b7118b2aa88518d0/c.html), [Caixin](https://china.caixin.com/2026-04-13/102433594.html)':
     '[新华社](https://www.news.cn/sports/20260413/5a609df239414cb1b7118b2aa88518d0/c.html)、[财新](https://china.caixin.com/2026-04-13/102433594.html)',
   'The April 2026 rulings': '2026年4月的处罚',
   '[China News Service](https://www.chinanews.com.cn/ty/2025/01-13/10352255.shtml), [China Daily](https://cn.chinadaily.com.cn/a/202501/12/WS6783355ea310b59111dad5af.html)':
     '[中新网](https://www.chinanews.com.cn/ty/2025/01-13/10352255.shtml)、[中国日报](https://cn.chinadaily.com.cn/a/202501/12/WS6783355ea310b59111dad5af.html)',
-  'The 41-person batch, January 2025': '2025年1月的41人处罚',
   '[National Business Daily](https://www.nbd.com.cn/articles/2024-09-19/3562788.html)':
     '[每日经济新闻](https://www.nbd.com.cn/articles/2024-09-19/3562788.html)',
   'Wang Tianyi’s life ban, September 2024': '2024年9月王天一被终身禁赛',
@@ -4079,16 +4019,173 @@ const ZH_HANS: Record<string, string> = {
   'The verdict and the six sentences': '宣判与六人刑期',
   '[Tencent News](https://news.qq.com/rain/a/20250924A04LFX00)':
     '[腾讯新闻](https://news.qq.com/rain/a/20250924A04LFX00)',
-  'Hong Zhi’s refusal to plead guilty, via his counsel': '洪智不认罪，经其辩护人确认',
   '[CCTV](https://news.cctv.cn/2025/01/13/ARTIeFfY6eKYaRLubq3G5ZQp250113.shtml)':
     '[央视新闻](https://news.cctv.cn/2025/01/13/ARTIeFfY6eKYaRLubq3G5ZQp250113.shtml)',
-  'The appearance-fee figures and the four motives': '出场费数字与各项动机',
   '[Jiemian](https://m.jiemian.com/article/12366112.html)':
     '[界面新闻](https://m.jiemian.com/article/12366112.html)',
-  'Liu Dahua’s account, and how the recordings spread': '柳大华的说法，以及录音如何流传',
   '[Guancha](https://www.guancha.cn/sports/2025_01_12_761863.shtml)':
     '[观察者网](https://www.guancha.cn/sports/2025_01_12_761863.shtml)',
   'The fullest timeline of the affair': '事件最完整的时间线',
+  // Retune, 2026-10-21 (machine-drafted, not native-reviewed).
+  'Wang Tianyi, China’s top-rated xiangqi player from 2014 to 2023, was banned for life in 2024 and sentenced to 2 years 9 months for bribery. Why he, Zheng Weitong and 47 others were sanctioned, the 12 games prosecutors named, and where the banned players are now.':
+    '王天一在2014到2023年间是中国等级分第一的象棋棋手，2024年被终身禁赛，后因行贿罪被判有期徒刑2年9个月。他、郑惟桐和另外47人为何受罚，检方点名的12盘棋，以及被禁赛棋手的近况。',
+  'No ruling names a game: the only games on record are 12 in the prosecution’s charges, as one newspaper reported them. Engine cheating is alleged in every account and charged in none.':
+    '没有任何处罚点名具体对局：有据可查的只有检方指控中的12盘，且仅见于一家报纸的报道。各方说法都提到用软件作弊，却没有一项指控涉及。',
+  Ban: '禁赛',
+  Prison: '刑期',
+  'Wang\u00a0Tianyi 王天一': '王天一',
+  'Bought and sold games': '买棋卖棋',
+  '2\u00a0years 9\u00a0months': '2年9个月',
+  'Wang\u00a0Yuefei 王跃飞': '王跃飞',
+  Middleman: '中间人',
+  '1\u00a0year': '1年',
+  'Hao\u00a0Jichao 郝继超': '郝继超',
+  'On the tapes': '录音当事人',
+  '4\u00a0years 3\u00a0months': '4年3个月',
+  None: '无',
+  'Hong\u00a0Zhi 洪智': '洪智',
+  '2005 champion': '2005年冠军',
+  '2\u00a0years 7\u00a0months': '2年7个月',
+  'Zhao\u00a0Xinxin 赵鑫鑫': '赵鑫鑫',
+  '4\u00a0years 9\u00a0months': '4年9个月',
+  'Xie\u00a0Jing 谢靖': '谢靖',
+  '2013 champion': '2013年冠军',
+  '2\u00a0years 6\u00a0months': '2年6个月',
+  'Xu\u00a0Chao 徐超': '徐超',
+  '2017 champion': '2017年冠军',
+  'Liu\u00a0Dahua 柳大华': '柳大华',
+  'Accused an official': '举报官员',
+  'Dang\u00a0Fei 党斐': '党斐',
+  'Backed Liu Dahua': '声援柳大华',
+  '3\u00a0years': '3年',
+  'Rating points were not just a ranking. Under the system in force at the time they fed appearance and per-game fees, which made them the number a professional was paid on. That produced an asymmetry: a top-rated player gained almost nothing from beating a weaker one and lost a great deal from slipping, while the weaker player earned so little that a fee for losing beat the result. On CCTV, the player Cai Yi 才溢 illustrated the gap as perhaps ¥20,000 a game for a marquee name in a sponsored team event against ¥4,000 for an ordinary master. That rating is gone: the association’s 2026 points ranking took effect on 30 January 2026 and replaced it with a rolling 52-week ranking. The association gave fairer measurement of players as the reason and did not mention the case.':
+    '等级分不只是排名。在当时施行的制度下，它关系到出场费与对局费，也就成了职业棋手实际拿钱的依据。这带来一种不对称：等级分高的棋手赢下低分对手几乎没有收益，掉分却损失惨重；低分棋手所得本就微薄，输棋换来的报酬反而胜过战绩本身。棋手才溢在央视节目中举例说，有赞助的团体赛里，名将一盘或可得两万元，普通大师约四千元。这套等级分已不复存在：中国象棋协会的2026年积分排名于2026年1月30日生效，以按52周滚动计算的排名取而代之。协会给出的理由是更公平地衡量棋手，并未提及本案。',
+  'From about 2012': '约2012年起',
+  'The association opens a formal investigation': '中国象棋协会正式立案调查',
+  'Wang Tianyi withdraws from the Asian Games, citing health': '王天一以身体原因退出亚运会',
+  'Liu Dahua accuses a sport official by name': '柳大华实名举报一名体育官员',
+  'Start date of the bans announced in April 2026': '2026年4月所公布禁赛的起算日',
+  'National titles': '全国冠军',
+  'Zheng\u00a0Weitong 郑惟桐': '郑惟桐',
+  'Wang\u00a0Yang 汪洋': '汪洋',
+  'Shen\u00a0Peng 申鹏': '申鹏',
+  '8\u00a0years': '8年',
+  'Wang\u00a0Kuo 王廓': '王廓',
+  '7\u00a0years 6\u00a0months': '7年6个月',
+  'Sun\u00a0Yiyang 孙逸阳': '孙逸阳',
+  '7\u00a0years': '7年',
+  'Zhao\u00a0Jincheng 赵金成': '赵金成',
+  '6\u00a0years': '6年',
+  'Jiang\u00a0Chuan 蒋川': '蒋川',
+  '5\u00a0years': '5年',
+  'Zhang\u00a0Shenhong 张申宏': '张申宏',
+  '4\u00a0years 6\u00a0months': '4年6个月',
+  'Sun\u00a0Yongzheng 孙勇征': '孙勇征',
+  'Liu\u00a0Junda 刘俊达': '刘俊达',
+  'Yu\u00a0Yixiao 俞易肖': '俞易肖',
+  'Cheng\u00a0Ming 程鸣': '程鸣',
+  'Zheng\u00a0Yihong 郑一泓': '郑一泓',
+  '4\u00a0years': '4年',
+  'Li\u00a0Shaogeng 李少庚': '李少庚',
+  'Zhao\u00a0Dianyu 赵殿宇': '赵殿宇',
+  'Nie\u00a0Tiewen 聂铁文': '聂铁文',
+  'Wu\u00a0Junqiang 武俊强': '武俊强',
+  'Miao\u00a0Liming 苗利明': '苗利明',
+  '2\u00a0years': '2年',
+  'Huang\u00a0Zhufeng 黄竹风': '黄竹风',
+  'Sun\u00a0Xinhao 孙昕昊': '孙昕昊',
+  'Yang\u00a0Ming 杨铭': '杨铭',
+  'Xu\u00a0Chongfeng 徐崇峰': '徐崇峰',
+  'Zhao\u00a0Wei 赵玮': '赵玮',
+  'Lu\u00a0Weitao 陆伟韬': '陆伟韬',
+  'Yang\u00a0Hui 杨辉': '杨辉',
+  'Li\u00a0Xiaolong 李小龙': '李小龙',
+  'Zheng\u00a0Yuhang 郑宇航': '郑宇航',
+  'Ma\u00a0Tianyue 马天越': '马天越',
+  'Li\u00a0Aidong 李艾东': '李艾东',
+  'Wang\u00a0Yuhang 王宇航': '王宇航',
+  '6\u00a0months': '6个月',
+  'Zhao\u00a0Yanghe 赵旸鹤': '赵旸鹤',
+  'Cui\u00a0Ge 崔革': '崔革',
+  'Meng\u00a0Chen 孟辰': '孟辰',
+  'Xie\u00a0Kui 谢岿': '谢岿',
+  'Zhao\u00a0Ziyu 赵子雨': '赵子雨',
+  'Cao\u00a0Yanlei 曹岩磊': '曹岩磊',
+  'Huang\u00a0Wenjun 黄文俊': '黄文俊',
+  'Cai\u00a0Youguang 蔡佑广': '蔡佑广',
+  'Liang\u00a0Yunlong 梁运龙': '梁运龙',
+  'Hao Jichao, whose recordings started the case, is in the four-year-three-month tier, and was never criminally charged: the sporting penalty is the only one he carries. The end dates that are public all come from the April 2026 batch: Xu Chongfeng’s two-year ban ran out on 23 July 2026, and Jiang Chuan’s five years, announced in that batch and not in January, run to 23 July 2029.':
+    '引发此案的录音出自郝继超之手，他被禁赛四年三个月，且从未被刑事追诉，所受的只有体育处罚。已公开的截止日期全部来自2026年4月那一批：徐崇峰的两年禁赛已于2026年7月23日期满；蒋川的五年禁赛是在那一批而非1月公布的，至2029年7月23日止。',
+  'Why Wang Tianyi was banned for life': '王天一为何被终身禁赛',
+  'The association banned Wang Tianyi for life on 19 September 2024, in its first notice, together with Wang Yuefei, for buying and selling games, and revoked his titles. The notice describes the conduct as long-running and frequent and names no game. A year later the Hangzhou court convicted him of bribery and sentenced him to 2 years 9 months. He pleaded guilty.':
+    '2024年9月19日，中国象棋协会在第一份通报中以买棋卖棋为由，对王天一与王跃飞作出终身禁赛，并撤销了他的称号。通报称相关行为长期、频繁，但未点名任何一盘棋。一年后，杭州的法院以行贿罪判处他有期徒刑2年9个月。他认罪认罚。',
+  'He had been China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
+    '他在2014到2023年间等级分居全国第一，被称为象棋第一人。检方指控他行贿22笔、合计94.2万元，受贿2笔、合计11.6万元。22笔中有19笔经由王跃飞。',
+  'Eight yuan paid for every one received. He was not a weak player selling games he would have lost: he was the best player in the world, buying them.':
+    '每收一元，付出八元。他不是卖掉本就要输的棋的弱手，而是最强的棋手在买棋。',
+  'The 12 games prosecutors say were bought or sold': '检方所称被买卖的12盘棋',
+  'No ruling names a single game. The association’s notices give events and years at most, the court released no judgment text, and the verdict was reported only as counts and totals. The only games named anywhere in the record are in the prosecution’s charges against Wang Tianyi, as the Economic Observer reported them on 13 June 2025 from the 9 May hearing in Hangzhou. Every line below is a charge as that newspaper reported it, not a finding.':
+    '没有任何处罚点名哪怕一盘棋。协会的通报至多写到赛事和年份，法院没有公开判决书，宣判也只以笔数和总额见报。整个记录中唯一点名的对局，出自检方对王天一的指控，由《经济观察报》于2025年6月13日根据5月9日在杭州的庭审报道。下面每一行都是该报所报道的指控，而非认定的事实。',
+  'They are one man’s charges, not the whole case. At least 37 of the 49 people the association sanctioned appear nowhere in them, and no other player’s charges were reported game by game. In ten of the games he was the buyer, paying an opponent to lose to him; in two he was the seller, paid to lose.':
+    '这是一个人的指控，不是整个案件。协会处罚的49人中，至少有37人完全没有出现在其中，其他棋手的指控也没有逐盘见报。其中十盘他是买方，付钱让对手输给他；两盘他是卖方，收钱输棋。',
+  Year: '年份',
+  'Opponent he paid to lose': '收他钱输棋的对手',
+  Yuan: '金额（元）',
+  'National Championship': '全国个人赛',
+  'Sun Yiyang': '孙逸阳',
+  'Shen Peng': '申鹏',
+  'Yang Guanlin Cup': '杨官璘杯',
+  'Xie Jing*': '谢靖*',
+  'Country Garden Cup': '碧桂园杯',
+  'Xie Jing, Hong Zhi, Zhao Xinxin*': '谢靖、洪智、赵鑫鑫*',
+  'Han Xin Cup': '韩信杯',
+  'Cheng Ming; Xie Jing*': '程鸣；谢靖*',
+  'Xu Chongfeng': '徐崇峰',
+  'Men’s Team League': '象甲联赛',
+  'Nie Tiewen, Liu Junda*': '聂铁文、刘俊达*',
+  'Nie Tiewen; Liu Junda*': '聂铁文；刘俊达*',
+  'Huamu Cup': '花木杯',
+  'Bought: he paid the opponent. Ten games, ¥525,000 in all. * Paid through Wang Yuefei.':
+    '买棋：他付钱给对手。共十盘，合计52.5万元。* 经由王跃飞支付。',
+  'Opponent who paid him to lose': '付钱让他输棋的对手',
+  'Wenling Cup, semi-final': '温岭杯半决赛',
+  'Sold: the opponent paid him, and won. Two games, ¥116,000. Both tables are the prosecution’s charges as reported by the Economic Observer, 13 June 2025; no ruling or published judgment confirms any line.':
+    '卖棋：对手付钱给他，并赢下了棋。共两盘，11.6万元。两张表都是《经济观察报》2025年6月13日所报道的检方指控，没有任何处罚或公开的判决书证实其中任何一行。',
+  'Ten of the lines have Wang Tianyi paying, and they add up to ¥525,000 of the ¥942,000 he was charged with giving; the reporting does not itemise the rest. The two lines where he was paid, ¥100,000 from Xu Chao and ¥16,000 from Zhao Xinxin, add up to exactly the ¥116,000 he was charged with taking. Xu Chao won that 2017 championship. Every player named in the list is also on the association’s sanctions list above.':
+    '其中十行是王天一付钱，合计52.5万元，是他被控行贿总额94.2万元的一部分；其余部分报道没有逐笔列出。他收钱的两行，徐超的10万元和赵鑫鑫的1.6万元，加起来正好是他被控受贿的11.6万元。那届2017年全国个人赛的冠军正是徐超。清单中点到的每一位棋手，也都在上文协会的处罚名单上。',
+  'The same report describes the first game. Sun Yiyang, then 17, had Red and was ahead for a time, then made a run of errors and resigned at move 88; Wang Tianyi went on to win that 2012 championship. The move-by-move account is an unnamed observer’s, quoted by the paper.':
+    '同一篇报道描述了第一盘棋。时年17岁的孙逸阳执红，一度占优，随后连续失误，在第88回合认负；王天一最终夺得那届2012年全国个人赛冠军。逐着的描述出自一位未具名的观察者，由该报引述。',
+  'All of it rests on one newspaper. We read the report in two reprints, on Sina Finance and Tencent News, which agree on most lines; the two league seasons appear only in the Sina reprint. We have not seen the list in any other outlet’s account of the hearing. Wang Tianyi pleaded guilty to the charge, but the verdict as reported does not say which of these games the court accepted.':
+    '这一切都只依据一家报纸。我们读的是新浪财经和腾讯新闻上的两份转载，大部分条目一致；两个联赛赛季只出现在新浪的转载中。在其他媒体对这次庭审的报道里，我们没有见到这份清单。王天一对指控认罪，但见报的判决并未说明法院认定了其中哪几盘。',
+  'No ruling says which individual games were bought. What was revoked is the personal technical grade, the 特级大师 or 大师 rank, which is a title conferred on a player rather than a tournament result. No championship or team title appears to have been annulled, and the champion lists on this site are unchanged. Ratings are a special case: none were struck, but the rating itself was replaced when the 2026 points ranking took effect on 30 January 2026.':
+    '没有任何处罚指明具体哪一盘棋被买。被撤销的是个人的技术等级称号，即特级大师或大师，那是授予棋手个人的头衔，而非赛事成绩。看不到任何冠军或团体名次被取消，本站的冠军名单也未作改动。等级分是个特例：并无个别分数被抹去，但等级分本身在2026年积分排名于2026年1月30日生效时被取代。',
+  'Where the banned players are now': '被禁赛棋手的近况',
+  'The notices give the same reason for every name, buying and selling games, and none says which games. The players searched for most stand like this. Wang Tianyi is the only one who has spoken: on 21 October 2025 he published an apology on his personal account, his first public statement since the sentence, saying he could finally let go of the obsession with being first under heaven, that he had once told himself buying games was something everyone in the profession tacitly accepted, and that people would see a better version of him.':
+    '通报对每个名字给出的理由都一样，即买棋卖棋，也都没有说明是哪些对局。被搜索最多的几位棋手现况如下。王天一是唯一公开发声的人：2025年10月21日，他在个人账号上发表致歉，这是他宣判后第一次公开表态。他说终于可以放下“天下第一”的执念，说自己曾告诉自己买棋是行内人人默许的事，还说大家会看到一个更好的他。',
+  'None reported': '未见报道',
+  '5\u00a0years, to July 2029': '5年，至2029年7月',
+  'All but Meng Chen also had their technical grade title revoked; Wang Kuo’s 2020 national title stands. Apart from Wang Tianyi’s apology, Chinese-language searches in October 2026 for each name (latest news, response, livestream, Douyin, comeback) found no public statement after the ruling. That is a statement about those searches, not proof of silence.':
+    '除孟辰外，其余几位的技术等级称号也被撤销；王廓2020年的全国冠军保留。除王天一的致歉外，2026年10月对每个名字所做的中文搜索（最新消息、回应、直播、抖音、复出）都没有找到处罚之后的公开表态。这只说明那些搜索的结果，并不证明他们保持沉默。',
+  'What it covers': '涵盖内容',
+  'The January 2025 batch of 41': '2025年1月的41人处罚',
+  'Hong Zhi’s refusal to plead guilty': '洪智不认罪',
+  'Appearance fees and the motives': '出场费与动机',
+  'Liu Dahua’s account; how the tapes spread': '柳大华的说法；录音如何流传',
+  'The 12 charged games, 13 June 2025': '被指控的12盘棋，2025年6月13日',
+  'Economic Observer, via [Sina](https://cj.sina.com.cn/articles/view/1641561812/61d83ed402701a2aa) and [Tencent](https://news.qq.com/rain/a/20250613A02A2500)':
+    '《经济观察报》，经[新浪](https://cj.sina.com.cn/articles/view/1641561812/61d83ed402701a2aa)和[腾讯](https://news.qq.com/rain/a/20250613A02A2500)转载',
+  'Wang Tianyi’s apology, 21 October 2025': '王天一的致歉，2025年10月21日',
+  '[Jiemian](https://www.jiemian.com/article/13494543.html)':
+    '[界面新闻](https://www.jiemian.com/article/13494543.html)',
+  'Both notices, with Jiang Chuan’s dates': '两份通报及蒋川的禁赛日期',
+  '[Xinhua](https://www.news.cn/sports/20250112/cdc48783bc344002b69e179d7ae2fde1/c.html), [Yangtse Evening Post](https://www.yzwb.net/news/txs/202604/t20260413_341537.html)':
+    '[新华社](https://www.news.cn/sports/20250112/cdc48783bc344002b69e179d7ae2fde1/c.html)、[扬子晚报](https://www.yzwb.net/news/txs/202604/t20260413_341537.html)',
+  'The 2026 points ranking and its reason': '2026年积分排名及其理由',
+  '[Beijing Daily](https://news.bjd.com.cn/2026/02/02/11561527.shtml)':
+    '[北京日报](https://news.bjd.com.cn/2026/02/02/11561527.shtml)',
+  'Several claims here rest on thinner ground than the rest, and the text says so where they appear: five of the six sentences trace to the prosecution rather than a released judgment, the 12 games are one newspaper’s report of the charges, all of Liu Dahua’s testimony and the Xu Yinchuan quotation are single-sourced accounts, the route the recordings took to the internet is one outlet’s investigation, the officials’ departures are not officially tied to this case, and the absence of any annulled result is inferred from silence rather than stated in a ruling.':
+    '本页有几处依据较薄，正文中已在相应位置注明：六项刑期中有五项源自检方而非已公开的判决书；那12盘棋来自一家报纸对指控的报道；柳大华的全部证言与许银川那句引述均为单一来源；录音流入网络的经过出自一家媒体的调查；官员去职并未被官方与本案相联系；而没有成绩被取消这一点，是从无人提及推出的，并非哪份处罚写明。',
+  'Why Wang Tianyi 王天一 and Zheng Weitong 郑惟桐 Were Banned': '王天一、郑惟桐为何被终身禁赛',
   // Review refinements, 2026-10-19.
   'Sign in to request full-game analysis, then try different moves from your own game.':
     '登录后请求整盘分析，再从自己的对局中尝试不同着法。',
@@ -6360,6 +6457,46 @@ const ZH_HANS: Record<string, string> = {
 
 const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
+  // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困斃 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作殺, 薩姆·勞埃德, 著法, 搜尋, 電腦); 迷霧國際象棋 for fog of war; 研究 for a study.
+  'The Shortest Xiangqi Stalemate We Know': '我們所知最短的象棋困斃',
+  'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':
+    '已知最短的象棋困斃：21個半回合',
+  'In xiangqi a side with no legal move loses. The shortest stalemate we know takes 21 plies: after Red’s 11th move, Black has eight pieces and none of them can move.':
+    '在象棋裡，無著可走的一方判負。我們所知最短的困斃只要21個半回合：紅方走完第11步後，黑方還有八個子，卻沒有一個子走得動。',
+  'Black’s own pieces and one red chariot wall in most of its army, and two red cannons pin the three pieces that could still move.':
+    '黑方自己的棋子和一輛紅車堵住了黑方大部分子力，兩門紅炮又牽制住仍能走動的三個子。',
+  'A computer search found it, and it can miss shorter lines. No stalemate is possible in under 9 plies, so 9 to 20 is still open.':
+    '這是電腦搜尋找到的，而這種搜尋可能漏掉更短的著法。少於9個半回合不可能形成困斃，所以9到20個半回合之間仍無定論。',
+  'In chess, a player who is not in check and has no legal move is stalemated, and the game is drawn. In [xiangqi](/rules/xiangqi) that player has lost, the same as if mated. So how quickly can a game end that way? We count in plies, one move by one side, so 21 plies ends on Red’s 11th move.':
+    '在國際象棋裡，沒有被將軍卻無著可走的一方被逼和，對局算和棋。在[象棋](/rules/xiangqi)裡，這一方就輸了，和被將死一樣，這叫困斃。那麼，一盤棋最快能多快以這種方式結束？我們按半回合計數，一方走一步算一個半回合，所以21個半回合結束於紅方的第11步。',
+  'Sam Loyd stalemated Black on the tenth move in chess':
+    '國際象棋裡，薩姆·勞埃德第十步就逼和了黑方',
+  'Chess has a famous answer. In Sam Loyd’s ten-move game, Black still has ten pieces, the queen and both rooks among them, and none of them can move. [Oz Problems](https://www.ozproblems.com/walkabout/walkabout2021/feb27) has the history.':
+    '國際象棋有一個著名的答案。在薩姆·勞埃德的十步棋局裡，黑方還有十個子，其中包括后和兩個車，卻沒有一個能動。[Oz Problems](https://www.ozproblems.com/walkabout/walkabout2021/feb27) 介紹了它的來歷。',
+  'Sam Loyd’s ten-move stalemate': '薩姆·勞埃德的十步逼和',
+  'Fog of war is harder. There you see only the squares your pieces reach, and a king may step into check, so a side is stuck only when nothing can move at all. In Sven’s 2011 TalkChess game, Black ran out of moves after 63 plies; we found a route to the same final position in 35. Both are in [this study](/study/Yj0X1pDy).':
+    '迷霧國際象棋更難。在那裡你只能看到自己棋子能到達的格子，王也可以走進被將軍的位置，所以只有一個子都動不了時，一方才算被困住。在 Sven 2011年發在 TalkChess 上的對局裡，黑方在63個半回合後無棋可走；我們找到了一條只用35個半回合就到達同一終局的路線。兩局都在[這個研究](/study/Yj0X1pDy)裡。',
+  'Nanao Okumura stalemated Red with all sixteen pieces on the board':
+    'Nanao Okumura 困斃了十六個子全在盤上的紅方',
+  'Nanao Okumura posted an earlier xiangqi stalemate on Zhihu in 2019, built for a different record: after 136 plies Red still has all sixteen pieces, and none of them can move. Black lost nine and took nothing. Chinese-language sites mostly blocked our search, so shorter published games may exist. We found a route to his final position in 116 plies, the fewest possible; it is the last chapter of [the study](/study/ls3xEcX3/FuXbQg6L).':
+    'Nanao Okumura 2019年在知乎上發表過一盤更早的象棋困斃，追求的是另一項紀錄：136個半回合後，紅方十六個子一個不少，卻沒有一個能動。黑方丟了九個子，一個也沒吃。中文網站大多擋住了我們的搜尋，所以可能還有更短的已發表對局。我們找到了一條只用116個半回合就到達他這個終局的路線，這是可能的最少半回合數；這盤棋是[這個研究](/study/ls3xEcX3/FuXbQg6L)的最後一章。',
+  'Nanao Okumura’s 136-ply stalemate': 'Nanao Okumura 的136個半回合困斃',
+  'Black is stalemated after 21 plies, held mostly by its own pieces':
+    '黑方在21個半回合後被困斃，困住它的主要是自己的棋子',
+  'Two red cannons hold the pieces that could move. The one on e7 looks at the general through Black’s chariot and cannon, and the one on b10 through an elephant and an advisor. The chariot, the cannon and that elephant each have a move, and each of those moves leaves the general in check. Everything else is boxed in by its own pieces or by the red chariot on h9. Red took eight pieces on the way, Black one.':
+    '兩門紅炮牽制著本來能動的子。e7的炮隔著黑方的車和炮對著將，b10的炮隔著一隻象和一個士對著將。車、炮和那隻象各有一步可走，但每一步都會讓將被將軍。其餘的子不是被自己的棋子堵住，就是被h9的紅車封住。一路上紅方吃了八個子，黑方吃了一個。',
+  'Black stalemated in 21 plies': '黑方21個半回合被困斃',
+  'A computer search found it by keeping the most cramped positions':
+    '電腦搜尋只保留最侷促的局面，由此找到了它',
+  'Both sides play toward one goal, stalemating Black, as in a [helpmate](/blog/helpmates-in-xiangqi). Every line is far too many to search past a few moves, so after each move the search keeps a fixed number of positions, the ones where Black has the fewest legal moves, and drops the rest. Each black piece that can still move counts heavily against a position. The search stops at the first position where Black is to move, has no legal move and is not in check.':
+    '雙方朝同一個目標走棋：困斃黑方，就像[合作殺](/blog/helpmates-in-xiangqi)那樣。走過幾步之後，全部著法就多到無法逐一搜尋，所以每走一步，搜尋只保留固定數量的局面，即黑方合法著法最少的那些，其餘全部丟棄。黑方每有一個還能動的子，局面的評分就要重重扣分。搜尋停在第一個這樣的局面：輪到黑方走，黑方沒有合法著法，且沒有被將軍。',
+  'Dropping positions is what makes it fast, and it is also why it can miss a shorter line. Run the other way, it stalemated Red in 22 plies, which is in [the study](/study/ls3xEcX3) with the others.':
+    '丟棄局面讓搜尋變快，也正因如此它可能漏掉更短的著法。反過來執行，它在22個半回合內困斃了紅方，這盤棋和其他幾盤一起收在[這個研究](/study/ls3xEcX3)裡。',
+  'No stalemate is possible in under 9 plies': '少於9個半回合不可能形成困斃',
+  'A search of every line proves that no game stalemates Black within 7 plies, and none stalemates Red within 8. So a stalemate shorter than ours, if one exists, takes 9 to 20 plies. Find one, or prove there is none, and post it in the forum.':
+    '對所有著法的完全搜尋證明，沒有任何對局能在7個半回合內困斃黑方，也沒有任何對局能在8個半回合內困斃紅方。所以比我們更短的困斃如果存在，需要9到20個半回合。找到一個，或者證明它不存在，然後發到論壇上。',
+  'Shortest stalemates in xiangqi': '象棋最短困斃',
+  'Post a shorter one': '發一個更短的',
   // -- Can you make General Blunder win? (general-blunder-challenge): machine-drafted 2026-10-17, not native-reviewed. --
   'Can you make General Blunder win?': '你能讓 General Blunder 贏嗎？',
   'Make General Blunder win': '讓 General Blunder 贏',
@@ -6394,8 +6531,7 @@ const ZH_HANT: Record<string, string> = {
   'Play General Blunder': '與 General Blunder 對弈',
   'So can you make a bot that tries to lose win? The rules allow it: positions exist where every move General Blunder has would beat you, and in one of those it has to play one. Whether a person can walk a real game there, against a bot that sees the trap and tries to dodge it, is the open question. We will add the first game that does it to this page.':
     '那麼，你能讓一個想輸的機器人贏嗎？規則允許：存在這樣的局面，General Blunder 的每一步都會擊敗你，而在這樣的局面裡它必須走其中一步。一個人能否在真實對局中把棋引到那裡，同時面對一個看得出陷阱並設法躲開的機器人，這是懸而未決的問題。第一盤做到的棋局，我們會加到這一頁上。',
-  'Make it win': '讓它贏',
-  'THE GENERAL BLUNDER CHALLENGE': 'GENERAL BLUNDER 挑戰',
+  'Can you lose?': '你能輸掉嗎？',
   // unstyled-first-paint: machine-drafted 2026-10-17, not native-reviewed.
   ENGINEERING: '工程',
   UNSTYLED: '無樣式',
@@ -7453,6 +7589,7 @@ const ZH_HANT: Record<string, string> = {
   // Homepage card titles (`cardTitle`), 2026-10-03: the article's own zh
   // title cut to fit the card, machine-drafted, not native-reviewed.
   'Pikafish misjudged its reveals': '皮卡魚誤判了翻子',
+  'A 21-Ply Xiangqi Stalemate': '21個半回合的象棋困斃',
   'KataGo, a stronger Jungle bot': 'KataGo：更強的鬥獸棋電腦',
   '14 wins against our jieqi bot': '戰勝我們揭棋電腦的 14 盤棋',
   'How Strong Players Open Jieqi': '高手眼中的揭棋開局',
@@ -8524,8 +8661,6 @@ const ZH_HANT: Record<string, string> = {
     '2005年以來的十三位全國冠軍中，有十人受到處罰，其中包括2014到2023年間等級分第一的王天一。',
   'A Hangzhou court convicted six grandmasters of bribery in September 2025. The charge was bribery, not gambling.':
     '2025年9月，杭州一家法院以行賄受賄判決六名特級大師有罪。罪名是行賄受賄，不是賭博。',
-  'Engine cheating is alleged in every account and charged in none. No result or title has been struck from the record.':
-    '各方說法都提到用軟體作弊，但沒有一項指控涉及。至今沒有任何成績或稱號被撤銷。',
   'This is our best reading of what has been published. If you know something here to be wrong or out of date, [tell us](/contact) and we will correct it.':
     '本頁是我們對已公開報導的最佳解讀。如果你知道其中有錯誤或已過時的內容，請[告訴我們](/contact)，我們會更正。',
   'Who’s who': '人物一覽',
@@ -8533,36 +8668,9 @@ const ZH_HANT: Record<string, string> = {
     '下文反覆出現的人物。禁賽是協會的處罰，禁止棋手參賽；徒刑是法院的判決。',
   Person: '人物',
   'Part in the case': '在案中的角色',
-  'Top-rated player 2014 to 2023; bought games': '2014至2023年等級分第一；買棋',
-  'Life ban; 2 years 9 months in prison': '終身禁賽；有期徒刑2年9個月',
-  'On the recorded calls; the go-between for most of Wang Tianyi’s payments':
-    '錄音通話的一方；王天一大部分付款的中間人',
-  'Life ban; 1 year in prison': '終身禁賽；有期徒刑1年',
-  'The other voice on the recordings': '錄音中的另一方',
-  'Banned 4 years 3 months; not charged': '禁賽4年3個月；未被起訴',
-  '2005 champion; one outlet reports he passed the recordings on':
-    '2005年冠軍；有一家媒體報導錄音由他轉出',
-  'Life ban; 2 years 7 months in prison, appeal rejected': '終身禁賽；有期徒刑2年7個月，上訴被駁回',
   '2007 champion': '2007年冠軍',
-  'Life ban; 4 years 9 months in prison, the longest term': '終身禁賽；有期徒刑4年9個月，刑期最長',
-  'Xie Jing 谢靖, Xu Chao 徐超': '謝靖、徐超',
-  '2013 and 2017 champions': '2013年和2017年冠軍',
-  'Life bans; 2 years 6 months in prison each': '均終身禁賽；各判有期徒刑2年6個月',
-  'Veteran player; alleged engine cheating for years, then accused an official by name':
-    '老將；多年來指稱對手用軟體作弊，隨後實名舉報一名官員',
-  'Not sanctioned': '未受處罰',
-  'Joined Liu Dahua’s accusation': '與柳大華聯名舉報',
-  'Banned 3 years': '禁賽3年',
-  'Guo Liping 郭莉萍': '郭莉萍',
-  'Official at the sport administration, named in the accusation':
-    '棋牌運動管理中心官員，被舉報點名',
-  'Left the post in December 2024; not charged': '2024年12月去職；未被起訴',
-  'Ban from competing': '禁賽處罰',
   'Prison term': '刑期',
   'The Xiangqi Match-Fixing Case': '象棋假棋案',
-  'Xiangqi Match-Fixing: 录音门, the Bans, and the Convictions': '象棋假棋案：錄音門、禁賽與判決',
-  'Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.':
-    '2024到2026年間，中國象棋協會因買棋賣棋處罰了49人，杭州一家法院以行賄受賄判決六名特級大師有罪。事情經過、為何有利可圖、誰作出認定，以及哪些至今未獲證實。',
   'Ten of the thirteen men who have won the Chinese national xiangqi championship since 2005 carry a published ruling against them, including every winner from 2010 to 2023. The man who was China’s top-rated player from 2014 to 2023 was banned for life and then convicted in court. This is how that happened, and what it does and does not establish.':
     '2005年以來奪得全國象棋個人賽冠軍的十三人中，有十人已被公開處罰，其中包括2010到2023年間的每一位冠軍。2014到2023年間等級分居全國第一的棋手先被終身禁賽，隨後被法院判決有罪。以下是事情的經過，以及哪些已被認定、哪些沒有。',
   'It is assembled from Chinese-language reporting, which carries far more of it than the English coverage does. Where something is alleged rather than found, or charged rather than decided, this page says so.':
@@ -8573,8 +8681,6 @@ const ZH_HANT: Record<string, string> = {
   'It was not a gambling case, though English write-ups often reach for the word. The charges are offering and accepting bribes as a non-state functionary, and no ruling or indictment describes betting.':
     '這不是賭博案，儘管英文報道常用這個詞。指控的罪名是對非國家工作人員行賄罪和非國家工作人員受賄罪，沒有任何處罰或起訴書提到下注。',
   'Why buying a game paid for itself': '買一盤棋為什麼划算',
-  'Rating points were not just a ranking. Under the system in force at the time they fed appearance and per-game fees, which made them the number a professional was paid on. That produced an asymmetry: a top-rated player gained almost nothing from beating a weaker one and lost a great deal from slipping, while the weaker player earned so little that a fee for losing beat the result. On CCTV, the player Cai Yi 才溢 illustrated the gap as perhaps ¥20,000 a game for a marquee name in a sponsored team event against ¥4,000 for an ordinary master. That rating system was abolished on 30 January 2026 and replaced with a rolling 52-week ranking.':
-    '等級分不只是排名。在當時施行的制度下，它關係到出場費與對局費，也就成了職業棋手實際拿錢的依據。這帶來一種不對稱：等級分高的棋手贏下低分對手幾乎沒有收益，掉分卻損失慘重；低分棋手所得本就微薄，輸棋換來的報酬反而勝過戰績本身。棋手才溢在央視節目中舉例說，有贊助的團體賽裡，名將一盤或可得兩萬元，普通大師約四千元。該等級分制度已於2026年1月30日廢止，改為按52週滾動計算的排名。',
   'The sport administration’s chess and card centre gave three motives in all: promotion through the grade titles, private division of prize money, and inflating the rating itself. Results were arranged to hit the norms for 特级大师, grandmaster, with players negotiating prices across a national individual championship, and in team events the same trade bought qualification as 运动健将, Master of Sport, which the coverage calls 搭便车, free-riding.':
     '國家體育總局棋牌運動管理中心共列出三項動機：晉升技術等級稱號、私分獎金，以及提升等級分本身。為達到特級大師的標準，棋手在全國個人賽期間與多名對手談價錢安排結果；在團體賽中，同樣的交易被用來換取運動健將資格，報道稱之為搭便車。',
   'Which is why paying to win a game you would probably have won anyway is not irrational. You are not buying the point. You are buying the rating that sets next season’s fee and the title that outlasts any single event, and against those, tens of thousands of yuan for one game is cheap.':
@@ -8600,21 +8706,13 @@ const ZH_HANT: Record<string, string> = {
   'The association published almost every name. Where a player also appears on the champion lists, his national title years are in the last column.':
     '協會公布了幾乎每一個名字。若該棋手同時出現在冠軍名單上，其全國冠軍年份列在最後一欄。',
   Player: '棋手',
-  'National title': '全國冠軍',
   'The 47 the association named. The other two were withheld because they were under 18 when the conduct occurred. Revocation of the technical grade title accompanies 19 of the 45 bans, not all of them.':
     '協會具名公布的47人。另外兩人因涉案時未滿18周歲而未公布姓名。45項禁賽中有19項同時撤銷技術等級稱號，並非全部。',
-  'Hao Jichao, whose recordings started the case, is in the four-year-three-month tier, and was never criminally charged: the sporting penalty is the only one he carries. Xu Chongfeng’s two-year ban ran out on 23 July 2026, and the shorter bans from the January batch will have ended before it.':
-    '錄音出自郝继超之手，他被禁賽四年三個月，且從未被刑事追訴，所受的只有體育處罰。徐崇峰的兩年禁賽已於2026年7月23日期滿，而1月那批中更短的禁賽應當更早結束。',
   'Separately, the Shangcheng District People’s Court in Hangzhou convicted six grandmasters on 24 September 2025 of offering and accepting bribes as non-state functionaries, under Articles 163 and 164 of the criminal law. The Chinese press calls it the sport’s first criminal corruption case.':
     '另一條線上，杭州市上城區人民法院於2025年9月24日以對非國家工作人員行賄罪、非國家工作人員受賄罪判決六名特級大師有罪，依據刑法第163條與第164條。中文媒體稱之為中國象棋反腐第一案。',
   Convicted: '被判刑者',
   'Reported from the 24 September 2025 verdict. The terms are 有期徒刑, fixed-term imprisonment; whether any was suspended has not been reported. No judgment text was released: these figures trace to the prosecution’s case, and only Hong Zhi’s was separately reported as a court outcome. Fines were imposed on Wang Tianyi and Zhao Xinxin; no amounts have ever been published.':
     '據2025年9月24日宣判的報導整理。刑期均為有期徒刑，是否適用緩刑未見報導。判決書未公開：這些數字源自檢方的指控，其中只有洪智一項另有作為法院結果的報導。王天一與趙鑫鑫另被併處罰金，金額從未公布。',
-  'The strongest player in the world was buying': '最強的棋手是買家',
-  'Wang Tianyi was China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
-    '王天一在2014到2023年間等級分居全國第一，被稱為象棋第一人。檢方指控他行賄22筆、合計94.2萬元，受賄2筆、合計11.6萬元。22筆中有19筆經由王跃飞。',
-  'Eight yuan paid for every one received. He was not a weak player selling games he would have lost: he was the best player in the world, buying them. He pleaded guilty, was banned for life a year before the verdict, and apologised publicly in October 2025.':
-    '每收一元，付出八元。他不是賣掉本就要輸的棋的弱手，而是最強的棋手在買棋。他當庭認罪認罰，在宣判前一年已被終身禁賽，並於2025年10月公開致歉。',
   'Hong Zhi was the only one of the six who contested the charge. His appeal was rejected on 10 February 2026, and because he was taken into custody on sentencing day, roughly a year after Wang Tianyi, he will be released considerably later despite the shorter term.':
     '六人中只有洪智不認罪。他的上訴於2026年2月10日被駁回；由於他在宣判當日才被收押，比王天一晚約一年，儘管刑期較短，出獄時間反而晚得多。',
   'The cheating nobody charged': '無人指控的作弊',
@@ -8627,8 +8725,6 @@ const ZH_HANT: Record<string, string> = {
   'Tao Hanming, the 1994 champion, spoke out against software cheating in January 2016 and retracted the next day, saying he had spoken out of turn after drinking. A friend later told Jiemian the drink was cover for pressure. Which version to believe is the kind of thing a disciplinary finding settles, and none did.':
     '1994年的冠軍陶汉明在2016年1月公開抨擊軟件作弊，次日又收回，稱自己酒後失言。後來一位友人對界面新聞表示，酒是壓力之下的託詞。該信哪一種說法，本該由紀律認定來解決，而始終沒有。',
   'No result has been struck from the record': '沒有一項成績被從記錄中抹去',
-  'No ruling says which individual games were bought. What was revoked is the personal technical grade, the 特级大师 or 大师 rank, which is a title conferred on a player rather than a tournament result. No championship or team title appears to have been annulled, and the champion lists on this site are unchanged. Ratings are a special case: none were struck, but the whole rating system was abolished on 30 January 2026 and replaced.':
-    '沒有任何處罰指明具體哪一盤棋被買。被撤銷的是個人的技術等級稱號，即特級大師或大師，那是授予棋手個人的頭銜，而非賽事成績。看不到任何冠軍或團體名次被取消，本站的冠軍名單也未作改動。等級分是個特例：並無個別分數被抹去，但整套等級分制度已於2026年1月30日廢止並被取代。',
   'So the names stay on those pages with the finding beside them. Dropping them would assert something the rulings do not: that the games themselves were not real.':
     '因此這些名字仍留在那些頁面上，旁邊附著相應的認定。刪掉他們，等於斷言處罰並未認定的事：那些對局本身是假的。',
   'Where the sport is now': '這項運動如今的處境',
@@ -8641,9 +8737,6 @@ const ZH_HANT: Record<string, string> = {
   'All of it is Chinese-language reporting, listed so a reader who reads Chinese can check it rather than take our word for it.':
     '全部取自中文報道，在此列出，以便讀得懂中文的讀者自行核對，而不必只聽我們的說法。',
   Source: '來源',
-  'What it carries': '所載內容',
-  'Several claims here rest on thinner ground than the rest, and the text says so where they appear: five of the six sentences trace to the prosecution rather than a released judgment, all of Liu Dahua’s testimony and the Xu Yinchuan quotation are single-sourced accounts, the route the recordings took to the internet is one outlet’s investigation, the officials’ departures are not officially tied to this case, and the absence of any annulled result is inferred from silence rather than stated in a ruling.':
-    '本頁有幾處依據較薄，正文中已在相應位置註明：六項刑期中有五項源自檢方而非已公開的判決書；柳大华的全部證言與许银川那句引述均為單一來源；錄音流入網絡的經過出自一家媒體的調查；官員去職並未被官方與本案相聯繫；而沒有成績被取消這一點，是從無人提及推出的，並非哪份處罰寫明。',
   // -- Titled players (recruitment page) --
   // MACHINE-DRAFTED 2026-08-27, NOT NATIVE-REVIEWED. See the Simplified block.
   // Taiwan lexical forks applied, not a glyph conversion: 影片庫 not 视频库,
@@ -10140,35 +10233,17 @@ const ZH_HANT: Record<string, string> = {
   'Crossed cannon': '過河炮',
   // The three tables, Traditional forks only. Player names and the all-digit
   // cells inherit from the Simplified spread above.
-  '~2012 onward': '2012年前後起',
   'Liu Dahua privately alleges engine cheating': '柳大华私下指認軟件作弊',
   'The Hao Jichao and Wang Yuefei recordings appear online': '郝继超與王跃飞的通話錄音在網上流出',
-  'The association opens a formal investigation and forms a task force':
-    '中國象棋協會立案調查並成立專案組',
-  'Wang Tianyi withdraws from the Hangzhou Asian Games, citing health':
-    '王天一以身體原因退出杭州亞運會',
-  'Liu Dahua makes a real-name accusation against a sport-administration official':
-    '柳大华實名舉報體育總局一名官員',
-  'The date the April 2026 bans run from; the January notice publishes none':
-    '2026年4月處罰的起算日；1月的通報未公布日期',
   'First sanctions: Wang Tianyi and Wang Yuefei, life': '首批處罰：王天一、王跃飞終身禁賽',
   'Six grandmasters convicted in Hangzhou': '六名特級大師在杭州被判有罪',
   Life: '終身禁賽',
-  '7 years 6 months': '7年6個月',
-  '4 years 6 months': '4年6個月',
-  '4 years 3 months': '4年3個月',
-  '6 months': '6個月',
   Reprimand: '通報批評',
-  '4 years 9 months': '4年9個月',
-  '2 years 9 months': '2年9個月',
-  '2 years 7 months': '2年7個月',
-  '2 years 6 months': '2年6個月',
   '[Xinhua](https://www.news.cn/sports/20260413/5a609df239414cb1b7118b2aa88518d0/c.html), [Caixin](https://china.caixin.com/2026-04-13/102433594.html)':
     '[新華社](https://www.news.cn/sports/20260413/5a609df239414cb1b7118b2aa88518d0/c.html)、[財新](https://china.caixin.com/2026-04-13/102433594.html)',
   'The April 2026 rulings': '2026年4月的處罰',
   '[China News Service](https://www.chinanews.com.cn/ty/2025/01-13/10352255.shtml), [China Daily](https://cn.chinadaily.com.cn/a/202501/12/WS6783355ea310b59111dad5af.html)':
     '[中新網](https://www.chinanews.com.cn/ty/2025/01-13/10352255.shtml)、[中國日報](https://cn.chinadaily.com.cn/a/202501/12/WS6783355ea310b59111dad5af.html)',
-  'The 41-person batch, January 2025': '2025年1月的41人處罰',
   '[National Business Daily](https://www.nbd.com.cn/articles/2024-09-19/3562788.html)':
     '[每日經濟新聞](https://www.nbd.com.cn/articles/2024-09-19/3562788.html)',
   'Wang Tianyi’s life ban, September 2024': '2024年9月王天一被終身禁賽',
@@ -10177,16 +10252,173 @@ const ZH_HANT: Record<string, string> = {
   'The verdict and the six sentences': '宣判與六人刑期',
   '[Tencent News](https://news.qq.com/rain/a/20250924A04LFX00)':
     '[騰訊新聞](https://news.qq.com/rain/a/20250924A04LFX00)',
-  'Hong Zhi’s refusal to plead guilty, via his counsel': '洪智不認罪，經其辯護人確認',
   '[CCTV](https://news.cctv.cn/2025/01/13/ARTIeFfY6eKYaRLubq3G5ZQp250113.shtml)':
     '[央視新聞](https://news.cctv.cn/2025/01/13/ARTIeFfY6eKYaRLubq3G5ZQp250113.shtml)',
-  'The appearance-fee figures and the four motives': '出場費數字與各項動機',
   '[Jiemian](https://m.jiemian.com/article/12366112.html)':
     '[界面新聞](https://m.jiemian.com/article/12366112.html)',
-  'Liu Dahua’s account, and how the recordings spread': '柳大华的說法，以及錄音如何流傳',
   '[Guancha](https://www.guancha.cn/sports/2025_01_12_761863.shtml)':
     '[觀察者網](https://www.guancha.cn/sports/2025_01_12_761863.shtml)',
   'The fullest timeline of the affair': '事件最完整的時間線',
+  // Retune, 2026-10-21 (machine-drafted, not native-reviewed).
+  'Wang Tianyi, China’s top-rated xiangqi player from 2014 to 2023, was banned for life in 2024 and sentenced to 2 years 9 months for bribery. Why he, Zheng Weitong and 47 others were sanctioned, the 12 games prosecutors named, and where the banned players are now.':
+    '王天一在2014到2023年間是中國等級分第一的象棋棋手，2024年被終身禁賽，後因行賄罪被判有期徒刑2年9個月。他、郑惟桐和另外47人為何受罰，檢方點名的12盤棋，以及被禁賽棋手的近況。',
+  'No ruling names a game: the only games on record are 12 in the prosecution’s charges, as one newspaper reported them. Engine cheating is alleged in every account and charged in none.':
+    '沒有任何處罰點名具體對局：有據可查的只有檢方指控中的12盤，且僅見於一家報紙的報導。各方說法都提到用軟件作弊，卻沒有一項指控涉及。',
+  Ban: '禁賽',
+  Prison: '刑期',
+  'Wang\u00a0Tianyi 王天一': '王天一',
+  'Bought and sold games': '買棋賣棋',
+  '2\u00a0years 9\u00a0months': '2年9個月',
+  'Wang\u00a0Yuefei 王跃飞': '王跃飞',
+  Middleman: '中間人',
+  '1\u00a0year': '1年',
+  'Hao\u00a0Jichao 郝继超': '郝继超',
+  'On the tapes': '錄音當事人',
+  '4\u00a0years 3\u00a0months': '4年3個月',
+  None: '無',
+  'Hong\u00a0Zhi 洪智': '洪智',
+  '2005 champion': '2005年冠軍',
+  '2\u00a0years 7\u00a0months': '2年7個月',
+  'Zhao\u00a0Xinxin 赵鑫鑫': '赵鑫鑫',
+  '4\u00a0years 9\u00a0months': '4年9個月',
+  'Xie\u00a0Jing 谢靖': '谢靖',
+  '2013 champion': '2013年冠軍',
+  '2\u00a0years 6\u00a0months': '2年6個月',
+  'Xu\u00a0Chao 徐超': '徐超',
+  '2017 champion': '2017年冠軍',
+  'Liu\u00a0Dahua 柳大华': '柳大华',
+  'Accused an official': '舉報官員',
+  'Dang\u00a0Fei 党斐': '党斐',
+  'Backed Liu Dahua': '聲援柳大华',
+  '3\u00a0years': '3年',
+  'Rating points were not just a ranking. Under the system in force at the time they fed appearance and per-game fees, which made them the number a professional was paid on. That produced an asymmetry: a top-rated player gained almost nothing from beating a weaker one and lost a great deal from slipping, while the weaker player earned so little that a fee for losing beat the result. On CCTV, the player Cai Yi 才溢 illustrated the gap as perhaps ¥20,000 a game for a marquee name in a sponsored team event against ¥4,000 for an ordinary master. That rating is gone: the association’s 2026 points ranking took effect on 30 January 2026 and replaced it with a rolling 52-week ranking. The association gave fairer measurement of players as the reason and did not mention the case.':
+    '等級分不只是排名。在當時施行的制度下，它關係到出場費與對局費，也就成了職業棋手實際拿錢的依據。這帶來一種不對稱：等級分高的棋手贏下低分對手幾乎沒有收益，掉分卻損失慘重；低分棋手所得本就微薄，輸棋換來的報酬反而勝過戰績本身。棋手才溢在央視節目中舉例說，有贊助的團體賽裡，名將一盤或可得兩萬元，普通大師約四千元。這套等級分已不復存在：中國象棋協會的2026年積分排名於2026年1月30日生效，以按52週滾動計算的排名取而代之。協會給出的理由是更公平地衡量棋手，並未提及本案。',
+  'From about 2012': '約2012年起',
+  'The association opens a formal investigation': '中國象棋協會正式立案調查',
+  'Wang Tianyi withdraws from the Asian Games, citing health': '王天一以身體原因退出亞運會',
+  'Liu Dahua accuses a sport official by name': '柳大华實名舉報一名體育官員',
+  'Start date of the bans announced in April 2026': '2026年4月所公布禁賽的起算日',
+  'National titles': '全國冠軍',
+  'Zheng\u00a0Weitong 郑惟桐': '郑惟桐',
+  'Wang\u00a0Yang 汪洋': '汪洋',
+  'Shen\u00a0Peng 申鹏': '申鹏',
+  '8\u00a0years': '8年',
+  'Wang\u00a0Kuo 王廓': '王廓',
+  '7\u00a0years 6\u00a0months': '7年6個月',
+  'Sun\u00a0Yiyang 孙逸阳': '孙逸阳',
+  '7\u00a0years': '7年',
+  'Zhao\u00a0Jincheng 赵金成': '赵金成',
+  '6\u00a0years': '6年',
+  'Jiang\u00a0Chuan 蒋川': '蒋川',
+  '5\u00a0years': '5年',
+  'Zhang\u00a0Shenhong 张申宏': '张申宏',
+  '4\u00a0years 6\u00a0months': '4年6個月',
+  'Sun\u00a0Yongzheng 孙勇征': '孙勇征',
+  'Liu\u00a0Junda 刘俊达': '刘俊达',
+  'Yu\u00a0Yixiao 俞易肖': '俞易肖',
+  'Cheng\u00a0Ming 程鸣': '程鸣',
+  'Zheng\u00a0Yihong 郑一泓': '郑一泓',
+  '4\u00a0years': '4年',
+  'Li\u00a0Shaogeng 李少庚': '李少庚',
+  'Zhao\u00a0Dianyu 赵殿宇': '赵殿宇',
+  'Nie\u00a0Tiewen 聂铁文': '聂铁文',
+  'Wu\u00a0Junqiang 武俊强': '武俊强',
+  'Miao\u00a0Liming 苗利明': '苗利明',
+  '2\u00a0years': '2年',
+  'Huang\u00a0Zhufeng 黄竹风': '黄竹风',
+  'Sun\u00a0Xinhao 孙昕昊': '孙昕昊',
+  'Yang\u00a0Ming 杨铭': '杨铭',
+  'Xu\u00a0Chongfeng 徐崇峰': '徐崇峰',
+  'Zhao\u00a0Wei 赵玮': '赵玮',
+  'Lu\u00a0Weitao 陆伟韬': '陆伟韬',
+  'Yang\u00a0Hui 杨辉': '杨辉',
+  'Li\u00a0Xiaolong 李小龙': '李小龙',
+  'Zheng\u00a0Yuhang 郑宇航': '郑宇航',
+  'Ma\u00a0Tianyue 马天越': '马天越',
+  'Li\u00a0Aidong 李艾东': '李艾东',
+  'Wang\u00a0Yuhang 王宇航': '王宇航',
+  '6\u00a0months': '6個月',
+  'Zhao\u00a0Yanghe 赵旸鹤': '赵旸鹤',
+  'Cui\u00a0Ge 崔革': '崔革',
+  'Meng\u00a0Chen 孟辰': '孟辰',
+  'Xie\u00a0Kui 谢岿': '谢岿',
+  'Zhao\u00a0Ziyu 赵子雨': '赵子雨',
+  'Cao\u00a0Yanlei 曹岩磊': '曹岩磊',
+  'Huang\u00a0Wenjun 黄文俊': '黄文俊',
+  'Cai\u00a0Youguang 蔡佑广': '蔡佑广',
+  'Liang\u00a0Yunlong 梁运龙': '梁运龙',
+  'Hao Jichao, whose recordings started the case, is in the four-year-three-month tier, and was never criminally charged: the sporting penalty is the only one he carries. The end dates that are public all come from the April 2026 batch: Xu Chongfeng’s two-year ban ran out on 23 July 2026, and Jiang Chuan’s five years, announced in that batch and not in January, run to 23 July 2029.':
+    '引發此案的錄音出自郝继超之手，他被禁賽四年三個月，且從未被刑事追訴，所受的只有體育處罰。已公開的截止日期全部來自2026年4月那一批：徐崇峰的兩年禁賽已於2026年7月23日期滿；蒋川的五年禁賽是在那一批而非1月公布的，至2029年7月23日止。',
+  'Why Wang Tianyi was banned for life': '王天一為何被終身禁賽',
+  'The association banned Wang Tianyi for life on 19 September 2024, in its first notice, together with Wang Yuefei, for buying and selling games, and revoked his titles. The notice describes the conduct as long-running and frequent and names no game. A year later the Hangzhou court convicted him of bribery and sentenced him to 2 years 9 months. He pleaded guilty.':
+    '2024年9月19日，中國象棋協會在第一份通報中以買棋賣棋為由，對王天一與王跃飞作出終身禁賽，並撤銷了他的稱號。通報稱相關行為長期、頻繁，但未點名任何一盤棋。一年後，杭州的法院以行賄罪判處他有期徒刑2年9個月。他認罪認罰。',
+  'He had been China’s top-rated player from 2014 to 2023, known simply as 象棋第一人, the number one. The prosecution charged 22 separate acts of giving bribes totalling ¥942,000, against 2 acts of taking them totalling ¥116,000. Nineteen of the 22 payments ran through Wang Yuefei.':
+    '他在2014到2023年間等級分居全國第一，被稱為象棋第一人。檢方指控他行賄22筆、合計94.2萬元，受賄2筆、合計11.6萬元。22筆中有19筆經由王跃飞。',
+  'Eight yuan paid for every one received. He was not a weak player selling games he would have lost: he was the best player in the world, buying them.':
+    '每收一元，付出八元。他不是賣掉本就要輸的棋的弱手，而是最強的棋手在買棋。',
+  'The 12 games prosecutors say were bought or sold': '檢方所稱被買賣的12盤棋',
+  'No ruling names a single game. The association’s notices give events and years at most, the court released no judgment text, and the verdict was reported only as counts and totals. The only games named anywhere in the record are in the prosecution’s charges against Wang Tianyi, as the Economic Observer reported them on 13 June 2025 from the 9 May hearing in Hangzhou. Every line below is a charge as that newspaper reported it, not a finding.':
+    '沒有任何處罰點名哪怕一盤棋。協會的通報至多寫到賽事和年份，法院沒有公開判決書，宣判也只以筆數和總額見報。整個記錄中唯一點名的對局，出自檢方對王天一的指控，由《經濟觀察報》於2025年6月13日根據5月9日在杭州的庭審報導。下面每一行都是該報所報導的指控，而非認定的事實。',
+  'They are one man’s charges, not the whole case. At least 37 of the 49 people the association sanctioned appear nowhere in them, and no other player’s charges were reported game by game. In ten of the games he was the buyer, paying an opponent to lose to him; in two he was the seller, paid to lose.':
+    '這是一個人的指控，不是整個案件。協會處罰的49人中，至少有37人完全沒有出現在其中，其他棋手的指控也沒有逐盤見報。其中十盤他是買方，付錢讓對手輸給他；兩盤他是賣方，收錢輸棋。',
+  Year: '年份',
+  'Opponent he paid to lose': '收他錢輸棋的對手',
+  Yuan: '金額（元）',
+  'National Championship': '全國個人賽',
+  'Sun Yiyang': '孙逸阳',
+  'Shen Peng': '申鹏',
+  'Yang Guanlin Cup': '杨官璘盃',
+  'Xie Jing*': '谢靖*',
+  'Country Garden Cup': '碧桂園盃',
+  'Xie Jing, Hong Zhi, Zhao Xinxin*': '谢靖、洪智、赵鑫鑫*',
+  'Han Xin Cup': '韓信盃',
+  'Cheng Ming; Xie Jing*': '程鸣；谢靖*',
+  'Xu Chongfeng': '徐崇峰',
+  'Men’s Team League': '象甲聯賽',
+  'Nie Tiewen, Liu Junda*': '聂铁文、刘俊达*',
+  'Nie Tiewen; Liu Junda*': '聂铁文；刘俊达*',
+  'Huamu Cup': '花木盃',
+  'Bought: he paid the opponent. Ten games, ¥525,000 in all. * Paid through Wang Yuefei.':
+    '買棋：他付錢給對手。共十盤，合計52.5萬元。* 經由王跃飞支付。',
+  'Opponent who paid him to lose': '付錢讓他輸棋的對手',
+  'Wenling Cup, semi-final': '溫嶺盃半決賽',
+  'Sold: the opponent paid him, and won. Two games, ¥116,000. Both tables are the prosecution’s charges as reported by the Economic Observer, 13 June 2025; no ruling or published judgment confirms any line.':
+    '賣棋：對手付錢給他，並贏下了棋。共兩盤，11.6萬元。兩張表都是《經濟觀察報》2025年6月13日所報導的檢方指控，沒有任何處罰或公開的判決書證實其中任何一行。',
+  'Ten of the lines have Wang Tianyi paying, and they add up to ¥525,000 of the ¥942,000 he was charged with giving; the reporting does not itemise the rest. The two lines where he was paid, ¥100,000 from Xu Chao and ¥16,000 from Zhao Xinxin, add up to exactly the ¥116,000 he was charged with taking. Xu Chao won that 2017 championship. Every player named in the list is also on the association’s sanctions list above.':
+    '其中十行是王天一付錢，合計52.5萬元，是他被控行賄總額94.2萬元的一部分；其餘部分報導沒有逐筆列出。他收錢的兩行，徐超的10萬元和赵鑫鑫的1.6萬元，加起來正好是他被控受賄的11.6萬元。那屆2017年全國個人賽的冠軍正是徐超。清單中點到的每一位棋手，也都在上文協會的處罰名單上。',
+  'The same report describes the first game. Sun Yiyang, then 17, had Red and was ahead for a time, then made a run of errors and resigned at move 88; Wang Tianyi went on to win that 2012 championship. The move-by-move account is an unnamed observer’s, quoted by the paper.':
+    '同一篇報導描述了第一盤棋。時年17歲的孙逸阳執紅，一度佔優，隨後連續失誤，在第88回合認負；王天一最終奪得那屆2012年全國個人賽冠軍。逐著的描述出自一位未具名的觀察者，由該報引述。',
+  'All of it rests on one newspaper. We read the report in two reprints, on Sina Finance and Tencent News, which agree on most lines; the two league seasons appear only in the Sina reprint. We have not seen the list in any other outlet’s account of the hearing. Wang Tianyi pleaded guilty to the charge, but the verdict as reported does not say which of these games the court accepted.':
+    '這一切都只依據一家報紙。我們讀的是新浪財經和騰訊新聞上的兩份轉載，大部分條目一致；兩個聯賽賽季只出現在新浪的轉載中。在其他媒體對這次庭審的報導裡，我們沒有見到這份清單。王天一對指控認罪，但見報的判決並未說明法院認定了其中哪幾盤。',
+  'No ruling says which individual games were bought. What was revoked is the personal technical grade, the 特级大师 or 大师 rank, which is a title conferred on a player rather than a tournament result. No championship or team title appears to have been annulled, and the champion lists on this site are unchanged. Ratings are a special case: none were struck, but the rating itself was replaced when the 2026 points ranking took effect on 30 January 2026.':
+    '沒有任何處罰指明具體哪一盤棋被買。被撤銷的是個人的技術等級稱號，即特級大師或大師，那是授予棋手個人的頭銜，而非賽事成績。看不到任何冠軍或團體名次被取消，本站的冠軍名單也未作改動。等級分是個特例：並無個別分數被抹去，但等級分本身在2026年積分排名於2026年1月30日生效時被取代。',
+  'Where the banned players are now': '被禁賽棋手的近況',
+  'The notices give the same reason for every name, buying and selling games, and none says which games. The players searched for most stand like this. Wang Tianyi is the only one who has spoken: on 21 October 2025 he published an apology on his personal account, his first public statement since the sentence, saying he could finally let go of the obsession with being first under heaven, that he had once told himself buying games was something everyone in the profession tacitly accepted, and that people would see a better version of him.':
+    '通報對每個名字給出的理由都一樣，即買棋賣棋，也都沒有說明是哪些對局。被搜尋最多的幾位棋手現況如下。王天一是唯一公開發聲的人：2025年10月21日，他在個人帳號上發表致歉，這是他宣判後第一次公開表態。他說終於可以放下“天下第一”的執念，說自己曾告訴自己買棋是行內人人默許的事，還說大家會看到一個更好的他。',
+  'None reported': '未見報導',
+  '5\u00a0years, to July 2029': '5年，至2029年7月',
+  'All but Meng Chen also had their technical grade title revoked; Wang Kuo’s 2020 national title stands. Apart from Wang Tianyi’s apology, Chinese-language searches in October 2026 for each name (latest news, response, livestream, Douyin, comeback) found no public statement after the ruling. That is a statement about those searches, not proof of silence.':
+    '除孟辰外，其餘幾位的技術等級稱號也被撤銷；王廓2020年的全國冠軍保留。除王天一的致歉外，2026年10月對每個名字所做的中文搜尋（最新消息、回應、直播、抖音、復出）都沒有找到處罰之後的公開表態。這只說明那些搜尋的結果，並不證明他們保持沉默。',
+  'What it covers': '涵蓋內容',
+  'The January 2025 batch of 41': '2025年1月的41人處罰',
+  'Hong Zhi’s refusal to plead guilty': '洪智不認罪',
+  'Appearance fees and the motives': '出場費與動機',
+  'Liu Dahua’s account; how the tapes spread': '柳大华的說法；錄音如何流傳',
+  'The 12 charged games, 13 June 2025': '被指控的12盤棋，2025年6月13日',
+  'Economic Observer, via [Sina](https://cj.sina.com.cn/articles/view/1641561812/61d83ed402701a2aa) and [Tencent](https://news.qq.com/rain/a/20250613A02A2500)':
+    '《經濟觀察報》，經[新浪](https://cj.sina.com.cn/articles/view/1641561812/61d83ed402701a2aa)和[騰訊](https://news.qq.com/rain/a/20250613A02A2500)轉載',
+  'Wang Tianyi’s apology, 21 October 2025': '王天一的致歉，2025年10月21日',
+  '[Jiemian](https://www.jiemian.com/article/13494543.html)':
+    '[界面新聞](https://www.jiemian.com/article/13494543.html)',
+  'Both notices, with Jiang Chuan’s dates': '兩份通報及蒋川的禁賽日期',
+  '[Xinhua](https://www.news.cn/sports/20250112/cdc48783bc344002b69e179d7ae2fde1/c.html), [Yangtse Evening Post](https://www.yzwb.net/news/txs/202604/t20260413_341537.html)':
+    '[新華社](https://www.news.cn/sports/20250112/cdc48783bc344002b69e179d7ae2fde1/c.html)、[揚子晚報](https://www.yzwb.net/news/txs/202604/t20260413_341537.html)',
+  'The 2026 points ranking and its reason': '2026年積分排名及其理由',
+  '[Beijing Daily](https://news.bjd.com.cn/2026/02/02/11561527.shtml)':
+    '[北京日報](https://news.bjd.com.cn/2026/02/02/11561527.shtml)',
+  'Several claims here rest on thinner ground than the rest, and the text says so where they appear: five of the six sentences trace to the prosecution rather than a released judgment, the 12 games are one newspaper’s report of the charges, all of Liu Dahua’s testimony and the Xu Yinchuan quotation are single-sourced accounts, the route the recordings took to the internet is one outlet’s investigation, the officials’ departures are not officially tied to this case, and the absence of any annulled result is inferred from silence rather than stated in a ruling.':
+    '本頁有幾處依據較薄，正文中已在相應位置註明：六項刑期中有五項源自檢方而非已公開的判決書；那12盤棋來自一家報紙對指控的報導；柳大华的全部證言與许银川那句引述均為單一來源；錄音流入網絡的經過出自一家媒體的調查；官員去職並未被官方與本案相聯繫；而沒有成績被取消這一點，是從無人提及推出的，並非哪份處罰寫明。',
+  'Why Wang Tianyi 王天一 and Zheng Weitong 郑惟桐 Were Banned': '王天一、郑惟桐為何被終身禁賽',
   // Review refinements, 2026-10-19.
   'Sign in to request full-game analysis, then try different moves from your own game.':
     '登錄後請求整盤分析，再從自己的對局中嘗試不同著法。',
@@ -11278,14 +11510,6 @@ const ZH_HANT: Record<string, string> = {
   '24 September 2025': '2025年9月24日',
   '13 April 2026': '2026年4月13日',
   'Third batch: 6 people': '第三批：6人',
-  '8 years': '8年',
-  '7 years': '7年',
-  '6 years': '6年',
-  '5 years': '5年',
-  '4 years': '4年',
-  '3 years': '3年',
-  '2 years': '2年',
-  '1 year': '1年',
   // xiangqi piece table + FAQ, jieqi FAQ (2026-09-17)
   Moves: '走法',
   Limits: '限制',

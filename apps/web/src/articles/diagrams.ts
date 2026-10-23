@@ -1698,11 +1698,19 @@ export function xqHalfBoardThumbnailSvg(
   opts: Omit<Parameters<typeof xqBoardSvg>[0], 'x' | 'y' | 'label' | 'boardOffset'> & {
     half: 'top' | 'bottom';
     ariaLabel: string;
+    /** The card template with words: one short line (four words at most) on
+     * plain board colour over the river rank, then four ranks of board, the two
+     * centred together in the card. Bottom half only. */
+    headline?: string;
   },
 ): string {
-  const { half, ariaLabel, ...boardOpts } = opts;
+  const { half, ariaLabel, headline, ...boardOpts } = opts;
   const perspective = boardOpts.perspective ?? boardOpts.view?.perspective ?? 'red';
-  const box = xqHalfBoardThumbnailBox(half, perspective);
+  if (headline !== undefined && half !== 'bottom') {
+    throw new Error('xqHalfBoardThumbnailSvg: a headline needs the bottom half');
+  }
+  const box =
+    headline === undefined ? xqHalfBoardThumbnailBox(half, perspective) : xqHeadlineThumbnailBox(perspective);
   // Only the shown half's pieces are drawn: the river is one file spacing wide,
   // too narrow to leave room past the edge for both banks' discs, so a piece on
   // the far bank would show as a sliver along the cut.
@@ -1722,7 +1730,41 @@ export function xqHalfBoardThumbnailSvg(
   const clashAttr = clashes.length > 0 ? ` data-tag-clash="${clashes.join(' ')}"` : '';
   const board = xqBoardSvg({ ...boardOpts, state, view, perspective, x: 0, y: 0, label: '' });
   const { left, top, w, h } = box;
-  return `<svg class="xq-article-svg xq-half-thumb" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="${ariaLabel}"${clashAttr} xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${board}</svg>`;
+  const words = headline === undefined ? '' : xqHeadlineBand(headline, box, occupied, showsBlackHalf, perspective);
+  return `<svg class="xq-article-svg xq-half-thumb" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="${ariaLabel}"${clashAttr} xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${board}${words}</svg>`;
+}
+
+// The headline card's crop: the bottom half's box raised by a quarter file
+// spacing, so the headline and the four ranks under it sit centred in the card.
+function xqHeadlineThumbnailBox(perspective: XiangqiColor): XqHalfBoardBox {
+  const box = xqHalfBoardThumbnailBox('bottom', perspective);
+  const unit = box.w / (8 + 2 * XQ_HALF_THUMB_SIDE);
+  return { ...box, top: box.top - 0.2556 * unit };
+}
+
+// Plain board colour over everything above the fourth rank (the river and the
+// near bank), with the headline on it. A piece on the near bank would be
+// hidden, so it throws instead.
+function xqHeadlineBand(
+  headline: string,
+  box: XqHalfBoardBox,
+  occupied: readonly XiangqiSquare[],
+  showsBlackHalf: boolean,
+  perspective: XiangqiColor,
+): string {
+  const bankRank = showsBlackHalf ? 6 : 5;
+  const covered = occupied.filter((square) => xqCoord(square).rank === bankRank);
+  if (covered.length > 0) {
+    throw new Error(`xqHalfBoardThumbnailSvg: the headline band covers ${covered.join(' ')}`);
+  }
+  const bank = xqPoint(0, showsBlackHalf ? 6 : 5, perspective, 0, 28);
+  const unit = box.w / (8 + 2 * XQ_HALF_THUMB_SIDE);
+  // Stops just short of the fourth rank's line, so that line shows whole.
+  const bandBottom = bank.y + unit - 0.7;
+  return (
+    `<rect class="xq-diagram-bg" x="${box.left}" y="${box.top}" width="${box.w}" height="${bandBottom - box.top}"/>` +
+    `<text class="xq-diagram-ink" x="${box.left + box.w / 2}" y="${bank.y + 13}" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="32" font-weight="800" letter-spacing="-0.5">${headline}</text>`
+  );
 }
 
 // ── Hands: pieces held off the board, drawn with the board ────────────────

@@ -69,6 +69,7 @@ import {
   type StudyVisibility,
 } from './study-controls.js';
 import { buildGameRowLabel, gameCoachContext, gameRowParts } from './study-game-row.js';
+import { createStudyPhone, type StudyPhoneHandle } from './study-phone.js';
 import { buildStudyThumbnail } from './study-thumbnails.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
@@ -222,6 +223,8 @@ function renderStudy(
   });
   let activeHandle: TreeReviewHandle | null = null;
   let activeAutosave: StudyAutosave | null = null;
+  // Phone chrome (chapter bar, dock, chapter sheet); rebuilt per chapter.
+  let activePhone: StudyPhoneHandle | null = null;
 
   const flushActive = async (): Promise<boolean> => {
     if (!activeAutosave) return true;
@@ -767,6 +770,19 @@ function renderStudy(
         : undefined;
 
     root.replaceChildren(buildNav());
+    activePhone?.destroy();
+    const phoneEventGroups = chapterEventGroups(chapters);
+    const phone = createStudyPhone({
+      studyTitle: localizedStudyName(study.name, study.i18n),
+      chapters,
+      activeId: chapter.id,
+      gameFocus: studyFocusPlayer(chapters),
+      groupHeading: (id) => phoneEventGroups.get(id) ?? null,
+      chapterHref: (id) => studyChapterPath(study.id, id, window.location.pathname),
+      onSwitch: (id) => void switchTo(id),
+    });
+    activePhone = phone;
+    phone.attach(root);
 
     // A practice chapter is played against the engine. It is checked BEFORE the
     // gamebook branch because the two flags are mutually exclusive in intent and
@@ -837,6 +853,11 @@ function renderStudy(
             // rather than offered and inert.
             ...(nextChapter ? { onNext: () => void switchTo(nextChapter.id) } : {}),
           });
+          // The player replaced the root's children; put the phone chrome back.
+          if (activePhone === phone) {
+            phone.attach(root);
+            phone.bindMoveNav(root);
+          }
         },
       );
       attachStudyTitleRow(root, study.id, studyVariant(), studyActions(study));
@@ -897,6 +918,8 @@ function renderStudy(
         ...(game ? { game } : {}),
         ...(players ? { seats: { red: players.red, black: players.black } } : {}),
       });
+      phone.attach(root);
+      phone.bindMoveNav(root);
       return Promise.resolve();
     }
 
@@ -1094,6 +1117,10 @@ function renderStudy(
         );
         handle = mounted;
         activeHandle = mounted;
+        // The review shell landed after the dock; keep the dock last, then
+        // drive Back/Next from the shell's own move band.
+        phone.attach(root);
+        phone.bindMoveNav(root.querySelector('.study-review') ?? root);
       })
       .catch(() => renderError(root, 415));
   }
@@ -1326,9 +1353,12 @@ function aboutPanel(study: StudyDto, chapter: ChapterDto): HTMLElement {
   // repeating a study-wide control under all 92 chapters and pushing the moves
   // down on every one. They now sit in the chapter rail, which is the
   // study-level block. What stays is the visibility chip, which the owner wants
-  // while editing a chapter.
+  // while editing a chapter. The owner's name sits beside it: the study page
+  // otherwise said nowhere whose study it was, only the list cards did.
   const row = document.createElement('div');
   row.className = 'study-about__row';
+  const byline = studyOwnerByline(study);
+  if (byline) row.append(byline);
   if (study.isOwner) {
     const visibility = document.createElement('span');
     visibility.className = 'study-about__visibility';
@@ -1337,6 +1367,20 @@ function aboutPanel(study: StudyDto, chapter: ChapterDto): HTMLElement {
   }
   panel.append(row);
   return panel;
+}
+
+/** "Study by <name>", linked to the owner's profile; null for a study read
+ *  without an owner (a dev fallback or an older payload). */
+export function studyOwnerByline(study: Pick<StudyDto, 'owner'>): HTMLElement | null {
+  const owner = study.owner;
+  if (!owner?.handle) return null;
+  const line = document.createElement('span');
+  line.className = 'study-about__owner';
+  const link = document.createElement('a');
+  link.href = localizedHref(`/@/${encodeURIComponent(owner.handle)}`);
+  link.textContent = owner.displayName || `@${owner.handle}`;
+  line.append(`${t('study.ownedBy')} `, link);
+  return line;
 }
 
 /**

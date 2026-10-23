@@ -66,6 +66,9 @@ describe('article public listing gates', () => {
       // A solved banqi endgame (chariot and horse against chariot, horse and
       // soldier), scheduled for 2026-10-30 (DEV shows it early for review).
       '/blog/banqi-chariot-endgame',
+      // The shortest xiangqi stalemate we found, scheduled for 2026-10-27
+      // (DEV shows it early for review).
+      '/blog/shortest-stalemate-xiangqi',
       // The unstyled first-paint engineering post, scheduled for 2026-10-23
       // (DEV shows it early for review).
       '/blog/unstyled-first-paint',
@@ -271,7 +274,8 @@ describe('article public listing gates', () => {
     );
     expect(home?.querySelector('a[href="/zh-hant/blog/misty"]')).not.toBeNull();
     expect(home?.querySelector('a[href="/zh-hant/blog/mistybanqi"]')).not.toBeNull();
-    expect(home?.querySelector('a[href="/zh-hant/blog/server-enforced-fog"]')).not.toBeNull();
+    // An engineering post stays off the homepage in every language.
+    expect(home?.querySelector('a[href="/zh-hant/blog/server-enforced-fog"]')).toBeNull();
 
     const page = buildArticlePage('banqi', 'zh-Hant');
     expect(page.querySelector('.article-breadcrumb')).toBeNull();
@@ -326,10 +330,11 @@ describe('article public listing gates', () => {
 
     // Rules reference pages are excluded from this row; every listed editorial
     // (blog/concept) article without a homeRow appears, newest first, with no
-    // curated list. Deep dives have their own row (next test).
+    // curated list. Deep dives have their own row (next test); engineering
+    // posts are on neither.
     expect(hrefs).toEqual([
       '/blog/banqi-chariot-endgame',
-      '/blog/unstyled-first-paint',
+      '/blog/shortest-stalemate-xiangqi',
       '/blog/helpmates-in-xiangqi',
       '/blog/general-blunder-challenge',
       '/blog/fortress-and-atomic-xiangqi-on-hold',
@@ -338,11 +343,9 @@ describe('article public listing gates', () => {
       '/blog/longest-forced-mates-xiangqi',
       '/blog/benedict-xiangqi',
       '/blog/xiangqi-endgames',
-      '/blog/chariot-cannon-repetition-key',
       '/blog/duck-xiangqi-game-tree',
       '/blog/solver-audit',
       '/blog/katago-jungle',
-      '/blog/pikafish-reveal-bug',
       '/blog/ab-jchess',
       '/blog/jieqi-bot-wins',
       '/blog/one-thousand-games',
@@ -352,12 +355,10 @@ describe('article public listing gates', () => {
       '/blog/lichess-analysis-accuracy',
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
-      '/blog/en-passant-under-fog',
       '/blog/duck-xiangqi-strategy',
       '/blog/puzzles-with-more-than-one-solution',
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
-      '/blog/how-puzzle-mining-works',
       // Moved from brianhliou.com (2026-08-31) on 2026-10-16.
       '/blog/jungle-den-term',
       '/blog/titled-players',
@@ -369,7 +370,6 @@ describe('article public listing gates', () => {
       '/blog/dou-shou-qi-engine',
       '/blog/misty',
       '/blog/mistybanqi',
-      '/blog/server-enforced-fog',
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
@@ -466,7 +466,7 @@ describe('article public listing gates', () => {
     ).not.toBeNull();
   });
 
-  it('renders Misty with the generated thumbnail and uses star blog badges', () => {
+  it('renders Misty with the generated thumbnail', () => {
     const articles = buildArticlesIndex();
     const card = articles.querySelector<HTMLAnchorElement>(
       '.articles-index-card[href="/blog/misty"]',
@@ -474,16 +474,11 @@ describe('article public listing gates', () => {
     expect(card?.querySelector('img')?.getAttribute('src')).toBe(
       '/article-thumbs/misty-engine-belief-20260708.jpg',
     );
-    expect(card?.querySelector('.articles-index-card-author')?.textContent).toBe('★');
 
     const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
     expect(
       home?.querySelector('.landing-article-card[href="/blog/misty"] img')?.getAttribute('src'),
     ).toBe('/article-thumbs/misty-engine-belief-20260708.jpg');
-    expect(
-      home?.querySelector('.landing-article-card[href="/blog/misty"] .landing-article-card-star')
-        ?.textContent,
-    ).toBe('★');
   });
 
   it('renders the server-side truth article with the generated truth-core thumbnail', () => {
@@ -495,13 +490,6 @@ describe('article public listing gates', () => {
         )
         ?.getAttribute('alt'),
     ).toBe('A foggy visible board layer floating above a hidden golden truth layer.');
-
-    const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    expect(
-      home?.querySelector(
-        '.landing-article-card[href="/blog/server-enforced-fog"] img[src="/article-thumbs/server-fog-cutaway-truth-20260708.jpg"]',
-      ),
-    ).not.toBeNull();
   });
 
   // Mini Xiangqi is registered but never built: every request 501s, and the
@@ -1055,14 +1043,20 @@ describe('blog post read-next footer', () => {
     expect(hans?.querySelector('a')?.getAttribute('href')).toBe('/contribute#translate');
   });
 
-  // One star per card is texture in a long index grid. Three in a row under an
-  // article read as a rating, so the footer drops the badge outright rather
-  // than shipping DOM it then hides.
-  it('drops the index star badge, which /blog keeps', () => {
+  // The star marked a Mistboard post apart from a community one. With no
+  // community posts it sat on every card as clutter, so it is gone everywhere
+  // (2026-10-21); a mark for community posts can come back with the first one.
+  it('puts no star on any article card', () => {
     vi.stubEnv('DEV', false);
-    const footer = buildArticlePage('riverbank-cannon').querySelector('.article-footer');
-    expect(footer?.querySelector('.articles-index-card-author')).toBeNull();
-    expect(buildArticlesIndex().querySelector('.articles-index-card-author')).not.toBeNull();
+    const surfaces = [
+      buildArticlesIndex(),
+      buildArticlePage('riverbank-cannon').querySelector('.article-footer'),
+      buildHomeArticleCards(50, undefined, NO_AGE_CUT),
+      buildHomeArticleCards(50, undefined, { ...NO_AGE_CUT, row: 'deep-dives' }),
+    ];
+    for (const surface of surfaces) {
+      expect(surface?.textContent ?? '').not.toContain('★');
+    }
   });
 
   // The whole point is that a reader who finishes a post has somewhere to go.

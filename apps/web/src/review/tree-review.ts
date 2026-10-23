@@ -40,6 +40,7 @@ import {
   type MarkBetter,
   type MarkGrade,
 } from './analysis-marks.js';
+import { type AnalysisPhoneBar, createAnalysisPhoneBar } from './analysis-phone-bar.js';
 import { createAnalysisSummary, type SummaryJudgment } from './analysis-summary.js';
 import { createAnnotationEditor } from './annotations-editor.js';
 // Brush colours for the node's user-drawn shapes. Imported here, not only
@@ -379,6 +380,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   /** Shared scaffold role. Postgame is the default; standalone analysis and
    *  studies opt into their distinct roles at their route-level mount. */
   reviewSurface?: ReviewSurface;
+  /** The standalone analysis page's phone chrome (analysis-phone-bar.ts): an
+   *  engine bar over the board, an info row and a labelled bottom bar below
+   *  600px. Off for embeds and every other surface. */
+  phoneAnalysisBar?: { variantName: string };
   /** Root the tree at a hand-set position (a FEN-seeded composition) instead of
    *  the variant's standard start. `truth` seeds the tree root; `fen` is the
    *  canonical FEN persisted with a serialized tree (SerializedTree.rootFen).
@@ -946,6 +951,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // list) + a per-move luck readout (the advice line) + a two-number summary block.
   let decisionOverlay: DecisionOverlay | null = null;
   let engineLines: CevalLine[] | null = null;
+  // The analysis page's phone chrome; built after the controls, but the engine
+  // callbacks below reach it, so it is declared with the engine state.
+  let phoneBar: AnalysisPhoneBar | null = null;
   // Retro mode ("Learn from your mistakes"), open or not. Declared up here with
   // the engine state because the engine panel's constructor fires onLines
   // synchronously, and that callback reads it.
@@ -1128,10 +1136,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
             // The retro grader reads the same stream the panel renders; it may
             // navigate (a verdict jumps back), so it runs before the repaint.
             retro?.onEngineLines(lines);
+            phoneBar?.syncEngine();
             paintOverlays();
           },
           onToggle: (on) => {
             engineOn = on;
+            phoneBar?.setEngineOn(on);
             paintOverlays();
           },
           arrowsSupported: engineOverlaysSupported,
@@ -1787,6 +1797,43 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     onPromote: () => render(),
   });
 
+  // Phone analysis chrome (#576): engine bar above the board, info row under
+  // it, labelled bottom bar. CSS shows it below 600px only; the arrow strip and
+  // the engine card it stands in for stay in the DOM for wider screens.
+  if (config.phoneAnalysisBar && !config.embedded) {
+    const flipItem = menuItems[0];
+    phoneBar = createAnalysisPhoneBar({
+      signal: mountAbort.signal,
+      engine: enginePanel,
+      variantName: config.phoneAnalysisBar.variantName,
+      onFlip: () => flipBoard(),
+      onBack: () => go(tree.stepBack(currentPath)),
+      onNext: () => {
+        if (retro?.preventGoingToNextMove()) return;
+        go(tree.stepForward(currentPath));
+      },
+      // Flip has its own button on the bar; the sheet carries the rest.
+      toolsItems: () => controls.menuItems.filter((item) => item !== flipItem),
+      importPanel: importPanel?.el ?? null,
+      metaCard: config.metaCard ?? null,
+    });
+    const stageEl = scaffold.stage.el;
+    stageEl.before(phoneBar.engineBar);
+    stageEl.after(phoneBar.info);
+    root.append(phoneBar.bar, phoneBar.sheet);
+    root.classList.add('has-analysis-phone-bar');
+    const { bar, sheet } = phoneBar;
+    mountAbort.signal.addEventListener(
+      'abort',
+      () => {
+        root.classList.remove('has-analysis-phone-bar');
+        bar.remove();
+        sheet.remove();
+      },
+      { once: true },
+    );
+  }
+
   function go(path: TreePath): void {
     closeVariationPicker();
     const fromPath = currentPath;
@@ -1985,6 +2032,25 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     commentPanelEl.hidden = !authoredComment;
     moveTree.setCurrent(currentPath);
     controls.setBounds({ atStart: currentPath.length === 0, atEnd: node.children.length === 0 });
+    if (phoneBar) {
+      const seat = view ? presentation.seatFor(view) : null;
+      phoneBar.sync({
+        sideToMove:
+          seat == null
+            ? null
+            : inkWord(
+                seatStripDisplayInk(
+                  String(seat),
+                  config.seatColors,
+                  config.seatInkBindsOnFlip ?? false,
+                ),
+              ),
+        atStart: currentPath.length === 0,
+        atEnd: node.children.length === 0,
+        editorHref: config.boardEditorHref ? config.boardEditorHref(node.truth) : null,
+      });
+      phoneBar.revealCurrentMove(moveTree.el);
+    }
     // Opening statistics follow the board like every other per-node panel.
     config.explorer?.setTruth(node.truth);
     // Live-refresh the Share tab's FEN + move export for the current node/line.
@@ -2618,6 +2684,16 @@ function createImportPanel(
   }
   el.append(foot);
   return { el, fenInput, movesInput, editorLink };
+}
+
+/** The side-to-move word for the phone info row; null where no colour word is
+ *  true yet (a flip variant's seat before the first reveal binds it). */
+function inkWord(ink: string): string | null {
+  if (ink === 'red') return t('setup.red');
+  if (ink === 'black') return t('setup.black');
+  if (ink === 'white') return t('setup.white');
+  if (ink === 'blue') return t('setup.blue');
+  return null;
 }
 
 function truncationNotice(legal: number): HTMLElement {
