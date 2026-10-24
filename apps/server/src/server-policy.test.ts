@@ -475,6 +475,8 @@ const NOINDEX_ROUTE_SAMPLES = [
   '/following',
   '/correspondence',
   '/challenge/abc123',
+  '/lag',
+  '/verify-title',
   '/xiangqi/game/abc123',
   '/jungle-flip/game/abc123',
 ];

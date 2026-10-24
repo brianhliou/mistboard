@@ -568,6 +568,11 @@ export function isNoindexRoute(pathname: string): boolean {
     normalized === '/following' ||
     normalized === '/correspondence' ||
     normalized.startsWith('/challenge/') ||
+    // Utility pages with nothing to find in search: the connection-lag
+    // diagnostic and the title-verification form. They served the homepage
+    // title until 2026-10-24, and Bing filed them as duplicates of it.
+    normalized === '/lag' ||
+    normalized === '/verify-title' ||
     isSitePlayedGamePage(normalized)
   );
 }

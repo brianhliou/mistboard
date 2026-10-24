@@ -28,6 +28,7 @@ import {
   type PlayerPage,
   playerSitemapEntries,
 } from './player-pages.js';
+import { practiceChapterPath } from './practice-chapter-redirect.js';
 import { puzzleById } from './routes/puzzles.js';
 import { isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
@@ -371,6 +372,34 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'Site Statistics | Mistboard',
     description:
       'Live statistics for Mistboard: total xiangqi and variant games played, activity over time, and a breakdown by variant and game type.',
+  },
+  // Linked from every page's footer or nav, and each served the homepage title
+  // and description until 2026-10-24, so Bing read them as duplicates of '/'.
+  // English only: the client routes have no locale-prefixed URL.
+  '/terms': {
+    title: 'Terms of Use: Play, Ratings and Fair Play | Mistboard',
+    description:
+      'The rules for using mistboard.com: anonymous and rated play, ratings and fair play, finished games published under CC BY 4.0, and patron billing and refunds.',
+  },
+  '/privacy': {
+    title: 'Privacy: What Mistboard Collects | Mistboard',
+    description:
+      'What mistboard.com collects and why: analytics, the games you play, and your handle and email if you make an account. No ads, and no data sold.',
+  },
+  '/contact': {
+    title: 'Contact: Bugs, Accounts and Billing | Mistboard',
+    description:
+      'A private line to the person who runs Mistboard: report a bug or a broken game, or raise an account or billing problem. Add an email if you want a reply.',
+  },
+  '/watch': {
+    title: 'Watch Live Xiangqi Games | Mistboard',
+    description:
+      'Watch xiangqi (Chinese chess) and variant games live on Mistboard, move by move: humans against humans, humans against engines, and engine against engine.',
+  },
+  '/thanks': {
+    title: 'Credits: Engines, Sources and Thanks | Mistboard',
+    description:
+      'The engines you play against on Mistboard, the sites whose games and photos we show, and the players who reported what was broken, each thanked by name.',
   },
 };
 
@@ -719,7 +748,25 @@ export async function serveSpaShellWithRoutePreloads(params: {
   /** Override the puzzle id-or-short-code lookup (tests); the default is the
    *  one /api/puzzles/:id uses. */
   puzzleId?: (idOrShortCode: string) => Promise<string | null>;
+  /** Override the shelf deep-link lookup (tests); the default reads persistence. */
+  practiceChapterPath?: (pathname: string) => Promise<string | null>;
 }): Promise<boolean> {
+  // A shelf deep link (/practice/endgames-horse/horse-vs-advisor) names a
+  // chapter the client would bounce to anyway: answer with the move itself, so
+  // a crawler follows it rather than indexing a shell that reads as '/'. A day
+  // of max-age, not forever: the ids are per database and a reseed of a fresh
+  // one could move them.
+  const practiceTarget = await (params.practiceChapterPath ?? practiceChapterPath)(
+    params.pathname,
+  ).catch(() => null);
+  if (practiceTarget) {
+    params.response.writeHead(301, {
+      location: `${practiceTarget}${params.search ?? ''}`,
+      'cache-control': 'public, max-age=86400',
+    });
+    params.response.end();
+    return true;
+  }
   const links = await routePreloadLinksForPath(params);
   // A player, team or the players index (#458, player-pages.ts): its own meta,
   // a canonical link and a crawler body, from one read of the archive. A name
