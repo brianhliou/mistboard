@@ -548,6 +548,69 @@ describe('bot pages', () => {
     expect(gameLinks()).toEqual(['/xiangqi/game/room_x1']);
   });
 
+  it('reaches every older bot game once when a game finishes between pages (#630)', async () => {
+    const game = (index: number) => ({
+      roomId: `room_${String(index).padStart(3, '0')}`,
+      variant: 'xiangqi',
+      mode: 'pve',
+      rated: false,
+      result: 'white-wins',
+      termination: 'checkmate',
+      plyCount: 30,
+      whiteName: 'Pikafish',
+      blackName: 'challenger',
+      corpusId: null,
+      endedAt: '2026-07-01T00:00:00.000Z',
+      playerColor: 'white',
+    });
+    const original = Array.from({ length: 25 }, (_, i) => game(25 - i));
+    const dataset = [...original];
+    const requests: URL[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input), 'http://localhost');
+      if (!url.pathname.endsWith('/games'))
+        return jsonResponse({
+          bot: pikafish({
+            recordsByGameSpecId: { xiangqi: { games: 25, wins: 25, losses: 0, draws: 0 } },
+            gamesByGameSpecId: { xiangqi: original.slice(0, 10) },
+          }),
+        });
+      requests.push(url);
+      const before = url.searchParams.get('before');
+      const rows = before
+        ? dataset.filter((row) => row.roomId < JSON.parse(before)[1])
+        : dataset.slice(Number(url.searchParams.get('offset') ?? 0));
+      return jsonResponse({ games: rows.slice(0, 15) });
+    });
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+    await mountBotProfile(root, 'pikafish');
+    dataset.unshift(game(26));
+    const more = () =>
+      root.querySelector<HTMLButtonElement>('.bot-profile-games .profile-games-more-btn');
+    more()?.click();
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.bot-profile-games .profile-game-row-open')).toHaveLength(25),
+    );
+    expect(
+      Array.from(root.querySelectorAll('.bot-profile-games .profile-game-row-open'), (row) =>
+        row.getAttribute('href'),
+      ),
+    ).toEqual(original.map((row) => `/xiangqi/game/${row.roomId}`));
+    expect(more()).not.toBeNull();
+    expect(requests[0]?.searchParams.get('offset')).toBeNull();
+    expect(JSON.parse(requests[0]?.searchParams.get('before') ?? 'null')).toEqual([
+      original[9].endedAt,
+      original[9].roomId,
+    ]);
+    more()?.click();
+    await vi.waitFor(() => expect(more()).toBeNull());
+    expect(JSON.parse(requests[1]?.searchParams.get('before') ?? 'null')).toEqual([
+      original[24].endedAt,
+      original[24].roomId,
+    ]);
+  });
+
   it('pages older games of the selected variant past the profile cap (#550)', async () => {
     const game = (index: number) => ({
       roomId: `room_x${index}`,
@@ -592,7 +655,7 @@ describe('bot pages', () => {
     await flushPromises();
 
     expect(String(fetchMock.mock.calls[1]?.[0])).toBe(
-      '/api/bots/pikafish/games?variant=xiangqi&offset=10&limit=15',
+      `/api/bots/pikafish/games?${new URLSearchParams({ variant: 'xiangqi', before: JSON.stringify(['2026-07-01T00:00:00.000Z', 'room_x3']), limit: '15' })}`,
     );
     expect(rows()).toBe(12);
     // Every game of the variant is on the page, so the control goes away.

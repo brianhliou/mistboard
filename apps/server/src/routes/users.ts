@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from './../account-session.js';
+import { parseGamePageCursor } from '../game-page-cursor.js';
 import * as persistence from './../persistence.js';
 import {
   PUBLIC_RATING_TIME_CLASS,
@@ -66,6 +67,11 @@ export async function tryHandle(
       writeJson(response, 400, { error: 'invalid_handle' });
       return true;
     }
+    const before = parseGamePageCursor(parsedUrl.searchParams.get('before'));
+    if (before === undefined) {
+      writeJson(response, 400, { error: 'invalid_before' });
+      return true;
+    }
     const offset = clampInt(parsedUrl.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
     const limit = clampInt(parsedUrl.searchParams.get('limit'), 15, 1, GAMES_PAGE_MAX);
     const viewer = await currentAccountUser(request);
@@ -86,11 +92,18 @@ export async function tryHandle(
       writeJson(response, 400, { error: 'invalid_opponent' });
       return true;
     }
-    const page = await persistence.getUserGamesPage(handle, viewer?.id ?? null, offset, limit, {
-      ratingVariant,
-      result: persistence.isProfileGameResultFilter(resultParam) ? resultParam : null,
-      opponent: opponent || null,
-    });
+    const page = await persistence.getUserGamesPage(
+      handle,
+      viewer?.id ?? null,
+      offset,
+      limit,
+      {
+        ratingVariant,
+        result: persistence.isProfileGameResultFilter(resultParam) ? resultParam : null,
+        opponent: opponent || null,
+      },
+      before,
+    );
     if (!page) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
