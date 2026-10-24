@@ -34,6 +34,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-24, not native-reviewed, from the English signed
+  // off that day (jieqi readers are mostly Chinese).
+  'jqe',
   // Moved from brianhliou.com on 2026-10-15/16 in English, their zh pairs
   // dropped and the slugs exempted as "not yet translated" (which is what the
   // backlog check on UNTRANSLATED_ARTICLE_SLUGS now refuses). Restored
@@ -6114,6 +6117,115 @@ const ZH_HANS: Record<string, string> = {
     '新增炮规则的设计沿革，以及这些数字背后的引擎结果。',
   'Names obscuro-chess, the other open implementation, instead of calling Misty the only one.':
     '点名另一个开源实现 obscuro-chess，不再称 Misty 是唯一的开源实现。',
+  // jqe: machine-drafted 2026-10-24, not native-reviewed, from the English signed off that day. Terms follow ab-jchess and pikafish-reveal-bug (暗子, 翻子, 暗吃, 界限, 胜率, 皮卡鱼, 研究; 暗子布局 for a deal).
+  'jqe, the new top jieqi bot': 'jqe：新的最强揭棋电脑',
+  'jqe: the open-source jieqi engine that beat AB-JChess 171 to 114':
+    'jqe：以 171 比 114 战胜 AB-JChess 的开源揭棋引擎',
+  "jqe, an open-source jieqi engine by Devin O'Keefe, is now the top jieqi bot on Mistboard. It beat AB-JChess 0.2d 171 to 114 over 300 games, with a network about 90 times smaller.":
+    "jqe 是 Devin O'Keefe 开发的开源揭棋引擎，现在是 Mistboard 上最强的揭棋电脑。它在 300 盘中以 171 比 114 战胜 AB-JChess 0.2d，而它的神经网络小了大约 90 倍。",
+  "jqe, an open-source engine by Devin O'Keefe, is the top jieqi bot on Mistboard as of October 2026. Over 300 games against AB-JChess 0.2d, the release the site runs, it won 171, drew 15 and lost 114, about 67 Elo.":
+    "截至 2026 年 10 月，Devin O'Keefe 开发的开源引擎 jqe 是 Mistboard 上最强的揭棋电脑。它对本站使用的 AB-JChess 0.2d 版本下了 300 盘，赢 171 盘，和 15 盘，输 114 盘，约合 67 Elo。",
+  "Its biggest gain is a cheap way to score a reveal. It is as accurate on average as Star1, the exact method Bruce Ballard published in 1983, for a tenth of the work, and it was worth about 140 Elo against jqe's earlier version.":
+    '它最大的提升来自一种给翻子打分的省力方法。平均而言，它和 Bruce Ballard 在 1983 年发表的精确方法 Star1 一样准确，计算量却只有十分之一；对 jqe 自己的早期版本，这一项就值约 140 Elo。',
+  "Its network is about 90 times smaller than AB-JChess's, so it searches many more positions in the same time.":
+    '它的神经网络比 AB-JChess 的小大约 90 倍，所以同样的时间里能搜索多得多的局面。',
+  'jqe judged positions better: in 142 games it rated itself well ahead while AB-JChess still had the game close, and it won 116 of them.':
+    'jqe 对局面的判断更准：有 142 盘棋，它认为自己已经大幅领先，而 AB-JChess 仍认为局势接近，这些棋 jqe 赢了 116 盘。',
+  "[Jieqi](/rules/jieqi) on Mistboard has a new top bot. [jqe](https://github.com/devinokeefe/jieqi) is an open-source engine by Devin O'Keefe, first released on October 13, and we play it here with his permission. Against AB-JChess 0.2d, the top bot until now, it won 171 games, drew 15 and lost 114, about 67 Elo. You can [play it](/bot/jqe) now; [AB-JChess](/blog/ab-jchess) stays on the ladder one level below.":
+    "[揭棋](/rules/jieqi)在 Mistboard 上有了新的最强电脑。[jqe](https://github.com/devinokeefe/jieqi) 是 Devin O'Keefe 开发的开源引擎，10 月 13 日首次发布，我们经他许可在这里使用它。它对此前最强的电脑 AB-JChess 0.2d 赢了 171 盘，和 15 盘，输 114 盘，约合 67 Elo。现在就可以[和它下一盘](/bot/jqe)；[AB-JChess](/blog/ab-jchess) 仍留在电脑阶梯上，排在它下面一级。",
+  'The 300 games were 150 deals, each played twice with colours swapped, at 4 seconds a move on the settings the site uses. jqe won both games of a deal 43 times, and AB-JChess did that 19 times. All 300 are in [a study](/study/3RQbr51i), one chapter a game.':
+    '这 300 盘棋来自 150 组暗子布局，每组红黑互换各下一次，每步 4 秒，用的是本站的设置。同一组布局的两盘都赢，jqe 做到了 43 次，AB-JChess 做到了 19 次。全部 300 盘都在[一个研究](/study/3RQbr51i)里，每盘一章。',
+  'jqe 0.1.0 against AB-JChess 0.2d. Both engines are still being developed, so a later release of either may score differently.':
+    'jqe 0.1.0 对 AB-JChess 0.2d。两个引擎都还在开发中，任何一方的后续版本都可能得出不同的结果。',
+  'As of October 24, 2026': '截至 2026 年 10 月 24 日',
+  'jqe scores a reveal as well as the exact method, at a tenth of the cost':
+    'jqe 给翻子打分和精确方法一样准，代价只有十分之一',
+  '**Every reveal is a gamble the engine has to price.** A face-down piece turns over when it moves, so an engine moving one does not know what it is moving. It plays the move once for each piece it could be, scores each outcome, and averages them, weighted by how many of each piece are still unaccounted for. Every jieqi engine we have looked at does this.':
+    '**每一次翻子都是一场引擎必须估价的赌博。**暗子一动就会翻开，所以引擎走暗子时并不知道自己走的是什么。它会对这个暗子可能是的每一种棋子各走一次这步棋，给每种结果打分，再按每种棋子还有多少下落不明加权平均。我们看过的揭棋引擎都是这样做的。',
+  '**The usual shortcut makes reveals look safer than they are.** To save time, a search stops working on a move once it knows the move is worse than the best so far, and hands back a bound, "this much or worse", in place of a real score. That is fine for comparing moves and wrong inside an average: a piece that gets mated can come back as "no better than +7" and count as +7. Our Pikafish bot had this flaw, and so does the AB-JChess release we checked. [The reveal-bug post](/blog/pikafish-reveal-bug) shows the moves it led our bot to.':
+    '**常用的捷径会让翻子看起来比实际更安全。**为了节省时间，搜索一旦知道某步棋不如目前最好的一步，就会停止计算，交回一个界限，也就是“最多这么多，或者更差”，而不是真实的分数。用来比较着法没有问题，放进平均里就错了：一个会被将死的棋子，可能以“不超过 +7”的形式返回，然后被当成 +7 计算。我们的皮卡鱼电脑有这个缺陷，我们检查过的那个 AB-JChess 版本也有。[翻子错误那篇文章](/blog/pikafish-reveal-bug)展示了它让我们的电脑走出了哪些棋。',
+  "**The exact fix is from 1983, and it is slow.** Bruce Ballard's Star1 searches each chance move with bounds that keep every outcome honest, so the average comes out right. jqe's report measured both methods, and jqe's own, on 72 reveals jqe had played:":
+    '**精确的修正方法早在 1983 年就有了，但它很慢。**Bruce Ballard 的 Star1 在搜索每一步带随机性的着法时，都设定能让每种结果如实返回的界限，所以平均值是对的。jqe 的报告在 jqe 实战走过的 72 次翻子上，测量了这两种方法，以及 jqe 自己的方法：',
+  Method: '方法',
+  Overrating: '高估幅度',
+  'The usual shortcut': '常用的捷径',
+  '1 time': '1 倍',
+  'Star1, exact (Ballard, 1983)': 'Star1，精确（Ballard，1983）',
+  '11.5 times': '11.5 倍',
+  "jqe's method": 'jqe 的方法',
+  '1.15 times': '1.15 倍',
+  "How far each method overrated 72 of jqe's reveals, in expected score (0.01 is one point in a hundred), and how much searching it took. From jqe's report.":
+    '每种方法对 jqe 的 72 次翻子高估了多少（以期望得分计，0.01 即一百分中的一分），以及需要多少搜索量。数据来自 jqe 的报告。',
+  "**jqe gets Star1's accuracy for 15% more work.** It searches every piece the mover could be six half-moves less deep with no cut-off, so each comes back with a real score, and searches the most likely piece at full depth as well.":
+    '**jqe 只多花 15% 的工作量，就达到了 Star1 的准确度。**对走动的暗子可能是的每一种棋子，它都少搜 6 个半回合的深度，并且不做截断，所以每种棋子返回的都是真实分数；同时它还会对可能性最大的那种棋子做完整深度的搜索。',
+  'What the fix was worth': '这项改进值多少',
+  "Against jqe's own earlier version, this was worth about 140 Elo (somewhere between 80 and 200), jqe's largest single gain. For scale, searching four times as many positions a move was worth about 50. Using it at every reveal deep in the search, with three smaller changes, added about 34 more.":
+    '对 jqe 自己的早期版本，这一改进值约 140 Elo（介于 80 到 200 之间），是 jqe 最大的单项提升。作为对比，每步多搜四倍的局面只值约 50。在搜索深处的每次翻子都用上它，再加上另外三项较小的改动，又多了约 34。',
+  "We fixed our Pikafish bot only for the move it is choosing, because the exact average at every reveal made it about 150 Elo weaker. jqe's cheaper version gained when used everywhere.":
+    '我们修复皮卡鱼电脑时只修了它正在选择的那一步，因为在每次翻子都取精确平均会让它弱大约 150 Elo。jqe 这个更省力的版本用在所有地方，反而有提升。',
+  "A network 90 times smaller than AB-JChess's": '比 AB-JChess 小 90 倍的神经网络',
+  "jqe judges positions with a 1.5 MB neural network, about 90 times smaller than the one AB-JChess 0.2d runs (dated October 10, 2026; a later AB-JChess release may change it). jqe's was trained only on its own games, 82 million positions, where AB-JChess's first network was trained on about a billion. A small network is quick to run: jqe looks at about 30 times as many positions in the same time as AB-JChess 0.2b, the release before 0.2d. Its inputs also count every piece still face down, so it can see what a reveal might turn up.":
+    'jqe 用一个 1.5 MB 的神经网络评估局面，比 AB-JChess 0.2d 使用的网络（2026 年 10 月 10 日版；AB-JChess 之后的版本可能会更换）小大约 90 倍。jqe 的网络只用它自己的对局训练，共 8200 万个局面，而 AB-JChess 的第一个网络用了大约十亿个局面。小网络运行起来很快：同样的时间里，jqe 看的局面大约是 AB-JChess 0.2b（0.2d 的上一个版本）的 30 倍。它的输入还会统计每一枚仍然盖着的暗子，所以它能看出一次翻子可能翻出什么。',
+  'jqe judged positions better than AB-JChess': 'jqe 对局面的判断比 AB-JChess 更准',
+  'Each engine reports a score with every move, which we turned into a winning chance on a curve fitted to that engine. **In 142 games jqe gave itself 75% or more while AB-JChess, a move before or after, gave jqe 60% or less. jqe won 116 of them.** The other way round happened in 33 games, and AB-JChess won 23.':
+    '两个引擎每走一步都会报出一个分数，我们用为各引擎分别拟合的曲线把它换算成胜率。**有 142 盘棋，jqe 给自己 75% 或更高，而 AB-JChess 在前一步或后一步只给 jqe 60% 或更低。这些棋 jqe 赢了 116 盘。**反过来的情况出现在 33 盘棋中，AB-JChess 赢了其中 23 盘。',
+  "In the first two games below, a face-down piece of AB-JChess's came up a chariot where jqe could win it. In the third, the engines disagreed about who was winning.":
+    '下面前两盘棋里，AB-JChess 的一个暗子翻出来是车，而且正好落在 jqe 能吃掉它的位置。第三盘里，两个引擎对谁占优看法不一。',
+  'Game 46: jqe takes the chariot on move 8': '第 46 盘：jqe 第 8 回合吃掉车',
+  "jqe has Black. On move 8 AB-JChess's face-down piece takes one of jqe's and comes up a chariot, and a face-down piece of jqe's takes it straight back. AB-JChess keeps the game close until move 18; jqe mates on move 35.":
+    'jqe 执黑。第 8 回合，AB-JChess 的一个暗子吃掉 jqe 的一个子，翻出来是车，jqe 的一个暗子随即把它吃回。AB-JChess 直到第 18 回合都认为局势接近；jqe 第 35 回合将死对方。',
+  'Jieqi, game 46: jqe takes the chariot': '揭棋第 46 盘：jqe 吃掉车',
+  'Game 239: a cannon check wins a chariot': '第 239 盘：炮将军，赢得一车',
+  "jqe has Red. On move 5 AB-JChess pushes a face-down piece forward and it comes up a chariot. jqe's cannon leaves the corner file to check down the middle, which opens the file for the face-down piece behind it, and no answer to the check saves the chariot. AB-JChess first gives jqe 75% on move 16; jqe mates on move 39.":
+    'jqe 执红。第 5 回合，AB-JChess 把一个暗子往前走，翻出来是车。jqe 的炮离开边线，到中路将军，同时让出这条直线，给它身后的暗子打开通路；黑方怎么应将都保不住这个车。AB-JChess 到第 16 回合才第一次给 jqe 75%；jqe 第 39 回合将死对方。',
+  'Jieqi, game 239: the cannon check': '揭棋第 239 盘：炮将军',
+  'Game 152: AB-JChess misses a mate and loses a chariot':
+    '第 152 盘：AB-JChess 错过杀棋，丢了一车',
+  "jqe has Black and is losing: from move 19 both engines give AB-JChess 86% or more. On move 22 AB-JChess had a forced mate, starting with its chariot taking a soldier; a longer search by AB-JChess itself finds it. In the game its other chariot took an advisor with check instead, and jqe's general took the chariot. AB-JChess reported that move as winning, but the score was one its search had not finished checking when its 4 seconds ran out. Given 15 seconds on the same move, it scores it at about four pawns for Red, far short of the mate it gave up. Each engine got exactly 4 seconds a move in this match, with no extra time when its search was unsure, and game 152 shows what that can cost.":
+    'jqe 执黑，而且处于下风：从第 19 回合起，两个引擎都给 AB-JChess 86% 或更高。第 22 回合 AB-JChess 有一套连杀，第一步是车吃兵；让 AB-JChess 自己搜得更久，它也能找到。实战中它却用另一个车吃士将军，jqe 的将吃掉了这个车。AB-JChess 报告这步棋是胜势，但这个分数是它的搜索在 4 秒用完时还没验证完的。同一步棋给它 15 秒，它的评分约为红方多四个兵，远不及它放弃的杀棋。这次比赛中两个引擎每步都正好 4 秒，搜索没把握时也不加时，第 152 盘说明了这样做可能付出的代价。',
+  'jqe gave itself 81% as soon as it took the chariot, and 99% a move later. AB-JChess still gave itself 95% after move 23, then dropped to 9% on move 24. jqe mates on move 36.':
+    'jqe 一吃掉车就给自己 81%，再走一步就是 99%。第 23 回合之后 AB-JChess 仍给自己 95%，第 24 回合才跌到 9%。jqe 第 36 回合将死对方。',
+  'Jieqi, game 152: the chariot sacrifice': '揭棋第 152 盘：弃车',
+  'jqe is not always the one who is right. In game 40 jqe gave itself 67% on its last move, while AB-JChess gave it 2% and mated it on the next.':
+    'jqe 也不总是对的。第 40 盘，jqe 在自己的最后一步给自己 67%，而 AB-JChess 只给它 2%，下一步就将死了它。',
+  'jqe is at the top of the jieqi bot list, one level above AB-JChess, with the Pikafish levels below them. Its lead over AB-JChess 0.2d is smaller than its lead over the older 0.2b was, because the newer release is the stronger one: it beat the older by about 54 Elo.':
+    'jqe 排在揭棋电脑列表的最上面，比 AB-JChess 高一级，皮卡鱼的各个级别排在它们下面。它对 AB-JChess 0.2d 的领先，比当初对较旧的 0.2b 要小，因为新版本更强：0.2d 对旧版的胜幅约为 54 Elo。',
+  Clock: '用时',
+  Range: '区间',
+  'AB-JChess 0.2d': 'AB-JChess 0.2d',
+  '4 s a move': '每步 4 秒',
+  '+31 to +104': '+31 到 +104',
+  'AB-JChess 0.2b': 'AB-JChess 0.2b',
+  '+101 to +262': '+101 到 +262',
+  '15 s a move': '每步 15 秒',
+  '+58 to +261': '+58 到 +261',
+  '60 s + 0.6 s': '60 秒 + 0.6 秒',
+  '+136 to +181': '+136 到 +181',
+  'Our Pikafish bot': '我们的皮卡鱼电脑',
+  '+187 to +236': '+187 到 +236',
+  "jqe's results: wins, draws, losses. The range is the 95% interval. The last two rows are from jqe's own report, on its author's referee; its Pikafish opponent was our Pikafish bot as of September 21, before the reveal fix.":
+    'jqe 的战绩：胜-和-负。区间为 95% 置信区间。最后两行来自 jqe 自己的报告，用的是其作者的裁判程序；其中的皮卡鱼对手是我们 9 月 21 日的皮卡鱼电脑，当时还没有修复翻子错误。',
+  "Each row is its own match, on its own deals and settings, so the margins do not add up. Our matches ran on our own referee, whose rules are not quite jqe's. It draws any threefold repetition and any 60 moves without a capture, where jqe's own rules make a perpetual checker lose and draw after 40 moves without a capture. Of the 300 games against 0.2d, 15 ended in repetition, and one went past 40 moves without a capture before jqe won it. The referee also shows a piece captured face-down to both engines, where on the site only its capturer learns what it was. Both engines saw the same thing, so neither gained from it.":
+    '每一行都是一场独立的比赛，暗子布局和设置各不相同，所以这些差距不能相加。我们的比赛在我们自己的裁判程序上进行，它的规则和 jqe 的不完全一样：任何三次重复局面都判和，任何连续 60 回合无吃子也判和；而按 jqe 自己的规则，长将的一方判负，连续 40 回合无吃子判和。对 0.2d 的 300 盘里，有 15 盘以重复局面结束，还有一盘超过了 40 回合无吃子，最后 jqe 赢下。裁判程序还会把被暗吃的棋子向双方引擎公开，而在本站只有吃子方才知道它是什么。两个引擎看到的信息相同，所以谁也没有因此占便宜。',
+  "jqe is open source under the MIT licence at [github.com/devinokeefe/jieqi](https://github.com/devinokeefe/jieqi), with its network, its match records and the tools that recompute every number in its report. Congratulations to Devin O'Keefe, and thank you for letting us play it here. Thanks also to Huorongrong and Laoxu, whose [AB-JChess](https://github.com/lxsgx23/AB-JChess) set the mark jqe had to beat.":
+    "jqe 以 MIT 许可证开源，地址是 [github.com/devinokeefe/jieqi](https://github.com/devinokeefe/jieqi)，其中包括它的神经网络、比赛记录，以及能重算报告中每一个数字的工具。恭喜 Devin O'Keefe，也感谢他允许我们在这里使用它。同样感谢 Huorongrong 和 Laoxu，他们的 [AB-JChess](https://github.com/lxsgx23/AB-JChess) 是 jqe 必须超越的标杆。",
+  'Play jqe': '挑战 jqe',
+  "Game 46: jqe's winning chance by move as each engine saw it. jqe's own read jumps to 79% on move 8 and stays above 70%; AB-JChess's stays between 54% and 62% until move 18, then rises.":
+    '第 46 盘：两个引擎眼中 jqe 每回合的胜率。jqe 自己的判断在第 8 回合跳到 79%，此后一直高于 70%；AB-JChess 的判断到第 18 回合前都在 54% 到 62% 之间，之后才上升。',
+  "jqe's winning chance, as each engine saw it": '两个引擎眼中 jqe 的胜率',
+  'Chariot taken': '吃掉车',
+  'jqe: 79%': 'jqe：79%',
+  'AB-JChess agrees': 'AB-JChess 认同',
+  'move 18': '第 18 回合',
+  "Game 239: jqe's winning chance by move as each engine saw it. jqe's own read is 76% to 82% from move 5 to move 9 while AB-JChess's is 55% to 62%; both dip near move 12, then jqe's reaches 84% on move 14 and AB-JChess's reaches 75% on move 16.":
+    '第 239 盘：两个引擎眼中 jqe 每回合的胜率。第 5 到第 9 回合，jqe 自己的判断在 76% 到 82% 之间，AB-JChess 的在 55% 到 62% 之间；两者在第 12 回合附近都有所回落，随后 jqe 的判断在第 14 回合达到 84%，AB-JChess 的在第 16 回合达到 75%。',
+  'Cannon check': '炮将军',
+  'jqe: 81%': 'jqe：81%',
+  'move 16': '第 16 回合',
+  "Game 152: jqe's winning chance by move as each engine saw it. Both reads fall below 25% by move 16 and stay there until move 22; then jqe's own read jumps to 81% and 99%, while AB-JChess's stays near 0% for one more move and jumps to 91% on move 24.":
+    '第 152 盘：两个引擎眼中 jqe 每回合的胜率。到第 16 回合，两者的判断都跌到 25% 以下，并一直保持到第 22 回合；随后 jqe 自己的判断跳到 81% 和 99%，而 AB-JChess 的判断又在 0% 附近停留了一个回合，到第 24 回合才跳到 91%。',
+  'General takes the chariot': '将吃车',
+  'move 24': '第 24 回合',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -11807,6 +11919,115 @@ const ZH_HANT: Record<string, string> = {
     '新增炮規則的設計沿革，以及這些數字背後的引擎結果。',
   'Names obscuro-chess, the other open implementation, instead of calling Misty the only one.':
     '點名另一個開源實作 obscuro-chess，不再稱 Misty 是唯一的開源實作。',
+  // jqe: machine-drafted 2026-10-24, not native-reviewed, from the English signed off that day. Terms follow ab-jchess and pikafish-reveal-bug (暗子, 翻子, 暗吃, 界限, 勝率, 皮卡魚, 研究, 搜尋, 著法, 神經網路; 暗子佈局 for a deal).
+  'jqe, the new top jieqi bot': 'jqe：新的最強揭棋電腦',
+  'jqe: the open-source jieqi engine that beat AB-JChess 171 to 114':
+    'jqe：以 171 比 114 戰勝 AB-JChess 的開源揭棋引擎',
+  "jqe, an open-source jieqi engine by Devin O'Keefe, is now the top jieqi bot on Mistboard. It beat AB-JChess 0.2d 171 to 114 over 300 games, with a network about 90 times smaller.":
+    "jqe 是 Devin O'Keefe 開發的開源揭棋引擎，現在是 Mistboard 上最強的揭棋電腦。它在 300 盤中以 171 比 114 戰勝 AB-JChess 0.2d，而它的神經網路小了大約 90 倍。",
+  "jqe, an open-source engine by Devin O'Keefe, is the top jieqi bot on Mistboard as of October 2026. Over 300 games against AB-JChess 0.2d, the release the site runs, it won 171, drew 15 and lost 114, about 67 Elo.":
+    "截至 2026 年 10 月，Devin O'Keefe 開發的開源引擎 jqe 是 Mistboard 上最強的揭棋電腦。它對本站使用的 AB-JChess 0.2d 版本下了 300 盤，贏 171 盤，和 15 盤，輸 114 盤，約合 67 Elo。",
+  "Its biggest gain is a cheap way to score a reveal. It is as accurate on average as Star1, the exact method Bruce Ballard published in 1983, for a tenth of the work, and it was worth about 140 Elo against jqe's earlier version.":
+    '它最大的提升來自一種給翻子打分的省力方法。平均而言，它和 Bruce Ballard 在 1983 年發表的精確方法 Star1 一樣準確，計算量卻只有十分之一；對 jqe 自己的早期版本，這一項就值約 140 Elo。',
+  "Its network is about 90 times smaller than AB-JChess's, so it searches many more positions in the same time.":
+    '它的神經網路比 AB-JChess 的小大約 90 倍，所以同樣的時間裡能搜尋多得多的局面。',
+  'jqe judged positions better: in 142 games it rated itself well ahead while AB-JChess still had the game close, and it won 116 of them.':
+    'jqe 對局面的判斷更準：有 142 盤棋，它認為自己已經大幅領先，而 AB-JChess 仍認為局勢接近，這些棋 jqe 贏了 116 盤。',
+  "[Jieqi](/rules/jieqi) on Mistboard has a new top bot. [jqe](https://github.com/devinokeefe/jieqi) is an open-source engine by Devin O'Keefe, first released on October 13, and we play it here with his permission. Against AB-JChess 0.2d, the top bot until now, it won 171 games, drew 15 and lost 114, about 67 Elo. You can [play it](/bot/jqe) now; [AB-JChess](/blog/ab-jchess) stays on the ladder one level below.":
+    "[揭棋](/rules/jieqi)在 Mistboard 上有了新的最強電腦。[jqe](https://github.com/devinokeefe/jieqi) 是 Devin O'Keefe 開發的開源引擎，10 月 13 日首次發佈，我們經他許可在這裡使用它。它對此前最強的電腦 AB-JChess 0.2d 贏了 171 盤，和 15 盤，輸 114 盤，約合 67 Elo。現在就可以[和它下一盤](/bot/jqe)；[AB-JChess](/blog/ab-jchess) 仍留在電腦階梯上，排在它下面一級。",
+  'The 300 games were 150 deals, each played twice with colours swapped, at 4 seconds a move on the settings the site uses. jqe won both games of a deal 43 times, and AB-JChess did that 19 times. All 300 are in [a study](/study/3RQbr51i), one chapter a game.':
+    '這 300 盤棋來自 150 組暗子佈局，每組紅黑互換各下一次，每步 4 秒，用的是本站的設定。同一組佈局的兩盤都贏，jqe 做到了 43 次，AB-JChess 做到了 19 次。全部 300 盤都在[一個研究](/study/3RQbr51i)裡，每盤一章。',
+  'jqe 0.1.0 against AB-JChess 0.2d. Both engines are still being developed, so a later release of either may score differently.':
+    'jqe 0.1.0 對 AB-JChess 0.2d。兩個引擎都還在開發中，任何一方的後續版本都可能得出不同的結果。',
+  'As of October 24, 2026': '截至 2026 年 10 月 24 日',
+  'jqe scores a reveal as well as the exact method, at a tenth of the cost':
+    'jqe 給翻子打分和精確方法一樣準，代價只有十分之一',
+  '**Every reveal is a gamble the engine has to price.** A face-down piece turns over when it moves, so an engine moving one does not know what it is moving. It plays the move once for each piece it could be, scores each outcome, and averages them, weighted by how many of each piece are still unaccounted for. Every jieqi engine we have looked at does this.':
+    '**每一次翻子都是一場引擎必須估價的賭博。**暗子一動就會翻開，所以引擎走暗子時並不知道自己走的是什麼。它會對這個暗子可能是的每一種棋子各走一次這步棋，給每種結果打分，再按每種棋子還有多少下落不明加權平均。我們看過的揭棋引擎都是這樣做的。',
+  '**The usual shortcut makes reveals look safer than they are.** To save time, a search stops working on a move once it knows the move is worse than the best so far, and hands back a bound, "this much or worse", in place of a real score. That is fine for comparing moves and wrong inside an average: a piece that gets mated can come back as "no better than +7" and count as +7. Our Pikafish bot had this flaw, and so does the AB-JChess release we checked. [The reveal-bug post](/blog/pikafish-reveal-bug) shows the moves it led our bot to.':
+    '**常用的捷徑會讓翻子看起來比實際更安全。**為了節省時間，搜尋一旦知道某步棋不如目前最好的一步，就會停止計算，交回一個界限，也就是「最多這麼多，或者更差」，而不是真實的分數。用來比較著法沒有問題，放進平均裡就錯了：一個會被將死的棋子，可能以「不超過 +7」的形式返回，然後被當成 +7 計算。我們的皮卡魚電腦有這個缺陷，我們檢查過的那個 AB-JChess 版本也有。[翻子錯誤那篇文章](/blog/pikafish-reveal-bug)展示了它讓我們的電腦走出了哪些棋。',
+  "**The exact fix is from 1983, and it is slow.** Bruce Ballard's Star1 searches each chance move with bounds that keep every outcome honest, so the average comes out right. jqe's report measured both methods, and jqe's own, on 72 reveals jqe had played:":
+    '**精確的修正方法早在 1983 年就有了，但它很慢。**Bruce Ballard 的 Star1 在搜尋每一步帶隨機性的著法時，都設定能讓每種結果如實返回的界限，所以平均值是對的。jqe 的報告在 jqe 實戰走過的 72 次翻子上，測量了這兩種方法，以及 jqe 自己的方法：',
+  Method: '方法',
+  Overrating: '高估幅度',
+  'The usual shortcut': '常用的捷徑',
+  '1 time': '1 倍',
+  'Star1, exact (Ballard, 1983)': 'Star1，精確（Ballard，1983）',
+  '11.5 times': '11.5 倍',
+  "jqe's method": 'jqe 的方法',
+  '1.15 times': '1.15 倍',
+  "How far each method overrated 72 of jqe's reveals, in expected score (0.01 is one point in a hundred), and how much searching it took. From jqe's report.":
+    '每種方法對 jqe 的 72 次翻子高估了多少（以期望得分計，0.01 即一百分中的一分），以及需要多少搜尋量。資料來自 jqe 的報告。',
+  "**jqe gets Star1's accuracy for 15% more work.** It searches every piece the mover could be six half-moves less deep with no cut-off, so each comes back with a real score, and searches the most likely piece at full depth as well.":
+    '**jqe 只多花 15% 的工作量，就達到了 Star1 的準確度。**對走動的暗子可能是的每一種棋子，它都少搜 6 個半回合的深度，並且不做截斷，所以每種棋子返回的都是真實分數；同時它還會對可能性最大的那種棋子做完整深度的搜尋。',
+  'What the fix was worth': '這項改進值多少',
+  "Against jqe's own earlier version, this was worth about 140 Elo (somewhere between 80 and 200), jqe's largest single gain. For scale, searching four times as many positions a move was worth about 50. Using it at every reveal deep in the search, with three smaller changes, added about 34 more.":
+    '對 jqe 自己的早期版本，這一改進值約 140 Elo（介於 80 到 200 之間），是 jqe 最大的單項提升。作為對比，每步多搜四倍的局面只值約 50。在搜尋深處的每次翻子都用上它，再加上另外三項較小的改動，又多了約 34。',
+  "We fixed our Pikafish bot only for the move it is choosing, because the exact average at every reveal made it about 150 Elo weaker. jqe's cheaper version gained when used everywhere.":
+    '我們修復皮卡魚電腦時只修了它正在選擇的那一步，因為在每次翻子都取精確平均會讓它弱大約 150 Elo。jqe 這個更省力的版本用在所有地方，反而有提升。',
+  "A network 90 times smaller than AB-JChess's": '比 AB-JChess 小 90 倍的神經網路',
+  "jqe judges positions with a 1.5 MB neural network, about 90 times smaller than the one AB-JChess 0.2d runs (dated October 10, 2026; a later AB-JChess release may change it). jqe's was trained only on its own games, 82 million positions, where AB-JChess's first network was trained on about a billion. A small network is quick to run: jqe looks at about 30 times as many positions in the same time as AB-JChess 0.2b, the release before 0.2d. Its inputs also count every piece still face down, so it can see what a reveal might turn up.":
+    'jqe 用一個 1.5 MB 的神經網路評估局面，比 AB-JChess 0.2d 使用的網路（2026 年 10 月 10 日版；AB-JChess 之後的版本可能會更換）小大約 90 倍。jqe 的網路只用它自己的對局訓練，共 8200 萬個局面，而 AB-JChess 的第一個網路用了大約十億個局面。小網路運行起來很快：同樣的時間裡，jqe 看的局面大約是 AB-JChess 0.2b（0.2d 的上一個版本）的 30 倍。它的輸入還會統計每一枚仍然蓋著的暗子，所以它能看出一次翻子可能翻出什麼。',
+  'jqe judged positions better than AB-JChess': 'jqe 對局面的判斷比 AB-JChess 更準',
+  'Each engine reports a score with every move, which we turned into a winning chance on a curve fitted to that engine. **In 142 games jqe gave itself 75% or more while AB-JChess, a move before or after, gave jqe 60% or less. jqe won 116 of them.** The other way round happened in 33 games, and AB-JChess won 23.':
+    '兩個引擎每走一步都會報出一個分數，我們用為各引擎分別擬合的曲線把它換算成勝率。**有 142 盤棋，jqe 給自己 75% 或更高，而 AB-JChess 在前一步或後一步只給 jqe 60% 或更低。這些棋 jqe 贏了 116 盤。**反過來的情況出現在 33 盤棋中，AB-JChess 贏了其中 23 盤。',
+  "In the first two games below, a face-down piece of AB-JChess's came up a chariot where jqe could win it. In the third, the engines disagreed about who was winning.":
+    '下面前兩盤棋裡，AB-JChess 的一個暗子翻出來是車，而且正好落在 jqe 能吃掉它的位置。第三盤裡，兩個引擎對誰佔優看法不一。',
+  'Game 46: jqe takes the chariot on move 8': '第 46 盤：jqe 第 8 回合吃掉車',
+  "jqe has Black. On move 8 AB-JChess's face-down piece takes one of jqe's and comes up a chariot, and a face-down piece of jqe's takes it straight back. AB-JChess keeps the game close until move 18; jqe mates on move 35.":
+    'jqe 執黑。第 8 回合，AB-JChess 的一個暗子吃掉 jqe 的一個子，翻出來是車，jqe 的一個暗子隨即把它吃回。AB-JChess 直到第 18 回合都認為局勢接近；jqe 第 35 回合將死對方。',
+  'Jieqi, game 46: jqe takes the chariot': '揭棋第 46 盤：jqe 吃掉車',
+  'Game 239: a cannon check wins a chariot': '第 239 盤：炮將軍，贏得一車',
+  "jqe has Red. On move 5 AB-JChess pushes a face-down piece forward and it comes up a chariot. jqe's cannon leaves the corner file to check down the middle, which opens the file for the face-down piece behind it, and no answer to the check saves the chariot. AB-JChess first gives jqe 75% on move 16; jqe mates on move 39.":
+    'jqe 執紅。第 5 回合，AB-JChess 把一個暗子往前走，翻出來是車。jqe 的炮離開邊線，到中路將軍，同時讓出這條直線，給它身後的暗子打開通路；黑方怎麼應將都保不住這個車。AB-JChess 到第 16 回合才第一次給 jqe 75%；jqe 第 39 回合將死對方。',
+  'Jieqi, game 239: the cannon check': '揭棋第 239 盤：炮將軍',
+  'Game 152: AB-JChess misses a mate and loses a chariot':
+    '第 152 盤：AB-JChess 錯過殺棋，丟了一車',
+  "jqe has Black and is losing: from move 19 both engines give AB-JChess 86% or more. On move 22 AB-JChess had a forced mate, starting with its chariot taking a soldier; a longer search by AB-JChess itself finds it. In the game its other chariot took an advisor with check instead, and jqe's general took the chariot. AB-JChess reported that move as winning, but the score was one its search had not finished checking when its 4 seconds ran out. Given 15 seconds on the same move, it scores it at about four pawns for Red, far short of the mate it gave up. Each engine got exactly 4 seconds a move in this match, with no extra time when its search was unsure, and game 152 shows what that can cost.":
+    'jqe 執黑，而且處於下風：從第 19 回合起，兩個引擎都給 AB-JChess 86% 或更高。第 22 回合 AB-JChess 有一套連殺，第一步是車吃兵；讓 AB-JChess 自己搜得更久，它也能找到。實戰中它卻用另一個車吃士將軍，jqe 的將吃掉了這個車。AB-JChess 報告這步棋是勝勢，但這個分數是它的搜尋在 4 秒用完時還沒驗證完的。同一步棋給它 15 秒，它的評分約為紅方多四個兵，遠不及它放棄的殺棋。這次比賽中兩個引擎每步都正好 4 秒，搜尋沒把握時也不加時，第 152 盤說明了這樣做可能付出的代價。',
+  'jqe gave itself 81% as soon as it took the chariot, and 99% a move later. AB-JChess still gave itself 95% after move 23, then dropped to 9% on move 24. jqe mates on move 36.':
+    'jqe 一吃掉車就給自己 81%，再走一步就是 99%。第 23 回合之後 AB-JChess 仍給自己 95%，第 24 回合才跌到 9%。jqe 第 36 回合將死對方。',
+  'Jieqi, game 152: the chariot sacrifice': '揭棋第 152 盤：棄車',
+  'jqe is not always the one who is right. In game 40 jqe gave itself 67% on its last move, while AB-JChess gave it 2% and mated it on the next.':
+    'jqe 也不總是對的。第 40 盤，jqe 在自己的最後一步給自己 67%，而 AB-JChess 只給它 2%，下一步就將死了它。',
+  'jqe is at the top of the jieqi bot list, one level above AB-JChess, with the Pikafish levels below them. Its lead over AB-JChess 0.2d is smaller than its lead over the older 0.2b was, because the newer release is the stronger one: it beat the older by about 54 Elo.':
+    'jqe 排在揭棋電腦列表的最上面，比 AB-JChess 高一級，皮卡魚的各個級別排在它們下面。它對 AB-JChess 0.2d 的領先，比當初對較舊的 0.2b 要小，因為新版本更強：0.2d 對舊版的勝幅約為 54 Elo。',
+  Clock: '用時',
+  Range: '區間',
+  'AB-JChess 0.2d': 'AB-JChess 0.2d',
+  '4 s a move': '每步 4 秒',
+  '+31 to +104': '+31 到 +104',
+  'AB-JChess 0.2b': 'AB-JChess 0.2b',
+  '+101 to +262': '+101 到 +262',
+  '15 s a move': '每步 15 秒',
+  '+58 to +261': '+58 到 +261',
+  '60 s + 0.6 s': '60 秒 + 0.6 秒',
+  '+136 to +181': '+136 到 +181',
+  'Our Pikafish bot': '我們的皮卡魚電腦',
+  '+187 to +236': '+187 到 +236',
+  "jqe's results: wins, draws, losses. The range is the 95% interval. The last two rows are from jqe's own report, on its author's referee; its Pikafish opponent was our Pikafish bot as of September 21, before the reveal fix.":
+    'jqe 的戰績：勝-和-負。區間為 95% 信賴區間。最後兩行來自 jqe 自己的報告，用的是其作者的裁判程式；其中的皮卡魚對手是我們 9 月 21 日的皮卡魚電腦，當時還沒有修復翻子錯誤。',
+  "Each row is its own match, on its own deals and settings, so the margins do not add up. Our matches ran on our own referee, whose rules are not quite jqe's. It draws any threefold repetition and any 60 moves without a capture, where jqe's own rules make a perpetual checker lose and draw after 40 moves without a capture. Of the 300 games against 0.2d, 15 ended in repetition, and one went past 40 moves without a capture before jqe won it. The referee also shows a piece captured face-down to both engines, where on the site only its capturer learns what it was. Both engines saw the same thing, so neither gained from it.":
+    '每一行都是一場獨立的比賽，暗子佈局和設定各不相同，所以這些差距不能相加。我們的比賽在我們自己的裁判程式上進行，它的規則和 jqe 的不完全一樣：任何三次重複局面都判和，任何連續 60 回合無吃子也判和；而按 jqe 自己的規則，長將的一方判負，連續 40 回合無吃子判和。對 0.2d 的 300 盤裡，有 15 盤以重複局面結束，還有一盤超過了 40 回合無吃子，最後 jqe 贏下。裁判程式還會把被暗吃的棋子向雙方引擎公開，而在本站只有吃子方才知道它是什麼。兩個引擎看到的資訊相同，所以誰也沒有因此佔便宜。',
+  "jqe is open source under the MIT licence at [github.com/devinokeefe/jieqi](https://github.com/devinokeefe/jieqi), with its network, its match records and the tools that recompute every number in its report. Congratulations to Devin O'Keefe, and thank you for letting us play it here. Thanks also to Huorongrong and Laoxu, whose [AB-JChess](https://github.com/lxsgx23/AB-JChess) set the mark jqe had to beat.":
+    "jqe 以 MIT 授權開源，地址是 [github.com/devinokeefe/jieqi](https://github.com/devinokeefe/jieqi)，其中包括它的神經網路、比賽紀錄，以及能重算報告中每一個數字的工具。恭喜 Devin O'Keefe，也感謝他允許我們在這裡使用它。同樣感謝 Huorongrong 和 Laoxu，他們的 [AB-JChess](https://github.com/lxsgx23/AB-JChess) 是 jqe 必須超越的標竿。",
+  'Play jqe': '挑戰 jqe',
+  "Game 46: jqe's winning chance by move as each engine saw it. jqe's own read jumps to 79% on move 8 and stays above 70%; AB-JChess's stays between 54% and 62% until move 18, then rises.":
+    '第 46 盤：兩個引擎眼中 jqe 每回合的勝率。jqe 自己的判斷在第 8 回合跳到 79%，此後一直高於 70%；AB-JChess 的判斷到第 18 回合前都在 54% 到 62% 之間，之後才上升。',
+  "jqe's winning chance, as each engine saw it": '兩個引擎眼中 jqe 的勝率',
+  'Chariot taken': '吃掉車',
+  'jqe: 79%': 'jqe：79%',
+  'AB-JChess agrees': 'AB-JChess 認同',
+  'move 18': '第 18 回合',
+  "Game 239: jqe's winning chance by move as each engine saw it. jqe's own read is 76% to 82% from move 5 to move 9 while AB-JChess's is 55% to 62%; both dip near move 12, then jqe's reaches 84% on move 14 and AB-JChess's reaches 75% on move 16.":
+    '第 239 盤：兩個引擎眼中 jqe 每回合的勝率。第 5 到第 9 回合，jqe 自己的判斷在 76% 到 82% 之間，AB-JChess 的在 55% 到 62% 之間；兩者在第 12 回合附近都有所回落，隨後 jqe 的判斷在第 14 回合達到 84%，AB-JChess 的在第 16 回合達到 75%。',
+  'Cannon check': '炮將軍',
+  'jqe: 81%': 'jqe：81%',
+  'move 16': '第 16 回合',
+  "Game 152: jqe's winning chance by move as each engine saw it. Both reads fall below 25% by move 16 and stay there until move 22; then jqe's own read jumps to 81% and 99%, while AB-JChess's stays near 0% for one more move and jumps to 91% on move 24.":
+    '第 152 盤：兩個引擎眼中 jqe 每回合的勝率。到第 16 回合，兩者的判斷都跌到 25% 以下，並一直保持到第 22 回合；隨後 jqe 自己的判斷跳到 81% 和 99%，而 AB-JChess 的判斷又在 0% 附近停留了一個回合，到第 24 回合才跳到 91%。',
+  'General takes the chariot': '將吃車',
+  'move 24': '第 24 回合',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
