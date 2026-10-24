@@ -13,6 +13,7 @@ import {
 import { homedir, hostname, tmpdir } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { resolveBlogDeployHook, triggerBlogDeployHook } from './lib/blog-deploy-hook.mjs';
 import {
   currentMonth,
   insertChangelogEntries,
@@ -347,6 +348,8 @@ try {
   announceNews({ deployRequired: release.deployRequired });
 
   submitIndexNow({ deployRequired: release.deployRequired });
+
+  await rebuildBlog({ deployRequired: release.deployRequired });
 
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.log(`release: ok in ${formatDuration(elapsedMs)}${adoptionSummary()}`);
@@ -1913,6 +1916,20 @@ function submitIndexNow({ deployRequired }) {
       'warning: indexnow submission failed; re-run `npm run indexnow -- --prerendered`',
     );
   }
+}
+
+// brianhliou.com's home page lists our newest articles from /feed.xml at its
+// build, so every deploying release asks Vercel to rebuild it. Every deploy,
+// not only one that adds an article: a dated article reaches the feed at the
+// first ship after its 09:00, which no diff names, and a rebuild that finds
+// nothing new costs one Jekyll build. A failure is a warning.
+async function rebuildBlog({ deployRequired }) {
+  if (!deployRequired) {
+    console.log('skip: brianhliou.com rebuild (no deploy)');
+    return;
+  }
+  const { ok, message } = await triggerBlogDeployHook({ hookUrl: resolveBlogDeployHook() });
+  (ok || message.startsWith('skip:') ? console.log : console.error)(message);
 }
 
 // A committed drain shows every player "Server restarting now" until the
