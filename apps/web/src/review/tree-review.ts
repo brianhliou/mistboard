@@ -26,6 +26,7 @@ import { type ProfileTarget, playerNameEl } from '../profile-link.js';
 import type { ShowcaseClockPair } from '../showcase-clock.js';
 import type { StudyVariantId } from '../study-catalog.js';
 import { displayComment } from '../study-i18n.js';
+import { formatClock } from '../web-utils.js';
 import {
   type AdvantageChart,
   type AdvantageChartMark,
@@ -317,6 +318,10 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  summary's per-phase accuracy. Omit for variants without a phase heuristic —
    *  the chart and summary then skip the phase chrome. */
   gamePhases?(mainlineTruths: readonly Truth[]): GamePhases;
+  /** Captures beside a player, read only from the displayed projection. `owner`
+   *  is the ink of that player's opponent (the pieces the player took). The
+   *  root view is the baseline for open variants without a capture ledger. */
+  seatCaptures?(host: HTMLElement, view: View, rootView: View, owner: string): void;
   /** Optional right-rail material rows (lichess mat-top / mat-bot). The factory
    *  receives the two host rows and returns a per-render updater called with the
    *  displayed node's truth, the tree root's truth (the diff baseline — a
@@ -624,7 +629,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // this base instead of the variant's startpos.
   const engineBaseFen =
     config.root && presentation.engine ? presentation.engine.fen(tree.root.truth) : undefined;
-  const mainlineLen = tree.mainlinePath().length;
+  const recordedPath = tree.mainlinePath();
+  const mainlineLen = recordedPath.length;
   const notifyChange = (): void => config.onChange?.();
 
   const defaultPath: TreePath = config.initialPosition === 'start' ? [] : tree.last();
@@ -656,9 +662,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     return line;
   };
 
-  // ── Boards + gauge column. Captured-material rows are OFF on the review
-  // surface for now: empty rows collapse and re-inflate on the first capture,
-  // jarring the rail; they return with a lichess-style rework (#166).
+  // ── Boards + gauge column. Captures live in fixed-height player rows;
+  // drop reserves retain their dedicated rail pockets.
   //
   // adapter.project() returns ONE view (open variants) or N (fog: truth +
   // per-POV). The primary-tier view is the INTERACTIVE analysis board; any
@@ -754,11 +759,17 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   //
   // The strips are laid out by ORIENTATION, so flipping the board moves the
   // names with it: the side at the bottom is always the one facing the reader.
-  const seatNames = config.seatLabels ? config.players : undefined;
+  const seatNames = config.seatLabels ? (config.players ?? {}) : undefined;
   const topSeat = seatNames ? document.createElement('div') : null;
   const bottomSeat = seatNames ? document.createElement('div') : null;
-  function paintSeats(): void {
+  function paintSeats(view: View | null = viewForKey(currentPov)): void {
     if (!topSeat || !bottomSeat || !seatNames) return;
+    const rootView = presentation.seatCaptures
+      ? adapter.project(tree.root.truth).find((pv) => pv.key === currentPov)?.view
+      : undefined;
+    // Clocks belong to the played line, even after a variation is promoted.
+    const onRecordedLine = currentPath.every((id, i) => recordedPath[i] === id);
+    const clocks = onRecordedLine ? config.moveClocks?.[currentNode().ply] : undefined;
     // `perspective(false)` is the variant's unflipped side, which is Red for
     // every red/black variant and White for chess. Comparing against it avoids
     // hardcoding an ink name in the shared controller.
@@ -816,11 +827,24 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         ? playerNameEl(shown, profile ?? null, 'review-seat__name')
         : playerNameEl(inkWord(ink, isFirstMover), null, 'review-seat__name');
       el.append(disc, label);
+      if (presentation.seatCaptures) {
+        const material = document.createElement('div');
+        material.className = 'review-seat__material review-material-row';
+        const owner = slot === 'top' ? bottomInk : topInk;
+        if (view && rootView) presentation.seatCaptures(material, view, rootView, owner);
+        el.append(material);
+      }
       if (shown && detail) {
         const muted = document.createElement('span');
         muted.className = 'review-seat__detail';
         muted.textContent = detail;
         el.append(muted);
+      }
+      if (clocks) {
+        const clock = document.createElement('span');
+        clock.className = 'review-seat__clock';
+        clock.textContent = formatClock(isFirstMover ? clocks.first : clocks.second);
+        el.append(clock);
       }
     };
     // The first-mover SEAT is the one `perspective(false)` names, whatever ink it
@@ -829,11 +853,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     paint(bottomSeat, near, nearProfile, bottomInk, bottomIsRed, 'bottom', nearDetail);
   }
   if (topSeat && bottomSeat) {
-    // The strips are taken OUT of the flow and anchored to the wrapper. Adding
-    // them as grid rows pushed the board down and broke its alignment with the
-    // columns either side, which is the whole thing lichess gets right: the
-    // identity is added around the board without the board moving.
+    // Absolute rows keep the board's measured geometry independent of material;
+    // reserved margins keep names, clocks and captures clear of adjacent UI.
     wrap.classList.add('review-board-wrap--seated');
+    if (presentation.seatCaptures) wrap.classList.add('review-board-wrap--captures');
     paintSeats();
     wrap.append(boardEl, topSeat, bottomSeat);
   } else {
@@ -1955,7 +1978,6 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     flipped = !flipped;
     // The names travel with the board: whoever is at the bottom is the side the
     // reader is looking from.
-    paintSeats();
     render();
   }
   function lineEnd(path: TreePath): TreePath {
@@ -1987,6 +2009,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     povToggle?.sync();
     evalBar?.setFlipped(flipped);
     materialUpdate?.(node.truth, tree.root.truth, flipped);
+    paintSeats(view);
 
     // Order matters: setPosition fires onLines(null) synchronously when the
     // engine is on (stale-arrow clear); the explicit paintOverlays below then

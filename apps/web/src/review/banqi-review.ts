@@ -19,9 +19,10 @@ import {
 import { createBanqiInteractiveBoard } from '../banqi-board.js';
 import { t } from '../i18n/catalog.js';
 import type { BanqiBoardArrow, BanqiBoardMarker } from '../live-banqi-render.js';
-import { animateBanqiBoardMove } from '../live-banqi-render.js';
+import { animateBanqiBoardMove, banqiPieceGhostSvg } from '../live-banqi-render.js';
 import { createBanqiTablebasePanel } from './banqi-tablebase-panel.js';
 import { type BanqiReviewStart, makeBanqiTreeAdapter } from './banqi-tree-adapter.js';
+import { fillCapturedPoolWith } from './captured-pool.js';
 import {
   bestMoveArrowWithParser,
   bestMoveMarkerWithParser,
@@ -126,6 +127,10 @@ function makeBanqiPresentation(
       kind: 'circle',
       className: `xq-shape--${s.brush}`,
     }),
+    seatCaptures: (host, view, _rootView, owner) => {
+      if (owner !== 'red' && owner !== 'black') return;
+      fillCapturedPoolWith(host, view.captured, owner, banqiPieceGhostSvg);
+    },
     // Judgment badge on the square the move landed on, so the board states the
     // same verdict the move list does (lila pins its glyphs the same way).
     moveGlyphMarker: (move: BanqiMove, glyph): BanqiBoardMarker => ({

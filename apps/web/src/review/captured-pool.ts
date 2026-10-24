@@ -57,3 +57,27 @@ export function countBadge(count: number): HTMLSpanElement {
   badge.setAttribute('aria-hidden', 'true');
   return badge;
 }
+
+/** Pieces removed since this tree's root. Open variants have no capture ledger;
+ *  comparing with their seeded root avoids calling absent setup pieces captures.
+ *  Only for variants without promotions, drops or changes of identity. */
+export function capturedBetweenBoards<Color extends string, Role extends string>(
+  root: Partial<Record<string, { color: Color; role: Role }>>,
+  board: Partial<Record<string, { color: Color; role: Role }>>,
+): { owner: Color; role: Role }[] {
+  const remaining = new Map<string, number>();
+  for (const piece of Object.values(board)) {
+    if (!piece) continue;
+    const key = `${piece.color}:${piece.role}`;
+    remaining.set(key, (remaining.get(key) ?? 0) + 1);
+  }
+  const captured: { owner: Color; role: Role }[] = [];
+  for (const piece of Object.values(root)) {
+    if (!piece) continue;
+    const key = `${piece.color}:${piece.role}`;
+    const count = remaining.get(key) ?? 0;
+    if (count > 0) remaining.set(key, count - 1);
+    else captured.push({ owner: piece.color, role: piece.role });
+  }
+  return captured;
+}

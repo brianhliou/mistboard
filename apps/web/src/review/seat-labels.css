@@ -8,9 +8,23 @@
    styling at all -- static instead of absolute, so both stacked below the board;
    16px inherited instead of 13px; and the slot grew by their height, which
    dragged the resize grip (positioned by measuring that slot) off the board. */
+/* Reserve the top row on the whole cluster so both rails still align with the
+   board. Its padding is included in the viewport-fit budget. */
+.review-shell__cluster:has(.review-board-wrap--seated) {
+  padding-top: 26px;
+}
+
+.review-shell__cluster:has(.review-board-wrap--captures) {
+  padding-top: 54px;
+}
+
 .review-board-wrap--seated {
   position: relative;
   margin-bottom: 26px;
+}
+
+.review-board-wrap--captures {
+  margin-bottom: 54px;
 }
 
 .review-seat {
@@ -26,6 +40,46 @@
   font-weight: 500;
   line-height: 1.2;
   pointer-events: none;
+}
+
+.review-board-wrap--captures .review-seat {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: 22px 24px;
+  row-gap: 2px;
+}
+
+.review-seat__clock {
+  grid-column: 4;
+  grid-row: 1;
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.review-seat__detail {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+/* Reserve the second row even at the opening position. Captures stay compact
+   and scroll horizontally if needed instead of pushing the board on capture. */
+.review-seat .review-seat__material {
+  --capture-piece-size: 22px;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  flex-wrap: nowrap;
+  height: 24px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  pointer-events: auto;
+}
+
+.review-seat .review-seat__material .captures-row {
+  flex-wrap: nowrap;
 }
 
 /* `bottom: 100%` is the wrapper's top edge; the wrapper has no top padding, so
