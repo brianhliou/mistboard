@@ -309,3 +309,37 @@ test('review routes send COOP same-origin + COEP require-corp to every browser',
     await new Promise<void>((done) => server.close(() => done()));
   }
 });
+
+// The feeds' <media:content> links /thumb/article/<slug>.png?v=<hash>; the
+// route renders the build's SVG, and a post without one goes to its OG card.
+test('/thumb/article/<slug>.png renders the build thumbnail, else redirects to the OG card', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await mkdir(join(staticDir, 'thumb', 'article'), { recursive: true });
+  await writeFile(join(staticDir, 'index.html'), '<!doctype html><title>x</title>', 'utf-8');
+  await writeFile(
+    join(staticDir, 'thumb', 'article', 'some-post.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="300" viewBox="0 0 480 300"><rect x="40" y="40" width="400" height="220" fill="#e0b341"/></svg>',
+    'utf-8',
+  );
+  const handler = createHttpRequestHandler({
+    staticDir,
+    publicHost: 'https://mistboard.com',
+    drainController: { isDraining: () => false },
+  } as unknown as Parameters<typeof createHttpRequestHandler>[0]);
+  const server = createServer(handler);
+  await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const hit = await fetch(`${base}/thumb/article/some-post.png?v=0123abcd`);
+    const body = Buffer.from(await hit.arrayBuffer());
+    assert.equal(hit.status, 200);
+    assert.equal(hit.headers.get('content-type'), 'image/png');
+    assert.deepEqual([body.readUInt32BE(16), body.readUInt32BE(20)], [960, 600]);
+    const miss = await fetch(`${base}/thumb/article/no-such-post.png`, { redirect: 'manual' });
+    await miss.text();
+    assert.equal(miss.status, 302);
+    assert.equal(miss.headers.get('location'), '/og/article/no-such-post.png');
+  } finally {
+    await new Promise<void>((done) => server.close(() => done()));
+  }
+});

@@ -279,104 +279,6 @@ async function writeRoutePreloadManifest(manifest, shellHtml) {
 // prod HTML (leaking hidden variants and flashing panels that hydration then
 // removes).
 process.env.NODE_ENV = 'production';
-// --- RSS 2.0 for the announcement archive -----------------------------------
-// Hand-rolled rather than a dependency: the document is a dozen lines and the
-// only hard parts are escaping and the RFC-822 date.
-const xmlEscape = (value) =>
-  String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-
-// Announcements carry a date with no time. Noon UTC keeps every reader's local
-// date equal to the authored one.
-const rssDate = (iso) => {
-  const [year, month, day] = iso.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, day, 12)).toUTCString();
-};
-
-const absoluteHref = (href) => {
-  if (!href) return `${host}/feed`;
-  return /^https?:/.test(href) ? href : `${host}${href}`;
-};
-
-function renderNewsRss(entries) {
-  const items = entries
-    .map((entry) => {
-      // Stable id that does not change when an entry's link does, so a reader
-      // that has seen an item never sees it twice.
-      const slug = entry.headline
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 60);
-      // The authored CTA ("Open the editor") is a UI label, not prose. In a
-      // reader, and in a tweet built from this document, the link is the call
-      // to action, so the label would only read as a dangling imperative.
-      const description = entry.body ?? '';
-      return [
-        '    <item>',
-        `      <title>${xmlEscape(entry.headline)}</title>`,
-        `      <link>${xmlEscape(absoluteHref(entry.href))}</link>`,
-        `      <guid isPermaLink="false">mistboard:${entry.date}:${slug}</guid>`,
-        `      <pubDate>${rssDate(entry.date)}</pubDate>`,
-        `      <category>${xmlEscape(entry.kind)}</category>`,
-        description ? `      <description>${xmlEscape(description)}</description>` : null,
-        '    </item>',
-      ]
-        .filter(Boolean)
-        .join('\n');
-    })
-    .join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Mistboard updates</title>
-    <link>${host}/feed</link>
-    <atom:link href="${host}/feed.xml" rel="self" type="application/rss+xml" />
-    <description>Releases, articles, and status updates from Mistboard.</description>
-    <language>en</language>
-${items}
-  </channel>
-</rss>
-`;
-}
-
-// The blog's own feed, separate from /feed.xml (which carries announcements:
-// one-line release notes, not posts). A reader who subscribes to a blog wants
-// the posts, and mixing the two means either the announcements drown the posts
-// or subscribing to the posts signs you up for changelog entries.
-function renderArticlesRss(entries) {
-  const items = entries
-    .map((entry) => {
-      const url = `${host}/blog/${encodeURIComponent(entry.slug)}`;
-      return [
-        '    <item>',
-        `      <title>${xmlEscape(entry.title)}</title>`,
-        `      <link>${xmlEscape(url)}</link>`,
-        // Keyed by slug, not URL: a renamed slug 301s (RENAMED_ARTICLE_SLUGS)
-        // and the post is still the same post, so the id has to survive it.
-        `      <guid isPermaLink="false">mistboard:blog:${xmlEscape(entry.slug)}</guid>`,
-        ...(entry.publishedAt ? [`      <pubDate>${rssDate(entry.publishedAt)}</pubDate>`] : []),
-        `      <description>${xmlEscape(entry.summary)}</description>`,
-        '    </item>',
-      ].join('\n');
-    })
-    .join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Mistboard blog</title>
-    <link>${host}/blog</link>
-    <atom:link href="${host}/blog/feed.xml" rel="self" type="application/rss+xml" />
-    <description>Xiangqi, fog variants, and engine work from Mistboard.</description>
-    <language>en</language>
-${items}
-  </channel>
-</rss>
-`;
-}
 
 // Advertised in the head of every blog page so a reader's extension finds the
 // feed without being told it exists.
@@ -401,6 +303,11 @@ try {
   const { articleIsLive, articleGoesLiveAt } = await server.ssrLoadModule(
     '/src/articles/publish-time.ts',
   );
+  // RSS for /feed.xml and /blog/feed.xml, and the card art behind each post's
+  // feed thumbnail (/thumb/article/<slug>.png, rasterised by the server).
+  const { renderNewsRss, renderArticlesRss, feedThumbnailPath } =
+    await server.ssrLoadModule('/src/feed-rss.ts');
+  const { feedThumbnails } = await server.ssrLoadModule('/src/articles/feed-thumbnail.ts');
   // Card URLs (the ?v= and which slugs have aspect cards) mirror the server's
   // renderer; og-image.test.ts pins the mirror.
   const { articleOgImageUrl, articleStructuredDataImage } = await server.ssrLoadModule(
@@ -944,6 +851,28 @@ try {
   }
   win.happyDOM.setURL(host);
 
+  // Each live post's card art as one self-contained SVG, read by the server's
+  // /thumb/article/<slug>.png route. The feeds link the PNG with a content
+  // hash, since the route serves it immutable.
+  const thumbs = feedThumbnails(published);
+  const thumbDir = resolve(distDir, 'thumb', 'article');
+  await fs.mkdir(thumbDir, { recursive: true });
+  for (const thumb of thumbs.values()) {
+    await fs.writeFile(resolve(thumbDir, `${thumb.slug}.svg`), thumb.svg, 'utf-8');
+  }
+  console.log(`wrote /thumb/article/*.svg (${thumbs.size} posts)`);
+  const feedOptions = {
+    host,
+    postForSlug: (slug) => {
+      const post = publishedBySlug.get(slug);
+      return post?.kind === 'article' ? post : undefined;
+    },
+    thumbnailUrl: (slug) => {
+      const thumb = thumbs.get(slug);
+      return thumb ? `${host}${feedThumbnailPath(slug, thumb.version)}` : undefined;
+    },
+  };
+
   // blog/feed.xml: the posts as RSS, alongside the announcement feed at
   // /feed.xml. Published blog posts only, newest first; rules docs are
   // reference pages, not posts, and drafts are not public. An unlisted or
@@ -956,7 +885,7 @@ try {
   await fs.mkdir(resolve(distDir, 'blog'), { recursive: true });
   await fs.writeFile(
     resolve(distDir, 'blog', 'feed.xml'),
-    renderArticlesRss(blogFeedEntries),
+    renderArticlesRss(blogFeedEntries, feedOptions),
     'utf-8',
   );
   console.log(`wrote /blog/feed.xml (${blogFeedEntries.length} entries)`);
@@ -1096,7 +1025,11 @@ try {
   const feedEntries = announcements(builtAt)
     .filter((entry) => rulesHrefPublicSurfaceEnabled(entry.href))
     .sort((a, b) => b.date.localeCompare(a.date));
-  await fs.writeFile(resolve(distDir, 'feed.xml'), renderNewsRss(feedEntries), 'utf-8');
+  await fs.writeFile(
+    resolve(distDir, 'feed.xml'),
+    renderNewsRss(feedEntries, feedOptions),
+    'utf-8',
+  );
   console.log(`wrote /feed.xml (${feedEntries.length} entries)`);
 
   // Learn: bake the stage map (sidebar + all 20 stage tiles + "what next") with

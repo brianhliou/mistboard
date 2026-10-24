@@ -71,6 +71,13 @@ const FONT_FILES = ['NotoSans-Regular.ttf', 'NotoSans-Bold.ttf', 'NotoSansSC-Bol
   (file) => resolve(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'fonts', file),
 );
 
+/** resvg's font options for every card: the bundled fonts and nothing else. */
+export const OG_FONT_OPTIONS = {
+  loadSystemFonts: false,
+  fontFiles: FONT_FILES,
+  defaultFontFamily: 'Noto Sans',
+};
+
 /** The zoom every OG card is rasterised at (svgToPng's default). */
 export const OG_CARD_ZOOM = 2;
 
@@ -89,20 +96,21 @@ export const OG_CARD_ZOOM = 2;
  * that long, and a crawler walking the 470 chapter cards of the classical
  * manuals (each its own cache key) paged loop-lag warnings for a minute at a
  * time. Only the PNG encode (`asPng`, ~30 ms) still runs on the loop.
+ *
+ * `crop` keeps the top-left `right` x `bottom` pixels of the zoomed render
+ * (article-thumb.ts draws on a taller canvas than it serves).
  */
 export async function svgToPng(
   svg: string,
   background = '#0f1115',
   zoom = OG_CARD_ZOOM,
+  crop?: { right: number; bottom: number },
 ): Promise<Buffer> {
   const image = await renderAsync(svg, {
     background,
     fitTo: { mode: 'zoom', value: zoom },
-    font: {
-      loadSystemFonts: false,
-      fontFiles: FONT_FILES,
-      defaultFontFamily: 'Noto Sans',
-    },
+    font: OG_FONT_OPTIONS,
+    ...(crop ? { crop: { left: 0, top: 0, ...crop } } : {}),
   });
   return image.asPng();
 }

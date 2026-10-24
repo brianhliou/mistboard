@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { RoomTimeControl, VariantId } from '@mistboard/game';
 import serveHandler from 'serve-handler';
 import { articleIsRetired } from './article-meta.js';
+import { serveArticleThumbnail } from './article-thumb.js';
 import { type HttpApiContext, handleApiRequest } from './http-api.js';
 import { INDEXNOW_KEY, isIndexNowKeyRequest } from './indexnow.js';
 import { serveBroadcastBoardOgImage } from './og-broadcast.js';
@@ -341,6 +342,24 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
         staticDir: options.staticDir,
       }).catch((err: Error) => {
         console.warn('study og render failed', err.message);
+        if (!response.headersSent) {
+          response.writeHead(302, { location: '/og-image.png' });
+          response.end();
+        }
+      });
+      return;
+    }
+
+    // /thumb/article/:slug.png: a blog post's card art at 16:10, linked from the
+    // feeds' <media:content> (article-thumb.ts). The ?v= is a cache buster only.
+    const articleThumbMatch = pathname.match(/^\/thumb\/article\/([^/]+)\.png$/);
+    if (articleThumbMatch) {
+      void serveArticleThumbnail({
+        slug: articleThumbMatch[1]!,
+        response,
+        staticDir: options.staticDir,
+      }).catch((err: Error) => {
+        console.warn('article thumbnail render failed', err.message);
         if (!response.headersSent) {
           response.writeHead(302, { location: '/og-image.png' });
           response.end();
