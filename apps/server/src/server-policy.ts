@@ -406,6 +406,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/api-docs' ||
     normalized === '/thanks' ||
     normalized === '/lag' ||
+    normalized === '/washington-xiangqi' ||
     normalized === '/account' ||
     normalized === '/account/settings' ||
     normalized.startsWith('/account/settings/') ||
