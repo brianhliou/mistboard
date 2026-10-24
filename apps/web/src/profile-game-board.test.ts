@@ -69,6 +69,17 @@ describe('profile game board thumbnail', () => {
     expect(chess?.match(/profile-game-board__dark/g)).toHaveLength(32);
   });
 
+  it('draws a1 and h8 dark, and h1 and a8 light', () => {
+    const host = document.createElement('div');
+    host.innerHTML = profileBoardSvg({ shape: 'chess', files: 8, ranks: 8, pieces: [] }) ?? '';
+    const darkSquare = (x: number, y: number) =>
+      host.querySelector(`rect.profile-game-board__dark[x="${x}"][y="${y}"]`);
+    expect(darkSquare(0, 70)).not.toBeNull(); // a1
+    expect(darkSquare(70, 0)).not.toBeNull(); // h8
+    expect(darkSquare(70, 70)).toBeNull(); // h1
+    expect(darkSquare(0, 0)).toBeNull(); // a8
+  });
+
   it('skips what it cannot place instead of drawing it off the board', () => {
     const svg = profileBoardSvg({
       shape: 'grid',

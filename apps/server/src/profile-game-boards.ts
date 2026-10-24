@@ -130,10 +130,16 @@ function finalBoardOf(
     const plies = events.filter(
       (event) => (event as { type?: unknown } | null)?.type === 'move-played',
     ).length;
-    // fenAtPly yields only for a log that ends finished.
-    const fen = card.fenAtPly(events, roomId, plies);
-    const resolved = fen ? resolvePositionOg(card.variant, fen) : null;
-    return resolved ? thumbOf(resolved.board) : null;
+    // As on the share card, fall back one ply when a move-ending FEN has
+    // terminal side-to-move '-' and the position parser cannot draw it.
+    // fenAtPly yields only for a log that ends finished, even at an earlier ply.
+    for (const ply of [plies, plies - 1]) {
+      if (ply < 0) continue;
+      const fen = card.fenAtPly(events, roomId, ply);
+      const resolved = fen ? resolvePositionOg(card.variant, fen) : null;
+      if (resolved) return thumbOf(resolved.board);
+    }
+    return null;
   } catch {
     // A log the current rules refuse (replay-guard.ts): no board.
     return null;

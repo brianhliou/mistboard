@@ -127,7 +127,7 @@ function cellsMarkup(shape: 'grid' | 'jungle' | 'chess', files: number, ranks: n
     for (let file = 0; file < files; file += 1) {
       const kind =
         shape === 'chess'
-          ? (file + rank) % 2 === 0
+          ? (file + rank) % 2 === 1
             ? 'dark'
             : null
           : shape === 'jungle' && jungleIsWater(jungleSquareOf(file, rank))
