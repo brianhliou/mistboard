@@ -44,6 +44,11 @@ export interface RelativeMoveSpec {
   arg: number;
 }
 
+/** Occupancy and public roles only; a masked piece has no role. */
+export type XiangqiNotationBoard = Partial<
+  Record<XiangqiSquare, { color: XiangqiColor; role?: XiangqiPieceRole }>
+>;
+
 // Roles whose +/- argument is the destination FILE (they always change file on a
 // vertical move); everything else uses a rank-count argument.
 export const FILE_ARG_ROLES = new Set<XiangqiPieceRole>(['horse', 'elephant', 'advisor']);
@@ -60,10 +65,24 @@ export function resolveRelativeMove(
   spec: RelativeMoveSpec,
 ): XiangqiMove | null {
   if (state.status.type !== 'playing') return null;
-  const color = state.status.turn;
+  return resolveRelativeMoveFromLegalMoves(
+    state.board,
+    state.status.turn,
+    spec,
+    getStandardXiangqiLegalMoves(state),
+  );
+}
+
+/** Resolve with the caller's rule-specific legal moves, without reading a deal. */
+export function resolveRelativeMoveFromLegalMoves(
+  board: XiangqiNotationBoard,
+  color: XiangqiColor,
+  spec: RelativeMoveSpec,
+  legal: readonly XiangqiMove[],
+): XiangqiMove | null {
   const forwardUp = color === 'red';
 
-  const sources = Object.entries(state.board)
+  const sources = Object.entries(board)
     .filter(([, piece]) => piece && piece.color === color && piece.role === spec.role)
     .map(([square]) => square as XiangqiSquare);
 
@@ -100,7 +119,6 @@ export function resolveRelativeMove(
     candidates = pick ? [pick] : [];
   }
 
-  const legal = getStandardXiangqiLegalMoves(state);
   const matches: XiangqiMove[] = [];
   for (const from of candidates) {
     for (const move of legal) {
