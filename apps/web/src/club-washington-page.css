@@ -54,3 +54,96 @@
     padding: 22px 18px 32px;
   }
 }
+
+/* Email sign-up for announcements (#629), under the WeChat QR. */
+.club-signup {
+  margin: 0 0 8px;
+}
+
+.club-signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 460px;
+}
+
+.club-signup-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--site-heading);
+}
+
+.club-signup-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.club-signup-row input {
+  flex: 1 1 220px;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
+  font: inherit;
+  /* 16px keeps iOS Safari from zooming the page on focus. */
+  font-size: 16px;
+  color: var(--site-text);
+}
+
+.club-signup-row input:focus {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 1px;
+  border-color: var(--site-accent);
+}
+
+.club-signup-submit {
+  appearance: none;
+  border: 1px solid var(--site-accent);
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+  padding: 10px 18px;
+  min-height: 44px;
+  border-radius: var(--site-radius-sm);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.club-signup-submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* Off-screen rather than display:none, which some form bots read as a skip. */
+.club-signup-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.club-signup-status {
+  margin: 0;
+  min-height: 1.4em;
+  font-size: 14px;
+  color: var(--site-text);
+}
+
+.club-signup-status[data-state="ok"] {
+  color: var(--site-accent-strong);
+}
+
+.club-signup-status[data-state="error"] {
+  color: #b03a2e;
+}
+
+.club-signup-note {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--site-muted);
+}

@@ -19,6 +19,7 @@ import * as authRoute from './routes/auth.js';
 import * as banqiGamesRoute from './routes/banqi-games.js';
 import * as botsRoute from './routes/bots.js';
 import * as chatRoute from './routes/chat.js';
+import * as clubSignupRoute from './routes/club-signup.js';
 import * as coachesRoute from './routes/coaches.js';
 import * as correspondenceGamesRoute from './routes/correspondence-games.js';
 import * as correspondenceHostRoute from './routes/correspondence-host.js';
@@ -98,6 +99,7 @@ export const routes: RouteModule[] = [
   enginesRoute,
   patronRoute,
   feedbackRoute,
+  clubSignupRoute,
   forumRoute,
   inboxRoute,
   notificationsRoute,
