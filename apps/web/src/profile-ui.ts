@@ -15,6 +15,7 @@ import {
 import { timeControlLabelForGame } from './game-meta.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
+import { buildProfileGameBoard } from './profile-game-board.js';
 import { appendWithNameNode, participantProfileTarget, playerNameEl } from './profile-link.js';
 import { attachBotCard } from './profile-summary-card.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -178,6 +179,10 @@ export function buildProfileGameRow(
     // A "New" tag beside the opponent: a game that ended since the player
     // last looked (the same list).
     isNew?: boolean;
+    // The final-position thumbnail column after the result (#509, the profile's
+    // `?boards=1` view). Every row gets the cell, empty when the game has no
+    // board, so the columns line up.
+    boards?: boolean;
   } = {},
 ): HTMLElement {
   const locale = opts.locale ?? currentLocale();
@@ -314,7 +319,12 @@ export function buildProfileGameRow(
   // The overlay goes in FIRST so it sits under the row content in paint order;
   // the opponent link then only needs a z-index to come back out on top.
   if (open) link.append(open);
-  link.append(outcome, body, date);
+  if (opts.boards) {
+    link.classList.add('profile-game-row-board');
+    link.append(outcome, buildProfileGameBoard(game.finalBoard), body, date);
+  } else {
+    link.append(outcome, body, date);
+  }
   item.append(link);
   return item;
 }

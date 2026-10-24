@@ -2,6 +2,7 @@ import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import type { Locale } from './i18n/locale.js';
+import type { ProfileBoardThumb } from './profile-game-board.js';
 import { seatColorWord, seatsNamePlayers } from './variant-seat-label.js';
 
 export const MISTBOARD_ENGINE_SNAPSHOT_ID = 'engine-v2-2026-05-24';
@@ -94,6 +95,9 @@ export type FeaturedGame = {
   // surfaces can show the result by ink ("Black wins") rather than the seat token.
   // Absent/null for every other variant (seat == ink) and for unreplayable games.
   firstColor?: 'red' | 'black' | null;
+  // Profile list with `?boards=1` only (#509): the final position as a
+  // thumbnail, null when the game has none to draw.
+  finalBoard?: ProfileBoardThumb | null;
 };
 
 export function displayParticipantName(

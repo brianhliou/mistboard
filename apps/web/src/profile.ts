@@ -1000,6 +1000,7 @@ function renderLeaderboardTable(
 async function fetchUserProfile(handle: string): Promise<UserProfile> {
   // The play streak counts days on the viewer's calendar (play-streak.ts).
   const query = new URLSearchParams({ tz: browserTimeZone() });
+  if (profileBoardsView()) query.set('boards', '1');
   const resp = await fetch(`/api/users/${encodeURIComponent(handle)}/profile?${query}`);
   if (resp.status === 404) throw new ProfileNotFound();
   if (!resp.ok) throw new Error(`failed to load profile: ${resp.status}`);
@@ -2664,9 +2665,17 @@ function profileGameAppender(list: HTMLElement, locale: Locale): (games: Feature
         header.textContent = dayLabel(game.endedAt, locale);
         list.append(header);
       }
-      list.append(buildProfileGameRow(game, { timeOnly: true, locale }));
+      list.append(
+        buildProfileGameRow(game, { timeOnly: true, locale, boards: profileBoardsView() }),
+      );
     }
   };
+}
+
+// The games list with each game's final position (#509), on trial behind
+// `?boards=1` until it is judged against the plain list.
+function profileBoardsView(): boolean {
+  return new URLSearchParams(window.location.search).get('boards') === '1';
 }
 
 // A "Load more" control for a games list, wired to one page fetch. Shared so the
@@ -2843,7 +2852,7 @@ async function fetchUserGamesPage(
   // `total` comes back scoped to the same filter, so callers can page a filtered
   // list without tracking two different totals.
   const filterQuery = profileGamesFilterParams(filter).toString();
-  const query = filterQuery ? `&${filterQuery}` : '';
+  const query = `${filterQuery ? `&${filterQuery}` : ''}${profileBoardsView() ? '&boards=1' : ''}`;
   const resp = await fetch(
     `/api/users/${encodeURIComponent(handle)}/games?offset=${offset}&limit=${limit}${query}`,
   );
