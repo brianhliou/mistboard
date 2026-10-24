@@ -433,6 +433,15 @@
   border-color: var(--site-border);
 }
 
+/* Touch floor (#620): the bot page's Play button and the profile's relation
+   buttons are 32px for a mouse. */
+@media (pointer: coarse) {
+  .profile-relation-actions .landing-setup-start,
+  .profile-relation-actions .landing-setup-back {
+    min-height: 40px;
+  }
+}
+
 .account-actions .landing-setup-start:hover,
 .account-actions .landing-setup-start:focus-visible,
 .account-form .landing-setup-start:hover,
@@ -1400,6 +1409,23 @@
 .profile-chart-range-active {
   color: var(--site-accent-strong);
   background: var(--site-accent-soft);
+}
+
+/* Touch floor (#620) without moving the header: the drawn pill stays 28x23, a
+   transparent border (9px top and bottom, 6px at the sides) makes the target
+   40x41, and a negative margin hands the space back. The radius is elliptical
+   so the drawn corner stays 4px. */
+@media (pointer: coarse) {
+  .profile-chart-range {
+    box-sizing: content-box;
+    min-width: 16px;
+    margin: -9px -6px;
+    border-width: 9px 6px;
+    border-style: solid;
+    border-color: transparent;
+    border-radius: 10px / 13px;
+    background-clip: padding-box;
+  }
 }
 
 .profile-rating-chart {

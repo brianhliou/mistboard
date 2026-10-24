@@ -94,6 +94,24 @@ const SIZED: { file: string; selector: string; prop: 'min-height' | 'height' }[]
     selector: '.historical-xiangqi-floor-clear',
     prop: 'min-height',
   },
+  // Bot page Play and the profile relation buttons (#620).
+  {
+    file: 'src/account-profile.css',
+    selector: '.profile-relation-actions .landing-setup-start',
+    prop: 'min-height',
+  },
+  {
+    file: 'src/account-profile.css',
+    selector: '.profile-relation-actions .landing-setup-back',
+    prop: 'min-height',
+  },
+  // Article game embeds (#620).
+  {
+    file: 'src/embed/embed.css',
+    selector: '.embed-card-moves .review-move-list__move',
+    prop: 'min-height',
+  },
+  { file: 'src/embed/embed.css', selector: '.embed-card-control', prop: 'min-height' },
 ];
 
 describe('coarse-pointer touch floor', () => {
@@ -143,6 +161,59 @@ describe('coarse-pointer touch floor', () => {
     expect(Math.min(...widths) + 2 * borderX).toBeGreaterThanOrEqual(TAP_MIN);
   });
 
+  it('keeps the embed result rule level with the taller control bar', () => {
+    const rules = parse('src/embed/embed.css');
+    // The bar adds a 1px top rule; the result's min-height includes its own.
+    for (const media of [null, COARSE]) {
+      expect(px(decl(rules, '.embed-card-result', 'min-height', media))).toBe(
+        px(decl(rules, '.embed-card-control', 'min-height', media)) + 1,
+      );
+    }
+  });
+
+  // Drawn controls whose size is set by their content (#620): the drawn box is
+  // the audit's measurement, and the transparent border makes up the rest.
+  it.each([
+    {
+      file: 'src/account-profile.css',
+      selector: '.profile-chart-range',
+      media: COARSE,
+      drawn: { w: 28, h: 23 },
+    },
+    {
+      file: 'src/site-shell.css',
+      selector: '.site-nav-quick-button',
+      media: `${COARSE} and (max-width: 600px)`,
+      drawn: { w: 38, h: 44 },
+    },
+  ])('$selector grows a 40px target around its drawn box', ({ file, selector, media, drawn }) => {
+    const rules = parse(file);
+    expect(decl(rules, selector, 'box-sizing', media)).toBe('content-box');
+    expect(decl(rules, selector, 'background-clip', media)).toBe('padding-box');
+    expect(decl(rules, selector, 'border-color', media)).toBe('transparent');
+    const [borderY = 0, borderX = borderY] =
+      decl(rules, selector, 'border-width', media).match(/\d+px/g)?.map(px) ?? [];
+    const [marginY = 0, marginX = marginY] =
+      decl(rules, selector, 'margin', media)
+        .match(/-?\d+px/g)
+        ?.map(px) ?? [];
+    expect(marginY).toBe(-borderY);
+    expect(marginX).toBe(-borderX);
+    expect(drawn.w + 2 * borderX).toBeGreaterThanOrEqual(TAP_MIN);
+    expect(drawn.h + 2 * borderY).toBeGreaterThanOrEqual(TAP_MIN);
+  });
+
+  it('pads the logo-only brand to 40px and gives the width back', () => {
+    const rules = parse('src/site-shell.css');
+    const media = `${COARSE} and (max-width: 389px)`;
+    const logo = px(decl(rules, '.site-nav-logo', 'width', '(max-width: 600px)'));
+    const phonePad = px(decl(rules, '.site-nav-brand', 'padding-inline', '(max-width: 600px)'));
+    const pad = px(decl(rules, '.site-nav-brand', 'padding-inline', media));
+    const margin = px(decl(rules, '.site-nav-brand', 'margin-inline', media));
+    expect(logo + 2 * pad).toBeGreaterThanOrEqual(TAP_MIN);
+    expect(pad + margin).toBe(phonePad);
+  });
+
   it.each([
     { file: 'src/xiangqi-broadcast.css', selector: '.xqb-round-select' },
     { file: 'src/historical-xiangqi-search.css', selector: '.historical-xiangqi-input' },
@@ -172,5 +243,16 @@ describe('coarse-pointer touch floor', () => {
         null,
       ),
     ).toBe('0.88rem');
+    const profile = parse('src/account-profile.css');
+    expect(decl(profile, '.profile-chart-range', 'padding', null)).toBe('3px 6px');
+    expect(
+      decl(profile, '.profile-relation-actions .landing-setup-start', 'min-height', null),
+    ).toBe('32px');
+    const embed = parse('src/embed/embed.css');
+    expect(decl(embed, '.embed-card-control', 'min-height', null)).toBe('38px');
+    expect(decl(embed, '.embed-card-result', 'min-height', null)).toBe('39px');
+    expect(
+      decl(parse('src/site-shell.css'), '.site-nav-quick-button', 'width', '(max-width: 600px)'),
+    ).toBe('38px');
   });
 });
