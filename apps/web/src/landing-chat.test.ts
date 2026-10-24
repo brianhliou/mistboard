@@ -7,6 +7,7 @@ import {
   type ChatLine,
   chatTokenElement,
   createLandingChatFeed,
+  type LobbyChatNotice,
   readStoredChatMuted,
   visibleChatWindow,
 } from './landing-chat.js';
@@ -562,5 +563,135 @@ describe('human lines only', () => {
       expect(mount.querySelector('.landing-chat-quiet')).toBeTruthy();
     });
     expect(mount.querySelectorAll('.landing-chat-line')).toHaveLength(0);
+  });
+});
+
+// #651: the release drain's restart notice, the one system message the lobby
+// keeps. The server derives it from live drain state; the widget shows it as a
+// single row that a poll updates in place or takes away.
+describe('drain notice', () => {
+  const state = { canReport: true, isAdmin: true, viewerHandle: null };
+  const pending = (restartAt: number): LobbyChatNotice => ({
+    id: `drain-${restartAt}`,
+    kind: 'server_restart',
+    phase: 'pending',
+    restartAt,
+  });
+
+  function feedWithClock() {
+    let now = T0;
+    const feed = createLandingChatFeed({ state, locale: 'en', mode: 'live', now: () => now });
+    return { feed, advance: (ms: number) => (now += ms) };
+  }
+
+  function noticeRows(root: HTMLElement): HTMLElement[] {
+    return [...root.querySelectorAll<HTMLElement>('.landing-chat-notice')];
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.replaceChildren();
+  });
+
+  it('shows one notice row after the lines, with no handle link or moderation controls', () => {
+    const { feed } = feedWithClock();
+    feed.ingest([line('a', 1000)]);
+    feed.setNotice(pending(T0 + 120_000));
+    const rows = noticeRows(feed.element);
+    expect(rows).toHaveLength(1);
+    expect(feed.element.lastElementChild).toBe(rows[0]);
+    expect(rows[0]?.textContent).toContain('Update pending');
+    expect(rows[0]?.getAttribute('role')).toBe('status');
+    expect(rows[0]?.querySelector('a, button')).toBeNull();
+    expect(feed.visibleIds()).toEqual(['a']);
+  });
+
+  it('deduplicates: repeated polls of the same drain keep a single row', () => {
+    const { feed } = feedWithClock();
+    feed.ingest([line('a', 1000)]);
+    const notice = pending(T0 + 120_000);
+    feed.setNotice(notice);
+    feed.setNotice({ ...notice });
+    feed.ingest([line('a', 1000), line('b', 0)]);
+    feed.setNotice({ ...notice });
+    expect(noticeRows(feed.element)).toHaveLength(1);
+  });
+
+  it('updates the row in place when the drain commits to restarting', () => {
+    const { feed } = feedWithClock();
+    feed.ingest([line('a', 1000)]);
+    const notice = pending(T0 + 120_000);
+    feed.setNotice(notice);
+    feed.setNotice({ ...notice, phase: 'restarting' });
+    const rows = noticeRows(feed.element);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.textContent).toContain('Server restarting now');
+    expect(rows[0]?.textContent).not.toContain('Update pending');
+  });
+
+  it('a cancelled drain (no notice on the next poll) removes the row', () => {
+    const { feed } = feedWithClock();
+    feed.ingest([line('a', 1000)]);
+    feed.setNotice(pending(T0 + 120_000));
+    feed.setNotice(null);
+    expect(noticeRows(feed.element)).toHaveLength(0);
+    expect(feed.visibleIds()).toEqual(['a']);
+  });
+
+  it('drops the notice once its deadline passes, even with no poll', () => {
+    const { feed, advance } = feedWithClock();
+    feed.ingest([line('a', 1000)]);
+    feed.setNotice(pending(T0 + 120_000));
+    advance(120_001);
+    feed.expireTick();
+    expect(noticeRows(feed.element)).toHaveLength(0);
+  });
+
+  function stubLobby(lines: ChatLine[], notice?: LobbyChatNotice): void {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          lines,
+          ...(notice ? { notice } : {}),
+          canPost: false,
+          canReport: false,
+          viewerHandle: null,
+          isAdmin: false,
+        }),
+      })),
+    );
+  }
+
+  it('renders the notice from the lobby read in the live room', async () => {
+    stubLobby([line('a', 1000, Date.now())], pending(Date.now() + 120_000));
+    const mount = buildLandingChat();
+    document.body.append(mount);
+    await vi.waitFor(() => {
+      expect(mount.querySelectorAll('.landing-chat-line')).toHaveLength(1);
+    });
+    expect(noticeRows(mount)).toHaveLength(1);
+  });
+
+  it('shows the notice above the quiet invitation when no line is in the window', async () => {
+    stubLobby([], pending(Date.now() + 120_000));
+    const mount = buildLandingChat();
+    document.body.append(mount);
+    await vi.waitFor(() => {
+      expect(mount.querySelector('.landing-chat-quiet')).toBeTruthy();
+    });
+    expect(noticeRows(mount)).toHaveLength(1);
+  });
+
+  it('shows nothing extra when the lobby read carries no notice', async () => {
+    stubLobby([line('a', 1000, Date.now())]);
+    const mount = buildLandingChat();
+    document.body.append(mount);
+    await vi.waitFor(() => {
+      expect(mount.querySelectorAll('.landing-chat-line')).toHaveLength(1);
+    });
+    expect(noticeRows(mount)).toHaveLength(0);
   });
 });

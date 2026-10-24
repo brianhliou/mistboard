@@ -18,8 +18,18 @@ import { currentLocale, type Locale } from './i18n/locale.js';
 import { buildSiteBox } from './site-box.js';
 
 export type ChatLine = { id: string; handle: string | null; text: string; createdAt: string };
+// The release drain's restart notice (#651), the one system message the lobby
+// keeps. The server derives it from live drain state on every read and never
+// stores it as a line, so it is absent once the drain is cancelled or lapses.
+export type LobbyChatNotice = {
+  id: string;
+  kind: 'server_restart';
+  phase: 'pending' | 'restarting';
+  restartAt: number;
+};
 type ChatState = {
   lines: ChatLine[];
+  notice?: LobbyChatNotice;
   canPost: boolean;
   canReport: boolean;
   viewerHandle: string | null;
@@ -171,6 +181,17 @@ function renderQuiet(
   mode: LandingChatMode,
 ): void {
   body.replaceChildren();
+  // Quiet mode does not poll, so a notice present at load comes down at its
+  // own deadline rather than on a later read.
+  const notice = activeNotice(state.notice, Date.now());
+  if (notice) {
+    const noticeRow = buildNoticeRow(notice, locale);
+    body.append(noticeRow);
+    registerMountTimer(
+      mount,
+      window.setTimeout(() => noticeRow.remove(), notice.restartAt - Date.now()),
+    );
+  }
   const row = document.createElement('p');
   row.className = 'landing-chat-quiet';
   row.textContent = t('chat.quiet', {}, locale);
@@ -196,6 +217,8 @@ function renderQuiet(
 type LandingChatFeed = {
   element: HTMLElement;
   ingest(lines: ChatLine[]): void;
+  // Replaces, never appends: each lobby read carries the whole notice state.
+  setNotice(notice: LobbyChatNotice | null): void;
   expireTick(): void;
   remove(lineId: string): void;
   visibleIds(): string[];
@@ -220,6 +243,7 @@ export function createLandingChatFeed(options: {
   // Lines the viewer reported this page-life: re-renders keep the mark.
   const reported = new Set<string>();
   let store: ChatLine[] = [];
+  let notice: LobbyChatNotice | null = null;
   let renderedKey: string | null = null;
 
   const handle: LandingChatFeed = {
@@ -230,6 +254,10 @@ export function createLandingChatFeed(options: {
         if (!byId.has(line.id)) byId.set(line.id, line);
       }
       store = [...byId.values()].sort(byCreatedAtThenId);
+      render();
+    },
+    setNotice(next: LobbyChatNotice | null): void {
+      notice = next;
       render();
     },
     expireTick(): void {
@@ -247,7 +275,11 @@ export function createLandingChatFeed(options: {
   function render(): void {
     const now = clock();
     store = visibleChatWindow(store, now);
-    const key = store.map((line) => line.id).join('\n');
+    notice = activeNotice(notice, now);
+    const key = [
+      ...store.map((line) => line.id),
+      ...(notice ? [`notice:${notice.id}:${notice.phase}`] : []),
+    ].join('\n');
     if (key === renderedKey) return;
     renderedKey = key;
     feed.replaceChildren();
@@ -256,6 +288,7 @@ export function createLandingChatFeed(options: {
         buildLineRow(line, options.state, options.locale, options.mode, reported, handle, now),
       );
     }
+    if (notice) feed.append(buildNoticeRow(notice, options.locale));
     feed.scrollTop = feed.scrollHeight;
     if (store.length === 0) options.onEmpty?.();
   }
@@ -303,6 +336,7 @@ function renderRoom(
     },
   });
   feed.ingest(state.lines);
+  feed.setNotice(state.notice ?? null);
   body.append(feed.element);
 
   if (state.canPost) {
@@ -336,6 +370,7 @@ function renderRoom(
       if (!fresh) return;
       latestState = fresh;
       feed.ingest(fresh.lines);
+      feed.setNotice(fresh.notice ?? null);
     }, POLL_MS),
   );
   registerMountTimer(
@@ -372,6 +407,36 @@ function buildLineRow(
   } else if (canReportLine(state, line)) {
     row.append(buildReportControl(line, locale, mode, reported));
   }
+  return row;
+}
+
+// A notice past its deadline is a drain that lapsed or a restart that already
+// happened: drop it without waiting for the next read.
+function activeNotice(
+  notice: LobbyChatNotice | null | undefined,
+  now: number,
+): LobbyChatNotice | null {
+  return notice && notice.restartAt > now ? notice : null;
+}
+
+// Same words as the site-wide restart banner (restart-banner.ts). Not a chat
+// line: no author, no timestamp, nothing to report or hide.
+function buildNoticeRow(notice: LobbyChatNotice, locale: Locale): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'landing-chat-notice';
+  row.setAttribute('role', 'status');
+  const label = document.createElement('strong');
+  label.className = 'landing-chat-notice-label';
+  const hint = document.createElement('span');
+  hint.className = 'landing-chat-notice-hint';
+  if (notice.phase === 'pending') {
+    label.textContent = t('connection.restartPending', {}, locale);
+    hint.textContent = t('connection.restartPendingHint', {}, locale);
+  } else {
+    label.textContent = t('connection.restartNow', {}, locale);
+    hint.textContent = t('connection.restartNowHint', {}, locale);
+  }
+  row.append(label, hint);
   return row;
 }
 
