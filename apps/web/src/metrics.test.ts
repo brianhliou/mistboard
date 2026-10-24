@@ -124,6 +124,25 @@ const adminMetrics = {
   // Includes a deleted id (dark-draft960) that the live-shelf filter drops.
   humanGamesByVariant: { xiangqi: 402, 'dark-xiangqi': 180, 'dark-draft960': 60 },
   weekly: [week('2026-07-06'), week('2026-07-13'), week('2026-07-20', { players: 8 })],
+  retentionCohorts: [
+    {
+      weekStart: '2026-06-15',
+      segment: 'jieqi',
+      players: 8,
+      returns: [
+        { week: 1, returned: 2, percentage: 25 },
+        { week: 2, returned: 0, percentage: 0 },
+        { week: 3, returned: 1, percentage: 12.5 },
+        { week: 4, returned: 1, percentage: 12.5 },
+      ],
+    },
+    {
+      weekStart: '2026-07-13',
+      segment: 'other',
+      players: 3,
+      returns: [1, 2, 3, 4].map((week) => ({ week, returned: null, percentage: null })),
+    },
+  ],
   engines: {
     eveGames: 900,
     eveGamesLast7d: 90,
@@ -158,6 +177,47 @@ describe('metrics page', () => {
     vi.unstubAllGlobals();
     document.body.replaceChildren();
     document.body.className = '';
+  });
+
+  it('shows first-game cohorts with returned counts and leaves immature weeks blank', async () => {
+    stubFetch();
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    const section = root.querySelector('.metrics-retention');
+    expect(section?.querySelector('h2')?.textContent).toBe('First-game retention');
+    const rows = [...(section?.querySelectorAll('tbody tr') ?? [])].map((row) =>
+      [...row.querySelectorAll('td')].map((cell) => cell.textContent),
+    );
+    expect(rows).toEqual([
+      [
+        '2026-06-15',
+        'Jieqi',
+        '8',
+        '25.0% (2 / 8)',
+        '0.0% (0 / 8)',
+        '12.5% (1 / 8)',
+        '12.5% (1 / 8)',
+      ],
+      ['2026-07-13', 'Everything else', '3', '', '', '', ''],
+    ]);
+    expect(section?.textContent).toContain('Monday to Sunday UTC');
+    expect(section?.textContent).toContain('any variant');
+
+    await mountMetrics(root, { admin: false });
+    expect(root.querySelector('.metrics-retention')).toBeNull();
+
+    stubFetch({ '/api/stats/admin': () => json({}, 401) });
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelector('.metrics-retention')).toBeNull();
+  });
+
+  it('explains an empty retention window', async () => {
+    stubFetch({ '/api/stats/admin': () => json({ ...adminMetrics, retentionCohorts: [] }) });
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelector('.metrics-retention')?.textContent).toContain(
+      'No first-game cohorts in this window.',
+    );
   });
 
   it('public /stats is a translated rail page: games per week, totals, variants, modes', async () => {
@@ -281,6 +341,7 @@ describe('metrics page', () => {
       'Puzzles per week',
       'Study and practice per week',
       'Community per week',
+      'First-game retention',
       'Games over time',
       'Games by variant',
       'Games by mode',
