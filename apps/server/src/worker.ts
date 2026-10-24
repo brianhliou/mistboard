@@ -23,6 +23,7 @@ import { runMigrations } from './migrate.js';
 import { startObservability } from './obs.js';
 import { disposeAllPythonPools, getPythonPool } from './python-pool.js';
 import { eveWorkerCapabilities } from './variant-eve-registry.js';
+import { createWorkerPool, isWorkerDbConnectionError } from './worker-db.js';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -60,7 +61,7 @@ const engineHttpHost = process.env.MISTBOARD_ENGINE_SERVICE_HOST ?? '::';
 // serve a move" (#477).
 const railwayHealthPort = parsePositiveInteger(process.env.PORT);
 
-const pool = new pg.Pool({ connectionString: databaseUrl, max: 4 });
+const pool = createWorkerPool({ connectionString: databaseUrl });
 let engineHttpService: EngineHttpService | null = null;
 let engineHttpClosing: Promise<void> | null = null;
 let healthServer: Server | null = null;
@@ -133,20 +134,32 @@ try {
 
   let processedTasks = 0;
   while (!shuttingDown && processedTasks < maxTasks) {
-    await heartbeatWorkerRun(pool, workerRun.id);
+    let task: EngineGameTask | null;
+    try {
+      await heartbeatWorkerRun(pool, workerRun.id);
 
-    if (Date.now() >= nextCleanupAt) {
-      await cleanupStaleTasks();
-      nextCleanupAt = Date.now() + cleanupIntervalMs;
+      if (Date.now() >= nextCleanupAt) {
+        await cleanupStaleTasks();
+        nextCleanupAt = Date.now() + cleanupIntervalMs;
+      }
+
+      task = await claimNextEngineGameTask(pool, {
+        workerRunId: workerRun.id,
+        workerId,
+        provider,
+        providerRunId,
+        capabilities: workerCapabilities,
+      });
+    } catch (err) {
+      if (!loop || !isWorkerDbConnectionError(err)) throw err;
+      log('worker_db_poll_retry', {
+        workerRunId: workerRun.id,
+        error: (err as Error).message,
+        retryMs: idleSleepMs,
+      });
+      await sleep(idleSleepMs);
+      continue;
     }
-
-    const task = await claimNextEngineGameTask(pool, {
-      workerRunId: workerRun.id,
-      workerId,
-      provider,
-      providerRunId,
-      capabilities: workerCapabilities,
-    });
     activeTask = task;
 
     if (!task) {
