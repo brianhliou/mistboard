@@ -5345,6 +5345,8 @@ const ZH_HANS: Record<string, string> = {
     '暗棋是民间棋戏，各地规则不同，常见的有三种。台湾规则用本页的大小顺序，炮隔一子跳吃。香港规则的大小是将、车、马、炮、士、象、卒，炮在等级序列里面。中国大陆的规则通常没有跳吃的炮：炮和其他棋子一样按等级吃相邻的棋子。',
   // pikafish (2026-09-21, machine-drafted, not native-reviewed). Mainland wording on purpose: 在线, 网页版, 人机, 账号, 服务器 are the words the Bing corpus uses.
   'Pikafish on Mistboard': '皮卡鱼象棋：在线对弈与分析',
+  'Now opens with where to play and analyze Pikafish in your browser, and points to the official download for the engine itself.':
+    '开头改为说明如何在浏览器中与皮卡鱼对弈和分析，并指向引擎的官方下载。',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
     '皮卡鱼象棋在线：免费对弈、分析与引擎下载指引',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
@@ -11236,6 +11238,8 @@ const ZH_HANT: Record<string, string> = {
     '暗棋是民間棋戲，各地規則不同，常見的有三種。台灣規則用本頁的大小順序，砲隔一子跳吃。香港規則的大小是將、車、馬、砲、士、象、卒，砲在等級序列裡面。中國大陸的規則通常沒有跳吃的砲：砲和其他棋子一樣按等級吃相鄰的棋子。',
   // pikafish: Taiwan forms (線上, 網頁, 帳號, 伺服器, 等級, 選單, 資料, 西洋棋, 建置).
   'Pikafish on Mistboard': '皮卡魚象棋：線上對弈與分析',
+  'Now opens with where to play and analyze Pikafish in your browser, and points to the official download for the engine itself.':
+    '開頭改為說明如何在瀏覽器中與皮卡魚對弈和分析，並指向引擎的官方下載。',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
     '皮卡魚象棋線上：免費對弈、分析與引擎下載指引',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':

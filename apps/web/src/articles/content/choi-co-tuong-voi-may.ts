@@ -26,6 +26,8 @@ import { pikafishArticle } from './pikafish.js';
 
 export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
   'Pikafish on Mistboard': 'Chơi cờ tướng với máy: Pikafish trên Mistboard',
+  'Now opens with where to play and analyze Pikafish in your browser, and points to the official download for the engine itself.':
+    'Phần mở đầu giờ chỉ cách chơi và phân tích với Pikafish ngay trên trình duyệt, kèm đường dẫn tải engine chính thức.',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
     'Chơi cờ tướng với máy online miễn phí: Pikafish, không cần tải về',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':

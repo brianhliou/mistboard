@@ -51,6 +51,8 @@ export const pikafishArticle: Article = {
   status: 'published',
   publishedAt: '2026-09-22',
   updatedAt: '2026-10-23',
+  updateNote:
+    'Now opens with where to play and analyze Pikafish in your browser, and points to the official download for the engine itself.',
   audience: 'Xiangqi players looking for somewhere to play or analyze with Pikafish.',
   thumbnail: { kind: 'svg', svg: PIKAFISH_THUMBNAIL },
   readNext: ['jieqi-platform', 'skill-vs-luck', 'jieqi-openings'],
