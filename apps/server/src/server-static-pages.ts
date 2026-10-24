@@ -189,6 +189,13 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Help build a future for Chinese chess and original strategy games. Contribute as a player, teacher, translator, game creator or engine author.',
   },
+  // A casual xiangqi group in Bellevue; Mistboard hosts its page, and
+  // washingtonxiangqi.org and .com forward here (2026-10-23).
+  '/washington-xiangqi': {
+    title: 'Washington Xiangqi (华州象棋): Chinese chess in Bellevue',
+    description:
+      'Washington Xiangqi is a group in Bellevue for people who play xiangqi, Chinese chess. Any level is welcome and the games are casual. Join on WeChat or by email.',
+  },
   '/creators': {
     title: 'Work With Us: Creators and Players | Mistboard',
     description:
@@ -604,6 +611,10 @@ const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set(['/watch', '/ga
 // is worth baking) but whose page still needs a heading and its links for a
 // crawler that does not run the bundle. The client clears the root on mount.
 const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
+  // The club page is read from a printed address, so its text is in the HTML
+  // for link previews and crawlers too.
+  '/washington-xiangqi':
+    '<main lang="en"><h1>Washington Xiangqi <span lang="zh-Hans">华州象棋</span></h1><p>Washington Xiangqi is a group in Bellevue for people who play xiangqi, Chinese chess. Any level is welcome, from people learning how the pieces move to strong players, and the games are casual.</p><ul><li><a href="mailto:hello@washingtonxiangqi.org">hello@washingtonxiangqi.org</a></li><li><a href="/learn/xiangqi">Learn the rules</a></li><li><a href="/">Play online on Mistboard</a></li></ul></main>',
   '/games':
     '<main><h1>Current games</h1><p>Every xiangqi (Chinese chess) and variant game in progress on Mistboard right now: live games with clocks, and correspondence games waiting on a move.</p><ul><li><a href="/watch">Watch live games</a></li><li><a href="/games/search">Search finished games</a></li><li><a href="/broadcast/xiangqi">Xiangqi tournament broadcasts</a></li><li><a href="/">Play a game</a></li></ul></main>',
 };
@@ -1150,6 +1161,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/patron',
   '/contribute',
   '/creators',
+  '/washington-xiangqi',
   '/champions',
   '/zh-hans/champions',
   '/zh-hant/champions',

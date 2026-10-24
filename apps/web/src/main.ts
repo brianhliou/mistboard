@@ -252,6 +252,7 @@ const wantsDevelopers = path === '/developers' || page === 'developers';
 const wantsApiDocs = path === '/api-docs' || page === 'api-docs';
 const wantsThanks = path === '/thanks' || page === 'thanks';
 const wantsLag = path === '/lag' || page === 'lag';
+const wantsClubWashington = path === '/washington-xiangqi';
 const wantsAccount = path === '/account' || page === 'account';
 const wantsAccountSettings =
   path === '/account/settings' ||
@@ -1080,6 +1081,13 @@ if (replaySample) {
 } else if (wantsLag) {
   setTitleKey('lag.heading');
   void mountOrReport(() => import('./lag-page.js').then(({ mountLag }) => mountLag(appRoot)));
+} else if (wantsClubWashington) {
+  document.title = 'Washington Xiangqi (华州象棋)';
+  void mountOrReport(() =>
+    import('./club-washington-page.js').then(({ mountClubWashington }) =>
+      mountClubWashington(appRoot),
+    ),
+  );
 } else if (path === '/' || path === '/zh-hans' || path === '/zh-hant') {
   // The bare locale prefix is the Chinese home page, the same landing in the
   // reader's language. Compared explicitly, the way /rules does above, rather
