@@ -47,6 +47,18 @@ test('article infers a terminal result beyond the no-capture ruling', () => {
 });
 
 for (const compact of [false, true]) {
+  test(`article ${compact ? 'compact' : 'full'} board reports a move that leaves its general in check`, () => {
+    const el = document.createElement('div');
+    const spec = {
+      ...base,
+      startFen: '4k4/9/9/9/4r4/9/9/9/9/R3K4 r - - 0 1',
+      iccs: 'e0f0 e5f5 a0a1',
+    };
+    expect(() =>
+      compact ? mountXiangqiReplayBoard(el, spec) : mountXiangqiReplay(el, spec),
+    ).toThrow(/illegal move "a0a1" at ply 3/);
+  });
+
   test(`article ${compact ? 'compact' : 'full'} board plays a variation beyond repetition`, () => {
     const el = document.createElement('div');
     document.body.append(el);

@@ -2,10 +2,16 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { replayXiangqiBroadcastBoard, type XiangqiBroadcastBoard } from '@mistboard/game';
+import {
+  applyStandardXiangqiMove,
+  createInitialXiangqiState,
+  replayXiangqiBroadcastBoard,
+  type XiangqiBroadcastBoard,
+} from '@mistboard/game';
 import type { StoredXiangqiBroadcastBoard } from './persistence.js';
 import {
   buildXiangqiBroadcastBoardReplay,
+  finalXiangqiBoardView,
   findUnservableXiangqiBroadcastBoards,
   xiangqiBroadcastBoardServes,
 } from './xiangqi-broadcast-serving.js';
@@ -39,6 +45,36 @@ for (const file of [
     const board = stored(file);
     assert.equal(xiangqiBroadcastBoardServes(board), true);
     assert.equal(buildXiangqiBroadcastBoardReplay(board).timeline.length, board.moves.length);
+    assert.deepEqual(finalXiangqiBoardView(board), {
+      ...buildXiangqiBroadcastBoardReplay(board).view,
+      legalMoves: [],
+    });
+  });
+}
+
+for (const reason of ['repetition', 'progress-clock'] as const) {
+  test(`broadcast ending on ${reason} keeps its final draw status`, () => {
+    const board = stored(`arbiter-adjudicated/${reason}.json`);
+    let state = createInitialXiangqiState(board.id);
+    let plies = 0;
+    for (const move of board.moves) {
+      state = applyStandardXiangqiMove(state, move);
+      plies += 1;
+      if (state.status.type === 'finished') break;
+    }
+    assert.deepEqual(state.status, { type: 'finished', winner: null, reason });
+    const ended = {
+      ...board,
+      moves: board.moves.slice(0, plies),
+      plyCount: plies,
+      result: '1/2-1/2' as const,
+      finalStatus: state.status,
+    };
+    const replay = buildXiangqiBroadcastBoardReplay(ended);
+    assert.deepEqual(replay.state.status, state.status);
+    assert.deepEqual(replay.view.status, state.status);
+    assert.deepEqual(replay.history.truth.at(-1)?.view.status, state.status);
+    assert.deepEqual(finalXiangqiBoardView(ended).status, state.status);
   });
 }
 

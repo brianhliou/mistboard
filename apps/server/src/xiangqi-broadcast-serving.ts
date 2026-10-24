@@ -1,8 +1,9 @@
 import { setImmediate as yieldToEventLoop } from 'node:timers/promises';
 import {
-  applyXiangqiRecordMove,
+  applyStandardXiangqiMove,
   createInitialXiangqiState,
   getStandardXiangqiPlayerView,
+  resumeAdjudicatedDraw,
   type StandardXiangqiPlayerView,
   type XiangqiColor,
   type XiangqiGameState,
@@ -38,8 +39,9 @@ export function finalXiangqiBoardView(
 ): StandardXiangqiPlayerView {
   let state = createInitialXiangqiState(board.id);
   for (const move of board.moves) {
+    state = resumeAdjudicatedDraw(state);
     if (state.status.type !== 'playing') break;
-    state = applyXiangqiRecordMove(state, move);
+    state = applyStandardXiangqiMove(state, move);
   }
   return { ...getStandardXiangqiPlayerView(state, 'red'), legalMoves: [] };
 }
@@ -53,11 +55,14 @@ function replayStoredXiangqiBoard(
 ): XiangqiGameState {
   let state = createInitialXiangqiState(board.id);
   for (const [index, move] of board.moves.entries()) {
+    // Only a following recorded move resumes a draw. Keep the final position's
+    // ruling so a record ending on repetition or the progress clock shows it.
+    state = resumeAdjudicatedDraw(state);
     if (state.status.type !== 'playing') {
       throw new Error(`stored broadcast board ${board.id} has moves after terminal state`);
     }
     const color = state.status.turn;
-    state = applyXiangqiRecordMove(state, move);
+    state = applyStandardXiangqiMove(state, move);
     onPly?.(index + 1, color, move, state);
   }
   return state;

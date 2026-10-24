@@ -86,7 +86,15 @@ for (const record of fixtures.cases) {
     });
     assert.equal(state.moveLog.length, moves.length);
   });
-  test(`${record.key}: puzzle miner scans the whole source record`, async () => {
+  test(`${record.key}: puzzle miner stops before an adjudicated draw`, async () => {
+    let live = game.createInitialXiangqiState('miner-reference');
+    let drawnAt = 0;
+    for (const move of moves) {
+      live = game.applyStandardXiangqiMove(live, move);
+      drawnAt += 1;
+      if (live.status.type === 'finished') break;
+    }
+    assert.equal(live.status.type, 'finished');
     const seen: number[] = [];
     const engine = {
       newGame: async () => {},
@@ -117,7 +125,10 @@ for (const record of fixtures.cases) {
       perGame: 0,
     } as XiangqiPuzzleMinerOptions;
     await mineXiangqiPuzzleGame(engine, { id: record.key, moves }, options, metrics, new Set());
-    assert.equal(seen.at(-1), moves.length);
+    assert.deepEqual(
+      seen,
+      Array.from({ length: drawnAt }, (_, i) => i),
+    );
     assert.equal(metrics.gamesIllegalReplay, 0);
   });
 }

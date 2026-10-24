@@ -504,11 +504,11 @@ type XiangqiReplayLine = {
  * and stalemate stay terminal, because no ruleset plays on through those.
  */
 function replayLine(spec: XiangqiReplaySpec): XiangqiReplayLine {
-  const moves = spec.iccs
+  const tokens = spec.iccs
     .trim()
     .split(/\s+/)
-    .filter((t) => /^[a-i]\d[a-i]\d$/.test(t))
-    .map(iccsToMove);
+    .filter((t) => /^[a-i]\d[a-i]\d$/.test(t));
+  const moves = tokens.map(iccsToMove);
   const parsedStart = spec.startFen ? parseStandardXiangqiFen(spec.startFen, 'xq-replay') : null;
   const startState: XiangqiGameState =
     parsedStart?.ok === true ? parsedStart.state : createInitialXiangqiState('xq-replay');
@@ -519,8 +519,13 @@ function replayLine(spec: XiangqiReplaySpec): XiangqiReplayLine {
     startState.status.type === 'playing' ? startState.status.turn : 'red';
   const plyOffset = firstMover === 'red' ? 0 : 1;
   const states: XiangqiGameState[] = [startState];
-  for (const move of moves) {
-    states.push(applyXiangqiRecordMove(states[states.length - 1]!, move));
+  for (const [index, move] of moves.entries()) {
+    const state = states[states.length - 1]!;
+    const next = applyXiangqiRecordMove(state, move);
+    if (next === state) {
+      throw new Error(`illegal move "${tokens[index]}" at ply ${index + 1}`);
+    }
+    states.push(next);
   }
   return { moves, states, startState, firstMover, plyOffset, total: moves.length };
 }
@@ -533,14 +538,9 @@ function replayLine(spec: XiangqiReplaySpec): XiangqiReplayLine {
  */
 export function resultFromFinalPosition(spec: XiangqiReplaySpec): '1-0' | '0-1' | '' {
   // Record replay can pass Mistboard's draw rules and still recognize a
-  // terminal board. A refused move supplies no inferred result.
-  const { moves, startState } = replayLine(spec);
-  let last = startState;
-  for (const move of moves) {
-    const next = applyXiangqiRecordMove(last, move);
-    if (next === last) return '';
-    last = next;
-  }
+  // terminal board. Illegal records report their refused ply in replayLine.
+  const { states } = replayLine(spec);
+  const last = states[states.length - 1]!;
   if (last.status.type !== 'finished' || !('winner' in last.status)) return '';
   if (last.status.winner === 'red') return '1-0';
   if (last.status.winner === 'black') return '0-1';
