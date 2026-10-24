@@ -40,7 +40,7 @@ import {
 import { type ProfileTarget, playerNameEl, profileTargetFor } from './profile-link.js';
 import './landing-play-panel.css';
 import { fetchLiveStats } from './live-stats-client.js';
-import { rememberedPveEngine } from './pve-memory.js';
+import { type LastBotGame, lastBotGame, rememberedPveEngine } from './pve-memory.js';
 import {
   isCorrespondenceRatedModeEnabled,
   isRatedModeEnabled,
@@ -70,6 +70,8 @@ type StoredPanel = {
   mode?: PersonMode;
   bots?: Record<string, { botId?: string; tc?: TimeControlId }>;
   people?: Record<string, string>;
+  /** Before 2026-10-24 the Play again record, written only by this panel's own
+   *  Play button. Read as a fallback until a bot game writes the shared one. */
   last?: { gameSpecId: string; botId: string; tc: TimeControlId };
 };
 
@@ -93,6 +95,24 @@ function writeStored(patch: (state: StoredPanel) => void): void {
   } catch {
     // Storage blocked: the panel still works, it just forgets the picks.
   }
+}
+
+/** The game the Play again row offers: the last bot game this device started
+ *  anywhere on the site, at a pace the panel has a preset for; else the record
+ *  the panel kept before every start path wrote the shared one. */
+export function playAgainPick(
+  shared: LastBotGame | null,
+  legacy: StoredPanel['last'],
+): { gameSpecId: string; botId: string; tc: TimeControlId } | null {
+  if (!shared) return legacy ?? null;
+  const tc = shared.timeControl;
+  const preset = tc
+    ? LANDING_TIME_PRESETS.find(
+        (p) => p.initialMs === tc.initialMs && p.incrementMs === tc.incrementMs,
+      )
+    : undefined;
+  if (!preset) return null;
+  return { gameSpecId: shared.gameSpecId, botId: shared.botId, tc: preset.id };
 }
 
 function paceKey(pace: PersonPace): string {
@@ -356,14 +376,6 @@ export function buildPlayPanel(
       preferredColor: 'random',
     };
   };
-  const rememberStart = (req: BotPlayRequest): void => {
-    const state = botState.get(req.gameSpecId);
-    if (!state) return;
-    writeStored((s) => {
-      s.last = { gameSpecId: req.gameSpecId, botId: req.botId, tc: state.tc };
-    });
-  };
-
   const renderBotRows = (): void => {
     botRows.replaceChildren();
     playingEls.clear();
@@ -469,7 +481,6 @@ export function buildPlayPanel(
         pendingLabel: t('lobby.botStarting', {}, locale),
         errorLabel: t('lobby.botStartFailed', {}, locale),
         source: 'panel-bot',
-        onCreated: rememberStart,
       });
       // Only Play starts the game (Brian, 2026-10-02): a whole-row click turned
       // a near miss on a stepper into a game nobody asked for.
@@ -518,9 +529,9 @@ export function buildPlayPanel(
 
   const renderFeatures = (): void => {
     const rows: HTMLElement[] = [];
-    const last = readStored().last;
+    const last = playAgainPick(lastBotGame(), readStored().last);
     const lastLadder = last ? ladderFor(last.gameSpecId) : [];
-    const lastRung = last ? lastLadder.find((r) => r.botId === last.botId) : undefined;
+    const lastRung = last ? lastLadder[landingBotLadderIndex(lastLadder, last.botId)] : undefined;
     const lastPaces = last ? panelBotPaces(last.gameSpecId as LandingGameSpecId).ids : [];
     if (
       last &&
@@ -533,7 +544,7 @@ export function buildPlayPanel(
       bindBotPlayControl(
         again,
         () => ({
-          botId: last.botId,
+          botId: lastRung.botId,
           gameSpecId: last.gameSpecId,
           ...(preset
             ? { timeControl: { initialMs: preset.initialMs, incrementMs: preset.incrementMs } }

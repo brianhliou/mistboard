@@ -51,7 +51,7 @@ import {
 } from './landing-bot-policy.js';
 import { registerLobbySeek, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
-import { rememberedPveEngine } from './pve-memory.js';
+import { rememberBotRoomRequest, rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { postThroughRestart } from './room-create-retry.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
@@ -3522,13 +3522,14 @@ async function createRoomFromPlay(
     // Any game this page starts ends the seeks it has open (lobby-seek-registry).
     const withdrawing = withdrawLobbySeeks();
     if (withdrawing) await withdrawing;
+    const requestBody = roomCreationRequestBody(mode, setup, engineId);
     while (true) {
       const response = await postThroughRestart(
         '/api/rooms',
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(roomCreationRequestBody(mode, setup, engineId)),
+          body: JSON.stringify(requestBody),
         },
         {
           onRestarting: () => {
@@ -3542,6 +3543,7 @@ async function createRoomFromPlay(
       if (response.ok) {
         const data = (await response.json()) as { url?: string };
         if (!data.url) throw new Error('room creation did not return a URL');
+        rememberBotRoomRequest(requestBody);
         if (status && !status.isConnected) return;
         roomNavigator(data.url);
         return;

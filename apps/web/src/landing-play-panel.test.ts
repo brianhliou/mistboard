@@ -332,12 +332,64 @@ describe('homepage play panel', () => {
     expect(JSON.parse(sessionStorage.getItem('mistboard.gameStartSource') ?? '{}').source).toBe(
       'panel-bot',
     );
-    const stored = JSON.parse(localStorage.getItem('mistboard.playPanel.v1') ?? '{}');
-    expect(stored.last).toEqual({
+    expect(JSON.parse(localStorage.getItem('mistboard:last-bot-game') ?? '{}')).toEqual({
       gameSpecId: 'xiangqi',
       botId: 'fairy-stockfish-level-4',
-      tc: '5m5',
+      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
     });
+  });
+
+  // Brian, 2026-10-23: the row still named Duck Xiangqi against Fairy-Stockfish
+  // Level 8 after a later game, because only this panel's own Play button wrote
+  // its record. A game started from the setup dialog or a room's play again
+  // writes the shared one, and the row follows it.
+  it('offers Play again for a bot game started outside the panel', async () => {
+    localStorage.setItem(
+      'mistboard.playPanel.v1',
+      JSON.stringify({
+        last: { gameSpecId: 'duck-xiangqi', botId: 'fairy-stockfish-level-8', tc: '10m5' },
+      }),
+    );
+    // The setup dialog names the jieqi levels by engine id.
+    localStorage.setItem(
+      'mistboard:last-bot-game',
+      JSON.stringify({
+        gameSpecId: 'jieqi',
+        botId: 'pikafish-jieqi-level-5',
+        timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+      }),
+    );
+    const fetchSpy = vi.fn(async () => Response.json({ url: '/jieqi/room-1' }, { status: 201 }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const board = buildPlayPanel('en', { hydrate: false });
+    document.body.append(board);
+    const again = board.querySelector('.pp-feature-again');
+    expect(again?.textContent).toContain('Pikafish Level 5');
+    expect(again?.textContent).not.toContain('Duck');
+    expect(again?.textContent).toContain('5+5');
+
+    board.querySelector<HTMLButtonElement>('.pp-feature-again .pp-act')!.click();
+    await flush();
+    const [, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toMatchObject({
+      mode: 'pve',
+      botId: 'pikafish-level-5',
+      gameSpecId: 'jieqi',
+      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+    });
+  });
+
+  it('offers no Play again for a last game at a pace the panel has no preset for', () => {
+    localStorage.setItem(
+      'mistboard:last-bot-game',
+      JSON.stringify({
+        gameSpecId: 'xiangqi',
+        botId: 'fairy-stockfish-level-4',
+        timeControl: { initialMs: 420_000, incrementMs: 0 },
+      }),
+    );
+    const board = buildPlayPanel('en', { hydrate: false });
+    expect(board.querySelector('.pp-feature-again')).toBeNull();
   });
 
   it('offers Play again for the last bot game, and keeps the picked level', () => {

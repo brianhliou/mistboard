@@ -5,6 +5,7 @@ import { liveState } from './live-state.js';
 import { correspondenceAwaitingOpponent } from './live-status.js';
 import { currentView } from './live-view.js';
 import { postGameActions } from './postgame-panel.js';
+import { rememberBotRoomRequest } from './pve-memory.js';
 import { rematchControls } from './rematch-controls.js';
 import { postThroughRestart } from './room-create-retry.js';
 import { isColor, oppositeColor } from './web-utils.js';
@@ -131,6 +132,7 @@ async function createPlayAgainRoom(refs: RoomActionRefs, deps: RoomActionDeps): 
     if (!response.ok) throw new Error(`room creation failed: ${response.status}`);
     const data = (await response.json()) as { url?: string };
     if (!data.url) throw new Error('room creation response missing url');
+    rememberBotRoomRequest(body);
     window.location.assign(data.url);
   } catch (err) {
     console.warn(err);

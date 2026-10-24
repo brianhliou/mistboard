@@ -32,6 +32,7 @@ import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
 import { postGameActions, renderGameResult, resultScore } from '../postgame-panel.js';
 import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile-link.js';
+import { rememberBotRoomRequest } from '../pve-memory.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
 import { isLikelySignedIn } from '../signed-in-state.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
@@ -855,14 +856,16 @@ export function createTenantRoomChrome<C extends string>(
     playAgainStatus = 'creating';
     renderRoomActions();
     try {
+      const body = playAgainBody();
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(playAgainBody()),
+        body: JSON.stringify(body),
       });
       if (!response.ok) throw new Error(`play-again failed: ${response.status}`);
       const data = (await response.json()) as { url?: string };
       if (!data.url) throw new Error('play-again did not return a URL');
+      rememberBotRoomRequest(body);
       window.location.assign(data.url);
     } catch (err) {
       console.warn(err);
