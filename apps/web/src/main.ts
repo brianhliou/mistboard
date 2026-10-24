@@ -1115,7 +1115,14 @@ function setTitle(page: string): void {
 function setTitleKey(key: I18nKey): void {
   // Localized titles wait for the locale chunk so zh visitors never see an
   // English tab title stick around; for English this resolves immediately.
-  void localeReady.then(() => setTitle(t(key, {}, currentLocale())));
+  // A title the server chose for this route (SPA_ROUTE_META) is put back in
+  // the same tick, not only after the mount, so the short UI title never shows
+  // while the page chunk loads ("Terms · Mistboard" over the served title).
+  void localeReady.then(() => {
+    const locale = currentLocale();
+    setTitle(t(key, {}, locale));
+    serverRender.keepTitle(locale);
+  });
 }
 
 async function mountOrReport(run: () => Promise<void>): Promise<void> {

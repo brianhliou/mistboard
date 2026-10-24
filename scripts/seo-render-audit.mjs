@@ -24,12 +24,23 @@
 //   npm run seo:render-audit -- --block-lazy-chunks --base http://localhost:3000
 //   npm run seo:render-audit -- --url /rules/duck-xiangqi --json out.json
 //
+// The server HTML's meta is checked too (serverMetaFindings): a page other
+// than the homepage serving the homepage's title fails, since Bing files it as
+// a duplicate of '/' (/terms, /privacy, /contact, /watch and 35 endgame deep
+// links did until 2026-10-24). The homepage's description elsewhere, a title
+// or description under the length floors, and an <img> with no alt attribute
+// warn: the floors are gated where each title is written (seo-meta-length
+// tests), and this run is the backstop for data-driven pages.
+//
 // Exit 1 when any page fails; warnings (a rendered title that differs from
 // the server's) never fail the run.
 import { writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { pathToFileURL } from 'node:url';
+// The server's copy, not a third one: it imports nothing and its types are
+// erasable, so Node (22.18 and later) loads it as it stands.
+import { seoMetaLengthProblems } from '../apps/server/src/seo-meta-length.ts';
 
 const GOOGLEBOT_UA =
   'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
@@ -37,6 +48,10 @@ const SITEMAPS = ['pages', 'studies', 'players', 'broadcasts'];
 // Titles the client sets as a stand-in while a route loads. Indexed, they
 // replace a page's real title in results.
 const PLACEHOLDER_TITLES = new Set(['Articles', 'News', 'Mistboard', 'Page failed to load']);
+// apps/web/index.html's own title: what every route without route meta serves,
+// and the fallback when the run cannot read the homepage itself.
+const SHELL_TITLE = 'Free Online Chinese Chess (Xiangqi) | Mistboard';
+const HOME_PATHS = new Set(['/', '/zh-hans', '/zh-hant']);
 
 function parseArgs(argv) {
   const args = {
@@ -127,7 +142,58 @@ export function serverHtmlFacts(html) {
   // to when a chunk fails, and nothing for a crawler that does not run it.
   const prerendered = html !== '' && !/<div id="app">\s*<\/div>/.test(html);
   const htmlLang = html.match(/<html[^>]*\slang="([^"]*)"/i)?.[1] || null;
-  return { title, noindex, canonical, h1, prerendered, htmlLang };
+  const description = html.match(/<meta[^>]+name="description"[^>]+content="([^"]*)"/i)?.[1];
+  // alt="" is a decorative image and fine; no alt attribute at all is not.
+  const imgsMissingAlt = [...html.matchAll(/<img\b[^>]*>/gi)].filter(
+    (m) => !/\salt\s*=/i.test(m[0]),
+  ).length;
+  return {
+    title: title === null ? null : decodeEntities(title),
+    noindex,
+    canonical,
+    h1,
+    prerendered,
+    htmlLang,
+    description: description === undefined ? null : decodeEntities(description),
+    imgsMissingAlt,
+  };
+}
+
+function decodeEntities(text) {
+  return text
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+/**
+ * Meta findings for a 200 response's server HTML, against the homepage's own
+ * title and description. A noindexed page is out of search, so none apply.
+ */
+export function serverMetaFindings(pathname, facts, home = { title: SHELL_TITLE }) {
+  const failures = [];
+  const warnings = [];
+  if (facts.noindex) return { failures, warnings };
+  if (!HOME_PATHS.has(pathname.replace(/\/+$/, '') || '/')) {
+    if (facts.title && home.title && facts.title === home.title) {
+      failures.push(`serves the homepage title "${facts.title}"`);
+    }
+    if (facts.description && home.description && facts.description === home.description) {
+      warnings.push('serves the homepage description');
+    }
+  }
+  if (facts.title !== null || facts.description !== null) {
+    for (const problem of seoMetaLengthProblems(pathname, {
+      title: facts.title ?? '',
+      description: facts.description ?? '',
+    })) {
+      warnings.push(problem.slice(pathname.length + 2));
+    }
+  }
+  if (facts.imgsMissingAlt > 0) warnings.push(`${facts.imgsMissingAlt} <img> without alt`);
+  return { failures, warnings };
 }
 
 /** Failures when the client changes the language <html lang> declares. The
@@ -191,6 +257,9 @@ async function auditUrl(browser, url, args) {
   }
   if (server.noindex) result.warnings.push('server HTML is noindex');
   result.failures.push(...serverHtmlFailures(new URL(url).pathname, server));
+  const meta = serverMetaFindings(new URL(url).pathname, server, args.home);
+  result.failures.push(...meta.failures);
+  result.warnings.push(...meta.warnings);
 
   const context = await browser.newContext({
     userAgent: GOOGLEBOT_UA,
@@ -225,6 +294,7 @@ async function auditUrl(browser, url, args) {
       lang: document.documentElement.lang,
       errorPanel: document.querySelector('.app-error-panel') !== null,
       appText: (document.querySelector('#app')?.textContent ?? '').trim().length,
+      imgsMissingAlt: document.querySelectorAll('img:not([alt])').length,
     }))
     .catch((err) => ({ evaluateError: err.message }));
   await context.close();
@@ -247,6 +317,11 @@ async function auditUrl(browser, url, args) {
     if (rendered.appText === 0) result.failures.push('#app is empty');
   }
   if (!rendered.h1) result.warnings.push('no h1');
+  // The client draws most images; the server-HTML count above sees only the
+  // prerendered ones.
+  if (rendered.imgsMissingAlt > (server.imgsMissingAlt ?? 0)) {
+    result.warnings.push(`${rendered.imgsMissingAlt} rendered <img> without alt`);
+  }
   if (!rendered.evaluateError) {
     result.failures.push(...htmlLangFailures(server.htmlLang, rendered.lang));
   }
@@ -268,11 +343,23 @@ async function auditUrl(browser, url, args) {
   return result;
 }
 
+/** The homepage's served title and description, the duplicate check's reference. */
+async function homeMeta(base) {
+  try {
+    const res = await fetch(`${base}/`, { headers: { 'user-agent': GOOGLEBOT_UA } });
+    const facts = serverHtmlFacts(res.ok ? await res.text() : '');
+    return { title: facts.title ?? SHELL_TITLE, description: facts.description };
+  } catch {
+    return { title: SHELL_TITLE, description: null };
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const urls = args.urls.length
     ? args.urls.map((u) => rebase(u, args.base))
     : (await Promise.all(args.sitemaps.map((s) => sitemapUrls(args.base, s, args.limit)))).flat();
+  args.home = await homeMeta(args.base);
   const { launchChromium } = await import('./lib/launch-browser.mjs');
   const browser = await launchChromium();
   const results = [];

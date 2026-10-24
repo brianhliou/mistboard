@@ -4,6 +4,7 @@ import {
   htmlLangFailures,
   serverHtmlFacts,
   serverHtmlFailures,
+  serverMetaFindings,
   sitemapUrls,
 } from './seo-render-audit.mjs';
 
@@ -177,4 +178,86 @@ test('a client that changes <html lang> fails the audit; case alone does not', (
   // Nothing to compare: a page without lang is not this check's finding.
   assert.deepEqual(htmlLangFailures(null, 'en'), []);
   assert.equal(serverHtmlFacts('<html><body></body></html>').htmlLang, null);
+});
+
+const HOME = {
+  title: 'Free Online Chinese Chess (Xiangqi) | Mistboard',
+  description:
+    'Play xiangqi (Chinese chess) online for free against people or bots, with rated games, puzzles, studies and live broadcasts of top events.',
+};
+const page = ({ title, description, body = '', robots = 'max-image-preview:large' }) =>
+  `<html lang="en"><head><title>${title}</title><meta name="robots" content="${robots}" />` +
+  `<meta name="description" content="${description}"></head><body><div id="app">${body}</div></body></html>`;
+const OWN = {
+  title: 'Terms of Use: Play, Ratings and Fair Play | Mistboard',
+  description:
+    'The rules for using mistboard.com: anonymous and rated play, ratings and fair play, finished games published under CC BY 4.0, and patron billing and refunds.',
+};
+
+test('a page other than the homepage serving its title fails; its description warns', () => {
+  // The planted failure: what /terms and every endgame deep link served until 2026-10-24.
+  const copy = serverMetaFindings('/terms', serverHtmlFacts(page(HOME)), HOME);
+  assert.deepEqual(copy.failures, [`serves the homepage title "${HOME.title}"`]);
+  assert.deepEqual(copy.warnings, ['serves the homepage description']);
+  // The homepage itself, in any locale, is not a copy of itself.
+  for (const home of ['/', '/zh-hans', '/zh-hant/']) {
+    assert.deepEqual(
+      serverMetaFindings(home, serverHtmlFacts(page(HOME)), HOME).failures,
+      [],
+      home,
+    );
+  }
+  // A noindexed copy is out of search, so it is not a duplicate.
+  const noindexed = serverHtmlFacts(page({ ...HOME, robots: 'noindex, follow' }));
+  assert.deepEqual(serverMetaFindings('/lag', noindexed, HOME), { failures: [], warnings: [] });
+  assert.deepEqual(serverMetaFindings('/terms', serverHtmlFacts(page(OWN)), HOME), {
+    failures: [],
+    warnings: [],
+  });
+  // Known blind spot: only the reference home title is compared, so a route
+  // serving the zh homepage's title is not caught (the run reads '/' only).
+});
+
+test('a title or description under the length floor warns, never fails', () => {
+  const short = serverMetaFindings(
+    '/watch',
+    serverHtmlFacts(page({ title: 'Watch · Mistboard', description: 'Live games.' })),
+    HOME,
+  );
+  assert.deepEqual(short.failures, []);
+  assert.deepEqual(short.warnings, [
+    'title 17 < 25: Watch · Mistboard',
+    'description 11 < 100: Live games.',
+  ]);
+  // A zh description is held to its character floor, CJK counted wide.
+  const zh = serverMetaFindings(
+    '/zh-hans/watch',
+    serverHtmlFacts(
+      page({
+        title: '观看象棋直播对局 | Mistboard',
+        description: '在 Mistboard 上实时观看象棋和各种变体的对局，逐步跟进。',
+      }),
+    ),
+    HOME,
+  );
+  assert.equal(zh.failures.length, 0);
+  assert.match(zh.warnings.join('\n'), /description \d+ < 100|zh description \d+ chars < 60/);
+  // Entities count as the character they stand for.
+  const escaped = serverHtmlFacts(
+    page({ ...OWN, title: 'Terms &amp; Fair Play: The Rules | Mistboard' }),
+  );
+  assert.equal(escaped.title, 'Terms & Fair Play: The Rules | Mistboard');
+});
+
+test('an <img> with no alt attribute warns; alt="" is decorative and passes', () => {
+  const facts = serverHtmlFacts(
+    page({
+      ...OWN,
+      body: '<img src="/a.png"><img src="/b.png" alt=""><IMG SRC="/c.png" ALT="Board"><img\nsrc="/d.png">',
+    }),
+  );
+  assert.equal(facts.imgsMissingAlt, 2);
+  assert.deepEqual(serverMetaFindings('/thanks', facts, HOME).warnings, ['2 <img> without alt']);
+  // Known blind spot: the server HTML holds only prerendered images; the client's
+  // are counted in the rendered DOM, which only the full run reads.
 });
