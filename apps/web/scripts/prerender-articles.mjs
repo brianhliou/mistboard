@@ -396,6 +396,8 @@ try {
   const { isArticleTranslationPublished, translateArticle } =
     await server.ssrLoadModule('/src/article-i18n.ts');
   const { articleIsNoindex } = await server.ssrLoadModule('/src/variant-public-surfaces.ts');
+  // The same author the page's byline names (articles/site-author.ts).
+  const { articleJsonLdAuthor } = await server.ssrLoadModule('/src/articles/site-author.ts');
   const { articleIsLive, articleGoesLiveAt } = await server.ssrLoadModule(
     '/src/articles/publish-time.ts',
   );
@@ -682,7 +684,7 @@ try {
         headline: localized.title,
         description: localized.summary,
         image: structuredImage,
-        author: { '@type': 'Organization', name: 'Mistboard' },
+        author: articleJsonLdAuthor(article),
         publisher: { '@type': 'Organization', name: 'Mistboard' },
         mainEntityOfPage: { '@type': 'WebPage', '@id': url },
         ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),

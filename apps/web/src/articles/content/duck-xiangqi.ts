@@ -25,6 +25,8 @@ export const duckXiangqiArticle: Article = {
   status: 'published',
   publishedAt: '2026-09-09',
   updatedAt: '2026-10-16',
+  updateNote:
+    "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.",
   audience:
     'Xiangqi players, and Duck Chess players who want the xiangqi version stated precisely.',
   thumbnail: { kind: 'svg', svg: DUCK_XIANGQI_THUMBNAIL },

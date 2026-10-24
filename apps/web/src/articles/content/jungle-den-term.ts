@@ -72,8 +72,15 @@ export const jungleDenTermArticle: Article = {
     'Misty, our Jungle Chess engine, has no idea of a den race. Three ways to teach it one came back null or negative: races decide 4.7% of games at full strength, and a 12 times deeper search sees the loss a median of one ply sooner.',
   showSummaryOnPage: false,
   status: 'published',
+  method: [
+    'Base rate from 172 self-play games at the production budget of five million nodes a move.',
+    'Headroom: in each of the 8 den races, the earliest ply at which five and sixty million nodes see the forced loss.',
+    'The search extension tested as a harness policy that gives one side more nodes near an enemy den, 300 colour-swapped pairs per arm, with and without a fixed node budget.',
+  ],
   publishedAt: '2026-08-31',
   updatedAt: '2026-10-16',
+  updateNote:
+    'Back as its own page, with the deeper-search deficit median corrected to 1 ply and the race shares restated.',
   thumbnail: {
     kind: 'image',
     src: '/article-thumbs/jungle-den-term/thumbnail.png',

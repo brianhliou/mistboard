@@ -26,6 +26,8 @@ export const atomicXiangqiArticle: Article = {
   status: 'published',
   publishedAt: '2026-09-15',
   updatedAt: '2026-10-07',
+  updateNote:
+    "Added the cannon rule's design history and the engine results behind the numbers.",
   audience:
     'Xiangqi players, and Atomic Chess players who want the xiangqi version stated precisely.',
   thumbnail: { kind: 'svg', svg: ATOMIC_XIANGQI_THUMBNAIL },

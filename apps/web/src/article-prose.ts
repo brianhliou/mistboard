@@ -190,7 +190,9 @@ function sectionProse(section: ArticleSection, path: string): Prose[] {
 }
 
 // Every natural-language string an article contributes, each with a dotted path
-// for diagnostics. Order is stable: title, summary, tldr, intro, then sections.
+// for diagnostics. Order is stable: title, summary, tldr, method, intro, then
+// sections. `updateNote` stays out: it is a note about the text, not the text,
+// so it neither needs a translation nor moves the content fingerprint.
 export function articleProse(article: Article): Prose[] {
   const out: Prose[] = [
     { path: 'title', text: article.title },
@@ -198,6 +200,9 @@ export function articleProse(article: Article): Prose[] {
   ];
   (article.tldr ?? []).forEach((t, i) => {
     out.push({ path: `tldr[${i}]`, text: t });
+  });
+  (article.method ?? []).forEach((m, i) => {
+    out.push({ path: `method[${i}]`, text: m });
   });
   (article.intro ?? []).forEach((b, i) => {
     out.push(...blockProse(b, `intro[${i}]`));

@@ -55,6 +55,30 @@ describe('article public listing gates', () => {
     expect(undated).toEqual([]);
   });
 
+  it('says what changed on every article whose updated date differs from its publish date', () => {
+    // An "Updated" date with nothing behind it reads as freshness theatre; the
+    // note is the reader's reason to look again. A note with no date to hang on
+    // is a stray, and an update before publication is a typo.
+    const problems = articles
+      .filter((article) => article.status === 'published')
+      .flatMap((article) => {
+        const { slug, publishedAt, updatedAt, updateNote } = article;
+        const out: string[] = [];
+        if (updatedAt && updatedAt !== publishedAt && !updateNote?.trim()) {
+          out.push(`${slug}: updatedAt ${updatedAt} without an updateNote`);
+        }
+        if (updateNote && (!updatedAt || updatedAt === publishedAt)) {
+          out.push(`${slug}: updateNote without an updatedAt after publishedAt`);
+        }
+        if (updatedAt && publishedAt && updatedAt < publishedAt) {
+          out.push(`${slug}: updatedAt ${updatedAt} is before publishedAt ${publishedAt}`);
+        }
+        if (updateNote?.includes('\u2014')) out.push(`${slug}: updateNote has an em dash`);
+        return out;
+      });
+    expect(problems).toEqual([]);
+  });
+
   it('orders the articles page by publish date newest first', () => {
     vi.stubEnv('DEV', true);
 

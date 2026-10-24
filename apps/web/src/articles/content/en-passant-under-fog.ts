@@ -32,6 +32,8 @@ export const enPassantUnderFogArticle: Article = {
   status: 'published',
   publishedAt: '2026-09-12',
   updatedAt: '2026-10-15',
+  updateNote:
+    'Retold as a bug story, with the code path production actually ran corrected.',
   thumbnail: {
     pieces: boardToPieces(WITH_EP.board),
     fogSquares: fogFor(WITH_EP, 'black'),

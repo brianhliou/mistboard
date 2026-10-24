@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
+import { hasSiteByline } from './articles/site-author.js';
 import { articles } from './articles-data.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -87,6 +88,34 @@ describe('static pages', () => {
     expect(fetchMock).not.toHaveBeenCalledWith('/api/stats/public', expect.anything());
     expect(root.querySelector('.platform-activity')).toBeNull();
     expect(root.textContent).not.toContain('Player game activity');
+  });
+
+  it('says who builds Mistboard and how articles are made, with an anchor the byline links to', () => {
+    const root = document.createElement('main');
+    document.body.append(root);
+    mountAbout(root);
+
+    const who = root.querySelector('#who');
+    expect(who?.tagName).toBe('H2');
+    expect(who?.textContent).toBe('Who builds Mistboard');
+    expect(who?.nextElementSibling?.textContent).toContain(
+      'Brian H. Liou designs, builds and runs Mistboard',
+    );
+    const articlesHeading = root.querySelector('#articles');
+    expect(articlesHeading?.textContent).toBe('How articles are made');
+    expect(articlesHeading?.nextElementSibling?.textContent).toContain('drafted with Claude');
+  });
+
+  it('localizes the who and articles sections on a zh page', () => {
+    window.history.replaceState(null, '', '/zh-hans/about');
+    const root = document.createElement('main');
+    document.body.append(root);
+    mountAbout(root);
+
+    const who = root.querySelector('#who');
+    expect(who?.textContent).toBe('谁在打造 Mistboard');
+    expect(who?.hasAttribute('lang')).toBe(false);
+    expect(root.querySelector('#articles')?.nextElementSibling?.textContent).toContain('机器翻译');
   });
 
   it('localizes Traditional Chinese about copy', () => {
@@ -393,6 +422,22 @@ describe('prerendered article page', () => {
       expect(baked).toEqual(mounted);
     },
   );
+
+  it('bakes the byline and the drafted note into the prerendered HTML, English and zh', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, json: async () => ({}) })),
+    );
+    const slug = articles.find(
+      (a) => a.status === 'published' && hasSiteByline(a) && isArticleTranslationPublished(a.slug),
+    )?.slug as string;
+    const en = await renderArticlePageShellForPrerender(slug);
+    expect(en).toContain('href="/about#who"');
+    expect(en).toContain('Brian H. Liou');
+    expect(en).toContain('Drafted with Claude');
+    const hans = await renderArticlePageShellForPrerender(slug, 'zh-Hans');
+    expect(hans).toContain('与 Claude 合写 · 由英文机器翻译');
+  });
 
   // The prerender ships a Vietnamese page as <html lang="vi">; locale init then
   // resets <html lang> to the UI locale ("en"), and until 2026-10-21 the mount

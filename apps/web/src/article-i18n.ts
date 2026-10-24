@@ -3598,8 +3598,8 @@ const ZH_HANS: Record<string, string> = {
   'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.':
     '许银川对阮武君，2007年，出自他三个冠军中的最后一个。我们的引擎给他打出98.5分，是本页最干净的一局。',
   'Zhao Xinxin 赵鑫鑫, 2009': '赵鑫鑫，2009',
-  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
-    '浙江台州人，2007年十九岁夺得全国冠军，2009年二十一岁夺得世界冠军，九局拿下十五分。他至今仍是拿下这个头衔最年轻的棋手，而这一冠也让他集齐全国、亚洲与世界三项冠军，中国象棋界称之为大满贯。',
+  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. Taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
+    '浙江台州人，2007年十九岁夺得全国冠军，2009年二十一岁夺得世界冠军，九局拿下十五分。这一冠让他集齐全国、亚洲与世界三项冠军，中国象棋界称之为大满贯。',
   'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.':
     '2025年1月12日，他在一次处罚四十一人的决定中被终身禁赛。',
   'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.':
@@ -10053,8 +10053,8 @@ const ZH_HANT: Record<string, string> = {
     '他和吕钦一樣出自廣東，一樣把棋建立在殘局功夫上，也一樣是本頁三位紀錄清白的棋手之一。',
   'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.':
     '许银川對阮武君，2007年，出自他三個冠軍中的最後一個。我們的引擎給他打出98.5分，是本頁最乾淨的一局。',
-  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
-    '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。他至今仍是拿下這個頭銜最年輕的棋手，而這一冠也讓他集齊全國、亞洲與世界三項冠軍，象棋界稱之為大滿貫。',
+  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. Taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
+    '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。這一冠讓他集齊全國、亞洲與世界三項冠軍，象棋界稱之為大滿貫。',
   'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.':
     '2025年1月12日，他在一次處罰四十一人的決定中被終身禁賽。',
   'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.':

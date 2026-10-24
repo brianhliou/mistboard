@@ -16,6 +16,9 @@ export function mountAbout(root: HTMLElement): void {
   root.replaceChildren();
   root.classList.add('landing-page', 'about-route');
   root.append(buildNav(locale), buildStaticPageLayout('about', buildAbout(locale), locale));
+  // The page mounts after a lazy import, so the browser's own jump to /about#who
+  // found no target; make it again now the section exists.
+  scrollToLocationHash();
 }
 
 export function mountSource(root: HTMLElement): void {
@@ -560,6 +563,14 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     t('about.openSourceSuffix', {}, locale),
   ]);
 
+  const whoHeading = aboutSubheading(t('about.whoHeading', {}, locale));
+  whoHeading.id = 'who';
+  const whoP = aboutParagraph([t('about.whoBody', {}, locale)]);
+
+  const articlesHeading = aboutSubheading(t('about.articlesHeading', {}, locale));
+  articlesHeading.id = 'articles';
+  const articlesP = aboutParagraph([t('about.articlesBody', {}, locale)]);
+
   section.append(
     heading,
     lede,
@@ -577,6 +588,10 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     communityP,
     oss1Heading,
     oss1P,
+    whoHeading,
+    whoP,
+    articlesHeading,
+    articlesP,
   );
   return section;
 }

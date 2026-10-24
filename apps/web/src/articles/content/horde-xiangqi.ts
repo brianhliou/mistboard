@@ -66,8 +66,15 @@ export const hordeXiangqiArticle: Article = {
     'We put Horde on the xiangqi board and measured it before building anything: twelve start arrays, two soldier rules, each played four times by an engine against itself. With xiangqi’s own soldier the army wins every game by one trick; give the soldier the crossed move from the start and the game becomes a siege that draws three times in four. We are publishing the measurement, not the variant.',
   showSummaryOnPage: false,
   status: 'published',
+  method: [
+    "A rule kernel referees every game, after matching the engine's legal moves by perft from each array, on nine hand-built positions and on 300 positions from random play.",
+    'Every array played four times, at 150,000, 200,000, 300,000 and 500,000 nodes a move, with no random openings.',
+    'Node budgets, not time, so nothing depends on the machine.',
+  ],
   publishedAt: '2026-09-15',
   updatedAt: '2026-10-07',
+  updateNote:
+    'Added the full account: the twelve start arrays, both result tables, step-through games and the checks, with four figures corrected against the sample games.',
   audience:
     'Chess players who know Horde and wonder what it does on the xiangqi board, and xiangqi players curious why a variant was measured and then not built.',
   thumbnail: { kind: 'svg', svg: HORDE_XIANGQI_THUMBNAIL },

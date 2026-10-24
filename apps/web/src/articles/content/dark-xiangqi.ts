@@ -29,6 +29,8 @@ export const darkXiangqiArticle: Article = {
     playableOnMistboard: true,
     publishedAt: '2026-05-26',
     updatedAt: '2026-07-23',
+    updateNote:
+      'Added a sample game from the site.',
     audience:
       'Xiangqi players, Fog Chess players, and anyone who wants a clean first explanation of xiangqi under fog.',
     thumbnail: { kind: 'svg', svg: XQ_DARK_XIANGQI_THUMBNAIL },

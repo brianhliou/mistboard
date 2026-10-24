@@ -567,6 +567,9 @@ export const xiangqiWorldChampionshipArticle: Article = {
   // argument landing the same day read as a dump rather than as a pair. The
   // date is what the reader and the feed see, so it carries the stagger.
   publishedAt: '2026-08-30',
+  updatedAt: '2026-10-24',
+  updateNote:
+    'Removed a claim that Zhao Xinxin is the youngest world champion; Zheng Weitong won the title younger in 2015.',
   audience:
     'Readers who have met the national champions and want to know what the international title is worth.',
   thumbnail: { kind: 'svg', svg: WORLD_TITLE_THUMBNAIL },
@@ -714,7 +717,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.',
+          text: 'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. Taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.',
         },
         {
           kind: 'paragraph',
