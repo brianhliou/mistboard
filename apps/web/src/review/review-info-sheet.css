@@ -1,0 +1,68 @@
+/* Phone game review info sheet (review-info-sheet.ts, #655). The sheet and its
+   ☰ row exist on every screen; above 600px neither shows, so tablet and
+   desktop keep the game card and chat in the left rail as they were. */
+
+.review-info-sheet {
+  display: none;
+}
+
+@media (min-width: 601px) {
+  .move-nav-menu__item[data-review-info] {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  /* The game card and the chat live in the sheet (lent on open), so the page
+     stops at the move list and the bar. */
+  .has-review-info-sheet .review-rail-group {
+    display: none;
+  }
+
+  .review-info-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: block;
+  }
+  .review-info-sheet__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.4);
+  }
+  .review-info-sheet__panel {
+    position: absolute;
+    inset: auto 0 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 85vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 4px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    border-radius: 14px 14px 0 0;
+    background: var(--site-panel, var(--site-surface));
+    color: var(--site-text);
+  }
+  .review-info-sheet__close {
+    appearance: none;
+    align-self: flex-end;
+    min-height: 44px;
+    padding: 0 8px;
+    border: 0;
+    background: transparent;
+    color: var(--site-link, var(--site-accent));
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .review-info-sheet__body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  body.review-info-open {
+    overflow: hidden;
+  }
+}

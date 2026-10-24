@@ -200,6 +200,8 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     summary: `${status} · ${postgame.game.plyCount} plies`,
     metaCard,
     details,
+    // Phone: the card and chat go to a sheet from the ☰, off the page (#655).
+    phoneInfoSheet: true,
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
