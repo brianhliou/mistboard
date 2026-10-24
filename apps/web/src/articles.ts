@@ -718,20 +718,15 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
     thumb.classList.add('is-empty');
   }
 
-  // Date pill overlaid on the thumbnail, lichess blog-card style.
-  const dateIso = article.publishedAt ?? article.updatedAt;
-  if (dateIso) {
-    const date = document.createElement('span');
-    date.className = 'landing-article-card-date';
-    date.textContent = formatCardDate(dateIso, locale);
-    thumb.append(date);
-  }
-
   const title = document.createElement('strong');
   title.className = 'landing-article-card-title';
   title.textContent = localized.cardTitle ?? localized.title;
 
   link.append(thumb, title);
+  // The date sits under the title as muted text, never over the art, so a
+  // thumbnail needs no empty corner for it.
+  const dateIso = article.publishedAt ?? article.updatedAt;
+  if (dateIso) link.append(landingCardDate(dateIso, locale));
   return link;
 }
 
@@ -755,17 +750,19 @@ function landingAnnouncementCard(announcement: Announcement, locale: Locale): HT
   icon.append(buildUiIcon(uiIconForAnnouncementKind(announcement.kind)));
   thumb.append(icon);
 
-  const date = document.createElement('span');
-  date.className = 'landing-article-card-date';
-  date.textContent = formatCardDate(announcement.date, locale);
-  thumb.append(date);
-
   const title = document.createElement('strong');
   title.className = 'landing-article-card-title';
   title.textContent = localizeAnnouncementString(announcement.headline, locale);
 
-  link.append(thumb, title);
+  link.append(thumb, title, landingCardDate(announcement.date, locale));
   return link;
+}
+
+function landingCardDate(iso: string, locale: Locale): HTMLElement {
+  const date = document.createElement('span');
+  date.className = 'landing-article-card-date';
+  date.textContent = formatCardDate(iso, locale);
+  return date;
 }
 
 function formatCardDate(iso: string, locale: Locale): string {
@@ -2713,14 +2710,6 @@ function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
     thumb.classList.add('is-empty');
   }
 
-  const dateIso = article.publishedAt ?? article.updatedAt;
-  if (dateIso) {
-    const date = document.createElement('span');
-    date.className = 'articles-index-card-over-image articles-index-card-date';
-    date.textContent = formatCardDate(dateIso, locale);
-    thumb.append(date);
-  }
-
   if (isArticleStatusBadge(article.status)) {
     const badge = document.createElement('span');
     badge.className = `article-status-badge article-status-${article.status} articles-index-card-status`;
@@ -2740,6 +2729,14 @@ function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
   summary.textContent = article.summary;
 
   body.append(title, summary);
+  // Under the summary, not over the thumbnail, so the art keeps its corner.
+  const dateIso = article.publishedAt ?? article.updatedAt;
+  if (dateIso) {
+    const date = document.createElement('span');
+    date.className = 'articles-index-card-date';
+    date.textContent = formatCardDate(dateIso, locale);
+    body.append(date);
+  }
 
   link.append(thumb, body);
   item.append(link);

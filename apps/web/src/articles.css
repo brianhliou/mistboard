@@ -183,37 +183,6 @@
     linear-gradient(135deg, rgba(29, 37, 34, 0.08), transparent 48%), var(--site-panel-soft);
 }
 
-.articles-index-card-over-image {
-  position: absolute;
-  top: -1px;
-  z-index: 1;
-  padding: 3px 7px 4px;
-  background: color-mix(in srgb, var(--site-panel) 86%, transparent);
-  color: var(--site-text);
-  font-size: 11px;
-  font-weight: 400;
-  line-height: 1.1;
-}
-
-/* Blur on a pseudo-element, not on the badge: same compositor misregistration
-   as the landing cards (see .landing-article-card-date::before in landing.css).
-   Background and backdrop-filter on one element put the badge in its own
-   composited layer whose rounded clip can land a pixel off the card's, leaking
-   a crescent of raw thumbnail around the outer corner. */
-.articles-index-card-over-image::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  backdrop-filter: blur(6px);
-}
-
-.articles-index-card-date {
-  left: -1px;
-  border-radius: var(--site-radius) 0 7px 0;
-}
-
 .articles-index-card-status {
   right: 8px;
   bottom: 8px;
@@ -302,14 +271,7 @@
 .articles-index-card-body {
   display: block;
   padding: 17px 21px 20px;
-  max-height: 150px;
-}
-
-.articles-index-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 8px;
+  max-height: 172px;
 }
 
 .articles-index-card-title {
@@ -338,10 +300,12 @@
   -webkit-line-clamp: 2;
 }
 
-.articles-index-card-dates {
-  margin: 6px 0 0;
+.articles-index-card-date {
+  display: block;
+  margin: 8px 0 0;
   color: var(--site-muted);
   font-size: 12px;
+  line-height: 1.2;
 }
 
 .articles-index-card-arrow {
@@ -429,7 +393,7 @@
 @media (min-width: 721px) {
   .article-footer .articles-index-card-body {
     padding: 13px 15px 15px;
-    max-height: 128px;
+    max-height: 148px;
   }
 
   .article-footer .articles-index-card-title {
