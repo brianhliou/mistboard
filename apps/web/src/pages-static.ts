@@ -567,10 +567,12 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
   const whoHeading = aboutSubheading(t('about.whoHeading', {}, locale));
   whoHeading.id = 'who';
   const whoP = aboutParagraph([t('about.whoBody', {}, locale)]);
+  // Chinese runs on without spaces after 。 and ：.
+  const gap = locale === 'en' ? ' ' : '';
   whoP.append(
-    ' ',
+    gap,
     t('about.whoSitePrefix', {}, locale),
-    ' ',
+    gap,
     aboutExternalLink('brianhliou.com', SITE_AUTHOR.sameAs),
   );
 
