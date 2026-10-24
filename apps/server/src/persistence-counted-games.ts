@@ -90,9 +90,16 @@ export function excludedVersusAccountOnly(gamesAlias: string): string {
 // (Brian, 2026-10-23: "no me vs guest"). Every count below uses this one
 // clause, so the counted and not-counted rows still partition completed human
 // games.
+//
+// A CASE, not an AND: Postgres does not promise to evaluate AND operands in
+// order, and adding excludedVersusAccountOnly took /api/stats/public on prod
+// from 1.4 s to 5 s (2026-10-23), consistent with its two nested seat scans
+// running for every game. CASE evaluates its WHEN first, so those scans run
+// only for the few games that have an excluded seat.
 export function excludedFromStats(gamesAlias: string): string {
-  return `(${excludedSeatExists(gamesAlias)}
-    AND NOT ${excludedVersusAccountOnly(gamesAlias)})`;
+  return `(CASE WHEN ${excludedSeatExists(gamesAlias)}
+    THEN NOT ${excludedVersusAccountOnly(gamesAlias)}
+    ELSE FALSE END)`;
 }
 
 // Finished on or after the launch date.
