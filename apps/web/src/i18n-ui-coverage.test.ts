@@ -96,7 +96,12 @@ function unlocalizedFiles(): Map<string, string[]> {
   const flagged = new Map<string, string[]>();
   for (const path of sourceFiles(SRC)) {
     const rel = relative(SRC, path);
-    if (/\.test\.ts$|\.d\.ts$|^i18n\/|^articles\/content\/|^article-i18n\.ts$/.test(rel)) continue;
+    if (
+      /\.test\.ts$|\.d\.ts$|^i18n\/|^articles\/content\/|^article-i18n(-moved-posts)?\.ts$/.test(
+        rel,
+      )
+    )
+      continue;
     const source = readFileSync(path, 'utf8');
     if (LOCALIZED.test(source)) continue;
     const phrases = englishPhrases(source);

@@ -27,6 +27,18 @@ function truncate(text: string): string {
 
 const published = articles.filter((a) => a.status === 'published');
 
+// A reason that says the zh is merely late rather than deliberately absent.
+// Known blind spot: a backlog phrased without these words ("zh comes next
+// week") passes; the planted test below pins what is caught.
+const BACKLOG_REASON =
+  /not (yet )?translated|untranslated|translat\w* (later|pending|next|soon)|(later|pending|awaiting|waits? for( a)?) translation|translate later|to be translated|\btodo\b/i;
+
+function backlogExemptions(exempt: Readonly<Record<string, string>>): string[] {
+  return Object.entries(exempt)
+    .filter(([, reason]) => BACKLOG_REASON.test(reason))
+    .map(([slug, reason]) => `${slug}: ${reason}`);
+}
+
 describe('article translation coverage', () => {
   for (const slug of TRANSLATED_ARTICLE_SLUGS) {
     it(`${slug}: every prose string resolves in all zh scripts`, () => {
@@ -157,6 +169,29 @@ describe('article translation coverage', () => {
       ...(reason.trim() ? [] : [`${slug}: no reason given`]),
     ]);
     expect(problems, problems.join('\n')).toEqual([]);
+  });
+
+  // An exemption is a decision that a page has no zh, not a to-do list. On
+  // 2026-10-15/16 six posts moved from brianhliou.com dropped their zh pages
+  // and were exempted as "not yet translated", which passed every check above
+  // while their zh URLs served English: the backlog hid inside the exemption.
+  it('no exemption reason describes a translation backlog', () => {
+    const problems = backlogExemptions(UNTRANSLATED_ARTICLE_SLUGS);
+    expect(
+      problems,
+      `exempt as a backlog; translate the article and move it to TRANSLATED_ARTICLE_SLUGS:\n${problems.join('\n')}`,
+    ).toEqual([]);
+  });
+
+  it('the backlog check catches a planted "not yet translated" reason', () => {
+    expect(
+      backlogExemptions({
+        'planted-a': 'Moved from brianhliou.com in English; not yet translated.',
+        'planted-b': 'Translation pending.',
+        'planted-c': 'Will translate later.',
+        'planted-d': 'Vietnamese copy of pikafish, whose zh pages exist.',
+      }),
+    ).toEqual(['planted-a', 'planted-b', 'planted-c'].map((slug) => expect.stringContaining(slug)));
   });
 
   it('locked slugs are real published articles', () => {
