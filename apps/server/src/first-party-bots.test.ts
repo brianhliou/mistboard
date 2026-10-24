@@ -10,6 +10,7 @@ import {
   firstPartyBotForId,
   liveSeatEngineName,
   liveSeatProfileIdentity,
+  persistedSeatDisplayName,
 } from './first-party-bots.js';
 import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
 import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
@@ -89,7 +90,7 @@ test('live Jieqi seats keep every ladder label while linking to the bot identity
 test('live seat labels preserve other bot brands, historical tiers and unknown engines', () => {
   assert.equal(
     liveSeatEngineName('pikafish-xiangqi-level-8', 'pikafish', () => 'Tier'),
-    'Pikafish',
+    'Pikafish Level 8',
   );
   assert.equal(
     liveSeatEngineName('pikafish-jieqi-amateur', 'pikafish', () => 'Old tier'),
@@ -102,6 +103,55 @@ test('live seat labels preserve other bot brands, historical tiers and unknown e
   assert.equal(
     liveSeatEngineName('unregistered', undefined, () => 'Custom engine'),
     'Custom engine',
+  );
+});
+
+test('a finished bot seat stored with the bare bot name reads back with its rung', () => {
+  // jq_597a12a4-0994-4e09-b2b0-3c3331c1ce0e stored black as "Pikafish" with
+  // engine pikafish-jieqi-strongest; the room had shown "Pikafish Level 8".
+  const stored = {
+    displayName: 'Pikafish',
+    subjectType: 'bot',
+    subjectId: 'pikafish',
+    engineId: 'pikafish-jieqi-strongest',
+  };
+  assert.equal(persistedSeatDisplayName(stored), 'Pikafish Level 8');
+  assert.equal(
+    persistedSeatDisplayName({ ...stored, engineId: 'pikafish-xiangqi-level-8' }),
+    'Pikafish Level 8',
+  );
+  // A legacy bot id still resolves to the merged profile.
+  assert.equal(
+    persistedSeatDisplayName({ ...stored, subjectId: 'pika-jieqi-strongest' }),
+    'Pikafish Level 8',
+  );
+  // No rung recorded (pre-migration-148 seat) or no rung label: the stored name.
+  assert.equal(persistedSeatDisplayName({ ...stored, engineId: null }), 'Pikafish');
+  assert.equal(
+    persistedSeatDisplayName({ ...stored, engineId: 'pikafish-jieqi-amateur' }),
+    'Pikafish',
+  );
+  assert.equal(
+    persistedSeatDisplayName({
+      displayName: 'Misty',
+      subjectType: 'bot',
+      subjectId: 'misty',
+      engineId: 'python-v2-v1.6',
+    }),
+    'Misty',
+  );
+  // Only bot seats are renamed: a human called "Pikafish" stays as typed.
+  assert.equal(
+    persistedSeatDisplayName({ ...stored, subjectType: 'user', subjectId: 'user-1' }),
+    'Pikafish',
+  );
+  assert.equal(
+    persistedSeatDisplayName({
+      displayName: 'Pikafish',
+      subjectType: 'engine-version',
+      subjectId: 'pikafish-jieqi-strongest',
+    }),
+    'Pikafish',
   );
 });
 

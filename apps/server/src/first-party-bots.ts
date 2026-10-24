@@ -41,6 +41,9 @@ export const MISTY_DARK_CHESS_ACTIVE_ENGINE_ID = 'python-v2-v1.6';
 
 const FAIRY_STOCKFISH_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 const PIKAFISH_JIEQI_LEVELS = [1, 2, 3, 4, 5, 6, 7] as const;
+// The xiangqi Pikafish ladder (xiangqi-pikafish-engine.ts): level 8 is the bot's
+// current xiangqi engine, 1-7 are retired rungs whose games still attribute here.
+const PIKAFISH_XIANGQI_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
 function pikafishJieqiLevelProfile(level: number): FirstPartyBotProfile {
   return {
@@ -129,7 +132,17 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       xiangqi: 'pikafish-xiangqi-level-8',
       jieqi: 'pikafish-jieqi-strongest',
     },
-    seatNamesByEngineId: { 'pikafish-jieqi-strongest': 'Pikafish Level 8' },
+    // Same label as the jieqi ladder bots ("Pikafish Level N"), so a Pikafish seat
+    // names its rung in every variant, live and finished.
+    seatNamesByEngineId: {
+      'pikafish-jieqi-strongest': 'Pikafish Level 8',
+      ...Object.fromEntries(
+        PIKAFISH_XIANGQI_LEVELS.map((level) => [
+          `pikafish-xiangqi-level-${level}`,
+          `Pikafish Level ${level}`,
+        ]),
+      ),
+    },
     defaultGameSpecId: 'xiangqi',
     attributionEngineIds: [
       'pikafish-xiangqi-level-1',
@@ -237,7 +250,44 @@ export function liveSeatEngineName(
   engineName: () => string,
 ): string {
   const bot = pveBotId ? firstPartyBotForId(pveBotId) : firstPartyBotForEngine(engineClientId);
-  return bot?.seatNamesByEngineId?.[engineClientId] ?? bot?.displayName ?? engineName();
+  return bot ? botSeatName(bot, engineClientId) : engineName();
+}
+
+/**
+ * A first-party bot's seat name when it runs `engineId`: the rung label when the
+ * shared profile name omits it ("Pikafish Level 8"), else the bot's name. The one
+ * rule behind live seats (liveSeatEngineName), the participant rows written at
+ * game end (variant-tenant/events.ts, room-manager.ts) and finished-game reads
+ * (persistedSeatDisplayName), so a seat cannot read one name live and another
+ * once the game is over.
+ */
+export function botSeatName(
+  bot: FirstPartyBotProfile,
+  engineId: string | null | undefined,
+): string {
+  return (engineId ? bot.seatNamesByEngineId?.[engineId] : undefined) ?? bot.displayName;
+}
+
+/**
+ * The display name of a persisted participant, resolved at read time. Bot seats
+ * written before the writers used botSeatName stored the bare profile name
+ * ("Pikafish" for a jieqi Level 8 game); the stored engine id still says which
+ * rung played, so the label is recovered here without a backfill. Anything
+ * without a rung label (humans, engine-version seats, bot seats written before
+ * migration 148 recorded engine_id) keeps its stored name.
+ */
+export function persistedSeatDisplayName(participant: {
+  displayName: string;
+  subjectType: string;
+  subjectId: string | null;
+  engineId?: string | null;
+}): string {
+  const { engineId } = participant;
+  if (participant.subjectType !== 'bot' || !engineId) return participant.displayName;
+  const bot =
+    (participant.subjectId ? firstPartyBotForId(participant.subjectId) : null) ??
+    firstPartyBotForEngine(engineId);
+  return bot?.seatNamesByEngineId?.[engineId] ?? participant.displayName;
 }
 
 // games.variant values that name the same spec as a bot's engine-map key. The
