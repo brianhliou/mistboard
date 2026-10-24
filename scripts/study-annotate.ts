@@ -14,8 +14,8 @@
 //     on the last move of every sideline, where a line's verdict goes. A
 //     mainline move carries its move glyph only, as on every other variant's
 //     study (Brian, 2026-10-02). From red's expected score through the site's own maps: the
-//     score is turned back into centipawns on the analysis board's win curve
-//     (winPercent, WIN_PCT_K) and read by advantageSymbol, the bands the
+//     score is read on the analysis board's win curve (winPercent, WIN_PCT_K)
+//     by advantageSymbolForScore, using the bands the
 //     review's engine lines close on (60 / 180 / 450 cp: 55.5%, 66.0% and 84.0%
 //     for red). Stored as the PGN assessment NAG that assessment-glyphs.ts decodes.
 //   - each sideline as the played move's sibling, with its own comment and a
@@ -30,7 +30,7 @@
 
 import { moveJudgment, WIN_PCT_K } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from '../apps/web/src/assessment-glyphs.ts';
-import { advantageSymbol } from '../apps/web/src/review/engine/eval-format.ts';
+import { advantageSymbolForScore } from '../apps/web/src/review/engine/eval-format.ts';
 
 export const MOVE_NAG = { '?!': 6, '?': 2, '??': 4 } as const;
 export type MoveGlyph = keyof typeof MOVE_NAG;
@@ -51,7 +51,7 @@ export function cpForRedScore(score: number): number {
 
 /** The informant symbol and its PGN NAG for red's expected score. */
 export function assessmentForRedScore(score: number): { symbol: string; nag: number } {
-  const symbol = advantageSymbol(Math.round(cpForRedScore(score)), null);
+  const symbol = advantageSymbolForScore(score);
   const nag = NAG_FOR_ASSESSMENT[symbol];
   if (nag === undefined) throw new Error(`no assessment NAG for "${symbol}"`);
   return { symbol, nag };
