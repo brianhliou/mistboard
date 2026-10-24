@@ -101,10 +101,14 @@ export const hordeXiangqiArticle: Article = {
           text: 'The side to move with no legal move loses, as in xiangqi; Lichess Horde calls it a draw, and the terminal rules below say how much that matters. Threefold repetition draws, and so does a run of 60 or 120 plies without a capture. Standard soldiers move as in xiangqi: one point forward, sideways only after crossing the river, never backward. Veteran soldiers have the crossed soldier’s move from their first step. The army’s five soldiers stay standard either way.',
         },
         {
+          kind: 'paragraph',
+          text: 'On the boards below, a veteran wears a gold chevron, so it reads apart from a standard soldier in any piece set. The International set draws it as the crossed soldier instead.',
+        },
+        {
           kind: 'raw-svg',
           svg: HORDE_XIANGQI_START,
           caption:
-            'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward, drawn with the crossed-soldier piece because that is the move they have.',
+            'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward.',
         } as ArticleBlock,
       ],
     },

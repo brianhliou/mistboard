@@ -4896,8 +4896,8 @@ const ZH_HANS: Record<string, string> = {
     '我们把部落棋搬到象棋棋盘上，先测量再动手：十二种开局阵形、两种兵的走法，每一种由引擎自战四局。用象棋自己的兵，全军靠同一招赢下每一局；让兵从开局起就有过河兵的走法，棋局则变成四局里有三局和棋的围城。我们发布的是这份测量，而不是这个变体。',
   'Horde chess is 36 pawns and no king against a normal army; the pawns win by checkmate, the army by taking the last pawn. Lichess has played it since 2015. We put the same idea on the xiangqi board: Red has soldiers only and no general, Black has the standard army, and everything else is xiangqi. Then we measured it before designing anything.':
     '部落棋是 36 个兵、没有王，对阵正常的一军；兵靠将死取胜，全军靠吃掉最后一个兵取胜。Lichess 从 2015 年起就有它。我们把同样的想法搬到象棋棋盘上：红方只有兵、没有将，黑方是标准全军，其他一切照象棋。然后在设计任何东西之前先做了测量。',
-  'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward, drawn with the crossed-soldier piece because that is the move they have.':
-    '原版阵形配标准兵，以及我们找到的最接近一盘棋的设计：36 个老兵前移一行，用过河兵的棋子图案画出，因为那正是它们的走法。',
+  'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward.':
+    '原版阵形配标准兵，以及我们找到的最接近一盘棋的设计：36 个老兵前移一行。',
   'Standard soldiers: the chariot eats the horde from behind': '标准兵：车从背后吃光兵团',
   'Veteran soldiers: the horde holds, and the siege is a draw': '老兵：兵团守得住，围城是和棋',
   'The rule kernel with both soldier rules and all twelve arrays, the Fairy-Stockfish stanzas, all 387 engine games, the checks behind them, and a verifier that replays every game against the rules and recomputes the tallies in half a minute, with no engine needed. If you have a soldier rule that gives the block cover on the way, that is where the next attempt starts; open an issue there and the write-up will say so.':
@@ -4968,6 +4968,8 @@ const ZH_HANS: Record<string, string> = {
     '国际象棋的部落棋（Horde）是它的母版：36 个兵、没有王，对抗正常的一方军队。这次移植尽量保留象棋本身的规则。红方是兵团：只有兵，没有帅，红方先行。黑方是标准全军。红方靠将死取胜；黑方靠吃掉红方所有子取胜。由于棋盘上只有一个将，兵团一方不存在被将，也不存在白脸将。',
   'The side to move with no legal move loses, as in xiangqi; Lichess Horde calls it a draw, and the terminal rules below say how much that matters. Threefold repetition draws, and so does a run of 60 or 120 plies without a capture. Standard soldiers move as in xiangqi: one point forward, sideways only after crossing the river, never backward. Veteran soldiers have the crossed soldier’s move from their first step. The army’s five soldiers stay standard either way.':
     '轮到行棋而无合法着法的一方判负，与象棋相同；Lichess 的部落棋判为和棋，下面的终局规则一节会说明这有多大影响。三次重复局面判和；连续 60 或 120 步无吃子也判和。标准兵走法与象棋相同：向前一格，过河后才能横走，永不后退。老兵从第一步起就有过河兵的走法。无论哪种设定，全军一方的五个兵都是标准兵。',
+  'On the boards below, a veteran wears a gold chevron, so it reads apart from a standard soldier in any piece set. The International set draws it as the crossed soldier instead.':
+    '下面的棋图里，老兵带一个金色的向上箭头标记，在任何棋子样式下都能和标准兵区分开。国际棋子样式则直接把它画成过河兵。',
   'The design space': '设计空间',
   'Five dials. A design is a soldier rule and a start array, and twenty-four were played.':
     '五个旋钮。一种设计由一种兵的走法和一种初始阵形构成，我们下了二十四种。',
@@ -11167,8 +11169,8 @@ const ZH_HANT: Record<string, string> = {
     '我們把部落棋搬到象棋棋盤上，先測量再動手：十二種開局陣形、兩種兵的走法，每一種由引擎自戰四局。用象棋自己的兵，全軍靠同一招贏下每一局；讓兵從開局起就有過河兵的走法，棋局則變成四局裡有三局和棋的圍城。我們發佈的是這份測量，而不是這個變體。',
   'Horde chess is 36 pawns and no king against a normal army; the pawns win by checkmate, the army by taking the last pawn. Lichess has played it since 2015. We put the same idea on the xiangqi board: Red has soldiers only and no general, Black has the standard army, and everything else is xiangqi. Then we measured it before designing anything.':
     '部落棋是 36 個兵、沒有王，對陣正常的一軍；兵靠將死取勝，全軍靠吃掉最後一個兵取勝。Lichess 從 2015 年起就有它。我們把同樣的想法搬到象棋棋盤上：紅方只有兵、沒有將，黑方是標準全軍，其他一切照象棋。然後在設計任何東西之前先做了測量。',
-  'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward, drawn with the crossed-soldier piece because that is the move they have.':
-    '原版陣形配標準兵，以及我們找到的最接近一盤棋的設計：36 個老兵前移一行，用過河兵的棋子圖案畫出，因為那正是它們的走法。',
+  'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward.':
+    '原版陣形配標準兵，以及我們找到的最接近一盤棋的設計：36 個老兵前移一行。',
   'Standard soldiers: the chariot eats the horde from behind': '標準兵：車從背後吃光兵團',
   'Veteran soldiers: the horde holds, and the siege is a draw': '老兵：兵團守得住，圍城是和棋',
   'The rule kernel with both soldier rules and all twelve arrays, the Fairy-Stockfish stanzas, all 387 engine games, the checks behind them, and a verifier that replays every game against the rules and recomputes the tallies in half a minute, with no engine needed. If you have a soldier rule that gives the block cover on the way, that is where the next attempt starts; open an issue there and the write-up will say so.':
@@ -11239,6 +11241,8 @@ const ZH_HANT: Record<string, string> = {
     '國際象棋的部落棋（Horde）是它的母版：36 個兵、沒有王，對抗正常的一方軍隊。這次移植儘量保留象棋本身的規則。紅方是兵團：只有兵，沒有帥，紅方先行。黑方是標準全軍。紅方靠將死取勝；黑方靠吃掉紅方所有子取勝。由於棋盤上只有一個將，兵團一方不存在被將，也不存在白臉將。',
   'The side to move with no legal move loses, as in xiangqi; Lichess Horde calls it a draw, and the terminal rules below say how much that matters. Threefold repetition draws, and so does a run of 60 or 120 plies without a capture. Standard soldiers move as in xiangqi: one point forward, sideways only after crossing the river, never backward. Veteran soldiers have the crossed soldier’s move from their first step. The army’s five soldiers stay standard either way.':
     '輪到行棋而無合法著法的一方判負，與象棋相同；Lichess 的部落棋判為和棋，下面的終局規則一節會說明這有多大影響。三次重複局面判和；連續 60 或 120 步無吃子也判和。標準兵走法與象棋相同：向前一格，過河後才能橫走，永不後退。老兵從第一步起就有過河兵的走法。無論哪種設定，全軍一方的五個兵都是標準兵。',
+  'On the boards below, a veteran wears a gold chevron, so it reads apart from a standard soldier in any piece set. The International set draws it as the crossed soldier instead.':
+    '下面的棋圖裡，老兵帶一個金色的向上箭頭標記，在任何棋子樣式下都能和標準兵區分開。國際棋子樣式則直接把它畫成過河兵。',
   'The design space': '設計空間',
   'Five dials. A design is a soldier rule and a start array, and twenty-four were played.':
     '五個旋鈕。一種設計由一種兵的走法和一種初始陣形構成，我們下了二十四種。',
