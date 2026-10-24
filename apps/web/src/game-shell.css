@@ -869,6 +869,12 @@ a.clock-name.player-name-link {
   opacity: 0;
 }
 
+@media (max-width: 600px) {
+  .clock-to-move {
+    font-size: 11px;
+  }
+}
+
 .round-table__player .presence-dot {
   margin-right: 0;
 }

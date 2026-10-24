@@ -89,6 +89,12 @@
   pointer-events: none;
   user-select: none;
 }
+
+@media (max-width: 600px) {
+  .advantage-chart__phase-label {
+    font-size: 11px;
+  }
+}
 /* Chinese labels: upright Han in vertical-rl stacks one character per line, so
    these run horizontally on one line. Too wide for the phase's span, the label
    is hidden by advantage-chart.ts, never wrapped. */
