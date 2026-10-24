@@ -81,7 +81,7 @@ test('uses the stored engine curve rather than comparing raw cp across engines',
   assert.ok(result.blunders[0].winLoss > 22 && result.blunders[0].winLoss < 23);
 });
 
-test('handles signed mates and mate zero without treating null cp as equality', () => {
+test('handles signed mates without treating null cp as equality', () => {
   for (const firstMover of ['red', 'black'] as const) {
     const sign = firstMover === 'red' ? 1 : -1;
     const result = rankBlunders(
@@ -98,6 +98,9 @@ test('handles signed mates and mate zero without treating null cp as equality', 
     assert.ok(result.blunders[0].winLoss > 99);
     assert.equal(result.blunders[0].mover, firstMover);
   }
+});
+
+test('Red delivering mate zero is not a blunder', () => {
   assert.equal(
     rankBlunders(
       input(
@@ -106,9 +109,32 @@ test('handles signed mates and mate zero without treating null cp as equality', 
         }),
       ),
     ).totalBlunders,
-    1,
+    0,
   );
 });
+
+for (const firstMover of ['red', 'black'] as const) {
+  for (const matePly of [0, 1, 2]) {
+    test(`normalizes mate zero to decisive Red-POV cp at ply ${matePly}, ${firstMover} first`, () => {
+      const plies = [cp(0, 0), cp(1, 0), cp(2, 0)];
+      const sideToMove = matePly % 2 === 0 ? firstMover : firstMover === 'red' ? 'black' : 'red';
+      const normalized = game({
+        firstMover,
+        moves: ['a0a1', 'a9a8'],
+        plies: plies.map((row) =>
+          row.ply === matePly ? cp(matePly, sideToMove === 'red' ? -30000 : 30000) : row,
+        ),
+      });
+      const source = game({
+        ...normalized,
+        plies: plies.map((row) =>
+          row.ply === matePly ? { ply: matePly, cp: null, mate: 0 } : row,
+        ),
+      });
+      assert.deepEqual(rankBlunders(input(source)), rankBlunders(input(normalized)));
+    });
+  }
+}
 
 test('never bridges gaps or defaults null evaluations to 50 percent', () => {
   for (const plies of [[], [cp(0, 200), cp(2, -200)], [cp(0, null), cp(1, -200), cp(2, null)]]) {

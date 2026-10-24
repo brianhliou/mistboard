@@ -178,10 +178,13 @@ function parseFixture(value: unknown): FixtureGame[] {
       if (row.unstable !== undefined && typeof row.unstable !== 'boolean') {
         throw new Error(`${rowLabel}.unstable must be boolean`);
       }
+      // UCI mate 0 means the side to move is already mated; zero cannot carry
+      // a Red-POV sign. Encode the loss as decisive cp, like redPovScore.
+      const sideToMove = ply % 2 === 0 ? game.firstMover : opposite(game.firstMover);
       plies.set(ply, {
         ply,
-        cp,
-        mate,
+        cp: mate === 0 ? (sideToMove === 'red' ? -30000 : 30000) : cp,
+        mate: mate === 0 ? null : mate,
         best: row.best == null ? null : text(row.best, `${rowLabel}.best`),
         unstable: row.unstable === true,
       });
