@@ -469,8 +469,8 @@
     "description": "Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "皮卡鱼在线：在 Mistboard 上与皮卡鱼对弈",
-      "zh-hant": "皮卡魚線上：在 Mistboard 上與皮卡魚對弈"
+      "zh-hans": "皮卡鱼象棋：在线对弈与分析",
+      "zh-hant": "皮卡魚象棋：線上對弈與分析"
     }
   },
   "pikafish-reveal-bug": {

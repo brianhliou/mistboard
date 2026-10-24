@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isArticleTranslationPublished } from './article-i18n.js';
+import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import {
   BANQI_BOARD_W,
   BANQI_ENGINE_THUMBNAIL,
@@ -25,6 +25,60 @@ const articleStyles = readFileSync('src/articles.css', 'utf8');
 // on purpose, so they opt out of the homepage row's age cut rather than being
 // rewritten every time the calendar moves past one of them.
 const NO_AGE_CUT = { maxAgeDays: Number.POSITIVE_INFINITY };
+
+describe('Pikafish search intent', () => {
+  for (const [lang, name, online, download] of [
+    ['zh-Hans', '皮卡鱼', '在线', '下载'],
+    ['zh-Hant', '皮卡魚', '線上', '下載'],
+  ] as const) {
+    it(`${lang}: describes play, analysis and the engine download route in search results`, () => {
+      const source = articles.find((article) => article.slug === 'pikafish');
+      expect(source).toBeDefined();
+      if (!source) return;
+      const article = translateArticle(source, lang);
+      for (const text of [article.seoTitle, article.summary]) {
+        expect(text).toContain(`${name}象棋`);
+        expect(text).toContain(online);
+        expect(text).toContain('分析');
+        expect(text).toContain(download);
+      }
+    });
+
+    it(`${lang}: renders play, analysis and official engine links before the first section`, () => {
+      const intro = buildArticlePage('pikafish', lang).querySelector('.article-intro');
+      const buttons = [...(intro?.querySelectorAll<HTMLAnchorElement>('.article-cta') ?? [])];
+      expect(buttons.map((button) => button.getAttribute('href'))).toEqual([
+        '/bot/pikafish',
+        '/analysis/xiangqi',
+      ]);
+      const official = intro?.querySelector<HTMLAnchorElement>(
+        'a[href="https://github.com/official-pikafish/Pikafish"]',
+      );
+      expect(official?.parentElement?.textContent).toContain(download);
+      expect(official?.closest('.article-cta-row')).toBeNull();
+      expect(intro?.textContent).toContain('51 MB');
+    });
+
+    it(`${lang}: renders FAQs for the online, analysis and download searches without interaction`, () => {
+      const page = buildArticlePage('pikafish', lang);
+      const questions = [...page.querySelectorAll('.article-faq-question')].map(
+        (question) => question.textContent ?? '',
+      );
+      for (const intent of [online, '分析', download]) {
+        expect(
+          questions.some((question) => question.includes(name) && question.includes(intent)),
+        ).toBe(true);
+      }
+      const answers = [...page.querySelectorAll('.article-faq-answer')]
+        .map((answer) => answer.textContent)
+        .join('\n');
+      expect(answers).toContain('51 MB');
+      expect(answers).toContain('Fairy-Stockfish');
+      expect(answers).toContain(`${name}官方`);
+      expect(answers).not.toMatch(/\[[^\]]+\]\(/);
+    });
+  }
+});
 
 describe('article public listing gates', () => {
   afterEach(() => {
