@@ -50,16 +50,28 @@ export function buildClubWashington(): HTMLElement {
   section.append(
     heading,
     proseParagraph([
-      'Washington Xiangqi is a group in Bellevue for people who play xiangqi, Chinese chess. Any level is welcome, from people learning how the pieces move to strong players, and the games are casual.',
+      'Washington Xiangqi is a casual group for people who play xiangqi, Chinese chess, in Bellevue, WA. Any level is welcome, including people who have never played.',
+    ]),
+
+    proseSubheading('What to expect'),
+    proseParagraph([
+      'Games are free and casual, with no sign-up. Bring a set if you have one. Players speak English, Chinese or both. If you are new, say so and someone will show you how the pieces move.',
     ]),
 
     proseSubheading('Join the group'),
     proseParagraph([
-      'The group talks and plans its games in WeChat. Scan the code to add the organizer, who will invite you in.',
+      'The group talks and plans its games in WeChat. Scan the code to add Brian H. Liou, the organizer, who will invite you in.',
     ]),
     buildQrPlaceholder(),
     proseParagraph([
       'Not on WeChat? Email ',
+      proseLink(CLUB_WASHINGTON_EMAIL, `mailto:${CLUB_WASHINGTON_EMAIL}`),
+      '.',
+    ]),
+
+    proseSubheading('Help out'),
+    proseParagraph([
+      'Know a cafe, library room or community space in Bellevue that would host a few boards, or want to help run the group? Email ',
       proseLink(CLUB_WASHINGTON_EMAIL, `mailto:${CLUB_WASHINGTON_EMAIL}`),
       '.',
     ]),
