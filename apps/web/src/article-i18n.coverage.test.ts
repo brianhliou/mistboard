@@ -34,11 +34,6 @@ describe('article translation coverage', () => {
       expect(article, `locked slug "${slug}" is not a published article`).toBeTruthy();
       const missing: string[] = [];
       for (const { path, text } of articleProse(article as Article)) {
-        // "How we measured this" lines (added 2026-10-23) wait for Brian's
-        // English sign-off before they are translated (CLAUDE.md: translate only
-        // signed-off English); until then they render in English on zh pages.
-        // Remove this skip in the commit that adds their zh entries.
-        if (path.startsWith('method[')) continue;
         for (const lang of ARTICLE_LANGS) {
           if (!hasTranslation(lang, text)) missing.push(`[${lang}] ${path}: ${truncate(text)}`);
         }
@@ -46,6 +41,20 @@ describe('article translation coverage', () => {
       expect(missing, `untranslated strings:\n${missing.join('\n')}`).toEqual([]);
     });
   }
+
+  // articleProse leaves `updateNote` out (it is about the text, not the text),
+  // so without this a translated page showed its "What changed" line in English.
+  it('every locked article translates its update note in all zh scripts', () => {
+    const missing: string[] = [];
+    for (const slug of TRANSLATED_ARTICLE_SLUGS) {
+      const note = published.find((a) => a.slug === slug)?.updateNote;
+      if (!note) continue;
+      for (const lang of ARTICLE_LANGS) {
+        if (!hasTranslation(lang, note)) missing.push(`[${lang}] ${slug}: ${note}`);
+      }
+    }
+    expect(missing, `untranslated update notes:\n${missing.join('\n')}`).toEqual([]);
+  });
 
   // Diagram labels live inside generated SVG, where articleProse cannot see
   // them, so until 2026-10-01 this file read every rules page as covered while

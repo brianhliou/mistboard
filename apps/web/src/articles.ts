@@ -966,6 +966,19 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     name.textContent = SITE_AUTHOR.name;
     nameEl.append(name);
     byline.append(nameEl);
+    // How the text was made sits with who made it (the brianhliou.com
+    // post-drafted note). A zh rendering also says it is a machine translation.
+    const madeWith = articleMadeWithNote(base, articleLang);
+    if (madeWith) {
+      const note = document.createElement('span');
+      note.className = 'article-meta-drafted';
+      note.textContent = t(
+        madeWith === 'drafted' ? 'articles.draftedWithClaude' : 'articles.draftedTranslated',
+        {},
+        locale,
+      );
+      byline.append(' · ', note);
+    }
     metaRow.append(byline);
   }
   if (article.publishedAt) {
@@ -980,19 +993,6 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
         article.updatedAt,
         locale,
       )}`;
-    }
-    // How the text was made, muted beside the dates (the brianhliou.com
-    // post-drafted note). A zh rendering also says it is a machine translation.
-    const madeWith = articleMadeWithNote(base, articleLang);
-    if (madeWith) {
-      const note = document.createElement('span');
-      note.className = 'article-meta-drafted';
-      note.textContent = t(
-        madeWith === 'drafted' ? 'articles.draftedWithClaude' : 'articles.draftedTranslated',
-        {},
-        locale,
-      );
-      dates.append(' · ', note);
     }
     metaRow.append(dates);
   }

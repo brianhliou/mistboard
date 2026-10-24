@@ -101,6 +101,11 @@ describe('static pages', () => {
     expect(who?.nextElementSibling?.textContent).toContain(
       'Brian H. Liou designs, builds and runs Mistboard',
     );
+    const site = who?.nextElementSibling?.querySelector<HTMLAnchorElement>(
+      'a[href="https://brianhliou.com"]',
+    );
+    expect(site?.textContent).toBe('brianhliou.com');
+    expect(site?.getAttribute('rel')).toContain('noopener');
     const articlesHeading = root.querySelector('#articles');
     expect(articlesHeading?.textContent).toBe('How articles are made');
     expect(articlesHeading?.nextElementSibling?.textContent).toContain('drafted with Claude');

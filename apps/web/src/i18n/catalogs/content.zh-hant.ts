@@ -162,6 +162,7 @@ export const ZH_HANT_CONTENT = {
   'about.whoHeading': '誰在打造 Mistboard',
   'about.whoBody':
     'Brian H. Liou 藉助一套 AI 智能體系統設計、開發並營運 Mistboard，從遊戲伺服器、Mistboard 自研引擎，到賽事直播和文章。此前，他在亞馬遜和 DoorDash 工作了五年，從事大規模分散式系統和成長工程。他創辦 Mistboard，是為了透過象棋與原創策略遊戲，連結不同文化背景的人。',
+  'about.whoSitePrefix': '他的網站：',
   'about.articlesHeading': '文章如何寫成',
   'about.articlesBody':
     '文章與 Claude 合寫，並由 Brian 對照文中引用的對局、引擎運行和資料逐一核實。中文頁面由英文機器翻譯。',

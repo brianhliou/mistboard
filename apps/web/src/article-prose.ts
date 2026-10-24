@@ -192,7 +192,8 @@ function sectionProse(section: ArticleSection, path: string): Prose[] {
 // Every natural-language string an article contributes, each with a dotted path
 // for diagnostics. Order is stable: title, summary, tldr, method, intro, then
 // sections. `updateNote` stays out: it is a note about the text, not the text,
-// so it neither needs a translation nor moves the content fingerprint.
+// so it does not move the content fingerprint (its translation is checked on
+// its own in article-i18n.coverage.test.ts).
 export function articleProse(article: Article): Prose[] {
   const out: Prose[] = [
     { path: 'title', text: article.title },

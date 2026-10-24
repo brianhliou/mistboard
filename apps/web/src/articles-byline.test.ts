@@ -144,8 +144,9 @@ describe('site author byline and drafted note', () => {
     expect(link?.textContent).toBe('Brian H. Liou');
     expect(link?.getAttribute('href')).toBe('/about#who');
     expect(page.querySelector('.article-meta-drafted')?.textContent).toBe('Drafted with Claude');
-    // The note sits on the date line, not as a line of its own.
-    expect(page.querySelector('.article-meta-dates .article-meta-drafted')).not.toBeNull();
+    // The note sits with the name it describes, not on the date line.
+    expect(page.querySelector('.article-meta-byline .article-meta-drafted')).not.toBeNull();
+    expect(page.querySelector('.article-meta-dates .article-meta-drafted')).toBeNull();
   });
 
   it('says a zh rendering is a machine translation of the English', () => {
@@ -216,6 +217,7 @@ describe('article JSON-LD author', () => {
       '@type': 'Person',
       name: SITE_AUTHOR.name,
       url: 'https://mistboard.com/about',
+      sameAs: ['https://brianhliou.com'],
     });
     expect(articleJsonLdAuthor(GUEST)).toEqual({
       '@type': 'Person',

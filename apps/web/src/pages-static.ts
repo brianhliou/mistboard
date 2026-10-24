@@ -4,6 +4,7 @@ import './pages-static.css';
 
 import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
 import { track } from './analytics.js';
+import { SITE_AUTHOR } from './articles/site-author.js';
 import { buildContact } from './contact.js';
 import { jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
@@ -566,6 +567,12 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
   const whoHeading = aboutSubheading(t('about.whoHeading', {}, locale));
   whoHeading.id = 'who';
   const whoP = aboutParagraph([t('about.whoBody', {}, locale)]);
+  whoP.append(
+    ' ',
+    t('about.whoSitePrefix', {}, locale),
+    ' ',
+    aboutExternalLink('brianhliou.com', SITE_AUTHOR.sameAs),
+  );
 
   const articlesHeading = aboutSubheading(t('about.articlesHeading', {}, locale));
   articlesHeading.id = 'articles';

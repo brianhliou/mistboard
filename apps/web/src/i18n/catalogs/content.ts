@@ -211,6 +211,7 @@ export const EN_CONTENT = {
   'about.whoHeading': 'Who builds Mistboard',
   'about.whoBody':
     "Brian H. Liou designs, builds and runs Mistboard with a system of AI agents, from the game servers and Mistboard's own engines to the broadcasts and articles. Before this he spent five years at Amazon and DoorDash on high-scale distributed systems and growth engineering. He started Mistboard to bring people together across cultures through Chinese chess and original strategy games.",
+  'about.whoSitePrefix': 'His site:',
   'about.articlesHeading': 'How articles are made',
   'about.articlesBody':
     'Articles are drafted with Claude and checked by Brian against the games, engine runs and sources they cite. Chinese pages are machine-translated.',
