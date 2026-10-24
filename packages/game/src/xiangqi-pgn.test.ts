@@ -1,11 +1,65 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
+import type { XiangqiMove } from './variants-xiangqi.js';
 import { createInitialXiangqiState } from './variants-xiangqi.js';
-import { parseXiangqiPgn, writeXiangqiPgn, xiangqiPgnPlayers } from './xiangqi-pgn.js';
+import { importXiangqiGame } from './xiangqi-import.js';
+import { formatXiangqiMoves } from './xiangqi-notation-format.js';
+import {
+  importXiangqiPaste,
+  parseXiangqiPgn,
+  writeXiangqiPgn,
+  xiangqiPgnPlayers,
+} from './xiangqi-pgn.js';
 import { parseStandardXiangqiFen, standardXiangqiFen } from './xiangqi-position.js';
 
 // The canonical anchor used across the import tests: 炮二平五 = C2.5 = h3->e3.
 const OPENING = 'h3e3';
+
+const continuedRecords = JSON.parse(
+  readFileSync(
+    new URL('../fixtures/xiangqi-notation/adjudicated-records.json', import.meta.url),
+    'utf8',
+  ),
+) as {
+  cases: { key: string; reason: string; iccs: string; plies: number; adjudicatedAt: number }[];
+};
+
+for (const record of continuedRecords.cases) {
+  for (const style of ['coordinate', 'wxf', 'chinese-simplified'] as const) {
+    test(`tagged PGN keeps the mainline and variation past ${record.reason} in ${style}`, () => {
+      const imported = importXiangqiGame(record.iccs);
+      assert.equal(imported.error, undefined);
+      assert.equal(imported.moves.length, record.plies);
+      const tokens = formatXiangqiMoves(imported.moves, style);
+      // Both branches continue beyond the kernel's automatic draw.
+      const prefix = tokens.slice(0, record.adjudicatedAt);
+      const continuation = tokens.slice(record.adjudicatedAt);
+      const text = `[Event "${record.key}"]\n\n${prefix.join(' ')} ${continuation[0]} (${continuation.join(' ')}) ${continuation.slice(1).join(' ')} *`;
+      const [game] = parseXiangqiPgn(text);
+      assert.ok(game);
+      assert.equal(game.error, undefined);
+      assert.equal(game.plyCount, record.plies);
+      let branchPoint = game.children[0]!;
+      for (let ply = 1; ply < record.adjudicatedAt; ply += 1) {
+        branchPoint = branchPoint.children[0]!;
+      }
+      assert.equal(branchPoint.children.length, 2);
+      for (let node of branchPoint.children) {
+        const moves: XiangqiMove[] = [];
+        while (node) {
+          moves.push(node.move);
+          node = node.children[0]!;
+        }
+        assert.deepEqual(moves, imported.moves.slice(record.adjudicatedAt));
+      }
+      const paste = importXiangqiPaste(text);
+      assert.equal(paste.error, undefined);
+      assert.equal(paste.source, 'pgn');
+      assert.deepEqual(paste.moves, imported.moves);
+    });
+  }
+}
 
 test('reads tag pairs and the mainline out of a real PGN wrapper', () => {
   const [game] = parseXiangqiPgn(`[Event "Test Event"]

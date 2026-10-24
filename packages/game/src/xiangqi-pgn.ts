@@ -16,6 +16,7 @@
 // format (resolveXiangqiMoveInFormat).
 
 import {
+  ARBITER_ADJUDICATED_DRAWS,
   createInitialXiangqiState,
   type XiangqiGameState,
   type XiangqiMove,
@@ -381,7 +382,19 @@ function resolveNodes(
       error ??= `"${node.token}" is not a legal move here.`;
       continue;
     }
-    const next = applyStandardXiangqiMove(state, move);
+    let next = applyStandardXiangqiMove(state, move);
+    // PGN records, including variations, can continue past an arbiter's draw.
+    // Resume before resolving the next token, just as the format sniffer does.
+    if (
+      state.status.type === 'playing' &&
+      next.status.type === 'finished' &&
+      ARBITER_ADJUDICATED_DRAWS.has(next.status.reason)
+    ) {
+      next = {
+        ...next,
+        status: { type: 'playing', turn: state.status.turn === 'red' ? 'black' : 'red' },
+      };
+    }
     const children = resolveNodes(node.children, next, format);
     error ??= children.error;
     out.push({
