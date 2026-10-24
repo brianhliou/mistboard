@@ -87,6 +87,8 @@ function replayFrom(start: JieqiGameState, tokens: readonly string[]): JieqiRepl
     const move = tokenToMove(token);
     if (!move) break;
     const before = states[states.length - 1]!;
+    // Moving an unknown piece would turn over a sampled identity.
+    if (before.board[move.from]?.unknown) break;
     const next = applyJieqiMove(before, move);
     if (next === before) break;
     states.push(next);
@@ -100,14 +102,16 @@ function replayFrom(start: JieqiGameState, tokens: readonly string[]): JieqiRepl
  * it; a token it refuses ends the line there. Null when the root is missing,
  * does not parse, or carries no deal: a public five-field FEN would have the
  * parser sample one, and a sampled deal draws identities that never happened.
+ * A deal with `?` slots is still a deal: an imported game names every piece
+ * that turned over and marks the rest unknown, and those stay face down.
  */
 export function replayJieqiLine(
   rootFen: string | undefined,
   tokens: readonly string[],
 ): JieqiReplayLine | null {
-  if (!rootFen) return null;
+  if (!rootFen || rootFen.trim().split(/\s+/).length < 6) return null;
   const parsed = parseJieqiFen(rootFen, { gameId: 'study-embed' });
-  if (!parsed.ok || parsed.sampled) return null;
+  if (!parsed.ok) return null;
   return replayFrom(parsed.state, tokens);
 }
 
