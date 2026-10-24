@@ -456,6 +456,13 @@ test('a Taiwan, Hong Kong, Macau or Vietnamese name reads in traditional charact
   assert.equal(xiangqiPlayerOwnScriptName('沈毅豪', '马来西亚'), undefined);
 });
 
+test('Lin Youxuan receives his traditional name for Taiwan player and team pages', () => {
+  for (const federation of ['台湾', '中华台北', '中国台北']) {
+    assert.equal(xiangqiPlayerOwnScriptName('林友轩', federation), '林友軒');
+  }
+  assert.equal(xiangqiPlayerOwnScriptName('林友轩', '浙江'), undefined);
+});
+
 test('every Taiwan, Hong Kong, Macau and Vietnamese spelling has its traditional name', () => {
   const missing = [...FEDERATION_PLAYER_NAMES.keys()].filter(
     (key) =>

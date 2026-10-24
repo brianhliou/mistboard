@@ -275,6 +275,7 @@ export const FEDERATION_PLAYER_TRADITIONAL_NAMES = new Map<string, string>([
   ['TW:刘国华', '劉國華'],
   ['TW:彭柔安', '彭柔安'],
   ['TW:赵奕帆', '趙奕帆'],
+  ['TW:林友轩', '林友軒'],
   // The 1990 world champion, as the world championship article writes him.
   ['TW:吴贵临', '吳貴臨'],
   // 2025 WXF world championship, men, round 1 (fixture article-1844).
