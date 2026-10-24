@@ -20,10 +20,11 @@ import {
   type BanqiStoredSetup,
   banqiNoProgressLimitOf,
   createBanqiStateFromSetup,
+  getBanqiLegalMoves,
   winPercent,
 } from '@mistboard/game';
 import { BANQI_ENGINE_VERSION, evaluateBanqiFenNodes } from './banqi-engine.js';
-import { banqiMoveToEngineUci, banqiStateToEngineFen, engineUciToBanqiMove } from './banqi-fen.js';
+import { banqiMoveToEngineUci, banqiStateToEngineFen } from './banqi-fen.js';
 import {
   type AnalysisProgressStore,
   liveAnalysisProgressStore,
@@ -259,6 +260,8 @@ const BANQI_DECISION_MOVETIME_CAP_MS = 4_000;
 // Matches the banqi-analysis engine pool's slot count: with launch concurrency ==
 // pool slots, no fan-out eval ever waits in the pool queue (headroom, not shedding).
 const BANQI_DECISION_EVAL_CONCURRENCY = 2;
+// Cheaply rank all legal moves, then true-baseline the top three plus played.
+const BANQI_DECISION_CANDIDATES = 3;
 
 /** One flip ply's decision-vs-luck numbers, all in WIN% from the MOVER's (seat's) POV. */
 export type BanqiDecision = {
@@ -273,14 +276,18 @@ export type BanqiDecision = {
   realizedWin: number;
   /** Rank of the played move among the candidates by true baseline (1 = it WAS the best). */
   playedRank: number | null;
+  /** True-baselined candidates, best first. Absent on older cached rows. */
+  candidates?: BanqiDecisionCandidate[];
+};
+
+export type BanqiDecisionCandidate = {
+  move: string;
+  /** Pool-mean win%, mover POV. */
+  win: number;
+  played?: boolean;
 };
 
 export type BanqiDecisionDeps = {
-  /** The engine's single best move (UCI) for a pre-move FEN — the ceiling candidate to true-
-   *  baseline alongside the played move. Unlike jieqi we use rank-1 only (MistyBanqi is a custom
-   *  αβ engine with no verified MultiPV), which makes the ceiling conservative: a better move the
-   *  engine ranked #2 is missed, so decision loss is only ever UNDER-reported (never a false flag). */
-  bestMove: (fen: string, repetitionWindow?: BanqiRepetitionWindow) => Promise<string | null>;
   /** Single-position eval (side-to-move POV) at decision budget — the pool-mean's per-tile term. */
   evalPosition: (
     fen: string,
@@ -291,13 +298,6 @@ export type BanqiDecisionDeps = {
 /** The live engine deps for one game, searched under that game's no-progress limit. */
 function liveDecisionDeps(noProgressLimit: number): BanqiDecisionDeps {
   return {
-    bestMove: (fen, repetitionWindow) =>
-      evaluateBanqiFenNodes(repetitionWindow?.fen ?? fen, {
-        nodes: BANQI_DECISION_NODES,
-        movetimeCapMs: BANQI_DECISION_MOVETIME_CAP_MS,
-        moves: repetitionWindow?.moves,
-        noProgressLimit,
-      }).then((e) => e.best),
     evalPosition: (fen, repetitionWindow) =>
       evaluateBanqiFenNodes(repetitionWindow?.fen ?? fen, {
         nodes: BANQI_DECISION_NODES,
@@ -427,9 +427,10 @@ async function poolMeanWin(
 
 /**
  * Compute the decision-vs-luck numbers for every FLIP ply. Reconstructs the game from the deal
- * (same kernel as the Layer-1 sweep). For each flip, the engine names one ceiling candidate (its
- * best move); we true-baseline the played flip plus that candidate (unclamped pool-mean win%), take
- * the max as `bestWin`, and read the played flip's actual-tile term as `realizedWin`. `deps` is
+ * (same kernel as the Layer-1 sweep). For each flip, a single post-move eval ranks every legal
+ * move (including quiet alternatives). We true-baseline the top three plus the played flip using
+ * unclamped pool-mean win%, take the max as `bestWin`, and retain the sorted candidates. The
+ * played flip's actual-tile term is `realizedWin`. `deps` is
  * injectable so tests drive it without an engine. No dependency on the Layer-1 sweep — realized is
  * computed here, same-search as the mean it is compared against.
  */
@@ -464,18 +465,32 @@ export async function analyzeBanqiDecisions(
     const isFlip =
       move.from === move.to && source?.faceDown === true && state.status.type === 'playing';
     if (isFlip) {
-      const fen = banqiStateToEngineFen(state);
       const playedUci = banqiMoveToEngineUci(move);
-      const best = await deps.bestMove(fen, repetitionWindow);
-      // Candidate ceiling moves: the engine's best plus the played flip (deduped).
-      const candidateUcis = new Set<string>([playedUci]);
-      if (best) candidateUcis.add(best);
+      // The cheap scores choose a shortlist only. Chance outcomes here can be lucky;
+      // every shortlisted flip is re-scored over its whole pool before grading.
+      const ranked = await mapWithConcurrency(
+        getBanqiLegalMoves(state),
+        BANQI_DECISION_EVAL_CONCURRENCY,
+        async (candidate) => {
+          const post = applyBanqiMove(state, candidate);
+          const win = await moverWinAfter(
+            post,
+            mover,
+            deps.evalPosition,
+            banqiRepetitionWindowAfterMove(state, candidate, post, repetitionWindow),
+          );
+          return { move: candidate, uci: banqiMoveToEngineUci(candidate), win };
+        },
+      );
+      ranked.sort((a, b) => b.win - a.win);
+      const shortlist = new Map(
+        ranked.slice(0, BANQI_DECISION_CANDIDATES).map((c) => [c.uci, c.move]),
+      );
+      shortlist.set(playedUci, move);
       let playedWin = 50;
       let realizedWin = 50;
-      const baselines: number[] = [];
-      for (const uci of candidateUcis) {
-        const candidate = uci === playedUci ? move : engineUciToBanqiMove(uci);
-        if (!candidate) continue;
+      const scored: BanqiDecisionCandidate[] = [];
+      for (const [uci, candidate] of shortlist) {
         const { baseline, realized } = await poolMeanWin(
           state,
           candidate,
@@ -483,16 +498,26 @@ export async function analyzeBanqiDecisions(
           deps.evalPosition,
           repetitionWindow,
         );
-        baselines.push(baseline);
+        scored.push({ move: uci, win: baseline, ...(uci === playedUci ? { played: true } : {}) });
         if (uci === playedUci) {
           playedWin = baseline;
           realizedWin = realized;
         }
       }
+      const baselines = scored.map((c) => c.win);
       const bestWin = baselines.length ? Math.max(...baselines) : playedWin;
       // Rank by true baseline: 1 + how many candidates strictly beat the played move.
       const playedRank = 1 + baselines.filter((b) => b > playedWin + 1e-9).length;
-      decisions.push({ ply: i + 1, mover, bestWin, playedWin, realizedWin, playedRank });
+      const candidates = scored.sort((a, b) => b.win - a.win);
+      decisions.push({
+        ply: i + 1,
+        mover,
+        bestWin,
+        playedWin,
+        realizedWin,
+        playedRank,
+        candidates,
+      });
       if (progress) await progress.save({ nextIndex: i + 1, items: decisions });
     }
     const post = applyBanqiMove(state, move);
