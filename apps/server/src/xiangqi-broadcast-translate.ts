@@ -137,7 +137,7 @@ function federationRegion(federation: string | undefined): FederationRegion | un
 // equally be a mainland player's; a mainland team keeps pinyin. Every entry
 // is sourced (the event that lists the pair is named); a name with no source
 // stays pinyin rather than a guess.
-const FEDERATION_PLAYER_NAMES = new Map<string, string>([
+export const FEDERATION_PLAYER_NAMES = new Map<string, string>([
   // 2024 20th Asian Xiangqi Individual Championship (Singapore): the AXF's
   // bilingual results sheet, which prints each entrant's Chinese and Latin
   // names side by side (xiangqi.sg, communiqué 43). Where the 2025 WXF world
@@ -235,6 +235,67 @@ const FEDERATION_PLAYER_NAMES = new Map<string, string>([
 function federationPlayerName(zh: string, federation: string | undefined): string | undefined {
   const region = federationRegion(federation);
   return region ? FEDERATION_PLAYER_NAMES.get(`${region}:${zh}`) : undefined;
+}
+
+/** The regions whose players write their names in traditional characters. */
+export const TRADITIONAL_SCRIPT_REGIONS: ReadonlySet<string> = new Set<FederationRegion>([
+  'TW',
+  'HK',
+  'MO',
+  'VN',
+]);
+
+// A person's name is written in the script that person uses (#605), as the
+// articles already do (apps/web/src/articles/world-champion-name-script.test.ts).
+// Sources print every name in mainland simplified, so a Taiwan, Hong Kong,
+// Macau or Vietnamese player's own characters are kept here, keyed as
+// FEDERATION_PLAYER_NAMES is. Every entry of those regions there has one
+// (a test fails a new one without it); an entry that repeats the name says it
+// has no simplified-only character. Malaysia and Singapore are absent on
+// purpose: both write simplified.
+export const FEDERATION_PLAYER_TRADITIONAL_NAMES = new Map<string, string>([
+  ['VN:武国达', '武國達'],
+  ['VN:阮明日光', '阮明日光'],
+  ['VN:阮黄燕', '阮黃燕'],
+  ['VN:阮成保', '阮成保'],
+  ['VN:黎氏金鸾', '黎氏金鸞'],
+  ['HK:黄学谦', '黃學謙'],
+  ['HK:郑彦隆', '鄭彥隆'],
+  ['HK:林嘉欣', '林嘉欣'],
+  ['HK:冯家俊', '馮家俊'],
+  // 杰 is a traditional character too; no source shows him writing 傑.
+  ['HK:陈振杰', '陳振杰'],
+  ['MO:苏俊豪', '蘇俊豪'],
+  ['MO:伍子骏', '伍子駿'],
+  ['MO:李凯雯', '李凱雯'],
+  ['MO:甘建希', '甘建希'],
+  ['TW:葛振衣', '葛振衣'],
+  ['TW:蔡安爵', '蔡安爵'],
+  ['TW:李思谊', '李思誼'],
+  ['TW:刘国华', '劉國華'],
+  ['TW:彭柔安', '彭柔安'],
+  ['TW:赵奕帆', '趙奕帆'],
+  // The 1990 world champion, as the world championship article writes him.
+  ['TW:吴贵临', '吳貴臨'],
+  // 2025 WXF world championship, men, round 1 (fixture article-1844).
+  ['TW:郭胜文', '郭勝文'],
+]);
+
+// Players entered without a federation as often as with one, as in
+// PLAYER_NAME_OVERRIDES.
+const TRADITIONAL_NAME_OVERRIDES = new Map<string, string>([['赖理兄', '賴理兄']]);
+
+/**
+ * The name in the characters the player writes it in, when that differs from
+ * the source's simplified spelling; undefined for everyone else. Display only:
+ * the source spelling stays the player's identity (boards, CXA lists, slugs).
+ */
+export function xiangqiPlayerOwnScriptName(zh: string, federation?: string): string | undefined {
+  const region = federationRegion(federation);
+  const own =
+    (region ? FEDERATION_PLAYER_TRADITIONAL_NAMES.get(`${region}:${zh}`) : undefined) ??
+    TRADITIONAL_NAME_OVERRIDES.get(zh);
+  return own && own !== zh ? own : undefined;
 }
 
 // The event glossary and the organiser-fixed names live in @mistboard/game

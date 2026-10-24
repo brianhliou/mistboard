@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { XiangqiBroadcastPlayerTag } from '@mistboard/game';
 import {
+  FEDERATION_PLAYER_NAMES,
+  FEDERATION_PLAYER_TRADITIONAL_NAMES,
   romanizeXiangqiPlayerName,
+  TRADITIONAL_SCRIPT_REGIONS,
   translatedXiangqiBroadcastPlayerTag,
   translatedXiangqiBroadcastRound,
   translatedXiangqiBroadcastTour,
@@ -11,6 +14,7 @@ import {
   translateXiangqiMatchName,
   translateXiangqiRoundLabel,
   translateXiangqiTeamName,
+  xiangqiPlayerOwnScriptName,
 } from './xiangqi-broadcast-translate.js';
 
 // Every player name ingested with the 2026 national team championship tour.
@@ -433,4 +437,44 @@ test('the 2026 North American Championship reads as its host names it', () => {
     }).nameEn,
     '2026 North American Xiangqi Championship',
   );
+});
+
+// #605: a Taiwan or Hong Kong player's name is shown in the characters that
+// player writes, not the mainland simplified every source prints.
+test('a Taiwan, Hong Kong, Macau or Vietnamese name reads in traditional characters', () => {
+  assert.equal(xiangqiPlayerOwnScriptName('赵奕帆', '中华台北'), '趙奕帆');
+  assert.equal(xiangqiPlayerOwnScriptName('赵奕帆', '台湾'), '趙奕帆');
+  assert.equal(xiangqiPlayerOwnScriptName('冯家俊', '中国香港'), '馮家俊');
+  assert.equal(xiangqiPlayerOwnScriptName('伍子骏', '中国澳门'), '伍子駿');
+  assert.equal(xiangqiPlayerOwnScriptName('武国达', '越南'), '武國達');
+  assert.equal(xiangqiPlayerOwnScriptName('赖理兄'), '賴理兄');
+  // The same characters on a mainland team are a different person.
+  assert.equal(xiangqiPlayerOwnScriptName('赵奕帆', '浙江'), undefined);
+  // No simplified-only character: nothing to show apart from the source's.
+  assert.equal(xiangqiPlayerOwnScriptName('葛振衣', '中华台北'), undefined);
+  // Malaysia and Singapore write simplified.
+  assert.equal(xiangqiPlayerOwnScriptName('沈毅豪', '马来西亚'), undefined);
+});
+
+test('every Taiwan, Hong Kong, Macau and Vietnamese spelling has its traditional name', () => {
+  const missing = [...FEDERATION_PLAYER_NAMES.keys()].filter(
+    (key) =>
+      TRADITIONAL_SCRIPT_REGIONS.has(key.slice(0, key.indexOf(':'))) &&
+      !FEDERATION_PLAYER_TRADITIONAL_NAMES.has(key),
+  );
+  assert.deepEqual(missing, [], 'add each to FEDERATION_PLAYER_TRADITIONAL_NAMES');
+  // A character the map converts anywhere is simplified-only, so no
+  // traditional name may still carry one.
+  const simplifiedOnly = new Set<string>();
+  for (const [key, own] of FEDERATION_PLAYER_TRADITIONAL_NAMES) {
+    const source = Array.from(key.slice(key.indexOf(':') + 1));
+    Array.from(own).forEach((char, i) => {
+      if (source[i] !== char) simplifiedOnly.add(source[i]!);
+    });
+  }
+  assert.ok(simplifiedOnly.size > 10, 'the guard found no simplified characters');
+  const still = [...FEDERATION_PLAYER_TRADITIONAL_NAMES.values()].filter((own) =>
+    Array.from(own).some((char) => simplifiedOnly.has(char)),
+  );
+  assert.deepEqual(still, []);
 });

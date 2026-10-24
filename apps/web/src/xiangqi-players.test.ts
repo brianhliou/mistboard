@@ -147,6 +147,42 @@ describe('player pages', () => {
     ]);
   });
 
+  // #605: one Taiwan team whatever federation name the source printed, named
+  // by locale, and a Taiwan player's name in the characters they write.
+  it('puts every Taiwan federation name on one team, named by locale', () => {
+    const on = (name: string, federation: string, federationEn: string) => ({
+      ...player({ name, games: 2, wins: 1 }),
+      federation,
+      federationEn,
+    });
+    const players = [
+      on('赵奕帆', '台湾', 'Taiwan'),
+      on('洪旭增', '中华台北', 'Chinese Taipei'),
+      on('林友轩', '中国台北', 'Chinese Taipei'),
+      on('孟繁睿', '河北队', 'Hebei Team'),
+    ];
+    const en = teamsOf(players, 'en');
+    expect(en.map((t) => [t.key, t.players.length])).toEqual([
+      ['taiwan', 3],
+      ['hebei-team', 1],
+    ]);
+    expect(en[0]).toMatchObject({ name: '台灣', nameEn: 'Taiwan', games: 6 });
+    expect(teamsOf(players, 'zh-Hant')[0]?.name).toBe('台灣');
+    expect(teamsOf(players, 'zh-Hans')[0]?.name).toBe('中华台北');
+    expect(teamKey({ federation: '中华台北', federationEn: 'Chinese Taipei' })).toBe('taiwan');
+  });
+
+  it('names a Taiwan player in traditional characters', () => {
+    const chao = {
+      ...player({ name: '赵奕帆', nameEn: 'Chao Yi-fan', games: 1 }),
+      nameOwn: '趙奕帆',
+    };
+    expect(displayName(chao)).toBe('Chao Yi-fan 趙奕帆');
+    expect(displayName({ name: '赵奕帆', nameEn: null, nameOwn: '趙奕帆' })).toBe('趙奕帆');
+    expect(matchesQuery(chao, '趙')).toBe(true);
+    expect(matchesQuery(chao, '赵')).toBe(true);
+  });
+
   it('reads the CXA points under the CXA spelling of a name', () => {
     // The points list prints 粱妍婷; the archive prints 梁妍婷.
     expect(latestPoints('梁妍婷')).toEqual({ points: 1198, rank: 7 });

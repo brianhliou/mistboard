@@ -649,6 +649,13 @@ test('legacyPageRedirect sends /challenges to /champions in each language, once'
   assert.equal(legacyPageRedirect('/en/challenges'), null);
 });
 
+test('legacyPageRedirect sends the Chinese Taipei team page to the one Taiwan team', () => {
+  assert.equal(legacyPageRedirect('/players/teams/chinese-taipei'), '/players/teams/taiwan');
+  assert.equal(legacyPageRedirect('/players/teams/chinese-taipei/'), '/players/teams/taiwan');
+  assert.equal(legacyPageRedirect('/players/teams/taiwan'), null);
+  assert.equal(isClientRoute('/players/teams/taiwan'), true);
+});
+
 test('isClientRoute lets vendored ceval engine assets fall through to static', () => {
   // /engine/:id is the admin engine-profile SPA page, but /engine/fairy-stockfish/*
   // are real vendored files. They MUST NOT be rewritten to index.html, or the local
