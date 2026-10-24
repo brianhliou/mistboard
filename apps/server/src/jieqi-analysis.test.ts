@@ -18,6 +18,7 @@ import {
   analyzeJieqiDecisions,
   analyzeJieqiPostgame,
   believedMoverPool,
+  evaluateJieqiPosition,
   isJieqiChanceMove,
   JIEQI_ANALYSIS_ENGINE_ID,
   JIEQI_DECISIONS_ENGINE_ID,
@@ -31,6 +32,7 @@ import {
   jieqiChancePlies,
   jieqiDeterministicPlies,
   PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+  reconcileJieqiSeries,
   resolveJieqiAnalysis,
   resolveJieqiDecisions,
 } from './jieqi-analysis.js';
@@ -113,6 +115,114 @@ test('jieqiChancePlies flags reveals and face-down captures, not already-reveale
   assert.ok(chance.length < moves.length, 'expected some non-reveal (graded) plies');
   // jieqiChancePlies re-derives exactly the same set by an independent replay.
   assert.deepEqual(jieqiChancePlies(moves, STANDARD_JIEQI_DEAL), chance);
+});
+
+// Engine-coordinate fixtures: two public general steps, then a dark soldier's reveal.
+const PUBLIC_PV = ['e0e1', 'e9e8'];
+const REVEAL_PV = [...PUBLIC_PV, 'a3a4', 'e8e9'];
+
+test('Jieqi position eval retains only the public PV prefix, with Red-POV scores', async () => {
+  const state = applyJieqiMove(createInitialJieqiState('pv', STANDARD_JIEQI_DEAL), {
+    from: 'e1',
+    to: 'e2',
+  });
+  const result = await evaluateJieqiPosition(state, async () => ({
+    cp: 42,
+    mate: null,
+    best: 'e9e8',
+    pv: ['e9e8', 'a3a4', 'e8e9'],
+  }));
+  assert.deepEqual(result, { cp: -42, mate: null, best: 'e9e8', pv: ['e9e8'] });
+});
+
+test('Jieqi sweep checkpoints and caches the PV strictly before its first reveal', async () => {
+  const checkpoints: SweepPlyEval[][] = [];
+  const analysis = await analyzeJieqiPostgame(
+    [],
+    STANDARD_JIEQI_DEAL,
+    async () => ({ cp: 42, mate: null, best: PUBLIC_PV[0]!, pv: REVEAL_PV }),
+    {
+      load: async () => null,
+      save: async (checkpoint) => {
+        checkpoints.push(JSON.parse(JSON.stringify(checkpoint.items)));
+      },
+    },
+  );
+  const cache = memoryCache();
+  const payload = await resolveJieqiAnalysis(
+    'pv-cache',
+    [],
+    STANDARD_JIEQI_DEAL,
+    cache,
+    async () => analysis,
+  );
+  const expected = [{ ply: 0, cp: 42, mate: null, best: 'e0e1', pv: PUBLIC_PV }];
+  assert.deepEqual(JSON.parse(JSON.stringify(payload)).plies, expected);
+  assert.deepEqual(checkpoints, [expected]);
+  assert.deepEqual(
+    (await resolveJieqiAnalysis('pv-cache', [], STANDARD_JIEQI_DEAL, cache))?.plies,
+    expected,
+  );
+  assert.deepEqual(REVEAL_PV, [...PUBLIC_PV, 'a3a4', 'e8e9'], 'engine input is untouched');
+});
+
+test('Jieqi PV fixtures stop before malformed, illegal, or immediately revealing moves', async () => {
+  for (const [pv, expected] of [
+    [undefined, undefined],
+    [[], undefined],
+    [['a3a4', 'e9e8'], undefined],
+    [['bad', ...PUBLIC_PV], undefined],
+    [['e0e1', 'bad', 'e9e8'], ['e0e1']],
+    [['e0e1', 'e1e0', 'e9e8'], ['e0e1']], // wrong side to move
+    [PUBLIC_PV, PUBLIC_PV],
+  ] as const) {
+    const analysis = await analyzeJieqiPostgame([], STANDARD_JIEQI_DEAL, async () => ({
+      cp: 0,
+      mate: null,
+      best: 'e0e1',
+      ...(pv ? { pv: [...pv] } : {}),
+    }));
+    assert.deepEqual(analysis.plies[0]!.pv, expected, JSON.stringify(pv));
+  }
+});
+
+test('Jieqi PV stops before a face-down capture even when its mover is face-up', async () => {
+  const { before, capture } = faceUpTakesDark();
+  const result = await evaluateJieqiPosition(before, async () => ({
+    cp: 12,
+    mate: null,
+    best: jieqiMoveToPikafishUci(capture),
+    pv: [jieqiMoveToPikafishUci(capture), 'e9e8'],
+  }));
+  assert.deepEqual(JSON.parse(JSON.stringify(result)), {
+    cp: 12,
+    mate: null,
+    best: jieqiMoveToPikafishUci(capture),
+  });
+});
+
+test('Jieqi consistency re-search replaces or clears the PV along with the score', async () => {
+  const state = createInitialJieqiState('pv-research', STANDARD_JIEQI_DEAL);
+  const child = applyJieqiMove(state, { from: 'e1', to: 'e2' });
+  for (const pv of [['e0e1', 'a9a8', 'e1e0'], undefined]) {
+    const result = await reconcileJieqiSeries(
+      [
+        { ply: 0, cp: 0, mate: null, best: 'e0e1', pv: PUBLIC_PV },
+        { ply: 1, cp: 500, mate: null, best: null },
+      ],
+      [state, child],
+      [{ fen: jieqiStateToPikafishFen(state, { public: true }), moves: [] }],
+      new Set([1]),
+      async () => ({ cp: 600, mate: null, best: 'e0e1', ...(pv ? { pv } : {}) }),
+    );
+    assert.deepEqual(JSON.parse(JSON.stringify(result[0])), {
+      ply: 0,
+      cp: 600,
+      mate: null,
+      best: 'e0e1',
+      ...(pv ? { pv: ['e0e1'] } : {}),
+    });
+  }
 });
 
 test('Jieqi analysis resets repetition history on reveal/capture and replays quiet moves', () => {
