@@ -197,6 +197,7 @@ Conventions:
 
 ### Community
 
+- The Washington Xiangqi page has an email sign-up for club announcements, in English and Chinese, and an address joins the list after its owner clicks the confirm link ([c5b7bc54](https://github.com/brianhliou/mistboard/commit/c5b7bc54))
 - Washington Xiangqi has its own page at /washington-xiangqi, with what to expect at a meetup, the organizer and how to help out ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
 - The homepage chat shows only messages from people; bot wins and new studies no longer appear in it ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
 - Typing @handle in a forum post links to that player's profile ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
@@ -211,6 +212,7 @@ Conventions:
 
 ### Site
 
+- The updates and blog feeds now carry each article's headline and a card thumbnail ([c5b7bc54](https://github.com/brianhliou/mistboard/commit/c5b7bc54))
 - Read next on a blog post offers more posts of the same kind, engineering or for players ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
 - Article cards show the date under the title, so it no longer covers the picture ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
 - Articles name their author, say they were drafted with Claude, mark machine translations and say what changed when updated; the about page says who builds Mistboard and how articles are made ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
@@ -293,6 +295,8 @@ Conventions:
 
 ### Fixed
 
+- Jieqi study embeds whose games leave some pieces unrevealed show the board again ([c5b7bc54](https://github.com/brianhliou/mistboard/commit/c5b7bc54))
+- Article embeds no longer shake at browser zoom levels like 110% ([c5b7bc54](https://github.com/brianhliou/mistboard/commit/c5b7bc54))
 - The homepage Play again card offers your last bot game wherever you started it ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
 - The side picker in Play a game shows the general in your chosen piece set ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
 - Pikafish seats keep their level after a game ends, and xiangqi Pikafish games now show it too ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
