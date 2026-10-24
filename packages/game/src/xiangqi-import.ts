@@ -12,6 +12,7 @@
 // resolveMove is board-aware for that reason; coordinate codecs ignore the state.
 
 import {
+  ARBITER_ADJUDICATED_DRAWS,
   coordOf,
   createInitialXiangqiState,
   positionRepetitionKey,
@@ -371,7 +372,14 @@ function replayWithCodec(
     if (!move || state.status.type !== 'playing' || !isStandardXiangqiLegalMove(state, move)) {
       return { moves, error: `Move ${index + 1} ("${token}") is not legal as ${codec.format}.` };
     }
+    const mover = state.status.turn;
     state = applyStandardXiangqiMove(state, move);
+    // A recorded game can continue past our automatic draw rulings. Resume
+    // before the next token is resolved: relative notation needs legal moves.
+    // Checkmate and stalemate remain terminal, as they are in live play.
+    if (state.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
+      state = { ...state, status: { type: 'playing', turn: mover === 'red' ? 'black' : 'red' } };
+    }
     moves.push(move);
   }
   return { moves };
