@@ -4,9 +4,11 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   replayXiangqiBroadcastBoard,
   type XiangqiBroadcastBoard,
+  type XiangqiGameStatus,
 } from '@mistboard/game';
 import type { StoredXiangqiBroadcastBoard } from './persistence.js';
 import {
@@ -53,7 +55,7 @@ for (const file of [
 }
 
 for (const reason of ['repetition', 'progress-clock'] as const) {
-  test(`broadcast ending on ${reason} keeps its final draw status`, () => {
+  test(`broadcast ending on ${reason} takes its ending from the source result`, () => {
     const board = stored(`arbiter-adjudicated/${reason}.json`);
     let state = createInitialXiangqiState(board.id);
     let plies = 0;
@@ -70,13 +72,54 @@ for (const reason of ['repetition', 'progress-clock'] as const) {
       result: '1/2-1/2' as const,
       finalStatus: state.status,
     };
-    const replay = buildXiangqiBroadcastBoardReplay(ended);
-    assert.deepEqual(replay.state.status, state.status);
-    assert.deepEqual(replay.view.status, state.status);
-    assert.deepEqual(replay.history.truth.at(-1)?.view.status, state.status);
-    assert.deepEqual(finalXiangqiBoardView(ended).status, state.status);
+    for (const result of ['*', '1-0', '0-1', '1/2-1/2'] as const) {
+      const source = {
+        ...ended,
+        result,
+        status: result === '*' ? ('live' as const) : ('complete' as const),
+      };
+      const expected: XiangqiGameStatus =
+        result === '*'
+          ? { type: 'playing', turn: plies % 2 === 0 ? 'red' : 'black' }
+          : {
+              type: 'finished',
+              winner: result === '1-0' ? 'red' : result === '0-1' ? 'black' : null,
+              reason: result === '1/2-1/2' ? 'agreement' : 'resignation',
+            };
+      const replay = buildXiangqiBroadcastBoardReplay(source);
+      assert.deepEqual(replay.state.status, expected, result);
+      assert.deepEqual(replay.view.status, expected, result);
+      assert.deepEqual(replay.views.truth.status, expected, result);
+      assert.deepEqual(replay.history.truth.at(-1)?.view.status, expected, result);
+      assert.deepEqual(finalXiangqiBoardView(source).status, expected, result);
+      assert.ok(
+        replay.history.truth.slice(0, -1).every(({ view }) => view.status.type === 'playing'),
+      );
+    }
   });
 }
+
+test('live broadcast at the 61st no-capture ply stays playing', () => {
+  const board = stored('arbiter-adjudicated/progress-clock.json');
+  let state = createInitialXiangqiState(board.id);
+  for (const move of board.moves) {
+    state = applyXiangqiRecordMove(state, move);
+    if (state.progressClock === 61) break;
+  }
+  assert.equal(state.progressClock, 61);
+  assert.ok(state.moveLog);
+  const live = {
+    ...board,
+    moves: [...state.moveLog],
+    plyCount: state.moveLog.length,
+    status: 'live' as const,
+    result: '*' as const,
+  };
+  const replay = buildXiangqiBroadcastBoardReplay(live);
+  assert.deepEqual(replay.state.status, state.status);
+  assert.deepEqual(replay.history.truth.at(-1)?.view.status, state.status);
+  assert.deepEqual(finalXiangqiBoardView(live).status, state.status);
+});
 
 test('serving check fails a record with a move after checkmate, as the API does', () => {
   // A real game (2026 women's league) that ended in mate on the board, plus one

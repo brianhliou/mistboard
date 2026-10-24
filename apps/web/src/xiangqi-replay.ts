@@ -486,6 +486,8 @@ type XiangqiReplayLine = {
    *  shifted by one half-move. */
   plyOffset: number;
   total: number;
+  /** First refused ply (1-based), or null when the whole line replayed. */
+  refusedPly: number | null;
 };
 
 /**
@@ -519,15 +521,26 @@ function replayLine(spec: XiangqiReplaySpec): XiangqiReplayLine {
     startState.status.type === 'playing' ? startState.status.turn : 'red';
   const plyOffset = firstMover === 'red' ? 0 : 1;
   const states: XiangqiGameState[] = [startState];
+  let refusedPly: number | null = null;
   for (const [index, move] of moves.entries()) {
     const state = states[states.length - 1]!;
     const next = applyXiangqiRecordMove(state, move);
     if (next === state) {
-      throw new Error(`illegal move "${tokens[index]}" at ply ${index + 1}`);
+      refusedPly = index + 1;
+      break;
     }
     states.push(next);
   }
-  return { moves, states, startState, firstMover, plyOffset, total: moves.length };
+  const total = states.length - 1;
+  return {
+    moves: moves.slice(0, total),
+    states,
+    startState,
+    firstMover,
+    plyOffset,
+    total,
+    refusedPly,
+  };
 }
 
 /**
@@ -538,8 +551,10 @@ function replayLine(spec: XiangqiReplaySpec): XiangqiReplayLine {
  */
 export function resultFromFinalPosition(spec: XiangqiReplaySpec): '1-0' | '0-1' | '' {
   // Record replay can pass Mistboard's draw rules and still recognize a
-  // terminal board. Illegal records report their refused ply in replayLine.
-  const { states } = replayLine(spec);
+  // terminal board. A refused move leaves the legal prefix visible, but
+  // supplies no inferred result for an incomplete or variant-specific line.
+  const { states, refusedPly } = replayLine(spec);
+  if (refusedPly !== null) return '';
   const last = states[states.length - 1]!;
   if (last.status.type !== 'finished' || !('winner' in last.status)) return '';
   if (last.status.winner === 'red') return '1-0';

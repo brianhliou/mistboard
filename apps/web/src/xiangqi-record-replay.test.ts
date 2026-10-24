@@ -1,6 +1,7 @@
 import { createInitialXiangqiState, standardXiangqiFen, type XiangqiMove } from '@mistboard/game';
 import { expect, test } from 'vitest';
 import { BLACK_STALEMATE_ICCS } from './articles/content/shortest-stalemate-xiangqi.js';
+import { mountPendingWidgets, renderBlock } from './articles.js';
 import { broadcastGamePgn } from './xiangqi-broadcast-pgn.js';
 import {
   mountXiangqiReplay,
@@ -46,17 +47,51 @@ test('article infers a terminal result beyond the no-capture ruling', () => {
   expect(resultFromFinalPosition({ ...base, startFen, iccs: BLACK_STALEMATE_ICCS })).toBe('1-0');
 });
 
+test('a refused move supplies no inferred result, including after a terminal position', () => {
+  expect(resultFromFinalPosition({ ...base, iccs: 'h2e2 a0a9 h0g2' })).toBe('');
+  expect(resultFromFinalPosition({ ...base, iccs: `${BLACK_STALEMATE_ICCS} a0a9` })).toBe('');
+});
+
+test('an illegal article line does not prevent the next widget from mounting', () => {
+  const root = document.createElement('div');
+  root.append(
+    renderBlock({ kind: 'xq-replay', spec: { ...base, iccs: 'h2e2 a0a9 h0g2' } }),
+    renderBlock({ kind: 'xq-replay', spec: { ...base, iccs: 'h2e2 h9g7' } }),
+  );
+  document.body.append(root);
+  const controllers = mountPendingWidgets(root);
+  expect(controllers).toHaveLength(2);
+  expect(root.querySelectorAll('.raw-svg-stepper-frame-xq > svg')).toHaveLength(2);
+  controllers.forEach((controller) => {
+    controller.destroy();
+  });
+  root.remove();
+});
+
 for (const compact of [false, true]) {
-  test(`article ${compact ? 'compact' : 'full'} board reports a move that leaves its general in check`, () => {
+  test(`article ${compact ? 'compact' : 'full'} board freezes before a move that leaves its general in check`, () => {
     const el = document.createElement('div');
     const spec = {
       ...base,
       startFen: '4k4/9/9/9/4r4/9/9/9/9/R3K4 r - - 0 1',
       iccs: 'e0f0 e5f5 a0a1',
     };
-    expect(() =>
-      compact ? mountXiangqiReplayBoard(el, spec) : mountXiangqiReplay(el, spec),
-    ).toThrow(/illegal move "a0a1" at ply 3/);
+    if (compact) {
+      const board = mountXiangqiReplayBoard(el, spec);
+      expect(board.plyCount()).toBe(2);
+      board.jumpToPly(2);
+      const before = el.innerHTML;
+      board.jumpToPly(3);
+      expect(el.innerHTML).toBe(before);
+      expect(el.querySelector('svg')).not.toBeNull();
+      board.destroy();
+    } else {
+      const board = mountXiangqiReplay(el, spec);
+      expect(el.querySelectorAll('.xq-replay-row .xq-replay-move-button')).toHaveLength(2);
+      el.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+      expect(el.querySelector('svg')).not.toBeNull();
+      board.destroy();
+    }
   });
 
   test(`article ${compact ? 'compact' : 'full'} board plays a variation beyond repetition`, () => {
