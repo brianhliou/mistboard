@@ -141,12 +141,14 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
+      // (DEV shows it early for review).
+      '/blog/shortest-stalemate-xiangqi',
       // A solved banqi endgame (chariot and horse against chariot, horse and
       // soldier), scheduled for 2026-10-30 (DEV shows it early for review).
       '/blog/banqi-chariot-endgame',
-      // The shortest xiangqi stalemate we found, scheduled for 2026-10-27
-      // (DEV shows it early for review).
-      '/blog/shortest-stalemate-xiangqi',
+      // jqe against AB-JChess, scheduled for 2026-10-27 (DEV shows it early).
+      '/blog/jqe',
       // The unstyled first-paint engineering post, scheduled for 2026-10-23
       // (DEV shows it early for review).
       '/blog/unstyled-first-paint',
@@ -255,8 +257,6 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
-      // The jqe post, an undated draft (sorts last until Brian dates it).
-      '/blog/jqe',
     ]);
   });
 
@@ -413,8 +413,9 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
-      '/blog/banqi-chariot-endgame',
       '/blog/shortest-stalemate-xiangqi',
+      '/blog/banqi-chariot-endgame',
+      '/blog/jqe',
       '/blog/helpmates-in-xiangqi',
       '/blog/general-blunder-challenge',
       '/blog/fortress-and-atomic-xiangqi-on-hold',
@@ -453,8 +454,6 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
-      // The jqe post, an undated draft (sorts last until Brian dates it).
-      '/blog/jqe',
     ]);
   });
 

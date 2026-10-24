@@ -127,9 +127,11 @@ describe('/champions', () => {
   });
 
   // jqe reigns only in a build that offers it (VITE_JQE_ENABLED); until its
-  // write-up is published the card links to the bot and the match games.
+  // write-up goes live the card links to the bot and the match games.
   it('hands the jieqi title to jqe when jqe is on, keeping AB-JChess in the history', async () => {
     vi.stubEnv('VITE_JQE_ENABLED', 'true');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-26T12:00:00Z'));
     vi.resetModules();
     try {
       const { buildChampions: build } = await import('./champions-page.js');
@@ -153,6 +155,34 @@ describe('/champions', () => {
       );
       expect(lines[1]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
     } finally {
+      vi.useRealTimers();
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+
+  it('links the jqe write-up once the article is live, on its own date', async () => {
+    const { jqeArticle } = await import('./articles/content/jqe.js');
+    const { JQE_WRITE_UP } = await import('./champions-page.js');
+    expect(JQE_WRITE_UP.publishedAt).toBe(jqeArticle.publishedAt);
+    vi.stubEnv('VITE_JQE_ENABLED', 'true');
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-27T17:00:00Z'));
+    vi.resetModules();
+    try {
+      const { buildChampions: build } = await import('./champions-page.js');
+      const jieqi = build('en').querySelector<HTMLElement>('[data-game="jieqi"]')!;
+      expect(
+        [...jieqi.querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(
+          (a) => `${a.textContent} ${a.getAttribute('href')}`,
+        ),
+      ).toEqual([
+        'Read the match /blog/jqe',
+        'See the games /study/3RQbr51i',
+        'Play the champion /bot/jqe',
+      ]);
+    } finally {
+      vi.useRealTimers();
       vi.unstubAllEnvs();
       vi.resetModules();
     }
