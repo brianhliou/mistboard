@@ -121,6 +121,20 @@ test('live broadcast at the 61st no-capture ply stays playing', () => {
   assert.deepEqual(finalXiangqiBoardView(live).status, state.status);
 });
 
+test('live broadcast ending in checkmate keeps the mate before the source posts its result', () => {
+  const board = stored('checkmate.json');
+  const expected: XiangqiGameStatus = { type: 'finished', winner: 'red', reason: 'checkmate' };
+  assert.deepEqual(board.finalStatus, expected);
+  const live = { ...board, status: 'live' as const, result: '*' as const };
+  const replay = buildXiangqiBroadcastBoardReplay(live);
+  assert.equal(replay.timeline.length, board.moves.length);
+  assert.deepEqual(replay.state.status, expected);
+  assert.deepEqual(replay.view.status, expected);
+  assert.deepEqual(replay.views.truth.status, expected);
+  assert.deepEqual(replay.history.truth.at(-1)?.view.status, expected);
+  assert.deepEqual(finalXiangqiBoardView(live).status, expected);
+});
+
 test('serving check fails a record with a move after checkmate, as the API does', () => {
   // A real game (2026 women's league) that ended in mate on the board, plus one
   // more move: checkmate is not an arbiter draw, so neither path resumes.

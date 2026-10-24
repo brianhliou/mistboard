@@ -29,18 +29,13 @@ export type BroadcastHistorySnapshot = {
   view: StandardXiangqiPlayerView;
 };
 
-// The source decides a record's result. A kernel repetition or progress-clock
-// ruling is never a broadcast ending, including on the newest recorded ply.
+// The source decides arbiter results. Record replay already clears automatic
+// draws; without a posted result, keep board endings such as mate or stalemate.
 function withBroadcastResult(
   state: XiangqiGameState,
   result: StoredXiangqiBroadcastBoard['result'],
 ): XiangqiGameState {
-  if (result === '*') {
-    return {
-      ...state,
-      status: { type: 'playing', turn: (state.moveLog?.length ?? 0) % 2 === 0 ? 'red' : 'black' },
-    };
-  }
+  if (result === '*') return state;
   const winner = result === '1-0' ? 'red' : result === '0-1' ? 'black' : null;
   if (state.status.type === 'finished' && state.status.winner === winner) return state;
   return {
