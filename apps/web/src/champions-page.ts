@@ -17,6 +17,7 @@
 // (jieqi-engine.ts, jungle-katago-engine.ts, jungle-engine.ts). TITLES is in
 // CANONICAL_VARIANT_ORDER (champions-page.test.ts checks it against VARIANTS).
 
+import { articleIsLive } from './articles/publish-time.js';
 import { jqeEnabled } from './feature-flags.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
@@ -77,7 +78,14 @@ const JIEQI_MATCH: TitleMatch = { writeUpHref: '/blog/ab-jchess', gamesHref: '/d
 // jqe took the jieqi title from AB-JChess 0.2d (mistboard-engine lab/jieqi-match,
 // run jqe-vs-abj-0.2d, 2026-10-21). It reigns only once jqe is the bot you play,
 // so the swap rides VITE_JQE_ENABLED with the jieqi picker.
-const JQE_MATCH: TitleMatch = { gamesHref: '/study/3RQbr51i' };
+// The jqe write-up goes live on its own date (articles/publish-time.ts); before
+// that the card links only the games and the bot. The test pins this date to
+// the article's publishedAt.
+export const JQE_WRITE_UP = { status: 'published', publishedAt: '2026-10-27' } as const;
+const JQE_MATCH: TitleMatch = {
+  ...(articleIsLive(JQE_WRITE_UP) ? { writeUpHref: '/blog/jqe' } : {}),
+  gamesHref: '/study/3RQbr51i',
+};
 const JUNGLE_MATCH: TitleMatch = {
   writeUpHref: '/blog/katago-jungle',
   gamesHref: '/study/0t8xpyv6',

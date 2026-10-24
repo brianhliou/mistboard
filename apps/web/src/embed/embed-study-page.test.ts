@@ -810,6 +810,42 @@ describe('mountEmbedStudy', () => {
     expect(root.querySelector('svg')).toBeNull();
   });
 
+  it('draws a jieqi chapter whose deal marks unrevealed pieces unknown', async () => {
+    // Prod study 3RQbr51i chapter OCePocLG: an engine match import names every
+    // piece that turned over and writes ? for the rest (a10 is one). Refusing
+    // the ? left every chapter of that study blank.
+    const partialRoot =
+      'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w ' +
+      'R2A2C2P5N2B2r2a2c2p5n2b2 0 1 ?pnbcar?c???npaCP??PRR?ABNCPPP';
+    const moves = 'b1c3 i7i6 a4a5 b10a8 a5e5 g10e8'.split(' ');
+    const chapter = (id: string, tokens: string[]) => ({
+      id,
+      name: id,
+      variant: 'jieqi',
+      root: { rootFen: partialRoot, root: chainTree(tokens) },
+    });
+    // The second chapter moves a10, a piece the deal never names: the line
+    // ends before it rather than turning over a sampled identity.
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [chapter('JqPartl1', moves), chapter('JqPartl2', ['b1c3', 'a10a9'])],
+    });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'JqPartl1' });
+    expect(root.textContent).not.toContain('no dealt position');
+    const a10 = root.querySelector('[data-piece-square="a10"]');
+    // Face down, and nothing on the board names what it is.
+    expect(a10?.innerHTML).toContain('black hidden piece');
+    expect(root.querySelector('.embed-card-status')?.textContent).toContain('6');
+    root.remove();
+
+    const stopped = document.createElement('div');
+    await mountEmbedStudy(stopped, { studyId: 's', chapterId: 'JqPartl2' });
+    expect(stopped.querySelector('.embed-card-status')?.textContent).toContain('1');
+    expect(stopped.querySelector('.embed-card-status')?.textContent).not.toContain('2');
+    stopped.remove();
+  });
+
   it('draws a flip jungle chapter face down until each tile is flipped', async () => {
     // No flip jungle study exists on prod yet; this is the shape the study
     // builder writes (scripts/banqi-study.ts): the dealt root, seat-keyed

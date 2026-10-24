@@ -1578,7 +1578,7 @@ function rememberPendingMount(figure: HTMLElement, block: PendingBlock, lang?: A
 /** One body block as DOM. Exported for tests. */
 export function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'paragraph') return paragraphNode(block.text);
-  if (block.kind === 'note') return noteNode(block.text);
+  if (block.kind === 'note') return noteNode(block.text, block.label);
   if (block.kind === 'sub-heading') return subHeadingNode(block);
   if (block.kind === 'static-boards') return renderStaticBoardsBlock(block);
   if (block.kind === 'cta') return renderCtaBlock(block);
@@ -2576,9 +2576,15 @@ function paragraphNode(text: string): HTMLParagraphElement {
 }
 
 /** An editorial note: one paragraph of rich text in a bordered aside. */
-function noteNode(text: string): HTMLElement {
+function noteNode(text: string, label?: string): HTMLElement {
   const aside = document.createElement('aside');
   aside.className = 'article-note';
+  if (label) {
+    const name = document.createElement('p');
+    name.className = 'article-note-label';
+    name.textContent = label;
+    aside.append(name);
+  }
   const p = document.createElement('p');
   p.className = 'article-note-text';
   appendRichText(p, text);

@@ -141,12 +141,14 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
+      // (DEV shows it early for review).
+      '/blog/shortest-stalemate-xiangqi',
       // A solved banqi endgame (chariot and horse against chariot, horse and
       // soldier), scheduled for 2026-10-30 (DEV shows it early for review).
       '/blog/banqi-chariot-endgame',
-      // The shortest xiangqi stalemate we found, scheduled for 2026-10-27
-      // (DEV shows it early for review).
-      '/blog/shortest-stalemate-xiangqi',
+      // jqe against AB-JChess, scheduled for 2026-10-27 (DEV shows it early).
+      '/blog/jqe',
       // The unstyled first-paint engineering post, scheduled for 2026-10-23
       // (DEV shows it early for review).
       '/blog/unstyled-first-paint',
@@ -411,8 +413,9 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
-      '/blog/banqi-chariot-endgame',
       '/blog/shortest-stalemate-xiangqi',
+      '/blog/banqi-chariot-endgame',
+      '/blog/jqe',
       '/blog/helpmates-in-xiangqi',
       '/blog/general-blunder-challenge',
       '/blog/fortress-and-atomic-xiangqi-on-hold',
@@ -1226,6 +1229,16 @@ describe('note block', () => {
     expect(p?.textContent).toBe('Spotted an error? Tell us and we will correct it.');
     expect(p?.querySelector('a')?.getAttribute('href')).toBe('/feedback');
     expect(p?.querySelector('strong')?.textContent).toBe('correct');
+  });
+
+  it('names the note in a label above its text when it has one', () => {
+    const el = renderBlock({ kind: 'note', label: 'As of October 24, 2026', text: 'jqe 0.1.0.' });
+    expect(el.firstElementChild?.className).toBe('article-note-label');
+    expect(el.firstElementChild?.textContent).toBe('As of October 24, 2026');
+    expect(el.querySelector('p.article-note-text')?.textContent).toBe('jqe 0.1.0.');
+    expect(
+      renderBlock({ kind: 'note', text: 'x' }).querySelector('.article-note-label'),
+    ).toBeNull();
   });
 
   it('styles the note with neutral tokens, not a warning colour', () => {

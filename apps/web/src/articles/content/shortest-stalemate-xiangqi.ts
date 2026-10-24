@@ -87,7 +87,7 @@ export const shortestStalemateXiangqiArticle: Article = {
   showSummaryOnPage: false,
   thumbnail: { kind: 'svg', svg: BLACK_STALEMATE_SVG },
   status: 'published',
-  publishedAt: '2026-10-27',
+  publishedAt: '2026-11-03',
   audience:
     'Xiangqi players who like problems, and chess players who know stalemate as a draw and want to see it win a game.',
   readNext: ['helpmates-in-xiangqi', 'longest-forced-mates-xiangqi'],
