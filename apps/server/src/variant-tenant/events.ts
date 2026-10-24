@@ -7,7 +7,11 @@
 
 import { clockPolicyKindFor } from '@mistboard/game';
 import { engineFailureAbort } from '../engine-failure-abort.js';
-import { firstPartyBotForEngine, firstPartyBotForId } from '../first-party-bots.js';
+import {
+  firstPartyBotForEngine,
+  firstPartyBotForId,
+  liveSeatEngineName,
+} from '../first-party-bots.js';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
 import { releaseLiveEngineReservation } from '../server-live-engine-reservations.js';
@@ -472,11 +476,17 @@ export function tenantParticipant<
   const seatedClientId = room.projection.seats[color];
   if (seatedClientId && tenant.engine?.isEngineClientId(seatedClientId)) {
     const engineVersion = tenant.engine.engineVersion?.(seatedClientId) ?? null;
+    // The live seat name, verbatim (tenantSeatDisplayNames): the finished game
+    // keeps the name the room showed, rung label included.
+    const engine = tenant.engine;
+    const seatName = liveSeatEngineName(seatedClientId, room.pveBotId, () =>
+      engine.displayName(seatedClientId),
+    );
     if (room.pveBotId) {
       const bot = firstPartyBotForId(room.pveBotId);
       return {
         color: color as persistence.GameParticipantColor,
-        displayName: bot?.displayName ?? tenant.engine.displayName(seatedClientId),
+        displayName: seatName,
         subjectType: 'bot',
         // Canonicalize: a room created against a pre-consolidation bot id
         // still attributes its game to the merged identity.
@@ -490,7 +500,7 @@ export function tenantParticipant<
     if (bot) {
       return {
         color: color as persistence.GameParticipantColor,
-        displayName: bot.displayName,
+        displayName: seatName,
         subjectType: 'bot',
         subjectId: bot.id,
         engineId: seatedClientId,
@@ -500,7 +510,7 @@ export function tenantParticipant<
     }
     return {
       color: color as persistence.GameParticipantColor,
-      displayName: tenant.engine.displayName(seatedClientId),
+      displayName: seatName,
       subjectType: 'engine-version',
       subjectId: seatedClientId,
       // Records the engine build for version-less subject_ids (variant-tenant UCI engines),

@@ -28,6 +28,7 @@ import {
   type PlayerPage,
   playerSitemapEntries,
 } from './player-pages.js';
+import { practiceChapterPath } from './practice-chapter-redirect.js';
 import { puzzleById } from './routes/puzzles.js';
 import { isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
@@ -36,6 +37,7 @@ import {
   renderStudyBody,
   renderStudyIndexBody,
   STUDY_INDEX_PAGES,
+  studyPageMeta,
 } from './study-page-body.js';
 
 export { ARTICLE_META, canonicalArticleBase };
@@ -188,6 +190,13 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'How to Contribute | Mistboard',
     description:
       'Help build a future for Chinese chess and original strategy games. Contribute as a player, teacher, translator, game creator or engine author.',
+  },
+  // A casual xiangqi group in Bellevue; Mistboard hosts its page, and
+  // washingtonxiangqi.org and .com forward here (2026-10-23).
+  '/washington-xiangqi': {
+    title: 'Washington Xiangqi (华州象棋): Chinese chess in Bellevue',
+    description:
+      'Washington Xiangqi is a casual group for people who play xiangqi, Chinese chess, in Bellevue, WA. Any level is welcome. Join on WeChat or by email.',
   },
   '/creators': {
     title: 'Work With Us: Creators and Players | Mistboard',
@@ -364,6 +373,34 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'Site Statistics | Mistboard',
     description:
       'Live statistics for Mistboard: total xiangqi and variant games played, activity over time, and a breakdown by variant and game type.',
+  },
+  // Linked from every page's footer or nav, and each served the homepage title
+  // and description until 2026-10-24, so Bing read them as duplicates of '/'.
+  // English only: the client routes have no locale-prefixed URL.
+  '/terms': {
+    title: 'Terms of Use: Play, Ratings and Fair Play | Mistboard',
+    description:
+      'The rules for using mistboard.com: anonymous and rated play, ratings and fair play, finished games published under CC BY 4.0, and patron billing and refunds.',
+  },
+  '/privacy': {
+    title: 'Privacy: What Mistboard Collects | Mistboard',
+    description:
+      'What mistboard.com collects and why: analytics, the games you play, and your handle and email if you make an account. No ads, and no data sold.',
+  },
+  '/contact': {
+    title: 'Contact: Bugs, Accounts and Billing | Mistboard',
+    description:
+      'A private line to the person who runs Mistboard: report a bug or a broken game, or raise an account or billing problem. Add an email if you want a reply.',
+  },
+  '/watch': {
+    title: 'Watch Live Xiangqi Games | Mistboard',
+    description:
+      'Watch xiangqi (Chinese chess) and variant games live on Mistboard, move by move: humans against humans, humans against engines, and engine against engine.',
+  },
+  '/thanks': {
+    title: 'Credits: Engines, Sources and Thanks | Mistboard',
+    description:
+      'The engines you play against on Mistboard, the sites whose games and photos we show, and the players who reported what was broken, each thanked by name.',
   },
 };
 
@@ -604,6 +641,10 @@ const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set(['/watch', '/ga
 // is worth baking) but whose page still needs a heading and its links for a
 // crawler that does not run the bundle. The client clears the root on mount.
 const STATIC_ROUTE_BODIES: Readonly<Record<string, string>> = {
+  // The club page is read from a printed address, so its text is in the HTML
+  // for link previews and crawlers too.
+  '/washington-xiangqi':
+    '<main lang="en"><h1>Washington Xiangqi <span lang="zh-Hans">华州象棋</span></h1><p>Washington Xiangqi is a casual group for people who play xiangqi, Chinese chess, in Bellevue, WA. Any level is welcome, including people who have never played.</p><ul><li><a href="mailto:hello@washingtonxiangqi.org">hello@washingtonxiangqi.org</a></li><li><a href="/learn/xiangqi">Learn the rules</a></li><li><a href="/">Play online on Mistboard</a></li></ul></main>',
   '/games':
     '<main><h1>Current games</h1><p>Every xiangqi (Chinese chess) and variant game in progress on Mistboard right now: live games with clocks, and correspondence games waiting on a move.</p><ul><li><a href="/watch">Watch live games</a></li><li><a href="/games/search">Search finished games</a></li><li><a href="/broadcast/xiangqi">Xiangqi tournament broadcasts</a></li><li><a href="/">Play a game</a></li></ul></main>',
 };
@@ -708,7 +749,25 @@ export async function serveSpaShellWithRoutePreloads(params: {
   /** Override the puzzle id-or-short-code lookup (tests); the default is the
    *  one /api/puzzles/:id uses. */
   puzzleId?: (idOrShortCode: string) => Promise<string | null>;
+  /** Override the shelf deep-link lookup (tests); the default reads persistence. */
+  practiceChapterPath?: (pathname: string) => Promise<string | null>;
 }): Promise<boolean> {
+  // A shelf deep link (/practice/endgames-horse/horse-vs-advisor) names a
+  // chapter the client would bounce to anyway: answer with the move itself, so
+  // a crawler follows it rather than indexing a shell that reads as '/'. A day
+  // of max-age, not forever: the ids are per database and a reseed of a fresh
+  // one could move them.
+  const practiceTarget = await (params.practiceChapterPath ?? practiceChapterPath)(
+    params.pathname,
+  ).catch(() => null);
+  if (practiceTarget) {
+    params.response.writeHead(301, {
+      location: `${practiceTarget}${params.search ?? ''}`,
+      'cache-control': 'public, max-age=86400',
+    });
+    params.response.end();
+    return true;
+  }
   const links = await routePreloadLinksForPath(params);
   // A player, team or the players index (#458, player-pages.ts): its own meta,
   // a canonical link and a crawler body, from one read of the archive. A name
@@ -869,22 +928,6 @@ const STUDY_LOCALE_BY_SLUG = {
   'zh-hant': 'zh-Hant',
 } as const;
 
-/** Pick a study's localized string for a locale, falling back to the base
- *  column. Mirrors study-i18n.ts on the client; kept tiny and local rather than
- *  importing web code into the server. */
-function localizedStudyField(
-  base: string,
-  i18n: unknown,
-  locale: string,
-  field: 'name' | 'description',
-): string {
-  if (!i18n || typeof i18n !== 'object' || Array.isArray(i18n)) return base;
-  const entry = (i18n as Record<string, unknown>)[locale];
-  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return base;
-  const value = (entry as Record<string, unknown>)[field];
-  return typeof value === 'string' && value.trim() ? value : base;
-}
-
 export async function serveStudyPage(params: {
   studyId: string;
   /** Present on a chapter permalink (/study/:id/:chapterId). An unknown id falls
@@ -915,19 +958,13 @@ export async function serveStudyPage(params: {
       ? study.chapters.find((c) => c.id === params.chapterId)
       : undefined;
     const pathSuffix = chapter ? `/${encodeURIComponent(chapter.id)}` : '';
-    const chapterCount = study.chapters.length;
-    const name = localizedStudyField(study.name, study.i18n, locale, 'name');
-    const described = localizedStudyField(study.description, study.i18n, locale, 'description');
-    const studyMeta = {
-      title: `${name} | Mistboard study`,
-      description:
-        described ||
-        `A xiangqi study on Mistboard with ${chapterCount} ${chapterCount === 1 ? 'chapter' : 'chapters'}: annotated moves on an interactive board.`,
-    };
     // A chapter permalink carries the CHAPTER's title and prose. Without this,
     // every chapter of a 66-composition study serves the study's own meta and
-    // the set reads as near-duplicates.
-    const meta = chapter ? chapterPageMeta({ study, chapter, locale }) : studyMeta;
+    // the set reads as near-duplicates. Both builders extend a description
+    // under the SEO floor with facts the page already shows.
+    const meta = chapter
+      ? chapterPageMeta({ study, chapter, locale })
+      : studyPageMeta({ study, locale });
     html = injectPageMeta(html, {
       title: meta.title,
       description: meta.description,
@@ -1150,6 +1187,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/patron',
   '/contribute',
   '/creators',
+  '/washington-xiangqi',
   '/champions',
   '/zh-hans/champions',
   '/zh-hant/champions',

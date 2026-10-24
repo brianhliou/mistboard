@@ -8,6 +8,7 @@
 // keep the two id spaces from colliding. Engines never enter room.clients, so
 // they don't inflate this.
 
+import { isStaleLiveRoom } from './current-games.js';
 import { isGameInPlay } from './deploy-gate.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { registeredVariantTenants } from './variant-tenant/registry.js';
@@ -19,6 +20,10 @@ export interface LiveRoomStats {
   // variant-tenant/reaper-coverage.test.ts), so counting raw status advertised
   // dead rooms on the landing page: prod showed "7 games in play" against 0
   // players online and nothing featurable on TV.
+  // A live room also drops out once its last move is older than its time
+  // class's window (isStaleLiveRoom, the rule /games lists by), so the count
+  // matches the page it links to. Before that, abandoned rapid games stayed in
+  // the count for up to 10 minutes after /games had dropped them at 5.
   playing: number;
   // Per game spec id: rooms counted in `playing` above that also hold at least
   // one connected human in a seat (not a spectator). The homepage's "N playing"
@@ -59,7 +64,8 @@ export function collectLiveRoomStats(
     let inPlay = false;
     if (roomPlaying) {
       playingRoomIds.add(roomId);
-      inPlay = isGameInPlay(room, nowMs);
+      inPlay =
+        isGameInPlay(room, nowMs) && !isStaleLiveRoom(room.timeControl, room.events ?? [], nowMs);
       if (inPlay) playing += 1;
     }
     let seatedHuman = false;
@@ -78,7 +84,9 @@ export function collectLiveRoomStats(
       let inPlay = false;
       if (roomPlaying) {
         playingRoomIds.add(roomId);
-        inPlay = isGameInPlay(room as Parameters<typeof isGameInPlay>[0], nowMs);
+        inPlay =
+          isGameInPlay(room as Parameters<typeof isGameInPlay>[0], nowMs) &&
+          !isStaleLiveRoom(room.projection?.timeControl, room.events ?? [], nowMs);
         if (inPlay) playing += 1;
       }
       let seatedHuman = false;

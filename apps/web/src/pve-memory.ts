@@ -44,3 +44,79 @@ export function rememberPveEngine(gameSpecId: string, engineId: string): void {
     // Storage may be disabled; the next visit simply starts on the first-game rung again.
   }
 }
+
+// The last bot game this device started, whichever path started it: the home
+// panel, a one-click bot start, the setup dialog, or a finished room's play
+// again. The home panel's "Play again" row reads it. It used to keep its own
+// record written only by its own Play button, so a game started anywhere else
+// left the row naming an older one.
+const LAST_BOT_GAME_STORAGE_KEY = 'mistboard:last-bot-game';
+
+export type LastBotGame = {
+  gameSpecId: string;
+  /** A bot id or an engine id; the panel resolves either to its ladder rung. */
+  botId: string;
+  timeControl?: { initialMs: number; incrementMs: number };
+};
+
+function isTimeControl(value: unknown): value is { initialMs: number; incrementMs: number } {
+  const tc = value as { initialMs?: unknown; incrementMs?: unknown } | null;
+  return (
+    !!tc &&
+    typeof tc === 'object' &&
+    typeof tc.initialMs === 'number' &&
+    typeof tc.incrementMs === 'number'
+  );
+}
+
+export function lastBotGame(): LastBotGame | null {
+  try {
+    const raw = window.localStorage.getItem(LAST_BOT_GAME_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<LastBotGame> | null;
+    if (!parsed || typeof parsed.gameSpecId !== 'string' || typeof parsed.botId !== 'string') {
+      return null;
+    }
+    return {
+      gameSpecId: parsed.gameSpecId,
+      botId: parsed.botId,
+      ...(isTimeControl(parsed.timeControl)
+        ? {
+            timeControl: {
+              initialMs: parsed.timeControl.initialMs,
+              incrementMs: parsed.timeControl.incrementMs,
+            },
+          }
+        : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Record a room-create body after the server took it. Anything that is not a
+ *  bot game naming its variant and bot is ignored, so every create path can
+ *  pass its body through without deciding first. */
+export function rememberBotRoomRequest(body: Record<string, unknown>): void {
+  if (body.mode !== 'pve') return;
+  const gameSpecId = typeof body.gameSpecId === 'string' ? body.gameSpecId : body.variant;
+  const botId = typeof body.botId === 'string' ? body.botId : body.engineId;
+  if (typeof gameSpecId !== 'string' || typeof botId !== 'string' || !botId) return;
+  const record: LastBotGame = {
+    gameSpecId,
+    botId,
+    ...(isTimeControl(body.timeControl)
+      ? {
+          timeControl: {
+            initialMs: body.timeControl.initialMs,
+            incrementMs: body.timeControl.incrementMs,
+          },
+        }
+      : {}),
+  };
+  try {
+    window.localStorage.setItem(LAST_BOT_GAME_STORAGE_KEY, JSON.stringify(record));
+  } catch {
+    // Storage may be disabled; the home panel then shows no Play again row.
+  }
+}

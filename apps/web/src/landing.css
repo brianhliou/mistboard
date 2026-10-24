@@ -1147,10 +1147,15 @@
 }
 
 .landing-articles-row .landing-article-card-title {
-  margin: 7px 0 9px;
+  margin: 7px 0 2px;
   padding: 0 9px;
-  font-size: 12.5px;
-  line-height: 1.35;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.landing-articles-row .landing-article-card-date {
+  margin-bottom: 8px;
+  padding: 0 9px;
 }
 
 /* Band 4: the deep-dives row is the blog row's carousel again, in its own
@@ -1254,10 +1259,9 @@
    are rendered at 8:5 so they fill cleanly; raster art is object-fit cover. */
 .landing-article-card-thumb .articles-index-card-thumb {
   /* Own stacking context so chessground's internal piece z-indices
-     (piece = 2, piece.anim = 8) stay contained below the date pill. Without it,
-     no ancestor contains the absolutely-positioned pieces, so they bubble up to
-     the carousel track's stacking context and out-bid the z-index:1 date — the
-     black pieces in the top-left then paint over the date label. */
+     (piece = 2, piece.anim = 8) stay inside the thumbnail. Without it, no
+     ancestor contains the absolutely-positioned pieces, so they bubble up to
+     the carousel track's stacking context and out-bid what sits above it. */
   position: relative;
   z-index: 0;
   width: 100%;
@@ -1295,38 +1299,12 @@
 }
 
 .landing-article-card-date {
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  z-index: 1;
-  padding: 3px 7px 4px;
-  border-radius: var(--site-radius) 0 7px 0;
-  background: color-mix(in srgb, var(--site-panel) 86%, transparent);
-  color: var(--site-text);
-  font-size: 10px;
-  font-weight: 400;
-  line-height: 1.1;
-}
-
-/* The blur sits on a pseudo-element, not on the badge itself. A backdrop-filter
-   element is composited into its own layer, and that layer's rounded clip can
-   land up to a pixel off the card's at fractional device-pixel offsets, which
-   is where the card's right edge lands (left edges hit integer device pixels,
-   which is why only the right-hand corner leaked). With the background painted in the
-   main layer the misregistration is invisible; with background and blur
-   together on the badge it drew a crescent of raw thumbnail around the outer
-   corner. z-index: -1 keeps the pseudo above the badge's own background but
-   below its text; the badge's z-index: 1 already makes it a stacking context.
-   Do not reach for isolation: isolate here, which forms a backdrop root and
-   would limit the blur to the badge's own background in spec-following
-   engines. */
-.landing-article-card-date::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  backdrop-filter: blur(6px);
+  display: block;
+  margin: 0 0 11px;
+  padding: 0 12px;
+  color: var(--site-muted);
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 .landing-article-card-title {
@@ -1341,7 +1319,7 @@
      that clip box past the 2nd line, letting the untruncated 3rd line peek
      through; margin keeps the clamp box exactly two text-lines tall so the
      overflow is clipped cleanly. */
-  margin: 10px 0 13px;
+  margin: 10px 0 3px;
   padding: 0 12px;
   font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
@@ -2679,7 +2657,8 @@
     order: 1;
   }
 
-  .landing-demo .landing-play-panel {
+  .landing-demo .landing-play-panel,
+  .landing-demo .landing-activity {
     order: 2;
   }
 
@@ -2695,11 +2674,6 @@
     order: 5;
   }
 
-  .landing-demo .landing-event-banners {
-    order: 6;
-    margin-top: 0;
-  }
-
   .landing-demo .landing-chat-column {
     order: 7;
   }
@@ -2708,7 +2682,7 @@
      (buildLandingStage `phone`), so they never fetch or poll. This rule only
      keeps the prerendered desktop shell, painted before the script mounts, from
      showing them for a moment, and tidies a desktop mount narrowed past 600px. */
-  .landing-demo .landing-activity,
+  .landing-demo .landing-event-banners,
   .landing-demo .landing-puzzle-column,
   .landing-demo .landing-forum-column,
   .landing-demo .landing-studies-column,
@@ -2894,17 +2868,12 @@
 
   /* Card: the thumbnail carries it, so it gets the width (200px, an 8:5 frame
      125px tall); the title is two lines at most and the date sits under it as
-     plain muted text, never over the art. No star on phones. The thumb drops
-     out of positioning so the date anchors to the card instead, and its
-     overflow clip no longer applies to it. */
+     plain muted text, anchored to the card's bottom so it lines up across one-
+     and two-line titles. No star on phones. */
   .landing-demo .landing-articles-row .landing-article-card {
     position: relative;
     flex: 0 0 200px;
     scroll-snap-align: start;
-  }
-
-  .landing-demo .landing-articles-row .landing-article-card-thumb {
-    position: static;
   }
 
   .landing-demo .landing-articles-row .landing-article-card-title {
@@ -2914,18 +2883,11 @@
   }
 
   .landing-demo .landing-articles-row .landing-article-card-date {
-    top: auto;
+    position: absolute;
     bottom: 7px;
     left: 10px;
+    margin: 0;
     padding: 0;
-    border-radius: 0;
-    background: none;
-    color: var(--site-muted);
-    font-size: 11px;
-  }
-
-  .landing-demo .landing-articles-row .landing-article-card-date::before {
-    content: none;
   }
 
   .landing-demo .landing-articles-row .landing-carousel-nav {

@@ -11,8 +11,8 @@ import type { Article } from '../types.js';
 //
 // Four sites already serve "analyze with Pikafish in a browser" (xiangqiai.com,
 // ai.pikafish.org, xiangqi.freetools.me, pikafish.com's own web build), so the
-// headline is PLAYING it, at a level you choose, and at jieqi, which is rare
-// in a browser. Analysis is one section, worded honestly: finished xiangqi
+// headline originally led with PLAYING it. #597 brings play, browser analysis
+// and the official engine download route into the first screen. Finished xiangqi
 // games are reviewed by Pikafish on the server (xiangqi-analysis.ts,
 // pikafish-xiangqi-analysis pool); the live /analysis board runs Pikafish in
 // the browser (pikafish-ceval.ts, since 2026-09; Fairy-Stockfish before that);
@@ -50,6 +50,9 @@ export const pikafishArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-22',
+  updatedAt: '2026-10-23',
+  updateNote:
+    'Now opens with where to play and analyze Pikafish in your browser, and points to the official download for the engine itself.',
   audience: 'Xiangqi players looking for somewhere to play or analyze with Pikafish.',
   thumbnail: { kind: 'svg', svg: PIKAFISH_THUMBNAIL },
   readNext: ['jieqi-platform', 'skill-vs-luck', 'jieqi-openings'],
@@ -57,23 +60,23 @@ export const pikafishArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.',
-    },
-    {
-      kind: 'paragraph',
-      text:
-        'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.',
+        'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.',
     },
     {
       kind: 'cta',
       buttons: [
         { label: 'Play Pikafish', href: '/bot/pikafish', emphasis: 'primary' },
         {
-          label: 'Play Pikafish at jieqi',
-          href: '/?play=computer&gameSpecId=jieqi',
+          label: 'Analyze with Pikafish',
+          href: '/analysis/xiangqi',
           emphasis: 'secondary',
         },
       ],
+    },
+    {
+      kind: 'paragraph',
+      text:
+        'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads a 51 MB net on first use.',
     },
   ],
   sections: [
@@ -124,6 +127,12 @@ export const pikafishArticle: Article = {
           text:
             '[Jieqi](/rules/jieqi) is xiangqi with every piece face-down. The engine here is PikaJieQi, [our build of Pikafish for the hidden game](https://github.com/brianhliou/pikafish-jieqi-wasm), and it gets the same face-down board you do: a test fails the build if a piece identity ever leaks into what it is sent. [Jieqi on Mistboard](/blog/jieqi-platform) covers the rest.',
         },
+        {
+          kind: 'cta',
+          buttons: [
+            { label: 'Play Pikafish at jieqi', href: '/?play=computer&gameSpecId=jieqi', emphasis: 'secondary' },
+          ],
+        },
       ],
     },
     {
@@ -155,7 +164,12 @@ export const pikafishArticle: Article = {
             {
               question: 'Can I play Pikafish online?',
               answer:
-                'Yes, here, in the browser. One click on the Pikafish page starts a game against it; the play menu offers eight easier levels.',
+                'Yes. Open Play Pikafish to start a game in your browser. The play menu also offers eight easier Fairy-Stockfish levels.',
+            },
+            {
+              question: 'Can I analyze with Pikafish online?',
+              answer:
+                'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 51 MB net loads on first use.',
             },
             {
               question: 'Is it free?',
@@ -163,9 +177,9 @@ export const pikafishArticle: Article = {
                 'Yes. Playing, the ladder, jieqi, game review and the analysis board are all free. An account is optional.',
             },
             {
-              question: 'Do I need to download anything?',
+              question: 'Where can I download Pikafish?',
               answer:
-                'No. The game runs in the page. On a phone, open the site in the browser and play.',
+                'For the engine itself, use the official Pikafish project for releases, source code and setup instructions. To play or analyze on Mistboard, open your browser without installing an app.',
             },
             {
               question: 'How strong is it?',

@@ -34,6 +34,12 @@ export const benedictXiangqiArticle: Article = {
     'We put Benedict Chess’s rule on the xiangqi board: nothing is captured, and every enemy piece your moved piece attacks joins you. The game has no endgame and no draws, and the first mover wins 78% of engine games, nearly all of it from one cannon move. The pie rule looks like the repair.',
   showSummaryOnPage: false,
   status: 'published',
+  method: [
+    'Our own engine in Rust (alpha-beta search with late move reductions and a quiescence search over conversions), because no existing engine plays these rules.',
+    'Engine games from the starting array with no opening book, the two colors taking the first move in turn.',
+    "Every engine game replayed through Mistboard's rule kernel, with the same legal moves at every position.",
+    'Two checks that do not depend on engine strength: 6,000 games of random legal moves, and a proof search of 20.8 billion nodes.',
+  ],
   publishedAt: '2026-10-08',
   audience:
     'Chess variant players who know Benedict Chess, and xiangqi players curious what a conversion rule does to cannons, palaces and the opening.',

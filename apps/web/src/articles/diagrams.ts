@@ -1471,6 +1471,22 @@ export function xqMoveDots(
     .join('');
 }
 
+/** A gold badge with an upward chevron on the piece's upper right: Horde
+ *  Xiangqi's veteran soldier in the sets that have no crossed-soldier art. */
+export function xqVeteranMark(cx: number, cy: number, size: number): string {
+  const r = size * 0.17;
+  const bx = cx + size * 0.34;
+  const by = cy - size * 0.34;
+  const w = r * 0.55;
+  const h = r * 0.3;
+  return [
+    `<g class="xq-veteran-mark" aria-hidden="true">`,
+    `<circle cx="${bx}" cy="${by}" r="${r}" fill="#e3b341" stroke="#3b2a05" stroke-width="1.25"/>`,
+    `<polyline points="${bx - w},${by + h} ${bx},${by - h} ${bx + w},${by + h}" fill="none" stroke="#3b2a05" stroke-width="${Math.max(1.5, r * 0.28)}" stroke-linecap="round" stroke-linejoin="round"/>`,
+    `</g>`,
+  ].join('');
+}
+
 export function xqPiecesLayer(
   state: XiangqiGameState,
   view: XiangqiPlayerView | null,
@@ -1489,6 +1505,8 @@ export function xqPiecesLayer(
       const { file, rank } = xqCoord(sq as XiangqiSquare);
       const { x, y } = xqPoint(file, rank, perspective, x0, y0);
       const size = xqPieceDrawSize();
+      const veteran =
+        !shrouded && veteranSoldiers && piece.role === 'soldier' && piece.color === 'red';
       const pieceSvg = renderXiangqiPieceGlyphed(piece as XiangqiPiece, activeXiangqiPieceSet, {
         x: x - size / 2,
         y: y - size / 2,
@@ -1498,15 +1516,17 @@ export function xqPiecesLayer(
         shroudedStyle,
         // Horde Xiangqi's veteran soldier has the crossed soldier's move from
         // its first step, so it wears the crossed art from rank 1.
-        crossed:
-          !shrouded &&
-          (drawsCrossedSoldier(piece as XiangqiPiece, rank) ||
-            (veteranSoldiers && piece.role === 'soldier' && piece.color === 'red')),
+        crossed: !shrouded && (drawsCrossedSoldier(piece as XiangqiPiece, rank) || veteran),
       });
+      // Only the International set has crossed art, so in every other set a
+      // veteran on its own bank looked like a standard soldier; the chevron is
+      // what tells them apart there. Inside the slot, so it glides with the piece.
+      const mark =
+        veteran && activeXiangqiPieceSet !== 'international' ? xqVeteranMark(x, y, size) : '';
       // Keyed by square, with its centre, so a stepping widget (the article step
       // card, horde-xiangqi-replay.ts) can find the piece that moved and glide
       // it; a static figure ignores it.
-      return pieceSlot(sq, { x, y }, pieceSvg, 'xq-diagram-piece-slot');
+      return pieceSlot(sq, { x, y }, pieceSvg + mark, 'xq-diagram-piece-slot');
     })
     .join('');
 }
@@ -2847,10 +2867,10 @@ export const BANQI_CENTER_X = 0;
 export const BANQI_RIGHT_HALF_W = BANQI_MARGIN * 2 + (BANQI_COLS / 2) * BANQI_CELL;
 export const BANQI_RIGHT_HALF_X0 = -(BANQI_COLS / 2) * BANQI_CELL;
 // The engine-article thumbnail uses the full 8x4 board inside a card canvas
-// close to 16:10. Keep a little extra space above the board so the full board
-// sits slightly low in the image, matching the card's visual weight.
+// close to 16:10, vertically centered. It sat 11 units low while the card's
+// date pill covered the top-left; the date moved under the title (cd25d5fdf).
 export const BANQI_ENGINE_THUMB_H = 270;
-export const BANQI_ENGINE_THUMB_Y = 30;
+export const BANQI_ENGINE_THUMB_Y = (BANQI_ENGINE_THUMB_H - BANQI_BOARD_H) / 2;
 const BANQI_ENGINE_THUMB_PLY = 30;
 
 export type BanqiPieceSpec = {

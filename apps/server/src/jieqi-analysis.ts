@@ -197,7 +197,24 @@ export type JieqiPositionEval = {
   mate: number | null;
   /** Best move in Pikafish UCI (rank 0..9, e.g. "e7a7"); the engine's own dialect. */
   best: string | null;
+  /** Legal public continuation in engine UCI, ending before any hidden identity resolves. */
+  pv?: string[];
 };
+
+/** Never follow an engine's assumed hidden identity into a published continuation. */
+function publicJieqiPv(state: JieqiGameState, pv: readonly string[] = []): string[] {
+  const prefix: string[] = [];
+  for (const uci of pv) {
+    if (state.status.type !== 'playing') break;
+    const move = pikafishUciToJieqiMove(uci);
+    if (!move || isJieqiChanceMove(state, move)) break;
+    const next = applyJieqiMove(state, move);
+    if (next === state) break; // The kernel rejects illegal moves without changing state.
+    prefix.push(uci);
+    state = next;
+  }
+  return prefix;
+}
 
 /**
  * Evaluate a single PLAYING jieqi position with PikaJieQi, normalized to the RED SEAT's POV.
@@ -214,7 +231,7 @@ export async function evaluateJieqiPosition(
   evaluateFen: (
     fen: string,
     opts: JieqiEvalBudget & { moves?: readonly string[] },
-  ) => Promise<{ cp: number | null; mate: number | null; best: string | null }> = evaluateJieqiFen,
+  ) => Promise<JieqiPositionEval> = evaluateJieqiFen,
   repetitionWindow: JieqiRepetitionWindow = {
     fen: jieqiStateToPikafishFen(state, { public: true }),
     moves: [],
@@ -229,10 +246,12 @@ export async function evaluateJieqiPosition(
     movetimeMs: movetimeCapMs,
     moves: repetitionWindow.moves,
   });
+  const pv = publicJieqiPv(state, evaluation.pv);
   return {
     cp: evaluation.cp == null ? null : evaluation.cp * sign,
     mate: evaluation.mate == null ? null : evaluation.mate * sign,
     best: evaluation.best,
+    ...(pv.length ? { pv } : {}),
   };
 }
 
@@ -331,7 +350,14 @@ export async function analyzeJieqiPostgame(
         continue;
       }
       const evaluation = await evaluatePosition(s, repetitionWindows[ply]!);
-      plies.push({ ply, cp: evaluation.cp, mate: evaluation.mate, best: evaluation.best });
+      const pv = publicJieqiPv(s, evaluation.pv);
+      plies.push({
+        ply,
+        cp: evaluation.cp,
+        mate: evaluation.mate,
+        best: evaluation.best,
+        ...(pv.length ? { pv } : {}),
+      });
       if (progress) await progress.save({ nextIndex: ply + 1, items: plies });
     }
     return plies;
@@ -447,7 +473,17 @@ export async function reconcileJieqiSeries(
     // (a stalled or stale binary) would otherwise punch a null into a series that had a
     // perfectly good value, and enough of those drift the whole sweep toward vacuous.
     if (rescored.cp != null || rescored.mate != null) {
-      out[k - 1] = { ...out[k - 1]!, cp: rescored.cp, mate: rescored.mate, best: rescored.best };
+      const replacement = {
+        ...out[k - 1]!,
+        cp: rescored.cp,
+        mate: rescored.mate,
+        best: rescored.best,
+      };
+      // The old line belongs to the old search, including when the new search has no PV.
+      delete replacement.pv;
+      const pv = publicJieqiPv(parentState, rescored.pv);
+      if (pv.length) replacement.pv = pv;
+      out[k - 1] = replacement;
     }
     const after = moverGain(k);
     if (after != null && after > threshold) out[k - 1]!.unstable = true;

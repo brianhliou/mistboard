@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { rememberedPveEngine, rememberPveEngine } from './pve-memory.js';
+import {
+  lastBotGame,
+  rememberBotRoomRequest,
+  rememberedPveEngine,
+  rememberPveEngine,
+} from './pve-memory.js';
 
 const KEY = 'mistboard:setup:pve';
 
@@ -76,5 +81,22 @@ describe('pve-memory', () => {
     restore = () => {};
     expect(rememberedPveEngine('xiangqi')).toBeNull();
     expect(() => rememberPveEngine('xiangqi', 'fairy-stockfish-level-2')).not.toThrow();
+  });
+  it('remembers the last bot game from any room-create body', () => {
+    rememberBotRoomRequest({
+      mode: 'pve',
+      variant: 'dark-chess',
+      engineId: 'misty',
+      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+    });
+    expect(lastBotGame()).toEqual({
+      gameSpecId: 'dark-chess',
+      botId: 'misty',
+      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+    });
+    // A friend room or a body naming no bot leaves the last bot game alone.
+    rememberBotRoomRequest({ mode: 'pvp', gameSpecId: 'xiangqi', engineId: 'x' });
+    rememberBotRoomRequest({ mode: 'pve', gameSpecId: 'xiangqi' });
+    expect(lastBotGame()?.botId).toBe('misty');
   });
 });

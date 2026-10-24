@@ -156,17 +156,56 @@ function agedRoom(
   lastEventAgoMs: number,
   options: { paused?: boolean; daysPerMove?: number } = {},
 ): Room {
+  const timeControl = options.daysPerMove
+    ? {
+        initialMs: options.daysPerMove * 86_400_000,
+        incrementMs: 0,
+        daysPerMove: options.daysPerMove,
+      }
+    : null;
   return {
     clients: new Set<Client>(),
     mode: 'pvp',
     events: [{ at: Date.now() - lastEventAgoMs }],
+    timeControl,
     projection: {
       paused: options.paused ?? false,
       state: { status: { type: 'playing' } },
-      timeControl: options.daysPerMove ? { daysPerMove: options.daysPerMove } : null,
+      timeControl,
     },
   } as unknown as Room;
 }
+
+// A 10+5 (rapid) room whose last move was `lastMoveAgoMs` ago, with a reconnect
+// 30 s ago: recent enough for the deploy gate's 10-minute idle rule to call it
+// in play, which is how an abandoned guest tab looked on prod (2026-10-23).
+function rapidRoom(lastMoveAgoMs: number): Room {
+  const now = Date.now();
+  const timeControl = { initialMs: 600_000, incrementMs: 5_000 };
+  return {
+    clients: new Set<Client>(),
+    mode: 'pve',
+    events: [
+      { type: 'move-played', at: now - lastMoveAgoMs },
+      { type: 'client-joined', at: now - 30_000 },
+    ],
+    timeControl,
+    projection: { paused: false, state: { status: { type: 'playing' } }, timeControl },
+  } as unknown as Room;
+}
+
+test('live-stats drops a live game past the /games stale-move window', async () => {
+  // The homepage "N games in play" links to /games, which stops listing a rapid
+  // game 5 minutes after its last move. The count kept those rooms until the
+  // gate's 10-minute idle cutoff: prod read 6 in play against 2 listed.
+  const stats = await liveStats(
+    new Map<string, Room>([
+      ['moving', rapidRoom(60_000)],
+      ['abandoned', rapidRoom(6 * 60_000)],
+    ]),
+  );
+  assert.equal(stats.playing, 1);
+});
 
 test('live-stats excludes abandoned rooms that no reaper has claimed', async () => {
   const stats = await liveStats(

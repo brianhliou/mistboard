@@ -219,6 +219,21 @@ export async function findUserByEmail(email: string): Promise<UserAccount | null
   return rows[0] ? userFromRow(rows[0]) : null;
 }
 
+// The whole account for a handle (case-insensitive), or null for none or a
+// closed one. The correspondence host route loads the host this way so the seek
+// it posts on the host's behalf goes through the same gates as one he posted.
+export async function findUserByHandle(handle: string): Promise<UserAccount | null> {
+  const { rows } = await getPool().query<UserRow>(
+    `SELECT ${USER_COLUMNS}
+     FROM users
+     WHERE lower(handle) = lower($1)
+       AND closed_at IS NULL
+     LIMIT 1`,
+    [handle],
+  );
+  return rows[0] ? userFromRow(rows[0]) : null;
+}
+
 export async function createUser(user: {
   id: string;
   email: string;

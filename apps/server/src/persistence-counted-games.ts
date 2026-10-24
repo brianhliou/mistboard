@@ -38,22 +38,68 @@ export const MIN_COUNTED_PLIES = 2;
 
 // An excluded seat is a signed-in seat of a stats-excluded account, or a
 // guest seat whose device id belongs to a browser such an account has used
-// (stats_excluded_devices, migration 137). Games alias must be the table
+// (stats_excluded_devices, migration 137). Participants alias must be the
+// game_participants alias in the caller's query.
+export function excludedSeat(participantsAlias: string): string {
+  const p = participantsAlias;
+  return `(
+    (${p}.subject_type = 'user' AND EXISTS (
+      SELECT 1 FROM users xu
+      WHERE xu.id = ${p}.subject_id AND xu.stats_excluded_at IS NOT NULL
+    ))
+    OR (${p}.subject_type = 'guest' AND ${p}.subject_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM stats_excluded_devices xd WHERE xd.device_id = ${p}.subject_id
+    ))
+  )`;
+}
+
+// Some seat in the game is an excluded seat. Games alias must be the table
 // alias in the caller's FROM clause.
 export function excludedSeatExists(gamesAlias: string): string {
   return `EXISTS (
     SELECT 1 FROM game_participants xp
-    WHERE xp.game_id = ${gamesAlias}.room_id
-      AND (
-        (xp.subject_type = 'user' AND EXISTS (
-          SELECT 1 FROM users xu
-          WHERE xu.id = xp.subject_id AND xu.stats_excluded_at IS NOT NULL
-        ))
-        OR (xp.subject_type = 'guest' AND xp.subject_id IS NOT NULL AND EXISTS (
-          SELECT 1 FROM stats_excluded_devices xd WHERE xd.device_id = xp.subject_id
-        ))
-      )
+    WHERE xp.game_id = ${gamesAlias}.room_id AND ${excludedSeat('xp')}
   )`;
+}
+
+// The operator playing a real account: a pvp room where every seat is either
+// an excluded seat or a signed-in account that is not excluded, and at least
+// one seat is the latter. Any bot, engine, imported or guest seat that is not
+// the operator's own browser fails it. Games alias as above.
+export function excludedVersusAccountOnly(gamesAlias: string): string {
+  return `(${gamesAlias}.mode = 'pvp'
+    AND EXISTS (
+      SELECT 1 FROM game_participants ap
+      WHERE ap.game_id = ${gamesAlias}.room_id AND ${countedAccountSeat('ap')}
+    )
+    AND NOT EXISTS (
+      SELECT 1 FROM game_participants op
+      WHERE op.game_id = ${gamesAlias}.room_id
+        AND NOT ${excludedSeat('op')}
+        AND NOT (${countedAccountSeat('op')})
+    ))`;
+}
+
+// The game is left out of the aggregates for its seats. An excluded seat drops
+// the game unless it was people against people and every other seat is a
+// signed-in account that is not excluded: the operator playing a real account
+// is that player's game, and it happened (set 2026-10-23, when the owner
+// became the guaranteed correspondence opponent). The operator against a bot,
+// a guest, another excluded account or his own browser stays out: a guest
+// carries no identity, so it could be the operator testing against himself
+// (Brian, 2026-10-23: "no me vs guest"). Every count below uses this one
+// clause, so the counted and not-counted rows still partition completed human
+// games.
+//
+// A CASE, not an AND: Postgres does not promise to evaluate AND operands in
+// order, and adding excludedVersusAccountOnly took /api/stats/public on prod
+// from 1.4 s to 5 s (2026-10-23), consistent with its two nested seat scans
+// running for every game. CASE evaluates its WHEN first, so those scans run
+// only for the few games that have an excluded seat.
+export function excludedFromStats(gamesAlias: string): string {
+  return `(CASE WHEN ${excludedSeatExists(gamesAlias)}
+    THEN NOT ${excludedVersusAccountOnly(gamesAlias)}
+    ELSE FALSE END)`;
 }
 
 // Finished on or after the launch date.
@@ -66,12 +112,13 @@ export function bothSidesMoved(gamesAlias: string): string {
   return `${gamesAlias}.ply_count >= ${MIN_COUNTED_PLIES}`;
 }
 
-// Completed pvp/pve game since launch, both sides moved, no excluded seat.
+// Completed pvp/pve game since launch, both sides moved, not excluded for its
+// seats (excludedFromStats).
 export function countedHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${sinceLaunch(gamesAlias)}
     AND ${bothSidesMoved(gamesAlias)}
-    AND NOT ${excludedSeatExists(gamesAlias)}`;
+    AND NOT ${excludedFromStats(gamesAlias)}`;
 }
 
 // The public figures (/stats, the homepage counts, the play panel's variant
@@ -143,15 +190,15 @@ export function countedAbortedGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'aborted' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${sinceLaunch(gamesAlias)}
     AND ${humanSeatExists(gamesAlias)}
-    AND NOT ${excludedSeatExists(gamesAlias)}`;
+    AND NOT ${excludedFromStats(gamesAlias)}`;
 }
 
-// Completed pvp/pve game that an excluded account sat in, any date: what the
+// Completed pvp/pve game left out for an excluded seat, any date: what the
 // counts above leave out, reported on /metrics beside bot-vs-bot so the
 // exclusion is visible rather than silent.
 export function internalHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
-    AND ${excludedSeatExists(gamesAlias)}`;
+    AND ${excludedFromStats(gamesAlias)}`;
 }
 
 // Completed pvp/pve game before the launch date with no excluded seat: the
@@ -159,7 +206,7 @@ export function internalHumanGame(gamesAlias = 'g'): string {
 export function preLaunchHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND NOT ${sinceLaunch(gamesAlias)}
-    AND NOT ${excludedSeatExists(gamesAlias)}`;
+    AND NOT ${excludedFromStats(gamesAlias)}`;
 }
 
 // Completed pvp/pve game since launch with no excluded seat that ended before
@@ -169,7 +216,7 @@ export function shortHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${sinceLaunch(gamesAlias)}
     AND NOT ${bothSidesMoved(gamesAlias)}
-    AND NOT ${excludedSeatExists(gamesAlias)}`;
+    AND NOT ${excludedFromStats(gamesAlias)}`;
 }
 
 // A seat with a countable person behind it: a signed-in account that is not

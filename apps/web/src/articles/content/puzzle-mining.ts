@@ -89,6 +89,8 @@ export const puzzleMiningArticle: Article = {
   // stale and stays out; the withheld threshold is AHEAD_CP=300 in
   // scripts/hide-xiangqi-puzzles.mjs (the post's "more than a horse" was wrong).
   updatedAt: '2026-10-07',
+  updateNote:
+    "Added the miner's puzzle ratings, its audit, the licence gate and the withheld class.",
   audience:
     'Developers curious how an automated puzzle pipeline decides what counts as a puzzle, and players who want to know where the puzzles on this site come from.',
   boardFamily: 'xiangqi',

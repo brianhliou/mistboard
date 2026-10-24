@@ -123,7 +123,11 @@
     "title": "Chess960 Starting Positions Ranked By Stockfish",
     "kind": "article",
     "description": "Stockfish 18 rankings for all 960 Chess960/Fischer Random starting positions. Most balanced: SP-418 and SP-563; standard chess is near median.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "Stockfish 对国际象棋960全部开局局面的排名",
+      "zh-hant": "Stockfish 評出的西洋棋960開局局面排名"
+    }
   },
   "choi-co-tuong-voi-may": {
     "title": "Chơi cờ tướng với máy: Pikafish trên Mistboard",
@@ -151,7 +155,11 @@
     "title": "A Dou Shou Qi (Jungle Chess) Engine: Classical Search Beat the Learned Eval",
     "kind": "article",
     "description": "Building an engine for Jungle, also called Animal Chess: alpha-beta search and a hand-written evaluation went 11-2 with 187 draws against the strongest open-source engine I could run. A learned evaluation and a tablebase didn't help.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "斗兽棋引擎：经典搜索胜过学习型评估",
+      "zh-hant": "鬥獸棋引擎：經典搜尋勝過學習式評估"
+    }
   },
   "duck-xiangqi": {
     "title": "Duck Xiangqi Rules",
@@ -187,7 +195,11 @@
     "title": "An En Passant Bug Under Fog",
     "kind": "article",
     "description": "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "迷雾下的一个吃过路兵缺陷",
+      "zh-hant": "迷霧下的一個吃過路兵錯誤"
+    }
   },
   "flip-jungle-skill-ceiling": {
     "title": "Flip Jungle: 512 times the search still loses 23% of games",
@@ -361,7 +373,11 @@
     "title": "Teaching our Jungle Chess engine the den race bought nothing",
     "kind": "article",
     "description": "Misty, our Jungle Chess engine, has no idea of a den race. Three ways to teach it one came back null or negative: races decide 4.7% of games at full strength, and a 12 times deeper search sees the loss a median of one ply sooner.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "教斗兽棋引擎冲兽穴竞速，毫无收获",
+      "zh-hant": "教鬥獸棋引擎衝獸穴競速，毫無收穫"
+    }
   },
   "jungle-flip": {
     "title": "Flip Jungle Rules (Flip Dou Shou Qi)",
@@ -409,7 +425,11 @@
     "title": "Lichess Analysis: What a Million Nodes a Move Buys",
     "kind": "article",
     "description": "Lichess analyses each move at a million nodes, about a second of one core. I re-ran 300 games at twenty times that to see what the budget trades away: the blunders hold, the inaccuracies move.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "Lichess 分析：每着一百万节点换来了什么",
+      "zh-hant": "Lichess 分析：每著一百萬節點換來了什麼"
+    }
   },
   "longest-forced-mates-xiangqi": {
     "title": "The Longest Forced Mates in Xiangqi",
@@ -457,7 +477,11 @@
     "title": "When the Most Played Move Is an Inaccuracy",
     "kind": "article",
     "description": "In 144 of 4,121 common opening positions, the move club players choose most often loses winning chances against the engine at twenty million nodes. Ten of them, with what the masters played in each era, and a study holding all 144.",
-    "status": "published"
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "当最常走的一手其实是不精确",
+      "zh-hant": "當最多人下的著法其實是不精確"
+    }
   },
   "one-thousand-games": {
     "title": "1,000 games played",
@@ -475,8 +499,8 @@
     "description": "Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "皮卡鱼在线：在 Mistboard 上与皮卡鱼对弈",
-      "zh-hant": "皮卡魚線上：在 Mistboard 上與皮卡魚對弈"
+      "zh-hans": "皮卡鱼象棋：在线对弈与分析",
+      "zh-hant": "皮卡魚象棋：線上對弈與分析"
     }
   },
   "pikafish-reveal-bug": {

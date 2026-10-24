@@ -34,6 +34,8 @@ export const banqiArticle: Article = {
   status: 'published',
   publishedAt: '2026-06-15',
   updatedAt: '2026-10-17',
+  updateNote:
+    'The no-progress draw is now 60 plies without a capture or flip, up from 40.',
   audience:
     'Experienced banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
   thumbnail: { kind: 'svg', svg: BANQI_RULES_THUMBNAIL },

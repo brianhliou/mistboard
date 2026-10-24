@@ -124,6 +124,14 @@ export function correspondenceEnabled(): boolean {
   return process.env.MISTBOARD_CORRESPONDENCE_ENABLED === 'true';
 }
 
+// The account that offers itself as a correspondence opponent on /correspondence
+// ("Play Brian"), by handle. Unset or blank: the card is hidden and the host
+// route answers 404. Set 2026-10-23.
+export function correspondenceHostHandle(): string | null {
+  const handle = process.env.MISTBOARD_CORRESPONDENCE_HOST_HANDLE?.trim().replace(/^@/, '');
+  return handle ? handle : null;
+}
+
 // Automated bot-vs-bot (engine-vs-engine) game generation. Server-side opt-in,
 // default off. This gates only GENERATION of EvE games (the in-server scheduler
 // that tops up a backlog of xiangqi EvE tasks for the worker to drain). It is

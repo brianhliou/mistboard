@@ -20,6 +20,22 @@ import type { Article, ArticleBlock } from '../types.js';
 // claim a note or a table makes before it writes the module.
 const EVIDENCE = 'https://github.com/brianhliou/horde-xiangqi';
 
+// The generator keeps one cell per fact (its self-checks index them). The page
+// merges them so the results fit a phone column without scrolling sideways:
+// soldiers and start become one array cell, and the three counts one score.
+const ARRAY_START: Record<string, string> = {
+  'Xiangqi’s five points': 'on xiangqi’s five points',
+  'Parent shape': 'in the parent’s shape',
+};
+
+function resultRows(rows: string[][]): string[][] {
+  return rows.map(([soldiers, start, army, horde, draw, ...rest]) => [
+    `${soldiers} ${ARRAY_START[start!] ?? `on ${start!.replace(/^Ranks/, 'ranks')}`}`,
+    `${army}-${horde}-${draw}`,
+    ...rest,
+  ]);
+}
+
 const RUN_INI = `[hordexiangqi:xiangqi]
 startFen = rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/VVVVVVVVV/VVVVVVVVV/VVVVVVVVV/VVVVVVVVV w - - 0 1
 customPiece1 = v:fsW
@@ -50,8 +66,15 @@ export const hordeXiangqiArticle: Article = {
     'We put Horde on the xiangqi board and measured it before building anything: twelve start arrays, two soldier rules, each played four times by an engine against itself. With xiangqi’s own soldier the army wins every game by one trick; give the soldier the crossed move from the start and the game becomes a siege that draws three times in four. We are publishing the measurement, not the variant.',
   showSummaryOnPage: false,
   status: 'published',
+  method: [
+    "A rule kernel referees every game, after matching the engine's legal moves by perft from each array, on nine hand-built positions and on 300 positions from random play.",
+    'Every array played four times, at 150,000, 200,000, 300,000 and 500,000 nodes a move, with no random openings.',
+    'Node budgets, not time, so nothing depends on the machine.',
+  ],
   publishedAt: '2026-09-15',
   updatedAt: '2026-10-07',
+  updateNote:
+    'Added the full account: the twelve start arrays, both result tables, step-through games and the checks, with four figures corrected against the sample games.',
   audience:
     'Chess players who know Horde and wonder what it does on the xiangqi board, and xiangqi players curious why a variant was measured and then not built.',
   thumbnail: { kind: 'svg', svg: HORDE_XIANGQI_THUMBNAIL },
@@ -78,10 +101,14 @@ export const hordeXiangqiArticle: Article = {
           text: 'The side to move with no legal move loses, as in xiangqi; Lichess Horde calls it a draw, and the terminal rules below say how much that matters. Threefold repetition draws, and so does a run of 60 or 120 plies without a capture. Standard soldiers move as in xiangqi: one point forward, sideways only after crossing the river, never backward. Veteran soldiers have the crossed soldier’s move from their first step. The army’s five soldiers stay standard either way.',
         },
         {
+          kind: 'paragraph',
+          text: 'On the boards below, a veteran wears a gold chevron, so it reads apart from a standard soldier in any piece set. The International set draws it as the crossed soldier instead.',
+        },
+        {
           kind: 'raw-svg',
           svg: HORDE_XIANGQI_START,
           caption:
-            'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward, drawn with the crossed-soldier piece because that is the move they have.',
+            'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward.',
         } as ArticleBlock,
       ],
     },
@@ -146,12 +173,13 @@ export const hordeXiangqiArticle: Article = {
         },
         {
           kind: 'table',
-          headers: ['Soldiers', 'Start', 'Army', 'Horde', 'Draw', '1M game', 'Plies'],
-          rows: HORDE_XIANGQI_STANDARD_ROWS,
+          headers: ['Array', 'Army-Horde-Draw', '1M game', 'Plies'],
+          rows: resultRows(HORDE_XIANGQI_STANDARD_ROWS),
           highlightRows: [7],
           compact: true,
+          wrap: true,
           caption:
-            'Army, Horde and Draw count four games per array at 150,000, 200,000, 300,000 and 500,000 nodes a move, 120-ply clock, every move the engine’s first choice. Then the single game at a million nodes with a 60-ply clock, and its length. Four arrays were played once more at five million nodes: the army won the 36 on ranks 1 to 4 in 156 plies, the 36 on ranks 2 to 5 in 146 and the 32 in 106, and the 36 across the river drew by repetition at 104.',
+            'Army-Horde-Draw counts four games per array at 150,000, 200,000, 300,000 and 500,000 nodes a move, 120-ply clock, every move the engine’s first choice. Then the single game at a million nodes with a 60-ply clock, and its length. Four arrays were played once more at five million nodes: the army won the 36 on ranks 1 to 4 in 156 plies, the 36 on ranks 2 to 5 in 146 and the 32 in 106, and the 36 across the river drew by repetition at 104.',
         } as ArticleBlock,
       ],
     },
@@ -168,12 +196,13 @@ export const hordeXiangqiArticle: Article = {
         },
         {
           kind: 'table',
-          headers: ['Soldiers', 'Start', 'Army', 'Horde', 'Draw', '1M game', 'Plies', 'Army lost'],
-          rows: HORDE_XIANGQI_VETERAN_ROWS,
+          headers: ['Array', 'Army-Horde-Draw', '1M game', 'Plies', 'Lost'],
+          rows: resultRows(HORDE_XIANGQI_VETERAN_ROWS),
           highlightRows: [6],
           compact: true,
+          wrap: true,
           caption:
-            'Four games per array at the same four budgets and the 120-ply clock, then the single game at a million nodes; Army lost counts the army’s pieces lost in that game. *Three million-node games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; no capture followed, and the ply shown is where the clock ended them. Each ended with nine or ten soldiers against a general and both chariots, with an elephant or an advisor beside them in two.',
+            'Four games per array at the same four budgets and the 120-ply clock, then the single game at a million nodes; Lost counts the army’s pieces lost in that game. *Three million-node games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; no capture followed, and the ply shown is where the clock ended them. Each ended with nine or ten soldiers against a general and both chariots, with an elephant or an advisor beside them in two.',
         } as ArticleBlock,
         {
           kind: 'paragraph',

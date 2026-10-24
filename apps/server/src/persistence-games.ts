@@ -2,7 +2,11 @@ import { type Color, TIME_CONTROLS, type TimeClass, type XiangqiColor } from '@m
 import type { MahjongSeat } from '@mistboard/mahjong';
 import { emitAchievementTrigger } from './achievement-triggers.js';
 import { engineVersionDisplayName } from './engine-registry.js';
-import { botEngineAttributions, firstPartyBotForEngine } from './first-party-bots.js';
+import {
+  botEngineAttributions,
+  firstPartyBotForEngine,
+  persistedSeatDisplayName,
+} from './first-party-bots.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import { scheduledEngineGame } from './persistence-game-data.js';
 import type {
@@ -1675,6 +1679,7 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
     subject_id: string | null;
     display_name: string;
     visibility: GameVisibility;
+    engine_id: string | null;
     engine_version: string | null;
     elo_before: number | null;
     elo_after: number | null;
@@ -1686,6 +1691,7 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
     `SELECT game_participants.game_id, game_participants.color,
             game_participants.subject_type, game_participants.subject_id,
             game_participants.display_name, game_participants.visibility,
+            game_participants.engine_id,
             game_participants.engine_version, game_participants.elo_before,
             game_participants.elo_after, users.handle
      FROM game_participants
@@ -1703,7 +1709,15 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
   for (const row of rows) {
     const participant: GameParticipant = {
       color: row.color,
-      displayName: row.display_name,
+      // A bot seat stored with its bare profile name before the writers named the
+      // rung gets the live seat name back from its engine id. The engine id itself
+      // stays server-side: it is not added to the participant shape.
+      displayName: persistedSeatDisplayName({
+        displayName: row.display_name,
+        subjectType: row.subject_type,
+        subjectId: row.subject_id,
+        engineId: row.engine_id,
+      }),
       subjectType: row.subject_type,
       // A guest's subject id is the browser's device id (migration 137): an
       // aggregate key, never something to hand back to a browser, where it

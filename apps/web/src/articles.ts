@@ -18,6 +18,7 @@ import {
 import { track } from './analytics.js';
 import { LANGUAGE_ENDONYMS, languagePartnersOf } from './articles/language-pairs.js';
 import { articleIsLive } from './articles/publish-time.js';
+import { articleMadeWithNote, hasSiteByline, SITE_AUTHOR } from './articles/site-author.js';
 import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
 import './articles.css';
@@ -718,20 +719,15 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
     thumb.classList.add('is-empty');
   }
 
-  // Date pill overlaid on the thumbnail, lichess blog-card style.
-  const dateIso = article.publishedAt ?? article.updatedAt;
-  if (dateIso) {
-    const date = document.createElement('span');
-    date.className = 'landing-article-card-date';
-    date.textContent = formatCardDate(dateIso, locale);
-    thumb.append(date);
-  }
-
   const title = document.createElement('strong');
   title.className = 'landing-article-card-title';
   title.textContent = localized.cardTitle ?? localized.title;
 
   link.append(thumb, title);
+  // The date sits under the title as muted text, never over the art, so a
+  // thumbnail needs no empty corner for it.
+  const dateIso = article.publishedAt ?? article.updatedAt;
+  if (dateIso) link.append(landingCardDate(dateIso, locale));
   return link;
 }
 
@@ -755,17 +751,19 @@ function landingAnnouncementCard(announcement: Announcement, locale: Locale): HT
   icon.append(buildUiIcon(uiIconForAnnouncementKind(announcement.kind)));
   thumb.append(icon);
 
-  const date = document.createElement('span');
-  date.className = 'landing-article-card-date';
-  date.textContent = formatCardDate(announcement.date, locale);
-  thumb.append(date);
-
   const title = document.createElement('strong');
   title.className = 'landing-article-card-title';
   title.textContent = localizeAnnouncementString(announcement.headline, locale);
 
-  link.append(thumb, title);
+  link.append(thumb, title, landingCardDate(announcement.date, locale));
   return link;
+}
+
+function landingCardDate(iso: string, locale: Locale): HTMLElement {
+  const date = document.createElement('span');
+  date.className = 'landing-article-card-date';
+  date.textContent = formatCardDate(iso, locale);
+  return date;
 }
 
 function formatCardDate(iso: string, locale: Locale): string {
@@ -950,6 +948,35 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     nameEl.append(name);
     byline.append(nameEl);
     metaRow.append(byline);
+  } else if (hasSiteByline(article)) {
+    // Everything Mistboard publishes as an article has a person behind it; the
+    // name links to the About section that says who he is and how the pages
+    // are made. Rules pages are reference documents and stay unsigned.
+    const byline = document.createElement('span');
+    byline.className = 'article-meta-byline';
+    byline.append(`${t('articles.by', {}, locale)} `);
+    const nameEl = document.createElement('a');
+    nameEl.href = localizedHref(SITE_AUTHOR.href, locale);
+    nameEl.className = 'article-meta-author';
+    const name = document.createElement('span');
+    name.className = 'article-meta-author-name';
+    name.textContent = SITE_AUTHOR.name;
+    nameEl.append(name);
+    byline.append(nameEl);
+    // How the text was made sits with who made it (the brianhliou.com
+    // post-drafted note). A zh rendering also says it is a machine translation.
+    const madeWith = articleMadeWithNote(base, articleLang);
+    if (madeWith) {
+      const note = document.createElement('span');
+      note.className = 'article-meta-drafted';
+      note.textContent = t(
+        madeWith === 'drafted' ? 'articles.draftedWithClaude' : 'articles.draftedTranslated',
+        {},
+        locale,
+      );
+      byline.append(' · ', note);
+    }
+    metaRow.append(byline);
   }
   if (article.publishedAt) {
     const dates = document.createElement('span');
@@ -981,6 +1008,23 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     metaRow.append(link);
   }
   if (metaRow.childElementCount > 0) header.append(metaRow);
+
+  // What the update on the meta row's "Updated" date changed. The note text is
+  // authored in English and stays English on a translation unless the
+  // dictionary carries it; the label is chrome and follows the locale.
+  if (article.updateNote && article.updatedAt && article.updatedAt !== article.publishedAt) {
+    const updateNote = document.createElement('p');
+    updateNote.className = 'article-update-note';
+    const label = document.createElement('span');
+    label.className = 'article-update-note-label';
+    label.textContent = t('articles.updateNote', {}, locale);
+    const text = document.createElement('span');
+    text.className = 'article-update-note-text';
+    if (articleLang) text.lang = article.updateNote === base.updateNote ? 'en' : articleLang;
+    text.textContent = article.updateNote;
+    updateNote.append(label, ' ', text);
+    header.append(updateNote);
+  }
 
   const showSummaryOnPage = article.showSummaryOnPage ?? true;
   if (showSummaryOnPage) {
@@ -1026,6 +1070,27 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     }
     tldr.append(tldrHeading, tldrList);
     sheet.append(tldr);
+  }
+
+  // A data post's method, restated from its own text, so a reader can judge
+  // the numbers before reading them.
+  if (article.method && article.method.length > 0) {
+    const method = document.createElement('aside');
+    method.className = 'article-method';
+    const methodHeading = document.createElement('strong');
+    methodHeading.className = 'article-method-heading';
+    methodHeading.textContent = t('articles.method', {}, locale);
+    const methodList = document.createElement('ul');
+    methodList.className = 'article-method-list';
+    article.method.forEach((line, index) => {
+      const li = document.createElement('li');
+      // A line the zh dictionary does not carry yet renders in English.
+      li.lang = articleLang && line === base.method?.[index] ? 'en' : contentLang;
+      appendRichText(li, line);
+      methodList.append(li);
+    });
+    method.append(methodHeading, methodList);
+    sheet.append(method);
   }
 
   if (article.intro && article.intro.length > 0) {
@@ -1137,12 +1202,13 @@ type BlogArticle = Extract<Article, { kind: 'article' }>;
 // current post: every post gets a distinct trio and it reads as "the posts
 // either side of this one".
 //
-// No topic weighting, deliberately. `boardFamily` is the obvious candidate and
-// it is the wrong field: it selects which appearance pickers an article shows,
-// so it is set on the banqi engine write-up and unset on the xiangqi champions
-// list. Ranking by it demoted a xiangqi article below a banqi one on a xiangqi
-// page. A real topic signal needs a field that means topic; until the schema has
-// one, recency is the honest answer.
+// The ring keeps to the post's own kind first: an engineering post's footer
+// offers engineering posts and a player post's offers player posts, and the
+// other kind fills only when one runs short. `topic` is that field.
+// `boardFamily` is not a topic signal: it selects which appearance pickers an
+// article shows, so it is set on the banqi engine write-up and unset on the
+// xiangqi champions list, and ranking by it demoted a xiangqi article below a
+// banqi one on a xiangqi page.
 function relatedArticles(article: BlogArticle): BlogArticle[] {
   // A content-language page walks its OWN language's ring. `isArticleListedInThisEnv`
   // rejects everything with `sourceLang` set, so an unqualified pool leaves a
@@ -1180,7 +1246,9 @@ function relatedArticles(article: BlogArticle): BlogArticle[] {
     { length: ordered.length - 1 },
     (_, i) => ordered[(start + 1 + i) % ordered.length]!,
   ).filter((candidate) => !chosenSlugs.has(candidate.slug));
-  return [...chosen, ...ring].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
+  const sameTopic = ring.filter((candidate) => candidate.topic === article.topic);
+  const otherTopic = ring.filter((candidate) => candidate.topic !== article.topic);
+  return [...chosen, ...sameTopic, ...otherTopic].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
 }
 
 // Left rail on rules surfaces (pychess variant-page grammar): every listed
@@ -2716,14 +2784,6 @@ function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
     thumb.classList.add('is-empty');
   }
 
-  const dateIso = article.publishedAt ?? article.updatedAt;
-  if (dateIso) {
-    const date = document.createElement('span');
-    date.className = 'articles-index-card-over-image articles-index-card-date';
-    date.textContent = formatCardDate(dateIso, locale);
-    thumb.append(date);
-  }
-
   if (isArticleStatusBadge(article.status)) {
     const badge = document.createElement('span');
     badge.className = `article-status-badge article-status-${article.status} articles-index-card-status`;
@@ -2743,6 +2803,14 @@ function articleCard(baseArticle: Article, lang?: ArticleLang): HTMLLIElement {
   summary.textContent = article.summary;
 
   body.append(title, summary);
+  // Under the summary, not over the thumbnail, so the art keeps its corner.
+  const dateIso = article.publishedAt ?? article.updatedAt;
+  if (dateIso) {
+    const date = document.createElement('span');
+    date.className = 'articles-index-card-date';
+    date.textContent = formatCardDate(dateIso, locale);
+    body.append(date);
+  }
 
   link.append(thumb, body);
   item.append(link);

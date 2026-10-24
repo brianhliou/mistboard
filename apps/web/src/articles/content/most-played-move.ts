@@ -48,8 +48,16 @@ export const mostPlayedMoveArticle: Article = {
     'In 144 of 4,121 common opening positions, the move club players choose most often loses winning chances against the engine at twenty million nodes. Ten of them, with what the masters played in each era, and a study holding all 144.',
   showSummaryOnPage: false,
   status: 'published',
+  method: [
+    'Positions from the Lichess opening explorer at 1600 to 2200, blitz, rapid and classical: every position to 14 plies with at least 500,000 games.',
+    'Stockfish 18 at 20,000,000 nodes, MultiPV 3, one search per position.',
+    "A miss is a gap of 0.1 or more in winning chances between the most played move and the engine's best, by lila's formula.",
+    'Every flagged position searched again on a different machine under the same rule; 144 of 168 held.',
+  ],
   publishedAt: '2026-09-21',
   updatedAt: '2026-10-15',
+  updateNote:
+    'Corrected the number of positions where the club or engine move is a capture: four, not six.',
   thumbnail: {
     pieces: boardToPieces(KINGS_GAMBIT_D6.board),
     orientation: 'white',

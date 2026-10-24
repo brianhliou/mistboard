@@ -68,6 +68,10 @@ export const ZH_HANS_CONTENT = {
   'articles.status.draft': '草稿',
   'articles.status.outline': '大纲',
   'articles.tldr': '概要',
+  'articles.method': '我们如何测量',
+  'articles.updateNote': '更新内容：',
+  'articles.draftedWithClaude': '与 Claude 合写',
+  'articles.draftedTranslated': '与 Claude 合写 · 由英文机器翻译',
   'articles.readNext': '接着读',
   'articles.playThisGame': '下{game}',
   'articles.playVsComputer': '和电脑对弈',
@@ -155,6 +159,13 @@ export const ZH_HANS_CONTENT = {
   'about.openSourceMiddle':
     '。你可以查看游戏如何运行、贡献改进，也可以基于代码继续开发。玩家、教师和引擎作者都能参与塑造 Mistboard 的未来。许可和第三方鸣谢见 ',
   'about.openSourceSuffix': '。',
+  'about.whoHeading': '谁在打造 Mistboard',
+  'about.whoBody':
+    'Brian H. Liou 借助一套 AI 智能体系统设计、开发并运营 Mistboard，从游戏服务器、Mistboard 自研引擎，到赛事直播和文章。此前，他在亚马逊和 DoorDash 工作了五年，从事大规模分布式系统和增长工程。他创办 Mistboard，是为了通过中国象棋与原创策略游戏，让不同文化背景的人走到一起。',
+  'about.whoSitePrefix': '他的网站：',
+  'about.articlesHeading': '文章如何写成',
+  'about.articlesBody':
+    '文章与 Claude 合写，并由 Brian 对照文中引用的对局、引擎运行和资料逐一核实。中文页面由英文机器翻译。',
   'stats.heading': '统计',
   'stats.lede':
     '这里的对局量。计入人与人或人与引擎之间已完成的对局；引擎对引擎的比赛和测试对局不计入。',

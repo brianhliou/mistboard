@@ -12,6 +12,7 @@
 // (head term 迷雾国际象棋 / 迷霧國際象棋 validated against the zh chess-variant
 // community; Traditional carries the Taiwan lexical forks, not a glyph conversion).
 import { hasOwnKey } from '@mistboard/game';
+import { MOVED_POSTS_ZH_HANS, MOVED_POSTS_ZH_HANT } from './article-i18n-moved-posts.js';
 import { endgamePageDictionary } from './articles/xiangqi-endgames-text.js';
 import type { Article } from './articles-data.js';
 import { contentLocalePrefix, type Locale, localizedHref } from './i18n/locale.js';
@@ -33,6 +34,18 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Moved from brianhliou.com on 2026-10-15/16 in English, their zh pairs
+  // dropped and the slugs exempted as "not yet translated" (which is what the
+  // backlog check on UNTRANSLATED_ARTICLE_SLUGS now refuses). Restored
+  // 2026-10-24: sentences reused from the brianhliou.com zh-hans and zh-hant
+  // versions where they still say what the moved English says, the rest
+  // machine-drafted; not native-reviewed.
+  'en-passant-under-fog',
+  'most-played-move',
+  'chess960-starting-positions',
+  'lichess-analysis-accuracy',
+  'dou-shou-qi-engine',
+  'jungle-den-term',
   // Machine-drafted 2026-10-21, not native-reviewed, from the English signed
   // off that day. Terms follow longest-forced-mates-xiangqi and helpmates (困毙 /
   // 困斃 for xiangqi stalemate, 逼和 for chess's, 半回合 a ply, 合作杀 / 合作殺),
@@ -205,7 +218,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 // Every published article is in TRANSLATED_ARTICLE_SLUGS or here, and
 // article-i18n.coverage.test.ts fails one in neither: an opt-in list alone let
 // fortress-and-atomic-xiangqi-on-hold go live on 2026-10-13 with English zh
-// pages and every test green.
+// pages and every test green. A reason says why a page has no zh, never that
+// its zh is late: "not yet translated" fails the same test (six moved posts
+// sat here that way from 2026-10-15 to 10-24).
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
   mahjong:
     'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
@@ -216,16 +231,6 @@ export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
   'co-up': 'Vietnamese copy of jieqi-platform, whose zh pages exist.',
   'khai-cuoc-co-up': 'Vietnamese copy of jieqi-openings, whose zh pages exist.',
   'lai-ly-huynh-co-tuong': 'Vietnamese copy of lai-ly-huynh, whose zh pages exist.',
-  // Chess posts moved from brianhliou.com on 2026-10-15 with their original dates;
-  // their old zh pairs were dropped, so zh waits for a translation of the moved text.
-  'en-passant-under-fog': 'Moved from brianhliou.com in English; not yet translated.',
-  'most-played-move': 'Moved from brianhliou.com in English; not yet translated.',
-  'chess960-starting-positions': 'Moved from brianhliou.com in English; not yet translated.',
-  // The last chess post, moved on 2026-10-16 and reframed on the way.
-  'lichess-analysis-accuracy': 'Moved from brianhliou.com in English; not yet translated.',
-  // The Dou Shou Qi engine post, moved on 2026-10-16.
-  'dou-shou-qi-engine': 'Moved from brianhliou.com in English; not yet translated.',
-  'jungle-den-term': 'Moved from brianhliou.com in English; not yet translated.',
 };
 
 const TRANSLATED_ARTICLE_SLUG_SET = new Set<string>(TRANSLATED_ARTICLE_SLUGS);
@@ -3598,8 +3603,8 @@ const ZH_HANS: Record<string, string> = {
   'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.':
     '许银川对阮武君，2007年，出自他三个冠军中的最后一个。我们的引擎给他打出98.5分，是本页最干净的一局。',
   'Zhao Xinxin 赵鑫鑫, 2009': '赵鑫鑫，2009',
-  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
-    '浙江台州人，2007年十九岁夺得全国冠军，2009年二十一岁夺得世界冠军，九局拿下十五分。他至今仍是拿下这个头衔最年轻的棋手，而这一冠也让他集齐全国、亚洲与世界三项冠军，中国象棋界称之为大满贯。',
+  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. Taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
+    '浙江台州人，2007年十九岁夺得全国冠军，2009年二十一岁夺得世界冠军，九局拿下十五分。这一冠让他集齐全国、亚洲与世界三项冠军，中国象棋界称之为大满贯。',
   'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.':
     '2025年1月12日，他在一次处罚四十一人的决定中被终身禁赛。',
   'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.':
@@ -4896,8 +4901,8 @@ const ZH_HANS: Record<string, string> = {
     '我们把部落棋搬到象棋棋盘上，先测量再动手：十二种开局阵形、两种兵的走法，每一种由引擎自战四局。用象棋自己的兵，全军靠同一招赢下每一局；让兵从开局起就有过河兵的走法，棋局则变成四局里有三局和棋的围城。我们发布的是这份测量，而不是这个变体。',
   'Horde chess is 36 pawns and no king against a normal army; the pawns win by checkmate, the army by taking the last pawn. Lichess has played it since 2015. We put the same idea on the xiangqi board: Red has soldiers only and no general, Black has the standard army, and everything else is xiangqi. Then we measured it before designing anything.':
     '部落棋是 36 个兵、没有王，对阵正常的一军；兵靠将死取胜，全军靠吃掉最后一个兵取胜。Lichess 从 2015 年起就有它。我们把同样的想法搬到象棋棋盘上：红方只有兵、没有将，黑方是标准全军，其他一切照象棋。然后在设计任何东西之前先做了测量。',
-  'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward, drawn with the crossed-soldier piece because that is the move they have.':
-    '原版阵形配标准兵，以及我们找到的最接近一盘棋的设计：36 个老兵前移一行，用过河兵的棋子图案画出，因为那正是它们的走法。',
+  'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward.':
+    '原版阵形配标准兵，以及我们找到的最接近一盘棋的设计：36 个老兵前移一行。',
   'Standard soldiers: the chariot eats the horde from behind': '标准兵：车从背后吃光兵团',
   'Veteran soldiers: the horde holds, and the siege is a draw': '老兵：兵团守得住，围城是和棋',
   'The rule kernel with both soldier rules and all twelve arrays, the Fairy-Stockfish stanzas, all 387 engine games, the checks behind them, and a verifier that replays every game against the rules and recomputes the tallies in half a minute, with no engine needed. If you have a soldier rule that gives the block cover on the way, that is where the next attempt starts; open an issue there and the write-up will say so.':
@@ -4968,6 +4973,8 @@ const ZH_HANS: Record<string, string> = {
     '国际象棋的部落棋（Horde）是它的母版：36 个兵、没有王，对抗正常的一方军队。这次移植尽量保留象棋本身的规则。红方是兵团：只有兵，没有帅，红方先行。黑方是标准全军。红方靠将死取胜；黑方靠吃掉红方所有子取胜。由于棋盘上只有一个将，兵团一方不存在被将，也不存在白脸将。',
   'The side to move with no legal move loses, as in xiangqi; Lichess Horde calls it a draw, and the terminal rules below say how much that matters. Threefold repetition draws, and so does a run of 60 or 120 plies without a capture. Standard soldiers move as in xiangqi: one point forward, sideways only after crossing the river, never backward. Veteran soldiers have the crossed soldier’s move from their first step. The army’s five soldiers stay standard either way.':
     '轮到行棋而无合法着法的一方判负，与象棋相同；Lichess 的部落棋判为和棋，下面的终局规则一节会说明这有多大影响。三次重复局面判和；连续 60 或 120 步无吃子也判和。标准兵走法与象棋相同：向前一格，过河后才能横走，永不后退。老兵从第一步起就有过河兵的走法。无论哪种设定，全军一方的五个兵都是标准兵。',
+  'On the boards below, a veteran wears a gold chevron, so it reads apart from a standard soldier in any piece set. The International set draws it as the crossed soldier instead.':
+    '下面的棋图里，老兵带一个金色的向上箭头标记，在任何棋子样式下都能和标准兵区分开。国际棋子样式则直接把它画成过河兵。',
   'The design space': '设计空间',
   'Five dials. A design is a soldier rule and a start array, and twenty-four were played.':
     '五个旋钮。一种设计由一种兵的走法和一种初始阵形构成，我们下了二十四种。',
@@ -4998,37 +5005,36 @@ const ZH_HANS: Record<string, string> = {
   'Black wins: the last soldier is gone.': '黑方胜：最后一个兵也没了。',
   'The other three arrays are one exception: enough soldiers get across before the chariot is done. 45 on ranks 1 to 5 is a five-deep block, and its four games split two army wins, one horde mate and one draw. The two arrays that start across the river begin in contact with the army’s soldiers. The 27 still loses; the 36 is a coin flip that skips the march and previews the veteran game.':
     '另外三种阵形是同一个例外：在车做完这件事之前，有足够多的兵过了河。第 1 至 5 线的 45 兵是五层深的兵阵，四局结果是全军两胜、兵团将死一局、和棋一局。两种从过河处起始的阵形一开局就与全军的兵短兵相接。27 兵仍然要输；36 兵则是五五开，它跳过了行军阶段，预演了老兵版的棋局。',
-  Soldiers: '兵数',
-  Start: '起始',
-  Army: '全军',
-  Horde: '兵团',
+  Array: '阵形',
+  'Army-Horde-Draw': '全军-兵团-和',
+  Lost: '损失',
   '1M game': '百万节点局',
   Plies: '步数',
-  'Ranks 1-2': '第 1-2 线',
+  '18 on ranks 1-2': '第 1-2 线 18 兵',
   'Army, extinction': '全军，全灭',
-  'Ranks 3-4': '第 3-4 线',
-  'Ranks 1-3': '第 1-3 线',
-  'Ranks 2-4': '第 2-4 线',
-  'Ranks 4-6': '第 4-6 线',
-  'Ranks 1-4': '第 1-4 线',
-  'Ranks 2-5': '第 2-5 线',
-  'Ranks 3-6': '第 3-6 线',
+  '18 on ranks 3-4': '第 3-4 线 18 兵',
+  '27 on ranks 1-3': '第 1-3 线 27 兵',
+  '27 on ranks 2-4': '第 2-4 线 27 兵',
+  '27 on ranks 4-6': '第 4-6 线 27 兵',
+  '36 on ranks 1-4': '第 1-4 线 36 兵',
+  '36 on ranks 2-5': '第 2-5 线 36 兵',
+  '36 on ranks 3-6': '第 3-6 线 36 兵',
   'Horde, mate': '兵团，将死',
-  'Ranks 1-5': '第 1-5 线',
-  'Xiangqi’s five points': '象棋的五个兵位',
-  'Parent shape': '母版形状',
-  'Army, Horde and Draw count four games per array at 150,000, 200,000, 300,000 and 500,000 nodes a move, 120-ply clock, every move the engine’s first choice. Then the single game at a million nodes with a 60-ply clock, and its length. Four arrays were played once more at five million nodes: the army won the 36 on ranks 1 to 4 in 156 plies, the 36 on ranks 2 to 5 in 146 and the 32 in 106, and the 36 across the river drew by repetition at 104.':
-    '全军、兵团、和棋三栏统计每种阵形的四局，每着 150,000、200,000、300,000 和 500,000 节点，120 步无吃子限制，每着都取引擎首选。之后是每着一百万节点、60 步限制下的单局及其步数。有四种阵形在每着五百万节点下又下了一局：全军在 156 步赢下第 1 至 4 线的 36 兵，在 146 步赢下第 2 至 5 线的 36 兵，在 106 步赢下 32 兵；过河起始的 36 兵在第 104 步因重复局面和棋。',
+  '45 on ranks 1-5': '第 1-5 线 45 兵',
+  '32 on xiangqi’s five points': '象棋五个兵位 32 兵',
+  '31 in the parent’s shape': '母版形状 31 兵',
+  '40 in the parent’s shape': '母版形状 40 兵',
+  'Army-Horde-Draw counts four games per array at 150,000, 200,000, 300,000 and 500,000 nodes a move, 120-ply clock, every move the engine’s first choice. Then the single game at a million nodes with a 60-ply clock, and its length. Four arrays were played once more at five million nodes: the army won the 36 on ranks 1 to 4 in 156 plies, the 36 on ranks 2 to 5 in 146 and the 32 in 106, and the 36 across the river drew by repetition at 104.':
+    '全军-兵团-和一栏统计每种阵形的四局，每着 150,000、200,000、300,000 和 500,000 节点，120 步无吃子限制，每着都取引擎首选。之后是每着一百万节点、60 步限制下的单局及其步数。有四种阵形在每着五百万节点下又下了一局：全军在 156 步赢下第 1 至 4 线的 36 兵，在 146 步赢下第 2 至 5 线的 36 兵，在 106 步赢下 32 兵；过河起始的 36 兵在第 104 步因重复局面和棋。',
   'The chariot’s road exists because a standard soldier attacks nothing beside it, and xiangqi already has a soldier that does: the crossed soldier, which moves and captures one point forward or sideways. Veteran soldiers are a horde that starts promoted. Every horde soldier has that move from its first step, nothing else changes, and a player learns nothing new.':
     '车之所以有路可走，是因为标准兵不攻击身旁任何一格，而象棋里本来就有一种能做到的兵：过河兵，可向前或横向一格行走与吃子。老兵就是一开始就已经升变的兵团。兵团的每个兵从第一步起就有这种走法，其余一切不变，玩家不需要学任何新东西。',
   'This closes the road. A veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side, and between equals the game becomes a siege: 48 games, 37 draws. The army wins only against 18 soldiers, and from 27 up it never wins.':
     '这条路被堵死了。老兵纵队会攻击身旁各格，车没法白站在它旁边。兵团成了真正的一方，而在实力相当的双方之间，棋局变成围城：48 局，37 和。全军只赢得了对 18 兵的局，从 27 兵往上它一局不胜。',
-  'Army lost': '全军损失',
   'Draw, clock': '和棋，步数限制',
   'Horde, smother': '兵团，困毙',
   'Draw, repetition': '和棋，重复局面',
-  'Four games per array at the same four budgets and the 120-ply clock, then the single game at a million nodes; Army lost counts the army’s pieces lost in that game. *Three million-node games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; no capture followed, and the ply shown is where the clock ended them. Each ended with nine or ten soldiers against a general and both chariots, with an elephant or an advisor beside them in two.':
-    '每种阵形在同样的四档预算、120 步限制下各下四局，然后是一百万节点下的单局；全军损失一栏统计全军在那一局里损失的子力。*有三局一百万节点对局撞上了测试框架的 1,000 步上限，之后从该局面继续下，步数限制照常生效；之后未再出现吃子，表中所示步数即为步数限制终止之处。三局结束时都是九或十个兵对将加双车，其中两局还多一个象或一个士。',
+  'Four games per array at the same four budgets and the 120-ply clock, then the single game at a million nodes; Lost counts the army’s pieces lost in that game. *Three million-node games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; no capture followed, and the ply shown is where the clock ended them. Each ended with nine or ten soldiers against a general and both chariots, with an elephant or an advisor beside them in two.':
+    '每种阵形在同样的四档预算、120 步限制下各下四局，然后是一百万节点下的单局；损失一栏统计全军在那一局里损失的子力。*有三局一百万节点对局撞上了测试框架的 1,000 步上限，之后从该局面继续下，步数限制照常生效；之后未再出现吃子，表中所示步数即为步数限制终止之处。三局结束时都是九或十个兵对将加双车，其中两局还多一个象或一个士。',
   '**The ending.** The horde marches, takes the army’s cannons and elephants on the way in, and arrives at the palace to find a general with two chariots waiting. From there the soldiers cannot force their way past the chariots, and the chariots cannot eat a block of soldiers that guard each other. Start rank and shape decide how much of the army the horde takes on the way in, and nothing else. The parent’s 31 shows the other face of the same rule: its four games drew at 155 to 245 plies with never more than two soldiers across the river, because a block that has not moved cannot be attacked and a block that moves loses the soldier that moved.':
     '**终局形态。**兵团行军推进，路上吃掉全军的炮和相，抵达九宫时发现将和两只车在那里等着。到了这一步，兵冲不过车，车也吃不动互相保护的兵阵。起始横线和形状只决定兵团在路上能吃掉全军多少子，别无其他。母版的 31 兵展示了同一条规则的另一面：四局在 155 至 245 步和棋，过河的兵从未超过两个，因为没动过的兵阵无法被攻击，而一动就要丢掉动过的那个兵。',
   'The ending, here from the 40-soldier array at a million nodes a move: twelve soldiers against a general, an advisor and two chariots at ply 754. The soldiers cannot force a way past the chariots, and the chariots take a soldier only when one steps out of the block: two in the next 246 plies, at 822 and 896.':
@@ -5338,17 +5344,23 @@ const ZH_HANS: Record<string, string> = {
   'Banqi is a folk game and the rules differ by region. Three families are common. Taiwanese rules use the ladder above and a cannon that captures by jumping one screen. Hong Kong rules rank the pieces general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder. Mainland rules usually have no jumping cannon at all: it captures adjacent pieces by rank like everything else.':
     '暗棋是民间棋戏，各地规则不同，常见的有三种。台湾规则用本页的大小顺序，炮隔一子跳吃。香港规则的大小是将、车、马、炮、士、象、卒，炮在等级序列里面。中国大陆的规则通常没有跳吃的炮：炮和其他棋子一样按等级吃相邻的棋子。',
   // pikafish (2026-09-21, machine-drafted, not native-reviewed). Mainland wording on purpose: 在线, 网页版, 人机, 账号, 服务器 are the words the Bing corpus uses.
-  'Pikafish on Mistboard': '皮卡鱼在线：在 Mistboard 上与皮卡鱼对弈',
+  'Pikafish on Mistboard': '皮卡鱼象棋：在线对弈与分析',
+  'Now opens with where to play and analyze Pikafish in your browser, and points to the official download for the engine itself.':
+    '开头改为说明如何在浏览器中与皮卡鱼对弈和分析，并指向引擎的官方下载。',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
-    '皮卡鱼象棋在线对弈：象棋和揭棋，免费网页版',
+    '皮卡鱼象棋在线：免费对弈、分析与引擎下载指引',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    '在浏览器里直接与开源象棋引擎皮卡鱼对弈，它由 Stockfish 改造而来。免费、不用注册、不用下载。可选难度等级，可下揭棋，还能用它复盘你的对局。',
+    '皮卡鱼象棋在线免费对弈，免注册、免安装；在浏览器里用皮卡鱼分析局面、导入棋谱。想下载引擎？这里也有皮卡鱼官方项目入口与安装说明指引。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     '想找地方与皮卡鱼对弈或用它分析的象棋棋手。',
-  '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
-    '[皮卡鱼（Pikafish）](https://github.com/official-pikafish/Pikafish) 是目前最强的开源象棋引擎，由 Stockfish 改造而来。多数人要先下载引擎，再配一个界面才能用。在这里，它直接在网页里运行。',
-  'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    '可以直接挑战皮卡鱼本尊，也可以从八级人机阶梯的低级别开始；可以和它下揭棋；也可以把下完的棋交给它复盘。[中国象棋在线对弈](/zh-hans)免费，不用注册，不用安装，手机浏览器也能玩。',
+  'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':
+    '皮卡鱼（Pikafish）是基于 Stockfish 的开源象棋引擎。在这里可以直接与它在线对弈，也可以用它分析局面，免费、免注册。',
+  'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads a 51 MB net on first use.':
+    '想下载引擎本体？请到[皮卡鱼官方项目](https://github.com/official-pikafish/Pikafish)查看发布版本、源代码与安装说明。网页分析首次使用需加载 51 MB 权重。',
+  'Analyze with Pikafish': '用皮卡鱼分析',
+  'Can I analyze with Pikafish online?': '皮卡鱼象棋怎么在线分析？',
+  'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 51 MB net loads on first use.':
+    '可以。打开分析棋盘，输入局面或导入棋谱，再开启引擎。皮卡鱼在浏览器里运行，首次使用会加载 51 MB 权重。',
   'Play Pikafish': '与皮卡鱼对弈',
   'Play Pikafish at jieqi': '与皮卡鱼下揭棋',
   'Play against Pikafish': '人机对弈：挑战皮卡鱼',
@@ -5377,15 +5389,15 @@ const ZH_HANS: Record<string, string> = {
   'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.':
     '[分析棋盘](/analysis/xiangqi)用于你自己摆的局面。它在你的浏览器里运行全强度的皮卡鱼，带官方权重，你分析的内容不会离开你的电脑。权重 51 MB，只需下载一次。',
   Questions: '常见问题',
-  'Can I play Pikafish online?': '可以在线和皮卡鱼下棋吗？',
-  'Yes, here, in the browser. One click on the Pikafish page starts a game against it; the play menu offers eight easier levels.':
-    '可以，就在这里，网页里直接下。在皮卡鱼页面点一下就开局；对弈菜单里还有八个更容易的级别。',
+  'Can I play Pikafish online?': '皮卡鱼象棋在线怎么玩？',
+  'Yes. Open Play Pikafish to start a game in your browser. The play menu also offers eight easier Fairy-Stockfish levels.':
+    '打开与皮卡鱼对弈，即可在浏览器里开局。对弈菜单另有八个较容易的 Fairy-Stockfish 级别。',
   'Is it free?': '免费吗？',
   'Yes. Playing, the ladder, jieqi, game review and the analysis board are all free. An account is optional.':
     '免费。对弈、人机阶梯、揭棋、复盘和分析棋盘都免费。账号可选，不是必需。',
-  'Do I need to download anything?': '需要下载什么吗？',
-  'No. The game runs in the page. On a phone, open the site in the browser and play.':
-    '不需要。棋局直接在网页里运行。手机上用浏览器打开本站即可开始。',
+  'Where can I download Pikafish?': '皮卡鱼象棋引擎怎么下载？',
+  'For the engine itself, use the official Pikafish project for releases, source code and setup instructions. To play or analyze on Mistboard, open your browser without installing an app.':
+    '引擎本体的发布版本、源代码与安装说明见皮卡鱼官方项目。在 Mistboard 对弈或分析只需打开浏览器，不必安装应用。',
   'How strong is it?': '皮卡鱼有多强？',
   'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
     '皮卡鱼机器人在服务器上每步搜索三百万个局面，约四秒。这已超出任何人类棋手。上面的阶梯一路降到初学者也能赢的级别。',
@@ -5809,450 +5821,7 @@ const ZH_HANS: Record<string, string> = {
   '10 of the last 13 champions': '近 13 位冠军中有 10 位',
   'CHINESE XIANGQI ASSOCIATION RULINGS': '中国象棋协会处罚决定',
   'VERIFIED TITLES': '已核实的头衔',
-  // en-passant-under-fog: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
-  "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.":
-    '我的战争迷雾国际象棋引擎按标准象棋的合法性规则记录吃过路兵格，而这个变体根本没有这条规则。吃过路兵的可用性决定了兵能看见什么，于是真实棋盘从引擎的信念集合中掉了出去，它对着41个并不存在的世界下完了整局。',
-  'Misty tracks every board consistent with what it has seen, stored as FEN strings. In one game it finished against 41 boards, none of them the real one.':
-    'Misty 会跟踪所有与它所观察到的信息相符的棋盘，以 FEN 字符串存储。在一局棋中，它是对着41个棋盘下完的，而其中没有一个是真实棋盘。',
-  'python-chess writes the en passant square only when the capture is legal in standard chess. Under fog the capture is legal even in check, and a pawn that can take en passant sees that square, so the true position stopped matching what Misty had seen.':
-    'python-chess 只在这步吃子在标准象棋中合法时才写出吃过路兵格。在迷雾规则下，即使被将军这步吃子也合法，而能吃过路兵的兵看得见那个格子，于是真实局面不再与 Misty 观察到的信息相符。',
-  'The fix records the square whenever a pawn can take. Replaying all 271 games, lost-truth cases outside the sampled games went from four to none.':
-    '修正后，只要有兵能吃就记录该格。重放全部271局，抽样局面之外丢失真相的情形由四例降为零。',
-  'Nothing caught it: the Rust port copied python-chess byte for byte, so the test comparing the two passed, and a belief that loses the truth gets more confident, not less.':
-    '没有任何机制发现它：Rust 移植版逐字节照搬 python-chess，所以对比两者的测试通过了；而一个丢失真相的信念只会变得更自信，不会变得更不确定。',
-  "Game `e751c6c4`, Misty as Black, move 29. White pushes the g-pawn two squares, beside Black's pawn on f4. White's queen on d6 attacks the black king.":
-    '对局 `e751c6c4`，Misty 执黑，第29回合。白方把 g 兵推进两格，落在黑方 f4 兵的旁边。白方位于 d6 的后正攻击着黑王。',
-  'Record the square when a pawn can take, regardless of whether taking is wise. That is `EnPassantMode.XFEN`, and it is the fog rule. It still omits the square when no enemy pawn is adjacent, so the belief does not split over a square nobody can use.':
-    '只要有兵能吃就记录该格，不管吃下去是否明智。这就是 `EnPassantMode.XFEN`，也正是迷雾规则。当旁边没有敌方兵时它仍然会省略该格，这样信念就不会因为一个谁都用不上的格子而分裂。',
-  'At the failing ply `P` now goes 625 to 617, truth kept. Replaying all 271 games reports no lost-truth decisions outside the sampled games, against four before.':
-    '在出错的那一着，`P` 现在是从625变到617，真相得以保留。重放全部271局，抽样局面之外不再报告任何丢失真相的决策，此前是四例。',
-  'Why nothing caught it': '为什么没有任何机制发现它',
-  "Fixed in the engine on 2026-09-10 and released in [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3). Every board above is drawn by the engine's own visibility code from that position; the script that draws them refuses to run if the two views stop differing by exactly g3 and g4.":
-    '已于2026-09-10在引擎中修正，并随 [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3) 发布。上面每一张棋盘都是引擎自己的可见性代码从该局面绘制的；绘图脚本一旦发现两个视图的差异不再恰好是 g3 和 g4，就会拒绝运行。',
-  // most-played-move: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
-  'When the Most Played Move Is an Inaccuracy': '当最常走的一手其实是不精确',
-  "Half are gambits and sidelines the masters never play. Where masters reach the position, most already play the engine's move; only four share the club's mistake.":
-    '其中一半是大师从不下的弃兵和冷门变例。在大师确实到达过的局面里，多数人早已走引擎的那一手；只有四个局面里大师和俱乐部棋手犯了同样的错。',
-  'The biggest by games: after 1.e4 e5 2.f4 d6, 85% of club players play 3.Nf3, and 3.d3 is nearly a pawn better.':
-    '按对局数算最大的一个：1.e4 e5 2.f4 d6之后，85%的俱乐部棋手走3.Nf3，而3.d3几乎要好上一个兵。',
-  "The fix is in the explorer's settings: the masters database, 2018 onward. All 144 are in a study.":
-    '解决办法就在局面浏览器的设置里：大师数据库，2018年起。全部144个局面都在一份研究里。',
-  'The opening explorer on Lichess shows you, for any position, what people played next and how it went. It can show you three databases (every rated game on Lichess, the masters, or one player), filtered by rating band, speed and year, and the masters filtered by era is the best free opening book there is. But the table a club player sees by default is the Lichess database at their own rating, and its top row is the most played move at their level. That row is the move most of us play, because everyone else did. I asked how often it is an inaccuracy.':
-    'Lichess的开局局面浏览器会告诉你，在任意局面下人们接着走了什么、结果如何。它能显示三个数据库（Lichess上所有等级分对局、大师对局，或某一位棋手），可按分段、棋速和年份筛选，而按年代筛选的大师库是现有最好的免费开局库。但俱乐部棋手默认看到的那张表，是自己分段下的Lichess数据库，首行就是这个水平上最常走的一手。那一行是我们大多数人会走的一手，只因为别人都这么走。我想知道，它有多常是一步不精确。',
-  'Where "most played" comes from': '「最常走」从何而来',
-  "Then every position went through Stockfish 18 at 20,000,000 nodes with three lines. The most played move is judged against the best move from the same search, by lila's own winning-chance formula, the one that decides what gets a `?!` on a Lichess report. A gap of 0.1 or more is an inaccuracy, 0.2 a mistake, 0.3 a blunder. Every flagged position then got a second 20M search with a different thread count, and 24 of 168 did not survive it; 144 did. That is the same noise floor the [last post](/blog/lichess-analysis-accuracy) found, and it is why one search is never the verdict here.":
-    '随后每个局面都用Stockfish 18在20,000,000节点下跑了三条变例。最常走的一手，是按同一次搜索给出的最佳着法来评判的，采用lila自己的获胜机会公式，也就是决定Lichess报告里哪一手会被标上`?!`的那个公式。差距达到0.1及以上算不精确，0.2算错着，0.3算漏着。每个被标记的局面又用不同线程数做了第二次20M搜索，168个里有24个没能通过；144个通过了。这和[上一篇](/blog/lichess-analysis-accuracy)发现的噪声底线一致，也正因如此，这里单次搜索从来不是定论。',
-  'For each of the 144 I also pulled the masters database by era (before 2010, 2010 to 2017, since 2018), which is where the shapes come from.':
-    '对这144个局面，我还按年代（2010年前、2010到2017年、2018年起）调取了大师数据库，下面的几种形态就是由此得来的。',
-  'Four shapes': '四种形态',
-  shape: '形态',
-  positions: '局面数',
-  'what it means': '含义',
-  'club only': '只有俱乐部棋手',
-  "masters have no games there, or fewer than twenty; the line is the club's alone":
-    '大师在此没有对局，或不足二十局；这条变例只属于俱乐部棋手',
-  'masters always knew': '大师一直就知道',
-  "the masters' top move is the engine's move in every era": '每个年代大师的首选都是引擎那一手',
-  'masters play a third move': '大师走第三种着法',
-  "the masters avoid both the club move and the engine's first choice":
-    '大师既避开俱乐部的那一手，也避开引擎的首选',
-  'masters switched': '大师改弦更张',
-  "the masters' top move became the engine's move in a later era":
-    '大师的首选在后来的年代变成了引擎那一手',
-  'everyone plays it': '所有人都这么走',
-  "the masters' top move is the club move too": '大师的首选也是俱乐部棋手的那一手',
-  "The club's book is mostly a book the masters never opened: 69 positions are gambits and sidelines with no masters games worth counting. Where the masters do play the position, they already agree with the engine in 51 cases, and moved toward it in 8 more. In only four of 144 do masters and club share the mistake. Theory is not lagging the engine much; the club is lagging theory.":
-    '俱乐部棋手的开局库，大体上是一本大师从未翻开的书：69个局面是弃兵和冷门变例，大师对局数少到不值一提。在大师确实下过的局面里，有51例他们本就与引擎一致，另有8例后来转向了引擎的着法。144个局面中，只有四个是大师和俱乐部棋手同犯一错。理论并没有落后引擎多少；落后理论的是俱乐部棋手。',
-  'Ten positions': '十个局面',
-  "Each has a board below. The most played move is on the mainline with its mark; the engine's line is the sideline with the numbers; the comment holds the club share and the masters' history. The strips first: how often the club move and the engine move are played, by 1600 to 2200 players and by masters in each era.":
-    '每个局面下方都有一张棋盘。最常走的一手在主线上并带标记；引擎的变例是带评估值的副线；注释里写着俱乐部占比和大师的历史选择。先看条形图：俱乐部的那一手和引擎的那一手，分别被1600到2200分棋手以及各年代大师走了多大比例。',
-  "Rust is the club's favourite, blue the engine's move. Masters cells with fewer than twenty games are left blank.":
-    '铁锈色是俱乐部棋手的最爱，蓝色是引擎的着法。大师栏对局数不足二十的留空。',
-  'For ten opening positions, bars showing how often the club move and the engine move are played by 1600 to 2200 players on Lichess, and by masters before 2010, in 2010 to 2017, and since 2018.':
-    '十个开局局面中，俱乐部的一手和引擎的一手分别被Lichess上1600到2200分棋手，以及2010年前、2010到2017年、2018年起的大师走出的频率条形图。',
-  "**King's Gambit, 2...d6.** After 1.e4 e5 2.f4 d6, 85% of club players play 3.Nf3, and so did half the masters who reached it. At 20M it is −0.67; 3.d3 is +0.25, because after 3.Nf3 exf4 Black takes the pawn and keeps it (the next position in the tree agrees: 44% then play 3...Nc6?! instead of taking). Everyone plays it, and it is the biggest miss on the list by games.":
-    '**王翼弃兵，2...d6。**1.e4 e5 2.f4 d6之后，85%的俱乐部棋手走3.Nf3，到过这个局面的大师也有一半这么走。在20M下它是−0.67；3.d3是+0.25，因为3.Nf3 exf4之后黑方吃兵并守住（树里的下一个局面也印证了这点：44%的人接着走3...Nc6?!而不是吃兵）。所有人都这么走，而且按对局数算，这是名单上最大的一次失误。',
-  "King's Gambit 2...d6: 3.Nf3 is the club move, 3.d3 the engine's":
-    '王翼弃兵2...d6：3.Nf3是俱乐部的一手，3.d3是引擎的一手',
-  '**Petrov, 3.Bc4.** 1.e4 e5 2.Nf3 Nf6 3.Bc4 reaches ten million club games, and a third of Black players answer 3...Nc6, turning it into a Two Knights. 3...Nxe4 takes the pawn: −0.54 against +0.15. The masters have taken it in every era, seven times in ten.':
-    '**彼得罗夫防御，3.Bc4。**1.e4 e5 2.Nf3 Nf6 3.Bc4的俱乐部对局数达到一千万，三分之一的黑方棋手应以3...Nc6，把它变成两马防御。3...Nxe4吃兵：−0.54对+0.15。大师在每个年代都吃了这个兵，十局里有七局。',
-  'Petrov 3.Bc4: the club plays Nc6, the engine takes on e4':
-    '彼得罗夫防御3.Bc4：俱乐部棋手走Nc6，引擎吃e4',
-  "Four Knights Spanish 4.Nc3: the club plays d6, the engine plays Rubinstein's Nd4":
-    '四马西班牙4.Nc3：俱乐部棋手走d6，引擎走Rubinstein的Nd4',
-  '**Vienna Gambit, 3...exf4.** 1.e4 e5 2.Nc3 Nf6 3.f4, and 30% take the pawn. It is +0.63 for White; 3...d5, the move 97% of masters have played in every era, is −0.31. Taking is the natural move and the losing one, which is what the gambit is for.':
-    '**维也纳弃兵，3...exf4。**1.e4 e5 2.Nc3 Nf6 3.f4，30%的人吃兵。这对白方是+0.63；而3...d5，各个年代97%的大师都走的一手，是−0.31。吃兵是自然的一手，也是输棋的一手，弃兵的用意正在于此。',
-  "Vienna Gambit: exf4 is the club move, d5 the engine's and the masters'":
-    '维也纳弃兵：exf4是俱乐部的一手，d5是引擎和大师的一手',
-  "**London, 2...g6 3.Nc3.** 1.d4 Nf6 2.Bf4 g6 3.Nc3 and 73% of the club plays 3...Bg7, the move you play in every other London. Here it is +0.62 and 3...d5 is 0.00, because 3.Nc3 is there to play 4.e4, and the bishop move lets it happen while 3...d5 stops it. The masters' share of 3...d5 went 48%, 66%, 77% by era.":
-    '**伦敦体系，2...g6 3.Nc3。**1.d4 Nf6 2.Bf4 g6 3.Nc3，73%的俱乐部棋手走3...Bg7，也就是在其他所有伦敦体系里都会走的那一手。这里它是+0.62，而3...d5是0.00，因为3.Nc3就是为了走4.e4，象走一步反倒放行，3...d5才拦得住。大师走3...d5的占比按年代依次为48%、66%、77%。',
-  "London 2...g6 3.Nc3: Bg7 is the club move, d5 the engine's":
-    '伦敦体系2...g6 3.Nc3：Bg7是俱乐部的一手，d5是引擎的一手',
-  '**Scandinavian, 3.Ng5 line.** 1.e4 d5 2.Nf3 dxe4 3.Ng5 Nf6 4.d3 exd3 5.Bxd3, a million club games, and 31% of Black players play 5...h6 to ask the knight. The answer is 6.Nxf7 Kxf7 7.Bg6+ and the queen on d8 goes: +2.70 for White against −1.12 for 5...Nc6. No master has ever been in this position.':
-    '**中心弃兵防御，3.Ng5变例。**1.e4 d5 2.Nf3 dxe4 3.Ng5 Nf6 4.d3 exd3 5.Bxd3，俱乐部对局一百万局，31%的黑方棋手走5...h6去赶马。回答是6.Nxf7 Kxf7 7.Bg6+，d8的后就没了：白方+2.70，而5...Nc6是−1.12。从没有大师到过这个局面。',
-  'Scandinavian 3.Ng5 line: 5...h6 is the club move and loses the queen':
-    '中心弃兵防御3.Ng5变例：5...h6是俱乐部的一手，会丢后',
-  "QGA 3.e4 e5: 4.d5 is the club move, 4.Nf3 the engine's and the masters'":
-    '后翼弃兵接受3.e4 e5：4.d5是俱乐部的一手，4.Nf3是引擎和大师的一手',
-  'All 144 are in [the study](/study/ibFQtGAL), these ten first, the rest ranked by how many games they touch times how much the move gives up.':
-    '全部144个局面都在[这份研究](/study/ibFQtGAL)里，这十个排在最前，其余按涉及对局数乘以该着法损失的幅度排序。',
-  'Reading the explorer': '怎么读局面浏览器',
-  "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; four of the ten above are a capture or a declined capture.":
-    '你所在分段最常走的一手，是和你同分段的多数人会走的一手，这并不是推荐，局面浏览器也从没说过它是。能解决这份名单上大部分问题的筛选项，就在齿轮菜单里。切换到大师数据库，把年份设为2018年起，别用全时段的表：大师的开局库是会变的，而全时段表是各年代的平均。还有，当最常走的一手是吃兵或拒收弃兵时，先问问引擎，别轻信大众；上面十个局面里有四个涉及吃子或拒收吃子。',
-  'How this was measured': '测量方法',
-  'Open the 144 positions':
-    '<a class="cta cta-primary" href="{{ site.embed_origin }}/study/{{ page.study }}">打开这144个局面</a>',
-  'The deep puzzles':
-    '<a class="cta cta-secondary" href="{{ site.embed_origin }}/study/fhC7BCG7">深度谜题</a>',
-  'Xiangqi for chess players':
-    '<a class="cta cta-secondary" href="{{ site.embed_origin }}/rules/xiangqi">写给国际象棋棋手的中国象棋入门</a>',
-  // chess960-starting-positions: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
-  'Chess960 Starting Positions Ranked By Stockfish': 'Stockfish 对国际象棋960全部开局局面的排名',
-  'Stockfish 18 rankings for all 960 Chess960/Fischer Random starting positions. Most balanced: SP-418 and SP-563; standard chess is near median.':
-    'Stockfish 18 对全部960个国际象棋960（菲舍尔任意制）开局局面的排名。最均衡的是 SP-418 与 SP-563；标准国际象棋接近中位数。',
-  'I evaluated all 960 Chess960 starting positions with Stockfish 18 at depth 36. Every one favors White.':
-    '我用 Stockfish 18 在搜索深度 36 下评估了全部 960 个国际象棋960开局局面。每一个都对白方有利。',
-  'The most balanced are SP-418 and SP-563, at +0.07. The most lopsided is SP-783 (QRKNRNBB) at +1.08, the only one over a pawn.':
-    '最均衡的是 SP-418 与 SP-563，评估值 +0.07。最失衡的是 SP-783（QRKNRNBB），评估值 +1.08，是唯一超过一个兵的局面。',
-  'Standard chess, SP-518, is +0.31 and ranks 463 of 960: almost exactly the median.':
-    '标准国际象棋即 SP-518，评估值 +0.31，在 960 个局面中排第 463 位：几乎正好是中位数。',
-  'None of the 105 starts used in recent elite Freestyle events came from the ten most White-favored. All 960 are in a CSV.':
-    '近期顶级 Freestyle 赛事所用的 105 个开局局面，没有一个来自最偏向白方的前十。全部 960 个都在一个 CSV 文件里。',
-  'I evaluated all 960 **Chess960 starting positions** with Stockfish 18 at uniform depth 36. Chess960 is also called **Fischer Random chess**; each legal back rank is usually identified by a **Scharnagl ID** from 0 to 959.':
-    '我用 Stockfish 18 在统一搜索深度 36 下评估了全部 960 个**国际象棋960开局局面**。国际象棋960也叫**菲舍尔任意制国际象棋**；每一种合法的底排通常用 0 到 959 的 **Scharnagl ID** 来标识。',
-  'Chess960 is the modern tournament name for Fischer Random chess, the variant Bobby Fischer proposed in 1996 to reduce opening memorization and force players back into over-the-board problem solving. The pieces are randomized across 960 legal back-rank layouts while preserving bishops on opposite colors and keeping the king between the rooks so castling still works.':
-    '国际象棋960是菲舍尔任意制国际象棋在现代比赛中的名称，这一变体由鲍比·菲舍尔于 1996 年提出，目的是减少开局背谱，迫使棋手回到棋盘前真正解决问题。棋子在 960 种合法底排布局中随机排列，同时保持双象异色、王位于两车之间，使王车易位依然可行。',
-  'Evaluations are white-POV: positive favors White, and **+1.00 is roughly one pawn**.':
-    '评估值均以白方视角给出：正值对白方有利，**+1.00 大致相当于一个兵**。',
-  Finding: '结论',
-  'Evaluation range': '评估值区间',
-  '+0.07 to +1.08': '+0.07 至 +1.08',
-  'Black-favored starts': '偏向黑方的开局局面',
-  'Standard chess, SP-518': '标准国际象棋，SP-518',
-  'Standard chess rank by balance': '标准国际象棋按均衡度的排名',
-  'Starts more balanced than standard chess': '比标准国际象棋更均衡的开局局面',
-  'Move-1 castling best moves': '第 1 着即王车易位为最佳着法的局面',
-  'Recent elite corpus overlap with highlighted starts': '近期顶级赛事棋局与重点开局局面的重合',
-  'SP-482, once': 'SP-482，一次',
-  "If you want the **most balanced Chess960 starting positions**, the clean candidates are **SP-418, SP-563, SP-269, SP-444, and SP-786**. All evaluate at +0.10 or below, far under standard chess's +0.31.":
-    '如果你想要**最均衡的国际象棋960开局局面**，明确的候选是 **SP-418、SP-563、SP-269、SP-444 和 SP-786**。它们的评估值都在 +0.10 及以下，远低于标准国际象棋的 +0.31。',
-  'Full dataset: [chess960_starting_position_evals.csv](/article-data/chess960-starting-position-evals.csv) (960 rows).':
-    '完整数据集：[chess960_starting_position_evals.csv](/article-data/chess960-starting-position-evals.csv)（960 行）。',
-  'How I Evaluated The Chess960 Positions': '我是如何评估这些国际象棋960局面的',
-  'The evaluation contract is deliberately narrow:': '评估条件刻意设得很窄：',
-  Parameter: '参数',
-  Value: '取值',
-  Engine: '引擎',
-  'Stockfish 18': 'Stockfish 18',
-  Depth: '搜索深度',
-  MultiPV: 'MultiPV',
-  'Chess960 mode': '国际象棋960模式',
-  '`UCI_Chess960=true`': '`UCI_Chess960=true`',
-  Compute: '算力',
-  'Modal, 96 batches × 10 positions': 'Modal，96 批 × 10 个局面',
-  Runtime: '运行时间',
-  '33 minutes wall, under $3': '实际耗时 33 分钟，不到 3 美元',
-  'Every starting position used the same depth target, so the rankings do not mix shallow and deep engine outputs. The pipeline is the same cloud Stockfish setup described in the [previous post on scaling Stockfish compute](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/).':
-    '每个开局局面都用同一个深度目标，因此排名不会把浅层和深层的引擎输出混在一起。这套流水线与[上一篇关于扩展 Stockfish 算力的文章](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)中描述的云端 Stockfish 配置相同。',
-  'Quality checks:': '质量检查：',
-  '959/960 reached depth 36; 1 position fell back to depth 35 at the time cap.':
-    '959/960 达到搜索深度 36；有 1 个局面在时间上限处回落到深度 35。',
-  'Median principal-variation length: 36 plies.': '主变着法长度中位数：36 着。',
-  'Check against Lichess cache': '与 Lichess 缓存的比对',
-  'Best-move agreement': '最佳着法一致率',
-  'Evaluation correlation': '评估值相关性',
-  'Absolute Δcp <= 0.20': 'Δcp 绝对值 <= 0.20',
-  'Mean Δcp': 'Δcp 平均值',
-  'The top-10 order moves around between datasets, but the headline does not: standard chess sits near the median, every start favors White at depth 36, and 9 starts have castling as the best first move.':
-    '前十名的顺序在两份数据之间会有变动，但主要结论不变：标准国际象棋接近中位数，在深度 36 下每个开局局面都偏向白方，并且有 9 个局面以王车易位为最佳首着。',
-  'Chess960 Evaluation Distribution': '国际象棋960评估值分布',
-  'Most starts land in a narrow white-edge band. The right tail is short: only one start crosses +1.00.':
-    '大多数开局局面落在一条狭窄的白方优势带里。右尾很短：只有一个局面越过 +1.00。',
-  evaluation: '评估值',
-  '< 0.00 (black-favored)': '< 0.00（偏向黑方）',
-  '0.00 to 0.09': '0.00 至 0.09',
-  '0.10 to 0.24': '0.10 至 0.24',
-  '0.25 to 0.49': '0.25 至 0.49',
-  '0.50 to 0.99': '0.50 至 0.99',
-  'Evaluation distribution histogram': '评估值分布直方图',
-  'At shallower public-cache depth, SP-663 can appear slightly black-favored (-0.10 in the Lichess cache). At depth 36 it evaluates at +0.14. The "black-favored start" result disappears under the uniform deeper search.':
-    '在公共缓存较浅的深度下，SP-663 会显得略偏黑方（Lichess 缓存中为 -0.10）。在深度 36 下它的评估值是 +0.14。在统一的更深搜索下，「偏向黑方的开局局面」这一结果就消失了。',
-  'Where Standard Chess Ranks': '标准国际象棋排在哪里',
-  'The default start, **SP-518 (RNBQKBNR)**, evaluates to **+0.31**. It ranks 463/960 by ascending imbalance: almost exactly the median. 462 Chess960 starts are more balanced; 497 are more imbalanced.':
-    '默认的开局局面 **SP-518（RNBQKBNR）**评估值为 **+0.31**。按失衡程度升序排列，它排第 463/960：几乎正好是中位数。462 个国际象棋960开局局面更均衡；497 个更失衡。',
-  'SP-518: standard chess. +0.31 at depth 36, best move d4.':
-    '<figcaption style="font-size: 0.88rem; line-height: 1.35; margin-top: 0.45rem; text-align: center;"><strong>SP-518：标准国际象棋。</strong> 深度 36 下 +0.31，最佳着法 d4。</figcaption>',
-  'SP-518, the standard chess starting position': 'SP-518，标准国际象棋的开局局面',
-  'This is a structural result, not a claim about which starting position is better to play. Standard chess is near the middle of the Chess960 balance distribution.':
-    '这是一个结构性结果，并不是在说哪个开局局面下起来更好。标准国际象棋处在国际象棋960均衡度分布的中间附近。',
-  'Most Imbalanced Chess960 Start: SP-783': '最失衡的国际象棋960开局局面：SP-783',
-  'One position crosses +1.00: **SP-783 (QRKNRNBB)**, at **+1.08** with best move `b4`. It is the largest opening edge in the full 960-position set.':
-    '有一个局面越过了 +1.00：**SP-783（QRKNRNBB）**，评估值 **+1.08**，最佳着法 `b4`。这是全部 960 个局面中最大的开局优势。',
-  'SP-783: QRKNRNBB. The most white-favored start at +1.08, best move b4.':
-    '<figcaption style="font-size: 0.88rem; line-height: 1.35; margin-top: 0.45rem; text-align: center;"><strong>SP-783：QRKNRNBB。</strong> 最偏向白方的开局局面，+1.08，最佳着法 b4。</figcaption>',
-  'SP-783, the most imbalanced Chess960 starting position': 'SP-783，最失衡的国际象棋960开局局面',
-  'Every other starting position lands between +0.07 and +0.92.':
-    '其余所有开局局面都落在 +0.07 到 +0.92 之间。',
-  'Most White-Favored Chess960 Starting Positions': '最偏向白方的国际象棋960开局局面',
-  'Only one position crosses +1.00. The rest of the top 10 sit between +0.68 and +0.92.':
-    '只有一个局面越过 +1.00。前十名中的其余局面落在 +0.68 到 +0.92 之间。',
-  SP: 'SP',
-  'back-rank': '底排',
-  depth: '深度',
-  QRKNRNBB: 'QRKNRNBB',
-  b4: 'b4',
-  QRKRNNBB: 'QRKRNNBB',
-  RBQNKRBN: 'RBQNKRBN',
-  f4: 'f4',
-  QNRKBBRN: 'QNRKBBRN',
-  c4: 'c4',
-  BBNNRKRQ: 'BBNNRKRQ',
-  g3: 'g3',
-  QBBRKRNN: 'QBBRKRNN',
-  Ng3: 'Ng3',
-  QRNNKRBB: 'QRNNKRBB',
-  RQKNBBRN: 'RQKNBBRN',
-  RNKBNQBR: 'RNKBNQBR',
-  e4: 'e4',
-  BBNRNKRQ: 'BBNRNKRQ',
-  g4: 'g4',
-  "Board previews are clickable. The green arrow marks the engine's best first move. Full principal variations are in the CSV.":
-    '棋盘预览可点击。绿色箭头标出引擎的最佳首着。完整主变着法见 CSV。',
-  '**SP-783** `QRKNRNBB` · +1.08 · best b4 · 29 plies':
-    '**SP-783** `QRKNRNBB` · +1.08 · 最佳 b4 · 29 着',
-  'SP-783 starting position; SP-783 final position after principal variation':
-    'SP-783 开局局面；SP-783 主变着法走完后的局面',
-  'Principal variation: `1. b4 b5 2. a4 a5 3. axb5 axb4 4. Qxa8 Rxa8 5. Rxb4 g5 6. g4 Ra1+ 7. Rb1 Rxb1+ 8. Kxb1 Nb7 9. d3 h5 10. gxh5 Ne6 11. Ng3 Nd6 12. c4 Bh7 13. Ne3 Nd4 14. Kc1 f5 15. Kd2`':
-    '主变着法：`1. b4 b5 2. a4 a5 3. axb5 axb4 4. Qxa8 Rxa8 5. Rxb4 g5 6. g4 Ra1+ 7. Rb1 Rxb1+ 8. Kxb1 Nb7 9. d3 h5 10. gxh5 Ne6 11. Ng3 Nd6 12. c4 Bh7 13. Ne3 Nd4 14. Kc1 f5 15. Kd2`',
-  '**SP-879** `QRKRNNBB` · +0.92 · best b4 · 41 plies':
-    '**SP-879** `QRKRNNBB` · +0.92 · 最佳 b4 · 41 着',
-  'SP-879 starting position; SP-879 final position after principal variation':
-    'SP-879 开局局面；SP-879 主变着法走完后的局面',
-  'Principal variation: `1. b4 a5 2. a4 f5 3. Nd3 axb4 4. Ne3 d6 5. f4 c5 6. Nxf5 Be6 7. Nxe7+ Kd7 8. Nxc5+ Kxe7 9. Nxe6 Nxe6 10. Bb6 Rdc8 11. Rxb4 Qa6 12. f5 g6 13. Qa2 gxf5 14. g4 f4 15. a5 Nf6 16. Bf3 Bg7 17. c3 Ng5 18. Re1 Nd7 19. h4 Bxc3 20. dxc3 Rxc3+ 21. Kb1`':
-    '主变着法：`1. b4 a5 2. a4 f5 3. Nd3 axb4 4. Ne3 d6 5. f4 c5 6. Nxf5 Be6 7. Nxe7+ Kd7 8. Nxc5+ Kxe7 9. Nxe6 Nxe6 10. Bb6 Rdc8 11. Rxb4 Qa6 12. f5 g6 13. Qa2 gxf5 14. g4 f4 15. a5 Nf6 16. Bf3 Bg7 17. c3 Ng5 18. Re1 Nd7 19. h4 Bxc3 20. dxc3 Rxc3+ 21. Kb1`',
-  '**SP-604** `RBQNKRBN` · +0.81 · best f4 · 39 plies':
-    '**SP-604** `RBQNKRBN` · +0.81 · 最佳 f4 · 39 着',
-  'SP-604 starting position; SP-604 final position after principal variation':
-    'SP-604 开局局面；SP-604 主变着法走完后的局面',
-  'Principal variation: `1. f4 c5 2. Ng3 Ne6 3. e3 f6 4. c4 g5 5. Ne2 gxf4 6. exf4 Nd4 7. Nxd4 cxd4 8. Bxd4 Qxc4 9. Qxc4 Bxc4 10. Rf2 Ng6 11. g3 Bb5 12. Ne3 Bc6 13. Bc3 e5 14. fxe5 fxe5 15. Rxf8+ Nxf8 16. Bf5 Bc7 17. O-O-O O-O-O 18. Rf1 Re8 19. Bc2 Ne6 20. Rf7`':
-    '主变着法：`1. f4 c5 2. Ng3 Ne6 3. e3 f6 4. c4 g5 5. Ne2 gxf4 6. exf4 Nd4 7. Nxd4 cxd4 8. Bxd4 Qxc4 9. Qxc4 Bxc4 10. Rf2 Ng6 11. g3 Bb5 12. Ne3 Bc6 13. Bc3 e5 14. fxe5 fxe5 15. Rxf8+ Nxf8 16. Bf5 Bc7 17. O-O-O O-O-O 18. Rf1 Re8 19. Bc2 Ne6 20. Rf7`',
-  '**SP-298** `QNRKBBRN` · +0.73 · best c4 · 28 plies':
-    '**SP-298** `QNRKBBRN` · +0.73 · 最佳 c4 · 28 着',
-  'SP-298 starting position; SP-298 final position after principal variation':
-    'SP-298 开局局面；SP-298 主变着法走完后的局面',
-  'Principal variation: `1. c4 f5 2. d4 e6 3. e3 Bh5+ 4. f3 Bf7 5. b3 Be7 6. Bc3 Ng6 7. Nd2 a5 8. f4 O-O 9. Bd3 Ba3 10. Bb2 Bxb2 11. Qxb2 d6 12. g4 Rce8 13. O-O-O a4 14. d5 fxg4`':
-    '主变着法：`1. c4 f5 2. d4 e6 3. e3 Bh5+ 4. f3 Bf7 5. b3 Be7 6. Bc3 Ng6 7. Nd2 a5 8. f4 O-O 9. Bd3 Ba3 10. Bb2 Bxb2 11. Qxb2 d6 12. g4 Rce8 13. O-O-O a4 14. d5 fxg4`',
-  '**SP-80** `BBNNRKRQ` · +0.73 · best g3 · 39 plies':
-    '**SP-80** `BBNNRKRQ` · +0.73 · 最佳 g3 · 39 着',
-  'SP-80 starting position; SP-80 final position after principal variation':
-    'SP-80 开局局面；SP-80 主变着法走完后的局面',
-  'Principal variation: `1. g3 c5 2. Nd3 c4 3. Nc5 Nb6 4. b3 d6 5. Ne4 Nc6 6. h4 e6 7. h5 h6 8. Qh4 d5 9. Nec3 a6 10. e4 d4 11. Ne2 g5 12. hxg6 fxg6 13. Bb2 Bd6 14. e5 Bxe5 15. c3 d3 16. Nd4 Qf6 17. Nxc6 bxc6 18. Ba3+ Kf7 19. Nb2 c5 20. Qxf6+`':
-    '主变着法：`1. g3 c5 2. Nd3 c4 3. Nc5 Nb6 4. b3 d6 5. Ne4 Nc6 6. h4 e6 7. h5 h6 8. Qh4 d5 9. Nec3 a6 10. e4 d4 11. Ne2 g5 12. hxg6 fxg6 13. Bb2 Bd6 14. e5 Bxe5 15. c3 d3 16. Nd4 Qf6 17. Nxc6 bxc6 18. Ba3+ Kf7 19. Nb2 c5 20. Qxf6+`',
-  '**SP-868** `QBBRKRNN` · +0.70 · best Ng3 · 39 plies':
-    '**SP-868** `QBBRKRNN` · +0.70 · 最佳 Ng3 · 39 着',
-  'SP-868 starting position; SP-868 final position after principal variation':
-    'SP-868 开局局面；SP-868 主变着法走完后的局面',
-  'Principal variation: `1. Ng3 d5 2. Nh5 f6 3. Nxg7+ Kf7 4. Nh5 Ng6 5. d4 Nh4 6. f3 Nxg2+ 7. Kf2 Nh4 8. c4 dxc4 9. b3 c5 10. Bxh7 cxd4 11. Qb1 d3 12. bxc4 Bd6 13. exd3 Bf5 14. Bxf5 Nxf5 15. Ng3 Nd4 16. N1e2 Bc5 17. Be3 Qc8 18. Bxd4 Bxd4+ 19. Kg2 Nh6 20. Rh1`':
-    '主变着法：`1. Ng3 d5 2. Nh5 f6 3. Nxg7+ Kf7 4. Nh5 Ng6 5. d4 Nh4 6. f3 Nxg2+ 7. Kf2 Nh4 8. c4 dxc4 9. b3 c5 10. Bxh7 cxd4 11. Qb1 d3 12. bxc4 Bd6 13. exd3 Bf5 14. Bxf5 Nxf5 15. Ng3 Nd4 16. N1e2 Bc5 17. Be3 Qc8 18. Bxd4 Bxd4+ 19. Kg2 Nh6 20. Rh1`',
-  '**SP-399** `QRNNKRBB` · +0.70 · best b4 · 34 plies':
-    '**SP-399** `QRNNKRBB` · +0.70 · 最佳 b4 · 34 着',
-  'SP-399 starting position; SP-399 final position after principal variation':
-    'SP-399 开局局面；SP-399 主变着法走完后的局面',
-  'Principal variation: `1. b4 h6 2. f4 Bh7 3. Nc3 g5 4. f5 b6 5. Nb3 Nd6 6. Bd4 Bxd4 7. Nxd4 f6 8. d3 c6 9. a4 Qb7 10. Kd2 O-O 11. g4 Kg7 12. h4 Qc7 13. hxg5 hxg5 14. b5 Bg8 15. bxc6 dxc6 16. Ne4 Nxe4+ 17. Bxe4 Qd6`':
-    '主变着法：`1. b4 h6 2. f4 Bh7 3. Nc3 g5 4. f5 b6 5. Nb3 Nd6 6. Bd4 Bxd4 7. Nxd4 f6 8. d3 c6 9. a4 Qb7 10. Kd2 O-O 11. g4 Kg7 12. h4 Qc7 13. hxg5 hxg5 14. b5 Bg8 15. bxc6 dxc6 16. Ne4 Nxe4+ 17. Bxe4 Qd6`',
-  '**SP-794** `RQKNBBRN` · +0.68 · best f4 · 35 plies':
-    '**SP-794** `RQKNBBRN` · +0.68 · 最佳 f4 · 35 着',
-  'SP-794 starting position; SP-794 final position after principal variation':
-    'SP-794 开局局面；SP-794 主变着法走完后的局面',
-  'Principal variation: `1. f4 c6 2. e3 f5 3. c4 g5 4. Qxf5 gxf4 5. Qxf4 Qxf4 6. exf4 Ne6 7. f5 Nd4 8. Ng3 Nf7 9. Bf2 Bg7 10. Nc3 Nh6 11. Bd3 Rf8 12. O-O Ndxf5 13. Nxf5 Nxf5 14. Rae1 Bg6 15. Bxf5 Rxf5 16. Rxe7 Bxc3 17. dxc3 b6 18. Ree1`':
-    '主变着法：`1. f4 c6 2. e3 f5 3. c4 g5 4. Qxf5 gxf4 5. Qxf4 Qxf4 6. exf4 Ne6 7. f5 Nd4 8. Ng3 Nf7 9. Bf2 Bg7 10. Nc3 Nh6 11. Bd3 Rf8 12. O-O Ndxf5 13. Nxf5 Nxf5 14. Rae1 Bg6 15. Bxf5 Rxf5 16. Rxe7 Bxc3 17. dxc3 b6 18. Ree1`',
-  '**SP-557** `RNKBNQBR` · +0.68 · best e4 · 32 plies':
-    '**SP-557** `RNKBNQBR` · +0.68 · 最佳 e4 · 32 着',
-  'SP-557 starting position; SP-557 final position after principal variation':
-    'SP-557 开局局面；SP-557 主变着法走完后的局面',
-  'Principal variation: `1. e4 e5 2. f4 exf4 3. Nc3 f5 4. Qxf4 Be6 5. e5 g5 6. Qe3 Nc6 7. d4 d5 8. h4 h6 9. Qf3 gxh4 10. Nd3 Ng7 11. Nf4 Bg5 12. Ne2 O-O-O 13. Kb1 Bf7 14. Bf2 Ne6 15. Nxe6 Bxe6 16. Nf4 Bf7`':
-    '主变着法：`1. e4 e5 2. f4 exf4 3. Nc3 f5 4. Qxf4 Be6 5. e5 g5 6. Qe3 Nc6 7. d4 d5 8. h4 h6 9. Qf3 gxh4 10. Nd3 Ng7 11. Nf4 Bg5 12. Ne2 O-O-O 13. Kb1 Bf7 14. Bf2 Ne6 15. Nxe6 Bxe6 16. Nf4 Bf7`',
-  '**SP-176** `BBNRNKRQ` · +0.68 · best g4 · 36 plies':
-    '**SP-176** `BBNRNKRQ` · +0.68 · 最佳 g4 · 36 着',
-  'SP-176 starting position; SP-176 final position after principal variation':
-    'SP-176 开局局面；SP-176 主变着法走完后的局面',
-  'Principal variation: `1. g4 c5 2. b3 Nc7 3. c4 b6 4. Be4 Bxe4 5. Qxe4 Nd6 6. Qf3 h6 7. e3 Qh7 8. Ne2 Ne6 9. Be5 O-O 10. Bxd6 Bxd6 11. h4 f5 12. g5 hxg5 13. hxg5 f4 14. e4 Qg6 15. d3 Bb8 16. d4 cxd4 17. Nxd4 Nxd4 18. Rxd4 Be5`':
-    '主变着法：`1. g4 c5 2. b3 Nc7 3. c4 b6 4. Be4 Bxe4 5. Qxe4 Nd6 6. Qf3 h6 7. e3 Qh7 8. Ne2 Ne6 9. Be5 O-O 10. Bxd6 Bxd6 11. h4 f5 12. g5 hxg5 13. hxg5 f4 14. e4 Qg6 15. d3 Bb8 16. d4 cxd4 17. Nxd4 Nxd4 18. Rxd4 Be5`',
-  'Most Balanced Chess960 Starting Positions': '最均衡的国际象棋960开局局面',
-  "These are the starts where the position itself contributes the least white edge. All are +0.12 or below, far under standard chess's +0.31.":
-    '这些是局面本身给白方带来优势最小的开局。全部在 +0.12 及以下，远低于标准国际象棋的 +0.31。',
-  BRNQNBKR: 'BRNQNBKR',
-  BRNKNRQB: 'BRNKNRQB',
-  NRKBNQBR: 'NRKBNQBR',
-  Nb3: 'Nb3',
-  RBNNQKBR: 'RBNNQKBR',
-  d4: 'd4',
-  BRQKNBRN: 'BRQKNBRN',
-  NQNBRKBR: 'NQNBRKBR',
-  BQRNKBNR: 'BQRNKBNR',
-  e3: 'e3',
-  RKQNNRBB: 'RKQNNRBB',
-  NNBBRKRQ: 'NNBBRKRQ',
-  d3: 'd3',
-  NQBRNKRB: 'NQBRNKRB',
-  '**SP-418** `BRNQNBKR` · +0.07 · best b4 · 32 plies':
-    '**SP-418** `BRNQNBKR` · +0.07 · 最佳 b4 · 32 着',
-  'SP-418 starting position; SP-418 final position after principal variation':
-    'SP-418 开局局面；SP-418 主变着法走完后的局面',
-  'Principal variation: `1. b4 b5 2. e3 e6 3. Be2 Be7 4. O-O O-O 5. d3 a6 6. Qd2 d6 7. Nb3 c5 8. bxc5 dxc5 9. Nf3 Nb6 10. c4 Nd7 11. Ne5 Nef6 12. Qa5 Bd6 13. Qxd8 Rfxd8 14. Nxd7 Nxd7 15. cxb5 axb5 16. Rfc1 Rdc8`':
-    '主变着法：`1. b4 b5 2. e3 e6 3. Be2 Be7 4. O-O O-O 5. d3 a6 6. Qd2 d6 7. Nb3 c5 8. bxc5 dxc5 9. Nf3 Nb6 10. c4 Nd7 11. Ne5 Nef6 12. Qa5 Bd6 13. Qxd8 Rfxd8 14. Nxd7 Nxd7 15. cxb5 axb5 16. Rfc1 Rdc8`',
-  '**SP-563** `BRNKNRQB` · +0.07 · best g4 · 40 plies':
-    '**SP-563** `BRNKNRQB` · +0.07 · 最佳 g4 · 40 着',
-  'SP-563 starting position; SP-563 final position after principal variation':
-    'SP-563 开局局面；SP-563 主变着法走完后的局面',
-  'Principal variation: `1. g4 g5 2. Ncd3 a5 3. b3 Bxa1 4. Rxa1 b6 5. h4 h6 6. Bxa8 Rxa8 7. a4 f6 8. f4 gxf4 9. Nxf4 e5 10. Nh5 Ne7 11. Qg2 c6 12. Nd3 Qe6 13. Kc1 Kc7 14. e4 Rg8 15. Nf2 d5 16. Kb2 Nd6 17. Qf3 Raf8 18. d3 d4 19. Ng3 b5 20. Nf5 bxa4`':
-    '主变着法：`1. g4 g5 2. Ncd3 a5 3. b3 Bxa1 4. Rxa1 b6 5. h4 h6 6. Bxa8 Rxa8 7. a4 f6 8. f4 gxf4 9. Nxf4 e5 10. Nh5 Ne7 11. Qg2 c6 12. Nd3 Qe6 13. Kc1 Kc7 14. e4 Rg8 15. Nf2 d5 16. Kb2 Nd6 17. Qf3 Raf8 18. d3 d4 19. Ng3 b5 20. Nf5 bxa4`',
-  '**SP-269** `NRKBNQBR` · +0.09 · best Nb3 · 38 plies':
-    '**SP-269** `NRKBNQBR` · +0.09 · 最佳 Nb3 · 38 着',
-  'SP-269 starting position; SP-269 final position after principal variation':
-    'SP-269 开局局面；SP-269 主变着法走完后的局面',
-  'Principal variation: `1. Nb3 f5 2. f4 Nb6 3. d3 c6 4. c3 d6 5. Nd2 Bc7 6. Nef3 Nf6 7. e4 fxe4 8. dxe4 e5 9. fxe5 dxe5 10. b4 Nbd7 11. Bb3 Bb6 12. Qd1 Bxg1 13. Qxg1 a5 14. Bxg8 Qxg8 15. Qa7 Qxa2 16. O-O O-O 17. bxa5 Ra8 18. Qxb7 Qxa5 19. Qb3+ Kh8`':
-    '主变着法：`1. Nb3 f5 2. f4 Nb6 3. d3 c6 4. c3 d6 5. Nd2 Bc7 6. Nef3 Nf6 7. e4 fxe4 8. dxe4 e5 9. fxe5 dxe5 10. b4 Nbd7 11. Bb3 Bb6 12. Qd1 Bxg1 13. Qxg1 a5 14. Bxg8 Qxg8 15. Qa7 Qxa2 16. O-O O-O 17. bxa5 Ra8 18. Qxb7 Qxa5 19. Qb3+ Kh8`',
-  '**SP-444** `RBNNQKBR` · +0.10 · best d4 · 33 plies':
-    '**SP-444** `RBNNQKBR` · +0.10 · 最佳 d4 · 33 着',
-  'SP-444 starting position; SP-444 final position after principal variation':
-    'SP-444 开局局面；SP-444 主变着法走完后的局面',
-  'Principal variation: `1. d4 f6 2. f3 Bf7 3. e4 c6 4. Bf2 O-O 5. a4 a5 6. O-O e5 7. dxe5 fxe5 8. Ne3 Ne7 9. Qd2 Ne6 10. Ne2 d6 11. Kh1 Nc5 12. Ng4 Ng6 13. Ng3 Bc7 14. Nf5 Rd8 15. Bxc5 dxc5 16. Qc3 c4 17. Ba2`':
-    '主变着法：`1. d4 f6 2. f3 Bf7 3. e4 c6 4. Bf2 O-O 5. a4 a5 6. O-O e5 7. dxe5 fxe5 8. Ne3 Ne7 9. Qd2 Ne6 10. Ne2 d6 11. Kh1 Nc5 12. Ng4 Ng6 13. Ng3 Bc7 14. Nf5 Rd8 15. Bxc5 dxc5 16. Qc3 c4 17. Ba2`',
-  '**SP-786** `BRQKNBRN` · +0.10 · best c4 · 31 plies':
-    '**SP-786** `BRQKNBRN` · +0.10 · 最佳 c4 · 31 着',
-  'SP-786 starting position; SP-786 final position after principal variation':
-    'SP-786 开局局面；SP-786 主变着法走完后的局面',
-  'Principal variation: `1. c4 e6 2. f4 b5 3. c5 a5 4. b3 d6 5. Nd3 Ng6 6. e3 Be7 7. Be2 Nf6 8. cxd6 cxd6 9. Qxc8+ Rxc8 10. g3 Nd5 11. Nhf2 Bf6 12. a3 O-O 13. Bxf6 Nxf6 14. Nb2 Bd5 15. Bxb5 Bxb3+ 16. Ke2`':
-    '主变着法：`1. c4 e6 2. f4 b5 3. c5 a5 4. b3 d6 5. Nd3 Ng6 6. e3 Be7 7. Be2 Nf6 8. cxd6 cxd6 9. Qxc8+ Rxc8 10. g3 Nd5 11. Nhf2 Bf6 12. a3 O-O 13. Bxf6 Nxf6 14. Nb2 Bd5 15. Bxb5 Bxb3+ 16. Ke2`',
-  '**SP-29** `NQNBRKBR` · +0.11 · best c4 · 31 plies':
-    '**SP-29** `NQNBRKBR` · +0.11 · 最佳 c4 · 31 着',
-  'SP-29 starting position; SP-29 final position after principal variation':
-    'SP-29 开局局面；SP-29 主变着法走完后的局面',
-  'Principal variation: `1. c4 e5 2. f3 c6 3. b4 f6 4. Bb3 Bf7 5. Bf2 O-O 6. O-O d5 7. cxd5 cxd5 8. a4 Bb6 9. e3 Ne7 10. Nc2 Kh8 11. Qa2 a5 12. d4 Bc7 13. dxe5 Bxe5 14. Kh1 Nb6 15. Ne2 Nc4 16. bxa5`':
-    '主变着法：`1. c4 e5 2. f3 c6 3. b4 f6 4. Bb3 Bf7 5. Bf2 O-O 6. O-O d5 7. cxd5 cxd5 8. a4 Bb6 9. e3 Ne7 10. Nc2 Kh8 11. Qa2 a5 12. d4 Bc7 13. dxe5 Bxe5 14. Kh1 Nb6 15. Ne2 Nc4 16. bxa5`',
-  '**SP-482** `BQRNKBNR` · +0.11 · best e3 · 32 plies · elite match':
-    '**SP-482** `BQRNKBNR` · +0.11 · 最佳 e3 · 32 着 · 顶级对抗赛',
-  'SP-482 starting position; SP-482 final position after principal variation':
-    'SP-482 开局局面；SP-482 主变着法走完后的局面',
-  'Principal variation: `1. e3 e6 2. b4 f5 3. f4 Nf6 4. Nf3 Be7 5. c4 b6 6. Be2 Nf7 7. Nf2 c5 8. bxc5 bxc5 9. Qc2 Rg8 10. h4 Bc6 11. Rb1 Qa8 12. Bc3 Nh5 13. d3 Ng3 14. Rh3 Nxe2 15. Kxe2 Rb8 16. Rxb8+ Qxb8`':
-    '主变着法：`1. e3 e6 2. b4 f5 3. f4 Nf6 4. Nf3 Be7 5. c4 b6 6. Be2 Nf7 7. Nf2 c5 8. bxc5 bxc5 9. Qc2 Rg8 10. h4 Bc6 11. Rb1 Qa8 12. Bc3 Nh5 13. d3 Ng3 14. Rh3 Nxe2 15. Kxe2 Rb8 16. Rxb8+ Qxb8`',
-  '**SP-719** `RKQNNRBB` · +0.11 · best f4 · 43 plies':
-    '**SP-719** `RKQNNRBB` · +0.11 · 最佳 f4 · 43 着',
-  'SP-719 starting position; SP-719 final position after principal variation':
-    'SP-719 开局局面；SP-719 主变着法走完后的局面',
-  'Principal variation: `1. f4 f5 2. g3 g6 3. d3 d6 4. c4 c5 5. Nc3 Nc6 6. Qd2 Qd7 7. Nc2 Nc7 8. b3 Bf7 9. O-O-O Ne6 10. e3 O-O 11. d4 Nb4 12. Nxb4 cxb4 13. Nd5 Nc7 14. Nxc7 Qxc7 15. Qxb4 Rfb8 16. Qc3 a5 17. a4 d5 18. Kd2 dxc4 19. bxc4 Qxc4 20. Qxc4 Bxc4 21. Rfe1 Ra7 22. Rb1`':
-    '主变着法：`1. f4 f5 2. g3 g6 3. d3 d6 4. c4 c5 5. Nc3 Nc6 6. Qd2 Qd7 7. Nc2 Nc7 8. b3 Bf7 9. O-O-O Ne6 10. e3 O-O 11. d4 Nb4 12. Nxb4 cxb4 13. Nd5 Nc7 14. Nxc7 Qxc7 15. Qxb4 Rfb8 16. Qc3 a5 17. a4 d5 18. Kd2 dxc4 19. bxc4 Qxc4 20. Qxc4 Bxc4 21. Rfe1 Ra7 22. Rb1`',
-  '**SP-85** `NNBBRKRQ` · +0.12 · best d3 · 25 plies':
-    '**SP-85** `NNBBRKRQ` · +0.12 · 最佳 d3 · 25 着',
-  'SP-85 starting position; SP-85 final position after principal variation':
-    'SP-85 开局局面；SP-85 主变着法走完后的局面',
-  'Principal variation: `1. d3 e5 2. h4 d6 3. Nb3 h5 4. g3 Nb6 5. e4 Nc6 6. Bd2 g6 7. Bf3 Bf6 8. Nc3 Bd7 9. Bg2 O-O-O 10. a4 Be6 11. Bh3 Nd7 12. Nd5 g5 13. Nxf6`':
-    '主变着法：`1. d3 e5 2. h4 d6 3. Nb3 h5 4. g3 Nb6 5. e4 Nc6 6. Bd2 g6 7. Bf3 Bf6 8. Nc3 Bd7 9. Bg2 O-O-O 10. a4 Be6 11. Bh3 Nd7 12. Nd5 g5 13. Nxf6`',
-  '**SP-119** `NQBRNKRB` · +0.12 · best c4 · 31 plies':
-    '**SP-119** `NQBRNKRB` · +0.12 · 最佳 c4 · 31 着',
-  'SP-119 starting position; SP-119 final position after principal variation':
-    'SP-119 开局局面；SP-119 主变着法走完后的局面',
-  'Principal variation: `1. c4 g6 2. d4 c6 3. O-O d5 4. cxd5 cxd5 5. Nac2 Bf5 6. g3 Nac7 7. Bg2 Bg7 8. a4 Nd6 9. Qa2 O-O 10. Ne3 Be6 11. b3 b5 12. Nd3 Ne4 13. Bb2 b4 14. Qa1 Bh6 15. f4 a5 16. Nc5`':
-    '主变着法：`1. c4 g6 2. d4 c6 3. O-O d5 4. cxd5 cxd5 5. Nac2 Bf5 6. g3 Nac7 7. Bg2 Bg7 8. a4 Nd6 9. Qa2 O-O 10. Ne3 Be6 11. b3 b5 12. Nd3 Ne4 13. Bb2 b4 14. Qa1 Bh6 15. f4 a5 16. Nc5`',
-  'Best First Moves In Chess960': '国际象棋960中的最佳首着',
-  "Across all 960 starts, **94.9%** have a pawn move as Stockfish's best first move. `e4` and `d4` are still the most common, but they cover only 36% of the field. The Chess960-specific signal is flank activity: `f4`, `b4`, and `g4` combine for 27.3%.":
-    '在全部 960 个开局局面中，**94.9%** 的 Stockfish 最佳首着是兵着。`e4` 和 `d4` 仍然最常见，但只覆盖 36% 的局面。国际象棋960特有的信号是翼侧活动：`f4`、`b4` 和 `g4` 合计占 27.3%。',
-  '%': '%',
-  a4: 'a4',
-  'Piece-move and move-1 castling details': '<summary>子力着法与第 1 着王车易位的细节</summary>',
-  'Piece moves account for 49 positions, or 5.1% of the field. Knights account for 40 of them. The other 9 are legal move-1 castles.':
-    '子力着法占 49 个局面，即全部的 5.1%。其中 40 个是马着。另外 9 个是合法的第 1 着王车易位。',
-  'Origin to dest': '起点到终点',
-  '`Ng3`': 'Ng3',
-  'h1 to g3': 'h1 到 g3',
-  '`O-O`': '`O-O`',
-  'f1 to g1': 'f1 到 g1',
-  '`Nc3`': '`Nc3`',
-  'b1 to c3': 'b1 到 c3',
-  '`Nb3`': 'Nb3',
-  'a1 to b3': 'a1 到 b3',
-  '`Nf3`': '`Nf3`',
-  'g1 to f3': 'g1 到 f3',
-  '`Nh3`': '`Nh3`',
-  'g1 to h3': 'g1 到 h3',
-  '`Nde3`': '`Nde3`',
-  'd1 to e3': 'd1 到 e3',
-  '`Ncd3`': '`Ncd3`',
-  'c1 to d3': 'c1 到 d3',
-  'The 9 move-1 castling starts all place the king on `f1` and the kingside rook on `g1`: SP-296 (+0.20), SP-308 (+0.35), SP-312 (+0.37), SP-324 (+0.22), SP-407 (+0.16), SP-580 (+0.26), SP-585 (+0.26), SP-596 (+0.22), and SP-612 (+0.40).':
-    '这 9 个第 1 着王车易位的开局局面都把王放在 `f1`、王翼车放在 `g1`：SP-296（+0.20）、SP-308（+0.35）、SP-312（+0.37）、SP-324（+0.22）、SP-407（+0.16）、SP-580（+0.26）、SP-585（+0.26）、SP-596（+0.22）和 SP-612（+0.40）。 </details>',
-  'What Recent Elite Chess960 Actually Picked': '近期顶级国际象棋960实际选了什么',
-  'I mapped recent elite Freestyle broadcast PGNs back to Scharnagl IDs using the starting FEN. This avoids relying on the PGN `Variant` tag: some 2025 Freestyle broadcasts are labeled `Variant "Standard"` even though the FEN is a Chess960 start.':
-    '我用开局 FEN 把近期顶级 Freestyle 直播 PGN 映射回 Scharnagl ID。这样就不用依赖 PGN 的 `Variant` 标签：有些 2025 年的 Freestyle 直播标注为 `Variant "Standard"`，尽管 FEN 是一个国际象棋960开局局面。',
-  'The modern elite corpus:': '现代顶级赛事棋局集：',
-  Games: '局数',
-  'unique SPs': '不重复 SP 数',
-  '**Total**': '**总计**',
-  'The most repeated starts are mostly tournament-format artifacts: paired games, rematches, and bracket mini-matches reuse the same position.':
-    '出现次数最多的开局局面大多是赛制造成的：成对的棋局、复赛和淘汰赛小型对抗赛都会重复使用同一个局面。',
-  eval: '评估值',
-  'appeared in': '出现于',
-  '`RBKNQRBN`': '`RBKNQRBN`',
-  '`RNKNRQBB`': '`RNKNRQBB`',
-  'Las Vegas': '拉斯维加斯站',
-  '`QRKBNNBR`': '`QRKBNNBR`',
-  '`BBQNRNKR`': '`BBQNRNKR`',
-  '`NRKBQNBR`': '`NRKBQNBR`',
-  '`RQBNKNRB`': '`RQBNKNRB`',
-  '`RBNQKNBR`': '`RBNQKNBR`',
-  '`RNBBKNQR`': '`RNBBKNQR`',
-  'All selected Scharnagl IDs by event': '<summary>各赛事所选用的全部 Scharnagl ID</summary>',
-  'SPs used': '<th>所用 SP</th>',
-  'Overlap with the highlighted sets:': '与重点集合的重合情况：',
-  'Highlight set': '重点集合',
-  'Matches in the 426-game corpus': '在 426 局棋局集中的匹配数',
-  'Top 10 most white-favored': '最偏向白方的前十',
-  none: '无',
-  'Top 10 most equal': '最均势的前十',
-  'The only highlighted start that appeared was neutral, not extreme: **SP-482 (BQRNKBNR) evaluates at +0.11** and appeared once in Las Vegas.':
-    '唯一出现过的重点开局局面是中性的，而非极端的：**SP-482（BQRNKBNR）评估值为 +0.11**，在拉斯维加斯站出现过一次。',
-  Field: '字段',
-  '`BQRNKBNR`': 'BQRNKBNR',
-  game: '棋局',
-  'Magnus Carlsen vs Levon Aronian': 'Magnus Carlsen 对 Levon Aronian',
-  result: '结果',
-  round: '轮次',
-  broadcast: '直播',
-  '[Las Vegas round-robin white tiebreak, game 1](https://lichess.org/broadcast/freestyle-chess-grand-slam-las-vegas--round-robin-white/tiebreak--game-1/nhVdjSZB)':
-    '[拉斯维加斯循环赛白方加赛，第 1 局](https://lichess.org/broadcast/freestyle-chess-grand-slam-las-vegas--round-robin-white/tiebreak--game-1/nhVdjSZB)',
-  'Critical position after 20...d5. White to move. Lichess marks 21.c5? as the mistake; 21.cxd5 was best. Green arrow: best capture. Gray arrow: game move.':
-    '<figcaption><strong>20...d5 之后的关键局面。</strong> 轮到白方走。Lichess 标注 21.c5? 为失误；21.cxd5 才是最佳。绿色箭头：最佳吃子。灰色箭头：实战着法。</figcaption>',
-  'Critical midgame position after 20...d5 in Magnus Carlsen vs Levon Aronian, SP-482':
-    'Magnus Carlsen 对 Levon Aronian，SP-482，20...d5 之后的关键中局局面',
-  'The game result is not meaningful by itself. The selection result is: among 105 unique modern elite starts, none came from the top-10 white-favored list.':
-    '这盘棋的结果本身说明不了什么。有意义的是选择结果：在 105 个不重复的现代顶级开局局面中，没有一个来自最偏向白方的前十名单。',
-  'Any start in the CSV opens on a Chess960 analysis board: [SP-418](https://lichess.org/analysis/chess960/brnqnbkr/pppppppp/8/8/8/8/PPPPPPPP/BRNQNBKR_w_KQkq_-_0_1) for one of the most balanced starts, [SP-783](https://lichess.org/analysis/chess960/qrknrnbb/pppppppp/8/8/8/8/PPPPPPPP/QRKNRNBB_w_KQkq_-_0_1) for the most white-favored.':
-    'CSV 中的任一开局局面都能在国际象棋960分析棋盘上打开：[SP-418](https://lichess.org/analysis/chess960/brnqnbkr/pppppppp/8/8/8/8/PPPPPPPP/BRNQNBKR_w_KQkq_-_0_1) 是最均衡的开局局面之一，[SP-783](https://lichess.org/analysis/chess960/qrknrnbb/pppppppp/8/8/8/8/PPPPPPPP/QRKNRNBB_w_KQkq_-_0_1) 则最偏向白方。',
-  Reproducibility: '可复现性',
-  'Quick Answers': '快速问答',
-  'What is the most balanced Chess960 starting position?':
-    '**最均衡的国际象棋960开局局面是哪个？**',
-  'SP-418 (BRNQNBKR) and SP-563 (BRNKNRQB) are the most balanced in this run. Both evaluate at +0.07 for White.':
-    '在这次运行中，SP-418（BRNQNBKR）和 SP-563（BRNKNRQB）最均衡。两者对白方的评估值都是 +0.07。',
-  'What is the most imbalanced Chess960 starting position?':
-    '**最失衡的国际象棋960开局局面是哪个？**',
-  'SP-783 (QRKNRNBB) is the most white-favored start at +1.08.':
-    'SP-783（QRKNRNBB）最偏向白方，评估值 +1.08。',
-  'Is standard chess balanced compared to Chess960?': '**与国际象棋960相比，标准国际象棋均衡吗？**',
-  'Standard chess, SP-518 (RNBQKBNR), evaluates at +0.31 and ranks 463/960 by balance. It is almost exactly median.':
-    '标准国际象棋 SP-518（RNBQKBNR）评估值为 +0.31，按均衡度排第 463/960，几乎正好是中位数。',
-  'Are any Chess960 starts better for Black?': '**有对黑方更有利的国际象棋960开局局面吗？**',
-  'Not at Stockfish 18 depth 36. All 960 starts evaluate as White-favored.':
-    '在 Stockfish 18 深度 36 下没有。全部 960 个开局局面的评估值都偏向白方。',
-  'Further Reading': '延伸阅读',
-  "[Scaling Parallel Stockfish Analysis](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/): methodology for running Stockfish at scale on cloud CPU workers, written for the case where the cache doesn't have the answer.":
-    '[扩展并行 Stockfish 分析](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)：在云端 CPU 工作节点上大规模运行 Stockfish 的方法，面向缓存*没有*现成答案的情形。',
-  '[Mistboard](/): free online Chinese chess in English, which also hosts open-source Fog of War chess. Its Chess960 pregame (Draft960) was retired in September 2026.':
-    '[Mistboard](/)：英文界面的免费在线象棋网站，同时提供开源的迷雾国际象棋。其国际象棋960赛前选项（Draft960）已于 2026 年 9 月下线。',
-  Dataset: '数据集',
-  '[Download the full CSV](/article-data/chess960-starting-position-evals.csv) (960 rows). Columns: `scharnagl_id`, `back_rank`, `fen`, `position_key`, `cp`, `mate`, `best_move`, `pv`, `depth`, `nodes`, `source`, `fetched_at_iso`.':
-    '[下载完整 CSV](/article-data/chess960-starting-position-evals.csv)（960 行）。列：`scharnagl_id`、`back_rank`、`fen`、`position_key`、`cp`、`mate`、`best_move`、`pv`、`depth`、`nodes`、`source`、`fetched_at_iso`。',
+  ...MOVED_POSTS_ZH_HANS,
   // xiangqi-mahjong-32: machine-drafted 2026-10-16 from the signed-off English. Terms follow the live table (live.xmj.*): 台, 面子, 将眼, 庄家, 胡, 自摸, 吃, 碰, 流局.
   'Xiangqi Mahjong Rules (32 tiles)': '象棋麻将规则（32 张）',
   'The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the points each one scores.':
@@ -6453,6 +6022,98 @@ const ZH_HANS: Record<string, string> = {
   'Not a winning hand: a red and a black Advisor are not a pair': '不算胡牌：红仕和黑士不成对',
   'The dealer draws the black General to win': '庄家摸到黑将胡牌',
   Replay: '重播',
+  // Method lines and "What changed" notes on locked articles: machine-drafted 2026-10-23, not native-reviewed, from English already published.
+  'The 50 most recent finished jieqi games on the site with 20 plies or more: 2,939 positions.':
+    '本站最近 50 盘已结束、至少 20 个半回合的揭棋对局，共 2,939 个局面。',
+  'AB-JChess scored every candidate move; a reveal was scored once for each piece it could be, weighted by how many of each the side to move had not yet seen.':
+    'AB-JChess 给每个候选着法打分；翻开暗子的着法按它可能翻出的每种棋子各算一次，权重是走棋一方尚未见到的该种棋子数量。',
+  'A position counted when the best move beat the second by at least 15 points of winning chance, at standard depth and at four times that.':
+    '最佳着法的胜率比次佳着法至少高 15 个百分点，且在标准深度和四倍深度下都如此，这个局面才计入。',
+  'MistyJungleFlip: alpha-beta search with a handwritten evaluation and exact endgame tablebases, its strength set by a node budget rather than a clock.':
+    'MistyJungleFlip：α-β 搜索，配手写的评估函数和精确的残局库，棋力由节点预算而不是用时决定。',
+  'Move quality graded against the tablebases in endgames of up to five pieces, and against an exact solver on 200 five- and six-piece midgames.':
+    '在五子以内的残局中用残局库评判着法质量，在 200 个五子和六子的中局里用精确求解器评判。',
+  'Strength measured by a round robin of copies at 1k, 8k, 64k and 512k nodes a move, 120 paired, colour-swapped games per pairing.':
+    '棋力用循环赛测量：同一引擎分别以每步 1k、8k、64k 和 512k 节点对弈，每对组合下 120 盘交换先后手的成对对局。',
+  'Nothing here checks the opening, which is too large to solve.':
+    '这里没有检验开局，开局太大，无法求解。',
+  "The site's own rules engine counted the first move's positions; Fairy-Stockfish counted the deeper ones.":
+    '第一步的局面数由本站自己的规则引擎计算；更深层的由 Fairy-Stockfish 计算。',
+  'Fairy-Stockfish played 64 games per variant at 100,000 positions a move, with its neural network off.':
+    'Fairy-Stockfish 每个变体下 64 盘，每步搜索 100,000 个局面，关闭神经网络。',
+  'Xiangqi counts are strictly legal; Duck Xiangqi has no check rule, so every piece move counts.':
+    '象棋的计数只算严格合法的着法；鸭子象棋没有将军规则，所以每一步走子都计入。',
+  'Added a faster-mate example, three audits that were wrong and the helpmate bug.':
+    '新增：一个更快杀法的例子、三个判错的审校结果，以及合作杀判定的漏洞。',
+  'Retold in order, with the match results in one table; the 7x row now reads as within noise rather than a loss.':
+    '按时间顺序重写，对局结果合并为一张表；7x 那一行现在解读为在误差范围内，而不是落败。',
+  'The den-race section moved to its own article; this page now links to it.':
+    '冲兽穴竞速一节已移到单独的文章，本页现在链接到那里。',
+  'A game counts once both sides have moved and it ends, against a person or a bot.':
+    '双方都走过棋且对局结束，才算一盘，对手是人或机器人都算。',
+  'Engine matches and our test accounts are left out; counting started on June 1.':
+    '引擎对引擎的比赛和我们的测试账号不计入；从 6 月 1 日开始计数。',
+  'The six featured games are now all wins.': '精选的六盘对局现在全是胜局。',
+  'Added the Manila final with its round table and board.': '新增马尼拉决赛，附轮次表和棋盘。',
+  'Rewritten as a guide to playing and reviewing jieqi here.':
+    '改写为在本站下揭棋和复盘揭棋的指南。',
+  "Added the miner's puzzle ratings, its audit, the licence gate and the withheld class.":
+    '新增挖题程序给出的题目等级分、对它的审校、授权门槛，以及不予上线的一类题目。',
+  'Removed a claim that Zhao Xinxin is the youngest world champion; Zheng Weitong won the title younger in 2015.':
+    '删去了赵鑫鑫是最年轻世界冠军的说法；郑惟桐 2015 年夺冠时更年轻。',
+  'Replaced the sample game with a game played against the engine on the site.':
+    '示例对局换成了一盘在本站与引擎下的对局。',
+  'Added a sample game from the site.': '新增一盘本站的示例对局。',
+  'Rewritten as a guide for chess players.': '改写为写给国际象棋棋手的指南。',
+  'Reworked the diagrams, the history and the prose.': '重做了图示、历史部分和正文。',
+  'Added a capture table and an FAQ.': '新增吃子对照表和常见问题。',
+  'The no-progress draw is now 60 plies without a capture or flip, up from 40.':
+    '无进展和棋现在是 60 个半回合内没有吃子或翻子，原来是 40。',
+  '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
+    'MistyBanqi 自我对弈 200 盘，每步一千万节点，采用台湾比赛规则和 40 个半回合无进展和棋。',
+  'Every game a fresh deal, with both seats the same engine at the same search.':
+    '每盘都重新洗子，双方都是同一个引擎、同样的搜索量。',
+  "Material counted on the engine's own value table.": '子力按引擎自己的价值表计算。',
+  'The games measure this engine, not banqi between people.':
+    '这些对局衡量的是这个引擎，而不是人与人之间的暗棋。',
+  'Added how the engine was built: self-play, the value table, the search plateau and the repetition fix.':
+    '新增引擎的构建过程：自我对弈、价值表、搜索的平台期和重复局面的修复。',
+  'Added an FAQ on what the bot cannot see, and the sample game as a study.':
+    '新增关于机器人看不到什么的常见问题，示例对局也做成了研习。',
+  'The Treasure figure now shows the five moves the rules allow, not eight.':
+    '宝的示意图现在显示规则允许的五种走法，而不是八种。',
+  "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.":
+    '不再称鸭子象棋为 Mistboard 原创；它是把 Tim Paulden 的鸭子国际象棋搬到了象棋棋盘上。',
+  'Added the facing argument, the 8-of-88 count, the median game length and a note on the 29 September engine bug.':
+    '新增将帅对面的论证、88 个中占 8 个的统计、对局长度的中位数，以及关于 9 月 29 日引擎漏洞的说明。',
+  "A rule kernel referees every game; its move generation matches Fairy-Stockfish's on 209 positions.":
+    '每盘对局都由规则内核裁判；它的着法生成在 209 个局面上与 Fairy-Stockfish 一致。',
+  'Fairy-Stockfish played a game from each of the 83 distinct endings of the opening chain at 100,000 nodes a move, and again at a million.':
+    'Fairy-Stockfish 从开局链的 83 种不同结局各下一盘，每步 100,000 节点，再以每步一百万节点各下一盘。',
+  'Proof-number search turned the decisive endings into proofs about the rules: 63 of 70 closed, and a separate checker replays each one.':
+    '证明数搜索把决定胜负的结局变成关于规则的证明：70 个中有 63 个得证，另有一个独立的检查程序逐一重放。',
+  'Added the full analysis: the opening forks, the proof line, the engine games and how it was checked.':
+    '新增完整分析：开局分支、证明路线、引擎对局，以及检验方法。',
+  "A rule kernel referees every game, after matching the engine's legal moves by perft from each array, on nine hand-built positions and on 300 positions from random play.":
+    '每盘对局都由规则内核裁判；此前它已用 perft 从每种布阵出发核对引擎的合法着法，并在九个手工构造的局面和 300 个随机对局局面上核对过。',
+  'Every array played four times, at 150,000, 200,000, 300,000 and 500,000 nodes a move, with no random openings.':
+    '每种布阵各下四盘，分别为每步 150,000、200,000、300,000 和 500,000 节点，不用随机开局。',
+  'Node budgets, not time, so nothing depends on the machine.':
+    '用节点预算而不是时间，所以结果不依赖机器。',
+  'Added the full account: the twelve start arrays, both result tables, step-through games and the checks, with four figures corrected against the sample games.':
+    '新增完整记录：十二种起始布阵、两张结果表、可逐步浏览的对局和检验过程，并对照示例对局更正了四个数字。',
+  'Our own engine in Rust (alpha-beta search with late move reductions and a quiescence search over conversions), because no existing engine plays these rules.':
+    '我们自己用 Rust 写的引擎（α-β 搜索，带后期着法缩减，以及针对转化的静态搜索），因为现有引擎都不支持这套规则。',
+  'Engine games from the starting array with no opening book, the two colors taking the first move in turn.':
+    '引擎对局从初始布阵开始，不用开局库，双方轮流先走。',
+  "Every engine game replayed through Mistboard's rule kernel, with the same legal moves at every position.":
+    '每盘引擎对局都经 Mistboard 的规则内核重放，每个局面的合法着法都一致。',
+  'Two checks that do not depend on engine strength: 6,000 games of random legal moves, and a proof search of 20.8 billion nodes.':
+    '两项不依赖引擎棋力的检验：6,000 盘随机合法着法的对局，以及一次 208 亿节点的证明搜索。',
+  "Added the cannon rule's design history and the engine results behind the numbers.":
+    '新增炮规则的设计沿革，以及这些数字背后的引擎结果。',
+  'Names obscuro-chess, the other open implementation, instead of calling Misty the only one.':
+    '点名另一个开源实现 obscuro-chess，不再称 Misty 是唯一的开源实现。',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -10054,8 +9715,8 @@ const ZH_HANT: Record<string, string> = {
     '他和吕钦一樣出自廣東，一樣把棋建立在殘局功夫上，也一樣是本頁三位紀錄清白的棋手之一。',
   'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.':
     '许银川對阮武君，2007年，出自他三個冠軍中的最後一個。我們的引擎給他打出98.5分，是本頁最乾淨的一局。',
-  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
-    '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。他至今仍是拿下這個頭銜最年輕的棋手，而這一冠也讓他集齊全國、亞洲與世界三項冠軍，象棋界稱之為大滿貫。',
+  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. Taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
+    '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。這一冠讓他集齊全國、亞洲與世界三項冠軍，象棋界稱之為大滿貫。',
   'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.':
     '2025年1月12日，他在一次處罰四十一人的決定中被終身禁賽。',
   'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.':
@@ -11076,8 +10737,8 @@ const ZH_HANT: Record<string, string> = {
     '我們把部落棋搬到象棋棋盤上，先測量再動手：十二種開局陣形、兩種兵的走法，每一種由引擎自戰四局。用象棋自己的兵，全軍靠同一招贏下每一局；讓兵從開局起就有過河兵的走法，棋局則變成四局裡有三局和棋的圍城。我們發佈的是這份測量，而不是這個變體。',
   'Horde chess is 36 pawns and no king against a normal army; the pawns win by checkmate, the army by taking the last pawn. Lichess has played it since 2015. We put the same idea on the xiangqi board: Red has soldiers only and no general, Black has the standard army, and everything else is xiangqi. Then we measured it before designing anything.':
     '部落棋是 36 個兵、沒有王，對陣正常的一軍；兵靠將死取勝，全軍靠吃掉最後一個兵取勝。Lichess 從 2015 年起就有它。我們把同樣的想法搬到象棋棋盤上：紅方只有兵、沒有將，黑方是標準全軍，其他一切照象棋。然後在設計任何東西之前先做了測量。',
-  'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward, drawn with the crossed-soldier piece because that is the move they have.':
-    '原版陣形配標準兵，以及我們找到的最接近一盤棋的設計：36 個老兵前移一行，用過河兵的棋子圖案畫出，因為那正是它們的走法。',
+  'The parent’s array with standard soldiers, and the closest thing to a game we found: 36 veterans a rank forward.':
+    '原版陣形配標準兵，以及我們找到的最接近一盤棋的設計：36 個老兵前移一行。',
   'Standard soldiers: the chariot eats the horde from behind': '標準兵：車從背後吃光兵團',
   'Veteran soldiers: the horde holds, and the siege is a draw': '老兵：兵團守得住，圍城是和棋',
   'The rule kernel with both soldier rules and all twelve arrays, the Fairy-Stockfish stanzas, all 387 engine games, the checks behind them, and a verifier that replays every game against the rules and recomputes the tallies in half a minute, with no engine needed. If you have a soldier rule that gives the block cover on the way, that is where the next attempt starts; open an issue there and the write-up will say so.':
@@ -11148,6 +10809,8 @@ const ZH_HANT: Record<string, string> = {
     '國際象棋的部落棋（Horde）是它的母版：36 個兵、沒有王，對抗正常的一方軍隊。這次移植儘量保留象棋本身的規則。紅方是兵團：只有兵，沒有帥，紅方先行。黑方是標準全軍。紅方靠將死取勝；黑方靠吃掉紅方所有子取勝。由於棋盤上只有一個將，兵團一方不存在被將，也不存在白臉將。',
   'The side to move with no legal move loses, as in xiangqi; Lichess Horde calls it a draw, and the terminal rules below say how much that matters. Threefold repetition draws, and so does a run of 60 or 120 plies without a capture. Standard soldiers move as in xiangqi: one point forward, sideways only after crossing the river, never backward. Veteran soldiers have the crossed soldier’s move from their first step. The army’s five soldiers stay standard either way.':
     '輪到行棋而無合法著法的一方判負，與象棋相同；Lichess 的部落棋判為和棋，下面的終局規則一節會說明這有多大影響。三次重複局面判和；連續 60 或 120 步無吃子也判和。標準兵走法與象棋相同：向前一格，過河後才能橫走，永不後退。老兵從第一步起就有過河兵的走法。無論哪種設定，全軍一方的五個兵都是標準兵。',
+  'On the boards below, a veteran wears a gold chevron, so it reads apart from a standard soldier in any piece set. The International set draws it as the crossed soldier instead.':
+    '下面的棋圖裡，老兵帶一個金色的向上箭頭標記，在任何棋子樣式下都能和標準兵區分開。國際棋子樣式則直接把它畫成過河兵。',
   'The design space': '設計空間',
   'Five dials. A design is a soldier rule and a start array, and twenty-four were played.':
     '五個旋鈕。一種設計由一種兵的走法和一種初始陣形構成，我們下了二十四種。',
@@ -11178,37 +10841,36 @@ const ZH_HANT: Record<string, string> = {
   'Black wins: the last soldier is gone.': '黑方勝：最後一個兵也沒了。',
   'The other three arrays are one exception: enough soldiers get across before the chariot is done. 45 on ranks 1 to 5 is a five-deep block, and its four games split two army wins, one horde mate and one draw. The two arrays that start across the river begin in contact with the army’s soldiers. The 27 still loses; the 36 is a coin flip that skips the march and previews the veteran game.':
     '另外三種陣形是同一個例外：在車做完這件事之前，有足夠多的兵過了河。第 1 至 5 線的 45 兵是五層深的兵陣，四局結果是全軍兩勝、兵團將死一局、和棋一局。兩種從過河處起始的陣形一開局就與全軍的兵短兵相接。27 兵仍然要輸；36 兵則是五五開，它跳過了行軍階段，預演了老兵版的棋局。',
-  Soldiers: '兵數',
-  Start: '起始',
-  Army: '全軍',
-  Horde: '兵團',
+  Array: '陣形',
+  'Army-Horde-Draw': '全軍-兵團-和',
+  Lost: '損失',
   '1M game': '百萬節點局',
   Plies: '步數',
-  'Ranks 1-2': '第 1-2 線',
+  '18 on ranks 1-2': '第 1-2 線 18 兵',
   'Army, extinction': '全軍，全滅',
-  'Ranks 3-4': '第 3-4 線',
-  'Ranks 1-3': '第 1-3 線',
-  'Ranks 2-4': '第 2-4 線',
-  'Ranks 4-6': '第 4-6 線',
-  'Ranks 1-4': '第 1-4 線',
-  'Ranks 2-5': '第 2-5 線',
-  'Ranks 3-6': '第 3-6 線',
+  '18 on ranks 3-4': '第 3-4 線 18 兵',
+  '27 on ranks 1-3': '第 1-3 線 27 兵',
+  '27 on ranks 2-4': '第 2-4 線 27 兵',
+  '27 on ranks 4-6': '第 4-6 線 27 兵',
+  '36 on ranks 1-4': '第 1-4 線 36 兵',
+  '36 on ranks 2-5': '第 2-5 線 36 兵',
+  '36 on ranks 3-6': '第 3-6 線 36 兵',
   'Horde, mate': '兵團，將死',
-  'Ranks 1-5': '第 1-5 線',
-  'Xiangqi’s five points': '象棋的五個兵位',
-  'Parent shape': '母版形狀',
-  'Army, Horde and Draw count four games per array at 150,000, 200,000, 300,000 and 500,000 nodes a move, 120-ply clock, every move the engine’s first choice. Then the single game at a million nodes with a 60-ply clock, and its length. Four arrays were played once more at five million nodes: the army won the 36 on ranks 1 to 4 in 156 plies, the 36 on ranks 2 to 5 in 146 and the 32 in 106, and the 36 across the river drew by repetition at 104.':
-    '全軍、兵團、和棋三欄統計每種陣形的四局，每著 150,000、200,000、300,000 和 500,000 節點，120 步無吃子限制，每著都取引擎首選。之後是每著一百萬節點、60 步限制下的單局及其步數。有四種陣形在每著五百萬節點下又下了一局：全軍在 156 步贏下第 1 至 4 線的 36 兵，在 146 步贏下第 2 至 5 線的 36 兵，在 106 步贏下 32 兵；過河起始的 36 兵在第 104 步因重複局面和棋。',
+  '45 on ranks 1-5': '第 1-5 線 45 兵',
+  '32 on xiangqi’s five points': '象棋五個兵位 32 兵',
+  '31 in the parent’s shape': '母版形狀 31 兵',
+  '40 in the parent’s shape': '母版形狀 40 兵',
+  'Army-Horde-Draw counts four games per array at 150,000, 200,000, 300,000 and 500,000 nodes a move, 120-ply clock, every move the engine’s first choice. Then the single game at a million nodes with a 60-ply clock, and its length. Four arrays were played once more at five million nodes: the army won the 36 on ranks 1 to 4 in 156 plies, the 36 on ranks 2 to 5 in 146 and the 32 in 106, and the 36 across the river drew by repetition at 104.':
+    '全軍-兵團-和一欄統計每種陣形的四局，每著 150,000、200,000、300,000 和 500,000 節點，120 步無吃子限制，每著都取引擎首選。之後是每著一百萬節點、60 步限制下的單局及其步數。有四種陣形在每著五百萬節點下又下了一局：全軍在 156 步贏下第 1 至 4 線的 36 兵，在 146 步贏下第 2 至 5 線的 36 兵，在 106 步贏下 32 兵；過河起始的 36 兵在第 104 步因重複局面和棋。',
   'The chariot’s road exists because a standard soldier attacks nothing beside it, and xiangqi already has a soldier that does: the crossed soldier, which moves and captures one point forward or sideways. Veteran soldiers are a horde that starts promoted. Every horde soldier has that move from its first step, nothing else changes, and a player learns nothing new.':
     '車之所以有路可走，是因為標準兵不攻擊身旁任何一格，而象棋裡本來就有一種能做到的兵：過河兵，可向前或橫向一格行走與吃子。老兵就是一開始就已經升變的兵團。兵團的每個兵從第一步起就有這種走法，其餘一切不變，玩家不需要學任何新東西。',
   'This closes the road. A veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side, and between equals the game becomes a siege: 48 games, 37 draws. The army wins only against 18 soldiers, and from 27 up it never wins.':
     '這條路被堵死了。老兵縱隊會攻擊身旁各格，車沒法白站在它旁邊。兵團成了真正的一方，而在實力相當的雙方之間，棋局變成圍城：48 局，37 和。全軍只贏得了對 18 兵的局，從 27 兵往上它一局不勝。',
-  'Army lost': '全軍損失',
   'Draw, clock': '和棋，步數限制',
   'Horde, smother': '兵團，困斃',
   'Draw, repetition': '和棋，重複局面',
-  'Four games per array at the same four budgets and the 120-ply clock, then the single game at a million nodes; Army lost counts the army’s pieces lost in that game. *Three million-node games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; no capture followed, and the ply shown is where the clock ended them. Each ended with nine or ten soldiers against a general and both chariots, with an elephant or an advisor beside them in two.':
-    '每種陣形在同樣的四檔預算、120 步限制下各下四局，然後是一百萬節點下的單局；全軍損失一欄統計全軍在那一局裡損失的子力。*有三局一百萬節點對局撞上了測試框架的 1,000 步上限，之後從該局面繼續下，步數限制照常生效；之後未再出現吃子，表中所示步數即為步數限制終止之處。三局結束時都是九或十個兵對將加雙車，其中兩局還多一個象或一個士。',
+  'Four games per array at the same four budgets and the 120-ply clock, then the single game at a million nodes; Lost counts the army’s pieces lost in that game. *Three million-node games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; no capture followed, and the ply shown is where the clock ended them. Each ended with nine or ten soldiers against a general and both chariots, with an elephant or an advisor beside them in two.':
+    '每種陣形在同樣的四檔預算、120 步限制下各下四局，然後是一百萬節點下的單局；損失一欄統計全軍在那一局裡損失的子力。*有三局一百萬節點對局撞上了測試框架的 1,000 步上限，之後從該局面繼續下，步數限制照常生效；之後未再出現吃子，表中所示步數即為步數限制終止之處。三局結束時都是九或十個兵對將加雙車，其中兩局還多一個象或一個士。',
   '**The ending.** The horde marches, takes the army’s cannons and elephants on the way in, and arrives at the palace to find a general with two chariots waiting. From there the soldiers cannot force their way past the chariots, and the chariots cannot eat a block of soldiers that guard each other. Start rank and shape decide how much of the army the horde takes on the way in, and nothing else. The parent’s 31 shows the other face of the same rule: its four games drew at 155 to 245 plies with never more than two soldiers across the river, because a block that has not moved cannot be attacked and a block that moves loses the soldier that moved.':
     '**終局形態。**兵團行軍推進，路上吃掉全軍的炮和相，抵達九宮時發現將和兩隻車在那裡等著。到了這一步，兵衝不過車，車也吃不動互相保護的兵陣。起始橫線和形狀只決定兵團在路上能吃掉全軍多少子，別無其他。母版的 31 兵展示了同一條規則的另一面：四局在 155 至 245 步和棋，過河的兵從未超過兩個，因為沒動過的兵陣無法被攻擊，而一動就要丟掉動過的那個兵。',
   'The ending, here from the 40-soldier array at a million nodes a move: twelve soldiers against a general, an advisor and two chariots at ply 754. The soldiers cannot force a way past the chariots, and the chariots take a soldier only when one steps out of the block: two in the next 246 plies, at 822 and 896.':
@@ -11575,17 +11237,23 @@ const ZH_HANT: Record<string, string> = {
   'Banqi is a folk game and the rules differ by region. Three families are common. Taiwanese rules use the ladder above and a cannon that captures by jumping one screen. Hong Kong rules rank the pieces general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder. Mainland rules usually have no jumping cannon at all: it captures adjacent pieces by rank like everything else.':
     '暗棋是民間棋戲，各地規則不同，常見的有三種。台灣規則用本頁的大小順序，砲隔一子跳吃。香港規則的大小是將、車、馬、砲、士、象、卒，砲在等級序列裡面。中國大陸的規則通常沒有跳吃的砲：砲和其他棋子一樣按等級吃相鄰的棋子。',
   // pikafish: Taiwan forms (線上, 網頁, 帳號, 伺服器, 等級, 選單, 資料, 西洋棋, 建置).
-  'Pikafish on Mistboard': '皮卡魚線上：在 Mistboard 上與皮卡魚對弈',
+  'Pikafish on Mistboard': '皮卡魚象棋：線上對弈與分析',
+  'Now opens with where to play and analyze Pikafish in your browser, and points to the official download for the engine itself.':
+    '開頭改為說明如何在瀏覽器中與皮卡魚對弈和分析，並指向引擎的官方下載。',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
-    '皮卡魚象棋線上對弈：象棋和揭棋，免費網頁版',
+    '皮卡魚象棋線上：免費對弈、分析與引擎下載指引',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    '在瀏覽器裡直接與開源象棋引擎皮卡魚對弈，它由 Stockfish 改造而來。免費、不用註冊、不用下載。可選難度等級，可下揭棋，還能用它復盤你的對局。',
+    '皮卡魚象棋線上免費對弈，免註冊、免安裝；在瀏覽器裡用皮卡魚分析局面、匯入棋譜。想下載引擎？這裡也有皮卡魚官方專案入口與安裝說明指引。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     '想找地方與皮卡魚對弈或用它分析的象棋棋手。',
-  '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
-    '[皮卡魚（Pikafish）](https://github.com/official-pikafish/Pikafish) 是目前最強的開源象棋引擎，由 Stockfish 改造而來。多數人要先下載引擎，再搭配一個介面才能用。在這裡，它直接在網頁裡運行。',
-  'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    '可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它復盤。[象棋線上對弈](/zh-hant)免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
+  'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':
+    '皮卡魚（Pikafish）是基於 Stockfish 的開源象棋引擎。在這裡可以直接與它線上對弈，也可以用它分析局面，免費、免註冊。',
+  'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads a 51 MB net on first use.':
+    '想下載引擎本體？請到[皮卡魚官方專案](https://github.com/official-pikafish/Pikafish)查看發布版本、原始碼與安裝說明。網頁分析首次使用需載入 51 MB 權重。',
+  'Analyze with Pikafish': '用皮卡魚分析',
+  'Can I analyze with Pikafish online?': '皮卡魚象棋怎麼線上分析？',
+  'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 51 MB net loads on first use.':
+    '可以。開啟分析棋盤，輸入局面或匯入棋譜，再開啟引擎。皮卡魚在瀏覽器裡運行，首次使用會載入 51 MB 權重。',
   'Play Pikafish': '與皮卡魚對弈',
   'Play Pikafish at jieqi': '與皮卡魚下揭棋',
   'Play against Pikafish': '人機對弈：挑戰皮卡魚',
@@ -11614,15 +11282,15 @@ const ZH_HANT: Record<string, string> = {
   'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.':
     '[分析棋盤](/analysis/xiangqi)用於你自己擺的局面。它在你的瀏覽器裡運行全強度的皮卡魚，帶官方權重，你分析的內容不會離開你的電腦。權重 51 MB，只需下載一次。',
   Questions: '常見問題',
-  'Can I play Pikafish online?': '可以線上和皮卡魚下棋嗎？',
-  'Yes, here, in the browser. One click on the Pikafish page starts a game against it; the play menu offers eight easier levels.':
-    '可以，就在這裡，網頁裡直接下。在皮卡魚頁面點一下就開局；對弈選單裡還有八個更容易的等級。',
+  'Can I play Pikafish online?': '皮卡魚象棋線上怎麼玩？',
+  'Yes. Open Play Pikafish to start a game in your browser. The play menu also offers eight easier Fairy-Stockfish levels.':
+    '開啟與皮卡魚對弈，即可在瀏覽器裡開局。對弈選單另有八個較容易的 Fairy-Stockfish 等級。',
   'Is it free?': '免費嗎？',
   'Yes. Playing, the ladder, jieqi, game review and the analysis board are all free. An account is optional.':
     '免費。對弈、人機階梯、揭棋、復盤和分析棋盤都免費。帳號可選，不是必需。',
-  'Do I need to download anything?': '需要下載什麼嗎？',
-  'No. The game runs in the page. On a phone, open the site in the browser and play.':
-    '不需要。棋局直接在網頁裡運行。手機上用瀏覽器打開本站即可開始。',
+  'Where can I download Pikafish?': '皮卡魚象棋引擎怎麼下載？',
+  'For the engine itself, use the official Pikafish project for releases, source code and setup instructions. To play or analyze on Mistboard, open your browser without installing an app.':
+    '引擎本體的發布版本、原始碼與安裝說明見皮卡魚官方專案。在 Mistboard 對弈或分析只需開啟瀏覽器，不必安裝應用程式。',
   'How strong is it?': '皮卡魚有多強？',
   'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
     '皮卡魚機器人在伺服器上每步搜尋三百萬個局面，約四秒。這已超出任何人類棋手。上面的階梯一路降到初學者也能贏的等級。',
@@ -12046,451 +11714,99 @@ const ZH_HANT: Record<string, string> = {
   '10 of the last 13 champions': '近 13 位冠軍中有 10 位',
   'CHINESE XIANGQI ASSOCIATION RULINGS': '中國象棋協會處罰決定',
   'VERIFIED TITLES': '已核實的頭銜',
-  // en-passant-under-fog: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
-  "My fog of war chess engine recorded the en passant square under standard chess legality, in a variant with no such rule. En passant availability decides what a pawn can see, so the true board fell out of the engine's belief and it finished the game against 41 worlds that did not exist.":
-    '我的迷霧戰爭西洋棋引擎依標準西洋棋的合法性記錄吃過路兵的目標格，可是這個變體根本沒有這條規則。能否吃過路兵決定了兵能看見什麼，於是真實棋盤從引擎的信念中掉了出去，它在最後對著 41 個不存在的世界下完了那盤棋。',
-  'Misty tracks every board consistent with what it has seen, stored as FEN strings. In one game it finished against 41 boards, none of them the real one.':
-    'Misty 追蹤所有與它所見一致的棋盤，以 FEN 字串儲存。有一盤棋它最後是對著 41 個棋盤下完的，其中沒有一個是真的。',
-  'python-chess writes the en passant square only when the capture is legal in standard chess. Under fog the capture is legal even in check, and a pawn that can take en passant sees that square, so the true position stopped matching what Misty had seen.':
-    'python-chess 只在該吃子於標準西洋棋中合法時才寫出吃過路兵的目標格。在迷霧規則下，即使被將軍，這個吃子也是合法的，而能吃過路兵的兵看得見那個格子，於是真實局面不再與 Misty 所見相符。',
-  'The fix records the square whenever a pawn can take. Replaying all 271 games, lost-truth cases outside the sampled games went from four to none.':
-    '修正方式是只要有兵能吃就記下該格。重播全部 271 盤棋後，抽樣棋局以外的真值遺失案例由四例降為零。',
-  'Nothing caught it: the Rust port copied python-chess byte for byte, so the test comparing the two passed, and a belief that loses the truth gets more confident, not less.':
-    '沒有任何機制抓到它：Rust 移植版逐位元組複製了 python-chess 的行為，所以比對兩者的測試通過了；而一個遺失真值的信念只會變得更有把握，不會更不確定。',
-  "Game `e751c6c4`, Misty as Black, move 29. White pushes the g-pawn two squares, beside Black's pawn on f4. White's queen on d6 attacks the black king.":
-    '棋局 `e751c6c4`，Misty 執黑，第 29 著。白方將 g 兵推進兩格，落在黑方 f4 兵的旁邊。白方在 d6 的后攻擊黑王。',
-  'Record the square when a pawn can take, regardless of whether taking is wise. That is `EnPassantMode.XFEN`, and it is the fog rule. It still omits the square when no enemy pawn is adjacent, so the belief does not split over a square nobody can use.':
-    '只要有兵能吃，就記下那個格子，不管吃下去是否明智。這就是 `EnPassantMode.XFEN`，也是迷霧規則。當旁邊沒有敵方兵時它仍會省略該格，所以信念不會因為一個沒人能用的格子而分裂。',
-  'At the failing ply `P` now goes 625 to 617, truth kept. Replaying all 271 games reports no lost-truth decisions outside the sampled games, against four before.':
-    '在出錯的那一著，`P` 現在是由 625 變為 617，真值保留。重播全部 271 盤棋後，抽樣棋局以外沒有任何真值遺失的決策，先前則有四例。',
-  'Why nothing caught it': '為什麼沒有任何機制抓到它',
-  "Fixed in the engine on 2026-09-10 and released in [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3). Every board above is drawn by the engine's own visibility code from that position; the script that draws them refuses to run if the two views stop differing by exactly g3 and g4.":
-    '已於 2026-09-10 在引擎中修正，並隨 [Misty 0.1.3](https://github.com/brianhliou/misty/releases/tag/v0.1.3) 發佈。上方每一張棋盤都是由引擎自己的可見性程式碼從該局面繪製的；繪圖的腳本若發現兩個視野的差異不再剛好是 g3 與 g4，就會拒絕執行。',
-  // most-played-move: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
-  'When the Most Played Move Is an Inaccuracy': '當最多人下的著法其實是不精確',
-  "Half are gambits and sidelines the masters never play. Where masters reach the position, most already play the engine's move; only four share the club's mistake.":
-    '其中半數是大師從不採用的棄兵與冷門變例。在大師確實下到的局面裡，多數大師早已走引擎的著法；只有四個局面與俱樂部棋手犯同樣的錯。',
-  'The biggest by games: after 1.e4 e5 2.f4 d6, 85% of club players play 3.Nf3, and 3.d3 is nearly a pawn better.':
-    '以對局數計最大的一例：1.e4 e5 2.f4 d6 之後，85% 的俱樂部棋手走 3.Nf3，而 3.d3 幾乎好上一個兵。',
-  "The fix is in the explorer's settings: the masters database, 2018 onward. All 144 are in a study.":
-    '解法就在局面瀏覽器的設定裡：大師資料庫，2018 年起。全部 144 個都收在一份研究中。',
-  'The opening explorer on Lichess shows you, for any position, what people played next and how it went. It can show you three databases (every rated game on Lichess, the masters, or one player), filtered by rating band, speed and year, and the masters filtered by era is the best free opening book there is. But the table a club player sees by default is the Lichess database at their own rating, and its top row is the most played move at their level. That row is the move most of us play, because everyone else did. I asked how often it is an inaccuracy.':
-    'Lichess 的開局瀏覽器會告訴你，在任一局面下大家接著走了什麼、結果如何。它可以顯示三種資料庫（Lichess 上所有計分對局、大師對局，或某位棋手的對局），並可按分數段、棋速與年份篩選，而按年代篩選的大師資料庫是現有最好的免費開局書。但俱樂部棋手預設看到的表格，是自己分數段的 Lichess 資料庫，最上面一列就是該水準最多人下的著法。那一列是我們大多數人會走的著法，因為別人都這樣走。我想知道：它有多常是一個不精確？',
-  'Where "most played" comes from': '「最多人下」是怎麼來的',
-  "Then every position went through Stockfish 18 at 20,000,000 nodes with three lines. The most played move is judged against the best move from the same search, by lila's own winning-chance formula, the one that decides what gets a `?!` on a Lichess report. A gap of 0.1 or more is an inaccuracy, 0.2 a mistake, 0.3 a blunder. Every flagged position then got a second 20M search with a different thread count, and 24 of 168 did not survive it; 144 did. That is the same noise floor the [last post](/blog/lichess-analysis-accuracy) found, and it is why one search is never the verdict here.":
-    '接著每個局面都用 Stockfish 18 以 20,000,000 節點、三條變例跑過。最多人下的著法，是以同一次搜尋得出的最佳著法為基準來評判，採用 lila 自己的取勝機會公式，也就是決定 Lichess 分析報告上何時標 `?!` 的那個公式。差距 0.1 以上算不精確，0.2 算錯著，0.3 算嚴重錯著。每個被標記的局面再以不同執行緒數做第二次 20M 搜尋，168 個中有 24 個沒能通過；144 個通過了。這正是[上一篇文章](/blog/lichess-analysis-accuracy)發現的同一個雜訊底線，也是為什麼本文從不以單次搜尋作為定論。',
-  'For each of the 144 I also pulled the masters database by era (before 2010, 2010 to 2017, since 2018), which is where the shapes come from.':
-    '這 144 個局面我也按年代（2010 年之前、2010 到 2017、2018 年起）取了大師資料庫的資料，下面的分類就是從這裡來的。',
-  'Four shapes': '四種型態',
-  shape: '型態',
-  positions: '局面數',
-  'what it means': '含意',
-  'club only': '只有俱樂部棋手',
-  "masters have no games there, or fewer than twenty; the line is the club's alone":
-    '大師在此沒有對局，或少於二十局；這條變例是俱樂部棋手獨有的',
-  'masters always knew': '大師一直都知道',
-  "the masters' top move is the engine's move in every era":
-    '大師的首選著法在每個年代都是引擎的著法',
-  'masters play a third move': '大師走第三種著法',
-  "the masters avoid both the club move and the engine's first choice":
-    '大師既不走俱樂部的著法，也不走引擎的首選',
-  'masters switched': '大師改弦易轍',
-  "the masters' top move became the engine's move in a later era":
-    '大師的首選著法在較晚的年代變成了引擎的著法',
-  'everyone plays it': '大家都這樣走',
-  "the masters' top move is the club move too": '大師的首選著法也是俱樂部的著法',
-  "The club's book is mostly a book the masters never opened: 69 positions are gambits and sidelines with no masters games worth counting. Where the masters do play the position, they already agree with the engine in 51 cases, and moved toward it in 8 more. In only four of 144 do masters and club share the mistake. Theory is not lagging the engine much; the club is lagging theory.":
-    '俱樂部棋手的開局書，大多是大師從未翻開的一本：69 個局面是棄兵與冷門變例，沒有值得計入的大師對局。在大師確實會下的局面中，有 51 個他們已經和引擎一致，另有 8 個逐漸朝引擎的著法移動。144 個中只有四個是大師與俱樂部棋手共犯同一個錯。理論並沒有落後引擎太多；是俱樂部棋手落後理論。',
-  'Ten positions': '十個局面',
-  "Each has a board below. The most played move is on the mainline with its mark; the engine's line is the sideline with the numbers; the comment holds the club share and the masters' history. The strips first: how often the club move and the engine move are played, by 1600 to 2200 players and by masters in each era.":
-    '每一個下面都有一個棋盤。最多人下的著法在主變例上，並附標記；引擎的變例是帶數字的副變例；註解裡有俱樂部棋手的比例以及大師的歷史選擇。先看長條圖：俱樂部著法與引擎著法分別被 1600 到 2200 分棋手、以及各年代大師走出的頻率。',
-  "Rust is the club's favourite, blue the engine's move. Masters cells with fewer than twenty games are left blank.":
-    '鏽紅色是俱樂部棋手的最愛，藍色是引擎的著法。大師欄位不足二十局者留空。',
-  'For ten opening positions, bars showing how often the club move and the engine move are played by 1600 to 2200 players on Lichess, and by masters before 2010, in 2010 to 2017, and since 2018.':
-    '十個開局局面的長條圖，顯示俱樂部著法與引擎著法分別被 Lichess 上 1600 到 2200 分棋手，以及 2010 年之前、2010 到 2017、2018 年起的大師走出的頻率。',
-  "**King's Gambit, 2...d6.** After 1.e4 e5 2.f4 d6, 85% of club players play 3.Nf3, and so did half the masters who reached it. At 20M it is −0.67; 3.d3 is +0.25, because after 3.Nf3 exf4 Black takes the pawn and keeps it (the next position in the tree agrees: 44% then play 3...Nc6?! instead of taking). Everyone plays it, and it is the biggest miss on the list by games.":
-    '**王翼棄兵，2...d6。**1.e4 e5 2.f4 d6 之後，85% 的俱樂部棋手走 3.Nf3，下到此局面的大師也有半數如此。在 20M 下它是 −0.67；3.d3 是 +0.25，因為 3.Nf3 exf4 之後黑方吃下這個兵並守住它（局面樹的下一個局面也印證了這點：接著有 44% 走 3...Nc6?! 而不吃兵）。大家都這樣走，而以對局數計，這是本清單上最大的一次失誤。',
-  "King's Gambit 2...d6: 3.Nf3 is the club move, 3.d3 the engine's":
-    '王翼棄兵 2...d6：3.Nf3 是俱樂部的著法，3.d3 是引擎的著法',
-  '**Petrov, 3.Bc4.** 1.e4 e5 2.Nf3 Nf6 3.Bc4 reaches ten million club games, and a third of Black players answer 3...Nc6, turning it into a Two Knights. 3...Nxe4 takes the pawn: −0.54 against +0.15. The masters have taken it in every era, seven times in ten.':
-    '**彼得羅夫防禦，3.Bc4。**1.e4 e5 2.Nf3 Nf6 3.Bc4 累積了一千萬局俱樂部對局，三分之一的黑方回以 3...Nc6，把它變成兩馬防禦。3...Nxe4 可以吃兵：−0.54 對 +0.15。大師在每個年代都吃了這個兵，十次有七次。',
-  'Petrov 3.Bc4: the club plays Nc6, the engine takes on e4':
-    '彼得羅夫防禦 3.Bc4：俱樂部棋手走 Nc6，引擎在 e4 吃兵',
-  "Four Knights Spanish 4.Nc3: the club plays d6, the engine plays Rubinstein's Nd4":
-    '四馬防禦西班牙式 4.Nc3：俱樂部棋手走 d6，引擎走 Rubinstein 的 Nd4',
-  '**Vienna Gambit, 3...exf4.** 1.e4 e5 2.Nc3 Nf6 3.f4, and 30% take the pawn. It is +0.63 for White; 3...d5, the move 97% of masters have played in every era, is −0.31. Taking is the natural move and the losing one, which is what the gambit is for.':
-    '**維也納棄兵，3...exf4。**1.e4 e5 2.Nc3 Nf6 3.f4，30% 的人吃兵。這是白方 +0.63；而 3...d5，也就是各年代 97% 大師都走的著法，是 −0.31。吃兵是最自然的一著，也是輸掉的一著，而這正是棄兵的用意。',
-  "Vienna Gambit: exf4 is the club move, d5 the engine's and the masters'":
-    '維也納棄兵：exf4 是俱樂部的著法，d5 是引擎也是大師的著法',
-  "**London, 2...g6 3.Nc3.** 1.d4 Nf6 2.Bf4 g6 3.Nc3 and 73% of the club plays 3...Bg7, the move you play in every other London. Here it is +0.62 and 3...d5 is 0.00, because 3.Nc3 is there to play 4.e4, and the bishop move lets it happen while 3...d5 stops it. The masters' share of 3...d5 went 48%, 66%, 77% by era.":
-    '**倫敦系統，2...g6 3.Nc3。**1.d4 Nf6 2.Bf4 g6 3.Nc3，73% 的俱樂部棋手走 3...Bg7，那是在其他倫敦系統裡都會走的一著。但在這裡它是 +0.62，而 3...d5 是 0.00，因為 3.Nc3 的用意就是要走 4.e4，象的那一著讓它得以實現，而 3...d5 則阻止了它。大師走 3...d5 的比例按年代依序是 48%、66%、77%。',
-  "London 2...g6 3.Nc3: Bg7 is the club move, d5 the engine's":
-    '倫敦系統 2...g6 3.Nc3：Bg7 是俱樂部的著法，d5 是引擎的著法',
-  '**Scandinavian, 3.Ng5 line.** 1.e4 d5 2.Nf3 dxe4 3.Ng5 Nf6 4.d3 exd3 5.Bxd3, a million club games, and 31% of Black players play 5...h6 to ask the knight. The answer is 6.Nxf7 Kxf7 7.Bg6+ and the queen on d8 goes: +2.70 for White against −1.12 for 5...Nc6. No master has ever been in this position.':
-    '**中心兵防禦，3.Ng5 變例。**1.e4 d5 2.Nf3 dxe4 3.Ng5 Nf6 4.d3 exd3 5.Bxd3，一百萬局俱樂部對局，31% 的黑方走 5...h6 來趕馬。回應是 6.Nxf7 Kxf7 7.Bg6+，d8 上的后就沒了：白方 +2.70，對比 5...Nc6 的 −1.12。從來沒有大師身處這個局面。',
-  'Scandinavian 3.Ng5 line: 5...h6 is the club move and loses the queen':
-    '中心兵防禦 3.Ng5 變例：5...h6 是俱樂部的著法，會丟后',
-  "QGA 3.e4 e5: 4.d5 is the club move, 4.Nf3 the engine's and the masters'":
-    '接受后翼棄兵 3.e4 e5：4.d5 是俱樂部的著法，4.Nf3 是引擎也是大師的著法',
-  'All 144 are in [the study](/study/ibFQtGAL), these ten first, the rest ranked by how many games they touch times how much the move gives up.':
-    '全部 144 個都收在[這份研究](/study/ibFQtGAL)裡，這十個排在最前面，其餘按「涉及對局數乘以該著法所損失的幅度」排序。',
-  'Reading the explorer': '如何閱讀局面瀏覽器',
-  "The most played move in your rating band is the move most people at your rating play, which is not a recommendation, and the explorer never said it was. The filters that fix most of this list are already in the gear menu. Switch to the masters database and set the years to 2018 on, not the all-time table: the masters' book moves, and the all-time table is an average of eras. And when the most played move takes a pawn or declines one, check the engine before trusting the crowd; four of the ten above are a capture or a declined capture.":
-    '你所在分數段中最多人下的著法，就是與你同分的人多數會走的著法，這並不是推薦，局面瀏覽器也從未說它是推薦。能修正這份清單上大部分問題的篩選條件，已經在齒輪選單裡了。切換到大師資料庫，並把年份設為 2018 年起，不要用全時期的表格：大師的開局書會移動，而全時期的表格是各年代的平均。此外，當最多人下的著法是吃兵或拒吃時，先查引擎，別輕信群眾；上面十個局面裡有四個是吃子或拒吃。',
-  'How this was measured': '測量方式',
-  'Open the 144 positions':
-    '<a class="cta cta-primary" href="{{ site.embed_origin }}/study/{{ page.study }}">打開這 144 個局面</a>',
-  'The deep puzzles':
-    '<a class="cta cta-secondary" href="{{ site.embed_origin }}/study/fhC7BCG7">深層排局</a>',
-  'Xiangqi for chess players':
-    '<a class="cta cta-secondary" href="{{ site.embed_origin }}/rules/xiangqi">給西洋棋棋手的象棋入門</a>',
-  // chess960-starting-positions: carried over from the brianhliou.com zh-hans and zh-hant posts (2026-10-15), word for word; links repointed like the English. Strings whose two zh versions were translated separately (ASCII differs) are left out, so the parity check below holds.
-  'Chess960 Starting Positions Ranked By Stockfish': 'Stockfish 評出的西洋棋960開局局面排名',
-  'Stockfish 18 rankings for all 960 Chess960/Fischer Random starting positions. Most balanced: SP-418 and SP-563; standard chess is near median.':
-    'Stockfish 18 對全部 960 個西洋棋960（費舍爾任意制）開局局面的排名。最均衡的是 SP-418 與 SP-563；標準西洋棋接近中位數。',
-  'I evaluated all 960 Chess960 starting positions with Stockfish 18 at depth 36. Every one favors White.':
-    '我用 Stockfish 18 以深度 36 評估了全部 960 個西洋棋960開局局面。每一個都對白方有利。',
-  'The most balanced are SP-418 and SP-563, at +0.07. The most lopsided is SP-783 (QRKNRNBB) at +1.08, the only one over a pawn.':
-    '最均衡的是 SP-418 與 SP-563，皆為 +0.07。最失衡的是 SP-783（QRKNRNBB），達 +1.08，是唯一超過一個兵的局面。',
-  'Standard chess, SP-518, is +0.31 and ranks 463 of 960: almost exactly the median.':
-    '標準西洋棋（SP-518）為 +0.31，在 960 個中排名第 463：幾乎正好是中位數。',
-  'None of the 105 starts used in recent elite Freestyle events came from the ten most White-favored. All 960 are in a CSV.':
-    '近期頂級 Freestyle 賽事使用的 105 個開局中，沒有一個出自最有利於白方的前十名。全部 960 個都收錄在一份 CSV 中。',
-  'I evaluated all 960 **Chess960 starting positions** with Stockfish 18 at uniform depth 36. Chess960 is also called **Fischer Random chess**; each legal back rank is usually identified by a **Scharnagl ID** from 0 to 959.':
-    '我用 Stockfish 18 以統一深度 36 評估了全部 960 個**西洋棋960開局局面**。西洋棋960也稱為**費舍爾任意制西洋棋**；每一個合法底線排列通常以 0 到 959 的 **Scharnagl ID** 標示。',
-  'Chess960 is the modern tournament name for Fischer Random chess, the variant Bobby Fischer proposed in 1996 to reduce opening memorization and force players back into over-the-board problem solving. The pieces are randomized across 960 legal back-rank layouts while preserving bishops on opposite colors and keeping the king between the rooks so castling still works.':
-    '西洋棋960是費舍爾任意制西洋棋在現代賽事中的名稱，這個變體由鮑比·菲舍爾於 1996 年提出，目的是減少開局記憶、迫使棋手回到棋盤前實際解決問題。棋子在 960 種合法底線排列中隨機分佈，同時保持兩個主教位於不同顏色格，並讓王位於兩個城堡之間，使王車易位仍然可行。',
-  'Evaluations are white-POV: positive favors White, and **+1.00 is roughly one pawn**.':
-    '評估值以白方視角表示：正值對白方有利，而**+1.00 大致相當於一個兵**。',
-  Finding: '發現',
-  'Evaluation range': '評估值範圍',
-  '+0.07 to +1.08': '+0.07 到 +1.08',
-  'Black-favored starts': '對黑方有利的開局',
-  'Standard chess, SP-518': '標準西洋棋，SP-518',
-  'Standard chess rank by balance': '標準西洋棋依均衡度的排名',
-  'Starts more balanced than standard chess': '比標準西洋棋更均衡的開局',
-  'Move-1 castling best moves': '第 1 著即為王車易位的最佳著法',
-  'Recent elite corpus overlap with highlighted starts': '近期頂級賽事棋譜與重點開局的重疊',
-  'SP-482, once': 'SP-482，一次',
-  "If you want the **most balanced Chess960 starting positions**, the clean candidates are **SP-418, SP-563, SP-269, SP-444, and SP-786**. All evaluate at +0.10 or below, far under standard chess's +0.31.":
-    '如果你想找**最均衡的西洋棋960開局局面**，明確的候選是 **SP-418、SP-563、SP-269、SP-444 與 SP-786**。它們的評估值都在 +0.10 以下，遠低於標準西洋棋的 +0.31。',
-  'Full dataset: [chess960_starting_position_evals.csv](/article-data/chess960-starting-position-evals.csv) (960 rows).':
-    '完整資料集：[chess960_starting_position_evals.csv](/article-data/chess960-starting-position-evals.csv)（960 列）。',
-  'How I Evaluated The Chess960 Positions': '我如何評估這些西洋棋960局面',
-  'The evaluation contract is deliberately narrow:': '評估條件刻意設得很窄：',
-  Parameter: '參數',
-  Value: '值',
-  Engine: '引擎',
-  'Stockfish 18': 'Stockfish 18',
-  Depth: '深度',
-  MultiPV: 'MultiPV',
-  'Chess960 mode': '西洋棋960模式',
-  '`UCI_Chess960=true`': '`UCI_Chess960=true`',
-  Compute: '運算',
-  'Modal, 96 batches × 10 positions': 'Modal，96 批 × 10 個局面',
-  Runtime: '執行時間',
-  '33 minutes wall, under $3': '實際耗時 33 分鐘，不到 3 美元',
-  'Every starting position used the same depth target, so the rankings do not mix shallow and deep engine outputs. The pipeline is the same cloud Stockfish setup described in the [previous post on scaling Stockfish compute](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/).':
-    '每個開局局面都用相同的深度目標，因此排名不會混雜淺層與深層的引擎輸出。這套流程與[先前談擴展 Stockfish 運算的文章](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)中所述的雲端 Stockfish 設定相同。',
-  'Quality checks:': '品質檢查：',
-  '959/960 reached depth 36; 1 position fell back to depth 35 at the time cap.':
-    '959/960 達到深度 36；有 1 個局面在時間上限時退回深度 35。',
-  'Median principal-variation length: 36 plies.': '主變著法長度中位數：36 著。',
-  'Check against Lichess cache': '與 Lichess 快取的核對',
-  'Best-move agreement': '最佳著法一致度',
-  'Evaluation correlation': '評估值相關性',
-  'Absolute Δcp <= 0.20': '絕對 Δcp <= 0.20',
-  'Mean Δcp': '平均 Δcp',
-  'The top-10 order moves around between datasets, but the headline does not: standard chess sits near the median, every start favors White at depth 36, and 9 starts have castling as the best first move.':
-    '前十名的順序在兩份資料集之間會有變動，但主要結論不變：標準西洋棋位於中位數附近，在深度 36 下每個開局都對白方有利，而有 9 個開局的最佳第一著是王車易位。',
-  'Chess960 Evaluation Distribution': '西洋棋960評估值分佈',
-  'Most starts land in a narrow white-edge band. The right tail is short: only one start crosses +1.00.':
-    '多數開局落在白方小優勢的窄帶內。右尾很短：只有一個開局超過 +1.00。',
-  evaluation: '評估值',
-  '< 0.00 (black-favored)': '< 0.00（對黑方有利）',
-  '0.00 to 0.09': '0.00 到 0.09',
-  '0.10 to 0.24': '0.10 到 0.24',
-  '0.25 to 0.49': '0.25 到 0.49',
-  '0.50 to 0.99': '0.50 到 0.99',
-  'Evaluation distribution histogram': '評估值分佈直方圖',
-  'At shallower public-cache depth, SP-663 can appear slightly black-favored (-0.10 in the Lichess cache). At depth 36 it evaluates at +0.14. The "black-favored start" result disappears under the uniform deeper search.':
-    '在較淺的公開快取深度下，SP-663 可能看起來略微對黑方有利（Lichess 快取中為 -0.10）。在深度 36 時它的評估值是 +0.14。在統一的較深搜尋下，「對黑方有利的開局」這個結果就消失了。',
-  'Where Standard Chess Ranks': '標準西洋棋排在哪裡',
-  'The default start, **SP-518 (RNBQKBNR)**, evaluates to **+0.31**. It ranks 463/960 by ascending imbalance: almost exactly the median. 462 Chess960 starts are more balanced; 497 are more imbalanced.':
-    '預設開局 **SP-518（RNBQKBNR）**的評估值是 **+0.31**。依失衡程度遞增排序，它排在 463/960：幾乎正好是中位數。有 462 個西洋棋960開局更均衡；497 個更失衡。',
-  'SP-518: standard chess. +0.31 at depth 36, best move d4.':
-    '<figcaption style="font-size: 0.88rem; line-height: 1.35; margin-top: 0.45rem; text-align: center;"><strong>SP-518：標準西洋棋。</strong> 深度 36 時為 +0.31，最佳著法 d4。</figcaption>',
-  'SP-518, the standard chess starting position': 'SP-518，標準西洋棋的開局局面',
-  'This is a structural result, not a claim about which starting position is better to play. Standard chess is near the middle of the Chess960 balance distribution.':
-    '這是一個結構性的結果，並非主張哪個開局局面比較適合下。標準西洋棋位於西洋棋960均衡度分佈的中間附近。',
-  'Most Imbalanced Chess960 Start: SP-783': '最失衡的西洋棋960開局：SP-783',
-  'One position crosses +1.00: **SP-783 (QRKNRNBB)**, at **+1.08** with best move `b4`. It is the largest opening edge in the full 960-position set.':
-    '有一個局面超過 +1.00：**SP-783（QRKNRNBB）**，評估值 **+1.08**，最佳著法為 `b4`。它是全部 960 個局面中開局優勢最大的一個。',
-  'SP-783: QRKNRNBB. The most white-favored start at +1.08, best move b4.':
-    '<figcaption style="font-size: 0.88rem; line-height: 1.35; margin-top: 0.45rem; text-align: center;"><strong>SP-783：QRKNRNBB。</strong> 最有利於白方的開局，+1.08，最佳著法 b4。</figcaption>',
-  'SP-783, the most imbalanced Chess960 starting position': 'SP-783，最失衡的西洋棋960開局局面',
-  'Every other starting position lands between +0.07 and +0.92.':
-    '其餘所有開局局面都落在 +0.07 到 +0.92 之間。',
-  'Most White-Favored Chess960 Starting Positions': '最有利於白方的西洋棋960開局局面',
-  'Only one position crosses +1.00. The rest of the top 10 sit between +0.68 and +0.92.':
-    '只有一個局面超過 +1.00。前十名中的其餘局面落在 +0.68 到 +0.92 之間。',
-  SP: 'SP',
-  'back-rank': '底線排列',
-  depth: '深度',
-  QRKNRNBB: 'QRKNRNBB',
-  b4: 'b4',
-  QRKRNNBB: 'QRKRNNBB',
-  RBQNKRBN: 'RBQNKRBN',
-  f4: 'f4',
-  QNRKBBRN: 'QNRKBBRN',
-  c4: 'c4',
-  BBNNRKRQ: 'BBNNRKRQ',
-  g3: 'g3',
-  QBBRKRNN: 'QBBRKRNN',
-  Ng3: 'Ng3',
-  QRNNKRBB: 'QRNNKRBB',
-  RQKNBBRN: 'RQKNBBRN',
-  RNKBNQBR: 'RNKBNQBR',
-  e4: 'e4',
-  BBNRNKRQ: 'BBNRNKRQ',
-  g4: 'g4',
-  "Board previews are clickable. The green arrow marks the engine's best first move. Full principal variations are in the CSV.":
-    '棋盤預覽可以點擊。綠色箭頭標示引擎的最佳第一著。完整主變著法收錄在 CSV 中。',
-  '**SP-783** `QRKNRNBB` · +1.08 · best b4 · 29 plies':
-    '**SP-783** `QRKNRNBB` · +1.08 · 最佳著法 b4 · 29 著',
-  'SP-783 starting position; SP-783 final position after principal variation':
-    'SP-783 的開局局面；SP-783 走完主變著法後的最終局面',
-  'Principal variation: `1. b4 b5 2. a4 a5 3. axb5 axb4 4. Qxa8 Rxa8 5. Rxb4 g5 6. g4 Ra1+ 7. Rb1 Rxb1+ 8. Kxb1 Nb7 9. d3 h5 10. gxh5 Ne6 11. Ng3 Nd6 12. c4 Bh7 13. Ne3 Nd4 14. Kc1 f5 15. Kd2`':
-    '主變著法：`1. b4 b5 2. a4 a5 3. axb5 axb4 4. Qxa8 Rxa8 5. Rxb4 g5 6. g4 Ra1+ 7. Rb1 Rxb1+ 8. Kxb1 Nb7 9. d3 h5 10. gxh5 Ne6 11. Ng3 Nd6 12. c4 Bh7 13. Ne3 Nd4 14. Kc1 f5 15. Kd2`',
-  '**SP-879** `QRKRNNBB` · +0.92 · best b4 · 41 plies':
-    '**SP-879** `QRKRNNBB` · +0.92 · 最佳著法 b4 · 41 著',
-  'SP-879 starting position; SP-879 final position after principal variation':
-    'SP-879 的開局局面；SP-879 走完主變著法後的最終局面',
-  'Principal variation: `1. b4 a5 2. a4 f5 3. Nd3 axb4 4. Ne3 d6 5. f4 c5 6. Nxf5 Be6 7. Nxe7+ Kd7 8. Nxc5+ Kxe7 9. Nxe6 Nxe6 10. Bb6 Rdc8 11. Rxb4 Qa6 12. f5 g6 13. Qa2 gxf5 14. g4 f4 15. a5 Nf6 16. Bf3 Bg7 17. c3 Ng5 18. Re1 Nd7 19. h4 Bxc3 20. dxc3 Rxc3+ 21. Kb1`':
-    '主變著法：`1. b4 a5 2. a4 f5 3. Nd3 axb4 4. Ne3 d6 5. f4 c5 6. Nxf5 Be6 7. Nxe7+ Kd7 8. Nxc5+ Kxe7 9. Nxe6 Nxe6 10. Bb6 Rdc8 11. Rxb4 Qa6 12. f5 g6 13. Qa2 gxf5 14. g4 f4 15. a5 Nf6 16. Bf3 Bg7 17. c3 Ng5 18. Re1 Nd7 19. h4 Bxc3 20. dxc3 Rxc3+ 21. Kb1`',
-  '**SP-604** `RBQNKRBN` · +0.81 · best f4 · 39 plies':
-    '**SP-604** `RBQNKRBN` · +0.81 · 最佳著法 f4 · 39 著',
-  'SP-604 starting position; SP-604 final position after principal variation':
-    'SP-604 的開局局面；SP-604 走完主變著法後的最終局面',
-  'Principal variation: `1. f4 c5 2. Ng3 Ne6 3. e3 f6 4. c4 g5 5. Ne2 gxf4 6. exf4 Nd4 7. Nxd4 cxd4 8. Bxd4 Qxc4 9. Qxc4 Bxc4 10. Rf2 Ng6 11. g3 Bb5 12. Ne3 Bc6 13. Bc3 e5 14. fxe5 fxe5 15. Rxf8+ Nxf8 16. Bf5 Bc7 17. O-O-O O-O-O 18. Rf1 Re8 19. Bc2 Ne6 20. Rf7`':
-    '主變著法：`1. f4 c5 2. Ng3 Ne6 3. e3 f6 4. c4 g5 5. Ne2 gxf4 6. exf4 Nd4 7. Nxd4 cxd4 8. Bxd4 Qxc4 9. Qxc4 Bxc4 10. Rf2 Ng6 11. g3 Bb5 12. Ne3 Bc6 13. Bc3 e5 14. fxe5 fxe5 15. Rxf8+ Nxf8 16. Bf5 Bc7 17. O-O-O O-O-O 18. Rf1 Re8 19. Bc2 Ne6 20. Rf7`',
-  '**SP-298** `QNRKBBRN` · +0.73 · best c4 · 28 plies':
-    '**SP-298** `QNRKBBRN` · +0.73 · 最佳著法 c4 · 28 著',
-  'SP-298 starting position; SP-298 final position after principal variation':
-    'SP-298 的開局局面；SP-298 走完主變著法後的最終局面',
-  'Principal variation: `1. c4 f5 2. d4 e6 3. e3 Bh5+ 4. f3 Bf7 5. b3 Be7 6. Bc3 Ng6 7. Nd2 a5 8. f4 O-O 9. Bd3 Ba3 10. Bb2 Bxb2 11. Qxb2 d6 12. g4 Rce8 13. O-O-O a4 14. d5 fxg4`':
-    '主變著法：`1. c4 f5 2. d4 e6 3. e3 Bh5+ 4. f3 Bf7 5. b3 Be7 6. Bc3 Ng6 7. Nd2 a5 8. f4 O-O 9. Bd3 Ba3 10. Bb2 Bxb2 11. Qxb2 d6 12. g4 Rce8 13. O-O-O a4 14. d5 fxg4`',
-  '**SP-80** `BBNNRKRQ` · +0.73 · best g3 · 39 plies':
-    '**SP-80** `BBNNRKRQ` · +0.73 · 最佳著法 g3 · 39 著',
-  'SP-80 starting position; SP-80 final position after principal variation':
-    'SP-80 的開局局面；SP-80 走完主變著法後的最終局面',
-  'Principal variation: `1. g3 c5 2. Nd3 c4 3. Nc5 Nb6 4. b3 d6 5. Ne4 Nc6 6. h4 e6 7. h5 h6 8. Qh4 d5 9. Nec3 a6 10. e4 d4 11. Ne2 g5 12. hxg6 fxg6 13. Bb2 Bd6 14. e5 Bxe5 15. c3 d3 16. Nd4 Qf6 17. Nxc6 bxc6 18. Ba3+ Kf7 19. Nb2 c5 20. Qxf6+`':
-    '主變著法：`1. g3 c5 2. Nd3 c4 3. Nc5 Nb6 4. b3 d6 5. Ne4 Nc6 6. h4 e6 7. h5 h6 8. Qh4 d5 9. Nec3 a6 10. e4 d4 11. Ne2 g5 12. hxg6 fxg6 13. Bb2 Bd6 14. e5 Bxe5 15. c3 d3 16. Nd4 Qf6 17. Nxc6 bxc6 18. Ba3+ Kf7 19. Nb2 c5 20. Qxf6+`',
-  '**SP-868** `QBBRKRNN` · +0.70 · best Ng3 · 39 plies':
-    '**SP-868** `QBBRKRNN` · +0.70 · 最佳著法 Ng3 · 39 著',
-  'SP-868 starting position; SP-868 final position after principal variation':
-    'SP-868 的開局局面；SP-868 走完主變著法後的最終局面',
-  'Principal variation: `1. Ng3 d5 2. Nh5 f6 3. Nxg7+ Kf7 4. Nh5 Ng6 5. d4 Nh4 6. f3 Nxg2+ 7. Kf2 Nh4 8. c4 dxc4 9. b3 c5 10. Bxh7 cxd4 11. Qb1 d3 12. bxc4 Bd6 13. exd3 Bf5 14. Bxf5 Nxf5 15. Ng3 Nd4 16. N1e2 Bc5 17. Be3 Qc8 18. Bxd4 Bxd4+ 19. Kg2 Nh6 20. Rh1`':
-    '主變著法：`1. Ng3 d5 2. Nh5 f6 3. Nxg7+ Kf7 4. Nh5 Ng6 5. d4 Nh4 6. f3 Nxg2+ 7. Kf2 Nh4 8. c4 dxc4 9. b3 c5 10. Bxh7 cxd4 11. Qb1 d3 12. bxc4 Bd6 13. exd3 Bf5 14. Bxf5 Nxf5 15. Ng3 Nd4 16. N1e2 Bc5 17. Be3 Qc8 18. Bxd4 Bxd4+ 19. Kg2 Nh6 20. Rh1`',
-  '**SP-399** `QRNNKRBB` · +0.70 · best b4 · 34 plies':
-    '**SP-399** `QRNNKRBB` · +0.70 · 最佳著法 b4 · 34 著',
-  'SP-399 starting position; SP-399 final position after principal variation':
-    'SP-399 的開局局面；SP-399 走完主變著法後的最終局面',
-  'Principal variation: `1. b4 h6 2. f4 Bh7 3. Nc3 g5 4. f5 b6 5. Nb3 Nd6 6. Bd4 Bxd4 7. Nxd4 f6 8. d3 c6 9. a4 Qb7 10. Kd2 O-O 11. g4 Kg7 12. h4 Qc7 13. hxg5 hxg5 14. b5 Bg8 15. bxc6 dxc6 16. Ne4 Nxe4+ 17. Bxe4 Qd6`':
-    '主變著法：`1. b4 h6 2. f4 Bh7 3. Nc3 g5 4. f5 b6 5. Nb3 Nd6 6. Bd4 Bxd4 7. Nxd4 f6 8. d3 c6 9. a4 Qb7 10. Kd2 O-O 11. g4 Kg7 12. h4 Qc7 13. hxg5 hxg5 14. b5 Bg8 15. bxc6 dxc6 16. Ne4 Nxe4+ 17. Bxe4 Qd6`',
-  '**SP-794** `RQKNBBRN` · +0.68 · best f4 · 35 plies':
-    '**SP-794** `RQKNBBRN` · +0.68 · 最佳著法 f4 · 35 著',
-  'SP-794 starting position; SP-794 final position after principal variation':
-    'SP-794 的開局局面；SP-794 走完主變著法後的最終局面',
-  'Principal variation: `1. f4 c6 2. e3 f5 3. c4 g5 4. Qxf5 gxf4 5. Qxf4 Qxf4 6. exf4 Ne6 7. f5 Nd4 8. Ng3 Nf7 9. Bf2 Bg7 10. Nc3 Nh6 11. Bd3 Rf8 12. O-O Ndxf5 13. Nxf5 Nxf5 14. Rae1 Bg6 15. Bxf5 Rxf5 16. Rxe7 Bxc3 17. dxc3 b6 18. Ree1`':
-    '主變著法：`1. f4 c6 2. e3 f5 3. c4 g5 4. Qxf5 gxf4 5. Qxf4 Qxf4 6. exf4 Ne6 7. f5 Nd4 8. Ng3 Nf7 9. Bf2 Bg7 10. Nc3 Nh6 11. Bd3 Rf8 12. O-O Ndxf5 13. Nxf5 Nxf5 14. Rae1 Bg6 15. Bxf5 Rxf5 16. Rxe7 Bxc3 17. dxc3 b6 18. Ree1`',
-  '**SP-557** `RNKBNQBR` · +0.68 · best e4 · 32 plies':
-    '**SP-557** `RNKBNQBR` · +0.68 · 最佳著法 e4 · 32 著',
-  'SP-557 starting position; SP-557 final position after principal variation':
-    'SP-557 的開局局面；SP-557 走完主變著法後的最終局面',
-  'Principal variation: `1. e4 e5 2. f4 exf4 3. Nc3 f5 4. Qxf4 Be6 5. e5 g5 6. Qe3 Nc6 7. d4 d5 8. h4 h6 9. Qf3 gxh4 10. Nd3 Ng7 11. Nf4 Bg5 12. Ne2 O-O-O 13. Kb1 Bf7 14. Bf2 Ne6 15. Nxe6 Bxe6 16. Nf4 Bf7`':
-    '主變著法：`1. e4 e5 2. f4 exf4 3. Nc3 f5 4. Qxf4 Be6 5. e5 g5 6. Qe3 Nc6 7. d4 d5 8. h4 h6 9. Qf3 gxh4 10. Nd3 Ng7 11. Nf4 Bg5 12. Ne2 O-O-O 13. Kb1 Bf7 14. Bf2 Ne6 15. Nxe6 Bxe6 16. Nf4 Bf7`',
-  '**SP-176** `BBNRNKRQ` · +0.68 · best g4 · 36 plies':
-    '**SP-176** `BBNRNKRQ` · +0.68 · 最佳著法 g4 · 36 著',
-  'SP-176 starting position; SP-176 final position after principal variation':
-    'SP-176 的開局局面；SP-176 走完主變著法後的最終局面',
-  'Principal variation: `1. g4 c5 2. b3 Nc7 3. c4 b6 4. Be4 Bxe4 5. Qxe4 Nd6 6. Qf3 h6 7. e3 Qh7 8. Ne2 Ne6 9. Be5 O-O 10. Bxd6 Bxd6 11. h4 f5 12. g5 hxg5 13. hxg5 f4 14. e4 Qg6 15. d3 Bb8 16. d4 cxd4 17. Nxd4 Nxd4 18. Rxd4 Be5`':
-    '主變著法：`1. g4 c5 2. b3 Nc7 3. c4 b6 4. Be4 Bxe4 5. Qxe4 Nd6 6. Qf3 h6 7. e3 Qh7 8. Ne2 Ne6 9. Be5 O-O 10. Bxd6 Bxd6 11. h4 f5 12. g5 hxg5 13. hxg5 f4 14. e4 Qg6 15. d3 Bb8 16. d4 cxd4 17. Nxd4 Nxd4 18. Rxd4 Be5`',
-  'Most Balanced Chess960 Starting Positions': '最均衡的西洋棋960開局局面',
-  "These are the starts where the position itself contributes the least white edge. All are +0.12 or below, far under standard chess's +0.31.":
-    '這些是局面本身給白方的優勢最小的開局。全部都在 +0.12 以下，遠低於標準西洋棋的 +0.31。',
-  BRNQNBKR: 'BRNQNBKR',
-  BRNKNRQB: 'BRNKNRQB',
-  NRKBNQBR: 'NRKBNQBR',
-  Nb3: 'Nb3',
-  RBNNQKBR: 'RBNNQKBR',
-  d4: 'd4',
-  BRQKNBRN: 'BRQKNBRN',
-  NQNBRKBR: 'NQNBRKBR',
-  BQRNKBNR: 'BQRNKBNR',
-  e3: 'e3',
-  RKQNNRBB: 'RKQNNRBB',
-  NNBBRKRQ: 'NNBBRKRQ',
-  d3: 'd3',
-  NQBRNKRB: 'NQBRNKRB',
-  '**SP-418** `BRNQNBKR` · +0.07 · best b4 · 32 plies':
-    '**SP-418** `BRNQNBKR` · +0.07 · 最佳著法 b4 · 32 著',
-  'SP-418 starting position; SP-418 final position after principal variation':
-    'SP-418 的開局局面；SP-418 走完主變著法後的最終局面',
-  'Principal variation: `1. b4 b5 2. e3 e6 3. Be2 Be7 4. O-O O-O 5. d3 a6 6. Qd2 d6 7. Nb3 c5 8. bxc5 dxc5 9. Nf3 Nb6 10. c4 Nd7 11. Ne5 Nef6 12. Qa5 Bd6 13. Qxd8 Rfxd8 14. Nxd7 Nxd7 15. cxb5 axb5 16. Rfc1 Rdc8`':
-    '主變著法：`1. b4 b5 2. e3 e6 3. Be2 Be7 4. O-O O-O 5. d3 a6 6. Qd2 d6 7. Nb3 c5 8. bxc5 dxc5 9. Nf3 Nb6 10. c4 Nd7 11. Ne5 Nef6 12. Qa5 Bd6 13. Qxd8 Rfxd8 14. Nxd7 Nxd7 15. cxb5 axb5 16. Rfc1 Rdc8`',
-  '**SP-563** `BRNKNRQB` · +0.07 · best g4 · 40 plies':
-    '**SP-563** `BRNKNRQB` · +0.07 · 最佳著法 g4 · 40 著',
-  'SP-563 starting position; SP-563 final position after principal variation':
-    'SP-563 的開局局面；SP-563 走完主變著法後的最終局面',
-  'Principal variation: `1. g4 g5 2. Ncd3 a5 3. b3 Bxa1 4. Rxa1 b6 5. h4 h6 6. Bxa8 Rxa8 7. a4 f6 8. f4 gxf4 9. Nxf4 e5 10. Nh5 Ne7 11. Qg2 c6 12. Nd3 Qe6 13. Kc1 Kc7 14. e4 Rg8 15. Nf2 d5 16. Kb2 Nd6 17. Qf3 Raf8 18. d3 d4 19. Ng3 b5 20. Nf5 bxa4`':
-    '主變著法：`1. g4 g5 2. Ncd3 a5 3. b3 Bxa1 4. Rxa1 b6 5. h4 h6 6. Bxa8 Rxa8 7. a4 f6 8. f4 gxf4 9. Nxf4 e5 10. Nh5 Ne7 11. Qg2 c6 12. Nd3 Qe6 13. Kc1 Kc7 14. e4 Rg8 15. Nf2 d5 16. Kb2 Nd6 17. Qf3 Raf8 18. d3 d4 19. Ng3 b5 20. Nf5 bxa4`',
-  '**SP-269** `NRKBNQBR` · +0.09 · best Nb3 · 38 plies':
-    '**SP-269** `NRKBNQBR` · +0.09 · 最佳著法 Nb3 · 38 著',
-  'SP-269 starting position; SP-269 final position after principal variation':
-    'SP-269 的開局局面；SP-269 走完主變著法後的最終局面',
-  'Principal variation: `1. Nb3 f5 2. f4 Nb6 3. d3 c6 4. c3 d6 5. Nd2 Bc7 6. Nef3 Nf6 7. e4 fxe4 8. dxe4 e5 9. fxe5 dxe5 10. b4 Nbd7 11. Bb3 Bb6 12. Qd1 Bxg1 13. Qxg1 a5 14. Bxg8 Qxg8 15. Qa7 Qxa2 16. O-O O-O 17. bxa5 Ra8 18. Qxb7 Qxa5 19. Qb3+ Kh8`':
-    '主變著法：`1. Nb3 f5 2. f4 Nb6 3. d3 c6 4. c3 d6 5. Nd2 Bc7 6. Nef3 Nf6 7. e4 fxe4 8. dxe4 e5 9. fxe5 dxe5 10. b4 Nbd7 11. Bb3 Bb6 12. Qd1 Bxg1 13. Qxg1 a5 14. Bxg8 Qxg8 15. Qa7 Qxa2 16. O-O O-O 17. bxa5 Ra8 18. Qxb7 Qxa5 19. Qb3+ Kh8`',
-  '**SP-444** `RBNNQKBR` · +0.10 · best d4 · 33 plies':
-    '**SP-444** `RBNNQKBR` · +0.10 · 最佳著法 d4 · 33 著',
-  'SP-444 starting position; SP-444 final position after principal variation':
-    'SP-444 的開局局面；SP-444 走完主變著法後的最終局面',
-  'Principal variation: `1. d4 f6 2. f3 Bf7 3. e4 c6 4. Bf2 O-O 5. a4 a5 6. O-O e5 7. dxe5 fxe5 8. Ne3 Ne7 9. Qd2 Ne6 10. Ne2 d6 11. Kh1 Nc5 12. Ng4 Ng6 13. Ng3 Bc7 14. Nf5 Rd8 15. Bxc5 dxc5 16. Qc3 c4 17. Ba2`':
-    '主變著法：`1. d4 f6 2. f3 Bf7 3. e4 c6 4. Bf2 O-O 5. a4 a5 6. O-O e5 7. dxe5 fxe5 8. Ne3 Ne7 9. Qd2 Ne6 10. Ne2 d6 11. Kh1 Nc5 12. Ng4 Ng6 13. Ng3 Bc7 14. Nf5 Rd8 15. Bxc5 dxc5 16. Qc3 c4 17. Ba2`',
-  '**SP-786** `BRQKNBRN` · +0.10 · best c4 · 31 plies':
-    '**SP-786** `BRQKNBRN` · +0.10 · 最佳著法 c4 · 31 著',
-  'SP-786 starting position; SP-786 final position after principal variation':
-    'SP-786 的開局局面；SP-786 走完主變著法後的最終局面',
-  'Principal variation: `1. c4 e6 2. f4 b5 3. c5 a5 4. b3 d6 5. Nd3 Ng6 6. e3 Be7 7. Be2 Nf6 8. cxd6 cxd6 9. Qxc8+ Rxc8 10. g3 Nd5 11. Nhf2 Bf6 12. a3 O-O 13. Bxf6 Nxf6 14. Nb2 Bd5 15. Bxb5 Bxb3+ 16. Ke2`':
-    '主變著法：`1. c4 e6 2. f4 b5 3. c5 a5 4. b3 d6 5. Nd3 Ng6 6. e3 Be7 7. Be2 Nf6 8. cxd6 cxd6 9. Qxc8+ Rxc8 10. g3 Nd5 11. Nhf2 Bf6 12. a3 O-O 13. Bxf6 Nxf6 14. Nb2 Bd5 15. Bxb5 Bxb3+ 16. Ke2`',
-  '**SP-29** `NQNBRKBR` · +0.11 · best c4 · 31 plies':
-    '**SP-29** `NQNBRKBR` · +0.11 · 最佳著法 c4 · 31 著',
-  'SP-29 starting position; SP-29 final position after principal variation':
-    'SP-29 的開局局面；SP-29 走完主變著法後的最終局面',
-  'Principal variation: `1. c4 e5 2. f3 c6 3. b4 f6 4. Bb3 Bf7 5. Bf2 O-O 6. O-O d5 7. cxd5 cxd5 8. a4 Bb6 9. e3 Ne7 10. Nc2 Kh8 11. Qa2 a5 12. d4 Bc7 13. dxe5 Bxe5 14. Kh1 Nb6 15. Ne2 Nc4 16. bxa5`':
-    '主變著法：`1. c4 e5 2. f3 c6 3. b4 f6 4. Bb3 Bf7 5. Bf2 O-O 6. O-O d5 7. cxd5 cxd5 8. a4 Bb6 9. e3 Ne7 10. Nc2 Kh8 11. Qa2 a5 12. d4 Bc7 13. dxe5 Bxe5 14. Kh1 Nb6 15. Ne2 Nc4 16. bxa5`',
-  '**SP-482** `BQRNKBNR` · +0.11 · best e3 · 32 plies · elite match':
-    '**SP-482** `BQRNKBNR` · +0.11 · 最佳著法 e3 · 32 著 · 頂級對局',
-  'SP-482 starting position; SP-482 final position after principal variation':
-    'SP-482 的開局局面；SP-482 走完主變著法後的最終局面',
-  'Principal variation: `1. e3 e6 2. b4 f5 3. f4 Nf6 4. Nf3 Be7 5. c4 b6 6. Be2 Nf7 7. Nf2 c5 8. bxc5 bxc5 9. Qc2 Rg8 10. h4 Bc6 11. Rb1 Qa8 12. Bc3 Nh5 13. d3 Ng3 14. Rh3 Nxe2 15. Kxe2 Rb8 16. Rxb8+ Qxb8`':
-    '主變著法：`1. e3 e6 2. b4 f5 3. f4 Nf6 4. Nf3 Be7 5. c4 b6 6. Be2 Nf7 7. Nf2 c5 8. bxc5 bxc5 9. Qc2 Rg8 10. h4 Bc6 11. Rb1 Qa8 12. Bc3 Nh5 13. d3 Ng3 14. Rh3 Nxe2 15. Kxe2 Rb8 16. Rxb8+ Qxb8`',
-  '**SP-719** `RKQNNRBB` · +0.11 · best f4 · 43 plies':
-    '**SP-719** `RKQNNRBB` · +0.11 · 最佳著法 f4 · 43 著',
-  'SP-719 starting position; SP-719 final position after principal variation':
-    'SP-719 的開局局面；SP-719 走完主變著法後的最終局面',
-  'Principal variation: `1. f4 f5 2. g3 g6 3. d3 d6 4. c4 c5 5. Nc3 Nc6 6. Qd2 Qd7 7. Nc2 Nc7 8. b3 Bf7 9. O-O-O Ne6 10. e3 O-O 11. d4 Nb4 12. Nxb4 cxb4 13. Nd5 Nc7 14. Nxc7 Qxc7 15. Qxb4 Rfb8 16. Qc3 a5 17. a4 d5 18. Kd2 dxc4 19. bxc4 Qxc4 20. Qxc4 Bxc4 21. Rfe1 Ra7 22. Rb1`':
-    '主變著法：`1. f4 f5 2. g3 g6 3. d3 d6 4. c4 c5 5. Nc3 Nc6 6. Qd2 Qd7 7. Nc2 Nc7 8. b3 Bf7 9. O-O-O Ne6 10. e3 O-O 11. d4 Nb4 12. Nxb4 cxb4 13. Nd5 Nc7 14. Nxc7 Qxc7 15. Qxb4 Rfb8 16. Qc3 a5 17. a4 d5 18. Kd2 dxc4 19. bxc4 Qxc4 20. Qxc4 Bxc4 21. Rfe1 Ra7 22. Rb1`',
-  '**SP-85** `NNBBRKRQ` · +0.12 · best d3 · 25 plies':
-    '**SP-85** `NNBBRKRQ` · +0.12 · 最佳著法 d3 · 25 著',
-  'SP-85 starting position; SP-85 final position after principal variation':
-    'SP-85 的開局局面；SP-85 走完主變著法後的最終局面',
-  'Principal variation: `1. d3 e5 2. h4 d6 3. Nb3 h5 4. g3 Nb6 5. e4 Nc6 6. Bd2 g6 7. Bf3 Bf6 8. Nc3 Bd7 9. Bg2 O-O-O 10. a4 Be6 11. Bh3 Nd7 12. Nd5 g5 13. Nxf6`':
-    '主變著法：`1. d3 e5 2. h4 d6 3. Nb3 h5 4. g3 Nb6 5. e4 Nc6 6. Bd2 g6 7. Bf3 Bf6 8. Nc3 Bd7 9. Bg2 O-O-O 10. a4 Be6 11. Bh3 Nd7 12. Nd5 g5 13. Nxf6`',
-  '**SP-119** `NQBRNKRB` · +0.12 · best c4 · 31 plies':
-    '**SP-119** `NQBRNKRB` · +0.12 · 最佳著法 c4 · 31 著',
-  'SP-119 starting position; SP-119 final position after principal variation':
-    'SP-119 的開局局面；SP-119 走完主變著法後的最終局面',
-  'Principal variation: `1. c4 g6 2. d4 c6 3. O-O d5 4. cxd5 cxd5 5. Nac2 Bf5 6. g3 Nac7 7. Bg2 Bg7 8. a4 Nd6 9. Qa2 O-O 10. Ne3 Be6 11. b3 b5 12. Nd3 Ne4 13. Bb2 b4 14. Qa1 Bh6 15. f4 a5 16. Nc5`':
-    '主變著法：`1. c4 g6 2. d4 c6 3. O-O d5 4. cxd5 cxd5 5. Nac2 Bf5 6. g3 Nac7 7. Bg2 Bg7 8. a4 Nd6 9. Qa2 O-O 10. Ne3 Be6 11. b3 b5 12. Nd3 Ne4 13. Bb2 b4 14. Qa1 Bh6 15. f4 a5 16. Nc5`',
-  'Best First Moves In Chess960': '西洋棋960中的最佳第一著',
-  "Across all 960 starts, **94.9%** have a pawn move as Stockfish's best first move. `e4` and `d4` are still the most common, but they cover only 36% of the field. The Chess960-specific signal is flank activity: `f4`, `b4`, and `g4` combine for 27.3%.":
-    '在全部 960 個開局中，有 **94.9%** 的 Stockfish 最佳第一著是兵的走法。`e4` 與 `d4` 依然最常見，但只佔全體的 36%。西洋棋960特有的訊號是側翼活動：`f4`、`b4` 與 `g4` 合計佔 27.3%。',
-  '%': '%',
-  a4: 'a4',
-  'Piece-move and move-1 castling details': '<summary>棋子走法與第 1 著王車易位的細節</summary>',
-  'Piece moves account for 49 positions, or 5.1% of the field. Knights account for 40 of them. The other 9 are legal move-1 castles.':
-    '棋子走法佔 49 個局面，即全體的 5.1%。其中 40 個是騎士。其餘 9 個是合法的第 1 著王車易位。',
-  'Origin to dest': '起點到終點',
-  '`Ng3`': 'Ng3',
-  'h1 to g3': 'h1 到 g3',
-  '`O-O`': '`O-O`',
-  'f1 to g1': 'f1 到 g1',
-  '`Nc3`': '`Nc3`',
-  'b1 to c3': 'b1 到 c3',
-  '`Nb3`': 'Nb3',
-  'a1 to b3': 'a1 到 b3',
-  '`Nf3`': '`Nf3`',
-  'g1 to f3': 'g1 到 f3',
-  '`Nh3`': '`Nh3`',
-  'g1 to h3': 'g1 到 h3',
-  '`Nde3`': '`Nde3`',
-  'd1 to e3': 'd1 到 e3',
-  '`Ncd3`': '`Ncd3`',
-  'c1 to d3': 'c1 到 d3',
-  'The 9 move-1 castling starts all place the king on `f1` and the kingside rook on `g1`: SP-296 (+0.20), SP-308 (+0.35), SP-312 (+0.37), SP-324 (+0.22), SP-407 (+0.16), SP-580 (+0.26), SP-585 (+0.26), SP-596 (+0.22), and SP-612 (+0.40).':
-    '這 9 個第 1 著即王車易位的開局，都把王放在 `f1`、王翼城堡放在 `g1`：SP-296（+0.20）、SP-308（+0.35）、SP-312（+0.37）、SP-324（+0.22）、SP-407（+0.16）、SP-580（+0.26）、SP-585（+0.26）、SP-596（+0.22）與 SP-612（+0.40）。 </details>',
-  'What Recent Elite Chess960 Actually Picked': '近期頂級西洋棋960實際選了哪些開局',
-  'I mapped recent elite Freestyle broadcast PGNs back to Scharnagl IDs using the starting FEN. This avoids relying on the PGN `Variant` tag: some 2025 Freestyle broadcasts are labeled `Variant "Standard"` even though the FEN is a Chess960 start.':
-    '我利用起始 FEN，把近期頂級 Freestyle 賽事轉播的 PGN 對應回 Scharnagl ID。這樣就不必依賴 PGN 的 `Variant` 標籤：有些 2025 年的 Freestyle 轉播標成 `Variant "Standard"`，即使其 FEN 其實是西洋棋960的開局。',
-  'The modern elite corpus:': '現代頂級賽事棋譜集：',
-  Games: '對局數',
-  'unique SPs': '不同的 SP 數',
-  '**Total**': '**總計**',
-  'The most repeated starts are mostly tournament-format artifacts: paired games, rematches, and bracket mini-matches reuse the same position.':
-    '重複次數最多的開局，多半是賽制造成的現象：成對對局、重賽以及淘汰賽的小型對抗賽都會重複使用同一個局面。',
-  eval: '評估值',
-  'appeared in': '出現於',
-  '`RBKNQRBN`': '`RBKNQRBN`',
-  '`RNKNRQBB`': '`RNKNRQBB`',
-  'Las Vegas': '拉斯維加斯',
-  '`QRKBNNBR`': '`QRKBNNBR`',
-  '`BBQNRNKR`': '`BBQNRNKR`',
-  '`NRKBQNBR`': '`NRKBQNBR`',
-  '`RQBNKNRB`': '`RQBNKNRB`',
-  '`RBNQKNBR`': '`RBNQKNBR`',
-  '`RNBBKNQR`': '`RNBBKNQR`',
-  'All selected Scharnagl IDs by event': '<summary>各賽事所選用的全部 Scharnagl ID</summary>',
-  'SPs used': '<th>使用的 SP</th>',
-  'Overlap with the highlighted sets:': '與重點開局集合的重疊：',
-  'Highlight set': '重點集合',
-  'Matches in the 426-game corpus': '在 426 局棋譜集中的符合數',
-  'Top 10 most white-favored': '最有利於白方的前十名',
-  none: '無',
-  'Top 10 most equal': '最均衡的前十名',
-  'The only highlighted start that appeared was neutral, not extreme: **SP-482 (BQRNKBNR) evaluates at +0.11** and appeared once in Las Vegas.':
-    '唯一出現過的重點開局是中性的，而非極端的：**SP-482（BQRNKBNR）的評估值為 +0.11**，在拉斯維加斯出現過一次。',
-  Field: '欄位',
-  '`BQRNKBNR`': 'BQRNKBNR',
-  game: '對局',
-  'Magnus Carlsen vs Levon Aronian': 'Magnus Carlsen 對 Levon Aronian',
-  result: '結果',
-  round: '輪次',
-  broadcast: '轉播',
-  '[Las Vegas round-robin white tiebreak, game 1](https://lichess.org/broadcast/freestyle-chess-grand-slam-las-vegas--round-robin-white/tiebreak--game-1/nhVdjSZB)':
-    '[拉斯維加斯循環賽白組加賽，第 1 局](https://lichess.org/broadcast/freestyle-chess-grand-slam-las-vegas--round-robin-white/tiebreak--game-1/nhVdjSZB)',
-  'Critical position after 20...d5. White to move. Lichess marks 21.c5? as the mistake; 21.cxd5 was best. Green arrow: best capture. Gray arrow: game move.':
-    '<figcaption><strong>20...d5 之後的關鍵局面。</strong> 白方走。Lichess 標記 21.c5? 為失誤；21.cxd5 才是最佳著法。綠色箭頭：最佳吃子。灰色箭頭：實戰著法。</figcaption>',
-  'Critical midgame position after 20...d5 in Magnus Carlsen vs Levon Aronian, SP-482':
-    'Magnus Carlsen 對 Levon Aronian（SP-482）在 20...d5 之後的關鍵中局局面',
-  'The game result is not meaningful by itself. The selection result is: among 105 unique modern elite starts, none came from the top-10 white-favored list.':
-    '對局結果本身沒有什麼意義。有意義的是選擇結果：在 105 個不同的現代頂級開局中，沒有一個出自最有利於白方的前十名。',
-  'Any start in the CSV opens on a Chess960 analysis board: [SP-418](https://lichess.org/analysis/chess960/brnqnbkr/pppppppp/8/8/8/8/PPPPPPPP/BRNQNBKR_w_KQkq_-_0_1) for one of the most balanced starts, [SP-783](https://lichess.org/analysis/chess960/qrknrnbb/pppppppp/8/8/8/8/PPPPPPPP/QRKNRNBB_w_KQkq_-_0_1) for the most white-favored.':
-    'CSV 中的任何開局都能在西洋棋960分析棋盤上開啟：[SP-418](https://lichess.org/analysis/chess960/brnqnbkr/pppppppp/8/8/8/8/PPPPPPPP/BRNQNBKR_w_KQkq_-_0_1) 是最均衡的開局之一，[SP-783](https://lichess.org/analysis/chess960/qrknrnbb/pppppppp/8/8/8/8/PPPPPPPP/QRKNRNBB_w_KQkq_-_0_1) 則是最有利於白方的開局。',
-  Reproducibility: '可重現性',
-  'Quick Answers': '快速問答',
-  'What is the most balanced Chess960 starting position?':
-    '**最均衡的西洋棋960開局局面是哪一個？**',
-  'SP-418 (BRNQNBKR) and SP-563 (BRNKNRQB) are the most balanced in this run. Both evaluate at +0.07 for White.':
-    '在這次執行中，SP-418（BRNQNBKR）與 SP-563（BRNKNRQB）最均衡。兩者的白方評估值皆為 +0.07。',
-  'What is the most imbalanced Chess960 starting position?':
-    '**最失衡的西洋棋960開局局面是哪一個？**',
-  'SP-783 (QRKNRNBB) is the most white-favored start at +1.08.':
-    'SP-783（QRKNRNBB）是最有利於白方的開局，評估值 +1.08。',
-  'Is standard chess balanced compared to Chess960?': '**和西洋棋960相比，標準西洋棋算均衡嗎？**',
-  'Standard chess, SP-518 (RNBQKBNR), evaluates at +0.31 and ranks 463/960 by balance. It is almost exactly median.':
-    '標準西洋棋 SP-518（RNBQKBNR）的評估值是 +0.31，依均衡度排名 463/960。幾乎正好是中位數。',
-  'Are any Chess960 starts better for Black?': '**有任何西洋棋960開局對黑方更有利嗎？**',
-  'Not at Stockfish 18 depth 36. All 960 starts evaluate as White-favored.':
-    '在 Stockfish 18 深度 36 下沒有。全部 960 個開局的評估值都對白方有利。',
-  'Further Reading': '延伸閱讀',
-  "[Scaling Parallel Stockfish Analysis](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/): methodology for running Stockfish at scale on cloud CPU workers, written for the case where the cache doesn't have the answer.":
-    '[擴展平行 Stockfish 分析](https://brianhliou.com/posts/scaling-stockfish-compute-workloads/)：在雲端 CPU 工作節點上大規模執行 Stockfish 的方法論，針對快取*沒有*答案的情況而寫。',
-  '[Mistboard](/): free online Chinese chess in English, which also hosts open-source Fog of War chess. Its Chess960 pregame (Draft960) was retired in September 2026.':
-    '[Mistboard](/)：免費的英文介面線上象棋，同時也提供開源的迷霧西洋棋。其西洋棋960賽前選項（Draft960）已於 2026 年 9 月下線。',
-  Dataset: '資料集',
-  '[Download the full CSV](/article-data/chess960-starting-position-evals.csv) (960 rows). Columns: `scharnagl_id`, `back_rank`, `fen`, `position_key`, `cp`, `mate`, `best_move`, `pv`, `depth`, `nodes`, `source`, `fetched_at_iso`.':
-    '[下載完整 CSV](/article-data/chess960-starting-position-evals.csv)（960 列）。欄位：`scharnagl_id`、`back_rank`、`fen`、`position_key`、`cp`、`mate`、`best_move`、`pv`、`depth`、`nodes`、`source`、`fetched_at_iso`。',
+  ...MOVED_POSTS_ZH_HANT,
+  // Method lines and "What changed" notes on locked articles: machine-drafted 2026-10-23, not native-reviewed, from English already published.
+  'The 50 most recent finished jieqi games on the site with 20 plies or more: 2,939 positions.':
+    '本站最近 50 盤已結束、至少 20 個半回合的揭棋對局，共 2,939 個局面。',
+  'AB-JChess scored every candidate move; a reveal was scored once for each piece it could be, weighted by how many of each the side to move had not yet seen.':
+    'AB-JChess 給每個候選著法打分；翻開暗子的著法按它可能翻出的每種棋子各算一次，權重是走棋一方尚未見到的該種棋子數量。',
+  'A position counted when the best move beat the second by at least 15 points of winning chance, at standard depth and at four times that.':
+    '最佳著法的勝率比次佳著法至少高 15 個百分點，且在標準深度和四倍深度下都如此，這個局面才計入。',
+  'MistyJungleFlip: alpha-beta search with a handwritten evaluation and exact endgame tablebases, its strength set by a node budget rather than a clock.':
+    'MistyJungleFlip：α-β 搜尋，配手寫的評估函數和精確的殘局庫，棋力由節點預算而不是用時決定。',
+  'Move quality graded against the tablebases in endgames of up to five pieces, and against an exact solver on 200 five- and six-piece midgames.':
+    '在五子以內的殘局中用殘局庫評判著法品質，在 200 個五子和六子的中局裡用精確求解器評判。',
+  'Strength measured by a round robin of copies at 1k, 8k, 64k and 512k nodes a move, 120 paired, colour-swapped games per pairing.':
+    '棋力用循環賽測量：同一引擎分別以每步 1k、8k、64k 和 512k 節點對弈，每對組合下 120 盤交換先後手的成對對局。',
+  'Nothing here checks the opening, which is too large to solve.':
+    '這裡沒有檢驗開局，開局太大，無法求解。',
+  "The site's own rules engine counted the first move's positions; Fairy-Stockfish counted the deeper ones.":
+    '第一步的局面數由本站自己的規則引擎計算；更深層的由 Fairy-Stockfish 計算。',
+  'Fairy-Stockfish played 64 games per variant at 100,000 positions a move, with its neural network off.':
+    'Fairy-Stockfish 每個變體下 64 盤，每步搜尋 100,000 個局面，關閉神經網路。',
+  'Xiangqi counts are strictly legal; Duck Xiangqi has no check rule, so every piece move counts.':
+    '象棋的計數只算嚴格合法的著法；鴨子象棋沒有將軍規則，所以每一步走子都計入。',
+  'Added a faster-mate example, three audits that were wrong and the helpmate bug.':
+    '新增：一個更快殺法的例子、三個判錯的審校結果，以及合作殺判定的漏洞。',
+  'Retold in order, with the match results in one table; the 7x row now reads as within noise rather than a loss.':
+    '按時間順序重寫，對局結果合併為一張表；7x 那一行現在解讀為在誤差範圍內，而不是落敗。',
+  'The den-race section moved to its own article; this page now links to it.':
+    '衝獸穴競速一節已移到單獨的文章，本頁現在連結到那裡。',
+  'A game counts once both sides have moved and it ends, against a person or a bot.':
+    '雙方都走過棋且對局結束，才算一盤，對手是人或機器人都算。',
+  'Engine matches and our test accounts are left out; counting started on June 1.':
+    '引擎對引擎的比賽和我們的測試帳號不計入；從 6 月 1 日開始計數。',
+  'The six featured games are now all wins.': '精選的六盤對局現在全是勝局。',
+  'Added the Manila final with its round table and board.': '新增馬尼拉決賽，附輪次表和棋盤。',
+  'Rewritten as a guide to playing and reviewing jieqi here.':
+    '改寫為在本站下揭棋和復盤揭棋的指南。',
+  "Added the miner's puzzle ratings, its audit, the licence gate and the withheld class.":
+    '新增挖題程式給出的題目等級分、對它的審校、授權門檻，以及不予上線的一類題目。',
+  'Removed a claim that Zhao Xinxin is the youngest world champion; Zheng Weitong won the title younger in 2015.':
+    '刪去了赵鑫鑫是最年輕世界冠軍的說法；郑惟桐 2015 年奪冠時更年輕。',
+  'Replaced the sample game with a game played against the engine on the site.':
+    '範例對局換成了一盤在本站與引擎下的對局。',
+  'Added a sample game from the site.': '新增一盤本站的範例對局。',
+  'Rewritten as a guide for chess players.': '改寫為寫給西洋棋棋手的指南。',
+  'Reworked the diagrams, the history and the prose.': '重做了圖示、歷史部分和正文。',
+  'Added a capture table and an FAQ.': '新增吃子對照表和常見問題。',
+  'The no-progress draw is now 60 plies without a capture or flip, up from 40.':
+    '無進展和棋現在是 60 個半回合內沒有吃子或翻子，原來是 40。',
+  '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
+    'MistyBanqi 自我對弈 200 盤，每步一千萬節點，採用台灣比賽規則和 40 個半回合無進展和棋。',
+  'Every game a fresh deal, with both seats the same engine at the same search.':
+    '每盤都重新洗子，雙方都是同一個引擎、同樣的搜尋量。',
+  "Material counted on the engine's own value table.": '子力按引擎自己的價值表計算。',
+  'The games measure this engine, not banqi between people.':
+    '這些對局衡量的是這個引擎，而不是人與人之間的暗棋。',
+  'Added how the engine was built: self-play, the value table, the search plateau and the repetition fix.':
+    '新增引擎的構建過程：自我對弈、價值表、搜尋的平台期和重複局面的修復。',
+  'Added an FAQ on what the bot cannot see, and the sample game as a study.':
+    '新增關於機器人看不到什麼的常見問題，範例對局也做成了研習。',
+  'The Treasure figure now shows the five moves the rules allow, not eight.':
+    '寶的示意圖現在顯示規則允許的五種走法，而不是八種。',
+  "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.":
+    '不再稱鴨子象棋為 Mistboard 原創；它是把 Tim Paulden 的鴨子西洋棋搬到了象棋棋盤上。',
+  'Added the facing argument, the 8-of-88 count, the median game length and a note on the 29 September engine bug.':
+    '新增將帥對面的論證、88 個中占 8 個的統計、對局長度的中位數，以及關於 9 月 29 日引擎漏洞的說明。',
+  "A rule kernel referees every game; its move generation matches Fairy-Stockfish's on 209 positions.":
+    '每盤對局都由規則內核裁判；它的著法生成在 209 個局面上與 Fairy-Stockfish 一致。',
+  'Fairy-Stockfish played a game from each of the 83 distinct endings of the opening chain at 100,000 nodes a move, and again at a million.':
+    'Fairy-Stockfish 從開局鏈的 83 種不同結局各下一盤，每步 100,000 節點，再以每步一百萬節點各下一盤。',
+  'Proof-number search turned the decisive endings into proofs about the rules: 63 of 70 closed, and a separate checker replays each one.':
+    '證明數搜尋把決定勝負的結局變成關於規則的證明：70 個中有 63 個得證，另有一個獨立的檢查程式逐一重播。',
+  'Added the full analysis: the opening forks, the proof line, the engine games and how it was checked.':
+    '新增完整分析：開局分支、證明路線、引擎對局，以及檢驗方法。',
+  "A rule kernel referees every game, after matching the engine's legal moves by perft from each array, on nine hand-built positions and on 300 positions from random play.":
+    '每盤對局都由規則內核裁判；此前它已用 perft 從每種佈陣出發核對引擎的合法著法，並在九個手工構造的局面和 300 個隨機對局局面上核對過。',
+  'Every array played four times, at 150,000, 200,000, 300,000 and 500,000 nodes a move, with no random openings.':
+    '每種佈陣各下四盤，分別為每步 150,000、200,000、300,000 和 500,000 節點，不用隨機開局。',
+  'Node budgets, not time, so nothing depends on the machine.':
+    '用節點預算而不是時間，所以結果不依賴機器。',
+  'Added the full account: the twelve start arrays, both result tables, step-through games and the checks, with four figures corrected against the sample games.':
+    '新增完整記錄：十二種起始佈陣、兩張結果表、可逐步瀏覽的對局和檢驗過程，並對照範例對局更正了四個數字。',
+  'Our own engine in Rust (alpha-beta search with late move reductions and a quiescence search over conversions), because no existing engine plays these rules.':
+    '我們自己用 Rust 寫的引擎（α-β 搜尋，帶後期著法縮減，以及針對轉化的靜態搜尋），因為現有引擎都不支援這套規則。',
+  'Engine games from the starting array with no opening book, the two colors taking the first move in turn.':
+    '引擎對局從初始佈陣開始，不用開局庫，雙方輪流先走。',
+  "Every engine game replayed through Mistboard's rule kernel, with the same legal moves at every position.":
+    '每盤引擎對局都經 Mistboard 的規則內核重播，每個局面的合法著法都一致。',
+  'Two checks that do not depend on engine strength: 6,000 games of random legal moves, and a proof search of 20.8 billion nodes.':
+    '兩項不依賴引擎棋力的檢驗：6,000 盤隨機合法著法的對局，以及一次 208 億節點的證明搜尋。',
+  "Added the cannon rule's design history and the engine results behind the numbers.":
+    '新增炮規則的設計沿革，以及這些數字背後的引擎結果。',
+  'Names obscuro-chess, the other open implementation, instead of calling Misty the only one.':
+    '點名另一個開源實作 obscuro-chess，不再稱 Misty 是唯一的開源實作。',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

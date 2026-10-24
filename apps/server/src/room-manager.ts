@@ -19,6 +19,7 @@ import { sendEngineAlertNotification } from './engine-alert-email.js';
 import { engineFailureAbort } from './engine-failure-abort.js';
 import { engineVersionDisplayName, loadEngine } from './engine-registry.js';
 import {
+  botSeatName,
   firstPartyBotForEngine,
   firstPartyBotForId,
   type LiveSeatProfile,
@@ -272,7 +273,9 @@ function inMemoryParticipant(
       const bot = firstPartyBotForId(botId);
       return {
         color,
-        displayName: displayName ?? bot?.displayName ?? engineVersionDisplayName(engineVersionId),
+        displayName:
+          displayName ??
+          (bot ? botSeatName(bot, engineVersionId) : engineVersionDisplayName(engineVersionId)),
         subjectType: 'bot',
         // Canonicalize: a room created against a pre-consolidation bot id
         // still attributes its game to the merged identity.
@@ -285,7 +288,7 @@ function inMemoryParticipant(
     if (bot) {
       return {
         color,
-        displayName: displayName ?? bot.displayName,
+        displayName: displayName ?? botSeatName(bot, engineVersionId),
         subjectType: 'bot',
         subjectId: bot.id,
         engineId: engineVersionId,

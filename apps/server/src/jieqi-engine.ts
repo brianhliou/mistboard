@@ -890,8 +890,20 @@ export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {
 // once, so at most that many of each are ever parked; an AB-JChess one holds its 133 MB
 // net besides the hash. The idle TTL is long on purpose: a reaped session
 // means the next player pays the spawn + hash allocation on their clock, which is the
-// exact cost this cache exists to keep off the move path.
-const warmSessions = new UciWarmSessionCache({ name: 'pikafish-jieqi', idleTtlMs: 60 * 60_000 });
+// exact cost this cache exists to keep off the move path (prod, 2026-10-23: a cold
+// first move ran 0.5-5.8 s past its movetime, against ~0.1 s locally).
+// The long TTL covers ONE session per binary, the most recently used. Copies a
+// burst of overlapping games spawned close after 10 idle minutes: each holds
+// ~600 MB (256 MB hash, 4 threads' tables, AB-JChess's net), and parked behind
+// round-robin reuse they stayed resident all day (the web box went from 0.2 to
+// 1.4-2 GB). Replayed on the 17 h of prod moves to 10-23: average parked
+// sessions 2.29 -> 1.68, and the only added cold spawns were three moves of a
+// second concurrent PikaJieQi game (a lone game always reuses the warm copy).
+const warmSessions = new UciWarmSessionCache({
+  name: 'pikafish-jieqi',
+  idleTtlMs: 60 * 60_000,
+  extraIdleTtlMs: 10 * 60_000,
+});
 
 function jieqiLiveSessionSpec(engine?: JieqiLiveEngine) {
   if (engine === 'ab-jchess') {

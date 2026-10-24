@@ -618,6 +618,24 @@
   height: 38px;
 }
 
+.landing-color-piece.xiangqi {
+  display: block;
+  width: 44px;
+  height: 44px;
+}
+
+.landing-color-piece.xiangqi svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.landing-color-glyph.random .landing-color-piece.xiangqi {
+  width: 38px;
+  height: 38px;
+}
+
 .landing-color-option .landing-color-glyph.white {
   color: #f8faf5;
   -webkit-text-stroke: 1px #65716a;
@@ -660,7 +678,7 @@
 
 /* On the solid-green selected fill a character glyph turns white with its
    label: red 帥 and black 將 both read poorly on green, and the label already
-   names the side. Image pieces (chess, jungle) keep their own art. */
+   names the side. Image pieces (chess, jungle, xiangqi) keep their own art. */
 .landing-color-option.selected .landing-color-glyph,
 .landing-color-option.selected .landing-color-glyph.random .red,
 .landing-color-option.selected .landing-color-glyph.random .black {

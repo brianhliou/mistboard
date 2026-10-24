@@ -7,6 +7,8 @@ import {
   canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
+  DAYS_PER_MOVE_OPTIONS,
+  DEFAULT_DAYS_PER_MOVE,
   DUCK_XIANGQI_SPEC_ID,
   defaultEngineTimeControl,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -49,7 +51,7 @@ import {
 } from './landing-bot-policy.js';
 import { registerLobbySeek, withdrawLobbySeeks } from './lobby-seek-registry.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
-import { rememberedPveEngine } from './pve-memory.js';
+import { rememberBotRoomRequest, rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
 import { postThroughRestart } from './room-create-retry.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
@@ -66,6 +68,7 @@ import {
 } from './variant-tenant/registry.js';
 import { variantMiniIdForGameSpec } from './variants.js';
 import { ENGINE_OFFER_AFTER_MS, shouldOfferEngine } from './web-utils.js';
+import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 export type PlayableEngine = {
   id: string;
@@ -2739,10 +2742,12 @@ function reopenSetupDialogInMode(
 // (openLandingSetupDialog). Selecting one routes the submit to the correspondence
 // path — a private room (Challenge a friend) or an open seek (Find opponent) —
 // instead of the real-time create.
-const CORRESPONDENCE_DAY_OPTIONS: { days: number }[] = [{ days: 1 }, { days: 3 }, { days: 7 }];
+const CORRESPONDENCE_DAY_OPTIONS: { days: number }[] = DAYS_PER_MOVE_OPTIONS.map((days) => ({
+  days,
+}));
 // Pre-selected day-chip when the player first flips to the Correspondence segment,
 // so the Start button is immediately valid (mirrors lichess defaulting its slider).
-const DEFAULT_CORRESPONDENCE_DAYS = 3;
+const DEFAULT_CORRESPONDENCE_DAYS: number = DEFAULT_DAYS_PER_MOVE;
 
 function dayOptionLabel(days: number, locale: Locale): string {
   return days === 1 ? t('setup.oneDay', {}, locale) : t('setup.days', { count: days }, locale);
@@ -2812,7 +2817,11 @@ async function createCorrespondenceFromPlay(
     if (failure.error === 'correspondence_requires_account') {
       status.append('Correspondence games need an account. ', accountLink('Sign in'), ' first.');
     } else if (failure.error === 'invalid_days_per_move') {
-      status.textContent = 'Pick 1, 3, or 7 days per move.';
+      status.textContent = t(
+        'setup.invalidDaysPerMove',
+        { list: DAYS_PER_MOVE_OPTIONS.join(' / ') },
+        locale,
+      );
     } else if (failure.error === 'server_draining') {
       status.textContent = t('setup.serverRestartTimeout', {}, locale);
     } else {
@@ -2884,7 +2893,11 @@ async function postCorrespondenceSeekFromPlay(
     if (failure.error === 'not_signed_in' || failure.error === 'correspondence_requires_account') {
       status.append('Correspondence games need an account. ', accountLink('Sign in'), ' first.');
     } else if (failure.error === 'invalid_days_per_move') {
-      status.textContent = 'Pick 1, 3, or 7 days per move.';
+      status.textContent = t(
+        'setup.invalidDaysPerMove',
+        { list: DAYS_PER_MOVE_OPTIONS.join(' / ') },
+        locale,
+      );
     } else if (failure.error === 'seek_limit_reached') {
       status.textContent = 'You already have the most open games allowed. Cancel one first.';
     } else if (failure.error === 'server_draining') {
@@ -3309,6 +3322,9 @@ function colorGlyphNodes(
     return chessKingGlyphNodes(value);
   }
   const capabilities = landingGameSpecCapabilities(gameSpecId);
+  if (capabilities.glyphClass === 'xiangqi') {
+    return xiangqiGeneralGlyphNodes(value);
+  }
   if (value === 'random') {
     const first = document.createElement('span');
     first.className = capabilities.neutralGlyphColor ? '' : capabilities.firstColor;
@@ -3335,6 +3351,22 @@ function jungleElephantGlyphNodes(value: LandingColorPreference): Node[] {
   };
   if (value === 'random') return [elephant('red'), elephant('black')];
   return [elephant(value === 'black' ? 'black' : 'red')];
+}
+
+// The general in the player's own piece set, so an international-set player
+// picks a side by the piece they will see on the board, not by 帥 and 將.
+function xiangqiGeneralGlyphNodes(value: LandingColorPreference): Node[] {
+  const general = (color: 'red' | 'black') => {
+    const piece = document.createElement('span');
+    piece.className = `landing-color-piece xiangqi ${color}`;
+    piece.innerHTML = renderXiangqiPiece(
+      { color, role: 'general' },
+      { ariaLabel: `${color} general` },
+    );
+    return piece;
+  };
+  if (value === 'random') return [general('red'), general('black')];
+  return [general(value === 'black' ? 'black' : 'red')];
 }
 
 function chessKingGlyphNodes(value: LandingColorPreference): Node[] {
@@ -3510,13 +3542,14 @@ async function createRoomFromPlay(
     // Any game this page starts ends the seeks it has open (lobby-seek-registry).
     const withdrawing = withdrawLobbySeeks();
     if (withdrawing) await withdrawing;
+    const requestBody = roomCreationRequestBody(mode, setup, engineId);
     while (true) {
       const response = await postThroughRestart(
         '/api/rooms',
         {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(roomCreationRequestBody(mode, setup, engineId)),
+          body: JSON.stringify(requestBody),
         },
         {
           onRestarting: () => {
@@ -3530,6 +3563,7 @@ async function createRoomFromPlay(
       if (response.ok) {
         const data = (await response.json()) as { url?: string };
         if (!data.url) throw new Error('room creation did not return a URL');
+        rememberBotRoomRequest(requestBody);
         if (status && !status.isConnected) return;
         roomNavigator(data.url);
         return;

@@ -12,6 +12,7 @@ import {
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
+import { writeStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
 // The public shelf keeps the xiangqi family together, pairs Fog Xiangqi with
 // Fog Chess, then closes with Jungle + Flip Jungle.
@@ -670,6 +671,37 @@ describe('landing play panel', () => {
     expect(selectedModalColor()).toBe('Second');
   });
 
+  // Brian, 2026-10-23: with the international set the side picker still showed
+  // 帥 and 將. It draws the general in the player's own piece set.
+  it('draws the xiangqi side choices in the saved piece set', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const pickerFor = (pieceSet: 'international' | 'traditional') => {
+      document.body.replaceChildren();
+      writeStoredXiangqiPieceSet(pieceSet);
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+      openPlaySetup(panel, 'Challenge a friend');
+      selectModalVariant('xiangqi');
+      return [...document.querySelectorAll<HTMLElement>('.landing-color-glyph')];
+    };
+
+    const international = pickerFor('international');
+    expect(
+      international.map((g) => g.querySelectorAll('.landing-color-piece.xiangqi svg').length),
+    ).toEqual([1, 2, 1]);
+    expect(international.map((g) => g.innerHTML).join('')).not.toMatch(/[帥將]/);
+    expect(international[0]?.querySelector('svg')?.getAttribute('aria-label')).toBe('red general');
+
+    const traditional = pickerFor('traditional');
+    // The character set draws its own disc and outlined 帥, not the figure.
+    expect(traditional[0]?.querySelector('svg')?.getAttribute('aria-label')).toBe('red general');
+    expect(traditional[0]?.querySelector('image')).toBeNull();
+    expect(international[0]?.querySelector('image')).not.toBeNull();
+  });
+
   it('shows Banqi first and second move-order choices in the setup modal', async () => {
     vi.stubEnv('VITE_BANQI_ENABLED', 'true');
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
@@ -915,20 +947,20 @@ describe('landing play panel', () => {
     expect(correspondenceToggleVisible()).toBe(true);
     expect(visibleCorrespondenceOptions()).toEqual([]); // hidden until the segment is active
     clickModalButton('Correspondence');
-    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '3 days', '7 days']);
+    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '2 days', '3 days', '7 days']);
 
     // Every variant carries correspondence since 2026-10-02: switching to Fog
     // Xiangqi keeps the toggle and the chosen segment.
     selectModalVariant('dark-xiangqi');
     expect(correspondenceToggleVisible()).toBe(true);
-    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '3 days', '7 days']);
+    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '2 days', '3 days', '7 days']);
 
     // Find opponent offers it too (submitting posts an open seek to the board).
     openPlaySetup(panel, 'Find opponent');
     selectModalVariant('dark-chess');
     expect(correspondenceToggleVisible()).toBe(true);
     clickModalButton('Correspondence');
-    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '3 days', '7 days']);
+    expect(visibleCorrespondenceOptions()).toEqual(['1 day', '2 days', '3 days', '7 days']);
   });
 
   it('an untouched pace follows the variant; a chosen one sticks across variants', () => {

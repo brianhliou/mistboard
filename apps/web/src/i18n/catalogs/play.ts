@@ -69,6 +69,7 @@ export const EN_PLAY = {
   'setup.daysPerMove': 'Days per move',
   'setup.oneDay': '1 day',
   'setup.days': '{count} days',
+  'setup.invalidDaysPerMove': 'Pick {list} days per move.',
   'setup.gameType': 'Game type',
   'setup.engine': 'Bot',
   'setup.side': 'Side',
@@ -283,6 +284,25 @@ export const EN_PLAY = {
   'correspondence.daysPerMoveLabel': 'Days per move',
   'correspondence.seekLimitReached': 'You can have up to {limit} open games at once.',
   'correspondence.couldNotPostGame': 'Could not post that game. Try again.',
+  'correspondence.seekTileTitle': 'Post a seek',
+  'correspondence.seekTileBody':
+    'It stays open until another player accepts it, here or in the lobby. Or make a link to send a friend.',
+  'correspondence.seekTileButton': 'New seek',
+  'correspondence.hostTileBody':
+    'The person who builds Mistboard. {days} days per move, and the game starts right away.',
+  'correspondence.hostTileButton': 'Play',
+  'correspondence.dialogClose': 'Close',
+  'correspondence.hostTitle': 'Play {name}, who builds Mistboard',
+  'correspondence.hostBody':
+    'A casual game at {days} days per move against the person who builds the site. Pick a variant and a side, and the game starts right away.',
+  'correspondence.hostPlay': 'Play {name}',
+  'correspondence.hostSignIn': 'Sign in to play',
+  'correspondence.hostPlayerLimit':
+    'You already have {limit} games going with {name}. Finish one to start another.',
+  'correspondence.hostFull':
+    '{name} has {limit} games going, the most at once. Try again in a few days.',
+  'correspondence.hostIsYou': 'This is you. Signed-in players start games against you here.',
+  'correspondence.hostCouldNotStart': 'Could not start that game. Try again.',
   'correspondence.cancel': 'Cancel',
   'correspondence.playsColor': 'Plays {color}',
   'correspondence.eitherColor': 'Either color',
@@ -710,6 +730,7 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'setup.daysPerMove',
   'setup.oneDay',
   'setup.days',
+  'setup.invalidDaysPerMove',
   'setup.gameType',
   'setup.engine',
   'setup.side',

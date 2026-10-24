@@ -252,6 +252,7 @@ const wantsDevelopers = path === '/developers' || page === 'developers';
 const wantsApiDocs = path === '/api-docs' || page === 'api-docs';
 const wantsThanks = path === '/thanks' || page === 'thanks';
 const wantsLag = path === '/lag' || page === 'lag';
+const wantsClubWashington = path === '/washington-xiangqi';
 const wantsAccount = path === '/account' || page === 'account';
 const wantsAccountSettings =
   path === '/account/settings' ||
@@ -1080,6 +1081,13 @@ if (replaySample) {
 } else if (wantsLag) {
   setTitleKey('lag.heading');
   void mountOrReport(() => import('./lag-page.js').then(({ mountLag }) => mountLag(appRoot)));
+} else if (wantsClubWashington) {
+  document.title = 'Washington Xiangqi (华州象棋)';
+  void mountOrReport(() =>
+    import('./club-washington-page.js').then(({ mountClubWashington }) =>
+      mountClubWashington(appRoot),
+    ),
+  );
 } else if (path === '/' || path === '/zh-hans' || path === '/zh-hant') {
   // The bare locale prefix is the Chinese home page, the same landing in the
   // reader's language. Compared explicitly, the way /rules does above, rather
@@ -1115,7 +1123,14 @@ function setTitle(page: string): void {
 function setTitleKey(key: I18nKey): void {
   // Localized titles wait for the locale chunk so zh visitors never see an
   // English tab title stick around; for English this resolves immediately.
-  void localeReady.then(() => setTitle(t(key, {}, currentLocale())));
+  // A title the server chose for this route (SPA_ROUTE_META) is put back in
+  // the same tick, not only after the mount, so the short UI title never shows
+  // while the page chunk loads ("Terms · Mistboard" over the served title).
+  void localeReady.then(() => {
+    const locale = currentLocale();
+    setTitle(t(key, {}, locale));
+    serverRender.keepTitle(locale);
+  });
 }
 
 async function mountOrReport(run: () => Promise<void>): Promise<void> {

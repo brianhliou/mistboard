@@ -26,6 +26,7 @@ Edit task → find file → open only that file.
 | `xiangqi-vision-kernel.ts` | Geometry-parameterized FoW vision walks shared by the xiangqi-family kernels (full Xiangqi and Fog Xiangqi): the cannon screen-walk, horse blocked-leg walk, and rook/slider ray walk + `VisionAccum`/`emptyVision`, driven by a per-variant `VisionProbe`. Per-piece rules that genuinely differ (general/advisor/elephant/soldier/pawn) stay in each variant kernel |
 | `events.ts` | `GameEvent` union type, `replayGameEvents` reducer, `GameProjection` |
 | `notation.ts` | `algebraicMoveLabels` — algebraic/coordinate notation for move lists and replay |
+| `variants-jieqi.notation.test.ts` | Jieqi notation regression tests: masked movers and captures stay hidden; revealed pieces use the selected style and Jieqi legal moves |
 | `clocks.ts` | `createClock`, `advanceClock`, `clockRemainingMs`, `expireClock` |
 | `start-fen.ts` | `normalizeStartFen(spec, fen)` + `hasStartFen()`: the ONE fail-closed entry point for accepting a hand-set start position (study chapters, the /analysis boards, the /editor hand-off). Validates through the variant's own parser and returns that variant's CANONICAL spelling, so a stored `rootFen` always round-trips; a spec with no parser is refused, never defaulted. Covers all 8 analysis variants since 2026-08-27: the dealt three (banqi, jieqi, jungle-flip) canonicalize to the six-field DEALT fen, sampling a public paste's hidden identities once. Parsers live beside their writers (`xiangqi-position.ts`, `jungle-fen.ts`, `variants-fortress-xiangqi.ts`, `variants.ts`, `banqi-fen.ts`, `jieqi-fen.ts`, `jungle-flip-fen.ts`) |
 | `study-analysis-coverage.ts` | `serializedTreeMainline`/`serializedTreeRootFen` + `studyAnalysisCoveredPlies`/`coveredStudyAnalysisPlies`: how much of a stored study-chapter analysis still describes the chapter (the common prefix of the analysed line and the current mainline; a different root covers nothing). Shared by the server planner and the study page, lichess's mainline.slice(0, analysedPathLength) rule (#510) |
@@ -74,6 +75,8 @@ Edit task → find file → open only that file.
 | `index.ts` | Barrel re-export |
 
 ## apps/server/src/ — WebSocket server + HTTP API
+
+`daily-rtt.ts` / `daily-rtt.test.ts`: transient raw RTT accumulator for the latest two UTC days; non-draining global and regional nearest-rank percentiles and caller-supplied threshold shares. Fed by `obs.ts` independently of its metrics tick (#652; persistence/reporting remain in #585).
 
 | File | Owns |
 |------|------|
@@ -943,6 +946,8 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `contribute-page.ts` | `/contribute` static page (how to help Mistboard), rendered in the shared `/about` rail + panel shell via static-page-dom/static-page-shell. Exports `mountContribute` |
 | `champions-page.ts` | `/champions` (+ `/zh-hans`, `/zh-hant`; `/challenges` 301s here) engine champions page, moved from brianhliou.com/challenges/: one card per game naming the reigning champion engine (the bot you play) or the house engine holding an open title, the title history, and how to challenge for a title. Same `/about` rail + panel shell. Exports `mountChampions`, `buildChampions`, `CHAMPIONS`, `TITLE_HISTORY` |
 | `lag-page.ts` | `/lag` page ("Is Mistboard lagging?"): polls `/api/ping` for server event-loop lag and network round trip, rendered in the shared `/about` shell. Exports `mountLag` |
+| `club-washington-page.ts` | `/washington-xiangqi`: the page of Washington Xiangqi (华州象棋), a casual xiangqi group in Bellevue that Mistboard hosts (washingtonxiangqi.org and .com forward here). Site nav, one panel, no /about rail; English only; WeChat QR placeholder until the group exists. Exports `mountClubWashington`, `buildClubWashington`. Loads `club-washington-page.css` |
+| `club-washington-page.css` | `/washington-xiangqi` single-panel layout and the QR placeholder box |
 | `static-page-shell.ts` | Shared shell for the `/about` family: `buildStaticPageLayout` renders the left rail (about, updates, FAQ, contact, support, terms, privacy, title, source, contribute, thanks, lag) and the boxed panel. Exports `StaticPageKey`. Loads `static-page-shell.css` |
 | `static-page-dom.ts` | Small `.static-prose` DOM builders (section, heading, subheading, paragraph, link, external link) shared by the newer static pages (contribute, thanks, lag) |
 | `account-preferences.ts` | Account preference store (localStorage `mistboard.accountPreferences.v1`): clock-tenths, low-time sound, premoves, confirm-actions, inbox/correspondence bells and deadline email. Exports read/replace/write helpers, `defaultAccountPreferences`, `shouldShowClockTenths`, and the change-event name |
@@ -1001,6 +1006,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 
 | Group | Files |
 |-------|-------|
+| Offline blunder ranking | `scripts/rank-blunders.mjs` reads versioned synthetic score fixtures and calls `apps/server/src/offline-blunder-ranker.ts`: mover-POV win-chance loss, deterministic ordering, missing/unstable/chance/best-played guards; tests in `offline-blunder-ranker.test.ts`, sample `scripts/data/offline-blunders.json`, contract in `docs/offline-blunder-ranker.md` (#653) |
 | `broadcast-records-speed.mjs` | One read-only round observation from WXF, permitted dpxq, or Mistboard; durable JSONL first-seen times and exact-mainline comparisons, with ambiguous matches and result conflicts flagged. Runbook: `docs/xiangqi-broadcast-records-speed.md`; `broadcast-records-speed.test.mjs` covers timing, matching and the saved WXF round through the real adapters |
 | Private source maps | `apps/web/scripts/posthog-sourcemaps.mjs` configures the official build plugin, release attribution and mandatory private-map cleanup; `posthog-sourcemap-cli.mjs` keeps upload credentials and raw CLI output out of logs; `posthog-sourcemaps.test.mjs` proves real Vite error mapping and upload-failure cleanup. Setup: `docs/posthog-sourcemaps.md` |
 | `article-chart-analysis.mjs` | Writes `apps/web/src/articles/analysis/*.json` for every article game without a `boardId`: reuses a stored site-budget run from `docs-private/players/*/annot1m` when the dpxq record matches, else runs `analyzeXiangqiPostgame` (pikafish-xiangqi-analysis@5, pikafish.ref pin; needs `apps/server/dist`). `--dry-run`, `--concurrency N`; keeps files already written |

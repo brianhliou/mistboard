@@ -440,11 +440,20 @@ async function createSeek(
   return true;
 }
 
-async function createSeekResult(
+/** Options for a seek posted on a player's behalf rather than by them. */
+export type CreateSeekOptions = {
+  // The correspondence host route posts a private seek as the host and accepts it
+  // in the same request, so it never stands; the host's own open seeks must not
+  // block it.
+  skipOpenSeekCap?: boolean;
+};
+
+export async function createSeekResult(
   ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   body: Record<string, unknown>,
   source: SeekAlertNotice['source'],
+  options: CreateSeekOptions = {},
 ): Promise<SeekRouteResult> {
   // Per-account play lock (126). Correspondence never reaches seat assignment
   // through a socket the way a live room does, so posting a seek and accepting
@@ -562,7 +571,7 @@ async function createSeekResult(
   }
   // Cap is best-effort under concurrency (no unique constraint); a racing pair of
   // creates could both pass at exactly the limit. Acceptable for a spam bound.
-  const open = await persistence.countOpenSeeksForUser(user.id);
+  const open = options.skipOpenSeekCap ? 0 : await persistence.countOpenSeeksForUser(user.id);
   if (open >= MAX_OPEN_SEEKS_PER_USER) {
     return { status: 409, body: { error: 'seek_limit_reached', limit: MAX_OPEN_SEEKS_PER_USER } };
   }
@@ -653,7 +662,7 @@ async function acceptSeek(
   return true;
 }
 
-async function acceptSeekResult(
+export async function acceptSeekResult(
   ctx: Pick<HttpApiContext, 'refusesCreate' | 'drainDeadlineMs'>,
   user: UserAccount,
   seekId: string,

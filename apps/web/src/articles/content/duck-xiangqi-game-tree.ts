@@ -33,6 +33,11 @@ export const duckXiangqiGameTreeArticle: Article = {
     'Red’s first Duck Xiangqi turn reaches more positions than a full xiangqi move by each side. About half of them leave the opponent exactly the same choices, so a search can skip them. What is left still cuts how far an engine sees almost in half.',
   showSummaryOnPage: false,
   status: 'published',
+  method: [
+    "The site's own rules engine counted the first move's positions; Fairy-Stockfish counted the deeper ones.",
+    'Fairy-Stockfish played 64 games per variant at 100,000 positions a move, with its neural network off.',
+    'Xiangqi counts are strictly legal; Duck Xiangqi has no check rule, so every piece move counts.',
+  ],
   publishedAt: '2026-10-07',
   audience: 'Xiangqi and Duck Xiangqi players curious how much the duck adds, and anyone who writes game engines.',
   thumbnail: { kind: 'svg', svg: duckTreeThumbnailSvg },

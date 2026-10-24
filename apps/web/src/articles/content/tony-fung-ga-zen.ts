@@ -285,6 +285,8 @@ export const tonyFungGaZenArticle: Article = {
   status: "published",
   publishedAt: "2026-10-03",
   updatedAt: "2026-10-08",
+  updateNote:
+    'Added the Manila final with its round table and board.',
   thumbnail: {
     kind: 'image',
     src: "/article-thumbs/tony-fung-2023-face.jpg",

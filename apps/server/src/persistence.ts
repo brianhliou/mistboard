@@ -16,6 +16,7 @@ export {
   DEFAULT_ACCOUNT_PREFERENCES,
   DM_POLICIES,
   findUserByEmail,
+  findUserByHandle,
   isAccountLocale,
   isClockTenthsPreference,
   isDmPolicy,
@@ -498,6 +499,7 @@ export type {
   RoomDeadlineRecord,
 } from './persistence-room-deadlines.js';
 export {
+  countHostCorrespondenceGames,
   deleteRoomDeadline,
   listActiveCorrespondenceRoomIds,
   listActiveRoomDeadlines,

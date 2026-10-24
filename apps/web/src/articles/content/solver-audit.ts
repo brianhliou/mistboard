@@ -69,6 +69,8 @@ export const solverAuditArticle: Article = {
   status: 'published',
   publishedAt: '2026-10-06',
   updatedAt: '2026-10-07',
+  updateNote:
+    'Added a faster-mate example, three audits that were wrong and the helpmate bug.',
   audience:
     'Xiangqi players who know the classical manuals, and chess problemists who want to know what a 450-year-old composition tradition looks like under a solver.',
   intro: [

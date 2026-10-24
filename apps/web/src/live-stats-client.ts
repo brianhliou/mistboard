@@ -18,7 +18,25 @@ export type LiveStatsPayload = {
   [key: string]: unknown;
 };
 
+declare global {
+  interface Window {
+    __mistboardLiveStats?: Promise<unknown>;
+  }
+}
+
 let cached: { at: number; promise: Promise<LiveStatsPayload | null> } | null = null;
+
+// index.html starts the homepage's first read in the page head, ahead of this
+// bundle. The first caller takes it instead of fetching again; it is used once.
+function takeEarlyRead(): Promise<LiveStatsPayload | null> | null {
+  if (typeof window === 'undefined') return null;
+  const early = window.__mistboardLiveStats;
+  if (!early) return null;
+  window.__mistboardLiveStats = undefined;
+  return Promise.resolve(early)
+    .then((data) => (data && typeof data === 'object' ? (data as LiveStatsPayload) : null))
+    .catch(() => null);
+}
 
 // `maxAgeMs` is how stale a shared read the caller accepts. The activity block
 // passes its own poll interval, so its ticks always fetch and it paces the
@@ -29,10 +47,12 @@ export function fetchLiveStats(
   const at = (options.now ?? Date.now)();
   const maxAgeMs = options.maxAgeMs ?? LIVE_STATS_MAX_AGE_MS;
   if (cached && at - cached.at < maxAgeMs) return cached.promise;
-  const promise = fetch('/api/live-stats', { headers: { accept: 'application/json' } })
-    .then((resp) => (resp.ok ? (resp.json() as Promise<LiveStatsPayload>) : null))
-    .then((data) => (data && typeof data === 'object' ? data : null))
-    .catch(() => null);
+  const promise =
+    takeEarlyRead() ??
+    fetch('/api/live-stats', { headers: { accept: 'application/json' } })
+      .then((resp) => (resp.ok ? (resp.json() as Promise<LiveStatsPayload>) : null))
+      .then((data) => (data && typeof data === 'object' ? data : null))
+      .catch(() => null);
   const entry = { at, promise };
   cached = entry;
   void promise.then((data) => {

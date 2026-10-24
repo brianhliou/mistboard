@@ -1,4 +1,4 @@
-import { DAYS_PER_MOVE_OPTIONS } from '@mistboard/game';
+import { DAYS_PER_MOVE_OPTIONS, DEFAULT_DAYS_PER_MOVE } from '@mistboard/game';
 import './challenge-dialog.css';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
 import { correspondenceRatedAvailable, correspondenceSpecIdsFor } from './correspondence-model.js';
@@ -65,7 +65,7 @@ export function openChallengeDialog(opts: {
     );
     days.append(opt);
   }
-  days.value = String(DAYS_PER_MOVE_OPTIONS[1] ?? DAYS_PER_MOVE_OPTIONS[0]);
+  days.value = String(DEFAULT_DAYS_PER_MOVE);
 
   // Side is stored as move order; the option LABELS reflect the picked variant's colors
   // (White/Black vs Red/Black), so switching variant relabels without changing the value.

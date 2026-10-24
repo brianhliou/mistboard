@@ -54,6 +54,8 @@ export const jieqiPlatformArticle: Article = {
   status: 'published',
   publishedAt: '2026-09-03',
   updatedAt: '2026-10-19',
+  updateNote:
+    'Rewritten as a guide to playing and reviewing jieqi here.',
   tldr: [
     'Play Level 1 or invite a friend, with no account needed for casual games.',
     'Full-game analysis grades your moves and measures reveal luck separately.',

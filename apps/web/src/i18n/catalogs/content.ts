@@ -67,6 +67,10 @@ export const EN_CONTENT = {
   'articles.status.draft': 'Draft',
   'articles.status.outline': 'Outline',
   'articles.tldr': 'In short',
+  'articles.method': 'How we measured this',
+  'articles.updateNote': 'What changed:',
+  'articles.draftedWithClaude': 'Drafted with Claude',
+  'articles.draftedTranslated': 'Drafted with Claude · Machine-translated from English',
   'articles.readNext': 'Read next',
   'articles.playThisGame': 'Play {game}',
   'articles.playVsComputer': 'Play the computer',
@@ -204,6 +208,13 @@ export const EN_CONTENT = {
   'about.openSourceMiddle':
     '. You can inspect how the games work, contribute improvements and build on the code. Players, teachers and engine authors all have a part in what Mistboard becomes. See ',
   'about.openSourceSuffix': ' for license and third-party credits.',
+  'about.whoHeading': 'Who builds Mistboard',
+  'about.whoBody':
+    "Brian H. Liou designs, builds and runs Mistboard with a system of AI agents, from the game servers and Mistboard's own engines to the broadcasts and articles. Before this he spent five years at Amazon and DoorDash on high-scale distributed systems and growth engineering. He started Mistboard to bring people together across cultures through Chinese chess and original strategy games.",
+  'about.whoSitePrefix': 'His site:',
+  'about.articlesHeading': 'How articles are made',
+  'about.articlesBody':
+    'Articles are drafted with Claude and checked by Brian against the games, engine runs and sources they cite. Chinese pages are machine-translated.',
   'stats.heading': 'Statistics',
   'stats.lede':
     'How much gets played here. Games between people or against the bots, counted when they finish; engine matches and test games are left out.',
@@ -714,6 +725,10 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'articles.status.draft',
   'articles.status.outline',
   'articles.tldr',
+  'articles.method',
+  'articles.updateNote',
+  'articles.draftedWithClaude',
+  'articles.draftedTranslated',
   'articles.readNext',
   'articles.playThisGame',
   'articles.playVsComputer',

@@ -270,7 +270,7 @@ describe('correspondence side names', () => {
       'duck-xiangqi': 'Red/Black',
       'crazyhouse-xiangqi': 'Red/Black',
       'dark-xiangqi': 'Red/Black',
-      jungle: 'Red/Black',
+      jungle: 'Red/Blue',
       'jungle-flip': 'First/Second',
     });
     // A retired variant left the create list, but a game in progress still

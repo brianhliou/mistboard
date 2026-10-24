@@ -91,8 +91,16 @@ export const chess960StartingPositionsArticle: Article = {
     'Stockfish 18 rankings for all 960 Chess960/Fischer Random starting positions. Most balanced: SP-418 and SP-563; standard chess is near median.',
   showSummaryOnPage: false,
   status: 'published',
+  method: [
+    'All 960 starting positions searched by Stockfish 18 with `UCI_Chess960=true`, to the same target of depth 36.',
+    '959 reached depth 36; one stopped at depth 35 at the time cap.',
+    'Compared with the Lichess cloud-eval cache, which had all 960 positions at depths 28 to 75.',
+    'Every evaluation is in the [CSV](/article-data/chess960-starting-position-evals.csv).',
+  ],
   publishedAt: '2026-05-07',
   updatedAt: '2026-10-15',
+  updateNote:
+    "Corrected two histogram counts, SP-663's depth-36 score and the run cost against the published CSV.",
   thumbnail: {
     pieces: boardToPieces(SP_783),
     orientation: 'white',
