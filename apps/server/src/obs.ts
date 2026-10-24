@@ -11,6 +11,7 @@
 
 import { monitorEventLoopDelay } from 'node:perf_hooks';
 import pino, { type Logger } from 'pino';
+import { DailyRttAccumulator, normalizeLatencyRegion } from './daily-rtt.js';
 import { type EngineAlertEmailPayload, sendEngineAlertNotification } from './engine-alert-email.js';
 import { isTimeoutish, type KnownEngineFailure } from './engine-known-failures.js';
 
@@ -542,6 +543,7 @@ class WsCounters {
   totalUnknownMessages = 0;
   totalParseFailures = 0;
   private latencyByRegion = new Map<string, number[]>();
+  private dailyLatency = new DailyRttAccumulator();
   private lastEmittedSnapshotRequests = 0;
   private lastEmittedUnknownMessages = 0;
   private lastEmittedParseFailures = 0;
@@ -555,11 +557,16 @@ class WsCounters {
   recordParseFailure(): void {
     this.totalParseFailures += 1;
   }
-  recordLatencySample(region: string, rttMs: number): void {
-    const normalizedRegion = normalizeRegion(region);
+  recordLatencySample(region: string, rttMs: number, atMs = Date.now()): void {
+    const normalizedRegion = normalizeLatencyRegion(region);
+    this.dailyLatency.record(normalizedRegion, rttMs, atMs);
     const samples = this.latencyByRegion.get(normalizedRegion) ?? [];
     samples.push(rttMs);
     this.latencyByRegion.set(normalizedRegion, samples);
+  }
+
+  snapshotDailyLatency(atMs = Date.now(), thresholdsMs: readonly number[] = []) {
+    return this.dailyLatency.snapshot(atMs, thresholdsMs);
   }
 
   snapshot(): {
@@ -800,8 +807,4 @@ function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
   const index = Math.min(sorted.length - 1, Math.ceil(sorted.length * p) - 1);
   return sorted[index]!;
-}
-
-function normalizeRegion(region: string): string {
-  return /^[a-z0-9-]{1,32}$/.test(region) ? region : 'global';
 }
