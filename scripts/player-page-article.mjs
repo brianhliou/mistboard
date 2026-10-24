@@ -381,7 +381,7 @@ const thumbnail = boardThumb
     ? `  thumbnail: {\n    kind: 'image',\n    src: ${q(meta.thumbnail)},\n${meta.thumbnailAlt ? `    alt: ${q(meta.thumbnailAlt)},\n` : ''}${meta.thumbnailPosition ? `    position: ${q(meta.thumbnailPosition)},\n` : ''}  },\n`
     : '';
 const thumbImports = boardThumb
-  ? `import { applyStandardXiangqiMove, createInitialXiangqiState, type XiangqiSquare } from '@mistboard/game';
+  ? `import { applyXiangqiRecordMove, createInitialXiangqiState, type XiangqiSquare } from '@mistboard/game';
 import { xqHalfBoardThumbnailSvg } from '../diagrams.js';
 `
   : '';
@@ -395,7 +395,7 @@ const THUMBNAIL = (): string => {
   let state = createInitialXiangqiState('${meta.slug}-thumb');
   for (const tok of ${boardThumb.constName}.iccs.trim().split(/\\s+/).slice(0, THUMBNAIL_PLY)) {
     const sq = (c: string) => \`\${c[0]}\${Number(c[1]) + 1}\` as XiangqiSquare;
-    const next = applyStandardXiangqiMove(state, { from: sq(tok.slice(0, 2)), to: sq(tok.slice(2, 4)) });
+    const next = applyXiangqiRecordMove(state, { from: sq(tok.slice(0, 2)), to: sq(tok.slice(2, 4)) });
     if (next === state) throw new Error(\`${meta.slug} thumbnail: illegal move \${tok}\`);
     state = next;
   }

@@ -4,9 +4,7 @@
 // Xiangqi Rules article to show a full historical game.
 
 import {
-  ARBITER_ADJUDICATED_DRAWS,
-  applyStandardXiangqiMove,
-  applyMove as applyXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   formatXiangqiMoves,
   parseJudgmentComment,
@@ -484,7 +482,6 @@ type XiangqiReplayLine = {
   states: XiangqiGameState[];
   startState: XiangqiGameState;
   firstMover: XiangqiColor;
-  secondMover: XiangqiColor;
   /** A black-first line is numbered "1... , 2. , 2... , 3.", so the pairing is
    *  shifted by one half-move. */
   plyOffset: number;
@@ -517,23 +514,15 @@ function replayLine(spec: XiangqiReplaySpec): XiangqiReplayLine {
     parsedStart?.ok === true ? parsedStart.state : createInitialXiangqiState('xq-replay');
   // Red opens a game, but not a chapter set from a FEN. Every ply-parity
   // decision counts from here rather than assuming Red is odd: the move
-  // numbers, the Red/Black columns, and the two adjudicated-draw resumes.
+  // numbers and the Red/Black columns.
   const firstMover: XiangqiColor =
     startState.status.type === 'playing' ? startState.status.turn : 'red';
-  const secondMover: XiangqiColor = firstMover === 'red' ? 'black' : 'red';
   const plyOffset = firstMover === 'red' ? 0 : 1;
   const states: XiangqiGameState[] = [startState];
-  for (const [index, move] of moves.entries()) {
-    let state = states[states.length - 1]!;
-    if (state.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
-      state = {
-        ...state,
-        status: { type: 'playing', turn: index % 2 === 0 ? firstMover : secondMover },
-      };
-    }
-    states.push(applyXiangqiMove(state, move));
+  for (const move of moves) {
+    states.push(applyXiangqiRecordMove(states[states.length - 1]!, move));
   }
-  return { moves, states, startState, firstMover, secondMover, plyOffset, total: moves.length };
+  return { moves, states, startState, firstMover, plyOffset, total: moves.length };
 }
 
 /**
@@ -543,13 +532,12 @@ function replayLine(spec: XiangqiReplaySpec): XiangqiReplayLine {
  * so without this its embed showed no result under a line that ends in mate.
  */
 export function resultFromFinalPosition(spec: XiangqiReplaySpec): '1-0' | '0-1' | '' {
-  // The display replay applies moves without adjudicating (it has to walk on
-  // past an arbiter's draw), so the ending is judged by the standard rules.
-  // A move those rules refuse comes back as the same state: no verdict then.
+  // Record replay can pass Mistboard's draw rules and still recognize a
+  // terminal board. A refused move supplies no inferred result.
   const { moves, startState } = replayLine(spec);
   let last = startState;
   for (const move of moves) {
-    const next = applyStandardXiangqiMove(last, move);
+    const next = applyXiangqiRecordMove(last, move);
     if (next === last) return '';
     last = next;
   }
@@ -579,7 +567,7 @@ export function mountXiangqiReplay(
 ): XiangqiReplayController {
   const copy = replayStepperCopy(options.lang, 'xiangqi');
   let perspective: XiangqiColor = spec.perspective ?? 'red';
-  const { moves, states, startState, firstMover, secondMover, plyOffset, total } = replayLine(spec);
+  const { moves, states, startState, firstMover, plyOffset, total } = replayLine(spec);
 
   host.classList.add('xq-replay', 'stepper');
   host.tabIndex = 0;
@@ -882,14 +870,8 @@ export function mountXiangqiReplay(
     // one move each.
     let state = states[ply - 1]!;
     const legal: XiangqiMove[] = [];
-    for (const [step, mv] of parsed.entries()) {
-      if (state.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
-        // Moves made so far is (ply - 1 + step); an even count means the side
-        // that opened the line is to move.
-        const turn = (ply - 1 + step) % 2 === 0 ? firstMover : secondMover;
-        state = { ...state, status: { type: 'playing', turn } };
-      }
-      const next = applyXiangqiMove(state, mv);
+    for (const mv of parsed) {
+      const next = applyXiangqiRecordMove(state, mv);
       if (next === state) break;
       legal.push(mv);
       state = next;
@@ -898,13 +880,11 @@ export function mountXiangqiReplay(
   }
 
   /** "1-0" or "0-1" when the line ends the game with a winner, else null.
-   *  Replayed through the STANDARD kernel: the stepper's own applier is the
-   *  fog one, pseudo-legal by design, and it never reports a mate. */
+   *  Record replay retains mate/stalemate while allowing source draw rules. */
   function lineResult(ply: number, line: XiangqiMove[]): string | null {
     let state = states[ply - 1]!;
     for (const mv of line) {
-      if (state.status.type !== 'playing') return null;
-      const next = applyStandardXiangqiMove(state, mv);
+      const next = applyXiangqiRecordMove(state, mv);
       if (next === state) return null;
       state = next;
     }
@@ -954,7 +934,7 @@ export function mountXiangqiReplay(
     let last: XiangqiMove | undefined;
     for (let i = 0; i < variation.cursor; i += 1) {
       const mv = variation.moves[i]!;
-      const next = applyXiangqiMove(state, mv);
+      const next = applyXiangqiRecordMove(state, mv);
       if (next === state) break;
       state = next;
       last = mv;
@@ -1586,7 +1566,7 @@ export function mountXiangqiReplayBoard(
       let last: XiangqiMove | undefined;
       for (let i = 0; line && i < inLine.cursor; i += 1) {
         const mv = line.moves[i]!;
-        const next = applyXiangqiMove(state, mv);
+        const next = applyXiangqiRecordMove(state, mv);
         if (next === state) break;
         state = next;
         last = mv;

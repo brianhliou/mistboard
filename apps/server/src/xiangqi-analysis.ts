@@ -8,7 +8,7 @@
 // per position, and several-fold faster than the old spawn-per-ply depth sweep.
 
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   classifyXiangqiMove,
   createInitialXiangqiState,
   pikafishUciToXiangqiSquares,
@@ -182,9 +182,7 @@ async function attachOfferLines(
     const move = moves[ply - 1];
     const before = state;
     if (!move || before.status.type !== 'playing') return;
-    const next = applyStandardXiangqiMove(before, move);
-    // The kernel may adjudicate an end (repetition, no-progress) before the record
-    // does; nothing past that point is a position worth classifying.
+    const next = applyXiangqiRecordMove(before, move);
     if (next === before) return;
     state = next;
 

@@ -71,6 +71,7 @@ import {
 } from '../../apps/server/src/xiangqi-pikafish-engine.ts';
 import {
   applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   assembleMinedXiangqiPuzzle,
   createInitialXiangqiState,
   detectXiangqiBlunderCandidates,
@@ -423,7 +424,7 @@ export async function mineXiangqiPuzzleGame(
       break;
     }
     uciMoves.push(xiangqiMoveToPikafishUci(move));
-    state = applyStandardXiangqiMove(state, move);
+    state = applyXiangqiRecordMove(state, move);
     states.push(state);
   }
   const moveCount = states.length - 1;

@@ -61,6 +61,25 @@ for (const record of continuedRecords.cases) {
   }
 }
 
+for (const record of continuedRecords.cases) {
+  test(`PGN writer keeps WXF through the mainline and variation past ${record.reason}`, () => {
+    const imported = importXiangqiGame(record.iccs);
+    const labels = formatXiangqiMoves(imported.moves, 'wxf');
+    const prefix = labels.slice(0, record.adjudicatedAt);
+    const tail = labels.slice(record.adjudicatedAt);
+    const [game] = parseXiangqiPgn(
+      `[Event "${record.key}"]\n\n${prefix.join(' ')} ${tail[0]} (${tail.join(' ')}) ${tail.slice(1).join(' ')} *`,
+    );
+    assert.ok(game);
+    assert.equal(game.error, undefined);
+    const output = writeXiangqiPgn(game, { style: 'wxf' });
+    assert.ok(!/[a-i]\d+-[a-i]\d+/.test(output), 'writer degraded to coordinates');
+    const [roundtrip] = parseXiangqiPgn(output);
+    assert.equal(roundtrip?.error, undefined);
+    assert.equal(roundtrip?.plyCount, record.plies);
+  });
+}
+
 test('reads tag pairs and the mainline out of a real PGN wrapper', () => {
   const [game] = parseXiangqiPgn(`[Event "Test Event"]
 [Red "Xu Tengfei"]

@@ -11,7 +11,7 @@
 // nothing from the position. Fog xiangqi never asks for WXF.
 
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   formatXiangqiMoves,
   isStandardXiangqiLegalMove,
@@ -35,7 +35,7 @@ export function standardXiangqiLineReplays(moves: readonly XiangqiMove[]): boole
   let state = createInitialXiangqiState('export-replay');
   for (const move of moves) {
     if (state.status.type !== 'playing' || !isStandardXiangqiLegalMove(state, move)) return false;
-    state = applyStandardXiangqiMove(state, move);
+    state = applyXiangqiRecordMove(state, move);
   }
   return true;
 }

@@ -1,7 +1,6 @@
 import { setImmediate as yieldToEventLoop } from 'node:timers/promises';
 import {
-  ARBITER_ADJUDICATED_DRAWS,
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
@@ -30,21 +29,6 @@ export type BroadcastHistorySnapshot = {
   view: StandardXiangqiPlayerView;
 };
 
-// A stored board is a tournament RECORD, not live play: the kernel auto-draws
-// on repetition and on the progress clock, but an arbiter applies the
-// perpetual-check/chase rules instead and the real game runs on. Ingestion
-// already replays past those two reasons (`continuePastAdjudicatedDraw`), so
-// the rows hold the full game; the serving side has to resume the same way or
-// a legitimate record reads as "moves after terminal state". Mirrors
-// `replayXiangqiBroadcastBoard` in the game package and the web replay, which
-// both resume on the ply's mover.
-export function resumePastArbiterDraw(state: XiangqiGameState, index: number): XiangqiGameState {
-  if (state.status.type !== 'finished' || !ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
-    return state;
-  }
-  return { ...state, status: { type: 'playing', turn: index % 2 === 0 ? 'red' : 'black' } };
-}
-
 // Replay a stored board to its final position. Defensive about moves past a
 // genuinely terminal state so one bad row degrades to a stale thumbnail instead
 // of a 500. Legal moves are dead weight on a non-interactive thumbnail, so they
@@ -53,10 +37,9 @@ export function finalXiangqiBoardView(
   board: StoredXiangqiBroadcastBoard,
 ): StandardXiangqiPlayerView {
   let state = createInitialXiangqiState(board.id);
-  for (const [index, move] of board.moves.entries()) {
-    state = resumePastArbiterDraw(state, index);
+  for (const move of board.moves) {
     if (state.status.type !== 'playing') break;
-    state = applyStandardXiangqiMove(state, move);
+    state = applyXiangqiRecordMove(state, move);
   }
   return { ...getStandardXiangqiPlayerView(state, 'red'), legalMoves: [] };
 }
@@ -70,12 +53,11 @@ function replayStoredXiangqiBoard(
 ): XiangqiGameState {
   let state = createInitialXiangqiState(board.id);
   for (const [index, move] of board.moves.entries()) {
-    state = resumePastArbiterDraw(state, index);
     if (state.status.type !== 'playing') {
       throw new Error(`stored broadcast board ${board.id} has moves after terminal state`);
     }
     const color = state.status.turn;
-    state = applyStandardXiangqiMove(state, move);
+    state = applyXiangqiRecordMove(state, move);
     onPly?.(index + 1, color, move, state);
   }
   return state;
