@@ -2847,10 +2847,10 @@ export const BANQI_CENTER_X = 0;
 export const BANQI_RIGHT_HALF_W = BANQI_MARGIN * 2 + (BANQI_COLS / 2) * BANQI_CELL;
 export const BANQI_RIGHT_HALF_X0 = -(BANQI_COLS / 2) * BANQI_CELL;
 // The engine-article thumbnail uses the full 8x4 board inside a card canvas
-// close to 16:10. Keep a little extra space above the board so the full board
-// sits slightly low in the image, matching the card's visual weight.
+// close to 16:10, vertically centered. It sat 11 units low while the card's
+// date pill covered the top-left; the date moved under the title (cd25d5fdf).
 export const BANQI_ENGINE_THUMB_H = 270;
-export const BANQI_ENGINE_THUMB_Y = 30;
+export const BANQI_ENGINE_THUMB_Y = (BANQI_ENGINE_THUMB_H - BANQI_BOARD_H) / 2;
 const BANQI_ENGINE_THUMB_PLY = 30;
 
 export type BanqiPieceSpec = {
