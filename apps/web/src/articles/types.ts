@@ -616,9 +616,9 @@ export type Article = ArticleBase &
         // authors are introduced later.
         publisher: 'mistboard' | 'community';
         // Author-chosen "Read next" slugs, in order. The footer defaults to a
-        // date ring because `topic` is too coarse to pick neighbours by; a
-        // platform page whose neighbours by date are unrelated variants can
-        // name its own. Missing or unlisted slugs are skipped and the ring
+        // date ring of posts with the same `topic`, which is too coarse to tell
+        // variants apart; a platform page whose neighbours by date are
+        // unrelated variants can name its own. Missing or unlisted slugs are skipped and the ring
         // fills the rest.
         readNext?: string[];
         // Who the post is written for. 'engineering' is a post about how the

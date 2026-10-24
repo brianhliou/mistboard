@@ -990,6 +990,25 @@ describe('blog post read-next footer', () => {
     ]);
   });
 
+  // Engineering posts and player posts are two audiences; the footer keeps a
+  // reader in the kind they came for while that kind has posts to offer. A
+  // hand-picked readNext list still leads, so those posts are not checked here.
+  it('offers posts of the same topic before the other kind', () => {
+    vi.stubEnv('DEV', false);
+    const post = (slug: string) => {
+      const found = articles.find((a) => a.slug === slug);
+      return found?.kind === 'article' ? found : undefined;
+    };
+    const topicOf = (slug: string) => post(slug)?.topic ?? 'players';
+    const live = publishedBlogSlugs().filter((slug) => !post(slug)?.readNext);
+    const engineering = live.filter((slug) => topicOf(slug) === 'engineering');
+    expect(engineering.length).toBeGreaterThan(3);
+    for (const slug of [...engineering, live.find((s) => topicOf(s) === 'players')!]) {
+      const onward = footerLinks(slug).map((href) => topicOf(href.split('/').pop() ?? ''));
+      expect(onward, slug).toEqual([topicOf(slug), topicOf(slug), topicOf(slug)]);
+    }
+  });
+
   it('closes a blog post with three onward posts instead of nothing', () => {
     vi.stubEnv('DEV', false);
     const page = buildArticlePage('riverbank-cannon');

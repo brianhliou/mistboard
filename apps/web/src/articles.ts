@@ -1137,12 +1137,13 @@ type BlogArticle = Extract<Article, { kind: 'article' }>;
 // current post: every post gets a distinct trio and it reads as "the posts
 // either side of this one".
 //
-// No topic weighting, deliberately. `boardFamily` is the obvious candidate and
-// it is the wrong field: it selects which appearance pickers an article shows,
-// so it is set on the banqi engine write-up and unset on the xiangqi champions
-// list. Ranking by it demoted a xiangqi article below a banqi one on a xiangqi
-// page. A real topic signal needs a field that means topic; until the schema has
-// one, recency is the honest answer.
+// The ring keeps to the post's own kind first: an engineering post's footer
+// offers engineering posts and a player post's offers player posts, and the
+// other kind fills only when one runs short. `topic` is that field.
+// `boardFamily` is not a topic signal: it selects which appearance pickers an
+// article shows, so it is set on the banqi engine write-up and unset on the
+// xiangqi champions list, and ranking by it demoted a xiangqi article below a
+// banqi one on a xiangqi page.
 function relatedArticles(article: BlogArticle): BlogArticle[] {
   // A content-language page walks its OWN language's ring. `isArticleListedInThisEnv`
   // rejects everything with `sourceLang` set, so an unqualified pool leaves a
@@ -1180,7 +1181,9 @@ function relatedArticles(article: BlogArticle): BlogArticle[] {
     { length: ordered.length - 1 },
     (_, i) => ordered[(start + 1 + i) % ordered.length]!,
   ).filter((candidate) => !chosenSlugs.has(candidate.slug));
-  return [...chosen, ...ring].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
+  const sameTopic = ring.filter((candidate) => candidate.topic === article.topic);
+  const otherTopic = ring.filter((candidate) => candidate.topic !== article.topic);
+  return [...chosen, ...sameTopic, ...otherTopic].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
 }
 
 // Left rail on rules surfaces (pychess variant-page grammar): every listed
