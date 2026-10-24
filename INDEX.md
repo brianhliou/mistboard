@@ -76,6 +76,8 @@ Edit task → find file → open only that file.
 
 ## apps/server/src/ — WebSocket server + HTTP API
 
+`daily-rtt.ts` / `daily-rtt.test.ts`: transient raw RTT accumulator for the latest two UTC days; non-draining global and regional nearest-rank percentiles and caller-supplied threshold shares. Fed by `obs.ts` independently of its metrics tick (#652; persistence/reporting remain in #585).
+
 | File | Owns |
 |------|------|
 | `main.ts` | Prod entry point. Calls `installShutdownHandlers()` then `startServer({port})`. Tiny — all logic lives in `index.ts`. |
