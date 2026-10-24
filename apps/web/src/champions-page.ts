@@ -77,7 +77,7 @@ const JIEQI_MATCH: TitleMatch = { writeUpHref: '/blog/ab-jchess', gamesHref: '/d
 // jqe took the jieqi title from AB-JChess 0.2d (mistboard-engine lab/jieqi-match,
 // run jqe-vs-abj-0.2d, 2026-10-21). It reigns only once jqe is the bot you play,
 // so the swap rides VITE_JQE_ENABLED with the jieqi picker.
-const JQE_MATCH: TitleMatch = { gamesHref: '/study/3RQbr51i' };
+const JQE_MATCH: TitleMatch = { writeUpHref: '/blog/jqe', gamesHref: '/study/3RQbr51i' };
 const JUNGLE_MATCH: TitleMatch = {
   writeUpHref: '/blog/katago-jungle',
   gamesHref: '/study/0t8xpyv6',

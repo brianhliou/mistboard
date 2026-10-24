@@ -31,7 +31,10 @@ export type SubHeadingBlock = { kind: 'sub-heading'; text: string };
 // An editorial note set apart from the body: a corrections invitation, a
 // sourcing remark. One short paragraph with the same inline markdown as a
 // paragraph ([text](href), **bold**, `code`), drawn as a quiet bordered aside.
-export type NoteBlock = { kind: 'note'; text: string };
+/** An aside that qualifies the article rather than advancing it: the as-of
+ *  date and versions, a correction, a caveat on the evidence. `label` is a
+ *  two-to-four-word name shown above it ("As of October 24, 2026"). */
+export type NoteBlock = { kind: 'note'; text: string; label?: string };
 
 // Inline SVG composition of 1, 2, or 3 boards. Renderer wraps the composer
 // output in an <svg> with the given canvas dimensions and background.

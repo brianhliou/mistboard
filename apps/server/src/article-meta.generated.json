@@ -311,12 +311,6 @@
       "zh-hant": "戰勝我們揭棋電腦的 14 盤棋"
     }
   },
-  "jieqi-engines": {
-    "title": "Three jieqi engines, head to head",
-    "kind": "article",
-    "description": "How PikaJieQi, AB-JChess and jqe judge a face-down piece, what each evaluates positions with, and how they did against each other: jqe, the top jieqi bot on the site, beat AB-JChess 0.2d 171 to 114 over 300 games.",
-    "status": "draft"
-  },
   "jieqi-openings": {
     "title": "What Strong Jieqi Players Believe About the Opening",
     "kind": "article",
@@ -346,6 +340,12 @@
       "zh-hans": "在揭棋里找题目",
       "zh-hant": "在揭棋裡找題目"
     }
+  },
+  "jqe": {
+    "title": "jqe, the new top jieqi bot",
+    "kind": "article",
+    "description": "jqe, an open-source jieqi engine by Devin O'Keefe, is now the top jieqi bot on Mistboard. It beat AB-JChess 0.2d 171 to 114 over 300 games, with a network about 90 times smaller.",
+    "status": "draft"
   },
   "jungle": {
     "title": "Jungle Chess Rules (Dou Shou Qi, Animal Chess)",

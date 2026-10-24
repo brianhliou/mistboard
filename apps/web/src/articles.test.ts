@@ -177,9 +177,8 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
-      // The jieqi engines comparison, an undated draft held for jqe's author
-      // (sorts last until Brian dates it).
-      '/blog/jieqi-engines',
+      // The jqe post, an undated draft (sorts last until Brian dates it).
+      '/blog/jqe',
     ]);
   });
 
@@ -376,9 +375,8 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
-      // The jieqi engines comparison, an undated draft held for jqe's author
-      // (sorts last until Brian dates it).
-      '/blog/jieqi-engines',
+      // The jqe post, an undated draft (sorts last until Brian dates it).
+      '/blog/jqe',
     ]);
   });
 
@@ -1135,6 +1133,16 @@ describe('note block', () => {
     expect(p?.textContent).toBe('Spotted an error? Tell us and we will correct it.');
     expect(p?.querySelector('a')?.getAttribute('href')).toBe('/feedback');
     expect(p?.querySelector('strong')?.textContent).toBe('correct');
+  });
+
+  it('names the note in a label above its text when it has one', () => {
+    const el = renderBlock({ kind: 'note', label: 'As of October 24, 2026', text: 'jqe 0.1.0.' });
+    expect(el.firstElementChild?.className).toBe('article-note-label');
+    expect(el.firstElementChild?.textContent).toBe('As of October 24, 2026');
+    expect(el.querySelector('p.article-note-text')?.textContent).toBe('jqe 0.1.0.');
+    expect(
+      renderBlock({ kind: 'note', text: 'x' }).querySelector('.article-note-label'),
+    ).toBeNull();
   });
 
   it('styles the note with neutral tokens, not a warning colour', () => {
