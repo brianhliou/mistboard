@@ -37,6 +37,7 @@ import {
   renderStudyBody,
   renderStudyIndexBody,
   STUDY_INDEX_PAGES,
+  studyPageMeta,
 } from './study-page-body.js';
 
 export { ARTICLE_META, canonicalArticleBase };
@@ -927,22 +928,6 @@ const STUDY_LOCALE_BY_SLUG = {
   'zh-hant': 'zh-Hant',
 } as const;
 
-/** Pick a study's localized string for a locale, falling back to the base
- *  column. Mirrors study-i18n.ts on the client; kept tiny and local rather than
- *  importing web code into the server. */
-function localizedStudyField(
-  base: string,
-  i18n: unknown,
-  locale: string,
-  field: 'name' | 'description',
-): string {
-  if (!i18n || typeof i18n !== 'object' || Array.isArray(i18n)) return base;
-  const entry = (i18n as Record<string, unknown>)[locale];
-  if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return base;
-  const value = (entry as Record<string, unknown>)[field];
-  return typeof value === 'string' && value.trim() ? value : base;
-}
-
 export async function serveStudyPage(params: {
   studyId: string;
   /** Present on a chapter permalink (/study/:id/:chapterId). An unknown id falls
@@ -973,19 +958,13 @@ export async function serveStudyPage(params: {
       ? study.chapters.find((c) => c.id === params.chapterId)
       : undefined;
     const pathSuffix = chapter ? `/${encodeURIComponent(chapter.id)}` : '';
-    const chapterCount = study.chapters.length;
-    const name = localizedStudyField(study.name, study.i18n, locale, 'name');
-    const described = localizedStudyField(study.description, study.i18n, locale, 'description');
-    const studyMeta = {
-      title: `${name} | Mistboard study`,
-      description:
-        described ||
-        `A xiangqi study on Mistboard with ${chapterCount} ${chapterCount === 1 ? 'chapter' : 'chapters'}: annotated moves on an interactive board.`,
-    };
     // A chapter permalink carries the CHAPTER's title and prose. Without this,
     // every chapter of a 66-composition study serves the study's own meta and
-    // the set reads as near-duplicates.
-    const meta = chapter ? chapterPageMeta({ study, chapter, locale }) : studyMeta;
+    // the set reads as near-duplicates. Both builders extend a description
+    // under the SEO floor with facts the page already shows.
+    const meta = chapter
+      ? chapterPageMeta({ study, chapter, locale })
+      : studyPageMeta({ study, locale });
     html = injectPageMeta(html, {
       title: meta.title,
       description: meta.description,
