@@ -181,17 +181,31 @@ function renderQuiet(
   mode: LandingChatMode,
 ): void {
   body.replaceChildren();
-  // Quiet mode does not poll, so a notice present at load comes down at its
-  // own deadline rather than on a later read.
-  const notice = activeNotice(state.notice, Date.now());
-  if (notice) {
-    const noticeRow = buildNoticeRow(notice, locale);
-    body.append(noticeRow);
+  let notice: LobbyChatNotice | null = null;
+  let noticeRow: HTMLElement | null = null;
+  function updateNotice(next: LobbyChatNotice | undefined): void {
+    const active = activeNotice(next, Date.now());
+    if (
+      active?.id === notice?.id &&
+      active?.phase === notice?.phase &&
+      active?.restartAt === notice?.restartAt
+    ) {
+      return;
+    }
+    notice = active;
+    noticeRow?.remove();
+    noticeRow = null;
+    if (!notice) return;
+    const row = buildNoticeRow(notice, locale);
+    noticeRow = row;
+    body.prepend(row);
+    // Expire locally even if a later poll fails or the tab is hidden.
     registerMountTimer(
       mount,
-      window.setTimeout(() => noticeRow.remove(), notice.restartAt - Date.now()),
+      window.setTimeout(() => row.remove(), notice.restartAt - Date.now()),
     );
   }
+  updateNotice(state.notice);
   const row = document.createElement('p');
   row.className = 'landing-chat-quiet';
   row.textContent = t('chat.quiet', {}, locale);
@@ -212,6 +226,17 @@ function renderQuiet(
   } else {
     body.append(buildSignInRow(locale));
   }
+
+  // Quiet rooms still need live drain updates. Only replace the notice so a
+  // poll leaves the invitation and any unfinished composer text intact.
+  if (mode === 'mock' || import.meta.env.MODE === 'test') return;
+  const pollTimer = window.setInterval(async () => {
+    if (document.visibilityState !== 'visible') return;
+    const fresh = await fetchChat();
+    if (!fresh || !mountTimers.get(mount)?.includes(pollTimer)) return;
+    updateNotice(fresh.notice);
+  }, POLL_MS);
+  registerMountTimer(mount, pollTimer);
 }
 
 type LandingChatFeed = {

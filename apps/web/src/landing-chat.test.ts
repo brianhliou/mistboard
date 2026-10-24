@@ -694,4 +694,84 @@ describe('drain notice', () => {
     });
     expect(noticeRows(mount)).toHaveLength(0);
   });
+
+  describe('quiet lobby polling', () => {
+    let notice: LobbyChatNotice | undefined;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(T0);
+      // Exercise the page-scoped poller, which is disabled in test mode.
+      vi.stubEnv('MODE', 'development');
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+      notice = undefined;
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({
+          ok: true,
+          json: async () => ({
+            lines: [],
+            notice,
+            canPost: true,
+            canReport: false,
+            viewerHandle: 'you',
+            isAdmin: false,
+          }),
+        })),
+      );
+    });
+
+    afterEach(() => {
+      vi.clearAllTimers();
+      vi.useRealTimers();
+      vi.unstubAllEnvs();
+      vi.restoreAllMocks();
+    });
+
+    async function mountQuietLobby(): Promise<HTMLElement> {
+      const mount = buildLandingChat();
+      document.body.append(mount);
+      await vi.advanceTimersByTimeAsync(0);
+      expect(mount.querySelector('.landing-chat-quiet')).toBeTruthy();
+      return mount;
+    }
+
+    it('removes a cancelled notice on the next poll before its deadline', async () => {
+      notice = pending(T0 + 120_000);
+      const mount = await mountQuietLobby();
+      expect(noticeRows(mount)).toHaveLength(1);
+
+      notice = undefined;
+      await vi.advanceTimersByTimeAsync(7000);
+
+      expect(noticeRows(mount)).toHaveLength(0);
+      expect(mount.querySelector('.landing-chat-quiet')).toBeTruthy();
+    });
+
+    it('picks up a new drain and its restarting phase without replacing a draft', async () => {
+      const mount = await mountQuietLobby();
+      expect(noticeRows(mount)).toHaveLength(0);
+      const input = mount.querySelector<HTMLInputElement>('.landing-chat-input');
+      expect(input).toBeTruthy();
+      if (!input) return;
+      input.value = 'unfinished message';
+
+      notice = pending(T0 + 120_000);
+      await vi.advanceTimersByTimeAsync(7000);
+      expect(noticeRows(mount)).toHaveLength(1);
+      expect(noticeRows(mount)[0]?.textContent).toContain('Update pending');
+
+      notice = { ...notice, phase: 'restarting' };
+      await vi.advanceTimersByTimeAsync(7000);
+      expect(noticeRows(mount)).toHaveLength(1);
+      expect(noticeRows(mount)[0]?.textContent).toContain('Server restarting now');
+      expect(mount.querySelector('.landing-chat-input')).toBe(input);
+      expect(input.value).toBe('unfinished message');
+
+      // The new notice still expires locally while polls are suspended.
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+      await vi.advanceTimersByTimeAsync(106_000);
+      expect(noticeRows(mount)).toHaveLength(0);
+    });
+  });
 });
