@@ -32,10 +32,16 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
     'Chơi cờ tướng với máy ngay trên trình duyệt, đối thủ là Pikafish, engine cờ tướng mã nguồn mở phát triển từ Stockfish. Miễn phí, không cần tài khoản, không cần tải về. Chọn cấp độ, chơi cờ úp, và xem lại ván đấu bằng engine.',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     'Người chơi cờ tướng muốn chơi với máy hoặc phân tích ván cờ bằng Pikafish.',
-  '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
-    '[Pikafish](https://github.com/official-pikafish/Pikafish) là engine cờ tướng mã nguồn mở mạnh nhất, được phát triển từ Stockfish cho bàn cờ tướng. Phần lớn mọi người phải tải về và cài thêm một giao diện riêng để dùng. Ở đây nó chạy ngay trên trang.',
-  'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    'Chơi với nó ở sức mạnh tối đa hoặc bắt đầu từ các cấp thấp hơn trong tám cấp độ, chơi cờ úp với nó, hoặc đưa cho nó một ván đã xong để phân tích. Miễn phí, không cần đăng ký, không phải cài gì, và chơi được trên điện thoại.',
+  'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':
+    'Pikafish là engine cờ tướng mã nguồn mở phát triển từ Stockfish. Chơi với máy hoặc phân tích thế cờ ngay trên trình duyệt, miễn phí và không cần tài khoản.',
+  'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads a 51 MB net on first use.':
+    'Muốn tải engine về máy? Xem các bản phát hành, mã nguồn và hướng dẫn cài đặt tại [dự án Pikafish chính thức](https://github.com/official-pikafish/Pikafish). Phân tích trên trình duyệt tải mạng 51 MB ở lần dùng đầu tiên.',
+  'Analyze with Pikafish':
+    'Phân tích bằng Pikafish',
+  'Can I analyze with Pikafish online?':
+    'Có thể phân tích bằng Pikafish online không?',
+  'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 51 MB net loads on first use.':
+    'Có. Mở bàn phân tích, nhập thế cờ hoặc nhập ván đấu rồi bật engine. Pikafish chạy trong trình duyệt; mạng 51 MB được tải ở lần dùng đầu tiên.',
   'Play Pikafish': 'Chơi với Pikafish',
   'Play Pikafish at jieqi': 'Chơi cờ úp với Pikafish',
   'Play against Pikafish': 'Chơi với Pikafish',
@@ -67,14 +73,15 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
     '[Bàn phân tích](/analysis/xiangqi) dành cho thế cờ bạn tự xếp. Nó chạy Pikafish ngay trong trình duyệt ở sức mạnh tối đa, với mạng nơ-ron riêng, nên không có gì bạn phân tích rời khỏi máy của bạn. Mạng nặng 51 MB và chỉ tải một lần.',
   Questions: 'Câu hỏi thường gặp',
   'Can I play Pikafish online?': 'Có thể chơi cờ tướng với máy online không?',
-  'Yes, here, in the browser. One click on the Pikafish page starts a game against it; the play menu offers eight easier levels.':
-    'Có, ngay tại đây, trên trình duyệt. Một cú nhấp trên trang Pikafish là bắt đầu ván với nó; menu chơi có tám cấp độ dễ hơn.',
+  'Yes. Open Play Pikafish to start a game in your browser. The play menu also offers eight easier Fairy-Stockfish levels.':
+    'Mở Chơi với Pikafish để bắt đầu ván trên trình duyệt. Menu chơi còn có tám cấp Fairy-Stockfish dễ hơn.',
   'Is it free?': 'Có miễn phí không?',
   'Yes. Playing, the ladder, jieqi, game review and the analysis board are all free. An account is optional.':
     'Có. Chơi cờ, tám cấp độ, cờ úp, xem lại ván đấu và bàn phân tích đều miễn phí. Tài khoản là không bắt buộc.',
-  'Do I need to download anything?': 'Có cần tải về gì không?',
-  'No. The game runs in the page. On a phone, open the site in the browser and play.':
-    'Không. Ván cờ chạy ngay trên trang. Trên điện thoại, mở trang bằng trình duyệt và chơi.',
+  'Where can I download Pikafish?':
+    'Tải Pikafish ở đâu?',
+  'For the engine itself, use the official Pikafish project for releases, source code and setup instructions. To play or analyze on Mistboard, open your browser without installing an app.':
+    'Xem bản phát hành, mã nguồn và hướng dẫn cài đặt engine tại dự án Pikafish chính thức. Để chơi hoặc phân tích trên Mistboard, chỉ cần mở trình duyệt, không phải cài ứng dụng.',
   'How strong is it?': 'Máy mạnh đến mức nào?',
   'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
     'Pikafish tính ba triệu thế cờ mỗi nước, khoảng bốn giây, trên máy chủ. Mức đó vượt xa mọi người chơi. Các cấp độ bên dưới đi xuống tới mức người mới chơi cũng thắng được.',

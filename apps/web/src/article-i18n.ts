@@ -5344,17 +5344,21 @@ const ZH_HANS: Record<string, string> = {
   'Banqi is a folk game and the rules differ by region. Three families are common. Taiwanese rules use the ladder above and a cannon that captures by jumping one screen. Hong Kong rules rank the pieces general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder. Mainland rules usually have no jumping cannon at all: it captures adjacent pieces by rank like everything else.':
     '暗棋是民间棋戏，各地规则不同，常见的有三种。台湾规则用本页的大小顺序，炮隔一子跳吃。香港规则的大小是将、车、马、炮、士、象、卒，炮在等级序列里面。中国大陆的规则通常没有跳吃的炮：炮和其他棋子一样按等级吃相邻的棋子。',
   // pikafish (2026-09-21, machine-drafted, not native-reviewed). Mainland wording on purpose: 在线, 网页版, 人机, 账号, 服务器 are the words the Bing corpus uses.
-  'Pikafish on Mistboard': '皮卡鱼在线：在 Mistboard 上与皮卡鱼对弈',
+  'Pikafish on Mistboard': '皮卡鱼象棋：在线对弈与分析',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
-    '皮卡鱼象棋在线对弈：象棋和揭棋，免费网页版',
+    '皮卡鱼象棋在线：免费对弈、分析与引擎下载指引',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    '在浏览器里直接与开源象棋引擎皮卡鱼对弈，它由 Stockfish 改造而来。免费、不用注册、不用下载。可选难度等级，可下揭棋，还能用它复盘你的对局。',
+    '皮卡鱼象棋在线免费对弈，免注册、免安装；在浏览器里用皮卡鱼分析局面、导入棋谱。想下载引擎？这里也有皮卡鱼官方项目入口与安装说明指引。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     '想找地方与皮卡鱼对弈或用它分析的象棋棋手。',
-  '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
-    '[皮卡鱼（Pikafish）](https://github.com/official-pikafish/Pikafish) 是目前最强的开源象棋引擎，由 Stockfish 改造而来。多数人要先下载引擎，再配一个界面才能用。在这里，它直接在网页里运行。',
-  'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    '可以直接挑战皮卡鱼本尊，也可以从八级人机阶梯的低级别开始；可以和它下揭棋；也可以把下完的棋交给它复盘。[中国象棋在线对弈](/zh-hans)免费，不用注册，不用安装，手机浏览器也能玩。',
+  'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':
+    '皮卡鱼（Pikafish）是基于 Stockfish 的开源象棋引擎。在这里可以直接与它在线对弈，也可以用它分析局面，免费、免注册。',
+  'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads a 51 MB net on first use.':
+    '想下载引擎本体？请到[皮卡鱼官方项目](https://github.com/official-pikafish/Pikafish)查看发布版本、源代码与安装说明。网页分析首次使用需加载 51 MB 权重。',
+  'Analyze with Pikafish': '用皮卡鱼分析',
+  'Can I analyze with Pikafish online?': '皮卡鱼象棋怎么在线分析？',
+  'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 51 MB net loads on first use.':
+    '可以。打开分析棋盘，输入局面或导入棋谱，再开启引擎。皮卡鱼在浏览器里运行，首次使用会加载 51 MB 权重。',
   'Play Pikafish': '与皮卡鱼对弈',
   'Play Pikafish at jieqi': '与皮卡鱼下揭棋',
   'Play against Pikafish': '人机对弈：挑战皮卡鱼',
@@ -5383,15 +5387,15 @@ const ZH_HANS: Record<string, string> = {
   'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.':
     '[分析棋盘](/analysis/xiangqi)用于你自己摆的局面。它在你的浏览器里运行全强度的皮卡鱼，带官方权重，你分析的内容不会离开你的电脑。权重 51 MB，只需下载一次。',
   Questions: '常见问题',
-  'Can I play Pikafish online?': '可以在线和皮卡鱼下棋吗？',
-  'Yes, here, in the browser. One click on the Pikafish page starts a game against it; the play menu offers eight easier levels.':
-    '可以，就在这里，网页里直接下。在皮卡鱼页面点一下就开局；对弈菜单里还有八个更容易的级别。',
+  'Can I play Pikafish online?': '皮卡鱼象棋在线怎么玩？',
+  'Yes. Open Play Pikafish to start a game in your browser. The play menu also offers eight easier Fairy-Stockfish levels.':
+    '打开与皮卡鱼对弈，即可在浏览器里开局。对弈菜单另有八个较容易的 Fairy-Stockfish 级别。',
   'Is it free?': '免费吗？',
   'Yes. Playing, the ladder, jieqi, game review and the analysis board are all free. An account is optional.':
     '免费。对弈、人机阶梯、揭棋、复盘和分析棋盘都免费。账号可选，不是必需。',
-  'Do I need to download anything?': '需要下载什么吗？',
-  'No. The game runs in the page. On a phone, open the site in the browser and play.':
-    '不需要。棋局直接在网页里运行。手机上用浏览器打开本站即可开始。',
+  'Where can I download Pikafish?': '皮卡鱼象棋引擎怎么下载？',
+  'For the engine itself, use the official Pikafish project for releases, source code and setup instructions. To play or analyze on Mistboard, open your browser without installing an app.':
+    '引擎本体的发布版本、源代码与安装说明见皮卡鱼官方项目。在 Mistboard 对弈或分析只需打开浏览器，不必安装应用。',
   'How strong is it?': '皮卡鱼有多强？',
   'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
     '皮卡鱼机器人在服务器上每步搜索三百万个局面，约四秒。这已超出任何人类棋手。上面的阶梯一路降到初学者也能赢的级别。',
@@ -11231,17 +11235,21 @@ const ZH_HANT: Record<string, string> = {
   'Banqi is a folk game and the rules differ by region. Three families are common. Taiwanese rules use the ladder above and a cannon that captures by jumping one screen. Hong Kong rules rank the pieces general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder. Mainland rules usually have no jumping cannon at all: it captures adjacent pieces by rank like everything else.':
     '暗棋是民間棋戲，各地規則不同，常見的有三種。台灣規則用本頁的大小順序，砲隔一子跳吃。香港規則的大小是將、車、馬、砲、士、象、卒，砲在等級序列裡面。中國大陸的規則通常沒有跳吃的砲：砲和其他棋子一樣按等級吃相鄰的棋子。',
   // pikafish: Taiwan forms (線上, 網頁, 帳號, 伺服器, 等級, 選單, 資料, 西洋棋, 建置).
-  'Pikafish on Mistboard': '皮卡魚線上：在 Mistboard 上與皮卡魚對弈',
+  'Pikafish on Mistboard': '皮卡魚象棋：線上對弈與分析',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
-    '皮卡魚象棋線上對弈：象棋和揭棋，免費網頁版',
+    '皮卡魚象棋線上：免費對弈、分析與引擎下載指引',
   'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    '在瀏覽器裡直接與開源象棋引擎皮卡魚對弈，它由 Stockfish 改造而來。免費、不用註冊、不用下載。可選難度等級，可下揭棋，還能用它復盤你的對局。',
+    '皮卡魚象棋線上免費對弈，免註冊、免安裝；在瀏覽器裡用皮卡魚分析局面、匯入棋譜。想下載引擎？這裡也有皮卡魚官方專案入口與安裝說明指引。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     '想找地方與皮卡魚對弈或用它分析的象棋棋手。',
-  '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
-    '[皮卡魚（Pikafish）](https://github.com/official-pikafish/Pikafish) 是目前最強的開源象棋引擎，由 Stockfish 改造而來。多數人要先下載引擎，再搭配一個介面才能用。在這裡，它直接在網頁裡運行。',
-  'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    '可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它復盤。[象棋線上對弈](/zh-hant)免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
+  'Pikafish is an open-source xiangqi engine built from Stockfish. Play against it or analyze a position in your browser, free and without an account.':
+    '皮卡魚（Pikafish）是基於 Stockfish 的開源象棋引擎。在這裡可以直接與它線上對弈，也可以用它分析局面，免費、免註冊。',
+  'Want to download the engine? Visit the [official Pikafish project](https://github.com/official-pikafish/Pikafish) for releases, source code and setup instructions. Browser analysis loads a 51 MB net on first use.':
+    '想下載引擎本體？請到[皮卡魚官方專案](https://github.com/official-pikafish/Pikafish)查看發布版本、原始碼與安裝說明。網頁分析首次使用需載入 51 MB 權重。',
+  'Analyze with Pikafish': '用皮卡魚分析',
+  'Can I analyze with Pikafish online?': '皮卡魚象棋怎麼線上分析？',
+  'Yes. Open the analysis board, enter a position or import a game, and switch on the engine. Pikafish runs in your browser; its 51 MB net loads on first use.':
+    '可以。開啟分析棋盤，輸入局面或匯入棋譜，再開啟引擎。皮卡魚在瀏覽器裡運行，首次使用會載入 51 MB 權重。',
   'Play Pikafish': '與皮卡魚對弈',
   'Play Pikafish at jieqi': '與皮卡魚下揭棋',
   'Play against Pikafish': '人機對弈：挑戰皮卡魚',
@@ -11270,15 +11278,15 @@ const ZH_HANT: Record<string, string> = {
   'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.':
     '[分析棋盤](/analysis/xiangqi)用於你自己擺的局面。它在你的瀏覽器裡運行全強度的皮卡魚，帶官方權重，你分析的內容不會離開你的電腦。權重 51 MB，只需下載一次。',
   Questions: '常見問題',
-  'Can I play Pikafish online?': '可以線上和皮卡魚下棋嗎？',
-  'Yes, here, in the browser. One click on the Pikafish page starts a game against it; the play menu offers eight easier levels.':
-    '可以，就在這裡，網頁裡直接下。在皮卡魚頁面點一下就開局；對弈選單裡還有八個更容易的等級。',
+  'Can I play Pikafish online?': '皮卡魚象棋線上怎麼玩？',
+  'Yes. Open Play Pikafish to start a game in your browser. The play menu also offers eight easier Fairy-Stockfish levels.':
+    '開啟與皮卡魚對弈，即可在瀏覽器裡開局。對弈選單另有八個較容易的 Fairy-Stockfish 等級。',
   'Is it free?': '免費嗎？',
   'Yes. Playing, the ladder, jieqi, game review and the analysis board are all free. An account is optional.':
     '免費。對弈、人機階梯、揭棋、復盤和分析棋盤都免費。帳號可選，不是必需。',
-  'Do I need to download anything?': '需要下載什麼嗎？',
-  'No. The game runs in the page. On a phone, open the site in the browser and play.':
-    '不需要。棋局直接在網頁裡運行。手機上用瀏覽器打開本站即可開始。',
+  'Where can I download Pikafish?': '皮卡魚象棋引擎怎麼下載？',
+  'For the engine itself, use the official Pikafish project for releases, source code and setup instructions. To play or analyze on Mistboard, open your browser without installing an app.':
+    '引擎本體的發布版本、原始碼與安裝說明見皮卡魚官方專案。在 Mistboard 對弈或分析只需開啟瀏覽器，不必安裝應用程式。',
   'How strong is it?': '皮卡魚有多強？',
   'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
     '皮卡魚機器人在伺服器上每步搜尋三百萬個局面，約四秒。這已超出任何人類棋手。上面的階梯一路降到初學者也能贏的等級。',
