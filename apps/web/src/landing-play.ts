@@ -68,6 +68,7 @@ import {
 } from './variant-tenant/registry.js';
 import { variantMiniIdForGameSpec } from './variants.js';
 import { ENGINE_OFFER_AFTER_MS, shouldOfferEngine } from './web-utils.js';
+import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 export type PlayableEngine = {
   id: string;
@@ -3321,6 +3322,9 @@ function colorGlyphNodes(
     return chessKingGlyphNodes(value);
   }
   const capabilities = landingGameSpecCapabilities(gameSpecId);
+  if (capabilities.glyphClass === 'xiangqi') {
+    return xiangqiGeneralGlyphNodes(value);
+  }
   if (value === 'random') {
     const first = document.createElement('span');
     first.className = capabilities.neutralGlyphColor ? '' : capabilities.firstColor;
@@ -3347,6 +3351,22 @@ function jungleElephantGlyphNodes(value: LandingColorPreference): Node[] {
   };
   if (value === 'random') return [elephant('red'), elephant('black')];
   return [elephant(value === 'black' ? 'black' : 'red')];
+}
+
+// The general in the player's own piece set, so an international-set player
+// picks a side by the piece they will see on the board, not by 帥 and 將.
+function xiangqiGeneralGlyphNodes(value: LandingColorPreference): Node[] {
+  const general = (color: 'red' | 'black') => {
+    const piece = document.createElement('span');
+    piece.className = `landing-color-piece xiangqi ${color}`;
+    piece.innerHTML = renderXiangqiPiece(
+      { color, role: 'general' },
+      { ariaLabel: `${color} general` },
+    );
+    return piece;
+  };
+  if (value === 'random') return [general('red'), general('black')];
+  return [general(value === 'black' ? 'black' : 'red')];
 }
 
 function chessKingGlyphNodes(value: LandingColorPreference): Node[] {

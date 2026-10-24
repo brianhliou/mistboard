@@ -12,6 +12,7 @@ import {
 import { resetLiveStatsCacheForTests } from './live-stats-client.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
+import { writeStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
 // The public shelf keeps the xiangqi family together, pairs Fog Xiangqi with
 // Fog Chess, then closes with Jungle + Flip Jungle.
@@ -668,6 +669,37 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Play a bot');
     expect(selectedModalColor()).toBe('Second');
+  });
+
+  // Brian, 2026-10-23: with the international set the side picker still showed
+  // 帥 and 將. It draws the general in the player's own piece set.
+  it('draws the xiangqi side choices in the saved piece set', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const pickerFor = (pieceSet: 'international' | 'traditional') => {
+      document.body.replaceChildren();
+      writeStoredXiangqiPieceSet(pieceSet);
+      const panel = buildLandingPlayPanel([]);
+      document.body.append(panel);
+      openPlaySetup(panel, 'Challenge a friend');
+      selectModalVariant('xiangqi');
+      return [...document.querySelectorAll<HTMLElement>('.landing-color-glyph')];
+    };
+
+    const international = pickerFor('international');
+    expect(
+      international.map((g) => g.querySelectorAll('.landing-color-piece.xiangqi svg').length),
+    ).toEqual([1, 2, 1]);
+    expect(international.map((g) => g.innerHTML).join('')).not.toMatch(/[帥將]/);
+    expect(international[0]?.querySelector('svg')?.getAttribute('aria-label')).toBe('red general');
+
+    const traditional = pickerFor('traditional');
+    // The character set draws its own disc and outlined 帥, not the figure.
+    expect(traditional[0]?.querySelector('svg')?.getAttribute('aria-label')).toBe('red general');
+    expect(traditional[0]?.querySelector('image')).toBeNull();
+    expect(international[0]?.querySelector('image')).not.toBeNull();
   });
 
   it('shows Banqi first and second move-order choices in the setup modal', async () => {
