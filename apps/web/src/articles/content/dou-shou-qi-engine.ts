@@ -37,7 +37,6 @@ export const douShouQiEngineArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-27',
-  updatedAt: '2026-10-16',
   thumbnail: {
     kind: 'image',
     src: '/article-thumbs/dou-shou-qi-engine/thumbnail.png',

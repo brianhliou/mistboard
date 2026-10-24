@@ -300,6 +300,8 @@ export const caoYanleiArticle: Article = {
   status: "published",
   publishedAt: "2026-09-25",
   updatedAt: "2026-09-27",
+  updateNote:
+    'The six featured games are now all wins.',
   thumbnail: {
     kind: 'image',
     src: "/article-thumbs/cao-yanlei-2024-face.jpg",

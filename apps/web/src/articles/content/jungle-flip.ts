@@ -20,7 +20,9 @@ export const jungleFlipArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-30',
-  updatedAt: '2026-07-26',
+  updatedAt: '2026-09-25',
+  updateNote:
+    'Added an FAQ on what the bot cannot see, and the sample game as a study.',
   playableOnMistboard: true,
   audience:
     'Jungle players who want the flip variant, and anyone who grew up playing a face-down animal game on a chalk grid.',

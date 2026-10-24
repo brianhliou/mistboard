@@ -331,6 +331,11 @@ export const jieqiPuzzleSearchArticle: Article = {
   showSummaryOnPage: false,
   thumbnail: { kind: 'svg', svg: JIEQI_PUZZLE_THUMBNAIL },
   status: 'published',
+  method: [
+    'The 50 most recent finished jieqi games on the site with 20 plies or more: 2,939 positions.',
+    'AB-JChess scored every candidate move; a reveal was scored once for each piece it could be, weighted by how many of each the side to move had not yet seen.',
+    'A position counted when the best move beat the second by at least 15 points of winning chance, at standard depth and at four times that.',
+  ],
   publishedAt: '2026-10-11',
   boardFamily: 'xiangqi',
   audience:

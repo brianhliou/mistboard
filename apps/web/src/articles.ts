@@ -18,6 +18,7 @@ import {
 import { track } from './analytics.js';
 import { LANGUAGE_ENDONYMS, languagePartnersOf } from './articles/language-pairs.js';
 import { articleIsLive } from './articles/publish-time.js';
+import { articleMadeWithNote, hasSiteByline, SITE_AUTHOR } from './articles/site-author.js';
 import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
 import './articles.css';
@@ -947,6 +948,35 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     nameEl.append(name);
     byline.append(nameEl);
     metaRow.append(byline);
+  } else if (hasSiteByline(article)) {
+    // Everything Mistboard publishes as an article has a person behind it; the
+    // name links to the About section that says who he is and how the pages
+    // are made. Rules pages are reference documents and stay unsigned.
+    const byline = document.createElement('span');
+    byline.className = 'article-meta-byline';
+    byline.append(`${t('articles.by', {}, locale)} `);
+    const nameEl = document.createElement('a');
+    nameEl.href = localizedHref(SITE_AUTHOR.href, locale);
+    nameEl.className = 'article-meta-author';
+    const name = document.createElement('span');
+    name.className = 'article-meta-author-name';
+    name.textContent = SITE_AUTHOR.name;
+    nameEl.append(name);
+    byline.append(nameEl);
+    // How the text was made sits with who made it (the brianhliou.com
+    // post-drafted note). A zh rendering also says it is a machine translation.
+    const madeWith = articleMadeWithNote(base, articleLang);
+    if (madeWith) {
+      const note = document.createElement('span');
+      note.className = 'article-meta-drafted';
+      note.textContent = t(
+        madeWith === 'drafted' ? 'articles.draftedWithClaude' : 'articles.draftedTranslated',
+        {},
+        locale,
+      );
+      byline.append(' · ', note);
+    }
+    metaRow.append(byline);
   }
   if (article.publishedAt) {
     const dates = document.createElement('span');
@@ -978,6 +1008,23 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     metaRow.append(link);
   }
   if (metaRow.childElementCount > 0) header.append(metaRow);
+
+  // What the update on the meta row's "Updated" date changed. The note text is
+  // authored in English and stays English on a translation unless the
+  // dictionary carries it; the label is chrome and follows the locale.
+  if (article.updateNote && article.updatedAt && article.updatedAt !== article.publishedAt) {
+    const updateNote = document.createElement('p');
+    updateNote.className = 'article-update-note';
+    const label = document.createElement('span');
+    label.className = 'article-update-note-label';
+    label.textContent = t('articles.updateNote', {}, locale);
+    const text = document.createElement('span');
+    text.className = 'article-update-note-text';
+    if (articleLang) text.lang = article.updateNote === base.updateNote ? 'en' : articleLang;
+    text.textContent = article.updateNote;
+    updateNote.append(label, ' ', text);
+    header.append(updateNote);
+  }
 
   const showSummaryOnPage = article.showSummaryOnPage ?? true;
   if (showSummaryOnPage) {
@@ -1023,6 +1070,27 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     }
     tldr.append(tldrHeading, tldrList);
     sheet.append(tldr);
+  }
+
+  // A data post's method, restated from its own text, so a reader can judge
+  // the numbers before reading them.
+  if (article.method && article.method.length > 0) {
+    const method = document.createElement('aside');
+    method.className = 'article-method';
+    const methodHeading = document.createElement('strong');
+    methodHeading.className = 'article-method-heading';
+    methodHeading.textContent = t('articles.method', {}, locale);
+    const methodList = document.createElement('ul');
+    methodList.className = 'article-method-list';
+    article.method.forEach((line, index) => {
+      const li = document.createElement('li');
+      // A line the zh dictionary does not carry yet renders in English.
+      li.lang = articleLang && line === base.method?.[index] ? 'en' : contentLang;
+      appendRichText(li, line);
+      methodList.append(li);
+    });
+    method.append(methodHeading, methodList);
+    sheet.append(method);
   }
 
   if (article.intro && article.intro.length > 0) {

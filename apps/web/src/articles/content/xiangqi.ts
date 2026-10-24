@@ -30,6 +30,8 @@ export const xiangqiArticle: Article = {
     status: 'published',
     publishedAt: '2026-05-26',
     updatedAt: '2026-09-25',
+    updateNote:
+      'Rewritten as a guide for chess players.',
     audience:
       'Players new to Xiangqi, and chess players who want to learn xiangqi and play it on Mistboard.',
     thumbnail: { kind: 'svg', svg: XQ_RULES_PRIMER_THUMBNAIL },

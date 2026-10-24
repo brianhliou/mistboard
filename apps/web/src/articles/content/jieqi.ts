@@ -22,6 +22,8 @@ export const jieqiArticle: Article = {
     status: 'published',
     publishedAt: '2026-06-15',
     updatedAt: '2026-09-17',
+    updateNote:
+      'Added a capture table and an FAQ.',
     audience:
       'Xiangqi players and hidden-information fans who want a clean English rules reference for jieqi.',
     thumbnail: { kind: 'svg', svg: JIEQI_RULES_THUMBNAIL },

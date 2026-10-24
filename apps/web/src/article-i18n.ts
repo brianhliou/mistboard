@@ -3598,8 +3598,8 @@ const ZH_HANS: Record<string, string> = {
   'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.':
     '许银川对阮武君，2007年，出自他三个冠军中的最后一个。我们的引擎给他打出98.5分，是本页最干净的一局。',
   'Zhao Xinxin 赵鑫鑫, 2009': '赵鑫鑫，2009',
-  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
-    '浙江台州人，2007年十九岁夺得全国冠军，2009年二十一岁夺得世界冠军，九局拿下十五分。他至今仍是拿下这个头衔最年轻的棋手，而这一冠也让他集齐全国、亚洲与世界三项冠军，中国象棋界称之为大满贯。',
+  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. Taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
+    '浙江台州人，2007年十九岁夺得全国冠军，2009年二十一岁夺得世界冠军，九局拿下十五分。这一冠让他集齐全国、亚洲与世界三项冠军，中国象棋界称之为大满贯。',
   'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.':
     '2025年1月12日，他在一次处罚四十一人的决定中被终身禁赛。',
   'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.':
@@ -6452,6 +6452,98 @@ const ZH_HANS: Record<string, string> = {
   'Not a winning hand: a red and a black Advisor are not a pair': '不算胡牌：红仕和黑士不成对',
   'The dealer draws the black General to win': '庄家摸到黑将胡牌',
   Replay: '重播',
+  // Method lines and "What changed" notes on locked articles: machine-drafted 2026-10-23, not native-reviewed, from English already published.
+  'The 50 most recent finished jieqi games on the site with 20 plies or more: 2,939 positions.':
+    '本站最近 50 盘已结束、至少 20 个半回合的揭棋对局，共 2,939 个局面。',
+  'AB-JChess scored every candidate move; a reveal was scored once for each piece it could be, weighted by how many of each the side to move had not yet seen.':
+    'AB-JChess 给每个候选着法打分；翻开暗子的着法按它可能翻出的每种棋子各算一次，权重是走棋一方尚未见到的该种棋子数量。',
+  'A position counted when the best move beat the second by at least 15 points of winning chance, at standard depth and at four times that.':
+    '最佳着法的胜率比次佳着法至少高 15 个百分点，且在标准深度和四倍深度下都如此，这个局面才计入。',
+  'MistyJungleFlip: alpha-beta search with a handwritten evaluation and exact endgame tablebases, its strength set by a node budget rather than a clock.':
+    'MistyJungleFlip：α-β 搜索，配手写的评估函数和精确的残局库，棋力由节点预算而不是用时决定。',
+  'Move quality graded against the tablebases in endgames of up to five pieces, and against an exact solver on 200 five- and six-piece midgames.':
+    '在五子以内的残局中用残局库评判着法质量，在 200 个五子和六子的中局里用精确求解器评判。',
+  'Strength measured by a round robin of copies at 1k, 8k, 64k and 512k nodes a move, 120 paired, colour-swapped games per pairing.':
+    '棋力用循环赛测量：同一引擎分别以每步 1k、8k、64k 和 512k 节点对弈，每对组合下 120 盘交换先后手的成对对局。',
+  'Nothing here checks the opening, which is too large to solve.':
+    '这里没有检验开局，开局太大，无法求解。',
+  "The site's own rules engine counted the first move's positions; Fairy-Stockfish counted the deeper ones.":
+    '第一步的局面数由本站自己的规则引擎计算；更深层的由 Fairy-Stockfish 计算。',
+  'Fairy-Stockfish played 64 games per variant at 100,000 positions a move, with its neural network off.':
+    'Fairy-Stockfish 每个变体下 64 盘，每步搜索 100,000 个局面，关闭神经网络。',
+  'Xiangqi counts are strictly legal; Duck Xiangqi has no check rule, so every piece move counts.':
+    '象棋的计数只算严格合法的着法；鸭子象棋没有将军规则，所以每一步走子都计入。',
+  'Added a faster-mate example, three audits that were wrong and the helpmate bug.':
+    '新增：一个更快杀法的例子、三个判错的审校结果，以及合作杀判定的漏洞。',
+  'Retold in order, with the match results in one table; the 7x row now reads as within noise rather than a loss.':
+    '按时间顺序重写，对局结果合并为一张表；7x 那一行现在解读为在误差范围内，而不是落败。',
+  'The den-race section moved to its own article; this page now links to it.':
+    '冲兽穴竞速一节已移到单独的文章，本页现在链接到那里。',
+  'A game counts once both sides have moved and it ends, against a person or a bot.':
+    '双方都走过棋且对局结束，才算一盘，对手是人或机器人都算。',
+  'Engine matches and our test accounts are left out; counting started on June 1.':
+    '引擎对引擎的比赛和我们的测试账号不计入；从 6 月 1 日开始计数。',
+  'The six featured games are now all wins.': '精选的六盘对局现在全是胜局。',
+  'Added the Manila final with its round table and board.': '新增马尼拉决赛，附轮次表和棋盘。',
+  'Rewritten as a guide to playing and reviewing jieqi here.':
+    '改写为在本站下揭棋和复盘揭棋的指南。',
+  "Added the miner's puzzle ratings, its audit, the licence gate and the withheld class.":
+    '新增挖题程序给出的题目等级分、对它的审校、授权门槛，以及不予上线的一类题目。',
+  'Removed a claim that Zhao Xinxin is the youngest world champion; Zheng Weitong won the title younger in 2015.':
+    '删去了赵鑫鑫是最年轻世界冠军的说法；郑惟桐 2015 年夺冠时更年轻。',
+  'Replaced the sample game with a game played against the engine on the site.':
+    '示例对局换成了一盘在本站与引擎下的对局。',
+  'Added a sample game from the site.': '新增一盘本站的示例对局。',
+  'Rewritten as a guide for chess players.': '改写为写给国际象棋棋手的指南。',
+  'Reworked the diagrams, the history and the prose.': '重做了图示、历史部分和正文。',
+  'Added a capture table and an FAQ.': '新增吃子对照表和常见问题。',
+  'The no-progress draw is now 60 plies without a capture or flip, up from 40.':
+    '无进展和棋现在是 60 个半回合内没有吃子或翻子，原来是 40。',
+  '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
+    'MistyBanqi 自我对弈 200 盘，每步一千万节点，采用台湾比赛规则和 40 个半回合无进展和棋。',
+  'Every game a fresh deal, with both seats the same engine at the same search.':
+    '每盘都重新洗子，双方都是同一个引擎、同样的搜索量。',
+  "Material counted on the engine's own value table.": '子力按引擎自己的价值表计算。',
+  'The games measure this engine, not banqi between people.':
+    '这些对局衡量的是这个引擎，而不是人与人之间的暗棋。',
+  'Added how the engine was built: self-play, the value table, the search plateau and the repetition fix.':
+    '新增引擎的构建过程：自我对弈、价值表、搜索的平台期和重复局面的修复。',
+  'Added an FAQ on what the bot cannot see, and the sample game as a study.':
+    '新增关于机器人看不到什么的常见问题，示例对局也做成了研习。',
+  'The Treasure figure now shows the five moves the rules allow, not eight.':
+    '宝的示意图现在显示规则允许的五种走法，而不是八种。',
+  "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.":
+    '不再称鸭子象棋为 Mistboard 原创；它是把 Tim Paulden 的鸭子国际象棋搬到了象棋棋盘上。',
+  'Added the facing argument, the 8-of-88 count, the median game length and a note on the 29 September engine bug.':
+    '新增将帅对面的论证、88 个中占 8 个的统计、对局长度的中位数，以及关于 9 月 29 日引擎漏洞的说明。',
+  "A rule kernel referees every game; its move generation matches Fairy-Stockfish's on 209 positions.":
+    '每盘对局都由规则内核裁判；它的着法生成在 209 个局面上与 Fairy-Stockfish 一致。',
+  'Fairy-Stockfish played a game from each of the 83 distinct endings of the opening chain at 100,000 nodes a move, and again at a million.':
+    'Fairy-Stockfish 从开局链的 83 种不同结局各下一盘，每步 100,000 节点，再以每步一百万节点各下一盘。',
+  'Proof-number search turned the decisive endings into proofs about the rules: 63 of 70 closed, and a separate checker replays each one.':
+    '证明数搜索把决定胜负的结局变成关于规则的证明：70 个中有 63 个得证，另有一个独立的检查程序逐一重放。',
+  'Added the full analysis: the opening forks, the proof line, the engine games and how it was checked.':
+    '新增完整分析：开局分支、证明路线、引擎对局，以及检验方法。',
+  "A rule kernel referees every game, after matching the engine's legal moves by perft from each array, on nine hand-built positions and on 300 positions from random play.":
+    '每盘对局都由规则内核裁判；此前它已用 perft 从每种布阵出发核对引擎的合法着法，并在九个手工构造的局面和 300 个随机对局局面上核对过。',
+  'Every array played four times, at 150,000, 200,000, 300,000 and 500,000 nodes a move, with no random openings.':
+    '每种布阵各下四盘，分别为每步 150,000、200,000、300,000 和 500,000 节点，不用随机开局。',
+  'Node budgets, not time, so nothing depends on the machine.':
+    '用节点预算而不是时间，所以结果不依赖机器。',
+  'Added the full account: the twelve start arrays, both result tables, step-through games and the checks, with four figures corrected against the sample games.':
+    '新增完整记录：十二种起始布阵、两张结果表、可逐步浏览的对局和检验过程，并对照示例对局更正了四个数字。',
+  'Our own engine in Rust (alpha-beta search with late move reductions and a quiescence search over conversions), because no existing engine plays these rules.':
+    '我们自己用 Rust 写的引擎（α-β 搜索，带后期着法缩减，以及针对转化的静态搜索），因为现有引擎都不支持这套规则。',
+  'Engine games from the starting array with no opening book, the two colors taking the first move in turn.':
+    '引擎对局从初始布阵开始，不用开局库，双方轮流先走。',
+  "Every engine game replayed through Mistboard's rule kernel, with the same legal moves at every position.":
+    '每盘引擎对局都经 Mistboard 的规则内核重放，每个局面的合法着法都一致。',
+  'Two checks that do not depend on engine strength: 6,000 games of random legal moves, and a proof search of 20.8 billion nodes.':
+    '两项不依赖引擎棋力的检验：6,000 盘随机合法着法的对局，以及一次 208 亿节点的证明搜索。',
+  "Added the cannon rule's design history and the engine results behind the numbers.":
+    '新增炮规则的设计沿革，以及这些数字背后的引擎结果。',
+  'Names obscuro-chess, the other open implementation, instead of calling Misty the only one.':
+    '点名另一个开源实现 obscuro-chess，不再称 Misty 是唯一的开源实现。',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -10053,8 +10145,8 @@ const ZH_HANT: Record<string, string> = {
     '他和吕钦一樣出自廣東，一樣把棋建立在殘局功夫上，也一樣是本頁三位紀錄清白的棋手之一。',
   'Xu Yinchuan vs Nguyễn Vũ Quân, 2007, from the last of his three titles. Our engine grades him 98.5, the cleanest game on this page.':
     '许银川對阮武君，2007年，出自他三個冠軍中的最後一個。我們的引擎給他打出98.5分，是本頁最乾淨的一局。',
-  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. He is still the youngest man to have won this title, and taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
-    '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。他至今仍是拿下這個頭銜最年輕的棋手，而這一冠也讓他集齊全國、亞洲與世界三項冠軍，象棋界稱之為大滿貫。',
+  'From Taizhou in Zhejiang, national champion at nineteen in 2007, and world champion at twenty-one in 2009 with fifteen points from nine games. Taking it completed the set of national, Asian and world championships that Chinese xiangqi calls a grand slam.':
+    '浙江台州人，2007年十九歲奪得全國冠軍，2009年二十一歲奪得世界冠軍，九局拿下十五分。這一冠讓他集齊全國、亞洲與世界三項冠軍，象棋界稱之為大滿貫。',
   'He was banned for life on 12 January 2025, in the ruling that sanctioned forty-one people at once.':
     '2025年1月12日，他在一次處罰四十一人的決定中被終身禁賽。',
   'Zhao Xinxin vs Nguyễn Thành Bảo, 2009, from the championship he won.':
@@ -12489,6 +12581,98 @@ const ZH_HANT: Record<string, string> = {
   Dataset: '資料集',
   '[Download the full CSV](/article-data/chess960-starting-position-evals.csv) (960 rows). Columns: `scharnagl_id`, `back_rank`, `fen`, `position_key`, `cp`, `mate`, `best_move`, `pv`, `depth`, `nodes`, `source`, `fetched_at_iso`.':
     '[下載完整 CSV](/article-data/chess960-starting-position-evals.csv)（960 列）。欄位：`scharnagl_id`、`back_rank`、`fen`、`position_key`、`cp`、`mate`、`best_move`、`pv`、`depth`、`nodes`、`source`、`fetched_at_iso`。',
+  // Method lines and "What changed" notes on locked articles: machine-drafted 2026-10-23, not native-reviewed, from English already published.
+  'The 50 most recent finished jieqi games on the site with 20 plies or more: 2,939 positions.':
+    '本站最近 50 盤已結束、至少 20 個半回合的揭棋對局，共 2,939 個局面。',
+  'AB-JChess scored every candidate move; a reveal was scored once for each piece it could be, weighted by how many of each the side to move had not yet seen.':
+    'AB-JChess 給每個候選著法打分；翻開暗子的著法按它可能翻出的每種棋子各算一次，權重是走棋一方尚未見到的該種棋子數量。',
+  'A position counted when the best move beat the second by at least 15 points of winning chance, at standard depth and at four times that.':
+    '最佳著法的勝率比次佳著法至少高 15 個百分點，且在標準深度和四倍深度下都如此，這個局面才計入。',
+  'MistyJungleFlip: alpha-beta search with a handwritten evaluation and exact endgame tablebases, its strength set by a node budget rather than a clock.':
+    'MistyJungleFlip：α-β 搜尋，配手寫的評估函數和精確的殘局庫，棋力由節點預算而不是用時決定。',
+  'Move quality graded against the tablebases in endgames of up to five pieces, and against an exact solver on 200 five- and six-piece midgames.':
+    '在五子以內的殘局中用殘局庫評判著法品質，在 200 個五子和六子的中局裡用精確求解器評判。',
+  'Strength measured by a round robin of copies at 1k, 8k, 64k and 512k nodes a move, 120 paired, colour-swapped games per pairing.':
+    '棋力用循環賽測量：同一引擎分別以每步 1k、8k、64k 和 512k 節點對弈，每對組合下 120 盤交換先後手的成對對局。',
+  'Nothing here checks the opening, which is too large to solve.':
+    '這裡沒有檢驗開局，開局太大，無法求解。',
+  "The site's own rules engine counted the first move's positions; Fairy-Stockfish counted the deeper ones.":
+    '第一步的局面數由本站自己的規則引擎計算；更深層的由 Fairy-Stockfish 計算。',
+  'Fairy-Stockfish played 64 games per variant at 100,000 positions a move, with its neural network off.':
+    'Fairy-Stockfish 每個變體下 64 盤，每步搜尋 100,000 個局面，關閉神經網路。',
+  'Xiangqi counts are strictly legal; Duck Xiangqi has no check rule, so every piece move counts.':
+    '象棋的計數只算嚴格合法的著法；鴨子象棋沒有將軍規則，所以每一步走子都計入。',
+  'Added a faster-mate example, three audits that were wrong and the helpmate bug.':
+    '新增：一個更快殺法的例子、三個判錯的審校結果，以及合作殺判定的漏洞。',
+  'Retold in order, with the match results in one table; the 7x row now reads as within noise rather than a loss.':
+    '按時間順序重寫，對局結果合併為一張表；7x 那一行現在解讀為在誤差範圍內，而不是落敗。',
+  'The den-race section moved to its own article; this page now links to it.':
+    '衝獸穴競速一節已移到單獨的文章，本頁現在連結到那裡。',
+  'A game counts once both sides have moved and it ends, against a person or a bot.':
+    '雙方都走過棋且對局結束，才算一盤，對手是人或機器人都算。',
+  'Engine matches and our test accounts are left out; counting started on June 1.':
+    '引擎對引擎的比賽和我們的測試帳號不計入；從 6 月 1 日開始計數。',
+  'The six featured games are now all wins.': '精選的六盤對局現在全是勝局。',
+  'Added the Manila final with its round table and board.': '新增馬尼拉決賽，附輪次表和棋盤。',
+  'Rewritten as a guide to playing and reviewing jieqi here.':
+    '改寫為在本站下揭棋和復盤揭棋的指南。',
+  "Added the miner's puzzle ratings, its audit, the licence gate and the withheld class.":
+    '新增挖題程式給出的題目等級分、對它的審校、授權門檻，以及不予上線的一類題目。',
+  'Removed a claim that Zhao Xinxin is the youngest world champion; Zheng Weitong won the title younger in 2015.':
+    '刪去了赵鑫鑫是最年輕世界冠軍的說法；郑惟桐 2015 年奪冠時更年輕。',
+  'Replaced the sample game with a game played against the engine on the site.':
+    '範例對局換成了一盤在本站與引擎下的對局。',
+  'Added a sample game from the site.': '新增一盤本站的範例對局。',
+  'Rewritten as a guide for chess players.': '改寫為寫給西洋棋棋手的指南。',
+  'Reworked the diagrams, the history and the prose.': '重做了圖示、歷史部分和正文。',
+  'Added a capture table and an FAQ.': '新增吃子對照表和常見問題。',
+  'The no-progress draw is now 60 plies without a capture or flip, up from 40.':
+    '無進展和棋現在是 60 個半回合內沒有吃子或翻子，原來是 40。',
+  '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
+    'MistyBanqi 自我對弈 200 盤，每步一千萬節點，採用台灣比賽規則和 40 個半回合無進展和棋。',
+  'Every game a fresh deal, with both seats the same engine at the same search.':
+    '每盤都重新洗子，雙方都是同一個引擎、同樣的搜尋量。',
+  "Material counted on the engine's own value table.": '子力按引擎自己的價值表計算。',
+  'The games measure this engine, not banqi between people.':
+    '這些對局衡量的是這個引擎，而不是人與人之間的暗棋。',
+  'Added how the engine was built: self-play, the value table, the search plateau and the repetition fix.':
+    '新增引擎的構建過程：自我對弈、價值表、搜尋的平台期和重複局面的修復。',
+  'Added an FAQ on what the bot cannot see, and the sample game as a study.':
+    '新增關於機器人看不到什麼的常見問題，範例對局也做成了研習。',
+  'The Treasure figure now shows the five moves the rules allow, not eight.':
+    '寶的示意圖現在顯示規則允許的五種走法，而不是八種。',
+  "No longer calls Duck Xiangqi a Mistboard original; it brings Tim Paulden's Duck Chess to the xiangqi board.":
+    '不再稱鴨子象棋為 Mistboard 原創；它是把 Tim Paulden 的鴨子西洋棋搬到了象棋棋盤上。',
+  'Added the facing argument, the 8-of-88 count, the median game length and a note on the 29 September engine bug.':
+    '新增將帥對面的論證、88 個中占 8 個的統計、對局長度的中位數，以及關於 9 月 29 日引擎漏洞的說明。',
+  "A rule kernel referees every game; its move generation matches Fairy-Stockfish's on 209 positions.":
+    '每盤對局都由規則內核裁判；它的著法生成在 209 個局面上與 Fairy-Stockfish 一致。',
+  'Fairy-Stockfish played a game from each of the 83 distinct endings of the opening chain at 100,000 nodes a move, and again at a million.':
+    'Fairy-Stockfish 從開局鏈的 83 種不同結局各下一盤，每步 100,000 節點，再以每步一百萬節點各下一盤。',
+  'Proof-number search turned the decisive endings into proofs about the rules: 63 of 70 closed, and a separate checker replays each one.':
+    '證明數搜尋把決定勝負的結局變成關於規則的證明：70 個中有 63 個得證，另有一個獨立的檢查程式逐一重播。',
+  'Added the full analysis: the opening forks, the proof line, the engine games and how it was checked.':
+    '新增完整分析：開局分支、證明路線、引擎對局，以及檢驗方法。',
+  "A rule kernel referees every game, after matching the engine's legal moves by perft from each array, on nine hand-built positions and on 300 positions from random play.":
+    '每盤對局都由規則內核裁判；此前它已用 perft 從每種佈陣出發核對引擎的合法著法，並在九個手工構造的局面和 300 個隨機對局局面上核對過。',
+  'Every array played four times, at 150,000, 200,000, 300,000 and 500,000 nodes a move, with no random openings.':
+    '每種佈陣各下四盤，分別為每步 150,000、200,000、300,000 和 500,000 節點，不用隨機開局。',
+  'Node budgets, not time, so nothing depends on the machine.':
+    '用節點預算而不是時間，所以結果不依賴機器。',
+  'Added the full account: the twelve start arrays, both result tables, step-through games and the checks, with four figures corrected against the sample games.':
+    '新增完整記錄：十二種起始佈陣、兩張結果表、可逐步瀏覽的對局和檢驗過程，並對照範例對局更正了四個數字。',
+  'Our own engine in Rust (alpha-beta search with late move reductions and a quiescence search over conversions), because no existing engine plays these rules.':
+    '我們自己用 Rust 寫的引擎（α-β 搜尋，帶後期著法縮減，以及針對轉化的靜態搜尋），因為現有引擎都不支援這套規則。',
+  'Engine games from the starting array with no opening book, the two colors taking the first move in turn.':
+    '引擎對局從初始佈陣開始，不用開局庫，雙方輪流先走。',
+  "Every engine game replayed through Mistboard's rule kernel, with the same legal moves at every position.":
+    '每盤引擎對局都經 Mistboard 的規則內核重播，每個局面的合法著法都一致。',
+  'Two checks that do not depend on engine strength: 6,000 games of random legal moves, and a proof search of 20.8 billion nodes.':
+    '兩項不依賴引擎棋力的檢驗：6,000 盤隨機合法著法的對局，以及一次 208 億節點的證明搜尋。',
+  "Added the cannon rule's design history and the engine results behind the numbers.":
+    '新增炮規則的設計沿革，以及這些數字背後的引擎結果。',
+  'Names obscuro-chess, the other open implementation, instead of calling Misty the only one.':
+    '點名另一個開源實作 obscuro-chess，不再稱 Misty 是唯一的開源實作。',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

@@ -42,6 +42,20 @@ describe('article translation coverage', () => {
     });
   }
 
+  // articleProse leaves `updateNote` out (it is about the text, not the text),
+  // so without this a translated page showed its "What changed" line in English.
+  it('every locked article translates its update note in all zh scripts', () => {
+    const missing: string[] = [];
+    for (const slug of TRANSLATED_ARTICLE_SLUGS) {
+      const note = published.find((a) => a.slug === slug)?.updateNote;
+      if (!note) continue;
+      for (const lang of ARTICLE_LANGS) {
+        if (!hasTranslation(lang, note)) missing.push(`[${lang}] ${slug}: ${note}`);
+      }
+    }
+    expect(missing, `untranslated update notes:\n${missing.join('\n')}`).toEqual([]);
+  });
+
   // Diagram labels live inside generated SVG, where articleProse cannot see
   // them, so until 2026-10-01 this file read every rules page as covered while
   // the zh jieqi page showed SHUFFLED START, BEFORE: HORSE POINT and CAPTURE in

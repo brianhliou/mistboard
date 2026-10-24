@@ -50,6 +50,8 @@ export const banqiEngineArticle: Article = {
   status: 'published',
   publishedAt: '2026-06-20',
   updatedAt: '2026-10-16',
+  updateNote:
+    'Added how the engine was built: self-play, the value table, the search plateau and the repetition fix.',
   audience:
     'Banqi players curious about the bot they play against, and anyone who wants to know where a hand-written engine cracks.',
   thumbnail: { kind: 'svg', svg: BANQI_ENGINE_THUMBNAIL },

@@ -4,6 +4,7 @@ import './pages-static.css';
 
 import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
 import { track } from './analytics.js';
+import { SITE_AUTHOR } from './articles/site-author.js';
 import { buildContact } from './contact.js';
 import { jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
@@ -16,6 +17,9 @@ export function mountAbout(root: HTMLElement): void {
   root.replaceChildren();
   root.classList.add('landing-page', 'about-route');
   root.append(buildNav(locale), buildStaticPageLayout('about', buildAbout(locale), locale));
+  // The page mounts after a lazy import, so the browser's own jump to /about#who
+  // found no target; make it again now the section exists.
+  scrollToLocationHash();
 }
 
 export function mountSource(root: HTMLElement): void {
@@ -560,6 +564,22 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     t('about.openSourceSuffix', {}, locale),
   ]);
 
+  const whoHeading = aboutSubheading(t('about.whoHeading', {}, locale));
+  whoHeading.id = 'who';
+  const whoP = aboutParagraph([t('about.whoBody', {}, locale)]);
+  // Chinese runs on without spaces after 。 and ：.
+  const gap = locale === 'en' ? ' ' : '';
+  whoP.append(
+    gap,
+    t('about.whoSitePrefix', {}, locale),
+    gap,
+    aboutExternalLink('brianhliou.com', SITE_AUTHOR.sameAs),
+  );
+
+  const articlesHeading = aboutSubheading(t('about.articlesHeading', {}, locale));
+  articlesHeading.id = 'articles';
+  const articlesP = aboutParagraph([t('about.articlesBody', {}, locale)]);
+
   section.append(
     heading,
     lede,
@@ -577,6 +597,10 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
     communityP,
     oss1Heading,
     oss1P,
+    whoHeading,
+    whoP,
+    articlesHeading,
+    articlesP,
   );
   return section;
 }

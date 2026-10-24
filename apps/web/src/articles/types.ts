@@ -561,9 +561,10 @@ type ArticleBase = {
   /**
    * Guest byline. Set when someone other than Mistboard wrote the piece: a
    * verified titled player sends prose, we edit it and publish it under their
-   * name. Absent means the site is the author and no byline renders, which is
-   * every existing article. `handle` links to the player's profile when they
-   * have an account here; `title` renders their verified badge beside the name.
+   * name. Absent on a Mistboard-published article means the site author wrote
+   * it, and the byline names them (SITE_AUTHOR in articles/site-author.ts).
+   * `handle` links to the player's profile when they have an account here;
+   * `title` renders their verified badge beside the name.
    */
   author?: {
     displayName: string;
@@ -592,8 +593,20 @@ type ArticleBase = {
   audience: string;
   // ISO-8601 dates (YYYY-MM-DD). When present, rendered in the article meta.
   publishedAt?: string;
+  // Set only for a change a returning reader would want to know about: a
+  // corrected number, a new section, a rule change. A move, a reformat, a new
+  // thumbnail or a translation is not an update. `content-fingerprints.json`
+  // catches reader-text edits that forgot to bump it (articles-fingerprint.test.ts).
   updatedAt?: string;
+  // One sentence on what changed on `updatedAt`, shown under the dates. Required
+  // whenever `updatedAt` differs from `publishedAt` (articles.test.ts). Stays
+  // English on translations; the label around it is localized.
+  updateNote?: string;
   tldr?: string[];
+  // How the numbers in a data post were measured, one line per step, rendered
+  // as a "How we measured this" box under the TL;DR. Only restate what the
+  // article's own text already says; this box adds no new numbers.
+  method?: string[];
   intro?: ArticleBlock[];
   // Card art, drawn in the 16:10 card media under a date pill (top left) and a
   // star (top right). Half a xiangqi board goes through xqHalfBoardThumbnailSvg

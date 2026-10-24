@@ -281,7 +281,6 @@ export const laiLyHuynhArticle: Article = {
   showSummaryOnPage: false,
   status: "published",
   publishedAt: "2026-10-02",
-  updatedAt: "2026-10-02",
   thumbnail: {
     kind: 'image',
     src: "/article-thumbs/lai-ly-huynh-2026-face.jpg",
