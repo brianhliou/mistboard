@@ -48,6 +48,10 @@ const ZH_HANS: Record<string, string> = {
   'The shortest xiangqi stalemate we know: 21 plies.': '我们所知最短的象棋困毙：21 个半回合。',
   'In xiangqi a side with no legal move loses. The shortest stalemate we know leaves Black with eight pieces and nothing to play after Red’s 11th move. No stalemate is possible in under 9 plies, so 9 to 20 is open.':
     '在象棋里，无着可走的一方判负。我们所知最短的困毙里，红方走完第 11 步后，黑方还有八个子，却一步棋也走不了。少于 9 个半回合不可能形成困毙，所以 9 到 20 个半回合仍无定论。',
+  // ── 2026-10-27 (jqe article) ── 神经网络 / 车 follow the jqe article.
+  'jqe against AB-JChess: the 300-game match.': 'jqe 对 AB-JChess：300 盘比赛。',
+  'jqe won 171 games to 114 with a network about 90 times smaller. The write-up shows the games where the two engines disagreed about who was winning, and why AB-JChess lost a chariot in game 152.':
+    'jqe 以 171 胜对 114 负击败 AB-JChess，神经网络却小了约 90 倍。文章展示两个引擎对谁占优判断相反的几盘棋，以及 AB-JChess 为什么在第 152 盘丢了一个车。',
   // ── 2026-10-22 (jqe) ── 电脑 / 级 / 研究 follow the AB-JChess entry and the longest-forced-mates entry.
   'Meet jqe, the new top jieqi bot.': '认识 jqe：新的最强揭棋电脑。',
   'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':
@@ -543,6 +547,10 @@ const ZH_HANT: Record<string, string> = {
   'The shortest xiangqi stalemate we know: 21 plies.': '我們所知最短的象棋困斃：21 個半回合。',
   'In xiangqi a side with no legal move loses. The shortest stalemate we know leaves Black with eight pieces and nothing to play after Red’s 11th move. No stalemate is possible in under 9 plies, so 9 to 20 is open.':
     '在象棋裡，無著可走的一方判負。我們所知最短的困斃裡，紅方走完第 11 步後，黑方還有八個子，卻一步棋也走不了。少於 9 個半回合不可能形成困斃，所以 9 到 20 個半回合仍無定論。',
+  // ── 2026-10-27 (jqe article) ── 神經網路 / 車 follow the jqe article.
+  'jqe against AB-JChess: the 300-game match.': 'jqe 對 AB-JChess：300 盤比賽。',
+  'jqe won 171 games to 114 with a network about 90 times smaller. The write-up shows the games where the two engines disagreed about who was winning, and why AB-JChess lost a chariot in game 152.':
+    'jqe 以 171 勝對 114 負擊敗 AB-JChess，神經網路卻小了約 90 倍。文章展示兩個引擎對誰佔優判斷相反的幾盤棋，以及 AB-JChess 為什麼在第 152 盤丟了一個車。',
   // ── 2026-10-22 (jqe) ── 電腦 / 級 / 研究 follow the AB-JChess entry and the longest-forced-mates entry.
   'Meet jqe, the new top jieqi bot.': '認識 jqe：新的最強揭棋電腦。',
   'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':

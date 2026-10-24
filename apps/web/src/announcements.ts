@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-03',
+    kind: 'article',
+    headline: 'The shortest xiangqi stalemate we know: 21 plies.',
+    body: 'In xiangqi a side with no legal move loses. The shortest stalemate we know leaves Black with eight pieces and nothing to play after Red’s 11th move. No stalemate is possible in under 9 plies, so 9 to 20 is open.',
+    href: '/blog/shortest-stalemate-xiangqi',
+    cta: 'Read the article',
+  },
+  {
     date: '2026-10-30',
     kind: 'article',
     headline: 'A solved banqi endgame: chariot and horse against chariot, horse and soldier.',
@@ -53,9 +61,9 @@ const baseAnnouncements: Announcement[] = [
   {
     date: '2026-10-27',
     kind: 'article',
-    headline: 'The shortest xiangqi stalemate we know: 21 plies.',
-    body: 'In xiangqi a side with no legal move loses. The shortest stalemate we know leaves Black with eight pieces and nothing to play after Red’s 11th move. No stalemate is possible in under 9 plies, so 9 to 20 is open.',
-    href: '/blog/shortest-stalemate-xiangqi',
+    headline: 'jqe against AB-JChess: the 300-game match.',
+    body: 'jqe won 171 games to 114 with a network about 90 times smaller. The write-up shows the games where the two engines disagreed about who was winning, and why AB-JChess lost a chariot in game 152.',
+    href: '/blog/jqe',
     cta: 'Read the article',
   },
   {
