@@ -419,6 +419,78 @@
   }
 }
 
+/* Phones: the By Mistboard / Community rail becomes a tab row above the sheet
+   and the posts take the full width, one card per row. Every selector is
+   scoped under the shell so it outranks the generic .community-layout /
+   .community-rail rules in community-rail.css and the blog rules above,
+   whatever order the bundle loads them in. */
+@media (max-width: 600px) {
+  .articles-community-shell {
+    width: calc(100% - 24px);
+  }
+
+  .articles-community-shell .articles-community-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .articles-community-shell .articles-community-layout > .article-sheet {
+    padding: 18px 10px 24px;
+  }
+
+  .articles-community-shell .articles-community-rail {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding-top: 0;
+    overflow-x: auto;
+  }
+
+  .articles-community-shell .articles-community-rail a {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
+  /* An empty view gets no tab on a phone; the one being shown always stays. */
+  .articles-community-shell
+    .articles-community-rail
+    a[data-empty="true"]:not(.community-rail-active) {
+    display: none;
+  }
+
+  .articles-community-shell .articles-index-heading .site-section-heading {
+    font-size: 30px;
+  }
+
+  .articles-community-shell .article-sheet .articles-index-heading {
+    margin-bottom: 20px;
+  }
+
+  .articles-community-shell .articles-index-heading .articles-topic-chips {
+    margin-top: 14px;
+  }
+
+  .articles-community-shell .article-sheet .articles-index-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .articles-community-shell .articles-index-list .articles-index-card-body {
+    padding: 14px 14px 16px;
+  }
+}
+
+@media (max-width: 600px) and (pointer: coarse) {
+  .articles-community-shell .articles-community-rail a {
+    min-height: 44px;
+  }
+}
+
 @media (max-width: 560px) {
   .articles-community-shell {
     width: calc(100% - 24px);

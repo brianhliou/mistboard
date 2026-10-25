@@ -397,10 +397,21 @@ function buildArticleCommunityRail(locale: Locale, activeView: ArticleIndexView)
     { label: 'Community', href: localizedHref('/blog/community', locale), view: 'community' },
   ];
 
+  // A view with no posts is marked so the phone tab row can drop it (the
+  // desktop rail keeps both links); the view being shown always stays.
+  const viewHasPosts = (view: ArticleIndexView): boolean =>
+    articles.some(
+      (article) =>
+        article.kind === 'article' &&
+        article.publisher === view &&
+        isArticleListedInThisEnv(article),
+    );
+
   for (const item of links) {
     const link = document.createElement('a');
     link.href = item.href;
     link.textContent = item.label;
+    if (!viewHasPosts(item.view)) link.dataset.empty = 'true';
     if (item.view === activeView) {
       link.className = 'community-rail-active';
       link.setAttribute('aria-current', 'page');
