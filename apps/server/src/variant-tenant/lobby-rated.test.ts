@@ -24,7 +24,6 @@ import { jungleFlipTenant } from '../jungle-flip-tenant.js';
 import { jungleTenant } from '../jungle-tenant.js';
 import {
   createUser,
-  getBestRatingsAnyTimeClass,
   getLeaderboardSummary,
   getUserProfileByHandle,
   recordGameEnd,
@@ -635,10 +634,10 @@ definePersistenceTests('lobby rated', () => {
 
   // Xiangqi mahjong rates the whole four-hand match (the room finishes when the
   // match does) at 5+5, the one rated pace its lobby offers. Seats are east and
-  // west, so this is the write that needs the east->white slot mapping; and the
-  // spec is allowlisted, so the rating must reach no public rating surface.
+  // west, so this is the write that needs the east->white slot mapping. Launched
+  // (no grant), so the pool is public: a rapid ladder and a profile row.
   persistenceTest(
-    'a rated Xiangqi Mahjong match moves both ratings and stays private',
+    'a rated Xiangqi Mahjong match moves both ratings onto the public rapid ladder',
     async () => {
       const registration = registeredVariantTenants().find(
         (candidate) => candidate.gameSpecId === xiangqiMahjongTenant.gameSpecId,
@@ -704,21 +703,20 @@ definePersistenceTests('lobby rated', () => {
         await client.end();
       }
 
-      // Allowlisted: no ladder, no profile rail row, no best-rating badge.
+      // Public pool: a rapid ladder (5+5 is rapid) and a profile row.
       for (const timeClass of ['bullet', 'blitz', 'rapid'] as const) {
         const ladders = await getLeaderboardSummary({ timeClass });
-        assert.ok(
-          ladders.every((ladder) => ladder.variant !== 'xiangqi_mahjong'),
+        assert.equal(
+          ladders.some((ladder) => ladder.variant === 'xiangqi_mahjong'),
+          timeClass === 'rapid',
           `xiangqi_mahjong ladder on the ${timeClass} leaderboard`,
         );
       }
-      const best = await getBestRatingsAnyTimeClass(['user_xmj_east', 'user_xmj_west']);
-      assert.deepEqual([...best.values()].length, 0, 'no best-rating badge from a private pool');
       const profile = await getUserProfileByHandle('userxmjwest', null);
       assert.ok(profile, 'the profile loads');
       assert.ok(
-        profile.ratings.every((rating) => rating.variant !== 'xiangqi_mahjong'),
-        'xiangqi_mahjong on a public profile',
+        profile.ratings.some((rating) => rating.variant === 'xiangqi_mahjong'),
+        'xiangqi_mahjong on the winner profile',
       );
     },
   );
