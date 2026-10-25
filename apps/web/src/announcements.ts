@@ -67,6 +67,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Read the article',
   },
   {
+    date: '2026-10-25',
+    kind: 'release',
+    headline: 'Xiangqi Mahjong has launched.',
+    body: 'A folk game from Taiwan that plays one xiangqi set as mahjong tiles. Draw and discard until you hold five tiles that make one set of three and a pair. Play Misty, a friend, the lobby at anything from 1+1 to 10+5, or by correspondence; a rated game counts the whole six-hand match. The rules page draws every winning hand.',
+    href: '/rules/xiangqi-mahjong-32',
+    cta: 'Read the rules',
+  },
+  {
     date: '2026-10-23',
     kind: 'release',
     headline: 'The classical opening manuals are online.',
