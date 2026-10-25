@@ -259,7 +259,7 @@ for (const [role, points] of Object.entries({
   });
 }
 
-test('100 points ends play immediately, including on the 40th ply with pieces still present', () => {
+test('100 points ends play immediately with pieces still present, ahead of no-progress settlement', () => {
   const state = playing(
     { a1: up('red', 'soldier'), a2: up('black', 'general'), i5: up('black', 'soldier') },
     { scores: { red: 85, black: 90 }, noProgressClock: 39 },
@@ -279,6 +279,14 @@ test('100 points ends play immediately, including on the 40th ply with pieces st
     winner: 'black',
     reason: 'score',
   });
+  assert.deepEqual(
+    game.getThreeKingdomsBanqiResult({
+      ...state,
+      scores: { red: 100, black: 90 },
+      noProgressClock: 40,
+    }),
+    { type: 'finished', winner: 'red', reason: 'score' },
+  );
 });
 
 test('a flip and a capture reset the no-progress clock, a quiet move increments it', () => {
@@ -324,6 +332,21 @@ function sixChases(): State {
   }
   return state;
 }
+
+test('chasing a standing target counts the opening threat and refuses the seventh threat', () => {
+  let state = playing({ a1: up('red', 'chariot'), b2: up('black', 'soldier') });
+  for (let chase = 1; chase <= 6; chase += 1) {
+    const threat = chase % 2 === 1 ? move('a1', 'b1') : move('b1', 'a1');
+    assert.ok(dests(state, threat.from).includes(threat.to), `threat ${chase} is legal`);
+    state = play(state, threat.from, threat.to);
+    assert.equal(state.chases.red?.count, chase);
+    assert.equal(state.status.type, 'playing');
+    state = chase % 2 === 1 ? play(state, 'b2', 'a2') : play(state, 'a2', 'b2');
+  }
+  assert.equal(state.chases.red?.target, 'b2');
+  assert.ok(!dests(state, 'a1').includes('b1'));
+  assert.equal(game.applyThreeKingdomsBanqiMove(state, move('a1', 'b1')), state);
+});
 
 test('the seventh chase of the same fleeing piece is absent and applying it is a no-op', () => {
   const state = sixChases();

@@ -228,8 +228,8 @@ function boardDests(
   return dests;
 }
 
-/** Same public chase test as banqi: a QUIET move by a revealed piece threatens
- * the enemy that moved last ply. Targets are tracked by square through their
+/** A QUIET move by a revealed piece threatens a revealed enemy, including one
+ * that has been standing still. Targets are tracked by square through their
  * fleeing moves, so identical roles cannot be mistaken for the same piece.
  * A different target, a non-chase by the chaser, or any flip/capture breaks a run.
  * Unlike banqi's repetition rule there is no mutual-chase or only-move exemption.
@@ -238,16 +238,21 @@ function chaseAfter(
   state: ThreeKingdomsBanqiState,
   move: ThreeKingdomsBanqiMove,
 ): ThreeKingdomsBanqiChase | undefined {
-  const last = state.lastMove;
-  if (move.from === move.to || state.board[move.to] || !last || last.from === last.to)
-    return undefined;
-  const target = state.board[last.to];
-  if (!target || target.faceDown) return undefined;
+  if (move.from === move.to || state.board[move.to]) return undefined;
   const board = { ...state.board, [move.to]: state.board[move.from] };
   delete board[move.from];
-  if (!boardDests(board, move.to).includes(last.to)) return undefined;
+  // Occupied destinations are revealed enemies by boardDests' landing rules.
+  const targets = boardDests(board, move.to).filter((to) => board[to]);
   const run = state.chases[threeKingdomsBanqiSeatToMove(state)];
-  return { target: last.to, count: run?.target === last.to ? run.count + 1 : 1 };
+  const last = state.lastMove;
+  const target =
+    run && targets.includes(run.target)
+      ? run.target
+      : last && targets.includes(last.to)
+        ? last.to
+        : targets[0];
+  if (!target) return undefined;
+  return { target, count: run?.target === target ? run.count + 1 : 1 };
 }
 
 export function getThreeKingdomsBanqiLegalMoves(
