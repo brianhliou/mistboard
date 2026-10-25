@@ -118,7 +118,10 @@ describe('Xiangqi Mahjong review helpers', () => {
 });
 
 describe('Xiangqi Mahjong review page', () => {
+  const capture = vi.fn();
+
   beforeEach(() => {
+    capture.mockClear();
     vi.stubEnv('VITE_XIANGQI_MAHJONG_ENABLED', 'true');
     window.history.replaceState(null, '', '/xiangqi-mahjong/game/xmj_review');
   });
@@ -143,6 +146,8 @@ describe('Xiangqi Mahjong review page', () => {
     // The room client is a module singleton with document-level key handlers:
     // a fresh module per test keeps one test's keys from stepping another's.
     vi.resetModules();
+    const { setPostHogInstance } = await import('./analytics.js');
+    setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
     const { mountXiangqiMahjongPostgame } = await import('./xiangqi-mahjong-postgame.js');
     mountXiangqiMahjongPostgame(root, 'xmj_review');
     await flushPromises();
@@ -151,6 +156,43 @@ describe('Xiangqi Mahjong review page', () => {
   }
 
   const key = (name: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
+
+  it('counts one review open and no gameplay events when stepping through the recording', async () => {
+    const root = await mount(FIXTURE);
+    const reviewCalls = () => capture.mock.calls.filter(([name]) => name === 'review_opened');
+    const gameplayCalls = () =>
+      capture.mock.calls.filter(([name]) => name === 'game_started' || name === 'game_finished');
+    expect(reviewCalls()).toEqual([
+      [
+        'review_opened',
+        expect.objectContaining({
+          variant: 'xiangqi-mahjong',
+          game_spec: 'xiangqi-mahjong',
+          review_surface: 'game',
+          route: '/xiangqi-mahjong/game/:id',
+          has_analysis: false,
+        }),
+      ],
+    ]);
+    expect(gameplayCalls()).toEqual([]);
+
+    key('Home');
+    key('ArrowRight');
+    expect(root.querySelector('.xmj-log__row.active')?.getAttribute('data-xmj-ply')).toBe('1');
+    key('ArrowLeft');
+    const row = [...root.querySelectorAll<HTMLElement>('.xmj-log [data-xmj-ply]')].find(
+      (each) => Number(each.dataset.xmjPly) > 2,
+    );
+    const target = row?.dataset.xmjPly;
+    expect(target).toBeDefined();
+    row?.click();
+    expect(root.querySelector('.xmj-log__row.active')?.getAttribute('data-xmj-ply')).toBe(target);
+    key('End');
+    await flushPromises();
+
+    expect(reviewCalls()).toHaveLength(1);
+    expect(gameplayCalls()).toEqual([]);
+  });
 
   it('steps through the match with both hands face up and nothing to act on', async () => {
     const root = await mount(FIXTURE);
@@ -241,6 +283,7 @@ describe('Xiangqi Mahjong review page', () => {
     const root = await mount({ error: 'not_found' }, 404);
     expect(root.textContent).toContain('Game not found');
     expect(root.querySelector('.xmj-table')).toBeNull();
+    expect(capture).not.toHaveBeenCalled();
   });
 });
 
