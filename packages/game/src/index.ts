@@ -46,6 +46,7 @@ export * from './variants-fortress-xiangqi.js';
 export * from './variants-jieqi.js';
 export * from './variants-jungle.js';
 export * from './variants-jungle-flip.js';
+export * from './variants-three-kingdoms-banqi.js';
 export * from './variants-xiangqi.js';
 export * from './variants-xiangqi-standard.js';
 export * from './xiangqi-broadcast.js';
