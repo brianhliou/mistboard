@@ -1142,7 +1142,10 @@
     --phone-room-extra: var(--phone-room-pool, 96px);
   }
 
-  .live-route--banqi .review-shell__cluster.live-review__cluster {
+  /* 80px is the live odds layout: two 40px lines. The finished tally keeps its
+     caption and 30px discs (15 + 30 + 30 + gaps = 91px), so 80px cut off the
+     second ink's row; it takes the 96px default (#618, 10-24 review). */
+  .live-route--banqi .review-shell__cluster.live-review__cluster:has(.hidden-pool--odds) {
     --phone-room-pool: 80px;
   }
 

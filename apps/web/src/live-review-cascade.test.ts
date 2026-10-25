@@ -65,4 +65,29 @@ describe('room cluster cascade (#618)', () => {
     expect(stageFrameInset(360)).toBe('0');
     expect(stageFrameInset(1280)).toBe('-2px');
   });
+
+  // Banqi's 80px pool band is the live odds layout (two 40px lines). The
+  // finished tally keeps its caption and 30px discs, 91px of content, so the
+  // band cut its second row off; it takes the 96px default instead.
+  it('gives the finished banqi tally room for both rows, and keeps the live odds band', () => {
+    expect(banqiPoolHeight(390, 664, false)).toBe('96px');
+    expect(banqiPoolHeight(360, 740, false)).toBe('96px');
+    expect(banqiPoolHeight(390, 664, true)).toBe('80px');
+  });
 });
+
+function banqiPoolHeight(width: number, height: number, odds: boolean): string {
+  const win = new Window({ width, height });
+  try {
+    win.document.head.innerHTML = [LIVE_REVIEW, REVIEW_SHELL]
+      .map((css) => `<style>${css}</style>`)
+      .join('');
+    const poolClass = odds ? 'hidden-pool hidden-pool--odds' : 'hidden-pool';
+    win.document.body.innerHTML = `<div class="live-route--banqi"><div class="review-shell__cluster live-review__cluster"><div class="${poolClass}"><div class="hidden-pool__row"></div></div></div></div>`;
+    const pool = win.document.querySelector('.hidden-pool');
+    if (!pool) throw new Error('pool did not mount');
+    return win.getComputedStyle(pool).height;
+  } finally {
+    void win.happyDOM.close();
+  }
+}
