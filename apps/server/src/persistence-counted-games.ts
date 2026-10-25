@@ -249,6 +249,37 @@ export function countedAccountSeat(participantsAlias = 'p'): string {
     )`;
 }
 
+// A puzzle_quality_sessions row with a countable person behind it (migration
+// 177): a signed-in account that is not excluded, or, signed out, a browser
+// device id that is not excluded. The same two halves as countedPlayerSeat,
+// read from the row's own columns. Rows from before migration 177 carry
+// neither and are not people, as guest seats before 137 are not. A row's
+// person is puzzlePlayerKind/puzzlePlayerId: the account when there is one,
+// else the browser, so a person who solves both signed in and out on one
+// browser is two players, the same known floor as games.
+export function countedPuzzlePlayerRow(sessionsAlias = 'q'): string {
+  const q = sessionsAlias;
+  return `(
+    (${q}.user_id IS NOT NULL AND EXISTS (
+      SELECT 1 FROM users pu
+      WHERE pu.id = ${q}.user_id AND pu.stats_excluded_at IS NULL
+    ))
+    OR (${q}.user_id IS NULL AND ${q}.device_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM stats_excluded_devices pd WHERE pd.device_id = ${q}.device_id
+    ))
+  )`;
+}
+
+// 'user' or 'guest', the subject_type a game seat would carry for this row.
+export function puzzlePlayerKind(sessionsAlias = 'q'): string {
+  return `(CASE WHEN ${sessionsAlias}.user_id IS NOT NULL THEN 'user' ELSE 'guest' END)`;
+}
+
+// The account id, else the browser device id.
+export function puzzlePlayerId(sessionsAlias = 'q'): string {
+  return `COALESCE(${sessionsAlias}.user_id, ${sessionsAlias}.device_id)`;
+}
+
 // Row filter for counts over the users table itself.
 export const COUNTED_USER = `stats_excluded_at IS NULL`;
 

@@ -5,10 +5,13 @@ import {
   countedAuthor,
   countedHumanGame,
   countedPlayerSeat,
+  countedPuzzlePlayerRow,
   excludedFromStats,
   internalHumanGame,
   MIN_COUNTED_PLIES,
   preLaunchHumanGame,
+  puzzlePlayerId,
+  puzzlePlayerKind,
   STATS_COUNTED_FROM,
   shortHumanGame,
   sinceLaunch,
@@ -54,9 +57,17 @@ export interface AdminMetricsWeek {
   // the database can give.
   guestGames: number;
   newAccounts: number;
+  // Puzzles started this week (a row per puzzle opened that got a move), not
+  // people: every started row, with or without an identity.
   puzzleSessions: number;
   puzzleSolves: number;
+  // Rated attempts by counted (not stats-excluded) accounts.
   puzzleAttempts: number;
+  // Distinct counted people who started a puzzle this week: accounts plus
+  // guest browsers (countedPuzzlePlayerRow). Zero before migration 177.
+  puzzlePlayers: number;
+  // Of those, the ones who had started a puzzle in an earlier week.
+  returningPuzzlePlayers: number;
   studiesCreated: number;
   studyChaptersCreated: number;
   practiceSolves: number;
@@ -121,6 +132,7 @@ type Queryable = { query: <R>(text: string, params?: unknown[]) => Promise<{ row
 const HUMAN_GAME = countedHumanGame('g');
 const PLAYER_SEAT = countedPlayerSeat('p');
 const SIGNED_IN_SEAT = countedAccountSeat('p');
+const PUZZLE_PLAYER_ROW = countedPuzzlePlayerRow('q');
 const INTERNAL_GAME = internalHumanGame('g');
 const EXCLUDED_SEAT = excludedFromStats('g');
 const PRE_LAUNCH_GAME = preLaunchHumanGame('g');
@@ -138,21 +150,31 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
   const weeks = options.weeks ?? ADMIN_METRICS_WEEKS;
   const pool = getPool() as unknown as Queryable;
 
-  const [axis, headline, engines, gamesByWeek, playersByWeek, mauByWeek, activity] =
-    await Promise.all([
-      weekAxis(pool, now, weeks),
-      collectHeadline(pool, now),
-      collectEngines(pool, now),
-      collectGamesByWeek(pool, now, weeks),
-      collectPlayersByWeek(pool, now, weeks),
-      collectActive28dByWeek(pool, now, weeks),
-      collectActivityByWeek(pool, now, weeks),
-    ]);
+  const [
+    axis,
+    headline,
+    engines,
+    gamesByWeek,
+    playersByWeek,
+    mauByWeek,
+    activity,
+    puzzlePlayersByWeek,
+  ] = await Promise.all([
+    weekAxis(pool, now, weeks),
+    collectHeadline(pool, now),
+    collectEngines(pool, now),
+    collectGamesByWeek(pool, now, weeks),
+    collectPlayersByWeek(pool, now, weeks),
+    collectActive28dByWeek(pool, now, weeks),
+    collectActivityByWeek(pool, now, weeks),
+    collectPuzzlePlayersByWeek(pool, now, weeks),
+  ]);
 
   const weekly = axis.map((weekStart): AdminMetricsWeek => {
     const games = gamesByWeek.get(weekStart);
     const players = playersByWeek.get(weekStart);
     const act = activity.get(weekStart);
+    const puzzlePlayers = puzzlePlayersByWeek.get(weekStart);
     return {
       weekStart,
       humanGames: (games?.pvp ?? 0) + (games?.pve ?? 0),
@@ -168,6 +190,8 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
       puzzleSessions: act?.puzzleSessions ?? 0,
       puzzleSolves: act?.puzzleSolves ?? 0,
       puzzleAttempts: act?.puzzleAttempts ?? 0,
+      puzzlePlayers: puzzlePlayers?.players ?? 0,
+      returningPuzzlePlayers: puzzlePlayers?.returning ?? 0,
       studiesCreated: act?.studiesCreated ?? 0,
       studyChaptersCreated: act?.studyChaptersCreated ?? 0,
       practiceSolves: act?.practiceSolves ?? 0,
@@ -461,6 +485,48 @@ async function collectActive28dByWeek(
   return new Map(result.rows.map((row) => [isoDate(row.week), row.n]));
 }
 
+// Distinct counted people who started a puzzle each week (moved at least once:
+// a landing page opens a puzzle for every visitor, so an open is not play),
+// and how many of them had started one in an earlier week. Same shape as
+// collectPlayersByWeek: first_seen is over all time, not just the window.
+async function collectPuzzlePlayersByWeek(
+  db: Queryable,
+  now: Date,
+  weeks: number,
+): Promise<Map<string, { players: number; returning: number }>> {
+  const result = await db.query<{ week: Date | string; players: number; returning: number }>(
+    `WITH puzzle AS (
+       SELECT ${puzzlePlayerKind('q')} AS kind, ${puzzlePlayerId('q')} AS id, q.started_at
+       FROM puzzle_quality_sessions q
+       WHERE q.started_at IS NOT NULL AND q.started_at < $1::timestamptz
+         AND ${PUZZLE_PLAYER_ROW}
+     ),
+     first_seen AS (
+       SELECT kind, id, date_trunc('week', min(started_at))::date::text AS first_week
+       FROM puzzle
+       GROUP BY kind, id
+     ),
+     weekly AS (
+       SELECT DISTINCT date_trunc('week', started_at)::date::text AS week, kind, id
+       FROM puzzle
+       WHERE started_at >= ${WINDOW_START}
+     )
+     SELECT w.week,
+       count(*)::int AS players,
+       count(*) FILTER (WHERE f.first_week < w.week)::int AS returning
+     FROM weekly w
+     JOIN first_seen f USING (kind, id)
+     GROUP BY w.week`,
+    [now, weeks],
+  );
+  return new Map(
+    result.rows.map((row) => [
+      isoDate(row.week),
+      { players: row.players, returning: row.returning },
+    ]),
+  );
+}
+
 type ActivityWeek = {
   newAccounts: number;
   puzzleSessions: number;
@@ -495,8 +561,9 @@ async function collectActivityByWeek(
   const result = await db.query<{ week: Date | string; metric: keyof ActivityWeek; n: number }>(
     [
       arm('newAccounts', 'users', 'created_at', COUNTED_USER),
-      // Distinct visits that started at least one puzzle, not rows: a session
-      // that views five puzzles is one session.
+      // Puzzles started. The session id is minted per puzzle opened, so the
+      // distinct count is a row count: one person starting five puzzles is
+      // five. People are puzzlePlayers (collectPuzzlePlayersByWeek).
       `SELECT date_trunc('week', started_at)::date::text AS week, 'puzzleSessions' AS metric,
               count(DISTINCT session_id)::int AS n
        FROM puzzle_quality_sessions
@@ -504,7 +571,7 @@ async function collectActivityByWeek(
          AND started_at >= ${WINDOW_START} AND started_at < $1::timestamptz
        GROUP BY week`,
       arm('puzzleSolves', 'puzzle_quality_sessions', 'completed_at', `outcome = 'solved'`),
-      arm('puzzleAttempts', 'puzzle_attempts', 'created_at'),
+      arm('puzzleAttempts', 'puzzle_attempts', 'created_at', countedAuthor('user_id')),
       arm('studiesCreated', 'studies', 'created_at'),
       arm('studyChaptersCreated', 'study_chapters', 'created_at'),
       arm('practiceSolves', 'practice_progress', 'solved_at'),
