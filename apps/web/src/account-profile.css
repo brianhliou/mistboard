@@ -1411,15 +1411,15 @@
   background: var(--site-accent-soft);
 }
 
-/* Touch floor (#620) without moving the header: the drawn pill stays 28x23, a
-   transparent border (9px top and bottom, 6px at the sides) makes the target
-   40x41, and a negative margin hands the space back. The radius is elliptical
-   so the drawn corner stays 4px. */
+/* Touch floor (#620): the drawn pill stays 28x23, a transparent border (9px
+   top and bottom, 6px at the sides) makes the target 40x41. Return only the
+   vertical space so adjacent targets keep their 4px gap. The radius is
+   elliptical so the drawn corner stays 4px. */
 @media (pointer: coarse) {
   .profile-chart-range {
     box-sizing: content-box;
     min-width: 16px;
-    margin: -9px -6px;
+    margin: -9px 0;
     border-width: 9px 6px;
     border-style: solid;
     border-color: transparent;

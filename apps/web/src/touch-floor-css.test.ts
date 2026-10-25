@@ -179,28 +179,44 @@ describe('coarse-pointer touch floor', () => {
       selector: '.profile-chart-range',
       media: COARSE,
       drawn: { w: 28, h: 23 },
+      marginX: 0,
     },
     {
       file: 'src/site-shell.css',
       selector: '.site-nav-quick-button',
       media: `${COARSE} and (max-width: 600px)`,
       drawn: { w: 38, h: 44 },
+      marginX: -1,
     },
-  ])('$selector grows a 40px target around its drawn box', ({ file, selector, media, drawn }) => {
-    const rules = parse(file);
-    expect(decl(rules, selector, 'box-sizing', media)).toBe('content-box');
-    expect(decl(rules, selector, 'background-clip', media)).toBe('padding-box');
-    expect(decl(rules, selector, 'border-color', media)).toBe('transparent');
-    const [borderY = 0, borderX = borderY] =
-      decl(rules, selector, 'border-width', media).match(/\d+px/g)?.map(px) ?? [];
-    const [marginY = 0, marginX = marginY] =
-      decl(rules, selector, 'margin', media)
-        .match(/-?\d+px/g)
-        ?.map(px) ?? [];
-    expect(marginY).toBe(-borderY);
-    expect(marginX).toBe(-borderX);
-    expect(drawn.w + 2 * borderX).toBeGreaterThanOrEqual(TAP_MIN);
-    expect(drawn.h + 2 * borderY).toBeGreaterThanOrEqual(TAP_MIN);
+  ])(
+    '$selector grows a 40px target around its drawn box',
+    ({ file, selector, media, drawn, marginX: expectedMarginX }) => {
+      const rules = parse(file);
+      expect(decl(rules, selector, 'box-sizing', media)).toBe('content-box');
+      expect(decl(rules, selector, 'background-clip', media)).toBe('padding-box');
+      expect(decl(rules, selector, 'border-color', media)).toBe('transparent');
+      const [borderY = 0, borderX = borderY] = decl(rules, selector, 'border-width', media)
+        .split(/\s+/)
+        .map(px);
+      const [marginY = 0, marginX = marginY] = decl(rules, selector, 'margin', media)
+        .split(/\s+/)
+        .map(px);
+      expect(marginY + borderY).toBe(0);
+      expect(marginX).toBe(expectedMarginX);
+      expect(drawn.w + 2 * borderX).toBeGreaterThanOrEqual(TAP_MIN);
+      expect(drawn.h + 2 * borderY).toBeGreaterThanOrEqual(TAP_MIN);
+    },
+  );
+
+  it('keeps adjacent chart range touch targets from overlapping', () => {
+    const rules = parse('src/account-profile.css');
+    const gap = px(decl(rules, '.profile-chart-ranges', 'gap', null));
+    const [marginY = 0, marginX = marginY] = decl(rules, '.profile-chart-range', 'margin', COARSE)
+      .split(/\s+/)
+      .map(px);
+    // Flex gap separates margin boxes; negative side margins consume it and
+    // let a neighbour intercept the edge of an otherwise 40px-wide target.
+    expect(gap + 2 * marginX).toBeGreaterThanOrEqual(0);
   });
 
   it('pads the logo-only brand to 40px and gives the width back', () => {
