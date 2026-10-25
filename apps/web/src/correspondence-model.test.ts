@@ -346,22 +346,22 @@ describe('start form prefill (the bell\'s "post it again" link)', () => {
   });
 });
 
-describe('allowlisted correspondence specs (xiangqi mahjong)', () => {
+describe('launched correspondence specs (xiangqi mahjong)', () => {
   const granted = (specId: string) => specId === XIANGQI_MAHJONG_SPEC_ID;
 
-  it('are offered only to a viewer the menu offers them to', () => {
-    expect(CORRESPONDENCE_ELIGIBLE_SPEC_IDS).not.toContain(XIANGQI_MAHJONG_SPEC_ID);
-    expect(correspondenceSpecIdsFor()).not.toContain(XIANGQI_MAHJONG_SPEC_ID);
+  it('are public without a playtest grant and never duplicated by a legacy grant', () => {
+    expect(CORRESPONDENCE_ELIGIBLE_SPEC_IDS).toContain(XIANGQI_MAHJONG_SPEC_ID);
+    expect(correspondenceSpecIdsFor()).toContain(XIANGQI_MAHJONG_SPEC_ID);
     expect(correspondenceSpecIdsFor(() => false)).toEqual([...CORRESPONDENCE_ELIGIBLE_SPEC_IDS]);
-    expect(correspondenceSpecIdsFor(granted)).toEqual([
-      ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
-      XIANGQI_MAHJONG_SPEC_ID,
-    ]);
+    expect(correspondenceSpecIdsFor(granted)).toEqual([...CORRESPONDENCE_ELIGIBLE_SPEC_IDS]);
   });
 
-  it('prefill a start form only for a granted viewer', () => {
+  it('prefill a start form for every viewer', () => {
     const search = `?gameSpecId=${XIANGQI_MAHJONG_SPEC_ID}&days=3`;
-    expect(parseStartFormPrefill(search)).toEqual({ daysPerMove: 3 });
+    expect(parseStartFormPrefill(search)).toEqual({
+      gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+      daysPerMove: 3,
+    });
     expect(parseStartFormPrefill(search, granted)).toEqual({
       gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
       daysPerMove: 3,

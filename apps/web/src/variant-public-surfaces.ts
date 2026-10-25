@@ -16,9 +16,9 @@ import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-
 // they are not listings. It is the same switch the server's allowlist, rating
 // pools, sitemap and /stats read, so a launch is one edit there
 // (launch-switch.test.ts). Hidden today: Fortress and Atomic Xiangqi (retired
-// 2026-10-11; their rules pages stay up by URL, unindexed), HK mahjong and
-// Xiangqi Mahjong (allowlisted playtests: the scoring is not checked by a
-// player yet), and study-only chess (no rules page, no tile, no feed entry).
+// 2026-10-11; their rules pages stay up by URL, unindexed), HK mahjong
+// (allowlisted playtest), and study-only chess (no rules page, no tile, no feed
+// entry). Xiangqi Mahjong launched for search on 2026-10-25.
 
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
 // Reachable by URL, unlisted and unindexed: /rules/shogi4 is linked from

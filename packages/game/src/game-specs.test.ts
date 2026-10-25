@@ -28,6 +28,7 @@ import {
   RETIRED_GAME_SPEC_IDS,
   ratingPoolForSpec,
   STUDY_ELIGIBLE_SPEC_IDS,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
 import { hasStartFen } from './start-fen.js';
@@ -43,6 +44,7 @@ test('canonical display order contains exactly the current public variant shelf'
     DARK_CHESS_SPEC_ID,
     JUNGLE_SPEC_ID,
     JUNGLE_FLIP_SPEC_ID,
+    XIANGQI_MAHJONG_SPEC_ID,
   ]);
 });
 

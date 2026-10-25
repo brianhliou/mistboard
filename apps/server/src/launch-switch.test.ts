@@ -6,7 +6,10 @@
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import type { ServerResponse } from 'node:http';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
@@ -25,18 +28,25 @@ import {
   XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { articleIsIndexable, playtestRulesSlugs } from './article-meta.js';
+import type { BotProfile } from './persistence-bots.js';
 import {
   countedPublicGame,
   OFF_PUBLIC_GAME_SPEC_IDS,
   offPublicGameSpecIds,
   publicVariant,
 } from './persistence-counted-games.js';
-import { ALLOWLISTED_GAME_SPEC_IDS, isAllowlistedGameSpec } from './persistence-variant-access.js';
+import {
+  ALLOWLISTED_GAME_SPEC_IDS,
+  isAllowlistedGameSpec,
+  mayPlayVariant,
+} from './persistence-variant-access.js';
 import {
   isPublicRatingPool,
   PRIVATE_RATING_POOLS,
   privateRatingPoolsFor,
 } from './rating-buckets.js';
+import { withoutHiddenSpecs } from './routes/bots.js';
+import { serveSitemap } from './server-static-pages.js';
 
 const XMJ = XIANGQI_MAHJONG_SPEC_ID;
 const XMJ_RULES_SLUG = 'xiangqi-mahjong-32';
@@ -80,6 +90,49 @@ function withSwitchOn(id: GameSpecId) {
     spec.id === id ? { ...spec, publicSurface: 'casual' as const } : spec,
   );
 }
+
+test('XMJ is launched on every server surface without a playtest grant', async () => {
+  assert.equal(isPublicGameSpec(XMJ), true);
+  const listed = xmjListedNow();
+  assert.deepEqual(listed, everyValue(listed, true));
+  assert.equal(await mayPlayVariant(null, XMJ), true);
+  assert.equal(await mayPlayVariant(null, 'mahjong'), false);
+
+  // /api/bots uses this projection before returning each bot's supported specs.
+  const bot = { supportedGameSpecIds: [XMJ, 'mahjong'] } as BotProfile;
+  assert.deepEqual(withoutHiddenSpecs(bot).supportedGameSpecIds, [XMJ]);
+});
+
+test('the generated sitemap lists XMJ rules and the shared play pages in every locale', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-launch-'));
+  const prefixes = ['', '/zh-hans', '/zh-hant'];
+  for (const prefix of prefixes) {
+    const rulesDir = join(staticDir, prefix, 'rules');
+    await mkdir(rulesDir, { recursive: true });
+    for (const slug of [XMJ_RULES_SLUG, 'mahjong']) {
+      await writeFile(join(rulesDir, `${slug}.html`), '<html>Rules</html>');
+    }
+  }
+  let xml = '';
+  const response = {
+    writeHead() {},
+    end(body: string) {
+      xml = body;
+    },
+  } as unknown as ServerResponse;
+  await serveSitemap({
+    response,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+    section: 'pages',
+  });
+  for (const prefix of prefixes) {
+    assert.ok(xml.includes(`<loc>https://mistboard.test${prefix}/rules/${XMJ_RULES_SLUG}</loc>`));
+    // Play setup lives on the home page, including XMJ's ?play= deep links.
+    assert.ok(xml.includes(`<loc>https://mistboard.test${prefix || '/'}</loc>`));
+    assert.ok(!xml.includes(`<loc>https://mistboard.test${prefix}/rules/mahjong</loc>`));
+  }
+});
 
 test('every server list agrees with the launch switch as it stands', () => {
   const lists = deriveLaunchLists(isPublicGameSpec);

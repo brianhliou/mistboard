@@ -47,7 +47,7 @@ function newState(seed: number): XmjRoomState {
   return tenant.rules.createInitialState('xmj_test', createXmjSetup(seeded(seed)));
 }
 
-test('gated twice: the flag is off by default and the spec needs a grant', () => {
+test('launched XMJ needs no grant; the runtime flag still defaults off', () => {
   const previous = process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED;
   delete process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED;
   try {
@@ -57,7 +57,7 @@ test('gated twice: the flag is off by default and the spec needs a grant', () =>
   } finally {
     if (previous !== undefined) process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED = previous;
   }
-  assert.equal(isAllowlistedGameSpec(XIANGQI_MAHJONG_SPEC_ID), true);
+  assert.equal(isAllowlistedGameSpec(XIANGQI_MAHJONG_SPEC_ID), false);
 });
 
 test('a room with no persisted walls refuses to start rather than dealing fresh ones', () => {
