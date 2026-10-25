@@ -15,6 +15,7 @@ import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { resolveBlogDeployHook, triggerBlogDeployHook } from './lib/blog-deploy-hook.mjs';
 import {
+  assertEntriesAreNew,
   currentMonth,
   insertChangelogEntries,
   parseChangelogArg,
@@ -1142,10 +1143,11 @@ function catchUpBeforeGate() {
   mergeRemoteTip(remote, release.lockWaited ? 'while this release queued' : 'before the release');
 }
 
-// --changelog refuses up front, before any lock wait, on the three states that
+// --changelog refuses up front, before any lock wait, on the four states that
 // would put a wrong line on the page: an edited CHANGELOG.md, a HEAD that is
 // itself a changelog commit (a retry after a failed release: the line is
-// already committed), and a HEAD the file already links.
+// already committed), a HEAD the file already links, and a line whose text the
+// file already has (the same retry with a fix commit on top).
 function checkChangelogPreconditions() {
   if (git(['status', '--porcelain', '--', 'CHANGELOG.md']) !== '') {
     throw new Error('--changelog: CHANGELOG.md has uncommitted edits; commit or drop them first');
@@ -1167,6 +1169,9 @@ function checkChangelogPreconditions() {
   if (source.includes(`/commit/${shortHash})`)) {
     throw new Error(`--changelog: CHANGELOG.md already links ${shortHash}`);
   }
+  // A retry with a fix commit on top of the first changelog commit passes the
+  // two checks above; the line itself is what is already there.
+  assertEntriesAreNew(source, options.changelog);
   release.featureRevision = git(['rev-parse', '--verify', 'HEAD']);
 }
 
