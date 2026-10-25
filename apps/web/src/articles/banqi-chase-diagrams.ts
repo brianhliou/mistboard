@@ -25,6 +25,7 @@ import {
   banqiPiecesFromView,
   banqiReplayViewAt,
   xqSvg,
+  banqiThumbnailSvg,
 } from './diagrams.js';
 
 const TITLE_H = 28;
@@ -214,8 +215,7 @@ export const BANQI_CHASE_HERD_END = () =>
 
 // Card art: the back-and-forth position from the real game, full board.
 export const BANQI_CHASE_THUMBNAIL = () =>
-  xqSvg(
-    BANQI_BOARD_W,
+  banqiThumbnailSvg(
     BANQI_ENGINE_THUMB_H,
     [
       banqiBoardGrid(0, BANQI_ENGINE_THUMB_Y),
