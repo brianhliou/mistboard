@@ -21,22 +21,32 @@ export const THREE_KINGDOMS_BANQI_WIDTH = 9;
 export const THREE_KINGDOMS_BANQI_HEIGHT = 5;
 export const THREE_KINGDOMS_BANQI_SCORE_TARGET = 100;
 export const THREE_KINGDOMS_BANQI_NO_PROGRESS_LIMIT = 40;
-// The seventh consecutive chase is refused, so only six may be played.
-export const THREE_KINGDOMS_BANQI_CHASE_LIMIT = 7;
+// A chase move may not make its resulting position appear for this many times.
+export const THREE_KINGDOMS_BANQI_CHASE_REPETITION_LIMIT = 3;
 
-/** Provisional defaults from #628. Each policy is implemented here once;
- * a future rules revision can replace it without changing the rule callers.
- * No alternate rulesets are exposed to players.
+/** Mistboard's decided rules for #628 (Brian, 2026-10-25). Gamesofa's app
+ * level-locks the mode and its help has no Three Kingdoms section, so these are
+ * our reasoned rules, not a transcription of theirs. Each is implemented here
+ * once, so a later revision replaces one policy without touching its callers.
+ * Evidence: docs-private/research/banqi-ruleset-2026-10/three-kingdoms-rules.md
+ * § Decisions (2026-10-25). No alternate rulesets are exposed to players.
  */
-export const THREE_KINGDOMS_BANQI_DEFAULTS = {
+export const THREE_KINGDOMS_BANQI_RULES = {
   // The general is ordinary: neither check nor facing generals restrict a move.
   generalSafety: (_state: ThreeKingdomsBanqiState, _move: ThreeKingdomsBanqiMove): boolean => true,
-  // Face-down occupancy is public, but its ink/role cannot affect move legality.
+  // Rule 3: a face-down piece cannot be captured, by the cannon or anything else.
+  // Its occupancy is public; its ink/role never affects move legality.
   faceDownTarget: (): boolean => false,
+  // Rule 2: both a capture and a flip reset the 40-ply no-progress count.
   captureResetsNoProgress: true,
-  chaseMoveAllowed: (count: number): boolean => count < THREE_KINGDOMS_BANQI_CHASE_LIMIT,
+  flipResetsNoProgress: true,
+  // Rule 1: a chase move is refused when its resulting position would appear
+  // for the third time (see "Perpetual chase" below). `occurrences` counts the
+  // resulting position including this move.
+  chaseMoveAllowed: (occurrences: number): boolean =>
+    occurrences < THREE_KINGDOMS_BANQI_CHASE_REPETITION_LIMIT,
+  // Rule 5: a player with no legal move on their turn loses.
   noLegalMoveWinner: (seat: BanqiSeat): BanqiSeat | null => oppositeBanqiSeat(seat),
-  noPiecesWinner: (seat: BanqiSeat): BanqiSeat | null => oppositeBanqiSeat(seat),
 } as const;
 
 export const THREE_KINGDOMS_BANQI_POINTS: Readonly<Record<BanqiPieceRole, number>> = {
@@ -65,9 +75,9 @@ export type ThreeKingdomsBanqiStatus =
   | {
       type: 'finished';
       winner: BanqiSeat | null;
-      reason: 'score' | 'no-progress' | 'no-legal-move' | 'no-pieces';
+      // No 'no-pieces' reason: rule 4, wipe-out cannot happen (see getThreeKingdomsBanqiResult).
+      reason: 'score' | 'no-progress' | 'no-legal-move';
     };
-export type ThreeKingdomsBanqiChase = { target: ThreeKingdomsBanqiSquare; count: number };
 export type ThreeKingdomsBanqiState = {
   id: string;
   board: ThreeKingdomsBanqiBoard;
@@ -75,12 +85,17 @@ export type ThreeKingdomsBanqiState = {
   ply: number;
   moveNumber: number;
   firstColor: BanqiColor | null;
-  // Scores and chase runs are keyed by SEAT, never by ink.
+  // Scores are keyed by SEAT, never by ink.
   scores: Record<BanqiSeat, number>;
   noProgressClock: number;
   captures: BanqiCapture[];
   lastMove?: ThreeKingdomsBanqiMove;
-  chases: Partial<Record<BanqiSeat, ThreeKingdomsBanqiChase>>;
+  // The square of the piece the previous ply chased, if it was a chase move
+  // (a mutual chase sets it too). Read only to classify the next move as a flee.
+  chasedSquare?: ThreeKingdomsBanqiSquare;
+  // Occurrences of each position since the last flip or capture, keyed by
+  // threeKingdomsBanqiPositionKey. Public: it is a function of the move list.
+  repCounts: Record<string, number>;
 };
 export type ThreeKingdomsBanqiPlayerView = {
   id: string;
@@ -169,7 +184,7 @@ export function createInitialThreeKingdomsBanqiState(
     scores: { red: 0, black: 0 },
     noProgressClock: 0,
     captures: [],
-    chases: {},
+    repCounts: {},
   };
 }
 
@@ -180,7 +195,7 @@ export function threeKingdomsBanqiSeatToMove(
 }
 
 /** Ordinary piece geometry only: no royal general, check, palace or river
- * (THREE_KINGDOMS_BANQI_DEFAULTS.generalSafety). All revealed enemies are capturable.
+ * (THREE_KINGDOMS_BANQI_RULES.generalSafety). All revealed enemies are capturable.
  */
 function boardDests(
   board: ThreeKingdomsBanqiBoard,
@@ -193,9 +208,7 @@ function boardDests(
   const dests: ThreeKingdomsBanqiSquare[] = [];
   const mayLand = (target: BanqiPiece | undefined) =>
     !target ||
-    (target.faceDown
-      ? THREE_KINGDOMS_BANQI_DEFAULTS.faceDownTarget()
-      : target.color !== piece.color);
+    (target.faceDown ? THREE_KINGDOMS_BANQI_RULES.faceDownTarget() : target.color !== piece.color);
 
   if (piece.role === 'chariot' || piece.role === 'general' || piece.role === 'cannon') {
     for (const [df, dr] of ORTHO) {
@@ -228,34 +241,104 @@ function boardDests(
   return dests;
 }
 
-/** A QUIET move by a revealed piece starts a run even if the threatened enemy
- * has not moved yet. The target must then flee between threats to continue the
- * run. Targets are tracked by square so identical roles cannot be confused.
- * A different target, a non-chase by the chaser, or any flip/capture breaks a run.
- * Unlike banqi's repetition rule there is no mutual-chase or only-move exemption.
- */
-function chaseAfter(
-  state: ThreeKingdomsBanqiState,
+// ── Perpetual chase (rule 1) ─────────────────────────────────────────────────
+//
+// Ported from mistboard banqi's 長捉 rule (variants-banqi.ts, "Perpetual chase"),
+// with this variant's capture test: any face-up piece captures any face-up enemy
+// it can reach under the 9x5 geometry below (no rank ladder).
+//
+// A CHASE MOVE is a quiet move (no flip, no capture) after which the moved piece
+// could capture the enemy piece that moved on the previous ply. Whether that
+// target is protected does not matter. A FLEE is a move of the piece the previous
+// ply chased. A move that is both (the chased piece steps to a square from which
+// it threatens its chaser, 一捉一) is an ordinary move. The threat test reads only
+// face-up pieces and square occupancy, both public, so the rule leaks nothing.
+//
+// The rule: a chase move that would make its resulting position appear for the
+// third time is illegal, unless the side to move has no other legal move (flips
+// count as legal moves). Only the chaser is limited: a flee, a mutual chase and
+// every other move are never restricted, and a chase that herds its target onto
+// new squares never repeats, so it is never limited.
+//
+// Three Kingdoms has NO repetition draw. Banqi's clause 2 (which repetitions end
+// the game) is not imported: an ordinary repetition does not end the game, it runs
+// on until the 40-ply no-progress count settles it on score. Positions are counted
+// only to enforce the chase restriction.
+
+/** `board` after the quiet move `move` (no flip, no capture). */
+function boardAfterQuietMove(
+  board: ThreeKingdomsBanqiBoard,
   move: ThreeKingdomsBanqiMove,
-): ThreeKingdomsBanqiChase | undefined {
-  if (move.from === move.to || state.board[move.to]) return undefined;
-  const board = { ...state.board, [move.to]: state.board[move.from] };
-  delete board[move.from];
-  // Occupied destinations are revealed enemies by boardDests' landing rules.
-  const targets = boardDests(board, move.to).filter((to) => board[to]);
-  const run = state.chases[threeKingdomsBanqiSeatToMove(state)];
-  const last = state.lastMove;
-  const target =
-    run && targets.includes(run.target)
-      ? run.target
-      : last && targets.includes(last.to)
-        ? last.to
-        : targets[0];
-  if (!target) return undefined;
-  return { target, count: run?.target === target ? run.count + 1 : 1 };
+): ThreeKingdomsBanqiBoard {
+  const next: ThreeKingdomsBanqiBoard = { ...board, [move.to]: board[move.from] };
+  delete next[move.from];
+  return next;
 }
 
-export function getThreeKingdomsBanqiLegalMoves(
+/**
+ * If `move` is a chase move in `state`, the square of the piece it chases (the
+ * enemy piece that moved on the previous ply); else null. `move` must be legal.
+ */
+function chaseTargetOf(
+  state: ThreeKingdomsBanqiState,
+  move: ThreeKingdomsBanqiMove,
+): ThreeKingdomsBanqiSquare | null {
+  if (move.from === move.to) return null; // flip
+  if (state.board[move.to]) return null; // capture
+  const last = state.lastMove;
+  if (!last || last.from === last.to) return null; // nothing moved last ply
+  const board = boardAfterQuietMove(state.board, move);
+  // boardDests only lands on empty points and face-up enemies, so a hit on the
+  // occupied last.to is exactly "could capture it".
+  return boardDests(board, move.to).includes(last.to) ? last.to : null;
+}
+
+/** How `move` relates to a chase: the two kinds the rule singles out, or neither. */
+function chaseKindOf(
+  state: ThreeKingdomsBanqiState,
+  move: ThreeKingdomsBanqiMove,
+): 'chase' | 'flee' | null {
+  const chases = chaseTargetOf(state, move) !== null;
+  const flees = state.chasedSquare !== undefined && move.from === state.chasedSquare;
+  if (chases === flees) return null; // neither, or a mutual chase (ordinary move)
+  return chases ? 'chase' : 'flee';
+}
+
+/**
+ * The repetition key: every square (face-down tiles as 'x', so the deal is
+ * excluded), the seat to move and the colour binding. Scores and captures are
+ * left out because the count restarts at every flip and capture: a capture
+ * removes a piece and a flip removes a face-down tile, so no earlier position
+ * can recur, and within one window the scores are fixed.
+ */
+export function threeKingdomsBanqiPositionKey(
+  state: Pick<ThreeKingdomsBanqiState, 'board' | 'ply' | 'firstColor'>,
+): string {
+  const squares = ALL_THREE_KINGDOMS_BANQI_SQUARES.map((square) => {
+    const piece = state.board[square];
+    if (!piece) return '.';
+    return piece.faceDown ? 'x' : banqiPieceLetter(piece);
+  }).join('');
+  return `${squares}|${state.ply % 2}|${state.firstColor ?? '?'}`;
+}
+
+/** Chase moves (from `moves`) the repetition limit refuses. */
+function forbiddenChaseMoves(
+  state: ThreeKingdomsBanqiState,
+  moves: ThreeKingdomsBanqiMove[],
+): ThreeKingdomsBanqiMove[] {
+  return moves.filter((move) => {
+    if (chaseKindOf(state, move) !== 'chase') return false;
+    const key = threeKingdomsBanqiPositionKey({
+      board: boardAfterQuietMove(state.board, move),
+      ply: state.ply + 1,
+      firstColor: state.firstColor,
+    });
+    return !THREE_KINGDOMS_BANQI_RULES.chaseMoveAllowed((state.repCounts[key] ?? 0) + 1);
+  });
+}
+
+function enumerateThreeKingdomsBanqiMoves(
   state: ThreeKingdomsBanqiState,
 ): ThreeKingdomsBanqiMove[] {
   if (state.status.type !== 'playing') return [];
@@ -268,15 +351,34 @@ export function getThreeKingdomsBanqiLegalMoves(
     else if (piece.color === ink) {
       for (const to of boardDests(state.board, from)) {
         const move = { from, to };
-        if (
-          THREE_KINGDOMS_BANQI_DEFAULTS.generalSafety(state, move) &&
-          THREE_KINGDOMS_BANQI_DEFAULTS.chaseMoveAllowed(chaseAfter(state, move)?.count ?? 0)
-        )
-          moves.push(move);
+        if (THREE_KINGDOMS_BANQI_RULES.generalSafety(state, move)) moves.push(move);
       }
     }
   }
   return moves;
+}
+
+/**
+ * The moves rule 1 takes away from the side to move right now: empty when none,
+ * or when they are its only moves and so stay legal.
+ */
+export function getThreeKingdomsBanqiForbiddenChaseMoves(
+  state: ThreeKingdomsBanqiState,
+): ThreeKingdomsBanqiMove[] {
+  const moves = enumerateThreeKingdomsBanqiMoves(state);
+  const forbidden = forbiddenChaseMoves(state, moves);
+  return forbidden.length < moves.length ? forbidden : [];
+}
+
+export function getThreeKingdomsBanqiLegalMoves(
+  state: ThreeKingdomsBanqiState,
+): ThreeKingdomsBanqiMove[] {
+  const moves = enumerateThreeKingdomsBanqiMoves(state);
+  const forbidden = forbiddenChaseMoves(state, moves);
+  if (forbidden.length === 0) return moves;
+  const allowed = moves.filter((move) => !forbidden.includes(move));
+  // The only-move exception: if repeating the chase is all the side can do, it stays legal.
+  return allowed.length > 0 ? allowed : moves;
 }
 
 export function getThreeKingdomsBanqiResult(
@@ -299,25 +401,16 @@ export function getThreeKingdomsBanqiResult(
       reason: 'no-progress',
     };
   }
-  // Elimination is checked from PUBLIC material: fixed starting set minus
-  // revealed captures. Never inspect a face-down tile's ink for adjudication.
-  for (const seat of ['red', 'black'] as const) {
-    const ink = banqiInkForSeat(state, seat);
-    const publiclyEliminated =
-      state.captures.filter((capture) => capture.owner === ink).length === 16 ||
-      !Object.values(state.board).some((piece) => piece && (piece.faceDown || piece.color === ink));
-    if (ink !== null && publiclyEliminated) {
-      return {
-        type: 'finished',
-        winner: THREE_KINGDOMS_BANQI_DEFAULTS.noPiecesWinner(seat),
-        reason: 'no-pieces',
-      };
-    }
-  }
+  // Rule 4, wipe-out cannot happen, so there is no elimination check. A side
+  // loses pieces only to enemy captures, each scoring for the captor, and its
+  // sixteen pieces total 135. The thirteen cheapest total 85, so the fourteenth
+  // capture of one side's pieces always reaches 100 and ends the game before the
+  // sixteenth could be taken. (A hand-built board with no pieces for one side
+  // just reaches the no-legal-move rule below.)
   if (getThreeKingdomsBanqiLegalMoves(state).length === 0) {
     return {
       type: 'finished',
-      winner: THREE_KINGDOMS_BANQI_DEFAULTS.noLegalMoveWinner(threeKingdomsBanqiSeatToMove(state)),
+      winner: THREE_KINGDOMS_BANQI_RULES.noLegalMoveWinner(threeKingdomsBanqiSeatToMove(state)),
       reason: 'no-legal-move',
     };
   }
@@ -343,7 +436,6 @@ export function applyThreeKingdomsBanqiMove(
   const scores = { ...state.scores };
   let captures = state.captures;
   let firstColor = state.firstColor;
-  const chases: ThreeKingdomsBanqiState['chases'] = {};
   if (flip) {
     board[move.from] = { ...piece, faceDown: false };
     if (firstColor === null) firstColor = piece.color;
@@ -353,21 +445,11 @@ export function applyThreeKingdomsBanqiMove(
     if (target) {
       scores[seat] += THREE_KINGDOMS_BANQI_POINTS[target.role];
       captures = [...captures, { owner: target.color, role: target.role }];
-    } else {
-      const chase = chaseAfter(state, move);
-      if (chase) chases[seat] = chase;
-      const otherRun = state.chases[other];
-      if (otherRun?.target === move.from) chases[other] = { ...otherRun, target: move.to };
-      else if (
-        otherRun &&
-        state.lastMove &&
-        boardDests(state.board, state.lastMove.to).includes(move.from)
-      ) {
-        // The opening threat also counts when another threatened piece flees.
-        chases[other] = { target: move.to, count: 1 };
-      }
     }
   }
+  // A flip or capture can never be undone, so it opens a fresh repetition window.
+  const irreversible = flip || target !== undefined;
+  const chased = irreversible ? null : chaseTargetOf(state, move);
   const ply = state.ply + 1;
   const next: ThreeKingdomsBanqiState = {
     ...state,
@@ -375,16 +457,21 @@ export function applyThreeKingdomsBanqiMove(
     firstColor,
     scores,
     captures,
-    chases,
+    repCounts: irreversible ? {} : { ...state.repCounts },
     ply,
     moveNumber: Math.floor(ply / 2) + 1,
     noProgressClock:
-      flip || (target && THREE_KINGDOMS_BANQI_DEFAULTS.captureResetsNoProgress)
+      (flip && THREE_KINGDOMS_BANQI_RULES.flipResetsNoProgress) ||
+      (target && THREE_KINGDOMS_BANQI_RULES.captureResetsNoProgress)
         ? 0
         : state.noProgressClock + 1,
     lastMove: { ...move },
-    status: { type: 'playing', turn: oppositeBanqiSeat(seat) },
+    status: { type: 'playing', turn: other },
   };
+  delete next.chasedSquare;
+  if (chased !== null) next.chasedSquare = chased;
+  const key = threeKingdomsBanqiPositionKey(next);
+  next.repCounts[key] = (next.repCounts[key] ?? 0) + 1;
   next.status = getThreeKingdomsBanqiResult(next);
   return next;
 }

@@ -319,84 +319,156 @@ for (const [red, black, winner] of [
   });
 }
 
-function sixChases(): State {
-  let state = playing(
-    { a1: up('red', 'chariot'), b2: up('black', 'soldier') },
+const key = (state: State) => game.threeKingdomsBanqiPositionKey(state);
+const forbidden = (state: State) =>
+  game
+    .getThreeKingdomsBanqiForbiddenChaseMoves(state)
+    .map((m) => `${m.from}${m.to}`)
+    .sort();
+/** The position `from`-`to` would reach, for presetting its repetition count. */
+function keyAfter(state: State, from: Square, to: Square): string {
+  const board = { ...state.board, [to]: state.board[from] };
+  delete board[from];
+  return key({ ...state, board, ply: state.ply + 1 });
+}
+
+// Red chariot a1 chases the black soldier b2 round a 2x2 block; the black general
+// on i5 never moves, so red always has other moves and the cycle is real play.
+function chaseCycle(): State {
+  return playing(
+    { a1: up('red', 'chariot'), b2: up('black', 'soldier'), i5: up('black', 'general') },
     { lastMove: move('c2', 'b2') },
   );
-  for (let chase = 1; chase <= 6; chase += 1) {
-    state = chase % 2 === 1 ? play(state, 'a1', 'b1') : play(state, 'b1', 'a1');
-    assert.equal(state.chases.red?.count, chase);
-    assert.equal(state.status.type, 'playing');
-    state = chase % 2 === 1 ? play(state, 'b2', 'a2') : play(state, 'a2', 'b2');
-  }
-  return state;
 }
+const CHASES: readonly (readonly [Square, Square])[] = [
+  ['a1', 'b1'],
+  ['b1', 'a1'],
+];
+const FLEES: readonly (readonly [Square, Square])[] = [
+  ['b2', 'a2'],
+  ['a2', 'b2'],
+];
 
-test('the opening threat on a piece that has not moved yet counts toward the chase limit', () => {
-  let state = playing({ a1: up('red', 'chariot'), b2: up('black', 'soldier') });
-  for (let chase = 1; chase <= 6; chase += 1) {
-    const threat = chase % 2 === 1 ? move('a1', 'b1') : move('b1', 'a1');
-    assert.ok(dests(state, threat.from).includes(threat.to), `threat ${chase} is legal`);
-    state = play(state, threat.from, threat.to);
-    assert.equal(state.chases.red?.count, chase);
-    assert.equal(state.status.type, 'playing');
-    state = chase % 2 === 1 ? play(state, 'b2', 'a2') : play(state, 'a2', 'b2');
-  }
-  assert.equal(state.chases.red?.target, 'b2');
-  assert.ok(!dests(state, 'a1').includes('b1'));
-  assert.equal(game.applyThreeKingdomsBanqiMove(state, move('a1', 'b1')), state);
-});
-
-for (const [target, fleeTo, follow] of [
-  ['c3', 'b3', 'b1'],
-  ['f1', 'f2', 'c2'],
-] as const) {
-  test(`the opening threat on two pieces counts when the soldier on ${target} flees`, () => {
-    let state = playing({
-      d1: up('red', 'chariot'),
-      f1: up('black', 'soldier'),
-      c3: up('black', 'soldier'),
-    });
-    state = play(state, 'd1', 'c1'); // Threatens both f1 and c3.
-    for (let chase = 1; chase <= 6; chase += 1) {
-      state = chase % 2 === 1 ? play(state, target, fleeTo) : play(state, fleeTo, target);
-      assert.deepEqual(state.chases.red, {
-        target: chase % 2 === 1 ? fleeTo : target,
-        count: chase,
-      });
-      if (chase < 6) {
-        state = chase % 2 === 1 ? play(state, 'c1', follow) : play(state, follow, 'c1');
-        assert.equal(state.chases.red?.count, chase + 1);
-      }
+test('a cycling chase is refused when it would make its position appear a third time', () => {
+  let state = chaseCycle();
+  for (let lap = 0; lap < 2; lap += 1) {
+    for (let i = 0; i < 2; i += 1) {
+      const [from, to] = CHASES[i];
+      assert.ok(dests(state, from).includes(to), `lap ${lap} chase ${from}${to} is legal`);
+      state = play(state, from, to);
+      assert.equal(state.chasedSquare, FLEES[i][0], 'the chase targets the soldier');
+      assert.equal(state.repCounts[key(state)], lap + 1);
+      state = play(state, FLEES[i][0], FLEES[i][1]);
+      assert.equal(state.chasedSquare, undefined, 'a flee to a2/b2 threatens nothing');
     }
-    assert.equal(state.status.type, 'playing');
-    assert.ok(!dests(state, follow).includes('c1'));
-    assert.equal(game.applyThreeKingdomsBanqiMove(state, move(follow, 'c1')), state);
-  });
-}
-
-test('the seventh chase of the same fleeing piece is absent and applying it is a no-op', () => {
-  const state = sixChases();
-  assert.equal(state.chases.red?.target, 'b2');
+  }
+  // Third time round: a1b1 would reach its position a third time.
+  assert.equal(state.repCounts[keyAfter(state, 'a1', 'b1')], 2);
+  assert.deepEqual(forbidden(state), ['a1b1']);
   assert.ok(!dests(state, 'a1').includes('b1'));
   assert.equal(game.applyThreeKingdomsBanqiMove(state, move('a1', 'b1')), state);
-  assert.ok(dests(state, 'a1').includes('a4')); // a non-chasing alternative
+  // Red keeps every non-chasing move, and the game is still on (no repetition draw).
+  assert.ok(dests(state, 'a1').includes('a3'));
+  assert.deepEqual(state.status, { type: 'playing', turn: 'red' });
 });
 
-test('a non-chase, flip, capture or different fleeing target breaks a chase streak', () => {
-  const state = sixChases();
-  assert.equal(play(state, 'a1', 'a4').chases.red, undefined);
-  const withTile = { ...state, board: { ...state.board, i5: down('black', 'general') } };
-  assert.deepEqual(play(withTile, 'i5', 'i5').chases, {});
-  const withCapture = { ...state, board: { ...state.board, a3: up('black', 'advisor') } };
-  assert.deepEqual(play(withCapture, 'a1', 'a3').chases, {});
-  const different = {
-    ...state,
-    board: { ...state.board, c4: up('black', 'soldier') },
-    lastMove: move('d4', 'c4'),
+test('the chase restriction never limits the defender: a flee is legal at any count', () => {
+  let state = play(chaseCycle(), 'a1', 'b1');
+  // Even with the flee's position already seen twice, black may flee into it,
+  // and the third occurrence does not end the game.
+  state = { ...state, repCounts: { ...state.repCounts, [keyAfter(state, 'b2', 'a2')]: 2 } };
+  assert.deepEqual(forbidden(state), []);
+  assert.ok(dests(state, 'b2').includes('a2'));
+  const fled = play(state, 'b2', 'a2');
+  assert.equal(fled.repCounts[key(fled)], 3);
+  assert.deepEqual(fled.status, { type: 'playing', turn: 'red' });
+});
+
+test('an ordinary repetition does not end the game; only the 40-ply count does', () => {
+  // Two quiet pieces far apart shuffle back and forth: no move is a chase.
+  let state = playing({ a1: up('red', 'soldier'), i5: up('black', 'soldier') });
+  const cycle = [move('a1', 'b1'), move('i5', 'h5'), move('b1', 'a1'), move('h5', 'i5')];
+  for (let ply = 0; ply < 39; ply += 1) {
+    state = play(state, cycle[ply % 4].from, cycle[ply % 4].to);
+    assert.equal(state.status.type, 'playing');
+  }
+  assert.equal(state.repCounts[key(state)], 10);
+  state = play(state, cycle[39 % 4].from, cycle[39 % 4].to);
+  assert.deepEqual(state.status, { type: 'finished', winner: null, reason: 'no-progress' });
+});
+
+test('a mutual chase (一捉一) is an ordinary move and never restricted', () => {
+  // Chariots on one rank attack each other. Each move steps along the rank,
+  // fleeing the chariot that just moved and attacking it again.
+  let state = playing(
+    { a1: up('red', 'chariot'), i1: up('black', 'chariot'), e5: up('red', 'soldier') },
+    { lastMove: move('i2', 'i1'), chasedSquare: 'a1' },
+  );
+  const cycle = [move('a1', 'b1'), move('i1', 'h1'), move('b1', 'a1'), move('h1', 'i1')];
+  for (let ply = 0; ply < 16; ply += 1) {
+    assert.deepEqual(forbidden(state), [], `ply ${ply}`);
+    state = play(state, cycle[ply % 4].from, cycle[ply % 4].to);
+    assert.ok(state.chasedSquare, 'every move also chases');
+  }
+  assert.equal(state.repCounts[key(state)], 4);
+  assert.deepEqual(state.status, { type: 'playing', turn: 'red' });
+});
+
+test('a chase that herds its target onto new squares is never limited', () => {
+  // The soldier runs along rank 5 and the chariot follows on rank 1: eight chases
+  // in a row, past the old six-chase cap, and every position is new.
+  let state = playing(
+    { a1: up('red', 'chariot'), b5: up('black', 'soldier') },
+    { lastMove: move('c5', 'b5') },
+  );
+  const files = 'abcdefghi';
+  for (let i = 1; i < files.length; i += 1) {
+    assert.deepEqual(forbidden(state), []);
+    state = play(state, `${files[i - 1]}1` as Square, `${files[i]}1` as Square);
+    assert.equal(state.chasedSquare, `${files[i]}5`, `chase ${i}`);
+    assert.equal(state.repCounts[key(state)], 1);
+    if (i + 1 < files.length)
+      state = play(state, `${files[i]}5` as Square, `${files[i + 1]}5` as Square);
+  }
+  assert.equal(state.ply, 15);
+});
+
+test('the only-legal-move exception keeps a forbidden chase legal', () => {
+  // Red's elephants are locked on their own lattice; the soldier on b1 has two
+  // moves, c1 and b2, and both chase the black chariot that just reached c2.
+  const board: Board = {
+    a1: up('red', 'elephant'),
+    c3: up('red', 'elephant'),
+    e1: up('red', 'elephant'),
+    e5: up('red', 'elephant'),
+    g3: up('red', 'elephant'),
+    i1: up('red', 'elephant'),
+    i5: up('red', 'elephant'),
+    a5: up('red', 'elephant'),
+    b1: up('red', 'soldier'),
+    c2: up('black', 'chariot'),
   };
-  assert.equal(play(different, 'a1', 'c1').chases.red?.count, 1);
+  const base = playing(board, { lastMove: move('d2', 'c2') });
+  assert.deepEqual(dests(base, 'b1'), ['b2', 'c1']);
+  const one = { ...base, repCounts: { [keyAfter(base, 'b1', 'c1')]: 2 } };
+  assert.deepEqual(forbidden(one), ['b1c1']);
+  assert.deepEqual(dests(one, 'b1'), ['b2']);
+  const both = {
+    ...base,
+    repCounts: { [keyAfter(base, 'b1', 'c1')]: 2, [keyAfter(base, 'b1', 'b2')]: 2 },
+  };
+  // Refusing both would leave red with no move; the rule limits, it never loses.
+  assert.deepEqual(forbidden(both), []);
+  assert.deepEqual(dests(both, 'b1'), ['b2', 'c1']);
+  assert.equal(play(both, 'b1', 'c1').repCounts[keyAfter(base, 'b1', 'c1')], 3);
+  // A face-down tile anywhere is a flip, which counts as another legal move.
+  const tiled = playing({ ...board, h4: down('black', 'horse') }, { lastMove: move('d2', 'c2') });
+  const withTile = {
+    ...tiled,
+    repCounts: { [keyAfter(tiled, 'b1', 'c1')]: 2, [keyAfter(tiled, 'b1', 'b2')]: 2 },
+  };
+  assert.deepEqual(forbidden(withTile), ['b1b2', 'b1c1']);
+  assert.deepEqual(game.getThreeKingdomsBanqiLegalMoves(withTile), [move('h4', 'h4')]);
 });
 
 test('chase detection uses cannon screens and applies equally to the second seat', () => {
@@ -404,9 +476,22 @@ test('chase detection uses cannon screens and applies equally to the second seat
     { a1: up('black', 'cannon'), b2: down('red', 'general'), b3: up('red', 'soldier') },
     { ply: 1, status: { type: 'playing', turn: 'black' }, lastMove: move('c3', 'b3') },
   );
-  assert.equal(play(state, 'a1', 'b1').chases.black?.count, 1);
-  const capped = { ...state, chases: { black: { target: 'b3' as const, count: 6 } } };
-  assert.ok(!dests(capped, 'a1').includes('b1'));
+  assert.equal(play(state, 'a1', 'b1').chasedSquare, 'b3');
+  const seen = { ...state, repCounts: { [keyAfter(state, 'a1', 'b1')]: 2 } };
+  assert.deepEqual(forbidden(seen), ['a1b1']);
+});
+
+test('a flip or capture restarts the repetition count and clears the chase', () => {
+  let state = chaseCycle();
+  state = play(state, 'a1', 'b1');
+  assert.equal(state.chasedSquare, 'b2');
+  const withTile = { ...state, board: { ...state.board, h4: down('black', 'horse') } };
+  const flipped = play(withTile, 'h4', 'h4');
+  assert.equal(flipped.chasedSquare, undefined);
+  assert.deepEqual(flipped.repCounts, { [key(flipped)]: 1 });
+  const captured = play({ ...state, ply: 1 }, 'b2', 'b1');
+  assert.deepEqual(captured.repCounts, { [key(captured)]: 1 });
+  assert.equal(captured.chasedSquare, undefined);
 });
 
 test('no legal move loses, and flips keep a blocked player able to act', () => {
@@ -447,15 +532,52 @@ test('no legal move loses, and flips keep a blocked player able to act', () => {
   });
 });
 
-test('losing the last piece loses, but unrevealed material prevents premature elimination', () => {
-  const state = playing({ a1: up('red', 'soldier'), a2: up('black', 'soldier') });
-  assert.deepEqual(play(state, 'a1', 'a2').status, {
-    type: 'finished',
-    winner: 'red',
-    reason: 'no-pieces',
-  });
-  const hidden = { ...state, board: { ...state.board, i5: down('red', 'general') } };
-  assert.equal(play(hidden, 'a1', 'a2').status.type, 'playing');
+test('wipe-out cannot happen: capturing a side always reaches 100 before its last piece', () => {
+  const values = Object.entries(game.BANQI_PIECE_COUNTS)
+    .flatMap(([role, count]) =>
+      Array<number>(count).fill(game.THREE_KINGDOMS_BANQI_POINTS[role as game.BanqiPieceRole]),
+    )
+    .sort((a, b) => a - b);
+  assert.equal(values.length, 16);
+  assert.equal(
+    values.reduce((sum, value) => sum + value, 0),
+    135,
+  );
+  // The slowest route to 100 takes the cheapest pieces first. Even then the
+  // fourteenth capture reaches it, so a side's sixteenth piece is never taken.
+  let sum = 0;
+  let crossing = 0;
+  for (const [i, value] of values.entries()) {
+    sum += value;
+    if (sum >= game.THREE_KINGDOMS_BANQI_SCORE_TARGET) {
+      crossing = i + 1;
+      break;
+    }
+  }
+  assert.equal(crossing, 14);
+  assert.ok(crossing < values.length);
+  // Played out: red has taken black's thirteen cheapest pieces (85 points) and
+  // takes a chariot; the game ends on score with black's chariot and general left.
+  const state = playing(
+    {
+      a1: up('red', 'chariot'),
+      a3: up('black', 'chariot'),
+      i3: up('black', 'chariot'),
+      i5: up('black', 'general'),
+    },
+    {
+      scores: { red: 85, black: 0 },
+      captures: values.slice(0, 13).map((value) => ({
+        owner: 'black' as const,
+        role: (Object.keys(game.THREE_KINGDOMS_BANQI_POINTS) as game.BanqiPieceRole[]).find(
+          (role) => game.THREE_KINGDOMS_BANQI_POINTS[role] === value,
+        )!,
+      })),
+    },
+  );
+  const next = play(state, 'a1', 'a3');
+  assert.deepEqual(next.status, { type: 'finished', winner: 'red', reason: 'score' });
+  assert.ok(next.board.i3 && next.board.i5);
 });
 
 test('illegal moves do not mutate state and legal apply preserves previous states', () => {
@@ -492,8 +614,8 @@ test('whole player views and public serialization never expose hidden identity b
       assert.equal(payload, JSON.stringify(game.getThreeKingdomsBanqiPlayerView(swapped, seat)));
       for (const square of hidden)
         assert.deepEqual(JSON.parse(payload).board[square], { faceDown: true });
-      for (const forbidden of ['chases', 'seed', 'deal', 'hidden'])
-        assert.ok(!(forbidden in JSON.parse(payload)));
+      for (const field of ['repCounts', 'chasedSquare', 'seed', 'deal', 'hidden'])
+        assert.ok(!(field in JSON.parse(payload)));
       assert.ok(
         view.legalMoves.every((entry) => Object.keys(entry).sort().join(',') === 'from,to'),
       );

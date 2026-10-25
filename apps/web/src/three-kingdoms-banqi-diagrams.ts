@@ -160,7 +160,7 @@ function diagramState(board: TkDiagramBoard, toMove: 'red' | 'black'): ThreeKing
     scores: { red: 0, black: 0 },
     noProgressClock: 0,
     captures: [],
-    chases: {},
+    repCounts: {},
   };
 }
 

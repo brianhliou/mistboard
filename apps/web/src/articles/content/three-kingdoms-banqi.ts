@@ -18,9 +18,11 @@ import type { Article } from '../types.js';
 // production 404s it: the engine has no room, route or lobby, and whether it
 // gets one is the 10-31 checkpoint's call. Every move diagram asks the kernel
 // for its marks (three-kingdoms-banqi-diagrams.ts).
-// Rules marked as defaults in the engine (face-down capture, the 7th chase,
-// a capture resetting the 40-ply count, no legal move) are stated here as
-// Mistboard's rules; change both together if the app turns out to differ.
+// Five rules the app leaves unwritten (perpetual chase, what resets the 40-ply
+// count, face-down capture, wipe-out, no legal move) were decided for Mistboard
+// on 2026-10-25 (THREE_KINGDOMS_BANQI_RULES in the engine). The app's help has no
+// section for this mode, so the page presents them as Mistboard's rules, not
+// Gamesofa's; change the engine and this page together.
 export const threeKingdomsBanqiArticle: Article = {
   slug: 'three-kingdoms-banqi',
   boardFamily: 'xiangqi',
@@ -40,7 +42,7 @@ export const threeKingdomsBanqiArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'Gamesofa has not published a full rulebook for the mode. This page gives the exact rules Mistboard uses, worked out from games played in the app. Mistboard is not affiliated with Gamesofa.',
+      text: 'Gamesofa has not published a rulebook for the mode, and the app’s help has no section on it. This page gives the rules Mistboard uses. The board, moves and scoring follow games played in the app. Where the app leaves a rule unclear, such as how a perpetual chase is limited, the rule here is Mistboard’s own choice, made to fit the rest of banqi. Mistboard is not affiliated with Gamesofa.',
     },
   ],
   sections: [
@@ -159,15 +161,15 @@ export const threeKingdomsBanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The first player to reach 100 points wins at once, even with pieces still on the board. You also win if your opponent has no legal move on their turn: no face-down piece left to flip and no face-up piece that can move, which includes having no pieces at all.',
+          text: 'The first player to reach 100 points wins at once, even with pieces still on the board. A side can never be wiped out: its sixteen pieces are worth 135, so whoever is capturing them reaches 100 before the last ones go. You also win if your opponent has no legal move on their turn: no face-down piece left to flip and no face-up piece that can move.',
         },
         {
           kind: 'paragraph',
-          text: 'If 40 plies (single moves) pass with no flip and no capture, the game ends and the player with more points wins. Equal points is a draw.',
+          text: 'If 40 plies (single moves) pass with no flip and no capture, the game ends and the player with more points wins. Equal points is a draw. A flip or a capture starts the count again. Repeating a position does not end the game on its own; the 40-ply count settles it.',
         },
         {
           kind: 'paragraph',
-          text: 'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture an enemy piece. You may chase the same piece at most six times in a row; a seventh chasing move against it is not allowed, and you have to play something else.',
+          text: 'A chasing move is a quiet move, with no flip and no capture, after which the piece you moved could capture the enemy piece that just moved. You may not play a chasing move that brings about the same position for the third time. Play something else instead, unless the chase is your only legal move. The rule limits only the chaser. The chased piece may always run, a move that both runs and threatens back counts as an ordinary move, and a chase that keeps driving the piece onto new points never repeats, so it is never stopped.',
         },
       ],
     },
