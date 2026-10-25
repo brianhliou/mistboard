@@ -105,12 +105,13 @@ try {
   await cleanupStaleTasks();
   let nextCleanupAt = Date.now() + cleanupIntervalMs;
 
-  const workerRun = await registerWorkerRun(pool, {
+  const workerRunOptions = {
     provider,
     providerRunId,
     capabilities: workerCapabilities,
     resourceLimits: workerResourceLimits,
-  });
+  };
+  let workerRun = await registerWorkerRun(pool, workerRunOptions);
   activeWorkerRunId = workerRun.id;
 
   log('worker_started', {
@@ -136,11 +137,28 @@ try {
   while (!shuttingDown && processedTasks < maxTasks) {
     let task: EngineGameTask | null;
     try {
-      await heartbeatWorkerRun(pool, workerRun.id);
-
       if (Date.now() >= nextCleanupAt) {
         await cleanupStaleTasks();
         nextCleanupAt = Date.now() + cleanupIntervalMs;
+      }
+
+      try {
+        await heartbeatWorkerRun(pool, workerRun.id);
+      } catch (err) {
+        if (
+          !loop ||
+          !(err instanceof Error) ||
+          err.message !== `worker run ${workerRun.id} is not active`
+        ) {
+          throw err;
+        }
+        // Cleanup (ours or a peer's) may fence this run after an outage or
+        // an unacknowledged claim expires. Keep the live service up and use
+        // a fresh run for subsequent claims; never revive the fenced run.
+        const previousWorkerRunId = workerRun.id;
+        workerRun = await registerWorkerRun(pool, workerRunOptions);
+        activeWorkerRunId = workerRun.id;
+        log('worker_run_reregistered', { previousWorkerRunId, workerRunId: workerRun.id });
       }
 
       task = await claimNextEngineGameTask(pool, {
