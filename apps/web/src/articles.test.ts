@@ -657,6 +657,15 @@ describe('article public listing gates', () => {
     ).not.toBeNull();
   });
 
+  it('sorts three kingdoms banqi right after banqi on the rules tiles', () => {
+    const hrefs = [...buildRulesIndex().querySelectorAll('.rules-landing-tile')].map((tile) =>
+      tile.getAttribute('href'),
+    );
+    const banqi = hrefs.indexOf('/rules/banqi');
+    expect(banqi).toBeGreaterThanOrEqual(0);
+    expect(hrefs[banqi + 1]).toBe('/rules/three-kingdoms-banqi');
+  });
+
   it('renders rules tiles as marker plus label, with no per-tile badge', () => {
     const index = buildRulesIndex();
     const tiles = [...index.querySelectorAll('.rules-landing-tile')];
