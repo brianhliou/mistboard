@@ -19,6 +19,38 @@ describe('postGameActions', () => {
     expect(labels(box)).toEqual(['Review game']);
   });
 
+  // #618: a lone action rides in the phone room's bottom bar (live-review.css);
+  // two or more, or a rematch offer block, keep the band.
+  it('marks a lone action for the bar and leaves groups and rematch blocks alone', () => {
+    const spectator = postGameActions({
+      variant: 'xiangqi',
+      mode: 'pvp',
+      seated: false,
+      rematch: null,
+      reviewHref: '/game/x',
+    });
+    expect(spectator.classList.contains('postgame-actions--solo')).toBe(true);
+    const seated = postGameActions({
+      variant: 'xiangqi',
+      mode: 'pvp',
+      seated: true,
+      rematch: null,
+      reviewHref: '/game/x',
+    });
+    expect(seated.classList.contains('postgame-actions--solo')).toBe(false);
+    const offer = document.createElement('div');
+    offer.className = 'room-rematch';
+    const offerOnly = postGameActions({
+      variant: 'no-such-variant',
+      mode: 'pvp',
+      seated: true,
+      rematch: offer,
+      reviewHref: null,
+    });
+    expect(offerOnly.children).toHaveLength(1);
+    expect(offerOnly.classList.contains('postgame-actions--solo')).toBe(false);
+  });
+
   it('orders a seated bot game rematch, new game, review, then the friend invite', () => {
     const rematch = document.createElement('button');
     rematch.textContent = 'Rematch';

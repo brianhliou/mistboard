@@ -169,6 +169,93 @@ describe('createGameLifecycleTracker', () => {
   });
 });
 
+// game_started fires when a room's status becomes 'playing', before anyone
+// moves, so a room the player opened and left counts as a start (about 9% of
+// counted PvE starts, 2026-10-25). game_first_move is the count of games the
+// human actually played: the seat's own first move, accepted by the server.
+describe('game_first_move', () => {
+  const capture = vi.fn();
+  const named = (name: string) =>
+    (capture.mock.calls as Array<[string, Record<string, unknown>]>).filter(([n]) => n === name);
+  const base = { gameId: 'g1', game_spec: 'xiangqi', roomMode: 'pve', bot_name: 'Misty' };
+  const playing = (ownMoveCount: number, moveNumber: number) =>
+    ({ statusType: 'playing', baseProps: base, ownMoveCount, moveNumber }) as const;
+
+  beforeEach(() => {
+    capture.mockReset();
+    Object.defineProperty(window, 'localStorage', { configurable: true, value: memoryStorage() });
+    resetTrackedGameStartsForTests();
+    setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
+  });
+
+  it('fires once, after the seat has a move accepted, with the start props and moveNumber', () => {
+    rememberGameStartSource('panel-bot');
+    const t = createGameLifecycleTracker();
+    t.update(playing(0, 0));
+    // Opening the room is a start, not a first move.
+    expect(named('game_started')).toHaveLength(1);
+    expect(named('game_first_move')).toHaveLength(0);
+    t.update(playing(1, 1));
+    t.update(playing(1, 2));
+    t.update(playing(2, 3));
+    expect(named('game_first_move')).toHaveLength(1);
+    expect(named('game_first_move')[0][1]).toEqual({
+      ...base,
+      entry_source: 'panel-bot',
+      moveNumber: 1,
+    });
+  });
+
+  it('does not fire while only the opponent or bot has moved', () => {
+    const t = createGameLifecycleTracker();
+    t.update(playing(0, 0));
+    t.update(playing(0, 1));
+    t.update({ ...playing(0, 2), statusType: 'finished' });
+    expect(named('game_first_move')).toHaveLength(0);
+  });
+
+  it('does not fire for a room first seen with the move already made', () => {
+    // A reload mid-game, or a finished game opened later: this page never saw
+    // the empty board, so nothing it watched was a first move.
+    createGameLifecycleTracker().update(playing(3, 6));
+    createGameLifecycleTracker().update({ ...playing(3, 6), statusType: 'finished' });
+    expect(named('game_first_move')).toHaveLength(0);
+  });
+
+  it('fires once across a reconnect, a reset and a reload of the same game', () => {
+    const t = createGameLifecycleTracker();
+    t.update(playing(0, 0));
+    // initRender resets the tracker; the move lands in the next snapshot.
+    t.reset();
+    t.update(playing(1, 1));
+    expect(named('game_first_move')).toHaveLength(1);
+    t.reset();
+    t.update(playing(1, 1));
+    // A takeback to an empty board and a fresh page cannot count it again.
+    t.update(playing(0, 0));
+    t.update(playing(1, 1));
+    const reload = createGameLifecycleTracker();
+    reload.update(playing(0, 0));
+    reload.update(playing(1, 1));
+    expect(named('game_first_move')).toHaveLength(1);
+  });
+
+  it('carries a null entry source when the start fired on an earlier page load', () => {
+    createGameLifecycleTracker().update(playing(0, 0));
+    const reload = createGameLifecycleTracker();
+    reload.update(playing(0, 0));
+    reload.update(playing(1, 2));
+    expect(named('game_first_move')[0][1]).toMatchObject({ entry_source: null, moveNumber: 2 });
+  });
+
+  it('stays silent for callers that pass no move count', () => {
+    const t = createGameLifecycleTracker();
+    t.update({ statusType: 'playing', baseProps: base });
+    t.update({ statusType: 'playing', baseProps: base, moveNumber: 4 });
+    expect(named('game_first_move')).toHaveLength(0);
+  });
+});
+
 describe('analyticsTimeClass', () => {
   it('reports a days-per-move control as correspondence, not the classical its ms fall in', () => {
     // 1 day = 86,400,000 ms with no increment; the pace formula says classical.

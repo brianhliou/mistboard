@@ -33,6 +33,7 @@ export * from './puzzles-xiangqi.js';
 export * from './puzzles-xiangqi-difficulty.js';
 export * from './puzzles-xiangqi-mining.js';
 export * from './puzzles-xiangqi-motifs.js';
+export * from './puzzles-xiangqi-setup.js';
 export * from './start-fen.js';
 export * from './study-analysis-coverage.js';
 export * from './time-controls.js';

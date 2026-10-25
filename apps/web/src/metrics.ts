@@ -59,6 +59,8 @@ export type AdminMetricsWeek = {
   puzzleSessions: number;
   puzzleSolves: number;
   puzzleAttempts: number;
+  puzzlePlayers: number;
+  returningPuzzlePlayers: number;
   studiesCreated: number;
   studyChaptersCreated: number;
   practiceSolves: number;
@@ -492,13 +494,21 @@ function buildWeeklySections(admin: AdminMetrics, locale: Locale): HTMLElement[]
       'Accounts created and patrons started per week',
     ),
     chart(
+      'Puzzle players per week',
+      [
+        { key: 'puzzlePlayers', label: 'Puzzle players' },
+        { key: 'returningPuzzlePlayers', label: 'Returning' },
+      ],
+      'Distinct accounts and guest browsers that made a move on a puzzle each week, and those who had in an earlier week. Counted from 2026-10-25; earlier weeks have no player identity',
+    ),
+    chart(
       'Puzzles per week',
       [
-        { key: 'puzzleSessions', label: 'Sessions' },
+        { key: 'puzzleSessions', label: 'Puzzles started' },
         { key: 'puzzleSolves', label: 'Solves' },
         { key: 'puzzleAttempts', label: 'Signed-in attempts' },
       ],
-      'Puzzle visits that started a puzzle, puzzles solved, and rated attempts per week',
+      'Puzzles started (one person starting five is five), puzzles solved, and rated attempts by counted accounts per week',
     ),
     chart(
       'Study and practice per week',

@@ -502,6 +502,7 @@ export const ZH_HANS_COMMUNITY = {
   'forum.errCategoryRestricted': '这个分类受限。',
   'forum.errTopicLocked': '这个主题已锁定。',
   'forum.errTooQuick': '你发帖太频繁了。',
+  'forum.errEditTooQuick': '你编辑太频繁了，请过几分钟再试。',
   'forum.errUnavailable': '论坛暂时不可用。',
   'forum.errCheckFields': '请检查填写内容后重试。',
   'forum.errSignInToReport': '登录后举报。',

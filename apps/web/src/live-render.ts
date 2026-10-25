@@ -230,7 +230,21 @@ function trackGameLifecycle(view: PlayerView | null): void {
           return { winner: finished.winner, reason: finished.reason, moveNumber: view.moveNumber };
         })()
       : null;
-  lifecycleTracker.update({ statusType, baseProps, outcome });
+  lifecycleTracker.update({
+    statusType,
+    baseProps,
+    outcome,
+    ownMoveCount: seatOwnMoveCount(liveState.events, liveState.seat),
+    moveNumber: view.moveNumber,
+  });
+}
+
+// How many moves the seat has had accepted, from the event log the server sent
+// it (fog included: a seat always receives its own move-played events), so a
+// click the server rejected never counts. Feeds game_first_move.
+export function seatOwnMoveCount(events: readonly GameEvent[], seat: unknown): number {
+  if (!isColor(seat)) return 0;
+  return events.filter((event) => event.type === 'move-played' && event.color === seat).length;
 }
 
 function renderActionStatus(view: PlayerView | null): void {
