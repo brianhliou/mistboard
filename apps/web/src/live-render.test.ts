@@ -1,5 +1,5 @@
 import { boardFen, hiddenSquareClasses } from '@mistboard/board-render/interactive';
-import type { Board, PlayerView, Square } from '@mistboard/game';
+import type { Board, GameEvent, PlayerView, Square } from '@mistboard/game';
 import { configure } from 'chessground/config';
 import type { DrawShape } from 'chessground/draw';
 import { defaults } from 'chessground/state';
@@ -8,6 +8,7 @@ import { boardHighlightClasses, boardResultClass, legalDests } from './live-boar
 import { shouldAutoScrollMoveList, shouldMaskMoveList } from './live-move-list.js';
 import {
   drawShapeGameOf,
+  seatOwnMoveCount,
   shouldEnablePremoves,
   shouldShowPostGameRoomActions,
 } from './live-render.js';
@@ -403,5 +404,30 @@ describe('shouldMaskMoveList', () => {
     liveState.roomMode = 'eve';
     liveState.seat = 'spectator';
     expect(shouldMaskMoveList()).toBe(false);
+  });
+});
+
+// Feeds game_first_move on the chess stack (fog and Misty rooms): only the
+// seat's own accepted moves count, never the opponent's or the bot's.
+describe('seatOwnMoveCount', () => {
+  const moved = (color: 'white' | 'black', at: number): GameEvent => ({
+    type: 'move-played',
+    at,
+    roomId: 'test-room',
+    color,
+    move: { from: 'e2', to: 'e4' },
+  });
+
+  it('counts only move-played events in the seat colour', () => {
+    const events = [moved('white', 1), moved('black', 2), moved('white', 3)];
+    expect(seatOwnMoveCount(events, 'white')).toBe(2);
+    expect(seatOwnMoveCount(events, 'black')).toBe(1);
+    expect(seatOwnMoveCount([moved('white', 1)], 'black')).toBe(0);
+  });
+
+  it('is zero for a spectator or an unseated viewer', () => {
+    const events = [moved('white', 1), moved('black', 2)];
+    expect(seatOwnMoveCount(events, 'spectator')).toBe(0);
+    expect(seatOwnMoveCount(events, null)).toBe(0);
   });
 });
