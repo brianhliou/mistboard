@@ -142,7 +142,10 @@ export function mountXiangqiMahjongWatchReplay(
   let log: XmjMoveLog | null = null;
 
   const board = document.createElement('div');
-  board.className = 'board xiangqi-mahjong-live-board xmj-watch-board';
+  // A compact host (the homepage viewer, feed cards) gets a smaller table that
+  // keeps to a xiangqi board's footprint: small tiles, the hand's result without
+  // its scoring lines.
+  board.className = `board xiangqi-mahjong-live-board xmj-watch-board${options.compact ? ' xmj-watch-board--compact' : ''}`;
   root.replaceChildren(board);
 
   const maxPly = (): number => (match ? match.frames.length - 1 : 0);

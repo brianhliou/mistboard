@@ -1523,3 +1523,64 @@ ol.xmj-log {
   color: var(--site-text);
   font-weight: 700;
 }
+
+/* ── Compact watch board ───────────────────────────────────────────────────── */
+
+/* The homepage viewer and feed cards: the table keeps to a xiangqi board's
+   footprint beside it. Small tiles throughout (your own hand is not larger,
+   there is no "you" here), and a finished hand shows who won, the points and
+   the winning tiles, without the scoring lines or the next-hand row. */
+.xmj-watch-board--compact,
+.xmj-watch-board--compact .xmj-seat--self {
+  --xmj-tile-w: 28px;
+  --xmj-tile-h: 37px;
+  --xmj-tile-r: 4px;
+  --xmj-depth: 3px;
+  --xmj-pond-w: 20px;
+  --xmj-pond-h: 26px;
+  --xmj-pond-gap: 2px;
+}
+
+/* The showcase widget hugs its board, and every variant's board takes the
+   widget's one size so a swap to this table neither shrinks nor jumps it. */
+.xmj-watch-board--compact {
+  width: var(--showcase-widget-size, 100%);
+  max-width: 100%;
+}
+
+.xmj-watch-board--compact .xmj-table {
+  width: 100%;
+  padding: 10px;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.xmj-watch-board--compact .xmj-scoring,
+.xmj-watch-board--compact .xmj-result__foot,
+.xmj-watch-board--compact .xmj-middle--result > :not(.xmj-result) {
+  display: none;
+}
+
+.xmj-watch-board--compact .xmj-middle--result > .xmj-result {
+  position: static;
+}
+
+.xmj-watch-board--compact .xmj-middle {
+  gap: 6px;
+}
+
+.xmj-watch-board--compact .xmj-centre {
+  min-height: 0;
+  padding: 6px 10px;
+  gap: 4px;
+}
+
+.xmj-watch-board--compact .xmj-centre__status {
+  min-height: 0;
+}
+
+.xmj-watch-board--compact .xmj-pond {
+  gap: 3px var(--xmj-pond-gap);
+  min-height: calc((var(--xmj-pond-h) + 4px) * 2 + 3px);
+  padding-top: 0;
+}

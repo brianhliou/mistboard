@@ -83,6 +83,8 @@ describe('xiangqi mahjong TV mount', () => {
     expect(plies.at(-1)).toEqual([6, 6]);
     expect(handle.gameResult?.()).toBe('in-progress');
     expect(root.querySelector('.xiangqi-mahjong-live-board .xmj-table')).not.toBeNull();
+    // The homepage viewer asks for the compact table; it is the same view, smaller.
+    expect(root.querySelector('.xmj-watch-board--compact')).not.toBeNull();
     expect(root.textContent).toContain('Ada');
     expect(root.textContent).toContain('Bo');
     // A spectator during a hand: both racks are backs, and no seat can act.
@@ -110,6 +112,9 @@ describe('xiangqi mahjong TV mount', () => {
       onPlyChange: (ply) => plies.push(ply),
       loadPostgameOverride: async () => ({ ok: true, postgame: frame }),
     });
+    // The full TV page keeps the full-size table.
+    expect(root.querySelector('.xmj-watch-board')).not.toBeNull();
+    expect(root.querySelector('.xmj-watch-board--compact')).toBeNull();
     const log = handle.moveLog?.();
     expect(log?.el.classList.contains('xmj-log')).toBe(true);
     log?.update(8, (ply) => handle.jumpToPly?.(ply));
