@@ -114,6 +114,10 @@ function slugLosesInformation(value: string): boolean {
 // A round label like "第03轮" -> "r03" (stable across imports so same-round
 // games group). Non-numeric labels fall back to a slug or a deterministic hash.
 function roundToken(round: string): string {
+  // A match's game (第08局, see the dpxq adapter) is "g08", the id the hand
+  // backfill of the 2026 春丘大叶杯 ten-game match gave its rounds.
+  const game = round.match(/^第\s*(\d+)\s*局$/)?.[1];
+  if (game) return `g${game.padStart(2, '0')}`;
   const num = round.match(/\d+/)?.[0];
   if (num) return `r${num.padStart(2, '0')}`;
   return slugPart(round) || `r-${hashToken(round)}`;
