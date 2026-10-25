@@ -790,24 +790,24 @@ describe('rules variant sidebar', () => {
     expect(fortress.querySelector('a[href*="gameSpecId=crazyhouse-xiangqi"]')).not.toBeNull();
   });
 
-  // Under review (2026-10-15): by URL only, noindex, and on no list. No
-  // gameSpecId, so they stay off the lists when the variant itself goes public.
-  it('serves the Xiangqi Mahjong rules pages by URL, noindex and unlisted', () => {
+  // Launched for search 2026-10-25 (#678): indexable, on the rules index and
+  // the rules rail, with a play button. Not an article, so not on /blog.
+  it('serves the Xiangqi Mahjong rules pages as a launched variant', () => {
     vi.stubEnv('DEV', false);
     const index = buildRulesIndex();
     for (const slug of ['xiangqi-mahjong-32']) {
       const article = articles.find((a) => a.slug === slug);
       expect(article?.gameSpecId, slug).toBeUndefined();
-      expect(articleIsNoindex(article!), slug).toBe(true);
-      expect(rulesSlugPublicSurfaceEnabled(slug), slug).toBe(false);
-      expect(index.querySelector(`a[href="/rules/${slug}"]`), slug).toBeNull();
+      expect(articleIsNoindex(article!), slug).toBe(false);
+      expect(rulesSlugPublicSurfaceEnabled(slug), slug).toBe(true);
+      expect(index.querySelector(`a[href="/rules/${slug}"]`), slug).not.toBeNull();
       expect(buildArticlesIndex().querySelector(`a[href$="/${slug}"]`), slug).toBeNull();
       const page = buildArticlePage(slug);
       expect(page.querySelector('h1')?.textContent, slug).toBe(article?.title);
       expect(page.querySelectorAll('svg.xmj-article-tiles').length, slug).toBeGreaterThan(10);
-      expect(page.querySelector('.article-cta-row.article-play-cta'), slug).toBeNull();
+      expect(page.querySelector('.article-cta-row.article-play-cta'), slug).not.toBeNull();
       const rail = page.querySelector('.article-variant-sidebar');
-      expect(rail?.querySelector('a[href*="xiangqi-mahjong"]') ?? null, slug).toBeNull();
+      expect(rail?.querySelector('a[href*="xiangqi-mahjong"]') ?? null, slug).not.toBeNull();
     }
   });
 

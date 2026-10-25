@@ -5828,7 +5828,7 @@ const ZH_HANS: Record<string, string> = {
   // xiangqi-mahjong-32: machine-drafted 2026-10-16 from the signed-off English. Terms follow the live table (live.xmj.*): 台, 面子, 将眼, 庄家, 胡, 自摸, 吃, 碰, 流局.
   'Xiangqi Mahjong Rules (32 tiles)': '象棋麻将规则（32 张）',
   'The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the points each one scores.':
-    '两人对打的 32 张象棋麻将：一副象棋当作麻将牌，手牌五张，图解每种胡牌牌型，以及各自的台数。',
+    '两人对打的 32 张象棋麻将规则：一副象棋当作麻将牌，手牌五张，图解每种胡牌牌型，以及各自的台数和计分方式，一场比赛共六手。',
   'Xiangqi Mahjong is a mahjong game played with the 32 pieces of a xiangqi set, a pastime from Taiwan. The pieces go face down as tiles, you draw and discard, and the first player to hold a complete hand wins. The hand is tiny: five tiles, which is one set of three and a pair. That makes the game fast, and it means you can learn the winning hands from the pictures on this page.':
     '象棋麻将是用一副象棋的 32 颗棋子来打的麻将，源自台湾的民间游戏。棋子盖着当牌，轮流摸牌、打牌，先凑成一副完整手牌的人就胡了。手牌很小：只有五张，也就是一组三张的面子加一对将眼。所以一手牌打得很快，看这一页的图就能学会所有胡牌牌型。',
   'This page describes the two-player game as Mistboard’s table plays it, with the rules the sources agree on.':
@@ -6364,7 +6364,7 @@ const ZH_HANT: Record<string, string> = {
   // xiangqi-mahjong-32: machine-drafted 2026-10-16 from the signed-off English. Terms follow the live table (live.xmj.*): 台, 面子, 將眼, 莊家, 胡, 自摸, 吃, 碰, 流局; tile names per colour, black cannon 砲 as on the tile faces.
   'Xiangqi Mahjong Rules (32 tiles)': '象棋麻將規則（32 張）',
   'The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the points each one scores.':
-    '兩人對打的 32 張象棋麻將：一副象棋當作麻將牌，手牌五張，圖解每種胡牌牌型，以及各自的台數。',
+    '兩人對打的 32 張象棋麻將規則：一副象棋當作麻將牌，手牌五張，圖解每種胡牌牌型，以及各自的台數和計分方式，一場比賽共六手。',
   'Xiangqi Mahjong is a mahjong game played with the 32 pieces of a xiangqi set, a pastime from Taiwan. The pieces go face down as tiles, you draw and discard, and the first player to hold a complete hand wins. The hand is tiny: five tiles, which is one set of three and a pair. That makes the game fast, and it means you can learn the winning hands from the pictures on this page.':
     '象棋麻將是用一副象棋的 32 顆棋子來打的麻將，源自台灣的民間遊戲。棋子蓋著當牌，輪流摸牌、打牌，先湊成一副完整手牌的人就胡了。手牌很小：只有五張，也就是一組三張的面子加一對將眼。所以一手牌打得很快，看這一頁的圖就能學會所有胡牌牌型。',
   'This page describes the two-player game as Mistboard’s table plays it, with the rules the sources agree on.':

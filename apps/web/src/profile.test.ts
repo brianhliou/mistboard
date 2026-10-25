@@ -21,10 +21,11 @@ describe('profile ratings rail', () => {
     const section = buildProfileRatings([]);
 
     expect(section.textContent).toContain('Fog Chess');
-    // Duck + Crazyhouse + Flip Jungle + Jungle + Dark Chess (always-on) = 5
-    // rows. Fortress and Atomic Xiangqi retired on 2026-10-11: their pools are
+    // Duck + Crazyhouse + Flip Jungle + Jungle + Dark Chess (always-on) +
+    // Xiangqi Mahjong (launched 2026-10-25) = 6 rows. Fortress and Atomic Xiangqi retired on 2026-10-11: their pools are
     // kept but no profile lists them.
-    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(5);
+    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(6);
+    expect(section.textContent).toContain('Xiangqi Mahjong');
     expect(section.textContent).not.toContain('Fortress Xiangqi');
     expect(section.textContent).not.toContain('Atomic Xiangqi');
   });
