@@ -9,6 +9,7 @@ export { withXiangqiBoardLayout, withXiangqiPieceSet } from './articles/diagrams
 import type { Article } from './articles/types.js';
 import { SERVER_FOG_SNAPSHOT_JSON_TEXT } from './articles/diagrams.js';
 import { banqiArticle } from './articles/content/banqi.js';
+import { threeKingdomsBanqiArticle } from './articles/content/three-kingdoms-banqi.js';
 import { banqiStatisticsArticle } from './articles/content/banqi-statistics.js';
 import { banqiEngineArticle } from './articles/content/banqi-engine.js';
 import { banqiLuckArticle } from './articles/content/banqi-luck.js';
@@ -145,6 +146,7 @@ export const articles: Article[] = [
   mahjongArticle,
   xiangqiMahjong32Article,
   banqiArticle,
+  threeKingdomsBanqiArticle,
   banqiStatisticsArticle,
   banqiEngineArticle,
   douShouQiEngineArticle,

@@ -639,6 +639,24 @@ describe('article public listing gates', () => {
   // playableOnMistboard is true for every rules article that exists, so the
   // badge appeared on all of them and distinguished nothing. If a genuinely
   // unplayable variant ever gets a rules page, mark THAT one, not all the rest.
+  // A variant without marker art used to fall back to its article's board
+  // thumbnail, a full board picture in a column of one-colour icons
+  // (three-kingdoms-banqi, 2026-10-24). It gets the question-mark placeholder.
+  it('gives every rules tile a marker, the placeholder when the variant has no art', () => {
+    const tiles = [...buildRulesIndex().querySelectorAll('.rules-landing-tile')];
+    expect(tiles.length).toBeGreaterThan(0);
+    for (const tile of tiles) {
+      const href = tile.getAttribute('href') ?? '';
+      expect(tile.querySelector('.variant-marker'), href).not.toBeNull();
+      expect(tile.querySelector('svg, img, .articles-thumb-board'), href).toBeNull();
+    }
+    expect(
+      buildRulesIndex().querySelector(
+        '.rules-landing-tile[href="/rules/three-kingdoms-banqi"] .variant-marker[data-variant-marker-placeholder]',
+      ),
+    ).not.toBeNull();
+  });
+
   it('renders rules tiles as marker plus label, with no per-tile badge', () => {
     const index = buildRulesIndex();
     const tiles = [...index.querySelectorAll('.rules-landing-tile')];

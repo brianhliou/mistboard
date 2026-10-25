@@ -82,6 +82,17 @@ export function renderVariantMarker(
   return `<span class="${escapeAttr(className)}" role="img" aria-label="${escapeAttr(label)}" data-variant-marker-id="${id}" data-variant-marker-size="${size}"${dataClass} style="--variant-marker-mask: url('${escapeAttr(marker.path)}'); --variant-marker-size: ${size}px"></span>`;
 }
 
+// A neutral question-mark marker for a rules page whose variant has no art yet.
+// Same box and mask paint as a final marker, so a rail or tile never falls back
+// to a board picture; replace it by adding the variant to FINAL_VARIANT_MARKERS.
+export function renderPlaceholderVariantMarker(
+  opts: { label?: string; size?: number } = {},
+): string {
+  const size = opts.size ?? 64;
+  const label = opts.label ?? 'Variant marker coming soon';
+  return `<span class="variant-marker" role="img" aria-label="${escapeAttr(label)}" data-variant-marker-placeholder data-variant-marker-size="${size}" style="--variant-marker-mask: url('/variant-markers/placeholder.svg'); --variant-marker-size: ${size}px"></span>`;
+}
+
 function escapeAttr(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
