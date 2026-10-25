@@ -106,13 +106,32 @@ export async function svgToPng(
   zoom = OG_CARD_ZOOM,
   crop?: { right: number; bottom: number },
 ): Promise<Buffer> {
-  const image = await renderAsync(svg, {
+  return (await renderSvg(svg, background, zoom, crop)).asPng();
+}
+
+/** svgToPng's render as raw RGBA, for a caller that encodes it itself. */
+export async function svgToRgba(
+  svg: string,
+  background: string,
+  zoom: number,
+  crop?: { right: number; bottom: number },
+): Promise<{ pixels: Buffer; width: number; height: number }> {
+  const image = await renderSvg(svg, background, zoom, crop);
+  return { pixels: image.pixels, width: image.width, height: image.height };
+}
+
+function renderSvg(
+  svg: string,
+  background: string,
+  zoom: number,
+  crop?: { right: number; bottom: number },
+) {
+  return renderAsync(svg, {
     background,
     fitTo: { mode: 'zoom', value: zoom },
     font: OG_FONT_OPTIONS,
     ...(crop ? { crop: { left: 0, top: 0, ...crop } } : {}),
   });
-  return image.asPng();
 }
 
 /** A PNG's pixel size, read from its IHDR chunk (bytes 16-23). */
@@ -128,10 +147,18 @@ export function pngSize(png: Buffer): { width: number; height: number } {
  * chained, the halvings are the mip levels a raster must be drawn from.
  */
 export async function halvePng(png: Buffer): Promise<Buffer> {
-  const { width, height } = pngSize(png);
+  return halveImage(png, 'image/png', pngSize(png));
+}
+
+/** halvePng for any raster resvg reads (a JPEG photo too), as a PNG. */
+export async function halveImage(
+  data: Buffer,
+  mime: string,
+  { width, height }: { width: number; height: number },
+): Promise<Buffer> {
   const w = Math.max(1, Math.round(width / 2));
   const h = Math.max(1, Math.round(height / 2));
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><image href="data:image/png;base64,${png.toString('base64')}" width="${w}" height="${h}" preserveAspectRatio="none"/></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><image href="data:${mime};base64,${data.toString('base64')}" width="${w}" height="${h}" preserveAspectRatio="none"/></svg>`;
   const image = await renderAsync(svg, { font: { loadSystemFonts: false } });
   return image.asPng();
 }
