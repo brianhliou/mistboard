@@ -27,6 +27,7 @@ import {
   xiangqiMahjongTableHtml,
   xmjHandsTableHtml,
   xmjLogHtml,
+  xmjPoints,
 } from './xiangqi-mahjong-table.js';
 import { xmjMoveSound } from './xiangqi-mahjong-terminal-sound.js';
 
@@ -146,7 +147,26 @@ export function mountXiangqiMahjongWatchReplay(
   // keeps to a xiangqi board's footprint: small tiles, the hand's result without
   // its scoring lines.
   board.className = `board xiangqi-mahjong-live-board xmj-watch-board${options.compact ? ' xmj-watch-board--compact' : ''}`;
-  root.replaceChildren(board);
+  // Names sit above and below the felt, as every other variant's board: the
+  // spectator's table puts east at the bottom. The clock slot holds the match
+  // points, since a frame carries no clocks. A host that has the names in its
+  // own chrome hides these rows, as it does for the other variants.
+  const seatRow = (seat: XmjSeat) => {
+    const row = document.createElement('div');
+    row.className = 'showcase-seat';
+    row.dataset.seat = seat === 'east' ? 'first' : 'second';
+    const nameEl = document.createElement('span');
+    nameEl.className = 'showcase-seat-name';
+    const clockEl = document.createElement('span');
+    clockEl.className = 'showcase-seat-clock';
+    row.append(nameEl, clockEl);
+    return { seat, row, nameEl, clockEl };
+  };
+  const seatRows = [seatRow('west'), seatRow('east')] as const;
+  const layout = document.createElement('div');
+  layout.className = 'replay-layout replay-layout-solo xmj-watch-layout';
+  layout.append(seatRows[0].row, board, seatRows[1].row);
+  root.replaceChildren(layout);
 
   const maxPly = (): number => (match ? match.frames.length - 1 : 0);
 
@@ -164,6 +184,20 @@ export function mountXiangqiMahjongWatchReplay(
       names: match.names,
       now: Date.now(),
     });
+    const view = frame.view;
+    const winner = view.status.type === 'finished' ? view.status.winner : null;
+    for (const { seat, row, nameEl, clockEl } of seatRows) {
+      nameEl.textContent = match.names[seat];
+      clockEl.textContent = xmjPoints(view.scores[seat]);
+      row.classList.toggle(
+        'active',
+        view.status.type === 'playing' &&
+          !view.between &&
+          view.phase.type === 'discard' &&
+          view.turn === seat,
+      );
+      row.classList.toggle('result-win', winner === seat);
+    }
     log?.render(ply);
     options.onPlyChange?.(ply, maxPly());
   };
@@ -225,7 +259,7 @@ export function mountXiangqiMahjongWatchReplay(
       fail();
       return;
     }
-    if (!board.isConnected) root.replaceChildren(board);
+    if (!layout.isConnected) root.replaceChildren(layout);
     match = loaded;
     log = new XmjMoveLog(() => match, jumpToPly);
     const autoplay = loadOptions?.startAutoplay ?? options.autoplay;

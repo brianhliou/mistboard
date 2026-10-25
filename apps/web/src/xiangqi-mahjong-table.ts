@@ -280,11 +280,12 @@ function seatJustDrew(view: XmjPlayerView, seat: XmjSeat): boolean {
 
 // ── Seats ────────────────────────────────────────────────────────────────────
 
-function seatRowHtml(
-  view: XmjPlayerView,
-  seat: XmjSeat,
-  names: Readonly<Record<XmjSeat, string>>,
-): string {
+/**
+ * A seat's two badges, either side of its hand: the dealer on the left, the
+ * seat to discard on the right. Names sit outside the felt (the room's clock
+ * column, the homepage viewer's seat rows), as every other variant's board.
+ */
+function rackHtml(view: XmjPlayerView, seat: XmjSeat, concealed: string): string {
   const dealer =
     view.dealer === seat
       ? `<span class="xmj-badge xmj-badge--dealer">${t('live.xmj.dealer')}</span>`
@@ -296,7 +297,7 @@ function seatRowHtml(
     view.turn === seat
       ? `<span class="xmj-badge xmj-badge--turn">${t('live.xmj.toDiscard')}</span>`
       : '';
-  return `<div class="xmj-seat-row"><span class="xmj-name">${escapeHtml(names[seat])}</span>${dealer}${turn}</div>`;
+  return `<div class="xmj-rack"><span class="xmj-rack__tag xmj-rack__tag--start">${dealer}</span><span class="xmj-rack__hand"><span class="xmj-concealed">${concealed}</span>${meldsHtml(view.melds[seat])}</span><span class="xmj-rack__tag xmj-rack__tag--end">${turn}</span></div>`;
 }
 
 function opponentHtml(
@@ -325,7 +326,7 @@ function opponentHtml(
       rest.map((tile) => tileSpan(tile)).join('') +
       (drawn !== null && drawnAt >= 0 ? tileSpan(drawn, 'xmj-tile--drawn') : '');
   }
-  return `<section class="xmj-seat xmj-seat--opponent" data-xmj-seat="${seat}">${seatRowHtml(view, seat, names)}<div class="xmj-rack"><span class="xmj-concealed">${concealed}</span>${meldsHtml(view.melds[seat])}</div></section>`;
+  return `<section class="xmj-seat xmj-seat--opponent" data-xmj-seat="${seat}" aria-label="${escapeHtml(names[seat])}">${rackHtml(view, seat, concealed)}</section>`;
 }
 
 function selfHtml(
@@ -361,7 +362,7 @@ function selfHtml(
     concealed = rest.map((tile) => draw(tile)).join('');
     if (drawn !== null && drawnAt >= 0) concealed += draw(drawn, 'xmj-tile--drawn', true);
   }
-  return `<section class="xmj-seat xmj-seat--self${you ? ' xmj-seat--you' : ''}" data-xmj-seat="${seat}"><div class="xmj-rack"><span class="xmj-concealed">${concealed}</span>${meldsHtml(view.melds[seat])}</div>${seatRowHtml(view, seat, names)}</section>`;
+  return `<section class="xmj-seat xmj-seat--self${you ? ' xmj-seat--you' : ''}" data-xmj-seat="${seat}" aria-label="${escapeHtml(names[seat])}">${rackHtml(view, seat, concealed)}</section>`;
 }
 
 // ── Ponds ────────────────────────────────────────────────────────────────────
@@ -565,7 +566,11 @@ function centreHtml(
   })}</span>`;
   const you = view.perspective !== 'spectator';
   const actions = handOver || !you ? '' : actionsHtml(view, options);
-  const status = handOver ? '' : actions || messageHtml(view, self, options.names);
+  // Between hands the result covers the centre; an empty line the height of a
+  // message (one with a tile in it) keeps the table from shrinking under it.
+  const status = handOver
+    ? `<p class="xmj-message xmj-message--held" aria-hidden="true"><span class="xmj-message__strut"></span></p>`
+    : actions || messageHtml(view, self, options.names);
   return `<div class="xmj-centre"><div class="xmj-centre__facts">${handLine}${wallHtml(view.wallCount)}</div><div class="xmj-centre__status">${status}</div></div>`;
 }
 
