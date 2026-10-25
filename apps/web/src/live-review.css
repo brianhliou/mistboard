@@ -935,12 +935,29 @@
     font-weight: 600;
   }
 
+  /* The result ends the strip on two small lines inside the band. At the
+     desktop sizes (18px over 14px, normal line height) it stood 47px in the
+     44px strip: the score touched the top edge, and the taller flex line
+     pushed the current-move pill 2px from the top and 6px from the bottom
+     (10-24 phone review). Kept under the band, the line is the pill's own
+     height plus the result's, centred, so both clear the edges. */
   .live-review__cluster .game-table-moves > .game-result {
     flex: none;
+    align-self: center;
+    gap: 1px;
     margin: 0 4px;
-    padding: 0;
+    padding: 4px 0;
     border: 0;
+    line-height: 1.15;
     white-space: nowrap;
+  }
+
+  .live-review__cluster .game-table-moves > .game-result > .game-result__score {
+    font-size: 14px;
+  }
+
+  .live-review__cluster .game-table-moves > .game-result > .game-result__summary {
+    font-size: 11px;
   }
 
   /* --- Action bar: ½ and the flag (or Abort) beside the move-nav arrows, one
@@ -1212,9 +1229,31 @@
 
   /* After the game: Rematch and the three links as a 2x2 grid of compact
      buttons, a fixed height the board gives up, so the finished room still
-     ends on the moves strip and the bar. */
+     ends on the moves strip and the bar. The band is one 48px line per row
+     the grid fills: a spectator has only Review game, one line, and the 96px
+     two-line band left 48px blank under it and took it from the board (10-24
+     phone review). Two lines when there are three actions or more, or when
+     the PvP rematch offer takes the first line to itself. */
   .review-shell__cluster.live-review__cluster:has(.postgame-actions) {
+    --phone-room-post: 48px;
+  }
+
+  .review-shell__cluster.live-review__cluster:has(.postgame-actions > :nth-child(3)),
+  .review-shell__cluster.live-review__cluster:has(.postgame-actions > .room-rematch + *) {
     --phone-room-post: 96px;
+  }
+
+  /* An action left alone on the grid's last line (a spectator's Review game,
+     a bot game with no invite) spans the line instead of sitting in the left
+     column with an empty cell beside it. The PvP rematch offer spans the
+     first line by itself, so after it the lone one is the even-numbered. */
+  .live-review__cluster .postgame-actions:not(:has(> .room-rematch)) > a:last-child:nth-child(odd),
+  .live-review__cluster
+    .postgame-actions:not(:has(> .room-rematch))
+    > button:last-child:nth-child(odd),
+  .live-review__cluster .postgame-actions:has(> .room-rematch) > a:last-child:nth-child(even),
+  .live-review__cluster .postgame-actions:has(> .room-rematch) > button:last-child:nth-child(even) {
+    grid-column: 1 / -1;
   }
 
   .live-review__cluster .round-table__row:has(.postgame-actions) {
