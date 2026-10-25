@@ -186,7 +186,7 @@ describe('coarse-pointer touch floor', () => {
       selector: '.site-nav-quick-button',
       media: `${COARSE} and (max-width: 600px)`,
       drawn: { w: 38, h: 44 },
-      marginX: -1,
+      marginX: 0,
     },
   ])(
     '$selector grows a 40px target around its drawn box',
@@ -208,16 +208,40 @@ describe('coarse-pointer touch floor', () => {
     },
   );
 
-  it('keeps adjacent chart range touch targets from overlapping', () => {
-    const rules = parse('src/account-profile.css');
-    const gap = px(decl(rules, '.profile-chart-ranges', 'gap', null));
-    const [marginY = 0, marginX = marginY] = decl(rules, '.profile-chart-range', 'margin', COARSE)
-      .split(/\s+/)
-      .map(px);
-    // Flex gap separates margin boxes; negative side margins consume it and
-    // let a neighbour intercept the edge of an otherwise 40px-wide target.
-    expect(gap + 2 * marginX).toBeGreaterThanOrEqual(0);
-  });
+  it.each([
+    {
+      file: 'src/account-profile.css',
+      container: '.profile-chart-ranges',
+      selector: '.profile-chart-range',
+      media: COARSE,
+      containerMedia: null,
+    },
+    {
+      file: 'src/site-shell.css',
+      container: '.site-nav-quick',
+      selector: '.site-nav-quick-button',
+      media: `${COARSE} and (max-width: 600px)`,
+      containerMedia: '(max-width: 600px)',
+    },
+  ])(
+    'keeps adjacent $selector touch targets from overlapping',
+    ({ file, container, selector, media, containerMedia }) => {
+      const rules = parse(file);
+      const gapRules = rules.filter(
+        (r) =>
+          r.selector === container &&
+          [null, containerMedia, media].includes(r.media) &&
+          r.decls.has('gap'),
+      );
+      const gap = px(gapRules[gapRules.length - 1]?.decls.get('gap') ?? '0');
+      const [marginY = 0, marginX = marginY] = decl(rules, selector, 'margin', media)
+        .split(/\s+/)
+        .map(px);
+      // Flex gap separates margin boxes; negative side margins consume it and
+      // let a neighbour intercept the edge of an otherwise 40px-wide target.
+      expect(gap + 2 * marginX).toBeGreaterThanOrEqual(0);
+    },
+  );
 
   it('pads the logo-only brand to 40px and gives the width back', () => {
     const rules = parse('src/site-shell.css');

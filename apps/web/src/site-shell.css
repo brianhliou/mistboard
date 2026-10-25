@@ -951,13 +951,13 @@ a.site-nav-link[hidden],
   }
 }
 
-/* Touch floor (#620) without widening the bar, which has no room to spare at
-   390px: the quick buttons stay 38px wide as drawn, a 1px transparent border
-   at each side makes the target 40px, and a negative margin hands it back. */
+/* Touch floor (#620): the quick buttons stay 38px wide as drawn, with a 1px
+   transparent border at each side making distinct 40px targets. Side margins
+   stay zero so a neighbouring button cannot intercept the target's edge. */
 @media (pointer: coarse) and (max-width: 600px) {
   .site-nav-quick-button {
     box-sizing: content-box;
-    margin: 0 -1px;
+    margin: 0;
     border-width: 0 1px;
     border-style: solid;
     border-color: transparent;
