@@ -13,7 +13,7 @@ import {
 } from './xiangqi-mahjong-bot-match.js';
 import { xmjDealInProbability } from './xiangqi-mahjong-danger.js';
 import { xmjDefensiveAction } from './xiangqi-mahjong-defensive-bot.js';
-import { createXmjRoomState, xmjViewFor } from './xiangqi-mahjong-room.js';
+import { createXmjRoomState, type XmjSeat, xmjViewFor } from './xiangqi-mahjong-room.js';
 
 // Independently enumerate physical subsets, so repeated faces get their actual weight.
 function exhaustive(
@@ -139,7 +139,29 @@ test('six-hand harness is deterministic, alternates dealers, and books kernel re
   assert.notDeepEqual(xmjMatchWalls(42), xmjMatchWalls(43));
 });
 
-test('paired seeds swap policy seats on identical walls and retain pair-level uncertainty', () => {
+test('paired seeds swap distinct policies on identical walls', () => {
+  const challengerSeats = new Set<XmjSeat>();
+  const opponentSeats = new Set<XmjSeat>();
+  const pair = xmjRunBotPairs(
+    49,
+    1,
+    (view, seat) => {
+      challengerSeats.add(seat);
+      return xmjDefensiveAction(view, seat);
+    },
+    (view, seat) => {
+      opponentSeats.add(seat);
+      return baseline(view, seat);
+    },
+  )[0];
+  assert.ok(pair);
+  assert.deepEqual([...challengerSeats], ['east', 'west']);
+  assert.deepEqual([...opponentSeats], ['west', 'east']);
+  assert.deepEqual(pair.challengerEast, xmjPlayBotMatch(49, [xmjDefensiveAction, baseline]));
+  assert.deepEqual(pair.challengerWest, xmjPlayBotMatch(49, [baseline, xmjDefensiveAction]));
+});
+
+test('identical policies cancel seat advantage and retain pair-level uncertainty', () => {
   const pairs = xmjRunBotPairs(9, 1, baseline, baseline);
   assert.equal(pairs.length, 1);
   const pair = pairs[0];
