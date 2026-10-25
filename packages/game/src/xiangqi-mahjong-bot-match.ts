@@ -151,8 +151,20 @@ export function xmjRunBotPairs(
   return out;
 }
 
-export function xmjSummarizeBotPairs(pairs: readonly XmjBotSeedPair[]) {
+export function xmjSummarizeBotPairs(
+  pairs: readonly XmjBotSeedPair[],
+  { minimumScore = 0.55, minimumMatches = 0 } = {},
+) {
   if (pairs.length === 0) throw new RangeError('Cannot summarize zero seed pairs');
+  if (
+    !Number.isFinite(minimumScore) ||
+    minimumScore < 0.5 ||
+    minimumScore > 1 ||
+    !Number.isInteger(minimumMatches) ||
+    minimumMatches < 0
+  ) {
+    throw new RangeError('Invalid promotion requirements');
+  }
   let wins = 0;
   let draws = 0;
   const dealIns = { challenger: 0, baseline: 0 };
@@ -189,6 +201,10 @@ export function xmjSummarizeBotPairs(pairs: readonly XmjBotSeedPair[]) {
     exhaustedWalls,
     paired95,
     intervalMethod: 'paired Hoeffding (two-sided 95%)',
-    promote: matchScore >= 0.55 && paired95 !== null && paired95[0] > 0.5,
+    promote:
+      matches >= minimumMatches &&
+      matchScore >= minimumScore &&
+      paired95 !== null &&
+      paired95[0] > 0.5,
   };
 }
