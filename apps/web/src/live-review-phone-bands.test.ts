@@ -85,9 +85,13 @@ describe('phone room bands', () => {
     expect(rule('.review-shell__cluster.live-review__cluster {\n    --phone-room-band')).toContain(
       'var(--phone-room-post, 0px)',
     );
+    // One 48px line per row the grid fills: a lone Review game takes one.
     expect(rule('.review-shell__cluster.live-review__cluster:has(.postgame-actions)')).toContain(
-      '--phone-room-post: 96px;',
+      '--phone-room-post: 48px;',
     );
+    expect(
+      rule('.review-shell__cluster.live-review__cluster:has(.postgame-actions > :nth-child(3))'),
+    ).toContain('--phone-room-post: 96px;');
     expect(rule('.live-review__cluster .round-table__row:has(.postgame-actions)')).toContain(
       'height: calc(var(--phone-room-post) - 8px);',
     );
@@ -163,7 +167,7 @@ describe('phone room bands', () => {
   it('gives banqi odds one 40px line per side, the viewer first', () => {
     expect(
       rule(
-        '.live-route--banqi .review-shell__cluster.live-review__cluster {\n    --phone-room-pool',
+        '.live-route--banqi .review-shell__cluster.live-review__cluster:has(.hidden-pool--odds) {\n    --phone-room-pool',
       ),
     ).toContain('--phone-room-pool: 80px;');
     expect(rule('.live-review__cluster .hidden-pool--odds .hidden-pool__row {')).toContain(

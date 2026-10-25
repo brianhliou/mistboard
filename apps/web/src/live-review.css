@@ -406,9 +406,12 @@
    A flex row (not grid areas) because an item this list does not name (a
    tenant extra) must land at the end at full width, never auto-placed into a
    named row that happens to be empty; `order: 50` puts it there. The three
-   seat pieces share a line; everything else takes a line of its own. */
+   seat pieces share a line; everything else takes a line of its own.
+   Two classes, not one: review-shell.css's `.review-shell__cluster` grid is
+   one class too, and the build puts its stylesheet after this one in the
+   same chunk, so a room opened from its URL took the grid (#618). */
 @media (max-width: 799px) {
-  .live-review__cluster {
+  .review-shell__cluster.live-review__cluster {
     display: flex;
     flex-flow: row wrap;
     align-items: center;
@@ -591,6 +594,7 @@
       var(--phone-room-bar) -
       var(--phone-room-extra, 0px) -
       var(--phone-room-post, 0px) -
+      var(--phone-room-notice, 0px) -
       var(--uni-board-chrome-h, 0px)
     );
     /* The board's unsnapped height: its width (the page, or the budget times
@@ -649,6 +653,14 @@
      px it gives back instead of leaving them all on the right. */
   .live-review__cluster .board-shell > .board-stage {
     justify-self: center;
+  }
+
+  /* The start/finish frame (live-lifecycle-effects.css) sits 2px outside the
+     stage. When the stage fills the screen (360px snaps to itself) that 2px
+     widened the page past the screen and Chrome zoomed it out (#618); on a
+     phone the frame sits on the board's edge instead. */
+  .live-review__cluster .board-stage::after {
+    inset: 0;
   }
 
   /* Seat bands: one 44px line on the bar tone; the clock block fills its
@@ -823,12 +835,65 @@
     padding: 0;
   }
 
+  /* A correspondence room's "N days per move" line. The board's budget has no
+     line for it, so it scrolled a seated live Fog room and every finished one
+     by 27px (#618, 10-24 phone review). The phone room drops it, as the
+     tenant rooms already do: the clocks count the days down, and Game info
+     (the bar's menu) names the time control. */
   .live-review__cluster .clocks-pregame-note {
-    order: 35;
+    display: none;
   }
 
   .live-review__cluster [data-action-section] {
     order: 35;
+  }
+
+  /* A plain notice with nothing to press (a spectator's "Watching" and why,
+     a tenant's "Red to move") is a fixed band the board gives up: title over
+     at most two lines of body. Unbudgeted, it scrolled every live spectator
+     room by 67-85px (#618, 10-24 phone review). A notice ending in a button
+     or link (reconnect, sign in) keeps its own height. */
+  .review-shell__cluster.live-review__cluster:has(
+    [data-action-section]:not([hidden]) .action-notice > span:last-child
+  ) {
+    --phone-room-notice: 60px;
+  }
+
+  .live-review__cluster [data-action-section]:has(.action-notice > span:last-child) {
+    flex: 0 0 calc(100% - 24px);
+    height: calc(var(--phone-room-notice, 60px) - 8px);
+    margin: 4px 12px;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .live-review__cluster
+    [data-action-section]
+    .action-status:has(> .action-notice > span:last-child) {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .live-review__cluster .action-notice:has(> span:last-child) {
+    gap: 2px;
+    align-content: center;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 0 10px;
+  }
+
+  .live-review__cluster .action-notice:has(> span:last-child) > strong {
+    font-size: 14px;
+    line-height: 1.2;
+  }
+
+  .live-review__cluster .action-notice:has(> span:last-child) > span {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.3;
   }
 
   .live-review__cluster .round-table__row:has(> .room-actions) {
@@ -924,12 +989,29 @@
     font-weight: 600;
   }
 
+  /* The result ends the strip on two small lines inside the band. At the
+     desktop sizes (18px over 14px, normal line height) it stood 47px in the
+     44px strip: the score touched the top edge, and the taller flex line
+     pushed the current-move pill 2px from the top and 6px from the bottom
+     (10-24 phone review). Kept under the band, the line is the pill's own
+     height plus the result's, centred, so both clear the edges. */
   .live-review__cluster .game-table-moves > .game-result {
     flex: none;
+    align-self: center;
+    gap: 1px;
     margin: 0 4px;
-    padding: 0;
+    padding: 4px 0;
     border: 0;
+    line-height: 1.15;
     white-space: nowrap;
+  }
+
+  .live-review__cluster .game-table-moves > .game-result > .game-result__score {
+    font-size: 14px;
+  }
+
+  .live-review__cluster .game-table-moves > .game-result > .game-result__summary {
+    font-size: 11px;
   }
 
   /* --- Action bar: ½ and the flag (or Abort) beside the move-nav arrows, one
@@ -1131,7 +1213,10 @@
     --phone-room-extra: var(--phone-room-pool, 96px);
   }
 
-  .live-route--banqi .review-shell__cluster.live-review__cluster {
+  /* 80px is the live odds layout: two 40px lines. The finished tally keeps its
+     caption and 30px discs (15 + 30 + 30 + gaps = 91px), so 80px cut off the
+     second ink's row; it takes the 96px default (#618, 10-24 review). */
+  .live-route--banqi .review-shell__cluster.live-review__cluster:has(.hidden-pool--odds) {
     --phone-room-pool: 80px;
   }
 
@@ -1198,9 +1283,87 @@
 
   /* After the game: Rematch and the three links as a 2x2 grid of compact
      buttons, a fixed height the board gives up, so the finished room still
-     ends on the moves strip and the bar. */
+     ends on the moves strip and the bar. The band is one 48px line per row
+     the grid fills: a spectator has only Review game, one line, and the 96px
+     two-line band left 48px blank under it and took it from the board (10-24
+     phone review). Two lines when there are three actions or more, or when
+     the PvP rematch offer takes the first line to itself. */
   .review-shell__cluster.live-review__cluster:has(.postgame-actions) {
+    --phone-room-post: 48px;
+  }
+
+  .review-shell__cluster.live-review__cluster:has(.postgame-actions > :nth-child(3)),
+  .review-shell__cluster.live-review__cluster:has(.postgame-actions > .room-rematch + *) {
     --phone-room-post: 96px;
+  }
+
+  /* An action left alone on the grid's last line (a spectator's Review game,
+     a bot game with no invite) spans the line instead of sitting in the left
+     column with an empty cell beside it. The PvP rematch offer spans the
+     first line by itself, so after it the lone one is the even-numbered. */
+  .live-review__cluster .postgame-actions:not(:has(> .room-rematch)) > a:last-child:nth-child(odd),
+  .live-review__cluster
+    .postgame-actions:not(:has(> .room-rematch))
+    > button:last-child:nth-child(odd),
+  .live-review__cluster .postgame-actions:has(> .room-rematch) > a:last-child:nth-child(even),
+  .live-review__cluster .postgame-actions:has(> .room-rematch) > button:last-child:nth-child(even) {
+    grid-column: 1 / -1;
+  }
+
+  /* A lone action (a spectator's or signed-out viewer's Review game) needs no
+     band: it takes the left end of the bar, the spot Resign/Abort hold beside
+     the move arrows during play, and the board grows by the 48px (Brian,
+     2026-10-24: "we can try it"). Its wrappers step aside so the link is an
+     item of the room's own line, like the game-control buttons. */
+  .review-shell__cluster.live-review__cluster:has(.postgame-actions.postgame-actions--solo) {
+    --phone-room-post: 0px;
+  }
+
+  .live-review__cluster .round-table__row:has(.postgame-actions--solo),
+  .live-review__cluster .room-actions:has(> .postgame-actions--solo),
+  .live-review__cluster .postgame-actions.postgame-actions--solo {
+    display: contents;
+  }
+
+  .review-shell__cluster.live-review__cluster
+    .round-table__box
+    .room-actions
+    .postgame-actions--solo
+    > :is(a, button) {
+    order: 46;
+    flex: 0 1 auto;
+    max-width: 40%;
+    width: auto;
+    height: auto;
+    min-height: var(--phone-room-bar);
+    margin: 0;
+    padding: 0 16px;
+    border: 0;
+    border-top: 1px solid var(--site-border-soft);
+    border-radius: 0;
+    background: var(--site-mobile-bar-bg, var(--site-panel));
+    color: var(--site-heading);
+    font-size: 13px;
+    font-weight: 600;
+    /* Sentence case like the rest of the bar, not the desktop link's caps. */
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .review-shell__cluster.live-review__cluster
+    .round-table__box
+    .room-actions
+    .postgame-actions--solo
+    > :is(a, button):is(:hover, :focus-visible) {
+    background: var(--site-panel-soft);
+  }
+
+  .review-shell__cluster.live-review__cluster
+    .round-table__box
+    .room-actions
+    .postgame-actions--solo
+    > :is(a, button):focus-visible {
+    box-shadow: inset 0 0 0 2px var(--site-focus);
   }
 
   .live-review__cluster .round-table__row:has(.postgame-actions) {
