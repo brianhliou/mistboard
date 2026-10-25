@@ -160,8 +160,8 @@
    difference, measured after paint by fitPuzzleGrip(). */
 .puzzle-board > .board-resize-grip {
   position: absolute;
-  right: calc(var(--puzzle-board-inset, 0px) + 3px);
-  bottom: 3px;
+  right: var(--puzzle-board-inset, 0px);
+  bottom: 0;
 }
 
 .puzzle-board .mini-xq-board {
