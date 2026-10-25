@@ -253,14 +253,14 @@ export async function resolveBanqiAnalysis(
 // that bias, so 0 luck is exactly "the average outcome" and realized is one term of the same mean.
 
 // Search budget. Each candidate's baseline is a small fan of single-position evals (one per distinct
-// hidden tile), all at this node budget so realized and the mean share one search. A whole game is a
-// couple of minutes, one-time and cached. Lighter than the Layer-1 sweep since a flip fans out.
+// hidden tile), all at this node budget so realized and the mean share one search. Each branch is
+// lighter than the Layer-1 sweep since a flip fans out; whole-game results are cached.
 const BANQI_DECISION_NODES = 250_000;
 const BANQI_DECISION_MOVETIME_CAP_MS = 4_000;
 // Matches the banqi-analysis engine pool's slot count: with launch concurrency ==
 // pool slots, no fan-out eval ever waits in the pool queue (headroom, not shedding).
 const BANQI_DECISION_EVAL_CONCURRENCY = 2;
-// Cheaply rank all legal moves, then true-baseline the top three plus played.
+// Retain the top three pool-mean moves plus played after scoring every legal move.
 const BANQI_DECISION_CANDIDATES = 3;
 
 /** One flip ply's decision-vs-luck numbers, all in WIN% from the MOVER's (seat's) POV. */
@@ -427,11 +427,12 @@ async function poolMeanWin(
 
 /**
  * Compute the decision-vs-luck numbers for every FLIP ply. Reconstructs the game from the deal
- * (same kernel as the Layer-1 sweep). For each flip, a single post-move eval ranks every legal
- * move (including quiet alternatives). We true-baseline the top three plus the played flip using
- * unclamped pool-mean win%, take the max as `bestWin`, and retain the sorted candidates. The
- * played flip's actual-tile term is `realizedWin`. `deps` is
- * injectable so tests drive it without an engine. No dependency on the Layer-1 sweep — realized is
+ * (same kernel as the Layer-1 sweep). For each flip, true-baseline every legal move (including
+ * quiet alternatives) using unclamped pool-mean win%, then retain the top three plus the played
+ * flip. This keeps lucky actual tiles from excluding better average moves. The best baseline is
+ * `bestWin`, and the sorted candidates retain their pool-mean scores. The played flip's actual-tile
+ * term is `realizedWin`. `deps` is injectable so tests drive it without an engine.
+ * No dependency on the Layer-1 sweep — realized is
  * computed here, same-search as the mean it is compared against.
  */
 export async function analyzeBanqiDecisions(
@@ -466,31 +467,13 @@ export async function analyzeBanqiDecisions(
       move.from === move.to && source?.faceDown === true && state.status.type === 'playing';
     if (isFlip) {
       const playedUci = banqiMoveToEngineUci(move);
-      // The cheap scores choose a shortlist only. Chance outcomes here can be lucky;
-      // every shortlisted flip is re-scored over its whole pool before grading.
-      const ranked = await mapWithConcurrency(
-        getBanqiLegalMoves(state),
-        BANQI_DECISION_EVAL_CONCURRENCY,
-        async (candidate) => {
-          const post = applyBanqiMove(state, candidate);
-          const win = await moverWinAfter(
-            post,
-            mover,
-            deps.evalPosition,
-            banqiRepetitionWindowAfterMove(state, candidate, post, repetitionWindow),
-          );
-          return { move: candidate, uci: banqiMoveToEngineUci(candidate), win };
-        },
-      );
-      ranked.sort((a, b) => b.win - a.win);
-      const shortlist = new Map(
-        ranked.slice(0, BANQI_DECISION_CANDIDATES).map((c) => [c.uci, c.move]),
-      );
-      shortlist.set(playedUci, move);
       let playedWin = 50;
       let realizedWin = 50;
       const scored: BanqiDecisionCandidate[] = [];
-      for (const [uci, candidate] of shortlist) {
+      // Average every flip over the hidden pool BEFORE selecting alternatives.
+      // Keep the outer loop serial so the inner fan-out stays within the engine pool's slots.
+      for (const candidate of getBanqiLegalMoves(state)) {
+        const uci = banqiMoveToEngineUci(candidate);
         const { baseline, realized } = await poolMeanWin(
           state,
           candidate,
@@ -504,11 +487,13 @@ export async function analyzeBanqiDecisions(
           realizedWin = realized;
         }
       }
-      const baselines = scored.map((c) => c.win);
+      const candidates = scored
+        .sort((a, b) => b.win - a.win)
+        .filter((c, index) => index < BANQI_DECISION_CANDIDATES || c.played);
+      const baselines = candidates.map((c) => c.win);
       const bestWin = baselines.length ? Math.max(...baselines) : playedWin;
       // Rank by true baseline: 1 + how many candidates strictly beat the played move.
       const playedRank = 1 + baselines.filter((b) => b > playedWin + 1e-9).length;
-      const candidates = scored.sort((a, b) => b.win - a.win);
       decisions.push({
         ply: i + 1,
         mover,
@@ -530,9 +515,10 @@ export async function analyzeBanqiDecisions(
 // Cache engine id for the decomposition blob — a DIFFERENT engine_id than the basic analysis, so
 // both live in the same game_analysis table without collision (see persistence-game-analysis).
 // The `+dN` suffix versions the DECOMPOSITION ALGORITHM independently of the engine binary: bump it
-// to invalidate cached decisions when the algorithm changes without an engine change. d3 adds
+// to invalidate cached decisions when the algorithm changes without an engine change. d4 adds
+// ranked alternatives selected by pool mean, invalidating both old results and checkpoints. d3 adds
 // the live repetition window; d2 fixed counterfactual hidden-multiset preservation.
-export const BANQI_DECISIONS_ENGINE_ID = `misty-banqi-decisions@${BANQI_ENGINE_VERSION}+d3`;
+export const BANQI_DECISIONS_ENGINE_ID = `misty-banqi-decisions@${BANQI_ENGINE_VERSION}+d4`;
 
 export type BanqiDecisionsCache = {
   get(roomId: string, engineId: string, depth: number): Promise<BanqiDecision[] | null>;
