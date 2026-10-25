@@ -14,6 +14,7 @@ import {
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { displayPreferenceStorageKey } from './display-preferences.js';
+import { playSound } from './live-sound.js';
 import {
   mountPuzzleSolver,
   mountPuzzles,
@@ -23,6 +24,11 @@ import {
 } from './puzzles.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { pinXiangqiNotation } from './xiangqi-notation.js';
+
+vi.mock('./live-sound.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./live-sound.js')>();
+  return { ...actual, playSound: vi.fn() };
+});
 
 function publicSummary(puzzle: XiangqiPuzzle) {
   return {
@@ -928,6 +934,7 @@ describe('standard xiangqi puzzles', () => {
       root.querySelectorAll('.xq-piece-slot').length;
 
     it('opens one move earlier, glides the setup move in, and only then takes input', async () => {
+      vi.mocked(playSound).mockClear();
       const { puzzle, setupMove } = QUIET;
       const fetchSpy = setupFetchMock(puzzle, setupMove);
       vi.stubGlobal('fetch', fetchSpy);
@@ -949,6 +956,7 @@ describe('standard xiangqi puzzles', () => {
         expect(root.querySelector('.puzzle-move-list')?.textContent ?? '').not.toContain(
           moveLabel(setupMove),
         );
+        expect(playSound).not.toHaveBeenCalled();
         // Input is blocked until the hand-over.
         clickMove(root, solverMovesOf(puzzle)[0]!);
         expect(fetchSpy).not.toHaveBeenCalledWith(
@@ -960,6 +968,7 @@ describe('standard xiangqi puzzles', () => {
         expect(slotAt(root, setupMove.to)).not.toBeNull();
         expect(glides).toContain(setupMove.to);
         expect(root.textContent).toContain(moveLabel(setupMove));
+        expect(vi.mocked(playSound).mock.calls).toEqual([['move']]);
 
         clickMove(root, solverMovesOf(puzzle)[0]!);
         await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
@@ -990,6 +999,7 @@ describe('standard xiangqi puzzles', () => {
     });
 
     it('puts a captured piece back on its square in the pre-setup position', async () => {
+      vi.mocked(playSound).mockClear();
       const { puzzle, setupMove } = CAPTURE;
       vi.stubGlobal('fetch', setupFetchMock(puzzle, setupMove));
       const root = document.createElement('div');
@@ -1003,6 +1013,7 @@ describe('standard xiangqi puzzles', () => {
 
       await vi.waitFor(() => expect(slotAt(root, setupMove.from)).toBeNull());
       expect(pieceCount(root)).toBe(initialCount);
+      expect(vi.mocked(playSound).mock.calls).toEqual([['capture']]);
     });
 
     it("keeps today's behaviour when the payload carries no setup move", async () => {

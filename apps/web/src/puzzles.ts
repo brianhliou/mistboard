@@ -1125,6 +1125,8 @@ function playSetupIntro(
     session.setupIntro = null;
     renderSession();
     animatePuzzleMove(session, setup);
+    // The setup move sounds like any other move: a capture if it took a piece.
+    playSound(puzzlePieceCount(session.state) < puzzlePieceCount(intro) ? 'capture' : 'move');
   }, SETUP_INTRO_PAUSE_MS);
 }
 
