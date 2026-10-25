@@ -3,13 +3,14 @@
 //
 // The fog chess card (og-image.ts serveGameOgImage) draws both fog views of the
 // final position. A tenant card draws ONE board, the position card's renderer
-// (og-position.ts), framed by the pairing and the result; the position it
+// (og-position.ts), framed by the pairing and the result; a tile match draws
+// its final tai scoreboard instead. The position a board card
 // shows is the game's turning point when the review has been analysed, else
 // the final position (see cardPly).
 //
 // Finished games only, twice over: getGameSummary reads completed rows, and the
-// tenant's fenAtPly (game-card-tenant.ts) yields nothing for a log that does
-// not end finished. A live fog game has no card and no meta.
+// tenant's fenAtPly or finalScores yields nothing for a log that does not end
+// finished. A live game has no card and no meta.
 
 import type { ServerResponse } from 'node:http';
 import { GAME_IMAGE_VERSION, winPercent } from '@mistboard/game';
@@ -80,6 +81,8 @@ export type TenantGameCard = {
   label: string;
   /** "Pikafish won by resignation" / "Drawn by repetition". */
   outcome: string;
+  /** Public final tai totals for a match card; no tile state crosses here. */
+  scores: Record<string, number> | null;
   /** Review URL path, the canonical share target. */
   reviewPath: string;
 };
@@ -93,13 +96,26 @@ export async function tenantGameCard(
   const registration = variantTenantForRoomId(roomId);
   const card = registration?.card;
   const gameRouteBase = registration?.export?.gameRouteBase;
-  if (!registration || !card || !gameRouteBase) return null;
-  if (!isPositionOgVariant(card.variant)) return null;
+  if (!registration || !card) return null;
+  if (!gameRouteBase && !registration.finishedGameOpensRoom) return null;
+  const label =
+    card.layout === 'match'
+      ? card.label
+      : isPositionOgVariant(card.variant)
+        ? positionOgVariantLabel(card.variant)
+        : null;
+  if (!label) return null;
   const game = await store.summary(roomId);
   if (!game || game.variant !== registration.gameSpecId) return null;
   // A game whose stored log no longer replays has no card and no page meta
   // (replay-guard.ts): the page keeps its generic meta, the image its default.
   if (!(await storedGameReplays(registration, roomId, store))) return null;
+  let scores: Record<string, number> | null = null;
+  if (card.layout === 'match') {
+    const events = await store.events(roomId);
+    scores = events ? card.finalScores(events, roomId) : null;
+    if (!scores) return null;
+  }
   const outcome = outcomeLine(game);
   if (!outcome) return null;
   // Tenant participants are written in tenant.colors order
@@ -115,9 +131,10 @@ export async function tenantGameCard(
     card,
     game,
     players,
-    label: positionOgVariantLabel(card.variant),
+    label,
     outcome,
-    reviewPath: `${gameRouteBase}/${encodeURIComponent(roomId)}`,
+    scores,
+    reviewPath: `${gameRouteBase ?? '/room'}/${encodeURIComponent(roomId)}`,
   };
 }
 
@@ -200,6 +217,7 @@ async function chosenPly(
   plyCount: number,
   store: TenantGameCardStore,
 ): Promise<number> {
+  if (entry.card.layout === 'match') return plyCount;
   const { analysis } = entry.card;
   if (!analysis) return plyCount;
   try {
@@ -246,9 +264,12 @@ export async function tenantGamePageMeta(
   if (gameMatch && `${gameMatch[1] ?? ''}/game` !== entry.registration.export?.gameRouteBase) {
     return null;
   }
+  const { scores } = entry;
   return {
     title: `${entry.players[0]} vs ${entry.players[1]} · ${entry.label} | Mistboard`,
-    description: `${entry.outcome} after ${plural(moveCount(entry.game.plyCount), 'move')}. Replay this ${entry.label} game move by move on Mistboard.`,
+    description: scores
+      ? `${entry.outcome}. ${entry.game.participants.map((participant, index) => `${entry.players[index]}: ${scores[participant.color]} tai`).join(', ')}. Replay this ${entry.label} match on Mistboard.`
+      : `${entry.outcome} after ${plural(moveCount(entry.game.plyCount), 'move')}. Replay this ${entry.label} game move by move on Mistboard.`,
     urlPath: entry.reviewPath,
     imagePath: `/og/game/${encodeURIComponent(roomId)}.png?v=${TENANT_GAME_OG_IMAGE_VERSION}`,
   };
@@ -309,6 +330,7 @@ export async function renderTenantGameCard(
   store: TenantGameCardStore = liveStore,
   art: CardArt = new Map(),
 ): Promise<string> {
+  if (entry.card.layout === 'match') return matchCard(entry);
   const events = await store.events(entry.game.roomId);
   const plyCount = entry.game.plyCount;
   if (events) {
@@ -342,6 +364,53 @@ export async function renderTenantGameCard(
     }
   }
   return pairingOnlyCard(entry);
+}
+
+/** A match scoreboard, entirely inside the shared 1200 x 630 card frame.
+ * No board, tile art, filters or oversized layers are needed for public tai. */
+function matchCard(entry: TenantGameCard): string {
+  const text = (
+    x: number,
+    y: number,
+    size: number,
+    fill: string,
+    value: string,
+    anchor = 'start',
+  ) =>
+    `<text x="${x}" y="${y}" text-anchor="${anchor}" fill="${fill}" font-family="${OG_FONT}" font-size="${size}" font-weight="700">${escapeXml(value)}</text>`;
+  // Limit wide (including CJK) names and outcome lines before rendering, so
+  // user text cannot extend a layer beyond the card or collide with a score.
+  const fit = (value: string, size: number, width: number) => {
+    let used = 0;
+    let result = '';
+    for (const ch of value) {
+      used += size; // A full em per character also bounds wide Latin names.
+      if (used > width - size) return `${result}…`;
+      result += ch;
+    }
+    return result;
+  };
+  const parts = [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
+    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    text(72, 100, 44, '#c9cfc3', fit(entry.label, 44, OG_WIDTH - 144)),
+    text(72, 160, 24, '#9ca3af', 'Final tai totals'),
+  ];
+  for (const [index, participant] of entry.game.participants.slice(0, 2).entries()) {
+    const y = 270 + index * 110;
+    const winner = seatScore(entry.game.result, participant.color) === '1';
+    const fill = winner ? '#d6dfb8' : '#f3f4f6';
+    parts.push(
+      text(72, y, 40, fill, fit(entry.players[index] ?? 'Player', 40, 760)),
+      text(OG_WIDTH - 72, y, 52, fill, `${entry.scores?.[participant.color] ?? 0} tai`, 'end'),
+    );
+  }
+  parts.push(
+    text(72, 480, 32, '#c9cfc3', fit(entry.outcome, 32, OG_WIDTH - 144)),
+    text(72, 566, 26, '#9ca3af', 'mistboard.com'),
+    '</svg>',
+  );
+  return parts.join('');
 }
 
 /** No renderable position: the pairing carries the card. */

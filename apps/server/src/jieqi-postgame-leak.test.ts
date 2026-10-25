@@ -210,6 +210,7 @@ test('finished jieqi leak: the JSON and PGN exports are the same whatever was de
 test('finished jieqi leak: the share card FEN is the same at every ply whatever was dealt face-down', () => {
   const card = variantTenantForRoomId(ROOM_ID)?.card;
   assert.ok(card);
+  if (card.layout === 'match') assert.fail('jieqi uses a board card');
   for (const ply of [0, 1, 2]) {
     const fen = sameForEveryDeal(`card ply ${ply}`, (deal): string | null =>
       card.fenAtPly(finishedEvents(deal), ROOM_ID, ply),

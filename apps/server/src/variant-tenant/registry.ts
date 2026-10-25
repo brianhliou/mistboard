@@ -179,7 +179,8 @@ export type VariantTenantExport = {
 // game-card-tenant.ts. Same finished-only rule as export: an in-progress or
 // aborted log yields nothing, so a live fog game's position never reaches a
 // scraper. Absent = the tenant's game pages serve the generic site card.
-export type VariantTenantCard = {
+export type VariantTenantBoardCard = {
+  layout?: 'board';
   // Position-card variant slug (og-position.ts POSITION_OG_VARIANTS): the
   // board renderer and FEN parser the card draws with.
   variant: string;
@@ -197,6 +198,17 @@ export type VariantTenantCard = {
   // not this tenant's or does not end finished.
   seatInks(events: readonly unknown[], roomId: string): Record<string, 'red' | 'black'> | null;
 };
+
+/** A tile match has public totals rather than a board position. The binding
+ * replays the finished log and returns ONLY those totals, never tile state. */
+export type VariantTenantMatchCard = {
+  layout: 'match';
+  variant: string;
+  label: string;
+  finalScores(events: readonly unknown[], roomId: string): Record<string, number> | null;
+};
+
+export type VariantTenantCard = VariantTenantBoardCard | VariantTenantMatchCard;
 
 export type VariantTenantRegistration = {
   kind: string;

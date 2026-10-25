@@ -202,11 +202,11 @@ test('a bot claimant settles the window at the same moment, claim or not', () =>
 });
 
 // Launch-playbook rule 3: the surfaces Xiangqi Mahjong is left off on purpose.
-// No PGN/JSON export (no notation for a tile match), no share card (no board
-// position to draw). Its TV channel serves only the spectator view
+// No PGN/JSON export (no notation for a tile match). The share card carries
+// final tai totals only. Its TV channel serves only the spectator view
 // (xiangqi-mahjong-spectate.test.ts). A finished game opens at its own room
 // instead (finishedGameOpensRoom). Bot-vs-bot never schedules it.
-test('xiangqi mahjong is off export, share card and TV on purpose', async () => {
+test('xiangqi mahjong binds a match card without export or bot-vs-bot', async () => {
   await import('./variant-tenant/register-tenants.js');
   const { registeredVariantTenants } = await import('./variant-tenant/registry.js');
   const entry = registeredVariantTenants().find(
@@ -215,7 +215,7 @@ test('xiangqi mahjong is off export, share card and TV on purpose', async () => 
   assert.ok(entry, 'xiangqi mahjong is registered');
   assert.deepEqual(exportFormatsForVariant(XIANGQI_MAHJONG_SPEC_ID), []);
   assert.equal(entry.export ?? null, null);
-  assert.equal(entry.card ?? null, null);
+  assert.equal(entry.card?.layout, 'match');
   assert.equal(entry.watch?.channelId, 'xiangqi-mahjong');
   assert.equal(entry.finishedGameOpensRoom, true);
   const eve = botVsBotConfigFromEnv({
