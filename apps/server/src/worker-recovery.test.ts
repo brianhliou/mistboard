@@ -20,7 +20,7 @@ const workerSource = stripTypeScriptTypes(
   },
 );
 
-async function runRecoveryScenario(kind: 'ambiguous-claim' | 'expired-heartbeat') {
+async function runRecoveryScenario(kind: 'ambiguous-claim' | 'expired-heartbeat' | 'long-game') {
   let now = 0;
   let heartbeatAttempts = 0;
   let claimAttempts = 0;
@@ -29,6 +29,7 @@ async function runRecoveryScenario(kind: 'ambiguous-claim' | 'expired-heartbeat'
   let serviceOpen = false;
   let serviceCloses = 0;
   const registrations: EngineWorkerRun[] = [];
+  const cleanupTimes: number[] = [];
   const claimedRunIds: string[] = [];
   const executedRunIds: string[] = [];
   const stoppedRunIds: string[] = [];
@@ -39,7 +40,7 @@ async function runRecoveryScenario(kind: 'ambiguous-claim' | 'expired-heartbeat'
       DATABASE_URL: 'postgres://worker-test.invalid/worker-test',
       WORKER_PROVIDER: 'test-provider',
       WORKER_PROVIDER_RUN_ID: 'test-provider-run',
-      WORKER_MAX_TASKS: '1',
+      WORKER_MAX_TASKS: kind === 'long-game' ? '2' : '1',
       WORKER_IDLE_SLEEP_MS: '60000',
       MISTBOARD_ENGINE_WARMUP_DISABLED: '1',
     },
@@ -67,7 +68,11 @@ async function runRecoveryScenario(kind: 'ambiguous-claim' | 'expired-heartbeat'
     './engine-experiments.js': {
       registerWorkerRun: async (_pool: unknown, input: unknown) => {
         registrationInputs.push(input);
-        const run = { id: `run-${registrations.length + 1}`, status: 'running' } as EngineWorkerRun;
+        const run = {
+          id: `run-${registrations.length + 1}`,
+          status: 'running',
+          heartbeatAt: new Date(now),
+        } as EngineWorkerRun;
         registrations.push(run);
         return { ...run };
       },
@@ -82,9 +87,11 @@ async function runRecoveryScenario(kind: 'ambiguous-claim' | 'expired-heartbeat'
           throw Object.assign(new Error('database unavailable'), { code: 'ECONNREFUSED' });
         }
         if (run.status !== 'running') throw new Error(`worker run ${id} is not active`);
+        run.heartbeatAt = new Date(now);
         return { ...run };
       },
       cleanupStaleEngineGameTasks: async () => {
+        cleanupTimes.push(now);
         const result = {
           retried: 0,
           failed: 0,
@@ -100,6 +107,12 @@ async function runRecoveryScenario(kind: 'ambiguous-claim' | 'expired-heartbeat'
           result.failedWorkerRuns = 1;
           // Another worker takes the requeued orphan. Our queue is empty
           // until a new task arrives on the next poll.
+        }
+        for (const run of registrations) {
+          if (run.status === 'running' && run.heartbeatAt.getTime() < now - 120_000) {
+            run.status = 'failed';
+            result.staleWorkerRuns += 1;
+          }
         }
         return result;
       },
@@ -127,6 +140,8 @@ async function runRecoveryScenario(kind: 'ambiguous-claim' | 'expired-heartbeat'
         assert.equal(serviceOpen, true, 'live moves remain available through recovery');
         assert.equal(registrations.find((run) => run.id === task.workerRunId)?.status, 'running');
         executedRunIds.push(task.workerRunId!);
+        // The runner refreshes the task lease, but not the worker heartbeat.
+        if (kind === 'long-game' && executedRunIds.length === 1) now += 180_000;
         return { gameId: 'next-game', status: 'completed', plyCount: 1 };
       },
     },
@@ -168,6 +183,7 @@ async function runRecoveryScenario(kind: 'ambiguous-claim' | 'expired-heartbeat'
   return {
     exitCode: fakeProcess.exitCode,
     registrations,
+    cleanupTimes,
     registrationInputs,
     claimedRunIds,
     executedRunIds,
@@ -203,4 +219,19 @@ test('worker survives cleanup expiring an ambiguously committed claim', async ()
 
 test('worker re-registers when a peer expires its heartbeat during a database outage', async () => {
   assertRecovered(await runRecoveryScenario('expired-heartbeat'));
+});
+
+test('worker refreshes its heartbeat before cleanup after a game longer than two minutes', async () => {
+  const result = await runRecoveryScenario('long-game');
+  assert.equal(result.exitCode, 0, JSON.stringify(result.logs));
+  assert.deepEqual(result.cleanupTimes, [0, 180_000], 'cleanup runs after the long game');
+  assert.equal(result.registrations.length, 1, 'a healthy worker keeps its original run');
+  assert.equal(result.registrations[0]!.status, 'running', 'cleanup must not fence the worker');
+  assert.deepEqual(result.executedRunIds, ['run-1', 'run-1']);
+  assert.deepEqual(result.stoppedRunIds, ['run-1']);
+  assert.equal(result.serviceCloses, 1);
+  assert.equal(
+    result.logs.some((entry) => entry.kind === 'worker_stale_tasks_cleaned'),
+    false,
+  );
 });

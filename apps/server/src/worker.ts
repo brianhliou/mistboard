@@ -137,11 +137,6 @@ try {
   while (!shuttingDown && processedTasks < maxTasks) {
     let task: EngineGameTask | null;
     try {
-      if (Date.now() >= nextCleanupAt) {
-        await cleanupStaleTasks();
-        nextCleanupAt = Date.now() + cleanupIntervalMs;
-      }
-
       try {
         await heartbeatWorkerRun(pool, workerRun.id);
       } catch (err) {
@@ -159,6 +154,12 @@ try {
         workerRun = await registerWorkerRun(pool, workerRunOptions);
         activeWorkerRunId = workerRun.id;
         log('worker_run_reregistered', { previousWorkerRunId, workerRunId: workerRun.id });
+      }
+
+      // Refresh our heartbeat first so cleanup cannot fence us after a long game.
+      if (Date.now() >= nextCleanupAt) {
+        await cleanupStaleTasks();
+        nextCleanupAt = Date.now() + cleanupIntervalMs;
       }
 
       task = await claimNextEngineGameTask(pool, {
