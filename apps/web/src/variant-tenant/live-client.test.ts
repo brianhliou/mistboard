@@ -999,6 +999,88 @@ describe('tenant game lifecycle analytics', () => {
     expect(named('game_finished')).toHaveLength(0);
   });
 
+  // game_started fires when the room opens, before anyone moves; this is the
+  // count of games the seated player actually played (2026-10-25).
+  it('emits game_first_move once, when the seat move comes back from the server', () => {
+    const h = createHarness({ gameSpecId: BANQI_SPEC_ID, chrome: { roomMode: () => 'pve' } });
+    h.feedHello({ state: view({ moveNumber: 0 }), events: [] });
+    expect(named('game_started')).toHaveLength(1);
+    expect(named('game_first_move')).toHaveLength(0);
+
+    // The bot (blue) moving is not the player playing.
+    h.feedEvent({ state: view({ moveNumber: 1 }), event: moveEvent('blue', 'a1', 'a2', 1) });
+    expect(named('game_first_move')).toHaveLength(0);
+
+    h.feedEvent({ state: view({ moveNumber: 2 }), event: moveEvent('red', 'b1', 'b2', 2) });
+    h.feedEvent({ state: view({ moveNumber: 3 }), event: moveEvent('blue', 'a2', 'a3', 3) });
+    h.feedEvent({ state: view({ moveNumber: 4 }), event: moveEvent('red', 'b2', 'b3', 4) });
+    expect(named('game_first_move')).toHaveLength(1);
+    expect(named('game_first_move')[0][1]).toMatchObject({
+      gameId: 'room1',
+      variant: BANQI_SPEC_ID,
+      game_spec: BANQI_SPEC_ID,
+      roomMode: 'pve',
+      moveNumber: 2,
+      entry_source: 'none',
+    });
+
+    // Reconnect: a fresh hello carrying the whole log is not another first move.
+    h.feedHello({
+      state: view({ moveNumber: 4 }),
+      events: [
+        moveEvent('blue', 'a1', 'a2', 1),
+        moveEvent('red', 'b1', 'b2', 2),
+        moveEvent('blue', 'a2', 'a3', 3),
+        moveEvent('red', 'b2', 'b3', 4),
+      ],
+    });
+    expect(named('game_first_move')).toHaveLength(1);
+  });
+
+  it('emits no game_first_move for a spectator, or for a finished game opened later', () => {
+    const watching = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    watching.feedHello({ seat: 'spectator', state: view({ moveNumber: 0 }), events: [] });
+    watching.feedEvent({
+      seat: 'spectator',
+      state: view({ moveNumber: 1 }),
+      event: moveEvent('red', 'b1', 'b2', 1),
+    });
+    expect(named('game_first_move')).toHaveLength(0);
+
+    globalThis.localStorage?.clear();
+    resetTrackedGameStartsForTests();
+    const finished = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    finished.feedHello({
+      state: view({
+        status: { type: 'finished', winner: 'red', reason: 'no-moves' },
+        moveNumber: 2,
+      }),
+      events: [moveEvent('red', 'b1', 'b2', 1), moveEvent('blue', 'a1', 'a2', 2)],
+    });
+    expect(named('game_first_move')).toHaveLength(0);
+  });
+
+  it('counts only moves the tenant says the player chose', () => {
+    // Mahjong's draw is sent for the seat automatically; a table opened and
+    // left after one auto-draw has not been played.
+    const h = createHarness({
+      gameSpecId: BANQI_SPEC_ID,
+      moveList: {
+        rowClass: 'move-row test-move-row',
+        cellPrefix: 'test-move-row',
+        masked: false,
+        notate: (move) => `${move.from}-${move.to}`,
+        isMoveEvent: isTestMoveEvent,
+        playedByPlayer: (move) => move.from !== 'auto',
+      },
+    });
+    h.feedHello({ state: view({ moveNumber: 0 }), events: [] });
+    h.feedEvent({ state: view({ moveNumber: 1 }), event: moveEvent('red', 'auto', 'a1', 1) });
+    expect(named('game_first_move')).toHaveLength(0);
+    h.feedEvent({ state: view({ moveNumber: 2 }), event: moveEvent('red', 'b1', 'b2', 2) });
+    expect(named('game_first_move')).toHaveLength(1);
+  });
+
   it('survives a gameSpecId the registry does not know', () => {
     // Variant dispatch is fail-closed and throws on an unknown id. Measurement
     // must not: an analytics call that can take down a live room is worse than

@@ -530,6 +530,11 @@ const client = createTenantLiveClient<XmjSeat, XmjPlayerView, XmjMove>({
     masked: false,
     notate,
     isMoveEvent: isXmjMoveEvent,
+    // game_first_move: only a decision counts. The draw (sent automatically on
+    // the seat's turn), a pass (an empty hand passes on its own), the runtime's
+    // timeout and next-hand all ride the seat's colour without a choice.
+    playedByPlayer: (move) =>
+      move.action === 'discard' || move.action === 'claim' || move.action === 'self-draw',
     render: renderMoveLog,
   },
   replayCapture: {
