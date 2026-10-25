@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { JIEQI_SPEC_ID, STANDARD_JIEQI_DEAL, XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  ATOMIC_XIANGQI_SPEC_ID,
+  DARK_XIANGQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
+  JIEQI_SPEC_ID,
+  STANDARD_JIEQI_DEAL,
+  XIANGQI_SPEC_ID,
+} from '@mistboard/game';
 import { resolvePositionOg, startPositionFen } from './og-position.js';
 import {
   attachProfileBoards,
@@ -128,6 +135,75 @@ test('a xiangqi game ending on a move keeps the deciding move in its final board
   assert.ok(final);
   assert.deepEqual(board, thumbOf(final.board));
 });
+
+const generalCaptureMoves = [
+  { from: 'h3', to: 'e3' },
+  { from: 'e7', to: 'e6' },
+  { from: 'e4', to: 'e5' },
+  { from: 'e6', to: 'e5' },
+  { from: 'e3', to: 'e10' },
+];
+
+for (const fixture of [
+  { roomId: 'dxq_profile_capture', variant: DARK_XIANGQI_SPEC_ID, moves: generalCaptureMoves },
+  {
+    roomId: 'dkx_profile_capture',
+    variant: DUCK_XIANGQI_SPEC_ID,
+    moves: generalCaptureMoves.map((move, i) => ({
+      ...move,
+      duckTo: i === generalCaptureMoves.length - 1 ? null : i % 2 === 0 ? 'a5' : 'b5',
+    })),
+  },
+  {
+    roomId: 'axq_profile_capture',
+    variant: ATOMIC_XIANGQI_SPEC_ID,
+    moves: [
+      // Clear file b, then take the advisor beside the general with a chariot.
+      { from: 'b3', to: 'b10' },
+      { from: 'b8', to: 'a8' },
+      { from: 'a1', to: 'a2' },
+      { from: 'a7', to: 'a6' },
+      { from: 'a2', to: 'b2' },
+      { from: 'a6', to: 'a5' },
+      { from: 'b2', to: 'b9' },
+      { from: 'c7', to: 'c6' },
+      { from: 'b9', to: 'd9' },
+      { from: 'c6', to: 'c5' },
+      { from: 'd9', to: 'd10' },
+    ],
+  },
+]) {
+  test(`${fixture.variant}: a captured general falls back to the preceding board`, async () => {
+    resetProfileBoardCache();
+    const { roomId, variant, moves } = fixture;
+    const events = [
+      ...preamble(roomId, variant),
+      ...moves.map((move, i) => ({
+        type: 'move-played',
+        at: 10 + i,
+        roomId,
+        color: i % 2 === 0 ? 'red' : 'black',
+        move,
+      })),
+    ];
+    const boardDeps = await deps({ [roomId]: events });
+    const card = boardDeps.cardForRoomId(roomId);
+    assert.ok(card);
+    const terminalFen = card.fenAtPly(events, roomId, moves.length);
+    assert.ok(terminalFen, 'the real tenant replay finishes on the capture');
+    assert.ok(!terminalFen.split(' ')[0]?.includes('k'), 'the black general is gone');
+    assert.equal(resolvePositionOg(card.variant, terminalFen), null);
+    const precedingFen = card.fenAtPly(events, roomId, moves.length - 1);
+    assert.ok(precedingFen);
+    const preceding = resolvePositionOg(card.variant, precedingFen);
+    assert.ok(preceding);
+
+    const rows = await attachProfileBoards([{ roomId, variant }], boardDeps);
+    assert.deepEqual(JSON.parse(JSON.stringify(rows)), [
+      { roomId, variant, finalBoard: thumbOf(preceding.board) },
+    ]);
+  });
+}
 
 test('a jieqi board says which side a face-down piece is, never what it is', async () => {
   resetProfileBoardCache();
