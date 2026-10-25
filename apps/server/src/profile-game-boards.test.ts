@@ -87,7 +87,7 @@ test('a finished xiangqi game carries its final position, pieces by ink only', a
   assert.equal(at(6, 8), 'black');
 });
 
-test('a xiangqi game ending on a move falls back from terminal FEN to the preceding ply', async () => {
+test('a xiangqi game ending on a move keeps the deciding move in its final board', async () => {
   resetProfileBoardCache();
   const roomId = 'xq_profile_repetition';
   const cycle = [
@@ -113,14 +113,20 @@ test('a xiangqi game ending on a move falls back from terminal FEN to the preced
   const terminalFen = card.fenAtPly(events, roomId, plies);
   assert.ok(terminalFen);
   assert.equal(terminalFen.split(/\s+/)[1], '-');
-  assert.equal(resolvePositionOg(card.variant, terminalFen), null);
   const precedingFen = card.fenAtPly(events, roomId, plies - 1);
   assert.ok(precedingFen);
   const preceding = resolvePositionOg(card.variant, precedingFen);
   assert.ok(preceding);
 
   const [row] = await attachProfileBoards([{ roomId, variant: 'xiangqi' }], boardDeps);
-  assert.deepEqual(row?.finalBoard, thumbOf(preceding.board));
+  const board = row?.finalBoard;
+  assert.ok(board);
+  assert.ok(board.pieces.some(([file, rank, ink]) => file === 0 && rank === 10 && ink === 'black'));
+  assert.ok(!board.pieces.some(([file, rank]) => file === 0 && rank === 9));
+  assert.notDeepEqual(board, thumbOf(preceding.board));
+  const final = resolvePositionOg(card.variant, terminalFen);
+  assert.ok(final);
+  assert.deepEqual(board, thumbOf(final.board));
 });
 
 test('a jieqi board says which side a face-down piece is, never what it is', async () => {
