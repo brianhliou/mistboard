@@ -130,3 +130,15 @@
   font-size: 0.78rem;
   flex: 0 0 auto;
 }
+
+/* Phone: a board page keeps its move controls at the foot of the screen (the
+   move-nav bar under a room, review or puzzle; the study dock; the analysis
+   bar), and this fixed pill sat on the right-hand ones, taking the tap meant
+   for the last-move button (#674). The study dock shares z-index 40 and loses
+   on DOM order. On a phone, board pages leave the widget out; every other page
+   keeps it. `body:has()` outranks the bare class whatever the bundle order. */
+@media (max-width: 600px) {
+  body:has(.move-nav-bar, .study-phone-dock, .analysis-phone-bar) .friends-online {
+    display: none;
+  }
+}
