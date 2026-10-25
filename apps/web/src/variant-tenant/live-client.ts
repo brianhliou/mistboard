@@ -43,6 +43,7 @@ import {
 import { initLiveSound, resetLiveSoundState } from '../live-sound.js';
 import { clearSeatTokenForRoom, type LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
+import { announceLiveRoomSeat } from '../review/spectator-chat.js';
 import { roomIdFromPath } from '../room-url.js';
 import { syncMoveListScroll } from './chrome-dom.js';
 import {
@@ -710,6 +711,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       applyHello: (frame) => {
         applyFrame(frame as TenantLiveFrame<C, V>);
         rebuildReplayHistory(frame as TenantLiveFrame<C, V>);
+        announceLiveRoomSeat(room, tenant.isColor(state.seat));
       },
       applySnapshot: (frame) => {
         applyFrame(frame as TenantLiveFrame<C, V>);

@@ -20,6 +20,7 @@ import type {
 } from './live-state.js';
 import { isPlayableSeat, liveState, takeRematchCancel } from './live-state.js';
 import type { ProfileIdentity } from './profile-link.js';
+import { announceLiveRoomSeat } from './review/spectator-chat.js';
 import {
   createTenantSocketClient,
   type TenantSocketClient,
@@ -138,7 +139,10 @@ function applyStateFrame(generic: TenantSocketFrame): void {
     liveState.events = frame.events ?? [];
     // A live Fog Chess seat's hello carries its own per-ply views, so a reload
     // can step back through the game (live-replay seedFogViewHistory).
-    if (frame.type === 'hello') seedFogViewHistory(frame.liveHistory);
+    if (frame.type === 'hello') {
+      seedFogViewHistory(frame.liveHistory);
+      announceLiveRoomSeat(liveState.room, isPlayableSeat(liveState.seat));
+    }
   }
   if (liveState.gameSpecId !== 'dark-xiangqi') {
     _maybePlaySnapshotSound(liveState.events, liveState.state);
