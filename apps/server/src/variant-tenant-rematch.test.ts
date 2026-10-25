@@ -373,8 +373,8 @@ for (const registration of registeredVariantTenants()) {
       for (const client of [nowFirst, nowSecond, watcher])
         assertXmjWire(client.socket, client.seat);
       const nextXmj = next as XmjRuntimeRoom;
-      assert.equal(nextXmj.seatTokens.east?.userId, secondSeat.userId);
-      assert.equal(nextXmj.seatTokens.west?.userId, firstSeat.userId);
+      assert.equal(nextXmj.seatTokens.east?.userId ?? null, secondSeat.userId ?? null);
+      assert.equal(nextXmj.seatTokens.west?.userId ?? null, firstSeat.userId ?? null);
     }
 
     if (HIDDEN_INFO_KINDS.has(tenant.kind)) {
@@ -396,12 +396,13 @@ for (const registration of registeredVariantTenants()) {
 }
 
 for (const revokedSeat of ['east', 'west'] as const) {
-  test(`xiangqi-mahjong rematch: a revoked ${revokedSeat} grant refuses a new room`, async (t) => {
+  // XMJ is public, so no grant gates it; a play lock is the account check left.
+  test(`xiangqi-mahjong rematch: a locked ${revokedSeat} account refuses a new room`, async (t) => {
     const registration = registeredVariantTenants().find(
       (entry) => entry.kind === 'xiangqi-mahjong',
     );
     assert.ok(registration?.lobby);
-    const { granted } = accountDatabase(t, registration);
+    const { locked } = accountDatabase(t, registration);
     const created = await registration.lobby.createRoom(TEN_PLUS_FIVE, false);
     const room = registration.rooms.get(created.id) as XmjRuntimeRoom;
     const a = await connect(registration, room, 'client-a', undefined, 'client-a');
@@ -414,11 +415,11 @@ for (const revokedSeat of ['east', 'west'] as const) {
     a.socket.receive({ type: 'rematch:offer' });
     await settle();
     assert.ok(room.rematch.offers[a.seat as 'east' | 'west'], 'the first offer is active');
-    granted.delete(room.seatTokens[revokedSeat]!.userId!);
+    locked.add(room.seatTokens[revokedSeat]!.userId!);
     const roomCount = registration.rooms.size;
     b.socket.receive({ type: 'rematch:offer' });
     await settle();
-    assert.equal(registration.rooms.size, roomCount, 'no room created after revocation');
+    assert.equal(registration.rooms.size, roomCount, 'no room created after the lock');
     assert.equal(room.rematch.finalizedRoomId, undefined);
     assert.deepEqual(room.rematch.offers, {}, 'offers are cleared');
     for (const player of [a, b]) {
