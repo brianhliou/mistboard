@@ -406,9 +406,12 @@
    A flex row (not grid areas) because an item this list does not name (a
    tenant extra) must land at the end at full width, never auto-placed into a
    named row that happens to be empty; `order: 50` puts it there. The three
-   seat pieces share a line; everything else takes a line of its own. */
+   seat pieces share a line; everything else takes a line of its own.
+   Two classes, not one: review-shell.css's `.review-shell__cluster` grid is
+   one class too, and the build puts its stylesheet after this one in the
+   same chunk, so a room opened from its URL took the grid (#618). */
 @media (max-width: 799px) {
-  .live-review__cluster {
+  .review-shell__cluster.live-review__cluster {
     display: flex;
     flex-flow: row wrap;
     align-items: center;
@@ -649,6 +652,14 @@
      px it gives back instead of leaving them all on the right. */
   .live-review__cluster .board-shell > .board-stage {
     justify-self: center;
+  }
+
+  /* The start/finish frame (live-lifecycle-effects.css) sits 2px outside the
+     stage. When the stage fills the screen (360px snaps to itself) that 2px
+     widened the page past the screen and Chrome zoomed it out (#618); on a
+     phone the frame sits on the board's edge instead. */
+  .live-review__cluster .board-stage::after {
+    inset: 0;
   }
 
   /* Seat bands: one 44px line on the bar tone; the clock block fills its
