@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
+import type { ServerResponse } from 'node:http';
 import test from 'node:test';
 import {
   createInitialXiangqiState,
   JIEQI_SPEC_ID,
   STANDARD_JIEQI_DEAL,
   standardXiangqiFen,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
+  type XmjSeat,
+  type XmjTile,
+  xmjOrderedTiles,
 } from '@mistboard/game';
 import { tenantCardBinding } from './game-card-tenant.js';
 import {
@@ -13,12 +18,15 @@ import {
   cardPly,
   outcomeLine,
   renderTenantGameCard,
+  serveTenantGameOgImage,
   TENANT_GAME_OG_IMAGE_VERSION,
   type TenantGameCardStore,
   tenantGameCard,
   tenantGamePageMeta,
 } from './og-game-tenant.js';
 import { isPositionOgVariant, publicPositionFen } from './og-position.js';
+import { OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
+import { OG_CARD_ZOOM, pngSize, svgToPng } from './og-raster.js';
 import type { GameParticipant, GameRecord } from './persistence.js';
 import type { StoredPlyEval } from './persistence-game-analysis.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
@@ -86,6 +94,41 @@ function finishedJieqiEvents(): unknown[] {
   ];
 }
 
+const XMJ_ROOM = 'xmj_card';
+function finishedXmjEvents(firstDealer: XmjSeat = 'east', hands = 3): unknown[] {
+  // Each dealer wins a heavenly hand for 6 tai; three hands end 12 to 6.
+  const dealt: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'rP', 'bR', 'bH', 'bC', 'bA'];
+  const rest = xmjOrderedTiles();
+  for (const tile of dealt) rest.splice(rest.indexOf(tile), 1);
+  const wall = [...dealt, ...rest];
+  const events: unknown[] = [
+    {
+      type: 'room-created',
+      at: 1,
+      roomId: XMJ_ROOM,
+      gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+      setup: { firstDealer, walls: Array.from({ length: hands }, () => wall) },
+    },
+  ];
+  for (let hand = 0; hand < hands; hand += 1) {
+    const by = hand % 2 === 0 ? firstDealer : firstDealer === 'east' ? 'west' : 'east';
+    const actions =
+      hand === 0 ? (['self-draw'] as const) : (['next-hand', 'next-hand', 'self-draw'] as const);
+    for (const [index, action] of actions.entries()) {
+      const color = action === 'next-hand' && index === 1 ? (by === 'east' ? 'west' : 'east') : by;
+      const at = events.length * 1_000;
+      events.push({
+        type: 'move-played',
+        at,
+        roomId: XMJ_ROOM,
+        color,
+        move: { by: color, at, action },
+      });
+    }
+  }
+  return events;
+}
+
 const xiangqiCard = tenantCardBinding(xiangqiTenant, {
   variant: 'xiangqi',
   analysis: { engineId: 'test-engine', depth: 1 },
@@ -131,6 +174,8 @@ test('a jieqi card FEN is the public spelling: no deal field, face-down pieces s
   const { variantTenantForRoomId } = await import('./variant-tenant/registry.js');
   const card = variantTenantForRoomId(JQ_ROOM)?.card;
   assert.ok(card, 'jieqi registers a card');
+  assert.notEqual(card.layout, 'match');
+  if (card.layout === 'match') return;
   const events = finishedJieqiEvents();
   for (const ply of [0, 1]) {
     const fen = card.fenAtPly(events, JQ_ROOM, ply);
@@ -252,6 +297,7 @@ test('the card draws the analysed turning point, else the final position, else t
   const entry = await tenantGameCard(XQ_ROOM, base);
   assert.ok(entry);
   assert.deepEqual(entry.players, ['alice', 'bob']);
+  if (entry.card.layout === 'match') assert.fail('xiangqi uses a board card');
 
   // Analysed: Red POV collapses at ply 2 -> the position after ply 1 is drawn.
   const asked: string[] = [];
@@ -305,6 +351,7 @@ test('a jieqi card never carries a glyph on a face-down piece', async () => {
     }),
   );
   assert.ok(entry);
+  if (entry.card.layout === 'match') assert.fail('jieqi uses a board card');
   assert.equal(entry.card.analysis, null, 'jieqi picks no analysed ply');
   const svg = await renderTenantGameCard(
     entry,
@@ -324,11 +371,173 @@ test('a jieqi card never carries a glyph on a face-down piece', async () => {
 
 // ── registry conformance ────────────────────────────────────────────────────
 
+test('an XMJ match card renders both players, final tai and winner to a full-size PNG', async () => {
+  await loadRegistry();
+  const base = store({
+    summary: async () =>
+      gameRecord({
+        roomId: XMJ_ROOM,
+        variant: XIANGQI_MAHJONG_SPEC_ID,
+        result: 'east-wins',
+        termination: 'points',
+        participants: [participant('east', 'alice'), participant('west', 'bob')],
+      }),
+    events: async () => finishedXmjEvents() as { type: string; roomId: string }[],
+  });
+  const entry = await tenantGameCard(XMJ_ROOM, base);
+  assert.ok(entry, 'XMJ registers a finished-match card without a board or export binding');
+  const svg = await renderTenantGameCard(entry, base);
+  for (const text of [
+    'alice',
+    'bob',
+    '12 tai',
+    '6 tai',
+    'alice won on points',
+    'Xiangqi Mahjong',
+    'mistboard.com',
+  ]) {
+    assert.ok(svg.includes(`>${text}</text>`), text);
+  }
+  const meta = await tenantGamePageMeta(`/room/${XMJ_ROOM}`, base);
+  assert.equal(meta?.title, 'alice vs bob · Xiangqi Mahjong | Mistboard');
+  assert.equal(meta?.urlPath, `/room/${XMJ_ROOM}`);
+  assert.equal(meta?.imagePath, `/og/game/${XMJ_ROOM}.png?v=${TENANT_GAME_OG_IMAGE_VERSION}`);
+  assert.match(meta?.description ?? '', /alice won on points/);
+  assert.match(meta?.description ?? '', /12 tai.*6 tai/);
+  assert.equal(await tenantGamePageMeta(`/xiangqi/game/${XMJ_ROOM}`, base), null);
+  // Serialize everything the card can expose, including its metadata: no
+  // concealed hand, tile, setup or wall may ride along with the public totals.
+  const payload = JSON.stringify({ entry, svg, meta });
+  assert.doesNotMatch(payload, /"(?:walls|setup|hands|tiles)"/);
+  for (const tile of new Set(xmjOrderedTiles())) assert.ok(!payload.includes(`"${tile}"`), tile);
+  let status = 0;
+  let headers: Record<string, string> = {};
+  let png: Buffer = Buffer.alloc(0);
+  const response = {
+    writeHead(code: number, values: Record<string, string>) {
+      status = code;
+      headers = values;
+    },
+    end(body: Buffer) {
+      png = body;
+    },
+  } as unknown as ServerResponse;
+  await serveTenantGameOgImage(XMJ_ROOM, response, base);
+  assert.equal(status, 200);
+  assert.equal(headers['content-type'], 'image/png');
+  assert.equal(headers['x-og-cache'], 'MISS');
+  assert.equal(png.subarray(1, 4).toString(), 'PNG');
+  assert.deepEqual(pngSize(png), {
+    width: OG_WIDTH * OG_CARD_ZOOM,
+    height: OG_HEIGHT * OG_CARD_ZOOM,
+  });
+});
+
+test('XMJ cards escape names and bound long Latin and CJK text within the frame', async () => {
+  await loadRegistry();
+  const base = store({
+    summary: async () =>
+      gameRecord({
+        roomId: XMJ_ROOM,
+        variant: XIANGQI_MAHJONG_SPEC_ID,
+        result: 'east-wins',
+        termination: 'points',
+        participants: [
+          participant('east', `<&${'W'.repeat(100)}`),
+          participant('west', '棋'.repeat(100)),
+        ],
+      }),
+    events: async () => finishedXmjEvents() as { type: string; roomId: string }[],
+  });
+  const entry = await tenantGameCard(XMJ_ROOM, base);
+  assert.ok(entry);
+  const svg = await renderTenantGameCard(entry, base);
+  assert.ok(svg.includes('&lt;&amp;'));
+  assert.ok(!svg.includes('W'.repeat(40)));
+  assert.ok(!svg.includes('棋'.repeat(30)));
+  assert.ok(svg.includes('…'));
+  assert.doesNotMatch(svg, /<filter|<image/);
+  assert.deepEqual(pngSize(await svgToPng(svg)), {
+    width: OG_WIDTH * OG_CARD_ZOOM,
+    height: OG_HEIGHT * OG_CARD_ZOOM,
+  });
+});
+
+test('XMJ cards follow west wins, ties and private display names', async () => {
+  await loadRegistry();
+  for (const [result, hands, outcome] of [
+    ['west-wins', 3, 'Anonymous won on points'],
+    ['draw', 2, 'Drawn'],
+  ] as const) {
+    const base = store({
+      summary: async () =>
+        gameRecord({
+          roomId: XMJ_ROOM,
+          variant: XIANGQI_MAHJONG_SPEC_ID,
+          result,
+          termination: result === 'draw' ? 'draw' : 'points',
+          participants: [
+            participant('east', 'alice'),
+            participant('west', 'secret-name', 'private'),
+          ],
+        }),
+      events: async () => finishedXmjEvents('west', hands) as { type: string; roomId: string }[],
+    });
+    const entry = await tenantGameCard(XMJ_ROOM, base);
+    assert.ok(entry);
+    const svg = await renderTenantGameCard(entry, base);
+    assert.ok(svg.includes(`>${outcome}</text>`));
+    assert.ok(svg.includes('>Anonymous</text>'));
+    assert.ok(!svg.includes('secret-name'));
+    const totals = [...svg.matchAll(/>(\d+) tai<\/text>/g)].map((match) => Number(match[1]));
+    assert.deepEqual(totals, result === 'draw' ? [6, 6] : [6, 12]);
+  }
+});
+
+test('XMJ cards refuse live, between-hand, aborted, missing and mismatched logs', async () => {
+  await loadRegistry();
+  const full = finishedXmjEvents() as { type: string; roomId: string }[];
+  const created = full[0]!;
+  const { variantTenantForRoomId } = await import('./variant-tenant/registry.js');
+  const card = variantTenantForRoomId(XMJ_ROOM)?.card;
+  assert.equal(card?.layout, 'match');
+  if (card?.layout !== 'match') assert.fail('XMJ uses a match card');
+  assert.equal(card.finalScores(full, 'xmj_other'), null);
+  for (const events of [
+    null,
+    [],
+    [created],
+    full.slice(0, 2), // One hand won, but the match has hands left.
+    [created, { type: 'game-aborted', at: 2, roomId: XMJ_ROOM, reason: 'no-start' }],
+    finishedXiangqiEvents(),
+  ]) {
+    const base = store({
+      summary: async () =>
+        gameRecord({
+          roomId: XMJ_ROOM,
+          variant: XIANGQI_MAHJONG_SPEC_ID,
+          result: 'east-wins',
+          termination: 'points',
+          participants: [participant('east', 'alice'), participant('west', 'bob')],
+        }),
+      events: async () => events as { type: string; roomId: string }[] | null,
+    });
+    assert.equal(await tenantGameCard(XMJ_ROOM, base), null);
+    assert.equal(await tenantGamePageMeta(`/room/${XMJ_ROOM}`, base), null);
+  }
+});
+
 test('every tenant with a review URL binds a card on a position-card variant', async () => {
   await loadRegistry();
   const { registeredVariantTenants } = await import('./variant-tenant/registry.js');
   let cards = 0;
   for (const entry of registeredVariantTenants()) {
+    if (entry.card?.layout === 'match') {
+      assert.equal(entry.finishedGameOpensRoom, true, `${entry.kind}: match cards need a page`);
+      assert.equal(entry.card.variant, entry.gameSpecId, entry.kind);
+      assert.equal(entry.card.finalScores([], `${entry.roomIdPrefix}x`), null);
+      continue;
+    }
     if (!entry.export) {
       assert.ok(!entry.card, `${entry.kind}: a card needs the export's review URL`);
       continue;

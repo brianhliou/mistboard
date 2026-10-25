@@ -36,7 +36,12 @@ import {
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
+import {
+  countActiveTenantGames,
+  isTenantEventLog,
+  replayTenantEvents,
+  tenantReplayCheck,
+} from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
   clearTenantRuntimeTimers,
@@ -213,6 +218,19 @@ registerVariantTenant({
   },
   // No export binding: there is no record format for this game here.
   export: null,
+  card: {
+    layout: 'match',
+    variant: xiangqiMahjongTenant.gameSpecId,
+    label: 'Xiangqi Mahjong',
+    finalScores(events, roomId) {
+      if (!isTenantEventLog(xiangqiMahjongTenant, events, roomId)) return null;
+      const { state } = replayTenantEvents(xiangqiMahjongTenant, events);
+      if (state.status.type !== 'finished') return null;
+      // The match state holds the secret walls and concealed tiles. Project
+      // just the public tai totals at this boundary, even after the finish.
+      return { east: state.match.scores[0], west: state.match.scores[1] };
+    },
+  },
   // No postgame page either: a finished game opens at its room, which shows
   // every hand and never the walls (xiangqi-mahjong-pvp.test.ts).
   finishedGameOpensRoom: true,
