@@ -10,7 +10,8 @@
     "jungle-flip",
     "jieqi",
     "dark-xiangqi",
-    "dark-chess"
+    "dark-chess",
+    "xiangqi-mahjong"
   ],
   "serverFlagByGameSpecId": {
     "xiangqi": "MISTBOARD_XIANGQI_ENABLED",
@@ -22,7 +23,8 @@
     "dark-xiangqi": "MISTBOARD_DARK_XIANGQI_ENABLED",
     "duck-xiangqi": "MISTBOARD_DUCK_XIANGQI_ENABLED",
     "atomic-xiangqi": "MISTBOARD_ATOMIC_XIANGQI_ENABLED",
-    "crazyhouse-xiangqi": "MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED"
+    "crazyhouse-xiangqi": "MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED",
+    "xiangqi-mahjong": "MISTBOARD_XIANGQI_MAHJONG_ENABLED"
   },
   "productAdditionalServerFlags": ["MISTBOARD_CORRESPONDENCE_ENABLED"]
 }

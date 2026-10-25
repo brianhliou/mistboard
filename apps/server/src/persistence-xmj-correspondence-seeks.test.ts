@@ -1,21 +1,14 @@
 /**
- * Xiangqi mahjong correspondence seeks and challenges: offered only between
- * accounts holding the per-account grant, and never rated. An account without
- * the grant cannot post one, accept one, be challenged to one, see one on the
- * seek board, or open a challenge link to one.
+ * Launched Xiangqi mahjong correspondence seeks and challenges: accounts need
+ * no playtest grant, and guests can see public seeks. Rated correspondence
+ * remains behind its separate runtime flag.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import { XIANGQI_MAHJONG_SPEC_ID } from '@mistboard/game';
-import {
-  type AccountSession,
-  createAccountSession,
-  createUser,
-  getCorrespondenceSeek,
-} from './persistence.js';
+import { type AccountSession, createAccountSession, createUser } from './persistence.js';
 import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
-import { grantVariantAccess } from './persistence-variant-access.js';
 import { tryHandle as tryHandleSeekRoute } from './routes/correspondence-seeks.js';
 import type { HttpApiContext } from './routes/lib.js';
 // Side-effect import: every tenant registers, so an accept can seat a game.
@@ -24,7 +17,7 @@ import { correspondenceTenantForSpecId } from './variant-tenant/registry.js';
 
 definePersistenceTests('xiangqi mahjong correspondence seeks', () => {
   const at = new Date('2026-10-15T12:00:00Z');
-  const seedUser = (id: string, granted: boolean) =>
+  const seedUser = (id: string) =>
     createUser({
       id,
       email: `${id}@example.com`,
@@ -32,22 +25,15 @@ definePersistenceTests('xiangqi mahjong correspondence seeks', () => {
       handle: id.replace(/[^a-z0-9]/g, ''),
       displayName: id,
       now: at,
-    }).then(async (user) => {
-      if (granted) await grantVariantAccess(user.id, XIANGQI_MAHJONG_SPEC_ID, 'test');
-      return user;
     });
   const xmjSeek = { gameSpecId: XIANGQI_MAHJONG_SPEC_ID, daysPerMove: 3, preferredColor: 'random' };
 
-  test('an account without the grant can neither post nor accept, and never sees the seek', async () => {
+  test('accounts without grants can post, see and accept a public XMJ seek', async () => {
     await withFlags(async () => {
-      const ann = await seedUser('xmj-ann', true);
-      const bob = await seedUser('xmj-bob', false);
+      const ann = await seedUser('xmj-ann');
+      const bob = await seedUser('xmj-bob');
       const annCookie = await makeSessionCookie(ann.id);
       const bobCookie = await makeSessionCookie(bob.id);
-
-      const refused = await callSeekRoute('POST', '/api/correspondence/seeks', bobCookie, xmjSeek);
-      assert.equal(refused.status, 403);
-      assert.equal(refused.json.error, 'variant_not_granted');
 
       const posted = await callSeekRoute('POST', '/api/correspondence/seeks', annCookie, xmjSeek);
       assert.equal(posted.status, 201, JSON.stringify(posted.json));
@@ -61,45 +47,41 @@ definePersistenceTests('xiangqi mahjong correspondence seeks', () => {
         ),
       );
       assert.ok(
-        !listed((await callSeekRoute('GET', '/api/correspondence/seeks', bobCookie)).json).includes(
+        listed((await callSeekRoute('GET', '/api/correspondence/seeks', bobCookie)).json).includes(
           seekId,
         ),
       );
       assert.ok(
-        !listed((await callSeekRoute('GET', '/api/correspondence/seeks', '')).json).includes(
-          seekId,
-        ),
+        listed((await callSeekRoute('GET', '/api/correspondence/seeks', '')).json).includes(seekId),
       );
 
       const view = await callSeekRoute('GET', `/api/correspondence/seeks/${seekId}`, bobCookie);
-      assert.equal(view.status, 404, 'the challenge link does not exist for him');
+      assert.equal(view.status, 200, 'the challenge link is public');
 
-      const accept = await callSeekRoute(
-        'POST',
-        `/api/correspondence/seeks/${seekId}/accept`,
-        bobCookie,
-      );
-      assert.equal(accept.status, 403);
-      assert.equal(accept.json.error, 'variant_not_granted');
-      assert.notEqual(
-        await getCorrespondenceSeek(seekId),
-        null,
-        'a refused accept consumes nothing',
-      );
+      try {
+        const accept = await callSeekRoute(
+          'POST',
+          `/api/correspondence/seeks/${seekId}/accept`,
+          bobCookie,
+        );
+        assert.equal(accept.status, 201, JSON.stringify(accept.json));
+        assert.equal(accept.json.gameSpecId, XIANGQI_MAHJONG_SPEC_ID);
+      } finally {
+        correspondenceTenantForSpecId(XIANGQI_MAHJONG_SPEC_ID)?.clearRooms();
+      }
     });
   });
 
-  test('a challenge to an account without the grant is refused; rated is refused', async () => {
+  test('an account without a grant can be challenged; the rated flag stays off', async () => {
     await withFlags(async () => {
-      const cal = await seedUser('xmj-cal', true);
-      const dee = await seedUser('xmj-dee', false);
+      const cal = await seedUser('xmj-cal');
+      const dee = await seedUser('xmj-dee');
       const cookie = await makeSessionCookie(cal.id);
       const directed = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
         ...xmjSeek,
         targetUserId: dee.id,
       });
-      assert.equal(directed.status, 403);
-      assert.equal(directed.json.error, 'target_variant_not_granted');
+      assert.equal(directed.status, 201, JSON.stringify(directed.json));
 
       const rated = await callSeekRoute('POST', '/api/correspondence/seeks', cookie, {
         ...xmjSeek,
@@ -109,10 +91,10 @@ definePersistenceTests('xiangqi mahjong correspondence seeks', () => {
     });
   });
 
-  test('two granted accounts start a casual game from a seek', async () => {
+  test('two accounts without grants start a casual game from a seek', async () => {
     await withFlags(async () => {
-      const eve = await seedUser('xmj-eve', true);
-      const fay = await seedUser('xmj-fay', true);
+      const eve = await seedUser('xmj-eve');
+      const fay = await seedUser('xmj-fay');
       const posted = await callSeekRoute(
         'POST',
         '/api/correspondence/seeks',

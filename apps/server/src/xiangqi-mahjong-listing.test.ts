@@ -117,12 +117,12 @@ beforeEach(() => {
   xiangqiMahjongRooms.set(room.id, room);
 });
 
-test('xmj listing: the spec ships hidden, and its live board is servable either way', () => {
-  assert.equal(gameSpecForId(XIANGQI_MAHJONG_SPEC_ID).publicSurface, 'hidden');
-  assert.equal(gameSpecIsPublic(XIANGQI_MAHJONG_SPEC_ID), false);
+test('xmj listing: the spec ships public, and its live board is servable either way', () => {
+  assert.equal(gameSpecForId(XIANGQI_MAHJONG_SPEC_ID).publicSurface, 'casual');
+  assert.equal(gameSpecIsPublic(XIANGQI_MAHJONG_SPEC_ID), true);
   assert.equal(gameSpecIsPublic('not-a-spec'), false);
   assert.equal(canServeLiveBoard(XIANGQI_MAHJONG_SPEC_ID), true);
-  assert.equal(listedOnSurface(XIANGQI_MAHJONG_SPEC_ID), false);
+  assert.equal(listedOnSurface(XIANGQI_MAHJONG_SPEC_ID), true);
   // Scoped: the other hidden specs keep their flag-only listing.
   assert.equal(listedOnSurface('atomic-xiangqi'), true);
   assert.equal(listedOnSurface('mahjong'), true);

@@ -59,6 +59,7 @@ describe('web variant launch registry', () => {
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
+      XIANGQI_MAHJONG_SPEC_ID,
     ]);
     vi.unstubAllEnvs();
     vi.resetModules();
@@ -97,7 +98,7 @@ describe('web variant launch registry', () => {
   });
 
   it('shows only product-profile variants on default local rating surfaces', () => {
-    // Public shelf order: xiangqi family, fog pair, then Jungle family.
+    // Public shelf order: xiangqi family, fog pair, Jungle family, then XMJ.
     expect(leaderboardVariants.map((v) => v.gameSpecId)).toEqual([
       XIANGQI_SPEC_ID,
       JIEQI_SPEC_ID,
@@ -108,6 +109,7 @@ describe('web variant launch registry', () => {
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
+      XIANGQI_MAHJONG_SPEC_ID,
     ]);
     expect(profileRatingVariants.map((v) => v.gameSpecId)).toEqual([
       XIANGQI_SPEC_ID,
@@ -119,6 +121,7 @@ describe('web variant launch registry', () => {
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
+      XIANGQI_MAHJONG_SPEC_ID,
     ]);
   });
 
@@ -143,8 +146,7 @@ describe('web variant launch registry', () => {
       [DARK_CHESS_SPEC_ID, 'fog'],
       [JUNGLE_SPEC_ID, 'jungle'],
       [JUNGLE_FLIP_SPEC_ID, 'jungle-flip'],
-      // Closes the shelf once public; until then it sits here, ahead of the
-      // retired tail, on no rating surface.
+      // XMJ closes the public shelf ahead of the retired tail.
       [XIANGQI_MAHJONG_SPEC_ID, 'xiangqi-mahjong'],
       // Retired 2026-10-11: off the canonical order, kept at the tail so
       // labels and finished games resolve, and on no rating surface.

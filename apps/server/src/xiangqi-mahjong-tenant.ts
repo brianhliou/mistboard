@@ -20,11 +20,11 @@
  *   - Correspondence (days per move) has neither deadline. The claimant's turn
  *     opens with the claim decision on every discard (claim, or pass and then
  *     draw and discard, all on one move deadline), and the next hand deals at
- *     once, played by the next dealer. Unrated, and offered only to accounts
- *     the allowlist admits (CORRESPONDENCE_ALLOWLISTED_SPEC_IDS).
+ *     once, played by the next dealer. Correspondence follows the public
+ *     eligibility and rated-correspondence flag shared by launched variants.
  *
- * GATED TWICE, like HK mahjong: the flag is off by default, and the spec is on
- * the per-account allowlist (139). It exists for a playtest.
+ * Public since 2026-10-25. The runtime flag still defaults off; the launch
+ * switch removes the per-account playtest grant requirement.
  */
 
 import { randomInt } from 'node:crypto';
@@ -146,13 +146,10 @@ export const xiangqiMahjongTenant: XmjTenantType = {
   gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
   roomIdPrefix: XIANGQI_MAHJONG_ROOM_ID_PREFIX,
   colors: XMJ_SEATS,
-  // Rematch rides the lobby factory, which this table now has, but the
-  // conformance test (variant-tenant-rematch.test.ts) seats two guests and the
-  // per-account grant refuses guests. Opted out until that test can seat
-  // granted accounts; a PvP seat gets New opponent meanwhile. A finished match
-  // reopens at its own room, whose Review button opens the review page
+  // Rematches remain opted out at launch; a PvP seat gets New opponent.
+  // A finished match reopens at its own room, whose Review button opens the review page
   // (routes/xiangqi-mahjong-games.ts, finished matches only).
-  rematch: { optOut: 'allowlisted playtest: the rematch conformance test seats guests' },
+  rematch: { optOut: 'Xiangqi Mahjong rematches are not enabled' },
   // A move here is an action, not a turn; the clock runs from the first one.
   armsClockOnFirstMove: true,
   // Each seat sees its deal before its first move: no free redeal.

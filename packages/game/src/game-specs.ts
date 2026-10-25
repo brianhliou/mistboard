@@ -157,8 +157,7 @@ export type GameSpecId =
   // Hong Kong mahjong. Playable behind a server flag AND a per-account grant;
   // runtimeStatus is 'future' because nothing is built behind it yet.
   | 'mahjong'
-  // Xiangqi mahjong (象棋麻將), the 32-tile two-player Taiwan game. Playtest
-  // only: behind a server flag AND the per-account allowlist, like 'mahjong'.
+  // Xiangqi mahjong (象棋麻將), the 32-tile two-player Taiwan game.
   | 'xiangqi-mahjong'
   // Standard chess, STUDY-ONLY (set 2026-09-20). Exists so chess studies can be
   // written, reviewed and embedded (the shallow-labels puzzles on the blog);
@@ -510,9 +509,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
   },
   {
     // Xiangqi mahjong (象棋麻將): the 32 xiangqi pieces as tiles, two players,
-    // five-tile hands of one set and a pair, a four-hand match. Hidden
-    // and allowlisted: it exists for a playtest, and nobody who plays the game
-    // has checked it yet. Imports nothing from the HK mahjong package.
+    // five-tile hands of one set and a pair, a six-hand match. Public for
+    // search (Brian, 2026-10-25). Imports nothing from the HK mahjong package.
     // Rated (Brian, 2026-10-15): the rated unit is the whole match, since the
     // room finishes when the match does. Migration 168 added the pool to the
     // user_ratings CHECK. The pool stays off the leaderboard and profiles while
@@ -535,7 +533,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'xiangqi_mahjong',
-    publicSurface: 'hidden',
+    publicSurface: 'casual',
     runtimeStatus: 'live',
     rated: true,
   },

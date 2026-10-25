@@ -55,6 +55,12 @@ afterEach(() => {
 });
 
 describe('launch switch on the web', () => {
+  it('XMJ is public on every web surface', async () => {
+    expect(isPublicGameSpec(XMJ)).toBe(true);
+    const listed = await xmjListedOnWeb();
+    expect(listed).toEqual(everyValue(listed, true));
+  });
+
   it('every web surface agrees with the switch as it stands', async () => {
     const listed = await xmjListedOnWeb();
     expect(listed).toEqual(everyValue(listed, isPublicGameSpec(XMJ)));

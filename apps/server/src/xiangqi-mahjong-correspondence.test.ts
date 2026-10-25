@@ -1,6 +1,6 @@
 /**
- * Xiangqi mahjong by correspondence (days per move), casual and for granted
- * accounts only. The turn: after a discard the other seat owes the claim
+ * Xiangqi mahjong by correspondence (days per move), casual by default for
+ * signed-in accounts. The turn: after a discard the other seat owes the claim
  * decision, and on a pass it draws and discards on the same deadline; the next
  * hand deals itself. The deadline the sweeper enforces always names the seat
  * that owes the next move.
@@ -372,13 +372,30 @@ for (const seed of [7, 12, 55]) {
         steps += 1;
         for (const seat of tenant.colors)
           await assertSeatSeesOnlyItsOwn(room, seat, `step ${steps}`);
-        // The public current-games card carries no board, so no tile.
+        const s = state(room);
+        // A launched card serves the spectator's public table, never a seat's
+        // concealed hand. Check the whole payload as well as the view.
         const card = collectCurrentGames(ctx, at).find((entry) => entry.roomId === room.id);
         if (card) {
           assert.equal('payload' in card, false);
-          assert.equal(await currentGameBoardPayload(card), null);
+          const payload = await currentGameBoardPayload(card);
+          assert.ok(payload);
+          assert.deepEqual(payload.view, xmjViewFor(s, 'spectator'));
+          const json = JSON.stringify(payload);
+          const keys = keysOf(JSON.parse(json));
+          for (const secret of ['setup', 'walls', 'wall', 'firstDealer']) {
+            assert.equal(keys.has(secret), false, `card carries ${secret}`);
+          }
+          if (s.match.hand.wall.length >= 2) {
+            assert.ok(
+              !json.includes(JSON.stringify(s.match.hand.wall)),
+              'card hides the live wall',
+            );
+          }
+          for (const wall of s.match.walls.slice(s.match.handIndex + 1)) {
+            assert.ok(!json.includes(JSON.stringify(wall)), 'card hides future walls');
+          }
         }
-        const s = state(room);
         at += 1_000;
         if (s.match.between) {
           // No button: the deal is the runtime's, due at once.

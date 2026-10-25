@@ -75,9 +75,8 @@ export function mahjongEnabled(): boolean {
 }
 
 // Xiangqi mahjong (象棋麻將, 32 tiles, two players) live rooms. Server-side
-// opt-in, default off, and like Hong Kong mahjong only half the gate: the spec
-// is on the per-account allowlist (139) too, so an environment with this on
-// seats admins and grant holders and nobody else. It exists for a playtest.
+// opt-in, default off. Public since 2026-10-25: its launch switch in game-specs
+// removes the per-account grant requirement; this remains the runtime gate.
 export function xiangqiMahjongEnabled(): boolean {
   return process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED === 'true';
 }

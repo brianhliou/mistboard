@@ -2,22 +2,25 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { CtaBlock } from './articles/types.js';
 import { renderBlock } from './articles.js';
 import { setResolvedVariantGrants } from './signed-in-state.js';
-import { variantPublicSurfaceEnabled } from './variant-public-surfaces.js';
+import {
+  articleIsNoindex,
+  rulesHrefForGameSpec,
+  variantPublicSurfaceEnabled,
+} from './variant-public-surfaces.js';
 
-// The Xiangqi Mahjong rules page's own CTA block. Its Play buttons open the play
-// dialog on a playtest variant; for a visitor without a grant the dialog has no
-// such variant and silently set up xiangqi instead (2026-10-16).
-const XMJ_CTA: CtaBlock = {
+// HK mahjong remains a playtest after XMJ launches. A visitor without its
+// grant must not get buttons into a dialog that cannot offer that variant.
+const PLAYTEST_CTA: CtaBlock = {
   kind: 'cta',
   buttons: [
     {
       label: 'Play vs computer',
-      href: '/?play=computer&gameSpecId=xiangqi-mahjong',
+      href: '/?play=computer&gameSpecId=mahjong',
       emphasis: 'primary',
     },
     {
       label: 'Challenge a friend',
-      href: '/?play=friend&gameSpecId=xiangqi-mahjong',
+      href: '/?play=friend&gameSpecId=mahjong',
       emphasis: 'secondary',
     },
   ],
@@ -34,12 +37,12 @@ describe('play CTAs for a playtest variant', () => {
   });
 
   it('is a playtest variant while this holds', () => {
-    expect(variantPublicSurfaceEnabled('xiangqi-mahjong')).toBe(false);
+    expect(variantPublicSurfaceEnabled('mahjong')).toBe(false);
   });
 
   it('shows a visitor without a grant a note, not buttons into a xiangqi setup', () => {
     setResolvedVariantGrants([]);
-    const row = renderBlock(XMJ_CTA);
+    const row = renderBlock(PLAYTEST_CTA);
     expect(links(row)).toEqual([]);
     const note = row.querySelector('.article-cta-playtest-note');
     expect(note?.textContent).toContain('in testing');
@@ -47,19 +50,36 @@ describe('play CTAs for a playtest variant', () => {
   });
 
   it('keeps the buttons for a granted account', () => {
-    setResolvedVariantGrants(['xiangqi-mahjong']);
-    const row = renderBlock(XMJ_CTA);
-    expect(links(row)).toEqual(XMJ_CTA.buttons.map((b) => b.href));
+    setResolvedVariantGrants(['mahjong']);
+    const row = renderBlock(PLAYTEST_CTA);
+    expect(links(row)).toEqual(PLAYTEST_CTA.buttons.map((b) => b.href));
     expect(row.querySelector('.article-cta-playtest-note')).toBeNull();
   });
 
   it('redraws with the buttons once a grant made since the last visit resolves', () => {
-    const row = renderBlock(XMJ_CTA);
+    const row = renderBlock(PLAYTEST_CTA);
     document.body.append(row);
     expect(links(row)).toEqual([]);
-    setResolvedVariantGrants(['xiangqi-mahjong']);
+    setResolvedVariantGrants(['mahjong']);
     const redrawn = document.body.querySelector('.article-cta-row') as HTMLElement;
-    expect(links(redrawn)).toEqual(XMJ_CTA.buttons.map((b) => b.href));
+    expect(links(redrawn)).toEqual(PLAYTEST_CTA.buttons.map((b) => b.href));
+  });
+
+  it('offers launched XMJ play buttons without a grant', () => {
+    expect(variantPublicSurfaceEnabled('xiangqi-mahjong')).toBe(true);
+    expect(articleIsNoindex({ kind: 'rules', slug: 'xiangqi-mahjong-32' })).toBe(false);
+    expect(rulesHrefForGameSpec('xiangqi-mahjong')).toBe('/rules/xiangqi-mahjong-32');
+    setResolvedVariantGrants([]);
+    const cta: CtaBlock = {
+      ...PLAYTEST_CTA,
+      buttons: PLAYTEST_CTA.buttons.map((button) => ({
+        ...button,
+        href: button.href.replace('gameSpecId=mahjong', 'gameSpecId=xiangqi-mahjong'),
+      })),
+    };
+    const row = renderBlock(cta);
+    expect(links(row)).toEqual(cta.buttons.map((button) => button.href));
+    expect(row.querySelector('.article-cta-playtest-note')).toBeNull();
   });
 
   it('leaves a public variant and plain links alone', () => {
