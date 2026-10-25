@@ -16,6 +16,7 @@ import {
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
+import { articleListable } from './articles/blog-listing.js';
 import { LANGUAGE_ENDONYMS, languagePartnersOf } from './articles/language-pairs.js';
 import { articleIsLive } from './articles/publish-time.js';
 import { articleMadeWithNote, hasSiteByline, SITE_AUTHOR } from './articles/site-author.js';
@@ -141,17 +142,16 @@ function isArticleVisibleInThisEnv(article: Article): boolean {
 
 function isArticleListedInThisEnv(article: Article): boolean {
   if (!isArticleVisibleInThisEnv(article)) return false;
-  if (article.showInIndex === false || article.noindex === true) return false;
-  // A page written in a language the interface does not speak never lists here.
-  // The index is one reader's shelf, and a Vietnamese card in an English list is
-  // noise to everyone: an English reader cannot read it, and a Vietnamese reader
-  // never sees the list, because they arrive from a search for `luật cờ úp`
-  // straight onto the page. Search and the sitemap are the discovery path for
-  // these, plus a link from the English original; the index is not.
-  //
-  // Structural rather than per-file (`showInIndex: false` on each) so the next
-  // translated page cannot forget it.
-  if (article.sourceLang) return false;
+  // Shared with the feeds (articles/blog-listing.ts), so /feed.xml carries
+  // exactly what /blog lists. It also drops a page written in a language the
+  // interface does not speak: the index is one reader's shelf, and a Vietnamese
+  // card in an English list is noise to everyone: an English reader cannot
+  // read it, and a Vietnamese reader never sees the list, because they arrive
+  // from a search for `luật cờ úp` straight onto the page. Search and the
+  // sitemap are the discovery path for these, plus a link from the English
+  // original; the index is not. Structural rather than per-file
+  // (`showInIndex: false` on each) so the next translated page cannot forget it.
+  if (!articleListable(article)) return false;
   if (
     article.kind === 'rules' &&
     !rulesSlugPublicSurfaceEnabled(article.gameSpecId ?? article.slug)

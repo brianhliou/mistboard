@@ -1,11 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Announcement } from './announcements.js';
 import { announcements } from './announcements.js';
+import { blogPosts } from './articles/blog-listing.js';
 import { feedThumbnails } from './articles/feed-thumbnail.js';
 import { articleIsLive } from './articles/publish-time.js';
+import { buildArticlesIndex } from './articles.js';
 import { articles } from './articles-data.js';
 import {
   announcedPostSlug,
+  type FeedBlogPost,
   type FeedOptions,
   feedThumbnailPath,
   MEDIA_RSS_NS,
@@ -23,6 +26,7 @@ function liveOptions(): FeedOptions {
   const thumbs = feedThumbnails(live);
   return {
     host: HOST,
+    blogPosts: blogPosts(articles, NOW),
     postForSlug: (slug) => bySlug.get(slug),
     thumbnailUrl: (slug) => {
       const thumb = thumbs.get(slug);
@@ -31,7 +35,14 @@ function liveOptions(): FeedOptions {
   };
 }
 
-type Item = { title: string; link: string; category: string; media: string[] };
+type Item = {
+  title: string;
+  link: string;
+  guid: string;
+  pubDate: string;
+  category: string;
+  media: string[];
+};
 
 function parseItems(xml: string): { root: Element; items: Item[] } {
   const doc = new DOMParser().parseFromString(xml, 'application/xml');
@@ -41,6 +52,8 @@ function parseItems(xml: string): { root: Element; items: Item[] } {
     return {
       title: text('title'),
       link: text('link'),
+      guid: text('guid'),
+      pubDate: text('pubDate'),
       category: text('category'),
       media: [...item.getElementsByTagName('media:content')].map(
         (el) => el.getAttribute('url') ?? '',
@@ -48,6 +61,32 @@ function parseItems(xml: string): { root: Element; items: Item[] } {
     };
   });
   return { root: doc.documentElement, items };
+}
+
+/**
+ * Which listed posts the feed lacks, and which links it carries more than once
+ * as an article item. The coverage check the live test and the planted test
+ * share, so the planted one proves the live one can fail.
+ */
+function feedCoverage(
+  items: readonly Item[],
+  posts: readonly FeedBlogPost[],
+): { missing: string[]; duplicated: string[] } {
+  const counts = new Map<string, number>();
+  for (const item of items) {
+    if (item.category !== 'article') continue;
+    counts.set(item.link, (counts.get(item.link) ?? 0) + 1);
+  }
+  const missing = posts
+    .filter((post) => {
+      const item = items.find(
+        (i) => i.category === 'article' && i.link === `${HOST}/blog/${post.slug}`,
+      );
+      return !item || item.title !== post.title || !item.pubDate;
+    })
+    .map((post) => post.slug);
+  const duplicated = [...counts].filter(([, n]) => n > 1).map(([link]) => link);
+  return { missing, duplicated };
 }
 
 describe('/feed.xml', () => {
@@ -95,6 +134,31 @@ describe('/feed.xml', () => {
     expect(linked).toBeGreaterThan(10);
   });
 
+  it('carries every post /blog lists, once each, with its thumbnail', () => {
+    const posts = options.blogPosts!;
+    // 2026-10-25: four of these were missing (no hand-written announcement).
+    for (const slug of ['helpmates-in-xiangqi', 'general-blunder-challenge']) {
+      expect(
+        posts.some((p) => p.slug === slug),
+        slug,
+      ).toBe(true);
+    }
+    expect(feedCoverage(items, posts)).toEqual({ missing: [], duplicated: [] });
+    for (const post of posts) {
+      const item = items.find(
+        (i) => i.category === 'article' && i.link === `${HOST}/blog/${post.slug}`,
+      )!;
+      expect(item.pubDate, post.slug).toBe(new Date(`${post.publishedAt}T12:00:00Z`).toUTCString());
+      const url = options.thumbnailUrl!(post.slug);
+      expect(item.media, post.slug).toEqual(url ? [url] : []);
+    }
+  });
+
+  it('never uses one guid twice', () => {
+    const guids = items.map((i) => i.guid);
+    expect(new Set(guids).size).toBe(guids.length);
+  });
+
   it('leaves release, update and status items as written', () => {
     const others = entries.filter((entry) => entry.kind !== 'article');
     expect(others.length).toBeGreaterThan(0);
@@ -103,6 +167,89 @@ describe('/feed.xml', () => {
       expect(item, entry.headline).toBeDefined();
       expect(item!.media).toEqual([]);
     }
+  });
+});
+
+describe('/feed.xml post list', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('is the list /blog renders in production', () => {
+    vi.stubEnv('DEV', false);
+    const index = buildArticlesIndex();
+    const hrefs = [...index.querySelectorAll<HTMLAnchorElement>('.articles-index-list a[href]')]
+      .map((a) => new URL(a.href, HOST).pathname)
+      .filter((path) => /^\/blog\/[a-z0-9-]+$/.test(path));
+    const rendered = [...new Set(hrefs)].map((path) => path.slice('/blog/'.length));
+    expect(rendered.length).toBeGreaterThan(10);
+    expect(rendered.sort()).toEqual(
+      blogPosts(articles, Date.now())
+        .map((p) => p.slug)
+        .sort(),
+    );
+  });
+
+  const post = (slug: string, publishedAt: string): FeedBlogPost => ({
+    slug,
+    title: `Title of ${slug}`,
+    summary: `Summary of ${slug}.`,
+    publishedAt,
+  });
+  const fixturePosts = [post('kept-post', '2026-10-21'), post('dropped-post', '2026-10-20')];
+  const announcement: Announcement = {
+    date: '2026-10-21',
+    kind: 'article',
+    headline: 'Kept post is out.',
+    body: 'The announcement body.',
+    href: '/blog/kept-post',
+  };
+  const release: Announcement = { date: '2026-10-22', kind: 'release', headline: 'A release.' };
+
+  it('catches a planted post left out of the feed', () => {
+    // The feed was built from a list that lost one post: the check must say so.
+    const xml = renderNewsRss([announcement, release], {
+      host: HOST,
+      blogPosts: fixturePosts.slice(0, 1),
+    });
+    expect(feedCoverage(parseItems(xml).items, fixturePosts)).toEqual({
+      missing: ['dropped-post'],
+      duplicated: [],
+    });
+  });
+
+  it('folds an announcement of a listed post into its one item', () => {
+    const xml = renderNewsRss([announcement, release, { ...announcement, date: '2026-10-19' }], {
+      host: HOST,
+      blogPosts: [...fixturePosts, fixturePosts[0]!],
+      thumbnailUrl: (slug) => `${HOST}/thumb/article/${slug}.png?v=abcd1234`,
+    });
+    const { items } = parseItems(xml);
+    expect(feedCoverage(items, fixturePosts)).toEqual({ missing: [], duplicated: [] });
+    expect(items.map((i) => [i.category, i.title])).toEqual([
+      ['release', 'A release.'],
+      ['article', 'Title of kept-post'],
+      ['article', 'Title of dropped-post'],
+    ]);
+    // The announced post keeps the guid a reader (and the tweet ledger) has seen.
+    expect(items[1]!.guid).toBe('mistboard:2026-10-21:kept-post-is-out');
+    expect(items[2]!.guid).toBe('mistboard:blog:dropped-post');
+    expect(items[2]!.media).toEqual([`${HOST}/thumb/article/dropped-post.png?v=abcd1234`]);
+    expect(xml).toContain('<description>The announcement body.</description>');
+    expect(xml).toContain('<description>Summary of dropped-post.</description>');
+  });
+
+  // A falsifiable check is one that can fail; the planted case above is it.
+  it('feedCoverage flags a duplicate', () => {
+    const one: Item = {
+      title: 'Title of kept-post',
+      link: `${HOST}/blog/kept-post`,
+      guid: 'g',
+      pubDate: 'x',
+      category: 'article',
+      media: [],
+    };
+    expect(feedCoverage([one, one], fixturePosts.slice(0, 1)).duplicated).toEqual([one.link]);
   });
 });
 

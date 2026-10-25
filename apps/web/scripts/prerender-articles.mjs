@@ -308,6 +308,8 @@ try {
   const { renderNewsRss, renderArticlesRss, feedThumbnailPath } =
     await server.ssrLoadModule('/src/feed-rss.ts');
   const { feedThumbnails } = await server.ssrLoadModule('/src/articles/feed-thumbnail.ts');
+  // The posts /blog lists, the one source for both feeds' post items.
+  const { blogPosts } = await server.ssrLoadModule('/src/articles/blog-listing.ts');
   // Card URLs (the ?v= and which slugs have aspect cards) mirror the server's
   // renderer; og-image.test.ts pins the mirror.
   const { articleOgImageUrl, articleStructuredDataImage } = await server.ssrLoadModule(
@@ -861,8 +863,10 @@ try {
     await fs.writeFile(resolve(thumbDir, `${thumb.slug}.svg`), thumb.svg, 'utf-8');
   }
   console.log(`wrote /thumb/article/*.svg (${thumbs.size} posts)`);
+  const listedPosts = blogPosts(articles, builtAt);
   const feedOptions = {
     host,
+    blogPosts: listedPosts,
     postForSlug: (slug) => {
       const post = publishedBySlug.get(slug);
       return post?.kind === 'article' ? post : undefined;
@@ -874,14 +878,10 @@ try {
   };
 
   // blog/feed.xml: the posts as RSS, alongside the announcement feed at
-  // /feed.xml. Published blog posts only, newest first; rules docs are
-  // reference pages, not posts, and drafts are not public. An unlisted or
-  // noindex post is served by URL only, so it is not announced here either.
-  const blogFeedEntries = published
-    .filter(
-      (entry) => entry.kind === 'article' && entry.showInIndex !== false && entry.noindex !== true,
-    )
-    .sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
+  // /feed.xml. Exactly what /blog lists, newest first: rules docs are
+  // reference pages, not posts; drafts and scheduled posts are not public; an
+  // unlisted, noindex or translated-only post is served by URL only.
+  const blogFeedEntries = listedPosts;
   await fs.mkdir(resolve(distDir, 'blog'), { recursive: true });
   await fs.writeFile(
     resolve(distDir, 'blog', 'feed.xml'),
