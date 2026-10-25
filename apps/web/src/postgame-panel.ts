@@ -120,6 +120,13 @@ export function postGameActions(input: PostGameActionsInput): HTMLDivElement {
       box.append(invite);
     }
   }
+  // One action and nothing else (a spectator's or signed-out viewer's Review
+  // game): the phone room puts it in the bottom bar beside the move arrows,
+  // where Resign/Abort sat during play, and the board takes the band it would
+  // have needed (live-review.css, #618).
+  // A lone rematch offer block (note plus buttons) keeps the band.
+  const only = box.childElementCount === 1 ? box.firstElementChild : null;
+  if (only?.matches('a, button')) box.classList.add('postgame-actions--solo');
   return box;
 }
 

@@ -248,3 +248,66 @@ describe('live spectator notice on a phone (#618)', () => {
     expect(noticeBand(1280, '').section).not.toBe('52px');
   });
 });
+
+// A finished room whose one action is Review game (a spectator, a signed-out
+// viewer) puts it in the bottom bar, where Resign/Abort sat beside the move
+// arrows during play, and drops the 48px band so the board grows (#618,
+// Brian 2026-10-24). Two or more actions keep the band.
+function soloReview(width: number, solo: boolean) {
+  const win = new Window({ width, height: 664 });
+  win.document.head.innerHTML = [GAME_SHELL, LIVE_REVIEW, REVIEW_SHELL]
+    .map((css) => `<style>${css}</style>`)
+    .join('');
+  const actions = solo
+    ? '<a class="postgame-actions__link" href="/game/x">Review game</a>'
+    : '<a class="postgame-actions__link" href="/">New opponent</a><a class="postgame-actions__link" href="/game/x">Review game</a>';
+  const cls = solo ? 'postgame-actions postgame-actions--solo' : 'postgame-actions';
+  win.document.body.innerHTML = `<div class="review-shell__cluster live-review__cluster"><section class="panel-section game-console"><div class="round-table__box"><div class="round-table__row"><div data-room-actions class="room-actions"><div class="${cls}">${actions}</div></div></div><div class="replay-console"><div class="move-nav-bar"></div></div></div></section></div>`;
+  const doc = win.document;
+  const style = (sel: string) => win.getComputedStyle(need(doc.querySelector(sel), sel));
+  const review = need(doc.querySelectorAll('.postgame-actions > a'), 'links');
+  const link = win.getComputedStyle(need(review[review.length - 1], 'review link'));
+  const read = {
+    post: style('.live-review__cluster').getPropertyValue('--phone-room-post').trim(),
+    row: style('.round-table__row').display,
+    roomActions: style('.room-actions').display,
+    box: style('.postgame-actions').display,
+    order: link.order,
+    minHeight: link.minHeight,
+    radius: link.borderTopLeftRadius,
+    transform: link.textTransform,
+    nav: style('.move-nav-bar').order,
+  };
+  void win.happyDOM.close();
+  return read;
+}
+
+describe('lone Review game in the phone bar (#618)', () => {
+  it.each([390, 360])('sits beside the move arrows with no band at %ipx', (w) => {
+    const r = soloReview(w, true);
+    expect(r.post).toBe('0px');
+    expect([r.row, r.roomActions, r.box]).toEqual(['contents', 'contents', 'contents']);
+    // Order 46: the Resign/Abort slot, just before the arrows (47).
+    expect(r.order).toBe('46');
+    expect(r.nav).toBe('47');
+    // The bar's height, a 44px+ tap target.
+    expect(r.minHeight).toBe('48px');
+    expect(r.radius).toBe('0px');
+    expect(r.transform).toBe('none');
+  });
+
+  // happy-dom matches `:has(.postgame-actions > :nth-child(3))` with two
+  // actions, so it reads 96px here; Chromium reads 48px (the sheet run).
+  it('keeps the band for two actions', () => {
+    const r = soloReview(390, false);
+    expect(r.post).not.toBe('0px');
+    expect(r.box).toBe('grid');
+    expect(r.order).not.toBe('46');
+  });
+
+  it('leaves the desktop room alone', () => {
+    const r = soloReview(1280, true);
+    expect(r.box).toBe('grid');
+    expect(r.order).not.toBe('46');
+  });
+});

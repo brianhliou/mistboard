@@ -1310,6 +1310,62 @@
     grid-column: 1 / -1;
   }
 
+  /* A lone action (a spectator's or signed-out viewer's Review game) needs no
+     band: it takes the left end of the bar, the spot Resign/Abort hold beside
+     the move arrows during play, and the board grows by the 48px (Brian,
+     2026-10-24: "we can try it"). Its wrappers step aside so the link is an
+     item of the room's own line, like the game-control buttons. */
+  .review-shell__cluster.live-review__cluster:has(.postgame-actions.postgame-actions--solo) {
+    --phone-room-post: 0px;
+  }
+
+  .live-review__cluster .round-table__row:has(.postgame-actions--solo),
+  .live-review__cluster .room-actions:has(> .postgame-actions--solo),
+  .live-review__cluster .postgame-actions.postgame-actions--solo {
+    display: contents;
+  }
+
+  .review-shell__cluster.live-review__cluster
+    .round-table__box
+    .room-actions
+    .postgame-actions--solo
+    > :is(a, button) {
+    order: 46;
+    flex: 0 1 auto;
+    max-width: 40%;
+    width: auto;
+    height: auto;
+    min-height: var(--phone-room-bar);
+    margin: 0;
+    padding: 0 16px;
+    border: 0;
+    border-top: 1px solid var(--site-border-soft);
+    border-radius: 0;
+    background: var(--site-mobile-bar-bg, var(--site-panel));
+    color: var(--site-heading);
+    font-size: 13px;
+    font-weight: 600;
+    /* Sentence case like the rest of the bar, not the desktop link's caps. */
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  .review-shell__cluster.live-review__cluster
+    .round-table__box
+    .room-actions
+    .postgame-actions--solo
+    > :is(a, button):is(:hover, :focus-visible) {
+    background: var(--site-panel-soft);
+  }
+
+  .review-shell__cluster.live-review__cluster
+    .round-table__box
+    .room-actions
+    .postgame-actions--solo
+    > :is(a, button):focus-visible {
+    box-shadow: inset 0 0 0 2px var(--site-focus);
+  }
+
   .live-review__cluster .round-table__row:has(.postgame-actions) {
     flex: 0 0 calc(100% - 24px);
     height: calc(var(--phone-room-post) - 8px);
