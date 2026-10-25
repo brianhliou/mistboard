@@ -502,6 +502,7 @@ export const ZH_HANT_COMMUNITY = {
   'forum.errCategoryRestricted': '這個分類受限。',
   'forum.errTopicLocked': '這個主題已鎖定。',
   'forum.errTooQuick': '你發文太頻繁了。',
+  'forum.errEditTooQuick': '你編輯太頻繁了，請過幾分鐘再試。',
   'forum.errUnavailable': '論壇暫時無法使用。',
   'forum.errCheckFields': '請檢查填寫內容後重試。',
   'forum.errSignInToReport': '登入後檢舉。',

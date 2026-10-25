@@ -1714,6 +1714,7 @@ function errorMessageForEditStatus(status: number): string {
   if (status === 401) return t('forum.errSignInToPost');
   if (status === 403) return t('forum.errNotYourPost');
   if (status === 404) return t('forum.errContentNotAvailable');
+  if (status === 429) return t('forum.errEditTooQuick');
   if (status >= 500) return t('forum.errUnavailable');
   return t('forum.errCheckFields');
 }
