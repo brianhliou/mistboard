@@ -53,7 +53,10 @@ export function keepActivePuzzleMoveInView(root: ParentNode): void {
 // The opponent's move that set up the puzzle (the mined blunder), if the initial
 // state carries one. Prepended to the move list so it reads like a game and the
 // opening position (viewPly 0) highlights the move that created the puzzle.
+// Held back while the opening glide is pending (#664): the board still shows
+// the position before it, so the move lands in the list as it lands on the board.
 function puzzleSetupMove(session: PuzzleSession): PuzzleMove | null {
+  if (session.setupIntro) return null;
   return session.puzzle.initial.lastMove ?? null;
 }
 

@@ -73,7 +73,16 @@ export type PuzzleSummary = {
   };
 };
 
-export type PuzzleDetail = PuzzleSummary & { initial: PuzzleState };
+// The opponent's setup move (initial.lastMove) with the piece it captured,
+// sent only where the server could derive it exactly (standard xiangqi with a
+// stored source game, #664). Lets the trainer open one move earlier.
+export type PuzzleSetupMove = {
+  from: string;
+  to: string;
+  captured: { color: PuzzleColor; role: string } | null;
+};
+
+export type PuzzleDetail = PuzzleSummary & { initial: PuzzleState; setupMove?: PuzzleSetupMove };
 
 export type FeedbackKind = 'neutral' | 'good' | 'bad' | 'pending';
 
@@ -114,6 +123,11 @@ export type PuzzleSession = {
   // (the solved panel is rebuilt from scratch on every render). Voting shows
   // feedback in place and does NOT advance to the next puzzle.
   vote: 'up' | 'down' | null;
+  // The position one move before `initial` while the opening glide of the
+  // opponent's setup move is pending (#664): painted instead of the live state,
+  // with input blocked, until the glide hands over (null from then on, or from
+  // the start when animation is off or the variant cannot rebuild it exactly).
+  setupIntro: PuzzleState | null;
   // Post-completion engine analysis (adapters that expose createAnalysis).
   // Created lazily the first time a completed puzzle renders, then persists
   // across renderSession() rebuilds so the engine toggle + eval + arrows
@@ -200,6 +214,13 @@ export type PuzzleBoardAdapter = {
     puzzle: PuzzleDetail,
     played: readonly PuzzleMove[],
   ): { setup: string | null; played: string[] };
+  /**
+   * OPTIONAL: the exact position one ply before `puzzle.initial` (the setup
+   * move taken back, any capture restored), or null when it cannot be rebuilt
+   * exactly. Omit for a variant whose setup move must not animate (hidden
+   * information, or no capture record); the trainer then shows `initial` at once.
+   */
+  preSetupState?(puzzle: PuzzleDetail): PuzzleState | null;
   /** Side icon SVG for the feedback panel (the variant's "general"). */
   sideIconSvg(puzzle: PuzzleDetail): string;
   /** Post-completion engine analysis; omit when the variant has no client engine. */
@@ -208,8 +229,10 @@ export type PuzzleBoardAdapter = {
 
 // ── Pure session helpers (shared by the core and every adapter) ──────────────
 
+// The board shows the live position the solver can move from: not a scrubbed
+// replay, and not the pre-setup position of the opening glide.
 export function isReplayLive(session: PuzzleSession): boolean {
-  return session.viewPly >= session.playedMoves.length;
+  return session.setupIntro === null && session.viewPly >= session.playedMoves.length;
 }
 
 export function activeTurn(session: PuzzleSession): PuzzleColor {
