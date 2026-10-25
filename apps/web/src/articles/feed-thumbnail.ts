@@ -263,12 +263,23 @@ export function articleFeedThumbnailSvg(article: Article): string | null {
   return feedThumbnailSvg(article.thumbnail);
 }
 
-/** A short content hash for the thumbnail URL's `?v=`, so a changed card is a
- *  new URL under the PNG route's immutable cache header (FNV-1a, 32 bits). */
+/**
+ * The server renderer's output revision (apps/server/src/article-thumb.ts
+ * ARTICLE_THUMB_RENDER_REVISION; feed-thumbnail-render.test.ts pins the two
+ * equal). The PNG's bytes depend on the SVG and on how the server draws it, so
+ * both go into the `?v=`: 2 is the 480x300 palette PNG (2026-10-25), 1 the
+ * 960x600 32-bit one before it.
+ */
+export const FEED_THUMB_RENDER_REVISION = 2;
+
+/** A short content hash for the thumbnail URL's `?v=`, so a changed card or a
+ *  changed renderer is a new URL under the PNG route's immutable cache header
+ *  (FNV-1a, 32 bits). */
 export function feedThumbnailVersion(svg: string): string {
+  const input = `r${FEED_THUMB_RENDER_REVISION}\n${svg}`;
   let hash = 0x811c9dc5;
-  for (let i = 0; i < svg.length; i += 1) {
-    hash ^= svg.charCodeAt(i);
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
   return hash.toString(16).padStart(8, '0');

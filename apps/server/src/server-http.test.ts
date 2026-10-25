@@ -334,7 +334,7 @@ test('/thumb/article/<slug>.png renders the build thumbnail, else redirects to t
     const body = Buffer.from(await hit.arrayBuffer());
     assert.equal(hit.status, 200);
     assert.equal(hit.headers.get('content-type'), 'image/png');
-    assert.deepEqual([body.readUInt32BE(16), body.readUInt32BE(20)], [960, 600]);
+    assert.deepEqual([body.readUInt32BE(16), body.readUInt32BE(20)], [480, 300]);
     const miss = await fetch(`${base}/thumb/article/no-such-post.png`, { redirect: 'manual' });
     await miss.text();
     assert.equal(miss.status, 302);

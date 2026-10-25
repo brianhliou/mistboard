@@ -62,36 +62,35 @@ async function serve(slug: string): Promise<Captured> {
   return captured;
 }
 
-test('an inline-SVG thumbnail is served as a 16:10 PNG at least 480 wide', async () => {
+test('an inline-SVG thumbnail is served as a 480x300 palette PNG', async () => {
   writeFileSync(join(staticDir, 'thumb', 'article', 'cropped-card.svg'), croppedCard);
   const first = await serve('cropped-card');
   assert.equal(first.status, 200);
   assert.equal(first.headers['content-type'], 'image/png');
   assert.match(first.headers['cache-control'] ?? '', /immutable/);
   assert.equal(first.headers['x-og-cache'], 'MISS');
-  const { width, height } = pngSize(first.body!);
-  assert.ok(width >= 480, `width ${width}`);
-  assert.equal(width / height, 16 / 10);
-  assert.deepEqual({ width, height }, { width: 960, height: 600 });
+  assert.deepEqual(pngSize(first.body!), { width: 480, height: 300 });
+  assert.equal(first.body![25], 3, 'colour type 3 (palette)');
   const second = await serve('cropped-card');
   assert.equal(second.headers['x-og-cache'], 'HIT');
 });
 
-test('a photo is never upscaled: the zoom drops to its pixels, not below 480', async () => {
-  // A 600x375 photo filling the frame caps the render at 600x375 (1.25x).
+test('a photo larger than the frame renders at 480x300, not at its own size', async () => {
+  // Until 2026-10-25 a 600x375 photo set the render to 600x375 (and board art
+  // to 960x600): too heavy for the 240 px tile that hotlinks it.
   const photo = await svgToPng(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="375"><rect width="600" height="375" fill="#a33"/></svg>',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750"><rect width="1200" height="750" fill="#a33"/></svg>',
     '#a33',
     1,
   );
-  assert.deepEqual(pngSize(photo), { width: 600, height: 375 });
+  assert.deepEqual(pngSize(photo), { width: 1200, height: 750 });
   mkdirSync(join(staticDir, 'img'), { recursive: true });
   writeFileSync(join(staticDir, 'img', 'face.png'), photo);
   const png = await renderArticleThumbnail(
     frame('<image href="/img/face.png" x="0" y="0" width="480" height="300"/>'),
     staticDir,
   );
-  assert.deepEqual(pngSize(png!), { width: 600, height: 375 });
+  assert.deepEqual(pngSize(png!), { width: 480, height: 300 });
 });
 
 test('a post with no thumbnail file falls back to its OG card', async () => {
