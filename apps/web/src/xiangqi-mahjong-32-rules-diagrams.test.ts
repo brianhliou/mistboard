@@ -120,9 +120,9 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
     });
   }
 
-  it('the worked example totals 6 points', () => {
+  it('the worked example totals 5 points', () => {
     const { concealed, melds } = xmjExampleHand(XMJ32_WORKED);
-    expect(xmjScore({ concealed, melds, ...XMJ32_WORKED.context }).total).toBe(6);
+    expect(xmjScore({ concealed, melds, ...XMJ32_WORKED.context }).total).toBe(5);
   });
 
   for (const example of XMJ32_NOT_WINS) {
@@ -341,7 +341,11 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
       expect(ctx.winnerIsDealer, `hand ${i + 1}`).toBe(hand.winner === hand.dealer);
       expect(ctx.selfDrawn, `hand ${i + 1}`).toBe(hand.how.startsWith('Self-draw'));
       expect(ctx.lastTile).toBe(hand.how.includes('last tile'));
-      expect(hand.how.includes('as dealer')).toBe(ctx.winnerIsDealer);
+      // The dealer scores nothing extra, so the table does not say who dealt.
+      expect(hand.how).not.toMatch(/dealer/);
+      expect(hand.how.includes('one General')).toBe(
+        hand.win.expectedLines.some((key) => key === 'red-general' || key === 'black-general'),
+      );
       expect(hand.how.includes('one colour')).toBe(hand.win.expectedLines.includes('one-colour'));
       if (!ctx.selfDrawn) {
         expect(hand.how.startsWith(`${hand.winner === 'Ana' ? 'Ben' : 'Ana'}’s discard`)).toBe(
@@ -363,7 +367,7 @@ describe('xiangqi mahjong 32 rules diagrams', () => {
     expect(rows.map((r) => r[0])).toEqual(['Ana', 'Ben']);
     for (const row of rows) expect(row).toHaveLength(XMJ32_MATCH_HEADERS.length);
     expect(rows.map((r) => r.at(-1))).toEqual([String(totals.Ana), String(totals.Ben)]);
-    expect(totals).toEqual({ Ana: 7, Ben: 6 });
+    expect(totals).toEqual({ Ana: 6, Ben: 5 });
     XMJ32_MATCH.forEach((hand, i) => {
       const [ana, ben] = [rows[0]?.[i + 1], rows[1]?.[i + 1]];
       if (!hand.winner) {

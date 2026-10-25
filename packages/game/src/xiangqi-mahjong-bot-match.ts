@@ -1,6 +1,7 @@
 /** Reproducible, paired six-hand measurement; no production registration. */
 import {
   XMJ_MATCH_HANDS,
+  XMJ_TAI_TABLE,
   type XmjHandResult,
   type XmjTile,
   xmjMatchWinner,
@@ -57,7 +58,7 @@ export function xmjPlayBotMatch(
   policies: readonly [XmjBotPolicy, XmjBotPolicy],
 ): XmjBotMatchResult {
   let state = createXmjRoomState(
-    { walls: xmjMatchWalls(seed), firstDealer: 'east' },
+    { walls: xmjMatchWalls(seed), firstDealer: 'east', taiTable: XMJ_TAI_TABLE },
     `xmj-bench-${seed}`,
   );
   let steps = 0;

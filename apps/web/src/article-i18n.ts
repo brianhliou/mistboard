@@ -5888,12 +5888,15 @@ const ZH_HANS: Record<string, string> = {
   'How a hand ends': '一手牌怎么结束',
   'A hand ends in one of three ways. You draw the tile that completes your hand and declare a win, which is a self-drawn win. Or the other player discards that tile and you claim it. Or the wall runs out with nobody winning: the hand is void, nobody scores, and the deal passes.':
     '一手牌有三种结束方式。你摸到凑成手牌的那张并宣告胡牌，这是自摸。或者对手打出那张牌，你拿来胡。或者牌墙摸完了没人胡：这手牌流局，双方都不计分，换人做庄。',
-  'Two wins happen before the hand has really started. If the dealer’s opening five tiles already make a winning hand, that is a **heavenly hand**. If the other player wins with their first draw, before anyone has claimed a tile, that is an **earthly hand**.':
-    '有两种胡牌发生在一手牌真正开始之前。庄家起手的五张牌已经是胡牌牌型，叫做**天胡**。另一位玩家在还没有人吃碰之前，第一次摸牌就胡，叫做**地胡**。',
+  'A win before the hand has really started is a **heavenly hand**: the dealer’s opening five tiles already make a winning hand, or the other player wins with their first draw, before anyone has claimed a tile.':
+    '一手牌真正开始之前就胡牌，叫做**天胡**：庄家起手的五张牌已经是胡牌牌型，或另一位玩家在还没有人吃碰之前，第一次摸牌就胡。',
+  'Points now follow the scoring table in Gamesofa’s Xiangqi Mahjong app: new lines for one General, three of a piece and mixed Soldiers, no dealer point, and one heavenly hand for either player’s first draw.':
+    '台数改为依照 Gamesofa 象棋麻将 app 的计台表：新增将之才、帅之才、三张同子和鼓角齐鸣，取消庄家台，天胡改为任一方第一次摸牌就胡都算。',
   'Winning hands and their score': '胡牌牌型与台数',
-  'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when the player who did not deal wins it on a discard.':
-    '胡牌是五张牌：一组面子加一对将眼，吃碰亮出的面子也算在内。能凑的面子只有三种：将士象顺子、车马炮顺子、三张兵卒，所以下面前三种牌型就涵盖了全部。每副胡牌计台；每张图的说明写的是闲家胡对手弃牌时的台数。',
-  'General, Advisor and Elephant, with any pair: 1 point.': '将士象顺子，加任意将眼：1 台。',
+  'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
+    '胡牌是五张牌：一组面子加一对将眼，吃碰亮出的面子也算在内。能凑的面子只有三种：将士象顺子、车马炮顺子、三张兵卒，所以下面前三种牌型就涵盖了全部。每副胡牌计台；每张图的说明写的是胡对手弃牌时的台数。',
+  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for 2 points.':
+    '将士象顺子，加任意将眼：1 台；手上只有将或只有帅，再加 1 台，共 2 台。',
   'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.':
     '车马炮顺子，加任意将眼。将眼不必和面子同色：1 台。',
   'Three Soldiers of one colour, with any pair: 1 point.': '三张同色兵卒，加任意将眼：1 台。',
@@ -5903,6 +5906,10 @@ const ZH_HANS: Record<string, string> = {
     '将帅听令：红帅和黑将当将眼。再加 2 台，共 3 台。',
   'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.':
     '五兵合纵：同色的五张兵卒全到齐。再加 5 台，而且也是清一色：共 7 台。',
+  'Mixed Soldiers: five Soldiers of both colours. 2 more, for 3 points.':
+    '鼓角齐鸣：五张兵卒，红黑都有。再加 2 台，共 3 台。',
+  'Three of a piece: three Horses, of either colour. 2 more, for 3 points. Three Advisors, Elephants, Chariots or Cannons score the same.':
+    '三张同子：三张马，红黑不拘（千军万马）。再加 2 台，共 3 台。三张士、象、车或炮也一样。',
   'Close, but not a win': '差一点，但不算胡',
   'These look finished and are not. In each, the three tiles on the left fail to make a set or the two on the right fail to make a pair.':
     '这些看起来成牌了，其实没有。每一副不是左边三张凑不成面子，就是右边两张凑不成将眼。',
@@ -5922,26 +5929,27 @@ const ZH_HANS: Record<string, string> = {
   When: '条件',
   'Every winning hand': '每副胡牌',
   'One colour': '清一色',
+  'One General': '将之才 / 帅之才',
+  'One General in the hand and not the other': '手上有将或帅其中一张，没有另一张',
   'All five tiles one colour': '五张牌同一颜色',
   'Generals pair': '将帅听令',
+  'Three of a piece': '三张同子',
+  'Three Advisors, Elephants, Chariots, Horses or Cannons': '三张士、象、车、马或炮',
+  'Mixed Soldiers': '鼓角齐鸣',
+  'Five Soldiers of both colours': '五张兵卒，红黑都有',
   'The two Generals are the pair': '帅将两张当将眼',
   'Five Soldiers': '五兵合纵',
   'Five Soldiers of one colour': '同色五张兵卒',
   'Self-draw': '自摸',
   'You drew the winning tile': '胡的那张是自己摸到的',
-  Dealer: '庄家',
-  'The dealer won': '庄家胡牌',
   'Last tile': '海底捞月',
   'Self-draw on the last wall tile': '摸牌墙最后一张自摸',
-  'The two special hands are the exception. Each scores a flat 6, and nothing is added to it.':
-    '两种特殊牌型是例外，各计 6 台，不再加计其他项目。',
-  'Special hand': '特殊牌型',
-  'Heavenly hand': '天胡',
-  'The dealer’s first five tiles win': '庄家起手五张就胡',
-  'Earthly hand': '地胡',
-  'The other player wins on their first draw': '闲家第一次摸牌就胡',
-  'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair, 2 for the self-draw and 1 because the dealer won, 6 points in all. It is not one colour, since the pair is half black.':
-    '来算一个例子。庄家手上有红车马炮和红帅，从牌墙摸到黑将。这是一组面子加帅将一对：胡牌 1 台、将帅听令 2 台、自摸 2 台、庄家 1 台，共 6 台。将眼有一半是黑的，所以不算清一色。',
+  'The heavenly hand is the exception: it scores a flat 6 whoever wins it, and nothing is added to it.':
+    '天胡是例外：不论谁胡，都计 6 台，不再加计其他项目。',
+  'Five Soldiers of one colour score Five Soldiers, not Mixed Soldiers as well. The dealer scores nothing extra for dealing.':
+    '同色五张兵卒只计五兵合纵，不再另计鼓角齐鸣。庄家做庄不另加台。',
+  'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair and 2 for the self-draw, 5 points in all. It is not one colour, since the pair is half black, and with both Generals in it, One General does not apply.':
+    '来算一个例子。庄家手上有红车马炮和红帅，从牌墙摸到黑将。这是一组面子加帅将一对：胡牌 1 台、将帅听令 2 台、自摸 2 台，共 5 台。将眼有一半是黑的，所以不算清一色；将帅都在手上，也不算将之才或帅之才。',
   'The dealer draws the black General and declares a win.': '庄家摸到黑将，宣告胡牌。',
   'The match': '一场比赛',
   'A match is six hands, and the deal alternates every hand, so each player deals three times. The winner of a hand adds its points to their score, and the other score stays where it was. After six hands the higher score wins the match, and equal scores are a draw.':
@@ -5952,11 +5960,11 @@ const ZH_HANS: Record<string, string> = {
   void: '流局',
   Ana: 'Ana',
   Ben: 'Ben',
-  'Ana wins the match 7 to 6. The fifth hand decided it: a self-draw on the last tile while she was dealer, worth 1 for the win, 2 for the self-draw, 1 as dealer and 1 for the last tile.':
-    'Ana 以 7 比 6 赢得比赛。关键是第五手：她做庄时摸牌墙最后一张自摸，胡牌 1 台、自摸 2 台、庄家 1 台、海底捞月 1 台。',
+  'Ana wins the match 6 to 5. The fifth hand decided it: a self-draw on the last tile, worth 1 for the win, 2 for the self-draw and 1 for the last tile.':
+    'Ana 以 6 比 5 赢得比赛。关键是第五手：她摸牌墙最后一张自摸，胡牌 1 台、自摸 2 台、海底捞月 1 台。',
   'Where do these rules come from?': '这些规则从哪里来？',
-  'The game has no rulebook. The rules and point values here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they leave a choice, Mistboard made it: the deal alternates every hand, and a match is six hands, since the sources play for money and give no match format.':
-    '这个游戏没有正式的规则书。本页的规则和台数依据中文维基百科条目和 Eastking 的规则页，两者说法一致，也对照过其他台湾规则网页和 FunTown 的线上牌桌。来源没有规定的地方由 Mistboard 决定：每手轮流做庄，一场比赛打六手，因为这些来源都是赌钱玩的，没有给出比赛赛制。',
+  'The game has no rulebook. The tiles and winning hands here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. The points follow the scoring table inside Gamesofa’s Xiangqi Mahjong app. Where they leave a choice, Mistboard made it: the deal alternates every hand, a match is six hands, since the sources play for money and give no match format, and five Soldiers of one colour do not also score Mixed Soldiers.':
+    '这个游戏没有正式的规则书。本页的牌和胡牌牌型依据中文维基百科条目和 Eastking 的规则页，两者说法一致，也对照过其他台湾规则网页和 FunTown 的线上牌桌。台数依照 Gamesofa 象棋麻将 app 里的计台表。来源没有规定的地方由 Mistboard 决定：每手轮流做庄；一场比赛打六手，因为这些来源都是赌钱玩的，没有给出比赛赛制；同色五张兵卒也不另计鼓角齐鸣。',
   'Can more than two people play?': '可以超过两人玩吗？',
   'Folk sources play with two to four. With four, 17 tiles are dealt and only 15 stay in the wall, so each player gets about four draws, and claims on the other three players’ discards do much of the work. Mistboard plays the two-player game.':
     '民间玩法是二到四人。四人玩时发出 17 张，牌墙只剩 15 张，每人大约只摸得到四次，主要靠吃碰其他三家的弃牌。Mistboard 采用两人玩法。',
@@ -5964,11 +5972,11 @@ const ZH_HANS: Record<string, string> = {
   'The other player wins the match, whatever the score. Leaving the game, running out of time and resigning all end the match the same way they end any game on Mistboard.':
     '不论比分如何，留下的一方赢得比赛。离开对局、超时和认输，都和 Mistboard 上任何对局一样结束比赛。',
   'Why is there no kong or ready declaration?': '为什么没有杠，也不能宣告听牌？',
-  'Both turn up in the folk rules, but online tables mostly drop the kong from the 32-tile game, and every source treats the ready declaration as optional, so Mistboard leaves both out. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two.':
-    '民间规则里两者都有，但线上牌桌的 32 张玩法大多不算杠，各家来源也都把宣告听牌当作可选，所以 Mistboard 两者都不采用。反正杠也很少出现：杠是四张相同的牌，而只有兵卒多于两张。',
+  'Online tables mostly drop the kong from the 32-tile game, and Mistboard does too. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two. The ready declaration is not in yet. Gamesofa’s table gives 1 point for declaring ready and 5 for each of two hands won after a ready declaration; Mistboard leaves those three lines out until the table has a way to declare ready.':
+    '线上牌桌的 32 张玩法大多不算杠，Mistboard 也不算。反正杠也很少出现：杠是四张相同的牌，而只有兵卒多于两张。宣告听牌目前还没有。Gamesofa 的计台表里，听牌 1 台，宣告听牌后胡的双龙抢珠和再战各 5 台；在牌桌能宣告听牌之前，Mistboard 先不计这三项。',
   'Why does the deal always alternate?': '为什么每手都要换庄？',
-  'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, so in a six-hand match each player deals three times.':
-    '有些牌桌让胡牌的庄家连庄，并另外加台。Mistboard 则每手都换庄，所以六手的比赛每人各做三次庄。',
+  'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, and the dealer scores nothing extra, so in a six-hand match each player deals three times.':
+    '有些牌桌让胡牌的庄家连庄，并另外加台。Mistboard 则每手都换庄，庄家也不另加台，所以六手的比赛每人各做三次庄。',
   'Five tiles, one set and a pair. Learn the hands against the computer, then play a friend.':
     '五张牌，一组面子加一对将眼。先和电脑对打学会牌型，再找朋友来打。',
   'All 32 tiles: the sixteen red tiles above the sixteen black tiles':
@@ -6026,6 +6034,10 @@ const ZH_HANS: Record<string, string> = {
     '胡牌：将帅听令，红帅和黑将当将眼',
   'Winning hand: Five Soldiers: all five Soldiers of one colour':
     '胡牌：五兵合纵，同色五张兵卒全到齐',
+  'Winning hand: Mixed Soldiers: three red Soldiers with a pair of black ones':
+    '胡牌：鼓角齐鸣，三张红兵加一对黑卒',
+  'Winning hand: Three of a piece: a black Horse in the set and a pair of red Horses':
+    '胡牌：三张同子，黑车马炮加一对红马',
   'Not a winning hand: the General, Advisor and Elephant are not all one colour':
     '不算胡牌：将士象不是同一颜色',
   'Not a winning hand': '不算胡牌',
@@ -6435,12 +6447,15 @@ const ZH_HANT: Record<string, string> = {
   'How a hand ends': '一手牌怎麼結束',
   'A hand ends in one of three ways. You draw the tile that completes your hand and declare a win, which is a self-drawn win. Or the other player discards that tile and you claim it. Or the wall runs out with nobody winning: the hand is void, nobody scores, and the deal passes.':
     '一手牌有三種結束方式。你摸到湊成手牌的那張並宣告胡牌，這是自摸。或者對手打出那張牌，你拿來胡。或者牌牆摸完了沒人胡：這手牌流局，雙方都不計分，換人做莊。',
-  'Two wins happen before the hand has really started. If the dealer’s opening five tiles already make a winning hand, that is a **heavenly hand**. If the other player wins with their first draw, before anyone has claimed a tile, that is an **earthly hand**.':
-    '有兩種胡牌發生在一手牌真正開始之前。莊家起手的五張牌已經是胡牌牌型，叫做**天胡**。另一位玩家在還沒有人吃碰之前，第一次摸牌就胡，叫做**地胡**。',
+  'A win before the hand has really started is a **heavenly hand**: the dealer’s opening five tiles already make a winning hand, or the other player wins with their first draw, before anyone has claimed a tile.':
+    '一手牌真正開始之前就胡牌，叫做**天胡**：莊家起手的五張牌已經是胡牌牌型，或另一位玩家在還沒有人吃碰之前，第一次摸牌就胡。',
+  'Points now follow the scoring table in Gamesofa’s Xiangqi Mahjong app: new lines for one General, three of a piece and mixed Soldiers, no dealer point, and one heavenly hand for either player’s first draw.':
+    '台數改為依照 Gamesofa 象棋麻將 app 的計台表：新增將之才、帥之才、三張同子和鼓角齊鳴，取消莊家台，天胡改為任一方第一次摸牌就胡都算。',
   'Winning hands and their score': '胡牌牌型與台數',
-  'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when the player who did not deal wins it on a discard.':
-    '胡牌是五張牌：一組面子加一對將眼，吃碰亮出的面子也算在內。能湊的面子只有三種：將士象順子、車馬炮順子、三張兵卒，所以下面前三種牌型就涵蓋了全部。每副胡牌計台；每張圖的說明寫的是閒家胡對手棄牌時的台數。',
-  'General, Advisor and Elephant, with any pair: 1 point.': '將士象順子，加任意將眼：1 台。',
+  'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
+    '胡牌是五張牌：一組面子加一對將眼，吃碰亮出的面子也算在內。能湊的面子只有三種：將士象順子、車馬炮順子、三張兵卒，所以下面前三種牌型就涵蓋了全部。每副胡牌計台；每張圖的說明寫的是胡對手棄牌時的台數。',
+  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for 2 points.':
+    '將士象順子，加任意將眼：1 台；手上只有將或只有帥，再加 1 台，共 2 台。',
   'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.':
     '車馬炮順子，加任意將眼。將眼不必和面子同色：1 台。',
   'Three Soldiers of one colour, with any pair: 1 point.': '三張同色兵卒，加任意將眼：1 台。',
@@ -6450,6 +6465,10 @@ const ZH_HANT: Record<string, string> = {
     '將帥聽令：紅帥和黑將當將眼。再加 2 台，共 3 台。',
   'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.':
     '五兵合縱：同色的五張兵卒全到齊。再加 5 台，而且也是清一色：共 7 台。',
+  'Mixed Soldiers: five Soldiers of both colours. 2 more, for 3 points.':
+    '鼓角齊鳴：五張兵卒，紅黑都有。再加 2 台，共 3 台。',
+  'Three of a piece: three Horses, of either colour. 2 more, for 3 points. Three Advisors, Elephants, Chariots or Cannons score the same.':
+    '三張同子：三張馬，紅黑不拘（千軍萬馬）。再加 2 台，共 3 台。三張士、象、車或炮也一樣。',
   'Close, but not a win': '差一點，但不算胡',
   'These look finished and are not. In each, the three tiles on the left fail to make a set or the two on the right fail to make a pair.':
     '這些看起來成牌了，其實沒有。每一副不是左邊三張湊不成面子，就是右邊兩張湊不成將眼。',
@@ -6469,26 +6488,27 @@ const ZH_HANT: Record<string, string> = {
   When: '條件',
   'Every winning hand': '每副胡牌',
   'One colour': '清一色',
+  'One General': '將之才 / 帥之才',
+  'One General in the hand and not the other': '手上有將或帥其中一張，沒有另一張',
   'All five tiles one colour': '五張牌同一顏色',
   'Generals pair': '將帥聽令',
+  'Three of a piece': '三張同子',
+  'Three Advisors, Elephants, Chariots, Horses or Cannons': '三張士、象、車、馬或炮',
+  'Mixed Soldiers': '鼓角齊鳴',
+  'Five Soldiers of both colours': '五張兵卒，紅黑都有',
   'The two Generals are the pair': '帥將兩張當將眼',
   'Five Soldiers': '五兵合縱',
   'Five Soldiers of one colour': '同色五張兵卒',
   'Self-draw': '自摸',
   'You drew the winning tile': '胡的那張是自己摸到的',
-  Dealer: '莊家',
-  'The dealer won': '莊家胡牌',
   'Last tile': '海底撈月',
   'Self-draw on the last wall tile': '摸牌牆最後一張自摸',
-  'The two special hands are the exception. Each scores a flat 6, and nothing is added to it.':
-    '兩種特殊牌型是例外，各計 6 台，不再加計其他項目。',
-  'Special hand': '特殊牌型',
-  'Heavenly hand': '天胡',
-  'The dealer’s first five tiles win': '莊家起手五張就胡',
-  'Earthly hand': '地胡',
-  'The other player wins on their first draw': '閒家第一次摸牌就胡',
-  'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair, 2 for the self-draw and 1 because the dealer won, 6 points in all. It is not one colour, since the pair is half black.':
-    '來算一個例子。莊家手上有紅俥傌炮和紅帥，從牌牆摸到黑將。這是一組面子加帥將一對：胡牌 1 台、將帥聽令 2 台、自摸 2 台、莊家 1 台，共 6 台。將眼有一半是黑的，所以不算清一色。',
+  'The heavenly hand is the exception: it scores a flat 6 whoever wins it, and nothing is added to it.':
+    '天胡是例外：不論誰胡，都計 6 台，不再加計其他項目。',
+  'Five Soldiers of one colour score Five Soldiers, not Mixed Soldiers as well. The dealer scores nothing extra for dealing.':
+    '同色五張兵卒只計五兵合縱，不再另計鼓角齊鳴。莊家做莊不另加台。',
+  'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair and 2 for the self-draw, 5 points in all. It is not one colour, since the pair is half black, and with both Generals in it, One General does not apply.':
+    '來算一個例子。莊家手上有紅俥傌炮和紅帥，從牌牆摸到黑將。這是一組面子加帥將一對：胡牌 1 台、將帥聽令 2 台、自摸 2 台，共 5 台。將眼有一半是黑的，所以不算清一色；將帥都在手上，也不算將之才或帥之才。',
   'The dealer draws the black General and declares a win.': '莊家摸到黑將，宣告胡牌。',
   'The match': '一場比賽',
   'A match is six hands, and the deal alternates every hand, so each player deals three times. The winner of a hand adds its points to their score, and the other score stays where it was. After six hands the higher score wins the match, and equal scores are a draw.':
@@ -6499,11 +6519,11 @@ const ZH_HANT: Record<string, string> = {
   void: '流局',
   Ana: 'Ana',
   Ben: 'Ben',
-  'Ana wins the match 7 to 6. The fifth hand decided it: a self-draw on the last tile while she was dealer, worth 1 for the win, 2 for the self-draw, 1 as dealer and 1 for the last tile.':
-    'Ana 以 7 比 6 贏得比賽。關鍵是第五手：她做莊時摸牌牆最後一張自摸，胡牌 1 台、自摸 2 台、莊家 1 台、海底撈月 1 台。',
+  'Ana wins the match 6 to 5. The fifth hand decided it: a self-draw on the last tile, worth 1 for the win, 2 for the self-draw and 1 for the last tile.':
+    'Ana 以 6 比 5 贏得比賽。關鍵是第五手：她摸牌牆最後一張自摸，胡牌 1 台、自摸 2 台、海底撈月 1 台。',
   'Where do these rules come from?': '這些規則從哪裡來？',
-  'The game has no rulebook. The rules and point values here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they leave a choice, Mistboard made it: the deal alternates every hand, and a match is six hands, since the sources play for money and give no match format.':
-    '這個遊戲沒有正式的規則書。本頁的規則和台數依據中文維基百科條目和 Eastking 的規則頁，兩者說法一致，也對照過其他台灣規則網頁和 FunTown 的線上牌桌。來源沒有規定的地方由 Mistboard 決定：每手輪流做莊，一場比賽打六手，因為這些來源都是賭錢玩的，沒有給出比賽賽制。',
+  'The game has no rulebook. The tiles and winning hands here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. The points follow the scoring table inside Gamesofa’s Xiangqi Mahjong app. Where they leave a choice, Mistboard made it: the deal alternates every hand, a match is six hands, since the sources play for money and give no match format, and five Soldiers of one colour do not also score Mixed Soldiers.':
+    '這個遊戲沒有正式的規則書。本頁的牌和胡牌牌型依據中文維基百科條目和 Eastking 的規則頁，兩者說法一致，也對照過其他台灣規則網頁和 FunTown 的線上牌桌。台數依照 Gamesofa 象棋麻將 app 裡的計台表。來源沒有規定的地方由 Mistboard 決定：每手輪流做莊；一場比賽打六手，因為這些來源都是賭錢玩的，沒有給出比賽賽制；同色五張兵卒也不另計鼓角齊鳴。',
   'Can more than two people play?': '可以超過兩人玩嗎？',
   'Folk sources play with two to four. With four, 17 tiles are dealt and only 15 stay in the wall, so each player gets about four draws, and claims on the other three players’ discards do much of the work. Mistboard plays the two-player game.':
     '民間玩法是二到四人。四人玩時發出 17 張，牌牆只剩 15 張，每人大約只摸得到四次，主要靠吃碰其他三家的棄牌。Mistboard 採用兩人玩法。',
@@ -6511,11 +6531,11 @@ const ZH_HANT: Record<string, string> = {
   'The other player wins the match, whatever the score. Leaving the game, running out of time and resigning all end the match the same way they end any game on Mistboard.':
     '不論比分如何，留下的一方贏得比賽。離開對局、超時和認輸，都和 Mistboard 上任何對局一樣結束比賽。',
   'Why is there no kong or ready declaration?': '為什麼沒有槓，也不能宣告聽牌？',
-  'Both turn up in the folk rules, but online tables mostly drop the kong from the 32-tile game, and every source treats the ready declaration as optional, so Mistboard leaves both out. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two.':
-    '民間規則裡兩者都有，但線上牌桌的 32 張玩法大多不算槓，各家來源也都把宣告聽牌當作可選，所以 Mistboard 兩者都不採用。反正槓也很少出現：槓是四張相同的牌，而只有兵卒多於兩張。',
+  'Online tables mostly drop the kong from the 32-tile game, and Mistboard does too. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two. The ready declaration is not in yet. Gamesofa’s table gives 1 point for declaring ready and 5 for each of two hands won after a ready declaration; Mistboard leaves those three lines out until the table has a way to declare ready.':
+    '線上牌桌的 32 張玩法大多不算槓，Mistboard 也不算。反正槓也很少出現：槓是四張相同的牌，而只有兵卒多於兩張。宣告聽牌目前還沒有。Gamesofa 的計台表裡，聽牌 1 台，宣告聽牌後胡的雙龍搶珠和再戰各 5 台；在牌桌能宣告聽牌之前，Mistboard 先不計這三項。',
   'Why does the deal always alternate?': '為什麼每手都要換莊？',
-  'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, so in a six-hand match each player deals three times.':
-    '有些牌桌讓胡牌的莊家連莊，並另外加台。Mistboard 則每手都換莊，所以六手的比賽每人各做三次莊。',
+  'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, and the dealer scores nothing extra, so in a six-hand match each player deals three times.':
+    '有些牌桌讓胡牌的莊家連莊，並另外加台。Mistboard 則每手都換莊，莊家也不另加台，所以六手的比賽每人各做三次莊。',
   'Five tiles, one set and a pair. Learn the hands against the computer, then play a friend.':
     '五張牌，一組面子加一對將眼。先和電腦對打學會牌型，再找朋友來打。',
   'All 32 tiles: the sixteen red tiles above the sixteen black tiles':
@@ -6573,6 +6593,10 @@ const ZH_HANT: Record<string, string> = {
     '胡牌：將帥聽令，紅帥和黑將當將眼',
   'Winning hand: Five Soldiers: all five Soldiers of one colour':
     '胡牌：五兵合縱，同色五張兵卒全到齊',
+  'Winning hand: Mixed Soldiers: three red Soldiers with a pair of black ones':
+    '胡牌：鼓角齊鳴，三張紅兵加一對黑卒',
+  'Winning hand: Three of a piece: a black Horse in the set and a pair of red Horses':
+    '胡牌：三張同子，黑車馬砲加一對紅傌',
   'Not a winning hand: the General, Advisor and Elephant are not all one colour':
     '不算胡牌：將士象不是同一顏色',
   'Not a winning hand': '不算胡牌',

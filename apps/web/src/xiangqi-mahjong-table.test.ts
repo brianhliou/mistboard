@@ -577,7 +577,7 @@ describe('xiangqi mahjong table', () => {
         // The whole scoring table, in the rules page's order, with this hand's
         // lines lit; the lit lines add up to the total.
         const rows = [...host.querySelectorAll('.xmj-lines li')];
-        expect(rows.length).toBe(9);
+        expect(rows.length).toBe(10);
         const lit = rows.filter((row) => row.classList.contains('xmj-line--on'));
         expect(lit.length).toBe(won.score.lines.length);
         expect(lit.map((row) => row.querySelector('.xmj-sr')?.textContent)).toEqual(

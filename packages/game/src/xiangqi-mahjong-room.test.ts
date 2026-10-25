@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { XMJ_MATCH_HANDS, type XmjTile, xmjOrderedTiles, xmjShuffle } from './xiangqi-mahjong.js';
+import {
+  XMJ_MATCH_HANDS,
+  XMJ_TAI_TABLE,
+  type XmjTile,
+  xmjOrderedTiles,
+  xmjShuffle,
+} from './xiangqi-mahjong.js';
 import { xmjBotAction, xmjBotDiscard, xmjDistance, xmjUnseen } from './xiangqi-mahjong-bot.js';
 import {
   applyXmjMove,
@@ -78,6 +84,41 @@ test('a fresh setup is one full wall per match hand and passes its own validator
   assert.ok(!isXmjRoomSetup({ ...setup, walls: [setup.walls[0]?.slice(1)] }));
   assert.ok(!isXmjRoomSetup({ ...setup, firstDealer: 'north' }));
 });
+
+test('a match scores on the 台 table its setup was stamped with; no stamp is table 1', () => {
+  assert.equal(createXmjSetup(seeded(1)).taiTable, XMJ_TAI_TABLE);
+  assert.equal(createXmjSetup(seeded(1), { correspondence: true }).taiTable, XMJ_TAI_TABLE);
+  const setup = createXmjSetup(seeded(1));
+  assert.ok(isXmjRoomSetup({ ...setup, taiTable: 1 }));
+  assert.ok(!isXmjRoomSetup({ ...setup, taiTable: 3 }));
+  assert.ok(!isXmjRoomSetup({ ...setup, taiTable: '2' }));
+
+  // East deals and throws 象; west's 將士 + 兵兵 wins on it. Table 2 adds 將之才.
+  const front: XmjTile[] = ['bE', 'rA', 'rR', 'bH', 'rC', 'bK', 'bA', 'rP', 'rP'];
+  const rest = xmjOrderedTiles();
+  for (const tile of front) rest.splice(rest.indexOf(tile), 1);
+  const wall = [...front, ...rest];
+  const totalOn = (stamp: Partial<XmjRoomSetup>) => {
+    const state = createXmjRoomState({ walls: [wall, wall], firstDealer: 'east', ...stamp });
+    const won = play(play(state, 'east', { action: 'discard', tile: 'bE' }), 'west', {
+      action: 'claim',
+      kind: 'win',
+      fromHand: [],
+    });
+    const result = won.match.results[0];
+    // The next hand deals on the same table.
+    assert.equal(xmjAdvanceDeal(won).match.hand.taiTable, stamp.taiTable ?? 1);
+    return result?.score?.total;
+  };
+  assert.equal(totalOn({}), 1, 'an unstamped (pre-10-26) game keeps its old score');
+  assert.equal(totalOn({ taiTable: 1 }), 1);
+  assert.equal(totalOn({ taiTable: 2 }), 2);
+});
+
+/** Deal the next hand of a match that is between hands. */
+function xmjAdvanceDeal(state: XmjRoomState): XmjRoomState {
+  return play(play(state, 'east', { action: 'next-hand' }), 'west', { action: 'next-hand' });
+}
 
 test('a seat sees its own tiles, never the other hand or the other seat’s draw', () => {
   const setup: XmjRoomSetup = { walls: [xmjShuffle(seeded(2))], firstDealer: 'east' };

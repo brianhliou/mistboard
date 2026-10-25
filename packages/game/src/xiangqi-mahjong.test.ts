@@ -270,8 +270,8 @@ test('win on the opponent discard (胡) scores and books the hand', () => {
   if (won.phase.type !== 'won') return;
   assert.equal(won.phase.winner, 1);
   assert.equal(won.phase.selfDrawn, false);
-  // win 1 only: mixed colours, non-dealer.
-  assert.equal(won.phase.score.total, 1);
+  // win 1 + 將之才 1 (將 and no 帥); mixed colours.
+  assert.equal(won.phase.score.total, 2);
   // The score carries the split it was counted from, for the table to group.
   assert.deepEqual(won.phase.score.shape, { meld: ['bK', 'bA', 'bE'], pair: ['rP', 'rP'] });
 });
@@ -288,10 +288,11 @@ test('a discard completing the pair is a win claim, never a pair claim', () => {
   assert.deepEqual(xmjLegalClaims(['rK', 'bH', 'rR', 'bC'], [], 'bH'), []);
 });
 
-test('地胡: the non-dealer wins on the first draw, flat 6', () => {
+test('table 1 地胡: the non-dealer wins on the first draw, flat 6', () => {
   const hand = xmjDeal(
     wallWith(['rA', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rP'], ['bE']),
     0,
+    1,
   );
   const drawn = xmjPass(xmjDiscard(hand, 'rR'));
   assert.equal(drawn.turn, 1);
@@ -306,7 +307,7 @@ test('地胡: the non-dealer wins on the first draw, flat 6', () => {
   }
 });
 
-test('dealer self-draw: 自摸 + 莊家, a flat +1 with no 連莊 doubling', () => {
+test('table 1 dealer self-draw: 自摸 + 莊家, a flat +1 with no 連莊 doubling', () => {
   const score = xmjScore({
     concealed: ['bR', 'bH', 'bC', 'rA', 'rA'],
     melds: [],
@@ -315,6 +316,7 @@ test('dealer self-draw: 自摸 + 莊家, a flat +1 with no 連莊 doubling', () 
     heavenly: false,
     earthly: false,
     lastTile: true,
+    table: 1,
   });
   // 1 + 2 + 1 (dealer) + 1 (last tile) = 5, not doubled.
   assert.equal(score.total, 5);
@@ -332,6 +334,106 @@ test('dealer self-draw: 自摸 + 莊家, a flat +1 with no 連莊 doubling', () 
     score.lines.reduce((sum, l) => sum + l.tai, 0),
     'the total is the sum of the lines, nothing multiplied',
   );
+});
+
+/** The lines a concealed winning hand scores on the current table, as [key, 台]. */
+function linesOf(concealed: XmjTile[], over: Partial<Parameters<typeof xmjScore>[0]> = {}) {
+  return xmjScore({
+    concealed,
+    melds: [],
+    selfDrawn: false,
+    winnerIsDealer: false,
+    heavenly: false,
+    earthly: false,
+    lastTile: false,
+    ...over,
+  }).lines.map((l) => [l.key, l.tai]);
+}
+
+test('天胡 is either seat winning on its first draw, flat 6 (地胡 folded in)', () => {
+  const hand = xmjDeal(
+    wallWith(['rA', 'rA', 'rR', 'bH', 'rC'], ['bK', 'bA', 'rP', 'rP'], ['bE']),
+    0,
+  );
+  const won = xmjSelfDraw(xmjPass(xmjDiscard(hand, 'rR')));
+  assert.equal(won.phase.type, 'won');
+  if (won.phase.type !== 'won') return;
+  assert.equal(won.phase.winner, 1, 'the non-dealer');
+  assert.deepEqual(
+    won.phase.score.lines.map((l) => [l.key, l.tai]),
+    [['heavenly', 6]],
+  );
+});
+
+test('no dealer line: a dealer self-draw scores 胡牌 + 自摸 + 海底撈月 only', () => {
+  assert.deepEqual(
+    linesOf(['bR', 'bH', 'bC', 'rA', 'rA'], {
+      selfDrawn: true,
+      winnerIsDealer: true,
+      lastTile: true,
+    }),
+    [
+      ['win', 1],
+      ['self-draw', 2],
+      ['last-tile', 1],
+    ],
+  );
+});
+
+test('將之才 / 帥之才: one general in the hand and not the other, +1', () => {
+  assert.deepEqual(linesOf(['bK', 'bA', 'bE', 'rP', 'rP']), [
+    ['win', 1],
+    ['black-general', 1],
+  ]);
+  assert.deepEqual(linesOf(['rK', 'rA', 'rE', 'bH', 'bH']), [
+    ['win', 1],
+    ['red-general', 1],
+  ]);
+  // Both generals can only be the 將帥 pair: that line, and neither 之才.
+  assert.deepEqual(linesOf(['rK', 'bK', 'rP', 'rP', 'rP']), [
+    ['win', 1],
+    ['generals-pair', 2],
+  ]);
+  // Neither general: no line.
+  assert.deepEqual(linesOf(['bR', 'bH', 'bC', 'rP', 'rP']), [['win', 1]]);
+});
+
+test('three of a piece, either colour, +2 each', () => {
+  const three = (pair: XmjTile, meld: XmjTile[]) =>
+    linesOf([pair, pair, ...meld]).filter(([key]) => String(key).startsWith('three-'));
+  assert.deepEqual(three('rA', ['bK', 'bA', 'bE']), [['three-advisors', 2]]);
+  assert.deepEqual(three('rE', ['bK', 'bA', 'bE']), [['three-elephants', 2]]);
+  assert.deepEqual(three('rR', ['bR', 'bH', 'bC']), [['three-chariots', 2]]);
+  assert.deepEqual(three('rH', ['bR', 'bH', 'bC']), [['three-horses', 2]]);
+  assert.deepEqual(three('rC', ['bR', 'bH', 'bC']), [['three-cannons', 2]]);
+  // Two of a piece is not three.
+  assert.deepEqual(three('rA', ['bR', 'bH', 'bC']), []);
+  // The full line set for one hand: 仕仕 + 將士象 is three advisors and 將之才.
+  assert.deepEqual(linesOf(['rA', 'rA', 'bK', 'bA', 'bE']), [
+    ['win', 1],
+    ['black-general', 1],
+    ['three-advisors', 2],
+  ]);
+});
+
+test('鼓角齊鳴: five soldiers of both colours +2; one colour is 五兵 instead', () => {
+  assert.deepEqual(linesOf(['rP', 'rP', 'rP', 'bP', 'bP']), [
+    ['win', 1],
+    ['mixed-soldiers', 2],
+  ]);
+  // Five of one colour scores the narrower line and not 鼓角齊鳴 on top.
+  assert.deepEqual(linesOf(['bP', 'bP', 'bP', 'bP', 'bP']), [
+    ['win', 1],
+    ['one-colour', 1],
+    ['five-soldiers', 5],
+  ]);
+  // Three soldiers and a pair of something else is neither.
+  assert.deepEqual(linesOf(['rP', 'rP', 'rP', 'bH', 'bH']), [['win', 1]]);
+});
+
+test('table 1 scores none of the table 2 lines', () => {
+  assert.deepEqual(linesOf(['rA', 'rA', 'bK', 'bA', 'bE'], { table: 1 }), [['win', 1]]);
+  assert.deepEqual(linesOf(['rP', 'rP', 'rP', 'bP', 'bP'], { table: 1 }), [['win', 1]]);
 });
 
 /** Play a hand out with both seats discarding their first tile and never claiming. */

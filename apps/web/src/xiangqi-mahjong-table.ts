@@ -25,13 +25,13 @@ import {
   XMJ_DEALER_TILES,
   XMJ_OTHER_TILES,
   XMJ_SEATS,
-  XMJ_TAI_ORDER,
   XMJ_TAI_POINTS,
   type XmjClaim,
   type XmjMeld,
   type XmjPlayerView,
   type XmjScore,
   type XmjSeat,
+  type XmjTaiKey,
   type XmjTile,
   type XmjViewResult,
   xmjSortTiles,
@@ -606,26 +606,61 @@ function winningHandHtml(score: XmjScore, winning: XmjTile): string {
 }
 
 /**
+ * The panel's rows: the rules page's lines, with the two 之才 lines and the
+ * five three-of-a-piece lines each sharing a row, so the table stays two
+ * columns of five. A hand can score at most one line of a shared row.
+ */
+const PANEL_ROWS: readonly (readonly [I18nKey, readonly XmjTaiKey[]])[] = [
+  ['live.xmj.tai.win', ['win']],
+  ['live.xmj.tai.one-colour', ['one-colour']],
+  ['live.xmj.tai.one-general', ['black-general', 'red-general']],
+  ['live.xmj.tai.generals-pair', ['generals-pair']],
+  [
+    'live.xmj.tai.three-of',
+    ['three-advisors', 'three-elephants', 'three-chariots', 'three-horses', 'three-cannons'],
+  ],
+  ['live.xmj.tai.mixed-soldiers', ['mixed-soldiers']],
+  ['live.xmj.tai.five-soldiers', ['five-soldiers']],
+  ['live.xmj.tai.self-draw', ['self-draw']],
+  ['live.xmj.tai.last-tile', ['last-tile']],
+  ['live.xmj.tai.heavenly', ['heavenly']],
+];
+
+/**
  * The rules page's scoring table, all of it, with the lines this hand scored
  * lit and the rest left dim: the reader learns the table by seeing which rows
  * a real hand hits. Same order and wording as "Adding it up", which the "?"
- * opens. The total is the big number in the head, so it is not said again.
+ * opens. The total is the big number in the head, so it is not said again. A
+ * game scored on the old table (`XmjTaiTable` 1) also lists the 莊家 or 地胡
+ * line it scored.
  */
 function scoringHtml(score: XmjScore): string {
-  const scored = new Set(score.lines.map((line) => line.key));
-  const rows = XMJ_TAI_ORDER.map((key) => {
+  const scored = new Map(score.lines.map((line) => [line.key, line.tai]));
+  const row = (label: I18nKey, keys: readonly XmjTaiKey[]) => {
+    const hit = keys.find((key) => scored.has(key));
+    const key = hit ?? (keys[0] as XmjTaiKey);
     const points = XMJ_TAI_POINTS[key];
-    // A line that is the whole score (the win, the two special hands) is a
-    // flat number; the rest add to it.
+    // A line that is the whole score (the win, the special hands) is a flat
+    // number; the rest add to it.
     const flat = key === 'win' || key === 'heavenly' || key === 'earthly';
-    const on = scored.has(key);
-    const mark = on ? `<span class="xmj-sr">${t('live.xmj.taiScored')}</span>` : '';
-    return `<li${on ? ' class="xmj-line--on"' : ''}><span>${t(`live.xmj.tai.${key}` as I18nKey)}${mark}</span><b>${flat ? points : `+${points}`}</b></li>`;
-  }).join('');
+    const name = t(hit && keys.length > 1 ? (`live.xmj.tai.${hit}` as I18nKey) : label);
+    const mark = hit ? `<span class="xmj-sr">${t('live.xmj.taiScored')}</span>` : '';
+    return `<li${hit ? ' class="xmj-line--on"' : ''}><span>${name}${mark}</span><b>${flat ? points : `+${points}`}</b></li>`;
+  };
+  const listed = new Set(PANEL_ROWS.flatMap(([, keys]) => keys));
+  const rows = [
+    ...PANEL_ROWS.map(([label, keys]) => row(label, keys)),
+    ...XMJ_TAI_ORDER_LEGACY.filter((key) => scored.has(key) && !listed.has(key)).map((key) =>
+      row(`live.xmj.tai.${key}` as I18nKey, [key]),
+    ),
+  ].join('');
   const how = t('live.xmj.howScoring');
   const link = `<a class="xmj-result__how" href="${localizedHref(XMJ_SCORING_HREF)}" title="${how}" aria-label="${how}">?</a>`;
   return `<div class="xmj-scoring"><ol class="xmj-lines" aria-label="${t('live.xmj.taiTable')}">${rows}</ol>${link}</div>`;
 }
+
+/** Table 1's lines that table 2 dropped, for a game scored before the change. */
+const XMJ_TAI_ORDER_LEGACY: readonly XmjTaiKey[] = ['dealer', 'earthly'];
 
 function outcomeText(result: XmjViewResult, names: Readonly<Record<XmjSeat, string>>): string {
   if (result.winner === null) return t('live.xmj.resultNone');

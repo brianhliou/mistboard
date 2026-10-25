@@ -196,20 +196,22 @@ export const howToPlayXiangqiMahjongArticle: Article = {
           rows: [
             ['Win', '1', 'Every winning hand'],
             ['One colour', '+1', 'All five tiles one colour'],
+            ['One general', '+1', 'One general in the hand and not the other'],
             ['Generals pair', '+2', 'The two generals are the pair'],
+            ['Three of a piece', '+2', 'Three advisors, elephants, chariots, horses or cannons'],
+            ['Mixed soldiers', '+2', 'Five soldiers of both colours'],
             ['Five soldiers', '+5', 'Five soldiers of one colour'],
             ['Self-draw', '+2', 'You drew the winning tile'],
-            ['Dealer', '+1', 'The dealer won'],
             ['Last tile', '+1', 'Self-draw on the last wall tile'],
           ],
         },
         {
           kind: 'paragraph',
-          text: 'Two hands skip the table and score a flat 6. A dealer whose first five tiles already win has a **heavenly hand**. A non-dealer who wins on the first draw, before anyone has claimed a tile, has an **earthly hand**.',
+          text: 'One hand skips the table and scores a flat 6: the **heavenly hand**, a win on either player’s first five tiles, before anyone has claimed a tile. Dealing earns nothing extra.',
         },
         {
           kind: 'paragraph',
-          text: 'Here’s a hand that adds up. The dealer holds the red chariot, horse and cannon and the red general, then draws the black general. That’s 1 for the win, 2 for the generals pair, 2 for the self-draw and 1 for dealing, 6 points in all, as much as a heavenly hand.',
+          text: 'Here’s a hand that adds up. The dealer holds the red chariot, horse and cannon and the red general, then draws the black general. That’s 1 for the win, 2 for the generals pair and 2 for the self-draw, 5 points in all.',
         },
         {
           kind: 'raw-svg',
