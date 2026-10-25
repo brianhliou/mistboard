@@ -463,6 +463,12 @@
     display: none;
   }
 
+  /* With only the shown view left, the row is one pill that goes nowhere. */
+  .articles-community-shell
+  .articles-community-rail:not(:has(a:not([data-empty="true"]):not(.community-rail-active))) {
+    display: none;
+  }
+
   .articles-community-shell .articles-index-heading .site-section-heading {
     font-size: 30px;
   }

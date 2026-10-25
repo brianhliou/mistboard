@@ -44,6 +44,11 @@ test('phone: the blog index puts the posts full width with no rail beside them',
       sheetLeft: Math.round(sheet.getBoundingClientRect().left),
       railBottom: Math.round(rail.getBoundingClientRect().bottom),
       sheetTop: Math.round(sheet.getBoundingClientRect().top),
+      railShown: rail.getClientRects().length > 0,
+      otherViewHasPosts: [...rail.querySelectorAll('a')].some(
+        (link) =>
+          !link.classList.contains('community-rail-active') && link.dataset.empty !== 'true',
+      ),
       chipCount: document.querySelectorAll('.articles-topic-chip').length,
       chipRows: chipTops.size,
       titleWidths,
@@ -60,6 +65,10 @@ test('phone: the blog index puts the posts full width with no rail beside them',
   expect
     .soft(layout.railBottom, 'the blog tabs sit above the sheet, not beside it')
     .toBeLessThanOrEqual(layout.sheetTop);
+  // A lone tab for the view already shown goes nowhere, so the row hides.
+  expect
+    .soft(layout.railShown, 'the tab row shows only when there is a second view')
+    .toBe(layout.otherViewHasPosts);
   expect.soft(layout.chipCount, 'the index shows its topic chips').toBeGreaterThanOrEqual(2);
   expect.soft(layout.chipRows, 'topic chips sit in one or two rows').toBeLessThanOrEqual(2);
   expect.soft(layout.titleWidths.length).toBeGreaterThan(0);
