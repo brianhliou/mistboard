@@ -95,6 +95,8 @@ const week = (weekStart: string, overrides: Record<string, number> = {}) => ({
   puzzleSessions: 3,
   puzzleSolves: 2,
   puzzleAttempts: 1,
+  puzzlePlayers: 2,
+  returningPuzzlePlayers: 1,
   studiesCreated: 0,
   studyChaptersCreated: 0,
   practiceSolves: 0,
@@ -278,6 +280,7 @@ describe('metrics page', () => {
       'Active players, rolling 28 days',
       'Games per week',
       'Accounts per week',
+      'Puzzle players per week',
       'Puzzles per week',
       'Study and practice per week',
       'Community per week',
@@ -305,6 +308,20 @@ describe('metrics page', () => {
       '4',
     ]);
     expect(playersSection?.querySelector('.weekly-chart-line-partial')).not.toBeNull();
+
+    // Puzzles: people beside the puzzles-started line, which says what it counts.
+    const legendOf = (title: string) =>
+      [
+        ...([...root.querySelectorAll('.metrics-weekly-section')]
+          .find((s) => s.querySelector('.metrics-section-heading')?.textContent === title)
+          ?.querySelectorAll('.weekly-chart-legend li') ?? []),
+      ].map((n) => n.textContent);
+    expect(legendOf('Puzzle players per week')).toEqual(['Puzzle players', 'Returning']);
+    expect(legendOf('Puzzles per week')).toEqual([
+      'Puzzles started',
+      'Solves',
+      'Signed-in attempts',
+    ]);
 
     // "Games by mode" is human only on admin too: bot-vs-bot lives in the
     // Engines block and nowhere else on the page.

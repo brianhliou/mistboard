@@ -7,6 +7,7 @@
  */
 
 import { browserTimeZone } from '../browser-time-zone.js';
+import { deviceIdForBrowser } from '../live-state.js';
 import type { PuzzleDetail, PuzzleMove, PuzzleState, PuzzleSummary } from './adapter.js';
 
 export type PuzzleAttempt =
@@ -206,10 +207,19 @@ export async function sendPuzzleQualityEvent(
   event: 'view' | 'start' | 'abandon' | 'vote',
   vote?: PuzzleQualityVote,
 ): Promise<void> {
+  // The browser's device id, the one live rooms already send (migration 137),
+  // so /metrics can count puzzle players, not puzzles (server migration 177).
+  // Null when storage is blocked; the row then counts as no one.
+  const deviceId = deviceIdForBrowser();
   const response = await fetch(`/api/puzzles/${encodeURIComponent(id)}/quality`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ sessionId, event, ...(event === 'vote' ? { vote } : {}) }),
+    body: JSON.stringify({
+      sessionId,
+      event,
+      ...(event === 'vote' ? { vote } : {}),
+      ...(deviceId ? { deviceId } : {}),
+    }),
     keepalive: true,
   });
   if (!response.ok) throw new Error(`Puzzle quality event failed: ${response.status}`);
