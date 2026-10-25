@@ -13,6 +13,7 @@ import {
   GAME_SPECS,
   gameSpecForId,
   gameSpecForLegacyLiveRoom,
+  isCorrespondenceAllowlistedSpec,
   isCorrespondenceRatedSpec,
   isGameSpecId,
   isRatedPoolBase,
@@ -254,4 +255,11 @@ test('isCorrespondenceRatedSpec is exactly correspondence-eligible AND an active
   assert.equal(isCorrespondenceRatedSpec('not-a-spec'), false);
   assert.equal(isCorrespondenceRatedSpec(null), false);
   assert.equal(isCorrespondenceRatedSpec(undefined), false);
+});
+
+test('Xiangqi Mahjong is not played by correspondence, publicly or by allowlist', () => {
+  // Brian, 2026-10-25: held out at launch; the tenant's correspondence binding stays.
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(XIANGQI_MAHJONG_SPEC_ID), false);
+  assert.equal(isCorrespondenceAllowlistedSpec(XIANGQI_MAHJONG_SPEC_ID), false);
+  assert.equal(isCorrespondenceRatedSpec(XIANGQI_MAHJONG_SPEC_ID), false);
 });

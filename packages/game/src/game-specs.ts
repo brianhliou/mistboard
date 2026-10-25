@@ -218,7 +218,8 @@ export const CHESS_SPEC_ID = 'chess' satisfies GameSpecId;
 // Every launched two-player variant since 2026-10-02 (Brian: "all of them should
 // support it"). Xiangqi and Fog Chess keep the first two places (the original
 // pair, and the pickers' default); the rest follow CANONICAL_VARIANT_ORDER.
-// Mahjong (four seats, account-allowlisted) and study-only chess stay out.
+// Mahjong (four seats, account-allowlisted), Xiangqi Mahjong (below) and
+// study-only chess stay out.
 //
 // This is the list of specs that CAN be played by correspondence. Which of them
 // are public (CORRESPONDENCE_ELIGIBLE_SPEC_IDS) and which only admit allowlisted
@@ -234,8 +235,9 @@ const CORRESPONDENCE_PLAYABLE_SPEC_IDS: readonly GameSpecId[] = [
   DARK_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
-  // Two-seated (east, west), so it rides the generic two-seat seek factory.
-  XIANGQI_MAHJONG_SPEC_ID,
+  // Xiangqi Mahjong is held out at launch (Brian, 2026-10-25: "let's not support
+  // correspondence for this variant yet"). Its tenant keeps the correspondence
+  // binding and its tests, so opening it again is adding XIANGQI_MAHJONG_SPEC_ID here.
 ];
 
 // Specs that may ALSO be played by correspondence, but only by accounts the

@@ -273,7 +273,6 @@ describe('correspondence side names', () => {
       'dark-xiangqi': 'Red/Black',
       jungle: 'Red/Blue',
       'jungle-flip': 'First/Second',
-      'xiangqi-mahjong': 'East/West',
     });
     // A retired variant left the create list, but a game in progress still
     // names its sides.

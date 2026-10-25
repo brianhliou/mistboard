@@ -64,7 +64,11 @@ test('every variant on the public shelf is eligible, and nothing else (2026-10-0
   // the one list every picker reads; mahjong and study-only chess are not on it.
   // A variant added to the shelf without correspondence fails here, not in a
   // player's start panel.
-  assert.deepEqual([...CORRESPONDENCE_ELIGIBLE_SPECS].sort(), [...CANONICAL_VARIANT_ORDER].sort());
+  // Xiangqi Mahjong is on the shelf but held out (Brian, 2026-10-25).
+  assert.deepEqual(
+    [...CORRESPONDENCE_ELIGIBLE_SPECS].sort(),
+    CANONICAL_VARIANT_ORDER.filter((id) => id !== XIANGQI_MAHJONG_SPEC_ID).sort(),
+  );
   assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(MAHJONG_SPEC_ID));
   assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(CHESS_SPEC_ID));
 });
@@ -160,8 +164,9 @@ test('held by default: with the correspondence-rated flag off no eligible spec t
 
 // ---- Launch and allowlisted playtest specs ----------------------------------
 
-test('launched XMJ correspondence is public and needs no playtest grant', () => {
-  assert.ok(CORRESPONDENCE_ELIGIBLE_SPECS.has(XIANGQI_MAHJONG_SPEC_ID));
+test('XMJ is not played by correspondence, publicly or by grant (2026-10-25)', () => {
+  // Brian: "let's not support correspondence for this variant yet".
+  assert.ok(!CORRESPONDENCE_ELIGIBLE_SPECS.has(XIANGQI_MAHJONG_SPEC_ID));
   assert.ok(!CORRESPONDENCE_ALLOWLISTED_SPECS.has(XIANGQI_MAHJONG_SPEC_ID));
   assert.equal(isAllowlistedGameSpec(XIANGQI_MAHJONG_SPEC_ID), false);
 });

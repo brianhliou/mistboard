@@ -55,8 +55,8 @@ const ZH_HANS: Record<string, string> = {
   // ── 2026-10-22 (jqe) ── 电脑 / 级 / 研究 follow the AB-JChess entry and the longest-forced-mates entry.
   // ── 2026-10-25 ── 面子 / 将眼 follow live.xmj.set and live.xmj.pair.
   'Xiangqi Mahjong has launched.': '象棋麻将上线了。',
-  'A folk game from Taiwan that plays one xiangqi set as mahjong tiles. Draw and discard until you hold five tiles that make one set of three and a pair. Play Misty, a friend, the lobby at anything from 1+1 to 10+5, or by correspondence; a rated game counts the whole six-hand match. The rules page draws every winning hand.':
-    '一种来自台湾的民间玩法，把一副象棋当作麻将牌来打。摸牌、打牌，凑齐五张牌，组成一个面子和一个将眼就胡了。可以和 Misty 对局、邀请朋友、在大厅下 1+1 到 10+5 的对局，也可以下通信棋；积分对局按整场六手牌计算。规则页画出了每一种胡牌牌型。',
+  'A folk game from Taiwan that plays one xiangqi set as mahjong tiles. Draw and discard until you hold five tiles that make one set of three and a pair. Play Misty, a friend or the lobby at anything from 1+1 to 10+5; a rated game counts the whole six-hand match. The rules page draws every winning hand.':
+    '一种来自台湾的民间玩法，把一副象棋当作麻将牌来打。摸牌、打牌，凑齐五张牌，组成一个面子和一个将眼就胡了。可以和 Misty 对局、邀请朋友、在大厅下 1+1 到 10+5 的对局；积分对局按整场六手牌计算。规则页画出了每一种胡牌牌型。',
   'Meet jqe, the new top jieqi bot.': '认识 jqe：新的最强揭棋电脑。',
   'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':
     'jqe 是 Devin O’Keefe 开发的开源揭棋引擎。它与此前的最强电脑 AB-JChess 对弈 300 盘，171 胜、15 和、114 负。它现在排在 AB-JChess 上面一级，AB-JChess 继续保留。整场比赛的每一盘棋都收在一个研究里。',
@@ -558,8 +558,8 @@ const ZH_HANT: Record<string, string> = {
   // ── 2026-10-22 (jqe) ── 電腦 / 級 / 研究 follow the AB-JChess entry and the longest-forced-mates entry.
   // ── 2026-10-25 ── 面子 / 將眼 follow live.xmj.set and live.xmj.pair.
   'Xiangqi Mahjong has launched.': '象棋麻將上線了。',
-  'A folk game from Taiwan that plays one xiangqi set as mahjong tiles. Draw and discard until you hold five tiles that make one set of three and a pair. Play Misty, a friend, the lobby at anything from 1+1 to 10+5, or by correspondence; a rated game counts the whole six-hand match. The rules page draws every winning hand.':
-    '一種來自台灣的民間玩法，把一副象棋當作麻將牌來打。摸牌、打牌，湊齊五張牌，組成一個面子和一個將眼就胡了。可以和 Misty 對局、邀請朋友、在大廳下 1+1 到 10+5 的對局，也可以下通信棋；積分對局按整場六手牌計算。規則頁畫出了每一種胡牌牌型。',
+  'A folk game from Taiwan that plays one xiangqi set as mahjong tiles. Draw and discard until you hold five tiles that make one set of three and a pair. Play Misty, a friend or the lobby at anything from 1+1 to 10+5; a rated game counts the whole six-hand match. The rules page draws every winning hand.':
+    '一種來自台灣的民間玩法，把一副象棋當作麻將牌來打。摸牌、打牌，湊齊五張牌，組成一個面子和一個將眼就胡了。可以和 Misty 對局、邀請朋友、在大廳下 1+1 到 10+5 的對局；積分對局按整場六手牌計算。規則頁畫出了每一種胡牌牌型。',
   'Meet jqe, the new top jieqi bot.': '認識 jqe：新的最強揭棋電腦。',
   'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':
     'jqe 是 Devin O’Keefe 開發的開源揭棋引擎。它與此前的最強電腦 AB-JChess 對弈 300 盤，171 勝、15 和、114 負。它現在排在 AB-JChess 上面一級，AB-JChess 繼續保留。整場比賽的每一盤棋都收在一個研究裡。',

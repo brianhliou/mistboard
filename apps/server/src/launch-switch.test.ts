@@ -59,8 +59,6 @@ function xmjListedUnder(isPublic: (id: GameSpecId) => boolean): Record<string, b
   const offPublic = offPublicGameSpecIds(lists.allowlisted);
   return {
     'on the variant shelf (CANONICAL_VARIANT_ORDER)': lists.canonicalVariantOrder.includes(XMJ),
-    'correspondence for everyone': lists.correspondenceEligible.includes(XMJ),
-    'not correspondence-allowlisted': !lists.correspondenceAllowlisted.includes(XMJ),
     'not on the play allowlist': !lists.allowlisted.includes(XMJ),
     'a public rating pool': !privateRatingPoolsFor(lists.allowlisted).includes(XMJ_POOL),
     'rules page indexed': !playtestRulesSlugs(isPublic).includes(XMJ_RULES_SLUG),
@@ -72,8 +70,6 @@ function xmjListedUnder(isPublic: (id: GameSpecId) => boolean): Record<string, b
 function xmjListedNow(): Record<string, boolean> {
   return {
     'on the variant shelf (CANONICAL_VARIANT_ORDER)': CANONICAL_VARIANT_ORDER.includes(XMJ),
-    'correspondence for everyone': CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(XMJ),
-    'not correspondence-allowlisted': !isCorrespondenceAllowlistedSpec(XMJ),
     'not on the play allowlist': !isAllowlistedGameSpec(XMJ),
     'a public rating pool': isPublicRatingPool(XMJ_POOL),
     'rules page indexed': articleIsIndexable(XMJ_RULES_SLUG),
@@ -93,6 +89,9 @@ function withSwitchOn(id: GameSpecId) {
 
 test('XMJ is launched on every server surface without a playtest grant', async () => {
   assert.equal(isPublicGameSpec(XMJ), true);
+  // Held out of correspondence for everyone, granted or not (Brian, 2026-10-25).
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(XMJ), false);
+  assert.equal(isCorrespondenceAllowlistedSpec(XMJ), false);
   const listed = xmjListedNow();
   assert.deepEqual(listed, everyValue(listed, true));
   assert.equal(await mayPlayVariant(null, XMJ), true);
@@ -196,7 +195,11 @@ test('flipping the XMJ switch lists it on every server surface', () => {
   const hidden = deriveLaunchLists(off);
   assert.equal(launched.canonicalVariantOrder.at(-1), XMJ);
   assert.deepEqual(launched.canonicalVariantOrder.slice(0, -1), hidden.canonicalVariantOrder);
-  assert.deepEqual(launched.correspondenceEligible.slice(0, -1), hidden.correspondenceEligible);
+  // Correspondence is the one list the switch does not reach: XMJ is held out of
+  // it either way (Brian, 2026-10-25), so flipping it leaves that list alone.
+  assert.deepEqual(launched.correspondenceEligible, hidden.correspondenceEligible);
+  assert.ok(!launched.correspondenceEligible.includes(XMJ));
+  assert.ok(!hidden.correspondenceAllowlisted.includes(XMJ));
   // HK mahjong is untouched by XMJ's switch.
   assert.ok(launched.allowlisted.includes('mahjong'));
   assert.ok(playtestRulesSlugs(on).includes('mahjong'));

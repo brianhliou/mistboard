@@ -24,7 +24,7 @@ import type { Article, ArticleBlock } from '../types.js';
 // follows the kernel in packages/game xiangqi-mahjong.ts; every tile picture is
 // one of that page's diagrams, whose test runs each hand through xmjWinShape and
 // xmjScore. Facts read from code, 2026-10-25: the first dealer is random in a
-// live room and East in correspondence (createXmjSetup); the clock owner is the
+// live room (createXmjSetup; correspondence is held out at launch); the clock owner is the
 // seat to discard or, after a discard, the claimant, and nobody between hands
 // (xmjClockOwner); 1+1, 3+2 and 5+5 are rated, 10+5 casual (time-controls.ts),
 // and the rated unit is the whole match (xiangqi-mahjong-registration.ts).
@@ -97,7 +97,7 @@ export const howToPlayXiangqiMahjongArticle: Article = {
     'The tiles are one xiangqi set: 32 pieces, red and black, and colour works like a suit.',
     'A winning hand is five tiles, one set of three and a pair.',
     'A match is six hands on one clock, and each player deals three times.',
-    'Play Misty, a friend or the lobby at 1+1 to 10+5, or by correspondence; a rated game counts all six hands as one result.',
+    'Play Misty, a friend or the lobby at 1+1 to 10+5; a rated game counts all six hands as one result.',
   ],
   intro: [
     {
@@ -222,7 +222,7 @@ export const howToPlayXiangqiMahjongArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The deal passes every hand, so in a six-hand match each player deals three times. The first dealer is drawn at random, except by correspondence, where East always deals first. The winner of a hand adds its points to their score, and the other score stays where it was. After six hands the higher score wins the match, and equal scores are a draw.',
+          text: 'The deal passes every hand, so in a six-hand match each player deals three times. The first dealer is drawn at random. The winner of a hand adds its points to their score, and the other score stays where it was. After six hands the higher score wins the match, and equal scores are a draw.',
         },
         {
           kind: 'paragraph',
@@ -230,7 +230,7 @@ export const howToPlayXiangqiMahjongArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Games at 1+1, 3+2 and 5+5 between two signed-in players can be rated, and the rating counts the match as one result, all six hands together. Games at 10+5, by correspondence and against Misty are unrated.',
+          text: 'Games at 1+1, 3+2 and 5+5 between two signed-in players can be rated, and the rating counts the match as one result, all six hands together. Games at 10+5 and against Misty are unrated.',
         },
       ],
     },
@@ -239,7 +239,7 @@ export const howToPlayXiangqiMahjongArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Misty, Mistboard’s bot, is the quickest way to learn the hands, and it’s there any time. You can also challenge a friend, post or answer a seek in the lobby, or start a correspondence match at days per move. The rules page draws every winning hand and scores a sample six-hand match from the first deal to the last.',
+          text: 'Misty, Mistboard’s bot, is the quickest way to learn the hands, and it’s there any time. You can also challenge a friend, or post or answer a seek in the lobby. The rules page draws every winning hand and scores a sample six-hand match from the first deal to the last.',
         },
         {
           kind: 'cta',
