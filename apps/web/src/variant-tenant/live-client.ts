@@ -34,6 +34,7 @@ import {
   type FinishBadge,
   type LiveFinishBadges,
 } from '../live-finish-badges.js';
+import { maybePlayGameStartSound } from '../live-game-start-sound.js';
 import { createLiveLayout, setLiveLayoutGameSpec } from '../live-layout.js';
 import {
   createLiveLifecycleEffects,
@@ -765,6 +766,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     captureReplayView(view);
     const displayed = replay.currentView(view);
     const lifecycleEffect = updateLifecycleEffects(view);
+    // The game-start sound for every tenant rides the same frame as the start
+    // pulse, so a new variant on this client sounds its start with no wiring.
+    maybePlayGameStartSound(lifecycleEffect, view?.id);
     trackGameLifecycle(view);
     // Drain the animation channel on EVERY render (even disabled/hook-less
     // paths) so nothing stale carries into a later, unrelated render.

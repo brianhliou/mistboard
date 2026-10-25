@@ -10,6 +10,8 @@ import { BANQI_SPEC_ID } from '@mistboard/game';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setPostHogInstance } from '../analytics.js';
 import { resetTrackedGameStartsForTests } from '../game-start-source.js';
+import { resetGameStartSoundForTests } from '../live-game-start-sound.js';
+import { playSoundWhenUnlocked } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
 import {
   createTenantLiveClient,
@@ -26,6 +28,13 @@ import { adoptLiveHistory } from './live-history.js';
 import { createTenantReplayController } from './replay-controller.js';
 import type { TenantWebView, WebVariantTenant } from './room-chrome.js';
 import type { TenantSocketClientOptions } from './socket-client.js';
+
+// The real controller needs an AudioContext; the wiring test only needs to see
+// which sound the client asked for.
+vi.mock('../live-sound.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../live-sound.js')>()),
+  playSoundWhenUnlocked: vi.fn(),
+}));
 
 type TColor = 'red' | 'blue';
 type TMove = { from: string; to: string };
@@ -173,6 +182,9 @@ function moveEvent(color: TColor, from: string, to: string, ply: number): Tenant
 
 beforeEach(() => {
   enabledFlag = true;
+  window.sessionStorage.clear();
+  resetGameStartSoundForTests();
+  vi.mocked(playSoundWhenUnlocked).mockClear();
 });
 
 describe('tenant live-client core', () => {
@@ -347,6 +359,67 @@ describe('tenant live-client core', () => {
       }),
     });
     expect(stage?.dataset.liveLifecycleEffect).toBe('finish-win');
+  });
+
+  describe('game-start sound (shared helper, every tenant)', () => {
+    function gameStartPlays(): number {
+      return vi.mocked(playSoundWhenUnlocked).mock.calls.filter(([kind]) => kind === 'game-start')
+        .length;
+    }
+
+    it('sounds a PvE game on its first frame at the start, once', () => {
+      const h = createHarness({ chrome: { roomMode: () => 'pve' } });
+      h.feedHello({ seat: 'red', connectedSeats: { red: true, blue: true }, state: view() });
+      h.feedSnapshot({ seat: 'red', connectedSeats: { red: true, blue: true }, state: view() });
+      expect(gameStartPlays()).toBe(1);
+    });
+
+    it('sounds a PvP game when the opponent arrives, not while waiting', () => {
+      const h = createHarness();
+      h.feedHello({ seat: 'red', connectedSeats: { red: true, blue: false }, state: view() });
+      expect(gameStartPlays()).toBe(0);
+      h.feedSnapshot({ seat: 'red', connectedSeats: { red: true, blue: true }, state: view() });
+      expect(gameStartPlays()).toBe(1);
+    });
+
+    it('does not sound again when the room reloads at the start', () => {
+      createHarness({ chrome: { roomMode: () => 'pve' } }).feedHello({
+        seat: 'red',
+        connectedSeats: { red: true, blue: true },
+        state: view(),
+      });
+      resetGameStartSoundForTests(); // a page reload keeps only sessionStorage
+      createHarness({ chrome: { roomMode: () => 'pve' } }).feedHello({
+        seat: 'red',
+        connectedSeats: { red: true, blue: true },
+        state: view(),
+      });
+      expect(gameStartPlays()).toBe(1);
+    });
+
+    it('stays silent mid-game, for a spectator, on a finished game, and in correspondence', () => {
+      createHarness({ chrome: { roomMode: () => 'pve' } }).feedHello({
+        seat: 'red',
+        connectedSeats: { red: true, blue: true },
+        state: view({ id: 'mid', moveNumber: 6 }),
+      });
+      createHarness({ chrome: { roomMode: () => 'pve' } }).feedHello({
+        seat: 'spectator',
+        connectedSeats: { red: true, blue: true },
+        state: view({ id: 'watch' }),
+      });
+      createHarness({ chrome: { roomMode: () => 'pve' } }).feedHello({
+        seat: 'red',
+        connectedSeats: { red: true, blue: true },
+        state: view({ id: 'done', status: { type: 'finished', winner: 'red', reason: 'x' } }),
+      });
+      createHarness({ chrome: { roomMode: () => 'correspondence' } }).feedHello({
+        seat: 'red',
+        connectedSeats: { red: true, blue: true },
+        state: view({ id: 'corr' }),
+      });
+      expect(gameStartPlays()).toBe(0);
+    });
   });
 
   it('renders the unmasked two-column move list with a fallback for missing plies', () => {

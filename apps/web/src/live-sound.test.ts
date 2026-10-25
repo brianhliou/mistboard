@@ -304,6 +304,24 @@ describe('audio unlock and sticky activation', () => {
     expect(audio.oscillatorCount()).toBeGreaterThan(0);
   });
 
+  it('plays every sound queued before the first gesture: the start notify and the opening move', async () => {
+    const audio = installFakeAudio();
+    setUserActivation(false);
+    window.localStorage.setItem('mistboard.soundSet', 'mist');
+    vi.resetModules();
+    const mod = await import('./live-sound.js');
+    const oscillators = (kind: Parameters<typeof tonesForSound>[0]) =>
+      mod.tonesForSound(kind, 'mist').filter((tone) => !tone.noise).length;
+
+    mod.initLiveSound();
+    mod.playSoundWhenUnlocked('game-start');
+    mod.playSoundWhenUnlocked('move');
+    expect(audio.oscillatorCount()).toBe(0);
+
+    window.dispatchEvent(new Event('pointerdown'));
+    expect(audio.oscillatorCount()).toBe(oscillators('game-start') + oscillators('move'));
+  });
+
   it('switches the running controller from Mist tones to Wood percussion', async () => {
     const audio = installFakeAudio();
     setUserActivation(true);

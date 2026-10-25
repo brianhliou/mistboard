@@ -34,6 +34,7 @@ import {
   renderGameControls as renderGameControlRows,
   updateAbortCountdown as updateGameControlCountdown,
 } from './live-game-controls.js';
+import { maybePlayGameStartSound } from './live-game-start-sound.js';
 import { createLiveLayout, setLiveLayoutGameSpec } from './live-layout.js';
 import { createLiveLifecycleEffects, type LiveLifecycleEffects } from './live-lifecycle-effects.js';
 import { renderReplay, resetMoveListState } from './live-move-list.js';
@@ -186,7 +187,7 @@ function updateLifecycleEffects(replayIsLive: boolean): void {
   const ready =
     !correspondence &&
     (liveState.solo || liveState.roomMode !== 'pvp' || view.moveNumber >= 2 || opponentConnected);
-  lifecycleEffects.update({
+  const effect = lifecycleEffects.update({
     gameId: view.id,
     status: view.status.type,
     moveNumber: view.moveNumber,
@@ -196,6 +197,7 @@ function updateLifecycleEffects(replayIsLive: boolean): void {
     seat: seated ? liveState.seat : null,
     winner: view.status.type === 'finished' ? view.status.winner : null,
   });
+  maybePlayGameStartSound(effect, view.id);
 }
 
 function trackGameLifecycle(view: PlayerView | null): void {
