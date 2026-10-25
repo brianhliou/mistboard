@@ -76,6 +76,26 @@
   --board-resize-ink: #f1f5f2;
 }
 
+/* On a phone the tiles keep fixed sizes (max-width 520px, below), so the
+   table is the same height at any width and the 1.45 ratio means nothing:
+   at 360x780 the phone room's height budget squeezed the column to 231px,
+   under the 294px the hand needs, and the table ran past the right edge and
+   39px into the bottom seat line. Here the table takes the screen's width,
+   its block takes the table's height, and a short phone scrolls instead. */
+@media (max-width: 600px) {
+  .live-route--xiangqi-mahjong .review-shell__cluster.live-review__cluster {
+    --phone-room-slack: 0px;
+  }
+
+  .live-route--xiangqi-mahjong .live-review__cluster .board-shell {
+    width: 100%;
+  }
+
+  .live-route--xiangqi-mahjong .live-review__cluster > .review-shell__center {
+    height: auto;
+  }
+}
+
 @media (min-width: 800px) {
   .live-route--xiangqi-mahjong .xiangqi-mahjong-live-board {
     container-type: inline-size;

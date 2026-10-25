@@ -130,4 +130,21 @@ async function press(locator: Locator, touch: boolean): Promise<void> {
 
 async function expectFits(page: Page, stage: string): Promise<void> {
   expect(await horizontalOverflow(page), `${stage} scrolls sideways`).toBeLessThanOrEqual(1);
+  // A 360px phone's height budget once squeezed the column under the hand's
+  // width: the table ran off the right edge and into the bottom seat line.
+  const overlap = await page.evaluate(() => {
+    const table = document.querySelector('.xiangqi-mahjong-live-board .xmj-table');
+    const seat = document.querySelector('.round-table__player--bottom');
+    if (!table) return 'no table';
+    const box = table.getBoundingClientRect();
+    if (box.right > document.documentElement.clientWidth + 1) return `table right ${box.right}`;
+    // On a desktop the seat lines sit in the rail beside the table.
+    const line = seat?.getBoundingClientRect();
+    const stacked = line && line.left < box.right && line.right > box.left;
+    if (line && stacked && box.bottom > line.top + 1) {
+      return `table bottom ${box.bottom} over seat ${line.top}`;
+    }
+    return null;
+  });
+  expect(overlap, `${stage} table overflows its block`).toBeNull();
 }
