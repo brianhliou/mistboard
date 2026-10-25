@@ -148,3 +148,57 @@ async function expectFits(page: Page, stage: string): Promise<void> {
   });
   expect(overlap, `${stage} table overflows its block`).toBeNull();
 }
+
+// The phone room fits one 390x664 screen: board, both player rows and the move
+// arrows, with no vertical scroll (a hand's ponds stay one row of twelve). The
+// planted tall table proves the check can fail.
+test('Xiangqi Mahjong: the phone room fits one screen', async ({
+  page,
+  isMobile,
+  grantedAccount,
+}) => {
+  expect(grantedAccount).toBeTruthy();
+  test.skip(!isMobile, 'phone layout only');
+  await page.setViewportSize({ width: 390, height: 664 });
+  const created = await page.request.post('/api/rooms', {
+    data: {
+      gameSpecId: 'xiangqi-mahjong',
+      mode: 'pve',
+      preferredColor: 'east',
+      timeControl: { initialMs: 600_000, incrementMs: 0 },
+    },
+  });
+  expect(created.status()).toBe(201);
+  const room = (await created.json()) as { url: string };
+  await page.goto(room.url);
+  const board = page.locator('.xiangqi-mahjong-live-board');
+  await expect(board.locator('.xmj-table')).toBeVisible();
+  await expect(page.locator('.round-table__player--bottom .clock-seat-tag').first()).toBeVisible();
+  expect(await phoneFitProblems(page)).toEqual([]);
+
+  await page.addStyleTag({ content: '.xmj-table { min-height: 900px; }' });
+  expect(await phoneFitProblems(page)).not.toEqual([]);
+});
+
+async function phoneFitProblems(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const problems: string[] = [];
+    const root = document.documentElement;
+    if (root.scrollHeight > innerHeight + 1) {
+      problems.push(`page is ${root.scrollHeight}px tall on a ${innerHeight}px screen`);
+    }
+    const nav = document.querySelector('.move-nav-bar')?.getBoundingClientRect();
+    if (!nav || nav.bottom > innerHeight + 1) problems.push('move arrows below the fold');
+    const table = document.querySelector('.xmj-table')?.getBoundingClientRect();
+    if (!table) return [...problems, 'no table'];
+    for (const el of document.querySelectorAll<HTMLElement>('.xmj-table *')) {
+      const box = el.getBoundingClientRect();
+      if (!box.width || getComputedStyle(el).visibility === 'hidden') continue;
+      if (box.left < table.left - 1 || box.right > table.right + 1) {
+        problems.push(`${el.className} runs off the table`);
+        break;
+      }
+    }
+    return problems;
+  });
+}

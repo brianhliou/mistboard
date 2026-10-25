@@ -155,6 +155,10 @@ export type WebVariantTenant<C extends string> = {
   // pending, so a two-action turn's second half reads in the same spot as the
   // first, with no extra element and nothing shifting.
   turnChipLabel?(seat: C): I18nKey | null;
+  // Optional: short facts about a seat shown after its name on the player row
+  // (already localized). Mahjong puts the dealer and the running points here on
+  // a phone, where its table has no room for them.
+  seatTags?(seat: C): readonly string[];
 };
 
 /** A recorded clock at one ply of a finished match (the review page). */
@@ -375,6 +379,15 @@ export function createTenantRoomChrome<C extends string>(
     return color === ctx.seat() ? 'bottom' : 'top';
   }
 
+  function appendSeatTags(playerLine: HTMLElement, color: C): void {
+    for (const tag of tenant.seatTags?.(color) ?? []) {
+      const el = document.createElement('span');
+      el.className = 'clock-seat-tag';
+      el.textContent = tag;
+      playerLine.append(el);
+    }
+  }
+
   function renderClocks(): void {
     if (!refs) return;
     refs.clockTop.replaceChildren();
@@ -447,6 +460,7 @@ export function createTenantRoomChrome<C extends string>(
             'clock-name',
           ),
         );
+        appendSeatTags(playerLine, color);
         if (isTurn) {
           const toMove = document.createElement('span');
           toMove.className = 'clock-to-move';
@@ -510,6 +524,7 @@ export function createTenantRoomChrome<C extends string>(
           'clock-name',
         ),
       );
+      appendSeatTags(playerLine, color);
       const toMove = document.createElement('span');
       toMove.className = 'clock-to-move';
       const chipLabel = tenant.turnChipLabel?.(color) ?? null;

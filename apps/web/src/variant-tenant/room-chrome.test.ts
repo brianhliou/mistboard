@@ -537,6 +537,27 @@ describe('tenant room chrome player names', () => {
     expect(refs.gameInfo.textContent).not.toContain('4320+0');
   });
 
+  it('puts tenant seat tags after the name, armed and pregame', () => {
+    // Mahjong shows the dealer and the running points here on a phone.
+    const tagged: WebVariantTenant<Color> = {
+      ...tenant,
+      seatTags: (seat) => (seat === 'red' ? ['Dealer', '12 points'] : ['0 points']),
+    };
+    for (const clock of [armedClock, null]) {
+      const { chrome, refs } = chromeHarness(
+        { clock, timeControl, seatDisplayNames: { white: 'brian', red: 'Misty' } },
+        tagged,
+      );
+      chrome.renderClocks();
+      const tags = (row: HTMLElement) =>
+        [...row.querySelectorAll('.clock-seat-tag')].map((el) => el.textContent);
+      expect(tags(refs.playerTop)).toEqual(['Dealer', '12 points']);
+      expect(tags(refs.playerBottom)).toEqual(['0 points']);
+      const top = refs.playerTop.textContent ?? '';
+      expect(top.indexOf('Misty')).toBeLessThan(top.indexOf('Dealer'));
+    }
+  });
+
   it('uses server names in the meta card player rows', () => {
     const { chrome, refs } = chromeHarness({
       seatDisplayNames: { white: 'brian', red: 'Misty DMX' },

@@ -47,6 +47,7 @@ import {
   xmjFeltFromSearch,
   xmjHandsTableHtml,
   xmjLogHtml,
+  xmjPoints,
   xmjReasonPhrase,
   xmjResultLine,
   xmjTileLookFromSearch,
@@ -166,6 +167,17 @@ const xmjWebTenant: WebVariantTenant<XmjSeat> = {
   liveGameRejectedBody: 'live.roomLiveHandSeatedOnly',
   spectatorBody: 'live.spectatorXiangqiMahjong',
   selectInstruction: 'live.selectXiangqiMahjong',
+  // The dealer and the running points on each player row. Only a phone shows
+  // them (xiangqi-mahjong.css): there the table drops its badge columns and the
+  // points table under the board so the room fits one screen. Read from the
+  // displayed view, so stepping back through the moves rewinds them too.
+  seatTags: (seat) => {
+    const view = core?.displayedView();
+    if (!view) return [];
+    const tags = [xmjPoints(view.scores[seat])];
+    if (view.dealer === seat) tags.unshift(t('live.xmj.dealer'));
+    return tags;
+  },
 };
 
 const CLAIM_LABEL: Readonly<

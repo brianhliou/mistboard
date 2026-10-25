@@ -386,12 +386,14 @@ function lastDiscardSeat(view: XmjPlayerView): XmjSeat | null {
 function bubbleHtml(view: XmjPlayerView, names: Readonly<Record<XmjSeat, string>>): string {
   const phase = view.phase;
   if (phase.type !== 'claim' || view.legal.claims.length === 0) return '';
-  const column = (view.discards[phase.discarder].length - 1) % XMJ_POND_COLUMNS;
+  // The raw index too: a phone lays the pond out twelve wide (xiangqi-mahjong.css).
+  const index = view.discards[phase.discarder].length - 1;
+  const column = index % XMJ_POND_COLUMNS;
   const text = t('live.xmj.claimBubble', {
     name: escapeHtml(names[phase.discarder]),
     tile: xmjTileName(phase.discard),
   });
-  return `<div class="xmj-bubble" role="status" style="--xmj-col:${column}">${text}</div>`;
+  return `<div class="xmj-bubble" role="status" style="--xmj-col:${column};--xmj-i:${index}">${text}</div>`;
 }
 
 function pondHtml(

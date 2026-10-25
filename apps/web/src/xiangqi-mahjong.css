@@ -80,8 +80,9 @@
    table is the same height at any width and the 1.45 ratio means nothing:
    at 360x780 the phone room's height budget squeezed the column to 231px,
    under the 294px the hand needs, and the table ran past the right edge and
-   39px into the bottom seat line. Here the table takes the screen's width,
-   its block takes the table's height, and a short phone scrolls instead. */
+   39px into the bottom seat line. Here the table takes the screen's width
+   and its block takes the table's height, which the phone rules below keep
+   inside the slot a xiangqi board gets, so the room fits one screen. */
 @media (max-width: 600px) {
   .live-route--xiangqi-mahjong .review-shell__cluster.live-review__cluster {
     --phone-room-slack: 0px;
@@ -1355,6 +1356,73 @@ ol.xmj-log {
 }
 
 /* ── Phones ────────────────────────────────────────────────────────────────── */
+
+/* The phone room fits one screen, as a xiangqi room does (Brian, 2026-10-25:
+   "ideally we should make the room page not vertically scroll on mobile").
+   A xiangqi board gets 426px between the player rows at 390x664; the table
+   was 539px with the points table under it. So, on a phone only:
+   - each pond is one row of twelve: over 400 bot matches no hand passed 12
+     discards (the median hand ends at 3), so the second row was empty felt;
+   - the badges and the points table leave the felt for the player rows
+     (`seatTags` in live-xiangqi-mahjong.ts): at six tiles a badge column
+     beside the hand is 20px wide and clipped "To discard";
+   - the hand's result lies over the whole table, not the shorter middle band.
+   The centre keeps its 118px, the height of a claim prompt and its buttons,
+   so the table still never changes height. */
+@media (max-width: 520px) {
+  .live-route--xiangqi-mahjong .xmj-table {
+    width: 100%;
+    container-type: inline-size;
+    padding: 8px;
+    gap: 6px;
+    --xmj-pond-gap: 2px;
+    --xmj-pond-w: min(28px, calc((100cqw - 22px) / 12));
+    --xmj-pond-h: calc(var(--xmj-pond-w) * 1.32);
+  }
+
+  .live-route--xiangqi-mahjong .xmj-middle {
+    position: static;
+    gap: 8px;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-pond-wrap {
+    width: calc(var(--xmj-pond-w) * 12 + var(--xmj-pond-gap) * 11);
+  }
+
+  .live-route--xiangqi-mahjong .xmj-pond {
+    grid-template-columns: repeat(12, var(--xmj-pond-w));
+    row-gap: 4px;
+    min-height: calc(var(--xmj-pond-h) + 8px);
+    padding-top: 4px;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-bubble::after {
+    left: calc(
+      mod(var(--xmj-i, 0), 12) *
+      (var(--xmj-pond-w) + var(--xmj-pond-gap)) +
+      var(--xmj-pond-w) /
+      2
+    );
+  }
+
+  .live-route--xiangqi-mahjong .xmj-rack {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-rack__tag,
+  .live-route--xiangqi-mahjong .xmj-hands-under {
+    display: none;
+  }
+}
+
+/* The player rows carry the dealer and the points only where the table
+   dropped them. */
+@media (min-width: 521px) {
+  .live-route--xiangqi-mahjong .clock-seat-tag {
+    display: none;
+  }
+}
 
 @media (max-width: 520px) {
   .xiangqi-mahjong-live-board {
