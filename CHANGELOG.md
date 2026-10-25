@@ -87,6 +87,8 @@ Conventions:
 
 ### Learning and puzzles
 
+- The General Blunder challenge names its first draw and our verdict on making it win ([4b4990cb](https://github.com/brianhliou/mistboard/commit/4b4990cb))
+- Xiangqi puzzles play your opponent's last move in before you solve, so you see what just happened ([4b4990cb](https://github.com/brianhliou/mistboard/commit/4b4990cb))
 - Horde Xiangqi veterans now carry a gold chevron in every piece set, not just International ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
 - The six posts moved from brianhliou.com read in Simplified and Traditional Chinese again ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
 - The Chinese Pikafish guide now opens with online play, browser analysis and official engine download guidance ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
@@ -287,6 +289,10 @@ Conventions:
 
 ### Fixed
 
+- A ten-game match imported from dpxq lists its games as Game 1, Game 2 ([4b4990cb](https://github.com/brianhliou/mistboard/commit/4b4990cb))
+- A finished game opened from its link on a phone now fits the board, clocks and move arrows on one screen instead of a long, zoomed-out page ([4b4990cb](https://github.com/brianhliou/mistboard/commit/4b4990cb))
+- Forum edits are rate limited, so a post rewritten in a loop can no longer use up the day's translations ([4b4990cb](https://github.com/brianhliou/mistboard/commit/4b4990cb))
+- News items and changelog lines for the classical manuals link each manual's own study instead of the studies index ([4b4990cb](https://github.com/brianhliou/mistboard/commit/4b4990cb))
 - Jieqi study embeds whose games leave some pieces unrevealed show the board again ([c5b7bc54](https://github.com/brianhliou/mistboard/commit/c5b7bc54))
 - Article embeds no longer shake at browser zoom levels like 110% ([c5b7bc54](https://github.com/brianhliou/mistboard/commit/c5b7bc54))
 - The homepage Play again card offers your last bot game wherever you started it ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
