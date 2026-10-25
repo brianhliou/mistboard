@@ -11,6 +11,10 @@ Edit task → find file → open only that file.
 
 | File | Owns |
 |------|------|
+| `xiangqi-mahjong-bot-baseline.ts` | Frozen 2026-10-25 XMJ offence-only bot for reproducible comparisons; do not retune |
+| `xiangqi-mahjong-danger.ts` | Exact neutral-prior deal-in probability from hypergeometrically weighted waiting hands |
+| `xiangqi-mahjong-defensive-bot.ts` | Offline XMJ challenger: frozen offence plus a separately configurable discard danger penalty |
+| `xiangqi-mahjong-bot-match.ts` | Seeded six-hand XMJ harness, swapped-seat wall pairs, kernel scoring and paired promotion bounds |
 | `types.ts` | Shared types: `Color`, `Square`, `Board`, `Move`, `GameState`, `PlayerView`, `Variant` |
 | `game-specs.ts` | Cross-family game-spec taxonomy and stable ids (`GameSpecId`): families (chess, xiangqi, jungle, military-chess, ...), board geometries, movement/objective rules, and the open / dark / hidden-identity visibility axis that fail-closed variant dispatch keys on |
 | `export-formats.ts` | `GAME_EXPORT_FORMATS`: the one table of which export formats (pgn/json) each variant serves, read by the server route gate AND the web download links; explicit map, no fallback |
@@ -1034,6 +1038,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | AI asset gen | `pixel-gen.mjs`, `slice-fog.py` |
 | Misty engine-repo heroes | Three-stage pipeline behind the animated README heroes in the public `misty-jungle` / `misty-flip-jungle` / `misty-banqi` repos, no browser involved. `misty-hero-selfplay.ts` plays the SHIPPED bot against itself at its full node budget (jungle 5M, banqi 1.5M, flip 512K — mirrors the server tier tables) through the real kernel + redacted FEN encoders, driving the UCI binaries built from the public repos (the same source railpack fetches release binaries from); jungle needs `--opening-plies` / `--opening-topk` because deterministic symmetric self-play there has exactly ONE game and it is a no-capture draw. `misty-hero-frames.ts` replays that game through the PRODUCT board renderers at the site's DEFAULT appearance (nothing pinned) and rasterizes with resvg, inlining `BANQI_BOARD_CSS` and collapsing `var()` because resvg has neither a page stylesheet nor custom properties. `misty_hero_webp.py` stitches the PNGs into a looping animated WebP (not GIF: the same clip is ~12 MB as a GIF) |
 | Cycles-gate config | `.madgerc` (repo root): madge detective options for the cycles gate (`skipTypeImports` + `skipAsyncImports`): type-only imports and lazy dynamic `import()` edges are not counted, so the gate flags only real runtime import cycles |
+| XMJ bot measurement | `xmj-bot-match.mjs`: offline paired baseline/challenger matches; usage and parked-build evidence in `docs/xmj-bot-match.md` |
 | Other | `key-transparency.py` |
 
 ## Conventions
