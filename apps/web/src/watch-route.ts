@@ -21,6 +21,8 @@ import {
   displayParticipantName,
   type FeaturedGame,
   type GameParticipant,
+  liveFirstMover,
+  liveMatchupNames,
   matchupLabel,
   matchupSeats,
   namesMatchupLabel,
@@ -897,17 +899,12 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
 
   // ── Featured live-follow: poll the cross-channel election and drive the board ──
   const registerLiveNames = (featured: LiveFeatured): void => {
-    const players = featured.players ?? [];
-    if (players.length < 2 || namesByRoomId[featured.roomId]) return;
-    const first = players.find((p) => p.color === 'red' || p.color === 'white') ?? players[0]!;
-    const second = players.find((p) => p !== first) ?? players[1]!;
-    namesByRoomId[featured.roomId] = {
-      first: displayLiveName(first.name, t('watch.guest')),
-      second: displayLiveName(second.name, t('watch.guest')),
-    };
+    if (namesByRoomId[featured.roomId]) return;
+    const names = liveMatchupNames(featured.players ?? [], t('watch.guest'));
+    if (names) namesByRoomId[featured.roomId] = names;
   };
 
-  // The featured live game's seats as meta players, first mover (red/white) first
+  // The featured live game's seats as meta players, first mover (red/white/east) first
   // so the rows seat like every other watch board. Live payloads carry no
   // ratings, so the rows are name + BOT only. A flip variant's ink is read off the
   // live payload's view (the same `firstColor` the finished feed rows carry), and
@@ -915,7 +912,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // nobody owns a color yet.
   const liveMetaPlayers = (featured: LiveFeatured): GameMetaPlayer[] => {
     const players = featured.players ?? [];
-    const first = players.find((p) => p.color === 'red' || p.color === 'white') ?? players[0];
+    const first = liveFirstMover(players);
     const ordered = first ? [first, ...players.filter((p) => p !== first)] : players;
     const firstColor = payloadFirstColor(featured.payload);
     return ordered.map((p) => ({

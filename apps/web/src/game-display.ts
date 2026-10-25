@@ -227,6 +227,26 @@ export function displayLiveName(name: string | null | undefined, fallback: strin
   return brandedEngineName(name) ?? name;
 }
 
+// The seat that moves first in a live game: red (xiangqi family, jungle), white
+// (chess) or east (Xiangqi Mahjong's dealer seat).
+const FIRST_MOVER_COLORS = new Set(['red', 'white', 'east']);
+
+export function liveFirstMover<T extends { color: string }>(players: readonly T[]): T | undefined {
+  return players.find((player) => FIRST_MOVER_COLORS.has(player.color)) ?? players[0];
+}
+
+/** First/second-mover names for a live featured game, or null without two
+ *  seats. A null name is a guest seat. */
+export function liveMatchupNames(
+  players: readonly { color: string; name: string | null | undefined }[],
+  guest: string,
+): { first: string; second: string } | null {
+  if (players.length < 2) return null;
+  const first = liveFirstMover(players)!;
+  const second = players.find((player) => player !== first) ?? players[1]!;
+  return { first: displayLiveName(first.name, guest), second: displayLiveName(second.name, guest) };
+}
+
 // Correspondence seeks store a side as MOVE ORDER ('first'/'second'), variant-neutral, so
 // one seek board serves every eligible variant. These map that axis back to the words a
 // player recognises: chess is White/Black, the xiangqi family Red/Black, Jungle Red/Blue. Banqi

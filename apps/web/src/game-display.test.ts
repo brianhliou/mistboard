@@ -13,6 +13,7 @@ import {
   firstMoverColorName,
   type GameParticipant,
   gameOutcome,
+  liveMatchupNames,
   matchupLabel,
   matchupSeats,
   secondMoverColorName,
@@ -272,6 +273,7 @@ describe('correspondence side names', () => {
       'dark-xiangqi': 'Red/Black',
       jungle: 'Red/Blue',
       'jungle-flip': 'First/Second',
+      'xiangqi-mahjong': 'East/West',
     });
     // A retired variant left the create list, but a game in progress still
     // names its sides.
@@ -282,5 +284,32 @@ describe('correspondence side names', () => {
     // and goes by its catalog name, so zh readers see 象棋麻将, not the English.
     expect(variantNameKeyForSpecId('xiangqi-mahjong')).toBe('variant.xiangqiMahjong.name');
     expect(firstMoverColorName('no-such-spec')).toBe('White');
+  });
+});
+
+describe('liveMatchupNames', () => {
+  it('seats the Xiangqi Mahjong dealer (east) first, so a guest is not named after the bot', () => {
+    // The live feed lists west (the bot) first; the guest east seat moves first.
+    const names = liveMatchupNames(
+      [
+        { color: 'west', name: 'Misty' },
+        { color: 'east', name: null },
+      ],
+      'Guest',
+    );
+    expect(names).toEqual({ first: 'Guest', second: 'Misty' });
+  });
+
+  it('keeps red and white first and needs two seats', () => {
+    expect(
+      liveMatchupNames(
+        [
+          { color: 'black', name: 'b' },
+          { color: 'red', name: 'r' },
+        ],
+        'Guest',
+      ),
+    ).toEqual({ first: 'r', second: 'b' });
+    expect(liveMatchupNames([{ color: 'white', name: 'w' }], 'Guest')).toBeNull();
   });
 });
