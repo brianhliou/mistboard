@@ -174,3 +174,77 @@ describe('finished phone room (10-24 review)', () => {
     expect(span(`<button>Rematch</button>${REVIEW}`, 0)).not.toBe('1 / -1');
   });
 });
+
+// A correspondence room's "7 days per move" line took a line the phone
+// board's budget never gave up, so a finished Fog Chess room (and a seated
+// live one) scrolled by 27px at 390x664 and 360x740 (10-24 phone review).
+const GAME_SHELL = readFileSync(resolve(__dirname, 'game-shell.css'), 'utf8');
+
+function daysPerMoveNoteDisplay(width: number, height: number): string {
+  const win = new Window({ width, height });
+  try {
+    win.document.head.innerHTML = [GAME_SHELL, LIVE_REVIEW, REVIEW_SHELL]
+      .map((css) => `<style>${css}</style>`)
+      .join('');
+    win.document.body.innerHTML =
+      '<div class="review-shell__cluster live-review__cluster"><section class="panel-section game-console"><p data-clocks-note class="clocks-pregame-note">7 days per move</p></section></div>';
+    return win.getComputedStyle(need(win.document.querySelector('.clocks-pregame-note'), 'note'))
+      .display;
+  } finally {
+    void win.happyDOM.close();
+  }
+}
+
+describe('correspondence days-per-move line (#618)', () => {
+  it.each([
+    [390, 664],
+    [360, 740],
+  ])('leaves the phone room at %ix%i', (w, h) => {
+    expect(daysPerMoveNoteDisplay(w, h)).toBe('none');
+  });
+
+  it('stays under the clocks on desktop', () => {
+    expect(daysPerMoveNoteDisplay(1280, 800)).toBe('block');
+  });
+});
+
+// A live spectator's notice ("Watching" and why) took 59-77px the phone
+// board's budget never gave up, so every live spectator room scrolled by
+// 67-85px (10-24 phone review). A plain notice is now a fixed band; one that
+// ends in a button (reconnect, sign in) keeps its own height.
+function noticeBand(width: number, extra: string): { section: string; clamp: string } {
+  const win = new Window({ width, height: 664 });
+  try {
+    win.document.head.innerHTML = [GAME_SHELL, LIVE_REVIEW, REVIEW_SHELL]
+      .map((css) => `<style>${css}</style>`)
+      .join('');
+    win.document.body.innerHTML = `<div class="review-shell__cluster live-review__cluster"><div class="round-table__box"><div data-action-section class="round-table__row"><div data-action-status class="action-status"><div class="action-notice default"><strong>Watching</strong><span>Spectators receive a public Fog view while the game is live.</span>${extra}</div></div></div></div></div>`;
+    const section = need(win.document.querySelector('[data-action-section]'), 'section');
+    const body = need(win.document.querySelector('.action-notice > span'), 'body');
+    // happy-dom leaves calc() unresolved; a browser reads 52px.
+    const h = win
+      .getComputedStyle(section)
+      .height.replace(/^calc\((\d+)px - (\d+)px\)$/, (_m, a, b) => `${Number(a) - Number(b)}px`);
+    return {
+      section: h,
+      clamp: win.getComputedStyle(body).getPropertyValue('-webkit-line-clamp'),
+    };
+  } finally {
+    void win.happyDOM.close();
+  }
+}
+
+describe('live spectator notice on a phone (#618)', () => {
+  it('is a fixed band with the body held to two lines', () => {
+    expect(noticeBand(390, '')).toEqual({ section: '52px', clamp: '2' });
+    expect(noticeBand(360, '')).toEqual({ section: '52px', clamp: '2' });
+  });
+
+  // Not here: a notice ending in a button keeping its own height. happy-dom
+  // matches `> span:last-child` inside :has() with a button after the span,
+  // so that half was checked in WebKit and Chromium on a live spectator room
+  // with a Reconnect button appended (52px band, then 85px and no budget).
+  it('leaves the desktop notice alone', () => {
+    expect(noticeBand(1280, '').section).not.toBe('52px');
+  });
+});
