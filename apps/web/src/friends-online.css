@@ -7,7 +7,8 @@
   right: 0;
   bottom: 0;
   z-index: 40;
-  display: flex;
+  /* none on a phone's board page (the media query at the end of this file) */
+  display: var(--friends-online-display, flex);
   flex-direction: column;
   /* Collapsed: hug the pill's contents (lichess-style compact tab). Expanded:
      a fixed panel width (see below) so the list reads as a column. */
@@ -136,9 +137,11 @@
    bar), and this fixed pill sat on the right-hand ones, taking the tap meant
    for the last-move button (#674). The study dock shares z-index 40 and loses
    on DOM order. On a phone, board pages leave the widget out; every other page
-   keeps it. `body:has()` outranks the bare class whatever the bundle order. */
+   keeps it. The :has() restyles body alone and hands the answer down as a
+   custom property: a combinator after it would re-check body's whole subtree
+   on every board redraw (review-css-has-guard.test.ts, #608). */
 @media (max-width: 600px) {
-  body:has(.move-nav-bar, .study-phone-dock, .analysis-phone-bar) .friends-online {
-    display: none;
+  body:has(.move-nav-bar, .study-phone-dock, .analysis-phone-bar) {
+    --friends-online-display: none;
   }
 }
