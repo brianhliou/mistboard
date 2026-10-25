@@ -215,6 +215,7 @@ test('searchable variants are the launched channels in the canonical shelf order
     'CRAZYHOUSE_XIANGQI',
     'JUNGLE',
     'JUNGLE_FLIP',
+    'XIANGQI_MAHJONG',
     'MAHJONG',
   ];
   const saved = flags.map((flag) => process.env[`MISTBOARD_${flag}_ENABLED`]);
