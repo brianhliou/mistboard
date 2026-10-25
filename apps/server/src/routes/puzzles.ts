@@ -14,10 +14,12 @@ import {
   type XiangqiMotifId,
   type XiangqiMove,
   type XiangqiPuzzle,
+  type XiangqiPuzzleSetupMove,
 } from '@mistboard/game';
 import { currentAccountUser } from '../account-session.js';
 import { createAuthRateLimiter } from '../auth-rate-limit.js';
 import { isPlayDisabled, isInitialized as persistenceInitialized } from '../persistence.js';
+import { getHistoricalXiangqiGameMoves } from '../persistence-historical-xiangqi.js';
 import {
   isPuzzleQualitySessionId,
   type PuzzleQualityVote,
@@ -38,6 +40,7 @@ import {
   parseDailyPuzzleSlot,
 } from '../persistence-puzzles.js';
 import { seedPuzzleRating } from '../puzzle-rating.js';
+import { puzzleSetupMove } from '../puzzle-setup-move.js';
 import { getPuzzleStore, type PuzzleStoreSnapshot } from '../puzzle-store.js';
 import { clientIpForRateLimit } from '../server-policy.js';
 import { type HttpApiContext, readJsonBody, requireMethod, writeJson } from './lib.js';
@@ -90,6 +93,9 @@ type PuzzleDetail = PuzzleSummary & {
   // puzzles only). The source game itself is not hosted until license-cleared,
   // so this is display metadata, not a link target.
   sourceGame?: XiangqiPuzzle['sourceGame'];
+  // The setup move (initial.lastMove) with the piece it captured, derived from
+  // the stored source game; absent when that game is not stored (#664).
+  setupMove?: XiangqiPuzzleSetupMove;
 };
 
 export async function tryHandle(
@@ -510,6 +516,7 @@ function puzzleSummary(
 async function puzzleDetail(puzzle: PublicPuzzle): Promise<PuzzleDetail> {
   const stored = await getPuzzleRating(puzzle.id);
   const store = await getPuzzleStore();
+  const setupMove = await detailSetupMove(puzzle);
   return {
     ...puzzleSummary(
       puzzle,
@@ -522,7 +529,16 @@ async function puzzleDetail(puzzle: PublicPuzzle): Promise<PuzzleDetail> {
     ...(puzzle.variant === XIANGQI_SPEC_ID && puzzle.sourceGame
       ? { sourceGame: puzzle.sourceGame }
       : {}),
+    ...(setupMove ? { setupMove } : {}),
   };
+}
+
+// The opponent's setup move with what it captured (#664), so the trainer can
+// open one move earlier and glide it in. Standard xiangqi only, and only when
+// the source game is stored (persistence on); every other case omits the field.
+async function detailSetupMove(puzzle: PublicPuzzle): Promise<XiangqiPuzzleSetupMove | null> {
+  if (puzzle.variant !== XIANGQI_SPEC_ID || !persistenceInitialized()) return null;
+  return puzzleSetupMove(puzzle, getHistoricalXiangqiGameMoves);
 }
 
 function seededPuzzleRatingSummary(

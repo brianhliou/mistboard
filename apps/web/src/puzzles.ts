@@ -19,6 +19,7 @@ import {
   puzzleAttemptedProps,
   track,
 } from './analytics.js';
+import { pieceAnimationDurationMs } from './board-anim.js';
 import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 import { t } from './i18n/catalog.js';
 import { initLiveSound, playSound } from './live-sound.js';
@@ -82,6 +83,9 @@ const AUTO_NEXT_DELAY_MS = 150;
 // Cadence for auto-playing the revealed solution, one ply at a time (each step
 // reuses the scrub-forward animation).
 const REVEAL_STEP_MS = 650;
+// How long the pre-setup position holds before the opponent's setup move
+// glides in (#664): long enough for the eye to land on the board.
+const SETUP_INTRO_PAUSE_MS = 400;
 
 // Variants surfaced in the Settings variant picker (order = display order; the
 // first is the default view). Standard Xiangqi (the mined real-game corpus,
@@ -261,11 +265,13 @@ export async function mountPuzzles(
       trackPuzzleAttempted(session, 'abandoned');
     }
     session?.analysis?.dispose();
-    session = createPuzzleSession(puzzle);
-    void sendPuzzleQualityEvent(puzzle.id, session.qualitySessionId, 'view').catch(() => {});
+    const opened = createPuzzleSession(puzzle);
+    session = opened;
+    void sendPuzzleQualityEvent(puzzle.id, opened.qualitySessionId, 'view').catch(() => {});
     markPuzzleSeen(id);
     renderSession();
     renderControls();
+    playSetupIntro(opened, renderSession, () => session === opened);
   };
 
   // Arrow-key replay scrubbing (lichess-style): up/down jump to the first/last
@@ -370,7 +376,15 @@ export async function mountPuzzles(
 }
 
 function createPuzzleSession(puzzle: PuzzleDetail): PuzzleSession {
+  // Open one move earlier and glide the opponent's setup move in, lichess
+  // style (#664), only when pieces animate at all and the adapter can rebuild
+  // that position exactly; otherwise `initial` shows at once, as before.
+  const setupIntro =
+    pieceAnimationDurationMs() > 0
+      ? (puzzleBoardAdapter(puzzle.variant).preSetupState?.(puzzle) ?? null)
+      : null;
   return {
+    setupIntro,
     qualitySessionId: globalThis.crypto.randomUUID(),
     puzzle,
     state: clonePuzzleState(puzzle.initial),
@@ -867,6 +881,7 @@ async function submitMove(
   // Once the answer has been shown (or the puzzle is solved), the board is a
   // locked replay: no further moves are submitted.
   if (session.revealed || session.solved) return;
+  session.setupIntro = null;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.checkingMove') };
   renderSession();
@@ -945,6 +960,7 @@ async function submitMove(
 // then play the highlighted piece, take the full solution, or move on.
 async function requestHint(session: PuzzleSession, renderSession: () => void): Promise<void> {
   if (session.submitting || session.revealed || session.solved) return;
+  session.setupIntro = null;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.fetchingHint') };
   renderSession();
@@ -981,6 +997,7 @@ async function requestHint(session: PuzzleSession, renderSession: () => void): P
 // rated attempt on the first terminal action (idempotent server-side).
 async function revealSolution(session: PuzzleSession, renderSession: () => void): Promise<void> {
   if (session.submitting || session.revealed) return;
+  session.setupIntro = null;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.loadingSolution') };
   renderSession();
@@ -1087,6 +1104,32 @@ function installPuzzleGripFit(): void {
 // final position. Drop moves have no origin square and stay discrete. Moves
 // come from the server attempt payload or the local playedMoves history,
 // never from diffing board states.
+// The opening glide (#664): the first render painted the pre-setup position;
+// after a short pause, hand over to `initial` and glide the opponent's setup
+// move into it, the same glide a scripted reply gets. Input stays blocked until
+// then (isReplayLive). A hint or reveal in the pause clears setupIntro, which
+// cancels this; so does leaving the puzzle (isCurrent).
+function playSetupIntro(
+  session: PuzzleSession,
+  renderSession: () => void,
+  isCurrent: () => boolean,
+): void {
+  const intro = session.setupIntro;
+  const setup = session.puzzle.initial.lastMove;
+  if (!intro || !setup) {
+    session.setupIntro = null;
+    return;
+  }
+  window.setTimeout(() => {
+    if (session.setupIntro !== intro || !isCurrent()) return;
+    session.setupIntro = null;
+    renderSession();
+    animatePuzzleMove(session, setup);
+    // The setup move sounds like any other move: a capture if it took a piece.
+    playSound(puzzlePieceCount(session.state) < puzzlePieceCount(intro) ? 'capture' : 'move');
+  }, SETUP_INTRO_PAUSE_MS);
+}
+
 function animatePuzzleMove(
   session: PuzzleSession,
   move: PuzzleMove,
@@ -1153,6 +1196,7 @@ function navigationFor(
 // The replay-aware state to display: the live state when the cursor sits at the
 // tip, else the initial state with the first viewPly moves re-applied.
 function puzzleReplayState(session: PuzzleSession): PuzzleState {
+  if (session.setupIntro) return session.setupIntro;
   if (session.viewPly >= session.playedMoves.length) return session.state;
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
   let state: PuzzleState = clonePuzzleState(session.puzzle.initial);
@@ -1351,7 +1395,9 @@ export function mountPuzzleSolver(
   const renderSession = (): void => {
     renderPuzzleDetail(host, session, renderSession, navigation, (id) => opts.onSolved?.(id));
   };
+  let disposed = false;
   renderSession();
+  playSetupIntro(session, renderSession, () => !disposed && host.isConnected);
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!host.isConnected) {
@@ -1377,6 +1423,7 @@ export function mountPuzzleSolver(
 
   return {
     dispose: () => {
+      disposed = true;
       session.analysis?.dispose();
       window.removeEventListener('keydown', onKeyDown);
     },

@@ -25,7 +25,9 @@ import {
   type XiangqiColor,
   type XiangqiGameState,
   type XiangqiMove,
+  type XiangqiPuzzleSetupMove,
   type XiangqiSquare,
+  xiangqiPuzzlePreSetupState,
 } from '@mistboard/game';
 import '../live-xiangqi.css';
 import { t } from '../i18n/catalog.js';
@@ -331,6 +333,14 @@ export const xiangqiPuzzleAdapter: PuzzleBoardAdapter = {
       played: formatXiangqiMoves(played as XiangqiMove[], style, initial),
     };
   },
+  // Open information, so the pre-setup board (the captured piece back on its
+  // square) is what both players saw. Rebuilt only from the server's capture
+  // record and re-verified against `initial`; anything else stays null.
+  preSetupState: (puzzle: PuzzleDetail) =>
+    xiangqiPuzzlePreSetupState(
+      puzzle.initial as XiangqiGameState,
+      puzzle.setupMove as XiangqiPuzzleSetupMove | undefined,
+    ),
   sideIconSvg: (puzzle: PuzzleDetail) =>
     xiangqiPieceGhostSvg({ color: puzzle.sideToMove ?? 'red', role: 'general' }),
   createAnalysis: createPuzzleAnalysis,
