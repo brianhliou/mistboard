@@ -189,6 +189,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'skill-vs-luck': renderSkillVsLuckOgSvg,
   shogi4: renderShogi4OgSvg,
   'xiangqi-mahjong-32': renderXiangqiMahjongOgSvg,
+  'how-to-play-xiangqi-mahjong': renderXiangqiMahjongOgSvg,
   misty: renderMistyOgSvg,
   'yin-sheng': playerFaceOgSvg('article-thumbs/yin-sheng-2022-face.jpg'),
   'cao-yanlei': playerFaceOgSvg('article-thumbs/cao-yanlei-2024-face.jpg'),
