@@ -425,24 +425,30 @@
    .community-rail rules in community-rail.css and the blog rules above,
    whatever order the bundle loads them in. */
 @media (max-width: 600px) {
-  .articles-community-shell {
-    width: calc(100% - 24px);
+  /* The sheet runs edge to edge: a page-coloured gutter around it is width a
+     phone cannot spare. */
+  .community-shell.articles-community-shell {
+    width: 100%;
+    padding-top: 0;
   }
 
   .articles-community-shell .articles-community-layout {
     grid-template-columns: minmax(0, 1fr);
-    gap: 10px;
+    gap: 0;
   }
 
   .articles-community-shell .articles-community-layout > .article-sheet {
-    padding: 18px 10px 24px;
+    padding: 18px 16px 24px;
+    border-width: 0 0 1px;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .articles-community-shell .articles-community-rail {
     display: flex;
     flex-wrap: nowrap;
     gap: 4px;
-    padding-top: 0;
+    padding: 8px 12px;
     overflow-x: auto;
   }
 
@@ -498,10 +504,6 @@
 }
 
 @media (max-width: 560px) {
-  .articles-community-shell {
-    width: calc(100% - 24px);
-  }
-
   .articles-index .article-sheet {
     padding: 20px 14px 28px;
   }

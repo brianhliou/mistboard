@@ -42,6 +42,7 @@ test('phone: the blog index puts the posts full width with no rail beside them',
       clientWidth: document.documentElement.clientWidth,
       listLeft: Math.round(list.getBoundingClientRect().left),
       sheetLeft: Math.round(sheet.getBoundingClientRect().left),
+      sheetRight: Math.round(sheet.getBoundingClientRect().right),
       railBottom: Math.round(rail.getBoundingClientRect().bottom),
       sheetTop: Math.round(sheet.getBoundingClientRect().top),
       railShown: rail.getClientRects().length > 0,
@@ -58,9 +59,10 @@ test('phone: the blog index puts the posts full width with no rail beside them',
   expect
     .soft(layout.scrollWidth, 'no horizontal page scroll')
     .toBeLessThanOrEqual(layout.clientWidth);
-  // The sheet starts at the page gutter and the list at the sheet's own
-  // padding: nothing sits to the left of the posts.
-  expect.soft(layout.sheetLeft, 'sheet starts at the left gutter').toBeLessThanOrEqual(16);
+  // The sheet runs edge to edge (Brian, 2026-10-25: no page-coloured gutter on
+  // a phone) and the list starts at the sheet's own padding.
+  expect.soft(layout.sheetLeft, 'sheet starts at the screen edge').toBe(0);
+  expect.soft(layout.sheetRight, 'sheet ends at the screen edge').toBe(layout.clientWidth);
   expect.soft(layout.listLeft, 'post list starts at the left gutter').toBeLessThanOrEqual(32);
   expect
     .soft(layout.railBottom, 'the blog tabs sit above the sheet, not beside it')
