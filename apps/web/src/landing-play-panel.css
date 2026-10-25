@@ -15,6 +15,9 @@
   --pp-pad: 14px;
   /* The variant marker fills most of a row's height (Brian, 2026-10-03). */
   --pp-icon: 40px;
+  /* Rows size off the panel, not the window: the three-column homepage band
+     squeezes the panel to ~480px on a laptop. */
+  container: pp-board / inline-size;
 }
 
 :root[data-effective-theme="dark"] .pp-board {
@@ -518,6 +521,31 @@
   color: var(--site-text);
   font: inherit;
   cursor: pointer;
+}
+
+/* Narrow panel on a wide window (homepage three-column band, 1241-1410px):
+   the full columns left the variant name 29px ("Xi…"). Tighter columns keep
+   one line per row, and a name that still does not fit wraps instead of
+   ellipsizing. Phones keep their own two-line layout below. */
+@media (min-width: 641px) {
+  @container pp-board (max-width: 640px) {
+    .pp-row {
+      grid-template-columns: var(--pp-icon) minmax(0, 1fr) 144px 86px 62px;
+      column-gap: 8px;
+    }
+
+    .pp-row-person {
+      grid-template-columns: var(--pp-icon) minmax(0, 1fr) 118px 74px 62px;
+    }
+
+    .pp-name-label {
+      white-space: normal;
+    }
+
+    .pp-act {
+      padding: 0 10px;
+    }
+  }
 }
 
 /* Phone width: name and action on the first line, steppers under them. */
