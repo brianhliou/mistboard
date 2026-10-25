@@ -310,8 +310,10 @@ const ZH_HANS: Record<string, string> = {
     'General Blunder 用强引擎检查每一步合法着法，然后走对自己最差的那一步。',
   'In ten test games, an opponent choosing its moves at random checkmated it every time, the quickest in 19 moves.':
     '在十盘测试对局中，一个随机走棋的对手每盘都将死了它，最快的一盘只用了19步。',
-  'The easier challenge is to get a draw. The harder one is to make it win on the board.':
-    '较容易的挑战是下出和棋。较难的挑战是让它在棋盘上赢棋。',
+  'The easier challenge, a draw, fell on 19 October. We think the harder one, making it win, is out of reach in a real game.':
+    '较容易的挑战（下出和棋）已在10月19日被完成。较难的挑战（让它赢棋），我们认为在真实对局中几乎不可能做到。',
+  'Added the first draw, by rebirthfox333, and our verdict on the harder challenge.':
+    '新增了 rebirthfox333 下出的第一盘和棋，以及我们对较难挑战的结论。',
   '[General Blunder](/bot/general-blunder) is the xiangqi bot that tries to lose. Every turn it asks a strong engine about each of its legal moves and plays the one that is worst for itself: the move that gets it checkmated soonest, or, when no mate is in sight, the one that gives away the most.':
     '[General Blunder](/bot/general-blunder) 是一个想输棋的象棋机器人。每个回合，它都让强引擎评估自己的每一步合法着法，然后走对自己最差的那一步：让自己最快被将死的一着；看不到杀棋时，就走送掉子力最多的一着。',
   'Winning against it is not the hard part. We played ten test games against it with an opponent that picked every move at random, and the random player checkmated it in all ten. The quickest took 19 moves.':
@@ -322,17 +324,26 @@ const ZH_HANS: Record<string, string> = {
   'The easier challenge: get a draw': '较容易的挑战：下出和棋',
   'General Blunder never resigns, and Mistboard has no draw offers, so a draw has to come from the rules themselves. That is harder than it sounds against a bot that spends every turn handing you something. The [xiangqi rules page](/rules/xiangqi) lists every way a game can end. Find the one that works against an opponent that wants to lose.':
     'General Blunder 从不认输，Mistboard 也没有提和功能，所以和棋只能来自规则本身。面对一个每回合都在送你东西的机器人，这比听起来要难。[象棋规则页](/rules/xiangqi)列出了一盘棋结束的所有方式。找出对一个想输的对手有效的那一种。',
+  'rebirthfox333 did it first, on 19 October, the day this page went up, in [a 137-move draw](/xiangqi/game/xq_e4ff1ac2-dafd-4690-ad41-4a72780e550a). The game page shows how it ended, if you want the answer.':
+    'rebirthfox333 第一个做到了：10月19日，也就是本页上线当天，下出了[一盘137步的和棋](/xiangqi/game/xq_e4ff1ac2-dafd-4690-ad41-4a72780e550a)。想知道答案的话，对局页面显示了它是怎么结束的。',
   'The harder challenge: make it win': '较难的挑战：让它赢',
   'General Blunder treats winning as the worst thing it could do, so it wins when it has no other choice. A move that checkmates you sits at the very bottom of its list, and it plays one only when every legal move it has would end the game in its favour.':
     'General Blunder 把赢棋当作它能做的最差的事，所以只有在别无选择时它才会赢。将死你的着法排在它清单的最底部，只有当它的每一步合法着法都会以它获胜结束对局时，它才会走这样一步。',
-  'The challenge is to steer a real game into a position like that. It searches ahead, so it steps around a trap it can see coming. We have not managed it ourselves, and we do not know how hard it is.':
-    '挑战在于把一盘真实的对局引到这样的局面。它会向前搜索，所以能看出来的陷阱它会绕开。我们自己还没做到，也不知道这有多难。',
+  'The challenge is to steer a real game into a position like that. It searches ahead, so it steps around a trap it can see coming.':
+    '挑战在于把一盘真实的对局引到这样的局面。它会向前搜索，所以能看出来的陷阱它会绕开。',
+  'We think the win is out of reach': '我们认为让它赢棋几乎不可能',
+  'rebirthfox333 tried that too, in [a 103-move game on 20 October](/xiangqi/game/xq_efe0c4b1-bdd9-4290-877f-594c8693e772). General Blunder kept capturing with a chariot or a cannon on squares where Red could then checkmate it at once. Red had a mate in one on 36 different turns and, trying to lose, played none of them, so every one of those captures stood.':
+    'rebirthfox333 也试过，在[10月20日一盘103步的对局](/xiangqi/game/xq_efe0c4b1-bdd9-4290-877f-594c8693e772)里。General Blunder 一次次用车或炮吃子，吃完的位置让红方可以立刻将死它。红方有36个回合可以一步杀，但为了输棋一次都没走，所以这些吃子全都留了下来。',
+  'That is the catch. Every piece General Blunder keeps is another piece it can move, and with 30 or 40 legal moves there is nearly always one that wins slowly or not at all. Late in that game every move it had was winning, and it still never had to mate. It shuffled until Red resigned.':
+    '问题就在这里。General Blunder 每多留一个子，就多一个能动的子；有三四十步合法着法时，几乎总有一步是赢得很慢或根本不赢的。那盘棋的后段，它的每一步都是赢棋，但它始终不必将死对方。它来回挪子，直到红方认输。',
+  "It came close once. Around its 80th move it had three legal moves, and all three won by force. It picked the slowest, as it is built to, and Red's reply gave it room again.":
+    '它有一次很接近。大约在第80步，它只有三步合法着法，三步都是必胜。它按设计选了最慢的一步，而红方的应着又给了它回旋的余地。',
+  'So our verdict: making General Blunder win is probably impossible in a real game. The rules allow it, and the one route we can see runs against instinct: take its pieces until it has its general and almost nothing else, then leave it no move that does not win. No game we know of has got there.':
+    '所以我们的结论是：在真实对局中让 General Blunder 赢，大概是不可能的。规则允许这种结果，我们能想到的唯一路线也违反直觉：吃掉它的子，直到它只剩老将和极少的子，然后让它没有任何不赢的着法。据我们所知，还没有一盘棋走到那一步。',
   'Show us': '晒出你的棋局',
-  'If you draw General Blunder or get it to win, post the game on the [forum](/forum) with its link. Every finished game on Mistboard has its own page. Running out of time, resigning or leaving the game do not count. Those are the ways it wins today without anyone trying.':
-    '如果你和 General Blunder 下成了和棋，或者让它赢了，请把这盘棋的链接发到[论坛](/forum)。Mistboard 上每一盘下完的棋都有自己的页面。超时、认输或中途离开都不算。这些是它目前不用任何人刻意去做就能赢的方式。',
+  'If you get it to win, post the game on the [forum](/forum) with its link. Every finished game on Mistboard has its own page. Running out of time, resigning or leaving the game do not count. Those are the ways it wins today without anyone trying.':
+    '如果你让它赢了，请把这盘棋的链接发到[论坛](/forum)。Mistboard 上每一盘下完的棋都有自己的页面。超时、认输或中途离开都不算。这些是它目前不用任何人刻意去做就能赢的方式。',
   'Play General Blunder': '与 General Blunder 对弈',
-  'So can you make a bot that tries to lose win? The rules allow it: positions exist where every move General Blunder has would beat you, and in one of those it has to play one. Whether a person can walk a real game there, against a bot that sees the trap and tries to dodge it, is the open question. We will add the first game that does it to this page.':
-    '那么，你能让一个想输的机器人赢吗？规则允许：存在这样的局面，General Blunder 的每一步都会击败你，而在这样的局面里它必须走其中一步。一个人能否在真实对局中把棋引到那里，同时面对一个看得出陷阱并设法躲开的机器人，这是悬而未决的问题。第一盘做到的棋局，我们会加到这一页上。',
   'Can you lose?': '你能输掉吗？',
   // unstyled-first-paint: machine-drafted 2026-10-17, not native-reviewed.
   ENGINEERING: '工程',
@@ -6281,8 +6292,10 @@ const ZH_HANT: Record<string, string> = {
     'General Blunder 用強引擎檢查每一步合法著法，然後走對自己最差的那一步。',
   'In ten test games, an opponent choosing its moves at random checkmated it every time, the quickest in 19 moves.':
     '在十盤測試對局中，一個隨機走棋的對手每盤都將死了它，最快的一盤只用了19步。',
-  'The easier challenge is to get a draw. The harder one is to make it win on the board.':
-    '較容易的挑戰是下出和棋。較難的挑戰是讓它在棋盤上贏棋。',
+  'The easier challenge, a draw, fell on 19 October. We think the harder one, making it win, is out of reach in a real game.':
+    '較容易的挑戰（下出和棋）已在10月19日被完成。較難的挑戰（讓它贏棋），我們認為在真實對局中幾乎不可能做到。',
+  'Added the first draw, by rebirthfox333, and our verdict on the harder challenge.':
+    '新增了 rebirthfox333 下出的第一盤和棋，以及我們對較難挑戰的結論。',
   '[General Blunder](/bot/general-blunder) is the xiangqi bot that tries to lose. Every turn it asks a strong engine about each of its legal moves and plays the one that is worst for itself: the move that gets it checkmated soonest, or, when no mate is in sight, the one that gives away the most.':
     '[General Blunder](/bot/general-blunder) 是一個想輸棋的象棋機器人。每個回合，它都讓強引擎評估自己的每一步合法著法，然後走對自己最差的那一步：讓自己最快被將死的一著；看不到殺棋時，就走送掉子力最多的一著。',
   'Winning against it is not the hard part. We played ten test games against it with an opponent that picked every move at random, and the random player checkmated it in all ten. The quickest took 19 moves.':
@@ -6293,17 +6306,26 @@ const ZH_HANT: Record<string, string> = {
   'The easier challenge: get a draw': '較容易的挑戰：下出和棋',
   'General Blunder never resigns, and Mistboard has no draw offers, so a draw has to come from the rules themselves. That is harder than it sounds against a bot that spends every turn handing you something. The [xiangqi rules page](/rules/xiangqi) lists every way a game can end. Find the one that works against an opponent that wants to lose.':
     'General Blunder 從不認輸，Mistboard 也沒有提和功能，所以和棋只能來自規則本身。面對一個每回合都在送你東西的機器人，這比聽起來要難。[象棋規則頁](/rules/xiangqi)列出了一盤棋結束的所有方式。找出對一個想輸的對手有效的那一種。',
+  'rebirthfox333 did it first, on 19 October, the day this page went up, in [a 137-move draw](/xiangqi/game/xq_e4ff1ac2-dafd-4690-ad41-4a72780e550a). The game page shows how it ended, if you want the answer.':
+    'rebirthfox333 第一個做到了：10月19日，也就是本頁上線當天，下出了[一盤137步的和棋](/xiangqi/game/xq_e4ff1ac2-dafd-4690-ad41-4a72780e550a)。想知道答案的話，對局頁面顯示了它是怎麼結束的。',
   'The harder challenge: make it win': '較難的挑戰：讓它贏',
   'General Blunder treats winning as the worst thing it could do, so it wins when it has no other choice. A move that checkmates you sits at the very bottom of its list, and it plays one only when every legal move it has would end the game in its favour.':
     'General Blunder 把贏棋當作它能做的最差的事，所以只有在別無選擇時它才會贏。將死你的著法排在它清單的最底部，只有當它的每一步合法著法都會以它獲勝結束對局時，它才會走這樣一步。',
-  'The challenge is to steer a real game into a position like that. It searches ahead, so it steps around a trap it can see coming. We have not managed it ourselves, and we do not know how hard it is.':
-    '挑戰在於把一盤真實的對局引到這樣的局面。它會向前搜索，所以能看出來的陷阱它會繞開。我們自己還沒做到，也不知道這有多難。',
+  'The challenge is to steer a real game into a position like that. It searches ahead, so it steps around a trap it can see coming.':
+    '挑戰在於把一盤真實的對局引到這樣的局面。它會向前搜索，所以能看出來的陷阱它會繞開。',
+  'We think the win is out of reach': '我們認為讓它贏棋幾乎不可能',
+  'rebirthfox333 tried that too, in [a 103-move game on 20 October](/xiangqi/game/xq_efe0c4b1-bdd9-4290-877f-594c8693e772). General Blunder kept capturing with a chariot or a cannon on squares where Red could then checkmate it at once. Red had a mate in one on 36 different turns and, trying to lose, played none of them, so every one of those captures stood.':
+    'rebirthfox333 也試過，在[10月20日一盤103步的對局](/xiangqi/game/xq_efe0c4b1-bdd9-4290-877f-594c8693e772)裡。General Blunder 一次次用車或炮吃子，吃完的位置讓紅方可以立刻將死它。紅方有36個回合可以一步殺，但為了輸棋一次都沒走，所以這些吃子全都留了下來。',
+  'That is the catch. Every piece General Blunder keeps is another piece it can move, and with 30 or 40 legal moves there is nearly always one that wins slowly or not at all. Late in that game every move it had was winning, and it still never had to mate. It shuffled until Red resigned.':
+    '問題就在這裡。General Blunder 每多留一個子，就多一個能動的子；有三四十步合法著法時，幾乎總有一步是贏得很慢或根本不贏的。那盤棋的後段，它的每一步都是贏棋，但它始終不必將死對方。它來回挪子，直到紅方認輸。',
+  "It came close once. Around its 80th move it had three legal moves, and all three won by force. It picked the slowest, as it is built to, and Red's reply gave it room again.":
+    '它有一次很接近。大約在第80步，它只有三步合法著法，三步都是必勝。它按設計選了最慢的一步，而紅方的應著又給了它迴旋的餘地。',
+  'So our verdict: making General Blunder win is probably impossible in a real game. The rules allow it, and the one route we can see runs against instinct: take its pieces until it has its general and almost nothing else, then leave it no move that does not win. No game we know of has got there.':
+    '所以我們的結論是：在真實對局中讓 General Blunder 贏，大概是不可能的。規則允許這種結果，我們能想到的唯一路線也違反直覺：吃掉它的子，直到它只剩老將和極少的子，然後讓它沒有任何不贏的著法。據我們所知，還沒有一盤棋走到那一步。',
   'Show us': '曬出你的棋局',
-  'If you draw General Blunder or get it to win, post the game on the [forum](/forum) with its link. Every finished game on Mistboard has its own page. Running out of time, resigning or leaving the game do not count. Those are the ways it wins today without anyone trying.':
-    '如果你和 General Blunder 下成了和棋，或者讓它贏了，請把這盤棋的連結發到[論壇](/forum)。Mistboard 上每一盤下完的棋都有自己的頁面。超時、認輸或中途離開都不算。這些是它目前不用任何人刻意去做就能贏的方式。',
+  'If you get it to win, post the game on the [forum](/forum) with its link. Every finished game on Mistboard has its own page. Running out of time, resigning or leaving the game do not count. Those are the ways it wins today without anyone trying.':
+    '如果你讓它贏了，請把這盤棋的連結發到[論壇](/forum)。Mistboard 上每一盤下完的棋都有自己的頁面。超時、認輸或中途離開都不算。這些是它目前不用任何人刻意去做就能贏的方式。',
   'Play General Blunder': '與 General Blunder 對弈',
-  'So can you make a bot that tries to lose win? The rules allow it: positions exist where every move General Blunder has would beat you, and in one of those it has to play one. Whether a person can walk a real game there, against a bot that sees the trap and tries to dodge it, is the open question. We will add the first game that does it to this page.':
-    '那麼，你能讓一個想輸的機器人贏嗎？規則允許：存在這樣的局面，General Blunder 的每一步都會擊敗你，而在這樣的局面裡它必須走其中一步。一個人能否在真實對局中把棋引到那裡，同時面對一個看得出陷阱並設法躲開的機器人，這是懸而未決的問題。第一盤做到的棋局，我們會加到這一頁上。',
   'Can you lose?': '你能輸掉嗎？',
   // unstyled-first-paint: machine-drafted 2026-10-17, not native-reviewed.
   ENGINEERING: '工程',
