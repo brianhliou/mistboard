@@ -333,7 +333,7 @@ function sixChases(): State {
   return state;
 }
 
-test('chasing a standing target counts the opening threat and refuses the seventh threat', () => {
+test('the opening threat on a piece that has not moved yet counts toward the chase limit', () => {
   let state = playing({ a1: up('red', 'chariot'), b2: up('black', 'soldier') });
   for (let chase = 1; chase <= 6; chase += 1) {
     const threat = chase % 2 === 1 ? move('a1', 'b1') : move('b1', 'a1');
@@ -347,6 +347,34 @@ test('chasing a standing target counts the opening threat and refuses the sevent
   assert.ok(!dests(state, 'a1').includes('b1'));
   assert.equal(game.applyThreeKingdomsBanqiMove(state, move('a1', 'b1')), state);
 });
+
+for (const [target, fleeTo, follow] of [
+  ['c3', 'b3', 'b1'],
+  ['f1', 'f2', 'c2'],
+] as const) {
+  test(`the opening threat on two pieces counts when the soldier on ${target} flees`, () => {
+    let state = playing({
+      d1: up('red', 'chariot'),
+      f1: up('black', 'soldier'),
+      c3: up('black', 'soldier'),
+    });
+    state = play(state, 'd1', 'c1'); // Threatens both f1 and c3.
+    for (let chase = 1; chase <= 6; chase += 1) {
+      state = chase % 2 === 1 ? play(state, target, fleeTo) : play(state, fleeTo, target);
+      assert.deepEqual(state.chases.red, {
+        target: chase % 2 === 1 ? fleeTo : target,
+        count: chase,
+      });
+      if (chase < 6) {
+        state = chase % 2 === 1 ? play(state, 'c1', follow) : play(state, follow, 'c1');
+        assert.equal(state.chases.red?.count, chase + 1);
+      }
+    }
+    assert.equal(state.status.type, 'playing');
+    assert.ok(!dests(state, follow).includes('c1'));
+    assert.equal(game.applyThreeKingdomsBanqiMove(state, move(follow, 'c1')), state);
+  });
+}
 
 test('the seventh chase of the same fleeing piece is absent and applying it is a no-op', () => {
   const state = sixChases();

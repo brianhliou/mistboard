@@ -228,9 +228,9 @@ function boardDests(
   return dests;
 }
 
-/** A QUIET move by a revealed piece threatens a revealed enemy, including one
- * that has been standing still. Targets are tracked by square through their
- * fleeing moves, so identical roles cannot be mistaken for the same piece.
+/** A QUIET move by a revealed piece starts a run even if the threatened enemy
+ * has not moved yet. The target must then flee between threats to continue the
+ * run. Targets are tracked by square so identical roles cannot be confused.
  * A different target, a non-chase by the chaser, or any flip/capture breaks a run.
  * Unlike banqi's repetition rule there is no mutual-chase or only-move exemption.
  */
@@ -358,6 +358,14 @@ export function applyThreeKingdomsBanqiMove(
       if (chase) chases[seat] = chase;
       const otherRun = state.chases[other];
       if (otherRun?.target === move.from) chases[other] = { ...otherRun, target: move.to };
+      else if (
+        otherRun &&
+        state.lastMove &&
+        boardDests(state.board, state.lastMove.to).includes(move.from)
+      ) {
+        // The opening threat also counts when another threatened piece flees.
+        chases[other] = { target: move.to, count: 1 };
+      }
     }
   }
   const ply = state.ply + 1;
