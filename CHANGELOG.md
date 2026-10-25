@@ -26,6 +26,9 @@ Conventions:
 
 ### Playing
 
+- Xiangqi Mahjong is open to everyone: play the computer, a friend or Find opponent, rated or casual, with rematches and share cards for every match ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
+- Xiangqi Mahjong tables put player names outside the felt like every other board, the table no longer changes height when a set is claimed or a hand ends, and on phones the room fits one screen with the dealer and points on the player rows ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
+- every live game now plays the start sound when it begins, including games against the computer, in every variant ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
 - Signed-in players can start a casual correspondence game against Brian, who builds Mistboard, from one card on /correspondence (2 days per move) ([77a7a87f](https://github.com/brianhliou/mistboard/commit/77a7a87f))
 - jqe, an open-source jieqi engine by Devin O'Keefe, is the new top jieqi bot, one level above AB-JChess ([1cd1fa44](https://github.com/brianhliou/mistboard/commit/1cd1fa44))
 - Offer, accept or decline a draw in any game against another person, rated and correspondence included ([077aee77](https://github.com/brianhliou/mistboard/commit/077aee77))
@@ -136,6 +139,7 @@ Conventions:
 
 ### Watching and review
 
+- The homepage game viewer shows Xiangqi Mahjong as a compact table, and live boards there and on TV name the right seat to move ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
 - Jieqi analysis keeps engine lines up to the first reveal instead of dropping them ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
 - Banqi studies can show the endgame tablebase under the board; click a move to play it ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
 - /videos adds Master Zhang Qiang's opening lessons (Chinese, English subtitles) ([7fe703fc](https://github.com/brianhliou/mistboard/commit/7fe703fc))
@@ -210,6 +214,7 @@ Conventions:
 
 ### Site
 
+- article thumbnails in feeds are smaller, /feed.xml lists every post, and banqi cards fill their frame ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
 - The updates and blog feeds now carry each article's headline and a card thumbnail ([c5b7bc54](https://github.com/brianhliou/mistboard/commit/c5b7bc54))
 - Read next on a blog post offers more posts of the same kind, engineering or for players ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
 - Article cards show the date under the title, so it no longer covers the picture ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
@@ -289,6 +294,11 @@ Conventions:
 
 ### Fixed
 
+- The board resize grip sits flush in the board's corner ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
+- Players no longer briefly see the spectator chat when a new game opens ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
+- On phones, the friends online tab no longer covers the move buttons under the board ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
+- The homepage's play-the-computer table shows each variant's full name on laptop screens ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
+- On phones, the blog index puts posts at full width with its tabs above them ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
 - A ten-game match imported from dpxq lists its games as Game 1, Game 2 ([4b4990cb](https://github.com/brianhliou/mistboard/commit/4b4990cb))
 - A finished game opened from its link on a phone now fits the board, clocks and move arrows on one screen instead of a long, zoomed-out page ([4b4990cb](https://github.com/brianhliou/mistboard/commit/4b4990cb))
 - Forum edits are rate limited, so a post rewritten in a loop can no longer use up the day's translations ([4b4990cb](https://github.com/brianhliou/mistboard/commit/4b4990cb))
