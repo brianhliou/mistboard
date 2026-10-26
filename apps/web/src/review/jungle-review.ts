@@ -19,7 +19,9 @@ import {
   JUNGLE_BOARD_VIEW,
   type JungleBoardArrow,
   type JungleBoardMarker,
+  junglePieceGhostSvg,
 } from '../jungle-render.js';
+import { capturedBetweenBoards, fillCapturedPoolWith } from './captured-pool.js';
 import {
   bestMoveArrowWithParser,
   engineArrowsFromLinesWithParser,
@@ -86,6 +88,15 @@ const junglePresentation: TreePresentation<
     className: `xq-arrow--draw xq-shape--${s.brush}`,
   }),
   shapeToMarker: (s: NodeShape) => s,
+  seatCaptures: (host, view, rootView, owner) => {
+    if (owner !== 'red' && owner !== 'black') return;
+    fillCapturedPoolWith(
+      host,
+      capturedBetweenBoards(rootView.board, view.board),
+      owner,
+      junglePieceGhostSvg,
+    );
+  },
   // Judgment badge on the square the move landed on, so the board states the
   // same verdict the move list does (lila pins its glyphs the same way).
   moveGlyphMarker: (move: JungleMove, glyph): JungleBoardMarker => ({
