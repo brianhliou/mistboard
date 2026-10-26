@@ -5,6 +5,7 @@
 // Split out of persistence-accounts.ts; the shared users-row plumbing
 // (USER_COLUMNS, userFromRow) stays there.
 import type { FlairKey } from './flair.js';
+import type { GamePageCursor } from './game-page-cursor.js';
 import { PROVISIONAL_RD } from './glicko.js';
 import {
   type AccountLocale,
@@ -494,7 +495,7 @@ function profileGameFilterSql(
 
 // One page of a user's completed games, newest first. total_count is a window
 // aggregate (COUNT(*) OVER()) so the caller learns the full match count in the
-// same round-trip — used to drive the profile "Load more" pager.
+// same round-trip, before the cursor is applied, for the Games tab count.
 async function queryUserGames(
   userId: string,
   isViewer: boolean,
@@ -504,8 +505,10 @@ async function queryUserGames(
   // spec ids AND their legacy spellings, so a pool's older rows ('fog') are not
   // silently dropped from its own history.
   filters: UserGamesQueryFilters = {},
+  before: GamePageCursor | null = null,
 ): Promise<{ games: ProfileGameRecord[]; total: number }> {
   const filterSql = profileGameFilterSql(filters, 4);
+  const cursorParam = 4 + filterSql.params.length;
   const { rows } = await getPool().query<{
     room_id: string;
     player_color: GameParticipantColor;
@@ -525,7 +528,8 @@ async function queryUserGames(
     visibility: GameVisibility;
     total_count: string;
   }>(
-    `SELECT games.room_id, game_participants.color AS player_color,
+    `WITH matching_games AS (
+     SELECT games.room_id, game_participants.color AS player_color,
             games.variant, games.mode, games.result, games.termination,
             games.ply_count, games.started_at, games.ended_at,
             games.white_name, games.black_name, games.corpus_id,
@@ -539,12 +543,22 @@ async function queryUserGames(
        AND games.status = 'completed'
        ${filterSql.sql}
        ${profileVisibilityClause(isViewer)}
-     ORDER BY games.ended_at DESC, games.room_id DESC
+     )
+     SELECT * FROM matching_games
+     WHERE ($${cursorParam}::timestamptz IS NULL
+       OR (ended_at, room_id) < ($${cursorParam}::timestamptz, $${cursorParam + 1}::text))
+     ORDER BY ended_at DESC, room_id DESC
      LIMIT $2 OFFSET $3`,
     // COUNT(*) OVER() sits inside the same WHERE, so `total` is the FILTERED
-    // total -- which is what the Games tab count and the "Load more" exhaustion
-    // check both need once a filter is set.
-    [userId, limit, offset, ...filterSql.params],
+    // total for the Games tab. The outer cursor only narrows the returned rows.
+    [
+      userId,
+      limit,
+      before ? 0 : offset,
+      ...filterSql.params,
+      before?.endedAt ?? null,
+      before?.roomId ?? null,
+    ],
   );
   const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
   const games = rows.map(
@@ -770,6 +784,7 @@ export async function getUserGamesPage(
   offset: number,
   limit: number,
   filters: ProfileGameFilters = {},
+  before: GamePageCursor | null = null,
 ): Promise<{ games: ProfileGameRecord[]; total: number } | null> {
   const user = await loadProfileUser(handle);
   if (!user) return null;
@@ -777,7 +792,7 @@ export async function getUserGamesPage(
   if (user.profileVisibility === 'private' && !isViewer) return null;
   const boundedLimit = Math.max(1, Math.min(limit, 50));
   const boundedOffset = Math.max(0, offset);
-  return queryUserGames(user.id, isViewer, boundedOffset, boundedLimit, filters);
+  return queryUserGames(user.id, isViewer, boundedOffset, boundedLimit, filters, before);
 }
 
 export async function getUserRatingHistory(

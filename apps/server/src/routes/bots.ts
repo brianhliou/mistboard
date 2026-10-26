@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { maybeGameSpecForId } from '@mistboard/game';
 import { isBotSpecPlayable, parsePublicBotId } from '../bot-profile-policy.js';
 import { firstPartyBotForId } from '../first-party-bots.js';
+import { parseGamePageCursor } from '../game-page-cursor.js';
 import {
   abJchessAvailable,
   JIEQI_ABJCHESS_ENGINE_ID,
@@ -162,6 +163,11 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
+    const before = parseGamePageCursor(parsedUrl.searchParams.get('before'));
+    if (before === undefined) {
+      writeJson(response, 400, { error: 'invalid_before' });
+      return true;
+    }
     const offset = clampInt(parsedUrl.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
     const limit = clampInt(
       parsedUrl.searchParams.get('limit'),
@@ -169,7 +175,7 @@ export async function tryHandle(
       1,
       BOT_GAMES_PAGE_MAX,
     );
-    const games = await persistence.getBotGamesPage(botId, variant, offset, limit);
+    const games = await persistence.getBotGamesPage(botId, variant, offset, limit, before);
     writeJson(response, 200, { games: await markUnavailableGames(games) });
     return true;
   }

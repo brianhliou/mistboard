@@ -686,6 +686,11 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
           query('offset', { type: 'integer', minimum: 0, default: 0 }, 'Skip this many.'),
           query('limit', { type: 'integer', minimum: 1, maximum: 50, default: 15 }, 'Page size.'),
           query(
+            'before',
+            { type: 'string' },
+            'JSON [endedAt, roomId] from the last row. Lists strictly older games; overrides offset.',
+          ),
+          query(
             'variant',
             { type: 'string' },
             'Rating pool, e.g. `xiangqi`; unknown values list every variant.',
@@ -705,7 +710,9 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
               total: { type: 'integer', description: 'Games matching the filters.' },
             },
           }),
-          '400': ERROR_RESPONSE('`invalid_handle`, `invalid_result`, `invalid_opponent`'),
+          '400': ERROR_RESPONSE(
+            '`invalid_handle`, `invalid_result`, `invalid_opponent`, `invalid_before`',
+          ),
           '404': NOT_FOUND,
           '503': PERSISTENCE,
         },

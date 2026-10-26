@@ -1,4 +1,5 @@
 import { defaultEngineTimeControl } from '@mistboard/game';
+import type { GamePageCursor } from './game-page-cursor.js';
 import { PROVISIONAL_RD } from './glicko.js';
 import { getPool } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
@@ -555,14 +556,15 @@ export async function getBotGamesPage(
   variant: string,
   offset: number,
   limit: number,
+  before: GamePageCursor | null = null,
 ): Promise<ProfileGameRecord[]> {
-  return queryBotGames(botId, limit, { variant, offset });
+  return queryBotGames(botId, limit, { variant, offset, before });
 }
 
 async function queryBotGames(
   botId: string,
   limit: number,
-  page: { variant?: string; offset?: number } = {},
+  page: { variant?: string; offset?: number; before?: GamePageCursor | null } = {},
 ): Promise<ProfileGameRecord[]> {
   const { rows } = await getPool().query<BotGameRow>(
     `SELECT games.room_id,
@@ -589,13 +591,16 @@ async function queryBotGames(
         AND games.visibility = 'public'
         AND game_participants.visibility = 'public'
         AND ($3::text IS NULL OR games.variant = $3)
+        AND ($5::timestamptz IS NULL OR (games.ended_at, games.room_id) < ($5::timestamptz, $6::text))
       ORDER BY games.ended_at DESC, games.room_id DESC
       LIMIT $2 OFFSET $4`,
     [
       botId,
       Math.max(1, Math.min(limit, 50)),
       page.variant ?? null,
-      Math.max(0, Math.trunc(page.offset ?? 0)),
+      page.before ? 0 : Math.max(0, Math.trunc(page.offset ?? 0)),
+      page.before?.endedAt ?? null,
+      page.before?.roomId ?? null,
     ],
   );
   return attachGameParticipants(rows.map(botGameFromRow));
