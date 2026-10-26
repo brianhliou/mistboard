@@ -879,6 +879,12 @@ a.clock-name.player-name-link {
   white-space: nowrap;
 }
 
+@media (max-width: 600px) {
+  .clock-to-move {
+    font-size: 11px;
+  }
+}
+
 .round-table__player .presence-dot {
   margin-right: 0;
 }

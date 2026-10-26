@@ -433,6 +433,15 @@
   border-color: var(--site-border);
 }
 
+/* Touch floor (#620): the bot page's Play button and the profile's relation
+   buttons are 32px for a mouse. */
+@media (pointer: coarse) {
+  .profile-relation-actions .landing-setup-start,
+  .profile-relation-actions .landing-setup-back {
+    min-height: 40px;
+  }
+}
+
 .account-actions .landing-setup-start:hover,
 .account-actions .landing-setup-start:focus-visible,
 .account-form .landing-setup-start:hover,
@@ -1402,6 +1411,23 @@
   background: var(--site-accent-soft);
 }
 
+/* Touch floor (#620): the drawn pill stays 28x23, a transparent border (9px
+   top and bottom, 6px at the sides) makes the target 40x41. Return only the
+   vertical space so adjacent targets keep their 4px gap. The radius is
+   elliptical so the drawn corner stays 4px. */
+@media (pointer: coarse) {
+  .profile-chart-range {
+    box-sizing: content-box;
+    min-width: 16px;
+    margin: -9px 0;
+    border-width: 9px 6px;
+    border-style: solid;
+    border-color: transparent;
+    border-radius: 10px / 13px;
+    background-clip: padding-box;
+  }
+}
+
 .profile-rating-chart {
   position: relative;
   min-height: 150px;
@@ -1595,6 +1621,12 @@
   font-weight: 750;
   letter-spacing: 0.06em;
   text-transform: uppercase;
+}
+
+@media (max-width: 600px) {
+  .profile-rating-name {
+    font-size: 11px;
+  }
 }
 
 /* Named only when the row is not the default pace, so the usual row reads
@@ -2027,6 +2059,79 @@
   position: relative;
 }
 
+/* The `?boards=1` view (#509): a final-position thumbnail column between the
+   result and the body. Discs on a faint board, the study-card fingerprint
+   (study-thumbnails.css), not a readable position. */
+.profile-game-row.profile-game-row-board {
+  grid-template-columns: 76px 52px minmax(0, 1fr) auto;
+}
+
+.profile-game-board {
+  display: block;
+  width: 52px;
+}
+
+.profile-game-board svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.profile-game-board__wood {
+  fill: var(--xq-diagram-bg, #d9bd82);
+}
+
+.profile-game-board__grid {
+  stroke: var(--xq-diagram-line, #4b3c2a);
+  opacity: 0.5;
+}
+
+.profile-game-board__dark {
+  fill: rgb(0 0 0 / 18%);
+}
+
+.profile-game-board__water {
+  fill: rgb(59 130 246 / 35%);
+}
+
+.profile-game-board__red {
+  fill: #b91c1c;
+}
+
+.profile-game-board__black {
+  fill: #1f2937;
+}
+
+.profile-game-board__white {
+  fill: #f8fafc;
+  stroke: #1f2937;
+  stroke-width: 0.8;
+}
+
+/* Face-down jieqi pieces: the side is public, the piece is not. */
+.profile-game-board__red-down,
+.profile-game-board__black-down {
+  fill: var(--xq-diagram-bg, #d9bd82);
+  stroke-width: 1.6;
+}
+
+.profile-game-board__red-down {
+  stroke: #b91c1c;
+}
+
+.profile-game-board__black-down {
+  stroke: #1f2937;
+}
+
+/* A face-down banqi or Flip Jungle tile: no side to show. */
+.profile-game-board__hidden {
+  fill: #8a7350;
+}
+
+.profile-game-board__duck {
+  fill: #eab308;
+}
+
 /* The row's click target: covers the whole row and carries the game href. Sits
    under the content in paint order (it is appended first and has no z-index), so
    only the elements that opt out with a z-index — the opponent link — take
@@ -2453,6 +2558,21 @@
     justify-self: start;
     padding-top: 0;
     text-align: left;
+  }
+
+  /* With boards the thumbnail spans both lines and the date folds under the
+     body in the third column. */
+  .profile-game-row.profile-game-row-board {
+    grid-template-columns: 64px 44px minmax(0, 1fr);
+  }
+
+  .profile-game-board {
+    grid-row: span 2;
+    width: 44px;
+  }
+
+  .profile-game-row-board .profile-game-date {
+    grid-column: 3;
   }
 
   .profile-activity-summary-row {

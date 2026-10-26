@@ -294,38 +294,57 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
-  it('draws a duck chapter with the DUCK board, not the xiangqi one', async () => {
-    // The xiangqi board cannot render the duck: it lives in the seventh FEN
-    // field and has no piece to stand for it. Before the dispatch, a duck
-    // chapter came out as a xiangqi position with the duck simply absent.
-    const duckChapter = {
-      id: 'Duck1234',
-      name: 'Game 6',
-      orientation: 'red',
-      variant: 'duck-xiangqi',
-      tags: { red: 'Fairy-Stockfish', black: 'Fairy-Stockfish', event: 'self-play', result: '1-0' },
-      root: { root: { children: [{ uci: 'b3b5@d9', children: [{ uci: 'b8b6@a8' }] }] } },
+  for (const result of ['1-0', undefined]) {
+    it(`draws a duck chapter with the DUCK board with result ${result ?? 'untagged'}`, async () => {
+      // The xiangqi board cannot render the duck: it lives in the seventh FEN
+      // field and has no piece to stand for it. Before the dispatch, a duck
+      // chapter came out as a xiangqi position with the duck simply absent.
+      const duckChapter = {
+        id: 'Duck1234',
+        name: 'Game 6',
+        orientation: 'red',
+        variant: 'duck-xiangqi',
+        tags: { red: 'Fairy-Stockfish', black: 'Fairy-Stockfish', event: 'self-play', result },
+        root: { root: { children: [{ uci: 'b3b5@d9', children: [{ uci: 'b8b6@a8' }] }] } },
+      };
+      stubFetch(200, { study: { id: 's' }, chapters: [duckChapter] });
+      const root = document.createElement('div');
+      document.body.append(root);
+
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'Duck1234' });
+
+      // Asserted on a marker the DUCK renderer emits and the xiangqi board never
+      // does. Not on the duck piece itself: the card opens at ply 0, and the duck
+      // is not on the board until the second half of Red's first turn, so a duck
+      // token would be a false negative here.
+      expect(root.innerHTML).toContain('dkx-');
+
+      // And writes the turn in the grammar every other duck surface uses. The
+      // replay module had its own spelling, `b3-b5, duck d9`, which is wider than
+      // a cell in the sheet beside the board: every duck turn in an embedded
+      // study rendered as `b3-b5, d…`.
+      const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+        el.textContent?.trim(),
+      );
+      expect(moves).toEqual(['b3-b5@d9', 'b8-b6@a8']);
+      root.remove();
+    });
+  }
+
+  it('renders an untagged atomic chapter without inferring its result with standard rules', async () => {
+    const chapter = {
+      id: 'Atomic12',
+      name: 'Atomic opening',
+      variant: 'atomic-xiangqi',
+      root: { root: chainTree(['g1e3', 'b10c8', 'h3h5', 'c7c6', 'b3b7']) },
     };
-    stubFetch(200, { study: { id: 's' }, chapters: [duckChapter] });
+    stubFetch(200, { study: { id: 's' }, chapters: [chapter] });
     const root = document.createElement('div');
     document.body.append(root);
-
-    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Duck1234' });
-
-    // Asserted on a marker the DUCK renderer emits and the xiangqi board never
-    // does. Not on the duck piece itself: the card opens at ply 0, and the duck
-    // is not on the board until the second half of Red's first turn, so a duck
-    // token would be a false negative here.
-    expect(root.innerHTML).toContain('dkx-');
-
-    // And writes the turn in the grammar every other duck surface uses. The
-    // replay module had its own spelling, `b3-b5, duck d9`, which is wider than
-    // a cell in the sheet beside the board: every duck turn in an embedded
-    // study rendered as `b3-b5, d…`.
-    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
-      el.textContent?.trim(),
-    );
-    expect(moves).toEqual(['b3-b5@d9', 'b8-b6@a8']);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Atomic12' });
+    expect(root.querySelector('.embed-board svg')).not.toBeNull();
+    expect(root.querySelectorAll('.review-move-list__move')).toHaveLength(5);
+    expect(root.querySelector('.embed-card-result')?.textContent ?? '').toBe('');
     root.remove();
   });
 

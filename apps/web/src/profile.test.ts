@@ -101,6 +101,94 @@ describe('profile ratings rail', () => {
     expect(row.textContent).toContain('12 手');
   });
 
+  it.each([false, true])(
+    'pages profile games past a new finish, filtered=%s (#630)',
+    async (filtered) => {
+      if (filtered)
+        window.history.replaceState(null, '', '/@/pager?variant=xiangqi&result=win&vs=bob');
+      const game = (index: number) => ({
+        roomId: `room_${String(index).padStart(3, '0')}`,
+        variant: 'xiangqi',
+        mode: 'pvp',
+        rated: false,
+        result: 'red-wins',
+        termination: 'resignation',
+        plyCount: 20,
+        whiteName: null,
+        blackName: null,
+        corpusId: null,
+        endedAt: '2026-07-01T12:00:00.000Z',
+        participants: [],
+        playerColor: 'red',
+      });
+      const original = Array.from({ length: 31 }, (_, i) => game(31 - i));
+      const dataset = [...original];
+      const requests: URL[] = [];
+      const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = new URL(String(input), 'http://localhost');
+        if (url.pathname.endsWith('/rating-history')) return json({ points: [] });
+        if (url.pathname.endsWith('/games')) {
+          requests.push(url);
+          const before = url.searchParams.get('before');
+          const rows = before
+            ? dataset.filter((row) => row.roomId < JSON.parse(before)[1])
+            : dataset.slice(Number(url.searchParams.get('offset') ?? 0));
+          return json({ games: rows.slice(0, 15), total: dataset.length });
+        }
+        return json({
+          profile: {
+            isViewer: false,
+            relation: null,
+            user: {
+              handle: 'pager',
+              displayName: 'pager',
+              bio: '',
+              profileVisibility: 'public',
+              accountRole: 'player',
+              createdAt: '2026-05-01T00:00:00.000Z',
+            },
+            ratings: [],
+            puzzleRatings: [],
+            games: original.slice(0, 15),
+            gamesTotal: 31,
+          },
+        });
+      });
+      const root = document.createElement('div');
+      const { mountProfile } = await import('./profile.js');
+      await mountProfile(root, 'pager');
+      const links = () =>
+        Array.from(root.querySelectorAll('.profile-games .profile-game-row-open'), (row) =>
+          row.getAttribute('href'),
+        );
+      await vi.waitFor(() => expect(links()).toHaveLength(15));
+      dataset.unshift(game(32));
+      const more = () =>
+        root.querySelector<HTMLButtonElement>('.profile-games .profile-games-more-btn');
+      more()?.click();
+      await vi.waitFor(() => expect(links()).toHaveLength(30));
+      expect(more()).not.toBeNull();
+      more()?.click();
+      await vi.waitFor(() => expect(more()).toBeNull());
+      expect(links()).toEqual(original.map((row) => `/xiangqi/game/${row.roomId}`));
+      const older = requests.filter((url) => url.searchParams.has('before'));
+      expect(older).toHaveLength(2);
+      expect(JSON.parse(older[1].searchParams.get('before') ?? 'null')).toEqual([
+        original[29].endedAt,
+        original[29].roomId,
+      ]);
+      for (const url of older) {
+        expect(url.searchParams.has('offset')).toBe(false);
+        if (filtered) {
+          expect(url.searchParams.get('variant')).toBe('xiangqi');
+          expect(url.searchParams.get('result')).toBe('win');
+          expect(url.searchParams.get('vs')).toBe('bob');
+        }
+      }
+    },
+  );
+
   it('mounts the profile dashboard with activity and games tabs', async () => {
     vi.stubEnv('DEV', false);
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {

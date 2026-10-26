@@ -194,6 +194,12 @@
   color: #8b5cf6;
 }
 
+@media (max-width: 600px) {
+  .game-meta-card__bot {
+    font-size: 11px;
+  }
+}
+
 .game-meta-card__name {
   min-width: 0;
   overflow: hidden;

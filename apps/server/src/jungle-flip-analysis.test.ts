@@ -236,7 +236,6 @@ function flipPool(
 test('analyzeJungleFlipDecisions: only flip plies, per-mover POV, flat eval => zero luck/loss', async () => {
   const moves = openingFlips(STANDARD_JUNGLE_FLIP_DEAL, 6);
   const decisions = await analyzeJungleFlipDecisions([...moves], STANDARD_JUNGLE_FLIP_DEAL, {
-    bestMove: async () => null,
     evalPosition: async () => ({ cp: 100, mate: null }),
   });
   assert.deepEqual(
@@ -302,7 +301,6 @@ test('analyzeJungleFlipDecisions: playedWin is the TRUE pool-weighted mean over 
   }
 
   const decisions = await analyzeJungleFlipDecisions([flip], deal, {
-    bestMove: async () => jungleFlipMoveToEngineUci(flip), // played is the only candidate
     evalPosition: async (fen) => ({ cp: fenToCp.get(fen) ?? 0, mate: null }),
   });
   const d = decisions[0]!;
@@ -318,7 +316,7 @@ test('analyzeJungleFlipDecisions: playedWin is the TRUE pool-weighted mean over 
     `playedWin ${d.playedWin} vs ${expectedMean}`,
   );
   assert.ok(Math.abs(d.realizedWin - expectedRealized) < 1e-6);
-  assert.ok(Math.abs(d.bestWin - d.playedWin) < 1e-6); // only candidate
+  assert.ok(Math.abs(d.bestWin - d.playedWin) < 1e-6); // played flip remains best
   assert.equal(d.playedRank, 1);
 });
 
@@ -337,7 +335,6 @@ test('analyzeJungleFlipDecisions: a better candidate flip lifts bestWin above pl
     betterFens.add(jungleFlipStateToEngineFen(applyJungleFlipMove(cf, better)));
   }
   const decisions = await analyzeJungleFlipDecisions([played], deal, {
-    bestMove: async () => jungleFlipMoveToEngineUci(better),
     evalPosition: async (fen) => ({ cp: betterFens.has(fen) ? -400 : -50, mate: null }),
   });
   const d = decisions[0]!;
@@ -345,6 +342,170 @@ test('analyzeJungleFlipDecisions: a better candidate flip lifts bestWin above pl
   assert.ok(Math.abs(d.playedWin - winPercent(50, null)) < 1e-6);
   assert.ok(Math.abs(d.bestWin - winPercent(400, null)) < 1e-6);
   assert.equal(d.playedRank, 2);
+});
+
+test('analyzeJungleFlipDecisions: ranks three alternatives plus played by pool mean, without hidden identities', async () => {
+  const deal = STANDARD_JUNGLE_FLIP_DEAL;
+  const state = createInitialJungleFlipState('t', deal);
+  const flips = getJungleFlipLegalMoves(state).filter((m) => m.from === m.to);
+  const played = flips.at(-1)!;
+  const top = flips.slice(0, 3);
+  const scores = new Map<string, number>();
+  for (const [index, move] of top.entries()) {
+    for (const entry of flipPool(deal).values()) {
+      const cf = jungleFlipCounterfactualCf(state, move.from, entry, state.board[move.from]!);
+      scores.set(jungleFlipStateToEngineFen(applyJungleFlipMove(cf, move)), -600 + index * 150);
+    }
+  }
+  const decisions = await analyzeJungleFlipDecisions([played], deal, {
+    evalPosition: async (fen) => ({ cp: scores.get(fen) ?? 100, mate: null }),
+  });
+  const d = decisions[0]!;
+  assert.equal(d.playedRank, 4);
+  const expected = [
+    ...top.map((move, index) => ({
+      move: jungleFlipMoveToEngineUci(move),
+      win: winPercent(600 - index * 150, null),
+    })),
+    { move: jungleFlipMoveToEngineUci(played), win: winPercent(-100, null), played: true },
+  ];
+  assert.deepEqual(
+    d.candidates?.map((c) => ({ ...c, win: Math.round(c.win * 1e6) })),
+    expected.map((c) => ({ ...c, win: Math.round(c.win * 1e6) })),
+  );
+  assert.equal(d.bestWin, d.candidates![0]!.win);
+  assert.equal(d.playedWin, d.candidates!.at(-1)!.win);
+  // Serialize the entire persisted decision: candidates disclose only public moves and scores.
+  assert.deepEqual(JSON.parse(JSON.stringify(d)), {
+    ply: 1,
+    mover: 'red',
+    bestWin: d.bestWin,
+    playedWin: d.playedWin,
+    realizedWin: d.realizedWin,
+    playedRank: 4,
+    candidates: d.candidates,
+  });
+});
+
+test('analyzeJungleFlipDecisions: shortlists quiet moves with the live repetition history', async () => {
+  const deal = STANDARD_JUNGLE_FLIP_DEAL;
+  let state = createInitialJungleFlipState('t', deal);
+  const prefix: JungleFlipMove[] = [];
+  const states = [state];
+  // Open enough squares through real legal play to offer a quiet move beside flips.
+  for (let i = 0; i < 32; i += 1) {
+    const legal = getJungleFlipLegalMoves(state);
+    if (legal.some((m) => m.from !== m.to && !state.board[m.to])) break;
+    const next = legal.find((m) => m.from !== m.to) ?? legal.find((m) => m.from === m.to)!;
+    assert.ok(next);
+    prefix.push(next);
+    state = applyJungleFlipMove(state, next);
+    states.push(state);
+  }
+  const legal = getJungleFlipLegalMoves(state);
+  const quiet = legal.find((m) => m.from !== m.to && !state.board[m.to])!;
+  const played = legal.find((m) => m.from === m.to)!;
+  assert.ok(quiet && played);
+  const quietUci = jungleFlipMoveToEngineUci(quiet);
+  const quietFen = jungleFlipStateToEngineFen(applyJungleFlipMove(state, quiet));
+  // Three lucky actual reveals must not crowd the better quiet move out.
+  const luckyFlips = legal.filter((m) => m.from === m.to && m.from !== played.from).slice(0, 3);
+  assert.equal(luckyFlips.length, 3);
+  const luckyFens = new Set(
+    luckyFlips.map((m) => jungleFlipStateToEngineFen(applyJungleFlipMove(state, m))),
+  );
+  let sawQuiet = false;
+  const decisions = await analyzeJungleFlipDecisions(
+    [...prefix, played],
+    deal,
+    {
+      evalPosition: async (fen, history) => {
+        if (fen === quietFen) {
+          sawQuiet = true;
+          assert.deepEqual(
+            history,
+            jungleFlipRepSeedFens([...states, applyJungleFlipMove(state, quiet)]),
+          );
+        }
+        return { cp: fen === quietFen ? -800 : luckyFens.has(fen) ? -1200 : 100, mate: null };
+      },
+    },
+    {
+      load: async () => ({ nextIndex: prefix.length, items: [] }),
+      save: async () => {},
+    },
+  );
+  assert.ok(sawQuiet);
+  const d = decisions[0]!;
+  assert.equal(d.ply, prefix.length + 1);
+  assert.equal(d.candidates![0]!.move, quietUci);
+  assert.ok(Math.abs(d.bestWin - winPercent(800, null)) < 1e-6);
+  assert.ok(d.bestWin > d.playedWin);
+});
+
+test('analyzeJungleFlipDecisions: deduplicates played and bounds pool fan-out while scoring every legal move', async () => {
+  const deal = STANDARD_JUNGLE_FLIP_DEAL;
+  const state = createInitialJungleFlipState('t', deal);
+  const legal = getJungleFlipLegalMoves(state);
+  const played = legal[0]!;
+  let active = 0;
+  let peak = 0;
+  let calls = 0;
+  const [d] = await analyzeJungleFlipDecisions([played], deal, {
+    evalPosition: async () => {
+      calls += 1;
+      active += 1;
+      peak = Math.max(peak, active);
+      await Promise.resolve();
+      active -= 1;
+      return { cp: 0, mate: null };
+    },
+  });
+  assert.equal(d!.candidates!.length, 3);
+  assert.equal(d!.candidates!.filter((c) => c.played).length, 1);
+  assert.equal(d!.playedRank, 1);
+  assert.equal(calls, legal.length * flipPool(deal).size);
+  assert.equal(peak, 2);
+});
+
+test('analyzeJungleFlipDecisions: lucky reveals cannot crowd out a better pool-mean flip', async () => {
+  const deal = STANDARD_JUNGLE_FLIP_DEAL;
+  const state = createInitialJungleFlipState('t', deal);
+  const flips = getJungleFlipLegalMoves(state).filter((m) => m.from === m.to);
+  const lucky = flips.slice(0, 3);
+  const better = flips[3]!;
+  const played = flips.at(-1)!;
+  const scores = new Map<string, number>();
+  for (const move of [...lucky, better]) {
+    for (const entry of flipPool(deal).values()) {
+      const counterfactual = jungleFlipCounterfactualCf(
+        state,
+        move.from,
+        entry,
+        state.board[move.from]!,
+      );
+      scores.set(
+        jungleFlipStateToEngineFen(applyJungleFlipMove(counterfactual, move)),
+        move === better ? -600 : 1200,
+      );
+    }
+    // The best average flip has a bad actual tile; the three worse flips get lucky tiles.
+    scores.set(
+      jungleFlipStateToEngineFen(applyJungleFlipMove(state, move)),
+      move === better ? 1200 : -1200,
+    );
+  }
+  const [d] = await analyzeJungleFlipDecisions([played], deal, {
+    evalPosition: async (fen) => ({ cp: scores.get(fen) ?? 0, mate: null }),
+  });
+  assert.ok(d!.bestWin > d!.playedWin);
+  assert.equal(d!.playedRank, 2);
+  assert.equal(d!.candidates![0]!.move, jungleFlipMoveToEngineUci(better));
+  assert.ok(
+    d!.candidates!.every((c) => !lucky.some((m) => jungleFlipMoveToEngineUci(m) === c.move)),
+  );
+  assert.ok(Math.abs(d!.playedWin - 50) < 1e-6);
+  assert.ok(Math.abs(d!.realizedWin - 50) < 1e-6);
 });
 
 function decisionsMemoryCache(): JungleFlipDecisionsCache & { saves: number } {
@@ -389,6 +550,41 @@ test('resolveJungleFlipDecisions: pure cache read misses without computing', asy
   assert.equal(result, null);
   assert.equal(computes, 0);
   assert.equal(cache.saves, 0);
+});
+
+test('resolveJungleFlipDecisions invalidates legacy d3 decisions before computing ranked candidates', async () => {
+  const cache = decisionsMemoryCache();
+  const legacyEngineId = JUNGLE_FLIP_DECISIONS_ENGINE_ID.replace(/\+d\d+$/, '+d3');
+  await cache.save('room-legacy', legacyEngineId, 12, [sampleDecision(1)]);
+  let computes = 0;
+  const fresh = [{ ...sampleDecision(1), candidates: [{ move: 'a0a0', win: 55, played: true }] }];
+  const analyze = async () => {
+    computes += 1;
+    return fresh;
+  };
+  assert.equal(
+    await resolveJungleFlipDecisions(
+      'room-legacy',
+      [],
+      STANDARD_JUNGLE_FLIP_DEAL,
+      cache,
+      analyze,
+      false,
+    ),
+    null,
+  );
+  assert.equal(computes, 0);
+  const result = await resolveJungleFlipDecisions(
+    'room-legacy',
+    [],
+    STANDARD_JUNGLE_FLIP_DEAL,
+    cache,
+    analyze,
+  );
+  assert.equal(computes, 1);
+  assert.deepEqual(result?.decisions, fresh);
+  assert.deepEqual(await cache.get('room-legacy', legacyEngineId, 12), [sampleDecision(1)]);
+  assert.equal(cache.saves, 2);
 });
 
 test('resolveJungleFlipDecisions computes once, persists, then serves from cache', async () => {

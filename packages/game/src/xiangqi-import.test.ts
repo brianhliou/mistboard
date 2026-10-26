@@ -1,7 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createInitialXiangqiBoard } from './variants-xiangqi.js';
+import {
+  createInitialXiangqiBoard,
+  createInitialXiangqiState,
+  squareOf,
+  type XiangqiBoard,
+  type XiangqiMove,
+} from './variants-xiangqi.js';
+import { applyStandardXiangqiMove } from './variants-xiangqi-standard.js';
 import { importXiangqiGame, xiangqiBoardFromDhtmlxqBinit } from './xiangqi-import.js';
+import { formatXiangqiMoves } from './xiangqi-notation-format.js';
 
 test('importXiangqiGame reads native coordinate notation', () => {
   const result = importXiangqiGame('h3e3 h8e8 h1g3');
@@ -134,4 +142,99 @@ test('importXiangqiGame keeps the standard start when a record has no binit', ()
   const result = importXiangqiGame('[DhtmlXQ_movelist]7747724279677062[/DhtmlXQ_movelist]');
   assert.equal(result.format, 'dhtmlxq');
   assert.equal(result.initialState, undefined);
+});
+
+// Real dpxq records saved in 06ea99319 (the archive parser fix, refs #377).
+// #624: our kernel draws at ply 45 / 173, but the players recorded 61 / 208.
+const CONTINUED_RECORDS = [
+  {
+    id: '141150',
+    reason: 'repetition',
+    plies: 61,
+    digits:
+      '2625204217371031192700202735121535271512694770620919636427358081777823242524202478086254355424547967312359482335191535271517812189595459485921234645273517153527151727351715352715172735171535271517273517153527151727351715352715172735171535271517',
+  },
+  {
+    id: '141140',
+    reason: 'progress-clock',
+    plies: 208,
+    digits:
+      '2625122277476042190710020919001017135041796763648979726269877051464523242524222919291013072642247971805026341317876920426746626671766665394817167673022147575070735321134544133446655172537334225727221465574344293916565736444527771406777206273937273536155686153486563757565748574152345345555332405032443041574864657271355473745462446350407473838449398485634424027363628171517073636173333949817361713343442541507172524151817352818042607270857580605260706055456064432325376555645475656987656654146656141656468769030416062303372504050616032325442343442502242504430316142442141041300425032325042324041224221204504110132224042342202331242948392922314322274331272131232122234422424463426269870515634462641343151644231617233164343112172759482728123328384373405073535040876920424959383933213431213339295949313233544260536360826323325254335262',
+  },
+] as const;
+
+for (const record of CONTINUED_RECORDS) {
+  const moves: XiangqiMove[] = record.digits.match(/.{4}/g)!.map((token) => ({
+    from: squareOf(Number(token[0]), 10 - Number(token[1])),
+    to: squareOf(Number(token[2]), 10 - Number(token[3])),
+  }));
+
+  test(`importXiangqiGame replays all of dpxq ${record.id} past ${record.reason}`, () => {
+    assert.equal(moves.length, record.plies);
+    const result = importXiangqiGame(`[DhtmlXQ_movelist]${record.digits}[/DhtmlXQ_movelist]`);
+    assert.equal(result.error, undefined);
+    assert.equal(result.format, 'dhtmlxq');
+    assert.deepEqual(result.moves, moves);
+  });
+
+  for (const style of ['coordinate', 'wxf', 'chinese-simplified'] as const) {
+    test(`importXiangqiGame replays dpxq ${record.id} pasted as ${style}`, () => {
+      const result = importXiangqiGame(formatXiangqiMoves(moves, style).join(' '));
+      assert.equal(result.error, undefined);
+      assert.deepEqual(result.moves, moves);
+    });
+  }
+
+  test(`importXiangqiGame resumes dpxq ${record.id} from a Black-to-move start`, () => {
+    const initialState = applyStandardXiangqiMove(createInitialXiangqiState('import'), moves[0]!);
+    const saved = structuredClone(initialState);
+    const result = importXiangqiGame(
+      formatXiangqiMoves(moves.slice(1), 'wxf', initialState).join(' '),
+      { initialState },
+    );
+    assert.equal(result.error, undefined);
+    assert.deepEqual(result.moves, moves.slice(1));
+    assert.deepEqual(initialState, saved);
+  });
+}
+
+for (const [reason, board, move] of [
+  [
+    'checkmate',
+    {
+      e1: { color: 'red', role: 'general' },
+      i5: { color: 'red', role: 'chariot' },
+      d8: { color: 'red', role: 'soldier' },
+      d10: { color: 'black', role: 'general' },
+    },
+    { from: 'i5', to: 'i10' },
+  ],
+  [
+    'stalemate',
+    {
+      e1: { color: 'red', role: 'general' },
+      d1: { color: 'red', role: 'chariot' },
+      f1: { color: 'red', role: 'chariot' },
+      e7: { color: 'red', role: 'soldier' },
+      e10: { color: 'black', role: 'general' },
+    },
+    { from: 'e7', to: 'e8' },
+  ],
+] as const satisfies readonly [string, XiangqiBoard, XiangqiMove][]) {
+  test(`importXiangqiGame rejects moves after ${reason}`, () => {
+    const initialState = { ...createInitialXiangqiState('import'), board };
+    assert.equal(applyStandardXiangqiMove(initialState, move).status.type, 'finished');
+    const line = `${move.from}${move.to}`;
+    assert.equal(importXiangqiGame(line, { initialState }).error, undefined);
+    const extra = importXiangqiGame(`${line} d10e10`, { initialState });
+    assert.equal(extra.format, null);
+    assert.match(extra.error ?? '', /^Move 2 /);
+  });
+}
+
+test('importXiangqiGame still rejects an illegal move after an automatic draw', () => {
+  const digits = `${CONTINUED_RECORDS[0].digits.slice(0, 45 * 4)}0000`;
+  const result = importXiangqiGame(`[DhtmlXQ_movelist]${digits}[/DhtmlXQ_movelist]`);
+  assert.equal(result.format, null);
+  assert.match(result.error ?? '', /^Move 46 /);
 });

@@ -3,6 +3,7 @@
 
 import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { parseGamePageCursor } from './game-page-cursor.js';
 import { createUser, getUserGamesPage } from './persistence.js';
 import {
   assert,
@@ -149,7 +150,80 @@ type MarkedRow = { roomId: string; unavailable?: string };
 const marks = (rows: MarkedRow[]) =>
   Object.fromEntries(rows.map((row) => [row.roomId, row.unavailable ?? null]));
 
+test('game page cursors accept only a timestamp and id tuple (#630)', () => {
+  const endedAt = '2026-10-23T12:00:00.000Z';
+  assert.equal(parseGamePageCursor(null), null);
+  assert.deepEqual(parseGamePageCursor(JSON.stringify([endedAt, 'room-1'])), {
+    endedAt,
+    roomId: 'room-1',
+  });
+  for (const raw of [
+    '',
+    'bad',
+    'null',
+    '{}',
+    '[]',
+    '[1,2]',
+    JSON.stringify(['not-a-date', 'room-1']),
+    JSON.stringify(['2026-02-30T00:00:00.000Z', 'room-1']),
+    JSON.stringify([endedAt, '']),
+    JSON.stringify([endedAt, 'room-1', 'extra']),
+    JSON.stringify([endedAt, 'x'.repeat(257)]),
+  ]) {
+    assert.equal(parseGamePageCursor(raw), undefined, raw);
+  }
+});
+
 definePersistenceTests('profile games filters', () => {
+  test('profile cursor survives a newer finish with filters and timestamp ties (#630)', async () => {
+    await seedUsers();
+    for (const id of ['03', '02', '01', '00']) {
+      await seedRow(
+        `cursor-${id}`,
+        'xiangqi',
+        'red-wins',
+        id === '00' ? '2026-08-01T00:00:00Z' : '2026-08-01T01:00:00Z',
+        [alice('red'), user('u_bob', 'black')],
+      );
+    }
+    await seedRow('cursor-loss', 'xiangqi', 'black-wins', '2026-08-01T01:00:00Z', [
+      alice('red'),
+      user('u_bob', 'black'),
+    ]);
+    await seedRow('cursor-private', 'xiangqi', 'red-wins', '2026-08-01T01:00:00Z', [
+      alice('red', 'private'),
+      user('u_bob', 'black'),
+    ]);
+    const query = 'variant=xiangqi&result=win&vs=bob&limit=2';
+    const first = JSON.parse(
+      (await callUsersRoute('/api/users/alice/games', query)).body.toString(),
+    ).games as Array<{ roomId: string; endedAt: string }>;
+    assert.deepEqual(
+      first.map((game) => game.roomId),
+      ['cursor-03', 'cursor-02'],
+    );
+    await seedRow('cursor-04', 'xiangqi', 'red-wins', '2026-08-01T02:00:00Z', [
+      alice('red'),
+      user('u_bob', 'black'),
+    ]);
+    const last = first[first.length - 1];
+    const before = encodeURIComponent(JSON.stringify([last.endedAt, last.roomId]));
+    const second = JSON.parse(
+      (
+        await callUsersRoute('/api/users/alice/games', `${query}&offset=99&before=${before}`)
+      ).body.toString(),
+    );
+    assert.deepEqual(
+      [...first, ...second.games].map((game) => game.roomId),
+      ['cursor-03', 'cursor-02', 'cursor-01', 'cursor-00'],
+    );
+    assert.equal(second.total, 5);
+    assert.equal(
+      (await callUsersRoute('/api/users/alice/games', `${query}&before=bad`)).status,
+      400,
+    );
+  });
+
   test('the result filter reads the owner seat, as the row paints it', async () => {
     await seedList();
     assert.deepEqual(ids(await getUserGamesPage('alice', null, 0, 50, { result: 'win' })), [

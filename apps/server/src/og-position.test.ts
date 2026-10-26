@@ -176,6 +176,24 @@ test('the caption names the variant and the side to move', () => {
 
 // --- validation and fallback ----------------------------------------------------
 
+for (const variant of ['xiangqi', 'atomic-xiangqi', 'dark-xiangqi'] as const) {
+  for (const [winner, placement, nextTurn] of [
+    ['red', '3k4R/9/3P5/9/9/9/9/9/9/4K4', 'b'],
+    ['black', '4k4/9/9/9/9/9/9/3p5/9/3K4r', 'r'],
+  ] as const) {
+    test(`${variant}: terminal FEN preserves the ${winner} mating position without a side to move`, () => {
+      const fen = `${placement} - - - 1 1`;
+      const resolved = resolvePositionOg(variant, fen);
+      assert.ok(resolved);
+      const withTurn = resolvePositionOg(variant, `${placement} ${nextTurn} - - 1 1`);
+      assert.ok(withTurn);
+      assert.deepEqual(resolved.board, withTurn.board);
+      assert.equal(resolved.publicFen, fen);
+      assert.equal(resolved.toMove, null);
+    });
+  }
+}
+
 test('an unknown variant, an absent FEN, or a bad FEN falls back to the default card', async () => {
   for (const [variant, fen] of [
     ['chess', START_FENS['dark-chess']],

@@ -1000,6 +1000,7 @@ function renderLeaderboardTable(
 async function fetchUserProfile(handle: string): Promise<UserProfile> {
   // The play streak counts days on the viewer's calendar (play-streak.ts).
   const query = new URLSearchParams({ tz: browserTimeZone() });
+  if (profileBoardsView()) query.set('boards', '1');
   const resp = await fetch(`/api/users/${encodeURIComponent(handle)}/profile?${query}`);
   if (resp.status === 404) throw new ProfileNotFound();
   if (!resp.ok) throw new Error(`failed to load profile: ${resp.status}`);
@@ -2664,22 +2665,30 @@ function profileGameAppender(list: HTMLElement, locale: Locale): (games: Feature
         header.textContent = dayLabel(game.endedAt, locale);
         list.append(header);
       }
-      list.append(buildProfileGameRow(game, { timeOnly: true, locale }));
+      list.append(
+        buildProfileGameRow(game, { timeOnly: true, locale, boards: profileBoardsView() }),
+      );
     }
   };
 }
 
+// The games list with each game's final position (#509), on trial behind
+// `?boards=1` until it is judged against the plain list.
+function profileBoardsView(): boolean {
+  return new URLSearchParams(window.location.search).get('boards') === '1';
+}
+
 // A "Load more" control for a games list, wired to one page fetch. Shared so the
-// filtered and unfiltered panels page identically -- including the exhaustion
-// rule, which reads the FILTERED total the server returns.
+// filtered and unfiltered panels continue before the last row. A short page
+// exhausts the list, independently of totals that change as games finish.
 function profileGamesMore(
   handle: string,
   locale: Locale,
   filter: ProfileGamesFilter,
-  startRendered: number,
+  lastGame: FeaturedGame,
   appendGames: (games: FeaturedGame[]) => void,
 ): HTMLElement {
-  let rendered = startRendered;
+  let before = JSON.stringify([lastGame.endedAt, lastGame.roomId]);
   const moreWrap = document.createElement('div');
   moreWrap.className = 'profile-games-more';
   const button = document.createElement('button');
@@ -2689,7 +2698,7 @@ function profileGamesMore(
   button.addEventListener('click', async () => {
     button.disabled = true;
     button.textContent = t('profile.loadingMore', {}, locale);
-    const page = await fetchUserGamesPage(handle, rendered, PROFILE_GAMES_PAGE, filter).catch(
+    const page = await fetchUserGamesPage(handle, before, PROFILE_GAMES_PAGE, filter).catch(
       (err) => {
         console.warn(err);
         return null;
@@ -2701,8 +2710,9 @@ function profileGamesMore(
       return;
     }
     appendGames(page.games);
-    rendered += page.games.length;
-    if (rendered >= page.total || page.games.length === 0) {
+    const last = page.games[page.games.length - 1];
+    if (last) before = JSON.stringify([last.endedAt, last.roomId]);
+    if (page.games.length < PROFILE_GAMES_PAGE) {
       moreWrap.remove();
     } else {
       button.disabled = false;
@@ -2736,12 +2746,15 @@ function buildFilteredProfileGames(
   section.append(body);
 
   void (async () => {
-    const page = await fetchUserGamesPage(profile.user.handle, 0, PROFILE_GAMES_PAGE, filter).catch(
-      (err) => {
-        console.warn(err);
-        return null;
-      },
-    );
+    const page = await fetchUserGamesPage(
+      profile.user.handle,
+      null,
+      PROFILE_GAMES_PAGE,
+      filter,
+    ).catch((err) => {
+      console.warn(err);
+      return null;
+    });
     body.replaceChildren();
     onTotal?.(page?.total ?? 0);
     if (!page || page.games.length === 0) {
@@ -2769,9 +2782,15 @@ function buildFilteredProfileGames(
     };
     appendGames(page.games);
     body.append(list);
-    if (page.games.length < page.total) {
+    if (page.games.length === PROFILE_GAMES_PAGE) {
       body.append(
-        profileGamesMore(profile.user.handle, locale, filter, page.games.length, appendGames),
+        profileGamesMore(
+          profile.user.handle,
+          locale,
+          filter,
+          page.games[page.games.length - 1],
+          appendGames,
+        ),
       );
     }
   })();
@@ -2814,13 +2833,13 @@ function buildProfileGames(
   appendGames(profile.games);
   section.append(list);
 
-  if (profile.games.length >= profile.gamesTotal) return section;
+  if (profile.games.length < PROFILE_GAMES_PAGE) return section;
   section.append(
     profileGamesMore(
       profile.user.handle,
       locale,
       NO_PROFILE_GAMES_FILTER,
-      profile.games.length,
+      profile.games[profile.games.length - 1],
       appendGames,
     ),
   );
@@ -2836,16 +2855,16 @@ function profileVariantLabel(
 
 async function fetchUserGamesPage(
   handle: string,
-  offset: number,
+  before: string | null,
   limit: number,
   filter: ProfileGamesFilter = NO_PROFILE_GAMES_FILTER,
 ): Promise<{ games: FeaturedGame[]; total: number } | null> {
-  // `total` comes back scoped to the same filter, so callers can page a filtered
-  // list without tracking two different totals.
+  // `total` labels the first filtered page; pagination uses only its last row.
   const filterQuery = profileGamesFilterParams(filter).toString();
-  const query = filterQuery ? `&${filterQuery}` : '';
+  const query = `${filterQuery ? `&${filterQuery}` : ''}${profileBoardsView() ? '&boards=1' : ''}`;
+  const cursor = before ? `&before=${encodeURIComponent(before)}` : '';
   const resp = await fetch(
-    `/api/users/${encodeURIComponent(handle)}/games?offset=${offset}&limit=${limit}${query}`,
+    `/api/users/${encodeURIComponent(handle)}/games?limit=${limit}${cursor}${query}`,
   );
   if (!resp.ok) throw new Error(`failed to load games: ${resp.status}`);
   return (await resp.json()) as { games: FeaturedGame[]; total: number };

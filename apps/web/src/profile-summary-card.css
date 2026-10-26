@@ -81,6 +81,12 @@
   padding: 0.05rem 0.3rem;
 }
 
+@media (max-width: 600px) {
+  .profile-summary-card-badge {
+    font-size: 11px;
+  }
+}
+
 .profile-summary-card-playing {
   margin-left: auto;
   color: var(--site-muted);

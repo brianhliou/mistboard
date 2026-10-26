@@ -8,9 +8,23 @@
    styling at all -- static instead of absolute, so both stacked below the board;
    16px inherited instead of 13px; and the slot grew by their height, which
    dragged the resize grip (positioned by measuring that slot) off the board. */
+/* Reserve the top row on the whole cluster so both rails still align with the
+   board. Its padding is included in the viewport-fit budget. */
+.review-shell__cluster:has(.review-board-wrap--seated) {
+  padding-top: 26px;
+}
+
+.review-shell__cluster:has(.review-board-wrap--captures) {
+  padding-top: 28px;
+}
+
 .review-board-wrap--seated {
   position: relative;
   margin-bottom: 26px;
+}
+
+.review-board-wrap--captures {
+  margin-bottom: 28px;
 }
 
 .review-seat {
@@ -26,6 +40,33 @@
   font-weight: 500;
   line-height: 1.2;
   pointer-events: none;
+}
+
+.review-seat__clock {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Captures sit in the name's row, between the name and the clock (Brian,
+   2026-10-25: a second row under the name was too disruptive). They stay
+   compact and scroll sideways instead of pushing the clock out. */
+.review-seat .review-seat__material {
+  --capture-piece-size: 22px;
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: nowrap;
+  height: 24px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  pointer-events: auto;
+}
+
+.review-seat .review-seat__material .captures-row {
+  flex-wrap: nowrap;
 }
 
 /* `bottom: 100%` is the wrapper's top edge; the wrapper has no top padding, so
@@ -44,6 +85,8 @@
 }
 
 .review-seat__name {
+  flex: 0 1 auto;
+  min-width: 3em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

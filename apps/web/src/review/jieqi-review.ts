@@ -15,6 +15,7 @@ import {
   pikafishUciToJieqiMove,
 } from '@mistboard/game';
 import { createJieqiInteractiveBoard } from '../jieqi-board.js';
+import { renderJieqiMaterial } from '../jieqi-material.js';
 import type { JieqiBoardArrow, JieqiBoardMarker } from '../live-jieqi-render.js';
 import { animateJieqiBoardMove, JIEQI_GEO, jieqiPieceGhostSvg } from '../live-jieqi-render.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
@@ -133,6 +134,15 @@ function makeJieqiPresentation(
       className: `xq-arrow--draw xq-shape--${s.brush}`,
     }),
     shapeToMarker: (s: NodeShape) => s,
+    seatCaptures: (host, view, _rootView, owner) => {
+      if (owner !== 'red' && owner !== 'black') return;
+      const top = document.createElement('div');
+      renderJieqiMaterial(
+        { capturesTop: top, capturesBottom: host, hiddenPool: document.createElement('div') },
+        view,
+        owner === 'red' ? 'black' : 'red',
+      );
+    },
     // Judgment badge on the square the move landed on, so the board states the
     // same verdict the move list does (lila pins its glyphs the same way).
     moveGlyphMarker: (move: JieqiMove, glyph): JieqiBoardMarker => ({

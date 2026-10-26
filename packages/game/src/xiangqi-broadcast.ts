@@ -9,6 +9,7 @@ import {
 import {
   applyStandardXiangqiMove,
   getStandardXiangqiLegalMoves,
+  resumeAdjudicatedDraw,
 } from './variants-xiangqi-standard.js';
 
 export const XIANGQI_BROADCAST_SCHEMA = 'mistboard.xiangqi.broadcast.v1' as const;
@@ -387,7 +388,7 @@ export function replayXiangqiBroadcastBoard(
       ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)
     ) {
       adjudications.push({ ply: i + 1, reason: state.status.reason });
-      state = { ...state, status: { type: 'playing', turn: i % 2 === 0 ? 'red' : 'black' } };
+      state = resumeAdjudicatedDraw(state);
     }
     const legal = getStandardXiangqiLegalMoves(state).some(
       (candidate) => candidate.from === move.from && candidate.to === move.to,

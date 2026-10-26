@@ -21,7 +21,9 @@ import {
   JUNGLE_FLIP_BOARD_VIEW,
   type JungleFlipBoardArrow,
   type JungleFlipBoardMarker,
+  jungleFlipPieceGhostSvg,
 } from '../jungle-flip-render.js';
+import { fillCapturedPoolWith } from './captured-pool.js';
 import {
   bestMoveArrowWithParser,
   bestMoveMarkerWithParser,
@@ -115,6 +117,10 @@ function makeJungleFlipPresentation(
       kind: 'circle',
       className: `xq-shape--${s.brush}`,
     }),
+    seatCaptures: (host, view, _rootView, owner) => {
+      if (owner !== 'red' && owner !== 'black') return;
+      fillCapturedPoolWith(host, view.captured, owner, jungleFlipPieceGhostSvg);
+    },
     // Judgment badge on the square the move landed on, so the board states the
     // same verdict the move list does (lila pins its glyphs the same way).
     moveGlyphMarker: (move: JungleFlipMove, glyph): JungleFlipBoardMarker => ({

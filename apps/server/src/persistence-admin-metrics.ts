@@ -39,6 +39,14 @@ import { PATRON_ACTIVE_STATUSES, patronQualifyingRowSql } from './persistence-pa
 
 export const ADMIN_METRICS_WEEKS = 26;
 
+export interface AdminRetentionCohort {
+  weekStart: string;
+  // Variant of the player's first counted game, not of the return game.
+  segment: 'all' | 'jieqi' | 'other';
+  players: number;
+  returns: { week: number; returned: number | null; percentage: number | null }[];
+}
+
 export interface AdminMetricsWeek {
   weekStart: string;
   humanGames: number;
@@ -117,6 +125,7 @@ export interface AdminMetrics {
   humanGamesByResult: Record<string, number>;
   humanGamesByVariant: Record<string, number>;
   weekly: AdminMetricsWeek[];
+  retentionCohorts: AdminRetentionCohort[];
   engines: AdminMetricsEngines;
 }
 
@@ -159,6 +168,7 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
     mauByWeek,
     activity,
     puzzlePlayersByWeek,
+    retentionCohorts,
   ] = await Promise.all([
     weekAxis(pool, now, weeks),
     collectHeadline(pool, now),
@@ -168,6 +178,7 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
     collectActive28dByWeek(pool, now, weeks),
     collectActivityByWeek(pool, now, weeks),
     collectPuzzlePlayersByWeek(pool, now, weeks),
+    collectRetentionCohorts(pool, now, weeks),
   ]);
 
   const weekly = axis.map((weekStart): AdminMetricsWeek => {
@@ -210,8 +221,85 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
     weekCount: weeks,
     ...headline,
     weekly,
+    retentionCohorts,
     engines,
   };
+}
+
+// First-game cohorts use the full counted history before applying the display
+// window. Otherwise an established player's first game IN the window would
+// incorrectly make them new. Identity is the same account/browser pair used
+// by the other player metrics; no ids leave this aggregate query.
+async function collectRetentionCohorts(
+  db: Queryable,
+  now: Date,
+  weeks: number,
+): Promise<AdminRetentionCohort[]> {
+  const result = await db.query<{
+    week: string;
+    segment: AdminRetentionCohort['segment'];
+    players: number;
+    return_week: number;
+    returned: number | null;
+  }>(
+    `WITH human AS (
+       SELECT p.subject_type, p.subject_id, g.room_id, g.variant,
+              g.ended_at AT TIME ZONE 'UTC' AS ended_at
+       FROM game_participants p
+       JOIN games g ON g.room_id = p.game_id
+       WHERE ${PLAYER_SEAT} AND ${HUMAN_GAME} AND g.ended_at < $1::timestamptz
+     ),
+     first_game AS (
+       SELECT DISTINCT ON (subject_type, subject_id)
+         subject_type, subject_id, variant, date_trunc('week', ended_at) AS week
+       FROM human
+       ORDER BY subject_type, subject_id, ended_at, room_id
+     ),
+     members AS (
+       SELECT f.subject_type, f.subject_id, f.week, s.segment
+       FROM first_game f
+       CROSS JOIN LATERAL (VALUES ('all'),
+         (CASE WHEN f.variant = 'jieqi' THEN 'jieqi' ELSE 'other' END)) s(segment)
+       WHERE f.week >= date_trunc('week', $1::timestamptz AT TIME ZONE 'UTC')
+         - ($2::int - 1) * INTERVAL '1 week'
+     ),
+     cohorts AS (
+       SELECT week, segment, count(*)::int AS players FROM members GROUP BY week, segment
+     ),
+     player_weeks AS (
+       SELECT DISTINCT subject_type, subject_id, date_trunc('week', ended_at) AS week FROM human
+     ),
+     returned AS (
+       SELECT m.week, m.segment, p.week AS return_week, count(*)::int AS players
+       FROM members m JOIN player_weeks p USING (subject_type, subject_id)
+       WHERE p.week > m.week
+       GROUP BY m.week, m.segment, p.week
+     )
+     SELECT c.week::date::text AS week, c.segment, c.players, w.n AS return_week,
+       CASE WHEN c.week + (w.n + 1) * INTERVAL '1 week'
+                   <= ($1::timestamptz AT TIME ZONE 'UTC')
+         THEN coalesce(r.players, 0) ELSE NULL END AS returned
+     FROM cohorts c CROSS JOIN generate_series(1, greatest(4, $2::int - 1)) w(n)
+     LEFT JOIN returned r ON r.week = c.week AND r.segment = c.segment
+       AND r.return_week = c.week + w.n * INTERVAL '1 week'
+     ORDER BY c.week DESC, c.segment, w.n`,
+    [now, weeks],
+  );
+  const cohorts = new Map<string, AdminRetentionCohort>();
+  for (const row of result.rows) {
+    const key = `${row.week}:${row.segment}`;
+    let cohort = cohorts.get(key);
+    if (!cohort) {
+      cohort = { weekStart: row.week, segment: row.segment, players: row.players, returns: [] };
+      cohorts.set(key, cohort);
+    }
+    cohort.returns.push({
+      week: row.return_week,
+      returned: row.returned,
+      percentage: row.returned === null ? null : (100 * row.returned) / row.players,
+    });
+  }
+  return [...cohorts.values()];
 }
 
 // Monday-start weeks, oldest first, ending with the week containing `now`.

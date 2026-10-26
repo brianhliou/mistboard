@@ -13,3 +13,5 @@ The default piece set is **Cburnett**, which ships embedded in `chessground/asse
 | Chessnut | Alexis Luengas | Apache 2.0 |
 | Fantasy | Maurizio Monge | MIT |
 | Letter | usolando | AGPLv3+ |
+
+These are the chess sets only. Xiangqi, Jungle and the unused shogi art live in `../piece-sets/`, credited in [`../piece-sets/CREDITS.md`](../piece-sets/CREDITS.md).
