@@ -1623,6 +1623,12 @@
   text-transform: uppercase;
 }
 
+@media (max-width: 600px) {
+  .profile-rating-name {
+    font-size: 11px;
+  }
+}
+
 /* Named only when the row is not the default pace, so the usual row reads
    exactly as before. */
 .profile-rating-pace,
