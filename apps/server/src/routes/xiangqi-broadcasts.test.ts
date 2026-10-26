@@ -860,9 +860,13 @@ test('broadcast board API builds replay-compatible timeline and history', async 
 // those in real play). The serving side has to resume the same way: until
 // 2026-09-20 it threw "moves after terminal state" and 52 of 376 prod boards
 // answered 500 while the featured thumbnail silently froze at the auto-draw.
-for (const [file, reason] of [
-  ['repetition.json', 'repetition'],
-  ['progress-clock.json', 'progress-clock'],
+for (const [file, reason, expectedStatus] of [
+  ['repetition.json', 'repetition', { type: 'finished', winner: null, reason: 'agreement' }],
+  [
+    'progress-clock.json',
+    'progress-clock',
+    { type: 'finished', winner: 'red', reason: 'resignation' },
+  ],
 ] as const) {
   test(`broadcast board API replays a real game that ran past the kernel's ${reason} draw`, async () => {
     const record = readJson<XiangqiBroadcastBoard>(`../arbiter-adjudicated/${file}`);
@@ -887,7 +891,7 @@ for (const [file, reason] of [
     assert.ok(payload);
     assert.equal(payload.timeline.length, record.moves.length);
     assert.equal(payload.history.truth.length, record.moves.length + 1);
-    assert.deepEqual(payload.state.status, ingest.finalStatus);
+    assert.deepEqual(payload.state.status, expectedStatus);
 
     // The thumbnail path resumes too: the featured position is the last ply,
     // not the position the kernel called a draw on.

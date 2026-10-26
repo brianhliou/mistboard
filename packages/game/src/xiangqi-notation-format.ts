@@ -18,7 +18,6 @@
 // masked movers must keep coordinate labels. Drop moves have no relative form.
 
 import {
-  ARBITER_ADJUDICATED_DRAWS,
   coordOf,
   createInitialXiangqiState,
   type XiangqiColor,
@@ -29,9 +28,11 @@ import {
 } from './variants-xiangqi.js';
 import {
   applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   getStandardXiangqiLegalMoves,
   isStandardXiangqiGeneralInCheck,
   isStandardXiangqiLegalMove,
+  resumeAdjudicatedDraw,
 } from './variants-xiangqi-standard.js';
 import {
   FILE_ARG_ROLES,
@@ -469,21 +470,13 @@ export function formatXiangqiMoves(
   startState?: XiangqiGameState,
 ): string[] {
   const initial = startState ?? createInitialXiangqiState('notation-format');
-  // Whoever is to move in the start position, not always Red: a chapter FEN can
-  // hand the line to Black on ply 1, and the resume below alternates from here.
-  const firstMover: XiangqiColor = initial.status.type === 'playing' ? initial.status.turn : 'red';
   let state: XiangqiGameState | null = initial;
   const labels: string[] = [];
-  for (const [index, move] of moves.entries()) {
-    // Resume through an auto-draw the record clearly played past.
-    if (state?.status.type === 'finished' && ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
-      const turn: XiangqiColor =
-        index % 2 === 0 ? firstMover : firstMover === 'red' ? 'black' : 'red';
-      state = { ...state, status: { type: 'playing', turn } };
-    }
+  for (const move of moves) {
+    if (state) state = resumeAdjudicatedDraw(state);
     if (state?.status.type === 'playing' && isStandardXiangqiLegalMove(state, move)) {
       labels.push(formatXiangqiMove(state, move, style));
-      state = applyStandardXiangqiMove(state, move);
+      state = applyXiangqiRecordMove(state, move);
     } else {
       state = null;
       labels.push(style === 'iccs' ? xiangqiMoveToPikafishUci(move) : coordinateXiangqiLabel(move));

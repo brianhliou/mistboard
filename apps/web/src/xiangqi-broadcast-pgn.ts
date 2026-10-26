@@ -9,7 +9,7 @@
 // (apps/server/src/xiangqi-game-export.ts).
 
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   isStandardXiangqiLegalMove,
   writeXiangqiPgn,
@@ -43,7 +43,7 @@ function lineReplays(moves: readonly XiangqiMove[]): boolean {
   let state = createInitialXiangqiState('broadcast-pgn');
   for (const move of moves) {
     if (state.status.type !== 'playing' || !isStandardXiangqiLegalMove(state, move)) return false;
-    state = applyStandardXiangqiMove(state, move);
+    state = applyXiangqiRecordMove(state, move);
   }
   return true;
 }

@@ -28,6 +28,7 @@ import { makeSquare as eoMakeSquare, parseSquare as eoParseSquare } from 'elepha
 import { Xiangqi as EoXiangqi } from 'elephantops/xiangqi';
 import { checkSubjectColor } from './check-subject.js';
 import {
+  ARBITER_ADJUDICATED_DRAWS,
   boardToEoBoard,
   createInitialXiangqiState,
   eoToRole,
@@ -205,6 +206,36 @@ export function applyStandardXiangqiMove(
     positionCounts: newPositionCounts,
     moveLog: [...(state.moveLog ?? []), move],
   };
+}
+
+/** Restore the next mover when replaying a record past Mistboard's automatic
+ * draw ruling. Mate, stalemate and explicit game endings remain terminal.
+ * Read the last mover from the resulting board, so FEN-seeded Black-first
+ * lines work without callers maintaining their own ply parity. */
+export function resumeAdjudicatedDraw(state: XiangqiGameState): XiangqiGameState {
+  if (
+    state.status.type !== 'finished' ||
+    !ARBITER_ADJUDICATED_DRAWS.has(state.status.reason) ||
+    !state.lastMove
+  )
+    return state;
+  const mover = state.board[state.lastMove.to]?.color;
+  return mover
+    ? { ...state, status: { type: 'playing', turn: mover === 'red' ? 'black' : 'red' } }
+    : state;
+}
+
+/** Apply a checked move in a stored record, without deciding its result from
+ * repetition or the no-capture clock. Imported results belong to the source;
+ * live play and Mistboard result adjudication use applyStandardXiangqiMove.
+ * As in the kernel, an illegal move returns the original object unchanged. */
+export function applyXiangqiRecordMove(
+  state: XiangqiGameState,
+  move: XiangqiMove,
+): XiangqiGameState {
+  const playing = resumeAdjudicatedDraw(state);
+  const next = applyStandardXiangqiMove(playing, move);
+  return next === playing ? state : resumeAdjudicatedDraw(next);
 }
 
 // ── Check detection ─────────────────────────────────────────────────────────

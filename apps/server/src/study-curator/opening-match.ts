@@ -6,7 +6,7 @@
 // never matches half-mirrored.
 
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   type XiangqiColor,
   type XiangqiGameState,
@@ -53,7 +53,7 @@ export function replayPlies(
   let state = createInitialXiangqiState('study-curator-opening');
   let applied = 0;
   for (const move of moves.slice(0, plies)) {
-    const next = applyStandardXiangqiMove(state, move);
+    const next = applyXiangqiRecordMove(state, move);
     if (next === state) break;
     state = next;
     applied += 1;

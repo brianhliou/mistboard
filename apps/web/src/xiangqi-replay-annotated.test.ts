@@ -414,9 +414,10 @@ test('nothing drawn for an edge-rank move escapes the board viewBox', () => {
   document.documentElement.dataset.xiangqiPieceShadow = 'on';
   const c = mountXiangqiReplay(el, {
     ...base,
-    // a1-a10: Red's chariot up the edge file to Black's back rank.
-    iccs: 'a0a4 h9g7 a4a9',
-    annotations: { byPly: { 3: { glyph: '?!' } } },
+    // A clear edge file lets Red's chariot legally reach the back-rank corner.
+    startFen: '4k4/9/9/9/4p4/9/9/9/9/R3K4 r - - 0 1',
+    iccs: 'a0a9',
+    annotations: { byPly: { 1: { glyph: '?!' } } },
   });
   const buttons = mainButtons(el);
   (buttons[buttons.length - 1] as HTMLButtonElement | undefined)?.click();
