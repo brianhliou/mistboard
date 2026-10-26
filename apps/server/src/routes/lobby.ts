@@ -120,6 +120,13 @@ export async function tryHandle(
       writeJson(response, 401, { error: 'rated_requires_account' });
       return true;
     }
+    // A stats-excluded account (operator, QA) is not counted, so it never rates:
+    // refused before a ticket exists, so it can neither post nor accept a rated
+    // seek, and the rated room's seat gate refuses it again for a stale client.
+    if (body.rated === true && persistence.isStatsExcluded(accountUser)) {
+      writeJson(response, 403, { error: 'rated_requires_counted_account' });
+      return true;
+    }
     const lobbyRated = body.rated === true && accountUser !== null;
     if (body.timeControl !== undefined && !timeControl) {
       response.writeHead(400, { 'content-type': 'application/json' });

@@ -90,6 +90,7 @@ export const EN_PLAY = {
   'setup.ratedComingSoon': 'Rated (coming soon)',
   'setup.ratedSwitchedToLobby': 'Rated games are against people, so we switched to Find opponent.',
   'setup.ratedSignIn': 'Rated (sign in)',
+  'setup.ratedNotCounted': 'Rated (counted accounts only)',
   'setup.ratedUnavailable': 'Rated (not for this variant)',
   'setup.createRoom': 'Create room',
   'setup.startGame': 'Start game',
@@ -179,6 +180,8 @@ export const EN_PLAY = {
     'This game is in progress. Mistboard never shares live game state with anyone but the seated players. The full replay will be here once the game finishes.',
   'live.rejectedRatedAccount':
     'This is a rated game. Rated games move both ratings, so both players need an account. Sign in and you will return here to take your seat.',
+  'live.rejectedRatedCountedAccount':
+    'This is a rated game. Rated games need a counted account, and this account plays casual games only.',
   'live.rejectedCorrespondenceAccount':
     'This is a correspondence game. Both players need an account so the game can find you across devices and remind you when it is your move. Sign in and you will return here to take your seat.',
   'live.rejectedOrigin': 'This browser origin is not allowed to open the room.',
@@ -692,6 +695,7 @@ export const EN_PLAY = {
   'lobby.panelSlower': 'Slower clock',
   'lobby.panelRatedNote': 'Rated: {clocks}.',
   'lobby.panelRatedSignIn': 'Sign in to play rated',
+  'lobby.ratedNeedsCountedAccount': 'Rated games need a counted account.',
   'lobby.panelOpenGames': 'Open games',
   'lobby.panelStartOne': 'Start one',
   'lobby.panelVersus': '{variant} vs {opponent}',

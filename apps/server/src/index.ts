@@ -162,6 +162,8 @@ const rematchOrch: RematchOrchestrator = {
   ctx: roomMgrCtx,
   send,
   buildRoomUrl: (roomId) => `/?room=${encodeURIComponent(roomId)}`,
+  accountMayRate: async (userId) =>
+    !persistence.isInitialized() || !(await persistence.isUserIdStatsExcluded(userId)),
   createRoom: (spec) =>
     roomLifecycle.createRoom(
       spec.mode,

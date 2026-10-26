@@ -7,6 +7,7 @@ import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from '
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { isCorrespondenceRatedModeEnabled } from './rated-flag.js';
+import { isLikelyStatsExcluded } from './signed-in-state.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 
 // A small modal to send a directed correspondence challenge to a specific player
@@ -110,12 +111,18 @@ export function openChallengeDialog(opts: {
     opt.textContent = t(key, {}, locale);
     rated.append(opt);
   }
+  // An account excluded from stats never rates (the server refuses it), so its
+  // Rated option is disabled and says why.
+  const notCounted = isLikelyStatsExcluded();
   const ratedAvailable = (): boolean =>
-    correspondenceRatedAvailable(variant.value, isCorrespondenceRatedModeEnabled());
+    !notCounted && correspondenceRatedAvailable(variant.value, isCorrespondenceRatedModeEnabled());
   const syncRated = (): void => {
     const available = ratedAvailable();
     const ratedOption = rated.options[1];
-    if (ratedOption) ratedOption.disabled = !available;
+    if (ratedOption) {
+      ratedOption.disabled = !available;
+      if (notCounted) ratedOption.textContent = t('setup.ratedNotCounted', {}, locale);
+    }
     if (!available) rated.value = 'casual';
   };
   syncRated();

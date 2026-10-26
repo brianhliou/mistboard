@@ -104,6 +104,7 @@ import { isCorrespondenceRatedModeEnabled, onRatedModeChange } from './rated-fla
 import type { ReplayHandle } from './replay.js';
 import { accepterColorLabel, accepterSide, buildSeekAcceptAction } from './seek-accept.js';
 import { buildSeekCard } from './seek-card.js';
+import { isLikelyStatsExcluded } from './signed-in-state.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 import { formatDayClock } from './web-utils.js';
@@ -829,10 +830,10 @@ export function buildStartForm(
   const syncRated = (): void => {
     // The whole control is absent while rated correspondence is held (flag off).
     rated.root.hidden = !isCorrespondenceRatedModeEnabled();
-    const available = correspondenceRatedAvailable(
-      variant.value(),
-      isCorrespondenceRatedModeEnabled(),
-    );
+    // An account excluded from stats never rates (the server refuses it).
+    const available =
+      !isLikelyStatsExcluded() &&
+      correspondenceRatedAvailable(variant.value(), isCorrespondenceRatedModeEnabled());
     rated.setDisabled('rated', !available);
     if (!available) rated.select('casual');
   };

@@ -168,6 +168,15 @@ export function isPlayDisabled(user: Pick<UserAccount, 'playDisabledAt'> | null)
   return user?.playDisabledAt != null;
 }
 
+// Stats exclusion as a rated gate (2026-10-26). An account flagged
+// stats_excluded_at is operating or testing the site, so its games are not
+// counted, and an uncounted account must never move a counted player's rating.
+// Every rated entry point (lobby, friend rooms, seats, rematch, correspondence)
+// refuses it; casual play is untouched.
+export function isStatsExcluded(user: Pick<UserAccount, 'statsExcludedAt'> | null): boolean {
+  return user?.statsExcludedAt != null;
+}
+
 // Canonical users-table column list for reads. Keep in lockstep with UserRow
 // and userFromRow below: every SELECT/RETURNING of a full user row derives from
 // this, so a column can't be silently dropped from one query (which once
@@ -284,6 +293,17 @@ export async function isUserIdPlayDisabled(userId: string): Promise<boolean> {
     [userId],
   );
   return rows[0]?.locked ?? true;
+}
+
+// Stats exclusion for an account other than the requester's (a seek creator, a
+// rematch opponent, a challenge target). Missing or closed fails closed: true.
+export async function isUserIdStatsExcluded(userId: string): Promise<boolean> {
+  const { rows } = await getPool().query<{ excluded: boolean }>(
+    `SELECT (stats_excluded_at IS NOT NULL OR closed_at IS NOT NULL) AS excluded
+       FROM users WHERE id = $1`,
+    [userId],
+  );
+  return rows[0]?.excluded ?? true;
 }
 
 export async function userExists(userId: string): Promise<boolean> {

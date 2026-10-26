@@ -72,7 +72,7 @@ export type SeatAssignment = {
   // rated account-gate: a guest may not take a color seat in a rated room, so
   // the connection layer closes with a 'rated requires account' reason instead
   // of the generic 'private room'.
-  deniedReason?: 'rated-requires-account' | 'play-disabled';
+  deniedReason?: 'rated-requires-account' | 'rated-requires-counted-account' | 'play-disabled';
 };
 
 export type Room = {

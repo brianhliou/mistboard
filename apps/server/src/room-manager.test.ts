@@ -481,6 +481,40 @@ test('assignSeat: casual room still seats a guest (gate is rated-only)', async (
   assert.equal(assignment.deniedReason, undefined);
 });
 
+test('assignSeat: rated room refuses a stats-excluded account a color seat', async () => {
+  const room = makeRoom('rated-excluded');
+  const ctx = makeCtx();
+
+  const assignment = await assignSeat(
+    ctx,
+    room,
+    'excluded-client',
+    undefined,
+    makeAccount({ statsExcludedAt: new Date() }),
+  );
+
+  assert.equal(assignment.seat, 'spectator', 'an uncounted account must not rate');
+  assert.equal(assignment.deniedReason, 'rated-requires-counted-account');
+  assert.equal(room.projection.seats.white, undefined, 'no seat was assigned');
+});
+
+test('assignSeat: casual room seats a stats-excluded account', async () => {
+  const room = makeRoom('casual-excluded');
+  room.rated = false;
+  const ctx = makeCtx();
+
+  const assignment = await assignSeat(
+    ctx,
+    room,
+    'excluded-client',
+    undefined,
+    makeAccount({ statsExcludedAt: new Date() }),
+  );
+
+  assert.equal(assignment.seat, 'white');
+  assert.equal(assignment.deniedReason, undefined);
+});
+
 test('assignSeat: rated room exempts a server-engine client', async () => {
   const room = makeRoom('rated-engine');
   const ctx = makeCtx();
