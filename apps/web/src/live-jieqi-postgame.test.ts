@@ -91,6 +91,44 @@ describe('Jieqi postgame page', () => {
     // ply 0 is the start position: no move is current, though the game has one.
     expect(root.querySelector('.review-move-list__move--current')).toBeNull();
   });
+
+  // #655: on a phone the game card and the chat leave the page for a sheet
+  // opened from the bar's menu, as in the live room, and go back on close.
+  it('lends the game card and chat to the phone info sheet from the bar menu', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(postgameFixture())),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    mountJieqiPostgame(root, 'jq_postgame');
+    await flushPromises();
+
+    expect(root.classList.contains('has-review-info-sheet')).toBe(true);
+    const card = root.querySelector<HTMLElement>('.game-meta-card');
+    const chat = root.querySelector<HTMLElement>('.review-spectator-chat');
+    expect(card?.closest('.review-rail-group')).not.toBeNull();
+    expect(chat?.closest('.review-rail-group')).not.toBeNull();
+
+    const row = root.querySelector<HTMLButtonElement>('.review-controls [data-review-info]');
+    expect(row?.textContent).toContain('Game info and chat');
+    const sheet = root.querySelector<HTMLElement>('.review-info-sheet');
+    expect(sheet?.hidden).toBe(true);
+
+    row?.click();
+    expect(sheet?.hidden).toBe(false);
+    expect(sheet?.contains(card ?? null)).toBe(true);
+    expect(sheet?.contains(chat ?? null)).toBe(true);
+    // Card first, chat after it, as in the rail.
+    expect(card?.compareDocumentPosition(chat as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(sheet?.hidden).toBe(true);
+    expect(card?.closest('.review-rail-group')).not.toBeNull();
+    expect(chat?.closest('.review-rail-group')).not.toBeNull();
+    root.remove();
+  });
 });
 
 function postgameFixture() {

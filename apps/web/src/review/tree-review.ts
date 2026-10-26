@@ -43,6 +43,7 @@ import {
 import { type AnalysisPhoneBar, createAnalysisPhoneBar } from './analysis-phone-bar.js';
 import { createAnalysisSummary, type SummaryJudgment } from './analysis-summary.js';
 import { createAnnotationEditor } from './annotations-editor.js';
+import { createReviewInfoSheet } from './review-info-sheet.js';
 // Brush colours for the node's user-drawn shapes. Imported here, not only
 // from the editor: the board draws shapes on surfaces that hide the panel.
 import '../variant-tenant/board-annotations.css';
@@ -384,6 +385,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  engine bar over the board, an info row and a labelled bottom bar below
    *  600px. Off for embeds and every other surface. */
   phoneAnalysisBar?: { variantName: string };
+  /** A played game's phone review (review-info-sheet.ts): below 600px the meta
+   *  card and `details` (the chat) leave the rail for a sheet opened from the
+   *  bar's ☰. Needs `metaCard`; off for embeds. */
+  phoneInfoSheet?: boolean;
   /** Root the tree at a hand-set position (a FEN-seeded composition) instead of
    *  the variant's standard start. `truth` seeds the tree root; `fen` is the
    *  canonical FEN persisted with a serialized tree (SerializedTree.rootFen).
@@ -1398,6 +1403,17 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       },
     });
   }
+  // Phone game review (#655): the game card and the chat move to a sheet
+  // opened from the ☰. The rail's details are composed further down (the
+  // truncation notice); the sheet reads them only when it opens.
+  const infoSheet =
+    config.phoneInfoSheet && config.metaCard && !config.embedded
+      ? createReviewInfoSheet({
+          signal: mountAbort.signal,
+          blocks: () => [config.metaCard, details],
+        })
+      : null;
+  if (infoSheet) menuItems.push(infoSheet.menuItem);
   const controls = createReviewControls({
     signal: mountAbort.signal,
     // The book tool appears only when a corpus is behind it (see review-controls).
@@ -1796,6 +1812,21 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     showBoardMaterial: Boolean(presentation.material),
     onPromote: () => render(),
   });
+
+  if (infoSheet) {
+    const { sheet } = infoSheet;
+    root.append(sheet);
+    root.classList.add('has-review-info-sheet');
+    mountAbort.signal.addEventListener(
+      'abort',
+      () => {
+        infoSheet.close();
+        root.classList.remove('has-review-info-sheet');
+        sheet.remove();
+      },
+      { once: true },
+    );
+  }
 
   // Phone analysis chrome (#576): engine bar above the board, info row under
   // it, labelled bottom bar. CSS shows it below 600px only; the arrow strip and
