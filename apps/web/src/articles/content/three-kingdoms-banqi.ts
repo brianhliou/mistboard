@@ -27,22 +27,22 @@ export const threeKingdomsBanqiArticle: Article = {
   slug: 'three-kingdoms-banqi',
   boardFamily: 'xiangqi',
   kind: 'rules',
-  title: 'Three Kingdoms Banqi Rules (三國暗棋)',
+  title: 'Three Kingdoms Banqi Rules',
   summary:
     'Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.',
   showSummaryOnPage: false,
   status: 'draft',
   thumbnail: { kind: 'svg', svg: TK_THUMBNAIL },
   audience:
-    'Banqi players who have met the Three Kingdoms mode in 神來也暗棋2 and want its rules written down, and xiangqi players curious about a scoring version of dark chess.',
+    'Banqi players who have met the Three Kingdoms mode in Gamesofa’s banqi app and want its rules written down, and xiangqi players curious about a scoring version of dark chess.',
   intro: [
     {
       kind: 'paragraph',
-      text: 'Three Kingdoms banqi (三國暗棋) is a two-player dark chess game from Gamesofa, added to their app 神來也暗棋2 in July 2026. It starts like [banqi](/rules/banqi), with every piece shuffled face-down, but it is played on a 9 by 5 board and the pieces move as they do in [xiangqi](/rules/xiangqi). There is no rank order: any piece can capture any enemy piece it reaches. Each capture scores points, and the first player to 100 wins.',
+      text: 'Three Kingdoms banqi takes banqi’s face-down luck and gives every piece its full [xiangqi](/rules/xiangqi) move. Chariots sweep the board, cannons fire over tiles, horses leap, and there is no rank order: a soldier can take the general. Every capture scores points, and the first player to 100 wins, so a game turns on what to flip, what to grab and what to leave hanging.',
     },
     {
       kind: 'paragraph',
-      text: 'Gamesofa has not published a rulebook for the mode, and the app’s help has no section on it. This page gives the rules Mistboard uses. The board, moves and scoring follow games played in the app. Where the app leaves a rule unclear, such as how a perpetual chase is limited, the rule here is Mistboard’s own choice, made to fit the rest of banqi. Mistboard is not affiliated with Gamesofa.',
+      text: 'The mode comes from Gamesofa’s banqi app, which added it in July 2026 without a written rulebook. This page gives the rules Mistboard plays; where the app leaves one unclear, the choice is ours. Mistboard is not affiliated with Gamesofa.',
     },
   ],
   sections: [
@@ -51,7 +51,7 @@ export const threeKingdomsBanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The board has 9 columns and 5 rows of points, 45 in all, with no river. The thirty-two xiangqi pieces are shuffled face-down into four blocks of eight, one in each corner: two rows by four columns. The middle column and the middle row start empty.',
+          text: 'As in [banqi](/rules/banqi), all thirty-two pieces start shuffled and face-down, but the layout is different. Banqi fills every square of a 4 by 8 board. Here the board has 9 columns and 5 rows of points, 45 in all, with no river, and the pieces sit in four blocks of eight, one in each corner: two rows by four columns. The middle column and the middle row start empty, so pieces have room to move from the first turn.',
         },
         {
           kind: 'raw-svg',
@@ -161,15 +161,16 @@ export const threeKingdomsBanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The first player to reach 100 points wins at once, even with pieces still on the board. A side can never be wiped out: its sixteen pieces are worth 135, so whoever is capturing them reaches 100 before the last ones go. You also win if your opponent has no legal move on their turn: no face-down piece left to flip and no face-up piece that can move.',
+          text: 'The first player to reach 100 points wins at once, even with pieces still on the board. A side can never be wiped out: its sixteen pieces are worth 135, so whoever is capturing them reaches 100 before the last ones go. It is rare, but a player who has nothing left to flip and every face-up piece boxed in has no legal move, and loses.',
         },
         {
           kind: 'paragraph',
-          text: 'If 40 plies (single moves) pass with no flip and no capture, the game ends and the player with more points wins. Equal points is a draw. A flip or a capture starts the count again. Repeating a position does not end the game on its own; the 40-ply count settles it.',
+          text: 'If 40 plies (single moves) pass with no flip and no capture, the game ends and the player with more points wins. Equal points is a draw. A flip or a capture starts the count again. Repeating a position does not end the game; the 40-ply count settles it.',
         },
         {
-          kind: 'paragraph',
-          text: 'A chasing move is a quiet move, with no flip and no capture, after which the piece you moved could capture the enemy piece that just moved. You may not play a chasing move that brings about the same position for the third time. Play something else instead, unless the chase is your only legal move. The rule limits only the chaser. The chased piece may always run, a move that both runs and threatens back counts as an ordinary move, and a chase that keeps driving the piece onto new points never repeats, so it is never stopped.',
+          kind: 'note',
+          label: 'Repetition and chases',
+          text: 'A repeated position never draws here, unlike [banqi](/rules/banqi), where most threefold repetitions draw. The one limit is on chasing. A chase is a quiet move, with no flip and no capture, after which the piece you moved could capture the enemy piece that just moved. You may not play a chase that brings about the same position for the third time; play something else, unless the chase is your only legal move. The chased piece may always run, a move that both runs and threatens back counts as an ordinary move, and a chase that keeps driving the piece onto new points never repeats, so it is never stopped.',
         },
       ],
     },
