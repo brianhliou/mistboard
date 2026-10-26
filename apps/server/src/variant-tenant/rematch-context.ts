@@ -81,6 +81,8 @@ export function registeredTenantRematchContext<
       // variant grant here too, before creating a room for either account.
       return persistence.mayPlayVariantByUserId(userId, registration.gameSpecId);
     },
+    accountMayRate: async (userId) =>
+      !persistence.isInitialized() || !(await persistence.isUserIdStatsExcluded(userId)),
     issueSeatToken: async (room, seat, identity) => {
       const minted = mintTenantSeatToken(room, seat, identity);
       if (persistence.isInitialized()) {

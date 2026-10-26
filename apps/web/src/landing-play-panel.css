@@ -454,6 +454,11 @@
   color: var(--site-text);
 }
 
+.pp-mode-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .pp-note {
   text-align: right;
 }

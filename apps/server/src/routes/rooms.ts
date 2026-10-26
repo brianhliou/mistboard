@@ -126,8 +126,18 @@ export async function tryHandle(
       response.end(JSON.stringify({ error: 'rated_requires_account' }));
       return true;
     }
+    // A stats-excluded account never rates: an explicit rated request is
+    // refused, and the signed-in default (rated unless asked casual) is casual.
+    const statsExcluded = persistence.isStatsExcluded(accountUser);
+    if (body.rated === true && statsExcluded) {
+      response.writeHead(403, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ error: 'rated_requires_counted_account' }));
+      return true;
+    }
     const rated =
-      mode === 'pve' ? false : ratedEnabled() && body.rated !== false && accountUser !== null;
+      mode === 'pve'
+        ? false
+        : ratedEnabled() && body.rated !== false && accountUser !== null && !statsExcluded;
     if (body.timeControl !== undefined && !timeControl) {
       response.writeHead(400, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ error: 'invalid_time_control' }));

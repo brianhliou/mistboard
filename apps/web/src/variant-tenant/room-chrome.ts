@@ -56,6 +56,10 @@ export type TenantWebView<C extends string> = {
 
 import { clockRemainingMs, type TenantWebClock } from './clock-projection.js';
 
+// Server seat gate (apps/server variant-tenant/seat-session.ts): an account
+// excluded from stats takes no seat in a rated room, and signing in will not help.
+const RATED_COUNTED_REASON = 'rated requires counted account';
+
 export type { TenantWebClock } from './clock-projection.js';
 
 // Everything a tenant hands the chrome to SAY is a catalog key, never a
@@ -670,7 +674,9 @@ export function createTenantRoomChrome<C extends string>(
       // itself is what says the room is rated.
       headline: [
         tcLabel,
-        ctx.rated?.() || ctx.closeReason() === 'rated requires account'
+        ctx.rated?.() ||
+        ctx.closeReason() === 'rated requires account' ||
+        ctx.closeReason() === RATED_COUNTED_REASON
           ? t('live.modeRated')
           : t('live.modeCasual'),
       ],
@@ -1003,7 +1009,8 @@ export function createTenantRoomChrome<C extends string>(
   function actionTitle(view: TenantWebView<C> | null): string {
     if (ctx.connectionState() === 'rejected') {
       const gated = accountGatedRejection();
-      if (gated === 'rated') return t('live.titleRatedGame');
+      if (gated === 'rated' || ctx.closeReason() === RATED_COUNTED_REASON)
+        return t('live.titleRatedGame');
       if (gated === 'correspondence') return t('correspondence.heading');
       if (liveGameRejection()) return t('live.titleGameInProgress');
       return ctx.closeReason() === 'play disabled'
@@ -1030,6 +1037,8 @@ export function createTenantRoomChrome<C extends string>(
       const gated = accountGatedRejection();
       if (gated === 'rated') return t('live.rejectedRatedAccount');
       if (gated === 'correspondence') return t('live.rejectedCorrespondenceAccount');
+      // A stats-excluded account: signing in will not help, so no CTA.
+      if (ctx.closeReason() === RATED_COUNTED_REASON) return t('live.rejectedRatedCountedAccount');
       if (liveGameRejection())
         return t(tenant.liveGameRejectedBody ?? 'live.roomLiveGameSeatedOnly');
       return ctx.closeReason() === 'play disabled'
