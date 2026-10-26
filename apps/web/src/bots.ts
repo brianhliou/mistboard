@@ -138,18 +138,7 @@ export async function mountBots(root: HTMLElement): Promise<void> {
   );
   headerCopy.append(eyebrow, heading, sub, meta);
 
-  const markers = document.createElement('div');
-  markers.className = 'bots-directory-markers';
-  markers.setAttribute('aria-hidden', 'true');
-  for (const [gameSpecId, size] of [
-    ['dark-chess', 48],
-    ['xiangqi', 64],
-    ['banqi', 44],
-  ] as const) {
-    const marker = variantThumb(gameSpecId, size, 'bots-directory-marker');
-    if (marker) markers.append(marker);
-  }
-  header.append(headerCopy, markers);
+  header.append(headerCopy);
 
   const body = document.createElement('section');
   body.className = 'bots-directory';

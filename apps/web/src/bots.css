@@ -14,7 +14,7 @@
 
 .bots-directory-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   align-items: center;
   overflow: hidden;
@@ -83,27 +83,6 @@
   background: var(--site-accent);
   content: "";
   transform: translateY(-50%);
-}
-
-.bots-directory-markers {
-  display: flex;
-  align-items: center;
-  padding: 8px 10px 8px 28px;
-}
-
-.bots-directory-marker {
-  display: inline-flex;
-  filter: drop-shadow(0 8px 12px color-mix(in srgb, var(--site-shadow) 24%, transparent));
-  line-height: 0;
-}
-
-.bots-directory-marker + .bots-directory-marker {
-  margin-left: -14px;
-}
-
-.bots-directory-marker:nth-child(2) {
-  position: relative;
-  z-index: 1;
 }
 
 .bots-status {
@@ -280,12 +259,6 @@
   color: var(--site-accent-strong);
 }
 
-@media (max-width: 760px) {
-  .bots-directory-markers {
-    padding-left: 8px;
-  }
-}
-
 @media (max-width: 560px) {
   .bots-main {
     gap: 22px;
@@ -294,10 +267,6 @@
   .bots-directory-header {
     grid-template-columns: 1fr;
     padding: 20px;
-  }
-
-  .bots-directory-markers {
-    display: none;
   }
 
   .bots-directory-meta {
