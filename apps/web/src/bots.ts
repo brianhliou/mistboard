@@ -257,7 +257,8 @@ async function fetchBotProfile(botId: string): Promise<BotProfile> {
 // plays xiangqi (Pikafish) as the top rung. Each rung is named by its level,
 // shows its one xiangqi rating, and leads with "Play xiangqi"; the level a
 // first-timer is given (XIANGQI_FIRST_GAME_LEVEL) says "Start here". Bots that
-// do not play xiangqi (Misty) follow under Other games.
+// do not play xiangqi follow: Misty in a section of its own, since its card
+// lists every game it plays, then the rest under Other games.
 function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
   const system = bots.filter((bot) => bot.ownerType === 'system');
   const ladder = system
@@ -279,7 +280,9 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
     .filter((bot) => playsGame(bot, 'jieqi'))
     .sort((a, b) => jieqiTopRank(a.id) - jieqiTopRank(b.id));
   const jieqiStrongestId = jieqiTopRungs.at(-1)?.id;
-  const otherGames = others.filter((bot) => !playsGame(bot, 'xiangqi') && !playsGame(bot, 'jieqi'));
+  const nonLadder = others.filter((bot) => !playsGame(bot, 'xiangqi') && !playsGame(bot, 'jieqi'));
+  const misty = nonLadder.filter((bot) => bot.id === 'misty');
+  const otherGames = nonLadder.filter((bot) => bot.id !== 'misty');
   const community = bots.filter((bot) => bot.ownerType === 'user');
   const xiangqiCard = { ratingGameSpecId: 'xiangqi', primaryPlayGameSpecId: 'xiangqi' };
   const jieqiCard = { ratingGameSpecId: 'jieqi', primaryPlayGameSpecId: 'jieqi' };
@@ -349,6 +352,13 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
             ),
           ]
         : [],
+    },
+    {
+      title: t('bots.mistyTitle'),
+      intro: t('bots.mistyIntro'),
+      rows: misty.map((bot) =>
+        buildBotSummaryCard(bot, { subtitle: t('bots.firstParty'), bio: systemBotBio(bot) }),
+      ),
     },
     {
       title: t('bots.otherTitle'),

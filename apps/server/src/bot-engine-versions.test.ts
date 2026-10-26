@@ -21,7 +21,7 @@ test('mainline Pikafish shows the pikafish.ref commit under its own release name
   const sha = pinnedSha('pikafish.ref');
   assert.ok(PIKAFISH_XIANGQI_VERSION.endsWith(`-${sha.slice(0, 8)}`), PIKAFISH_XIANGQI_VERSION);
   assert.ok(read('pikafish.ref').includes(`Pikafish ${PIKAFISH_XIANGQI_VERSION}`));
-  assert.equal(botEngineVersion('pikafish-xiangqi-level-8'), PIKAFISH_XIANGQI_VERSION);
+  assert.equal(botEngineVersion('pikafish-xiangqi-level-8'), sha.slice(0, 8));
 });
 
 test('pinned source builds show the short sha of their .ref', () => {

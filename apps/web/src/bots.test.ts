@@ -170,7 +170,7 @@ describe('bot pages', () => {
     ).not.toBe('Strongest');
   });
 
-  it('leads with the xiangqi ladder by level, Pikafish on top, Misty after', async () => {
+  it('leads with the xiangqi ladder by level, Pikafish on top, Misty in her own section', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(rosterPayload()));
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
@@ -180,7 +180,7 @@ describe('bot pages', () => {
     expect(root.querySelector('h1')?.textContent).toBe('Play xiangqi against the computer');
     expect(
       [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
-    ).toEqual(['Xiangqi, level by level', 'Other games']);
+    ).toEqual(['Xiangqi, level by level', 'Misty, the house bot']);
     // Community rail is shared with /player; Online bots is the active entry.
     expect(root.querySelector('.community-rail a[aria-current="page"]')?.textContent).toBe(
       'Online bots',
@@ -782,11 +782,14 @@ describe('bot pages', () => {
     expect(rowText('xiangqi-mahjong')).not.toContain('Version');
   });
 
-  it('gives a variant the bot no longer offers a row for its games, with no Play', async () => {
+  it('leaves out a variant the bot no longer offers, whatever its record', async () => {
     const payload = {
       bots: [
         misty({
-          playOptions: [{ gameSpecId: 'dark-chess', engineId: 'python-v2-v1.6', playable: true }],
+          playOptions: [
+            { gameSpecId: 'dark-chess', engineId: 'python-v2-v1.6', playable: true },
+            { gameSpecId: 'dark-xiangqi', engineId: 'python-fdx-v1.2', playable: true },
+          ],
           recordsByGameSpecId: {
             'dark-chess': { games: 9, wins: 6, losses: 2, draws: 1 },
             banqi: { games: 3, wins: 2, losses: 1, draws: 0 },
@@ -803,10 +806,8 @@ describe('bot pages', () => {
     const rows = [...root.querySelectorAll('.profile-summary-card-variant')];
     expect(rows.map((row) => row.getAttribute('data-game-spec-id'))).toEqual([
       'dark-chess',
-      'banqi',
+      'dark-xiangqi',
     ]);
-    expect(rows[1]?.textContent).toContain('3 games · 2-1-0');
-    expect(rows[1]?.querySelector('.profile-summary-card-action')).toBeNull();
   });
 
   it('shows the whole bio on a card: no line clamp in the card stylesheet', async () => {

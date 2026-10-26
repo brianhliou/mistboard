@@ -559,6 +559,8 @@ export const ZH_HANT_COMMUNITY = {
   'bots.ladderIntro': '剛開始下象棋？從第 2 級開始。贏幾盤之後，再往上挑戰一級。',
   'bots.jieqiLadderTitle': '揭棋：按等級挑選',
   'bots.jieqiLadderIntro': '剛開始下揭棋？從第 2 級開始。贏幾盤之後，再往上挑戰一級。',
+  'bots.mistyTitle': 'Misty：站內機器人',
+  'bots.mistyIntro': 'Mistboard 自研引擎，一個機器人下迷霧棋、暗棋、鬥獸棋和象棋麻將。',
   'bots.otherTitle': '其他棋類',
   'bots.otherIntro': 'Mistboard 其他棋類的機器人。',
   'bots.pikafishBio': '開源，由 Stockfish 改造而來，每步搜尋三百萬個局面。也可以下揭棋。',

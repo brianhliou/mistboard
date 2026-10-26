@@ -585,6 +585,9 @@ export const EN_COMMUNITY = {
   'bots.ladderIntro': 'New to xiangqi? Start at level 2. Win a few games, then move up a level.',
   'bots.jieqiLadderTitle': 'Jieqi, level by level',
   'bots.jieqiLadderIntro': 'New to jieqi? Start at level 2. Win a few games, then move up a level.',
+  'bots.mistyTitle': 'Misty, the house bot',
+  'bots.mistyIntro':
+    "Mistboard's own engine, one bot for the fog games, banqi, Jungle and Xiangqi Mahjong.",
   'bots.otherTitle': 'Other games',
   'bots.otherIntro': "Bots for Mistboard's other games.",
   'bots.pikafishBio':
@@ -640,6 +643,8 @@ export const CRITICAL_COMMUNITY_I18N_KEYS = [
   'bots.ladderIntro',
   'bots.jieqiLadderTitle',
   'bots.jieqiLadderIntro',
+  'bots.mistyTitle',
+  'bots.mistyIntro',
   'bots.otherTitle',
   'bots.otherIntro',
   'bots.pikafishBio',

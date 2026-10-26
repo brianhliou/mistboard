@@ -177,8 +177,8 @@ type BotVariantRow = {
   record: BotSummaryRecord | null;
 };
 
-// Every variant the bot can be played at, the card's lead variant first, then
-// any variant it has games in but no longer offers (its record still counts).
+// Every variant the bot can be played at, the card's lead variant first. A
+// variant it no longer offers gets no row: the card is for choosing a game.
 function botVariantRows(profile: BotSummaryProfile, primaryGameSpecId?: string): BotVariantRow[] {
   const options = botPlayOptions(profile);
   // A bot with one variant has one obvious action, so it is the primary one.
@@ -187,17 +187,11 @@ function botVariantRows(profile: BotSummaryProfile, primaryGameSpecId?: string):
     (options.length === 1 ? options[0] : undefined);
   const ordered = primary ? [primary, ...options.filter((option) => option !== primary)] : options;
   const records = profile.recordsByGameSpecId;
-  const rows: BotVariantRow[] = ordered.map((option) => ({
+  return ordered.map((option) => ({
     gameSpecId: option.gameSpecId,
     option,
     record: records?.[option.gameSpecId] ?? null,
   }));
-  for (const [gameSpecId, record] of Object.entries(records ?? {})) {
-    if (record.games > 0 && !rows.some((row) => row.gameSpecId === gameSpecId)) {
-      rows.push({ gameSpecId, option: null, record });
-    }
-  }
-  return rows;
 }
 
 function buildBotVariantRows(

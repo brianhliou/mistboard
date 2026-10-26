@@ -29,6 +29,11 @@ import { XIANGQI_FSF_ENGINE_REF } from './xiangqi-fsf-engine.js';
 // quotes it; the binary prints it in `id name`). The test ties it to the ref.
 export const PIKAFISH_XIANGQI_VERSION = 'dev-20260919-6a59ee2f';
 
+// The page shows the commit alone, like the other engines' refs.
+const PIKAFISH_XIANGQI_COMMIT = PIKAFISH_XIANGQI_VERSION.slice(
+  PIKAFISH_XIANGQI_VERSION.lastIndexOf('-') + 1,
+);
+
 // The stock Fairy-Stockfish largeboard release behind Fortress and Crazyhouse
 // Xiangqi (scripts/fetch-fairy-stockfish-largeboard.sh downloads tag fairy_sf_14).
 export const FAIRY_STOCKFISH_RELEASE_VERSION = '14';
@@ -65,7 +70,7 @@ function registryVersion(engineId: string): string | null {
 
 /** The version string for one engine id, or null when none is recorded. */
 export function botEngineVersion(engineId: string): string | null {
-  if (engineId.startsWith('pikafish-xiangqi-')) return PIKAFISH_XIANGQI_VERSION;
+  if (engineId.startsWith('pikafish-xiangqi-')) return PIKAFISH_XIANGQI_COMMIT;
   if (engineId.startsWith('pikafish-jieqi-')) return PIKAFISH_JIEQI_ENGINE_REF;
   if (engineId.startsWith('fairy-stockfish-xiangqi-')) return XIANGQI_FSF_ENGINE_REF;
   if (engineId.startsWith('fairy-stockfish-duck-xiangqi-')) return DUCK_XIANGQI_FSF_ENGINE_REF;
