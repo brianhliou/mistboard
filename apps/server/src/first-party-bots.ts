@@ -132,15 +132,14 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       xiangqi: 'pikafish-xiangqi-level-8',
       jieqi: 'pikafish-jieqi-strongest',
     },
-    // Same label as the jieqi ladder bots ("Pikafish Level N"), so a Pikafish seat
-    // names its rung in every variant, live and finished.
+    // Jieqi Level 8 sits on a ladder of Pikafish Level 1..7 bots, so it names its
+    // rung. Xiangqi offers only full-strength Pikafish, so its seats read plain
+    // "Pikafish"; the explicit entries also correct rows stored as "Pikafish
+    // Level N" between 2026-10-23 and this fix.
     seatNamesByEngineId: {
       'pikafish-jieqi-strongest': 'Pikafish Level 8',
       ...Object.fromEntries(
-        PIKAFISH_XIANGQI_LEVELS.map((level) => [
-          `pikafish-xiangqi-level-${level}`,
-          `Pikafish Level ${level}`,
-        ]),
+        PIKAFISH_XIANGQI_LEVELS.map((level) => [`pikafish-xiangqi-level-${level}`, 'Pikafish']),
       ),
     },
     defaultGameSpecId: 'xiangqi',

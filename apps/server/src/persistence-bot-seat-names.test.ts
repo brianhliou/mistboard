@@ -47,15 +47,18 @@ definePersistenceTests('bot seat names', () => {
     visibility: 'public',
   });
 
-  test('a past bot seat stored as "Pikafish" with a level engine id reads "Pikafish Level 8"', async () => {
+  test('a past jieqi seat reads its rung; a xiangqi seat reads plain "Pikafish"', async () => {
     await endGame('bsn-jq-1', 'jieqi', storedPikafish('pikafish-jieqi-strongest'));
     await endGame('bsn-xq-1', 'xiangqi', storedPikafish('pikafish-xiangqi-level-8'));
     await endGame('bsn-xq-old', 'xiangqi', storedPikafish(null));
 
-    for (const roomId of ['bsn-jq-1', 'bsn-xq-1']) {
+    for (const [roomId, label] of [
+      ['bsn-jq-1', 'Pikafish Level 8'],
+      ['bsn-xq-1', 'Pikafish'],
+    ]) {
       const game = await getGameSummary(roomId);
       const black = game?.participants.find((p) => p.color === 'black');
-      assert.equal(black?.displayName, 'Pikafish Level 8', roomId);
+      assert.equal(black?.displayName, label, roomId);
       // The engine id stays server-side.
       assert.equal(black && 'engineId' in black, false, roomId);
       const red = game?.participants.find((p) => p.color === 'red');
