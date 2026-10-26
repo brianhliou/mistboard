@@ -15,7 +15,11 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { embedRendererKindForVariant, showcaseRendererKindForSpec } from './showcase-dispatch.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
-import { mountXiangqiMahjongWatchReplay, xmjWatchFrames } from './watch-xiangqi-mahjong-replay.js';
+import {
+  mountXiangqiMahjongWatchReplay,
+  xmjCompactFit,
+  xmjWatchFrames,
+} from './watch-xiangqi-mahjong-replay.js';
 
 function seeded(seed: number): () => number {
   let x = seed;
@@ -200,5 +204,27 @@ describe('xiangqi mahjong TV mount', () => {
     expect(webVariantTenantForSpecId('xiangqi-mahjong')?.watch?.family).toBe('mahjong');
     expect(showcaseRendererKindForSpec('xiangqi-mahjong')).toBe('xiangqi-mahjong');
     expect(embedRendererKindForVariant('xiangqi-mahjong')).toBeNull();
+  });
+});
+
+describe('xiangqi mahjong compact fit', () => {
+  // A table shaped like the one measured in a 230px feed card: 338px tall
+  // below 280px wide, and the To discard badge reaching past the edge until
+  // the table is 300px wide.
+  const table = (width: number) => ({
+    height: width < 280 ? 338 : 300,
+    overflow: Math.max(0, (300 - width) / 2),
+  });
+
+  it('scales a table too big for a square card until the rack and the badges fit', () => {
+    const { zoom, width } = xmjCompactFit(230, 230, table);
+    expect(zoom).toBeLessThan(1);
+    expect(width * zoom).toBeCloseTo(230);
+    expect(table(width).height * zoom).toBeLessThanOrEqual(230);
+    expect(table(width).overflow).toBe(0);
+  });
+
+  it('leaves a table that fits its host at full size', () => {
+    expect(xmjCompactFit(320, 400, table)).toEqual({ zoom: 1, width: 320 });
   });
 });

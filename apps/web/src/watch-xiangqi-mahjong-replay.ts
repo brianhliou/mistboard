@@ -128,6 +128,35 @@ function readMatch(
   };
 }
 
+/** What the table needs when laid out at a given width, in unzoomed px. */
+export type XmjTableMeasure = { height: number; overflow: number };
+
+/**
+ * The zoom that fits a compact table inside its host's box, and the width to
+ * lay it out at so it fills that box once zoomed. A feed card is a fixed
+ * square narrower than the table wants: unscaled, the bottom rack fell below
+ * it and the seat badges spilled past the table's edge, and both were clipped.
+ * Laying out wider at a smaller zoom gives the badges their columns back and
+ * shrinks tiles and badges together. `overflow` is how far the widest thing
+ * reaches past the table's edge on its worse side; the badge columns share
+ * any extra width, so each side gets half of it.
+ */
+export function xmjCompactFit(
+  availW: number,
+  availH: number,
+  measure: (width: number) => XmjTableMeasure,
+): { zoom: number; width: number } {
+  let zoom = 1;
+  for (let pass = 0; pass < 4; pass += 1) {
+    const width = availW / zoom;
+    const { height, overflow } = measure(width);
+    const next = Math.min(zoom, availH / height, availW / (width + 2 * overflow));
+    if (next >= zoom - 0.001) break;
+    zoom = next;
+  }
+  return { zoom, width: availW / zoom };
+}
+
 export function mountXiangqiMahjongWatchReplay(
   root: HTMLElement,
   initialRoomId: string,
@@ -175,6 +204,49 @@ export function mountXiangqiMahjongWatchReplay(
     timer = null;
   };
 
+  // A compact host scales the table to its box; a host whose height follows
+  // its content measures as fitting and keeps the table at full size.
+  let fitted = '';
+  const fitToHost = (): void => {
+    if (!options.compact || !board.isConnected) return;
+    board.style.removeProperty('zoom');
+    board.style.removeProperty('width');
+    board.style.removeProperty('max-width');
+    const availW = board.offsetWidth;
+    const shown = [...layout.children].filter(
+      (child): child is HTMLElement => child instanceof HTMLElement && child.offsetHeight > 0,
+    );
+    const rows = shown.reduce((sum, child) => sum + child.offsetHeight, 0) - board.offsetHeight;
+    // A pixel spare, so a rounded box never clips the rack's bottom edge.
+    const availH = root.clientHeight - rows - 1;
+    const table = board.querySelector<HTMLElement>('.xmj-table');
+    if (!table || availW <= 0 || availH <= 0) return;
+    const { zoom, width } = xmjCompactFit(availW, availH, (at) => {
+      board.style.width = `${at}px`;
+      board.style.maxWidth = 'none';
+      const edge = table.getBoundingClientRect();
+      let overflow = 0;
+      for (const el of table.querySelectorAll<HTMLElement>('.xmj-rack__tag > *')) {
+        const box = el.getBoundingClientRect();
+        overflow = Math.max(overflow, edge.left - box.left, box.right - edge.right);
+      }
+      return { height: board.offsetHeight, overflow };
+    });
+    if (zoom >= 1) {
+      board.style.removeProperty('width');
+      board.style.removeProperty('max-width');
+    } else {
+      board.style.width = `${width}px`;
+      board.style.maxWidth = 'none';
+      board.style.zoom = String(zoom);
+    }
+    fitted = `${root.clientWidth}x${root.clientHeight}`;
+  };
+  const resized = new ResizeObserver(() => {
+    if (`${root.clientWidth}x${root.clientHeight}` !== fitted) fitToHost();
+  });
+  if (options.compact) resized.observe(root);
+
   const render = (): void => {
     if (!match) return;
     const frame = match.frames[Math.max(0, Math.min(ply, maxPly()))];
@@ -198,6 +270,7 @@ export function mountXiangqiMahjongWatchReplay(
       );
       row.classList.toggle('result-win', winner === seat);
     }
+    fitToHost();
     log?.render(ply);
     options.onPlyChange?.(ply, maxPly());
   };
@@ -287,6 +360,7 @@ export function mountXiangqiMahjongWatchReplay(
     destroy: () => {
       destroyed = true;
       stop();
+      resized.disconnect();
       root.replaceChildren();
     },
     loadGame,
