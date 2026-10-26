@@ -139,6 +139,9 @@ Conventions:
 
 ### Watching and review
 
+- Game review puts each side's captures and clock in its player row, and a variation you explore never borrows the game's real times ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- Banqi and Flip Jungle review ranks the alternatives to each move by their true odds, so a lucky flip no longer crowds out a better quiet move ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- On phones, jieqi game review opens the game card and chat in a sheet from the menu ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - The homepage game viewer shows Xiangqi Mahjong as a compact table, and live boards there and on TV name the right seat to move ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
 - Jieqi analysis keeps engine lines up to the first reveal instead of dropping them ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
 - Banqi studies can show the endgame tablebase under the board; click a move to play it ([81e33799](https://github.com/brianhliou/mistboard/commit/81e33799))
@@ -199,6 +202,8 @@ Conventions:
 
 ### Community
 
+- Lobby chat says when a site update is about to restart games ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- Taiwan's players sit on one team page, and players from Taiwan, Hong Kong, Macau and Vietnam show their names in traditional characters ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - The Washington Xiangqi page has an email sign-up for club announcements, in English and Chinese, and an address joins the list after its owner clicks the confirm link ([c5b7bc54](https://github.com/brianhliou/mistboard/commit/c5b7bc54))
 - Washington Xiangqi has its own page at /washington-xiangqi, with what to expect at a meetup, the organizer and how to help out ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
 - The homepage chat shows only messages from people; bot wins and new studies no longer appear in it ([3702e4f7](https://github.com/brianhliou/mistboard/commit/3702e4f7))
@@ -214,6 +219,10 @@ Conventions:
 
 ### Site
 
+- The homepage shows two rows of articles beside the daily puzzle, and the forum moves beside the chat ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- Xiangqi Mahjong joins /champions as an open title held by Misty ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- The rules index on the left stays in view as you scroll ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- Banqi has a new marker: four pieces inside the squares of a frame ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - article thumbnails in feeds are smaller, /feed.xml lists every post, and banqi cards fill their frame ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
 - The updates and blog feeds now carry each article's headline and a card thumbnail ([c5b7bc54](https://github.com/brianhliou/mistboard/commit/c5b7bc54))
 - Read next on a blog post offers more posts of the same kind, engineering or for players ([aa95954a](https://github.com/brianhliou/mistboard/commit/aa95954a))
@@ -294,6 +303,13 @@ Conventions:
 
 ### Fixed
 
+- Test and staff accounts can't enter rated games ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- Xiangqi Mahjong on /watch shows the clocks and the points table as in the room, with no grey seat dots, and a match ended mid-hand leads with how it ended ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- An old game that no longer replays can't break the /watch feed ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- On narrow phones the Xiangqi Mahjong table no longer runs off the screen or over the player line ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- Imported xiangqi games play through to their recorded end, past automatic draws and bad moves in the source ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- Bot and profile game lists no longer repeat or skip a game when one finishes while you page ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- Phone buttons and labels the audit flagged are bigger and no longer overlap ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - The board resize grip sits flush in the board's corner ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
 - Players no longer briefly see the spectator chat when a new game opens ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
 - On phones, the friends online tab no longer covers the move buttons under the board ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
@@ -477,6 +493,8 @@ Conventions:
 
 ### Technical
 
+- The engine worker survives a database restart and recovers runs cut off by an outage ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
+- Postgres JIT is off on every pool, which removes the slow first /stats and /metrics query after a deploy ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - Parked jieqi engines from a burst of games now close after 10 idle minutes, cutting the server's idle memory ([2cab42fb](https://github.com/brianhliou/mistboard/commit/2cab42fb))
 - Updated a page-sanitizing library with security fixes ([1cd1fa44](https://github.com/brianhliou/mistboard/commit/1cd1fa44))
 - Every response now carries nosniff and an explicit referrer policy ([9eaba49c](https://github.com/brianhliou/mistboard/commit/9eaba49c))
