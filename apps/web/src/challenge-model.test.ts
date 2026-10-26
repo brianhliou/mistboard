@@ -52,11 +52,12 @@ describe('postgame directed-challenge eligibility', () => {
     expect(canOfferPostGameChallenge({ ...game, ...overrides })).toBe(false);
   });
 
-  it('requires an explicit offer for an allowlisted correspondence variant', () => {
-    const playtest = { ...game, gameSpecId: XIANGQI_MAHJONG_SPEC_ID };
-    expect(canOfferPostGameChallenge(playtest)).toBe(false);
-    expect(canOfferPostGameChallenge(playtest, () => false)).toBe(false);
-    expect(canOfferPostGameChallenge(playtest, () => true)).toBe(true);
+  // Held out of correspondence at launch (Brian, 2026-10-25), with or without a grant.
+  it('refuses xiangqi mahjong even when the menu offers it', () => {
+    const held = { ...game, gameSpecId: XIANGQI_MAHJONG_SPEC_ID };
+    expect(canOfferPostGameChallenge(held)).toBe(false);
+    expect(canOfferPostGameChallenge(held, () => false)).toBe(false);
+    expect(canOfferPostGameChallenge(held, () => true)).toBe(false);
     expect(canOfferPostGameChallenge({ ...game, gameSpecId: 'unknown' }, () => true)).toBe(false);
   });
 });
@@ -147,20 +148,13 @@ describe('targeted correspondence challenge payload', () => {
     });
   });
 
-  it('checks the viewer offer and keeps allowlisted challenges casual', () => {
-    const playtest = { ...input, gameSpecId: XIANGQI_MAHJONG_SPEC_ID, rated: true };
-    expect(targetedChallengeRequestBody(playtest, true)).toEqual({
-      ok: false,
-      error: 'correspondence_unsupported_spec',
-    });
-    expect(targetedChallengeRequestBody(playtest, true, () => true)).toEqual({
-      ok: true,
-      body: {
-        targetHandle: 'bob',
-        gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
-        daysPerMove: 3,
-        preferredColor: 'random',
-      },
-    });
+  it('refuses xiangqi mahjong, held out of correspondence, even when offered', () => {
+    const held = { ...input, gameSpecId: XIANGQI_MAHJONG_SPEC_ID, rated: true };
+    for (const offered of [undefined, () => true]) {
+      expect(targetedChallengeRequestBody(held, true, offered)).toEqual({
+        ok: false,
+        error: 'correspondence_unsupported_spec',
+      });
+    }
   });
 });
