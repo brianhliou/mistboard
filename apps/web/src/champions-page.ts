@@ -166,6 +166,7 @@ export const TITLES: readonly Title[] = [
     },
   },
   { gameId: 'jungle-flip', nameKey: 'variant.jungleFlip.name', ...MISTY },
+  { gameId: 'xiangqi-mahjong', nameKey: 'variant.xiangqiMahjong.name', ...MISTY },
 ];
 
 export const CHAMPIONS = TITLES.filter((title) => title.reign);

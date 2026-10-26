@@ -50,6 +50,7 @@ describe('/champions', () => {
       'dark-xiangqi',
       'dark-chess',
       'jungle-flip',
+      'xiangqi-mahjong',
     ]);
     const holder = (game: string) =>
       page.querySelector<HTMLAnchorElement>(
@@ -57,7 +58,7 @@ describe('/champions', () => {
       );
     expect(holder('xiangqi')?.textContent).toBe('Pikafish');
     expect(holder('xiangqi')?.getAttribute('href')).toBe('/bot/pikafish');
-    for (const game of ['banqi', 'dark-xiangqi', 'dark-chess', 'jungle-flip']) {
+    for (const game of ['banqi', 'dark-xiangqi', 'dark-chess', 'jungle-flip', 'xiangqi-mahjong']) {
       expect(holder(game)?.textContent, game).toBe('Misty');
       expect(holder(game)?.getAttribute('href'), game).toBe('/bot/misty');
     }
@@ -246,7 +247,7 @@ describe('/champions', () => {
         }
       }
       const body = buildChampions(locale).textContent ?? '';
-      expect(body).not.toMatch(/mahjong|luzhanqi|麻将|麻將|陆战棋|陸戰棋|ten nets/i);
+      expect(body).not.toMatch(/luzhanqi|陆战棋|陸戰棋|ten nets/i);
     }
   });
 
