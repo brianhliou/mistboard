@@ -607,7 +607,7 @@ describe('xiangqi mahjong table', () => {
     };
     const text =
       doc(xiangqiMahjongTableHtml(xmjViewFor(resigned, 'east'), opts(false))).textContent ?? '';
-    expect(text).toContain('Hand 1 was not finished.');
+    expect(text).toContain('Ended during hand 1 of 1');
     expect(text).not.toContain('The wall ran out');
   });
 
@@ -618,8 +618,10 @@ describe('xiangqi mahjong table', () => {
       status: { type: 'finished', winner: 'west', reason: 'timeout' },
     };
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(timedOut, 'east'), opts(false)));
-    expect(host.querySelector('.xmj-result__title')?.textContent).toBe('Hand 1 was not finished.');
-    expect(host.querySelector('.xmj-result__foot')?.textContent).toBe('Bot wins on time.');
+    // How it ended is the title; the hand it stopped in is the small line.
+    expect(host.querySelector('.xmj-result__title')?.textContent).toBe('Bot wins on time');
+    expect(host.querySelector('.xmj-result__sub')?.textContent).toBe('Ended during hand 1 of 1');
+    expect(host.querySelector('.xmj-result__foot')).toBeNull();
     // Nobody won the hand: a small card over the centre, the discards in view.
     expect(host.querySelector('.xmj-result.xmj-result--brief')).not.toBeNull();
     expect(host.querySelector('.xmj-middle--brief')).not.toBeNull();

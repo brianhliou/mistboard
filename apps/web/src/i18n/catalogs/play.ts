@@ -544,7 +544,7 @@ export const EN_PLAY = {
   'live.xmj.readyList': 'Ready: {names}.',
   'live.xmj.nextHandIn': 'Next deal in {count}s',
   'live.xmj.exhausted': 'Hand {hand}: no winner. The wall ran out.',
-  'live.xmj.handUnfinished': 'Hand {hand} was not finished.',
+  'live.xmj.handUnfinished': 'Ended during hand {hand} of {hands}',
   'live.xmj.meldShown': 'Shown',
   'live.xmj.meldShownTitle': 'Claimed from a discard: both players see this set',
   'live.xmj.set': 'set',

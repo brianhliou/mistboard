@@ -1720,6 +1720,12 @@ ol.xmj-log {
   display: flex;
 }
 
+/* One line on a queue card, so the note stays clear of the discards. */
+.watch-queue-preview .xmj-result--brief .xmj-result__title {
+  font-size: 16px;
+  white-space: nowrap;
+}
+
 /* The foot is hidden, so the winning hand closes the group. */
 .xmj-watch-board--compact .xmj-result:not(.xmj-result--brief) > .xmj-won {
   margin-bottom: auto;

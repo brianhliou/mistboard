@@ -517,7 +517,7 @@ export const ZH_HANT_PLAY = {
   'live.xmj.readyList': '已準備：{names}。',
   'live.xmj.nextHandIn': '{count} 秒後發下一手',
   'live.xmj.exhausted': '第 {hand} 手：流局，牌牆已摸完。',
-  'live.xmj.handUnfinished': '第 {hand} 手未打完。',
+  'live.xmj.handUnfinished': '於第 {hand} 手結束（共 {hands} 手）',
   'live.xmj.meldShown': '亮出',
   'live.xmj.meldShownTitle': '吃來的面子，雙方都看得到',
   'live.xmj.set': '面子',

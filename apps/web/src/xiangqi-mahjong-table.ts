@@ -732,8 +732,14 @@ export function xmjResultTitle(
     });
   }
   if (phase.type === 'exhausted') return t('live.xmj.exhausted', { hand });
-  // The match ended mid-hand (resignation, timeout): the foot names how.
-  return t('live.xmj.handUnfinished', { hand });
+  // The match ended mid-hand (resignation, timeout): how it ended is the news,
+  // and the head's small line names the hand.
+  if (view.status.type === 'finished') {
+    return xmjResultLine(view.status.winner, view.status.reason, view.perspective, (seat) =>
+      escapeHtml(names[seat]),
+    );
+  }
+  return xmjHandEnded(view);
 }
 
 /**
@@ -746,8 +752,11 @@ function resultHeadHtml(
   title: string,
 ): string {
   const phase = view.phase;
-  if (phase.type !== 'won') {
+  if (phase.type === 'exhausted') {
     return `<div class="xmj-result__head"><h3 class="xmj-result__title">${title}</h3></div>`;
+  }
+  if (phase.type !== 'won') {
+    return `<div class="xmj-result__head"><div><h3 class="xmj-result__title">${title}</h3><p class="xmj-result__sub">${xmjHandEnded(view)}</p></div></div>`;
   }
   const you = view.perspective === phase.winner;
   const who = you
@@ -767,6 +776,14 @@ function resultHeadHtml(
   return `<div class="xmj-result__head${tone}"><div><h3 class="xmj-result__title">${who}</h3><p class="xmj-result__sub">${how}</p></div><p class="xmj-result__total"><b>${total}</b><span>${unit}</span></p></div>`;
 }
 
+/** "Ended during hand 3 of 6": the hand a match stopped in mid-play. */
+function xmjHandEnded(view: XmjPlayerView): string {
+  return t('live.xmj.handUnfinished', {
+    hand: view.handNumber,
+    hands: Math.max(view.handsInMatch, view.handNumber),
+  });
+}
+
 /** Finished reasons the match score decides; any other names how it ended. */
 const ON_POINTS: ReadonlySet<string> = new Set(['points', 'tie']);
 
@@ -779,7 +796,10 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
       ? `<div class="xmj-won">${winningHandHtml(phase.score, phase.winningTile)}</div>${scoringHtml(phase.score)}`
       : '';
   let foot: string;
-  if (view.status.type === 'finished' && !ON_POINTS.has(view.status.reason)) {
+  if (phase.type !== 'won' && phase.type !== 'exhausted' && view.status.type === 'finished') {
+    // Ended mid-hand: the head already says how, and which hand.
+    foot = '';
+  } else if (view.status.type === 'finished' && !ON_POINTS.has(view.status.reason)) {
     // Ended by the clock, a resignation or abandonment: the score says nothing
     // about why (often +0 to +0), so the line names how instead.
     const line = xmjResultLine(view.status.winner, view.status.reason, view.perspective, (seat) =>
