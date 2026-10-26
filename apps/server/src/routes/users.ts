@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from './../account-session.js';
 import { parseGamePageCursor } from '../game-page-cursor.js';
 import * as persistence from './../persistence.js';
+import { attachProfileBoards } from './../profile-game-boards.js';
 import {
   PUBLIC_RATING_TIME_CLASS,
   parseRatingVariant,
@@ -14,6 +15,17 @@ const HANDLE_PATTERN = /^[a-zA-Z0-9_-]{1,40}$/;
 // Upper bound on a single games page; mirrors the server-side clamp in
 // getUserGamesPage so a hand-crafted URL can't request an unbounded page.
 const GAMES_PAGE_MAX = 50;
+
+// A profile's game rows as both routes send them: marked when they cannot be
+// opened, and with each final position when the client asks (`boards=1`, the
+// list's board view, #509). Without the flag the payload is unchanged.
+async function profileGameRows<T extends { roomId: string; variant: string }>(
+  games: readonly T[],
+  parsedUrl: URL,
+) {
+  const marked = await markUnavailableGames(games);
+  return parsedUrl.searchParams.get('boards') === '1' ? attachProfileBoards(marked) : marked;
+}
 
 export async function tryHandle(
   _ctx: unknown,
@@ -50,7 +62,7 @@ export async function tryHandle(
       profile: {
         ...profile,
         // The first page of the Games tab: same marking as the pager below.
-        games: await markUnavailableGames(profile.games),
+        games: await profileGameRows(profile.games, parsedUrl),
         isViewer,
         relation: relation ? { following: relation.following, blocked: relation.blocked } : null,
       },
@@ -111,7 +123,10 @@ export async function tryHandle(
     // A game that cannot be opened (old rules, a variant with no game page)
     // stays in the owner's history, marked, rather than vanishing from it
     // (replayable-games.ts markUnavailableGames).
-    writeJson(response, 200, { games: await markUnavailableGames(page.games), total: page.total });
+    writeJson(response, 200, {
+      games: await profileGameRows(page.games, parsedUrl),
+      total: page.total,
+    });
     return true;
   }
 
