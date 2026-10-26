@@ -2,7 +2,7 @@ import { type GameEvent, maybeGameSpecForId } from '@mistboard/game';
 import { shouldShowClockTenths, shouldShowFinalClockTenths } from './account-preferences.js';
 import { applyClockEmphasis, setClockFace } from './clock-emphasis.js';
 import { resultLabel, watchQueueResultLabel } from './finished-result-label.js';
-import { payloadFirstColor, seatInkForVariant } from './flip-seat-ink.js';
+import { payloadFirstColor, seatInkForVariant, variantSeatsHaveInk } from './flip-seat-ink.js';
 import { createGameTable } from './game-table.js';
 import { t } from './i18n/catalog.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -917,6 +917,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     const firstColor = payloadFirstColor(featured.payload);
     return ordered.map((p) => ({
       color: seatInkForVariant(featured.gameSpecId, p.color, firstColor),
+      noDisc: !variantSeatsHaveInk(featured.gameSpecId),
       name: displayLiveName(p.name, t('watch.guest')),
       rating: null,
       isEngine: p.isEngine,
@@ -1795,6 +1796,7 @@ export function watchGamePlayers(game: FeaturedGame): GameMetaPlayer[] {
     const participant = participantForColor(game, seat);
     return {
       color: seatInkForVariant(game.variant, seat, game.firstColor ?? null),
+      noDisc: !variantSeatsHaveInk(game.variant),
       name: displayParticipantName(game, seat),
       rating: watchParticipantRating(participant),
       isEngine: participant?.subjectType === 'engine-version' || participant?.subjectType === 'bot',
@@ -1956,8 +1958,9 @@ function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
   row.className = 'clock-player-line watch-game-table__player';
   // A null color is a flip variant whose opening flip has not bound an ink yet:
   // the disc renders the neutral ring rather than guessing a side.
-  const disc = seatDiscEl(player.color, 'watch-player-disc');
-  row.append(disc, playerNameEl(player.name, player.profile ?? null, 'clock-name'));
+  // A seat with no colour (the mahjong family) draws no disc, as in its room.
+  if (!player.noDisc) row.append(seatDiscEl(player.color, 'watch-player-disc'));
+  row.append(playerNameEl(player.name, player.profile ?? null, 'clock-name'));
   if (player.isEngine) {
     const bot = document.createElement('span');
     bot.className = 'watch-player-bot';

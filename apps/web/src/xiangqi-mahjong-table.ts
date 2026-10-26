@@ -816,7 +816,10 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
     }
     foot = `<div class="xmj-result__foot">${parts.join('')}</div>`;
   }
-  return `<div class="xmj-result" role="region" aria-label="${title}">${resultHeadHtml(view, names, title)}${body}${foot}</div>`;
+  // A hand nobody won is a sentence and how it ended: a small card over the
+  // centre, the discards left in view, rather than a panel over the band.
+  const brief = phase.type === 'won' ? '' : ' xmj-result--brief';
+  return `<div class="xmj-result${brief}" role="region" aria-label="${title}">${resultHeadHtml(view, names, title)}${body}${foot}</div>`;
 }
 
 // ── The table ────────────────────────────────────────────────────────────────
@@ -841,7 +844,12 @@ function tableHtml(view: XmjPlayerView, options: XmjTableOptions): string {
   const handOver = view.between || view.status.type === 'finished';
   const claimBubble = you && !handOver ? bubbleHtml(view, names) : '';
   const result = handOver ? resultHtml(view, options) : '';
-  const middle = `<div class="xmj-middle${handOver ? ' xmj-middle--result' : ''}">${pondHtml(view, opponent, false, names, claimBubble)}${centreHtml(view, self, options, handOver)}${pondHtml(view, self, you, names, '')}${result}</div>`;
+  const band = handOver
+    ? view.phase.type === 'won'
+      ? ' xmj-middle--result'
+      : ' xmj-middle--result xmj-middle--brief'
+    : '';
+  const middle = `<div class="xmj-middle${band}">${pondHtml(view, opponent, false, names, claimBubble)}${centreHtml(view, self, options, handOver)}${pondHtml(view, self, you, names, '')}${result}</div>`;
   return `<div class="xmj-table">${opponentHtml(view, opponent, names)}${middle}${selfHtml(view, self, you, options.canAct && you, names, options.armedDiscard ?? null)}</div>`;
 }
 

@@ -17,6 +17,7 @@ import { embedRendererKindForVariant, showcaseRendererKindForSpec } from './show
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import {
   mountXiangqiMahjongWatchReplay,
+  xmjClockAtPly,
   xmjCompactFit,
   xmjWatchFrames,
 } from './watch-xiangqi-mahjong-replay.js';
@@ -137,7 +138,8 @@ describe('xiangqi mahjong TV mount', () => {
       pool: document.createElement('div'),
     };
     handle.fillMaterial?.(slots);
-    expect(slots.pool.querySelector('table.xmj-hands')).not.toBeNull();
+    // The room's under-board card, not a bare table floating in the rail.
+    expect(slots.pool.querySelector('section.xmj-hands-under > table.xmj-hands')).not.toBeNull();
     expect(slots.pool.textContent).toContain('Ada');
     expect(slots.top.childElementCount + slots.bottom.childElementCount).toBe(0);
 
@@ -226,5 +228,61 @@ describe('xiangqi mahjong compact fit', () => {
 
   it('leaves a table that fits its host at full size', () => {
     expect(xmjCompactFit(320, 400, table)).toEqual({ zoom: 1, width: 320 });
+  });
+});
+
+describe('xiangqi mahjong rail clock', () => {
+  // Regression: the TV rail had no clockAtPly for this variant, so /watch drew
+  // no clocks beside the players while every other variant's rail did.
+  const view = liveFrame(0).view as XmjPlayerView;
+  const frame = (
+    ply: number,
+    clock?: { east: number; west: number; active: 'east' | 'west' | null },
+  ) => ({
+    ply,
+    view,
+    ...(clock
+      ? { clock: { remainingMs: { east: clock.east, west: clock.west }, active: clock.active } }
+      : {}),
+  });
+
+  it('reads a finished match from the latest snapshot at or before the ply', () => {
+    const match = {
+      frames: [frame(0), frame(1, { east: 179_000, west: 180_000, active: 'west' }), frame(2)],
+      liveClock: null,
+      initialMs: 180_000,
+      result: 'west-wins',
+    };
+    expect(xmjClockAtPly(match, 0, 0)).toBeNull();
+    expect(xmjClockAtPly(match, 1, 0)).toEqual({
+      first: 179_000,
+      second: 180_000,
+      toMove: 'second',
+      initialMs: 180_000,
+    });
+    // The last ply of a finished match has nobody to move.
+    expect(xmjClockAtPly(match, 2, 0)?.toMove).toBeNull();
+    expect(xmjClockAtPly(match, 2, 0)?.first).toBe(179_000);
+  });
+
+  it('runs the live side down from the server clock at the latest ply only', () => {
+    const match = {
+      frames: [frame(0), frame(1, { east: 170_000, west: 175_000, active: 'east' })],
+      liveClock: {
+        remainingMs: { east: 170_000, west: 175_000 },
+        activeColor: 'east' as const,
+        runningSince: 10_000,
+      },
+      initialMs: 180_000,
+      result: 'in-progress',
+    };
+    expect(xmjClockAtPly(match, 1, 14_000)).toEqual({
+      first: 166_000,
+      second: 175_000,
+      toMove: 'first',
+      initialMs: 180_000,
+    });
+    // Scrubbed back, the board shows the snapshot, not the running clock.
+    expect(xmjClockAtPly(match, 0, 14_000)).toBeNull();
   });
 });

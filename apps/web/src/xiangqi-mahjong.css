@@ -925,6 +925,25 @@
   margin-bottom: auto;
 }
 
+/* A hand nobody won: a card the size of its sentence over the centre band,
+   the discards above and below left in view. `translate` rather than
+   `transform`, so the entrance's scale still applies. */
+.xmj-result--brief {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: max-content;
+  max-width: 100%;
+  overflow: visible;
+  padding: 12px 20px;
+  gap: 6px;
+}
+
+.xmj-middle--brief > .xmj-centre {
+  visibility: hidden;
+}
+
 .xmj-sr {
   position: absolute;
   width: 1px;
@@ -1570,6 +1589,17 @@ ol.xmj-log {
   display: none;
 }
 
+/* The TV rail's copy, under the clocks: the rail's width, and the card's own
+   border in place of the pool slot's rule. */
+.xmj-hands-under--rail {
+  width: 100%;
+}
+
+.hidden-pool:has(> .xmj-hands-under) {
+  padding: 0;
+  border-top: 0;
+}
+
 .xmj-hands {
   width: 100%;
   border-collapse: collapse;
@@ -1680,9 +1710,19 @@ ol.xmj-log {
 }
 
 /* A hand's result covers the discards and the centre rather than replacing
-   them, so the table keeps its height from one hand to the next. */
-.xmj-watch-board--compact .xmj-middle--result > :not(.xmj-result) {
+   them, so the table keeps its height from one hand to the next. A hand
+   nobody won keeps its discards and its one line of how the match ended. */
+.xmj-watch-board--compact .xmj-middle--result:not(.xmj-middle--brief) > :not(.xmj-result) {
   visibility: hidden;
+}
+
+.xmj-watch-board--compact .xmj-result--brief .xmj-result__foot {
+  display: flex;
+}
+
+/* The foot is hidden, so the winning hand closes the group. */
+.xmj-watch-board--compact .xmj-result:not(.xmj-result--brief) > .xmj-won {
+  margin-bottom: auto;
 }
 
 .xmj-watch-board--compact .xmj-middle {

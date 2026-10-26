@@ -15,6 +15,7 @@ import {
 } from '@mistboard/game';
 import { botVsBotConfigFromEnv } from './bot-vs-bot-scheduler.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
+import { logger } from './obs.js';
 import { isAllowlistedGameSpec } from './persistence-variant-access.js';
 import {
   isXmjBotClientId,
@@ -23,6 +24,11 @@ import {
   xmjBotDelayMs,
   xmjBotMove,
 } from './server-xiangqi-mahjong-bots.js';
+import {
+  isKnownUnreplayableGame,
+  resetTenantReplayGuardForTests,
+} from './variant-tenant/replay-guard.js';
+import { tenantReplayCheck } from './variant-tenant/runtime.js';
 import {
   getXmjClientView,
   type XmjEvent,
@@ -223,4 +229,30 @@ test('xiangqi mahjong binds a match card without export or bot-vs-bot', async ()
   } as NodeJS.ProcessEnv);
   assert.deepEqual(eve.plans, []);
   assert.equal(eve.skipped[0]?.variant, XIANGQI_MAHJONG_SPEC_ID);
+});
+
+test('a stored match whose walls the current rules refuse is skipped, not thrown', () => {
+  // Pre-launch rooms were dealt 8 walls; the match is 6 hands now. Building
+  // the seed outside the replay guard let that throw 500 the /watch feed.
+  const rnd = seeded(5);
+  const setup = createXmjSetup(rnd);
+  const walls = [...setup.walls, setup.walls[0]!, setup.walls[1]!];
+  const events = [
+    {
+      type: 'room-created',
+      at: 1,
+      roomId: 'xmj_eight_walls',
+      gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+      setup: { ...setup, walls },
+    },
+  ];
+  resetTenantReplayGuardForTests();
+  const warn = logger.warn;
+  logger.warn = (() => {}) as typeof logger.warn;
+  try {
+    assert.equal(tenantReplayCheck(tenant)(events, 'xmj_eight_walls'), false);
+  } finally {
+    logger.warn = warn;
+  }
+  assert.equal(isKnownUnreplayableGame('xmj_eight_walls'), true);
 });

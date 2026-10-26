@@ -288,6 +288,18 @@ describe('watchGamePlayers', () => {
     expect(rows.map((row) => row.color)).toEqual([null, null]);
   });
 
+  it('draws no seat disc for a variant whose seats have no colour', () => {
+    // Regression: Xiangqi Mahjong's rail showed two grey discs; its room shows none.
+    expect(watchGamePlayers(flipGame('xiangqi-mahjong', null)).map((row) => row.noDisc)).toEqual([
+      true,
+      true,
+    ]);
+    expect(watchGamePlayers(flipGame('xiangqi', null)).map((row) => row.noDisc)).toEqual([
+      false,
+      false,
+    ]);
+  });
+
   it('passes the seat straight through for variants where seat == ink', () => {
     const rows = watchGamePlayers(flipGame('xiangqi', null));
     expect(rows.map((row) => row.color)).toEqual(['red', 'black']);

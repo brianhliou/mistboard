@@ -17,7 +17,7 @@
 import type { XmjMove, XmjPlayerView, XmjSeat } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
 import type { SoundKind } from './live-state.js';
-import type { GameMeta, ReplayHandle, ReplayMaterialSlots } from './replay.js';
+import type { GameMeta, ReplayClockReadout, ReplayHandle, ReplayMaterialSlots } from './replay.js';
 import type { MoveList } from './review/move-list.js';
 import { syncMoveListScroll } from './variant-tenant/chrome-dom.js';
 import './xiangqi-mahjong.css';
@@ -49,7 +49,17 @@ export type XmjWatchReplayOptions = {
   onLoadError?: () => boolean;
 };
 
-type XmjFrame = { ply: number; view: XmjPlayerView };
+/** A finished match's clocks after a ply, as the server filed them. */
+type XmjFrameClock = { remainingMs: Record<XmjSeat, number>; active: XmjSeat | null };
+
+/** The room's running clock, as a live frame carries it. */
+type XmjLiveClock = {
+  remainingMs: Record<XmjSeat, number>;
+  activeColor: XmjSeat | null;
+  runningSince: number | null;
+};
+
+type XmjFrame = { ply: number; view: XmjPlayerView; clock?: XmjFrameClock };
 
 type XmjTimelineEntry = {
   type?: string;
@@ -61,7 +71,8 @@ type XmjTimelineEntry = {
 
 /** The two payloads this mount reads: the live frame and the finished game. */
 type XmjWatchPayload = {
-  game?: { result?: string; termination?: string };
+  game?: { result?: string; termination?: string; initialMs?: number | null };
+  state?: { status?: unknown; clock?: XmjLiveClock; timeControl?: { initialMs?: number } };
   timeline?: readonly XmjTimelineEntry[];
   seatDisplayNames?: Partial<Record<XmjSeat, string>>;
   // Live: { spectator: frames }. Finished: the frames themselves.
@@ -74,6 +85,9 @@ type LoadedMatch = {
   events: XmjTimelineEntry[];
   names: Record<XmjSeat, string>;
   result: string;
+  /** The live frame's running clock; null for a finished match. */
+  liveClock: XmjLiveClock | null;
+  initialMs: number | null;
 };
 
 function isFrame(value: unknown): value is XmjFrame {
@@ -125,6 +139,51 @@ function readMatch(
     events,
     names: seatNames(payload, fallback),
     result: payload.game?.result ?? 'in-progress',
+    liveClock: payload.state?.clock ?? null,
+    initialMs: payload.state?.timeControl?.initialMs ?? payload.game?.initialMs ?? null,
+  };
+}
+
+/**
+ * The rail clocks at `ply`, east as the first mover (seated at the bottom).
+ * A finished match reads the latest clock the server filed at or before the
+ * ply; a live one caught up to its last ply runs the room's clock to `now`.
+ * Null when the match kept no clocks, which the rail shows as no clock.
+ */
+export function xmjClockAtPly(
+  match: Pick<LoadedMatch, 'frames' | 'liveClock' | 'initialMs' | 'result'>,
+  ply: number,
+  now: number,
+): ReplayClockReadout | null {
+  const last = match.frames.length - 1;
+  const ended = match.result !== 'in-progress';
+  const toMove = (seat: XmjSeat | null): ReplayClockReadout['toMove'] =>
+    seat === null || (ply >= last && ended) ? null : seat === 'east' ? 'first' : 'second';
+  const live = match.liveClock;
+  if (live && ply >= last) {
+    const left = (seat: XmjSeat): number => {
+      const remaining = live.remainingMs[seat];
+      if (live.activeColor !== seat || live.runningSince === null) return remaining;
+      return Math.max(0, remaining - Math.max(0, now - live.runningSince));
+    };
+    return {
+      first: left('east'),
+      second: left('west'),
+      toMove: toMove(live.activeColor),
+      initialMs: match.initialMs,
+    };
+  }
+  let clock: XmjFrameClock | null = null;
+  for (const frame of match.frames) {
+    if (frame.ply > ply) break;
+    if (frame.clock) clock = frame.clock;
+  }
+  if (!clock) return null;
+  return {
+    first: clock.remainingMs.east,
+    second: clock.remainingMs.west,
+    toMove: toMove(clock.active),
+    initialMs: match.initialMs,
   };
 }
 
@@ -178,8 +237,8 @@ export function mountXiangqiMahjongWatchReplay(
   board.className = `board xiangqi-mahjong-live-board xmj-watch-board${options.compact ? ' xmj-watch-board--compact' : ''}`;
   // Names sit above and below the felt, as every other variant's board: the
   // spectator's table puts east at the bottom. The clock slot holds the match
-  // points, since a frame carries no clocks. A host that has the names in its
-  // own chrome hides these rows, as it does for the other variants.
+  // points; the TV rail's clocks come from clockAtPly. A host that has the
+  // names in its own chrome hides these rows, as it does for the other variants.
   const seatRow = (seat: XmjSeat) => {
     const row = document.createElement('div');
     row.className = 'showcase-seat';
@@ -371,6 +430,7 @@ export function mountXiangqiMahjongWatchReplay(
     moveLog: () => log?.list ?? null,
     gameResult: () => match?.result ?? null,
     availablePovs: () => ['truth'],
+    clockAtPly: () => (match ? xmjClockAtPly(match, ply, Date.now()) : null),
     moveSoundAtPly: (at: number): SoundKind | null => {
       if (!match || at < 1 || at > match.events.length) return null;
       const matchOver = at === maxPly() && match.result !== 'in-progress';
@@ -379,8 +439,11 @@ export function mountXiangqiMahjongWatchReplay(
     fillMaterial: (slots: ReplayMaterialSlots) => {
       const frame = match?.frames[ply];
       if (!match || !frame) return;
-      // The points by hand, as the room's meta card shows them.
-      slots.pool.innerHTML = xmjHandsTableHtml(frame.view, match.names);
+      // The points by hand, in the card the room draws under its board.
+      const hands = xmjHandsTableHtml(frame.view, match.names);
+      slots.pool.innerHTML = hands
+        ? `<section class="xmj-hands-under xmj-hands-under--rail">${hands}</section>`
+        : '';
     },
   };
 
