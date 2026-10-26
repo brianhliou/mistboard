@@ -171,6 +171,7 @@ Edit task → find file → open only that file.
 | `server-live-engine-reservations.ts` | Live engine reservation helpers: PvE engine-seat detection, legacy engine ID normalization, engine-worker reservation create/release, and reservation logging. |
 | `internal-engine-client.ts` | HTTP client/reservation adapter for the internal live engine service |
 | `persistence-db.ts` | Postgres pool lifecycle: `init`, `probeDb`, `close`, `isInitialized`, `getPool` |
+| `worker-db.ts` | Engine-worker pool with dropped-connection guards and transient connection-error classification for queue polling retries |
 | `persistence-seat-tokens.ts` | Room seat token persistence, including token load/upsert/touch/replace/verify helpers |
 | `persistence.ts` | Public persistence facade over the focused `persistence-*` modules (the accounts family alone spans five: accounts/auth/sessions/profiles/leaderboards). Import existing persistence APIs from here unless changing query ownership. |
 | `persistence-game-lifecycle.ts` | Room event loading/append, running-game lifecycle, stale-room cleanup, debug artifact persistence |
