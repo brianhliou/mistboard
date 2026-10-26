@@ -847,18 +847,17 @@
 }
 
 /* Both rails are quiet text on the page background: no card chrome, the
-   sheet is the only box. The TOC pins (it is short and useful mid-read);
-   the variant rail scrolls away with the page like pychess's, so the page
-   has a single scroll context instead of two. */
+   sheet is the only box. Both pin, so another game's rules are one click
+   away mid-read (Brian, 2026-10-25; the variant rail used to scroll away
+   with the page). A rail taller than the window scrolls on its own. */
 .article-toc-sidebar,
 .article-variant-sidebar {
   display: none;
 }
 
 @media (min-width: 1280px) {
-  .article-toc-sidebar {
-    display: block;
-    grid-area: toc;
+  .article-toc-sidebar,
+  .article-variant-sidebar {
     position: sticky;
     /* Exactly the rail's natural offset (58px sticky nav + 40px section
        padding) so it pins with zero travel on scroll. */
@@ -868,8 +867,14 @@
     scrollbar-width: none;
   }
 
-  .article-toc-sidebar::-webkit-scrollbar {
+  .article-toc-sidebar::-webkit-scrollbar,
+  .article-variant-sidebar::-webkit-scrollbar {
     display: none;
+  }
+
+  .article-toc-sidebar {
+    display: block;
+    grid-area: toc;
   }
 
   .article-variant-sidebar {
