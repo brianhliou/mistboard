@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
-import { type JunglePuzzle, puzzleShortCode, type XiangqiPuzzle } from '@mistboard/game';
+import {
+  type JunglePuzzle,
+  puzzleShortCode,
+  XIANGQI_MOTIFS,
+  type XiangqiMotifId,
+  type XiangqiPuzzle,
+} from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/puzzles.js';
@@ -107,6 +113,71 @@ test('puzzle list filters by variant, and a retired variant filters to nothing',
   // A retired variant is not a variant the route knows: 400, not an empty list.
   const retired = await route('/api/puzzles?variant=mini-xiangqi');
   assert.equal(retired.status, 400);
+});
+
+test('puzzle list filters by every registered motif without changing summary order or fields', async () => {
+  const unfiltered = await route('/api/puzzles');
+  assert.equal(unfiltered.status, 200);
+  const all = JSON.parse(unfiltered.body) as {
+    puzzles: Array<{ id: string; motifs: XiangqiMotifId[] }>;
+    attemptedIds: string[];
+  };
+  let hasNonemptySubset = false;
+
+  for (const { id } of XIANGQI_MOTIFS) {
+    const response = await route(`/api/puzzles?motif=${id}`);
+    assert.equal(response.status, 200, id);
+    const body = JSON.parse(response.body) as typeof all;
+    const expected = all.puzzles.filter((puzzle) => puzzle.motifs.includes(id));
+    hasNonemptySubset ||= expected.length > 0 && expected.length < all.puzzles.length;
+    assert.equal(body.puzzles.length, expected.length, id);
+    assert.deepEqual(body.puzzles, expected, id);
+    assert.deepEqual(body.attemptedIds, all.attemptedIds, id);
+  }
+  assert.ok(hasNonemptySubset, 'the corpus must exercise a motif with matches and exclusions');
+});
+
+test('puzzle list treats an empty motif like an omitted motif', async () => {
+  const unfiltered = await route('/api/puzzles');
+  const empty = await route('/api/puzzles?motif=');
+  assert.equal(empty.status, 200);
+  assert.deepEqual(JSON.parse(empty.body), JSON.parse(unfiltered.body));
+});
+
+test('puzzle list rejects unknown or malformed motif ids', async () => {
+  for (const motif of [
+    'not-a-motif',
+    'MA-HOU-PAO',
+    ' ma-hou-pao',
+    'ma-hou-pao ',
+    'ma-hou-pao,men-sha',
+    '__proto__',
+    'toString',
+  ]) {
+    const response = await route(`/api/puzzles?motif=${encodeURIComponent(motif)}`);
+    assert.equal(response.status, 400, motif);
+    assert.deepEqual(JSON.parse(response.body), { error: 'invalid_motif' }, motif);
+  }
+});
+
+test('puzzle list combines motif and variant filters while keeping parked puzzles hidden', async () => {
+  const motif = await route('/api/puzzles?motif=ma-hou-pao');
+  const xiangqi = await route('/api/puzzles?variant=xiangqi&motif=ma-hou-pao');
+  assert.equal(motif.status, 200);
+  assert.equal(xiangqi.status, 200);
+  assert.deepEqual(JSON.parse(xiangqi.body), JSON.parse(motif.body));
+
+  const jungle = await route('/api/puzzles?variant=jungle&motif=ma-hou-pao');
+  assert.equal(jungle.status, 200);
+  assert.deepEqual(JSON.parse(jungle.body), { puzzles: [], attemptedIds: [] });
+
+  const invalidMotif = await route('/api/puzzles?variant=jungle&motif=not-a-motif');
+  assert.equal(invalidMotif.status, 400);
+  assert.deepEqual(JSON.parse(invalidMotif.body), { error: 'invalid_motif' });
+
+  const retired = await route('/api/puzzles?variant=fortress-xiangqi&motif=ma-hou-pao');
+  assert.equal(retired.status, 400);
+  assert.deepEqual(JSON.parse(retired.body), { error: 'invalid_variant' });
 });
 
 // Fortress Xiangqi was retired on 2026-10-11 and its puzzle registry deleted.
