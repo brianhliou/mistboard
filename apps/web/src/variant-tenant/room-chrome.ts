@@ -30,7 +30,12 @@ import {
 import { type I18nKey, t } from '../i18n/catalog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
-import { postGameActions, renderGameResult, resultScore } from '../postgame-panel.js';
+import {
+  clearPostGameSheet,
+  renderGameResult,
+  renderPostGameActions,
+  resultScore,
+} from '../postgame-panel.js';
 import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile-link.js';
 import { rememberBotRoomRequest } from '../pve-memory.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
@@ -756,12 +761,15 @@ export function createTenantRoomChrome<C extends string>(
 
   function renderRoomActions(): void {
     if (!refs) return;
-    refs.roomActions.replaceChildren();
     const row = document.createElement('div');
     row.className = 'room-actions-row';
     const view = ctx.view();
     // A recording is the review itself: nothing to rematch, nobody to invite.
-    if (ctx.recording?.()) return;
+    if (ctx.recording?.()) {
+      clearPostGameSheet(refs.roomActions);
+      refs.roomActions.replaceChildren();
+      return;
+    }
 
     if (view?.status.type === 'finished') {
       // Rematch / New opponent / Review game (postgame-panel.ts). Only a seated
@@ -779,17 +787,17 @@ export function createTenantRoomChrome<C extends string>(
           : mode === 'pve'
             ? playAgainButton()
             : null;
-      refs.roomActions.append(
-        postGameActions({
-          variant: tenantSpecId(),
-          mode,
-          seated,
-          rematch,
-          reviewHref: tenant.reviewUrl(ctx.room()),
-        }),
-      );
+      renderPostGameActions(refs.roomActions, {
+        variant: tenantSpecId(),
+        mode,
+        seated,
+        rematch,
+        reviewHref: tenant.reviewUrl(ctx.room()),
+      });
       return;
     }
+    clearPostGameSheet(refs.roomActions);
+    refs.roomActions.replaceChildren();
     // Aborted games offer NO play-again: an instant new room after an abort
     // creates a fresh solo room where the mover can play before the opponent
     // joins. No Home button either (lichess parity): the site nav is the way

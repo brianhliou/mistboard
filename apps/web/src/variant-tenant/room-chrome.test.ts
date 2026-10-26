@@ -690,6 +690,36 @@ describe('tenant room chrome bot rematch', () => {
     moveNumber: 9,
   };
 
+  it('keeps every tenant action in the phone sheet across finished-room snapshots', () => {
+    const media = window.matchMedia('(max-width: 600px)');
+    Object.defineProperty(media, 'matches', { value: true });
+    const spy = vi.spyOn(window, 'matchMedia').mockReturnValue(media);
+    const console = document.createElement('section');
+    console.className = 'game-console';
+    const { chrome, refs } = chromeHarness({
+      view: finished,
+      roomMode: 'pve',
+      playAgainRequestBody: { mode: 'pve', gameSpecId: 'xiangqi' },
+    });
+    console.append(refs.roomActions);
+    document.body.append(console);
+    try {
+      chrome.renderRoomActions();
+      const sheet = console.querySelector<HTMLDialogElement>('.postgame-sheet');
+      expect(sheet?.open).toBe(true);
+      expect(
+        [...sheet!.querySelectorAll('.postgame-actions > *')].map((el) => el.textContent),
+      ).toEqual(['Rematch', 'New game', 'Review game', 'Challenge a friend']);
+      sheet?.querySelector<HTMLButtonElement>('.postgame-sheet__close')?.click();
+      chrome.renderRoomActions();
+      expect(console.querySelector('dialog')).toBe(sheet);
+      expect(sheet?.open).toBe(false);
+    } finally {
+      spy.mockRestore();
+      console.remove();
+    }
+  });
+
   async function rematchBody(seat: Color): Promise<Record<string, unknown>> {
     const fetchSpy = vi.fn(async () => new Response('{}', { status: 500 }));
     vi.stubGlobal('fetch', fetchSpy);

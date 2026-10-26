@@ -152,27 +152,6 @@ describe('finished phone room (10-24 review)', () => {
       void win.happyDOM.close();
     }
   });
-
-  // Not here: the band height (--phone-room-post, 48px for one line, 96px for
-  // two). happy-dom matches `:has(A > B)` whenever A exists, so it cannot
-  // tell one action from four; that rule was checked in Chromium on a built
-  // room with one, two, three and four actions instead (10-24).
-  it('spans a lone action across the line instead of leaving it in the left half', () => {
-    const span = (actions: string, index: number) => {
-      const win = finishedRoom(390, 664, actions);
-      try {
-        const items = win.document.querySelectorAll('.postgame-actions > *');
-        return win.getComputedStyle(need(items[index], 'action')).gridColumn;
-      } finally {
-        void win.happyDOM.close();
-      }
-    };
-    expect(span(REVIEW, 0)).toBe('1 / -1');
-    expect(span(`<button>Rematch</button><a>New</a>${REVIEW}`, 2)).toBe('1 / -1');
-    expect(span(`<div class="room-rematch"></div>${REVIEW}`, 1)).toBe('1 / -1');
-    expect(span(`<button>Rematch</button>${REVIEW}`, 1)).not.toBe('1 / -1');
-    expect(span(`<button>Rematch</button>${REVIEW}`, 0)).not.toBe('1 / -1');
-  });
 });
 
 // A correspondence room's "7 days per move" line took a line the phone
@@ -252,7 +231,7 @@ describe('live spectator notice on a phone (#618)', () => {
 // A finished room whose one action is Review game (a spectator, a signed-out
 // viewer) puts it in the bottom bar, where Resign/Abort sat beside the move
 // arrows during play, and drops the 48px band so the board grows (#618,
-// Brian 2026-10-24). Two or more actions keep the band.
+// Brian 2026-10-24). Seated actions now use the game-over sheet.
 function soloReview(width: number, solo: boolean) {
   const win = new Window({ width, height: 664 });
   win.document.head.innerHTML = [GAME_SHELL, LIVE_REVIEW, REVIEW_SHELL]
@@ -296,18 +275,49 @@ describe('lone Review game in the phone bar (#618)', () => {
     expect(r.transform).toBe('none');
   });
 
-  // happy-dom matches `:has(.postgame-actions > :nth-child(3))` with two
-  // actions, so it reads 96px here; Chromium reads 48px (the sheet run).
-  it('keeps the band for two actions', () => {
-    const r = soloReview(390, false);
-    expect(r.post).not.toBe('0px');
-    expect(r.box).toBe('grid');
-    expect(r.order).not.toBe('46');
-  });
-
   it('leaves the desktop room alone', () => {
     const r = soloReview(1280, true);
     expect(r.box).toBe('grid');
     expect(r.order).not.toBe('46');
   });
+});
+
+describe('game-over sheet layout (#671)', () => {
+  it.each([360, 390])(
+    'keeps the board budget and puts the result above full-width actions at %ipx',
+    (width) => {
+      const win = new Window({ width, height: 664 });
+      try {
+        win.document.head.innerHTML = [GAME_SHELL, LIVE_REVIEW, REVIEW_SHELL]
+          .map((css) => `<style>${css}</style>`)
+          .join('');
+        win.document.body.innerHTML = `<div class="review-shell__cluster live-review__cluster"><section class="game-console"><div class="round-table__box"><div class="round-table__row"><div class="room-actions"></div></div></div></section></div>`;
+        const doc = win.document;
+        const style = (selector: string) =>
+          win.getComputedStyle(need(doc.querySelector(selector), selector));
+        const playingBudget =
+          style('.live-review__cluster').getPropertyValue('--uni-board-h-budget');
+        const host = need(doc.querySelector('.room-actions'), 'actions host');
+        host.setAttribute('data-postgame-sheet', '');
+        host.innerHTML = `<button class="postgame-sheet-toggle">Game over</button><dialog class="postgame-sheet" open><div class="game-result postgame-sheet__result">1-0 White wins</div><div class="postgame-actions"><button>Rematch</button><a>New game</a><a>Review game</a><a>Challenge a friend</a></div></dialog>`;
+        expect(style('.live-review__cluster').getPropertyValue('--uni-board-h-budget')).toBe(
+          playingBudget,
+        );
+        expect(style('.postgame-sheet').position).toBe('fixed');
+        expect(style('.room-actions').display).toBe('contents');
+        expect(style('.round-table__row').display).toBe('contents');
+        expect(style('.postgame-sheet-toggle').order).toBe('46');
+        expect(style('.postgame-sheet-toggle').minHeight).toBe('48px');
+        expect(style('.postgame-actions').gridTemplateColumns).toBe('minmax(0, 1fr)');
+        expect(style('.postgame-actions button').minHeight).toBe('48px');
+        expect(style('.postgame-actions a').width).toBe('100%');
+        doc.querySelector('dialog')?.removeAttribute('open');
+        expect(style('.live-review__cluster').getPropertyValue('--uni-board-h-budget')).toBe(
+          playingBudget,
+        );
+      } finally {
+        void win.happyDOM.close();
+      }
+    },
+  );
 });
