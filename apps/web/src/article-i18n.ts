@@ -2867,8 +2867,9 @@ const ZH_HANS: Record<string, string> = {
     '当对手轮到自己却无棋可走时，你获胜——通常是因为敌方棋子被全部吃光，有时则是被困死、无路可走。这里的将不是王棋：吃掉它只是进展，而非胜利，棋局会一直进行到一方被吃光或被困死为止。',
   'Mistboard draws a game two ways: 60 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly. A game started before 17 October 2026 keeps the 40-ply limit it began under.':
     'Mistboard 有两种自动和棋：连续 60 个半回合没有翻子或吃子，或同一局面出现三次。翻子或吃子会不可逆地改变局面，因此会重置两个计数。2026 年 10 月 17 日之前开始的对局仍按开局时的 40 个半回合计算。',
-  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
-    '捉子（长捉）指既不翻子也不吃子、走完后能吃掉对方刚走动那枚棋子的一步棋，不论那枚棋子有没有根。捉子的一方不能用捉子让同一局面第三次出现，必须改走别的着法，除非没有其他合法着法。由捉子造成的重复局面一律不判和，因为被捉的棋子不走就会被吃。不断把对方棋子赶到新位置的捉子不受限制。[这条规则为什么这样定](/blog/banqi-perpetual-chase)，附对局。',
+  'Repetition and chases': '重复局面与捉子',
+  'A position repeated three times draws, with one exception: a chase. A chase is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. So a repetition caused by a chase is never a draw: the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '同一局面出现三次判和，只有一个例外：捉子。捉子指既不翻子也不吃子、走完后能吃掉对方刚走动那枚棋子的一步棋，不论那枚棋子有没有根。捉子的一方不能用捉子让同一局面第三次出现，必须改走别的着法，除非没有其他合法着法。所以由捉子造成的重复局面一律不判和：被捉的棋子不走就会被吃。不断把对方棋子赶到新位置的捉子不受限制。[这条规则为什么这样定](/blog/banqi-perpetual-chase)，附对局。',
   'Play MistyBanqi': '对战 MistyBanqi',
   'Challenge a friend': '挑战好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -6093,8 +6094,8 @@ const ZH_HANS: Record<string, string> = {
   'Rewritten as a guide for chess players.': '改写为写给国际象棋棋手的指南。',
   'Reworked the diagrams, the history and the prose.': '重做了图示、历史部分和正文。',
   'Added a capture table and an FAQ.': '新增吃子对照表和常见问题。',
-  'The no-progress draw is now 60 plies without a capture or flip, up from 40.':
-    '无进展和棋现在是 60 个半回合内没有吃子或翻子，原来是 40。',
+  'The repetition and chase rules now sit together in one note under Winning and draws.':
+    '重复局面和捉子的规则现在合并为“胜负与和棋”下的一条说明。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我对弈 200 盘，每步一千万节点，采用台湾比赛规则和 40 个半回合无进展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':
@@ -9228,8 +9229,9 @@ const ZH_HANT: Record<string, string> = {
     '當對手輪到自己卻無棋可走時，你獲勝——通常是因為敵方棋子被全部吃光，有時則是被困死、無路可走。這裡的將不是王棋：吃掉它只是進展，而非勝利，棋局會一直進行到一方被吃光或被困死為止。',
   'Mistboard draws a game two ways: 60 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly. A game started before 17 October 2026 keeps the 40-ply limit it began under.':
     'Mistboard 有兩種自動和棋：連續 60 個半回合沒有翻子或吃子，或同一局面出現三次。翻子或吃子會不可逆地改變局面，因此會重置兩個計數。2026 年 10 月 17 日之前開始的對局仍按開局時的 40 個半回合計算。',
-  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
-    '捉子（長捉）指既不翻子也不吃子、走完後能吃掉對方剛走動那枚棋子的一步棋，不論那枚棋子有沒有根。捉子的一方不能用捉子讓同一局面第三次出現，必須改走別的著法，除非沒有其他合法著法。由捉子造成的重複局面一律不判和，因為被捉的棋子不走就會被吃。不斷把對方棋子趕到新位置的捉子不受限制。[這條規則為什麼這樣定](/blog/banqi-perpetual-chase)，附對局。',
+  'Repetition and chases': '重複局面與捉子',
+  'A position repeated three times draws, with one exception: a chase. A chase is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. So a repetition caused by a chase is never a draw: the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '同一局面出現三次判和，只有一個例外：捉子。捉子指既不翻子也不吃子、走完後能吃掉對方剛走動那枚棋子的一步棋，不論那枚棋子有沒有根。捉子的一方不能用捉子讓同一局面第三次出現，必須改走別的著法，除非沒有其他合法著法。所以由捉子造成的重複局面一律不判和：被捉的棋子不走就會被吃。不斷把對方棋子趕到新位置的捉子不受限制。[這條規則為什麼這樣定](/blog/banqi-perpetual-chase)，附對局。',
   'Play MistyBanqi': '對戰 MistyBanqi',
   'Challenge a friend': '挑戰好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -11918,8 +11920,8 @@ const ZH_HANT: Record<string, string> = {
   'Rewritten as a guide for chess players.': '改寫為寫給西洋棋棋手的指南。',
   'Reworked the diagrams, the history and the prose.': '重做了圖示、歷史部分和正文。',
   'Added a capture table and an FAQ.': '新增吃子對照表和常見問題。',
-  'The no-progress draw is now 60 plies without a capture or flip, up from 40.':
-    '無進展和棋現在是 60 個半回合內沒有吃子或翻子，原來是 40。',
+  'The repetition and chase rules now sit together in one note under Winning and draws.':
+    '重複局面和捉子的規則現在合併為「勝負與和棋」下的一條說明。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我對弈 200 盤，每步一千萬節點，採用台灣比賽規則和 40 個半回合無進展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':
