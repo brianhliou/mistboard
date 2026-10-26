@@ -52,7 +52,6 @@ const ALLOWED: Record<string, Reason> = {
   'replay-board.ts': '#464',
   'review/move-tree.ts': '#464',
   'review/opening-explorer.ts': '#464',
-  'review/xiangqi-gamebook.ts': '#464',
   'review/xiangqi-game-source.ts': '#464',
   'variant-mini-boards.ts': '#464',
   'xiangqi-import-page.ts': '#464',
