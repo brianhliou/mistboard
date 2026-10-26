@@ -291,6 +291,9 @@ export function legacyPageRedirect(pathname: string): string | null {
   // game. Each language keeps its prefix.
   const challenges = /^(\/zh-hans|\/zh-hant)?\/challenges$/.exec(normalized);
   if (challenges) return `${challenges[1] ?? ''}/champions`;
+  // Taiwan was two team pages, by whichever federation name a source printed
+  // (#605); the players merged into /players/teams/taiwan.
+  if (normalized === '/players/teams/chinese-taipei') return '/players/teams/taiwan';
   return null;
 }
 

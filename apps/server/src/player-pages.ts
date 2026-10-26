@@ -69,7 +69,7 @@ export const playerHref = (slug: string): string => `/players/${encodeURICompone
 export const teamHref = (key: string): string => `/players/teams/${encodeURIComponent(key)}`;
 
 // ── Teams ─────────────────────────────────────────────────────────────────────
-// Mirrors teamKey/teamsOf in apps/web/src/xiangqi-players.ts (the server cannot
+// Mirrors teamOf/teamsOf in apps/web/src/xiangqi-players.ts (the server cannot
 // import web code): a team is the players' latest federation, keyed by its
 // English name slugged, else the Chinese.
 
@@ -84,27 +84,38 @@ export type PlayerTeam = {
   losses: number;
 };
 
-export function teamKey(
+// Taiwan is one team whatever a source calls its federation (#605): 台湾
+// ("Taiwan"), 中华台北 and 中国台北 ("Chinese Taipei"), 台北. Event rows keep the
+// name the source printed; only the team is merged. The crawler body is
+// English, so its Chinese is the team's own 台灣.
+const TAIWAN_FEDERATION = /台湾|台灣|臺灣|台北|臺北/;
+const TAIWAN_TEAM = { key: 'taiwan', name: '台灣', nameEn: 'Taiwan' } as const;
+
+/** The team a player's latest federation puts them on, or null with none. */
+export function playerTeam(
   player: Pick<XiangqiPlayerRecord, 'federation' | 'federationEn'>,
-): string | null {
+): { key: string; name: string; nameEn: string | null } | null {
+  if (!player.federation) return null;
+  if (TAIWAN_FEDERATION.test(player.federation)) return TAIWAN_TEAM;
   const slug = (player.federationEn ?? '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return slug || player.federation || null;
+  return { key: slug || player.federation, name: player.federation, nameEn: player.federationEn };
 }
 
 export function teamsOf(players: readonly XiangqiPlayerRecord[]): PlayerTeam[] {
   const teams = new Map<string, PlayerTeam>();
   for (const player of players) {
-    const key = teamKey(player);
-    if (!key || !player.federation) continue;
+    const of = playerTeam(player);
+    if (!of) continue;
+    const key = of.key;
     let team = teams.get(key);
     if (!team) {
       team = {
         key,
-        name: player.federation,
-        nameEn: player.federationEn,
+        name: of.name,
+        nameEn: of.nameEn,
         players: [],
         games: 0,
         wins: 0,
@@ -128,16 +139,16 @@ const count = (n: number): string => new Intl.NumberFormat('en-US').format(n);
 const plural = (n: number, one: string, many = `${one}s`): string =>
   `${count(n)} ${n === 1 ? one : many}`;
 
-type Named = { name: string; nameEn: string | null };
+type Named = { name: string; nameEn: string | null; nameOwn?: string };
 
-/** "Meng Fanrui (孟繁睿)", or the one spelling when there is only one. */
+/** "Meng Fanrui (孟繁睿)", or the one spelling when there is only one. The
+ *  Chinese is the player's own characters when they write traditional. */
 export function bothScripts(entity: Named): string {
-  return entity.nameEn && entity.nameEn !== entity.name
-    ? `${entity.nameEn} (${entity.name})`
-    : entity.name;
+  const zh = entity.nameOwn ?? entity.name;
+  return entity.nameEn && entity.nameEn !== entity.name ? `${entity.nameEn} (${zh})` : zh;
 }
 
-const english = (entity: Named): string => entity.nameEn?.trim() || entity.name;
+const english = (entity: Named): string => entity.nameEn?.trim() || entity.nameOwn || entity.name;
 
 const teamLabel = (team: Pick<PlayerTeam, 'name' | 'nameEn'>): string => team.nameEn ?? team.name;
 
@@ -208,9 +219,8 @@ export type PlayerPage = {
 export function playerDescription(player: XiangqiPlayerRecord, reference: PlayerReference): string {
   const title = referenceTitle(reference, player);
   const who = title ? `Xiangqi ${TITLE_WORDS[title].toLowerCase()}` : 'Xiangqi player';
-  const team = player.federation
-    ? ` for ${english({ name: player.federation, nameEn: player.federationEn })}`
-    : '';
+  const of = playerTeam(player);
+  const team = of ? ` for ${english(of)}` : '';
   const official = pointsLine(reference, player.name) ?? ratingLine(reference, player.name);
   return [
     `${who}${team}.`,
@@ -250,10 +260,11 @@ export function playerCardContent(
   const rating = reference.ratings[player.name];
   // The strongest fact first; a player we have not relayed never leads with
   // "0 games".
+  const team = playerTeam(player);
   const subtitle = points
     ? `CXA #${points.rank} · ${count(points.points)} points`
-    : player.federation
-      ? english({ name: player.federation, nameEn: player.federationEn })
+    : team
+      ? english(team)
       : rating
         ? `CXA rating ${count(rating.rating)}${rating.rank ? ` · #${rating.rank}` : ''} (${rating.listLabel.slice(0, 4)})`
         : player.games > 0
@@ -275,9 +286,10 @@ export function playerCardPath(slug: string, content: PlayerCardContent): string
 
 function nameHtml(entity: Named): string {
   const en = english(entity);
+  const zh = escapeHtml(entity.nameOwn ?? entity.name);
   return entity.nameEn && entity.nameEn !== entity.name
-    ? `${escapeHtml(en)} <span lang="zh">${escapeHtml(entity.name)}</span>`
-    : `<span lang="zh">${escapeHtml(entity.name)}</span>`;
+    ? `${escapeHtml(en)} <span lang="zh">${zh}</span>`
+    : `<span lang="zh">${zh}</span>`;
 }
 
 function playerLink(player: XiangqiPlayerRecord): string {
@@ -322,11 +334,9 @@ export function renderPlayerBody(
       `<p>${escapeHtml(sanction)} <a href="/blog/xiangqi-match-fixing">About the case</a></p>`,
     );
   }
-  const key = teamKey(player);
-  if (key && player.federation) {
-    parts.push(
-      `<p>Team: <a href="${escapeHtml(teamHref(key))}">${nameHtml({ name: player.federation, nameEn: player.federationEn })}</a></p>`,
-    );
+  const team = playerTeam(player);
+  if (team) {
+    parts.push(`<p>Team: <a href="${escapeHtml(teamHref(team.key))}">${nameHtml(team)}</a></p>`);
   }
   const points = pointsLine(reference, player.name);
   const rating = ratingLine(reference, player.name);
@@ -362,10 +372,9 @@ export function renderPlayerBody(
 
 function playerRow(player: XiangqiPlayerRecord, reference: PlayerReference, showTeam: boolean) {
   const title = referenceTitle(reference, player);
+  const team = showTeam ? playerTeam(player) : null;
   const bits = [
-    showTeam && player.federation
-      ? english({ name: player.federation, nameEn: player.federationEn })
-      : null,
+    team ? english(team) : null,
     reference.points[player.name]
       ? `CXA points ${count(reference.points[player.name]!.points)}`
       : null,

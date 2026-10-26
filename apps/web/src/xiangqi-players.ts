@@ -9,7 +9,7 @@ import './seat-disc-ink.css';
 import './xiangqi-broadcast.css';
 import './xiangqi-players.css';
 import { t } from './i18n/catalog.js';
-import { currentLocale } from './i18n/locale.js';
+import { currentLocale, type Locale } from './i18n/locale.js';
 import {
   cxaGroupFor,
   cxaPointsFor,
@@ -73,6 +73,10 @@ export type PlayerRecord = {
   slug: string;
   name: string;
   nameEn: string | null;
+  /** The name in the characters the player writes it in, when the source's
+   *  simplified spelling is not that (趙奕帆, #605). Shown on every locale;
+   *  `name` stays the key the CXA lists are read by. */
+  nameOwn?: string;
   federation: string | null;
   federationEn: string | null;
   games: number;
@@ -149,8 +153,10 @@ export async function mountXiangqiTeam(root: HTMLElement, key: string): Promise<
   setRoot(root, 'Loading team');
   try {
     const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
-    const team = teamsOf(data.players).find((entry) => entry.key === key);
+    const canonical = TEAM_KEY_ALIASES[key] ?? key;
+    const team = teamsOf(data.players).find((entry) => entry.key === canonical);
     if (!team) throw new Error('No team by that name');
+    if (canonical !== key) history.replaceState(history.state, '', teamHref(canonical));
     document.title = `${teamLabel(team)} · Mistboard`;
     const page = renderTeam(team);
     page.append(rightsContactNote(teamHref(team.key)));
@@ -179,10 +185,15 @@ function renderError(root: HTMLElement, err: unknown): void {
   root.replaceChildren(buildNav(), buildNotice('Players unavailable', message));
 }
 
-export function displayName(player: Pick<PlayerRecord, 'name' | 'nameEn'>): string {
+/** The Chinese name as the player writes it. */
+export function chineseName(player: Pick<PlayerRecord, 'name' | 'nameOwn'>): string {
+  return player.nameOwn ?? player.name;
+}
+
+export function displayName(player: Pick<PlayerRecord, 'name' | 'nameEn' | 'nameOwn'>): string {
   return player.nameEn && player.nameEn !== player.name
-    ? `${player.nameEn} ${player.name}`
-    : player.name;
+    ? `${player.nameEn} ${chineseName(player)}`
+    : chineseName(player);
 }
 
 export function recordText(r: { wins: number; draws: number; losses: number }): string {
@@ -262,8 +273,8 @@ export function sortPlayers(players: readonly PlayerRecord[], sort: IndexSort): 
 export function matchesQuery(player: PlayerRecord, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return [player.name, player.nameEn, player.federation, player.federationEn].some((s) =>
-    s?.toLowerCase().includes(q),
+  return [player.name, player.nameOwn, player.nameEn, player.federation, player.federationEn].some(
+    (s) => s?.toLowerCase().includes(q),
   );
 }
 
@@ -634,26 +645,52 @@ export type TeamRecord = {
   losses: number;
 };
 
-/** A URL-safe key for a team: its English name slugged, else the Chinese. */
-export function teamKey(player: Pick<PlayerRecord, 'federation' | 'federationEn'>): string | null {
+// Taiwan is one team whatever a source calls its federation (#605): 台湾
+// ("Taiwan"), 中华台北 and 中国台北 ("Chinese Taipei"), 台北. Event rows keep the
+// name the source printed; only the team is merged. Its Chinese name is the
+// locale's: 台灣 in traditional, 中华台北 (the sports name both sides use) in
+// simplified. Mirrored in apps/server/src/player-pages.ts.
+const TAIWAN_FEDERATION = /台湾|台灣|臺灣|台北|臺北/;
+const TEAM_KEY_ALIASES: Readonly<Record<string, string>> = { 'chinese-taipei': 'taiwan' };
+
+type TeamName = { key: string; name: string; nameEn: string | null };
+
+/** The team a player's latest federation puts them on, or null with none. */
+export function teamOf(
+  player: Pick<PlayerRecord, 'federation' | 'federationEn'>,
+  locale: Locale = currentLocale(),
+): TeamName | null {
+  if (!player.federation) return null;
+  if (TAIWAN_FEDERATION.test(player.federation)) {
+    return { key: 'taiwan', name: locale === 'zh-Hans' ? '中华台北' : '台灣', nameEn: 'Taiwan' };
+  }
   const slug = (player.federationEn ?? '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return slug || player.federation || null;
+  return { key: slug || player.federation, name: player.federation, nameEn: player.federationEn };
 }
 
-export function teamsOf(players: readonly PlayerRecord[]): TeamRecord[] {
+/** A URL-safe key for a team: its English name slugged, else the Chinese. */
+export function teamKey(player: Pick<PlayerRecord, 'federation' | 'federationEn'>): string | null {
+  return teamOf(player, 'en')?.key ?? null;
+}
+
+export function teamsOf(
+  players: readonly PlayerRecord[],
+  locale: Locale = currentLocale(),
+): TeamRecord[] {
   const teams = new Map<string, TeamRecord>();
   for (const player of players) {
-    const key = teamKey(player);
-    if (!key || !player.federation) continue;
+    const of = teamOf(player, locale);
+    if (!of) continue;
+    const key = of.key;
     let team = teams.get(key);
     if (!team) {
       team = {
         key,
-        name: player.federation,
-        nameEn: player.federationEn,
+        name: of.name,
+        nameEn: of.nameEn,
         players: [],
         games: 0,
         wins: 0,
@@ -833,7 +870,7 @@ export function sourcedPhotoFor(slug: string): SourcedPlayerPhoto | null {
  *  photos carries one credit line for them (`sourcedPhotosCredit`); the page
  *  hero credits its own (`playerPortrait`). */
 export function avatar(
-  player: Pick<PlayerRecord, 'slug' | 'name'>,
+  player: Pick<PlayerRecord, 'slug' | 'name' | 'nameOwn'>,
   size: 'row' | 'page',
 ): HTMLElement {
   const profile = PLAYER_PROFILES[player.slug];
@@ -852,7 +889,7 @@ export function avatar(
   }
   const tile = document.createElement('span');
   tile.className = `xqp-avatar xqp-avatar-${size} xqp-avatar-tile`;
-  tile.textContent = Array.from(player.name)[0] ?? '';
+  tile.textContent = Array.from(chineseName(player))[0] ?? '';
   tile.setAttribute('aria-hidden', 'true');
   return tile;
 }
@@ -861,7 +898,7 @@ export function avatar(
  *  sourced photo with the credit line its owner asked for (the site name,
  *  linked to the player's page there), else the character tile. */
 export function playerPortrait(
-  player: Pick<PlayerRecord, 'slug' | 'name' | 'nameEn'>,
+  player: Pick<PlayerRecord, 'slug' | 'name' | 'nameEn' | 'nameOwn'>,
 ): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'xqp-portrait';
@@ -882,7 +919,7 @@ export function playerPortrait(
   img.width = sourced.width;
   img.height = sourced.height;
   img.alt = t('broadcast.playerPhotoAlt', {
-    name: currentLocale() === 'en' ? displayName(player) : player.name,
+    name: currentLocale() === 'en' ? displayName(player) : chineseName(player),
   });
   img.decoding = 'async';
   const cap = document.createElement('figcaption');
@@ -944,16 +981,13 @@ function nameCell(player: PlayerRecord, showTeam = true): HTMLTableCellElement {
   if (tag) link.append(tag, ' ');
   link.append(displayName(player));
   wrap.append(link);
-  const key = teamKey(player);
-  if (showTeam && key && player.federation) {
+  const of = showTeam ? teamOf(player) : null;
+  if (of) {
     // The team under the name, lichess's flag and country.
     const team = document.createElement('a');
     team.className = 'xqp-team';
-    team.href = teamHref(key);
-    team.append(
-      teamBadge({ key, name: player.federation }, 'mini'),
-      player.federationEn ?? player.federation,
-    );
+    team.href = teamHref(of.key);
+    team.append(teamBadge(of, 'mini'), teamLabel(of));
     wrap.append(team);
   } else if (showTeam && player.cxaOnly) {
     // No team to show: the list the player is on stands in, and says why the
@@ -999,11 +1033,11 @@ function renderPlayer(
   h1.className = 'xqp-h1';
   const tag = titleTag(playerTitle(player));
   if (tag) h1.append(tag, ' ');
-  h1.append(player.nameEn ?? player.name);
+  h1.append(player.nameEn ?? chineseName(player));
   if (player.nameEn && player.nameEn !== player.name) {
     const zh = document.createElement('span');
     zh.className = 'xqp-h1-zh';
-    zh.textContent = player.name;
+    zh.textContent = chineseName(player);
     h1.append(' ', zh);
   }
   // The key facts as one strip of label-over-value pairs, from data the page
@@ -1044,13 +1078,12 @@ function renderPlayer(
       fact(t('broadcast.playerFactRank'), rankText(lastRating.rank, list?.size ?? null));
     }
   }
-  const key = teamKey(player);
-  if (key && player.federation) {
+  const of = teamOf(player);
+  if (of) {
     const team = document.createElement('a');
     team.className = 'xqp-fact-link';
-    team.href = teamHref(key);
-    team.textContent =
-      currentLocale() === 'en' ? (player.federationEn ?? player.federation) : player.federation;
+    team.href = teamHref(of.key);
+    team.textContent = currentLocale() === 'en' ? teamLabel(of) : of.name;
     fact(t('broadcast.playerFactTeam'), team);
   }
   const group = cxaGroupFor(player.name);
