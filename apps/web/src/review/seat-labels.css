@@ -15,7 +15,7 @@
 }
 
 .review-shell__cluster:has(.review-board-wrap--captures) {
-  padding-top: 54px;
+  padding-top: 28px;
 }
 
 .review-board-wrap--seated {
@@ -24,7 +24,7 @@
 }
 
 .review-board-wrap--captures {
-  margin-bottom: 54px;
+  margin-bottom: 28px;
 }
 
 .review-seat {
@@ -42,16 +42,7 @@
   pointer-events: none;
 }
 
-.review-board-wrap--captures .review-seat {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  grid-template-rows: 22px 24px;
-  row-gap: 2px;
-}
-
 .review-seat__clock {
-  grid-column: 4;
-  grid-row: 1;
   flex: 0 0 auto;
   margin-left: auto;
   font-variant-numeric: tabular-nums;
@@ -59,17 +50,13 @@
   white-space: nowrap;
 }
 
-.review-seat__detail {
-  grid-column: 3;
-  grid-row: 1;
-}
-
-/* Reserve the second row even at the opening position. Captures stay compact
-   and scroll horizontally if needed instead of pushing the board on capture. */
+/* Captures sit in the name's row, between the name and the clock (Brian,
+   2026-10-25: a second row under the name was too disruptive). They stay
+   compact and scroll sideways instead of pushing the clock out. */
 .review-seat .review-seat__material {
   --capture-piece-size: 22px;
-  grid-column: 1 / -1;
-  grid-row: 2;
+  flex: 0 1 auto;
+  min-width: 0;
   display: flex;
   flex-wrap: nowrap;
   height: 24px;
@@ -98,6 +85,8 @@
 }
 
 .review-seat__name {
+  flex: 0 1 auto;
+  min-width: 3em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
