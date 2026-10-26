@@ -278,6 +278,37 @@ definePersistenceTests('chat', () => {
         'viewerHandle',
       ]);
 
+      // An open release drain rides on the lobby read as one notice (#651),
+      // and only there: a game room's read carries none.
+      const draining = {
+        drainDeadlineMs: () => 1_900_000_000_000,
+        restartPhase: () => 'pending' as const,
+      };
+      const drainRead = captureResponse();
+      await tryHandleChatRoute(
+        draining,
+        { method: 'GET', headers: {} } as unknown as IncomingMessage,
+        drainRead,
+        '/api/chat/lobby',
+        new URL('http://test.local/api/chat/lobby'),
+      );
+      assert.deepEqual(JSON.parse(drainRead.body).notice, {
+        id: 'drain-1900000000000',
+        kind: 'server_restart',
+        phase: 'pending',
+        restartAt: 1_900_000_000_000,
+      });
+      const gameRead = captureResponse();
+      await tryHandleChatRoute(
+        draining,
+        { method: 'GET', headers: {} } as unknown as IncomingMessage,
+        gameRead,
+        '/api/chat/game/xq_drain_room',
+        new URL('http://test.local/api/chat/game/xq_drain_room'),
+      );
+      assert.equal(gameRead.status, 200);
+      assert.equal('notice' in JSON.parse(gameRead.body), false);
+
       const post = captureResponse();
       await tryHandleChatRoute(
         {},

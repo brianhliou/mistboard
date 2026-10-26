@@ -37,6 +37,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from './../account-session.js';
 import { CHAT_POLICY, evaluateChatText } from './../chat-policy.js';
 import { lobbyChatEnabled } from './../feature-flags.js';
+import { type LobbyChatNoticeSource, lobbyDrainNotice } from './../lobby-chat-notice.js';
 import * as persistence from './../persistence.js';
 import {
   readJsonBody,
@@ -59,7 +60,7 @@ type ChatRoomTarget = {
 };
 
 export async function tryHandle(
-  _ctx: unknown,
+  ctx: LobbyChatNoticeSource,
   request: IncomingMessage,
   response: ServerResponse,
   pathname: string,
@@ -237,6 +238,10 @@ export async function tryHandle(
     const timeoutUntil = viewer
       ? await persistence.activeChatTimeout(target.room, viewer.id)
       : null;
+    // The one system message the lobby keeps (#579): a restart notice while a
+    // release drain is open, absent otherwise. Lobby only; game, study and
+    // player rooms stay people-only.
+    const notice = target.kind === 'lobby' ? lobbyDrainNotice(ctx) : null;
     writeJson(response, 200, {
       lines: lines.map((line) => ({
         id: line.id,
@@ -248,6 +253,7 @@ export async function tryHandle(
       canReport: !!viewer,
       viewerHandle: viewer?.handle ?? null,
       ...(timeoutUntil ? { timeoutUntil: timeoutUntil.toISOString() } : {}),
+      ...(notice ? { notice } : {}),
       isAdmin: viewer?.accountRole === 'admin',
     });
     return true;
