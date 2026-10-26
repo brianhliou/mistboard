@@ -220,8 +220,10 @@ export function releaseLock(file, info) {
  * Release on every way out: normal exit, process.exit from a failure path, an
  * uncaught throw, SIGINT and SIGTERM. A signal handler replaces Node's default
  * (terminate), so it exits itself, with the conventional 128+signal code.
+ * beforeSignal lets a release cancel its pending drain while still holding
+ * the lock, including when interrupted during the hosted CI wait.
  */
-export function releaseOnExit(handle, proc = process) {
+export function releaseOnExit(handle, proc = process, beforeSignal = null) {
   let released = false;
   const releaseOnce = () => {
     if (released) return;
@@ -235,9 +237,13 @@ export function releaseOnExit(handle, proc = process) {
     ['SIGINT', 130],
     ['SIGTERM', 143],
   ]) {
-    proc.on(signal, () => {
-      releaseOnce();
-      proc.exit(code);
+    proc.on(signal, async () => {
+      try {
+        if (beforeSignal) await beforeSignal();
+      } finally {
+        releaseOnce();
+        proc.exit(code);
+      }
     });
   }
   return releaseOnce;

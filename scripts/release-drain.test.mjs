@@ -25,6 +25,13 @@ test('a drain committed before a push that never happened is cancelled', () => {
   );
 });
 
+test('a pending drain is cancelled when candidate CI fails before main is pushed', () => {
+  assert.equal(
+    postFailureDrainAction({ drainStarted: true, drainCommitted: false, pushCompleted: false }),
+    'cancel-before-push',
+  );
+});
+
 // 2026-10-16 21:46Z: pushed, then the hosted CI wait failed; the old cleanup
 // skipped any pushed release and the banner stayed up until the window lapsed.
 test('a drain committed before a push whose deploy never landed is cancelled', () => {
