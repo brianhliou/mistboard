@@ -99,7 +99,12 @@ function ladderBot(
 function rosterPayload(): { bots: Record<string, unknown>[] } {
   return {
     bots: [
-      misty(),
+      misty({
+        recordsByGameSpecId: {
+          'dark-chess': { games: 12, wins: 8, losses: 3, draws: 1 },
+          banqi: { games: 0, wins: 0, losses: 0, draws: 0 },
+        },
+      }),
       pikafish(),
       // Out of order on purpose: the directory sorts the ladder by level.
       ...[3, 1, 2, 4, 5, 6, 7, 8].map((level) => ladderBot(level)),
@@ -195,13 +200,21 @@ describe('bot pages', () => {
     // The stored bios are English-only; the page carries its own localized lines.
     expect(root.textContent).toContain("Mistboard's own engine for Fog Chess");
     expect(root.textContent).not.toContain('Searches hidden positions');
+    // Misty plays two variants, so her card has a row per variant (rating,
+    // games, record, Play) and no lifetime footer summing them.
     const mistyCard = root.querySelector('.profile-summary-card[data-bot-id="misty"]');
-    expect(mistyCard?.querySelector('.profile-summary-card-rating-value')?.textContent).toBe(
-      '1,812',
-    );
-    expect(mistyCard?.querySelector('.profile-summary-card-footer')?.textContent).toContain(
-      '12 games',
-    );
+    const mistyRow = (gameSpecId: string) =>
+      mistyCard?.querySelector(`.profile-summary-card-variant[data-game-spec-id="${gameSpecId}"]`);
+    expect(
+      mistyRow('dark-chess')?.querySelector('.profile-summary-card-rating-value')?.textContent,
+    ).toBe('1,812');
+    expect(mistyRow('dark-chess')?.textContent).toContain('12 games · 8-3-1');
+    expect(mistyRow('banqi')?.textContent).toContain('0 games');
+    expect(mistyRow('banqi')?.textContent).not.toContain('0-0-0');
+    expect(
+      mistyRow('banqi')?.querySelector('.profile-summary-card-rating-value')?.textContent,
+    ).toBe('1,620');
+    expect(mistyCard?.querySelector('.profile-summary-card-footer')).toBeNull();
 
     const badge = (botId: string) =>
       root.querySelector(
@@ -210,12 +223,20 @@ describe('bot pages', () => {
     expect(badge('fairy-stockfish-level-2')).toBe('Start here');
     expect(badge('fairy-stockfish-level-1')).toBe('BOT');
     expect(badge('pikafish')).toBe('Strongest');
-    // Each rung leads with one filled Play xiangqi button.
-    const primary = root.querySelector(
-      '.profile-summary-card[data-bot-id="fairy-stockfish-level-1"] .profile-summary-card-action',
+    // Each rung leads with its xiangqi row, whose Play is the one filled button.
+    const firstRow = root.querySelector(
+      '.profile-summary-card[data-bot-id="fairy-stockfish-level-1"] .profile-summary-card-variant',
     );
-    expect(primary?.textContent).toBe('Play Xiangqi');
+    expect(firstRow?.getAttribute('data-game-spec-id')).toBe('xiangqi');
+    const primary = firstRow?.querySelector('.profile-summary-card-action');
+    expect(primary?.textContent).toBe('Play');
+    expect(primary?.getAttribute('aria-label')).toBe('Play Xiangqi');
     expect(primary?.classList.contains('profile-summary-card-action-primary')).toBe(true);
+    expect(
+      root.querySelectorAll(
+        '.profile-summary-card[data-bot-id="fairy-stockfish-level-1"] .profile-summary-card-action-primary',
+      ),
+    ).toHaveLength(1);
 
     const ladderCards = [
       ...root.querySelectorAll('.profile-summary-card[data-bot-id^="fairy-stockfish-level-"]'),
@@ -230,9 +251,20 @@ describe('bot pages', () => {
       expect(card.getAttribute('data-subject-kind')).toBe('bot');
       expect(card.querySelector('.profile-summary-card-avatar')).not.toBeNull();
       expect(card.querySelector('.profile-summary-card-bio')).toBeNull();
-      expect(card.querySelector('.profile-summary-card-actions')).not.toBeNull();
-      expect(card.querySelector('.profile-summary-card-footer')).not.toBeNull();
+      expect(
+        [...card.querySelectorAll('.profile-summary-card-variant')].map((row) =>
+          row.getAttribute('data-game-spec-id'),
+        ),
+      ).toEqual(['xiangqi', 'fortress-xiangqi']);
     }
+    // Pikafish (xiangqi + jieqi) leads with xiangqi in the xiangqi section.
+    expect(
+      root
+        .querySelector(
+          '.profile-summary-card[data-bot-id="pikafish"] .profile-summary-card-variant',
+        )
+        ?.getAttribute('data-game-spec-id'),
+    ).toBe('xiangqi');
   });
 
   it('shows the xiangqi blitz rating per FSF card, dash and ?-suffix included', async () => {
@@ -265,7 +297,11 @@ describe('bot pages', () => {
 
     const ratings = [
       ...root.querySelectorAll('.profile-summary-card[data-bot-id^="fairy-stockfish-level-"]'),
-    ].map((card) => card.querySelector('.profile-summary-card-rating-value')?.textContent ?? '—');
+    ].map(
+      (card) =>
+        card.querySelector('[data-game-spec-id="xiangqi"] .profile-summary-card-rating-value')
+          ?.textContent || '—',
+    );
     expect(ratings).toEqual(['1,450', '1,710?', '—']);
   });
 
@@ -281,10 +317,10 @@ describe('bot pages', () => {
     const { mountBots } = await import('./bots.js');
 
     await mountBots(root);
-    const fogChip = [
-      ...root.querySelectorAll<HTMLButtonElement>('button.profile-summary-card-action'),
-    ].find((chip) => chip.textContent?.includes('Fog Chess'));
-    expect(fogChip).toBeDefined();
+    const fogChip = root.querySelector<HTMLButtonElement>(
+      '[data-game-spec-id="dark-chess"] button.profile-summary-card-action',
+    );
+    expect(fogChip?.getAttribute('aria-label')).toBe('Play Fog Chess');
     fogChip?.click();
     // The chip itself shows the starting state while the room is created.
     expect(fogChip?.textContent).toContain('Starting...');
@@ -313,7 +349,11 @@ describe('bot pages', () => {
 
     await mountBots(root);
     const offChip = root.querySelector<HTMLElement>('.profile-summary-card-action-unavailable');
-    expect(offChip?.textContent).toContain('Fortress Xiangqi');
+    expect(offChip?.closest('[data-game-spec-id]')?.getAttribute('data-game-spec-id')).toBe(
+      'fortress-xiangqi',
+    );
+    expect(offChip?.textContent).toBe('Play');
+    expect(offChip?.title).toBe('Not available right now');
     expect(offChip?.tagName).not.toBe('BUTTON');
     offChip?.click();
     await flushPromises();
@@ -394,7 +434,14 @@ describe('bot pages', () => {
       activeEngineId: 'jqe-jieqi',
       defaultGameSpecId: 'jieqi',
       supportedGameSpecIds: ['jieqi'],
-      playOptions: [{ gameSpecId: 'jieqi', engineId: 'jqe-jieqi', playable: true }],
+      playOptions: [
+        {
+          gameSpecId: 'jieqi',
+          engineId: 'jqe-jieqi',
+          playable: true,
+          version: '331a6e61 · it014',
+        },
+      ],
       rating: null,
       ratings: [],
     });
@@ -404,20 +451,23 @@ describe('bot pages', () => {
 
     await mountBotProfile(root, 'jqe');
 
-    const side = root.querySelector('.profile-overview-side');
-    expect(side?.querySelector('.profile-side-bio')?.textContent).toContain(
+    // Bio and credits sit full width under the header, not in the side column.
+    const about = root.querySelector('.profile-overview-top + .bot-profile-about');
+    expect(about?.querySelector('.profile-side-bio')?.textContent).toContain(
       "An open-source jieqi engine by Devin O'Keefe",
     );
-    const credit = side?.querySelector<HTMLAnchorElement>('.bot-profile-credits a');
+    const credit = about?.querySelector<HTMLAnchorElement>('.bot-profile-credits a');
     expect(credit?.textContent).toBe("jqe by Devin O'Keefe");
     expect(credit?.href).toBe('https://github.com/devinokeefe/jieqi');
-    expect(side?.textContent).not.toContain('jqe-jieqi');
-    // Match results are against one network, so the page names it.
+    const side = root.querySelector('.profile-overview-side');
+    expect(side?.querySelector('.profile-side-bio')).toBeNull();
+    expect(root.textContent).not.toContain('jqe-jieqi');
+    // Match results are against one build, so the page names it, as the server sends it.
     const stats = [...(side?.querySelectorAll('.profile-side-stat') ?? [])].map((stat) => [
       stat.querySelector('.profile-side-stat-label')?.textContent,
       stat.querySelector('.profile-side-stat-value')?.textContent,
     ]);
-    expect(stats).toContainEqual(['Version', 'it014 (network)']);
+    expect(stats).toContainEqual(['Version', '331a6e61 · it014']);
   });
 
   it('describes an eve-anchor sample as engine games, never as rated games or a time class', async () => {
@@ -673,5 +723,120 @@ describe('bot pages', () => {
       rated: false,
     });
     expect(window.location.pathname).toBe('/room/bot_xq');
+  });
+
+  it('names each engine build from the payload: one on the subtitle, else one per row', async () => {
+    const payload = {
+      bots: [
+        // One build across its variants: the subtitle carries it.
+        ladderBot(1, {
+          playOptions: [
+            {
+              gameSpecId: 'xiangqi',
+              engineId: 'fairy-stockfish-xiangqi-level-1',
+              playable: true,
+              version: '1b5bdd40',
+            },
+          ],
+          supportedGameSpecIds: ['xiangqi'],
+        }),
+        // Different builds per variant, one with none recorded: each row names its own.
+        misty({
+          playOptions: [
+            {
+              gameSpecId: 'dark-chess',
+              engineId: 'python-v2-v1.6',
+              playable: true,
+              version: '1.6',
+            },
+            { gameSpecId: 'banqi', engineId: 'misty-banqi', playable: true, version: '0.2.7' },
+            { gameSpecId: 'xiangqi-mahjong', engineId: 'misty-xiangqi-mahjong', playable: true },
+          ],
+        }),
+      ],
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(payload));
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+
+    await mountBots(root);
+
+    const card = (botId: string) =>
+      root.querySelector(`.profile-summary-card[data-bot-id="${botId}"]`);
+    const level1 = card('fairy-stockfish-level-1');
+    expect(level1?.querySelector('.profile-summary-card-subtitle')?.textContent).toBe(
+      'Fairy-Stockfish · Version 1b5bdd40',
+    );
+    // A one-variant bot keeps the compact card: one Play sized to its label, a footer.
+    expect(level1?.querySelector('.profile-summary-card-variants')).toBeNull();
+    expect(level1?.querySelectorAll('.profile-summary-card-action')).toHaveLength(1);
+    expect(level1?.querySelector('.profile-summary-card-footer')).not.toBeNull();
+
+    const mistyCard = card('misty');
+    expect(mistyCard?.querySelector('.profile-summary-card-version')).toBeNull();
+    const rowText = (gameSpecId: string) =>
+      mistyCard?.querySelector(`[data-game-spec-id="${gameSpecId}"]`)?.textContent ?? '';
+    expect(rowText('dark-chess')).toContain('Version 1.6');
+    expect(rowText('banqi')).toContain('Version 0.2.7');
+    // No recorded version: nothing, never a guess.
+    expect(rowText('xiangqi-mahjong')).not.toContain('Version');
+  });
+
+  it('gives a variant the bot no longer offers a row for its games, with no Play', async () => {
+    const payload = {
+      bots: [
+        misty({
+          playOptions: [{ gameSpecId: 'dark-chess', engineId: 'python-v2-v1.6', playable: true }],
+          recordsByGameSpecId: {
+            'dark-chess': { games: 9, wins: 6, losses: 2, draws: 1 },
+            banqi: { games: 3, wins: 2, losses: 1, draws: 0 },
+          },
+        }),
+      ],
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(payload));
+    const root = document.createElement('div');
+    const { mountBots } = await import('./bots.js');
+
+    await mountBots(root);
+
+    const rows = [...root.querySelectorAll('.profile-summary-card-variant')];
+    expect(rows.map((row) => row.getAttribute('data-game-spec-id'))).toEqual([
+      'dark-chess',
+      'banqi',
+    ]);
+    expect(rows[1]?.textContent).toContain('3 games · 2-1-0');
+    expect(rows[1]?.querySelector('.profile-summary-card-action')).toBeNull();
+  });
+
+  it('shows the whole bio on a card: no line clamp in the card stylesheet', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const css = readFileSync(resolve(__dirname, 'profile-summary-card.css'), 'utf8');
+    const bioRule = /\.profile-summary-card-bio\s*\{[^}]*\}/.exec(css)?.[0] ?? '';
+    expect(bioRule).not.toBe('');
+    expect(bioRule).not.toMatch(/line-clamp|text-overflow|max-height/);
+  });
+
+  it("shows the selected variant's engine build on the profile", async () => {
+    const profile = misty({
+      playOptions: [
+        { gameSpecId: 'dark-chess', engineId: 'python-v2-v1.6', playable: true, version: '1.6' },
+        { gameSpecId: 'banqi', engineId: 'misty-banqi', playable: true, version: '0.2.7' },
+      ],
+    });
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
+    const root = document.createElement('div');
+    const { mountBotProfile } = await import('./bots.js');
+
+    await mountBotProfile(root, 'misty');
+
+    const version = () =>
+      [...root.querySelectorAll('.profile-overview-side .profile-side-stat')]
+        .find((stat) => stat.querySelector('.profile-side-stat-label')?.textContent === 'Version')
+        ?.querySelector('.profile-side-stat-value')?.textContent;
+    expect(version()).toBe('1.6');
+    root.querySelector<HTMLElement>('.profile-rating-row[data-game-spec-id="banqi"]')?.click();
+    expect(version()).toBe('0.2.7');
   });
 });

@@ -88,16 +88,72 @@
 }
 
 .profile-summary-card-bio {
-  display: -webkit-box;
-  min-height: 2.6em;
   margin: 0;
   padding: 0.6rem 0.8rem 0;
-  overflow: hidden;
   color: var(--site-muted);
   font-size: 0.82rem;
   line-height: 1.4;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+/* A version wraps as one unit; it breaks inside only when wider than the line. */
+.profile-summary-card-version,
+.profile-summary-card-variant-fact {
+  display: inline-block;
+  max-width: 100%;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* One row per variant for a bot that plays several: marker, name over its
+   games and record, rating, and that variant's Play sized to its label. */
+.profile-summary-card-variants {
+  display: grid;
+  gap: 0;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--site-border-soft, var(--site-border));
+}
+
+.profile-summary-card-variant {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.8rem;
+}
+
+.profile-summary-card-variant + .profile-summary-card-variant {
+  border-top: 1px solid var(--site-border-soft, var(--site-border));
+}
+
+.profile-summary-card-variant-copy {
+  display: grid;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.profile-summary-card-variant-name {
+  font-weight: 600;
+  font-size: 0.84rem;
+}
+
+.profile-summary-card-variant-meta {
+  color: var(--site-muted);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.profile-summary-card-variant-rating {
+  font-size: 0.84rem;
+}
+
+.profile-summary-card-variant .profile-summary-card-action {
+  flex: none;
+  padding: 0.3rem 0.75rem;
+  white-space: nowrap;
 }
 
 .profile-summary-card-ratings {
@@ -161,7 +217,8 @@
 }
 
 .profile-summary-card-bot-actions .profile-summary-card-action {
-  flex: 1 1 calc(50% - 0.4rem);
+  flex: 0 0 auto;
+  padding-inline: 0.9rem;
 }
 
 /* Touch floor: on /bots these are the "play this bot at this variant" entry
@@ -216,7 +273,6 @@
 /* /bots: the rung's one playable game leads the row as a filled button, so it
    reads as the action rather than one tag among the variant chips. */
 .profile-summary-card-action-primary {
-  flex: 2;
   border-color: var(--site-accent);
   background: var(--site-accent);
   color: var(--site-on-accent);

@@ -26,6 +26,9 @@ type BotPlayOption = {
   gameSpecId: string;
   engineId: string;
   playable: boolean;
+  // The engine build this variant plays, from the server's pins
+  // (bot-engine-versions.ts); absent when none is recorded.
+  version?: string;
 };
 
 type BotRecord = {
@@ -408,16 +411,6 @@ export function botCredits(botId: string): BotCredit[] {
   ];
 }
 
-// The version a bot plays, for bots whose strength depends on which one it is:
-// match results and the ladder are against this version, not the engine in
-// general. jqe has no release numbers, so its network names it. Keep in step
-// with ab-jchess.ref and jqe.ref.
-export function botVersion(botId: string): string | undefined {
-  if (botId === 'jqe') return 'it014 (network)';
-  if (botId === 'ab-jchess') return '0.2d';
-  return undefined;
-}
-
 function buildBotCredits(credits: readonly BotCredit[]): HTMLElement {
   const list = document.createElement('ul');
   list.className = 'profile-side-links bot-profile-credits';
@@ -488,12 +481,35 @@ function buildBotOverview(bot: BotProfile, gameSpecId: string): HTMLElement {
   const option =
     playOptionsFor(bot).find((candidate) => candidate.gameSpecId === gameSpecId) ??
     playOptionsFor(bot)[0];
-  return buildProfileOverviewShell({
+  const overview = buildProfileOverviewShell({
     identity: buildBotIdentity(bot, gameSpecId),
     actions: option ? buildBotPlayAction(bot, option) : null,
     primary: buildBotRatingSpotlight(bot, gameSpecId),
     side: buildBotSideInfo(bot, gameSpecId),
   });
+  const about = buildBotAbout(bot);
+  if (about) overview.querySelector('.profile-overview-top')?.after(about);
+  return overview;
+}
+
+// The bio and credits, at the page's width under the header. In the side column
+// they had a third of the card, and a long credit ran past its edge.
+function buildBotAbout(bot: BotProfile): HTMLElement | null {
+  // The roster card's localized bio, so the page and the card say the same thing
+  // in every locale; other bots keep their stored bio.
+  const bioText = systemBotBio(bot) ?? bot.bio;
+  const credits = botCredits(bot.id);
+  if (bioText.trim().length === 0 && credits.length === 0) return null;
+  const about = document.createElement('div');
+  about.className = 'bot-profile-about';
+  if (bioText.trim().length > 0) {
+    const bio = document.createElement('p');
+    bio.className = 'profile-side-line profile-side-bio';
+    bio.textContent = bioText;
+    about.append(bio);
+  }
+  if (credits.length > 0) about.append(buildBotCredits(credits));
+  return about;
 }
 
 function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
@@ -633,18 +649,10 @@ function buildBotSideInfo(bot: BotProfile, gameSpecId: string): HTMLElement {
   const side = document.createElement('aside');
   side.className = 'profile-overview-side';
 
-  // The roster card's localized bio, so the page and the card say the same thing in
-  // every locale; other bots keep their stored bio.
-  const bioText = systemBotBio(bot) ?? bot.bio;
-  if (bioText.trim().length > 0) {
-    const bio = document.createElement('p');
-    bio.className = 'profile-side-line profile-side-bio';
-    bio.textContent = bioText;
-    side.append(bio);
-  }
-  const credits = botCredits(bot.id);
-  if (credits.length > 0) side.append(buildBotCredits(credits));
-  const version = botVersion(bot.id);
+  // The selected variant's engine build: Misty runs a different one per variant.
+  const version = playOptionsFor(bot).find(
+    (candidate) => candidate.gameSpecId === gameSpecId,
+  )?.version;
   if (version) side.append(buildBotSideStat('Version', version));
 
   const rating = botRatings(bot).find((candidate) => candidate.gameSpecId === gameSpecId);
