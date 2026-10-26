@@ -732,7 +732,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
 
   const title = document.createElement('strong');
   title.className = 'landing-article-card-title';
-  title.textContent = localized.cardTitle ?? localized.title;
+  appendCardTitle(title, localized.cardTitle ?? localized.title);
 
   link.append(thumb, title);
   // The date sits under the title as muted text, never over the art, so a
@@ -768,6 +768,26 @@ function landingAnnouncementCard(announcement: Announcement, locale: Locale): HT
 
   link.append(thumb, title, landingCardDate(announcement.date, locale));
   return link;
+}
+
+// A romanized name followed by its Chinese ("Zuo Wenjing 左文静").
+const TRAILING_HAN_NAME = /^([^\p{Script=Han}]*\p{L}[^\p{Script=Han}]*?)\s+(\p{Script=Han}+)$/u;
+
+/** A title ending in a Chinese name breaks before the name, so the name never
+ *  splits across lines; where titles hold to one line the break is hidden and
+ *  the trailing space keeps the two apart. */
+export function appendCardTitle(title: HTMLElement, text: string): void {
+  const match = TRAILING_HAN_NAME.exec(text);
+  if (!match) {
+    title.textContent = text;
+    return;
+  }
+  const brk = document.createElement('br');
+  brk.className = 'landing-article-card-title-break';
+  const name = document.createElement('span');
+  name.className = 'landing-article-card-title-han';
+  name.textContent = match[2];
+  title.append(`${match[1]} `, brk, name);
 }
 
 function landingCardDate(iso: string, locale: Locale): HTMLElement {
@@ -831,11 +851,13 @@ function initSingleCarousel(carousel: HTMLElement): void {
     if (cards.length < 2) return 0;
     return cards[1]!.getBoundingClientRect().left - cards[0]!.getBoundingClientRect().left;
   };
+  const overflow = (): number => Math.max(0, track.scrollWidth - carousel.clientWidth);
   const maxIndex = (): number => {
     const step = stepPx();
     if (step <= 0) return 0;
-    const overflow = Math.max(0, track.scrollWidth - carousel.clientWidth);
-    return Math.round(overflow / step);
+    // Ceil, not round: with a part card in view (the desktop band-2 rows) the
+    // last stop must reach the end; apply() clamps it there.
+    return Math.ceil(overflow() / step - 0.05);
   };
 
   const apply = () => {
@@ -849,7 +871,7 @@ function initSingleCarousel(carousel: HTMLElement): void {
       return;
     }
     index = Math.max(0, Math.min(index, mi));
-    track.style.transform = `translateX(${-(index * stepPx())}px)`;
+    track.style.transform = `translateX(${-Math.min(index * stepPx(), overflow())}px)`;
   };
 
   const tick = () => {
