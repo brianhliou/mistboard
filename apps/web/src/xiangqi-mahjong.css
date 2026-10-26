@@ -1702,6 +1702,7 @@ ol.xmj-log {
   padding: 10px;
   gap: 8px;
   font-size: 12px;
+  justify-content: space-between;
 }
 
 .xmj-watch-board--compact .xmj-scoring,

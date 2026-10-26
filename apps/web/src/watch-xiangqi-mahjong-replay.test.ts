@@ -19,6 +19,7 @@ import {
   mountXiangqiMahjongWatchReplay,
   xmjClockAtPly,
   xmjCompactFit,
+  xmjTagOverflow,
   xmjWatchFrames,
 } from './watch-xiangqi-mahjong-replay.js';
 
@@ -228,6 +229,21 @@ describe('xiangqi mahjong compact fit', () => {
 
   it('leaves a table that fits its host at full size', () => {
     expect(xmjCompactFit(320, 400, table)).toEqual({ zoom: 1, width: 320 });
+  });
+
+  // Regression: a Dealer badge 48px wide in a 38px column spilled into the
+  // felt's padding, inside the table's edge, so the fit measured no overflow
+  // and the rounded corner clipped the badge's first letters on /watch.
+  it('counts a badge wider than its column though it stays inside the felt', () => {
+    const column = { left: 10, right: 48 };
+    expect(xmjTagOverflow([{ column, badge: { left: 0, right: 48 } }])).toBe(10);
+    expect(xmjTagOverflow([{ column, badge: { left: 20, right: 48 } }])).toBe(0);
+    expect(
+      xmjTagOverflow([
+        { column, badge: { left: 14, right: 48 } },
+        { column: { left: 200, right: 238 }, badge: { left: 200, right: 244 } },
+      ]),
+    ).toBe(6);
   });
 });
 
