@@ -1952,7 +1952,7 @@
   height: 16px;
   margin: 0;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--site-text) 22%, transparent);
+  background-color: color-mix(in srgb, var(--site-text) 22%, transparent);
   cursor: pointer;
   transition: background-color 120ms ease;
 }
@@ -1981,8 +1981,11 @@
   }
 }
 
+/* background-color, never the `background` shorthand: the shorthand resets
+   background-clip to border-box, and this rule outranks the coarse one, so on
+   a phone the checked switch painted its 12px touch border green (54x40). */
 .xqb-gauge-toggle input:checked {
-  background: var(--site-accent);
+  background-color: var(--site-accent);
 }
 
 .xqb-gauge-toggle input:checked::after {
