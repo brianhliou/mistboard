@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
 import {
+  attemptStandardXiangqiPuzzleLine,
+  getStandardXiangqiLegalMoves,
   type JunglePuzzle,
   puzzleShortCode,
   XIANGQI_MOTIFS,
@@ -9,6 +11,8 @@ import {
   type XiangqiPuzzle,
 } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
+import { getPuzzleStore } from './puzzle-store.js';
+import { loadPuzzleStreak, startPuzzleStreak } from './puzzle-streak.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/puzzles.js';
 
@@ -142,16 +146,24 @@ test('anonymous streak counts solves, allows one skip, and locks the run on a mi
     400,
   );
   const missedId = run.puzzle.id;
+  const missedPuzzle = XIANGQI_PUZZLES.find((p) => p.id === missedId)!;
+  const wrongMove = getStandardXiangqiLegalMoves(missedPuzzle.initial).find((move) => {
+    const attempt = attemptStandardXiangqiPuzzleLine(missedPuzzle, [move]);
+    return !attempt.ok && attempt.code === 'incorrect-move';
+  });
+  assert.ok(wrongMove, 'the miss must be a legal wrong answer');
   run = JSON.parse(
     (
       await route('/api/puzzles/streak', 'POST', {
         action: 'move',
         runId: run.runId,
         puzzleId: missedId,
-        move: { from: 'a1', to: 'a1' },
+        move: wrongMove,
       })
     ).body,
   );
+  assert.equal(run.attempt.ok, false);
+  assert.equal(run.attempt.code, 'incorrect-move');
   assert.equal(run.finished, true);
   assert.equal(run.score, 1);
   assert.equal(run.results[2].outcome, 'failed');
@@ -167,6 +179,49 @@ test('anonymous streak counts solves, allows one skip, and locks the run on a mi
     409,
   );
 });
+
+for (const code of ['illegal-move', 'line-too-long'] as const) {
+  test(`streak ${code} rejection preserves the run and allows a correct retry`, async (t) => {
+    const puzzle = XIANGQI_PUZZLES[0]!;
+    const run = await startPuzzleStreak([puzzle.id, XIANGQI_PUZZLES[1]!.id], null);
+    const before = await loadPuzzleStreak(run.id);
+    const store = await getPuzzleStore();
+    const originalGet = store.byId.get.bind(store.byId);
+    const move = { from: 'a1', to: 'a1' } as const;
+    // These checker errors require a broken stored line: arbitrary guesses,
+    // including illegal ones, are classified as incorrect-move first.
+    const brokenPuzzle = { ...puzzle, solution: code === 'illegal-move' ? [move] : [] };
+    const lookup = t.mock.method(store.byId, 'get', (id: string) =>
+      id === puzzle.id ? brokenPuzzle : originalGet(id),
+    );
+    const response = await route('/api/puzzles/streak', 'POST', {
+      action: 'move',
+      runId: run.id,
+      puzzleId: puzzle.id,
+      move,
+      qualitySessionId: 'a85ef43f-73b3-4ef0-bdc2-d1e907c1ff35',
+    });
+    assert.equal(response.status, 200);
+    const rejected = JSON.parse(response.body);
+    assert.equal(rejected.attempt.ok, false);
+    assert.equal(rejected.attempt.code, code);
+    assert.equal(rejected.finished, false);
+    assert.equal(rejected.score, 0);
+    assert.equal(rejected.skipUsed, false);
+    assert.deepEqual(rejected.results, []);
+    assert.deepEqual(await loadPuzzleStreak(run.id), before);
+
+    lookup.mock.restore();
+    const retried = await route('/api/puzzles/streak', 'POST', {
+      action: 'move',
+      runId: run.id,
+      puzzleId: puzzle.id,
+      move: puzzle.solution[0],
+    });
+    assert.equal(retried.status, 200);
+    assert.equal(JSON.parse(retried.body).attempt.ok, true);
+  });
+}
 
 test('puzzle list returns surfaced summaries without solutions', async () => {
   const response = await route('/api/puzzles');

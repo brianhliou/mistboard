@@ -190,6 +190,12 @@ export async function tryHandle(
         return true;
       }
       attempt = attemptPuzzle(puzzle, [...state.moves, ...moves]);
+      // Only a wrong answer ends a run. Checker errors neither change the
+      // canonical run nor count as wrong quality events, as on /attempt.
+      if (!attempt.ok && attempt.code !== 'incorrect-move') {
+        writeJson(response, 200, { ...(await streakResponse(run)), attempt });
+        return true;
+      }
       if (!attempt.ok) {
         state.finished = true;
         state.results.push({ id, outcome: 'failed' });
