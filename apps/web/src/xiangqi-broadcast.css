@@ -2992,3 +2992,69 @@ a.xqb-standings-name:focus-visible {
   font-weight: 500;
   line-height: 1.3;
 }
+
+/* ── Withheld records (2026-10-26) ───────────────────────────────────────────
+   A finished game whose source record reads two ways: the card dims the start
+   position under "Not replayed" like a results-only card, but it opens (its
+   page says why and links the source), so it keeps the card's hover. */
+.xqb-board-card-withheld .xqb-card-board {
+  position: relative;
+}
+
+.xqb-board-card-withheld .xqb-card-board svg {
+  opacity: 0.45;
+}
+
+/* The board page of the same game: players, result, the reason and the
+   source link, and no board, so the start position never stands in for it. */
+.xqb-held {
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.xqb-held-title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.xqb-held-seats {
+  display: grid;
+  gap: 6px;
+}
+
+.xqb-held-seat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--site-panel);
+}
+
+.xqb-held-team {
+  color: var(--site-muted);
+  font-size: 0.85em;
+}
+
+.xqb-held-score {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqb-held-result {
+  margin: 0;
+  font-weight: 600;
+}
+
+.xqb-held-note {
+  margin: 0;
+  color: var(--site-muted);
+  line-height: 1.5;
+}

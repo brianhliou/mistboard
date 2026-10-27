@@ -1735,6 +1735,10 @@ const ZH_HANS: Record<string, string> = {
   '2026 Five Rams Cup, semi-final': '2026 五羊杯，半决赛',
   '"Since I won the world championship, more people in Vietnam follow xiangqi," he said in Guangzhou, "and more of them have started playing."':
     '他在广州说：“自从世锦赛夺冠之后，越南国内关注象棋的人越来越多了，开始下棋、喜欢象棋的人也明显变多了。”',
+  "In July he led Vietnam against Guangdong in Đà Nẵng, and the [1st Kim Long Motor Cup](/broadcast/xiangqi/2026-kim-long-motor-cup) is in the broadcast archive, from XQBase's game records.":
+    '七月，他率领越南队在岘港迎战广东队，[第一届金龙摩托杯](/broadcast/xiangqi/2026-kim-long-motor-cup)收在直播档案里，棋谱来自 XQBase。',
+  'Added a link to the Vietnam vs Guangdong match in the broadcast archive.':
+    '新增指向直播档案中越南对广东比赛的链接。',
   'All 38 games': '全部 38 局',
   "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 15 of them are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; the round table from the WXF results book; the Five Rams Cup and arena records from VnExpress, and the Vietnam vs Guangdong record from VnExpress and 象棋热情; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
     '本页的每一盘都在 Mistboard 的一个研究里，附引擎的判断和变化；其中 15 盘也在直播档案里，附网站的分析。资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；逐轮战绩表来自世界象棋联合会的成绩册；五羊杯和擂台赛战绩来自 VnExpress，越南对广东的战绩来自 VnExpress 和象棋热情；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
@@ -7955,6 +7959,10 @@ const ZH_HANT: Record<string, string> = {
   '2026 Five Rams Cup, semi-final': '2026 五羊盃，半決賽',
   '"Since I won the world championship, more people in Vietnam follow xiangqi," he said in Guangzhou, "and more of them have started playing."':
     '他在廣州說：「自從世錦賽奪冠之後，越南國內關注象棋的人越來越多了，開始下棋、喜歡象棋的人也明顯變多了。」',
+  "In July he led Vietnam against Guangdong in Đà Nẵng, and the [1st Kim Long Motor Cup](/broadcast/xiangqi/2026-kim-long-motor-cup) is in the broadcast archive, from XQBase's game records.":
+    '七月，他率領越南隊在峴港迎戰廣東隊，[第一屆金龍摩托盃](/broadcast/xiangqi/2026-kim-long-motor-cup)收在直播檔案裡，棋譜來自 XQBase。',
+  'Added a link to the Vietnam vs Guangdong match in the broadcast archive.':
+    '新增指向直播檔案中越南對廣東比賽的連結。',
   'All 38 games': '全部 38 局',
   "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 15 of them are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; the round table from the WXF results book; the Five Rams Cup and arena records from VnExpress, and the Vietnam vs Guangdong record from VnExpress and 象棋热情; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
     '本頁的每一盤都在 Mistboard 的一個研究裡，附引擎的判斷和變化；其中 15 盤也在直播檔案裡，附網站的分析。資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；逐輪戰績表來自世界象棋聯合會的成績冊；五羊盃和擂台賽戰績來自 VnExpress，越南對廣東的戰績來自 VnExpress 和象棋熱情；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',

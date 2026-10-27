@@ -622,6 +622,9 @@ function boardEvaluation(
   liveEval: XiangqiBroadcastLiveEvalLookup,
 ): XiangqiBroadcastBoardEvaluation | null {
   if (board.status === 'complete') {
+    // No moves (results only, or a withheld record): an analysis stored when
+    // the board had a replay scores a game we no longer show.
+    if (board.plyCount === 0) return null;
     const final = finals.get(board.id);
     return final ? { ...final, source: 'analysis' } : null;
   }
@@ -743,6 +746,7 @@ export async function xiangqiBroadcastBoardExportForApi(
     result: board.result,
     moves: board.moves,
     ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
+    ...(board.recordWithheld ? { recordWithheld: board.recordWithheld } : {}),
   };
 }
 

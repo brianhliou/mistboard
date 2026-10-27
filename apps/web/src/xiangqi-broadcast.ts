@@ -63,7 +63,11 @@ import {
   broadcastPgnFileName,
   pgnDataHref,
 } from './xiangqi-broadcast-pgn.js';
-import { mountBroadcastBoardReview } from './xiangqi-broadcast-review.js';
+import {
+  heldRecordNote,
+  mountBroadcastBoardReview,
+  mountBroadcastHeldBoard,
+} from './xiangqi-broadcast-review.js';
 import { broadcastStandings, formatStandingsScore } from './xiangqi-broadcast-standings.js';
 import {
   formatEventDateRange,
@@ -99,6 +103,8 @@ type BroadcastBoardSummary = {
   moves?: XiangqiMove[];
   sourceUrl?: string;
   details?: XiangqiBroadcastGameDetails;
+  /** A finished game whose record we do not replay: it reads two legal ways. */
+  recordWithheld?: 'ambiguous';
   /** Red-POV eval for the grid gauge: a finished game's stored analysis at its
    *  final position, or the live engine layer's read of a live one. */
   evaluation?: { cp: number | null; mate: number | null; source: 'analysis' | 'live' };
@@ -156,7 +162,7 @@ type BroadcastRoundWithStats = XiangqiBroadcastRound & Partial<BroadcastRoundSta
 
 type BroadcastTourResponse = {
   /** Who to credit for the records; derived server-side from the boards. */
-  recordsSource?: { host: string; href: string } | null;
+  recordsSource?: { host: string; href: string; name?: string } | null;
   tour: XiangqiBroadcastTour;
   rounds: BroadcastRoundWithStats[];
 };
@@ -505,6 +511,10 @@ export async function mountXiangqiBroadcastBoard(
       review?.destroy();
       review = null;
       const embedded = context !== null;
+      if (data.board.recordWithheld) {
+        mountBroadcastHeldBoard(body, data, { context, embedded });
+        return;
+      }
       if (data.board.status === 'complete') {
         review = mountBroadcastBoardReview(body, data, { context, embedded });
         return;
@@ -1963,7 +1973,7 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     const link = document.createElement('a');
     link.href = credit.href;
     link.rel = 'noreferrer';
-    link.textContent = credit.host;
+    link.textContent = credit.name ?? credit.host;
     line.append(link);
     wrap.append(share, line);
   } else {
@@ -2301,6 +2311,7 @@ function boardCardSignature(board: BroadcastBoardSummary, playedOn?: string | nu
     board.black,
     board.details ?? null,
     board.evaluation ?? null,
+    board.recordWithheld ?? null,
   ]);
 }
 
@@ -2330,7 +2341,7 @@ function recordsCreditLine(
 }
 
 function creditLineFrom(
-  credit: { host: string; href: string } | null | undefined,
+  credit: { host: string; href: string; name?: string } | null | undefined,
 ): HTMLElement | null {
   if (!credit) return null;
   const line = document.createElement('p');
@@ -2338,7 +2349,8 @@ function creditLineFrom(
   const link = document.createElement('a');
   link.href = credit.href;
   link.rel = 'noreferrer';
-  link.textContent = credit.host;
+  // A named database (XQBase) is credited by name; a plain site by its host.
+  link.textContent = credit.name ?? credit.host;
   const [before, after] = t('broadcast.recordsFrom').split('{source}');
   line.append(document.createTextNode(before ?? ''), link, document.createTextNode(after ?? ''));
   return line;
@@ -2761,9 +2773,11 @@ export function isResultsOnlyBoard(
 
 function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTMLElement {
   const resultsOnly = isResultsOnlyBoard(board);
+  const withheld = board.recordWithheld !== undefined;
   // Not a link: the board page would open an empty review. The result, the
-  // players and the start position say everything the source published.
-  const card = document.createElement(resultsOnly ? 'div' : 'a');
+  // players and the start position say everything the source published. A
+  // withheld record does open: its page says why and links the source.
+  const card = document.createElement(resultsOnly && !withheld ? 'div' : 'a');
   card.className = `xqb-board-card xqb-board-card-${board.status}`;
   if (card instanceof HTMLAnchorElement) {
     card.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
@@ -2779,10 +2793,14 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
   // the board, and the game list and the open board both carry the table.
   if (label) card.title = label;
   if (resultsOnly) {
-    card.classList.add('xqb-board-card-no-moves');
+    // A withheld record opens, so it keeps the card's hover.
+    card.classList.add(withheld ? 'xqb-board-card-withheld' : 'xqb-board-card-no-moves');
     card.title = [label, board.status === 'complete' ? t('broadcast.resultOnlyHint') : null]
       .filter(Boolean)
       .join(' · ');
+  }
+  if (withheld) {
+    card.title = [label, heldRecordNote(board.sourceUrl).textContent].filter(Boolean).join(' · ');
   }
 
   const boardEl = document.createElement('div');
@@ -2816,8 +2834,11 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
     // Over the start position, so it does not read as a game still to begin.
     const stamp = document.createElement('span');
     stamp.className = 'xqb-card-no-moves';
-    stamp.textContent =
-      board.status === 'complete' ? t('broadcast.noRecord') : t('broadcast.gameNotStarted');
+    stamp.textContent = withheld
+      ? t('broadcast.notReplayed')
+      : board.status === 'complete'
+        ? t('broadcast.noRecord')
+        : t('broadcast.gameNotStarted');
     boardEl.append(stamp);
   }
   // A live game shows who is to move where a finished one shows its score:
@@ -3013,13 +3034,15 @@ function sideRail(
   for (const [index, board] of boards.entries()) {
     const current = board.id === currentBoardId;
     const resultsOnly = isResultsOnlyBoard(board);
-    // A results-only row names the pairing and the result and opens nothing.
-    const row = document.createElement(resultsOnly && !current ? 'div' : 'a');
+    const withheld = board.recordWithheld !== undefined;
+    // A results-only row names the pairing and the result and opens nothing;
+    // a withheld record opens the page that says why.
+    const row = document.createElement(resultsOnly && !current && !withheld ? 'div' : 'a');
     row.className = current ? 'xqb-rail-row xqb-rail-row-current' : 'xqb-rail-row';
     if (row instanceof HTMLAnchorElement) {
       row.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
     }
-    if (resultsOnly) row.classList.add('xqb-rail-row-no-moves');
+    if (resultsOnly && !withheld) row.classList.add('xqb-rail-row-no-moves');
     if (current) row.setAttribute('aria-current', 'page');
 
     // lichess's game list: the row's place in the list, then both players
@@ -3037,7 +3060,10 @@ function sideRail(
       row.title = board.details?.kind === 'blitz' ? `${where} · ${t('broadcast.blitz')}` : where;
     }
     if (resultsOnly && board.status === 'complete') {
-      row.title = [row.title, t('broadcast.resultOnlyHint')].filter(Boolean).join(' · ');
+      const why = withheld
+        ? heldRecordNote(board.sourceUrl).textContent
+        : t('broadcast.resultOnlyHint');
+      row.title = [row.title, why].filter(Boolean).join(' · ');
     }
     const rowMover = board.status === 'live' ? sideToMove(board) : null;
     const players = document.createElement('span');
@@ -3059,7 +3085,7 @@ function sideRail(
       row.classList.add('xqb-rail-row-no-record');
       const caption = document.createElement('span');
       caption.className = 'xqb-rail-no-record';
-      caption.textContent = t('broadcast.noRecord');
+      caption.textContent = withheld ? t('broadcast.notReplayed') : t('broadcast.noRecord');
       players.append(caption);
     }
     row.append(number, railGauge(board), players);

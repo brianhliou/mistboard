@@ -802,6 +802,27 @@ test('broadcast round API gives a finished board its stored final eval for the g
   assert.equal(bare?.boards[0] && 'evaluation' in bare.boards[0], false);
 });
 
+test('broadcast round API gives a board with no moves no gauge, even with a stored analysis', async () => {
+  // A record withheld after it was once replayed keeps its old analysis row.
+  const held = {
+    ...storedBoard,
+    moves: [],
+    plyCount: 0,
+    recordWithheld: 'ambiguous' as const,
+  };
+  const payload = await xiangqiBroadcastRoundForApi(
+    tour.slug,
+    'men-r1',
+    deps({
+      listXiangqiBroadcastBoards: async () => [held],
+      listXiangqiBroadcastFinalEvals: async () => new Map([[board.id, { cp: 300, mate: null }]]),
+    }),
+  );
+  const [row] = payload?.boards ?? [];
+  assert.equal(row && 'evaluation' in row, false);
+  assert.equal(row?.recordWithheld, 'ambiguous');
+});
+
 test('broadcast round API gives a live board the live engine read', async () => {
   const live = { ...storedBoard, status: 'live' as const, result: '*' as const };
   const payload = await xiangqiBroadcastRoundForApi(

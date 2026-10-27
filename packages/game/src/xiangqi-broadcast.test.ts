@@ -102,6 +102,47 @@ test('xiangqi broadcast runtime validation rejects malformed payloads before rep
   ]);
 });
 
+test('a withheld record is a finished result with no moves and a source page', () => {
+  const held = {
+    schema: 'mistboard.xiangqi.broadcast.v1',
+    id: 'held-board',
+    tourSlug: '2026-kim-long-motor-cup',
+    roundId: '2026-kim-long-motor-cup-r01',
+    sourceBoardId: 'xqbase-1631-g010',
+    boardNumber: 10,
+    red: { name: 'Red' },
+    black: { name: 'Black' },
+    status: 'complete',
+    result: '1-0',
+    moves: [],
+    sourceUrl: 'https://vietnamchess.vn/databank/xqbase-vietnamchess?view=game&id=1640',
+    recordWithheld: 'ambiguous',
+  };
+  const ok = validateXiangqiBroadcastBoard(held);
+  assert.equal(ok.ok, true);
+  if (ok.ok) {
+    const replay = replayXiangqiBroadcastBoard(ok.value);
+    assert.equal(replay.ok && replay.plies, 0);
+  }
+
+  const bad = validateXiangqiBroadcastBoard({
+    ...held,
+    status: 'live',
+    result: '*',
+    moves: [{ from: 'b1', to: 'c3' }],
+    sourceUrl: undefined,
+    recordWithheld: 'lost',
+  });
+  assert.equal(bad.ok, false);
+  if (bad.ok) return;
+  assert.deepEqual(bad.errors, [
+    'board.recordWithheld must be ambiguous when present',
+    'board.recordWithheld needs board.status complete',
+    'board.recordWithheld needs board.moves to be empty',
+    'board.recordWithheld needs board.sourceUrl, the page with the record',
+  ]);
+});
+
 test('xiangqi broadcast tape validation rejects ambiguous and unordered events', () => {
   const parsed = validateXiangqiBroadcastTape({
     schema: 'mistboard.xiangqi.broadcast-tape.v1',
