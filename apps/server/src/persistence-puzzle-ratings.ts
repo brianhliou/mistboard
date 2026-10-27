@@ -33,6 +33,17 @@ export type PuzzleRatingSummary = {
   provisional: boolean;
 };
 
+export type PuzzleAttemptHistoryEntry = {
+  puzzleId: string;
+  variant: string;
+  solved: boolean;
+  rated: boolean;
+  ratingBefore: number | null;
+  ratingAfter: number | null;
+  ratingDelta: number | null;
+  createdAt: string;
+};
+
 export type RecordPuzzleAttemptInput = {
   userId: string;
   puzzleId: string;
@@ -135,6 +146,53 @@ export async function listAttemptedPuzzleIds(
     variant ? [userId, variant] : [userId],
   );
   return rows.map((row) => row.puzzle_id);
+}
+
+// Read the first-outcome ledger, including unrated attempts and puzzles no
+// longer in the serving corpus. Never reconstruct past ratings from today's
+// puzzle ratings. The caller supplies the authenticated account, not a handle
+// or an account id taken from the request. Equal timestamps have a stable tie
+// break, so bounded chronological pages can also feed a progress graph.
+export async function listPuzzleAttemptHistory(
+  userId: string,
+  variant: string,
+  limit: number,
+  offset: number,
+): Promise<{ attempts: PuzzleAttemptHistoryEntry[]; nextOffset: number | null }> {
+  if (!isInitialized()) return { attempts: [], nextOffset: null };
+  const { rows } = await getPool().query<{
+    puzzle_id: string;
+    variant: string;
+    solved: boolean;
+    rated: boolean;
+    user_rating_before: number | null;
+    user_rating_after: number | null;
+    created_at: Date;
+  }>(
+    `SELECT puzzle_id, variant, solved, rated,
+            user_rating_before, user_rating_after, created_at
+       FROM puzzle_attempts
+       WHERE user_id = $1 AND variant = $2
+       ORDER BY created_at ASC, puzzle_id ASC
+       LIMIT $3 OFFSET $4`,
+    [userId, variant, limit + 1, offset],
+  );
+  return {
+    attempts: rows.slice(0, limit).map((row) => ({
+      puzzleId: row.puzzle_id,
+      variant: row.variant,
+      solved: row.solved,
+      rated: row.rated,
+      ratingBefore: row.user_rating_before,
+      ratingAfter: row.user_rating_after,
+      ratingDelta:
+        row.user_rating_before === null || row.user_rating_after === null
+          ? null
+          : row.user_rating_after - row.user_rating_before,
+      createdAt: row.created_at.toISOString(),
+    })),
+    nextOffset: rows.length > limit ? offset + limit : null,
+  };
 }
 
 // Record a user's first outcome for a puzzle and, if rated, apply the Glicko-2

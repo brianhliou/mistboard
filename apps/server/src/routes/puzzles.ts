@@ -32,6 +32,7 @@ import {
   getPuzzleRating,
   getUserPuzzleRating,
   listAttemptedPuzzleIds,
+  listPuzzleAttemptHistory,
   listPuzzleRatingSummaries,
   recordPuzzleAttempt,
 } from '../persistence-puzzle-ratings.js';
@@ -182,6 +183,56 @@ export async function tryHandle(
           }
         : null,
     });
+    return true;
+  }
+
+  // Private history and progress for the session owner. Claim the literal
+  // before :id, and never accept an account selector from the client.
+  if (pathname === '/api/puzzles/history') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    const headers = { 'cache-control': 'private, no-store' };
+    const user = await currentAccountUser(request);
+    if (!user) {
+      writeJson(response, 401, { error: 'authentication_required' }, headers);
+      return true;
+    }
+    const variant = parsePuzzleVariant(parsedUrl.searchParams.get('variant'));
+    if (variant === 'invalid' || variant === null) {
+      writeJson(response, 400, { error: 'invalid_variant' }, headers);
+      return true;
+    }
+    const limitText = parsedUrl.searchParams.get('limit') ?? '50';
+    const offsetText = parsedUrl.searchParams.get('offset') ?? '0';
+    const limit = Number(limitText);
+    const offset = Number(offsetText);
+    if (
+      !/^\d+$/.test(limitText) ||
+      !/^\d+$/.test(offsetText) ||
+      !Number.isSafeInteger(offset + limit + 1) ||
+      limit < 1 ||
+      limit > 100
+    ) {
+      writeJson(response, 400, { error: 'invalid_pagination' }, headers);
+      return true;
+    }
+    const history = await listPuzzleAttemptHistory(user.id, variant, limit, offset);
+    const rating = await getUserPuzzleRating(user.id, variant);
+    writeJson(
+      response,
+      200,
+      {
+        ...history,
+        progress: rating
+          ? {
+              rating: rating.rating,
+              provisional: rating.provisional,
+              solved: rating.solved,
+              attempts: rating.attempts,
+            }
+          : null,
+      },
+      headers,
+    );
     return true;
   }
 
