@@ -1868,10 +1868,69 @@ test('/watch canonicalises to the bare path whatever its query', async () => {
   await serveSpaShellWithRoutePreloads({
     response: other,
     staticDir,
-    pathname: '/faq',
+    pathname: '/settings',
     publicHost: 'https://mistboard.com',
   });
   assert.doesNotMatch(other.body, /rel="canonical"/);
+});
+
+// Every player, team and broadcast page links /contact?about=<its own path>, so
+// each crawled page minted another contact URL; with no canonical, Search
+// Console filed 43 of them as "Duplicate without user-selected canonical"
+// (validation failed 2026-10-19). The contact page stays indexable.
+test('/contact canonicalises to the bare path whatever its ?about=', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  for (const [pathname, search] of [
+    ['/contact', '?about=%2Fbroadcast%2Fxiangqi%2F2026-gaogang-cup'],
+    ['/contact', '?about=/players/teams/hubei-xiangqi-association'],
+    ['/contact/', '?about=/x'],
+    ['/contact', ''],
+  ] as const) {
+    const response = captureResponse();
+    const served = await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      search,
+      publicHost: 'https://mistboard.com',
+      routeBody: async () => null,
+    });
+    assert.equal(served, true, `${pathname}${search}`);
+    const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+    assert.deepEqual(
+      canonicals,
+      ['<link rel="canonical" href="https://mistboard.com/contact">'],
+      `${pathname}${search}`,
+    );
+    assert.doesNotMatch(response.body, /noindex/, `${pathname}${search} must stay indexable`);
+  }
+});
+
+// The other English-only pages with no canonical of their own: a ?utm= or
+// ?ref= copy of any of them would be filed the same way as the contact copies.
+test('/terms, /privacy, /thanks and /faq canonicalise to the bare path', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  for (const pathname of ['/terms', '/privacy', '/thanks', '/faq']) {
+    const response = captureResponse();
+    const served = await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      search: '?utm_source=x&about=/y',
+      publicHost: 'https://mistboard.com',
+      routeBody: async () => null,
+    });
+    assert.equal(served, true, pathname);
+    const canonicals = response.body.match(/<link rel="canonical"[^>]*>/g) ?? [];
+    assert.deepEqual(
+      canonicals,
+      [`<link rel="canonical" href="https://mistboard.com${pathname}">`],
+      pathname,
+    );
+    assert.doesNotMatch(response.body, /noindex/, `${pathname} must stay indexable`);
+  }
 });
 
 test('the /games database carries its own route meta and sitemap entry', async () => {
