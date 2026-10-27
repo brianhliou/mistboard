@@ -1,14 +1,28 @@
 import { existsSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  BROADCAST_SLOT_PENDING_CLASS,
   type BroadcastTourSummary,
   broadcastBanners,
+  broadcastSlot,
   buildLandingEventBanners,
   cardLines,
   type EventBanner,
   loadBroadcastBanners,
   shortDate,
 } from './landing-event-banners.js';
+
+// happy-dom provides no localStorage here; the smallest stand-in (the same
+// shim as room-chrome.test.ts) holds the slot's cached index.
+const store = new Map<string, string>();
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => void store.set(key, value),
+    removeItem: (key: string) => void store.delete(key),
+  },
+});
 
 const BANNERS: EventBanner[] = [
   {
@@ -206,7 +220,10 @@ describe('the two-row spotlight', () => {
   });
   const beforeAsian = Date.parse('2026-09-25T12:00:00Z');
 
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.localStorage.removeItem('mistboard:home-broadcasts:v1');
+  });
 
   it("dates an event by its own day, not the visitor's", () => {
     // Midnight Oct 2 in Manila is still Oct 1 in any US timezone.
@@ -294,6 +311,104 @@ describe('the two-row spotlight', () => {
     const more = host.querySelector<HTMLAnchorElement>('.landing-event-banners-more');
     expect(more?.textContent).toBe('2 more broadcasts');
     expect(more?.getAttribute('href')).toBe('/broadcast/xiangqi');
+  });
+});
+
+describe('the broadcast slot', () => {
+  const day = 24 * 60 * 60 * 1000;
+  const at = Date.parse('2026-10-27T12:00:00Z');
+  const tour = (
+    slug: string,
+    extra: Partial<BroadcastTourSummary> & { startsAt?: string; endsAt?: string } = {},
+  ): BroadcastTourSummary => ({
+    tour: {
+      slug,
+      name: slug,
+      nameEn: `2026 ${slug}`,
+      startsAt: extra.startsAt ?? new Date(at - 10 * day).toISOString(),
+      endsAt: extra.endsAt ?? new Date(at + 4 * day).toISOString(),
+    },
+    boardCount: extra.boardCount ?? 40,
+    liveBoardCount: extra.liveBoardCount ?? 0,
+    recordedBoardCount: extra.recordedBoardCount ?? 40,
+  });
+  const rapid = tour('World Rapid Championship', {
+    startsAt: '2026-11-10T00:00:00+08:00',
+    endsAt: '2026-11-15T23:59:59+08:00',
+    boardCount: 0,
+    recordedBoardCount: 0,
+  });
+  const stubIndex = (tours: BroadcastTourSummary[]) => {
+    const fetchSpy = vi.fn(async () => ({ ok: true, json: async () => ({ tours }) }));
+    vi.stubGlobal('fetch', fetchSpy);
+    return fetchSpy;
+  };
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    window.localStorage.removeItem('mistboard:home-broadcasts:v1');
+  });
+
+  // A card for an event with no games led to an empty intro page (Brian,
+  // 2026-10-27: "4th World Rapid Championship · Starts Nov 10").
+  it('announces an event with no games yet as a plain line, not a card or a link', async () => {
+    vi.useFakeTimers({ now: at, toFake: ['Date'] });
+    stubIndex([rapid, tour('League', { liveBoardCount: 3 })]);
+    const host = buildLandingEventBanners([]);
+    await loadBroadcastBanners(host, 'en');
+    const cards = [...host.querySelectorAll<HTMLAnchorElement>('a.landing-event-banner')];
+    expect(cards.map((card) => card.dataset.eventId)).toEqual(['broadcast-League']);
+    const line = host.querySelector<HTMLElement>('.landing-event-upcoming-line');
+    expect(line?.textContent).toBe('World Rapid Championship · Starts Nov 10');
+    expect(line?.closest('a')).toBeNull();
+    expect(line?.querySelector('a')).toBeNull();
+    expect(line?.hasAttribute('href')).toBe(false);
+    expect(
+      host.querySelector(
+        '[data-event-id="broadcast-World Rapid Championship"].landing-event-banner',
+      ),
+    ).toBeNull();
+    // The lines come after the cards, and are not counted as "more".
+    expect(host.lastElementChild?.className).toBe('landing-event-upcoming');
+  });
+
+  it('keeps the card for an event that is on, and caps the lines at two', () => {
+    const rows = broadcastBanners(
+      [
+        rapid,
+        { ...rapid, tour: { ...rapid.tour, slug: 'b', name: 'b', nameEn: 'b' } },
+        { ...rapid, tour: { ...rapid.tour, slug: 'c', name: 'c', nameEn: 'c' } },
+        tour('League', { liveBoardCount: 3 }),
+      ],
+      'en',
+      at,
+    );
+    const slot = broadcastSlot(rows);
+    expect(slot.cards.map((row) => row.id)).toEqual(['broadcast-League']);
+    expect(slot.upcoming).toHaveLength(2);
+    expect(slot.more).toBe(1);
+  });
+
+  it('paints the last index this browser saw before the fetch answers', async () => {
+    vi.useFakeTimers({ now: at, toFake: ['Date'] });
+    stubIndex([tour('League', { liveBoardCount: 3 })]);
+    await loadBroadcastBanners(buildLandingEventBanners([]), 'en');
+    let answer: (value: unknown) => void = () => {};
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise((resolve) => (answer = resolve))),
+    );
+    const host = buildLandingEventBanners([]);
+    host.classList.add(BROADCAST_SLOT_PENDING_CLASS);
+    const loading = loadBroadcastBanners(host, 'en');
+    // Synchronously, before the fetch resolves.
+    expect(host.querySelectorAll('.landing-event-banner')).toHaveLength(1);
+    expect(host.classList.contains(BROADCAST_SLOT_PENDING_CLASS)).toBe(false);
+    answer({ ok: true, json: async () => ({ tours: [tour('League'), tour('Cup')] }) });
+    await loading;
+    // The fresh answer replaces the cached rows, never adds to them.
+    expect(host.querySelectorAll('.landing-event-banner')).toHaveLength(2);
   });
 });
 

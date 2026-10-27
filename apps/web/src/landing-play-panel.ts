@@ -655,6 +655,7 @@ export function buildPlayPanel(
   personScroll.className = 'pp-scroll';
   const offersSlot = document.createElement('div');
   const personRows = document.createElement('div');
+  personRows.className = 'pp-person-rows';
   personScroll.append(offersSlot, personRows);
 
   const searchBar = document.createElement('div');
@@ -685,18 +686,27 @@ export function buildPlayPanel(
     casualBtn.classList.toggle('is-active', mode === 'casual');
     ratedBtn.classList.toggle('is-active', mode === 'rated');
     ratedBtn.disabled = ratedBlocked;
-    if (ratedBlocked) ratedBtn.title = t('lobby.ratedNeedsCountedAccount', {}, locale);
-    else if (!signedIn) ratedBtn.title = t('lobby.panelRatedSignIn', {}, locale);
+    // Why Rated is out of reach, in plain words (Brian, 2026-10-27: "what does
+    // that mean, need a counted account?"): a guest is told to sign in; a
+    // stats-excluded account (the owner's and QA's) is told it plays casual only.
+    const ratedBlockedNote = t('lobby.ratedCasualOnlyAccount', {}, locale);
+    const ratedSignInNote = t('lobby.panelRatedSignIn', {}, locale);
+    if (ratedBlocked) ratedBtn.title = ratedBlockedNote;
+    else if (!signedIn) ratedBtn.title = ratedSignInNote;
     else ratedBtn.removeAttribute('title');
-    note.textContent = ratedBlocked
-      ? t('lobby.ratedNeedsCountedAccount', {}, locale)
-      : mode === 'rated'
-        ? t(
-            'lobby.panelRatedNote',
-            { clocks: RATED_TIME_CONTROLS.map((tc) => compactLabel(tc.id)).join(', ') },
-            locale,
-          )
-        : '';
+    note.textContent = !ratedAvailable
+      ? ''
+      : ratedBlocked
+        ? ratedBlockedNote
+        : !signedIn
+          ? ratedSignInNote
+          : mode === 'rated'
+            ? t(
+                'lobby.panelRatedNote',
+                { clocks: RATED_TIME_CONTROLS.map((tc) => compactLabel(tc.id)).join(', ') },
+                locale,
+              )
+            : '';
   };
   casualBtn.addEventListener('click', () => {
     if (mode === 'casual') return;

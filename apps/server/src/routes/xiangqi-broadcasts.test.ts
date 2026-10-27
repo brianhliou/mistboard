@@ -13,6 +13,7 @@ import type { StoredXiangqiBroadcastBoard } from '../persistence.js';
 import {
   manualXiangqiBroadcastPollForApi,
   manualXiangqiBroadcastSourceImportForApi,
+  staleWhileRevalidate,
   tryHandle,
   type XiangqiBroadcastApiPersistence,
   xiangqiBroadcastBoardExportForApi,
@@ -761,6 +762,19 @@ test('broadcast tour API rounds carry board status counts for status icons', asy
   assert.equal(payload.rounds[0]?.completeBoardCount, 1);
   assert.equal(payload.rounds[0]?.liveBoardCount, 0);
   assert.equal(payload.rounds[0]?.scheduledBoardCount, 0);
+  assert.equal(payload.rounds[0]?.recordedBoardCount, storedBoard.plyCount > 0 ? 1 : 0);
+
+  // A results-only board (no plies) is a board but not a recorded game, so the
+  // tour page does not open on a round of empty boards.
+  const resultsOnly = await xiangqiBroadcastTourForApi(
+    tour.slug,
+    deps({
+      listXiangqiBroadcastBoards: async (roundId) =>
+        roundId === board.roundId ? [{ ...storedBoard, moves: [], plyCount: 0 }] : [],
+    }),
+  );
+  assert.equal(resultsOnly?.rounds[0]?.boardCount, 1);
+  assert.equal(resultsOnly?.rounds[0]?.recordedBoardCount, 0);
 });
 
 test('broadcast round API returns only boards under the requested round', async () => {
@@ -1082,3 +1096,39 @@ function captureResponse(): ServerResponse & ResponseCapture {
   };
   return capture as unknown as ServerResponse & ResponseCapture;
 }
+
+test('broadcast index cache: fresh served as is, stale served at once while one refresh runs', async () => {
+  let clock = 0;
+  let loads = 0;
+  let release: (() => void) | null = null;
+  let fail = false;
+  const read = staleWhileRevalidate(
+    async () => {
+      loads += 1;
+      const n = loads;
+      if (fail) throw new Error('db down');
+      if (n === 2) await new Promise<void>((resolve) => (release = resolve));
+      return n;
+    },
+    { freshMs: 15_000, staleMs: 600_000, now: () => clock },
+  );
+  assert.equal(await read(), 1);
+  clock = 10_000;
+  assert.equal(await read(), 1, 'fresh: no second load');
+  assert.equal(loads, 1);
+  clock = 20_000;
+  // Stale: the old value comes back without waiting on the slow refresh, and
+  // a second stale read joins that refresh instead of starting another.
+  assert.equal(await read(), 1);
+  assert.equal(await read(), 1);
+  assert.equal(loads, 2);
+  release!();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(await read(), 2);
+  // Past the stale window the caller waits, and a failure does not stick.
+  clock = 1_000_000;
+  fail = true;
+  await assert.rejects(read(), /db down/);
+  fail = false;
+  assert.equal(await read(), 4);
+});

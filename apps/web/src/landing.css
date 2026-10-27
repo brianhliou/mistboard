@@ -27,6 +27,12 @@
      On desktop the min-width:1241px block re-derives this from the rail width so
      the boxes match the full-width daily-puzzle board. */
   --landing-lower-widget-height: 20em;
+  /* Band 3 (forum beside chat and Top studies) is flatter than band 2 (Brian,
+     2026-10-27): five compact forum topics (a 64px row: title, one-line
+     excerpt, meta, plus 1px for a taller CJK fallback font) under the box's
+     42px title bar. The stacked phone layout
+     sizes the forum to its rows instead (landing-forum-preview.css). */
+  --landing-forum-height: calc(42px + 5 * 65px);
   /* Desktop side-rail (puzzle / players column) width. Single-sourced here so the
      grid columns and the puzzle board's derived height stay in sync. */
   --landing-rail-width: 340px;
@@ -276,6 +282,7 @@
 .landing-play-column {
   --landing-play-gap: clamp(12px, 1.6vw, 18px);
   --landing-event-more-height: 22px;
+  --landing-event-more-gap: 4px;
   grid-area: play;
   display: flex;
   flex-direction: column;
@@ -289,18 +296,17 @@
 }
 
 /* With a "N more broadcasts" link the link takes the column's bottom edge
-   (level with the panel's bottom) and the cards sit midway between the
-   activity line and it: the same gap above and below them (Brian,
-   2026-10-26). The link is laid out of the cards' grid, so it no longer takes
-   an equal 1fr row (a card-tall empty row that pushed the link ~70px down and
-   stretched the whole band). */
-.landing-play-column:has(> .landing-event-banners > .landing-event-banners-more) {
+   (level with the panel's bottom) and the cards sit right above it, one unit
+   with the link (Brian, 2026-10-27; they sat midway up the gap from
+   2026-10-26 and read as apart from it). With no link the cards themselves
+   end on that bottom edge. The link is laid out of the cards' grid, so it
+   does not take an equal 1fr row (a card-tall empty row that pushed the link
+   ~70px down and stretched the whole band). A pending slot keeps the link's
+   room too. */
+.landing-play-column:has(> .landing-event-banners > .landing-event-banners-more),
+.landing-play-column:has(> .landing-event-banners--pending) {
   position: relative;
-  padding-bottom: calc(var(--landing-event-more-height) + var(--landing-play-gap));
-}
-
-.landing-play-column > .landing-event-banners:has(> .landing-event-banners-more) {
-  margin-block: auto;
+  padding-bottom: calc(var(--landing-event-more-height) + var(--landing-event-more-gap));
 }
 
 .landing-play-column > .landing-event-banners > .landing-event-banners-more {
@@ -1744,11 +1750,12 @@
   max-width: 100%;
 }
 
-/* On the homepage the boards carry a seat row above and below; give the initial
-   skeleton the same allowance so the panel doesn't grow when the first board
-   lands (between-game swaps are exact via the cycler's min-height pin). */
+/* The initial skeleton (in the prerendered shell) holds the box of the board
+   the TV shows most, a 9x10 xiangqi-family board with its seats laid over it,
+   so the first board lands without moving the panel (between-game swaps are
+   exact via the cycler's min-height pin). */
 .landing-board-column #landing-replay .watch-replay-skeleton {
-  min-height: calc(var(--showcase-widget-size) + 54px);
+  min-height: calc(var(--showcase-widget-size) * 10 / 9);
 }
 
 .showcase-widget .watch-replay-skeleton-board {
@@ -2401,7 +2408,7 @@
 
   .landing-chat-column > .landing-chat-mount:not(:empty),
   .landing-chat-column .landing-chat {
-    height: var(--landing-lower-widget-height);
+    height: var(--landing-forum-height);
     min-height: 0;
   }
 
