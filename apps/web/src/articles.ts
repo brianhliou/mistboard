@@ -104,7 +104,7 @@ import {
   readStoredXiangqiPieceSet,
   xiangqiAppearanceChangedEvent,
 } from './theme.js';
-import { renderVariantMarker } from './variant-markers.js';
+import { renderPlaceholderVariantMarker, renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import {
   gameSpecIdFromRulesSlug,
@@ -465,9 +465,7 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
     const tile = document.createElement('a');
     tile.className = 'rules-landing-tile';
     tile.href = localizedArticleHref(article, locale);
-    const miniTile = renderVariantMiniThumb(article.slug);
-    if (miniTile) tile.append(miniTile);
-    else if (article.thumbnail) tile.append(renderArticleThumbnail(article.thumbnail, locale));
+    tile.append(renderRulesMarkerThumb(article.slug));
     const label = document.createElement('span');
     label.className = 'rules-landing-tile-label';
     label.textContent = variantNavLabel(localized.title);
@@ -1255,9 +1253,7 @@ function buildVariantSidebar(currentSlug: string | null, lang?: ArticleLang): HT
     const link = document.createElement('a');
     link.className = 'article-variant-link';
     link.href = localizedArticleHref(entry, locale);
-    const miniRail = renderVariantMiniThumb(entry.slug);
-    if (miniRail) link.append(miniRail);
-    else if (entry.thumbnail) link.append(renderArticleThumbnail(entry.thumbnail, locale));
+    link.append(renderRulesMarkerThumb(entry.slug));
     const localized = entryLang ? translateArticle(entry, entryLang) : entry;
     const label = document.createElement('span');
     label.className = 'article-variant-label';
@@ -1301,9 +1297,17 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
   return a.title.localeCompare(b.title);
 }
 
+// A rules page with no game spec yet sorts right after the spec it varies,
+// instead of falling to the end of the rail.
+const RULES_RAIL_AFTER_SPEC: Record<string, string> = {
+  'three-kingdoms-banqi': 'banqi',
+};
+
 function rulesArticleRailSortIndex(article: Article): number {
   const gameSpecId = article.gameSpecId ?? article.slug;
   if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
+  const after = RULES_RAIL_AFTER_SPEC[article.slug];
+  if (after && isGameSpecId(after)) return canonicalVariantOrderIndex(after) + 0.5;
   return Number.MAX_SAFE_INTEGER;
 }
 
@@ -2851,7 +2855,7 @@ export function renderArticleThumbnail(
 // Variant rules articles whose rail/landing thumbnail is the shared variant
 // marker. Base-game articles map to their no-fog markers so the whole rail
 // reads in one visual language. Chess is study-only, not a variant, and has no
-// marker: its rules page keeps its own board thumbnail.
+// marker: off the rail it keeps its own board thumbnail.
 const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   'fog-chess': 'dark-chess',
   xiangqi: 'xiangqi',
@@ -2872,11 +2876,25 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
 function renderVariantMiniThumb(slug: string): HTMLElement | null {
   const miniId = VARIANT_MINI_BY_SLUG[slug];
   if (!miniId) return null;
+  return variantMarkerThumb(renderVariantMarker(miniId, { size: 100 }));
+}
+
+// The rules rail and landing tiles always show a marker: the variant's own, or
+// the question-mark placeholder until it has art. Never the article's board
+// thumbnail, which reads as a different visual language in a marker column.
+function renderRulesMarkerThumb(slug: string): HTMLElement {
+  return (
+    renderVariantMiniThumb(slug) ??
+    variantMarkerThumb(renderPlaceholderVariantMarker({ size: 100 }))
+  );
+}
+
+function variantMarkerThumb(markerHtml: string): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'articles-index-card-thumb variant-mini-thumb variant-marker-thumb';
   wrap.setAttribute('aria-hidden', 'true');
   markNoTranslate(wrap);
-  wrap.innerHTML = renderVariantMarker(miniId, { size: 100 });
+  wrap.innerHTML = markerHtml;
   const marker = wrap.firstElementChild;
   if (marker instanceof HTMLElement) {
     marker.style.display = 'block';

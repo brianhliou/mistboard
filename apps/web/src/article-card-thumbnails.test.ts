@@ -34,7 +34,7 @@ function hasArt(box: Element | null): boolean {
   if (!box || box.classList.contains('is-empty')) return false;
   return (
     box.querySelector(
-      'svg, img, .articles-thumb-board, .variant-marker[data-variant-marker-id]',
+      'svg, img, .articles-thumb-board, .variant-marker[data-variant-marker-id], .variant-marker[data-variant-marker-placeholder]',
     ) !== null
   );
 }
