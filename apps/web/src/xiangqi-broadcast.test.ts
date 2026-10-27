@@ -475,8 +475,14 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(link?.getAttribute('href')).toBe(
       `/contact?about=${encodeURIComponent('/broadcast/xiangqi/t/round/r')}`,
     );
-    // The last thing on the page, after the event layout.
-    expect(root.querySelector('.xqb-event')?.lastElementChild).toBe(notes[0]);
+    // The last thing on the page: the event layout's last grid item, in the
+    // foot area under the content column. Below the layout it ended the pinned
+    // left column's grid area above the page's foot, so at the bottom of the
+    // page the column was pushed up by the note's height.
+    const layout = root.querySelector('.xqb-event-layout-with-rail');
+    expect(layout).not.toBeNull();
+    expect(layout?.lastElementChild).toBe(notes[0]);
+    expect(root.querySelector('.xqb-event')?.lastElementChild).toBe(layout);
     window.history.replaceState(null, '', '/');
   });
 
