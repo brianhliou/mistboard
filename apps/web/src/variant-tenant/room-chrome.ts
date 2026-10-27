@@ -225,6 +225,9 @@ export type TenantChromeContext<C extends string> = {
   // The viewer's bottom-of-board color (seat when seated, else perspective).
   orientation(): C;
   playAgainRequestBody(): Record<string, unknown>;
+  // The bot this room was played against (snapshot `pveEngineId`), or null.
+  // Optional so a test ctx may omit it.
+  pveEngineId?(): string | null;
   // Post-game rematch block for a seated player, or null to fall back to
   // play-again. Tenant-owned because the shared control reads liveState.
   rematchControls(sendSocket: (payload: unknown) => boolean): HTMLElement | null;
@@ -875,7 +878,7 @@ export function createTenantRoomChrome<C extends string>(
   // flip variants they are move order, so this alternates who opens. A table
   // of four (mahjong) keeps the tenant's own body.
   function playAgainBody(): Record<string, unknown> {
-    const body = ctx.playAgainRequestBody();
+    const body = withRoomBot(ctx.playAgainRequestBody(), ctx.pveEngineId?.() ?? null);
     const seat = seatColor();
     if (seat === null || tenant.colors.length !== 2) return body;
     return { ...body, preferredColor: tenant.oppositeColor(seat) };
@@ -1436,4 +1439,18 @@ const SEAT_WORD_KEYS: Readonly<Record<string, I18nKey>> = {
  *  shown as a variant (mahjong): no icon box, never a stand-in glyph. */
 export function roomMarkerId(gameSpecId: string | undefined): VariantMiniId | undefined {
   return (gameSpecId && variantMiniIdForRawVariant(gameSpecId)) || undefined;
+}
+
+/** A bot rematch plays the same bot. Four tenants (Duck Xiangqi, Flip Jungle,
+ *  both mahjongs) sent a body with no bot, so the server picked its default
+ *  and the home panel's Play again record, which needs a bot, kept naming an
+ *  older game. The room's own engine fills the gap; a body that names a bot
+ *  keeps it. */
+export function withRoomBot(
+  body: Record<string, unknown>,
+  pveEngineId: string | null,
+): Record<string, unknown> {
+  if (body.mode !== 'pve' || !pveEngineId) return body;
+  if (typeof body.botId === 'string' || typeof body.engineId === 'string') return body;
+  return { ...body, engineId: pveEngineId };
 }

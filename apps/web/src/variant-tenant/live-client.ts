@@ -480,6 +480,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   // server sends the offer flags on a finished PvP room's snapshot and in
   // rematch:state frames, and socket-client follows the redirect. A bot room
   // shows Play again instead (room-chrome), and a table of four has no swap.
+  // The bot a PvE room is played against, from its snapshot; room-chrome
+  // puts it on a rematch body that names none (withRoomBot).
+  let roomPveEngineId: string | null = null;
+
   const rematch =
     tenant.colors.length === 2
       ? createTenantRematch(tenant.colors as unknown as readonly [C, C], () =>
@@ -507,6 +511,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     isReplayLive: () => replay.isLive(),
     orientation,
     playAgainRequestBody: () => config.playAgainRequestBody(state),
+    pveEngineId: () => roomPveEngineId,
     rematchControls:
       config.chrome?.rematchControls ?? ((sendSocket) => rematch?.controls(sendSocket) ?? null),
     lobbyMatch: () => state.lobbyMatch,
@@ -572,6 +577,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     );
     if (frame.events) state.events = frame.events;
     rematch?.applyFrame(frame.rematch);
+    if (typeof frame.pveEngineId === 'string') roomPveEngineId = frame.pveEngineId;
     config.onFrame?.(frame);
   }
 
@@ -663,6 +669,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     replay.reset();
     chrome.resetState();
     rematch?.reset();
+    roomPveEngineId = null;
     initLiveSound();
     resetLiveSoundState();
     config.resetSounds?.();

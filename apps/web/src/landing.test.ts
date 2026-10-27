@@ -148,6 +148,17 @@ describe('landing shell', () => {
     }
   });
 
+  it('prerenders the viewer and broadcast slots at their size, so nothing pops in', () => {
+    // The viewer slot used to ship empty and the broadcast slot collapsed until
+    // the index answered (~1s); both then grew and pushed band 1 around.
+    const wrap = document.createElement('div');
+    wrap.innerHTML = renderLandingShellForPrerender();
+    expect(wrap.querySelector('#landing-replay > .watch-replay-skeleton')).not.toBeNull();
+    expect(
+      wrap.querySelector('.landing-event-banners.landing-event-banners--pending'),
+    ).not.toBeNull();
+  });
+
   it('keeps the grid-area hooks the homepage band CSS keys on', () => {
     // landing.css places the bands via these class names (grid-areas
     // left/panel/play, puzzle/forum/chat, news/blogs+learn/studies); renaming
@@ -268,6 +279,32 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 describe('homepage band layout (CSS)', () => {
   const css = readFileSync('src/landing.css', 'utf8');
 
+  it('makes band 3 five compact forum topics, flatter than band 2', () => {
+    // Brian, 2026-10-27: the forum showed three or four two-line-excerpt
+    // topics in a box as tall as the puzzle band.
+    const forum = readFileSync('src/landing-forum-preview.css', 'utf8');
+    expect(css).toMatch(/--landing-forum-height: calc\(42px \+ 5 \* 65px\);/);
+    expect(forum).toMatch(
+      /height: var\(--landing-forum-height, var\(--landing-lower-widget-height/,
+    );
+    expect(forum).toMatch(/\.landing-forum-topic-excerpt \{[^}]*-webkit-line-clamp: 1;/);
+  });
+
+  it('fits Play a person without a scrollbar, with room for two more variants', () => {
+    // Brian, 2026-10-27: the person tab scrolled at 46px rows. A 32px floor
+    // and 4px bar padding fit 12 rows in the 11-bot-row computer tab height.
+    const panel = readFileSync('src/landing-play-panel.css', 'utf8');
+    expect(panel).toMatch(
+      /\.pp-view-person \.pp-row-person \{\s*flex: 1 0 auto;\s*min-height: 32px;\s*max-height: 46px;/,
+    );
+    // Brian, 2026-10-27: "compress it even a tiny bit more" and account for
+    // the Casual/Rated bar: a 2px bar that never wraps, and 40px rows in the
+    // three-column band, the bot rows' floor.
+    expect(panel).toMatch(/\.pp-view-person \.pp-control \{\s*padding-block: 2px;/);
+    expect(panel).toMatch(/\.pp-view-person \.pp-note \{[^}]*white-space: nowrap;/);
+    expect(panel).toMatch(/\.landing-demo \.pp-view-person \.pp-row-person \{\s*max-height: 40px;/);
+  });
+
   it('puts the deep-dives row above the blog row at every width', () => {
     // Brian, 2026-10-26: deep dives go above the laptop fold. The three grid
     // layouts and the phone flex order must all agree.
@@ -302,8 +339,14 @@ describe('homepage band layout (CSS)', () => {
     expect(css).toMatch(
       /^\.landing-play-column > \.landing-event-banners > \.landing-event-banners-more \{[^}]*position: absolute;/m,
     );
+    // The cards sit right on the link (Brian, 2026-10-27): bottom-aligned in
+    // the column, with only the link's own room below them.
     expect(css).toMatch(
-      /^\.landing-play-column > \.landing-event-banners:has\(> \.landing-event-banners-more\) \{[^}]*margin-block: auto;/m,
+      /^\.landing-play-column > \.landing-event-banners \{\s*margin-top: auto;\s*\}/m,
+    );
+    expect(css).not.toMatch(/landing-event-banners[^{]*\{[^}]*margin-block: auto;/);
+    expect(css).toMatch(
+      /^\.landing-play-column:has\(> \.landing-event-banners > \.landing-event-banners-more\),[^{]*\{[^}]*padding-bottom: calc\(var\(--landing-event-more-height\) \+ var\(--landing-event-more-gap\)\);/m,
     );
   });
 

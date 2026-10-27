@@ -5,7 +5,10 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  height: var(--landing-lower-widget-height, 20em);
+  /* Band 3 is flatter than band 2 (Brian, 2026-10-27): landing.css sets
+     --landing-forum-height to five compact topic rows where the box shares a
+     band; elsewhere it keeps the band-2 widget height. */
+  height: var(--landing-forum-height, var(--landing-lower-widget-height, 20em));
   min-height: 0;
 }
 
@@ -42,12 +45,12 @@
   align-items: center;
   gap: 12px;
   min-height: 38px;
-  padding-block: 6px;
+  padding-block: 4px;
 }
 
 .landing-forum-topic-main {
   display: grid;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
@@ -71,12 +74,13 @@
   text-decoration: underline;
 }
 
-/* Latest post's opening words (lichess lobby forum shape): body ink, two lines
-   max, so a topic row carries what was actually said, not just its title. */
+/* Latest post's opening words (lichess lobby forum shape): body ink, one line
+   (two until 2026-10-27, when five topics had to fit a flatter band 3), so a
+   topic row carries what was actually said, not just its title. */
 .landing-forum-topic-excerpt {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   overflow: hidden;
   color: var(--site-text);
   font-size: 13px;

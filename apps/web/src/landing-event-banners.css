@@ -2,7 +2,8 @@
    in the play column (PlayStrategy-style). The slot collapses entirely when no
    event is on. */
 /* A grid of equal rows, so a title that wraps to two lines does not leave its
-   neighbour a shorter card. */
+   neighbour a shorter card. The announcement lines under the cards are not a
+   card, so with them the rows size to their content. */
 .landing-event-banners {
   display: grid;
   grid-auto-rows: 1fr;
@@ -11,8 +12,22 @@
   min-width: 0;
 }
 
+.landing-event-banners:has(> .landing-event-upcoming) {
+  grid-auto-rows: auto;
+}
+
 .landing-event-banners:empty {
   display: none;
+}
+
+/* While the index loads (landing-event-banners.ts BROADCAST_SLOT_PENDING_CLASS)
+   the slot holds two cards' room, so their arrival does not grow the band.
+   Phones never show the slot (landing.css hides it at 600px and below). */
+@media (min-width: 601px) {
+  .landing-event-banners.landing-event-banners--pending {
+    display: block;
+    min-height: calc(2 * 52px + 8px);
+  }
 }
 
 .landing-event-banner {
@@ -126,6 +141,33 @@
   color: var(--site-muted);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* An event still to start (no games yet): a plain line under the cards, not a
+   card and not a link, since its page would be an empty intro (Brian,
+   2026-10-27). No pointer, no hover. */
+.landing-event-upcoming {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-inline: 4px;
+}
+
+.landing-event-upcoming-line {
+  overflow: hidden;
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 12.5px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.landing-event-upcoming-title {
+  color: var(--site-text);
+  font-weight: 600;
 }
 
 /* Past the two-row cap: the rest are on the broadcast list. */

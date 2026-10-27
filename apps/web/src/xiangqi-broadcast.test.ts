@@ -1395,6 +1395,37 @@ describe('event page (tabs, default round, standings)', () => {
     expect(urls[1]).toBe('/api/xiangqi/broadcasts/t/rounds/r2');
   });
 
+  // dpxq published the 2026 league's rounds 10 and 11 as result rows with no
+  // moves; the homepage card's tour link opened round 11 on 78 empty boards.
+  it('skips a newer round of results-only boards for the latest round with moves', async () => {
+    const urls: string[] = [];
+    stubFetchJson((url) => {
+      urls.push(url);
+      if (url.includes('/rounds/')) return { ...ROUND, round: ROUND.rounds[1] };
+      return {
+        ...TOUR,
+        rounds: [
+          { ...ROUND.rounds[0], liveBoardCount: 0, completeBoardCount: 2, recordedBoardCount: 2 },
+          { ...ROUND.rounds[1], boardCount: 3, completeBoardCount: 3, recordedBoardCount: 3 },
+          {
+            ...ROUND.rounds[1],
+            id: 'r3',
+            name: '第3轮',
+            nameEn: 'Round 3',
+            boardCount: 4,
+            completeBoardCount: 4,
+            recordedBoardCount: 0,
+          },
+        ],
+      };
+    });
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastTour(root, 't');
+    expect(urls[1]).toBe('/api/xiangqi/broadcasts/t/rounds/r2');
+  });
+
   it('switches tabs in place: Overview lists the schedule, Players computes standings from every round', async () => {
     const finished = {
       ...ROUND,

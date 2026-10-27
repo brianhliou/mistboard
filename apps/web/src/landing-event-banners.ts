@@ -27,6 +27,10 @@ export type EventBanner = {
   // "starts Aug 31, 7:00 AM"). Plain text, composed by the editor.
   subtitle: string;
   href: string;
+  // A broadcast that has not started and has no games yet. Its tour page is an
+  // empty intro, so it shows as a plain announcement line, never a card or a
+  // link (Brian, 2026-10-27).
+  upcoming?: true;
 };
 
 // Hand-published banners for events the broadcast API does not know. Empty =
@@ -70,8 +74,10 @@ const FINISHED_WINDOW_MS = 7 * DAY_MS;
 // An upcoming tour appears two weeks out.
 const UPCOMING_WINDOW_MS = 14 * DAY_MS;
 
-// The slot has room for two rows; the rest are one link away.
+// The slot has room for two cards; the rest are one link away.
 export const MAX_BROADCAST_BANNERS = 2;
+// Under the cards, up to two one-line announcements of events about to start.
+export const MAX_UPCOMING_LINES = 2;
 
 type Words = {
   live: string;
@@ -150,6 +156,8 @@ const SECTION_SUFFIX_EN = /,?\s+(Men|Women)$/;
 
 type RankedBanner = EventBanner & { rank: number; order: number };
 
+const RANK_UPCOMING = 2;
+
 /** Banner rows for the tours worth a spotlight right now, most pressing first:
  *  live (most live games first), between rounds, starting soonest, finished
  *  most recently. An event's two sections share one row. Pure: the caller
@@ -195,6 +203,9 @@ export function broadcastBanners(
       href: `/broadcast/xiangqi/${encodeURIComponent(lead.tour.slug)}`,
       rank: state.rank,
       order: state.order,
+      ...(state.rank === RANK_UPCOMING && merged.recordedBoardCount === 0
+        ? { upcoming: true as const }
+        : {}),
     });
   }
   return rows
@@ -223,7 +234,7 @@ function bannerState(
     if (startsAt - now > UPCOMING_WINDOW_MS) return null;
     return {
       subtitle: `${words.starts} ${shortDate(tour.startsAt!, locale)}`,
-      rank: 2,
+      rank: RANK_UPCOMING,
       order: startsAt,
     };
   }
@@ -248,29 +259,130 @@ function bannerState(
   return null;
 }
 
-/** Fetch the tours and append their rows to a mounted container. Failures
- *  leave the slot as it was: a missing banner is never an error on the home page. */
+/** What the broadcast part of the slot shows: up to two cards for events
+ *  with games to watch, up to two announcement lines for events still to
+ *  start, and how many rows are left for the "more" link. */
+export function broadcastSlot(rows: readonly EventBanner[]): {
+  cards: EventBanner[];
+  upcoming: EventBanner[];
+  more: number;
+} {
+  const cards = rows.filter((row) => !row.upcoming).slice(0, MAX_BROADCAST_BANNERS);
+  const upcoming = rows.filter((row) => row.upcoming).slice(0, MAX_UPCOMING_LINES);
+  return { cards, upcoming, more: rows.length - cards.length - upcoming.length };
+}
+
+// The last index this browser saw, so a repeat visit paints the cards with the
+// page instead of a second later (the index read took ~850ms on prod). Rows
+// are recomputed from it with the current clock and replaced when the fetch
+// lands; past a few hours it is not shown at all.
+const BROADCAST_CACHE_KEY = 'mistboard:home-broadcasts:v1';
+const BROADCAST_CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
+function readCachedTours(now: number): BroadcastTourSummary[] | null {
+  try {
+    const raw = window.localStorage.getItem(BROADCAST_CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as { at?: unknown; tours?: unknown };
+    if (typeof cached.at !== 'number' || !Array.isArray(cached.tours)) return null;
+    if (now - cached.at > BROADCAST_CACHE_MAX_AGE_MS || cached.at > now) return null;
+    return cached.tours as BroadcastTourSummary[];
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedTours(tours: readonly BroadcastTourSummary[], now: number): void {
+  // Only what a banner reads: the full index carries players and rounds.
+  const slim = tours.map(({ tour, boardCount, liveBoardCount, recordedBoardCount }) => ({
+    tour: {
+      slug: tour.slug,
+      name: tour.name,
+      nameEn: tour.nameEn,
+      startsAt: tour.startsAt,
+      endsAt: tour.endsAt,
+    },
+    boardCount,
+    liveBoardCount,
+    recordedBoardCount,
+  }));
+  try {
+    window.localStorage.setItem(BROADCAST_CACHE_KEY, JSON.stringify({ at: now, tours: slim }));
+  } catch {
+    // Storage full or blocked: the next visit fetches, as before.
+  }
+}
+
+/** Replace the slot's broadcast part (hand-published banners stay). */
+function renderBroadcastSlot(host: HTMLElement, rows: readonly EventBanner[], locale: Locale) {
+  for (const el of host.querySelectorAll('[data-broadcast-slot]')) el.remove();
+  const { cards, upcoming, more } = broadcastSlot(rows);
+  for (const banner of cards) {
+    const row = eventBannerRow(banner);
+    row.dataset.broadcastSlot = '';
+    host.append(row);
+  }
+  if (upcoming.length > 0) {
+    const list = document.createElement('div');
+    list.className = 'landing-event-upcoming';
+    list.dataset.broadcastSlot = '';
+    list.append(...upcoming.map(upcomingLine));
+    host.append(list);
+  }
+  if (more > 0) {
+    // lichess's "more broadcasts" under its featured ones.
+    const link = document.createElement('a');
+    link.className = 'landing-event-banners-more';
+    link.dataset.broadcastSlot = '';
+    link.href = '/broadcast/xiangqi';
+    link.textContent = WORDS[locale].more(more);
+    host.append(link);
+  }
+  if (rows.length > 0) {
+    for (const sample of host.querySelectorAll('[data-event-id^="dev-sample-"]')) sample.remove();
+  }
+}
+
+/** An event still to start: its name and start date as plain text. */
+function upcomingLine(banner: EventBanner): HTMLElement {
+  const lines = cardLines(banner);
+  const line = document.createElement('p');
+  line.className = 'landing-event-upcoming-line';
+  line.dataset.eventId = banner.id;
+  const title = document.createElement('span');
+  title.className = 'landing-event-upcoming-title';
+  title.textContent = lines.title;
+  // cardLines moved the year to the front of the meta; the line reads
+  // "World Rapid Championship · Starts Nov 10", so the year stays out.
+  line.append(title, ` · ${banner.subtitle}`);
+  return line;
+}
+
+/** While the index loads, the slot keeps the room two cards and the "more"
+ *  link take, so their arrival does not grow band 1 and push the viewer
+ *  beside it down (it moved 57px on prod, 2026-10-27). */
+export const BROADCAST_SLOT_PENDING_CLASS = 'landing-event-banners--pending';
+
+/** Fill the slot: from this browser's last copy of the index at once when it
+ *  has one, then from the API. Failures leave the slot as it was: a missing
+ *  banner is never an error on the home page. */
 export async function loadBroadcastBanners(host: HTMLElement, locale: Locale): Promise<void> {
+  const cached = readCachedTours(Date.now());
+  if (cached) {
+    renderBroadcastSlot(host, broadcastBanners(cached, locale), locale);
+    host.classList.remove(BROADCAST_SLOT_PENDING_CLASS);
+  }
   try {
     const resp = await fetch('/api/xiangqi/broadcasts');
     if (!resp.ok) return;
     const data = (await resp.json()) as { tours?: BroadcastTourSummary[] };
-    const rows = broadcastBanners(data.tours ?? [], locale);
-    const shown = rows.slice(0, MAX_BROADCAST_BANNERS);
-    for (const banner of shown) host.append(eventBannerRow(banner));
-    if (rows.length > shown.length) {
-      // lichess's "more broadcasts" under its featured ones.
-      const more = document.createElement('a');
-      more.className = 'landing-event-banners-more';
-      more.href = '/broadcast/xiangqi';
-      more.textContent = WORDS[locale].more(rows.length - shown.length);
-      host.append(more);
-    }
-    if (rows.length > 0) {
-      for (const sample of host.querySelectorAll('[data-event-id^="dev-sample-"]')) sample.remove();
-    }
+    const tours = data.tours ?? [];
+    writeCachedTours(tours, Date.now());
+    renderBroadcastSlot(host, broadcastBanners(tours, locale), locale);
   } catch {
-    // Offline or a dev pair without the route: the slot stays empty.
+    // Offline or a dev pair without the route: the slot stays as it was.
+  } finally {
+    host.classList.remove(BROADCAST_SLOT_PENDING_CLASS);
   }
 }
 

@@ -156,6 +156,8 @@ type BroadcastRoundStats = {
   liveBoardCount: number;
   completeBoardCount: number;
   scheduledBoardCount: number;
+  /** Boards with moves; results-only rows (no plies) do not count. */
+  recordedBoardCount: number;
 };
 
 type BroadcastRoundWithStats = XiangqiBroadcastRound & Partial<BroadcastRoundStats>;
@@ -310,11 +312,21 @@ export async function mountXiangqiBroadcastRound(
   }
 }
 
+// A source can publish a round's results hours before its moves (dpxq's 2026
+// league: rounds 10 and 11 arrived as 112 result rows with no plies), so "has
+// games" means boards with moves. An older payload without the count falls
+// back to any boards, and a tour of only result rows to its latest such round.
 function defaultRound(rounds: BroadcastRoundWithStats[]): BroadcastRoundWithStats | null {
   const live = rounds.find((round) => (round.liveBoardCount ?? 0) > 0);
   if (live) return live;
-  const withBoards = rounds.filter((round) => (round.boardCount ?? 0) > 0);
-  return withBoards[withBoards.length - 1] ?? rounds[0] ?? null;
+  const latest = (has: (round: BroadcastRoundWithStats) => boolean) =>
+    rounds.filter(has).at(-1) ?? null;
+  return (
+    latest((round) => (round.recordedBoardCount ?? round.boardCount ?? 0) > 0) ??
+    latest((round) => (round.boardCount ?? 0) > 0) ??
+    rounds[0] ??
+    null
+  );
 }
 
 // A tour seeded with no rounds still gets the event page; the round-shaped

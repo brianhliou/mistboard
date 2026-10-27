@@ -27,7 +27,11 @@ import { buildLandingActivity } from './landing-activity.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
 import { buildTopStudiesWidget } from './landing-community-widgets.js';
-import { buildLandingEventBanners, loadBroadcastBanners } from './landing-event-banners.js';
+import {
+  BROADCAST_SLOT_PENDING_CLASS,
+  buildLandingEventBanners,
+  loadBroadcastBanners,
+} from './landing-event-banners.js';
 import { buildLandingForumPreview } from './landing-forum-preview.js';
 import {
   buildLandingPhoneTiles,
@@ -651,6 +655,10 @@ export function buildLandingStage(
   // Widget styling (compact board + name/clock seats) is keyed on this class,
   // shared with the dev variant sheet's cells.
   replayRoot.classList.add('showcase-widget');
+  // The board's placeholder is part of the shell, prerender included, so first
+  // paint already holds the viewer's room instead of an empty slot that the
+  // skeleton, then the board, grow into.
+  renderWatchReplaySkeleton(replayRoot);
   viewerLink.append(replayRoot);
   boardColumn.append(viewerLink);
   // Honest "recent · 2h ago" caption: kept wired (the cycler's onGameChange still
@@ -742,7 +750,10 @@ export function buildLandingStage(
   playColumn.append(playCenter);
   if (!phone) {
     const eventBanners = buildLandingEventBanners();
-    void loadBroadcastBanners(eventBanners, locale);
+    // Pending in the prerendered shell too, so first paint already holds the
+    // cards' room.
+    eventBanners.classList.add(BROADCAST_SLOT_PENDING_CLASS);
+    if (!opts.skipLiveWidgets) void loadBroadcastBanners(eventBanners, locale);
     playColumn.append(eventBanners);
   }
 

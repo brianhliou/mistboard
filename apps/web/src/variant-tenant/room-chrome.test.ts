@@ -2,11 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { writeAccountPreference } from '../account-preferences.js';
 import type { LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
+import { lastBotGame } from '../pve-memory.js';
 import {
   createTenantRoomChrome,
   type TenantChromeContext,
   type TenantWebView,
   type WebVariantTenant,
+  withRoomBot,
 } from './room-chrome.js';
 
 // Direct pins for the chrome branches the per-tenant suites do not reach:
@@ -66,6 +68,7 @@ type CtxOverrides = Partial<{
   abortDeadline: number | null;
   roomMode: string;
   playAgainRequestBody: Record<string, unknown>;
+  pveEngineId: string | null;
   gameSpecId: string;
   drawOffer: Color | null;
   drawOfferCooldown: number;
@@ -96,6 +99,7 @@ function chromeHarness(
     isReplayLive: () => overrides.isReplayLive ?? true,
     orientation: () => 'white',
     playAgainRequestBody: () => overrides.playAgainRequestBody ?? {},
+    pveEngineId: () => overrides.pveEngineId ?? null,
     rematchControls: () => null,
     lobbyMatch: () => overrides.lobbyMatch ?? false,
     rated: () => overrides.rated ?? false,
@@ -750,6 +754,58 @@ describe('tenant room chrome bot rematch', () => {
       preferredColor: 'red',
     });
     expect(await rematchBody('red')).toMatchObject({ preferredColor: 'white' });
+  });
+
+  // Duck Xiangqi, Flip Jungle and both mahjongs sent a rematch body with no
+  // bot: the server picked its default bot, and the home panel's Play again
+  // row (which reads the last bot game this device started) skipped the
+  // rematch and kept naming an older game.
+  it('rematches the same bot and records it for the home Play again row', async () => {
+    localStorage.removeItem('mistboard:last-bot-game');
+    const fetchSpy = vi.fn(
+      async () => new Response(JSON.stringify({ url: '/r/next' }), { status: 200 }),
+    );
+    vi.stubGlobal('fetch', fetchSpy);
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    try {
+      const { chrome, refs } = chromeHarness({
+        view: finished,
+        seat: 'white',
+        roomMode: 'pve',
+        pveEngineId: 'fairy-stockfish-duck-level-3',
+        playAgainRequestBody: {
+          mode: 'pve',
+          gameSpecId: 'duck-xiangqi',
+          preferredColor: 'random',
+          timeControl: { initialMs: 300_000, incrementMs: 3_000 },
+        },
+      });
+      chrome.renderRoomActions();
+      refs.roomActions
+        .querySelector<HTMLButtonElement>('button.postgame-actions__rematch')
+        ?.click();
+      await vi.waitFor(() => expect(assign).toHaveBeenCalledWith('/r/next'));
+      const init = (fetchSpy.mock.calls[0] as unknown[])[1] as RequestInit;
+      expect(JSON.parse(String(init.body))).toMatchObject({
+        engineId: 'fairy-stockfish-duck-level-3',
+      });
+      expect(lastBotGame()).toEqual({
+        gameSpecId: 'duck-xiangqi',
+        botId: 'fairy-stockfish-duck-level-3',
+        timeControl: { initialMs: 300_000, incrementMs: 3_000 },
+      });
+    } finally {
+      assign.mockRestore();
+      vi.unstubAllGlobals();
+      localStorage.removeItem('mistboard:last-bot-game');
+    }
+  });
+
+  it('keeps a bot the tenant body already names', () => {
+    const body = { mode: 'pve', gameSpecId: 'xiangqi', engineId: 'pikafish-level-4' };
+    expect(withRoomBot(body, 'pikafish-level-8')).toBe(body);
+    expect(withRoomBot({ mode: 'pvp' }, 'pikafish-level-8')).toEqual({ mode: 'pvp' });
+    expect(withRoomBot({ mode: 'pve' }, null)).toEqual({ mode: 'pve' });
   });
 });
 
