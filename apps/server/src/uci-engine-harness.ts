@@ -463,6 +463,8 @@ export function runUciBestmove(args: RunUciBestmoveArgs): Promise<string | null>
  */
 export function parseInfoScore(line: string):
   | {
+      /** 1-based MultiPV rank; an unranked score is rank 1. */
+      index: number;
       depth: number;
       cp: number | null;
       mate: number | null;
@@ -479,8 +481,11 @@ export function parseInfoScore(line: string):
       bound: 'lower' | 'upper' | null;
     }
   | undefined {
-  if (!line.startsWith('info ') || !line.includes(' score ')) return undefined;
+  if (!line.startsWith('info ') || line.startsWith('info string ') || !line.includes(' score ')) {
+    return undefined;
+  }
   const tokens = line.split(/\s+/);
+  let index = 1;
   let depth = 0;
   let cp: number | null = null;
   let mate: number | null = null;
@@ -491,7 +496,8 @@ export function parseInfoScore(line: string):
   let timeMs: number | null = null;
   let bound: 'lower' | 'upper' | null = null;
   for (let i = 1; i < tokens.length; i += 1) {
-    if (tokens[i] === 'depth') depth = Number(tokens[i + 1]);
+    if (tokens[i] === 'multipv') index = Number(tokens[i + 1]);
+    else if (tokens[i] === 'depth') depth = Number(tokens[i + 1]);
     else if (tokens[i] === 'nodes') nodes = Number(tokens[i + 1]);
     else if (tokens[i] === 'time') timeMs = Number(tokens[i + 1]);
     else if (tokens[i] === 'lowerbound') bound = 'lower';
@@ -504,7 +510,8 @@ export function parseInfoScore(line: string):
       break;
     }
   }
-  return { depth, cp, mate, pv, nodes, timeMs, bound };
+  if (!Number.isSafeInteger(index) || index < 1) return undefined;
+  return { index, depth, cp, mate, pv, nodes, timeMs, bound };
 }
 
 export type UciEval = {
@@ -514,22 +521,74 @@ export type UciEval = {
   cp: number | null;
   /** Signed moves-to-mate (side-to-move POV); null otherwise. */
   mate: number | null;
-  /** Depth of the last scored line seen before bestmove. */
+  /** Depth of the last exact rank-1 score (bounded only if no exact score arrived). */
   depth: number;
-  /** Principal variation of the last scored line (engine UCI); absent/empty when
+  /** Principal variation of the chosen rank-1 score (engine UCI); absent/empty when
    *  the engine emitted none. Feeds inline best-play lines in postgame analysis. */
   pv?: string[];
-  /** Nodes searched, from the last scored info line; absent when the engine emits none.
+  /** Nodes searched, from the chosen rank-1 score; absent when the engine emits none.
    *  Powers search-truncation telemetry (a move well under its node budget was cut short). */
   nodes?: number;
-  /** Search time (ms) from the last scored info line; absent when the engine emits none. */
+  /** Search time (ms) from the chosen rank-1 score; absent when the engine emits none. */
   timeMs?: number;
+  /** Ranked candidates, index 1 first, in the engine's side-to-move POV. Keeps the
+   *  last exact row per rank, or its last bounded row if no exact row arrived.
+   *  Rows may come from different depths. Scores without a PV supply no candidate.
+   *  Both live runners return this table; optional for other UciEval providers. */
+  lines?: UciMultiPvLine[];
 };
 
+/** One accumulator per search, shared by the spawned and warm live runners. */
+class UciEvalAccumulator {
+  private readonly scores = new Map<number, NonNullable<ReturnType<typeof parseInfoScore>>>();
+
+  note(line: string): void {
+    const score = parseInfoScore(line);
+    if (!score) return;
+    const previous = this.scores.get(score.index);
+    // A bound is an aborted iteration. It must not replace an exact row, even
+    // when another rank continues searching and emits more info afterwards.
+    if (score.bound === null || !previous || previous.bound !== null) {
+      this.scores.set(score.index, score);
+    }
+  }
+
+  result(best: string | null): UciEval {
+    const top = this.scores.get(1);
+    const lines = [...this.scores.values()]
+      .sort((a, b) => a.index - b.index)
+      .flatMap((score): UciMultiPvLine[] => {
+        const move = score.pv[0];
+        return move
+          ? [
+              {
+                index: score.index,
+                move,
+                cp: score.cp,
+                mate: score.mate,
+                depth: score.depth,
+                pv: score.pv,
+                bound: score.bound,
+              },
+            ]
+          : [];
+      });
+    return {
+      best,
+      cp: top?.cp ?? null,
+      mate: top?.mate ?? null,
+      depth: top?.depth ?? 0,
+      pv: top?.pv,
+      nodes: top?.nodes ?? undefined,
+      timeMs: top?.timeMs ?? undefined,
+      lines,
+    };
+  }
+}
+
 /**
- * Like runUciBestmove, but also keeps the last `info … score` line so the caller
- * gets the position's evaluation (for postgame analysis), not just the move. Same
- * spawn / hard-timeout / SIGKILL-cleanup contract.
+ * Like runUciBestmove, but also retains the ranked `info … score` candidates and
+ * rank-1 evaluation. Same spawn / hard-timeout / SIGKILL-cleanup contract.
  */
 export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
   const { bin, commands, timeoutMs, timeoutMessage, env } = args;
@@ -546,9 +605,7 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
     const trace = new UciOutputTrace('spawn');
     let buf = '';
     let settled = false;
-    let latest: ReturnType<typeof parseInfoScore> | null = null;
-    // Only used when the whole search produced nothing but bounded lines.
-    let fallback: ReturnType<typeof parseInfoScore> | null = null;
+    const evaluation = new UciEvalAccumulator();
     const advertisedOptions = new Set<string>();
 
     const finish = (run: () => void): void => {
@@ -585,27 +642,13 @@ export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
           finish(() => reject(new Error(`UCI engine rejected command: ${protocolError}`)));
           return;
         }
-        const score = parseInfoScore(line);
-        // A bounded line is an aborted iteration; keep it only as a last resort.
-        if (score) {
-          if (score.bound === null) latest = score;
-          else if (latest === null) fallback = score;
-        }
+        evaluation.note(line);
         const move = parseBestmoveLine(line);
         if (move !== undefined) {
           finish(() => {
             try {
               validateConfiguredUciOptions(commands, advertisedOptions);
-              const chosen = latest ?? fallback;
-              resolveEval({
-                best: move,
-                cp: chosen?.cp ?? null,
-                mate: chosen?.mate ?? null,
-                depth: chosen?.depth ?? 0,
-                pv: chosen?.pv,
-                nodes: chosen?.nodes ?? undefined,
-                timeMs: chosen?.timeMs ?? undefined,
-              });
+              resolveEval(evaluation.result(move));
             } catch (err) {
               reject(err);
             }
@@ -876,8 +919,8 @@ export class UciEngineSession {
   }
 
   /**
-   * Evaluate one position: write `positionCommand` + `goCommand`, keep the last
-   * `info … score` line, resolve on `bestmove`. Requests are serialized; each has
+   * Evaluate one position: write `positionCommand` + `goCommand`, retain ranked
+   * candidates and the rank-1 score, resolve on `bestmove`. Requests are serialized; each has
    * its own hard timeout, after which the session is failed closed (the engine's
    * state is unknown mid-search, so the whole session dies, not just the request).
    */
@@ -890,9 +933,7 @@ export class UciEngineSession {
     return this.enqueue(async () => {
       await this.readyPromise;
       return await new Promise<UciEval>((resolveEval, reject) => {
-        let latest: ReturnType<typeof parseInfoScore> | null = null;
-        // Only used when the whole search produced nothing but bounded lines.
-        let fallback: ReturnType<typeof parseInfoScore> | null = null;
+        const evaluation = new UciEvalAccumulator();
         const trace = new UciOutputTrace('request');
         const timer = setTimeout(() => {
           const init =
@@ -903,26 +944,12 @@ export class UciEngineSession {
         this.consume({
           onLine: (line) => {
             trace.note(line);
-            const score = parseInfoScore(line);
-            // A bounded line is an aborted iteration; keep it only as a last resort.
-            if (score) {
-              if (score.bound === null) latest = score;
-              else if (latest === null) fallback = score;
-            }
+            evaluation.note(line);
             const move = parseBestmoveLine(line);
             if (move !== undefined) {
               clearTimeout(timer);
               this.consumer = null;
-              const chosen = latest ?? fallback;
-              resolveEval({
-                best: move,
-                cp: chosen?.cp ?? null,
-                mate: chosen?.mate ?? null,
-                depth: chosen?.depth ?? 0,
-                pv: chosen?.pv,
-                nodes: chosen?.nodes ?? undefined,
-                timeMs: chosen?.timeMs ?? undefined,
-              });
+              resolveEval(evaluation.result(move));
             }
           },
           reject: (err) => {
