@@ -9,7 +9,7 @@ import './seat-disc-ink.css';
 import './xiangqi-broadcast.css';
 import './xiangqi-players.css';
 import { t } from './i18n/catalog.js';
-import { currentLocale, type Locale } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import {
   cxaGroupFor,
   cxaPointsFor,
@@ -35,12 +35,7 @@ import {
   searchFromFilter,
 } from './players/player-stats.js';
 import { playerTitleFor } from './players/player-title.js';
-import {
-  PLAYER_PROFILES,
-  PLAYER_TITLE_LABEL,
-  PLAYER_TITLES,
-  type PlayerTitle,
-} from './players/profiles.js';
+import { PLAYER_PROFILES, PLAYER_TITLES, type PlayerTitle } from './players/profiles.js';
 import { ratingHistoryFigure } from './players/rating-history-chart.js';
 import { MATCH_FIXING_ARTICLE_PATH, sanctionFor, sanctionSentence } from './players/sanctions.js';
 import {
@@ -52,6 +47,10 @@ import { seatDiscEl } from './seat-disc.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import {
   type BroadcastRailItem,
+  broadcastCount,
+  broadcastName,
+  broadcastRoundName,
+  broadcastSecondaryName,
   broadcastSectionLayout,
   rightsContactNote,
 } from './xiangqi-broadcast-pages.js';
@@ -102,7 +101,7 @@ export type PlayerBoardRecord = {
   roundNameEn?: string | null;
   playedOn: string | null;
   colour: 'red' | 'black';
-  opponent: { name: string; nameEn: string | null; slug: string | null };
+  opponent: { name: string; nameEn: string | null; nameOwn?: string; slug: string | null };
   result: '1-0' | '0-1' | '1/2-1/2' | '*';
   outcome: 'win' | 'draw' | 'loss';
   plyCount: number;
@@ -115,7 +114,7 @@ type PlayersIndexResponse = { players: PlayerRecord[] };
 type PlayerResponse = { player: PlayerRecord; boards: PlayerBoardRecord[] };
 
 export async function mountXiangqiPlayersIndex(root: HTMLElement): Promise<void> {
-  setRoot(root, 'Loading players');
+  setRoot(root, t('broadcast.loadingPlayers'));
   try {
     const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
     root.replaceChildren(buildNav(), renderIndex(data.players).main);
@@ -125,7 +124,7 @@ export async function mountXiangqiPlayersIndex(root: HTMLElement): Promise<void>
 }
 
 export async function mountXiangqiPlayer(root: HTMLElement, slug: string): Promise<void> {
-  setRoot(root, 'Loading player');
+  setRoot(root, t('broadcast.loadingPlayer'));
   try {
     const data = await fetchJson<PlayerResponse>(
       `/api/xiangqi/players/${encodeURIComponent(slug)}`,
@@ -140,7 +139,7 @@ export async function mountXiangqiPlayer(root: HTMLElement, slug: string): Promi
 }
 
 export async function mountXiangqiTeamsIndex(root: HTMLElement): Promise<void> {
-  setRoot(root, 'Loading teams');
+  setRoot(root, t('broadcast.loadingTeams'));
   try {
     const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
     root.replaceChildren(buildNav(), renderTeams(data.players).main);
@@ -150,12 +149,12 @@ export async function mountXiangqiTeamsIndex(root: HTMLElement): Promise<void> {
 }
 
 export async function mountXiangqiTeam(root: HTMLElement, key: string): Promise<void> {
-  setRoot(root, 'Loading team');
+  setRoot(root, t('broadcast.loadingTeam'));
   try {
     const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
     const canonical = TEAM_KEY_ALIASES[key] ?? key;
     const team = teamsOf(data.players).find((entry) => entry.key === canonical);
-    if (!team) throw new Error('No team by that name');
+    if (!team) throw new Error(t('broadcast.noSuchTeam'));
     if (canonical !== key) history.replaceState(history.state, '', teamHref(canonical));
     document.title = `${teamLabel(team)} · Mistboard`;
     const page = renderTeam(team);
@@ -174,26 +173,24 @@ function setRoot(root: HTMLElement, loadingLabel: string): void {
 async function fetchJson<T>(url: string): Promise<T> {
   const response = await fetch(url);
   if (!response.ok) {
-    if (response.status === 404) throw new Error('No such player');
-    throw new Error(`Players API failed: ${response.status}`);
+    if (response.status === 404) throw new Error(t('broadcast.playerNotFound'));
+    throw new Error(t('broadcast.playersApiFailed', { status: response.status }));
   }
   return (await response.json()) as T;
 }
 
 function renderError(root: HTMLElement, err: unknown): void {
   const message = err instanceof Error ? err.message : String(err);
-  root.replaceChildren(buildNav(), buildNotice('Players unavailable', message));
+  root.replaceChildren(buildNav(), buildNotice(t('broadcast.playersUnavailable'), message));
 }
 
 /** The Chinese name as the player writes it. */
 export function chineseName(player: Pick<PlayerRecord, 'name' | 'nameOwn'>): string {
-  return player.nameOwn ?? player.name;
+  return player.nameOwn?.trim() || player.name;
 }
 
 export function displayName(player: Pick<PlayerRecord, 'name' | 'nameEn' | 'nameOwn'>): string {
-  return player.nameEn && player.nameEn !== player.name
-    ? `${player.nameEn} ${chineseName(player)}`
-    : chineseName(player);
+  return [broadcastName(player), broadcastSecondaryName(player)].filter(Boolean).join(' ');
 }
 
 export function recordText(r: { wins: number; draws: number; losses: number }): string {
@@ -240,8 +237,9 @@ function listOrder(player: PlayerRecord): number {
 export function sortPlayers(players: readonly PlayerRecord[], sort: IndexSort): PlayerRecord[] {
   const out = [...players];
   const byGames = (a: PlayerRecord, b: PlayerRecord) =>
-    b.games - a.games || displayName(a).localeCompare(displayName(b));
-  if (sort === 'name') out.sort((a, b) => displayName(a).localeCompare(displayName(b)));
+    b.games - a.games || displayName(a).localeCompare(displayName(b), currentLocale());
+  if (sort === 'name')
+    out.sort((a, b) => displayName(a).localeCompare(displayName(b), currentLocale()));
   else if (sort === 'score')
     out.sort(
       (a, b) =>
@@ -369,7 +367,7 @@ function boardHead(title: HTMLElement, search?: HTMLInputElement): HTMLElement {
     const button = document.createElement('button');
     button.type = 'submit';
     button.className = 'xqp-search-button';
-    button.setAttribute('aria-label', 'Search');
+    button.setAttribute('aria-label', t('broadcast.search'));
     button.innerHTML = SEARCH_ICON;
     form.addEventListener('submit', (event) => {
       event.preventDefault();
@@ -385,7 +383,7 @@ function searchInput(label: string): HTMLInputElement {
   const search = document.createElement('input');
   search.type = 'search';
   search.className = 'xqp-search';
-  search.placeholder = 'Search';
+  search.placeholder = t('broadcast.search');
   search.setAttribute('aria-label', label);
   return search;
 }
@@ -473,8 +471,8 @@ function sortableTable<T, K extends string>(input: {
       shown.length > 0
         ? ''
         : query.trim()
-          ? `Nothing matches “${query.trim()}”.`
-          : 'Nothing matches.';
+          ? t('broadcast.nothingMatchesQuery', { query: query.trim() })
+          : t('broadcast.nothingMatches');
     input.onPaint?.(shown.length);
   }
   input.search?.addEventListener('input', paint);
@@ -490,27 +488,31 @@ function numberCell(value: number | null | undefined, suffix = ''): HTMLTableCel
 function playerColumns(showTeam: boolean): Column<PlayerRecord, IndexSort>[] {
   return [
     {
-      label: 'Name',
+      label: t('broadcast.playerNameHeading'),
       sort: 'name',
       className: 'xqp-col-name',
       value: (p) => nameCell(p, showTeam),
     },
     {
-      label: 'Points',
+      label: t('broadcast.playerPointsHeading'),
       sort: 'points',
-      hint: 'CXA tournament points, the latest list the player is on',
+      hint: t('broadcast.playerPointsHint'),
       value: (p) => numberCell(latestPoints(p.name)?.points),
     },
     {
-      label: 'Rating',
+      label: t('broadcast.playerRatingHeading'),
       sort: 'rating',
-      hint: 'Last CXA rating (the rating lists ended in 2026)',
+      hint: t('broadcast.playerRatingHint'),
       value: (p) => numberCell(latestRating(p.name)),
     },
     // A CXA-only player has no games to count, which is not the same as none won.
-    { label: 'Games', sort: 'games', value: (p) => numberCell(p.cxaOnly ? null : p.games) },
     {
-      label: 'Score',
+      label: t('broadcast.games'),
+      sort: 'games',
+      value: (p) => numberCell(p.cxaOnly ? null : p.games),
+    },
+    {
+      label: t('broadcast.score'),
       sort: 'score',
       value: (p) => numberCell(p.games > 0 ? scorePercent(p) : null, '%'),
     },
@@ -536,11 +538,12 @@ function playersTable(
 }
 
 function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement } {
+  document.title = `${t('broadcast.playersTitle')} · Mistboard`;
   const main = shell('players');
   const title = document.createElement('h1');
   title.className = 'xqp-board-title';
-  title.textContent = 'Xiangqi players';
-  const search = searchInput('Search players');
+  title.textContent = t('broadcast.playersTitle');
+  const search = searchInput(t('broadcast.searchPlayers'));
   const panel = document.createElement('section');
   panel.className = 'xqp-board';
   const season = currentSeason(players);
@@ -550,7 +553,7 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
   const table = playersTable(players, search, true, {
     filter: (p) => matchesFilter(p, state.filter),
     onPaint: (shown) => {
-      count.textContent = t('broadcast.playersCount', { n: shown });
+      count.textContent = broadcastCount(shown, 'player');
     },
   });
   const apply = (next: IndexFilter): void => {
@@ -727,7 +730,8 @@ export function sortTeams(teams: readonly TeamRecord[], sort: TeamSort): TeamRec
   const out = [...teams];
   const byPlayers = (a: TeamRecord, b: TeamRecord) =>
     b.players.length - a.players.length || b.games - a.games;
-  if (sort === 'name') out.sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
+  if (sort === 'name')
+    out.sort((a, b) => teamLabel(a).localeCompare(teamLabel(b), currentLocale()));
   else if (sort === 'players') out.sort(byPlayers);
   else if (sort === 'games') out.sort((a, b) => b.games - a.games);
   else if (sort === 'score')
@@ -737,11 +741,11 @@ export function sortTeams(teams: readonly TeamRecord[], sort: TeamSort): TeamRec
 }
 
 function teamLabel(team: Pick<TeamRecord, 'name' | 'nameEn'>): string {
-  return team.nameEn ?? team.name;
+  return broadcastName(team);
 }
 
 function teamHref(key: string): string {
-  return `/players/teams/${encodeURIComponent(key)}`;
+  return localizedHref(`/players/teams/${encodeURIComponent(key)}`);
 }
 
 const TEAM_INKS = ['#a63328', '#237960', '#3b4f8f', '#9a6419', '#7a3b69'] as const;
@@ -771,10 +775,10 @@ function teamNameCell(team: TeamRecord): HTMLTableCellElement {
   link.href = teamHref(team.key);
   link.textContent = teamLabel(team);
   wrap.append(link);
-  if (team.nameEn && team.nameEn !== team.name) {
+  if (broadcastSecondaryName(team)) {
     const zh = document.createElement('span');
     zh.className = 'xqp-team';
-    zh.textContent = team.name;
+    zh.textContent = broadcastSecondaryName(team);
     wrap.append(zh);
   }
   td.append(teamBadge(team, 'row'), wrap);
@@ -782,11 +786,12 @@ function teamNameCell(team: TeamRecord): HTMLTableCellElement {
 }
 
 function renderTeams(players: PlayerRecord[]): HTMLElement & { main: HTMLElement } {
+  document.title = `${t('broadcast.teamsTitle')} · Mistboard`;
   const main = shell('teams');
   const title = document.createElement('h1');
   title.className = 'xqp-board-title';
-  title.textContent = 'Xiangqi teams';
-  const search = searchInput('Search teams');
+  title.textContent = t('broadcast.teamsTitle');
+  const search = searchInput(t('broadcast.searchTeams'));
   const panel = document.createElement('section');
   panel.className = 'xqp-board';
   panel.append(
@@ -794,16 +799,29 @@ function renderTeams(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
     sortableTable<TeamRecord, TeamSort>({
       rows: teamsOf(players),
       columns: [
-        { label: 'Team', sort: 'name', className: 'xqp-col-name', value: teamNameCell },
-        { label: 'Players', sort: 'players', value: (t) => numberCell(t.players.length) },
         {
-          label: 'Top 5 points',
+          label: t('broadcast.team'),
+          sort: 'name',
+          className: 'xqp-col-name',
+          value: teamNameCell,
+        },
+        {
+          label: t('broadcast.players'),
+          sort: 'players',
+          value: (t) => numberCell(t.players.length),
+        },
+        {
+          label: t('broadcast.teamTopPoints'),
           sort: 'strength',
-          hint: 'The CXA points of the team’s five best players, added up',
+          hint: t('broadcast.teamTopPointsHint'),
           value: (t) => numberCell(teamStrength(t)),
         },
-        { label: 'Games', sort: 'games', value: (t) => numberCell(t.games) },
-        { label: 'Score', sort: 'score', value: (t) => numberCell(scorePercent(t), '%') },
+        { label: t('broadcast.games'), sort: 'games', value: (t) => numberCell(t.games) },
+        {
+          label: t('broadcast.score'),
+          sort: 'score',
+          value: (t) => numberCell(scorePercent(t), '%'),
+        },
       ],
       sort: 'strength',
       order: sortTeams,
@@ -831,9 +849,12 @@ function renderTeam(team: TeamRecord): HTMLElement & { main: HTMLElement } {
   const meta = document.createElement('p');
   meta.className = 'xqp-team-meta';
   meta.textContent = [
-    team.nameEn && team.nameEn !== team.name ? team.name : null,
-    `${team.players.length} ${team.players.length === 1 ? 'player' : 'players'}`,
-    `${team.games} games, ${recordText(team)}`,
+    broadcastSecondaryName(team),
+    broadcastCount(team.players.length, 'player'),
+    t('broadcast.gamesRecord', {
+      games: broadcastCount(team.games, 'game'),
+      record: recordText(team),
+    }),
   ]
     .filter(Boolean)
     .join(' · ');
@@ -849,7 +870,7 @@ function renderTeam(team: TeamRecord): HTMLElement & { main: HTMLElement } {
 }
 
 function playerHref(player: Pick<PlayerRecord, 'slug'>): string {
-  return `/players/${encodeURIComponent(player.slug)}`;
+  return localizedHref(`/players/${encodeURIComponent(player.slug)}`);
 }
 
 const XIANGQIQIPU_SITE = 'https://www.xiangqiqipu.com/';
@@ -908,7 +929,7 @@ export function playerPortrait(
     figure.append(avatar(player, 'page'));
     if (profile?.photoCredit) {
       const cap = document.createElement('figcaption');
-      cap.textContent = `Credit: ${profile.photoCredit}`;
+      cap.textContent = t('broadcast.photoCredit', { source: profile.photoCredit });
       figure.append(cap);
     }
     return figure;
@@ -965,7 +986,11 @@ function titleTag(title: PlayerTitle | null): HTMLElement | null {
   const tag = document.createElement('span');
   tag.className = 'xqp-title';
   tag.textContent = title;
-  tag.title = PLAYER_TITLE_LABEL[title];
+  tag.title = t(
+    ({ GM: 'title.xgm', IM: 'title.xim', FM: 'broadcast.titleFm', NM: 'title.xnm' } as const)[
+      title
+    ],
+  );
   return tag;
 }
 
@@ -1033,11 +1058,11 @@ function renderPlayer(
   h1.className = 'xqp-h1';
   const tag = titleTag(playerTitle(player));
   if (tag) h1.append(tag, ' ');
-  h1.append(player.nameEn ?? chineseName(player));
-  if (player.nameEn && player.nameEn !== player.name) {
+  h1.append(broadcastName(player));
+  if (broadcastSecondaryName(player)) {
     const zh = document.createElement('span');
     zh.className = 'xqp-h1-zh';
-    zh.textContent = chineseName(player);
+    zh.textContent = broadcastSecondaryName(player);
     h1.append(' ', zh);
   }
   // The key facts as one strip of label-over-value pairs, from data the page
@@ -1072,7 +1097,9 @@ function renderPlayer(
     fact(
       t('broadcast.playerFactLastRating'),
       String(lastRating.rating),
-      list ? `CXA 等级分, last list ${list.label}` : 'CXA 等级分',
+      list
+        ? t('broadcast.lastRatingList', { list: list.label })
+        : t('broadcast.playerFactLastRating'),
     );
     if (lastRating.rank !== null) {
       fact(t('broadcast.playerFactRank'), rankText(lastRating.rank, list?.size ?? null));
@@ -1104,7 +1131,7 @@ function renderPlayer(
     fact(
       t('broadcast.playerFactSeen'),
       from === to ? from : t('broadcast.playerFactSeenRange', { from, to }),
-      `${player.firstPlayedOn} to ${player.lastPlayedOn}`,
+      t('broadcast.playerFactSeenRange', { from: player.firstPlayedOn, to: player.lastPlayedOn }),
     );
   }
   // No "All players" link: the rail's Pro players entry is the way back.
@@ -1118,8 +1145,8 @@ function renderPlayer(
     note.className = 'xqp-sanction';
     note.setAttribute('role', 'note');
     const link = document.createElement('a');
-    link.href = MATCH_FIXING_ARTICLE_PATH;
-    link.textContent = 'About the case';
+    link.href = localizedHref(MATCH_FIXING_ARTICLE_PATH);
+    link.textContent = t('broadcast.aboutCase');
     note.append(`${sanctionSentence(sanction)} `, link);
     copy.append(note);
   }
@@ -1128,8 +1155,8 @@ function renderPlayer(
     actions.className = 'xqb-hero-actions xqp-header-actions';
     const link = document.createElement('a');
     link.className = 'xqb-link xqb-link-primary';
-    link.href = profile.profileHref;
-    link.textContent = 'Read the profile';
+    link.href = localizedHref(profile.profileHref);
+    link.textContent = t('broadcast.readProfile');
     actions.append(link);
     copy.append(actions);
   }
@@ -1143,7 +1170,7 @@ function renderPlayer(
     const cards = document.createElement('div');
     cards.className = 'xqp-rating-row';
     cards.append(...officialRating);
-    main.append(section('Official rating', cards));
+    main.append(section(t('broadcast.officialRating'), cards));
   }
 
   const history = ratingHistoryFigure(cxaRatingsFor(player.name), cxaPointsFor(player.name));
@@ -1158,9 +1185,9 @@ function renderPlayer(
     title.className = 'xqp-no-games-title';
     title.textContent = t('broadcast.playerNoGames');
     const body = document.createElement('p');
-    body.textContent = t('broadcast.playerNoGamesBody', { name: player.nameEn ?? player.name });
+    body.textContent = t('broadcast.playerNoGamesBody', { name: broadcastName(player) });
     empty.append(title, body);
-    main.append(section(`Games (0)`, empty));
+    main.append(section(t('broadcast.gamesHeading', { n: 0 }), empty));
     return main;
   }
 
@@ -1173,7 +1200,7 @@ function renderPlayer(
     const grid = document.createElement('div');
     grid.className = 'xqp-events';
     for (const event of player.events) grid.append(eventCard(event));
-    main.append(section('Events', grid));
+    main.append(section(t('broadcast.events'), grid));
   }
   main.append(view.section);
   return main;
@@ -1203,7 +1230,7 @@ type GamesView = {
 function gamesView(player: PlayerRecord, boards: readonly PlayerBoardRecord[]): GamesView {
   let filter = filterFromSearch(window.location.search, boards);
   const listeners: ((filter: BoardFilter) => void)[] = [];
-  const wrap = section(`Games (${boards.length})`);
+  const wrap = section(t('broadcast.gamesHeading', { n: boards.length }));
   wrap.id = 'games';
   const href = (next: BoardFilter): string =>
     `${window.location.pathname}${searchFromFilter(next)}#games`;
@@ -1255,7 +1282,7 @@ function gamesView(player: PlayerRecord, boards: readonly PlayerBoardRecord[]): 
     [
       ['', t('broadcast.playerFilterAnyOpponent')],
       ...opponents.map(
-        (o) => [o.key, `${o.nameEn ?? o.name} (${o.record.games})`] as [string, string],
+        (o) => [o.key, `${broadcastName(o)} (${o.record.games})`] as [string, string],
       ),
     ],
     filter.opponent ?? '',
@@ -1363,11 +1390,11 @@ function recordSection(boards: readonly PlayerBoardRecord[], view: GamesView): H
   const head = document.createElement('tr');
   for (const label of [
     '',
-    'Games',
+    t('broadcast.games'),
     t('broadcast.playerWon'),
     t('broadcast.playerDrawn'),
     t('broadcast.playerLost'),
-    'Score',
+    t('broadcast.score'),
     '',
   ]) {
     const th = document.createElement('th');
@@ -1523,21 +1550,21 @@ function openingsSection(
 function eventCard(event: PlayerEventRecord): HTMLElement {
   const card = document.createElement('a');
   card.className = 'xqp-event';
-  card.href = `/broadcast/xiangqi/${encodeURIComponent(event.tourSlug)}`;
+  card.href = localizedHref(`/broadcast/xiangqi/${encodeURIComponent(event.tourSlug)}`);
   const dates = document.createElement('span');
   dates.className = 'xqp-event-dates';
   dates.textContent =
     event.firstPlayedOn && event.lastPlayedOn
       ? event.firstPlayedOn === event.lastPlayedOn
         ? event.firstPlayedOn
-        : `${event.firstPlayedOn} to ${event.lastPlayedOn}`
+        : t('broadcast.playerFactSeenRange', { from: event.firstPlayedOn, to: event.lastPlayedOn })
       : '';
   const name = document.createElement('span');
   name.className = 'xqp-event-name';
-  name.textContent = event.tourNameEn ?? event.tourName;
+  name.textContent = broadcastName({ name: event.tourName, nameEn: event.tourNameEn });
   const record = document.createElement('span');
   record.className = 'xqp-event-record';
-  record.textContent = `${event.games} games · ${recordText(event)} · ${scorePercent(event)}%`;
+  record.textContent = `${broadcastCount(event.games, 'game')} · ${recordText(event)} · ${scorePercent(event)}%`;
   card.append(dates, name, record);
   return card;
 }
@@ -1557,7 +1584,7 @@ function pointsCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
   head.className = 'xqp-rating-head';
   const label = document.createElement('span');
   label.className = 'xqp-rating-label';
-  label.textContent = 'CXA 竞赛积分';
+  label.textContent = t('broadcast.pointsLabel');
   const value = document.createElement('span');
   value.className = 'xqp-rating-value';
   value.textContent = String(last.points);
@@ -1565,9 +1592,9 @@ function pointsCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
   const sub = document.createElement('p');
   sub.className = 'xqp-rating-sub';
   sub.textContent = [
-    size !== null ? `#${last.rank} of ${size}` : `#${last.rank}`,
-    `${last.events} events, best ${last.best}`,
-    list?.window ? `rolling window since ${list.window[0]}` : null,
+    size !== null ? t('broadcast.playerFactRankOf', { rank: last.rank, size }) : `#${last.rank}`,
+    t('broadcast.pointsEvents', { n: last.events, best: last.best }),
+    list?.window ? t('broadcast.pointsWindow', { date: list.window[0] }) : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -1589,7 +1616,7 @@ function ratingCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
   head.className = 'xqp-rating-head';
   const label = document.createElement('span');
   label.className = 'xqp-rating-label';
-  label.textContent = 'CXA 等级分 (closed)';
+  label.textContent = t('broadcast.ratingLabel');
   const value = document.createElement('span');
   value.className = 'xqp-rating-value';
   value.textContent = String(last.rating);
@@ -1597,9 +1624,11 @@ function ratingCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
   const sub = document.createElement('p');
   sub.className = 'xqp-rating-sub';
   sub.textContent = [
-    last.rank !== null && lastList ? `#${last.rank} of ${lastList.size}` : null,
-    lastList ? `last list ${lastList.label}` : null,
-    'replaced by tournament points in January 2026',
+    last.rank !== null && lastList
+      ? t('broadcast.playerFactRankOf', { rank: last.rank, size: lastList.size })
+      : null,
+    lastList ? t('broadcast.lastList', { list: lastList.label }) : null,
+    t('broadcast.ratingReplaced'),
   ]
     .filter(Boolean)
     .join(' · ');
@@ -1649,36 +1678,44 @@ export function sparkline(values: readonly number[], labels: readonly string[]):
 function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
   const row = document.createElement('a');
   row.className = `xqp-game xqp-game-${board.outcome}`;
-  row.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.boardId)}`;
+  row.href = localizedHref(`/broadcast/xiangqi/board/${encodeURIComponent(board.boardId)}`);
 
   const outcome = document.createElement('span');
   outcome.className = 'xqp-outcome';
-  outcome.textContent = board.outcome === 'win' ? 'W' : board.outcome === 'loss' ? 'L' : 'D';
+  outcome.textContent = t(
+    board.outcome === 'win'
+      ? 'broadcast.recordWin'
+      : board.outcome === 'loss'
+        ? 'broadcast.recordLoss'
+        : 'broadcast.recordDraw',
+  );
 
   const who = document.createElement('span');
   who.className = 'xqp-who';
   const me = document.createElement('span');
-  me.textContent = player.nameEn ?? player.name;
+  me.textContent = broadcastName(player);
   const vs = document.createElement('span');
   vs.className = 'xqp-vs';
-  vs.textContent = ' vs ';
+  vs.textContent = t('broadcast.vs');
   const them = document.createElement('span');
-  them.textContent = board.opponent.nameEn ?? board.opponent.name;
+  them.textContent = broadcastName(board.opponent);
   // Red is listed first on every board on the site; keep that order here.
   if (board.colour === 'red') who.append(me, vs, them);
   else who.append(them, vs, me);
 
   const colour = document.createElement('span');
   colour.className = `xqp-colour xqp-colour-${board.colour}`;
-  colour.textContent = board.colour === 'red' ? 'red' : 'black';
+  colour.textContent = t(
+    board.colour === 'red' ? 'broadcast.playerFilterRed' : 'broadcast.playerFilterBlack',
+  );
 
   const meta = document.createElement('span');
   meta.className = 'xqp-game-meta';
   meta.textContent = [
-    board.tourNameEn ?? board.tourName,
-    board.roundNameEn ?? board.roundName,
+    broadcastName({ name: board.tourName, nameEn: board.tourNameEn }),
+    broadcastRoundName({ name: board.roundName, nameEn: board.roundNameEn }),
     board.playedOn ?? '',
-    `${Math.ceil(board.plyCount / 2)} moves`,
+    broadcastCount(Math.ceil(board.plyCount / 2), 'move'),
     board.result,
   ]
     .filter(Boolean)

@@ -26,6 +26,7 @@ import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
 import './xiangqi-postgame.css';
 import { t } from './i18n/catalog.js';
+import { currentLocale, localizedHref } from './i18n/locale.js';
 import type { ProfileTarget } from './profile-link.js';
 import { fetchCachedGameAnalysis } from './review/game-analysis.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
@@ -35,6 +36,12 @@ import type { XiangqiAnalysisSource } from './review/xiangqi-review.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildNav } from './site-shell.js';
+import {
+  broadcastCount,
+  broadcastRoundName,
+  broadcastName as primary,
+  broadcastSecondaryName as secondary,
+} from './xiangqi-broadcast-pages.js';
 import { formatEventDateTime } from './xiangqi-broadcast-time.js';
 
 export type BroadcastReviewBoard = {
@@ -79,10 +86,10 @@ export function mountBroadcastBoardReview(
   const black = playerLabel(data.board.black);
   const result = resultOf(data.board.result);
   const eventName = context ? primary(context.tour) : null;
-  const roundName = context ? primary(context.round) : null;
-  const playedOn = context ? formatEventDateTime(context.round.startsAt) : null;
+  const roundName = context ? broadcastRoundName(context.round) : null;
+  const playedOn = context ? formatEventDateTime(context.round.startsAt, currentLocale()) : null;
 
-  document.title = `${red} vs ${black} · ${eventName ?? 'Mistboard'}`;
+  document.title = `${red}${t('broadcast.vs')}${black} · ${eventName ?? 'Mistboard'}`;
   if (!opts.embedded) {
     root.classList.add('landing-page', 'xiangqi-postgame-route', 'xqb-review-route');
   }
@@ -91,11 +98,13 @@ export function mountBroadcastBoardReview(
     markerId: 'xiangqi',
     headline: [eventName ?? t('broadcast.eyebrow')],
     // Lichess's board view names its event as the way back to the boards.
-    headlineHref: `/broadcast/xiangqi/${encodeURIComponent(
-      data.board.tourSlug,
-    )}/round/${encodeURIComponent(data.board.roundId)}`,
+    headlineHref: localizedHref(
+      `/broadcast/xiangqi/${encodeURIComponent(
+        data.board.tourSlug,
+      )}/round/${encodeURIComponent(data.board.roundId)}`,
+    ),
     variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
-    subline: [roundName, `${t('broadcast.board')} ${data.board.boardNumber}`, playedOn]
+    subline: [roundName, t('broadcast.boardNumber', { n: data.board.boardNumber }), playedOn]
       .filter(Boolean)
       .join(' · '),
     // The players are named in the strips above and below the board, the way
@@ -123,8 +132,8 @@ export function mountBroadcastBoardReview(
     embedded: opts.embedded,
     pageClassName: 'xiangqi-review',
     ariaLabel: t('broadcast.boardAriaLabel'),
-    title: `${red} vs ${black}`,
-    summary: `${result.label} · ${replay.maxPly} plies`,
+    title: `${red}${t('broadcast.vs')}${black}`,
+    summary: `${result.label} · ${broadcastCount(replay.maxPly, 'ply')}`,
     boardAriaLabel: t('broadcast.boardAriaLabel'),
     ...(opts.embedded ? {} : { metaCard: metaCard.el }),
     ...(opts.rail && !opts.embedded ? { details: opts.rail } : {}),
@@ -147,11 +156,13 @@ export function mountBroadcastBoardReview(
         },
         exportLink(data.board.id),
       ]),
-      embedRow(data.board.id, `${red} vs ${black} · Mistboard`),
+      embedRow(data.board.id, `${red}${t('broadcast.vs')}${black} · Mistboard`),
     ],
     studyExport: {
       variant: DEFAULT_STUDY_VARIANT,
-      name: eventName ? `${red} vs ${black} (${eventName})` : `${red} vs ${black}`,
+      name: eventName
+        ? `${red}${t('broadcast.vs')}${black} (${eventName})`
+        : `${red}${t('broadcast.vs')}${black}`,
     },
     // The server analyses every finished broadcast game once and stores it
     // (xiangqi-broadcast-analysis.ts), so the review opens with the chart and
@@ -199,8 +210,13 @@ function provenance(
   details.className = 'review-provenance';
   if (context) {
     addDetail(details, t('broadcast.event'), primary(context.tour), secondary(context.tour));
-    addDetail(details, t('broadcast.round'), primary(context.round), secondary(context.round));
-    const date = formatEventDateTime(context.round.startsAt);
+    addDetail(
+      details,
+      t('broadcast.round'),
+      broadcastRoundName(context.round),
+      secondary(context.round),
+    );
+    const date = formatEventDateTime(context.round.startsAt, currentLocale());
     if (date) addDetail(details, t('broadcast.date'), date);
   }
   addDetail(details, t('broadcast.board'), String(data.board.boardNumber));
@@ -234,17 +250,9 @@ function addDetail(
   details.append(dt, dd);
 }
 
-function primary(entity: { name: string; nameEn?: string }): string {
-  return entity.nameEn?.trim() || entity.name;
-}
-
-function secondary(entity: { name: string; nameEn?: string }): string | null {
-  return entity.nameEn?.trim() && entity.nameEn.trim() !== entity.name ? entity.name : null;
-}
-
-/** The player's team, English first, for the strip's muted line. */
+/** The player's team in the reader's locale, for the strip's muted line. */
 function teamOf(player: XiangqiBroadcastPlayerTag): string | undefined {
-  return player.federationEn?.trim() || player.federation?.trim() || undefined;
+  return primary({ name: player.federation ?? '', nameEn: player.federationEn }) || undefined;
 }
 
 function playerLabel(player: XiangqiBroadcastPlayerTag): string {
@@ -254,7 +262,7 @@ function playerLabel(player: XiangqiBroadcastPlayerTag): string {
 
 function playerLine(player: XiangqiBroadcastPlayerTag): string {
   const zh = secondary(player);
-  const team = player.federationEn?.trim() || player.federation;
+  const team = teamOf(player);
   return [playerLabel(player), zh ? `(${zh})` : null, team ? `· ${team}` : null]
     .filter(Boolean)
     .join(' ');

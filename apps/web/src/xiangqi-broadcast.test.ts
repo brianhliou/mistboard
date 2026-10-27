@@ -14,6 +14,11 @@ import {
   mountXiangqiBroadcastTour,
   serializeBroadcastMovesForAnalysis,
 } from './xiangqi-broadcast.js';
+import {
+  broadcastRoundName,
+  calendarEventRow,
+  mountXiangqiBroadcastCalendar,
+} from './xiangqi-broadcast-pages.js';
 
 // Only `track` is stubbed; the review shell a finished board mounts still
 // needs the module's other exports (reviewOpenedProps and friends).
@@ -1942,4 +1947,172 @@ describe('event header before any round exists', () => {
     expect(heading?.querySelector('a')).toBeNull();
     expect(root.querySelector('.xqb-side-rail .xqb-rail-empty')?.textContent).toBe('No games yet');
   });
+});
+
+// Mixed-language API fixtures must follow the reader, even when translations
+// are missing. Source names and export payloads stay untouched.
+describe('broadcast locale fixtures', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.history.replaceState(null, '', '/');
+    window.localStorage?.clear();
+  });
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'renders index, round, calendar and live board in %s',
+    async (locale) => {
+      const prefix = locale === 'en' ? '' : `/${locale.toLowerCase()}`;
+      window.history.replaceState(null, '', `${prefix}/broadcast/xiangqi`);
+      const english = locale === 'en';
+      expect(broadcastRoundName({ name: 'Final', nameEn: 'Championship final' })).toBe(
+        english ? 'Championship final' : 'Final',
+      );
+      expect(broadcastRoundName({ name: 'Round 3' })).toBe(
+        english ? 'Round 3' : locale === 'zh-Hans' ? '第 3 轮' : '第 3 輪',
+      );
+      const tour = { ...ROUND.tour, name: '测试杯', nameEn: 'Test Cup' };
+      const round = { ...ROUND.round, name: '第1轮', nameEn: 'Round 1' };
+      const data = {
+        ...ROUND,
+        tour,
+        round,
+        boards: ROUND.boards.map((board) => ({
+          ...board,
+          status: 'complete',
+          result: '1-0',
+          red: { ...board.red, federation: '浙江', federationEn: 'Zhejiang' },
+          black: { ...board.black, federation: '江苏', federationEn: 'Jiangsu' },
+          details: {
+            match: '浙江-江苏',
+            matchEn: 'Zhejiang-Jiangsu',
+            table: board.boardNumber,
+            kind: 'standard',
+          },
+        })),
+      };
+      const calendar = {
+        sourceReadable: true,
+        events: [
+          {
+            name: '测试杯',
+            nameEn: 'Test Cup',
+            location: '台北',
+            startsOn: '2099-10-01',
+            endsOn: '2099-10-01',
+            status: 'upcoming' as const,
+            tourSlug: 't',
+            sourceUrl: null,
+          },
+        ],
+      };
+      stubEventSource();
+      stubFetchJson((url) =>
+        url.endsWith('/calendar')
+          ? calendar
+          : url.endsWith('/broadcasts')
+            ? {
+                tours: [
+                  {
+                    tour,
+                    roundCount: 2,
+                    boardCount: 2,
+                    liveBoardCount: 1,
+                    completeBoardCount: 0,
+                    scheduledBoardCount: 1,
+                    totalPlies: 1,
+                    updatedAt: null,
+                    lastSyncLog: null,
+                    latestRound: { ...round, startsAt: null, live: true },
+                    players: [{ name: '孟繁睿', nameEn: 'Meng Fanrui' }],
+                  },
+                ],
+              }
+            : data,
+      );
+      const root = document.createElement('div');
+      await mountXiangqiBroadcastIndex(root);
+      expect(root.querySelector('.xqb-tour-card-name')?.textContent).toBe(
+        english ? 'Test Cup' : '测试杯',
+      );
+      expect(root.querySelector('.xqb-tour-players')?.textContent).toContain(
+        english ? 'Meng Fanrui' : '孟繁睿',
+      );
+      await mountXiangqiBroadcastRound(root, 't', 'r');
+      expect(root.querySelector('.xqb-event-header h1')?.textContent).toBe(
+        english ? 'Test Cup' : '测试杯',
+      );
+      expect(root.querySelector('.xqb-round-meta')?.textContent).toContain(
+        english ? '2 boards' : '2 局',
+      );
+      expect(root.querySelector('.xqb-round-picker-name')?.textContent).toContain(
+        english ? 'Round 1' : locale === 'zh-Hans' ? '第 1 轮' : '第 1 輪',
+      );
+      expect(root.querySelector('.xqb-card-seat-red .xqb-card-seat-name')?.textContent).toContain(
+        english ? 'Wang Tianyi' : '王天一',
+      );
+      const teamFilter = root.querySelector<HTMLSelectElement>('.xqb-team-filter')!;
+      expect([...teamFilter.options].map((option) => option.textContent)).toContain(
+        english ? 'Zhejiang' : '浙江',
+      );
+      const teamsTab = root.querySelectorAll<HTMLButtonElement>('.xqb-tab')[2]!;
+      teamsTab.click();
+      await vi.waitFor(() => expect(root.querySelector('.xqb-standings')).not.toBeNull());
+      expect(root.querySelector('.xqb-match-team')?.textContent).toBe(
+        english ? 'Zhejiang' : '浙江',
+      );
+      expect(root.querySelector('.xqb-standings-player strong')?.textContent).toBe(
+        english ? 'Zhejiang' : '浙江',
+      );
+      window.history.replaceState(null, '', `${prefix}/broadcast/xiangqi`);
+      await mountXiangqiBroadcastTour(root, 't');
+      expect(root.querySelector<HTMLAnchorElement>('.xqb-board-card')?.getAttribute('href')).toBe(
+        '/broadcast/xiangqi/board/t-r-b1',
+      );
+      expect(document.title).toContain(english ? 'Test Cup' : '测试杯');
+      const row = calendarEventRow(calendar.events[0]!);
+      expect(row.querySelector('strong')?.textContent).toBe(english ? 'Test Cup' : '测试杯');
+      expect(
+        calendarEventRow({ ...calendar.events[0]!, nameEn: ' ' }).querySelector('strong')
+          ?.textContent,
+      ).toBe('测试杯');
+      await mountXiangqiBroadcastCalendar(root);
+      expect(root.querySelector('.xqb-cal-month h2')?.textContent).toBe(
+        english ? 'October 2099' : '2099年10月',
+      );
+
+      const moves: XiangqiMove[] = [{ from: 'h3', to: 'e3' }];
+      const replay = buildXiangqiReplayFromMoves(moves);
+      const board = {
+        ...data.boards[0]!,
+        status: 'live',
+        result: '*',
+        red: {
+          name: '赵奕帆',
+          nameOwn: '趙奕帆',
+          nameEn: 'Chao Yi-fan',
+          federation: '台灣',
+          federationEn: 'Taiwan',
+        },
+        black: { name: '无名', nameEn: ' ' },
+      };
+      stubFetchJson((url) =>
+        url.includes('/boards/')
+          ? {
+              board,
+              state: { status: { type: 'playing', turn: 'black' }, moveNumber: 1 },
+              timeline: timelineFrom(moves),
+              view: replay.views[1],
+              views: { truth: replay.views[1] },
+              history: { truth: replay.views.map((view, ply) => ({ view, ply })) },
+            }
+          : data,
+      );
+      await mountXiangqiBroadcastBoard(root, board.id);
+      expect(document.title).toContain(english ? 'Chao Yi-fan (Taiwan)' : '趙奕帆 (台灣)');
+      expect(document.title).toContain('无名');
+      expect(root.querySelector('.xqb-player')?.parentElement?.textContent).toContain(
+        english ? 'Chao Yi-fan' : '趙奕帆',
+      );
+    },
+  );
 });

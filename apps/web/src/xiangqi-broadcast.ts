@@ -21,7 +21,7 @@ import './seat-disc-ink.css';
 import './xiangqi-broadcast.css';
 import { track } from './analytics.js';
 import { t } from './i18n/catalog.js';
-import { currentLocale } from './i18n/locale.js';
+import { currentLocale, localizedHref } from './i18n/locale.js';
 import { renderXiangqiBoardSvg } from './live-xiangqi.js';
 import { playerTitleFor } from './players/player-title.js';
 import type { CevalLine } from './review/engine/ceval-types.js';
@@ -49,12 +49,17 @@ import {
 import {
   type BroadcastCalendarResponse,
   type BroadcastPlayerRef,
+  broadcastCount,
+  broadcastRoundName,
   broadcastSectionLayout,
   calendarEventRow,
   fetchBroadcastCalendar,
+  broadcastDateRange as formatEventDateRange,
   mountXiangqiBroadcastAbout,
   mountXiangqiBroadcastCalendar,
+  broadcastName as primaryName,
   rightsContactNote,
+  broadcastSecondaryName as secondaryName,
   topBroadcastPlayers,
 } from './xiangqi-broadcast-pages.js';
 import {
@@ -66,7 +71,6 @@ import {
 import { mountBroadcastBoardReview } from './xiangqi-broadcast-review.js';
 import { broadcastStandings, formatStandingsScore } from './xiangqi-broadcast-standings.js';
 import {
-  formatEventDateRange,
   formatEventDateTime,
   formatEventDay,
   formatEventOffset,
@@ -741,13 +745,6 @@ async function fetchJson<T>(url: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-// These counts render as bare English on surfaces the catalog does not cover,
-// so "1 boards" reaches the page. Chinese needs no plural form, which is why
-// only the English catalog entry gains a singular sibling.
-function countLabel(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
 function renderError(root: HTMLElement, err: unknown): void {
   const message = err instanceof Error ? err.message : String(err);
   root.replaceChildren(buildNav(), buildNotice(t('broadcast.unavailable'), message));
@@ -936,7 +933,7 @@ function tourHasEnded(tour: { endsAt?: string | null }, now = Date.now()): boole
 function tourStatusLine(entry: BroadcastIndexEntry): { text: string; live: boolean } | null {
   const latest = entry.latestRound ?? null;
   if (entry.liveBoardCount > 0) {
-    const round = latest ? primaryName(latest) : null;
+    const round = latest ? broadcastRoundName(latest) : null;
     return {
       text: round ? t('broadcast.roundLive', { round }) : t('broadcast.statusLive'),
       live: true,
@@ -946,15 +943,17 @@ function tourStatusLine(entry: BroadcastIndexEntry): { text: string; live: boole
   if (next?.startsAt) {
     return {
       text: t('broadcast.roundOn', {
-        round: primaryName(next),
-        date: formatEventDay(next.startsAt) ?? '',
+        round: broadcastRoundName(next),
+        date: formatEventDay(next.startsAt, currentLocale()) ?? '',
       }),
       live: false,
     };
   }
   if (isAfter(entry.tour.startsAt, Date.now())) {
     return {
-      text: t('broadcast.startsOn', { date: formatEventDay(entry.tour.startsAt) ?? '' }),
+      text: t('broadcast.startsOn', {
+        date: formatEventDay(entry.tour.startsAt, currentLocale()) ?? '',
+      }),
       live: false,
     };
   }
@@ -973,11 +972,11 @@ function tourStatusLine(entry: BroadcastIndexEntry): { text: string; live: boole
     return { text: t('broadcast.noGamesPublished'), live: false };
   }
   if (latest) {
-    const date = formatEventDay(latest.startsAt ?? undefined);
+    const date = formatEventDay(latest.startsAt ?? undefined, currentLocale());
     return {
       text: date
-        ? t('broadcast.roundOn', { round: primaryName(latest), date })
-        : primaryName(latest),
+        ? t('broadcast.roundOn', { round: broadcastRoundName(latest), date })
+        : broadcastRoundName(latest),
       live: false,
     };
   }
@@ -1041,7 +1040,7 @@ function comingUpSection(
   title.textContent = t('broadcast.comingUp');
   const all = document.createElement('a');
   all.className = 'xqb-link';
-  all.href = '/broadcast/xiangqi/calendar';
+  all.href = localizedHref('/broadcast/xiangqi/calendar');
   all.textContent = t('broadcast.fullCalendar');
   head.append(title, all);
   const list = document.createElement('ul');
@@ -1097,7 +1096,7 @@ function renderEvent(
 ): HTMLElement {
   const hasRound = data.round.id !== '';
   document.title = hasRound
-    ? `${primaryName(data.round)} · ${primaryName(data.tour)} · Mistboard`
+    ? `${broadcastRoundName(data.round)} · ${primaryName(data.tour)} · Mistboard`
     : `${primaryName(data.tour)} · Mistboard`;
   let body: HTMLElement;
   if (state.tab === 'overview') body = renderOverviewTab(data, state);
@@ -1120,7 +1119,7 @@ function roundKey(data: { tour: { slug: string }; round: { id: string } }): stri
 
 function roundHref(tourSlug: string, roundId: string, tab: EventTab = 'boards'): string {
   const base = `/broadcast/xiangqi/${encodeURIComponent(tourSlug)}/round/${encodeURIComponent(roundId)}`;
-  return tab === 'boards' ? base : `${base}?tab=${tab}`;
+  return localizedHref(tab === 'boards' ? base : `${base}?tab=${tab}`);
 }
 
 /**
@@ -1248,8 +1247,8 @@ function eventHeader(data: BroadcastRoundResponse): HTMLElement {
       formatEventDateRange(data.tour.startsAt, data.tour.endsAt),
       // Before the first round is paired the dates say it; "0 rounds" read as
       // an event with nothing in it.
-      rounds.length > 0 ? countLabel(rounds.length, 'round', 'rounds') : null,
-      liveCount > 0 ? `${liveCount} live` : null,
+      rounds.length > 0 ? broadcastCount(rounds.length, 'round') : null,
+      liveCount > 0 ? t('broadcast.liveNowCount', { count: liveCount }) : null,
     ].filter(Boolean) as string[],
     switcher: data.round.id !== '' ? roundSwitcher(data.tour.slug, rounds, data.round.id) : null,
   });
@@ -1282,12 +1281,12 @@ function eventArt(tour: {
   const year = tour.startsAt?.slice(0, 4) ?? tour.name.match(/^(\d{4})/)?.[1] ?? null;
   const zh = document.createElement('span');
   zh.className = 'xqb-event-art-zh';
-  zh.textContent = tour.name.replace(/^\d{4}\s*年?/, '');
+  zh.textContent = primaryName(tour).replace(/^\d{4}\s*年?/, '');
   art.append(zh);
-  if (tour.nameEn) {
+  if (secondaryName(tour)) {
     const en = document.createElement('span');
     en.className = 'xqb-event-art-en';
-    en.textContent = tour.nameEn.replace(/^\d{4}\s*/, '');
+    en.textContent = secondaryName(tour)!.replace(/^\d{4}\s*年?/, '');
     art.append(en);
   }
   const meta = [tour.location, year].filter(Boolean).join(' · ');
@@ -1347,9 +1346,9 @@ function renderBoardsTab(
   const meta = document.createElement('p');
   meta.className = 'xqb-round-meta';
   meta.textContent = [
-    formatEventDateTime(roundPlayedAt(data.boards) ?? data.round.startsAt),
-    countLabel(data.boards.length, 'board', 'boards'),
-    liveCount > 0 ? `${liveCount} live` : null,
+    formatEventDateTime(roundPlayedAt(data.boards) ?? data.round.startsAt, currentLocale()),
+    broadcastCount(data.boards.length, 'board'),
+    liveCount > 0 ? t('broadcast.liveNowCount', { count: liveCount }) : null,
   ]
     .filter(Boolean)
     .join(' / ');
@@ -1387,7 +1386,7 @@ function renderBoardsTab(
   // Only once the round is over: while it is running, freshness is the more
   // useful thing in that slot and the round date is the same on every card.
   const roundPlayedOn = data.boards.every((board) => board.status !== 'live')
-    ? formatEventDay(roundPlayedAt(data.boards) ?? data.round.startsAt)
+    ? formatEventDay(roundPlayedAt(data.boards) ?? data.round.startsAt, currentLocale())
     : null;
   head.prepend(boardsToolbar(wrap, data.boards));
   // Playing with nothing live: say so rather than show an empty page.
@@ -1557,7 +1556,7 @@ function roundPlayedAt(boards: readonly BroadcastBoardSummary[]): string | undef
 // blitz split. The Teams tab lists the round's matches this way, and the
 // Boards grid heads a filtered team's games with it.
 function teamLabel(team: MatchTeam): string {
-  return team.nameEn ?? team.name;
+  return primaryName(team);
 }
 
 function matchSummary(match: TeamMatch<BroadcastBoardSummary>): HTMLElement {
@@ -1568,8 +1567,8 @@ function matchSummary(match: TeamMatch<BroadcastBoardSummary>): HTMLElement {
   const side = (team: MatchTeam, index: 0 | 1): HTMLElement => {
     const el = document.createElement('span');
     el.className = `xqb-match-team${match.winner === index ? ' xqb-match-team-won' : ''}`;
-    el.textContent = team.nameEn ?? team.name;
-    if (team.nameEn) el.title = team.name;
+    el.textContent = primaryName(team);
+    if (secondaryName(team)) el.title = secondaryName(team)!;
     return el;
   };
   // Game points, the league's 2 a win and 1 a draw, slow and blitz together:
@@ -1579,9 +1578,7 @@ function matchSummary(match: TeamMatch<BroadcastBoardSummary>): HTMLElement {
   score.textContent = `${formatPoints(match.score[0])} – ${formatPoints(match.score[1])}`;
   header.append(side(match.teams[0], 0), score, side(match.teams[1], 1));
   section.append(header);
-  const names = [match.nameEn ? match.nameEn.replace('-', ' vs ') : null, match.name].filter(
-    Boolean,
-  );
+  const names = [primaryName(match), secondaryName(match)].filter(Boolean);
   // What settled it, in words: the score above is the tables' points, and a
   // level match is decided by one more blitz game. The slow and blitz point
   // split this line used to show counted the two games at a table separately
@@ -1705,11 +1702,11 @@ function teamFilter(
   select.append(all);
   const teams = matches
     .flatMap((match) => match.teams)
-    .sort((a, b) => (a.nameEn ?? a.name).localeCompare(b.nameEn ?? b.name));
+    .sort((a, b) => primaryName(a).localeCompare(primaryName(b), currentLocale()));
   for (const side of teams) {
     const option = document.createElement('option');
     option.value = side.name;
-    option.textContent = side.nameEn ?? side.name;
+    option.textContent = primaryName(side);
     option.selected = side.name === team;
     select.append(option);
   }
@@ -1796,12 +1793,12 @@ function renderTeamsTab(data: BroadcastRoundResponse, state: EventPageState): HT
     const team = document.createElement('td');
     team.className = 'xqb-standings-player';
     const name = document.createElement('strong');
-    name.textContent = row.team.nameEn ?? row.team.name;
+    name.textContent = primaryName(row.team);
     team.append(name);
-    if (row.team.nameEn) {
+    if (secondaryName(row.team)) {
       const zh = document.createElement('span');
       zh.className = 'xqb-standings-sub';
-      zh.textContent = row.team.name;
+      zh.textContent = secondaryName(row.team);
       team.append(zh);
     }
     const matches = document.createElement('td');
@@ -1880,7 +1877,7 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     ICON_TROPHY,
     [
       teamEvent ? t('broadcast.teamLeague') : null,
-      rounds.length > 0 ? countLabel(rounds.length, 'round', 'rounds') : null,
+      rounds.length > 0 ? broadcastCount(rounds.length, 'round') : null,
     ]
       .filter(Boolean)
       .join(' · ') || null,
@@ -1948,7 +1945,7 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
   if (data.round.id !== '') {
     share.append(
       shareRow(
-        `${primaryName(data.tour)} | ${primaryName(data.round)}`,
+        `${primaryName(data.tour)} | ${broadcastRoundName(data.round)}`,
         `${origin}/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}/round/${encodeURIComponent(
           data.round.id,
         )}`,
@@ -2092,7 +2089,7 @@ function renderPlayersTab(data: BroadcastRoundResponse, state: EventPageState): 
     const name = document.createElement(slug ? 'a' : 'strong');
     name.className = 'xqb-standings-name';
     if (slug && name instanceof HTMLAnchorElement)
-      name.href = `/players/${encodeURIComponent(slug)}`;
+      name.href = localizedHref(`/players/${encodeURIComponent(slug)}`);
     const title =
       row.player.title ?? playerTitleFor({ name: row.player.name, nameEn: row.player.nameEn });
     if (title) {
@@ -2160,10 +2157,13 @@ function roundSwitcher(
   button.className = 'xqb-round-picker-button';
   button.setAttribute('aria-haspopup', 'listbox');
   button.setAttribute('aria-expanded', 'false');
-  button.setAttribute('aria-label', `${t('broadcast.switchRound')}: ${primaryName(current)}`);
+  button.setAttribute(
+    'aria-label',
+    `${t('broadcast.switchRound')}: ${broadcastRoundName(current)}`,
+  );
   const name = document.createElement('span');
   name.className = 'xqb-round-picker-name';
-  name.textContent = primaryName(current);
+  name.textContent = broadcastRoundName(current);
   const caret = document.createElement('span');
   caret.className = 'xqb-round-picker-caret';
   caret.setAttribute('aria-hidden', 'true');
@@ -2183,10 +2183,10 @@ function roundSwitcher(
     option.setAttribute('aria-selected', round.id === current.id ? 'true' : 'false');
     const label = document.createElement('span');
     label.className = 'xqb-round-option-name';
-    label.textContent = primaryName(round);
+    label.textContent = broadcastRoundName(round);
     const when = document.createElement('span');
     when.className = 'xqb-round-option-when';
-    when.textContent = formatEventDateTime(round.startsAt) ?? '';
+    when.textContent = formatEventDateTime(round.startsAt, currentLocale()) ?? '';
     option.append(label, when, roundStatusEl(round, { withLabel: false }));
     option.addEventListener('click', () => close());
     panel.append(option);
@@ -2272,8 +2272,7 @@ function relativeFromNow(at: number): string {
 }
 
 function currentLocaleTag(): string {
-  const lang = document.documentElement.lang;
-  return lang || 'en';
+  return currentLocale();
 }
 
 const CARET_DOWN =
@@ -2363,20 +2362,20 @@ function renderBoardReplay(
       : null;
   const liveArrows = liveEval ? engineArrowsFromLines(cevalLinesFromLiveEval(liveEval)) : [];
 
-  document.title = `${playerName(data.board.red)} vs ${playerName(data.board.black)} · Mistboard`;
+  document.title = `${playerName(data.board.red)}${t('broadcast.vs')}${playerName(data.board.black)} · Mistboard`;
   const redZh = playerNameZh(data.board.red);
   const blackZh = playerNameZh(data.board.black);
   const hero = heroSection({
-    eyebrow: `Board ${data.board.boardNumber}`,
-    title: `${playerName(data.board.red)} vs ${playerName(data.board.black)}`,
+    eyebrow: t('broadcast.boardNumber', { n: data.board.boardNumber }),
+    title: `${playerName(data.board.red)}${t('broadcast.vs')}${playerName(data.board.black)}`,
     subtitle:
       redZh || blackZh
-        ? `${redZh ?? data.board.red.name} vs ${blackZh ?? data.board.black.name}`
+        ? `${redZh ?? data.board.red.name}${t('broadcast.vs')}${blackZh ?? data.board.black.name}`
         : null,
     href: data.board.sourceUrl,
     meta: [
       resultLabel(data.board),
-      `${data.timeline.length} plies`,
+      broadcastCount(data.timeline.length, 'ply'),
       statusLabel(data.state.status),
     ],
     backHref: `/broadcast/xiangqi/${encodeURIComponent(
@@ -2456,7 +2455,7 @@ function renderBoardReplay(
     exportLink(data.board.id),
     embedCodeButton(
       data.board.id,
-      `${primaryName(data.board.red)} vs ${primaryName(data.board.black)} · Mistboard`,
+      `${primaryName(data.board.red)}${t('broadcast.vs')}${primaryName(data.board.black)} · Mistboard`,
     ),
   );
   movesPanel.append(moveHeading, moveList, actions);
@@ -2668,7 +2667,7 @@ function heroSection(input: {
   if (input.backHref && input.backLabel) {
     const back = document.createElement('a');
     back.className = 'xqb-link';
-    back.href = input.backHref;
+    back.href = localizedHref(input.backHref);
     back.textContent = input.backLabel;
     actions.append(back);
   }
@@ -2697,7 +2696,7 @@ function tourCard(entry: BroadcastIndexEntry, opts: { featured?: boolean } = {})
   ]
     .filter(Boolean)
     .join(' ');
-  card.href = `/broadcast/xiangqi/${encodeURIComponent(entry.tour.slug)}`;
+  card.href = localizedHref(`/broadcast/xiangqi/${encodeURIComponent(entry.tour.slug)}`);
 
   // The event's art, lichess's card image; a drawn placeholder until events
   // have art of their own (eventArt).
@@ -2730,8 +2729,8 @@ function tourCard(entry: BroadcastIndexEntry, opts: { featured?: boolean } = {})
     const counts = document.createElement('span');
     counts.className = 'xqb-tour-card-meta';
     counts.textContent = [
-      countLabel(entry.roundCount, 'round', 'rounds'),
-      countLabel(entry.boardCount, 'game', 'games'),
+      broadcastCount(entry.roundCount, 'round'),
+      broadcastCount(entry.boardCount, 'game'),
     ].join(' / ');
     copy.append(counts);
   }
@@ -2766,7 +2765,7 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
   const card = document.createElement(resultsOnly ? 'div' : 'a');
   card.className = `xqb-board-card xqb-board-card-${board.status}`;
   if (card instanceof HTMLAnchorElement) {
-    card.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
+    card.href = localizedHref(`/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`);
   }
 
   const table = board.details?.table;
@@ -2980,9 +2979,11 @@ function sideRail(
     heading.append(t('broadcast.boards'));
   } else {
     const back = document.createElement('a');
-    back.href = `/broadcast/xiangqi/${encodeURIComponent(
-      context.tour.slug,
-    )}/round/${encodeURIComponent(context.round.id)}`;
+    back.href = localizedHref(
+      `/broadcast/xiangqi/${encodeURIComponent(
+        context.tour.slug,
+      )}/round/${encodeURIComponent(context.round.id)}`,
+    );
     // With a board open, the heading is the way back to the round's boards
     // (lichess's arrow beside the round name).
     if (currentBoardId) {
@@ -2994,7 +2995,7 @@ function sideRail(
       arrow.textContent = '‹';
       back.append(arrow);
     }
-    back.append(primaryName(context.round));
+    back.append(broadcastRoundName(context.round));
     heading.append(back);
   }
   const list = document.createElement('div');
@@ -3017,7 +3018,7 @@ function sideRail(
     const row = document.createElement(resultsOnly && !current ? 'div' : 'a');
     row.className = current ? 'xqb-rail-row xqb-rail-row-current' : 'xqb-rail-row';
     if (row instanceof HTMLAnchorElement) {
-      row.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
+      row.href = localizedHref(`/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`);
     }
     if (resultsOnly) row.classList.add('xqb-rail-row-no-moves');
     if (current) row.setAttribute('aria-current', 'page');
@@ -3176,7 +3177,7 @@ function analysisDeeplink(timeline: BroadcastMoveTimelineEntry[]): string | null
 function analyseLink(href: string): HTMLElement {
   const link = document.createElement('a');
   link.className = 'xqb-export-link xqb-link-primary';
-  link.href = href;
+  link.href = localizedHref(href);
   link.target = '_blank';
   link.rel = 'noopener';
   link.textContent = t('broadcast.analyseWithEngine');
@@ -3222,19 +3223,6 @@ function exportLink(boardId: string): HTMLElement {
   return link;
 }
 
-// Ingestion caches an English form (nameEn) next to the original Chinese
-// name on tours, rounds, and player tags. Viewers render English primary and
-// keep the Chinese as a subtle secondary line when the two differ.
-function primaryName(entity: { name: string; nameEn?: string }): string {
-  const en = entity.nameEn?.trim();
-  return en && en.length > 0 ? en : entity.name;
-}
-
-function secondaryName(entity: { name: string; nameEn?: string }): string | null {
-  const en = entity.nameEn?.trim();
-  return en && en.length > 0 && en !== entity.name ? entity.name : null;
-}
-
 function zhSubline(text: string | null, className = 'xqb-name-zh'): HTMLElement | null {
   if (!text) return null;
   const span = document.createElement('span');
@@ -3243,12 +3231,9 @@ function zhSubline(text: string | null, className = 'xqb-name-zh'): HTMLElement 
   return span;
 }
 
-// Team affiliations get the same English-primary treatment as names: a team
-// event is most of top-level xiangqi, so an untranslated team beside a
-// romanized player would leave half of every label in Chinese.
+// Team affiliations use the same locale and missing-translation fallbacks as names.
 function primaryFederation(player: XiangqiBroadcastPlayerTag): string | undefined {
-  const en = player.federationEn?.trim();
-  return en && en.length > 0 ? en : player.federation;
+  return primaryName({ name: player.federation ?? '', nameEn: player.federationEn }) || undefined;
 }
 
 function playerName(player: XiangqiBroadcastPlayerTag): string {

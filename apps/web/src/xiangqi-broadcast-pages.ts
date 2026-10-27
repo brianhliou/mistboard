@@ -6,12 +6,56 @@
 
 import './xiangqi-broadcast.css';
 import { t } from './i18n/catalog.js';
-import { localizedHref } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { CXA_POINTS } from './players/cxa-points.js';
 import { CXA_RATINGS } from './players/cxa-ratings.js';
 import { playerTitleFor } from './players/player-title.js';
 import { buildNav } from './site-shell.js';
-import { formatEventDateRange } from './xiangqi-broadcast-time.js';
+import { formatEventDay } from './xiangqi-broadcast-time.js';
+
+type BroadcastName = { name: string; nameEn?: string | null; nameOwn?: string };
+
+/** Names are source text: choose a translation, never convert their script.
+ * The player's own spelling wins over an archive's normalized Chinese key. */
+export function broadcastName(entity: BroadcastName, locale: Locale = currentLocale()): string {
+  const own = entity.nameOwn?.trim() || entity.name.trim();
+  const en = entity.nameEn?.trim();
+  return locale === 'en' ? en || own : own || en || '';
+}
+
+export function broadcastSecondaryName(entity: BroadcastName): string | null {
+  const other = broadcastName(entity, currentLocale() === 'en' ? 'zh-Hans' : 'en');
+  return other && other !== broadcastName(entity) ? other : null;
+}
+
+/** Translate only generated round labels; keep authored stage names intact. */
+export function broadcastRoundName(entity: BroadcastName): string {
+  const match = entity.name.match(/^\s*(?:第\s*(\d+)\s*[轮輪]|Round\s+(\d+))\s*$/i);
+  return match ? t('study.rowRound', { n: match[1] ?? match[2]! }) : broadcastName(entity);
+}
+
+export function broadcastCount(
+  n: number,
+  kind: 'round' | 'board' | 'game' | 'ply' | 'player' | 'move',
+): string {
+  const keys = {
+    round: ['broadcast.roundCountOne', 'broadcast.roundCount'],
+    board: ['broadcast.boardCountOne', 'broadcast.boardCount'],
+    game: ['broadcast.gameCountOne', 'broadcast.gameCount'],
+    ply: ['broadcast.plyCountOne', 'broadcast.plyCount'],
+    player: ['broadcast.playersCountOne', 'broadcast.playersCount'],
+    move: ['broadcast.moveCountOne', 'broadcast.moveCount'],
+  } as const;
+  return t(keys[kind][n === 1 ? 0 : 1], { n });
+}
+
+export function broadcastDateRange(startsAt?: string, endsAt?: string): string | null {
+  const start = formatEventDay(startsAt, currentLocale());
+  const end = formatEventDay(endsAt, currentLocale());
+  return start && end && start !== end
+    ? t('broadcast.playerFactSeenRange', { from: start, to: end })
+    : (start ?? end);
+}
 
 export type BroadcastRailItem = 'broadcasts' | 'calendar' | 'about' | 'players' | 'teams';
 
@@ -32,7 +76,7 @@ export function broadcastRail(active: BroadcastRailItem): HTMLElement {
     const link = document.createElement('a');
     link.className = item.id === active ? 'xqb-rail-link xqb-rail-link-active' : 'xqb-rail-link';
     if (item.group) link.classList.add('xqb-rail-link-group');
-    link.href = item.href;
+    link.href = localizedHref(item.href);
     link.textContent = item.label;
     if (item.id === active) link.setAttribute('aria-current', 'page');
     nav.append(link);
@@ -74,7 +118,7 @@ export function rightsContactNote(path: string = window.location.pathname): HTML
   return note;
 }
 
-export type BroadcastPlayerRef = { name: string; nameEn?: string; title?: string };
+export type BroadcastPlayerRef = BroadcastName & { title?: string };
 
 /**
  * The strongest few players of an event, for the card's "who is playing" line
@@ -99,10 +143,11 @@ export function topBroadcastPlayers(players: readonly BroadcastPlayerRef[], coun
         (b.rating ?? 0) - (a.rating ?? 0),
     );
   return ranked.slice(0, count).map(({ player }) => {
-    const name = player.nameEn?.trim() || player.name;
+    const name = broadcastName(player);
     // The same tag the player pages show, so a grade the match-fixing
     // rulings may have revoked is hidden here too (players/sanctions.ts).
-    const shown = player.title ?? playerTitleFor({ name: player.name, nameEn: player.nameEn });
+    const shown =
+      player.title ?? playerTitleFor({ name: player.name, nameEn: player.nameEn ?? undefined });
     return shown ? `${shown} ${name}` : name;
   });
 }
@@ -144,16 +189,14 @@ export function calendarEventRow(event: BroadcastCalendarEvent): HTMLElement {
   const when = document.createElement('span');
   when.className = 'xqb-cal-when';
   when.textContent =
-    formatEventDateRange(`${event.startsOn}T12:00:00+08:00`, `${event.endsOn}T12:00:00+08:00`) ??
+    broadcastDateRange(`${event.startsOn}T12:00:00+08:00`, `${event.endsOn}T12:00:00+08:00`) ??
     event.startsOn;
   const what = document.createElement('span');
   what.className = 'xqb-cal-what';
   const name = document.createElement('strong');
-  name.textContent = event.nameEn ?? event.name;
+  name.textContent = broadcastName(event);
   what.append(name);
-  const sub = [event.nameEn ? event.name : null, event.location || null]
-    .filter(Boolean)
-    .join(' · ');
+  const sub = [broadcastSecondaryName(event), event.location || null].filter(Boolean).join(' · ');
   if (sub) {
     const line = document.createElement('span');
     line.className = 'xqb-cal-sub';
@@ -174,7 +217,7 @@ export function calendarEventRow(event: BroadcastCalendarEvent): HTMLElement {
   if (event.tourSlug) {
     const link = document.createElement('a');
     link.className = 'xqb-link';
-    link.href = `/broadcast/xiangqi/${encodeURIComponent(event.tourSlug)}`;
+    link.href = localizedHref(`/broadcast/xiangqi/${encodeURIComponent(event.tourSlug)}`);
     link.textContent = t('broadcast.watch');
     row.append(link);
   }
@@ -216,7 +259,7 @@ export async function mountXiangqiBroadcastCalendar(root: HTMLElement): Promise<
     const section = document.createElement('section');
     section.className = 'xqb-cal-month';
     const title = document.createElement('h2');
-    title.textContent = new Date(`${month}-15T12:00:00Z`).toLocaleDateString(undefined, {
+    title.textContent = new Date(`${month}-15T12:00:00Z`).toLocaleDateString(currentLocale(), {
       month: 'long',
       year: 'numeric',
     });

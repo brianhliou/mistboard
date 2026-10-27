@@ -321,3 +321,113 @@ describe('rights note', () => {
     expect(teams.querySelector('.xqb-rights-note')).toBeNull();
   });
 });
+
+describe('professional player locale fixtures', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.history.replaceState(null, '', '/');
+    window.localStorage?.clear();
+  });
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'renders players, teams, records and filters in %s',
+    async (locale) => {
+      const english = locale === 'en';
+      window.history.replaceState(null, '', `${english ? '' : `/${locale.toLowerCase()}`}/players`);
+      const chao = {
+        ...player({ name: '赵奕帆', nameEn: 'Chao Yi-fan', games: 1, wins: 1 }),
+        nameOwn: '趙奕帆',
+        federation: '台湾',
+        federationEn: 'Taiwan',
+        events: [
+          {
+            tourSlug: 'test',
+            tourName: '测试杯',
+            tourNameEn: 'Test Cup',
+            level: 'A',
+            games: 1,
+            wins: 1,
+            draws: 0,
+            losses: 0,
+            firstPlayedOn: '2026-10-01',
+            lastPlayedOn: '2026-10-02',
+          },
+        ],
+        firstPlayedOn: '2026-10-01',
+        lastPlayedOn: '2026-10-02',
+      };
+      const missing = { ...player({ name: '无名', nameEn: ' ', games: 0 }), nameOwn: '無名' };
+      const board = {
+        boardId: 'test-b1',
+        tourSlug: 'test',
+        tourName: '测试杯',
+        tourNameEn: 'Test Cup',
+        roundId: 'r1',
+        roundName: '第1轮',
+        roundNameEn: 'Round 1',
+        playedOn: '2026-10-01',
+        colour: 'red',
+        opponent: { name: '无名', nameEn: null, slug: null },
+        result: '1-0',
+        outcome: 'win',
+        plyCount: 2,
+        sourceUrl: null,
+      };
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: unknown) => ({
+          ok: true,
+          status: 200,
+          json: async () =>
+            String(input).endsWith('/players')
+              ? { players: [chao, missing] }
+              : { player: chao, boards: [board] },
+        })),
+      );
+      const root = document.createElement('div');
+      await mountXiangqiPlayersIndex(root);
+      expect(root.querySelector('h1')?.textContent).toBe(english ? 'Xiangqi players' : '象棋棋手');
+      expect(root.querySelector('.xqp-name-link')?.textContent).toContain(
+        english ? 'Chao Yi-fan 趙奕帆' : '趙奕帆 Chao Yi-fan',
+      );
+      expect(root.textContent).toContain('無名');
+      const search = root.querySelector<HTMLInputElement>('input[type=search]')!;
+      search.value = '趙';
+      search.dispatchEvent(new Event('input'));
+      expect(root.querySelectorAll('.xqp-row')).toHaveLength(1);
+      expect(root.querySelector('.xqp-filter-count')?.textContent).toBe(
+        english ? '1 player' : '1 位棋手',
+      );
+      await mountXiangqiTeam(root, 'taiwan');
+      expect(root.querySelector('h1')?.textContent).toBe(
+        english ? 'Taiwan' : locale === 'zh-Hans' ? '中华台北' : '台灣',
+      );
+      expect(root.querySelector('.xqp-team-meta')?.textContent).toContain(
+        english ? '1 game' : '1 局',
+      );
+      await mountXiangqiTeamsIndex(root);
+      expect(root.querySelector('h1')?.textContent).toBe(
+        english ? 'Xiangqi teams' : locale === 'zh-Hans' ? '象棋队伍' : '象棋隊伍',
+      );
+      await mountXiangqiPlayer(root, chao.slug);
+      expect(root.querySelector('.xqp-h1')?.textContent).toContain(
+        english ? 'Chao Yi-fan 趙奕帆' : '趙奕帆 Chao Yi-fan',
+      );
+      expect(root.querySelector('.xqp-who')?.textContent).toContain(
+        english ? 'Chao Yi-fan' : '趙奕帆',
+      );
+      expect(root.querySelector('.xqp-game-meta')?.textContent).toContain(
+        english ? 'Test Cup' : '测试杯',
+      );
+      expect(root.querySelector('.xqp-colour')?.textContent).toBe(
+        english ? 'Red' : locale === 'zh-Hans' ? '红' : '紅',
+      );
+      expect(root.querySelector('.xqp-event-record')?.textContent).toContain(
+        english ? '1 game' : '1 局',
+      );
+      expect(root.querySelector('.xqp-filters')?.textContent).toContain(
+        english ? 'Any opponent' : locale === 'zh-Hans' ? '所有对手' : '所有對手',
+      );
+    },
+  );
+});

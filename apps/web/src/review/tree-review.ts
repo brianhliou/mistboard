@@ -2231,6 +2231,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       seatColors: config.seatColors,
       winK: winPercentK(analysis.engineId),
       phases: gamePhases,
+      phaseLabels: {
+        opening: t('summary.opening'),
+        middlegame: t('summary.middlegame'),
+        endgame: t('summary.endgame'),
+      },
       // Names the ply under the pointer in the chart's hover readout, in the same
       // "5. b1-c3" / "5… c7-c6" form the move tree numbers its rows with, so the
       // two readings of one move agree.
