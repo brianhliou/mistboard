@@ -169,7 +169,9 @@ test('puzzle list combines motif and variant filters while keeping parked puzzle
 
   const jungle = await route('/api/puzzles?variant=jungle&motif=ma-hou-pao');
   assert.equal(jungle.status, 200);
-  assert.deepEqual(JSON.parse(jungle.body), { puzzles: [], attemptedIds: [] });
+  // `themes` (#376) carries the variant pool's counts; its own test covers it.
+  const { themes: _themes, ...jungleList } = JSON.parse(jungle.body);
+  assert.deepEqual(jungleList, { puzzles: [], attemptedIds: [] });
 
   const invalidMotif = await route('/api/puzzles?variant=jungle&motif=not-a-motif');
   assert.equal(invalidMotif.status, 400);
