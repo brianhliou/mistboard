@@ -152,6 +152,72 @@ describe('puzzles route', () => {
     await vi.waitFor(() => expect(reopened.textContent).toContain('0 solved of 3'));
   });
 
+  it.each(['ma-hou-pao', ''])(
+    'preserves an unfinished puzzle when changing to theme "%s" keeps it in the queue',
+    async (nextTheme) => {
+      stubWindowLocalStorage(memoryStorage());
+      window.history.replaceState(
+        null,
+        '',
+        `/puzzles/${RED_MATE.id}?theme=${nextTheme ? '' : 'ma-hou-pao'}`,
+      );
+      const qualityEvents: Array<{ sessionId: string; event: string }> = [];
+      const attemptBodies: Array<{ moves: XiangqiMove[]; qualitySessionId: string }> = [];
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/puzzles') {
+          return json({
+            puzzles: [{ ...publicSummary(RED_MATE), motifs: ['ma-hou-pao'] }],
+            themes: themeOptions,
+          });
+        }
+        if (url === `/api/puzzles/${RED_MATE.id}`) {
+          return json({ puzzle: publicDetail(RED_MATE) });
+        }
+        if (url.endsWith('/quality')) {
+          qualityEvents.push(JSON.parse(String(init?.body)));
+          return new Response(null, { status: 204 });
+        }
+        if (url.endsWith('/attempt')) {
+          const body = JSON.parse(String(init?.body));
+          attemptBodies.push(body);
+          return json({ attempt: attemptStandardXiangqiPuzzleLine(RED_MATE, body.moves) });
+        }
+        return json({}, 404);
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const root = document.createElement('div');
+      await mountPuzzles(root, RED_MATE.id);
+      clickSquares(root, RED_MATE.solution[0]!);
+      await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+      const view = qualityEvents[0]!;
+
+      const picker = root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')!;
+      picker.value = nextTheme;
+      picker.dispatchEvent(new Event('change'));
+      await vi.waitFor(() =>
+        expect(new URL(window.location.href).searchParams.get('theme') ?? '').toBe(nextTheme),
+      );
+
+      expect(
+        fetchSpy.mock.calls.filter(([input]) => String(input) === `/api/puzzles/${RED_MATE.id}`),
+      ).toHaveLength(1);
+      expect(root.textContent).toContain('Correct.');
+      expect(root.textContent).toContain(
+        `${RED_MATE.solution[1]!.from}-${RED_MATE.solution[1]!.to}`,
+      );
+      expect(qualityEvents).toEqual([view]);
+      expect(view.event).toBe('view');
+      clickSquares(root, RED_MATE.solution[2]!);
+      await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+      expect(attemptBodies.map((body) => body.moves)).toEqual([
+        [RED_MATE.solution[0]],
+        [RED_MATE.solution[0], RED_MATE.solution[2]],
+      ]);
+      expect(attemptBodies.every((body) => body.qualitySessionId === view.sessionId)).toBe(true);
+    },
+  );
+
   it('opens the themes index with counts, glosses and filtered-session links', async () => {
     vi.stubGlobal(
       'fetch',
@@ -196,9 +262,10 @@ describe('puzzles route', () => {
     window.dispatchEvent(new PopStateEvent('popstate'));
     await vi.waitFor(() => expect(root.querySelector('[data-square]')).not.toBeNull());
     expect(root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe('');
+    expect(loadPuzzleTheme()).toBe('men-gong');
   });
 
-  it('lets a direct puzzle link override a stored theme and ignores invalid stored ids', async () => {
+  it('opens a direct puzzle link without erasing the saved theme and ignores invalid stored ids', async () => {
     stubWindowLocalStorage(memoryStorage({ 'mistboard:puzzles:theme': 'ma-hou-pao' }));
     vi.stubGlobal(
       'fetch',
@@ -212,6 +279,13 @@ describe('puzzles route', () => {
     await mountPuzzles(root, RED_MATE.id);
     expect(root.querySelector('[data-square]')).not.toBeNull();
     expect(root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe('');
+    expect(loadPuzzleTheme()).toBe('ma-hou-pao');
+    window.history.replaceState(null, '', '/puzzles');
+    const reopened = document.createElement('div');
+    await mountPuzzles(reopened);
+    expect(reopened.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe(
+      'ma-hou-pao',
+    );
     window.localStorage.setItem('mistboard:puzzles:theme', 'toString');
     expect(loadPuzzleTheme()).toBeNull();
     stubWindowLocalStorage({

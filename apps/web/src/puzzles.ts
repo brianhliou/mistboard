@@ -136,7 +136,7 @@ export async function mountPuzzles(
       ? null
       : loadPuzzleTheme();
   let themes: PuzzleThemeCount[] = [];
-  savePuzzleTheme(themeFilter);
+  if (themeParam.has('theme')) savePuzzleTheme(themeFilter);
   let session: PuzzleSession | null = null;
   const solvedIds = loadSolvedPuzzleIds();
   const seenPuzzles = loadSeenPuzzles();
@@ -175,13 +175,25 @@ export async function mountPuzzles(
     }
   };
 
+  const pushPuzzleUrl = (id: string): void => {
+    const nextPath = `/puzzles/${encodeURIComponent(id)}${themeFilter ? `?theme=${themeFilter}` : ''}`;
+    if (`${window.location.pathname}${window.location.search}` !== nextPath) {
+      window.history.pushState(null, '', nextPath);
+    }
+  };
+
   const changeQueue = async (pushUrl = true): Promise<void> => {
     const queue = queueSummaries();
     const nextId =
       selectedId && queue.some((puzzle) => puzzle.id === selectedId)
         ? selectedId
         : (queue[0]?.id ?? null);
-    if (nextId) await selectPuzzle(nextId, pushUrl);
+    if (nextId && nextId === selectedId && nextId === session?.puzzle.id) {
+      // Filtering the queue does not start another attempt at the same puzzle.
+      clearAutoNextTimer();
+      if (pushUrl) pushPuzzleUrl(nextId);
+      renderSession();
+    } else if (nextId) await selectPuzzle(nextId, pushUrl);
     else {
       clearAutoNextTimer();
       ++loadToken;
@@ -326,10 +338,7 @@ export async function mountPuzzles(
       renderStatus(detail, t('puzzle.notFound'));
       return;
     }
-    const nextPath = `/puzzles/${encodeURIComponent(id)}${themeFilter ? `?theme=${themeFilter}` : ''}`;
-    if (pushUrl && `${window.location.pathname}${window.location.search}` !== nextPath) {
-      window.history.pushState(null, '', nextPath);
-    }
+    if (pushUrl) pushPuzzleUrl(id);
     // Tear down the outgoing puzzle's engine (worker + arrows) before swapping
     // in the next session, so a stale ceval handle does not outlive its board.
     if (session && !isPuzzleComplete(session)) {
@@ -437,8 +446,9 @@ export async function mountPuzzles(
 
   window.addEventListener('popstate', () => {
     if (!shell.isConnected) return;
-    themeFilter = parsePuzzleTheme(new URLSearchParams(window.location.search).get('theme'));
-    savePuzzleTheme(themeFilter);
+    const params = new URLSearchParams(window.location.search);
+    themeFilter = parsePuzzleTheme(params.get('theme'));
+    if (params.has('theme')) savePuzzleTheme(themeFilter);
     const id = puzzleIdFromPath(window.location.pathname) ?? queueSummaries()[0]?.id ?? null;
     if (id) void selectPuzzle(id, false);
     else void changeQueue(false);
