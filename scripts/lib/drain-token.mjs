@@ -13,18 +13,14 @@ import { createHash } from 'node:crypto';
 // exporting it into the shell.
 //
 // Store it once (the -w flag prompts, so the value never lands in history):
-//   security add-generic-password -a "$USER" -s mistboard-drain-token -U -w
+//   security add-generic-password -a "$USER" -s mistboard/MISTBOARD_DRAIN_TOKEN -U -w
 // Rotate it by re-running that same command; -U updates in place.
-export const DRAIN_TOKEN_KEYCHAIN_SERVICE = 'mistboard-drain-token';
+export const DRAIN_TOKEN_KEYCHAIN_SERVICE = 'mistboard/MISTBOARD_DRAIN_TOKEN';
 
-// The SECOND name this same secret can legitimately be stored under. Every
-// Railway secret pushed by scripts/railway-secret.mjs lives at
-// `mistboard/<VAR>`, so a drain token put there by that tool is correctly
-// stored and was, until 2026-09-09, invisible here: this module searched one
-// name, reported "no token", and that is indistinguishable from never having
-// stored one. Accept both rather than ask anyone to keep two copies of one
-// secret in sync.
-export const DRAIN_TOKEN_KEYCHAIN_FALLBACK = 'mistboard/MISTBOARD_DRAIN_TOKEN';
+// Keep the old name readable for installations that have not rotated yet.
+// New stores and rotations use only the canonical mistboard/<VAR> item that
+// railway-secret.mjs pushes. It must win over any stale legacy copy (#613).
+export const DRAIN_TOKEN_KEYCHAIN_FALLBACK = 'mistboard-drain-token';
 
 const KEYCHAIN_ITEMS = [DRAIN_TOKEN_KEYCHAIN_SERVICE, DRAIN_TOKEN_KEYCHAIN_FALLBACK];
 
