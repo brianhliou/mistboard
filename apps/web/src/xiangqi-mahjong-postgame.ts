@@ -5,6 +5,7 @@ import {
   type XmjRoomStatus,
   type XmjSeat,
 } from '@mistboard/game';
+import { reviewOpenedProps, track } from './analytics.js';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import './landing.css';
@@ -191,6 +192,17 @@ function mountRecording(root: HTMLElement, postgame: XmjPostgameResponse): void 
     initialPly: xmjInitialPly(window.location.search, xmjPostgameLastPly(postgame)),
     clockAt: (ply) => xmjPostgameClockAt(postgame, ply),
   });
+  // This recording uses the live room instead of the shared review scaffold.
+  track(
+    'review_opened',
+    reviewOpenedProps({
+      pathname: window.location.pathname,
+      referrer: document.referrer,
+      origin: window.location.origin,
+      reviewSurface: 'game',
+      hasAnalysis: false,
+    }),
+  );
 }
 
 function messageView(text: string): HTMLElement {

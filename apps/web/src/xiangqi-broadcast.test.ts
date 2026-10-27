@@ -238,6 +238,39 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     vi.unstubAllGlobals();
   });
 
+  it('mini-board cards show the last recorded position past repetition', async () => {
+    const parsed = importXiangqiGame('h0g2 h9g7 g2h0 g7h9 h0g2 h9g7 g2h0 g7h9 h2e2 b9c7');
+    expect(parsed.error).toBeUndefined();
+    const moves = parsed.moves;
+    stubFetchJson(() => ({
+      ...ROUND,
+      boards: [
+        fixtureBoard({
+          n: 1,
+          red: 'Red',
+          black: 'Black',
+          moves,
+          status: 'complete',
+          result: '1-0',
+        }),
+      ],
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    const expected = document.createElement('div');
+    const { renderXiangqiBoardSvg } = await import('./xiangqi-board.js');
+    const replay = buildXiangqiReplayFromMoves(moves, undefined, { record: true });
+    expected.innerHTML = renderXiangqiBoardSvg(replay.views[replay.maxPly]!, 'red', {
+      coordinates: false,
+    });
+    const squares = (element: Element) =>
+      [...element.querySelectorAll('[data-piece-square]')]
+        .map((piece) => piece.getAttribute('data-piece-square'))
+        .sort();
+    expect(squares(root.querySelector('.xqb-card-board')!)).toEqual(squares(expected));
+  });
+
   it('renders one mini-board card per board with a board, names, and live marker', async () => {
     // Stub the round fetch; EventSource is stubbed to a no-op so the live-stream
     // wiring does not reach for a real connection under happy-dom.

@@ -47,6 +47,9 @@ export const xiangqiMahjong32Article: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-15',
+  updatedAt: '2026-10-25',
+  updateNote:
+    'Points now follow the scoring table in Gamesofa’s Xiangqi Mahjong app: new lines for one General, three of a piece and mixed Soldiers, no dealer point, and one heavenly hand for either player’s first draw.',
   audience:
     'Xiangqi players who have never played mahjong, mahjong players who have never seen this game, and anyone at the Mistboard table who wants to know why a hand won.',
   intro: [
@@ -177,7 +180,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Two wins happen before the hand has really started. If the dealer’s opening five tiles already make a winning hand, that is a **heavenly hand**. If the other player wins with their first draw, before anyone has claimed a tile, that is an **earthly hand**.',
+          text: 'A win before the hand has really started is a **heavenly hand**: the dealer’s opening five tiles already make a winning hand, or the other player wins with their first draw, before anyone has claimed a tile.',
         },
       ],
     },
@@ -186,9 +189,12 @@ export const xiangqiMahjong32Article: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when the player who did not deal wins it on a discard.',
+          text: 'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.',
         },
-        win('palace', 'General, Advisor and Elephant, with any pair: 1 point.'),
+        win(
+          'palace',
+          'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for 2 points.',
+        ),
         win('chariot', 'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.'),
         win('soldiers', 'Three Soldiers of one colour, with any pair: 1 point.'),
         win('one-colour', 'One colour: every tile red, or every tile black. 1 more, for 2 points.'),
@@ -196,6 +202,11 @@ export const xiangqiMahjong32Article: Article = {
         win(
           'five-soldiers',
           'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.',
+        ),
+        win('mixed-soldiers', 'Mixed Soldiers: five Soldiers of both colours. 2 more, for 3 points.'),
+        win(
+          'three-horses',
+          'Three of a piece: three Horses, of either colour. 2 more, for 3 points. Three Advisors, Elephants, Chariots or Cannons score the same.',
         ),
         {
           kind: 'sub-heading',
@@ -228,30 +239,26 @@ export const xiangqiMahjong32Article: Article = {
           rows: [
             ['Win', '1', 'Every winning hand'],
             ['One colour', '+1', 'All five tiles one colour'],
+            ['One General', '+1', 'One General in the hand and not the other'],
             ['Generals pair', '+2', 'The two Generals are the pair'],
+            ['Three of a piece', '+2', 'Three Advisors, Elephants, Chariots, Horses or Cannons'],
+            ['Mixed Soldiers', '+2', 'Five Soldiers of both colours'],
             ['Five Soldiers', '+5', 'Five Soldiers of one colour'],
             ['Self-draw', '+2', 'You drew the winning tile'],
-            ['Dealer', '+1', 'The dealer won'],
             ['Last tile', '+1', 'Self-draw on the last wall tile'],
           ],
         },
         {
           kind: 'paragraph',
-          text: 'The two special hands are the exception. Each scores a flat 6, and nothing is added to it.',
-        },
-        {
-          kind: 'table',
-          keyColumn: true,
-          compact: true,
-          headers: ['Special hand', 'Points', 'When'],
-          rows: [
-            ['Heavenly hand', '6', 'The dealer’s first five tiles win'],
-            ['Earthly hand', '6', 'The other player wins on their first draw'],
-          ],
+          text: 'Five Soldiers of one colour score Five Soldiers, not Mixed Soldiers as well. The dealer scores nothing extra for dealing.',
         },
         {
           kind: 'paragraph',
-          text: 'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair, 2 for the self-draw and 1 because the dealer won, 6 points in all. It is not one colour, since the pair is half black.',
+          text: 'The heavenly hand is the exception: it scores a flat 6 whoever wins it, and nothing is added to it.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair and 2 for the self-draw, 5 points in all. It is not one colour, since the pair is half black, and with both Generals in it, One General does not apply.',
         },
         {
           kind: 'raw-svg',
@@ -280,7 +287,7 @@ export const xiangqiMahjong32Article: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Ana wins the match 7 to 6. The fifth hand decided it: a self-draw on the last tile while she was dealer, worth 1 for the win, 2 for the self-draw, 1 as dealer and 1 for the last tile.',
+          text: 'Ana wins the match 6 to 5. The fifth hand decided it: a self-draw on the last tile, worth 1 for the win, 2 for the self-draw and 1 for the last tile.',
         },
       ],
     },
@@ -293,7 +300,7 @@ export const xiangqiMahjong32Article: Article = {
             {
               question: 'Where do these rules come from?',
               answer:
-                'The game has no rulebook. The rules and point values here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they leave a choice, Mistboard made it: the deal alternates every hand, and a match is six hands, since the sources play for money and give no match format.',
+                'The game has no rulebook. The tiles and winning hands here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. The points follow the scoring table inside Gamesofa’s Xiangqi Mahjong app. Where they leave a choice, Mistboard made it: the deal alternates every hand, a match is six hands, since the sources play for money and give no match format, and five Soldiers of one colour do not also score Mixed Soldiers.',
             },
             {
               question: 'Can more than two people play?',
@@ -308,12 +315,12 @@ export const xiangqiMahjong32Article: Article = {
             {
               question: 'Why is there no kong or ready declaration?',
               answer:
-                'Both turn up in the folk rules, but online tables mostly drop the kong from the 32-tile game, and every source treats the ready declaration as optional, so Mistboard leaves both out. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two.',
+                'Online tables mostly drop the kong from the 32-tile game, and Mistboard does too. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two. The ready declaration is not in yet. Gamesofa’s table gives 1 point for declaring ready and 5 for each of two hands won after a ready declaration; Mistboard leaves those three lines out until the table has a way to declare ready.',
             },
             {
               question: 'Why does the deal always alternate?',
               answer:
-                'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, so in a six-hand match each player deals three times.',
+                'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, and the dealer scores nothing extra, so in a six-hand match each player deals three times.',
             },
           ],
         },

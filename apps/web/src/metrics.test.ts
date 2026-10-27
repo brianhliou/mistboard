@@ -95,6 +95,8 @@ const week = (weekStart: string, overrides: Record<string, number> = {}) => ({
   puzzleSessions: 3,
   puzzleSolves: 2,
   puzzleAttempts: 1,
+  puzzlePlayers: 2,
+  returningPuzzlePlayers: 1,
   studiesCreated: 0,
   studyChaptersCreated: 0,
   practiceSolves: 0,
@@ -124,6 +126,25 @@ const adminMetrics = {
   // Includes a deleted id (dark-draft960) that the live-shelf filter drops.
   humanGamesByVariant: { xiangqi: 402, 'dark-xiangqi': 180, 'dark-draft960': 60 },
   weekly: [week('2026-07-06'), week('2026-07-13'), week('2026-07-20', { players: 8 })],
+  retentionCohorts: [
+    {
+      weekStart: '2026-06-15',
+      segment: 'jieqi',
+      players: 8,
+      returns: [
+        { week: 1, returned: 2, percentage: 25 },
+        { week: 2, returned: 0, percentage: 0 },
+        { week: 3, returned: 1, percentage: 12.5 },
+        { week: 4, returned: 1, percentage: 12.5 },
+      ],
+    },
+    {
+      weekStart: '2026-07-13',
+      segment: 'other',
+      players: 3,
+      returns: [1, 2, 3, 4].map((week) => ({ week, returned: null, percentage: null })),
+    },
+  ],
   engines: {
     eveGames: 900,
     eveGamesLast7d: 90,
@@ -158,6 +179,47 @@ describe('metrics page', () => {
     vi.unstubAllGlobals();
     document.body.replaceChildren();
     document.body.className = '';
+  });
+
+  it('shows first-game cohorts with returned counts and leaves immature weeks blank', async () => {
+    stubFetch();
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    const section = root.querySelector('.metrics-retention');
+    expect(section?.querySelector('h2')?.textContent).toBe('First-game retention');
+    const rows = [...(section?.querySelectorAll('tbody tr') ?? [])].map((row) =>
+      [...row.querySelectorAll('td')].map((cell) => cell.textContent),
+    );
+    expect(rows).toEqual([
+      [
+        '2026-06-15',
+        'Jieqi',
+        '8',
+        '25.0% (2 / 8)',
+        '0.0% (0 / 8)',
+        '12.5% (1 / 8)',
+        '12.5% (1 / 8)',
+      ],
+      ['2026-07-13', 'Everything else', '3', '', '', '', ''],
+    ]);
+    expect(section?.textContent).toContain('Monday to Sunday UTC');
+    expect(section?.textContent).toContain('any variant');
+
+    await mountMetrics(root, { admin: false });
+    expect(root.querySelector('.metrics-retention')).toBeNull();
+
+    stubFetch({ '/api/stats/admin': () => json({}, 401) });
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelector('.metrics-retention')).toBeNull();
+  });
+
+  it('explains an empty retention window', async () => {
+    stubFetch({ '/api/stats/admin': () => json({ ...adminMetrics, retentionCohorts: [] }) });
+    const root = mountRoot();
+    await mountMetrics(root, { admin: true });
+    expect(root.querySelector('.metrics-retention')?.textContent).toContain(
+      'No first-game cohorts in this window.',
+    );
   });
 
   it('public /stats is a translated rail page: games per week, totals, variants, modes', async () => {
@@ -278,9 +340,11 @@ describe('metrics page', () => {
       'Active players, rolling 28 days',
       'Games per week',
       'Accounts per week',
+      'Puzzle players per week',
       'Puzzles per week',
       'Study and practice per week',
       'Community per week',
+      'First-game retention',
       'Games over time',
       'Games by variant',
       'Games by mode',
@@ -305,6 +369,20 @@ describe('metrics page', () => {
       '4',
     ]);
     expect(playersSection?.querySelector('.weekly-chart-line-partial')).not.toBeNull();
+
+    // Puzzles: people beside the puzzles-started line, which says what it counts.
+    const legendOf = (title: string) =>
+      [
+        ...([...root.querySelectorAll('.metrics-weekly-section')]
+          .find((s) => s.querySelector('.metrics-section-heading')?.textContent === title)
+          ?.querySelectorAll('.weekly-chart-legend li') ?? []),
+      ].map((n) => n.textContent);
+    expect(legendOf('Puzzle players per week')).toEqual(['Puzzle players', 'Returning']);
+    expect(legendOf('Puzzles per week')).toEqual([
+      'Puzzles started',
+      'Solves',
+      'Signed-in attempts',
+    ]);
 
     // "Games by mode" is human only on admin too: bot-vs-bot lives in the
     // Engines block and nowhere else on the page.

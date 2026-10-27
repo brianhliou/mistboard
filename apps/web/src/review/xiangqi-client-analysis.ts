@@ -3,7 +3,7 @@
 // review (historical-xiangqi-postgame.ts). Both are roomless — there is no server
 // Pikafish cache to fetch — so the "Computer analysis" tab computes in-browser on
 // request. (Played games use the server path instead; see xiangqi-postgame.ts.)
-import { xiangqiMoveToFsfUci } from '@mistboard/game';
+import { redPovScore, xiangqiMoveToFsfUci } from '@mistboard/game';
 import { createCeval } from './engine/ceval.js';
 import { computeGameAnalysis, type PlyEval } from './game-analysis.js';
 import type { XiangqiAnalysisSource } from './xiangqi-review.js';
@@ -46,8 +46,7 @@ export function buildXiangqiClientAnalysisSource(
           const mate = best?.mate ?? null;
           plies.push({
             ply,
-            cp: cp === null ? null : redToMove ? cp : -cp,
-            mate: mate === null ? null : redToMove ? mate : -mate,
+            ...redPovScore(cp, mate, redToMove ? 1 : -1),
             best: best?.pvUci[0] ?? null,
             pv: best?.pvUci.slice(0, 16),
           });

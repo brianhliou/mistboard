@@ -403,10 +403,16 @@ async function main() {
   }
   const base = resolveBaseUrl(args.base);
   // A --path name the list doesn't have is a page of its own (a forum
-  // thread, a new route), audited after the listed ones.
+  // thread, a new route), audited after the listed ones. A room or game path
+  // is a board page, so --path room-bq=/room/<id> gets the board rules.
   const extra = [...args.paths]
     .filter(([name]) => !PAGES.some((p) => p.name === name))
-    .map(([name, path]) => ({ name, template: 'extra', path }));
+    .map(([name, path]) => ({
+      name,
+      template: 'extra',
+      path,
+      board: /^\/(?:room|game)\//.test(path),
+    }));
   const all = [...PAGES, ...extra];
   const pages = args.only
     ? all.filter((p) => args.only.has(p.name) || p.template === 'extra')

@@ -16,6 +16,7 @@ import {
   type TranslationLocale,
   translationNeeded,
 } from './../forum-translation.js';
+import { createForumWriteLimits } from './../forum-write-limits.js';
 import { logger } from './../obs.js';
 import * as persistence from './../persistence.js';
 import { onlinePresence } from './../presence.js';
@@ -45,6 +46,8 @@ const forumWatchLimiter = createAuthRateLimiter(120, 60 * 60 * 1000);
 // anonymous budget is the smaller because it is the one a script would use.
 const translationMissLimiterByAccount = createAuthRateLimiter(40, 60 * 60 * 1000);
 const translationMissLimiterByIp = createAuthRateLimiter(10, 60 * 60 * 1000);
+// Edits, and the translation calls an author's writes pre-pay.
+const forumWriteLimits = createForumWriteLimits();
 
 function envInt(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -119,15 +122,21 @@ async function translationOverlay(
 }
 
 // Fill the cache for a new or edited text so the lists can show it translated
-// before any reader has asked. Fire-and-forget after the response. Bypasses
-// the author's per-caller meter (writing is already rate limited) but not the
-// daily cap or the breaker, and the feature flag turns it off with the rest.
-function warmForumTranslation(kind: 'topic' | 'post', id: string, text: string): void {
+// before any reader has asked. Fire-and-forget after the response. Metered on
+// the writer's own warm budget (forum-write-limits.ts), then the daily cap and
+// the breaker; the feature flag turns it off with the rest.
+function warmForumTranslation(
+  kind: 'topic' | 'post',
+  id: string,
+  text: string,
+  writerAccountId: string,
+): void {
   if (!forumTranslationEnabled()) return;
+  const meter = forumWriteLimits.warmMeter(writerAccountId);
   for (const target of TRANSLATION_LOCALES) {
     if (!translationNeeded(text, target)) continue;
     translationService()
-      .translate({ kind, id, target, meter: () => true })
+      .translate({ kind, id, target, meter })
       .catch((error: unknown) => {
         logger.warn({ kind: 'forum_translation_warm_failed', source: kind, id, target, error });
       });
@@ -567,9 +576,9 @@ async function createTopic(request: IncomingMessage, response: ServerResponse): 
     return true;
   }
   writeJson(response, 201, { topic: serializeTopicDetail(result.topic) });
-  warmForumTranslation('topic', result.topic.id, title);
+  warmForumTranslation('topic', result.topic.id, title, user.id);
   const opening = result.topic.posts[0];
-  if (opening) warmForumTranslation('post', opening.id, opening.bodyText);
+  if (opening) warmForumTranslation('post', opening.id, opening.bodyText, user.id);
   return true;
 }
 
@@ -608,7 +617,7 @@ async function createPost(
     return true;
   }
   writeJson(response, 201, { post: serializePost(result.post) });
-  warmForumTranslation('post', result.post.id, bodyText);
+  warmForumTranslation('post', result.post.id, bodyText, user.id);
   return true;
 }
 
@@ -743,6 +752,10 @@ async function updateTopic(
     writeJson(response, 401, { error: 'not_signed_in' });
     return true;
   }
+  if (!forumWriteLimits.allowEdit(user.id)) {
+    writeJson(response, 429, { error: 'rate_limited' });
+    return true;
+  }
   const body = await readJsonBody(request);
   const title = normalizeTitle(typeof body.title === 'string' ? body.title : '');
   if (!title) {
@@ -762,7 +775,7 @@ async function updateTopic(
     return true;
   }
   writeJson(response, 200, { topic: serializeTopicDetail(result.topic) });
-  warmForumTranslation('topic', result.topic.id, title);
+  warmForumTranslation('topic', result.topic.id, title, user.id);
   return true;
 }
 
@@ -803,6 +816,10 @@ async function updatePost(
     writeJson(response, 401, { error: 'not_signed_in' });
     return true;
   }
+  if (!forumWriteLimits.allowEdit(user.id)) {
+    writeJson(response, 429, { error: 'rate_limited' });
+    return true;
+  }
   const body = await readJsonBody(request);
   const bodyText = normalizeBodyText(typeof body.body === 'string' ? body.body : '');
   if (!bodyText) {
@@ -823,7 +840,7 @@ async function updatePost(
     return true;
   }
   writeJson(response, 200, { post: serializePost(result.post) });
-  warmForumTranslation('post', result.post.id, bodyText);
+  warmForumTranslation('post', result.post.id, bodyText, user.id);
   return true;
 }
 

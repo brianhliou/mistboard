@@ -18,6 +18,48 @@ const TOKEN_PATTERN = /(@[a-z0-9_-]+|(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(
 const QUICK_CHAT_MESSAGES = ['GG', 'WP', 'TY', 'GTG', 'BYE'] as const;
 /** Poll ticks a demoted panel keeps re-probing its gated room before settling. */
 const PROMOTE_ATTEMPTS = 5;
+/**
+ * How long the live room's chat waits for the socket's hello to say whether this
+ * viewer holds a seat before it probes the player room anyway.
+ */
+const SEAT_WAIT_MS = 5000;
+
+/** Fired on window by a live room's socket once its hello names this viewer's seat. */
+export const LIVE_ROOM_SEAT_EVENT = 'mistboard:live-room-seat';
+type LiveRoomSeatDetail = { roomId: string; seated: boolean };
+const announcedSeats = new Map<string, boolean>();
+
+/**
+ * The room's socket calls this on every hello. The server persists the seat
+ * before it sends the hello, so a player-room probe made after it cannot beat
+ * the seat into the database, and a viewer the hello names a spectator never
+ * probes the seat-gated room at all.
+ */
+export function announceLiveRoomSeat(roomId: string, seated: boolean): void {
+  announcedSeats.set(roomId, seated);
+  window.dispatchEvent(
+    new CustomEvent<LiveRoomSeatDetail>(LIVE_ROOM_SEAT_EVENT, { detail: { roomId, seated } }),
+  );
+}
+
+/** Resolves with the hello's answer, or null when none arrives in time. */
+function awaitLiveRoomSeat(roomId: string, timeoutMs: number): Promise<boolean | null> {
+  const known = announcedSeats.get(roomId);
+  if (known !== undefined) return Promise.resolve(known);
+  return new Promise((resolve) => {
+    const onSeat = (event: Event) => {
+      const detail = (event as CustomEvent<LiveRoomSeatDetail>).detail;
+      if (detail?.roomId === roomId) finish(detail.seated);
+    };
+    const timer = window.setTimeout(() => finish(null), timeoutMs);
+    function finish(seated: boolean | null): void {
+      window.clearTimeout(timer);
+      window.removeEventListener(LIVE_ROOM_SEAT_EVENT, onSeat);
+      resolve(seated);
+    }
+    window.addEventListener(LIVE_ROOM_SEAT_EVENT, onSeat);
+  });
+}
 
 type GameChatOptions = {
   ariaLabel: string;
@@ -33,12 +75,24 @@ type GameChatOptions = {
    * instead. Falling back is a demotion, so quick chat goes with it.
    */
   fallback?: { apiUrl: string; title: string };
+  /** Live room: hold the first probe until the socket's hello names the seat. */
+  seatOf?: string;
   /** Desktop game/review rails can give this room a persisted height control. */
   resizable?: boolean;
 };
 
-/** Mutable per-panel resolution: which room this panel actually ended up in. */
-type ChatSession = { apiUrl: string; live: boolean; demoted: boolean };
+/**
+ * Mutable per-panel resolution: which room this panel actually ended up in.
+ * `settled` stays false until the first load picks a room, so polling never
+ * probes the gated room ahead of it; `promoteAttemptsLeft` is the re-probe budget.
+ */
+type ChatSession = {
+  apiUrl: string;
+  live: boolean;
+  demoted: boolean;
+  settled: boolean;
+  promoteAttemptsLeft: number;
+};
 
 /** The three regions a room's state renders into. */
 type ChatPanelUi = { tab: HTMLElement; feed: HTMLElement; footer: HTMLElement };
@@ -68,6 +122,7 @@ export function buildLiveRoomChat(roomId: string): HTMLElement {
     title: t('study.chatRoom'),
     apiUrl: playerChatApiUrl(roomId),
     fallback: { apiUrl: gameChatApiUrl(roomId), title: t('review.spectatorRoom') },
+    seatOf: roomId,
     // No drag separator in the live room (Brian, 2026-10-02: "a handle that does
     // nothing"). The room's rail is capped at the board's height and the chat
     // flex-fills it (live-review.css), and that rule outranks the manual-height
@@ -138,6 +193,8 @@ function buildGameChat(roomId: string, options: GameChatOptions): HTMLElement {
     apiUrl: options.apiUrl ?? gameChatApiUrl(roomId),
     live: options.live,
     demoted: false,
+    settled: false,
+    promoteAttemptsLeft: options.fallback ? PROMOTE_ATTEMPTS : 0,
   };
   const known = new Set<string>();
   const ui: ChatPanelUi = { tab, feed, footer };
@@ -165,14 +222,28 @@ async function hydrateGameChat(
   known: Set<string>,
   options: GameChatOptions,
 ): Promise<void> {
-  let result = await fetchGameChat(session.apiUrl);
-  if (!result.state && options.fallback && (result.status === 401 || result.status === 403)) {
-    session.apiUrl = options.fallback.apiUrl;
+  const seated = options.seatOf ? await awaitLiveRoomSeat(options.seatOf, SEAT_WAIT_MS) : null;
+  const demote = (fallback: { apiUrl: string; title: string }) => {
+    session.apiUrl = fallback.apiUrl;
     session.live = false;
     session.demoted = true;
-    ui.tab.textContent = options.fallback.title;
+    ui.tab.textContent = fallback.title;
+  };
+  let result: Awaited<ReturnType<typeof fetchGameChat>>;
+  if (seated === false && options.fallback) {
+    // The hello says spectator: read the spectator room and never knock on
+    // the players' door (a refused probe is a 403 in every viewer's console).
+    demote(options.fallback);
+    session.promoteAttemptsLeft = 0;
     result = await fetchGameChat(session.apiUrl);
+  } else {
+    result = await fetchGameChat(session.apiUrl);
+    if (!result.state && options.fallback && (result.status === 401 || result.status === 403)) {
+      demote(options.fallback);
+      result = await fetchGameChat(session.apiUrl);
+    }
   }
+  session.settled = true;
   if (!result.state || !Array.isArray(result.state.lines)) {
     renderStatus(ui.footer, t('live.chatUnavailable'));
     return;
@@ -200,20 +271,21 @@ function startPolling(
   known: Set<string>,
   options: GameChatOptions,
 ): void {
-  // A player who opens a brand-new room can beat their own seat token into the
-  // database, so the first player-room probe 403s and the panel demotes. Re-probe
-  // for a bounded window afterwards and promote once the seat lands, rather than
-  // stranding a player in the spectator room until they reload. A genuine
-  // spectator burns the budget once and then polls one room like everyone else.
-  let promoteAttemptsLeft = options.fallback ? PROMOTE_ATTEMPTS : 0;
+  // The live room waits for the hello (announceLiveRoomSeat) before its first
+  // probe, so a player no longer beats their own seat token into the database.
+  // When no hello arrives in time the panel probes anyway and may demote; then
+  // it re-probes for a bounded window and promotes once the seat lands, rather
+  // than stranding a player in the spectator room until they reload. A viewer
+  // the hello names a spectator has no budget and polls one room.
   const timer = window.setInterval(async () => {
     if (!panel.isConnected) {
       window.clearInterval(timer);
       return;
     }
     if (document.visibilityState !== 'visible') return;
-    if (session.demoted && promoteAttemptsLeft > 0 && options.apiUrl) {
-      promoteAttemptsLeft -= 1;
+    if (!session.settled) return;
+    if (session.demoted && session.promoteAttemptsLeft > 0 && options.apiUrl) {
+      session.promoteAttemptsLeft -= 1;
       const promoted = await fetchGameChat(options.apiUrl);
       if (promoted.state) {
         session.apiUrl = options.apiUrl;

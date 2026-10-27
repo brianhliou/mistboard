@@ -548,6 +548,7 @@ test('serveArticlePage 301s legacy rules slugs to their canonical slug', async (
     ['dark-chess', 'fog-chess'],
     ['dark-xiangqi', 'fog-xiangqi'],
     ['reveal-xiangqi', 'jieqi'],
+    ['xiangqi-mahjong', 'xiangqi-mahjong-32'],
   ] as const) {
     const response = captureResponse();
     await serveArticlePage({

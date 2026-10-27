@@ -13,6 +13,7 @@ import {
   GAME_SPECS,
   gameSpecForId,
   gameSpecForLegacyLiveRoom,
+  isCorrespondenceAllowlistedSpec,
   isCorrespondenceRatedSpec,
   isGameSpecId,
   isRatedPoolBase,
@@ -28,6 +29,7 @@ import {
   RETIRED_GAME_SPEC_IDS,
   ratingPoolForSpec,
   STUDY_ELIGIBLE_SPEC_IDS,
+  XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
 import { hasStartFen } from './start-fen.js';
@@ -43,6 +45,7 @@ test('canonical display order contains exactly the current public variant shelf'
     DARK_CHESS_SPEC_ID,
     JUNGLE_SPEC_ID,
     JUNGLE_FLIP_SPEC_ID,
+    XIANGQI_MAHJONG_SPEC_ID,
   ]);
 });
 
@@ -252,4 +255,11 @@ test('isCorrespondenceRatedSpec is exactly correspondence-eligible AND an active
   assert.equal(isCorrespondenceRatedSpec('not-a-spec'), false);
   assert.equal(isCorrespondenceRatedSpec(null), false);
   assert.equal(isCorrespondenceRatedSpec(undefined), false);
+});
+
+test('Xiangqi Mahjong is not played by correspondence, publicly or by allowlist', () => {
+  // Brian, 2026-10-25: held out at launch; the tenant's correspondence binding stays.
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(XIANGQI_MAHJONG_SPEC_ID), false);
+  assert.equal(isCorrespondenceAllowlistedSpec(XIANGQI_MAHJONG_SPEC_ID), false);
+  assert.equal(isCorrespondenceRatedSpec(XIANGQI_MAHJONG_SPEC_ID), false);
 });

@@ -473,23 +473,26 @@ export function replayTenantEvents<
   // therefore dealt a whole throwaway game before the event carrying the real
   // one was applied a line later. Harmless where a tenant tolerates a missing
   // setup, fatal where it refuses one, and wasted work in both cases.
-  const seed =
-    first?.type === 'room-created'
-      ? initialTenantProjection(
-          tenant,
-          first.roomId,
-          first.timeControl,
-          first.creatorPreference,
-          first.rated === true,
-          first.setup,
-        )
-      : initialTenantProjection(tenant, firstRoomId);
   // The replay boundary: a stored log the current rules refuse (a variant's
   // rules changed under an old game) becomes UnreplayableTenantGameError, which
-  // every read surface treats as "no such game" (replay-guard.ts).
-  return guardTenantReplay(tenant.kind, first?.roomId, () =>
-    events.reduce((projection, event) => applyTenantEvent(tenant, projection, event), seed),
-  );
+  // every read surface treats as "no such game" (replay-guard.ts). The seed is
+  // inside it too: a setup the current rules refuse (an 8-hand mahjong wall
+  // after the match became 6) is the same kind of old game, and outside the
+  // guard its throw 500'd the whole /watch feed.
+  return guardTenantReplay(tenant.kind, first?.roomId, () => {
+    const seed =
+      first?.type === 'room-created'
+        ? initialTenantProjection(
+            tenant,
+            first.roomId,
+            first.timeControl,
+            first.creatorPreference,
+            first.rated === true,
+            first.setup,
+          )
+        : initialTenantProjection(tenant, firstRoomId);
+    return events.reduce((projection, event) => applyTenantEvent(tenant, projection, event), seed);
+  });
 }
 
 /**

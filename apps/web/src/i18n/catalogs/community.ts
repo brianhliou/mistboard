@@ -525,6 +525,7 @@ export const EN_COMMUNITY = {
   'forum.errCategoryRestricted': 'This category is restricted.',
   'forum.errTopicLocked': 'This topic is locked.',
   'forum.errTooQuick': 'You are posting too quickly.',
+  'forum.errEditTooQuick': 'You are editing too quickly. Try again in a few minutes.',
   'forum.errUnavailable': 'Forum is unavailable.',
   'forum.errCheckFields': 'Check the fields and try again.',
   'forum.errSignInToReport': 'Sign in to report.',

@@ -34,6 +34,7 @@ export const ARTICLE_OG_WIDE_ONLY_SLUGS: readonly string[] = [
   'one-thousand-games',
   'zuo-wenjing',
   'xiangqi-mahjong-32',
+  'how-to-play-xiangqi-mahjong',
 ];
 
 /** Mirrors ARTICLE_OG_ZH_SLUGS in apps/server/src/og-image.ts: pages whose

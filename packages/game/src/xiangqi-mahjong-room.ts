@@ -15,6 +15,7 @@
 import {
   isXmjTile,
   XMJ_MATCH_HANDS,
+  XMJ_TAI_TABLE,
   type XmjClaim,
   type XmjClaimKind,
   type XmjHandResult,
@@ -22,6 +23,7 @@ import {
   type XmjMeld,
   type XmjScore,
   type XmjSeatIndex,
+  type XmjTaiTable,
   type XmjTile,
   xmjAdvance,
   xmjCanDiscard,
@@ -102,6 +104,11 @@ export interface XmjRoomSetup {
    * once. Absent on a live room's setup.
    */
   readonly correspondence?: boolean;
+  /**
+   * The 台 table the match scores on (`XmjTaiTable`). Absent on a match created
+   * before 2026-10-26, which replays on table 1.
+   */
+  readonly taiTable?: XmjTaiTable;
 }
 
 /** Mirrors @mistboard/game's AbortReason (the server tenant checks they agree). */
@@ -146,8 +153,11 @@ export function createXmjSetup(
 ): XmjRoomSetup {
   const walls: XmjTile[][] = [];
   for (let i = 0; i < XMJ_MATCH_HANDS; i += 1) walls.push(xmjShuffle(random));
-  if (options.correspondence) return { walls, firstDealer: 'east', correspondence: true };
-  return { walls, firstDealer: random() < 0.5 ? 'east' : 'west' };
+  const taiTable = XMJ_TAI_TABLE;
+  if (options.correspondence) {
+    return { walls, firstDealer: 'east', correspondence: true, taiTable };
+  }
+  return { walls, firstDealer: random() < 0.5 ? 'east' : 'west', taiTable };
 }
 
 const FULL_SET = xmjOrderedTiles().join(',');
@@ -158,6 +168,7 @@ export function isXmjRoomSetup(value: unknown): value is XmjRoomSetup {
   const setup = value as Record<string, unknown>;
   if (!isXmjSeat(setup.firstDealer) || !Array.isArray(setup.walls)) return false;
   if (setup.correspondence !== undefined && typeof setup.correspondence !== 'boolean') return false;
+  if (setup.taiTable !== undefined && setup.taiTable !== 1 && setup.taiTable !== 2) return false;
   if (setup.walls.length < 1 || setup.walls.length > XMJ_MATCH_HANDS) return false;
   return setup.walls.every(
     (wall) =>
@@ -168,7 +179,7 @@ export function isXmjRoomSetup(value: unknown): value is XmjRoomSetup {
 }
 
 export function createXmjRoomState(setup: XmjRoomSetup, id = ''): XmjRoomState {
-  const match = xmjNewMatch(setup.walls, xmjSeatIndex(setup.firstDealer));
+  const match = xmjNewMatch(setup.walls, xmjSeatIndex(setup.firstDealer), setup.taiTable ?? 1);
   return {
     id,
     status: { type: 'playing', turn: xmjSeatName(match.hand.turn) },

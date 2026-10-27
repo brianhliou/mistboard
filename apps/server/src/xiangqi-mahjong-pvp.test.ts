@@ -1,6 +1,5 @@
 /**
- * Xiangqi mahjong PvP: two humans at one table, behind the flag and the
- * per-account grant (139).
+ * Xiangqi mahjong PvP: two humans at one public table, behind the runtime flag.
  *
  * The invariant is hidden information. A seat sees its own concealed tiles and
  * the public discards and melds; never the other hand, never the walls. This
@@ -344,7 +343,7 @@ test('xmj pvp: against the bot the human keeps east unless they named west', () 
   assert.equal(xmjPveEngineSeat(undefined, 'west'), undefined, 'PvP seats no bot');
 });
 
-test('xmj pvp: only granted accounts sit down, and a guest never does', async () => {
+test('xmj pvp: guests and accounts without grants can sit at a launched table', async () => {
   const created = await createXiangqiMahjongRoom(FIVE_FIVE, 'random');
   assert.ok(created.ok);
   if (!created.ok) return;
@@ -355,19 +354,31 @@ test('xmj pvp: only granted accounts sit down, and a guest never does', async ()
     const stranger = account('stranger-1');
     const admin = account('admin-1', 'admin');
 
-    assert.equal(await mayPlayVariant(null, XIANGQI_MAHJONG_SPEC_ID, pool), false);
-    assert.equal(await mayPlayVariant(stranger, XIANGQI_MAHJONG_SPEC_ID, pool), false);
+    assert.equal(await mayPlayVariant(null, XIANGQI_MAHJONG_SPEC_ID, pool), true);
+    assert.equal(await mayPlayVariant(stranger, XIANGQI_MAHJONG_SPEC_ID, pool), true);
     assert.equal(await mayPlayVariant(granted, XIANGQI_MAHJONG_SPEC_ID, pool), true);
     assert.equal(await mayPlayVariant(admin, XIANGQI_MAHJONG_SPEC_ID, pool), true);
 
-    const guestSeat = assignTenantSeat(tenant, room, 'guest', undefined, null, null, false);
-    assert.equal(guestSeat.ok, false);
-    assert.equal(!guestSeat.ok && guestSeat.reason, 'variant not granted');
-    const strangerSeat = assignTenantSeat(tenant, room, 'c-s', undefined, stranger, null, false);
-    assert.equal(!strangerSeat.ok && strangerSeat.reason, 'variant not granted');
-
-    const first = assignTenantSeat(tenant, room, 'c-g', undefined, granted, null, true);
-    assert.ok(first.ok, 'a granted account takes a seat');
+    const guestSeat = assignTenantSeat(
+      tenant,
+      room,
+      'guest',
+      undefined,
+      null,
+      null,
+      await mayPlayVariant(null, XIANGQI_MAHJONG_SPEC_ID, pool),
+    );
+    assert.ok(guestSeat.ok, 'a guest takes a seat');
+    const strangerSeat = assignTenantSeat(
+      tenant,
+      room,
+      'c-s',
+      undefined,
+      stranger,
+      null,
+      await mayPlayVariant(stranger, XIANGQI_MAHJONG_SPEC_ID, pool),
+    );
+    assert.ok(strangerSeat.ok, 'an account without a grant takes the other seat');
   } finally {
     xiangqiMahjongRooms.delete(room.id);
   }

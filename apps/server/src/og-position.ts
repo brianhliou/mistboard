@@ -278,18 +278,27 @@ export function resolvePositionOg(
     case 'dark-xiangqi': {
       // Same board and writer; only the legality bar moves, because under fog a
       // general may stand en prise.
-      const parsed = parseStandardXiangqiFen(trimmed, 'og-card', {
-        allowExposedGeneral: variant === 'dark-xiangqi',
-      });
+      const terminal = trimmed.split(/\s+/)[1] === '-';
+      // Finished games have no mover. Supply one only for the placement parser,
+      // without its opposite-check test: the final move may have delivered mate.
+      // Keep '-' in the public FEN and never label this as a playable position.
+      const parsed = parseStandardXiangqiFen(
+        terminal ? trimmed.replace(/^(\S+)\s+-/, '$1 r') : trimmed,
+        'og-card',
+        { allowExposedGeneral: terminal || variant === 'dark-xiangqi' },
+      );
       if (!parsed.ok) return null;
       const pieces: XiangqiOgPiece[] = Object.entries(parsed.state.board).flatMap(
         ([square, piece]) =>
           piece ? [{ ...xqCoord(square), color: piece.color, role: piece.role }] : [],
       );
+      const publicFen = standardXiangqiFen(parsed.state);
       return {
         variant,
-        publicFen: standardXiangqiFen(parsed.state),
-        toMove: inkToMove(parsed.state.status.type === 'playing' ? parsed.state.status.turn : null),
+        publicFen: terminal ? publicFen.replace(' r ', ' - ') : publicFen,
+        toMove: inkToMove(
+          !terminal && parsed.state.status.type === 'playing' ? parsed.state.status.turn : null,
+        ),
         board: { kind: 'intersection', ...XIANGQI_GEOMETRY, pieces, extras: [] },
       };
     }

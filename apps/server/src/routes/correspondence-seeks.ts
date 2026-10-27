@@ -495,6 +495,10 @@ export async function createSeekResult(
     if (ratedError) {
       return { status: ratedSeekErrorStatus(ratedError), body: { error: ratedError } };
     }
+    // A stats-excluded account (operator, QA) is not counted, so it never rates.
+    if (persistence.isStatsExcluded(user)) {
+      return { status: 403, body: { error: 'rated_requires_counted_account' } };
+    }
   }
 
   // Challenge dimensions. A target forces a private, directed seek; otherwise
@@ -531,6 +535,10 @@ export async function createSeekResult(
     // anyone else could never be accepted, and would show them the variant.
     if (allowlisted && !(await persistence.mayPlayVariantByUserId(targetUserId, gameSpecId))) {
       return { status: 403, body: { error: 'target_variant_not_granted' } };
+    }
+    // A rated challenge to an uncounted account could never become a rated game.
+    if (rated && (await persistence.isUserIdStatsExcluded(targetUserId))) {
+      return { status: 403, body: { error: 'target_rated_requires_counted_account' } };
     }
   }
 
@@ -727,6 +735,13 @@ export async function acceptSeekResult(
     }
     if (await persistence.isUserIdPlayDisabled(seek.creatorUserId)) {
       return { status: 409, body: { error: 'opponent_play_disabled' } };
+    }
+    // Neither side of a rated game may be a stats-excluded (uncounted) account.
+    if (persistence.isStatsExcluded(user)) {
+      return { status: 403, body: { error: 'rated_requires_counted_account' } };
+    }
+    if (await persistence.isUserIdStatsExcluded(seek.creatorUserId)) {
+      return { status: 409, body: { error: 'opponent_rated_requires_counted_account' } };
     }
   }
   // The DB decides the race: deleteCorrespondenceSeek removes the row once, so

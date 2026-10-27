@@ -81,6 +81,8 @@ type BotProfile = {
 class BotNotFound extends Error {}
 
 // Games per "Load more" click on a bot profile (server routes/bots.ts).
+// The profile payload carries ten rows per variant; continuation pages carry fifteen.
+const BOT_PROFILE_GAMES_PAGE = 10;
 const BOT_GAMES_PAGE = 15;
 
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
@@ -784,12 +786,10 @@ function buildRecentGames(bot: BotProfile, gameSpecId: string): HTMLElement {
   list.className = 'profile-game-list profile-activity';
   for (const game of games) list.append(buildProfileGameRow(game));
   section.append(list);
-  // The payload carries only the newest games per variant; the record counts
-  // the same rows, so a gap between the two means older games to page in.
-  const total = botRecordFor(bot, gameSpecId).games;
-  if (games.length < total) {
+  // A full initial page may have older games. Counts can change as games finish.
+  if (games.length >= BOT_PROFILE_GAMES_PAGE) {
     section.append(
-      buildBotGamesMore(bot.id, gameSpecId, games.length, total, (page) => {
+      buildBotGamesMore(bot.id, gameSpecId, games[games.length - 1], (page) => {
         for (const game of page) list.append(buildProfileGameRow(game));
       }),
     );
@@ -797,17 +797,15 @@ function buildRecentGames(bot: BotProfile, gameSpecId: string): HTMLElement {
   return section;
 }
 
-// "Load more" for one variant's games, the player profile's control and stop
-// rule (profile.ts profileGamesMore). Switching variant rebuilds the panel, so
-// the page count never carries across variants.
+// Continue strictly before the last row. New finishes cannot shift the next
+// page, and only a short response means the history is exhausted.
 function buildBotGamesMore(
   botId: string,
   gameSpecId: string,
-  startRendered: number,
-  total: number,
+  lastGame: FeaturedGame,
   appendGames: (games: FeaturedGame[]) => void,
 ): HTMLElement {
-  let rendered = startRendered;
+  let before = JSON.stringify([lastGame.endedAt, lastGame.roomId]);
   const moreWrap = document.createElement('div');
   moreWrap.className = 'profile-games-more';
   const button = document.createElement('button');
@@ -817,7 +815,7 @@ function buildBotGamesMore(
   button.addEventListener('click', async () => {
     button.disabled = true;
     button.textContent = t('profile.loadingMore');
-    const page = await fetchBotGamesPage(botId, gameSpecId, rendered).catch((err) => {
+    const page = await fetchBotGamesPage(botId, gameSpecId, before).catch((err) => {
       console.warn(err);
       return null;
     });
@@ -827,8 +825,9 @@ function buildBotGamesMore(
       return;
     }
     appendGames(page);
-    rendered += page.length;
-    if (rendered >= total || page.length === 0) {
+    const last = page[page.length - 1];
+    if (last) before = JSON.stringify([last.endedAt, last.roomId]);
+    if (page.length < BOT_GAMES_PAGE) {
       moreWrap.remove();
     } else {
       button.disabled = false;
@@ -842,11 +841,11 @@ function buildBotGamesMore(
 async function fetchBotGamesPage(
   botId: string,
   gameSpecId: string,
-  offset: number,
+  before: string,
 ): Promise<FeaturedGame[]> {
   const params = new URLSearchParams({
     variant: gameSpecId,
-    offset: String(offset),
+    before,
     limit: String(BOT_GAMES_PAGE),
   });
   const resp = await fetch(`/api/bots/${encodeURIComponent(botId)}/games?${params}`, {

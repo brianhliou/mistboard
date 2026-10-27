@@ -46,7 +46,7 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "暗棋规则：玩法详解与免费在线对弈",
-      "zh-hant": "暗棋規則：玩法詳解與免費線上對弈"
+      "zh-hant": "暗棋規則：吃子大小、兵吃將與砲的走法"
     }
   },
   "banqi-chariot-endgame": {
@@ -302,6 +302,12 @@
       "zh-hans": "从真实对局中挖掘象棋题目",
       "zh-hant": "從真實對局中挖掘象棋題目"
     }
+  },
+  "how-to-play-xiangqi-mahjong": {
+    "title": "How to Play Xiangqi Mahjong",
+    "kind": "article",
+    "description": "Xiangqi Mahjong is a folk game from Taiwan that plays one 32-piece xiangqi set as mahjong tiles. How a turn goes, what makes a winning hand, how it scores, and how to start a match on Mistboard.",
+    "status": "draft"
   },
   "jieqi": {
     "title": "Jieqi Rules (Reveal Xiangqi)",

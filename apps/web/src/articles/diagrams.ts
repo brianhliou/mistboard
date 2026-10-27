@@ -3033,8 +3033,7 @@ export const BANQI_SETUP_BOARD = () =>
   );
 
 export const BANQI_RULES_THUMBNAIL = () =>
-  xqSvg(
-    BANQI_BOARD_W,
+  banqiThumbnailSvg(
     BANQI_BOARD_H,
     [
       banqiBoardGrid(0, 0),
@@ -3046,6 +3045,26 @@ export const BANQI_RULES_THUMBNAIL = () =>
     ].join(''),
   );
 
+// Every banqi card thumbnail is drawn through this. Its viewBox is still the
+// board alone, so the grid and pieces keep their size and place in any card,
+// but a board-coloured rect far larger than the viewBox sits under the board
+// and `overflow="visible"` lets it paint into the letterbox the card's 16:10
+// box leaves around the figure. The card (and the feed PNG's frame) clips it,
+// so the board reads as running edge to edge instead of floating on a
+// panel-coloured margin (Brian, 2026-10-25). The board's own rounded rect lands
+// on the same colour, so its corners leave no seam. 200 units covers the
+// widest letterbox any card box leaves (a square box around the 440x240 stats
+// board: 100 a side) and keeps the feed PNG's grown canvas small
+// (apps/server/src/article-thumb.ts coverBelowFrame refuses art past 8x the
+// frame height, and 2000 units of bleed passed it).
+const BANQI_THUMB_BLEED = 200;
+export function banqiThumbnailSvg(height: number, body: string): string {
+  const w = BANQI_BOARD_W + 2 * BANQI_THUMB_BLEED;
+  const h = height + 2 * BANQI_THUMB_BLEED;
+  const bleed = `<rect x="${-BANQI_THUMB_BLEED}" y="${-BANQI_THUMB_BLEED}" width="${w}" height="${h}" class="xq-diagram-bg" data-banqi-thumb-bleed=""/>`;
+  return xqSvg(BANQI_BOARD_W, height, bleed + body).replace(/^<svg /, '<svg overflow="visible" ');
+}
+
 // Distinct thumbnail for the "How MistyBanqi Plays" engine article: a full real
 // position from the article's conversion game, after enough flips that the card
 // reads as Banqi instead of a wall of backs. Full-board rendering keeps the card
@@ -3056,8 +3075,7 @@ export const BANQI_ENGINE_THUMBNAIL = () => {
     BANQI_CONVERSION_GAME.moves,
     BANQI_ENGINE_THUMB_PLY,
   );
-  return xqSvg(
-    BANQI_BOARD_W,
+  return banqiThumbnailSvg(
     BANQI_ENGINE_THUMB_H,
     [
       `<g data-banqi-thumbnail-layout="engine-full-board">`,

@@ -9,9 +9,14 @@ import {
   XIANGQI_SPEC_ID,
   type XiangqiMove,
   type XiangqiPuzzle,
+  type XiangqiPuzzleSetupMove,
+  xiangqiPuzzlePreSetupState,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { displayPreferenceStorageKey } from './display-preferences.js';
+import { playSound } from './live-sound.js';
 import {
+  mountPuzzleSolver,
   mountPuzzles,
   puzzleMoveRowNumber,
   renderPuzzlesShellForPrerender,
@@ -19,6 +24,11 @@ import {
 } from './puzzles.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { pinXiangqiNotation } from './xiangqi-notation.js';
+
+vi.mock('./live-sound.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./live-sound.js')>();
+  return { ...actual, playSound: vi.fn() };
+});
 
 function publicSummary(puzzle: XiangqiPuzzle) {
   return {
@@ -879,6 +889,165 @@ describe('standard xiangqi puzzles', () => {
       vi.unstubAllGlobals();
       window.history.replaceState(null, '', '/');
     }
+  });
+
+  describe('opening glide of the setup move (#664)', () => {
+    // The piece-animation duration is cached in board-anim; this event is how a
+    // settings change invalidates it, so each test re-reads its own storage.
+    const refreshAnimationPreference = (): void => {
+      window.dispatchEvent(new Event('mistboard:display-preferences-change'));
+    };
+    beforeEach(refreshAnimationPreference);
+    afterEach(refreshAnimationPreference);
+
+    // A seed puzzle whose setup move rebuilds under the given capture record.
+    const withSetup = (
+      captured: (puzzle: XiangqiPuzzle) => XiangqiPuzzleSetupMove['captured'],
+    ): { puzzle: XiangqiPuzzle; setupMove: XiangqiPuzzleSetupMove } => {
+      for (const puzzle of XIANGQI_PUZZLES) {
+        const last = puzzle.initial.lastMove;
+        if (!last || puzzle.solution.length !== 3) continue;
+        const setupMove = { ...last, captured: captured(puzzle) };
+        if (xiangqiPuzzlePreSetupState(puzzle.initial, setupMove)) return { puzzle, setupMove };
+      }
+      throw new Error('the seed corpus must hold a puzzle with a rebuildable setup move');
+    };
+    const QUIET = withSetup(() => null);
+    const CAPTURE = withSetup((puzzle) => ({
+      color: puzzle.initial.status.type === 'playing' ? puzzle.initial.status.turn : 'red',
+      role: 'soldier',
+    }));
+
+    function setupFetchMock(puzzle: XiangqiPuzzle, setupMove: XiangqiPuzzleSetupMove) {
+      const base = xiangqiFetchMock([puzzle]);
+      return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === `/api/puzzles/${puzzle.id}`) {
+          return json({ puzzle: { ...publicDetail(puzzle), setupMove } });
+        }
+        return base(input, init);
+      });
+    }
+
+    const slotAt = (root: HTMLElement, square: string): Element | null =>
+      root.querySelector(`[data-piece-square="${square}"]`);
+    const pieceCount = (root: HTMLElement): number =>
+      root.querySelectorAll('.xq-piece-slot').length;
+
+    it('opens one move earlier, glides the setup move in, and only then takes input', async () => {
+      vi.mocked(playSound).mockClear();
+      const { puzzle, setupMove } = QUIET;
+      const fetchSpy = setupFetchMock(puzzle, setupMove);
+      vi.stubGlobal('fetch', fetchSpy);
+      const glides: Array<string | null> = [];
+      const proto = Element.prototype as unknown as { animate?: unknown };
+      const originalAnimate = proto.animate;
+      proto.animate = function (this: Element) {
+        glides.push(this.getAttribute('data-piece-square'));
+        return { cancel: () => {} };
+      };
+      const root = document.createElement('div');
+      document.body.append(root);
+      try {
+        await mountPuzzles(root, puzzle.id);
+        // The pre-setup position: the opponent's piece still on its origin,
+        // and the setup move not yet in the list.
+        expect(slotAt(root, setupMove.from)).not.toBeNull();
+        expect(slotAt(root, setupMove.to)).toBeNull();
+        expect(root.querySelector('.puzzle-move-list')?.textContent ?? '').not.toContain(
+          moveLabel(setupMove),
+        );
+        expect(playSound).not.toHaveBeenCalled();
+        // Input is blocked until the hand-over.
+        clickMove(root, solverMovesOf(puzzle)[0]!);
+        expect(fetchSpy).not.toHaveBeenCalledWith(
+          `/api/puzzles/${puzzle.id}/attempt`,
+          expect.anything(),
+        );
+
+        await vi.waitFor(() => expect(slotAt(root, setupMove.from)).toBeNull());
+        expect(slotAt(root, setupMove.to)).not.toBeNull();
+        expect(glides).toContain(setupMove.to);
+        expect(root.textContent).toContain(moveLabel(setupMove));
+        expect(vi.mocked(playSound).mock.calls).toEqual([['move']]);
+
+        clickMove(root, solverMovesOf(puzzle)[0]!);
+        await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+      } finally {
+        if (originalAnimate === undefined) delete proto.animate;
+        else proto.animate = originalAnimate;
+      }
+    });
+
+    it('shows the puzzle position at once when piece animation is off', async () => {
+      stubWindowLocalStorage(
+        memoryStorage({
+          [displayPreferenceStorageKey]: JSON.stringify({ pieceAnimation: 'none' }),
+        }),
+      );
+      refreshAnimationPreference();
+      const { puzzle, setupMove } = QUIET;
+      vi.stubGlobal('fetch', setupFetchMock(puzzle, setupMove));
+      const root = document.createElement('div');
+      document.body.append(root);
+
+      await mountPuzzles(root, puzzle.id);
+      expect(slotAt(root, setupMove.from)).toBeNull();
+      expect(slotAt(root, setupMove.to)).not.toBeNull();
+      expect(root.textContent).toContain(moveLabel(setupMove));
+      clickMove(root, solverMovesOf(puzzle)[0]!);
+      await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+    });
+
+    it('puts a captured piece back on its square in the pre-setup position', async () => {
+      vi.mocked(playSound).mockClear();
+      const { puzzle, setupMove } = CAPTURE;
+      vi.stubGlobal('fetch', setupFetchMock(puzzle, setupMove));
+      const root = document.createElement('div');
+      document.body.append(root);
+      const initialCount = Object.keys(puzzle.initial.board).length;
+
+      await mountPuzzles(root, puzzle.id);
+      expect(slotAt(root, setupMove.from)).not.toBeNull();
+      expect(slotAt(root, setupMove.to)).not.toBeNull();
+      expect(pieceCount(root)).toBe(initialCount + 1);
+
+      await vi.waitFor(() => expect(slotAt(root, setupMove.from)).toBeNull());
+      expect(pieceCount(root)).toBe(initialCount);
+      expect(vi.mocked(playSound).mock.calls).toEqual([['capture']]);
+    });
+
+    it("keeps today's behaviour when the payload carries no setup move", async () => {
+      const { puzzle, setupMove } = QUIET;
+      vi.stubGlobal('fetch', xiangqiFetchMock([puzzle]));
+      const root = document.createElement('div');
+      document.body.append(root);
+
+      await mountPuzzles(root, puzzle.id);
+      expect(slotAt(root, setupMove.from)).toBeNull();
+      expect(slotAt(root, setupMove.to)).not.toBeNull();
+    });
+
+    it('plays the same opening glide in the embed solver', async () => {
+      const { puzzle, setupMove } = QUIET;
+      vi.stubGlobal('fetch', setupFetchMock(puzzle, setupMove));
+      const host = document.createElement('div');
+      document.body.append(host);
+
+      const solver = mountPuzzleSolver(host, {
+        ...publicDetail(puzzle),
+        setupMove,
+      } as unknown as Parameters<typeof mountPuzzleSolver>[1]);
+      try {
+        expect(slotAt(host, setupMove.from)).not.toBeNull();
+        expect(slotAt(host, setupMove.to)).toBeNull();
+        await vi.waitFor(() => expect(slotAt(host, setupMove.from)).toBeNull());
+        expect(slotAt(host, setupMove.to)).not.toBeNull();
+        clickMove(host, solverMovesOf(puzzle)[0]!);
+        await vi.waitFor(() => expect(host.textContent).toContain('Correct.'));
+      } finally {
+        solver.dispose();
+      }
+    });
   });
 });
 

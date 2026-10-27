@@ -46,6 +46,33 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// Describes the old fastest-mate gate, not a reason to withhold a puzzle.
+// Immediate mates are accepted by the grader and do not belong to this set.
+// Keep absent/legacy evidence unknown rather than claiming it was unambiguous.
+function mateSpeedOnly(puzzle: XiangqiPuzzle, evidence: Record<string, unknown>): boolean | null {
+  if (puzzle.goal.type !== 'checkmate') return null;
+  const plies = evidence.plies;
+  if (!Array.isArray(plies) || plies.length === 0) return null;
+  if (
+    plies.some(
+      (ply) =>
+        isRecord(ply) &&
+        typeof ply.bestMate === 'number' &&
+        ply.bestMate > 1 &&
+        typeof ply.secondMate === 'number' &&
+        ply.secondMate > 0,
+    )
+  ) {
+    return true;
+  }
+  const hasMateScore = (value: unknown) => value === null || typeof value === 'number';
+  return plies.every(
+    (ply) => isRecord(ply) && hasMateScore(ply.bestMate) && hasMateScore(ply.secondMate),
+  )
+    ? false
+    : null;
+}
+
 function validatedPuzzle(entry: XiangqiPuzzleEditorialCandidate): XiangqiPuzzle {
   const value = entry.candidate.puzzleData;
   if (
@@ -285,8 +312,8 @@ export async function publishXiangqiPuzzlePublication(input: {
       await client.query(
         `INSERT INTO puzzles
            (id, variant, title, seq, goal_type, themes, solution_plies, data,
-            source_kind, mined_at, mining_candidate_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::json, 'mined', now(), $9)`,
+            source_kind, mined_at, mining_candidate_id, mate_speed_only)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::json, 'mined', now(), $9, $10)`,
         [
           puzzle.id,
           puzzle.variant,
@@ -297,6 +324,7 @@ export async function publishXiangqiPuzzlePublication(input: {
           puzzle.solution.length,
           JSON.stringify(puzzle),
           entry.candidate.id,
+          mateSpeedOnly(puzzle, entry.auditJudgment?.evidence ?? {}),
         ],
       );
       const updated = await client.query<{ id: string }>(

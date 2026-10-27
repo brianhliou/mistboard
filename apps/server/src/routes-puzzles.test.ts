@@ -333,6 +333,9 @@ test('puzzle detail returns the starting position but not the solution', async (
   );
   assert.deepEqual(body.puzzle.initial.board, puzzle.initial.board);
   assert.equal(body.puzzle.solution, undefined);
+  // Persistence off: no stored source game, so no setup move (the client then
+  // shows `initial` at once, as before #664).
+  assert.equal((body.puzzle as { setupMove?: unknown }).setupMove, undefined);
 });
 
 test('puzzle detail 404s unknown puzzle ids', async () => {

@@ -26,8 +26,10 @@ export const FINAL_VARIANT_MARKERS = {
   'jungle-flip': {
     path: '/variant-markers/final/flip-jungle.png',
   },
+  // Four pieces inside the squares of a frame: banqi plays in the squares. Its
+  // twin, Three Kingdoms banqi, puts four pieces on the points of a grid.
   banqi: {
-    path: '/variant-markers/final/half-flip-chess.png',
+    path: '/variant-markers/final/banqi.png',
   },
   jungle: {
     path: '/variant-markers/final/jungle-chess.png',

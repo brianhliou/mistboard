@@ -26,11 +26,12 @@ import './live-xiangqi.css';
 import { threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { flipSeatInk } from './flip-seat-ink.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
-import { banqiPieceGhostSvg } from './live-banqi-render.js';
+import { banqiPieceGhostSvg, banqiRevealFlipSquare } from './live-banqi-render.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import {
   animateThreeKingdomsBanqiBoardMove,
+  animateThreeKingdomsBanqiReveal,
   renderThreeKingdomsBanqiLiveBoardSvg,
   TK_LIVE_BOARD_VIEW,
   type TkLiveBoardEntry,
@@ -177,6 +178,11 @@ const client = createTenantLiveClient<
     const pending = takePendingAnimation();
     if (!pending) return;
     if (pending.kind === 'live') {
+      const flipped = banqiRevealFlipSquare(pending, view.board);
+      if (flipped) {
+        animateThreeKingdomsBanqiReveal(liveRefs.board, flipped);
+        return;
+      }
       animateThreeKingdomsBanqiBoardMove(liveRefs.board, pending.move);
       return;
     }

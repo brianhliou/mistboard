@@ -2,6 +2,7 @@ import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import type { Locale } from './i18n/locale.js';
+import type { ProfileBoardThumb } from './profile-game-board.js';
 import { seatColorWord, seatsNamePlayers } from './variant-seat-label.js';
 
 export const MISTBOARD_ENGINE_SNAPSHOT_ID = 'engine-v2-2026-05-24';
@@ -94,6 +95,9 @@ export type FeaturedGame = {
   // surfaces can show the result by ink ("Black wins") rather than the seat token.
   // Absent/null for every other variant (seat == ink) and for unreplayable games.
   firstColor?: 'red' | 'black' | null;
+  // Profile list with `?boards=1` only (#509): the final position as a
+  // thumbnail, null when the game has none to draw.
+  finalBoard?: ProfileBoardThumb | null;
 };
 
 export function displayParticipantName(
@@ -225,6 +229,26 @@ export function brandedEngineName(name: string): string | null {
 export function displayLiveName(name: string | null | undefined, fallback: string): string {
   if (!name) return fallback;
   return brandedEngineName(name) ?? name;
+}
+
+// The seat that moves first in a live game: red (xiangqi family, jungle), white
+// (chess) or east (Xiangqi Mahjong's dealer seat).
+const FIRST_MOVER_COLORS = new Set(['red', 'white', 'east']);
+
+export function liveFirstMover<T extends { color: string }>(players: readonly T[]): T | undefined {
+  return players.find((player) => FIRST_MOVER_COLORS.has(player.color)) ?? players[0];
+}
+
+/** First/second-mover names for a live featured game, or null without two
+ *  seats. A null name is a guest seat. */
+export function liveMatchupNames(
+  players: readonly { color: string; name: string | null | undefined }[],
+  guest: string,
+): { first: string; second: string } | null {
+  if (players.length < 2) return null;
+  const first = liveFirstMover(players)!;
+  const second = players.find((player) => player !== first) ?? players[1]!;
+  return { first: displayLiveName(first.name, guest), second: displayLiveName(second.name, guest) };
 }
 
 // Correspondence seeks store a side as MOVE ORDER ('first'/'second'), variant-neutral, so

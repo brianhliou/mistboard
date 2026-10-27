@@ -411,8 +411,9 @@ export async function mineXiangqiPuzzleGame(
 ): Promise<MinedPuzzleRecord[]> {
   await engine.newGame();
 
-  // Kernel-replay the recorded game; an illegal recorded move truncates the
-  // walk (the legal prefix still mines).
+  // Stop at the live kernel's ending, including adjudicated draws. The puzzle
+  // solver uses that same kernel and must not inherit an already drawn history.
+  // An illegal recorded move truncates the walk (the legal prefix still mines).
   let state = createInitialXiangqiState(game.id);
   const states: XiangqiGameState[] = [state];
   const uciMoves: string[] = [];

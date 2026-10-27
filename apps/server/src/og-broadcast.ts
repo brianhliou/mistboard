@@ -7,7 +7,7 @@
 
 import type { ServerResponse } from 'node:http';
 import {
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   isStandardXiangqiLegalMove,
   standardXiangqiFen,
@@ -22,7 +22,7 @@ import * as persistence from './persistence.js';
 
 // v3 (2026-10-15): the piece look of 2026-10-14: one dark ring on both sides, pieces at 98% of the point gap (banqi 92%), no shadow, full-size face-down backs, Jungle rounded squares.
 // v4 (2026-10-15): the international pieces with smooth edges, one line width on the straight figures.
-export const BROADCAST_OG_IMAGE_VERSION = 4;
+export const BROADCAST_OG_IMAGE_VERSION = 5;
 
 const cache = createPngCache(64);
 
@@ -32,12 +32,12 @@ function english(entity: Named): string {
   return entity.nameEn?.trim() || entity.name;
 }
 
-/** The position after the last move that replays under standard rules. */
+/** The position after the last legal move in the source record. */
 export function broadcastFinalFen(moves: readonly XiangqiMove[]): string {
   let state = createInitialXiangqiState('broadcast-og');
   for (const move of moves) {
     if (state.status.type !== 'playing' || !isStandardXiangqiLegalMove(state, move)) break;
-    state = applyStandardXiangqiMove(state, move);
+    state = applyXiangqiRecordMove(state, move);
   }
   return standardXiangqiFen(state);
 }

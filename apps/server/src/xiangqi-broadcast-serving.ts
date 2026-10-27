@@ -1,7 +1,6 @@
 import { setImmediate as yieldToEventLoop } from 'node:timers/promises';
 import {
-  ARBITER_ADJUDICATED_DRAWS,
-  applyStandardXiangqiMove,
+  applyXiangqiRecordMove,
   createInitialXiangqiState,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
@@ -30,19 +29,19 @@ export type BroadcastHistorySnapshot = {
   view: StandardXiangqiPlayerView;
 };
 
-// A stored board is a tournament RECORD, not live play: the kernel auto-draws
-// on repetition and on the progress clock, but an arbiter applies the
-// perpetual-check/chase rules instead and the real game runs on. Ingestion
-// already replays past those two reasons (`continuePastAdjudicatedDraw`), so
-// the rows hold the full game; the serving side has to resume the same way or
-// a legitimate record reads as "moves after terminal state". Mirrors
-// `replayXiangqiBroadcastBoard` in the game package and the web replay, which
-// both resume on the ply's mover.
-export function resumePastArbiterDraw(state: XiangqiGameState, index: number): XiangqiGameState {
-  if (state.status.type !== 'finished' || !ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
-    return state;
-  }
-  return { ...state, status: { type: 'playing', turn: index % 2 === 0 ? 'red' : 'black' } };
+// The source decides arbiter results. Record replay already clears automatic
+// draws; without a posted result, keep board endings such as mate or stalemate.
+function withBroadcastResult(
+  state: XiangqiGameState,
+  result: StoredXiangqiBroadcastBoard['result'],
+): XiangqiGameState {
+  if (result === '*') return state;
+  const winner = result === '1-0' ? 'red' : result === '0-1' ? 'black' : null;
+  if (state.status.type === 'finished' && state.status.winner === winner) return state;
+  return {
+    ...state,
+    status: { type: 'finished', winner, reason: winner === null ? 'agreement' : 'resignation' },
+  };
 }
 
 // Replay a stored board to its final position. Defensive about moves past a
@@ -53,12 +52,14 @@ export function finalXiangqiBoardView(
   board: StoredXiangqiBroadcastBoard,
 ): StandardXiangqiPlayerView {
   let state = createInitialXiangqiState(board.id);
-  for (const [index, move] of board.moves.entries()) {
-    state = resumePastArbiterDraw(state, index);
+  for (const move of board.moves) {
     if (state.status.type !== 'playing') break;
-    state = applyStandardXiangqiMove(state, move);
+    state = applyXiangqiRecordMove(state, move);
   }
-  return { ...getStandardXiangqiPlayerView(state, 'red'), legalMoves: [] };
+  return {
+    ...getStandardXiangqiPlayerView(withBroadcastResult(state, board.result), 'red'),
+    legalMoves: [],
+  };
 }
 
 // The one loop that decides whether a stored record is servable. Throws on a
@@ -70,15 +71,14 @@ function replayStoredXiangqiBoard(
 ): XiangqiGameState {
   let state = createInitialXiangqiState(board.id);
   for (const [index, move] of board.moves.entries()) {
-    state = resumePastArbiterDraw(state, index);
     if (state.status.type !== 'playing') {
       throw new Error(`stored broadcast board ${board.id} has moves after terminal state`);
     }
     const color = state.status.turn;
-    state = applyStandardXiangqiMove(state, move);
+    state = applyXiangqiRecordMove(state, move);
     onPly?.(index + 1, color, move, state);
   }
-  return state;
+  return withBroadcastResult(state, board.result);
 }
 
 export function buildXiangqiBroadcastBoardReplay(board: StoredXiangqiBroadcastBoard) {
@@ -90,6 +90,10 @@ export function buildXiangqiBroadcastBoardReplay(board: StoredXiangqiBroadcastBo
     timeline.push({ type: 'move-played', color, move, ply });
     truth.push({ ply, view: getStandardXiangqiPlayerView(next, 'red') });
   });
+  truth[truth.length - 1] = {
+    ply: timeline.length,
+    view: getStandardXiangqiPlayerView(state, 'red'),
+  };
 
   return {
     board: {

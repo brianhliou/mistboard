@@ -31,7 +31,12 @@ export function init(connectionString: string, guards?: PoolSessionGuards): void
   // temp_file_limit is superuser-only on some deployments. Failing the
   // connection outright is the right behaviour: a batch fleet that cannot
   // install its ceiling should refuse to start rather than run uncapped.
-  const settings: string[] = [];
+  //
+  // JIT stays off on every pool. The counted-game filter's EXISTS clauses push
+  // the planner's cost past the JIT thresholds on tables of a few thousand
+  // rows, and compiling then costs more than the query: on 2026-10-25 prod's
+  // public stats took 5.3s with JIT and 0.65s without, /metrics 3.4s and 0.2s.
+  const settings: string[] = ['-c jit=off'];
   if (guards?.statementTimeoutMs !== undefined) {
     settings.push(`-c statement_timeout=${Math.trunc(guards.statementTimeoutMs)}`);
   }
@@ -44,7 +49,7 @@ export function init(connectionString: string, guards?: PoolSessionGuards): void
     keepAlive: true,
     keepAliveInitialDelayMillis: 10_000,
     idleTimeoutMillis: 30_000,
-    ...(settings.length === 0 ? {} : { options: settings.join(' ') }),
+    options: settings.join(' '),
   });
   guardPoolConnectionErrors(pool);
 }

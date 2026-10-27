@@ -164,11 +164,13 @@
 }
 
 /* Restarts and drains: a plain admin table, scrolled sideways on phones. */
-.metrics-deploys-scroll {
+.metrics-deploys-scroll,
+.metrics-retention-scroll {
   overflow-x: auto;
 }
 
-.metrics-deploys-table {
+.metrics-deploys-table,
+.metrics-retention-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
@@ -176,14 +178,17 @@
 }
 
 .metrics-deploys-table th,
-.metrics-deploys-table td {
+.metrics-deploys-table td,
+.metrics-retention-table th,
+.metrics-retention-table td {
   padding: 6px 10px;
   text-align: left;
   white-space: nowrap;
   border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
 }
 
-.metrics-deploys-table th {
+.metrics-deploys-table th,
+.metrics-retention-table th {
   font-weight: 600;
   opacity: 0.75;
 }

@@ -9,7 +9,13 @@ import {
   banqiCoordOf,
   banqiLastMoverInk,
 } from '@mistboard/game';
-import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import {
+  drawMarkerOnArrival,
+  flipSvgPiece,
+  glideSvgPiece,
+  pieceAnimationDurationMs,
+  pieceFlipDurationMs,
+} from './board-anim.js';
 import { BOARD_LASTMOVE_MARKER_SELECTOR } from './board-lastmove.js';
 import {
   boardCornerRadius,
@@ -612,4 +618,52 @@ export function installBanqiBoardStyles(): void {
   const style = document.createElement('style');
   style.textContent = BANQI_BOARD_CSS;
   document.head.append(style);
+}
+
+// ── Turn-over on a live reveal (#709) ────────────────────────────────────────
+
+/**
+ * The square a live flip just turned face up, or null: the banqi family's
+ * turn-over trigger. Only a LIVE move event that is a flip (a self-move) and
+ * whose square the rendered board now shows face up qualifies. The first
+ * render, a reconnect, a scrub and a replay jump carry no live event, so they
+ * never turn a tile; a live flip that lands while the viewer is scrubbed back
+ * finds that square still face down on the board shown, so it does not either.
+ * Reads only the wire move and the board already rendered, never a diff.
+ */
+export function banqiRevealFlipSquare<S extends string>(
+  pending: { kind: 'live'; move: { from: S; to: S } } | { kind: 'scrub' } | null,
+  board: Partial<Record<S, { faceDown: boolean }>>,
+): S | null {
+  if (pending?.kind !== 'live') return null;
+  const { from, to } = pending.move;
+  if (from !== to) return null;
+  const entry = board[to];
+  return entry && !entry.faceDown ? to : null;
+}
+
+/**
+ * Turn the tile on `square` over for any banqi-family board whose slots are
+ * `[data-piece-square]`: `center` maps a square to its viewBox point and `back`
+ * draws the board's own face-down tile there (identity-free by construction).
+ * Call after the render that drew the face. No-op under reduced motion or the
+ * 'none' animation pref (the face just appears).
+ */
+export function flipBanqiFamilyReveal<S extends string>(
+  host: HTMLElement,
+  square: S,
+  center: (square: S) => { x: number; y: number },
+  back: (cx: number, cy: number) => string,
+): boolean {
+  const slot = host.querySelector(`[data-piece-square="${square}"]`);
+  if (!slot) return false;
+  const point = center(square);
+  return flipSvgPiece(slot, point, back(point.x, point.y), pieceFlipDurationMs());
+}
+
+/** Banqi's turn-over: the jade (or the set's printed) back turns to the face. */
+export function animateBanqiReveal(host: HTMLElement, square: BanqiSquare): boolean {
+  return flipBanqiFamilyReveal(host, square, cellCenter, (cx, cy) =>
+    faceDownDisc(cx, cy, readStoredXiangqiPieceSet()),
+  );
 }

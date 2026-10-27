@@ -223,17 +223,32 @@ describe('Three Kingdoms banqi live room', () => {
     expect(seen).toEqual(['b1']);
   });
 
-  it('animates nothing for a flip, which travels nowhere', async () => {
+  // A flip travels nowhere, so it turns the tile over instead of gliding (#709).
+  it('turns the tile over on a live flip instead of gliding', async () => {
     const animateBoard = await hook();
     const el = host({ from: 'a1', to: 'a1' });
     const seen = recordAnimations(el, () => {
-      animateBoard({ board: el }, { lastMove: { from: 'a1', to: 'a1' } }, () => ({
+      animateBoard({ board: el }, { board, lastMove: { from: 'a1', to: 'a1' } }, () => ({
         kind: 'live',
         move: { from: 'a1', to: 'a1' },
         color: 'black',
       }));
     });
 
-    expect(seen).toEqual([]);
+    expect(seen).toEqual(['banqi-piece', 'piece-flip-back', 'a1']);
+  });
+
+  it('turns nothing when a replay step lands on a flip', async () => {
+    const animateBoard = await hook();
+    const el = host({ from: 'a1', to: 'a1' });
+    const seen = recordAnimations(el, () => {
+      animateBoard({ board: el }, { board, lastMove: { from: 'a1', to: 'a1' } }, () => ({
+        kind: 'scrub',
+        direction: 'forward',
+        prevView: { lastMove: null },
+      }));
+    });
+
+    expect(seen).not.toContain('piece-flip-back');
   });
 });

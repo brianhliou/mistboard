@@ -7,13 +7,14 @@
    puzzles page) rendered an unstyled 16px button that also missed the
    coarse-pointer hide below. A component's styles belong with the component. */
 
+/* Flush in the board's corner, so both lines run out to the board's two edges. */
 .board-resize-grip {
   position: absolute;
-  right: 3px;
-  bottom: 3px;
+  right: 0;
+  bottom: 0;
   z-index: 3;
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
   padding: 0;
   border: none;
   background: transparent;
@@ -39,11 +40,11 @@
   inset: 0;
   background: linear-gradient(
     135deg,
-    transparent 0 54%,
-    var(--board-resize-ink, #3a322a) 54% 63%,
-    transparent 63% 74%,
-    var(--board-resize-ink, #3a322a) 74% 83%,
-    transparent 83%
+    transparent 0 50%,
+    var(--board-resize-ink, #3a322a) 50% 58%,
+    transparent 58% 71%,
+    var(--board-resize-ink, #3a322a) 71% 79%,
+    transparent 79%
   );
 }
 

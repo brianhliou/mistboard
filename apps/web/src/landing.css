@@ -46,10 +46,11 @@
   /* lichess-shaped portal in three bands. Band 1 (~the first two-thirds of the
      initial screen): event banners + the game viewer (left), the tall tabbed
      lobby panel (center, the focal element), the single Play button + activity
-     stats (right). Band 2: daily puzzle (left), forum topics (center), top
-     studies (right). Bands 3-4: the blog row then the deep-dives row in the center,
-     flanked by the News feed (left) and the lobby chat (right), each spanning
-     both rows. */
+     stats (right). Band 2: daily puzzle (left), the blog row then the deep-dives
+     row (center), top studies (right); the puzzle and studies span both rows.
+     Band 3: News (left), forum topics (center), the lobby chat (right), so the
+     forum sits beside the chat (Brian, 2026-10-25: the articles are the work we
+     are proud of, and the forum is quiet). */
   /* lila proportions: the lobby is the dominant element (lila's app is 66% of a
      34%/1fr grid). Center takes the free space (1fr) while the side rails hold
      a tight 280-340px, so the panel reads as the focal block, not a co-equal
@@ -59,9 +60,9 @@
     minmax(280px, var(--landing-rail-width));
   grid-template-areas:
     "left   panel  play"
-    "puzzle forum  studies"
-    "news   blogs  chat"
-    "news   dives  chat";
+    "puzzle blogs  studies"
+    "puzzle dives  studies"
+    "news   forum  chat";
   /* The play panel's tab strip, fixed so the play rail can drop by exactly
      this much and start level with the panel's card (2026-10-11). */
   --landing-lobby-tabs-height: 40px;
@@ -324,8 +325,8 @@
   min-width: 0;
 }
 
-/* Band-2 center column: forum topics, sharing the band's box height with the
-   puzzle and Top studies so the row reads as one strip. */
+/* Band-3 center column: forum topics, beside the chat, at the band's shared
+   box height so News, forum and chat read as one strip. */
 .landing-forum-column {
   grid-area: forum;
   display: flex;
@@ -333,10 +334,10 @@
   min-width: 0;
 }
 
-/* Bands 3-4 right rail: the lobby chat, spanning the blog and deep-dives rows like
-   News on the left (the stretch lives in the desktop block). It traded places
-   with Top studies 2026-09-26: the band-2 slot is the only one of the three that
-   starts above a desktop fold, and a quiet chat there read as an empty site. */
+/* Band-3 right rail: the lobby chat beside the forum, at the forum's height
+   like News on the left (the stretch lives in the desktop block). It traded
+   places with Top studies 2026-09-26: a quiet chat in band 2 read as an empty
+   site. */
 .landing-chat-column {
   grid-area: chat;
   display: flex;
@@ -345,11 +346,10 @@
   min-width: 0;
 }
 
-/* Bands 3-4 left rail: News spans the blog and deep-dives rows on desktop, so its box
-   stretches from the blog row's top edge to the deep-dives row's bottom edge (the
+/* Band-3 left rail: News, stretched to the forum's height on desktop (the
    stretch itself lives in the desktop block; stacked, the box keeps its own
-   fixed height) and scrolls inside. Band-2 right rail: Top studies, stretched to
-   the band's shared height and fitting whole rows to it (site-box-fit.ts). */
+   fixed height), scrolling inside. Band-2 right rail: Top studies, spanning
+   the blog and deep-dives rows, fitting whole rows to the box (site-box-fit.ts). */
 .landing-news-column {
   grid-area: news;
   display: flex;
@@ -1136,8 +1136,8 @@
   gap: clamp(8px, 1vw, 12px);
 }
 
-/* Blog row (band 3): the same carousel, confined to the center column for now
-   (the side columns stay empty), three compact cards per view. */
+/* Blog row (band 2): the carousel in the center column between the daily
+   puzzle and Top studies, three compact cards per view. */
 .landing-articles-row {
   grid-area: blogs;
 }
@@ -1158,8 +1158,8 @@
   padding: 0 9px;
 }
 
-/* Band 4: the deep-dives row is the blog row's carousel again, in its own
-   grid area, pulled up against the blog row like the learn row it replaced. */
+/* Band 2, second row: the deep-dives row is the blog row's carousel again, in
+   its own grid area under the blog row. */
 .landing-dives-row {
   grid-area: dives;
   margin-top: calc(var(--landing-col-gap) - var(--landing-row-gap));
@@ -1296,6 +1296,11 @@
   width: 50%;
   height: 50%;
   filter: drop-shadow(0 6px 12px rgba(31, 24, 15, 0.26));
+}
+
+/* The Chinese after a romanized name stays whole (appendCardTitle). */
+.landing-article-card-title-han {
+  white-space: nowrap;
 }
 
 .landing-article-card-date {
@@ -2090,14 +2095,72 @@
     aspect-ratio: auto;
   }
 
+  /* ── Band 2: two article rows beside the puzzle ─────────────────────────────
+     The blog and deep-dives rows split the puzzle widget's height between them,
+     so both edges stay flush with the puzzle. Each row always shows three whole
+     cards (Brian, 2026-10-25: three in a row reads better than a part card), so
+     the card's height is fixed by the row and its width by the column; the
+     difference lands in the card's text strip. The date pins to the card's
+     bottom and the title takes two lines where the strip has room for them and
+     one where it does not (the container query below), and its size grows to
+     take up the strip, never a gap between the rows. */
+  .landing-demo .landing-articles-row {
+    gap: 4px;
+    height: calc((var(--landing-lower-widget-height) - var(--landing-col-gap)) / 2);
+  }
+
+  .landing-demo .landing-articles-row .landing-carousel {
+    flex: 1 1 auto;
+    min-height: 0;
+    container-type: inline-size;
+  }
+
+  .landing-demo .landing-articles-row .landing-carousel-track {
+    height: 100%;
+  }
+
+  .landing-demo .landing-articles-row .landing-article-card {
+    position: relative;
+  }
+
+  /* The text strip under the 8:5 thumbnail shrinks as the track widens (about
+     83px at a 482px track, 48px at 650px), so the title's size follows the
+     track: two lines sized to fill the strip, between 14px and 17px. The
+     figures are the strip height (row 181px, less the thumbnail at 5/24 of the
+     track) minus the date and margins (28px), over two lines of 1.3. */
+  .landing-demo .landing-articles-row .landing-article-card-title {
+    margin-top: 4px;
+    font-size: clamp(14px, 59.6px - 8.01cqi, 17px);
+  }
+
+  .landing-demo .landing-articles-row .landing-article-card-date {
+    position: absolute;
+    bottom: 6px;
+    left: 0;
+    margin: 0;
+    font-size: 12px;
+  }
+
+  /* Past a 569px track two 14px lines no longer fit: one line, sized the same
+     way over one line of 1.3. */
+  @container (min-width: 570px) {
+    .landing-demo .landing-articles-row .landing-article-card-title {
+      -webkit-line-clamp: 1;
+      line-clamp: 1;
+      font-size: clamp(14px, 119.2px - 16.02cqi, 17px);
+    }
+
+    .landing-demo .landing-articles-row .landing-article-card-title-break {
+      display: none;
+    }
+  }
+
   /* ── Stretched boxes ─────────────────────────────────────────────────────────
-     News and the chat span the blog + deep-dives rows and fill the spanned area:
-     top-aligned with the blog row, bottom-aligned with the deep-dives row, each body
-     scrolling inside. Top studies fills band 2 beside the puzzle and forum,
-     fitting whole rows to the box. All three are taken out of flow (absolute in
-     the stretched column) so their own content contributes NOTHING to the auto
-     row heights: in flow a long timeline would inflate rows 3-4 and tear the
-     blog row away from the deep-dives row. */
+     News and the chat sit beside the forum in band 3 and fill its height, each
+     body scrolling inside. Top studies fills band 2 beside the puzzle and the
+     article rows, fitting whole rows to the box. All three are taken out of flow
+     (absolute in the stretched column) so their own content contributes NOTHING
+     to the auto row heights: in flow a long timeline would inflate the band. */
   .landing-news-column,
   .landing-chat-column,
   .landing-studies-column {
@@ -2263,9 +2326,8 @@
 @media (min-width: 960px) and (max-width: 1240px) {
   /* Two columns (lichess's middle band: the lobby app plus one side column).
      The left rail folds into the right one: the center keeps the lobby panel
-     with the forum and chat under it, the rail carries the Play button, the
-     viewer, the daily puzzle and Top studies, and the blog row, the deep-dives row
-     and News span both. Both columns scale with the window (a fixed 340px rail
+     with the blog and deep-dives rows under it beside the daily puzzle, then the
+     forum beside the chat, and News beside Top studies. Both columns scale with the window (a fixed 340px rail
      beside a fluid center read as the center alone resizing): the rail is a
      viewport fraction, re-sourced into the rail-width token so the viewer and
      puzzle boards and the band-2 box height all derive from the same number,
@@ -2279,11 +2341,10 @@
     grid-template-areas:
       "panel play"
       "panel left"
-      "forum puzzle"
-      "studies chat"
-      "blogs blogs"
-      "dives dives"
-      "news  news";
+      "blogs puzzle"
+      "dives puzzle"
+      "forum chat"
+      "news  studies";
     --landing-puzzle-board-height: calc(var(--landing-rail-width) * 612 / 552);
     --landing-lower-widget-height: calc(
       var(--landing-puzzle-board-height) +
@@ -2333,19 +2394,19 @@
 
 @media (max-width: 959px) {
   /* Collapse to one column: Play button + activity, the lobby panel, banners +
-     viewer, then the band-2 widgets (puzzle, forum, studies), the blog row, the
-     deep-dives row, and the two side-rail boxes (chat, news). */
+     viewer, then the blog row, the deep-dives row, the puzzle and Top studies,
+     and the band-3 boxes (forum, chat, news). */
   .landing-demo {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "play"
       "panel"
       "left"
-      "puzzle"
-      "forum"
-      "studies"
       "blogs"
       "dives"
+      "puzzle"
+      "studies"
+      "forum"
       "chat"
       "news";
     max-width: 640px;

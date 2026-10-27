@@ -17,7 +17,7 @@
 import type { XmjMove, XmjPlayerView, XmjSeat } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
 import type { SoundKind } from './live-state.js';
-import type { GameMeta, ReplayHandle, ReplayMaterialSlots } from './replay.js';
+import type { GameMeta, ReplayClockReadout, ReplayHandle, ReplayMaterialSlots } from './replay.js';
 import type { MoveList } from './review/move-list.js';
 import { syncMoveListScroll } from './variant-tenant/chrome-dom.js';
 import './xiangqi-mahjong.css';
@@ -27,6 +27,7 @@ import {
   xiangqiMahjongTableHtml,
   xmjHandsTableHtml,
   xmjLogHtml,
+  xmjPoints,
 } from './xiangqi-mahjong-table.js';
 import { xmjMoveSound } from './xiangqi-mahjong-terminal-sound.js';
 
@@ -48,7 +49,17 @@ export type XmjWatchReplayOptions = {
   onLoadError?: () => boolean;
 };
 
-type XmjFrame = { ply: number; view: XmjPlayerView };
+/** A finished match's clocks after a ply, as the server filed them. */
+type XmjFrameClock = { remainingMs: Record<XmjSeat, number>; active: XmjSeat | null };
+
+/** The room's running clock, as a live frame carries it. */
+type XmjLiveClock = {
+  remainingMs: Record<XmjSeat, number>;
+  activeColor: XmjSeat | null;
+  runningSince: number | null;
+};
+
+type XmjFrame = { ply: number; view: XmjPlayerView; clock?: XmjFrameClock };
 
 type XmjTimelineEntry = {
   type?: string;
@@ -60,7 +71,8 @@ type XmjTimelineEntry = {
 
 /** The two payloads this mount reads: the live frame and the finished game. */
 type XmjWatchPayload = {
-  game?: { result?: string; termination?: string };
+  game?: { result?: string; termination?: string; initialMs?: number | null };
+  state?: { status?: unknown; clock?: XmjLiveClock; timeControl?: { initialMs?: number } };
   timeline?: readonly XmjTimelineEntry[];
   seatDisplayNames?: Partial<Record<XmjSeat, string>>;
   // Live: { spectator: frames }. Finished: the frames themselves.
@@ -73,6 +85,9 @@ type LoadedMatch = {
   events: XmjTimelineEntry[];
   names: Record<XmjSeat, string>;
   result: string;
+  /** The live frame's running clock; null for a finished match. */
+  liveClock: XmjLiveClock | null;
+  initialMs: number | null;
 };
 
 function isFrame(value: unknown): value is XmjFrame {
@@ -124,7 +139,81 @@ function readMatch(
     events,
     names: seatNames(payload, fallback),
     result: payload.game?.result ?? 'in-progress',
+    liveClock: payload.state?.clock ?? null,
+    initialMs: payload.state?.timeControl?.initialMs ?? payload.game?.initialMs ?? null,
   };
+}
+
+/**
+ * The rail clocks at `ply`, east as the first mover (seated at the bottom).
+ * A finished match reads the latest clock the server filed at or before the
+ * ply; a live one caught up to its last ply runs the room's clock to `now`.
+ * Null when the match kept no clocks, which the rail shows as no clock.
+ */
+export function xmjClockAtPly(
+  match: Pick<LoadedMatch, 'frames' | 'liveClock' | 'initialMs' | 'result'>,
+  ply: number,
+  now: number,
+): ReplayClockReadout | null {
+  const last = match.frames.length - 1;
+  const ended = match.result !== 'in-progress';
+  const toMove = (seat: XmjSeat | null): ReplayClockReadout['toMove'] =>
+    seat === null || (ply >= last && ended) ? null : seat === 'east' ? 'first' : 'second';
+  const live = match.liveClock;
+  if (live && ply >= last) {
+    const left = (seat: XmjSeat): number => {
+      const remaining = live.remainingMs[seat];
+      if (live.activeColor !== seat || live.runningSince === null) return remaining;
+      return Math.max(0, remaining - Math.max(0, now - live.runningSince));
+    };
+    return {
+      first: left('east'),
+      second: left('west'),
+      toMove: toMove(live.activeColor),
+      initialMs: match.initialMs,
+    };
+  }
+  let clock: XmjFrameClock | null = null;
+  for (const frame of match.frames) {
+    if (frame.ply > ply) break;
+    if (frame.clock) clock = frame.clock;
+  }
+  if (!clock) return null;
+  return {
+    first: clock.remainingMs.east,
+    second: clock.remainingMs.west,
+    toMove: toMove(clock.active),
+    initialMs: match.initialMs,
+  };
+}
+
+/** What the table needs when laid out at a given width, in unzoomed px. */
+export type XmjTableMeasure = { height: number; overflow: number };
+
+/**
+ * The zoom that fits a compact table inside its host's box, and the width to
+ * lay it out at so it fills that box once zoomed. A feed card is a fixed
+ * square narrower than the table wants: unscaled, the bottom rack fell below
+ * it and the seat badges spilled past the table's edge, and both were clipped.
+ * Laying out wider at a smaller zoom gives the badges their columns back and
+ * shrinks tiles and badges together. `overflow` is how far the widest thing
+ * reaches past the table's edge on its worse side; the badge columns share
+ * any extra width, so each side gets half of it.
+ */
+export function xmjCompactFit(
+  availW: number,
+  availH: number,
+  measure: (width: number) => XmjTableMeasure,
+): { zoom: number; width: number } {
+  let zoom = 1;
+  for (let pass = 0; pass < 4; pass += 1) {
+    const width = availW / zoom;
+    const { height, overflow } = measure(width);
+    const next = Math.min(zoom, availH / height, availW / (width + 2 * overflow));
+    if (next >= zoom - 0.001) break;
+    zoom = next;
+  }
+  return { zoom, width: availW / zoom };
 }
 
 export function mountXiangqiMahjongWatchReplay(
@@ -142,8 +231,30 @@ export function mountXiangqiMahjongWatchReplay(
   let log: XmjMoveLog | null = null;
 
   const board = document.createElement('div');
-  board.className = 'board xiangqi-mahjong-live-board xmj-watch-board';
-  root.replaceChildren(board);
+  // A compact host (the homepage viewer, feed cards) gets a smaller table that
+  // keeps to a xiangqi board's footprint: small tiles, the hand's result without
+  // its scoring lines.
+  board.className = `board xiangqi-mahjong-live-board xmj-watch-board${options.compact ? ' xmj-watch-board--compact' : ''}`;
+  // Names sit above and below the felt, as every other variant's board: the
+  // spectator's table puts east at the bottom. The clock slot holds the match
+  // points; the TV rail's clocks come from clockAtPly. A host that has the
+  // names in its own chrome hides these rows, as it does for the other variants.
+  const seatRow = (seat: XmjSeat) => {
+    const row = document.createElement('div');
+    row.className = 'showcase-seat';
+    row.dataset.seat = seat === 'east' ? 'first' : 'second';
+    const nameEl = document.createElement('span');
+    nameEl.className = 'showcase-seat-name';
+    const clockEl = document.createElement('span');
+    clockEl.className = 'showcase-seat-clock';
+    row.append(nameEl, clockEl);
+    return { seat, row, nameEl, clockEl };
+  };
+  const seatRows = [seatRow('west'), seatRow('east')] as const;
+  const layout = document.createElement('div');
+  layout.className = 'replay-layout replay-layout-solo xmj-watch-layout';
+  layout.append(seatRows[0].row, board, seatRows[1].row);
+  root.replaceChildren(layout);
 
   const maxPly = (): number => (match ? match.frames.length - 1 : 0);
 
@@ -151,6 +262,49 @@ export function mountXiangqiMahjongWatchReplay(
     if (timer !== null) window.clearTimeout(timer);
     timer = null;
   };
+
+  // A compact host scales the table to its box; a host whose height follows
+  // its content measures as fitting and keeps the table at full size.
+  let fitted = '';
+  const fitToHost = (): void => {
+    if (!options.compact || !board.isConnected) return;
+    board.style.removeProperty('zoom');
+    board.style.removeProperty('width');
+    board.style.removeProperty('max-width');
+    const availW = board.offsetWidth;
+    const shown = [...layout.children].filter(
+      (child): child is HTMLElement => child instanceof HTMLElement && child.offsetHeight > 0,
+    );
+    const rows = shown.reduce((sum, child) => sum + child.offsetHeight, 0) - board.offsetHeight;
+    // A pixel spare, so a rounded box never clips the rack's bottom edge.
+    const availH = root.clientHeight - rows - 1;
+    const table = board.querySelector<HTMLElement>('.xmj-table');
+    if (!table || availW <= 0 || availH <= 0) return;
+    const { zoom, width } = xmjCompactFit(availW, availH, (at) => {
+      board.style.width = `${at}px`;
+      board.style.maxWidth = 'none';
+      const edge = table.getBoundingClientRect();
+      let overflow = 0;
+      for (const el of table.querySelectorAll<HTMLElement>('.xmj-rack__tag > *')) {
+        const box = el.getBoundingClientRect();
+        overflow = Math.max(overflow, edge.left - box.left, box.right - edge.right);
+      }
+      return { height: board.offsetHeight, overflow };
+    });
+    if (zoom >= 1) {
+      board.style.removeProperty('width');
+      board.style.removeProperty('max-width');
+    } else {
+      board.style.width = `${width}px`;
+      board.style.maxWidth = 'none';
+      board.style.zoom = String(zoom);
+    }
+    fitted = `${root.clientWidth}x${root.clientHeight}`;
+  };
+  const resized = new ResizeObserver(() => {
+    if (`${root.clientWidth}x${root.clientHeight}` !== fitted) fitToHost();
+  });
+  if (options.compact) resized.observe(root);
 
   const render = (): void => {
     if (!match) return;
@@ -161,6 +315,21 @@ export function mountXiangqiMahjongWatchReplay(
       names: match.names,
       now: Date.now(),
     });
+    const view = frame.view;
+    const winner = view.status.type === 'finished' ? view.status.winner : null;
+    for (const { seat, row, nameEl, clockEl } of seatRows) {
+      nameEl.textContent = match.names[seat];
+      clockEl.textContent = xmjPoints(view.scores[seat]);
+      row.classList.toggle(
+        'active',
+        view.status.type === 'playing' &&
+          !view.between &&
+          view.phase.type === 'discard' &&
+          view.turn === seat,
+      );
+      row.classList.toggle('result-win', winner === seat);
+    }
+    fitToHost();
     log?.render(ply);
     options.onPlyChange?.(ply, maxPly());
   };
@@ -222,7 +391,7 @@ export function mountXiangqiMahjongWatchReplay(
       fail();
       return;
     }
-    if (!board.isConnected) root.replaceChildren(board);
+    if (!layout.isConnected) root.replaceChildren(layout);
     match = loaded;
     log = new XmjMoveLog(() => match, jumpToPly);
     const autoplay = loadOptions?.startAutoplay ?? options.autoplay;
@@ -250,6 +419,7 @@ export function mountXiangqiMahjongWatchReplay(
     destroy: () => {
       destroyed = true;
       stop();
+      resized.disconnect();
       root.replaceChildren();
     },
     loadGame,
@@ -260,6 +430,7 @@ export function mountXiangqiMahjongWatchReplay(
     moveLog: () => log?.list ?? null,
     gameResult: () => match?.result ?? null,
     availablePovs: () => ['truth'],
+    clockAtPly: () => (match ? xmjClockAtPly(match, ply, Date.now()) : null),
     moveSoundAtPly: (at: number): SoundKind | null => {
       if (!match || at < 1 || at > match.events.length) return null;
       const matchOver = at === maxPly() && match.result !== 'in-progress';
@@ -268,8 +439,11 @@ export function mountXiangqiMahjongWatchReplay(
     fillMaterial: (slots: ReplayMaterialSlots) => {
       const frame = match?.frames[ply];
       if (!match || !frame) return;
-      // The points by hand, as the room's meta card shows them.
-      slots.pool.innerHTML = xmjHandsTableHtml(frame.view, match.names);
+      // The points by hand, in the card the room draws under its board.
+      const hands = xmjHandsTableHtml(frame.view, match.names);
+      slots.pool.innerHTML = hands
+        ? `<section class="xmj-hands-under xmj-hands-under--rail">${hands}</section>`
+        : '';
     },
   };
 

@@ -131,11 +131,10 @@ test('analyzeBanqiDecisions resumes from the saved move cursor', async () => {
       moves,
       deal,
       {
-        bestMove: async () => null,
         evalPosition: async () => {
           evals += 1;
           // Let the first flip's whole fan-out finish, then die mid-second-flip.
-          if (evals > 20) throw new Error('killed');
+          if (progress.saves.length > 0) throw new Error('killed');
           return { cp: 50, mate: null };
         },
       },
@@ -145,16 +144,16 @@ test('analyzeBanqiDecisions resumes from the saved move cursor', async () => {
   );
   assert.equal(progress.saves.length, 1, 'the first graded flip was checkpointed');
 
-  let resumedBestMoves = 0;
+  const checkpoint = progress.saves[0]!.items[0]!;
+  let resumedEvals = 0;
   const decisions = await analyzeBanqiDecisions(
     moves,
     deal,
     {
-      bestMove: async () => {
-        resumedBestMoves += 1;
-        return null;
+      evalPosition: async () => {
+        resumedEvals += 1;
+        return { cp: 50, mate: null };
       },
-      evalPosition: async () => ({ cp: 50, mate: null }),
     },
     progress,
   );
@@ -164,7 +163,8 @@ test('analyzeBanqiDecisions resumes from the saved move cursor', async () => {
     [1, 2],
   );
   // Only the second flip was re-graded on resume.
-  assert.equal(resumedBestMoves, 1);
+  assert.deepEqual(decisions[0], checkpoint);
+  assert.ok(resumedEvals > 0 && resumedEvals < evals);
 });
 
 // ── Job queue caps + status envelope ──────────────────────────────────────────

@@ -173,8 +173,7 @@ export type GameSpecId =
   // Hong Kong mahjong. Playable behind a server flag AND a per-account grant;
   // runtimeStatus is 'future' because nothing is built behind it yet.
   | 'mahjong'
-  // Xiangqi mahjong (象棋麻將), the 32-tile two-player Taiwan game. Playtest
-  // only: behind a server flag AND the per-account allowlist, like 'mahjong'.
+  // Xiangqi mahjong (象棋麻將), the 32-tile two-player Taiwan game.
   | 'xiangqi-mahjong'
   // Standard chess, STUDY-ONLY (set 2026-09-20). Exists so chess studies can be
   // written, reviewed and embedded (the shallow-labels puzzles on the blog);
@@ -236,7 +235,8 @@ export const CHESS_SPEC_ID = 'chess' satisfies GameSpecId;
 // Every launched two-player variant since 2026-10-02 (Brian: "all of them should
 // support it"). Xiangqi and Fog Chess keep the first two places (the original
 // pair, and the pickers' default); the rest follow CANONICAL_VARIANT_ORDER.
-// Mahjong (four seats, account-allowlisted) and study-only chess stay out.
+// Mahjong (four seats, account-allowlisted), Xiangqi Mahjong (below) and
+// study-only chess stay out.
 //
 // This is the list of specs that CAN be played by correspondence. Which of them
 // are public (CORRESPONDENCE_ELIGIBLE_SPEC_IDS) and which only admit allowlisted
@@ -252,8 +252,9 @@ const CORRESPONDENCE_PLAYABLE_SPEC_IDS: readonly GameSpecId[] = [
   DARK_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
-  // Two-seated (east, west), so it rides the generic two-seat seek factory.
-  XIANGQI_MAHJONG_SPEC_ID,
+  // Xiangqi Mahjong is held out at launch (Brian, 2026-10-25: "let's not support
+  // correspondence for this variant yet"). Its tenant keeps the correspondence
+  // binding and its tests, so opening it again is adding XIANGQI_MAHJONG_SPEC_ID here.
 ];
 
 // Specs that may ALSO be played by correspondence, but only by accounts the
@@ -527,9 +528,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
   },
   {
     // Xiangqi mahjong (象棋麻將): the 32 xiangqi pieces as tiles, two players,
-    // five-tile hands of one set and a pair, a four-hand match. Hidden
-    // and allowlisted: it exists for a playtest, and nobody who plays the game
-    // has checked it yet. Imports nothing from the HK mahjong package.
+    // five-tile hands of one set and a pair, a six-hand match. Public for
+    // search (Brian, 2026-10-25). Imports nothing from the HK mahjong package.
     // Rated (Brian, 2026-10-15): the rated unit is the whole match, since the
     // room finishes when the match does. Migration 168 added the pool to the
     // user_ratings CHECK. The pool stays off the leaderboard and profiles while
@@ -552,7 +552,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'xiangqi_mahjong',
-    publicSurface: 'hidden',
+    publicSurface: 'casual',
     runtimeStatus: 'live',
     rated: true,
   },

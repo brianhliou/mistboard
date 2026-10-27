@@ -29,6 +29,7 @@ import {
   BANQI_PIECE_SHAPE,
   banqiFaceDownRadius,
   banqiPieceDrawSize,
+  flipBanqiFamilyReveal,
   glideBanqiFamilyMove,
 } from './live-banqi-render.js';
 import {
@@ -359,6 +360,11 @@ export function animateThreeKingdomsBanqiBoardMove(
   opts: { reverse?: boolean } = {},
 ): void {
   glideBanqiFamilyMove(host, move, point, opts);
+}
+
+/** Turn a live-flipped tile over (banqi's turn-over, on the point grid). */
+export function animateThreeKingdomsBanqiReveal(host: HTMLElement, square: Square): boolean {
+  return flipBanqiFamilyReveal(host, square, point, faceDown);
 }
 
 /** The live room's board geometry, for drag-ghost sizing. */

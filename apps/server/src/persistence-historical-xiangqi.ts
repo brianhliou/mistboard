@@ -581,6 +581,16 @@ export async function getHistoricalXiangqiGame(id: string): Promise<HistoricalXi
   return rows[0] ? gameFromRow(rows[0]) : null;
 }
 
+// Only the move list, for callers that replay one game (the puzzle setup move,
+// #664) and should not pull the whole row. Null when the game is not stored.
+export async function getHistoricalXiangqiGameMoves(id: string): Promise<XiangqiMove[] | null> {
+  const { rows } = await getPool().query<{ moves: XiangqiMove[] }>(
+    `SELECT moves FROM historical_xiangqi_games WHERE id = $1 LIMIT 1`,
+    [id],
+  );
+  return rows[0] ? rows[0].moves : null;
+}
+
 export async function getHistoricalXiangqiSource(
   id: string,
 ): Promise<HistoricalXiangqiSource | null> {

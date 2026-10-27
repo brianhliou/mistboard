@@ -326,6 +326,14 @@ test('jieqi rematch context: rated carries over only while the rated switch and 
   }
 });
 
+test('jieqi rematch: a rated game with a stats-excluded seat rematches casual', async () => {
+  const room = finishedHydratedRoom(true, { red: 'u-red', black: 'u-excluded' });
+  const { ctx, calls } = stubContext({ accountMayRate: async (userId) => userId !== 'u-excluded' });
+  const result = await finalizeTenantRematchIfReady(jieqiTenant, ctx, room);
+  assert.ok(result, 'the rematch still opens');
+  assert.deepEqual(calls, [{ rated: false }], 'an uncounted account never rates');
+});
+
 test('jieqi rematch: a play-locked account cancels the rematch', async () => {
   const room = finishedHydratedRoom(true, { red: 'u-red', black: 'u-locked' });
   const { ctx, calls } = stubContext({ accountMayPlay: async (userId) => userId !== 'u-locked' });

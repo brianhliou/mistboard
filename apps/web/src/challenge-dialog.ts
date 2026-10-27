@@ -1,11 +1,13 @@
 import { DAYS_PER_MOVE_OPTIONS, DEFAULT_DAYS_PER_MOVE } from '@mistboard/game';
 import './challenge-dialog.css';
 import { trackCorrespondenceSeekPosted } from './analytics.js';
+import { targetedChallengeRequestBody } from './challenge-model.js';
 import { correspondenceRatedAvailable, correspondenceSpecIdsFor } from './correspondence-model.js';
 import { firstMoverColorName, secondMoverColorName, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { isCorrespondenceRatedModeEnabled } from './rated-flag.js';
+import { isLikelyStatsExcluded } from './signed-in-state.js';
 import { webVariantOfferedInMenu } from './variant-tenant/registry.js';
 
 // A small modal to send a directed correspondence challenge to a specific player
@@ -109,12 +111,18 @@ export function openChallengeDialog(opts: {
     opt.textContent = t(key, {}, locale);
     rated.append(opt);
   }
+  // An account excluded from stats never rates (the server refuses it), so its
+  // Rated option is disabled and says why.
+  const notCounted = isLikelyStatsExcluded();
   const ratedAvailable = (): boolean =>
-    correspondenceRatedAvailable(variant.value, isCorrespondenceRatedModeEnabled());
+    !notCounted && correspondenceRatedAvailable(variant.value, isCorrespondenceRatedModeEnabled());
   const syncRated = (): void => {
     const available = ratedAvailable();
     const ratedOption = rated.options[1];
-    if (ratedOption) ratedOption.disabled = !available;
+    if (ratedOption) {
+      ratedOption.disabled = !available;
+      if (notCounted) ratedOption.textContent = t('setup.ratedNotCounted', {}, locale);
+    }
     if (!available) rated.value = 'casual';
   };
   syncRated();
@@ -144,18 +152,28 @@ export function openChallengeDialog(opts: {
   send.className = 'confirm-dialog-confirm';
   send.textContent = t('challenge.send', {}, locale);
   send.addEventListener('click', () => {
+    const request = targetedChallengeRequestBody(
+      {
+        handle: opts.handle,
+        gameSpecId: variant.value,
+        daysPerMove: Number(days.value),
+        preferredColor: color.value,
+        rated: rated.value === 'rated',
+      },
+      isCorrespondenceRatedModeEnabled(),
+      webVariantOfferedInMenu,
+    );
+    if (!request.ok) {
+      error.textContent = t('challenge.errorGeneric', {}, locale);
+      error.hidden = false;
+      return;
+    }
     send.disabled = true;
     error.hidden = true;
     void fetch('/api/correspondence/seeks', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        targetHandle: opts.handle,
-        gameSpecId: variant.value,
-        daysPerMove: Number(days.value),
-        preferredColor: color.value,
-        ...(rated.value === 'rated' && ratedAvailable() ? { rated: true } : {}),
-      }),
+      body: JSON.stringify(request.body),
     })
       .then(async (res) => {
         const body = (await res.json().catch(() => null)) as {

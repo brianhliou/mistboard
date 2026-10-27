@@ -534,6 +534,9 @@ const RENAMED_ARTICLE_SLUGS: Record<string, string> = {
   'reveal-xiangqi': 'jieqi',
   // Retitled from the launch post to a strategy guide on 2026-09-25.
   'duck-xiangqi-build': 'duck-xiangqi-strategy',
+  // The rules slug carries the tile count (32); the plain name is the one
+  // people type.
+  'xiangqi-mahjong': 'xiangqi-mahjong-32',
 };
 
 const ROBOTS_META = /<meta\s+name="robots"\s+content="[^"]*"\s*\/?>/;

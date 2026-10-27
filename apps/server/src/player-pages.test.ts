@@ -166,6 +166,63 @@ test('a player page names the player in both scripts, the standing and the recor
   );
 });
 
+// #605: Taiwan was split by whichever federation name a source printed, and its
+// players' names rendered in the sources' simplified characters.
+test('Taiwan is one team, and a Taiwan player is named in traditional characters', async () => {
+  const chao = player({
+    slug: 'chao-yi-fan',
+    name: '赵奕帆',
+    nameEn: 'Chao Yi-fan',
+    nameOwn: '趙奕帆',
+    federation: '台湾',
+    federationEn: 'Taiwan',
+  });
+  const hong = player({
+    slug: 'hong-xuzeng',
+    name: '洪旭增',
+    nameEn: 'Hong Xuzeng',
+    federation: '中华台北',
+    federationEn: 'Chinese Taipei',
+  });
+  const lin = player({
+    slug: 'lin-youxuan',
+    name: '林友轩',
+    nameEn: 'Lin Youxuan',
+    federation: '中国台北',
+    federationEn: 'Chinese Taipei',
+  });
+  const taiwan: PlayerPageSources = {
+    listPlayers: async () => [MENG, chao, hong, lin],
+    listBoards: async () => [],
+    reference: async () => REFERENCE,
+  };
+  const teams = teamsOf([MENG, chao, hong, lin]);
+  assert.deepEqual(
+    teams.map((t) => [t.key, t.players.length]),
+    [
+      ['zhejiang', 1],
+      ['taiwan', 3],
+    ],
+  );
+  const team = await playerPageFor('/players/teams/taiwan', taiwan);
+  assert.equal(team?.meta?.title, 'Taiwan (台灣) · Xiangqi team · Mistboard');
+  assert.match(team?.body ?? '', /Chao Yi-fan <span lang="zh">趙奕帆<\/span>/);
+  assert.deepEqual(await playerPageFor('/players/teams/chinese-taipei', taiwan), {
+    noindex: true,
+  });
+  const page = await playerPageFor('/players/chao-yi-fan', taiwan);
+  assert.equal(page?.meta?.title, 'Chao Yi-fan (趙奕帆) · Xiangqi player · Mistboard');
+  assert.match(page?.meta?.description ?? '', /^Xiangqi player for Taiwan\./);
+  assert.match(page?.body ?? '', /<h1>Chao Yi-fan <span lang="zh">趙奕帆<\/span><\/h1>/);
+  assert.match(
+    page?.body ?? '',
+    /<a href="\/players\/teams\/taiwan">Taiwan <span lang="zh">台灣<\/span><\/a>/,
+  );
+  assert.doesNotMatch(page?.body ?? '', /赵奕帆/);
+  const hongPage = await playerPageFor('/players/hong-xuzeng', taiwan);
+  assert.match(hongPage?.meta?.description ?? '', /^Xiangqi player for Taiwan\./);
+});
+
 test('a player off the points list falls back to the closed rating; an authored title wins', () => {
   assert.equal(
     playerDescription(YIN, REFERENCE),

@@ -419,11 +419,91 @@
   }
 }
 
-@media (max-width: 560px) {
-  .articles-community-shell {
-    width: calc(100% - 24px);
+/* Phones: the By Mistboard / Community rail becomes a tab row above the sheet
+   and the posts take the full width, one card per row. Every selector is
+   scoped under the shell so it outranks the generic .community-layout /
+   .community-rail rules in community-rail.css and the blog rules above,
+   whatever order the bundle loads them in. */
+@media (max-width: 600px) {
+  /* The sheet runs edge to edge: a page-coloured gutter around it is width a
+     phone cannot spare. */
+  .community-shell.articles-community-shell {
+    width: 100%;
+    padding-top: 0;
   }
 
+  .articles-community-shell .articles-community-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .articles-community-shell .articles-community-layout > .article-sheet {
+    padding: 18px 16px 24px;
+    border-width: 0 0 1px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .articles-community-shell .articles-community-rail {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding: 8px 12px;
+    overflow-x: auto;
+  }
+
+  .articles-community-shell .articles-community-rail a {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
+  /* An empty view gets no tab on a phone; the one being shown always stays. */
+  .articles-community-shell
+    .articles-community-rail
+    a[data-empty="true"]:not(.community-rail-active) {
+    display: none;
+  }
+
+  /* With only the shown view left, the row is one pill that goes nowhere. */
+  .articles-community-shell
+  .articles-community-rail:not(:has(a:not([data-empty="true"]):not(.community-rail-active))) {
+    display: none;
+  }
+
+  .articles-community-shell .articles-index-heading .site-section-heading {
+    font-size: 30px;
+  }
+
+  .articles-community-shell .article-sheet .articles-index-heading {
+    margin-bottom: 20px;
+  }
+
+  .articles-community-shell .articles-index-heading .articles-topic-chips {
+    margin-top: 14px;
+  }
+
+  .articles-community-shell .article-sheet .articles-index-list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .articles-community-shell .articles-index-list .articles-index-card-body {
+    padding: 14px 14px 16px;
+  }
+}
+
+@media (max-width: 600px) and (pointer: coarse) {
+  .articles-community-shell .articles-community-rail a {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 560px) {
   .articles-index .article-sheet {
     padding: 20px 14px 28px;
   }
@@ -767,18 +847,17 @@
 }
 
 /* Both rails are quiet text on the page background: no card chrome, the
-   sheet is the only box. The TOC pins (it is short and useful mid-read);
-   the variant rail scrolls away with the page like pychess's, so the page
-   has a single scroll context instead of two. */
+   sheet is the only box. Both pin, so another game's rules are one click
+   away mid-read (Brian, 2026-10-25; the variant rail used to scroll away
+   with the page). A rail taller than the window scrolls on its own. */
 .article-toc-sidebar,
 .article-variant-sidebar {
   display: none;
 }
 
 @media (min-width: 1280px) {
-  .article-toc-sidebar {
-    display: block;
-    grid-area: toc;
+  .article-toc-sidebar,
+  .article-variant-sidebar {
     position: sticky;
     /* Exactly the rail's natural offset (58px sticky nav + 40px section
        padding) so it pins with zero travel on scroll. */
@@ -788,8 +867,14 @@
     scrollbar-width: none;
   }
 
-  .article-toc-sidebar::-webkit-scrollbar {
+  .article-toc-sidebar::-webkit-scrollbar,
+  .article-variant-sidebar::-webkit-scrollbar {
     display: none;
+  }
+
+  .article-toc-sidebar {
+    display: block;
+    grid-area: toc;
   }
 
   .article-variant-sidebar {

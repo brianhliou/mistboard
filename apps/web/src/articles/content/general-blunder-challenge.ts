@@ -43,13 +43,15 @@ export const generalBlunderChallengeArticle: Article = {
     'General Blunder is a xiangqi bot that plays its worst move every turn, so beating it is easy. Two challenges for anyone who wants more: get a draw, then make it win.',
   status: 'published',
   publishedAt: '2026-10-19',
+  updatedAt: '2026-10-24',
+  updateNote: 'Added the first draw, by rebirthfox333, and our verdict on the harder challenge.',
   thumbnail: { kind: 'svg', svg: GENERAL_BLUNDER_CHALLENGE_THUMBNAIL },
   boardFamily: 'xiangqi',
   audience: 'Beginners and anyone who likes a puzzle with a twist.',
   tldr: [
     'General Blunder checks every legal move with a strong engine and plays the one that is worst for itself.',
     'In ten test games, an opponent choosing its moves at random checkmated it every time, the quickest in 19 moves.',
-    'The easier challenge is to get a draw. The harder one is to make it win on the board.',
+    'The easier challenge, a draw, fell on 19 October. We think the harder one, making it win, is out of reach in a real game.',
   ],
   intro: [
     {
@@ -77,6 +79,10 @@ export const generalBlunderChallengeArticle: Article = {
           kind: 'paragraph',
           text: 'General Blunder never resigns, and Mistboard has no draw offers, so a draw has to come from the rules themselves. That is harder than it sounds against a bot that spends every turn handing you something. The [xiangqi rules page](/rules/xiangqi) lists every way a game can end. Find the one that works against an opponent that wants to lose.',
         },
+        {
+          kind: 'paragraph',
+          text: 'rebirthfox333 did it first, on 19 October, the day this page went up, in [a 137-move draw](/xiangqi/game/xq_e4ff1ac2-dafd-4690-ad41-4a72780e550a). The game page shows how it ended, if you want the answer.',
+        },
       ],
     },
     {
@@ -88,7 +94,28 @@ export const generalBlunderChallengeArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The challenge is to steer a real game into a position like that. It searches ahead, so it steps around a trap it can see coming. We have not managed it ourselves, and we do not know how hard it is.',
+          text: 'The challenge is to steer a real game into a position like that. It searches ahead, so it steps around a trap it can see coming.',
+        },
+      ],
+    },
+    {
+      heading: 'We think the win is out of reach',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'rebirthfox333 tried that too, in [a 103-move game on 20 October](/xiangqi/game/xq_efe0c4b1-bdd9-4290-877f-594c8693e772). General Blunder kept capturing with a chariot or a cannon on squares where Red could then checkmate it at once. Red had a mate in one on 36 different turns and, trying to lose, played none of them, so every one of those captures stood.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'That is the catch. Every piece General Blunder keeps is another piece it can move, and with 30 or 40 legal moves there is nearly always one that wins slowly or not at all. Late in that game every move it had was winning, and it still never had to mate. It shuffled until Red resigned.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'It came close once. Around its 80th move it had three legal moves, and all three won by force. It picked the slowest, as it is built to, and Red\'s reply gave it room again.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'So our verdict: making General Blunder win is probably impossible in a real game. The rules allow it, and the one route we can see runs against instinct: take its pieces until it has its general and almost nothing else, then leave it no move that does not win. No game we know of has got there.',
         },
       ],
     },
@@ -97,7 +124,7 @@ export const generalBlunderChallengeArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'If you draw General Blunder or get it to win, post the game on the [forum](/forum) with its link. Every finished game on Mistboard has its own page. Running out of time, resigning or leaving the game do not count. Those are the ways it wins today without anyone trying.',
+          text: 'If you get it to win, post the game on the [forum](/forum) with its link. Every finished game on Mistboard has its own page. Running out of time, resigning or leaving the game do not count. Those are the ways it wins today without anyone trying.',
         },
         {
           kind: 'cta',
@@ -106,10 +133,6 @@ export const generalBlunderChallengeArticle: Article = {
             { label: 'Play General Blunder', href: '/bot/general-blunder', emphasis: 'primary' },
             { label: 'Read the rules', href: '/rules/xiangqi', emphasis: 'secondary' },
           ],
-        },
-        {
-          kind: 'paragraph',
-          text: 'So can you make a bot that tries to lose win? The rules allow it: positions exist where every move General Blunder has would beat you, and in one of those it has to play one. Whether a person can walk a real game there, against a bot that sees the trap and tries to dodge it, is the open question. We will add the first game that does it to this page.',
         },
       ],
     },

@@ -10,8 +10,10 @@ import {
 } from '@mistboard/game';
 import {
   hasTrackedCorrespondenceStart,
+  hasTrackedGameFirstMove,
   hasTrackedLiveGameStart,
   markCorrespondenceStartTracked,
+  markGameFirstMoveTracked,
   markLiveGameStartTracked,
   takeCorrespondenceStartSource,
   takeGameStartSource,
@@ -305,11 +307,20 @@ export type GameLifecycleTracker = {
   // `finished`. Repeated calls with the same status are no-ops, so it is safe to
   // drive from a render loop. `baseProps` should carry game-spec/time-control
   // identity (see gameSpecAnalyticsProps) so the funnel is sliceable by variant.
+  //
+  // `ownMoveCount` drives `game_first_move`: how many moves this client's seated
+  // player has had accepted, counted from the state the server sent (its event
+  // log), never from a click that may yet be rejected. The event fires when the
+  // count goes from 0 to 1 or more inside one tracker's sight, so a room opened
+  // and left never fires it, and neither does a reload or a finished game that
+  // was first seen with the move already made. Omitted: no first-move event.
   update: (
     input: {
       statusType: GameLifecycleStatusType;
       baseProps: Record<string, unknown>;
       outcome?: GameFinishedOutcome | null;
+      ownMoveCount?: number | null;
+      moveNumber?: number | null;
     } | null,
   ) => void;
   reset: () => void;
@@ -322,6 +333,33 @@ export type GameLifecycleTracker = {
 export function createGameLifecycleTracker(): GameLifecycleTracker {
   let lastStatusType: GameLifecycleStatusType | null = null;
   let playingSinceMs: number | null = null;
+  // Keyed by game id, so reset() keeps them: a reconnect that resets the tracker
+  // between the empty board and the accepted move must still see the move land,
+  // and a rematch is a new id.
+  const sawNoOwnMove = new Set<string>();
+  const startSources = new Map<string, string>();
+  function trackFirstMove(input: Parameters<GameLifecycleTracker['update']>[0]): void {
+    if (!input) return;
+    const { statusType, baseProps, ownMoveCount } = input;
+    const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
+    if (!gameId || typeof ownMoveCount !== 'number') return;
+    if (ownMoveCount <= 0) {
+      if (statusType !== 'finished' && statusType !== 'aborted') sawNoOwnMove.add(gameId);
+      return;
+    }
+    if (!sawNoOwnMove.has(gameId)) return;
+    if (statusType !== 'playing' && statusType !== 'finished') return;
+    sawNoOwnMove.delete(gameId);
+    if (hasTrackedGameFirstMove(gameId)) return;
+    markGameFirstMoveTracked(gameId);
+    track('game_first_move', {
+      ...baseProps,
+      // Known only when this page fired the start; null when the start fired on
+      // an earlier load of the same game (join on gameId for it).
+      entry_source: startSources.get(gameId) ?? null,
+      moveNumber: input.moveNumber ?? null,
+    });
+  }
   return {
     reset() {
       lastStatusType = null;
@@ -330,11 +368,15 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
     update(input) {
       if (!input) return;
       const { statusType, baseProps } = input;
-      if (statusType === lastStatusType) return;
-      if (statusType === 'playing' && lastStatusType !== 'playing') {
+      if (statusType === 'playing' && statusType !== lastStatusType) {
         playingSinceMs = Date.now();
-        trackGameStarted(baseProps);
+        const source = trackGameStarted(baseProps);
+        if (source !== null && typeof baseProps.gameId === 'string') {
+          startSources.set(baseProps.gameId, source);
+        }
       }
+      trackFirstMove(input);
+      if (statusType === lastStatusType) return;
       if (statusType === 'finished' && input.outcome) {
         track('game_finished', {
           ...baseProps,
@@ -359,20 +401,23 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
 // can also come from the long-lived correspondence slot: the player who posted
 // the seek arrives days later from an email, long after the ten-minute live
 // source has expired.
-function trackGameStarted(baseProps: Record<string, unknown>): void {
+// Returns the entry source it sent, or null when the start was already counted.
+function trackGameStarted(baseProps: Record<string, unknown>): string | null {
   const gameId = typeof baseProps.gameId === 'string' ? baseProps.gameId : null;
   if (baseProps.time_class !== 'correspondence') {
-    if (gameId && hasTrackedLiveGameStart(gameId)) return;
+    if (gameId && hasTrackedLiveGameStart(gameId)) return null;
     if (gameId) markLiveGameStartTracked(gameId);
-    track('game_started', { ...baseProps, entry_source: takeGameStartSource() });
-    return;
+    const source = takeGameStartSource();
+    track('game_started', { ...baseProps, entry_source: source });
+    return source;
   }
-  if (gameId && hasTrackedCorrespondenceStart(gameId)) return;
+  if (gameId && hasTrackedCorrespondenceStart(gameId)) return null;
   const liveSource = takeGameStartSource();
   const gameSpec = typeof baseProps.game_spec === 'string' ? baseProps.game_spec : null;
   const entrySource = liveSource !== 'none' ? liveSource : takeCorrespondenceStartSource(gameSpec);
   if (gameId) markCorrespondenceStartTracked(gameId);
   track('game_started', { ...baseProps, entry_source: entrySource });
+  return entrySource;
 }
 
 // Tie subsequent events to a known account. Idempotent: safe to call on every

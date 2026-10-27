@@ -338,6 +338,37 @@ definePersistenceTests('bot profiles', () => {
     assert.equal((await routeGet('/api/bots/missing-bot/games?variant=dark-chess')).status, 404);
   });
 
+  test('bot cursor survives a newer finish and orders tied timestamps (#630)', async () => {
+    await insertBotProfile('cursor-bot', 'Cursor Bot', 'public');
+    for (const id of ['03', '02', '01', '00']) {
+      await endBotGame(
+        'cursor-bot',
+        `cursor-${id}`,
+        'dark-chess',
+        id === '00' ? '2026-01-01T00:00:00Z' : '2026-01-01T01:00:00Z',
+      );
+    }
+    const base = '/api/bots/cursor-bot/games?variant=dark-chess&limit=2';
+    const first = JSON.parse((await routeGet(base)).body).games as Array<{
+      roomId: string;
+      endedAt: string;
+    }>;
+    assert.deepEqual(
+      first.map((game) => game.roomId),
+      ['cursor-03', 'cursor-02'],
+    );
+    await endBotGame('cursor-bot', 'cursor-04', 'dark-chess', '2026-01-01T02:00:00Z');
+    const last = first[first.length - 1];
+    const before = encodeURIComponent(JSON.stringify([last.endedAt, last.roomId]));
+    const second = JSON.parse((await routeGet(`${base}&offset=99&before=${before}`)).body)
+      .games as Array<{ roomId: string }>;
+    assert.deepEqual(
+      [...first, ...second].map((game) => game.roomId),
+      ['cursor-03', 'cursor-02', 'cursor-01', 'cursor-00'],
+    );
+    assert.equal((await routeGet(`${base}&before=bad`)).status, 400);
+  });
+
   test('bot rating snapshot audit query separates latest, public, and history views', async () => {
     await insertBotProfile('audit-bot', 'Audit Bot', 'public');
     await insertBotRatingSnapshot('audit-bot', {

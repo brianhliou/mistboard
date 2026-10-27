@@ -15,6 +15,20 @@ import { articleIsNoindex } from './variant-public-surfaces.js';
 
 const appsDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
+it('describes the searched rules in the zh-Hant banqi search snippet', () => {
+  const banqi = articles.find((article) => article.slug === 'banqi')!;
+  const localized = translateArticle(banqi, 'zh-Hant');
+  // These are the title and description inputs used by the prerenderer.
+  expect({
+    title: `${localized.seoTitle ?? localized.title} | Mistboard`,
+    description: localized.summary,
+  }).toEqual({
+    title: '暗棋規則：吃子大小、兵吃將與砲的走法 | Mistboard',
+    description:
+      '暗棋規則怎麼玩？看圖掌握棋子大小與吃子順序、兵吃將、砲隔一子吃棋，以及翻子、走法、勝負與和棋判定。採用台灣暗棋玩法，看完可免費線上對弈。',
+  });
+});
+
 describe('seoTextLength', () => {
   it('counts a CJK character as two and everything else as one', () => {
     expect(seoTextLength('Rules | Mistboard')).toBe(17);

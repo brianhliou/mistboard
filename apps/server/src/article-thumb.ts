@@ -5,9 +5,17 @@
 // dist/thumb/article/<slug>.svg (apps/web/src/articles/feed-thumbnail.ts: the
 // site's card CSS and variables already baked in). This route inlines the
 // public files that SVG points at (piece art, photos) and rasterises it with
-// the OG cards' resvg. The SVG is vector board art, so it renders at the output
-// size; only the embedded rasters are scaled, and each is drawn from the mip
-// level nearest its drawn size, never shrunk 2x or more from a finished raster.
+// the OG cards' resvg at the frame's own 480x300 (2x the 240 px brianhliou.com
+// shows at most), then encodes it as a palette PNG (png-quantize.ts). The SVG is
+// vector board art, so it renders at the output size; only the embedded rasters
+// are scaled, and each is drawn from the mip level nearest its drawn size,
+// never shrunk 2x or more from a finished raster.
+//
+// Until 2026-10-25 the render was 2x the frame (960x600, photos 600x375) as a
+// 32-bit PNG: 7.2 MB over 56 cards, a face photo near 400 KB, for a tile drawn
+// 177 px wide. Any change to what this file outputs bumps
+// ARTICLE_THUMB_RENDER_REVISION and the web's FEED_THUMB_RENDER_REVISION
+// together, so the feed's ?v= moves and caches drop the old bytes.
 //
 // No live game state is drawn: the art is static article content, so the
 // hidden-information rule has nothing to redact here.
@@ -19,21 +27,33 @@ import { Resvg } from '@resvg/resvg-js';
 import { loadCardArt } from './og-card-board.js';
 import {
   createPngCache,
+  halveImage,
   halvePng,
   OG_FONT_OPTIONS,
   pngSize,
   svgToPng,
+  svgToRgba,
   writePng,
 } from './og-raster.js';
+import { encodePalettePng } from './png-quantize.js';
 
 /** The frame the web module draws (FEED_THUMB_WIDTH x FEED_THUMB_HEIGHT). */
 export const ARTICLE_THUMB_WIDTH = 480;
 export const ARTICLE_THUMB_HEIGHT = 300;
+/** Bumped with any change to the PNG this file outputs; pinned equal to the
+ *  web's FEED_THUMB_RENDER_REVISION (feed-thumbnail-render.test.ts), which
+ *  feeds the URL's ?v=. */
+export const ARTICLE_THUMB_RENDER_REVISION = 2;
 /** The dark card's --site-panel-soft, hsl(40, 5%, 19%), behind the art. */
 const PANEL_SOFT = '#33312e';
-/** 2x the frame, 960x600, unless that would upscale a photo (see thumbZoom). */
-const MAX_ZOOM = 2;
 const MIN_ART_PX = 64;
+/**
+ * A card still over this at 256 colours is a photo (board art lands at 5-27 KB,
+ * the face photos at 50-85 KB): it is re-encoded at PHOTO_COLORS, which takes
+ * them to 35-66 KB with banding that does not show at the 240 px tile.
+ */
+const PHOTO_BYTES = 40 * 1024;
+const PHOTO_COLORS = 128;
 /** How deep the canvas may grow to cover art below the frame (coverBelowFrame). */
 const MAX_CANVAS_HEIGHT = ARTICLE_THUMB_HEIGHT * 8;
 /** Room under the measured art for stroke widths, which the bbox approximates. */
@@ -84,24 +104,21 @@ async function readRaster(file: string, mime: string): Promise<Raster | null> {
   const stat = await fs.stat(file);
   if (!stat.isFile() || stat.size > MAX_ASSET_BYTES) return null;
   let data: Buffer = await fs.readFile(file);
-  if (mime === 'image/png') {
-    const { width, height } = pngSize(data);
-    const levels: { px: number; uri: string }[] = [];
-    for (;;) {
-      const size = pngSize(data);
-      const px = Math.max(size.width, size.height);
-      levels.push({ px, uri: `data:image/png;base64,${data.toString('base64')}` });
-      if (px / 2 < MIN_ART_PX) break;
-      data = await halvePng(data);
-    }
-    return { width, height, levels };
-  }
-  // A photo fills the frame and is never drawn above its own size (thumbZoom),
-  // so the file itself is the only level it needs.
-  const size = mime === 'image/jpeg' ? jpegSize(data) : null;
+  const size = mime === 'image/png' ? pngSize(data) : mime === 'image/jpeg' ? jpegSize(data) : null;
   if (!size) return null;
-  const uri = `data:${mime};base64,${data.toString('base64')}`;
-  return { ...size, levels: [{ px: Math.max(size.width, size.height), uri }] };
+  // The file, then its halvings as PNGs (a 1493 px photo drawn at 480 needs
+  // one: resvg's kernel steps when it shrinks a raster 2x or more).
+  const levels: { px: number; uri: string }[] = [];
+  let type = mime;
+  for (let level = size; ; ) {
+    const px = Math.max(level.width, level.height);
+    levels.push({ px, uri: `data:${type};base64,${data.toString('base64')}` });
+    if (px / 2 < MIN_ART_PX) break;
+    data = type === 'image/png' ? await halvePng(data) : await halveImage(data, type, level);
+    type = 'image/png';
+    level = pngSize(data);
+  }
+  return { ...size, levels };
 }
 
 /** The raster behind a root-relative href, or null (outside the build, absent,
@@ -228,25 +245,10 @@ function placedImages(svg: string): Placed[] {
   return out;
 }
 
-/**
- * The raster zoom: 2x the frame (960x600), lowered so no embedded raster is
- * drawn above its own pixels (a 600x382 face photo renders at 600x375), never
- * below 1x (480x300). Vector art has no such limit, and piece rasters (1024 px,
- * drawn at ~40) sit far below theirs.
- */
-function thumbZoom(placed: readonly { unitsPerPixel: number }[]): number {
-  let zoom = MAX_ZOOM;
-  for (const image of placed) zoom = Math.min(zoom, 1 / image.unitsPerPixel);
-  return Math.max(1, zoom);
-}
-
 /** `svg` with each root-relative image inlined as a data URI at the mip level
- *  its drawn size needs (an unreadable one is dropped), and the zoom to
- *  rasterise it at. */
-export async function inlineThumbImages(
-  svg: string,
-  staticDir: string,
-): Promise<{ svg: string; zoom: number }> {
+ *  its drawn size needs (an unreadable one is dropped). The render is 1:1 with
+ *  the frame, so an image's drawn size is its size in SVG units. */
+export async function inlineThumbImages(svg: string, staticDir: string): Promise<string> {
   const placed = placedImages(svg);
   const resolved = await Promise.all(
     placed.map(async (image) => {
@@ -256,20 +258,19 @@ export async function inlineThumbImages(
         : { image, raster: null, unitsPerPixel: 0 };
     }),
   );
-  const zoom = thumbZoom(resolved.filter((r) => r.raster));
   let out = '';
   let cursor = 0;
   for (const { image, raster, unitsPerPixel } of resolved) {
     out += svg.slice(cursor, image.start);
     cursor = image.end;
     if (!raster) continue;
-    const need = Math.max(raster.width, raster.height) * unitsPerPixel * zoom;
+    const need = Math.max(raster.width, raster.height) * unitsPerPixel;
     let pick = raster.levels[0]!;
     for (const level of raster.levels) if (level.px >= need) pick = level;
     const attrs = image.attrs.replace(/\s(?:xlink:)?href="[^"]*"/g, '');
     out += `<image href="${pick.uri}"${attrs}/>`;
   }
-  return { svg: out + svg.slice(cursor), zoom };
+  return out + svg.slice(cursor);
 }
 
 // ── Below the frame ──────────────────────────────────────────────────────────
@@ -307,19 +308,21 @@ export function coverBelowFrame(svg: string): string | null {
   return root.replace(frame, tall) + svg.slice(root.length);
 }
 
-/** A thumbnail SVG from the build as its PNG: images inlined, the canvas grown
- *  to cover its art, cropped back to 16:10. Null when it cannot be drawn safely. */
+/** A thumbnail SVG from the build as its 480x300 PNG: images inlined, the
+ *  canvas grown to cover its art, cropped back to the frame, palette-encoded.
+ *  Null when it cannot be drawn safely. */
 export async function renderArticleThumbnail(
   source: string,
   staticDir: string,
 ): Promise<Buffer | null> {
-  const { svg, zoom } = await inlineThumbImages(source, staticDir);
-  const covered = coverBelowFrame(svg);
+  const covered = coverBelowFrame(await inlineThumbImages(source, staticDir));
   if (!covered) return null;
-  return svgToPng(covered, PANEL_SOFT, zoom, {
-    right: Math.round(ARTICLE_THUMB_WIDTH * zoom),
-    bottom: Math.round(ARTICLE_THUMB_HEIGHT * zoom),
-  });
+  const crop = { right: ARTICLE_THUMB_WIDTH, bottom: ARTICLE_THUMB_HEIGHT };
+  const { pixels, width, height } = await svgToRgba(covered, PANEL_SOFT, 1, crop);
+  const png = encodePalettePng(pixels, width, height);
+  if (!png) return svgToPng(covered, PANEL_SOFT, 1, crop);
+  if (png.length <= PHOTO_BYTES) return png;
+  return encodePalettePng(pixels, width, height, PHOTO_COLORS) ?? png;
 }
 
 // ── The route ────────────────────────────────────────────────────────────────

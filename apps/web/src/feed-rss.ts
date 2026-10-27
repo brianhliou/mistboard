@@ -3,9 +3,11 @@
 // than a dependency: the document is a dozen lines and the only hard parts are
 // escaping and the RFC-822 date.
 //
-// An announcement of a blog post carries the post's own headline and card
-// thumbnail, not the announcement's summary line: a reader that lists posts
-// from this feed (brianhliou.com's home page tiles) shows what /blog shows.
+// Its posts come from the list /blog renders (articles/blog-listing.ts), one
+// item each with the post's own headline and card thumbnail, not from the
+// hand-written announcements: a reader that lists posts from this feed
+// (brianhliou.com's home page tiles) shows what /blog shows, announced or not.
+// Releases, updates and status entries stay hand-written in announcements.ts.
 
 import type { Announcement } from './announcements.js';
 
@@ -28,8 +30,22 @@ export const rssDate = (iso: string): string => {
 /** The live blog post an announcement points at, as much as the feed needs. */
 export type FeedPost = { title: string };
 
+/** A post /blog lists, as /feed.xml needs it (articles/blog-listing.ts). */
+export type FeedBlogPost = {
+  slug: string;
+  title: string;
+  summary: string;
+  publishedAt?: string;
+};
+
 export type FeedOptions = {
   host: string;
+  /**
+   * Every post /blog lists, at the build's clock. Each becomes exactly one
+   * `category=article` item; a hand-written article announcement that links
+   * one of them is folded into that item (its guid and body), never a second.
+   */
+  blogPosts?: readonly FeedBlogPost[];
   /** A live blog post by slug, or undefined (draft, scheduled, or no post). */
   postForSlug?: (slug: string) => FeedPost | undefined;
   /** The absolute URL of a post's card thumbnail PNG, when it has one. */
@@ -49,22 +65,66 @@ function mediaLine(url: string | undefined): string | null {
   return `      <media:content url="${xmlEscape(url)}" medium="image" type="image/png" />`;
 }
 
+// Stable id that does not change when an entry's link or title does, so a
+// reader that has seen an item never sees it twice. Keyed by the authored
+// headline, never the post title the item may display.
+function announcementGuid(entry: Announcement): string {
+  const slug = entry.headline
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+  return `mistboard:${entry.date}:${slug}`;
+}
+
+type NewsItem = { date: string; lines: (string | null)[] };
+
 export function renderNewsRss(entries: readonly Announcement[], options: FeedOptions): string {
   const { host } = options;
   const absoluteHref = (href: string | undefined): string => {
     if (!href) return `${host}/feed`;
     return /^https?:/.test(href) ? href : `${host}${href}`;
   };
-  const items = entries
+  // One item per listed post, built from the post list rather than from the
+  // announcements, so a post nobody announced still reaches a reader of this
+  // feed. The newest announcement linking a post lends the item its guid (a
+  // reader, or the tweet ledger, that saw it keeps it as seen) and its body.
+  const posts = options.blogPosts ?? [];
+  const announcementFor = new Map<string, Announcement>();
+  for (const entry of entries) {
+    const slug = announcedPostSlug(entry);
+    if (slug && !announcementFor.has(slug)) announcementFor.set(slug, entry);
+  }
+  const listed = new Set<string>();
+  const postItems: NewsItem[] = [];
+  for (const post of posts) {
+    if (listed.has(post.slug)) continue;
+    listed.add(post.slug);
+    const entry = announcementFor.get(post.slug);
+    const date = post.publishedAt ?? entry?.date;
+    const description = entry?.body ?? post.summary;
+    postItems.push({
+      date: date ?? '',
+      lines: [
+        `      <title>${xmlEscape(post.title)}</title>`,
+        `      <link>${xmlEscape(`${host}/blog/${encodeURIComponent(post.slug)}`)}</link>`,
+        `      <guid isPermaLink="false">${
+          entry ? announcementGuid(entry) : `mistboard:blog:${xmlEscape(post.slug)}`
+        }</guid>`,
+        date ? `      <pubDate>${rssDate(date)}</pubDate>` : null,
+        '      <category>article</category>',
+        description ? `      <description>${xmlEscape(description)}</description>` : null,
+        mediaLine(options.thumbnailUrl?.(post.slug)),
+      ],
+    });
+  }
+  const entryItems: NewsItem[] = entries
+    // An announcement of a listed post is that post's item above.
+    .filter((entry) => {
+      const slug = announcedPostSlug(entry);
+      return !(slug && listed.has(slug));
+    })
     .map((entry) => {
-      // Stable id that does not change when an entry's link or title does, so
-      // a reader that has seen an item never sees it twice. Keyed by the
-      // authored headline, never the post title the item may display.
-      const slug = entry.headline
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 60);
       const postSlug = announcedPostSlug(entry);
       const post = postSlug ? options.postForSlug?.(postSlug) : undefined;
       const title = post?.title ?? entry.headline;
@@ -72,20 +132,23 @@ export function renderNewsRss(entries: readonly Announcement[], options: FeedOpt
       // reader, and in a tweet built from this document, the link is the call
       // to action, so the label would only read as a dangling imperative.
       const description = entry.body ?? '';
-      return [
-        '    <item>',
-        `      <title>${xmlEscape(title)}</title>`,
-        `      <link>${xmlEscape(absoluteHref(entry.href))}</link>`,
-        `      <guid isPermaLink="false">mistboard:${entry.date}:${slug}</guid>`,
-        `      <pubDate>${rssDate(entry.date)}</pubDate>`,
-        `      <category>${xmlEscape(entry.kind)}</category>`,
-        description ? `      <description>${xmlEscape(description)}</description>` : null,
-        post && postSlug ? mediaLine(options.thumbnailUrl?.(postSlug)) : null,
-        '    </item>',
-      ]
-        .filter(Boolean)
-        .join('\n');
-    })
+      return {
+        date: entry.date,
+        lines: [
+          `      <title>${xmlEscape(title)}</title>`,
+          `      <link>${xmlEscape(absoluteHref(entry.href))}</link>`,
+          `      <guid isPermaLink="false">${announcementGuid(entry)}</guid>`,
+          `      <pubDate>${rssDate(entry.date)}</pubDate>`,
+          `      <category>${xmlEscape(entry.kind)}</category>`,
+          description ? `      <description>${xmlEscape(description)}</description>` : null,
+          post && postSlug ? mediaLine(options.thumbnailUrl?.(postSlug)) : null,
+        ],
+      };
+    });
+  // Newest first; a stable sort keeps the authored order within a day.
+  const items = [...postItems, ...entryItems]
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .map((item) => ['    <item>', ...item.lines, '    </item>'].filter(Boolean).join('\n'))
     .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="${MEDIA_RSS_NS}">

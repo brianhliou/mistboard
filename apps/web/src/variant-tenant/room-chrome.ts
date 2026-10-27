@@ -56,6 +56,10 @@ export type TenantWebView<C extends string> = {
 
 import { clockRemainingMs, type TenantWebClock } from './clock-projection.js';
 
+// Server seat gate (apps/server variant-tenant/seat-session.ts): an account
+// excluded from stats takes no seat in a rated room, and signing in will not help.
+const RATED_COUNTED_REASON = 'rated requires counted account';
+
 export type { TenantWebClock } from './clock-projection.js';
 
 // Everything a tenant hands the chrome to SAY is a catalog key, never a
@@ -155,6 +159,10 @@ export type WebVariantTenant<C extends string> = {
   // pending, so a two-action turn's second half reads in the same spot as the
   // first, with no extra element and nothing shifting.
   turnChipLabel?(seat: C): I18nKey | null;
+  // Optional: short facts about a seat shown after its name on the player row
+  // (already localized). Mahjong puts the dealer and the running points here on
+  // a phone, where its table has no room for them.
+  seatTags?(seat: C): readonly string[];
 };
 
 /** A recorded clock at one ply of a finished match (the review page). */
@@ -375,6 +383,15 @@ export function createTenantRoomChrome<C extends string>(
     return color === ctx.seat() ? 'bottom' : 'top';
   }
 
+  function appendSeatTags(playerLine: HTMLElement, color: C): void {
+    for (const tag of tenant.seatTags?.(color) ?? []) {
+      const el = document.createElement('span');
+      el.className = 'clock-seat-tag';
+      el.textContent = tag;
+      playerLine.append(el);
+    }
+  }
+
   function renderClocks(): void {
     if (!refs) return;
     refs.clockTop.replaceChildren();
@@ -447,6 +464,7 @@ export function createTenantRoomChrome<C extends string>(
             'clock-name',
           ),
         );
+        appendSeatTags(playerLine, color);
         if (isTurn) {
           const toMove = document.createElement('span');
           toMove.className = 'clock-to-move';
@@ -510,6 +528,7 @@ export function createTenantRoomChrome<C extends string>(
           'clock-name',
         ),
       );
+      appendSeatTags(playerLine, color);
       const toMove = document.createElement('span');
       toMove.className = 'clock-to-move';
       const chipLabel = tenant.turnChipLabel?.(color) ?? null;
@@ -655,7 +674,9 @@ export function createTenantRoomChrome<C extends string>(
       // itself is what says the room is rated.
       headline: [
         tcLabel,
-        ctx.rated?.() || ctx.closeReason() === 'rated requires account'
+        ctx.rated?.() ||
+        ctx.closeReason() === 'rated requires account' ||
+        ctx.closeReason() === RATED_COUNTED_REASON
           ? t('live.modeRated')
           : t('live.modeCasual'),
       ],
@@ -988,7 +1009,8 @@ export function createTenantRoomChrome<C extends string>(
   function actionTitle(view: TenantWebView<C> | null): string {
     if (ctx.connectionState() === 'rejected') {
       const gated = accountGatedRejection();
-      if (gated === 'rated') return t('live.titleRatedGame');
+      if (gated === 'rated' || ctx.closeReason() === RATED_COUNTED_REASON)
+        return t('live.titleRatedGame');
       if (gated === 'correspondence') return t('correspondence.heading');
       if (liveGameRejection()) return t('live.titleGameInProgress');
       return ctx.closeReason() === 'play disabled'
@@ -1015,6 +1037,8 @@ export function createTenantRoomChrome<C extends string>(
       const gated = accountGatedRejection();
       if (gated === 'rated') return t('live.rejectedRatedAccount');
       if (gated === 'correspondence') return t('live.rejectedCorrespondenceAccount');
+      // A stats-excluded account: signing in will not help, so no CTA.
+      if (ctx.closeReason() === RATED_COUNTED_REASON) return t('live.rejectedRatedCountedAccount');
       if (liveGameRejection())
         return t(tenant.liveGameRejectedBody ?? 'live.roomLiveGameSeatedOnly');
       return ctx.closeReason() === 'play disabled'

@@ -57,6 +57,21 @@ describe('openChallengeDialog', () => {
     expect('rated' in body).toBe(false);
   });
 
+  it.each(['', '   ', ' @ '])('never posts an untargeted seek for handle %j', (handle) => {
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    openChallengeDialog({ handle });
+    const dialog = document.querySelector('dialog[data-challenge-dialog]');
+    dialog?.querySelector<HTMLButtonElement>('.confirm-dialog-confirm')?.click();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(dialog?.querySelector<HTMLElement>('.challenge-dialog-error')?.hidden).toBe(false);
+    expect(dialog?.querySelector<HTMLButtonElement>('.confirm-dialog-confirm')?.disabled).toBe(
+      false,
+    );
+  });
+
   it('sends rated only when Rated is picked for a variant that can be rated', () => {
     const fetchMock = vi.fn((_url: string, _init: RequestInit) => new Promise<Response>(() => {}));
     vi.stubGlobal('fetch', fetchMock);

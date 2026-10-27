@@ -157,6 +157,12 @@ export async function handleWebSocketConnection(
     socket.close(1008, 'rated requires account');
     return;
   }
+  if (assignment.deniedReason === 'rated-requires-counted-account') {
+    // A stats-excluded account in a rated room: distinct reason so the client
+    // says why instead of prompting a sign-in it already has.
+    socket.close(1008, 'rated requires counted account');
+    return;
+  }
   if (assignment.deniedReason === 'play-disabled') {
     // The account is an identity, not a player (126). Distinct close reason so
     // the client explains the lock instead of showing the generic spectator or

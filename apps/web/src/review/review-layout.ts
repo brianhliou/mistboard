@@ -405,8 +405,9 @@ export function createReviewScaffold(
   const grip = attachBoardResizeGrip(stage.el, () =>
     stage.el.querySelector<HTMLElement>('.review-stage__slot--primary'),
   );
-  const GRIP_SIZE_PX = 15;
-  const GRIP_INSET_PX = 3;
+  // Matches .board-resize-grip; flush in the corner so its long line meets both edges.
+  const GRIP_SIZE_PX = 16;
+  const GRIP_INSET_PX = 0;
   const positionGrip = (): void => {
     const slot = stage.el.querySelector<HTMLElement>('.review-stage__slot--primary');
     if (!slot) return;
@@ -579,6 +580,9 @@ function fitPrimaryToViewport(
         ? underboard.getBoundingClientRect().height + STACK_GAP_PX
         : 0;
     const cluster = stageEl.closest<HTMLElement>('.review-shell__cluster');
+    const seatRowsTopPx = cluster
+      ? Number.parseFloat(getComputedStyle(cluster).paddingTop) || 0
+      : 0;
     // An embedded review starts below its host's header, not under the site
     // nav, so the board fits the height left beneath that header, never less
     // than a readable board.
@@ -597,10 +601,11 @@ function fitPrimaryToViewport(
       const baseChrome = Number(cluster.dataset.uniBaseChrome ?? '0') || 0;
       cluster.style.setProperty(
         '--uni-board-chrome-h',
-        `${baseChrome + Math.round(underboardPx) + hostHeaderPx}px`,
+        `${baseChrome + Math.round(underboardPx) + hostHeaderPx + seatRowsTopPx}px`,
       );
     }
-    const available = window.innerHeight - VIEWPORT_CHROME_PX - underboardPx - hostHeaderPx;
+    const available =
+      window.innerHeight - VIEWPORT_CHROME_PX - underboardPx - hostHeaderPx - seatRowsTopPx;
     const slot = stageEl.querySelector<HTMLElement>('.review-stage__slot--primary');
     if (available <= 0 || !slot) return;
     const visibleStageRows = [...stageEl.children].filter(

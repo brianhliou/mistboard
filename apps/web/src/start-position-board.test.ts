@@ -17,7 +17,9 @@ describe('renderStartPositionSvg', () => {
     for (const id of CORRESPONDENCE_ELIGIBLE_SPEC_IDS) {
       const spec = maybeGameSpecForId(id);
       const svg = await renderStartPositionSvg(id);
-      if (spec?.visibility === 'dark') {
+      // Fog, and the mahjong tables (a dealt hand is concealed, and there is
+      // no board): the seek card keeps its plain tile.
+      if (spec?.visibility === 'dark' || spec?.visibility === 'concealed-hands') {
         expect(svg, id).toBeNull();
         continue;
       }

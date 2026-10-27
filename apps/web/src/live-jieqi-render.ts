@@ -5,7 +5,12 @@ import {
   type JieqiSquare,
   jieqiCheckedGeneral,
 } from '@mistboard/game';
-import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import {
+  flipSvgPiece,
+  glideSvgPiece,
+  pieceAnimationDurationMs,
+  pieceFlipDurationMs,
+} from './board-anim.js';
 import { boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
@@ -550,4 +555,55 @@ export function installJieqiBoardStyles(): void {
     .jieqi-hit rect { fill: transparent; cursor: pointer; }
   `;
   document.head.append(style);
+}
+
+// ── Turn-over on a live reveal (#709, prototype) ─────────────────────────────
+
+type JieqiFaceBoard = Partial<Record<JieqiSquare, { faceDown: boolean }>>;
+
+/**
+ * The square a live jieqi move turned face up, or null. Jieqi reveals a hidden
+ * piece the first time it moves, so the trigger is the wire move plus whether
+ * its origin held a face-down piece on the board shown before it (public: both
+ * seats see which pieces are face down) and its destination now shows a face.
+ * The caller passes the previous LIVE board only, never a scrubbed one.
+ */
+export function jieqiRevealSquare(
+  move: JieqiMove,
+  before: JieqiFaceBoard | null | undefined,
+  after: JieqiFaceBoard,
+): JieqiSquare | null {
+  if (!before?.[move.from]?.faceDown) return null;
+  const landed = after[move.to];
+  return landed && !landed.faceDown ? move.to : null;
+}
+
+/**
+ * Turn the piece on `square` over from this side's jieqi back (the same back
+ * the board drew for it while hidden). `delayMs` holds the turn until the
+ * glide that carries it lands, so the piece travels face down and turns over
+ * on arrival. Call after the render that drew the face.
+ */
+export function animateJieqiReveal(
+  host: HTMLElement,
+  square: JieqiSquare,
+  color: JieqiColor,
+  perspective: JieqiColor,
+  opts: { delayMs?: number } = {},
+): boolean {
+  const slot = host.querySelector(`[data-piece-square="${square}"]`);
+  if (!slot) return false;
+  const { file, rank } = jieqiCoordOf(square);
+  const center = intersection(file, rank, perspective);
+  const back = renderXiangqiPieceGlyphed({ color, role: 'soldier' }, readStoredXiangqiPieceSet(), {
+    ariaLabel: `${color} hidden piece`,
+    className: 'jieqi-piece',
+    shrouded: true,
+    shroudedStyle: 'back',
+    x: center.x - PIECE_SIZE / 2,
+    y: center.y - PIECE_SIZE / 2,
+    size: PIECE_SIZE,
+    shape: xiangqiPieceShapeForLayout(activeLayout),
+  });
+  return flipSvgPiece(slot, center, back, pieceFlipDurationMs(), opts);
 }

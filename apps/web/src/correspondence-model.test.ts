@@ -346,25 +346,19 @@ describe('start form prefill (the bell\'s "post it again" link)', () => {
   });
 });
 
-describe('allowlisted correspondence specs (xiangqi mahjong)', () => {
+// Held out of correspondence at launch (Brian, 2026-10-25), with or without a grant.
+describe('xiangqi mahjong is not offered by correspondence', () => {
   const granted = (specId: string) => specId === XIANGQI_MAHJONG_SPEC_ID;
 
-  it('are offered only to a viewer the menu offers them to', () => {
+  it('is in no picker, granted or not', () => {
     expect(CORRESPONDENCE_ELIGIBLE_SPEC_IDS).not.toContain(XIANGQI_MAHJONG_SPEC_ID);
     expect(correspondenceSpecIdsFor()).not.toContain(XIANGQI_MAHJONG_SPEC_ID);
-    expect(correspondenceSpecIdsFor(() => false)).toEqual([...CORRESPONDENCE_ELIGIBLE_SPEC_IDS]);
-    expect(correspondenceSpecIdsFor(granted)).toEqual([
-      ...CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
-      XIANGQI_MAHJONG_SPEC_ID,
-    ]);
+    expect(correspondenceSpecIdsFor(granted)).not.toContain(XIANGQI_MAHJONG_SPEC_ID);
   });
 
-  it('prefill a start form only for a granted viewer', () => {
+  it('never prefills it as the start form variant', () => {
     const search = `?gameSpecId=${XIANGQI_MAHJONG_SPEC_ID}&days=3`;
     expect(parseStartFormPrefill(search)).toEqual({ daysPerMove: 3 });
-    expect(parseStartFormPrefill(search, granted)).toEqual({
-      gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
-      daysPerMove: 3,
-    });
+    expect(parseStartFormPrefill(search, granted)).toEqual({ daysPerMove: 3 });
   });
 });

@@ -310,8 +310,10 @@ const ZH_HANS: Record<string, string> = {
     'General Blunder 用强引擎检查每一步合法着法，然后走对自己最差的那一步。',
   'In ten test games, an opponent choosing its moves at random checkmated it every time, the quickest in 19 moves.':
     '在十盘测试对局中，一个随机走棋的对手每盘都将死了它，最快的一盘只用了19步。',
-  'The easier challenge is to get a draw. The harder one is to make it win on the board.':
-    '较容易的挑战是下出和棋。较难的挑战是让它在棋盘上赢棋。',
+  'The easier challenge, a draw, fell on 19 October. We think the harder one, making it win, is out of reach in a real game.':
+    '较容易的挑战（下出和棋）已在10月19日被完成。较难的挑战（让它赢棋），我们认为在真实对局中几乎不可能做到。',
+  'Added the first draw, by rebirthfox333, and our verdict on the harder challenge.':
+    '新增了 rebirthfox333 下出的第一盘和棋，以及我们对较难挑战的结论。',
   '[General Blunder](/bot/general-blunder) is the xiangqi bot that tries to lose. Every turn it asks a strong engine about each of its legal moves and plays the one that is worst for itself: the move that gets it checkmated soonest, or, when no mate is in sight, the one that gives away the most.':
     '[General Blunder](/bot/general-blunder) 是一个想输棋的象棋机器人。每个回合，它都让强引擎评估自己的每一步合法着法，然后走对自己最差的那一步：让自己最快被将死的一着；看不到杀棋时，就走送掉子力最多的一着。',
   'Winning against it is not the hard part. We played ten test games against it with an opponent that picked every move at random, and the random player checkmated it in all ten. The quickest took 19 moves.':
@@ -322,17 +324,26 @@ const ZH_HANS: Record<string, string> = {
   'The easier challenge: get a draw': '较容易的挑战：下出和棋',
   'General Blunder never resigns, and Mistboard has no draw offers, so a draw has to come from the rules themselves. That is harder than it sounds against a bot that spends every turn handing you something. The [xiangqi rules page](/rules/xiangqi) lists every way a game can end. Find the one that works against an opponent that wants to lose.':
     'General Blunder 从不认输，Mistboard 也没有提和功能，所以和棋只能来自规则本身。面对一个每回合都在送你东西的机器人，这比听起来要难。[象棋规则页](/rules/xiangqi)列出了一盘棋结束的所有方式。找出对一个想输的对手有效的那一种。',
+  'rebirthfox333 did it first, on 19 October, the day this page went up, in [a 137-move draw](/xiangqi/game/xq_e4ff1ac2-dafd-4690-ad41-4a72780e550a). The game page shows how it ended, if you want the answer.':
+    'rebirthfox333 第一个做到了：10月19日，也就是本页上线当天，下出了[一盘137步的和棋](/xiangqi/game/xq_e4ff1ac2-dafd-4690-ad41-4a72780e550a)。想知道答案的话，对局页面显示了它是怎么结束的。',
   'The harder challenge: make it win': '较难的挑战：让它赢',
   'General Blunder treats winning as the worst thing it could do, so it wins when it has no other choice. A move that checkmates you sits at the very bottom of its list, and it plays one only when every legal move it has would end the game in its favour.':
     'General Blunder 把赢棋当作它能做的最差的事，所以只有在别无选择时它才会赢。将死你的着法排在它清单的最底部，只有当它的每一步合法着法都会以它获胜结束对局时，它才会走这样一步。',
-  'The challenge is to steer a real game into a position like that. It searches ahead, so it steps around a trap it can see coming. We have not managed it ourselves, and we do not know how hard it is.':
-    '挑战在于把一盘真实的对局引到这样的局面。它会向前搜索，所以能看出来的陷阱它会绕开。我们自己还没做到，也不知道这有多难。',
+  'The challenge is to steer a real game into a position like that. It searches ahead, so it steps around a trap it can see coming.':
+    '挑战在于把一盘真实的对局引到这样的局面。它会向前搜索，所以能看出来的陷阱它会绕开。',
+  'We think the win is out of reach': '我们认为让它赢棋几乎不可能',
+  'rebirthfox333 tried that too, in [a 103-move game on 20 October](/xiangqi/game/xq_efe0c4b1-bdd9-4290-877f-594c8693e772). General Blunder kept capturing with a chariot or a cannon on squares where Red could then checkmate it at once. Red had a mate in one on 36 different turns and, trying to lose, played none of them, so every one of those captures stood.':
+    'rebirthfox333 也试过，在[10月20日一盘103步的对局](/xiangqi/game/xq_efe0c4b1-bdd9-4290-877f-594c8693e772)里。General Blunder 一次次用车或炮吃子，吃完的位置让红方可以立刻将死它。红方有36个回合可以一步杀，但为了输棋一次都没走，所以这些吃子全都留了下来。',
+  'That is the catch. Every piece General Blunder keeps is another piece it can move, and with 30 or 40 legal moves there is nearly always one that wins slowly or not at all. Late in that game every move it had was winning, and it still never had to mate. It shuffled until Red resigned.':
+    '问题就在这里。General Blunder 每多留一个子，就多一个能动的子；有三四十步合法着法时，几乎总有一步是赢得很慢或根本不赢的。那盘棋的后段，它的每一步都是赢棋，但它始终不必将死对方。它来回挪子，直到红方认输。',
+  "It came close once. Around its 80th move it had three legal moves, and all three won by force. It picked the slowest, as it is built to, and Red's reply gave it room again.":
+    '它有一次很接近。大约在第80步，它只有三步合法着法，三步都是必胜。它按设计选了最慢的一步，而红方的应着又给了它回旋的余地。',
+  'So our verdict: making General Blunder win is probably impossible in a real game. The rules allow it, and the one route we can see runs against instinct: take its pieces until it has its general and almost nothing else, then leave it no move that does not win. No game we know of has got there.':
+    '所以我们的结论是：在真实对局中让 General Blunder 赢，大概是不可能的。规则允许这种结果，我们能想到的唯一路线也违反直觉：吃掉它的子，直到它只剩老将和极少的子，然后让它没有任何不赢的着法。据我们所知，还没有一盘棋走到那一步。',
   'Show us': '晒出你的棋局',
-  'If you draw General Blunder or get it to win, post the game on the [forum](/forum) with its link. Every finished game on Mistboard has its own page. Running out of time, resigning or leaving the game do not count. Those are the ways it wins today without anyone trying.':
-    '如果你和 General Blunder 下成了和棋，或者让它赢了，请把这盘棋的链接发到[论坛](/forum)。Mistboard 上每一盘下完的棋都有自己的页面。超时、认输或中途离开都不算。这些是它目前不用任何人刻意去做就能赢的方式。',
+  'If you get it to win, post the game on the [forum](/forum) with its link. Every finished game on Mistboard has its own page. Running out of time, resigning or leaving the game do not count. Those are the ways it wins today without anyone trying.':
+    '如果你让它赢了，请把这盘棋的链接发到[论坛](/forum)。Mistboard 上每一盘下完的棋都有自己的页面。超时、认输或中途离开都不算。这些是它目前不用任何人刻意去做就能赢的方式。',
   'Play General Blunder': '与 General Blunder 对弈',
-  'So can you make a bot that tries to lose win? The rules allow it: positions exist where every move General Blunder has would beat you, and in one of those it has to play one. Whether a person can walk a real game there, against a bot that sees the trap and tries to dodge it, is the open question. We will add the first game that does it to this page.':
-    '那么，你能让一个想输的机器人赢吗？规则允许：存在这样的局面，General Blunder 的每一步都会击败你，而在这样的局面里它必须走其中一步。一个人能否在真实对局中把棋引到那里，同时面对一个看得出陷阱并设法躲开的机器人，这是悬而未决的问题。第一盘做到的棋局，我们会加到这一页上。',
   'Can you lose?': '你能输掉吗？',
   // unstyled-first-paint: machine-drafted 2026-10-17, not native-reviewed.
   ENGINEERING: '工程',
@@ -2856,8 +2867,9 @@ const ZH_HANS: Record<string, string> = {
     '当对手轮到自己却无棋可走时，你获胜——通常是因为敌方棋子被全部吃光，有时则是被困死、无路可走。这里的将不是王棋：吃掉它只是进展，而非胜利，棋局会一直进行到一方被吃光或被困死为止。',
   'Mistboard draws a game two ways: 60 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly. A game started before 17 October 2026 keeps the 40-ply limit it began under.':
     'Mistboard 有两种自动和棋：连续 60 个半回合没有翻子或吃子，或同一局面出现三次。翻子或吃子会不可逆地改变局面，因此会重置两个计数。2026 年 10 月 17 日之前开始的对局仍按开局时的 40 个半回合计算。',
-  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
-    '捉子（长捉）指既不翻子也不吃子、走完后能吃掉对方刚走动那枚棋子的一步棋，不论那枚棋子有没有根。捉子的一方不能用捉子让同一局面第三次出现，必须改走别的着法，除非没有其他合法着法。由捉子造成的重复局面一律不判和，因为被捉的棋子不走就会被吃。不断把对方棋子赶到新位置的捉子不受限制。[这条规则为什么这样定](/blog/banqi-perpetual-chase)，附对局。',
+  'Repetition and chases': '重复局面与捉子',
+  'A position repeated three times draws, with one exception: a chase. A chase is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. So a repetition caused by a chase is never a draw: the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '同一局面出现三次判和，只有一个例外：捉子。捉子指既不翻子也不吃子、走完后能吃掉对方刚走动那枚棋子的一步棋，不论那枚棋子有没有根。捉子的一方不能用捉子让同一局面第三次出现，必须改走别的着法，除非没有其他合法着法。所以由捉子造成的重复局面一律不判和：被捉的棋子不走就会被吃。不断把对方棋子赶到新位置的捉子不受限制。[这条规则为什么这样定](/blog/banqi-perpetual-chase)，附对局。',
   'Play MistyBanqi': '对战 MistyBanqi',
   'Challenge a friend': '挑战好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -5828,7 +5840,7 @@ const ZH_HANS: Record<string, string> = {
   // xiangqi-mahjong-32: machine-drafted 2026-10-16 from the signed-off English. Terms follow the live table (live.xmj.*): 台, 面子, 将眼, 庄家, 胡, 自摸, 吃, 碰, 流局.
   'Xiangqi Mahjong Rules (32 tiles)': '象棋麻将规则（32 张）',
   'The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the points each one scores.':
-    '两人对打的 32 张象棋麻将：一副象棋当作麻将牌，手牌五张，图解每种胡牌牌型，以及各自的台数。',
+    '两人对打的 32 张象棋麻将规则：一副象棋当作麻将牌，手牌五张，图解每种胡牌牌型，以及各自的台数和计分方式，一场比赛共六手。',
   'Xiangqi Mahjong is a mahjong game played with the 32 pieces of a xiangqi set, a pastime from Taiwan. The pieces go face down as tiles, you draw and discard, and the first player to hold a complete hand wins. The hand is tiny: five tiles, which is one set of three and a pair. That makes the game fast, and it means you can learn the winning hands from the pictures on this page.':
     '象棋麻将是用一副象棋的 32 颗棋子来打的麻将，源自台湾的民间游戏。棋子盖着当牌，轮流摸牌、打牌，先凑成一副完整手牌的人就胡了。手牌很小：只有五张，也就是一组三张的面子加一对将眼。所以一手牌打得很快，看这一页的图就能学会所有胡牌牌型。',
   'This page describes the two-player game as Mistboard’s table plays it, with the rules the sources agree on.':
@@ -5877,12 +5889,15 @@ const ZH_HANS: Record<string, string> = {
   'How a hand ends': '一手牌怎么结束',
   'A hand ends in one of three ways. You draw the tile that completes your hand and declare a win, which is a self-drawn win. Or the other player discards that tile and you claim it. Or the wall runs out with nobody winning: the hand is void, nobody scores, and the deal passes.':
     '一手牌有三种结束方式。你摸到凑成手牌的那张并宣告胡牌，这是自摸。或者对手打出那张牌，你拿来胡。或者牌墙摸完了没人胡：这手牌流局，双方都不计分，换人做庄。',
-  'Two wins happen before the hand has really started. If the dealer’s opening five tiles already make a winning hand, that is a **heavenly hand**. If the other player wins with their first draw, before anyone has claimed a tile, that is an **earthly hand**.':
-    '有两种胡牌发生在一手牌真正开始之前。庄家起手的五张牌已经是胡牌牌型，叫做**天胡**。另一位玩家在还没有人吃碰之前，第一次摸牌就胡，叫做**地胡**。',
+  'A win before the hand has really started is a **heavenly hand**: the dealer’s opening five tiles already make a winning hand, or the other player wins with their first draw, before anyone has claimed a tile.':
+    '一手牌真正开始之前就胡牌，叫做**天胡**：庄家起手的五张牌已经是胡牌牌型，或另一位玩家在还没有人吃碰之前，第一次摸牌就胡。',
+  'Points now follow the scoring table in Gamesofa’s Xiangqi Mahjong app: new lines for one General, three of a piece and mixed Soldiers, no dealer point, and one heavenly hand for either player’s first draw.':
+    '台数改为依照 Gamesofa 象棋麻将 app 的计台表：新增将之才、帅之才、三张同子和鼓角齐鸣，取消庄家台，天胡改为任一方第一次摸牌就胡都算。',
   'Winning hands and their score': '胡牌牌型与台数',
-  'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when the player who did not deal wins it on a discard.':
-    '胡牌是五张牌：一组面子加一对将眼，吃碰亮出的面子也算在内。能凑的面子只有三种：将士象顺子、车马炮顺子、三张兵卒，所以下面前三种牌型就涵盖了全部。每副胡牌计台；每张图的说明写的是闲家胡对手弃牌时的台数。',
-  'General, Advisor and Elephant, with any pair: 1 point.': '将士象顺子，加任意将眼：1 台。',
+  'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
+    '胡牌是五张牌：一组面子加一对将眼，吃碰亮出的面子也算在内。能凑的面子只有三种：将士象顺子、车马炮顺子、三张兵卒，所以下面前三种牌型就涵盖了全部。每副胡牌计台；每张图的说明写的是胡对手弃牌时的台数。',
+  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for 2 points.':
+    '将士象顺子，加任意将眼：1 台；手上只有将或只有帅，再加 1 台，共 2 台。',
   'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.':
     '车马炮顺子，加任意将眼。将眼不必和面子同色：1 台。',
   'Three Soldiers of one colour, with any pair: 1 point.': '三张同色兵卒，加任意将眼：1 台。',
@@ -5892,6 +5907,10 @@ const ZH_HANS: Record<string, string> = {
     '将帅听令：红帅和黑将当将眼。再加 2 台，共 3 台。',
   'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.':
     '五兵合纵：同色的五张兵卒全到齐。再加 5 台，而且也是清一色：共 7 台。',
+  'Mixed Soldiers: five Soldiers of both colours. 2 more, for 3 points.':
+    '鼓角齐鸣：五张兵卒，红黑都有。再加 2 台，共 3 台。',
+  'Three of a piece: three Horses, of either colour. 2 more, for 3 points. Three Advisors, Elephants, Chariots or Cannons score the same.':
+    '三张同子：三张马，红黑不拘（千军万马）。再加 2 台，共 3 台。三张士、象、车或炮也一样。',
   'Close, but not a win': '差一点，但不算胡',
   'These look finished and are not. In each, the three tiles on the left fail to make a set or the two on the right fail to make a pair.':
     '这些看起来成牌了，其实没有。每一副不是左边三张凑不成面子，就是右边两张凑不成将眼。',
@@ -5911,26 +5930,27 @@ const ZH_HANS: Record<string, string> = {
   When: '条件',
   'Every winning hand': '每副胡牌',
   'One colour': '清一色',
+  'One General': '将之才 / 帅之才',
+  'One General in the hand and not the other': '手上有将或帅其中一张，没有另一张',
   'All five tiles one colour': '五张牌同一颜色',
   'Generals pair': '将帅听令',
+  'Three of a piece': '三张同子',
+  'Three Advisors, Elephants, Chariots, Horses or Cannons': '三张士、象、车、马或炮',
+  'Mixed Soldiers': '鼓角齐鸣',
+  'Five Soldiers of both colours': '五张兵卒，红黑都有',
   'The two Generals are the pair': '帅将两张当将眼',
   'Five Soldiers': '五兵合纵',
   'Five Soldiers of one colour': '同色五张兵卒',
   'Self-draw': '自摸',
   'You drew the winning tile': '胡的那张是自己摸到的',
-  Dealer: '庄家',
-  'The dealer won': '庄家胡牌',
   'Last tile': '海底捞月',
   'Self-draw on the last wall tile': '摸牌墙最后一张自摸',
-  'The two special hands are the exception. Each scores a flat 6, and nothing is added to it.':
-    '两种特殊牌型是例外，各计 6 台，不再加计其他项目。',
-  'Special hand': '特殊牌型',
-  'Heavenly hand': '天胡',
-  'The dealer’s first five tiles win': '庄家起手五张就胡',
-  'Earthly hand': '地胡',
-  'The other player wins on their first draw': '闲家第一次摸牌就胡',
-  'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair, 2 for the self-draw and 1 because the dealer won, 6 points in all. It is not one colour, since the pair is half black.':
-    '来算一个例子。庄家手上有红车马炮和红帅，从牌墙摸到黑将。这是一组面子加帅将一对：胡牌 1 台、将帅听令 2 台、自摸 2 台、庄家 1 台，共 6 台。将眼有一半是黑的，所以不算清一色。',
+  'The heavenly hand is the exception: it scores a flat 6 whoever wins it, and nothing is added to it.':
+    '天胡是例外：不论谁胡，都计 6 台，不再加计其他项目。',
+  'Five Soldiers of one colour score Five Soldiers, not Mixed Soldiers as well. The dealer scores nothing extra for dealing.':
+    '同色五张兵卒只计五兵合纵，不再另计鼓角齐鸣。庄家做庄不另加台。',
+  'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair and 2 for the self-draw, 5 points in all. It is not one colour, since the pair is half black, and with both Generals in it, One General does not apply.':
+    '来算一个例子。庄家手上有红车马炮和红帅，从牌墙摸到黑将。这是一组面子加帅将一对：胡牌 1 台、将帅听令 2 台、自摸 2 台，共 5 台。将眼有一半是黑的，所以不算清一色；将帅都在手上，也不算将之才或帅之才。',
   'The dealer draws the black General and declares a win.': '庄家摸到黑将，宣告胡牌。',
   'The match': '一场比赛',
   'A match is six hands, and the deal alternates every hand, so each player deals three times. The winner of a hand adds its points to their score, and the other score stays where it was. After six hands the higher score wins the match, and equal scores are a draw.':
@@ -5941,11 +5961,11 @@ const ZH_HANS: Record<string, string> = {
   void: '流局',
   Ana: 'Ana',
   Ben: 'Ben',
-  'Ana wins the match 7 to 6. The fifth hand decided it: a self-draw on the last tile while she was dealer, worth 1 for the win, 2 for the self-draw, 1 as dealer and 1 for the last tile.':
-    'Ana 以 7 比 6 赢得比赛。关键是第五手：她做庄时摸牌墙最后一张自摸，胡牌 1 台、自摸 2 台、庄家 1 台、海底捞月 1 台。',
+  'Ana wins the match 6 to 5. The fifth hand decided it: a self-draw on the last tile, worth 1 for the win, 2 for the self-draw and 1 for the last tile.':
+    'Ana 以 6 比 5 赢得比赛。关键是第五手：她摸牌墙最后一张自摸，胡牌 1 台、自摸 2 台、海底捞月 1 台。',
   'Where do these rules come from?': '这些规则从哪里来？',
-  'The game has no rulebook. The rules and point values here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they leave a choice, Mistboard made it: the deal alternates every hand, and a match is six hands, since the sources play for money and give no match format.':
-    '这个游戏没有正式的规则书。本页的规则和台数依据中文维基百科条目和 Eastking 的规则页，两者说法一致，也对照过其他台湾规则网页和 FunTown 的线上牌桌。来源没有规定的地方由 Mistboard 决定：每手轮流做庄，一场比赛打六手，因为这些来源都是赌钱玩的，没有给出比赛赛制。',
+  'The game has no rulebook. The tiles and winning hands here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. The points follow the scoring table inside Gamesofa’s Xiangqi Mahjong app. Where they leave a choice, Mistboard made it: the deal alternates every hand, a match is six hands, since the sources play for money and give no match format, and five Soldiers of one colour do not also score Mixed Soldiers.':
+    '这个游戏没有正式的规则书。本页的牌和胡牌牌型依据中文维基百科条目和 Eastking 的规则页，两者说法一致，也对照过其他台湾规则网页和 FunTown 的线上牌桌。台数依照 Gamesofa 象棋麻将 app 里的计台表。来源没有规定的地方由 Mistboard 决定：每手轮流做庄；一场比赛打六手，因为这些来源都是赌钱玩的，没有给出比赛赛制；同色五张兵卒也不另计鼓角齐鸣。',
   'Can more than two people play?': '可以超过两人玩吗？',
   'Folk sources play with two to four. With four, 17 tiles are dealt and only 15 stay in the wall, so each player gets about four draws, and claims on the other three players’ discards do much of the work. Mistboard plays the two-player game.':
     '民间玩法是二到四人。四人玩时发出 17 张，牌墙只剩 15 张，每人大约只摸得到四次，主要靠吃碰其他三家的弃牌。Mistboard 采用两人玩法。',
@@ -5953,11 +5973,11 @@ const ZH_HANS: Record<string, string> = {
   'The other player wins the match, whatever the score. Leaving the game, running out of time and resigning all end the match the same way they end any game on Mistboard.':
     '不论比分如何，留下的一方赢得比赛。离开对局、超时和认输，都和 Mistboard 上任何对局一样结束比赛。',
   'Why is there no kong or ready declaration?': '为什么没有杠，也不能宣告听牌？',
-  'Both turn up in the folk rules, but online tables mostly drop the kong from the 32-tile game, and every source treats the ready declaration as optional, so Mistboard leaves both out. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two.':
-    '民间规则里两者都有，但线上牌桌的 32 张玩法大多不算杠，各家来源也都把宣告听牌当作可选，所以 Mistboard 两者都不采用。反正杠也很少出现：杠是四张相同的牌，而只有兵卒多于两张。',
+  'Online tables mostly drop the kong from the 32-tile game, and Mistboard does too. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two. The ready declaration is not in yet. Gamesofa’s table gives 1 point for declaring ready and 5 for each of two hands won after a ready declaration; Mistboard leaves those three lines out until the table has a way to declare ready.':
+    '线上牌桌的 32 张玩法大多不算杠，Mistboard 也不算。反正杠也很少出现：杠是四张相同的牌，而只有兵卒多于两张。宣告听牌目前还没有。Gamesofa 的计台表里，听牌 1 台，宣告听牌后胡的双龙抢珠和再战各 5 台；在牌桌能宣告听牌之前，Mistboard 先不计这三项。',
   'Why does the deal always alternate?': '为什么每手都要换庄？',
-  'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, so in a six-hand match each player deals three times.':
-    '有些牌桌让胡牌的庄家连庄，并另外加台。Mistboard 则每手都换庄，所以六手的比赛每人各做三次庄。',
+  'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, and the dealer scores nothing extra, so in a six-hand match each player deals three times.':
+    '有些牌桌让胡牌的庄家连庄，并另外加台。Mistboard 则每手都换庄，庄家也不另加台，所以六手的比赛每人各做三次庄。',
   'Five tiles, one set and a pair. Learn the hands against the computer, then play a friend.':
     '五张牌，一组面子加一对将眼。先和电脑对打学会牌型，再找朋友来打。',
   'All 32 tiles: the sixteen red tiles above the sixteen black tiles':
@@ -6015,6 +6035,10 @@ const ZH_HANS: Record<string, string> = {
     '胡牌：将帅听令，红帅和黑将当将眼',
   'Winning hand: Five Soldiers: all five Soldiers of one colour':
     '胡牌：五兵合纵，同色五张兵卒全到齐',
+  'Winning hand: Mixed Soldiers: three red Soldiers with a pair of black ones':
+    '胡牌：鼓角齐鸣，三张红兵加一对黑卒',
+  'Winning hand: Three of a piece: a black Horse in the set and a pair of red Horses':
+    '胡牌：三张同子，黑车马炮加一对红马',
   'Not a winning hand: the General, Advisor and Elephant are not all one colour':
     '不算胡牌：将士象不是同一颜色',
   'Not a winning hand': '不算胡牌',
@@ -6070,8 +6094,8 @@ const ZH_HANS: Record<string, string> = {
   'Rewritten as a guide for chess players.': '改写为写给国际象棋棋手的指南。',
   'Reworked the diagrams, the history and the prose.': '重做了图示、历史部分和正文。',
   'Added a capture table and an FAQ.': '新增吃子对照表和常见问题。',
-  'The no-progress draw is now 60 plies without a capture or flip, up from 40.':
-    '无进展和棋现在是 60 个半回合内没有吃子或翻子，原来是 40。',
+  'The repetition and chase rules now sit together in one note under Winning and draws.':
+    '重复局面和捉子的规则现在合并为“胜负与和棋”下的一条说明。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我对弈 200 盘，每步一千万节点，采用台湾比赛规则和 40 个半回合无进展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':
@@ -6281,8 +6305,10 @@ const ZH_HANT: Record<string, string> = {
     'General Blunder 用強引擎檢查每一步合法著法，然後走對自己最差的那一步。',
   'In ten test games, an opponent choosing its moves at random checkmated it every time, the quickest in 19 moves.':
     '在十盤測試對局中，一個隨機走棋的對手每盤都將死了它，最快的一盤只用了19步。',
-  'The easier challenge is to get a draw. The harder one is to make it win on the board.':
-    '較容易的挑戰是下出和棋。較難的挑戰是讓它在棋盤上贏棋。',
+  'The easier challenge, a draw, fell on 19 October. We think the harder one, making it win, is out of reach in a real game.':
+    '較容易的挑戰（下出和棋）已在10月19日被完成。較難的挑戰（讓它贏棋），我們認為在真實對局中幾乎不可能做到。',
+  'Added the first draw, by rebirthfox333, and our verdict on the harder challenge.':
+    '新增了 rebirthfox333 下出的第一盤和棋，以及我們對較難挑戰的結論。',
   '[General Blunder](/bot/general-blunder) is the xiangqi bot that tries to lose. Every turn it asks a strong engine about each of its legal moves and plays the one that is worst for itself: the move that gets it checkmated soonest, or, when no mate is in sight, the one that gives away the most.':
     '[General Blunder](/bot/general-blunder) 是一個想輸棋的象棋機器人。每個回合，它都讓強引擎評估自己的每一步合法著法，然後走對自己最差的那一步：讓自己最快被將死的一著；看不到殺棋時，就走送掉子力最多的一著。',
   'Winning against it is not the hard part. We played ten test games against it with an opponent that picked every move at random, and the random player checkmated it in all ten. The quickest took 19 moves.':
@@ -6293,17 +6319,26 @@ const ZH_HANT: Record<string, string> = {
   'The easier challenge: get a draw': '較容易的挑戰：下出和棋',
   'General Blunder never resigns, and Mistboard has no draw offers, so a draw has to come from the rules themselves. That is harder than it sounds against a bot that spends every turn handing you something. The [xiangqi rules page](/rules/xiangqi) lists every way a game can end. Find the one that works against an opponent that wants to lose.':
     'General Blunder 從不認輸，Mistboard 也沒有提和功能，所以和棋只能來自規則本身。面對一個每回合都在送你東西的機器人，這比聽起來要難。[象棋規則頁](/rules/xiangqi)列出了一盤棋結束的所有方式。找出對一個想輸的對手有效的那一種。',
+  'rebirthfox333 did it first, on 19 October, the day this page went up, in [a 137-move draw](/xiangqi/game/xq_e4ff1ac2-dafd-4690-ad41-4a72780e550a). The game page shows how it ended, if you want the answer.':
+    'rebirthfox333 第一個做到了：10月19日，也就是本頁上線當天，下出了[一盤137步的和棋](/xiangqi/game/xq_e4ff1ac2-dafd-4690-ad41-4a72780e550a)。想知道答案的話，對局頁面顯示了它是怎麼結束的。',
   'The harder challenge: make it win': '較難的挑戰：讓它贏',
   'General Blunder treats winning as the worst thing it could do, so it wins when it has no other choice. A move that checkmates you sits at the very bottom of its list, and it plays one only when every legal move it has would end the game in its favour.':
     'General Blunder 把贏棋當作它能做的最差的事，所以只有在別無選擇時它才會贏。將死你的著法排在它清單的最底部，只有當它的每一步合法著法都會以它獲勝結束對局時，它才會走這樣一步。',
-  'The challenge is to steer a real game into a position like that. It searches ahead, so it steps around a trap it can see coming. We have not managed it ourselves, and we do not know how hard it is.':
-    '挑戰在於把一盤真實的對局引到這樣的局面。它會向前搜索，所以能看出來的陷阱它會繞開。我們自己還沒做到，也不知道這有多難。',
+  'The challenge is to steer a real game into a position like that. It searches ahead, so it steps around a trap it can see coming.':
+    '挑戰在於把一盤真實的對局引到這樣的局面。它會向前搜索，所以能看出來的陷阱它會繞開。',
+  'We think the win is out of reach': '我們認為讓它贏棋幾乎不可能',
+  'rebirthfox333 tried that too, in [a 103-move game on 20 October](/xiangqi/game/xq_efe0c4b1-bdd9-4290-877f-594c8693e772). General Blunder kept capturing with a chariot or a cannon on squares where Red could then checkmate it at once. Red had a mate in one on 36 different turns and, trying to lose, played none of them, so every one of those captures stood.':
+    'rebirthfox333 也試過，在[10月20日一盤103步的對局](/xiangqi/game/xq_efe0c4b1-bdd9-4290-877f-594c8693e772)裡。General Blunder 一次次用車或炮吃子，吃完的位置讓紅方可以立刻將死它。紅方有36個回合可以一步殺，但為了輸棋一次都沒走，所以這些吃子全都留了下來。',
+  'That is the catch. Every piece General Blunder keeps is another piece it can move, and with 30 or 40 legal moves there is nearly always one that wins slowly or not at all. Late in that game every move it had was winning, and it still never had to mate. It shuffled until Red resigned.':
+    '問題就在這裡。General Blunder 每多留一個子，就多一個能動的子；有三四十步合法著法時，幾乎總有一步是贏得很慢或根本不贏的。那盤棋的後段，它的每一步都是贏棋，但它始終不必將死對方。它來回挪子，直到紅方認輸。',
+  "It came close once. Around its 80th move it had three legal moves, and all three won by force. It picked the slowest, as it is built to, and Red's reply gave it room again.":
+    '它有一次很接近。大約在第80步，它只有三步合法著法，三步都是必勝。它按設計選了最慢的一步，而紅方的應著又給了它迴旋的餘地。',
+  'So our verdict: making General Blunder win is probably impossible in a real game. The rules allow it, and the one route we can see runs against instinct: take its pieces until it has its general and almost nothing else, then leave it no move that does not win. No game we know of has got there.':
+    '所以我們的結論是：在真實對局中讓 General Blunder 贏，大概是不可能的。規則允許這種結果，我們能想到的唯一路線也違反直覺：吃掉它的子，直到它只剩老將和極少的子，然後讓它沒有任何不贏的著法。據我們所知，還沒有一盤棋走到那一步。',
   'Show us': '曬出你的棋局',
-  'If you draw General Blunder or get it to win, post the game on the [forum](/forum) with its link. Every finished game on Mistboard has its own page. Running out of time, resigning or leaving the game do not count. Those are the ways it wins today without anyone trying.':
-    '如果你和 General Blunder 下成了和棋，或者讓它贏了，請把這盤棋的連結發到[論壇](/forum)。Mistboard 上每一盤下完的棋都有自己的頁面。超時、認輸或中途離開都不算。這些是它目前不用任何人刻意去做就能贏的方式。',
+  'If you get it to win, post the game on the [forum](/forum) with its link. Every finished game on Mistboard has its own page. Running out of time, resigning or leaving the game do not count. Those are the ways it wins today without anyone trying.':
+    '如果你讓它贏了，請把這盤棋的連結發到[論壇](/forum)。Mistboard 上每一盤下完的棋都有自己的頁面。超時、認輸或中途離開都不算。這些是它目前不用任何人刻意去做就能贏的方式。',
   'Play General Blunder': '與 General Blunder 對弈',
-  'So can you make a bot that tries to lose win? The rules allow it: positions exist where every move General Blunder has would beat you, and in one of those it has to play one. Whether a person can walk a real game there, against a bot that sees the trap and tries to dodge it, is the open question. We will add the first game that does it to this page.':
-    '那麼，你能讓一個想輸的機器人贏嗎？規則允許：存在這樣的局面，General Blunder 的每一步都會擊敗你，而在這樣的局面裡它必須走其中一步。一個人能否在真實對局中把棋引到那裡，同時面對一個看得出陷阱並設法躲開的機器人，這是懸而未決的問題。第一盤做到的棋局，我們會加到這一頁上。',
   'Can you lose?': '你能輸掉嗎？',
   // unstyled-first-paint: machine-drafted 2026-10-17, not native-reviewed.
   ENGINEERING: '工程',
@@ -6364,7 +6399,7 @@ const ZH_HANT: Record<string, string> = {
   // xiangqi-mahjong-32: machine-drafted 2026-10-16 from the signed-off English. Terms follow the live table (live.xmj.*): 台, 面子, 將眼, 莊家, 胡, 自摸, 吃, 碰, 流局; tile names per colour, black cannon 砲 as on the tile faces.
   'Xiangqi Mahjong Rules (32 tiles)': '象棋麻將規則（32 張）',
   'The 32-tile game of Xiangqi Mahjong for two players: one xiangqi set used as tiles, five-tile hands, the winning hands drawn out, and the points each one scores.':
-    '兩人對打的 32 張象棋麻將：一副象棋當作麻將牌，手牌五張，圖解每種胡牌牌型，以及各自的台數。',
+    '兩人對打的 32 張象棋麻將規則：一副象棋當作麻將牌，手牌五張，圖解每種胡牌牌型，以及各自的台數和計分方式，一場比賽共六手。',
   'Xiangqi Mahjong is a mahjong game played with the 32 pieces of a xiangqi set, a pastime from Taiwan. The pieces go face down as tiles, you draw and discard, and the first player to hold a complete hand wins. The hand is tiny: five tiles, which is one set of three and a pair. That makes the game fast, and it means you can learn the winning hands from the pictures on this page.':
     '象棋麻將是用一副象棋的 32 顆棋子來打的麻將，源自台灣的民間遊戲。棋子蓋著當牌，輪流摸牌、打牌，先湊成一副完整手牌的人就胡了。手牌很小：只有五張，也就是一組三張的面子加一對將眼。所以一手牌打得很快，看這一頁的圖就能學會所有胡牌牌型。',
   'This page describes the two-player game as Mistboard’s table plays it, with the rules the sources agree on.':
@@ -6413,12 +6448,15 @@ const ZH_HANT: Record<string, string> = {
   'How a hand ends': '一手牌怎麼結束',
   'A hand ends in one of three ways. You draw the tile that completes your hand and declare a win, which is a self-drawn win. Or the other player discards that tile and you claim it. Or the wall runs out with nobody winning: the hand is void, nobody scores, and the deal passes.':
     '一手牌有三種結束方式。你摸到湊成手牌的那張並宣告胡牌，這是自摸。或者對手打出那張牌，你拿來胡。或者牌牆摸完了沒人胡：這手牌流局，雙方都不計分，換人做莊。',
-  'Two wins happen before the hand has really started. If the dealer’s opening five tiles already make a winning hand, that is a **heavenly hand**. If the other player wins with their first draw, before anyone has claimed a tile, that is an **earthly hand**.':
-    '有兩種胡牌發生在一手牌真正開始之前。莊家起手的五張牌已經是胡牌牌型，叫做**天胡**。另一位玩家在還沒有人吃碰之前，第一次摸牌就胡，叫做**地胡**。',
+  'A win before the hand has really started is a **heavenly hand**: the dealer’s opening five tiles already make a winning hand, or the other player wins with their first draw, before anyone has claimed a tile.':
+    '一手牌真正開始之前就胡牌，叫做**天胡**：莊家起手的五張牌已經是胡牌牌型，或另一位玩家在還沒有人吃碰之前，第一次摸牌就胡。',
+  'Points now follow the scoring table in Gamesofa’s Xiangqi Mahjong app: new lines for one General, three of a piece and mixed Soldiers, no dealer point, and one heavenly hand for either player’s first draw.':
+    '台數改為依照 Gamesofa 象棋麻將 app 的計台表：新增將之才、帥之才、三張同子和鼓角齊鳴，取消莊家台，天胡改為任一方第一次摸牌就胡都算。',
   'Winning hands and their score': '胡牌牌型與台數',
-  'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when the player who did not deal wins it on a discard.':
-    '胡牌是五張牌：一組面子加一對將眼，吃碰亮出的面子也算在內。能湊的面子只有三種：將士象順子、車馬炮順子、三張兵卒，所以下面前三種牌型就涵蓋了全部。每副胡牌計台；每張圖的說明寫的是閒家胡對手棄牌時的台數。',
-  'General, Advisor and Elephant, with any pair: 1 point.': '將士象順子，加任意將眼：1 台。',
+  'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
+    '胡牌是五張牌：一組面子加一對將眼，吃碰亮出的面子也算在內。能湊的面子只有三種：將士象順子、車馬炮順子、三張兵卒，所以下面前三種牌型就涵蓋了全部。每副胡牌計台；每張圖的說明寫的是胡對手棄牌時的台數。',
+  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for 2 points.':
+    '將士象順子，加任意將眼：1 台；手上只有將或只有帥，再加 1 台，共 2 台。',
   'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.':
     '車馬炮順子，加任意將眼。將眼不必和面子同色：1 台。',
   'Three Soldiers of one colour, with any pair: 1 point.': '三張同色兵卒，加任意將眼：1 台。',
@@ -6428,6 +6466,10 @@ const ZH_HANT: Record<string, string> = {
     '將帥聽令：紅帥和黑將當將眼。再加 2 台，共 3 台。',
   'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.':
     '五兵合縱：同色的五張兵卒全到齊。再加 5 台，而且也是清一色：共 7 台。',
+  'Mixed Soldiers: five Soldiers of both colours. 2 more, for 3 points.':
+    '鼓角齊鳴：五張兵卒，紅黑都有。再加 2 台，共 3 台。',
+  'Three of a piece: three Horses, of either colour. 2 more, for 3 points. Three Advisors, Elephants, Chariots or Cannons score the same.':
+    '三張同子：三張馬，紅黑不拘（千軍萬馬）。再加 2 台，共 3 台。三張士、象、車或炮也一樣。',
   'Close, but not a win': '差一點，但不算胡',
   'These look finished and are not. In each, the three tiles on the left fail to make a set or the two on the right fail to make a pair.':
     '這些看起來成牌了，其實沒有。每一副不是左邊三張湊不成面子，就是右邊兩張湊不成將眼。',
@@ -6447,26 +6489,27 @@ const ZH_HANT: Record<string, string> = {
   When: '條件',
   'Every winning hand': '每副胡牌',
   'One colour': '清一色',
+  'One General': '將之才 / 帥之才',
+  'One General in the hand and not the other': '手上有將或帥其中一張，沒有另一張',
   'All five tiles one colour': '五張牌同一顏色',
   'Generals pair': '將帥聽令',
+  'Three of a piece': '三張同子',
+  'Three Advisors, Elephants, Chariots, Horses or Cannons': '三張士、象、車、馬或炮',
+  'Mixed Soldiers': '鼓角齊鳴',
+  'Five Soldiers of both colours': '五張兵卒，紅黑都有',
   'The two Generals are the pair': '帥將兩張當將眼',
   'Five Soldiers': '五兵合縱',
   'Five Soldiers of one colour': '同色五張兵卒',
   'Self-draw': '自摸',
   'You drew the winning tile': '胡的那張是自己摸到的',
-  Dealer: '莊家',
-  'The dealer won': '莊家胡牌',
   'Last tile': '海底撈月',
   'Self-draw on the last wall tile': '摸牌牆最後一張自摸',
-  'The two special hands are the exception. Each scores a flat 6, and nothing is added to it.':
-    '兩種特殊牌型是例外，各計 6 台，不再加計其他項目。',
-  'Special hand': '特殊牌型',
-  'Heavenly hand': '天胡',
-  'The dealer’s first five tiles win': '莊家起手五張就胡',
-  'Earthly hand': '地胡',
-  'The other player wins on their first draw': '閒家第一次摸牌就胡',
-  'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair, 2 for the self-draw and 1 because the dealer won, 6 points in all. It is not one colour, since the pair is half black.':
-    '來算一個例子。莊家手上有紅俥傌炮和紅帥，從牌牆摸到黑將。這是一組面子加帥將一對：胡牌 1 台、將帥聽令 2 台、自摸 2 台、莊家 1 台，共 6 台。將眼有一半是黑的，所以不算清一色。',
+  'The heavenly hand is the exception: it scores a flat 6 whoever wins it, and nothing is added to it.':
+    '天胡是例外：不論誰胡，都計 6 台，不再加計其他項目。',
+  'Five Soldiers of one colour score Five Soldiers, not Mixed Soldiers as well. The dealer scores nothing extra for dealing.':
+    '同色五張兵卒只計五兵合縱，不再另計鼓角齊鳴。莊家做莊不另加台。',
+  'A worked example. The dealer holds the red Chariot, Horse and Cannon and the red General, and draws the black General from the wall. That is a set and the Generals pair: 1 for the win, 2 for the Generals pair and 2 for the self-draw, 5 points in all. It is not one colour, since the pair is half black, and with both Generals in it, One General does not apply.':
+    '來算一個例子。莊家手上有紅俥傌炮和紅帥，從牌牆摸到黑將。這是一組面子加帥將一對：胡牌 1 台、將帥聽令 2 台、自摸 2 台，共 5 台。將眼有一半是黑的，所以不算清一色；將帥都在手上，也不算將之才或帥之才。',
   'The dealer draws the black General and declares a win.': '莊家摸到黑將，宣告胡牌。',
   'The match': '一場比賽',
   'A match is six hands, and the deal alternates every hand, so each player deals three times. The winner of a hand adds its points to their score, and the other score stays where it was. After six hands the higher score wins the match, and equal scores are a draw.':
@@ -6477,11 +6520,11 @@ const ZH_HANT: Record<string, string> = {
   void: '流局',
   Ana: 'Ana',
   Ben: 'Ben',
-  'Ana wins the match 7 to 6. The fifth hand decided it: a self-draw on the last tile while she was dealer, worth 1 for the win, 2 for the self-draw, 1 as dealer and 1 for the last tile.':
-    'Ana 以 7 比 6 贏得比賽。關鍵是第五手：她做莊時摸牌牆最後一張自摸，胡牌 1 台、自摸 2 台、莊家 1 台、海底撈月 1 台。',
+  'Ana wins the match 6 to 5. The fifth hand decided it: a self-draw on the last tile, worth 1 for the win, 2 for the self-draw and 1 for the last tile.':
+    'Ana 以 6 比 5 贏得比賽。關鍵是第五手：她摸牌牆最後一張自摸，胡牌 1 台、自摸 2 台、海底撈月 1 台。',
   'Where do these rules come from?': '這些規則從哪裡來？',
-  'The game has no rulebook. The rules and point values here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. Where they leave a choice, Mistboard made it: the deal alternates every hand, and a match is six hands, since the sources play for money and give no match format.':
-    '這個遊戲沒有正式的規則書。本頁的規則和台數依據中文維基百科條目和 Eastking 的規則頁，兩者說法一致，也對照過其他台灣規則網頁和 FunTown 的線上牌桌。來源沒有規定的地方由 Mistboard 決定：每手輪流做莊，一場比賽打六手，因為這些來源都是賭錢玩的，沒有給出比賽賽制。',
+  'The game has no rulebook. The tiles and winning hands here follow the Chinese Wikipedia article and the Eastking rule page, which agree, checked against other Taiwanese rule pages and FunTown’s online parlour. The points follow the scoring table inside Gamesofa’s Xiangqi Mahjong app. Where they leave a choice, Mistboard made it: the deal alternates every hand, a match is six hands, since the sources play for money and give no match format, and five Soldiers of one colour do not also score Mixed Soldiers.':
+    '這個遊戲沒有正式的規則書。本頁的牌和胡牌牌型依據中文維基百科條目和 Eastking 的規則頁，兩者說法一致，也對照過其他台灣規則網頁和 FunTown 的線上牌桌。台數依照 Gamesofa 象棋麻將 app 裡的計台表。來源沒有規定的地方由 Mistboard 決定：每手輪流做莊；一場比賽打六手，因為這些來源都是賭錢玩的，沒有給出比賽賽制；同色五張兵卒也不另計鼓角齊鳴。',
   'Can more than two people play?': '可以超過兩人玩嗎？',
   'Folk sources play with two to four. With four, 17 tiles are dealt and only 15 stay in the wall, so each player gets about four draws, and claims on the other three players’ discards do much of the work. Mistboard plays the two-player game.':
     '民間玩法是二到四人。四人玩時發出 17 張，牌牆只剩 15 張，每人大約只摸得到四次，主要靠吃碰其他三家的棄牌。Mistboard 採用兩人玩法。',
@@ -6489,11 +6532,11 @@ const ZH_HANT: Record<string, string> = {
   'The other player wins the match, whatever the score. Leaving the game, running out of time and resigning all end the match the same way they end any game on Mistboard.':
     '不論比分如何，留下的一方贏得比賽。離開對局、超時和認輸，都和 Mistboard 上任何對局一樣結束比賽。',
   'Why is there no kong or ready declaration?': '為什麼沒有槓，也不能宣告聽牌？',
-  'Both turn up in the folk rules, but online tables mostly drop the kong from the 32-tile game, and every source treats the ready declaration as optional, so Mistboard leaves both out. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two.':
-    '民間規則裡兩者都有，但線上牌桌的 32 張玩法大多不算槓，各家來源也都把宣告聽牌當作可選，所以 Mistboard 兩者都不採用。反正槓也很少出現：槓是四張相同的牌，而只有兵卒多於兩張。',
+  'Online tables mostly drop the kong from the 32-tile game, and Mistboard does too. A kong would hardly come up anyway: it is four identical tiles, and only the Soldiers come in more than two. The ready declaration is not in yet. Gamesofa’s table gives 1 point for declaring ready and 5 for each of two hands won after a ready declaration; Mistboard leaves those three lines out until the table has a way to declare ready.':
+    '線上牌桌的 32 張玩法大多不算槓，Mistboard 也不算。反正槓也很少出現：槓是四張相同的牌，而只有兵卒多於兩張。宣告聽牌目前還沒有。Gamesofa 的計台表裡，聽牌 1 台，宣告聽牌後胡的雙龍搶珠和再戰各 5 台；在牌桌能宣告聽牌之前，Mistboard 先不計這三項。',
   'Why does the deal always alternate?': '為什麼每手都要換莊？',
-  'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, so in a six-hand match each player deals three times.':
-    '有些牌桌讓胡牌的莊家連莊，並另外加台。Mistboard 則每手都換莊，所以六手的比賽每人各做三次莊。',
+  'Some tables let a dealer who wins keep the deal and score extra for it. Mistboard passes the deal every hand instead, and the dealer scores nothing extra, so in a six-hand match each player deals three times.':
+    '有些牌桌讓胡牌的莊家連莊，並另外加台。Mistboard 則每手都換莊，莊家也不另加台，所以六手的比賽每人各做三次莊。',
   'Five tiles, one set and a pair. Learn the hands against the computer, then play a friend.':
     '五張牌，一組面子加一對將眼。先和電腦對打學會牌型，再找朋友來打。',
   'All 32 tiles: the sixteen red tiles above the sixteen black tiles':
@@ -6551,6 +6594,10 @@ const ZH_HANT: Record<string, string> = {
     '胡牌：將帥聽令，紅帥和黑將當將眼',
   'Winning hand: Five Soldiers: all five Soldiers of one colour':
     '胡牌：五兵合縱，同色五張兵卒全到齊',
+  'Winning hand: Mixed Soldiers: three red Soldiers with a pair of black ones':
+    '胡牌：鼓角齊鳴，三張紅兵加一對黑卒',
+  'Winning hand: Three of a piece: a black Horse in the set and a pair of red Horses':
+    '胡牌：三張同子，黑車馬砲加一對紅傌',
   'Not a winning hand: the General, Advisor and Elephant are not all one colour':
     '不算胡牌：將士象不是同一顏色',
   'Not a winning hand': '不算胡牌',
@@ -9182,8 +9229,9 @@ const ZH_HANT: Record<string, string> = {
     '當對手輪到自己卻無棋可走時，你獲勝——通常是因為敵方棋子被全部吃光，有時則是被困死、無路可走。這裡的將不是王棋：吃掉它只是進展，而非勝利，棋局會一直進行到一方被吃光或被困死為止。',
   'Mistboard draws a game two ways: 60 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly. A game started before 17 October 2026 keeps the 40-ply limit it began under.':
     'Mistboard 有兩種自動和棋：連續 60 個半回合沒有翻子或吃子，或同一局面出現三次。翻子或吃子會不可逆地改變局面，因此會重置兩個計數。2026 年 10 月 17 日之前開始的對局仍按開局時的 40 個半回合計算。',
-  'A chase (長捉) is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. A repetition caused by a chase is never a draw, because the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
-    '捉子（長捉）指既不翻子也不吃子、走完後能吃掉對方剛走動那枚棋子的一步棋，不論那枚棋子有沒有根。捉子的一方不能用捉子讓同一局面第三次出現，必須改走別的著法，除非沒有其他合法著法。由捉子造成的重複局面一律不判和，因為被捉的棋子不走就會被吃。不斷把對方棋子趕到新位置的捉子不受限制。[這條規則為什麼這樣定](/blog/banqi-perpetual-chase)，附對局。',
+  'Repetition and chases': '重複局面與捉子',
+  'A position repeated three times draws, with one exception: a chase. A chase is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. So a repetition caused by a chase is never a draw: the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '同一局面出現三次判和，只有一個例外：捉子。捉子指既不翻子也不吃子、走完後能吃掉對方剛走動那枚棋子的一步棋，不論那枚棋子有沒有根。捉子的一方不能用捉子讓同一局面第三次出現，必須改走別的著法，除非沒有其他合法著法。所以由捉子造成的重複局面一律不判和：被捉的棋子不走就會被吃。不斷把對方棋子趕到新位置的捉子不受限制。[這條規則為什麼這樣定](/blog/banqi-perpetual-chase)，附對局。',
   'Play MistyBanqi': '對戰 MistyBanqi',
   'Challenge a friend': '挑戰好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -9242,7 +9290,7 @@ const ZH_HANT: Record<string, string> = {
   'Orthodox xiangqi forbids facing generals. Fog Xiangqi allows the position; if one general sees the other on a clear file, it can capture across that file.':
     '正統象棋禁止將帥照面。迷霧象棋允許這個局面；如果一方將帥在無阻擋的直線上看見對方，就可以沿這條線直接擒獲。',
   'Banqi Rules': '暗棋規則',
-  'Banqi Rules (Chinese Dark Chess)': '暗棋規則：玩法詳解與免費線上對弈',
+  'Banqi Rules (Chinese Dark Chess)': '暗棋規則：吃子大小、兵吃將與砲的走法',
   'Use [Xiangqi Rules](/rules/xiangqi) for the base game. This page covers what changes.':
     '基礎規則請參考[象棋規則](/rules/xiangqi)。本頁只說明變化之處。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
@@ -11234,7 +11282,7 @@ const ZH_HANT: Record<string, string> = {
   "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
     '揭棋保留象棋的棋盤和將死目標，但隱藏所有非將帥棋子的身份。暗子首次按它所在起始位置的棋子走法移動、攻擊和吃子，走完後翻開，之後按真實身份行棋。',
   'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
-    '暗棋又稱盲棋，在半張象棋棋盤上以背面朝上的棋子進行。棋子按等級吃子，但有兩個例外：卒可以吃將，炮則隔著一個炮架跳吃任何棋子。',
+    '暗棋規則怎麼玩？看圖掌握棋子大小與吃子順序、兵吃將、砲隔一子吃棋，以及翻子、走法、勝負與和棋判定。採用台灣暗棋玩法，看完可免費線上對弈。',
   'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
     '暗棋是在半張象棋棋盤上進行的快節奏隱藏棋子遊戲。三十二枚棋子全部洗勻並背面朝上。第一次翻子決定雙方顏色。之後每回合都在兩種行動中選擇：翻開棋子，或移動一枚已翻開的棋子。除砲外，吃子按等級進行。',
   'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
@@ -11872,8 +11920,8 @@ const ZH_HANT: Record<string, string> = {
   'Rewritten as a guide for chess players.': '改寫為寫給西洋棋棋手的指南。',
   'Reworked the diagrams, the history and the prose.': '重做了圖示、歷史部分和正文。',
   'Added a capture table and an FAQ.': '新增吃子對照表和常見問題。',
-  'The no-progress draw is now 60 plies without a capture or flip, up from 40.':
-    '無進展和棋現在是 60 個半回合內沒有吃子或翻子，原來是 40。',
+  'The repetition and chase rules now sit together in one note under Winning and draws.':
+    '重複局面和捉子的規則現在合併為「勝負與和棋」下的一條說明。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我對弈 200 盤，每步一千萬節點，採用台灣比賽規則和 40 個半回合無進展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':

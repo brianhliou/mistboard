@@ -24,7 +24,6 @@ import { jungleFlipTenant } from '../jungle-flip-tenant.js';
 import { jungleTenant } from '../jungle-tenant.js';
 import {
   createUser,
-  getBestRatingsAnyTimeClass,
   getLeaderboardSummary,
   getUserProfileByHandle,
   recordGameEnd,
@@ -363,6 +362,97 @@ test('friend rooms: a guest is refused either seat of a rated Jieqi friend room'
   );
 });
 
+// ── Stats-excluded accounts never rate (2026-10-26) ─────────────────────────
+//
+// An operator or QA account (users.stats_excluded_at) is not counted, so a game
+// it plays must not move a counted player's rating: a rated XMJ friend game on
+// 10-26 took an opponent from 1500 to 1338. Casual play is untouched.
+
+const EXCLUDED = {
+  ...ACCOUNT,
+  id: 'user-excluded',
+  handle: 'excluded',
+  statsExcludedAt: new Date('2026-09-25T00:00:00Z'),
+} as UserAccount;
+
+test('friend rooms: a stats-excluded creator is refused a rated friend room on every rated variant', async () => {
+  const rated = routingTenants().filter((registration) => registration.lobby?.supportsRated);
+  assert.ok(
+    rated.some((registration) => registration.gameSpecId === xiangqiMahjongTenant.gameSpecId),
+    'xiangqi mahjong is a rated friend-room variant',
+  );
+  await withRatedOn(async () => {
+    for (const registration of rated) {
+      await withTenantEnabled(registration, async () => {
+        const refused = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: true, timeControl: BLITZ },
+          EXCLUDED,
+        );
+        assert.equal(refused.status, 403, `${registration.kind}: ${JSON.stringify(refused.json)}`);
+        assert.deepEqual(
+          refused.json,
+          { error: 'rated_requires_counted_account' },
+          registration.kind,
+        );
+        const casual = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: false, timeControl: BLITZ },
+          EXCLUDED,
+        );
+        assert.equal(casual.status, 201, `${registration.kind}: casual stays open`);
+        assert.equal(casual.json.rated, false, registration.kind);
+      });
+    }
+  });
+});
+
+test('friend rooms: a stats-excluded account is refused either seat of a rated room, not a casual one', async () => {
+  for (const tenant of [jieqiTenant, xiangqiMahjongTenant] as unknown as AnyTenant[]) {
+    const registration = routingTenants().find(
+      (candidate) => candidate.gameSpecId === tenant.gameSpecId,
+    );
+    assert.ok(registration, `${tenant.kind} is registered`);
+    await withRatedOn(() =>
+      withTenantEnabled(registration, async () => {
+        const created = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: true, timeControl: BLITZ },
+          ACCOUNT,
+        );
+        assert.equal(created.status, 201, tenant.kind);
+        const room = registration.rooms.get(
+          created.json.roomId as string,
+        ) as unknown as TenantSeatRoom<string>;
+        // First seat: the excluded account arrives before the creator.
+        assert.deepEqual(assignTenantSeat(tenant, room, 'excluded-first', undefined, EXCLUDED), {
+          ok: false,
+          reason: 'rated requires counted account',
+        });
+        assert.ok(assignTenantSeat(tenant, room, 'creator', undefined, ACCOUNT).ok, tenant.kind);
+        // Second seat: the excluded account accepts the creator's rated link.
+        assert.deepEqual(assignTenantSeat(tenant, room, 'excluded-second', undefined, EXCLUDED), {
+          ok: false,
+          reason: 'rated requires counted account',
+        });
+
+        const casual = await createFriendRoom(
+          registration,
+          { mode: 'pvp', rated: false, timeControl: BLITZ },
+          ACCOUNT,
+        );
+        const casualRoom = registration.rooms.get(
+          casual.json.roomId as string,
+        ) as unknown as TenantSeatRoom<string>;
+        assert.ok(
+          assignTenantSeat(tenant, casualRoom, 'excluded-casual', undefined, EXCLUDED).ok,
+          `${tenant.kind}: a casual seat stays open to an excluded account`,
+        );
+      }),
+    );
+  }
+});
+
 type AnyTenant = VariantTenant<
   string,
   string,
@@ -635,10 +725,10 @@ definePersistenceTests('lobby rated', () => {
 
   // Xiangqi mahjong rates the whole four-hand match (the room finishes when the
   // match does) at 5+5, the one rated pace its lobby offers. Seats are east and
-  // west, so this is the write that needs the east->white slot mapping; and the
-  // spec is allowlisted, so the rating must reach no public rating surface.
+  // west, so this is the write that needs the east->white slot mapping. Launched
+  // (no grant), so the pool is public: a rapid ladder and a profile row.
   persistenceTest(
-    'a rated Xiangqi Mahjong match moves both ratings and stays private',
+    'a rated Xiangqi Mahjong match moves both ratings onto the public rapid ladder',
     async () => {
       const registration = registeredVariantTenants().find(
         (candidate) => candidate.gameSpecId === xiangqiMahjongTenant.gameSpecId,
@@ -704,21 +794,20 @@ definePersistenceTests('lobby rated', () => {
         await client.end();
       }
 
-      // Allowlisted: no ladder, no profile rail row, no best-rating badge.
+      // Public pool: a rapid ladder (5+5 is rapid) and a profile row.
       for (const timeClass of ['bullet', 'blitz', 'rapid'] as const) {
         const ladders = await getLeaderboardSummary({ timeClass });
-        assert.ok(
-          ladders.every((ladder) => ladder.variant !== 'xiangqi_mahjong'),
+        assert.equal(
+          ladders.some((ladder) => ladder.variant === 'xiangqi_mahjong'),
+          timeClass === 'rapid',
           `xiangqi_mahjong ladder on the ${timeClass} leaderboard`,
         );
       }
-      const best = await getBestRatingsAnyTimeClass(['user_xmj_east', 'user_xmj_west']);
-      assert.deepEqual([...best.values()].length, 0, 'no best-rating badge from a private pool');
       const profile = await getUserProfileByHandle('userxmjwest', null);
       assert.ok(profile, 'the profile loads');
       assert.ok(
-        profile.ratings.every((rating) => rating.variant !== 'xiangqi_mahjong'),
-        'xiangqi_mahjong on a public profile',
+        profile.ratings.some((rating) => rating.variant === 'xiangqi_mahjong'),
+        'xiangqi_mahjong on the winner profile',
       );
     },
   );

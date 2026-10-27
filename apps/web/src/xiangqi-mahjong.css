@@ -76,6 +76,27 @@
   --board-resize-ink: #f1f5f2;
 }
 
+/* On a phone the tiles keep fixed sizes (max-width 520px, below), so the
+   table is the same height at any width and the 1.45 ratio means nothing:
+   at 360x780 the phone room's height budget squeezed the column to 231px,
+   under the 294px the hand needs, and the table ran past the right edge and
+   39px into the bottom seat line. Here the table takes the screen's width
+   and its block takes the table's height, which the phone rules below keep
+   inside the slot a xiangqi board gets, so the room fits one screen. */
+@media (max-width: 600px) {
+  .live-route--xiangqi-mahjong .review-shell__cluster.live-review__cluster {
+    --phone-room-slack: 0px;
+  }
+
+  .live-route--xiangqi-mahjong .live-review__cluster .board-shell {
+    width: 100%;
+  }
+
+  .live-route--xiangqi-mahjong .live-review__cluster > .review-shell__center {
+    height: auto;
+  }
+}
+
 @media (min-width: 800px) {
   .live-route--xiangqi-mahjong .xiangqi-mahjong-live-board {
     container-type: inline-size;
@@ -105,7 +126,6 @@
 
   /* The centre band and the wall grow with the table too, never below their
      laptop size: on a big screen they were the smallest things on it. */
-  .live-route--xiangqi-mahjong .xmj-seat-row,
   .live-route--xiangqi-mahjong .xmj-centre {
     font-size: max(13px, calc(13 * var(--xmj-u)));
   }
@@ -125,6 +145,10 @@
     width: max(20px, calc(20 * var(--xmj-u)));
     height: max(26px, calc(26 * var(--xmj-u)));
     font-size: max(12px, calc(12 * var(--xmj-u)));
+  }
+
+  .live-route--xiangqi-mahjong .xmj-message__strut {
+    height: max(26px, calc(26 * var(--xmj-u)));
   }
 
   .live-route--xiangqi-mahjong .xmj-centre {
@@ -298,24 +322,9 @@
   min-width: 0;
 }
 
-.xmj-seat-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 14px;
-  min-width: 0;
-  min-height: 24px;
-}
-
-.xmj-name {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
 .xmj-badge {
   font-size: 12px;
+  line-height: 1.3;
   padding: 2px 8px;
   border-radius: 999px;
   background: var(--xmj-chip);
@@ -333,17 +342,40 @@
   font-weight: 600;
 }
 
-/* A rack holds its height with no tiles in it, so a seat never jumps. A
-   claimed set stands well apart from the hand, as at a mahjong table. */
+/* A rack holds one height all match: with no tiles, with a claimed set's
+   tray (the 8px), and whichever badges it carries. The hand sits in the
+   middle, the dealer badge to its left and the seat to discard to its right,
+   so a badge coming or going never moves the tiles. A claimed set stands well
+   apart from the hand, as at a mahjong table. */
 .xmj-rack {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 8px 20px;
-  flex-wrap: wrap;
-  min-height: calc(var(--xmj-tile-h) + var(--xmj-depth));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: calc(var(--xmj-tile-h) + var(--xmj-depth) + 8px);
   padding-bottom: var(--xmj-depth);
   box-sizing: border-box;
+}
+
+.xmj-rack__hand {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+}
+
+.xmj-rack__tag {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.xmj-rack__tag--start {
+  align-items: flex-end;
+}
+
+.xmj-rack__tag--end {
+  align-items: flex-start;
 }
 
 .xmj-concealed {
@@ -359,14 +391,13 @@
 }
 
 /* A claimed set is face up for both players: it sits on a pale tray, its
-   caption under it, apart from the hand that only its owner sees. The
-   claimed tile lies sideways on the tray's bottom edge. */
+   caption set into the tray's top edge so it takes no height of its own,
+   apart from the hand that only its owner sees. The claimed tile lies
+   sideways on the tray's bottom edge. */
 .xmj-meld {
+  position: relative;
   display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 5px 5px 3px;
+  padding: 3px;
   border: 1px dashed rgb(255 255 255 / 0.32);
   border-radius: 9px;
   background: rgb(255 255 255 / 0.08);
@@ -379,8 +410,16 @@
 }
 
 .xmj-meld__cap {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--xmj-felt);
+  white-space: nowrap;
   color: rgb(255 255 255 / 0.75);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.06em;
   line-height: 1.2;
@@ -769,6 +808,19 @@
   margin: 0 1px;
 }
 
+.xmj-message--held {
+  visibility: hidden;
+}
+
+/* The height of a message tile, with no tile: a face-down one here would
+   read as a hidden hand to anything counting backs. */
+.xmj-message__strut {
+  display: inline-block;
+  width: 0;
+  height: 26px;
+  vertical-align: middle;
+}
+
 .xmj-note {
   margin: 0;
   font-size: 13px;
@@ -871,6 +923,25 @@
 
 .xmj-result > :last-child {
   margin-bottom: auto;
+}
+
+/* A hand nobody won: a card the size of its sentence over the centre band,
+   the discards above and below left in view. `translate` rather than
+   `transform`, so the entrance's scale still applies. */
+.xmj-result--brief {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  width: max-content;
+  max-width: 100%;
+  overflow: visible;
+  padding: 12px 20px;
+  gap: 6px;
+}
+
+.xmj-middle--brief > .xmj-centre {
+  visibility: hidden;
 }
 
 .xmj-sr {
@@ -1305,6 +1376,73 @@ ol.xmj-log {
 
 /* ── Phones ────────────────────────────────────────────────────────────────── */
 
+/* The phone room fits one screen, as a xiangqi room does (Brian, 2026-10-25:
+   "ideally we should make the room page not vertically scroll on mobile").
+   A xiangqi board gets 426px between the player rows at 390x664; the table
+   was 539px with the points table under it. So, on a phone only:
+   - each pond is one row of twelve: over 400 bot matches no hand passed 12
+     discards (the median hand ends at 3), so the second row was empty felt;
+   - the badges and the points table leave the felt for the player rows
+     (`seatTags` in live-xiangqi-mahjong.ts): at six tiles a badge column
+     beside the hand is 20px wide and clipped "To discard";
+   - the hand's result lies over the whole table, not the shorter middle band.
+   The centre keeps its 118px, the height of a claim prompt and its buttons,
+   so the table still never changes height. */
+@media (max-width: 520px) {
+  .live-route--xiangqi-mahjong .xmj-table {
+    width: 100%;
+    container-type: inline-size;
+    padding: 8px;
+    gap: 6px;
+    --xmj-pond-gap: 2px;
+    --xmj-pond-w: min(28px, calc((100cqw - 22px) / 12));
+    --xmj-pond-h: calc(var(--xmj-pond-w) * 1.32);
+  }
+
+  .live-route--xiangqi-mahjong .xmj-middle {
+    position: static;
+    gap: 8px;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-pond-wrap {
+    width: calc(var(--xmj-pond-w) * 12 + var(--xmj-pond-gap) * 11);
+  }
+
+  .live-route--xiangqi-mahjong .xmj-pond {
+    grid-template-columns: repeat(12, var(--xmj-pond-w));
+    row-gap: 4px;
+    min-height: calc(var(--xmj-pond-h) + 8px);
+    padding-top: 4px;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-bubble::after {
+    left: calc(
+      mod(var(--xmj-i, 0), 12) *
+      (var(--xmj-pond-w) + var(--xmj-pond-gap)) +
+      var(--xmj-pond-w) /
+      2
+    );
+  }
+
+  .live-route--xiangqi-mahjong .xmj-rack {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  .live-route--xiangqi-mahjong .xmj-rack__tag,
+  .live-route--xiangqi-mahjong .xmj-hands-under {
+    display: none;
+  }
+}
+
+/* The player rows carry the dealer and the points only where the table
+   dropped them. */
+@media (min-width: 521px) {
+  .live-route--xiangqi-mahjong .clock-seat-tag {
+    display: none;
+  }
+}
+
 @media (max-width: 520px) {
   .xiangqi-mahjong-live-board {
     --xmj-tile-w: 44px;
@@ -1328,8 +1466,8 @@ ol.xmj-log {
     border-radius: 14px;
   }
 
-  .xmj-rack {
-    gap: 8px 14px;
+  .xmj-rack__hand {
+    gap: 14px;
   }
 
   .xmj-concealed {
@@ -1451,6 +1589,17 @@ ol.xmj-log {
   display: none;
 }
 
+/* The TV rail's copy, under the clocks: the rail's width, and the card's own
+   border in place of the pool slot's rule. */
+.xmj-hands-under--rail {
+  width: 100%;
+}
+
+.hidden-pool:has(> .xmj-hands-under) {
+  padding: 0;
+  border-top: 0;
+}
+
 .xmj-hands {
   width: 100%;
   border-collapse: collapse;
@@ -1522,4 +1671,82 @@ ol.xmj-log {
   border-left: 1px solid var(--site-border);
   color: var(--site-text);
   font-weight: 700;
+}
+
+/* ── Compact watch board ───────────────────────────────────────────────────── */
+
+/* The homepage viewer and feed cards: the table keeps to a xiangqi board's
+   footprint beside it. Small tiles throughout (your own hand is not larger,
+   there is no "you" here), and a finished hand shows who won, the points and
+   the winning tiles, without the scoring lines or the next-hand row. */
+.xmj-watch-board--compact,
+.xmj-watch-board--compact .xmj-seat--self {
+  --xmj-tile-w: 28px;
+  --xmj-tile-h: 37px;
+  --xmj-tile-r: 4px;
+  --xmj-depth: 3px;
+  --xmj-pond-w: 20px;
+  --xmj-pond-h: 26px;
+  --xmj-pond-gap: 2px;
+}
+
+/* The showcase widget hugs its board, and every variant's board takes the
+   widget's one size so a swap to this table neither shrinks nor jumps it. */
+.xmj-watch-board--compact {
+  width: var(--showcase-widget-size, 100%);
+  max-width: 100%;
+}
+
+.xmj-watch-board--compact .xmj-table {
+  width: 100%;
+  padding: 10px;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.xmj-watch-board--compact .xmj-scoring,
+.xmj-watch-board--compact .xmj-result__foot {
+  display: none;
+}
+
+/* A hand's result covers the discards and the centre rather than replacing
+   them, so the table keeps its height from one hand to the next. A hand
+   nobody won keeps its discards and its one line of how the match ended. */
+.xmj-watch-board--compact .xmj-middle--result:not(.xmj-middle--brief) > :not(.xmj-result) {
+  visibility: hidden;
+}
+
+.xmj-watch-board--compact .xmj-result--brief .xmj-result__foot {
+  display: flex;
+}
+
+/* One line on a queue card, so the note stays clear of the discards. */
+.watch-queue-preview .xmj-result--brief .xmj-result__title {
+  font-size: 16px;
+  white-space: nowrap;
+}
+
+/* The foot is hidden, so the winning hand closes the group. */
+.xmj-watch-board--compact .xmj-result:not(.xmj-result--brief) > .xmj-won {
+  margin-bottom: auto;
+}
+
+.xmj-watch-board--compact .xmj-middle {
+  gap: 6px;
+}
+
+.xmj-watch-board--compact .xmj-centre {
+  min-height: 0;
+  padding: 6px 10px;
+  gap: 4px;
+}
+
+.xmj-watch-board--compact .xmj-centre__status {
+  min-height: 0;
+}
+
+.xmj-watch-board--compact .xmj-pond {
+  gap: 3px var(--xmj-pond-gap);
+  min-height: calc((var(--xmj-pond-h) + 4px) * 2 + 3px);
+  padding-top: 0;
 }

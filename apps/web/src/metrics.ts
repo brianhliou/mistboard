@@ -43,6 +43,14 @@ const STATS_VARIANTS: readonly string[] = CANONICAL_VARIANT_ORDER.filter(
 
 type LiveStats = { playing: number; online: number };
 
+// Mirrors AdminRetentionCohort in persistence-admin-metrics.ts.
+export type AdminRetentionCohort = {
+  weekStart: string;
+  segment: 'all' | 'jieqi' | 'other';
+  players: number;
+  returns: { week: number; returned: number | null; percentage: number | null }[];
+};
+
 // Mirrors AdminMetrics in apps/server/src/persistence-admin-metrics.ts.
 export type AdminMetricsWeek = {
   weekStart: string;
@@ -59,6 +67,8 @@ export type AdminMetricsWeek = {
   puzzleSessions: number;
   puzzleSolves: number;
   puzzleAttempts: number;
+  puzzlePlayers: number;
+  returningPuzzlePlayers: number;
   studiesCreated: number;
   studyChaptersCreated: number;
   practiceSolves: number;
@@ -86,6 +96,7 @@ export type AdminMetrics = {
   humanGamesByResult: Record<string, number>;
   humanGamesByVariant: Record<string, number>;
   weekly: AdminMetricsWeek[];
+  retentionCohorts: AdminRetentionCohort[];
   engines: {
     eveGames: number;
     eveGamesLast7d: number;
@@ -227,6 +238,7 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
       'Every number above the last block is visitor play only: games between people or against a bot, with no seat held by an account excluded from statistics, counted from the database at game end, so Do Not Track visitors are included. Players are signed-in accounts plus guest browsers (a guest seat carries a browser id since 2026-09-11; before that date guests appear only as games with a guest seat). Weeks start on Monday; the last week is in progress.';
     parts.push(lede);
     parts.push(...buildWeeklySections(admin, locale));
+    parts.push(buildRetentionSection(admin.retentionCohorts ?? []));
   }
 
   if (publicStats && publicStats.dailyCompletedGames.length > 0) {
@@ -268,6 +280,66 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
   if (deploys) parts.push(buildDeploysSection(deploys));
 
   body.replaceChildren(...parts);
+}
+
+function buildRetentionSection(cohorts: AdminRetentionCohort[]): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'metrics-section metrics-retention';
+  section.append(sectionHeading('First-game retention'));
+  const note = document.createElement('p');
+  note.className = 'metrics-section-note';
+  note.textContent =
+    'Cohorts start with each account or guest browser’s first completed counted game. Weeks run Monday to Sunday UTC; W1 is the following calendar week. The variant split uses that first game; a return is a completed counted game in any variant during the indicated week, not a cumulative return. Cells show percentage (returned / cohort size) only after the whole return week has elapsed. Blank cells are still maturing. Guest browser ids are available since 2026-09-11; earlier guests are absent. Signing in or changing browser identity can count the same person again.';
+  section.append(note);
+  if (cohorts.length === 0) {
+    const empty = document.createElement('p');
+    empty.textContent = 'No first-game cohorts in this window.';
+    section.append(empty);
+    return section;
+  }
+  const scroller = document.createElement('div');
+  scroller.className = 'metrics-retention-scroll';
+  scroller.tabIndex = 0;
+  scroller.setAttribute('role', 'region');
+  scroller.setAttribute('aria-label', 'First-game retention by cohort and return week');
+  const table = document.createElement('table');
+  table.className = 'metrics-retention-table';
+  const head = table.createTHead().insertRow();
+  const returnWeeks = cohorts[0].returns.map((cell) => cell.week);
+  for (const label of [
+    'First-game week',
+    'First variant',
+    'Players',
+    ...returnWeeks.map((week) => `W${week}`),
+  ]) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = label;
+    head.append(th);
+  }
+  const labels = { all: 'All variants', jieqi: 'Jieqi', other: 'Everything else' };
+  const body = table.createTBody();
+  for (const cohort of cohorts) {
+    const row = body.insertRow();
+    for (const value of [
+      cohort.weekStart,
+      labels[cohort.segment],
+      formatStatNumber(cohort.players),
+    ]) {
+      row.insertCell().textContent = value;
+    }
+    for (const cell of cohort.returns) {
+      const td = row.insertCell();
+      if (cell.returned === null || cell.percentage === null) {
+        td.setAttribute('aria-label', `W${cell.week}: still maturing`);
+      } else {
+        td.textContent = `${cell.percentage.toFixed(1)}% (${formatStatNumber(cell.returned)} / ${formatStatNumber(cohort.players)})`;
+      }
+    }
+  }
+  scroller.append(table);
+  section.append(scroller);
+  return section;
 }
 
 // ── headline number cards ────────────────────────────────────────────────────
@@ -492,13 +564,21 @@ function buildWeeklySections(admin: AdminMetrics, locale: Locale): HTMLElement[]
       'Accounts created and patrons started per week',
     ),
     chart(
+      'Puzzle players per week',
+      [
+        { key: 'puzzlePlayers', label: 'Puzzle players' },
+        { key: 'returningPuzzlePlayers', label: 'Returning' },
+      ],
+      'Distinct accounts and guest browsers that made a move on a puzzle each week, and those who had in an earlier week. Counted from 2026-10-25; earlier weeks have no player identity',
+    ),
+    chart(
       'Puzzles per week',
       [
-        { key: 'puzzleSessions', label: 'Sessions' },
+        { key: 'puzzleSessions', label: 'Puzzles started' },
         { key: 'puzzleSolves', label: 'Solves' },
         { key: 'puzzleAttempts', label: 'Signed-in attempts' },
       ],
-      'Puzzle visits that started a puzzle, puzzles solved, and rated attempts per week',
+      'Puzzles started (one person starting five is five), puzzles solved, and rated attempts by counted accounts per week',
     ),
     chart(
       'Study and practice per week',

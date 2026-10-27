@@ -12,6 +12,7 @@
 import {
   applyJungleFlipMove,
   createInitialJungleFlipState,
+  getJungleFlipLegalMoves,
   type JungleFlipColor,
   type JungleFlipDeal,
   type JungleFlipGameState,
@@ -33,11 +34,7 @@ import {
   VacuousAnalysisError,
 } from './game-analysis-sweep.js';
 import { evaluateJungleFlipFenNodes, JUNGLE_FLIP_ENGINE_VERSION } from './jungle-flip-engine.js';
-import {
-  engineUciToJungleFlipMove,
-  jungleFlipMoveToEngineUci,
-  jungleFlipStateToEngineFen,
-} from './jungle-flip-fen.js';
+import { jungleFlipMoveToEngineUci, jungleFlipStateToEngineFen } from './jungle-flip-fen.js';
 import * as persistence from './persistence.js';
 
 // Search budget. Node budget = CPU-independent strength, so the eval is reproducible across
@@ -228,12 +225,14 @@ export async function resolveJungleFlipAnalysis(
 
 // Search budget. Each candidate's baseline is a small fan of single-position evals (one per
 // distinct hidden tile), all at this node budget so realized and the mean share one search.
-// Lighter than the Layer-1 sweep since a flip fans out; one-time and cached.
+// Each branch is lighter than the Layer-1 sweep since a flip fans out; whole-game results are cached.
 const JUNGLE_FLIP_DECISION_NODES = 256_000;
 const JUNGLE_FLIP_DECISION_MOVETIME_CAP_MS = 4_000;
 // Matches the jungle-flip-analysis engine pool's slot count: with launch
 // concurrency == pool slots, no fan-out eval ever waits in the pool queue.
 const JUNGLE_FLIP_DECISION_EVAL_CONCURRENCY = 2;
+// Retain the top three pool-mean moves plus played after scoring every legal move.
+const JUNGLE_FLIP_DECISION_CANDIDATES = 3;
 
 /** One flip ply's decision-vs-luck numbers, all in WIN% from the MOVER's (seat's) POV. */
 export type JungleFlipDecision = {
@@ -248,14 +247,18 @@ export type JungleFlipDecision = {
   realizedWin: number;
   /** Rank of the played move among the candidates by true baseline (1 = it WAS the best). */
   playedRank: number | null;
+  /** True-baselined candidates, best first. Absent on older cached rows. */
+  candidates?: JungleFlipDecisionCandidate[];
+};
+
+export type JungleFlipDecisionCandidate = {
+  move: string;
+  /** Pool-mean win%, mover POV. */
+  win: number;
+  played?: boolean;
 };
 
 export type JungleFlipDecisionDeps = {
-  /** The engine's single best move (UCI) for a pre-move FEN — the ceiling candidate to true-
-   *  baseline alongside the played move. We use rank-1 only for now (MistyJungleFlip's binary
-   *  supports MultiPV, but the server wrapper does not expose it yet), which makes the ceiling
-   *  conservative: it can only UNDER-report decision loss, never false-flag. MultiPV parity: #211. */
-  bestMove: (fen: string, repSeedFens?: readonly string[]) => Promise<string | null>;
   /** Single-position eval (side-to-move POV) at decision budget — the pool-mean's per-tile term. */
   evalPosition: (
     fen: string,
@@ -264,12 +267,6 @@ export type JungleFlipDecisionDeps = {
 };
 
 const liveDecisionDeps: JungleFlipDecisionDeps = {
-  bestMove: (fen, repSeedFens) =>
-    evaluateJungleFlipFenNodes(fen, {
-      nodes: JUNGLE_FLIP_DECISION_NODES,
-      movetimeCapMs: JUNGLE_FLIP_DECISION_MOVETIME_CAP_MS,
-      repSeedFens,
-    }).then((e) => e.best),
   evalPosition: (fen, repSeedFens) =>
     evaluateJungleFlipFenNodes(fen, {
       nodes: JUNGLE_FLIP_DECISION_NODES,
@@ -369,10 +366,12 @@ async function poolMeanWin(
 
 /**
  * Compute the decision-vs-luck numbers for every FLIP ply. Reconstructs the game from the deal
- * (same kernel as the Layer-1 sweep). For each flip, the engine names one ceiling candidate (its
- * best move); we true-baseline the played flip plus that candidate (unclamped pool-mean win%), take
- * the max as `bestWin`, and read the played flip's actual-tile term as `realizedWin`. `deps` is
- * injectable so tests drive it without an engine. No dependency on the Layer-1 sweep — realized is
+ * (same kernel as the Layer-1 sweep). For each flip, true-baseline every legal move (including
+ * quiet alternatives) using unclamped pool-mean win%, then retain the top three plus the played
+ * flip. This keeps lucky actual tiles from excluding better average moves. The best baseline is
+ * `bestWin`, and the sorted candidates retain their pool-mean scores. The played flip's actual-tile
+ * term is `realizedWin`. `deps` is injectable so tests drive it without an engine.
+ * No dependency on the Layer-1 sweep — realized is
  * computed here, same-search as the mean it is compared against.
  */
 export async function analyzeJungleFlipDecisions(
@@ -401,17 +400,14 @@ export async function analyzeJungleFlipDecisions(
     const isFlip =
       move.from === move.to && source?.faceDown === true && state.status.type === 'playing';
     if (isFlip) {
-      const fen = jungleFlipStateToEngineFen(state);
       const playedUci = jungleFlipMoveToEngineUci(move);
-      const best = await deps.bestMove(fen, jungleFlipRepSeedFens(states));
-      const candidateUcis = new Set<string>([playedUci]);
-      if (best) candidateUcis.add(best);
       let playedWin = 50;
       let realizedWin = 50;
-      const baselines: number[] = [];
-      for (const uci of candidateUcis) {
-        const candidate = uci === playedUci ? move : engineUciToJungleFlipMove(uci);
-        if (!candidate) continue;
+      const scored: JungleFlipDecisionCandidate[] = [];
+      // Average every flip over the hidden pool BEFORE selecting alternatives.
+      // Keep the outer loop serial so the inner fan-out stays within the engine pool's slots.
+      for (const candidate of getJungleFlipLegalMoves(state)) {
+        const uci = jungleFlipMoveToEngineUci(candidate);
         const { baseline, realized } = await poolMeanWin(
           state,
           candidate,
@@ -419,15 +415,27 @@ export async function analyzeJungleFlipDecisions(
           deps.evalPosition,
           states,
         );
-        baselines.push(baseline);
+        scored.push({ move: uci, win: baseline, ...(uci === playedUci ? { played: true } : {}) });
         if (uci === playedUci) {
           playedWin = baseline;
           realizedWin = realized;
         }
       }
+      const candidates = scored
+        .sort((a, b) => b.win - a.win)
+        .filter((c, index) => index < JUNGLE_FLIP_DECISION_CANDIDATES || c.played);
+      const baselines = candidates.map((c) => c.win);
       const bestWin = baselines.length ? Math.max(...baselines) : playedWin;
       const playedRank = 1 + baselines.filter((b) => b > playedWin + 1e-9).length;
-      decisions.push({ ply: i + 1, mover, bestWin, playedWin, realizedWin, playedRank });
+      decisions.push({
+        ply: i + 1,
+        mover,
+        bestWin,
+        playedWin,
+        realizedWin,
+        playedRank,
+        candidates,
+      });
       if (progress) await progress.save({ nextIndex: i + 1, items: decisions });
     }
     state = applyJungleFlipMove(state, move);
@@ -439,9 +447,10 @@ export async function analyzeJungleFlipDecisions(
 // Cache engine id for the decomposition blob — a DIFFERENT engine_id than the basic analysis, so
 // both live in the same game_analysis table without collision.
 // The `+dN` suffix versions the DECOMPOSITION ALGORITHM independently of the engine binary: bump it
-// to invalidate cached decisions when the algorithm changes without an engine change. d3 adds
+// to invalidate cached decisions when the algorithm changes without an engine change. d4 adds
+// ranked alternatives selected by pool mean, invalidating both old results and checkpoints. d3 adds
 // repetition seeds; d2 fixed counterfactual hidden-multiset preservation.
-export const JUNGLE_FLIP_DECISIONS_ENGINE_ID = `misty-jungle-flip-decisions@${JUNGLE_FLIP_ENGINE_VERSION}+d3`;
+export const JUNGLE_FLIP_DECISIONS_ENGINE_ID = `misty-jungle-flip-decisions@${JUNGLE_FLIP_ENGINE_VERSION}+d4`;
 
 export type JungleFlipDecisionsCache = {
   get(roomId: string, engineId: string, depth: number): Promise<JungleFlipDecision[] | null>;

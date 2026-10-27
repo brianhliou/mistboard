@@ -5,10 +5,13 @@ import {
   countedAuthor,
   countedHumanGame,
   countedPlayerSeat,
+  countedPuzzlePlayerRow,
   excludedFromStats,
   internalHumanGame,
   MIN_COUNTED_PLIES,
   preLaunchHumanGame,
+  puzzlePlayerId,
+  puzzlePlayerKind,
   STATS_COUNTED_FROM,
   shortHumanGame,
   sinceLaunch,
@@ -36,6 +39,14 @@ import { PATRON_ACTIVE_STATUSES, patronQualifyingRowSql } from './persistence-pa
 
 export const ADMIN_METRICS_WEEKS = 26;
 
+export interface AdminRetentionCohort {
+  weekStart: string;
+  // Variant of the player's first counted game, not of the return game.
+  segment: 'all' | 'jieqi' | 'other';
+  players: number;
+  returns: { week: number; returned: number | null; percentage: number | null }[];
+}
+
 export interface AdminMetricsWeek {
   weekStart: string;
   humanGames: number;
@@ -54,9 +65,17 @@ export interface AdminMetricsWeek {
   // the database can give.
   guestGames: number;
   newAccounts: number;
+  // Puzzles started this week (a row per puzzle opened that got a move), not
+  // people: every started row, with or without an identity.
   puzzleSessions: number;
   puzzleSolves: number;
+  // Rated attempts by counted (not stats-excluded) accounts.
   puzzleAttempts: number;
+  // Distinct counted people who started a puzzle this week: accounts plus
+  // guest browsers (countedPuzzlePlayerRow). Zero before migration 177.
+  puzzlePlayers: number;
+  // Of those, the ones who had started a puzzle in an earlier week.
+  returningPuzzlePlayers: number;
   studiesCreated: number;
   studyChaptersCreated: number;
   practiceSolves: number;
@@ -106,6 +125,7 @@ export interface AdminMetrics {
   humanGamesByResult: Record<string, number>;
   humanGamesByVariant: Record<string, number>;
   weekly: AdminMetricsWeek[];
+  retentionCohorts: AdminRetentionCohort[];
   engines: AdminMetricsEngines;
 }
 
@@ -121,6 +141,7 @@ type Queryable = { query: <R>(text: string, params?: unknown[]) => Promise<{ row
 const HUMAN_GAME = countedHumanGame('g');
 const PLAYER_SEAT = countedPlayerSeat('p');
 const SIGNED_IN_SEAT = countedAccountSeat('p');
+const PUZZLE_PLAYER_ROW = countedPuzzlePlayerRow('q');
 const INTERNAL_GAME = internalHumanGame('g');
 const EXCLUDED_SEAT = excludedFromStats('g');
 const PRE_LAUNCH_GAME = preLaunchHumanGame('g');
@@ -138,21 +159,33 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
   const weeks = options.weeks ?? ADMIN_METRICS_WEEKS;
   const pool = getPool() as unknown as Queryable;
 
-  const [axis, headline, engines, gamesByWeek, playersByWeek, mauByWeek, activity] =
-    await Promise.all([
-      weekAxis(pool, now, weeks),
-      collectHeadline(pool, now),
-      collectEngines(pool, now),
-      collectGamesByWeek(pool, now, weeks),
-      collectPlayersByWeek(pool, now, weeks),
-      collectActive28dByWeek(pool, now, weeks),
-      collectActivityByWeek(pool, now, weeks),
-    ]);
+  const [
+    axis,
+    headline,
+    engines,
+    gamesByWeek,
+    playersByWeek,
+    mauByWeek,
+    activity,
+    puzzlePlayersByWeek,
+    retentionCohorts,
+  ] = await Promise.all([
+    weekAxis(pool, now, weeks),
+    collectHeadline(pool, now),
+    collectEngines(pool, now),
+    collectGamesByWeek(pool, now, weeks),
+    collectPlayersByWeek(pool, now, weeks),
+    collectActive28dByWeek(pool, now, weeks),
+    collectActivityByWeek(pool, now, weeks),
+    collectPuzzlePlayersByWeek(pool, now, weeks),
+    collectRetentionCohorts(pool, now, weeks),
+  ]);
 
   const weekly = axis.map((weekStart): AdminMetricsWeek => {
     const games = gamesByWeek.get(weekStart);
     const players = playersByWeek.get(weekStart);
     const act = activity.get(weekStart);
+    const puzzlePlayers = puzzlePlayersByWeek.get(weekStart);
     return {
       weekStart,
       humanGames: (games?.pvp ?? 0) + (games?.pve ?? 0),
@@ -168,6 +201,8 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
       puzzleSessions: act?.puzzleSessions ?? 0,
       puzzleSolves: act?.puzzleSolves ?? 0,
       puzzleAttempts: act?.puzzleAttempts ?? 0,
+      puzzlePlayers: puzzlePlayers?.players ?? 0,
+      returningPuzzlePlayers: puzzlePlayers?.returning ?? 0,
       studiesCreated: act?.studiesCreated ?? 0,
       studyChaptersCreated: act?.studyChaptersCreated ?? 0,
       practiceSolves: act?.practiceSolves ?? 0,
@@ -186,8 +221,85 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
     weekCount: weeks,
     ...headline,
     weekly,
+    retentionCohorts,
     engines,
   };
+}
+
+// First-game cohorts use the full counted history before applying the display
+// window. Otherwise an established player's first game IN the window would
+// incorrectly make them new. Identity is the same account/browser pair used
+// by the other player metrics; no ids leave this aggregate query.
+async function collectRetentionCohorts(
+  db: Queryable,
+  now: Date,
+  weeks: number,
+): Promise<AdminRetentionCohort[]> {
+  const result = await db.query<{
+    week: string;
+    segment: AdminRetentionCohort['segment'];
+    players: number;
+    return_week: number;
+    returned: number | null;
+  }>(
+    `WITH human AS (
+       SELECT p.subject_type, p.subject_id, g.room_id, g.variant,
+              g.ended_at AT TIME ZONE 'UTC' AS ended_at
+       FROM game_participants p
+       JOIN games g ON g.room_id = p.game_id
+       WHERE ${PLAYER_SEAT} AND ${HUMAN_GAME} AND g.ended_at < $1::timestamptz
+     ),
+     first_game AS (
+       SELECT DISTINCT ON (subject_type, subject_id)
+         subject_type, subject_id, variant, date_trunc('week', ended_at) AS week
+       FROM human
+       ORDER BY subject_type, subject_id, ended_at, room_id
+     ),
+     members AS (
+       SELECT f.subject_type, f.subject_id, f.week, s.segment
+       FROM first_game f
+       CROSS JOIN LATERAL (VALUES ('all'),
+         (CASE WHEN f.variant = 'jieqi' THEN 'jieqi' ELSE 'other' END)) s(segment)
+       WHERE f.week >= date_trunc('week', $1::timestamptz AT TIME ZONE 'UTC')
+         - ($2::int - 1) * INTERVAL '1 week'
+     ),
+     cohorts AS (
+       SELECT week, segment, count(*)::int AS players FROM members GROUP BY week, segment
+     ),
+     player_weeks AS (
+       SELECT DISTINCT subject_type, subject_id, date_trunc('week', ended_at) AS week FROM human
+     ),
+     returned AS (
+       SELECT m.week, m.segment, p.week AS return_week, count(*)::int AS players
+       FROM members m JOIN player_weeks p USING (subject_type, subject_id)
+       WHERE p.week > m.week
+       GROUP BY m.week, m.segment, p.week
+     )
+     SELECT c.week::date::text AS week, c.segment, c.players, w.n AS return_week,
+       CASE WHEN c.week + (w.n + 1) * INTERVAL '1 week'
+                   <= ($1::timestamptz AT TIME ZONE 'UTC')
+         THEN coalesce(r.players, 0) ELSE NULL END AS returned
+     FROM cohorts c CROSS JOIN generate_series(1, greatest(4, $2::int - 1)) w(n)
+     LEFT JOIN returned r ON r.week = c.week AND r.segment = c.segment
+       AND r.return_week = c.week + w.n * INTERVAL '1 week'
+     ORDER BY c.week DESC, c.segment, w.n`,
+    [now, weeks],
+  );
+  const cohorts = new Map<string, AdminRetentionCohort>();
+  for (const row of result.rows) {
+    const key = `${row.week}:${row.segment}`;
+    let cohort = cohorts.get(key);
+    if (!cohort) {
+      cohort = { weekStart: row.week, segment: row.segment, players: row.players, returns: [] };
+      cohorts.set(key, cohort);
+    }
+    cohort.returns.push({
+      week: row.return_week,
+      returned: row.returned,
+      percentage: row.returned === null ? null : (100 * row.returned) / row.players,
+    });
+  }
+  return [...cohorts.values()];
 }
 
 // Monday-start weeks, oldest first, ending with the week containing `now`.
@@ -461,6 +573,48 @@ async function collectActive28dByWeek(
   return new Map(result.rows.map((row) => [isoDate(row.week), row.n]));
 }
 
+// Distinct counted people who started a puzzle each week (moved at least once:
+// a landing page opens a puzzle for every visitor, so an open is not play),
+// and how many of them had started one in an earlier week. Same shape as
+// collectPlayersByWeek: first_seen is over all time, not just the window.
+async function collectPuzzlePlayersByWeek(
+  db: Queryable,
+  now: Date,
+  weeks: number,
+): Promise<Map<string, { players: number; returning: number }>> {
+  const result = await db.query<{ week: Date | string; players: number; returning: number }>(
+    `WITH puzzle AS (
+       SELECT ${puzzlePlayerKind('q')} AS kind, ${puzzlePlayerId('q')} AS id, q.started_at
+       FROM puzzle_quality_sessions q
+       WHERE q.started_at IS NOT NULL AND q.started_at < $1::timestamptz
+         AND ${PUZZLE_PLAYER_ROW}
+     ),
+     first_seen AS (
+       SELECT kind, id, date_trunc('week', min(started_at))::date::text AS first_week
+       FROM puzzle
+       GROUP BY kind, id
+     ),
+     weekly AS (
+       SELECT DISTINCT date_trunc('week', started_at)::date::text AS week, kind, id
+       FROM puzzle
+       WHERE started_at >= ${WINDOW_START}
+     )
+     SELECT w.week,
+       count(*)::int AS players,
+       count(*) FILTER (WHERE f.first_week < w.week)::int AS returning
+     FROM weekly w
+     JOIN first_seen f USING (kind, id)
+     GROUP BY w.week`,
+    [now, weeks],
+  );
+  return new Map(
+    result.rows.map((row) => [
+      isoDate(row.week),
+      { players: row.players, returning: row.returning },
+    ]),
+  );
+}
+
 type ActivityWeek = {
   newAccounts: number;
   puzzleSessions: number;
@@ -495,8 +649,9 @@ async function collectActivityByWeek(
   const result = await db.query<{ week: Date | string; metric: keyof ActivityWeek; n: number }>(
     [
       arm('newAccounts', 'users', 'created_at', COUNTED_USER),
-      // Distinct visits that started at least one puzzle, not rows: a session
-      // that views five puzzles is one session.
+      // Puzzles started. The session id is minted per puzzle opened, so the
+      // distinct count is a row count: one person starting five puzzles is
+      // five. People are puzzlePlayers (collectPuzzlePlayersByWeek).
       `SELECT date_trunc('week', started_at)::date::text AS week, 'puzzleSessions' AS metric,
               count(DISTINCT session_id)::int AS n
        FROM puzzle_quality_sessions
@@ -504,7 +659,7 @@ async function collectActivityByWeek(
          AND started_at >= ${WINDOW_START} AND started_at < $1::timestamptz
        GROUP BY week`,
       arm('puzzleSolves', 'puzzle_quality_sessions', 'completed_at', `outcome = 'solved'`),
-      arm('puzzleAttempts', 'puzzle_attempts', 'created_at'),
+      arm('puzzleAttempts', 'puzzle_attempts', 'created_at', countedAuthor('user_id')),
       arm('studiesCreated', 'studies', 'created_at'),
       arm('studyChaptersCreated', 'study_chapters', 'created_at'),
       arm('practiceSolves', 'practice_progress', 'solved_at'),

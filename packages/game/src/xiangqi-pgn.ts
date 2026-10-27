@@ -20,7 +20,7 @@ import {
   type XiangqiGameState,
   type XiangqiMove,
 } from './variants-xiangqi.js';
-import { applyStandardXiangqiMove } from './variants-xiangqi-standard.js';
+import { applyXiangqiRecordMove } from './variants-xiangqi-standard.js';
 import {
   importXiangqiGame,
   resolveXiangqiMoveInFormat,
@@ -381,7 +381,7 @@ function resolveNodes(
       error ??= `"${node.token}" is not a legal move here.`;
       continue;
     }
-    const next = applyStandardXiangqiMove(state, move);
+    const next = applyXiangqiRecordMove(state, move);
     const children = resolveNodes(node.children, next, format);
     error ??= children.error;
     out.push({
@@ -438,7 +438,7 @@ export function writeXiangqiPgn(
   const style = options.style ?? 'coordinate';
   const replay = options.replay ?? {
     start: createInitialXiangqiState('pgn-export'),
-    apply: applyStandardXiangqiMove,
+    apply: applyXiangqiRecordMove,
   };
   const start = game.initialState ?? replay.start;
   const custom = game.initialState !== undefined;

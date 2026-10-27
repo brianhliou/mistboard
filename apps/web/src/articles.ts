@@ -16,6 +16,7 @@ import {
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
+import { articleListable } from './articles/blog-listing.js';
 import { LANGUAGE_ENDONYMS, languagePartnersOf } from './articles/language-pairs.js';
 import { articleIsLive } from './articles/publish-time.js';
 import { articleMadeWithNote, hasSiteByline, SITE_AUTHOR } from './articles/site-author.js';
@@ -141,17 +142,16 @@ function isArticleVisibleInThisEnv(article: Article): boolean {
 
 function isArticleListedInThisEnv(article: Article): boolean {
   if (!isArticleVisibleInThisEnv(article)) return false;
-  if (article.showInIndex === false || article.noindex === true) return false;
-  // A page written in a language the interface does not speak never lists here.
-  // The index is one reader's shelf, and a Vietnamese card in an English list is
-  // noise to everyone: an English reader cannot read it, and a Vietnamese reader
-  // never sees the list, because they arrive from a search for `luật cờ úp`
-  // straight onto the page. Search and the sitemap are the discovery path for
-  // these, plus a link from the English original; the index is not.
-  //
-  // Structural rather than per-file (`showInIndex: false` on each) so the next
-  // translated page cannot forget it.
-  if (article.sourceLang) return false;
+  // Shared with the feeds (articles/blog-listing.ts), so /feed.xml carries
+  // exactly what /blog lists. It also drops a page written in a language the
+  // interface does not speak: the index is one reader's shelf, and a Vietnamese
+  // card in an English list is noise to everyone: an English reader cannot
+  // read it, and a Vietnamese reader never sees the list, because they arrive
+  // from a search for `luật cờ úp` straight onto the page. Search and the
+  // sitemap are the discovery path for these, plus a link from the English
+  // original; the index is not. Structural rather than per-file
+  // (`showInIndex: false` on each) so the next translated page cannot forget it.
+  if (!articleListable(article)) return false;
   if (
     article.kind === 'rules' &&
     !rulesSlugPublicSurfaceEnabled(article.gameSpecId ?? article.slug)
@@ -397,10 +397,21 @@ function buildArticleCommunityRail(locale: Locale, activeView: ArticleIndexView)
     { label: 'Community', href: localizedHref('/blog/community', locale), view: 'community' },
   ];
 
+  // A view with no posts is marked so the phone tab row can drop it (the
+  // desktop rail keeps both links); the view being shown always stays.
+  const viewHasPosts = (view: ArticleIndexView): boolean =>
+    articles.some(
+      (article) =>
+        article.kind === 'article' &&
+        article.publisher === view &&
+        isArticleListedInThisEnv(article),
+    );
+
   for (const item of links) {
     const link = document.createElement('a');
     link.href = item.href;
     link.textContent = item.label;
+    if (!viewHasPosts(item.view)) link.dataset.empty = 'true';
     if (item.view === activeView) {
       link.className = 'community-rail-active';
       link.setAttribute('aria-current', 'page');
@@ -719,7 +730,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
 
   const title = document.createElement('strong');
   title.className = 'landing-article-card-title';
-  title.textContent = localized.cardTitle ?? localized.title;
+  appendCardTitle(title, localized.cardTitle ?? localized.title);
 
   link.append(thumb, title);
   // The date sits under the title as muted text, never over the art, so a
@@ -755,6 +766,26 @@ function landingAnnouncementCard(announcement: Announcement, locale: Locale): HT
 
   link.append(thumb, title, landingCardDate(announcement.date, locale));
   return link;
+}
+
+// A romanized name followed by its Chinese ("Zuo Wenjing 左文静").
+const TRAILING_HAN_NAME = /^([^\p{Script=Han}]*\p{L}[^\p{Script=Han}]*?)\s+(\p{Script=Han}+)$/u;
+
+/** A title ending in a Chinese name breaks before the name, so the name never
+ *  splits across lines; where titles hold to one line the break is hidden and
+ *  the trailing space keeps the two apart. */
+export function appendCardTitle(title: HTMLElement, text: string): void {
+  const match = TRAILING_HAN_NAME.exec(text);
+  if (!match) {
+    title.textContent = text;
+    return;
+  }
+  const brk = document.createElement('br');
+  brk.className = 'landing-article-card-title-break';
+  const name = document.createElement('span');
+  name.className = 'landing-article-card-title-han';
+  name.textContent = match[2];
+  title.append(`${match[1]} `, brk, name);
 }
 
 function landingCardDate(iso: string, locale: Locale): HTMLElement {
@@ -818,11 +849,13 @@ function initSingleCarousel(carousel: HTMLElement): void {
     if (cards.length < 2) return 0;
     return cards[1]!.getBoundingClientRect().left - cards[0]!.getBoundingClientRect().left;
   };
+  const overflow = (): number => Math.max(0, track.scrollWidth - carousel.clientWidth);
   const maxIndex = (): number => {
     const step = stepPx();
     if (step <= 0) return 0;
-    const overflow = Math.max(0, track.scrollWidth - carousel.clientWidth);
-    return Math.round(overflow / step);
+    // Ceil, not round: with a part card in view (the desktop band-2 rows) the
+    // last stop must reach the end; apply() clamps it there.
+    return Math.ceil(overflow() / step - 0.05);
   };
 
   const apply = () => {
@@ -836,7 +869,7 @@ function initSingleCarousel(carousel: HTMLElement): void {
       return;
     }
     index = Math.max(0, Math.min(index, mi));
-    track.style.transform = `translateX(${-(index * stepPx())}px)`;
+    track.style.transform = `translateX(${-Math.min(index * stepPx(), overflow())}px)`;
   };
 
   const tick = () => {

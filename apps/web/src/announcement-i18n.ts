@@ -53,6 +53,10 @@ const ZH_HANS: Record<string, string> = {
   'jqe won 171 games to 114 with a network about 90 times smaller. The write-up shows the games where the two engines disagreed about who was winning, and why AB-JChess lost a chariot in game 152.':
     'jqe 以 171 胜对 114 负击败 AB-JChess，神经网络却小了约 90 倍。文章展示两个引擎对谁占优判断相反的几盘棋，以及 AB-JChess 为什么在第 152 盘丢了一个车。',
   // ── 2026-10-22 (jqe) ── 电脑 / 级 / 研究 follow the AB-JChess entry and the longest-forced-mates entry.
+  // ── 2026-10-25 ── 面子 / 将眼 follow live.xmj.set and live.xmj.pair.
+  'Xiangqi Mahjong has launched.': '象棋麻将上线了。',
+  'A folk game from Taiwan that plays one xiangqi set as mahjong tiles. Draw and discard until you hold five tiles that make one set of three and a pair. Play Misty, a friend or the lobby at anything from 1+1 to 10+5; a rated game counts the whole six-hand match. The rules page draws every winning hand.':
+    '一种来自台湾的民间玩法，把一副象棋当作麻将牌来打。摸牌、打牌，凑齐五张牌，组成一个面子和一个将眼就胡了。可以和 Misty 对局、邀请朋友、在大厅下 1+1 到 10+5 的对局；积分对局按整场六手牌计算。规则页画出了每一种胡牌牌型。',
   'Meet jqe, the new top jieqi bot.': '认识 jqe：新的最强揭棋电脑。',
   'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':
     'jqe 是 Devin O’Keefe 开发的开源揭棋引擎。它与此前的最强电脑 AB-JChess 对弈 300 盘，171 胜、15 和、114 负。它现在排在 AB-JChess 上面一级，AB-JChess 继续保留。整场比赛的每一盘棋都收在一个研究里。',
@@ -264,7 +268,7 @@ const ZH_HANS: Record<string, string> = {
   'Two of the four great Qing composition manuals are online.': '清代四大排局谱中的两部已上线。',
   "Fragments of a Martial Mind (1800) and Deep Abyss, Wide Sea (1808) join the Elegant Pastime Manual: four hundred and seventy problems, each on its own board, with the book's line played out as the mainline and the original four-character title kept beside the English one. Positions come from dpxq.com and are credited on every composition. A problem whose recorded line does not survive replay, or whose diagram the engine reads differently from the book, is held back rather than published wrong. The other manuals on the same shelf follow over the coming weeks.":
     '《心武残编》（1800 年）与《渊深海阔》（1808 年）继《适情雅趣》之后上线：共四百七十局，每局独立成章，以书中着法作为主变，英文局名旁保留原四字标题。棋谱来源为 dpxq.com，每局均注明出处。凡所记着法无法完整复盘，或引擎对棋图的判断与原书不符的局，宁可暂不发布，也不发布错误的内容。同一书架上的其他古谱将在接下来几周陆续上线。',
-  'Open the studies': '打开棋谱',
+  'Open the manual': '打开棋谱',
   // ── 2026-09-11 (Elegant Pastime Manual) ── 残局 follows the app catalogs and the
   // study overlays; 古谱 is dpxq's own category word for these manuals.
   'All six volumes of the Elegant Pastime Manual are online.': '《适情雅趣》六卷已全部上线。',
@@ -552,6 +556,10 @@ const ZH_HANT: Record<string, string> = {
   'jqe won 171 games to 114 with a network about 90 times smaller. The write-up shows the games where the two engines disagreed about who was winning, and why AB-JChess lost a chariot in game 152.':
     'jqe 以 171 勝對 114 負擊敗 AB-JChess，神經網路卻小了約 90 倍。文章展示兩個引擎對誰佔優判斷相反的幾盤棋，以及 AB-JChess 為什麼在第 152 盤丟了一個車。',
   // ── 2026-10-22 (jqe) ── 電腦 / 級 / 研究 follow the AB-JChess entry and the longest-forced-mates entry.
+  // ── 2026-10-25 ── 面子 / 將眼 follow live.xmj.set and live.xmj.pair.
+  'Xiangqi Mahjong has launched.': '象棋麻將上線了。',
+  'A folk game from Taiwan that plays one xiangqi set as mahjong tiles. Draw and discard until you hold five tiles that make one set of three and a pair. Play Misty, a friend or the lobby at anything from 1+1 to 10+5; a rated game counts the whole six-hand match. The rules page draws every winning hand.':
+    '一種來自台灣的民間玩法，把一副象棋當作麻將牌來打。摸牌、打牌，湊齊五張牌，組成一個面子和一個將眼就胡了。可以和 Misty 對局、邀請朋友、在大廳下 1+1 到 10+5 的對局；積分對局按整場六手牌計算。規則頁畫出了每一種胡牌牌型。',
   'Meet jqe, the new top jieqi bot.': '認識 jqe：新的最強揭棋電腦。',
   'jqe is an open-source jieqi engine by Devin O’Keefe. Over 300 games against AB-JChess, the top bot until today, it won 171, drew 15 and lost 114. It now sits one level above AB-JChess, which stays on the ladder. Every game of the match is in a study.':
     'jqe 是 Devin O’Keefe 開發的開源揭棋引擎。它與此前的最強電腦 AB-JChess 對弈 300 盤，171 勝、15 和、114 負。它現在排在 AB-JChess 上面一級，AB-JChess 繼續保留。整場比賽的每一盤棋都收在一個研究裡。',
@@ -761,7 +769,7 @@ const ZH_HANT: Record<string, string> = {
   'Two of the four great Qing composition manuals are online.': '清代四大排局譜中的兩部已上線。',
   "Fragments of a Martial Mind (1800) and Deep Abyss, Wide Sea (1808) join the Elegant Pastime Manual: four hundred and seventy problems, each on its own board, with the book's line played out as the mainline and the original four-character title kept beside the English one. Positions come from dpxq.com and are credited on every composition. A problem whose recorded line does not survive replay, or whose diagram the engine reads differently from the book, is held back rather than published wrong. The other manuals on the same shelf follow over the coming weeks.":
     '《心武殘編》（1800 年）與《淵深海闊》（1808 年）繼《適情雅趣》之後上線：共四百七十局，每局獨立成章，以書中著法作為主變，英文局名旁保留原四字標題。棋譜來源為 dpxq.com，每局均註明出處。凡所記著法無法完整復盤，或引擎對棋圖的判斷與原書不符的局，寧可暫不發布，也不發布錯誤的內容。同一書架上的其他古譜將在接下來幾週陸續上線。',
-  'Open the studies': '打開棋譜',
+  'Open the manual': '打開棋譜',
   // ── 2026-09-11 (Elegant Pastime Manual) ──
   'All six volumes of the Elegant Pastime Manual are online.': '《適情雅趣》六卷已全部上線。',
   "The Elegant Pastime Manual is a Ming collection of xiangqi endgame compositions. Five hundred and forty-nine of its problems are here now, each on its own board, with the book's solution played out as the mainline and the original four-character title kept beside the English one. Around sixty are draw studies where the source gives its answer in prose rather than as a line, and those notes are quoted as written rather than guessed at. Positions come from dpxq.com and are credited on every composition. One problem is absent: the line recorded for number 479 stops being legal partway through, and half a solution is worse than none.":

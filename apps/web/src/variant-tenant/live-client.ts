@@ -34,6 +34,7 @@ import {
   type FinishBadge,
   type LiveFinishBadges,
 } from '../live-finish-badges.js';
+import { maybePlayGameStartSound } from '../live-game-start-sound.js';
 import { createLiveLayout, setLiveLayoutGameSpec } from '../live-layout.js';
 import {
   createLiveLifecycleEffects,
@@ -42,6 +43,7 @@ import {
 import { initLiveSound, resetLiveSoundState } from '../live-sound.js';
 import { clearSeatTokenForRoom, type LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
+import { announceLiveRoomSeat } from '../review/spectator-chat.js';
 import { roomIdFromPath } from '../room-url.js';
 import { syncMoveListScroll } from './chrome-dom.js';
 import {
@@ -207,6 +209,14 @@ export type TenantMoveListConfig<C extends string, M, V = unknown> = {
    */
   notateWithView?(move: M, viewAfter: V | null): string;
   isMoveEvent(event: TenantLiveEvent): event is TenantMovePlayed<C, M>;
+  /**
+   * OPTIONAL: whether a move in the seat's own colour was the player's choice,
+   * for `game_first_move`. Defaults to every move. A tenant whose log carries
+   * moves made for the seat (mahjong's automatic draw, the runtime's timeout,
+   * an empty hand's automatic pass) excludes them, or a player who opened the
+   * table and left would count as having played.
+   */
+  playedByPlayer?(move: M): boolean;
   /** Optional banner row above the list (e.g. the parachute bounce note). */
   banner?(): { className: string; text: string } | null;
   /**
@@ -701,6 +711,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       applyHello: (frame) => {
         applyFrame(frame as TenantLiveFrame<C, V>);
         rebuildReplayHistory(frame as TenantLiveFrame<C, V>);
+        announceLiveRoomSeat(room, tenant.isColor(state.seat));
       },
       applySnapshot: (frame) => {
         applyFrame(frame as TenantLiveFrame<C, V>);
@@ -765,6 +776,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     captureReplayView(view);
     const displayed = replay.currentView(view);
     const lifecycleEffect = updateLifecycleEffects(view);
+    // The game-start sound for every tenant rides the same frame as the start
+    // pulse, so a new variant on this client sounds its start with no wiring.
+    maybePlayGameStartSound(lifecycleEffect, view?.id);
     trackGameLifecycle(view);
     // Drain the animation channel on EVERY render (even disabled/hook-less
     // paths) so nothing stale carries into a later, unrelated render.
@@ -877,6 +891,15 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       days_per_move: state.timeControl?.daysPerMove ?? null,
     };
     const status = view.status;
+    // From the event log the server sent this seat, so a click the server
+    // rejected never counts. A seat always receives its own moves, fog included.
+    const seat = state.seat;
+    const ownMoveCount = state.events.filter(
+      (event) =>
+        moveList.isMoveEvent(event) &&
+        event.color === seat &&
+        (moveList.playedByPlayer?.(event.move) ?? true),
+    ).length;
     lifecycleTracker.update({
       statusType: lifecycleStatusType(status.type),
       baseProps,
@@ -884,6 +907,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
         status.type === 'finished'
           ? { winner: status.winner, reason: status.reason, moveNumber: view.moveNumber }
           : null,
+      ownMoveCount,
+      moveNumber: view.moveNumber,
     });
   }
 

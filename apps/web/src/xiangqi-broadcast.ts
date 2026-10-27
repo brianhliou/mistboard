@@ -2788,7 +2788,7 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
   const boardEl = document.createElement('div');
   boardEl.className = 'xqb-card-board xiangqi-live-board';
   boardEl.setAttribute('aria-hidden', 'true');
-  const replay = buildXiangqiReplayFromMoves(board.moves ?? []);
+  const replay = buildXiangqiReplayFromMoves(board.moves ?? [], undefined, { record: true });
   const view = replay.views[replay.maxPly] ?? replay.views[0]!;
   // Card thumbnail, aria-hidden and about a hundred pixels across. Coordinates
   // are noise at that size, and the card is framed by hand, so the reserved

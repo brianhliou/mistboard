@@ -14,13 +14,17 @@ import {
   type XiangqiMotifId,
   type XiangqiMove,
   type XiangqiPuzzle,
+  type XiangqiPuzzleSetupMove,
 } from '@mistboard/game';
 import { currentAccountUser } from '../account-session.js';
 import { createAuthRateLimiter } from '../auth-rate-limit.js';
 import { isPlayDisabled, isInitialized as persistenceInitialized } from '../persistence.js';
+import { getHistoricalXiangqiGameMoves } from '../persistence-historical-xiangqi.js';
 import {
   isPuzzleQualitySessionId,
+  type PuzzleQualityPlayer,
   type PuzzleQualityVote,
+  parsePuzzleDeviceId,
   recordPuzzleQualityEvent,
   recordPuzzleQualityVote,
 } from '../persistence-puzzle-quality.js';
@@ -38,8 +42,10 @@ import {
   parseDailyPuzzleSlot,
 } from '../persistence-puzzles.js';
 import { seedPuzzleRating } from '../puzzle-rating.js';
+import { puzzleSetupMove } from '../puzzle-setup-move.js';
 import { getPuzzleStore, type PuzzleStoreSnapshot } from '../puzzle-store.js';
 import { clientIpForRateLimit } from '../server-policy.js';
+import { rememberExcludedDevice } from '../stats-excluded-device.js';
 import { type HttpApiContext, readJsonBody, requireMethod, writeJson } from './lib.js';
 
 // High enough for fast play, low enough to prevent unbounded anonymous UUID
@@ -90,6 +96,9 @@ type PuzzleDetail = PuzzleSummary & {
   // puzzles only). The source game itself is not hosted until license-cleared,
   // so this is display metadata, not a link target.
   sourceGame?: XiangqiPuzzle['sourceGame'];
+  // The setup move (initial.lastMove) with the piece it captured, derived from
+  // the stored source game; absent when that game is not stored (#664).
+  setupMove?: XiangqiPuzzleSetupMove;
 };
 
 export async function tryHandle(
@@ -193,6 +202,14 @@ export async function tryHandle(
       writeJson(response, 429, { error: 'rate_limited' });
       return true;
     }
+    // Who opened it, for /metrics' puzzle players (migration 177). The account
+    // comes from the session cookie only, never the body; the device id is the
+    // browser's own. A stats-excluded account marks its browser here as live
+    // rooms do, so the operator's signed-out puzzles leave the counts too.
+    const accountUser = persistenceInitialized() ? await currentAccountUser(request) : null;
+    const deviceId = parsePuzzleDeviceId(body.deviceId);
+    rememberExcludedDevice(deviceId, accountUser);
+    const player: PuzzleQualityPlayer = { userId: accountUser?.id ?? null, deviceId };
     if (body.event === 'vote') {
       const vote = parsePuzzleQualityVote(body.vote);
       if (vote === 'invalid') {
@@ -204,6 +221,7 @@ export async function tryHandle(
         sessionId: body.sessionId,
         variant: puzzle.variant,
         vote,
+        player,
       });
     } else if (body.event === 'view' || body.event === 'start' || body.event === 'abandon') {
       await recordPuzzleQualityEvent({
@@ -211,6 +229,7 @@ export async function tryHandle(
         sessionId: body.sessionId,
         variant: puzzle.variant,
         event: body.event,
+        player,
       });
     } else {
       writeJson(response, 400, { error: 'invalid_quality_event' });
@@ -510,6 +529,7 @@ function puzzleSummary(
 async function puzzleDetail(puzzle: PublicPuzzle): Promise<PuzzleDetail> {
   const stored = await getPuzzleRating(puzzle.id);
   const store = await getPuzzleStore();
+  const setupMove = await detailSetupMove(puzzle);
   return {
     ...puzzleSummary(
       puzzle,
@@ -522,7 +542,16 @@ async function puzzleDetail(puzzle: PublicPuzzle): Promise<PuzzleDetail> {
     ...(puzzle.variant === XIANGQI_SPEC_ID && puzzle.sourceGame
       ? { sourceGame: puzzle.sourceGame }
       : {}),
+    ...(setupMove ? { setupMove } : {}),
   };
+}
+
+// The opponent's setup move with what it captured (#664), so the trainer can
+// open one move earlier and glide it in. Standard xiangqi only, and only when
+// the source game is stored (persistence on); every other case omits the field.
+async function detailSetupMove(puzzle: PublicPuzzle): Promise<XiangqiPuzzleSetupMove | null> {
+  if (puzzle.variant !== XIANGQI_SPEC_ID || !persistenceInitialized()) return null;
+  return puzzleSetupMove(puzzle, getHistoricalXiangqiGameMoves);
 }
 
 function seededPuzzleRatingSummary(

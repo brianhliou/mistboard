@@ -3,7 +3,7 @@
  * follows the spectator view and lists only when the spec is public.
  * A room is PvE (the in-process bot takes the other seat), PvP (a friend room,
  * or a Find opponent pairing through the lobby), or correspondence (a seek or
- * challenge between two granted accounts, casual only). The rated unit is the
+ * challenge between two accounts). The rated unit is the
  * whole match, since the room finishes when the match does.
  */
 
@@ -36,7 +36,12 @@ import {
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
+import {
+  countActiveTenantGames,
+  isTenantEventLog,
+  replayTenantEvents,
+  tenantReplayCheck,
+} from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
   clearTenantRuntimeTimers,
@@ -135,8 +140,8 @@ export function getOrLoadXiangqiMahjongRoom(roomId: string): Promise<XmjRuntimeR
 // Correspondence (days per move): accepting a seek seats both accounts, the
 // sweeper flags a missed deadline. No seatBoard: the inbox carries no board for
 // this game, so no card or listing can show a concealed tile. The seek routes
-// admit it only between granted accounts and never rated
-// (CORRESPONDENCE_ALLOWLISTED_SPEC_IDS).
+// use public correspondence eligibility; rated seeks stay behind the shared
+// rated-correspondence flag.
 const xiangqiMahjongCorrespondence = tenantCorrespondenceBinding(xiangqiMahjongTenant, {
   factoryContext: () => ({
     rooms: xiangqiMahjongRooms,
@@ -200,8 +205,7 @@ registerVariantTenant({
     handleCreate: (ctx, _request, response, body, accountUser) =>
       handleXiangqiMahjongCreate({ ...ctx, createXiangqiMahjongRoom }, response, body, accountUser),
   },
-  // Find opponent. Both seats still pass the grant check when they connect, and
-  // the lobby route refuses a seek from an account without the grant.
+  // Find opponent. Public launch removes the playtest grant requirement.
   lobby: {
     supportsRated: true,
     allowsTimeControl: xmjLobbyAllowsTimeControl,
@@ -213,6 +217,19 @@ registerVariantTenant({
   },
   // No export binding: there is no record format for this game here.
   export: null,
+  card: {
+    layout: 'match',
+    variant: xiangqiMahjongTenant.gameSpecId,
+    label: 'Xiangqi Mahjong',
+    finalScores(events, roomId) {
+      if (!isTenantEventLog(xiangqiMahjongTenant, events, roomId)) return null;
+      const { state } = replayTenantEvents(xiangqiMahjongTenant, events);
+      if (state.status.type !== 'finished') return null;
+      // The match state holds the secret walls and concealed tiles. Project
+      // just the public tai totals at this boundary, even after the finish.
+      return { east: state.match.scores[0], west: state.match.scores[1] };
+    },
+  },
   // No postgame page either: a finished game opens at its room, which shows
   // every hand and never the walls (xiangqi-mahjong-pvp.test.ts).
   finishedGameOpensRoom: true,

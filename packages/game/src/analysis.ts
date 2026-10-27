@@ -86,6 +86,21 @@
 
 export type MoveJudgment = 'blunder' | 'mistake' | 'inaccuracy' | null;
 
+/** Normalize a side-to-move UCI score to Red's POV. `sign` is +1 when Red
+ *  moves next, -1 when Black does. Mate zero means that side is already
+ *  checkmated: encode it as decisive cp because zero cannot carry a POV sign. */
+export function redPovScore(
+  cp: number | null,
+  mate: number | null,
+  sign: 1 | -1,
+): { cp: number | null; mate: number | null } {
+  if (mate === 0) return { cp: sign * -30000, mate: null };
+  return {
+    cp: cp == null ? null : cp * sign,
+    mate: mate == null ? null : mate * sign,
+  };
+}
+
 const WIN_PCT_CLAMP_CP = 1000;
 // lila rawWinningChances constant (chess). Recalibrate for xiangqi if evals feel
 // too flat / too spiky.

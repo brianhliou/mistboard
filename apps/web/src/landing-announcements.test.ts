@@ -302,6 +302,8 @@ describe('landing announcements', () => {
     const readerFacingRuleSlugs: Record<string, string> = {
       'dark-chess': 'fog-chess',
       'dark-xiangqi': 'fog-xiangqi',
+      // The rules page names its 32-tile set.
+      'xiangqi-mahjong': 'xiangqi-mahjong-32',
     };
 
     for (const variant of leaderboardVariants) {

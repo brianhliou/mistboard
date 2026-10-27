@@ -80,6 +80,9 @@ export async function mountStudyReview(
       const parsed = rootFen ? parseStandardXiangqiFen(rootFen) : null;
       return mountXiangqiReview(root, {
         ...(await baseReady),
+        // Imported chapters can contain played records that continue past an
+        // arbiter-adjudicated draw. Preserve those moves when rebuilding the tree.
+        record: true,
         // The opening explorer IS on here (default). It was off until 2026-08-26
         // to leave the hand-specced study layout untouched; the call was made
         // when a study author reported the site had no game database, while the

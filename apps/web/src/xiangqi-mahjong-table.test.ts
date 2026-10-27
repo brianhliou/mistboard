@@ -104,7 +104,11 @@ describe('xiangqi mahjong table', () => {
 
   it('names seats by who sits there and marks the dealer, with no winds', () => {
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(state, 'east'), opts(true)));
-    const names = [...host.querySelectorAll('.xmj-name')].map((node) => node.textContent);
+    // The names label the seats; they are shown outside the felt.
+    const names = [...host.querySelectorAll('.xmj-seat')].map((node) =>
+      node.getAttribute('aria-label'),
+    );
+    expect(host.querySelectorAll('.xmj-name').length).toBe(0);
     expect(names.sort()).toEqual(['Bot', 'You']);
     expect(host.querySelectorAll('.xmj-badge--dealer').length).toBe(1);
     expect(host.textContent).not.toMatch(/East|West|東|西/);
@@ -260,6 +264,15 @@ describe('xiangqi mahjong table', () => {
         const html = xiangqiMahjongTableHtml(view, opts(true));
         // No set or pair hints while a hand is in play.
         if (!view.between) expect(html).not.toContain('xmj-group');
+        // The table keeps its height when a hand ends: the result covers the
+        // centre, and a held line stands in for the message it replaced.
+        expect(html.includes('xmj-message--held')).toBe(view.between);
+        if (view.between || steps % 25 === 0) {
+          // Badges sit beside the hand, never on a line of their own.
+          const badges = [...doc(html).querySelectorAll('.xmj-badge')];
+          for (const badge of badges)
+            expect(badge.parentElement?.classList).toContain('xmj-rack__tag');
+        }
         if (view.between && view.phase.type === 'won' && seat === 'east') {
           wins += 1;
           const host = doc(html);
@@ -286,6 +299,7 @@ describe('xiangqi mahjong table', () => {
       /^Match to (You|Bot), \d+ to \d+\.$|^Match drawn, \d+ points each\.$/,
     );
     expect(host.querySelector('.xmj-result__match')).toBeNull();
+    expect(host.querySelector('.xmj-centre .xmj-message--held')).not.toBeNull();
     expect(host.querySelector('.xmj-centre .xmj-hand-line')?.textContent).toBe('Hand 6 of 6');
     // The running score lives in the points table under the board, not by the names.
     expect(host.querySelector('.xmj-points')).toBeNull();
@@ -412,8 +426,10 @@ describe('xiangqi mahjong table', () => {
       expect(sideways[0]?.getAttribute('aria-label')).toBe(xmjTileName(meld?.claimed as XmjTile));
       // The set stands apart from the hand, in its own group in the rack.
       const rack = tray?.closest('.xmj-rack');
-      expect(rack?.querySelector(':scope > .xmj-concealed')).not.toBeNull();
-      expect(rack?.querySelector(':scope > .xmj-melds')?.contains(tray ?? null)).toBe(true);
+      expect(rack?.querySelector('.xmj-rack__hand > .xmj-concealed')).not.toBeNull();
+      expect(rack?.querySelector('.xmj-rack__hand > .xmj-melds')?.contains(tray ?? null)).toBe(
+        true,
+      );
     }
     // In three Soldiers only the claimed copy lies sideways.
     const view = xmjViewFor(state, seat);
@@ -542,6 +558,7 @@ describe('xiangqi mahjong table', () => {
         const host = doc(html);
         // Over the band, so nothing below it moves when a hand ends.
         expect(host.querySelector('.xmj-middle > .xmj-result')).not.toBeNull();
+        expect(host.querySelector('.xmj-result--brief, .xmj-middle--brief')).toBeNull();
         const won = view.phase;
         const total = won.score.total;
         // The whole sentence is the region's name; the head splits it.
@@ -561,7 +578,7 @@ describe('xiangqi mahjong table', () => {
         // The whole scoring table, in the rules page's order, with this hand's
         // lines lit; the lit lines add up to the total.
         const rows = [...host.querySelectorAll('.xmj-lines li')];
-        expect(rows.length).toBe(9);
+        expect(rows.length).toBe(10);
         const lit = rows.filter((row) => row.classList.contains('xmj-line--on'));
         expect(lit.length).toBe(won.score.lines.length);
         expect(lit.map((row) => row.querySelector('.xmj-sr')?.textContent)).toEqual(
@@ -590,7 +607,7 @@ describe('xiangqi mahjong table', () => {
     };
     const text =
       doc(xiangqiMahjongTableHtml(xmjViewFor(resigned, 'east'), opts(false))).textContent ?? '';
-    expect(text).toContain('Hand 1 was not finished.');
+    expect(text).toContain('Ended during hand 1 of 1');
     expect(text).not.toContain('The wall ran out');
   });
 
@@ -601,8 +618,13 @@ describe('xiangqi mahjong table', () => {
       status: { type: 'finished', winner: 'west', reason: 'timeout' },
     };
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(timedOut, 'east'), opts(false)));
-    expect(host.querySelector('.xmj-result__title')?.textContent).toBe('Hand 1 was not finished.');
-    expect(host.querySelector('.xmj-result__foot')?.textContent).toBe('Bot wins on time.');
+    // How it ended is the title; the hand it stopped in is the small line.
+    expect(host.querySelector('.xmj-result__title')?.textContent).toBe('Bot wins on time');
+    expect(host.querySelector('.xmj-result__sub')?.textContent).toBe('Ended during hand 1 of 1');
+    expect(host.querySelector('.xmj-result__foot')).toBeNull();
+    // Nobody won the hand: a small card over the centre, the discards in view.
+    expect(host.querySelector('.xmj-result.xmj-result--brief')).not.toBeNull();
+    expect(host.querySelector('.xmj-middle--brief')).not.toBeNull();
     expect(host.textContent).not.toMatch(/Match to|\+0 to/);
     // A finished match has no running match line.
     expect(host.querySelector('.xmj-result__match')).toBeNull();

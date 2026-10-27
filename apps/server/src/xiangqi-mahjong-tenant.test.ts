@@ -15,6 +15,7 @@ import {
 } from '@mistboard/game';
 import { botVsBotConfigFromEnv } from './bot-vs-bot-scheduler.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
+import { logger } from './obs.js';
 import { isAllowlistedGameSpec } from './persistence-variant-access.js';
 import {
   isXmjBotClientId,
@@ -23,6 +24,11 @@ import {
   xmjBotDelayMs,
   xmjBotMove,
 } from './server-xiangqi-mahjong-bots.js';
+import {
+  isKnownUnreplayableGame,
+  resetTenantReplayGuardForTests,
+} from './variant-tenant/replay-guard.js';
+import { tenantReplayCheck } from './variant-tenant/runtime.js';
 import {
   getXmjClientView,
   type XmjEvent,
@@ -47,7 +53,7 @@ function newState(seed: number): XmjRoomState {
   return tenant.rules.createInitialState('xmj_test', createXmjSetup(seeded(seed)));
 }
 
-test('gated twice: the flag is off by default and the spec needs a grant', () => {
+test('launched XMJ needs no grant; the runtime flag still defaults off', () => {
   const previous = process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED;
   delete process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED;
   try {
@@ -57,7 +63,7 @@ test('gated twice: the flag is off by default and the spec needs a grant', () =>
   } finally {
     if (previous !== undefined) process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED = previous;
   }
-  assert.equal(isAllowlistedGameSpec(XIANGQI_MAHJONG_SPEC_ID), true);
+  assert.equal(isAllowlistedGameSpec(XIANGQI_MAHJONG_SPEC_ID), false);
 });
 
 test('a room with no persisted walls refuses to start rather than dealing fresh ones', () => {
@@ -202,11 +208,11 @@ test('a bot claimant settles the window at the same moment, claim or not', () =>
 });
 
 // Launch-playbook rule 3: the surfaces Xiangqi Mahjong is left off on purpose.
-// No PGN/JSON export (no notation for a tile match), no share card (no board
-// position to draw). Its TV channel serves only the spectator view
+// No PGN/JSON export (no notation for a tile match). The share card carries
+// final tai totals only. Its TV channel serves only the spectator view
 // (xiangqi-mahjong-spectate.test.ts). A finished game opens at its own room
 // instead (finishedGameOpensRoom). Bot-vs-bot never schedules it.
-test('xiangqi mahjong is off export, share card and TV on purpose', async () => {
+test('xiangqi mahjong binds a match card without export or bot-vs-bot', async () => {
   await import('./variant-tenant/register-tenants.js');
   const { registeredVariantTenants } = await import('./variant-tenant/registry.js');
   const entry = registeredVariantTenants().find(
@@ -215,7 +221,7 @@ test('xiangqi mahjong is off export, share card and TV on purpose', async () => 
   assert.ok(entry, 'xiangqi mahjong is registered');
   assert.deepEqual(exportFormatsForVariant(XIANGQI_MAHJONG_SPEC_ID), []);
   assert.equal(entry.export ?? null, null);
-  assert.equal(entry.card ?? null, null);
+  assert.equal(entry.card?.layout, 'match');
   assert.equal(entry.watch?.channelId, 'xiangqi-mahjong');
   assert.equal(entry.finishedGameOpensRoom, true);
   const eve = botVsBotConfigFromEnv({
@@ -223,4 +229,30 @@ test('xiangqi mahjong is off export, share card and TV on purpose', async () => 
   } as NodeJS.ProcessEnv);
   assert.deepEqual(eve.plans, []);
   assert.equal(eve.skipped[0]?.variant, XIANGQI_MAHJONG_SPEC_ID);
+});
+
+test('a stored match whose walls the current rules refuse is skipped, not thrown', () => {
+  // Pre-launch rooms were dealt 8 walls; the match is 6 hands now. Building
+  // the seed outside the replay guard let that throw 500 the /watch feed.
+  const rnd = seeded(5);
+  const setup = createXmjSetup(rnd);
+  const walls = [...setup.walls, setup.walls[0]!, setup.walls[1]!];
+  const events = [
+    {
+      type: 'room-created',
+      at: 1,
+      roomId: 'xmj_eight_walls',
+      gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+      setup: { ...setup, walls },
+    },
+  ];
+  resetTenantReplayGuardForTests();
+  const warn = logger.warn;
+  logger.warn = (() => {}) as typeof logger.warn;
+  try {
+    assert.equal(tenantReplayCheck(tenant)(events, 'xmj_eight_walls'), false);
+  } finally {
+    logger.warn = warn;
+  }
+  assert.equal(isKnownUnreplayableGame('xmj_eight_walls'), true);
 });
