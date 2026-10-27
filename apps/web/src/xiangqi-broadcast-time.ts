@@ -30,12 +30,20 @@ function hasClock(value: string): boolean {
   return value.includes('T');
 }
 
+// A source that dates its games but gives no time ("2026-07-28", an XQBase
+// file) is written date-only, and a date-only string is a calendar day, not a
+// moment: JavaScript reads it as UTC midnight, so it is formatted in UTC or a
+// viewer west of Greenwich sees the day before.
+function readsAsUtc(value: string): boolean {
+  return isoOffsetMinutes(value) !== null || !hasClock(value);
+}
+
 /** "Sep 13, 2026, 2:30 PM" in the event's clock; a date-only string stays a date. */
 export function formatEventDateTime(value: string | undefined, locale?: string): string | null {
   if (!value) return null;
   const shifted = shiftedToOffset(value);
   if (!shifted) return value;
-  const inSourceZone = isoOffsetMinutes(value) !== null;
+  const inSourceZone = readsAsUtc(value);
   return new Intl.DateTimeFormat(locale, {
     month: 'short',
     day: 'numeric',
@@ -50,7 +58,7 @@ export function formatEventDay(value: string | undefined, locale?: string): stri
   if (!value) return null;
   const shifted = shiftedToOffset(value);
   if (!shifted) return null;
-  const inSourceZone = isoOffsetMinutes(value) !== null;
+  const inSourceZone = readsAsUtc(value);
   const year = inSourceZone ? shifted.getUTCFullYear() : shifted.getFullYear();
   return new Intl.DateTimeFormat(locale, {
     month: 'short',

@@ -111,6 +111,8 @@ export function buildXiangqiBroadcastBoardReplay(board: StoredXiangqiBroadcastBo
       createdAt: board.createdAt,
       updatedAt: board.updatedAt,
       ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
+      // A record that reads two ways: the page shows the result and why, no replay.
+      ...(board.recordWithheld ? { recordWithheld: board.recordWithheld } : {}),
     },
     state: {
       status: state.status,

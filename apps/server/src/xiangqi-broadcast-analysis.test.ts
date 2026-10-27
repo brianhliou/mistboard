@@ -5,10 +5,11 @@ import {
   type BroadcastAnalysisSweepDeps,
   broadcastAnalysisRoomId,
   createBroadcastAnalysisSweep,
+  isAnalysableBroadcastBoard,
   SWEEP_GAMES_PER_HOUR,
 } from './xiangqi-broadcast-analysis.js';
 
-type Board = { id: string; moves: XiangqiMove[] };
+type Board = { id: string; moves: XiangqiMove[]; recordWithheld?: 'ambiguous' };
 
 function harness(boards: Board[]) {
   let now = 1_000_000;
@@ -48,7 +49,7 @@ function harness(boards: Board[]) {
 }
 
 const boards = (n: number): Board[] =>
-  Array.from({ length: n }, (_, i) => ({ id: `b${i}`, moves: [] }));
+  Array.from({ length: n }, (_, i) => ({ id: `b${i}`, moves: [{ from: 'b1', to: 'c3' }] }));
 
 test('the curator and the sweep share one analysis key', () => {
   assert.equal(
@@ -111,4 +112,35 @@ test('with slots to spare, the sweep runs that many games side by side, never th
   assert.deepEqual(started, ['b0', 'b1', 'b2']);
   release();
   assert.equal(await tick, 3);
+});
+
+test('the sweep passes over a withheld record and a board with no moves', async () => {
+  const h = harness([
+    { id: 'held', moves: [], recordWithheld: 'ambiguous' },
+    { id: 'empty', moves: [] },
+    ...boards(1),
+  ]);
+  assert.equal(await h.sweep.tick(), 1);
+  assert.deepEqual(h.analysed, ['b0']);
+  assert.deepEqual(h.skipsSeen.at(-1), ['held', 'empty']);
+});
+
+test('a withheld record is never analysable, even with moves on it', () => {
+  assert.equal(
+    isAnalysableBroadcastBoard({
+      id: 'x',
+      status: 'complete',
+      moves: [{ from: 'b1', to: 'c3' }],
+      recordWithheld: 'ambiguous',
+    }),
+    false,
+  );
+  assert.equal(
+    isAnalysableBroadcastBoard({ id: 'y', status: 'live', moves: [{ from: 'b1', to: 'c3' }] }),
+    false,
+  );
+  assert.equal(
+    isAnalysableBroadcastBoard({ id: 'z', status: 'complete', moves: [{ from: 'b1', to: 'c3' }] }),
+    true,
+  );
 });

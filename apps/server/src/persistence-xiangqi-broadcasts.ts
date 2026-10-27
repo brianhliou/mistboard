@@ -692,7 +692,7 @@ async function dropBroadcastAnalysis(client: Queryable, boardId: string): Promis
 
 type BoardTags = Pick<
   XiangqiBroadcastBoard,
-  'red' | 'black' | 'status' | 'result' | 'sourceUrl' | 'details'
+  'red' | 'black' | 'status' | 'result' | 'sourceUrl' | 'details' | 'recordWithheld'
 >;
 
 function boardTagsEqual(a: BoardTags, b: BoardTags): boolean {
@@ -704,7 +704,9 @@ function boardTagsEqual(a: BoardTags, b: BoardTags): boolean {
     a.sourceUrl === b.sourceUrl &&
     // The game's details arrive on a re-read of a board stored before they
     // existed; same moves, new details is an update, not a duplicate.
-    JSON.stringify(a.details ?? null) === JSON.stringify(b.details ?? null)
+    JSON.stringify(a.details ?? null) === JSON.stringify(b.details ?? null) &&
+    // A held record resolved later, or one newly held, is an update too.
+    a.recordWithheld === b.recordWithheld
   );
 }
 

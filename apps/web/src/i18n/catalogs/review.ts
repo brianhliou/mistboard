@@ -361,6 +361,10 @@ export const EN_REVIEW = {
     "The source has not published this round's games. If it does, they appear here.",
   'broadcast.noRecord': 'No record published',
   'broadcast.resultOnlyHint': "The source published this result without the game's moves.",
+  'broadcast.notReplayed': 'Not replayed',
+  'broadcast.recordAmbiguous':
+    "The {source} of this game can be read two ways, so it isn't replayed.",
+  'broadcast.recordAmbiguousSource': 'source record',
   'broadcast.gameNotStarted': 'Not started',
   'broadcast.calendarEarlier': 'Show earlier months',
   'broadcast.downloadPgn': 'Download PGN',

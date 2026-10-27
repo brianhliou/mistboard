@@ -11,7 +11,7 @@ import type {
   XiangqiColor,
   XiangqiMove,
 } from '@mistboard/game';
-import { XIANGQI_SPEC_ID } from '@mistboard/game';
+import { broadcastRecordsSourceName, XIANGQI_SPEC_ID } from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import { broadcastEmbedCode } from './xiangqi-broadcast-embed-code.js';
@@ -46,6 +46,8 @@ export type BroadcastReviewBoard = {
   black: XiangqiBroadcastPlayerTag;
   result: XiangqiBroadcastResult;
   sourceUrl?: string;
+  /** A record we do not replay (it reads two legal ways); see the schema. */
+  recordWithheld?: 'ambiguous';
 };
 
 export type BroadcastReviewInput = {
@@ -164,6 +166,82 @@ export function mountBroadcastBoardReview(
 }
 
 /**
+ * A finished game whose source record we do not replay (`recordWithheld`):
+ * the players, the result, why, and the source page, with no board. A board
+ * here would be the start position standing in for a game that was played.
+ */
+export function mountBroadcastHeldBoard(
+  root: HTMLElement,
+  data: Pick<BroadcastReviewInput, 'board' | 'context'>,
+  opts: { context?: BroadcastReviewInput['context']; embedded?: boolean } = {},
+): void {
+  const context = opts.context ?? data.context ?? null;
+  const red = playerLabel(data.board.red);
+  const black = playerLabel(data.board.black);
+  const result = resultOf(data.board.result);
+  const eventName = context ? primary(context.tour) : null;
+  document.title = `${red} vs ${black} · ${eventName ?? 'Mistboard'}`;
+
+  const view = document.createElement('section');
+  view.className = 'xqb-held';
+  const title = document.createElement('h1');
+  title.className = 'xqb-held-title';
+  title.textContent = `${red} vs ${black}`;
+  const seats = document.createElement('div');
+  seats.className = 'xqb-held-seats';
+  const [redScore = '', blackScore = ''] =
+    data.board.result === '1/2-1/2' ? ['½', '½'] : result.score.split('-');
+  for (const [side, player, score] of [
+    ['red', data.board.red, redScore],
+    ['black', data.board.black, blackScore],
+  ] as const) {
+    const seat = document.createElement('p');
+    seat.className = `xqb-held-seat xqb-held-seat-${side}`;
+    const name = document.createElement('span');
+    name.className = 'xqb-held-name';
+    name.textContent = playerLabel(player);
+    const team = teamOf(player);
+    if (team) {
+      const muted = document.createElement('span');
+      muted.className = 'xqb-held-team';
+      muted.textContent = team;
+      name.append(' ', muted);
+    }
+    const points = document.createElement('span');
+    points.className = 'xqb-held-score';
+    points.textContent = score;
+    seat.append(name, points);
+    seats.append(seat);
+  }
+  const status = document.createElement('p');
+  status.className = 'xqb-held-result';
+  status.textContent = result.label;
+  view.append(title, seats, status, heldRecordNote(data.board.sourceUrl));
+  view.append(provenance({ board: data.board, timeline: [] }, context));
+  if (opts.embedded) root.replaceChildren(view);
+  else root.replaceChildren(buildNav(), view);
+}
+
+/** "The source record of this game can be read two ways, so it isn't
+ *  replayed.", the source record linking the game's page at the source. */
+export function heldRecordNote(sourceUrl: string | undefined): HTMLElement {
+  const note = document.createElement('p');
+  note.className = 'xqb-held-note';
+  const [before = '', after = ''] = t('broadcast.recordAmbiguous').split('{source}');
+  const label = t('broadcast.recordAmbiguousSource');
+  let source: Node = document.createTextNode(label);
+  if (sourceUrl) {
+    const link = document.createElement('a');
+    link.href = sourceUrl;
+    link.rel = 'noreferrer';
+    link.textContent = label;
+    source = link;
+  }
+  note.append(before, source, after);
+  return note;
+}
+
+/**
  * A finished game the source published with its result and no moves: the
  * board view says so over the start position, as its card in the round grid
  * does, so the empty board does not read as a page that failed to load.
@@ -213,7 +291,11 @@ function provenance(
     const link = document.createElement('a');
     link.href = data.board.sourceUrl;
     link.rel = 'noreferrer';
-    link.textContent = hostOf(data.board.sourceUrl) ?? data.board.sourceUrl;
+    // A named database (XQBase on vietnamchess.vn) is credited by name.
+    link.textContent =
+      broadcastRecordsSourceName(data.board.sourceUrl) ??
+      hostOf(data.board.sourceUrl) ??
+      data.board.sourceUrl;
     dd.append(link);
     details.append(dt, dd);
   }

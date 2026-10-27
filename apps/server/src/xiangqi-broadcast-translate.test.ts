@@ -59,6 +59,14 @@ test('translateXiangqiEventName translates the real 2026 team championship name'
   );
 });
 
+// A Vietnamese event name is Latin script with diacritics: the pinyin pass
+// used to drop each accented letter ("Cup Kim Long Motor l n I").
+test('translateXiangqiEventName leaves Latin-script names whole and uses an override', () => {
+  assert.equal(translateXiangqiEventName('Cup Kim Long Motor lần I'), '1st Kim Long Motor Cup');
+  assert.equal(translateXiangqiEventName('Giải Cờ tướng Đà Nẵng'), undefined);
+  assert.equal(translateXiangqiRoundLabel('Vòng 1'), undefined);
+});
+
 test('translateXiangqiEventName handles ordinals, cups, groups, and year markers', () => {
   assert.equal(
     translateXiangqiEventName('第21届五羊杯全国象棋冠军赛'),

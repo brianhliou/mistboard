@@ -262,6 +262,36 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(logs[0]?.kind, 'illegal_move');
   });
 
+  test('a withheld record imports as a result with its reason, and one with moves is refused', async () => {
+    const pack = await fixturePack();
+    const validBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;
+    const held: XiangqiBroadcastBoard = {
+      ...validBoard,
+      status: 'complete',
+      result: '0-1',
+      moves: [],
+      recordWithheld: 'ambiguous',
+      sourceUrl: 'https://fixture.invalid/game.html',
+    };
+    const imported = await importXiangqiBroadcastPack({ ...pack, boards: [held] });
+    assert.equal(imported.boardsImported, 1);
+    const stored = await getXiangqiBroadcastBoard(validBoard.id);
+    assert.equal(stored?.recordWithheld, 'ambiguous');
+    assert.equal(stored?.moves.length, 0);
+    assert.equal(stored?.result, '0-1');
+
+    // A withheld record never carries a game: the validator refuses it and
+    // the stored board stays as it was.
+    const refused = await importXiangqiBroadcastPack({
+      ...pack,
+      boards: [{ ...held, moves: validBoard.moves }],
+    });
+    assert.equal(refused.boardsImported, 0);
+    assert.equal(refused.boardsSkipped, 1);
+    assert.equal(refused.errors[0]?.kind, 'schema_validation_failed');
+    assert.equal((await getXiangqiBroadcastBoard(validBoard.id))?.moves.length, 0);
+  });
+
   test('including individual game files exercises invalid fixture rejection', async () => {
     const result = await importXiangqiBroadcastPack(await fixturePack(true));
 

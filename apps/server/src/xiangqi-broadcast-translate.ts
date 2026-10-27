@@ -669,7 +669,10 @@ function translateGlossaryText(
     .trim()
     .replace(/(\d)年/g, '$1 ')
     .replace(/\s+/g, ' ');
-  if (trimmed.length === 0 || isFullyAscii(trimmed)) return undefined;
+  // Nothing to translate without a Han character. Latin text with diacritics
+  // (a Vietnamese event, "Cup Kim Long Motor lần I") is already readable, and
+  // the pinyin pass would drop each accented letter ("l n I").
+  if (trimmed.length === 0 || !/\p{Script=Han}/u.test(trimmed)) return undefined;
 
   const tokens: string[] = [];
   let residual = '';
