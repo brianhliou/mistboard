@@ -69,6 +69,10 @@ export function rightsContactNote(path: string = window.location.pathname): HTML
   note.className = 'xqb-rights-note';
   const link = document.createElement('a');
   link.href = localizedHref(`/contact?about=${encodeURIComponent(path)}`);
+  // Each page's ?about= copy of /contact read to a crawler as another URL for
+  // it (Search Console, 2026-10-19); /contact canonicalises to the bare path,
+  // and nofollow stops crawlers minting new copies. The form still prefills.
+  link.rel = 'nofollow';
   link.textContent = t('contact.rightsLink');
   note.append(t('contact.rightsPrefix'), link, t('contact.rightsSuffix'));
   return note;
