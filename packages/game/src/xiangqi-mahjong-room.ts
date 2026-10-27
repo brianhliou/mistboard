@@ -30,8 +30,11 @@ import {
   xmjCanSelfDraw,
   xmjClaim,
   xmjClaimsOpen,
+  xmjDeclarationDiscards,
+  xmjDeclareReady,
   xmjDiscard,
   xmjHandOver,
+  xmjIsDeclared,
   xmjMatchWinner,
   xmjNewMatch,
   xmjNextDealer,
@@ -77,7 +80,7 @@ export const XMJ_CLAIM_KINDS: readonly XmjClaimKind[] = ['win', 'pung', 'chow'];
 /** What a client asks to do. Carries no identity and no time. */
 export type XmjAction =
   | {
-      readonly action: 'discard';
+      readonly action: 'discard' | 'declare-ready';
       readonly tile: XmjTile;
       /** The drawn tile has a twin in the hand, and the twin was thrown. */
       readonly handCopy?: true;
@@ -168,7 +171,13 @@ export function isXmjRoomSetup(value: unknown): value is XmjRoomSetup {
   const setup = value as Record<string, unknown>;
   if (!isXmjSeat(setup.firstDealer) || !Array.isArray(setup.walls)) return false;
   if (setup.correspondence !== undefined && typeof setup.correspondence !== 'boolean') return false;
-  if (setup.taiTable !== undefined && setup.taiTable !== 1 && setup.taiTable !== 2) return false;
+  if (
+    setup.taiTable !== undefined &&
+    setup.taiTable !== 1 &&
+    setup.taiTable !== 2 &&
+    setup.taiTable !== 3
+  )
+    return false;
   if (setup.walls.length < 1 || setup.walls.length > XMJ_MATCH_HANDS) return false;
   return setup.walls.every(
     (wall) =>
@@ -230,7 +239,9 @@ export function xmjIsLegalMove(state: XmjRoomState, move: XmjMove): boolean {
   const seat = xmjSeatIndex(move.by);
   switch (move.action) {
     case 'discard':
-      return hand.turn === seat && xmjCanDiscard(hand, move.tile);
+      return hand.turn === seat && xmjCanDiscard(hand, move.tile, move.handCopy === true);
+    case 'declare-ready':
+      return hand.turn === seat && xmjDeclarationDiscards(hand).includes(move.tile);
     case 'self-draw':
       return hand.turn === seat && xmjCanSelfDraw(hand);
     case 'pass':
@@ -274,6 +285,9 @@ export function applyXmjMove(state: XmjRoomState, move: XmjMove): XmjRoomState {
   switch (move.action) {
     case 'discard':
       after = xmjDiscard(hand, move.tile, move.handCopy === true);
+      break;
+    case 'declare-ready':
+      after = xmjDeclareReady(hand, move.tile, move.handCopy === true);
       break;
     case 'self-draw':
       after = xmjSelfDraw(hand);
@@ -343,6 +357,20 @@ export function xmjPendingAction(
     };
   }
   const phase = state.match.hand.phase;
+  const hand = state.match.hand;
+  if (
+    phase.type === 'discard' &&
+    phase.drawn !== null &&
+    xmjIsDeclared(hand, hand.turn) &&
+    !xmjCanSelfDraw(hand) &&
+    state.lastMove !== undefined
+  ) {
+    // Derive from the persisted draw-producing move, never a fresh wall-clock
+    // timer. A reconnect reconstructs exactly the same automatic discard.
+    const at = state.lastMove.at + (state.correspondence ? 0 : XMJ_CLAIM_PAUSE_MS);
+    const by = xmjSeatName(hand.turn);
+    return { at, color: by, move: { by, at, action: 'discard', tile: phase.drawn } };
+  }
   const pauseEnd = state.claimPauseEndsAt ?? null;
   if (phase.type === 'claim' && pauseEnd !== null) {
     // A claimant with a claim to weigh has no deadline but its own clock.
@@ -407,12 +435,15 @@ export function xmjMoveFromMessage(message: { action?: string; tiles?: string[] 
   if (!Array.isArray(tiles) || !tiles.every(isXmjTile)) return null;
   switch (message.action) {
     case 'discard':
-    case 'discard-hand': {
+    case 'discard-hand':
+    case 'declare-ready':
+    case 'declare-ready-hand': {
       const [tile] = tiles;
       if (tile === undefined || tiles.length !== 1) return null;
-      return message.action === 'discard-hand'
-        ? { ...placeholder, action: 'discard', tile, handCopy: true }
-        : { ...placeholder, action: 'discard', tile };
+      const action = message.action.startsWith('declare-ready') ? 'declare-ready' : 'discard';
+      return message.action.endsWith('-hand')
+        ? { ...placeholder, action, tile, handCopy: true }
+        : { ...placeholder, action, tile };
     }
     case 'self-draw':
       return { ...placeholder, action: 'self-draw' };
@@ -442,6 +473,7 @@ export function isXmjMove(value: unknown): value is XmjMove {
     case 'timeout':
       return true;
     case 'discard':
+    case 'declare-ready':
       return isXmjTile(move.tile) && (move.handCopy === undefined || move.handCopy === true);
     case 'claim':
       return (
@@ -480,6 +512,8 @@ export interface XmjViewResult {
 /** What this seat may do right now, so a client renders buttons and decides nothing. */
 export interface XmjLegalActions {
   readonly discard: readonly XmjTile[];
+  /** Table 3 only, and populated only for the owner on its discard turn. */
+  readonly declareReady?: readonly XmjTile[];
   readonly selfDraw: boolean;
   readonly claims: readonly XmjClaim[];
   readonly pass: boolean;
@@ -519,6 +553,8 @@ export interface XmjPlayerView {
   readonly phase: XmjViewPhase;
   readonly between: boolean;
   readonly ready: readonly XmjSeat[];
+  /** Table 3 only. These public declarations never mean Next hand. */
+  readonly declared?: Readonly<Record<XmjSeat, boolean>>;
   /** End of the pause every discard gets; the claimant's answer waits for it. */
   readonly claimPauseEndsAt: number | null;
   readonly nextHandAt: number | null;
@@ -552,7 +588,7 @@ function legalFor(state: XmjRoomState, seat: XmjSeat): XmjLegalActions {
   if (hand.phase.type !== 'discard' || hand.turn !== index) return NO_ACTIONS;
   return {
     ...NO_ACTIONS,
-    discard: [...new Set(hand.hands[index])],
+    discard: [...new Set(hand.hands[index])].filter((tile) => xmjCanDiscard(hand, tile)),
     selfDraw: xmjCanSelfDraw(hand),
   };
 }
@@ -609,6 +645,7 @@ export function xmjViewFor(state: XmjRoomState, perspective: XmjSeat | 'spectato
     phase: viewPhase(state, perspective),
     between: match.between,
     ready: state.ready,
+    ...(hand.taiTable === 3 ? { declared: bySeat((i) => xmjIsDeclared(hand, i)) } : {}),
     claimPauseEndsAt: state.claimPauseEndsAt ?? null,
     nextHandAt: state.nextHandAt,
     results: match.results.map((result) => ({
@@ -618,7 +655,19 @@ export function xmjViewFor(state: XmjRoomState, perspective: XmjSeat | 'spectato
       score: result.score,
       winningTile: result.winningTile ?? null,
     })),
-    legal: perspective === 'spectator' ? NO_ACTIONS : legalFor(state, perspective),
+    legal: {
+      ...(perspective === 'spectator' ? NO_ACTIONS : legalFor(state, perspective)),
+      ...(hand.taiTable === 3
+        ? {
+            declareReady:
+              state.status.type === 'playing' &&
+              !match.between &&
+              perspective === xmjSeatName(hand.turn)
+                ? xmjDeclarationDiscards(hand)
+                : [],
+          }
+        : {}),
+    },
     correspondence: state.correspondence === true,
   };
 }
