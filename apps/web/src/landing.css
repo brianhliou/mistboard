@@ -61,9 +61,9 @@
     minmax(280px, var(--landing-rail-width));
   grid-template-areas:
     "left   panel  play"
-    "puzzle dives  studies"
-    "puzzle blogs  studies"
-    "news   forum  chat";
+    "puzzle dives  news"
+    "puzzle blogs  news"
+    "studies forum chat";
   /* The play panel's tab strip, fixed so the play rail can drop by exactly
      this much and start level with the panel's card (2026-10-11). */
   --landing-lobby-tabs-height: 40px;
@@ -373,10 +373,11 @@
   min-width: 0;
 }
 
-/* Band-3 left rail: News, stretched to the forum's height on desktop (the
-   stretch itself lives in the desktop block; stacked, the box keeps its own
-   fixed height), scrolling inside. Band-2 right rail: Top studies, spanning
-   the blog and deep-dives rows, fitting whole rows to the box (site-box-fit.ts). */
+/* Band-2 right rail: News, spanning the deep-dives and blog rows, scrolling
+   inside (it took this rail from Top studies 2026-10-26, Brian: News matters
+   more). Band-3 left rail: Top studies, stretched to the forum's height on
+   desktop (the stretch itself lives in the desktop block; stacked, the box
+   keeps its own fixed height), fitting whole rows to the box (site-box-fit.ts). */
 .landing-news-column {
   grid-area: news;
   display: flex;
@@ -2167,9 +2168,9 @@
   }
 
   /* ── Stretched boxes ─────────────────────────────────────────────────────────
-     News and the chat sit beside the forum in band 3 and fill its height, each
-     body scrolling inside. Top studies fills band 2 beside the puzzle and the
-     article rows, fitting whole rows to the box. All three are taken out of flow
+     Top studies and the chat sit beside the forum in band 3 and fill its
+     height. News fills band 2 beside the puzzle and the article rows, its body
+     scrolling inside. All three are taken out of flow
      (absolute in the stretched column) so their own content contributes NOTHING
      to the auto row heights: in flow a long timeline would inflate the band. */
   .landing-news-column,
@@ -2190,6 +2191,15 @@
   .landing-chat-column .landing-chat {
     height: 100%;
     min-height: 0;
+  }
+
+  /* The News body clips its bottom entry mid-line; a short fade says "scroll
+     for more" (Brian, 2026-10-26). An alpha mask, so it needs no colour and
+     reads the same in both themes. The extra bottom padding lets the last entry
+     scroll clear of the fade. */
+  .landing-news-column .site-box-body.landing-news-scroll {
+    padding-bottom: 32px;
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
   }
 
   /* ── Homepage viewer: flush box model (Stage 2) ──────────────────────────────
@@ -2405,8 +2415,8 @@
 
 @media (max-width: 959px) {
   /* Collapse to one column: Play button + activity, the lobby panel, banners +
-     viewer, then the deep-dives row, the blog row, the puzzle and Top studies,
-     and the band-3 boxes (forum, chat, news). */
+     viewer, then the deep-dives row, the blog row, the puzzle and News, and
+     the band-3 boxes (forum, chat, Top studies). */
   .landing-demo {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -2416,10 +2426,10 @@
       "dives"
       "blogs"
       "puzzle"
-      "studies"
+      "news"
       "forum"
       "chat"
-      "news";
+      "studies";
     max-width: 640px;
   }
 

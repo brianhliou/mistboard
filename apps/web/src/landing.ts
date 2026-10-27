@@ -748,10 +748,8 @@ export function buildLandingStage(
 
   // ── Band 3 center: forum topics, beside the chat (Brian, 2026-10-25: the
   // articles took its band-2 slot, and the two community boxes read as one
-  // strip). Band 2 right: Top studies beside the daily puzzle, which took this
-  // slot back from the chat 2026-09-26 (it held it until 2026-07-21): the one
-  // side slot above a desktop fold goes to something new to open, not a chat
-  // that is often quiet. ──
+  // strip). Band 3 left: Top studies, which held the band-2 right rail from
+  // 2026-09-26 until News took it 2026-10-26 (Brian: News matters more). ──
   const forumColumn = document.createElement('div');
   forumColumn.className = 'landing-forum-column';
   const studiesColumn = document.createElement('div');
@@ -778,8 +776,8 @@ export function buildLandingStage(
   const deepDives = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale, { row: 'deep-dives' });
   deepDives?.classList.add('landing-articles-row', 'landing-dives-row');
 
-  // ── Band 3 side rails: the News feed on the left (its full history stays at
-  // /feed) and the lobby chat on the right, each at the forum's height. The
+  // ── Band 2 right rail: the News feed (its full history stays at /feed),
+  // beside the article rows. Band 3 right: the lobby chat at the forum's height. The
   // chat box is server-driven (the empty mount paints nothing until the chat
   // flag is confirmed). ──
   const newsColumn = document.createElement('div');
@@ -827,7 +825,7 @@ export function buildLandingStage(
 
   // Grid placement (see landing.css): band 1 = [banners+viewer · lobby panel ·
   // play button+activity], band 2 = [puzzle · deep-dives row then blog row ·
-  // top studies], with the two side rails spanning both rows, band 3 = [news ·
+  // news], with the two side rails spanning both rows, band 3 = [top studies ·
   // forum · chat]. Append order is irrelevant (grid-area governs).
   section.append(
     ...(phone

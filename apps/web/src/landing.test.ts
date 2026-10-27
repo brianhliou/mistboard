@@ -165,7 +165,7 @@ describe('landing shell', () => {
     expect(demo?.querySelector(':scope > .landing-forum-column')).not.toBeNull();
     expect(demo?.querySelector(':scope > .landing-chat-column')).not.toBeNull();
     expect(demo?.querySelector(':scope > .landing-articles-row')).not.toBeNull();
-    // Bands 3-4 side rails: News (left) and Top studies (right) span both rows.
+    // Side rails: News (band 2 right) and Top studies (band 3 left).
     expect(demo?.querySelector(':scope > .landing-news-column')).not.toBeNull();
     expect(demo?.querySelector(':scope > .landing-studies-column')).not.toBeNull();
     // Band 4: the deep-dives row sits in its own grid-area above the blog row
@@ -282,6 +282,18 @@ describe('homepage band layout (CSS)', () => {
     expect(order('.landing-demo .landing-dives-row')).toBeLessThan(
       order('.landing-demo .landing-articles-row:not(.landing-dives-row)'),
     );
+  });
+
+  it('reads News before Top studies at every width', () => {
+    // Brian, 2026-10-26: News matters more than Top studies, so it takes the
+    // band-2 right rail (under the play column) and studies drops to band 3.
+    const areas = [...css.matchAll(/grid-template-areas:([^;]*);/g)].map((m) => m[1] ?? '');
+    const withBoth = areas.filter((a) => /\bnews\b/.test(a) && /\bstudies\b/.test(a));
+    expect(withBoth).toHaveLength(3);
+    for (const a of withBoth) expect(a.search(/\bnews\b/)).toBeLessThan(a.search(/\bstudies\b/));
+    const desktop = withBoth[0] ?? '';
+    expect(desktop).toMatch(/"puzzle\s+dives\s+news"/);
+    expect(desktop).toMatch(/"studies\s+forum\s+chat"/);
   });
 
   it('keeps the "more broadcasts" link out of the cards\' equal-height rows', () => {
