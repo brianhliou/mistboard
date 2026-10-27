@@ -5891,26 +5891,31 @@ const ZH_HANS: Record<string, string> = {
     '一手牌有三种结束方式。你摸到凑成手牌的那张并宣告胡牌，这是自摸。或者对手打出那张牌，你拿来胡。或者牌墙摸完了没人胡：这手牌流局，双方都不计分，换人做庄。',
   'A win before the hand has really started is a **heavenly hand**: the dealer’s opening five tiles already make a winning hand, or the other player wins with their first draw, before anyone has claimed a tile.':
     '一手牌真正开始之前就胡牌，叫做**天胡**：庄家起手的五张牌已经是胡牌牌型，或另一位玩家在还没有人吃碰之前，第一次摸牌就胡。',
-  'Points now follow the scoring table in Gamesofa’s Xiangqi Mahjong app: new lines for one General, three of a piece and mixed Soldiers, no dealer point, and one heavenly hand for either player’s first draw.':
-    '台数改为依照 Gamesofa 象棋麻将 app 的计台表：新增将之才、帅之才、三张同子和鼓角齐鸣，取消庄家台，天胡改为任一方第一次摸牌就胡都算。',
+  'Pick 1+1, 3+2, 5+5 or 10+5. Each player has one clock for all six hands, and it stops between hands. Who deals the first hand is drawn at random.':
+    '可选 1+1、3+2、5+5 或 10+5。每人六手共用一个计时器，两手之间计时暂停。第一手由谁做庄，随机抽定。',
+  'A match at 1+1, 3+2 or 5+5 between two signed-in players can be rated, and the rating counts the whole match as one result. Matches at 10+5 and matches against Misty, the computer, are unrated.':
+    '两位已登录玩家在 1+1、3+2 或 5+5 下的比赛可以计等级分，整场比赛算作一个结果。10+5 的比赛和对电脑 Misty 的比赛不计等级分。',
+  'Added how a match runs on Mistboard: the time controls, which matches are rated and the first deal.':
+    '新增 Mistboard 上一场比赛怎么进行：可选的时限、哪些比赛计等级分，以及第一手由谁做庄。',
   'Winning hands and their score': '胡牌牌型与台数',
   'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
     '胡牌是五张牌：一组面子加一对将眼，吃碰亮出的面子也算在内。能凑的面子只有三种：将士象顺子、车马炮顺子、三张兵卒，所以下面前三种牌型就涵盖了全部。每副胡牌计台；每张图的说明写的是胡对手弃牌时的台数。',
-  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for 2 points.':
-    '将士象顺子，加任意将眼：1 台；手上只有将或只有帅，再加 1 台，共 2 台。',
-  'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.':
-    '车马炮顺子，加任意将眼。将眼不必和面子同色：1 台。',
-  'Three Soldiers of one colour, with any pair: 1 point.': '三张同色兵卒，加任意将眼：1 台。',
-  'One colour: every tile red, or every tile black. 1 more, for 2 points.':
-    '清一色：全部红牌或全部黑牌。再加 1 台，共 2 台。',
-  'Generals pair: the red and the black General as the pair. 2 more, for 3 points.':
-    '将帅听令：红帅和黑将当将眼。再加 2 台，共 3 台。',
-  'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.':
-    '五兵合纵：同色的五张兵卒全到齐。再加 5 台，而且也是清一色：共 7 台。',
-  'Mixed Soldiers: five Soldiers of both colours. 2 more, for 3 points.':
-    '鼓角齐鸣：五张兵卒，红黑都有。再加 2 台，共 3 台。',
-  'Three of a piece: three Horses, of either colour. 2 more, for 3 points. Three Advisors, Elephants, Chariots or Cannons score the same.':
-    '三张同子：三张马，红黑不拘（千军万马）。再加 2 台，共 3 台。三张士、象、车或炮也一样。',
+  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for **2 points**.':
+    '将士象顺子，加任意将眼：1 台；手上只有将或只有帅，再加 1 台，共 **2 台**。',
+  'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: **1 point**.':
+    '车马炮顺子，加任意将眼。将眼不必和面子同色：**1 台**。',
+  'Three Soldiers of one colour, with any pair: **1 point**.':
+    '三张同色兵卒，加任意将眼：**1 台**。',
+  'One colour: every tile red, or every tile black. 1 more, for **2 points**.':
+    '清一色：全部红牌或全部黑牌。再加 1 台，共 **2 台**。',
+  'Generals pair: the red and the black General as the pair. 2 more, for **3 points**.':
+    '将帅听令：红帅和黑将当将眼。再加 2 台，共 **3 台**。',
+  'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: **7 points**.':
+    '五兵合纵：同色的五张兵卒全到齐。再加 5 台，而且也是清一色：共 **7 台**。',
+  'Mixed Soldiers: five Soldiers of both colours. 2 more, for **3 points**.':
+    '鼓角齐鸣：五张兵卒，红黑都有。再加 2 台，共 **3 台**。',
+  'Three of a piece: three Horses, of either colour. 2 more, for **3 points**. Three Advisors, Elephants, Chariots or Cannons score the same.':
+    '三张同子：三张马，红黑不拘（千军万马）。再加 2 台，共 **3 台**。三张士、象、车或炮也一样。',
   'Close, but not a win': '差一点，但不算胡',
   'These look finished and are not. In each, the three tiles on the left fail to make a set or the two on the right fail to make a pair.':
     '这些看起来成牌了，其实没有。每一副不是左边三张凑不成面子，就是右边两张凑不成将眼。',
@@ -6450,26 +6455,31 @@ const ZH_HANT: Record<string, string> = {
     '一手牌有三種結束方式。你摸到湊成手牌的那張並宣告胡牌，這是自摸。或者對手打出那張牌，你拿來胡。或者牌牆摸完了沒人胡：這手牌流局，雙方都不計分，換人做莊。',
   'A win before the hand has really started is a **heavenly hand**: the dealer’s opening five tiles already make a winning hand, or the other player wins with their first draw, before anyone has claimed a tile.':
     '一手牌真正開始之前就胡牌，叫做**天胡**：莊家起手的五張牌已經是胡牌牌型，或另一位玩家在還沒有人吃碰之前，第一次摸牌就胡。',
-  'Points now follow the scoring table in Gamesofa’s Xiangqi Mahjong app: new lines for one General, three of a piece and mixed Soldiers, no dealer point, and one heavenly hand for either player’s first draw.':
-    '台數改為依照 Gamesofa 象棋麻將 app 的計台表：新增將之才、帥之才、三張同子和鼓角齊鳴，取消莊家台，天胡改為任一方第一次摸牌就胡都算。',
+  'Pick 1+1, 3+2, 5+5 or 10+5. Each player has one clock for all six hands, and it stops between hands. Who deals the first hand is drawn at random.':
+    '可選 1+1、3+2、5+5 或 10+5。每人六手共用一個計時器，兩手之間計時暫停。第一手由誰做莊，隨機抽定。',
+  'A match at 1+1, 3+2 or 5+5 between two signed-in players can be rated, and the rating counts the whole match as one result. Matches at 10+5 and matches against Misty, the computer, are unrated.':
+    '兩位已登入玩家在 1+1、3+2 或 5+5 下的比賽可以計等級分，整場比賽算作一個結果。10+5 的比賽和對電腦 Misty 的比賽不計等級分。',
+  'Added how a match runs on Mistboard: the time controls, which matches are rated and the first deal.':
+    '新增 Mistboard 上一場比賽怎麼進行：可選的時限、哪些比賽計等級分，以及第一手由誰做莊。',
   'Winning hands and their score': '胡牌牌型與台數',
   'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
     '胡牌是五張牌：一組面子加一對將眼，吃碰亮出的面子也算在內。能湊的面子只有三種：將士象順子、車馬炮順子、三張兵卒，所以下面前三種牌型就涵蓋了全部。每副胡牌計台；每張圖的說明寫的是胡對手棄牌時的台數。',
-  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for 2 points.':
-    '將士象順子，加任意將眼：1 台；手上只有將或只有帥，再加 1 台，共 2 台。',
-  'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.':
-    '車馬炮順子，加任意將眼。將眼不必和面子同色：1 台。',
-  'Three Soldiers of one colour, with any pair: 1 point.': '三張同色兵卒，加任意將眼：1 台。',
-  'One colour: every tile red, or every tile black. 1 more, for 2 points.':
-    '清一色：全部紅牌或全部黑牌。再加 1 台，共 2 台。',
-  'Generals pair: the red and the black General as the pair. 2 more, for 3 points.':
-    '將帥聽令：紅帥和黑將當將眼。再加 2 台，共 3 台。',
-  'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.':
-    '五兵合縱：同色的五張兵卒全到齊。再加 5 台，而且也是清一色：共 7 台。',
-  'Mixed Soldiers: five Soldiers of both colours. 2 more, for 3 points.':
-    '鼓角齊鳴：五張兵卒，紅黑都有。再加 2 台，共 3 台。',
-  'Three of a piece: three Horses, of either colour. 2 more, for 3 points. Three Advisors, Elephants, Chariots or Cannons score the same.':
-    '三張同子：三張馬，紅黑不拘（千軍萬馬）。再加 2 台，共 3 台。三張士、象、車或炮也一樣。',
+  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for **2 points**.':
+    '將士象順子，加任意將眼：1 台；手上只有將或只有帥，再加 1 台，共 **2 台**。',
+  'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: **1 point**.':
+    '車馬炮順子，加任意將眼。將眼不必和面子同色：**1 台**。',
+  'Three Soldiers of one colour, with any pair: **1 point**.':
+    '三張同色兵卒，加任意將眼：**1 台**。',
+  'One colour: every tile red, or every tile black. 1 more, for **2 points**.':
+    '清一色：全部紅牌或全部黑牌。再加 1 台，共 **2 台**。',
+  'Generals pair: the red and the black General as the pair. 2 more, for **3 points**.':
+    '將帥聽令：紅帥和黑將當將眼。再加 2 台，共 **3 台**。',
+  'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: **7 points**.':
+    '五兵合縱：同色的五張兵卒全到齊。再加 5 台，而且也是清一色：共 **7 台**。',
+  'Mixed Soldiers: five Soldiers of both colours. 2 more, for **3 points**.':
+    '鼓角齊鳴：五張兵卒，紅黑都有。再加 2 台，共 **3 台**。',
+  'Three of a piece: three Horses, of either colour. 2 more, for **3 points**. Three Advisors, Elephants, Chariots or Cannons score the same.':
+    '三張同子：三張馬，紅黑不拘（千軍萬馬）。再加 2 台，共 **3 台**。三張士、象、車或炮也一樣。',
   'Close, but not a win': '差一點，但不算胡',
   'These look finished and are not. In each, the three tiles on the left fail to make a set or the two on the right fail to make a pair.':
     '這些看起來成牌了，其實沒有。每一副不是左邊三張湊不成面子，就是右邊兩張湊不成將眼。',
