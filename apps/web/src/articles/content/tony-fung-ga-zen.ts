@@ -285,8 +285,7 @@ export const tonyFungGaZenArticle: Article = {
   status: "published",
   publishedAt: "2026-10-03",
   updatedAt: "2026-10-08",
-  updateNote:
-    'Added the Manila final with its round table and board.',
+  updateNote: "Added the Manila final with its round table and board.",
   thumbnail: {
     kind: 'image',
     src: "/article-thumbs/tony-fung-2023-face.jpg",
@@ -389,7 +388,7 @@ export const tonyFungGaZenArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions and runs a qualifying group for players from Hong Kong, Macau and Taiwan. Fung won it in January. He beat Chao Yi-fan of Chinese Taipei with a win and a draw, then drew two slow games with his Hong Kong teammate Wong Hok Him and went through when Wong ran out of time in the rapid playoff.",
+          text: "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions and runs a qualifying group for players from Hong Kong, Macau and Taiwan. Fung won it in January. He beat Chao Yi-fan of Taiwan with a win and a draw, then drew two slow games with his Hong Kong teammate Wong Hok Him and went through when Wong ran out of time in the rapid playoff.",
         },
         {
           kind: 'xq-replay',
