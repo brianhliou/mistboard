@@ -8,6 +8,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderJungleFlipBoardSvg } from './jungle-flip-render.js';
 import { renderJungleBoardSvg } from './jungle-render.js';
+import { renderThreeKingdomsBanqiLiveBoardSvg } from './three-kingdoms-banqi-diagrams.js';
 
 const captured = vi.hoisted(() => ({ configs: [] as Array<Record<string, unknown>> }));
 
@@ -167,6 +168,70 @@ describe('flip jungle live room', () => {
           color: 'black',
         }),
       );
+    });
+
+    expect(seen).toEqual([]);
+  });
+});
+
+describe('Three Kingdoms banqi live room', () => {
+  const board = {
+    a1: { faceDown: false, color: 'red', role: 'chariot' },
+    b1: { faceDown: false, color: 'black', role: 'horse' },
+  } as const;
+
+  const hook = () => liveHook('./live-three-kingdoms-banqi.js', 'three-kingdoms-banqi');
+
+  function host(lastMove: { from: 'a1' | 'b1'; to: 'a1' | 'b1' }): HTMLElement {
+    const el = document.createElement('div');
+    el.innerHTML = renderThreeKingdomsBanqiLiveBoardSvg(board, {
+      selected: null,
+      targets: [],
+      draggingFrom: null,
+      lastMove,
+      lastMoveInk: 'red',
+    });
+    return el;
+  }
+
+  // Own moves glide too: the room draws nothing before the server's echo.
+  it.each(['red', 'black'])('glides a %s move and fades the destination tint in', async (color) => {
+    const animateBoard = await hook();
+    const el = host({ from: 'a1', to: 'b1' });
+    const seen = recordAnimations(el, () => {
+      animateBoard({ board: el }, { lastMove: { from: 'a1', to: 'b1' } }, () => ({
+        kind: 'live',
+        move: { from: 'a1', to: 'b1' },
+        color,
+      }));
+    });
+
+    expect(seen).toEqual(['b1', 'banqi-lastmove banqi-lastmove-to banqi-lastmove--red']);
+  });
+
+  it('reverse-glides a back step without fading a mark', async () => {
+    const animateBoard = await hook();
+    const el = host({ from: 'a1', to: 'b1' });
+    const seen = recordAnimations(el, () => {
+      animateBoard({ board: el }, { lastMove: null }, () => ({
+        kind: 'scrub',
+        direction: 'back',
+        prevView: { lastMove: { from: 'b1', to: 'a1' } },
+      }));
+    });
+
+    expect(seen).toEqual(['b1']);
+  });
+
+  it('animates nothing for a flip, which travels nowhere', async () => {
+    const animateBoard = await hook();
+    const el = host({ from: 'a1', to: 'a1' });
+    const seen = recordAnimations(el, () => {
+      animateBoard({ board: el }, { lastMove: { from: 'a1', to: 'a1' } }, () => ({
+        kind: 'live',
+        move: { from: 'a1', to: 'a1' },
+        color: 'black',
+      }));
     });
 
     expect(seen).toEqual([]);

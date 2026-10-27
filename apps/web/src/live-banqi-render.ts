@@ -303,6 +303,21 @@ export function animateBanqiBoardMove(
   move: { from: BanqiSquare; to: BanqiSquare },
   opts: { reverse?: boolean } = {},
 ): void {
+  glideBanqiFamilyMove(host, move, cellCenter, opts);
+}
+
+/**
+ * The glide behind animateBanqiBoardMove, for any banqi-family board whose
+ * piece slots are `[data-piece-square]` and whose last-move tint is
+ * `.banqi-lastmove-to`: `center` maps a square to its viewBox point (Three
+ * Kingdoms banqi's 9x5 intersections, three-kingdoms-banqi-diagrams.ts).
+ */
+export function glideBanqiFamilyMove<S extends string>(
+  host: HTMLElement,
+  move: { from: S; to: S },
+  center: (square: S) => { x: number; y: number },
+  opts: { reverse?: boolean } = {},
+): void {
   if (move.from === move.to) return;
   const duration = pieceAnimationDurationMs();
   if (duration <= 0) return;
@@ -310,8 +325,8 @@ export function animateBanqiBoardMove(
   const originSquare = opts.reverse ? move.to : move.from;
   const slot = host.querySelector(`[data-piece-square="${settleSquare}"]`);
   if (!slot) return;
-  const from = cellCenter(originSquare);
-  const to = cellCenter(settleSquare);
+  const from = center(originSquare);
+  const to = center(settleSquare);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
   // A reverse step renders the prior move's marker at a different square, so
   // fading it in would not track the reverse glide.

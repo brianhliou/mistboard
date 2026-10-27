@@ -25,7 +25,12 @@ import {
 import { activeXiangqiPieceSet } from './articles/diagrams.js';
 import { boardCornerRadius } from './board-metrics.js';
 import './live-banqi-board.css';
-import { BANQI_PIECE_SHAPE, banqiFaceDownRadius, banqiPieceDrawSize } from './live-banqi-render.js';
+import {
+  BANQI_PIECE_SHAPE,
+  banqiFaceDownRadius,
+  banqiPieceDrawSize,
+  glideBanqiFamilyMove,
+} from './live-banqi-render.js';
 import {
   renderXiangqiPieceGlyphed,
   xiangqiBanqiBackMarks,
@@ -343,6 +348,18 @@ export const TK_ADVISOR_TAKES_GENERAL = tkMoveDiagram({
 });
 
 // ── Live room board (local playtest, #628) ───────────────────────────────────
+
+/** Banqi's glide on this board's points: the piece that settled on `move.to`
+ *  slides in from `move.from` (with `reverse`, back onto `move.from`) and the
+ *  last-move tint fades in as it lands. A flip travels nowhere: no-op, as in
+ *  banqi. Call after the render that drew the final position. */
+export function animateThreeKingdomsBanqiBoardMove(
+  host: HTMLElement,
+  move: { from: Square; to: Square },
+  opts: { reverse?: boolean } = {},
+): void {
+  glideBanqiFamilyMove(host, move, point, opts);
+}
 
 /** The live room's board geometry, for drag-ghost sizing. */
 export const TK_LIVE_BOARD_VIEW = { width: WIDTH, height: HEIGHT, cell: CELL, files: 9 } as const;

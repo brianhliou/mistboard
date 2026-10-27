@@ -30,6 +30,7 @@ import { banqiPieceGhostSvg } from './live-banqi-render.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import {
+  animateThreeKingdomsBanqiBoardMove,
   renderThreeKingdomsBanqiLiveBoardSvg,
   TK_LIVE_BOARD_VIEW,
   type TkLiveBoardEntry,
@@ -167,6 +168,25 @@ const client = createTenantLiveClient<
     roomMode = 'pvp';
   },
   renderBoard,
+  // Banqi's glides (pieceAnimation pref), live and on scrubs. Unlike banqi,
+  // the room's own moves glide too: nothing draws a move before the server
+  // echoes it (a dropped piece snaps back to its origin until then), so the
+  // echo is the first time the piece moves and gliding it is not a replay.
+  animateBoard: (liveRefs, view, takePendingAnimation) => {
+    if (!view || draggingFrom) return;
+    const pending = takePendingAnimation();
+    if (!pending) return;
+    if (pending.kind === 'live') {
+      animateThreeKingdomsBanqiBoardMove(liveRefs.board, pending.move);
+      return;
+    }
+    if (pending.direction === 'forward') {
+      if (view.lastMove) animateThreeKingdomsBanqiBoardMove(liveRefs.board, view.lastMove);
+      return;
+    }
+    const undone = pending.prevView?.lastMove;
+    if (undone) animateThreeKingdomsBanqiBoardMove(liveRefs.board, undone, { reverse: true });
+  },
   renderExtras: (refs, view) => renderScores(refs, view),
   onDisabled: (refs) => {
     renderScores(refs, core?.displayedView() ?? null);
