@@ -695,6 +695,8 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `news-page.ts` | `/news` route: full announcement history as a dated reverse-chronological feed; the landing News box "More" target. Loads `news-page.css` |
 | `news-page.css` | `/news` dated-feed styles loaded by `news-page.ts` |
 | `changelog-data.ts` | Root `CHANGELOG.md` inlined at build time (`?raw`) and parsed to months → headings → entries with inline links/code/bold; `changelogMonths()`. Covers the file's own conventions only, not markdown in general |
+| `changelog-highlights.ts` | `changelogHighlights(monthId, now)`: announcement highlights for one authored calendar month, newest first, with the feed's publication clock and public-surface gate; data only for the next changelog slice |
+| `changelog-highlights.test.ts` | Monthly highlight boundaries (adjacent months, years, leap day, invalid dates), source ordering and preservation, scheduling and public-surface gates |
 | `changelog-page.ts` | `/changelog` route, lichess.org/changelog-shaped: months newest first with anchors (`#2026-09`), one heading per part of the site, one line per change ending in its commit link; `/feed` is the curated megaphone, this is the complete record. Prerendered to `dist/changelog.html`; `renderChangelogShellForPrerender`. Loads `changelog-page.css` |
 | `changelog-page.css` | `/changelog` month/heading/entry styles loaded by `changelog-page.ts` |
 | `replay-skeleton.ts` | Neutral loading and terminal-failure placeholders for watch/showcase replay slots while renderer kinds swap or mount asynchronously |
