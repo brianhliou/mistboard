@@ -12,6 +12,7 @@ import {
   type XiangqiGameState,
 } from '@mistboard/game';
 import { attachBoardResizeGrip, restoreBoardScale } from '../board-resize.js';
+import { t } from '../i18n/catalog.js';
 import { initLiveSound, playSound } from '../live-sound.js';
 import { soundForOwnXiangqiMove } from '../live-xiangqi-sound.js';
 import { displayComment } from '../study-i18n.js';
@@ -86,7 +87,7 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   boardFrame.className = 'gamebook__board-frame';
   const boardEl = document.createElement('div');
   boardEl.className = 'gamebook__board xiangqi-live-board';
-  boardEl.setAttribute('aria-label', 'Xiangqi lesson board');
+  boardEl.setAttribute('aria-label', t('study.gamebook.boardLabel'));
   boardFrame.append(boardEl);
   // The same strips the review and game pages hang on their boards, so a game
   // position reads the same everywhere: names beside the board, not in a panel.
@@ -119,10 +120,13 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   const promptDot = document.createElement('span');
   promptDot.className = 'gamebook__prompt-dot';
   promptDot.setAttribute('aria-hidden', 'true');
-  promptSide.append(promptDot, opts.orientation === 'black' ? 'Black to play' : 'Red to play');
+  promptSide.append(
+    promptDot,
+    t(opts.orientation === 'black' ? 'study.gamebook.blackToPlay' : 'study.gamebook.redToPlay'),
+  );
   const promptTask = document.createElement('p');
   promptTask.className = 'gamebook__prompt-task';
-  promptTask.textContent = 'Find the best move.';
+  promptTask.textContent = t('study.gamebook.findBestMove');
   prompt.append(promptSide, promptTask);
   coach.append(prompt);
   if (opts.game?.detail) {
@@ -142,8 +146,8 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   bubble.append(comment, feedback, hintText);
   const controls = document.createElement('div');
   controls.className = 'gamebook__controls';
-  const hintBtn = button('Hint', 'gamebook__btn');
-  const restartBtn = button('Restart lesson', 'gamebook__btn');
+  const hintBtn = button(t('study.gamebook.hint'), 'gamebook__btn');
+  const restartBtn = button(t('study.gamebook.restart'), 'gamebook__btn');
   controls.append(hintBtn, restartBtn);
   coach.append(bubble, controls);
   wrap.append(coach);
@@ -182,7 +186,7 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
         { square: next.from, kind: 'circle', className: 'xq-marker--gamebook-hint' },
       ]);
     }
-    hintText.textContent = session.view().hint ?? (next ? 'Look at the circled piece.' : '');
+    hintText.textContent = session.view().hint ?? (next ? t('study.gamebook.hintPiece') : '');
   });
   restartBtn.addEventListener('click', () => {
     session.reset();
@@ -207,15 +211,15 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
       // The lesson text stays; the note under it says what was wrong, and the
       // board is still live, so the next move is the retry.
       comment.textContent = view.comment ?? '';
-      feedback.textContent = view.deviation ?? 'Not that one. Try another move.';
+      feedback.textContent = view.deviation ?? t('study.gamebook.wrongMove');
     } else if (view.feedback === 'end') {
       comment.textContent = view.comment ?? '';
-      feedback.textContent = 'Lesson complete! 🎉';
+      feedback.textContent = t('study.gamebook.complete');
     } else {
       comment.textContent = view.comment ?? '';
       // The prompt above already says whose move it is; this line reports only
       // on an attempt.
-      feedback.textContent = justAttempted === 'good' ? 'Correct! Keep going.' : '';
+      feedback.textContent = justAttempted === 'good' ? t('study.gamebook.correctMove') : '';
     }
 
     hintBtn.hidden = view.feedback === 'end' || !session.node().children[0];
