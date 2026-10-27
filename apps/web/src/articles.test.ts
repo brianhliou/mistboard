@@ -141,9 +141,6 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The Xiangqi Mahjong how-to, a draft dated 2026-11-06 until its zh pages
-      // exist (DEV shows it early for review).
-      '/blog/how-to-play-xiangqi-mahjong',
       // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
       // (DEV shows it early for review).
       '/blog/shortest-stalemate-xiangqi',
@@ -416,7 +413,6 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
-      '/blog/how-to-play-xiangqi-mahjong',
       '/blog/shortest-stalemate-xiangqi',
       '/blog/banqi-chariot-endgame',
       '/blog/jqe',
