@@ -358,9 +358,9 @@ const PLACE_GLOSSARY: Array<[string, string]> = [
   // the Asian and world federations' English results drop it.
   ['中国香港', 'Hong Kong'],
   ['中国澳门', 'Macau'],
-  ['中国台北', 'Chinese Taipei'],
+  ['中国台北', 'Taiwan'],
   ['中国', 'China'],
-  ['中华台北', 'Chinese Taipei'],
+  ['中华台北', 'Taiwan'],
   // Malaysia enters the Asian championships as two federations, 西马 and 东马
   // (both coded MAS); the AXF's English member list names them West Malaysia
   // (Malaysia Xiangqi Federation) and East Malaysia (Sabah and Sarawak).

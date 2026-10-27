@@ -294,7 +294,7 @@ test('translateXiangqiTeamName glosses the national team championship sports bod
 test('federations at the Asian and world events read as countries, not pinyin', () => {
   assert.equal(translateXiangqiTeamName('越南'), 'Vietnam');
   assert.equal(translateXiangqiTeamName('台北'), 'Taipei');
-  assert.equal(translateXiangqiTeamName('中华台北'), 'Chinese Taipei');
+  assert.equal(translateXiangqiTeamName('中华台北'), 'Taiwan');
   assert.equal(translateXiangqiTeamName('马来西亚'), 'Malaysia');
   assert.equal(translateXiangqiTeamName('武汉大学棋类协会'), 'Wuhan University Chess Association');
 });
@@ -337,7 +337,7 @@ test('Asian championship federations read as their English names', () => {
     ['中国', 'China'],
     ['中国香港', 'Hong Kong'],
     ['中国澳门', 'Macau'],
-    ['中华台北', 'Chinese Taipei'],
+    ['中华台北', 'Taiwan'],
     ['西马', 'West Malaysia'],
     ['东马', 'East Malaysia'],
     ['黎巴嫩', 'Lebanon'],

@@ -21,7 +21,9 @@
 //
 //   ---                              front matter, `key: value` per line:
 //   slug: cao-yanlei                 slug, export, title, seoTitle, summary,
-//   ---                              status, updatedAt, publishedAt, thumbnail,
+//   ---                              status, updatedAt, updateNote (what
+//                                    changed, required with updatedAt),
+//                                    publishedAt, thumbnail,
 //                                    thumbnailAlt, thumbnailPosition (CSS
 //                                    object-position for the card crop),
 //                                    audience, readNext (comma list),
@@ -434,7 +436,7 @@ ${meta.homeRow ? `  homeRow: ${q(meta.homeRow)},\n` : ''}  kind: 'article',
 ${meta.seoTitle ? `  seoTitle: ${q(meta.seoTitle)},\n` : ''}  summary: ${q(meta.summary)},
   showSummaryOnPage: false,
   status: ${q(meta.status ?? 'draft')},
-${meta.publishedAt ? `  publishedAt: ${q(meta.publishedAt)},\n` : ''}${meta.updatedAt ? `  updatedAt: ${q(meta.updatedAt)},\n` : ''}${thumbnail}  audience: ${q(meta.audience)},
+${meta.publishedAt ? `  publishedAt: ${q(meta.publishedAt)},\n` : ''}${meta.updatedAt ? `  updatedAt: ${q(meta.updatedAt)},\n` : ''}${meta.updateNote ? `  updateNote: ${q(meta.updateNote)},\n` : ''}${thumbnail}  audience: ${q(meta.audience)},
 ${readNext}${tldr.length ? `  tldr: ${q(tldr)},\n` : ''}  intro: [
 ${intro.map((b) => emitBlock(b, 4)).join('')}  ],
   sections: [
