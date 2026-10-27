@@ -149,6 +149,7 @@ test('table-3 locked nonwinning draws have persisted pending discards and determ
   for (const move of moves) state = play(state, move.by, move, move.at);
   assert.deepEqual(xmjViewFor(state, 'east').legal.discard, ['rA']);
   assert.deepEqual(xmjViewFor(state, 'east').legal.declareReady, []);
+  assert.equal(xmjClockOwner(state), null, 'a forced discard waits on neither player’s clock');
   for (const action of [
     { action: 'discard', tile: 'rK' },
     { action: 'discard', tile: 'rA', handCopy: true },
@@ -180,6 +181,7 @@ test('a declared winning draw waits for its owner; next-hand readiness resets de
   state = play(state, 'west', { action: 'discard', tile: 'bR' });
   state = play(state, 'east', { action: 'pass' });
   assert.equal(xmjPendingAction(state), null, 'never throw away a winning draw automatically');
+  assert.equal(xmjClockOwner(state), 'east', 'a winning draw still needs its owner’s decision');
   state = play(state, 'east', { action: 'self-draw' });
   assert.deepEqual(state.ready, []);
   state = play(state, 'east', { action: 'next-hand' });

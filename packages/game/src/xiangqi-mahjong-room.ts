@@ -416,15 +416,16 @@ function lastResult(match: XmjMatchState): XmjHandResult {
 
 /**
  * The seat whose clock runs: the seat to discard, or after a discard the
- * claimant, who owns the claim decision. Nobody between hands. So the clock
- * passes to the other seat on every discard whether a claim was there or not,
- * and the claimant's claim or pass, draw and discard are one turn on one clock,
- * live and correspondence alike (in correspondence, one move deadline).
+ * claimant, who owns the claim decision. Nobody between hands or during a
+ * live declared player's automatic discard: that delay is the server's, with
+ * no decision for either player. Otherwise the claimant's claim or pass, draw
+ * and discard are one turn on one clock (in correspondence, one move deadline).
  */
 export function xmjClockOwner(state: XmjRoomState): XmjSeat | null {
   if (state.status.type !== 'playing' || state.match.between) return null;
   const phase = state.match.hand.phase;
   if (phase.type === 'claim') return xmjSeatName(xmjOtherSeat(phase.discarder));
+  if (!state.correspondence && xmjPendingAction(state)?.move.action === 'discard') return null;
   return phase.type === 'discard' ? xmjSeatName(state.match.hand.turn) : null;
 }
 
