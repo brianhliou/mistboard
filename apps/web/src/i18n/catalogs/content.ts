@@ -110,10 +110,10 @@ export const EN_CONTENT = {
   'patron.frequencyMonthly': 'Monthly',
   'patron.frequencyOnce': 'One-time',
   'patron.intro':
-    'Mistboard is an independent, ad-free site for xiangqi and its variants. Core play and learning are free for everyone and stay that way. Patron is an optional monthly subscription, or a one-time payment, that adds a badge to your profile.',
+    "I'm Brian, and I run Mistboard, an independent site for xiangqi and its variants. Playing and studying here is free, and it stays free. Patron is an optional subscription, or a one-time payment, that adds a heart badge to your profile.",
   'patron.perkTitle': 'What Patron support includes',
   'patron.perk':
-    'Patrons get a small heart badge on their profile: for as long as a subscription runs, or one month for every $5 of a one-time payment. It does not unlock features or gameplay advantages.',
+    'A heart badge on your profile. It lasts as long as a monthly subscription runs, or one month for every $5 of a one-time payment. That is the whole perk, and it changes nothing in a game.',
   'patron.supportLine': 'Patrons keep Mistboard running.',
   'patron.donate': 'Subscribe',
   'patron.donateOnce': 'Pay once',
@@ -129,9 +129,8 @@ export const EN_CONTENT = {
   // server bill and then asks readers to cover it reads as a fundraising appeal,
   // which is what put the Stripe account into a Restricted Businesses review in
   // 2026-08 (docs-private/patron-track.md). The measured figure still lives in
-  // docs-private/COSTS.md; keep it there, not here.
-  'patron.transparency':
-    'There are no ads, no investors, and no data sales. Subscriptions pay for the servers and the development time.',
+  // docs-private/COSTS.md; keep it there, not here. Re-confirmed 2026-10-26.
+  'patron.transparency': "There are no ads and no investors, and I don't sell data.",
   'patron.faqTitle': 'Questions',
   'patron.faqPerkQuestion': 'Is anything Patron-only?',
   'patron.faqPerkAnswer':
@@ -144,10 +143,13 @@ export const EN_CONTENT = {
     'Open the billing portal from this page anytime to change your plan or cancel. Recurring billing stops at the end of the current period. If you were charged by mistake, or you want a recent payment back, contact us within 30 days of the charge and we will refund it.',
   'patron.faqPayQuestion': 'Which ways can I pay?',
   'patron.faqPayAnswer':
-    'Monthly takes cards. A one-time payment takes cards, Alipay and WeChat Pay. Prices are set in US dollars; checkout shows them in your local currency, and you can choose to pay in US dollars instead.',
+    'Monthly takes cards. A one-time payment takes cards and Alipay. Prices are set in US dollars; checkout shows them in your local currency, and you can choose to pay in US dollars instead.',
   'patron.termsPrefix': 'Billing, cancellation, and refunds are covered in the ',
   'patron.termsLink': 'Terms of Use',
   'patron.termsSuffix': '.',
+  'patron.amountOther': 'Other',
+  'patron.customAmountLabel': 'Amount in US dollars',
+  'patron.customAmountInvalid': 'Enter a whole dollar amount from $5 to $1,000.',
   'contact.heading': 'Contact',
   'contact.introAnon':
     'A private line to the person who runs Mistboard. Bugs, broken games, account or billing trouble, anything you would rather not post in public. Add an email if you want a reply.',

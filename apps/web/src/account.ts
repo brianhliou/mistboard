@@ -337,12 +337,22 @@ function buildAccountSettingsRail(
   rail.className = 'account-settings-rail';
   rail.setAttribute('aria-label', t('account.settingsNav', {}, locale));
 
+  const separator = (): HTMLElement => {
+    const el = document.createElement('div');
+    el.className = 'account-settings-rail-separator';
+    el.setAttribute('role', 'separator');
+    return el;
+  };
   accountSettingsSectionGroups.forEach((group, groupIndex) => {
-    if (groupIndex > 0) {
-      const separator = document.createElement('div');
-      separator.className = 'account-settings-rail-separator';
-      separator.setAttribute('role', 'separator');
-      rail.append(separator);
+    if (groupIndex > 0) rail.append(separator());
+    // A quiet way to /patron from settings, in its own group above Close
+    // account: a plain rail link, not a section of this page.
+    if (group.includes('close')) {
+      const patron = document.createElement('a');
+      patron.href = localizedHref('/patron', locale);
+      patron.className = 'account-settings-rail-link';
+      patron.textContent = t('patron.heading', {}, locale);
+      rail.append(patron, separator());
     }
     for (const section of group) {
       const link = document.createElement('a');

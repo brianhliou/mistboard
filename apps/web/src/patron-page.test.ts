@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type AuthUser, setAccountNavUser } from './account-nav.js';
-import { buildPatronPage, renderPatronShellForPrerender } from './patron-page.js';
+import {
+  buildPatronPage,
+  parseCustomAmountInput,
+  renderPatronShellForPrerender,
+} from './patron-page.js';
 
 // The card hydrates asynchronously off /api/patron/config and the cached user.
 async function settle(): Promise<void> {
@@ -198,6 +202,151 @@ describe('patron card with monthly and one-time tiers configured', () => {
     expect(amounts(page)).toEqual(['$5', '$10', '$20', '$50']);
     expect(page.querySelector('.patron-donate-btn')?.textContent).toBe('Pay once');
   });
+
+  it('offers no Other amount when the server sends no custom range', async () => {
+    const page = buildPatronPage('en');
+    document.body.append(page);
+    await settle();
+
+    expect(page.querySelector('.patron-amount-other')).toBeNull();
+    expect(page.querySelector('.patron-custom')).toBeNull();
+  });
+});
+
+// The "Other" amount: whole US dollars in the server's range. The client check
+// only gates the button; the server validates again (routes/patron.ts).
+describe('patron card with a custom amount', () => {
+  const tiers = [
+    ...['monthly_5', 'monthly_10', 'monthly_20', 'monthly_50'].map((key) => ({
+      key,
+      mode: 'subscription',
+    })),
+    ...['once_5', 'once_10', 'once_20', 'once_50'].map((key) => ({ key, mode: 'payment' })),
+  ];
+  const checkoutCalls: string[] = [];
+
+  beforeEach(() => {
+    checkoutCalls.length = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes('/api/patron/config')) {
+          return new Response(
+            JSON.stringify({ configured: true, tiers, custom: { minUsd: 5, maxUsd: 1000 } }),
+            { headers: { 'content-type': 'application/json' } },
+          );
+        }
+        if (url.includes('/api/patron/checkout')) {
+          checkoutCalls.push(String(init?.body));
+          return new Response('{}', { status: 401 });
+        }
+        return new Response('{}', { status: 401 });
+      }),
+    );
+    vi.stubGlobal('location', { ...window.location, assign: vi.fn() });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  const mount = async () => {
+    const page = buildPatronPage('en');
+    document.body.append(page);
+    await settle();
+    const q = <T extends HTMLElement>(selector: string) => {
+      const el = page.querySelector<T>(selector);
+      if (!el) throw new Error(`missing ${selector}`);
+      return el;
+    };
+    const type = (value: string) => {
+      const input = q<HTMLInputElement>('.patron-custom-input');
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+    return { page, q, type };
+  };
+
+  it('keeps the four presets and the $10 default, with Other after them', async () => {
+    const { page, q } = await mount();
+
+    expect(
+      [...page.querySelectorAll<HTMLElement>('.patron-amounts .patron-segment-btn')].map(
+        (el) => el.textContent,
+      ),
+    ).toEqual(['$5', '$10', '$20', '$50', 'Other']);
+    expect(q('.patron-amounts .is-selected').textContent).toBe('$10');
+    expect(q<HTMLElement>('.patron-custom').hidden).toBe(true);
+    expect(q<HTMLButtonElement>('.patron-donate-btn').disabled).toBe(false);
+  });
+
+  it('choosing Other reveals a dollar input and holds the button until it is valid', async () => {
+    const { q, type } = await mount();
+
+    q<HTMLButtonElement>('.patron-amount-other').click();
+    expect(q<HTMLElement>('.patron-custom').hidden).toBe(false);
+    expect(q<HTMLButtonElement>('.patron-donate-btn').disabled).toBe(true);
+    // Nothing typed yet: no message, only the placeholder range.
+    expect(q<HTMLElement>('.patron-custom-message').hidden).toBe(true);
+
+    for (const bad of ['4', '1001', '7.5', 'abc', '1e2', '-5', '25 dollars']) {
+      type(bad);
+      expect(q<HTMLButtonElement>('.patron-donate-btn').disabled, bad).toBe(true);
+      expect(q<HTMLElement>('.patron-custom-message').hidden, bad).toBe(false);
+      expect(q('.patron-custom-message').textContent).toBe(
+        'Enter a whole dollar amount from $5 to $1,000.',
+      );
+    }
+
+    type('25');
+    expect(q<HTMLButtonElement>('.patron-donate-btn').disabled).toBe(false);
+    expect(q<HTMLElement>('.patron-custom-message').hidden).toBe(true);
+  });
+
+  it('sends the custom tier and whole dollars for the chosen frequency', async () => {
+    const { page, q, type } = await mount();
+
+    q<HTMLButtonElement>('.patron-amount-other').click();
+    type('7');
+    q<HTMLButtonElement>('.patron-donate-btn').click();
+    await settle();
+
+    page.querySelectorAll<HTMLButtonElement>('.patron-frequency .patron-segment-btn')[1]?.click();
+    q<HTMLButtonElement>('.patron-amount-other').click();
+    type('25');
+    q<HTMLButtonElement>('.patron-donate-btn').click();
+    await settle();
+
+    expect(checkoutCalls).toEqual([
+      JSON.stringify({ tier: 'monthly_custom', amountUsd: 7 }),
+      JSON.stringify({ tier: 'once_custom', amountUsd: 25 }),
+    ]);
+  });
+
+  it('going back to a preset hides the input and sends the preset key', async () => {
+    const { page, q, type } = await mount();
+
+    q<HTMLButtonElement>('.patron-amount-other').click();
+    type('abc');
+    page.querySelectorAll<HTMLButtonElement>('.patron-amount-btn')[2]?.click();
+    expect(q<HTMLElement>('.patron-custom').hidden).toBe(true);
+    expect(q<HTMLButtonElement>('.patron-donate-btn').disabled).toBe(false);
+    q<HTMLButtonElement>('.patron-donate-btn').click();
+    await settle();
+
+    expect(checkoutCalls).toEqual([JSON.stringify({ tier: 'monthly_20' })]);
+  });
+
+  it('parses only whole dollars inside the range', () => {
+    const range = { minUsd: 5, maxUsd: 1000 };
+    expect(parseCustomAmountInput('5', range)).toBe(5);
+    expect(parseCustomAmountInput(' 1000 ', range)).toBe(1000);
+    for (const bad of ['', '4', '1001', '7.5', '7.0', 'abc', '1e2', '-5', '+5', '0x10']) {
+      expect(parseCustomAmountInput(bad, range), bad).toBeNull();
+    }
+  });
 });
 
 // A signed-in patron. What the badge rests on decides the card: a subscriber
@@ -280,9 +429,12 @@ describe('prerendered patron shell', () => {
 
     // What is sold, and the two claims a reviewer of a "restricted business"
     // asks about: it buys a cosmetic badge, and it is not a charitable gift.
-    expect(html).toContain('optional monthly subscription');
+    expect(html).toContain('An optional monthly subscription or a one-time payment');
     expect(html).toContain('heart badge');
+    expect(html).toContain('changes nothing in a game');
+    expect(html).toContain('not a registered charity');
     expect(html).toContain('not tax-deductible');
+    expect(html).toContain('change your plan or cancel');
     // Cancellation and refunds, plus the pointer to the full billing terms.
     expect(html).toContain('/terms');
   });
