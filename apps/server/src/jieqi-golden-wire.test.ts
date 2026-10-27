@@ -328,7 +328,7 @@ test('jieqi golden wire: per-seat payloads match the recorded fixture', () => {
 
 type WireEvent = { type: string; color?: string; seat?: string; setup?: unknown; move?: unknown };
 type WireBoardEntry = { color?: string; role?: string; faceDown: boolean };
-type WireCapture = { owner: 'red' | 'black'; role: string | null };
+type WireCapture = { owner: 'red' | 'black'; role: string | null; takenFaceDown?: true };
 type WireSnapshot = {
   events: WireEvent[];
   roomMode?: string;
@@ -453,6 +453,21 @@ test('jieqi golden wire: capture reveal is capturer-only, live and after the gam
         );
         if (victimRole === null) hiddenCaptureSeen = true;
         if (victimRole === null && finished) finishedHiddenCaptureSeen = true;
+        // The face-down mark (Brian, 2026-10-26: the pool shades it) rides only
+        // beside the capturer's own role for a hidden capture. The victim's
+        // entry is exactly as before: no mark, so nothing beside a null role.
+        const capturerEntry = owner === 'red' ? black[i]! : red[i]!;
+        const victimEntry = owner === 'red' ? red[i]! : black[i]!;
+        assert.equal(
+          capturerEntry.takenFaceDown === true,
+          victimRole === null,
+          `${script.id}/${step.label}: the capturer marks exactly its hidden captures`,
+        );
+        assert.equal(
+          'takenFaceDown' in victimEntry,
+          false,
+          `${script.id}/${step.label}: the victim's entry carries no face-down mark`,
+        );
         // A spectator holds the VICTIM's knowledge of each capture: the owner
         // (public: the piece left the board) and a role only where the piece
         // was face-up when taken. Never the capturer's private reveal.
@@ -465,6 +480,13 @@ test('jieqi golden wire: capture reveal is capturer-only, live and after the gam
         );
       }
       assert.equal(snapshots.spectator!.state.captured.length, red.length);
+      // The spectator never captures, so nothing it receives names a hidden
+      // capture or carries the mark that goes beside one.
+      assert.equal(
+        JSON.stringify(snapshots.spectator).includes('takenFaceDown'),
+        false,
+        `${script.id}/${step.label}: the spectator payload carries a face-down mark`,
+      );
     }
   }
   assert.ok(

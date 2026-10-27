@@ -51,22 +51,41 @@
 }
 
 /* Captures sit in the name's row, between the name and the clock (Brian,
-   2026-10-25: a second row under the name was too disruptive). They stay
-   compact and scroll sideways instead of pushing the clock out. */
+   2026-10-25: a second row under the name was too disruptive). They never
+   scroll or clip: the row used to be overflow-x: auto, and the count badge's
+   1px overhang alone (styles.css) made it one pixel too wide, so a scrollbar
+   took the row's height and cut the tiles' tops. Now the badge may overhang,
+   and when the strip is short of room the detail gives way first, then the
+   name down to its 3em, then the tiles shrink to fit (down to 12px). A grouped
+   pool holds at most one tile per role, so 12px tiles fit any phone board. */
 .review-seat .review-seat__material {
   --capture-piece-size: 22px;
   flex: 0 1 auto;
   min-width: 0;
   display: flex;
+  align-items: center;
   flex-wrap: nowrap;
   height: 24px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: visible;
   pointer-events: auto;
 }
 
 .review-seat .review-seat__material .captures-row {
+  flex: 0 1 auto;
+  min-width: 0;
   flex-wrap: nowrap;
+  overflow: visible;
+}
+
+.review-seat .review-seat__material .review-capture-piece {
+  flex: 0 1 var(--capture-piece-size);
+  min-width: 12px;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.review-seat .review-seat__material .review-capture-piece svg {
+  height: auto;
 }
 
 /* `bottom: 100%` is the wrapper's top edge; the wrapper has no top padding, so
@@ -85,7 +104,8 @@
 }
 
 .review-seat__name {
-  flex: 0 1 auto;
+  /* Shrinks well before the captures (see .review-seat__material). */
+  flex: 0 100 auto;
   min-width: 3em;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -99,6 +119,8 @@
 }
 
 .review-seat__detail {
+  flex: 0 1000 auto;
+  min-width: 0;
   overflow: hidden;
   color: var(--site-muted);
   font-weight: 400;
