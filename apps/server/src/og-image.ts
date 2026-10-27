@@ -195,6 +195,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'cao-yanlei': playerFaceOgSvg('article-thumbs/cao-yanlei-2024-face.jpg'),
   'lai-ly-huynh': playerFaceOgSvg('article-thumbs/lai-ly-huynh-2026-face.jpg'),
   'tony-fung-ga-zen': playerFaceOgSvg('article-thumbs/tony-fung-2023-face.jpg'),
+  'tang-dan': playerFaceOgSvg('player-photos/tang-dan.jpg', { width: 300, height: 380 }),
   'zuo-wenjing': playerFaceOgSvg('article-thumbs/zuo-wenjing-2023-face.jpg'),
   'xiangqi-champions': renderChampionsOgSvg,
   'xiangqi-world-championship': renderWorldTitleOgSvg,
@@ -925,18 +926,22 @@ async function renderMistyOgSvg(title: string, ctx: ArticleOgContext): Promise<s
 // landscape, title below. Same shape as Misty's card with a wider frame,
 // because a face crop is 3:2 and a square would cut the sides off it. One
 // renderer for every player page; the face crop is the only thing that varies.
-function playerFaceOgSvg(facePath: string) {
+// `whole` is a small portrait with no landscape crop (a 300x380 photo): drawn
+// whole at its own pixel size, centred in the frame, never cropped or upscaled.
+function playerFaceOgSvg(facePath: string, whole?: { width: number; height: number }) {
   return async (title: string, ctx: ArticleOgContext): Promise<string> => {
-    const artW = 660;
+    const artW = whole?.width ?? 660;
     const artH = 420;
     const artY = 36;
     const artX = (OG_WIDTH - artW) / 2;
+    const imgH = whole?.height ?? artH;
+    const imgY = artY + (artH - imgH) / 2;
     const uri = await fileDataUri(ctx.staticDir, facePath, 'image/jpeg');
     return [
       `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
       `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
-      `<clipPath id="player-face-art"><rect x="${artX}" y="${artY}" width="${artW}" height="${artH}" rx="10"/></clipPath>`,
-      `<image href="${uri}" x="${artX}" y="${artY}" width="${artW}" height="${artH}" preserveAspectRatio="xMidYMid slice" clip-path="url(#player-face-art)"/>`,
+      `<clipPath id="player-face-art"><rect x="${artX}" y="${imgY}" width="${artW}" height="${imgH}" rx="10"/></clipPath>`,
+      `<image href="${uri}" x="${artX}" y="${imgY}" width="${artW}" height="${imgH}" preserveAspectRatio="xMidYMid slice" clip-path="url(#player-face-art)"/>`,
       ogFooterLine(title, artY + artH + 48),
       `</svg>`,
     ].join('');

@@ -144,6 +144,9 @@ describe('article public listing gates', () => {
       // The Xiangqi Mahjong how-to, a draft dated 2026-11-06 until its zh pages
       // exist (DEV shows it early for review).
       '/blog/how-to-play-xiangqi-mahjong',
+      // The sixth player page, the ten-time national women's champion Tang Dan,
+      // scheduled for 2026-11-06 (DEV shows it early for review).
+      '/blog/tang-dan',
       // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
       // (DEV shows it early for review).
       '/blog/shortest-stalemate-xiangqi',
@@ -470,6 +473,7 @@ describe('article public listing gates', () => {
 
     // No age cut on this row, so this holds whatever the date.
     expect(hrefs).toEqual([
+      '/blog/tang-dan',
       '/blog/zuo-wenjing',
       '/blog/tony-fung-ga-zen',
       '/blog/lai-ly-huynh',
@@ -1218,6 +1222,32 @@ describe('blog post read-next footer', () => {
     expect(articleStyles).toMatch(
       /@media \(max-width: \d+px\) \{\s*\.article-footer \.article-footer-list \{\s*grid-template-columns: 1fr/,
     );
+  });
+});
+
+describe('image figure credit', () => {
+  // xiangqiqipu.com's portraits are used on condition of a credit and a link
+  // (permission of 2026-10-11), so an article figure can carry a linked credit.
+  it('renders the credit as a link after the caption, opening in a new tab', () => {
+    const el = renderBlock({
+      kind: 'image-figure',
+      src: '/player-photos/tang-dan.jpg',
+      alt: 'A portrait.',
+      caption: 'Tang Dan.',
+      credit: { text: 'xiangqiqipu.com', href: 'https://www.xiangqiqipu.com/Player/View-33.html' },
+    });
+    const cap = el.querySelector('figcaption');
+    expect(cap?.textContent).toBe('Tang Dan. Photo: xiangqiqipu.com');
+    const link = cap?.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('https://www.xiangqiqipu.com/Player/View-33.html');
+    expect(link?.target).toBe('_blank');
+    expect(link?.rel).toBe('noopener');
+  });
+
+  it('keeps a caption without a credit as plain text', () => {
+    const el = renderBlock({ kind: 'image-figure', src: '/a.jpg', alt: 'A.', caption: 'Plain.' });
+    expect(el.querySelector('figcaption')?.textContent).toBe('Plain.');
+    expect(el.querySelector('figcaption a')).toBeNull();
   });
 });
 

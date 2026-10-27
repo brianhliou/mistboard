@@ -593,6 +593,16 @@
       "zh-hant": "求解器在古譜裡發現了什麼"
     }
   },
+  "tang-dan": {
+    "title": "Tang Dan 唐丹",
+    "kind": "article",
+    "description": "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "唐丹",
+      "zh-hant": "唐丹"
+    }
+  },
   "titled-players": {
     "title": "Bring your title to Mistboard",
     "kind": "article",

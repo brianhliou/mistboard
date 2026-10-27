@@ -2055,10 +2055,18 @@ function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
   zoom.append(img);
   if (darkImg) zoom.append(darkImg);
   figure.append(zoom);
-  if (block.caption) {
+  if (block.caption || block.credit) {
     const cap = document.createElement('figcaption');
     cap.className = 'article-figure-caption';
-    cap.textContent = block.caption;
+    cap.textContent = block.caption ?? '';
+    if (block.credit) {
+      const link = document.createElement('a');
+      link.href = block.credit.href;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = block.credit.text;
+      cap.append(`${block.caption ? ' ' : ''}Photo: `, link);
+    }
     figure.append(cap);
   }
   return figure;

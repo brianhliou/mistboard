@@ -42,6 +42,14 @@
 //   ## Heading                       starts a section; anything above the first
 //                                    one is the intro
 //   [figure src=/a.jpg alt="…"] Caption
+//   [figure src=… alt="…" credit="Site" creditHref=https://…] Caption
+//   [figure src=… alt="…" native=1] Caption
+//                                    native: the image at its own size and
+//                                    aspect, never stretched to the column
+//                                    (a small portrait); narrower screens
+//                                    still shrink it
+//                                    a credit that must link: rendered after
+//                                    the caption as "Photo: <a>Site</a>"
 //   [board key=m_139844 ply=24]      const name defaults to G_<key>;
 //                                    perspective=red|black overrides `player:`;
 //                                    the caption is generated from the record
@@ -160,7 +168,16 @@ for (const chunk of chunks) {
     .join(' ');
   if (name === 'figure') {
     if (!a.src || !a.alt) fail(`[figure] needs src and alt: ${head}`);
-    target.push({ kind: 'image-figure', src: a.src, alt: a.alt, ...(caption ? { caption } : {}) });
+    if (Boolean(a.credit) !== Boolean(a.creditHref))
+      fail(`[figure] credit and creditHref go together: ${head}`);
+    target.push({
+      kind: 'image-figure',
+      src: a.src,
+      alt: a.alt,
+      ...(caption ? { caption } : {}),
+      ...(a.credit ? { credit: { text: a.credit, href: a.creditHref } } : {}),
+      ...(a.native ? { className: 'article-figure-native' } : {}),
+    });
   } else if (name === 'board') {
     if (!a.key) fail(`[board] needs key: ${head}`);
     const constName = a.const ?? `G_${a.key.toUpperCase()}`;

@@ -113,7 +113,7 @@ const BLOCK_PROSE: {
   'static-boards': caption,
   interactive: caption,
   'live-boards': caption,
-  'image-figure': (b) => [...caption(b), b.alt],
+  'image-figure': (b) => [...caption(b), b.alt, ...(b.credit ? [b.credit.text] : [])],
   'raw-svg': caption,
   'animated-svg': caption,
   'svg-row': (b) => [...caption(b), ...b.items.flatMap(caption)],
