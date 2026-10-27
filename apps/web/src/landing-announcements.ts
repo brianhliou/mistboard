@@ -73,7 +73,7 @@ function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
   marker.className = `landing-news-marker landing-news-marker-${entry.kind}`;
   marker.dataset.announcementKind = entry.kind;
   marker.setAttribute('aria-hidden', 'true');
-  // A xiangqi-style disc, not a line icon: see news-disc.ts.
+  // A sticker drawing in the broadcast TV's style, not a line icon: see news-disc.ts.
   marker.append(buildNewsDisc(entry.kind));
 
   const content = document.createElement('div');

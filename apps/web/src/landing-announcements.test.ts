@@ -5,7 +5,7 @@ import { localizedArticleHref } from './article-i18n.js';
 import { articles } from './articles-data.js';
 import { localizedHref } from './i18n/locale.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
-import { newsDiscInkForKind, newsDiscMarkForKind } from './news-disc.js';
+import { newsDiscMarkForKind, newsDiscSvg } from './news-disc.js';
 import { buildNewsPage } from './news-page.js';
 import {
   rulesHrefPublicSurfaceEnabled,
@@ -215,8 +215,8 @@ describe('landing announcements', () => {
     const disc = marker?.querySelector<SVGSVGElement>('svg.landing-news-disc');
     expect(disc?.dataset.mark).toBe(mark);
     expect(disc?.classList.contains(`landing-news-disc-${mark}`)).toBe(true);
-    // The disc carries its own ring and fill, so the marker needs no icon font
-    // or currentColor to render: nothing in it is a ui-icon.
+    // The drawing carries its own outline and fills, so the marker needs no
+    // icon font or currentColor to render: nothing in it is a ui-icon.
     expect(marker?.querySelector('svg.ui-icon')).toBeNull();
   });
 
@@ -232,13 +232,12 @@ describe('landing announcements', () => {
     expect(last?.dataset.announcementKind).toBeUndefined();
   });
 
-  it('gives every announcement kind its own mark, and both inks a use', () => {
+  it('gives every announcement kind its own drawing', () => {
     const kinds: AnnouncementKind[] = ['release', 'update', 'article', 'status'];
     const marks = kinds.map((kind) => newsDiscMarkForKind(kind));
     expect(new Set(marks).size).toBe(kinds.length);
-
-    const inks = new Set(kinds.map((kind) => newsDiscInkForKind(kind)));
-    expect(inks).toEqual(new Set(['red', 'black']));
+    const drawings = kinds.map((kind) => newsDiscSvg(kind).replace(/^<svg[^>]*>/, ''));
+    expect(new Set(drawings).size).toBe(kinds.length);
   });
 
   it('localizes the News rail and feed chrome', () => {
