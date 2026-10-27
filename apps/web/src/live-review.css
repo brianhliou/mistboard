@@ -593,7 +593,6 @@
       var(--phone-room-band) -
       var(--phone-room-bar) -
       var(--phone-room-extra, 0px) -
-      var(--phone-room-post, 0px) -
       var(--phone-room-notice, 0px) -
       var(--uni-board-chrome-h, 0px)
     );
@@ -1281,33 +1280,31 @@
     line-height: 1.15;
   }
 
-  /* After the game: Rematch and the three links as a 2x2 grid of compact
-     buttons, a fixed height the board gives up, so the finished room still
-     ends on the moves strip and the bar. The band is one 48px line per row
-     the grid fills: a spectator has only Review game, one line, and the 96px
-     two-line band left 48px blank under it and took it from the board (10-24
-     phone review). Two lines when there are three actions or more, or when
-     the PvP rematch offer takes the first line to itself. */
-  .review-shell__cluster.live-review__cluster:has(.postgame-actions) {
-    --phone-room-post: 48px;
+  /* Post-game actions overlay the board, so its playing budget stays whole. */
+  .live-review__cluster .round-table__row:has(> .room-actions[data-postgame-sheet]),
+  .live-review__cluster .room-actions[data-postgame-sheet] {
+    display: contents;
   }
 
-  .review-shell__cluster.live-review__cluster:has(.postgame-actions > :nth-child(3)),
-  .review-shell__cluster.live-review__cluster:has(.postgame-actions > .room-rematch + *) {
-    --phone-room-post: 96px;
-  }
-
-  /* An action left alone on the grid's last line (a spectator's Review game,
-     a bot game with no invite) spans the line instead of sitting in the left
-     column with an empty cell beside it. The PvP rematch offer spans the
-     first line by itself, so after it the lone one is the even-numbered. */
-  .live-review__cluster .postgame-actions:not(:has(> .room-rematch)) > a:last-child:nth-child(odd),
-  .live-review__cluster
-    .postgame-actions:not(:has(> .room-rematch))
-    > button:last-child:nth-child(odd),
-  .live-review__cluster .postgame-actions:has(> .room-rematch) > a:last-child:nth-child(even),
-  .live-review__cluster .postgame-actions:has(> .room-rematch) > button:last-child:nth-child(even) {
-    grid-column: 1 / -1;
+  .review-shell__cluster.live-review__cluster
+    .round-table__box
+    .room-actions
+    > .postgame-sheet-toggle {
+    order: 46;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 40%;
+    min-height: var(--phone-room-bar);
+    width: auto;
+    margin: 0;
+    padding: 0 12px;
+    border: 0;
+    border-top: 1px solid var(--site-border-soft);
+    border-radius: 0;
+    background: var(--site-mobile-bar-bg, var(--site-panel));
+    color: var(--site-heading);
+    font-size: 13px;
+    font-weight: 600;
   }
 
   /* A lone action (a spectator's or signed-out viewer's Review game) needs no
@@ -1366,73 +1363,90 @@
     box-shadow: inset 0 0 0 2px var(--site-focus);
   }
 
-  .live-review__cluster .round-table__row:has(.postgame-actions) {
-    flex: 0 0 calc(100% - 24px);
-    height: calc(var(--phone-room-post) - 8px);
-    margin: 4px 12px;
-    padding: 0;
-    overflow: hidden;
+  .live-review__cluster .postgame-sheet {
+    position: fixed;
+    inset: auto 0 0;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    max-height: 80svh;
+    margin: 0;
+    padding: 0 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--site-border-soft);
+    border-radius: 18px 18px 0 0;
+    background: var(--site-panel);
+    color: var(--site-text);
+    box-shadow: 0 -8px 32px #0003;
   }
 
-  .live-review__cluster .postgame-actions {
-    grid-template-columns: 1fr 1fr;
+  .postgame-sheet::backdrop {
+    background: #0005;
+  }
+
+  .postgame-sheet__header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-height: 48px;
+    touch-action: none;
+  }
+
+  .postgame-sheet__handle {
+    position: absolute;
+    top: 10px;
+    left: calc(50% - 20px);
+    width: 40px;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--site-muted);
+  }
+
+  .live-review__cluster .round-table__box .room-actions .postgame-sheet__close {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 8px;
+  }
+
+  .postgame-sheet .postgame-sheet__result {
+    margin: 0 0 16px;
+    padding: 0 0 16px;
+    text-align: center;
+  }
+
+  .live-review__cluster .postgame-sheet .postgame-actions {
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
 
-  .live-review__cluster .round-table__box .postgame-actions > :is(a, button),
-  .live-review__cluster .postgame-actions > :is(a, button) {
+  .live-review__cluster
+    .round-table__box
+    .room-actions
+    .postgame-sheet
+    .postgame-actions
+    :is(a, button) {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 0;
-    width: 100%;
-    height: 40px;
-    min-height: 0;
-    margin: 0;
-    padding: 0 8px;
     box-sizing: border-box;
-    font-size: 12px;
-    line-height: 1.15;
-    text-align: center;
-    white-space: normal;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    margin: 0;
+    padding: 8px 12px;
     border: 1px solid var(--site-border-soft);
     border-radius: var(--site-radius, 10px);
+    font-size: 15px;
+    line-height: 1.3;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: normal;
   }
 
-  /* Rematch keeps its brand slab but drops to the grid's 40px (the desktop
-     rule is (0,4,1) and sets 52px plus a gap under it). */
-  .review-shell__cluster.live-review__cluster
-    .round-table__box
-    .postgame-actions
-    > button.postgame-actions__rematch,
-  .review-shell__cluster.live-review__cluster .round-table__box .postgame-actions__rematch button {
-    height: 40px;
-    min-height: 0;
-    margin: 0;
-    font-size: 13px;
-  }
-
-  /* A two-player rematch offer (note plus Accept/Decline) takes the whole
-     first line, the note beside its buttons, so the grid stays two rows. */
-  .live-review__cluster .postgame-actions > .room-rematch {
-    grid-column: 1 / -1;
+  .postgame-sheet .room-rematch-buttons {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    height: 40px;
-    min-width: 0;
-  }
-
-  .live-review__cluster .postgame-actions > .room-rematch .room-rematch-note {
-    flex: 1 1 auto;
-    min-width: 0;
-    font-size: 12px;
-    line-height: 1.2;
-  }
-
-  .live-review__cluster .postgame-actions > .room-rematch .room-rematch-buttons {
-    display: flex;
-    flex: 1 1 auto;
     gap: 8px;
   }
 }
@@ -1440,4 +1454,24 @@
 /* The sheet's close button exists only in the phone room. */
 .meta-panel__close {
   display: none;
+}
+
+.postgame-sheet-toggle[hidden],
+.postgame-sheet[hidden] {
+  display: none;
+}
+
+@keyframes postgame-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .postgame-sheet[open] {
+    animation: postgame-sheet-in 180ms ease-out;
+  }
 }

@@ -4,7 +4,7 @@ import type { LiveRefs } from './live-state.js';
 import { liveState } from './live-state.js';
 import { correspondenceAwaitingOpponent } from './live-status.js';
 import { currentView } from './live-view.js';
-import { postGameActions } from './postgame-panel.js';
+import { clearPostGameSheet, renderPostGameActions } from './postgame-panel.js';
 import { rememberBotRoomRequest } from './pve-memory.js';
 import { rematchControls } from './rematch-controls.js';
 import { postThroughRestart } from './room-create-retry.js';
@@ -43,17 +43,16 @@ export function renderRoomActions(refs: RoomActionRefs, deps: RoomActionDeps): v
         : liveState.roomMode === 'pve'
           ? playAgainButton(refs, deps)
           : null;
-    refs.roomActions.replaceChildren(
-      postGameActions({
-        variant: postGameVariant(),
-        mode: liveState.roomMode,
-        seated,
-        rematch,
-        reviewHref: `/game/${encodeURIComponent(liveState.room)}`,
-      }),
-    );
+    renderPostGameActions(refs.roomActions, {
+      variant: postGameVariant(),
+      mode: liveState.roomMode,
+      seated,
+      rematch,
+      reviewHref: `/game/${encodeURIComponent(liveState.room)}`,
+    });
     return;
   }
+  clearPostGameSheet(refs.roomActions);
   // Rooms are 'playing' from creation, so the invite window is "second seat
   // unclaimed" (the correspondence rule; live friend rooms share the link from
   // the setup dialog instead).
