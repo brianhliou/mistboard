@@ -435,6 +435,7 @@ export const ZH_HANS_PLAY = {
   'live.finishWinner': '胜方',
   'variant.mahjong.name': '麻将',
   'variant.xiangqiMahjong.name': '象棋麻将',
+  'variant.threeKingdomsBanqi.name': '三国暗棋',
   'live.pageTitle': '对局',
   'live.you': '你',
   'live.guestAre': '访客（{color}）',

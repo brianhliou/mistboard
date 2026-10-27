@@ -11,6 +11,7 @@ import {
   buildArticlePage,
   buildArticlesIndex,
   buildHomeArticleCards,
+  buildRulesArticleRailEntries,
   buildRulesIndex,
   renderArticleThumbnail,
   renderBlock,
@@ -650,20 +651,24 @@ describe('article public listing gates', () => {
       expect(tile.querySelector('.variant-marker'), href).not.toBeNull();
       expect(tile.querySelector('svg, img, .articles-thumb-board'), href).toBeNull();
     }
-    expect(
-      buildRulesIndex().querySelector(
-        '.rules-landing-tile[href="/rules/three-kingdoms-banqi"] .variant-marker[data-variant-marker-placeholder]',
-      ),
-    ).not.toBeNull();
   });
 
-  it('sorts three kingdoms banqi right after banqi on the rules tiles', () => {
-    const hrefs = [...buildRulesIndex().querySelectorAll('.rules-landing-tile')].map((tile) =>
-      tile.getAttribute('href'),
-    );
-    const banqi = hrefs.indexOf('/rules/banqi');
+  // Three Kingdoms banqi became a game spec for the local playtest (#628), hidden
+  // like Xiangqi Mahjong, so its rules page follows the launch switch: reachable
+  // by URL, off the tiles and unindexed until the spec goes public.
+  it('keeps the three kingdoms banqi rules tile off while its spec is hidden', () => {
+    expect(rulesSlugPublicSurfaceEnabled('three-kingdoms-banqi')).toBe(false);
+    expect(
+      buildRulesIndex().querySelector('.rules-landing-tile[href="/rules/three-kingdoms-banqi"]'),
+    ).toBeNull();
+  });
+
+  it('sorts three kingdoms banqi right after banqi in the rules rail order', () => {
+    const rules = articles.filter((article) => article.kind === 'rules' && !article.sourceLang);
+    const slugs = buildRulesArticleRailEntries(rules).map((article) => article.slug);
+    const banqi = slugs.indexOf('banqi');
     expect(banqi).toBeGreaterThanOrEqual(0);
-    expect(hrefs[banqi + 1]).toBe('/rules/three-kingdoms-banqi');
+    expect(slugs[banqi + 1]).toBe('three-kingdoms-banqi');
   });
 
   it('renders rules tiles as marker plus label, with no per-tile badge', () => {

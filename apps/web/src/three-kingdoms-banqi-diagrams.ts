@@ -9,8 +9,9 @@
 // 45 INTERSECTIONS of a 9x5 line grid, as in xiangqi, not in the 32 cells.
 // Everything else is borrowed: the wood, grid, jade backs, selection and hint
 // colours come from live-banqi-board.css, and the pieces from the active
-// xiangqi piece set. There is no room renderer for this variant yet; when one
-// exists, these diagrams should draw through it, as banqi's do.
+// xiangqi piece set. The local-playtest room board
+// (renderThreeKingdomsBanqiLiveBoardSvg, at the bottom) draws through the same
+// helpers.
 
 import {
   ALL_THREE_KINGDOMS_BANQI_SQUARES,
@@ -340,3 +341,79 @@ export const TK_ADVISOR_TAKES_GENERAL = tkMoveDiagram({
   from: 'e3',
   expect: ['f4', 'd4', 'f2'],
 });
+
+// ── Live room board (local playtest, #628) ───────────────────────────────────
+
+/** The live room's board geometry, for drag-ghost sizing. */
+export const TK_LIVE_BOARD_VIEW = { width: WIDTH, height: HEIGHT, cell: CELL, files: 9 } as const;
+
+export type TkLiveBoardEntry =
+  | { color: 'red' | 'black'; role: BanqiPieceRole; faceDown: false }
+  | { faceDown: true };
+
+/** The room's board: the diagram board plus a `[data-square]` hit target on
+ *  every point (board-drag.ts and the click handler read it), the last-move
+ *  wash in the acting side's ink, and the lifted piece hidden while dragged. */
+export function renderThreeKingdomsBanqiLiveBoardSvg(
+  board: Partial<Record<Square, TkLiveBoardEntry>>,
+  opts: {
+    selected: Square | null;
+    targets: readonly Square[];
+    draggingFrom: Square | null;
+    lastMove: { from: Square; to: Square } | null;
+    lastMoveInk: 'red' | 'black' | null;
+  },
+): string {
+  const inkClass = opts.lastMoveInk ? ` banqi-lastmove--${opts.lastMoveInk}` : '';
+  const washAt = (square: Square, modifier: string) => {
+    const { x, y } = point(square);
+    return `<circle class="banqi-lastmove ${modifier}${inkClass}" cx="${x}" cy="${y}" r="${SELECTION_R}"/>`;
+  };
+  const lastMove = opts.lastMove
+    ? opts.lastMove.from === opts.lastMove.to
+      ? washAt(opts.lastMove.to, 'banqi-lastmove-to banqi-lastmove-flip')
+      : washAt(opts.lastMove.from, 'banqi-lastmove-from') +
+        washAt(opts.lastMove.to, 'banqi-lastmove-to')
+    : '';
+  const pieces = ALL_THREE_KINGDOMS_BANQI_SQUARES.map((square) => {
+    const entry = board[square];
+    if (!entry || square === opts.draggingFrom) return '';
+    const { x, y } = point(square);
+    const inner = entry.faceDown
+      ? faceDown(x, y)
+      : renderXiangqiPieceGlyphed(entry, activeXiangqiPieceSet, {
+          ariaLabel: `${entry.color} ${entry.role}`,
+          className: 'banqi-piece',
+          shrouded: false,
+          x: x - PIECE_SIZE / 2,
+          y: y - PIECE_SIZE / 2,
+          size: PIECE_SIZE,
+          shape: BANQI_PIECE_SHAPE,
+        });
+    return `<g data-piece-square="${square}">${inner}</g>`;
+  }).join('');
+  const selection = opts.selected
+    ? (({ x, y }) => `<circle class="banqi-selection" cx="${x}" cy="${y}" r="${SELECTION_R}"/>`)(
+        point(opts.selected),
+      )
+    : '';
+  const hints = opts.targets
+    .map((to) => {
+      const { x, y } = point(to);
+      return board[to]
+        ? `<circle class="banqi-hint-capture" cx="${x}" cy="${y}" r="${PIECE_EDGE_R}"/>`
+        : `<circle class="banqi-hint" cx="${x}" cy="${y}" r="${HINT_DOT_R}"/>`;
+    })
+    .join('');
+  const half = CELL / 2;
+  const hits = ALL_THREE_KINGDOMS_BANQI_SQUARES.map((square) => {
+    const { x, y } = point(square);
+    const target = opts.targets.includes(square) ? ' banqi-hit--target' : '';
+    return `<g data-square="${square}" class="banqi-hit${target}"><rect x="${x - half}" y="${y - half}" width="${CELL}" height="${CELL}"/></g>`;
+  }).join('');
+  return `<svg class="banqi-board" width="100%" style="height:auto;display:block" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three Kingdoms banqi board">
+    <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${boardCornerRadius(WIDTH)}"/>
+    <g class="banqi-grid">${gridLines()}</g>
+    ${lastMove}${selection}${pieces}${hints}${hits}
+  </svg>`;
+}

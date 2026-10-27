@@ -19,6 +19,7 @@ import {
   JUNGLE_SPEC_ID,
   MAHJONG_SPEC_ID,
   RATED_TIME_CONTROLS,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   TIME_CONTROLS,
   type TimeClass,
   type TimeControlId,
@@ -130,7 +131,8 @@ export type LandingGameSpecId =
   | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID
-  | typeof XIANGQI_MAHJONG_SPEC_ID;
+  | typeof XIANGQI_MAHJONG_SPEC_ID
+  | typeof THREE_KINGDOMS_BANQI_SPEC_ID;
 type LandingTimePresetId = TimeControlId;
 type LandingTimePreset = {
   id: LandingTimePresetId;
@@ -3620,7 +3622,10 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
-  if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) {
+  if (
+    setup.gameSpecId === JUNGLE_FLIP_SPEC_ID ||
+    setup.gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID
+  ) {
     // Flip Jungle is symmetric hidden-identity 4×4 flip animal chess; move-order
     // seats (ink binds on the first flip). PvP + in-process-spawned
     // PvE bot (MistyJungleFlip); PvE sends the picked engine id.
@@ -3789,6 +3794,7 @@ export function roomCreationGameSpecId(
   | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID
   | typeof XIANGQI_MAHJONG_SPEC_ID
+  | typeof THREE_KINGDOMS_BANQI_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
   | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
@@ -3802,6 +3808,8 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === CRAZYHOUSE_XIANGQI_SPEC_ID) return CRAZYHOUSE_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_SPEC_ID) return JUNGLE_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
+  // Local playtest only (#628), behind VITE_THREE_KINGDOMS_BANQI_ENABLED.
+  if (setup.gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID) return THREE_KINGDOMS_BANQI_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;
   if (setup.gameSpecId === BANQI_SPEC_ID) return BANQI_SPEC_ID;
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) return DARK_XIANGQI_SPEC_ID;

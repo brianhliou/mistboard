@@ -7,6 +7,7 @@ export type BoardGeometryId =
   | 'banqi-8x4'
   | 'jungle-7x9'
   | 'jungle-flip-4x4'
+  | 'three-kingdoms-banqi-9x5'
   | 'xiangqi-7x8'
   // Mahjong has no board. This dimension names the material instead: the 144
   // tiles, being the 136 core plus eight flowers. Forcing a geometry here would
@@ -23,6 +24,9 @@ export type MovementRulesId =
   | 'banqi'
   | 'jungle'
   | 'jungle-flip'
+  // Banqi's piece geometry on 9x5 with no rank ladder (any piece takes any
+  // face-up enemy) and a capture-points score (variants-three-kingdoms-banqi.ts).
+  | 'three-kingdoms-banqi'
   | 'fortress-xiangqi'
   // Duck Xiangqi: standard xiangqi geometry plus a shared, uncapturable duck
   // that moves every turn. Its own movement id because the duck is an ordinary
@@ -54,7 +58,10 @@ export type ObjectiveRulesId =
   // piece, no capture, and no position to win on.
   | 'four-sets-and-a-pair'
   // Xiangqi mahjong: five tiles, one set and a pair.
-  | 'one-set-and-a-pair';
+  | 'one-set-and-a-pair'
+  // Three Kingdoms banqi: first to 100 capture points; the 40-ply no-progress
+  // count settles it on score; no legal move loses.
+  | 'score-target';
 // 'open' = perfect-information; 'dark' is
 // fog of war (positions hidden); 'hidden-identity' is jieqi/banqi (positions
 // public, piece identities hidden until revealed).
@@ -70,6 +77,7 @@ export type SetupRulesId =
   | 'banqi-deal'
   | 'jungle-standard'
   | 'jungle-flip-deal'
+  | 'three-kingdoms-banqi-deal'
   | 'fortress-standard'
   // Crazyhouse Xiangqi: xiangqi's array without advisors and elephants, which
   // start in each side's hand.
@@ -113,6 +121,8 @@ export type RatingPoolBaseId =
   | 'banqi'
   | 'jungle'
   | 'jungle_flip'
+  // Never rated: no user_ratings CHECK entry exists or is owed until a launch.
+  | 'three_kingdoms_banqi'
   | 'fortress_xiangqi'
   | 'mahjong_hk'
   // Migration 168 added it to the user_ratings CHECK.
@@ -132,6 +142,12 @@ export type GameSpecId =
   | 'banqi'
   | 'jungle'
   | 'jungle-flip'
+  // Three Kingdoms banqi (三國暗棋, #628): banqi's pieces on a 9x5 board, scored to
+  // 100. LOCAL PLAYTEST ONLY until the 10-31 checkpoint decides on a surface:
+  // publicSurface 'hidden', server flag MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED
+  // off by default, no menu entry, no sitemap. Rules engine:
+  // packages/game/src/variants-three-kingdoms-banqi.ts.
+  | 'three-kingdoms-banqi'
   | 'fortress-xiangqi'
   // Duck Xiangqi: Duck Chess's shared blocker on the xiangqi board. Rules engine:
   // packages/game/src/variants-duck-xiangqi.ts. Design notes and the balance
@@ -199,6 +215,7 @@ export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
 export const XIANGQI_MAHJONG_SPEC_ID = 'xiangqi-mahjong' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
 export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
+export const THREE_KINGDOMS_BANQI_SPEC_ID = 'three-kingdoms-banqi' satisfies GameSpecId;
 export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
 export const XIANGQI_SPEC_ID = 'xiangqi' satisfies GameSpecId;
 export const DUCK_XIANGQI_SPEC_ID = 'duck-xiangqi' satisfies GameSpecId;
@@ -677,6 +694,26 @@ export const GAME_SPECS: readonly GameSpec[] = [
     ratingPoolBase: 'jungle_flip',
     rated: true,
     publicSurface: 'casual',
+    runtimeStatus: 'live',
+  },
+  {
+    // Three Kingdoms banqi (三國暗棋, #628): banqi's 32 pieces on a 9x5 board
+    // (setup leaves the e-file and rank 3 empty), first to 100 points. Local
+    // playtest only: 'hidden' (no menu, no listing, no sitemap), never rated, and
+    // its server flag is off unless set in a local env. Whether it gets a public
+    // surface is the 2026-10-31 checkpoint's decision.
+    id: THREE_KINGDOMS_BANQI_SPEC_ID,
+    publicName: 'Three Kingdoms Banqi',
+    family: 'xiangqi',
+    board: 'three-kingdoms-banqi-9x5',
+    movement: 'three-kingdoms-banqi',
+    objective: 'score-target',
+    visibility: 'hidden-identity',
+    setup: 'three-kingdoms-banqi-deal',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'three_kingdoms_banqi',
+    publicSurface: 'hidden',
     runtimeStatus: 'live',
   },
 ] as const;

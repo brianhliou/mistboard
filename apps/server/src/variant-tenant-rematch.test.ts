@@ -28,6 +28,7 @@ import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
 import { mahjongTenant } from './mahjong-tenant.js';
+import { threeKingdomsBanqiTenant } from './three-kingdoms-banqi-tenant.js';
 import './variant-tenant/register-tenants.js';
 import { registeredVariantTenants } from './variant-tenant/registry.js';
 import { tenantRoomOffersRematch, tenantSnapshotPayload } from './variant-tenant/runtime.js';
@@ -76,6 +77,7 @@ const TENANTS: Record<string, AnyTenant> = Object.fromEntries(
     jungleFlipTenant,
     jungleTenant,
     mahjongTenant,
+    threeKingdomsBanqiTenant,
     xiangqiMahjongTenant,
     xiangqiTenant,
   ].map((tenant) => [tenant.kind, tenant as unknown as AnyTenant]),

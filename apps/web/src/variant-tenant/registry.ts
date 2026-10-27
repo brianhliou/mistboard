@@ -28,6 +28,7 @@ import {
   JUNGLE_SPEC_ID,
   legacyLiveRoomForGameSpec,
   MAHJONG_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   type TimeControlId,
   variantDefaultTimeControl,
   XIANGQI_MAHJONG_SPEC_ID,
@@ -45,6 +46,8 @@ import {
   jungleEnabled,
   jungleFlipEnabled,
   mahjongEnabled,
+  threeKingdomsBanqiEnabled,
+  threeKingdomsBanqiEngineEnabled,
   xiangqiEnabled,
   xiangqiMahjongEnabled,
 } from '../feature-flags.js';
@@ -1090,6 +1093,57 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       ],
       defaultEngineId: 'misty-xiangqi-mahjong',
       hideColorPicker: true,
+    },
+  },
+  {
+    // Three Kingdoms banqi (三國暗棋, #628): a LOCAL PLAYTEST ONLY, on
+    // VITE_THREE_KINGDOMS_BANQI_ENABLED (off by default; never set in prod). No
+    // postgame, review or watch surface, so like HK mahjong the server marks its
+    // finished rows unavailable; the room itself still shows the finished game.
+    // Whether it gets any of those is the 10-31 checkpoint's call.
+    gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
+    roomIdPrefix: 'tkb_',
+    enabled: threeKingdomsBanqiEnabled,
+    pageTitleKey: 'variant.threeKingdomsBanqi.name',
+    loadLiveRoomClient: () =>
+      import('../live-three-kingdoms-banqi.js').then(
+        ({ bootstrapThreeKingdomsBanqiLiveRoom }) =>
+          () =>
+            bootstrapThreeKingdomsBanqiLiveRoom(),
+      ),
+    landing: {
+      // Ink binds on the opening flip, so the picker offers move order, as banqi.
+      capabilities: {
+        firstColor: 'red',
+        firstGlyph: '1',
+        firstLabel: 'First',
+        glyphClass: 'banqi-seat',
+        neutralGlyphColor: true,
+        pickerLabel: 'Move order',
+        secondColor: 'black',
+        secondGlyph: '2',
+        secondLabel: 'Second',
+        supportsRated: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['5m5', '10m5'],
+      // One predicate for both (the conformance test checks the pair).
+      offerInMenu: threeKingdomsBanqiEnabled,
+      acceptsDeepLink: threeKingdomsBanqiEnabled,
+      // The Rust UCI engine, only when the build says the server has its binary
+      // (VITE_THREE_KINGDOMS_BANQI_ENGINE). Without an option the variant offers
+      // no Play-the-computer path at all.
+      engineOptions: threeKingdomsBanqiEngineEnabled()
+        ? [
+            {
+              id: 'misty-three-kingdoms-banqi',
+              name: 'Misty',
+              familyName: 'Misty',
+              kind: 'container',
+            },
+          ]
+        : undefined,
+      defaultEngineId: threeKingdomsBanqiEngineEnabled() ? 'misty-three-kingdoms-banqi' : undefined,
     },
   },
 ];

@@ -10,6 +10,7 @@ import {
   isRetiredGameSpec,
   MAHJONG_SPEC_ID,
   RETIRED_GAME_SPEC_IDS,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -144,8 +145,11 @@ describe('variant correspondence conformance', () => {
 // take only the spec and look the marker up in variants.ts; these pin that.
 describe('variant marker conformance', () => {
   // HK mahjong is behind a flag and never shown as a variant: no marker, no icon.
+  // Nor is Three Kingdoms banqi, a local playtest (#628) whose flag is never set
+  // in prod.
   const markedTenants = webVariantTenants().filter(
-    (tenant) => tenant.gameSpecId !== MAHJONG_SPEC_ID,
+    (tenant) =>
+      tenant.gameSpecId !== MAHJONG_SPEC_ID && tenant.gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID,
   );
 
   it('marks Xiangqi Mahjong with its own tile marker', () => {

@@ -44,6 +44,19 @@ export function xiangqiMahjongEnabled(): boolean {
   return import.meta.env.VITE_XIANGQI_MAHJONG_ENABLED === 'true';
 }
 
+// Three Kingdoms banqi (#628): a LOCAL playtest only, off by default and never on
+// in dev. The server holds rooms behind MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED;
+// this build flag lets a ?play deep link select it. No menu entry either way.
+export function threeKingdomsBanqiEnabled(): boolean {
+  return import.meta.env.VITE_THREE_KINGDOMS_BANQI_ENABLED === 'true';
+}
+
+// The playtest bot is offered only when the local build says the engine path
+// is set (the server refuses a PvE room without it, too).
+export function threeKingdomsBanqiEngineEnabled(): boolean {
+  return threeKingdomsBanqiEnabled() && import.meta.env.VITE_THREE_KINGDOMS_BANQI_ENGINE === 'true';
+}
+
 // jqe, the jieqi bot above AB-JChess. Off by default and never on in dev: the
 // server holds the engine behind MISTBOARD_JQE_ENABLED until its author's OK, and
 // this build flag only adds it to the jieqi picker and the landing ladder.
