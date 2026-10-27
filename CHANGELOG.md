@@ -26,6 +26,8 @@ Conventions:
 
 ### Playing
 
+- the Play a person box is tighter, and its rated notes are plain: guests read "Sign in to play rated games" ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
+- Play again in a game against the computer keeps the same bot ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
 - The bots page lists only the variants each bot plays, gives Misty her own section, shows engine versions, and names xiangqi Pikafish seats plain "Pikafish" ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
 - On a phone, the end of a game opens a sheet with Rematch, New game, Review and Challenge a friend ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
 - Xiangqi Mahjong is open to everyone: play the computer, a friend or Find opponent, rated or casual, with rematches and share cards for every match ([53fa98aa](https://github.com/brianhliou/mistboard/commit/53fa98aa))
@@ -226,6 +228,11 @@ Conventions:
 
 ### Site
 
+- the homepage News box has drawn icons in the broadcast TV style, each centred on its item ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
+- the homepage shows broadcast cards and recent forum topics in a cleaner layout, and holds their space on first load so nothing jumps ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
+- the phone homepage tiles are drawn, with larger art, and Watch now shows binoculars ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
+- Latest studies on the homepage shows five studies with whole titles and a small board of each position ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
+- the Patron page takes any whole-dollar amount from $5 to $1000, and on a phone the price sits right under the perk ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
 - The homepage fits its top band above the fold, News moves to the top right, Top studies to the bottom row, and a From the blog row lists the newest articles ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
 - The homepage shows two rows of articles beside the daily puzzle, and the forum moves beside the chat ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - Xiangqi Mahjong joins /champions as an open title held by Misty ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
@@ -311,6 +318,8 @@ Conventions:
 
 ### Fixed
 
+- forum machine translation no longer drops an author's own words from a post that quotes someone else, and English readers are now offered Translate on Chinese replies that quote English ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
+- the broadcast Results switch no longer covers its label with a green blob on phones ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
 - Xiangqi Mahjong cards on /watch line up side by side and the Dealer badge is no longer clipped ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
 - Inbox message times sit at the bottom right of each message ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
 - Jieqi captured pieces in the review no longer change identity from move to move or open a scrollbar, and a piece you captured face-down is drawn shaded ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
