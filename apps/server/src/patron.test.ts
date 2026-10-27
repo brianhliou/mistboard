@@ -11,13 +11,17 @@ import {
   findPatronTier,
   loadPatronConfig,
   oneTimeMonthsForAmount,
+  PATRON_CUSTOM_MAX_USD,
+  PATRON_CUSTOM_MIN_USD,
   PATRON_TIERS,
+  parseCustomAmountUsd,
 } from './patron-config.js';
 import type { PatronTransaction } from './persistence.js';
 import { PATRON_ACTIVE_STATUSES, PATRON_ONE_TIME_STATUS } from './persistence-patron.js';
 import {
   addMonths,
   oneTimeInputFromSession,
+  planCheckout,
   processWebhookEvent,
   resolveAccountIdFromMetadata,
   subscriptionInputFromStripe,
@@ -41,6 +45,7 @@ function session(overrides: Record<string, unknown>): Stripe.Checkout.Session {
     mode: 'payment',
     payment_status: 'paid',
     amount_total: 2000,
+    currency: 'usd',
     customer: 'cus_123',
     client_reference_id: 'acct_1',
     metadata: { tier: 'once_20', mistboard_account_id: 'acct_1' },
@@ -156,6 +161,179 @@ test('subscription-mode checkout completion is NOT a one-time row', () => {
   assert.equal(input, null);
 });
 
+// ── custom ("Other") amounts ────────────────────────────────────────────────
+const PLAN_CONFIG = {
+  priceByTier: new Map([
+    ['monthly_10', 'price_m10'],
+    ['once_20', 'price_o20'],
+  ]),
+  productId: 'prod_patron',
+};
+
+function grantedMonths(input: ReturnType<typeof oneTimeInputFromSession>): number {
+  assert.ok(input?.currentPeriodEnd);
+  for (let months = 1; months <= 240; months += 1) {
+    if (addMonths(NOW, months).getTime() === input.currentPeriodEnd.getTime()) return months;
+  }
+  assert.fail(`period end ${input.currentPeriodEnd.toISOString()} is not a whole month count`);
+}
+
+test('custom amount range is whole USD 5..1000', () => {
+  assert.equal(PATRON_CUSTOM_MIN_USD, 5);
+  assert.equal(PATRON_CUSTOM_MAX_USD, 1000);
+  assert.equal(parseCustomAmountUsd(5), 5);
+  assert.equal(parseCustomAmountUsd(1000), 1000);
+});
+
+test('custom checkout rejects below-min, above-max, fractional and non-numeric amounts', () => {
+  const rejected: unknown[] = [
+    4,
+    0,
+    -5,
+    1001,
+    5000,
+    7.5,
+    10.01,
+    Number.NaN,
+    Infinity,
+    '25',
+    'abc',
+    '',
+    null,
+    undefined,
+    true,
+    [25],
+    { usd: 25 },
+  ];
+  for (const amountUsd of rejected) {
+    for (const tier of ['monthly_custom', 'once_custom']) {
+      assert.deepEqual(
+        planCheckout({ tier, amountUsd }, PLAN_CONFIG),
+        { error: 'invalid_amount' },
+        `${tier} ${String(amountUsd)} must be a 400`,
+      );
+    }
+  }
+});
+
+test('custom one-time checkout builds inline USD price_data on the patron product and stamps usd_cents', () => {
+  const plan = planCheckout({ tier: 'once_custom', amountUsd: 25 }, PLAN_CONFIG);
+  assert.ok(!('error' in plan));
+  assert.equal(plan.mode, 'payment');
+  assert.equal(plan.tierKey, 'once_custom');
+  assert.equal(plan.usdCents, 2500);
+  assert.deepEqual(plan.lineItem, {
+    quantity: 1,
+    price_data: { currency: 'usd', unit_amount: 2500, product: 'prod_patron' },
+  });
+});
+
+test('custom monthly checkout is a recurring monthly price; without a product id it names one inline', () => {
+  const plan = planCheckout(
+    { tier: 'monthly_custom', amountUsd: 7 },
+    { priceByTier: new Map(), productId: null },
+  );
+  assert.ok(!('error' in plan));
+  assert.equal(plan.mode, 'subscription');
+  assert.equal(plan.usdCents, 700);
+  assert.deepEqual(plan.lineItem, {
+    quantity: 1,
+    price_data: {
+      currency: 'usd',
+      unit_amount: 700,
+      product_data: { name: 'Mistboard Patron' },
+      recurring: { interval: 'month' },
+    },
+  });
+});
+
+test('preset checkout is unchanged: price id from env, unknown and unpriced tiers rejected', () => {
+  const plan = planCheckout({ tier: 'once_20', amountUsd: 999 }, PLAN_CONFIG);
+  assert.ok(!('error' in plan));
+  assert.equal(plan.mode, 'payment');
+  assert.equal(plan.tierKey, 'once_20');
+  assert.equal(plan.usdCents, 2000);
+  assert.deepEqual(plan.lineItem, { price: 'price_o20', quantity: 1 });
+  assert.deepEqual(planCheckout({ tier: 'lifetime' }, PLAN_CONFIG), { error: 'invalid_tier' });
+  assert.deepEqual(planCheckout({}, PLAN_CONFIG), { error: 'invalid_tier' });
+  assert.deepEqual(planCheckout({ tier: 'monthly_5' }, PLAN_CONFIG), {
+    error: 'tier_unavailable',
+  });
+});
+
+test('a custom one-time payment grants one month per $5 of its USD metadata: $7 -> 1, $25 -> 5', () => {
+  const custom = (usdCents: number) =>
+    oneTimeInputFromSession(
+      session({
+        amount_total: usdCents,
+        metadata: {
+          tier: 'once_custom',
+          usd_cents: String(usdCents),
+          mistboard_account_id: 'acct_1',
+        },
+      }),
+      'acct_1',
+      'cus_123',
+      NOW,
+    );
+  assert.equal(grantedMonths(custom(700)), 1);
+  assert.equal(grantedMonths(custom(2500)), 5);
+  assert.equal(grantedMonths(custom(100_000)), 200);
+  assert.equal(custom(2500)?.tier, 'once_custom');
+});
+
+test('a preset one-time payment keeps its tier mapping even with usd_cents stamped', () => {
+  const input = oneTimeInputFromSession(
+    session({ metadata: { tier: 'once_20', usd_cents: '2000', mistboard_account_id: 'acct_1' } }),
+    'acct_1',
+    'cus_123',
+    NOW,
+  );
+  assert.equal(grantedMonths(input), 4);
+});
+
+test('a non-USD custom session (Adaptive Pricing) grants by USD metadata, never by amount_total', () => {
+  // $25 shown in yen: amount_total is 3,800 JPY, which read as cents would be 7 months.
+  const input = oneTimeInputFromSession(
+    session({
+      currency: 'jpy',
+      amount_total: 3800,
+      metadata: { tier: 'once_custom', usd_cents: '2500', mistboard_account_id: 'acct_1' },
+    }),
+    'acct_1',
+    'cus_123',
+    NOW,
+  );
+  assert.equal(grantedMonths(input), 5);
+});
+
+test('a non-USD session with no USD metadata grants one month, never months from a foreign amount', () => {
+  const input = oneTimeInputFromSession(
+    session({ currency: 'inr', amount_total: 200_000, metadata: { tier: 'lifetime' } }),
+    'acct_1',
+    'cus_123',
+    NOW,
+  );
+  assert.equal(grantedMonths(input), 1);
+});
+
+test('a monthly custom subscription is an active patron, on creation and on renewal', () => {
+  const metadata = { tier: 'monthly_custom', usd_cents: '1500', mistboard_account_id: 'acct_1' };
+  const created = subscriptionInputFromStripe(subscription({ metadata }), 'acct_1', 'cus_123');
+  assert.equal(created.tier, 'monthly_custom');
+  assert.equal(PATRON_ACTIVE_STATUSES.includes(created.status), true);
+  // A renewal is a customer.subscription.updated carrying the same subscription
+  // metadata and a later period end; it keeps the row active.
+  const renewed = subscriptionInputFromStripe(
+    subscription({ metadata, items: { data: [{ current_period_end: 1_802_592_000 }] } }),
+    'acct_1',
+    'cus_123',
+  );
+  assert.equal(renewed.stripeSubscriptionId, created.stripeSubscriptionId);
+  assert.equal(PATRON_ACTIVE_STATUSES.includes(renewed.status), true);
+  assert.equal(renewed.currentPeriodEnd?.getTime(), 1_802_592_000 * 1000);
+});
+
 // ── account resolution ───────────────────────────────────────────────────────
 test('account resolves from client_reference_id first, then metadata', () => {
   assert.equal(
@@ -187,6 +365,9 @@ test('tier catalog: valid keys resolve, unknown keys reject', () => {
   assert.equal(findPatronTier('lifetime'), null);
   assert.equal(findPatronTier('monthly_999'), null);
   assert.equal(findPatronTier(''), null);
+  // Custom amounts are not presets: they carry no price id and no fixed months.
+  assert.equal(findPatronTier('monthly_custom'), null);
+  assert.equal(findPatronTier('once_custom'), null);
   // The same amount ladder under both frequencies: every monthly amount has a
   // one-time twin, so the page can swap frequency without changing the amounts.
   const amounts = (mode: string) =>
@@ -196,6 +377,9 @@ test('tier catalog: valid keys resolve, unknown keys reject', () => {
   // One-time badge months follow the amount, one month per $5.
   for (const tier of PATRON_TIERS.filter((t) => t.mode === 'payment')) {
     assert.equal(tier.months, Number(tier.key.split('_')[1]) / 5);
+  }
+  for (const tier of PATRON_TIERS) {
+    assert.equal(tier.amountUsd, Number(tier.key.split('_')[1]));
   }
 });
 
@@ -217,6 +401,13 @@ test('config builds a price map only for tiers whose price env var is set', () =
   assert.equal(config.priceByTier.get('once_10'), 'price_once_10');
   // monthly_5 has no env var set -> not offered.
   assert.equal(config.priceByTier.has('monthly_5'), false);
+  assert.equal(config.productId, null);
+  const withProduct = loadPatronConfig({
+    STRIPE_SECRET_KEY: 'sk_test_x',
+    STRIPE_WEBHOOK_SECRET: 'whsec_x',
+    STRIPE_PATRON_PRODUCT_ID: 'prod_patron',
+  });
+  assert.equal(withProduct?.productId, 'prod_patron');
 });
 
 // ── signature verification (the exact mechanism the webhook route uses) ──────

@@ -322,9 +322,16 @@ describe('account page auth flow', () => {
       'Change username',
       'Email and sign-in',
       'Security',
+      'Mistboard Patron',
       'Close account',
     ]);
-    expect(document.querySelectorAll('.account-settings-rail-separator')).toHaveLength(3);
+    expect(document.querySelectorAll('.account-settings-rail-separator')).toHaveLength(4);
+    // The Patron link is a plain way out to /patron, never a settings section.
+    const patronLink = [
+      ...document.querySelectorAll<HTMLAnchorElement>('.account-settings-rail-link'),
+    ].find((link) => link.textContent === 'Mistboard Patron');
+    expect(patronLink?.getAttribute('href')).toBe('/patron');
+    expect(patronLink?.classList.contains('active')).toBe(false);
 
     const animation = document.querySelector<HTMLInputElement>(
       'input[name="pieceAnimation"][value="fast"]',
