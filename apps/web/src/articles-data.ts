@@ -58,7 +58,6 @@ import { douShouQiEngineArticle } from './articles/content/dou-shou-qi-engine.js
 import { jungleDenTermArticle } from './articles/content/jungle-den-term.js';
 import { mahjongArticle } from './articles/content/mahjong.js';
 import { xiangqiMahjong32Article } from './articles/content/xiangqi-mahjong-32.js';
-import { howToPlayXiangqiMahjongArticle } from './articles/content/how-to-play-xiangqi-mahjong.js';
 import { puzzleMiningArticle } from './articles/content/puzzle-mining.js';
 import { puzzleTwoAnswersArticle } from './articles/content/puzzles-with-more-than-one-solution.js';
 import { mistyArticle } from './articles/content/misty.js';
@@ -85,7 +84,6 @@ import { zuoWenjingArticle } from './articles/content/zuo-wenjing.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
-  howToPlayXiangqiMahjongArticle,
   shortestStalemateXiangqiArticle,
   generalBlunderChallengeArticle,
   helpmatesInXiangqiArticle,

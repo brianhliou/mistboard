@@ -2027,7 +2027,7 @@ function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement 
   if (block.caption) {
     const cap = document.createElement('figcaption');
     cap.className = 'article-figure-caption';
-    cap.textContent = block.caption;
+    appendRichText(cap, block.caption);
     figure.append(cap);
   }
   return figure;

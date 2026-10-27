@@ -142,9 +142,6 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The Xiangqi Mahjong how-to, a draft dated 2026-11-06 until its zh pages
-      // exist (DEV shows it early for review).
-      '/blog/how-to-play-xiangqi-mahjong',
       // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
       // (DEV shows it early for review).
       '/blog/shortest-stalemate-xiangqi',
@@ -417,7 +414,6 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
-      '/blog/how-to-play-xiangqi-mahjong',
       '/blog/shortest-stalemate-xiangqi',
       '/blog/banqi-chariot-endgame',
       '/blog/jqe',
@@ -946,6 +942,24 @@ describe('rules variant sidebar', () => {
     expect(pageText).toContain('CAPTURED PIECE KNOWLEDGE');
     expect(pageText).toContain('RED KNOWS');
     expect(pageText).toContain('BLACK KNOWS');
+  });
+
+  it('bolds each Xiangqi Mahjong hand total in its caption', () => {
+    const page = buildArticlePage('xiangqi-mahjong-32');
+    const totals = [...page.querySelectorAll('.article-figure-caption strong')].map(
+      (el) => el.textContent,
+    );
+    expect(totals).toEqual([
+      '2 points',
+      '1 point',
+      '1 point',
+      '2 points',
+      '3 points',
+      '7 points',
+      '3 points',
+      '3 points',
+    ]);
+    expect(page.querySelector('.article-figure-caption')?.textContent).not.toContain('**');
   });
 
   it('renders Banqi diagrams and states the Mistboard cannon rule clearly', () => {
