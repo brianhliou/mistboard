@@ -76,6 +76,129 @@ const feedback = (host: HTMLElement): string =>
 const state = (host: HTMLElement): string | undefined =>
   host.querySelector<HTMLElement>('.gamebook__coach')?.dataset.state;
 
+// Node's native localStorage can shadow happy-dom's storage in the test worker.
+beforeEach(() => {
+  const values = new Map<string, string>();
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      clear: () => values.clear(),
+    },
+  });
+});
+
+afterEach(() => window.localStorage.clear());
+
+const LOCALES = [
+  {
+    locale: 'en',
+    red: 'Red to play',
+    black: 'Black to play',
+    task: 'Find the best move.',
+    board: 'Xiangqi lesson board',
+    hint: 'Hint',
+    fallback: 'Look at the circled piece.',
+    wrong: 'Not that one. Try another move.',
+    correct: 'Correct! Keep going.',
+    complete: 'Lesson complete! 🎉',
+    restart: 'Restart lesson',
+  },
+  {
+    locale: 'zh-Hans',
+    red: '红方走棋',
+    black: '黑方走棋',
+    task: '找出最佳着法。',
+    board: '象棋课程棋盘',
+    hint: '提示',
+    fallback: '看看圈出的棋子。',
+    wrong: '不是这步。请试试其他着法。',
+    correct: '正确！继续。',
+    complete: '课程完成！🎉',
+    restart: '重新开始课程',
+  },
+  {
+    locale: 'zh-Hant',
+    red: '紅方走棋',
+    black: '黑方走棋',
+    task: '找出最佳著法。',
+    board: '象棋課程棋盤',
+    hint: '提示',
+    fallback: '看看圈出的棋子。',
+    wrong: '不是這步。請試試其他著法。',
+    correct: '正確！繼續。',
+    complete: '課程完成！🎉',
+    restart: '重新開始課程',
+  },
+] as const;
+
+for (const copy of LOCALES) {
+  test(`${copy.locale}: hint, wrong move, correct move, completion and restart`, () => {
+    setStoredLocale(copy.locale);
+    const { host, m1, m3, wrongFirst } = mount();
+    expect(host.querySelector('.gamebook__prompt-side')?.textContent).toBe(copy.red);
+    expect(host.querySelector('.gamebook__prompt-task')?.textContent).toBe(copy.task);
+    expect(host.querySelector('.gamebook__board')?.getAttribute('aria-label')).toBe(copy.board);
+    const [hint, restart] = host.querySelectorAll<HTMLButtonElement>('.gamebook__controls button');
+    expect(hint?.textContent).toBe(copy.hint);
+    expect(restart?.textContent).toBe(copy.restart);
+    hint?.click();
+    expect(host.querySelector('.gamebook__hint')?.textContent).toBe(copy.fallback);
+    expect(host.querySelector('.xq-marker--gamebook-hint')).not.toBeNull();
+    play(host, wrongFirst);
+    expect(feedback(host)).toBe(copy.wrong);
+    play(host, m1);
+    expect(feedback(host)).toBe(copy.correct);
+    expect(host.querySelector('.gamebook__hint')?.textContent).toBe('');
+    play(host, m3);
+    expect(feedback(host)).toBe(copy.complete);
+    expect(hint?.hidden).toBe(true);
+    expect(restart?.hidden).toBe(false);
+    restart?.click();
+    expect(state(host)).toBe('play');
+    expect(feedback(host)).toBe('');
+    expect(hint?.hidden).toBe(false);
+    expect(restart?.hidden).toBe(true);
+    play(host, m1);
+    expect(feedback(host)).toBe(copy.correct);
+  });
+
+  test(`${copy.locale}: black prompt and authored lesson text and names survive`, () => {
+    setStoredLocale(copy.locale);
+    const { tree, wrongFirst } = fixture();
+    tree.root.annotations = {
+      comments: [{ text: 'Authored comment', by: 'Coach' }],
+      gamebook: { hint: 'Authored hint', deviation: 'Authored deviation' },
+    };
+    const host = document.createElement('div');
+    const opts = {
+      tree,
+      title: 'Authored title',
+      summary: 'Authored summary',
+      game: { detail: 'Recorded event' },
+      seats: { red: 'Original Red', black: 'Original Black' },
+    };
+    mountXiangqiGamebook(host, { ...opts, orientation: 'black' });
+    expect(host.querySelector('.gamebook__prompt-side')?.textContent).toBe(copy.black);
+    mountXiangqiGamebook(host, { ...opts, orientation: 'red' });
+    for (const text of [
+      'Authored title',
+      'Authored summary',
+      'Recorded event',
+      'Original Red',
+      'Original Black',
+      'Authored comment',
+    ])
+      expect(host.textContent).toContain(text);
+    host.querySelector<HTMLButtonElement>('.gamebook__controls button')?.click();
+    expect(host.querySelector('.gamebook__hint')?.textContent).toBe('Authored hint');
+    play(host, wrongFirst);
+    expect(feedback(host)).toBe('Authored deviation');
+    expect(host.querySelector('.gamebook__comment')?.textContent).toBe('Authored comment');
+  });
+}
+
 test('the lesson opens waiting on the learner', () => {
   const { host } = mount();
   // The prompt says whose move it is; the feedback line waits for an attempt.
