@@ -50,6 +50,14 @@
   --uni-board-max: 720px;
 }
 
+/* Three Kingdoms banqi carries .live-route--banqi too (live-layout.ts) and
+   differs only in its board: 9x5 points, viewBox 586x330
+   (three-kingdoms-banqi-diagrams.ts). Two classes so it outranks the rule
+   above wherever the bundle puts it. */
+.live-route--banqi.live-route--three-kingdoms-banqi {
+  --uni-board-aspect: calc(586 / 330);
+}
+
 .live-route--banqi .board-status {
   width: 100%;
 }

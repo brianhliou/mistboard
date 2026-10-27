@@ -25,7 +25,17 @@ export function setLiveLayoutGameSpec(target: HTMLElement, gameSpecId: string | 
   target.classList.toggle('live-route--duck-xiangqi', gameSpecId === 'duck-xiangqi');
   target.classList.toggle('live-route--fortress-xiangqi', gameSpecId === 'fortress-xiangqi');
   target.classList.toggle('live-route--jieqi', gameSpecId === 'jieqi');
-  target.classList.toggle('live-route--banqi', gameSpecId === 'banqi');
+  // Three Kingdoms banqi takes banqi's room layout whole (a short horizontal
+  // board, the tally under it, the three columns as one band); its own class
+  // only re-states the board's aspect (live-xiangqi.css).
+  target.classList.toggle(
+    'live-route--banqi',
+    gameSpecId === 'banqi' || gameSpecId === 'three-kingdoms-banqi',
+  );
+  target.classList.toggle(
+    'live-route--three-kingdoms-banqi',
+    gameSpecId === 'three-kingdoms-banqi',
+  );
   target.classList.toggle('live-route--jungle', gameSpecId === 'jungle');
   target.classList.toggle('live-route--jungle-flip', gameSpecId === 'jungle-flip');
   target.classList.toggle('live-route--mahjong', gameSpecId === 'mahjong');

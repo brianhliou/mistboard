@@ -4,6 +4,8 @@
 // a click on an own piece then a target sends the move, and a live reload steps
 // through the server's per-ply masked views without ever seeing an identity.
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   applyThreeKingdomsBanqiMove,
   type BanqiSeat,
@@ -16,6 +18,7 @@ import {
 } from '@mistboard/game';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ThreeKingdomsBanqiWireView } from './live-three-kingdoms-banqi.js';
+import { TK_LIVE_BOARD_VIEW } from './three-kingdoms-banqi-diagrams.js';
 import type { TenantLiveEvent } from './variant-tenant/live-client.js';
 import type {
   TenantSocketClientOptions,
@@ -160,6 +163,25 @@ describe('Three Kingdoms banqi live room', () => {
     expect(pieces.length).toBe(Object.keys(states[0]!.board).length);
     expect(document.querySelectorAll('[data-piece-square] image')).toHaveLength(0);
     expect(document.querySelector('.tk-banqi-scores')?.textContent).toContain('first to 100');
+  });
+
+  // Without banqi's route class the room fell back to the square-board layout:
+  // a square stage around the short board, the score line as a column beside
+  // it, the table floating off the board's top edge.
+  it("takes banqi's room layout, with an aspect that matches its own board", async () => {
+    await mount();
+    const app = document.getElementById('app');
+    expect(app?.classList.contains('live-route--banqi')).toBe(true);
+    expect(app?.classList.contains('live-route--three-kingdoms-banqi')).toBe(true);
+    const css = readFileSync(resolve(__dirname, 'live-xiangqi.css'), 'utf-8');
+    const aspect = css.match(
+      /\.live-route--banqi\.live-route--three-kingdoms-banqi\s*\{[^}]*--uni-board-aspect:\s*calc\((\d+)\s*\/\s*(\d+)\)/,
+    );
+    expect(aspect, 'no Three Kingdoms aspect rule in live-xiangqi.css').not.toBeNull();
+    expect([Number(aspect?.[1]), Number(aspect?.[2])]).toEqual([
+      TK_LIVE_BOARD_VIEW.width,
+      TK_LIVE_BOARD_VIEW.height,
+    ]);
   });
 
   it('a click on a face-down tile sends that flip', async () => {
