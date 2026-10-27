@@ -32,8 +32,8 @@ import {
   getPuzzleRating,
   getUserPuzzleRating,
   listAttemptedPuzzleIds,
-  listPuzzleAttemptHistory,
   listFailedPuzzleAttempts,
+  listPuzzleAttemptHistory,
   listPuzzleRatingSummaries,
   recordPuzzleAttempt,
 } from '../persistence-puzzle-ratings.js';
