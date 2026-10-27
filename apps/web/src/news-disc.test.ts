@@ -82,4 +82,11 @@ describe('News drawings', () => {
       /:root\[data-effective-theme="dark"\] \.landing-news-disc-halo \{\s*display: inline;/,
     );
   });
+
+  it('centres each drawing on its item text, not the row top', () => {
+    const css = readFileSync('src/landing-announcements.css', 'utf8');
+    const marker = css.match(/\n\.landing-news-marker \{([^}]*)\}/)?.[1] ?? '';
+    expect(marker).toMatch(/\balign-self: center;/);
+    expect(marker).not.toMatch(/\bmargin-top:/);
+  });
 });
