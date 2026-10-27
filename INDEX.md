@@ -15,6 +15,7 @@ Edit task → find file → open only that file.
 | `xiangqi-mahjong-danger.ts` | Exact neutral-prior deal-in probability from hypergeometrically weighted waiting hands |
 | `xiangqi-mahjong-defensive-bot.ts` | Offline XMJ challenger: frozen offence plus a separately configurable discard danger penalty |
 | `xiangqi-mahjong-bot-match.ts` | Seeded six-hand XMJ harness, swapped-seat wall pairs, kernel scoring and paired promotion bounds |
+| `xiangqi-mahjong-sampled-bot.ts` | Offline XMJ action search: 64 common unseen-tile samples, redacted policy rollouts and six-hand score-race value |
 | `types.ts` | Shared types: `Color`, `Square`, `Board`, `Move`, `GameState`, `PlayerView`, `Variant` |
 | `game-specs.ts` | Cross-family game-spec taxonomy and stable ids (`GameSpecId`): families (chess, xiangqi, jungle, military-chess, ...), board geometries, movement/objective rules, and the open / dark / hidden-identity visibility axis that fail-closed variant dispatch keys on |
 | `export-formats.ts` | `GAME_EXPORT_FORMATS`: the one table of which export formats (pgn/json) each variant serves, read by the server route gate AND the web download links; explicit map, no fallback |

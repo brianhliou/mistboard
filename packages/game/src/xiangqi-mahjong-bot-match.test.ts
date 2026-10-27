@@ -221,6 +221,12 @@ test('paired promotion requires both the score threshold and a lower bound above
   assert.equal(summary.promote, true);
   assert.ok((summary.paired95?.[0] ?? 0) > 0.5);
   assert.equal(xmjSummarizeBotPairs(strong.map((p, i) => (i === 1099 ? loss : p))).promote, false);
+  const stage2 = { minimumScore: 0.6, minimumMatches: 4000 };
+  assert.equal(xmjSummarizeBotPairs(strong, stage2).promote, false);
+  const sixty = strong.map((pair, i) => (i < 1200 ? { ...win, seed: i } : pair));
+  assert.equal(xmjSummarizeBotPairs(sixty, stage2).promote, true);
+  assert.equal(xmjSummarizeBotPairs(sixty.slice(0, 1999), stage2).promote, false);
+  assert.throws(() => xmjSummarizeBotPairs(strong, { minimumScore: Number.NaN }), RangeError);
 });
 
 test('exhausted hands count separately from drawn matches and matches award half for draws', () => {
