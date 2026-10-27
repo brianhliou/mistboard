@@ -68,7 +68,9 @@ type JieqiWireBoardEntry =
   | { color: JieqiColor; role: JieqiPieceRole; faceDown: false }
   | { color: JieqiColor; faceDown: true };
 
-type JieqiWireCaptured = { owner: JieqiColor; role: JieqiPieceRole | null };
+// `takenFaceDown`: only beside a role this seat holds for a piece it captured
+// while that piece was face-down (JieqiCapturedView).
+type JieqiWireCaptured = { owner: JieqiColor; role: JieqiPieceRole | null; takenFaceDown?: true };
 
 export type JieqiWireView = {
   id: string;
