@@ -66,6 +66,108 @@ async function route(path: string, method = 'GET', body?: unknown): Promise<Resp
   return response;
 }
 
+test('streak ramp is ordered, unique, solution-hidden and rejects unknown variants', async () => {
+  const response = await route('/api/puzzles/ramp?variant=xiangqi');
+  assert.equal(response.status, 200);
+  const { puzzles } = JSON.parse(response.body);
+  assert.ok(puzzles.length > 2);
+  assert.equal(new Set(puzzles.map((p: { id: string }) => p.id)).size, puzzles.length);
+  for (let i = 0; i < puzzles.length; i++) {
+    assert.equal(puzzles[i].variant, 'xiangqi');
+    assert.equal(puzzles[i].solution, undefined);
+    assert.equal(puzzles[i].initial, undefined);
+    if (i > 0) assert.ok(puzzles[i].rating >= puzzles[i - 1].rating);
+  }
+  assert.equal((await route('/api/puzzles/ramp?variant=unknown')).status, 400);
+  assert.equal((await route('/api/puzzles/ramp?variant=jungle')).status, 200);
+});
+
+test('anonymous streak counts solves, allows one skip, and locks the run on a miss', async () => {
+  const started = await route('/api/puzzles/streak', 'POST', { action: 'start' });
+  assert.equal(started.status, 200);
+  let run = JSON.parse(started.body);
+  assert.equal(run.score, 0);
+  assert.equal(run.best, null);
+  assert.equal(run.skipUsed, false);
+  assert.equal(run.finished, false);
+  assert.equal(JSON.stringify(run).includes('"solution":'), false);
+  const first = XIANGQI_PUZZLES.find((p) => p.id === run.puzzle.id)!;
+  for (const move of first.solution.filter((_, i) => i % 2 === 0)) {
+    const response = await route('/api/puzzles/streak', 'POST', {
+      action: 'move',
+      runId: run.runId,
+      puzzleId: first.id,
+      move,
+    });
+    assert.equal(response.status, 200);
+    run = JSON.parse(response.body);
+  }
+  assert.equal(run.score, 1);
+  assert.equal(run.results[0].outcome, 'solved');
+  const duplicate = await route('/api/puzzles/streak', 'POST', {
+    action: 'move',
+    runId: run.runId,
+    puzzleId: first.id,
+    move: first.solution[0],
+  });
+  assert.equal(duplicate.status, 409);
+  run = JSON.parse(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'skip',
+        runId: run.runId,
+        puzzleId: run.puzzle.id,
+      })
+    ).body,
+  );
+  assert.equal(run.skipUsed, true);
+  assert.equal(run.score, 1);
+  assert.equal(run.results[1].outcome, 'skipped');
+  const secondSkip = await route('/api/puzzles/streak', 'POST', {
+    action: 'skip',
+    runId: run.runId,
+    puzzleId: run.puzzle.id,
+  });
+  assert.equal(secondSkip.status, 409);
+  // A malformed action is rejected without ending the run.
+  assert.equal(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'move',
+        runId: run.runId,
+        puzzleId: run.puzzle.id,
+        move: null,
+      })
+    ).status,
+    400,
+  );
+  const missedId = run.puzzle.id;
+  run = JSON.parse(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'move',
+        runId: run.runId,
+        puzzleId: missedId,
+        move: { from: 'a1', to: 'a1' },
+      })
+    ).body,
+  );
+  assert.equal(run.finished, true);
+  assert.equal(run.score, 1);
+  assert.equal(run.results[2].outcome, 'failed');
+  assert.equal(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'move',
+        runId: run.runId,
+        puzzleId: missedId,
+        move: first.solution[0],
+      })
+    ).status,
+    409,
+  );
+});
+
 test('puzzle list returns surfaced summaries without solutions', async () => {
   const response = await route('/api/puzzles');
   const body = JSON.parse(response.body) as {

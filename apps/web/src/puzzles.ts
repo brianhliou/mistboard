@@ -41,6 +41,7 @@ import {
   fetchPuzzleSolution,
   fetchUserPuzzleRating,
   getPuzzleRatedPref,
+  type PuzzleAttempt,
   PuzzlePlayDisabledError,
   reportAttemptRating,
   sendPuzzleQualityEvent,
@@ -110,6 +111,15 @@ export async function mountPuzzles(
 
   const { shell, detail, controls } = buildPuzzlesFrame();
   root.replaceChildren(buildNav(), shell);
+
+  if (new URLSearchParams(window.location.search).get('mode') === 'streak') {
+    const { mountPuzzleStreak } = await import('./puzzles/streak.js');
+    await mountPuzzleStreak({ shell, detail, controls }, (puzzle, opts) =>
+      mountPuzzleSolver(detail, puzzle, { ...opts, mode: 'streak', analysis: false }),
+    );
+    return;
+  }
+  puzzleAnalyticsMode = 'session';
 
   let summaries: PuzzleSummary[] = [];
   let selectedId = initialPuzzleId;
@@ -197,6 +207,7 @@ export async function mountPuzzles(
       },
     };
     renderQueuePanel(controls, props);
+    controls.append(streakLink());
     // The phone ☰ sheet reads the same props; repaint it if it is open.
     phoneMenu.props = props;
     phoneMenu.refresh?.();
@@ -410,6 +421,7 @@ function renderPuzzleDetail(
   renderSession: () => void,
   navigation: PuzzleNavigation,
   onSolved: (id: string) => void,
+  opts: PuzzleSolverOptions = {},
 ): void {
   const reopenMenu = phoneMenu.open;
   // Focus inside the open sheet survives the rebuild (a revealed solution
@@ -438,7 +450,7 @@ function renderPuzzleDetail(
     session,
     displayState,
     renderSession,
-    submitMove: (move) => submitMove(session, move, renderSession, onSolved),
+    submitMove: (move) => submitMove(session, move, renderSession, onSolved, opts),
   });
 
   // Board zoom, same grip and same persisted --uni-board-scale as the room,
@@ -453,18 +465,19 @@ function renderPuzzleDetail(
   trainer.className = 'puzzle-trainer-panel';
   trainer.append(
     moveListPanel(session),
-    feedbackPanel(session, navigation, renderSession, {
-      onHint: () => void requestHint(session, renderSession),
-      onReveal: () => void revealSolution(session, renderSession),
-      onVote: (vote) => {
-        void sendPuzzleQualityEvent(
-          session.puzzle.id,
-          session.qualitySessionId,
-          'vote',
-          vote,
-        ).catch(() => {});
-      },
-    }),
+    opts.feedback?.(session) ??
+      feedbackPanel(session, navigation, renderSession, {
+        onHint: () => void requestHint(session, renderSession),
+        onReveal: () => void revealSolution(session, renderSession),
+        onVote: (vote) => {
+          void sendPuzzleQualityEvent(
+            session.puzzle.id,
+            session.qualitySessionId,
+            'vote',
+            vote,
+          ).catch(() => {});
+        },
+      }),
   );
   const actions = actionPanel(session, renderSession);
   const phoneBar = puzzlePhoneMoveNav(
@@ -477,7 +490,7 @@ function renderPuzzleDetail(
       // settings rows are built for the sheet from the sidebar's props.
       blocks: () => [session.analysis?.engineEl, session.analysis?.openLinkEl],
       head: () => (phoneMenu.props ? puzzlePhoneMenuHead(phoneMenu.props) : null),
-      rows: () => (phoneMenu.props ? puzzlePhoneMenuRows(phoneMenu.props) : []),
+      rows: () => (phoneMenu.props ? [...puzzlePhoneMenuRows(phoneMenu.props), streakLink()] : []),
       signal: phoneMenu.abort?.signal,
     },
   );
@@ -488,7 +501,7 @@ function renderPuzzleDetail(
   // panel + board arrows. Gated to non-spoiler states only — a bare wrong move
   // keeps solving open, so the engine stays hidden until the outcome is locked.
   // The controller persists on the session across renders.
-  if (adapter.createAnalysis && isPuzzleComplete(session)) {
+  if (opts.analysis !== false && adapter.createAnalysis && isPuzzleComplete(session)) {
     if (!session.analysis) session.analysis = adapter.createAnalysis();
     // Engine bar fuses onto the top of the move list (analyse-table shape);
     // the jump-out link sits below the scrub controls, centered. The column
@@ -877,10 +890,11 @@ async function submitMove(
   move: PuzzleMove,
   renderSession: () => void,
   onSolved?: (id: string) => void,
+  opts: PuzzleSolverOptions = {},
 ): Promise<void> {
   // Once the answer has been shown (or the puzzle is solved), the board is a
   // locked replay: no further moves are submitted.
-  if (session.revealed || session.solved) return;
+  if (session.submitting || session.revealed || session.solved) return;
   session.setupIntro = null;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.checkingMove') };
@@ -888,11 +902,18 @@ async function submitMove(
   const beforeCount = puzzlePieceCount(session.state);
   const playedCountBefore = session.playedMoves.length;
   const nextSolverMoves = [...session.solverMoves, move];
-  const submitted = await submitPuzzleAttempt(
+  const submitted = await (opts.submitAttempt ?? submitPuzzleAttempt)(
     session.puzzle.id,
     nextSolverMoves,
     session.qualitySessionId,
-  ).catch(playLockRefusal);
+  ).catch((error: unknown) => {
+    if (error instanceof PuzzlePlayDisabledError) return PLAY_LOCKED;
+    session.submitting = false;
+    session.feedback = { kind: 'bad', text: 'Could not check the move. Please try again.' };
+    renderSession();
+    return null;
+  });
+  if (!submitted) return;
   if (submitted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
   const { attempt, rating } = submitted;
   session.submitting = false;
@@ -951,6 +972,15 @@ async function submitMove(
     const reply = attempt.playedMoves.at(-1);
     if (reply) animatePuzzleMove(session, reply);
   }
+  opts.onAttempt?.(attempt);
+}
+
+function streakLink(): HTMLAnchorElement {
+  const link = document.createElement('a');
+  link.href = '/puzzles?mode=streak';
+  link.className = 'puzzle-streak-link puzzle-pm-row';
+  link.textContent = 'Puzzle Streak';
+  return link;
 }
 
 // Highlight the correct piece to move for the current ply (lichess "get a hint").
@@ -1378,22 +1408,38 @@ const ICON_NEXT =
  * Attempts are always UNRATED here: a frame on a third party's site must never
  * move the viewer's rating, and the embed never asks who the viewer is.
  */
+export type PuzzleSolverOptions = {
+  onSolved?: (id: string) => void;
+  mode?: 'embed' | 'streak';
+  analysis?: boolean;
+  feedback?: (session: PuzzleSession) => HTMLElement;
+  submitAttempt?: typeof submitPuzzleAttempt;
+  onAttempt?: (attempt: PuzzleAttempt) => void;
+};
+
 export function mountPuzzleSolver(
   host: HTMLElement,
   puzzle: PuzzleDetail,
-  opts: { onSolved?: (id: string) => void } = {},
+  opts: PuzzleSolverOptions = {},
 ): { dispose(): void } {
   for (const adapter of allPuzzleBoardAdapters()) adapter.installStyles?.();
   setBoardFamily('xiangqi');
   setPuzzleRatedPref(false);
-  puzzleAnalyticsMode = 'embed';
+  puzzleAnalyticsMode = opts.mode ?? 'embed';
+  if (opts.mode === 'streak') {
+    resetPhoneMenu();
+    phoneMenu.props = null;
+  }
   restoreBoardScale();
   installPuzzleGripFit();
   const session = createPuzzleSession(puzzle);
+  if (opts.mode === 'streak') {
+    void sendPuzzleQualityEvent(puzzle.id, session.qualitySessionId, 'view').catch(() => {});
+  }
   // An empty queue: the feedback panel then offers no previous/next.
   const navigation = navigationFor([], null, async () => {});
   const renderSession = (): void => {
-    renderPuzzleDetail(host, session, renderSession, navigation, (id) => opts.onSolved?.(id));
+    renderPuzzleDetail(host, session, renderSession, navigation, (id) => opts.onSolved?.(id), opts);
   };
   let disposed = false;
   renderSession();

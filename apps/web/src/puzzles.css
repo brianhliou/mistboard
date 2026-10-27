@@ -18,6 +18,60 @@
   background: var(--site-page-gradient);
 }
 
+.puzzle-streak-link {
+  display: block;
+  padding: 12px;
+  color: var(--site-accent);
+}
+
+.puzzles-page > .puzzles-shell.puzzle-streak-shell {
+  overflow: auto;
+}
+
+.puzzle-streak-card {
+  width: min(100%, 580px);
+  box-sizing: border-box;
+  align-self: start;
+  justify-self: center;
+  padding: 24px;
+  line-height: 1.6;
+}
+
+.puzzle-streak-card > a {
+  display: inline-block;
+  margin-block: 16px;
+}
+
+.puzzle-streak-card li {
+  padding-block: 8px;
+}
+
+.puzzle-streak-feedback .puzzle-continue-button {
+  min-height: 44px;
+  margin: 0;
+}
+
+.puzzles-shell .puzzle-feedback.puzzle-streak-feedback {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "title" "body" "assist";
+}
+
+.puzzle-streak-feedback .puzzle-feedback-copy {
+  display: contents;
+}
+
+.puzzle-streak-feedback .puzzle-feedback-title {
+  grid-area: title;
+}
+
+.puzzle-streak-feedback .puzzle-feedback-body {
+  grid-area: body;
+}
+
+.puzzle-streak-feedback .puzzle-assist-row {
+  grid-area: assist;
+}
+
 .puzzles-shell {
   --puzzle-nav-height: 53px;
   --puzzle-page-height: calc(100dvh - var(--puzzle-nav-height));
