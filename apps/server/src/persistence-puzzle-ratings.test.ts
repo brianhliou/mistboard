@@ -3,6 +3,8 @@ import { getPool } from './persistence-db.js';
 import {
   getPuzzleRating,
   getUserPuzzleRating,
+  listAttemptedPuzzleIds,
+  listFailedPuzzleAttempts,
   listPuzzleAttemptHistory,
   recordPuzzleAttempt,
 } from './persistence-puzzle-ratings.js';
@@ -216,5 +218,96 @@ definePersistenceTests('puzzle-ratings', () => {
       jungle.attempts.map((row) => row.puzzleId),
       ['history-jungle'],
     );
+
+  test('a later solve repairs a rated or unrated failure without rewriting its first outcome', async () => {
+    for (const rated of [true, false]) {
+      const userId = `repair-${rated}`;
+      await mkUser(userId, userId);
+      const input = {
+        userId,
+        puzzleId: `failed-${rated}`,
+        variant: 'xiangqi',
+        solved: false,
+        rated,
+        seedRating: seedPuzzleRating(3),
+      };
+      const failed = await recordPuzzleAttempt(input);
+      assert.equal(failed?.repairedAt, null);
+      const original = await getPool().query(
+        `SELECT solved, rated, user_rating_before, user_rating_after, created_at
+         FROM puzzle_attempts WHERE user_id = $1 AND puzzle_id = $2`,
+        [userId, input.puzzleId],
+      );
+      const userBefore = await getUserPuzzleRating(userId, input.variant);
+      const puzzleBefore = await getPuzzleRating(input.puzzleId);
+      const unresolved = await listFailedPuzzleAttempts(userId);
+      assert.equal(unresolved.length, 1);
+      assert.equal(unresolved[0].puzzleId, input.puzzleId);
+      assert.equal(unresolved[0].failedAt, original.rows[0].created_at.toISOString());
+      assert.equal(unresolved[0].repairedAt, null);
+
+      // Simultaneous solves serialize on the rating locks. Only the first
+      // repair time lands, and neither retry re-rates either participant.
+      const retries = await Promise.all([
+        recordPuzzleAttempt({ ...input, solved: true, rated: !rated }),
+        recordPuzzleAttempt({ ...input, solved: true, rated: true }),
+      ]);
+      assert.ok(retries[0]?.repairedAt);
+      for (const retry of retries) {
+        assert.equal(retry?.firstAttempt, false);
+        assert.equal(retry?.ratingChanged, false);
+        assert.equal(retry?.userRatingDelta, 0);
+        assert.equal(retry?.repairedAt, retries[0].repairedAt);
+      }
+      assert.deepEqual(await getUserPuzzleRating(userId, input.variant), userBefore);
+      assert.deepEqual(await getPuzzleRating(input.puzzleId), puzzleBefore);
+      const after = await getPool().query(
+        `SELECT solved, rated, user_rating_before, user_rating_after, created_at
+         FROM puzzle_attempts WHERE user_id = $1 AND puzzle_id = $2`,
+        [userId, input.puzzleId],
+      );
+      assert.deepEqual(after.rows, original.rows);
+      assert.deepEqual(await listFailedPuzzleAttempts(userId), []);
+      assert.deepEqual(await listFailedPuzzleAttempts(userId, { repaired: true }), [
+        { ...unresolved[0], repairedAt: retries[0].repairedAt },
+      ]);
+      assert.deepEqual(await listAttemptedPuzzleIds(userId), [input.puzzleId]);
+
+      // A subsequent mistake cannot clear or move the first repair time.
+      assert.equal((await recordPuzzleAttempt(input))?.repairedAt, retries[0].repairedAt);
+    }
+  });
+
+  test('failed queues isolate accounts and variants and exclude original solves', async () => {
+    await mkUser('queue-user', 'queue-user');
+    await mkUser('other-user', 'other-user');
+    const input = {
+      userId: 'queue-user',
+      variant: 'xiangqi',
+      solved: false,
+      rated: false,
+      seedRating: seedPuzzleRating(1),
+    };
+    await recordPuzzleAttempt({ ...input, puzzleId: 'xiangqi-fail' });
+    await recordPuzzleAttempt({ ...input, puzzleId: 'jungle-fail', variant: 'jungle' });
+    await recordPuzzleAttempt({ ...input, puzzleId: 'first-solve', solved: true });
+    await recordPuzzleAttempt({ ...input, puzzleId: 'other-fail', userId: 'other-user' });
+    assert.deepEqual(
+      (await listFailedPuzzleAttempts('queue-user', { variant: 'xiangqi' })).map(
+        (failure) => failure.puzzleId,
+      ),
+      ['xiangqi-fail'],
+    );
+    assert.deepEqual(
+      (await listFailedPuzzleAttempts('other-user')).map((failure) => failure.puzzleId),
+      ['other-fail'],
+    );
+    // Solving an original success again never puts it into the repair history.
+    assert.equal(
+      (await recordPuzzleAttempt({ ...input, puzzleId: 'first-solve', solved: true }))?.repairedAt,
+      null,
+    );
+    assert.deepEqual(await listFailedPuzzleAttempts('queue-user', { repaired: true }), []);
+    assert.deepEqual(await listFailedPuzzleAttempts('queue-user', { variant: 'banqi' }), []);
   });
 });

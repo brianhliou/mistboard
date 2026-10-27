@@ -33,6 +33,7 @@ import {
   getUserPuzzleRating,
   listAttemptedPuzzleIds,
   listPuzzleAttemptHistory,
+  listFailedPuzzleAttempts,
   listPuzzleRatingSummaries,
   recordPuzzleAttempt,
 } from '../persistence-puzzle-ratings.js';
@@ -233,6 +234,34 @@ export async function tryHandle(
       },
       headers,
     );
+    return true;
+  }
+
+  // Private retry queue. By default only unresolved failures are returned;
+  // ?repaired=true reads repaired failures. The account comes only from the
+  // session, never a caller-supplied user id. No solution data is exposed.
+  if (pathname === '/api/puzzles/failed') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    const user = await currentAccountUser(request);
+    if (!user) {
+      writeJson(response, 401, { error: 'not_signed_in' });
+      return true;
+    }
+    const variant = parsePuzzleVariant(parsedUrl.searchParams.get('variant'));
+    if (variant === 'invalid') {
+      writeJson(response, 400, { error: 'invalid_variant' });
+      return true;
+    }
+    const repaired = parsedUrl.searchParams.get('repaired');
+    if (repaired !== null && repaired !== 'true' && repaired !== 'false') {
+      writeJson(response, 400, { error: 'invalid_repaired' });
+      return true;
+    }
+    const failures = await listFailedPuzzleAttempts(user.id, {
+      variant: variant ?? undefined,
+      repaired: repaired === 'true',
+    });
+    writeJson(response, 200, { failures });
     return true;
   }
 
@@ -464,6 +493,7 @@ type PuzzleAttemptRating = {
   provisional: boolean;
   ratingChanged: boolean;
   firstAttempt: boolean;
+  repairedAt: string | null;
 };
 
 // true = solved, false = a genuine wrong answer, null = not a terminal outcome
@@ -518,7 +548,8 @@ async function recordAttemptRating(
 // puzzle_attempts primary key makes this idempotent per (user, puzzle): only the
 // FIRST terminal outcome moves ratings, so a wrong-move fail followed by a
 // reveal, or a reveal followed by a completed line, records once and returns
-// firstAttempt=false / ratingChanged=false on the repeat. Anon users and
+// firstAttempt=false / ratingChanged=false on the repeat. A completed retry
+// records a separate repairedAt timestamp for a prior failure. Anon users and
 // persistence-off return null (no rating).
 async function recordOutcomeRating(
   request: IncomingMessage,
@@ -549,6 +580,7 @@ async function recordOutcomeRating(
     provisional: result.provisional,
     ratingChanged: result.ratingChanged,
     firstAttempt: result.firstAttempt,
+    repairedAt: result.repairedAt,
   };
 }
 

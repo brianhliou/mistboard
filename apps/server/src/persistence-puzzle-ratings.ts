@@ -4,7 +4,7 @@
 // owns the reads/writes and the transactional idempotency. A rated attempt is
 // applied to BOTH the user and the puzzle inside one transaction, guarded by the
 // puzzle_attempts primary key so only a user's FIRST attempt at a puzzle moves
-// ratings — retries are no-ops.
+// ratings. A later solve of a failure records a separate repair timestamp.
 
 import type pg from 'pg';
 import { emitAchievementTrigger } from './achievement-triggers.js';
@@ -61,6 +61,14 @@ export type RecordPuzzleAttemptResult = {
   userRating: number;
   userRatingDelta: number;
   provisional: boolean;
+  repairedAt: string | null;
+};
+
+export type FailedPuzzleAttempt = {
+  puzzleId: string;
+  variant: string;
+  failedAt: string;
+  repairedAt: string | null;
 };
 
 type RatingRow = { rating: number; rating_deviation: number; volatility: number };
@@ -195,9 +203,37 @@ export async function listPuzzleAttemptHistory(
   };
 }
 
-// Record a user's first outcome for a puzzle and, if rated, apply the Glicko-2
-// update to both sides. Idempotent: a repeat attempt returns firstAttempt=false
-// and changes nothing. Returns null if persistence is disabled.
+// Private retry queue, newest failures first. Repaired failures can be read
+// separately; neither list treats a repair as a new first outcome.
+export async function listFailedPuzzleAttempts(
+  userId: string,
+  options: { variant?: string; repaired?: boolean } = {},
+): Promise<readonly FailedPuzzleAttempt[]> {
+  if (!isInitialized()) return [];
+  const { rows } = await getPool().query<{
+    puzzle_id: string;
+    variant: string;
+    created_at: Date;
+    repaired_at: Date | null;
+  }>(
+    `SELECT puzzle_id, variant, created_at, repaired_at FROM puzzle_attempts
+     WHERE user_id = $1 AND solved = FALSE
+       AND repaired_at IS ${options.repaired ? 'NOT NULL' : 'NULL'}
+       ${options.variant ? 'AND variant = $2' : ''}
+     ORDER BY created_at DESC, puzzle_id`,
+    options.variant ? [userId, options.variant] : [userId],
+  );
+  return rows.map((row) => ({
+    puzzleId: row.puzzle_id,
+    variant: row.variant,
+    failedAt: row.created_at.toISOString(),
+    repairedAt: row.repaired_at?.toISOString() ?? null,
+  }));
+}
+
+// Record a user's first outcome and, if rated, apply the Glicko-2 update to
+// both sides. A later solve repairs a failure once, preserving its outcome,
+// rating delta and counters. Returns null if persistence is disabled.
 export async function recordPuzzleAttempt(
   input: RecordPuzzleAttemptInput,
 ): Promise<RecordPuzzleAttemptResult | null> {
@@ -221,13 +257,28 @@ export async function recordPuzzleAttempt(
     );
 
     if (inserted.rowCount === 0) {
-      // Already attempted (or a concurrent first attempt won the race): no change.
+      // The rating locks serialize concurrent retries as well as first attempts.
+      // Only a validated complete line can repair; another failure cannot erase
+      // a repair, and repeated solves preserve the first repair time.
+      if (solved) {
+        await client.query(
+          `UPDATE puzzle_attempts SET repaired_at = now()
+           WHERE user_id = $1 AND puzzle_id = $2
+             AND solved = FALSE AND repaired_at IS NULL`,
+          [userId, puzzleId],
+        );
+      }
+      const { rows } = await client.query<{ repaired_at: Date | null }>(
+        `SELECT repaired_at FROM puzzle_attempts WHERE user_id = $1 AND puzzle_id = $2`,
+        [userId, puzzleId],
+      );
       return {
         firstAttempt: false,
         ratingChanged: false,
         userRating: before,
         userRatingDelta: 0,
         provisional: isProvisional(user.rd),
+        repairedAt: rows[0]?.repaired_at?.toISOString() ?? null,
       };
     }
 
@@ -240,6 +291,7 @@ export async function recordPuzzleAttempt(
       userRating: after,
       userRatingDelta: rated ? after - before : 0,
       provisional: isProvisional(change.user.rd),
+      repairedAt: null,
     };
   });
   // A first solve is the only attempt that can earn (after commit, off path).
