@@ -10,6 +10,7 @@ import {
   resolvePuzzleShortCode,
   standardXiangqiPuzzleNextMove,
   standardXiangqiPuzzleSideToMove,
+  XIANGQI_MOTIFS,
   XIANGQI_SPEC_ID,
   type XiangqiMotifId,
   type XiangqiMove,
@@ -115,11 +116,17 @@ export async function tryHandle(
       writeJson(response, 400, { error: 'invalid_variant' });
       return true;
     }
+    const motif = parsePuzzleMotif(parsedUrl.searchParams.get('motif'));
+    if (motif === 'invalid') {
+      writeJson(response, 400, { error: 'invalid_motif' });
+      return true;
+    }
     const store = await getPuzzleStore();
-    const discoverable = discoverablePuzzles(store);
-    const puzzles = variant
-      ? discoverable.filter((puzzle) => puzzle.variant === variant)
-      : discoverable;
+    const puzzles = discoverablePuzzles(store).filter(
+      (puzzle) =>
+        (!variant || puzzle.variant === variant) &&
+        (!motif || store.motifsById.get(puzzle.id)?.includes(motif)),
+    );
     const ratings = await listPuzzleRatingSummaries(puzzles.map((puzzle) => puzzle.id));
     // Signed-in visitors also get what they have already finished, so rotation
     // survives a cleared browser or a second device. Anonymous visitors get an
@@ -505,6 +512,11 @@ function parsePuzzleVariant(value: string | null): PublicPuzzleVariant | null | 
   if (value === null || value === '') return null;
   if (value === JUNGLE_SPEC_ID || value === XIANGQI_SPEC_ID) return value;
   return 'invalid';
+}
+
+function parsePuzzleMotif(value: string | null): XiangqiMotifId | null | 'invalid' {
+  if (value === null || value === '') return null;
+  return XIANGQI_MOTIFS.find((motif) => motif.id === value)?.id ?? 'invalid';
 }
 
 function puzzleSummary(
