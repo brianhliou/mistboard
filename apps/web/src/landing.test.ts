@@ -321,6 +321,21 @@ describe('homepage band layout (CSS)', () => {
     expect(rule('.landing-event-banner-icon')).toMatch(/width: 34px;\s*height: 34px;/);
   });
 
+  it('sizes the phone shortcut tiles for their drawings, one 6px gutter with the Play pair', () => {
+    // Brian, 2026-10-27: bigger tiles with less gap between them, and the
+    // Play the computer / Play a friend pair as close as the tiles. Then less
+    // empty space inside each tile: a shorter tile, a larger drawing and label.
+    const phone = css.slice(css.indexOf('@media (max-width: 600px)'));
+    const rule = (selector: string) =>
+      phone.match(new RegExp(`^  ${selector.replace(/[.]/g, '\\$&')} \\{([^}]*)\\}`, 'm'))?.[1] ??
+      '';
+    expect(rule('.landing-phone-tiles')).toMatch(/gap: 6px;/);
+    expect(rule('.landing-play-quick')).toMatch(/gap: 6px;/);
+    expect(rule('.landing-phone-tile')).toMatch(/height: 84px;/);
+    expect(rule('.landing-phone-tile')).toMatch(/font-size: 15px;/);
+    expect(rule('.landing-phone-tile-art')).toMatch(/width: 52px;\s*height: 52px;/);
+  });
+
   it('runs the Play a game label a couple of px above the old clamp, same height', () => {
     const play = readFileSync('src/landing-play.css', 'utf8');
     const rule =
