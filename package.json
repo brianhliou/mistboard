@@ -65,6 +65,7 @@
     "engine:artifact-closeout": "node scripts/engine-artifact-closeout.mjs",
     "engine:budget-report": "node scripts/engine-budget-report.mjs",
     "engine:budget-check": "node scripts/engine-budget-check.mjs",
+    "engine:loss-report": "node --import tsx scripts/misty-loss-report.mjs",
     "test": "npm run test --workspaces --if-present",
     "test:unit": "npm run test:tooling && npm run test:unit --workspaces --if-present",
     "test:tooling": "node --test scripts/*.test.mjs && tsx --test scripts/*.test.ts scripts/variant-lab/*.test.ts",
