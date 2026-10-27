@@ -909,7 +909,7 @@ async function submitMove(
   ).catch((error: unknown) => {
     if (error instanceof PuzzlePlayDisabledError) return PLAY_LOCKED;
     session.submitting = false;
-    session.feedback = { kind: 'bad', text: 'Could not check the move. Please try again.' };
+    session.feedback = { kind: 'bad', text: t('puzzle.checkFailed') };
     renderSession();
     return null;
   });
@@ -979,7 +979,7 @@ function streakLink(): HTMLAnchorElement {
   const link = document.createElement('a');
   link.href = '/puzzles?mode=streak';
   link.className = 'puzzle-streak-link puzzle-pm-row';
-  link.textContent = 'Puzzle Streak';
+  link.textContent = t('puzzle.streakTitle');
   return link;
 }
 

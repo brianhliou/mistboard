@@ -1,5 +1,6 @@
 import { puzzleShortCode } from '@mistboard/game';
 import { puzzleAttemptedProps, track } from '../analytics.js';
+import { t } from '../i18n/catalog.js';
 import { colorLabel, type PuzzleDetail, type PuzzleSession } from './adapter.js';
 import {
   type PuzzleAttempt,
@@ -85,21 +86,24 @@ export async function mountPuzzleStreak(
     const card = document.createElement('section');
     card.className = 'puzzle-streak-card';
     const title = document.createElement('h1');
-    title.textContent = 'Streak finished';
+    title.textContent = t('puzzle.streakFinished');
     const score = document.createElement('p');
     score.dataset.streakScore = 'true';
-    score.textContent = `Solved: ${run!.score} · ${bestLabel(run!)}`;
+    score.textContent = t('puzzle.streakSolvedScore', { score: run!.score, best: bestLabel(run!) });
     const list = document.createElement('ol');
-    list.setAttribute('aria-label', 'Review this run');
+    list.setAttribute('aria-label', t('puzzle.streakReview'));
     for (const result of run!.results) {
       const item = document.createElement('li');
       const link = document.createElement('a');
       link.href = `/puzzles/${encodeURIComponent(result.id)}`;
-      link.textContent = `Puzzle #${puzzleShortCode(result.id)}: ${result.outcome}`;
+      link.textContent = t('puzzle.streakResult', {
+        code: puzzleShortCode(result.id),
+        outcome: t(OUTCOME_KEYS[result.outcome]),
+      });
       item.append(link);
       list.append(item);
     }
-    card.append(title, score, button('Play again', start), practiceLink(), list);
+    card.append(title, score, button(t('puzzle.streakPlayAgain'), start), practiceLink(), list);
     shell.replaceChildren(card);
     title.tabIndex = -1;
     title.focus({ preventScroll: true });
@@ -116,9 +120,9 @@ export async function mountPuzzleStreak(
     const card = document.createElement('section');
     card.className = 'puzzle-left-card';
     const title = document.createElement('h1');
-    title.textContent = 'Puzzle Streak';
+    title.textContent = t('puzzle.streakTitle');
     const rules = document.createElement('p');
-    rules.textContent = 'Puzzles get harder. One wrong move ends the run. No clock. One skip.';
+    rules.textContent = t('puzzle.streakRules');
     card.append(title, rules, practiceLink());
     controls.append(card);
     solver = mountSolver(current, {
@@ -141,44 +145,48 @@ export async function mountPuzzleStreak(
         copy.className = 'puzzle-feedback-copy';
         const title = document.createElement('h2');
         title.className = 'puzzle-feedback-title';
-        title.textContent = `Streak: ${run!.score} · ${bestLabel(run!)}`;
+        title.textContent = t('puzzle.streakScore', { score: run!.score, best: bestLabel(run!) });
         const prompt = document.createElement('span');
         prompt.className = 'puzzle-feedback-body';
         prompt.textContent = session.solved
-          ? 'Correct!'
+          ? t('puzzle.streakCorrect')
           : session.feedback.kind === 'bad'
             ? session.feedback.text
-            : `${colorLabel(current!.sideToMove)} to move`;
+            : t('puzzle.toMove', { color: colorLabel(current!.sideToMove) });
         const actions = document.createElement('div');
         actions.className = 'puzzle-assist-row';
         if (session.solved) {
-          actions.append(button('Next puzzle', showBoard));
+          actions.append(button(t('puzzle.nextPuzzle'), showBoard));
         } else {
-          const skip = button(run!.skipUsed ? 'Skip used' : 'Skip (1 left)', async () => {
-            if (busy || session.submitting || run!.skipUsed) return;
-            busy = true;
-            skip.disabled = true;
-            try {
-              run = await request({ action: 'skip', runId: run!.runId, puzzleId: current!.id });
-              attempted('skipped');
-              void sendPuzzleQualityEvent(current!.id, session.qualitySessionId, 'abandon').catch(
-                () => {},
-              );
-              if (run.finished) {
-                finished('completed');
-                showSummary();
-              } else showBoard();
-            } catch (error) {
-              prompt.textContent = errorText(error);
-              skip.disabled = false;
-              actions.append(button('New run', start));
-            } finally {
-              busy = false;
-            }
-          });
+          const skip = button(
+            t(run!.skipUsed ? 'puzzle.streakSkipUsed' : 'puzzle.streakSkip'),
+            async () => {
+              if (busy || session.submitting || run!.skipUsed) return;
+              busy = true;
+              skip.disabled = true;
+              try {
+                run = await request({ action: 'skip', runId: run!.runId, puzzleId: current!.id });
+                attempted('skipped');
+                void sendPuzzleQualityEvent(current!.id, session.qualitySessionId, 'abandon').catch(
+                  () => {},
+                );
+                if (run.finished) {
+                  finished('completed');
+                  showSummary();
+                } else showBoard();
+              } catch (error) {
+                prompt.textContent = errorText(error);
+                skip.disabled = false;
+                actions.append(button(t('puzzle.streakNewRun'), start));
+              } finally {
+                busy = false;
+              }
+            },
+          );
           skip.disabled = session.submitting || run!.skipUsed;
           actions.append(skip);
-          if (session.feedback.kind === 'bad') actions.append(button('New run', start));
+          if (session.feedback.kind === 'bad')
+            actions.append(button(t('puzzle.streakNewRun'), start));
         }
         copy.append(title, prompt, actions);
         panel.append(copy);
@@ -223,14 +231,12 @@ export async function mountPuzzleStreak(
   const intro = document.createElement('section');
   intro.className = 'puzzle-streak-card';
   const title = document.createElement('h1');
-  title.textContent = 'Puzzle Streak';
+  title.textContent = t('puzzle.streakTitle');
   const rules = document.createElement('p');
-  rules.textContent =
-    'Start easy and solve progressively harder puzzles. One wrong move ends your run. No clock. One skip per run.';
+  rules.textContent = t('puzzle.streakIntro');
   const account = document.createElement('p');
-  account.textContent =
-    'Play as a guest, or sign in to save your best streak. Streak does not change your puzzle rating.';
-  intro.append(title, rules, account, button('Start streak', start), practiceLink());
+  account.textContent = t('puzzle.streakAccount');
+  intro.append(title, rules, account, button(t('puzzle.streakStart'), start), practiceLink());
   shell.replaceChildren(intro);
   window.addEventListener(
     'pagehide',
@@ -243,13 +249,19 @@ export async function mountPuzzleStreak(
   );
 }
 
+const OUTCOME_KEYS = {
+  solved: 'puzzle.streakOutcomeSolved',
+  skipped: 'puzzle.streakOutcomeSkipped',
+  failed: 'puzzle.streakOutcomeFailed',
+} as const;
+
 function bestLabel(run: Run): string {
-  return run.best === null ? 'Guest' : `Best: ${run.best}`;
+  return run.best === null ? t('puzzle.streakGuest') : t('puzzle.streakBest', { best: run.best });
 }
 function errorText(error: unknown): string {
   return error instanceof PuzzlePlayDisabledError
-    ? 'Puzzle play is disabled for this account.'
-    : 'Could not continue the run. Try again or start a new run.';
+    ? t('puzzle.streakPlayDisabled')
+    : t('puzzle.streakContinueFailed');
 }
 function button(label: string, action: () => void | Promise<void>): HTMLButtonElement {
   const el = document.createElement('button');
@@ -264,6 +276,6 @@ function button(label: string, action: () => void | Promise<void>): HTMLButtonEl
 function practiceLink(): HTMLAnchorElement {
   const link = document.createElement('a');
   link.href = '/puzzles';
-  link.textContent = 'Puzzle practice';
+  link.textContent = t('puzzle.streakPractice');
   return link;
 }
