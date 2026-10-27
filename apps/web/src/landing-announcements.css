@@ -15,7 +15,11 @@
    in the box. The column sits 14px in from the box edge and 14px clear of the
    text, so the chain reads as its own object rather than a gutter. The rail
    runs under the discs and touches each ring: a panel-coloured halo was tried
-   and read as a gap in the chain above and below every disc. */
+   and read as a gap in the chain above and below every disc.
+
+   Markers (redrawn 2026-10-27, #711): the discs became sticker drawings in the
+   broadcast TV's style (news-disc.ts), each centred on the rail so the rail
+   still meets it top and bottom. */
 .landing-announcements {
   --landing-feed-accent: var(--site-accent);
   --landing-feed-content-x: 64px;
@@ -151,6 +155,17 @@
   display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
+}
+
+/* The drawings' cream sticker border, as on the broadcast TV: only the dark
+   theme needs it, where the navy parts and black outline sink into the panel. */
+.landing-news-disc-halo {
+  display: none;
+}
+
+:root[data-effective-theme="dark"] .landing-news-disc-halo {
+  display: inline;
 }
 
 .landing-news-content {
