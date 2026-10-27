@@ -859,10 +859,14 @@
   .article-toc-sidebar,
   .article-variant-sidebar {
     position: sticky;
-    /* Exactly the rail's natural offset (58px sticky nav + 40px section
-       padding) so it pins with zero travel on scroll. */
-    top: 98px;
-    max-height: calc(100vh - 118px);
+    /* Exactly the rail's natural offset so it pins with zero travel on
+       scroll: the sticky nav (60px min-height + 1px hairline, site-shell.css)
+       plus .site-section's 40px top padding (app-base.css). Any less and both
+       rails ride up with the page for the first few pixels and then stop, a
+       bob at the top of every rules page (98px here after the nav grew to
+       61px). sticky-rail-offsets.test.ts adds the three up. */
+    top: 101px;
+    max-height: calc(100vh - 121px);
     overflow-y: auto;
     scrollbar-width: none;
   }

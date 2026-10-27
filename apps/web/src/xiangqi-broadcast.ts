@@ -1183,9 +1183,16 @@ function renderEventShell(
     layout.append(side);
     if (boardOpen) matchBoardHeight(side, content);
     else pinEventSide(side);
+    // The small print is the layout's last row, under the content column
+    // (one column: under the list and the chat, as before). Below the layout
+    // it ended the column's containing block above the page's foot, so at the
+    // bottom of the page the pinned column was pushed up by the note's height.
+    layout.append(rightsContactNote());
+    main.append(layout);
+  } else {
+    // The page's own path: the tour, round or board URL the reader is on.
+    main.append(layout, rightsContactNote());
   }
-  // The page's own path: the tour, round or board URL the reader is on.
-  main.append(layout, rightsContactNote());
   return main;
 }
 
