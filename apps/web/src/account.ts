@@ -1985,7 +1985,7 @@ function buildLoginForm(
       }>('/api/auth/email/start', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email: email.value }),
+        body: JSON.stringify({ email: email.value, locale }),
       });
       if (!resp.ok || !data.loginId || !data.expiresAt || !data.resendAvailableAt) {
         throw new Error(data.error ?? `start failed: ${resp.status}`);
