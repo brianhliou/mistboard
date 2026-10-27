@@ -58,17 +58,18 @@ export type BotModeRecord = {
 export type BotDirectoryEntry = BotProfile & {
   gamesTotal: number;
   record: BotModeRecord;
+  // Per-variant play record, keyed by game spec id. `record`/`gamesTotal` above
+  // stay LIFETIME totals across every variant; these are what a profile showing
+  // one selected variant reads, and what a /bots card for a bot that plays
+  // several games lists row by row. Every id in `supportedGameSpecIds` is
+  // present, including variants the bot has never played: a missing key and a
+  // real 0-0-0 are different claims, and the page has to be able to say "no
+  // games yet" rather than render nothing.
+  recordsByGameSpecId: Record<string, BotModeRecord>;
 };
 
 export type BotProfilePage = BotDirectoryEntry & {
   games: ProfileGameRecord[];
-  // Per-variant play record, keyed by game spec id. `record`/`gamesTotal` above
-  // stay LIFETIME totals across every variant (the /bots directory card wants
-  // those); these are what a profile showing one selected variant reads. Every
-  // id in `supportedGameSpecIds` is present, including variants the bot has
-  // never played: a missing key and a real 0-0-0 are different claims, and the
-  // profile has to be able to say "no games yet" rather than render nothing.
-  recordsByGameSpecId: Record<string, BotModeRecord>;
   // Recent games per variant, newest first, capped per variant. Partitioned on
   // the SERVER because the row cap has to be applied after the variant split: a
   // flat "most recent N across all variants" list can be 100% one variant, so
@@ -283,11 +284,17 @@ export async function listPublicBots(): Promise<BotDirectoryEntry[]> {
                rating.created_at
       ORDER BY bot_profiles.display_name`,
   );
-  const bots = rows.map((row) => ({
-    ...botFromRow(row),
-    gamesTotal: Number(row.games_total),
-    record: recordFromRow(row),
-  }));
+  const profiles = rows.map(botFromRow);
+  const records = await queryBotRecordsByGameSpecId(profiles);
+  const bots = rows.map((row, index) => {
+    const profile = profiles[index]!;
+    return {
+      ...profile,
+      gamesTotal: Number(row.games_total),
+      record: recordFromRow(row),
+      recordsByGameSpecId: records.get(profile.id) ?? {},
+    };
+  });
   return attachLatestRatings(bots);
 }
 
@@ -349,7 +356,7 @@ export async function getPublicBotProfile(botId: string): Promise<BotProfilePage
   const base = botFromRow(row);
   const [games, recordsByGameSpecId, gamesByGameSpecId] = await Promise.all([
     queryBotGames(botId, BOT_GAMES_PAGE),
-    queryBotRecordsByGameSpecId(botId, base.supportedGameSpecIds),
+    queryBotRecordsByGameSpecId([base]).then((records) => records.get(botId) ?? {}),
     queryBotGamesByGameSpecId(botId, base.supportedGameSpecIds, BOT_VARIANT_GAMES_PAGE),
   ]);
   const [profile] = await attachLatestRatings([
@@ -365,27 +372,35 @@ export async function getPublicBotProfile(botId: string): Promise<BotProfilePage
   return profile ?? null;
 }
 
-// Per-variant play record. Deliberately a SECOND aggregate rather than a
-// regrouping of the one above: the directory card and the profile header still
-// want the lifetime totals, so both shapes have to survive. Seeded with an
+// Per-variant play record for each bot, in one round trip. Deliberately a
+// SECOND aggregate rather than a regrouping of the lifetime one: the profile
+// header still wants the lifetime totals, so both shapes have to survive. Both
+// read BOT_SEAT_WON and the same public-seat, completed-public-game join, so a
+// bot's per-variant rows always sum to its lifetime record. Seeded with an
 // explicit 0-0-0 for every supported variant so a bot that has never played one
 // reports "no games" instead of a missing key the caller has to guess about.
 async function queryBotRecordsByGameSpecId(
-  botId: string,
-  supportedGameSpecIds: readonly string[],
-): Promise<Record<string, BotModeRecord>> {
-  const records: Record<string, BotModeRecord> = {};
-  for (const gameSpecId of supportedGameSpecIds) {
-    records[gameSpecId] = { games: 0, wins: 0, losses: 0, draws: 0 };
+  bots: readonly Pick<BotProfile, 'id' | 'supportedGameSpecIds'>[],
+): Promise<Map<string, Record<string, BotModeRecord>>> {
+  const byBot = new Map<string, Record<string, BotModeRecord>>();
+  for (const bot of bots) {
+    const records: Record<string, BotModeRecord> = {};
+    for (const gameSpecId of bot.supportedGameSpecIds) {
+      records[gameSpecId] = { games: 0, wins: 0, losses: 0, draws: 0 };
+    }
+    byBot.set(bot.id, records);
   }
+  if (bots.length === 0) return byBot;
   const { rows } = await getPool().query<{
+    bot_id: string;
     variant: string;
     games_total: string;
     wins: string;
     losses: string;
     draws: string;
   }>(
-    `SELECT games.variant,
+    `SELECT game_participants.subject_id AS bot_id,
+            games.variant,
             COUNT(games.room_id)::text AS games_total,
             COUNT(*) FILTER (WHERE games.result = 'draw')::text AS draws,
             COUNT(*) FILTER (
@@ -397,14 +412,16 @@ async function queryBotRecordsByGameSpecId(
        FROM game_participants
        JOIN games ON games.room_id = game_participants.game_id
       WHERE game_participants.subject_type = 'bot'
-        AND game_participants.subject_id = $1
+        AND game_participants.subject_id = ANY($1::text[])
         AND game_participants.visibility = 'public'
         AND games.status = 'completed'
         AND games.visibility = 'public'
-      GROUP BY games.variant`,
-    [botId],
+      GROUP BY game_participants.subject_id, games.variant`,
+    [bots.map((bot) => bot.id)],
   );
   for (const row of rows) {
+    const records = byBot.get(row.bot_id);
+    if (!records) continue;
     records[row.variant] = {
       games: Number(row.games_total),
       wins: Number(row.wins),
@@ -412,7 +429,7 @@ async function queryBotRecordsByGameSpecId(
       draws: Number(row.draws),
     };
   }
-  return records;
+  return byBot;
 }
 
 // The most recent `perVariant` games for each supported variant. One round trip

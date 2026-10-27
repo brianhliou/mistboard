@@ -112,6 +112,99 @@ definePersistenceTests('bot profiles', () => {
     );
   });
 
+  test('the directory lists each bot its own per-variant record, summing to lifetime', async () => {
+    // /bots shows a bot that plays several games one row per variant, so the
+    // directory payload carries the same per-variant split the profile does, for
+    // every bot from one batched query. Two bots share variants here: a grouping
+    // that forgot the bot id would hand each the other's games.
+    await insertBotProfile('dir-a', 'Dir A', 'public', {
+      gameSpecId: 'xiangqi',
+      supportedGameSpecIds: ['xiangqi', 'jieqi', 'banqi'],
+    });
+    await insertBotProfile('dir-b', 'Dir B', 'public', {
+      gameSpecId: 'jieqi',
+      supportedGameSpecIds: ['jieqi'],
+    });
+
+    const endGame = async (
+      roomId: string,
+      botId: string,
+      variant: string,
+      result: 'black-wins' | 'white-wins' | 'draw',
+      visibility: 'public' | 'private' = 'public',
+    ) => {
+      await recordGameEnd(roomId, {
+        variant,
+        mode: 'pve',
+        result,
+        termination: result === 'draw' ? 'draw' : 'king-captured',
+        plyCount: 20,
+        startedAt: new Date('2026-01-01T00:00:00Z'),
+        endedAt: new Date('2026-01-01T01:00:00Z'),
+        whiteClient: 'human-client',
+        blackClient: 'engine',
+        whiteName: null,
+        blackName: botId,
+        corpusId: null,
+        rated: false,
+        visibility,
+        participants: [
+          {
+            color: 'white',
+            displayName: 'Guest',
+            subjectType: 'guest',
+            subjectId: null,
+            visibility,
+          },
+          {
+            color: 'black',
+            displayName: botId,
+            subjectType: 'bot',
+            subjectId: botId,
+            visibility: 'public',
+          },
+        ],
+      });
+    };
+
+    // Dir A (black): xiangqi win + loss, jieqi draw; a private jieqi win that
+    // no public surface counts. Dir B: two jieqi wins.
+    await endGame('dir-a-xq-1', 'dir-a', 'xiangqi', 'black-wins');
+    await endGame('dir-a-xq-2', 'dir-a', 'xiangqi', 'white-wins');
+    await endGame('dir-a-jq-1', 'dir-a', 'jieqi', 'draw');
+    await endGame('dir-a-jq-private', 'dir-a', 'jieqi', 'black-wins', 'private');
+    await endGame('dir-b-jq-1', 'dir-b', 'jieqi', 'black-wins');
+    await endGame('dir-b-jq-2', 'dir-b', 'jieqi', 'black-wins');
+
+    const bots = await listPublicBots();
+    const a = bots.find((bot) => bot.id === 'dir-a');
+    const b = bots.find((bot) => bot.id === 'dir-b');
+
+    assert.deepEqual(a?.recordsByGameSpecId, {
+      xiangqi: { games: 2, wins: 1, losses: 1, draws: 0 },
+      jieqi: { games: 1, wins: 0, losses: 0, draws: 1 },
+      banqi: { games: 0, wins: 0, losses: 0, draws: 0 },
+    });
+    assert.deepEqual(b?.recordsByGameSpecId, {
+      jieqi: { games: 2, wins: 2, losses: 0, draws: 0 },
+    });
+
+    for (const bot of [a, b]) {
+      const rows = Object.values(bot?.recordsByGameSpecId ?? {});
+      const sum = (key: 'games' | 'wins' | 'losses' | 'draws') =>
+        rows.reduce((total, row) => total + row[key], 0);
+      assert.deepEqual(
+        { games: sum('games'), wins: sum('wins'), losses: sum('losses'), draws: sum('draws') },
+        bot?.record,
+        `${bot?.id} per-variant rows sum to its lifetime record`,
+      );
+    }
+
+    // The profile reads the same aggregate, so the two pages agree.
+    const profile = await getPublicBotProfile('dir-a');
+    assert.deepEqual(profile?.recordsByGameSpecId, a?.recordsByGameSpecId);
+  });
+
   test('lists public bot profiles with public recent games', async () => {
     await insertBotProfile('test-bot', 'Test Bot', 'public');
     await insertBotProfile('private-bot', 'Private Bot', 'private');

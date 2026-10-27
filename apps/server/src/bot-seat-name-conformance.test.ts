@@ -78,25 +78,24 @@ test('every rung label in seatNamesByEngineId is the name the seat shows, live a
       assert.equal(tenantParticipant(tenant, 'black', room, 'public').displayName, label, engineId);
     }
   }
-  // Jieqi Level 8 plus the eight xiangqi Pikafish rungs.
+  // Jieqi Level 8 plus the eight xiangqi Pikafish engine ids (all "Pikafish").
   assert.ok(labels >= 9, `expected at least 9 rung labels, found ${labels}`);
 });
 
-test('xiangqi and jieqi Pikafish seats name their level like the jieqi ladder bots', () => {
-  for (const engineId of ['pikafish-jieqi-strongest', 'pikafish-xiangqi-level-8']) {
+test('jieqi Pikafish names its ladder rung; xiangqi Pikafish has no level', () => {
+  // Jieqi Level 8 tops a ladder of Pikafish Level 1..7 bots. Xiangqi offers only
+  // full-strength Pikafish, so a seat there is plain "Pikafish".
+  const expected = {
+    'pikafish-jieqi-strongest': 'Pikafish Level 8',
+    'pikafish-xiangqi-level-8': 'Pikafish',
+    'pikafish-xiangqi-level-3': 'Pikafish',
+  };
+  for (const [engineId, label] of Object.entries(expected)) {
     const tenant = fakeTenant(engineId);
     for (const pveBotId of ['pikafish', null]) {
       const room = fakeRoom(engineId, pveBotId);
-      assert.equal(tenantSeatDisplayNames(tenant, room).black, 'Pikafish Level 8');
-      assert.equal(
-        tenantParticipant(tenant, 'black', room, 'public').displayName,
-        'Pikafish Level 8',
-      );
+      assert.equal(tenantSeatDisplayNames(tenant, room).black, label, engineId);
+      assert.equal(tenantParticipant(tenant, 'black', room, 'public').displayName, label, engineId);
     }
   }
-  const retiredRung = fakeTenant('pikafish-xiangqi-level-3');
-  assert.equal(
-    tenantSeatDisplayNames(retiredRung, fakeRoom('pikafish-xiangqi-level-3', null)).black,
-    'Pikafish Level 3',
-  );
 });
