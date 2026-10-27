@@ -240,6 +240,48 @@ test('puzzle list rejects unsupported variants', async () => {
   assert.deepEqual(JSON.parse(response.body), { error: 'invalid_variant' });
 });
 
+test('puzzle theme filter matches classified motifs and returns unfiltered theme counts', async () => {
+  const all = JSON.parse((await route('/api/puzzles')).body);
+  assert.deepEqual(
+    all.themes.map((motif: { id: string }) => motif.id),
+    XIANGQI_MOTIFS.map((motif) => motif.id),
+  );
+  for (const motif of all.themes) {
+    assert.equal(
+      motif.count,
+      all.puzzles.filter((puzzle: { motifs: string[] }) => puzzle.motifs.includes(motif.id)).length,
+    );
+    assert.ok(motif.literal && motif.gloss && motif.pinyin && motif.hanzi);
+  }
+  const theme = 'ma-hou-pao';
+  const expected = all.puzzles.filter((puzzle: { motifs: string[] }) =>
+    puzzle.motifs.includes(theme),
+  );
+  assert.ok(expected.length > 0 && expected.length < all.puzzles.length);
+  const response = await route(`/api/puzzles?variant=xiangqi&motif=${theme}`);
+  assert.equal(response.status, 200);
+  const filtered = JSON.parse(response.body);
+  assert.deepEqual(filtered.puzzles, expected);
+  assert.deepEqual(filtered.themes, all.themes);
+  const entry = filtered.themes.find((item: { id: string }) => item.id === theme);
+  assert.equal(entry.count, expected.length);
+  assert.equal(entry.hanzi, '马后炮');
+  assert.ok(entry.pinyin && entry.literal && entry.gloss);
+  assert.equal(JSON.stringify(filtered).includes('"solution":'), false);
+});
+
+test('puzzle themes reject unknown ids and intersect variant discovery', async () => {
+  // An empty motif is no filter (main's #637 contract); only unknown ids are refused.
+  for (const theme of ['unknown', 'toString', 'mate']) {
+    const response = await route(`/api/puzzles?motif=${theme}`);
+    assert.equal(response.status, 400);
+    assert.deepEqual(JSON.parse(response.body), { error: 'invalid_motif' });
+  }
+  const jungle = JSON.parse((await route('/api/puzzles?variant=jungle&motif=ma-hou-pao')).body);
+  assert.deepEqual(jungle.puzzles, []);
+  assert.ok(jungle.themes.every((theme: { count: number }) => theme.count === 0));
+});
+
 // Standard xiangqi serving wiring: the variant filter round-trips even while
 // the mined registry is still empty (assert the wiring, not the content).
 test('puzzle list filters to standard Xiangqi puzzles', async () => {

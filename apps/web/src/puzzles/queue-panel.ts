@@ -12,6 +12,7 @@ import { renderVariantMarker } from '../variant-markers.js';
 import { colorLabel, type PuzzleSummary } from './adapter.js';
 import type { UserPuzzleRating } from './api.js';
 import { isPuzzleVariant, type PuzzleVariant, puzzleBoardAdapter } from './registry.js';
+import { type PuzzleThemeSettings, puzzleThemePicker, puzzleThemesLink } from './themes.js';
 
 export type QueuePanelProps = {
   queue: readonly PuzzleSummary[];
@@ -20,6 +21,7 @@ export type QueuePanelProps = {
   variantFilter: PuzzleVariant;
   // Variants surfaced in the Settings variant picker (order = display order).
   variantFilters: readonly PuzzleVariant[];
+  theme?: PuzzleThemeSettings;
   autoNext: boolean;
   ratedEnabled: boolean;
   userRating: UserPuzzleRating | null;
@@ -90,7 +92,7 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   } else {
     const empty = document.createElement('p');
     empty.className = 'puzzle-card-empty';
-    empty.textContent = t('puzzle.noneForVariant');
+    empty.textContent = props.theme?.id ? t('puzzle.noneForTheme') : t('puzzle.noneForVariant');
     infoCard.append(empty);
   }
 
@@ -194,6 +196,10 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     field.append(fieldLabel, select);
     form.append(field);
   }
+  if (props.theme && variantFilter === XIANGQI_SPEC_ID) {
+    form.append(puzzleThemePicker(props.theme));
+  }
+  form.append(puzzleThemesLink());
   const autoNextToggle = document.createElement('label');
   autoNextToggle.className = 'puzzle-toggle';
   const autoNextInput = document.createElement('input');

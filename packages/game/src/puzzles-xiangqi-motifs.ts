@@ -68,6 +68,9 @@ export type XiangqiMotif = {
   pinyin: string;
   /** English gloss shown as the label; never a name chess players would search for alone. */
   label: string;
+  /** Literal name and teaching gloss from the researched motif corpus. */
+  literal: string;
+  gloss: string;
   tier: XiangqiMotifTier;
 };
 
@@ -77,14 +80,28 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '白脸将',
     pinyin: 'báiliǎn jiàng',
     label: 'Facing generals',
+    literal: 'white-face general / smiling face-to-face',
+    gloss:
+      'Facing-generals mate: win by weaponizing the rule that the two generals may never face each other on an open file.',
     tier: 'basic',
   },
-  { id: 'men-gong', hanzi: '闷宫', pinyin: 'mèn gōng', label: 'Sealed palace', tier: 'basic' },
+  {
+    id: 'men-gong',
+    hanzi: '闷宫',
+    pinyin: 'mèn gōng',
+    label: 'Sealed palace',
+    literal: 'sealed palace',
+    gloss: 'Smothered-palace mate: a lone cannon mates a general boxed in by its own advisors.',
+    tier: 'basic',
+  },
   {
     id: 'men-sha',
     hanzi: '闷杀',
     pinyin: 'mèn shā',
     label: 'Smothered mate',
+    literal: 'smother kill',
+    gloss:
+      "Smothered mate: bait the defense into plugging its own general's escape squares, then check.",
     tier: 'intermediate',
   },
   {
@@ -92,14 +109,29 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '臣压君',
     pinyin: 'chén yā jūn',
     label: 'Buried by its own piece',
+    literal: 'the minister crushes the sovereign',
+    gloss:
+      "Buried-general mate: the general's own piece squats on its escape square, and the check that exploits it is mate.",
     tier: 'intermediate',
   },
-  { id: 'chong-pao', hanzi: '重炮', pinyin: 'chóng pào', label: 'Doubled cannons', tier: 'basic' },
+  {
+    id: 'chong-pao',
+    hanzi: '重炮',
+    pinyin: 'chóng pào',
+    label: 'Doubled cannons',
+    literal: 'stacked cannons',
+    gloss:
+      'Double-cannon mate: two cannons on one line, the front one serving as the mount for the rear one.',
+    tier: 'basic',
+  },
   {
     id: 'ma-hou-pao',
     hanzi: '马后炮',
     pinyin: 'mǎ hòu pào',
     label: 'Cannon behind the horse',
+    literal: 'cannon behind the horse',
+    gloss:
+      "Horse-then-cannon mate: the horse pens the general in and doubles as the mount for the cannon's check from behind.",
     tier: 'basic',
   },
   {
@@ -107,6 +139,9 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '天地炮',
     pinyin: 'tiāndì pào',
     label: 'Heaven and earth cannons',
+    literal: 'heaven-and-earth cannons',
+    gloss:
+      'One cannon on the center file, one on the back rank, pinning the defense in two dimensions at once.',
     tier: 'intermediate',
   },
   {
@@ -114,6 +149,9 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '空头炮',
     pinyin: 'kōngtóu pào',
     label: 'Empty-headed cannon',
+    literal: 'empty-head cannon',
+    gloss:
+      'A cannon staring straight at the enemy general with nothing in between, splitting the defense in half.',
     tier: 'intermediate',
   },
   {
@@ -121,14 +159,28 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '铁门栓',
     pinyin: 'tiěménshuān',
     label: 'Iron bolt',
+    literal: 'iron door bolt',
+    gloss:
+      'Iron-bolt mate: a center cannon locks the palace shut while a chariot (or soldier) slides onto the rib file like a bolt through a door.',
     tier: 'basic',
   },
-  { id: 'wo-cao-ma', hanzi: '卧槽马', pinyin: 'wòcáo mǎ', label: 'Trough horse', tier: 'basic' },
+  {
+    id: 'wo-cao-ma',
+    hanzi: '卧槽马',
+    pinyin: 'wòcáo mǎ',
+    label: 'Trough horse',
+    literal: 'horse lying in the trough',
+    gloss:
+      "Trough-horse check: the horse lands on the classic square in front of the enemy's bottom elephant, checking the general and eyeing the palace corner.",
+    tier: 'basic',
+  },
   {
     id: 'gua-jiao-ma',
     hanzi: '挂角马',
     pinyin: 'guàjiǎo mǎ',
     label: 'Corner horse',
+    literal: 'horse hung on the corner',
+    gloss: "Corner-horse check: the horse checks from the palace's advisor-corner square.",
     tier: 'basic',
   },
   {
@@ -136,14 +188,29 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '八角马',
     pinyin: 'bājiǎo mǎ',
     label: 'Eight-corner horse',
+    literal: 'eight-corner horse',
+    gloss:
+      'Opposite-corner bind: a corner horse that pins the general on the diagonally opposite palace corner and holds it there.',
     tier: 'intermediate',
   },
-  { id: 'diao-yu-ma', hanzi: '钓鱼马', pinyin: 'diàoyú mǎ', label: 'Fishing horse', tier: 'basic' },
+  {
+    id: 'diao-yu-ma',
+    hanzi: '钓鱼马',
+    pinyin: 'diàoyú mǎ',
+    label: 'Fishing horse',
+    literal: 'fishing horse',
+    gloss:
+      "Fisher-horse bind: a horse posted two files and three ranks off the general's home corner, covering both corner escape squares like a fishing line.",
+    tier: 'basic',
+  },
   {
     id: 'gao-diao-ma',
     hanzi: '高钓马',
     pinyin: 'gāo diào mǎ',
     label: 'High fishing horse',
+    literal: 'high fishing horse / side-face tiger',
+    gloss:
+      "High-fisher bind: the fishing horse's higher-posted cousin, choking the general's file exits from the soldier rank.",
     tier: 'intermediate',
   },
   {
@@ -151,6 +218,9 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '拔簧马',
     pinyin: 'bá huáng mǎ',
     label: 'Spring-loaded horse',
+    literal: 'spring-release horse',
+    gloss:
+      'Spring-horse battery: moving the horse uncorks a chariot check behind it, and each re-jump repeats the discovered check to harvest material or mate.',
     tier: 'intermediate',
   },
   {
@@ -158,6 +228,9 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '双车错',
     pinyin: 'shuāng jū cuò',
     label: 'Scissoring chariots',
+    literal: 'two chariots interleaved',
+    gloss:
+      'Scissors mate: the two chariots check on alternating adjacent lines, shearing the general into a corner.',
     tier: 'basic',
   },
   {
@@ -165,6 +238,9 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '大胆穿心',
     pinyin: 'dàdǎn chuānxīn',
     label: 'Chariot through the heart',
+    literal: 'boldly pierce the heart / the great blade carves the heart',
+    gloss:
+      "Heart-strike sacrifice: a chariot crashes onto the palace-center advisor, ripping out the defense's linchpin; the follow-up mates before the material comes back.",
     tier: 'basic',
   },
   {
@@ -172,6 +248,9 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '小刀剜心',
     pinyin: 'xiǎodāo wān xīn',
     label: 'Soldier cuts the heart',
+    literal: 'the little blade carves the heart',
+    gloss:
+      'Little heart-strike: the humble soldier walks into the palace center to cut out the center advisor.',
     tier: 'intermediate',
   },
   {
@@ -179,6 +258,9 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '车炮抽杀',
     pinyin: 'jū pào chōu shā',
     label: 'Chariot-cannon battery',
+    literal: 'chariot-cannon extraction kill',
+    gloss:
+      'Windmill of xiangqi: the cannon behind the chariot turns every chariot move into a discovered check, vacuuming up material on the way to mate.',
     tier: 'intermediate',
   },
   {
@@ -186,6 +268,9 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '二鬼拍门',
     pinyin: 'èr guǐ pāi mén',
     label: 'Two ghosts at the gate',
+    literal: 'two ghosts pound the gates',
+    gloss:
+      'Twin-ghost soldiers: two soldiers plant themselves on both rib files at the palace edge, and the palace gates never open again.',
     tier: 'basic',
   },
   {
@@ -193,6 +278,9 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '送佛归殿',
     pinyin: 'sòng fó guī diàn',
     label: 'Soldier drives the general home',
+    literal: 'escorting the Buddha back to the shrine',
+    gloss:
+      'Escort mate: a lone soldier checks step by step, herding the displaced general back to its home square where the final check is mate.',
     tier: 'intermediate',
   },
   {
@@ -200,6 +288,9 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '老卒搜山',
     pinyin: 'lǎo zú sōu shān',
     label: 'Old soldier on the back rank',
+    literal: 'the old soldier combs the mountain',
+    gloss:
+      "Old-soldier sweep: a soldier that reached the back rank ('old' but not dead) scuttles along the bottom, flushing the general out of every hideout.",
     tier: 'intermediate',
   },
   {
@@ -207,6 +298,9 @@ export const XIANGQI_MOTIFS: readonly XiangqiMotif[] = [
     hanzi: '双照将',
     pinyin: 'shuāng zhào jiàng',
     label: 'Double check',
+    literal: 'double check',
+    gloss:
+      'Double check: one move, two checkers; blocking answers only one, so the general must move, and often cannot.',
     tier: 'intermediate',
   },
 ];

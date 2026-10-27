@@ -9,6 +9,7 @@
 import { browserTimeZone } from '../browser-time-zone.js';
 import { deviceIdForBrowser } from '../live-state.js';
 import type { PuzzleDetail, PuzzleMove, PuzzleState, PuzzleSummary } from './adapter.js';
+import type { PuzzleThemeCount } from './themes.js';
 
 export type PuzzleAttempt =
   | {
@@ -75,15 +76,18 @@ export async function fetchPuzzleList(): Promise<PuzzleSummary[]> {
 export async function fetchPuzzleListWithAttempts(): Promise<{
   puzzles: PuzzleSummary[];
   attemptedIds: string[];
+  themes: PuzzleThemeCount[];
 }> {
   const response = await fetch('/api/puzzles');
   if (!response.ok) throw new Error(`Puzzle list failed: ${response.status}`);
   const body = (await response.json()) as {
     puzzles?: PuzzleSummary[];
     attemptedIds?: unknown;
+    themes?: PuzzleThemeCount[];
   };
   return {
     puzzles: Array.isArray(body.puzzles) ? body.puzzles : [],
+    themes: Array.isArray(body.themes) ? body.themes : [],
     attemptedIds: Array.isArray(body.attemptedIds)
       ? body.attemptedIds.filter((id): id is string => typeof id === 'string')
       : [],

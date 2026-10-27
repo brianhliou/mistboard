@@ -122,11 +122,21 @@ export async function tryHandle(
       return true;
     }
     const store = await getPuzzleStore();
-    const puzzles = discoverablePuzzles(store).filter(
-      (puzzle) =>
-        (!variant || puzzle.variant === variant) &&
-        (!motif || store.motifsById.get(puzzle.id)?.includes(motif)),
-    );
+    const discoverable = discoverablePuzzles(store);
+    const variantPuzzles = variant
+      ? discoverable.filter((puzzle) => puzzle.variant === variant)
+      : discoverable;
+    const puzzles = motif
+      ? variantPuzzles.filter((puzzle) => store.motifsById.get(puzzle.id)?.includes(motif))
+      : variantPuzzles;
+    // Counts describe the variant's whole discoverable pool, so selecting one
+    // theme does not erase the other choices. Hidden/withheld puzzles never count.
+    const counts = new Map<XiangqiMotifId, number>();
+    for (const puzzle of variantPuzzles) {
+      for (const id of store.motifsById.get(puzzle.id) ?? []) {
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+    }
     const ratings = await listPuzzleRatingSummaries(puzzles.map((puzzle) => puzzle.id));
     // Signed-in visitors also get what they have already finished, so rotation
     // survives a cleared browser or a second device. Anonymous visitors get an
@@ -143,6 +153,7 @@ export async function tryHandle(
         ),
       ),
       attemptedIds,
+      themes: XIANGQI_MOTIFS.map((motif) => ({ ...motif, count: counts.get(motif.id) ?? 0 })),
     });
     return true;
   }

@@ -5,6 +5,7 @@ import {
   getStandardXiangqiLegalMoves,
   standardXiangqiPuzzleMoveEquals,
   XIANGQI_MOTIF_BY_ID,
+  XIANGQI_MOTIFS,
   XIANGQI_PUZZLES,
   XIANGQI_SPEC_ID,
   type XiangqiMove,
@@ -15,6 +16,8 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { displayPreferenceStorageKey } from './display-preferences.js';
 import { playSound } from './live-sound.js';
+import { puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
+import { loadPuzzleTheme } from './puzzles/themes.js';
 import {
   mountPuzzleSolver,
   mountPuzzles,
@@ -87,6 +90,162 @@ describe('puzzles route', () => {
     )!;
   const RED_MATE = minedMate('red');
   const BLACK_MATE = minedMate('black');
+  const themeOptions = XIANGQI_MOTIFS.map((motif) => ({
+    ...motif,
+    count: motif.id === 'ma-hou-pao' ? 2 : 0,
+    literal: 'cannon behind the horse',
+    gloss: 'The horse pens the general in and screens the cannon behind it.',
+  }));
+
+  it('filters the queue by theme, persists the picker, and keeps next navigation filtered', async () => {
+    const puzzles = XIANGQI_PUZZLES.slice(0, 3);
+    const summaries = puzzles.map((puzzle, index) => ({
+      ...publicSummary(puzzle),
+      motifs: index < 2 ? ['ma-hou-pao'] : [],
+    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles') return json({ puzzles: summaries, themes: themeOptions });
+        const hinted = puzzles.find((puzzle) => url === `/api/puzzles/${puzzle.id}/reveal`);
+        if (hinted) return json({ move: hinted.solution[0] });
+        const index = puzzles.findIndex((puzzle) => url === `/api/puzzles/${puzzle.id}`);
+        return index >= 0
+          ? json({ puzzle: { ...publicDetail(puzzles[index]!), ...summaries[index] } })
+          : json({}, 404);
+      }),
+    );
+    stubWindowLocalStorage(memoryStorage());
+    const root = document.createElement('div');
+    await mountPuzzles(root);
+    const picker = root.querySelector<HTMLSelectElement>('[data-puzzle-theme]');
+    expect(picker).not.toBeNull();
+    picker!.value = 'ma-hou-pao';
+    picker!.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(root.textContent).toContain('0 solved of 2'));
+    expect(window.localStorage.getItem('mistboard:puzzles:theme')).toBe('ma-hou-pao');
+    await vi.waitFor(() =>
+      expect(new URL(window.location.href).searchParams.get('theme')).toBe('ma-hou-pao'),
+    );
+    const firstPath = window.location.pathname;
+    root.querySelector<HTMLButtonElement>('[data-puzzle-hint]')!.click();
+    await vi.waitFor(() => expect(root.querySelector('[data-puzzle-skip]')).not.toBeNull());
+    const next = root.querySelector<HTMLButtonElement>('[data-puzzle-skip]');
+    expect(next).not.toBeNull();
+    next!.click();
+    await vi.waitFor(() => expect(window.location.pathname).not.toBe(firstPath));
+    expect(new URL(window.location.href).searchParams.get('theme')).toBe('ma-hou-pao');
+    expect(puzzles.slice(0, 2).some((puzzle) => window.location.pathname.endsWith(puzzle.id))).toBe(
+      true,
+    );
+    expect(root.textContent).toContain('0 solved of 2');
+    const reopened = document.createElement('div');
+    window.history.replaceState(null, '', '/puzzles');
+    await mountPuzzles(reopened);
+    expect(reopened.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe(
+      'ma-hou-pao',
+    );
+    const all = reopened.querySelector<HTMLSelectElement>('[data-puzzle-theme]')!;
+    all.value = '';
+    all.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(reopened.textContent).toContain('0 solved of 3'));
+  });
+
+  it('opens the themes index with counts, glosses and filtered-session links', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json({ puzzles: [], themes: themeOptions })),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, 'themes');
+    expect(root.querySelectorAll('[data-puzzle-theme-card]')).toHaveLength(XIANGQI_MOTIFS.length);
+    const link = root.querySelector<HTMLAnchorElement>('a[href="/puzzles?theme=ma-hou-pao"]');
+    expect(link?.textContent).toContain('Cannon behind the horse');
+    expect(root.textContent).toContain('马后炮');
+    expect(root.textContent).toContain('mǎ hòu pào');
+    expect(root.textContent).toContain('2 puzzles');
+    expect(root.textContent).toContain('The horse pens the general in');
+    expect(root.querySelector('.puzzle-xiangqi-board')).toBeNull();
+    expect(root.querySelector('a[href="/puzzles?theme=men-gong"]')).toBeNull();
+  });
+
+  it('honors a theme URL over storage and offers recovery from an empty theme', async () => {
+    stubWindowLocalStorage(memoryStorage({ 'mistboard:puzzles:theme': 'ma-hou-pao' }));
+    window.history.replaceState(null, '', '/puzzles?theme=men-gong');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input) === '/api/puzzles'
+          ? json({
+              puzzles: [{ ...publicSummary(RED_MATE), motifs: ['ma-hou-pao'] }],
+              themes: themeOptions,
+            })
+          : json({ puzzle: publicDetail(RED_MATE) }),
+      ),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    expect(root.querySelector('.puzzle-detail')?.textContent).toContain(
+      'No puzzles for this theme',
+    );
+    expect(root.querySelector('.puzzle-detail a[href="/puzzles?theme="]')).not.toBeNull();
+    expect(root.querySelector('[data-square]')).toBeNull();
+    window.history.replaceState(null, '', '/puzzles');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await vi.waitFor(() => expect(root.querySelector('[data-square]')).not.toBeNull());
+    expect(root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe('');
+  });
+
+  it('lets a direct puzzle link override a stored theme and ignores invalid stored ids', async () => {
+    stubWindowLocalStorage(memoryStorage({ 'mistboard:puzzles:theme': 'ma-hou-pao' }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input) === '/api/puzzles'
+          ? json({ puzzles: [{ ...publicSummary(RED_MATE), motifs: [] }], themes: themeOptions })
+          : json({ puzzle: publicDetail(RED_MATE) }),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, RED_MATE.id);
+    expect(root.querySelector('[data-square]')).not.toBeNull();
+    expect(root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe('');
+    window.localStorage.setItem('mistboard:puzzles:theme', 'toString');
+    expect(loadPuzzleTheme()).toBeNull();
+    stubWindowLocalStorage({
+      getItem: () => {
+        throw new Error('blocked');
+      },
+    } as unknown as Storage);
+    expect(loadPuzzleTheme()).toBeNull();
+  });
+
+  it('offers the theme picker in the phone menu using the same callback', async () => {
+    const onChange = vi.fn(async () => {});
+    const rows = puzzlePhoneMenuRows({
+      queue: [],
+      selectedId: null,
+      solvedIds: new Set(),
+      variantFilter: 'xiangqi',
+      variantFilters: ['xiangqi'],
+      autoNext: false,
+      ratedEnabled: true,
+      userRating: null,
+      ratingDelta: null,
+      onVariantChange: vi.fn(),
+      onAutoNextChange: vi.fn(),
+      onRatedChange: vi.fn(),
+      theme: { id: null, options: themeOptions, onChange },
+    });
+    const field = rows.find((row) => row.dataset.puzzleMenuRow === 'theme')!;
+    const select = field.querySelector<HTMLSelectElement>('[data-puzzle-menu="theme"]')!;
+    select.value = 'ma-hou-pao';
+    select.dispatchEvent(new Event('change'));
+    expect(onChange).toHaveBeenCalledWith('ma-hou-pao');
+    expect(rows.some((row) => row.querySelector('a[href="/puzzles/themes"]'))).toBe(true);
+  });
   const movesOf = (init?: RequestInit): XiangqiMove[] =>
     (JSON.parse(String(init?.body)) as { moves: XiangqiMove[] }).moves;
   const clickSquares = (root: HTMLElement, move: XiangqiMove): void => {

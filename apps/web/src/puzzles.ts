@@ -69,6 +69,14 @@ import {
   saveSeenPuzzles,
   saveSolvedPuzzleIds,
 } from './puzzles/storage.js';
+import {
+  loadPuzzleTheme,
+  type PuzzleThemeCount,
+  parsePuzzleTheme,
+  puzzleThemesLink,
+  renderPuzzleThemesIndex,
+  savePuzzleTheme,
+} from './puzzles/themes.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
 
@@ -98,6 +106,13 @@ export async function mountPuzzles(
   root: HTMLElement,
   initialPuzzleId: string | null = null,
 ): Promise<void> {
+  // The existing /puzzles/:id router passes this reserved index slug through.
+  if (initialPuzzleId === 'themes') {
+    root.replaceChildren(buildNav());
+    const list = await fetchPuzzleListWithAttempts();
+    root.append(renderPuzzleThemesIndex(list.themes));
+    return;
+  }
   for (const adapter of allPuzzleBoardAdapters()) adapter.installStyles?.();
   initLiveSound();
   setBoardFamily('xiangqi');
@@ -114,6 +129,14 @@ export async function mountPuzzles(
   let summaries: PuzzleSummary[] = [];
   let selectedId = initialPuzzleId;
   let variantFilter: PuzzleVariantFilter = PUZZLE_VARIANT_FILTERS[0] ?? XIANGQI_SPEC_ID;
+  const themeParam = new URLSearchParams(window.location.search);
+  let themeFilter = themeParam.has('theme')
+    ? parsePuzzleTheme(themeParam.get('theme'))
+    : initialPuzzleId
+      ? null
+      : loadPuzzleTheme();
+  let themes: PuzzleThemeCount[] = [];
+  savePuzzleTheme(themeFilter);
   let session: PuzzleSession | null = null;
   const solvedIds = loadSolvedPuzzleIds();
   const seenPuzzles = loadSeenPuzzles();
@@ -132,7 +155,55 @@ export async function mountPuzzles(
   let ratingToken = 0;
   setPuzzleRatedPref(ratedEnabled);
 
-  const queueSummaries = (): PuzzleSummary[] => filterPuzzlesByVariant(summaries, variantFilter);
+  // Like the variant picker, theme selection preserves this visit's frozen
+  // adaptive order. No re-shuffle or request can move a solved session's next.
+  const queueSummaries = (): PuzzleSummary[] =>
+    filterPuzzlesByVariant(summaries, variantFilter).filter(
+      (puzzle) => !themeFilter || puzzle.motifs?.includes(themeFilter),
+    );
+
+  const renderEmptyQueue = (): void => {
+    renderStatus(detail, t(themeFilter ? 'puzzle.noneForTheme' : 'puzzle.none'));
+    if (themeFilter) {
+      const all = document.createElement('a');
+      all.href = '/puzzles?theme=';
+      all.textContent = t('puzzle.allThemes');
+      const links = document.createElement('span');
+      links.className = 'puzzle-empty-links';
+      links.append(all, puzzleThemesLink());
+      detail.querySelector('.puzzles-status')?.append(links);
+    }
+  };
+
+  const changeQueue = async (pushUrl = true): Promise<void> => {
+    const queue = queueSummaries();
+    const nextId =
+      selectedId && queue.some((puzzle) => puzzle.id === selectedId)
+        ? selectedId
+        : (queue[0]?.id ?? null);
+    if (nextId) await selectPuzzle(nextId, pushUrl);
+    else {
+      clearAutoNextTimer();
+      ++loadToken;
+      if (session && !isPuzzleComplete(session)) {
+        void sendPuzzleQualityEvent(session.puzzle.id, session.qualitySessionId, 'abandon').catch(
+          () => {},
+        );
+        trackPuzzleAttempted(session, 'abandoned');
+      }
+      session?.analysis?.dispose();
+      selectedId = null;
+      session = null;
+      if (pushUrl)
+        window.history.pushState(
+          null,
+          '',
+          themeFilter ? `/puzzles?theme=${themeFilter}` : '/puzzles',
+        );
+      renderControls();
+      renderEmptyQueue();
+    }
+  };
 
   // Refresh the signed-in user's rating for the current variant. Guarded by a
   // token so a slow response for an old variant can't overwrite a newer one.
@@ -162,6 +233,15 @@ export async function mountPuzzles(
       solvedIds,
       variantFilter,
       variantFilters: PUZZLE_VARIANT_FILTERS,
+      theme: {
+        id: themeFilter,
+        options: themes,
+        onChange: async (id) => {
+          themeFilter = id;
+          savePuzzleTheme(id);
+          await changeQueue();
+        },
+      },
       autoNext,
       ratedEnabled,
       userRating,
@@ -169,20 +249,12 @@ export async function mountPuzzles(
       onVariantChange: async (nextFilter) => {
         variantFilter = nextFilter;
         ratingDelta = null;
-        const queue = queueSummaries();
-        const nextId =
-          selectedId && queue.some((puzzle) => puzzle.id === selectedId)
-            ? selectedId
-            : (queue[0]?.id ?? null);
-        renderControls();
-        void refreshUserRating();
-        if (nextId) {
-          await selectPuzzle(nextId, true);
-        } else {
-          selectedId = null;
-          session = null;
-          renderStatus(detail, t('puzzle.none'));
+        if (nextFilter !== XIANGQI_SPEC_ID) {
+          themeFilter = null;
+          savePuzzleTheme(null);
         }
+        await changeQueue();
+        void refreshUserRating();
       },
       onAutoNextChange: (enabled) => {
         autoNext = enabled;
@@ -240,6 +312,8 @@ export async function mountPuzzles(
     const summary = summaries.find((puzzle) => puzzle.id === id);
     if (summary && !queueSummaries().some((puzzle) => puzzle.id === id)) {
       variantFilter = summary.variant;
+      themeFilter = null;
+      savePuzzleTheme(null);
     }
     selectedId = id;
     renderControls();
@@ -252,8 +326,8 @@ export async function mountPuzzles(
       renderStatus(detail, t('puzzle.notFound'));
       return;
     }
-    const nextPath = `/puzzles/${encodeURIComponent(id)}`;
-    if (pushUrl && window.location.pathname !== nextPath) {
+    const nextPath = `/puzzles/${encodeURIComponent(id)}${themeFilter ? `?theme=${themeFilter}` : ''}`;
+    if (pushUrl && `${window.location.pathname}${window.location.search}` !== nextPath) {
       window.history.pushState(null, '', nextPath);
     }
     // Tear down the outgoing puzzle's engine (worker + arrows) before swapping
@@ -287,7 +361,10 @@ export async function mountPuzzles(
     const target = event.target as HTMLElement | null;
     if (
       target &&
-      (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'SELECT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable)
     ) {
       return;
     }
@@ -311,6 +388,7 @@ export async function mountPuzzles(
   renderPendingBoard(detail, t('puzzle.loading'));
   const puzzleList = await fetchPuzzleListWithAttempts();
   summaries = puzzleList.puzzles;
+  themes = puzzleList.themes;
   // Merge the server's record of finished puzzles into the local seen-set
   // before rotating. Timestamp 0 sorts them behind anything seen in this
   // browser, so a cross-device visitor sees unseen material first and their
@@ -339,6 +417,10 @@ export async function mountPuzzles(
   else if (!summaries.some((puzzle) => puzzle.variant === variantFilter) && summaries[0]) {
     variantFilter = summaries[0].variant;
   }
+  if (directSummary && themeFilter && !directSummary.motifs?.includes(themeFilter)) {
+    themeFilter = null;
+    savePuzzleTheme(null);
+  }
   renderControls();
   void refreshUserRating();
 
@@ -350,12 +432,16 @@ export async function mountPuzzles(
   if (firstId) {
     await selectPuzzle(firstId, false);
   } else {
-    renderStatus(detail, t('puzzle.none'));
+    renderEmptyQueue();
   }
 
   window.addEventListener('popstate', () => {
+    if (!shell.isConnected) return;
+    themeFilter = parsePuzzleTheme(new URLSearchParams(window.location.search).get('theme'));
+    savePuzzleTheme(themeFilter);
     const id = puzzleIdFromPath(window.location.pathname) ?? queueSummaries()[0]?.id ?? null;
     if (id) void selectPuzzle(id, false);
+    else void changeQueue(false);
   });
 
   window.addEventListener('pagehide', () => {
