@@ -48,7 +48,7 @@ export const ZH_HANS_CONTENT = {
   'videos.previousVideos': '上一个视频',
   'videos.moreVideos': '更多视频',
   'articles.heading': '文章',
-  'articles.latest': '最新动态',
+  'articles.latest': '博客',
   'articles.deepDives': '象棋深度文章',
   'articles.topicAll': '全部',
   'articles.topicEngineering': '技术',

@@ -23,8 +23,6 @@ import { articleMadeWithNote, hasSiteByline, SITE_AUTHOR } from './articles/site
 import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
 import './articles.css';
-import { localizeAnnouncementString } from './announcement-i18n.js';
-import { type Announcement, announcements } from './announcements.js';
 import { mountLazyStepGameSet, type StepGameSetController } from './article-game-set.js';
 import {
   type ArticleLang,
@@ -106,13 +104,11 @@ import {
   readStoredXiangqiPieceSet,
   xiangqiAppearanceChangedEvent,
 } from './theme.js';
-import { buildUiIcon, uiIconForAnnouncementKind } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import {
   gameSpecIdFromRulesSlug,
   isGameSpecId,
-  rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
   variantPublicSurfaceEnabled,
   variantSupportsPve,
@@ -505,19 +501,10 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // leads it, to put a new variant in front of people while it is new.
 export const HOME_ARTICLE_LEAD_ON_TIE = ['duck-xiangqi-strategy'] as const;
 
-type HomeCardItem =
-  | {
-      kind: 'announcement';
-      date: string;
-      order: number;
-      announcement: Announcement;
-    }
-  | {
-      kind: 'article';
-      date: string;
-      order: number;
-      article: Article;
-    };
+type HomeCardItem = {
+  date: string;
+  article: Article;
+};
 
 /**
  * How far back the homepage row reaches, and how short it is allowed to get.
@@ -544,8 +531,9 @@ export type HomeArticleCardOptions = {
   /** Cards kept regardless of age, so a quiet month cannot empty the row. */
   minCards?: number;
   /**
-   * Which homepage row to build. 'latest' (the default) is every article with no
-   * homeRow plus the newest announcement; 'deep-dives' is the articles tagged
+   * Which homepage row to build. 'latest' (the default, "From the blog") is
+   * every article with no homeRow, articles only: announcements live in the
+   * News box (Brian, 2026-10-26); 'deep-dives' is the articles tagged
    * for it, with no age cut, since a player page does not go stale in 60 days.
    * Engineering posts are in neither row: the homepage is for players, and those
    * posts live under the blog's Engineering chip (Brian, 2026-10-21).
@@ -555,7 +543,7 @@ export type HomeArticleCardOptions = {
 
 export type HomeArticleRow = 'latest' | 'deep-dives';
 
-/** Cards the homepage row shows at once (landing.ts), announcement included. */
+/** Cards the homepage row shows at once (landing.ts). */
 export const HOME_ARTICLE_ROW_SIZE = 6;
 
 export function buildHomeArticleCards(
@@ -573,25 +561,17 @@ export function buildHomeArticleCards(
     .filter((article) => isArticleListedInThisEnv(article) && article.kind !== 'rules')
     .filter((article) => !isEngineeringArticle(article))
     .filter((article) => (article.homeRow ?? 'latest') === row)
-    .sort((a, b) => tieRank(a) - tieRank(b) || compareArticlesNewestFirst(a, b))
-    .map<HomeCardItem>((article, index) => ({
-      kind: 'article',
-      date: articleDateKey(article),
-      order: index + 1,
-      article,
-    }));
-  const latestAnnouncement = row === 'latest' ? latestVisibleAnnouncement() : undefined;
-  const announcementItems: HomeCardItem[] = latestAnnouncement
-    ? [
-        {
-          kind: 'announcement',
-          date: latestAnnouncement.date,
-          order: 0,
-          announcement: latestAnnouncement,
-        },
-      ]
-    : [];
-  const ordered = [...announcementItems, ...articleItems].sort(compareHomeCardItems);
+    // Newest first; on a shared publish date a HOME_ARTICLE_LEAD_ON_TIE slug leads.
+    .sort(
+      (a, b) =>
+        articleDateKey(b).localeCompare(articleDateKey(a)) ||
+        tieRank(a) - tieRank(b) ||
+        a.title.localeCompare(b.title),
+    )
+    .map<HomeCardItem>((article) => ({ date: articleDateKey(article), article }));
+  // Articles only: the row used to slot in the newest announcement, which the
+  // News box already shows (Brian, 2026-10-26).
+  const ordered = articleItems;
 
   const maxAgeDays =
     options.maxAgeDays ??
@@ -607,13 +587,7 @@ export function buildHomeArticleCards(
   });
   const kept = fresh.length >= minCards ? fresh : ordered.slice(0, minCards);
 
-  const cards = kept
-    .map((item) =>
-      item.kind === 'announcement'
-        ? landingAnnouncementCard(item.announcement, locale)
-        : landingArticleCard(item.article, locale),
-    )
-    .slice(0, limit);
+  const cards = kept.map((item) => landingArticleCard(item.article, locale)).slice(0, limit);
   if (cards.length === 0) return null;
 
   const section = document.createElement('section');
@@ -623,9 +597,11 @@ export function buildHomeArticleCards(
     t(row === 'deep-dives' ? 'articles.deepDives' : 'articles.latest', {}, locale),
   );
 
-  // Both rows carry a short label (Brian, 2026-10-03: the unlabelled first
-  // row read as nothing next to "Xiangqi deep dives"), and the first row's
-  // label line links to the blog index, which the strip had no way to reach.
+  // Both rows carry a short label (Brian, 2026-10-03: the unlabelled row read
+  // as nothing next to "Xiangqi deep dives"; "Latest" became "From the blog"
+  // 2026-10-26, when it moved under the deep dives and dropped announcements),
+  // and its label line links to the blog index, which the strip had no way to
+  // reach.
   const header = document.createElement('div');
   header.className = 'landing-row-header';
   const label = document.createElement('h2');
@@ -682,19 +658,6 @@ function compareArticlesNewestFirst(a: Article, b: Article): number {
   return a.title.localeCompare(b.title);
 }
 
-function compareHomeCardItems(a: HomeCardItem, b: HomeCardItem): number {
-  const dateCompare = b.date.localeCompare(a.date);
-  if (dateCompare !== 0) return dateCompare;
-  return a.order - b.order;
-}
-
-function latestVisibleAnnouncement(): Announcement | undefined {
-  return [...announcements()]
-    .filter((announcement) => announcement.showInHomeArticleWidget === true)
-    .filter((announcement) => rulesHrefPublicSurfaceEnabled(announcement.href))
-    .sort((a, b) => b.date.localeCompare(a.date))[0];
-}
-
 function carouselNavButton(dir: 'prev' | 'next', glyph: string, locale: Locale): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
@@ -739,34 +702,6 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   // thumbnail needs no empty corner for it.
   const dateIso = article.publishedAt ?? article.updatedAt;
   if (dateIso) link.append(landingCardDate(dateIso, locale));
-  return link;
-}
-
-function landingAnnouncementCard(announcement: Announcement, locale: Locale): HTMLElement {
-  const link = document.createElement('a');
-  link.className = 'landing-article-card landing-announcement-card';
-  link.dataset.cardKind = 'announcement';
-  const href = announcement.href ?? '/feed';
-  link.href = /^https?:/.test(href) ? href : localizedHref(href, locale);
-  if (/^https?:/.test(href)) {
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-  }
-
-  const thumb = document.createElement('div');
-  thumb.className = 'landing-article-card-thumb landing-announcement-thumb';
-
-  const icon = document.createElement('span');
-  icon.className = 'landing-announcement-thumb-icon';
-  icon.setAttribute('aria-hidden', 'true');
-  icon.append(buildUiIcon(uiIconForAnnouncementKind(announcement.kind)));
-  thumb.append(icon);
-
-  const title = document.createElement('strong');
-  title.className = 'landing-article-card-title';
-  title.textContent = localizeAnnouncementString(announcement.headline, locale);
-
-  link.append(thumb, title, landingCardDate(announcement.date, locale));
   return link;
 }
 

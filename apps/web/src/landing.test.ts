@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   fetchPlayableEnginesOnce,
@@ -167,8 +168,9 @@ describe('landing shell', () => {
     // Bands 3-4 side rails: News (left) and Top studies (right) span both rows.
     expect(demo?.querySelector(':scope > .landing-news-column')).not.toBeNull();
     expect(demo?.querySelector(':scope > .landing-studies-column')).not.toBeNull();
-    // Band 4: the deep-dives row sits in its own grid-area beneath the blog row,
-    // and the player pages are in it, not in the blog row above.
+    // Band 4: the deep-dives row sits in its own grid-area above the blog row
+    // (on top since 2026-10-26), and the player pages are in it, not in the
+    // blog row below.
     const deepDives = demo?.querySelector(':scope > .landing-dives-row');
     expect(deepDives).not.toBeNull();
     expect(
@@ -180,9 +182,9 @@ describe('landing shell', () => {
       ),
     ).toBeNull();
     expect(deepDives?.querySelector('.landing-row-label')?.textContent).toBe('Xiangqi deep dives');
-    // The first row is labelled too, and its label line links to the blog index.
+    // The other row is labelled too, and its label line links to the blog index.
     const latest = demo?.querySelector(':scope > .landing-articles-row:not(.landing-dives-row)');
-    expect(latest?.querySelector('.landing-row-label')?.textContent).toBe('Latest');
+    expect(latest?.querySelector('.landing-row-label')?.textContent).toBe('From the blog');
     expect(
       latest?.querySelector('.landing-row-header a.landing-row-more')?.getAttribute('href'),
     ).toBe('/blog');
@@ -262,3 +264,56 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
     status: init.status ?? 200,
   });
 }
+
+describe('homepage band layout (CSS)', () => {
+  const css = readFileSync('src/landing.css', 'utf8');
+
+  it('puts the deep-dives row above the blog row at every width', () => {
+    // Brian, 2026-10-26: deep dives go above the laptop fold. The three grid
+    // layouts and the phone flex order must all agree.
+    const areas = [...css.matchAll(/grid-template-areas:([^;]*);/g)].map((m) => m[1] ?? '');
+    const withRows = areas.filter((a) => a.includes('dives') && a.includes('blogs'));
+    expect(withRows).toHaveLength(3);
+    for (const a of withRows) expect(a.indexOf('dives')).toBeLessThan(a.indexOf('blogs'));
+    const order = (selector: string) =>
+      Number(
+        css.match(new RegExp(`${selector.replace(/[.()]/g, '\\$&')} \\{\\s*order: (\\d+);`))?.[1],
+      );
+    expect(order('.landing-demo .landing-dives-row')).toBeLessThan(
+      order('.landing-demo .landing-articles-row:not(.landing-dives-row)'),
+    );
+  });
+
+  it('keeps the "more broadcasts" link out of the cards\' equal-height rows', () => {
+    // .landing-event-banners is grid-auto-rows: 1fr, so the link in flow took a
+    // card-tall row: a ~70px gap under the cards that also stretched band 1.
+    expect(css).toMatch(
+      /^\.landing-play-column > \.landing-event-banners > \.landing-event-banners-more \{[^}]*position: absolute;/m,
+    );
+    expect(css).toMatch(
+      /^\.landing-play-column > \.landing-event-banners:has\(> \.landing-event-banners-more\) \{[^}]*margin-block: auto;/m,
+    );
+  });
+
+  it('sizes the broadcast card for one line of name and keeps the square icon slot', () => {
+    // 2026-10-26: 84px two-line cards made the play column the band's tallest
+    // column. The name is one line at 13px; the icon slot stays 34px square
+    // for the illustrated card art.
+    const banners = readFileSync('src/landing-event-banners.css', 'utf8');
+    const rule = (selector: string) =>
+      banners.match(new RegExp(`^${selector.replace(/[.]/g, '\\$&')} \\{([^}]*)\\}`, 'm'))?.[1] ??
+      '';
+    expect(rule('.landing-event-banner')).toMatch(/padding: 8px 12px;/);
+    expect(rule('.landing-event-banner-title')).toMatch(/font-size: 13px;/);
+    expect(rule('.landing-event-banner-title')).toMatch(/-webkit-line-clamp: 2;/);
+    expect(rule('.landing-event-banner-icon')).toMatch(/width: 34px;\s*height: 34px;/);
+  });
+
+  it('runs the Play a game label a couple of px above the old clamp, same height', () => {
+    const play = readFileSync('src/landing-play.css', 'utf8');
+    const rule =
+      play.match(/^\.landing-play-action\.landing-play-action-primary \{([^}]*)\}/m)?.[1] ?? '';
+    expect(rule).toMatch(/font-size: clamp\(19px, 1\.35vw, 22px\);/);
+    expect(rule).toMatch(/min-height: 76px;/);
+  });
+});

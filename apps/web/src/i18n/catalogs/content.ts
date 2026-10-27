@@ -47,7 +47,7 @@ export const EN_CONTENT = {
   'videos.previousVideos': 'Previous videos',
   'videos.moreVideos': 'More videos',
   'articles.heading': 'Articles',
-  'articles.latest': 'Latest',
+  'articles.latest': 'From the blog',
   'articles.deepDives': 'Xiangqi deep dives',
   'articles.topicAll': 'All',
   'articles.topicEngineering': 'Engineering',

@@ -46,8 +46,9 @@
   /* lichess-shaped portal in three bands. Band 1 (~the first two-thirds of the
      initial screen): event banners + the game viewer (left), the tall tabbed
      lobby panel (center, the focal element), the single Play button + activity
-     stats (right). Band 2: daily puzzle (left), the blog row then the deep-dives
-     row (center), top studies (right); the puzzle and studies span both rows.
+     stats (right). Band 2: daily puzzle (left), the deep-dives row then the blog
+     row (center; deep dives on top since 2026-10-26, Brian: the row we are
+     proudest of goes above the laptop fold), top studies (right); the puzzle and studies span both rows.
      Band 3: News (left), forum topics (center), the lobby chat (right), so the
      forum sits beside the chat (Brian, 2026-10-25: the articles are the work we
      are proud of, and the forum is quiet). */
@@ -60,8 +61,8 @@
     minmax(280px, var(--landing-rail-width));
   grid-template-areas:
     "left   panel  play"
-    "puzzle blogs  studies"
     "puzzle dives  studies"
+    "puzzle blogs  studies"
     "news   forum  chat";
   /* The play panel's tab strip, fixed so the play rail can drop by exactly
      this much and start level with the panel's card (2026-10-11). */
@@ -273,16 +274,42 @@
    the panel, which with the summary line added left four different gaps down
    the rail (2026-09-25). */
 .landing-play-column {
+  --landing-play-gap: clamp(12px, 1.6vw, 18px);
+  --landing-event-more-height: 22px;
   grid-area: play;
   display: flex;
   flex-direction: column;
   align-self: stretch;
-  gap: clamp(12px, 1.6vw, 18px);
+  gap: var(--landing-play-gap);
   min-width: 0;
 }
 
 .landing-play-column > .landing-event-banners {
   margin-top: auto;
+}
+
+/* With a "N more broadcasts" link the link takes the column's bottom edge
+   (level with the panel's bottom) and the cards sit midway between the
+   activity line and it: the same gap above and below them (Brian,
+   2026-10-26). The link is laid out of the cards' grid, so it no longer takes
+   an equal 1fr row (a card-tall empty row that pushed the link ~70px down and
+   stretched the whole band). */
+.landing-play-column:has(> .landing-event-banners > .landing-event-banners-more) {
+  position: relative;
+  padding-bottom: calc(var(--landing-event-more-height) + var(--landing-play-gap));
+}
+
+.landing-play-column > .landing-event-banners:has(> .landing-event-banners-more) {
+  margin-block: auto;
+}
+
+.landing-play-column > .landing-event-banners > .landing-event-banners-more {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  height: var(--landing-event-more-height);
+  line-height: 18px;
 }
 
 .landing-lobby-board > .pp-tabs {
@@ -1274,30 +1301,6 @@
   background: linear-gradient(135deg, #2f5d4f, #1f6f5b);
 }
 
-.landing-announcement-thumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-  background:
-    radial-gradient(circle at 26% 28%, rgba(255, 255, 255, 0.72), transparent 34%),
-    linear-gradient(135deg, #f4d28c 0%, #e7b95f 46%, #5d8f75 100%);
-}
-
-.landing-announcement-thumb-icon {
-  display: grid;
-  place-items: center;
-  width: min(74%, 132px);
-  aspect-ratio: 1;
-  color: #ffffff;
-}
-
-.landing-announcement-thumb-icon .ui-icon {
-  width: 50%;
-  height: 50%;
-  filter: drop-shadow(0 6px 12px rgba(31, 24, 15, 0.26));
-}
-
 /* The Chinese after a romanized name stays whole (appendCardTitle). */
 .landing-article-card-title-han {
   white-space: nowrap;
@@ -2061,6 +2064,14 @@
     align-self: stretch;
   }
 
+  /* No height floor here: the band is as tall as its tallest column and the
+     panel stretches to it. The 60vh floor made the panel the band's height on
+     every laptop, so its rows ended ~100px above the card's bottom and the
+     article rows below fell under the fold (Brian, 2026-10-26). */
+  .landing-demo .landing-lobby-board {
+    min-height: 0;
+  }
+
   .landing-left-column {
     align-self: stretch;
   }
@@ -2326,7 +2337,7 @@
 @media (min-width: 960px) and (max-width: 1240px) {
   /* Two columns (lichess's middle band: the lobby app plus one side column).
      The left rail folds into the right one: the center keeps the lobby panel
-     with the blog and deep-dives rows under it beside the daily puzzle, then the
+     with the deep-dives and blog rows under it beside the daily puzzle, then the
      forum beside the chat, and News beside Top studies. Both columns scale with the window (a fixed 340px rail
      beside a fluid center read as the center alone resizing): the rail is a
      viewport fraction, re-sourced into the rail-width token so the viewer and
@@ -2341,8 +2352,8 @@
     grid-template-areas:
       "panel play"
       "panel left"
-      "blogs puzzle"
       "dives puzzle"
+      "blogs puzzle"
       "forum chat"
       "news  studies";
     --landing-puzzle-board-height: calc(var(--landing-rail-width) * 612 / 552);
@@ -2394,7 +2405,7 @@
 
 @media (max-width: 959px) {
   /* Collapse to one column: Play button + activity, the lobby panel, banners +
-     viewer, then the blog row, the deep-dives row, the puzzle and Top studies,
+     viewer, then the deep-dives row, the blog row, the puzzle and Top studies,
      and the band-3 boxes (forum, chat, news). */
   .landing-demo {
     grid-template-columns: minmax(0, 1fr);
@@ -2402,8 +2413,8 @@
       "play"
       "panel"
       "left"
-      "blogs"
       "dives"
+      "blogs"
       "puzzle"
       "studies"
       "forum"
@@ -2727,11 +2738,12 @@
     order: 3;
   }
 
-  .landing-demo .landing-articles-row:not(.landing-dives-row) {
+  /* Deep dives above the blog row here too, as at every width (2026-10-26). */
+  .landing-demo .landing-dives-row {
     order: 4;
   }
 
-  .landing-demo .landing-dives-row {
+  .landing-demo .landing-articles-row:not(.landing-dives-row) {
     order: 5;
   }
 

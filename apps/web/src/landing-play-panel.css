@@ -553,6 +553,32 @@
   }
 }
 
+/* Homepage three-column band (Brian, 2026-10-26): compact rows, so the panel
+   is never what pushes the article rows below a laptop fold. The band's height
+   is set by the tallest column (often the play rail beside it), and the panel
+   stretches to it; the rows share any height left over instead of leaving
+   dead panel under the last one. Still no internal scroll and no dropped row:
+   a list longer than the band grows the band, as before. */
+@media (min-width: 1241px) {
+  .landing-demo .pp-board {
+    --pp-icon: 34px;
+  }
+
+  .landing-demo .pp-view-computer .pp-scroll {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .landing-demo .pp-view-computer .pp-row {
+    flex: 1 0 auto;
+    min-height: 40px;
+  }
+
+  .landing-demo .pp-feature {
+    padding-block: 4px;
+  }
+}
+
 /* Phone width: name and action on the first line, steppers under them. */
 @media (max-width: 640px) {
   .pp-board {

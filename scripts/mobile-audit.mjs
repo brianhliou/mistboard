@@ -26,7 +26,8 @@
 //
 // --before loads the same paths on a second build (main, usually prod) and
 // pairs each screen with its baseline on the sheet, changed screens first.
-// "desktop" is a 1280px Chromium window; the phone rules do not judge it.
+// "desktop" is a 1280x720 Chromium window, "laptop" 1440x900 and "desktop-hd"
+// 1920x1080 (a 4K monitor at 200%); the phone rules judge none of them.
 //
 // Output: tmp/mobile-audit/<stamp>/report.md and report.json (+ shots/).
 // --sheet takes full-page shots (capped at three screens) and writes
@@ -65,7 +66,27 @@ export const DEVICES = {
     descriptor: devices['Desktop Chrome'],
     phone: false,
   },
+  // Bigger desktop windows (Brian, 2026-10-26: 1280x720 is smaller than what
+  // he reads on): a 1440x900 laptop, and 1920x1080, which is also a 4K monitor
+  // at 200% scaling. Same Chromium setup as `desktop`, phone rules off.
+  laptop: desktopDevice('Laptop 1440x900 (Chromium)', 1440, 900),
+  'desktop-hd': desktopDevice('Desktop 1920x1080 (Chromium)', 1920, 1080),
 };
+
+function desktopDevice(name, width, height) {
+  return {
+    name,
+    engine: 'chromium',
+    descriptor: {
+      ...devices['Desktop Chrome'],
+      viewport: { width, height },
+      screen: { width: Math.max(width, 1920), height: Math.max(height, 1080) },
+    },
+    phone: false,
+  };
+}
+
+const DEVICE_LIST = `${Object.keys(DEVICES).join(', ')}, all`;
 
 // Finished games come from the live recent-games feed, so the list never
 // points at a deleted room. A resolver returns a path or null (skip).
@@ -150,7 +171,7 @@ export const PAGES = [
   { name: 'profile', template: 'profile', path: '/@/mistboard' },
 ];
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const args = {
     base: undefined,
     only: null,
@@ -186,7 +207,7 @@ function parseArgs(argv) {
       const v = next();
       args.devices = v === 'all' ? Object.keys(DEVICES) : v.split(',').map((s) => s.trim());
       for (const d of args.devices)
-        if (!DEVICES[d]) throw new Error(`unknown device ${d} (iphone, android, desktop, all)`);
+        if (!DEVICES[d]) throw new Error(`unknown device ${d} (${DEVICE_LIST})`);
     } else if (a === '--shots') args.shots = true;
     else if (a === '--sheet') {
       args.sheet = true;
@@ -214,9 +235,9 @@ function parseArgs(argv) {
   return args;
 }
 
-function readHelp() {
+export function readHelp() {
   return [
-    'npm run mobile:audit -- [--base URL] [--only a,b] [--device iphone|android|desktop|all]',
+    `npm run mobile:audit -- [--base URL] [--only a,b] [--device ${Object.keys(DEVICES).join('|')}|all]`,
     '                        [--shots] [--sheet [--notes file.json] [--before URL]] [--strict] [--list]',
     '                        [--concurrency N] [--settle-ms MS]',
     '                        [--path <page>=/path ...]   (override a page URL, e.g. on a local pair)',
@@ -351,7 +372,7 @@ async function runDevice(deviceKey, base, pages, args, shotsDir, prefix = '') {
       const r = await auditPage(context, base, p, args, shotsDir, deviceKey, prefix);
       await context.close().catch(() => {});
       process.stdout.write(
-        `  ${deviceKey.padEnd(8)} ${p.name.padEnd(18)} ${r.skipped ? 'skip' : r.error ? 'ERROR' : r.verdict}\n`,
+        `  ${deviceKey.padEnd(10)} ${p.name.padEnd(18)} ${r.skipped ? 'skip' : r.error ? 'ERROR' : r.verdict}\n`,
       );
       results.push(r);
     }

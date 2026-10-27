@@ -279,6 +279,30 @@ const BANNER_ICON: Record<EventBanner['kind'], UiIconName> = {
   broadcast: 'event-broadcast',
 };
 
+// The broadcast card's art: a Dobutsu-style TV showing a xiangqi board
+// (2026-10-26; it replaces the RadioTower glyph on this card only). Two
+// renders: plain for the light theme, and one with a cream sticker border for
+// the dark theme, where the navy body and black outline sink into the panel.
+// CSS shows one. Decorative: the card's text names the event.
+const BROADCAST_ART = [
+  { theme: 'light', stem: '/icons/broadcast-tv' },
+  { theme: 'dark', stem: '/icons/broadcast-tv-halo' },
+] as const;
+
+function broadcastArt(): HTMLImageElement[] {
+  return BROADCAST_ART.map(({ theme, stem }) => {
+    const img = document.createElement('img');
+    img.className = `landing-event-banner-art landing-event-banner-art-${theme}`;
+    img.src = `${stem}.webp`;
+    img.srcset = `${stem}.webp 1x, ${stem}@2x.webp 2x, ${stem}@3x.webp 3x`;
+    img.alt = '';
+    img.width = 44;
+    img.height = 44;
+    img.decoding = 'async';
+    return img;
+  });
+}
+
 export function eventBanners(): EventBanner[] {
   if (EVENT_BANNERS.length === 0 && import.meta.env.DEV) return DEV_SAMPLE_BANNERS;
   return EVENT_BANNERS;
@@ -296,7 +320,29 @@ export function buildLandingEventBanners(banners: EventBanner[] = eventBanners()
   return list;
 }
 
+// A tour name's leading year ("2026 National Xiangqi Men's Division A
+// League", "2026年全国象棋甲级联赛"), and the rest of the name after it.
+const LEADING_YEAR = /^(\d{4})(?:年\s*|\s+)(?=\S)/;
+
+/** The card's two lines: a tour name's leading year moves to the start of the
+ *  meta line ("National Xiangqi Men's Division A League" over "2026 · In
+ *  progress · 174 games"), so the name fits one line of the card instead of
+ *  wrapping to two (Brian, 2026-10-26: a shorter card, no name cut). Display
+ *  only: the stored name and the banner data keep the year. */
+export function cardLines(banner: Pick<EventBanner, 'title' | 'subtitle'>): {
+  title: string;
+  meta: string;
+} {
+  const year = LEADING_YEAR.exec(banner.title);
+  if (!year) return { title: banner.title, meta: banner.subtitle };
+  return {
+    title: banner.title.slice(year[0].length),
+    meta: banner.subtitle ? `${year[1]} · ${banner.subtitle}` : year[1]!,
+  };
+}
+
 function eventBannerRow(banner: EventBanner): HTMLElement {
+  const lines = cardLines(banner);
   const row = document.createElement('a');
   row.className = `landing-event-banner landing-event-banner-${banner.kind}`;
   row.href = banner.href;
@@ -305,16 +351,21 @@ function eventBannerRow(banner: EventBanner): HTMLElement {
   const icon = document.createElement('span');
   icon.className = 'landing-event-banner-icon';
   icon.setAttribute('aria-hidden', 'true');
-  icon.append(buildUiIcon(BANNER_ICON[banner.kind]));
+  if (banner.kind === 'broadcast') {
+    icon.classList.add('landing-event-banner-icon-art');
+    icon.append(...broadcastArt());
+  } else {
+    icon.append(buildUiIcon(BANNER_ICON[banner.kind]));
+  }
 
   const text = document.createElement('span');
   text.className = 'landing-event-banner-text';
   const title = document.createElement('span');
   title.className = 'landing-event-banner-title';
-  title.textContent = banner.title;
+  title.textContent = lines.title;
   const subtitle = document.createElement('span');
   subtitle.className = 'landing-event-banner-subtitle';
-  subtitle.textContent = banner.subtitle;
+  subtitle.textContent = lines.meta;
   text.append(title, subtitle);
 
   row.append(icon, text);

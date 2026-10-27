@@ -48,7 +48,7 @@ export const ZH_HANT_CONTENT = {
   'videos.previousVideos': '上一個影片',
   'videos.moreVideos': '更多影片',
   'articles.heading': '文章',
-  'articles.latest': '最新動態',
+  'articles.latest': '網誌',
   'articles.deepDives': '象棋深度文章',
   'articles.topicAll': '全部',
   'articles.topicEngineering': '技術',

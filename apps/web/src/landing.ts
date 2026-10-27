@@ -761,17 +761,17 @@ export function buildLandingStage(
     studiesColumn.append(buildTopStudiesWidget({ hydrate: !opts.skipLiveWidgets }));
   }
 
-  // ── Band 2 center (grid-area: blogs): the blog row between the daily puzzle
-  // and Top studies — compact article cards, an announcement can take a slot,
-  // newest first. Every article with no homeRow lands here on publish. It took
+  // ── Band 2 center, second row (grid-area: blogs): the blog row between the
+  // daily puzzle and Top studies, "From the blog": compact article cards, newest
+  // first, articles only (announcements stay in the News box, Brian 2026-10-26). Every article with no homeRow lands here on publish. It took
   // the forum's slot 2026-10-25 (Brian: the articles are the work we are proud
   // of; the forum gets little use). ──
   const articleCards = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale);
   articleCards?.classList.add('landing-articles-row');
 
-  // ── Band 2 center, second row (grid-area: dives): the deep-dives row beneath
-  // it, the same carousel filled with articles tagged homeRow: 'deep-dives' (player pages,
-  // game deep dives), no age cut. It replaced the learn row (learn-row.ts) on
+  // ── Band 2 center, top row (grid-area: dives; on top since 2026-10-26): the
+  // deep-dives row above it, the same carousel filled with articles tagged
+  // homeRow: 'deep-dives' (player pages, game deep dives), no age cut. It replaced the learn row (learn-row.ts) on
   // 2026-10-01: one learn_card_clicked in two weeks against 177 homepage
   // visitors. Phones build it too (Brian, 2026-10-17): the articles are bundled,
   // so it costs no fetch. ──
@@ -826,7 +826,7 @@ export function buildLandingStage(
   };
 
   // Grid placement (see landing.css): band 1 = [banners+viewer · lobby panel ·
-  // play button+activity], band 2 = [puzzle · blog row then deep-dives row ·
+  // play button+activity], band 2 = [puzzle · deep-dives row then blog row ·
   // top studies], with the two side rails spanning both rows, band 3 = [news ·
   // forum · chat]. Append order is irrelevant (grid-area governs).
   section.append(

@@ -12,6 +12,7 @@ import {
   buildArticlesIndex,
   buildHomeArticleCards,
   buildRulesIndex,
+  HOME_ARTICLE_ROW_SIZE,
   renderArticleThumbnail,
   renderBlock,
 } from './articles.js';
@@ -348,7 +349,7 @@ describe('article public listing gates', () => {
     vi.stubEnv('DEV', false);
 
     const home = buildHomeArticleCards(50, 'zh-Hant', NO_AGE_CUT);
-    expect(home?.getAttribute('aria-label')).toBe('最新動態');
+    expect(home?.getAttribute('aria-label')).toBe('網誌');
     expect(home?.querySelector('.landing-carousel-nav-prev')?.getAttribute('aria-label')).toBe(
       '上一篇文章',
     );
@@ -481,36 +482,23 @@ describe('article public listing gates', () => {
     ]);
   });
 
-  it('keeps still-gated release announcements out of the homepage article widget by default', () => {
-    vi.stubEnv('DEV', false);
-
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.textContent).not.toContain('Reveal Chess is open for alpha play.');
-  });
-
-  it('keeps the rated xiangqi announcement out of the homepage article row', () => {
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.textContent).not.toContain('Rated xiangqi is live.');
-    expect(cards?.querySelector('.landing-announcement-card[href="/leaderboard"]')).toBeNull();
-  });
-
-  it('keeps the Secret in the Tangerine announcement out of the homepage article row', () => {
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.textContent).not.toContain('Secret in the Tangerine, both game volumes.');
-    expect(cards?.querySelector('.landing-announcement-card[href="/study/Dfi3NpRE"]')).toBeNull();
-  });
-
-  it('does not show the Banqi alpha announcement in the homepage article widget', () => {
-    vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_BANQI_ENABLED', 'true');
-
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.querySelector('.landing-announcement-card[href="/rules/banqi"]')).toBeNull();
-    expect(cards?.textContent).not.toContain('Banqi (半棋) is open for alpha play.');
+  it('makes "From the blog" articles only, with More linking the blog index', () => {
+    // Brian, 2026-10-26: announcements live in the News box, not this row.
+    const section = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE);
+    expect(section?.querySelector('.landing-row-label')?.textContent).toBe('From the blog');
+    expect(section?.querySelector('.landing-row-more')?.getAttribute('href')).toBe('/blog');
+    const cards = [...(section?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].filter(
+      (link) => !link.classList.contains('landing-row-more'),
+    );
+    // HOME_CARD_MIN (4) keeps the row full of articles through a quiet month.
+    expect(cards.length).toBeGreaterThanOrEqual(4);
+    for (const card of cards) {
+      expect(card.dataset.cardKind).toBe('article');
+      expect(card.getAttribute('href')).toMatch(/^\/blog\//);
+    }
+    const zh = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, 'zh-Hans');
+    expect(zh?.querySelector('.landing-row-label')?.textContent).toBe('博客');
+    expect(zh?.querySelector('.landing-row-more')?.getAttribute('href')).toBe('/zh-hans/blog');
   });
 
   it('keeps Banqi rules surfaces on the variant marker while the MistyBanqi thumbnail renders a full-board card', () => {

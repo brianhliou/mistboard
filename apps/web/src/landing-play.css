@@ -104,13 +104,15 @@
 }
 
 /* The unified Play button is the page's primary action: solid accent fill,
-   taller than the flat secondary tiles it replaced. */
+   taller than the flat secondary tiles it replaced. Its label runs about 2px
+   above the old clamp(17px, 1.2vw, 20px) (Brian, 2026-10-26: "a couple px
+   bigger"), with the height and padding unchanged so the fill does not crowd. */
 .landing-play-action.landing-play-action-primary {
   min-height: 76px;
   border-color: var(--site-accent);
   background: var(--site-accent);
   color: var(--site-on-accent);
-  font-size: clamp(17px, 1.2vw, 20px);
+  font-size: clamp(19px, 1.35vw, 22px);
   font-weight: 640;
 }
 
