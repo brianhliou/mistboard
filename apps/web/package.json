@@ -23,17 +23,17 @@
     "@mistboard/game": "0.0.0",
     "@mistboard/mahjong": "0.0.0",
     "chessground": "^9.2.1",
-    "lucide": "^1.28.0",
-    "posthog-js": "^1.409.0"
+    "lucide": "^1.61.0",
+    "posthog-js": "^1.438.21"
   },
   "devDependencies": {
-    "@posthog/rollup-plugin": "1.6.1",
+    "@posthog/rollup-plugin": "1.6.2",
     "@resvg/resvg-js": "^2.6.2",
-    "happy-dom": "^20.11.1",
-    "shogiops": "^0.21.0",
-    "tsx": "^4.23.1",
+    "happy-dom": "^20.14.6",
+    "shogiops": "^0.22.0",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vite": "^8.2.4",
+    "vite": "^8.3.5",
     "vitest": "^4.1.12"
   }
 }
