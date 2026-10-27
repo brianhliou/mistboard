@@ -46,9 +46,12 @@
 //       #182 engine-worker flow will run this against prod, making mined
 //       batches live WITHOUT a deploy. Seed-owned rows hit by an id collision
 //       keep source_kind='seed' (the next seed sync re-reconciles them).
-// A JSONL sidecar records per-puzzle mining metadata, and the LAST stdout line
-// is always a machine-parseable metrics JSON object (the calibration
-// deliverable).
+// A JSONL sidecar records per-puzzle mining metadata. Verified lines rejected
+// only by --min-solution-plies are retained there as `verified-short` records,
+// including the full kernel-validated puzzle, but never enter seed/DB output.
+// The LAST stdout line is always a machine-parseable metrics JSON object (the
+// calibration deliverable); verifiedShort counts these retained candidates
+// separately from verified (accepted puzzles).
 //
 // Run (fixture smoke, no DB):
 //   node_modules/.bin/tsx scripts/variant-lab/xiangqi-puzzle-miner.ts \
@@ -149,6 +152,11 @@ export type MinedPuzzleRecord = {
   verifySecondCp: number | null;
 };
 
+export type VerifiedShortPuzzleRecord = MinedPuzzleRecord & {
+  disposition: 'verified-short';
+  minSolutionPlies: number;
+};
+
 export type XiangqiPuzzleMinerMetrics = {
   gamesRequested: number;
   gamesLoaded: number;
@@ -180,6 +188,8 @@ export type XiangqiPuzzleMinerJudgment = XiangqiPuzzleMinerCandidate & {
 export type XiangqiPuzzleMinerHooks = {
   candidateScanned?: (candidate: XiangqiPuzzleMinerCandidate) => Promise<void>;
   candidateJudged?: (judgment: XiangqiPuzzleMinerJudgment) => Promise<void>;
+  /** Offline retention only; the normal judgment remains a too-short reject. */
+  shortCandidateVerified?: (record: VerifiedShortPuzzleRecord) => Promise<void>;
 };
 
 const DEFAULT_DB_URL = 'postgres://mistboard:mistboard@localhost:5435/mistboard';
@@ -472,18 +482,19 @@ export async function mineXiangqiPuzzleGame(
       });
       continue;
     }
-    const result = assembleMinedXiangqiPuzzle(
-      {
-        gameId: game.id,
-        blunderPly: candidate.ply,
-        postBlunderState,
-        pv: built.pv,
-        verifyScore: built.verifyScore,
-        swingCp: candidate.swingCp,
-        sourceMeta: game.meta,
-      },
-      { maxSolutionPlies: opts.maxSolutionPlies, minSolutionPlies: opts.minSolutionPlies },
-    );
+    const assemblyInput = {
+      gameId: game.id,
+      blunderPly: candidate.ply,
+      postBlunderState,
+      pv: built.pv,
+      verifyScore: built.verifyScore,
+      swingCp: candidate.swingCp,
+      sourceMeta: game.meta,
+    };
+    const result = assembleMinedXiangqiPuzzle(assemblyInput, {
+      maxSolutionPlies: opts.maxSolutionPlies,
+      minSolutionPlies: opts.minSolutionPlies,
+    });
     if (!result.ok) {
       bumpReject(metrics, result.reason);
       await hooks.candidateJudged?.({
@@ -498,6 +509,27 @@ export async function mineXiangqiPuzzleGame(
         },
         puzzle: null,
       });
+      if (result.reason === 'too-short' && hooks.shortCandidateVerified) {
+        // Relax only the length floor, after every retained solver move has
+        // passed the shared uniqueness gate. Assembly still kernel-replays,
+        // requires an expected mate to finish and validates the whole puzzle.
+        const short = assembleMinedXiangqiPuzzle(assemblyInput, {
+          maxSolutionPlies: opts.maxSolutionPlies,
+          minSolutionPlies: 1,
+        });
+        if (short.ok) {
+          await hooks.shortCandidateVerified({
+            disposition: 'verified-short',
+            minSolutionPlies: opts.minSolutionPlies,
+            puzzle: short.puzzle,
+            gameId: game.id,
+            blunderPly: candidate.ply,
+            swingCp: candidate.swingCp,
+            verifyBestCp: built.verifyScore.scoreCp,
+            verifySecondCp: built.secondScoreCp,
+          });
+        }
+      }
       continue;
     }
     await hooks.candidateJudged?.({
@@ -696,7 +728,7 @@ async function insertDbPuzzles(dbUrl: string, puzzles: readonly XiangqiPuzzle[])
   }
 }
 
-function jsonlLine(record: MinedPuzzleRecord): string {
+function jsonlLine(record: MinedPuzzleRecord | VerifiedShortPuzzleRecord): string {
   const { puzzle } = record;
   return JSON.stringify({
     id: puzzle.id,
@@ -712,6 +744,13 @@ function jsonlLine(record: MinedPuzzleRecord): string {
     solutionPlyCount: puzzle.solution.length,
     solution: puzzle.solution.map(standardXiangqiPuzzleMoveLabel),
     title: puzzle.title,
+    ...('disposition' in record
+      ? {
+          disposition: record.disposition,
+          minSolutionPlies: record.minSolutionPlies,
+          puzzle,
+        }
+      : {}),
   });
 }
 
@@ -738,6 +777,7 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
   };
   const seenPositions = new Set<string>();
   const records: MinedPuzzleRecord[] = [];
+  const shortRecords: VerifiedShortPuzzleRecord[] = [];
 
   let cursor = 0;
   const workerCount = Math.max(1, Math.min(options.concurrency, Math.max(games.length, 1)));
@@ -751,7 +791,11 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
         if (index >= games.length) break;
         const game = games[index] as XiangqiPuzzleMinerGame;
         try {
-          const mined = await mineXiangqiPuzzleGame(engine, game, options, metrics, seenPositions);
+          const mined = await mineXiangqiPuzzleGame(engine, game, options, metrics, seenPositions, {
+            shortCandidateVerified: async (record) => {
+              shortRecords.push(record);
+            },
+          });
           records.push(...mined);
           metrics.gamesScanned += 1;
         } catch (err) {
@@ -795,8 +839,11 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
     );
   }
   mkdirSync(dirname(resolve(options.jsonl)), { recursive: true });
-  writeFileSync(resolve(options.jsonl), records.map((r) => `${jsonlLine(r)}\n`).join(''));
-  console.error(`wrote sidecar ${resolve(options.jsonl)} (${records.length} lines)`);
+  const offlineRecords = [...records, ...shortRecords].sort((a, b) =>
+    a.puzzle.id.localeCompare(b.puzzle.id),
+  );
+  writeFileSync(resolve(options.jsonl), offlineRecords.map((r) => `${jsonlLine(r)}\n`).join(''));
+  console.error(`wrote sidecar ${resolve(options.jsonl)} (${offlineRecords.length} lines)`);
 
   const wallClockMs = Date.now() - startedAt;
   const summary = {
@@ -813,6 +860,7 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
     verifyEvals: metrics.verifyEvals,
     candidates: metrics.candidates,
     verified: metrics.verified,
+    verifiedShort: shortRecords.length,
     yieldPuzzlesPerGamePct:
       metrics.gamesScanned > 0
         ? Math.round((metrics.verified / metrics.gamesScanned) * 10000) / 100
@@ -894,7 +942,7 @@ Detection:
   --material-gap-cp N     Per-ply gate: a runner-up trailing best by >= N cp is wrong even if winning. Default: 250.
   --min-ply N             Skip game plies before N (opening filter). Default: 8.
   --max-solution-plies N  Solution-line cap (normalized to odd). Default: 7.
-  --min-solution-plies N  Minimum solution plies. Default: 3.
+  --min-solution-plies N  Minimum solution plies for seed/DB output. Default: 3.
   --per-game N            Max puzzles mined per game. Default: 3.
 
 Output:
@@ -905,6 +953,8 @@ Output:
   --insert-db             Upsert this run's puzzles into the puzzles table at --db-url
                           (source_kind='mined'; the boot-time seed sync never touches them).
   --jsonl PATH            Sidecar path. Default: scripts/variant-lab/out/xiangqi-puzzle-mine.jsonl.
+                          Also retains verified-short candidates with full puzzle data;
+                          these remain rejected for seed/DB output and live workers.
 
 The last stdout line is always a metrics JSON object (kind=xiangqi-puzzle-mine-metrics).`);
 }
