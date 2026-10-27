@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
+import * as localeModule from './i18n/locale.js';
 
 function ratingSnapshot(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -129,6 +131,190 @@ describe('bot pages', () => {
     document.body.replaceChildren();
     window.history.replaceState(null, '', '/');
     vi.restoreAllMocks();
+  });
+
+  describe.each([
+    {
+      locale: 'en',
+      botTitle: 'Bot',
+      owner: 'First-party',
+      ratings: 'Ratings',
+      games: 'Games here',
+      record: 'Record here',
+      variants: 'Variants',
+      recent: 'Recent games',
+      sample: 'Elo from 48 engine games',
+      railSample: '48 engine games',
+      play: 'Play Fog Chess',
+      random: 'random side',
+      pending: 'Starting...',
+      retry: 'Try again',
+      unavailable: 'Unavailable',
+      offline: 'Currently offline',
+      noRating: 'No published rating yet',
+      empty: 'No completed Banqi games yet.',
+      notFound: 'Bot not found',
+      notFoundBody: 'This bot profile is not public.',
+      failed: 'Bots unavailable',
+      failedBody: 'This bot profile could not load.',
+      community: 'Community',
+      levelBio: 'Level 2',
+      worstBio: 'A strong engine trying its hardest to lose.',
+    },
+    {
+      locale: 'zh-Hans',
+      botTitle: '机器人',
+      owner: '官方',
+      ratings: '等级分',
+      games: '本站对局',
+      record: '本站战绩',
+      variants: '棋种',
+      recent: '最近对局',
+      sample: 'Elo 来自 48 局引擎对局',
+      railSample: '48 局引擎对局',
+      play: '下迷雾国际象棋',
+      random: '随机执方',
+      pending: '正在开始...',
+      retry: '重试',
+      unavailable: '暂时不可用',
+      offline: '目前离线',
+      noRating: '尚无公开等级分',
+      empty: '尚无已完成的暗棋对局。',
+      notFound: '未找到机器人',
+      notFoundBody: '此机器人资料未公开。',
+      failed: '机器人暂不可用',
+      failedBody: '无法加载此机器人资料。',
+      community: '社区',
+      levelBio: '第 2 级',
+      worstBio: '一个竭尽全力求败的强大引擎。',
+    },
+    {
+      locale: 'zh-Hant',
+      botTitle: '機器人',
+      owner: '官方',
+      ratings: '等級分',
+      games: '本站對局',
+      record: '本站戰績',
+      variants: '棋種',
+      recent: '最近對局',
+      sample: 'Elo 來自 48 局引擎對局',
+      railSample: '48 局引擎對局',
+      play: '下迷霧國際象棋',
+      random: '隨機執方',
+      pending: '正在開始...',
+      retry: '重試',
+      unavailable: '暫時無法使用',
+      offline: '目前離線',
+      noRating: '尚無公開等級分',
+      empty: '尚無已完成的暗棋對局。',
+      notFound: '找不到機器人',
+      notFoundBody: '此機器人資料未公開。',
+      failed: '機器人暫時無法使用',
+      failedBody: '無法載入此機器人資料。',
+      community: '社群',
+      levelBio: '第 2 級',
+      worstBio: '一個竭盡全力求敗的強大引擎。',
+    },
+  ] as const)('$locale bot profile localization', (copy) => {
+    async function mount(profile = misty()): Promise<HTMLElement> {
+      await ensureLocaleCatalog(copy.locale);
+      vi.spyOn(localeModule, 'currentLocale').mockReturnValue(copy.locale);
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ bot: profile }));
+      const root = document.createElement('div');
+      const { mountBotProfile } = await import('./bots.js');
+      await mountBotProfile(root, String(profile.id));
+      return root;
+    }
+
+    it('localizes the successful profile and controls rebuilt on variant selection', async () => {
+      const root = await mount(
+        misty({
+          ratings: [ratingSnapshot()],
+          playOptions: [
+            { gameSpecId: 'dark-chess', engineId: 'python-v2-v1.5', playable: true },
+            { gameSpecId: 'banqi', engineId: 'misty-banqi', playable: false },
+          ],
+        }),
+      );
+      expect(document.title).toBe(`Misty · ${copy.botTitle} · Mistboard`);
+      expect(root.querySelector('.profile-role-owner')?.textContent).toBe(copy.owner);
+      expect(root.querySelector('.profile-ratings-heading')?.textContent).toBe(copy.ratings);
+      expect(
+        [...root.querySelectorAll('.profile-count-label')].map((el) => el.textContent),
+      ).toEqual([copy.games, copy.record, copy.variants]);
+      expect(root.querySelector('.profile-tab')?.textContent).toBe(copy.recent);
+      expect(root.querySelector('.profile-chart-detail')?.textContent).toBe(copy.sample);
+      expect(root.querySelector('.profile-rating-games')?.textContent).toBe(copy.railSample);
+      expect(root.querySelector('.bot-profile-actions button')?.textContent).toBe(copy.play);
+      expect(root.querySelector('.bot-rating-spotlight-clock')?.textContent).toContain(copy.random);
+
+      root.querySelector<HTMLButtonElement>('[data-game-spec-id="banqi"]')!.click();
+      const button = root.querySelector<HTMLButtonElement>('.bot-profile-actions button');
+      expect(button?.textContent).toBe(copy.unavailable);
+      expect(button?.disabled).toBe(true);
+      expect(root.querySelector('.bot-rating-spotlight-title')?.textContent).toBe(copy.offline);
+      expect(root.querySelector('.profile-chart-detail')?.textContent).toBe(copy.noRating);
+      expect(root.querySelector('.landing-games-empty')?.textContent).toBe(copy.empty);
+      expect(
+        [...root.querySelectorAll('.profile-count-label')].map((el) => el.textContent),
+      ).toEqual([copy.games, copy.record, copy.variants]);
+    });
+
+    it.each([404, 503, 'network'] as const)(
+      'localizes error state %s and its document title',
+      async (status) => {
+        await ensureLocaleCatalog(copy.locale);
+        vi.spyOn(localeModule, 'currentLocale').mockReturnValue(copy.locale);
+        const fetch = vi.spyOn(globalThis, 'fetch');
+        if (status === 'network') fetch.mockRejectedValue(new Error('offline'));
+        else fetch.mockResolvedValue(jsonResponse({}, { status }));
+        const root = document.createElement('div');
+        const { mountBotProfile } = await import('./bots.js');
+        document.title = 'Previous page';
+        await mountBotProfile(root, 'missing');
+        const title = status === 404 ? copy.notFound : copy.failed;
+        expect(document.title).toBe(`${title} · Mistboard`);
+        expect(root.textContent).toContain(title);
+        expect(root.textContent).toContain(status === 404 ? copy.notFoundBody : copy.failedBody);
+      },
+    );
+
+    it('localizes pending and retry labels on a rebuilt play control', async () => {
+      const root = await mount();
+      root.querySelector<HTMLButtonElement>('[data-game-spec-id="banqi"]')!.click();
+      let fail!: (response: Response) => void;
+      vi.mocked(globalThis.fetch).mockReturnValue(
+        new Promise((resolve) => {
+          fail = resolve;
+        }),
+      );
+      const button = root.querySelector<HTMLButtonElement>('.bot-profile-actions button')!;
+      button.click();
+      expect(button.textContent).toBe(copy.pending);
+      expect(button.disabled).toBe(true);
+      fail(jsonResponse({}, { status: 400 }));
+      await vi.waitFor(() => expect(button.textContent).toBe(copy.retry));
+      expect(button.disabled).toBe(false);
+    });
+
+    it('localizes system descriptions while preserving engine names and community biographies', async () => {
+      for (const profile of [ladderBot(2), pikafish({ id: 'pikafish-level-2' })]) {
+        const root = await mount(profile);
+        expect(root.querySelector('h1')?.textContent).toBe(profile.displayName);
+        expect(root.querySelector('.profile-side-bio')?.textContent).toContain(copy.levelBio);
+        expect(root.querySelector('.profile-side-bio')?.textContent).toContain(
+          String(profile.id).startsWith('fairy') ? 'Fairy-Stockfish' : 'Pikafish',
+        );
+      }
+      const worst = await mount(pikafish({ id: 'general-blunder' }));
+      expect(worst.querySelector('.profile-side-bio')?.textContent).toContain(copy.worstBio);
+      // Ownership, rather than a matching system id, decides whether prose is ours.
+      const community = await mount(misty({ ownerType: 'user', bio: 'My own engine biography.' }));
+      expect(community.querySelector('.profile-side-bio')?.textContent).toBe(
+        'My own engine biography.',
+      );
+      expect(community.querySelector('.profile-role-owner')?.textContent).toBe(copy.community);
+    });
   });
 
   // The page is for "play xiangqi against the computer": the ladder leads, named
