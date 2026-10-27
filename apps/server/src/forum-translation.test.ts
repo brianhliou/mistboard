@@ -5,10 +5,51 @@ import {
   detectScriptLanguage,
   type ForumTranslationDeps,
   forumContentHash,
+  forumTranslationCacheHash,
   TranslationFailedError,
   translationNeeded,
   translationSystemPrompt,
 } from './forum-translation.js';
+
+// Post #6 of the live "weekly jieqi arena" topic (2026-10-27), verbatim: a
+// Quote of Brian's English post, then one Chinese line of the author's own.
+const QUOTE_REPLY_POST = [
+  '> brianhliou-dev wrote:',
+  "> Haha yes, 3 p.m. UTC+8. Most of our current players are in Asia, so we picked a time that works there. If enough people come, we'd love to run it on repeat by itself, with longer events and more time zones.",
+  '> ',
+  "> No prize money for now. For now it's for glory: tournament points, achievements, maybe a trophy 😄",
+  '> ',
+  '> So would you play?!',
+  '你是这个网站的作者吗',
+].join('\n');
+const OWN_ZH_LINE = '你是这个网站的作者吗';
+
+// An English post whose author also wrote one line in Chinese: a zh reader
+// gets it translated, and that line must come through untouched.
+const MIXED_OWN_POST = [
+  'Thanks for hosting this, I played last week and had a lot of fun.',
+  OWN_ZH_LINE,
+  'See you on Saturday.',
+].join('\n');
+
+const SEG_RE = /<seg id="(\d+)">([\s\S]*?)<\/seg>/g;
+
+// A model stub that answers the segment protocol: each segment comes back
+// under its id, rewritten by `fn`. Untagged input (the pre-segment protocol)
+// is rewritten whole, so the stub means the same thing on either side.
+function perSegment(fn: (segment: string, target: string) => string | null) {
+  return async ({ text, target }: { text: string; target: string }) => {
+    const segments = [...text.matchAll(SEG_RE)];
+    if (segments.length === 0) return fn(text, target) ?? '';
+    return segments
+      .map(([, id, body]) => {
+        const out = fn(body ?? '', target);
+        return out === null ? '' : `<seg id="${id}">${out}</seg>`;
+      })
+      .filter(Boolean)
+      .join('\n');
+  };
+}
 
 test('detectScriptLanguage: Han-majority text is zh, Latin text is latin, symbols are unknown', () => {
   assert.equal(detectScriptLanguage('这个开局的炮二平五很常见'), 'zh');
@@ -29,6 +70,22 @@ test('translationNeeded: only when the script differs from the target locale', (
   assert.equal(translationNeeded('Cannon to the centre', 'zh-Hans'), true);
   assert.equal(translationNeeded('Cannon to the centre', 'zh-Hant'), true);
   assert.equal(translationNeeded('1. C2=5', 'zh-Hans'), false);
+});
+
+test('translationNeeded: decided by the author own lines, never by what they quoted', () => {
+  // The quote is English, the author wrote Chinese: an English reader needs it,
+  // a Chinese reader does not.
+  assert.equal(translationNeeded(QUOTE_REPLY_POST, 'en'), true);
+  assert.equal(translationNeeded(QUOTE_REPLY_POST, 'zh-Hans'), false);
+  assert.equal(translationNeeded(QUOTE_REPLY_POST, 'zh-Hant'), false);
+  // A post that is only a quote has nothing of its own to translate.
+  assert.equal(translationNeeded('> alice wrote:\n> Cannon to the centre', 'zh-Hans'), false);
+});
+
+test('translationSystemPrompt copies target-language text verbatim and never answers', () => {
+  const prompt = translationSystemPrompt('zh-Hans');
+  assert.match(prompt, /already written in Simplified Chinese.*verbatim/);
+  assert.match(prompt, /never answer/i);
 });
 
 test('forumContentHash: stable across CRLF, surrounding whitespace, and NFC', () => {
@@ -61,9 +118,10 @@ function makeDeps(
       model: 'test-model',
       async translate(text, target) {
         calls.push({ text, target });
-        const out = overrides.onTranslate
-          ? await overrides.onTranslate({ text, target })
-          : `[${target}] ${text}`;
+        const out = await (overrides.onTranslate ?? perSegment((seg, t) => `[${t}] ${seg}`))({
+          text,
+          target,
+        });
         return { text: out, inputTokens: 10, outputTokens: 12 };
       },
     },
@@ -168,9 +226,9 @@ test('service: concurrent misses for one key coalesce into one model call and on
     release = resolve;
   });
   const { deps, calls, stored } = makeDeps({
-    onTranslate: async ({ text, target }) => {
+    onTranslate: async (call) => {
       await gate;
-      return `[${target}] ${text}`;
+      return perSegment((segment, target) => `[${target}] ${segment}`)(call);
     },
   });
   const service = createForumTranslationService(deps);
@@ -330,4 +388,151 @@ test('service: one miss event per model call, carrying tokens and outcome; joine
   assert.equal(events[0]?.outputTokens, 12);
   assert.equal(events[0]?.missesToday, 1);
   assert.equal(events[0]?.target, 'zh-Hans');
+});
+
+test('service: a quote reply in Chinese is translated for an English reader, quote untouched', async () => {
+  const { deps, calls, stored } = makeDeps({ sourceText: QUOTE_REPLY_POST });
+  const service = createForumTranslationService(deps);
+  const result = await service.translate({
+    kind: 'post',
+    id: 'post_d5ec0914',
+    target: 'en',
+    meter: () => true,
+  });
+  assert.equal(result.status, 'ok');
+  // The English quote is already in the target language: it is not sent.
+  assert.equal(calls.length, 1);
+  assert.match(calls[0]?.text ?? '', /你是这个网站的作者吗/);
+  assert.doesNotMatch(calls[0]?.text ?? '', /Most of our current players/);
+  const lines = QUOTE_REPLY_POST.split('\n');
+  assert.equal(
+    result.status === 'ok' && result.text,
+    [...lines.slice(0, -1), `[en] ${OWN_ZH_LINE}`].join('\n'),
+  );
+  // A new key: whatever the whole-body path cached for this text is not served.
+  assert.notEqual(stored[0]?.contentHash, forumContentHash(QUOTE_REPLY_POST));
+  assert.equal(stored[0]?.contentHash, forumTranslationCacheHash(QUOTE_REPLY_POST, 'en'));
+});
+
+test('service: a Chinese reader of the quote reply gets the original, the author line intact', async () => {
+  const { deps, calls } = makeDeps({ sourceText: QUOTE_REPLY_POST });
+  const service = createForumTranslationService(deps);
+  for (const target of ['zh-Hans', 'zh-Hant'] as const) {
+    const result = await service.translate({ kind: 'post', id: 'p6', target, meter: () => true });
+    assert.deepEqual(result, { status: 'same_language' });
+  }
+  assert.equal(calls.length, 0);
+});
+
+test('service: zh-Hans output keeps the author line already in Chinese, even if the model drops it', async () => {
+  // The stub drops any Han segment, as the model did with post #6.
+  const { deps, calls } = makeDeps({
+    sourceText: MIXED_OWN_POST,
+    onTranslate: perSegment((seg, t) => (/\p{Script=Han}/u.test(seg) ? null : `[${t}] ${seg}`)),
+  });
+  const service = createForumTranslationService(deps);
+  const result = await service.translate({
+    kind: 'post',
+    id: 'p',
+    target: 'zh-Hans',
+    meter: () => true,
+  });
+  assert.equal(result.status, 'ok');
+  assert.doesNotMatch(
+    calls[0]?.text ?? '',
+    /你是这个网站的作者吗/,
+    'text already in the target script is not sent',
+  );
+  assert.equal(
+    result.status === 'ok' && result.text,
+    [
+      '[zh-Hans] Thanks for hosting this, I played last week and had a lot of fun.',
+      OWN_ZH_LINE,
+      '[zh-Hans] See you on Saturday.',
+    ].join('\n'),
+  );
+});
+
+test('service: a model that answers one segment and drops another cannot remove the author text', async () => {
+  const { deps } = makeDeps({
+    sourceText: MIXED_OWN_POST,
+    onTranslate: async ({ text }) =>
+      text.includes('<seg id=')
+        ? '<seg id="1">是的，我是这个网站的作者。</seg>'
+        : '是的，我是这个网站的作者。',
+  });
+  const service = createForumTranslationService(deps);
+  const result = await service.translate({
+    kind: 'post',
+    id: 'p',
+    target: 'zh-Hans',
+    meter: () => true,
+  });
+  assert.equal(result.status, 'ok');
+  const text = result.status === 'ok' ? result.text : '';
+  assert.match(text, /你是这个网站的作者吗/);
+  // The dropped segment falls back to its source, never to nothing.
+  assert.match(text, /See you on Saturday\./);
+});
+
+test('service: a foreign quote is translated line by line for the reader, header and quote marks kept', async () => {
+  const body = ['> 小明 wrote:', '> 炮二平五是最常见的开局', '', '我同意，这是最常见的开局'].join(
+    '\n',
+  );
+  const { deps } = makeDeps({ sourceText: body });
+  const service = createForumTranslationService(deps);
+  const en = await service.translate({ kind: 'post', id: 'p', target: 'en', meter: () => true });
+  assert.equal(
+    en.status === 'ok' && en.text,
+    ['> 小明 wrote:', '> [en] 炮二平五是最常见的开局', '', '[en] 我同意，这是最常见的开局'].join(
+      '\n',
+    ),
+  );
+  // An English reply quoting the same post: an English reader has nothing to
+  // translate, whatever the quote is in.
+  const reply = [
+    '> 小明 wrote:',
+    '> 炮二平五是最常见的开局',
+    '',
+    'Agreed, it is the most common.',
+  ].join('\n');
+  const { deps: deps2, calls } = makeDeps({ sourceText: reply });
+  const same = await createForumTranslationService(deps2).translate({
+    kind: 'post',
+    id: 'p',
+    target: 'en',
+    meter: () => true,
+  });
+  assert.deepEqual(same, { status: 'same_language' });
+  assert.equal(calls.length, 0);
+});
+
+test('service: pure Chinese for an English reader translates as before, under the old cache key', async () => {
+  const body = '这是什么宝藏网站，居然很少见到有人推荐这个网站';
+  const { deps, stored } = makeDeps({ sourceText: body });
+  const service = createForumTranslationService(deps);
+  const result = await service.translate({
+    kind: 'post',
+    id: 'p5',
+    target: 'en',
+    meter: () => true,
+  });
+  assert.deepEqual(result, { status: 'ok', text: `[en] ${body}`, cached: false });
+  assert.equal(stored[0]?.contentHash, forumContentHash(body));
+});
+
+test('forumTranslationCacheHash: whole-body texts keep the old key; segmented ones get a new one', () => {
+  assert.equal(
+    forumTranslationCacheHash('Cannon to the centre', 'zh-Hans'),
+    forumContentHash('Cannon to the centre'),
+  );
+  assert.equal(forumTranslationCacheHash('炮二平五好棋', 'en'), forumContentHash('炮二平五好棋'));
+  assert.notEqual(
+    forumTranslationCacheHash(QUOTE_REPLY_POST, 'zh-Hans'),
+    forumContentHash(QUOTE_REPLY_POST),
+  );
+  assert.notEqual(
+    forumTranslationCacheHash(MIXED_OWN_POST, 'zh-Hans'),
+    forumContentHash(MIXED_OWN_POST),
+  );
 });

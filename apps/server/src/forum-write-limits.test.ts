@@ -18,9 +18,15 @@ function editablePost(initial: string) {
   const deps: ForumTranslationDeps = {
     client: {
       model: 'test-model',
-      async translate(source, target) {
-        calls.push(source);
-        return { text: `[${target}] ${source}`, inputTokens: 1, outputTokens: 1 };
+      // The service sends a segment request (forum-translation.ts); record the
+      // text it carried and answer each segment under its id.
+      async translate(request, target) {
+        const segments = [...request.matchAll(/<seg id="(\d+)">([\s\S]*?)<\/seg>/g)];
+        calls.push(segments.map(([, , body]) => body).join('\n'));
+        const text = segments
+          .map(([, id, body]) => `<seg id="${id}">[${target}] ${body}</seg>`)
+          .join('\n');
+        return { text, inputTokens: 1, outputTokens: 1 };
       },
     },
     async loadSource(kind, id) {
