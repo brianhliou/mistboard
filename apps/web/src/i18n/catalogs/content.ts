@@ -110,7 +110,7 @@ export const EN_CONTENT = {
   'patron.frequencyMonthly': 'Monthly',
   'patron.frequencyOnce': 'One-time',
   'patron.intro':
-    "I'm Brian, and I run Mistboard, an independent site for xiangqi and its variants. Playing and studying here is free, and it stays free. Patron is an optional subscription, or a one-time payment, that adds a heart badge to your profile.",
+    'Mistboard is an independent, ad-free site for xiangqi and its variants. Playing and studying here is free, and it stays free. Patron is an optional subscription, or a one-time payment, that adds a heart badge to your profile.',
   'patron.perkTitle': 'What Patron support includes',
   'patron.perk':
     'A heart badge on your profile. It lasts as long as a monthly subscription runs, or one month for every $5 of a one-time payment. That is the whole perk, and it changes nothing in a game.',
@@ -130,7 +130,7 @@ export const EN_CONTENT = {
   // which is what put the Stripe account into a Restricted Businesses review in
   // 2026-08 (docs-private/patron-track.md). The measured figure still lives in
   // docs-private/COSTS.md; keep it there, not here. Re-confirmed 2026-10-26.
-  'patron.transparency': "There are no ads and no investors, and I don't sell data.",
+  'patron.transparency': "There are no ads and no investors, and we don't sell data.",
   'patron.faqTitle': 'Questions',
   'patron.faqPerkQuestion': 'Is anything Patron-only?',
   'patron.faqPerkAnswer':
