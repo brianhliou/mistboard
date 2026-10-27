@@ -2848,10 +2848,11 @@
     display: none;
   }
 
+  /* The pair sits as close as the shortcut tiles below it: one 6px gutter. */
   .landing-play-quick {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 6px;
   }
 
   .landing-play-quick-action {
@@ -2883,11 +2884,14 @@
     outline: none;
   }
 
-  /* Shortcut tiles: three by two. */
+  /* Shortcut tiles: three by two, each a sticker drawing over its label
+     (home-tile-art.ts). Brian, 2026-10-27: less empty space in each tile,
+     with a larger drawing and label, so the tile is 84px (was 92px) around a
+     52px drawing (was 44px) and a 15px label (was 14px). */
   .landing-phone-tiles {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    gap: 6px;
     margin-top: 6px;
   }
 
@@ -2896,14 +2900,15 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;
     min-width: 0;
-    height: 68px;
+    height: 84px;
+    padding: 0 6px;
     border: 1px solid var(--site-border-soft);
     border-radius: 12px;
     background: var(--site-panel);
     color: var(--site-text);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     line-height: 1.15;
     text-align: center;
@@ -2916,10 +2921,21 @@
     outline: none;
   }
 
-  .landing-phone-tile-icon {
-    width: 24px;
-    height: 24px;
-    color: var(--site-accent);
+  .landing-phone-tile-art {
+    flex: none;
+    width: 52px;
+    height: 52px;
+    overflow: visible;
+  }
+
+  /* The drawings' cream sticker border, as on the broadcast TV: only the dark
+     theme needs it, where the navy parts and black outline sink into the panel. */
+  .landing-phone-tile-halo {
+    display: none;
+  }
+
+  :root[data-effective-theme="dark"] .landing-phone-tile-halo {
+    display: inline;
   }
 
   /* Blog rows: a strip the thumb swipes, bleeding off the right edge, in place

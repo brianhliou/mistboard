@@ -175,9 +175,11 @@ describe('phone home shortcut tiles', () => {
       ['Forum', '/forum'],
       ['Watch', '/watch'],
     ]);
-    for (const tile of tiles) {
-      expect(tile.querySelector('svg.ui-icon.landing-phone-tile-icon')).not.toBeNull();
-    }
+    expect(
+      tiles.map((tile) =>
+        tile.querySelector('svg.landing-phone-tile-art')?.getAttribute('data-art'),
+      ),
+    ).toEqual(['puzzles', 'rules', 'study', 'analysis', 'forum', 'watch']);
   });
 
   it('localizes labels and hrefs', () => {
