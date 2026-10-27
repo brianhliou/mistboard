@@ -76,21 +76,6 @@ const feedback = (host: HTMLElement): string =>
 const state = (host: HTMLElement): string | undefined =>
   host.querySelector<HTMLElement>('.gamebook__coach')?.dataset.state;
 
-// Node's native localStorage can shadow happy-dom's storage in the test worker.
-beforeEach(() => {
-  const values = new Map<string, string>();
-  Object.defineProperty(window, 'localStorage', {
-    configurable: true,
-    value: {
-      getItem: (key: string) => values.get(key) ?? null,
-      setItem: (key: string, value: string) => values.set(key, value),
-      clear: () => values.clear(),
-    },
-  });
-});
-
-afterEach(() => window.localStorage.clear());
-
 const LOCALES = [
   {
     locale: 'en',
@@ -113,7 +98,7 @@ const LOCALES = [
     board: '象棋课程棋盘',
     hint: '提示',
     fallback: '看看圈出的棋子。',
-    wrong: '不是这步。请试试其他着法。',
+    wrong: '不是这一着，试试其他着法。',
     correct: '正确！继续。',
     complete: '课程完成！🎉',
     restart: '重新开始课程',
@@ -126,7 +111,7 @@ const LOCALES = [
     board: '象棋課程棋盤',
     hint: '提示',
     fallback: '看看圈出的棋子。',
-    wrong: '不是這步。請試試其他著法。',
+    wrong: '不是這一著，試試其他著法。',
     correct: '正確！繼續。',
     complete: '課程完成！🎉',
     restart: '重新開始課程',
