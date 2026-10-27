@@ -23,15 +23,18 @@ import type {
   JieqiSquare,
 } from '@mistboard/game';
 import './live-xiangqi.css';
+import { pieceAnimationDurationMs } from './board-anim.js';
 import { jieqiEnabled } from './feature-flags.js';
 import { renderJieqiMaterial } from './jieqi-material.js';
 import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
   animateJieqiBoardMove,
+  animateJieqiReveal,
   installJieqiBoardStyles,
   JIEQI_PIECE_PX,
   jieqiPieceGhostSvg,
+  jieqiRevealSquare,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
 import { rebuildLiveJieqiHistory } from './live-jieqi-replay-history.js';
@@ -90,6 +93,9 @@ let core: TenantLiveClientContext<JieqiColor, JieqiWireView> | null = null;
 let selectedSquare: JieqiSquare | null = null;
 // Right-click arrows/circles the player drew on this board.
 let annotations: BoardAnnotations | null = null;
+// The live board the last animateBoard saw: whether a moving piece was face
+// down before its move (public), for the reveal turn-over (#709 prototype).
+let lastLiveBoard: JieqiWireView['board'] | null = null;
 // The live reveal odds (live-jieqi-reveal-odds.ts), mounted once at setup.
 let revealOdds: RevealOddsMount | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
@@ -148,6 +154,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     roomMode = 'pvp';
     pveEngineId = null;
     checkMarks = [];
+    lastLiveBoard = null;
   },
   renderBoard,
   // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate -- an own
@@ -166,14 +173,26 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
           generalSquare: (color) => generalSquareOn(view.board, color),
         })
       : [],
+  // A live move that reveals its piece then turns it over on arrival (#709
+  // prototype): after the glide for a remote move, in place for an own one
+  // (which does not glide). Scrubs and jumps never turn a piece.
   animateBoard: (liveRefs, view, takePendingAnimation) => {
+    const live = core?.replay.isLive() ?? false;
+    const before = lastLiveBoard;
+    lastLiveBoard = live && view ? view.board : null;
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
     if (!pending) return;
     const perspective = orientationFor(view);
     if (pending.kind === 'live') {
-      if (pending.color === core?.state.seat) return;
-      animateJieqiBoardMove(liveRefs.board, pending.move, perspective);
+      const own = pending.color === core?.state.seat;
+      if (!own) animateJieqiBoardMove(liveRefs.board, pending.move, perspective);
+      const revealed = live ? jieqiRevealSquare(pending.move, before, view.board) : null;
+      if (revealed) {
+        animateJieqiReveal(liveRefs.board, revealed, pending.color, perspective, {
+          delayMs: own ? 0 : pieceAnimationDurationMs(),
+        });
+      }
       return;
     }
     if (pending.direction === 'forward') {

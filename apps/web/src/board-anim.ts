@@ -151,3 +151,92 @@ export function drawMarkerOnArrival(el: Element | null, durationMs: number): voi
     { duration: durationMs, easing: PIECE_GLIDE_EASING },
   );
 }
+
+/** A face-down tile's turn-over (#709): long enough to read as a turn, short
+ *  enough never to hold up the next move. Fixed rather than scaled by the glide
+ *  pref, which only switches it on or off ('none', reduced motion). */
+export const PIECE_FLIP_DURATION_MS = 280;
+
+/** The turn-over duration in ms, 0 when piece animation is off (the 'none'
+ *  pref or `prefers-reduced-motion: reduce`): the face then just appears. */
+export function pieceFlipDurationMs(): number {
+  return pieceAnimationDurationMs() > 0 ? PIECE_FLIP_DURATION_MS : 0;
+}
+
+/**
+ * Turn an already-revealed SVG piece slot over: a scaleX turn about `center`
+ * (viewBox units) that shows `backMarkup` for the first half and the slot's own
+ * face for the second. Call AFTER the innerHTML swap that rendered the face.
+ *
+ * Hidden information: the face is never drawn before the render that carries
+ * it. `backMarkup` must be the identity-free back the board already drew for
+ * this tile; the turn only covers the face that just arrived, briefly.
+ *
+ * `delayMs` holds the turn until a glide on the same slot lands (jieqi: the
+ * piece travels face-down, then turns over on its destination); the back covers
+ * the face for the whole delay. Without a delay, in-flight animations on the
+ * slot are cancelled first. The back is removed when the turn ends or is
+ * cancelled, and a re-render replaces the slot anyway, so nothing outlives it.
+ * Returns false (no-op) at duration 0 or without WAAPI (happy-dom/jsdom).
+ */
+export function flipSvgPiece(
+  slot: Element,
+  center: { x: number; y: number },
+  backMarkup: string,
+  durationMs: number,
+  opts: { delayMs?: number } = {},
+): boolean {
+  if (durationMs <= 0) return false;
+  const target = slot as Element & {
+    animate?: (keyframes: Keyframe[], options: KeyframeAnimationOptions) => Animation;
+    getAnimations?: () => Animation[];
+    style?: CSSStyleDeclaration;
+  };
+  if (typeof target.animate !== 'function') return false;
+  const delay = Math.max(0, opts.delayMs ?? 0);
+  if (delay === 0 && typeof target.getAnimations === 'function') {
+    for (const animation of target.getAnimations()) animation.cancel();
+  }
+  const faces = Array.from(slot.children);
+  const back = slot.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'g');
+  back.setAttribute('class', 'piece-flip-back');
+  back.setAttribute('aria-hidden', 'true');
+  back.innerHTML = backMarkup;
+  slot.append(back);
+  if (target.style) target.style.transformOrigin = `${center.x}px ${center.y}px`;
+  const timing: KeyframeAnimationOptions = { duration: durationMs, delay, fill: 'backwards' };
+  // The face swaps in at the midpoint, edge-on, where neither side shows.
+  const hideUntilMidpoint: Keyframe[] = [
+    { opacity: 0, offset: 0 },
+    { opacity: 0, offset: 0.5 },
+    { opacity: 1, offset: 0.5 },
+    { opacity: 1, offset: 1 },
+  ];
+  const showUntilMidpoint: Keyframe[] = [
+    { opacity: 1, offset: 0 },
+    { opacity: 1, offset: 0.5 },
+    { opacity: 0, offset: 0.5 },
+    { opacity: 0, offset: 1 },
+  ];
+  for (const face of faces) {
+    (face as Element & { animate?: typeof target.animate }).animate?.(hideUntilMidpoint, timing);
+  }
+  back.animate(showUntilMidpoint, { ...timing, fill: 'both' });
+  const turn = target.animate(
+    [
+      { transform: 'scaleX(1)', offset: 0, easing: 'ease-in' },
+      { transform: 'scaleX(0)', offset: 0.5, easing: 'ease-out' },
+      { transform: 'scaleX(1)', offset: 1 },
+    ],
+    // No backwards fill: during a delay the slot's glide owns its transform.
+    { duration: durationMs, delay },
+  );
+  const removeBack = () => back.remove();
+  if (turn && typeof turn.addEventListener === 'function') {
+    turn.addEventListener('finish', removeBack);
+    turn.addEventListener('cancel', removeBack);
+  } else {
+    removeBack();
+  }
+  return true;
+}
