@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto';
 import { createUser } from './persistence.js';
 import { getPool } from './persistence-db.js';
+import { recordPuzzleQualityEvent } from './persistence-puzzle-quality.js';
 import {
   getPuzzleRating,
   getUserPuzzleRating,
@@ -10,6 +12,7 @@ import {
 } from './persistence-puzzle-ratings.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 import { seedPuzzleRating } from './puzzle-rating.js';
+import { getPuzzleStore } from './puzzle-store.js';
 
 definePersistenceTests('puzzle-ratings', () => {
   const now = new Date();
@@ -218,19 +221,29 @@ definePersistenceTests('puzzle-ratings', () => {
       jungle.attempts.map((row) => row.puzzleId),
       ['history-jungle'],
     );
+  });
 
-  test('a later solve repairs a rated or unrated failure without rewriting its first outcome', async () => {
+  test('a clean later visit repairs a rated or unrated failure without rewriting its first outcome', async () => {
+    const puzzle = (await getPuzzleStore()).puzzles.find((puzzle) => puzzle.variant === 'xiangqi')!;
     for (const rated of [true, false]) {
       const userId = `repair-${rated}`;
       await mkUser(userId, userId);
       const input = {
         userId,
-        puzzleId: `failed-${rated}`,
+        puzzleId: puzzle.id,
         variant: 'xiangqi',
         solved: false,
         rated,
         seedRating: seedPuzzleRating(3),
       };
+      const sessionId = randomUUID();
+      const visit = {
+        puzzleId: input.puzzleId,
+        variant: input.variant,
+        sessionId,
+        player: { userId, deviceId: null },
+      };
+      await recordPuzzleQualityEvent({ ...visit, event: 'view' });
       const failed = await recordPuzzleAttempt(input);
       assert.equal(failed?.repairedAt, null);
       const original = await getPool().query(
@@ -246,11 +259,39 @@ definePersistenceTests('puzzle-ratings', () => {
       assert.equal(unresolved[0].failedAt, original.rows[0].created_at.toISOString());
       assert.equal(unresolved[0].repairedAt, null);
 
+      // Finishing in the failed visit cannot repair it, even without a quality
+      // wrong counter. A later visit with a hint or reveal is not clean either.
+      await recordPuzzleQualityEvent({ ...visit, event: 'solve' });
+      assert.equal(
+        (await recordPuzzleAttempt({ ...input, solved: true, qualitySessionId: sessionId }))
+          ?.repairedAt,
+        null,
+      );
+      assert.equal((await recordPuzzleAttempt({ ...input, solved: true }))?.repairedAt, null);
+      for (const event of ['wrong', 'hint', 'reveal'] as const) {
+        const assistedVisit = { ...visit, sessionId: randomUUID() };
+        await recordPuzzleQualityEvent({ ...assistedVisit, event });
+        await recordPuzzleQualityEvent({ ...assistedVisit, event: 'solve' });
+        assert.equal(
+          (
+            await recordPuzzleAttempt({
+              ...input,
+              solved: true,
+              qualitySessionId: assistedVisit.sessionId,
+            })
+          )?.repairedAt,
+          null,
+        );
+      }
+
+      const cleanVisit = { ...visit, sessionId: randomUUID() };
+      await recordPuzzleQualityEvent({ ...cleanVisit, event: 'solve' });
+      const retryInput = { ...input, solved: true, qualitySessionId: cleanVisit.sessionId };
       // Simultaneous solves serialize on the rating locks. Only the first
       // repair time lands, and neither retry re-rates either participant.
       const retries = await Promise.all([
-        recordPuzzleAttempt({ ...input, solved: true, rated: !rated }),
-        recordPuzzleAttempt({ ...input, solved: true, rated: true }),
+        recordPuzzleAttempt({ ...retryInput, rated: !rated }),
+        recordPuzzleAttempt({ ...retryInput, rated: true }),
       ]);
       assert.ok(retries[0]?.repairedAt);
       for (const retry of retries) {

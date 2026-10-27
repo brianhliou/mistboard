@@ -4,7 +4,7 @@
 // owns the reads/writes and the transactional idempotency. A rated attempt is
 // applied to BOTH the user and the puzzle inside one transaction, guarded by the
 // puzzle_attempts primary key so only a user's FIRST attempt at a puzzle moves
-// ratings. A later solve of a failure records a separate repair timestamp.
+// ratings. A clean solve on a later visit records a separate repair timestamp.
 
 import type pg from 'pg';
 import { emitAchievementTrigger } from './achievement-triggers.js';
@@ -53,6 +53,10 @@ export type RecordPuzzleAttemptInput = {
   // Seed rating applied to the puzzle only if it has no row yet (from the
   // puzzle's difficulty; see seedPuzzleRating). Ignored once the puzzle exists.
   seedRating: Glicko2;
+  // The existing per-visit quality session proves a retry was opened after
+  // the failure and completed without a wrong move, hint or solution reveal.
+  // Without that evidence a repeat solve cannot mark a failure repaired.
+  qualitySessionId?: string | null;
 };
 
 export type RecordPuzzleAttemptResult = {
@@ -232,13 +236,13 @@ export async function listFailedPuzzleAttempts(
 }
 
 // Record a user's first outcome and, if rated, apply the Glicko-2 update to
-// both sides. A later solve repairs a failure once, preserving its outcome,
+// both sides. A clean later visit repairs a failure once, preserving its outcome,
 // rating delta and counters. Returns null if persistence is disabled.
 export async function recordPuzzleAttempt(
   input: RecordPuzzleAttemptInput,
 ): Promise<RecordPuzzleAttemptResult | null> {
   if (!isInitialized()) return null;
-  const { userId, puzzleId, variant, solved, rated, seedRating } = input;
+  const { userId, puzzleId, variant, solved, rated, seedRating, qualitySessionId } = input;
 
   const result = await withTransaction(async (client) => {
     const user = await lockUserRating(client, userId, variant);
@@ -258,14 +262,23 @@ export async function recordPuzzleAttempt(
 
     if (inserted.rowCount === 0) {
       // The rating locks serialize concurrent retries as well as first attempts.
-      // Only a validated complete line can repair; another failure cannot erase
-      // a repair, and repeated solves preserve the first repair time.
-      if (solved) {
+      // Completing after a mistake or hint in this visit is still a failure.
+      // Require a clean, account-bound visit opened after the original failure;
+      // repeated solves preserve the first repair time and never re-rate it.
+      if (solved && qualitySessionId) {
         await client.query(
           `UPDATE puzzle_attempts SET repaired_at = now()
            WHERE user_id = $1 AND puzzle_id = $2
-             AND solved = FALSE AND repaired_at IS NULL`,
-          [userId, puzzleId],
+             AND solved = FALSE AND repaired_at IS NULL
+             AND EXISTS (
+               SELECT 1 FROM puzzle_quality_sessions AS visit
+               WHERE visit.puzzle_id = puzzle_attempts.puzzle_id
+                 AND visit.session_id = $3::uuid AND visit.user_id = $1
+                 AND visit.viewed_at > puzzle_attempts.created_at
+                 AND visit.outcome = 'solved'
+                 AND visit.wrong_attempts = 0 AND visit.hint_count = 0
+             )`,
+          [userId, puzzleId, qualitySessionId],
         );
       }
       const { rows } = await client.query<{ repaired_at: Date | null }>(

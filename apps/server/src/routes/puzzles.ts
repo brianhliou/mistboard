@@ -261,7 +261,10 @@ export async function tryHandle(
       variant: variant ?? undefined,
       repaired: repaired === 'true',
     });
-    writeJson(response, 200, { failures });
+    const store = await getPuzzleStore();
+    writeJson(response, 200, {
+      failures: failures.filter((failure) => store.byId.has(failure.puzzleId)),
+    });
     return true;
   }
 
@@ -354,10 +357,17 @@ export async function tryHandle(
           sessionId: qualitySessionId,
           variant: puzzle.variant,
           event: qualityEvent,
+          player: { userId: (await currentAccountUser(request))?.id ?? null, deviceId: null },
         });
       }
     }
-    const rating = await recordAttemptRating(request, puzzle, attempt, body.rated !== false);
+    const rating = await recordAttemptRating(
+      request,
+      puzzle,
+      attempt,
+      body.rated !== false,
+      qualitySessionId,
+    );
     // A completed solve answers with the solver's puzzle streak, read after the
     // attempt row landed so today counts. Days follow the browser's calendar
     // (`timeZone` in the body, play-streak.ts); anonymous solvers get none.
@@ -538,10 +548,11 @@ async function recordAttemptRating(
   puzzle: PublicPuzzle,
   attempt: PuzzleAttempt,
   rated: boolean,
+  qualitySessionId: string | null,
 ): Promise<PuzzleAttemptRating | null> {
   const outcome = attemptOutcome(attempt);
   if (outcome === null) return null;
-  return recordOutcomeRating(request, puzzle, outcome, rated);
+  return recordOutcomeRating(request, puzzle, outcome, rated, qualitySessionId);
 }
 
 // Book a single terminal outcome (solved/failed) for a signed-in user. The
@@ -549,13 +560,15 @@ async function recordAttemptRating(
 // FIRST terminal outcome moves ratings, so a wrong-move fail followed by a
 // reveal, or a reveal followed by a completed line, records once and returns
 // firstAttempt=false / ratingChanged=false on the repeat. A completed retry
-// records a separate repairedAt timestamp for a prior failure. Anon users and
+// on a clean later visit records a separate repairedAt for a prior failure.
+// The per-visit quality session supplies that evidence. Anon users and
 // persistence-off return null (no rating).
 async function recordOutcomeRating(
   request: IncomingMessage,
   puzzle: PublicPuzzle,
   solved: boolean,
   rated: boolean,
+  qualitySessionId?: string | null,
 ): Promise<PuzzleAttemptRating | null> {
   const user = await currentAccountUser(request);
   if (!user) return null;
@@ -568,6 +581,7 @@ async function recordOutcomeRating(
     variant: puzzle.variant,
     solved,
     rated,
+    qualitySessionId,
     seedRating: seedPuzzleRating(
       puzzle.solution.length,
       (await getPuzzleStore()).difficultyById.get(puzzle.id),

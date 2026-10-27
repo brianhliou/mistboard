@@ -5,6 +5,7 @@ import type { XiangqiPuzzle } from '@mistboard/game';
 import { loadSeedPuzzleRegistry, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
 import type pg from 'pg';
 import { close, getPool, init } from './persistence-db.js';
+import { recordPuzzleQualityEvent } from './persistence-puzzle-quality.js';
 import { recordPuzzleAttempt } from './persistence-puzzle-ratings.js';
 import { seedPuzzleRating } from './puzzle-rating.js';
 import { resetPuzzleStoreForTests } from './puzzle-store.js';
@@ -16,17 +17,36 @@ const repairedAt = new Date('2026-10-27T12:00:00Z');
 const puzzle = (loadSeedPuzzleRegistry('xiangqi') as readonly XiangqiPuzzle[]).find(
   (candidate) => candidate.solution.length >= 3,
 )!;
+const junglePuzzle = loadSeedPuzzleRegistry('jungle')[0]!;
+const qualitySessionId = '00000000-0000-4000-8000-000000000001';
+const laterSessionId = '00000000-0000-4000-8000-000000000002';
 
 // Exercise the real transaction and account-session paths offline. The existing
 // persistence suite also checks these invariants against PostgreSQL.
-function database(t: TestContext, initiallySolved = false) {
+function database(
+  t: TestContext,
+  options: { initiallySolved?: boolean; viewedAt?: Date; unavailableFailures?: boolean } = {},
+) {
   const queries: Array<{ sql: string; values: unknown[] }> = [];
   let repair: Date | null = null;
+  const sessions = new Map<
+    unknown,
+    { viewedAt: Date; userId: unknown; wrong: number; hints: number; outcome: string | null }
+  >();
   const rating = { rating: 1400, rating_deviation: 200, volatility: 0.06 };
   const query = async (sql: string, values: unknown[] = []) => {
     queries.push({ sql, values });
     if (sql.includes('SELECT seed_hash')) return { rows: [{ seed_hash: seedPuzzleContentHash() }] };
-    if (sql.includes('SELECT data FROM puzzles')) return { rows: [{ data: puzzle }] };
+    if (sql.includes('SELECT data FROM puzzles')) {
+      return {
+        rows: [
+          { data: puzzle },
+          { data: junglePuzzle },
+          // Retired rows can remain in the database; the store withholds them.
+          { data: { ...puzzle, id: 'retired-puzzle', variant: 'fortress-xiangqi' } },
+        ],
+      };
+    }
     if (sql.includes('SELECT DISTINCT to_char')) return { rows: [] };
     if (sql.includes('UPDATE account_sessions')) {
       return {
@@ -34,6 +54,30 @@ function database(t: TestContext, initiallySolved = false) {
       };
     }
     if (sql.includes('SELECT rating,')) return { rows: [rating] };
+    if (sql.includes('INSERT INTO puzzle_quality_sessions')) {
+      const session = sessions.get(values[1]);
+      if (session) session.userId ??= values[3];
+      else {
+        sessions.set(values[1], {
+          viewedAt: options.viewedAt ?? repairedAt,
+          userId: values[3],
+          wrong: 0,
+          hints: 0,
+          outcome: null,
+        });
+      }
+      return { rows: [] };
+    }
+    if (sql.includes('UPDATE puzzle_quality_sessions')) {
+      const session = sessions.get(values[1])!;
+      if (session.outcome === null) {
+        if (sql.includes('wrong_attempts = wrong_attempts + 1')) session.wrong++;
+        if (sql.includes('hint_count = hint_count + 1')) session.hints++;
+        if (sql.includes("outcome = 'solved'")) session.outcome = 'solved';
+        if (sql.includes("outcome = 'revealed'")) session.outcome = 'revealed';
+      }
+      return { rows: [] };
+    }
     if (sql.includes('INSERT INTO puzzle_attempts')) return { rows: [], rowCount: 0 };
     if (sql.includes('UPDATE puzzle_attempts')) {
       assert.match(sql, /SET repaired_at = now\(\)/);
@@ -43,7 +87,22 @@ function database(t: TestContext, initiallySolved = false) {
         sql.split('WHERE')[0]!,
         /(?:solved|rated|user_rating_before|user_rating_after|created_at)\s*=/,
       );
-      if (initiallySolved || repair) return { rows: [], rowCount: 0 };
+      if (options.initiallySolved || repair) return { rows: [], rowCount: 0 };
+      // Model the additional SQL predicate when present. The original query
+      // has no visit predicate, so these regressions expose its false repairs.
+      if (sql.includes('EXISTS')) {
+        const session = sessions.get(values[2]);
+        if (
+          !session ||
+          session.userId !== values[0] ||
+          session.viewedAt <= failedAt ||
+          session.wrong > 0 ||
+          session.hints > 0 ||
+          session.outcome !== 'solved'
+        ) {
+          return { rows: [], rowCount: 0 };
+        }
+      }
       repair = repairedAt;
       return { rows: [{ repaired_at: repair }], rowCount: 1 };
     }
@@ -54,16 +113,24 @@ function database(t: TestContext, initiallySolved = false) {
       assert.match(sql, /ORDER BY created_at DESC, puzzle_id/);
       return {
         rows:
-          initiallySolved || (sql.includes('repaired_at IS NOT NULL') ? !repair : !!repair)
+          options.initiallySolved || (sql.includes('repaired_at IS NOT NULL') ? !repair : !!repair)
             ? []
             : [
                 {
-                  puzzle_id: 'failed-puzzle',
+                  puzzle_id: puzzle.id,
                   variant: 'xiangqi',
                   created_at: failedAt,
                   repaired_at: repair,
                 },
-              ],
+                ...(options.unavailableFailures
+                  ? [
+                      { puzzle_id: junglePuzzle.id, variant: 'jungle' },
+                      { puzzle_id: 'removed-puzzle', variant: 'xiangqi' },
+                      { puzzle_id: 'hidden-puzzle', variant: 'xiangqi' },
+                      { puzzle_id: 'retired-puzzle', variant: 'fortress-xiangqi' },
+                    ].map((row) => ({ ...row, created_at: failedAt, repaired_at: repair }))
+                  : []),
+              ].filter((row) => !values[1] || row.variant === values[1]),
       };
     }
     if (/^(BEGIN|COMMIT|ROLLBACK)$/.test(sql)) return { rows: [] };
@@ -87,17 +154,29 @@ function database(t: TestContext, initiallySolved = false) {
 
 const attemptInput = {
   userId: 'solver',
-  puzzleId: 'failed-puzzle',
+  puzzleId: puzzle.id,
   variant: 'xiangqi',
   solved: true,
   rated: true,
   seedRating: seedPuzzleRating(3),
+  qualitySessionId,
 };
+
+async function cleanSolveSession() {
+  await recordPuzzleQualityEvent({
+    puzzleId: puzzle.id,
+    sessionId: qualitySessionId,
+    variant: puzzle.variant,
+    event: 'solve',
+    player: { userId: 'solver', deviceId: null },
+  });
+}
 
 test('a later solve persists repair without changing the failed outcome or either rating', async (t) => {
   const queries = database(t);
   assert.equal((await recordPuzzleAttempt({ ...attemptInput, solved: false }))?.repairedAt, null);
   assert.equal(queries.filter(({ sql }) => sql.includes('UPDATE puzzle_attempts')).length, 0);
+  await cleanSolveSession();
   const result = await recordPuzzleAttempt(attemptInput);
   assert.ok(result);
   assert.equal(result.repairedAt, repairedAt.toISOString());
@@ -118,7 +197,7 @@ test('a later solve persists repair without changing the failed outcome or eithe
 });
 
 test('revisiting an original solve never turns it into a repair', async (t) => {
-  const queries = database(t, true);
+  const queries = database(t, { initiallySolved: true });
   assert.equal((await recordPuzzleAttempt(attemptInput))?.repairedAt, null);
   assert.equal((await recordPuzzleAttempt({ ...attemptInput, solved: false }))?.repairedAt, null);
   assert.equal(queries.filter(({ sql }) => sql.includes('UPDATE puzzle_attempts')).length, 1);
@@ -169,7 +248,7 @@ test('failed-puzzle API scopes private results to the session account and valida
   assert.deepEqual(response.body, {
     failures: [
       {
-        puzzleId: 'failed-puzzle',
+        puzzleId: puzzle.id,
         variant: 'xiangqi',
         failedAt: failedAt.toISOString(),
         repairedAt: null,
@@ -182,6 +261,7 @@ test('failed-puzzle API scopes private results to the session account and valida
   assert.match(read.sql, /variant = \$2/);
   assert.deepEqual(read.values, ['solver', 'xiangqi']);
 
+  await cleanSolveSession();
   await recordPuzzleAttempt(attemptInput);
   const repaired = await route('/api/puzzles/failed?repaired=true');
   assert.equal(repaired.status, 200);
@@ -195,13 +275,13 @@ test('failed-puzzle API scopes private results to the session account and valida
   assert.equal((await route('/api/puzzles/failed', true, 'POST')).status, 405);
 });
 
-test('attempt API repairs only a complete validated solve and returns its separate timestamp', async (t) => {
+test('attempt API repairs a clean later visit only after a complete validated solve', async (t) => {
   const queries = database(t);
   const path = `/api/puzzles/${puzzle.id}`;
-  const hinted = await route(`${path}/reveal`, true, 'POST', { mode: 'hint' });
-  assert.equal(hinted.status, 200);
-  assert.equal(hinted.body.rating.repairedAt, null);
-  const incomplete = await route(`${path}/attempt`, true, 'POST', { moves: [puzzle.solution[0]] });
+  const incomplete = await route(`${path}/attempt`, true, 'POST', {
+    moves: [puzzle.solution[0]],
+    qualitySessionId,
+  });
   assert.equal(incomplete.status, 200);
   assert.equal(incomplete.body.attempt.complete, false);
   assert.equal(incomplete.body.rating, undefined);
@@ -210,6 +290,7 @@ test('attempt API repairs only a complete validated solve and returns its separa
   const solved = await route(`${path}/attempt`, true, 'POST', {
     moves: puzzle.solution.filter((_, ply) => ply % 2 === 0),
     rated: false,
+    qualitySessionId,
   });
   assert.equal(solved.status, 200);
   assert.equal(solved.body.attempt.ok, true);
@@ -222,5 +303,78 @@ test('attempt API repairs only a complete validated solve and returns its separa
   assert.deepEqual(queries.find(({ sql }) => sql.includes('UPDATE puzzle_attempts'))?.values, [
     'solver',
     puzzle.id,
+    qualitySessionId,
   ]);
+});
+
+for (const failure of ['wrong', 'hint', 'solution'] as const) {
+  test(`finishing after ${failure} in the same visit leaves the failure unresolved`, async (t) => {
+    database(t);
+    const path = `/api/puzzles/${puzzle.id}`;
+    const failed =
+      failure === 'wrong'
+        ? await route(`${path}/attempt`, true, 'POST', {
+            moves: [{ from: puzzle.solution[0]!.from, to: puzzle.solution[0]!.from }],
+            qualitySessionId,
+          })
+        : await route(`${path}/reveal`, true, 'POST', { mode: failure, qualitySessionId });
+    assert.equal(failed.status, 200);
+    if (failure === 'wrong') assert.equal(failed.body.attempt.code, 'incorrect-move');
+    const moves = puzzle.solution.filter((_, ply) => ply % 2 === 0);
+    const finished = await route(`${path}/attempt`, true, 'POST', { moves, qualitySessionId });
+    assert.equal(finished.body.attempt.complete, true);
+    assert.equal(finished.body.rating.repairedAt, null);
+    assert.equal((await route('/api/puzzles/failed')).body.failures[0].puzzleId, puzzle.id);
+    assert.deepEqual((await route('/api/puzzles/failed?repaired=true')).body, { failures: [] });
+
+    const later = await route(`${path}/attempt`, true, 'POST', {
+      moves,
+      qualitySessionId: laterSessionId,
+    });
+    assert.equal(later.body.rating.repairedAt, repairedAt.toISOString());
+    assert.deepEqual((await route('/api/puzzles/failed')).body, { failures: [] });
+  });
+}
+
+test('a clean completion of a visit opened before the failure is not a later retry', async (t) => {
+  database(t, { viewedAt: new Date(failedAt.getTime() - 1000) });
+  const finished = await route(`/api/puzzles/${puzzle.id}/attempt`, true, 'POST', {
+    moves: puzzle.solution.filter((_, ply) => ply % 2 === 0),
+    qualitySessionId,
+  });
+  assert.equal(finished.body.rating.repairedAt, null);
+});
+
+test('a solve without visit evidence cannot repair a failure', async (t) => {
+  database(t);
+  const result = await recordPuzzleAttempt({ ...attemptInput, qualitySessionId: undefined });
+  assert.equal(result?.repairedAt, null);
+});
+
+test('failed API omits removed, hidden and retired puzzles from both queues', async (t) => {
+  database(t, { unavailableFailures: true });
+  for (const id of ['removed-puzzle', 'hidden-puzzle', 'retired-puzzle']) {
+    assert.equal((await route(`/api/puzzles/${id}`)).status, 404);
+    assert.equal(
+      (await route(`/api/puzzles/${id}/attempt`, true, 'POST', { moves: [] })).status,
+      404,
+    );
+  }
+  for (const repaired of [false, true]) {
+    if (repaired) {
+      await cleanSolveSession();
+      await recordPuzzleAttempt(attemptInput);
+    }
+    const response = await route(`/api/puzzles/failed?repaired=${repaired}`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(
+      response.body.failures.map((failure: { puzzleId: string }) => failure.puzzleId),
+      [puzzle.id, junglePuzzle.id],
+    );
+    const filtered = await route(`/api/puzzles/failed?variant=xiangqi&repaired=${repaired}`);
+    assert.deepEqual(
+      filtered.body.failures.map((failure: { puzzleId: string }) => failure.puzzleId),
+      [puzzle.id],
+    );
+  }
 });
