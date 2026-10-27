@@ -196,9 +196,9 @@ export type XmjTableMeasure = { height: number; overflow: number };
  * square narrower than the table wants: unscaled, the bottom rack fell below
  * it and the seat badges spilled past the table's edge, and both were clipped.
  * Laying out wider at a smaller zoom gives the badges their columns back and
- * shrinks tiles and badges together. `overflow` is how far the widest thing
- * reaches past the table's edge on its worse side; the badge columns share
- * any extra width, so each side gets half of it.
+ * shrinks tiles and badges together. `overflow` is how far the widest badge
+ * reaches past its own column on its worse side; the badge columns share any
+ * extra width, so each side gets half of it.
  */
 export function xmjCompactFit(
   availW: number,
@@ -214,6 +214,22 @@ export function xmjCompactFit(
     zoom = next;
   }
   return { zoom, width: availW / zoom };
+}
+
+type XmjSpan = { left: number; right: number };
+
+/**
+ * How far a rack badge reaches past the column it sits in. Measured against
+ * the column, not the felt's edge: a badge wider than its column spills into
+ * the felt's padding first, still inside the table, and the rounded corner
+ * clipped its first letters while the fit read it as fitting.
+ */
+export function xmjTagOverflow(tags: ReadonlyArray<{ column: XmjSpan; badge: XmjSpan }>): number {
+  let overflow = 0;
+  for (const { column, badge } of tags) {
+    overflow = Math.max(overflow, column.left - badge.left, badge.right - column.right);
+  }
+  return overflow;
 }
 
 export function mountXiangqiMahjongWatchReplay(
@@ -271,6 +287,8 @@ export function mountXiangqiMahjongWatchReplay(
     board.style.removeProperty('zoom');
     board.style.removeProperty('width');
     board.style.removeProperty('max-width');
+    const table = board.querySelector<HTMLElement>('.xmj-table');
+    table?.style.removeProperty('min-height');
     const availW = board.offsetWidth;
     const shown = [...layout.children].filter(
       (child): child is HTMLElement => child instanceof HTMLElement && child.offsetHeight > 0,
@@ -278,18 +296,15 @@ export function mountXiangqiMahjongWatchReplay(
     const rows = shown.reduce((sum, child) => sum + child.offsetHeight, 0) - board.offsetHeight;
     // A pixel spare, so a rounded box never clips the rack's bottom edge.
     const availH = root.clientHeight - rows - 1;
-    const table = board.querySelector<HTMLElement>('.xmj-table');
     if (!table || availW <= 0 || availH <= 0) return;
     const { zoom, width } = xmjCompactFit(availW, availH, (at) => {
       board.style.width = `${at}px`;
       board.style.maxWidth = 'none';
-      const edge = table.getBoundingClientRect();
-      let overflow = 0;
-      for (const el of table.querySelectorAll<HTMLElement>('.xmj-rack__tag > *')) {
-        const box = el.getBoundingClientRect();
-        overflow = Math.max(overflow, edge.left - box.left, box.right - edge.right);
-      }
-      return { height: board.offsetHeight, overflow };
+      const tags = [...table.querySelectorAll<HTMLElement>('.xmj-rack__tag > *')].map((el) => ({
+        column: (el.parentElement ?? el).getBoundingClientRect(),
+        badge: el.getBoundingClientRect(),
+      }));
+      return { height: board.offsetHeight, overflow: xmjTagOverflow(tags) };
     });
     if (zoom >= 1) {
       board.style.removeProperty('width');
@@ -299,6 +314,10 @@ export function mountXiangqiMahjongWatchReplay(
       board.style.maxWidth = 'none';
       board.style.zoom = String(zoom);
     }
+    // Two cards whose tables zoom differently (a longer hand, a claimed set)
+    // stood at different heights side by side. The felt fills the host's box
+    // instead, racks at its top and bottom, so every card in a row lines up.
+    table.style.minHeight = `${Math.floor(availH / zoom)}px`;
     fitted = `${root.clientWidth}x${root.clientHeight}`;
   };
   const resized = new ResizeObserver(() => {
