@@ -14,7 +14,6 @@ type PublicStudy = {
   name: string;
   owner: { handle: string; displayName: string };
   chapterCount: number;
-  likeCount: number;
   previewBoard?: StudyPreviewBoard | null;
 };
 
@@ -41,14 +40,16 @@ export function buildTopPlayersWidget(options: { hydrate?: boolean } = {}): HTML
   return buildLeaderboardWidget(options);
 }
 
-// More than the box can show. On the homepage the box spans the blog + video
-// rows (bands 3-4), so its height comes from the band, not from its rows: the
-// row count is measured, not configured. fitRowsToBody() (site-box-fit.ts)
-// drops trailing rows that would clip mid-item and adds the fill class when
-// the rest should grow to meet the bottom edge. The API's own default is 5,
-// which left a third of the box empty once the rows took their intended
-// height (2026-08-27).
-const landingStudiesFetchLimit = 12;
+// Five studies (#710, Brian 2026-10-27: nine one-line rows cut every title off;
+// four tall rows read as too few and too airy; six two-line rows still cut most
+// titles). Each row is a small board of the study's own position beside a title
+// of up to three lines at a compact size, with owner and chapter count under
+// it. Five such rows fill the ~370px body the box spans at 1440 wide. Six are fetched: the stacked layout's wide, short box
+// lays them out two by three (landing-community-widgets.css), and the column
+// layout hides the sixth in CSS. fitRowsToBody() (site-box-fit.ts) still drops
+// a trailing row that would clip mid-item on any shorter box, adding the fill
+// class so the kept rows share the slack and the last one meets the bottom edge.
+const landingStudiesFetchCount = 6;
 const studiesFillClass = 'landing-community-body--fill';
 
 /** Standalone Top studies box: the homepage band-2 slot (replaced Top players
@@ -68,7 +69,7 @@ function buildStudyWidget(options: { hydrate?: boolean }): HTMLElement {
 
 async function hydrateStudies(body: HTMLElement): Promise<void> {
   try {
-    const response = await fetch(`/api/studies/public?limit=${landingStudiesFetchLimit}`, {
+    const response = await fetch(`/api/studies/public?limit=${landingStudiesFetchCount}`, {
       headers: { accept: 'application/json' },
     });
     if (!response.ok) throw new Error(`public_studies_failed_${response.status}`);
@@ -87,12 +88,13 @@ function studyRow(study: PublicStudy): HTMLElement {
   const row = document.createElement('a');
   row.className = 'site-box-row landing-study-row';
   row.href = `/study/${encodeURIComponent(study.id)}`;
-  const thumbnail = buildStudyThumbnail(
-    study.id,
-    'landing-study-thumbnail',
-    'lazy',
-    study.previewBoard ?? null,
-  );
+  // Every row holds a thumbnail slot, so titles line up down the box even when
+  // a study has no derived board and no variant marker (an empty panel of the
+  // same shape). No like count (#710): with every study at 0 it read as a
+  // verdict, not a signal; bring it back when likes exist.
+  const thumbnail =
+    buildStudyThumbnail(study.id, 'landing-study-thumbnail', 'lazy', study.previewBoard ?? null) ??
+    blankThumbnail();
 
   const main = document.createElement('span');
   main.className = 'landing-community-main';
@@ -100,17 +102,22 @@ function studyRow(study: PublicStudy): HTMLElement {
     study.chapterCount === 1
       ? t('study.chapterCountOne')
       : t('study.chapterCount', { count: study.chapterCount });
+  // No description line: the authored descriptions are paragraphs for the
+  // study page, and their first 45 characters (a URL, a date, the title again)
+  // said less than the title (#710, tried 2026-10-27).
   main.append(
-    text('landing-community-name', localizedStudyName(study.name, study.i18n)),
+    text('landing-community-name landing-study-name', localizedStudyName(study.name, study.i18n)),
     text('landing-community-meta', `${study.owner.displayName} · ${chapters}`),
   );
-  const likes = text('landing-study-likes', `♥ ${study.likeCount}`);
-  likes.title =
-    study.likeCount === 1
-      ? t('study.likeCountOne')
-      : t('study.likeCount', { count: study.likeCount });
-  row.append(...(thumbnail ? [thumbnail] : []), main, likes);
+  row.append(thumbnail, main);
   return row;
+}
+
+function blankThumbnail(): HTMLElement {
+  const el = document.createElement('span');
+  el.className = 'study-thumbnail study-thumbnail--blank landing-study-thumbnail';
+  el.setAttribute('aria-hidden', 'true');
+  return el;
 }
 
 function buildLeaderboardWidget(options: { hydrate?: boolean }): HTMLElement {
