@@ -236,8 +236,6 @@ export function resetPieceFlipStyleCache(): void {
 // Parse at load, before any in-app navigation can drop the query.
 if (typeof window !== 'undefined') pieceFlipStyle();
 
-/** Perspective distance for the lifted turns, in viewBox units (a tile is ~60). */
-const FLIP_PERSPECTIVE = 240;
 /** How far a lifted tile grows (it nears the eye) and the shadow it casts. */
 const FLIP_LIFT_SCALE = 1.12;
 const FLIP_SHADOW_DOWN = 'drop-shadow(0px 0px 0px rgba(0, 0, 0, 0))';
@@ -265,7 +263,9 @@ export function pieceFlipKeyframes(style: PieceFlipStyle): {
     };
   }
   const axis = style === 'lift' ? 'rotateX' : 'rotateY';
-  const at = (deg: number) => `perspective(${FLIP_PERSPECTIVE}px) ${axis}(${deg}deg)`;
+  // No perspective(): Chrome flattens 3D on SVG to an affine guess that widens
+  // the tile mid-turn (a 90px disc drew 157px wide); the lift sells the depth.
+  const at = (deg: number) => `${axis}(${deg}deg)`;
   return {
     turn: [
       { transform: at(0), offset: 0 },
