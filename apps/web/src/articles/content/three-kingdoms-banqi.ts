@@ -51,7 +51,7 @@ export const threeKingdomsBanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'As in [banqi](/rules/banqi), all thirty-two pieces start shuffled and face-down, but the layout is different. Banqi fills every square of a 4 by 8 board. Here the board has 9 columns and 5 rows of points, 45 in all, with no river, and the pieces sit in four blocks of eight, one in each corner: two rows by four columns. The middle column and the middle row start empty, so pieces have room to move from the first turn.',
+          text: 'As in [banqi](/rules/banqi), all thirty-two pieces start shuffled and face-down. Here they sit in four blocks of eight on a 9 by 5 board with no river.',
         },
         {
           kind: 'raw-svg',
@@ -79,11 +79,28 @@ export const threeKingdomsBanqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Pieces move as in xiangqi, with three differences. There is no palace, so the general and advisors go anywhere. There is no river, so elephants cross the middle row and soldiers never change how they move. And horses and elephants cannot be blocked.',
+          text: 'Pieces move as in [xiangqi](/rules/xiangqi), with five changes:',
+        },
+        {
+          kind: 'table',
+          headers: ['', 'In xiangqi', 'Here'],
+          keyColumn: true,
+          wrap: true,
+          rows: [
+            ['Palace', 'The general and advisors stay inside it', 'None: they go anywhere'],
+            ['River', 'Elephants stop at it; soldiers turn sideways after it', 'None'],
+            ['Horse and elephant', 'A piece in the way blocks them', 'Nothing blocks them'],
+            ['General', 'Steps one point', 'Slides like a chariot'],
+            ['Soldier', 'Steps forward, and sideways after the river', 'Steps forward, backward or sideways'],
+          ],
         },
         {
           kind: 'paragraph',
-          text: 'The chariot slides any distance along a row or column. The general moves exactly like the chariot, not one step at a time as in xiangqi. The cannon slides the same way when it moves, but to capture it must jump exactly one piece, face-up or face-down, of either color. The horse jumps one point straight and one diagonally, even when a piece stands next to it. The elephant jumps two points diagonally, even over a piece. The advisor steps one point diagonally. The soldier steps one point forward, backward or sideways.',
+          text: '**Any piece can capture any piece.** There is no rank order as in banqi: a soldier can take a chariot, and an advisor can take the general. Only face-up enemy pieces can be captured. A face-down piece blocks like any other, and nothing can move onto it. The general is an ordinary piece: there is no check, and losing it does not lose the game.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**Chariot:** slides any distance along a row or column.',
         },
         {
           kind: 'raw-svg',
@@ -92,10 +109,17 @@ export const threeKingdomsBanqiArticle: Article = {
             'The chariot slides until something stops it. It can take the black horse; the face-down tile blocks it and cannot be taken.',
         },
         {
+          kind: 'paragraph',
+          text: '**General:** moves exactly like the chariot.',
+        },
+        {
           kind: 'raw-svg',
           svg: TK_GENERAL,
-          caption:
-            'The general slides like a chariot, the whole row or column, and can take the black cannon.',
+          caption: 'The general slides the whole row or column and can take the black cannon.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**Cannon:** slides like the chariot when it moves. To capture, it jumps exactly one piece, face-up or face-down, of either color.',
         },
         {
           kind: 'raw-svg',
@@ -104,10 +128,18 @@ export const threeKingdomsBanqiArticle: Article = {
             'The cannon captures the general by jumping the face-down tile. The soldier next to it is not a target: there is nothing to jump.',
         },
         {
+          kind: 'paragraph',
+          text: '**Horse:** jumps one point straight and one diagonally, even when a piece stands next to it.',
+        },
+        {
           kind: 'raw-svg',
           svg: TK_HORSE,
           caption:
             'Every point next to the horse is occupied, and it still reaches all eight of its points, including the capture on the black chariot.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**Elephant:** jumps two points diagonally, even over a piece.',
         },
         {
           kind: 'raw-svg',
@@ -116,43 +148,42 @@ export const threeKingdomsBanqiArticle: Article = {
             'The elephant jumps over pieces and across the middle row. The face-down tile at the bottom right is not a destination.',
         },
         {
-          kind: 'raw-svg',
-          svg: TK_SOLDIER,
-          caption:
-            'The soldier steps in any of four directions, backward included, and can take the chariot in front of it.',
-        },
-        {
           kind: 'paragraph',
-          text: 'A face-down piece blocks a sliding piece like any other, and nothing can move onto it.',
-        },
-      ],
-    },
-    {
-      heading: 'Captures and points',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text: 'Any piece captures any face-up enemy piece it can reach. A soldier can take a chariot; an advisor can take the general. The general is an ordinary piece: there is no check, and losing it does not lose the game.',
+          text: '**Advisor:** steps one point diagonally.',
         },
         {
           kind: 'raw-svg',
           svg: TK_ADVISOR_TAKES_GENERAL,
           caption:
-            'The advisor can take the general. The face-down tile is not a destination.',
+            'The advisor can take the general: there is no rank order. The face-down tile is not a destination.',
         },
         {
           kind: 'paragraph',
-          text: 'You score the value of every piece you capture. Soldiers, advisors and elephants are worth 5, cannons and horses 10, chariots 15 and the general 20. Each color’s sixteen pieces add up to 135.',
+          text: '**Soldier:** steps one point forward, backward or sideways.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: TK_SOLDIER,
+          caption: 'The soldier steps in any of four directions and can take the chariot in front of it.',
+        },
+      ],
+    },
+    {
+      heading: 'Points',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Every capture scores the value of the piece taken. Each color’s sixteen pieces are worth 135 in all.',
         },
         {
           kind: 'raw-svg',
           svg: TK_POINTS,
           caption:
-            'What each piece scores for the player who captures it.',
+            'Soldiers, advisors and elephants score 5, cannons and horses 10, chariots 15 and the general 20.',
         },
         {
           kind: 'paragraph',
-          text: 'Points go to the player who captures, whatever the color of the piece. If you flipped one of your opponent’s pieces earlier, capturing it later still scores for you.',
+          text: 'Points go to the player who captures, whatever the piece’s color. If you flipped one of your opponent’s pieces earlier, taking it later still scores for you.',
         },
       ],
     },
@@ -194,6 +225,26 @@ export const threeKingdomsBanqiArticle: Article = {
               question: 'How is this different from regular banqi?',
               answer:
                 'Regular banqi is played on a 4 by 8 board, pieces move one square, and captures follow a rank order with the soldier able to take the general. Three Kingdoms banqi uses a 9 by 5 board, full xiangqi moves and no rank order, and you win on points, not by taking every enemy piece.',
+            },
+          ],
+        },
+      ],
+    },
+    {
+      heading: 'Play on Mistboard',
+      blocks: [
+        {
+          kind: 'cta',
+          buttons: [
+            {
+              label: 'Play vs computer',
+              href: '/?play=computer&gameSpecId=three-kingdoms-banqi',
+              emphasis: 'primary',
+            },
+            {
+              label: 'Challenge a friend',
+              href: '/?play=friend&gameSpecId=three-kingdoms-banqi',
+              emphasis: 'secondary',
             },
           ],
         },

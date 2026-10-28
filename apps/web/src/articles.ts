@@ -114,6 +114,7 @@ import {
   isGameSpecId,
   rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
+  variantPlaytestSurfaceEnabled,
   variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
@@ -2475,7 +2476,9 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
   // The variant's switch, not the page's: an unlisted rules page for a public
   // variant (crazyhouse-xiangqi's, while it was held back for polish) still
   // offers the board, and a hidden variant (mahjong) still does not.
-  if (!variantPublicSurfaceEnabled(gameSpecId)) return null;
+  if (!variantPublicSurfaceEnabled(gameSpecId) && !variantPlaytestSurfaceEnabled(gameSpecId)) {
+    return null;
+  }
 
   const game = variantNavLabel(title);
   const row = document.createElement('div');
@@ -2535,7 +2538,12 @@ function playCtaGameSpecId(href: string): GameSpecId | null {
  *  check is the gate. */
 function playCtaOpenToViewer(href: string): boolean {
   const id = playCtaGameSpecId(href);
-  return id === null || variantPublicSurfaceEnabled(id) || hasLikelyVariantGrant(id);
+  return (
+    id === null ||
+    variantPublicSurfaceEnabled(id) ||
+    variantPlaytestSurfaceEnabled(id) ||
+    hasLikelyVariantGrant(id)
+  );
 }
 
 function renderCtaBlock(block: CtaBlock): HTMLElement {
