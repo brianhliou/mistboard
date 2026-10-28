@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { listBotRatingSnapshots, promoteBotRatingSnapshots } from './bot-rating-snapshots.js';
 import { getPublicBotProfile, listPublicBots, recordGameEnd } from './persistence.js';
+import { SEAT_WIN_RESULT } from './persistence-counted-games.js';
+import type { GameParticipantColor } from './persistence-games.js';
 import {
   assert,
   definePersistenceTests,
@@ -110,6 +112,107 @@ definePersistenceTests('bot profiles', () => {
       profile?.games.slice(0, 3).map((game) => game.roomId),
       ['mb-jq-3', 'mb-jq-2', 'mb-jq-1'],
     );
+  });
+
+  test('counts the bot a win and a loss at every seat colour, the mahjong winds included', async () => {
+    // The Misty Xiangqi Mahjong bug (2026-10-28): the bot record's win check
+    // knew only white, black and red, so four Misty wins from the west seat
+    // read 0-4-0. One bot per colour, each with one won and one lost game, so a
+    // failure names the colour.
+    const colors = Object.keys(SEAT_WIN_RESULT) as GameParticipantColor[];
+
+    // Every colour the database accepts is a key of SEAT_WIN_RESULT, and every
+    // winning result it maps to is a result the database accepts. A migration
+    // that widens game_participants_color_check without the check fails here.
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    let dbColors: string[];
+    let dbResults: string[];
+    try {
+      const { rows } = await client.query<{ name: string; def: string }>(
+        `SELECT conname AS name, pg_get_constraintdef(oid) AS def
+           FROM pg_constraint
+          WHERE conname IN ('game_participants_color_check', 'games_result_check')`,
+      );
+      const quoted = (name: string) =>
+        [...(rows.find((row) => row.name === name)?.def ?? '').matchAll(/'([^']+)'/g)].map(
+          (match) => match[1]!,
+        );
+      dbColors = quoted('game_participants_color_check');
+      dbResults = quoted('games_result_check');
+    } finally {
+      await client.end();
+    }
+    assert.deepEqual([...colors].sort(), [...dbColors].sort());
+    for (const result of Object.values(SEAT_WIN_RESULT)) {
+      assert.ok(dbResults.includes(result), `${result} is a result the database accepts`);
+    }
+
+    for (const [index, color] of colors.entries()) {
+      const botId = `seat-${color}`;
+      const opponent = colors[(index + 1) % colors.length]!;
+      await insertBotProfile(botId, `Seat ${color}`, 'public', {
+        gameSpecId: 'xiangqi',
+        supportedGameSpecIds: ['xiangqi'],
+      });
+      for (const [suffix, result] of [
+        ['won', SEAT_WIN_RESULT[color]],
+        ['lost', SEAT_WIN_RESULT[opponent]],
+      ] as const) {
+        await recordGameEnd(`${botId}-${suffix}`, {
+          variant: 'xiangqi',
+          mode: 'pve',
+          result,
+          termination: 'king-captured',
+          plyCount: 20,
+          startedAt: new Date('2026-01-01T00:00:00Z'),
+          endedAt: new Date('2026-01-01T01:00:00Z'),
+          whiteClient: 'human-client',
+          blackClient: 'engine',
+          whiteName: null,
+          blackName: botId,
+          corpusId: null,
+          rated: false,
+          visibility: 'public',
+          participants: [
+            {
+              color: opponent,
+              displayName: 'Guest',
+              subjectType: 'guest',
+              subjectId: null,
+              visibility: 'public',
+            },
+            {
+              color,
+              displayName: botId,
+              subjectType: 'bot',
+              subjectId: botId,
+              visibility: 'public',
+            },
+          ],
+        });
+      }
+    }
+
+    const expected = { games: 2, wins: 1, losses: 1, draws: 0 };
+    const bots = await listPublicBots();
+    for (const color of colors) {
+      const botId = `seat-${color}`;
+      const listed = bots.find((bot) => bot.id === botId);
+      assert.deepEqual(listed?.record, expected, `${color} seat: directory lifetime record`);
+      assert.deepEqual(
+        listed?.recordsByGameSpecId,
+        { xiangqi: expected },
+        `${color} seat: directory per-variant record`,
+      );
+      const profile = await getPublicBotProfile(botId);
+      assert.deepEqual(profile?.record, expected, `${color} seat: profile lifetime record`);
+      assert.deepEqual(
+        profile?.recordsByGameSpecId,
+        { xiangqi: expected },
+        `${color} seat: profile per-variant record`,
+      );
+    }
   });
 
   test('the directory lists each bot its own per-variant record, summing to lifetime', async () => {
