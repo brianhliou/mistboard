@@ -490,7 +490,6 @@ export const ZH_HANS_CONTENT = {
     '其他所有有机器人的游戏。网站上最强的机器人持有头衔，直到有挑战者在对抗赛中击败它；目前还没有挑战者下过头衔赛。',
   'champions.heldBy': '持有者',
   'champions.openBadge': '头衔待争',
-  'champions.challengeCta': '挑战此头衔',
   'champions.enginePikafish': '皮卡鱼',
   'champions.engineFairyStockfish8': 'Fairy-Stockfish 第 8 级',
   'champions.writeUpLink': '文章',
