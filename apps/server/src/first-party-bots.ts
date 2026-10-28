@@ -123,8 +123,9 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'misty-jungle-level-1',
       'misty-jungle-level-3',
     ],
-    // 'misty-xiangqi-mahjong': xmj rooms before 2026-10-27 stored the engine id
-    // as their pveBotId, so a hydrated room or a finished game still links here.
+    // 'misty-xiangqi-mahjong' is the tile bot's engine id, which Xiangqi Mahjong
+    // rooms created before 2026-10-28 stored as their pveBotId; a resumed one
+    // still finishes as Misty (migration 178 moved the rows already written).
     legacyBotIds: ['misty-dark-chess', 'misty-dmx', 'misty-banqi', 'misty-xiangqi-mahjong'],
   },
   {

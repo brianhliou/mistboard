@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { listBotRatingSnapshots, promoteBotRatingSnapshots } from './bot-rating-snapshots.js';
 import { getPublicBotProfile, listPublicBots, recordGameEnd } from './persistence.js';
+import { SEAT_WIN_RESULT } from './persistence-counted-games.js';
+import type { GameParticipantColor } from './persistence-games.js';
 import {
   assert,
   definePersistenceTests,
@@ -9,6 +12,11 @@ import {
   test,
 } from './persistence-test-support.js';
 import { tryHandle as tryHandleBotsRoute } from './routes/bots.js';
+import { XMJ_BOT_CLIENT_ID } from './server-xiangqi-mahjong-bots.js';
+import { buildTenantGameSummary } from './variant-tenant/events.js';
+import { appendTenantRuntimeEvent } from './variant-tenant/runtime.js';
+import { createXiangqiMahjongRoom, xiangqiMahjongRooms } from './xiangqi-mahjong-registration.js';
+import { xiangqiMahjongTenant } from './xiangqi-mahjong-tenant.js';
 
 type ResponseCapture = {
   body: string;
@@ -110,6 +118,218 @@ definePersistenceTests('bot profiles', () => {
       profile?.games.slice(0, 3).map((game) => game.roomId),
       ['mb-jq-3', 'mb-jq-2', 'mb-jq-1'],
     );
+  });
+
+  test('every Xiangqi Mahjong bot seat lands on the misty profile, stored rows included', async () => {
+    // The 2026-10-28 bug: a room made with no botId (the setup dialog, a rematch)
+    // stored its bot seat as subject_id 'misty-xiangqi-mahjong', an id with no
+    // bot profile, so /bot/misty showed 4 of Misty's 12 games. Two games through
+    // the live paths, one row stored before the fix and corrected by migration
+    // 178: all three must count for misty.
+    process.env.MISTBOARD_XIANGQI_MAHJONG_ENABLED = 'true';
+    await insertBotProfile('misty', 'Misty', 'public', {
+      gameSpecId: 'dark-chess',
+      supportedGameSpecIds: ['dark-chess', 'xiangqi-mahjong'],
+    });
+    const timeControl = { initialMs: 300_000, incrementMs: 5_000 };
+    for (const botId of [undefined, 'misty']) {
+      const created = await createXiangqiMahjongRoom(timeControl, 'east', {
+        engineId: XMJ_BOT_CLIENT_ID,
+        seat: 'west',
+        ...(botId ? { botId } : {}),
+      });
+      assert.ok(created.ok, `room created (botId ${botId})`);
+      if (!created.ok) return;
+      const room = created.room;
+      try {
+        const at = Date.now();
+        appendTenantRuntimeEvent(xiangqiMahjongTenant, room, {
+          type: 'seat-assigned',
+          at,
+          roomId: room.id,
+          clientId: 'human-east',
+          seat: 'east',
+        });
+        appendTenantRuntimeEvent(xiangqiMahjongTenant, room, {
+          type: 'seat-resigned',
+          at: at + 1,
+          roomId: room.id,
+          color: 'east',
+        });
+        await recordGameEnd(room.id, buildTenantGameSummary(xiangqiMahjongTenant, room));
+      } finally {
+        xiangqiMahjongRooms.delete(room.id);
+      }
+    }
+    const live = await getPublicBotProfile('misty');
+    assert.equal(
+      live?.recordsByGameSpecId['xiangqi-mahjong']?.games,
+      2,
+      'both live paths count for misty with no backfill',
+    );
+    // A seat written before the fix.
+    await recordGameEnd('xmj_before-fix', {
+      variant: 'xiangqi-mahjong',
+      mode: 'pve',
+      result: SEAT_WIN_RESULT.west,
+      termination: 'resignation',
+      plyCount: 0,
+      startedAt: new Date('2026-10-20T00:00:00Z'),
+      endedAt: new Date('2026-10-20T00:10:00Z'),
+      whiteClient: null,
+      blackClient: null,
+      whiteName: null,
+      blackName: null,
+      corpusId: null,
+      rated: false,
+      visibility: 'public',
+      participants: [
+        {
+          color: 'east',
+          displayName: 'Guest',
+          subjectType: 'guest',
+          subjectId: null,
+          visibility: 'public',
+        },
+        {
+          color: 'west',
+          displayName: 'Misty',
+          subjectType: 'bot',
+          subjectId: 'misty-xiangqi-mahjong',
+          engineId: XMJ_BOT_CLIENT_ID,
+          visibility: 'public',
+        },
+      ],
+    });
+    const migration = readFileSync(
+      new URL('../migrations/178_xiangqi_mahjong_misty_seat_identity.sql', import.meta.url),
+      'utf8',
+    );
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(migration);
+      // Idempotent: a second run changes nothing.
+      const rerun = await client.query(migration);
+      assert.equal(rerun.rowCount, 0);
+      const { rows } = await client.query<{ subject_id: string; engine_id: string | null }>(
+        `SELECT subject_id, engine_id FROM game_participants
+          WHERE game_id LIKE 'xmj_%' AND subject_type = 'bot'`,
+      );
+      assert.equal(rows.length, 3);
+      for (const row of rows) {
+        assert.deepEqual(row, { subject_id: 'misty', engine_id: XMJ_BOT_CLIENT_ID });
+      }
+    } finally {
+      await client.end();
+    }
+
+    const expected = { games: 3, wins: 3, losses: 0, draws: 0 };
+    const profile = await getPublicBotProfile('misty');
+    assert.deepEqual(profile?.recordsByGameSpecId['xiangqi-mahjong'], expected);
+    const listed = (await listPublicBots()).find((bot) => bot.id === 'misty');
+    assert.deepEqual(listed?.recordsByGameSpecId['xiangqi-mahjong'], expected);
+  });
+
+  test('counts the bot a win and a loss at every seat colour, the mahjong winds included', async () => {
+    // The Misty Xiangqi Mahjong bug (2026-10-28): the bot record's win check
+    // knew only white, black and red, so four Misty wins from the west seat
+    // read 0-4-0. One bot per colour, each with one won and one lost game, so a
+    // failure names the colour.
+    const colors = Object.keys(SEAT_WIN_RESULT) as GameParticipantColor[];
+
+    // Every colour the database accepts is a key of SEAT_WIN_RESULT, and every
+    // winning result it maps to is a result the database accepts. A migration
+    // that widens game_participants_color_check without the check fails here.
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    let dbColors: string[];
+    let dbResults: string[];
+    try {
+      const { rows } = await client.query<{ name: string; def: string }>(
+        `SELECT conname AS name, pg_get_constraintdef(oid) AS def
+           FROM pg_constraint
+          WHERE conname IN ('game_participants_color_check', 'games_result_check')`,
+      );
+      const quoted = (name: string) =>
+        [...(rows.find((row) => row.name === name)?.def ?? '').matchAll(/'([^']+)'/g)].map(
+          (match) => match[1]!,
+        );
+      dbColors = quoted('game_participants_color_check');
+      dbResults = quoted('games_result_check');
+    } finally {
+      await client.end();
+    }
+    assert.deepEqual([...colors].sort(), [...dbColors].sort());
+    for (const result of Object.values(SEAT_WIN_RESULT)) {
+      assert.ok(dbResults.includes(result), `${result} is a result the database accepts`);
+    }
+
+    for (const [index, color] of colors.entries()) {
+      const botId = `seat-${color}`;
+      const opponent = colors[(index + 1) % colors.length]!;
+      await insertBotProfile(botId, `Seat ${color}`, 'public', {
+        gameSpecId: 'xiangqi',
+        supportedGameSpecIds: ['xiangqi'],
+      });
+      for (const [suffix, result] of [
+        ['won', SEAT_WIN_RESULT[color]],
+        ['lost', SEAT_WIN_RESULT[opponent]],
+      ] as const) {
+        await recordGameEnd(`${botId}-${suffix}`, {
+          variant: 'xiangqi',
+          mode: 'pve',
+          result,
+          termination: 'king-captured',
+          plyCount: 20,
+          startedAt: new Date('2026-01-01T00:00:00Z'),
+          endedAt: new Date('2026-01-01T01:00:00Z'),
+          whiteClient: 'human-client',
+          blackClient: 'engine',
+          whiteName: null,
+          blackName: botId,
+          corpusId: null,
+          rated: false,
+          visibility: 'public',
+          participants: [
+            {
+              color: opponent,
+              displayName: 'Guest',
+              subjectType: 'guest',
+              subjectId: null,
+              visibility: 'public',
+            },
+            {
+              color,
+              displayName: botId,
+              subjectType: 'bot',
+              subjectId: botId,
+              visibility: 'public',
+            },
+          ],
+        });
+      }
+    }
+
+    const expected = { games: 2, wins: 1, losses: 1, draws: 0 };
+    const bots = await listPublicBots();
+    for (const color of colors) {
+      const botId = `seat-${color}`;
+      const listed = bots.find((bot) => bot.id === botId);
+      assert.deepEqual(listed?.record, expected, `${color} seat: directory lifetime record`);
+      assert.deepEqual(
+        listed?.recordsByGameSpecId,
+        { xiangqi: expected },
+        `${color} seat: directory per-variant record`,
+      );
+      const profile = await getPublicBotProfile(botId);
+      assert.deepEqual(profile?.record, expected, `${color} seat: profile lifetime record`);
+      assert.deepEqual(
+        profile?.recordsByGameSpecId,
+        { xiangqi: expected },
+        `${color} seat: profile per-variant record`,
+      );
+    }
   });
 
   test('the directory lists each bot its own per-variant record, summing to lifetime', async () => {

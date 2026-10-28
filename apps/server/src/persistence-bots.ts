@@ -1,6 +1,7 @@
 import { defaultEngineTimeControl } from '@mistboard/game';
 import type { GamePageCursor } from './game-page-cursor.js';
 import { PROVISIONAL_RD } from './glicko.js';
+import { seatWonGame } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
@@ -121,13 +122,11 @@ const BOT_VARIANT_GAMES_PAGE = 10;
 
 // "The bot's seat won this game", as a SQL predicate over a game_participants
 // row joined to its game. Shared by the lifetime and per-variant aggregates so
-// the two can never disagree about what a win is.
+// the two can never disagree about what a win is, and built from the site's one
+// seat-won check so a seat colour (mahjong's winds) cannot count as a loss here
+// while it counts as a win everywhere else.
 const BOT_SEAT_WON = `games.room_id IS NOT NULL
-                AND (
-                  (game_participants.color = 'white' AND games.result = 'white-wins')
-                  OR (game_participants.color = 'black' AND games.result = 'black-wins')
-                  OR (game_participants.color = 'red' AND games.result = 'red-wins')
-                )`;
+                AND ${seatWonGame('game_participants', 'games')}`;
 
 type BotGameRow = {
   room_id: string;
