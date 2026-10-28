@@ -1166,15 +1166,15 @@ function fitPuzzleGrip(column: HTMLElement): void {
     const painted = paintedPuzzleBoard(column);
     const paintedRect = painted.getBoundingClientRect();
     const gutter = column.getBoundingClientRect().width - paintedRect.width;
-    column.style.setProperty('--puzzle-board-inset', `${Math.max(0, Math.round(gutter / 2))}px`);
-    // Set on the layout too: the left column is the detail's sibling there,
-    // and on desktop it ends at the board's bottom edge like the right one.
+    const inset = `${Math.max(0, Math.round(gutter / 2))}px`;
+    // On the detail, not the column: the session row under the board is the
+    // column's sibling and lines its first chip up with the board's left edge
+    // from the same inset. Set on the column it never reached the row, which
+    // started in the gutter left of the board.
     const detail = column.closest<HTMLElement>('.puzzle-detail');
-    const layout = column.closest<HTMLElement>('.puzzles-layout');
+    (detail ?? column).style.setProperty('--puzzle-board-inset', inset);
     if (paintedRect.height > 0) {
-      const height = `${Math.round(paintedRect.height)}px`;
-      detail?.style.setProperty('--puzzle-board-height', height);
-      layout?.style.setProperty('--puzzle-board-height', height);
+      detail?.style.setProperty('--puzzle-board-height', `${Math.round(paintedRect.height)}px`);
     }
   });
 }

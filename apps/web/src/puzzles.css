@@ -151,8 +151,9 @@ a.puzzle-streak-chip[aria-current="step"] {
     0 0 0 4px #3692e7;
 }
 
-/* Under the board, from its left edge (--puzzle-board-inset, fitPuzzleGrip),
-   a ✓ or ✗ per puzzle finished this visit. */
+/* Under the board, from its left edge, a ✓ or ✗ per puzzle finished this
+   visit. --puzzle-board-inset (fitPuzzleGrip) is set on .puzzle-detail, not the
+   board column: this row is the column's sibling and would read 0 there. */
 .puzzle-session-chips {
   order: 4;
   grid-column: 2;
@@ -375,16 +376,42 @@ a.puzzle-streak-chip:focus-visible {
   box-shadow: none;
 }
 
+/* The board column's widest is the board's own drawn width, not the height
+   budget: a 9x10 board is narrower than it is tall, and a track sized from the
+   budget left a gutter between each side column and the board that grew as the
+   resize grip shrank the board. Its floor follows the board down past 420px for
+   the same reason. Other boards keep the budget and centre in their track. */
 .puzzles-layout {
+  --puzzle-board-track: var(--puzzle-surface-size);
+
   display: grid;
   grid-template-columns:
     minmax(270px, 374px)
-    minmax(420px, var(--puzzle-surface-size))
+    minmax(min(420px, var(--puzzle-board-track)), var(--puzzle-board-track))
     minmax(320px, 426px);
-  gap: clamp(12px, 1.3vw, 20px);
+  gap: clamp(10px, 0.9vw, 14px);
   align-items: start;
   justify-content: center;
   min-height: 0;
+}
+
+/* The 9x10 board's drawn width, the same ratios as .puzzle-xiangqi-board's
+   width below (320px is its min-width). */
+.puzzles-layout:has(.puzzle-xiangqi-board) {
+  --puzzle-board-track: max(320px, calc(var(--puzzle-surface-size) * 552 / 612));
+}
+
+:root[data-xiangqi-board-layout="cell"] .puzzles-layout:has(.puzzle-xiangqi-board) {
+  --puzzle-board-track: max(320px, calc(var(--puzzle-surface-size) * 540 / 612));
+}
+
+:root[data-board-coordinates="on"] .puzzles-layout:has(.puzzle-xiangqi-board) {
+  --puzzle-board-track: max(320px, calc(var(--puzzle-surface-size) * 576 / 636));
+}
+
+:root[data-board-coordinates="on"][data-xiangqi-board-layout="cell"]
+  .puzzles-layout:has(.puzzle-xiangqi-board) {
+  --puzzle-board-track: max(320px, calc(var(--puzzle-surface-size) * 564 / 636));
 }
 
 .puzzle-detail,
@@ -1206,21 +1233,23 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-actions {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 4px;
+  grid-template-columns: repeat(4, 48px);
+  justify-content: center;
+  align-items: center;
+  gap: clamp(10px, 1.8vw, 24px);
+  min-height: 52px;
 }
 
 .puzzle-button {
   display: grid;
   place-items: center;
-  width: 100%;
+  width: 48px;
   height: 44px;
   padding: 0;
-  border: 1px solid var(--site-border-soft);
-  border-radius: 4px;
-  background: var(--site-panel);
-  color: var(--site-text);
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--site-muted);
   cursor: pointer;
   font: inherit;
   font-size: 26px;
@@ -1233,9 +1262,8 @@ a.puzzle-streak-chip:focus-visible {
   display: block;
 }
 
-.puzzle-button:hover:not(:disabled),
+.puzzle-button:hover,
 .puzzle-button:focus-visible {
-  background: var(--site-panel-soft);
   color: var(--site-heading);
   outline: 2px solid transparent;
 }
@@ -1246,7 +1274,6 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-button:disabled {
   color: var(--site-border);
-  background: transparent;
   cursor: default;
 }
 
@@ -1321,22 +1348,19 @@ a.puzzle-streak-chip:focus-visible {
   .puzzles-layout {
     align-content: start;
   }
+}
 
-  /* The left column ends at the board's bottom edge like the right one: its
-     last card sits on that edge, and a column taller than the board scrolls. */
+/* The left column keeps its natural height, like Lichess's, so it can run past
+   the board's bottom edge. It spans both rows so the session row still sits
+   right under the board: the second row is flexible, which keeps the spanning
+   column out of the first row's size (that row is the board's height). */
+@media (min-width: 981px) {
+  .puzzles-layout {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
   .puzzles-sidebar {
-    display: flex;
-    flex-direction: column;
-    height: var(--puzzle-board-height, auto);
-    max-height: var(--puzzle-board-height, var(--puzzle-column-max-height));
-  }
-
-  .puzzles-sidebar > * {
-    flex: none;
-  }
-
-  .puzzles-sidebar > :last-child {
-    margin-top: auto;
+    grid-row: 1 / span 2;
   }
 }
 
@@ -1372,7 +1396,7 @@ a.puzzle-streak-chip:focus-visible {
   .puzzles-layout {
     grid-template-columns:
       minmax(230px, 310px)
-      minmax(400px, min(50vw, 620px))
+      minmax(min(400px, var(--puzzle-board-track)), min(50vw, 620px, var(--puzzle-board-track)))
       minmax(270px, 360px);
   }
 
