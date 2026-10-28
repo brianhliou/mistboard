@@ -2940,6 +2940,7 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   'crazyhouse-xiangqi': 'crazyhouse-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
+  'three-kingdoms-banqi': 'three-kingdoms-banqi',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
   'xiangqi-mahjong-32': 'xiangqi-mahjong',
