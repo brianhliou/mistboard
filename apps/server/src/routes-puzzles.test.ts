@@ -9,6 +9,7 @@ import {
   type XiangqiPuzzle,
 } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
+import { puzzleServingRating } from './puzzle-rating.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/puzzles.js';
 
@@ -102,6 +103,21 @@ test('puzzle list returns surfaced summaries without solutions', async () => {
     body.puzzles.every((puzzle) => puzzle.ratingProvisional),
     true,
   );
+});
+
+test('puzzle list serves each puzzle on its rating folded with solution length (#712)', async () => {
+  const response = await route('/api/puzzles');
+  const body = JSON.parse(response.body) as {
+    puzzles: Array<{ solutionPlyCount: number; rating: number; servingRating?: number }>;
+  };
+  assert.equal(response.status, 200);
+  for (const puzzle of body.puzzles) {
+    // No persistence here, so no outcomes: the length-folded prior.
+    assert.equal(
+      puzzle.servingRating,
+      puzzleServingRating({ prior: puzzle.rating, solutionPlyCount: puzzle.solutionPlyCount }),
+    );
+  }
 });
 
 test('puzzle list filters by variant, and a retired variant filters to nothing', async () => {

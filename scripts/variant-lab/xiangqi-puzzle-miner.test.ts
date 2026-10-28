@@ -9,6 +9,7 @@ import {
   validateStandardXiangqiPuzzle,
   type XiangqiPuzzle,
 } from '../../packages/game/src/index.ts';
+import { dhtmlxqMeta, loadJsonGames } from './xiangqi-puzzle-miner.ts';
 
 const execFileAsync = promisify(execFile);
 const miner = resolve(import.meta.dirname, 'xiangqi-puzzle-miner.ts');
@@ -169,4 +170,47 @@ test('normal candidates still publish when their verified line meets the minimum
   assert.equal(seed.puzzles.length, 1);
   assert.equal(seed.puzzles[0]?.solution.length, 1);
   assert.equal(validateStandardXiangqiPuzzle(seed.puzzles[0]!).ok, true);
+});
+
+test('DhtmlXQ metadata carries the archive page the source credit needs (#712)', () => {
+  const raw = [
+    '[DhtmlXQ_title]Title only[/DhtmlXQ_title]',
+    '[DhtmlXQ_date]1987.5.3[/DhtmlXQ_date]',
+    '[DhtmlXQ_result]黑胜[/DhtmlXQ_result]',
+    '[DhtmlXQ_red]R[/DhtmlXQ_red]',
+    '[DhtmlXQ_black]B[/DhtmlXQ_black]',
+    '[DhtmlXQ_source_url]http://www.dpxq.com/hldcg/search/view_m_7.html[/DhtmlXQ_source_url]',
+  ].join('\n');
+  assert.deepEqual(dhtmlxqMeta(raw, 'view_m_7', 'dpxq-archive-test'), {
+    event: 'Title only',
+    playedOn: '1987-05-03',
+    result: '0-1',
+    redName: 'R',
+    blackName: 'B',
+    sourceSlug: 'dpxq-archive-test',
+    sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_7.html',
+    sourceGameId: 'view_m_7',
+  });
+});
+
+test('a JSON games export loads in order, skips short games and honours offset and limit', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'xq-miner-json-'));
+  const file = join(dir, 'games.json');
+  const moves = (n: number) => Array.from({ length: n }, () => 'h3e3');
+  writeFileSync(
+    file,
+    JSON.stringify({
+      games: [
+        { id: 'a', moves: moves(30) },
+        { id: 'short', moves: moves(5) },
+        { id: 'b', moves: moves(30), meta: { sourceSlug: 'elephantchess-pvp' } },
+        { id: 'c', moves: moves(30) },
+      ],
+    }),
+  );
+  const games = loadJsonGames({ gamesFile: file, plyMin: 20, seed: 0, offset: 1, limit: 1 });
+  assert.deepEqual(
+    games.map((game) => [game.id, game.meta?.sourceSlug]),
+    [['b', 'elephantchess-pvp']],
+  );
 });

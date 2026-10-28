@@ -205,6 +205,7 @@ export const ZH_HANS_PLAY = {
   'puzzle.autoNext': '解开后直接跳到下一题',
   'puzzle.fromGame': '取自对局',
   'puzzle.fromGameWith': '取自对局 · {details}',
+  'puzzle.sourceCredit': '对局来源：',
   'puzzle.label': '题目 ',
   'puzzle.winning': '优势',
   'puzzle.toMove': '{color}走棋',

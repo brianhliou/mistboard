@@ -4,6 +4,7 @@
  * built on the seen-set. All best-effort: puzzle play works without storage.
  */
 
+import { PUZZLE_NEW_PLAYER_RATING } from '@mistboard/game';
 import type { PuzzleSummary } from './adapter.js';
 
 const SOLVED_PUZZLES_STORAGE_KEY = 'mistboard:puzzles:solved';
@@ -63,7 +64,7 @@ export function rotatePuzzleOrder(
     unseenByVariant.set(puzzle.variant, group);
   }
   const adaptive = [...unseenByVariant.values()].flatMap((group) =>
-    adaptivePuzzleOrder(group, targetRatings.get(group[0]!.variant) ?? 1500),
+    adaptivePuzzleOrder(group, targetRatings.get(group[0]!.variant) ?? PUZZLE_NEW_PLAYER_RATING),
   );
   seenList.sort((a, b) => (seen.get(a.id) ?? 0) - (seen.get(b.id) ?? 0));
   return [...adaptive, ...seenList];
@@ -82,6 +83,13 @@ export function rotatePuzzleOrder(
 // get variety -- just the closest variety available, not the whole range.
 const EXPLORE_WINDOWS = [300, 600, 1200] as const;
 
+// Match on the serving rating when the server sent one (#712): the rating
+// folded with solution length and what players actually did. The displayed
+// rating alone was the prior for nearly every puzzle.
+function matchRating(puzzle: PuzzleSummary): number {
+  return puzzle.servingRating ?? puzzle.rating;
+}
+
 function exploreIndex(
   remaining: readonly { puzzle: PuzzleSummary }[],
   targetRating: number,
@@ -89,7 +97,7 @@ function exploreIndex(
   for (const window of EXPLORE_WINDOWS) {
     const withinBand: number[] = [];
     for (let index = 0; index < remaining.length; index += 1) {
-      if (Math.abs(remaining[index]!.puzzle.rating - targetRating) <= window)
+      if (Math.abs(matchRating(remaining[index]!.puzzle) - targetRating) <= window)
         withinBand.push(index);
     }
     if (withinBand.length > 0) {
@@ -122,7 +130,7 @@ function adaptivePuzzleOrder(
         const primaryTheme = candidate.puzzle.themes[0];
         const repeatPenalty = primaryTheme && recentThemes.has(primaryTheme) ? 75 : 0;
         const score =
-          Math.abs(candidate.puzzle.rating - targetRating) + repeatPenalty + candidate.jitter;
+          Math.abs(matchRating(candidate.puzzle) - targetRating) + repeatPenalty + candidate.jitter;
         if (score < bestScore) {
           bestScore = score;
           selectedIndex = index;

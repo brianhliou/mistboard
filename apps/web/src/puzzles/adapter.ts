@@ -60,8 +60,13 @@ export type PuzzleSummary = {
   solutionPlyCount: number;
   rating: number;
   ratingProvisional: boolean;
+  /** What the queue matches against (#712): the rating folded with solution
+   *  length and observed outcomes. Sent on list responses; display stays
+   *  `rating`. */
+  servingRating?: number;
   // Attribution for the "From game" card (standard-xiangqi mined puzzles). The
-  // source game is not hosted yet, so this is display-only, not a link.
+  // source game is not hosted, so this is display metadata; the one link is
+  // the credit a source such as DPXQ requires back to its original game page.
   sourceGame?: {
     gameId: string;
     ply: number;
@@ -70,6 +75,7 @@ export type PuzzleSummary = {
     result?: string;
     redName?: string;
     blackName?: string;
+    attribution?: { name: string; url: string };
   };
 };
 
