@@ -151,7 +151,7 @@ export type PuzzleSession = {
   // The source game's moves before the setup move, shown greyed at the top of
   // the move list and steppable read-only (viewPly < 0, see firstPuzzleViewPly).
   // Absent where the list starts at the setup move: no history sent, a variant
-  // without historyStart, or a mode that leaves it out (Streak, embeds).
+  // without historyStart, or an embed.
   history?: PuzzleMove[];
   // Post-completion engine analysis (adapters that expose createAnalysis).
   // Created lazily the first time a completed puzzle renders, then persists
