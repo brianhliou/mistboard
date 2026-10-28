@@ -358,7 +358,8 @@ describe('flip styles (?flip= spike)', () => {
     expect(lift?.keyframes.every((k) => String(k.filter).startsWith('drop-shadow('))).toBe(true);
     const turn = calls.find((call) => call.target === 'piece-flip-turn');
     const turns = turn?.keyframes.map((k) => String(k.transform)) ?? [];
-    expect(turns.every((t) => t.includes(`${axis}(`) && t.includes('perspective('))).toBe(true);
+    // No perspective(): Chrome draws it on SVG as a widening skew.
+    expect(turns.every((t) => t.includes(`${axis}(`) && !t.includes('perspective('))).toBe(true);
     const midpoint = turn?.keyframes.filter((k) => k.offset === 0.5).map((k) => k.transform);
     expect(midpoint).toEqual([
       expect.stringContaining(`${axis}(90deg)`),
