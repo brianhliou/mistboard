@@ -64,9 +64,11 @@ export type PuzzleSummary = {
    *  length and observed outcomes. Sent on list responses; display stays
    *  `rating`. */
   servingRating?: number;
-  // Attribution for the "From game" card (standard-xiangqi mined puzzles). The
-  // source game is not hosted, so this is display metadata; the one link is
-  // the credit a source such as DPXQ requires back to its original game page.
+  // Attribution for the "From game" card (standard-xiangqi mined puzzles).
+  // `attribution` is the credit a source such as DPXQ requires back to its
+  // original game page (#712). `hosted` (detail only) means the server holds
+  // the game and its page serves it, so the card links there; the names are
+  // then the game row's.
   sourceGame?: {
     gameId: string;
     ply: number;
@@ -76,6 +78,7 @@ export type PuzzleSummary = {
     redName?: string;
     blackName?: string;
     attribution?: { name: string; url: string };
+    hosted?: boolean;
   };
 };
 
@@ -88,7 +91,14 @@ export type PuzzleSetupMove = {
   captured: { color: PuzzleColor; role: string } | null;
 };
 
-export type PuzzleDetail = PuzzleSummary & { initial: PuzzleState; setupMove?: PuzzleSetupMove };
+export type PuzzleDetail = PuzzleSummary & {
+  initial: PuzzleState;
+  setupMove?: PuzzleSetupMove;
+  // The source game's moves before the setup move, from its opening position
+  // (standard xiangqi with a stored, listed source game). Never past the
+  // puzzle's start: the server cuts it there.
+  history?: PuzzleMove[];
+};
 
 export type FeedbackKind = 'neutral' | 'good' | 'bad' | 'pending';
 
@@ -134,6 +144,11 @@ export type PuzzleSession = {
   // with input blocked, until the glide hands over (null from then on, or from
   // the start when animation is off or the variant cannot rebuild it exactly).
   setupIntro: PuzzleState | null;
+  // The source game's moves before the setup move, shown greyed at the top of
+  // the move list and steppable read-only (viewPly < 0, see firstPuzzleViewPly).
+  // Absent where the list starts at the setup move: no history sent, a variant
+  // without historyStart, or a mode that leaves it out (Streak, embeds).
+  history?: PuzzleMove[];
   // Post-completion engine analysis (adapters that expose createAnalysis).
   // Created lazily the first time a completed puzzle renders, then persists
   // across renderSession() rebuilds so the engine toggle + eval + arrows
@@ -236,6 +251,14 @@ export type PuzzleBoardAdapter = {
    * information, or no capture record); the trainer then shows `initial` at once.
    */
   preSetupState?(puzzle: PuzzleDetail): PuzzleState | null;
+  /**
+   * OPTIONAL: the source game's opening position, from which `puzzle.history`
+   * replays to the board before the setup move, or null when this puzzle has
+   * none. Omit for a variant without stored source games.
+   */
+  historyStart?(puzzle: PuzzleDetail): PuzzleState | null;
+  /** OPTIONAL position-aware labels for `history`, played from historyStart. */
+  historyLabels?(puzzle: PuzzleDetail, history: readonly PuzzleMove[]): string[];
   /** Side icon SVG for the feedback panel (the variant's "general"). */
   sideIconSvg(puzzle: PuzzleDetail): string;
   /** Post-completion engine analysis; omit when the variant has no client engine. */
@@ -248,6 +271,15 @@ export type PuzzleBoardAdapter = {
 // replay, and not the pre-setup position of the opening glide.
 export function isReplayLive(session: PuzzleSession): boolean {
   return session.setupIntro === null && session.viewPly >= session.playedMoves.length;
+}
+
+// The replay cursor's floor. viewPly 0 is `initial` (the setup move just
+// played) and N > 0 is after the solution's Nth ply; with the source game's
+// history shown, -1 is the board before the setup move, -k the board after the
+// game's (H + 1 - k)th move, and -(H + 1) the game's opening position.
+export function firstPuzzleViewPly(session: PuzzleSession): number {
+  const length = session.history?.length ?? 0;
+  return length > 0 ? -(length + 1) : 0;
 }
 
 export function activeTurn(session: PuzzleSession): PuzzleColor {

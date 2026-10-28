@@ -518,6 +518,18 @@ a.puzzle-result-chip:focus-visible {
   text-decoration: underline;
 }
 
+.puzzle-source-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--site-border);
+  text-underline-offset: 2px;
+}
+
+.puzzle-source-link:hover {
+  color: var(--site-link);
+  text-decoration-color: currentColor;
+}
+
 /* "From game" attribution: one row per player, a color disc + name, with a
    result glyph pushed to the trailing edge on the side that won. */
 .puzzle-source-player {
@@ -793,6 +805,24 @@ a.puzzle-result-chip:focus-visible {
 .puzzle-move-cell--revealed {
   color: var(--site-muted);
   font-style: italic;
+}
+
+/* The source game's moves before the puzzle, lichess-style: greyed, so the
+   setup move and the solution read as the part that is the puzzle. */
+.puzzle-move-cell--history {
+  color: var(--site-muted);
+}
+
+.puzzle-move-cell--active.puzzle-move-cell--history {
+  color: var(--site-text);
+}
+
+.puzzle-move-cell--jump {
+  cursor: pointer;
+}
+
+.puzzle-move-cell--jump:not(.puzzle-move-cell--active):hover {
+  color: var(--site-heading);
 }
 
 .puzzle-feedback {

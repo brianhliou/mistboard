@@ -15,12 +15,11 @@ import {
   type XiangqiMotifId,
   type XiangqiMove,
   type XiangqiPuzzle,
-  type XiangqiPuzzleSetupMove,
 } from '@mistboard/game';
 import { currentAccountUser } from '../account-session.js';
 import { createAuthRateLimiter } from '../auth-rate-limit.js';
 import { isPlayDisabled, isInitialized as persistenceInitialized } from '../persistence.js';
-import { getHistoricalXiangqiGameMoves } from '../persistence-historical-xiangqi.js';
+import { getHistoricalXiangqiPuzzleSourceGame } from '../persistence-historical-xiangqi.js';
 import {
   isPuzzleQualitySessionId,
   listPuzzleServingEvidence,
@@ -48,7 +47,7 @@ import {
   puzzleServingRating,
   seedPuzzleRating,
 } from '../puzzle-rating.js';
-import { puzzleSetupMove } from '../puzzle-setup-move.js';
+import { type PuzzleDetailSourceFields, puzzleDetailSourceFields } from '../puzzle-setup-move.js';
 import { getPuzzleStore, type PuzzleStoreSnapshot } from '../puzzle-store.js';
 import { clientIpForRateLimit } from '../server-policy.js';
 import { rememberExcludedDevice } from '../stats-excluded-device.js';
@@ -101,15 +100,12 @@ type PuzzleSummary = {
 
 type PuzzleDetail = PuzzleSummary & {
   initial: PublicPuzzle['initial'];
-  // Denormalized attribution for the "From game" card (standard-xiangqi mined
-  // puzzles only). The source game itself is not hosted, so this is display
-  // metadata; the one link in it is `attribution.url`, the credit a source
-  // such as DPXQ requires back to its original game page (#712).
-  sourceGame?: XiangqiPuzzle['sourceGame'];
-  // The setup move (initial.lastMove) with the piece it captured, derived from
-  // the stored source game; absent when that game is not stored (#664).
-  setupMove?: XiangqiPuzzleSetupMove;
-};
+  // The "From game" card's attribution (standard-xiangqi mined puzzles only).
+  // Its credit link is `attribution.url`, the source's original game page
+  // (#712). From the stored source game it adds the setup move with what it
+  // captured (#664), the game's moves before it, and `hosted: true` only when
+  // our own game page serves that row (not private). See puzzle-setup-move.ts.
+} & PuzzleDetailSourceFields;
 
 export async function tryHandle(
   _ctx: HttpApiContext,
@@ -556,7 +552,7 @@ function puzzleSummary(
 async function puzzleDetail(puzzle: PublicPuzzle): Promise<PuzzleDetail> {
   const stored = await getPuzzleRating(puzzle.id);
   const store = await getPuzzleStore();
-  const setupMove = await detailSetupMove(puzzle);
+  const source = await detailSourceFields(puzzle);
   return {
     ...puzzleSummary(
       puzzle,
@@ -566,19 +562,19 @@ async function puzzleDetail(puzzle: PublicPuzzle): Promise<PuzzleDetail> {
       store.motifsById.get(puzzle.id) ?? [],
     ),
     initial: puzzle.initial,
-    ...(puzzle.variant === XIANGQI_SPEC_ID && puzzle.sourceGame
-      ? { sourceGame: puzzle.sourceGame }
-      : {}),
-    ...(setupMove ? { setupMove } : {}),
+    ...source,
   };
 }
 
-// The opponent's setup move with what it captured (#664), so the trainer can
-// open one move earlier and glide it in. Standard xiangqi only, and only when
-// the source game is stored (persistence on); every other case omits the field.
-async function detailSetupMove(puzzle: PublicPuzzle): Promise<XiangqiPuzzleSetupMove | null> {
-  if (puzzle.variant !== XIANGQI_SPEC_ID || !persistenceInitialized()) return null;
-  return puzzleSetupMove(puzzle, getHistoricalXiangqiGameMoves);
+// Standard xiangqi only. With persistence on, the stored source game adds the
+// setup move, the moves before it and the row's player names; off, the stored
+// attribution goes out unlinked.
+async function detailSourceFields(puzzle: PublicPuzzle): Promise<PuzzleDetailSourceFields> {
+  if (puzzle.variant !== XIANGQI_SPEC_ID) return {};
+  return puzzleDetailSourceFields(
+    puzzle,
+    persistenceInitialized() ? getHistoricalXiangqiPuzzleSourceGame : null,
+  );
 }
 
 // Outcome counts move slowly next to list traffic, so the list reads them at

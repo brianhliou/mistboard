@@ -26,6 +26,7 @@ import { initLiveSound, playSound } from './live-sound.js';
 import { createMoveNavBar, type MoveNavBar } from './move-nav-bar.js';
 import {
   clonePuzzleState,
+  firstPuzzleViewPly,
   isPuzzleComplete,
   type PuzzleDetail,
   type PuzzleMove,
@@ -181,6 +182,9 @@ export async function mountPuzzles(
       ratedEnabled,
       userRating,
       ratingDelta,
+      selectedSource: session
+        ? { id: session.puzzle.id, sourceGame: session.puzzle.sourceGame }
+        : null,
       onVariantChange: async (nextFilter) => {
         variantFilter = nextFilter;
         ratingDelta = null;
@@ -291,7 +295,7 @@ export async function mountPuzzles(
       trackPuzzleAttempted(session, 'abandoned');
     }
     session?.analysis?.dispose();
-    const opened = createPuzzleSession(puzzle);
+    const opened = createPuzzleSession(puzzle, { history: true });
     session = opened;
     void sendPuzzleQualityEvent(puzzle.id, opened.qualitySessionId, 'view').catch(() => {});
     markPuzzleSeen(id);
@@ -401,16 +405,27 @@ export async function mountPuzzles(
   });
 }
 
-function createPuzzleSession(puzzle: PuzzleDetail): PuzzleSession {
+// `history`: show the source game's moves before the puzzle in the move list
+// (the trainer page). Embeds leave it out: a small frame.
+function createPuzzleSession(
+  puzzle: PuzzleDetail,
+  opts: { history?: boolean } = {},
+): PuzzleSession {
+  const adapter = puzzleBoardAdapter(puzzle.variant);
+  // Only behind a setup move the server verified: the history ends one move
+  // before it, and the board replays it from the variant's opening.
+  const history =
+    opts.history && puzzle.setupMove && puzzle.history?.length && adapter.historyStart?.(puzzle)
+      ? puzzle.history
+      : null;
   // Open one move earlier and glide the opponent's setup move in, lichess
   // style (#664), only when pieces animate at all and the adapter can rebuild
   // that position exactly; otherwise `initial` shows at once, as before.
   const setupIntro =
-    pieceAnimationDurationMs() > 0
-      ? (puzzleBoardAdapter(puzzle.variant).preSetupState?.(puzzle) ?? null)
-      : null;
+    pieceAnimationDurationMs() > 0 ? (adapter.preSetupState?.(puzzle) ?? null) : null;
   return {
     setupIntro,
+    ...(history ? { history } : {}),
     qualitySessionId: globalThis.crypto.randomUUID(),
     puzzle,
     state: clonePuzzleState(puzzle.initial),
@@ -479,7 +494,7 @@ function renderPuzzleDetail(
   const trainer = document.createElement('div');
   trainer.className = 'puzzle-trainer-panel';
   trainer.append(
-    moveListPanel(session),
+    moveListPanel(session, (viewPly) => jumpPuzzle(session, renderSession, viewPly)),
     feedbackPanel(session, navigation, renderSession, {
       onHint: () => void requestHint(session, renderSession),
       onReveal: () => void revealSolution(session, renderSession),
@@ -579,19 +594,24 @@ export type PuzzleScrub = 'first' | 'previous' | 'next' | 'last';
 // Move the replay cursor. Shared by the arrow buttons and the keyboard handler
 // so both animate identically. No-op while a submission is in flight or when the
 // cursor is already at the requested end.
+// The cursor runs from firstPuzzleViewPly (the source game's opening, when
+// its history is shown; else `initial`) to the solution's last played ply.
+// Held while the opening glide is pending: the board then shows the position
+// before the setup move whatever the cursor says.
 function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: PuzzleScrub): void {
-  if (session.submitting) return;
+  if (session.submitting || session.setupIntro) return;
+  const firstPly = firstPuzzleViewPly(session);
   const lastPly = session.playedMoves.length;
   switch (action) {
     case 'first':
-      if (session.viewPly <= 0) return;
-      session.viewPly = 0;
+      if (session.viewPly <= firstPly) return;
+      session.viewPly = firstPly;
       renderSession();
       return;
     case 'previous': {
-      if (session.viewPly <= 0) return;
+      if (session.viewPly <= firstPly) return;
       // Reverse-glide the move being undone (replay back-step).
-      const undone = session.playedMoves[session.viewPly - 1];
+      const undone = puzzleMoveIntoView(session, session.viewPly);
       session.viewPly -= 1;
       renderSession();
       if (undone) animatePuzzleMove(session, undone, { reverse: true });
@@ -600,8 +620,8 @@ function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: 
     case 'next': {
       if (session.viewPly >= lastPly) return;
       // Glide the move being stepped into (replay forward step).
-      const stepped = session.playedMoves[session.viewPly];
       session.viewPly += 1;
+      const stepped = puzzleMoveIntoView(session, session.viewPly);
       renderSession();
       if (stepped) animatePuzzleMove(session, stepped);
       return;
@@ -614,10 +634,37 @@ function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: 
   }
 }
 
+// A click on a move in the list: show the position after it. One step glides
+// like the arrows; a longer jump repaints, as ⏮ and ⏭ do.
+function jumpPuzzle(session: PuzzleSession, renderSession: () => void, viewPly: number): void {
+  if (session.submitting || session.setupIntro) return;
+  const target = Math.min(
+    session.playedMoves.length,
+    Math.max(firstPuzzleViewPly(session), viewPly),
+  );
+  if (target === session.viewPly) return;
+  if (target === session.viewPly + 1) scrubPuzzle(session, renderSession, 'next');
+  else if (target === session.viewPly - 1) scrubPuzzle(session, renderSession, 'previous');
+  else {
+    session.viewPly = target;
+    renderSession();
+  }
+}
+
+// The move that leads into the position at `viewPly`: a solution ply, the setup
+// move (0), or a move of the source game's history (< 0; none for its opening).
+function puzzleMoveIntoView(session: PuzzleSession, viewPly: number): PuzzleMove | undefined {
+  if (viewPly > 0) return session.playedMoves[viewPly - 1];
+  if (viewPly === 0) return session.puzzle.initial.lastMove;
+  const history = session.history ?? [];
+  return history[history.length + viewPly];
+}
+
 function puzzleScrubBounds(session: PuzzleSession): { atStart: boolean; atEnd: boolean } {
+  const held = session.submitting || session.setupIntro !== null;
   return {
-    atStart: session.viewPly <= 0 || session.submitting,
-    atEnd: session.viewPly >= session.playedMoves.length || session.submitting,
+    atStart: session.viewPly <= firstPuzzleViewPly(session) || held,
+    atEnd: session.viewPly >= session.playedMoves.length || held,
   };
 }
 
@@ -1261,6 +1308,16 @@ function puzzleReplayState(session: PuzzleSession): PuzzleState {
   if (session.setupIntro) return session.setupIntro;
   if (session.viewPly >= session.playedMoves.length) return session.state;
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
+  const history = session.history ?? [];
+  const start = session.viewPly < 0 ? adapter.historyStart?.(session.puzzle) : null;
+  if (start) {
+    // The source game: its opening with its first (H + 1 + viewPly) moves.
+    let state = start;
+    for (const move of history.slice(0, Math.max(0, history.length + 1 + session.viewPly))) {
+      state = adapter.applyMove(state, move);
+    }
+    return state;
+  }
   let state: PuzzleState = clonePuzzleState(session.puzzle.initial);
   const visibleMoves = session.playedMoves.slice(0, Math.max(0, session.viewPly));
   for (const move of visibleMoves) {
