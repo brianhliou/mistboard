@@ -22,13 +22,17 @@ import {
   sourceGameLines,
   tagsPanel,
   variantLabel,
+  withSelectedSource,
 } from './queue-panel.js';
 import { puzzleThemePicker, puzzleThemesLink } from './themes.js';
 
 export type PuzzlePhoneMenuKey = 'rated' | 'autoNext' | 'variant';
 
 function currentPuzzle(props: QueuePanelProps) {
-  return props.queue.find((puzzle) => puzzle.id === props.selectedId) ?? props.queue[0] ?? null;
+  return withSelectedSource(
+    props.queue.find((puzzle) => puzzle.id === props.selectedId) ?? props.queue[0] ?? null,
+    props.selectedSource,
+  );
 }
 
 /** Puzzle code and status, then the goal (spoiler-gated like the sidebar) and

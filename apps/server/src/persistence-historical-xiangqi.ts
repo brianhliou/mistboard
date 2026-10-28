@@ -581,14 +581,30 @@ export async function getHistoricalXiangqiGame(id: string): Promise<HistoricalXi
   return rows[0] ? gameFromRow(rows[0]) : null;
 }
 
-// Only the move list, for callers that replay one game (the puzzle setup move,
-// #664) and should not pull the whole row. Null when the game is not stored.
-export async function getHistoricalXiangqiGameMoves(id: string): Promise<XiangqiMove[] | null> {
-  const { rows } = await getPool().query<{ moves: XiangqiMove[] }>(
-    `SELECT moves FROM historical_xiangqi_games WHERE id = $1 LIMIT 1`,
+// What a puzzle detail needs from its source game (the setup move #664, the
+// moves before it, the players, whether the game page serves it), without
+// pulling the whole row. Null when the game is not stored.
+export async function getHistoricalXiangqiPuzzleSourceGame(id: string): Promise<{
+  moves: XiangqiMove[];
+  redNameRaw: string | null;
+  blackNameRaw: string | null;
+  visibility: HistoricalXiangqiVisibility;
+} | null> {
+  const { rows } = await getPool().query<
+    Pick<GameRow, 'moves' | 'red_name_raw' | 'black_name_raw' | 'visibility'>
+  >(
+    `SELECT moves, red_name_raw, black_name_raw, visibility
+       FROM historical_xiangqi_games WHERE id = $1 LIMIT 1`,
     [id],
   );
-  return rows[0] ? rows[0].moves : null;
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    moves: row.moves,
+    redNameRaw: row.red_name_raw,
+    blackNameRaw: row.black_name_raw,
+    visibility: row.visibility,
+  };
 }
 
 export async function getHistoricalXiangqiSource(

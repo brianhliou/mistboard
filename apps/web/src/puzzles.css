@@ -100,7 +100,8 @@
 }
 
 /* The run's puzzles: small numbered chips, solved green, failed red, skipped
-   dashed and muted, the puzzle in play outlined in the accent. */
+   dashed and muted, the puzzle in play filled blue (Lichess's session row).
+   The regular page's session row under the board is the same chip. */
 .puzzle-streak-chips {
   display: flex;
   flex-wrap: wrap;
@@ -140,8 +141,29 @@
 }
 
 .puzzle-streak-chip--current {
-  border-color: var(--site-accent);
-  color: var(--site-accent);
+  background: #3692e7;
+  color: #fff;
+}
+
+a.puzzle-streak-chip[aria-current="step"] {
+  box-shadow:
+    0 0 0 2px var(--site-bg, #fff),
+    0 0 0 4px #3692e7;
+}
+
+/* Under the board, from its left edge, a ✓ or ✗ per puzzle finished this
+   visit. --puzzle-board-inset (fitPuzzleGrip) is set on .puzzle-detail, not the
+   board column: this row is the column's sibling and would read 0 there. */
+.puzzle-session-chips {
+  order: 4;
+  grid-column: 2;
+  min-width: 0;
+  min-height: 26px;
+  padding-inline: var(--puzzle-board-inset, 0px);
+}
+
+.puzzle-session-chips .puzzle-streak-chip {
+  font-size: 14px;
 }
 
 a.puzzle-streak-chip:hover {
@@ -231,8 +253,10 @@ a.puzzle-streak-chip:focus-visible {
   background: transparent;
 }
 
-/* Move list after a miss: the right move ✓ in its row, the played miss ✗ on
-   its own row under it, like a variation. */
+/* Move list: a move the solver found ✓ and green, each wrong try ✗ on its own
+   row under the row it was tried in, like a variation; moves the solution
+   showed are muted (after Streak's miss, the move that was right there keeps
+   its ✓). */
 .puzzle-move-cell--right .puzzle-move-mark {
   color: #2b8a57;
   font-weight: 700;
@@ -352,16 +376,42 @@ a.puzzle-streak-chip:focus-visible {
   box-shadow: none;
 }
 
+/* The board column's widest is the board's own drawn width, not the height
+   budget: a 9x10 board is narrower than it is tall, and a track sized from the
+   budget left a gutter between each side column and the board that grew as the
+   resize grip shrank the board. Its floor follows the board down past 420px for
+   the same reason. Other boards keep the budget and centre in their track. */
 .puzzles-layout {
+  --puzzle-board-track: var(--puzzle-surface-size);
+
   display: grid;
   grid-template-columns:
     minmax(270px, 374px)
-    minmax(420px, var(--puzzle-surface-size))
+    minmax(min(420px, var(--puzzle-board-track)), var(--puzzle-board-track))
     minmax(320px, 426px);
-  gap: clamp(12px, 1.3vw, 20px);
+  gap: clamp(10px, 0.9vw, 14px);
   align-items: start;
   justify-content: center;
   min-height: 0;
+}
+
+/* The 9x10 board's drawn width, the same ratios as .puzzle-xiangqi-board's
+   width below (320px is its min-width). */
+.puzzles-layout:has(.puzzle-xiangqi-board) {
+  --puzzle-board-track: max(320px, calc(var(--puzzle-surface-size) * 552 / 612));
+}
+
+:root[data-xiangqi-board-layout="cell"] .puzzles-layout:has(.puzzle-xiangqi-board) {
+  --puzzle-board-track: max(320px, calc(var(--puzzle-surface-size) * 540 / 612));
+}
+
+:root[data-board-coordinates="on"] .puzzles-layout:has(.puzzle-xiangqi-board) {
+  --puzzle-board-track: max(320px, calc(var(--puzzle-surface-size) * 576 / 636));
+}
+
+:root[data-board-coordinates="on"][data-xiangqi-board-layout="cell"]
+  .puzzles-layout:has(.puzzle-xiangqi-board) {
+  --puzzle-board-track: max(320px, calc(var(--puzzle-surface-size) * 564 / 636));
 }
 
 .puzzle-detail,
@@ -635,6 +685,18 @@ a.puzzle-streak-chip:focus-visible {
   text-decoration: underline;
 }
 
+.puzzle-source-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--site-border);
+  text-underline-offset: 2px;
+}
+
+.puzzle-source-link:hover {
+  color: var(--site-link);
+  text-decoration-color: currentColor;
+}
+
 /* "From game" attribution: one row per player, a color disc + name, with a
    result glyph pushed to the trailing edge on the side that won. */
 .puzzle-source-player {
@@ -672,11 +734,6 @@ a.puzzle-streak-chip:focus-visible {
 .puzzle-rating-card {
   align-content: start;
   gap: 14px;
-  min-height: 122px;
-}
-
-.puzzle-rating-card--practice {
-  min-height: 118px;
 }
 
 .puzzle-rating-card p {
@@ -698,6 +755,19 @@ a.puzzle-streak-chip:focus-visible {
   font-size: clamp(44px, 5vw, 62px);
   font-weight: 400;
   line-height: 1;
+}
+
+.puzzle-rating-card .puzzle-rating-summary--none {
+  grid-auto-flow: column;
+  justify-content: space-between;
+  align-items: baseline;
+  text-align: start;
+}
+
+.puzzle-rating-card .puzzle-rating-summary--none strong {
+  color: var(--site-muted);
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .puzzle-rating-meta {
@@ -725,17 +795,6 @@ a.puzzle-streak-chip:focus-visible {
   color: var(--site-muted);
   font-size: 13px;
   line-height: 1.35;
-}
-
-.puzzle-theme-card h2 {
-  color: var(--site-link);
-  font-size: 20px;
-  font-weight: 400;
-  text-transform: uppercase;
-}
-
-.puzzle-theme-card h2::before {
-  content: "« ";
 }
 
 .puzzle-theme-card p {
@@ -905,6 +964,33 @@ a.puzzle-streak-chip:focus-visible {
   background: var(--site-accent-soft);
   color: var(--site-heading);
   font-weight: 600;
+}
+
+.puzzle-move-cell--right:not(.puzzle-move-cell--revealed) {
+  color: #2b8a57;
+}
+
+.puzzle-move-cell--revealed {
+  color: var(--site-muted);
+  font-style: italic;
+}
+
+/* The source game's moves before the puzzle, lichess-style: greyed, so the
+   setup move and the solution read as the part that is the puzzle. */
+.puzzle-move-cell--history {
+  color: var(--site-muted);
+}
+
+.puzzle-move-cell--active.puzzle-move-cell--history {
+  color: var(--site-text);
+}
+
+.puzzle-move-cell--jump {
+  cursor: pointer;
+}
+
+.puzzle-move-cell--jump:not(.puzzle-move-cell--active):hover {
+  color: var(--site-heading);
 }
 
 .puzzle-feedback {
@@ -1222,6 +1308,29 @@ a.puzzle-streak-chip:focus-visible {
   cursor: default;
 }
 
+/* A wrong try's squares flash red after the move is taken back
+   (paintWrongFlash; the delay keeps the phase across a repaint). */
+.puzzle-wrong-flash rect {
+  animation: puzzle-wrong-flash 700ms ease-out both;
+  animation-delay: var(--puzzle-wrong-flash-delay, 0ms);
+  rx: 8px;
+}
+
+@keyframes puzzle-wrong-flash {
+  from {
+    fill: rgba(204, 51, 51, 0.55);
+  }
+  to {
+    fill: rgba(204, 51, 51, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .puzzle-wrong-flash rect {
+    animation-timing-function: steps(1, end);
+  }
+}
+
 .puzzle-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1258,6 +1367,38 @@ a.puzzle-streak-chip:focus-visible {
   body:has(.puzzles-shell) {
     overflow: hidden;
   }
+
+  /* The session row under the board takes its height out of the board's
+     budget, so the page still fits the viewport. */
+  .puzzles-shell:has(.puzzle-session-chips) {
+    --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - 52px));
+  }
+
+  /* Rows hug their content, so the session row sits right under the board
+     instead of sharing the shell's spare height with the board row. */
+  .puzzles-layout {
+    align-content: start;
+  }
+}
+
+/* The left column keeps its natural height, like Lichess's, so it can run past
+   the board's bottom edge. It spans both rows so the session row still sits
+   right under the board: the second row is flexible, which keeps the spanning
+   column out of the first row's size (that row is the board's height). */
+@media (min-width: 981px) {
+  .puzzles-layout {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .puzzles-sidebar {
+    grid-row: 1 / span 2;
+  }
+}
+
+@media (min-width: 1500px) and (min-height: 740px) {
+  .puzzles-shell:has(.puzzle-session-chips) {
+    --puzzle-surface-fit: min(860px, calc(var(--puzzle-page-height) - 52px));
+  }
 }
 
 /* Short desktop viewports (a laptop with the bookmarks bar and a banner open, a
@@ -1286,7 +1427,7 @@ a.puzzle-streak-chip:focus-visible {
   .puzzles-layout {
     grid-template-columns:
       minmax(230px, 310px)
-      minmax(400px, min(50vw, 620px))
+      minmax(min(400px, var(--puzzle-board-track)), min(50vw, 620px, var(--puzzle-board-track)))
       minmax(270px, 360px);
   }
 
@@ -1337,6 +1478,13 @@ a.puzzle-streak-chip:focus-visible {
     order: 2;
     height: auto;
     overflow: visible;
+  }
+
+  /* Phone: the session row closes the page, under the move bar. */
+  .puzzle-session-chips {
+    order: 3;
+    grid-column: auto;
+    padding: 8px 12px 0;
   }
 
   .puzzle-trainer-panel {
@@ -2005,6 +2153,15 @@ a.puzzle-streak-chip:focus-visible {
 
   .puzzle-board-panel--pending .puzzle-side-panel {
     min-height: var(--puzzle-stack-chrome);
+  }
+
+  .puzzles-page > .puzzles-shell:has(.puzzle-session-chips) {
+    --puzzle-stack-chrome: 214px;
+  }
+
+  .puzzles-shell .puzzle-session-chips {
+    flex: none;
+    padding-bottom: 8px;
   }
 }
 

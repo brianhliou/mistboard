@@ -1,6 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import {
+  applyStandardXiangqiMove,
   attemptStandardXiangqiPuzzleLine,
+  createInitialXiangqiState,
   detectXiangqiPuzzleMotifs,
   getStandardXiangqiLegalMoves,
   standardXiangqiPuzzleMoveEquals,
@@ -602,6 +604,72 @@ describe('puzzles route', () => {
     expect(rule('.puzzle-side-panel--analysis')).toMatch(
       /max-height: var\(--puzzle-board-height, var\(--puzzle-surface-size\)\)/,
     );
+  });
+
+  it("puts the board's inset on the detail, where the session row under the board reads it", async () => {
+    const puzzle = RED_MATE;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles') return json({ puzzles: [publicSummary(puzzle)] });
+        if (url === `/api/puzzles/${puzzle.id}`) return json({ puzzle: publicDetail(puzzle) });
+        return json({ error: 'not_found' }, 404);
+      }),
+    );
+    // A shrunk board centred in a wider column (1920x1080 at scale 0.6,
+    // measured): the 465px board sat 26px in from its 516px column, and the
+    // session row, a sibling of the column, started in that gutter.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      const painted = this.classList.contains('puzzle-xiangqi-board');
+      return new DOMRect(0, 0, painted ? 465 : 516, 516);
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle.id);
+
+    const detail = root.querySelector<HTMLElement>('.puzzle-detail');
+    await vi.waitFor(() =>
+      expect(detail?.style.getPropertyValue('--puzzle-board-inset')).toBe('26px'),
+    );
+    expect(detail?.querySelector('.puzzle-session-chips')).not.toBeNull();
+  });
+
+  describe('desktop columns around the board', () => {
+    const css = readFileSync(
+      ['src/puzzles.css', 'apps/web/src/puzzles.css'].find((path) => existsSync(path))!,
+      'utf8',
+    );
+    const rule = (selector: string): string =>
+      css.match(new RegExp(`(?<!,)\\n${selector.replace(/[.()-]/g, '\\$&')} \\{([^}]*)\\}`))?.[1] ??
+      '';
+
+    it('lets the left column keep its natural height instead of the board height', () => {
+      // Tied to the board, a shrunk board made the column scroll inside itself,
+      // and its last card pinned to the board's bottom left a blank gap above it.
+      expect(css).not.toMatch(/\.puzzles-sidebar \{[^}]*height: var\(--puzzle-board-height/);
+      expect(css).not.toMatch(/\.puzzles-sidebar > :last-child \{[^}]*margin-top: auto/);
+      // It spans the session row's line too, so that row stays under the board.
+      expect(css).toMatch(/\.puzzles-sidebar \{\s*grid-row: 1 \/ span 2;/);
+      expect(css).toMatch(/\.puzzles-layout \{\s*grid-template-rows: auto minmax\(0, 1fr\);/);
+    });
+
+    it("sizes the board column to the 9x10 board's drawn width", () => {
+      expect(rule('.puzzles-layout')).toMatch(
+        /minmax\(min\(420px, var\(--puzzle-board-track\)\), var\(--puzzle-board-track\)\)/,
+      );
+      expect(rule('.puzzles-layout:has(.puzzle-xiangqi-board)')).toContain(
+        'calc(var(--puzzle-surface-size) * 552 / 612)',
+      );
+    });
+
+    it('keeps the move nav as plain arrows, not boxed buttons', () => {
+      expect(rule('.puzzle-actions')).toContain('grid-template-columns: repeat(4, 48px);');
+      expect(rule('.puzzle-button')).toMatch(/border: 0;[\s\S]*background: transparent;/);
+    });
   });
 
   it('merges the practice note into the puzzle rating card', async () => {
@@ -1227,6 +1295,122 @@ describe('standard xiangqi puzzles', () => {
     expect(root.textContent).toContain(moveLabel(puzzle.solution[1]!));
   });
 
+  it('keeps a wrong try as a ✗ row, marks found moves ✓, and shows the rating once over', async () => {
+    const puzzle = minedByPlyCount(3);
+    const solver = solverMovesOf(puzzle);
+    const wrong = getStandardXiangqiLegalMoves(puzzle.initial).find(
+      (move) => !standardXiangqiPuzzleMoveEquals(move, puzzle.solution[0]!),
+    )!;
+    vi.stubGlobal('fetch', xiangqiFetchMock([puzzle]));
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle.id);
+    // The puzzle's own rating is a spoiler while it is in play.
+    expect(root.textContent).toContain('Rating: hidden');
+    // The session row holds only the puzzle in play, as the blue current chip.
+    const chipsBefore = root.querySelector('.puzzle-session-chips');
+    expect(chipsBefore?.querySelectorAll('.puzzle-streak-chip--current')).toHaveLength(1);
+
+    clickMove(root, wrong);
+    await vi.waitFor(() => expect(root.textContent).toContain('Try again'));
+    // The miss stays in the list after it is taken back, flashed on the board.
+    const variation = root.querySelector('.puzzle-move-variation');
+    expect(variation?.textContent).toContain(moveLabel(wrong));
+    expect(variation?.querySelector('.puzzle-move-cell--wrong')?.textContent).toContain('✗');
+    expect(root.querySelector('.puzzle-wrong-flash')).not.toBeNull();
+
+    clickMove(root, solver[0]!);
+    await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+    // The retry still lands, and the earlier miss is still listed.
+    expect(root.querySelector('.puzzle-move-variation')?.textContent).toContain(moveLabel(wrong));
+    clickMove(root, solver[1]!);
+    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+
+    // Only the solver's finds are ✓; the scripted reply is not.
+    const right = [...root.querySelectorAll('.puzzle-move-cell--right')].map((cell) =>
+      cell.textContent?.trim(),
+    );
+    expect(right).toEqual([`${moveLabel(solver[0]!)} ✓`, `${moveLabel(solver[1]!)} ✓`]);
+    // Over: the puzzle's rating is out.
+    expect(root.textContent).toContain('Rating: 1500');
+    // A miss on the way makes the session chip a failure.
+    const chips = [
+      ...root.querySelectorAll<HTMLElement>('.puzzle-session-chips .puzzle-streak-chip'),
+    ];
+    expect(chips.map((chip) => [chip.dataset.outcome, chip.textContent])).toEqual([
+      ['failed', '✗'],
+    ]);
+    expect(chips[0]?.getAttribute('aria-current')).toBe('step');
+  });
+
+  it('marks the revealed moves and records the reveal as a miss', async () => {
+    const puzzle = minedByPlyCount(3);
+    const base = xiangqiFetchMock([puzzle]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) =>
+        String(input) === `/api/puzzles/${puzzle.id}/reveal`
+          ? json({ solution: puzzle.solution })
+          : base(input, init),
+      ),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle.id);
+    root.querySelector<HTMLButtonElement>('[data-puzzle-reveal]')?.click();
+
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.puzzle-move-cell--revealed')).toHaveLength(
+        puzzle.solution.length,
+      ),
+    );
+    expect(root.querySelector('.puzzle-move-cell--right')).toBeNull();
+    expect(root.textContent).toContain('Rating: 1500');
+    const chip = root.querySelector<HTMLElement>('.puzzle-session-chips .puzzle-streak-chip');
+    expect(chip?.dataset.outcome).toBe('failed');
+  });
+
+  it('adds a ✓ chip per solved puzzle and reopens a past one from its chip', async () => {
+    const threes = XIANGQI_PUZZLES.filter((puzzle) => puzzle.solution.length === 3);
+    const [first, second] = [threes[0]!, threes[1]!];
+    stubWindowLocalStorage(
+      memoryStorage({ 'mistboard:puzzles:seen': JSON.stringify({ [second.id]: 1 }) }),
+    );
+    vi.stubGlobal('fetch', xiangqiFetchMock([first, second]));
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, first.id);
+    for (const move of solverMovesOf(first)) {
+      clickMove(root, move);
+      await vi.waitFor(() => expect(root.textContent).toContain(moveLabel(move)));
+    }
+    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+    root.querySelector<HTMLButtonElement>('[data-puzzle-next]')?.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(second.id),
+    );
+
+    const row = root.querySelector('.puzzle-session-chips')!;
+    const past = row.querySelector<HTMLAnchorElement>('a.puzzle-streak-chip--solved');
+    expect(past?.textContent).toBe('✓');
+    expect(past?.getAttribute('href')).toBe(`/puzzles/${first.id}`);
+    expect(row.lastElementChild?.classList.contains('puzzle-streak-chip--current')).toBe(true);
+
+    past?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(first.id),
+    );
+    expect(window.location.pathname).toBe(`/puzzles/${first.id}`);
+    // Leaving the second puzzle untouched records nothing for it.
+    const outcomes = [
+      ...root.querySelectorAll<HTMLElement>('.puzzle-session-chips .puzzle-streak-chip'),
+    ].map((chip) => chip.dataset.outcome);
+    expect(outcomes).toEqual(['solved']);
+  });
+
   it('advances to the next mined puzzle after a solve', async () => {
     const threes = XIANGQI_PUZZLES.filter((puzzle) => puzzle.solution.length === 3);
     const [first, second] = [threes[0]!, threes[1]!];
@@ -1433,6 +1617,168 @@ describe('standard xiangqi puzzles', () => {
         expect(slotAt(host, setupMove.to)).not.toBeNull();
         clickMove(host, solverMovesOf(puzzle)[0]!);
         await vi.waitFor(() => expect(host.textContent).toContain('Correct.'));
+      } finally {
+        solver.dispose();
+      }
+    });
+  });
+
+  describe('source game history in the move list', () => {
+    // A short legal game; the puzzle starts at ply 4, so GAME[3] is the setup
+    // move, GAME[0..3) the history, and red solves with GAME[4..7).
+    const GAME: XiangqiMove[] = [
+      { from: 'h3', to: 'e3' },
+      { from: 'h10', to: 'g8' },
+      { from: 'h1', to: 'g3' },
+      { from: 'i10', to: 'h10' },
+      { from: 'i1', to: 'h1' },
+      { from: 'b10', to: 'c8' },
+      { from: 'h1', to: 'h7' },
+    ];
+    const HISTORY = GAME.slice(0, 3);
+    const SETUP = { ...GAME[3]!, captured: null };
+    const PUZZLE: XiangqiPuzzle = (() => {
+      let initial = createInitialXiangqiState('xq_hist');
+      for (const move of GAME.slice(0, 4)) initial = applyStandardXiangqiMove(initial, move);
+      return {
+        ...XIANGQI_PUZZLES[0]!,
+        id: 'xq_hist',
+        title: 'History puzzle',
+        initial,
+        solution: GAME.slice(4),
+        goal: { type: 'winning-advantage', winner: 'red' },
+        sourceGame: { gameId: 'hxq_src', ply: 4, event: 'Club' },
+      };
+    })();
+
+    const slotAt = (root: HTMLElement, square: string): Element | null =>
+      root.querySelector(`[data-piece-square="${square}"]`);
+    const control = (root: HTMLElement, key: string): HTMLButtonElement =>
+      root.querySelector<HTMLButtonElement>(`[data-${key}]`)!;
+    const cellTexts = (root: HTMLElement, selector: string): string[] =>
+      [...root.querySelectorAll(selector)].map((cell) => cell.textContent ?? '');
+
+    function historyFetchMock(withHistory: boolean) {
+      const base = xiangqiFetchMock([PUZZLE]);
+      return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === `/api/puzzles/${PUZZLE.id}`) {
+          return json({
+            puzzle: {
+              ...publicDetail(PUZZLE),
+              sourceGame: { ...PUZZLE.sourceGame, redName: 'R', blackName: 'B', hosted: true },
+              setupMove: SETUP,
+              ...(withHistory ? { history: HISTORY } : {}),
+            },
+          });
+        }
+        return base(input, init);
+      });
+    }
+
+    function animationOff(): void {
+      // No opening glide, so the board starts on the live puzzle position.
+      stubWindowLocalStorage(
+        memoryStorage({
+          [displayPreferenceStorageKey]: JSON.stringify({ pieceAnimation: 'none' }),
+        }),
+      );
+      window.dispatchEvent(new Event('mistboard:display-preferences-change'));
+    }
+
+    async function mountWithoutGlide(withHistory = true) {
+      animationOff();
+      const fetchSpy = historyFetchMock(withHistory);
+      vi.stubGlobal('fetch', fetchSpy);
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountPuzzles(root, PUZZLE.id);
+      return { root, fetchSpy };
+    }
+
+    afterEach(() => window.dispatchEvent(new Event('mistboard:display-preferences-change')));
+
+    it('lists the game moves first, muted and numbered as in the game', async () => {
+      const { root } = await mountWithoutGlide();
+      expect(cellTexts(root, '.puzzle-move-cell--history')).toEqual(HISTORY.map(moveLabel));
+      const rows = [...root.querySelectorAll('.puzzle-move-list .puzzle-move-item')].map((row) =>
+        [...row.children].map((cell) => cell.textContent),
+      );
+      // Row 2 ends on the setup move (black), which is not muted.
+      expect(rows.slice(0, 2)).toEqual([
+        ['1', 'h3-e3', 'h10-g8'],
+        ['2', 'h1-g3', 'i10-h10'],
+      ]);
+      const setup = root.querySelector('[data-view-ply="0"]');
+      expect(setup?.classList.contains('puzzle-move-cell--history')).toBe(false);
+      expect(setup?.classList.contains('puzzle-move-cell--active')).toBe(true);
+
+      clickMove(root, GAME[4]!);
+      await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+      // The solution continues the game's numbering, with its mark.
+      const third = root.querySelectorAll('.puzzle-move-list .puzzle-move-item')[2];
+      expect(third?.children[0]?.textContent).toBe('3');
+      expect(third?.children[1]?.textContent).toContain('i1-h1');
+      expect(third?.children[1]?.textContent).toContain('✓');
+    });
+
+    it('steps back through the game read-only and returns to the live position', async () => {
+      const { root, fetchSpy } = await mountWithoutGlide();
+      expect(control(root, 'puzzle-replay-first').disabled).toBe(false);
+
+      control(root, 'puzzle-replay-first').click();
+      // The game's opening position: the central cannon still on h3.
+      expect(slotAt(root, 'h3')).not.toBeNull();
+      expect(slotAt(root, 'e3')).toBeNull();
+      expect(control(root, 'puzzle-replay-first').disabled).toBe(true);
+      expect(root.querySelector('.puzzle-move-cell--active')).toBeNull();
+
+      control(root, 'puzzle-replay-next').click();
+      expect(slotAt(root, 'e3')).not.toBeNull();
+      expect(root.querySelector('.puzzle-move-cell--active')?.textContent).toBe('h3-e3');
+
+      // A click on a history move jumps there.
+      root.querySelector<HTMLElement>('[data-view-ply="-2"]')!.click();
+      expect(root.querySelector('.puzzle-move-cell--active')?.textContent).toBe('h10-g8');
+      expect(slotAt(root, 'g8')).not.toBeNull();
+      expect(slotAt(root, 'g3')).toBeNull();
+
+      // Off the live position the board takes no moves.
+      clickMove(root, GAME[4]!);
+      expect(fetchSpy).not.toHaveBeenCalledWith(
+        `/api/puzzles/${PUZZLE.id}/attempt`,
+        expect.anything(),
+      );
+
+      control(root, 'puzzle-replay-last').click();
+      expect(root.querySelector('.puzzle-move-cell--active')?.textContent).toBe('i10-h10');
+      clickMove(root, GAME[4]!);
+      await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+    });
+
+    it('links the info card to the game page at the puzzle move', async () => {
+      const { root } = await mountWithoutGlide();
+      const link = root.querySelector<HTMLAnchorElement>('.puzzle-source-link');
+      expect(link?.getAttribute('href')).toBe('/historical-xiangqi/game/hxq_src?ply=4');
+      expect(link?.textContent).toContain('From game');
+    });
+
+    it('keeps the setup move as the first position when the detail has no history', async () => {
+      const { root } = await mountWithoutGlide(false);
+      expect(root.querySelector('.puzzle-move-cell--history')).toBeNull();
+      expect(control(root, 'puzzle-replay-first').disabled).toBe(true);
+    });
+
+    it('leaves the embed solver without history', () => {
+      animationOff();
+      const host = document.createElement('div');
+      document.body.append(host);
+      const solver = mountPuzzleSolver(host, {
+        ...publicDetail(PUZZLE),
+        setupMove: SETUP,
+        history: HISTORY,
+      } as unknown as Parameters<typeof mountPuzzleSolver>[1]);
+      try {
+        expect(host.querySelector('.puzzle-move-cell--history')).toBeNull();
       } finally {
         solver.dispose();
       }

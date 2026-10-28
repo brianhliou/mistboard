@@ -1,7 +1,9 @@
 /**
- * The trainer's two-column move list: [setup?, ...solution] rows with the
- * active (scrubbed-to) ply highlighted. Move notation dispatches through the
- * variant adapter's moveLabels (position-aware) or moveLabel per ply.
+ * The trainer's two-column move list: [history..., setup?, ...solution] rows
+ * with the active (scrubbed-to) ply highlighted. The history is the source
+ * game's moves before the setup move, greyed and numbered as the game numbers
+ * them, as lichess shows a puzzle's game. Move notation dispatches through the
+ * variant adapter's moveLabels / historyLabels (position-aware) or moveLabel.
  */
 
 import {
@@ -12,12 +14,20 @@ import {
 } from './adapter.js';
 import { puzzleBoardAdapter } from './registry.js';
 
-export function moveListPanel(session: PuzzleSession): HTMLElement {
+/**
+ * `onJump`, when given, makes each move a click target that moves the replay
+ * cursor to the position after it (its viewPly), so the live position is one
+ * click on the current move away from anywhere in the history.
+ */
+export function moveListPanel(
+  session: PuzzleSession,
+  onJump?: (viewPly: number) => void,
+): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'puzzle-moves';
   const list = document.createElement('ol');
   list.className = 'puzzle-move-list';
-  const rows = puzzleMoveRows(session);
+  const rows = puzzleMoveRows(session, onJump);
   for (const row of rows) {
     list.append(row);
   }
@@ -60,73 +70,128 @@ function puzzleSetupMove(session: PuzzleSession): PuzzleMove | null {
   return session.puzzle.initial.lastMove ?? null;
 }
 
-// `mark` is set once a miss ended the attempt (session.wrongMove): the move
-// that was right at that ply reads ✓, the miss ✗ on its own row under it.
-type PuzzleMoveCell = { label: string; active: boolean; mark?: 'right' | 'wrong' };
+// `mark` reads ✓ on a move the solver found (and, after Streak's miss, on the
+// move that was right at that ply) and ✗ on a wrong try, kept on its own row
+// under the row it belongs to, like a variation. `revealed` is a move the
+// solution showed rather than the solver found.
+type PuzzleMoveCell = {
+  label: string;
+  active: boolean;
+  mark?: 'right' | 'wrong';
+  revealed?: boolean;
+  // A move of the source game before the puzzle: greyed, read-only.
+  history?: boolean;
+  // The viewPly the board shows after this move (absent on a wrong try).
+  viewPly?: number;
+};
 type PuzzleMoveRowCells = { black?: PuzzleMoveCell; red?: PuzzleMoveCell };
+type JumpTo = ((viewPly: number) => void) | undefined;
 
-function puzzleMoveRows(session: PuzzleSession): HTMLElement[] {
+function puzzleMoveRows(session: PuzzleSession, onJump: JumpTo): HTMLElement[] {
   const solverColor = session.puzzle.sideToMove ?? 'red';
   const setup = puzzleSetupMove(session);
-
-  // Combined list: [setup?, ...solution]. The setup was played by the opponent,
-  // so the whole sequence alternates starting from the opponent's color when a
-  // setup exists, and from the solver's color otherwise.
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
+  const history = session.history ?? [];
+  const historyLabels =
+    history.length > 0 ? adapter.historyLabels?.(session.puzzle, history) : undefined;
+
+  // Combined list: [history..., setup?, ...solution]. With the source game's
+  // history it alternates from the game's first move (red in xiangqi), so the
+  // row numbers are the game's own. Without, the setup was the opponent's,
+  // so it alternates from the opponent's color when a setup exists, and from
+  // the solver's otherwise, numbered from 1.
   const labels = adapter.moveLabels?.(session.puzzle, session.playedMoves);
-  const combined: { label: string; solutionIndex: number | null }[] = [];
+  type Entry = { label: string; solutionIndex: number | null; viewPly: number; history?: true };
+  const combined: Entry[] = [];
+  for (const [index, move] of history.entries()) {
+    combined.push({
+      label: historyLabels?.[index] ?? adapter.moveLabel(move),
+      solutionIndex: null,
+      viewPly: index - history.length,
+      history: true,
+    });
+  }
   if (setup)
-    combined.push({ label: labels?.setup ?? adapter.moveLabel(setup), solutionIndex: null });
+    combined.push({
+      label: labels?.setup ?? adapter.moveLabel(setup),
+      solutionIndex: null,
+      viewPly: 0,
+    });
   for (const [index, move] of session.playedMoves.entries()) {
     combined.push({
       label: labels?.played[index] ?? adapter.moveLabel(move),
       solutionIndex: index,
+      viewPly: index + 1,
     });
   }
-  if (combined.length === 0) return [puzzleMoveContextRow(session)];
 
-  const firstColor: PuzzleColor = setup ? oppositePuzzleColor(solverColor) : solverColor;
-  // viewPly 0 = the setup/opening position (setup cell active); otherwise the
-  // just-played solution ply is viewPly-1.
-  const activeSolutionIndex = session.viewPly - 1;
+  const opener: PuzzleColor = setup ? oppositePuzzleColor(solverColor) : solverColor;
+  // The history ends one move before the setup move (the opponent's), even
+  // while the glide holds that move back.
+  const firstColor: PuzzleColor =
+    history.length > 0 ? moveColorAt(oppositePuzzleColor(solverColor), history.length) : opener;
+  const setupOffset = history.length + (setup ? 1 : 0);
+  // While the opening glide is pending the board shows the position before the
+  // setup move, so the last history move is the current one.
+  const activeViewPly = session.setupIntro ? -1 : session.viewPly;
+  const revealedFrom = session.revealed ? (session.revealedFromPly ?? null) : null;
 
   const wrong = session.wrongMove ?? null;
   const rows = new Map<number, PuzzleMoveRowCells>();
-  let variation: { number: number; cells: PuzzleMoveRowCells } | null = null;
   for (const [combinedIndex, entry] of combined.entries()) {
     const color = moveColorAt(firstColor, combinedIndex);
     const number = puzzleMoveRowNumber(firstColor, combinedIndex);
     const row = rows.get(number) ?? {};
-    const isWrongPly = wrong !== null && entry.solutionIndex === wrong.ply;
+    const index = entry.solutionIndex;
+    const revealed = index !== null && revealedFrom !== null && index >= revealedFrom;
+    // The solver's own plies are the even ones (the line opens with its move).
+    const found = index !== null && index % 2 === 0 && !revealed;
+    const rightAtMiss = wrong !== null && index === wrong.ply;
     row[color] = {
       label: entry.label,
-      active:
-        entry.solutionIndex === null
-          ? session.viewPly === 0
-          : entry.solutionIndex === activeSolutionIndex,
-      ...(isWrongPly ? { mark: 'right' as const } : {}),
+      active: entry.viewPly === activeViewPly,
+      viewPly: entry.viewPly,
+      ...(entry.history ? { history: true } : {}),
+      ...(found || rightAtMiss ? { mark: 'right' as const } : {}),
+      ...(revealed ? { revealed: true } : {}),
     };
     rows.set(number, row);
-    if (isWrongPly) {
-      const before = session.playedMoves.slice(0, wrong.ply);
-      const wrongLabel =
-        adapter.moveLabels?.(session.puzzle, [...before, wrong.move]).played[wrong.ply] ??
-        adapter.moveLabel(wrong.move);
-      variation = {
-        number,
-        cells: { [color]: { label: wrongLabel, active: false, mark: 'wrong' } },
-      };
-    }
   }
 
-  const out: HTMLElement[] = [];
+  // Wrong tries, each a ✗ row under the row of the ply it was tried at; a try
+  // at a ply the solver has not got past yet sits under the last row.
+  const tries = [...(session.wrongTries ?? []), ...(wrong ? [wrong] : [])];
+  const variations = new Map<number, PuzzleMoveRowCells[]>();
+  const seen = new Set<string>();
+  for (const attempt of tries) {
+    const before = session.playedMoves.slice(0, attempt.ply);
+    const label =
+      adapter.moveLabels?.(session.puzzle, [...before, attempt.move]).played[attempt.ply] ??
+      adapter.moveLabel(attempt.move);
+    const key = `${attempt.ply}:${label}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const combinedIndex = attempt.ply + setupOffset;
+    const number = puzzleMoveRowNumber(firstColor, combinedIndex);
+    const color = moveColorAt(firstColor, combinedIndex);
+    const list = variations.get(number) ?? [];
+    list.push({ [color]: { label, active: false, mark: 'wrong' } });
+    variations.set(number, list);
+  }
+  const variationRow = (number: number, cells: PuzzleMoveRowCells): HTMLElement => {
+    const item = puzzleMoveRow(number, cells, firstColor, undefined);
+    item.classList.add('puzzle-move-variation');
+    return item;
+  };
+
+  const out: HTMLElement[] = combined.length === 0 ? [puzzleMoveContextRow(session)] : [];
   for (const [number, row] of rows) {
-    out.push(puzzleMoveRow(number, row, firstColor));
-    if (variation?.number === number) {
-      const item = puzzleMoveRow(number, variation.cells, firstColor);
-      item.classList.add('puzzle-move-variation');
-      out.push(item);
-    }
+    out.push(puzzleMoveRow(number, row, firstColor, session.setupIntro ? undefined : onJump));
+    for (const cells of variations.get(number) ?? []) out.push(variationRow(number, cells));
+    variations.delete(number);
+  }
+  for (const number of [...variations.keys()].sort((a, b) => a - b)) {
+    for (const cells of variations.get(number) ?? []) out.push(variationRow(number, cells));
   }
   return out;
 }
@@ -146,6 +211,7 @@ function puzzleMoveRow(
   number: number,
   rowMoves: PuzzleMoveRowCells,
   firstColor: PuzzleColor,
+  onJump: JumpTo,
 ): HTMLElement {
   const row = document.createElement('li');
   row.className = 'puzzle-move-item';
@@ -158,16 +224,25 @@ function puzzleMoveRow(
     'puzzle-move-red',
     rowMoves.red ? rowMoves.red.label : number === 1 && blackLeads ? '...' : '',
   );
-  if (rowMoves.red?.active) redCell.classList.add('puzzle-move-cell--active');
   const blackCell = puzzleMoveCell('puzzle-move-black', rowMoves.black ? rowMoves.black.label : '');
-  if (rowMoves.black?.active) blackCell.classList.add('puzzle-move-cell--active');
-  markMoveCell(redCell, rowMoves.red?.mark);
-  markMoveCell(blackCell, rowMoves.black?.mark);
+  dressMoveCell(redCell, rowMoves.red, onJump);
+  dressMoveCell(blackCell, rowMoves.black, onJump);
   row.append(numberCell, redCell, blackCell);
   return row;
 }
 
-function markMoveCell(cell: HTMLElement, mark: PuzzleMoveCell['mark']): void {
+function dressMoveCell(cell: HTMLElement, move: PuzzleMoveCell | undefined, onJump: JumpTo): void {
+  if (!move) return;
+  if (move.active) cell.classList.add('puzzle-move-cell--active');
+  if (move.history) cell.classList.add('puzzle-move-cell--history');
+  if (move.revealed) cell.classList.add('puzzle-move-cell--revealed');
+  const target = move.viewPly;
+  if (onJump && target !== undefined) {
+    cell.classList.add('puzzle-move-cell--jump');
+    cell.dataset.viewPly = String(target);
+    cell.addEventListener('click', () => onJump(target));
+  }
+  const mark = move.mark;
   if (!mark) return;
   cell.classList.add(`puzzle-move-cell--${mark}`);
   const glyph = document.createElement('span');
