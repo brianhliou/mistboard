@@ -215,6 +215,72 @@ describe('puzzles route', () => {
     );
   });
 
+  it("puts the board's inset on the detail, where the session row under the board reads it", async () => {
+    const puzzle = RED_MATE;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles') return json({ puzzles: [publicSummary(puzzle)] });
+        if (url === `/api/puzzles/${puzzle.id}`) return json({ puzzle: publicDetail(puzzle) });
+        return json({ error: 'not_found' }, 404);
+      }),
+    );
+    // A shrunk board centred in a wider column (1920x1080 at scale 0.6,
+    // measured): the 465px board sat 26px in from its 516px column, and the
+    // session row, a sibling of the column, started in that gutter.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      const painted = this.classList.contains('puzzle-xiangqi-board');
+      return new DOMRect(0, 0, painted ? 465 : 516, 516);
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle.id);
+
+    const detail = root.querySelector<HTMLElement>('.puzzle-detail');
+    await vi.waitFor(() =>
+      expect(detail?.style.getPropertyValue('--puzzle-board-inset')).toBe('26px'),
+    );
+    expect(detail?.querySelector('.puzzle-session-chips')).not.toBeNull();
+  });
+
+  describe('desktop columns around the board', () => {
+    const css = readFileSync(
+      ['src/puzzles.css', 'apps/web/src/puzzles.css'].find((path) => existsSync(path))!,
+      'utf8',
+    );
+    const rule = (selector: string): string =>
+      css.match(new RegExp(`(?<!,)\\n${selector.replace(/[.()-]/g, '\\$&')} \\{([^}]*)\\}`))?.[1] ??
+      '';
+
+    it('lets the left column keep its natural height instead of the board height', () => {
+      // Tied to the board, a shrunk board made the column scroll inside itself,
+      // and its last card pinned to the board's bottom left a blank gap above it.
+      expect(css).not.toMatch(/\.puzzles-sidebar \{[^}]*height: var\(--puzzle-board-height/);
+      expect(css).not.toMatch(/\.puzzles-sidebar > :last-child \{[^}]*margin-top: auto/);
+      // It spans the session row's line too, so that row stays under the board.
+      expect(css).toMatch(/\.puzzles-sidebar \{\s*grid-row: 1 \/ span 2;/);
+      expect(css).toMatch(/\.puzzles-layout \{\s*grid-template-rows: auto minmax\(0, 1fr\);/);
+    });
+
+    it("sizes the board column to the 9x10 board's drawn width", () => {
+      expect(rule('.puzzles-layout')).toMatch(
+        /minmax\(min\(420px, var\(--puzzle-board-track\)\), var\(--puzzle-board-track\)\)/,
+      );
+      expect(rule('.puzzles-layout:has(.puzzle-xiangqi-board)')).toContain(
+        'calc(var(--puzzle-surface-size) * 552 / 612)',
+      );
+    });
+
+    it('keeps the move nav as plain arrows, not boxed buttons', () => {
+      expect(rule('.puzzle-actions')).toContain('grid-template-columns: repeat(4, 48px);');
+      expect(rule('.puzzle-button')).toMatch(/border: 0;[\s\S]*background: transparent;/);
+    });
+  });
+
   it('merges the practice note into the puzzle rating card', async () => {
     stubWindowLocalStorage(memoryStorage({ 'mistboard:puzzles:rated': 'false' }));
     const mini = RED_MATE;
