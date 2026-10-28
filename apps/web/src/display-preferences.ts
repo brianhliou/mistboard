@@ -7,6 +7,14 @@ export const DISPLAY_PREFERENCE_DEFINITIONS = [
     defaultValue: 'normal',
     options: ['none', 'fast', 'normal', 'slow'],
   },
+  // How a face-down tile turns over on a reveal (banqi, jieqi; #709). The
+  // speed comes from pieceAnimation, which also switches it off ('none').
+  {
+    id: 'pieceFlip',
+    kind: 'select',
+    defaultValue: 'lift',
+    options: ['flat', 'lift', 'spin'],
+  },
   { id: 'materialDifference', kind: 'boolean', defaultValue: true },
   { id: 'boardHighlights', kind: 'boolean', defaultValue: true },
   { id: 'pieceDestinations', kind: 'boolean', defaultValue: true },

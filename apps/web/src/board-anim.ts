@@ -36,6 +36,13 @@ let subscribed = false;
 function invalidateCache(): void {
   cachedDurationMs = null;
   cachedFlipDurationMs = null;
+  cachedFlipStyle = null;
+}
+
+function subscribeToPreferenceChanges(): void {
+  if (subscribed || typeof window === 'undefined') return;
+  subscribed = true;
+  window.addEventListener(DISPLAY_PREFERENCES_CHANGE_EVENT, invalidateCache);
 }
 
 function prefersReducedMotion(): boolean {
@@ -65,10 +72,7 @@ export function pieceAnimationDurationMs(opts?: { fog?: boolean }): number {
   // under fog that path can imply a square the server deliberately redacted, so
   // the current origin/destination inference is unsafe there.
   if (opts?.fog) return 0;
-  if (!subscribed && typeof window !== 'undefined') {
-    subscribed = true;
-    window.addEventListener(DISPLAY_PREFERENCES_CHANGE_EVENT, invalidateCache);
-  }
+  subscribeToPreferenceChanges();
   if (cachedDurationMs === null) cachedDurationMs = computeDurationMs();
   return cachedDurationMs;
 }
@@ -180,61 +184,81 @@ export function pieceFlipDurationMs(): number {
   return cachedFlipDurationMs;
 }
 
-// ── Flip style spike (#709): ?flip=flat|lift|spin ───────────────────────────
-// Three turn-overs side by side while Brian picks one live (2026-10-28). The
-// flag is read once per page load and kept for the tab (sessionStorage), so it
-// survives in-app navigation into a room; ?flip=flat goes back. Absent, the
-// style is 'flat', the shipped turn. Delete the losers once one is picked.
+// ── Flip style (#709): the "Tile flip" display setting ──────────────────────
+// Flat (a squeeze), Lift (rises and turns end over end) or Spin (rises and
+// turns side to side); default Lift (Brian, 2026-10-28). `?flip=flat|lift|spin`
+// overrides the setting for testing: read once per page load and kept for the
+// tab (sessionStorage) so it survives in-app navigation into a room.
 
 export const PIECE_FLIP_STYLES = ['flat', 'lift', 'spin'] as const;
 export type PieceFlipStyle = (typeof PIECE_FLIP_STYLES)[number];
 
 const PIECE_FLIP_STYLE_STORAGE_KEY = 'mistboard.flipStyle';
 
+function isPieceFlipStyle(value: unknown): value is PieceFlipStyle {
+  return (PIECE_FLIP_STYLES as readonly unknown[]).includes(value);
+}
+
 /** The style a `?flip=` query names, or null when it names none. */
 export function pieceFlipStyleFromSearch(search: string): PieceFlipStyle | null {
   try {
     const value = new URLSearchParams(search).get('flip');
-    return (PIECE_FLIP_STYLES as readonly string[]).includes(value ?? '')
-      ? (value as PieceFlipStyle)
-      : null;
+    return isPieceFlipStyle(value) ? value : null;
   } catch {
     return null;
   }
 }
 
+/** undefined: not parsed yet; null: no override this tab. */
+let cachedFlipOverride: PieceFlipStyle | null | undefined;
 let cachedFlipStyle: PieceFlipStyle | null = null;
 
-/** The turn-over style for this tab: the `?flip=` flag, else the one the tab
- *  last asked for, else 'flat'. */
-export function pieceFlipStyle(): PieceFlipStyle {
-  if (cachedFlipStyle !== null) return cachedFlipStyle;
-  let style: PieceFlipStyle = 'flat';
+function pieceFlipOverride(): PieceFlipStyle | null {
+  if (cachedFlipOverride !== undefined) return cachedFlipOverride;
+  let override: PieceFlipStyle | null = null;
   try {
     const flagged = pieceFlipStyleFromSearch(window.location.search);
     if (flagged) {
       window.sessionStorage.setItem(PIECE_FLIP_STYLE_STORAGE_KEY, flagged);
-      style = flagged;
+      override = flagged;
     } else {
       const stored = window.sessionStorage.getItem(PIECE_FLIP_STYLE_STORAGE_KEY);
-      style = (PIECE_FLIP_STYLES as readonly string[]).includes(stored ?? '')
-        ? (stored as PieceFlipStyle)
-        : 'flat';
+      override = isPieceFlipStyle(stored) ? stored : null;
     }
   } catch {
-    style = 'flat';
+    override = null;
   }
-  cachedFlipStyle = style;
-  return style;
+  cachedFlipOverride = override;
+  return override;
+}
+
+/** The turn-over style: the tab's `?flip=` override, else the Tile flip
+ *  setting (default 'lift'). Cached, cleared by the settings change event. */
+export function pieceFlipStyle(): PieceFlipStyle {
+  const override = pieceFlipOverride();
+  if (override) return override;
+  subscribeToPreferenceChanges();
+  if (cachedFlipStyle === null) {
+    let style: PieceFlipStyle = 'lift';
+    try {
+      const preference = readDisplayPreferences().pieceFlip;
+      if (isPieceFlipStyle(preference)) style = preference;
+    } catch {
+      style = 'lift';
+    }
+    cachedFlipStyle = style;
+  }
+  return cachedFlipStyle;
 }
 
 /** Tests only: forget the parsed flag so the next read re-parses the URL. */
 export function resetPieceFlipStyleCache(): void {
+  cachedFlipOverride = undefined;
   cachedFlipStyle = null;
 }
 
 // Parse at load, before any in-app navigation can drop the query.
-if (typeof window !== 'undefined') pieceFlipStyle();
+if (typeof window !== 'undefined') pieceFlipOverride();
 
 /** How far a lifted tile grows (it nears the eye) and the shadow it casts. */
 const FLIP_LIFT_SCALE = 1.12;

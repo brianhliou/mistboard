@@ -167,6 +167,7 @@ describe('the turn-over trigger', () => {
 
 describe('banqi turn-over', () => {
   it('turns the slot, hides the face until the midpoint, shows the back until then', () => {
+    writeDisplayPreference('pieceFlip', 'flat');
     const el = banqiHost(revealed);
     const { calls } = recordAnimations(() => {
       expect(animateBanqiReveal(el, 'a1')).toBe(true);
@@ -221,6 +222,10 @@ describe('banqi live room wiring', () => {
     const config = captured.configs.find((c) => c.gameSpecId === 'banqi');
     return config?.animateBoard as AnimateBoard;
   }
+
+  beforeEach(() => {
+    writeDisplayPreference('pieceFlip', 'flat');
+  });
 
   function turned(run: () => void): string[] {
     return recordAnimations(run)
@@ -280,7 +285,7 @@ describe('jieqi turn-over (prototype)', () => {
   });
 });
 
-describe('flip styles (?flip= spike)', () => {
+describe('flip styles (the Tile flip setting, ?flip= override)', () => {
   function useFlag(search: string): void {
     window.sessionStorage.removeItem('mistboard.flipStyle');
     window.history.replaceState(null, '', `${window.location.pathname}${search}`);
@@ -295,12 +300,76 @@ describe('flip styles (?flip= spike)', () => {
     expect(pieceFlipStyleFromSearch('')).toBeNull();
   });
 
-  it('defaults to flat, the shipped turn, with no flag', () => {
+  /** The axis the reveal turned on: what reached flipSvgPiece. */
+  function turnAxis(calls: Call[]): string | null {
+    for (const call of calls) {
+      for (const frame of call.keyframes) {
+        const match = /^(scaleX|rotateX|rotateY)\(/.exec(String(frame.transform ?? ''));
+        if (match) return match[1] ?? null;
+      }
+    }
+    return null;
+  }
+  const AXIS_BY_STYLE = { flat: 'scaleX', lift: 'rotateX', spin: 'rotateY' } as const;
+
+  it('defaults to lift with no setting and no flag', () => {
     useFlag('');
-    expect(pieceFlipStyle()).toBe('flat');
+    expect(pieceFlipStyle()).toBe('lift');
     useFlag('?flip=nope');
-    expect(pieceFlipStyle()).toBe('flat');
+    expect(pieceFlipStyle()).toBe('lift');
+    const { calls } = recordAnimations(() => animateBanqiReveal(banqiHost(revealed), 'a1'));
+    expect(turnAxis(calls)).toBe('rotateX');
   });
+
+  it.each(['flat', 'lift', 'spin'] as const)(
+    'the %s setting reaches the banqi and jieqi turns',
+    (style) => {
+      useFlag('');
+      writeDisplayPreference('pieceFlip', style);
+      expect(pieceFlipStyle()).toBe(style);
+      const banqi = recordAnimations(() => {
+        expect(animateBanqiReveal(banqiHost(revealed), 'a1')).toBe(true);
+      }).calls;
+      expect(turnAxis(banqi)).toBe(AXIS_BY_STYLE[style]);
+      const el = document.createElement('div');
+      el.innerHTML = '<svg><g data-piece-square="a3"><g class="jieqi-piece"></g></g></svg>';
+      const jieqi = recordAnimations(() => {
+        animateJieqiReveal(el, 'a3', 'red', 'red');
+      }).calls;
+      expect(turnAxis(jieqi)).toBe(AXIS_BY_STYLE[style]);
+    },
+  );
+
+  it('a setting change applies to the next turn without a reload', () => {
+    useFlag('');
+    writeDisplayPreference('pieceFlip', 'lift');
+    expect(pieceFlipStyle()).toBe('lift');
+    writeDisplayPreference('pieceFlip', 'spin');
+    expect(pieceFlipStyle()).toBe('spin');
+  });
+
+  it('the ?flip= override wins over the setting', () => {
+    writeDisplayPreference('pieceFlip', 'spin');
+    useFlag('?flip=flat');
+    expect(pieceFlipStyle()).toBe('flat');
+    const { calls } = recordAnimations(() => animateBanqiReveal(banqiHost(revealed), 'a1'));
+    expect(turnAxis(calls)).toBe('scaleX');
+  });
+
+  it.each(['flat', 'lift', 'spin'] as const)(
+    'reduced motion turns nothing whatever the setting (%s)',
+    (style) => {
+      useFlag('');
+      writeDisplayPreference('pieceFlip', style);
+      setReducedMotion(true);
+      const el = banqiHost(revealed);
+      const { calls } = recordAnimations(() => {
+        expect(animateBanqiReveal(el, 'a1')).toBe(false);
+      });
+      expect(calls).toEqual([]);
+      expect(el.querySelector('.piece-flip-back, .piece-flip-turn')).toBeNull();
+    },
+  );
 
   it('reads the flag once and keeps it for the tab after the query is gone', () => {
     useFlag('?flip=spin');

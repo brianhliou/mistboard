@@ -212,4 +212,8 @@ export const ZH_HANT_ACCOUNT = {
   'account.displayOption.pieceAnimation.fast': '快',
   'account.displayOption.pieceAnimation.normal': '正常',
   'account.displayOption.pieceAnimation.slow': '慢',
+  'account.displayPieceFlip': '翻棋動畫',
+  'account.displayOption.pieceFlip.flat': '平翻',
+  'account.displayOption.pieceFlip.lift': '抬起',
+  'account.displayOption.pieceFlip.spin': '旋轉',
 } satisfies Partial<Record<AccountI18nKey, string>>;
