@@ -167,7 +167,10 @@ export const XIANGQI_MOTIF_CORPUS_FIXTURES: readonly XiangqiMotifCorpusFixture[]
     id: 'xq-mined-hxq_198880fe12261f2ad605a283-25',
     fen: '1Cba1kbn1/4a4/9/p1p3p1p/1c2C4/4c4/P1P3P1P/R2RK1N2/5r3/1NBA1rB2 b - - 0 13',
     line: 'f1e1 d1e2 f2f3',
-    motifs: ['bai-lian-jiang', 'kong-tou-pao', 'shuang-ju-cuo'],
+    // Tagged shuang-ju-cuo on 2026-09-11 too, by the loose check that took any
+    // two chariots one file apart. The checks run down the e-file and then
+    // along rank 3, lines that cross, so it no longer is (2026-10-28).
+    motifs: ['bai-lian-jiang', 'kong-tou-pao'],
   },
   {
     motif: 'kong-tou-pao',

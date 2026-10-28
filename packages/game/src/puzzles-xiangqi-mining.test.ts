@@ -404,6 +404,16 @@ test('tagXiangqiPuzzleThemes tags mate depth, capture, swing size, and game phas
     swingCp: 300,
   });
   assert.deepEqual(advantage, ['winning', 'winning-material', 'middlegame']);
+
+  // Seven plies is mate in 4: the miner used to leave these without a length tag.
+  const mateInFour = tagXiangqiPuzzleThemes({
+    initial,
+    // Not a legal line; only its length matters here.
+    solution: Array.from({ length: 7 }, () => ({ from: 'a1', to: 'a2' }) as XiangqiMove),
+    goal: { type: 'checkmate', winner: 'red' },
+    swingCp: 700,
+  });
+  assert.ok(mateInFour.includes('matein4'));
 });
 
 test('xiangqiPuzzleTitle names the side and the goal', () => {

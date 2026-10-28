@@ -5,6 +5,7 @@ import {
   getStandardXiangqiLegalMoves,
   standardXiangqiPuzzleMoveEquals,
   XIANGQI_MOTIF_BY_ID,
+  XIANGQI_MOTIFS,
   XIANGQI_PUZZLES,
   XIANGQI_SPEC_ID,
   type XiangqiMove,
@@ -15,6 +16,8 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { displayPreferenceStorageKey } from './display-preferences.js';
 import { playSound } from './live-sound.js';
+import { puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
+import { loadPuzzleTheme, PUZZLE_THEME_MIN_PATTERN_COUNT } from './puzzles/themes.js';
 import {
   mountPuzzleSolver,
   mountPuzzles,
@@ -87,6 +90,392 @@ describe('puzzles route', () => {
     )!;
   const RED_MATE = minedMate('red');
   const BLACK_MATE = minedMate('black');
+  const themeOptions = XIANGQI_MOTIFS.map((motif) => ({
+    ...motif,
+    // Above PUZZLE_THEME_MIN_PATTERN_COUNT, so the picker lists it.
+    count: motif.id === 'ma-hou-pao' ? 24 : 0,
+    literal: 'cannon behind the horse',
+    gloss: 'The horse pens the general in and screens the cannon behind it.',
+  }));
+
+  it('filters the queue by theme, persists the picker, and keeps next navigation filtered', async () => {
+    const puzzles = XIANGQI_PUZZLES.slice(0, 3);
+    const summaries = puzzles.map((puzzle, index) => ({
+      ...publicSummary(puzzle),
+      motifs: index < 2 ? ['ma-hou-pao'] : [],
+    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles') return json({ puzzles: summaries, themes: themeOptions });
+        const hinted = puzzles.find((puzzle) => url === `/api/puzzles/${puzzle.id}/reveal`);
+        if (hinted) return json({ move: hinted.solution[0] });
+        const index = puzzles.findIndex((puzzle) => url === `/api/puzzles/${puzzle.id}`);
+        return index >= 0
+          ? json({ puzzle: { ...publicDetail(puzzles[index]!), ...summaries[index] } })
+          : json({}, 404);
+      }),
+    );
+    stubWindowLocalStorage(memoryStorage());
+    const root = document.createElement('div');
+    await mountPuzzles(root);
+    const picker = root.querySelector<HTMLSelectElement>('[data-puzzle-theme]');
+    expect(picker).not.toBeNull();
+    picker!.value = 'ma-hou-pao';
+    picker!.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(root.textContent).toContain('0 solved of 2'));
+    expect(window.localStorage.getItem('mistboard:puzzles:theme')).toBe('ma-hou-pao');
+    await vi.waitFor(() =>
+      expect(new URL(window.location.href).searchParams.get('theme')).toBe('ma-hou-pao'),
+    );
+    const firstPath = window.location.pathname;
+    root.querySelector<HTMLButtonElement>('[data-puzzle-hint]')!.click();
+    await vi.waitFor(() => expect(root.querySelector('[data-puzzle-skip]')).not.toBeNull());
+    const next = root.querySelector<HTMLButtonElement>('[data-puzzle-skip]');
+    expect(next).not.toBeNull();
+    next!.click();
+    await vi.waitFor(() => expect(window.location.pathname).not.toBe(firstPath));
+    expect(new URL(window.location.href).searchParams.get('theme')).toBe('ma-hou-pao');
+    expect(puzzles.slice(0, 2).some((puzzle) => window.location.pathname.endsWith(puzzle.id))).toBe(
+      true,
+    );
+    expect(root.textContent).toContain('0 solved of 2');
+    const reopened = document.createElement('div');
+    window.history.replaceState(null, '', '/puzzles');
+    await mountPuzzles(reopened);
+    expect(reopened.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe(
+      'ma-hou-pao',
+    );
+    const all = reopened.querySelector<HTMLSelectElement>('[data-puzzle-theme]')!;
+    all.value = '';
+    all.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(reopened.textContent).toContain('0 solved of 3'));
+  });
+
+  it.each(['ma-hou-pao', ''])(
+    'preserves an unfinished puzzle when changing to theme "%s" keeps it in the queue',
+    async (nextTheme) => {
+      stubWindowLocalStorage(memoryStorage());
+      window.history.replaceState(
+        null,
+        '',
+        `/puzzles/${RED_MATE.id}?theme=${nextTheme ? '' : 'ma-hou-pao'}`,
+      );
+      const qualityEvents: Array<{ sessionId: string; event: string }> = [];
+      const attemptBodies: Array<{ moves: XiangqiMove[]; qualitySessionId: string }> = [];
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/puzzles') {
+          return json({
+            puzzles: [{ ...publicSummary(RED_MATE), motifs: ['ma-hou-pao'] }],
+            themes: themeOptions,
+          });
+        }
+        if (url === `/api/puzzles/${RED_MATE.id}`) {
+          return json({ puzzle: publicDetail(RED_MATE) });
+        }
+        if (url.endsWith('/quality')) {
+          qualityEvents.push(JSON.parse(String(init?.body)));
+          return new Response(null, { status: 204 });
+        }
+        if (url.endsWith('/attempt')) {
+          const body = JSON.parse(String(init?.body));
+          attemptBodies.push(body);
+          return json({ attempt: attemptStandardXiangqiPuzzleLine(RED_MATE, body.moves) });
+        }
+        return json({}, 404);
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const root = document.createElement('div');
+      await mountPuzzles(root, RED_MATE.id);
+      clickSquares(root, RED_MATE.solution[0]!);
+      await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+      const view = qualityEvents[0]!;
+
+      const picker = root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')!;
+      picker.value = nextTheme;
+      picker.dispatchEvent(new Event('change'));
+      await vi.waitFor(() =>
+        expect(new URL(window.location.href).searchParams.get('theme') ?? '').toBe(nextTheme),
+      );
+
+      expect(
+        fetchSpy.mock.calls.filter(([input]) => String(input) === `/api/puzzles/${RED_MATE.id}`),
+      ).toHaveLength(1);
+      expect(root.textContent).toContain('Correct.');
+      expect(root.textContent).toContain(
+        `${RED_MATE.solution[1]!.from}-${RED_MATE.solution[1]!.to}`,
+      );
+      expect(qualityEvents).toEqual([view]);
+      expect(view.event).toBe('view');
+      clickSquares(root, RED_MATE.solution[2]!);
+      await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+      expect(attemptBodies.map((body) => body.moves)).toEqual([
+        [RED_MATE.solution[0]],
+        [RED_MATE.solution[0], RED_MATE.solution[2]],
+      ]);
+      expect(attemptBodies.every((body) => body.qualitySessionId === view.sessionId)).toBe(true);
+    },
+  );
+
+  it('opens the themes index with counts, glosses and filtered-session links', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json({ puzzles: [], themes: themeOptions })),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, 'themes');
+    // An older server sends no tagCounts: the page still lists the patterns.
+    expect(root.querySelectorAll('[data-puzzle-theme-card]')).toHaveLength(1);
+    const link = root.querySelector<HTMLAnchorElement>('a[href="/puzzles?theme=ma-hou-pao"]');
+    expect(link?.textContent).toContain('Cannon behind the horse');
+    expect(root.textContent).toContain('马后炮');
+    expect(root.textContent).toContain('mǎ hòu pào');
+    // Lichess's row: the count sits inline after the name, a bare number.
+    const count = root.querySelector(
+      '[data-puzzle-theme-card="ma-hou-pao"] h3 .puzzle-theme-count',
+    );
+    expect(count?.textContent).toBe('24');
+    expect(count?.getAttribute('title')).toBe('24 puzzles');
+    expect(root.textContent).toContain('The horse pens the general in');
+    // The pattern's piece is the row's icon, in the board's baked glyph outline.
+    expect(
+      root.querySelector('[data-puzzle-theme-card="ma-hou-pao"] .puzzle-theme-icon svg path'),
+    ).not.toBeNull();
+    expect(root.querySelector('.puzzle-xiangqi-board')).toBeNull();
+    expect(root.querySelector('a[href="/puzzles?theme=men-gong"]')).toBeNull();
+    // With no tag counts the mix row still links every puzzle, just uncounted.
+    const mix = root.querySelector('[data-puzzle-theme-recommended] a[href="/puzzles"]');
+    expect(mix?.textContent).toContain('Healthy mix');
+    expect(mix?.querySelector('.puzzle-theme-count')).toBeNull();
+  });
+
+  it('groups the themes page like lichess, with the pattern minimum and no empty entries', async () => {
+    const motifCount = (id: string) =>
+      ({ 'ma-hou-pao': 30, 'men-gong': PUZZLE_THEME_MIN_PATTERN_COUNT, 'tie-men-shuan': 90 })[id] ??
+      (id === 'chong-pao' ? PUZZLE_THEME_MIN_PATTERN_COUNT - 1 : 0);
+    const tagCounts = {
+      ...Object.fromEntries(XIANGQI_MOTIFS.map((m) => [m.id, motifCount(m.id)])),
+      matein1: 40,
+      matein2: 25,
+      matein3: 9,
+      matein4: 0,
+      opening: 5,
+      middlegame: 70,
+      endgame: 30,
+      checkmate: 74,
+      winning: 31,
+      'one-move': 50,
+      short: 30,
+      long: 25,
+      'very-long': 0,
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        json({
+          puzzles: [],
+          themes: XIANGQI_MOTIFS.map((m) => ({ ...m, count: motifCount(m.id) })),
+          tagCounts,
+        }),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, 'themes');
+    const groups = [...root.querySelectorAll<HTMLElement>('[data-puzzle-theme-group]')];
+    expect(groups.map((g) => g.dataset.puzzleThemeGroup)).toEqual([
+      'motif',
+      'mate',
+      'phase',
+      'goal',
+      'length',
+    ]);
+    expect(groups.map((g) => g.querySelector('h2')?.textContent)).toEqual([
+      'Mate patterns',
+      'Mates',
+      'Phases',
+      'Goals',
+      'Lengths',
+    ]);
+    const cards = (group: HTMLElement) =>
+      [...group.querySelectorAll<HTMLElement>('[data-puzzle-theme-card]')].map(
+        (card) => card.dataset.puzzleThemeCard,
+      );
+    // Patterns at the minimum, most puzzles first; one short of it is hidden.
+    expect(cards(groups[0]!)).toEqual(['tie-men-shuan', 'ma-hou-pao', 'men-gong']);
+    // Zero counts are hidden; any count above zero shows outside the patterns.
+    expect(cards(groups[1]!)).toEqual(['matein1', 'matein2', 'matein3']);
+    expect(cards(groups[2]!)).toEqual(['opening', 'middlegame', 'endgame']);
+    expect(cards(groups[3]!)).toEqual(['checkmate', 'winning']);
+    expect(cards(groups[4]!)).toEqual(['one-move', 'short', 'long']);
+    const mateIn1 = root.querySelector<HTMLAnchorElement>('a[href="/puzzles?theme=matein1"]');
+    expect(mateIn1?.querySelector('h3')?.textContent).toBe('Mate in 1 40');
+    expect(root.querySelector('[data-puzzle-theme-card="endgame"]')?.textContent).toContain(
+      '14 or fewer pieces',
+    );
+    // The hanzi · pinyin line sits on mate patterns only.
+    expect(root.querySelector('[data-puzzle-theme-card="matein1"] .puzzle-theme-name')).toBeNull();
+    expect(
+      root.querySelector('[data-puzzle-theme-card="men-gong"] .puzzle-theme-name [lang="zh-Hans"]'),
+    ).not.toBeNull();
+
+    // Recommended comes first: one row training on everything, counted as
+    // the corpus (each puzzle has one phase: 5 + 70 + 30).
+    const recommended = root.querySelector<HTMLElement>('[data-puzzle-theme-recommended]');
+    expect(recommended?.compareDocumentPosition(groups[0]!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(recommended?.querySelector('h2')?.textContent).toBe('Recommended');
+    const mix = recommended?.querySelectorAll<HTMLAnchorElement>('a') ?? [];
+    expect([...mix].map((a) => a.getAttribute('href'))).toEqual(['/puzzles']);
+    expect(mix[0]?.querySelector('h3')?.textContent).toBe('Healthy mix 105');
+    expect(mix[0]?.querySelector('.puzzle-theme-description')?.textContent).toContain(
+      'Every theme shuffled together',
+    );
+
+    // The sidebar is the Puzzles menu, this page current.
+    const side = root.querySelector<HTMLElement>('.puzzle-themes-side');
+    expect(
+      [...(side?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map((a) => [
+        a.getAttribute('href'),
+        a.textContent,
+        a.getAttribute('aria-current'),
+      ]),
+    ).toEqual([
+      ['/puzzles', 'Puzzles', null],
+      ['/puzzles/themes', 'Puzzle Themes', 'page'],
+      ['/puzzles?mode=streak', 'Puzzle Streak', null],
+    ]);
+  });
+
+  it('drills any tag, not only patterns, from the URL and the grouped picker', async () => {
+    const puzzles = XIANGQI_PUZZLES.slice(0, 3);
+    const summaries = puzzles.map((puzzle, index) => ({
+      ...publicSummary(puzzle),
+      tags: index === 1 ? ['matein2', 'middlegame', 'checkmate', 'short'] : ['endgame'],
+    }));
+    window.history.replaceState(null, '', '/puzzles?theme=matein2');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles')
+          return json({
+            puzzles: summaries,
+            themes: themeOptions,
+            tagCounts: { 'ma-hou-pao': 24, matein2: 1, middlegame: 1, endgame: 2, short: 1 },
+          });
+        const index = puzzles.findIndex((puzzle) => url === `/api/puzzles/${puzzle.id}`);
+        return index >= 0
+          ? json({ puzzle: { ...publicDetail(puzzles[index]!), ...summaries[index] } })
+          : json({}, 404);
+      }),
+    );
+    stubWindowLocalStorage(memoryStorage());
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    await vi.waitFor(() => expect(root.textContent).toContain('0 solved of 1'));
+    const picker = root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')!;
+    expect(picker.value).toBe('matein2');
+    expect([...picker.querySelectorAll('optgroup')].map((g) => g.label)).toEqual([
+      'Mate patterns',
+      'Mates',
+      'Phases',
+      'Lengths',
+    ]);
+    expect(
+      [...picker.querySelectorAll<HTMLOptionElement>('optgroup option')].map((o) => o.value),
+    ).toEqual(['ma-hou-pao', 'matein2', 'middlegame', 'endgame', 'short']);
+    picker.value = 'endgame';
+    picker.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(root.textContent).toContain('0 solved of 2'));
+    expect(loadPuzzleTheme()).toBe('endgame');
+  });
+
+  it('honors a theme URL over storage and offers recovery from an empty theme', async () => {
+    stubWindowLocalStorage(memoryStorage({ 'mistboard:puzzles:theme': 'ma-hou-pao' }));
+    window.history.replaceState(null, '', '/puzzles?theme=men-gong');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input) === '/api/puzzles'
+          ? json({
+              puzzles: [{ ...publicSummary(RED_MATE), motifs: ['ma-hou-pao'] }],
+              themes: themeOptions,
+            })
+          : json({ puzzle: publicDetail(RED_MATE) }),
+      ),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    expect(root.querySelector('.puzzle-detail')?.textContent).toContain(
+      'No puzzles for this theme',
+    );
+    expect(root.querySelector('.puzzle-detail a[href="/puzzles?theme="]')).not.toBeNull();
+    expect(root.querySelector('[data-square]')).toBeNull();
+    window.history.replaceState(null, '', '/puzzles');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await vi.waitFor(() => expect(root.querySelector('[data-square]')).not.toBeNull());
+    expect(root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe('');
+    expect(loadPuzzleTheme()).toBe('men-gong');
+  });
+
+  it('opens a direct puzzle link without erasing the saved theme and ignores invalid stored ids', async () => {
+    stubWindowLocalStorage(memoryStorage({ 'mistboard:puzzles:theme': 'ma-hou-pao' }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input) === '/api/puzzles'
+          ? json({ puzzles: [{ ...publicSummary(RED_MATE), motifs: [] }], themes: themeOptions })
+          : json({ puzzle: publicDetail(RED_MATE) }),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, RED_MATE.id);
+    expect(root.querySelector('[data-square]')).not.toBeNull();
+    expect(root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe('');
+    expect(loadPuzzleTheme()).toBe('ma-hou-pao');
+    window.history.replaceState(null, '', '/puzzles');
+    const reopened = document.createElement('div');
+    await mountPuzzles(reopened);
+    expect(reopened.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe(
+      'ma-hou-pao',
+    );
+    window.localStorage.setItem('mistboard:puzzles:theme', 'toString');
+    expect(loadPuzzleTheme()).toBeNull();
+    stubWindowLocalStorage({
+      getItem: () => {
+        throw new Error('blocked');
+      },
+    } as unknown as Storage);
+    expect(loadPuzzleTheme()).toBeNull();
+  });
+
+  it('offers the theme picker in the phone menu using the same callback', async () => {
+    const onChange = vi.fn(async () => {});
+    const rows = puzzlePhoneMenuRows({
+      queue: [],
+      selectedId: null,
+      solvedIds: new Set(),
+      variantFilter: 'xiangqi',
+      variantFilters: ['xiangqi'],
+      autoNext: false,
+      ratedEnabled: true,
+      userRating: null,
+      ratingDelta: null,
+      onVariantChange: vi.fn(),
+      onAutoNextChange: vi.fn(),
+      onRatedChange: vi.fn(),
+      theme: { id: null, options: { motifs: themeOptions, tagCounts: {} }, onChange },
+    });
+    const field = rows.find((row) => row.dataset.puzzleMenuRow === 'theme')!;
+    const select = field.querySelector<HTMLSelectElement>('[data-puzzle-menu="theme"]')!;
+    select.value = 'ma-hou-pao';
+    select.dispatchEvent(new Event('change'));
+    expect(onChange).toHaveBeenCalledWith('ma-hou-pao');
+    expect(rows.some((row) => row.querySelector('a[href="/puzzles/themes"]'))).toBe(true);
+  });
   const movesOf = (init?: RequestInit): XiangqiMove[] =>
     (JSON.parse(String(init?.body)) as { moves: XiangqiMove[] }).moves;
   const clickSquares = (root: HTMLElement, move: XiangqiMove): void => {

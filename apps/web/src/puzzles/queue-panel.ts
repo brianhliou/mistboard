@@ -12,6 +12,7 @@ import { renderVariantMarker } from '../variant-markers.js';
 import { colorLabel, type PuzzleSummary } from './adapter.js';
 import type { UserPuzzleRating } from './api.js';
 import { isPuzzleVariant, type PuzzleVariant, puzzleBoardAdapter } from './registry.js';
+import { type PuzzleThemeSettings, puzzleThemePicker, puzzleThemesLink } from './themes.js';
 
 export type QueuePanelProps = {
   queue: readonly PuzzleSummary[];
@@ -20,6 +21,7 @@ export type QueuePanelProps = {
   variantFilter: PuzzleVariant;
   // Variants surfaced in the Settings variant picker (order = display order).
   variantFilters: readonly PuzzleVariant[];
+  theme?: PuzzleThemeSettings;
   autoNext: boolean;
   ratedEnabled: boolean;
   userRating: UserPuzzleRating | null;
@@ -53,46 +55,13 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   const current = queue[currentIndex] ?? null;
   const solvedCount = queue.filter((puzzle) => solvedIds.has(puzzle.id)).length;
 
-  const infoCard = document.createElement('section');
-  infoCard.className = 'puzzle-left-card puzzle-current-card puzzle-info-card';
-  if (current) {
-    infoCard.append(
-      puzzleInfoRow('target', [
-        puzzleCodeLine(current),
-        puzzleInfoLine(t('puzzle.ratingHidden')),
-        puzzleInfoLine(
-          solvedIds.has(current.id) ? t('puzzle.statusSolved') : t('puzzle.playedLocally'),
-        ),
-      ]),
-      puzzleInfoDivider(),
-      puzzleInfoRow(
-        'variant',
-        [
-          // Mined xiangqi puzzles carry attribution for the real game they came
-          // from: show a lichess-style "From game" header instead of "From set".
-          // The source game is not hosted yet (license-gated), so this is
-          // display-only — no link.
-          ...sourceGameLines(current),
-          // The goal (e.g. "Mate in 1") is a spoiler while solving; reveal it only
-          // once the puzzle is solved, like the puzzle rating.
-          puzzleInfoLine(
-            solvedIds.has(current.id)
-              ? t('puzzle.goalToMove', {
-                  goal: goalLabel(current),
-                  color: colorLabel(current.sideToMove),
-                })
-              : t('puzzle.toMove', { color: colorLabel(current.sideToMove) }),
-          ),
-        ],
-        current.variant,
-      ),
-    );
-  } else {
-    const empty = document.createElement('p');
-    empty.className = 'puzzle-card-empty';
-    empty.textContent = t('puzzle.noneForVariant');
-    infoCard.append(empty);
-  }
+  const infoCard = current
+    ? puzzleInfoCard(current, {
+        rating: null,
+        status: solvedIds.has(current.id) ? t('puzzle.statusSolved') : t('puzzle.playedLocally'),
+        goalRevealed: solvedIds.has(current.id),
+      })
+    : emptyInfoCard(props.theme?.id ? t('puzzle.noneForTheme') : t('puzzle.noneForVariant'));
 
   // Rated on/off (lichess parity). Off = practice: attempts send rated:false, so
   // neither the user's nor the puzzle's rating moves.
@@ -194,6 +163,10 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     field.append(fieldLabel, select);
     form.append(field);
   }
+  if (props.theme && variantFilter === XIANGQI_SPEC_ID) {
+    form.append(puzzleThemePicker(props.theme));
+  }
+  form.append(puzzleThemesLink());
   const autoNextToggle = document.createElement('label');
   autoNextToggle.className = 'puzzle-toggle';
   const autoNextInput = document.createElement('input');
@@ -214,6 +187,61 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   settingsCard.append(settingsTitle, form);
 
   host.append(infoCard, ratingCard, themesCard, settingsCard);
+}
+
+// The current-puzzle info card (lichess's puzzle__side__metas): the puzzle's
+// code linking to its page, the rating (hidden unless `rating` is given), an
+// optional status line, then where it came from and who is to move. The goal
+// (e.g. "Mate in 1") is a spoiler while solving, so it shows only once
+// `goalRevealed`. Puzzle Streak puts the same card over its own.
+export function puzzleInfoCard(
+  puzzle: PuzzleSummary,
+  opts: { rating: number | null; status: string | null; goalRevealed: boolean },
+): HTMLElement {
+  const infoCard = document.createElement('section');
+  infoCard.className = 'puzzle-left-card puzzle-current-card puzzle-info-card';
+  infoCard.append(
+    puzzleInfoRow('target', [
+      puzzleCodeLine(puzzle),
+      puzzleInfoLine(
+        opts.rating === null
+          ? t('puzzle.ratingHidden')
+          : t('puzzle.ratingShown', { rating: opts.rating }),
+      ),
+      ...(opts.status ? [puzzleInfoLine(opts.status)] : []),
+    ]),
+    puzzleInfoDivider(),
+    puzzleInfoRow(
+      'variant',
+      [
+        // Mined xiangqi puzzles carry attribution for the real game they came
+        // from: show a lichess-style "From game" header instead of "From set".
+        // The source game is not hosted yet (license-gated), so this is
+        // display-only — no link.
+        ...sourceGameLines(puzzle),
+        puzzleInfoLine(
+          opts.goalRevealed
+            ? t('puzzle.goalToMove', {
+                goal: goalLabel(puzzle),
+                color: colorLabel(puzzle.sideToMove),
+              })
+            : t('puzzle.toMove', { color: colorLabel(puzzle.sideToMove) }),
+        ),
+      ],
+      puzzle.variant,
+    ),
+  );
+  return infoCard;
+}
+
+function emptyInfoCard(message: string): HTMLElement {
+  const infoCard = document.createElement('section');
+  infoCard.className = 'puzzle-left-card puzzle-current-card puzzle-info-card';
+  const empty = document.createElement('p');
+  empty.className = 'puzzle-card-empty';
+  empty.textContent = message;
+  infoCard.append(empty);
+  return infoCard;
 }
 
 export function variantLabel(variant: PuzzleVariant): string {

@@ -56,6 +56,18 @@ export function primaryNavItems(): NavItem[] {
   ];
 }
 
+// Puzzles dropdown (lichess parity: Puzzle Themes and Puzzle Streak sit in the
+// Puzzles menu, not on the trainer page). The title navigates to the trainer
+// and the panel repeats it, as Play does, so touch devices can still reach it.
+// The themes page's sidebar lists these same three.
+export function puzzleNavItems(): NavItem[] {
+  return [
+    { label: 'Puzzles', labelKey: 'nav.puzzles', href: '/puzzles' },
+    { label: 'Puzzle Themes', labelKey: 'nav.puzzleThemes', href: '/puzzles/themes' },
+    { label: 'Puzzle Streak', labelKey: 'nav.puzzleStreak', href: '/puzzles?mode=streak' },
+  ];
+}
+
 // Top-nav Community dropdown (lichess-aligned order): Leaderboard, Pro players
 // (the broadcast player pages at /players), Bots (the bot roster), Friends (your
 // following list), Forum, Blog (the articles surface). Teams is deliberately
@@ -227,15 +239,14 @@ export function mistboardMenuItems(): NavItem[] {
 // The phone site menu (site-shell.ts openSiteMenu): every destination the bar
 // carries, grouped into sections and composed from the same lists the bar
 // renders, so a link added to a dropdown reaches the phone menu with no second
-// edit. Puzzles joins Play and Support closes Community; Admin follows for
+// edit. The Puzzles menu joins Play and Support closes Community; Admin follows for
 // admins only, like the bar's admin menu. The order is the reading order of a
 // two-column flow: Play, Watch, Tools down the first column, Learn and
 // Community down the second. Mistboard always closes the menu
 // (mistboardMenuItems).
 export function siteMenuSections({ admin = false }: { admin?: boolean } = {}): NavSection[] {
-  const puzzles = primaryNavItems().find((item) => item.labelKey === 'nav.puzzles');
   return [
-    { labelKey: 'nav.play', items: [...playNavItems(), ...(puzzles ? [puzzles] : [])] },
+    { labelKey: 'nav.play', items: [...playNavItems(), ...puzzleNavItems()] },
     { labelKey: 'nav.watch', items: watchNavItems() },
     { labelKey: 'nav.tools', items: toolsNavItems() },
     { labelKey: 'nav.learn', items: learnNavItems() },
