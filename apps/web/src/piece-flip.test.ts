@@ -3,7 +3,14 @@
 // replay jump, reduced motion), and that nothing before the reveal carries the
 // piece's identity.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PIECE_FLIP_DURATION_MS, pieceFlipDurationMs } from './board-anim.js';
+import {
+  PIECE_FLIP_DURATION_MS,
+  pieceFlipDurationMs,
+  pieceFlipStyle,
+  pieceFlipStyleFromSearch,
+  resetPieceFlipStyleCache,
+} from './board-anim.js';
+import { writeDisplayPreference } from './display-preferences.js';
 import {
   animateBanqiReveal,
   banqiRevealFlipSquare,
@@ -96,9 +103,34 @@ function banqiHost(view: unknown): HTMLElement {
 
 const liveFlip = { kind: 'live', move: { from: 'a1', to: 'a1' }, color: 'red' } as const;
 
-beforeEach(() => setReducedMotion(false));
+/** A Storage backed by a Map: the test env ships no window storage. */
+function memoryStorage(): Storage {
+  const items = new Map<string, string>();
+  return {
+    get length() {
+      return items.size;
+    },
+    clear: () => items.clear(),
+    getItem: (key) => items.get(key) ?? null,
+    key: (index) => Array.from(items.keys())[index] ?? null,
+    removeItem: (key) => {
+      items.delete(key);
+    },
+    setItem: (key, value) => {
+      items.set(key, String(value));
+    },
+  };
+}
+
+beforeEach(() => {
+  vi.stubGlobal('localStorage', memoryStorage());
+  vi.stubGlobal('sessionStorage', memoryStorage());
+  setReducedMotion(false);
+});
 afterEach(() => {
   vi.unstubAllGlobals();
+  window.history.replaceState(null, '', window.location.pathname);
+  resetPieceFlipStyleCache();
   window.dispatchEvent(new Event('mistboard:display-preferences-change'));
 });
 
@@ -245,5 +277,101 @@ describe('jieqi turn-over (prototype)', () => {
     });
     expect(calls.find((call) => call.target === 'a3')?.options.delay).toBe(250);
     expect(backs).toHaveLength(1);
+  });
+});
+
+describe('flip styles (?flip= spike)', () => {
+  function useFlag(search: string): void {
+    window.sessionStorage.removeItem('mistboard.flipStyle');
+    window.history.replaceState(null, '', `${window.location.pathname}${search}`);
+    resetPieceFlipStyleCache();
+  }
+
+  it('resolves each style from the flag and ignores anything else', () => {
+    expect(pieceFlipStyleFromSearch('?flip=flat')).toBe('flat');
+    expect(pieceFlipStyleFromSearch('?flip=lift')).toBe('lift');
+    expect(pieceFlipStyleFromSearch('?flip=spin')).toBe('spin');
+    expect(pieceFlipStyleFromSearch('?flip=wobble')).toBeNull();
+    expect(pieceFlipStyleFromSearch('')).toBeNull();
+  });
+
+  it('defaults to flat, the shipped turn, with no flag', () => {
+    useFlag('');
+    expect(pieceFlipStyle()).toBe('flat');
+    useFlag('?flip=nope');
+    expect(pieceFlipStyle()).toBe('flat');
+  });
+
+  it('reads the flag once and keeps it for the tab after the query is gone', () => {
+    useFlag('?flip=spin');
+    expect(pieceFlipStyle()).toBe('spin');
+    window.history.replaceState(null, '', window.location.pathname);
+    expect(pieceFlipStyle()).toBe('spin');
+    resetPieceFlipStyleCache();
+    expect(pieceFlipStyle()).toBe('spin');
+    useFlag('?flip=flat');
+    expect(pieceFlipStyle()).toBe('flat');
+  });
+
+  it.each([
+    ['fast', 180],
+    ['normal', 280],
+    ['slow', 420],
+    ['none', 0],
+  ] as const)('the %s animation speed turns a tile in %ims', (speed, ms) => {
+    writeDisplayPreference('pieceAnimation', speed);
+    expect(pieceFlipDurationMs()).toBe(ms);
+  });
+
+  it.each(['flat', 'lift', 'spin'])('%s follows the speed setting and is off at none', (flag) => {
+    useFlag(`?flip=${flag}`);
+    writeDisplayPreference('pieceAnimation', 'slow');
+    const slow = recordAnimations(() => animateBanqiReveal(banqiHost(revealed), 'a1')).calls;
+    expect(slow.length).toBeGreaterThan(0);
+    for (const call of slow) expect(call.options.duration).toBe(420);
+    writeDisplayPreference('pieceAnimation', 'none');
+    const el = banqiHost(revealed);
+    const none = recordAnimations(() => {
+      expect(animateBanqiReveal(el, 'a1')).toBe(false);
+    }).calls;
+    expect(none).toEqual([]);
+    expect(el.querySelector('.piece-flip-back, .piece-flip-turn')).toBeNull();
+  });
+
+  it.each([
+    ['lift', 'rotateX'],
+    ['spin', 'rotateY'],
+  ])('%s lifts the slot and turns the tile with %s, face swapped edge-on', (flag, axis) => {
+    useFlag(`?flip=${flag}`);
+    const el = banqiHost(revealed);
+    const faceBefore = el.querySelector('[data-piece-square="a1"]')?.innerHTML;
+    const { calls, backs } = recordAnimations(() => {
+      expect(animateBanqiReveal(el, 'a1')).toBe(true);
+    });
+    const lift = calls.find((call) => call.target === 'a1');
+    expect(lift?.keyframes.map((k) => k.transform)).toEqual([
+      'scale(1)',
+      'scale(1.12)',
+      'scale(1.12)',
+      'scale(1)',
+    ]);
+    expect(lift?.keyframes.every((k) => String(k.filter).startsWith('drop-shadow('))).toBe(true);
+    const turn = calls.find((call) => call.target === 'piece-flip-turn');
+    const turns = turn?.keyframes.map((k) => String(k.transform)) ?? [];
+    expect(turns.every((t) => t.includes(`${axis}(`) && t.includes('perspective('))).toBe(true);
+    const midpoint = turn?.keyframes.filter((k) => k.offset === 0.5).map((k) => k.transform);
+    expect(midpoint).toEqual([
+      expect.stringContaining(`${axis}(90deg)`),
+      expect.stringContaining(`${axis}(-90deg)`),
+    ]);
+    // The flat turn's squash is not used.
+    expect(calls.some((call) => call.keyframes.some((k) => k.transform === 'scaleX(0)'))).toBe(
+      false,
+    );
+    // Same identity-free back; the stub never finishes, so the slot settles at
+    // once: back gone, wrapper unwrapped, the rendered face exactly as drawn.
+    expect(backs).toHaveLength(1);
+    expect(backs[0]?.replace('class="piece-flip-back"', '')).not.toMatch(IDENTITY);
+    expect(el.querySelector('[data-piece-square="a1"]')?.innerHTML).toBe(faceBefore);
   });
 });

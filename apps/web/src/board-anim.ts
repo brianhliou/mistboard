@@ -30,10 +30,12 @@ const PIECE_ANIMATION_DURATION_MS: Record<string, number> = {
 export const PIECE_GLIDE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
 let cachedDurationMs: number | null = null;
+let cachedFlipDurationMs: number | null = null;
 let subscribed = false;
 
 function invalidateCache(): void {
   cachedDurationMs = null;
+  cachedFlipDurationMs = null;
 }
 
 function prefersReducedMotion(): boolean {
@@ -152,21 +154,152 @@ export function drawMarkerOnArrival(el: Element | null, durationMs: number): voi
   );
 }
 
-/** A face-down tile's turn-over (#709): long enough to read as a turn, short
- *  enough never to hold up the next move. Fixed rather than scaled by the glide
- *  pref, which only switches it on or off ('none', reduced motion). */
-export const PIECE_FLIP_DURATION_MS = 280;
+/** A face-down tile's turn-over (#709), by the glide pref's speed: long enough
+ *  to read as a turn, short enough never to hold up the next move. 'none' (and
+ *  reduced motion) turns nothing: the face just appears. */
+const PIECE_FLIP_DURATION_BY_SPEED: Record<string, number> = {
+  none: 0,
+  fast: 180,
+  normal: 280,
+  slow: 420,
+};
 
-/** The turn-over duration in ms, 0 when piece animation is off (the 'none'
- *  pref or `prefers-reduced-motion: reduce`): the face then just appears. */
+/** The turn-over at the default ('normal') speed. */
+export const PIECE_FLIP_DURATION_MS = PIECE_FLIP_DURATION_BY_SPEED.normal!;
+
+/** The turn-over duration in ms for the current piece-animation pref, 0 when
+ *  piece animation is off (the 'none' pref or `prefers-reduced-motion: reduce`):
+ *  the face then just appears. Cached like the glide, cleared by the same
+ *  settings event. */
 export function pieceFlipDurationMs(): number {
-  return pieceAnimationDurationMs() > 0 ? PIECE_FLIP_DURATION_MS : 0;
+  if (pieceAnimationDurationMs() <= 0) return 0;
+  if (cachedFlipDurationMs === null) {
+    const preference = readDisplayPreferences().pieceAnimation;
+    cachedFlipDurationMs = PIECE_FLIP_DURATION_BY_SPEED[preference] ?? PIECE_FLIP_DURATION_MS;
+  }
+  return cachedFlipDurationMs;
 }
 
+// ── Flip style spike (#709): ?flip=flat|lift|spin ───────────────────────────
+// Three turn-overs side by side while Brian picks one live (2026-10-28). The
+// flag is read once per page load and kept for the tab (sessionStorage), so it
+// survives in-app navigation into a room; ?flip=flat goes back. Absent, the
+// style is 'flat', the shipped turn. Delete the losers once one is picked.
+
+export const PIECE_FLIP_STYLES = ['flat', 'lift', 'spin'] as const;
+export type PieceFlipStyle = (typeof PIECE_FLIP_STYLES)[number];
+
+const PIECE_FLIP_STYLE_STORAGE_KEY = 'mistboard.flipStyle';
+
+/** The style a `?flip=` query names, or null when it names none. */
+export function pieceFlipStyleFromSearch(search: string): PieceFlipStyle | null {
+  try {
+    const value = new URLSearchParams(search).get('flip');
+    return (PIECE_FLIP_STYLES as readonly string[]).includes(value ?? '')
+      ? (value as PieceFlipStyle)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+let cachedFlipStyle: PieceFlipStyle | null = null;
+
+/** The turn-over style for this tab: the `?flip=` flag, else the one the tab
+ *  last asked for, else 'flat'. */
+export function pieceFlipStyle(): PieceFlipStyle {
+  if (cachedFlipStyle !== null) return cachedFlipStyle;
+  let style: PieceFlipStyle = 'flat';
+  try {
+    const flagged = pieceFlipStyleFromSearch(window.location.search);
+    if (flagged) {
+      window.sessionStorage.setItem(PIECE_FLIP_STYLE_STORAGE_KEY, flagged);
+      style = flagged;
+    } else {
+      const stored = window.sessionStorage.getItem(PIECE_FLIP_STYLE_STORAGE_KEY);
+      style = (PIECE_FLIP_STYLES as readonly string[]).includes(stored ?? '')
+        ? (stored as PieceFlipStyle)
+        : 'flat';
+    }
+  } catch {
+    style = 'flat';
+  }
+  cachedFlipStyle = style;
+  return style;
+}
+
+/** Tests only: forget the parsed flag so the next read re-parses the URL. */
+export function resetPieceFlipStyleCache(): void {
+  cachedFlipStyle = null;
+}
+
+// Parse at load, before any in-app navigation can drop the query.
+if (typeof window !== 'undefined') pieceFlipStyle();
+
+/** Perspective distance for the lifted turns, in viewBox units (a tile is ~60). */
+const FLIP_PERSPECTIVE = 240;
+/** How far a lifted tile grows (it nears the eye) and the shadow it casts. */
+const FLIP_LIFT_SCALE = 1.12;
+const FLIP_SHADOW_DOWN = 'drop-shadow(0px 0px 0px rgba(0, 0, 0, 0))';
+const FLIP_SHADOW_UP = 'drop-shadow(0px 6px 5px rgba(0, 0, 0, 0.32))';
+
 /**
- * Turn an already-revealed SVG piece slot over: a scaleX turn about `center`
- * (viewBox units) that shows `backMarkup` for the first half and the slot's own
- * face for the second. Call AFTER the innerHTML swap that rendered the face.
+ * The keyframes of one turn-over style. `turn` turns the tile (face swap at
+ * offset 0.5, edge-on); `lift`, when present, raises the whole slot: up by
+ * 0.2, held while it turns, settled by 1. The lifted turns go to 90 degrees and
+ * come back from -90, so the new face arrives unmirrored. Browsers may flatten
+ * a 3D turn on SVG content to its 2D squash; the lift still reads.
+ */
+export function pieceFlipKeyframes(style: PieceFlipStyle): {
+  turn: Keyframe[];
+  lift: Keyframe[] | null;
+} {
+  if (style === 'flat') {
+    return {
+      turn: [
+        { transform: 'scaleX(1)', offset: 0, easing: 'ease-in' },
+        { transform: 'scaleX(0)', offset: 0.5, easing: 'ease-out' },
+        { transform: 'scaleX(1)', offset: 1 },
+      ],
+      lift: null,
+    };
+  }
+  const axis = style === 'lift' ? 'rotateX' : 'rotateY';
+  const at = (deg: number) => `perspective(${FLIP_PERSPECTIVE}px) ${axis}(${deg}deg)`;
+  return {
+    turn: [
+      { transform: at(0), offset: 0 },
+      { transform: at(0), offset: 0.2, easing: 'ease-in' },
+      { transform: at(90), offset: 0.5 },
+      { transform: at(-90), offset: 0.5, easing: 'ease-out' },
+      { transform: at(0), offset: 0.8 },
+      { transform: at(0), offset: 1 },
+    ],
+    lift: [
+      { transform: 'scale(1)', filter: FLIP_SHADOW_DOWN, offset: 0, easing: 'ease-out' },
+      { transform: `scale(${FLIP_LIFT_SCALE})`, filter: FLIP_SHADOW_UP, offset: 0.2 },
+      {
+        transform: `scale(${FLIP_LIFT_SCALE})`,
+        filter: FLIP_SHADOW_UP,
+        offset: 0.8,
+        easing: 'ease-in',
+      },
+      { transform: 'scale(1)', filter: FLIP_SHADOW_DOWN, offset: 1 },
+    ],
+  };
+}
+
+type Animatable = Element & {
+  animate?: (keyframes: Keyframe[], options: KeyframeAnimationOptions) => Animation;
+  getAnimations?: () => Animation[];
+  style?: CSSStyleDeclaration;
+};
+
+/**
+ * Turn an already-revealed SVG piece slot over about `center` (viewBox units),
+ * showing `backMarkup` for the first half and the slot's own face for the
+ * second, in the tab's flip style (`opts.style` overrides it). Call AFTER the
+ * innerHTML swap that rendered the face.
  *
  * Hidden information: the face is never drawn before the render that carries
  * it. `backMarkup` must be the identity-free back the board already drew for
@@ -175,8 +308,10 @@ export function pieceFlipDurationMs(): number {
  * `delayMs` holds the turn until a glide on the same slot lands (jieqi: the
  * piece travels face-down, then turns over on its destination); the back covers
  * the face for the whole delay. Without a delay, in-flight animations on the
- * slot are cancelled first. The back is removed when the turn ends or is
- * cancelled, and a re-render replaces the slot anyway, so nothing outlives it.
+ * slot are cancelled first. The lifted styles turn an inner wrapper and raise
+ * the slot; when the turn ends or is cancelled the back is removed and the
+ * wrapper unwrapped, and a re-render replaces the slot anyway, so nothing
+ * outlives it. Nothing moves before or after the turn.
  * Returns false (no-op) at duration 0 or without WAAPI (happy-dom/jsdom).
  */
 export function flipSvgPiece(
@@ -184,26 +319,37 @@ export function flipSvgPiece(
   center: { x: number; y: number },
   backMarkup: string,
   durationMs: number,
-  opts: { delayMs?: number } = {},
+  opts: { delayMs?: number; style?: PieceFlipStyle } = {},
 ): boolean {
   if (durationMs <= 0) return false;
-  const target = slot as Element & {
-    animate?: (keyframes: Keyframe[], options: KeyframeAnimationOptions) => Animation;
-    getAnimations?: () => Animation[];
-    style?: CSSStyleDeclaration;
-  };
+  const target = slot as Animatable;
   if (typeof target.animate !== 'function') return false;
   const delay = Math.max(0, opts.delayMs ?? 0);
   if (delay === 0 && typeof target.getAnimations === 'function') {
     for (const animation of target.getAnimations()) animation.cancel();
   }
+  const { turn: turnFrames, lift: liftFrames } = pieceFlipKeyframes(opts.style ?? pieceFlipStyle());
+  const svgNs = 'http://www.w3.org/2000/svg';
   const faces = Array.from(slot.children);
-  const back = slot.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'g');
+  const back = slot.ownerDocument.createElementNS(svgNs, 'g');
   back.setAttribute('class', 'piece-flip-back');
   back.setAttribute('aria-hidden', 'true');
   back.innerHTML = backMarkup;
-  slot.append(back);
-  if (target.style) target.style.transformOrigin = `${center.x}px ${center.y}px`;
+  const origin = `${center.x}px ${center.y}px`;
+  // Flat turns the slot itself; a lifted style turns a wrapper inside it, so
+  // the slot's own transform is free for the lift (and its shadow follows the
+  // turning shape, thinning edge-on as a real tile's would).
+  let turner: Animatable = target;
+  if (liftFrames) {
+    turner = slot.ownerDocument.createElementNS(svgNs, 'g') as Animatable;
+    turner.setAttribute('class', 'piece-flip-turn');
+    turner.append(...faces, back);
+    slot.append(turner);
+    if (turner.style) turner.style.transformOrigin = origin;
+  } else {
+    slot.append(back);
+  }
+  if (target.style) target.style.transformOrigin = origin;
   const timing: KeyframeAnimationOptions = { duration: durationMs, delay, fill: 'backwards' };
   // The face swaps in at the midpoint, edge-on, where neither side shows.
   const hideUntilMidpoint: Keyframe[] = [
@@ -219,24 +365,23 @@ export function flipSvgPiece(
     { opacity: 0, offset: 1 },
   ];
   for (const face of faces) {
-    (face as Element & { animate?: typeof target.animate }).animate?.(hideUntilMidpoint, timing);
+    (face as Animatable).animate?.(hideUntilMidpoint, timing);
   }
   back.animate(showUntilMidpoint, { ...timing, fill: 'both' });
-  const turn = target.animate(
-    [
-      { transform: 'scaleX(1)', offset: 0, easing: 'ease-in' },
-      { transform: 'scaleX(0)', offset: 0.5, easing: 'ease-out' },
-      { transform: 'scaleX(1)', offset: 1 },
-    ],
-    // No backwards fill: during a delay the slot's glide owns its transform.
-    { duration: durationMs, delay },
-  );
-  const removeBack = () => back.remove();
+  // No backwards fill: during a delay the slot's glide owns its transform.
+  const turn = turner.animate?.(turnFrames, { duration: durationMs, delay });
+  if (liftFrames) target.animate(liftFrames, { duration: durationMs, delay });
+  const settle = () => {
+    back.remove();
+    if (turner !== target && turner.parentNode === slot) {
+      turner.replaceWith(...Array.from(turner.childNodes));
+    }
+  };
   if (turn && typeof turn.addEventListener === 'function') {
-    turn.addEventListener('finish', removeBack);
-    turn.addEventListener('cancel', removeBack);
+    turn.addEventListener('finish', settle);
+    turn.addEventListener('cancel', settle);
   } else {
-    removeBack();
+    settle();
   }
   return true;
 }
