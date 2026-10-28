@@ -93,7 +93,7 @@ definePersistenceTests('puzzle-ratings', () => {
     assert.equal(res.userRatingDelta, 0);
 
     const user = await getUserPuzzleRating('u3', 'fortress-xiangqi');
-    assert.equal(user?.rating, 1500); // unchanged
+    assert.equal(user?.rating, 1800); // the new-player start, unchanged
     assert.equal(user?.attempts, 1); // still counted
     assert.equal(user?.solved, 1);
 
@@ -118,6 +118,25 @@ definePersistenceTests('puzzle-ratings', () => {
     const puzzle = await getPuzzleRating('p-4');
     assert.ok(puzzle);
     assert.ok(puzzle.rating > 1300);
+  });
+
+  test('a first rating row starts a new player at 1800, not the 1500 column default', async () => {
+    await mkUser('u6', 'newcomer');
+    const res = await recordPuzzleAttempt({
+      userId: 'u6',
+      puzzleId: 'p-6',
+      variant: 'xiangqi',
+      solved: true,
+      rated: true,
+      seedRating: seedPuzzleRating(5), // 1900
+    });
+    assert.ok(res);
+    // The delta is measured from the start the row was seeded with.
+    assert.equal(res.userRating - res.userRatingDelta, 1800);
+    const user = await getUserPuzzleRating('u6', 'xiangqi');
+    assert.ok(user);
+    assert.ok(user.rating > 1800);
+    assert.equal(user.provisional, true);
   });
 
   test('user puzzle ratings are per variant', async () => {

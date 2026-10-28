@@ -10,7 +10,10 @@ import {
   readPinnedArtifact,
 } from '../../apps/server/src/elephantchess-pilot-run-provenance.ts';
 import { close, getPool, init } from '../../apps/server/src/persistence-db.ts';
-import { getHistoricalXiangqiGame } from '../../apps/server/src/persistence-historical-xiangqi.ts';
+import {
+  getHistoricalXiangqiGame,
+  getHistoricalXiangqiSource,
+} from '../../apps/server/src/persistence-historical-xiangqi.ts';
 import {
   getXiangqiPuzzleMiningRun,
   recordXiangqiPuzzleMiningCandidate,
@@ -100,6 +103,14 @@ const MINING_SESSION_GUARDS = {
 
 init(databaseUrl, MINING_SESSION_GUARDS);
 let engine: PikafishEngine | null = null;
+
+const sourceSlugs = new Map<string, string | null>();
+async function sourceSlugFor(sourceId: string): Promise<string | null> {
+  if (!sourceSlugs.has(sourceId)) {
+    sourceSlugs.set(sourceId, (await getHistoricalXiangqiSource(sourceId))?.slug ?? null);
+  }
+  return sourceSlugs.get(sourceId) ?? null;
+}
 try {
   const run = await getXiangqiPuzzleMiningRun(getPool(), runId);
   const engineProfile = record(run.engineProfile, 'engineProfile');
@@ -184,6 +195,8 @@ try {
       processGame: async (member) => {
         const game = await getHistoricalXiangqiGame(member.historicalGameId);
         if (!game) throw new Error(`historical game ${member.historicalGameId} not found`);
+        // The source decides whether a puzzle must carry a credit link (#712).
+        const sourceSlug = await sourceSlugFor(game.sourceId);
         metrics.gamesLoaded += 1;
         await mineXiangqiPuzzleGame(
           engine as PikafishEngine,
@@ -196,6 +209,9 @@ try {
               result: game.result,
               redName: game.redNameRaw ?? null,
               blackName: game.blackNameRaw ?? null,
+              sourceSlug,
+              sourceUrl: game.sourceUrl ?? null,
+              sourceGameId: game.sourceGameId ?? null,
             },
           },
           options,

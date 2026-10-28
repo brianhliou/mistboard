@@ -10,7 +10,7 @@ import type pg from 'pg';
 import { emitAchievementTrigger } from './achievement-triggers.js';
 import { type Glicko2, isProvisional } from './glicko.js';
 import { getPool, isInitialized, withTransaction } from './persistence-db.js';
-import { ratePuzzleAttempt } from './puzzle-rating.js';
+import { newPlayerPuzzleRating, ratePuzzleAttempt } from './puzzle-rating.js';
 
 export type UserPuzzleRating = {
   glicko: Glicko2;
@@ -198,10 +198,14 @@ async function lockUserRating(
   userId: string,
   variant: string,
 ): Promise<Glicko2> {
+  // A first row starts at the new-player rating (#712), not the column
+  // default of 1500, so the queue and the first rated attempt agree.
+  const start = newPlayerPuzzleRating();
   await client.query(
-    `INSERT INTO user_puzzle_ratings (user_id, variant) VALUES ($1, $2)
+    `INSERT INTO user_puzzle_ratings (user_id, variant, rating, rating_deviation, volatility)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (user_id, variant) DO NOTHING`,
-    [userId, variant],
+    [userId, variant, start.rating, start.rd, start.volatility],
   );
   const { rows } = await client.query<RatingRow>(
     `SELECT rating, rating_deviation, volatility FROM user_puzzle_ratings
