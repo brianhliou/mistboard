@@ -2059,142 +2059,237 @@ a.puzzle-streak-chip:focus-visible {
     min-height: 52px;
   }
 }
+/* Puzzle Themes, lichess's training/themes: the Puzzles menu on the left and
+   the catalogue in one lifted panel, light headings, borderless rows. */
 .puzzle-themes-layout {
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
-  gap: 32px;
-  width: min(100%, 1280px);
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: start;
+  width: min(100%, 1300px);
   margin: 0 auto;
   padding: 24px 16px 48px;
   color: var(--site-text);
 }
 
-/* Lichess's left column: the Puzzles menu, this page marked. */
+/* The Puzzles menu, this page marked with the panel's own surface. */
 .puzzle-themes-side {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   align-self: start;
   position: sticky;
   top: 16px;
-  border-left: 1px solid var(--site-border-soft);
 }
 
 .puzzle-themes-side a {
-  display: flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 16px;
-  margin-left: -1px;
-  border-left: 3px solid transparent;
+  display: block;
+  padding: 10px 20px 10px 12px;
+  border-radius: 4px;
   color: var(--site-muted);
+  font-size: 14px;
+  line-height: 1.2;
   text-decoration: none;
+  transition:
+    background 140ms ease,
+    color 140ms ease;
 }
 
-.puzzle-themes-side a:hover {
+.puzzle-themes-side a:hover,
+.puzzle-themes-side a:focus-visible {
+  background: var(--site-hover);
   color: var(--site-text);
+  outline: none;
 }
 
 .puzzle-themes-side a[aria-current="page"] {
-  border-left-color: var(--site-accent);
-  color: var(--site-heading);
-  font-weight: 600;
+  background: var(--site-panel);
+  color: var(--site-text);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--site-shadow) 14%, transparent);
 }
 
 .puzzle-themes-index {
   min-width: 0;
+  box-sizing: border-box;
+  padding: clamp(30px, 4vh, 40px) clamp(24px, 3.5vw, 50px) clamp(32px, 4vh, 44px);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--site-shadow) 35%, transparent);
 }
 
-.puzzle-themes-index > p {
-  max-width: 75ch;
-  line-height: 1.6;
+.puzzle-themes-index .puzzle-themes-title {
+  margin: 0;
+  font-size: clamp(30px, 2.6vw, 38px);
+  line-height: 1.2;
 }
 
 .puzzle-themes-group {
-  margin-top: 32px;
+  margin-top: 36px;
 }
 
 .puzzle-themes-group h2 {
-  margin: 0;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--site-border-soft);
+  margin: 0 0 12px;
   color: var(--site-heading);
-  font-size: 22px;
+  font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 300;
+  line-height: 1.2;
 }
 
 .puzzle-themes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-  gap: 12px;
-  margin-top: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 24px;
+}
+
+.puzzle-themes-recommended .puzzle-themes-grid {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .puzzle-theme-entry {
   min-width: 0;
-  background: var(--site-panel);
-  border: 1px solid var(--site-border);
-  border-radius: 6px;
   overflow-wrap: anywhere;
 }
 
-.puzzle-theme-entry:hover {
-  border-color: var(--site-accent);
-}
-
 .puzzle-theme-entry__link {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
   height: 100%;
   box-sizing: border-box;
   padding: 16px 18px;
+  border-radius: 6px;
   color: inherit;
   text-decoration: none;
+  transition: background 140ms ease;
+}
+
+.puzzle-theme-entry__link:hover,
+.puzzle-theme-entry__link:focus-visible {
+  background: var(--site-panel-soft);
+  outline: none;
+}
+
+.puzzle-theme-entry__link:focus-visible {
+  box-shadow: 0 0 0 3px var(--site-focus);
+}
+
+.puzzle-theme-icon {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  margin-top: 2px;
+  color: color-mix(in srgb, var(--site-muted) 80%, transparent);
+}
+
+.puzzle-theme-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.puzzle-theme-body {
+  min-width: 0;
 }
 
 .puzzle-theme-entry h3 {
   margin: 0;
   color: var(--site-heading);
-  font-size: 18px;
+  font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
+  font-size: 23px;
+  font-weight: 300;
+  line-height: 1.25;
+}
+
+.puzzle-theme-count {
+  margin-left: 4px;
+  color: var(--site-muted);
+  font-family: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  white-space: nowrap;
 }
 
 .puzzle-theme-entry p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   line-height: 1.5;
 }
 
-.puzzle-theme-name,
-.puzzle-theme-count {
+.puzzle-theme-name {
   color: var(--site-muted);
-  font-size: 14px;
+  font-size: 13px;
 }
 
-.puzzle-theme-count {
-  margin-top: 10px;
-  font-weight: 600;
+/* The one recommended row sits on the brand tint, lichess's green box. */
+.puzzle-themes-recommended .puzzle-theme-entry__link {
+  background: var(--site-accent-soft);
+}
+
+.puzzle-themes-recommended .puzzle-theme-entry__link:hover,
+.puzzle-themes-recommended .puzzle-theme-entry__link:focus-visible {
+  background: color-mix(in srgb, var(--site-accent) 12%, var(--site-accent-soft));
+}
+
+.puzzle-themes-recommended .puzzle-theme-icon {
+  color: var(--site-accent);
 }
 
 @media (max-width: 760px) {
   .puzzle-themes-layout {
     grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
+    row-gap: 12px;
+    padding: 12px 8px 32px;
   }
 
   .puzzle-themes-side {
     position: static;
-    flex-direction: row;
+    display: flex;
     flex-wrap: wrap;
-    border-left: 0;
-    border-bottom: 1px solid var(--site-border-soft);
+    gap: 4px;
   }
 
   .puzzle-themes-side a {
-    margin: 0 0 -1px;
-    padding: 0 12px;
-    border-left: 0;
-    border-bottom: 3px solid transparent;
+    padding: 10px 14px;
   }
 
-  .puzzle-themes-side a[aria-current="page"] {
-    border-bottom-color: var(--site-accent);
+  .puzzle-themes-index {
+    padding: 24px 12px 28px;
+  }
+
+  .puzzle-themes-index .puzzle-themes-title {
+    padding: 0 8px;
+    font-size: 28px;
+  }
+
+  .puzzle-themes-group {
+    margin-top: 28px;
+  }
+
+  .puzzle-themes-group h2 {
+    padding: 0 8px;
+    font-size: 24px;
+  }
+
+  .puzzle-themes-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .puzzle-theme-entry__link {
+    gap: 14px;
+    padding: 12px 8px;
+  }
+
+  .puzzle-themes-recommended .puzzle-theme-entry__link {
+    padding: 14px 12px;
+  }
+
+  .puzzle-theme-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .puzzle-theme-entry h3 {
+    font-size: 20px;
   }
 }
 

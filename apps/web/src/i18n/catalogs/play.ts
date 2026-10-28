@@ -425,10 +425,12 @@ export const EN_PLAY = {
   'puzzle.allThemes': 'All themes',
   'puzzle.browseThemes': 'Browse puzzle themes',
   'puzzle.noneForTheme': 'No puzzles for this theme. Choose another theme or All themes.',
-  'puzzle.themeIndexIntro':
-    'Train by mate pattern, by how many moves the mate takes, by phase of the game, by goal or by length. Mate patterns give their Chinese name, pronunciation and literal meaning. A puzzle sits in several themes.',
   'puzzle.themeCount': '{count} puzzles',
   'puzzle.themeCountOne': '1 puzzle',
+  'puzzle.themeGroupRecommended': 'Recommended',
+  'puzzle.themeMixName': 'Healthy mix',
+  'puzzle.themeMixDesc':
+    'Every theme shuffled together, as positions come up in a real game: no hint of what is coming.',
   'puzzle.themeGroupMotif': 'Mate patterns',
   'puzzle.themeGroupMate': 'Mates',
   'puzzle.themeGroupPhase': 'Phases',

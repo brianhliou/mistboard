@@ -207,10 +207,11 @@ export const ZH_HANS_PLAY = {
   'puzzle.allThemes': '全部主题',
   'puzzle.browseThemes': '浏览题目主题',
   'puzzle.noneForTheme': '此主题暂无题目。请选择其他主题或“全部主题”。',
-  'puzzle.themeIndexIntro':
-    '按杀法、几步杀、对局阶段、目标或步数练习。杀法附有中文名称、拼音和字面意思。一道题可以属于多个主题。',
   'puzzle.themeCount': '{count}道题',
   'puzzle.themeCountOne': '1道题',
+  'puzzle.themeGroupRecommended': '推荐',
+  'puzzle.themeMixName': '综合练习',
+  'puzzle.themeMixDesc': '所有主题混在一起，就像实战中一样，事先不知道会遇到什么。',
   'puzzle.themeGroupMotif': '杀法',
   'puzzle.themeGroupMate': '几步杀',
   'puzzle.themeGroupPhase': '阶段',

@@ -207,10 +207,11 @@ export const ZH_HANT_PLAY = {
   'puzzle.allThemes': '全部主題',
   'puzzle.browseThemes': '瀏覽題目主題',
   'puzzle.noneForTheme': '此主題暫無題目。請選擇其他主題或「全部主題」。',
-  'puzzle.themeIndexIntro':
-    '按殺法、幾步殺、對局階段、目標或步數練習。殺法附有中文名稱、拼音和字面意思。一道題可以屬於多個主題。',
   'puzzle.themeCount': '{count}道題',
   'puzzle.themeCountOne': '1道題',
+  'puzzle.themeGroupRecommended': '推薦',
+  'puzzle.themeMixName': '綜合練習',
+  'puzzle.themeMixDesc': '所有主題混在一起，就像實戰中一樣，事先不知道會遇到什麼。',
   'puzzle.themeGroupMotif': '殺法',
   'puzzle.themeGroupMate': '幾步殺',
   'puzzle.themeGroupPhase': '階段',

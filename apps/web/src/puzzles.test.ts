@@ -232,10 +232,23 @@ describe('puzzles route', () => {
     expect(link?.textContent).toContain('Cannon behind the horse');
     expect(root.textContent).toContain('马后炮');
     expect(root.textContent).toContain('mǎ hòu pào');
-    expect(root.textContent).toContain('24 puzzles');
+    // Lichess's row: the count sits inline after the name, a bare number.
+    const count = root.querySelector(
+      '[data-puzzle-theme-card="ma-hou-pao"] h3 .puzzle-theme-count',
+    );
+    expect(count?.textContent).toBe('24');
+    expect(count?.getAttribute('title')).toBe('24 puzzles');
     expect(root.textContent).toContain('The horse pens the general in');
+    // The pattern's piece is the row's icon, in the board's baked glyph outline.
+    expect(
+      root.querySelector('[data-puzzle-theme-card="ma-hou-pao"] .puzzle-theme-icon svg path'),
+    ).not.toBeNull();
     expect(root.querySelector('.puzzle-xiangqi-board')).toBeNull();
     expect(root.querySelector('a[href="/puzzles?theme=men-gong"]')).toBeNull();
+    // With no tag counts the mix row still links every puzzle, just uncounted.
+    const mix = root.querySelector('[data-puzzle-theme-recommended] a[href="/puzzles"]');
+    expect(mix?.textContent).toContain('Healthy mix');
+    expect(mix?.querySelector('.puzzle-theme-count')).toBeNull();
   });
 
   it('groups the themes page like lichess, with the pattern minimum and no empty entries', async () => {
@@ -297,8 +310,7 @@ describe('puzzles route', () => {
     expect(cards(groups[3]!)).toEqual(['checkmate', 'winning']);
     expect(cards(groups[4]!)).toEqual(['one-move', 'short', 'long']);
     const mateIn1 = root.querySelector<HTMLAnchorElement>('a[href="/puzzles?theme=matein1"]');
-    expect(mateIn1?.textContent).toContain('Mate in 1');
-    expect(mateIn1?.textContent).toContain('40 puzzles');
+    expect(mateIn1?.querySelector('h3')?.textContent).toBe('Mate in 1 40');
     expect(root.querySelector('[data-puzzle-theme-card="endgame"]')?.textContent).toContain(
       '14 or fewer pieces',
     );
@@ -307,6 +319,18 @@ describe('puzzles route', () => {
     expect(
       root.querySelector('[data-puzzle-theme-card="men-gong"] .puzzle-theme-name [lang="zh-Hans"]'),
     ).not.toBeNull();
+
+    // Recommended comes first: one row training on everything, counted as
+    // the corpus (each puzzle has one phase: 5 + 70 + 30).
+    const recommended = root.querySelector<HTMLElement>('[data-puzzle-theme-recommended]');
+    expect(recommended?.compareDocumentPosition(groups[0]!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(recommended?.querySelector('h2')?.textContent).toBe('Recommended');
+    const mix = recommended?.querySelectorAll<HTMLAnchorElement>('a') ?? [];
+    expect([...mix].map((a) => a.getAttribute('href'))).toEqual(['/puzzles']);
+    expect(mix[0]?.querySelector('h3')?.textContent).toBe('Healthy mix 105');
+    expect(mix[0]?.querySelector('.puzzle-theme-description')?.textContent).toContain(
+      'Every theme shuffled together',
+    );
 
     // The sidebar is the Puzzles menu, this page current.
     const side = root.querySelector<HTMLElement>('.puzzle-themes-side');
