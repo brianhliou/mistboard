@@ -137,6 +137,15 @@ export type PuzzleSession = {
   // out (Puzzle Streak's game over): the move list marks it beside the move
   // that was right at that ply. `ply` indexes playedMoves.
   wrongMove?: { ply: number; move: PuzzleMove } | null;
+  // Every wrong try on the regular page, which does not end the attempt: the
+  // move list keeps each as a ✗ row at its ply while the solver retries.
+  wrongTries?: { ply: number; move: PuzzleMove }[];
+  // The ply the solution line took over from (a reveal, or Streak's miss):
+  // moves from here on were shown, not found, and read as such in the list.
+  revealedFromPly?: number | null;
+  // The last wrong try's squares, flashed red on the board for a moment.
+  // `at` is when it landed, so a repaint inside the flash keeps its phase.
+  wrongFlash?: { squares: string[]; at: number } | null;
 };
 
 export type PuzzleNavigation = {

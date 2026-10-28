@@ -237,6 +237,8 @@ export const ZH_HANS_PLAY = {
   'puzzle.streakNewRun': '开始新一轮',
   'puzzle.streakFinished': '本轮结束',
   'puzzle.streakReview': '本轮题目',
+  'puzzle.sessionHistory': '本次练习的题目',
+  'puzzle.sessionCurrent': '当前题目',
   'puzzle.streakResult': '题目 #{code}：{outcome}',
   'puzzle.streakOutcomeSolved': '已解开',
   'puzzle.streakOutcomeSkipped': '已跳过',

@@ -838,6 +838,122 @@ describe('standard xiangqi puzzles', () => {
     expect(root.textContent).toContain(moveLabel(puzzle.solution[1]!));
   });
 
+  it('keeps a wrong try as a ✗ row, marks found moves ✓, and shows the rating once over', async () => {
+    const puzzle = minedByPlyCount(3);
+    const solver = solverMovesOf(puzzle);
+    const wrong = getStandardXiangqiLegalMoves(puzzle.initial).find(
+      (move) => !standardXiangqiPuzzleMoveEquals(move, puzzle.solution[0]!),
+    )!;
+    vi.stubGlobal('fetch', xiangqiFetchMock([puzzle]));
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle.id);
+    // The puzzle's own rating is a spoiler while it is in play.
+    expect(root.textContent).toContain('Rating: hidden');
+    // The session row holds only the puzzle in play, as the blue current chip.
+    const chipsBefore = root.querySelector('.puzzle-session-chips');
+    expect(chipsBefore?.querySelectorAll('.puzzle-streak-chip--current')).toHaveLength(1);
+
+    clickMove(root, wrong);
+    await vi.waitFor(() => expect(root.textContent).toContain('Try again'));
+    // The miss stays in the list after it is taken back, flashed on the board.
+    const variation = root.querySelector('.puzzle-move-variation');
+    expect(variation?.textContent).toContain(moveLabel(wrong));
+    expect(variation?.querySelector('.puzzle-move-cell--wrong')?.textContent).toContain('✗');
+    expect(root.querySelector('.puzzle-wrong-flash')).not.toBeNull();
+
+    clickMove(root, solver[0]!);
+    await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+    // The retry still lands, and the earlier miss is still listed.
+    expect(root.querySelector('.puzzle-move-variation')?.textContent).toContain(moveLabel(wrong));
+    clickMove(root, solver[1]!);
+    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+
+    // Only the solver's finds are ✓; the scripted reply is not.
+    const right = [...root.querySelectorAll('.puzzle-move-cell--right')].map((cell) =>
+      cell.textContent?.trim(),
+    );
+    expect(right).toEqual([`${moveLabel(solver[0]!)} ✓`, `${moveLabel(solver[1]!)} ✓`]);
+    // Over: the puzzle's rating is out.
+    expect(root.textContent).toContain('Rating: 1500');
+    // A miss on the way makes the session chip a failure.
+    const chips = [
+      ...root.querySelectorAll<HTMLElement>('.puzzle-session-chips .puzzle-streak-chip'),
+    ];
+    expect(chips.map((chip) => [chip.dataset.outcome, chip.textContent])).toEqual([
+      ['failed', '✗'],
+    ]);
+    expect(chips[0]?.getAttribute('aria-current')).toBe('step');
+  });
+
+  it('marks the revealed moves and records the reveal as a miss', async () => {
+    const puzzle = minedByPlyCount(3);
+    const base = xiangqiFetchMock([puzzle]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) =>
+        String(input) === `/api/puzzles/${puzzle.id}/reveal`
+          ? json({ solution: puzzle.solution })
+          : base(input, init),
+      ),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle.id);
+    root.querySelector<HTMLButtonElement>('[data-puzzle-reveal]')?.click();
+
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.puzzle-move-cell--revealed')).toHaveLength(
+        puzzle.solution.length,
+      ),
+    );
+    expect(root.querySelector('.puzzle-move-cell--right')).toBeNull();
+    expect(root.textContent).toContain('Rating: 1500');
+    const chip = root.querySelector<HTMLElement>('.puzzle-session-chips .puzzle-streak-chip');
+    expect(chip?.dataset.outcome).toBe('failed');
+  });
+
+  it('adds a ✓ chip per solved puzzle and reopens a past one from its chip', async () => {
+    const threes = XIANGQI_PUZZLES.filter((puzzle) => puzzle.solution.length === 3);
+    const [first, second] = [threes[0]!, threes[1]!];
+    stubWindowLocalStorage(
+      memoryStorage({ 'mistboard:puzzles:seen': JSON.stringify({ [second.id]: 1 }) }),
+    );
+    vi.stubGlobal('fetch', xiangqiFetchMock([first, second]));
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, first.id);
+    for (const move of solverMovesOf(first)) {
+      clickMove(root, move);
+      await vi.waitFor(() => expect(root.textContent).toContain(moveLabel(move)));
+    }
+    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+    root.querySelector<HTMLButtonElement>('[data-puzzle-next]')?.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(second.id),
+    );
+
+    const row = root.querySelector('.puzzle-session-chips')!;
+    const past = row.querySelector<HTMLAnchorElement>('a.puzzle-streak-chip--solved');
+    expect(past?.textContent).toBe('✓');
+    expect(past?.getAttribute('href')).toBe(`/puzzles/${first.id}`);
+    expect(row.lastElementChild?.classList.contains('puzzle-streak-chip--current')).toBe(true);
+
+    past?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(first.id),
+    );
+    expect(window.location.pathname).toBe(`/puzzles/${first.id}`);
+    // Leaving the second puzzle untouched records nothing for it.
+    const outcomes = [
+      ...root.querySelectorAll<HTMLElement>('.puzzle-session-chips .puzzle-streak-chip'),
+    ].map((chip) => chip.dataset.outcome);
+    expect(outcomes).toEqual(['solved']);
+  });
+
   it('advances to the next mined puzzle after a solve', async () => {
     const threes = XIANGQI_PUZZLES.filter((puzzle) => puzzle.solution.length === 3);
     const [first, second] = [threes[0]!, threes[1]!];

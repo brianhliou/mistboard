@@ -100,7 +100,8 @@
 }
 
 /* The run's puzzles: small numbered chips, solved green, failed red, skipped
-   dashed and muted, the puzzle in play outlined in the accent. */
+   dashed and muted, the puzzle in play filled blue (Lichess's session row).
+   The regular page's session row under the board is the same chip. */
 .puzzle-streak-chips {
   display: flex;
   flex-wrap: wrap;
@@ -140,8 +141,28 @@
 }
 
 .puzzle-streak-chip--current {
-  border-color: var(--site-accent);
-  color: var(--site-accent);
+  background: #3692e7;
+  color: #fff;
+}
+
+a.puzzle-streak-chip[aria-current="step"] {
+  box-shadow:
+    0 0 0 2px var(--site-bg, #fff),
+    0 0 0 4px #3692e7;
+}
+
+/* Under the board, from its left edge (--puzzle-board-inset, fitPuzzleGrip),
+   a ✓ or ✗ per puzzle finished this visit. */
+.puzzle-session-chips {
+  order: 4;
+  grid-column: 2;
+  min-width: 0;
+  min-height: 26px;
+  padding-inline: var(--puzzle-board-inset, 0px);
+}
+
+.puzzle-session-chips .puzzle-streak-chip {
+  font-size: 14px;
 }
 
 a.puzzle-streak-chip:hover {
@@ -231,8 +252,10 @@ a.puzzle-streak-chip:focus-visible {
   background: transparent;
 }
 
-/* Move list after a miss: the right move ✓ in its row, the played miss ✗ on
-   its own row under it, like a variation. */
+/* Move list: a move the solver found ✓ and green, each wrong try ✗ on its own
+   row under the row it was tried in, like a variation; moves the solution
+   showed are muted (after Streak's miss, the move that was right there keeps
+   its ✓). */
 .puzzle-move-cell--right .puzzle-move-mark {
   color: #2b8a57;
   font-weight: 700;
@@ -672,11 +695,6 @@ a.puzzle-streak-chip:focus-visible {
 .puzzle-rating-card {
   align-content: start;
   gap: 14px;
-  min-height: 122px;
-}
-
-.puzzle-rating-card--practice {
-  min-height: 118px;
 }
 
 .puzzle-rating-card p {
@@ -698,6 +716,19 @@ a.puzzle-streak-chip:focus-visible {
   font-size: clamp(44px, 5vw, 62px);
   font-weight: 400;
   line-height: 1;
+}
+
+.puzzle-rating-card .puzzle-rating-summary--none {
+  grid-auto-flow: column;
+  justify-content: space-between;
+  align-items: baseline;
+  text-align: start;
+}
+
+.puzzle-rating-card .puzzle-rating-summary--none strong {
+  color: var(--site-muted);
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .puzzle-rating-meta {
@@ -725,17 +756,6 @@ a.puzzle-streak-chip:focus-visible {
   color: var(--site-muted);
   font-size: 13px;
   line-height: 1.35;
-}
-
-.puzzle-theme-card h2 {
-  color: var(--site-link);
-  font-size: 20px;
-  font-weight: 400;
-  text-transform: uppercase;
-}
-
-.puzzle-theme-card h2::before {
-  content: "« ";
 }
 
 .puzzle-theme-card p {
@@ -904,6 +924,15 @@ a.puzzle-streak-chip:focus-visible {
   background: var(--site-accent-soft);
   color: var(--site-heading);
   font-weight: 600;
+}
+
+.puzzle-move-cell--right:not(.puzzle-move-cell--revealed) {
+  color: #2b8a57;
+}
+
+.puzzle-move-cell--revealed {
+  color: var(--site-muted);
+  font-style: italic;
 }
 
 .puzzle-feedback {
@@ -1177,23 +1206,21 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-actions {
   display: grid;
-  grid-template-columns: repeat(4, 48px);
-  justify-content: center;
-  align-items: center;
-  gap: clamp(10px, 1.8vw, 24px);
-  min-height: 52px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 4px;
 }
 
 .puzzle-button {
   display: grid;
   place-items: center;
-  width: 48px;
+  width: 100%;
   height: 44px;
   padding: 0;
-  border: 0;
-  border-radius: 2px;
-  background: transparent;
-  color: var(--site-muted);
+  border: 1px solid var(--site-border-soft);
+  border-radius: 4px;
+  background: var(--site-panel);
+  color: var(--site-text);
   cursor: pointer;
   font: inherit;
   font-size: 26px;
@@ -1206,8 +1233,9 @@ a.puzzle-streak-chip:focus-visible {
   display: block;
 }
 
-.puzzle-button:hover,
+.puzzle-button:hover:not(:disabled),
 .puzzle-button:focus-visible {
+  background: var(--site-panel-soft);
   color: var(--site-heading);
   outline: 2px solid transparent;
 }
@@ -1218,7 +1246,31 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-button:disabled {
   color: var(--site-border);
+  background: transparent;
   cursor: default;
+}
+
+/* A wrong try's squares flash red after the move is taken back
+   (paintWrongFlash; the delay keeps the phase across a repaint). */
+.puzzle-wrong-flash rect {
+  animation: puzzle-wrong-flash 700ms ease-out both;
+  animation-delay: var(--puzzle-wrong-flash-delay, 0ms);
+  rx: 8px;
+}
+
+@keyframes puzzle-wrong-flash {
+  from {
+    fill: rgba(204, 51, 51, 0.55);
+  }
+  to {
+    fill: rgba(204, 51, 51, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .puzzle-wrong-flash rect {
+    animation-timing-function: steps(1, end);
+  }
 }
 
 .puzzle-tags {
@@ -1256,6 +1308,41 @@ a.puzzle-streak-chip:focus-visible {
 @media (min-width: 981px) and (min-height: 740px) {
   body:has(.puzzles-shell) {
     overflow: hidden;
+  }
+
+  /* The session row under the board takes its height out of the board's
+     budget, so the page still fits the viewport. */
+  .puzzles-shell:has(.puzzle-session-chips) {
+    --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - 52px));
+  }
+
+  /* Rows hug their content, so the session row sits right under the board
+     instead of sharing the shell's spare height with the board row. */
+  .puzzles-layout {
+    align-content: start;
+  }
+
+  /* The left column ends at the board's bottom edge like the right one: its
+     last card sits on that edge, and a column taller than the board scrolls. */
+  .puzzles-sidebar {
+    display: flex;
+    flex-direction: column;
+    height: var(--puzzle-board-height, auto);
+    max-height: var(--puzzle-board-height, var(--puzzle-column-max-height));
+  }
+
+  .puzzles-sidebar > * {
+    flex: none;
+  }
+
+  .puzzles-sidebar > :last-child {
+    margin-top: auto;
+  }
+}
+
+@media (min-width: 1500px) and (min-height: 740px) {
+  .puzzles-shell:has(.puzzle-session-chips) {
+    --puzzle-surface-fit: min(860px, calc(var(--puzzle-page-height) - 52px));
   }
 }
 
@@ -1336,6 +1423,13 @@ a.puzzle-streak-chip:focus-visible {
     order: 2;
     height: auto;
     overflow: visible;
+  }
+
+  /* Phone: the session row closes the page, under the move bar. */
+  .puzzle-session-chips {
+    order: 3;
+    grid-column: auto;
+    padding: 8px 12px 0;
   }
 
   .puzzle-trainer-panel {
@@ -1998,6 +2092,15 @@ a.puzzle-streak-chip:focus-visible {
 
   .puzzle-board-panel--pending .puzzle-side-panel {
     min-height: var(--puzzle-stack-chrome);
+  }
+
+  .puzzles-page > .puzzles-shell:has(.puzzle-session-chips) {
+    --puzzle-stack-chrome: 214px;
+  }
+
+  .puzzles-shell .puzzle-session-chips {
+    flex: none;
+    padding-bottom: 8px;
   }
 }
 

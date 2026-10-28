@@ -1,4 +1,3 @@
-import { puzzleShortCode } from '@mistboard/game';
 import { puzzleAttemptedProps, track } from '../analytics.js';
 import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { t } from '../i18n/catalog.js';
@@ -6,6 +5,7 @@ import type { PuzzleSolverHandle, PuzzleSolverOptions } from '../puzzles.js';
 import { colorLabel, type PuzzleDetail, type PuzzleMove, type PuzzleSession } from './adapter.js';
 import { type PuzzleAttempt, PuzzlePlayDisabledError, sendPuzzleQualityEvent } from './api.js';
 import { puzzleInfoCard } from './queue-panel.js';
+import { puzzleResultChips } from './result-chips.js';
 
 type Outcome = 'solved' | 'skipped' | 'failed';
 type Run = {
@@ -437,12 +437,6 @@ function streakInfoCard(puzzle: PuzzleDetail, over: boolean): HTMLElement {
   return card;
 }
 
-const OUTCOME_KEYS = {
-  solved: 'puzzle.streakOutcomeSolved',
-  skipped: 'puzzle.streakOutcomeSkipped',
-  failed: 'puzzle.streakOutcomeFailed',
-} as const;
-
 // The streak as a big number over its label.
 function streakCount(score: number, label: string): HTMLElement {
   const block = document.createElement('div');
@@ -476,31 +470,7 @@ function bestLine(run: Run, newBest: boolean): HTMLElement {
 // One small numbered chip per puzzle in the run, each a link to that puzzle's
 // own page; `currentId` adds the puzzle in play as an unlinked last chip.
 function chips(results: Run['results'], currentId: string | null): HTMLElement {
-  const nav = document.createElement('nav');
-  nav.className = 'puzzle-streak-chips';
-  nav.setAttribute('aria-label', t('puzzle.streakReview'));
-  results.forEach((result, index) => {
-    const chip = document.createElement('a');
-    chip.className = `puzzle-streak-chip puzzle-streak-chip--${result.outcome}`;
-    chip.dataset.outcome = result.outcome;
-    chip.href = `/puzzles/${encodeURIComponent(result.id)}`;
-    chip.textContent = String(index + 1);
-    const label = t('puzzle.streakResult', {
-      code: puzzleShortCode(result.id),
-      outcome: t(OUTCOME_KEYS[result.outcome]),
-    });
-    chip.title = label;
-    chip.setAttribute('aria-label', label);
-    nav.append(chip);
-  });
-  if (currentId && !results.some((r) => r.id === currentId)) {
-    const chip = document.createElement('span');
-    chip.className = 'puzzle-streak-chip puzzle-streak-chip--current';
-    chip.setAttribute('aria-current', 'step');
-    chip.textContent = String(results.length + 1);
-    nav.append(chip);
-  }
-  return nav;
+  return puzzleResultChips(results, currentId, { label: t('puzzle.streakReview'), text: 'index' });
 }
 
 function errorText(error: unknown): string {

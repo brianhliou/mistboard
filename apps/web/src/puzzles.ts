@@ -59,6 +59,7 @@ import {
   type PuzzleVariant,
   puzzleBoardAdapter,
 } from './puzzles/registry.js';
+import { type PuzzleChipResult, puzzleResultChips } from './puzzles/result-chips.js';
 import {
   loadAutoNextEnabled,
   loadRatedEnabled,
@@ -125,6 +126,19 @@ export async function mountPuzzles(
   let selectedId = initialPuzzleId;
   let variantFilter: PuzzleVariantFilter = PUZZLE_VARIANT_FILTERS[0] ?? XIANGQI_SPEC_ID;
   let session: PuzzleSession | null = null;
+  // This visit's puzzles, in the order they were finished, for the chip row
+  // under the board. The first outcome sticks: a puzzle reopened from its chip
+  // and solved clean the second time was still missed the first.
+  const sessionResults: PuzzleChipResult[] = [];
+  const recordResult = (played: PuzzleSession, leaving: boolean): void => {
+    if (sessionResults.some((result) => result.id === played.puzzle.id)) return;
+    const complete = isPuzzleComplete(played);
+    if (!complete && !(leaving && played.failed)) return;
+    sessionResults.push({
+      id: played.puzzle.id,
+      outcome: played.failed || played.revealed ? 'failed' : 'solved',
+    });
+  };
   const solvedIds = loadSolvedPuzzleIds();
   const seenPuzzles = loadSeenPuzzles();
   // Record a puzzle as seen (for the next visit's rotation) without disturbing
@@ -172,6 +186,7 @@ export async function mountPuzzles(
       solvedIds,
       variantFilter,
       variantFilters: PUZZLE_VARIANT_FILTERS,
+      selectedComplete: session !== null && isPuzzleComplete(session),
       autoNext,
       ratedEnabled,
       userRating,
@@ -237,6 +252,17 @@ export async function mountPuzzles(
       renderControls();
       scheduleAutoNext(navigation);
     });
+    recordResult(session, false);
+    detail.querySelector('.puzzle-board-panel')?.append(
+      puzzleResultChips(sessionResults, session.puzzle.id, {
+        label: t('puzzle.sessionHistory'),
+        text: 'mark',
+        className: 'puzzle-session-chips',
+        onPick: (id) => {
+          if (id !== selectedId) void selectPuzzle(id, true);
+        },
+      }),
+    );
     renderControls();
   };
 
@@ -268,6 +294,7 @@ export async function mountPuzzles(
     }
     // Tear down the outgoing puzzle's engine (worker + arrows) before swapping
     // in the next session, so a stale ceval handle does not outlive its board.
+    if (session) recordResult(session, true);
     if (session && !isPuzzleComplete(session)) {
       void sendPuzzleQualityEvent(session.puzzle.id, session.qualitySessionId, 'abandon').catch(
         () => {},
@@ -459,6 +486,7 @@ function renderPuzzleDetail(
     renderSession,
     submitMove: (move) => submitMove(session, move, renderSession, onSolved, opts),
   });
+  paintWrongFlash(board, session);
 
   // Board zoom, same grip and same persisted --uni-board-scale as the room,
   // review and analysis boards. Attached per render because renderSession
@@ -970,6 +998,14 @@ async function submitMove(
   } else {
     session.state = attempt.state;
     session.viewPly = session.playedMoves.length;
+    if (attempt.code === 'incorrect-move') {
+      const ply = session.playedMoves.length;
+      session.wrongTries = [...(session.wrongTries ?? []), { ply, move: attempt.move }];
+      session.wrongFlash = {
+        squares: 'from' in attempt.move ? [attempt.move.from, attempt.move.to] : [attempt.move.to],
+        at: Date.now(),
+      };
+    }
     // Persist the failed state so the escape hatches (hint / view solution /
     // next) survive the piece-select feedback reset on the next render.
     session.failed = true;
@@ -1072,6 +1108,7 @@ function showSolutionLine(
   fromPly: number,
 ): void {
   session.revealed = true;
+  session.revealedFromPly = Math.min(fromPly, solution.length);
   session.selectedSquare = null;
   session.selectedDrop = null;
   session.playedMoves = [...solution];
@@ -1130,11 +1167,37 @@ function fitPuzzleGrip(column: HTMLElement): void {
     const paintedRect = painted.getBoundingClientRect();
     const gutter = column.getBoundingClientRect().width - paintedRect.width;
     column.style.setProperty('--puzzle-board-inset', `${Math.max(0, Math.round(gutter / 2))}px`);
+    // Set on the layout too: the left column is the detail's sibling there,
+    // and on desktop it ends at the board's bottom edge like the right one.
     const detail = column.closest<HTMLElement>('.puzzle-detail');
-    if (detail && paintedRect.height > 0) {
-      detail.style.setProperty('--puzzle-board-height', `${Math.round(paintedRect.height)}px`);
+    const layout = column.closest<HTMLElement>('.puzzles-layout');
+    if (paintedRect.height > 0) {
+      const height = `${Math.round(paintedRect.height)}px`;
+      detail?.style.setProperty('--puzzle-board-height', height);
+      layout?.style.setProperty('--puzzle-board-height', height);
     }
   });
+}
+
+// A wrong try's squares flash red for a moment after it is taken back. The
+// board repaints on every render, so the flash is re-applied with its elapsed
+// time as a negative delay and keeps its phase instead of restarting.
+const WRONG_FLASH_MS = 700;
+
+function paintWrongFlash(board: HTMLElement, session: PuzzleSession): void {
+  const flash = session.wrongFlash;
+  if (!flash) return;
+  const elapsed = Date.now() - flash.at;
+  if (elapsed >= WRONG_FLASH_MS) {
+    session.wrongFlash = null;
+    return;
+  }
+  for (const square of flash.squares) {
+    const hit = board.querySelector<SVGElement>(`[data-square="${square}"]`);
+    if (!hit) continue;
+    hit.classList.add('puzzle-wrong-flash');
+    hit.style.setProperty('--puzzle-wrong-flash-delay', `-${elapsed}ms`);
+  }
 }
 
 // Both widths move with the viewport AND with the zoom scale (applyBoardScale
