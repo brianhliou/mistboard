@@ -44,6 +44,7 @@ export const EN_REVIEW = {
   'watch.inProgress': 'In progress',
   'watch.finalPositionUnavailable': 'Final position unavailable',
   'watch.review': 'Review',
+  'watch.watchLive': 'Watch',
   'watch.guest': 'Guest',
   'watch.boardPerspective': 'Board perspective',
   'watch.channels': 'Watch channels',

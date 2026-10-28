@@ -287,6 +287,7 @@ export const ZH_HANS_REVIEW = {
   'watch.inProgress': '进行中',
   'watch.finalPositionUnavailable': '无法显示终局局面',
   'watch.review': '复盘',
+  'watch.watchLive': '观看',
   'watch.guest': '访客',
   'watch.boardPerspective': '棋盘视角',
   'watch.channels': '观战频道',
