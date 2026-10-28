@@ -158,7 +158,6 @@ try {
     winHi: number(run.auditProfile.winHi, 'auditProfile.winHi'),
     winLo: number(run.auditProfile.winLo, 'auditProfile.winLo'),
     minGapCp: number(run.auditProfile.minGapCp, 'auditProfile.minGapCp'),
-    materialGapCp: number(run.auditProfile.materialGapCp, 'auditProfile.materialGapCp'),
     minPly: number(scan.minPly, 'scanProfile.minPly'),
     maxSolutionPlies: number(solutionPlies.max, 'scanProfile.solutionPlies.max'),
     minSolutionPlies: number(solutionPlies.min, 'scanProfile.solutionPlies.min'),

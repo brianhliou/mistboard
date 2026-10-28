@@ -13,7 +13,7 @@
 //      at a time, re-searching MultiPV(2) at a --verify-depth floor at each
 //      solver position. A solver move is kept only if it is uniquely correct by
 //      the winning-floor gate (isXiangqiSolverMoveUnique: best keeps a clear win
-//      AND the runner-up either loses the win or trails by --material-gap-cp);
+//      AND the runner-up loses the win);
 //      the defender reply is the engine's best (its uniqueness is not required).
 //      The line stops at the first non-unique solver move, at mate, or at the
 //      ply cap, always ending on the solver's move — so puzzles are born clean
@@ -124,7 +124,6 @@ export type XiangqiPuzzleMinerOptions = {
   winHi: number;
   winLo: number;
   minGapCp: number;
-  materialGapCp: number;
   minPly: number;
   maxSolutionPlies: number;
   minSolutionPlies: number;
@@ -238,10 +237,6 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
         type: 'string',
         default: String(XIANGQI_SOLVER_GATE_DEFAULTS.minGapCp),
       },
-      'material-gap-cp': {
-        type: 'string',
-        default: String(XIANGQI_SOLVER_GATE_DEFAULTS.materialGapCp),
-      },
       'min-ply': { type: 'string', default: '8' },
       'max-solution-plies': { type: 'string', default: '7' },
       'min-solution-plies': { type: 'string', default: '3' },
@@ -289,10 +284,6 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
     winHi: Number.parseFloat(values['win-hi'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winHi)),
     winLo: Number.parseFloat(values['win-lo'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winLo)),
     minGapCp: parsePositiveInt(values['min-gap-cp'], XIANGQI_SOLVER_GATE_DEFAULTS.minGapCp),
-    materialGapCp: parsePositiveInt(
-      values['material-gap-cp'],
-      XIANGQI_SOLVER_GATE_DEFAULTS.materialGapCp,
-    ),
     minPly: parseNonNegativeInt(values['min-ply'], 8),
     maxSolutionPlies: parsePositiveInt(values['max-solution-plies'], 7),
     minSolutionPlies: parsePositiveInt(values['min-solution-plies'], 3),
@@ -687,7 +678,6 @@ async function buildGatedLine(
     winHi: opts.winHi,
     winLo: opts.winLo,
     minGapCp: opts.minGapCp,
-    materialGapCp: opts.materialGapCp,
   };
   const limits = { depth: opts.verifyDepth, nodes: opts.verifyNodes };
   const pv: XiangqiMove[] = [];
@@ -992,7 +982,6 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
       winHi: options.winHi,
       winLo: options.winLo,
       minGapCp: options.minGapCp,
-      materialGapCp: options.materialGapCp,
       minPly: options.minPly,
       maxSolutionPlies: options.maxSolutionPlies,
       minSolutionPlies: options.minSolutionPlies,
@@ -1050,7 +1039,6 @@ Detection:
   --win-hi F              Per-ply gate: min win prob for the best solver line. Default: 0.80.
   --win-lo F              Per-ply gate: a runner-up at/below this win prob has lost the win. Default: 0.60.
   --min-gap-cp N          Hard near-tie rejection floor for non-mate alternatives. Default: 200.
-  --material-gap-cp N     Per-ply gate: a runner-up trailing best by >= N cp is wrong even if winning. Default: 250.
   --min-ply N             Skip game plies before N (opening filter). Default: 8.
   --max-solution-plies N  Solution-line cap (normalized to odd). Default: 7.
   --min-solution-plies N  Minimum solution plies for seed/DB output. Default: 3.

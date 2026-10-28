@@ -179,7 +179,7 @@ test('isXiangqiUniquelyWinning accepts a lone mate over a non-mate second line',
 // ── Winning-floor per-ply uniqueness (gated re-mine) ─────────────────────────
 
 // winHi 0.80 ~ +240cp, winLo 0.60 ~ +70cp on the K=400 logistic.
-const SOLVER_UNIQUE_OPTS = { winHi: 0.8, winLo: 0.6, minGapCp: 200, materialGapCp: 250 };
+const SOLVER_UNIQUE_OPTS = { winHi: 0.8, winLo: 0.6, minGapCp: 200 };
 
 test('isXiangqiSolverMoveUnique: only-move (no runner-up) is unique', () => {
   assert.equal(
@@ -249,15 +249,15 @@ test('isXiangqiSolverMoveUnique: hard near-tie floor rejects a boundary-sensitiv
   );
 });
 
-test('isXiangqiSolverMoveUnique: unique when the runner-up trails by a whole piece', () => {
-  // +900 vs +600: both winning, but a 300cp material margin (win the chariot).
-  assert.equal(
-    isXiangqiSolverMoveUnique(
+test('isXiangqiSolverMoveUnique: a runner-up that still wins is a second answer, whatever the margin', () => {
+  // +900 vs +600: the runner-up still wins (~97%), so failing it would be unfair.
+  assert.deepEqual(
+    classifyXiangqiSolverMoveUniqueness(
       { scoreCp: 900, mate: null },
       { scoreCp: 600, mate: null },
       SOLVER_UNIQUE_OPTS,
     ),
-    true,
+    { unique: false, reason: 'alternative-still-good' },
   );
 });
 

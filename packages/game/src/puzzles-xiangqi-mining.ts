@@ -177,9 +177,6 @@ export type XiangqiSolverUniquenessOptions = {
   /** Hard stability floor: reject any non-mate runner-up closer than this even
    *  when it happens to straddle the winLo boundary in one engine process. */
   minGapCp: number;
-  /** ...or a runner-up trailing best by at least this many cp is wrong even if
-   *  it is still nominally winning (win the chariot, not the horse). */
-  materialGapCp: number;
 };
 
 export type XiangqiSolverUniquenessReason =
@@ -192,7 +189,6 @@ export type XiangqiSolverUniquenessReason =
   | 'runner-up-mates'
   | 'near-tie'
   | 'runner-up-loses-win'
-  | 'material-gap'
   | 'alternative-still-good';
 
 export type XiangqiSolverUniquenessVerdict = {
@@ -201,8 +197,11 @@ export type XiangqiSolverUniquenessVerdict = {
 };
 
 /** Per-ply gate for a solver move: is the best line uniquely correct? True when
- *  best keeps a clear win AND the runner-up is actually wrong (lost the win or
- *  trails by a whole piece). Mates: unique iff no other move mates at all,
+ *  best keeps a clear win AND the runner-up has lost the win. A runner-up that
+ *  still wins is a second answer however much less it wins, so the position is
+ *  not a puzzle (Brian, 2026-10-28: failing a solver for a move that still wins
+ *  is unfair; the old "material gap" exception admitted 85 of 335 hard lines
+ *  with a +594 runner-up beside a +870 best). Mates: unique iff no other move mates at all,
  *  whatever its length, except that a mate-in-one ply is always unique. This
  *  is the lichess rule (adopted 2026-09-11): the grader accepts a stored line
  *  plus any move that mates on the spot, nothing else, so a position with a
@@ -241,7 +240,6 @@ export function classifyXiangqiSolverMoveUniqueness(
   if (xiangqiWinRate(second.scoreCp) <= opts.winLo) {
     return { unique: true, reason: 'runner-up-loses-win' };
   }
-  if (gapCp >= opts.materialGapCp) return { unique: true, reason: 'material-gap' };
   return { unique: false, reason: 'alternative-still-good' };
 }
 
