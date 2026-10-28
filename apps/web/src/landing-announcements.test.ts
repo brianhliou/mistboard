@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { localizeAnnouncement } from './announcement-i18n.js';
 import { type AnnouncementKind, announcementSlug, announcements } from './announcements.js';
@@ -322,5 +323,42 @@ describe('landing announcements', () => {
         `${variant.gameSpecId}: no launch announcement linking ${accepted.join(' or ')}`,
       ).toBe(true);
     }
+  });
+});
+
+// The rail used to be one line on the list, inset a fixed 16px from its top.
+// Each marker is centred on a row taller than the disc, so the first disc sat
+// below the inset and a stub of rail showed above it (Brian, 2026-10-28). The
+// rail is drawn per row from the marker's centre, so it cannot run past the
+// first or last disc whatever the drawing or the row height. happy-dom has no
+// layout, so this pins the stylesheet's shape; the pixel check was a browser
+// measurement on the branch.
+describe('News rail geometry', () => {
+  const css = readFileSync('src/landing-announcements.css', 'utf8');
+  const rule = (selector: string) => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Every block whose selector list ends in this selector, joined.
+    return [...css.matchAll(new RegExp(`(?:^|\\n)${escaped}\\s*\\{([^}]*)\\}`, 'g'))]
+      .map((match) => match[1])
+      .join('\n');
+  };
+
+  it('draws no list-wide rail with a fixed inset', () => {
+    expect(css).not.toMatch(/\.landing-news-updates::(?:before|after)/);
+  });
+
+  it('runs the rail from the first marker centre to the last, row by row', () => {
+    // A row's marker is centred in it, so 50% of the row is the marker centre.
+    const up = rule('.landing-news-update:not(:first-child)::before');
+    expect(up).toMatch(/bottom: 50%;/);
+    expect(up).toMatch(/top: calc\(-1 \* var\(--landing-feed-row-gap\)\);/);
+    const down = rule('.landing-news-update:not(:last-child)::after');
+    expect(down).toMatch(/top: 50%;/);
+    expect(down).toMatch(/bottom: 0;/);
+    // The gap the upward half crosses is the gap between rows.
+    expect(rule('.landing-news-update')).toMatch(/margin-top: var\(--landing-feed-row-gap\);/);
+    expect(rule('.landing-news-update')).toMatch(/position: relative;/);
+    // The marker stays centred in its row, which the 50% anchors rely on.
+    expect(rule('.landing-news-marker')).toMatch(/align-self: center;/);
   });
 });

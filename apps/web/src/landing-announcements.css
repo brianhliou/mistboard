@@ -19,7 +19,15 @@
 
    Markers (redrawn 2026-10-27, #711): the discs became sticker drawings in the
    broadcast TV's style (news-disc.ts), each centred on the rail so the rail
-   still meets it top and bottom. */
+   still meets it top and bottom.
+
+   Rail (re-cut 2026-10-28): it was one line on the list, inset a fixed 16px
+   from its top and 18px from its bottom. Each marker is centred on its own
+   row, which runs taller than the disc, so the first disc sat lower than the
+   inset and a stub of rail showed above it. The rail is now drawn per row,
+   from each marker's centre to the next one's, so it starts and ends inside
+   the first and last discs whatever their drawing or the row's height, and a
+   single row draws none. */
 .landing-announcements {
   --landing-feed-accent: var(--site-accent);
   --landing-feed-content-x: 64px;
@@ -28,6 +36,7 @@
   --landing-feed-marker-half: 18px;
   --landing-feed-marker-size: 36px;
   --landing-feed-rail-x: 32px;
+  --landing-feed-row-gap: 13px;
 
   box-sizing: border-box;
   display: flex;
@@ -80,22 +89,37 @@
   margin-inline-start: 0;
 }
 
-.landing-news-updates::before {
+.landing-news-update {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--landing-feed-content-x) minmax(0, 1fr);
+  column-gap: 0;
+  padding-inline-start: 0;
+  margin-top: var(--landing-feed-row-gap);
+}
+
+/* The rail, one segment per row: up from the marker's centre (the row's middle,
+   since the marker is centred in it) across the gap to the row above, and down
+   to the row's bottom edge. The first row draws no upward half and the last no
+   downward half, so the rail never runs past the end discs. The markers sit on
+   z-index 1 above it. */
+.landing-news-update:not(:first-child)::before,
+.landing-news-update:not(:last-child)::after {
   position: absolute;
-  top: calc(var(--landing-feed-marker-half) - 2px);
-  bottom: var(--landing-feed-marker-half);
   left: calc(var(--landing-feed-rail-x) - var(--landing-feed-line-half));
   width: var(--landing-feed-line-width);
   background: var(--site-border-soft);
   content: "";
 }
 
-.landing-news-update {
-  display: grid;
-  grid-template-columns: var(--landing-feed-content-x) minmax(0, 1fr);
-  column-gap: 0;
-  padding-inline-start: 0;
-  margin-top: 13px;
+.landing-news-update:not(:first-child)::before {
+  top: calc(-1 * var(--landing-feed-row-gap));
+  bottom: 50%;
+}
+
+.landing-news-update:not(:last-child)::after {
+  top: 50%;
+  bottom: 0;
 }
 
 .landing-news-update:first-child {
