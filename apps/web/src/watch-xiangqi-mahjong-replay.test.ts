@@ -13,6 +13,13 @@ import {
   xmjViewFor,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fitXmjRackBadges } from './xiangqi-mahjong-table.js';
+
+vi.mock('./xiangqi-mahjong-table.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./xiangqi-mahjong-table.js')>();
+  return { ...actual, fitXmjRackBadges: vi.fn(actual.fitXmjRackBadges) };
+});
+
 import { embedRendererKindForVariant, showcaseRendererKindForSpec } from './showcase-dispatch.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import {
@@ -105,6 +112,39 @@ describe('xiangqi mahjong TV mount', () => {
     expect(plies.at(-1)).toEqual([9, 9]);
     expect(faceUpInRacks(root)).toBe(0);
     handle.destroy();
+  });
+
+  it('fits the racks of a full-size table so a claimed set keeps its badge on the felt', async () => {
+    const fit = vi.mocked(fitXmjRackBadges);
+    fit.mockClear();
+    const root = document.createElement('div');
+    document.body.append(root);
+    const frame = liveFrame(8);
+    const handle = await mountXiangqiMahjongWatchReplay(root, 'xmj_tv', {
+      autoplay: false,
+      live: true,
+      metadataByRoomId: {},
+      loadPostgameOverride: async () => ({ ok: true, postgame: frame }),
+    });
+    const board = root.querySelector('.xmj-watch-board');
+    expect(fit).toHaveBeenCalledWith(board);
+    handle.destroy();
+    root.remove();
+
+    // A compact table zooms to its host instead and leaves the racks alone.
+    fit.mockClear();
+    const compact = document.createElement('div');
+    document.body.append(compact);
+    const small = await mountXiangqiMahjongWatchReplay(compact, 'xmj_tv', {
+      autoplay: false,
+      live: true,
+      compact: true,
+      metadataByRoomId: {},
+      loadPostgameOverride: async () => ({ ok: true, postgame: frame }),
+    });
+    expect(fit).not.toHaveBeenCalled();
+    small.destroy();
+    compact.remove();
   });
 
   it('gives the rail the hand log and the points table, and scrubs', async () => {

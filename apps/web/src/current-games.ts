@@ -66,6 +66,7 @@ import {
   displayLiveName,
   displayParticipantName,
   type FeaturedGame,
+  liveFirstMover,
   matchupSeats,
   namesMatchupLabel,
   terminationLabel,
@@ -688,13 +689,15 @@ function renderPill(el: HTMLElement, total: number): void {
   el.hidden = false;
 }
 
-// First mover (red / white) sits at the bottom, the way the player's own room
-// and the TV board orient; the other seat is on top.
-function seatOrder(game: CurrentGame): [CurrentGamePlayer | null, CurrentGamePlayer | null] {
-  const first =
-    game.players.find((player) => player.color === 'red' || player.color === 'white') ??
-    game.players[0] ??
-    null;
+// First mover (red / white / east) sits at the bottom, the way the player's own
+// room and the TV board orient; the other seat is on top. Xiangqi Mahjong's
+// spectator table draws east at the bottom whoever deals, and the feed may list
+// west first, so the rows and the names handed to the board key off the same
+// first-mover set (liveFirstMover), never off list order.
+export function seatOrder(
+  game: Pick<CurrentGame, 'players'>,
+): [CurrentGamePlayer | null, CurrentGamePlayer | null] {
+  const first = liveFirstMover(game.players) ?? null;
   const second = game.players.find((player) => player !== first) ?? null;
   return [second, first];
 }
@@ -881,7 +884,7 @@ function matchupLabel(game: CurrentGame): string {
   return namesMatchupLabel(first, second);
 }
 
-function namesFor(game: CurrentGame): { first: string; second: string } {
+export function namesFor(game: Pick<CurrentGame, 'players'>): { first: string; second: string } {
   const [top, bottom] = seatOrder(game);
   return {
     first: displayLiveName(bottom?.name, t('games.guest')),

@@ -36,6 +36,7 @@ import {
   tenantEventsForClient,
   tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
+  tenantSeatProfiles,
   tenantSnapshotPayload,
 } from './variant-tenant/runtime.js';
 import { assignTenantSeat } from './variant-tenant/seat-session.js';
@@ -330,6 +331,31 @@ test('xmj pvp: a friend room seats no bot and carries the rated flag', async () 
     assert.equal(pveExtras.roomMode, 'pve');
   } finally {
     if (pvp.ok) xiangqiMahjongRooms.delete(pvp.room.id);
+    if (pve.ok) xiangqiMahjongRooms.delete(pve.room.id);
+  }
+});
+
+// The room's side card linked the human but printed "Misty" as plain text
+// (2026-10-27): the room was created with pveBotId 'misty-xiangqi-mahjong', the
+// ENGINE id, which names no bot profile, so seatProfiles had no entry for the bot
+// seat and the name fell back to the engine's display name. Other variants send
+// { botId: 'misty' } and the card links /bot/misty.
+test("xmj pvp: the bot seat links to Misty's bot page like every other variant", async () => {
+  const pve = await createXiangqiMahjongRoom(FIVE_FIVE, 'east', {
+    engineId: XMJ_BOT_CLIENT_ID,
+    seat: 'west',
+  });
+  try {
+    assert.ok(pve.ok);
+    if (!pve.ok) return;
+    assert.deepEqual(tenantSeatProfiles(tenant, pve.room), { west: { botId: 'misty' } });
+    const snapshot = tenantSnapshotPayload(tenant, pve.room, client('east'));
+    assert.deepEqual(snapshot.seatProfiles, { west: { botId: 'misty' } });
+    assert.equal(snapshot.seatDisplayNames.west, 'Misty');
+    // A room created before the fix carries the engine id as its pveBotId.
+    const legacy = { ...pve.room, pveBotId: XMJ_BOT_CLIENT_ID };
+    assert.deepEqual(tenantSeatProfiles(tenant, legacy), { west: { botId: 'misty' } });
+  } finally {
     if (pve.ok) xiangqiMahjongRooms.delete(pve.room.id);
   }
 });

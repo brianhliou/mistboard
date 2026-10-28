@@ -123,7 +123,9 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
       'misty-jungle-level-1',
       'misty-jungle-level-3',
     ],
-    legacyBotIds: ['misty-dark-chess', 'misty-dmx', 'misty-banqi'],
+    // 'misty-xiangqi-mahjong': xmj rooms before 2026-10-27 stored the engine id
+    // as their pveBotId, so a hydrated room or a finished game still links here.
+    legacyBotIds: ['misty-dark-chess', 'misty-dmx', 'misty-banqi', 'misty-xiangqi-mahjong'],
   },
   {
     id: 'pikafish',

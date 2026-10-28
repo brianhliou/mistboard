@@ -1456,6 +1456,14 @@
   display: none;
 }
 
+/* Prepended, it makes the game card's section the rail's second child, and the
+   base .panel-section top border (styles.css) drew a stray rule above the card
+   on every wide room. The card is still the first thing in the rail. */
+.meta-panel > .meta-panel__close:first-child + .panel-section {
+  padding-top: 0;
+  border-top: 0;
+}
+
 .postgame-sheet-toggle[hidden],
 .postgame-sheet[hidden] {
   display: none;
