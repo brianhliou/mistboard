@@ -30,11 +30,7 @@ import {
   reloadForChunkLoadError,
 } from './chunk-load-recovery.js';
 import { editorVariantFromPath } from './editor/editor-catalog.js';
-import {
-  coordinateTrainerEnabled,
-  correspondenceEnabled,
-  friendsOnlineEnabled,
-} from './feature-flags.js';
+import { coordinateTrainerEnabled, correspondenceEnabled } from './feature-flags.js';
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, initializeLocaleFromCurrentUrl, resolveLocale } from './i18n/locale.js';
 import {
@@ -1100,19 +1096,6 @@ if (replaySample) {
   setTitleKey('notFound.heading');
   void mountOrReport(() =>
     import('./pages-static.js').then(({ mountNotFound }) => mountNotFound(appRoot)),
-  );
-}
-
-// Global friends-online widget (bottom-corner). Route-agnostic and self-gating
-// (it no-ops for anonymous viewers), so it mounts once regardless of the page
-// that rendered above. Lazy-imported so its bundle only loads when the flag is
-// on.
-// Not in an embed: it self-gates by asking /api/auth/me who the viewer is, and
-// that question is the one an embed must not ask from inside a third party's
-// page. It was also the last thing still asking it after the guard above.
-if (friendsOnlineEnabled() && !isEmbedDocument) {
-  void localeReady.then(() =>
-    import('./friends-online.js').then(({ mountFriendsOnline }) => mountFriendsOnline()),
   );
 }
 

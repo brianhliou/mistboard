@@ -4,6 +4,7 @@ import { type AccountPreferences, replaceAccountPreferences } from './account-pr
 import { identify, markInternalBrowser, resetIdentity } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
+import { clearFriendsNavs, decorateSiteMenuFriends, mountFriendsNav } from './friends-nav.js';
 import { t } from './i18n/catalog.js';
 import {
   applyAccountLocalePreference,
@@ -24,7 +25,11 @@ import {
   writeStatsExcludedHint,
   writeVariantGrantsHint,
 } from './signed-in-state.js';
-import { registerMenuLocaleSelectHandler, syncAdminNavMenus } from './site-shell.js';
+import {
+  registerMenuLocaleSelectHandler,
+  registerSiteMenuOpenHandler,
+  syncAdminNavMenus,
+} from './site-shell.js';
 import {
   buildAppearanceMenu,
   gearIconSvg,
@@ -83,6 +88,10 @@ export function initializeAccountNav(): void {
   // profile dropdown's picker does; signed out, the menu's own redirect is all.
   registerMenuLocaleSelectHandler((next) => {
     if (cachedUser) void saveAccountLocalePreference(next);
+  });
+  // The phone menu's Community > Friends item shows how many are online.
+  registerSiteMenuOpenHandler((panel, locale) => {
+    if (cachedUser) void decorateSiteMenuFriends(panel, locale);
   });
   applyPendingSlots();
   void primeAccountNav();
@@ -198,8 +207,10 @@ function applyPendingSlots(): void {
 }
 
 function revealSignedOutSlots(): void {
-  // The bell is signed-in-only; drop it when we resolve to signed-out.
+  // The bell and Friends are signed-in-only; drop them when we resolve to
+  // signed-out.
   clearNotificationBells();
+  clearFriendsNavs();
   applySignedInOnlyNav(false);
   document
     .querySelectorAll<HTMLElement>('[data-account-slot][data-account-pending="1"]')
@@ -263,6 +274,9 @@ function mountAccountNav(nav: HTMLElement, user: AuthUser): void {
   // menu). Mounted here so it inherits the same signed-in timing + observer;
   // a no-op when no notification sources are registered.
   mountNotificationBell(nav);
+  // Friends sits just left of the bell (lichess parity); desktop and tablet
+  // only, friends-nav.css hides it on phones.
+  mountFriendsNav(nav);
 
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
   const wasActive = path === '/account' || path.startsWith('/account/');
