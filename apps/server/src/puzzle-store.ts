@@ -154,8 +154,16 @@ function buildSnapshot(
   for (const puzzle of puzzles) {
     if (puzzle.variant !== XIANGQI_SPEC_ID) continue;
     // Read off the record without replaying it, so even a line that will not
-    // replay below is still filterable by mate, phase, goal and length.
-    tagsById.set(puzzle.id, xiangqiPuzzleTrainingTags(puzzle));
+    // replay below is still filterable by mate, phase, goal and length. A row
+    // too malformed to read (no solution) goes untagged: one bad row must not
+    // fail the whole store load and take every puzzle down with it.
+    try {
+      tagsById.set(puzzle.id, xiangqiPuzzleTrainingTags(puzzle));
+    } catch (error) {
+      console.warn(`puzzle-store: training tags failed for ${puzzle.id}`, {
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
     try {
       difficultyById.set(puzzle.id, deriveXiangqiPuzzleDifficulty(puzzle).score);
       const motifs = detectXiangqiPuzzleMotifs(puzzle);
