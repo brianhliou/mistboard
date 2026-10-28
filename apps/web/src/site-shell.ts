@@ -18,6 +18,7 @@ import {
   type NavSection,
   playNavItems,
   primaryNavItems,
+  puzzleNavItems,
   siteMenuSections,
   toolsNavItems,
   watchNavItems,
@@ -103,7 +104,8 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   // Play title links to the lobby; the dropdown adds Correspondence (and repeats
   // the lobby, for touch devices where the first tap opens the panel).
   links.append(navMenu('nav.play', playNavItems(), locale, play?.href ?? '/'));
-  if (puzzles) links.append(navLink(puzzles, locale));
+  // Puzzles title links to the trainer; the dropdown adds Puzzle Streak.
+  links.append(navMenu('nav.puzzles', puzzleNavItems(), locale, puzzles?.href ?? '/puzzles'));
   // Rules are the Learn landing and lead its dropdown; the interactive xiangqi
   // course remains directly reachable as the second item.
   links.append(navMenu('nav.learn', learnNavItems(), locale, '/rules'));
@@ -678,6 +680,13 @@ function closeNavMenu(menu: HTMLElement): void {
 
 function pathMatchesNavItem(path: string, href: string): boolean {
   const normalizedPath = stripLocalePrefix(path);
+  // A mode of a page (/puzzles?mode=streak) is its own destination: it matches
+  // only with its query, and the bare page stops matching while a mode is on.
+  const [hrefPath, hrefQuery] = href.split('?');
+  const mode = new URLSearchParams(window.location.search).get('mode');
+  if (hrefQuery !== undefined)
+    return normalizedPath === hrefPath && window.location.search === `?${hrefQuery}`;
+  if (href === '/puzzles' && normalizedPath === '/puzzles' && mode === 'streak') return false;
   return (
     normalizedPath === href ||
     (href === '/puzzles' && normalizedPath.startsWith('/puzzles/')) ||

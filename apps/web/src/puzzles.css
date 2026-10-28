@@ -18,12 +18,6 @@
   background: var(--site-page-gradient);
 }
 
-.puzzle-streak-link {
-  display: block;
-  padding: 12px;
-  color: var(--site-accent);
-}
-
 .puzzles-page > .puzzles-shell.puzzle-streak-shell {
   overflow: auto;
 }
@@ -42,10 +36,120 @@
   margin-block: 16px;
 }
 
-.puzzle-streak-card li {
-  padding-block: 8px;
+/* Quiet links: practice and sign-in sit under the main action, never beside
+   it as a second call to action. */
+.puzzle-streak-practice,
+.puzzle-streak-signin {
+  color: var(--site-muted);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
+.puzzle-streak-practice:hover,
+.puzzle-streak-signin:hover {
+  color: var(--site-accent);
+}
+
+.puzzle-streak-side .puzzle-streak-practice {
+  display: inline-block;
+  margin-top: 12px;
+}
+
+/* The streak count: a big number over its label. */
+.puzzle-streak-count {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  color: var(--site-heading);
+}
+
+.puzzle-streak-count strong {
+  font-size: 44px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.puzzle-streak-count span {
+  color: var(--site-muted);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.puzzle-streak-meta {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.puzzle-streak-new-best {
+  color: #2b8a57;
+  font-weight: 700;
+}
+
+/* The run's puzzles: small numbered chips, solved green, failed red, skipped
+   dashed and muted, the puzzle in play outlined in the accent. */
+.puzzle-streak-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.puzzle-streak-chip {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  box-sizing: border-box;
+  padding: 0 5px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.puzzle-streak-chip--solved {
+  background: #2b8a57;
+  color: #fff;
+}
+
+.puzzle-streak-chip--failed {
+  background: #b03636;
+  color: #fff;
+}
+
+.puzzle-streak-chip--skipped {
+  border: 1px dashed var(--site-border);
+  background: var(--site-panel-soft);
+  color: var(--site-muted);
+}
+
+.puzzle-streak-chip--current {
+  border-color: var(--site-accent);
+  color: var(--site-accent);
+}
+
+a.puzzle-streak-chip:hover {
+  filter: brightness(1.12);
+}
+
+a.puzzle-streak-chip:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 2px;
+}
+
+.puzzle-streak-progress:not(:empty) {
+  margin-top: 12px;
+}
+
+/* In the run: count, best, prompt, then Next puzzle or a quiet Skip. */
 .puzzle-streak-feedback .puzzle-continue-button {
   min-height: 44px;
   margin: 0;
@@ -53,7 +157,7 @@
 
 .puzzles-shell .puzzle-feedback.puzzle-streak-feedback {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "title" "body" "assist";
+  grid-template-areas: "title" "meta" "body" "assist";
 }
 
 .puzzle-streak-feedback .puzzle-feedback-copy {
@@ -64,12 +168,78 @@
   grid-area: title;
 }
 
+.puzzle-streak-feedback .puzzle-feedback-meta {
+  grid-area: meta;
+}
+
 .puzzle-streak-feedback .puzzle-feedback-body {
   grid-area: body;
 }
 
 .puzzle-streak-feedback .puzzle-assist-row {
   grid-area: assist;
+}
+
+/* Game over, in place of the prompt: title, the run's score, best, the run's
+   chips, one New streak button, the practice link under it. */
+.puzzle-streak-over {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-height: 0;
+  padding: 16px 20px 18px;
+  border-top: 1px solid var(--site-border-soft);
+  background: color-mix(in srgb, #b03636 6%, var(--site-panel));
+  color: var(--site-text);
+  overflow: auto;
+}
+
+/* Game over is taller than the prompt row's 240px cap: it takes the room it
+   needs and the move list above gives way. */
+.puzzle-trainer-panel:has(> .puzzle-streak-over) {
+  grid-template-rows: minmax(120px, 1fr) auto;
+}
+
+.puzzle-streak-over-title {
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.puzzle-streak-over .puzzle-continue-button {
+  min-height: 52px;
+  margin-top: 4px;
+  font-size: 16px;
+}
+
+.puzzle-streak-over .puzzle-streak-practice {
+  justify-self: center;
+}
+
+.puzzle-streak-card > .puzzle-streak-over {
+  border-top: 0;
+  background: transparent;
+}
+
+/* Move list after a miss: the right move ✓ in its row, the played miss ✗ on
+   its own row under it, like a variation. */
+.puzzle-move-cell--right .puzzle-move-mark {
+  color: #2b8a57;
+  font-weight: 700;
+}
+
+.puzzle-move-cell--wrong {
+  color: #b03636;
+}
+
+.puzzle-move-cell--wrong .puzzle-move-mark {
+  font-weight: 700;
+}
+
+.puzzle-move-variation {
+  background: color-mix(in srgb, #b03636 6%, transparent);
 }
 
 .puzzles-shell {
@@ -1872,5 +2042,96 @@
   .puzzle-continue-button {
     font-size: 15px;
     min-height: 52px;
+  }
+}
+
+/* Puzzle Streak on the phone stack. Kept after the shared phone blocks, which
+   puzzles-phone-stack.test.ts reads as the first 980px query. */
+@media (max-width: 980px) {
+  /* Stacked, the run's count shares a row with the prompt so the strip stays
+     as short as the trainer's. */
+  .puzzles-shell .puzzle-feedback.puzzle-streak-feedback {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "title meta"
+      "title body"
+      "assist assist";
+    column-gap: 14px;
+  }
+
+  .puzzles-shell .puzzle-streak-feedback .puzzle-streak-count {
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .puzzles-shell .puzzle-streak-feedback .puzzle-streak-count strong {
+    font-size: 30px;
+  }
+
+  .puzzles-shell .puzzle-streak-feedback .puzzle-streak-count span {
+    font-size: 11px;
+  }
+
+  .puzzles-shell .puzzle-streak-feedback .puzzle-assist-row > .puzzle-feedback-skip {
+    flex: 0 1 auto;
+    padding-inline: 12px;
+  }
+
+  .puzzles-shell .puzzle-streak-feedback .puzzle-assist-row > .puzzle-continue-button {
+    flex: 1 1 auto;
+  }
+
+  /* Game over grows past the fixed prompt height: the board above gives the
+     room back (it is a flex child that shrinks). */
+  .puzzles-shell .puzzle-trainer-panel > .puzzle-streak-over {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "title title"
+      "score meta"
+      "chips chips"
+      "cta cta"
+      "practice practice";
+    align-items: center;
+    column-gap: 14px;
+    row-gap: 8px;
+    padding: 10px 12px 12px;
+  }
+
+  .puzzles-shell .puzzle-streak-over-title {
+    grid-area: title;
+    font-size: 18px;
+  }
+
+  .puzzles-shell .puzzle-streak-over .puzzle-streak-count {
+    grid-area: score;
+  }
+
+  .puzzles-shell .puzzle-streak-over .puzzle-streak-count strong {
+    font-size: 34px;
+  }
+
+  .puzzles-shell .puzzle-streak-over .puzzle-streak-meta {
+    grid-area: meta;
+  }
+
+  .puzzles-shell .puzzle-streak-over .puzzle-streak-chips {
+    grid-area: chips;
+  }
+
+  .puzzles-shell .puzzle-streak-over .puzzle-continue-button {
+    grid-area: cta;
+    width: 100%;
+    min-height: 44px;
+    margin: 0;
+  }
+
+  .puzzles-shell .puzzle-streak-over .puzzle-streak-practice {
+    grid-area: practice;
+  }
+
+  /* The variation row joins the one-line move strip as an inline aside. */
+  .puzzles-shell .puzzle-move-variation {
+    border-radius: 4px;
   }
 }

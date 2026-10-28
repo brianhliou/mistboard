@@ -173,6 +173,10 @@ export async function tryHandle(
       return true;
     }
     let attempt: PuzzleAttempt | undefined;
+    // The line that ended the run, sent once the run can no longer change, so
+    // the end screen plays it out on the board without a separate reveal call
+    // (which would book a quality 'reveal' the player never asked for).
+    let solution: readonly unknown[] | undefined;
     if (body.action === 'skip') {
       state.skipUsed = true;
       state.results.push({ id, outcome: 'skipped' });
@@ -199,6 +203,7 @@ export async function tryHandle(
       if (!attempt.ok) {
         state.finished = true;
         state.results.push({ id, outcome: 'failed' });
+        solution = puzzle.solution;
       } else if (attempt.complete) {
         state.score++;
         state.results.push({ id, outcome: 'solved' });
@@ -222,7 +227,11 @@ export async function tryHandle(
     }
     // Streak deliberately never calls recordOutcomeRating: these attempts do
     // not change puzzle/user ratings or the separate daily-solve streak.
-    writeJson(response, 200, { ...(await streakResponse(run)), ...(attempt ? { attempt } : {}) });
+    writeJson(response, 200, {
+      ...(await streakResponse(run)),
+      ...(attempt ? { attempt } : {}),
+      ...(solution ? { solution } : {}),
+    });
     return true;
   }
 
@@ -416,8 +425,9 @@ export async function tryHandle(
   }
 
   // Solution-exposure endpoint (lichess "view solution" / "get a hint"). This is
-  // the ONLY route that returns solution move data; the detail + attempt routes
-  // stay solution-hidden. `mode:'solution'` returns the full line; `mode:'hint'`
+  // the only route that returns solution move data on request; the detail +
+  // attempt routes stay solution-hidden. (The streak route sends one puzzle's
+  // line only with the miss that has already locked its run.) `mode:'solution'` returns the full line; `mode:'hint'`
   // returns just the next correct move for the given played-ply count. Either
   // action books a FAILED rated attempt for the user (idempotent per user+puzzle
   // via ON CONFLICT DO NOTHING, so a prior wrong-move fail or a later solve is a

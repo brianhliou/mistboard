@@ -45,6 +45,17 @@ describe('site shell nav', () => {
     window.history.replaceState(null, '', '/');
   });
 
+  it('marks Puzzle Streak, not the trainer, as the current page in streak mode', () => {
+    window.history.replaceState(null, '', '/puzzles?mode=streak');
+    const nav = buildNav();
+    document.body.append(nav);
+    const current = [...nav.querySelectorAll<HTMLAnchorElement>('[aria-current="page"]')];
+    expect(current.map((a) => a.getAttribute('href'))).toEqual(['/puzzles?mode=streak']);
+    expect(
+      nav.querySelector('.site-nav-menu-toggle[href="/puzzles"]')?.classList.contains('active'),
+    ).toBe(true);
+  });
+
   it('links to Puzzles from the primary nav and marks puzzle detail routes active', () => {
     window.history.replaceState(null, '', '/puzzles/xq-mined-hxq_4a41e15e9d8a17414cf249ee-41');
 
@@ -75,8 +86,24 @@ describe('site shell nav', () => {
     // all: a hidden menu still put its labels in the prerendered HTML.
     expect(nav.querySelector('[data-admin-only]')).toBeNull();
 
-    const puzzleLink = nav.querySelector<HTMLAnchorElement>('a[href="/puzzles"]');
-    expect(puzzleLink?.textContent).toBe('Puzzles');
+    // Puzzles is a split menu (lichess parity): the title goes to the trainer,
+    // the panel repeats it and adds Puzzle Streak.
+    const puzzleToggle = nav.querySelector<HTMLAnchorElement>(
+      '.site-nav-menu-toggle[href="/puzzles"]',
+    );
+    expect(puzzleToggle?.textContent).toBe('Puzzles');
+    expect(puzzleToggle?.classList.contains('active')).toBe(true);
+    const puzzlePanel = puzzleToggle?.parentElement?.querySelector('.site-nav-menu-panel');
+    expect(
+      [...(puzzlePanel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map((a) => [
+        a.getAttribute('href'),
+        a.textContent,
+      ]),
+    ).toEqual([
+      ['/puzzles', 'Puzzles'],
+      ['/puzzles?mode=streak', 'Puzzle Streak'],
+    ]);
+    const puzzleLink = puzzlePanel?.querySelector<HTMLAnchorElement>('a[href="/puzzles"]');
     expect(puzzleLink?.classList.contains('active')).toBe(true);
     expect(puzzleLink?.getAttribute('aria-current')).toBe('page');
     // Identify the Learn toggle by its href, not by being the first toggle in
@@ -545,7 +572,7 @@ describe('site shell phone menu', () => {
       [...(play?.querySelectorAll<HTMLAnchorElement>('.site-menu-link') ?? [])].map((a) =>
         a.getAttribute('href'),
       ),
-    ).toEqual(['/', '/correspondence', '/puzzles']);
+    ).toEqual(['/', '/correspondence', '/puzzles', '/puzzles?mode=streak']);
     expect(menuPanel()?.querySelector('a[href="/patron"]')).not.toBeNull();
     expect(menuPanel()?.querySelector('a[href="/database"]')).toBeNull();
   });

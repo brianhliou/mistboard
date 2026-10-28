@@ -207,7 +207,6 @@ export async function mountPuzzles(
       },
     };
     renderQueuePanel(controls, props);
-    controls.append(streakLink());
     // The phone ☰ sheet reads the same props; repaint it if it is open.
     phoneMenu.props = props;
     phoneMenu.refresh?.();
@@ -429,6 +428,14 @@ function renderPuzzleDetail(
   // again (the engine panel), else the row with the same key, else the sheet.
   const sheetFocus = reopenMenu ? phoneMenuFocus() : null;
   resetPhoneMenu();
+  // Focus on the next-puzzle button survives the rebuild too: a solution played
+  // out under Game over re-renders once per move and would drop it to <body>.
+  if (
+    document.activeElement?.closest('[data-puzzle-next="true"]') &&
+    host.contains(document.activeElement)
+  ) {
+    session.focusNext = true;
+  }
   host.replaceChildren();
 
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
@@ -490,7 +497,7 @@ function renderPuzzleDetail(
       // settings rows are built for the sheet from the sidebar's props.
       blocks: () => [session.analysis?.engineEl, session.analysis?.openLinkEl],
       head: () => (phoneMenu.props ? puzzlePhoneMenuHead(phoneMenu.props) : null),
-      rows: () => (phoneMenu.props ? [...puzzlePhoneMenuRows(phoneMenu.props), streakLink()] : []),
+      rows: () => (phoneMenu.props ? puzzlePhoneMenuRows(phoneMenu.props) : []),
       signal: phoneMenu.abort?.signal,
     },
   );
@@ -916,6 +923,8 @@ async function submitMove(
   if (!submitted) return;
   if (submitted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
   const { attempt, rating } = submitted;
+  // Only a streak submitter sends the line, and only on the miss that ends the run.
+  const { solution } = submitted as { solution?: PuzzleMove[] };
   session.submitting = false;
   session.selectedSquare = null;
   session.selectedDrop = null;
@@ -949,6 +958,15 @@ async function submitMove(
           ? 'capture'
           : 'move',
     );
+  } else if (attempt.code === 'incorrect-move' && solution?.length) {
+    // A terminal miss whose submitter sends the line (Puzzle Streak): the board
+    // stays on this puzzle, keeps the wrong try for the move list and plays
+    // the answer out from the ply that went wrong, like a reveal.
+    session.failed = true;
+    session.wrongMove = { ply: session.playedMoves.length, move: attempt.move };
+    showSolutionLine(session, solution, session.playedMoves.length);
+    session.feedback = { kind: 'bad', text: t('puzzle.tryAnotherMove') };
+    playSound('learn-failure');
   } else {
     session.state = attempt.state;
     session.viewPly = session.playedMoves.length;
@@ -972,15 +990,8 @@ async function submitMove(
     const reply = attempt.playedMoves.at(-1);
     if (reply) animatePuzzleMove(session, reply);
   }
+  if (session.wrongMove && session.revealed) playbackSolution(session, renderSession);
   opts.onAttempt?.(attempt);
-}
-
-function streakLink(): HTMLAnchorElement {
-  const link = document.createElement('a');
-  link.href = '/puzzles?mode=streak';
-  link.className = 'puzzle-streak-link puzzle-pm-row';
-  link.textContent = t('puzzle.streakTitle');
-  return link;
 }
 
 // Highlight the correct piece to move for the current ply (lichess "get a hint").
@@ -1043,14 +1054,27 @@ async function revealSolution(session: PuzzleSession, renderSession: () => void)
     return;
   }
   session.failed = true;
-  session.revealed = true;
   trackPuzzleAttempted(session, 'revealed');
-  session.selectedSquare = null;
-  session.selectedDrop = null;
   // Play the answer out from wherever the user got to. Their correct moves are a
   // prefix of the solution, so replaying from that ply matches the board.
-  const startPly = Math.min(session.playedMoves.length, solution.length);
-  session.playedMoves = solution;
+  showSolutionLine(session, solution, session.playedMoves.length);
+  session.feedback = { kind: 'neutral', text: t('puzzle.solution') };
+  if (rating) reportAttemptRating(rating);
+  renderSession();
+  playbackSolution(session, renderSession);
+}
+
+// Lock the board on the full solution line with the replay cursor at
+// `fromPly`, ready for playbackSolution to step it forward.
+function showSolutionLine(
+  session: PuzzleSession,
+  solution: readonly PuzzleMove[],
+  fromPly: number,
+): void {
+  session.revealed = true;
+  session.selectedSquare = null;
+  session.selectedDrop = null;
+  session.playedMoves = [...solution];
   session.solverMoves = solution.filter((_, index) => index % 2 === 0);
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
   let state = clonePuzzleState(session.puzzle.initial);
@@ -1058,11 +1082,7 @@ async function revealSolution(session: PuzzleSession, renderSession: () => void)
     state = adapter.applyMove(state, move);
   }
   session.state = state;
-  session.viewPly = startPly;
-  session.feedback = { kind: 'neutral', text: t('puzzle.solution') };
-  if (rating) reportAttemptRating(rating);
-  renderSession();
-  playbackSolution(session, renderSession);
+  session.viewPly = Math.min(fromPly, solution.length);
 }
 
 // Step the replay cursor forward one ply at a time, reusing the scrub-forward
@@ -1413,15 +1433,28 @@ export type PuzzleSolverOptions = {
   mode?: 'embed' | 'streak';
   analysis?: boolean;
   feedback?: (session: PuzzleSession) => HTMLElement;
-  submitAttempt?: typeof submitPuzzleAttempt;
+  // A replacement attempt submitter. One that also returns `solution` on a
+  // terminal wrong move gets the line played out on the locked board.
+  submitAttempt?: (
+    id: string,
+    moves: readonly PuzzleMove[],
+    qualitySessionId?: string,
+  ) => Promise<Awaited<ReturnType<typeof submitPuzzleAttempt>> & { solution?: PuzzleMove[] }>;
   onAttempt?: (attempt: PuzzleAttempt) => void;
+};
+
+export type PuzzleSolverHandle = {
+  dispose(): void;
+  // Lock the board (no more moves) and re-render, e.g. when a run ends
+  // without a move on the board.
+  end(): void;
 };
 
 export function mountPuzzleSolver(
   host: HTMLElement,
   puzzle: PuzzleDetail,
   opts: PuzzleSolverOptions = {},
-): { dispose(): void } {
+): PuzzleSolverHandle {
   for (const adapter of allPuzzleBoardAdapters()) adapter.installStyles?.();
   setBoardFamily('xiangqi');
   setPuzzleRatedPref(false);
@@ -1472,6 +1505,13 @@ export function mountPuzzleSolver(
       disposed = true;
       session.analysis?.dispose();
       window.removeEventListener('keydown', onKeyDown);
+    },
+    end: () => {
+      if (disposed) return;
+      session.revealed = true;
+      session.selectedSquare = null;
+      session.selectedDrop = null;
+      renderSession();
     },
   };
 }

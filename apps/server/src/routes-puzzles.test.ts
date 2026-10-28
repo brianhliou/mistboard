@@ -108,6 +108,7 @@ test('anonymous streak counts solves, allows one skip, and locks the run on a mi
   }
   assert.equal(run.score, 1);
   assert.equal(run.results[0].outcome, 'solved');
+  assert.equal(run.solution, undefined);
   const duplicate = await route('/api/puzzles/streak', 'POST', {
     action: 'move',
     runId: run.runId,
@@ -167,6 +168,8 @@ test('anonymous streak counts solves, allows one skip, and locks the run on a mi
   assert.equal(run.finished, true);
   assert.equal(run.score, 1);
   assert.equal(run.results[2].outcome, 'failed');
+  // The finishing miss carries the line so the end screen can play it out.
+  assert.deepEqual(run.solution, missedPuzzle.solution);
   assert.equal(
     (
       await route('/api/puzzles/streak', 'POST', {

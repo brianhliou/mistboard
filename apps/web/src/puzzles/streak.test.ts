@@ -116,6 +116,7 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
       results,
       puzzle: finished ? null : detail(puzzles[index]!),
       attempt,
+      ...(finished ? { solution: puzzles[index]!.solution } : {}),
     });
   });
   vi.stubGlobal('fetch', fetchSpy);
@@ -129,6 +130,8 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   expect(root.querySelector('[data-puzzle-reveal]')).toBeNull();
   expect(root.querySelector('.engine-panel')).toBeNull();
   expect(root.textContent).toContain('Best: 4');
+  expect(root.textContent).not.toContain('Guest');
+  expect(root.querySelector('.puzzle-streak-count strong')?.textContent).toBe('0');
   for (const m of puzzles[0]!.solution.filter((_, i) => i % 2 === 0)) {
     const count = fetchSpy.mock.calls.length;
     move(root, m);
@@ -139,9 +142,19 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
       ),
     );
   }
-  await vi.waitFor(() => expect(root.textContent).toContain('Streak: 1'));
+  await vi.waitFor(() =>
+    expect(root.querySelector('.puzzle-streak-count strong')?.textContent).toBe('1'),
+  );
   click(root, 'Next puzzle');
-  click(root, 'Skip (1 left)');
+  // During the run the left card shows the run so far plus the puzzle in play.
+  expect(
+    [...root.querySelectorAll('.puzzle-streak-progress .puzzle-streak-chip')].map(
+      (c) => c.className,
+    ),
+  ).toEqual([expect.stringContaining('--solved'), expect.stringContaining('--current')]);
+  const skip = root.querySelector<HTMLButtonElement>('[data-streak-skip]');
+  expect(skip?.className).toBe('puzzle-feedback-skip');
+  click(root, 'Skip · 1 left');
   await vi.waitFor(() => expect(root.textContent).toContain('Skip used'));
   expect(
     [...root.querySelectorAll('button')].find((b) => b.textContent === 'Skip used')?.disabled,
@@ -150,14 +163,45 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
     (m) => !attemptStandardXiangqiPuzzleLine(puzzles[2]!, [m]).ok,
   )!;
   move(root, wrong);
-  await vi.waitFor(() => expect(root.textContent).toContain('Streak finished'));
-  expect(root.querySelector('[data-streak-score]')?.textContent).toContain('Solved: 1');
-  expect(root.querySelectorAll('ol a')).toHaveLength(3);
-  expect([...root.querySelectorAll('ol a')].map((a) => a.textContent)).toEqual([
-    expect.stringContaining('solved'),
-    expect.stringContaining('skipped'),
-    expect.stringContaining('failed'),
+  await vi.waitFor(() => expect(root.textContent).toContain('Game over'));
+  // The run ends on the puzzle page: the failed puzzle stays on the board and
+  // its answer is laid out in the move list, the miss marked ✗, the right move ✓.
+  const board = root.querySelector<HTMLElement>('.puzzle-board');
+  expect(board?.dataset.puzzleId).toBe(puzzles[2]!.id);
+  expect(root.querySelector('.puzzle-xiangqi-board')).toBeTruthy();
+  expect(root.querySelector('.puzzle-move-cell--wrong')?.textContent).toContain('✗');
+  expect(root.querySelector('.puzzle-move-variation')).toBeTruthy();
+  expect(root.querySelector('.puzzle-move-cell--right')?.textContent).toContain('✓');
+  expect(
+    root.querySelectorAll('.puzzle-move-list .puzzle-move-item:not(.puzzle-move-variation)').length,
+  ).toBeGreaterThan(1);
+  expect(root.querySelector('[data-streak-score] strong')?.textContent).toBe('1');
+  const chips = [
+    ...root.querySelectorAll<HTMLAnchorElement>('.puzzle-streak-over .puzzle-streak-chip'),
+  ];
+  expect(chips.map((c) => [c.textContent, c.dataset.outcome, c.getAttribute('href')])).toEqual([
+    ['1', 'solved', `/puzzles/${puzzles[0]!.id}`],
+    ['2', 'skipped', `/puzzles/${puzzles[1]!.id}`],
+    ['3', 'failed', `/puzzles/${puzzles[2]!.id}`],
   ]);
+  expect(root.querySelector('ol a')).toBeNull();
+  const newStreak = root.querySelector<HTMLButtonElement>('.puzzle-streak-over [data-puzzle-next]');
+  expect(newStreak?.textContent).toBe('New streak');
+  expect(document.activeElement).toBe(newStreak);
+  // The answer plays out under Game over, one re-render per move; focus stays
+  // on New streak through every rebuild instead of dropping to <body>.
+  await vi.waitFor(
+    () => {
+      const rows = root.querySelectorAll('.puzzle-move-item:not(.puzzle-move-variation)');
+      expect(rows[rows.length - 1]?.querySelector('.puzzle-move-cell--active')).toBeTruthy();
+    },
+    { timeout: 4000 },
+  );
+  expect(document.activeElement?.textContent).toBe('New streak');
+  expect(document.activeElement).not.toBe(newStreak);
+  expect(
+    root.querySelector('.puzzle-streak-over .puzzle-streak-practice')?.getAttribute('href'),
+  ).toBe('/puzzles');
   expect(track).toHaveBeenCalledWith(
     'puzzle_mode_started',
     expect.objectContaining({ mode: 'streak' }),
@@ -178,10 +222,76 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
     'puzzle_mode_finished',
     expect.objectContaining({ mode: 'streak', run_length: 1 }),
   );
-  click(root, 'Play again');
+  click(root, 'New streak');
+  await vi.waitFor(() => expect(root.querySelector('.puzzle-streak-over')).toBeNull());
+  expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(puzzles[0]!.id);
+  expect(root.querySelector('.puzzle-streak-count strong')?.textContent).toBe('0');
+  expect(root.textContent).toContain('Skip · 1 left');
+  expect(root.querySelector('.puzzle-move-cell--wrong')).toBeNull();
+});
+
+it('says New best when the run beats the best it started from, and asks a guest to sign in', async () => {
+  const puzzle = puzzles[0]!;
+  let best: number | null = 0;
+  let moves: XiangqiMove[] = [];
+  let score = 0;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      if (String(url).includes('/quality')) return json({});
+      const body = JSON.parse(String(init?.body));
+      if (body.action === 'start') {
+        moves = [];
+        score = 0;
+        return json({
+          runId: 'run',
+          score,
+          best,
+          skipUsed: false,
+          finished: false,
+          results: [],
+          puzzle: detail(puzzle),
+        });
+      }
+      moves.push(body.move);
+      const attempt = attemptStandardXiangqiPuzzleLine(puzzle, moves);
+      if (attempt.ok && attempt.complete) score++;
+      const finished = !attempt.ok || attempt.complete;
+      return json({
+        runId: 'run',
+        score,
+        best: best === null ? null : Math.max(best, score),
+        skipUsed: false,
+        finished,
+        results: finished ? [{ id: puzzle.id, outcome: attempt.ok ? 'solved' : 'failed' }] : [],
+        puzzle: finished ? null : detail(puzzle),
+        attempt,
+      });
+    }),
+  );
+  const root = document.createElement('div');
+  document.body.append(root);
+  await mountPuzzles(root);
+  click(root, 'Start streak');
   await vi.waitFor(() => expect(root.querySelector('.puzzle-xiangqi-board')).toBeTruthy());
-  expect(root.textContent).toContain('Streak: 0');
-  expect(root.textContent).toContain('Skip (1 left)');
+  for (const m of puzzle.solution.filter((_, i) => i % 2 === 0)) {
+    move(root, m);
+    await vi.waitFor(() =>
+      expect(
+        root.querySelector('.puzzle-streak-feedback')?.getAttribute('aria-busy') ?? 'false',
+      ).toBe('false'),
+    );
+  }
+  await vi.waitFor(() => expect(root.textContent).toContain('Game over'));
+  expect(root.querySelector('.puzzle-streak-new-best')?.textContent).toBe('New best!');
+
+  best = null;
+  click(root, 'New streak');
+  await vi.waitFor(() => expect(root.querySelector('.puzzle-streak-over')).toBeNull());
+  const signIn = root.querySelector<HTMLAnchorElement>('.puzzle-streak-signin');
+  expect(signIn?.textContent).toBe('Sign in to save your best');
+  expect(signIn?.getAttribute('href')).toContain('/account');
+  expect(root.textContent).not.toContain('Guest');
 });
 
 it('shows a failed start and allows retrying without a phantom mode-start event', async () => {

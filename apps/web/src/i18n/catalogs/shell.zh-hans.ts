@@ -11,6 +11,7 @@ export const ZH_HANS_SHELL = {
   'nav.menu': '菜单',
   'nav.play': '对弈',
   'nav.puzzles': '题目',
+  'nav.puzzleStreak': '连续解题',
   'nav.learn': '学习',
   'nav.learnXiangqi': '象棋入门',
   'nav.practice': '练习',
