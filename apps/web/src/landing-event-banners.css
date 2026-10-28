@@ -44,17 +44,10 @@
   background: var(--site-panel);
   color: inherit;
   text-decoration: none;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease;
 }
 
-.landing-event-banner:hover,
-.landing-event-banner:focus-visible {
-  border-color: var(--site-accent);
-  background: var(--site-panel-soft);
-  outline: none;
-}
+/* Hover and focus: the card grammar (hover-grammar.css .hover-card), border to
+   the accent and the title to the link green; focus keeps the global ring. */
 
 .landing-event-banner-icon {
   display: flex;
@@ -129,11 +122,6 @@
   color: var(--site-heading);
 }
 
-.landing-event-banner:hover .landing-event-banner-title,
-.landing-event-banner:focus-visible .landing-event-banner-title {
-  color: var(--site-link);
-}
-
 .landing-event-banner-subtitle {
   overflow: hidden;
   font-size: 12.5px;
@@ -177,9 +165,4 @@
   color: var(--site-muted);
   font-size: 13px;
   text-decoration: none;
-}
-
-.landing-event-banners-more:hover {
-  color: var(--site-text);
-  text-decoration: underline;
 }

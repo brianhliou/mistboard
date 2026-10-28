@@ -1,4 +1,5 @@
 import './site-shell.css';
+import './hover-grammar.css';
 import type { AccountPreferences } from './account-preferences.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -970,6 +971,7 @@ export function buildHomeFooter(locale: Locale = currentLocale()): HTMLElement {
   for (const link of footerNavItems()) {
     if (isBlockedForViewer(link.blockedIn)) continue;
     const anchor = document.createElement('a');
+    anchor.className = 'hover-link';
     anchor.href = link.external ? link.href : localizedHref(link.href, locale);
     anchor.textContent = t(link.labelKey, {}, locale);
     if (link.external) {

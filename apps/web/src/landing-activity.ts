@@ -12,6 +12,7 @@
 // Rows render only for data we actually have; a failed poll keeps the last
 // values, and the block removes itself when the first read has nothing to show.
 
+import './hover-grammar.css';
 import { t } from './i18n/catalog.js';
 import { fetchLiveStats } from './live-stats-client.js';
 
@@ -163,7 +164,7 @@ function activityMetric(
 ): HTMLElement {
   const row = href ? document.createElement('a') : document.createElement('div');
   row.className = href
-    ? 'landing-activity-metric landing-activity-link'
+    ? 'landing-activity-metric landing-activity-link hover-link'
     : 'landing-activity-metric';
   if (href) row.setAttribute('href', href);
   const valueEl = document.createElement('strong');
@@ -186,7 +187,9 @@ function activityLiveLine(stats: HTMLElement[]): HTMLElement {
 
 function activityInlineStat(value: string, label: string, href?: string): HTMLElement {
   const stat = href ? document.createElement('a') : document.createElement('span');
-  stat.className = 'landing-activity-inline-stat';
+  stat.className = href
+    ? 'landing-activity-inline-stat hover-link'
+    : 'landing-activity-inline-stat';
   if (href) stat.setAttribute('href', href);
   const valueEl = document.createElement('strong');
   valueEl.textContent = value;

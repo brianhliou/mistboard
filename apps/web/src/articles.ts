@@ -23,6 +23,7 @@ import { articleMadeWithNote, hasSiteByline, SITE_AUTHOR } from './articles/site
 import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
 import './articles.css';
+import './hover-grammar.css';
 import { mountLazyStepGameSet, type StepGameSetController } from './article-game-set.js';
 import {
   type ArticleLang,
@@ -620,7 +621,7 @@ export function buildHomeArticleCards(
         : null;
   if (moreHref) {
     const more = document.createElement('a');
-    more.className = 'landing-row-more';
+    more.className = 'landing-row-more hover-link';
     more.href = moreHref;
     more.textContent = t('site.more', {}, locale);
     // Autocapture is off, so a homepage link with no track() call is invisible
@@ -674,7 +675,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   const articleLang = publishedArticleLang(article.slug, requestedLang);
   const localized = articleLang ? translateArticle(article, articleLang) : article;
   const link = document.createElement('a');
-  link.className = 'landing-article-card';
+  link.className = 'landing-article-card hover-card';
   link.dataset.cardKind = 'article';
   link.href = localizedArticleHref(article, locale);
 
@@ -692,7 +693,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   }
 
   const title = document.createElement('strong');
-  title.className = 'landing-article-card-title';
+  title.className = 'landing-article-card-title hover-title';
   appendCardTitle(title, localized.cardTitle ?? localized.title);
 
   link.append(thumb, title);
