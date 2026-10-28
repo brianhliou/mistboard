@@ -12,7 +12,7 @@ import {
 } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { getPuzzleStore } from './puzzle-store.js';
-import { loadPuzzleStreak, startPuzzleStreak } from './puzzle-streak.js';
+import { loadPuzzleStreak, savePuzzleStreak, startPuzzleStreak } from './puzzle-streak.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/puzzles.js';
 
@@ -180,6 +180,79 @@ test('anonymous streak counts solves, allows one skip, and locks the run on a mi
       })
     ).status,
     409,
+  );
+});
+
+test('a second streak run does not replay the first one', async () => {
+  const N = 5;
+  const firstRun = JSON.parse(
+    (await route('/api/puzzles/streak', 'POST', { action: 'start' })).body,
+  );
+  const first = (await loadPuzzleStreak(firstRun.runId))!.state.ids;
+  assert.ok(first.length > N * 2, 'the pool must be larger than the compared prefix');
+  // The browser lists the puzzles the player met in the first run.
+  const secondRun = JSON.parse(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'start',
+        recent: first.slice(0, N),
+      })
+    ).body,
+  );
+  const second = (await loadPuzzleStreak(secondRun.runId))!.state.ids;
+  assert.notDeepEqual(second.slice(0, N), first.slice(0, N));
+  // It opens on a puzzle the player has not met.
+  assert.equal(first.slice(0, N).includes(second[0]!), false);
+});
+
+test('resume picks the open run up at the start of its puzzle and refuses an ended one', async () => {
+  const puzzle = XIANGQI_PUZZLES.find((p) => p.solution.length >= 3)!;
+  const run = await startPuzzleStreak(
+    [puzzle.id, XIANGQI_PUZZLES.find((p) => p !== puzzle)!.id],
+    null,
+  );
+  const played = await route('/api/puzzles/streak', 'POST', {
+    action: 'move',
+    runId: run.id,
+    puzzleId: puzzle.id,
+    move: puzzle.solution[0],
+  });
+  assert.equal(JSON.parse(played.body).attempt.ok, true);
+  const resumed = await route('/api/puzzles/streak', 'POST', { action: 'resume', runId: run.id });
+  assert.equal(resumed.status, 200);
+  const body = JSON.parse(resumed.body);
+  assert.equal(body.runId, run.id);
+  assert.equal(body.puzzle.id, puzzle.id);
+  assert.equal(JSON.stringify(body).includes('"solution":'), false);
+  assert.deepEqual((await loadPuzzleStreak(run.id))!.state.moves, []);
+  // The line is played again from its first move.
+  const again = await route('/api/puzzles/streak', 'POST', {
+    action: 'move',
+    runId: run.id,
+    puzzleId: puzzle.id,
+    move: puzzle.solution[0],
+  });
+  assert.equal(JSON.parse(again.body).attempt.ok, true);
+
+  const ended = await startPuzzleStreak([puzzle.id], null);
+  ended.state.finished = true;
+  assert.equal(await savePuzzleStreak(ended), true);
+  assert.equal(
+    (await route('/api/puzzles/streak', 'POST', { action: 'resume', runId: ended.id })).status,
+    409,
+  );
+  assert.equal(
+    (await route('/api/puzzles/streak', 'POST', { action: 'resume', runId: 'nope' })).status,
+    400,
+  );
+  assert.equal(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'resume',
+        runId: 'a85ef43f-73b3-4ef0-bdc2-d1e907c1ff35',
+      })
+    ).status,
+    404,
   );
 });
 

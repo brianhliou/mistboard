@@ -192,6 +192,7 @@ export const ZH_HANT_PLAY = {
   'puzzle.statusTryAgain': '再試一次',
   'puzzle.statusChecking': '檢查中',
   'puzzle.ratingHidden': '評分：隱藏',
+  'puzzle.ratingShown': '評分：{rating}',
   'puzzle.playedLocally': '本機已做過',
   'puzzle.rated': '計分',
   'puzzle.unrated': '不計分',
@@ -222,12 +223,8 @@ export const ZH_HANT_PLAY = {
   'puzzle.openInAnalysis': '在分析棋盤中開啟',
   'puzzle.checkFailed': '無法檢查著法，請重試。',
   'puzzle.streakTitle': '連續解題',
-  'puzzle.streakIntro':
-    '從簡單的題目開始，越往後越難。走錯一步，本輪就結束。不計時。每輪可跳過一次。',
-  'puzzle.streakAccount':
-    '可以用訪客身分直接玩，或登入保存你的最佳紀錄。連續解題不影響你的題目評分。',
-  'puzzle.streakStart': '開始連續解題',
-  'puzzle.streakRules': '題目越來越難。走錯一步，本輪就結束。不計時。可跳過一次。',
+  'puzzle.streakRules': '題目越來越難。走錯一步，本輪就結束。',
+  'puzzle.streakFacts': '不計時，可跳過一次。不影響你的題目評分。',
   'puzzle.streakPractice': '題目練習',
   'puzzle.streakBest': '最佳：{best}',
   'puzzle.streakCount': '連對',

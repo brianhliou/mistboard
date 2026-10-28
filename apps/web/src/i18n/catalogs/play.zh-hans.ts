@@ -192,6 +192,7 @@ export const ZH_HANS_PLAY = {
   'puzzle.statusTryAgain': '再试一次',
   'puzzle.statusChecking': '检查中',
   'puzzle.ratingHidden': '评分：隐藏',
+  'puzzle.ratingShown': '评分：{rating}',
   'puzzle.playedLocally': '本地已做过',
   'puzzle.rated': '计分',
   'puzzle.unrated': '不计分',
@@ -222,12 +223,8 @@ export const ZH_HANS_PLAY = {
   'puzzle.openInAnalysis': '在分析棋盘中打开',
   'puzzle.checkFailed': '无法检查着法，请重试。',
   'puzzle.streakTitle': '连续解题',
-  'puzzle.streakIntro':
-    '从简单的题目开始，越往后越难。走错一步，本轮就结束。不计时。每轮可跳过一次。',
-  'puzzle.streakAccount':
-    '可以用访客身份直接玩，或登录保存你的最佳纪录。连续解题不影响你的题目评分。',
-  'puzzle.streakStart': '开始连续解题',
-  'puzzle.streakRules': '题目越来越难。走错一步，本轮就结束。不计时。可跳过一次。',
+  'puzzle.streakRules': '题目越来越难。走错一步，本轮就结束。',
+  'puzzle.streakFacts': '不计时，可跳过一次。不影响你的题目评分。',
   'puzzle.streakPractice': '题目练习',
   'puzzle.streakBest': '最佳：{best}',
   'puzzle.streakCount': '连对',

@@ -62,6 +62,7 @@ beforeEach(() => {
       removeItem: (k: string) => values.delete(k),
     },
   });
+  window.sessionStorage.clear();
   window.history.replaceState(null, '', '/puzzles?mode=streak');
   vi.clearAllMocks();
 });
@@ -123,9 +124,22 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   const root = document.createElement('div');
   document.body.append(root);
   await mountPuzzles(root);
-  expect(fetchSpy).not.toHaveBeenCalled();
-  click(root, 'Start streak');
-  await vi.waitFor(() => expect(root.querySelector('.puzzle-xiangqi-board')).toBeTruthy());
+  // No start screen: the run layout is up at once and the run starts itself.
+  expect(root.querySelector('.puzzle-streak-side h1')?.textContent).toBe('Puzzle Streak');
+  expect(root.textContent).not.toContain('Start streak');
+  await vi.waitFor(() =>
+    expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(puzzles[0]!.id),
+  );
+  expect(actions(fetchSpy)).toEqual([{ action: 'start' }]);
+  // The regular page's info card sits on top, its rating hidden mid-run.
+  const info = () => root.querySelector<HTMLElement>('.puzzle-info-card')!;
+  expect(info().nextElementSibling?.classList.contains('puzzle-streak-side')).toBe(true);
+  expect(info().querySelector('a')?.getAttribute('href')).toContain(puzzles[0]!.id);
+  expect(info().textContent).toContain('Rating: hidden');
+  const side = root.querySelector('.puzzle-streak-side')!;
+  expect(side.textContent).toContain('No clock, one skip. Your puzzle rating does not change.');
+  // A signed-in player is not asked to sign in.
+  expect(side.querySelector('.puzzle-streak-signin')).toBeNull();
   expect(root.querySelector('[data-puzzle-hint]')).toBeNull();
   expect(root.querySelector('[data-puzzle-reveal]')).toBeNull();
   expect(root.querySelector('.engine-panel')).toBeNull();
@@ -168,6 +182,9 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   // its answer is laid out in the move list, the miss marked ✗, the right move ✓.
   const board = root.querySelector<HTMLElement>('.puzzle-board');
   expect(board?.dataset.puzzleId).toBe(puzzles[2]!.id);
+  // Game over reveals the failed puzzle's rating.
+  expect(info().textContent).toContain('Rating: 1000');
+  expect(info().querySelector('a')?.getAttribute('href')).toContain(puzzles[2]!.id);
   expect(root.querySelector('.puzzle-xiangqi-board')).toBeTruthy();
   expect(root.querySelector('.puzzle-move-cell--wrong')?.textContent).toContain('✗');
   expect(root.querySelector('.puzzle-move-variation')).toBeTruthy();
@@ -224,6 +241,12 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   );
   click(root, 'New streak');
   await vi.waitFor(() => expect(root.querySelector('.puzzle-streak-over')).toBeNull());
+  // The new run is told which puzzles this browser met, to draw others.
+  expect(actions(fetchSpy).at(-1)).toEqual({
+    action: 'start',
+    recent: puzzles.slice(0, 3).map((p) => p.id),
+  });
+  expect(info().textContent).toContain('Rating: hidden');
   expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(puzzles[0]!.id);
   expect(root.querySelector('.puzzle-streak-count strong')?.textContent).toBe('0');
   expect(root.textContent).toContain('Skip · 1 left');
@@ -272,8 +295,9 @@ it('says New best when the run beats the best it started from, and asks a guest 
   const root = document.createElement('div');
   document.body.append(root);
   await mountPuzzles(root);
-  click(root, 'Start streak');
-  await vi.waitFor(() => expect(root.querySelector('.puzzle-xiangqi-board')).toBeTruthy());
+  await vi.waitFor(() =>
+    expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(puzzle.id),
+  );
   for (const m of puzzle.solution.filter((_, i) => i % 2 === 0)) {
     move(root, m);
     await vi.waitFor(() =>
@@ -288,22 +312,129 @@ it('says New best when the run beats the best it started from, and asks a guest 
   best = null;
   click(root, 'New streak');
   await vi.waitFor(() => expect(root.querySelector('.puzzle-streak-over')).toBeNull());
-  const signIn = root.querySelector<HTMLAnchorElement>('.puzzle-streak-signin');
+  const signIn = root.querySelector<HTMLAnchorElement>('.puzzle-streak-side .puzzle-streak-signin');
   expect(signIn?.textContent).toBe('Sign in to save your best');
   expect(signIn?.getAttribute('href')).toContain('/account');
   expect(root.textContent).not.toContain('Guest');
 });
 
-it('shows a failed start and allows retrying without a phantom mode-start event', async () => {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async () => json({}, 503)),
-  );
+function startedRun(puzzle: XiangqiPuzzle, runId = 'run') {
+  return json({
+    runId,
+    score: 0,
+    best: 2,
+    skipUsed: false,
+    finished: false,
+    results: [],
+    puzzle: detail(puzzle),
+  });
+}
+function actions(spy: ReturnType<typeof vi.fn>) {
+  return spy.mock.calls
+    .filter(([url]) => String(url) === '/api/puzzles/streak')
+    .map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+}
+async function mount() {
   const root = document.createElement('div');
   document.body.append(root);
   await mountPuzzles(root);
-  click(root, 'Start streak');
+  return root;
+}
+
+it('shows a failed start and allows retrying without a phantom mode-start event', async () => {
+  let fail = true;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => (fail ? json({}, 503) : startedRun(puzzles[0]!))),
+  );
+  const root = await mount();
   await vi.waitFor(() => expect(root.querySelector('[role="alert"]')).toBeTruthy());
-  expect(root.querySelector('button')!.disabled).toBe(false);
   expect(track).not.toHaveBeenCalledWith('puzzle_mode_started', expect.anything());
+  const retry = [...root.querySelectorAll('button')].find((b) => b.textContent === 'New streak');
+  expect(retry?.disabled).toBe(false);
+  fail = false;
+  retry!.click();
+  await vi.waitFor(() =>
+    expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(puzzles[0]!.id),
+  );
+  expect(root.querySelector('[role="alert"]')).toBeNull();
+  expect(track).toHaveBeenCalledWith(
+    'puzzle_mode_started',
+    expect.objectContaining({ mode: 'streak' }),
+  );
+});
+
+it('resumes the open run on a reload instead of starting a second one', async () => {
+  const fetchSpy = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body));
+    return startedRun(puzzles[0]!, body.action === 'resume' ? body.runId : 'run-1');
+  });
+  vi.stubGlobal('fetch', fetchSpy);
+  await mount();
+  await vi.waitFor(() => expect(actions(fetchSpy)).toEqual([{ action: 'start' }]));
+  await vi.waitFor(() =>
+    expect(document.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(
+      puzzles[0]!.id,
+    ),
+  );
+  // The reload: a fresh document mounts the same tab's page again.
+  document.body.replaceChildren();
+  vi.mocked(track).mockClear();
+  const root = await mount();
+  await vi.waitFor(() =>
+    expect(actions(fetchSpy)).toEqual([{ action: 'start' }, { action: 'resume', runId: 'run-1' }]),
+  );
+  await vi.waitFor(() =>
+    expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(puzzles[0]!.id),
+  );
+  expect(track).not.toHaveBeenCalledWith('puzzle_mode_started', expect.anything());
+});
+
+it('starts a new run when the remembered one has ended or is gone', async () => {
+  window.sessionStorage.setItem(
+    'mistboard:puzzles:streak-run',
+    JSON.stringify({ runId: 'old', bestAtStart: 1 }),
+  );
+  const fetchSpy = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) =>
+    JSON.parse(String(init?.body)).action === 'resume'
+      ? json({ error: 'streak_action_unavailable' }, 409)
+      : startedRun(puzzles[1]!, 'new'),
+  );
+  vi.stubGlobal('fetch', fetchSpy);
+  const root = await mount();
+  await vi.waitFor(() =>
+    expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(puzzles[1]!.id),
+  );
+  expect(actions(fetchSpy)).toEqual([{ action: 'resume', runId: 'old' }, { action: 'start' }]);
+  expect(JSON.parse(window.sessionStorage.getItem('mistboard:puzzles:streak-run')!).runId).toBe(
+    'new',
+  );
+});
+
+it('does not create a run while the page is prerendered or hidden', async () => {
+  const fetchSpy = vi.fn(async () => startedRun(puzzles[0]!));
+  vi.stubGlobal('fetch', fetchSpy);
+  Object.defineProperty(document, 'prerendering', { configurable: true, value: true });
+  const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+  try {
+    const root = await mount();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(actions(fetchSpy)).toEqual([]);
+    expect(root.querySelector('.puzzle-streak-side h1')?.textContent).toBe('Puzzle Streak');
+    Object.defineProperty(document, 'prerendering', { configurable: true, value: false });
+    document.dispatchEvent(new Event('prerenderingchange'));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    // Activated, but still a background tab.
+    expect(actions(fetchSpy)).toEqual([]);
+    visibility.mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(
+        puzzles[0]!.id,
+      ),
+    );
+    expect(actions(fetchSpy)).toEqual([{ action: 'start' }]);
+  } finally {
+    delete (document as { prerendering?: boolean }).prerendering;
+  }
 });

@@ -56,6 +56,14 @@
   margin-top: 12px;
 }
 
+/* Beside the board the left card asks a guest to sign in, so the run's side
+   panel doesn't repeat it; the phone stack hides that card and keeps this. */
+@media (min-width: 981px) {
+  .puzzle-streak-feedback .puzzle-streak-signin {
+    display: none;
+  }
+}
+
 /* The streak count: a big number over its label. */
 .puzzle-streak-count {
   display: flex;

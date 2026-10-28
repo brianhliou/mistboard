@@ -5,6 +5,7 @@ import { t } from '../i18n/catalog.js';
 import type { PuzzleSolverHandle, PuzzleSolverOptions } from '../puzzles.js';
 import { colorLabel, type PuzzleDetail, type PuzzleMove, type PuzzleSession } from './adapter.js';
 import { type PuzzleAttempt, PuzzlePlayDisabledError, sendPuzzleQualityEvent } from './api.js';
+import { puzzleInfoCard } from './queue-panel.js';
 
 type Outcome = 'solved' | 'skipped' | 'failed';
 type Run = {
@@ -21,10 +22,14 @@ type Run = {
   solution?: PuzzleMove[];
 };
 
-// Lichess /streak shape: the run lives on the puzzle page. The side panel is
-// the streak count; a miss keeps the board on the failed puzzle, plays its
-// answer, and turns the panel into Game over with the run's puzzles as chips
-// and one New streak button.
+// Lichess /streak shape: opening the page starts a run, with no start screen.
+// The left card says what the mode is; the side panel is the streak count; a
+// miss keeps the board on the failed puzzle, plays its answer, and turns the
+// panel into Game over with the run's puzzles as chips and one New streak
+// button. The open run's id is kept for the tab (sessionStorage), so a reload
+// or a back/forward that rebuilds the page resumes it instead of starting a
+// second one; a run is only created once the page is actually shown, never
+// while it is prerendered or sitting in a background tab.
 export async function mountPuzzleStreak(
   frame: {
     shell: HTMLElement;
@@ -61,7 +66,9 @@ export async function mountPuzzleStreak(
     });
     if (response.status === 403) throw new PuzzlePlayDisabledError('play disabled');
     if (!response.ok) throw new Error('Could not continue the run. Try again or start a new run.');
-    return (await response.json()) as Run;
+    const next = (await response.json()) as Run;
+    rememberSeen(next.results.map((result) => result.id));
+    return next;
   };
   const attempted = (outcome: 'failed' | 'skipped' | 'abandoned'): void => {
     if (!current) return;
@@ -81,6 +88,8 @@ export async function mountPuzzleStreak(
   const finished = (reason: 'failed' | 'completed' | 'abandoned'): void => {
     if (!run || terminalSent) return;
     terminalSent = true;
+    // An ended run is not resumed; an abandoned one (pagehide) still may be.
+    if (reason !== 'abandoned') rememberRun(null);
     track('puzzle_mode_finished', {
       mode: 'streak',
       variant: 'xiangqi',
@@ -116,6 +125,30 @@ export async function mountPuzzleStreak(
     card.querySelector<HTMLElement>('[data-puzzle-next="true"]')?.focus({ preventScroll: true });
   };
 
+  // The left card: what the mode is in two short lines, a sign-in line for a
+  // guest (known once the run answers), the run so far, and practice. Desktop
+  // only: the phone stack hides this column, and the side panel and Game over
+  // carry the count, sign-in and chips there.
+  const sideCard = (): { card: HTMLElement; progress: HTMLElement; signIn: HTMLElement | null } => {
+    const card = document.createElement('section');
+    card.className = 'puzzle-left-card puzzle-streak-side';
+    const title = document.createElement('h1');
+    title.textContent = t('puzzle.streakTitle');
+    const rules = document.createElement('p');
+    rules.textContent = t('puzzle.streakRules');
+    const facts = document.createElement('p');
+    facts.className = 'puzzle-streak-meta';
+    facts.textContent = t('puzzle.streakFacts');
+    card.append(title, rules, facts);
+    const signIn = run && run.best === null ? bestLine(run, false) : null;
+    if (signIn) card.append(signIn);
+    // The run so far, with the puzzle in play as the last chip.
+    const progress = document.createElement('div');
+    progress.className = 'puzzle-streak-progress';
+    card.append(progress, practiceLink());
+    return { card, progress, signIn };
+  };
+
   const showBoard = (): void => {
     solver?.dispose();
     if (!run?.puzzle) {
@@ -125,21 +158,20 @@ export async function mountPuzzleStreak(
     current = run.puzzle;
     overFocused = false;
     shell.replaceChildren(layout);
-    controls.replaceChildren();
-    const card = document.createElement('section');
-    card.className = 'puzzle-left-card puzzle-streak-side';
-    const title = document.createElement('h1');
-    title.textContent = t('puzzle.streakTitle');
-    const rules = document.createElement('p');
-    rules.textContent = t('puzzle.streakRules');
-    // The run so far, with the puzzle in play as the last chip. Desktop only:
-    // the phone stack hides this column, and Game over carries the chips there.
-    const progress = document.createElement('div');
-    progress.className = 'puzzle-streak-progress';
-    card.append(title, rules, progress, practiceLink());
-    controls.append(card);
+    const { card, progress, signIn } = sideCard();
+    // The regular page's puzzle info card on top, as on Lichess's streak: the
+    // rating stays hidden until the run is over.
+    let info = streakInfoCard(current, false);
+    controls.replaceChildren(info, card);
     const paintProgress = (): void => {
       progress.replaceChildren(...(run!.finished ? [] : [chips(run!.results, current!.id)]));
+      // Game over carries its own sign-in line.
+      if (signIn) signIn.hidden = run!.finished;
+      if (run!.finished && info.dataset.revealed !== 'true') {
+        const revealed = streakInfoCard(current!, true);
+        info.replaceWith(revealed);
+        info = revealed;
+      }
     };
     paintProgress();
     solver = mountSolver(current, {
@@ -242,48 +274,167 @@ export async function mountPuzzleStreak(
     const control = event?.currentTarget instanceof HTMLButtonElement ? event.currentTarget : null;
     if (control) control.disabled = true;
     try {
-      const nextRun = await request({ action: 'start' });
+      const recent = seenPuzzleIds();
+      const nextRun = await request({ action: 'start', ...(recent.length ? { recent } : {}) });
       if (run && !run.finished) finished('abandoned');
       run = nextRun;
       bestAtStart = run.best;
       terminalSent = false;
+      rememberRun(run.finished ? null : { runId: run.runId, bestAtStart });
       track('puzzle_mode_started', { mode: 'streak', variant: 'xiangqi' });
       if (run.finished) {
         finished('completed');
         showSummary();
       } else showBoard();
     } catch (error) {
-      const message = document.createElement('p');
-      message.setAttribute('role', 'alert');
-      message.textContent = errorText(error);
-      const previous = shell.querySelector('[role="alert"]');
-      if (previous) previous.replaceWith(message);
-      else shell.append(message);
+      showStartError(errorText(error));
       if (control) control.disabled = false;
     } finally {
       busy = false;
     }
   }
 
-  const intro = document.createElement('section');
-  intro.className = 'puzzle-streak-card';
-  const title = document.createElement('h1');
-  title.textContent = t('puzzle.streakTitle');
-  const rules = document.createElement('p');
-  rules.textContent = t('puzzle.streakIntro');
-  const account = document.createElement('p');
-  account.textContent = t('puzzle.streakAccount');
-  intro.append(title, rules, account, button(t('puzzle.streakStart'), start), practiceLink());
-  shell.replaceChildren(intro);
-  window.addEventListener(
-    'pagehide',
-    () => {
-      if (!run || run.finished || terminalSent) return;
-      if (current && !run.results.some((r) => r.id === current!.id)) attempted('abandoned');
-      finished('abandoned');
-    },
-    { once: true },
-  );
+  // A start that failed: before the first run the message and a retry sit in
+  // the waiting board's side panel (shown on the phone too); after a run, by
+  // the New streak button that was pressed.
+  const showStartError = (text: string): void => {
+    shell.querySelector('[data-streak-alert]')?.remove();
+    const message = document.createElement('p');
+    message.setAttribute('role', 'alert');
+    message.dataset.streakAlert = 'true';
+    message.className = 'puzzles-status';
+    message.textContent = text;
+    const pending = detail.querySelector<HTMLElement>(
+      '.puzzle-board-panel--pending .puzzle-side-panel',
+    );
+    if (pending) {
+      const retry = button(t('puzzle.streakNewRun'), start);
+      pending.replaceChildren(message, retry);
+      return;
+    }
+    const over = shell.querySelector('.puzzle-streak-over');
+    (over ?? controls.querySelector('.puzzle-streak-side') ?? shell).append(message);
+  };
+
+  // Resume the tab's open run if the server still has it open for this
+  // player; otherwise start one.
+  const begin = async (): Promise<void> => {
+    const saved = rememberedRun();
+    if (saved) {
+      busy = true;
+      try {
+        const resumed = await request({ action: 'resume', runId: saved.runId });
+        if (!resumed.finished && resumed.puzzle) {
+          run = resumed;
+          bestAtStart = saved.bestAtStart;
+          terminalSent = false;
+          showBoard();
+          return;
+        }
+      } catch {
+        // Gone, ended, or another account's: start fresh.
+      } finally {
+        busy = false;
+      }
+      rememberRun(null);
+    }
+    await start();
+  };
+
+  // The run layout from the first paint: the left card over the waiting board.
+  shell.replaceChildren(layout);
+  controls.replaceChildren(sideCard().card);
+  window.addEventListener('pagehide', (event) => {
+    // A page kept in the back/forward cache comes back with the run in play.
+    if (event.persisted || !run || run.finished || terminalSent) return;
+    if (current && !run.results.some((r) => r.id === current!.id)) attempted('abandoned');
+    finished('abandoned');
+  });
+  void whenShown().then(begin);
+}
+
+const RUN_STORAGE_KEY = 'mistboard:puzzles:streak-run';
+// The puzzles met in recent runs, oldest first, sent with a start so a new
+// run draws others. The server reads an account's own runs; this covers guests.
+const SEEN_STORAGE_KEY = 'mistboard:puzzles:streak-seen';
+const SEEN_LIMIT = 120;
+
+function seenPuzzleIds(): string[] {
+  try {
+    const value = JSON.parse(window.localStorage?.getItem(SEEN_STORAGE_KEY) ?? '[]') as unknown;
+    return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberSeen(ids: readonly string[]): void {
+  if (!ids.length) return;
+  const seen = seenPuzzleIds();
+  const fresh = ids.filter((id) => !seen.includes(id));
+  if (!fresh.length) return;
+  try {
+    window.localStorage?.setItem(
+      SEEN_STORAGE_KEY,
+      JSON.stringify([...seen, ...fresh].slice(-SEEN_LIMIT)),
+    );
+  } catch {
+    // Storage blocked: the server still shuffles each run.
+  }
+}
+type RememberedRun = { runId: string; bestAtStart: number | null };
+
+function rememberedRun(): RememberedRun | null {
+  try {
+    const raw = window.sessionStorage?.getItem(RUN_STORAGE_KEY);
+    if (!raw) return null;
+    const value = JSON.parse(raw) as Partial<RememberedRun>;
+    if (typeof value.runId !== 'string') return null;
+    return {
+      runId: value.runId,
+      bestAtStart: typeof value.bestAtStart === 'number' ? value.bestAtStart : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function rememberRun(value: RememberedRun | null): void {
+  try {
+    if (value) window.sessionStorage?.setItem(RUN_STORAGE_KEY, JSON.stringify(value));
+    else window.sessionStorage?.removeItem(RUN_STORAGE_KEY);
+  } catch {
+    // Storage blocked: a reload then starts a new run, as before.
+  }
+}
+
+// Resolves once the page is in front of someone: not while it is prerendered
+// (a speculative load that may never show) or opened in a background tab.
+function whenShown(): Promise<void> {
+  const shown = (): boolean =>
+    !(document as Document & { prerendering?: boolean }).prerendering &&
+    document.visibilityState !== 'hidden';
+  if (shown()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const check = (): void => {
+      if (!shown()) return;
+      document.removeEventListener('prerenderingchange', check);
+      document.removeEventListener('visibilitychange', check);
+      resolve();
+    };
+    document.addEventListener('prerenderingchange', check);
+    document.addEventListener('visibilitychange', check);
+  });
+}
+
+function streakInfoCard(puzzle: PuzzleDetail, over: boolean): HTMLElement {
+  const card = puzzleInfoCard(puzzle, {
+    rating: over ? puzzle.rating : null,
+    status: null,
+    goalRevealed: over,
+  });
+  if (over) card.dataset.revealed = 'true';
+  return card;
 }
 
 const OUTCOME_KEYS = {

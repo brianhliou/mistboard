@@ -49,8 +49,10 @@ import {
   bestPuzzleStreak,
   loadPuzzleStreak,
   orderedPuzzleRamp,
+  recentStreakPuzzleIds,
   type StreakRun,
   savePuzzleStreak,
+  shuffledPuzzleRamp,
   startPuzzleStreak,
 } from '../puzzle-streak.js';
 import { clientIpForRateLimit } from '../server-policy.js';
@@ -140,7 +142,11 @@ export async function tryHandle(
         writeJson(response, 429, { error: 'rate_limited' });
         return true;
       }
-      const ramp = await ratedPuzzleRamp(XIANGQI_SPEC_ID);
+      // Each run draws its own climb, away from the player's recent runs: an
+      // account's from the database, a guest's as the browser lists them.
+      const avoid = await recentStreakPuzzleIds(user?.id ?? null);
+      for (const id of parseRecentPuzzleIds(body.recent)) avoid.add(id);
+      const ramp = shuffledPuzzleRamp(await rampPool(XIANGQI_SPEC_ID), { avoid });
       const run = await startPuzzleStreak(
         ramp.map((p) => p.id),
         user?.id ?? null,
@@ -149,7 +155,7 @@ export async function tryHandle(
       return true;
     }
     if (
-      (body.action !== 'move' && body.action !== 'skip') ||
+      (body.action !== 'move' && body.action !== 'skip' && body.action !== 'resume') ||
       !isPuzzleQualitySessionId(body.runId)
     ) {
       writeJson(response, 400, { error: 'invalid_streak_action' });
@@ -167,6 +173,24 @@ export async function tryHandle(
       return true;
     }
     const state = run.state;
+    // A reload or back/forward picks the tab's open run up again rather than
+    // starting another. The board comes back at the puzzle's start, so a line
+    // half played is dropped and the player plays it again from move one.
+    if (body.action === 'resume') {
+      if (state.finished) {
+        writeJson(response, 409, { error: 'streak_action_unavailable' });
+        return true;
+      }
+      if (state.moves.length) {
+        state.moves = [];
+        if (!(await savePuzzleStreak(run))) {
+          writeJson(response, 409, { error: 'streak_action_unavailable' });
+          return true;
+        }
+      }
+      writeJson(response, 200, await streakResponse(run));
+      return true;
+    }
     const id = state.ids[state.results.length];
     if (state.finished || id !== body.puzzleId || (body.action === 'skip' && state.skipUsed)) {
       writeJson(response, 409, { error: 'streak_action_unavailable' });
@@ -492,19 +516,30 @@ export async function tryHandle(
 }
 
 async function ratedPuzzleRamp(variant: PublicPuzzleVariant): Promise<PuzzleSummary[]> {
+  return orderedPuzzleRamp(await rampPool(variant));
+}
+
+async function rampPool(variant: PublicPuzzleVariant): Promise<PuzzleSummary[]> {
   const store = await getPuzzleStore();
   const puzzles = discoverablePuzzles(store).filter((p) => p.variant === variant);
   const ratings = await listPuzzleRatingSummaries(puzzles.map((p) => p.id));
-  return orderedPuzzleRamp(
-    puzzles.map((p) =>
-      puzzleSummary(
-        p,
-        ratings.get(p.id) ??
-          seededPuzzleRatingSummary(p.solution.length, store.difficultyById.get(p.id)),
-        store.motifsById.get(p.id) ?? [],
-      ),
+  return puzzles.map((p) =>
+    puzzleSummary(
+      p,
+      ratings.get(p.id) ??
+        seededPuzzleRatingSummary(p.solution.length, store.difficultyById.get(p.id)),
+      store.motifsById.get(p.id) ?? [],
     ),
   );
+}
+
+// A guest's recent puzzles as the browser sends them: only a preference for
+// the draw, so anything malformed is ignored rather than refused.
+function parseRecentPuzzleIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .slice(-200)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0 && id.length <= 200);
 }
 
 async function streakResponse(run: StreakRun) {

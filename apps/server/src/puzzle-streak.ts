@@ -27,6 +27,40 @@ export function orderedPuzzleRamp<T extends { id: string; rating: number }>(pool
   return ramp;
 }
 
+// A run's own sequence. The pool, easiest first, is cut into about ten
+// difficulty steps; each run plays the steps in order and shuffles inside
+// each one, so two runs do not replay one fixed list. A puzzle from the
+// player's recent runs (`avoid`) moves to the end of the next step, so a new
+// run opens on puzzles not met yet where the pool has them, at the cost of
+// one step of the climb. Every puzzle is still in the run once.
+const RAMP_STEPS = 10;
+const MIN_STEP_SIZE = 3;
+export function shuffledPuzzleRamp<T extends { id: string; rating: number }>(
+  pool: readonly T[],
+  opts: { avoid?: ReadonlySet<string>; random?: () => number } = {},
+): T[] {
+  const avoid = opts.avoid ?? new Set<string>();
+  const random = opts.random ?? Math.random;
+  const shuffle = (items: T[]): T[] => {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [items[i], items[j]] = [items[j]!, items[i]!];
+    }
+    return items;
+  };
+  const sorted = [...pool].sort((a, b) => a.rating - b.rating || a.id.localeCompare(b.id));
+  const size = Math.max(MIN_STEP_SIZE, Math.ceil(sorted.length / RAMP_STEPS));
+  const ramp: T[] = [];
+  let deferred: T[] = [];
+  for (let at = 0; at < sorted.length; at += size) {
+    const step = sorted.slice(at, at + size);
+    ramp.push(...shuffle(step.filter((p) => !avoid.has(p.id))), ...shuffle(deferred));
+    deferred = step.filter((p) => avoid.has(p.id));
+  }
+  ramp.push(...shuffle(deferred));
+  return ramp;
+}
+
 export type StreakResult = { id: string; outcome: 'solved' | 'skipped' | 'failed' };
 export type StreakState = {
   ids: string[];
@@ -85,6 +119,24 @@ export async function savePuzzleStreak(run: StreakRun): Promise<boolean> {
     [run.id, JSON.stringify(run.state), run.version],
   );
   return result.rowCount === 1;
+}
+
+// The puzzles a signed-in player met in their last few runs (only those
+// reached, not the rest of each run's list), for the next run to avoid.
+export async function recentStreakPuzzleIds(userId: string | null, runs = 5): Promise<Set<string>> {
+  if (!userId) return new Set();
+  if (!isInitialized()) {
+    const owned = [...memoryRuns.values()].filter((r) => r.userId === userId).slice(-runs);
+    return new Set(owned.flatMap((r) => r.state.results.map((result) => result.id)));
+  }
+  const result = await getPool().query<{ id: string }>(
+    `SELECT DISTINCT r.value->>'id' AS id
+     FROM (SELECT state FROM puzzle_streak_runs WHERE user_id = $1
+           ORDER BY created_at DESC LIMIT $2) recent,
+     LATERAL jsonb_array_elements(recent.state->'results') AS r(value)`,
+    [userId, runs],
+  );
+  return new Set(result.rows.map((row) => row.id));
 }
 
 export async function bestPuzzleStreak(userId: string | null): Promise<number | null> {

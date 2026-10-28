@@ -409,6 +409,7 @@ export const EN_PLAY = {
   'puzzle.statusTryAgain': 'Try again',
   'puzzle.statusChecking': 'Checking',
   'puzzle.ratingHidden': 'Rating: hidden',
+  'puzzle.ratingShown': 'Rating: {rating}',
   'puzzle.playedLocally': 'Played locally',
   'puzzle.rated': 'Rated',
   'puzzle.unrated': 'Unrated',
@@ -440,12 +441,8 @@ export const EN_PLAY = {
   'puzzle.openInAnalysis': 'Open in analysis board',
   'puzzle.checkFailed': 'Could not check the move. Please try again.',
   'puzzle.streakTitle': 'Puzzle Streak',
-  'puzzle.streakIntro':
-    'Start easy and solve progressively harder puzzles. One wrong move ends your run. No clock. One skip per run.',
-  'puzzle.streakAccount':
-    'Play as a guest, or sign in to save your best streak. Streak does not change your puzzle rating.',
-  'puzzle.streakStart': 'Start streak',
-  'puzzle.streakRules': 'Puzzles get harder. One wrong move ends the run. No clock. One skip.',
+  'puzzle.streakRules': 'Solve progressively harder puzzles. One wrong move ends the run.',
+  'puzzle.streakFacts': 'No clock, one skip. Your puzzle rating does not change.',
   'puzzle.streakPractice': 'Puzzle practice',
   'puzzle.streakBest': 'Best: {best}',
   'puzzle.streakCount': 'Streak',
