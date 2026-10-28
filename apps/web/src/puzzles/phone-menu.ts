@@ -64,6 +64,16 @@ export function puzzlePhoneMenuHead(props: QueuePanelProps): HTMLElement | null 
   const source = document.createElement('span');
   source.className = 'puzzle-pm-head__line puzzle-pm-head__source';
   source.append(...sourceGameLines(current));
+  // Archive names carry the team ("Xu Wei (Xinjiang …)"); the sheet has half a
+  // line per player, so it shows the player and keeps the team in the tooltip.
+  for (const name of source.querySelectorAll<HTMLElement>('.puzzle-source-player-name')) {
+    const full = name.textContent ?? '';
+    const player = playerWithoutTeam(full);
+    if (player !== full) {
+      name.textContent = player;
+      name.title = full;
+    }
+  }
 
   head.append(top, goal, source);
   return head;
@@ -202,4 +212,11 @@ function switchRow(
   track.setAttribute('aria-hidden', 'true');
   row.append(text, input, track);
   return row;
+}
+
+/** "Xu Wei (Xinjiang Production Team)" → "Xu Wei"; a name with no team, or one
+ *  that is only a parenthetical, is returned as is. */
+export function playerWithoutTeam(name: string): string {
+  const cut = name.indexOf(' (');
+  return cut > 0 ? name.slice(0, cut) : name;
 }

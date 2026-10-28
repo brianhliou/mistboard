@@ -460,6 +460,25 @@ describe('puzzle phone menu rows', () => {
     expect(puzzlePhoneMenuHead(solved)?.textContent).toContain('Mate in 2');
   });
 
+  it('puts the event over the players and drops the team from each name', () => {
+    const fromGame = {
+      ...puzzle,
+      sourceGame: {
+        event: '2026 National Xiangqi Team Championship',
+        redName: 'Xu Wei (Xinjiang Production Team)',
+        blackName: 'Xu Tengfei',
+        result: '0-1',
+      },
+    } as PuzzleSummary;
+    const head = puzzlePhoneMenuHead(props({ queue: [fromGame] }));
+    const source = head?.querySelector('.puzzle-pm-head__source');
+    expect(source?.firstElementChild?.textContent).toContain('2026 National Xiangqi');
+    const names = [...(source?.querySelectorAll<HTMLElement>('.puzzle-source-player-name') ?? [])];
+    expect(names.map((name) => name.textContent)).toEqual(['Xu Wei', 'Xu Tengfei']);
+    expect(names[0]?.title).toBe('Xu Wei (Xinjiang Production Team)');
+    expect(names[1]?.title).toBe('');
+  });
+
   it('carries the rating as small text on the Rated row', () => {
     const sub = (p: QueuePanelProps) =>
       puzzlePhoneMenuRows(p)[0]?.querySelector('.puzzle-pm-row__sub')?.textContent ?? null;

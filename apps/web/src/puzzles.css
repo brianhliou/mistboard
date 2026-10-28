@@ -1660,12 +1660,19 @@ a.puzzle-result-chip:focus-visible {
     text-overflow: ellipsis;
   }
 
-  /* One line, never wrapped, so the header's height is fixed and the sheet
-     fits 320x568: a long game source ellipsizes. */
+  /* Two fixed lines, the event over the two players, so the header's height
+     never depends on the names and the sheet still fits 320x568; a name too
+     long for its half of the second line ellipsizes. */
   .puzzles-shell .puzzle-pm-head__source {
-    display: flex;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: minmax(0, max-content) minmax(0, max-content);
     column-gap: 12px;
+  }
+
+  /* No intrinsic width, so the event line never widens the players' columns. */
+  .puzzles-shell .puzzle-pm-head__source > :first-child {
+    grid-column: 1 / -1;
+    contain: inline-size;
   }
 
   .puzzles-shell .puzzle-pm-head__source > * {
