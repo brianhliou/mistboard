@@ -2251,6 +2251,15 @@ a.puzzle-streak-chip:focus-visible {
     color 140ms ease;
 }
 
+/* Touch floor: the side menu is the page's only way back to Puzzles and Streak. */
+@media (pointer: coarse) {
+  .puzzle-themes-side a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+}
+
 .puzzle-themes-side a:hover,
 .puzzle-themes-side a:focus-visible {
   background: var(--site-hover);
