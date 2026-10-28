@@ -25,6 +25,7 @@ import { mayPlayVariant } from './persistence-variant-access.js';
 import { xmjPveEngineSeat } from './routes/xiangqi-mahjong-rooms.js';
 import { canObserveRoom } from './server-policy.js';
 import { isXmjBotClientId, XMJ_BOT_CLIENT_ID, xmjBotMove } from './server-xiangqi-mahjong-bots.js';
+import { tenantParticipant } from './variant-tenant/events.js';
 import {
   clearTenantRuntimeTimers,
   scheduleTenantLifecycleTimers,
@@ -331,6 +332,57 @@ test('xmj pvp: a friend room seats no bot and carries the rated flag', async () 
   } finally {
     if (pvp.ok) xiangqiMahjongRooms.delete(pvp.room.id);
     if (pve.ok) xiangqiMahjongRooms.delete(pve.room.id);
+  }
+});
+
+test('xmj pve: every way to seat the bot stores the seat as Misty, the public bot', async () => {
+  // 2026-10-28: a room made with no botId (the setup dialog, a rematch) took the
+  // engine id 'misty-xiangqi-mahjong' as its bot id. No bot profile has that id,
+  // so 8 of Misty's 12 Xiangqi Mahjong games were missing from /bot/misty.
+  const viaSetup = await createXiangqiMahjongRoom(FIVE_FIVE, 'east', {
+    engineId: XMJ_BOT_CLIENT_ID,
+    seat: 'west',
+  });
+  const viaBotPage = await createXiangqiMahjongRoom(FIVE_FIVE, 'east', {
+    engineId: XMJ_BOT_CLIENT_ID,
+    seat: 'west',
+    botId: 'misty',
+  });
+  try {
+    assert.ok(viaSetup.ok && viaBotPage.ok);
+    if (!viaSetup.ok || !viaBotPage.ok) return;
+    // A room created before the fix resumes from a log naming the old id.
+    const [created, ...rest] = viaSetup.room.events as XmjEvent[];
+    assert.equal(created?.type, 'room-created');
+    const beforeFix = hydrate([
+      { ...created, pveBotId: 'misty-xiangqi-mahjong' } as XmjEvent,
+      ...rest,
+    ]);
+    for (const [path, room] of [
+      ['setup dialog', viaSetup.room],
+      ['bot page', viaBotPage.room],
+      ['pre-fix event log', beforeFix],
+    ] as const) {
+      const seat = tenantParticipant(tenant, 'west', room, 'public');
+      assert.deepEqual(
+        {
+          subjectType: seat.subjectType,
+          subjectId: seat.subjectId,
+          engineId: seat.engineId,
+          displayName: seat.displayName,
+        },
+        {
+          subjectType: 'bot',
+          subjectId: 'misty',
+          engineId: XMJ_BOT_CLIENT_ID,
+          displayName: 'Misty',
+        },
+        path,
+      );
+    }
+  } finally {
+    if (viaSetup.ok) xiangqiMahjongRooms.delete(viaSetup.room.id);
+    if (viaBotPage.ok) xiangqiMahjongRooms.delete(viaBotPage.room.id);
   }
 });
 
