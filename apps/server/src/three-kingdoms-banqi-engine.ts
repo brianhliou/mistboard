@@ -19,9 +19,9 @@ export const THREE_KINGDOMS_BANQI_ENGINE_ID = 'misty-three-kingdoms-banqi';
 export const THREE_KINGDOMS_BANQI_ENGINE_NAME = 'MistyThreeKingdomsBanqi';
 export const THREE_KINGDOMS_BANQI_ENGINE_VERSION = '0.1.0';
 
-// A modest fixed budget for a playtest: a tenth of the engine's level (2M nodes)
-// answers in well under a second on a laptop, so the bot never holds up a game.
-export const THREE_KINGDOMS_BANQI_ENGINE_NODES = 200_000;
+// The engine's full level (Brian, 2026-10-28): about 1.6s a move on a laptop,
+// against 0.14s at 200k. The movetime cap below still bounds a slow move.
+export const THREE_KINGDOMS_BANQI_ENGINE_NODES = 2_000_000;
 export const THREE_KINGDOMS_BANQI_ENGINE_MOVETIME_CAP_MS = 3_000;
 
 const enginePool = new UciEnginePool({
