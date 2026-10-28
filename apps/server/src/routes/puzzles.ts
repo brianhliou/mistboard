@@ -45,6 +45,16 @@ import {
 import { seedPuzzleRating } from '../puzzle-rating.js';
 import { puzzleSetupMove } from '../puzzle-setup-move.js';
 import { getPuzzleStore, type PuzzleStoreSnapshot } from '../puzzle-store.js';
+import {
+  bestPuzzleStreak,
+  loadPuzzleStreak,
+  orderedPuzzleRamp,
+  recentStreakPuzzleIds,
+  type StreakRun,
+  savePuzzleStreak,
+  shuffledPuzzleRamp,
+  startPuzzleStreak,
+} from '../puzzle-streak.js';
 import { clientIpForRateLimit } from '../server-policy.js';
 import { rememberExcludedDevice } from '../stats-excluded-device.js';
 import { type HttpApiContext, readJsonBody, requireMethod, writeJson } from './lib.js';
@@ -52,6 +62,8 @@ import { type HttpApiContext, readJsonBody, requireMethod, writeJson } from './l
 // High enough for fast play, low enough to prevent unbounded anonymous UUID
 // insertion. The IP key stays only in process memory and is never persisted.
 const puzzleQualityRateLimiter = createAuthRateLimiter(300, 60_000);
+const streakStartRateLimiter = createAuthRateLimiter(30, 60_000);
+const streakMoveRateLimiter = createAuthRateLimiter(300, 60_000);
 
 // The public puzzle surface spans the Jungle registry and the standard-xiangqi
 // registry. Fortress Xiangqi's registry was deleted with the variant
@@ -109,6 +121,144 @@ export async function tryHandle(
   pathname: string,
   parsedUrl: URL,
 ): Promise<boolean> {
+  if (pathname === '/api/puzzles/ramp') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    const variant = parsePuzzleVariant(parsedUrl.searchParams.get('variant')) ?? XIANGQI_SPEC_ID;
+    if (variant === 'invalid') {
+      writeJson(response, 400, { error: 'invalid_variant' });
+      return true;
+    }
+    writeJson(response, 200, { puzzles: await ratedPuzzleRamp(variant) });
+    return true;
+  }
+
+  if (pathname === '/api/puzzles/streak') {
+    if (!requireMethod(request, response, 'POST')) return true;
+    if (await refusedForPlayLock(request, response)) return true;
+    const body = await readJsonBody(request);
+    const user = await currentAccountUser(request);
+    if (body.action === 'start') {
+      if (!streakStartRateLimiter.check(clientIpForRateLimit(request))) {
+        writeJson(response, 429, { error: 'rate_limited' });
+        return true;
+      }
+      // Each run draws its own climb, away from the player's recent runs: an
+      // account's from the database, a guest's as the browser lists them.
+      const avoid = await recentStreakPuzzleIds(user?.id ?? null);
+      for (const id of parseRecentPuzzleIds(body.recent)) avoid.add(id);
+      const ramp = shuffledPuzzleRamp(await rampPool(XIANGQI_SPEC_ID), { avoid });
+      const run = await startPuzzleStreak(
+        ramp.map((p) => p.id),
+        user?.id ?? null,
+      );
+      writeJson(response, 200, await streakResponse(run));
+      return true;
+    }
+    if (
+      (body.action !== 'move' && body.action !== 'skip' && body.action !== 'resume') ||
+      !isPuzzleQualitySessionId(body.runId)
+    ) {
+      writeJson(response, 400, { error: 'invalid_streak_action' });
+      return true;
+    }
+    if (!streakMoveRateLimiter.check(clientIpForRateLimit(request))) {
+      writeJson(response, 429, { error: 'rate_limited' });
+      return true;
+    }
+    const run = await loadPuzzleStreak(body.runId);
+    // An anonymous run is usable only anonymously; signing in starts a new
+    // owned run. Never accept a user id or score supplied by the browser.
+    if (!run || run.userId !== (user?.id ?? null)) {
+      writeJson(response, 404, { error: 'streak_not_found' });
+      return true;
+    }
+    const state = run.state;
+    // A reload or back/forward picks the tab's open run up again rather than
+    // starting another. The board comes back at the puzzle's start, so a line
+    // half played is dropped and the player plays it again from move one.
+    if (body.action === 'resume') {
+      if (state.finished) {
+        writeJson(response, 409, { error: 'streak_action_unavailable' });
+        return true;
+      }
+      if (state.moves.length) {
+        state.moves = [];
+        if (!(await savePuzzleStreak(run))) {
+          writeJson(response, 409, { error: 'streak_action_unavailable' });
+          return true;
+        }
+      }
+      writeJson(response, 200, await streakResponse(run));
+      return true;
+    }
+    const id = state.ids[state.results.length];
+    if (state.finished || id !== body.puzzleId || (body.action === 'skip' && state.skipUsed)) {
+      writeJson(response, 409, { error: 'streak_action_unavailable' });
+      return true;
+    }
+    let attempt: PuzzleAttempt | undefined;
+    // The line that ended the run, sent once the run can no longer change, so
+    // the end screen plays it out on the board without a separate reveal call
+    // (which would book a quality 'reveal' the player never asked for).
+    let solution: readonly unknown[] | undefined;
+    if (body.action === 'skip') {
+      state.skipUsed = true;
+      state.results.push({ id, outcome: 'skipped' });
+      state.moves = [];
+    } else {
+      const moves = parsePuzzleMoves([body.move]);
+      const qualitySessionId = parseOptionalQualitySessionId(body.qualitySessionId);
+      if (!moves || qualitySessionId === 'invalid') {
+        writeJson(response, 400, { error: 'invalid_moves' });
+        return true;
+      }
+      const puzzle = await puzzleById(id);
+      if (!puzzle) {
+        writeJson(response, 404, { error: 'not_found' });
+        return true;
+      }
+      attempt = attemptPuzzle(puzzle, [...state.moves, ...moves]);
+      // Only a wrong answer ends a run. Checker errors neither change the
+      // canonical run nor count as wrong quality events, as on /attempt.
+      if (!attempt.ok && attempt.code !== 'incorrect-move') {
+        writeJson(response, 200, { ...(await streakResponse(run)), attempt });
+        return true;
+      }
+      if (!attempt.ok) {
+        state.finished = true;
+        state.results.push({ id, outcome: 'failed' });
+        solution = puzzle.solution;
+      } else if (attempt.complete) {
+        state.score++;
+        state.results.push({ id, outcome: 'solved' });
+        state.moves = [];
+      } else {
+        state.moves = [...state.moves, ...moves] as XiangqiMove[];
+      }
+    }
+    state.finished ||= state.results.length >= state.ids.length;
+    if (!(await savePuzzleStreak(run))) {
+      writeJson(response, 409, { error: 'streak_action_unavailable' });
+      return true;
+    }
+    if (attempt && isPuzzleQualitySessionId(body.qualitySessionId)) {
+      await recordPuzzleQualityEvent({
+        puzzleId: id,
+        sessionId: body.qualitySessionId,
+        variant: XIANGQI_SPEC_ID,
+        event: !attempt.ok ? 'wrong' : attempt.complete ? 'solve' : 'start',
+      }).catch(() => {});
+    }
+    // Streak deliberately never calls recordOutcomeRating: these attempts do
+    // not change puzzle/user ratings or the separate daily-solve streak.
+    writeJson(response, 200, {
+      ...(await streakResponse(run)),
+      ...(attempt ? { attempt } : {}),
+      ...(solution ? { solution } : {}),
+    });
+    return true;
+  }
+
   if (pathname === '/api/puzzles') {
     if (!requireMethod(request, response, 'GET')) return true;
     const variant = parsePuzzleVariant(parsedUrl.searchParams.get('variant'));
@@ -310,8 +460,9 @@ export async function tryHandle(
   }
 
   // Solution-exposure endpoint (lichess "view solution" / "get a hint"). This is
-  // the ONLY route that returns solution move data; the detail + attempt routes
-  // stay solution-hidden. `mode:'solution'` returns the full line; `mode:'hint'`
+  // the only route that returns solution move data on request; the detail +
+  // attempt routes stay solution-hidden. (The streak route sends one puzzle's
+  // line only with the miss that has already locked its run.) `mode:'solution'` returns the full line; `mode:'hint'`
   // returns just the next correct move for the given played-ply count. Either
   // action books a FAILED rated attempt for the user (idempotent per user+puzzle
   // via ON CONFLICT DO NOTHING, so a prior wrong-move fail or a later solve is a
@@ -373,6 +524,47 @@ export async function tryHandle(
   }
   writeJson(response, 200, { puzzle: await puzzleDetail(puzzle) });
   return true;
+}
+
+async function ratedPuzzleRamp(variant: PublicPuzzleVariant): Promise<PuzzleSummary[]> {
+  return orderedPuzzleRamp(await rampPool(variant));
+}
+
+async function rampPool(variant: PublicPuzzleVariant): Promise<PuzzleSummary[]> {
+  const store = await getPuzzleStore();
+  const puzzles = discoverablePuzzles(store).filter((p) => p.variant === variant);
+  const ratings = await listPuzzleRatingSummaries(puzzles.map((p) => p.id));
+  return puzzles.map((p) =>
+    puzzleSummary(
+      p,
+      ratings.get(p.id) ??
+        seededPuzzleRatingSummary(p.solution.length, store.difficultyById.get(p.id)),
+      store.motifsById.get(p.id) ?? [],
+    ),
+  );
+}
+
+// A guest's recent puzzles as the browser sends them: only a preference for
+// the draw, so anything malformed is ignored rather than refused.
+function parseRecentPuzzleIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .slice(-200)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0 && id.length <= 200);
+}
+
+async function streakResponse(run: StreakRun) {
+  const id = run.state.ids[run.state.results.length];
+  const puzzle = !run.state.finished && id ? await puzzleById(id) : null;
+  return {
+    runId: run.id,
+    score: run.state.score,
+    best: await bestPuzzleStreak(run.userId),
+    skipUsed: run.state.skipUsed,
+    finished: run.state.finished,
+    results: run.state.results,
+    puzzle: puzzle ? await puzzleDetail(puzzle) : null,
+  };
 }
 
 // Accepts either a full puzzle id (the URL slug today) or a lichess-style short

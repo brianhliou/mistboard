@@ -11,6 +11,7 @@ export const ZH_HANT_SHELL = {
   'nav.menu': '選單',
   'nav.play': '對弈',
   'nav.puzzles': '題目',
+  'nav.puzzleStreak': '連續解題',
   'nav.learn': '學習',
   'nav.learnXiangqi': '象棋入門',
   'nav.practice': '練習',

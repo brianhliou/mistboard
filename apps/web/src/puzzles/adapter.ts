@@ -133,6 +133,10 @@ export type PuzzleSession = {
   // across renderSession() rebuilds so the engine toggle + eval + arrows
   // survive a full re-render. Disposed when the session is replaced.
   analysis?: PuzzleAnalysisController | null;
+  // The miss that ended the attempt, kept when the board then plays the line
+  // out (Puzzle Streak's game over): the move list marks it beside the move
+  // that was right at that ply. `ply` indexes playedMoves.
+  wrongMove?: { ply: number; move: PuzzleMove } | null;
 };
 
 export type PuzzleNavigation = {
