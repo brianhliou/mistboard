@@ -4,7 +4,6 @@ import {
   type JieqiGameStatus,
   type JieqiMove,
   type JieqiPlayerView,
-  jieqiStateToPikafishFen,
 } from '@mistboard/game';
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -31,7 +30,6 @@ import {
 import { mountJieqiReview } from './review/jieqi-review.js';
 import { recoverJieqiDeal } from './review/jieqi-tree-adapter.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
-import { analysisHref, editorHref } from './review/position-links.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 
@@ -200,7 +198,7 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     summary: `${status} · ${postgame.game.plyCount} plies`,
     metaCard,
     details,
-    // Phone: the card and chat go to a sheet from the ☰, off the page (#655).
+    // Phone: board, bar and a move strip; card, chart and chat in a sheet (#619).
     phoneInfoSheet: true,
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
@@ -219,13 +217,6 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     ...(postgame.game.mode === 'imported'
       ? {}
       : crosstableConfig(postgame.game.roomId, postgame.game.players)),
-    // Position hand-offs carry the PUBLIC fen: the board as played, and a pool
-    // of every piece no one has seen (face-down, or captured face-down). The deal
-    // is never sent, so the analysis board deals the face-down pieces afresh.
-    analyseFromHere: (truth) =>
-      analysisHref('jieqi', jieqiStateToPikafishFen(truth, { public: true })),
-    boardEditorHref: (truth) =>
-      editorHref('jieqi', jieqiStateToPikafishFen(truth, { public: true })),
     ...gameExportShareExtra('jieqi', postgame.game.roomId),
     // Server-side PikaJieQi whole-game analysis, DB-cached: an already-analysed game loads
     // straight from cache on open (a GET that never computes). Requesting a fresh compute is

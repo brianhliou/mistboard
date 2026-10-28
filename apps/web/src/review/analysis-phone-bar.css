@@ -1,9 +1,9 @@
 /* Phone chrome for the analysis board (analysis-phone-bar.ts, #576). Every
    piece is display: none above 600px, so tablet and desktop keep the arrow
-   strip and the engine card exactly as they were. */
+   strip and the engine card exactly as they were. The engine bar above the
+   board is shared with the phone game review (engine-bar.css). */
 
 .analysis-phone-bar,
-.analysis-engine-bar,
 .analysis-phone-info,
 .analysis-tools-sheet {
   display: none;
@@ -84,51 +84,6 @@
     padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* ── Engine bar above the board ── */
-  .analysis-engine-bar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    order: 1;
-    width: 100%;
-    height: 44px;
-    padding: 0 12px;
-    box-sizing: border-box;
-    border-bottom: 1px solid var(--site-border);
-    background: var(--site-panel, var(--site-surface));
-    font-size: 13px;
-  }
-  .analysis-engine-bar[hidden] {
-    display: none;
-  }
-  .analysis-engine-bar__eval {
-    flex: none;
-    min-width: 52px;
-    height: 28px;
-    padding: 0 6px;
-    box-sizing: border-box;
-    border-radius: 6px;
-    background: var(--site-text);
-    color: var(--site-panel, var(--site-surface));
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    line-height: 28px;
-    text-align: center;
-  }
-  .analysis-engine-bar__pv {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    color: var(--site-text);
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .analysis-engine-bar__depth {
-    flex: none;
-    font-size: 12px;
-    color: var(--site-muted);
-  }
-
   /* ── Info row under the board ── */
   .analysis-phone-info {
     display: flex;
@@ -173,8 +128,9 @@
     display: none;
   }
   /* The move strip: one row that scrolls sideways, the current move kept in
-     view (analysis-phone-bar.ts revealCurrentMove). */
-  .review-shell.review-shell--analysis
+     view (analysis-phone-bar.ts revealCurrentMove). The phone game review
+     (review-info-sheet.ts, #619) uses the same strip. */
+  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
     .review-shell__cluster--col1-stack
     .review-rail-main
     .review-move-list
@@ -190,13 +146,17 @@
     scrollbar-width: none;
     overscroll-behavior-x: contain;
   }
-  .review-shell.review-shell--analysis .review-rail-main .review-move-list {
+  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+    .review-rail-main
+    .review-move-list {
     padding: 0 8px;
   }
-  .review-shell.review-shell--analysis .review-rail-main .review-move-list__row {
+  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+    .review-rail-main
+    .review-move-list__row {
     display: contents;
   }
-  .review-shell.review-shell--analysis
+  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
     .review-rail-main
     .review-move-list__rows
     > li:not(.review-move-list__row) {
@@ -206,18 +166,24 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .review-shell.review-shell--analysis .review-rail-main .review-move-list__number {
+  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+    .review-rail-main
+    .review-move-list__number {
     flex: none;
     padding: 0 0 0 6px;
   }
-  .review-shell.review-shell--analysis .review-rail-main .review-move-list__move {
+  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+    .review-rail-main
+    .review-move-list__move {
     flex: none;
     align-items: center;
     min-height: 32px;
     padding: 0 8px;
     border-radius: 6px;
   }
-  .review-shell.review-shell--analysis .review-rail-main .review-move-list__move--empty {
+  :is(.review-shell.review-shell--analysis, .has-review-info-sheet .review-shell)
+    .review-rail-main
+    .review-move-list__move--empty {
     display: none;
   }
 

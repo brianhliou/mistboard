@@ -41,10 +41,20 @@ import {
   type MarkBetter,
   type MarkGrade,
 } from './analysis-marks.js';
-import { type AnalysisPhoneBar, createAnalysisPhoneBar } from './analysis-phone-bar.js';
+import {
+  type AnalysisPhoneBar,
+  createAnalysisPhoneBar,
+  revealCurrentMove,
+} from './analysis-phone-bar.js';
 import { createAnalysisSummary, type SummaryJudgment } from './analysis-summary.js';
 import { createAnnotationEditor } from './annotations-editor.js';
-import { createReviewInfoSheet } from './review-info-sheet.js';
+import { createReviewEngineToggle, type ReviewEngineToggle } from './review-engine-toggle.js';
+import { attachChatUnread, createReviewInfoSheet } from './review-info-sheet.js';
+import {
+  createPhoneAnalysisSlot,
+  type PhoneAnalysisContent,
+  type PhoneAnalysisSlot,
+} from './review-phone-analysis.js';
 // Brush colours for the node's user-drawn shapes. Imported here, not only
 // from the editor: the board draws shapes on surfaces that hide the panel.
 import '../variant-tenant/board-annotations.css';
@@ -392,7 +402,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   phoneAnalysisBar?: { variantName: string };
   /** A played game's phone review (review-info-sheet.ts): below 600px the meta
    *  card and `details` (the chat) leave the rail for a sheet opened from the
-   *  bar's ☰. Needs `metaCard`; off for embeds. */
+   *  bar's ☰, with the advantage chart, the analysis summary and the engine
+   *  card (#619), and the move list becomes a one-row strip. Needs `metaCard`;
+   *  off for embeds. */
   phoneInfoSheet?: boolean;
   /** Root the tree at a hand-set position (a FEN-seeded composition) instead of
    *  the variant's standard start. `truth` seeds the tree root; `fen` is the
@@ -564,8 +576,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
   };
   /** Enable the control-bar menu's "Study" action: create a study seeded with the
    *  current tree. Absent = the item is omitted (the study page itself omits it —
-   *  you are already in a study). */
-  studyExport?: { variant: StudyVariantId; name: string };
+   *  you are already in a study). `label` names the row where "Study" alone
+   *  would not say what it does (a game review: "New study from this game"). */
+  studyExport?: { variant: StudyVariantId; name: string; label?: string };
   /** Persist the board's CURRENT facing as the chapter's default, for an owner.
    *  Sits under Flip board in the same menu because that is where an author
    *  looks when they think about orientation, and the pair reads as what it is:
@@ -982,6 +995,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // The analysis page's phone chrome; built after the controls, but the engine
   // callbacks below reach it, so it is declared with the engine state.
   let phoneBar: AnalysisPhoneBar | null = null;
+  // The phone game review's engine bar and Engine button (#619); built with the
+  // controls, reached from the engine callbacks like phoneBar.
+  let reviewEngine: ReviewEngineToggle | null = null;
   // Retro mode ("Learn from your mistakes"), open or not. Declared up here with
   // the engine state because the engine panel's constructor fires onLines
   // synchronously, and that callback reads it.
@@ -1165,12 +1181,20 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
             // navigate (a verdict jumps back), so it runs before the repaint.
             retro?.onEngineLines(lines);
             phoneBar?.syncEngine();
+            reviewEngine?.sync();
             paintOverlays();
           },
           onToggle: (on) => {
             engineOn = on;
             phoneBar?.setEngineOn(on);
+            reviewEngine?.setOn(on);
             paintOverlays();
+            // The engine bar above the board and the engine card under the
+            // move list come and go with it; give the board what is left. Phone
+            // only: wider screens keep the board as it was.
+            if (reviewEngine && window.matchMedia?.('(max-width: 600px)').matches) {
+              scaffold.refit();
+            }
           },
           arrowsSupported: engineOverlaysSupported,
           showArrows: showEngineArrows,
@@ -1359,7 +1383,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
   if (config.studyExport) {
     menuItems.push({
-      label: t('review.menuStudy'),
+      label: config.studyExport.label ?? t('review.menuStudy'),
       icon: REVIEW_MENU_ICONS.study,
       onClick: () => saveAsStudy(),
     });
@@ -1426,17 +1450,66 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       },
     });
   }
-  // Phone game review (#655): the game card and the chat move to a sheet
-  // opened from the ☰. The rail's details are composed further down (the
-  // truncation notice); the sheet reads them only when it opens.
-  const infoSheet =
-    config.phoneInfoSheet && config.metaCard && !config.embedded
+  // Phone game review (#655, #619): the game card, the analysis summary and the
+  // underboard's Move times and Share & export move to a Game info sheet, and
+  // the chat to a Chat sheet, each opened from its own ☰ row, so the page is
+  // the board, the analysis strip, the bar and a move strip. Those blocks are
+  // built further down; a sheet reads them only when it opens, and skips any
+  // that never reached the page.
+  const phoneReview = Boolean(config.phoneInfoSheet && config.metaCard && !config.embedded);
+  // The Game info sheet shows only these underboard tabs; the chart is on the
+  // page and the rest stay with the wide layout (review-info-sheet.css).
+  const SHEET_TABS = ['times', 'share'];
+  let tabBeforeSheet: HTMLElement | null = null;
+  const gameSheet = phoneReview
+    ? createReviewInfoSheet({
+        signal: mountAbort.signal,
+        kind: 'game',
+        label: t('underboard.gameInfo'),
+        icon: REVIEW_MENU_ICONS.info,
+        blocks: () => [
+          config.metaCard,
+          analysisSummaryEl,
+          underboardEl,
+          explorerBelowRail ? config.explorer?.el : undefined,
+        ],
+        // Open on a tab the sheet shows, and hand the wide layout its tab back.
+        onOpen: () => {
+          const active = underboardEl.querySelector<HTMLElement>('.review-underboard-tab--active');
+          if (active && SHEET_TABS.includes(active.dataset.tab ?? '')) return;
+          tabBeforeSheet = active;
+          underboardEl
+            .querySelector<HTMLElement>(SHEET_TABS.map((id) => `[data-tab="${id}"]`).join(','))
+            ?.click();
+        },
+        onClose: () => {
+          tabBeforeSheet?.click();
+          tabBeforeSheet = null;
+        },
+      })
+    : null;
+  // `details` (the chat, behind any truncation notice) is built further down
+  // from config.details; the sheet lends it on open.
+  const chatSheet =
+    phoneReview && config.details
       ? createReviewInfoSheet({
           signal: mountAbort.signal,
-          blocks: () => [config.metaCard, details],
+          kind: 'chat',
+          label: t('chat.title'),
+          blocks: () => [details],
+          onOpen: () => chatUnread?.clear(),
         })
       : null;
-  if (infoSheet) menuItems.push(infoSheet.menuItem);
+  // Phone game review (#619): an Engine analysis toggle row in ☰ and the
+  // engine bar above the board (review-engine-toggle.ts), on variants whose
+  // engine runs in this browser.
+  if (phoneReview && enginePanel?.supported) {
+    reviewEngine = createReviewEngineToggle({ signal: mountAbort.signal, engine: enginePanel });
+    reviewEngine.setOn(engineOn);
+    menuItems.push(reviewEngine.menuItem);
+  }
+  if (gameSheet) menuItems.push(gameSheet.menuItem);
+  if (chatSheet) menuItems.push(chatSheet.menuItem);
   const controls = createReviewControls({
     signal: mountAbort.signal,
     // The book tool appears only when a corpus is behind it (see review-controls).
@@ -1455,6 +1528,17 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     onLast: () => go(lineEnd(currentPath)),
     menuItems,
   });
+  // A chat line from someone else, with the Chat sheet closed, marks ☰ and
+  // the Chat row until the sheet opens (review-info-sheet.ts).
+  const chatUnread =
+    chatSheet && config.details
+      ? attachChatUnread({
+          signal: mountAbort.signal,
+          chat: config.details,
+          bar: controls.el,
+          isOpen: () => chatSheet.isOpen(),
+        })
+      : null;
 
   // Computer-injected refutation lines stay out of the persisted blob unless the
   // user adopted them via promote (adoptCompLine clears their flags). Shared by
@@ -1508,6 +1592,26 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // ── Whole-game analysis (mainline) → underboard chart + summary + glyphs ──
   const underboardBody = document.createElement('div');
   underboardBody.className = 'review-underboard-panel__body';
+  // Phone game review (#619): the request control or the chart lives in a
+  // strip under the board at 600px and under, in this tab body above it.
+  // Without the strip, the tab body is the only home, as before.
+  let phoneAnalysis: PhoneAnalysisSlot | null = null;
+  if (phoneReview && config.analysis) {
+    phoneAnalysis = createPhoneAnalysisSlot({
+      signal: mountAbort.signal,
+      wideHost: underboardBody,
+      onScrub: (fraction) => {
+        const nodes = mainlineNodes();
+        const target = nodes[Math.round(fraction * Math.max(1, nodes.length - 1))];
+        if (target && target !== currentNode()) go(tree.pathTo(target));
+      },
+      onLayout: () => scaffold.refit(),
+    });
+  }
+  const setAnalysisContent = (content: PhoneAnalysisContent): void => {
+    if (phoneAnalysis) phoneAnalysis.setContent(content);
+    else underboardBody.replaceChildren(...(content ? [content.el] : []));
+  };
   // Live-FEN share input, refreshed on every navigation (see render()).
   const shareFenInput = document.createElement('input');
   const shareMovesInput = document.createElement('textarea');
@@ -1823,6 +1927,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       config.underboardNote,
     ),
     underboardOverflows: true,
+    phoneOneScreen: phoneReview,
     enginePanel: enginePanel?.el,
     moves: moveTree.el,
     railPanel: explorerBelowRail ? undefined : config.explorer?.el,
@@ -1836,19 +1941,27 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     onPromote: () => render(),
   });
 
-  if (infoSheet) {
-    const { sheet } = infoSheet;
-    root.append(sheet);
+  if (phoneReview) {
+    const sheets = [gameSheet, chatSheet].filter((sheet) => sheet !== null);
+    root.append(...sheets.map((sheet) => sheet.sheet));
     root.classList.add('has-review-info-sheet');
     mountAbort.signal.addEventListener(
       'abort',
       () => {
-        infoSheet.close();
+        for (const sheet of sheets) {
+          sheet.close();
+          sheet.sheet.remove();
+        }
         root.classList.remove('has-review-info-sheet');
-        sheet.remove();
       },
       { once: true },
     );
+    // The analysis strip between the board's bottom player row and the bar,
+    // and the engine bar above the board (review-phone-analysis.ts,
+    // engine-bar.ts). Both are display: none above 600px.
+    const stageEl = scaffold.stage.el;
+    if (phoneAnalysis) stageEl.after(phoneAnalysis.el);
+    if (reviewEngine) stageEl.before(reviewEngine.bar);
   }
 
   // Phone analysis chrome (#576): engine bar above the board, info row under
@@ -2105,6 +2218,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       });
       phoneBar.revealCurrentMove(moveTree.el);
     }
+    // The phone game review's move strip (#619) keeps the current move in view.
+    if (phoneReview) revealCurrentMove(moveTree.el);
     // Opening statistics follow the board like every other per-node panel.
     config.explorer?.setTruth(node.truth);
     // Live-refresh the Share tab's FEN + move export for the current node/line.
@@ -2130,6 +2245,15 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       }
     }
     chart?.setPly(node.ply);
+    // The phone strip's eval chip: the current move's whole-game eval, on the
+    // main line only (a side line has none of its own).
+    if (phoneAnalysis) {
+      const point =
+        gameAnalysis && mainlineNodes()[node.ply] === node
+          ? gameAnalysis.evals.find((entry) => entry.ply === node.ply)
+          : undefined;
+      phoneAnalysis.setEval(gameAnalysis ? (point ? formatEval(point.cp, point.mate) : '–') : null);
+    }
     moveTimesChart?.setPly(node.ply);
     config.onLineChange?.(movesTo(node));
   }
@@ -2244,7 +2368,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       },
     });
     chart.setPly(currentNode().ply);
-    underboardBody.replaceChildren(chart.el);
+    setAnalysisContent({ kind: 'chart', el: chart.el });
     // Chance variants (jieqi) grade every move luck-free once the decomposition loads; the base
     // summary would exclude reveals and read as a misleading clean sheet, so hold a placeholder
     // until applyDecisions folds the decomposition in. Deterministic variants show the base now.
@@ -2429,7 +2553,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
 
   function renderAnalysisRequest(source: AnalysisSource): void {
     if (mainlineLen < 1) {
-      underboardBody.replaceChildren();
+      setAnalysisContent(null);
       return;
     }
     const control = source.requestHref
@@ -2475,7 +2599,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           });
       });
     }
-    underboardBody.replaceChildren(control);
+    setAnalysisContent({ kind: 'request', el: control });
   }
 
   const decisionSource = config.decisions ?? null;

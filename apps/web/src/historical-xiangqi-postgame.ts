@@ -137,6 +137,7 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
     studyExport: {
       variant: DEFAULT_STUDY_VARIANT,
       name: archiveStudyName(game),
+      label: t('review.newStudyFromGame'),
     },
     // Roomless archive game: whole-game analysis is the shared client ceval sweep
     // (same as /analysis/xiangqi), computed on request. No server Pikafish cache.
