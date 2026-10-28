@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- on phones a game review fits one screen: bigger board, engine analysis and chat in the menu, unread chat dot ([55eb9f07](https://github.com/brianhliou/mistboard/commit/55eb9f07))
 - the Play a person box is tighter, and its rated notes are plain: guests read "Sign in to play rated games" ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
 - Play again in a game against the computer keeps the same bot ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
 - The bots page lists only the variants each bot plays, gives Misty her own section, shows engine versions, and names xiangqi Pikafish seats plain "Pikafish" ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
@@ -228,6 +229,7 @@ Conventions:
 
 ### Site
 
+- Each engine champion on /champions links to its bot page and credits its code and network ([55eb9f07](https://github.com/brianhliou/mistboard/commit/55eb9f07))
 - the homepage News box has drawn icons in the broadcast TV style, each centred on its item ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
 - the homepage shows broadcast cards and recent forum topics in a cleaner layout, and holds their space on first load so nothing jumps ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
 - the phone homepage tiles are drawn, with larger art, and Watch now shows binoculars ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
@@ -318,6 +320,12 @@ Conventions:
 
 ### Fixed
 
+- Xiangqi Mahjong: the /games card shows each player on the right side, the To discard badge stays on the table after a claimed set, and Misty's name links to its bot page. A stray line above the room's game card is gone ([55eb9f07](https://github.com/brianhliou/mistboard/commit/55eb9f07))
+- Read next on xiangqi player pages and deep dives now suggests only other xiangqi articles ([55eb9f07](https://github.com/brianhliou/mistboard/commit/55eb9f07))
+- the homepage News box's timeline line no longer sticks out above the first icon ([55eb9f07](https://github.com/brianhliou/mistboard/commit/55eb9f07))
+- Misty's bot page counts every Xiangqi Mahjong game, including wins from any seat and games started from the setup dialog or a rematch ([55eb9f07](https://github.com/brianhliou/mistboard/commit/55eb9f07))
+- The homepage board and Mistboard TV keep showing a live game while a player takes a long think, instead of switching to an older finished game ([55eb9f07](https://github.com/brianhliou/mistboard/commit/55eb9f07))
+- On Mistboard TV, clicking the live game's board opens its room so you can watch it as a spectator ([55eb9f07](https://github.com/brianhliou/mistboard/commit/55eb9f07))
 - forum machine translation no longer drops an author's own words from a post that quotes someone else, and English readers are now offered Translate on Chinese replies that quote English ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
 - the broadcast Results switch no longer covers its label with a green blob on phones ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
 - Xiangqi Mahjong cards on /watch line up side by side and the Dealer badge is no longer clipped ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
