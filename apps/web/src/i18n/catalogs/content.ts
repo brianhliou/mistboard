@@ -379,7 +379,9 @@ export const EN_CONTENT = {
     'By Huorongrong and Laoxu (Kouza): a Pikafish fork with its own neural network. It plays here at 4 s a move on 4 threads.',
   'champions.aboutJungle':
     'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move.',
-  'champions.sourceLink': 'Source code',
+  'champions.creditCode': 'Code',
+  'champions.creditNetwork': 'Network',
+  'champions.netPikafish': 'Pikafish NNUE',
   'champions.championBadge': 'Champion',
   'champions.statWins': 'wins',
   'champions.statDraws': 'draws',

@@ -465,7 +465,9 @@ export const ZH_HANT_CONTENT = {
     '作者 Huorongrong 和 Laoxu（Kouza）：帶有自己神經網路的 Pikafish 分叉。在本站每步 4 秒，4 執行緒。',
   'champions.aboutJungle':
     '作者 hzyhhzy，網路來自 Kouza：自我對弈訓練的神經網路。在本站每步 150 次訪問。',
-  'champions.sourceLink': '原始碼',
+  'champions.creditCode': '程式碼',
+  'champions.creditNetwork': '神經網路',
+  'champions.netPikafish': '皮卡魚 NNUE',
   'champions.aboutJqe':
     "作者 Devin O'Keefe：開源引擎，帶有自己的神經網路，透過自我對弈訓練。在本站每步 4 秒，4 執行緒。",
   'champions.tookJqe': '2026-10-21 從 AB-JChess 0.2d 手中奪得頭銜，共 300 局，得分率 60%。',
