@@ -27,6 +27,9 @@ export type QueuePanelProps = {
   ratedEnabled: boolean;
   userRating: UserPuzzleRating | null;
   ratingDelta: number | null;
+  // The open puzzle's detail attribution: the list summaries carry no source
+  // game, so the "From game" card reads it from here when the ids match.
+  selectedSource?: Pick<PuzzleSummary, 'id' | 'sourceGame'> | null;
   onVariantChange: (variant: PuzzleVariant) => Promise<void>;
   onAutoNextChange: (enabled: boolean) => void;
   onRatedChange: (enabled: boolean) => void;
@@ -54,7 +57,7 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     0,
     queue.findIndex((puzzle) => puzzle.id === selectedId),
   );
-  const current = queue[currentIndex] ?? null;
+  const current = withSelectedSource(queue[currentIndex] ?? null, props.selectedSource);
   const solvedCount = queue.filter((puzzle) => solvedIds.has(puzzle.id)).length;
   // Solved before, or finished just now (a reveal counts: the answer is out).
   const revealed =
@@ -220,9 +223,8 @@ export function puzzleInfoCard(
       'variant',
       [
         // Mined xiangqi puzzles carry attribution for the real game they came
-        // from: show a lichess-style "From game" header instead of "From set".
-        // The source game is not hosted yet (license-gated), so this is
-        // display-only — no link.
+        // from: show a lichess-style "From game" header instead of "From set",
+        // linked to the game's page where the server serves it.
         ...sourceGameLines(puzzle),
         puzzleInfoLine(
           opts.goalRevealed
@@ -304,7 +306,7 @@ export function sourceGameLines(
   if (!source || !hasAttribution) {
     return [puzzleInfoLine(t('puzzle.fromSet', { variant: variantLabel(puzzle.variant) }))];
   }
-  const lines: HTMLElement[] = [puzzleInfoLine(sourceGameHeader(source))];
+  const lines: HTMLElement[] = [sourceGameHeaderLine(source)];
   if (source.redName !== undefined || source.blackName !== undefined) {
     lines.push(
       sourceGamePlayerLine('red', source.redName, source.result),
@@ -312,6 +314,30 @@ export function sourceGameLines(
     );
   }
   return lines;
+}
+
+/** The list summary with the open puzzle's detail attribution, when it is that puzzle. */
+export function withSelectedSource(
+  puzzle: PuzzleSummary | null,
+  selected: Pick<PuzzleSummary, 'id' | 'sourceGame'> | null | undefined,
+): PuzzleSummary | null {
+  if (!puzzle || !selected?.sourceGame || selected.id !== puzzle.id) return puzzle;
+  return { ...puzzle, sourceGame: selected.sourceGame };
+}
+
+// The header, a link to the game's page at the puzzle's move when the server
+// says it hosts the game (the same route as historicalXiangqiReviewUrl, not
+// imported: that module brings the game search's styles with it).
+function sourceGameHeaderLine(source: NonNullable<PuzzleSummary['sourceGame']>): HTMLElement {
+  if (!source.hosted) return puzzleInfoLine(sourceGameHeader(source));
+  const line = document.createElement('span');
+  const link = document.createElement('a');
+  link.className = 'puzzle-source-link';
+  link.href = `/historical-xiangqi/game/${encodeURIComponent(source.gameId)}?ply=${source.ply}`;
+  link.textContent = sourceGameHeader(source);
+  link.title = t('puzzle.openSourceGame');
+  line.append(link);
+  return line;
 }
 
 // "From game · <event> (<year>)" — event and year are both optional.
@@ -326,7 +352,9 @@ function sourceGameHeader(source: NonNullable<PuzzleSummary['sourceGame']>): str
 }
 
 // One player row: a color disc, the player name, and a result glyph on the
-// side that won (½ on a draw). Names are the raw source-archive strings.
+// side that won (½ on a draw). Names are the raw source-archive strings, the
+// game row's where the server holds the game (it replaces the copy stored on
+// the puzzle at mine time).
 function sourceGamePlayerLine(
   color: 'red' | 'black',
   name: string | undefined,

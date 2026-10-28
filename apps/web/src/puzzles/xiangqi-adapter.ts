@@ -15,6 +15,7 @@
 import {
   applyStandardXiangqiMove,
   coordOf,
+  createInitialXiangqiState,
   formatXiangqiMove,
   formatXiangqiMoveFromAfter,
   formatXiangqiMoves,
@@ -345,6 +346,17 @@ export const xiangqiPuzzleAdapter: PuzzleBoardAdapter = {
     xiangqiPuzzlePreSetupState(
       puzzle.initial as XiangqiGameState,
       puzzle.setupMove as XiangqiPuzzleSetupMove | undefined,
+    ),
+  // Every standard game opens from the standard array, red to move.
+  historyStart: (puzzle: PuzzleDetail) =>
+    puzzle.history && puzzle.history.length > 0
+      ? createInitialXiangqiState(`${puzzle.id}:history`)
+      : null,
+  historyLabels: (puzzle: PuzzleDetail, history: readonly PuzzleMove[]) =>
+    formatXiangqiMoves(
+      history as XiangqiMove[],
+      currentXiangqiNotationStyle(),
+      createInitialXiangqiState(`${puzzle.id}:history`),
     ),
   sideIconSvg: (puzzle: PuzzleDetail) =>
     xiangqiPieceGhostSvg({ color: puzzle.sideToMove ?? 'red', role: 'general' }),
