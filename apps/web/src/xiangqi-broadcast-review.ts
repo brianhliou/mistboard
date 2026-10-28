@@ -154,6 +154,7 @@ export function mountBroadcastBoardReview(
     studyExport: {
       variant: DEFAULT_STUDY_VARIANT,
       name: eventName ? `${red} vs ${black} (${eventName})` : `${red} vs ${black}`,
+      label: t('review.newStudyFromGame'),
     },
     // The server analyses every finished broadcast game once and stores it
     // (xiangqi-broadcast-analysis.ts), so the review opens with the chart and

@@ -92,9 +92,11 @@ describe('Jieqi postgame page', () => {
     expect(root.querySelector('.review-move-list__move--current')).toBeNull();
   });
 
-  // #655: on a phone the game card and the chat leave the page for a sheet
-  // opened from the bar's menu, as in the live room, and go back on close.
-  it('lends the game card and chat to the phone info sheet from the bar menu', async () => {
+  // #619: on a phone the game card, the analysis summary and the Move times
+  // and Share tabs are in a Game info sheet and the chat in a Chat sheet, both
+  // from the bar's menu; the engine card stays on the page. Each goes back
+  // where it was on close.
+  it('lends the game card to a Game info sheet and the chat to a Chat sheet', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse(postgameFixture())),
@@ -107,26 +109,75 @@ describe('Jieqi postgame page', () => {
 
     expect(root.classList.contains('has-review-info-sheet')).toBe(true);
     const card = root.querySelector<HTMLElement>('.game-meta-card');
+    const summary = root.querySelector<HTMLElement>('.review-analysis-summary-slot');
+    const tabs = root.querySelector<HTMLElement>('.review-underboard-panel');
+    const engine = root.querySelector<HTMLElement>('.engine-panel');
     const chat = root.querySelector<HTMLElement>('.review-spectator-chat');
-    expect(card?.closest('.review-rail-group')).not.toBeNull();
-    expect(chat?.closest('.review-rail-group')).not.toBeNull();
+    for (const el of [card, summary, tabs, engine, chat]) expect(el).not.toBeNull();
 
-    const row = root.querySelector<HTMLButtonElement>('.review-controls [data-review-info]');
-    expect(row?.textContent).toContain('Game info and chat');
-    const sheet = root.querySelector<HTMLElement>('.review-info-sheet');
-    expect(sheet?.hidden).toBe(true);
+    const rows = [
+      ...root.querySelectorAll<HTMLButtonElement>('.review-controls [data-review-info]'),
+    ];
+    expect(rows.map((row) => [row.dataset.reviewInfo, row.textContent?.trim()])).toEqual([
+      ['game', 'Game info'],
+      ['chat', 'Chat'],
+    ]);
+    const gameSheet = root.querySelector<HTMLElement>(
+      '.review-info-sheet[data-review-info="game"]',
+    );
+    const chatSheet = root.querySelector<HTMLElement>(
+      '.review-info-sheet[data-review-info="chat"]',
+    );
+    expect(gameSheet?.hidden).toBe(true);
+    expect(chatSheet?.hidden).toBe(true);
 
-    row?.click();
-    expect(sheet?.hidden).toBe(false);
-    expect(sheet?.contains(card ?? null)).toBe(true);
-    expect(sheet?.contains(chat ?? null)).toBe(true);
-    // Card first, chat after it, as in the rail.
-    expect(card?.compareDocumentPosition(chat as Node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-
+    rows[0]?.click();
+    expect(gameSheet?.hidden).toBe(false);
+    for (const el of [card, summary, tabs]) expect(gameSheet?.contains(el ?? null)).toBe(true);
+    for (const el of [engine, chat]) expect(gameSheet?.contains(el ?? null)).toBe(false);
+    // It opens on a tab it shows (Move times, else Share & export).
+    const active = gameSheet?.querySelector<HTMLElement>('.review-underboard-tab--active');
+    expect(['times', 'share']).toContain(active?.dataset.tab);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    expect(sheet?.hidden).toBe(true);
+    expect(gameSheet?.hidden).toBe(true);
     expect(card?.closest('.review-rail-group')).not.toBeNull();
+    expect(tabs?.closest('[data-col1-area="under"]')).not.toBeNull();
+    expect(summary?.closest('.review-info-sheet')).toBeNull();
+
+    rows[1]?.click();
+    expect(chatSheet?.hidden).toBe(false);
+    expect(chatSheet?.contains(chat)).toBe(true);
+    expect(chatSheet?.contains(card)).toBe(false);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(chatSheet?.hidden).toBe(true);
     expect(chat?.closest('.review-rail-group')).not.toBeNull();
+    expect(engine?.closest('.review-rail-main')).not.toBeNull();
+    root.remove();
+  });
+
+  // #619: the board editor and the analysis board hand-offs left the game
+  // review menu; /analysis keeps both.
+  it('offers no Board editor or Analyse from here in the review menu', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(postgameFixture())),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    mountJieqiPostgame(root, 'jq_postgame');
+    await flushPromises();
+
+    const labels = [...root.querySelectorAll<HTMLButtonElement>('.move-nav-menu__item')].map(
+      (item) => item.textContent?.trim(),
+    );
+    expect(labels).toEqual([
+      'Flip board',
+      'Reveal identities',
+      'Show alternatives',
+      'Game info',
+      'Chat',
+    ]);
     root.remove();
   });
 });

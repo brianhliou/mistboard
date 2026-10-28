@@ -234,6 +234,9 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   let currentBaseSide: Side = 'red';
   let currentPerspective: ScorePerspective = 'bound';
   let debounceId: ReturnType<typeof setTimeout> | undefined;
+  // Bumped by every new search and every stop, so a finished search reports
+  // only while it is still the one on screen.
+  let searchGeneration = 0;
 
   function sideToMove(moves: string[]): Side {
     const flipped = moves.length % 2 === 1;
@@ -286,6 +289,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     if (!handle) handle = createCeval(opts.variant);
     const moves = currentMoves;
     const side = sideToMove(moves);
+    const generation = ++searchGeneration;
     sub.textContent = 'loading…';
     opts.evalBar?.setLoading();
     void handle!
@@ -298,6 +302,17 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
         multiPv,
         effort,
         onUpdate: (update) => render(update, side),
+      })
+      .then((final) => {
+        // A search that finished with no line at all had no legal move to
+        // search: the position is over, though the caller did not say so (a
+        // variant without canEvaluatePosition, a mate the rules see only as
+        // "no moves"). Say so instead of leaving "thinking…" up for good.
+        if (generation !== searchGeneration || !on) return;
+        if (final.lines.some((line) => line.pvUci.length > 0)) return;
+        clearOutput();
+        opts.evalBar?.setIdle(true);
+        sub.textContent = t('engine.gameOver');
       })
       .catch((err: unknown) => {
         sub.textContent = `Engine error: ${(err as Error).message ?? 'failed'}`;
@@ -324,6 +339,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     opts.onLines?.(null);
     clearTimeout(debounceId);
     if (!currentSearchable) {
+      searchGeneration += 1;
       handle?.stop();
       clearOutput();
       opts.evalBar?.setIdle(true);
@@ -365,6 +381,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     on = false;
     opts.onToggle?.(false);
     syncToggle();
+    searchGeneration += 1;
     handle?.stop();
     clearOutput();
     opts.evalBar?.setIdle(true);
@@ -373,6 +390,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
   function onVisibilityChange(): void {
     if (!on || effort !== 'infinite') return;
     if (document.hidden) {
+      searchGeneration += 1;
       handle?.stop();
       sub.textContent = t('engine.pausedInactive');
       return;

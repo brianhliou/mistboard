@@ -166,6 +166,23 @@ export function buildBroadcastChat(tourSlug: string): HTMLElement {
 /** Fired (bubbling) from a chat panel when a poll brings in lines. */
 export const CHAT_LINES_EVENT = 'mistboard:chat-lines';
 
+/** The event's detail: how many of the new lines someone else wrote (the
+ *  viewer's own, posted from another tab, do not count as news). */
+export interface ChatLinesDetail {
+  fromOthers: number;
+}
+
+/** A poll's new lines as the event reports them: the viewer's own lines
+ *  (posted from another tab) are not news. */
+export function chatLinesDetail(
+  incoming: readonly { handle: string | null }[],
+  viewerHandle: string | null | undefined,
+): ChatLinesDetail {
+  return {
+    fromOthers: incoming.filter((line) => !viewerHandle || line.handle !== viewerHandle).length,
+  };
+}
+
 function buildGameChat(roomId: string, options: GameChatOptions): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'review-spectator-chat';
@@ -300,9 +317,16 @@ function startPolling(
     if (!state) return;
     const incoming = state.lines.filter((line) => !known.has(line.id)).slice(-VISIBLE_LINES);
     appendLines(ui.feed, incoming, known, state, session.apiUrl);
-    // The phone room keeps the chat in a closed sheet and marks ☰ unread.
+    // The phone room and the phone game review keep the chat in a closed sheet
+    // and mark ☰ unread. Lines already shown at load are in `known`, so only a
+    // poll's new lines reach here.
     if (incoming.length > 0) {
-      panel.dispatchEvent(new CustomEvent(CHAT_LINES_EVENT, { bubbles: true }));
+      panel.dispatchEvent(
+        new CustomEvent<ChatLinesDetail>(CHAT_LINES_EVENT, {
+          bubbles: true,
+          detail: chatLinesDetail(incoming, state.viewerHandle),
+        }),
+      );
     }
   }, options.pollMs);
 }

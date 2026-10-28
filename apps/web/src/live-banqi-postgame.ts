@@ -5,8 +5,6 @@ import {
   type BanqiMove,
   type BanqiPlayerView,
   banqiRulesFromView,
-  banqiStateToDealtFen,
-  banqiStateToEngineFen,
 } from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -30,7 +28,6 @@ import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-anal
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
-import { analysisHref, editorHref } from './review/position-links.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 
@@ -203,6 +200,8 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     summary: `${status} · ${postgame.game.plyCount} plies`,
     metaCard,
     details,
+    // Phone: board, bar and a move strip; card, chart and chat in a sheet (#619).
+    phoneInfoSheet: true,
     moves,
     moveTimes: hasMoveTimes ? moveTimes : undefined,
     moveClocks: hasMoveTimes ? reviewMoveClocks(postgame) : undefined,
@@ -219,8 +218,6 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     // Position hand-offs. The analysis link carries the DEALT fen (the exact
     // reveals of this game continue there); the editor link carries only the
     // public fen (it edits what is visible).
-    analyseFromHere: (truth) => analysisHref('banqi', banqiStateToDealtFen(truth)),
-    boardEditorHref: (truth) => editorHref('banqi', banqiStateToEngineFen(truth)),
     ...gameExportShareExtra('banqi', postgame.game.roomId),
     // Server-side MistyBanqi whole-game analysis, DB-cached: an already-analysed game
     // loads straight from cache on open (a GET that never computes). Requesting a fresh
