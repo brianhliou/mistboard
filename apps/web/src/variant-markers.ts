@@ -31,6 +31,9 @@ export const FINAL_VARIANT_MARKERS = {
   banqi: {
     path: '/variant-markers/final/banqi.png',
   },
+  'three-kingdoms-banqi': {
+    path: '/variant-markers/final/three-kingdoms-banqi.png',
+  },
   jungle: {
     path: '/variant-markers/final/jungle-chess.png',
   },
