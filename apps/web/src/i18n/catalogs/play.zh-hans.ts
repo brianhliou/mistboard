@@ -224,6 +224,7 @@ export const ZH_HANS_PLAY = {
   'puzzle.embedNotAvailable': '这道题目暂不可用。',
   'puzzle.openInAnalysis': '在分析棋盘中打开',
   'puzzle.sessionHistory': '本次练习的题目',
+  'puzzle.sessionVisit': '本次练习',
   'puzzle.sessionCurrent': '当前题目',
   'puzzle.sessionResult': '题目 #{code}：{outcome}',
   'puzzle.sessionOutcomeSolved': '已解开',

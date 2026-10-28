@@ -11,7 +11,11 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PuzzleSummary } from './puzzles/adapter.js';
 import { keepActivePuzzleMoveInView } from './puzzles/move-list.js';
-import { puzzlePhoneMenuHead, puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
+import {
+  puzzlePhoneMenuHead,
+  puzzlePhoneMenuRows,
+  puzzlePhoneMenuVisitRow,
+} from './puzzles/phone-menu.js';
 import type { QueuePanelProps } from './puzzles/queue-panel.js';
 import {
   focusPuzzleNext,
@@ -160,15 +164,20 @@ describe('puzzle phone first screen', () => {
     );
   });
 
-  // The session row (this visit's ✓/✗ chips) must not take height from the
-  // board: on an iPhone 13 it drew the board 352px wide instead of 390. It
-  // gets no chrome budget of its own, and its negative margin cancels its
-  // height, so it follows the controls and the board keeps main's width.
-  it('gives the session row none of the board budget', () => {
-    expect(portraitBlock.match(/--puzzle-stack-chrome: \d+px;/g)).toHaveLength(1);
-    expect(portraitBlock).toMatch(
-      /\.puzzles-shell \.puzzle-session-chips \{ --puzzle-session-row-height: 42px; flex: none; flex-wrap: nowrap; box-sizing: border-box; height: var\(--puzzle-session-row-height\); margin-bottom: calc\(-1 \* var\(--puzzle-session-row-height\)\);/,
+  // This visit's ✓/✗ chips leave the page on the phone and close the ☰ sheet
+  // (Brian, 2026-10-28): under the controls they pushed the page 42px past a
+  // 390x664 fold, and given a share of the height they shrank the board to
+  // 352px. The page gets no scroll escape for them and the board budget stays
+  // the one chrome figure; tests/e2e/puzzles-phone.spec.ts measures the fit.
+  it('keeps the session row off the phone page, with no scroll and no budget for it', () => {
+    expect(phoneBlock).toContain(
+      '.puzzles-shell .puzzle-board-panel > .puzzle-session-chips { display: none; }',
     );
+    expect(portraitBlock).not.toContain('puzzle-session-chips');
+    expect(portraitBlock).not.toMatch(/overflow-y: (auto|scroll)/);
+    expect(portraitBlock.match(/--puzzle-stack-chrome: \d+px;/g)).toHaveLength(1);
+    // Desktop keeps it under the board.
+    expect(desktop).toMatch(/\.puzzle-session-chips \{ order: 4; grid-column: 2;/);
   });
 
   // Measured in the browser on 2026-10-20 (unsolved, after a miss with Skip,
@@ -460,6 +469,28 @@ describe('puzzle phone menu rows', () => {
     ).toContain('1512?');
     // Practice mode: no rating line, the explanation moves to the tooltip.
     expect(sub(props({ ratedEnabled: false }))).toBeNull();
+  });
+
+  it("closes the sheet with this visit's chips once a puzzle is finished", () => {
+    expect(puzzlePhoneMenuVisitRow([], puzzle.id, () => {})).toBeNull();
+    const onPick = vi.fn();
+    const row = puzzlePhoneMenuVisitRow(
+      [
+        { id: 'xiangqi-test-puzzle-0', outcome: 'solved' },
+        { id: 'xiangqi-test-puzzle-9', outcome: 'failed' },
+      ],
+      puzzle.id,
+      onPick,
+    );
+    expect(row?.dataset.puzzleMenuRow).toBe('visit');
+    expect(row?.querySelector('.puzzle-pm-row__label')?.textContent).toBe('This visit');
+    const chips = [...(row?.querySelectorAll<HTMLElement>('.puzzle-result-chip') ?? [])];
+    expect(chips.map((chip) => chip.textContent)).toEqual(['✓', '✗', '']);
+    expect(chips[2]?.classList.contains('puzzle-result-chip--current')).toBe(true);
+    // Its own class, so the phone's hide of the page row never reaches it.
+    expect(row?.querySelector('.puzzle-session-chips')).toBeNull();
+    chips[1]?.click();
+    expect(onPick).toHaveBeenCalledWith('xiangqi-test-puzzle-9');
   });
 
   it('wires each switch to its setting, with the switch on the right', () => {

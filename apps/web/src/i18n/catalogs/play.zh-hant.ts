@@ -224,6 +224,7 @@ export const ZH_HANT_PLAY = {
   'puzzle.embedNotAvailable': '這道題目暫不可用。',
   'puzzle.openInAnalysis': '在分析棋盤中開啟',
   'puzzle.sessionHistory': '本次練習的題目',
+  'puzzle.sessionVisit': '本次練習',
   'puzzle.sessionCurrent': '當前題目',
   'puzzle.sessionResult': '題目 #{code}：{outcome}',
   'puzzle.sessionOutcomeSolved': '已解開',
