@@ -56,12 +56,14 @@ export function primaryNavItems(): NavItem[] {
   ];
 }
 
-// Puzzles dropdown (lichess parity: Puzzle Streak sits in the Puzzles menu, not
-// on the trainer page). The title navigates to the trainer and the panel
-// repeats it, as Play does, so touch devices can still reach it.
+// Puzzles dropdown (lichess parity: Puzzle Themes and Puzzle Streak sit in the
+// Puzzles menu, not on the trainer page). The title navigates to the trainer
+// and the panel repeats it, as Play does, so touch devices can still reach it.
+// The themes page's sidebar lists these same three.
 export function puzzleNavItems(): NavItem[] {
   return [
     { label: 'Puzzles', labelKey: 'nav.puzzles', href: '/puzzles' },
+    { label: 'Puzzle Themes', labelKey: 'nav.puzzleThemes', href: '/puzzles/themes' },
     { label: 'Puzzle Streak', labelKey: 'nav.puzzleStreak', href: '/puzzles?mode=streak' },
   ];
 }

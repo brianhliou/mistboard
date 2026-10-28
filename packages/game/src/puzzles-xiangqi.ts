@@ -47,6 +47,7 @@ export type XiangqiPuzzleTheme =
   | 'matein1'
   | 'matein2'
   | 'matein3'
+  | 'matein4'
   | 'winning'
   | 'winning-material'
   | 'crushing'

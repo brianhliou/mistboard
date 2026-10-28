@@ -72,8 +72,9 @@ import {
 } from './puzzles/storage.js';
 import {
   loadPuzzleTheme,
-  type PuzzleThemeCount,
+  type PuzzleThemeOptions,
   parsePuzzleTheme,
+  puzzleSummaryTags,
   puzzleThemesLink,
   renderPuzzleThemesIndex,
   savePuzzleTheme,
@@ -111,7 +112,7 @@ export async function mountPuzzles(
   if (initialPuzzleId === 'themes') {
     root.replaceChildren(buildNav());
     const list = await fetchPuzzleListWithAttempts();
-    root.append(renderPuzzleThemesIndex(list.themes));
+    root.append(renderPuzzleThemesIndex({ motifs: list.themes, tagCounts: list.tagCounts }));
     return;
   }
   for (const adapter of allPuzzleBoardAdapters()) adapter.installStyles?.();
@@ -145,7 +146,7 @@ export async function mountPuzzles(
     : initialPuzzleId
       ? null
       : loadPuzzleTheme();
-  let themes: PuzzleThemeCount[] = [];
+  let themes: PuzzleThemeOptions = { motifs: [], tagCounts: {} };
   if (themeParam.has('theme')) savePuzzleTheme(themeFilter);
   let session: PuzzleSession | null = null;
   const solvedIds = loadSolvedPuzzleIds();
@@ -169,7 +170,7 @@ export async function mountPuzzles(
   // adaptive order. No re-shuffle or request can move a solved session's next.
   const queueSummaries = (): PuzzleSummary[] =>
     filterPuzzlesByVariant(summaries, variantFilter).filter(
-      (puzzle) => !themeFilter || puzzle.motifs?.includes(themeFilter),
+      (puzzle) => !themeFilter || puzzleSummaryTags(puzzle).includes(themeFilter),
     );
 
   const renderEmptyQueue = (): void => {
@@ -407,7 +408,7 @@ export async function mountPuzzles(
   renderPendingBoard(detail, t('puzzle.loading'));
   const puzzleList = await fetchPuzzleListWithAttempts();
   summaries = puzzleList.puzzles;
-  themes = puzzleList.themes;
+  themes = { motifs: puzzleList.themes, tagCounts: puzzleList.tagCounts };
   // Merge the server's record of finished puzzles into the local seen-set
   // before rotating. Timestamp 0 sorts them behind anything seen in this
   // browser, so a cross-device visitor sees unseen material first and their
@@ -436,7 +437,7 @@ export async function mountPuzzles(
   else if (!summaries.some((puzzle) => puzzle.variant === variantFilter) && summaries[0]) {
     variantFilter = summaries[0].variant;
   }
-  if (directSummary && themeFilter && !directSummary.motifs?.includes(themeFilter)) {
+  if (directSummary && themeFilter && !puzzleSummaryTags(directSummary).includes(themeFilter)) {
     themeFilter = null;
     savePuzzleTheme(null);
   }

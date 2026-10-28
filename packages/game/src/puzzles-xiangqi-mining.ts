@@ -363,6 +363,7 @@ export function tagXiangqiPuzzleThemes(input: {
     if (mateIn === 1) themes.push('matein1');
     else if (mateIn === 2) themes.push('matein2');
     else if (mateIn === 3) themes.push('matein3');
+    else if (mateIn === 4) themes.push('matein4');
   } else {
     themes.push('winning');
   }

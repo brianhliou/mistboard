@@ -11,7 +11,7 @@
 // deliberately absent; documenting them would promise a contract they do not
 // have. Version 0: shapes may change, and the description says so.
 
-import { XIANGQI_MOTIFS } from '@mistboard/game';
+import { XIANGQI_MOTIFS, XIANGQI_TRAINING_TAGS } from '@mistboard/game';
 
 type Schema = Record<string, unknown>;
 
@@ -156,6 +156,13 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         },
       },
       themes: { type: 'array', items: { type: 'string' } },
+      motifs: { type: 'array', items: { type: 'string' } },
+      tags: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Trainer tags derived at load: kill patterns plus mate-in-N, phase, goal and length.',
+      },
       solutionPlyCount: { type: 'integer' },
       rating: { type: 'integer' },
       ratingProvisional: { type: 'boolean' },
@@ -864,6 +871,17 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
             { type: 'string', enum: XIANGQI_MOTIFS.map((motif) => motif.id) },
             'Restrict to a named xiangqi mating pattern. Intersects variant; omit or leave empty for all.',
           ),
+          query(
+            'theme',
+            {
+              type: 'string',
+              enum: [
+                ...XIANGQI_MOTIFS.map((motif) => motif.id),
+                ...XIANGQI_TRAINING_TAGS.map((tag) => tag.id),
+              ],
+            },
+            'Restrict to any trainer tag: a mating pattern, mate-in-N, phase, goal or length. Intersects variant and motif.',
+          ),
         ],
         responses: {
           '200': OK({
@@ -889,9 +907,15 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
                   },
                 },
               },
+              tagCounts: {
+                type: 'object',
+                description:
+                  'Puzzles per trainer tag (every tag, zeros included) in the discoverable variant pool, before the motif and theme filters.',
+                additionalProperties: { type: 'integer', minimum: 0 },
+              },
             },
           }),
-          '400': ERROR_RESPONSE('`invalid_variant`, `invalid_motif`'),
+          '400': ERROR_RESPONSE('`invalid_variant`, `invalid_motif`, `invalid_theme`'),
         },
       },
     },

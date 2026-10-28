@@ -104,7 +104,7 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   // Play title links to the lobby; the dropdown adds Correspondence (and repeats
   // the lobby, for touch devices where the first tap opens the panel).
   links.append(navMenu('nav.play', playNavItems(), locale, play?.href ?? '/'));
-  // Puzzles title links to the trainer; the dropdown adds Puzzle Streak.
+  // Puzzles title links to the trainer; the dropdown adds Puzzle Themes and Streak.
   links.append(navMenu('nav.puzzles', puzzleNavItems(), locale, puzzles?.href ?? '/puzzles'));
   // Rules are the Learn landing and lead its dropdown; the interactive xiangqi
   // course remains directly reachable as the second item.
@@ -687,6 +687,8 @@ function pathMatchesNavItem(path: string, href: string): boolean {
   if (hrefQuery !== undefined)
     return normalizedPath === hrefPath && window.location.search === `?${hrefQuery}`;
   if (href === '/puzzles' && normalizedPath === '/puzzles' && mode === 'streak') return false;
+  // The themes index is its own menu item; puzzle detail pages stay the trainer's.
+  if (href === '/puzzles' && normalizedPath === '/puzzles/themes') return false;
   return (
     normalizedPath === href ||
     (href === '/puzzles' && normalizedPath.startsWith('/puzzles/')) ||

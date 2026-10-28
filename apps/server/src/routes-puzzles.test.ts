@@ -7,8 +7,10 @@ import {
   type JunglePuzzle,
   puzzleShortCode,
   XIANGQI_MOTIFS,
+  XIANGQI_TRAINING_TAGS,
   type XiangqiMotifId,
   type XiangqiPuzzle,
+  xiangqiPuzzleTrainingTags,
 } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { getPuzzleStore } from './puzzle-store.js';
@@ -370,6 +372,58 @@ test('puzzle list filters by every registered motif without changing summary ord
   assert.ok(hasNonemptySubset, 'the corpus must exercise a motif with matches and exclusions');
 });
 
+test('puzzle list filters by any trainer tag through theme=, and counts every tag', async () => {
+  const all = JSON.parse((await route('/api/puzzles')).body) as {
+    puzzles: Array<{ id: string; variant: string; motifs: string[]; tags: string[] }>;
+    tagCounts: Record<string, number>;
+  };
+  // Every tag is counted, zeros included, so the page can hide what is empty.
+  const ids = [...XIANGQI_MOTIFS.map((m) => m.id), ...XIANGQI_TRAINING_TAGS.map((t) => t.id)];
+  assert.deepEqual(Object.keys(all.tagCounts).sort(), [...ids].sort());
+
+  let exercised = 0;
+  for (const id of ids) {
+    const response = await route(`/api/puzzles?theme=${id}`);
+    assert.equal(response.status, 200, id);
+    const body = JSON.parse(response.body) as typeof all;
+    const expected = all.puzzles.filter((puzzle) => puzzle.tags.includes(id));
+    assert.deepEqual(body.puzzles, expected, id);
+    assert.equal(all.tagCounts[id], expected.length, id);
+    // The counts describe the pool before the filter.
+    assert.deepEqual(body.tagCounts, all.tagCounts, id);
+    if (expected.length > 0 && expected.length < all.puzzles.length) exercised += 1;
+  }
+  assert.ok(exercised >= 5, 'the corpus must exercise several tags with matches and exclusions');
+});
+
+test('trainer tags are derived at load, not read from the mined themes', async () => {
+  const all = JSON.parse((await route('/api/puzzles?variant=xiangqi')).body) as {
+    puzzles: Array<{ id: string; motifs: string[]; tags: string[] }>;
+  };
+  const byId = new Map(XIANGQI_PUZZLES.map((puzzle) => [puzzle.id, puzzle]));
+  for (const summary of all.puzzles) {
+    const puzzle = byId.get(summary.id);
+    assert.ok(puzzle, summary.id);
+    assert.deepEqual(summary.tags, [...summary.motifs, ...xiangqiPuzzleTrainingTags(puzzle)]);
+  }
+});
+
+test('theme= intersects motif= and rejects unknown tags', async () => {
+  const both = await route('/api/puzzles?motif=ma-hou-pao&theme=matein1');
+  assert.equal(both.status, 200);
+  const body = JSON.parse(both.body) as { puzzles: Array<{ tags: string[] }> };
+  for (const puzzle of body.puzzles) {
+    assert.ok(puzzle.tags.includes('ma-hou-pao') && puzzle.tags.includes('matein1'));
+  }
+  for (const theme of ['crushing', 'winning-material', 'MATEIN1', '__proto__', 'toString']) {
+    const response = await route(`/api/puzzles?theme=${encodeURIComponent(theme)}`);
+    assert.equal(response.status, 400, theme);
+    assert.deepEqual(JSON.parse(response.body), { error: 'invalid_theme' }, theme);
+  }
+  const empty = await route('/api/puzzles?theme=');
+  assert.deepEqual(JSON.parse(empty.body), JSON.parse((await route('/api/puzzles')).body));
+});
+
 test('puzzle list treats an empty motif like an omitted motif', async () => {
   const unfiltered = await route('/api/puzzles');
   const empty = await route('/api/puzzles?motif=');
@@ -402,8 +456,8 @@ test('puzzle list combines motif and variant filters while keeping parked puzzle
 
   const jungle = await route('/api/puzzles?variant=jungle&motif=ma-hou-pao');
   assert.equal(jungle.status, 200);
-  // `themes` (#376) carries the variant pool's counts; its own test covers it.
-  const { themes: _themes, ...jungleList } = JSON.parse(jungle.body);
+  // `themes` and `tagCounts` (#376) carry the variant pool's counts; their own tests cover them.
+  const { themes: _themes, tagCounts: _tagCounts, ...jungleList } = JSON.parse(jungle.body);
   assert.deepEqual(jungleList, { puzzles: [], attemptedIds: [] });
 
   const invalidMotif = await route('/api/puzzles?variant=jungle&motif=not-a-motif');

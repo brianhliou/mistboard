@@ -26,6 +26,8 @@ import {
   XIANGQI_SPEC_ID,
   type XiangqiMotifId,
   type XiangqiPuzzle,
+  type XiangqiTrainingTagId,
+  xiangqiPuzzleTrainingTags,
 } from '@mistboard/game';
 import {
   loadAllSeedPuzzles,
@@ -58,6 +60,11 @@ export type PuzzleStoreSnapshot = {
   // record it describes. The column #302 anticipates arrives with the SQL
   // band query that needs it. Only puzzles with at least one motif appear.
   motifsById: ReadonlyMap<string, readonly XiangqiMotifId[]>;
+  // Every tag the trainer filters by, per standard-xiangqi puzzle: its kill
+  // patterns plus mate-in-N, phase, goal and length, derived here for the same
+  // reason. The `themes` stored at mining time are not read, so a tag rule
+  // added later (matein4, 2026-10-28) covers the whole corpus on the next load.
+  tagsById: ReadonlyMap<string, readonly XiangqiTrainingTagId[]>;
   source: 'database' | 'seed';
 };
 
@@ -143,12 +150,19 @@ function buildSnapshot(
 ): PuzzleStoreSnapshot {
   const difficultyById = new Map<string, number>();
   const motifsById = new Map<string, readonly XiangqiMotifId[]>();
+  const tagsById = new Map<string, readonly XiangqiTrainingTagId[]>();
   for (const puzzle of puzzles) {
     if (puzzle.variant !== XIANGQI_SPEC_ID) continue;
+    // Read off the record without replaying it, so even a line that will not
+    // replay below is still filterable by mate, phase, goal and length.
+    tagsById.set(puzzle.id, xiangqiPuzzleTrainingTags(puzzle));
     try {
       difficultyById.set(puzzle.id, deriveXiangqiPuzzleDifficulty(puzzle).score);
       const motifs = detectXiangqiPuzzleMotifs(puzzle);
-      if (motifs.length > 0) motifsById.set(puzzle.id, motifs);
+      if (motifs.length > 0) {
+        motifsById.set(puzzle.id, motifs);
+        tagsById.set(puzzle.id, [...motifs, ...(tagsById.get(puzzle.id) ?? [])]);
+      }
     } catch (error) {
       // A puzzle whose line will not replay still has to serve; it simply
       // falls back to the depth-only seed rating at the call site.
@@ -162,6 +176,7 @@ function buildSnapshot(
     byId: new Map(puzzles.map((puzzle) => [puzzle.id, puzzle])),
     difficultyById,
     motifsById,
+    tagsById,
     source,
   };
 }

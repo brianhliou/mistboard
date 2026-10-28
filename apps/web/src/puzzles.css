@@ -2059,12 +2059,50 @@ a.puzzle-streak-chip:focus-visible {
     min-height: 52px;
   }
 }
-.puzzle-themes-index {
+.puzzle-themes-layout {
   box-sizing: border-box;
-  width: min(100%, 1120px);
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 32px;
+  width: min(100%, 1280px);
   margin: 0 auto;
   padding: 24px 16px 48px;
   color: var(--site-text);
+}
+
+/* Lichess's left column: the Puzzles menu, this page marked. */
+.puzzle-themes-side {
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  position: sticky;
+  top: 16px;
+  border-left: 1px solid var(--site-border-soft);
+}
+
+.puzzle-themes-side a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  margin-left: -1px;
+  border-left: 3px solid transparent;
+  color: var(--site-muted);
+  text-decoration: none;
+}
+
+.puzzle-themes-side a:hover {
+  color: var(--site-text);
+}
+
+.puzzle-themes-side a[aria-current="page"] {
+  border-left-color: var(--site-accent);
+  color: var(--site-heading);
+  font-weight: 600;
+}
+
+.puzzle-themes-index {
+  min-width: 0;
 }
 
 .puzzle-themes-index > p {
@@ -2072,34 +2110,54 @@ a.puzzle-streak-chip:focus-visible {
   line-height: 1.6;
 }
 
+.puzzle-themes-group {
+  margin-top: 32px;
+}
+
+.puzzle-themes-group h2 {
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--site-border-soft);
+  color: var(--site-heading);
+  font-size: 22px;
+}
+
 .puzzle-themes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-  gap: 16px;
-  margin-top: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .puzzle-theme-entry {
   min-width: 0;
-  padding: 18px;
   background: var(--site-panel);
   border: 1px solid var(--site-border);
   border-radius: 6px;
   overflow-wrap: anywhere;
 }
 
-.puzzle-theme-entry h2 {
-  margin: 0;
-  font-size: 19px;
+.puzzle-theme-entry:hover {
+  border-color: var(--site-accent);
 }
 
-.puzzle-theme-entry h2 a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
+.puzzle-theme-entry__link {
+  display: block;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 16px 18px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.puzzle-theme-entry h3 {
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 18px;
 }
 
 .puzzle-theme-entry p {
+  margin: 6px 0 0;
   line-height: 1.5;
 }
 
@@ -2109,6 +2167,37 @@ a.puzzle-streak-chip:focus-visible {
   font-size: 14px;
 }
 
+.puzzle-theme-count {
+  margin-top: 10px;
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  .puzzle-themes-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .puzzle-themes-side {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    border-left: 0;
+    border-bottom: 1px solid var(--site-border-soft);
+  }
+
+  .puzzle-themes-side a {
+    margin: 0 0 -1px;
+    padding: 0 12px;
+    border-left: 0;
+    border-bottom: 3px solid transparent;
+  }
+
+  .puzzle-themes-side a[aria-current="page"] {
+    border-bottom-color: var(--site-accent);
+  }
+}
+
 .puzzle-empty-links {
   display: flex;
   flex-wrap: wrap;
@@ -2116,8 +2205,7 @@ a.puzzle-streak-chip:focus-visible {
   margin-top: 16px;
 }
 
-.puzzle-empty-links a,
-.puzzle-themes-index > a {
+.puzzle-empty-links a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;

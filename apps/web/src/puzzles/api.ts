@@ -9,7 +9,7 @@
 import { browserTimeZone } from '../browser-time-zone.js';
 import { deviceIdForBrowser } from '../live-state.js';
 import type { PuzzleDetail, PuzzleMove, PuzzleState, PuzzleSummary } from './adapter.js';
-import type { PuzzleThemeCount } from './themes.js';
+import type { PuzzleThemeCount, PuzzleThemeOptions } from './themes.js';
 
 export type PuzzleAttempt =
   | {
@@ -77,6 +77,7 @@ export async function fetchPuzzleListWithAttempts(): Promise<{
   puzzles: PuzzleSummary[];
   attemptedIds: string[];
   themes: PuzzleThemeCount[];
+  tagCounts: PuzzleThemeOptions['tagCounts'];
 }> {
   const response = await fetch('/api/puzzles');
   if (!response.ok) throw new Error(`Puzzle list failed: ${response.status}`);
@@ -84,10 +85,17 @@ export async function fetchPuzzleListWithAttempts(): Promise<{
     puzzles?: PuzzleSummary[];
     attemptedIds?: unknown;
     themes?: PuzzleThemeCount[];
+    tagCounts?: unknown;
   };
   return {
     puzzles: Array.isArray(body.puzzles) ? body.puzzles : [],
     themes: Array.isArray(body.themes) ? body.themes : [],
+    // Absent from a server older than the tag filter; the themes then fall
+    // back to the motif counts alone.
+    tagCounts:
+      body.tagCounts && typeof body.tagCounts === 'object' && !Array.isArray(body.tagCounts)
+        ? (body.tagCounts as PuzzleThemeOptions['tagCounts'])
+        : {},
     attemptedIds: Array.isArray(body.attemptedIds)
       ? body.attemptedIds.filter((id): id is string => typeof id === 'string')
       : [],

@@ -15,7 +15,7 @@
  * types at the boundary, exactly like the live tenants do.
  */
 
-import { deepCloneJson, type XiangqiMotifId } from '@mistboard/game';
+import { deepCloneJson, type XiangqiMotifId, type XiangqiTrainingTagId } from '@mistboard/game';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import type { PuzzleVariant } from './variant-ids.js';
@@ -57,6 +57,11 @@ export type PuzzleSummary = {
   themes: string[];
   /** Named kill patterns (杀法) by id, standard-xiangqi mates only. */
   motifs: XiangqiMotifId[];
+  /**
+   * Every trainer tag (motifs plus mate-in-N, phase, goal, length), derived by
+   * the server at load. Absent from an older server: filter on `motifs` then.
+   */
+  tags?: XiangqiTrainingTagId[];
   solutionPlyCount: number;
   rating: number;
   ratingProvisional: boolean;

@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   attemptJunglePuzzleLine,
   attemptStandardXiangqiPuzzleLine,
+  isXiangqiTrainingTagId,
   JUNGLE_SPEC_ID,
   type JungleMove,
   type JunglePuzzle,
@@ -12,10 +13,12 @@ import {
   standardXiangqiPuzzleSideToMove,
   XIANGQI_MOTIFS,
   XIANGQI_SPEC_ID,
+  XIANGQI_TRAINING_TAGS,
   type XiangqiMotifId,
   type XiangqiMove,
   type XiangqiPuzzle,
   type XiangqiPuzzleSetupMove,
+  type XiangqiTrainingTagId,
 } from '@mistboard/game';
 import { currentAccountUser } from '../account-session.js';
 import { createAuthRateLimiter } from '../auth-rate-limit.js';
@@ -98,6 +101,11 @@ type PuzzleSummary = {
   themes: readonly string[];
   /** Named kill patterns (杀法) by id; empty outside standard-xiangqi mates. */
   motifs: readonly XiangqiMotifId[];
+  /**
+   * Every trainer tag, derived at load: the motifs plus mate-in-N, phase,
+   * goal and length. Empty outside standard xiangqi.
+   */
+  tags: readonly XiangqiTrainingTagId[];
   solutionPlyCount: number;
   rating: number;
   ratingProvisional: boolean;
@@ -271,20 +279,35 @@ export async function tryHandle(
       writeJson(response, 400, { error: 'invalid_motif' });
       return true;
     }
+    // `theme` takes any trainer tag (a kill pattern, mate-in-N, phase, goal or
+    // length); `motif` stays for the kill patterns alone. Both intersect.
+    const theme = parsePuzzleTrainingTag(parsedUrl.searchParams.get('theme'));
+    if (theme === 'invalid') {
+      writeJson(response, 400, { error: 'invalid_theme' });
+      return true;
+    }
     const store = await getPuzzleStore();
     const discoverable = discoverablePuzzles(store);
     const variantPuzzles = variant
       ? discoverable.filter((puzzle) => puzzle.variant === variant)
       : discoverable;
-    const puzzles = motif
-      ? variantPuzzles.filter((puzzle) => store.motifsById.get(puzzle.id)?.includes(motif))
-      : variantPuzzles;
+    const puzzles = variantPuzzles.filter(
+      (puzzle) =>
+        (!motif || store.motifsById.get(puzzle.id)?.includes(motif)) &&
+        (!theme || store.tagsById.get(puzzle.id)?.includes(theme)),
+    );
     // Counts describe the variant's whole discoverable pool, so selecting one
     // theme does not erase the other choices. Hidden/withheld puzzles never count.
     const counts = new Map<XiangqiMotifId, number>();
+    const tagCounts: Partial<Record<XiangqiTrainingTagId, number>> = {};
+    for (const id of XIANGQI_MOTIFS.map((m) => m.id)) tagCounts[id] = 0;
+    for (const tag of XIANGQI_TRAINING_TAGS) tagCounts[tag.id] = 0;
     for (const puzzle of variantPuzzles) {
       for (const id of store.motifsById.get(puzzle.id) ?? []) {
         counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+      for (const id of store.tagsById.get(puzzle.id) ?? []) {
+        tagCounts[id] = (tagCounts[id] ?? 0) + 1;
       }
     }
     const ratings = await listPuzzleRatingSummaries(puzzles.map((puzzle) => puzzle.id));
@@ -299,11 +322,12 @@ export async function tryHandle(
           puzzle,
           ratings.get(puzzle.id) ??
             seededPuzzleRatingSummary(puzzle.solution.length, store.difficultyById.get(puzzle.id)),
-          store.motifsById.get(puzzle.id) ?? [],
+          store,
         ),
       ),
       attemptedIds,
       themes: XIANGQI_MOTIFS.map((motif) => ({ ...motif, count: counts.get(motif.id) ?? 0 })),
+      tagCounts,
     });
     return true;
   }
@@ -539,7 +563,7 @@ async function rampPool(variant: PublicPuzzleVariant): Promise<PuzzleSummary[]> 
       p,
       ratings.get(p.id) ??
         seededPuzzleRatingSummary(p.solution.length, store.difficultyById.get(p.id)),
-      store.motifsById.get(p.id) ?? [],
+      store,
     ),
   );
 }
@@ -722,10 +746,15 @@ function parsePuzzleMotif(value: string | null): XiangqiMotifId | null | 'invali
   return XIANGQI_MOTIFS.find((motif) => motif.id === value)?.id ?? 'invalid';
 }
 
+function parsePuzzleTrainingTag(value: string | null): XiangqiTrainingTagId | null | 'invalid' {
+  if (value === null || value === '') return null;
+  return isXiangqiTrainingTagId(value) ? value : 'invalid';
+}
+
 function puzzleSummary(
   puzzle: PublicPuzzle,
   rating: { rating: number; provisional: boolean },
-  motifs: readonly XiangqiMotifId[],
+  store: Pick<PuzzleStoreSnapshot, 'motifsById' | 'tagsById'>,
 ): PuzzleSummary {
   return {
     id: puzzle.id,
@@ -734,7 +763,8 @@ function puzzleSummary(
     sideToMove: puzzleSideToMove(puzzle),
     goal: puzzle.goal,
     themes: puzzle.themes,
-    motifs,
+    motifs: store.motifsById.get(puzzle.id) ?? [],
+    tags: store.tagsById.get(puzzle.id) ?? [],
     solutionPlyCount: puzzle.solution.length,
     rating: rating.rating,
     ratingProvisional: rating.provisional,
@@ -751,7 +781,7 @@ async function puzzleDetail(puzzle: PublicPuzzle): Promise<PuzzleDetail> {
       stored
         ? { rating: stored.rating, provisional: stored.provisional }
         : seededPuzzleRatingSummary(puzzle.solution.length, store.difficultyById.get(puzzle.id)),
-      store.motifsById.get(puzzle.id) ?? [],
+      store,
     ),
     initial: puzzle.initial,
     ...(puzzle.variant === XIANGQI_SPEC_ID && puzzle.sourceGame

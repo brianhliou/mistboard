@@ -735,8 +735,12 @@ const DETECTORS: Record<XiangqiMotifId, Detector> = {
   // A solver horse move uncovers a chariot check along the line it left.
   'ba-huang-ma': ({ plies }) => plies.some((p) => discoveredCheck(p, 'horse', 'chariot')),
 
-  // Two chariots on adjacent lines shear the general between them: the last
-  // two solver moves are checks by different chariots, the second of them mate.
+  // Two chariots on adjacent parallel lines shear the general between them:
+  // the last two solver moves are checks by different chariots, the second of
+  // them mate. The mating chariot checks along a file (or rank) and the other
+  // stands on the file (or rank) beside the general's, so the pair holds two
+  // neighbouring parallel lines. Two chariots merely one rank or one file
+  // apart, on lines that cross, are not the pattern.
   'shuang-ju-cuo': ({ final, plies }) => {
     const solverPlies = plies.filter((p) => p.solver);
     const last = solverPlies.at(-1);
@@ -748,11 +752,10 @@ const DETECTORS: Record<XiangqiMotifId, Detector> = {
     const a = coordOf(last.move.to);
     const b = final.board[prev.move.to]?.role === 'chariot' ? coordOf(prev.move.to) : null;
     if (!b) return false;
+    const g = coordOf(final.general);
     return (
-      (a.file === b.file && Math.abs(a.rank - b.rank) === 1) ||
-      (a.rank === b.rank && Math.abs(a.file - b.file) === 1) ||
-      Math.abs(a.rank - b.rank) === 1 ||
-      Math.abs(a.file - b.file) === 1
+      (a.file === g.file && Math.abs(b.file - g.file) === 1) ||
+      (a.rank === g.rank && Math.abs(b.rank - g.rank) === 1)
     );
   },
 

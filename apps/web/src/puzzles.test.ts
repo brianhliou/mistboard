@@ -17,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { displayPreferenceStorageKey } from './display-preferences.js';
 import { playSound } from './live-sound.js';
 import { puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
-import { loadPuzzleTheme } from './puzzles/themes.js';
+import { loadPuzzleTheme, PUZZLE_THEME_MIN_PATTERN_COUNT } from './puzzles/themes.js';
 import {
   mountPuzzleSolver,
   mountPuzzles,
@@ -92,7 +92,8 @@ describe('puzzles route', () => {
   const BLACK_MATE = minedMate('black');
   const themeOptions = XIANGQI_MOTIFS.map((motif) => ({
     ...motif,
-    count: motif.id === 'ma-hou-pao' ? 2 : 0,
+    // Above PUZZLE_THEME_MIN_PATTERN_COUNT, so the picker lists it.
+    count: motif.id === 'ma-hou-pao' ? 24 : 0,
     literal: 'cannon behind the horse',
     gloss: 'The horse pens the general in and screens the cannon behind it.',
   }));
@@ -225,15 +226,146 @@ describe('puzzles route', () => {
     );
     const root = document.createElement('div');
     await mountPuzzles(root, 'themes');
-    expect(root.querySelectorAll('[data-puzzle-theme-card]')).toHaveLength(XIANGQI_MOTIFS.length);
+    // An older server sends no tagCounts: the page still lists the patterns.
+    expect(root.querySelectorAll('[data-puzzle-theme-card]')).toHaveLength(1);
     const link = root.querySelector<HTMLAnchorElement>('a[href="/puzzles?theme=ma-hou-pao"]');
     expect(link?.textContent).toContain('Cannon behind the horse');
     expect(root.textContent).toContain('马后炮');
     expect(root.textContent).toContain('mǎ hòu pào');
-    expect(root.textContent).toContain('2 puzzles');
+    expect(root.textContent).toContain('24 puzzles');
     expect(root.textContent).toContain('The horse pens the general in');
     expect(root.querySelector('.puzzle-xiangqi-board')).toBeNull();
     expect(root.querySelector('a[href="/puzzles?theme=men-gong"]')).toBeNull();
+  });
+
+  it('groups the themes page like lichess, with the pattern minimum and no empty entries', async () => {
+    const motifCount = (id: string) =>
+      ({ 'ma-hou-pao': 30, 'men-gong': PUZZLE_THEME_MIN_PATTERN_COUNT, 'tie-men-shuan': 90 })[id] ??
+      (id === 'chong-pao' ? PUZZLE_THEME_MIN_PATTERN_COUNT - 1 : 0);
+    const tagCounts = {
+      ...Object.fromEntries(XIANGQI_MOTIFS.map((m) => [m.id, motifCount(m.id)])),
+      matein1: 40,
+      matein2: 25,
+      matein3: 9,
+      matein4: 0,
+      opening: 5,
+      middlegame: 70,
+      endgame: 30,
+      checkmate: 74,
+      winning: 31,
+      'one-move': 50,
+      short: 30,
+      long: 25,
+      'very-long': 0,
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        json({
+          puzzles: [],
+          themes: XIANGQI_MOTIFS.map((m) => ({ ...m, count: motifCount(m.id) })),
+          tagCounts,
+        }),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, 'themes');
+    const groups = [...root.querySelectorAll<HTMLElement>('[data-puzzle-theme-group]')];
+    expect(groups.map((g) => g.dataset.puzzleThemeGroup)).toEqual([
+      'motif',
+      'mate',
+      'phase',
+      'goal',
+      'length',
+    ]);
+    expect(groups.map((g) => g.querySelector('h2')?.textContent)).toEqual([
+      'Mate patterns',
+      'Mates',
+      'Phases',
+      'Goals',
+      'Lengths',
+    ]);
+    const cards = (group: HTMLElement) =>
+      [...group.querySelectorAll<HTMLElement>('[data-puzzle-theme-card]')].map(
+        (card) => card.dataset.puzzleThemeCard,
+      );
+    // Patterns at the minimum, most puzzles first; one short of it is hidden.
+    expect(cards(groups[0]!)).toEqual(['tie-men-shuan', 'ma-hou-pao', 'men-gong']);
+    // Zero counts are hidden; any count above zero shows outside the patterns.
+    expect(cards(groups[1]!)).toEqual(['matein1', 'matein2', 'matein3']);
+    expect(cards(groups[2]!)).toEqual(['opening', 'middlegame', 'endgame']);
+    expect(cards(groups[3]!)).toEqual(['checkmate', 'winning']);
+    expect(cards(groups[4]!)).toEqual(['one-move', 'short', 'long']);
+    const mateIn1 = root.querySelector<HTMLAnchorElement>('a[href="/puzzles?theme=matein1"]');
+    expect(mateIn1?.textContent).toContain('Mate in 1');
+    expect(mateIn1?.textContent).toContain('40 puzzles');
+    expect(root.querySelector('[data-puzzle-theme-card="endgame"]')?.textContent).toContain(
+      '14 or fewer pieces',
+    );
+    // The hanzi · pinyin line sits on mate patterns only.
+    expect(root.querySelector('[data-puzzle-theme-card="matein1"] .puzzle-theme-name')).toBeNull();
+    expect(
+      root.querySelector('[data-puzzle-theme-card="men-gong"] .puzzle-theme-name [lang="zh-Hans"]'),
+    ).not.toBeNull();
+
+    // The sidebar is the Puzzles menu, this page current.
+    const side = root.querySelector<HTMLElement>('.puzzle-themes-side');
+    expect(
+      [...(side?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map((a) => [
+        a.getAttribute('href'),
+        a.textContent,
+        a.getAttribute('aria-current'),
+      ]),
+    ).toEqual([
+      ['/puzzles', 'Puzzles', null],
+      ['/puzzles/themes', 'Puzzle Themes', 'page'],
+      ['/puzzles?mode=streak', 'Puzzle Streak', null],
+    ]);
+  });
+
+  it('drills any tag, not only patterns, from the URL and the grouped picker', async () => {
+    const puzzles = XIANGQI_PUZZLES.slice(0, 3);
+    const summaries = puzzles.map((puzzle, index) => ({
+      ...publicSummary(puzzle),
+      tags: index === 1 ? ['matein2', 'middlegame', 'checkmate', 'short'] : ['endgame'],
+    }));
+    window.history.replaceState(null, '', '/puzzles?theme=matein2');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles')
+          return json({
+            puzzles: summaries,
+            themes: themeOptions,
+            tagCounts: { 'ma-hou-pao': 24, matein2: 1, middlegame: 1, endgame: 2, short: 1 },
+          });
+        const index = puzzles.findIndex((puzzle) => url === `/api/puzzles/${puzzle.id}`);
+        return index >= 0
+          ? json({ puzzle: { ...publicDetail(puzzles[index]!), ...summaries[index] } })
+          : json({}, 404);
+      }),
+    );
+    stubWindowLocalStorage(memoryStorage());
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    await vi.waitFor(() => expect(root.textContent).toContain('0 solved of 1'));
+    const picker = root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')!;
+    expect(picker.value).toBe('matein2');
+    expect([...picker.querySelectorAll('optgroup')].map((g) => g.label)).toEqual([
+      'Mate patterns',
+      'Mates',
+      'Phases',
+      'Lengths',
+    ]);
+    expect(
+      [...picker.querySelectorAll<HTMLOptionElement>('optgroup option')].map((o) => o.value),
+    ).toEqual(['ma-hou-pao', 'matein2', 'middlegame', 'endgame', 'short']);
+    picker.value = 'endgame';
+    picker.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(root.textContent).toContain('0 solved of 2'));
+    expect(loadPuzzleTheme()).toBe('endgame');
   });
 
   it('honors a theme URL over storage and offers recovery from an empty theme', async () => {
@@ -311,7 +443,7 @@ describe('puzzles route', () => {
       onVariantChange: vi.fn(),
       onAutoNextChange: vi.fn(),
       onRatedChange: vi.fn(),
-      theme: { id: null, options: themeOptions, onChange },
+      theme: { id: null, options: { motifs: themeOptions, tagCounts: {} }, onChange },
     });
     const field = rows.find((row) => row.dataset.puzzleMenuRow === 'theme')!;
     const select = field.querySelector<HTMLSelectElement>('[data-puzzle-menu="theme"]')!;
