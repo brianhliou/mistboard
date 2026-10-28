@@ -20,8 +20,6 @@ function hrefs(root: HTMLElement): string[] {
 // A Misty card with no public repo link, each with its reason. The test fails
 // once a listed card gets one, so the list cannot go stale.
 const MISTY_WITHOUT_PUBLIC_REPO: Readonly<Record<string, string>> = {
-  // The Xiangqi Mahjong engine is not published yet (#725).
-  'xiangqi-mahjong': '#725',
   // github.com/brianhliou/misty is the Fog Chess engine only: "The variant
   // siblings and the research lab stay private" (articles/content/misty.ts).
   // No public repo carries the Fog Xiangqi engine.
@@ -209,9 +207,10 @@ describe('/champions', () => {
     expect(credits(open('jungle-flip'))).toEqual([
       'Code: misty-flip-jungle https://github.com/brianhliou/misty-flip-jungle',
     ]);
-    for (const game of ['dark-xiangqi', 'xiangqi-mahjong']) {
-      expect(open(game).querySelector('.champions-credits'), game).toBeNull();
-    }
+    expect(credits(open('xiangqi-mahjong'))).toEqual([
+      'Code: misty-xiangqi-mahjong https://github.com/brianhliou/misty-xiangqi-mahjong',
+    ]);
+    expect(open('dark-xiangqi').querySelector('.champions-credits')).toBeNull();
     // Every credit opens off-site; the profile links stay on Mistboard.
     for (const a of page.querySelectorAll<HTMLAnchorElement>('.champions-credits a')) {
       expect(a.getAttribute('href')).toMatch(/^https:\/\//);

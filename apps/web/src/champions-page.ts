@@ -258,7 +258,12 @@ export const TITLES: readonly Title[] = [
     credits: mistyRepo('misty-flip-jungle'),
   },
   // No public repo yet (#725).
-  { gameId: 'xiangqi-mahjong', nameKey: 'variant.xiangqiMahjong.name', ...MISTY },
+  {
+    gameId: 'xiangqi-mahjong',
+    nameKey: 'variant.xiangqiMahjong.name',
+    ...MISTY,
+    credits: mistyRepo('misty-xiangqi-mahjong'),
+  },
 ];
 
 export const CHAMPIONS = TITLES.filter((title) => title.reign);
