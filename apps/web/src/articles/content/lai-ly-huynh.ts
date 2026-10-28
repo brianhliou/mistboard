@@ -274,6 +274,7 @@ export const laiLyHuynhArticle: Article = {
   homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: "Lại Lý Huynh 赖理兄",
   seoTitle: "Lại Lý Huynh 赖理兄, the world xiangqi champion: games and analysis",

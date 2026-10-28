@@ -643,5 +643,12 @@ export type Article = ArticleBase &
         // rules, history, players, results). Drives the /blog?topic= chips
         // (ARTICLE_TOPICS in articles.ts), so a reader can keep one kind.
         topic?: 'engineering';
+        // The game a player post is about, when it is standard xiangqi (not a
+        // xiangqi variant such as jieqi, banqi, fog or duck). Read next keeps a
+        // xiangqi deep dive (`homeRow: 'deep-dives'`) among posts marked here,
+        // so an unmarked post never fills one's footer. Every deep dive must
+        // name its game (articles.test.ts); widen the union when a deep dive on
+        // another game needs the same footer.
+        game?: 'xiangqi';
       }
   );

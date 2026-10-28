@@ -1175,6 +1175,12 @@ type BlogArticle = Extract<Article, { kind: 'article' }>;
 // article shows, so it is set on the banqi engine write-up and unset on the
 // xiangqi champions list, and ranking by it demoted a xiangqi article below a
 // banqi one on a xiangqi page.
+//
+// A xiangqi deep dive (a player page or game deep dive marked `game: 'xiangqi'`)
+// is stricter: its footer offers only xiangqi player posts, other deep dives
+// first, then the rest, and never another variant or an engineering post, even
+// when that leaves fewer than three cards (Brian, 2026-10-28: a player page
+// ended on a fortress/atomic post and a jieqi post).
 function relatedArticles(article: BlogArticle): BlogArticle[] {
   // A content-language page walks its OWN language's ring. `isArticleListedInThisEnv`
   // rejects everything with `sourceLang` set, so an unqualified pool leaves a
@@ -1186,13 +1192,15 @@ function relatedArticles(article: BlogArticle): BlogArticle[] {
     article.sourceLang
       ? candidate.sourceLang === article.sourceLang && isArticleVisibleInThisEnv(candidate)
       : isArticleListedInThisEnv(candidate);
+  const xiangqiDeepDive = isXiangqiDeepDive(article);
   const pool = articles
     .filter(
       (candidate): candidate is BlogArticle =>
         candidate.kind === 'article' &&
         candidate.slug !== article.slug &&
         candidate.publisher === article.publisher &&
-        sameLanguage(candidate),
+        sameLanguage(candidate) &&
+        (!xiangqiDeepDive || isXiangqiPlayerPost(candidate)),
     )
     .sort(compareArticlesNewestFirst);
   if (pool.length === 0) return [];
@@ -1212,9 +1220,22 @@ function relatedArticles(article: BlogArticle): BlogArticle[] {
     { length: ordered.length - 1 },
     (_, i) => ordered[(start + 1 + i) % ordered.length]!,
   ).filter((candidate) => !chosenSlugs.has(candidate.slug));
+  if (xiangqiDeepDive) {
+    const deepDives = ring.filter(isXiangqiDeepDive);
+    const rest = ring.filter((candidate) => !isXiangqiDeepDive(candidate));
+    return [...chosen, ...deepDives, ...rest].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
+  }
   const sameTopic = ring.filter((candidate) => candidate.topic === article.topic);
   const otherTopic = ring.filter((candidate) => candidate.topic !== article.topic);
   return [...chosen, ...sameTopic, ...otherTopic].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
+}
+
+function isXiangqiPlayerPost(article: BlogArticle): boolean {
+  return article.game === 'xiangqi' && article.topic !== 'engineering';
+}
+
+function isXiangqiDeepDive(article: BlogArticle): boolean {
+  return article.homeRow === 'deep-dives' && isXiangqiPlayerPost(article);
 }
 
 // Left rail on rules surfaces (pychess variant-page grammar): every listed

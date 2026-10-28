@@ -78,6 +78,7 @@ export const shortestStalemateXiangqiArticle: Article = {
   slug: 'shortest-stalemate-xiangqi',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: 'The Shortest Xiangqi Stalemate We Know',
   cardTitle: 'A 21-Ply Xiangqi Stalemate',

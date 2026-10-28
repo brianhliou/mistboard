@@ -36,6 +36,7 @@ export const generalBlunderChallengeArticle: Article = {
   slug: 'general-blunder-challenge',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   title: 'Can you make General Blunder win?',
   cardTitle: 'Make General Blunder win',
   seoTitle: 'The General Blunder challenge: draw or lose to a xiangqi bot that tries to lose',
