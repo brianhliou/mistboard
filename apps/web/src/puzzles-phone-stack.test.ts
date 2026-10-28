@@ -160,6 +160,17 @@ describe('puzzle phone first screen', () => {
     );
   });
 
+  // The session row (this visit's ✓/✗ chips) must not take height from the
+  // board: on an iPhone 13 it drew the board 352px wide instead of 390. It
+  // gets no chrome budget of its own, and its negative margin cancels its
+  // height, so it follows the controls and the board keeps main's width.
+  it('gives the session row none of the board budget', () => {
+    expect(portraitBlock.match(/--puzzle-stack-chrome: \d+px;/g)).toHaveLength(1);
+    expect(portraitBlock).toMatch(
+      /\.puzzles-shell \.puzzle-session-chips \{ --puzzle-session-row-height: 42px; flex: none; flex-wrap: nowrap; box-sizing: border-box; height: var\(--puzzle-session-row-height\); margin-bottom: calc\(-1 \* var\(--puzzle-session-row-height\)\);/,
+    );
+  });
+
   // Measured in the browser on 2026-10-20 (unsolved, after a miss with Skip,
   // solved with the thumbs, solution revealed; scrollHeight == innerHeight in
   // all 16): site bar 52px, arrows 46px, move strip 34px, prompt strip 100px.
