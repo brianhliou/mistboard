@@ -6,6 +6,7 @@ import {
   type XiangqiMove,
 } from '@mistboard/game';
 import {
+  englishSourcePlayerName,
   type PuzzleSourceGameRow,
   puzzleDetailSourceFields,
   resetPuzzleSetupMoveCacheForTests,
@@ -131,4 +132,30 @@ test('a loader error fails soft and is retried on the next request', async () =>
   const retried = await puzzleDetailSourceFields(puzzle('xq_e'), async () => row());
   assert.ok(retried.setupMove);
   assert.equal(retried.history?.length, 3);
+});
+
+test('Chinese event and names get English forms beside the originals', async () => {
+  resetPuzzleSetupMoveCacheForTests();
+  const stored = puzzle('xq_zh', 4);
+  stored.sourceGame.event = '2026年全国象棋团体赛';
+  const fields = await puzzleDetailSourceFields(stored, async () =>
+    row({ redNameRaw: '山东省棋牌运动管理中心 黄蕾蕾', blackNameRaw: '金州 Son X Nguyen' }),
+  );
+  const source = fields.sourceGame;
+  assert.equal(source?.event, '2026年全国象棋团体赛');
+  assert.equal(source?.eventEn, '2026 National Xiangqi Team Championship');
+  assert.equal(source?.redName, '山东省棋牌运动管理中心 黄蕾蕾');
+  assert.equal(source?.redNameEn, 'Huang Leilei (Shandong Board Games Centre)');
+  assert.equal(source?.blackNameEn, 'Son X Nguyen (Golden State)');
+  // Persistence off translates the stored attribution too.
+  const off = await puzzleDetailSourceFields(
+    { ...stored, sourceGame: { ...stored.sourceGame, redName: '许银川' } },
+    null,
+  );
+  assert.equal(off.sourceGame?.redNameEn, 'Xu Yinchuan');
+});
+
+test('an English name needs no English form', () => {
+  assert.equal(englishSourcePlayerName('HTown David Nguyen'), undefined);
+  assert.equal(englishSourcePlayerName('越南 阮成保'), 'Nguyễn Thành Bảo (Vietnam)');
 });

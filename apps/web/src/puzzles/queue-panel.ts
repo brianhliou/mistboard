@@ -293,8 +293,12 @@ export function sourceGameLines(
   const lines: HTMLElement[] = [sourceGameHeaderLine(source)];
   if (source.redName !== undefined || source.blackName !== undefined) {
     lines.push(
-      sourceGamePlayerLine('red', source.redName, source.result),
-      sourceGamePlayerLine('black', source.blackName, source.result),
+      sourceGamePlayerLine('red', sourceText(source.redName, source.redNameEn), source.result),
+      sourceGamePlayerLine(
+        'black',
+        sourceText(source.blackName, source.blackNameEn),
+        source.result,
+      ),
     );
   }
   if (source.attribution) lines.push(sourceCreditLine(source.attribution));
@@ -339,10 +343,26 @@ function sourceGameHeaderLine(source: NonNullable<PuzzleSummary['sourceGame']>):
   return line;
 }
 
+const CJK = /[\p{Script=Han}\u3000-\u303f\uff00-\uffef]/u;
+
+// The archive's event and player strings are Chinese; the server sends an
+// English form beside each (the broadcast translators). English pages show
+// that form and never the Chinese: with no English form, a Chinese string is
+// left out (the line falls back to "From game" or the side's colour). The
+// Chinese pages keep the original.
+export function sourceText(
+  original: string | undefined,
+  english: string | undefined,
+): string | undefined {
+  if (currentLocale() !== 'en') return original;
+  if (english && english.length > 0) return english;
+  return original && !CJK.test(original) ? original : undefined;
+}
+
 // "From game · <event> (<year>)" — event and year are both optional.
 function sourceGameHeader(source: NonNullable<PuzzleSummary['sourceGame']>): string {
   const year = source.playedOn?.slice(0, 4);
-  const parts = [source.event, year ? `(${year})` : undefined].filter(
+  const parts = [sourceText(source.event, source.eventEn), year ? `(${year})` : undefined].filter(
     (part): part is string => part !== undefined && part.length > 0,
   );
   return parts.length > 0
