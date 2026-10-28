@@ -1,6 +1,7 @@
 import type { GameEvent } from '@mistboard/game';
 import './landing-play.css';
 import './landing.css';
+import './hover-grammar.css';
 import './game-route.css';
 import {
   buildHomeArticleCards,
@@ -909,6 +910,7 @@ function appendLinkedTagline(target: HTMLElement, tagline: string, href: string)
   const boundary = useDot ? dotBoundary : fullStopBoundary;
   if (boundary < 0) {
     const fallback = document.createElement('a');
+    fallback.className = 'hover-link';
     fallback.href = href;
     fallback.textContent = tagline;
     target.append(fallback);
@@ -920,6 +922,7 @@ function appendLinkedTagline(target: HTMLElement, tagline: string, href: string)
   const linkedText = tagline.slice(linkStart);
   target.append(document.createTextNode(useDot ? lead : `${lead} `));
   const link = document.createElement('a');
+  link.className = 'hover-link';
   link.href = href;
   link.textContent = linkedText;
   target.append(link);

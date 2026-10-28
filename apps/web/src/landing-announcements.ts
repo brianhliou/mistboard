@@ -1,5 +1,6 @@
 import './site-box.css';
 import './landing-announcements.css';
+import './hover-grammar.css';
 import { localizeAnnouncement } from './announcement-i18n.js';
 import { type Announcement, announcementSlug, announcements } from './announcements.js';
 import { t } from './i18n/catalog.js';
@@ -65,8 +66,15 @@ function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
   // From `source`: the slug is built from the English headline so one anchor
   // works in every locale (announcementSlug). `entry` is already translated.
   const entryHref = `${localizedHref('/feed', locale)}#${announcementSlug(source)}`;
-  const row = document.createElement('article');
-  row.className = `landing-news-update landing-news-update-${entry.kind}`;
+  // The whole row is one link (list-row hover grammar, hover-grammar.css): it
+  // was a date link over a headline link, two targets with two hovers that
+  // went to the same place. The headline links to this entry ON /feed, not to
+  // the feature it announces: the row clamps its body to one line, so a reader
+  // who clicks is asking to read the rest, not to be dropped into /import.
+  // /feed renders the full body with the authored CTA inline.
+  const row = document.createElement('a');
+  row.className = `landing-news-update landing-news-update-${entry.kind} landing-news-link hover-row`;
+  row.href = entryHref;
   row.dataset.announcementKind = entry.kind;
 
   const marker = document.createElement('span');
@@ -79,40 +87,27 @@ function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
   const content = document.createElement('div');
   content.className = 'landing-news-content';
 
-  // Match the Lichess lobby feed: the relative date is a link to the full
-  // archive, while hovering it exposes the exact calendar date.
-  const dateLink = document.createElement('a');
-  dateLink.className = 'landing-news-date';
-  dateLink.href = entryHref;
-  dateLink.title = formatAnnouncementDate(entry.date, true, locale);
-  const date = document.createElement('time');
-  date.dateTime = entry.date;
-  date.textContent = formatAnnouncementRelativeDate(entry.date, locale);
-  dateLink.append(date);
+  // The relative date stays the row's green timeline mark; hovering it still
+  // shows the exact calendar date.
+  const date = document.createElement('span');
+  date.className = 'landing-news-date';
+  date.title = formatAnnouncementDate(entry.date, true, locale);
+  const time = document.createElement('time');
+  time.dateTime = entry.date;
+  time.textContent = formatAnnouncementRelativeDate(entry.date, locale);
+  date.append(time);
 
-  // The headline links to this entry ON /feed, not to the feature it announces.
-  // The row clamps its body to one line, so every row ends in an ellipsis, and
-  // a reader who clicks a truncated headline is asking to read the rest, not to
-  // be dropped into /import. /feed renders the full body with the authored CTA
-  // inline, so the feature is still one click away, from a place where the
-  // reader has the whole update in front of them.
-  //
-  // It used to link straight to entry.href, and the only route to the full text
-  // was the small uppercase date. That inverted the affordances: the least
-  // prominent element in the row was the one that did what the row looked like
-  // it would do.
   const headline = document.createElement('p');
-  headline.className = 'landing-news-headline';
-  const link = document.createElement('a');
-  link.className = 'landing-news-link';
-  link.href = entryHref;
-  link.textContent = entry.headline;
-  headline.append(link);
-  content.append(dateLink, headline);
+  headline.className = 'landing-news-headline hover-title';
+  headline.textContent = entry.headline;
+  content.append(date, headline);
 
   if (entry.body) {
+    // Out of the link's accessible name, which reads date then headline: the
+    // body is a one-line clamp of the text /feed shows in full.
     const body = document.createElement('p');
     body.className = 'landing-news-body';
+    body.setAttribute('aria-hidden', 'true');
     body.textContent = entry.body;
     content.append(body);
   }
@@ -123,7 +118,7 @@ function renderFeedEntry(source: Announcement, locale: Locale): HTMLElement {
 
 function renderMoreRow(locale: Locale): HTMLElement {
   const row = document.createElement('a');
-  row.className = 'landing-news-update landing-news-more';
+  row.className = 'landing-news-update landing-news-more hover-link-host';
   row.href = localizedHref('/feed', locale);
 
   const marker = document.createElement('span');
@@ -137,7 +132,7 @@ function renderMoreRow(locale: Locale): HTMLElement {
   const content = document.createElement('div');
   content.className = 'landing-news-content landing-news-more-content';
   const label = document.createElement('span');
-  label.className = 'landing-news-more-label';
+  label.className = 'landing-news-more-label hover-link-text';
   label.textContent = t('site.more', {}, locale);
   content.append(label);
 

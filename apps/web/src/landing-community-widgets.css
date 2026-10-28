@@ -53,7 +53,8 @@
 /* A wide, short box (the stacked layout below 1240px: full column width at the
    20em band height) holds six studies two by three, so no grid cell sits
    empty. Zebra follows the grid's rows, not the DOM's alternation, which
-   would stripe the columns. */
+   would stripe the columns. The stripes set --site-box-row-bg (site-box.css),
+   so the hover tint still wins on every cell. */
 @container landing-studies (min-width: 520px) {
   .landing-study-widget .site-box-body {
     display: grid;
@@ -76,16 +77,12 @@
     height: 62px;
   }
 
-  .landing-study-widget
-    .site-box-body
-    > .site-box-row.landing-study-row:nth-child(4n + 2):not(:hover, :focus-visible) {
-    background: transparent;
+  .landing-study-widget .site-box-body > .site-box-row.landing-study-row:nth-child(4n + 2) {
+    --site-box-row-bg: transparent;
   }
 
-  .landing-study-widget
-    .site-box-body
-    > .site-box-row.landing-study-row:nth-child(4n + 3):not(:hover, :focus-visible) {
-    background: var(--site-zebra);
+  .landing-study-widget .site-box-body > .site-box-row.landing-study-row:nth-child(4n + 3) {
+    --site-box-row-bg: var(--site-zebra);
   }
 }
 

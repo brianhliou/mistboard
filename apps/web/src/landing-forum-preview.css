@@ -69,11 +69,6 @@
   font-weight: 600;
 }
 
-.landing-forum-topic:hover .landing-forum-topic-title,
-.landing-forum-topic:focus-visible .landing-forum-topic-title {
-  text-decoration: underline;
-}
-
 /* Latest post's opening words (lichess lobby forum shape): body ink, one line
    (two until 2026-10-27, when five topics had to fit a flatter band 3), so a
    topic row carries what was actually said, not just its title. */
