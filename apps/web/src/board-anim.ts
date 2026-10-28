@@ -338,12 +338,67 @@ type Animatable = Element & {
  * outlives it. Nothing moves before or after the turn.
  * Returns false (no-op) at duration 0 or without WAAPI (happy-dom/jsdom).
  */
+/**
+ * A tile's thickness for the turn-over (the ?tile=3d spike): edge-on, a band
+ * `2 * halfWidth` long and `depth` thick shows where a flat disc would be a
+ * hairline. `fills` stripe the band across its thickness; `stroke` outlines it.
+ */
+export interface PieceFlipEdge {
+  halfWidth: number;
+  depth: number;
+  fills: readonly string[];
+  stroke?: string;
+}
+
+/** The edge band, across the turn's axis: lying flat for Lift, upright otherwise. */
+export function pieceFlipEdgeMarkup(
+  center: { x: number; y: number },
+  edge: PieceFlipEdge,
+  style: PieceFlipStyle,
+): string {
+  const across = style === 'lift';
+  const n = Math.max(1, edge.fills.length);
+  const t = edge.depth / n;
+  const stripes = edge.fills.map((fill, i) => {
+    const off = -edge.depth / 2 + i * t;
+    return across
+      ? `<rect x="${center.x - edge.halfWidth}" y="${center.y + off}" width="${2 * edge.halfWidth}" height="${t}" fill="${fill}"/>`
+      : `<rect x="${center.x + off}" y="${center.y - edge.halfWidth}" width="${t}" height="${2 * edge.halfWidth}" fill="${fill}"/>`;
+  });
+  const r = edge.depth / 2;
+  const outline = edge.stroke
+    ? across
+      ? `<rect x="${center.x - edge.halfWidth}" y="${center.y - r}" width="${2 * edge.halfWidth}" height="${edge.depth}" rx="${r}" fill="none" stroke="${edge.stroke}" stroke-width="1"/>`
+      : `<rect x="${center.x - r}" y="${center.y - edge.halfWidth}" width="${edge.depth}" height="${2 * edge.halfWidth}" rx="${r}" fill="none" stroke="${edge.stroke}" stroke-width="1"/>`
+    : '';
+  return stripes.join('') + outline;
+}
+
+/** The edge shows as the face goes edge-on and is gone again as it lands. */
+export function pieceFlipEdgeKeyframes(style: PieceFlipStyle): Keyframe[] {
+  const s = (k: number) => (style === 'lift' ? `scaleY(${k})` : `scaleX(${k})`);
+  if (style === 'flat') {
+    return [
+      { transform: s(0), offset: 0, easing: 'ease-in' },
+      { transform: s(1), offset: 0.5, easing: 'ease-out' },
+      { transform: s(0), offset: 1 },
+    ];
+  }
+  return [
+    { transform: s(0), offset: 0 },
+    { transform: s(0), offset: 0.2, easing: 'ease-in' },
+    { transform: s(1), offset: 0.5, easing: 'ease-out' },
+    { transform: s(0), offset: 0.8 },
+    { transform: s(0), offset: 1 },
+  ];
+}
+
 export function flipSvgPiece(
   slot: Element,
   center: { x: number; y: number },
   backMarkup: string,
   durationMs: number,
-  opts: { delayMs?: number; style?: PieceFlipStyle } = {},
+  opts: { delayMs?: number; style?: PieceFlipStyle; edge?: PieceFlipEdge } = {},
 ): boolean {
   if (durationMs <= 0) return false;
   const target = slot as Animatable;
@@ -352,7 +407,9 @@ export function flipSvgPiece(
   if (delay === 0 && typeof target.getAnimations === 'function') {
     for (const animation of target.getAnimations()) animation.cancel();
   }
-  const { turn: turnFrames, lift: liftFrames } = pieceFlipKeyframes(opts.style ?? pieceFlipStyle());
+  const style = opts.style ?? pieceFlipStyle();
+  const { turn: turnFrames, lift: liftFrames } = pieceFlipKeyframes(style);
+  const edge = opts.edge;
   const svgNs = 'http://www.w3.org/2000/svg';
   const faces = Array.from(slot.children);
   const back = slot.ownerDocument.createElementNS(svgNs, 'g');
@@ -363,8 +420,9 @@ export function flipSvgPiece(
   // Flat turns the slot itself; a lifted style turns a wrapper inside it, so
   // the slot's own transform is free for the lift (and its shadow follows the
   // turning shape, thinning edge-on as a real tile's would).
+  // A tile with an edge turns a wrapper too, so the edge can stay unturned.
   let turner: Animatable = target;
-  if (liftFrames) {
+  if (liftFrames || edge) {
     turner = slot.ownerDocument.createElementNS(svgNs, 'g') as Animatable;
     turner.setAttribute('class', 'piece-flip-turn');
     turner.append(...faces, back);
@@ -374,6 +432,15 @@ export function flipSvgPiece(
     slot.append(back);
   }
   if (target.style) target.style.transformOrigin = origin;
+  let edgeEl: Animatable | null = null;
+  if (edge) {
+    edgeEl = slot.ownerDocument.createElementNS(svgNs, 'g') as Animatable;
+    edgeEl.setAttribute('class', 'piece-flip-edge');
+    edgeEl.setAttribute('aria-hidden', 'true');
+    edgeEl.innerHTML = pieceFlipEdgeMarkup(center, edge, style);
+    slot.append(edgeEl);
+    if (edgeEl.style) edgeEl.style.transformOrigin = origin;
+  }
   const timing: KeyframeAnimationOptions = { duration: durationMs, delay, fill: 'backwards' };
   // The face swaps in at the midpoint, edge-on, where neither side shows.
   const hideUntilMidpoint: Keyframe[] = [
@@ -395,8 +462,10 @@ export function flipSvgPiece(
   // No backwards fill: during a delay the slot's glide owns its transform.
   const turn = turner.animate?.(turnFrames, { duration: durationMs, delay });
   if (liftFrames) target.animate(liftFrames, { duration: durationMs, delay });
+  edgeEl?.animate?.(pieceFlipEdgeKeyframes(style), { duration: durationMs, delay, fill: 'both' });
   const settle = () => {
     back.remove();
+    edgeEl?.remove();
     if (turner !== target && turner.parentNode === slot) {
       turner.replaceWith(...Array.from(turner.childNodes));
     }
