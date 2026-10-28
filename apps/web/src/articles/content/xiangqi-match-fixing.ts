@@ -46,6 +46,7 @@ export const xiangqiMatchFixingArticle: Article = {
   homeRow: 'deep-dives',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   // The title names the people searched for. Search Console (to 2026-10-17):
   // 232 impressions at about position 6 and 3 clicks under the old title, "The

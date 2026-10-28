@@ -39,6 +39,7 @@ export const titledPlayersArticle: Article = {
   slug: 'titled-players',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: 'Bring your title to Mistboard',
   seoTitle: 'For titled xiangqi and chess players',

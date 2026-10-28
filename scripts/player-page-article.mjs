@@ -440,6 +440,7 @@ export const ${meta.export}: Article = {
   slug: ${q(meta.slug)},
 ${meta.homeRow ? `  homeRow: ${q(meta.homeRow)},\n` : ''}  kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: ${q(meta.title)},
 ${meta.seoTitle ? `  seoTitle: ${q(meta.seoTitle)},\n` : ''}  summary: ${q(meta.summary)},

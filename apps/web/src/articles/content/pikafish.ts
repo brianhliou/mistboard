@@ -41,6 +41,7 @@ export const pikafishArticle: Article = {
   slug: 'pikafish',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: 'Pikafish on Mistboard',
   cardTitle: 'Play Pikafish online',

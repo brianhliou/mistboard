@@ -292,6 +292,7 @@ export const caoYanleiArticle: Article = {
   homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: "Cao Yanlei 曹岩磊",
   seoTitle: "Cao Yanlei 曹岩磊: games, results, and analysis",

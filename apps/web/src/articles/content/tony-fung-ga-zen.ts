@@ -277,6 +277,7 @@ export const tonyFungGaZenArticle: Article = {
   homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: "Tony Fung 冯家俊",
   seoTitle: "Tony Fung 冯家俊, Hong Kong's first Asian xiangqi champion: games and analysis",

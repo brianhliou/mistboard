@@ -242,6 +242,7 @@ export const zuoWenjingArticle: Article = {
   homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: "Zuo Wenjing 左文静",
   seoTitle: "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis",

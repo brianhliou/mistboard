@@ -556,6 +556,7 @@ export const xiangqiWorldChampionshipArticle: Article = {
   homeRow: 'deep-dives',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: 'The Xiangqi World Championship',
   seoTitle: 'Xiangqi World Championship: Every Winner, and Why It Is Not the Senior Title',
