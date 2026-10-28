@@ -20,6 +20,9 @@ export type QueuePanelProps = {
   variantFilter: PuzzleVariant;
   // Variants surfaced in the Settings variant picker (order = display order).
   variantFilters: readonly PuzzleVariant[];
+  // The selected puzzle is over in this visit (solved or its solution shown):
+  // its rating, goal and themes are no longer spoilers.
+  selectedComplete?: boolean;
   autoNext: boolean;
   ratedEnabled: boolean;
   userRating: UserPuzzleRating | null;
@@ -36,6 +39,7 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     solvedIds,
     variantFilter,
     variantFilters,
+    selectedComplete = false,
     autoNext,
     ratedEnabled,
     userRating,
@@ -52,6 +56,10 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   );
   const current = queue[currentIndex] ?? null;
   const solvedCount = queue.filter((puzzle) => solvedIds.has(puzzle.id)).length;
+  // Solved before, or finished just now (a reveal counts: the answer is out).
+  const revealed =
+    current !== null &&
+    (solvedIds.has(current.id) || (selectedComplete && current.id === selectedId));
 
   const infoCard = document.createElement('section');
   infoCard.className = 'puzzle-left-card puzzle-current-card puzzle-info-card';
@@ -59,7 +67,9 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     infoCard.append(
       puzzleInfoRow('target', [
         puzzleCodeLine(current),
-        puzzleInfoLine(t('puzzle.ratingHidden')),
+        puzzleInfoLine(
+          revealed ? t('puzzle.ratingShown', { rating: current.rating }) : t('puzzle.ratingHidden'),
+        ),
         puzzleInfoLine(
           solvedIds.has(current.id) ? t('puzzle.statusSolved') : t('puzzle.playedLocally'),
         ),
@@ -74,9 +84,9 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
           // display-only — no link.
           ...sourceGameLines(current),
           // The goal (e.g. "Mate in 1") is a spoiler while solving; reveal it only
-          // once the puzzle is solved, like the puzzle rating.
+          // once the puzzle is solved or its solution shown, like the rating.
           puzzleInfoLine(
-            solvedIds.has(current.id)
+            revealed
               ? t('puzzle.goalToMove', {
                   goal: goalLabel(current),
                   color: colorLabel(current.sideToMove),
@@ -128,6 +138,9 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
         ratingValue.append(delta);
       }
     } else {
+      // No rating yet (a guest, or no rated attempt): one quiet line beside the
+      // count, not a headline number.
+      ratingSummary.classList.add('puzzle-rating-summary--none');
       ratingValue.textContent = t('puzzle.unrated');
     }
     const ratingMeta = document.createElement('span');
@@ -150,7 +163,7 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   const themesCopy = document.createElement('p');
   themesCopy.textContent = t('puzzle.themesCopy');
   themesCard.append(themesTitle);
-  if (current && solvedIds.has(current.id)) {
+  if (current && revealed) {
     // Themes name the piece/pattern (e.g. "Drop", "Treasure"), so reveal them
     // only after the puzzle is solved to avoid giving the move away.
     themesCard.append(themesCopy, tagsPanel(current));

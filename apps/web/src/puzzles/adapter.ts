@@ -139,6 +139,15 @@ export type PuzzleSession = {
   // across renderSession() rebuilds so the engine toggle + eval + arrows
   // survive a full re-render. Disposed when the session is replaced.
   analysis?: PuzzleAnalysisController | null;
+  // Every wrong try, which does not end the attempt: the move list keeps each
+  // as a ✗ row at its ply while the solver retries. `ply` indexes playedMoves.
+  wrongTries?: { ply: number; move: PuzzleMove }[];
+  // The ply the solution line took over from (a reveal): moves from here on
+  // were shown, not found, and read as such in the list.
+  revealedFromPly?: number | null;
+  // The last wrong try's squares, flashed red on the board for a moment.
+  // `at` is when it landed, so a repaint inside the flash keeps its phase.
+  wrongFlash?: { squares: string[]; at: number } | null;
 };
 
 export type PuzzleNavigation = {
