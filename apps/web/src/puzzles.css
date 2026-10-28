@@ -1981,13 +1981,34 @@ a.puzzle-result-chip:focus-visible {
     min-height: var(--puzzle-stack-chrome);
   }
 
+  /* The session row takes none of the one-screen height: the board keeps
+     main's full width. It is one line that scrolls sideways, and its negative
+     margin cancels its own height, so it follows the controls into whatever
+     height is spare and past the fold on a phone with none; the page then
+     scrolls to it. */
+  .puzzles-page:has(.puzzle-session-chips) {
+    overflow-y: auto;
+  }
+
   .puzzles-page > .puzzles-shell:has(.puzzle-session-chips) {
-    --puzzle-stack-chrome: 214px;
+    overflow: visible;
   }
 
   .puzzles-shell .puzzle-session-chips {
+    --puzzle-session-row-height: 42px;
     flex: none;
-    padding-bottom: 8px;
+    flex-wrap: nowrap;
+    box-sizing: border-box;
+    height: var(--puzzle-session-row-height);
+    margin-bottom: calc(-1 * var(--puzzle-session-row-height));
+    padding: 8px 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .puzzles-shell .puzzle-session-chips .puzzle-result-chip {
+    flex: none;
   }
 }
 
