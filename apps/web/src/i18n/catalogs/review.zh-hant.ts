@@ -287,6 +287,7 @@ export const ZH_HANT_REVIEW = {
   'watch.inProgress': '進行中',
   'watch.finalPositionUnavailable': '無法顯示終局局面',
   'watch.review': '覆盤',
+  'watch.watchLive': '觀看',
   'watch.guest': '訪客',
   'watch.boardPerspective': '棋盤視角',
   'watch.channels': '觀戰頻道',
