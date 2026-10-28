@@ -212,6 +212,7 @@ Conventions:
 
 ### Community
 
+- a Friends menu in the header shows who you follow is online, with a Watch link when they're playing; it replaces the bottom-right box ([482ca76b](https://github.com/brianhliou/mistboard/commit/482ca76b))
 - Lobby chat says when a site update is about to restart games ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - Taiwan's players sit on one team page, and players from Taiwan, Hong Kong, Macau and Vietnam show their names in traditional characters ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - The Washington Xiangqi page has an email sign-up for club announcements, in English and Chinese, and an address joins the list after its owner clicks the confirm link ([c5b7bc54](https://github.com/brianhliou/mistboard/commit/c5b7bc54))
@@ -229,6 +230,7 @@ Conventions:
 
 ### Site
 
+- Homepage links, cards and lists respond to hover the same way: links underline, cards and rows highlight, and each News item is one link ([482ca76b](https://github.com/brianhliou/mistboard/commit/482ca76b))
 - Each engine champion on /champions links to its bot page and credits its code and network ([55eb9f07](https://github.com/brianhliou/mistboard/commit/55eb9f07))
 - the homepage News box has drawn icons in the broadcast TV style, each centred on its item ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
 - the homepage shows broadcast cards and recent forum topics in a cleaner layout, and holds their space on first load so nothing jumps ([571204cf](https://github.com/brianhliou/mistboard/commit/571204cf))
