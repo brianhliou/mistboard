@@ -11,6 +11,7 @@ import {
   type XiangqiTrainingTagId,
 } from '@mistboard/game';
 import { type I18nKey, t } from '../i18n/catalog.js';
+import { currentLocale } from '../i18n/locale.js';
 import { puzzleNavItems } from '../nav-items.js';
 
 export type PuzzleThemeCount = XiangqiMotif & { count: number };
@@ -121,8 +122,10 @@ export function puzzleThemeGroups(
     .map(
       ({ motif, count }): PuzzleThemeEntry => ({
         id: motif.id,
-        name: motif.label,
-        description: motif.gloss,
+        // The catalogue holds each pattern's name and gloss per locale: the
+        // English label and gloss, the hanzi and a Chinese gloss in zh.
+        name: t(`puzzle.motifName.${motif.id}` as I18nKey),
+        description: t(`puzzle.motifDesc.${motif.id}` as I18nKey),
         count,
         motif,
       }),
@@ -312,7 +315,9 @@ function themeRow(
   text.className = 'puzzle-theme-description';
   text.textContent = description;
   body.append(heading, text);
-  if (motif) {
+  // In zh the name is already the hanzi; the pinyin and English literal are
+  // for readers who do not read it.
+  if (motif && !currentLocale().startsWith('zh')) {
     const native = document.createElement('p');
     native.className = 'puzzle-theme-name';
     const hanzi = document.createElement('span');
@@ -361,7 +366,8 @@ function recommendedSection(options: PuzzleThemeOptions): HTMLElement {
   grid.append(
     themeRow(
       'mix',
-      '/puzzles',
+      // An empty theme clears a saved one: plain /puzzles reopens the last drill.
+      '/puzzles?theme=',
       t('puzzle.themeMixName'),
       puzzleThemeTotal(options),
       t('puzzle.themeMixDesc'),

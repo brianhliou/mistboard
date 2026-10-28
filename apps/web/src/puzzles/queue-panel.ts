@@ -5,7 +5,7 @@
  */
 
 import { puzzleShortCode, XIANGQI_MOTIF_BY_ID, XIANGQI_SPEC_ID } from '@mistboard/game';
-import { t } from '../i18n/catalog.js';
+import { type I18nKey, t } from '../i18n/catalog.js';
 import { currentLocale } from '../i18n/locale.js';
 import { seatDiscEl } from '../seat-disc.js';
 import { renderVariantMarker } from '../variant-markers.js';
@@ -425,7 +425,8 @@ export function tagsPanel(puzzle: Pick<PuzzleSummary, 'themes' | 'motifs'>): HTM
     const tag = document.createElement('span');
     tag.className = 'puzzle-tag puzzle-tag-motif';
     tag.lang = 'zh';
-    tag.textContent = zh ? motif.hanzi : `${motif.hanzi} ${motif.label}`;
+    // zh-Hant reads the traditional form from the catalogue.
+    tag.textContent = zh ? t(`puzzle.motifName.${id}` as I18nKey) : `${motif.hanzi} ${motif.label}`;
     tag.title = motif.pinyin;
     tags.append(tag);
   }

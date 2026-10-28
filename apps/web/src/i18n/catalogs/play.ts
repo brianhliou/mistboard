@@ -463,6 +463,75 @@ export const EN_PLAY = {
   'puzzle.tagDesc.long': 'Three moves to win.',
   'puzzle.tagName.very-long': 'Very long puzzle',
   'puzzle.tagDesc.very-long': 'Four moves or more to win.',
+  'puzzle.motifName.bai-lian-jiang': 'Facing generals',
+  'puzzle.motifDesc.bai-lian-jiang':
+    'Facing-generals mate: win by weaponizing the rule that the two generals may never face each other on an open file.',
+  'puzzle.motifName.men-gong': 'Sealed palace',
+  'puzzle.motifDesc.men-gong':
+    'Smothered-palace mate: a lone cannon mates a general boxed in by its own advisors.',
+  'puzzle.motifName.men-sha': 'Smothered mate',
+  'puzzle.motifDesc.men-sha':
+    "Smothered mate: bait the defense into plugging its own general's escape squares, then check.",
+  'puzzle.motifName.chen-ya-jun': 'Buried by its own piece',
+  'puzzle.motifDesc.chen-ya-jun':
+    "Buried-general mate: the general's own piece squats on its escape square, and the check that exploits it is mate.",
+  'puzzle.motifName.chong-pao': 'Doubled cannons',
+  'puzzle.motifDesc.chong-pao':
+    'Double-cannon mate: two cannons on one line, the front one serving as the mount for the rear one.',
+  'puzzle.motifName.ma-hou-pao': 'Cannon behind the horse',
+  'puzzle.motifDesc.ma-hou-pao':
+    "Horse-then-cannon mate: the horse pens the general in and doubles as the mount for the cannon's check from behind.",
+  'puzzle.motifName.tian-di-pao': 'Heaven and earth cannons',
+  'puzzle.motifDesc.tian-di-pao':
+    'One cannon on the center file, one on the back rank, pinning the defense in two dimensions at once.',
+  'puzzle.motifName.kong-tou-pao': 'Empty-headed cannon',
+  'puzzle.motifDesc.kong-tou-pao':
+    'A cannon staring straight at the enemy general with nothing in between, splitting the defense in half.',
+  'puzzle.motifName.tie-men-shuan': 'Iron bolt',
+  'puzzle.motifDesc.tie-men-shuan':
+    'Iron-bolt mate: a center cannon locks the palace shut while a chariot (or soldier) slides onto the rib file like a bolt through a door.',
+  'puzzle.motifName.wo-cao-ma': 'Trough horse',
+  'puzzle.motifDesc.wo-cao-ma':
+    "Trough-horse check: the horse lands on the classic square in front of the enemy's bottom elephant, checking the general and eyeing the palace corner.",
+  'puzzle.motifName.gua-jiao-ma': 'Corner horse',
+  'puzzle.motifDesc.gua-jiao-ma':
+    "Corner-horse check: the horse checks from the palace's advisor-corner square.",
+  'puzzle.motifName.ba-jiao-ma': 'Eight-corner horse',
+  'puzzle.motifDesc.ba-jiao-ma':
+    'Opposite-corner bind: a corner horse that pins the general on the diagonally opposite palace corner and holds it there.',
+  'puzzle.motifName.diao-yu-ma': 'Fishing horse',
+  'puzzle.motifDesc.diao-yu-ma':
+    "Fisher-horse bind: a horse posted two files and three ranks off the general's home corner, covering both corner escape squares like a fishing line.",
+  'puzzle.motifName.gao-diao-ma': 'High fishing horse',
+  'puzzle.motifDesc.gao-diao-ma':
+    "High-fisher bind: the fishing horse's higher-posted cousin, choking the general's file exits from the soldier rank.",
+  'puzzle.motifName.ba-huang-ma': 'Spring-loaded horse',
+  'puzzle.motifDesc.ba-huang-ma':
+    'Spring-horse battery: moving the horse uncorks a chariot check behind it, and each re-jump repeats the discovered check to harvest material or mate.',
+  'puzzle.motifName.shuang-ju-cuo': 'Scissoring chariots',
+  'puzzle.motifDesc.shuang-ju-cuo':
+    'Scissors mate: the two chariots check on alternating adjacent lines, shearing the general into a corner.',
+  'puzzle.motifName.da-dan-chuan-xin': 'Chariot through the heart',
+  'puzzle.motifDesc.da-dan-chuan-xin':
+    "Heart-strike sacrifice: a chariot crashes onto the palace-center advisor, ripping out the defense's linchpin; the follow-up mates before the material comes back.",
+  'puzzle.motifName.xiao-dao-wan-xin': 'Soldier cuts the heart',
+  'puzzle.motifDesc.xiao-dao-wan-xin':
+    'Little heart-strike: the humble soldier walks into the palace center to cut out the center advisor.',
+  'puzzle.motifName.ju-pao-chou-sha': 'Chariot-cannon battery',
+  'puzzle.motifDesc.ju-pao-chou-sha':
+    'Windmill of xiangqi: the cannon behind the chariot turns every chariot move into a discovered check, vacuuming up material on the way to mate.',
+  'puzzle.motifName.er-gui-pai-men': 'Two ghosts at the gate',
+  'puzzle.motifDesc.er-gui-pai-men':
+    'Twin-ghost soldiers: two soldiers plant themselves on both rib files at the palace edge, and the palace gates never open again.',
+  'puzzle.motifName.song-fo-gui-dian': 'Soldier drives the general home',
+  'puzzle.motifDesc.song-fo-gui-dian':
+    'Escort mate: a lone soldier checks step by step, herding the displaced general back to its home square where the final check is mate.',
+  'puzzle.motifName.lao-zu-sou-shan': 'Old soldier on the back rank',
+  'puzzle.motifDesc.lao-zu-sou-shan':
+    "Old-soldier sweep: a soldier that reached the back rank ('old' but not dead) scuttles along the bottom, flushing the general out of every hideout.",
+  'puzzle.motifName.shuang-zhao-jiang': 'Double check',
+  'puzzle.motifDesc.shuang-zhao-jiang':
+    'Double check: one move, two checkers; blocking answers only one, so the general must move, and often cannot.',
   'puzzle.autoNext': 'Jump to next puzzle immediately',
   'puzzle.fromGame': 'From game',
   'puzzle.fromGameWith': 'From game · {details}',

@@ -17,6 +17,7 @@ import {
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { displayPreferenceStorageKey } from './display-preferences.js';
+import { LOCALE_STORAGE_KEY } from './i18n/locale.js';
 import { playSound } from './live-sound.js';
 import { puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
 import { loadPuzzleTheme, PUZZLE_THEME_MIN_PATTERN_COUNT } from './puzzles/themes.js';
@@ -240,7 +241,8 @@ describe('puzzles route', () => {
     );
     expect(count?.textContent).toBe('24');
     expect(count?.getAttribute('title')).toBe('24 puzzles');
-    expect(root.textContent).toContain('The horse pens the general in');
+    // Names and glosses come from the catalogue, so they follow the locale.
+    expect(root.textContent).toContain('the horse pens the general in');
     // The pattern's piece is the row's icon, in the board's baked glyph outline.
     expect(
       root.querySelector('[data-puzzle-theme-card="ma-hou-pao"] .puzzle-theme-icon svg path'),
@@ -248,9 +250,26 @@ describe('puzzles route', () => {
     expect(root.querySelector('.puzzle-xiangqi-board')).toBeNull();
     expect(root.querySelector('a[href="/puzzles?theme=men-gong"]')).toBeNull();
     // With no tag counts the mix row still links every puzzle, just uncounted.
-    const mix = root.querySelector('[data-puzzle-theme-recommended] a[href="/puzzles"]');
+    // The mix row clears a saved theme: plain /puzzles would reopen the last drill.
+    const mix = root.querySelector('[data-puzzle-theme-recommended] a[href="/puzzles?theme="]');
     expect(mix?.textContent).toContain('Healthy mix');
     expect(mix?.querySelector('.puzzle-theme-count')).toBeNull();
+  });
+
+  it("names the mate patterns in the reader's script on a zh-Hant themes page", async () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, 'zh-Hant');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json({ puzzles: [], themes: themeOptions })),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, 'themes');
+    const card = root.querySelector<HTMLElement>('[data-puzzle-theme-card="ma-hou-pao"]');
+    expect(card?.querySelector('h3')?.textContent).toContain('馬後炮');
+    expect(card?.textContent).toContain('炮在馬後將軍');
+    // The hanzi is the name: no pinyin or English literal line under it.
+    expect(card?.querySelector('.puzzle-theme-name')).toBeNull();
+    expect(card?.textContent).not.toContain('Cannon behind the horse');
   });
 
   it('groups the themes page like lichess, with the pattern minimum and no empty entries', async () => {
@@ -328,7 +347,7 @@ describe('puzzles route', () => {
     expect(recommended?.compareDocumentPosition(groups[0]!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(recommended?.querySelector('h2')?.textContent).toBe('Recommended');
     const mix = recommended?.querySelectorAll<HTMLAnchorElement>('a') ?? [];
-    expect([...mix].map((a) => a.getAttribute('href'))).toEqual(['/puzzles']);
+    expect([...mix].map((a) => a.getAttribute('href'))).toEqual(['/puzzles?theme=']);
     expect(mix[0]?.querySelector('h3')?.textContent).toBe('Healthy mix 105');
     expect(mix[0]?.querySelector('.puzzle-theme-description')?.textContent).toContain(
       'Every theme shuffled together',
