@@ -61,6 +61,15 @@
   /* Lichess-derived shape scale: 7px boxes/cards, 5px controls. Theme-invariant. */
   --site-radius: 7px;
   --site-radius-sm: 5px;
+  /* The "more below" fade on a box that scrolls inside the page (the News
+     body, the broadcast game list): an alpha mask, so it needs no colour and
+     reads the same in both themes. Theme-invariant. */
+  --site-scroll-fade-size: 32px;
+  --site-scroll-fade: linear-gradient(
+    to bottom,
+    #000 calc(100% - var(--site-scroll-fade-size)),
+    transparent
+  );
   /* Board corner radius, shared by every board renderer so all surfaces match.
      A percentage keeps it proportional to board size (the SVG grid + xiangqi
      boards already round themselves at ~2% of board width); ~1.9% lands near the

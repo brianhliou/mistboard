@@ -31,6 +31,7 @@ import { formatEval, winProbRed } from './review/engine/eval-format.js';
 import { buildBroadcastChat } from './review/spectator-chat.js';
 import { formatXiangqiEngineMove } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
+import { bindScrollFade } from './scroll-fade.js';
 import { seatDiscEl } from './seat-disc.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
@@ -3113,6 +3114,9 @@ function sideRail(
     if (current) currentRow = row;
   }
   rail.append(heading, list);
+  // A long round clips its last row at the list's foot; the News box's fade
+  // there says the list scrolls (Brian, 2026-10-28).
+  bindScrollFade(list, 'xqb-rail-list-more');
   scheduleRailScroll(list, currentRow);
   return rail;
 }

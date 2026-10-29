@@ -2194,8 +2194,8 @@
      scroll clear of the fade. */
   .landing-news-column .site-box-body.landing-news-scroll {
     /* Less the last row's own padding (landing-announcements.css). */
-    padding-bottom: calc(32px - var(--landing-feed-row-pad));
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
+    padding-bottom: calc(var(--site-scroll-fade-size) - var(--landing-feed-row-pad));
+    mask-image: var(--site-scroll-fade);
   }
 
   /* ── Homepage viewer: flush box model (Stage 2) ──────────────────────────────
