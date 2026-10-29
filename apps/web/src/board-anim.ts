@@ -186,7 +186,8 @@ export function pieceFlipDurationMs(): number {
 
 // ── Flip style (#709): the "Tile flip" display setting ──────────────────────
 // Flat (a squeeze), Lift (rises and turns end over end) or Spin (rises and
-// turns side to side); default Lift (Brian, 2026-10-28). `?flip=flat|lift|spin`
+// turns side to side); default Spin (Brian, 2026-10-28: Spin for flat and 3D
+// tiles, one motion everywhere). `?flip=flat|lift|spin`
 // overrides the setting for testing: read once per page load and kept for the
 // tab (sessionStorage) so it survives in-app navigation into a room.
 
@@ -233,18 +234,18 @@ function pieceFlipOverride(): PieceFlipStyle | null {
 }
 
 /** The turn-over style: the tab's `?flip=` override, else the Tile flip
- *  setting (default 'lift'). Cached, cleared by the settings change event. */
+ *  setting (default 'spin'). Cached, cleared by the settings change event. */
 export function pieceFlipStyle(): PieceFlipStyle {
   const override = pieceFlipOverride();
   if (override) return override;
   subscribeToPreferenceChanges();
   if (cachedFlipStyle === null) {
-    let style: PieceFlipStyle = 'lift';
+    let style: PieceFlipStyle = 'spin';
     try {
       const preference = readDisplayPreferences().pieceFlip;
       if (isPieceFlipStyle(preference)) style = preference;
     } catch {
-      style = 'lift';
+      style = 'spin';
     }
     cachedFlipStyle = style;
   }

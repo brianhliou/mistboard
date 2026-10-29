@@ -24,7 +24,13 @@ import {
 import { activeXiangqiPieceSet } from './articles/diagrams.js';
 import { boardCornerRadius } from './board-metrics.js';
 import './live-banqi-board.css';
-import { BANQI_PIECE_SHAPE, banqiFaceDownRadius, banqiPieceDrawSize } from './live-banqi-render.js';
+import {
+  BANQI_PIECE_SHAPE,
+  banqiFaceDownRadius,
+  banqiPieceDrawSize,
+  banqiTile3dFlag,
+  banqiTile3dMarkup,
+} from './live-banqi-render.js';
 import {
   renderXiangqiPieceGlyphed,
   xiangqiBanqiBackMarks,
@@ -92,10 +98,16 @@ function renderBoard(
   selected?: Square,
   targets: readonly Square[] = [],
 ): string {
+  // The banqi ?tile=3d spike: the same 3D tile as the room's, its whole body
+  // (rim and shadow too) centred on the point and sized to the gap.
+  const tile3d = banqiTile3dFlag();
   const pieces = ALL_THREE_KINGDOMS_BANQI_SQUARES.map((square) => {
     const entry = board[square];
     if (!entry) return '';
     const { x, y } = point(square);
+    if (tile3d) {
+      return banqiTile3dMarkup({ x, y }, entry === 'down' ? null : entry, activeXiangqiPieceSet);
+    }
     return entry === 'down'
       ? faceDown(x, y)
       : renderXiangqiPieceGlyphed(entry, activeXiangqiPieceSet, {

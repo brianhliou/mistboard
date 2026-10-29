@@ -132,7 +132,7 @@
 /* The disc only: the shadow's circles sit inside a group of their own. */
 .banqi-back > circle {
   fill: #2f8f6b;
-  stroke: #184a38;
+  stroke: #202427;
   stroke-width: 2;
 }
 .banqi-hit rect {

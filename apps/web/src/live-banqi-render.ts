@@ -14,8 +14,10 @@ import {
   flipSvgPiece,
   glideSvgPiece,
   type PieceFlipEdge,
+  type PieceFlipStyle,
   pieceAnimationDurationMs,
   pieceFlipDurationMs,
+  pieceFlipStyle,
 } from './board-anim.js';
 import { BOARD_LASTMOVE_MARKER_SELECTOR } from './board-lastmove.js';
 import {
@@ -32,9 +34,11 @@ import {
   svgBoardCircleMarker,
   svgBoardGlyphMarker,
 } from './svg-board-marker.js';
+import { flipTileOverlay } from './tile-flip-3d.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import {
   renderXiangqiPieceGlyphed,
+  XIANGQI_PIECE_SHADOW,
   type XiangqiPieceSet,
   type XiangqiPieceShape,
   xiangqiBanqiBackMarks,
@@ -253,9 +257,9 @@ function faceDownDisc(
   tile3d = false,
 ): string {
   if (tile3d) {
-    // The rim draws the shadow, under the tile's whole body.
-    const rim = tileRim(cx, cy, pieceSet, true, className.includes('banqi-drag-source'));
-    return rim + faceDownDiscFlat(cx, cy, pieceSet, className, false);
+    return banqiTile3dMarkup({ x: cx, y: cy }, null, pieceSet, {
+      dragSource: className.includes('banqi-drag-source'),
+    });
   }
   return faceDownDiscFlat(cx, cy, pieceSet, className, xiangqiPieceShadowEnabled());
 }
@@ -266,19 +270,20 @@ function faceDownDiscFlat(
   pieceSet: XiangqiPieceSet,
   className: string,
   shadowOn: boolean,
+  box = PIECE_SIZE,
 ): string {
   const marks = xiangqiBanqiBackMarks(pieceSet);
   if (marks) {
-    const x = cx - PIECE_SIZE / 2;
-    const y = cy - PIECE_SIZE / 2;
+    const x = cx - box / 2;
+    const y = cy - box / 2;
     // The asset backs are normalised to a radius-45 disc, like the faces.
     const shadow = shadowOn ? xiangqiPieceShadowMarks(45) : '';
     const overflowAttr = shadow ? ' overflow="visible"' : '';
-    return `<g class="${className}"><svg x="${x}" y="${y}" width="${PIECE_SIZE}" height="${PIECE_SIZE}"${overflowAttr} viewBox="0 0 100 100">${shadow}${marks}</svg></g>`;
+    return `<g class="${className}"><svg x="${x}" y="${y}" width="${box}" height="${box}"${overflowAttr} viewBox="0 0 100 100">${shadow}${marks}</svg></g>`;
   }
-  const r = banqiFaceDownRadius(PIECE_SIZE);
+  const r = banqiFaceDownRadius(box);
   // The disc's outer edge includes its 2-unit stroke (.banqi-back > circle).
-  const shadow = shadowOn ? xiangqiPieceShadowMarks(r + 1, cx, cy, PIECE_SIZE) : '';
+  const shadow = shadowOn ? xiangqiPieceShadowMarks(r + 1, cx, cy, box) : '';
   return [
     `<g class="${className}">`,
     shadow,
@@ -297,17 +302,15 @@ function pieceLayer(
     const entry = view.board[square];
     if (!entry) return '';
     const dragSource = square === draggingFrom;
+    if (tile3d) {
+      const tile = entry.faceDown ? null : { color: entry.color, role: entry.role };
+      const markup = banqiTile3dMarkup(cellCenter(square), tile, pieceSet, { dragSource });
+      return `<g class="banqi-piece-slot" data-piece-square="${square}">${markup}</g>`;
+    }
     const { x, y } = cellCenter(square);
     const pieceSvg = entry.faceDown
-      ? faceDownDisc(
-          x,
-          y,
-          pieceSet,
-          dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back',
-          tile3d,
-        )
-      : (tile3d ? tileRim(x, y, pieceSet, false, dragSource) : '') +
-        renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
+      ? faceDownDisc(x, y, pieceSet, dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back')
+      : renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
           ariaLabel: `${entry.color} ${entry.role}`,
           className: dragSource ? 'banqi-piece banqi-drag-source' : 'banqi-piece',
           shrouded: false,
@@ -315,7 +318,6 @@ function pieceLayer(
           y: y - PIECE_SIZE / 2,
           size: PIECE_SIZE,
           shape: BANQI_PIECE_SHAPE,
-          ...(tile3d ? { shadow: false } : {}),
         });
     return `<g class="banqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
   }).join('');
@@ -620,7 +622,7 @@ export const BANQI_BOARD_CSS = `
     .banqi-back { pointer-events: none; }
     .banqi-drag-source { opacity: 0.34; }
     /* The disc only: the shadow's circles sit inside a group of their own. */
-    .banqi-back > circle { fill: #2f8f6b; stroke: #184a38; stroke-width: 2; }
+    .banqi-back > circle { fill: #2f8f6b; stroke: #202427; stroke-width: 2; }
     .banqi-hit rect { fill: transparent; cursor: pointer; }
   `;
 
@@ -666,7 +668,7 @@ export function flipBanqiFamilyReveal<S extends string>(
   square: S,
   center: (square: S) => { x: number; y: number },
   back: (cx: number, cy: number) => string,
-  edge?: PieceFlipEdge,
+  style?: PieceFlipStyle,
 ): boolean {
   const slot = host.querySelector(`[data-piece-square="${square}"]`);
   if (!slot) return false;
@@ -676,7 +678,7 @@ export function flipBanqiFamilyReveal<S extends string>(
     point,
     back(point.x, point.y),
     pieceFlipDurationMs(),
-    edge ? { edge } : {},
+    style ? { style } : {},
   );
 }
 
@@ -684,16 +686,18 @@ export function flipBanqiFamilyReveal<S extends string>(
 export function animateBanqiReveal(
   host: HTMLElement,
   square: BanqiSquare,
-  opts: { tile3d?: boolean } = {},
+  opts: { tile3d?: boolean; style?: PieceFlipStyle } = {},
 ): boolean {
   const pieceSet = readStoredXiangqiPieceSet();
-  const tile3d = opts.tile3d ?? banqiTile3dFlag();
+  if (opts.tile3d ?? banqiTile3dFlag()) {
+    return flipBanqiTile3dReveal(host, square, cellCenter, pieceSet, { style: opts.style });
+  }
   return flipBanqiFamilyReveal(
     host,
     square,
     cellCenter,
-    (cx, cy) => faceDownDisc(cx, cy, pieceSet, 'banqi-back', tile3d),
-    tile3d ? banqiTileEdge(pieceSet) : undefined,
+    (cx, cy) => faceDownDisc(cx, cy, pieceSet),
+    opts.style,
   );
 }
 
@@ -701,11 +705,11 @@ export function animateBanqiReveal(
 //
 // A banqi tile is a short cylinder seen a little from above: under each disc a
 // band of its body shows along the bottom edge, as the Xiangqi Mahjong tiles
-// show theirs (xiangqi-mahjong-tile-svg.ts). Mistboard's sets are an ivory face
-// on a jade back, so a face-up tile shows jade under it and a face-down tile
-// ivory; an asset set's tile is one block of its material. Every face-down rim
-// is the same, so the rim tells nothing a back does not. The turn-over carries
-// the rim with the face and, edge-on, shows the tile's thickness
+// show theirs (xiangqi-mahjong-tile-svg.ts). A tile is one object, so its rim
+// is one colour face up and face down, before, during and after the turn:
+// ivory on Mistboard's sets, an asset set's own material on its. The rim tells
+// nothing a back does not, and a turn-over never changes it. The turn-over
+// carries the rim with the face and, edge-on, shows the tile's thickness
 // (flipSvgPiece's `edge`) instead of a hairline. Vector only, no idle motion.
 
 const TILE_3D_SEARCH_KEY = 'tile';
@@ -736,25 +740,141 @@ export function resetBanqiTile3dFlag(): void {
   cachedTile3d = undefined;
 }
 
-// Ivory under a back, jade under a face: the Xiangqi Mahjong tile's colours.
-const TILE_JADE: readonly [string, string] = ['#2f8a70', '#22684f'];
+// The tile's body (rim and wall), the same under a face and under a back.
 const TILE_IVORY: readonly [string, string] = ['#efe7d2', '#d6c9a8'];
-// Thickness as a share of the piece box (59 px: about 5 px of rim).
+// Thickness as a share of the piece box (54 px: about 4.6 px of rim).
 const TILE_DEPTH_SHARE = 0.085;
+// How far the disc shadow reaches past the rim's bottom: its drop plus its
+// widest ring, in the 100-unit box (XIANGQI_PIECE_SHADOW).
+const TILE_SHADOW_SHARE =
+  (XIANGQI_PIECE_SHADOW.dy + Math.max(...XIANGQI_PIECE_SHADOW.spread)) / 100;
+// The whole tile's height as a share of its box: the disc (to its outline),
+// the rim below it and the shadow below that.
+const TILE_3D_HEIGHT_SHARE = XIANGQI_PIECE_OUTLINE_SHARE + TILE_DEPTH_SHARE + TILE_SHADOW_SHARE;
+
+/**
+ * The box a 3D tile is drawn in at this pitch (cell, or the gap between
+ * points): the whole tile, rim and shadow included, spans BANQI_PIECE_REACH of
+ * it, as a flat disc's outline does. 54 at banqi's 64.
+ */
+export function banqiTile3dBox(pitch: number): number {
+  return roundPieceBox((pitch * BANQI_PIECE_REACH) / TILE_3D_HEIGHT_SHARE);
+}
+
+const TILE_BOX = banqiTile3dBox(CELL);
+
+/**
+ * Where a 3D tile's disc sits for a tile anchored at `anchor` (a cell centre,
+ * or a point on the Three Kingdoms board): raised by half the rim and shadow,
+ * so the whole tile, not just its disc, is centred on the anchor.
+ */
+export function banqiTile3dDiscCenter(anchor: { x: number; y: number }): {
+  x: number;
+  y: number;
+} {
+  return {
+    x: anchor.x,
+    y: round2(anchor.y - (TILE_BOX * (TILE_DEPTH_SHARE + TILE_SHADOW_SHARE)) / 2),
+  };
+}
+
+/**
+ * One 3D tile centred on `anchor`: its rim (and shadow), then the back when
+ * `entry` is null, else the face. A face-down tile takes no identity, so every
+ * back draws the same.
+ */
+export function banqiTile3dMarkup(
+  anchor: { x: number; y: number },
+  entry: { color: BanqiColor; role: BanqiPieceRole } | null,
+  pieceSet: XiangqiPieceSet,
+  opts: { dragSource?: boolean } = {},
+): string {
+  const dragSource = opts.dragSource ?? false;
+  const disc = banqiTile3dDiscCenter(anchor);
+  const rim = tileRim(disc.x, disc.y, pieceSet, dragSource);
+  if (!entry) {
+    const cls = dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back';
+    return rim + faceDownDiscFlat(disc.x, disc.y, pieceSet, cls, false, TILE_BOX);
+  }
+  return (
+    rim +
+    renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
+      ariaLabel: `${entry.color} ${entry.role}`,
+      className: dragSource ? 'banqi-piece banqi-drag-source' : 'banqi-piece',
+      shrouded: false,
+      x: disc.x - TILE_BOX / 2,
+      y: disc.y - TILE_BOX / 2,
+      size: TILE_BOX,
+      shape: BANQI_PIECE_SHAPE,
+      shadow: false,
+    })
+  );
+}
+
+/**
+ * Turn a 3D tile over after the render that drew its face. Lift and Spin turn
+ * a coin with real perspective over the board (tile-flip-3d.ts); Flat, or a
+ * page where the coin cannot go up, falls back to the SVG turn with the edge.
+ * The back is the identity-free back the board drew before the reveal.
+ * `durationMs` overrides the setting's length (a review sheet's slow motion).
+ */
+export function flipBanqiTile3dReveal<S extends string>(
+  host: HTMLElement,
+  square: S,
+  anchorOf: (square: S) => { x: number; y: number },
+  pieceSet: XiangqiPieceSet,
+  opts: { style?: PieceFlipStyle; durationMs?: number } = {},
+): boolean {
+  const slot = host.querySelector(`[data-piece-square="${square}"]`);
+  const face = slot?.querySelector(':scope > .banqi-piece');
+  if (!slot || !face) return false;
+  const style = opts.style ?? pieceFlipStyle();
+  const durationMs = opts.durationMs ?? pieceFlipDurationMs();
+  if (durationMs <= 0) return false;
+  const anchor = anchorOf(square);
+  const disc = banqiTile3dDiscCenter(anchor);
+  if (style !== 'flat') {
+    const look = tileLook(pieceSet);
+    const shadow = TILE_BOX * TILE_SHADOW_SHARE;
+    const turned = flipTileOverlay({
+      slot,
+      center: disc,
+      radius: look.radius,
+      depth: look.depth,
+      reach: look.radius + look.depth + shadow + 2,
+      front: {
+        band: slot.querySelector(':scope > .banqi-rim')?.outerHTML ?? '',
+        face: face.outerHTML,
+      },
+      back: {
+        band: tileRim(disc.x, disc.y, pieceSet, false),
+        face: faceDownDiscFlat(disc.x, disc.y, pieceSet, 'banqi-back', false, TILE_BOX),
+      },
+      // One body: the wall is the rim's colour on both halves.
+      wall: { front: look.body[0], back: look.body[0] },
+      durationMs,
+      style,
+    });
+    if (turned) return true;
+  }
+  return flipSvgPiece(slot, disc, banqiTile3dMarkup(anchor, null, pieceSet), durationMs, {
+    style,
+    edge: banqiTileEdge(pieceSet),
+  });
+}
 
 function tileLook(pieceSet: XiangqiPieceSet): {
   radius: number;
   depth: number;
-  face: readonly [string, string];
-  back: readonly [string, string];
+  body: readonly [string, string];
 } {
   const backing = xiangqiTileBacking(pieceSet);
   // Asset discs are normalised to radius 45 of the 100 box; Mistboard's faces
   // end at 47.4 (banqiFaceDownRadius plus its stroke).
-  const radius = round2(PIECE_SIZE * (backing ? 0.45 : 0.474));
-  const depth = round2(PIECE_SIZE * TILE_DEPTH_SHARE);
-  const body: readonly [string, string] | null = backing ? [backing[1], backing[2]] : null;
-  return { radius, depth, face: body ?? TILE_JADE, back: body ?? TILE_IVORY };
+  const radius = round2(TILE_BOX * (backing ? 0.45 : 0.474));
+  const depth = round2(TILE_BOX * TILE_DEPTH_SHARE);
+  const body: readonly [string, string] = backing ? [backing[1], backing[2]] : TILE_IVORY;
+  return { radius, depth, body };
 }
 
 function round2(n: number): number {
@@ -768,17 +888,11 @@ function tileBandPath(cx: number, cy: number, r: number, k: number): string {
 }
 
 /** The rim under one tile, drawn before its face or back in the same slot. */
-function tileRim(
-  cx: number,
-  cy: number,
-  pieceSet: XiangqiPieceSet,
-  faceDown: boolean,
-  dragSource: boolean,
-): string {
+function tileRim(cx: number, cy: number, pieceSet: XiangqiPieceSet, dragSource: boolean): string {
   const look = tileLook(pieceSet);
-  const [mid, low] = faceDown ? look.back : look.face;
+  const [mid, low] = look.body;
   const shadow = xiangqiPieceShadowEnabled()
-    ? xiangqiPieceShadowMarks(look.radius, cx, cy + look.depth, PIECE_SIZE)
+    ? xiangqiPieceShadowMarks(look.radius, cx, cy + look.depth, TILE_BOX)
     : '';
   const cls = dragSource ? 'banqi-rim banqi-drag-source' : 'banqi-rim';
   return [
@@ -796,7 +910,7 @@ export function banqiTileEdge(pieceSet: XiangqiPieceSet): PieceFlipEdge {
   return {
     halfWidth: look.radius,
     depth: look.depth,
-    fills: [look.face[0], look.back[0]],
-    stroke: look.face[1],
+    fills: [look.body[0], look.body[0]],
+    stroke: look.body[1],
   };
 }

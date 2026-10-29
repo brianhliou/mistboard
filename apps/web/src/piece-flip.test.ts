@@ -312,13 +312,13 @@ describe('flip styles (the Tile flip setting, ?flip= override)', () => {
   }
   const AXIS_BY_STYLE = { flat: 'scaleX', lift: 'rotateX', spin: 'rotateY' } as const;
 
-  it('defaults to lift with no setting and no flag', () => {
+  it('defaults to spin with no setting and no flag', () => {
     useFlag('');
-    expect(pieceFlipStyle()).toBe('lift');
+    expect(pieceFlipStyle()).toBe('spin');
     useFlag('?flip=nope');
-    expect(pieceFlipStyle()).toBe('lift');
+    expect(pieceFlipStyle()).toBe('spin');
     const { calls } = recordAnimations(() => animateBanqiReveal(banqiHost(revealed), 'a1'));
-    expect(turnAxis(calls)).toBe('rotateX');
+    expect(turnAxis(calls)).toBe('rotateY');
   });
 
   it.each(['flat', 'lift', 'spin'] as const)(

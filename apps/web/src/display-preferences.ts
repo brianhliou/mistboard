@@ -12,7 +12,7 @@ export const DISPLAY_PREFERENCE_DEFINITIONS = [
   {
     id: 'pieceFlip',
     kind: 'select',
-    defaultValue: 'lift',
+    defaultValue: 'spin',
     options: ['flat', 'lift', 'spin'],
   },
   { id: 'materialDifference', kind: 'boolean', defaultValue: true },
