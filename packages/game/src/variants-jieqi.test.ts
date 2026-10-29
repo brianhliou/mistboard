@@ -338,10 +338,48 @@ test('only the capturer learns a captured dark piece; the owner never does', () 
   const after = applyJieqiMove(state, { from: 'a1', to: 'a3' });
 
   assert.deepEqual(after.captures, [{ owner: 'black', role: 'cannon', revealedAtCapture: false }]);
-  // Red captured it — red knows the identity.
-  assert.deepEqual(getJieqiPlayerView(after, 'red').captured, [{ owner: 'black', role: 'cannon' }]);
+  // Red captured it — red knows the identity, marked as taken face-down.
+  assert.deepEqual(getJieqiPlayerView(after, 'red').captured, [
+    { owner: 'black', role: 'cannon', takenFaceDown: true },
+  ]);
   // Black owned it but never knew it — still hidden.
   assert.deepEqual(getJieqiPlayerView(after, 'black').captured, [{ owner: 'black', role: null }]);
+});
+
+// The pool draws a piece named only because it was taken face-down apart from
+// one both players saw (Brian, 2026-10-26). The mark rides only beside a role
+// the view already holds: the victim's and the spectator's entries are
+// byte-for-byte what they were, so the mark can never carry an identity.
+test('takenFaceDown marks a named dark capture only, and only where the role is known', () => {
+  const state = playing({
+    d1: up('red', 'general'),
+    f10: up('black', 'general'),
+    a1: up('red', 'chariot'),
+    a3: dark('black', 'cannon'),
+    i10: up('black', 'chariot'),
+    i8: up('red', 'chariot'),
+  });
+  const after = applyJieqiMove(applyJieqiMove(state, { from: 'a1', to: 'a3' }), {
+    from: 'i10',
+    to: 'i8',
+  });
+  assert.deepEqual(getJieqiPlayerView(after, 'red').captured, [
+    { owner: 'black', role: 'cannon', takenFaceDown: true },
+    { owner: 'red', role: 'chariot' },
+  ]);
+  assert.deepEqual(jieqiTruthView(after).captured, [
+    { owner: 'black', role: 'cannon', takenFaceDown: true },
+    { owner: 'red', role: 'chariot' },
+  ]);
+  for (const view of [getJieqiPlayerView(after, 'black'), getJieqiPublicView(after)]) {
+    const wire = JSON.stringify(view);
+    assert.equal(wire.includes('takenFaceDown'), false);
+    assert.equal(wire.includes('cannon'), false, 'the victim and spectator never learn the cannon');
+    assert.deepEqual(view.captured, [
+      { owner: 'black', role: null },
+      { owner: 'red', role: 'chariot' },
+    ]);
+  }
 });
 
 test('a piece captured while revealed is known to both players', () => {
@@ -379,8 +417,9 @@ test('jieqiTruthView reveals every identity and captures carry full roles', () =
   // The still-dark red horse is revealed by identity in the truth view, unlike
   // the per-player view where the owner's own dark pieces stay masked.
   assert.deepEqual(truth.board.e5, { color: 'red', role: 'horse', faceDown: false });
-  // The captured dark piece carries its full role (no per-viewer redaction).
-  assert.deepEqual(truth.captured, [{ owner: 'black', role: 'cannon' }]);
+  // The captured dark piece carries its full role (no per-viewer redaction),
+  // marked as taken face-down.
+  assert.deepEqual(truth.captured, [{ owner: 'black', role: 'cannon', takenFaceDown: true }]);
   // Truth view is rendered from red's perspective and has no legal moves
   // attached (it is a static review projection). Nobody is in check here.
   assert.equal(truth.perspective, 'red');
@@ -481,7 +520,7 @@ test('the public view never holds a role that one of the seats lacks', () => {
     { owner: 'red', role: 'chariot' },
   ]);
   assert.deepEqual(red.captured, [
-    { owner: 'black', role: 'cannon' },
+    { owner: 'black', role: 'cannon', takenFaceDown: true },
     { owner: 'red', role: 'chariot' },
   ]);
   // Never more than either seat: each capture's public role is null or agrees

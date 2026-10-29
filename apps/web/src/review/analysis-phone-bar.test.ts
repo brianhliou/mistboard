@@ -228,8 +228,13 @@ describe('analysis phone bar CSS', () => {
   it('shows nothing above 600px: every piece is display none outside the media query', () => {
     const outside = css.slice(0, css.indexOf('@media (max-width: 600px)'));
     expect(outside).toContain(
-      '.analysis-phone-bar, .analysis-engine-bar, .analysis-phone-info, .analysis-tools-sheet { display: none; }',
+      '.analysis-phone-bar, .analysis-phone-info, .analysis-tools-sheet { display: none; }',
     );
+    // The engine bar is shared with the phone game review and has its own sheet.
+    const engineCss = readFileSync('src/review/engine-bar.css', 'utf8').replace(/\s+/g, ' ');
+    const engineOutside = engineCss.slice(0, engineCss.indexOf('@media (max-width: 600px)'));
+    expect(engineOutside).toContain('.analysis-engine-bar { display: none; }');
+    expect(engineCss).toContain('.analysis-engine-bar[hidden] { display: none; }');
   });
 
   it('keeps the phone page to one screen: the variant card and import form are hidden inline', () => {
@@ -240,7 +245,6 @@ describe('analysis phone bar CSS', () => {
 
   it('keeps the hidden attribute winning over its own display rules', () => {
     for (const selector of [
-      '.analysis-engine-bar[hidden]',
       '.analysis-tools-sheet[hidden]',
       '.analysis-phone-bar__button[hidden]',
     ]) {

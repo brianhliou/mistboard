@@ -20,7 +20,9 @@
  * cross-variant 'top' channel; within a tier, the most recently active room.
  * Hysteresis: the currently featured room keeps the board while it is still
  * live, still moving (LIVE_TV_STALL_MS), and its tier is unbeaten, so recency
- * alone never yanks a game mid-broadcast. EvE never appears here —
+ * alone never yanks a game mid-broadcast. A stalled game gives the board only
+ * to a live game that is still moving; with none, it keeps it until the server
+ * ends it (room finished or clock flagged). EvE never appears here —
  * engine-vs-engine games run headless in the worker and reach TV only as
  * completed games.
  */
@@ -104,9 +106,13 @@ function clockStillRunning(clock: unknown, timeControl: unknown, now: number): b
 // A live game with no MOVE in this long has been walked away from, and must not
 // hold the featured board while its clock runs down to the flag (2026-10-08:
 // four abandoned 2-19 ply games each froze the homepage for ~10 minutes). It
-// stays a candidate (the clock rule above still owns "is it live"); the
-// election just skips it, sticky pick included. Slower paces scale the bar so a
-// thinking player is not dropped: see liveTvStallMs.
+// stays a candidate (the clock rule above still owns "is it live"), and the
+// election prefers any game that is still moving over it, sticky pick included.
+// The bar is a preference, never a filter (2026-10-28): with no moving game a
+// stalled one keeps the board, because a long think is not an ended game and
+// the fallback was an older finished one (jgl_08d3d49f, 10+5: a guest's 100 s
+// think with 356 s on the clock blanked the live board for ~40 s). Slower paces
+// scale the bar so a thinking player is not passed over: see liveTvStallMs.
 export const LIVE_TV_STALL_MS = 60 * 1000;
 
 // Three average moves' worth of thinking at this pace (the 40-move estimate of
@@ -402,15 +408,17 @@ export function electLiveTvFeatured(
   candidates: LiveTvCandidate[],
   now: number,
 ): LiveTvCandidate | null {
-  const pool = candidates.filter(
-    (candidate) =>
-      (channelId === LIVE_TV_TOP_CHANNEL_ID || candidate.channelId === channelId) &&
-      !isStalled(candidate, now),
+  const onChannel = candidates.filter(
+    (candidate) => channelId === LIVE_TV_TOP_CHANNEL_ID || candidate.channelId === channelId,
   );
-  if (pool.length === 0) {
+  if (onChannel.length === 0) {
     featuredRoomByChannel.delete(channelId);
     return null;
   }
+  // Moving games first; stalled ones only when no game on the channel is
+  // moving, so a live game on the clock never leaves the board empty.
+  const moving = onChannel.filter((candidate) => !isStalled(candidate, now));
+  const pool = moving.length > 0 ? moving : onChannel;
   const best = pool.reduce((left, right) =>
     tier(right) > tier(left) ||
     (tier(right) === tier(left) && right.lastActivityAt > left.lastActivityAt)
@@ -421,9 +429,10 @@ export function electLiveTvFeatured(
   const current = currentRoomId
     ? pool.find((candidate) => candidate.roomId === currentRoomId)
     : undefined;
-  // Keep the currently featured game while it is still a live, unstalled
-  // candidate and a strictly better tier has not appeared — recency alone never
-  // switches the board mid-game.
+  // Keep the currently featured game while it is still in the pool (moving, or
+  // every game on the channel is stalled) and a strictly better tier has not
+  // appeared — recency alone never switches the board mid-game. When all are
+  // stalled the featured one holds, so two thinking games do not trade places.
   const chosen = current && tier(current) >= tier(best) ? current : best;
   featuredRoomByChannel.set(channelId, chosen.roomId);
   return chosen;

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import test from 'node:test';
+import childProcess, { execFileSync } from 'node:child_process';
+import { syncBuiltinESMExports } from 'node:module';
+import test, { afterEach, beforeEach, mock } from 'node:test';
 import {
   compareDrainTokenFingerprints,
   DRAIN_TOKEN_KEYCHAIN_FALLBACK,
@@ -8,10 +9,27 @@ import {
   describeDrainToken,
   drainTokenSource,
   fingerprintDrainToken,
+  listDrainTokenFingerprints,
   PROD_FINGERPRINT_COMMAND,
   parseProdFingerprint,
   resolveDrainToken,
 } from './lib/drain-token.mjs';
+
+let keychain;
+beforeEach(() => {
+  keychain = new Map();
+  mock.method(childProcess, 'spawnSync', (command, args) => {
+    assert.equal(command, 'security');
+    const item = args[args.indexOf('-s') + 1];
+    if (keychain.has(item)) return { status: 0, stdout: `${keychain.get(item)}\n` };
+    return { status: 44, stderr: 'The specified item could not be found in the keychain.' };
+  });
+  syncBuiltinESMExports();
+});
+afterEach(() => {
+  mock.restoreAll();
+  syncBuiltinESMExports();
+});
 
 // The env var wins so a one-off `MISTBOARD_DRAIN_TOKEN=… node scripts/…` still
 // overrides whatever is stored, and CI (no keychain) keeps working.
@@ -46,16 +64,41 @@ test('a keychain miss resolves to null instead of throwing', () => {
 test('the keychain service name is stable', () => {
   // Renaming this strands the stored credential without any error: resolution
   // just starts returning null and every live-game release blocks again.
-  assert.equal(DRAIN_TOKEN_KEYCHAIN_SERVICE, 'mistboard-drain-token');
+  assert.equal(DRAIN_TOKEN_KEYCHAIN_SERVICE, 'mistboard/MISTBOARD_DRAIN_TOKEN');
 });
 
-// Regression: this module searched exactly one keychain item, so a token stored
-// under railway-secret.mjs's `mistboard/<VAR>` convention resolved to null and
-// printed the same "no token" line as never having stored one. Two naming
-// conventions for one secret, and nothing said so.
-test('the railway-secret item name is a recognized fallback', () => {
-  assert.equal(DRAIN_TOKEN_KEYCHAIN_FALLBACK, 'mistboard/MISTBOARD_DRAIN_TOKEN');
+test('the old item name remains a fallback for existing installations', () => {
+  assert.equal(DRAIN_TOKEN_KEYCHAIN_FALLBACK, 'mistboard-drain-token');
   assert.notEqual(DRAIN_TOKEN_KEYCHAIN_FALLBACK, DRAIN_TOKEN_KEYCHAIN_SERVICE);
+});
+
+test('a stale legacy item cannot shadow a rotated canonical token', () => {
+  const previous = process.env.MISTBOARD_DRAIN_TOKEN;
+  delete process.env.MISTBOARD_DRAIN_TOKEN;
+  keychain.set('mistboard/MISTBOARD_DRAIN_TOKEN', 'fixture-rotated-token');
+  keychain.set('mistboard-drain-token', 'fixture-stale-token');
+  try {
+    assert.equal(resolveDrainToken(), 'fixture-rotated-token');
+    assert.equal(describeDrainToken().item, 'mistboard/MISTBOARD_DRAIN_TOKEN');
+    const entries = listDrainTokenFingerprints();
+    assert.equal(entries[0].item, 'mistboard/MISTBOARD_DRAIN_TOKEN');
+    const prod = { unset: false, ...fingerprintDrainToken('fixture-rotated-token') };
+    assert.equal(compareDrainTokenFingerprints(entries, prod).verdict, 'match');
+  } finally {
+    if (previous !== undefined) process.env.MISTBOARD_DRAIN_TOKEN = previous;
+  }
+});
+
+test('a legacy-only installation can still resolve its token', () => {
+  const previous = process.env.MISTBOARD_DRAIN_TOKEN;
+  delete process.env.MISTBOARD_DRAIN_TOKEN;
+  keychain.set('mistboard-drain-token', 'fixture-legacy-token');
+  try {
+    assert.equal(resolveDrainToken(), 'fixture-legacy-token');
+    assert.equal(describeDrainToken().item, 'mistboard-drain-token');
+  } finally {
+    if (previous !== undefined) process.env.MISTBOARD_DRAIN_TOKEN = previous;
+  }
 });
 
 // The whole point of describeDrainToken: absent / empty / denied used to be one
@@ -101,7 +144,10 @@ test('the shell fingerprint the container runs matches the node fingerprint', ()
   const value = 'not-a-real-token-0123456789';
   const out = execFileSync(
     'sh',
-    ['-c', PROD_FINGERPRINT_COMMAND.replace(/sha256sum/g, 'shasum -a 256')],
+    [
+      '-c',
+      PROD_FINGERPRINT_COMMAND.replace(/sha256sum/g, 'openssl dgst -sha256 | sed "s/^.*= //"'),
+    ],
     {
       env: { ...process.env, MISTBOARD_DRAIN_TOKEN: value },
       encoding: 'utf8',

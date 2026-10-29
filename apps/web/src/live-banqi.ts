@@ -225,11 +225,17 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
       return;
     }
     if (pending.direction === 'forward') {
-      if (view.lastMove) animateBanqiBoardMove(liveRefs.board, view.lastMove);
+      const stepped = view.lastMove;
+      if (!stepped) return;
+      // A scrub onto a flip turns the tile over, as it did live.
+      if (stepped.from === stepped.to) animateBanqiReveal(liveRefs.board, stepped.to);
+      else animateBanqiBoardMove(liveRefs.board, stepped);
       return;
     }
     const undone = pending.prevView?.lastMove;
-    if (undone) animateBanqiBoardMove(liveRefs.board, undone, { reverse: true });
+    if (undone && undone.from !== undone.to) {
+      animateBanqiBoardMove(liveRefs.board, undone, { reverse: true });
+    }
   },
   renderExtras: (refs, view) => {
     renderCapturedPools(refs, view);

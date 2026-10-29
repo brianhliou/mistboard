@@ -20,14 +20,31 @@ describe('landing community widgets', () => {
               name: 'Seven Stars',
               owner: { handle: 'teacher', displayName: 'Teacher' },
               chapterCount: 3,
-              likeCount: 12,
+              likeCount: 0,
             },
             {
               id: 'studyOne',
-              name: 'Horse and cannon attacks',
+              name: 'Horse and cannon attacks: a long title the box shows whole, never cut off',
+              i18n: { 'zh-Hans': { name: '马炮攻杀' }, 'zh-Hant': { name: '馬炮攻殺' } },
               owner: { handle: 'teacher', displayName: 'Teacher' },
               chapterCount: 1,
-              likeCount: 4,
+              likeCount: 0,
+            },
+            {
+              id: 'banqiStudy',
+              name: 'Banqi endgames',
+              owner: { handle: 'teacher', displayName: 'Teacher' },
+              chapterCount: 2,
+              previewBoard: {
+                variant: 'banqi',
+                fen: null,
+                grid: {
+                  shape: 'banqi',
+                  files: 8,
+                  ranks: 4,
+                  cells: '..................?.....r....?b.',
+                },
+              },
             },
           ],
         });
@@ -73,11 +90,119 @@ describe('landing community widgets', () => {
     const ordinaryRow = [...strip.querySelectorAll<HTMLAnchorElement>('.landing-study-row')].find(
       (row) => row.pathname === '/study/studyOne',
     );
-    expect(ordinaryRow?.querySelector('.landing-study-thumbnail')).toBeNull();
-    expect(strip.querySelector('.landing-study-likes')?.textContent).toBe('♥ 12');
+    // No board and no marker: an empty slot of the same shape keeps titles aligned.
+    expect(
+      ordinaryRow?.querySelector('.landing-study-thumbnail.study-thumbnail--blank'),
+    ).not.toBeNull();
+    // The whole title, in English on an English page; no like count (#710).
+    expect(ordinaryRow?.querySelector('.landing-study-name')?.textContent).toBe(
+      'Horse and cannon attacks: a long title the box shows whole, never cut off',
+    );
+    expect(strip.querySelector('.landing-study-likes')).toBeNull();
+    expect(strip.textContent).not.toContain('♥');
+    // Every derivable variant draws its own board (#710): banqi on its 8x4
+    // squares, face-down tiles as plain backs with no colour, face-up discs in
+    // their side's colour.
+    const banqiRow = [...strip.querySelectorAll<HTMLAnchorElement>('.landing-study-row')].find(
+      (row) => row.pathname === '/study/banqiStudy',
+    );
+    const banqiThumb = banqiRow?.querySelector<HTMLElement>(
+      '.landing-study-thumbnail.study-thumbnail--board',
+    );
+    expect(banqiThumb?.dataset.boardShape).toBe('banqi');
+    expect(banqiThumb?.querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 83 43');
+    expect(banqiThumb?.querySelectorAll('.study-thumbnail__down').length).toBe(2);
+    expect(
+      banqiThumb?.querySelectorAll('.study-thumbnail__down--red, .study-thumbnail__down--black')
+        .length,
+    ).toBe(0);
+    expect(banqiThumb?.querySelectorAll('.study-thumbnail__red').length).toBe(1);
+    expect(banqiThumb?.querySelectorAll('.study-thumbnail__black').length).toBe(1);
+    expect(
+      strip.querySelector('.landing-study-meta, .landing-community-meta')?.textContent,
+    ).toContain('Teacher');
+    expect(fetchMock).toHaveBeenCalledWith('/api/studies/public?limit=6', expect.anything());
     expect(strip.querySelector('.landing-leaderboard-category')?.textContent).toBe(variant.label);
     expect(strip.querySelector('.landing-leaderboard-rating')?.textContent).toBe('2412');
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows five studies with three-line titles in the column, six in the wide grid', async () => {
+    // Layout lives in CSS (no layout engine here), so pin the rules that set
+    // the count and the title room (#710): the sixth row fetched is hidden in
+    // the column and shown again in the two-by-three grid.
+    const { readFileSync } = await import('node:fs');
+    const css = readFileSync('src/landing-community-widgets.css', 'utf8');
+    const cap = /landing-study-row:nth-child\(n \+ 6\) \{\s*display: (\w+);/g;
+    expect([...css.matchAll(cap)].map((m) => m[1])).toEqual(['none', 'flex']);
+    expect(css.indexOf('display: none')).toBeLessThan(css.indexOf('@container landing-studies'));
+    expect(css).toMatch(/\.landing-study-name \{[^}]*-webkit-line-clamp: 3;/);
+  });
+
+  it('draws a preview grid only on a shape it knows, with cells that fill it', async () => {
+    const { buildStudyThumbnail } = await import('./study-thumbnails.js');
+    const board = (grid: { shape: string; files: number; ranks: number; cells: string }) =>
+      buildStudyThumbnail('x', 'c', 'lazy', {
+        variant: 'not-a-variant',
+        fen: null,
+        grid: grid as never,
+      });
+    const chess = buildStudyThumbnail('x', 'c', 'lazy', {
+      variant: 'chess',
+      fen: null,
+      grid: { shape: 'chess', files: 8, ranks: 8, cells: `${'.'.repeat(52)}r${'.'.repeat(11)}` },
+    });
+    expect(chess?.dataset.boardShape).toBe('chess');
+    expect(chess?.querySelectorAll('.study-thumbnail__white').length).toBe(1);
+    // Fail-closed: an unknown shape, or cells that do not fill the board, draw
+    // nothing rather than a guess.
+    expect(board({ shape: 'mahjong', files: 8, ranks: 8, cells: '.'.repeat(64) })).toBeNull();
+    expect(board({ shape: 'chess', files: 8, ranks: 8, cells: '.'.repeat(63) })).toBeNull();
+    expect(board({ shape: 'chess', files: 9, ranks: 10, cells: '.'.repeat(90) })).toBeNull();
+  });
+
+  it('shows an @mistboard study title in the page locale when the study has one', async () => {
+    window.history.replaceState(null, '', '/zh-hans/');
+    try {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          jsonResponse({
+            studies: [
+              {
+                id: 'DO92ymcx',
+                name: 'jqe vs AB-JChess: 100 games at 4 s a move',
+                i18n: {
+                  'zh-Hans': { name: 'jqe 对 AB-JChess：每步 4 秒的 100 盘' },
+                  'zh-Hant': { name: 'jqe 對 AB-JChess：每步 4 秒的 100 盤' },
+                },
+                owner: { handle: 'mistboard', displayName: 'Mistboard' },
+                chapterCount: 100,
+                likeCount: 0,
+              },
+              {
+                id: 'userStudy',
+                name: 'My openings',
+                owner: { handle: 'someone', displayName: 'Someone' },
+                chapterCount: 2,
+                likeCount: 0,
+              },
+            ],
+          }),
+        ),
+      );
+      const { buildTopStudiesWidget } = await import('./landing-community-widgets.js');
+      const box = buildTopStudiesWidget();
+      document.body.append(box);
+      await vi.waitFor(() => {
+        expect(box.querySelectorAll('.landing-study-name').length).toBe(2);
+      });
+      const names = [...box.querySelectorAll('.landing-study-name')].map((el) => el.textContent);
+      // A study with no overlay keeps its author's title.
+      expect(names).toEqual(['jqe 对 AB-JChess：每步 4 秒的 100 盘', 'My openings']);
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
   });
 
   it('fits Top studies to whole rows against the body height and fills small slack', async () => {

@@ -6,6 +6,7 @@ import { replayXiangqiBroadcastBoard } from '@mistboard/game';
 import {
   convertWxfDhtmlXqPageToSnapshot,
   extractArticleTitle,
+  gameDetailsFromFrameTags,
 } from './xiangqi-broadcast-wxf-dhtmlxq.js';
 
 const FIXTURE_PATH = fileURLToPath(
@@ -128,4 +129,13 @@ test('a 2025 WXF round page is named by its own title, not the site name', () =>
 
 test('a 2019 WXF title keeps its article name', () => {
   assert.equal(extractArticleTitle(fixtureHtml()), '2019 World Xiangqi Championship Men Round 01a');
+});
+
+test('a record dated with no time keeps a date-only playedAt, not a guessed midnight', () => {
+  assert.equal(gameDetailsFromFrameTags(new Map([['date', '2026-07-28']])).playedAt, '2026-07-28');
+  assert.equal(gameDetailsFromFrameTags(new Map([['date', '2026-7-8']])).playedAt, '2026-07-08');
+  assert.equal(
+    gameDetailsFromFrameTags(new Map([['date', '2026-09-16 19:00']])).playedAt,
+    '2026-09-16T19:00:00+08:00',
+  );
 });

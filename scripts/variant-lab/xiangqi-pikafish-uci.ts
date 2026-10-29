@@ -27,7 +27,8 @@
 // CLIs resolve binary + net and pass them in, so this module (and its test)
 // never needs a local Pikafish install.
 
-import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
+import { type ChildProcessByStdio, spawn } from 'node:child_process';
+import type { Readable, Writable } from 'node:stream';
 import {
   classifyXiangqiSolverMoveUniqueness,
   standardXiangqiEngineFen,
@@ -115,7 +116,7 @@ const ANALYZE_TIMEOUT_MS = 240_000;
 /** Thin driver around a mainline-Pikafish subprocess. One in-flight request at
  *  a time; kill() on error paths, quit() for a clean shutdown. */
 export class PikafishEngine {
-  #proc: ChildProcessWithoutNullStreams;
+  #proc: ChildProcessByStdio<Writable, Readable, null>;
   #buf = '';
   #waiter: {
     pred: (line: string) => boolean;

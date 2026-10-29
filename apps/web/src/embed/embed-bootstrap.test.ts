@@ -31,7 +31,6 @@ describe('the embed document skips the site bootstrap', () => {
     ['analytics', 'phKey && phHost && import.meta.env.PROD && !isEmbedDocument'],
     ['the account nav', 'localeReady.then(() => initializeAccountNav())'],
     ['the server-status poll', "fetch('/api/server-status')"],
-    ['the friends widget', "import('./friends-online.js')"],
   ] as const) {
     it(`guards ${what}`, () => {
       const at = main.indexOf(needle);
@@ -42,6 +41,13 @@ describe('the embed document skips the site bootstrap', () => {
       expect(before, `${what} is not behind the embed guard`).toContain('isEmbedDocument');
     });
   }
+
+  it('mounts no friends widget of its own; the header Friends menu rides on the account nav', () => {
+    // The old bottom-corner widget asked /api/auth/me from main.ts. The Friends
+    // menu is built by account-nav, which is behind the embed guard above.
+    expect(main).not.toContain('friends-online');
+    expect(main).not.toContain('friends-nav');
+  });
 
   it('never lets the embed ask who the viewer is', () => {
     // The credentialed call is the one that actually matters: it is a session

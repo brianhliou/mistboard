@@ -135,17 +135,53 @@
   }
 }
 
-/* Body: intro prose left, donation card right. */
+/* Body: one column on a phone (lead, card, rest); on desktop the prose runs
+   left and the card sits right beside both blocks. */
 .patron-body {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 40px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
 }
 
 .patron-intro-col {
-  flex: 1 1 340px;
   min-width: 0;
+}
+
+/* Grid items do not collapse margins, so the lead drops its last one and the
+   next heading's own margin sets the gap, as it did in one column. */
+.patron-lead > :last-child {
+  margin-bottom: 0;
+}
+
+/* Stacked, the grid gap already separates the card from the next heading. */
+@media (max-width: 759px) {
+  .patron-rest > :first-child {
+    margin-top: 0;
+  }
+}
+
+@media (min-width: 760px) {
+  .patron-body {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-areas:
+      "lead donate"
+      "rest donate";
+    column-gap: 40px;
+    row-gap: 0;
+  }
+
+  .patron-lead {
+    grid-area: lead;
+  }
+
+  .patron-rest {
+    grid-area: rest;
+  }
+
+  .patron-donate-col {
+    grid-area: donate;
+    align-self: start;
+  }
 }
 
 .patron-intro-col > p {
@@ -159,13 +195,19 @@
 }
 
 .patron-donate-col {
-  flex: 0 0 320px;
   max-width: 100%;
 }
 
+/* The column sticks as one block (card and support line), only beside the
+   intro: once the columns stack, nothing sticks. */
+@media (min-width: 760px) {
+  .patron-donate-col {
+    position: sticky;
+    top: 16px;
+  }
+}
+
 .patron-card {
-  position: sticky;
-  top: 16px;
   padding: 22px 20px;
   border: 1px solid var(--site-border-soft);
   border-radius: 12px;
@@ -283,6 +325,56 @@
   font-size: 13px;
   color: #d4645d;
   text-align: center;
+}
+
+/* "Other" amount: a dollar input under the amount row. */
+.patron-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.patron-custom[hidden],
+.patron-custom-message[hidden] {
+  display: none;
+}
+
+.patron-custom-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 8px;
+  background: var(--site-panel);
+}
+
+.patron-custom-field:focus-within {
+  border-color: var(--site-accent);
+}
+
+.patron-custom-currency {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--site-text-soft, #888);
+}
+
+.patron-custom-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+}
+
+.patron-custom-message {
+  margin: 0;
+  font-size: 13px;
+  color: #d4645d;
 }
 
 /* 404 page: a single centered panel (no rail aside). The big "404" is a light

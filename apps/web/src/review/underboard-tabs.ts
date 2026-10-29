@@ -189,6 +189,9 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'review-underboard-tab';
+    // The tab's id, so the phone game review can keep only the tabs its
+    // Game info sheet shows (#619).
+    button.dataset.tab = def.id;
     button.textContent = def.label;
     button.addEventListener('click', () => show(def.id));
     buttons.set(def.id, button);

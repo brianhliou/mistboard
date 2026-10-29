@@ -33,11 +33,57 @@
    meets the bottom edge (zebra stretches with the row, the flex row keeps
    its content vertically centered). Same file as the generic body rule
    above, so source order settles the tie. */
+.landing-study-widget {
+  container: landing-studies / inline-size;
+}
+
 .landing-study-widget .site-box-body {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
   overflow: hidden;
+}
+
+/* Five studies in the column (#710): the sixth one fetched is for the wide
+   layout below. */
+.landing-study-widget .site-box-body > .site-box-row.landing-study-row:nth-child(n + 6) {
+  display: none;
+}
+
+/* A wide, short box (the stacked layout below 1240px: full column width at the
+   20em band height) holds six studies two by three, so no grid cell sits
+   empty. Zebra follows the grid's rows, not the DOM's alternation, which
+   would stripe the columns. The stripes set --site-box-row-bg (site-box.css),
+   so the hover tint still wins on every cell. */
+@container landing-studies (min-width: 520px) {
+  .landing-study-widget .site-box-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    align-content: stretch;
+  }
+
+  .landing-study-widget .site-box-body > .site-box-row.landing-study-row:nth-child(n + 6) {
+    display: flex;
+  }
+
+  /* Three rows share the band here (about 79px each), so the boards grow
+     into the room instead of floating in it. Scoped to the widget so it
+     outranks the base slot rule below. */
+  .landing-study-widget .study-thumbnail.landing-study-thumbnail,
+  .landing-study-widget .study-thumbnail.study-thumbnail--board.landing-study-thumbnail {
+    flex-basis: 56px;
+    width: 56px;
+    height: 62px;
+  }
+
+  .landing-study-widget .site-box-body > .site-box-row.landing-study-row:nth-child(4n + 2) {
+    --site-box-row-bg: transparent;
+  }
+
+  .landing-study-widget .site-box-body > .site-box-row.landing-study-row:nth-child(4n + 3) {
+    --site-box-row-bg: var(--site-zebra);
+  }
 }
 
 .landing-study-widget .site-box-body > .site-box-row {
@@ -56,15 +102,52 @@
   box-sizing: border-box;
 }
 
+/* A study row (#710): a small board of the study's position beside a title of
+   up to three lines and its meta line. Five rows share the ~370px body at
+   1440 wide. */
 .site-box-row.landing-study-row {
   align-items: center;
+  gap: 10px;
   padding-block: 2px;
 }
 
-.landing-study-thumbnail {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 36px;
+.landing-study-row .landing-community-main {
+  gap: 0;
+}
+
+/* A fixed slot, so every board shape (tall xiangqi, square chess, wide banqi)
+   centres in the same footprint and the titles line up. Three classes: the
+   board frame's own height:auto and inline aspect ratio would otherwise size
+   it; with both sides set the SVG letterboxes inside (preserveAspectRatio
+   meet) over a transparent frame. */
+.study-thumbnail.landing-study-thumbnail,
+.study-thumbnail.study-thumbnail--board.landing-study-thumbnail {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 46px;
+  align-self: center;
+}
+
+/* The board draws its own edge; the frame's drop shadow would outline the
+   letterbox around a wide board (banqi) as an empty card. */
+.study-thumbnail.study-thumbnail--board.landing-study-thumbnail {
+  box-shadow: none;
+}
+
+/* A study with no derivable board (a variant the server cannot parse) shows
+   its variant marker on the board's own wood, inked in the board's line
+   colour, so the tiles read as one family with the derived boards. Three
+   classes: study-thumbnails.css sets the panel with two. */
+.study-thumbnail.study-thumbnail--variant.landing-study-thumbnail,
+.study-thumbnail.study-thumbnail--blank.landing-study-thumbnail {
+  border: 0;
+  border-radius: 2px;
+  background: var(--xq-diagram-bg, #d9bd82);
+  box-shadow: inset 0 0 0 1px var(--site-border-soft, rgb(0 0 0 / 15%));
+}
+
+.landing-study-thumbnail .variant-marker {
+  --variant-marker-color: var(--xq-diagram-line, #4b3c2a);
 }
 
 .landing-community-main {
@@ -74,7 +157,6 @@
   min-width: 0;
 }
 
-.landing-community-name,
 .landing-community-meta,
 .landing-leaderboard-category,
 .landing-leaderboard-player {
@@ -89,15 +171,27 @@
   font-weight: 600;
 }
 
+/* Up to three lines of title at a compact size (#710): the site's titles run
+   to about 90 characters, which three lines at this width hold whole. */
+.landing-community-name.landing-study-name {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  font-size: 13px;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+}
+
+.landing-study-row .landing-community-meta {
+  font-size: 11.5px;
+  line-height: 1.25;
+}
+
 .landing-community-meta {
   color: var(--site-muted);
   font-size: 12px;
-}
-
-.landing-study-likes {
-  flex: 0 0 auto;
-  color: var(--site-accent-strong);
-  font-variant-numeric: tabular-nums;
 }
 
 .site-box-row.landing-leaderboard-row {

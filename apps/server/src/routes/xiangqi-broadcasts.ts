@@ -113,6 +113,8 @@ type XiangqiBroadcastRoundStats = {
   liveBoardCount: number;
   completeBoardCount: number;
   scheduledBoardCount: number;
+  /** Boards with moves to replay; a results-only board (dpxq's 0-ply result rows) is not one. */
+  recordedBoardCount: number;
 };
 
 type SourceHealthState = 'ok' | 'warning' | 'error' | 'unknown' | 'missing_source';
@@ -294,6 +296,7 @@ function roundBoardStats(
     liveBoardCount: boards.filter((board) => board.status === 'live').length,
     completeBoardCount: boards.filter((board) => board.status === 'complete').length,
     scheduledBoardCount: boards.filter((board) => board.status === 'scheduled').length,
+    recordedBoardCount: boards.filter((board) => board.plyCount > 0).length,
   };
 }
 
@@ -622,6 +625,9 @@ function boardEvaluation(
   liveEval: XiangqiBroadcastLiveEvalLookup,
 ): XiangqiBroadcastBoardEvaluation | null {
   if (board.status === 'complete') {
+    // No moves (results only, or a withheld record): an analysis stored when
+    // the board had a replay scores a game we no longer show.
+    if (board.plyCount === 0) return null;
     const final = finals.get(board.id);
     return final ? { ...final, source: 'analysis' } : null;
   }
@@ -652,6 +658,56 @@ function cachedXiangqiPlayers() {
   }
   return playerIndexCache.players;
 }
+
+/**
+ * A stale-while-revalidate wrapper for a slow, public read. The broadcast index
+ * folds every board of every tour (~850ms warm on prod, 1-2s cold), and the
+ * homepage asks for it on every visit, so its cards arrived a second after the
+ * page. A value younger than `freshMs` is served as is; an older one up to
+ * `staleMs` is served at once while one refresh runs behind it; past that the
+ * caller waits. A failed load never sticks.
+ */
+export function staleWhileRevalidate<T>(
+  load: () => Promise<T>,
+  opts: { freshMs: number; staleMs: number; now?: () => number },
+): () => Promise<T> {
+  const now = opts.now ?? Date.now;
+  let settled: { at: number; value: T } | null = null;
+  let pending: Promise<T> | null = null;
+  const refresh = (): Promise<T> => {
+    if (pending) return pending;
+    const started = now();
+    const run = load().then(
+      (value) => {
+        settled = { at: started, value };
+        pending = null;
+        return value;
+      },
+      (error: unknown) => {
+        pending = null;
+        throw error;
+      },
+    );
+    pending = run;
+    return run;
+  };
+  return () => {
+    const age = settled ? now() - settled.at : Number.POSITIVE_INFINITY;
+    if (settled && age <= opts.freshMs) return Promise.resolve(settled.value);
+    if (settled && age <= opts.staleMs) {
+      refresh().catch(() => {});
+      return Promise.resolve(settled.value);
+    }
+    return refresh();
+  };
+}
+
+// Live counts on a card may trail by up to 15s; a board page and its stream
+// read the boards directly, so nothing a viewer watches is stale.
+const cachedXiangqiBroadcastIndex = staleWhileRevalidate(() => xiangqiBroadcastIndexForApi(), {
+  freshMs: 15_000,
+  staleMs: 10 * 60_000,
+});
 
 export async function xiangqiBroadcastRoundStreamForApi(
   tourSlug: string,
@@ -743,6 +799,7 @@ export async function xiangqiBroadcastBoardExportForApi(
     result: board.result,
     moves: board.moves,
     ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
+    ...(board.recordWithheld ? { recordWithheld: board.recordWithheld } : {}),
   };
 }
 
@@ -1185,7 +1242,7 @@ export async function tryHandle(
   if (pathname === '/api/xiangqi/broadcasts') {
     if (!requireMethod(request, response, 'GET')) return true;
     if (!requirePersistence(response)) return true;
-    writeJson(response, 200, await xiangqiBroadcastIndexForApi());
+    writeJson(response, 200, await cachedXiangqiBroadcastIndex());
     return true;
   }
 

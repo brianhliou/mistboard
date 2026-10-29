@@ -1735,6 +1735,10 @@ const ZH_HANS: Record<string, string> = {
   '2026 Five Rams Cup, semi-final': '2026 五羊杯，半决赛',
   '"Since I won the world championship, more people in Vietnam follow xiangqi," he said in Guangzhou, "and more of them have started playing."':
     '他在广州说：“自从世锦赛夺冠之后，越南国内关注象棋的人越来越多了，开始下棋、喜欢象棋的人也明显变多了。”',
+  "In July he led Vietnam against Guangdong in Đà Nẵng, and the [1st Kim Long Motor Cup](/broadcast/xiangqi/2026-kim-long-motor-cup) is in the broadcast archive, from XQBase's game records.":
+    '七月，他率领越南队在岘港迎战广东队，[第一届金龙摩托杯](/broadcast/xiangqi/2026-kim-long-motor-cup)收在直播档案里，棋谱来自 XQBase。',
+  'Added a link to the Vietnam vs Guangdong match in the broadcast archive.':
+    '新增指向直播档案中越南对广东比赛的链接。',
   'All 38 games': '全部 38 局',
   "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 15 of them are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; the round table from the WXF results book; the Five Rams Cup and arena records from VnExpress, and the Vietnam vs Guangdong record from VnExpress and 象棋热情; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
     '本页的每一盘都在 Mistboard 的一个研究里，附引擎的判断和变化；其中 15 盘也在直播档案里，附网站的分析。资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；逐轮战绩表来自世界象棋联合会的成绩册；五羊杯和擂台赛战绩来自 VnExpress，越南对广东的战绩来自 VnExpress 和象棋热情；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
@@ -1807,7 +1811,7 @@ const ZH_HANS: Record<string, string> = {
   '2026 China league qualifier, round 3': '2026 象甲预选赛，第 3 轮',
   'Cao Yanlei, who shared the top score and took Shanghai Jiahong into the league, has [his own page](/blog/cao-yanlei). The [qualifier](/broadcast/xiangqi/2026-league-qualifier) is in the broadcast archive.':
     '与他并列最高分、并把上海嘉弘带进联赛的曹岩磊，也有[自己的专页](/blog/cao-yanlei)。[这次预选赛](/broadcast/xiangqi/2026-league-qualifier)收在直播档案里。',
-  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions and runs a qualifying group for players from Hong Kong, Macau and Taiwan. Fung won it in January. He beat Chao Yi-fan of Chinese Taipei with a win and a draw, then drew two slow games with his Hong Kong teammate Wong Hok Him and went through when Wong ran out of time in the rapid playoff.":
+  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions and runs a qualifying group for players from Hong Kong, Macau and Taiwan. Fung won it in January. He beat Chao Yi-fan of Taiwan with a win and a draw, then drew two slow games with his Hong Kong teammate Wong Hok Him and went through when Wong ran out of time in the rapid playoff.":
     '广州的五羊杯邀请中国的全国冠军参赛，另设一个港澳台组，给香港、澳门和台湾的棋手争取名额。一月冯家俊拿下了这个组。他先以一胜一和击败中华台北的赵奕帆，再和香港队友黄学谦下了两盘慢棋，都是和棋，快棋加赛中黄学谦超时，冯家俊晋级。',
   "Chao Yi-fan vs Tony Fung Ga Zen, 2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier, 29 January 2026. Fung won with black in 81 moves. The board opens after red's move 40, with Fung to move.":
     '赵奕帆对冯家俊，2026 五羊杯港澳台组选拔赛，2026 年 1 月 29 日。冯家俊执黑 81 回合取胜。棋盘从红方第 40 回合之后开始，轮到冯家俊走。',
@@ -1888,16 +1892,16 @@ const ZH_HANS: Record<string, string> = {
   "**Her opponents make the first mistake.** In 16 of her 20 wins here, the engine marks her opponent's first mistake before any of hers.":
     '**对手先出错。** 这里她赢的 20 盘中有 16 盘，引擎标出的第一个错着出自对手，早于她的任何错着。',
   'The title': '夺冠',
-  "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Chinese Taipei, and the title with it.":
+  "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Taiwan, and the title with it.":
     '第十七届世界象棋锦标赛在砂拉越的古晋举行，女子组 2022 年 10 月 24 日至 29 日赛七轮。左文静前四盘全胜，第五轮与陈幸琳弈和，最后两轮都赢了。那时冠军已注定落在两位中国棋手之一。最后一盘她击败中华台北的彭柔安，冠军也随之到手。',
-  'Lee Meng Ju, Chinese Taipei': '李孟儒，中华台北',
+  'Lee Meng Ju, Taiwan': '李孟儒，中华台北',
   'Anna Yin Meixian, United States': 'Anna Yin Meixian，美国',
   'Ngo Lan Huang': '吴兰香',
   'Fiona Tan Min Fang, Singapore': '陈茗芳，新加坡',
   'Chen Xinglin, China': '陈幸琳，中国',
   'Nguyen Hoang Yen, Vietnam': '阮黄燕，越南',
   'Nguyen Hoang Yen': '阮黄燕',
-  'Peng Jou-An, Chinese Taipei': '彭柔安，中华台北',
+  'Peng Jou-An, Taiwan': '彭柔安，中华台北',
   'Peng Jou-An': '彭柔安',
   "Her 2022 World Championship, round by round. Names and federations as the WXF's game records give them; round three's federation is left out because other sources give a different one. The record of round one does not replay, so that game is on no board.":
     '她的 2022 年世锦赛，逐轮战绩。姓名和所属协会依照世界象棋联合会棋谱集的写法；第三轮的协会没有列出，因为其他来源给出的不一样。第一轮的棋谱无法回放，所以那盘不在盘面上。',
@@ -3594,7 +3598,7 @@ const ZH_HANS: Record<string, string> = {
   'Lü Qin 吕钦, 1990': '吕钦，1990',
   'Five world titles across fifteen years and five Chinese national titles, 1986 to 2004. Guangdong called him 羊城少帅, the Young Marshal of Guangzhou, and later paired him with Xu Yinchuan as 岭南双雄, the twin heroes of Lingnan. He is the most decorated player on this page and was never, in any single year, the best player in China.':
     '十五年间五夺世界冠军，另有五个全国个人赛冠军，从1986年到2004年。广东称他为羊城少帅，后来又把他与许银川并称岭南双雄。他是本页荣誉最多的棋手，却从来没有在任何一个年份里成为中国最强的棋手。',
-  'That sentence is the article in miniature. Hu Ronghua was ahead of him at home for most of his career and never entered this event; Lü Qin won it five times. Wu Guilin of Chinese Taipei was the strongest player outside the mainland for two decades and the recurring answer to who could actually beat these men, and Lü Qin beat him in 1990, 1995 and 1997.':
+  'That sentence is the article in miniature. Hu Ronghua was ahead of him at home for most of his career and never entered this event; Lü Qin won it five times. Wu Guilin of Taiwan was the strongest player outside the mainland for two decades and the recurring answer to who could actually beat these men, and Lü Qin beat him in 1990, 1995 and 1997.':
     '这句话就是整篇文章的缩影。胡荣华在国内大部分时间都压着他，却从未参加过这项赛事；吕钦却拿了五次。中华台北的吴贵临二十年间是大陆之外最强的棋手，也是"究竟谁能赢这些人"这个问题反复出现的答案，而吕钦在1990、1995和1997年都赢了他。',
   'Lü Qin vs Wu Guilin, 1997, from the fifth championship and the third of his five titles.':
     '吕钦对吴贵临，1997年，第五届世锦赛，也是他五个冠军中的第三个。',
@@ -5891,26 +5895,31 @@ const ZH_HANS: Record<string, string> = {
     '一手牌有三种结束方式。你摸到凑成手牌的那张并宣告胡牌，这是自摸。或者对手打出那张牌，你拿来胡。或者牌墙摸完了没人胡：这手牌流局，双方都不计分，换人做庄。',
   'A win before the hand has really started is a **heavenly hand**: the dealer’s opening five tiles already make a winning hand, or the other player wins with their first draw, before anyone has claimed a tile.':
     '一手牌真正开始之前就胡牌，叫做**天胡**：庄家起手的五张牌已经是胡牌牌型，或另一位玩家在还没有人吃碰之前，第一次摸牌就胡。',
-  'Points now follow the scoring table in Gamesofa’s Xiangqi Mahjong app: new lines for one General, three of a piece and mixed Soldiers, no dealer point, and one heavenly hand for either player’s first draw.':
-    '台数改为依照 Gamesofa 象棋麻将 app 的计台表：新增将之才、帅之才、三张同子和鼓角齐鸣，取消庄家台，天胡改为任一方第一次摸牌就胡都算。',
+  'Pick 1+1, 3+2, 5+5 or 10+5. Each player has one clock for all six hands, and it stops between hands. Who deals the first hand is drawn at random.':
+    '可选 1+1、3+2、5+5 或 10+5。每人六手共用一个计时器，两手之间计时暂停。第一手由谁做庄，随机抽定。',
+  'A match at 1+1, 3+2 or 5+5 between two signed-in players can be rated, and the rating counts the whole match as one result. Matches at 10+5 and matches against Misty, the computer, are unrated.':
+    '两位已登录玩家在 1+1、3+2 或 5+5 下的比赛可以计等级分，整场比赛算作一个结果。10+5 的比赛和对电脑 Misty 的比赛不计等级分。',
+  'Added how a match runs on Mistboard: the time controls, which matches are rated and the first deal.':
+    '新增 Mistboard 上一场比赛怎么进行：可选的时限、哪些比赛计等级分，以及第一手由谁做庄。',
   'Winning hands and their score': '胡牌牌型与台数',
   'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
     '胡牌是五张牌：一组面子加一对将眼，吃碰亮出的面子也算在内。能凑的面子只有三种：将士象顺子、车马炮顺子、三张兵卒，所以下面前三种牌型就涵盖了全部。每副胡牌计台；每张图的说明写的是胡对手弃牌时的台数。',
-  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for 2 points.':
-    '将士象顺子，加任意将眼：1 台；手上只有将或只有帅，再加 1 台，共 2 台。',
-  'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.':
-    '车马炮顺子，加任意将眼。将眼不必和面子同色：1 台。',
-  'Three Soldiers of one colour, with any pair: 1 point.': '三张同色兵卒，加任意将眼：1 台。',
-  'One colour: every tile red, or every tile black. 1 more, for 2 points.':
-    '清一色：全部红牌或全部黑牌。再加 1 台，共 2 台。',
-  'Generals pair: the red and the black General as the pair. 2 more, for 3 points.':
-    '将帅听令：红帅和黑将当将眼。再加 2 台，共 3 台。',
-  'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.':
-    '五兵合纵：同色的五张兵卒全到齐。再加 5 台，而且也是清一色：共 7 台。',
-  'Mixed Soldiers: five Soldiers of both colours. 2 more, for 3 points.':
-    '鼓角齐鸣：五张兵卒，红黑都有。再加 2 台，共 3 台。',
-  'Three of a piece: three Horses, of either colour. 2 more, for 3 points. Three Advisors, Elephants, Chariots or Cannons score the same.':
-    '三张同子：三张马，红黑不拘（千军万马）。再加 2 台，共 3 台。三张士、象、车或炮也一样。',
+  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for **2 points**.':
+    '将士象顺子，加任意将眼：1 台；手上只有将或只有帅，再加 1 台，共 **2 台**。',
+  'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: **1 point**.':
+    '车马炮顺子，加任意将眼。将眼不必和面子同色：**1 台**。',
+  'Three Soldiers of one colour, with any pair: **1 point**.':
+    '三张同色兵卒，加任意将眼：**1 台**。',
+  'One colour: every tile red, or every tile black. 1 more, for **2 points**.':
+    '清一色：全部红牌或全部黑牌。再加 1 台，共 **2 台**。',
+  'Generals pair: the red and the black General as the pair. 2 more, for **3 points**.':
+    '将帅听令：红帅和黑将当将眼。再加 2 台，共 **3 台**。',
+  'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: **7 points**.':
+    '五兵合纵：同色的五张兵卒全到齐。再加 5 台，而且也是清一色：共 **7 台**。',
+  'Mixed Soldiers: five Soldiers of both colours. 2 more, for **3 points**.':
+    '鼓角齐鸣：五张兵卒，红黑都有。再加 2 台，共 **3 台**。',
+  'Three of a piece: three Horses, of either colour. 2 more, for **3 points**. Three Advisors, Elephants, Chariots or Cannons score the same.':
+    '三张同子：三张马，红黑不拘（千军万马）。再加 2 台，共 **3 台**。三张士、象、车或炮也一样。',
   'Close, but not a win': '差一点，但不算胡',
   'These look finished and are not. In each, the three tiles on the left fail to make a set or the two on the right fail to make a pair.':
     '这些看起来成牌了，其实没有。每一副不是左边三张凑不成面子，就是右边两张凑不成将眼。',
@@ -6450,26 +6459,31 @@ const ZH_HANT: Record<string, string> = {
     '一手牌有三種結束方式。你摸到湊成手牌的那張並宣告胡牌，這是自摸。或者對手打出那張牌，你拿來胡。或者牌牆摸完了沒人胡：這手牌流局，雙方都不計分，換人做莊。',
   'A win before the hand has really started is a **heavenly hand**: the dealer’s opening five tiles already make a winning hand, or the other player wins with their first draw, before anyone has claimed a tile.':
     '一手牌真正開始之前就胡牌，叫做**天胡**：莊家起手的五張牌已經是胡牌牌型，或另一位玩家在還沒有人吃碰之前，第一次摸牌就胡。',
-  'Points now follow the scoring table in Gamesofa’s Xiangqi Mahjong app: new lines for one General, three of a piece and mixed Soldiers, no dealer point, and one heavenly hand for either player’s first draw.':
-    '台數改為依照 Gamesofa 象棋麻將 app 的計台表：新增將之才、帥之才、三張同子和鼓角齊鳴，取消莊家台，天胡改為任一方第一次摸牌就胡都算。',
+  'Pick 1+1, 3+2, 5+5 or 10+5. Each player has one clock for all six hands, and it stops between hands. Who deals the first hand is drawn at random.':
+    '可選 1+1、3+2、5+5 或 10+5。每人六手共用一個計時器，兩手之間計時暫停。第一手由誰做莊，隨機抽定。',
+  'A match at 1+1, 3+2 or 5+5 between two signed-in players can be rated, and the rating counts the whole match as one result. Matches at 10+5 and matches against Misty, the computer, are unrated.':
+    '兩位已登入玩家在 1+1、3+2 或 5+5 下的比賽可以計等級分，整場比賽算作一個結果。10+5 的比賽和對電腦 Misty 的比賽不計等級分。',
+  'Added how a match runs on Mistboard: the time controls, which matches are rated and the first deal.':
+    '新增 Mistboard 上一場比賽怎麼進行：可選的時限、哪些比賽計等級分，以及第一手由誰做莊。',
   'Winning hands and their score': '胡牌牌型與台數',
   'A winning hand is five tiles: one set and one pair, counting a set you laid down after a claim. There are only three sets to make, a General sequence, a Chariot sequence or three Soldiers, so the first three hands below cover them all. A hand scores points; each caption gives what it scores when it is won on a discard.':
     '胡牌是五張牌：一組面子加一對將眼，吃碰亮出的面子也算在內。能湊的面子只有三種：將士象順子、車馬炮順子、三張兵卒，所以下面前三種牌型就涵蓋了全部。每副胡牌計台；每張圖的說明寫的是胡對手棄牌時的台數。',
-  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for 2 points.':
-    '將士象順子，加任意將眼：1 台；手上只有將或只有帥，再加 1 台，共 2 台。',
-  'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.':
-    '車馬炮順子，加任意將眼。將眼不必和面子同色：1 台。',
-  'Three Soldiers of one colour, with any pair: 1 point.': '三張同色兵卒，加任意將眼：1 台。',
-  'One colour: every tile red, or every tile black. 1 more, for 2 points.':
-    '清一色：全部紅牌或全部黑牌。再加 1 台，共 2 台。',
-  'Generals pair: the red and the black General as the pair. 2 more, for 3 points.':
-    '將帥聽令：紅帥和黑將當將眼。再加 2 台，共 3 台。',
-  'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.':
-    '五兵合縱：同色的五張兵卒全到齊。再加 5 台，而且也是清一色：共 7 台。',
-  'Mixed Soldiers: five Soldiers of both colours. 2 more, for 3 points.':
-    '鼓角齊鳴：五張兵卒，紅黑都有。再加 2 台，共 3 台。',
-  'Three of a piece: three Horses, of either colour. 2 more, for 3 points. Three Advisors, Elephants, Chariots or Cannons score the same.':
-    '三張同子：三張馬，紅黑不拘（千軍萬馬）。再加 2 台，共 3 台。三張士、象、車或炮也一樣。',
+  'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for **2 points**.':
+    '將士象順子，加任意將眼：1 台；手上只有將或只有帥，再加 1 台，共 **2 台**。',
+  'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: **1 point**.':
+    '車馬炮順子，加任意將眼。將眼不必和面子同色：**1 台**。',
+  'Three Soldiers of one colour, with any pair: **1 point**.':
+    '三張同色兵卒，加任意將眼：**1 台**。',
+  'One colour: every tile red, or every tile black. 1 more, for **2 points**.':
+    '清一色：全部紅牌或全部黑牌。再加 1 台，共 **2 台**。',
+  'Generals pair: the red and the black General as the pair. 2 more, for **3 points**.':
+    '將帥聽令：紅帥和黑將當將眼。再加 2 台，共 **3 台**。',
+  'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: **7 points**.':
+    '五兵合縱：同色的五張兵卒全到齊。再加 5 台，而且也是清一色：共 **7 台**。',
+  'Mixed Soldiers: five Soldiers of both colours. 2 more, for **3 points**.':
+    '鼓角齊鳴：五張兵卒，紅黑都有。再加 2 台，共 **3 台**。',
+  'Three of a piece: three Horses, of either colour. 2 more, for **3 points**. Three Advisors, Elephants, Chariots or Cannons score the same.':
+    '三張同子：三張馬，紅黑不拘（千軍萬馬）。再加 2 台，共 **3 台**。三張士、象、車或炮也一樣。',
   'Close, but not a win': '差一點，但不算胡',
   'These look finished and are not. In each, the three tiles on the left fail to make a set or the two on the right fail to make a pair.':
     '這些看起來成牌了，其實沒有。每一副不是左邊三張湊不成面子，就是右邊兩張湊不成將眼。',
@@ -7945,6 +7959,10 @@ const ZH_HANT: Record<string, string> = {
   '2026 Five Rams Cup, semi-final': '2026 五羊盃，半決賽',
   '"Since I won the world championship, more people in Vietnam follow xiangqi," he said in Guangzhou, "and more of them have started playing."':
     '他在廣州說：「自從世錦賽奪冠之後，越南國內關注象棋的人越來越多了，開始下棋、喜歡象棋的人也明顯變多了。」',
+  "In July he led Vietnam against Guangdong in Đà Nẵng, and the [1st Kim Long Motor Cup](/broadcast/xiangqi/2026-kim-long-motor-cup) is in the broadcast archive, from XQBase's game records.":
+    '七月，他率領越南隊在峴港迎戰廣東隊，[第一屆金龍摩托盃](/broadcast/xiangqi/2026-kim-long-motor-cup)收在直播檔案裡，棋譜來自 XQBase。',
+  'Added a link to the Vietnam vs Guangdong match in the broadcast archive.':
+    '新增指向直播檔案中越南對廣東比賽的連結。',
   'All 38 games': '全部 38 局',
   "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 15 of them are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; the round table from the WXF results book; the Five Rams Cup and arena records from VnExpress, and the Vietnam vs Guangdong record from VnExpress and 象棋热情; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
     '本頁的每一盤都在 Mistboard 的一個研究裡，附引擎的判斷和變化；其中 15 盤也在直播檔案裡，附網站的分析。資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；逐輪戰績表來自世界象棋聯合會的成績冊；五羊盃和擂台賽戰績來自 VnExpress，越南對廣東的戰績來自 VnExpress 和象棋熱情；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
@@ -8008,8 +8026,8 @@ const ZH_HANT: Record<string, string> = {
   '2026 China league qualifier, round 3': '2026 象甲預選賽，第 3 輪',
   'Cao Yanlei, who shared the top score and took Shanghai Jiahong into the league, has [his own page](/blog/cao-yanlei). The [qualifier](/broadcast/xiangqi/2026-league-qualifier) is in the broadcast archive.':
     '與他並列最高分、並把上海嘉弘帶進聯賽的曹岩磊，也有[自己的專頁](/blog/cao-yanlei)。[這次預選賽](/broadcast/xiangqi/2026-league-qualifier)收在直播檔案裡。',
-  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions and runs a qualifying group for players from Hong Kong, Macau and Taiwan. Fung won it in January. He beat Chao Yi-fan of Chinese Taipei with a win and a draw, then drew two slow games with his Hong Kong teammate Wong Hok Him and went through when Wong ran out of time in the rapid playoff.":
-    '廣州的五羊盃邀請中國的全國冠軍參賽，另設一個港澳台組，給香港、澳門和台灣的棋手爭取名額。一月馮家俊拿下了這個組。他先以一勝一和擊敗中華台北的趙奕帆，再和香港隊友黃學謙下了兩盤慢棋，都是和棋，快棋加賽中黃學謙超時，馮家俊晉級。',
+  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions and runs a qualifying group for players from Hong Kong, Macau and Taiwan. Fung won it in January. He beat Chao Yi-fan of Taiwan with a win and a draw, then drew two slow games with his Hong Kong teammate Wong Hok Him and went through when Wong ran out of time in the rapid playoff.":
+    '廣州的五羊盃邀請中國的全國冠軍參賽，另設一個港澳台組，給香港、澳門和台灣的棋手爭取名額。一月馮家俊拿下了這個組。他先以一勝一和擊敗台灣的趙奕帆，再和香港隊友黃學謙下了兩盤慢棋，都是和棋，快棋加賽中黃學謙超時，馮家俊晉級。',
   "Chao Yi-fan vs Tony Fung Ga Zen, 2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier, 29 January 2026. Fung won with black in 81 moves. The board opens after red's move 40, with Fung to move.":
     '趙奕帆對馮家俊，2026 五羊盃港澳台組選拔賽，2026 年 1 月 29 日。馮家俊執黑 81 回合取勝。棋盤從紅方第 40 回合之後開始，輪到馮家俊走。',
   '2026 Five Rams Cup, Hong Kong, Macau and Taiwan qualifier': '2026 五羊盃，港澳台組選拔賽',
@@ -8081,16 +8099,16 @@ const ZH_HANT: Record<string, string> = {
   "**Her opponents make the first mistake.** In 16 of her 20 wins here, the engine marks her opponent's first mistake before any of hers.":
     '**對手先出錯。** 這裡她贏的 20 盤中有 16 盤，引擎標出的第一個錯著出自對手，早於她的任何錯著。',
   'The title': '奪冠',
-  "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Chinese Taipei, and the title with it.":
-    '第十七屆世界象棋錦標賽在砂拉越的古晉舉行，女子組 2022 年 10 月 24 日至 29 日賽七輪。左文静前四盤全勝，第五輪與陈幸琳弈和，最後兩輪都贏了。那時冠軍已註定落在兩位中國棋手之一。最後一盤她擊敗中華台北的彭柔安，冠軍也隨之到手。',
-  'Lee Meng Ju, Chinese Taipei': '李孟儒，中華台北',
+  "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Taiwan, and the title with it.":
+    '第十七屆世界象棋錦標賽在砂拉越的古晉舉行，女子組 2022 年 10 月 24 日至 29 日賽七輪。左文静前四盤全勝，第五輪與陈幸琳弈和，最後兩輪都贏了。那時冠軍已註定落在兩位中國棋手之一。最後一盤她擊敗台灣的彭柔安，冠軍也隨之到手。',
+  'Lee Meng Ju, Taiwan': '李孟儒，台灣',
   'Anna Yin Meixian, United States': 'Anna Yin Meixian，美國',
   'Ngo Lan Huang': '吳蘭香',
   'Fiona Tan Min Fang, Singapore': '陳茗芳，新加坡',
   'Chen Xinglin, China': '陈幸琳，中國',
   'Nguyen Hoang Yen, Vietnam': '阮黃燕，越南',
   'Nguyen Hoang Yen': '阮黃燕',
-  'Peng Jou-An, Chinese Taipei': '彭柔安，中華台北',
+  'Peng Jou-An, Taiwan': '彭柔安，台灣',
   "Her 2022 World Championship, round by round. Names and federations as the WXF's game records give them; round three's federation is left out because other sources give a different one. The record of round one does not replay, so that game is on no board.":
     '她的 2022 年世錦賽，逐輪戰績。姓名和所屬協會依照世界象棋聯合會棋譜集的寫法；第三輪的協會沒有列出，因為其他來源給出的不一樣。第一輪的棋譜無法回放，所以那盤不在盤面上。',
   "Nguyen Hoang Yen vs Zuo Wenjing, 2022 World Xiangqi Championship, women, round 6, 27 October 2022. Zuo won with black in 37 moves. The board opens after red's move 10, with Zuo to move.":
@@ -9855,8 +9873,8 @@ const ZH_HANT: Record<string, string> = {
   'The national title, and every champion since 1956': '全國冠軍，以及1956年以來的每一位',
   'Five world titles across fifteen years and five Chinese national titles, 1986 to 2004. Guangdong called him 羊城少帅, the Young Marshal of Guangzhou, and later paired him with Xu Yinchuan as 岭南双雄, the twin heroes of Lingnan. He is the most decorated player on this page and was never, in any single year, the best player in China.':
     '十五年間五奪世界冠軍，另有五個全國個人賽冠軍，從1986年到2004年。廣東稱他為羊城少帥，後來又把他與许银川並稱嶺南雙雄。他是本頁榮譽最多的棋手，卻從來沒有在任何一個年份裡成為中國最強的棋手。',
-  'That sentence is the article in miniature. Hu Ronghua was ahead of him at home for most of his career and never entered this event; Lü Qin won it five times. Wu Guilin of Chinese Taipei was the strongest player outside the mainland for two decades and the recurring answer to who could actually beat these men, and Lü Qin beat him in 1990, 1995 and 1997.':
-    '這句話就是整篇文章的縮影。胡荣华在國內大部分時間都壓著他，卻從未參加過這項賽事；吕钦卻拿了五次。中華臺北的吳貴臨二十年間是大陸之外最強的棋手，也是"究竟誰能贏這些人"這個問題反覆出現的答案，而吕钦在1990、1995和1997年都贏了他。',
+  'That sentence is the article in miniature. Hu Ronghua was ahead of him at home for most of his career and never entered this event; Lü Qin won it five times. Wu Guilin of Taiwan was the strongest player outside the mainland for two decades and the recurring answer to who could actually beat these men, and Lü Qin beat him in 1990, 1995 and 1997.':
+    '這句話就是整篇文章的縮影。胡荣华在國內大部分時間都壓著他，卻從未參加過這項賽事；吕钦卻拿了五次。台灣的吳貴臨二十年間是大陸之外最強的棋手，也是"究竟誰能贏這些人"這個問題反覆出現的答案，而吕钦在1990、1995和1997年都贏了他。',
   'Lü Qin vs Wu Guilin, 1997, from the fifth championship and the third of his five titles.':
     '吕钦對吳貴臨，1997年，第五屆世錦賽，也是他五個冠軍中的第三個。',
   'World champion in 1991 and four times Chinese national champion, spread across eighteen years from 1990 to 2008, which is a longer span at the top than anyone here except Hu Ronghua managed. He learned in Harbin under Wang Jialiang, known as the Northeast Tiger, and the sport made him the New Northeast Tiger in turn.':

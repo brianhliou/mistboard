@@ -26,6 +26,9 @@ type BotPlayOption = {
   gameSpecId: string;
   engineId: string;
   playable: boolean;
+  // The engine build this variant plays, from the server's pins
+  // (bot-engine-versions.ts); absent when none is recorded.
+  version?: string;
 };
 
 type BotRecord = {
@@ -137,18 +140,7 @@ export async function mountBots(root: HTMLElement): Promise<void> {
   );
   headerCopy.append(eyebrow, heading, sub, meta);
 
-  const markers = document.createElement('div');
-  markers.className = 'bots-directory-markers';
-  markers.setAttribute('aria-hidden', 'true');
-  for (const [gameSpecId, size] of [
-    ['dark-chess', 48],
-    ['xiangqi', 64],
-    ['banqi', 44],
-  ] as const) {
-    const marker = variantThumb(gameSpecId, size, 'bots-directory-marker');
-    if (marker) markers.append(marker);
-  }
-  header.append(headerCopy, markers);
+  header.append(headerCopy);
 
   const body = document.createElement('section');
   body.className = 'bots-directory';
@@ -267,7 +259,8 @@ async function fetchBotProfile(botId: string): Promise<BotProfile> {
 // plays xiangqi (Pikafish) as the top rung. Each rung is named by its level,
 // shows its one xiangqi rating, and leads with "Play xiangqi"; the level a
 // first-timer is given (XIANGQI_FIRST_GAME_LEVEL) says "Start here". Bots that
-// do not play xiangqi (Misty) follow under Other games.
+// do not play xiangqi follow: Misty in a section of its own, since its card
+// lists every game it plays, then the rest under Other games.
 function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
   const system = bots.filter((bot) => bot.ownerType === 'system');
   const ladder = system
@@ -289,7 +282,9 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
     .filter((bot) => playsGame(bot, 'jieqi'))
     .sort((a, b) => jieqiTopRank(a.id) - jieqiTopRank(b.id));
   const jieqiStrongestId = jieqiTopRungs.at(-1)?.id;
-  const otherGames = others.filter((bot) => !playsGame(bot, 'xiangqi') && !playsGame(bot, 'jieqi'));
+  const nonLadder = others.filter((bot) => !playsGame(bot, 'xiangqi') && !playsGame(bot, 'jieqi'));
+  const misty = nonLadder.filter((bot) => bot.id === 'misty');
+  const otherGames = nonLadder.filter((bot) => bot.id !== 'misty');
   const community = bots.filter((bot) => bot.ownerType === 'user');
   const xiangqiCard = { ratingGameSpecId: 'xiangqi', primaryPlayGameSpecId: 'xiangqi' };
   const jieqiCard = { ratingGameSpecId: 'jieqi', primaryPlayGameSpecId: 'jieqi' };
@@ -361,6 +356,13 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
         : [],
     },
     {
+      title: t('bots.mistyTitle'),
+      intro: t('bots.mistyIntro'),
+      rows: misty.map((bot) =>
+        buildBotSummaryCard(bot, { subtitle: t('bots.firstParty'), bio: systemBotBio(bot) }),
+      ),
+    },
+    {
       title: t('bots.otherTitle'),
       intro: t('bots.otherIntro'),
       rows: otherGames.map((bot) =>
@@ -408,16 +410,6 @@ export function botCredits(botId: string): BotCredit[] {
     { label: t('bots.katagoCreditKatago'), href: 'https://github.com/lightvector/KataGo' },
     { label: t('bots.katagoCreditNet'), href: 'https://github.com/lxsgx23/Dandelion-Chess' },
   ];
-}
-
-// The version a bot plays, for bots whose strength depends on which one it is:
-// match results and the ladder are against this version, not the engine in
-// general. jqe has no release numbers, so its network names it. Keep in step
-// with ab-jchess.ref and jqe.ref.
-export function botVersion(botId: string): string | undefined {
-  if (botId === 'jqe') return 'it014 (network)';
-  if (botId === 'ab-jchess') return '0.2d';
-  return undefined;
 }
 
 function buildBotCredits(credits: readonly BotCredit[]): HTMLElement {
@@ -490,12 +482,35 @@ function buildBotOverview(bot: BotProfile, gameSpecId: string): HTMLElement {
   const option =
     playOptionsFor(bot).find((candidate) => candidate.gameSpecId === gameSpecId) ??
     playOptionsFor(bot)[0];
-  return buildProfileOverviewShell({
+  const overview = buildProfileOverviewShell({
     identity: buildBotIdentity(bot, gameSpecId),
     actions: option ? buildBotPlayAction(bot, option) : null,
     primary: buildBotRatingSpotlight(bot, gameSpecId),
     side: buildBotSideInfo(bot, gameSpecId),
   });
+  const about = buildBotAbout(bot);
+  if (about) overview.querySelector('.profile-overview-top')?.after(about);
+  return overview;
+}
+
+// The bio and credits, at the page's width under the header. In the side column
+// they had a third of the card, and a long credit ran past its edge.
+function buildBotAbout(bot: BotProfile): HTMLElement | null {
+  // The roster card's localized bio, so the page and the card say the same thing
+  // in every locale; other bots keep their stored bio.
+  const bioText = systemBotBio(bot) ?? bot.bio;
+  const credits = botCredits(bot.id);
+  if (bioText.trim().length === 0 && credits.length === 0) return null;
+  const about = document.createElement('div');
+  about.className = 'bot-profile-about';
+  if (bioText.trim().length > 0) {
+    const bio = document.createElement('p');
+    bio.className = 'profile-side-line profile-side-bio';
+    bio.textContent = bioText;
+    about.append(bio);
+  }
+  if (credits.length > 0) about.append(buildBotCredits(credits));
+  return about;
 }
 
 function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
@@ -635,18 +650,10 @@ function buildBotSideInfo(bot: BotProfile, gameSpecId: string): HTMLElement {
   const side = document.createElement('aside');
   side.className = 'profile-overview-side';
 
-  // The roster card's localized bio, so the page and the card say the same thing in
-  // every locale; other bots keep their stored bio.
-  const bioText = systemBotBio(bot) ?? bot.bio;
-  if (bioText.trim().length > 0) {
-    const bio = document.createElement('p');
-    bio.className = 'profile-side-line profile-side-bio';
-    bio.textContent = bioText;
-    side.append(bio);
-  }
-  const credits = botCredits(bot.id);
-  if (credits.length > 0) side.append(buildBotCredits(credits));
-  const version = botVersion(bot.id);
+  // The selected variant's engine build: Misty runs a different one per variant.
+  const version = playOptionsFor(bot).find(
+    (candidate) => candidate.gameSpecId === gameSpecId,
+  )?.version;
   if (version) side.append(buildBotSideStat('Version', version));
 
   const rating = botRatings(bot).find((candidate) => candidate.gameSpecId === gameSpecId);

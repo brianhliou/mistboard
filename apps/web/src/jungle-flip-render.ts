@@ -23,12 +23,22 @@ import {
   type JungleFlipSquare,
   jungleFlipCoordOf,
 } from '@mistboard/game';
-import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import {
+  drawMarkerOnArrival,
+  flipSvgPiece,
+  glideSvgPiece,
+  type PieceFlipEdge,
+  type PieceFlipStyle,
+  pieceAnimationDurationMs,
+  pieceFlipDurationMs,
+  pieceFlipStyle,
+} from './board-anim.js';
 import { boardCornerRadius } from './board-metrics.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { currentJungleBoardSkin, currentJunglePieceSkin } from './jungle-appearance-storage.js';
 import {
   framedTokenSvg,
+  JUNGLE_ART,
   type JungleLastMoveInk,
   jungleBoardAssetHref,
   jungleCoverImage,
@@ -38,6 +48,7 @@ import {
   jungleTokenSize,
 } from './jungle-art.js';
 import { characterTokenSvg, type JungleBoardSkin, type JunglePieceSkin } from './jungle-skins.js';
+import { PIECE_3D_IVORY, piece3dDepthShare, piece3dEnabled, round2 } from './piece-3d.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -46,10 +57,16 @@ import {
   svgBoardCircleMarker,
   svgBoardGlyphMarker,
 } from './svg-board-marker.js';
+import { flipTileOverlay } from './tile-flip-3d.js';
 
 const FILES = 4;
 const RANKS = 4;
 const CELL = 64;
+/** A flat Flip Jungle tile's outer edge as a share of the cell, face up or down
+ *  (Brian, 2026-10-29: "2d 85 and 3d 90"; JUNGLE_FLIP_TILE_3D has the 3D one).
+ *  Plain Jungle keeps JUNGLE_TOKEN_REACH's whole cell. */
+export const JUNGLE_FLIP_TOKEN_REACH = 0.85;
+const tokenSpan = (cell: number): number => cell * JUNGLE_FLIP_TOKEN_REACH;
 // Board corner radius, shared by the descriptor's internal clip-path AND the drawn
 // border below so the two can never disagree about the curve. Derived from the shared
 // ratio rather than hand-computed, which is what let it sit at 5 against a 4.86 target.
@@ -119,6 +136,9 @@ export type JungleFlipRenderOptions = {
   // deterministically (variant markers, rules diagrams, OG cards).
   boardSkin?: JungleBoardSkin;
   pieceSkin?: JunglePieceSkin;
+  /** Trial 3D tiles (#709): each tile shows a band of its body under its face.
+   *  Off by default; without it the board's markup is unchanged. */
+  tile3d?: boolean;
 };
 
 export interface JungleFlipBoardArrow extends SvgBoardArrowStyle {
@@ -209,10 +229,12 @@ function pieces(
   shadow: boolean,
   draggingFrom: JungleFlipSquare | null,
   pieceSkin: JunglePieceSkin,
+  tile3d = false,
 ): string {
   const parts: string[] = [];
-  // Outer edge on the cell edge, the same as the face-down tile (JUNGLE_TOKEN_REACH).
-  const s = jungleTokenSize(geom.cell);
+  const tile = tile3d ? jungleFlipTile3dGeometry(geom.cell) : null;
+  // The same outer edge as the face-down tile (JUNGLE_FLIP_TOKEN_REACH).
+  const s = jungleTokenSize(tokenSpan(geom.cell));
   const filterId = shadow ? `${gid}-tok` : undefined;
   // The face-down disc is already flat, so it is shared by both skins.
   const tokenSvg = pieceSkin === 'characters' ? characterTokenSvg : framedTokenSvg;
@@ -225,12 +247,14 @@ function pieces(
     // capture onto a square and the glide has to find whatever settled there.
     // The keyed outer slot lets a post-render glide find the token
     // (animateJungleFlipBoardMove); the drag-source dimmer stays an inner wrapper.
-    const body = entry.faceDown
-      ? // Face-down back: a neutral jade rounded square (no ink or identity, the deal is
-        // hidden from both sides), the same outer size and shape as a face-up token.
-        jungleFaceDownDiscSvg(x, y, geom.cell, filterId)
-      : // Revealed: the framed token for the active skin (matches the vanilla board).
-        tokenSvg({ cx: x, cy: y, size: s, ink: entry.color, role: entry.role, filterId });
+    const body = tile
+      ? jungleFlipTile3dMarkup({ x, y }, entry.faceDown ? null : entry, tile, pieceSkin, filterId)
+      : entry.faceDown
+        ? // Face-down back: a neutral jade rounded square (no ink or identity, the deal is
+          // hidden from both sides), the same outer size and shape as a face-up token.
+          jungleFaceDownDiscSvg(x, y, tokenSpan(geom.cell), filterId)
+        : // Revealed: the framed token for the active skin (matches the vanilla board).
+          tokenSvg({ cx: x, cy: y, size: s, ink: entry.color, role: entry.role, filterId });
     // While this piece is being dragged, dim its on-board token so only the ghost reads.
     const slotBody =
       !entry.faceDown && square === draggingFrom
@@ -287,7 +311,7 @@ export function jungleFlipPieceGhostSvg(entry: {
   const inner = tokenSvg({
     cx: CELL / 2,
     cy: CELL / 2,
-    size: jungleTokenSize(CELL),
+    size: jungleTokenSize(tokenSpan(CELL)),
     ink: entry.color,
     role: entry.role,
   });
@@ -311,7 +335,15 @@ export function renderJungleFlipBoardSvg(
     coords: boardCoordinatesEnabled(),
     renderPieces: (geom) =>
       terrain(geom, options.lastMove ?? null, options.lastMoveInk ?? null, boardSkin) +
-      pieces(board, geom, gid, shadow, options.draggingFrom ?? null, pieceSkin) +
+      pieces(
+        board,
+        geom,
+        gid,
+        shadow,
+        options.draggingFrom ?? null,
+        pieceSkin,
+        options.tile3d ?? piece3dEnabled(),
+      ) +
       `<g class="jungle-flip-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${jungleFlipMarkerLayer(options.markers ?? [], geom)}</g>` +
       `<g class="jungle-flip-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jungleFlipArrowLayer(options.arrows ?? [], geom)}</g>`,
     // Last-move is drawn inside terrain (over the bushy board); the core's own last-move
@@ -379,4 +411,157 @@ function jungleFlipMarkerSvgWithGeometry(
   return svgBoardCircleMarker(marker, center, geom.cell * (26 / 60), {
     baseClassName: 'xq-marker engine-marker',
   });
+}
+
+// ── Turn-over and trial 3D tiles (#709) ─────────────────────────────────────
+
+/**
+ * Turn the tile on `square` over after the render that drew its face: the
+ * board's own face-down tile (identity-free) turns to the face, in the tab's
+ * flip style. With `tile3d` the 3D back turns and, edge-on, the tile shows its
+ * thickness. Call only for a reveal (a flip, `from === to`) on a square the
+ * render shows face up. No-op (false) under reduced motion, the 'none'
+ * animation pref, without WAAPI, or when the slot is missing.
+ */
+export function animateJungleFlipReveal(
+  host: HTMLElement,
+  square: JungleFlipSquare,
+  opts: { tile3d?: boolean; style?: PieceFlipStyle; delayMs?: number } = {},
+): boolean {
+  const slot = host.querySelector(`[data-piece-square="${square}"]`);
+  if (!slot) return false;
+  const geom = createGridGeometry(DESCRIPTOR, false);
+  const { file, rank } = jungleFlipCoordOf(square);
+  const anchor = geom.center(file, rank);
+  const durationMs = pieceFlipDurationMs();
+  const timing = {
+    ...(opts.style ? { style: opts.style } : {}),
+    ...(opts.delayMs ? { delayMs: opts.delayMs } : {}),
+  };
+  // The flip's cell in the flipper's ink turns up with the face, never first.
+  const faceMark = host.querySelector('.jungle-last-move-flip');
+  if (opts.tile3d ?? piece3dEnabled()) {
+    const tile = jungleFlipTile3dGeometry(geom.cell);
+    const face = { x: anchor.x, y: round2(anchor.y - tile.lift) };
+    const style = opts.style ?? pieceFlipStyle();
+    // A thick tile turns as a true 3D body; the SVG turn squashes it flat
+    // (Brian, 2026-10-29: "we need to fix the squash issue").
+    const rim = slot.querySelector(':scope > .jgf-rim');
+    if (style !== 'flat' && !opts.delayMs && rim && durationMs > 0) {
+      const front = Array.from(slot.children)
+        .filter((child) => child !== rim)
+        .map((child) => child.outerHTML)
+        .join('');
+      const turned = flipTileOverlay({
+        slot,
+        center: face,
+        radius: tile.half,
+        corner: tile.corner,
+        depth: tile.depth,
+        reach: tile.half + tile.depth + 2,
+        front: { band: rim.outerHTML, face: front },
+        back: {
+          band: rim.outerHTML,
+          face: jungleFaceDownDiscSvg(face.x, face.y, 2 * tile.half),
+        },
+        // One ivory body face up and face down.
+        wall: { front: PIECE_3D_IVORY[0], back: PIECE_3D_IVORY[0] },
+        durationMs,
+        style,
+        faceMark,
+      });
+      if (turned) return true;
+    }
+    return flipSvgPiece(slot, face, jungleFlipTile3dMarkup(anchor, null, tile), durationMs, {
+      ...timing,
+      edge: jungleFlipTile3dEdge(tile),
+      faceMark,
+    });
+  }
+  return flipSvgPiece(
+    slot,
+    anchor,
+    jungleFaceDownDiscSvg(anchor.x, anchor.y, tokenSpan(geom.cell)),
+    durationMs,
+    { ...timing, faceMark },
+  );
+}
+
+/**
+ * Trial 3D tiles: a rounded-square tile seen a little from above, as banqi's
+ * and xiangqi's 3D discs are (piece-3d.ts). Face and rim together are centred
+ * on the cell and span `reach` of it, so they never pass the flat tile's
+ * footprint; the face is raised by half the rim and
+ * comes out narrower than flat by the rim's depth. One ivory body face up and
+ * face down.
+ */
+export const JUNGLE_FLIP_TILE_3D = { reach: 0.9, depthShare: 0.08 } as const;
+
+export interface JungleFlipTile3dGeometry {
+  /** Rim thickness. */
+  depth: number;
+  /** How far the face is raised from the cell centre (half the rim). */
+  lift: number;
+  /** Half the face's outer width (ring or back stroke included). */
+  half: number;
+  /** The face's outer corner radius. */
+  corner: number;
+  /** The token size whose outer edge is the face. */
+  size: number;
+}
+
+const JUNGLE_TOKEN_OUTER_PER_SIZE = 2 * JUNGLE_ART.ringRadiusRatio + JUNGLE_ART.ringStrokeRatio;
+
+export function jungleFlipTile3dGeometry(cell: number): JungleFlipTile3dGeometry {
+  const span = cell * JUNGLE_FLIP_TILE_3D.reach;
+  const depth = round2(span * piece3dDepthShare(JUNGLE_FLIP_TILE_3D));
+  // Rounded down to the quarter so the face never outgrows span - depth.
+  const size = Math.floor(((span - depth) / JUNGLE_TOKEN_OUTER_PER_SIZE) * 4) / 4;
+  const face = size * JUNGLE_TOKEN_OUTER_PER_SIZE;
+  const half = round2(face / 2);
+  const stroke = face * JUNGLE_ART.faceDown.strokeRatio;
+  const corner = round2((half - stroke / 2) * JUNGLE_ART.cornerPerHalf + stroke / 2);
+  return { depth, lift: round2(depth / 2), half, corner, size };
+}
+
+// The side wall below the face: straight sides from the face's middle down
+// `k`, closed by the face's bottom edge and corners moved down by `k`.
+function tileBandPath(cx: number, cy: number, h: number, rc: number, k: number): string {
+  const bottom = round2(cy + h + k);
+  const turn = round2(bottom - rc);
+  return (
+    `M${round2(cx - h)} ${cy}V${turn}A${rc} ${rc} 0 0 0 ${round2(cx - h + rc)} ${bottom}` +
+    `H${round2(cx + h - rc)}A${rc} ${rc} 0 0 0 ${round2(cx + h)} ${turn}V${cy}Z`
+  );
+}
+
+/** One 3D tile on `anchor` (a cell centre): rim, then the back or the face. */
+function jungleFlipTile3dMarkup(
+  anchor: { x: number; y: number },
+  entry: { color: JungleFlipColor; role: JungleFlipPieceRole } | null,
+  tile: JungleFlipTile3dGeometry,
+  pieceSkin: JunglePieceSkin = 'animals',
+  filterId?: string,
+): string {
+  const cx = anchor.x;
+  const cy = round2(anchor.y - tile.lift);
+  const [mid, low] = PIECE_3D_IVORY;
+  const rim =
+    `<g class="jgf-rim" aria-hidden="true">` +
+    `<path d="${tileBandPath(cx, cy, tile.half, tile.corner, tile.depth)}" fill="${low}"/>` +
+    `<path d="${tileBandPath(cx, cy, tile.half, tile.corner, tile.depth - 1.5)}" fill="${mid}"/>` +
+    `</g>`;
+  if (!entry) return rim + jungleFaceDownDiscSvg(cx, cy, 2 * tile.half, filterId);
+  const tokenSvg = pieceSkin === 'characters' ? characterTokenSvg : framedTokenSvg;
+  return rim + tokenSvg({ cx, cy, size: tile.size, ink: entry.color, role: entry.role, filterId });
+}
+
+/** The 3D tile's edge for the turn-over: its thickness, in its body colour. */
+function jungleFlipTile3dEdge(tile: JungleFlipTile3dGeometry): PieceFlipEdge {
+  return {
+    halfWidth: tile.half,
+    depth: tile.depth,
+    fills: [PIECE_3D_IVORY[0], PIECE_3D_IVORY[0]],
+    stroke: PIECE_3D_IVORY[1],
+  };
 }

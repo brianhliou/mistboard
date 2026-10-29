@@ -237,7 +237,35 @@ describe('Three Kingdoms banqi live room', () => {
       }));
     });
 
-    expect(seen).toEqual(['banqi-piece', 'piece-flip-back', 'a1']);
+    // The flip's ring is hidden with the face until the midpoint, then turns in
+    // with it (flipSvgPiece's faceMark), so it never shows before the face.
+    expect(seen).toEqual([
+      'banqi-piece',
+      'piece-flip-back',
+      'a1',
+      'xq-live-lastmove-ring',
+      'xq-live-lastmove-ring',
+    ]);
+  });
+
+  // 3D tiles: the mark is the tile's edge, drawn over the pieces, in the
+  // mover's ink on a plain move and the flipper's on a flip.
+  it.each([
+    [{ from: 'a1', to: 'b1' }, 'red'],
+    [{ from: 'a1', to: 'a1' }, 'black'],
+  ] as const)('inks a 3D tile edge for %o', (lastMove, ink) => {
+    const el = document.createElement('div');
+    el.innerHTML = renderThreeKingdomsBanqiLiveBoardSvg(board, {
+      selected: null,
+      targets: [],
+      draggingFrom: null,
+      lastMove,
+      lastMoveInk: ink,
+      tile3d: true,
+    });
+    const edge = el.querySelector('.xq-live-lastmove-over .xq-live-lastmove-edge');
+    expect(edge?.getAttribute('class')).toContain(`tk-flip-ring--${ink}`);
+    expect(el.querySelectorAll('.banqi-rim').length).toBe(2);
   });
 
   it('turns nothing when a replay step lands on a flip', async () => {

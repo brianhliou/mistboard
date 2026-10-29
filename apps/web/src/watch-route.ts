@@ -48,6 +48,7 @@ import { createReviewShell } from './review/review-shell.js';
 import { seatDiscEl } from './seat-disc.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildLoadingState, buildNav } from './site-shell.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { buildUiIcon } from './ui-icon.js';
 import { localizedRulesHref } from './variant-public-surfaces.js';
 import { seatColorWord, seatInkFamily } from './variant-seat-label.js';
@@ -347,6 +348,9 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     // The rail was drawn from the live handle; stop its ticker before the
     // completed-feed render seeds the rail again (or nothing does).
     clearMoveList();
+    // The overlay pointed at the live room; the completed-feed render that
+    // follows re-points it at a review page (or leaves it hidden).
+    renderWatchMainReviewLink(watch.reviewLink, null);
     watch.el.classList.remove('watch-live-mode');
   };
 
@@ -537,6 +541,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   const { sync: syncMaterial, clear: clearMaterial } = createWatchMaterialRail(
     { top: watch.capturesTop, bottom: watch.capturesBottom, pool: watch.hiddenPool },
     railHandle,
+    abortController.signal,
   );
 
   // Re-highlight the current move + refresh the scrubber bounds/status. Driven by
@@ -931,7 +936,10 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     const players = liveMetaPlayers(featured);
     const variantName = variantDisplayLabel(featured.gameSpecId);
     setWatchSeatInkFamily(watch, featured.gameSpecId ?? null);
-    renderWatchMainReviewLink(watch.reviewLink, null);
+    renderWatchMainLiveLink(watch.reviewLink, {
+      matchup: playersMatchupLabel(players),
+      roomId: featured.roomId,
+    });
     watch.metaRoot.replaceChildren();
     const card = createGameMetaCard({
       markerId: variantMiniIdForRawVariant(featured.gameSpecId) ?? undefined,
@@ -1168,22 +1176,24 @@ async function mountWatchQueuePreview(
 
 // The rail's material driver: `sync` redraws the slots from the handle at its
 // current ply, `clear` empties them. The slots' mounted classes are captured once,
-// here, so every pass starts from the shape the shared table built.
+// here, so every pass starts from the shape the shared table built. The replay
+// redraws its board on a piece-set or 3D change, and the strips redraw on the
+// same event until `signal` aborts (they kept the old set until a reload).
 export function createWatchMaterialRail(
   slots: ReplayMaterialSlots,
   handle: () => Pick<ReplayHandle, 'fillMaterial'> | null | undefined,
+  signal?: AbortSignal,
 ): { sync: () => void; clear: () => void } {
   const mounted = new Map(Object.values(slots).map((slot) => [slot, slot.className] as const));
   const clear = (): void => {
     for (const [slot, className] of mounted) resetWatchMaterialSlot(slot, className);
   };
-  return {
-    clear,
-    sync: () => {
-      clear();
-      handle()?.fillMaterial?.(slots);
-    },
+  const sync = (): void => {
+    clear();
+    handle()?.fillMaterial?.(slots);
   };
+  if (signal) window.addEventListener(xiangqiAppearanceChangedEvent, sync, { signal });
+  return { clear, sync };
 }
 
 // Back to the slot as the shared table mounted it: no pieces, no has-captures, and
@@ -1870,6 +1880,30 @@ export function renderWatchMainReviewLink(
   link.hidden = false;
   link.setAttribute('aria-label', label);
   link.title = label;
+  setWatchMainLinkChip(link, t('watch.review'));
+}
+
+// The live board's overlay opens its room, where the visitor watches as a
+// spectator: the room serves a spectator its public view (roomViewPolicy), the
+// same room /games links every in-play card to. Fog never reaches this board
+// (canServeLiveBoard is fail-closed), so no room it links shows a hidden board.
+export function renderWatchMainLiveLink(
+  link: HTMLAnchorElement,
+  live: { roomId: string; matchup: string },
+): void {
+  const label = t('games.watchGame', { matchup: live.matchup });
+  link.href = `/room/${encodeURIComponent(live.roomId)}`;
+  link.hidden = false;
+  link.setAttribute('aria-label', label);
+  link.title = label;
+  setWatchMainLinkChip(link, t('watch.watchLive'));
+}
+
+// Re-labels the hover chip in place: it is built once with the overlay, and a
+// render that rebuilt the anchor's children would drop it.
+function setWatchMainLinkChip(link: HTMLAnchorElement, text: string): void {
+  const chip = link.querySelector<HTMLElement>('.watch-main-review-link__chip');
+  if (chip) chip.textContent = text;
 }
 
 function renderWatchMetaCard(root: HTMLElement, game: FeaturedGame | null): void {

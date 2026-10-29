@@ -47,9 +47,9 @@ export const xiangqiMahjong32Article: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-15',
-  updatedAt: '2026-10-25',
+  updatedAt: '2026-10-26',
   updateNote:
-    'Points now follow the scoring table in Gamesofa’s Xiangqi Mahjong app: new lines for one General, three of a piece and mixed Soldiers, no dealer point, and one heavenly hand for either player’s first draw.',
+    'Added how a match runs on Mistboard: the time controls, which matches are rated and the first deal.',
   audience:
     'Xiangqi players who have never played mahjong, mahjong players who have never seen this game, and anyone at the Mistboard table who wants to know why a hand won.',
   intro: [
@@ -193,20 +193,20 @@ export const xiangqiMahjong32Article: Article = {
         },
         win(
           'palace',
-          'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for 2 points.',
+          'General, Advisor and Elephant, with any pair: 1 point, and 1 more for holding one General without the other, for **2 points**.',
         ),
-        win('chariot', 'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: 1 point.'),
-        win('soldiers', 'Three Soldiers of one colour, with any pair: 1 point.'),
-        win('one-colour', 'One colour: every tile red, or every tile black. 1 more, for 2 points.'),
-        win('generals', 'Generals pair: the red and the black General as the pair. 2 more, for 3 points.'),
+        win('chariot', 'Chariot, Horse and Cannon, with any pair. The pair need not match the set’s colour: **1 point**.'),
+        win('soldiers', 'Three Soldiers of one colour, with any pair: **1 point**.'),
+        win('one-colour', 'One colour: every tile red, or every tile black. 1 more, for **2 points**.'),
+        win('generals', 'Generals pair: the red and the black General as the pair. 2 more, for **3 points**.'),
         win(
           'five-soldiers',
-          'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: 7 points.',
+          'Five Soldiers: all five Soldiers of one colour. 5 more, and it is one colour too: **7 points**.',
         ),
-        win('mixed-soldiers', 'Mixed Soldiers: five Soldiers of both colours. 2 more, for 3 points.'),
+        win('mixed-soldiers', 'Mixed Soldiers: five Soldiers of both colours. 2 more, for **3 points**.'),
         win(
           'three-horses',
-          'Three of a piece: three Horses, of either colour. 2 more, for 3 points. Three Advisors, Elephants, Chariots or Cannons score the same.',
+          'Three of a piece: three Horses, of either colour. 2 more, for **3 points**. Three Advisors, Elephants, Chariots or Cannons score the same.',
         ),
         {
           kind: 'sub-heading',
@@ -329,6 +329,14 @@ export const xiangqiMahjong32Article: Article = {
     {
       heading: 'Play on Mistboard',
       blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Pick 1+1, 3+2, 5+5 or 10+5. Each player has one clock for all six hands, and it stops between hands. Who deals the first hand is drawn at random.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'A match at 1+1, 3+2 or 5+5 between two signed-in players can be rated, and the rating counts the whole match as one result. Matches at 10+5 and matches against Misty, the computer, are unrated.',
+        },
         {
           kind: 'paragraph',
           text: 'Five tiles, one set and a pair. Learn the hands against the computer, then play a friend.',

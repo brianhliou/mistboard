@@ -63,6 +63,9 @@ export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroad
   // LA-hosted four-club invitational. Former North American champions play,
   // but this mixed club field does not qualify new professional player pages.
   '2026-us-qitian-cup': 'B',
+  // Vietnam against Guangdong, a friendly team exhibition in Đà Nẵng (July
+  // 24-28): B like the Guangdong Tigers city exhibitions. Graded before import.
+  '2026-kim-long-motor-cup': 'B',
   // The M0 fixture pack (packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample),
   // graded so the persistence tests can exercise the gate; it never reaches prod.
   '2025-wxc-sample': 'A',

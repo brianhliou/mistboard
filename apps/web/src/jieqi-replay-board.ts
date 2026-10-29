@@ -29,6 +29,7 @@ import {
 } from '@mistboard/game';
 import {
   animateJieqiBoardMove,
+  animateJieqiStepReveal,
   installJieqiBoardStyles,
   type JieqiBoardArrow,
   type JieqiBoardMarker,
@@ -235,9 +236,24 @@ export function mountJieqiReplayBoard(
       },
     );
   };
-  const render = (glide?: { move: JieqiMove; reverse: boolean }): void => {
+  const shownState = (): JieqiGameState =>
+    inLine ? lines.get(inLine.atPly)!.states[inLine.cursor]! : states[index]!;
+  // `before` is the position a forward step left: a move that turned its piece
+  // face up turns it over on the way.
+  const render = (glide?: { move: JieqiMove; reverse: boolean; before?: JieqiGameState }): void => {
     paint();
-    if (glide) animateJieqiBoardMove(frame, glide.move, perspective, { reverse: glide.reverse });
+    if (glide) {
+      animateJieqiBoardMove(frame, glide.move, perspective, { reverse: glide.reverse });
+      if (!glide.reverse && glide.before) {
+        animateJieqiStepReveal(
+          frame,
+          glide.move,
+          glide.before.board,
+          shownState().board,
+          perspective,
+        );
+      }
+    }
     if (!inLine) hooks.onPlyChange?.(index, total);
   };
   render();
@@ -255,7 +271,7 @@ export function mountJieqiReplayBoard(
       if (wasInLine || Math.abs(index - from) !== 1) return render();
       const forward = index > from;
       const move = forward ? played[index - 1] : played[from - 1];
-      render(move ? { move, reverse: !forward } : undefined);
+      render(move ? { move, reverse: !forward, before: states[from] } : undefined);
     },
     jumpToLine: (atPly: number, cursor: number) => {
       const side = lines.get(atPly);
@@ -267,7 +283,7 @@ export function mountJieqiReplayBoard(
       }
       const forward = inLine.cursor > prev.cursor;
       const move = side.played[Math.max(inLine.cursor, prev.cursor) - 1];
-      render(move ? { move, reverse: !forward } : undefined);
+      render(move ? { move, reverse: !forward, before: side.states[prev.cursor] } : undefined);
     },
     plyCount: () => total,
     moveEntries: () =>

@@ -22,6 +22,9 @@
 //   ---                              front matter, `key: value` per line:
 //   slug: cao-yanlei                 slug, export, title, seoTitle, summary,
 //   ---                              status, updatedAt, publishedAt, thumbnail,
+//                                    updateNote (one English line saying what
+//                                    changed; required when updatedAt differs
+//                                    from publishedAt, as articles.test.ts asks),
 //                                    thumbnailAlt, thumbnailPosition (CSS
 //                                    object-position for the card crop),
 //                                    audience, readNext (comma list),
@@ -107,6 +110,14 @@ for (const line of fm[1].split('\n')) {
 if (tldr.length > 4) fail(`tldr has ${tldr.length} lines; keep it to 2-4`);
 for (const k of ['slug', 'export', 'title', 'summary', 'audience']) {
   if (!meta[k]) fail(`front matter needs ${k}`);
+}
+// The article test fails a page whose updatedAt differs from its publishedAt
+// with no updateNote, so a draft missing one refuses here rather than writing
+// a page that fails the gate (a regenerated page used to drop the note).
+if (meta.updatedAt && meta.updatedAt !== meta.publishedAt && !meta.updateNote) {
+  fail(
+    `updatedAt ${meta.updatedAt} differs from publishedAt: add an updateNote line saying what changed`,
+  );
 }
 
 function attrs(s) {
@@ -429,12 +440,13 @@ export const ${meta.export}: Article = {
   slug: ${q(meta.slug)},
 ${meta.homeRow ? `  homeRow: ${q(meta.homeRow)},\n` : ''}  kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: ${q(meta.title)},
 ${meta.seoTitle ? `  seoTitle: ${q(meta.seoTitle)},\n` : ''}  summary: ${q(meta.summary)},
   showSummaryOnPage: false,
   status: ${q(meta.status ?? 'draft')},
-${meta.publishedAt ? `  publishedAt: ${q(meta.publishedAt)},\n` : ''}${meta.updatedAt ? `  updatedAt: ${q(meta.updatedAt)},\n` : ''}${thumbnail}  audience: ${q(meta.audience)},
+${meta.publishedAt ? `  publishedAt: ${q(meta.publishedAt)},\n` : ''}${meta.updatedAt ? `  updatedAt: ${q(meta.updatedAt)},\n` : ''}${meta.updateNote ? `  updateNote: ${q(meta.updateNote)},\n` : ''}${thumbnail}  audience: ${q(meta.audience)},
 ${readNext}${tldr.length ? `  tldr: ${q(tldr)},\n` : ''}  intro: [
 ${intro.map((b) => emitBlock(b, 4)).join('')}  ],
   sections: [

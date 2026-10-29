@@ -34,6 +34,26 @@ describe('broadcast times read in the event clock', () => {
     expect(formatEventOffset('2026-09-13')).toBeNull();
   });
 
+  it('shows a date-only round as its day, with no clock, in any viewer zone', () => {
+    // XQBase dates its games but gives no time: the round read "Jul 28, 2026,
+    // 12:00 AM" when the import guessed midnight, and a date-only string read
+    // as UTC midnight is the day before for a viewer in California.
+    const zone = process.env.TZ;
+    try {
+      for (const tz of ['America/Los_Angeles', 'Asia/Ho_Chi_Minh', 'UTC']) {
+        process.env.TZ = tz;
+        expect(formatEventDateTime('2026-07-28', 'en-US')).toBe('Jul 28, 2026');
+        expect(formatEventDay('2025-07-28', 'en-US')).toBe('Jul 28, 2025');
+        expect(formatEventDateRange('2025-07-24', '2025-07-28', 'en-US')).toBe(
+          'Jul 24, 2025 to Jul 28, 2025',
+        );
+      }
+    } finally {
+      if (zone === undefined) delete process.env.TZ;
+      else process.env.TZ = zone;
+    }
+  });
+
   it('passes an unparseable value through rather than hiding it', () => {
     expect(formatEventDateTime('soon')).toBe('soon');
     expect(formatEventDateTime(undefined)).toBeNull();

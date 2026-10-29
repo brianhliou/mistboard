@@ -12,6 +12,7 @@ import {
   applyJieqiMove,
   createInitialJieqiState,
   getJieqiPlayerView,
+  getJieqiPublicView,
   isJieqiLegalMove,
   type JieqiDeal,
   type JieqiGameState,
@@ -21,7 +22,8 @@ import {
   type JieqiSquare,
   jieqiHomeSquares,
   jieqiMoveLabel,
-  jieqiTruthView,
+  jieqiTruthBoard,
+  jieqiTruthCaptures,
   STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
 import type { ProjectedView, VariantTreeAdapter } from './game-tree.js';
@@ -96,9 +98,15 @@ function projectJieqiView(truth: JieqiGameState, revealAll: boolean): JieqiPlaye
     truth,
     truth.status.type === 'playing' ? truth.status.turn : 'red',
   );
-  if (!revealAll) return masked;
-  const full = jieqiTruthView(truth);
-  return { ...masked, board: full.board, captured: full.captured };
+  // The captured pool never takes a seat's knowledge: the side-to-move view made
+  // a face-down capture flip between a disc (victim to move) and a role (capturer
+  // to move) every ply, and on a finished game that role was a random draw, since
+  // the public deal never carries a dark capture's identity (recoverJieqiDeal
+  // fills undetermined squares from the pool). Masked, the pool is the public
+  // one, the same on every ply: a role only for a piece face-up when taken.
+  // Revealed, it is the truth's, where a never-determined piece stays a disc.
+  if (!revealAll) return { ...masked, captured: getJieqiPublicView(truth).captured };
+  return { ...masked, board: jieqiTruthBoard(truth), captured: jieqiTruthCaptures(truth) };
 }
 
 export function makeJieqiTreeAdapter(

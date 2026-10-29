@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { generalBlunderChallengeArticle } from './articles/content/general-blunder-challenge.js';
-import { xqHalfBoardThumbnailSvg, xqVisionDemoState } from './articles/diagrams.js';
+import {
+  withXiangqiBoardLayout,
+  xqHalfBoardThumbnailSvg,
+  xqVisionDemoState,
+} from './articles/diagrams.js';
 
 const state = (board: Parameters<typeof xqVisionDemoState>[1]) =>
   xqVisionDemoState('headline-test', board);
@@ -50,6 +54,19 @@ describe('half-board headline thumbnail', () => {
   it('is the General Blunder card', () => {
     const thumb = generalBlunderChallengeArticle.thumbnail;
     expect(thumb?.kind).toBe('svg');
-    expect(thumb && 'svg' in thumb ? thumb.svg : '').toContain('>Can you lose?</text>');
+    const svg = thumb && 'svg' in thumb ? thumb.svg : '';
+    expect(typeof svg === 'function' ? svg('en') : svg).toContain('>Can you lose?</text>');
+  });
+
+  // The card renders under the reader's board settings, so it must be a
+  // function, not a string frozen at import with the defaults.
+  it('follows the reader board layout', () => {
+    const svg = generalBlunderChallengeArticle.thumbnail;
+    expect(svg?.kind).toBe('svg');
+    const render = svg?.kind === 'svg' ? svg.svg : null;
+    expect(typeof render).toBe('function');
+    const cell = withXiangqiBoardLayout('cell', () => (render as (locale: 'en') => string)('en'));
+    expect(cell).toContain('xq-diagram-cell--light');
+    expect(cell).toContain('>Can you lose?</text>');
   });
 });

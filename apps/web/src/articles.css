@@ -859,10 +859,14 @@
   .article-toc-sidebar,
   .article-variant-sidebar {
     position: sticky;
-    /* Exactly the rail's natural offset (58px sticky nav + 40px section
-       padding) so it pins with zero travel on scroll. */
-    top: 98px;
-    max-height: calc(100vh - 118px);
+    /* Exactly the rail's natural offset so it pins with zero travel on
+       scroll: the sticky nav (60px min-height + 1px hairline, site-shell.css)
+       plus .site-section's 40px top padding (app-base.css). Any less and both
+       rails ride up with the page for the first few pixels and then stop, a
+       bob at the top of every rules page (98px here after the nav grew to
+       61px). sticky-rail-offsets.test.ts adds the three up. */
+    top: 101px;
+    max-height: calc(100vh - 121px);
     overflow-y: auto;
     scrollbar-width: none;
   }
@@ -1386,6 +1390,28 @@
 }
 .xq-article-svg .xq-diagram-ink {
   fill: var(--xq-diagram-ink, #4b3c2a);
+}
+/* The square grid (xqCellBoardGrid): the live square grid's colours
+   (xiangqi-board-surface.css), mixed from the diagram's own board and ink so a
+   picked board colour carries along. */
+.xq-article-svg .xq-diagram-cell--light {
+  fill: var(--xq-cell-light, var(--xq-diagram-bg, #f5dca8));
+}
+.xq-article-svg .xq-diagram-cell--dark {
+  fill: var(
+    --xq-cell-dark,
+    color-mix(in srgb, var(--xq-diagram-bg, #f5dca8) 84%, var(--xq-diagram-ink, #5a3a14))
+  );
+}
+.xq-article-svg .xq-diagram-cell-palace {
+  fill: var(--xq-cell-palace, color-mix(in srgb, #7c4d72 24%, transparent));
+}
+.xq-article-svg .xq-diagram-cell-river {
+  fill: color-mix(in srgb, #4f9bc6 78%, var(--xq-diagram-bg, #f5dca8));
+}
+.xq-article-svg .xq-diagram-cell-line {
+  stroke: color-mix(in srgb, var(--xq-diagram-ink, #5a3a14) 42%, transparent);
+  stroke-width: 1;
 }
 /* The replay board draws the shared surface (xiangqi-replay.ts, #558); its
    lines keep the diagrams' ink and hairline so it matches the boards beside it. */

@@ -15,7 +15,19 @@
    in the box. The column sits 14px in from the box edge and 14px clear of the
    text, so the chain reads as its own object rather than a gutter. The rail
    runs under the discs and touches each ring: a panel-coloured halo was tried
-   and read as a gap in the chain above and below every disc. */
+   and read as a gap in the chain above and below every disc.
+
+   Markers (redrawn 2026-10-27, #711): the discs became sticker drawings in the
+   broadcast TV's style (news-disc.ts), each centred on the rail so the rail
+   still meets it top and bottom.
+
+   Rail (re-cut 2026-10-28): it was one line on the list, inset a fixed 16px
+   from its top and 18px from its bottom. Each marker is centred on its own
+   row, which runs taller than the disc, so the first disc sat lower than the
+   inset and a stub of rail showed above it. The rail is now drawn per row,
+   from each marker's centre to the next one's, so it starts and ends inside
+   the first and last discs whatever their drawing or the row's height, and a
+   single row draws none. */
 .landing-announcements {
   --landing-feed-accent: var(--site-accent);
   --landing-feed-content-x: 64px;
@@ -24,6 +36,13 @@
   --landing-feed-marker-half: 18px;
   --landing-feed-marker-size: 36px;
   --landing-feed-rail-x: 32px;
+  --landing-feed-row-gap: 13px;
+  /* Each row is a link with a hover tint, so it carries part of the gap
+     between rows as its own padding (the tint has room around the text). The
+     scroller's padding and the row margin give that much back, so nothing
+     moves at rest: 13px from the box to the first row's text, 13px between
+     rows. */
+  --landing-feed-row-pad: 4px;
 
   box-sizing: border-box;
   display: flex;
@@ -42,7 +61,7 @@
   flex: 1 1 auto;
   box-sizing: border-box;
   display: block;
-  padding: 13px 12px 13px 0;
+  padding: calc(13px - var(--landing-feed-row-pad)) 0;
   overflow: hidden auto;
   scrollbar-color: transparent transparent;
   scrollbar-width: thin;
@@ -76,22 +95,42 @@
   margin-inline-start: 0;
 }
 
-.landing-news-updates::before {
+/* The 12px end padding was the scroller's; it moved onto the row so the tint
+   runs to the box edge, as site-box rows do. */
+.landing-news-update {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--landing-feed-content-x) minmax(0, 1fr);
+  column-gap: 0;
+  padding: var(--landing-feed-row-pad) 12px var(--landing-feed-row-pad) 0;
+  margin-top: calc(var(--landing-feed-row-gap) - 2 * var(--landing-feed-row-pad));
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The rail, one segment per row: up from the marker's centre (the row's middle,
+   since the marker is centred in it) across the gap to the row above, and down
+   to the row's bottom edge. The first row draws no upward half and the last no
+   downward half, so the rail never runs past the end discs. The markers sit on
+   z-index 1 above it. The gap between row boxes is the row gap less both
+   rows' padding. */
+.landing-news-update:not(:first-child)::before,
+.landing-news-update:not(:last-child)::after {
   position: absolute;
-  top: calc(var(--landing-feed-marker-half) - 2px);
-  bottom: var(--landing-feed-marker-half);
   left: calc(var(--landing-feed-rail-x) - var(--landing-feed-line-half));
   width: var(--landing-feed-line-width);
   background: var(--site-border-soft);
   content: "";
 }
 
-.landing-news-update {
-  display: grid;
-  grid-template-columns: var(--landing-feed-content-x) minmax(0, 1fr);
-  column-gap: 0;
-  padding-inline-start: 0;
-  margin-top: 13px;
+.landing-news-update:not(:first-child)::before {
+  top: calc(2 * var(--landing-feed-row-pad) - var(--landing-feed-row-gap));
+  bottom: 50%;
+}
+
+.landing-news-update:not(:last-child)::after {
+  top: 50%;
+  bottom: 0;
 }
 
 .landing-news-update:first-child {
@@ -103,13 +142,15 @@
   z-index: 1;
   box-sizing: border-box;
   grid-column: 1;
+  /* Centred on its item's text (date, headline, body), whether the headline
+     takes one line or two; top-aligned it sat high beside a three-line row. */
+  align-self: center;
   justify-self: start;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: var(--landing-feed-marker-size);
   height: var(--landing-feed-marker-size);
-  margin-top: -1px;
   margin-inline-start: calc(var(--landing-feed-rail-x) - var(--landing-feed-marker-half));
   border-radius: 50%;
   /* The disc paints its own cream fill and inked ring; the rail meets the ring
@@ -118,11 +159,8 @@
   line-height: 1;
 }
 
-/* The terminal row is one link: the archive disc plus its label. */
-.landing-news-more {
-  color: inherit;
-  text-decoration: none;
-}
+/* The terminal row is one link: the archive disc plus its label, a text link
+   (hover-grammar.css .hover-link-host), not a row with a tint. */
 
 .landing-news-more-content {
   display: flex;
@@ -137,20 +175,21 @@
   line-height: 1.28;
 }
 
-.landing-news-more:hover .landing-news-more-label,
-.landing-news-more:focus-visible .landing-news-more-label {
-  color: var(--site-link);
-  text-decoration: underline;
-}
-
-.landing-news-more:focus-visible {
-  outline: none;
-}
-
 .landing-news-disc {
   display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
+}
+
+/* The drawings' cream sticker border, as on the broadcast TV: only the dark
+   theme needs it, where the navy parts and black outline sink into the panel. */
+.landing-news-disc-halo {
+  display: none;
+}
+
+:root[data-effective-theme="dark"] .landing-news-disc-halo {
+  display: inline;
 }
 
 .landing-news-content {
@@ -166,13 +205,6 @@
   letter-spacing: 0.04em;
   line-height: 1.2;
   text-transform: uppercase;
-  text-decoration: none;
-}
-
-.landing-news-date:hover,
-.landing-news-date:focus-visible {
-  text-decoration: underline;
-  outline: none;
 }
 
 /* The row's own heading line. Before this it was a run of plain text sharing
@@ -183,18 +215,6 @@
   font-size: 13.5px;
   font-weight: 600;
   line-height: 1.28;
-}
-
-.landing-news-link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.landing-news-link:hover,
-.landing-news-link:focus-visible {
-  color: var(--site-link);
-  text-decoration: underline;
-  outline: none;
 }
 
 /* One line, so every row costs the same height and the box holds a predictable

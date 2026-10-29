@@ -105,6 +105,13 @@ describe('thanks page', () => {
     expect(hrefs.filter((href) => href === '/contact?about=/thanks').length).toBe(2);
   });
 
+  it('marks its ?about= contact links nofollow, so crawlers do not mint contact URLs', () => {
+    const about = [...buildThanks('en').querySelectorAll('a')].filter(
+      (a) => a.getAttribute('href') === '/contact?about=/thanks',
+    );
+    expect(about.map((a) => a.getAttribute('rel'))).toEqual(['nofollow', 'nofollow']);
+  });
+
   it('closes by thanking lichess, after the players and before the licence pointer', () => {
     const page = buildThanks('en');
     const lichess = page.querySelector('.thanks-lichess') as HTMLElement;

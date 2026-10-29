@@ -139,7 +139,10 @@ describe('profile summary cards', () => {
       '/bot/misty',
     );
     expect(card.querySelector('.profile-summary-card-rating-value')?.textContent).toBe('1,812');
-    expect(card.querySelector('button.profile-summary-card-action')?.textContent).toBe('Fog Chess');
+    // Its one variant is its one action: the primary "Play Fog Chess", not a bare chip.
+    const play = card.querySelector('button.profile-summary-card-action');
+    expect(play?.textContent).toBe('Play Fog Chess');
+    expect(play?.classList.contains('profile-summary-card-action-primary')).toBe(true);
     expect(card.querySelector('.profile-summary-card-footer')?.textContent).toContain('8-3-1');
   });
 });

@@ -357,20 +357,25 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+  /* Contains the floated stamp, which can sit below the last line. */
+  display: flow-root;
 }
 
 .inbox-message-mine .inbox-bubble {
   background: #e9f2df;
 }
 
+/* Floated after the text, the stamp sits at the bubble's bottom-right: on
+ * the last line when it fits there, else on a line of its own, still right
+ * aligned. Inline with a left margin, a wrapped stamp started its own line
+ * indented by that margin, looking dropped at random. */
 .inbox-stamp {
-  display: inline-block;
-  margin-left: 28px;
+  float: right;
+  margin: 3px 0 0 16px;
   color: color-mix(in srgb, var(--site-muted) 82%, transparent);
   font-size: 15px;
   line-height: 1;
   white-space: nowrap;
-  transform: translateY(1px);
 }
 
 .inbox-day {

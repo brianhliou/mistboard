@@ -4,6 +4,7 @@ export const SUPPORTED_LOCALES: readonly Locale[] = ['en', 'zh-Hans', 'zh-Hant']
 
 export const DEFAULT_LOCALE: Locale = 'en';
 export const LOCALE_STORAGE_KEY = 'mistboard.locale';
+export const FIRST_LOCALE_STORAGE_KEY = 'mistboard.firstLocale';
 
 export type LocaleMeta = {
   dateLocale: string;
@@ -167,7 +168,26 @@ export function applyAccountLocalePreference(locale: string | null | undefined):
   return previous !== supportedLocale;
 }
 
+// The locale this browser was first served, kept for good. Board defaults (piece
+// set, river text, move notation) read it instead of the current locale, so a
+// reader who switches the interface language keeps the board they started on
+// (Brian, 2026-10-29: switching to Chinese should not switch the notation). Only
+// the guess is kept; what the board defaults to for it can still change.
+export function firstLocale(): Locale {
+  try {
+    const stored = window.localStorage.getItem(FIRST_LOCALE_STORAGE_KEY);
+    if (isLocale(stored)) return stored;
+    const locale = currentLocale();
+    window.localStorage.setItem(FIRST_LOCALE_STORAGE_KEY, locale);
+    return locale;
+  } catch {
+    return currentLocale();
+  }
+}
+
 export function initializeLocaleFromCurrentUrl(): Locale {
+  // Before the path is stored, so a first visit records the page it landed on.
+  firstLocale();
   const pathLocale = localeFromPath();
   if (pathLocale) setStoredLocale(pathLocale);
   const locale = currentLocale();

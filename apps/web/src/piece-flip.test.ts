@@ -1,10 +1,11 @@
 // The turn-over a face-down tile plays when it is revealed (#709): when it runs
-// (a live reveal only), when it does not (first render, reconnect, scrub,
-// replay jump, reduced motion), and that nothing before the reveal carries the
+// (a live reveal, or a step forward onto one), when it does not (first render,
+// reconnect, a step back, replay jump, reduced motion), and that nothing before the reveal carries the
 // piece's identity.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PIECE_FLIP_DURATION_MS,
+  pieceAnimationDurationMs,
   pieceFlipDurationMs,
   pieceFlipStyle,
   pieceFlipStyleFromSearch,
@@ -16,7 +17,12 @@ import {
   banqiRevealFlipSquare,
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
-import { animateJieqiReveal, jieqiRevealSquare } from './live-jieqi-render.js';
+import {
+  animateJieqiReveal,
+  animateJieqiStepReveal,
+  jieqiRevealSquare,
+} from './live-jieqi-render.js';
+import { writeStoredBanqiTile3d } from './xiangqi-appearance-storage.js';
 
 const captured = vi.hoisted(() => ({ configs: [] as Array<Record<string, unknown>> }));
 
@@ -126,8 +132,12 @@ beforeEach(() => {
   vi.stubGlobal('localStorage', memoryStorage());
   vi.stubGlobal('sessionStorage', memoryStorage());
   setReducedMotion(false);
+  // These cover the turn itself on flat tiles; 3D tiles (the default since
+  // 2026-10-28) are covered in banqi-tile-3d.test.ts.
+  document.documentElement.dataset.banqiTile3d = 'off';
 });
 afterEach(() => {
+  delete document.documentElement.dataset.banqiTile3d;
   vi.unstubAllGlobals();
   window.history.replaceState(null, '', window.location.pathname);
   resetPieceFlipStyleCache();
@@ -167,6 +177,7 @@ describe('the turn-over trigger', () => {
 
 describe('banqi turn-over', () => {
   it('turns the slot, hides the face until the midpoint, shows the back until then', () => {
+    writeStoredBanqiTile3d(false);
     const el = banqiHost(revealed);
     const { calls } = recordAnimations(() => {
       expect(animateBanqiReveal(el, 'a1')).toBe(true);
@@ -184,6 +195,20 @@ describe('banqi turn-over', () => {
     expect(face?.keyframes.map((k) => k.opacity)).toEqual([0, 0, 1, 1]);
     // The animation stub never finishes, so the back is taken down at once.
     expect(el.querySelector('.piece-flip-back')).toBeNull();
+  });
+
+  it("turns the flipper's inked cell up with the face, never before it", () => {
+    writeStoredBanqiTile3d(false);
+    const el = banqiHost(revealed);
+    expect(el.querySelector('.banqi-lastmove-flip')).not.toBeNull();
+    const { calls } = recordAnimations(() => animateBanqiReveal(el, 'a1'));
+    const mark = calls.filter((call) => call.target?.includes('banqi-lastmove-flip'));
+    // Hidden with the face until the midpoint, then turned in with it.
+    expect(mark.map((call) => call.keyframes.map((k) => k.opacity ?? k.transform))).toEqual([
+      [0, 0, 1, 1],
+      ['scaleX(1)', 'scaleX(0)', 'scaleX(1)'],
+    ]);
+    expect(mark[1]?.options.composite).toBe('add');
   });
 
   it('swaps instantly under reduced motion', () => {
@@ -222,6 +247,13 @@ describe('banqi live room wiring', () => {
     return config?.animateBoard as AnimateBoard;
   }
 
+  beforeEach(() => {
+    writeStoredBanqiTile3d(false);
+  });
+
+  // The flip's cell in the flipper's ink (red made ply 1) turns with the tile.
+  const FLIP_CELL = 'banqi-lastmove banqi-lastmove-to banqi-lastmove-flip banqi-lastmove--red';
+
   function turned(run: () => void): string[] {
     return recordAnimations(run)
       .calls.filter((call) => call.keyframes.some((k) => k.transform === 'scaleX(0)'))
@@ -235,9 +267,19 @@ describe('banqi live room wiring', () => {
       const el = banqiHost(revealed);
       expect(
         turned(() => animateBoard({ board: el }, revealed, () => ({ ...liveFlip, color }))),
-      ).toEqual(['a1']);
+      ).toEqual(['a1', FLIP_CELL]);
     },
   );
+
+  // A 3D tile turns as one body (face, back and rim in a wrapper) with its edge.
+  it('turns the tile on a live flip with 3D tiles too', async () => {
+    document.documentElement.dataset.banqiTile3d = 'on';
+    const animateBoard = await hook();
+    const el = banqiHost(revealed);
+    expect(
+      turned(() => animateBoard({ board: el }, revealed, () => ({ ...liveFlip, color: 'red' }))),
+    ).toEqual(['piece-flip-turn', 'piece-flip-edge', FLIP_CELL]);
+  });
 
   it('turns nothing on the first render or a reconnect', async () => {
     const animateBoard = await hook();
@@ -245,11 +287,23 @@ describe('banqi live room wiring', () => {
     expect(turned(() => animateBoard({ board: el }, revealed, () => null))).toEqual([]);
   });
 
-  it('turns nothing when stepping through the replay onto a flip', async () => {
+  // Stepping through the moves turns a flip over as it did live (Brian,
+  // 2026-10-29); stepping back over one just shows the back.
+  it('turns the tile when stepping forward through the replay onto a flip', async () => {
     const animateBoard = await hook();
     const el = banqiHost(revealed);
     const step = { kind: 'scrub', direction: 'forward', prevView: hidden };
-    expect(turned(() => animateBoard({ board: el }, revealed, () => step))).toEqual([]);
+    expect(turned(() => animateBoard({ board: el }, revealed, () => step))).toEqual([
+      'a1',
+      FLIP_CELL,
+    ]);
+  });
+
+  it('turns nothing when stepping back over a flip', async () => {
+    const animateBoard = await hook();
+    const el = banqiHost(hidden);
+    const step = { kind: 'scrub', direction: 'back', prevView: revealed };
+    expect(turned(() => animateBoard({ board: el }, hidden, () => step))).toEqual([]);
   });
 });
 
@@ -269,6 +323,33 @@ describe('jieqi turn-over (prototype)', () => {
     ).toBeNull();
   });
 
+  // Stepping through a record (watch, study, review) turns a reveal over as it
+  // did live (Brian, 2026-10-29).
+  it('turns the piece along the glide on a step forward onto a reveal', () => {
+    const el = document.createElement('div');
+    el.innerHTML = '<svg><g data-piece-square="a3"><g class="jieqi-piece"></g></g></svg>';
+    const after = { a3: { faceDown: false, color: 'red' as const } };
+    let turnedOver = false;
+    const { calls, backs } = recordAnimations(() => {
+      turnedOver = animateJieqiStepReveal(el, { from: 'a1', to: 'a3' }, before, after, 'red');
+    });
+    expect(turnedOver).toBe(true);
+    expect(backs).toHaveLength(1);
+    expect(calls.every((call) => !call.options.delay)).toBe(true);
+  });
+
+  it('turns nothing on a step whose piece was already face up', () => {
+    const el = document.createElement('div');
+    el.innerHTML = '<svg><g data-piece-square="b2"><g class="jieqi-piece"></g></g></svg>';
+    const after = { b2: { faceDown: false, color: 'red' as const } };
+    const { calls } = recordAnimations(() => {
+      expect(animateJieqiStepReveal(el, { from: 'b1', to: 'b2' }, before, after, 'red')).toBe(
+        false,
+      );
+    });
+    expect(calls).toEqual([]);
+  });
+
   it('holds the turn until the glide lands', () => {
     const el = document.createElement('div');
     el.innerHTML = '<svg><g data-piece-square="a3"><g class="jieqi-piece"></g></g></svg>';
@@ -278,9 +359,40 @@ describe('jieqi turn-over (prototype)', () => {
     expect(calls.find((call) => call.target === 'a3')?.options.delay).toBe(250);
     expect(backs).toHaveLength(1);
   });
+
+  it('turns along the glide without cancelling or overriding the slot glide', () => {
+    const el = document.createElement('div');
+    el.innerHTML = '<svg><g data-piece-square="a3"><g class="jieqi-piece"></g></g></svg>';
+    const slot = el.querySelector('[data-piece-square="a3"]') as Element;
+    const glide = { cancel: vi.fn() };
+    Object.assign(slot, { getAnimations: () => [glide] });
+    const { calls, backs } = recordAnimations(() => {
+      animateJieqiReveal(el, 'a3', 'red', 'red', { alongGlide: true });
+    });
+    expect(glide.cancel).not.toHaveBeenCalled();
+    // The turn and any lift run on wrappers: the slot's transform stays the glide's.
+    expect(calls.filter((call) => call.target === 'a3')).toEqual([]);
+    expect(calls.some((call) => call.keyframes.some((frame) => 'transform' in frame))).toBe(true);
+    expect(calls.every((call) => !call.options.delay)).toBe(true);
+    expect(backs).toHaveLength(1);
+  });
+
+  it('finishes the turn three quarters into the glide, before the piece lands', () => {
+    // Brian, 2026-10-28: the turn ran past the landing; get it flipped earlier.
+    const el = document.createElement('div');
+    el.innerHTML = '<svg><g data-piece-square="a3"><g class="jieqi-piece"></g></g></svg>';
+    const glide = pieceAnimationDurationMs();
+    const { calls } = recordAnimations(() => {
+      animateJieqiReveal(el, 'a3', 'red', 'red', { alongGlide: true });
+    });
+    const durations = calls.map((call) => Number(call.options.duration));
+    expect(durations.length).toBeGreaterThan(0);
+    expect(Math.max(...durations)).toBe(Math.round(glide * 0.75));
+    expect(Math.max(...durations)).toBeLessThan(pieceFlipDurationMs());
+  });
 });
 
-describe('flip styles (?flip= spike)', () => {
+describe('flip styles (the Tile flip setting, ?flip= override)', () => {
   function useFlag(search: string): void {
     window.sessionStorage.removeItem('mistboard.flipStyle');
     window.history.replaceState(null, '', `${window.location.pathname}${search}`);
@@ -295,11 +407,73 @@ describe('flip styles (?flip= spike)', () => {
     expect(pieceFlipStyleFromSearch('')).toBeNull();
   });
 
-  it('defaults to flat, the shipped turn, with no flag', () => {
+  /** The axis the reveal turned on: what reached flipSvgPiece. */
+  function turnAxis(calls: Call[]): string | null {
+    for (const call of calls) {
+      for (const frame of call.keyframes) {
+        const match = /^(scaleX|rotateX|rotateY)\(/.exec(String(frame.transform ?? ''));
+        if (match) return match[1] ?? null;
+      }
+    }
+    return null;
+  }
+  const AXIS_BY_STYLE = { flat: 'scaleX', lift: 'rotateX', spin: 'rotateY' } as const;
+
+  it('defaults to flat with flat pieces and no flag', () => {
     useFlag('');
     expect(pieceFlipStyle()).toBe('flat');
     useFlag('?flip=nope');
     expect(pieceFlipStyle()).toBe('flat');
+    useFlag('?flip=spin');
+    expect(pieceFlipStyle()).toBe('spin');
+  });
+
+  // Brian, 2026-10-29: the flip is "tied to 3d", as the sheet showed it.
+  it.each([
+    [false, 'flat'],
+    [true, 'spin'],
+  ] as const)('3D look %s turns the banqi and jieqi reveals %s', (look3d, style) => {
+    useFlag('');
+    writeStoredBanqiTile3d(look3d);
+    expect(pieceFlipStyle()).toBe(style);
+    const banqi = recordAnimations(() => {
+      expect(animateBanqiReveal(banqiHost(revealed), 'a1')).toBe(true);
+    }).calls;
+    expect(turnAxis(banqi)).toBe(AXIS_BY_STYLE[style]);
+    const el = document.createElement('div');
+    el.innerHTML = '<svg><g data-piece-square="a3"><g class="jieqi-piece"></g></g></svg>';
+    const jieqi = recordAnimations(() => {
+      animateJieqiReveal(el, 'a3', 'red', 'red');
+    }).calls;
+    expect(turnAxis(jieqi)).toBe(AXIS_BY_STYLE[style]);
+  });
+
+  it('a look change applies to the next turn without a reload', () => {
+    useFlag('');
+    writeStoredBanqiTile3d(true);
+    expect(pieceFlipStyle()).toBe('spin');
+    writeStoredBanqiTile3d(false);
+    expect(pieceFlipStyle()).toBe('flat');
+  });
+
+  it('the ?flip= override wins over the look', () => {
+    writeStoredBanqiTile3d(true);
+    useFlag('?flip=flat');
+    expect(pieceFlipStyle()).toBe('flat');
+    const { calls } = recordAnimations(() => animateBanqiReveal(banqiHost(revealed), 'a1'));
+    expect(turnAxis(calls)).toBe('scaleX');
+  });
+
+  it.each([false, true])('reduced motion turns nothing whatever the look (3D %s)', (look3d) => {
+    useFlag('');
+    writeStoredBanqiTile3d(look3d);
+    setReducedMotion(true);
+    const el = banqiHost(revealed);
+    const { calls } = recordAnimations(() => {
+      expect(animateBanqiReveal(el, 'a1')).toBe(false);
+    });
+    expect(calls).toEqual([]);
+    expect(el.querySelector('.piece-flip-back, .piece-flip-turn')).toBeNull();
   });
 
   it('reads the flag once and keeps it for the tab after the query is gone', () => {

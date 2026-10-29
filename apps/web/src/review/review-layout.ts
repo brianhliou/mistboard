@@ -102,6 +102,8 @@ export type ReviewLayoutAdapter = {
 
 const NAV_AND_PADDING_PX = 122; // site nav + shell top/bottom padding
 const VIEWPORT_CHROME_PX = 108;
+/** The phone breakpoint the one-screen game review switches on (#619). */
+const PHONE_QUERY = '(max-width: 600px)';
 const RAILS_AND_GUTTERS_PX = 640;
 // Where a full-page review's cluster starts (site nav + shell top padding): an
 // embedded review below a taller host header gives the difference back.
@@ -179,6 +181,10 @@ export type ReviewScaffoldConfig = SizingInput & {
    *  fold instead of shrinking the board to keep everything above it. The board
    *  fills the viewport; the page scrolls to the chart. */
   underboardOverflows?: boolean;
+  /** Phone game review (#619): on the one-column stack the board, the arrow
+   *  bar and the move strip share one screen, so the board also shrinks to
+   *  leave room for what sits under it, down to the move list. */
+  phoneOneScreen?: boolean;
   /** Fires after a secondary board is promoted; the caller re-renders (the
    *  scaffold re-fits afterward). */
   onPromote?(): void;
@@ -430,6 +436,7 @@ export function createReviewScaffold(
     );
     fitPrimaryToViewport(stage.el, boardAspect, config.boardMaxPx, {
       underboardOverflows: config.underboardOverflows,
+      phoneOneScreen: config.phoneOneScreen,
     });
     setTimeout(positionGrip, 60);
   }
@@ -562,7 +569,7 @@ function fitPrimaryToViewport(
   stageEl: HTMLElement,
   aspect: number,
   maxPx?: number,
-  opts?: { underboardOverflows?: boolean },
+  opts?: { underboardOverflows?: boolean; phoneOneScreen?: boolean },
 ): void {
   scheduleAnimationFrame(() => {
     if (typeof window === 'undefined') return;
@@ -635,15 +642,49 @@ function fitPrimaryToViewport(
     const targetBoardWidth = Math.floor(
       (available - nonBoardChrome - 6) * aspect * currentBoardScale(),
     );
+    const oneScreenWidth =
+      opts?.phoneOneScreen && stacked
+        ? oneScreenBoardWidth(stageEl, boardWidth / aspect, aspect)
+        : Number.POSITIVE_INFINITY;
     const targetWidth = Math.max(
       160,
-      Math.min(widthCap, maxPx ?? Number.POSITIVE_INFINITY, targetBoardWidth + flankPx),
+      Math.min(
+        widthCap,
+        maxPx ?? Number.POSITIVE_INFINITY,
+        targetBoardWidth + flankPx,
+        oneScreenWidth + flankPx,
+      ),
     );
     stageEl.style.setProperty('--review-stage-primary-max', `${targetWidth}px`);
     stageEl
       .closest<HTMLElement>('.review-shell__cluster')
       ?.style.setProperty('--uni-board-fit-w', `${targetWidth}px`);
   });
+}
+
+/** The widest board that keeps the phone stack, from the board down to the
+ *  move list and the shell's bottom padding, inside the viewport (#619). What
+ *  sits between the board and the move list (seat row, arrow bar, gaps) does
+ *  not change with the board's size, so one measurement settles it. A running
+ *  engine's card sits below the move list and is left to scroll. Phones only:
+ *  the 601-799px stack keeps its full move list and its board size. */
+export function oneScreenBoardWidth(
+  stageEl: HTMLElement,
+  boardHeight: number,
+  aspect: number,
+): number {
+  if (typeof window.matchMedia !== 'function' || !window.matchMedia(PHONE_QUERY).matches) {
+    return Number.POSITIVE_INFINITY;
+  }
+  const shell = stageEl.closest<HTMLElement>('.review-shell');
+  const moves = shell?.querySelector<HTMLElement>('.review-rail-main .review-move-list');
+  if (!shell || !moves || boardHeight <= 0) return Number.POSITIVE_INFINITY;
+  const stageTop = stageEl.getBoundingClientRect().top + window.scrollY;
+  const belowBoard = moves.getBoundingClientRect().bottom - stageEl.getBoundingClientRect().top;
+  const shellBottomPad = Number.parseFloat(getComputedStyle(shell).paddingBottom) || 0;
+  const room = window.innerHeight - stageTop - shellBottomPad - (belowBoard - boardHeight);
+  if (room <= 0) return Number.POSITIVE_INFINITY;
+  return Math.floor((room - 2) * aspect * currentBoardScale());
 }
 
 function scheduleAnimationFrame(callback: () => void): void {

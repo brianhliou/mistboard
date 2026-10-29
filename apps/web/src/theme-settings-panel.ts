@@ -23,6 +23,11 @@ import {
   type AppearanceMenuOptions,
   type BoardFamily,
   formatVolume,
+  PIECE_ANIMATION_SPEEDS,
+  type PieceSegment,
+  type PieceSegmentValues,
+  pieceSegmentHidden,
+  pieceSegmentValues,
   type QuickPickerKind,
   readEffectiveSoundVolume,
   readStoredSiteTheme,
@@ -33,7 +38,10 @@ import {
   readStoredXiangqiStartMarkers,
   readXiangqiBoardChoice,
   type SiteTheme,
+  setBanqiTile3dPreference,
   setBoardCoordinatesPreference,
+  setPieceAnimationPreference,
+  setPieceEdgePreference,
   setSiteThemePreference,
   setSoundSetPreference,
   setSoundVolumePreference,
@@ -222,6 +230,8 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
         undefined,
         false,
       ),
+      createPieceLookGroup(locale),
+      createPieceMotionGroup(locale),
     );
   }
   addCategory('pieces', t('prefs.pieces', {}, locale), pieceBody);
@@ -537,6 +547,109 @@ function createXiangqiPieceShadowField(locale: Locale): HTMLLabelElement {
   const text = document.createElement('span');
   text.textContent = t('prefs.pieceShadow', {}, locale);
   field.append(input, text);
+  return field;
+}
+
+// The Pieces panel's two groups, as rows of segmented choices (Brian,
+// 2026-10-29: "Segmented rows"). A row that only means something under another
+// choice hides with it: Edge without 3D pieces, Flip with the animation off.
+// syncThemeControls keeps the selection and the hiding in step after a change.
+function createPieceLookGroup(locale: Locale): HTMLDivElement {
+  const values = pieceSegmentValues();
+  return createControlGroup(t('prefs.groupLook', {}, locale), [
+    createSegmentedField(
+      'look',
+      t('prefs.pieceLook', {}, locale),
+      [
+        { id: 'flat', label: t('prefs.optionFlat', {}, locale) },
+        { id: '3d', label: t('prefs.option3d', {}, locale) },
+      ],
+      values.look,
+      (id) => setBanqiTile3dPreference(id === '3d'),
+    ),
+    createSegmentedField(
+      'edge',
+      t('prefs.pieceEdge', {}, locale),
+      [
+        { id: 'standard', label: t('prefs.pieceEdgeStandard', {}, locale) },
+        { id: 'thick', label: t('prefs.pieceEdgeThick', {}, locale) },
+      ],
+      values.edge,
+      (id) => setPieceEdgePreference(id === 'thick'),
+    ),
+  ]);
+}
+
+// Speed is the account page's Piece animation, here so a guest can reach it.
+// The reveal turn has no row: it follows the look (3D pieces spin, flat squash).
+function createPieceMotionGroup(locale: Locale): HTMLDivElement {
+  const values = pieceSegmentValues();
+  return createControlGroup(t('prefs.groupMotion', {}, locale), [
+    createSegmentedField(
+      'speed',
+      t('prefs.animationSpeed', {}, locale),
+      PIECE_ANIMATION_SPEEDS.map((id) => ({
+        id,
+        label: t(PIECE_ANIMATION_LABEL_KEYS[id], {}, locale),
+      })),
+      values.speed,
+      setPieceAnimationPreference,
+    ),
+  ]);
+}
+
+const PIECE_ANIMATION_LABEL_KEYS: Record<PieceSegmentValues['speed'], I18nKey> = {
+  none: 'prefs.animationOff',
+  fast: 'prefs.animationFast',
+  normal: 'prefs.animationNormal',
+  slow: 'prefs.animationSlow',
+};
+
+function createControlGroup(label: string, rows: HTMLElement[]): HTMLDivElement {
+  const group = document.createElement('div');
+  group.className = 'theme-control-group';
+  const heading = document.createElement('span');
+  heading.className = 'theme-control-group-label';
+  heading.textContent = label;
+  group.append(heading, ...rows);
+  return group;
+}
+
+// One labelled row: the name on the left, the choices joined on the right.
+function createSegmentedField<S extends PieceSegment>(
+  segment: S,
+  label: string,
+  options: ReadonlyArray<{ id: PieceSegmentValues[S]; label: string }>,
+  value: PieceSegmentValues[S],
+  onChange: (value: PieceSegmentValues[S]) => void,
+): HTMLDivElement {
+  const field = document.createElement('div');
+  field.className = 'theme-segment-field';
+  field.dataset.pieceSegmentField = segment;
+  field.hidden = pieceSegmentHidden(segment, pieceSegmentValues());
+  const name = document.createElement('span');
+  name.className = 'theme-segment-label';
+  name.textContent = label;
+
+  const row = document.createElement('div');
+  row.className = 'theme-segment-row';
+  row.setAttribute('role', 'radiogroup');
+  row.setAttribute('aria-label', label);
+  for (const option of options) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'theme-mode-option';
+    button.dataset.pieceSegment = segment;
+    button.dataset.value = option.id;
+    button.textContent = option.label;
+    button.setAttribute('role', 'radio');
+    button.setAttribute('aria-checked', String(option.id === value));
+    if (option.id === value) button.classList.add('selected');
+    button.addEventListener('click', () => onChange(option.id));
+    row.append(button);
+  }
+
+  field.append(name, row);
   return field;
 }
 
