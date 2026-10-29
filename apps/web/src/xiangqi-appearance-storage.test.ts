@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  inferredChineseScript,
+  inferredXiangqiNotation,
   inferredXiangqiPieceSet,
   inferredXiangqiRiverText,
   normalizeXiangqiBoardLayout,
@@ -25,6 +27,7 @@ import {
   writeStoredXiangqiRiverText,
   writeStoredXiangqiStartMarkers,
 } from './xiangqi-appearance-storage.js';
+import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 
 function installLocalStorage(): Storage {
   const values = new Map<string, string>();
@@ -226,38 +229,81 @@ describe('xiangqi appearance storage normalization', () => {
 });
 
 describe('xiangqi move notation preference', () => {
-  it('defaults by locale and writes nothing until the reader chooses', () => {
+  it('infers Chinese wherever the pieces start as hanzi', () => {
+    expect(inferredXiangqiNotation('en', null, [])).toBe('algebraic');
+    expect(inferredXiangqiNotation('en', 'US', ['en-US', 'fr'])).toBe('algebraic');
+    expect(inferredXiangqiNotation('zh-Hans', null, [])).toBe('chinese');
+    expect(inferredXiangqiNotation('zh-Hant', null, [])).toBe('chinese');
+    expect(inferredXiangqiNotation('en', 'US', ['en-US', 'zh-TW'])).toBe('chinese');
+    expect(inferredXiangqiNotation('en', 'TW', ['en-US'])).toBe('chinese');
+  });
+
+  it('defaults from the first locale and writes nothing until the reader chooses', () => {
     const storage = installLocalStorage();
-    expect(readStoredXiangqiNotation('en')).toBe('algebraic');
-    expect(readStoredXiangqiNotation('zh-Hans')).toBe('chinese');
-    expect(readStoredXiangqiNotation('zh-Hant')).toBe('chinese');
+    storage.setItem('mistboard.firstLocale', 'en');
+    expect(readStoredXiangqiNotation()).toBe('algebraic');
+    storage.setItem('mistboard.firstLocale', 'zh-Hant');
+    expect(readStoredXiangqiNotation()).toBe('chinese');
     expect(storage.getItem('mistboard.xiangqiNotation')).toBeNull();
   });
 
-  it('keeps an explicit choice across locales', () => {
-    installLocalStorage();
+  // Brian, 2026-10-29: an English reader who switches the site to Chinese keeps
+  // algebraic moves; the board defaults belong to the first visit.
+  it('does not follow a later switch of the interface language', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.locale', 'en');
+    expect(readStoredXiangqiNotation()).toBe('algebraic');
+    expect(readStoredXiangqiPieceSet()).toBe('international');
+    expect(readStoredXiangqiRiverText()).toBe('off');
+    storage.setItem('mistboard.locale', 'zh-Hans');
+    expect(readStoredXiangqiNotation()).toBe('algebraic');
+    expect(readStoredXiangqiPieceSet()).toBe('international');
+    expect(readStoredXiangqiRiverText()).toBe('off');
+    expect(storage.getItem('mistboard.firstLocale')).toBe('en');
+    // The move list itself, which used to read the interface locale.
+    expect(currentXiangqiNotationStyle()).toBe('algebraic');
+  });
+
+  it('writes a chosen Chinese notation in the interface script', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.firstLocale', 'zh-Hans');
+    storage.setItem('mistboard.locale', 'zh-Hant');
+    expect(currentXiangqiNotationStyle()).toBe('chinese-traditional');
+  });
+
+  it('keeps an explicit choice', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.firstLocale', 'zh-Hans');
     writeStoredXiangqiNotation('wxf');
-    expect(readStoredXiangqiNotation('en')).toBe('wxf');
-    expect(readStoredXiangqiNotation('zh-Hans')).toBe('wxf');
+    expect(readStoredXiangqiNotation()).toBe('wxf');
+  });
+
+  it('picks the Chinese script for an English interface from the same guess', () => {
+    expect(inferredChineseScript('zh-Hant', null, [])).toBe('zh-Hant');
+    expect(inferredChineseScript('en', null, ['en-US', 'zh-HK'])).toBe('zh-Hant');
+    expect(inferredChineseScript('en', 'TW', ['en-US'])).toBe('zh-Hant');
+    expect(inferredChineseScript('en', 'CN', ['en-US'])).toBe('zh-Hans');
+    expect(inferredChineseScript('en', null, [])).toBe('zh-Hans');
   });
 
   it('drops the version-1 site-written coordinate default but keeps a real choice', () => {
     const storage = installLocalStorage();
+    storage.setItem('mistboard.firstLocale', 'en');
     storage.setItem('mistboard.xiangqiNotationVersion', '1');
     storage.setItem('mistboard.xiangqiNotation', 'coordinate');
-    expect(readStoredXiangqiNotation('en')).toBe('algebraic');
+    expect(readStoredXiangqiNotation()).toBe('algebraic');
     expect(storage.getItem('mistboard.xiangqiNotation')).toBeNull();
     expect(storage.getItem('mistboard.xiangqiNotationVersion')).toBe('2');
 
     // ICCS left the gear the same day; a stored choice of it reads as unset.
     storage.setItem('mistboard.xiangqiNotationVersion', '1');
     storage.setItem('mistboard.xiangqiNotation', 'iccs');
-    expect(readStoredXiangqiNotation('zh-Hans')).toBe('chinese');
+    expect(readStoredXiangqiNotation()).toBe('algebraic');
     expect(storage.getItem('mistboard.xiangqiNotation')).toBeNull();
 
     storage.setItem('mistboard.xiangqiNotationVersion', '1');
     storage.setItem('mistboard.xiangqiNotation', 'chinese');
-    expect(readStoredXiangqiNotation('en')).toBe('chinese');
+    expect(readStoredXiangqiNotation()).toBe('chinese');
     expect(storage.getItem('mistboard.xiangqiNotationVersion')).toBe('2');
   });
 });
