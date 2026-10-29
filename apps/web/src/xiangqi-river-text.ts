@@ -40,7 +40,7 @@ export function normalizeXiangqiRiverText(value: string | null | undefined): Xia
 
 /** The inscription as real boards set it (Brian picked it from a sheet of five,
  *  2026-10-29): each pair near its own edge, one character to a square, 漢界
- *  turned to face the far player, in a brush hand. Offsets are in cells from
+ *  turned to face the far player, in old printed type. Offsets are in cells from
  *  the river's centre; true turns the character 180 degrees. */
 const RIVER_CHARACTERS: readonly [string, number, boolean][] = [
   ['楚', -2.5, false],
@@ -52,9 +52,10 @@ const RIVER_CHARACTERS: readonly [string, number, boolean][] = [
 /** Character height as a share of the cell. */
 export const XIANGQI_RIVER_CHARACTER_SCALE = 0.7;
 
-/** A four-character cut of LXGW WenKai TC Bold (app-base.css, public/fonts),
- *  so every device draws the same brush hand; the system Kaiti faces follow. */
-export const XIANGQI_RIVER_FONT_FAMILY = "'Mistboard River', 'Kaiti SC', 'STKaiti', 'KaiTi', serif";
+/** A four-character cut of Zen Antique (app-base.css, public/fonts), so every
+ *  device draws the same old printed type; the system Song faces follow. */
+export const XIANGQI_RIVER_FONT_FAMILY =
+  "'Mistboard River', 'Songti TC', 'STSong', 'SimSun', serif";
 
 const round1 = (value: number): number => Math.round(value * 10) / 10;
 
