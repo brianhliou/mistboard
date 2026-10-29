@@ -13,7 +13,7 @@ import {
   pieceFlipDurationMs,
   pieceFlipStyle,
 } from './board-anim.js';
-import { boardCheckGlowSvg } from './board-check.js';
+import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
@@ -248,7 +248,7 @@ export function renderJieqiBoardSvg(
       ${palaceBands}
       ${coords ? `<g class="jieqi-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
       ${lastMoveMarkers(view, perspective, 'under', pieceSet, tile3d)}
-      ${options.check === false ? '' : checkGlow(view, perspective)}
+      ${options.check === false ? '' : checkGlow(view, perspective, pieceSet)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, legalMoves, perspective)}
       ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null, tile3d)}
@@ -260,11 +260,18 @@ export function renderJieqiBoardSvg(
   `;
 }
 
-function checkGlow(view: JieqiPlayerView, perspective: JieqiColor): string {
+function checkGlow(
+  view: JieqiPlayerView,
+  perspective: JieqiColor,
+  pieceSet: XiangqiPieceSet,
+): string {
   const square = jieqiCheckedGeneral(view.board, view.status);
   if (!square) return '';
   const { file, rank } = jieqiCoordOf(square);
-  return boardCheckGlowSvg(intersection(file, rank, perspective), MARK_PIECE_SIZE);
+  const center = intersection(file, rank, perspective);
+  return activeLayout === 'cell'
+    ? boardCheckCellSvg(center, CELL, pieceSet, MARK_PIECE_SIZE)
+    : boardCheckGlowSvg(center, MARK_PIECE_SIZE);
 }
 
 export function jieqiArrowSvg(arrow: JieqiBoardArrow, perspective: JieqiColor): string {

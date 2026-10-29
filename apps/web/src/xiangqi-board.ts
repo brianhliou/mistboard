@@ -25,7 +25,7 @@ import type {
   XiangqiSquare,
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { boardCheckGlowSvg } from './board-check.js';
+import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
@@ -288,7 +288,7 @@ export function xiangqiBoardSvg(
       <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>
       <g class="xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>
       <g class="xq-live-lastmove">${lastMoveMarks('under')}</g>
-      <g class="xq-live-check">${state.checkSquare ? checkLayer(state.checkSquare, perspective, layout) : ''}</g>
+      <g class="xq-live-check">${state.checkSquare ? checkLayer(state.checkSquare, perspective, layout, markSet) : ''}</g>
       <g class="xq-live-selection">${selectionLayer(state.selectedSquare, perspective, layout)}</g>
       <g class="xq-live-hints">${state.interactive ? '' : hintLayer(view, perspective, state.selectedSquare, layout)}</g>
       <g class="xq-live-pieces">${pieceLayer(view, perspective, state.draggingFrom, layout, state.pieceSet, tile3d)}</g>
@@ -345,9 +345,13 @@ function checkLayer(
   square: XiangqiSquare,
   perspective: XiangqiColor,
   layout: XiangqiBoardLayout,
+  set: XiangqiPieceSet,
 ): string {
   const { file, rank } = coordOf(square);
-  return boardCheckGlowSvg(intersection(file, rank, perspective, layout), MARK_PIECE_SIZE);
+  const center = intersection(file, rank, perspective, layout);
+  return layout === 'cell'
+    ? boardCheckCellSvg(center, CELL, set, MARK_PIECE_SIZE)
+    : boardCheckGlowSvg(center, MARK_PIECE_SIZE);
 }
 
 function lastDropLayer(
