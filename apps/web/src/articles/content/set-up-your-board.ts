@@ -77,7 +77,10 @@ const pieceSetsGrid = () => {
     );
     return [
       `<rect x="${x + 4}" y="${y + 4}" width="${SET_CELL_W - 8}" height="${SET_CELL_H - 8}" rx="10" class="xq-diagram-bg"/>`,
-      `<text x="${x + SET_CELL_W / 2}" y="${y + 24}" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-ink" text-anchor="middle">${label}</text>`,
+      // Keyed, because the bare word is already a dictionary key in another
+      // sense ("Book" is a source column in the problems audit, 书, where the
+      // zh menu calls this set 棋书).
+      `<text x="${x + SET_CELL_W / 2}" y="${y + 24}" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-ink" text-anchor="middle" data-i18n-key="Piece set: ${label}">${label}</text>`,
       pieces,
     ].join('');
   });
@@ -95,11 +98,7 @@ export const setUpYourBoardArticle: Article = {
   summary:
     'Mistboard has nine xiangqi piece sets, pieces can be flat or 3D, and the xiangqi board can be lined or a square grid. Pieces glide when you step through a game and turn over when a hidden piece is revealed. Here is what each look is and where to set it.',
   showSummaryOnPage: false,
-  // Draft until Brian signs off the English: article-i18n.coverage.test.ts
-  // fails a published article with no zh, and zh is translated only after the
-  // English is final. Then translate, add the slug to TRANSLATED_ARTICLE_SLUGS
-  // and flip this to 'published' (it goes live 2026-11-06 09:00 Pacific).
-  status: 'draft',
+  status: 'published',
   publishedAt: '2026-11-06',
   audience: 'Anyone who plays on Mistboard and wants the board to look the way they like it.',
   thumbnail: {
