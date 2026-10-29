@@ -201,6 +201,37 @@ describe('Three Kingdoms banqi live room', () => {
     expect(moveMessages()).toContainEqual({ type: 'move', from: flip.from, to: flip.to });
   });
 
+  // A flip's band says who flipped, in that seat's ink; the tile turned up says
+  // nothing about it. The opening flip binds the flipper to the colour it turned
+  // up, so it is that colour. A move keeps the gold band.
+  it('rings a flip in the flipper ink and a move in gold', async () => {
+    const { states, moves } = playLine(12);
+    const ringAfter = async (ply: number) => {
+      const options = await mount();
+      options.applyHello(
+        hello({
+          type: 'hello',
+          seat: 'red',
+          state: view(states[ply]!, 'red'),
+          events: [CREATED, ...moveEvents(moves.slice(0, ply))],
+        }),
+      );
+      options.render();
+      const ring = document.querySelector('.xq-live-lastmove-ring');
+      expect(ring, `no band after ply ${ply}`).not.toBeNull();
+      return ring?.getAttribute('class') ?? '';
+    };
+    const opening = states[1]!.firstColor;
+    expect(moves[0]!.from).toBe(moves[0]!.to);
+    expect(await ringAfter(1)).toContain(`tk-flip-ring--${opening}`);
+    const second = moves[1]!;
+    expect(second.from).toBe(second.to);
+    expect(await ringAfter(2)).toContain(`tk-flip-ring--${opening === 'red' ? 'black' : 'red'}`);
+    const quiet = moves.findIndex((m) => m.from !== m.to);
+    expect(quiet).toBeGreaterThan(0);
+    expect(await ringAfter(quiet + 1)).not.toContain('tk-flip-ring');
+  });
+
   it('own piece then a target sends the move; the other seat sends nothing', async () => {
     const { states } = playLine(12);
     // A ply where red is on turn with a board move available.

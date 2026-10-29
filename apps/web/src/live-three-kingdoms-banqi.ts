@@ -97,15 +97,6 @@ function seatLabel(seat: BanqiSeat): TenantSeatKey {
   return seat === 'red' ? 'setup.first' : 'setup.second';
 }
 
-// The side that made the last move: the seat that is NOT to move now (ply parity
-// once finished), read off the seat so a flip that turned up the other ink is
-// still washed in the mover's own.
-function lastMoverInk(view: ThreeKingdomsBanqiWireView): BanqiColor | null {
-  if (!view.lastMove || view.ply === 0) return null;
-  const mover: BanqiSeat = (view.ply - 1) % 2 === 0 ? 'red' : 'black';
-  return seatInk(mover, view);
-}
-
 function reasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'score':
@@ -308,8 +299,16 @@ function renderBoard(liveRefs: LiveRefs, view: ThreeKingdomsBanqiWireView | null
     targets,
     draggingFrom,
     lastMove: view.lastMove ?? null,
-    lastMoveInk: lastMoverInk(view),
+    flipInk: flipperInk(view),
   });
+}
+
+/** The ink of the seat that made the last move, when it was a flip. Read after
+ *  the flip, so the opening flip already has the ink it bound. */
+function flipperInk(view: ThreeKingdomsBanqiWireView): BanqiColor | null {
+  const last = view.lastMove;
+  if (!last || last.from !== last.to || view.ply < 1) return null;
+  return seatInk((view.ply - 1) % 2 === 0 ? 'red' : 'black', view);
 }
 
 // ── Interaction ───────────────────────────────────────────────────────────────

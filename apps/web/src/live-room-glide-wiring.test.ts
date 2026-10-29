@@ -189,25 +189,27 @@ describe('Three Kingdoms banqi live room', () => {
       targets: [],
       draggingFrom: null,
       lastMove,
-      lastMoveInk: 'red',
     });
     return el;
   }
 
   // Own moves glide too: the room draws nothing before the server's echo.
-  it.each(['red', 'black'])('glides a %s move and fades the destination tint in', async (color) => {
-    const animateBoard = await hook();
-    const el = host({ from: 'a1', to: 'b1' });
-    const seen = recordAnimations(el, () => {
-      animateBoard({ board: el }, { lastMove: { from: 'a1', to: 'b1' } }, () => ({
-        kind: 'live',
-        move: { from: 'a1', to: 'b1' },
-        color,
-      }));
-    });
+  it.each(['red', 'black'])(
+    'glides a %s move with the gold band riding the piece',
+    async (color) => {
+      const animateBoard = await hook();
+      const el = host({ from: 'a1', to: 'b1' });
+      const seen = recordAnimations(el, () => {
+        animateBoard({ board: el }, { lastMove: { from: 'a1', to: 'b1' } }, () => ({
+          kind: 'live',
+          move: { from: 'a1', to: 'b1' },
+          color,
+        }));
+      });
 
-    expect(seen).toEqual(['b1', 'banqi-lastmove banqi-lastmove-to banqi-lastmove--red']);
-  });
+      expect(seen).toEqual(['b1', 'xq-live-lastmove-ring']);
+    },
+  );
 
   it('reverse-glides a back step without fading a mark', async () => {
     const animateBoard = await hook();

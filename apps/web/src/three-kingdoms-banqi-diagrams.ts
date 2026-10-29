@@ -23,14 +23,21 @@ import {
   type ThreeKingdomsBanqiState,
 } from '@mistboard/game';
 import { activeXiangqiPieceSet } from './articles/diagrams.js';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import {
+  animateBoardLastMoveArrival,
+  boardLastMoveMarkersSvg,
+  boardLastMovePiece,
+} from './board-lastmove.js';
+import './board-lastmove.css';
 import { boardCornerRadius } from './board-metrics.js';
 import './live-banqi-board.css';
+import './three-kingdoms-banqi-board.css';
 import {
   BANQI_PIECE_SHAPE,
   banqiFaceDownRadius,
   banqiPieceDrawSize,
   flipBanqiFamilyReveal,
-  glideBanqiFamilyMove,
 } from './live-banqi-render.js';
 import {
   renderXiangqiPieceGlyphed,
@@ -359,7 +366,18 @@ export function animateThreeKingdomsBanqiBoardMove(
   move: { from: Square; to: Square },
   opts: { reverse?: boolean } = {},
 ): void {
-  glideBanqiFamilyMove(host, move, point, opts);
+  if (move.from === move.to) return;
+  const duration = pieceAnimationDurationMs();
+  if (duration <= 0) return;
+  const settle = opts.reverse ? move.from : move.to;
+  const slot = host.querySelector(`[data-piece-square="${settle}"]`);
+  if (!slot) return;
+  const from = point(opts.reverse ? move.to : move.from);
+  const to = point(settle);
+  glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  // The gold band rides the piece in, as on xiangqi and jieqi. A reverse step
+  // draws the prior move's marks elsewhere, so nothing follows that glide.
+  if (!opts.reverse) animateBoardLastMoveArrival(host, from, to, duration);
 }
 
 /** Turn a live-flipped tile over (banqi's turn-over, on the point grid). */
@@ -375,8 +393,8 @@ export type TkLiveBoardEntry =
   | { faceDown: true };
 
 /** The room's board: the diagram board plus a `[data-square]` hit target on
- *  every point (board-drag.ts and the click handler read it), the last-move
- *  wash in the acting side's ink, and the lifted piece hidden while dragged. */
+ *  every point (board-drag.ts and the click handler read it), xiangqi's
+ *  last-move marks, and the lifted piece hidden while dragged. */
 export function renderThreeKingdomsBanqiLiveBoardSvg(
   board: Partial<Record<Square, TkLiveBoardEntry>>,
   opts: {
@@ -384,20 +402,38 @@ export function renderThreeKingdomsBanqiLiveBoardSvg(
     targets: readonly Square[];
     draggingFrom: Square | null;
     lastMove: { from: Square; to: Square } | null;
-    lastMoveInk: 'red' | 'black' | null;
+    /** The ink of the seat that made `lastMove` when it is a flip. */
+    flipInk?: 'red' | 'black' | null;
   },
 ): string {
-  const inkClass = opts.lastMoveInk ? ` banqi-lastmove--${opts.lastMoveInk}` : '';
-  const washAt = (square: Square, modifier: string) => {
-    const { x, y } = point(square);
-    return `<circle class="banqi-lastmove ${modifier}${inkClass}" cx="${x}" cy="${y}" r="${SELECTION_R}"/>`;
-  };
-  const lastMove = opts.lastMove
-    ? opts.lastMove.from === opts.lastMove.to
-      ? washAt(opts.lastMove.to, 'banqi-lastmove-to banqi-lastmove-flip')
-      : washAt(opts.lastMove.from, 'banqi-lastmove-from') +
-        washAt(opts.lastMove.to, 'banqi-lastmove-to')
+  // Pieces sit on points, so the marks are xiangqi's and jieqi's: a pale wash
+  // where the piece left and a gold band around the piece that landed; a flip
+  // in place gets the band alone (Brian, 2026-10-28: "draw the last move
+  // golden ring just like... Xiangqi and jieqi"). Was banqi's cell wash in the
+  // mover's ink, which board_lastmove_two_grammars kept for cell boards.
+  // A flip's band takes the flipper's ink instead of gold: the tile turned up
+  // says nothing about who turned it (Brian, 2026-10-28: "only color the
+  // flips"). The first flip binds its flipper to the colour turned up, so every
+  // flip has an ink; gold stays only if a caller has none to give.
+  const flip = opts.lastMove !== null && opts.lastMove.from === opts.lastMove.to;
+  const flipInk = flip ? (opts.flipInk ?? null) : null;
+  const lastMoveMarks = opts.lastMove
+    ? boardLastMoveMarkersSvg(
+        {
+          from: opts.lastMove.from === opts.lastMove.to ? null : point(opts.lastMove.from),
+          to: point(opts.lastMove.to),
+        },
+        PIECE_SIZE,
+        'under',
+        boardLastMovePiece(PIECE_SIZE, activeXiangqiPieceSet),
+      )
     : '';
+  const lastMove = flipInk
+    ? lastMoveMarks.replace(
+        'class="xq-live-lastmove-ring"',
+        `class="xq-live-lastmove-ring tk-flip-ring tk-flip-ring--${flipInk}"`,
+      )
+    : lastMoveMarks;
   const pieces = ALL_THREE_KINGDOMS_BANQI_SQUARES.map((square) => {
     const entry = board[square];
     if (!entry || square === opts.draggingFrom) return '';
