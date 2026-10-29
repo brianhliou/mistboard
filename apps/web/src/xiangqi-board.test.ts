@@ -54,7 +54,7 @@ describe('standard Xiangqi board SVG', () => {
     // Coordinates default to off, and the label gutter is reclaimed when they
     // are: a reader who never turns them on sees exactly the board that shipped
     // before they existed.
-    expect(svg).toContain('viewBox="6 6 540 612"');
+    expect(svg).toContain('viewBox="6.6 6.6 538.8 610.8"');
     expect(svg.match(/class="xq-live-cell xq-live-cell--/g)).toHaveLength(90);
     expect(svg.match(/class="xq-live-cell-line"/g)).toHaveLength(24);
     expect(svg).toContain(

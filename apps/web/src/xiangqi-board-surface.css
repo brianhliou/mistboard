@@ -70,6 +70,37 @@
   -webkit-user-select: none;
 }
 
+/* Square grid with coordinates on: the gutter is a frame in the board's ink,
+   lighter than the ink itself, with the labels printed on it in the board's own
+   colour (xiangqi-board-surface.ts, cellRim). Both mix from the board colours,
+   so a picked or themed board carries its frame along. */
+.xq-surface .xq-live-cell-rim {
+  fill: color-mix(in srgb, var(--xq-live-ink, #5a3a14) 62%, var(--xq-live-board-bg, #f5dca8));
+}
+
+.xq-surface .xq-live-cell-frame {
+  fill: none;
+  stroke: var(--xq-live-ink, #5a3a14);
+  stroke-width: 1.2;
+}
+
+.xq-surface--cell .xq-live-coord {
+  fill: var(--xq-live-board-bg, #f5dca8);
+}
+
+/* Square grid corners follow the corner piece's outline. Its outer corner radius
+   is (rx 14 + half the 2.8 ring) of a 62-unit piece box = 9.548 board units, as a
+   share of the coordinate-free viewBox (538.8 x 610.8). The site's 1.9% corner
+   is an ellipse 1.9% of each side, rounder than the piece, so it clipped the
+   corner pieces (Brian, 2026-10-29). Set on the SVG and on the element that
+   clips it (the puzzle box, the TV board, the room board) through the radius
+   tokens they already read; `:root` lifts these over each host's own token. */
+:root .xq-surface--cell,
+:root :has(> .xq-surface--cell) {
+  --board-corner-radius: 1.772% / 1.563%;
+  --xq-board-radius: 1.772% / 1.563%;
+}
+
 /* Start markers: the printed brackets at the cannons' and soldiers' starting
    points (xiangqiSurfaceStartMarkers). The same ink as the grid, so a custom
    board colour carries them along with the lines. */

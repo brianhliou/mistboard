@@ -8,7 +8,7 @@
 }
 
 :root[data-xiangqi-board-layout="cell"] .live-route--xiangqi {
-  --uni-board-aspect: calc(540 / 612);
+  --uni-board-aspect: calc(538.8 / 610.8);
 }
 
 .live-route--xiangqi .board-status {
@@ -145,7 +145,7 @@
 }
 
 :root[data-xiangqi-board-layout="cell"] .xiangqi-live-board {
-  aspect-ratio: 540 / 612;
+  aspect-ratio: 538.8 / 610.8;
 }
 
 /* Coordinates ON reserves a gutter (a fifth of a cell each side), which makes
@@ -221,7 +221,7 @@
 }
 
 .xiangqi-live-board:has(.xq-live-svg--cell) {
-  aspect-ratio: 540 / 612;
+  aspect-ratio: 538.8 / 610.8;
 }
 
 .xq-live-palace-band {

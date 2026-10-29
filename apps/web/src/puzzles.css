@@ -195,7 +195,7 @@
 }
 
 :root[data-xiangqi-board-layout="cell"] .puzzle-board .puzzle-xiangqi-board {
-  width: min(100%, calc(var(--puzzle-surface-size) * 540 / 612));
+  width: min(100%, calc(var(--puzzle-surface-size) * 538.8 / 610.8));
 }
 
 /* Coordinates on: the label gutter reshapes the board (live-xiangqi.css). */
@@ -1716,7 +1716,7 @@
   }
 
   :root[data-xiangqi-board-layout="cell"] .puzzles-shell .puzzle-board .puzzle-xiangqi-board {
-    width: min(100cqw, calc(100cqh * 540 / 612));
+    width: min(100cqw, calc(100cqh * 538.8 / 610.8));
   }
 
   :root[data-board-coordinates="on"] .puzzles-shell .puzzle-board .puzzle-xiangqi-board {

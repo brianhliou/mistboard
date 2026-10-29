@@ -501,7 +501,10 @@ export function fogLayer(
       const x1 = displayFile === FILE_COUNT - 1 ? maxX : center.x + CELL / 2 + FOG_OVERLAP;
       const y0 = displayRank === 0 ? minY : center.y - CELL / 2 - FOG_OVERLAP;
       const y1 = displayRank === RANK_COUNT - 1 ? maxY : center.y + CELL / 2 + FOG_OVERLAP;
-      return `<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" fill="black"/>`;
+      // Rounded to a hundredth: the square grid's trimmed edge (6.6) leaves float
+      // noise in a clamped width (59.89999999999998).
+      const r = (n: number) => Math.round(n * 100) / 100;
+      return `<rect x="${x0}" y="${y0}" width="${r(x1 - x0)}" height="${r(y1 - y0)}" fill="black"/>`;
     })
     .join('');
   return xiangqiFogRegion(
