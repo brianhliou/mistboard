@@ -154,7 +154,7 @@ export const ZH_HANS_SHELL = {
   'connection.restartNow': '服务器正在重启',
   'connection.restartNowHint': '请稍后重新连接。',
   'homePuzzle.ariaLabel': '每日题目：{title}',
-  'homePuzzle.title': '每日题目：{variant}',
+  'homePuzzle.title': '每日题目',
   'homePuzzle.toPlay': '轮到{color}走',
   'homeForum.heading': '活跃论坛话题',
   'homeForum.loading': '正在加载论坛。',

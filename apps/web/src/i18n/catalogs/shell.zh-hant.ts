@@ -154,7 +154,7 @@ export const ZH_HANT_SHELL = {
   'connection.restartNow': '伺服器正在重啟',
   'connection.restartNowHint': '請稍後重新連線。',
   'homePuzzle.ariaLabel': '每日題目：{title}',
-  'homePuzzle.title': '每日題目：{variant}',
+  'homePuzzle.title': '每日題目',
   'homePuzzle.toPlay': '輪到{color}走',
   'homeForum.heading': '活躍論壇話題',
   'homeForum.loading': '正在載入論壇。',
