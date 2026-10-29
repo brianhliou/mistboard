@@ -196,7 +196,7 @@
   width: auto;
   max-width: 100%;
   height: 100%;
-  aspect-ratio: 540 / 612;
+  aspect-ratio: 538.8 / 610.8;
 }
 
 .home-puzzle-box:has(.xq-live-svg--cell) {
@@ -1649,6 +1649,14 @@
   max-width: 100%;
   height: auto;
   display: block;
+}
+
+/* The xiangqi boards round their corners like the puzzle box beside them
+   (.home-puzzle-widget-board): the host clips, so a square grid's corner cells
+   cannot paint past the curve. Chess (cg-wrap) keeps its own square board. */
+.showcase-widget .replay-layout-solo .replay-board:has(.xq-live-svg) {
+  border-radius: var(--board-corner-radius);
+  overflow: hidden;
 }
 
 /* The SVG defines the height: full width, aspect-driven height (was 100%/100%,

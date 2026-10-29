@@ -6,6 +6,7 @@
 // surface. Pure math: no DOM, no SVG, no storage reads.
 
 import type { XiangqiColor } from '@mistboard/game';
+import { XIANGQI_PIECE_REACH } from './board-metrics.js';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
 
 /** Board dimensions in board units + the pixel scale, so one transform serves
@@ -71,20 +72,38 @@ export function xiangqiBoardPoint(
   };
 }
 
+/** How far the board's edge is pulled in past the edge squares. A piece's outline
+ *  spans XIANGQI_PIECE_REACH of the cell, centred, so it stops half the leftover
+ *  short of its square; at the board's edge that read as board showing past the
+ *  last piece (Brian, 2026-10-29: "flush with the cells, but not flush with the
+ *  edge"). The trim is exactly that half, so the edge lands on the outline. A
+ *  trim of the whole leftover was tried the same night: headless Chrome showed a
+ *  hairline at the exact cut, but Brian's GPU Chrome clipped the deeper one
+ *  ("it's actually getting cut off"), and the exact cut is flush there. */
+export function xiangqiCellEdgeTrim(cell: number): number {
+  // Rounded to a hundredth so the viewBox prints 6.6, not 6.6000000000000005.
+  return Math.round(((cell * (1 - XIANGQI_PIECE_REACH)) / 2) * 100) / 100;
+}
+
 /** The board's own viewBox rectangle. 'intersection' spans the outer lines;
  *  'cell' spans full squares (half a cell beyond the outer intersections) plus
- *  the river gap. Mirrors the live renderer's viewBox math exactly. */
+ *  the river gap. Mirrors the live renderer's viewBox math exactly.
+ *
+ *  A 'cell' board without a coordinate gutter is trimmed by the piece's edge gap,
+ *  so an edge piece meets the board's edge. With a gutter the squares end at a
+ *  framed rim instead (xiangqiSurfaceGrid), so they keep their full size. */
 export function xiangqiBoardViewBox(
   layout: XiangqiBoardLayout,
   geo: XiangqiBoardGeometry,
 ): { minX: number; minY: number; width: number; height: number } {
   const g = geo.coordGutter ?? 0;
   if (layout === 'cell') {
+    const trim = g > 0 ? 0 : xiangqiCellEdgeTrim(geo.cell);
     return {
-      minX: geo.margin - geo.cell / 2 - g,
-      minY: geo.margin - geo.cell / 2 - g,
-      width: geo.fileCount * geo.cell + g * 2,
-      height: geo.rankCount * geo.cell + geo.riverGap + g * 2,
+      minX: geo.margin - geo.cell / 2 - g + trim,
+      minY: geo.margin - geo.cell / 2 - g + trim,
+      width: geo.fileCount * geo.cell + g * 2 - trim * 2,
+      height: geo.rankCount * geo.cell + geo.riverGap + g * 2 - trim * 2,
     };
   }
   return {

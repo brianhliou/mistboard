@@ -51,12 +51,15 @@ describe('Dark Xiangqi board svg', () => {
     const view: DarkXiangqiWireView = { ...viewFixture(), visibleSquares: ['b3', 'a1'] };
     const fog = fogLayer(view, 'red', 'm', 'cell');
 
-    // The sheet spans the cells plus the river strip: 9 x 60 by 10 x 60 + 12.
-    expect(fog).toContain('<rect x="6" y="6" width="540" height="612" rx="0" fill="white"/>');
+    // The sheet spans the cells plus the river strip (9 x 60 by 10 x 60 + 12),
+    // less the 1.2 edge trim the board takes when coordinates are off.
+    expect(fog).toContain(
+      '<rect x="6.6" y="6.6" width="538.8" height="610.8" rx="0" fill="white"/>',
+    );
     // b3 sits below the river: row 7, centre 36 + 7 * 60 + 12 = 468.
     expect(fog).toContain('<rect x="65.5" y="437.5" width="61" height="61" fill="black"/>');
     // a1 is the bottom-left square and bleeds to the sheet's own edges.
-    expect(fog).toContain('<rect x="6" y="557.5" width="60.5" height="60.5" fill="black"/>');
+    expect(fog).toContain('<rect x="6.6" y="557.5" width="59.9" height="59.9" fill="black"/>');
   });
 
   it('keeps intersection-board fog holes where they were', () => {

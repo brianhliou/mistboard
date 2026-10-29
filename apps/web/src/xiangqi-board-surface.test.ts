@@ -10,12 +10,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   XIANGQI_START_POINTS,
   type XiangqiSurfaceConfig,
+  xiangqiSurfaceCoords,
   xiangqiSurfaceGrid,
   xiangqiSurfacePalace,
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
   xiangqiSurfaceStartMarkers,
 } from './xiangqi-board-surface.js';
+import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 
 const STANDARD: XiangqiSurfaceConfig = {
   geo: { fileCount: 9, rankCount: 10, cell: 60, margin: 36, riverGap: 12 },
@@ -229,5 +231,35 @@ describe('wood grain preview', () => {
     const svg = xiangqiSurfaceGrid(STANDARD, 'intersection');
     expect(svg.startsWith('<image class="xq-live-grain"')).toBe(true);
     expect(xiangqiSurfaceGrid(STANDARD, 'cell')).not.toContain('xq-live-grain');
+  });
+});
+
+describe('square grid coordinate rim (2026-10-29)', () => {
+  const labels = xiangqiCoordLabels('algebraic', 9, 10);
+  const framed = { ...STANDARD, geo: { ...STANDARD.geo, coordGutter: 12 } };
+
+  it('frames the squares and paints only the gutter when coordinates are on', () => {
+    const svg = xiangqiSurfaceCoords(framed, 'red', 'cell', labels);
+    // Outer ring is the viewBox (-6..558 x -6..630); the hole is the squares (6..546 x 6..618).
+    expect(svg).toContain(
+      '<path class="xq-live-cell-rim" fill-rule="evenodd" d="M-6 -6h564v636h-564ZM6 6h540v612h-540Z"/>',
+    );
+    expect(svg).toContain(
+      '<rect class="xq-live-cell-frame" x="6" y="6" width="540" height="612"/>',
+    );
+    // Labels centre on the rim band, not between the frame and the pieces.
+    expect(svg).toMatch(/<text[^>]*y="0"/);
+  });
+
+  it('draws no rim with coordinates off, nor on the intersection board', () => {
+    expect(xiangqiSurfaceCoords(STANDARD, 'red', 'cell', labels)).toBe('');
+    expect(
+      xiangqiSurfaceCoords(
+        { ...STANDARD, geo: { ...STANDARD.geo, coordGutter: 12, riverGap: 0 } },
+        'red',
+        'intersection',
+        labels,
+      ),
+    ).not.toContain('xq-live-cell-rim');
   });
 });
