@@ -35,10 +35,27 @@ const VIETNAMESE_RANGES = [
   'U+1EA0-1EF9',
 ];
 
+/** A face whose every range starts at U+3000 or later draws only CJK (the
+ *  river inscription's four characters) and never meets a Latin letter. */
+function cjkOnly(face: Face): boolean {
+  const starts = face.unicodeRange?.split(',').map((r) => Number.parseInt(r.trim().slice(2), 16));
+  return !!starts?.length && starts.every((start) => start >= 0x3000);
+}
+
 describe('self-hosted font faces', () => {
+  const selfHosted = faces.filter((f) => f.src.startsWith('/fonts/'));
   const families = [
-    ...new Set(faces.filter((f) => f.src.startsWith('/fonts/')).map((f) => f.family)),
+    ...new Set(
+      selfHosted
+        .filter((f) => !selfHosted.filter((o) => o.family === f.family).every(cjkOnly))
+        .map((f) => f.family),
+    ),
   ];
+
+  it('skips only the CJK-only river face', () => {
+    expect(selfHosted.filter(cjkOnly).map((f) => f.family)).toEqual(['Mistboard River']);
+    expect(families).not.toContain('Mistboard River');
+  });
 
   it('finds the self-hosted families', () => {
     expect(families).toEqual(expect.arrayContaining(['Noto Sans', 'Roboto']));

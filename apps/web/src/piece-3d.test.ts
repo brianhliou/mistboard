@@ -74,17 +74,19 @@ const JQ_CASES: Record<
   },
 };
 
+// Lined boards re-pinned 2026-10-29: 楚河 漢界 one character to a square, the
+// far pair turned.
 const GOLDEN: Record<string, string> = {
-  xqInternational: '7817aa6951276cba',
-  xqWood: 'c500f6b834f5b9b1',
+  xqInternational: 'c07b4c9968ffd0d1',
+  xqWood: 'e286fc47d0693eee',
   // Re-pinned 2026-10-29: Square grid pieces at 85% of the square, the ring
   // outside their outline.
   xqCell: '18e27b8fa73c35f9',
-  xqDrag: '996fa6332f638a61',
-  jqInternational: 'ca874e5065afac0b',
-  jqWood: 'e04eae44be343388',
+  xqDrag: '0ca4d8b4ce76c8d5',
+  jqInternational: '1b1321bf428719e5',
+  jqWood: 'df4ddaf709b4f1da',
   jqCell: '4f51dcccff28e48d',
-  jqDrag: '8e17f0fb5c8e6bb1',
+  jqDrag: '02962bb59f9aef29',
 };
 
 function sha(svg: string): string {

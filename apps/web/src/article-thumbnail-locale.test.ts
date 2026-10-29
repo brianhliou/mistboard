@@ -32,8 +32,9 @@ const cardWords = (markup: string) =>
 // text card is set wholly in that language (2026-10-03): an English reader saw
 // a hanzi eyebrow on every text card and read it as a bug.
 describe('text cards are in the page language', () => {
-  // The river inscription (楚河 漢界) is board art, drawn on every xiangqi board.
-  const RIVER = /^[楚漢汉][\s\S]*[河界]$/u;
+  // The river inscription (楚河 漢界) is board art, drawn on every xiangqi
+  // board, one character to a <text>.
+  const RIVER = /^[楚河漢汉界\s]+$/u;
 
   it('no English index card carries hanzi', () => {
     const offenders: string[] = [];

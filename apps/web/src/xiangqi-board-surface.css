@@ -159,6 +159,15 @@
   display: var(--xq-river-label-display, none);
 }
 
+/* 楚河 漢界 one character to a square in a brush hand (xiangqi-river-text.ts:
+   XIANGQI_RIVER_FONT_FAMILY, XIANGQI_RIVER_CHARACTER_SCALE; 42 is 0.7 of the
+   60-unit cell). */
+.xq-surface .xq-live-river text.xq-live-river-label {
+  font-family: "Mistboard River", "Kaiti SC", "STKaiti", "KaiTi", serif;
+  font-size: calc(42px * var(--xq-river-scale, 1));
+  letter-spacing: 0;
+}
+
 /* The wordmark: the same ink as 楚河 漢界, in title case, large enough to fill
    the river as the hanzi do, lightly tracked. 32px and 0.04em are what
    xiangqi-board-surface.ts centres against (BRAND_FONT_SIZE,

@@ -329,7 +329,7 @@ function gridSvg(board: ReplayBoard): string {
   } else {
     parts.push(
       `<g class="xq-diagram-line" stroke-width="1">${xiangqiSurfacePalace(surface, perspective, layout)}</g>`,
-      xiangqiDiagramRiverText(margin + 4 * cell, margin + 4.5 * cell + 1),
+      xiangqiDiagramRiverText(margin + 4 * cell, margin + 4.5 * cell + 1, cell),
     );
   }
   if (board.coords) {

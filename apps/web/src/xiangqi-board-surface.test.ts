@@ -47,11 +47,27 @@ describe('xiangqi board surface, intersection layout', () => {
     expect(svg).toContain('<line class="xq-live-line" x1="96" y1="336" x2="96" y2="576"/>');
   });
 
-  it('centres the river caption on the middle file', () => {
+  // Real boards set the inscription one character to a square near each edge,
+  // 漢界 turned to face the far player (Brian, 2026-10-29).
+  it('spreads 楚河 漢界 along the river, the far pair turned', () => {
     const svg = xiangqiSurfaceRiver(STANDARD, 'red', 'intersection');
-    // Middle of 9 files is index 4 -> x = 36 + 4*60 = 276; caption baseline y+1.
-    expect(svg).toContain('x="276"');
-    expect(svg).toContain('楚 河   漢 界');
+    const chars = [
+      ...svg.matchAll(
+        /<text class="xq-live-river-label" x="([\d.]+)" y="([\d.]+)"( transform="[^"]*")?>(.)<\/text>/g,
+      ),
+    ];
+    // Centre file x = 36 + 4*60 = 276; characters sit 1.5 and 2.5 cells out.
+    expect(chars.map((m) => [m[4], Number(m[1])])).toEqual([
+      ['楚', 126],
+      ['河', 186],
+      ['界', 366],
+      ['漢', 426],
+    ]);
+    const turned = chars.filter((m) => m[3]).map((m) => m[4]);
+    expect(turned).toEqual(['界', '漢']);
+    for (const m of chars.filter((c) => c[3])) {
+      expect(m[3]).toBe(` transform="rotate(180 ${m[1]} ${m[2]})"`);
+    }
   });
 
   // River text (2026-10-08): both captions are drawn and CSS shows the chosen

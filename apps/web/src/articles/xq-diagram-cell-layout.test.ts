@@ -30,7 +30,7 @@ describe('article xiangqi diagram layout', () => {
 
     // Both keep the river label and the wood board box.
     for (const svg of [intersection, cell]) {
-      expect(svg).toContain('楚 河');
+      expect(svg).toContain('>楚</text>');
       expect(svg).toContain('class="xq-diagram-bg"');
     }
   });

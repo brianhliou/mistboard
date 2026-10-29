@@ -1340,7 +1340,8 @@ function xqPalaceAndRiver(x0: number, y0: number, perspective: XiangqiColor): st
   // River band sits between ranks 5 and 6 (file 4 is the horizontal center).
   const riverY = (xqPoint(0, 5, perspective, x0, y0).y + xqPoint(0, 6, perspective, x0, y0).y) / 2;
   const riverX = xqPoint(4, 1, perspective, x0, y0).x;
-  parts.push(xiangqiDiagramRiverText(riverX, riverY + 1));
+  const riverCell = Math.abs(xqPoint(1, 1, perspective, x0, y0).x - xqPoint(0, 1, perspective, x0, y0).x);
+  parts.push(xiangqiDiagramRiverText(riverX, riverY + 1, riverCell));
   return parts.join('');
 }
 

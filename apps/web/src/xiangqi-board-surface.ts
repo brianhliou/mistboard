@@ -29,7 +29,7 @@ import {
 import {
   XIANGQI_RIVER_BRAND_TEXT,
   XIANGQI_RIVER_BRAND_TRACKING,
-  XIANGQI_RIVER_CLASSIC_TEXT,
+  xiangqiRiverCharacters,
 } from './xiangqi-river-text.js';
 
 /** A palace, in 1-indexed board coordinates (inclusive on both ends). */
@@ -352,7 +352,8 @@ export function xiangqiSurfaceRiver(
   const y = riverTop + cell / 2;
   const x = margin + ((fileCount - 1) / 2) * cell;
   // Both captions; CSS shows the chosen one (xiangqi-board-surface.css). The
-  // brand is set larger than the hanzi, since Latin letters stand shorter in
+  // inscription is four characters spread along the river
+  // (xiangqiRiverCharacters). The brand is set larger than the hanzi, since Latin letters stand shorter in
   // their em; the shift re-centres its trailing letter-spacing
   // (XIANGQI_RIVER_BRAND_TRACKING). A board drawn at another cell size scales
   // both through --xq-river-scale, so the caption fills its river the same way.
@@ -360,7 +361,7 @@ export function xiangqiSurfaceRiver(
   const scaleAttr = scale === 1 ? '' : ` style="--xq-river-scale: ${scale}"`;
   const brandX = round(x + (BRAND_FONT_SIZE * scale * XIANGQI_RIVER_BRAND_TRACKING) / 2);
   return `
-    <text class="xq-live-river-label"${scaleAttr} x="${x}" y="${y + 1}">${XIANGQI_RIVER_CLASSIC_TEXT}</text>
+    ${xiangqiRiverCharacters(x, y + 1, cell, `class="xq-live-river-label"${scaleAttr}`)}
     <text class="xq-live-river-brand"${scaleAttr} translate="no" x="${brandX}" y="${y + 1}">${XIANGQI_RIVER_BRAND_TEXT}</text>
   `;
 }
