@@ -47,17 +47,94 @@
 .theme-control-check-field {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: var(--site-muted);
+  gap: 10px;
+  min-height: 24px;
+  color: var(--site-text);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 650;
 }
 
 .theme-control-check-field input {
-  width: 16px;
-  height: 16px;
+  flex: none;
+  width: 18px;
+  height: 18px;
   margin: 0;
   accent-color: var(--site-accent);
+}
+
+/* Gear > Pieces groups (Look, Motion): a small caps heading over rows of
+   joined choices, every row's choices starting on one column. */
+.theme-control-group {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.theme-control-group + .theme-control-group {
+  border-top: 1px solid var(--site-border);
+  padding-top: 12px;
+}
+
+.theme-control-group-label {
+  color: var(--site-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.theme-segment-field {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.theme-segment-field[hidden] {
+  display: none;
+}
+
+.theme-segment-label {
+  color: var(--site-text);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+/* Joined buttons, one shared outline: the pick is a fill, not a gap. Equal
+   widths until a label needs more ("Normal" in the four-way Speed row). */
+.theme-segment-row,
+.xq-river-text-row {
+  display: flex;
+}
+
+.theme-segment-row .theme-mode-option,
+.xq-river-text-row .theme-mode-option {
+  flex: 1 1 0;
+  min-width: max-content;
+  min-height: 32px;
+  padding: 0 3px;
+  border-radius: 0;
+  white-space: nowrap;
+}
+
+.theme-segment-row .theme-mode-option + .theme-mode-option,
+.xq-river-text-row .theme-mode-option + .theme-mode-option {
+  margin-left: -1px;
+}
+
+.theme-segment-row .theme-mode-option:first-child,
+.xq-river-text-row .theme-mode-option:first-child {
+  border-radius: var(--site-radius-sm) 0 0 var(--site-radius-sm);
+}
+
+.theme-segment-row .theme-mode-option:last-child,
+.xq-river-text-row .theme-mode-option:last-child {
+  border-radius: 0 var(--site-radius-sm) var(--site-radius-sm) 0;
+}
+
+.theme-segment-row .theme-mode-option:is(:hover, :focus-visible, .selected),
+.xq-river-text-row .theme-mode-option:is(:hover, :focus-visible, .selected) {
+  position: relative;
 }
 
 /* Inline field: label on the left, control on the right. */
@@ -188,7 +265,7 @@
   --menu-bottom-right-radius: var(--site-radius);
   --menu-bottom-left-radius: var(--site-radius);
   display: none;
-  width: min(225px, calc(100vw - 28px));
+  width: min(260px, calc(100vw - 28px));
   gap: 0;
   border: 1px solid var(--site-border);
   border-radius: var(--site-radius) 0 var(--site-radius) var(--site-radius);
@@ -655,6 +732,12 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
+}
+
+/* The xiangqi board row has two shapes (lined, square grid): two columns, so
+   the pair spans the panel like the rows under it. */
+.theme-tile-row[data-theme-tile-row="xqboard"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .theme-tile {
@@ -1217,19 +1300,20 @@
 
 /* Xiangqi board colour (gear > Board, 2026-10-08): round swatches for the
    presets (xiangqi-board-color.ts sets each fill inline as --xq-swatch). */
-/* 20px + 5px gaps keeps all eight (seven presets and Jungle, on the square
-   grid) on one row in the 199px panel body; the selected ring stays inside the
-   gap. */
+/* 24px swatches spread edge to edge keep all eight (seven presets and Jungle,
+   on the square grid) on one row in the 236px panel body; the selected ring
+   stays inside the gap. */
 .xq-board-color-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+  justify-content: space-between;
+  gap: 4px;
 }
 
 .xq-board-color-swatch {
   position: relative;
-  width: 20px;
-  height: 20px;
+  flex: none;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--site-text) 22%, transparent);
   border-radius: 999px;
@@ -1270,24 +1354,12 @@
   display: none;
 }
 
-/* River text: Off / 楚河 漢界 / Mistboard. Each button sizes to its label and
-   shares the spare width, so "Mistboard" never overflows a third of the row. */
-.xq-river-text-row {
-  display: flex;
-  gap: 4px;
-}
-
-.xq-river-text-row .theme-mode-option {
-  flex: 1 1 auto;
-  min-height: 32px;
-  padding: 0 6px;
-  white-space: nowrap;
-}
+/* River text: Off / 楚河 漢界 / Mistboard, joined like the Pieces rows (rules
+   above). Equal thirds fit "Mistboard" in the 236px body. */
 
 .appearance-submenu[data-key="board"] .xq-start-markers-field,
 .appearance-submenu[data-key="board"] .xq-piece-shadow-field,
-.appearance-submenu[data-key="board"] .board-coordinates-field,
-.appearance-submenu[data-key="pieces"] .banqi-tile-3d-field {
+.appearance-submenu[data-key="board"] .board-coordinates-field {
   padding: 0 12px 12px;
 }
 

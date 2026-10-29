@@ -435,30 +435,54 @@ describe('appearance family gating', () => {
     ).toBe(true);
   });
 
-  it('switches the 3D flip apart from the 3D look', async () => {
-    // Brian, 2026-10-28: "make those both toggleable separately".
+  it('has no Flip row: the reveal turn follows the 3D look', async () => {
+    // Brian, 2026-10-29: the flip is "tied to 3d".
     await rebuildThemePanel();
     const pieces = '[data-theme-control] .appearance-submenu[data-key="pieces"]';
-    const look = document.querySelector<HTMLInputElement>(`${pieces} [data-banqi-tile3d]`);
-    const flip = document.querySelector<HTMLInputElement>(`${pieces} [data-piece-flip3d]`);
-    // Both off until the reader opts in (Brian, 2026-10-29).
-    expect(look?.checked).toBe(false);
-    expect(flip?.checked).toBe(false);
-    const flipPref = () =>
-      JSON.parse(localStorage.getItem('mistboard.displayPreferences.v1') ?? '{}').pieceFlip;
+    expect(document.querySelector(`${pieces} [data-piece-segment="flip"]`)).toBeNull();
+    expect(document.querySelector(`${pieces} [data-piece-segment="speed"]`)).not.toBeNull();
+  });
+  it('shows Edge only with 3D pieces', async () => {
+    await rebuildThemePanel();
+    const pieces = '[data-theme-control] .appearance-submenu[data-key="pieces"]';
+    const row = (segment: string) =>
+      document.querySelector<HTMLElement>(`${pieces} [data-piece-segment-field="${segment}"]`);
+    const click = (segment: string, value: string) =>
+      document
+        .querySelector<HTMLButtonElement>(
+          `${pieces} [data-piece-segment="${segment}"][data-value="${value}"]`,
+        )
+        ?.click();
 
-    flip?.click();
-    expect(flipPref()).toBe('spin');
-    expect(look?.checked).toBe(false);
-    expect(document.documentElement.dataset.banqiTile3d).not.toBe('on');
+    expect(row('edge')?.hidden).toBe(true);
+    click('look', '3d');
+    expect(row('edge')?.hidden).toBe(false);
+    click('look', 'flat');
+    expect(row('edge')?.hidden).toBe(true);
+  });
 
-    look?.click();
-    expect(document.documentElement.dataset.banqiTile3d).toBe('on');
-    expect(flipPref()).toBe('spin');
-
-    flip?.click();
-    expect(flipPref()).toBe('flat');
-    expect(document.documentElement.dataset.banqiTile3d).toBe('on');
+  it('lets a guest set the animation speed without an account save', async () => {
+    // The speed was on the account page only, out of a guest's reach (Brian,
+    // 2026-10-29).
+    const fetchSpy = vi.fn(() => Promise.resolve(new Response('{}')));
+    vi.stubGlobal('fetch', fetchSpy);
+    try {
+      await rebuildThemePanel();
+      document
+        .querySelector<HTMLButtonElement>(
+          '[data-theme-control] .appearance-submenu[data-key="pieces"] [data-piece-segment="speed"][data-value="fast"]',
+        )
+        ?.click();
+      expect(
+        JSON.parse(localStorage.getItem('mistboard.displayPreferences.v1') ?? '{}').pieceAnimation,
+      ).toBe('fast');
+      expect(fetchSpy).not.toHaveBeenCalledWith(
+        '/api/account/display-preferences',
+        expect.anything(),
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('swaps the real appearance menu into the buildAppearanceMenu facade placeholder', async () => {

@@ -351,52 +351,6 @@ describe('account page auth flow', () => {
     );
   });
 
-  it('offers the Tile flip setting beside piece animation, Flat by default, saved locally', async () => {
-    window.history.replaceState(null, '', '/account/settings/display');
-    const user = testUser('misty');
-    const requests: unknown[] = [];
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const url = String(input);
-        if (url === '/api/auth/me') return jsonResponse({ user });
-        if (url === '/api/account/display-preferences') {
-          requests.push(JSON.parse(String(init?.body)) as unknown);
-          return jsonResponse({ user });
-        }
-        throw new Error(`unexpected fetch: ${url}`);
-      }),
-    );
-
-    const { displayPreferenceStorageKey } = await import('./display-preferences.js');
-    const { mountAccountSettings } = await import('./account.js');
-    await mountAccountSettings(document.querySelector<HTMLElement>('#app') as HTMLElement);
-    await flushDom();
-
-    const names = [...document.querySelectorAll<HTMLInputElement>('input[type="radio"]')].map(
-      (input) => input.name,
-    );
-    expect(names.indexOf('pieceFlip')).toBeGreaterThan(names.lastIndexOf('pieceAnimation'));
-    const options = [...document.querySelectorAll<HTMLInputElement>('input[name="pieceFlip"]')];
-    expect(options.map((input) => input.value)).toEqual(['flat', 'lift', 'spin']);
-    expect(options.find((input) => input.checked)?.value).toBe('flat');
-    const labels = options.map((input) => input.closest('label')?.textContent?.trim());
-    expect(labels).toEqual(['Flat', 'Lift', 'Spin']);
-    expect(document.body.textContent).toContain('Tile flip');
-
-    const spin = options.find((input) => input.value === 'spin');
-    if (!spin) throw new Error('missing spin option');
-    spin.checked = true;
-    spin.dispatchEvent(new Event('change', { bubbles: true }));
-    await flushDom();
-    const stored = JSON.parse(window.localStorage.getItem(displayPreferenceStorageKey) ?? '{}') as {
-      pieceFlip?: string;
-    };
-    expect(stored.pieceFlip).toBe('spin');
-    // Only the speed syncs to the account; the turn style stays on this device.
-    expect(requests.some((body) => JSON.stringify(body).includes('pieceFlip'))).toBe(false);
-  });
-
   it('syncs clock and game behavior preferences to the account and local cache', async () => {
     window.history.replaceState(null, '', '/account/settings/behavior');
     const user = testUser('misty');

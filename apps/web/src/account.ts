@@ -55,7 +55,6 @@ const accountSettingsSections = accountSettingsSectionGroups.flat();
 
 const implementedDisplayPreferenceIds = new Set<DisplayPreferenceId>([
   'pieceAnimation',
-  'pieceFlip',
   'playerFlairs',
   'boardCoordinates',
 ]);
@@ -1688,7 +1687,6 @@ function accountSettingsSectionLabel(
 function displayPreferenceLabel(id: DisplayPreferenceId, locale: Locale): string {
   const keyByPreference = {
     pieceAnimation: 'account.displayPieceAnimation',
-    pieceFlip: 'account.displayPieceFlip',
     materialDifference: 'account.displayMaterialDifference',
     boardHighlights: 'account.displayBoardHighlights',
     pieceDestinations: 'account.displayPieceDestinations',
@@ -1719,13 +1717,8 @@ function displayPreferenceOptionLabel(
       normal: 'account.displayOption.pieceAnimation.normal',
       slow: 'account.displayOption.pieceAnimation.slow',
     },
-    pieceFlip: {
-      flat: 'account.displayOption.pieceFlip.flat',
-      lift: 'account.displayOption.pieceFlip.lift',
-      spin: 'account.displayOption.pieceFlip.spin',
-    },
   } as const;
-  if (id !== 'pieceAnimation' && id !== 'pieceFlip') {
+  if (id !== 'pieceAnimation') {
     return value;
   }
   const options: Partial<Record<string, I18nKey>> = keys[id];

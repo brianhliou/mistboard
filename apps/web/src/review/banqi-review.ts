@@ -19,7 +19,11 @@ import {
 import { createBanqiInteractiveBoard } from '../banqi-board.js';
 import { t } from '../i18n/catalog.js';
 import type { BanqiBoardArrow, BanqiBoardMarker } from '../live-banqi-render.js';
-import { animateBanqiBoardMove, banqiPieceGhostSvg } from '../live-banqi-render.js';
+import {
+  animateBanqiBoardMove,
+  animateBanqiReveal,
+  banqiPieceGhostSvg,
+} from '../live-banqi-render.js';
 import { createBanqiTablebasePanel } from './banqi-tablebase-panel.js';
 import { type BanqiReviewStart, makeBanqiTreeAdapter } from './banqi-tree-adapter.js';
 import { fillCapturedPoolWith } from './captured-pool.js';
@@ -115,8 +119,12 @@ function makeBanqiPresentation(
     createBoard: (opts) => createBanqiInteractiveBoard(opts),
     // Banqi is symmetric, so there is no perspective to pass; the presentation
     // contract takes one anyway for the fog variants, and it is dropped here.
-    // A flip needs no special case: it is a self-move, and the glide no-ops.
-    animateMove: (boardEl, move, _perspective, opts) => animateBanqiBoardMove(boardEl, move, opts),
+    // A step forward onto a flip turns the tile over (#709); back over one,
+    // the back just reappears.
+    animateMove: (boardEl, move, _perspective, opts) => {
+      if (move.from !== move.to) animateBanqiBoardMove(boardEl, move, opts);
+      else if (!opts?.reverse) animateBanqiReveal(boardEl, move.to);
+    },
     shapeToArrow: (s: NodeShape): BanqiBoardArrow => ({
       from: s.orig as BanqiBoardArrow['from'],
       to: (s.dest ?? s.orig) as BanqiBoardArrow['to'],

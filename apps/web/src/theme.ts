@@ -442,6 +442,46 @@ export function setPieceEdgePreference(thick: boolean): void {
   dispatchXiangqiAppearanceChanged();
 }
 
+export const PIECE_ANIMATION_SPEEDS = ['none', 'fast', 'normal', 'slow'] as const;
+type PieceAnimationSpeed = (typeof PIECE_ANIMATION_SPEEDS)[number];
+
+/** The gear's Pieces rows, each as the value its segmented buttons carry. */
+export type PieceSegmentValues = {
+  look: 'flat' | '3d';
+  edge: 'standard' | 'thick';
+  speed: PieceAnimationSpeed;
+};
+export type PieceSegment = keyof PieceSegmentValues;
+
+export function pieceSegmentValues(): PieceSegmentValues {
+  const prefs = readDisplayPreferences();
+  return {
+    look: readStoredBanqiTile3d() ? '3d' : 'flat',
+    edge: readStoredPieceEdgeThick() ? 'thick' : 'standard',
+    speed: prefs.pieceAnimation,
+  };
+}
+
+/** Edge means nothing on flat pieces. */
+export function pieceSegmentHidden(segment: PieceSegment, values: PieceSegmentValues): boolean {
+  if (segment === 'edge') return values.look !== '3d';
+  return false;
+}
+
+/** Piece animation is also an account setting, and the account page copies the
+ *  account's value over this browser's on load, so a signed-in reader's change
+ *  here is saved to the account too or it would revert. */
+export function setPieceAnimationPreference(speed: PieceAnimationSpeed): void {
+  writeDisplayPreference('pieceAnimation', speed);
+  syncThemeControls();
+  if (!isLikelySignedIn()) return;
+  void fetch('/api/account/display-preferences', {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pieceAnimation: speed }),
+  }).catch(() => {});
+}
+
 export function setXiangqiPieceSetPreference(pieceSet: XiangqiPieceSet): void {
   applyXiangqiPieceSet(pieceSet);
   writeStoredXiangqiPieceSet(pieceSet);
@@ -744,11 +784,15 @@ function syncThemeControls(): void {
   document.querySelectorAll<HTMLInputElement>('input[data-xq-piece-shadow]').forEach((input) => {
     input.checked = readStoredXiangqiPieceShadow();
   });
-  document.querySelectorAll<HTMLInputElement>('input[data-banqi-tile3d]').forEach((input) => {
-    input.checked = readStoredBanqiTile3d();
+  const segments = pieceSegmentValues();
+  document.querySelectorAll<HTMLElement>('[data-piece-segment]').forEach((button) => {
+    const segment = button.dataset.pieceSegment as PieceSegment;
+    const isActive = button.dataset.value === segments[segment];
+    button.setAttribute('aria-checked', String(isActive));
+    button.classList.toggle('selected', isActive);
   });
-  document.querySelectorAll<HTMLInputElement>('input[data-piece-edge]').forEach((input) => {
-    input.checked = readStoredPieceEdgeThick();
+  document.querySelectorAll<HTMLElement>('[data-piece-segment-field]').forEach((field) => {
+    field.hidden = pieceSegmentHidden(field.dataset.pieceSegmentField as PieceSegment, segments);
   });
   document.querySelectorAll<HTMLInputElement>('input[data-sound-volume]').forEach((input) => {
     input.value = String(Math.round(effectiveVolume * 100));

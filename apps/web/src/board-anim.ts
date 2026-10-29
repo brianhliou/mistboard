@@ -16,6 +16,7 @@
 
 import { maybeGameSpecForId } from '@mistboard/game';
 import { readDisplayPreferences } from './display-preferences.js';
+import { readStoredBanqiTile3d } from './xiangqi-appearance-storage.js';
 
 const DISPLAY_PREFERENCES_CHANGE_EVENT = 'mistboard:display-preferences-change';
 
@@ -36,7 +37,6 @@ let subscribed = false;
 function invalidateCache(): void {
   cachedDurationMs = null;
   cachedFlipDurationMs = null;
-  cachedFlipStyle = null;
 }
 
 function subscribeToPreferenceChanges(): void {
@@ -184,12 +184,13 @@ export function pieceFlipDurationMs(): number {
   return cachedFlipDurationMs;
 }
 
-// ── Flip style (#709): the "Tile flip" display setting ──────────────────────
-// Flat (a squeeze), Lift (rises and turns end over end) or Spin (rises and
-// turns side to side); default Spin (Brian, 2026-10-28: Spin for flat and 3D
-// tiles, one motion everywhere). `?flip=flat|lift|spin`
-// overrides the setting for testing: read once per page load and kept for the
-// tab (sessionStorage) so it survives in-app navigation into a room.
+// ── Flip style (#709): follows the Pieces look ─────────────────────────────
+// 3D pieces Spin (rise and turn side to side, the wall showing mid-turn); flat
+// pieces Flat (a squeeze). No setting of its own (Brian, 2026-10-29: the flip
+// is "tied to 3d", as the sheet showed it). `?flip=flat|lift|spin` overrides it
+// for testing: read once per page load and kept for the tab (sessionStorage) so
+// it survives in-app navigation into a room. Lift (end over end) is reachable
+// only that way.
 
 export const PIECE_FLIP_STYLES = ['flat', 'lift', 'spin'] as const;
 export type PieceFlipStyle = (typeof PIECE_FLIP_STYLES)[number];
@@ -212,7 +213,6 @@ export function pieceFlipStyleFromSearch(search: string): PieceFlipStyle | null 
 
 /** undefined: not parsed yet; null: no override this tab. */
 let cachedFlipOverride: PieceFlipStyle | null | undefined;
-let cachedFlipStyle: PieceFlipStyle | null = null;
 
 function pieceFlipOverride(): PieceFlipStyle | null {
   if (cachedFlipOverride !== undefined) return cachedFlipOverride;
@@ -233,29 +233,18 @@ function pieceFlipOverride(): PieceFlipStyle | null {
   return override;
 }
 
-/** The turn-over style: the tab's `?flip=` override, else the Tile flip
- *  setting (default 'spin'). Cached, cleared by the settings change event. */
+/** The turn-over style: the tab's `?flip=` override, else Spin for 3D pieces
+ *  and Flat for flat ones. Read on every turn, so a look change applies to the
+ *  next one. */
 export function pieceFlipStyle(): PieceFlipStyle {
   const override = pieceFlipOverride();
   if (override) return override;
-  subscribeToPreferenceChanges();
-  if (cachedFlipStyle === null) {
-    let style: PieceFlipStyle = 'flat';
-    try {
-      const preference = readDisplayPreferences().pieceFlip;
-      if (isPieceFlipStyle(preference)) style = preference;
-    } catch {
-      style = 'flat';
-    }
-    cachedFlipStyle = style;
-  }
-  return cachedFlipStyle;
+  return readStoredBanqiTile3d() ? 'spin' : 'flat';
 }
 
 /** Tests only: forget the parsed flag so the next read re-parses the URL. */
 export function resetPieceFlipStyleCache(): void {
   cachedFlipOverride = undefined;
-  cachedFlipStyle = null;
 }
 
 // Parse at load, before any in-app navigation can drop the query.

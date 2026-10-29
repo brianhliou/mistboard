@@ -7,6 +7,7 @@ import {
   getFortressXiangqiPlayerView,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { mountCrazyhouseXiangqiWatchReplay } from './watch-crazyhouse-xiangqi-replay.js';
 import { mountFortressXiangqiWatchReplay } from './watch-fortress-xiangqi-replay.js';
 import { createWatchMaterialRail } from './watch-route.js';
@@ -111,6 +112,19 @@ describe('createWatchMaterialRail', () => {
     slots.pool.append(document.createElement('span'));
     createWatchMaterialRail(slots, () => null).sync();
     expect(slots.pool.childElementCount).toBe(0);
+  });
+  it('redraws the strips when the piece set or 3D look changes, until aborted', () => {
+    const slots = railSlots();
+    const fill = vi.fn();
+    const controller = new AbortController();
+    createWatchMaterialRail(slots, () => ({ fillMaterial: fill }), controller.signal);
+
+    window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
+    expect(fill).toHaveBeenCalledTimes(1);
+
+    controller.abort();
+    window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
+    expect(fill).toHaveBeenCalledTimes(1);
   });
 });
 

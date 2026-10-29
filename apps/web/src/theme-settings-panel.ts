@@ -8,11 +8,7 @@
 // preference setters this panel calls — the panel is a dumb view over that API.
 import { trackLocaleChanged, trackNotationChanged } from './analytics.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
-import {
-  boardCoordinatesEnabled,
-  readDisplayPreferences,
-  writeDisplayPreference,
-} from './display-preferences.js';
+import { boardCoordinatesEnabled } from './display-preferences.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import {
   currentLocale,
@@ -27,10 +23,13 @@ import {
   type AppearanceMenuOptions,
   type BoardFamily,
   formatVolume,
+  PIECE_ANIMATION_SPEEDS,
+  type PieceSegment,
+  type PieceSegmentValues,
+  pieceSegmentHidden,
+  pieceSegmentValues,
   type QuickPickerKind,
   readEffectiveSoundVolume,
-  readStoredBanqiTile3d,
-  readStoredPieceEdgeThick,
   readStoredSiteTheme,
   readStoredSoundMuted,
   readStoredXiangqiBoardColor,
@@ -41,6 +40,7 @@ import {
   type SiteTheme,
   setBanqiTile3dPreference,
   setBoardCoordinatesPreference,
+  setPieceAnimationPreference,
   setPieceEdgePreference,
   setSiteThemePreference,
   setSoundSetPreference,
@@ -230,9 +230,8 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
         undefined,
         false,
       ),
-      createBanqiTile3dField(locale),
-      createPieceEdgeField(locale),
-      createPieceFlip3dField(locale),
+      createPieceLookGroup(locale),
+      createPieceMotionGroup(locale),
     );
   }
   addCategory('pieces', t('prefs.pieces', {}, locale), pieceBody);
@@ -551,55 +550,106 @@ function createXiangqiPieceShadowField(locale: Locale): HTMLLabelElement {
   return field;
 }
 
-// Pieces drawn with a visible rim on every board (piece3dEnabled), on by
-// default since 2026-10-28. It sits with the piece sets because it changes them.
-function createBanqiTile3dField(locale: Locale): HTMLLabelElement {
-  const field = document.createElement('label');
-  field.className = 'theme-control-check-field banqi-tile-3d-field';
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  input.dataset.banqiTile3d = '';
-  input.checked = readStoredBanqiTile3d();
-  input.addEventListener('change', () => setBanqiTile3dPreference(input.checked));
-  const text = document.createElement('span');
-  text.textContent = t('prefs.banqiTile3d', {}, locale);
-  field.append(input, text);
-  return field;
+// The Pieces panel's two groups, as rows of segmented choices (Brian,
+// 2026-10-29: "Segmented rows"). A row that only means something under another
+// choice hides with it: Edge without 3D pieces, Flip with the animation off.
+// syncThemeControls keeps the selection and the hiding in step after a change.
+function createPieceLookGroup(locale: Locale): HTMLDivElement {
+  const values = pieceSegmentValues();
+  return createControlGroup(t('prefs.groupLook', {}, locale), [
+    createSegmentedField(
+      'look',
+      t('prefs.pieceLook', {}, locale),
+      [
+        { id: 'flat', label: t('prefs.optionFlat', {}, locale) },
+        { id: '3d', label: t('prefs.option3d', {}, locale) },
+      ],
+      values.look,
+      (id) => setBanqiTile3dPreference(id === '3d'),
+    ),
+    createSegmentedField(
+      'edge',
+      t('prefs.pieceEdge', {}, locale),
+      [
+        { id: 'standard', label: t('prefs.pieceEdgeStandard', {}, locale) },
+        { id: 'thick', label: t('prefs.pieceEdgeThick', {}, locale) },
+      ],
+      values.edge,
+      (id) => setPieceEdgePreference(id === 'thick'),
+    ),
+  ]);
 }
 
-// The 3D rim's depth, Standard or Thicker (piece3dDepthShare). Only 3D pieces
-// have a rim, so it sits under the 3D switch.
-function createPieceEdgeField(locale: Locale): HTMLLabelElement {
-  const field = document.createElement('label');
-  field.className = 'theme-control-check-field piece-edge-field';
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  input.dataset.pieceEdge = '';
-  input.checked = readStoredPieceEdgeThick();
-  input.addEventListener('change', () => setPieceEdgePreference(input.checked));
-  const text = document.createElement('span');
-  text.textContent = t('prefs.pieceEdgeThick', {}, locale);
-  field.append(input, text);
-  return field;
+// Speed is the account page's Piece animation, here so a guest can reach it.
+// The reveal turn has no row: it follows the look (3D pieces spin, flat squash).
+function createPieceMotionGroup(locale: Locale): HTMLDivElement {
+  const values = pieceSegmentValues();
+  return createControlGroup(t('prefs.groupMotion', {}, locale), [
+    createSegmentedField(
+      'speed',
+      t('prefs.animationSpeed', {}, locale),
+      PIECE_ANIMATION_SPEEDS.map((id) => ({
+        id,
+        label: t(PIECE_ANIMATION_LABEL_KEYS[id], {}, locale),
+      })),
+      values.speed,
+      setPieceAnimationPreference,
+    ),
+  ]);
 }
 
-// The turn-over, apart from the look (Brian, 2026-10-28: "make those both
-// toggleable separately"). On is Spin, the coin turning in depth; off is Flat,
-// the squeeze. Either works on flat or 3D pieces. It writes the account page's
-// Tile flip choice, which keeps Lift as a third option.
-function createPieceFlip3dField(locale: Locale): HTMLLabelElement {
-  const field = document.createElement('label');
-  field.className = 'theme-control-check-field piece-flip-3d-field';
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  input.dataset.pieceFlip3d = '';
-  input.checked = readDisplayPreferences().pieceFlip !== 'flat';
-  input.addEventListener('change', () =>
-    writeDisplayPreference('pieceFlip', input.checked ? 'spin' : 'flat'),
-  );
-  const text = document.createElement('span');
-  text.textContent = t('prefs.pieceFlip3d', {}, locale);
-  field.append(input, text);
+const PIECE_ANIMATION_LABEL_KEYS: Record<PieceSegmentValues['speed'], I18nKey> = {
+  none: 'prefs.animationOff',
+  fast: 'prefs.animationFast',
+  normal: 'prefs.animationNormal',
+  slow: 'prefs.animationSlow',
+};
+
+function createControlGroup(label: string, rows: HTMLElement[]): HTMLDivElement {
+  const group = document.createElement('div');
+  group.className = 'theme-control-group';
+  const heading = document.createElement('span');
+  heading.className = 'theme-control-group-label';
+  heading.textContent = label;
+  group.append(heading, ...rows);
+  return group;
+}
+
+// One labelled row: the name on the left, the choices joined on the right.
+function createSegmentedField<S extends PieceSegment>(
+  segment: S,
+  label: string,
+  options: ReadonlyArray<{ id: PieceSegmentValues[S]; label: string }>,
+  value: PieceSegmentValues[S],
+  onChange: (value: PieceSegmentValues[S]) => void,
+): HTMLDivElement {
+  const field = document.createElement('div');
+  field.className = 'theme-segment-field';
+  field.dataset.pieceSegmentField = segment;
+  field.hidden = pieceSegmentHidden(segment, pieceSegmentValues());
+  const name = document.createElement('span');
+  name.className = 'theme-segment-label';
+  name.textContent = label;
+
+  const row = document.createElement('div');
+  row.className = 'theme-segment-row';
+  row.setAttribute('role', 'radiogroup');
+  row.setAttribute('aria-label', label);
+  for (const option of options) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'theme-mode-option';
+    button.dataset.pieceSegment = segment;
+    button.dataset.value = option.id;
+    button.textContent = option.label;
+    button.setAttribute('role', 'radio');
+    button.setAttribute('aria-checked', String(option.id === value));
+    if (option.id === value) button.classList.add('selected');
+    button.addEventListener('click', () => onChange(option.id));
+    row.append(button);
+  }
+
+  field.append(name, row);
   return field;
 }
 

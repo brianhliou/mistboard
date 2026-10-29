@@ -212,8 +212,4 @@ export const ZH_HANS_ACCOUNT = {
   'account.displayOption.pieceAnimation.fast': '快',
   'account.displayOption.pieceAnimation.normal': '正常',
   'account.displayOption.pieceAnimation.slow': '慢',
-  'account.displayPieceFlip': '翻棋动画',
-  'account.displayOption.pieceFlip.flat': '平翻',
-  'account.displayOption.pieceFlip.lift': '抬起',
-  'account.displayOption.pieceFlip.spin': '旋转',
 } satisfies Partial<Record<AccountI18nKey, string>>;

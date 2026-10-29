@@ -18,6 +18,7 @@ import {
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
 import { animateJieqiReveal, jieqiRevealSquare } from './live-jieqi-render.js';
+import { writeStoredBanqiTile3d } from './xiangqi-appearance-storage.js';
 
 const captured = vi.hoisted(() => ({ configs: [] as Array<Record<string, unknown>> }));
 
@@ -172,7 +173,7 @@ describe('the turn-over trigger', () => {
 
 describe('banqi turn-over', () => {
   it('turns the slot, hides the face until the midpoint, shows the back until then', () => {
-    writeDisplayPreference('pieceFlip', 'flat');
+    writeStoredBanqiTile3d(false);
     const el = banqiHost(revealed);
     const { calls } = recordAnimations(() => {
       expect(animateBanqiReveal(el, 'a1')).toBe(true);
@@ -193,7 +194,7 @@ describe('banqi turn-over', () => {
   });
 
   it("turns the flipper's inked cell up with the face, never before it", () => {
-    writeDisplayPreference('pieceFlip', 'flat');
+    writeStoredBanqiTile3d(false);
     const el = banqiHost(revealed);
     expect(el.querySelector('.banqi-lastmove-flip')).not.toBeNull();
     const { calls } = recordAnimations(() => animateBanqiReveal(el, 'a1'));
@@ -243,7 +244,7 @@ describe('banqi live room wiring', () => {
   }
 
   beforeEach(() => {
-    writeDisplayPreference('pieceFlip', 'flat');
+    writeStoredBanqiTile3d(false);
   });
 
   // The flip's cell in the flipper's ink (red made ply 1) turns with the tile.
@@ -282,11 +283,23 @@ describe('banqi live room wiring', () => {
     expect(turned(() => animateBoard({ board: el }, revealed, () => null))).toEqual([]);
   });
 
-  it('turns nothing when stepping through the replay onto a flip', async () => {
+  // Stepping through the moves turns a flip over as it did live (Brian,
+  // 2026-10-29); stepping back over one just shows the back.
+  it('turns the tile when stepping forward through the replay onto a flip', async () => {
     const animateBoard = await hook();
     const el = banqiHost(revealed);
     const step = { kind: 'scrub', direction: 'forward', prevView: hidden };
-    expect(turned(() => animateBoard({ board: el }, revealed, () => step))).toEqual([]);
+    expect(turned(() => animateBoard({ board: el }, revealed, () => step))).toEqual([
+      'a1',
+      FLIP_CELL,
+    ]);
+  });
+
+  it('turns nothing when stepping back over a flip', async () => {
+    const animateBoard = await hook();
+    const el = banqiHost(hidden);
+    const step = { kind: 'scrub', direction: 'back', prevView: revealed };
+    expect(turned(() => animateBoard({ board: el }, hidden, () => step))).toEqual([]);
   });
 });
 
@@ -375,8 +388,7 @@ describe('flip styles (the Tile flip setting, ?flip= override)', () => {
   }
   const AXIS_BY_STYLE = { flat: 'scaleX', lift: 'rotateX', spin: 'rotateY' } as const;
 
-  it('defaults to flat with no setting and no flag', () => {
-    // Brian, 2026-10-29: the turn "synergizes more with the piece being 3D"; opt in.
+  it('defaults to flat with flat pieces and no flag', () => {
     useFlag('');
     expect(pieceFlipStyle()).toBe('flat');
     useFlag('?flip=nope');
@@ -385,55 +397,53 @@ describe('flip styles (the Tile flip setting, ?flip= override)', () => {
     expect(pieceFlipStyle()).toBe('spin');
   });
 
-  it.each(['flat', 'lift', 'spin'] as const)(
-    'the %s setting reaches the banqi and jieqi turns',
-    (style) => {
-      useFlag('');
-      writeDisplayPreference('pieceFlip', style);
-      expect(pieceFlipStyle()).toBe(style);
-      const banqi = recordAnimations(() => {
-        expect(animateBanqiReveal(banqiHost(revealed), 'a1')).toBe(true);
-      }).calls;
-      expect(turnAxis(banqi)).toBe(AXIS_BY_STYLE[style]);
-      const el = document.createElement('div');
-      el.innerHTML = '<svg><g data-piece-square="a3"><g class="jieqi-piece"></g></g></svg>';
-      const jieqi = recordAnimations(() => {
-        animateJieqiReveal(el, 'a3', 'red', 'red');
-      }).calls;
-      expect(turnAxis(jieqi)).toBe(AXIS_BY_STYLE[style]);
-    },
-  );
-
-  it('a setting change applies to the next turn without a reload', () => {
+  // Brian, 2026-10-29: the flip is "tied to 3d", as the sheet showed it.
+  it.each([
+    [false, 'flat'],
+    [true, 'spin'],
+  ] as const)('3D look %s turns the banqi and jieqi reveals %s', (look3d, style) => {
     useFlag('');
-    writeDisplayPreference('pieceFlip', 'lift');
-    expect(pieceFlipStyle()).toBe('lift');
-    writeDisplayPreference('pieceFlip', 'spin');
-    expect(pieceFlipStyle()).toBe('spin');
+    writeStoredBanqiTile3d(look3d);
+    expect(pieceFlipStyle()).toBe(style);
+    const banqi = recordAnimations(() => {
+      expect(animateBanqiReveal(banqiHost(revealed), 'a1')).toBe(true);
+    }).calls;
+    expect(turnAxis(banqi)).toBe(AXIS_BY_STYLE[style]);
+    const el = document.createElement('div');
+    el.innerHTML = '<svg><g data-piece-square="a3"><g class="jieqi-piece"></g></g></svg>';
+    const jieqi = recordAnimations(() => {
+      animateJieqiReveal(el, 'a3', 'red', 'red');
+    }).calls;
+    expect(turnAxis(jieqi)).toBe(AXIS_BY_STYLE[style]);
   });
 
-  it('the ?flip= override wins over the setting', () => {
-    writeDisplayPreference('pieceFlip', 'spin');
+  it('a look change applies to the next turn without a reload', () => {
+    useFlag('');
+    writeStoredBanqiTile3d(true);
+    expect(pieceFlipStyle()).toBe('spin');
+    writeStoredBanqiTile3d(false);
+    expect(pieceFlipStyle()).toBe('flat');
+  });
+
+  it('the ?flip= override wins over the look', () => {
+    writeStoredBanqiTile3d(true);
     useFlag('?flip=flat');
     expect(pieceFlipStyle()).toBe('flat');
     const { calls } = recordAnimations(() => animateBanqiReveal(banqiHost(revealed), 'a1'));
     expect(turnAxis(calls)).toBe('scaleX');
   });
 
-  it.each(['flat', 'lift', 'spin'] as const)(
-    'reduced motion turns nothing whatever the setting (%s)',
-    (style) => {
-      useFlag('');
-      writeDisplayPreference('pieceFlip', style);
-      setReducedMotion(true);
-      const el = banqiHost(revealed);
-      const { calls } = recordAnimations(() => {
-        expect(animateBanqiReveal(el, 'a1')).toBe(false);
-      });
-      expect(calls).toEqual([]);
-      expect(el.querySelector('.piece-flip-back, .piece-flip-turn')).toBeNull();
-    },
-  );
+  it.each([false, true])('reduced motion turns nothing whatever the look (3D %s)', (look3d) => {
+    useFlag('');
+    writeStoredBanqiTile3d(look3d);
+    setReducedMotion(true);
+    const el = banqiHost(revealed);
+    const { calls } = recordAnimations(() => {
+      expect(animateBanqiReveal(el, 'a1')).toBe(false);
+    });
+    expect(calls).toEqual([]);
+    expect(el.querySelector('.piece-flip-back, .piece-flip-turn')).toBeNull();
+  });
 
   it('reads the flag once and keeps it for the tab after the query is gone', () => {
     useFlag('?flip=spin');

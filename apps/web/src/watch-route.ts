@@ -48,6 +48,7 @@ import { createReviewShell } from './review/review-shell.js';
 import { seatDiscEl } from './seat-disc.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildLoadingState, buildNav } from './site-shell.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { buildUiIcon } from './ui-icon.js';
 import { localizedRulesHref } from './variant-public-surfaces.js';
 import { seatColorWord, seatInkFamily } from './variant-seat-label.js';
@@ -540,6 +541,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   const { sync: syncMaterial, clear: clearMaterial } = createWatchMaterialRail(
     { top: watch.capturesTop, bottom: watch.capturesBottom, pool: watch.hiddenPool },
     railHandle,
+    abortController.signal,
   );
 
   // Re-highlight the current move + refresh the scrubber bounds/status. Driven by
@@ -1174,22 +1176,24 @@ async function mountWatchQueuePreview(
 
 // The rail's material driver: `sync` redraws the slots from the handle at its
 // current ply, `clear` empties them. The slots' mounted classes are captured once,
-// here, so every pass starts from the shape the shared table built.
+// here, so every pass starts from the shape the shared table built. The replay
+// redraws its board on a piece-set or 3D change, and the strips redraw on the
+// same event until `signal` aborts (they kept the old set until a reload).
 export function createWatchMaterialRail(
   slots: ReplayMaterialSlots,
   handle: () => Pick<ReplayHandle, 'fillMaterial'> | null | undefined,
+  signal?: AbortSignal,
 ): { sync: () => void; clear: () => void } {
   const mounted = new Map(Object.values(slots).map((slot) => [slot, slot.className] as const));
   const clear = (): void => {
     for (const [slot, className] of mounted) resetWatchMaterialSlot(slot, className);
   };
-  return {
-    clear,
-    sync: () => {
-      clear();
-      handle()?.fillMaterial?.(slots);
-    },
+  const sync = (): void => {
+    clear();
+    handle()?.fillMaterial?.(slots);
   };
+  if (signal) window.addEventListener(xiangqiAppearanceChangedEvent, sync, { signal });
+  return { clear, sync };
 }
 
 // Back to the slot as the shared table mounted it: no pieces, no has-captures, and
