@@ -7,6 +7,7 @@ import { isLikelySignedIn } from './signed-in-state.js';
 import { readStoredSoundSet, type SoundSetId, storeSoundSet } from './sound-sets.js';
 import {
   endXiangqiAppearancePreview,
+  readStoredBanqiTile3d,
   readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
@@ -15,6 +16,7 @@ import {
   readStoredXiangqiRiverStyle,
   readStoredXiangqiRiverText,
   readStoredXiangqiStartMarkers,
+  writeStoredBanqiTile3d,
   writeStoredXiangqiBoardColor,
   writeStoredXiangqiBoardLayout,
   writeStoredXiangqiNotation,
@@ -42,6 +44,7 @@ import type { XiangqiPieceSet } from './xiangqi-piece-sets.js';
 import type { XiangqiRiverText } from './xiangqi-river-text.js';
 
 export {
+  readStoredBanqiTile3d,
   readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
@@ -173,6 +176,7 @@ export function initializeThemeSettings(): void {
   applyXiangqiRiverStyle(readStoredXiangqiRiverStyle());
   applyXiangqiStartMarkers(readStoredXiangqiStartMarkers());
   applyXiangqiPieceShadow(readStoredXiangqiPieceShadow());
+  applyBanqiTile3d(readStoredBanqiTile3d());
   applyXiangqiPieceSet(readStoredXiangqiPieceSet());
   if (!document.documentElement.dataset.boardFamily) {
     document.documentElement.dataset.boardFamily = defaultBoardFamily;
@@ -203,6 +207,7 @@ function watchForXiangqiAppearanceInOtherDocuments(): void {
     applyXiangqiRiverStyle(readStoredXiangqiRiverStyle());
     applyXiangqiStartMarkers(readStoredXiangqiStartMarkers());
     applyXiangqiPieceShadow(readStoredXiangqiPieceShadow());
+    applyBanqiTile3d(readStoredBanqiTile3d());
     applyXiangqiPieceSet(readStoredXiangqiPieceSet());
     syncThemeControls();
     dispatchXiangqiAppearanceChanged();
@@ -316,6 +321,11 @@ function applyXiangqiPieceShadow(on: boolean): void {
   document.documentElement.dataset.xiangqiPieceShadow = on ? 'on' : 'off';
 }
 
+/** The banqi renderers read this (banqiTile3dEnabled). */
+function applyBanqiTile3d(on: boolean): void {
+  document.documentElement.dataset.banqiTile3d = on ? 'on' : 'off';
+}
+
 /** Mirrors the coordinate preference onto the root so CSS can pick the matching
  *  board aspect. The label gutter is only reserved when labels are shown, so the
  *  board is a different rectangle in each state and the host slot has to agree
@@ -402,6 +412,14 @@ export function setXiangqiPieceShadowPreference(on: boolean): void {
   endXiangqiAppearancePreview('xqShadow');
   applyXiangqiPieceShadow(on);
   writeStoredXiangqiPieceShadow(on);
+  syncThemeControls();
+  dispatchXiangqiAppearanceChanged();
+}
+
+export function setBanqiTile3dPreference(on: boolean): void {
+  endXiangqiAppearancePreview('tile');
+  applyBanqiTile3d(on);
+  writeStoredBanqiTile3d(on);
   syncThemeControls();
   dispatchXiangqiAppearanceChanged();
 }
@@ -707,6 +725,9 @@ function syncThemeControls(): void {
   });
   document.querySelectorAll<HTMLInputElement>('input[data-xq-piece-shadow]').forEach((input) => {
     input.checked = readStoredXiangqiPieceShadow();
+  });
+  document.querySelectorAll<HTMLInputElement>('input[data-banqi-tile-3d]').forEach((input) => {
+    input.checked = readStoredBanqiTile3d();
   });
   document.querySelectorAll<HTMLInputElement>('input[data-sound-volume]').forEach((input) => {
     input.value = String(Math.round(effectiveVolume * 100));

@@ -1286,7 +1286,8 @@
 
 .appearance-submenu[data-key="board"] .xq-start-markers-field,
 .appearance-submenu[data-key="board"] .xq-piece-shadow-field,
-.appearance-submenu[data-key="board"] .board-coordinates-field {
+.appearance-submenu[data-key="board"] .board-coordinates-field,
+.appearance-submenu[data-key="pieces"] .banqi-tile-3d-field {
   padding: 0 12px 12px;
 }
 

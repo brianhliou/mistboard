@@ -136,7 +136,7 @@ export type BanqiBoardRenderOptions = {
   // Coordinate labels (the site-wide Board coordinates setting, #308): callers
   // pass boardCoordinatesEnabled(); authored diagrams leave it off.
   coordinates?: boolean;
-  // Spike (?tile=3d): tiles with a visible rim. Unset reads the flag.
+  // Tiles with a visible rim. Unset reads the reader's setting (banqiTile3dEnabled).
   tile3d?: boolean;
 };
 
@@ -514,7 +514,7 @@ export function renderBanqiBoardSvg(
       ${options.coordinates ? banqiCoordinateLabels() : ''}
       ${lastMoveMarkers(view)}
       ${selectionRing(options.selectedSquare ?? null)}
-      ${pieceLayer(view, pieceSet, options.draggingFrom ?? null, options.tile3d ?? banqiTile3dFlag())}
+      ${pieceLayer(view, pieceSet, options.draggingFrom ?? null, options.tile3d ?? banqiTile3dEnabled())}
       ${options.interactive ? '' : moveHints(view, moves)}
       <g class="banqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map(banqiMarkerSvg).join('')}</g>
       <g class="banqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${(options.arrows ?? []).map(banqiArrowSvg).join('')}</g>
@@ -689,7 +689,7 @@ export function animateBanqiReveal(
   opts: { tile3d?: boolean; style?: PieceFlipStyle } = {},
 ): boolean {
   const pieceSet = readStoredXiangqiPieceSet();
-  if (opts.tile3d ?? banqiTile3dFlag()) {
+  if (opts.tile3d ?? banqiTile3dEnabled()) {
     return flipBanqiTile3dReveal(host, square, cellCenter, pieceSet, { style: opts.style });
   }
   return flipBanqiFamilyReveal(
@@ -701,7 +701,7 @@ export function animateBanqiReveal(
   );
 }
 
-// ── 3D tiles: a spike behind ?tile=3d, not shipped ──────────────────────────
+// ── 3D tiles: the default look since 2026-10-28 ─────────────────────────────
 //
 // A banqi tile is a short cylinder seen a little from above: under each disc a
 // band of its body shows along the bottom edge, as the Xiangqi Mahjong tiles
@@ -711,33 +711,11 @@ export function animateBanqiReveal(
 // nothing a back does not, and a turn-over never changes it. The turn-over
 // carries the rim with the face and, edge-on, shows the tile's thickness
 // (flipSvgPiece's `edge`) instead of a hairline. Vector only, no idle motion.
+// The Pieces menu's "3D banqi tiles" switch turns it off (theme.ts).
 
-const TILE_3D_SEARCH_KEY = 'tile';
-const TILE_3D_STORAGE_KEY = 'mistboard.tile3d';
-let cachedTile3d: boolean | undefined;
-
-/** Whether ?tile=3d is on for this tab: the query sets it, sessionStorage keeps it. */
-export function banqiTile3dFlag(): boolean {
-  if (cachedTile3d !== undefined) return cachedTile3d;
-  let on = false;
-  try {
-    const raw = new URLSearchParams(globalThis.location?.search ?? '').get(TILE_3D_SEARCH_KEY);
-    if (raw !== null) {
-      on = raw === '3d';
-      if (on) globalThis.sessionStorage?.setItem(TILE_3D_STORAGE_KEY, '1');
-      else globalThis.sessionStorage?.removeItem(TILE_3D_STORAGE_KEY);
-    } else {
-      on = globalThis.sessionStorage?.getItem(TILE_3D_STORAGE_KEY) === '1';
-    }
-  } catch {
-    on = false;
-  }
-  cachedTile3d = on;
-  return on;
-}
-
-export function resetBanqiTile3dFlag(): void {
-  cachedTile3d = undefined;
+/** Whether banqi draws 3D tiles: on unless the reader switched it off. */
+export function banqiTile3dEnabled(): boolean {
+  return typeof document === 'undefined' || document.documentElement.dataset.banqiTile3d !== 'off';
 }
 
 // The tile's body (rim and wall), the same under a face and under a back.
@@ -745,28 +723,34 @@ const TILE_IVORY: readonly [string, string] = ['#efe7d2', '#d6c9a8'];
 // Thickness as a share of the piece box (54 px: about 4.6 px of rim).
 const TILE_DEPTH_SHARE = 0.085;
 // How far the disc shadow reaches past the rim's bottom: its drop plus its
-// widest ring, in the 100-unit box (XIANGQI_PIECE_SHADOW).
+// widest ring, in the 100-unit box (XIANGQI_PIECE_SHADOW). The turn-over's
+// overlay leaves room for it.
 const TILE_SHADOW_SHARE =
   (XIANGQI_PIECE_SHADOW.dy + Math.max(...XIANGQI_PIECE_SHADOW.spread)) / 100;
-// The whole tile's height as a share of its box: the disc (to its outline),
-// the rim below it and the shadow below that.
-const TILE_3D_HEIGHT_SHARE = XIANGQI_PIECE_OUTLINE_SHARE + TILE_DEPTH_SHARE + TILE_SHADOW_SHARE;
+// The tile's height as a share of its box: the disc (to its outline) and the
+// rim below it. The shadow, off by default, hangs past it as a flat disc's
+// does; reserving room for it left the tile small and high in its cell (Brian,
+// 2026-10-28: "closer to the top edge than it is to the bottom edge").
+const TILE_3D_HEIGHT_SHARE = XIANGQI_PIECE_OUTLINE_SHARE + TILE_DEPTH_SHARE;
+// How much of the pitch the disc and rim span together. A flat disc spans
+// BANQI_PIECE_REACH; the tile's disc comes out about 5% narrower than that,
+// its rim taking the rest, and neighbours keep a few pixels between them.
+const TILE_3D_REACH = 0.95;
 
 /**
  * The box a 3D tile is drawn in at this pitch (cell, or the gap between
- * points): the whole tile, rim and shadow included, spans BANQI_PIECE_REACH of
- * it, as a flat disc's outline does. 54 at banqi's 64.
+ * points): disc and rim together span TILE_3D_REACH of it. 58.75 at banqi's 64.
  */
 export function banqiTile3dBox(pitch: number): number {
-  return roundPieceBox((pitch * BANQI_PIECE_REACH) / TILE_3D_HEIGHT_SHARE);
+  return roundPieceBox((pitch * TILE_3D_REACH) / TILE_3D_HEIGHT_SHARE);
 }
 
 const TILE_BOX = banqiTile3dBox(CELL);
 
 /**
  * Where a 3D tile's disc sits for a tile anchored at `anchor` (a cell centre,
- * or a point on the Three Kingdoms board): raised by half the rim and shadow,
- * so the whole tile, not just its disc, is centred on the anchor.
+ * or a point on the Three Kingdoms board): raised by half the rim, so disc
+ * and rim together, not just the disc, are centred on the anchor.
  */
 export function banqiTile3dDiscCenter(anchor: { x: number; y: number }): {
   x: number;
@@ -774,7 +758,7 @@ export function banqiTile3dDiscCenter(anchor: { x: number; y: number }): {
 } {
   return {
     x: anchor.x,
-    y: round2(anchor.y - (TILE_BOX * (TILE_DEPTH_SHARE + TILE_SHADOW_SHARE)) / 2),
+    y: round2(anchor.y - (TILE_BOX * TILE_DEPTH_SHARE) / 2),
   };
 }
 

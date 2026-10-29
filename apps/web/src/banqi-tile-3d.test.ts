@@ -4,17 +4,16 @@ import { pieceFlipEdgeKeyframes, pieceFlipEdgeMarkup } from './board-anim.js';
 import {
   animateBanqiReveal,
   banqiTile3dBox,
-  banqiTile3dFlag,
+  banqiTile3dEnabled,
   banqiTileEdge,
   renderBanqiBoardSvg,
-  resetBanqiTile3dFlag,
 } from './live-banqi-render.js';
 import { TK_SETUP, TK_THUMBNAIL } from './three-kingdoms-banqi-diagrams.js';
 import { activeTileFlipOverlays, cancelTileFlipOverlays } from './tile-flip-3d.js';
 
-// The ?tile=3d spike draws banqi tiles with a visible rim. Without the flag the
-// board must be the board it was, byte for byte: these hashes are of the
-// renderer before the spike (agent/flip-setting at 86b6d6599).
+// Banqi draws its tiles with a visible rim unless the reader switches 3D tiles
+// off. Switched off, the board must be the board it was, byte for byte: these
+// hashes are of the renderer before 3D tiles (agent/flip-setting at 86b6d6599).
 const VIEW = {
   id: 'banqi-tile-3d',
   perspective: 'red',
@@ -76,7 +75,11 @@ function rimOf(host: HTMLElement, square: string): string {
 
 function setSearch(search: string): void {
   window.history.replaceState(null, '', `/${search}`);
-  resetBanqiTile3dFlag();
+}
+
+function setTile3d(on: boolean | undefined): void {
+  if (on === undefined) delete document.documentElement.dataset.banqiTile3d;
+  else document.documentElement.dataset.banqiTile3d = on ? 'on' : 'off';
 }
 
 type AnimateCall = { cls: string | null; html: string; frames: Keyframe[] };
@@ -110,21 +113,19 @@ function stubScreenMapping(ctm: unknown = { a: 2, b: 0, c: 0, d: 2, e: 10, f: 20
   };
 }
 
-/** The vertical span of a 3D tile in a slot: disc top to shadow bottom. */
+/** The vertical span of a 3D tile in a slot: disc top to rim bottom. */
 function tileSpan(slot: Element): { top: number; bottom: number; halfWidth: number } {
   const disc = slot.querySelector('.banqi-back > circle');
   const cy = Number(disc?.getAttribute('cy'));
   const top = cy - (Number(disc?.getAttribute('r')) + 1);
-  const shadow = slot.querySelector('.banqi-rim .xq-piece-shadow');
-  const ty = Number(shadow?.getAttribute('transform')?.match(/translate\([\d.]+ ([\d.]+)\)/)?.[1]);
-  const reach = Math.max(
-    ...Array.from(shadow?.querySelectorAll('circle') ?? []).map((c) => Number(c.getAttribute('r'))),
-  );
-  return { top, bottom: ty + reach, halfWidth: reach };
+  // The rim's outer band: down its sides to V, then round the bottom at radius A.
+  const band = slot.querySelector('.banqi-rim > path')?.getAttribute('d') ?? '';
+  const [, low, radius] = band.match(/V([\d.]+)A([\d.]+)/) ?? [];
+  return { top, bottom: Number(low) + Number(radius), halfWidth: Number(radius) };
 }
 
 beforeEach(() => {
-  resetBanqiTile3dFlag();
+  setTile3d(undefined);
   vi.stubGlobal('matchMedia', (query: string) => ({
     matches: false,
     media: query,
@@ -139,40 +140,31 @@ afterEach(() => {
   document.body.innerHTML = '';
   delete document.documentElement.dataset.xiangqiPieceShadow;
   setSearch('');
-  window.sessionStorage.clear();
-  resetBanqiTile3dFlag();
+  setTile3d(undefined);
   vi.unstubAllGlobals();
 });
 
-describe('banqi 3D tiles (?tile=3d spike)', () => {
-  it('leaves the board byte-identical without the flag', () => {
-    expect(banqiTile3dFlag()).toBe(false);
+describe('banqi 3D tiles', () => {
+  it('leaves the board byte-identical with 3D tiles switched off', () => {
+    setTile3d(false);
+    expect(banqiTile3dEnabled()).toBe(false);
     for (const name of NAMES) {
       expect(sha(render(name)), name).toBe(GOLDEN[name]);
       expect(render(name, { tile3d: false }), name).toBe(render(name));
     }
   });
 
-  it('draws one rim under every tile with the flag', () => {
-    setSearch('?tile=3d');
-    expect(banqiTile3dFlag()).toBe(true);
-    for (const name of NAMES) {
-      const flagged = render(name);
-      expect(flagged, name).not.toBe(render(name, { tile3d: false }));
-      expect(flagged, name).toBe(render(name, { tile3d: true }));
-      expect(flagged.match(/class="banqi-rim/g)?.length, name).toBe(5);
+  it('draws one rim under every tile by default', () => {
+    for (const on of [undefined, true]) {
+      setTile3d(on);
+      expect(banqiTile3dEnabled()).toBe(true);
+      for (const name of NAMES) {
+        const drawn = render(name);
+        expect(drawn, name).not.toBe(render(name, { tile3d: false }));
+        expect(drawn, name).toBe(render(name, { tile3d: true }));
+        expect(drawn.match(/class="banqi-rim/g)?.length, name).toBe(5);
+      }
     }
-  });
-
-  it('keeps the flag for the tab once the query sets it, and drops it on another value', () => {
-    setSearch('?tile=3d');
-    expect(banqiTile3dFlag()).toBe(true);
-    setSearch('');
-    expect(banqiTile3dFlag()).toBe(true);
-    setSearch('?tile=flat');
-    expect(banqiTile3dFlag()).toBe(false);
-    setSearch('');
-    expect(banqiTile3dFlag()).toBe(false);
   });
 
   it('gives every tile one rim, face down or face up, whatever its colour', () => {
@@ -203,38 +195,55 @@ describe('banqi 3D tiles (?tile=3d spike)', () => {
     }
   });
 
-  it('fits the whole tile, rim and shadow, inside its cell, centred on the cell', () => {
-    document.documentElement.dataset.xiangqiPieceShadow = 'on';
-    expect(banqiTile3dBox(64)).toBe(54);
-    const host = hostOf(render('international', { tile3d: true }));
-    // b1's cell: x 92..156, y 220..284, centre (124, 252).
-    const span = tileSpan(host.querySelector('[data-piece-square="b1"]')!);
-    expect(span.bottom - span.top).toBeLessThanOrEqual(64 * 0.92 + 0.01);
-    expect(span.bottom - span.top).toBeGreaterThan(64 * 0.9);
-    expect((span.top + span.bottom) / 2).toBeCloseTo(252, 0);
-    expect(span.halfWidth).toBeLessThan(32);
-    expect(span.top).toBeGreaterThan(220);
-    expect(span.bottom).toBeLessThan(284);
+  it('fits disc and rim inside its cell, centred on the cell, whether or not the shadow is on', () => {
+    expect(banqiTile3dBox(64)).toBe(58.75);
+    for (const shadow of ['off', 'on']) {
+      document.documentElement.dataset.xiangqiPieceShadow = shadow;
+      const host = hostOf(render('international', { tile3d: true }));
+      // b1's cell: x 92..156, y 220..284, centre (124, 252).
+      const span = tileSpan(host.querySelector('[data-piece-square="b1"]')!);
+      expect(span.bottom - span.top, shadow).toBeLessThanOrEqual(64 * 0.95 + 0.01);
+      expect(span.bottom - span.top, shadow).toBeGreaterThan(64 * 0.94);
+      expect((span.top + span.bottom) / 2, shadow).toBeCloseTo(252, 0);
+      expect(span.halfWidth, shadow).toBeLessThan(32);
+      expect(span.top, shadow).toBeGreaterThan(220);
+      expect(span.bottom, shadow).toBeLessThan(284);
+    }
+  });
+
+  it('draws a 3D disc no more than a twentieth narrower than a flat one', () => {
+    const r3d = (markup: string, square: string) =>
+      Number(
+        hostOf(markup)
+          .querySelector(`[data-piece-square="${square}"] .banqi-back > circle`)
+          ?.getAttribute('r'),
+      );
+    const flat = r3d(render('international', { tile3d: false }), 'b1');
+    const tile = r3d(render('international', { tile3d: true }), 'b1');
+    expect(tile / flat).toBeGreaterThan(0.94);
+    expect(tile / flat).toBeLessThan(1);
   });
 
   it('stands Three Kingdoms tiles on the points, with the same 3D body', () => {
+    setTile3d(false);
     const flat = TK_SETUP();
     expect(flat).not.toContain('banqi-rim');
-    setSearch('?tile=3d');
+    setTile3d(true);
     document.documentElement.dataset.xiangqiPieceShadow = 'on';
     const host = hostOf(TK_SETUP());
     const tiles = Array.from(host.querySelectorAll('.banqi-back'));
     expect(tiles.length).toBe(32);
     expect(host.querySelectorAll('.banqi-rim').length).toBe(32);
     // Points sit on a 64 grid from the frame's margin (37); each tile's whole
-    // body, disc top to shadow bottom, is centred on its point.
+    // body, disc top to rim bottom, is centred on its point.
     for (const tile of tiles) {
       const span = tileSpan(tile.parentElement!);
       const cx = Number(tile.querySelector('circle')?.getAttribute('cx'));
       const mid = (span.top + span.bottom) / 2;
       expect((cx - 37) % 64).toBe(0);
-      expect(Math.abs(((mid - 37) % 64) - 0)).toBeLessThan(0.5);
-      expect(span.bottom - span.top).toBeLessThanOrEqual(64 * 0.92 + 0.01);
+      const offset = (((mid - 37) % 64) + 64) % 64;
+      expect(Math.min(offset, 64 - offset)).toBeLessThan(0.5);
+      expect(span.bottom - span.top).toBeLessThanOrEqual(64 * 0.95 + 0.01);
     }
     // A turned-up tile wears the same ivory rim as a face-down one.
     expect(TK_THUMBNAIL()).toContain('#efe7d2');
@@ -344,7 +353,8 @@ describe('banqi 3D tiles (?tile=3d spike)', () => {
     expect(slot?.querySelector(':scope > .banqi-rim')).not.toBeNull();
   });
 
-  it('draws no edge and no rim for an unflagged reveal', () => {
+  it('draws no edge and no rim for a reveal with 3D tiles switched off', () => {
+    setTile3d(false);
     const host = hostOf(render('international'));
     const calls = recordAnimations(() => {
       animateBanqiReveal(host, 'a1');

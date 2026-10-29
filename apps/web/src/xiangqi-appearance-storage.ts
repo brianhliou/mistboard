@@ -396,13 +396,44 @@ export function writeStoredXiangqiPieceShadow(on: boolean): void {
   }
 }
 
-/** The URL preview hooks (?xqLayout=, ?xqBoardColor=, ?xqRiver=, ?xqShadow=) win over the
+// 3D banqi tiles (2026-10-28): banqi's tiles drawn as short cylinders with an
+// ivory rim (live-banqi-render.ts). On by default (Brian, 2026-10-28: "make the
+// 3D the default"); like the piece shadow, only an explicit pick is stored. The
+// key keeps the mistboard.xiangqi prefix so other documents hear the change
+// (theme.ts, watchForXiangqiAppearanceInOtherDocuments).
+const banqiTile3dStorageKey = 'mistboard.xiangqiBanqiTile3d';
+const defaultBanqiTile3d = true;
+
+export function readStoredBanqiTile3d(): boolean {
+  try {
+    // QA/share hook: `?tile=flat` or `?tile=3d` previews the switch without saving it.
+    const preview = new URLSearchParams(window.location.search).get('tile');
+    if (preview === '3d') return true;
+    if (preview === 'flat') return false;
+    const stored = window.localStorage.getItem(banqiTile3dStorageKey);
+    if (stored === 'on') return true;
+    if (stored === 'off') return false;
+    return defaultBanqiTile3d;
+  } catch {
+    return defaultBanqiTile3d;
+  }
+}
+
+export function writeStoredBanqiTile3d(on: boolean): void {
+  try {
+    window.localStorage.setItem(banqiTile3dStorageKey, on ? 'on' : 'off');
+  } catch {
+    // The root attribute still updates for the current page.
+  }
+}
+
+/** The URL preview hooks (?xqLayout=, ?xqBoardColor=, ?xqRiver=, ?xqShadow=, ?tile=) win over the
  *  stored pick, so a pick made on a preview link has to end the preview, or the
  *  gear would keep showing the previewed option as selected while the board
  *  shows the pick (Brian's 2026-10-08 review: the river-text selection "stuck"
  *  on a ?xqRiver= link). Drops the parameter from the address in place. */
 export function endXiangqiAppearancePreview(
-  param: 'xqLayout' | 'xqBoardColor' | 'xqRiver' | 'xqShadow',
+  param: 'xqLayout' | 'xqBoardColor' | 'xqRiver' | 'xqShadow' | 'tile',
 ): void {
   try {
     const url = new URL(window.location.href);

@@ -271,7 +271,7 @@ describe('banqi piece look', () => {
     }
   });
 
-  it('draws face-down backs as discs of the face-up outer size', () => {
+  it('draws flat face-down backs as discs of the face-up outer size', () => {
     const r = banqiFaceDownRadius(BANQI_PIECE_PX);
     // The back's 2-unit stroke puts its outer edge at r + 1.
     expect(r + 1).toBeCloseTo((BANQI_PIECE_PX * XIANGQI_PIECE_OUTLINE_SHARE) / 2, 1);
@@ -289,7 +289,10 @@ describe('banqi piece look', () => {
       firstColor: 'red',
       moveNumber: 1,
     };
-    const svg = renderBanqiBoardSvg(view as never, 'red', { pieceSet: 'international' });
+    const svg = renderBanqiBoardSvg(view as never, 'red', {
+      pieceSet: 'international',
+      tile3d: false,
+    });
     expect(svg).toContain(`r="${r}"`);
     expect(svg).not.toContain('<rect x="4" y="4" width="92" height="92" rx="14"');
   });

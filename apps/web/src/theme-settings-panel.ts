@@ -25,6 +25,7 @@ import {
   formatVolume,
   type QuickPickerKind,
   readEffectiveSoundVolume,
+  readStoredBanqiTile3d,
   readStoredSiteTheme,
   readStoredSoundMuted,
   readStoredXiangqiBoardColor,
@@ -33,6 +34,7 @@ import {
   readStoredXiangqiStartMarkers,
   readXiangqiBoardChoice,
   type SiteTheme,
+  setBanqiTile3dPreference,
   setBoardCoordinatesPreference,
   setSiteThemePreference,
   setSoundSetPreference,
@@ -222,6 +224,7 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
         undefined,
         false,
       ),
+      createBanqiTile3dField(locale),
     );
   }
   addCategory('pieces', t('prefs.pieces', {}, locale), pieceBody);
@@ -536,6 +539,22 @@ function createXiangqiPieceShadowField(locale: Locale): HTMLLabelElement {
   input.addEventListener('change', () => setXiangqiPieceShadowPreference(input.checked));
   const text = document.createElement('span');
   text.textContent = t('prefs.pieceShadow', {}, locale);
+  field.append(input, text);
+  return field;
+}
+
+// Banqi's tiles drawn with a visible rim (banqiTile3dEnabled). It sits with the
+// piece sets because it changes the pieces, and only banqi's, so it says so.
+function createBanqiTile3dField(locale: Locale): HTMLLabelElement {
+  const field = document.createElement('label');
+  field.className = 'theme-control-check-field banqi-tile-3d-field';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.dataset.banqiTile3d = '';
+  input.checked = readStoredBanqiTile3d();
+  input.addEventListener('change', () => setBanqiTile3dPreference(input.checked));
+  const text = document.createElement('span');
+  text.textContent = t('prefs.banqiTile3d', {}, locale);
   field.append(input, text);
   return field;
 }

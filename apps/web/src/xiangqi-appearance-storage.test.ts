@@ -5,6 +5,7 @@ import {
   normalizeXiangqiBoardLayout,
   normalizeXiangqiBoardTheme,
   normalizeXiangqiPieceSet,
+  readStoredBanqiTile3d,
   readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
@@ -13,6 +14,7 @@ import {
   readStoredXiangqiPieceShadow,
   readStoredXiangqiRiverText,
   readStoredXiangqiStartMarkers,
+  writeStoredBanqiTile3d,
   writeStoredXiangqiBoardColor,
   writeStoredXiangqiBoardLayout,
   writeStoredXiangqiNotation,
@@ -336,6 +338,25 @@ describe('xiangqi board colour, river text and start marker storage', () => {
     expect(readStoredXiangqiPieceShadow()).toBe(true);
     storage.setItem('mistboard.xiangqiPieceShadow', 'sometimes');
     expect(readStoredXiangqiPieceShadow()).toBe(false);
+  });
+
+  it('draws 3D banqi tiles by default without storing it, and remembers the switch', () => {
+    const storage = installLocalStorage();
+    window.history.replaceState({}, '', '/');
+    expect(readStoredBanqiTile3d()).toBe(true);
+    expect(storage.getItem('mistboard.xiangqiBanqiTile3d')).toBeNull();
+    writeStoredBanqiTile3d(false);
+    expect(storage.getItem('mistboard.xiangqiBanqiTile3d')).toBe('off');
+    expect(readStoredBanqiTile3d()).toBe(false);
+    writeStoredBanqiTile3d(true);
+    expect(readStoredBanqiTile3d()).toBe(true);
+    // ?tile= previews either way over a stored pick.
+    window.history.replaceState({}, '', '/?tile=flat');
+    expect(readStoredBanqiTile3d()).toBe(false);
+    storage.setItem('mistboard.xiangqiBanqiTile3d', 'off');
+    window.history.replaceState({}, '', '/?tile=3d');
+    expect(readStoredBanqiTile3d()).toBe(true);
+    window.history.replaceState({}, '', '/');
   });
 
   it('previews the piece shadow from ?xqShadow= without saving it', () => {

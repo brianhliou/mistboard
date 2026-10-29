@@ -28,7 +28,7 @@ import {
   BANQI_PIECE_SHAPE,
   banqiFaceDownRadius,
   banqiPieceDrawSize,
-  banqiTile3dFlag,
+  banqiTile3dEnabled,
   banqiTile3dMarkup,
 } from './live-banqi-render.js';
 import {
@@ -98,9 +98,9 @@ function renderBoard(
   selected?: Square,
   targets: readonly Square[] = [],
 ): string {
-  // The banqi ?tile=3d spike: the same 3D tile as the room's, its whole body
-  // (rim and shadow too) centred on the point and sized to the gap.
-  const tile3d = banqiTile3dFlag();
+  // 3D tiles (the reader's setting, on by default): the same tile as the room's,
+  // disc and rim centred on the point and sized to the gap.
+  const tile3d = banqiTile3dEnabled();
   const pieces = ALL_THREE_KINGDOMS_BANQI_SQUARES.map((square) => {
     const entry = board[square];
     if (!entry) return '';
