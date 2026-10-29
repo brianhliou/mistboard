@@ -293,12 +293,14 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
   createBoard(
     opts: TreeBoardFactoryOptions<Move, View, Color>,
   ): TreeBoardHandle<View, Color, Arrow, Marker>;
-  /** Glide the piece for `move` on the board host (reverse = a replay back-step). */
+  /** Glide the piece for `move` on the board host (reverse = a replay back-step).
+   *  A forward step also passes the shown view before and after the move, for a
+   *  variant whose move turns a piece over (jieqi). */
   animateMove(
     boardEl: HTMLElement,
     move: Move,
     perspective: Color,
-    opts?: { reverse?: boolean },
+    opts?: { reverse?: boolean; before?: View | null; after?: View | null },
   ): void;
   /** A user-drawn annotation arrow shape → board arrow. */
   shapeToArrow(shape: NodeShape): Arrow;
@@ -2110,12 +2112,28 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   function animateStep(fromPath: TreePath, toPath: TreePath): void {
     if (toPath.length === fromPath.length + 1 && isPrefix(fromPath, toPath)) {
       const move = tree.nodeAt(toPath)?.move;
-      if (move) presentation.animateMove(boardEl, move, orientation());
+      const from = tree.nodeAt(fromPath);
+      const before = from
+        ? (adapter.project(from.truth).find((v) => v.key === currentPov)?.view ?? null)
+        : null;
+      if (move) {
+        presentation.animateMove(boardEl, move, orientation(), {
+          before,
+          after: viewForKey(currentPov),
+        });
+      }
       return;
     }
     if (fromPath.length === toPath.length + 1 && isPrefix(toPath, fromPath)) {
-      const move = tree.nodeAt(fromPath)?.move;
-      if (move) presentation.animateMove(boardEl, move, orientation(), { reverse: true });
+      const from = tree.nodeAt(fromPath);
+      const move = from?.move;
+      if (move) {
+        presentation.animateMove(boardEl, move, orientation(), {
+          reverse: true,
+          before: viewForKey(currentPov),
+          after: adapter.project(from.truth).find((v) => v.key === currentPov)?.view ?? null,
+        });
+      }
     }
   }
   function flipBoard(): void {

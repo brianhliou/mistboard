@@ -1,6 +1,6 @@
 // The turn-over a face-down tile plays when it is revealed (#709): when it runs
-// (a live reveal only), when it does not (first render, reconnect, scrub,
-// replay jump, reduced motion), and that nothing before the reveal carries the
+// (a live reveal, or a step forward onto one), when it does not (first render,
+// reconnect, a step back, replay jump, reduced motion), and that nothing before the reveal carries the
 // piece's identity.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -17,7 +17,11 @@ import {
   banqiRevealFlipSquare,
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
-import { animateJieqiReveal, jieqiRevealSquare } from './live-jieqi-render.js';
+import {
+  animateJieqiReveal,
+  animateJieqiStepReveal,
+  jieqiRevealSquare,
+} from './live-jieqi-render.js';
 import { writeStoredBanqiTile3d } from './xiangqi-appearance-storage.js';
 
 const captured = vi.hoisted(() => ({ configs: [] as Array<Record<string, unknown>> }));
@@ -317,6 +321,33 @@ describe('jieqi turn-over (prototype)', () => {
     expect(
       jieqiRevealSquare({ from: 'a1', to: 'a3' }, null, { a3: { faceDown: false } }),
     ).toBeNull();
+  });
+
+  // Stepping through a record (watch, study, review) turns a reveal over as it
+  // did live (Brian, 2026-10-29).
+  it('turns the piece along the glide on a step forward onto a reveal', () => {
+    const el = document.createElement('div');
+    el.innerHTML = '<svg><g data-piece-square="a3"><g class="jieqi-piece"></g></g></svg>';
+    const after = { a3: { faceDown: false, color: 'red' as const } };
+    let turnedOver = false;
+    const { calls, backs } = recordAnimations(() => {
+      turnedOver = animateJieqiStepReveal(el, { from: 'a1', to: 'a3' }, before, after, 'red');
+    });
+    expect(turnedOver).toBe(true);
+    expect(backs).toHaveLength(1);
+    expect(calls.every((call) => !call.options.delay)).toBe(true);
+  });
+
+  it('turns nothing on a step whose piece was already face up', () => {
+    const el = document.createElement('div');
+    el.innerHTML = '<svg><g data-piece-square="b2"><g class="jieqi-piece"></g></g></svg>';
+    const after = { b2: { faceDown: false, color: 'red' as const } };
+    const { calls } = recordAnimations(() => {
+      expect(animateJieqiStepReveal(el, { from: 'b1', to: 'b2' }, before, after, 'red')).toBe(
+        false,
+      );
+    });
+    expect(calls).toEqual([]);
   });
 
   it('holds the turn until the glide lands', () => {

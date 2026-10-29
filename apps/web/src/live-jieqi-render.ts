@@ -778,3 +778,21 @@ export function animateJieqiReveal(
     ...(opts.alongGlide ? { alongGlide: true } : {}),
   });
 }
+
+/** A step forward through a jieqi record (watch, study, review, the room's
+ *  stepper): when the move turned its piece face up, turn it over along the
+ *  glide, as it did live (Brian, 2026-10-29). Call after animateJieqiBoardMove.
+ *  `before` and `after` are the boards either side of the move; only their
+ *  face-down flags and the mover's colour are read. */
+export function animateJieqiStepReveal(
+  host: HTMLElement,
+  move: JieqiMove,
+  before: JieqiFaceBoard | null | undefined,
+  after: Partial<Record<JieqiSquare, { faceDown: boolean; color: JieqiColor }>>,
+  perspective: JieqiColor,
+): boolean {
+  const square = jieqiRevealSquare(move, before, after);
+  const piece = square ? after[square] : undefined;
+  if (!square || !piece) return false;
+  return animateJieqiReveal(host, square, piece.color, perspective, { alongGlide: true });
+}

@@ -30,6 +30,7 @@ import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
   animateJieqiBoardMove,
   animateJieqiReveal,
+  animateJieqiStepReveal,
   installJieqiBoardStyles,
   JIEQI_PIECE_PX,
   jieqiPieceGhostSvg,
@@ -175,7 +176,8 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
         })
       : [],
   // A live move that reveals its piece turns it over (#709 prototype): during
-  // the glide for a remote move, in place for an own one (which does not glide). Scrubs and jumps never turn a piece.
+  // the glide for a remote move, in place for an own one (which does not glide).
+  // A forward scrub step turns it along its glide; back steps and jumps never do.
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     const live = core?.replay.isLive() ?? false;
     const before = lastLiveBoard;
@@ -196,7 +198,16 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
       return;
     }
     if (pending.direction === 'forward') {
-      if (view.lastMove) animateJieqiBoardMove(liveRefs.board, view.lastMove, perspective);
+      const stepped = view.lastMove;
+      if (!stepped) return;
+      animateJieqiBoardMove(liveRefs.board, stepped, perspective);
+      animateJieqiStepReveal(
+        liveRefs.board,
+        stepped,
+        pending.prevView?.board,
+        view.board,
+        perspective,
+      );
       return;
     }
     const undone = pending.prevView?.lastMove;
