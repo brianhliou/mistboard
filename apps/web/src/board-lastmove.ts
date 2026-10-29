@@ -56,7 +56,13 @@ export const BOARD_LASTMOVE_BAND_WIDTH = 2.5;
  * (xiangqiPieceOuterRadius: 47.4 for the international and Dobutsu sets, 47.25
  * for the character discs, 45 for the asset discs).
  */
-export type BoardLastMovePiece = { box: number; outer: number };
+export type BoardLastMovePiece = {
+  box: number;
+  outer: number;
+  /** How far the drawn disc sits above its anchor: a 3D piece raises its disc
+   *  by half its rim, and its mark is that rim in gold (boardLastMoveEdgeSvg). */
+  lift?: number;
+};
 
 /** The piece a set draws face up in a box of this size. */
 export function boardLastMovePiece(box: number, set: XiangqiPieceSet): BoardLastMovePiece {
@@ -168,25 +174,49 @@ export function boardLastMoveMarkersSvg(
   layer: BoardLastMoveLayer,
   piece: BoardLastMovePiece,
 ): string {
-  if (layer === 'over') return '';
+  // A raised (3D) piece's mark is its gold edge, over the pieces
+  // (boardLastMoveEdgeSvg); a flat one's band goes under.
+  const lift = piece.lift ?? 0;
+  if (layer === 'over' && !lift) return '';
   const scale = pieceSize / CANONICAL_PIECE_SIZE;
   // A stroke is centred on its circle, so a mark's centre line sits half its
   // own stroke inside the edge it is meant to reach. Get this wrong and the
   // outline, not the fill, is what collides with the neighbouring mark.
   const originRadius = round2((CANONICAL_ORIGIN_OUTER_EDGE - CANONICAL_ORIGIN_STROKE / 2) * scale);
   const parts: string[] = [];
-  if (endpoints.from) {
+  if (endpoints.from && layer !== 'over') {
     parts.push(
       `<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="${endpoints.from.x}" cy="${endpoints.from.y}" r="${originRadius}"/>`,
     );
   }
-  if (endpoints.to) {
+  if (endpoints.to && lift && layer !== 'under') {
+    parts.push(boardLastMoveEdgeSvg(endpoints.to, boardLastMoveBand(piece).inner, lift));
+  } else if (endpoints.to && !lift) {
     const band = boardLastMoveBand(piece);
     parts.push(
       `<circle class="xq-live-lastmove-ring" cx="${endpoints.to.x}" cy="${endpoints.to.y}" r="${band.r}" stroke-width="${band.width}"/>`,
     );
   }
   return parts.join('');
+}
+
+/**
+ * A raised (3D) piece's destination mark: its edge, the wall showing below the
+ * face, painted gold (Brian, 2026-10-29, picked over a band on the rim, which
+ * "sits a little bit on the edge of the disk" and made it harder to read as
+ * one). Down both sides from the face's centre line, round the base, back up
+ * under the face. `data-cx`/`data-cy` name the point the piece stands on, so the
+ * mark glides with the piece (animateBoardLastMoveArrival) instead of fading in
+ * after it lands.
+ */
+function boardLastMoveEdgeSvg(to: BoardPoint, radius: number, lift: number): string {
+  const r = round2(radius);
+  const left = round2(to.x - r);
+  const right = round2(to.x + r);
+  const top = round2(to.y - lift);
+  const base = round2(to.y + lift);
+  const d = `M${left} ${top}V${base}A${r} ${r} 0 0 0 ${right} ${base}V${top}A${r} ${r} 0 0 1 ${left} ${top}Z`;
+  return `<path class="xq-live-lastmove-ring xq-live-lastmove-edge" d="${d}" data-cx="${to.x}" data-cy="${to.y}"/>`;
 }
 
 /**
@@ -216,9 +246,18 @@ export function animateBoardLastMoveArrival(
   }
 }
 
+/** The gold edge a 3D piece standing on `at` carries, if it is the last move's. */
+export function boardLastMoveEdgeOn(root: ParentNode, at: BoardPoint): Element | null {
+  for (const edge of root.querySelectorAll('.xq-live-lastmove-edge')) {
+    if (centredOn(edge, at)) return edge;
+  }
+  return null;
+}
+
 function centredOn(el: Element, p: BoardPoint): boolean {
-  const cx = Number(el.getAttribute('cx'));
-  const cy = Number(el.getAttribute('cy'));
+  // A 3D piece's edge is a path; it names the point it stands on.
+  const cx = Number(el.getAttribute('data-cx') ?? el.getAttribute('cx'));
+  const cy = Number(el.getAttribute('data-cy') ?? el.getAttribute('cy'));
   return Math.abs(cx - p.x) < 0.01 && Math.abs(cy - p.y) < 0.01;
 }
 

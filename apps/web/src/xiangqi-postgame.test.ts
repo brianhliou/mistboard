@@ -7,6 +7,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { gameChatApiUrl } from './review/spectator-chat.js';
 import { mountXiangqiPostgame, xiangqiPostgameApiUrl } from './xiangqi-postgame.js';
 
+// Flat pieces unless a test asks for 3D: the board-wide 3D default
+// (piece3dEnabled, 2026-10-28) reads the root, which these tests pin off.
+beforeEach(() => {
+  document.documentElement.dataset.banqiTile3d = 'off';
+});
+afterEach(() => {
+  delete document.documentElement.dataset.banqiTile3d;
+});
+
 describe('Xiangqi postgame page', () => {
   beforeEach(() => {
     vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');

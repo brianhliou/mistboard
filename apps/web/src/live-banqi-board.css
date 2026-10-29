@@ -1,5 +1,5 @@
 /* MIRROR of BANQI_BOARD_CSS in live-banqi-render.ts, rule for rule after this
-   header, whitespace aside (the one interpolation, LAST_MOVE_FLIP_STROKE, resolved). The string
+   header, whitespace aside. The string
    is the source: the hero-frame rasterizer inlines it. The article pages need
    the same rules in a stylesheet the prerendered page carries, for the rules
    diagrams drawn with renderBanqiBoardSvg. live-banqi-render.test.ts fails if
@@ -106,18 +106,6 @@
 }
 .banqi-lastmove--black.banqi-lastmove-to {
   fill: rgba(22, 40, 58, 0.44);
-}
-/* One tinted cell already reads as a flip against a move's two; the border
-       says so on a glance that catches only the one cell. */
-.banqi-lastmove-flip {
-  stroke: rgba(214, 175, 78, 0.4);
-  stroke-width: 2.5;
-}
-.banqi-lastmove-flip.banqi-lastmove--red {
-  stroke: rgba(143, 26, 20, 0.36);
-}
-.banqi-lastmove-flip.banqi-lastmove--black {
-  stroke: rgba(11, 23, 35, 0.44);
 }
 /* The disc shadow is drawn into each piece and back (xiangqiPieceShadowMarks). */
 .banqi-piece {

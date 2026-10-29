@@ -47,9 +47,9 @@ const CASES = {
 } as const;
 
 const GOLDEN: Record<keyof typeof CASES, string> = {
-  international: '9b77a9f4cbbd9629',
-  wood: '6b479bc556c03d05',
-  interactive: '1e0ece76b19b7316',
+  international: 'cd606ef0cae43c08',
+  wood: '8a819263f381eb46',
+  interactive: 'b1ec98573e6fd173',
 };
 
 const NAMES = Object.keys(CASES) as (keyof typeof CASES)[];
@@ -117,7 +117,9 @@ function stubScreenMapping(ctm: unknown = { a: 2, b: 0, c: 0, d: 2, e: 10, f: 20
 function tileSpan(slot: Element): { top: number; bottom: number; halfWidth: number } {
   const disc = slot.querySelector('.banqi-back > circle');
   const cy = Number(disc?.getAttribute('cy'));
-  const top = cy - (Number(disc?.getAttribute('r')) + 1);
+  // A 3D back's stroke is its tile's line (style), else .banqi-back's 2 units.
+  const line = Number(/stroke-width:([\d.]+)/.exec(disc?.getAttribute('style') ?? '')?.[1] ?? 2);
+  const top = cy - (Number(disc?.getAttribute('r')) + line / 2);
   // The rim's outer band: down its sides to V, then round the bottom at radius A.
   const band = slot.querySelector('.banqi-rim > path')?.getAttribute('d') ?? '';
   const [, low, radius] = band.match(/V([\d.]+)A([\d.]+)/) ?? [];
@@ -154,8 +156,11 @@ describe('banqi 3D tiles', () => {
     }
   });
 
-  it('draws one rim under every tile by default', () => {
-    for (const on of [undefined, true]) {
+  it('draws flat tiles by default and one rim under every tile once switched on', () => {
+    setTile3d(undefined);
+    expect(banqiTile3dEnabled()).toBe(false);
+    for (const name of NAMES) expect(render(name)).toBe(render(name, { tile3d: false }));
+    for (const on of [true]) {
       setTile3d(on);
       expect(banqiTile3dEnabled()).toBe(true);
       for (const name of NAMES) {
@@ -186,6 +191,26 @@ describe('banqi 3D tiles', () => {
     const wood = hostOf(render('wood', { tile3d: true }));
     expect(shape(rimOf(wood, 'a1'))).toBe(shape(rimOf(wood, 'b1')));
     expect(fills(rimOf(wood, 'a1'))).toEqual(fills(rimOf(wood, 'b1')));
+  });
+
+  it('outlines a 3D tile face down at the width of its face ring, and leaves the rim bare', () => {
+    // Brian, 2026-10-29: the unflipped tiles "look a little thicker" (the back
+    // drew 2 units against the face ring's 1.65), and a rim outline made the
+    // whole piece "too heavy".
+    const host = hostOf(render('international', { tile3d: true }));
+    const ring = (banqiTile3dBox(64) * 2.8) / 100;
+    for (const square of ['a1', 'b1']) {
+      expect(
+        host.querySelector(`[data-piece-square="${square}"] .banqi-rim [stroke]`),
+        square,
+      ).toBeNull();
+    }
+    const back = host.querySelector('[data-piece-square="b1"] .banqi-back > circle');
+    const backWidth = Number(/stroke-width:([\d.]+)/.exec(back?.getAttribute('style') ?? '')?.[1]);
+    expect(backWidth).toBeCloseTo(ring, 1);
+    // The flat board keeps .banqi-back's own 2 units.
+    const flat = hostOf(render('international', { tile3d: false }));
+    expect(flat.querySelector('.banqi-back > circle')?.getAttribute('style')).toBeNull();
   });
 
   it('keeps one disc shadow per tile, moved under the rim', () => {

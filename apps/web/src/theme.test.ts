@@ -435,6 +435,32 @@ describe('appearance family gating', () => {
     ).toBe(true);
   });
 
+  it('switches the 3D flip apart from the 3D look', async () => {
+    // Brian, 2026-10-28: "make those both toggleable separately".
+    await rebuildThemePanel();
+    const pieces = '[data-theme-control] .appearance-submenu[data-key="pieces"]';
+    const look = document.querySelector<HTMLInputElement>(`${pieces} [data-banqi-tile3d]`);
+    const flip = document.querySelector<HTMLInputElement>(`${pieces} [data-piece-flip3d]`);
+    // Both off until the reader opts in (Brian, 2026-10-29).
+    expect(look?.checked).toBe(false);
+    expect(flip?.checked).toBe(false);
+    const flipPref = () =>
+      JSON.parse(localStorage.getItem('mistboard.displayPreferences.v1') ?? '{}').pieceFlip;
+
+    flip?.click();
+    expect(flipPref()).toBe('spin');
+    expect(look?.checked).toBe(false);
+    expect(document.documentElement.dataset.banqiTile3d).not.toBe('on');
+
+    look?.click();
+    expect(document.documentElement.dataset.banqiTile3d).toBe('on');
+    expect(flipPref()).toBe('spin');
+
+    flip?.click();
+    expect(flipPref()).toBe('flat');
+    expect(document.documentElement.dataset.banqiTile3d).toBe('on');
+  });
+
   it('swaps the real appearance menu into the buildAppearanceMenu facade placeholder', async () => {
     // account-nav embeds the menu synchronously; the facade returns an empty
     // .appearance-menu holder and replaces it once the lazy settings chunk

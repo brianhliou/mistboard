@@ -321,7 +321,7 @@ function applyXiangqiPieceShadow(on: boolean): void {
   document.documentElement.dataset.xiangqiPieceShadow = on ? 'on' : 'off';
 }
 
-/** The banqi renderers read this (banqiTile3dEnabled). */
+/** Every board renderer reads this (piece3dEnabled). */
 function applyBanqiTile3d(on: boolean): void {
   document.documentElement.dataset.banqiTile3d = on ? 'on' : 'off';
 }

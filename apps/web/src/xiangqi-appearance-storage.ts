@@ -396,13 +396,16 @@ export function writeStoredXiangqiPieceShadow(on: boolean): void {
   }
 }
 
-// 3D banqi tiles (2026-10-28): banqi's tiles drawn as short cylinders with an
-// ivory rim (live-banqi-render.ts). On by default (Brian, 2026-10-28: "make the
-// 3D the default"); like the piece shadow, only an explicit pick is stored. The
+// 3D pieces (2026-10-28): pieces drawn as short cylinders with an ivory rim
+// (piece-3d.ts), banqi's first and then every board's (Brian: "ship 3D as the
+// default for all variants"). The key and names keep "banqi" from the first
+// cut so no stored pick is lost. Off by default, a reader's own pick (Brian,
+// 2026-10-29: "if users want the 3D, they have to toggle it themselves"; the
+// xiangqi board was tuned for flat pieces); only an explicit pick is stored. The
 // key keeps the mistboard.xiangqi prefix so other documents hear the change
 // (theme.ts, watchForXiangqiAppearanceInOtherDocuments).
 const banqiTile3dStorageKey = 'mistboard.xiangqiBanqiTile3d';
-const defaultBanqiTile3d = true;
+const defaultBanqiTile3d = false;
 
 export function readStoredBanqiTile3d(): boolean {
   try {

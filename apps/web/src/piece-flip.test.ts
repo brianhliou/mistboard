@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PIECE_FLIP_DURATION_MS,
+  pieceAnimationDurationMs,
   pieceFlipDurationMs,
   pieceFlipStyle,
   pieceFlipStyleFromSearch,
@@ -297,6 +298,37 @@ describe('jieqi turn-over (prototype)', () => {
     expect(calls.find((call) => call.target === 'a3')?.options.delay).toBe(250);
     expect(backs).toHaveLength(1);
   });
+
+  it('turns along the glide without cancelling or overriding the slot glide', () => {
+    const el = document.createElement('div');
+    el.innerHTML = '<svg><g data-piece-square="a3"><g class="jieqi-piece"></g></g></svg>';
+    const slot = el.querySelector('[data-piece-square="a3"]') as Element;
+    const glide = { cancel: vi.fn() };
+    Object.assign(slot, { getAnimations: () => [glide] });
+    const { calls, backs } = recordAnimations(() => {
+      animateJieqiReveal(el, 'a3', 'red', 'red', { alongGlide: true });
+    });
+    expect(glide.cancel).not.toHaveBeenCalled();
+    // The turn and any lift run on wrappers: the slot's transform stays the glide's.
+    expect(calls.filter((call) => call.target === 'a3')).toEqual([]);
+    expect(calls.some((call) => call.keyframes.some((frame) => 'transform' in frame))).toBe(true);
+    expect(calls.every((call) => !call.options.delay)).toBe(true);
+    expect(backs).toHaveLength(1);
+  });
+
+  it('finishes the turn three quarters into the glide, before the piece lands', () => {
+    // Brian, 2026-10-28: the turn ran past the landing; get it flipped earlier.
+    const el = document.createElement('div');
+    el.innerHTML = '<svg><g data-piece-square="a3"><g class="jieqi-piece"></g></g></svg>';
+    const glide = pieceAnimationDurationMs();
+    const { calls } = recordAnimations(() => {
+      animateJieqiReveal(el, 'a3', 'red', 'red', { alongGlide: true });
+    });
+    const durations = calls.map((call) => Number(call.options.duration));
+    expect(durations.length).toBeGreaterThan(0);
+    expect(Math.max(...durations)).toBe(Math.round(glide * 0.75));
+    expect(Math.max(...durations)).toBeLessThan(pieceFlipDurationMs());
+  });
 });
 
 describe('flip styles (the Tile flip setting, ?flip= override)', () => {
@@ -326,13 +358,14 @@ describe('flip styles (the Tile flip setting, ?flip= override)', () => {
   }
   const AXIS_BY_STYLE = { flat: 'scaleX', lift: 'rotateX', spin: 'rotateY' } as const;
 
-  it('defaults to spin with no setting and no flag', () => {
+  it('defaults to flat with no setting and no flag', () => {
+    // Brian, 2026-10-29: the turn "synergizes more with the piece being 3D"; opt in.
     useFlag('');
-    expect(pieceFlipStyle()).toBe('spin');
+    expect(pieceFlipStyle()).toBe('flat');
     useFlag('?flip=nope');
+    expect(pieceFlipStyle()).toBe('flat');
+    useFlag('?flip=spin');
     expect(pieceFlipStyle()).toBe('spin');
-    const { calls } = recordAnimations(() => animateBanqiReveal(banqiHost(revealed), 'a1'));
-    expect(turnAxis(calls)).toBe('rotateY');
   });
 
   it.each(['flat', 'lift', 'spin'] as const)(

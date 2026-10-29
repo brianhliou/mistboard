@@ -8,7 +8,11 @@
 // preference setters this panel calls — the panel is a dumb view over that API.
 import { trackLocaleChanged, trackNotationChanged } from './analytics.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
-import { boardCoordinatesEnabled } from './display-preferences.js';
+import {
+  boardCoordinatesEnabled,
+  readDisplayPreferences,
+  writeDisplayPreference,
+} from './display-preferences.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import {
   currentLocale,
@@ -225,6 +229,7 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
         false,
       ),
       createBanqiTile3dField(locale),
+      createPieceFlip3dField(locale),
     );
   }
   addCategory('pieces', t('prefs.pieces', {}, locale), pieceBody);
@@ -543,8 +548,8 @@ function createXiangqiPieceShadowField(locale: Locale): HTMLLabelElement {
   return field;
 }
 
-// Banqi's tiles drawn with a visible rim (banqiTile3dEnabled). It sits with the
-// piece sets because it changes the pieces, and only banqi's, so it says so.
+// Pieces drawn with a visible rim on every board (piece3dEnabled), on by
+// default since 2026-10-28. It sits with the piece sets because it changes them.
 function createBanqiTile3dField(locale: Locale): HTMLLabelElement {
   const field = document.createElement('label');
   field.className = 'theme-control-check-field banqi-tile-3d-field';
@@ -555,6 +560,26 @@ function createBanqiTile3dField(locale: Locale): HTMLLabelElement {
   input.addEventListener('change', () => setBanqiTile3dPreference(input.checked));
   const text = document.createElement('span');
   text.textContent = t('prefs.banqiTile3d', {}, locale);
+  field.append(input, text);
+  return field;
+}
+
+// The turn-over, apart from the look (Brian, 2026-10-28: "make those both
+// toggleable separately"). On is Spin, the coin turning in depth; off is Flat,
+// the squeeze. Either works on flat or 3D pieces. It writes the account page's
+// Tile flip choice, which keeps Lift as a third option.
+function createPieceFlip3dField(locale: Locale): HTMLLabelElement {
+  const field = document.createElement('label');
+  field.className = 'theme-control-check-field piece-flip-3d-field';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.dataset.pieceFlip3d = '';
+  input.checked = readDisplayPreferences().pieceFlip !== 'flat';
+  input.addEventListener('change', () =>
+    writeDisplayPreference('pieceFlip', input.checked ? 'spin' : 'flat'),
+  );
+  const text = document.createElement('span');
+  text.textContent = t('prefs.pieceFlip3d', {}, locale);
   field.append(input, text);
   return field;
 }

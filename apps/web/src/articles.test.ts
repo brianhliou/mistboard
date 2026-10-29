@@ -956,7 +956,7 @@ describe('rules variant sidebar', () => {
     expect(page.querySelector('.xq-piece-back-mark')).not.toBeNull();
     expect(page.innerHTML).toContain('fill="#2f7d62"');
     expect(page.innerHTML).toContain('fill="#a95f4a"');
-    expect(page.innerHTML).toContain('stroke="#553025"');
+    expect(page.innerHTML).toContain('stroke="#202427"');
     expect(page.innerHTML).not.toContain('fill="#286d55"');
     expect(page.innerHTML).not.toContain('stroke="#c8ead2"');
     expect(page.innerHTML).not.toContain('fill="#2563eb"');

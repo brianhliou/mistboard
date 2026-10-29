@@ -10,7 +10,7 @@ import {
   getJieqiPlayerView,
   getStandardXiangqiPlayerView,
 } from '@mistboard/game';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   boardLastMoveCellMarksSvg,
   boardLastMoveMarkersSvg,
@@ -23,6 +23,15 @@ import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 import { renderJungleBoardSvg } from './jungle-render.js';
 import { renderJieqiBoardSvg } from './live-jieqi-render.js';
 import { renderXiangqiBoardSvg } from './xiangqi-board.js';
+
+// Flat pieces unless a test asks for 3D: the board-wide 3D default
+// (piece3dEnabled, 2026-10-28) reads the root, which these tests pin off.
+beforeEach(() => {
+  document.documentElement.dataset.banqiTile3d = 'off';
+});
+afterEach(() => {
+  delete document.documentElement.dataset.banqiTile3d;
+});
 
 // The destination band (2026-10-15) hugs the OUTSIDE of the drawn piece and
 // draws UNDER the piece layer with the origin wash: the piece covers none of it,

@@ -3,7 +3,7 @@ import {
   createInitialXiangqiState,
   getStandardXiangqiPlayerView,
 } from '@mistboard/game';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type DisplayPreferenceValue, writeDisplayPreference } from './display-preferences.js';
 import { renderXiangqiBoardSvg as renderLiveXiangqiBoardSvg } from './live-xiangqi.js';
 import {
@@ -15,6 +15,15 @@ import {
   xiangqiBoardSvg,
   xiangqiMarkerSvg,
 } from './xiangqi-board.js';
+
+// Flat pieces unless a test asks for 3D: the board-wide 3D default
+// (piece3dEnabled, 2026-10-28) reads the root, which these tests pin off.
+beforeEach(() => {
+  document.documentElement.dataset.banqiTile3d = 'off';
+});
+afterEach(() => {
+  delete document.documentElement.dataset.banqiTile3d;
+});
 
 // This happy-dom build ships no window.localStorage; back it with memory (same
 // idiom as puzzles.test.ts) so the pieceAnimation preference writes work.

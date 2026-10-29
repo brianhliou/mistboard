@@ -9,10 +9,12 @@ export const DISPLAY_PREFERENCE_DEFINITIONS = [
   },
   // How a face-down tile turns over on a reveal (banqi, jieqi; #709). The
   // speed comes from pieceAnimation, which also switches it off ('none').
+  // Flat by default, like 3D pieces (Brian, 2026-10-29: the turn "synergizes
+  // more with the piece being 3D"; a reader opts in).
   {
     id: 'pieceFlip',
     kind: 'select',
-    defaultValue: 'spin',
+    defaultValue: 'flat',
     options: ['flat', 'lift', 'spin'],
   },
   { id: 'materialDifference', kind: 'boolean', defaultValue: true },

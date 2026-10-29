@@ -240,12 +240,12 @@ export function pieceFlipStyle(): PieceFlipStyle {
   if (override) return override;
   subscribeToPreferenceChanges();
   if (cachedFlipStyle === null) {
-    let style: PieceFlipStyle = 'spin';
+    let style: PieceFlipStyle = 'flat';
     try {
       const preference = readDisplayPreferences().pieceFlip;
       if (isPieceFlipStyle(preference)) style = preference;
     } catch {
-      style = 'spin';
+      style = 'flat';
     }
     cachedFlipStyle = style;
   }
@@ -399,13 +399,30 @@ export function flipSvgPiece(
   center: { x: number; y: number },
   backMarkup: string,
   durationMs: number,
-  opts: { delayMs?: number; style?: PieceFlipStyle; edge?: PieceFlipEdge } = {},
+  opts: {
+    delayMs?: number;
+    style?: PieceFlipStyle;
+    edge?: PieceFlipEdge;
+    /**
+     * Turn while the slot glides: the slot's own transform stays the glide's,
+     * so the turn and any lift run on wrappers inside it (Brian, 2026-10-28:
+     * "Will we be able to flip it while the piece is moving?").
+     */
+    alongGlide?: boolean;
+    /**
+     * A mark drawn outside the slot that belongs to the piece (a 3D piece's
+     * gold last-move edge): it turns and lifts with the piece, added onto its
+     * own glide, so it never hangs off a piece standing edge-on.
+     */
+    follower?: Element | null;
+  } = {},
 ): boolean {
   if (durationMs <= 0) return false;
   const target = slot as Animatable;
   if (typeof target.animate !== 'function') return false;
   const delay = Math.max(0, opts.delayMs ?? 0);
-  if (delay === 0 && typeof target.getAnimations === 'function') {
+  const alongGlide = opts.alongGlide === true;
+  if (delay === 0 && !alongGlide && typeof target.getAnimations === 'function') {
     for (const animation of target.getAnimations()) animation.cancel();
   }
   const style = opts.style ?? pieceFlipStyle();
@@ -423,7 +440,7 @@ export function flipSvgPiece(
   // turning shape, thinning edge-on as a real tile's would).
   // A tile with an edge turns a wrapper too, so the edge can stay unturned.
   let turner: Animatable = target;
-  if (liftFrames || edge) {
+  if (liftFrames || edge || alongGlide) {
     turner = slot.ownerDocument.createElementNS(svgNs, 'g') as Animatable;
     turner.setAttribute('class', 'piece-flip-turn');
     turner.append(...faces, back);
@@ -433,13 +450,22 @@ export function flipSvgPiece(
     slot.append(back);
   }
   if (target.style) target.style.transformOrigin = origin;
+  // Along a glide the lift goes on a wrapper around the turn and the edge.
+  let lifter: Animatable = target;
+  if (alongGlide && liftFrames) {
+    lifter = slot.ownerDocument.createElementNS(svgNs, 'g') as Animatable;
+    lifter.setAttribute('class', 'piece-flip-lift');
+    lifter.append(turner);
+    slot.append(lifter);
+    if (lifter.style) lifter.style.transformOrigin = origin;
+  }
   let edgeEl: Animatable | null = null;
   if (edge) {
     edgeEl = slot.ownerDocument.createElementNS(svgNs, 'g') as Animatable;
     edgeEl.setAttribute('class', 'piece-flip-edge');
     edgeEl.setAttribute('aria-hidden', 'true');
     edgeEl.innerHTML = pieceFlipEdgeMarkup(center, edge, style);
-    slot.append(edgeEl);
+    (lifter === target ? slot : lifter).append(edgeEl);
     if (edgeEl.style) edgeEl.style.transformOrigin = origin;
   }
   const timing: KeyframeAnimationOptions = { duration: durationMs, delay, fill: 'backwards' };
@@ -462,13 +488,28 @@ export function flipSvgPiece(
   back.animate(showUntilMidpoint, { ...timing, fill: 'both' });
   // No backwards fill: during a delay the slot's glide owns its transform.
   const turn = turner.animate?.(turnFrames, { duration: durationMs, delay });
-  if (liftFrames) target.animate(liftFrames, { duration: durationMs, delay });
+  if (liftFrames) lifter.animate?.(liftFrames, { duration: durationMs, delay });
   edgeEl?.animate?.(pieceFlipEdgeKeyframes(style), { duration: durationMs, delay, fill: 'both' });
+  const follower = opts.follower as Animatable | null | undefined;
+  if (follower && typeof follower.animate === 'function') {
+    if (follower.style) follower.style.transformOrigin = origin;
+    const added: KeyframeAnimationOptions = { duration: durationMs, delay, composite: 'add' };
+    follower.animate(turnFrames, added);
+    if (liftFrames) {
+      follower.animate(
+        liftFrames.map(({ filter: _shadow, ...frame }) => frame),
+        added,
+      );
+    }
+  }
   const settle = () => {
     back.remove();
     edgeEl?.remove();
-    if (turner !== target && turner.parentNode === slot) {
+    if (turner !== target && turner.parentNode) {
       turner.replaceWith(...Array.from(turner.childNodes));
+    }
+    if (lifter !== target && lifter.parentNode === slot) {
+      lifter.replaceWith(...Array.from(lifter.childNodes));
     }
   };
   if (turn && typeof turn.addEventListener === 'function') {

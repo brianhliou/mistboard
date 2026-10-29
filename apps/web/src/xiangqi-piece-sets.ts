@@ -175,6 +175,9 @@ export type XiangqiPieceRenderOptions = {
   ariaLabel?: string;
   shrouded?: boolean;
   shroudedStyle?: XiangqiShroudedStyle;
+  /** The back's outline width in the 100-unit box (default BACK_STROKE); a 3D
+   *  piece passes its face's ring width. */
+  backStroke?: number;
   className?: string;
   x?: number;
   y?: number;
@@ -309,7 +312,7 @@ export function renderXiangqiPieceGlyphed(
     return `${open}${shadow}${assetImageMark(assetPieceHref(set, piece.color, 'back'))}${question}</svg>`;
   }
   if (opts.shrouded && opts.shroudedStyle === 'back') {
-    return [open, shadow, pieceBackMark(piece.color, shape), `</svg>`].join('');
+    return [open, shadow, pieceBackMark(piece.color, shape, opts.backStroke), `</svg>`].join('');
   }
   // A shrouded "?" token on an image set (international / animal) draws over that
   // set's single-ring disc so the hidden token sits flush with its revealed
@@ -457,6 +460,16 @@ export function xiangqiPieceDiscShadow(
   );
 }
 
+/** The width of a face-up piece's outer ring in the 100-unit box: the glyph
+ *  sets' 2.5 (xiangqiGlyphFrameMarks), the image sets' 2.8. A 3D piece draws its
+ *  back and its rim's lower edge at this width, so the piece reads as one
+ *  object face up or down (piece-3d.ts). */
+export function xiangqiPieceRingWidth(set: XiangqiPieceSet): number {
+  return isAssetPieceSet(set) || set === 'international' || isAnimalPieceSet(set)
+    ? IMAGE_RING
+    : 2.5;
+}
+
 /** The outer radius (half-width, for a square) of the outline a set draws,
  *  stroke included, in the 100-unit box. */
 export function xiangqiPieceOuterRadius(
@@ -497,16 +510,22 @@ const PIECE_EDGE = 46;
 /** The image sets' ring (international and Dobutsu alike). */
 const IMAGE_RING = 2.8;
 const BACK_STROKE = 3;
+/** Banqi's face-down edge (.banqi-back > circle, live-banqi-render.ts). */
+const BACK_EDGE = '#202427';
 
-function pieceBackMark(color: XiangqiColor, shape: XiangqiPieceShape = 'disc'): string {
+function pieceBackMark(
+  color: XiangqiColor,
+  shape: XiangqiPieceShape = 'disc',
+  width = BACK_STROKE,
+): string {
   const fill = color === 'red' ? '#a95f4a' : '#2f7d62';
-  // Each outline about half its fill's brightness, so the red back's edge
-  // reads as firmly as the green one's (Brian, 2026-10-17).
-  const stroke = color === 'red' ? '#553025' : '#174536';
+  // One black edge on both backs, banqi's (Brian, 2026-10-28: "a black
+  // outline like Banqi"; was each fill at half brightness from 2026-10-17).
+  const stroke = BACK_EDGE;
   return xiangqiPieceFrameOutline(
     shape,
     PIECE_EDGE,
-    `class="xq-piece-back-mark" fill="${fill}" stroke="${stroke}" stroke-width="${BACK_STROKE}"`,
+    `class="xq-piece-back-mark" fill="${fill}" stroke="${stroke}" stroke-width="${width}"`,
   );
 }
 

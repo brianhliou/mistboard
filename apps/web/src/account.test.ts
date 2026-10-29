@@ -351,7 +351,7 @@ describe('account page auth flow', () => {
     );
   });
 
-  it('offers the Tile flip setting beside piece animation, Spin by default, saved locally', async () => {
+  it('offers the Tile flip setting beside piece animation, Flat by default, saved locally', async () => {
     window.history.replaceState(null, '', '/account/settings/display');
     const user = testUser('misty');
     const requests: unknown[] = [];
@@ -379,7 +379,7 @@ describe('account page auth flow', () => {
     expect(names.indexOf('pieceFlip')).toBeGreaterThan(names.lastIndexOf('pieceAnimation'));
     const options = [...document.querySelectorAll<HTMLInputElement>('input[name="pieceFlip"]')];
     expect(options.map((input) => input.value)).toEqual(['flat', 'lift', 'spin']);
-    expect(options.find((input) => input.checked)?.value).toBe('spin');
+    expect(options.find((input) => input.checked)?.value).toBe('flat');
     const labels = options.map((input) => input.closest('label')?.textContent?.trim());
     expect(labels).toEqual(['Flat', 'Lift', 'Spin']);
     expect(document.body.textContent).toContain('Tile flip');

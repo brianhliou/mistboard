@@ -340,10 +340,10 @@ describe('xiangqi board colour, river text and start marker storage', () => {
     expect(readStoredXiangqiPieceShadow()).toBe(false);
   });
 
-  it('draws 3D banqi tiles by default without storing it, and remembers the switch', () => {
+  it('draws flat banqi tiles by default without storing it, and remembers the switch', () => {
     const storage = installLocalStorage();
     window.history.replaceState({}, '', '/');
-    expect(readStoredBanqiTile3d()).toBe(true);
+    expect(readStoredBanqiTile3d()).toBe(false);
     expect(storage.getItem('mistboard.xiangqiBanqiTile3d')).toBeNull();
     writeStoredBanqiTile3d(false);
     expect(storage.getItem('mistboard.xiangqiBanqiTile3d')).toBe('off');

@@ -23,7 +23,6 @@ import type {
   JieqiSquare,
 } from '@mistboard/game';
 import './live-xiangqi.css';
-import { pieceAnimationDurationMs } from './board-anim.js';
 import { jieqiEnabled } from './feature-flags.js';
 import { renderJieqiMaterial } from './jieqi-material.js';
 import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
@@ -175,9 +174,8 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
           generalSquare: (color) => generalSquareOn(view.board, color),
         })
       : [],
-  // A live move that reveals its piece then turns it over on arrival (#709
-  // prototype): after the glide for a remote move, in place for an own one
-  // (which does not glide). Scrubs and jumps never turn a piece.
+  // A live move that reveals its piece turns it over (#709 prototype): during
+  // the glide for a remote move, in place for an own one (which does not glide). Scrubs and jumps never turn a piece.
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     const live = core?.replay.isLive() ?? false;
     const before = lastLiveBoard;
@@ -192,7 +190,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
       const revealed = live ? jieqiRevealSquare(pending.move, before, view.board) : null;
       if (revealed) {
         animateJieqiReveal(liveRefs.board, revealed, pending.color, perspective, {
-          delayMs: own ? 0 : pieceAnimationDurationMs(),
+          alongGlide: !own,
         });
       }
       return;
