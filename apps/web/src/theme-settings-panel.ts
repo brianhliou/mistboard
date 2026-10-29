@@ -30,6 +30,7 @@ import {
   type QuickPickerKind,
   readEffectiveSoundVolume,
   readStoredBanqiTile3d,
+  readStoredPieceEdgeThick,
   readStoredSiteTheme,
   readStoredSoundMuted,
   readStoredXiangqiBoardColor,
@@ -40,6 +41,7 @@ import {
   type SiteTheme,
   setBanqiTile3dPreference,
   setBoardCoordinatesPreference,
+  setPieceEdgePreference,
   setSiteThemePreference,
   setSoundSetPreference,
   setSoundVolumePreference,
@@ -229,6 +231,7 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
         false,
       ),
       createBanqiTile3dField(locale),
+      createPieceEdgeField(locale),
       createPieceFlip3dField(locale),
     );
   }
@@ -560,6 +563,22 @@ function createBanqiTile3dField(locale: Locale): HTMLLabelElement {
   input.addEventListener('change', () => setBanqiTile3dPreference(input.checked));
   const text = document.createElement('span');
   text.textContent = t('prefs.banqiTile3d', {}, locale);
+  field.append(input, text);
+  return field;
+}
+
+// The 3D rim's depth, Standard or Thicker (piece3dDepthShare). Only 3D pieces
+// have a rim, so it sits under the 3D switch.
+function createPieceEdgeField(locale: Locale): HTMLLabelElement {
+  const field = document.createElement('label');
+  field.className = 'theme-control-check-field piece-edge-field';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.dataset.pieceEdge = '';
+  input.checked = readStoredPieceEdgeThick();
+  input.addEventListener('change', () => setPieceEdgePreference(input.checked));
+  const text = document.createElement('span');
+  text.textContent = t('prefs.pieceEdgeThick', {}, locale);
   field.append(input, text);
   return field;
 }

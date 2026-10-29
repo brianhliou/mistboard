@@ -8,13 +8,19 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { animateBoardLastMoveArrival } from './board-lastmove.js';
 import { XIANGQI_PIECE_OUTLINE_SHARE, xiangqiPieceDrawSize } from './board-metrics.js';
+import { JUNGLE_FLIP_TILE_3D, jungleFlipTile3dGeometry } from './jungle-flip-render.js';
+import { banqiTile3dBox } from './live-banqi-render.js';
 import { animateJieqiReveal, renderJieqiBoardSvg } from './live-jieqi-render.js';
 import {
+  BANQI_PIECE_3D,
+  PIECE_3D_THICK_EDGE,
+  piece3dLook,
   XIANGQI_PIECE_3D,
   xiangqiPiece3dBox,
   xiangqiPiece3dDiscCenter,
   xiangqiPiece3dEdge,
 } from './piece-3d.js';
+import { cancelTileFlipOverlays } from './tile-flip-3d.js';
 import { type XiangqiBoardSvgState, xiangqiBoardSvg } from './xiangqi-board.js';
 
 // Flat pieces unless a test asks for 3D: the board-wide 3D default
@@ -197,6 +203,47 @@ describe('xiangqi and jieqi 3D pieces', () => {
     }
   });
 
+  it("deepens every board's rim 1.5x on the Thicker edge, at the same footprint", () => {
+    const measure = () => ({
+      xq: xiangqiPiece3dEdge('traditional', 60).depth,
+      xqBox: xiangqiPiece3dBox(60),
+      bq: piece3dLook('traditional', banqiTile3dBox(64), BANQI_PIECE_3D).depth,
+      bqBox: banqiTile3dBox(64),
+      jg: jungleFlipTile3dGeometry(64),
+    });
+    const standard = measure();
+    document.documentElement.dataset.pieceEdge = 'thick';
+    try {
+      const thick = measure();
+      expect(thick.xq / standard.xq).toBeCloseTo(
+        PIECE_3D_THICK_EDGE * (thick.xqBox / standard.xqBox),
+        1,
+      );
+      expect(thick.bq / standard.bq).toBeCloseTo(
+        PIECE_3D_THICK_EDGE * (thick.bqBox / standard.bqBox),
+        1,
+      );
+      expect(thick.jg.depth / standard.jg.depth).toBeCloseTo(PIECE_3D_THICK_EDGE, 1);
+      // The face gives up the depth: smaller box (or token), same span.
+      const span = (box: number, share: number) => box * (XIANGQI_PIECE_OUTLINE_SHARE + share);
+      expect(thick.xqBox).toBeLessThan(standard.xqBox);
+      expect(
+        span(thick.xqBox, XIANGQI_PIECE_3D.depthShare * PIECE_3D_THICK_EDGE),
+      ).toBeLessThanOrEqual(60 * XIANGQI_PIECE_3D.reach + 1e-9);
+      expect(thick.bqBox).toBeLessThan(standard.bqBox);
+      expect(
+        span(thick.bqBox, BANQI_PIECE_3D.depthShare * PIECE_3D_THICK_EDGE),
+      ).toBeLessThanOrEqual(64 * BANQI_PIECE_3D.reach + 1e-9);
+      expect(thick.jg.size).toBeLessThan(standard.jg.size);
+      expect(2 * thick.jg.half + thick.jg.depth).toBeLessThanOrEqual(
+        64 * JUNGLE_FLIP_TILE_3D.reach + 1e-9,
+      );
+    } finally {
+      delete document.documentElement.dataset.pieceEdge;
+    }
+    expect(measure()).toEqual(standard);
+  });
+
   it('stands every xiangqi piece on its point with one rim, inside the flat footprint', () => {
     for (const shadow of ['off', 'on']) {
       document.documentElement.dataset.xiangqiPieceShadow = shadow;
@@ -330,6 +377,69 @@ describe('xiangqi and jieqi 3D pieces', () => {
     // Added onto the glide, never replacing it, with the piece's own turn.
     expect(edge.every((c) => c.composite === 'add')).toBe(true);
     expect(edge[0].frames).toEqual(turn?.frames);
+  });
+
+  it('turns a jieqi reveal as a 3D coin that rides the glide, gold edge landing with the face', () => {
+    // Brian, 2026-10-29: the SVG turn squashed the piece "into a thin line" mid-flip.
+    const proto = SVGSVGElement.prototype as unknown as { getScreenCTM?: unknown };
+    const original = proto.getScreenCTM;
+    proto.getScreenCTM = () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
+    const moved = { ...JQ, lastMove: { from: 'e2', to: 'e1' } } as typeof JQ;
+    const host = hostOf(
+      renderJieqiBoardSvg(moved, 'red', { pieceSet: 'international', tile3d: true }),
+    );
+    document.body.append(host);
+    try {
+      const slot = host.querySelector<SVGGElement>('[data-piece-square="e1"]')!;
+      const reveal = () =>
+        recordAnimations(() => {
+          expect(
+            animateJieqiReveal(host, 'e1', 'red', 'red', {
+              alongGlide: true,
+              tile3d: true,
+              pieceSet: 'international',
+              style: 'spin',
+            }),
+          ).toBe(true);
+        });
+      const coinTop = () =>
+        Number.parseFloat(document.querySelector<HTMLElement>('.tile-flip-3d')?.style.top ?? '');
+      reveal();
+      const restingTop = coinTop();
+      cancelTileFlipOverlays();
+      // Midway through the glide the slot sits 30 units short of its point.
+      const computed = window.getComputedStyle;
+      window.getComputedStyle = ((el: Element) =>
+        el === slot
+          ? ({ transform: 'matrix(1, 0, 0, 1, 0, 30)' } as CSSStyleDeclaration)
+          : computed(el)) as typeof window.getComputedStyle;
+      let calls: AnimateCall[] = [];
+      try {
+        calls = reveal();
+      } finally {
+        window.getComputedStyle = computed;
+      }
+      const coin = document.querySelector<HTMLElement>('.tile-flip-3d');
+      expect(coin).not.toBeNull();
+      expect(coinTop() - restingTop).toBeCloseTo(30, 1);
+      expect(coin!.querySelectorAll('.tile-flip-3d-wall').length).toBe(40);
+      expect(slot.style.getPropertyValue('visibility')).toBe('hidden');
+      expect(calls.some((c) => c.cls === 'piece-flip-turn')).toBe(false);
+      const back = Array.from(coin!.querySelectorAll('.tile-flip-3d-back'))
+        .map((layer) => layer.outerHTML)
+        .join('');
+      expect(back).toContain('jieqi-piece-rim');
+      expect(back).toContain('hidden piece');
+      // The gold edge waits for the face it rings.
+      const edge = calls.find((c) => c.cls?.includes('xq-live-lastmove-edge'));
+      expect(edge?.frames.map((k) => k.opacity)).toEqual([0, 0, 1, 1]);
+      cancelTileFlipOverlays();
+      expect(slot.style.getPropertyValue('visibility')).toBe('');
+    } finally {
+      host.remove();
+      if (original === undefined) delete proto.getScreenCTM;
+      else proto.getScreenCTM = original;
+    }
   });
 
   it('marks a 3D piece by its gold edge, which glides with the piece', () => {

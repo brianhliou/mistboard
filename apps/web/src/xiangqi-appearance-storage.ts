@@ -430,13 +430,38 @@ export function writeStoredBanqiTile3d(on: boolean): void {
   }
 }
 
-/** The URL preview hooks (?xqLayout=, ?xqBoardColor=, ?xqRiver=, ?xqShadow=, ?tile=) win over the
+// The 3D pieces' edge depth: Standard, or Thicker (1.5x deeper, same footprint;
+// piece-3d.ts). Brian, 2026-10-29: both looked "decent" and he "couldn't pick",
+// so both ship with a Pieces-menu switch, Standard by default.
+const pieceEdgeStorageKey = 'mistboard.xiangqiPieceEdge';
+
+export function readStoredPieceEdgeThick(): boolean {
+  try {
+    // QA/share hook: `?edge=thick` or `?edge=standard` previews the switch without saving it.
+    const preview = new URLSearchParams(window.location.search).get('edge');
+    if (preview === 'thick') return true;
+    if (preview === 'standard') return false;
+    return window.localStorage.getItem(pieceEdgeStorageKey) === 'thick';
+  } catch {
+    return false;
+  }
+}
+
+export function writeStoredPieceEdgeThick(thick: boolean): void {
+  try {
+    window.localStorage.setItem(pieceEdgeStorageKey, thick ? 'thick' : 'standard');
+  } catch {
+    // The root attribute still updates for the current page.
+  }
+}
+
+/** The URL preview hooks (?xqLayout=, ?xqBoardColor=, ?xqRiver=, ?xqShadow=, ?tile=, ?edge=) win over the
  *  stored pick, so a pick made on a preview link has to end the preview, or the
  *  gear would keep showing the previewed option as selected while the board
  *  shows the pick (Brian's 2026-10-08 review: the river-text selection "stuck"
  *  on a ?xqRiver= link). Drops the parameter from the address in place. */
 export function endXiangqiAppearancePreview(
-  param: 'xqLayout' | 'xqBoardColor' | 'xqRiver' | 'xqShadow' | 'tile',
+  param: 'xqLayout' | 'xqBoardColor' | 'xqRiver' | 'xqShadow' | 'tile' | 'edge',
 ): void {
   try {
     const url = new URL(window.location.href);

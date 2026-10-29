@@ -132,6 +132,7 @@ export const ZH_HANS_SHELL = {
   'prefs.startMarkers': '兵炮位标记',
   'prefs.pieceShadow': '棋子阴影',
   'prefs.banqiTile3d': '立体棋子',
+  'prefs.pieceEdgeThick': '加厚立体边缘',
   'prefs.pieceFlip3d': '立体翻棋',
   'prefs.coordinates': '坐标',
   'connection.status': '连接状态',

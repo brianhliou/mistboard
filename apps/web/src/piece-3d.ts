@@ -68,6 +68,24 @@ export const BANQI_PIECE_3D: Piece3dSpec = { reach: 0.95, depthShare: 0.085 };
  */
 export const XIANGQI_PIECE_3D: Piece3dSpec = { reach: XIANGQI_PIECE_REACH, depthShare: 0.08 };
 
+/** How much deeper the Thicker edge is (the reader's Pieces pick). */
+export const PIECE_3D_THICK_EDGE = 1.5;
+
+/** Whether the reader picked the Thicker edge: the root's data-piece-edge,
+ *  stamped by theme.ts from the stored setting (Brian, 2026-10-29: both depths
+ *  "look decent", so both ship, Standard by default). */
+export function piece3dThickEdge(): boolean {
+  return typeof document !== 'undefined' && document.documentElement.dataset.pieceEdge === 'thick';
+}
+
+/**
+ * The rim's share of the box for this reader. The footprint holds either way,
+ * so the Thicker edge takes its extra depth out of the face (about 4% narrower).
+ */
+export function piece3dDepthShare(spec: { readonly depthShare: number }): number {
+  return piece3dThickEdge() ? spec.depthShare * PIECE_3D_THICK_EDGE : spec.depthShare;
+}
+
 /** The body (rim and wall) on Mistboard's own sets. */
 export const PIECE_3D_IVORY: readonly [string, string] = ['#efe7d2', '#d6c9a8'];
 
@@ -87,7 +105,9 @@ export function round2(n: number): number {
  * the rim below it together span `spec.reach` of the pitch.
  */
 export function piece3dBox(pitch: number, spec: Piece3dSpec): number {
-  return roundPieceBox((pitch * spec.reach) / (XIANGQI_PIECE_OUTLINE_SHARE + spec.depthShare));
+  return roundPieceBox(
+    (pitch * spec.reach) / (XIANGQI_PIECE_OUTLINE_SHARE + piece3dDepthShare(spec)),
+  );
 }
 
 /** The disc's centre for a piece anchored at `anchor`: raised by half the rim. */
@@ -96,7 +116,7 @@ export function piece3dDiscCenter(
   box: number,
   spec: Piece3dSpec,
 ): { x: number; y: number } {
-  return { x: anchor.x, y: round2(anchor.y - (box * spec.depthShare) / 2) };
+  return { x: anchor.x, y: round2(anchor.y - (box * piece3dDepthShare(spec)) / 2) };
 }
 
 export interface Piece3dLook {
@@ -117,7 +137,7 @@ export function piece3dLook(
   // Asset discs are normalised to radius 45 of the 100 box; Mistboard's faces
   // end at 47.4 (the face-down radius plus its stroke).
   const radius = round2(box * (backing ? 0.45 : 0.474));
-  const depth = round2(box * spec.depthShare);
+  const depth = round2(box * piece3dDepthShare(spec));
   const body: readonly [string, string] = backing ? [backing[1], backing[2]] : PIECE_3D_IVORY;
   return { radius, depth, body };
 }
@@ -187,7 +207,8 @@ export function piece3dEdge(
  */
 export function xiangqiPiece3dBox(pitch: number): number {
   const exact =
-    (pitch * XIANGQI_PIECE_3D.reach) / (XIANGQI_PIECE_OUTLINE_SHARE + XIANGQI_PIECE_3D.depthShare);
+    (pitch * XIANGQI_PIECE_3D.reach) /
+    (XIANGQI_PIECE_OUTLINE_SHARE + piece3dDepthShare(XIANGQI_PIECE_3D));
   return Math.floor(exact * 4) / 4;
 }
 
@@ -236,11 +257,24 @@ export function xiangqiPiece3dMarkup(
   renderOpts: Omit<XiangqiPieceRenderOptions, 'x' | 'y' | 'size' | 'shape' | 'shadow'>,
   rimClass: string,
 ): string {
+  const { band, face } = xiangqiPiece3dLayers(anchor, pitch, piece, pieceSet, renderOpts, rimClass);
+  return band + face;
+}
+
+/** xiangqiPiece3dMarkup in its two layers: the rim (and shadow), then the disc. */
+export function xiangqiPiece3dLayers(
+  anchor: { x: number; y: number },
+  pitch: number,
+  piece: XiangqiPiece,
+  pieceSet: XiangqiPieceSet,
+  renderOpts: Omit<XiangqiPieceRenderOptions, 'x' | 'y' | 'size' | 'shape' | 'shadow'>,
+  rimClass: string,
+): { band: string; face: string } {
   const box = xiangqiPiece3dBox(pitch);
   const disc = piece3dDiscCenter(anchor, box, XIANGQI_PIECE_3D);
-  return (
-    piece3dRim(disc.x, disc.y, pieceSet, box, XIANGQI_PIECE_3D, rimClass) +
-    renderXiangqiPieceGlyphed(piece, pieceSet, {
+  return {
+    band: piece3dRim(disc.x, disc.y, pieceSet, box, XIANGQI_PIECE_3D, rimClass),
+    face: renderXiangqiPieceGlyphed(piece, pieceSet, {
       ...renderOpts,
       x: disc.x - box / 2,
       y: disc.y - box / 2,
@@ -248,8 +282,21 @@ export function xiangqiPiece3dMarkup(
       shape: 'disc',
       shadow: false,
       backStroke: xiangqiPieceRingWidth(pieceSet),
-    })
-  );
+    }),
+  };
+}
+
+/** A xiangqi or jieqi 3D piece's body for the perspective turn: disc, rim,
+ *  and how far its shadow reaches past the rim. */
+export function xiangqiPiece3dTurnLook(
+  pieceSet: XiangqiPieceSet,
+  pitch: number,
+): Piece3dLook & { shadow: number } {
+  const box = xiangqiPiece3dBox(pitch);
+  return {
+    ...piece3dLook(pieceSet, box, XIANGQI_PIECE_3D),
+    shadow: box * PIECE_3D_SHADOW_SHARE,
+  };
 }
 
 /** A xiangqi or jieqi 3D piece's edge for a turn-over. */

@@ -33,8 +33,10 @@ export interface TileFlipOverlaySpec {
   slot: Element;
   /** The disc's centre, board units. */
   center: { x: number; y: number };
-  /** The disc's outer radius, board units. */
+  /** The disc's outer radius, board units; a rounded square's half side. */
   radius: number;
+  /** A rounded square's corner radius, board units; omitted for a disc. */
+  corner?: number;
   /** The band the flat tile shows under its disc, board units. */
   depth: number;
   /** Half the side of the square each face layer draws (disc, band, shadow). */
@@ -47,6 +49,12 @@ export interface TileFlipOverlaySpec {
   wall: { front: string; back: string };
   durationMs: number;
   style: 'lift' | 'spin';
+  /** A mark on the board that belongs to the face turned up (a flip's ring or
+   *  cell in the flipper's ink): hidden until the coin lands face up. */
+  faceMark?: Element | null;
+  /** Ride the slot's own glide: each frame the coin sits where the moving
+   *  slot is, so a piece can turn while it travels (jieqi's first move). */
+  followGlide?: boolean;
 }
 
 /** How much of the true thickness the flat band shows: the camera's tilt. */
@@ -105,6 +113,70 @@ function layer(
   return svg;
 }
 
+/** Where a gliding slot is now, board units off its square: its animated
+ *  translate (an SVG element's CSS px are user units). */
+function glideOffset(slot: Element, view: Window): { x: number; y: number } {
+  const transform = view.getComputedStyle?.(slot).transform;
+  if (!transform || transform === 'none') return { x: 0, y: 0 };
+  const Matrix = (view as Window & { DOMMatrixReadOnly?: typeof DOMMatrixReadOnly })
+    .DOMMatrixReadOnly;
+  if (!Matrix) return { x: 0, y: 0 };
+  try {
+    const m = new Matrix(transform);
+    return { x: m.e, y: m.f };
+  } catch {
+    return { x: 0, y: 0 };
+  }
+}
+
+/** Strips in each quarter of a rounded square's corner. */
+const CORNER_STRIPS = 6;
+
+interface WallStrip {
+  /** The strip's middle on the outline, from the centre, px. */
+  x: number;
+  y: number;
+  /** Which way it faces: 0 is down the screen, turning clockwise. */
+  turn: number;
+  width: number;
+}
+
+/**
+ * The wall's strips around a disc of radius `r` or, with `corner`, a rounded
+ * square of half side `r`: one strip per straight side and a fan per corner.
+ * Each overlaps its neighbours a little so no seam shows mid-turn.
+ */
+export function wallStrips(r: number, corner: number | null): WallStrip[] {
+  const strips: WallStrip[] = [];
+  const along = (turn: number, d: number) => {
+    const a = (turn * Math.PI) / 180;
+    return { x: -Math.sin(a) * d, y: Math.cos(a) * d };
+  };
+  if (corner === null) {
+    const width = 2 * r * Math.tan(Math.PI / WALL_STRIPS) + 0.6;
+    for (let i = 0; i < WALL_STRIPS; i += 1) {
+      const turn = (i / WALL_STRIPS) * 360;
+      strips.push({ ...along(turn, r), turn, width });
+    }
+    return strips;
+  }
+  const c = Math.min(Math.max(corner, 0), r);
+  const inner = r - c;
+  const arcWidth = 2 * c * Math.tan(Math.PI / 4 / CORNER_STRIPS) + 0.6;
+  for (let side = 0; side < 4; side += 1) {
+    const turn = side * 90;
+    if (inner > 0) strips.push({ ...along(turn, r), turn, width: 2 * inner + 0.6 });
+    // The corner after this side, clockwise: centred on the inner square's corner.
+    const hub = along(turn + 45, inner * Math.SQRT2);
+    for (let i = 0; i < CORNER_STRIPS; i += 1) {
+      const t = turn + ((i + 0.5) / CORNER_STRIPS) * 90;
+      const out = along(t, c);
+      strips.push({ x: hub.x + out.x, y: hub.y + out.y, turn: t, width: arcWidth });
+    }
+  }
+  return strips;
+}
+
 /**
  * Turn the tile in `spec.slot` over with true perspective. Returns false, and
  * changes nothing, when it cannot (duration 0, no WAAPI, no screen mapping for
@@ -140,8 +212,9 @@ export function flipTileOverlay(spec: TileFlipOverlaySpec): boolean {
   const place = () => {
     const m = board.getScreenCTM();
     if (!m) return;
-    root.style.left = px(m.e + m.a * (center.x - reach));
-    root.style.top = px(m.f + m.d * (center.y - reach));
+    const { x, y } = spec.followGlide ? glideOffset(slot, view) : { x: 0, y: 0 };
+    root.style.left = px(m.e + m.a * (center.x + x - reach));
+    root.style.top = px(m.f + m.d * (center.y + y - reach));
   };
   Object.assign(root.style, {
     position: 'fixed',
@@ -178,20 +251,21 @@ export function flipTileOverlay(spec: TileFlipOverlaySpec): boolean {
 
   // The wall: strips around the rim, each the face's colour on its face half
   // and the back's on the other, shaded by the way it faces.
-  const stripWidth = 2 * r * Math.tan(Math.PI / WALL_STRIPS) + 0.6;
-  for (let i = 0; i < WALL_STRIPS; i += 1) {
-    const turn = (i / WALL_STRIPS) * 360;
+  for (const { x, y, turn, width } of wallStrips(
+    r,
+    spec.corner === undefined ? null : spec.corner * k,
+  )) {
     const shade = 0.04 + 0.16 * ((1 - Math.cos(((turn - 135) * Math.PI) / 180)) / 2);
     const strip = doc.createElement('div');
     strip.className = 'tile-flip-3d-wall';
     Object.assign(strip.style, {
       position: 'absolute',
-      left: px(side / 2 - stripWidth / 2),
+      left: px(side / 2 - width / 2),
       top: px(side / 2 - half),
-      width: px(stripWidth),
+      width: px(width),
       height: px(thick),
       background: `linear-gradient(rgba(0,0,0,${shade.toFixed(3)}), rgba(0,0,0,${shade.toFixed(3)})), linear-gradient(${spec.wall.front} 0 50%, ${spec.wall.back} 50% 100%)`,
-      transform: `rotateZ(${turn}deg) translateY(${px(r)}) rotateX(-90deg)`,
+      transform: `translate(${px(x)}, ${px(y)}) rotateZ(${turn}deg) rotateX(-90deg)`,
       backfaceVisibility: 'hidden',
     });
     strip.style.setProperty('-webkit-backface-visibility', 'hidden');
@@ -259,6 +333,9 @@ export function flipTileOverlay(spec: TileFlipOverlaySpec): boolean {
   const turn = run(coin, turnFrames);
   run(backBand, bandOut);
   run(frontBand, bandIn);
+  if (spec.faceMark && typeof (spec.faceMark as HTMLElement).animate === 'function') {
+    run(spec.faceMark, bandIn);
+  }
   const lift = pieceFlipKeyframes(spec.style).lift;
   if (lift) run(root, lift);
 

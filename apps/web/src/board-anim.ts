@@ -415,6 +415,13 @@ export function flipSvgPiece(
      * own glide, so it never hangs off a piece standing edge-on.
      */
     follower?: Element | null;
+    /**
+     * A mark that belongs to the face being turned up (a flip's ring or cell
+     * in the flipper's ink): hidden with the face while the back turns away,
+     * then turned in with it, so it never shows before the flip lands (Brian,
+     * 2026-10-29: "I'm seeing the ring before the piece flip completes").
+     */
+    faceMark?: Element | null;
   } = {},
 ): boolean {
   if (durationMs <= 0) return false;
@@ -497,6 +504,19 @@ export function flipSvgPiece(
     follower.animate(turnFrames, added);
     if (liftFrames) {
       follower.animate(
+        liftFrames.map(({ filter: _shadow, ...frame }) => frame),
+        added,
+      );
+    }
+  }
+  const faceMark = opts.faceMark as Animatable | null | undefined;
+  if (faceMark && typeof faceMark.animate === 'function') {
+    if (faceMark.style) faceMark.style.transformOrigin = origin;
+    faceMark.animate(hideUntilMidpoint, timing);
+    const added: KeyframeAnimationOptions = { duration: durationMs, delay, composite: 'add' };
+    faceMark.animate(turnFrames, added);
+    if (liftFrames) {
+      faceMark.animate(
         liftFrames.map(({ filter: _shadow, ...frame }) => frame),
         added,
       );

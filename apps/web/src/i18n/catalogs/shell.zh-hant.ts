@@ -132,6 +132,7 @@ export const ZH_HANT_SHELL = {
   'prefs.startMarkers': '兵炮位標記',
   'prefs.pieceShadow': '棋子陰影',
   'prefs.banqiTile3d': '立體棋子',
+  'prefs.pieceEdgeThick': '加厚立體邊緣',
   'prefs.pieceFlip3d': '立體翻棋',
   'prefs.coordinates': '座標',
   'connection.status': '連線狀態',

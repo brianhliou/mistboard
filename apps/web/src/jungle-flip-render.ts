@@ -31,6 +31,7 @@ import {
   type PieceFlipStyle,
   pieceAnimationDurationMs,
   pieceFlipDurationMs,
+  pieceFlipStyle,
 } from './board-anim.js';
 import { boardCornerRadius } from './board-metrics.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
@@ -47,7 +48,7 @@ import {
   jungleTokenSize,
 } from './jungle-art.js';
 import { characterTokenSvg, type JungleBoardSkin, type JunglePieceSkin } from './jungle-skins.js';
-import { PIECE_3D_IVORY, piece3dEnabled, round2 } from './piece-3d.js';
+import { PIECE_3D_IVORY, piece3dDepthShare, piece3dEnabled, round2 } from './piece-3d.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
   GLYPH_OFFSET_RATIO,
@@ -56,6 +57,7 @@ import {
   svgBoardCircleMarker,
   svgBoardGlyphMarker,
 } from './svg-board-marker.js';
+import { flipTileOverlay } from './tile-flip-3d.js';
 
 const FILES = 4;
 const RANKS = 4;
@@ -436,12 +438,44 @@ export function animateJungleFlipReveal(
     ...(opts.style ? { style: opts.style } : {}),
     ...(opts.delayMs ? { delayMs: opts.delayMs } : {}),
   };
+  // The flip's cell in the flipper's ink turns up with the face, never first.
+  const faceMark = host.querySelector('.jungle-last-move-flip');
   if (opts.tile3d ?? piece3dEnabled()) {
     const tile = jungleFlipTile3dGeometry(geom.cell);
     const face = { x: anchor.x, y: round2(anchor.y - tile.lift) };
+    const style = opts.style ?? pieceFlipStyle();
+    // A thick tile turns as a true 3D body; the SVG turn squashes it flat
+    // (Brian, 2026-10-29: "we need to fix the squash issue").
+    const rim = slot.querySelector(':scope > .jgf-rim');
+    if (style !== 'flat' && !opts.delayMs && rim && durationMs > 0) {
+      const front = Array.from(slot.children)
+        .filter((child) => child !== rim)
+        .map((child) => child.outerHTML)
+        .join('');
+      const turned = flipTileOverlay({
+        slot,
+        center: face,
+        radius: tile.half,
+        corner: tile.corner,
+        depth: tile.depth,
+        reach: tile.half + tile.depth + 2,
+        front: { band: rim.outerHTML, face: front },
+        back: {
+          band: rim.outerHTML,
+          face: jungleFaceDownDiscSvg(face.x, face.y, 2 * tile.half),
+        },
+        // One ivory body face up and face down.
+        wall: { front: PIECE_3D_IVORY[0], back: PIECE_3D_IVORY[0] },
+        durationMs,
+        style,
+        faceMark,
+      });
+      if (turned) return true;
+    }
     return flipSvgPiece(slot, face, jungleFlipTile3dMarkup(anchor, null, tile), durationMs, {
       ...timing,
       edge: jungleFlipTile3dEdge(tile),
+      faceMark,
     });
   }
   return flipSvgPiece(
@@ -449,7 +483,7 @@ export function animateJungleFlipReveal(
     anchor,
     jungleFaceDownDiscSvg(anchor.x, anchor.y, tokenSpan(geom.cell)),
     durationMs,
-    timing,
+    { ...timing, faceMark },
   );
 }
 
@@ -480,7 +514,7 @@ const JUNGLE_TOKEN_OUTER_PER_SIZE = 2 * JUNGLE_ART.ringRadiusRatio + JUNGLE_ART.
 
 export function jungleFlipTile3dGeometry(cell: number): JungleFlipTile3dGeometry {
   const span = cell * JUNGLE_FLIP_TILE_3D.reach;
-  const depth = round2(span * JUNGLE_FLIP_TILE_3D.depthShare);
+  const depth = round2(span * piece3dDepthShare(JUNGLE_FLIP_TILE_3D));
   // Rounded down to the quarter so the face never outgrows span - depth.
   const size = Math.floor(((span - depth) / JUNGLE_TOKEN_OUTER_PER_SIZE) * 4) / 4;
   const face = size * JUNGLE_TOKEN_OUTER_PER_SIZE;

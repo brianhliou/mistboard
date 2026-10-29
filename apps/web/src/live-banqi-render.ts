@@ -660,17 +660,15 @@ export function flipBanqiFamilyReveal<S extends string>(
   center: (square: S) => { x: number; y: number },
   back: (cx: number, cy: number) => string,
   style?: PieceFlipStyle,
+  faceMark?: Element | null,
 ): boolean {
   const slot = host.querySelector(`[data-piece-square="${square}"]`);
   if (!slot) return false;
   const point = center(square);
-  return flipSvgPiece(
-    slot,
-    point,
-    back(point.x, point.y),
-    pieceFlipDurationMs(),
-    style ? { style } : {},
-  );
+  return flipSvgPiece(slot, point, back(point.x, point.y), pieceFlipDurationMs(), {
+    ...(style ? { style } : {}),
+    faceMark,
+  });
 }
 
 /** Banqi's turn-over: the jade (or the set's printed) back turns to the face. */
@@ -680,8 +678,13 @@ export function animateBanqiReveal(
   opts: { tile3d?: boolean; style?: PieceFlipStyle } = {},
 ): boolean {
   const pieceSet = readStoredXiangqiPieceSet();
+  // The flip's cell in the flipper's ink turns up with the face, never first.
+  const faceMark = host.querySelector('.banqi-lastmove-flip');
   if (opts.tile3d ?? banqiTile3dEnabled()) {
-    return flipBanqiTile3dReveal(host, square, cellCenter, pieceSet, { style: opts.style });
+    return flipBanqiTile3dReveal(host, square, cellCenter, pieceSet, {
+      style: opts.style,
+      faceMark,
+    });
   }
   return flipBanqiFamilyReveal(
     host,
@@ -689,6 +692,7 @@ export function animateBanqiReveal(
     cellCenter,
     (cx, cy) => faceDownDisc(cx, cy, pieceSet),
     opts.style,
+    faceMark,
   );
 }
 
@@ -722,7 +726,10 @@ export function banqiTile3dBox(pitch: number): number {
   return piece3dBox(pitch, BANQI_PIECE_3D);
 }
 
-const TILE_BOX = banqiTile3dBox(CELL);
+// Read per draw: the reader's edge depth changes the box (piece3dDepthShare).
+function tileBox(): number {
+  return banqiTile3dBox(CELL);
+}
 
 /**
  * Where a 3D tile's disc sits for a tile anchored at `anchor` (a cell centre,
@@ -733,7 +740,7 @@ export function banqiTile3dDiscCenter(anchor: { x: number; y: number }): {
   x: number;
   y: number;
 } {
-  return piece3dDiscCenter(anchor, TILE_BOX, BANQI_PIECE_3D);
+  return piece3dDiscCenter(anchor, tileBox(), BANQI_PIECE_3D);
 }
 
 /**
@@ -753,7 +760,7 @@ export function banqiTile3dMarkup(
   if (!entry) {
     const cls = dragSource ? 'banqi-back banqi-drag-source' : 'banqi-back';
     return (
-      rim + faceDownDiscFlat(disc.x, disc.y, pieceSet, cls, false, TILE_BOX, tileLine(pieceSet))
+      rim + faceDownDiscFlat(disc.x, disc.y, pieceSet, cls, false, tileBox(), tileLine(pieceSet))
     );
   }
   return (
@@ -762,9 +769,9 @@ export function banqiTile3dMarkup(
       ariaLabel: `${entry.color} ${entry.role}`,
       className: dragSource ? 'banqi-piece banqi-drag-source' : 'banqi-piece',
       shrouded: false,
-      x: disc.x - TILE_BOX / 2,
-      y: disc.y - TILE_BOX / 2,
-      size: TILE_BOX,
+      x: disc.x - tileBox() / 2,
+      y: disc.y - tileBox() / 2,
+      size: tileBox(),
       shape: BANQI_PIECE_SHAPE,
       shadow: false,
     })
@@ -783,7 +790,7 @@ export function flipBanqiTile3dReveal<S extends string>(
   square: S,
   anchorOf: (square: S) => { x: number; y: number },
   pieceSet: XiangqiPieceSet,
-  opts: { style?: PieceFlipStyle; durationMs?: number } = {},
+  opts: { style?: PieceFlipStyle; durationMs?: number; faceMark?: Element | null } = {},
 ): boolean {
   const slot = host.querySelector(`[data-piece-square="${square}"]`);
   const face = slot?.querySelector(':scope > .banqi-piece');
@@ -795,7 +802,7 @@ export function flipBanqiTile3dReveal<S extends string>(
   const disc = banqiTile3dDiscCenter(anchor);
   if (style !== 'flat') {
     const look = tileLook(pieceSet);
-    const shadow = TILE_BOX * PIECE_3D_SHADOW_SHARE;
+    const shadow = tileBox() * PIECE_3D_SHADOW_SHARE;
     const turned = flipTileOverlay({
       slot,
       center: disc,
@@ -814,7 +821,7 @@ export function flipBanqiTile3dReveal<S extends string>(
           pieceSet,
           'banqi-back',
           false,
-          TILE_BOX,
+          tileBox(),
           tileLine(pieceSet),
         ),
       },
@@ -822,30 +829,32 @@ export function flipBanqiTile3dReveal<S extends string>(
       wall: { front: look.body[0], back: look.body[0] },
       durationMs,
       style,
+      faceMark: opts.faceMark,
     });
     if (turned) return true;
   }
   return flipSvgPiece(slot, disc, banqiTile3dMarkup(anchor, null, pieceSet), durationMs, {
     style,
     edge: banqiTileEdge(pieceSet),
+    faceMark: opts.faceMark,
   });
 }
 
 function tileLine(pieceSet: XiangqiPieceSet): number {
-  return piece3dLineWidth(pieceSet, TILE_BOX);
+  return piece3dLineWidth(pieceSet, tileBox());
 }
 
 function tileLook(pieceSet: XiangqiPieceSet): Piece3dLook {
-  return piece3dLook(pieceSet, TILE_BOX, BANQI_PIECE_3D);
+  return piece3dLook(pieceSet, tileBox(), BANQI_PIECE_3D);
 }
 
 /** The rim under one tile, drawn before its face or back in the same slot. */
 function tileRim(cx: number, cy: number, pieceSet: XiangqiPieceSet, dragSource: boolean): string {
   const cls = dragSource ? 'banqi-rim banqi-drag-source' : 'banqi-rim';
-  return piece3dRim(cx, cy, pieceSet, TILE_BOX, BANQI_PIECE_3D, cls);
+  return piece3dRim(cx, cy, pieceSet, tileBox(), BANQI_PIECE_3D, cls);
 }
 
 /** The tile's edge for the turn-over: its thickness and the two bands it shows. */
 export function banqiTileEdge(pieceSet: XiangqiPieceSet): PieceFlipEdge {
-  return piece3dEdge(pieceSet, TILE_BOX, BANQI_PIECE_3D);
+  return piece3dEdge(pieceSet, tileBox(), BANQI_PIECE_3D);
 }

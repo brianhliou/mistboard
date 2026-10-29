@@ -6,6 +6,7 @@ import {
   normalizeXiangqiBoardTheme,
   normalizeXiangqiPieceSet,
   readStoredBanqiTile3d,
+  readStoredPieceEdgeThick,
   readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
@@ -15,6 +16,7 @@ import {
   readStoredXiangqiRiverText,
   readStoredXiangqiStartMarkers,
   writeStoredBanqiTile3d,
+  writeStoredPieceEdgeThick,
   writeStoredXiangqiBoardColor,
   writeStoredXiangqiBoardLayout,
   writeStoredXiangqiNotation,
@@ -357,6 +359,23 @@ describe('xiangqi board colour, river text and start marker storage', () => {
     window.history.replaceState({}, '', '/?tile=3d');
     expect(readStoredBanqiTile3d()).toBe(true);
     window.history.replaceState({}, '', '/');
+  });
+
+  it('keeps the standard 3D edge by default, remembers Thicker, and previews ?edge=', () => {
+    const storage = installLocalStorage();
+    window.history.replaceState({}, '', '/');
+    expect(readStoredPieceEdgeThick()).toBe(false);
+    expect(storage.getItem('mistboard.xiangqiPieceEdge')).toBeNull();
+    writeStoredPieceEdgeThick(true);
+    expect(storage.getItem('mistboard.xiangqiPieceEdge')).toBe('thick');
+    expect(readStoredPieceEdgeThick()).toBe(true);
+    window.history.replaceState({}, '', '/?edge=standard');
+    expect(readStoredPieceEdgeThick()).toBe(false);
+    writeStoredPieceEdgeThick(false);
+    window.history.replaceState({}, '', '/?edge=thick');
+    expect(readStoredPieceEdgeThick()).toBe(true);
+    window.history.replaceState({}, '', '/');
+    expect(readStoredPieceEdgeThick()).toBe(false);
   });
 
   it('previews the piece shadow from ?xqShadow= without saving it', () => {

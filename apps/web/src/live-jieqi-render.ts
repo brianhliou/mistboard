@@ -8,8 +8,10 @@ import {
 import {
   flipSvgPiece,
   glideSvgPiece,
+  type PieceFlipStyle,
   pieceAnimationDurationMs,
   pieceFlipDurationMs,
+  pieceFlipStyle,
 } from './board-anim.js';
 import { boardCheckGlowSvg } from './board-check.js';
 import {
@@ -29,8 +31,10 @@ import {
   xiangqiPiece3dApplies,
   xiangqiPiece3dDiscCenter,
   xiangqiPiece3dEdge,
+  xiangqiPiece3dLayers,
   xiangqiPiece3dMarkPiece,
   xiangqiPiece3dMarkup,
+  xiangqiPiece3dTurnLook,
 } from './piece-3d.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
@@ -40,6 +44,7 @@ import {
   svgBoardCircleMarker,
   svgBoardGlyphMarker,
 } from './svg-board-marker.js';
+import { flipTileOverlay } from './tile-flip-3d.js';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
 import {
   readStoredXiangqiBoardLayout,
@@ -673,6 +678,7 @@ export function animateJieqiReveal(
     alongGlide?: boolean;
     tile3d?: boolean;
     pieceSet?: XiangqiPieceSet;
+    style?: PieceFlipStyle;
   } = {},
 ): boolean {
   const slot = host.querySelector(`[data-piece-square="${square}"]`);
@@ -686,7 +692,7 @@ export function animateJieqiReveal(
   ) {
     // The face and its rim turn as one piece; edge-on the turn shows the
     // piece's thickness, and the back it turns from carries the same rim.
-    const back3d = xiangqiPiece3dMarkup(
+    const back3d = xiangqiPiece3dLayers(
       center,
       CELL,
       { color, role: 'soldier' },
@@ -699,18 +705,46 @@ export function animateJieqiReveal(
       },
       'jieqi-piece-rim',
     );
-    return flipSvgPiece(
-      slot,
-      xiangqiPiece3dDiscCenter(center, CELL),
-      back3d,
-      revealFlipDurationMs(opts.alongGlide),
-      {
-        ...(opts.delayMs === undefined ? {} : { delayMs: opts.delayMs }),
-        ...(opts.alongGlide ? { alongGlide: true } : {}),
-        edge: xiangqiPiece3dEdge(pieceSet, CELL),
-        follower: boardLastMoveEdgeOn(host, center),
-      },
-    );
+    const disc = xiangqiPiece3dDiscCenter(center, CELL);
+    const durationMs = revealFlipDurationMs(opts.alongGlide);
+    const goldEdge = boardLastMoveEdgeOn(host, center);
+    // A thick piece turned in the SVG flashes to a thin line edge-on; it
+    // turns as a true 3D body, riding the glide that carries it (Brian,
+    // 2026-10-29: "squashed into a thin line… in the middle of the flip").
+    const rim = slot.querySelector(':scope > .jieqi-piece-rim');
+    const style = opts.style ?? pieceFlipStyle();
+    if (style !== 'flat' && opts.delayMs === undefined && rim && durationMs > 0) {
+      const look = xiangqiPiece3dTurnLook(pieceSet, CELL);
+      const turned = flipTileOverlay({
+        slot,
+        center: disc,
+        radius: look.radius,
+        depth: look.depth,
+        reach: look.radius + look.depth + look.shadow + 2,
+        front: {
+          band: rim.outerHTML,
+          face: Array.from(slot.children)
+            .filter((child) => child !== rim)
+            .map((child) => child.outerHTML)
+            .join(''),
+        },
+        back: back3d,
+        wall: { front: look.body[0], back: look.body[0] },
+        durationMs,
+        style,
+        // The gold edge rings the face turned up: it lands with it.
+        faceMark: goldEdge,
+        followGlide: opts.alongGlide === true,
+      });
+      if (turned) return true;
+    }
+    return flipSvgPiece(slot, disc, back3d.band + back3d.face, durationMs, {
+      ...(opts.delayMs === undefined ? {} : { delayMs: opts.delayMs }),
+      ...(opts.alongGlide ? { alongGlide: true } : {}),
+      style,
+      edge: xiangqiPiece3dEdge(pieceSet, CELL),
+      follower: goldEdge,
+    });
   }
   const back = renderXiangqiPieceGlyphed({ color, role: 'soldier' }, readStoredXiangqiPieceSet(), {
     ariaLabel: `${color} hidden piece`,

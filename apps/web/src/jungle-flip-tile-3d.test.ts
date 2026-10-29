@@ -13,6 +13,7 @@ import {
   jungleFlipTile3dGeometry,
   renderJungleFlipBoardSvg,
 } from './jungle-flip-render.js';
+import { cancelTileFlipOverlays, wallStrips } from './tile-flip-3d.js';
 
 // Flat pieces unless a test asks for 3D: the board-wide 3D default
 // (piece3dEnabled, 2026-10-28) reads the root, which these tests pin off.
@@ -265,6 +266,44 @@ describe('Flip Jungle turn-over', () => {
     expect(calls.some((c) => c.target === 'piece-flip-edge')).toBe(tile3d);
   });
 
+  // A thick tile turned in the SVG squashes flat; it turns as a true 3D body.
+  it('turns a lifted or spun 3D tile as a rounded-square coin over the board', () => {
+    const proto = SVGSVGElement.prototype as unknown as { getScreenCTM?: unknown };
+    const original = proto.getScreenCTM;
+    proto.getScreenCTM = () => ({ a: 2, b: 0, c: 0, d: 2, e: 10, f: 20 });
+    try {
+      for (const style of ['lift', 'spin'] as const) {
+        const el = host(true);
+        document.body.append(el);
+        const slot = el.querySelector<SVGGElement>('[data-piece-square="b1"]')!;
+        const calls = recordAnimations(() => {
+          expect(animateJungleFlipReveal(el, 'b1', { tile3d: true, style })).toBe(true);
+        });
+        const coin = document.querySelector('.tile-flip-3d');
+        expect(coin).not.toBeNull();
+        expect(slot.style.getPropertyValue('visibility')).toBe('hidden');
+        // Four straight sides and a fan of six strips per corner, not a disc's 40.
+        expect(coin!.querySelectorAll('.tile-flip-3d-wall').length).toBe(4 + 4 * 6);
+        const back = Array.from(coin!.querySelectorAll('.tile-flip-3d-back'))
+          .map((layer) => layer.outerHTML)
+          .join('');
+        expect(back).toContain('jgf-rim');
+        expect(back).toContain(JUNGLE_FLIP_FACE_DOWN_FILL);
+        expect(back).not.toMatch(IDENTITY);
+        expect(calls.some((c) => c.target === 'piece-flip-turn')).toBe(false);
+        // The flipper's inked cell waits for the coin to land.
+        const mark = calls.find((c) => c.target?.includes('jungle-last-move-flip'));
+        expect(mark?.keyframes.map((k) => k.opacity)).toEqual([0, 0, 1, 1]);
+        cancelTileFlipOverlays();
+        expect(slot.style.getPropertyValue('visibility')).toBe('');
+        el.remove();
+      }
+    } finally {
+      if (original === undefined) delete proto.getScreenCTM;
+      else proto.getScreenCTM = original;
+    }
+  });
+
   it('turns nothing under reduced motion', () => {
     setReducedMotion(true);
     const el = host(true);
@@ -276,3 +315,27 @@ describe('Flip Jungle turn-over', () => {
 });
 
 const JUNGLE_FLIP_FACE_DOWN_FILL = '#2f8f6b';
+
+describe('the coin wall', () => {
+  it('puts every strip of a rounded square on its outline, facing out', () => {
+    const r = 30;
+    const corner = 8;
+    const strips = wallStrips(r, corner);
+    expect(strips).toHaveLength(4 + 4 * 6);
+    for (const { x, y, turn } of strips) {
+      // Distance from the inner square (half side r - corner) is the corner radius.
+      const dx = Math.max(Math.abs(x) - (r - corner), 0);
+      const dy = Math.max(Math.abs(y) - (r - corner), 0);
+      expect(Math.hypot(dx, dy)).toBeCloseTo(corner, 6);
+      // Facing out: the strip's normal points away from the centre.
+      const a = (turn * Math.PI) / 180;
+      expect(-Math.sin(a) * x + Math.cos(a) * y).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps a disc at 40 strips on its circle', () => {
+    const strips = wallStrips(30, null);
+    expect(strips).toHaveLength(40);
+    for (const { x, y } of strips) expect(Math.hypot(x, y)).toBeCloseTo(30, 6);
+  });
+});

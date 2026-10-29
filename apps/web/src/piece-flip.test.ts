@@ -192,6 +192,20 @@ describe('banqi turn-over', () => {
     expect(el.querySelector('.piece-flip-back')).toBeNull();
   });
 
+  it("turns the flipper's inked cell up with the face, never before it", () => {
+    writeDisplayPreference('pieceFlip', 'flat');
+    const el = banqiHost(revealed);
+    expect(el.querySelector('.banqi-lastmove-flip')).not.toBeNull();
+    const { calls } = recordAnimations(() => animateBanqiReveal(el, 'a1'));
+    const mark = calls.filter((call) => call.target?.includes('banqi-lastmove-flip'));
+    // Hidden with the face until the midpoint, then turned in with it.
+    expect(mark.map((call) => call.keyframes.map((k) => k.opacity ?? k.transform))).toEqual([
+      [0, 0, 1, 1],
+      ['scaleX(1)', 'scaleX(0)', 'scaleX(1)'],
+    ]);
+    expect(mark[1]?.options.composite).toBe('add');
+  });
+
   it('swaps instantly under reduced motion', () => {
     setReducedMotion(true);
     const el = banqiHost(revealed);
@@ -232,6 +246,9 @@ describe('banqi live room wiring', () => {
     writeDisplayPreference('pieceFlip', 'flat');
   });
 
+  // The flip's cell in the flipper's ink (red made ply 1) turns with the tile.
+  const FLIP_CELL = 'banqi-lastmove banqi-lastmove-to banqi-lastmove-flip banqi-lastmove--red';
+
   function turned(run: () => void): string[] {
     return recordAnimations(run)
       .calls.filter((call) => call.keyframes.some((k) => k.transform === 'scaleX(0)'))
@@ -245,7 +262,7 @@ describe('banqi live room wiring', () => {
       const el = banqiHost(revealed);
       expect(
         turned(() => animateBoard({ board: el }, revealed, () => ({ ...liveFlip, color }))),
-      ).toEqual(['a1']);
+      ).toEqual(['a1', FLIP_CELL]);
     },
   );
 
@@ -256,7 +273,7 @@ describe('banqi live room wiring', () => {
     const el = banqiHost(revealed);
     expect(
       turned(() => animateBoard({ board: el }, revealed, () => ({ ...liveFlip, color: 'red' }))),
-    ).toEqual(['piece-flip-turn', 'piece-flip-edge']);
+    ).toEqual(['piece-flip-turn', 'piece-flip-edge', FLIP_CELL]);
   });
 
   it('turns nothing on the first render or a reconnect', async () => {

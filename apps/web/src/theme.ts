@@ -8,6 +8,7 @@ import { readStoredSoundSet, type SoundSetId, storeSoundSet } from './sound-sets
 import {
   endXiangqiAppearancePreview,
   readStoredBanqiTile3d,
+  readStoredPieceEdgeThick,
   readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
@@ -17,6 +18,7 @@ import {
   readStoredXiangqiRiverText,
   readStoredXiangqiStartMarkers,
   writeStoredBanqiTile3d,
+  writeStoredPieceEdgeThick,
   writeStoredXiangqiBoardColor,
   writeStoredXiangqiBoardLayout,
   writeStoredXiangqiNotation,
@@ -45,6 +47,7 @@ import type { XiangqiRiverText } from './xiangqi-river-text.js';
 
 export {
   readStoredBanqiTile3d,
+  readStoredPieceEdgeThick,
   readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
@@ -177,6 +180,7 @@ export function initializeThemeSettings(): void {
   applyXiangqiStartMarkers(readStoredXiangqiStartMarkers());
   applyXiangqiPieceShadow(readStoredXiangqiPieceShadow());
   applyBanqiTile3d(readStoredBanqiTile3d());
+  applyPieceEdge(readStoredPieceEdgeThick());
   applyXiangqiPieceSet(readStoredXiangqiPieceSet());
   if (!document.documentElement.dataset.boardFamily) {
     document.documentElement.dataset.boardFamily = defaultBoardFamily;
@@ -208,6 +212,7 @@ function watchForXiangqiAppearanceInOtherDocuments(): void {
     applyXiangqiStartMarkers(readStoredXiangqiStartMarkers());
     applyXiangqiPieceShadow(readStoredXiangqiPieceShadow());
     applyBanqiTile3d(readStoredBanqiTile3d());
+    applyPieceEdge(readStoredPieceEdgeThick());
     applyXiangqiPieceSet(readStoredXiangqiPieceSet());
     syncThemeControls();
     dispatchXiangqiAppearanceChanged();
@@ -326,6 +331,11 @@ function applyBanqiTile3d(on: boolean): void {
   document.documentElement.dataset.banqiTile3d = on ? 'on' : 'off';
 }
 
+/** Every 3D rim reads this (piece3dThickEdge). */
+function applyPieceEdge(thick: boolean): void {
+  document.documentElement.dataset.pieceEdge = thick ? 'thick' : 'standard';
+}
+
 /** Mirrors the coordinate preference onto the root so CSS can pick the matching
  *  board aspect. The label gutter is only reserved when labels are shown, so the
  *  board is a different rectangle in each state and the host slot has to agree
@@ -420,6 +430,14 @@ export function setBanqiTile3dPreference(on: boolean): void {
   endXiangqiAppearancePreview('tile');
   applyBanqiTile3d(on);
   writeStoredBanqiTile3d(on);
+  syncThemeControls();
+  dispatchXiangqiAppearanceChanged();
+}
+
+export function setPieceEdgePreference(thick: boolean): void {
+  endXiangqiAppearancePreview('edge');
+  applyPieceEdge(thick);
+  writeStoredPieceEdgeThick(thick);
   syncThemeControls();
   dispatchXiangqiAppearanceChanged();
 }
@@ -726,8 +744,11 @@ function syncThemeControls(): void {
   document.querySelectorAll<HTMLInputElement>('input[data-xq-piece-shadow]').forEach((input) => {
     input.checked = readStoredXiangqiPieceShadow();
   });
-  document.querySelectorAll<HTMLInputElement>('input[data-banqi-tile-3d]').forEach((input) => {
+  document.querySelectorAll<HTMLInputElement>('input[data-banqi-tile3d]').forEach((input) => {
     input.checked = readStoredBanqiTile3d();
+  });
+  document.querySelectorAll<HTMLInputElement>('input[data-piece-edge]').forEach((input) => {
+    input.checked = readStoredPieceEdgeThick();
   });
   document.querySelectorAll<HTMLInputElement>('input[data-sound-volume]').forEach((input) => {
     input.value = String(Math.round(effectiveVolume * 100));
