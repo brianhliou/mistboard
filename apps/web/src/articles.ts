@@ -894,6 +894,17 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     badge.textContent = t(ARTICLE_STATUS_KEYS[article.status], {}, locale);
     metaRow.append(badge);
   }
+  // An engineering post says so first on the row, linking to the blog's
+  // Engineering chip, so a player who lands on a build story knows it is one
+  // (Brian, 2026-10-28: "make sure it's labeled engineering").
+  if (isEngineeringArticle(base)) {
+    const topic = document.createElement('a');
+    topic.className = 'articles-topic-chip article-topic-label';
+    topic.href = articleTopicHref('engineering', locale);
+    topic.dataset.topic = 'engineering';
+    topic.textContent = t('articles.topicEngineering', {}, locale);
+    metaRow.append(topic);
+  }
   // Guest byline leads the meta row, before the dates: who wrote it matters
   // more to a reader than when. Absent on everything Mistboard wrote itself.
   if (article.author) {

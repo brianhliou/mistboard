@@ -354,8 +354,9 @@ describe('article public listing gates', () => {
       '更多文章',
     );
     expect(home?.querySelector('a[href="/zh-hant/blog/misty"]')).not.toBeNull();
-    expect(home?.querySelector('a[href="/zh-hant/blog/mistybanqi"]')).not.toBeNull();
-    // An engineering post stays off the homepage in every language.
+    // An engineering post stays off the homepage in every language (MistyBanqi
+    // is one since 2026-10-28: it shows its Rust).
+    expect(home?.querySelector('a[href="/zh-hant/blog/mistybanqi"]')).toBeNull();
     expect(home?.querySelector('a[href="/zh-hant/blog/server-enforced-fog"]')).toBeNull();
 
     const page = buildArticlePage('banqi', 'zh-Hant');
@@ -441,8 +442,6 @@ describe('article public listing gates', () => {
       '/blog/puzzles-with-more-than-one-solution',
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
-      // Moved from brianhliou.com (2026-08-31) on 2026-10-16.
-      '/blog/jungle-den-term',
       '/blog/titled-players',
       '/blog/riverbank-cannon',
       '/blog/skill-vs-luck',
@@ -451,7 +450,6 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-06-27) on 2026-10-16.
       '/blog/dou-shou-qi-engine',
       '/blog/misty',
-      '/blog/mistybanqi',
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
@@ -525,14 +523,11 @@ describe('article public listing gates', () => {
       rulesIndex.querySelector('a[href="/rules/banqi"] span[data-variant-marker-id="banqi"]'),
     ).not.toBeNull();
 
-    // ...while the MistyBanqi editorial card keeps the full-board thumbnail in
-    // the homepage row.
+    // ...while the MistyBanqi card keeps the full-board thumbnail on /blog
+    // (above). It is an engineering post since 2026-10-28, so it is off the
+    // homepage row.
     const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    expect(
-      home?.querySelector(
-        '.landing-article-card[href="/blog/mistybanqi"] svg g[data-banqi-thumbnail-layout="engine-full-board"]',
-      ),
-    ).not.toBeNull();
+    expect(home?.querySelector('.landing-article-card[href="/blog/mistybanqi"]')).toBeNull();
   });
 
   it('renders Misty with the generated thumbnail', () => {

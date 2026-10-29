@@ -90,6 +90,13 @@
   border-color: var(--site-accent-strong);
 }
 
+/* The same chip on an engineering article's meta row, sized down to the row's
+   13px type so it labels the post instead of reading as a button bar. */
+.article-meta-row .article-topic-label {
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
 @media (pointer: coarse) {
   .articles-topic-chip {
     display: inline-flex;
