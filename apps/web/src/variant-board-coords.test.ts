@@ -183,11 +183,12 @@ describe('Duck Xiangqi board renderer', () => {
       const host = render();
       return {
         duck: host.querySelector('.dkx-duck > g')?.getAttribute('transform'),
-        piece: host.querySelector('[data-piece-square="e1"]')?.getAttribute('transform'),
+        piece: host.querySelector('[data-piece-square="e1"] > g')?.getAttribute('transform'),
       };
     };
     const off = duckAt(false);
     expect(off.duck).toBeTruthy();
+    expect(off.piece).toBeTruthy();
     expect(duckAt(true)).toEqual(off);
   });
 });

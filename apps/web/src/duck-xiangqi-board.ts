@@ -20,6 +20,7 @@
  */
 
 import type { DuckXiangqiPlayerView, DuckXiangqiSquare, DuckXiangqiTurn } from '@mistboard/game';
+import { PIECE_GLIDE_EASING, pieceAnimationDurationMs } from './board-anim.js';
 import {
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
   type BoardLastMoveLayer,
@@ -35,6 +36,7 @@ import {
   type XiangqiBoardLayout,
 } from './xiangqi-appearance-storage.js';
 import {
+  animateXiangqiBoardMove,
   LIVE_BOARD_GEO,
   mountedXiangqiBoardLayout,
   XIANGQI_LIVE_PIECE_SIZE,
@@ -199,7 +201,9 @@ function pieceLayer(
     const p = point(square, perspective, layout);
     const size = XIANGQI_LIVE_PIECE_SIZE;
     out.push(
-      `<g class="xq-piece-slot${square === lifted ? ' xq-piece--drag-source' : ''}" data-piece-square="${square}" transform="translate(${p.x - size / 2},${p.y - size / 2})">`,
+      // The position sits on an inner group: a glide animates the slot's CSS
+      // transform, which would replace a transform attribute on the slot itself.
+      `<g class="xq-piece-slot${square === lifted ? ' xq-piece--drag-source' : ''}" data-piece-square="${square}"><g transform="translate(${p.x - size / 2},${p.y - size / 2})">`,
       // A soldier past the river draws the veteran art. This is the standard
       // 9x10 river, so the standard predicate applies (NOT the fortress one,
       // whose board is 7x8 and disagrees on rank 5 for both colours).
@@ -212,7 +216,7 @@ function pieceLayer(
           shape: xiangqiPieceShapeForLayout(layout),
         } as never,
       ),
-      `</g>`,
+      `</g></g>`,
     );
   }
   return out.join('');
@@ -662,4 +666,55 @@ export function installDuckXiangqiDrag(opts: {
       if (hit) opts.click(dropped);
     },
   });
+}
+
+/**
+ * Glide one duck turn on a board already rendered at its end: the piece and the
+ * duck from where it stood, together, so a step takes one glide's time
+ * (Brian, 2026-10-29: stepping through duck games did not animate).
+ * `before` and `after` are the views either side of the turn (the view's
+ * `lastDuck` is where the duck landed, so where it stood comes from `before`).
+ * `reverse` is a back step over it: the board shows `before`, and both halves
+ * undo the same way. The first duck of a game has nowhere to glide from, so it fades
+ * in where it lands.
+ */
+export function animateDuckXiangqiTurn(
+  host: HTMLElement,
+  before: Pick<DuckXiangqiPlayerView, 'duck'> | null | undefined,
+  after: Pick<DuckXiangqiPlayerView, 'lastMove' | 'duck'>,
+  perspective: Color,
+  opts: { reverse?: boolean } = {},
+): void {
+  const duration = pieceAnimationDurationMs();
+  if (duration <= 0 || !after.lastMove) return;
+  animateXiangqiBoardMove(host, after.lastMove, perspective, opts);
+  const settle = opts.reverse ? before?.duck : after.duck;
+  const origin = opts.reverse ? after.duck : before?.duck;
+  if (!settle || settle === origin) return;
+  const duck = host.querySelector(`[data-duck-square="${settle}"]`) as
+    | (Element & {
+        animate?: (keyframes: Keyframe[], options: KeyframeAnimationOptions) => Animation;
+        getAnimations?: () => Animation[];
+      })
+    | null;
+  if (!duck || typeof duck.animate !== 'function') return;
+  for (const animation of duck.getAnimations?.() ?? []) animation.cancel();
+  // The glide replaces the live board's landing plop, which would run at once.
+  duck.classList.remove('dkx-duck--landed');
+  const timing: KeyframeAnimationOptions = {
+    duration,
+    easing: PIECE_GLIDE_EASING,
+    fill: 'backwards',
+  };
+  if (!origin) {
+    duck.animate([{ opacity: 0 }, { opacity: 1 }], timing);
+    return;
+  }
+  const layout = mountedXiangqiBoardLayout(host);
+  const from = point(origin, perspective, layout);
+  const to = point(settle, perspective, layout);
+  duck.animate(
+    [{ transform: `translate(${from.x - to.x}px, ${from.y - to.y}px)` }, { transform: 'none' }],
+    timing,
+  );
 }

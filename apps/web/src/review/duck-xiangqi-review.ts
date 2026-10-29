@@ -50,6 +50,7 @@ import {
 import '../live-xiangqi.css';
 import '../duck-xiangqi.css';
 import {
+  animateDuckXiangqiTurn,
   type DuckXiangqiBoardPhase,
   duckXiangqiBoardSvg,
   duckXiangqiClickResult,
@@ -323,10 +324,17 @@ const duckXiangqiPresentation: TreePresentation<
   // Review plays BOTH sides: the interactive seat is the side to move.
   seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
   createBoard: (opts) => createDuckXiangqiInteractiveBoard(opts),
-  // No glide animation: the board re-renders on navigation, and a turn moves TWO
-  // things (a piece and the duck), so a single-piece glide would state half of
-  // what happened and imply the other half did not.
-  animateMove: () => {},
+  // A turn moves two things: the piece and the duck glide together. `before` and
+  // `after` are the views either side of the turn, in either direction.
+  animateMove: (boardEl, turn, perspective, opts) => {
+    animateDuckXiangqiTurn(
+      boardEl,
+      opts?.before,
+      opts?.after ?? { lastMove: { from: turn.from, to: turn.to }, duck: turn.duckTo ?? undefined },
+      perspective,
+      { reverse: opts?.reverse },
+    );
+  },
   shapeToArrow: (s: NodeShape): XiangqiBoardArrow => ({
     from: s.orig as XiangqiBoardArrow['from'],
     to: (s.dest ?? s.orig) as XiangqiBoardArrow['to'],
