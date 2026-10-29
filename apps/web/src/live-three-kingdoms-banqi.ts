@@ -299,15 +299,14 @@ function renderBoard(liveRefs: LiveRefs, view: ThreeKingdomsBanqiWireView | null
     targets,
     draggingFrom,
     lastMove: view.lastMove ?? null,
-    flipInk: flipperInk(view),
+    lastMoveInk: lastMoverInk(view),
   });
 }
 
-/** The ink of the seat that made the last move, when it was a flip. Read after
- *  the flip, so the opening flip already has the ink it bound. */
-function flipperInk(view: ThreeKingdomsBanqiWireView): BanqiColor | null {
-  const last = view.lastMove;
-  if (!last || last.from !== last.to || view.ply < 1) return null;
+/** The ink of the seat that made the last move. Read after the move, so the
+ *  opening flip already has the ink it bound. */
+function lastMoverInk(view: ThreeKingdomsBanqiWireView): BanqiColor | null {
+  if (!view.lastMove || view.ply < 1) return null;
   return seatInk((view.ply - 1) % 2 === 0 ? 'red' : 'black', view);
 }
 

@@ -402,8 +402,8 @@ export function renderThreeKingdomsBanqiLiveBoardSvg(
     targets: readonly Square[];
     draggingFrom: Square | null;
     lastMove: { from: Square; to: Square } | null;
-    /** The ink of the seat that made `lastMove` when it is a flip. */
-    flipInk?: 'red' | 'black' | null;
+    /** The ink of the seat that made `lastMove`. */
+    lastMoveInk?: 'red' | 'black' | null;
   },
 ): string {
   // Pieces sit on points, so the marks are xiangqi's and jieqi's: a pale wash
@@ -414,9 +414,12 @@ export function renderThreeKingdomsBanqiLiveBoardSvg(
   // A flip's band takes the flipper's ink instead of gold: the tile turned up
   // says nothing about who turned it (Brian, 2026-10-28: "only color the
   // flips"). The first flip binds its flipper to the colour turned up, so every
-  // flip has an ink; gold stays only if a caller has none to give.
+  // flip has an ink; gold stays only if a caller has none to give. A 3D
+  // tile's edge band takes the mover's ink on a plain move too (Brian,
+  // 2026-10-29: "color the edge of the moved piece either red or black"); the
+  // flat ring stays gold for moves.
   const flip = opts.lastMove !== null && opts.lastMove.from === opts.lastMove.to;
-  const flipInk = flip ? (opts.flipInk ?? null) : null;
+  const ink = opts.lastMove ? (opts.lastMoveInk ?? null) : null;
   const lastMoveMarks = opts.lastMove
     ? boardLastMoveMarkersSvg(
         {
@@ -428,10 +431,13 @@ export function renderThreeKingdomsBanqiLiveBoardSvg(
         boardLastMovePiece(PIECE_SIZE, activeXiangqiPieceSet),
       )
     : '';
-  const lastMove = flipInk
+  const lastMove = ink
     ? lastMoveMarks.replace(
-        'class="xq-live-lastmove-ring"',
-        `class="xq-live-lastmove-ring tk-flip-ring tk-flip-ring--${flipInk}"`,
+        /class="xq-live-lastmove-ring( xq-live-lastmove-edge)?"/,
+        (whole, edge = '') =>
+          flip || edge
+            ? `class="xq-live-lastmove-ring${edge} tk-flip-ring tk-flip-ring--${ink}"`
+            : whole,
       )
     : lastMoveMarks;
   const pieces = ALL_THREE_KINGDOMS_BANQI_SQUARES.map((square) => {
