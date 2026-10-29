@@ -91,6 +91,13 @@ export function piece3dDepthShare(spec: { readonly depthShare: number }): number
 export const PIECE_3D_IVORY: readonly [string, string] = ['#efe7d2', '#d6c9a8'];
 
 /**
+ * Animal Dobutsu's body. Its faces are ivory, so an ivory rim under them barely
+ * showed and 3D read as flat; tan sets the face off (Brian, 2026-10-29: "we
+ * could update Dobutsu"). The other Mistboard sets keep ivory.
+ */
+export const PIECE_3D_DOBUTSU_TAN: readonly [string, string] = ['#d6b47f', '#b08a55'];
+
+/**
  * The shadow under a 3D piece, in the 100 box. The flat piece's shadow drops
  * 3.5 to show a disc lifted off the board; a 3D piece's rim already shows its
  * height, so its shadow is where the base meets the board: a short drop and a
@@ -147,7 +154,11 @@ export function piece3dLook(
   // end at 47.4 (the face-down radius plus its stroke).
   const radius = round2(box * (backing ? 0.45 : 0.474));
   const depth = round2(box * piece3dDepthShare(spec));
-  const body: readonly [string, string] = backing ? [backing[1], backing[2]] : PIECE_3D_IVORY;
+  const body: readonly [string, string] = backing
+    ? [backing[1], backing[2]]
+    : pieceSet === 'animal-dobutsu'
+      ? PIECE_3D_DOBUTSU_TAN
+      : PIECE_3D_IVORY;
   return { radius, depth, body };
 }
 
