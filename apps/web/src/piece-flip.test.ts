@@ -126,8 +126,12 @@ beforeEach(() => {
   vi.stubGlobal('localStorage', memoryStorage());
   vi.stubGlobal('sessionStorage', memoryStorage());
   setReducedMotion(false);
+  // These cover the turn itself on flat tiles; 3D tiles (the default since
+  // 2026-10-28) are covered in banqi-tile-3d.test.ts.
+  document.documentElement.dataset.banqiTile3d = 'off';
 });
 afterEach(() => {
+  delete document.documentElement.dataset.banqiTile3d;
   vi.unstubAllGlobals();
   window.history.replaceState(null, '', window.location.pathname);
   resetPieceFlipStyleCache();
@@ -243,6 +247,16 @@ describe('banqi live room wiring', () => {
       ).toEqual(['a1']);
     },
   );
+
+  // A 3D tile turns as one body (face, back and rim in a wrapper) with its edge.
+  it('turns the tile on a live flip with 3D tiles too', async () => {
+    document.documentElement.dataset.banqiTile3d = 'on';
+    const animateBoard = await hook();
+    const el = banqiHost(revealed);
+    expect(
+      turned(() => animateBoard({ board: el }, revealed, () => ({ ...liveFlip, color: 'red' }))),
+    ).toEqual(['piece-flip-turn', 'piece-flip-edge']);
+  });
 
   it('turns nothing on the first render or a reconnect', async () => {
     const animateBoard = await hook();
