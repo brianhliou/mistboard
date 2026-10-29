@@ -1277,6 +1277,34 @@
   margin: 0;
 }
 
+/* A pair of boards that fills its columns instead of the single-board cap, so
+   two boards side by side read at a useful size. Two classes on the row so it
+   outranks the single-layout width rule. */
+.article-figure-row.article-figure-row--full-boards .xq-article-svg[data-xq-layout] {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* A pair of small boards for a setting that changes one detail (River text):
+   the boards stay small, side by side and centred, so the detail is what reads. */
+.article-figure-row.article-figure-row--small-boards {
+  grid-template-columns: repeat(2, minmax(0, 300px));
+  justify-content: center;
+}
+
+.article-figure-row.article-figure-row--small-boards .xq-article-svg[data-xq-layout] {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Stills composed of several rounded panels on a transparent ground: the
+   panels carry their own corners and outline, so the figure adds neither. */
+.article-figure-image.article-figure-panels img {
+  border: none;
+  border-radius: 0;
+  max-width: 100%;
+}
+
 .article-figure-row-caption {
   grid-column: 1 / -1;
   margin: 0;
