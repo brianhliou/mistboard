@@ -162,7 +162,7 @@ export const EN_SHELL = {
   'connection.restartNow': 'Server restarting now',
   'connection.restartNowHint': 'Please reconnect in a moment.',
   'homePuzzle.ariaLabel': 'Puzzle of the day: {title}',
-  'homePuzzle.title': 'Puzzle of the day - {variant}',
+  'homePuzzle.title': 'Puzzle of the day',
   'homePuzzle.toPlay': '{color} to play',
   'homeForum.heading': 'Active forum topics',
   'homeForum.loading': 'Loading forum.',
