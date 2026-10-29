@@ -921,6 +921,13 @@
   gap: 4px;
 }
 
+/* The News box's "scroll for more" fade at the list's foot, on only while
+   rows sit below the visible part (scroll-fade.ts), so it goes at the bottom
+   and never shows on a list that fits. A mask, so clicks reach the last row. */
+.xqb-rail-list.xqb-rail-list-more {
+  mask-image: var(--site-scroll-fade);
+}
+
 .xqb-rail-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
