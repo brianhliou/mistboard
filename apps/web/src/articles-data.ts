@@ -15,6 +15,7 @@ import { banqiEngineArticle } from './articles/content/banqi-engine.js';
 import { banqiLuckArticle } from './articles/content/banqi-luck.js';
 import { banqiChariotEndgameArticle } from './articles/content/banqi-chariot-endgame.js';
 import { banqiPerpetualChaseArticle } from './articles/content/banqi-perpetual-chase.js';
+import { setUpYourBoardArticle } from './articles/content/set-up-your-board.js';
 import { chessArticle } from './articles/content/chess.js';
 import { choiCoTuongVoiMayArticle } from './articles/content/choi-co-tuong-voi-may.js';
 import { coUpArticle } from './articles/content/co-up.js';
@@ -154,6 +155,7 @@ export const articles: Article[] = [
   banqiLuckArticle,
   banqiPerpetualChaseArticle,
   banqiChariotEndgameArticle,
+  setUpYourBoardArticle,
   flipJungleSkillCeilingArticle,
   puzzleMiningArticle,
   puzzleTwoAnswersArticle,

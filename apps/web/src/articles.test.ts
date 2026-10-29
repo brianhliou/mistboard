@@ -142,6 +142,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The board and piece settings showcase, scheduled for 2026-11-06
+      // (DEV shows it early for review).
+      '/blog/set-up-your-board',
       // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
       // (DEV shows it early for review).
       '/blog/shortest-stalemate-xiangqi',
@@ -414,6 +417,7 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
+      '/blog/set-up-your-board',
       '/blog/shortest-stalemate-xiangqi',
       '/blog/banqi-chariot-endgame',
       '/blog/jqe',

@@ -547,6 +547,12 @@
       "zh-hant": "用伺服器端真實局面實現迷霧國際象棋"
     }
   },
+  "set-up-your-board": {
+    "title": "Set Up Your Board: Flat or 3D Pieces, Lines or Squares",
+    "kind": "article",
+    "description": "Mistboard pieces can be flat or 3D, and the xiangqi board can be lined or a square grid. Pieces glide when you step through a game and turn over when a hidden piece is revealed. Here is what each look is and where to set it.",
+    "status": "draft"
+  },
   "shogi4": {
     "title": "Shogi4 (4×4 Shogi) Rules",
     "kind": "rules",
