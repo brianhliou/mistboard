@@ -16,9 +16,6 @@ export const XIANGQI_RIVER_TEXTS: readonly XiangqiRiverText[] = ['off', 'classic
 /** Before anyone picks: no river text, which is what the default board showed. */
 export const DEFAULT_XIANGQI_RIVER_TEXT: XiangqiRiverText = 'off';
 
-/** The classic inscription, spaced as printed boards space it. */
-export const XIANGQI_RIVER_CLASSIC_TEXT = '楚 河   漢 界';
-
 /** The wordmark. Set in title case, large and lightly tracked so it fills the
  *  river the way 楚河 漢界 does (Brian, 2026-10-08: the spaced capitals looked
  *  "a little bit too clinical and not big enough"). Style 'a' (the default) is a
@@ -41,15 +38,52 @@ export function normalizeXiangqiRiverText(value: string | null | undefined): Xia
     : DEFAULT_XIANGQI_RIVER_TEXT;
 }
 
-/** Both captions for the article and replay diagrams, centred on (x, y). The
- *  stylesheet (articles.css) shows at most one of them. The wordmark carries
- *  translate="no": it is the site's name, so the zh label swap and the
- *  translation coverage gates (articles/svg-labels.ts) skip it. */
-export function xiangqiDiagramRiverText(x: number, y: number, fontSize = 16): string {
+/** The inscription as real boards set it (Brian picked it from a sheet of five,
+ *  2026-10-29): each pair near its own edge, one character to a square, 漢界
+ *  turned to face the far player, in a brush hand. Offsets are in cells from
+ *  the river's centre; true turns the character 180 degrees. */
+const RIVER_CHARACTERS: readonly [string, number, boolean][] = [
+  ['楚', -2.5, false],
+  ['河', -1.5, false],
+  ['界', 1.5, true],
+  ['漢', 2.5, true],
+];
+
+/** Character height as a share of the cell. */
+export const XIANGQI_RIVER_CHARACTER_SCALE = 0.7;
+
+/** A four-character cut of LXGW WenKai TC Bold (app-base.css, public/fonts),
+ *  so every device draws the same brush hand; the system Kaiti faces follow. */
+export const XIANGQI_RIVER_FONT_FAMILY = "'Mistboard River', 'Kaiti SC', 'STKaiti', 'KaiTi', serif";
+
+const round1 = (value: number): number => Math.round(value * 10) / 10;
+
+/** The four characters around the river's centre (x, y), each a <text> with
+ *  `attrs`. The caller's stylesheet or attrs set the font. */
+export function xiangqiRiverCharacters(x: number, y: number, cell: number, attrs: string): string {
+  return RIVER_CHARACTERS.map(([char, offset, turned]) => {
+    const cx = round1(x + offset * cell);
+    const turn = turned ? ` transform="rotate(180 ${cx} ${y})"` : '';
+    return `<text ${attrs} x="${cx}" y="${y}"${turn}>${char}</text>`;
+  }).join('');
+}
+
+/** Both captions for the article and replay diagrams, centred on (x, y) on a
+ *  board of `cell` units a square. The stylesheet (articles.css) shows at most
+ *  one of them. The wordmark carries translate="no": it is the site's name, so
+ *  the zh label swap and the translation coverage gates (articles/svg-labels.ts)
+ *  skip it. */
+export function xiangqiDiagramRiverText(x: number, y: number, cell: number, fontSize = 16): string {
   const brandSize = Math.round(fontSize * XIANGQI_RIVER_BRAND_SCALE * 10) / 10;
   const tracking = Math.round(brandSize * XIANGQI_RIVER_BRAND_TRACKING * 10) / 10;
+  const labelFont = XIANGQI_RIVER_FONT_FAMILY.replaceAll("'", '&quot;');
   return (
-    `<text x="${x}" y="${y}" font-family="serif" font-size="${fontSize}" class="xq-diagram-ink xq-diagram-river-label" text-anchor="middle" dominant-baseline="central">${XIANGQI_RIVER_CLASSIC_TEXT}</text>` +
+    xiangqiRiverCharacters(
+      x,
+      y,
+      cell,
+      `font-family="${labelFont}" font-size="${round1(cell * XIANGQI_RIVER_CHARACTER_SCALE)}" font-weight="700" class="xq-diagram-ink xq-diagram-river-label" text-anchor="middle" dominant-baseline="central"`,
+    ) +
     `<text x="${Math.round((x + tracking / 2) * 10) / 10}" y="${y}" font-family="serif" font-size="${brandSize}" font-weight="600" letter-spacing="${tracking}" class="xq-diagram-ink xq-diagram-river-brand" translate="no" text-anchor="middle" dominant-baseline="central">${XIANGQI_RIVER_BRAND_TEXT}</text>`
   );
 }

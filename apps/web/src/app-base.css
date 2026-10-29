@@ -14,6 +14,17 @@
   font-display: swap;
   src: url("/fonts/roboto-latin.20b535fa.woff2") format("woff2");
 }
+/* The river inscription 楚河 漢界 in LXGW WenKai TC Bold, cut to those four
+   characters (2.4 KB; xiangqi-river-text.ts). unicode-range keeps it off pages
+   that draw none of them. */
+@font-face {
+  font-family: "Mistboard River";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/lxgw-wenkai-tc-river.woff2") format("woff2");
+  unicode-range: U+695A, U+6CB3, U+6F22, U+754C;
+}
 /* Vietnamese subsets of the same font versions (Noto Sans 2.015, Roboto 3.009).
    The latin files lack ơ ư đ and the stacked-diacritic vowels, so without these
    the vi articles drew those letters in a system font mid-word. unicode-range

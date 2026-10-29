@@ -1340,26 +1340,72 @@ function xqPalaceAndRiver(x0: number, y0: number, perspective: XiangqiColor): st
   // River band sits between ranks 5 and 6 (file 4 is the horizontal center).
   const riverY = (xqPoint(0, 5, perspective, x0, y0).y + xqPoint(0, 6, perspective, x0, y0).y) / 2;
   const riverX = xqPoint(4, 1, perspective, x0, y0).x;
-  parts.push(xiangqiDiagramRiverText(riverX, riverY + 1));
+  const riverCell = Math.abs(xqPoint(1, 1, perspective, x0, y0).x - xqPoint(0, 1, perspective, x0, y0).x);
+  parts.push(xiangqiDiagramRiverText(riverX, riverY + 1, riverCell));
   return parts.join('');
 }
 
-// Square-grid layout: pieces sit inside cells, so the grid is drawn as one square
-// per point instead of crossing lines. The board box is unchanged.
+// Square-grid layout: pieces sit inside cells, drawn the way the live square grid
+// draws its board (xiangqi-board-surface.ts): alternating light and dark squares,
+// seams only between them, the river a blue band and each palace a tinted block.
+// The intersection board's palace diagonals and river caption are its own cues;
+// on squares they read as a different board (Brian, 2026-10-29). The board ends
+// at its outline: a rounded wood margin round the sharp grid read as two boards
+// stacked (Brian, 2026-10-29), so the box keeps its size and the margin stays bare.
 function xqCellBoardGrid(x0: number, y0: number, perspective: XiangqiColor): string {
   const half = XQ_CELL_SIZE / 2;
-  const parts: string[] = [
-    `<rect x="${x0}" y="${y0}" width="${XQ_BOARD_W}" height="${XQ_BOARD_H}" rx="${XQ_BOARD_RADIUS}" class="xq-diagram-bg"/>`,
-  ];
-  for (let file = 0; file < 9; file += 1) {
-    for (let rank = 1; rank <= 10; rank += 1) {
-      const { x, y } = xqPoint(file, rank, perspective, x0, y0);
+  const corner = (file: number, rank: number) => {
+    const { x, y } = xqPoint(file, rank, perspective, x0, y0);
+    return { x: x - half, y: y - half };
+  };
+  const parts: string[] = [];
+  const left = Math.min(corner(0, 1).x, corner(8, 1).x);
+  const right = left + 9 * XQ_CELL_SIZE;
+  const top = Math.min(corner(0, 1).y, corner(0, 10).y);
+  const bottom = top + 10 * XQ_CELL_SIZE + XQ_CELL_RIVER_GAP;
+  const riverTop = top + 5 * XQ_CELL_SIZE;
+  const riverBottom = riverTop + XQ_CELL_RIVER_GAP;
+  parts.push(
+    `<rect x="${left}" y="${top}" width="${right - left}" height="${bottom - top}" class="xq-diagram-bg"/>`,
+  );
+  // Shaded by where a square is drawn, not its name, so the top-left square is
+  // light from either side, as on the live board.
+  for (let row = 0; row < 10; row += 1) {
+    const y = top + row * XQ_CELL_SIZE + (row >= 5 ? XQ_CELL_RIVER_GAP : 0);
+    for (let col = 0; col < 9; col += 1) {
+      const shade = (col + row) % 2 === 0 ? 'light' : 'dark';
       parts.push(
-        `<rect x="${x - half}" y="${y - half}" width="${XQ_CELL_SIZE}" height="${XQ_CELL_SIZE}" class="xq-diagram-line" fill="none" stroke-width="1"/>`,
+        `<rect x="${left + col * XQ_CELL_SIZE}" y="${y}" width="${XQ_CELL_SIZE}" height="${XQ_CELL_SIZE}" class="xq-diagram-cell--${shade}"/>`,
       );
     }
   }
-  parts.push(xqPalaceAndRiver(x0, y0, perspective));
+  for (const palace of [
+    { rankMin: 1, rankMax: 3 },
+    { rankMin: 8, rankMax: 10 },
+  ]) {
+    const a = corner(3, palace.rankMin);
+    const b = corner(5, palace.rankMax);
+    const x = Math.min(a.x, b.x);
+    const y = Math.min(a.y, b.y);
+    const size = 3 * XQ_CELL_SIZE;
+    parts.push(`<rect x="${x}" y="${y}" width="${size}" height="${size}" class="xq-diagram-cell-palace"/>`);
+  }
+  parts.push(
+    `<rect x="${left}" y="${riverTop}" width="${right - left}" height="${XQ_CELL_RIVER_GAP}" class="xq-diagram-cell-river"/>`,
+  );
+  for (let row = 1; row < 10; row += 1) {
+    if (row === 5) continue;
+    const y = top + row * XQ_CELL_SIZE + (row > 5 ? XQ_CELL_RIVER_GAP : 0);
+    parts.push(`<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" class="xq-diagram-cell-line"/>`);
+  }
+  for (let col = 1; col < 9; col += 1) {
+    const x = left + col * XQ_CELL_SIZE;
+    parts.push(`<line x1="${x}" y1="${top}" x2="${x}" y2="${riverTop}" class="xq-diagram-cell-line"/>`);
+    parts.push(`<line x1="${x}" y1="${riverBottom}" x2="${x}" y2="${bottom}" class="xq-diagram-cell-line"/>`);
+  }
+  parts.push(
+    `<rect x="${left}" y="${top}" width="${right - left}" height="${bottom - top}" class="xq-diagram-line" fill="none" stroke-width="1"/>`,
+  );
   return parts.join('');
 }
 
@@ -1610,6 +1656,8 @@ export function xqBoardSvg(opts: {
   // Raw SVG drawn on top of the pieces (a confrontation line, etc.). The
   // caller positions it with xqPoint using the same x and boardY (y + 28).
   overlay?: string;
+  /** Raw SVG drawn under the pieces, positioned like `overlay`. */
+  underlay?: string;
   /** Draw every red soldier with the crossed art (Horde Xiangqi's veterans). */
   veteranSoldiers?: boolean;
   /** Distance from the label row to the board's top edge (default 28). A
@@ -1626,6 +1674,7 @@ export function xqBoardSvg(opts: {
     opts.zones ? xqZoneHighlights(opts.x, boardY, perspective) : '',
     xqFogLayer(view, opts.x, boardY, perspective, clipId),
     xqMoveDots(opts.dots, opts.x, boardY, perspective),
+    opts.underlay ?? '',
     xqPiecesLayer(
       opts.state,
       view,
@@ -1640,6 +1689,29 @@ export function xqBoardSvg(opts: {
   ].join('');
 }
 
+/**
+ * Amber marks on the points a blast cleared, the Atomic Xiangqi aftermath mark.
+ * On lines a ring over the disc; on the square grid the cell itself, under the
+ * tile, since a ring is drawn for a round piece (Brian, 2026-10-29). Spread
+ * into xqBoardSvg's options; x0 and y0 are the board svg's own x and y.
+ */
+export function xqBlastMarks(
+  squares: readonly XiangqiSquare[],
+  x0: number,
+  y0: number,
+): { overlay: string; underlay: string } {
+  const cell = activeXiangqiBoardLayout === 'cell';
+  const size = xqPieceSize();
+  const marks = squares.map((square) => {
+    const { file, rank } = xqCoord(square);
+    const { x, y } = xqPoint(file, rank, 'red', x0, y0 + 28);
+    return cell
+      ? `<rect class="xq-marker--blast-cell" x="${x - XQ_CELL_SIZE / 2}" y="${y - XQ_CELL_SIZE / 2}" width="${XQ_CELL_SIZE}" height="${XQ_CELL_SIZE}" fill="#d99a1e" fill-opacity="0.5"/>`
+      : `<circle class="xq-marker--blast" cx="${x}" cy="${y}" r="${size / 2 + 2}" fill="rgba(217, 154, 30, 0.28)" stroke="#d99a1e" stroke-width="3" stroke-opacity="0.55"/>`;
+  });
+  return cell ? { overlay: '', underlay: marks.join('') } : { overlay: marks.join(''), underlay: '' };
+}
+
 // ── Card art: half a board ────────────────────────────────────────────────
 // One crop for every half-board card (blog index, homepage rows), so none clips
 // a corner piece or shows a sliver of the far bank. The river edge stops inside
@@ -1649,10 +1721,23 @@ export function xqBoardSvg(opts: {
 // back-rank corner pieces clear of the date pill and featured star the index
 // lays over the card's top corners. The river label is hidden on the crop
 // (articles.css .xq-half-thumb): the cut would slice it.
+//
+// The square grid is cut at its outline instead, on the sides and the back edge:
+// wood round the sharp grid read as a second board under it (Brian, 2026-10-29).
+// Nine cells across at 16:10 is a little taller than half the board, so the
+// river runs on to the card's river edge, over the far bank's first sliver.
 
 export const XQ_THUMB_ASPECT = 16 / 10;
 const XQ_HALF_THUMB_SIDE = 0.8; // file spacings beyond the a and i files
 const XQ_HALF_THUMB_RIVER = 0.725; // file spacings from the near bank into the river
+const XQ_CELL_THUMB_EDGE = 0.5; // the outer half of the grid's 1-wide outline
+
+// File spacings from the a and i files to the card's side edges.
+function xqHalfThumbSide(): number {
+  return activeXiangqiBoardLayout === 'cell'
+    ? 0.5 + XQ_CELL_THUMB_EDGE / XQ_CELL_SIZE
+    : XQ_HALF_THUMB_SIDE;
+}
 
 // The corner overlays on the blog index (articles.css .articles-index-card-date,
 // 72x19, and -author, the star, 28x19), plus 2px, at a 260px card media: the
@@ -1680,9 +1765,15 @@ export function xqHalfBoardThumbnailBox(
   const a = xqPoint(0, nearBank, perspective, 0, boardY);
   const i = xqPoint(8, nearBank, perspective, 0, boardY);
   const unit = Math.abs(i.x - a.x) / 8;
-  const w = (8 + 2 * XQ_HALF_THUMB_SIDE) * unit;
+  const side = xqHalfThumbSide();
+  const w = (8 + 2 * side) * unit;
   const h = w / XQ_THUMB_ASPECT;
-  const left = Math.min(a.x, i.x) - XQ_HALF_THUMB_SIDE * unit;
+  const left = Math.min(a.x, i.x) - side * unit;
+  if (activeXiangqiBoardLayout === 'cell') {
+    const back = xqPoint(0, showsBlackHalf ? 10 : 1, perspective, 0, boardY).y;
+    const edge = XQ_CELL_SIZE / 2 + XQ_CELL_THUMB_EDGE;
+    return { left, top: half === 'top' ? back - edge : back + edge - h, w, h };
+  }
   const top =
     half === 'top' ? a.y + XQ_HALF_THUMB_RIVER * unit - h : a.y - XQ_HALF_THUMB_RIVER * unit;
   return { left, top, w, h };
@@ -1748,16 +1839,39 @@ export function xqHalfBoardThumbnailSvg(
   const occupied = Object.keys(view?.board ?? state.board) as XiangqiSquare[];
   const clashes = xqHalfBoardTagClashes(occupied, box, perspective);
   const clashAttr = clashes.length > 0 ? ` data-tag-clash="${clashes.join(' ')}"` : '';
-  const board = xqBoardSvg({ ...boardOpts, state, view, perspective, x: 0, y: 0, label: '' });
   const { left, top, w, h } = box;
+  const board = xqBoardSvg({
+    ...boardOpts,
+    state,
+    view,
+    perspective,
+    x: 0,
+    y: 0,
+    label: '',
+    underlay: xqCellThumbRiver(box, showsBlackHalf, perspective) + (boardOpts.underlay ?? ''),
+  });
   const words = headline === undefined ? '' : xqHeadlineBand(headline, box, occupied, showsBlackHalf, perspective);
   return `<svg class="xq-article-svg xq-half-thumb" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="${ariaLabel}"${clashAttr} xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${board}${words}</svg>`;
+}
+
+// The square grid's river carried on to the card's river edge, between the
+// outline's side strokes, so the far bank never shows as a sliver of cells.
+function xqCellThumbRiver(box: XqHalfBoardBox, showsBlackHalf: boolean, perspective: XiangqiColor): string {
+  if (activeXiangqiBoardLayout !== 'cell') return '';
+  const near = xqPoint(0, showsBlackHalf ? 6 : 5, perspective, 0, 28).y;
+  const riverOnTop = box.top < near;
+  const y0 = riverOnTop ? box.top : near + XQ_CELL_SIZE / 2;
+  const y1 = riverOnTop ? near - XQ_CELL_SIZE / 2 : box.top + box.h;
+  const inset = 2 * XQ_CELL_THUMB_EDGE;
+  return `<rect class="xq-diagram-cell-river" x="${box.left + inset}" y="${y0}" width="${box.w - 2 * inset}" height="${y1 - y0}"/>`;
 }
 
 // The headline card's crop: the bottom half's box raised by a quarter file
 // spacing, so the headline and the four ranks under it sit centred in the card.
 function xqHeadlineThumbnailBox(perspective: XiangqiColor): XqHalfBoardBox {
   const box = xqHalfBoardThumbnailBox('bottom', perspective);
+  // The square grid's box already ends on its back edge; its band takes the slack.
+  if (activeXiangqiBoardLayout === 'cell') return box;
   const unit = box.w / (8 + 2 * XQ_HALF_THUMB_SIDE);
   return { ...box, top: box.top - 0.2556 * unit };
 }
@@ -1777,10 +1891,20 @@ function xqHeadlineBand(
   if (covered.length > 0) {
     throw new Error(`xqHalfBoardThumbnailSvg: the headline band covers ${covered.join(' ')}`);
   }
+  // On squares a rank is a row of cells, so the band also takes an empty fourth
+  // rank and ends on the third row's top edge: three whole rows, as the
+  // intersection board shows three rows of squares. The reader picks the layout,
+  // so a piece there keeps its row rather than throwing on their page.
+  const fourthRank = showsBlackHalf ? 7 : 4;
+  const cell =
+    activeXiangqiBoardLayout === 'cell' && !occupied.some((square) => xqCoord(square).rank === fourthRank);
   const bank = xqPoint(0, showsBlackHalf ? 6 : 5, perspective, 0, 28);
   const unit = box.w / (8 + 2 * XQ_HALF_THUMB_SIDE);
-  // Stops just short of the fourth rank's line, so that line shows whole.
-  const bandBottom = bank.y + unit - 0.7;
+  // Stops just short of the fourth rank's line (or the third row's top seam),
+  // so that line shows whole.
+  const bandBottom = cell
+    ? xqPoint(0, showsBlackHalf ? 8 : 3, perspective, 0, 28).y - XQ_CELL_SIZE / 2 - 0.7
+    : bank.y + unit - 0.7;
   return (
     `<rect class="xq-diagram-bg" x="${box.left}" y="${box.top}" width="${box.w}" height="${bandBottom - box.top}"/>` +
     `<text class="xq-diagram-ink" x="${box.left + box.w / 2}" y="${bank.y + 13}" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="32" font-weight="800" letter-spacing="-0.5">${headline}</text>`

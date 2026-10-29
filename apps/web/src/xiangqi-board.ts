@@ -25,7 +25,7 @@ import type {
   XiangqiSquare,
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { boardCheckGlowSvg } from './board-check.js';
+import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
@@ -35,8 +35,15 @@ import {
   boardLastMoveMarkersSvg,
   boardLastMovePiece,
 } from './board-lastmove.js';
-import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
+import { tokenPieceSize, xiangqiPieceCellBox, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
+import {
+  piece3dEnabled,
+  xiangqiPiece3dApplies,
+  xiangqiPiece3dCellMark,
+  xiangqiPiece3dMarkPiece,
+  xiangqiPiece3dMarkup,
+} from './piece-3d.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import { installBoardDrag, installBoardDraw } from './variant-tenant/board-drag.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
@@ -64,11 +71,7 @@ import {
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
-import {
-  type XiangqiPieceSet,
-  xiangqiPieceSetShape,
-  xiangqiPieceShapeForLayout,
-} from './xiangqi-piece-sets.js';
+import { type XiangqiPieceSet, xiangqiPieceShapeForLayout } from './xiangqi-piece-sets.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 const FILES = 'abcdefghi';
@@ -131,7 +134,7 @@ export function renderXiangqiBoardSvg(
   perspective: XiangqiColor = view.perspective,
   options: Pick<
     XiangqiBoardSvgState,
-    'layout' | 'coordinates' | 'arrows' | 'markers' | 'checkSquare'
+    'layout' | 'coordinates' | 'arrows' | 'markers' | 'checkSquare' | 'pieceSet' | 'tile3d'
   > = {},
 ): string {
   return xiangqiBoardSvg(view, perspective, {
@@ -185,6 +188,9 @@ export interface XiangqiBoardSvgState {
    *  with its variant's rule. Absent or null = no glow, which is what every
    *  surface without check (Fog Xiangqi, diagrams) gets by default. */
   checkSquare?: XiangqiSquare | null;
+  /** Draw each piece as a 3D disc with a rim (piece-3d.ts) where the set and
+   *  layout draw discs. Off unless asked: no surface turns it on yet. */
+  tile3d?: boolean;
 }
 
 /** A decoration pinned to one intersection: 'star' = a collectible item
@@ -259,9 +265,15 @@ export function xiangqiBoardSvg(
   // ring its outline (the asset sets keep their disc there), the intersection
   // band the outside of its disc.
   const markSet = state.pieceSet ?? readStoredXiangqiPieceSet();
+  const tile3d = state.tile3d ?? piece3dEnabled();
   const markPiece: MarkPiece = {
-    cell: { size: PIECE_SIZE, shape: xiangqiPieceSetShape(markSet, 'square') },
-    band: boardLastMovePiece(PIECE_SIZE, markSet),
+    cell: tile3d
+      ? xiangqiPiece3dCellMark(markSet, CELL)
+      : { size: xiangqiPieceCellBox(PIECE_SIZE), set: markSet },
+    band:
+      tile3d && xiangqiPiece3dApplies(markSet, xiangqiPieceShapeForLayout(layout))
+        ? xiangqiPiece3dMarkPiece(markSet, CELL)
+        : boardLastMovePiece(PIECE_SIZE, markSet),
   };
   const lastMoveMarks = (layer: BoardLastMoveLayer) =>
     state.lastDropSquare
@@ -276,10 +288,10 @@ export function xiangqiBoardSvg(
       <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>
       <g class="xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>
       <g class="xq-live-lastmove">${lastMoveMarks('under')}</g>
-      <g class="xq-live-check">${state.checkSquare ? checkLayer(state.checkSquare, perspective, layout) : ''}</g>
+      <g class="xq-live-check">${state.checkSquare ? checkLayer(state.checkSquare, perspective, layout, markSet) : ''}</g>
       <g class="xq-live-selection">${selectionLayer(state.selectedSquare, perspective, layout)}</g>
       <g class="xq-live-hints">${state.interactive ? '' : hintLayer(view, perspective, state.selectedSquare, layout)}</g>
-      <g class="xq-live-pieces">${pieceLayer(view, perspective, state.draggingFrom, layout, state.pieceSet)}</g>
+      <g class="xq-live-pieces">${pieceLayer(view, perspective, state.draggingFrom, layout, state.pieceSet, tile3d)}</g>
       <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarks('over')}</g>
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerLayer(state.markers ?? [], perspective, layout, 'point')}</g>
       <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${arrowLayer(state.arrows ?? [], perspective, layout)}</g>
@@ -333,9 +345,13 @@ function checkLayer(
   square: XiangqiSquare,
   perspective: XiangqiColor,
   layout: XiangqiBoardLayout,
+  set: XiangqiPieceSet,
 ): string {
   const { file, rank } = coordOf(square);
-  return boardCheckGlowSvg(intersection(file, rank, perspective, layout), MARK_PIECE_SIZE);
+  const center = intersection(file, rank, perspective, layout);
+  return layout === 'cell'
+    ? boardCheckCellSvg(center, CELL, set, MARK_PIECE_SIZE)
+    : boardCheckGlowSvg(center, MARK_PIECE_SIZE);
 }
 
 function lastDropLayer(
@@ -487,8 +503,11 @@ function pieceLayer(
   draggingFromSquare: XiangqiSquare | null,
   layout: XiangqiBoardLayout,
   pieceSet?: XiangqiPieceSet,
+  tile3d = false,
 ): string {
   const parts: string[] = [];
+  const set3d = tile3d ? (pieceSet ?? readStoredXiangqiPieceSet()) : null;
+  const draw3d = set3d !== null && xiangqiPiece3dApplies(set3d, xiangqiPieceShapeForLayout(layout));
   for (const [square, piece] of Object.entries(view.board)) {
     if (!piece) continue;
     const dragSource = square === draggingFromSquare;
@@ -499,6 +518,22 @@ function pieceLayer(
     // 6-10); coordOf().rank is the same 1-10 rank those use.
     const crossed =
       piece.role === 'soldier' && (piece.color === 'red' ? coord.rank >= 6 : coord.rank <= 5);
+    if (draw3d && set3d) {
+      const piece3d = xiangqiPiece3dMarkup(
+        center,
+        CELL,
+        piece,
+        set3d,
+        {
+          className: dragSource ? 'xq-piece xq-piece--drag-source' : 'xq-piece',
+          crossed,
+        },
+        dragSource ? 'xq-piece-rim xq-piece--drag-source' : 'xq-piece-rim',
+        xiangqiPieceShapeForLayout(layout),
+      );
+      parts.push(`<g class="xq-piece-slot" data-piece-square="${square}">${piece3d}</g>`);
+      continue;
+    }
     const pieceSvg = renderXiangqiPiece(piece, {
       x: center.x - PIECE_SIZE / 2,
       y: center.y - PIECE_SIZE / 2,

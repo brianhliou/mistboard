@@ -40,8 +40,10 @@ import {
 import { banqiClickResult, banqiForbiddenMove } from './live-banqi-interaction.js';
 import {
   animateBanqiBoardMove,
+  animateBanqiReveal,
   BANQI_PIECE_PX,
   banqiPieceGhostSvg,
+  banqiRevealFlipSquare,
   installBanqiBoardStyles,
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
@@ -205,22 +207,35 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
   // move already re-rendered synchronously at input time, so animating the server
   // echo would double-play it. Scrubs glide the stepped-into move forward and
   // reverse-glide the undone one. Skipped mid-drag so a glide never fights the
-  // drag ghost, and a no-op for flips, which travel nowhere.
+  // drag ghost. A live flip turns the tile over instead (#709), own flips
+  // included: the face exists only from the server's echo, so the echo is the
+  // first time anyone sees it.
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
     if (!pending) return;
     if (pending.kind === 'live') {
+      const flipped = banqiRevealFlipSquare(pending, view.board);
+      if (flipped) {
+        animateBanqiReveal(liveRefs.board, flipped);
+        return;
+      }
       if (pending.color === core?.state.seat) return;
       animateBanqiBoardMove(liveRefs.board, pending.move);
       return;
     }
     if (pending.direction === 'forward') {
-      if (view.lastMove) animateBanqiBoardMove(liveRefs.board, view.lastMove);
+      const stepped = view.lastMove;
+      if (!stepped) return;
+      // A scrub onto a flip turns the tile over, as it did live.
+      if (stepped.from === stepped.to) animateBanqiReveal(liveRefs.board, stepped.to);
+      else animateBanqiBoardMove(liveRefs.board, stepped);
       return;
     }
     const undone = pending.prevView?.lastMove;
-    if (undone) animateBanqiBoardMove(liveRefs.board, undone, { reverse: true });
+    if (undone && undone.from !== undone.to) {
+      animateBanqiBoardMove(liveRefs.board, undone, { reverse: true });
+    }
   },
   renderExtras: (refs, view) => {
     renderCapturedPools(refs, view);

@@ -1391,6 +1391,28 @@
 .xq-article-svg .xq-diagram-ink {
   fill: var(--xq-diagram-ink, #4b3c2a);
 }
+/* The square grid (xqCellBoardGrid): the live square grid's colours
+   (xiangqi-board-surface.css), mixed from the diagram's own board and ink so a
+   picked board colour carries along. */
+.xq-article-svg .xq-diagram-cell--light {
+  fill: var(--xq-cell-light, var(--xq-diagram-bg, #f5dca8));
+}
+.xq-article-svg .xq-diagram-cell--dark {
+  fill: var(
+    --xq-cell-dark,
+    color-mix(in srgb, var(--xq-diagram-bg, #f5dca8) 84%, var(--xq-diagram-ink, #5a3a14))
+  );
+}
+.xq-article-svg .xq-diagram-cell-palace {
+  fill: var(--xq-cell-palace, color-mix(in srgb, #7c4d72 24%, transparent));
+}
+.xq-article-svg .xq-diagram-cell-river {
+  fill: color-mix(in srgb, #4f9bc6 78%, var(--xq-diagram-bg, #f5dca8));
+}
+.xq-article-svg .xq-diagram-cell-line {
+  stroke: color-mix(in srgb, var(--xq-diagram-ink, #5a3a14) 42%, transparent);
+  stroke-width: 1;
+}
 /* The replay board draws the shared surface (xiangqi-replay.ts, #558); its
    lines keep the diagrams' ink and hairline so it matches the boards beside it. */
 .xq-article-svg.xq-surface .xq-live-line,

@@ -108,7 +108,7 @@
   --menu-bottom-right-radius: 0;
   --menu-bottom-left-radius: var(--site-radius);
   display: none;
-  width: min(225px, calc(100vw - 32px));
+  width: min(260px, calc(100vw - 32px));
   flex-direction: column;
   border: 1px solid var(--site-border);
   border-radius: var(--site-radius) 0 0 var(--site-radius);
