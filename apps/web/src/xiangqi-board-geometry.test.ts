@@ -3,7 +3,6 @@ import {
   type XiangqiBoardGeometry,
   xiangqiBoardPoint,
   xiangqiBoardViewBox,
-  xiangqiCellEdgeTrim,
   xiangqiDisplayRow,
 } from './xiangqi-board-geometry.js';
 
@@ -74,26 +73,25 @@ describe('xiangqiBoardViewBox', () => {
     });
   });
 
-  it('spans full squares plus the river gap in cell layout, less the edge trim', () => {
+  it('spans full squares plus the river gap in cell layout', () => {
     expect(xiangqiBoardViewBox('cell', GEO)).toEqual({
-      minX: 36 - 30 + 0.6,
-      minY: 36 - 30 + 0.6,
-      width: 9 * 60 - 1.2,
-      height: 10 * 60 + 12 - 1.2,
+      minX: 36 - 30,
+      minY: 36 - 30,
+      width: 9 * 60,
+      height: 10 * 60 + 12,
     });
   });
 });
 
-describe('square grid edge trim (2026-10-29)', () => {
+describe('square grid edge (2026-10-29)', () => {
   const geo = { fileCount: 9, rankCount: 10, cell: 60, margin: 36, riverGap: 12 };
 
-  it('trims a coordinate-free square grid by the piece edge gap so edge pieces meet the board edge', () => {
-    expect(xiangqiCellEdgeTrim(60)).toBe(0.6);
+  it('keeps full edge squares on a coordinate-free square grid', () => {
     expect(xiangqiBoardViewBox('cell', geo)).toEqual({
-      minX: 6.6,
-      minY: 6.6,
-      width: 538.8,
-      height: 610.8,
+      minX: 6,
+      minY: 6,
+      width: 540,
+      height: 612,
     });
   });
 

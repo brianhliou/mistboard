@@ -27,7 +27,7 @@ import {
   boardLastMoveMarkersSvg,
   boardLastMovePiece,
 } from './board-lastmove.js';
-import { tokenPieceSize } from './board-metrics.js';
+import { tokenPieceSize, xiangqiPieceCellBox } from './board-metrics.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   readStoredXiangqiBoardLayout,
@@ -368,8 +368,8 @@ function lastMoveLayer(
       LIVE_BOARD_GEO.cell,
       layer,
       {
-        size: XIANGQI_LIVE_PIECE_SIZE,
-        shape: xiangqiPieceSetShape(pieceSet ?? readStoredXiangqiPieceSet(), 'square'),
+        size: xiangqiPieceCellBox(XIANGQI_LIVE_PIECE_SIZE),
+        set: pieceSet ?? readStoredXiangqiPieceSet(),
       },
     );
   }

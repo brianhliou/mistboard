@@ -18,6 +18,7 @@ import {
   type XiangqiPiece,
   type XiangqiPieceRole,
 } from '@mistboard/game';
+import { XIANGQI_PIECE_CELL_INSET } from './board-metrics.js';
 
 export type XiangqiPieceSet =
   | 'international'
@@ -151,7 +152,7 @@ export function xiangqiPieceSetShape(
 const frameShape = xiangqiPieceSetShape;
 
 /** Corner radius of the rounded square per unit of half-width (14 at 46). */
-const SQUARE_CORNER_PER_HALF = 14 / 46;
+export const SQUARE_CORNER_PER_HALF = 14 / 46;
 
 /**
  * A disc of radius `half`, or the rounded square of the same half-width, centred
@@ -191,7 +192,12 @@ export type XiangqiPieceRenderOptions = {
   shadow?: boolean;
   // The board's outline for the piece (xiangqiPieceShapeForLayout). The image and
   // character sets draw the square; the asset sets stay discs. Default disc.
+  // Asked for the square, the art also draws inset to XIANGQI_PIECE_CELL_REACH
+  // of its square (every set: it is the Square grid's size, not the outline's).
   shape?: XiangqiPieceShape;
+  // Fill the given box even on the Square grid: for a caller that sized the box
+  // itself (the 3D piece's face).
+  fullBox?: boolean;
 };
 
 export function xiangqiGlyph(
@@ -300,7 +306,11 @@ export function renderXiangqiPieceGlyphed(
     (opts.size !== undefined || opts.x !== undefined || opts.y !== undefined
       ? ` x="${opts.x ?? 0}" y="${opts.y ?? 0}" width="${opts.size ?? 100}" height="${opts.size ?? 100}"`
       : '') + overflowAttr;
-  const open = `<svg${classAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`;
+  const inset = opts.shape === 'square' && !opts.fullBox ? XIANGQI_PIECE_CELL_INSET : 0;
+  const viewBox = inset
+    ? `${-inset} ${-inset} ${100 + 2 * inset} ${100 + 2 * inset}`
+    : '0 0 100 100';
+  const open = `<svg${classAttr}${posAttrs} viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`;
   if (isAssetPieceSet(set)) {
     if (!opts.shrouded) {
       return `${open}${shadow}${assetImageMark(assetPieceHref(set, piece.color, piece.role))}</svg>`;
@@ -427,9 +437,15 @@ export function xiangqiPieceShadowMarks(
   cy = 50,
   box = 100,
   shape: XiangqiPieceShape = 'disc',
+  tune: {
+    dy: number;
+    spread: readonly number[];
+    opacity: number;
+    color: string;
+  } = XIANGQI_PIECE_SHADOW,
 ): string {
   const k = box / 100;
-  const { dy, spread, opacity, color } = XIANGQI_PIECE_SHADOW;
+  const { dy, spread, opacity, color } = tune;
   // One translate on the group instead of cx/cy on every circle: an article
   // diagram draws this under every piece, and its markup budget is per board.
   const layers = spread
@@ -810,7 +826,7 @@ export function animalDuckHref(): string {
 const DUCK_ART_FILL = 0.796;
 
 /** A box whose DRAWN art reaches `radius`, given the master's own padding. */
-function duckBoxForRadius(radius: number): number {
+function _duckBoxForRadius(radius: number): number {
   return Math.round((2 * radius) / DUCK_ART_FILL);
 }
 

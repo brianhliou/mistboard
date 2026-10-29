@@ -16,6 +16,7 @@ import {
   PIECE_3D_THICK_EDGE,
   piece3dLook,
   XIANGQI_PIECE_3D,
+  XIANGQI_PIECE_3D_CELL_REACH,
   xiangqiPiece3dBox,
   xiangqiPiece3dDiscCenter,
   xiangqiPiece3dEdge,
@@ -76,11 +77,13 @@ const JQ_CASES: Record<
 const GOLDEN: Record<string, string> = {
   xqInternational: '7817aa6951276cba',
   xqWood: 'c500f6b834f5b9b1',
-  xqCell: 'b322a7f806f91a53',
+  // Re-pinned 2026-10-29: Square grid pieces at 85% of the square, the ring
+  // outside their outline.
+  xqCell: '18e27b8fa73c35f9',
   xqDrag: '996fa6332f638a61',
   jqInternational: 'ca874e5065afac0b',
   jqWood: 'e04eae44be343388',
-  jqCell: '4523d802c00a08df',
+  jqCell: '4f51dcccff28e48d',
   jqDrag: '8e17f0fb5c8e6bb1',
 };
 
@@ -278,11 +281,38 @@ describe('xiangqi and jieqi 3D pieces', () => {
     expect(slot.querySelector(':scope > svg')?.classList).toContain('xq-piece--drag-source');
   });
 
-  it('stays flat where the set draws rounded squares, and draws a rim where it draws discs', () => {
-    expect(xq('xqCell', { tile3d: true })).toBe(xq('xqCell'));
-    expect(jq('jqCell', { tile3d: true })).toBe(jq('jqCell'));
-    // An asset set has no square: its discs on the cell grid get rims.
-    expect(xq('xqCell', { tile3d: true, pieceSet: 'wood' })).toContain('xq-piece-rim');
+  it('stands rounded squares on the Square grid on a squared rim, 90% of the square like Flip Jungle', () => {
+    for (const [render, key, rimClass] of [
+      [xq, 'xqCell', 'xq-piece-rim'],
+      [jq, 'jqCell', 'jieqi-piece-rim'],
+    ] as const) {
+      const flat = hostOf(render(key));
+      const host = hostOf(render(key, { tile3d: true }));
+      const slots = Array.from(host.querySelectorAll('[data-piece-square]'));
+      expect(slots.length).toBe(32);
+      for (const slot of slots) {
+        const square = slot.getAttribute('data-piece-square');
+        const band = slot.querySelector(`:scope > .${rimClass} > path`)?.getAttribute('d') ?? '';
+        // A flat bottom edge between two corners, not a half disc.
+        expect(band, `${key} ${square}`).toMatch(/A[\d.]+ [\d.]+ 0 0 0 [\d.]+ [\d.]+H/);
+        expect(slot.querySelector(':scope > svg rect'), `${key} ${square}`).not.toBeNull();
+        const was = pieceGeometry(flat.querySelector(`[data-piece-square="${square}"]`)!);
+        const now = pieceGeometry(slot);
+        // Centred on the square, face and rim spanning XIANGQI_PIECE_3D_CELL_REACH
+        // of it where the flat piece spans XIANGQI_PIECE_REACH: an even margin.
+        const share = XIANGQI_PIECE_3D_CELL_REACH / XIANGQI_PIECE_3D.reach;
+        expect(now.cx, `${key} ${square}`).toBeCloseTo(was.cx, 1);
+        expect((now.top + now.bottom) / 2, `${key} ${square}`).toBeCloseTo(was.cy, 0);
+        const height = (now.bottom - now.top) / (was.bottom - was.top);
+        expect(height, `${key} ${square}`).toBeLessThanOrEqual(share + 1e-9);
+        expect(height, `${key} ${square}`).toBeGreaterThan(share - 0.02);
+      }
+    }
+    // An asset set has no square: its discs on the cell grid keep round rims.
+    const wood = hostOf(xq('xqCell', { tile3d: true, pieceSet: 'wood' }));
+    const woodBand = wood.querySelector('.xq-piece-rim > path')?.getAttribute('d') ?? '';
+    expect(woodBand).not.toBe('');
+    expect(woodBand).not.toContain('H');
   });
 
   it('gives jieqi face-down backs and revealed faces the same rim', () => {
@@ -473,5 +503,63 @@ describe('xiangqi and jieqi 3D pieces', () => {
     animateBoardLastMoveArrival(host, from, anchor, 200);
     expect(animate).toHaveBeenCalledOnce();
     expect(animate.mock.calls[0][0][0].transform).toBe('translate(-180px, 0px)');
+  });
+
+  // Brian, 2026-10-29: on the square grid the destination mark "pops in" after
+  // the glide, and on 3D it should be "the technique we do for the other 3D
+  // pieces where we color the edge" rather than a ring over the outline.
+  it('marks a 3D piece on the square grid by its gold edge, and it glides', () => {
+    const moved = { ...XQ, lastMove: { from: 'b3', to: 'e3' } } as typeof XQ;
+    const host = hostOf(
+      xiangqiBoardSvg(moved, 'red', {
+        ...BASE,
+        layout: 'cell',
+        coordinates: false,
+        pieceSet: 'traditional',
+        tile3d: true,
+      }),
+    );
+    expect(host.querySelector('.xq-live-lastmove-piece-ring')).toBeNull();
+    const edge = host.querySelector('.xq-live-lastmove-edge') as SVGPathElement;
+    expect(edge.closest('.xq-live-lastmove-over')).not.toBeNull();
+    const anchor = {
+      x: Number(edge.getAttribute('data-cx')),
+      y: Number(edge.getAttribute('data-cy')),
+    };
+    // Down both sides of the rim at its outer edge, rounded at the corners.
+    const [left] = (edge.getAttribute('d') ?? '').match(/-?[\d.]+/g)!.map(Number);
+    expect(left).toBeCloseTo(anchor.x - (xiangqiPiece3dBox(60, 'square') * 47.4) / 100, 1);
+    expect(edge.getAttribute('d')).toMatch(/A[\d.]+ [\d.]+ 0 0 0 .*H.*A/);
+
+    const animate = vi.fn();
+    Object.assign(edge, { animate, getAnimations: () => [] });
+    animateBoardLastMoveArrival(host, { x: anchor.x - 180, y: anchor.y }, anchor, 200);
+    expect(animate.mock.calls[0][0][0].transform).toBe('translate(-180px, 0px)');
+  });
+
+  it('glides the flat square-grid ring with the piece instead of fading it in after', () => {
+    const moved = { ...XQ, lastMove: { from: 'b3', to: 'e3' } } as typeof XQ;
+    const host = hostOf(
+      xiangqiBoardSvg(moved, 'red', {
+        ...BASE,
+        layout: 'cell',
+        coordinates: false,
+        pieceSet: 'traditional',
+      }),
+    );
+    const ring = host.querySelector('.xq-live-lastmove-piece-ring') as SVGRectElement;
+    const tint = host.querySelector('.xq-live-lastmove-to') as SVGRectElement;
+    const anchor = {
+      x: Number(ring.getAttribute('data-cx')),
+      y: Number(ring.getAttribute('data-cy')),
+    };
+    const glide = vi.fn();
+    const fade = vi.fn();
+    Object.assign(ring, { animate: glide, getAnimations: () => [] });
+    Object.assign(tint, { animate: fade, getAnimations: () => [] });
+    animateBoardLastMoveArrival(host, { x: anchor.x - 180, y: anchor.y }, anchor, 200);
+    expect(glide.mock.calls[0][0][0].transform).toBe('translate(-180px, 0px)');
+    // The cell tint under the piece keeps its fade-in.
+    expect(fade.mock.calls[0]?.[0][0].transform).toBeUndefined();
   });
 });

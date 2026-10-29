@@ -306,7 +306,7 @@
 
 :root[data-board-coordinates="on"][data-xiangqi-board-layout="cell"]
   .xqb-card-board.xiangqi-live-board {
-  aspect-ratio: 538.8 / 610.8;
+  aspect-ratio: 540 / 612;
 }
 
 .xqb-card-players {

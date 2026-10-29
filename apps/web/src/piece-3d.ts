@@ -27,6 +27,7 @@ import {
 } from './board-metrics.js';
 import {
   renderXiangqiPieceGlyphed,
+  SQUARE_CORNER_PER_HALF,
   XIANGQI_PIECE_SHADOW,
   type XiangqiPieceRenderOptions,
   type XiangqiPieceSet,
@@ -90,11 +91,19 @@ export function piece3dDepthShare(spec: { readonly depthShare: number }): number
 export const PIECE_3D_IVORY: readonly [string, string] = ['#efe7d2', '#d6c9a8'];
 
 /**
- * How far the disc shadow reaches past the rim's bottom, as a share of the
- * box: its drop plus its widest ring (XIANGQI_PIECE_SHADOW, in the 100 box).
+ * The shadow under a 3D piece, in the 100 box. The flat piece's shadow drops
+ * 3.5 to show a disc lifted off the board; a 3D piece's rim already shows its
+ * height, so its shadow is where the base meets the board: a short drop and a
+ * tighter spread (Brian, 2026-10-29: the shadow "was designed for 2D").
+ */
+export const PIECE_3D_SHADOW = { ...XIANGQI_PIECE_SHADOW, dy: 1, spread: [1.5, 0.75, 0, -1] };
+
+/**
+ * How far the 3D shadow reaches past the rim's bottom, as a share of the box:
+ * its drop plus its widest ring.
  */
 export const PIECE_3D_SHADOW_SHARE =
-  (XIANGQI_PIECE_SHADOW.dy + Math.max(...XIANGQI_PIECE_SHADOW.spread)) / 100;
+  (PIECE_3D_SHADOW.dy + Math.max(...PIECE_3D_SHADOW.spread)) / 100;
 
 export function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -156,6 +165,25 @@ function bandPath(cx: number, cy: number, r: number, k: number): string {
   return `M${round2(cx - r)} ${cy}V${round2(cy + k)}A${r} ${r} 0 0 0 ${round2(cx + r)} ${round2(cy + k)}V${cy}Z`;
 }
 
+// The same wall under a rounded square of half-width `h` and outer corner `rc`:
+// straight sides from the face's middle down `k`, closed by the face's bottom
+// edge and corners moved down by `k` (Flip Jungle's tiles, jungle-flip-render.ts).
+function squareBandPath(cx: number, cy: number, h: number, rc: number, k: number): string {
+  const bottom = round2(cy + h + k);
+  const turn = round2(bottom - rc);
+  return (
+    `M${round2(cx - h)} ${cy}V${turn}A${rc} ${rc} 0 0 0 ${round2(cx - h + rc)} ${bottom}` +
+    `H${round2(cx + h - rc)}A${rc} ${rc} 0 0 0 ${round2(cx + h)} ${turn}V${cy}Z`
+  );
+}
+
+/** The outer corner radius of a set's rounded square whose outer half-width is
+ *  `half` in a box of `box`: the outline's corner plus half its stroke. */
+function squareOuterCorner(pieceSet: XiangqiPieceSet, half: number, box: number): number {
+  const stroke = (box * xiangqiPieceRingWidth(pieceSet)) / 100;
+  return round2((half - stroke / 2) * SQUARE_CORNER_PER_HALF + stroke / 2);
+}
+
 /**
  * The rim under one piece whose disc is centred at (cx, cy), drawn before its
  * face or back in the same slot, with the disc shadow when the reader has
@@ -168,17 +196,29 @@ export function piece3dRim(
   box: number,
   spec: Piece3dSpec,
   className: string,
+  shape: XiangqiPieceShape = 'disc',
 ): string {
   const look = piece3dLook(pieceSet, box, spec);
   const [mid, low] = look.body;
+  const square = xiangqiPieceSetShape(pieceSet, shape) === 'square';
   const shadow = xiangqiPieceShadowEnabled()
-    ? xiangqiPieceShadowMarks(look.radius, cx, cy + look.depth, box)
+    ? xiangqiPieceShadowMarks(
+        look.radius,
+        cx,
+        cy + look.depth,
+        box,
+        square ? 'square' : 'disc',
+        PIECE_3D_SHADOW,
+      )
     : '';
+  const corner = square ? squareOuterCorner(pieceSet, look.radius, box) : 0;
+  const band = (k: number) =>
+    square ? squareBandPath(cx, cy, look.radius, corner, k) : bandPath(cx, cy, look.radius, k);
   return [
     `<g class="${className}" aria-hidden="true">`,
     shadow,
-    `<path d="${bandPath(cx, cy, look.radius, look.depth)}" fill="${low}"/>`,
-    `<path d="${bandPath(cx, cy, look.radius, look.depth - 1.5)}" fill="${mid}"/>`,
+    `<path d="${band(look.depth)}" fill="${low}"/>`,
+    `<path d="${band(look.depth - 1.5)}" fill="${mid}"/>`,
     `</g>`,
   ].join('');
 }
@@ -201,26 +241,36 @@ export function piece3dEdge(
 // ── Xiangqi-family pieces (xiangqi and jieqi boards, opt-in) ─────────────────
 
 /**
- * The box a xiangqi or jieqi 3D piece is drawn in at this point gap, rounded
- * down to the quarter pixel so disc and rim never reach past a flat piece
- * (59 at xiangqi's 60, 71 at jieqi's 72).
+ * How much of a Square grid cell a 3D piece spans, face and rim together:
+ * Flip Jungle's 3D tile share (JUNGLE_FLIP_TILE_3D), so the piece sits on its square with an even
+ * margin all round (Brian, 2026-10-29: "the same sort of proportions as the
+ * flip jungle pieces against the grid"). At the points' 0.98 the rim leaves
+ * the face a sliver short of the board's sides only.
  */
-export function xiangqiPiece3dBox(pitch: number): number {
+export const XIANGQI_PIECE_3D_CELL_REACH = 0.9;
+
+/**
+ * The box a xiangqi or jieqi 3D piece is drawn in at this point gap (or cell,
+ * for the Square grid's `shape` 'square'), rounded down to the quarter pixel
+ * so face and rim never reach past their share of it.
+ */
+export function xiangqiPiece3dBox(pitch: number, shape: XiangqiPieceShape = 'disc'): number {
+  const reach = shape === 'square' ? XIANGQI_PIECE_3D_CELL_REACH : XIANGQI_PIECE_3D.reach;
   const exact =
-    (pitch * XIANGQI_PIECE_3D.reach) /
-    (XIANGQI_PIECE_OUTLINE_SHARE + piece3dDepthShare(XIANGQI_PIECE_3D));
+    (pitch * reach) / (XIANGQI_PIECE_OUTLINE_SHARE + piece3dDepthShare(XIANGQI_PIECE_3D));
   return Math.floor(exact * 4) / 4;
 }
 
 /**
- * Whether a board draws 3D pieces in this set and layout shape: only a disc
- * has a rim. A set drawn as rounded squares on the cell layout stays flat.
+ * Whether a board draws 3D pieces in this set and layout shape. Discs and the
+ * square grid's rounded squares both have a rim since 2026-10-29 (Brian: reuse
+ * Flip Jungle's rounded-square tiles), so every set and layout does.
  */
 export function xiangqiPiece3dApplies(
-  pieceSet: XiangqiPieceSet,
-  shape: XiangqiPieceShape,
+  _pieceSet: XiangqiPieceSet,
+  _shape: XiangqiPieceShape,
 ): boolean {
-  return xiangqiPieceSetShape(pieceSet, shape) === 'disc';
+  return true;
 }
 
 /**
@@ -237,12 +287,29 @@ export function xiangqiPiece3dMarkPiece(
   return { box, outer: (look.radius * 100) / box, lift: round2(look.depth / 2) };
 }
 
+/** The square grid's destination mark on a 3D piece: the box, the rim's outer
+ *  edge and the face's lift, for the gold edge drawn on its wall. */
+export function xiangqiPiece3dCellMark(
+  pieceSet: XiangqiPieceSet,
+  pitch: number,
+): { size: number; set: XiangqiPieceSet; outer: number; lift: number } {
+  const box = xiangqiPiece3dBox(pitch, 'square');
+  return {
+    size: box,
+    set: pieceSet,
+    // The rim's edge, which the gold edge traces (piece3dLook).
+    outer: xiangqiTileBacking(pieceSet) ? 45 : 47.4,
+    lift: round2((box * piece3dDepthShare(XIANGQI_PIECE_3D)) / 2),
+  };
+}
+
 /** Where a 3D piece's disc sits for a piece anchored at `anchor`. */
 export function xiangqiPiece3dDiscCenter(
   anchor: { x: number; y: number },
   pitch: number,
+  shape: XiangqiPieceShape = 'disc',
 ): { x: number; y: number } {
-  return piece3dDiscCenter(anchor, xiangqiPiece3dBox(pitch), XIANGQI_PIECE_3D);
+  return piece3dDiscCenter(anchor, xiangqiPiece3dBox(pitch, shape), XIANGQI_PIECE_3D);
 }
 
 /**
@@ -256,8 +323,17 @@ export function xiangqiPiece3dMarkup(
   pieceSet: XiangqiPieceSet,
   renderOpts: Omit<XiangqiPieceRenderOptions, 'x' | 'y' | 'size' | 'shape' | 'shadow'>,
   rimClass: string,
+  shape: XiangqiPieceShape = 'disc',
 ): string {
-  const { band, face } = xiangqiPiece3dLayers(anchor, pitch, piece, pieceSet, renderOpts, rimClass);
+  const { band, face } = xiangqiPiece3dLayers(
+    anchor,
+    pitch,
+    piece,
+    pieceSet,
+    renderOpts,
+    rimClass,
+    shape,
+  );
   return band + face;
 }
 
@@ -269,17 +345,19 @@ export function xiangqiPiece3dLayers(
   pieceSet: XiangqiPieceSet,
   renderOpts: Omit<XiangqiPieceRenderOptions, 'x' | 'y' | 'size' | 'shape' | 'shadow'>,
   rimClass: string,
+  shape: XiangqiPieceShape = 'disc',
 ): { band: string; face: string } {
-  const box = xiangqiPiece3dBox(pitch);
+  const box = xiangqiPiece3dBox(pitch, shape);
   const disc = piece3dDiscCenter(anchor, box, XIANGQI_PIECE_3D);
   return {
-    band: piece3dRim(disc.x, disc.y, pieceSet, box, XIANGQI_PIECE_3D, rimClass),
+    band: piece3dRim(disc.x, disc.y, pieceSet, box, XIANGQI_PIECE_3D, rimClass, shape),
     face: renderXiangqiPieceGlyphed(piece, pieceSet, {
       ...renderOpts,
       x: disc.x - box / 2,
       y: disc.y - box / 2,
       size: box,
-      shape: 'disc',
+      shape: xiangqiPieceSetShape(pieceSet, shape),
+      fullBox: true,
       shadow: false,
       backStroke: xiangqiPieceRingWidth(pieceSet),
     }),
@@ -291,15 +369,24 @@ export function xiangqiPiece3dLayers(
 export function xiangqiPiece3dTurnLook(
   pieceSet: XiangqiPieceSet,
   pitch: number,
-): Piece3dLook & { shadow: number } {
-  const box = xiangqiPiece3dBox(pitch);
+  shape: XiangqiPieceShape = 'disc',
+): Piece3dLook & { shadow: number; corner?: number } {
+  const box = xiangqiPiece3dBox(pitch, shape);
+  const look = piece3dLook(pieceSet, box, XIANGQI_PIECE_3D);
   return {
-    ...piece3dLook(pieceSet, box, XIANGQI_PIECE_3D),
+    ...look,
     shadow: box * PIECE_3D_SHADOW_SHARE,
+    ...(xiangqiPieceSetShape(pieceSet, shape) === 'square'
+      ? { corner: squareOuterCorner(pieceSet, look.radius, box) }
+      : {}),
   };
 }
 
 /** A xiangqi or jieqi 3D piece's edge for a turn-over. */
-export function xiangqiPiece3dEdge(pieceSet: XiangqiPieceSet, pitch: number): PieceFlipEdge {
-  return piece3dEdge(pieceSet, xiangqiPiece3dBox(pitch), XIANGQI_PIECE_3D);
+export function xiangqiPiece3dEdge(
+  pieceSet: XiangqiPieceSet,
+  pitch: number,
+  shape: XiangqiPieceShape = 'disc',
+): PieceFlipEdge {
+  return piece3dEdge(pieceSet, xiangqiPiece3dBox(pitch, shape), XIANGQI_PIECE_3D);
 }

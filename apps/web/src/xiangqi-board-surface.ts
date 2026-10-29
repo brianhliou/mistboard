@@ -146,7 +146,7 @@ function cellGrid(cfg: XiangqiSurfaceConfig): string {
     }
   }
   // Only internal boundaries are stroked. Without coordinates the first/last
-  // cells run to the (trimmed) viewBox edge; with them, cellRim draws the frame.
+  // cells run to the viewBox edge; with them, cellRim draws the frame.
   for (let boundary = 1; boundary < rankCount; boundary++) {
     if (boundary === half) continue;
     const y = top + boundary * cell + (boundary > half ? riverGap : 0);

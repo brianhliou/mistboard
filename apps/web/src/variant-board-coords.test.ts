@@ -78,7 +78,7 @@ Object.defineProperty(window, 'localStorage', {
 // xiangqiBoardSvg below, so these are the standard board's numbers.
 const VIEWBOX = {
   intersection: { on: '-12 -12 576 636', off: '0 0 552 612' },
-  cell: { on: '-6 -6 564 636', off: '6.6 6.6 538.8 610.8' },
+  cell: { on: '-6 -6 564 636', off: '6 6 540 612' },
 } as const;
 
 function setCoordinates(on: boolean): void {

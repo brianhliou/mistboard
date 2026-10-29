@@ -24,11 +24,17 @@ import {
   boardLastMoveStyleAttr,
 } from './board-lastmove.js';
 import { type LuckMarkSpec, svgBoardLuckMark } from './board-luck-mark.js';
-import { boardCornerRadius, tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
+import {
+  boardCornerRadius,
+  tokenPieceSize,
+  xiangqiPieceCellBox,
+  xiangqiPieceDrawSize,
+} from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import {
   piece3dEnabled,
   xiangqiPiece3dApplies,
+  xiangqiPiece3dCellMark,
   xiangqiPiece3dDiscCenter,
   xiangqiPiece3dEdge,
   xiangqiPiece3dLayers,
@@ -72,7 +78,6 @@ import {
   renderXiangqiPieceGlyphed,
   type XiangqiPieceSet,
   xiangqiPieceOuterRadius,
-  xiangqiPieceSetShape,
   xiangqiPieceShapeForLayout,
 } from './xiangqi-piece-sets.js';
 
@@ -378,7 +383,11 @@ function pieceLayer(
         const rimClass = dragSource
           ? 'jieqi-piece-rim jieqi-piece--drag-source'
           : 'jieqi-piece-rim';
-        const disc = xiangqiPiece3dDiscCenter({ x, y }, CELL);
+        const disc = xiangqiPiece3dDiscCenter(
+          { x, y },
+          CELL,
+          xiangqiPieceShapeForLayout(activeLayout),
+        );
         const pieceSvg = entry.faceDown
           ? xiangqiPiece3dMarkup(
               { x, y },
@@ -400,6 +409,7 @@ function pieceLayer(
                 shroudedStyle: 'back',
               },
               rimClass,
+              xiangqiPieceShapeForLayout(activeLayout),
             ) + (unknown ? unknownMark(disc.x, disc.y) : '')
           : xiangqiPiece3dMarkup(
               { x, y },
@@ -413,6 +423,7 @@ function pieceLayer(
                 crossed: drawsCrossedSoldier(entry, rank),
               },
               rimClass,
+              xiangqiPieceShapeForLayout(activeLayout),
             );
         return `<g class="jieqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
       }
@@ -525,10 +536,14 @@ function lastMoveMarkers(
   };
   const ends = { from: center(view.lastMove.from), to: center(view.lastMove.to) };
   if (activeLayout === 'cell') {
-    return boardLastMoveCellMarksSvg(ends, CELL, layer, {
-      size: PIECE_SIZE,
-      shape: xiangqiPieceSetShape(pieceSet, 'square'),
-    });
+    return boardLastMoveCellMarksSvg(
+      ends,
+      CELL,
+      layer,
+      tile3d
+        ? xiangqiPiece3dCellMark(pieceSet, CELL)
+        : { size: xiangqiPieceCellBox(PIECE_SIZE), set: pieceSet },
+    );
   }
   // The band hugs the piece actually standing on the destination: a move
   // reveals the piece, so it is face up, but a face-down back has a wider rim
@@ -704,8 +719,9 @@ export function animateJieqiReveal(
         shroudedStyle: 'back',
       },
       'jieqi-piece-rim',
+      xiangqiPieceShapeForLayout(activeLayout),
     );
-    const disc = xiangqiPiece3dDiscCenter(center, CELL);
+    const disc = xiangqiPiece3dDiscCenter(center, CELL, xiangqiPieceShapeForLayout(activeLayout));
     const durationMs = revealFlipDurationMs(opts.alongGlide);
     const goldEdge = boardLastMoveEdgeOn(host, center);
     // A thick piece turned in the SVG flashes to a thin line edge-on; it
@@ -714,11 +730,12 @@ export function animateJieqiReveal(
     const rim = slot.querySelector(':scope > .jieqi-piece-rim');
     const style = opts.style ?? pieceFlipStyle();
     if (style !== 'flat' && opts.delayMs === undefined && rim && durationMs > 0) {
-      const look = xiangqiPiece3dTurnLook(pieceSet, CELL);
+      const look = xiangqiPiece3dTurnLook(pieceSet, CELL, xiangqiPieceShapeForLayout(activeLayout));
       const turned = flipTileOverlay({
         slot,
         center: disc,
         radius: look.radius,
+        ...(look.corner === undefined ? {} : { corner: look.corner }),
         depth: look.depth,
         reach: look.radius + look.depth + look.shadow + 2,
         front: {
@@ -742,7 +759,7 @@ export function animateJieqiReveal(
       ...(opts.delayMs === undefined ? {} : { delayMs: opts.delayMs }),
       ...(opts.alongGlide ? { alongGlide: true } : {}),
       style,
-      edge: xiangqiPiece3dEdge(pieceSet, CELL),
+      edge: xiangqiPiece3dEdge(pieceSet, CELL, xiangqiPieceShapeForLayout(activeLayout)),
       follower: goldEdge,
     });
   }

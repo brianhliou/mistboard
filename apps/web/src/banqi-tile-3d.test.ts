@@ -6,6 +6,7 @@ import {
   banqiTile3dBox,
   banqiTile3dEnabled,
   banqiTileEdge,
+  flipBanqiTile3dReveal,
   renderBanqiBoardSvg,
 } from './live-banqi-render.js';
 import { TK_SETUP, TK_THUMBNAIL } from './three-kingdoms-banqi-diagrams.js';
@@ -318,6 +319,47 @@ describe('banqi 3D tiles', () => {
       cancelTileFlipOverlays();
       expect(document.querySelector('.tile-flip-3d')).toBeNull();
       expect(slot.style.getPropertyValue('visibility')).toBe('');
+    } finally {
+      restore();
+    }
+  });
+
+  it("wears an edge mark's ink on the turning tile from the first frame", () => {
+    // Three Kingdoms 3D: the flipper's ink rings the tile's edge. On an ivory
+    // coin it popped in after the turn (Brian, 2026-10-29).
+    const restore = stubScreenMapping();
+    try {
+      const host = hostOf(render('international', { tile3d: true }));
+      document.body.append(host);
+      const board = host.querySelector('svg')!;
+      const ink = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      ink.setAttribute('class', 'xq-live-lastmove-ring xq-live-lastmove-edge');
+      ink.setAttribute('d', 'M0 0H10V10Z');
+      ink.setAttribute('fill', 'rgb(194, 32, 26)');
+      ink.setAttribute('fill-opacity', '0.85');
+      board.append(ink);
+      const point = { x: 32, y: 32 };
+      recordAnimations(() => {
+        expect(
+          flipBanqiTile3dReveal(host, 'a1', () => point, 'international', {
+            style: 'lift',
+            faceMark: ink,
+          }),
+        ).toBe(true);
+      });
+      const coin = document.querySelector('.tile-flip-3d')!;
+      const wall = (coin.querySelector('.tile-flip-3d-wall') as HTMLElement).style.background;
+      // The face half is ivory under the ink; the back half stays ivory.
+      const halves =
+        /linear-gradient\((rgb\([^)]+\)|#\w+) 0(?:px)? 50%, (rgb\([^)]+\)|#\w+) 50%/.exec(wall);
+      const [r, g] = (halves?.[1] ?? '').match(/\d+/g)!.map(Number);
+      expect(r!).toBeGreaterThan(g! + 100);
+      expect(halves?.[2]).toMatch(/rgb\(239, 231, 210\)|#efe7d2/i);
+      const front = Array.from(coin.querySelectorAll('.tile-flip-3d-front'))
+        .map((el) => el.outerHTML)
+        .join('');
+      expect(front).toContain('fill="rgb(194, 32, 26)"');
+      cancelTileFlipOverlays();
     } finally {
       restore();
     }

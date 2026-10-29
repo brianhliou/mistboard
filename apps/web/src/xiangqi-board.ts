@@ -35,11 +35,12 @@ import {
   boardLastMoveMarkersSvg,
   boardLastMovePiece,
 } from './board-lastmove.js';
-import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
+import { tokenPieceSize, xiangqiPieceCellBox, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import {
   piece3dEnabled,
   xiangqiPiece3dApplies,
+  xiangqiPiece3dCellMark,
   xiangqiPiece3dMarkPiece,
   xiangqiPiece3dMarkup,
 } from './piece-3d.js';
@@ -70,11 +71,7 @@ import {
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
-import {
-  type XiangqiPieceSet,
-  xiangqiPieceSetShape,
-  xiangqiPieceShapeForLayout,
-} from './xiangqi-piece-sets.js';
+import { type XiangqiPieceSet, xiangqiPieceShapeForLayout } from './xiangqi-piece-sets.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 const FILES = 'abcdefghi';
@@ -270,7 +267,9 @@ export function xiangqiBoardSvg(
   const markSet = state.pieceSet ?? readStoredXiangqiPieceSet();
   const tile3d = state.tile3d ?? piece3dEnabled();
   const markPiece: MarkPiece = {
-    cell: { size: PIECE_SIZE, shape: xiangqiPieceSetShape(markSet, 'square') },
+    cell: tile3d
+      ? xiangqiPiece3dCellMark(markSet, CELL)
+      : { size: xiangqiPieceCellBox(PIECE_SIZE), set: markSet },
     band:
       tile3d && xiangqiPiece3dApplies(markSet, xiangqiPieceShapeForLayout(layout))
         ? xiangqiPiece3dMarkPiece(markSet, CELL)
@@ -526,6 +525,7 @@ function pieceLayer(
           crossed,
         },
         dragSource ? 'xq-piece-rim xq-piece--drag-source' : 'xq-piece-rim',
+        xiangqiPieceShapeForLayout(layout),
       );
       parts.push(`<g class="xq-piece-slot" data-piece-square="${square}">${piece3d}</g>`);
       continue;

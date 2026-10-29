@@ -196,7 +196,7 @@
   width: auto;
   max-width: 100%;
   height: 100%;
-  aspect-ratio: 538.8 / 610.8;
+  aspect-ratio: 540 / 612;
 }
 
 .home-puzzle-box:has(.xq-live-svg--cell) {

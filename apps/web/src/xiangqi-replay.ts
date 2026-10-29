@@ -31,7 +31,7 @@ import {
   boardLastMoveOuterRadius,
   boardLastMovePiece,
 } from './board-lastmove.js';
-import { tokenPieceSize, xiangqiPieceDrawSize } from './board-metrics.js';
+import { tokenPieceSize, xiangqiPieceCellBox, xiangqiPieceDrawSize } from './board-metrics.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
 import { seatDiscEl } from './seat-disc.js';
@@ -59,11 +59,7 @@ import {
 import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
-import {
-  renderXiangqiPieceGlyphed,
-  XIANGQI_PIECE_SETS,
-  xiangqiPieceSetShape,
-} from './xiangqi-piece-sets.js';
+import { renderXiangqiPieceGlyphed, XIANGQI_PIECE_SETS } from './xiangqi-piece-sets.js';
 import type { ReplayChartSource } from './xiangqi-replay-chart.js';
 import { xiangqiDiagramRiverText } from './xiangqi-river-text.js';
 
@@ -441,8 +437,8 @@ function lastMoveSvg(move: XiangqiMove, board: ReplayBoard, layer: BoardLastMove
   // The square grid gets its own marks (board-lastmove.ts), traced on the piece drawn.
   if (board.layout === 'cell') {
     return boardLastMoveCellMarksSvg(ends, board.surface.geo.cell, layer, {
-      size: PIECE_DRAWN,
-      shape: xiangqiPieceSetShape(readStoredXiangqiPieceSet(), 'square'),
+      size: xiangqiPieceCellBox(PIECE_DRAWN),
+      set: readStoredXiangqiPieceSet(),
     });
   }
   return boardLastMoveMarkersSvg(

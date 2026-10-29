@@ -87,6 +87,57 @@ function px(n: number): string {
   return `${Math.round(n * 1000) / 1000}px`;
 }
 
+type Rgb = [number, number, number];
+
+function parseRgb(color: string): Rgb | null {
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color.trim());
+  if (hex) {
+    const h = hex[1]!.length === 3 ? [...hex[1]!].map((c) => c + c).join('') : hex[1]!;
+    return [0, 2, 4].map((i) => Number.parseInt(h.slice(i, i + 2), 16)) as Rgb;
+  }
+  const rgb = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i.exec(color.trim());
+  return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] : null;
+}
+
+/** A face mark that is the tile's edge (board-lastmove.ts's 3D band), as the
+ *  board paints it: the coin's wall and band wear it through the turn. */
+interface EdgePaint {
+  fill: string;
+  opacity: number;
+  multiply: boolean;
+  markup: string;
+}
+
+function edgePaint(mark: Element | null | undefined, view: Window): EdgePaint | null {
+  if (!mark?.classList.contains('xq-live-lastmove-edge')) return null;
+  const style = view.getComputedStyle?.(mark);
+  const fill = style?.fill || mark.getAttribute('fill') || '';
+  if (!parseRgb(fill)) return null;
+  const opacity = Number.parseFloat(style?.fillOpacity || mark.getAttribute('fill-opacity') || '1');
+  const multiply = style?.mixBlendMode === 'multiply';
+  // Inline paint: the coin hangs off <body>, outside the board's custom
+  // properties and its variant's stylesheet scope.
+  const copy = mark.cloneNode(true) as Element;
+  copy.removeAttribute('class');
+  copy.setAttribute('fill', fill);
+  copy.setAttribute('fill-opacity', String(opacity));
+  if (multiply) copy.setAttribute('style', 'mix-blend-mode:multiply');
+  return { fill, opacity, multiply, markup: copy.outerHTML };
+}
+
+/** `base` under the edge's paint, as the board composites it. */
+function tintOver(base: string, paint: EdgePaint): string {
+  const under = parseRgb(base);
+  const over = parseRgb(paint.fill);
+  if (!under || !over) return paint.fill;
+  const a = Number.isFinite(paint.opacity) ? paint.opacity : 1;
+  const mixed = under.map((u, i) => {
+    const top = paint.multiply ? (u * over[i]!) / 255 : over[i]!;
+    return Math.round(u * (1 - a) + top * a);
+  });
+  return `rgb(${mixed.join(', ')})`;
+}
+
 function layer(
   doc: Document,
   markup: string,
@@ -205,6 +256,12 @@ export function flipTileOverlay(spec: TileFlipOverlaySpec): boolean {
   const half = thick / 2;
   const r = radius * k;
   const axis = spec.style === 'lift' ? 'rotateX' : 'rotateY';
+  // An edge mark in the flipper's ink (or gold) is the face's own edge: the
+  // wall's face half and the landing band wear it from the first frame, so
+  // the colour turns up with the tile instead of after it (Brian, 2026-10-29:
+  // "It looks white and then the blue/black pops in").
+  const edge = edgePaint(spec.faceMark, view);
+  const wallFront = edge ? tintOver(spec.wall.front, edge) : spec.wall.front;
 
   const root = doc.createElement('div');
   root.className = 'tile-flip-3d';
@@ -264,7 +321,7 @@ export function flipTileOverlay(spec: TileFlipOverlaySpec): boolean {
       top: px(side / 2 - half),
       width: px(width),
       height: px(thick),
-      background: `linear-gradient(rgba(0,0,0,${shade.toFixed(3)}), rgba(0,0,0,${shade.toFixed(3)})), linear-gradient(${spec.wall.front} 0 50%, ${spec.wall.back} 50% 100%)`,
+      background: `linear-gradient(rgba(0,0,0,${shade.toFixed(3)}), rgba(0,0,0,${shade.toFixed(3)})), linear-gradient(${wallFront} 0 50%, ${spec.wall.back} 50% 100%)`,
       transform: `translate(${px(x)}, ${px(y)}) rotateZ(${turn}deg) rotateX(-90deg)`,
       backfaceVisibility: 'hidden',
     });
@@ -281,7 +338,13 @@ export function flipTileOverlay(spec: TileFlipOverlaySpec): boolean {
     side,
     `${flipBack} translateZ(${px(half + FACE_PROUD * k)})`,
   );
-  const frontBand = layer(doc, spec.front.band, viewBox, side, `translateZ(${px(half)})`);
+  const frontBand = layer(
+    doc,
+    edge ? spec.front.band + edge.markup : spec.front.band,
+    viewBox,
+    side,
+    `translateZ(${px(half)})`,
+  );
   const frontFace = layer(
     doc,
     spec.front.face,

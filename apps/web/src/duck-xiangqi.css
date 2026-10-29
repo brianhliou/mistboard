@@ -17,7 +17,7 @@
 }
 
 :root[data-xiangqi-board-layout="cell"] .live-route--duck-xiangqi {
-  --uni-board-aspect: calc(538.8 / 610.8);
+  --uni-board-aspect: calc(540 / 612);
 }
 
 :root[data-board-coordinates="on"] .live-route--duck-xiangqi {

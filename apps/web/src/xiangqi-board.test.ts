@@ -54,7 +54,7 @@ describe('standard Xiangqi board SVG', () => {
     // Coordinates default to off, and the label gutter is reclaimed when they
     // are: a reader who never turns them on sees exactly the board that shipped
     // before they existed.
-    expect(svg).toContain('viewBox="6.6 6.6 538.8 610.8"');
+    expect(svg).toContain('viewBox="6 6 540 612"');
     expect(svg.match(/class="xq-live-cell xq-live-cell--/g)).toHaveLength(90);
     expect(svg.match(/class="xq-live-cell-line"/g)).toHaveLength(24);
     expect(svg).toContain(
@@ -155,9 +155,10 @@ describe('standard Xiangqi board SVG', () => {
     expect(svg).toContain(
       '<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="246" y="438" width="60" height="60"/>',
     );
-    // The ring traces the moved piece's outline (62-unit box: rect 4..96).
+    // The ring wraps the moved piece's outline from outside (the art fills
+    // 53.77 of its 62 box at 85% of the cell), and stays inside the square.
     expect(svg).toContain(
-      '<rect x="247.48" y="439.48" width="57.04" height="57.04" rx="8.68" class="xq-live-lastmove-piece-ring" fill="none" stroke="#f59e0b" stroke-width="2.6"/>',
+      '<rect class="xq-live-lastmove-piece-ring" fill="none" stroke="#f59e0b" stroke-width="2.26" data-cx="276" data-cy="468" x="249.38" y="441.38" width="53.24" height="53.24" rx="9.41"/>',
     );
     expect(svg).not.toContain('xq-live-lastmove-cell');
     expect(svg).not.toContain('xq-live-lastmove-ring');

@@ -390,7 +390,7 @@ describe('mountXiangqiAnalysisPage', () => {
       root
         .querySelector<HTMLElement>('.review-shell__cluster')
         ?.style.getPropertyValue('--uni-board-aspect'),
-    ).toBe((538.8 / 610.8).toFixed(4));
+    ).toBe((540 / 612).toFixed(4));
     root.remove();
   });
 });
