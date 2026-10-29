@@ -46,7 +46,7 @@ const baseAnnouncements: Announcement[] = [
     date: '2026-10-29',
     kind: 'update',
     headline: '3D pieces, and banqi tiles that turn over.',
-    body: 'Xiangqi, jieqi and Jungle pieces can now stand in 3D: pick 3D under Pieces in the board settings. Banqi tiles are 3D by default and turn over when they are revealed, and stepping through a finished game glides each move into place.',
+    body: 'Xiangqi, jieqi, Jungle and banqi pieces can now stand in 3D: pick 3D under Pieces in the board settings. A banqi tile turns over when it is revealed, and stepping through a finished game glides each move into place.',
     href: '/?play=computer&gameSpecId=banqi',
     cta: 'Play banqi',
   },
