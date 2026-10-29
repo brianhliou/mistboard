@@ -14,15 +14,17 @@
   font-display: swap;
   src: url("/fonts/roboto-latin.20b535fa.woff2") format("woff2");
 }
-/* The river inscription 楚河 漢界 in LXGW WenKai TC Bold, cut to those four
-   characters (2.4 KB; xiangqi-river-text.ts). unicode-range keeps it off pages
-   that draw none of them. */
+/* The river inscription 楚河 漢界 in Zen Antique, a revival of Meiji-era metal
+   type (Brian, 2026-10-29, over the brush hand of LXGW WenKai), cut to those
+   four characters (2.4 KB; xiangqi-river-text.ts). The face is declared at 700,
+   the weight the river text asks for, so the browser never thickens it with a
+   faux bold. unicode-range keeps it off pages that draw none of them. */
 @font-face {
   font-family: "Mistboard River";
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url("/fonts/lxgw-wenkai-tc-river.woff2") format("woff2");
+  src: url("/fonts/zen-antique-river.woff2") format("woff2");
   unicode-range: U+695A, U+6CB3, U+6F22, U+754C;
 }
 /* Vietnamese subsets of the same font versions (Noto Sans 2.015, Roboto 3.009).
