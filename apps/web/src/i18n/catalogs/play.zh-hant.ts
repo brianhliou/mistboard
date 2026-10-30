@@ -563,6 +563,7 @@ export const ZH_HANT_PLAY = {
   'live.finishWinner': '勝方',
   'variant.mahjong.name': '麻將',
   'variant.xiangqiMahjong.name': '象棋麻將',
+  'variant.threeKingdomsBanqi.name': '三國暗棋',
   'live.pageTitle': '對局',
   'live.you': '你',
   'live.guestAre': '訪客（{color}）',

@@ -111,6 +111,7 @@ import {
   gameSpecIdFromRulesSlug,
   isGameSpecId,
   rulesSlugPublicSurfaceEnabled,
+  variantPlaytestSurfaceEnabled,
   variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
@@ -1477,7 +1478,7 @@ function variantNavLabel(title: string): string {
     .trim();
 }
 
-function buildRulesArticleRailEntries(entries: readonly Article[]): Article[] {
+export function buildRulesArticleRailEntries(entries: readonly Article[]): Article[] {
   return [...entries].sort(compareRulesArticleRailEntries);
 }
 
@@ -1487,17 +1488,18 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
   return a.title.localeCompare(b.title);
 }
 
-// A rules page with no game spec yet sorts right after the spec it varies,
-// instead of falling to the end of the rail.
+// A rules page whose variant is outside the canonical order (no game spec yet,
+// or a hidden playtest spec such as three-kingdoms-banqi, #628) sorts right
+// after the spec it varies, instead of falling to the end of the rail.
 const RULES_RAIL_AFTER_SPEC: Record<string, string> = {
   'three-kingdoms-banqi': 'banqi',
 };
 
 function rulesArticleRailSortIndex(article: Article): number {
-  const gameSpecId = article.gameSpecId ?? article.slug;
-  if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
   const after = RULES_RAIL_AFTER_SPEC[article.slug];
   if (after && isGameSpecId(after)) return canonicalVariantOrderIndex(after) + 0.5;
+  const gameSpecId = article.gameSpecId ?? article.slug;
+  if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
   return Number.MAX_SAFE_INTEGER;
 }
 
@@ -2599,7 +2601,9 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
   // The variant's switch, not the page's: an unlisted rules page for a public
   // variant (crazyhouse-xiangqi's, while it was held back for polish) still
   // offers the board, and a hidden variant (mahjong) still does not.
-  if (!variantPublicSurfaceEnabled(gameSpecId)) return null;
+  if (!variantPublicSurfaceEnabled(gameSpecId) && !variantPlaytestSurfaceEnabled(gameSpecId)) {
+    return null;
+  }
 
   const game = variantNavLabel(title);
   const row = document.createElement('div');
@@ -2659,7 +2663,12 @@ function playCtaGameSpecId(href: string): GameSpecId | null {
  *  check is the gate. */
 function playCtaOpenToViewer(href: string): boolean {
   const id = playCtaGameSpecId(href);
-  return id === null || variantPublicSurfaceEnabled(id) || hasLikelyVariantGrant(id);
+  return (
+    id === null ||
+    variantPublicSurfaceEnabled(id) ||
+    variantPlaytestSurfaceEnabled(id) ||
+    hasLikelyVariantGrant(id)
+  );
 }
 
 function renderCtaBlock(block: CtaBlock): HTMLElement {
@@ -3056,6 +3065,7 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   'crazyhouse-xiangqi': 'crazyhouse-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
+  'three-kingdoms-banqi': 'three-kingdoms-banqi',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
   'xiangqi-mahjong-32': 'xiangqi-mahjong',

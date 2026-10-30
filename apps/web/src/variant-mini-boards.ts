@@ -18,6 +18,7 @@ export type VariantMiniId =
   | 'crazyhouse-xiangqi'
   | 'jieqi'
   | 'banqi'
+  | 'three-kingdoms-banqi'
   | 'jungle'
   | 'jungle-flip'
   | 'xiangqi-mahjong';
@@ -106,6 +107,14 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     shortLabel: 'BQ',
     accent: '#2563a6',
     blurb: 'All 32 pieces face-down on a half board; flip one or move a revealed piece.',
+    family: 'xiangqi',
+  },
+  {
+    id: 'three-kingdoms-banqi',
+    label: 'Three Kingdoms Banqi',
+    shortLabel: 'TKB',
+    accent: '#2563a6',
+    blurb: 'Flip pieces on a 9x5 grid of points and capture to score 100 points.',
     family: 'xiangqi',
   },
   {

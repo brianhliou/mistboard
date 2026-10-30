@@ -610,6 +610,8 @@ export const EN_PLAY = {
   // Tenant live room (variant-tenant/room-chrome.ts and the live-*.ts tenants), #427.
   'variant.mahjong.name': 'Mahjong',
   'variant.xiangqiMahjong.name': 'Xiangqi Mahjong',
+  // Local playtest only (#628).
+  'variant.threeKingdomsBanqi.name': 'Three Kingdoms Banqi',
   'live.pageTitle': 'Live',
   'live.you': 'You',
   'live.guestAre': 'Guest ({color})',

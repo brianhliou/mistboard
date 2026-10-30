@@ -37,6 +37,7 @@ import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
 import { mahjongTenant } from './mahjong-tenant.js';
 import { handleXiangqiWebSocketConnection } from './server-ws-xiangqi.js';
+import { threeKingdomsBanqiTenant } from './three-kingdoms-banqi-tenant.js';
 import { buildTenantGameSummary } from './variant-tenant/events.js';
 import { tenantDurableDeadlineFor } from './variant-tenant/lifecycle.js';
 import './variant-tenant/register-tenants.js';
@@ -73,6 +74,7 @@ const DRAWING_TENANTS: readonly AnyTenant[] = [
   crazyhouseXiangqiTenant,
   atomicXiangqiTenant,
   fortressXiangqiTenant,
+  threeKingdomsBanqiTenant,
 ] as unknown as AnyTenant[];
 
 // Two-seat tenants with no draw by agreement, each with its reason.

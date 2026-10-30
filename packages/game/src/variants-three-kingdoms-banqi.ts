@@ -1,10 +1,14 @@
-// Three Kingdoms banqi (三國暗棋), engine only (#628). No GameSpecId or tenant.
+// Three Kingdoms banqi (三國暗棋) (#628). Its GameSpecId is a hidden local
+// playtest (MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED, off by default); the server
+// tenant is apps/server/src/three-kingdoms-banqi-tenant.ts.
 // Seats use Banqi's convention: red = first mover, black = second mover;
 // a seat's INK is bound by the opening flip, independently of its seat token.
 // Canonical state is server-secret. Only getThreeKingdomsBanqiPlayerView and
 // threeKingdomsBanqiStateToFen may cross a player/engine boundary, even at game end.
 import { banqiPieceLetter } from './banqi-fen.js';
+import type { AbortReason } from './types.js';
 import {
+  assertValidBanqiDeal,
   type BanqiCapture,
   type BanqiColor,
   type BanqiDeal,
@@ -15,6 +19,7 @@ import {
   banqiInkForSeat,
   createBanqiDeal,
   oppositeBanqiSeat,
+  STANDARD_BANQI_DEAL,
 } from './variants-banqi.js';
 
 export const THREE_KINGDOMS_BANQI_WIDTH = 9;
@@ -76,8 +81,18 @@ export type ThreeKingdomsBanqiStatus =
       type: 'finished';
       winner: BanqiSeat | null;
       // No 'no-pieces' reason: rule 4, wipe-out cannot happen (see getThreeKingdomsBanqiResult).
-      reason: 'score' | 'no-progress' | 'no-legal-move';
-    };
+      // The last four are the live room's endings (clock, resign, abandon, agreed draw).
+      reason: ThreeKingdomsBanqiEndReason;
+    }
+  | { type: 'aborted'; reason: AbortReason };
+export type ThreeKingdomsBanqiEndReason =
+  | 'score'
+  | 'no-progress'
+  | 'no-legal-move'
+  | 'timeout'
+  | 'resignation'
+  | 'abandonment'
+  | 'agreement';
 export type ThreeKingdomsBanqiState = {
   id: string;
   board: ThreeKingdomsBanqiBoard;
@@ -186,6 +201,49 @@ export function createInitialThreeKingdomsBanqiState(
     captures: [],
     repCounts: {},
   };
+}
+
+function boardFromDeal(deal: BanqiDeal): ThreeKingdomsBanqiBoard {
+  const board: ThreeKingdomsBanqiBoard = {};
+  deal.forEach((piece, i) => {
+    board[THREE_KINGDOMS_BANQI_SETUP_SQUARES[i]] = { ...piece, faceDown: true };
+  });
+  return board;
+}
+
+/** The live room's setup: the crypto-shuffled deal, stored in the room-created
+ * event as a server secret (never sent to a client). */
+export type ThreeKingdomsBanqiSetup = { deal: BanqiDeal };
+
+export function createThreeKingdomsBanqiSetup(rng: () => number): ThreeKingdomsBanqiSetup {
+  return { deal: createBanqiDeal(rng) };
+}
+
+/** A state from a stored setup. Fails closed on a corrupt deal; an absent setup
+ * is only the runtime's throwaway seed projection and gets the standard deal. */
+export function createThreeKingdomsBanqiStateFromSetup(
+  id: string,
+  setup: unknown,
+): ThreeKingdomsBanqiState {
+  const deal =
+    setup === undefined || setup === null
+      ? STANDARD_BANQI_DEAL
+      : (setup as Partial<ThreeKingdomsBanqiSetup>).deal;
+  if (!Array.isArray(deal)) throw new Error('invalid three kingdoms banqi setup: no deal');
+  assertValidBanqiDeal(deal);
+  return {
+    ...createInitialThreeKingdomsBanqiState(id, 0),
+    board: boardFromDeal(deal),
+  };
+}
+
+export function isThreeKingdomsBanqiLegalMove(
+  state: ThreeKingdomsBanqiState,
+  move: ThreeKingdomsBanqiMove,
+): boolean {
+  return getThreeKingdomsBanqiLegalMoves(state).some(
+    (candidate) => candidate.from === move.from && candidate.to === move.to,
+  );
 }
 
 export function threeKingdomsBanqiSeatToMove(
@@ -384,7 +442,7 @@ export function getThreeKingdomsBanqiLegalMoves(
 export function getThreeKingdomsBanqiResult(
   state: ThreeKingdomsBanqiState,
 ): ThreeKingdomsBanqiStatus {
-  if (state.status.type === 'finished') return state.status;
+  if (state.status.type !== 'playing') return state.status;
   for (const seat of ['red', 'black'] as const) {
     if (state.scores[seat] >= THREE_KINGDOMS_BANQI_SCORE_TARGET)
       return { type: 'finished', winner: seat, reason: 'score' };
@@ -532,4 +590,47 @@ export function threeKingdomsBanqiStateToFen(state: ThreeKingdomsBanqiState): st
     rows.push(row);
   }
   return `${rows.join('/')} ${threeKingdomsBanqiSeatToMove(state)[0]} ${state.firstColor?.[0] ?? '-'} ${state.scores.red} ${state.scores.black} ${state.noProgressClock} ${state.moveNumber}`;
+}
+
+const ENGINE_ROLE_ORDER: readonly BanqiPieceRole[] = [
+  'general',
+  'advisor',
+  'elephant',
+  'chariot',
+  'horse',
+  'cannon',
+  'soldier',
+];
+const START_COUNTS: Readonly<Record<BanqiPieceRole, number>> = {
+  general: 1,
+  advisor: 2,
+  elephant: 2,
+  chariot: 2,
+  horse: 2,
+  cannon: 2,
+  soldier: 5,
+};
+
+/** The engine FEN (three-kingdoms-banqi-engine, src/uci.rs): the public FEN plus
+ * the covered-tile pool and the last move. The pool is PUBLIC arithmetic (start
+ * counts minus face-up pieces minus captures), computed without reading any
+ * face-down tile's identity, so the engine learns nothing a player could not. */
+export function threeKingdomsBanqiStateToEngineFen(state: ThreeKingdomsBanqiState): string {
+  const seen = new Map<string, number>();
+  const bump = (color: BanqiColor, role: BanqiPieceRole) =>
+    seen.set(`${color}:${role}`, (seen.get(`${color}:${role}`) ?? 0) + 1);
+  for (const square of ALL_THREE_KINGDOMS_BANQI_SQUARES) {
+    const piece = state.board[square];
+    if (piece && !piece.faceDown) bump(piece.color, piece.role);
+  }
+  for (const capture of state.captures) bump(capture.owner, capture.role);
+  let pool = '';
+  for (const color of ['red', 'black'] as const) {
+    for (const role of ENGINE_ROLE_ORDER) {
+      const covered = START_COUNTS[role] - (seen.get(`${color}:${role}`) ?? 0);
+      if (covered > 0) pool += `${banqiPieceLetter({ color, role })}${covered}`;
+    }
+  }
+  const last = state.lastMove ? `${state.lastMove.from}${state.lastMove.to}` : '-';
+  return `${threeKingdomsBanqiStateToFen(state)} ${pool || '-'} ${last}`;
 }

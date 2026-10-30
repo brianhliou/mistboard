@@ -9,8 +9,9 @@
 // 45 INTERSECTIONS of a 9x5 line grid, as in xiangqi, not in the 32 cells.
 // Everything else is borrowed: the wood, grid, jade backs, selection and hint
 // colours come from live-banqi-board.css, and the pieces from the active
-// xiangqi piece set. There is no room renderer for this variant yet; when one
-// exists, these diagrams should draw through it, as banqi's do.
+// xiangqi piece set. The local-playtest room board
+// (renderThreeKingdomsBanqiLiveBoardSvg, at the bottom) draws through the same
+// helpers.
 
 import {
   ALL_THREE_KINGDOMS_BANQI_SQUARES,
@@ -22,15 +23,29 @@ import {
   type ThreeKingdomsBanqiState,
 } from '@mistboard/game';
 import { activeXiangqiPieceSet } from './articles/diagrams.js';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import {
+  animateBoardLastMoveArrival,
+  BOARD_LASTMOVE_OVER_GROUP_ATTRS,
+  type BoardLastMovePiece,
+  boardLastMoveMarkersSvg,
+  boardLastMovePiece,
+} from './board-lastmove.js';
+import './board-lastmove.css';
 import { boardCornerRadius } from './board-metrics.js';
 import './live-banqi-board.css';
+import './three-kingdoms-banqi-board.css';
 import {
   BANQI_PIECE_SHAPE,
   banqiFaceDownRadius,
   banqiPieceDrawSize,
+  banqiTile3dBox,
   banqiTile3dEnabled,
   banqiTile3dMarkup,
+  flipBanqiFamilyReveal,
+  flipBanqiTile3dReveal,
 } from './live-banqi-render.js';
+import { BANQI_PIECE_3D, piece3dLook, round2 } from './piece-3d.js';
 import {
   renderXiangqiPieceGlyphed,
   xiangqiBanqiBackMarks,
@@ -352,3 +367,164 @@ export const TK_ADVISOR_TAKES_GENERAL = tkMoveDiagram({
   from: 'e3',
   expect: ['f4', 'd4', 'f2'],
 });
+
+// ── Live room board (local playtest, #628) ───────────────────────────────────
+
+/** Banqi's glide on this board's points: the piece that settled on `move.to`
+ *  slides in from `move.from` (with `reverse`, back onto `move.from`) and the
+ *  last-move tint fades in as it lands. A flip travels nowhere: no-op, as in
+ *  banqi. Call after the render that drew the final position. */
+export function animateThreeKingdomsBanqiBoardMove(
+  host: HTMLElement,
+  move: { from: Square; to: Square },
+  opts: { reverse?: boolean } = {},
+): void {
+  if (move.from === move.to) return;
+  const duration = pieceAnimationDurationMs();
+  if (duration <= 0) return;
+  const settle = opts.reverse ? move.from : move.to;
+  const slot = host.querySelector(`[data-piece-square="${settle}"]`);
+  if (!slot) return;
+  const from = point(opts.reverse ? move.to : move.from);
+  const to = point(settle);
+  glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  // The gold band rides the piece in, as on xiangqi and jieqi. A reverse step
+  // draws the prior move's marks elsewhere, so nothing follows that glide.
+  if (!opts.reverse) animateBoardLastMoveArrival(host, from, to, duration);
+}
+
+/** Turn a live-flipped tile over (banqi's turn-over, on the point grid). The
+ *  flip's mark in the flipper's ink (the flat ring, or a 3D tile's edge) turns
+ *  up with the face, never before it. */
+export function animateThreeKingdomsBanqiReveal(
+  host: HTMLElement,
+  square: Square,
+  opts: { tile3d?: boolean } = {},
+): boolean {
+  const faceMark =
+    host.querySelector('.tk-flip-ring') ?? host.querySelector('.xq-live-lastmove-ring');
+  if (opts.tile3d ?? banqiTile3dEnabled()) {
+    return flipBanqiTile3dReveal(host, square, point, activeXiangqiPieceSet, { faceMark });
+  }
+  return flipBanqiFamilyReveal(host, square, point, faceDown, undefined, faceMark);
+}
+
+/** The piece the last-move mark hugs on a 3D tile: the raised disc, so the mark
+ *  is the tile's edge (board-lastmove.ts boardLastMoveEdgeSvg), as on xiangqi's
+ *  3D pieces (piece-3d.ts xiangqiPiece3dMarkPiece). */
+function tile3dMarkPiece(): BoardLastMovePiece {
+  const box = banqiTile3dBox(CELL);
+  const look = piece3dLook(activeXiangqiPieceSet, box, BANQI_PIECE_3D);
+  return { box, outer: (look.radius * 100) / box, lift: round2(look.depth / 2) };
+}
+
+/** The live room's board geometry, for drag-ghost sizing. */
+export const TK_LIVE_BOARD_VIEW = { width: WIDTH, height: HEIGHT, cell: CELL, files: 9 } as const;
+
+export type TkLiveBoardEntry =
+  | { color: 'red' | 'black'; role: BanqiPieceRole; faceDown: false }
+  | { faceDown: true };
+
+/** The room's board: the diagram board plus a `[data-square]` hit target on
+ *  every point (board-drag.ts and the click handler read it), xiangqi's
+ *  last-move marks, and the lifted piece hidden while dragged. */
+export function renderThreeKingdomsBanqiLiveBoardSvg(
+  board: Partial<Record<Square, TkLiveBoardEntry>>,
+  opts: {
+    selected: Square | null;
+    targets: readonly Square[];
+    draggingFrom: Square | null;
+    lastMove: { from: Square; to: Square } | null;
+    /** The ink of the seat that made `lastMove`. */
+    lastMoveInk?: 'red' | 'black' | null;
+    /** 3D tiles; unset reads the reader's setting (banqiTile3dEnabled). */
+    tile3d?: boolean;
+  },
+): string {
+  // Pieces sit on points, so the marks are xiangqi's and jieqi's: a pale wash
+  // where the piece left and a gold band around the piece that landed; a flip
+  // in place gets the band alone (Brian, 2026-10-28: "draw the last move
+  // golden ring just like... Xiangqi and jieqi"). Was banqi's cell wash in the
+  // mover's ink, which board_lastmove_two_grammars kept for cell boards.
+  // A flip's band takes the flipper's ink instead of gold: the tile turned up
+  // says nothing about who turned it (Brian, 2026-10-28: "only color the
+  // flips"). The first flip binds its flipper to the colour turned up, so every
+  // flip has an ink; gold stays only if a caller has none to give. A 3D
+  // tile's edge band takes the mover's ink on a plain move too (Brian,
+  // 2026-10-29: "color the edge of the moved piece either red or black"); the
+  // flat ring stays gold for moves.
+  // 3D tiles follow the reader's Pieces-menu setting, as banqi's room does; the
+  // mark on a 3D tile is its edge, drawn over the pieces.
+  const tile3d = opts.tile3d ?? banqiTile3dEnabled();
+  const flip = opts.lastMove !== null && opts.lastMove.from === opts.lastMove.to;
+  const ink = opts.lastMove ? (opts.lastMoveInk ?? null) : null;
+  const markPiece = tile3d
+    ? tile3dMarkPiece()
+    : boardLastMovePiece(PIECE_SIZE, activeXiangqiPieceSet);
+  const marks = (layer: 'under' | 'over'): string => {
+    if (!opts.lastMove) return '';
+    const svg = boardLastMoveMarkersSvg(
+      { from: flip ? null : point(opts.lastMove.from), to: point(opts.lastMove.to) },
+      PIECE_SIZE,
+      layer,
+      markPiece,
+    );
+    return ink
+      ? svg.replace(/class="xq-live-lastmove-ring( xq-live-lastmove-edge)?"/, (whole, edge = '') =>
+          flip || edge
+            ? `class="xq-live-lastmove-ring${edge} tk-flip-ring tk-flip-ring--${ink}"`
+            : whole,
+        )
+      : svg;
+  };
+  const marksOver = marks('over');
+  const pieces = ALL_THREE_KINGDOMS_BANQI_SQUARES.map((square) => {
+    const entry = board[square];
+    if (!entry || square === opts.draggingFrom) return '';
+    const { x, y } = point(square);
+    if (tile3d) {
+      const markup = banqiTile3dMarkup(
+        { x, y },
+        entry.faceDown ? null : entry,
+        activeXiangqiPieceSet,
+      );
+      return `<g data-piece-square="${square}">${markup}</g>`;
+    }
+    const inner = entry.faceDown
+      ? faceDown(x, y)
+      : renderXiangqiPieceGlyphed(entry, activeXiangqiPieceSet, {
+          ariaLabel: `${entry.color} ${entry.role}`,
+          className: 'banqi-piece',
+          shrouded: false,
+          x: x - PIECE_SIZE / 2,
+          y: y - PIECE_SIZE / 2,
+          size: PIECE_SIZE,
+          shape: BANQI_PIECE_SHAPE,
+        });
+    return `<g data-piece-square="${square}">${inner}</g>`;
+  }).join('');
+  const selection = opts.selected
+    ? (({ x, y }) => `<circle class="banqi-selection" cx="${x}" cy="${y}" r="${SELECTION_R}"/>`)(
+        point(opts.selected),
+      )
+    : '';
+  const hints = opts.targets
+    .map((to) => {
+      const { x, y } = point(to);
+      return board[to]
+        ? `<circle class="banqi-hint-capture" cx="${x}" cy="${y}" r="${PIECE_EDGE_R}"/>`
+        : `<circle class="banqi-hint" cx="${x}" cy="${y}" r="${HINT_DOT_R}"/>`;
+    })
+    .join('');
+  const half = CELL / 2;
+  const hits = ALL_THREE_KINGDOMS_BANQI_SQUARES.map((square) => {
+    const { x, y } = point(square);
+    const target = opts.targets.includes(square) ? ' banqi-hit--target' : '';
+    return `<g data-square="${square}" class="banqi-hit${target}"><rect x="${x - half}" y="${y - half}" width="${CELL}" height="${CELL}"/></g>`;
+  }).join('');
+  return `<svg class="banqi-board" width="100%" style="height:auto;display:block" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three Kingdoms banqi board">
+    <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${boardCornerRadius(WIDTH)}"/>
+    <g class="banqi-grid">${gridLines()}</g>
+    ${marks('under')}${selection}${pieces}${marksOver ? `<g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${marksOver}</g>` : ''}${hints}${hits}
+  </svg>`;
+}

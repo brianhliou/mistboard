@@ -651,3 +651,49 @@ test('public FEN-like snapshot masks tiles and records binding, seat scores and 
   );
   assert.equal(game.threeKingdomsBanqiStateToFen(exposed), '8r/9/9/1X7/G8 b b 20 15 12 1');
 });
+
+test('Three Kingdoms banqi builds a room state from a stored deal and fails closed on a bad one', () => {
+  const setup = game.createThreeKingdomsBanqiSetup(() => 0.5);
+  const state = game.createThreeKingdomsBanqiStateFromSetup('room', setup);
+  assert.equal(Object.keys(state.board).length, 32);
+  assert.ok(Object.values(state.board).every((piece) => piece?.faceDown));
+  assert.deepEqual(state.status, { type: 'playing', turn: 'red' });
+  assert.throws(() =>
+    game.createThreeKingdomsBanqiStateFromSetup('room', { deal: setup.deal.slice(1) }),
+  );
+  assert.throws(() => game.createThreeKingdomsBanqiStateFromSetup('room', { nope: true }));
+});
+
+test('Three Kingdoms banqi engine FEN carries the public pool and last move, never a hidden identity', () => {
+  const start = game.createThreeKingdomsBanqiStateFromSetup(
+    'room',
+    game.createThreeKingdomsBanqiSetup(() => 0.25),
+  );
+  assert.equal(
+    game.threeKingdomsBanqiStateToEngineFen(start),
+    'XXXX1XXXX/XXXX1XXXX/9/XXXX1XXXX/XXXX1XXXX r - 0 0 0 1 G1A2E2R2H2C2S5g1a2e2r2h2c2s5 -',
+  );
+  const flipped = play(start, 'a1', 'a1');
+  const piece = flipped.board.a1!;
+  const fen = game.threeKingdomsBanqiStateToEngineFen(flipped);
+  const fields = fen.split(' ');
+  assert.equal(fields.length, 9);
+  assert.equal(fields[8], 'a1a1');
+  // The flipped piece left the pool; nothing else did.
+  const letter = game.banqiPieceLetter(piece);
+  const before = /([A-Za-z])(\d+)/g;
+  const counts = (pool: string) =>
+    Object.fromEntries([...pool.matchAll(before)].map((m) => [m[1], Number(m[2])]));
+  const startCounts = counts('G1A2E2R2H2C2S5g1a2e2r2h2c2s5');
+  const now = counts(fields[7]);
+  assert.equal((now[letter] ?? 0) + 1, startCounts[letter]);
+  // Swapping two face-down tiles changes no byte of the FEN.
+  const covered = game.ALL_THREE_KINGDOMS_BANQI_SQUARES.filter(
+    (sq) => flipped.board[sq]?.faceDown && flipped.board[sq]?.role !== flipped.board.b1?.role,
+  );
+  const other = covered.find((sq) => sq !== 'b1')!;
+  const swapped = { ...flipped, board: { ...flipped.board } };
+  [swapped.board.b1, swapped.board[other]] = [flipped.board[other], flipped.board.b1];
+  assert.notDeepEqual(swapped.board.b1, flipped.board.b1);
+  assert.equal(game.threeKingdomsBanqiStateToEngineFen(swapped), fen);
+});

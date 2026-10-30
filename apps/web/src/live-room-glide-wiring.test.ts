@@ -8,6 +8,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderJungleFlipBoardSvg } from './jungle-flip-render.js';
 import { renderJungleBoardSvg } from './jungle-render.js';
+import { renderThreeKingdomsBanqiLiveBoardSvg } from './three-kingdoms-banqi-diagrams.js';
 
 const captured = vi.hoisted(() => ({ configs: [] as Array<Record<string, unknown>> }));
 
@@ -170,5 +171,114 @@ describe('flip jungle live room', () => {
     });
 
     expect(seen).toEqual([]);
+  });
+});
+
+describe('Three Kingdoms banqi live room', () => {
+  const board = {
+    a1: { faceDown: false, color: 'red', role: 'chariot' },
+    b1: { faceDown: false, color: 'black', role: 'horse' },
+  } as const;
+
+  const hook = () => liveHook('./live-three-kingdoms-banqi.js', 'three-kingdoms-banqi');
+
+  function host(lastMove: { from: 'a1' | 'b1'; to: 'a1' | 'b1' }): HTMLElement {
+    const el = document.createElement('div');
+    el.innerHTML = renderThreeKingdomsBanqiLiveBoardSvg(board, {
+      selected: null,
+      targets: [],
+      draggingFrom: null,
+      lastMove,
+    });
+    return el;
+  }
+
+  // Own moves glide too: the room draws nothing before the server's echo.
+  it.each(['red', 'black'])(
+    'glides a %s move with the gold band riding the piece',
+    async (color) => {
+      const animateBoard = await hook();
+      const el = host({ from: 'a1', to: 'b1' });
+      const seen = recordAnimations(el, () => {
+        animateBoard({ board: el }, { lastMove: { from: 'a1', to: 'b1' } }, () => ({
+          kind: 'live',
+          move: { from: 'a1', to: 'b1' },
+          color,
+        }));
+      });
+
+      expect(seen).toEqual(['b1', 'xq-live-lastmove-ring']);
+    },
+  );
+
+  it('reverse-glides a back step without fading a mark', async () => {
+    const animateBoard = await hook();
+    const el = host({ from: 'a1', to: 'b1' });
+    const seen = recordAnimations(el, () => {
+      animateBoard({ board: el }, { lastMove: null }, () => ({
+        kind: 'scrub',
+        direction: 'back',
+        prevView: { lastMove: { from: 'b1', to: 'a1' } },
+      }));
+    });
+
+    expect(seen).toEqual(['b1']);
+  });
+
+  // A flip travels nowhere, so it turns the tile over instead of gliding (#709).
+  it('turns the tile over on a live flip instead of gliding', async () => {
+    const animateBoard = await hook();
+    const el = host({ from: 'a1', to: 'a1' });
+    const seen = recordAnimations(el, () => {
+      animateBoard({ board: el }, { board, lastMove: { from: 'a1', to: 'a1' } }, () => ({
+        kind: 'live',
+        move: { from: 'a1', to: 'a1' },
+        color: 'black',
+      }));
+    });
+
+    // The flip's ring is hidden with the face until the midpoint, then turns in
+    // with it (flipSvgPiece's faceMark), so it never shows before the face.
+    expect(seen).toEqual([
+      'banqi-piece',
+      'piece-flip-back',
+      'a1',
+      'xq-live-lastmove-ring',
+      'xq-live-lastmove-ring',
+    ]);
+  });
+
+  // 3D tiles: the mark is the tile's edge, drawn over the pieces, in the
+  // mover's ink on a plain move and the flipper's on a flip.
+  it.each([
+    [{ from: 'a1', to: 'b1' }, 'red'],
+    [{ from: 'a1', to: 'a1' }, 'black'],
+  ] as const)('inks a 3D tile edge for %o', (lastMove, ink) => {
+    const el = document.createElement('div');
+    el.innerHTML = renderThreeKingdomsBanqiLiveBoardSvg(board, {
+      selected: null,
+      targets: [],
+      draggingFrom: null,
+      lastMove,
+      lastMoveInk: ink,
+      tile3d: true,
+    });
+    const edge = el.querySelector('.xq-live-lastmove-over .xq-live-lastmove-edge');
+    expect(edge?.getAttribute('class')).toContain(`tk-flip-ring--${ink}`);
+    expect(el.querySelectorAll('.banqi-rim').length).toBe(2);
+  });
+
+  it('turns nothing when a replay step lands on a flip', async () => {
+    const animateBoard = await hook();
+    const el = host({ from: 'a1', to: 'a1' });
+    const seen = recordAnimations(el, () => {
+      animateBoard({ board: el }, { board, lastMove: { from: 'a1', to: 'a1' } }, () => ({
+        kind: 'scrub',
+        direction: 'forward',
+        prevView: { lastMove: null },
+      }));
+    });
+
+    expect(seen).not.toContain('piece-flip-back');
   });
 });

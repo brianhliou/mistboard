@@ -10,6 +10,7 @@ import {
   jungleEnabled,
   jungleFlipEnabled,
   mahjongEnabled,
+  threeKingdomsBanqiEnabled,
   xiangqiEnabled,
   xiangqiMahjongEnabled,
 } from './feature-flags.js';
@@ -79,6 +80,12 @@ const GATED_GAME_SPECS = {
     enabled: jungleFlipEnabled,
     disabledError: 'jungle_flip_disabled',
     notIntegratedError: 'jungle_flip_not_integrated',
+  },
+  // Local playtest only (#628); the flag is never set in prod.
+  'three-kingdoms-banqi': {
+    enabled: threeKingdomsBanqiEnabled,
+    disabledError: 'three_kingdoms_banqi_disabled',
+    notIntegratedError: 'three_kingdoms_banqi_not_integrated',
   },
   'fortress-xiangqi': {
     enabled: fortressXiangqiEnabled,

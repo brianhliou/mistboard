@@ -106,6 +106,8 @@ const VARIANT_MINI_BY_GAME_SPEC: Record<GameSpecId, VariantMiniId | null> = {
   [XIANGQI_MAHJONG_SPEC_ID]: 'xiangqi-mahjong',
   // Behind a server flag and a per-account grant; no variant surface shows it.
   mahjong: null,
+  // Local playtest only (#628): its marker, without a public play or rating row.
+  'three-kingdoms-banqi': 'three-kingdoms-banqi',
   // Study-only (game-specs.ts): never playable, so never a variant marker.
   chess: null,
 };

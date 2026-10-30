@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GAME_SPECS } from '@mistboard/game';
+import { GAME_SPECS, isPublicGameSpec } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { variantDisplayLabel } from './game-display.js';
 import {
@@ -10,7 +10,7 @@ import {
   renderVariantMarker,
 } from './variant-markers.js';
 import { VARIANT_MINIS, type VariantMiniId } from './variant-mini-boards.js';
-import { variantMiniIdForGameSpec } from './variants.js';
+import { VARIANTS, variantMiniIdForGameSpec } from './variants.js';
 
 // Variant markers fail closed: no fallback picture exists, so a variant with no
 // marker art has to fail here (or at the `satisfies Record<VariantMiniId, …>`
@@ -27,6 +27,16 @@ const MARKER_PX = 1254;
 const SPECS_WITHOUT_MARKER = ['chess', 'mahjong'];
 
 describe('variant markers', () => {
+  it('wires the committed Three Kingdoms art without a public variant row', () => {
+    const id = 'three-kingdoms-banqi';
+    expect(variantMiniIdForGameSpec(id)).toBe(id);
+    expect(renderVariantMarker(id as VariantMiniId)).toContain(
+      "url('/variant-markers/final/three-kingdoms-banqi.png')",
+    );
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
+    expect(isPublicGameSpec(id)).toBe(false);
+  });
+
   it('has a marker for every variant id, and nothing else', () => {
     expect(Object.keys(FINAL_VARIANT_MARKERS).sort()).toEqual(
       VARIANT_MINIS.map((def) => def.id).sort(),

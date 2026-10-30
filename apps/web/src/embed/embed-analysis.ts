@@ -189,6 +189,8 @@ export const EMBED_ANALYSIS_VARIANTS: Record<GameSpecId, EmbedAnalysisVariant | 
   'crazyhouse-xiangqi': null,
   mahjong: null,
   'xiangqi-mahjong': null,
+  // Local playtest only (#628): no stored analysis.
+  'three-kingdoms-banqi': null,
   chess: null,
 };
 
