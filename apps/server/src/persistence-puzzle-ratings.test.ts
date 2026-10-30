@@ -1,7 +1,9 @@
 import { createUser } from './persistence.js';
+import { getPool } from './persistence-db.js';
 import {
   getPuzzleRating,
   getUserPuzzleRating,
+  listPuzzleAttemptHistory,
   recordPuzzleAttempt,
 } from './persistence-puzzle-ratings.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
@@ -134,5 +136,85 @@ definePersistenceTests('puzzle-ratings', () => {
     const fortress = await getUserPuzzleRating('u5', 'fortress-xiangqi');
     assert.ok(mini);
     assert.equal(fortress, null); // untouched variant has no rating yet
+  });
+
+  test('history matches stored first outcomes, orders tied timestamps, and isolates accounts', async () => {
+    await mkUser('history-owner', 'history-owner');
+    await mkUser('history-other', 'history-other');
+    const attempt = (puzzleId: string, solved: boolean, rated = true, variant = 'xiangqi') =>
+      recordPuzzleAttempt({
+        userId: 'history-owner',
+        puzzleId,
+        variant,
+        solved,
+        rated,
+        seedRating: seedPuzzleRating(3),
+      });
+    // Insert out of chronological/tie-break order, and include an unrated
+    // failure. A retry must not replace the stored first outcome or rating.
+    await attempt('history-b', false);
+    await attempt('history-a', true);
+    await attempt('history-c', false, false);
+    await attempt('history-a', false);
+    await attempt('history-jungle', true, true, 'jungle');
+    await recordPuzzleAttempt({
+      userId: 'history-other',
+      puzzleId: 'other-private',
+      variant: 'xiangqi',
+      solved: true,
+      rated: true,
+      seedRating: seedPuzzleRating(1),
+    });
+    await getPool().query(
+      `UPDATE puzzle_attempts SET created_at = '2026-10-26T12:00:00Z'
+       WHERE user_id = $1`,
+      ['history-owner'],
+    );
+    const stored = await getPool().query<{
+      puzzle_id: string;
+      solved: boolean;
+      rated: boolean;
+      user_rating_before: number;
+      user_rating_after: number;
+      created_at: Date;
+    }>(
+      `SELECT * FROM puzzle_attempts WHERE user_id = $1 AND variant = $2
+       ORDER BY created_at, puzzle_id`,
+      ['history-owner', 'xiangqi'],
+    );
+    const first = await listPuzzleAttemptHistory('history-owner', 'xiangqi', 2, 0);
+    const last = await listPuzzleAttemptHistory('history-owner', 'xiangqi', 2, 2);
+    assert.equal(first.nextOffset, 2);
+    assert.equal(last.nextOffset, null);
+    assert.deepEqual(
+      [...first.attempts, ...last.attempts],
+      stored.rows.map((row) => ({
+        puzzleId: row.puzzle_id,
+        variant: 'xiangqi',
+        solved: row.solved,
+        rated: row.rated,
+        ratingBefore: row.user_rating_before,
+        ratingAfter: row.user_rating_after,
+        ratingDelta: row.user_rating_after - row.user_rating_before,
+        createdAt: row.created_at.toISOString(),
+      })),
+    );
+    assert.deepEqual(
+      first.attempts.map((row) => row.puzzleId),
+      ['history-a', 'history-b'],
+    );
+    assert.equal(first.attempts[0]?.solved, true);
+    assert.equal(last.attempts[0]?.ratingDelta, 0);
+    assert.equal((await getUserPuzzleRating('history-owner', 'xiangqi'))?.attempts, 3);
+    const other = await listPuzzleAttemptHistory('history-other', 'xiangqi', 50, 0);
+    assert.deepEqual(
+      other.attempts.map((row) => row.puzzleId),
+      ['other-private'],
+    );
+    const jungle = await listPuzzleAttemptHistory('history-owner', 'jungle', 50, 0);
+    assert.deepEqual(
+      jungle.attempts.map((row) => row.puzzleId),
+      ['history-jungle'],
+    );
   });
 });
