@@ -215,10 +215,63 @@
     flex: 0 1 auto;
     min-height: 72px;
   }
+  /* One table height from the first move to the result (Brian, 2026-10-30:
+     the finished game's Rematch and links grew the column by ~140px and pushed
+     the bottom clock and captured row down). The box holds a fixed floor tall
+     enough for the in-game rows plus a full move window, and the move window
+     takes whatever the other rows leave (basis 0, so a long game never grows
+     the box either). At the end the post-game actions take their height out of
+     the move window, not the column; the box grows past the floor only when
+     its rows would leave the window under its 72px minimum (a rematch offer
+     with its note, a notice on top of the actions). The mahjong tables keep
+     their own taller hand log (xiangqi-mahjong.css). */
+  .live-review__cluster:not(:is(.live-route--mahjong, .live-route--xiangqi-mahjong) *) {
+    --live-table-h: 400px;
+  }
+  .live-review__cluster:not(:is(.live-route--mahjong, .live-route--xiangqi-mahjong) *)
+    .round-table__box {
+    min-height: var(--live-table-h);
+  }
+  .live-review__cluster:not(:is(.live-route--mahjong, .live-route--xiangqi-mahjong) *)
+    .replay-console
+    .game-table-moves {
+    flex: 1 1 0px;
+    max-height: none;
+  }
   .live-review__cluster .replay-console .move-list {
     flex: 0 0 auto;
     min-height: 0;
     height: auto;
+  }
+  /* Compact post-game actions, so they fit the table above without growing
+     it: the rematch a 40px button (was a 52px slab), the other actions 30px
+     text buttons, still stacked one to a row (Brian, 2026-10-30: side by side
+     read worse; the move list and result scroll instead). Desktop only; the phone
+     sheet keeps its own full-size targets (below). One class more than
+     game-shell.css's rules so the order the two files land in never matters. */
+  .live-review__cluster .round-table__row:has(> .room-actions > .postgame-actions) {
+    padding: 6px 6px 4px;
+  }
+  .live-review__cluster .round-table__box .room-actions .postgame-actions {
+    gap: 2px;
+  }
+  .live-review__cluster .round-table__box .room-actions .postgame-actions > a,
+  .live-review__cluster .round-table__box .room-actions .postgame-actions > button {
+    min-height: 30px;
+    padding: 4px 6px;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+  }
+  .live-review__cluster
+    .round-table__box
+    .room-actions
+    .postgame-actions
+    > button.postgame-actions__rematch,
+  .live-review__cluster .round-table__box .room-actions .postgame-actions__rematch button {
+    min-height: 40px;
+    margin-bottom: 2px;
+    font-size: 14px;
   }
   /* Board pins to the top of its column — aligned with the left meta card — and
      stays there on resize, instead of floating to the vertical centre
