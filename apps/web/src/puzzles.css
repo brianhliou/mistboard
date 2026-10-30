@@ -37,9 +37,11 @@
 }
 
 /* Quiet links: practice and sign-in sit under the main action, never beside
-   it as a second call to action. */
+   it as a second call to action. The settings card's Browse puzzle themes
+   (.puzzle-quiet-link) reads the same. */
 .puzzle-streak-practice,
-.puzzle-streak-signin {
+.puzzle-streak-signin,
+.puzzle-quiet-link {
   color: var(--site-muted);
   font-size: 13px;
   text-decoration: underline;
@@ -47,7 +49,8 @@
 }
 
 .puzzle-streak-practice:hover,
-.puzzle-streak-signin:hover {
+.puzzle-streak-signin:hover,
+.puzzle-quiet-link:hover {
   color: var(--site-accent);
 }
 
@@ -2143,9 +2146,25 @@ a.puzzle-streak-chip:focus-visible {
 
   /* Tall phones: the board area stops at the height of a full-width board and
      sits at the top, so the controls follow it directly and the spare height
-     falls below the page's last row rather than around the board. */
+     falls below the page's last row rather than around the board. The cap is
+     each layout's own aspect (the widths below), so the arrows sit flush under
+     the board with no band of the board area showing between them. */
   .puzzles-shell .puzzle-board:has(.puzzle-xiangqi-board) {
     align-content: start;
+    max-height: calc(100vw * 612 / 552);
+  }
+
+  :root[data-xiangqi-board-layout="cell"] .puzzles-shell .puzzle-board:has(.puzzle-xiangqi-board) {
+    max-height: calc(100vw * 612 / 540);
+  }
+
+  :root[data-board-coordinates="on"] .puzzles-shell .puzzle-board:has(.puzzle-xiangqi-board) {
+    max-height: calc(100vw * 636 / 576);
+  }
+
+  :root[data-board-coordinates="on"][data-xiangqi-board-layout="cell"]
+    .puzzles-shell
+    .puzzle-board:has(.puzzle-xiangqi-board) {
     max-height: calc(100vw * 636 / 564);
   }
 
@@ -2203,8 +2222,13 @@ a.puzzle-streak-chip:focus-visible {
     overflow: hidden;
   }
 
+  /* The session row is centred in the height left under the prompt: auto
+     margins take only what the board, already at its cap, leaves over, so the
+     row never costs the board a pixel and sits mid-gap rather than pinned
+     under the prompt. */
   .puzzles-shell .puzzle-board-panel > .puzzle-session-chips {
     flex: none;
+    margin-block: auto;
   }
 
   /* Streak's shell scrolls on desktop (its summary card can be long); with a

@@ -1307,7 +1307,11 @@ describe('standard xiangqi puzzles', () => {
     expect(hiddenRow?.textContent).toBe('Puzzle themesRevealed after you solve it.');
     const settings = root.querySelector<HTMLElement>('.puzzle-settings-card');
     expect(settings?.querySelector('[data-puzzle-auto-next]')).not.toBeNull();
-    expect(settings?.querySelector('a[href="/puzzles/themes"]')).not.toBeNull();
+    // Muted like the page's other small links (sign-in, practice), whose
+    // shared rule in puzzles.css also names .puzzle-quiet-link.
+    expect(settings?.querySelector('a[href="/puzzles/themes"]')?.className).toBe(
+      'puzzle-quiet-link',
+    );
     for (const move of solverMovesOf(puzzle!)) {
       clickMove(root, move);
       await vi.waitFor(() => expect(root.textContent).toMatch(/Correct\.|Success!/));

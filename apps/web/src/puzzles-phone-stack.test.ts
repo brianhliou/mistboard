@@ -172,6 +172,11 @@ describe('puzzle phone first screen', () => {
     // The board sizes from the box it is given, never from the viewport.
     expect(portraitBlock).toContain('width: min(100cqw, calc(100cqh * 552 / 612));');
     expect(portraitBlock).toContain('width: min(100cqw, calc(100cqh * 576 / 636));');
+    // The board area's cap is the default board's own aspect, so the arrows
+    // sit flush under it (the coordinates+cell cap left a 7px band).
+    expect(portraitBlock).toMatch(
+      /\.puzzles-shell \.puzzle-board:has\(\.puzzle-xiangqi-board\) \{ align-content: start; max-height: calc\(100vw \* 612 \/ 552\); \}/,
+    );
     expect(portraitBlock).toMatch(
       /> \.puzzle-solved-panel \{ box-sizing: border-box; height: var\(--puzzle-prompt-height\); min-height: 0; overflow: hidden;/,
     );
@@ -187,8 +192,10 @@ describe('puzzle phone first screen', () => {
       /\.puzzles-shell \.puzzle-board-panel > \.puzzle-session-chips \{ order: 4;[^}]*height: 30px;/,
     );
     expect(phoneBlock).not.toMatch(/\.puzzle-session-chips \{[^}]*display: none/);
+    // Centred in the spare height under the prompt; auto margins take only
+    // what the capped board leaves, never the board's own height.
     expect(portraitBlock).toContain(
-      '.puzzles-shell .puzzle-board-panel > .puzzle-session-chips { flex: none; }',
+      '.puzzles-shell .puzzle-board-panel > .puzzle-session-chips { flex: none; margin-block: auto; }',
     );
     expect(portraitBlock).not.toMatch(/overflow-y: (auto|scroll)/);
     expect(portraitBlock.match(/--puzzle-stack-chrome: \d+px;/g)).toHaveLength(1);

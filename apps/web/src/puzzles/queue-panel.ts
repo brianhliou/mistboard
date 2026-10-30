@@ -165,7 +165,11 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   if (props.theme && variantFilter === XIANGQI_SPEC_ID) {
     form.append(puzzleThemePicker(props.theme));
   }
-  form.append(puzzleThemesLink());
+  // Muted like the page's other small links (sign-in, practice), not the
+  // browser's default blue.
+  const browseThemes = puzzleThemesLink();
+  browseThemes.className = 'puzzle-quiet-link';
+  form.append(browseThemes);
   const autoNextToggle = document.createElement('label');
   autoNextToggle.className = 'puzzle-toggle';
   const autoNextInput = document.createElement('input');
