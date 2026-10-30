@@ -1863,5 +1863,145 @@
     "cp": 535,
     "mate": null,
     "symbol": "+−"
+  },
+  "tang-dan:0:33": {
+    "cp": 5,
+    "mate": null,
+    "symbol": "="
+  },
+  "tang-dan:0:45": {
+    "cp": 13,
+    "mate": null,
+    "symbol": "="
+  },
+  "tang-dan:0:47": {
+    "cp": -106,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tang-dan:0:49": {
+    "cp": -177,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tang-dan:1:53": {
+    "cp": -13,
+    "mate": null,
+    "symbol": "="
+  },
+  "tang-dan:1:55": {
+    "cp": -33,
+    "mate": null,
+    "symbol": "⩱"
+  },
+  "tang-dan:1:56": {
+    "cp": -215,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tang-dan:1:65": {
+    "cp": -62,
+    "mate": null,
+    "symbol": "⩱"
+  },
+  "tang-dan:2:24": {
+    "cp": 12,
+    "mate": null,
+    "symbol": "="
+  },
+  "tang-dan:2:38": {
+    "cp": 15,
+    "mate": null,
+    "symbol": "="
+  },
+  "tang-dan:2:40": {
+    "cp": 103,
+    "mate": null,
+    "symbol": "±"
+  },
+  "tang-dan:2:42": {
+    "cp": 189,
+    "mate": null,
+    "symbol": "±"
+  },
+  "tang-dan:2:81": {
+    "cp": 525,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "tang-dan:3:16": {
+    "cp": 95,
+    "mate": null,
+    "symbol": "±"
+  },
+  "tang-dan:3:19": {
+    "cp": 157,
+    "mate": null,
+    "symbol": "±"
+  },
+  "tang-dan:3:20": {
+    "cp": 39,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "tang-dan:3:26": {
+    "cp": 62,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "tang-dan:3:33": {
+    "cp": 229,
+    "mate": null,
+    "symbol": "±"
+  },
+  "tang-dan:3:36": {
+    "cp": 176,
+    "mate": null,
+    "symbol": "±"
+  },
+  "tang-dan:4:11": {
+    "cp": 0,
+    "mate": null,
+    "symbol": "="
+  },
+  "tang-dan:4:17": {
+    "cp": -28,
+    "mate": null,
+    "symbol": "="
+  },
+  "tang-dan:4:19": {
+    "cp": -119,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tang-dan:4:24": {
+    "cp": -164,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tang-dan:4:32": {
+    "cp": -95,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tang-dan:4:35": {
+    "cp": -76,
+    "mate": null,
+    "symbol": "⩱"
+  },
+  "tang-dan:4:47": {
+    "cp": -183,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "tang-dan:4:52": {
+    "cp": -311,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "tang-dan:4:57": {
+    "cp": -279,
+    "mate": null,
+    "symbol": "−+"
   }
 }

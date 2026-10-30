@@ -141,6 +141,10 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-10-11, not native-reviewed. The fifth player page;
   // locked with its English copy, which publishes in the same release.
   'zuo-wenjing',
+  // Machine-drafted 2026-10-26, not native-reviewed, from the English Brian
+  // signed off that day. The sixth player page; terms and names follow
+  // zuo-wenjing. Taiwan is 中华台北 in zh-Hans and 台灣 in zh-Hant.
+  'tang-dan',
   // Machine-drafted 2026-09-03, not native-reviewed, locked the day the English
   // copy published. The openings article's dictionary was already complete and
   // waiting: the lock requires a PUBLISHED article, so it could not be listed
@@ -1965,6 +1969,93 @@ const ZH_HANS: Record<string, string> = {
   'Her games in the archive': '她在档案里的对局',
   "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
     '左文静，2022 年女子世界象棋冠军：对局与分析',
+  // tang-dan (zh-Hans), machine-drafted 2026-10-26, not native-reviewed, from the
+  // English Brian signed off that day. Terms follow zuo-wenjing; mainland names stay
+  // in one form in both scripts and, with the dates, reach zh-Hant through the spread.
+  // Li Sih-yi is 李思谊 as dpxq records her; Taiwan is 中华台北 here, 台灣 in zh-Hant.
+  'Tang Dan 唐丹': '唐丹',
+  'Tang Dan.': '唐丹。',
+  'xiangqiqipu.com': 'xiangqiqipu.com',
+  'Oct 3–6, 2026': '2026年10月3–6日',
+  'From Sep 23, 2026': '2026年9月23日起',
+  'Dec 24–28, 2025': '2025年12月24–28日',
+  'Dec 6–13, 2025': '2025年12月6–13日',
+  "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.":
+    '十个全国冠军，比任何一位女棋手都多，还有 2025 年女子世界冠军。她从上海到马尼拉夺得亚洲冠军的这个赛季，盘面上五盘对局，50 局附引擎分析。',
+  'Tang Dan in glasses and a navy top with a white bow, in front of a potted plant.':
+    '唐丹戴着眼镜，身穿系白色蝴蝶结的藏青色上衣，站在一盆绿植前。',
+  "English-speaking xiangqi players who follow the women's game and China's national championship. Found through search, the site, and the Zuo Wenjing and Yin Sheng pages.":
+    '关注女子象棋和全国象棋个人赛的说英语的棋友。通过搜索、本站以及左文静和尹昇的专页找到这一页。',
+  "Tang Dan has won China's national individual women's title ten times, more than any other woman; the tenth came in December 2025, against Zuo Wenjing in the final.":
+    '唐丹十次夺得全国象棋个人赛女子冠军，比任何一位女棋手都多；第十个冠军在 2025 年 12 月到手，决赛对手是左文静。',
+  "Between September 2025 and October 2026 she won the women's world title in Shanghai, her fourth, and the Asian individual title in Manila.":
+    '2025 年 9 月到 2026 年 10 月间，她在上海夺得女子世界冠军，这是她的第四个世界冠军，又在马尼拉夺得亚洲个人赛冠军。',
+  'In the 50 games we hold from that stretch she lost twice, both with red; with black she won 15 and drew 9.':
+    '我们收录的这段时间的 50 盘对局中，她只输了两盘，都是执红；执黑她 15 胜 9 和。',
+  'With red she most often opens by pushing a soldier: 12 of her 26 red games here start that way.':
+    '执红她最常以进兵开局：这里她的 26 盘执红对局，有 12 盘这样开局。',
+  'Tang Dan in glasses and a navy top with a white bow at the collar, arms folded, standing in front of a potted plant.':
+    '唐丹戴着眼镜，身穿领口系白色蝴蝶结的藏青色上衣，双臂交叉，站在一盆绿植前。',
+  "Tang Dan 唐丹 has won China's national individual women's championship ten times, more than any other woman since the women's event began in 1979. The tenth came in December 2025 in Jinan, where she beat Zuo Wenjing in the final. Three months earlier, in Shanghai, she had won her fourth women's world title, and in October 2026 she added the Asian individual title in Manila.":
+    '唐丹十次夺得全国象棋个人赛女子组冠军，是 1979 年设立女子组以来夺冠最多的女棋手。第十个冠军是 2025 年 12 月在济南拿下的，决赛她击败了左文静。三个月前在上海，她第四次夺得女子世界冠军；2026 年 10 月，她又在马尼拉拿下亚洲个人赛冠军。',
+  "She was born in 1990 in Anhui, moved to Beijing as a child, and plays for the Beijing Chess Academy. She is a Chinese grandmaster and a WXF International Grandmaster, and at the 2010 Asian Games in Guangzhou she won the women's individual gold, winning all seven rounds. On the Chinese Xiangqi Association's points list of 28 December 2025 she was the second woman, behind Li Qin.":
+    '她 1990 年生于安徽，小时候迁居北京，代表北京棋院出赛。她是象棋特级大师，也是世界象棋联合会国际特级大师；2010 年广州亚运会上，她七轮全胜，夺得女子个人赛金牌。在中国象棋协会 2025 年 12 月 28 日的积分榜上，她在女棋手中排名第二，仅次于李沁。',
+  'This page is her season from the 2025 world championship to Manila, with five of her games on the board. I ran the 50 games we hold through the same engine analysis Mistboard gives your own games.':
+    '这一页写的是她从 2025 年世锦赛到马尼拉的这个赛季，盘面上有她的五盘对局。我们收录的 50 盘对局，我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  '**She did not lose with black.** In her 24 games with black here she won 15 and drew 9. Both of her losses came with red.':
+    '**执黑她没有输过。** 这里她的 24 盘执黑对局，15 胜 9 和。她的两盘败局都是执红。',
+  '**She opens with a soldier.** In 12 of her 26 red games here her first move pushes a soldier. No other first move comes close: the horse, the elephant and the central cannon have four games each.':
+    '**她以进兵开局。** 这里她的 26 盘执红对局中，有 12 盘第一步就是进兵。其他第一步都差得远：起马、飞相和中炮各有四盘。',
+  '**She played her best at the world championship.** Her median accuracy over the 50 games is 95.7. Over her seven games in Shanghai it was 97.3, her highest at any event here.':
+    '**她在世锦赛上下得最好。** 50 盘对局中她的准确率中位数是 95.7。在上海的七盘对局是 97.3，是这里所有赛事中她最高的。',
+  '"I\'m not afraid of losing," she told the Yangcheng Evening News in March 2026, "only of not playing a high-quality game."':
+    '2026 年 3 月她对《羊城晚报》说：“我不怕输棋，只怕下不出高质量的棋局。”',
+  'The titles': '她的冠军',
+  "The 19th World Xiangqi Championship was played in Shanghai from 21 to 27 September 2025. Tang Dan won the women's individual title, her fourth world title, and the women's team gold for China with Chen Lichun. We hold seven of her games there: five wins and two draws. The first was a win with black over Li Sih-yi of Taiwan.":
+    '第十九届世界象棋锦标赛于 2025 年 9 月 21 日至 27 日在上海举行。唐丹夺得女子个人冠军，这是她的第四个世界冠军；她还与陈丽淳一起为中国队夺得女子团体金牌。我们收录了她在那里的七盘对局：五胜两和。第一盘她执黑战胜中华台北的李思谊。',
+  "Li Sih-yi vs Tang Dan, 2025 World Xiangqi Championship, women, 22 September 2025. Tang Dan won with black in 32 moves. The board opens after red's move 23, with Tang Dan to move.":
+    '李思谊对唐丹，2025 世界象棋锦标赛女子组，2025 年 9 月 22 日。唐丹执黑 32 回合取胜。棋盘从红方第 23 回合之后开始，轮到唐丹走。',
+  '2025 World Xiangqi Championship, women': '2025 世界象棋锦标赛，女子组',
+  'National Championship, Jinan': '全国象棋个人赛，济南',
+  "China's national individual championship was played in Gangcheng, Jinan, from 6 to 13 December 2025, with 56 women in the field. After the group stage and three knockout rounds she met Zuo Wenjing in the final, drew the slow game, and won the rapid tie-break with black for her tenth national title.":
+    '全国象棋个人赛于 2025 年 12 月 6 日至 13 日在济南钢城举行，女子组有 56 名棋手参赛。经过小组赛和三轮淘汰赛，她在决赛遇上左文静，慢棋弈和，快棋加赛执黑取胜，拿下她的第十个全国冠军。',
+  "It was the second time in a month that she beat Zuo for a title: in November she had won the women's individual open event at the 15th National Games, beating Zuo there too. Zuo, the 2022 world champion, has [her own page](/blog/zuo-wenjing).":
+    '这是一个月内她第二次在冠军争夺中击败左文静：11 月在第十五届全运会上，她夺得女子个人公开组冠军，击败的也是左文静。2022 年世界冠军左文静也有[自己的专页](/blog/zuo-wenjing)。',
+  "Zuo Wenjing vs Tang Dan, 2025 National Individual Championship, women, final, 13 December 2025. Tang Dan won with black in 36 moves. The board opens after red's move 33, with Tang Dan to move.":
+    '左文静对唐丹，2025 全国象棋个人赛女子组决赛，2025 年 12 月 13 日。唐丹执黑 36 回合取胜。棋盘从红方第 33 回合之后开始，轮到唐丹走。',
+  '2025 National Individual Championship, women, final': '2025 全国象棋个人赛，女子组决赛',
+  'The season since': '此后的赛季',
+  'CXA Year-End Finals, Chengmai': '中国象棋协会年终总决赛，澄迈',
+  "Eleven days later she played the Chinese Xiangqi Association's year-end finals in Chengmai, Hainan, from 24 to 28 December 2025. We hold eight of her games there: five wins, two draws and a loss to Shi Fenglan. Her last game was a win with red over Li Qin.":
+    '十一天后，她在海南澄迈参加了 2025 年 12 月 24 日至 28 日的中国象棋协会年终总决赛。我们收录了她在那里的八盘对局：五胜两和，另有一盘负于时凤兰。最后一盘她执红战胜李沁。',
+  "Tang Dan vs Li Qin, 2025 CXA Year-End Finals, women, 28 December 2025. Tang Dan won with red in 49 moves. The board opens after black's move 21, with Tang Dan to move.":
+    '唐丹对李沁，2025 中国象棋协会年终总决赛女子组，2025 年 12 月 28 日。唐丹执红 49 回合取胜。棋盘从黑方第 21 回合之后开始，轮到唐丹走。',
+  '2025 CXA Year-End Finals, women': '2025 中国象棋协会年终总决赛，女子组',
+  'The national team championship ran from 28 March to 2 April 2026. Tang played all seven rounds for Beijing and went unbeaten: five wins and two draws. The [whole event](/broadcast/xiangqi/2026-womens-xiangqi-team-championship) is in the broadcast archive.':
+    '全国象棋团体赛于 2026 年 3 月 28 日至 4 月 2 日举行。唐丹代表北京打满七轮，保持不败：五胜两和。[整项赛事](/broadcast/xiangqi/2026-womens-xiangqi-team-championship)都在直播档案里。',
+  "Women's league": '女子甲级联赛',
+  "The first stage of China's [women's league](/broadcast/xiangqi/2026-womens-xiangqi-league) was played in Suifenhe from 23 to 27 September 2026. In round one she beat Tang Sinan, the 2023 women's world champion, with red. She finished the stage with seven wins, two draws and a loss to Liang Yanting.":
+    '全国象棋[女子甲级联赛](/broadcast/xiangqi/2026-womens-xiangqi-league)第一阶段于 2026 年 9 月 23 日至 27 日在绥芬河举行。第一轮她执红战胜 2023 年女子世界冠军唐思楠。这一阶段她七胜两和，另有一盘负于梁妍婷。',
+  "Tang Dan vs Tang Sinan, 2026 Women's Xiangqi League, 23 September 2026. Tang Dan won with red in 42 moves. The board opens after black's move 13, with Tang Dan to move.":
+    '唐丹对唐思楠，2026 全国象棋女子甲级联赛，2026 年 9 月 23 日。唐丹执红 42 回合取胜。棋盘从黑方第 13 回合之后开始，轮到唐丹走。',
+  "2026 Women's Xiangqi League": '2026 全国象棋女子甲级联赛',
+  "A week later she was in Manila for the 21st Asian Individual Championship, and won the women's title, beating Hong Qianhui of Malaysia in the final. We hold six of her games there: four wins and two draws. Her last two were against Hong on the final day: a draw with red, then a win with black.":
+    '一周后她来到马尼拉参加第二十一届亚洲象棋个人锦标赛，决赛击败马来西亚的洪千惠，夺得女子组冠军。我们收录了她在那里的六盘对局：四胜两和。最后两盘都是在最后一天对洪千惠：先执红弈和，再执黑取胜。',
+  "Hong Qianhui vs Tang Dan, 2026 Asian Xiangqi Individual Championship, women, 6 October 2026. Tang Dan won with black in 49 moves. The board opens after red's move 24, with Tang Dan to move.":
+    '洪千惠对唐丹，2026 亚洲象棋个人锦标赛女子组，2026 年 10 月 6 日。唐丹执黑 49 回合取胜。棋盘从红方第 24 回合之后开始，轮到唐丹走。',
+  '2026 Asian Xiangqi Individual Championship, women': '2026 亚洲象棋个人锦标赛，女子组',
+  'Every event in our records': '我们记录中的每项赛事',
+  "Women's league, rounds 1–18": '女子甲级联赛，第 1–18 轮',
+  'Her results in the games we hold, newest first. Our game records come from dpxq.com, which may not hold every game of an event; the Jinan count includes its rapid tie-breaks. The Five Rams Cup, where we hold one game, is left out.':
+    '她在我们收录的对局中的成绩，最新的在前。我们的棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；济南的数字包括快棋加赛。五羊杯我们只收录了一盘，没有列入。',
+  "Sources: game records from dpxq.com and Mistboard's broadcast archive; the national titles from China Sports Daily and the xiangqi news site Guangxiang, with Chinese Wikipedia for the earlier champions; the National Games from Beijing Daily and the Yangcheng Evening News; the 2025 world championship from the Shanghai Sports Bureau, The Paper and Taiwan News; the Manila result from Ming Pao, Sin Chew, Sing Tao and HK01; the 2010 Asian Games from Sina; her titles from the WXF title list of December 2022 and China's national registration list of 2023; the points list from the Chinese Xiangqi Association; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '资料来源：棋谱来自 dpxq.com 和 Mistboard 的直播档案；全国冠军来自《中国体育报》和象棋新闻网站广象网，更早的冠军参考中文维基百科；全运会来自《北京日报》和《羊城晚报》；2025 年世锦赛来自上海市体育局、澎湃新闻和 Taiwan News；马尼拉的成绩来自《明报》、《星洲日报》、《星岛》和 HK01；2010 年亚运会来自新浪；她的称号来自世界象棋联合会 2022 年 12 月的称号名单和 2023 年的全国等级称号注册名单；积分榜来自中国象棋协会；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
+  'Sixteen years after her Asian Games gold she is still winning titles. In thirteen months she won the world, national and Asian titles, and in the 50 games we hold from that stretch nobody beat her when she had black.':
+    '亚运会夺金十六年后，她仍在不断夺冠。十三个月里，她拿下了世界、全国和亚洲冠军；我们收录的这段时间的 50 盘对局中，她执黑时没有人赢过她。',
+  'Her player page': '她的棋手页面',
+  'The Manila championship': '马尼拉锦标赛',
+  "Tang Dan 唐丹, ten-time Chinese women's xiangqi champion: games and analysis":
+    '唐丹，十届全国象棋女子个人冠军：对局与分析',
   // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：对局、战绩与分析',
@@ -8295,6 +8386,85 @@ const ZH_HANT: Record<string, string> = {
   'Her games in the archive': '她在檔案裡的對局',
   "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
     '左文静，2022 年女子世界象棋冠軍：對局與分析',
+  // tang-dan (zh-Hant), machine-drafted 2026-10-26, not native-reviewed. After the
+  // spread, like zuo-wenjing's: mainland names stay simplified (陈丽淳, 时凤兰);
+  // Li Sih-yi converts (李思誼), Taiwan is 台灣, Cup is 盃.
+  "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.":
+    '十個全國冠軍，比任何一位女棋手都多，還有 2025 年女子世界冠軍。她從上海到馬尼拉奪得亞洲冠軍的這個賽季，盤面上五盤對局，50 局附引擎分析。',
+  'Tang Dan in glasses and a navy top with a white bow, in front of a potted plant.':
+    '唐丹戴著眼鏡，身穿繫白色蝴蝶結的藏青色上衣，站在一盆綠植前。',
+  "English-speaking xiangqi players who follow the women's game and China's national championship. Found through search, the site, and the Zuo Wenjing and Yin Sheng pages.":
+    '關注女子象棋和全國象棋個人賽的說英語的棋友。透過搜尋、本站以及左文静和尹昇的專頁找到這一頁。',
+  "Tang Dan has won China's national individual women's title ten times, more than any other woman; the tenth came in December 2025, against Zuo Wenjing in the final.":
+    '唐丹十次奪得全國象棋個人賽女子冠軍，比任何一位女棋手都多；第十個冠軍在 2025 年 12 月到手，決賽對手是左文静。',
+  "Between September 2025 and October 2026 she won the women's world title in Shanghai, her fourth, and the Asian individual title in Manila.":
+    '2025 年 9 月到 2026 年 10 月間，她在上海奪得女子世界冠軍，這是她的第四個世界冠軍，又在馬尼拉奪得亞洲個人賽冠軍。',
+  'In the 50 games we hold from that stretch she lost twice, both with red; with black she won 15 and drew 9.':
+    '我們收錄的這段時間的 50 盤對局中，她只輸了兩盤，都是執紅；執黑她 15 勝 9 和。',
+  'With red she most often opens by pushing a soldier: 12 of her 26 red games here start that way.':
+    '執紅她最常以進兵開局：這裡她的 26 盤執紅對局，有 12 盤這樣開局。',
+  'Tang Dan in glasses and a navy top with a white bow at the collar, arms folded, standing in front of a potted plant.':
+    '唐丹戴著眼鏡，身穿領口繫白色蝴蝶結的藏青色上衣，雙臂交叉，站在一盆綠植前。',
+  "Tang Dan 唐丹 has won China's national individual women's championship ten times, more than any other woman since the women's event began in 1979. The tenth came in December 2025 in Jinan, where she beat Zuo Wenjing in the final. Three months earlier, in Shanghai, she had won her fourth women's world title, and in October 2026 she added the Asian individual title in Manila.":
+    '唐丹十次奪得全國象棋個人賽女子組冠軍，是 1979 年設立女子組以來奪冠最多的女棋手。第十個冠軍是 2025 年 12 月在濟南拿下的，決賽她擊敗了左文静。三個月前在上海，她第四次奪得女子世界冠軍；2026 年 10 月，她又在馬尼拉拿下亞洲個人賽冠軍。',
+  "She was born in 1990 in Anhui, moved to Beijing as a child, and plays for the Beijing Chess Academy. She is a Chinese grandmaster and a WXF International Grandmaster, and at the 2010 Asian Games in Guangzhou she won the women's individual gold, winning all seven rounds. On the Chinese Xiangqi Association's points list of 28 December 2025 she was the second woman, behind Li Qin.":
+    '她 1990 年生於安徽，小時候遷居北京，代表北京棋院出賽。她是象棋特級大師，也是世界象棋聯合會國際特級大師；2010 年廣州亞運會上，她七輪全勝，奪得女子個人賽金牌。在中國象棋協會 2025 年 12 月 28 日的積分榜上，她在女棋手中排名第二，僅次於李沁。',
+  'This page is her season from the 2025 world championship to Manila, with five of her games on the board. I ran the 50 games we hold through the same engine analysis Mistboard gives your own games.':
+    '這一頁寫的是她從 2025 年世錦賽到馬尼拉的這個賽季，盤面上有她的五盤對局。我們收錄的 50 盤對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  '**She did not lose with black.** In her 24 games with black here she won 15 and drew 9. Both of her losses came with red.':
+    '**執黑她沒有輸過。** 這裡她的 24 盤執黑對局，15 勝 9 和。她的兩盤敗局都是執紅。',
+  '**She opens with a soldier.** In 12 of her 26 red games here her first move pushes a soldier. No other first move comes close: the horse, the elephant and the central cannon have four games each.':
+    '**她以進兵開局。** 這裡她的 26 盤執紅對局中，有 12 盤第一步就是進兵。其他第一步都差得遠：起馬、飛相和中炮各有四盤。',
+  '**She played her best at the world championship.** Her median accuracy over the 50 games is 95.7. Over her seven games in Shanghai it was 97.3, her highest at any event here.':
+    '**她在世錦賽上下得最好。** 50 盤對局中她的準確率中位數是 95.7。在上海的七盤對局是 97.3，是這裡所有賽事中她最高的。',
+  '"I\'m not afraid of losing," she told the Yangcheng Evening News in March 2026, "only of not playing a high-quality game."':
+    '2026 年 3 月她對《羊城晚報》說：「我不怕輸棋，只怕下不出高質量的棋局。」',
+  'The titles': '她的冠軍',
+  "The 19th World Xiangqi Championship was played in Shanghai from 21 to 27 September 2025. Tang Dan won the women's individual title, her fourth world title, and the women's team gold for China with Chen Lichun. We hold seven of her games there: five wins and two draws. The first was a win with black over Li Sih-yi of Taiwan.":
+    '第十九屆世界象棋錦標賽於 2025 年 9 月 21 日至 27 日在上海舉行。唐丹奪得女子個人冠軍，這是她的第四個世界冠軍；她還與陈丽淳一起為中國隊奪得女子團體金牌。我們收錄了她在那裡的七盤對局：五勝兩和。第一盤她執黑戰勝台灣的李思誼。',
+  "Li Sih-yi vs Tang Dan, 2025 World Xiangqi Championship, women, 22 September 2025. Tang Dan won with black in 32 moves. The board opens after red's move 23, with Tang Dan to move.":
+    '李思誼對唐丹，2025 世界象棋錦標賽女子組，2025 年 9 月 22 日。唐丹執黑 32 回合取勝。棋盤從紅方第 23 回合之後開始，輪到唐丹走。',
+  '2025 World Xiangqi Championship, women': '2025 世界象棋錦標賽，女子組',
+  'National Championship, Jinan': '全國象棋個人賽，濟南',
+  "China's national individual championship was played in Gangcheng, Jinan, from 6 to 13 December 2025, with 56 women in the field. After the group stage and three knockout rounds she met Zuo Wenjing in the final, drew the slow game, and won the rapid tie-break with black for her tenth national title.":
+    '全國象棋個人賽於 2025 年 12 月 6 日至 13 日在濟南鋼城舉行，女子組有 56 名棋手參賽。經過小組賽和三輪淘汰賽，她在決賽遇上左文静，慢棋弈和，快棋加賽執黑取勝，拿下她的第十個全國冠軍。',
+  "It was the second time in a month that she beat Zuo for a title: in November she had won the women's individual open event at the 15th National Games, beating Zuo there too. Zuo, the 2022 world champion, has [her own page](/blog/zuo-wenjing).":
+    '這是一個月內她第二次在冠軍爭奪中擊敗左文静：11 月在第十五屆全運會上，她奪得女子個人公開組冠軍，擊敗的也是左文静。2022 年世界冠軍左文静也有[自己的專頁](/blog/zuo-wenjing)。',
+  "Zuo Wenjing vs Tang Dan, 2025 National Individual Championship, women, final, 13 December 2025. Tang Dan won with black in 36 moves. The board opens after red's move 33, with Tang Dan to move.":
+    '左文静對唐丹，2025 全國象棋個人賽女子組決賽，2025 年 12 月 13 日。唐丹執黑 36 回合取勝。棋盤從紅方第 33 回合之後開始，輪到唐丹走。',
+  '2025 National Individual Championship, women, final': '2025 全國象棋個人賽，女子組決賽',
+  'The season since': '此後的賽季',
+  'CXA Year-End Finals, Chengmai': '中國象棋協會年終總決賽，澄邁',
+  "Eleven days later she played the Chinese Xiangqi Association's year-end finals in Chengmai, Hainan, from 24 to 28 December 2025. We hold eight of her games there: five wins, two draws and a loss to Shi Fenglan. Her last game was a win with red over Li Qin.":
+    '十一天後，她在海南澄邁參加了 2025 年 12 月 24 日至 28 日的中國象棋協會年終總決賽。我們收錄了她在那裡的八盤對局：五勝兩和，另有一盤負於时凤兰。最後一盤她執紅戰勝李沁。',
+  "Tang Dan vs Li Qin, 2025 CXA Year-End Finals, women, 28 December 2025. Tang Dan won with red in 49 moves. The board opens after black's move 21, with Tang Dan to move.":
+    '唐丹對李沁，2025 中國象棋協會年終總決賽女子組，2025 年 12 月 28 日。唐丹執紅 49 回合取勝。棋盤從黑方第 21 回合之後開始，輪到唐丹走。',
+  '2025 CXA Year-End Finals, women': '2025 中國象棋協會年終總決賽，女子組',
+  'The national team championship ran from 28 March to 2 April 2026. Tang played all seven rounds for Beijing and went unbeaten: five wins and two draws. The [whole event](/broadcast/xiangqi/2026-womens-xiangqi-team-championship) is in the broadcast archive.':
+    '全國象棋團體賽於 2026 年 3 月 28 日至 4 月 2 日舉行。唐丹代表北京打滿七輪，保持不敗：五勝兩和。[整項賽事](/broadcast/xiangqi/2026-womens-xiangqi-team-championship)都在直播檔案裡。',
+  "Women's league": '女子甲級聯賽',
+  "The first stage of China's [women's league](/broadcast/xiangqi/2026-womens-xiangqi-league) was played in Suifenhe from 23 to 27 September 2026. In round one she beat Tang Sinan, the 2023 women's world champion, with red. She finished the stage with seven wins, two draws and a loss to Liang Yanting.":
+    '全國象棋[女子甲級聯賽](/broadcast/xiangqi/2026-womens-xiangqi-league)第一階段於 2026 年 9 月 23 日至 27 日在綏芬河舉行。第一輪她執紅戰勝 2023 年女子世界冠軍唐思楠。這一階段她七勝兩和，另有一盤負於梁妍婷。',
+  "Tang Dan vs Tang Sinan, 2026 Women's Xiangqi League, 23 September 2026. Tang Dan won with red in 42 moves. The board opens after black's move 13, with Tang Dan to move.":
+    '唐丹對唐思楠，2026 全國象棋女子甲級聯賽，2026 年 9 月 23 日。唐丹執紅 42 回合取勝。棋盤從黑方第 13 回合之後開始，輪到唐丹走。',
+  "2026 Women's Xiangqi League": '2026 全國象棋女子甲級聯賽',
+  "A week later she was in Manila for the 21st Asian Individual Championship, and won the women's title, beating Hong Qianhui of Malaysia in the final. We hold six of her games there: four wins and two draws. Her last two were against Hong on the final day: a draw with red, then a win with black.":
+    '一週後她來到馬尼拉參加第二十一屆亞洲象棋個人錦標賽，決賽擊敗馬來西亞的洪千惠，奪得女子組冠軍。我們收錄了她在那裡的六盤對局：四勝兩和。最後兩盤都是在最後一天對洪千惠：先執紅弈和，再執黑取勝。',
+  "Hong Qianhui vs Tang Dan, 2026 Asian Xiangqi Individual Championship, women, 6 October 2026. Tang Dan won with black in 49 moves. The board opens after red's move 24, with Tang Dan to move.":
+    '洪千惠對唐丹，2026 亞洲象棋個人錦標賽女子組，2026 年 10 月 6 日。唐丹執黑 49 回合取勝。棋盤從紅方第 24 回合之後開始，輪到唐丹走。',
+  '2026 Asian Xiangqi Individual Championship, women': '2026 亞洲象棋個人錦標賽，女子組',
+  'Every event in our records': '我們記錄中的每項賽事',
+  "Women's league, rounds 1–18": '女子甲級聯賽，第 1–18 輪',
+  'Her results in the games we hold, newest first. Our game records come from dpxq.com, which may not hold every game of an event; the Jinan count includes its rapid tie-breaks. The Five Rams Cup, where we hold one game, is left out.':
+    '她在我們收錄的對局中的成績，最新的在前。我們的棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；濟南的數字包括快棋加賽。五羊盃我們只收錄了一盤，沒有列入。',
+  "Sources: game records from dpxq.com and Mistboard's broadcast archive; the national titles from China Sports Daily and the xiangqi news site Guangxiang, with Chinese Wikipedia for the earlier champions; the National Games from Beijing Daily and the Yangcheng Evening News; the 2025 world championship from the Shanghai Sports Bureau, The Paper and Taiwan News; the Manila result from Ming Pao, Sin Chew, Sing Tao and HK01; the 2010 Asian Games from Sina; her titles from the WXF title list of December 2022 and China's national registration list of 2023; the points list from the Chinese Xiangqi Association; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '資料來源：棋譜來自 dpxq.com 和 Mistboard 的直播檔案；全國冠軍來自《中國體育報》和象棋新聞網站廣象網，更早的冠軍參考中文維基百科；全運會來自《北京日報》和《羊城晚報》；2025 年世錦賽來自上海市體育局、澎湃新聞和 Taiwan News；馬尼拉的成績來自《明報》、《星洲日報》、《星島》和 HK01；2010 年亞運會來自新浪；她的稱號來自世界象棋聯合會 2022 年 12 月的稱號名單和 2023 年的全國等級稱號註冊名單；積分榜來自中國象棋協會；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
+  'Sixteen years after her Asian Games gold she is still winning titles. In thirteen months she won the world, national and Asian titles, and in the 50 games we hold from that stretch nobody beat her when she had black.':
+    '亞運會奪金十六年後，她仍在不斷奪冠。十三個月裡，她拿下了世界、全國和亞洲冠軍；我們收錄的這段時間的 50 盤對局中，她執黑時沒有人贏過她。',
+  'Her player page': '她的棋手頁面',
+  'The Manila championship': '馬尼拉錦標賽',
+  "Tang Dan 唐丹, ten-time Chinese women's xiangqi champion: games and analysis":
+    '唐丹，十屆全國象棋女子個人冠軍：對局與分析',
   // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. After the
   // spread, or the Simplified entries win (they did, for one deploy).
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：對局、戰績與分析',

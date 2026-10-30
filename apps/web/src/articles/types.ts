@@ -431,6 +431,10 @@ export type ImageFigureBlock = {
   darkSrc?: string;
   alt: string;
   caption?: string;
+  // A credit that must carry a link (a photo used on condition of a credit
+  // and a link, like the xiangqiqipu.com portraits): rendered after the
+  // caption as "Photo: <a href>text</a>", opening in a new tab.
+  credit?: { text: string; href: string };
   // 'article-figure-full' lets the image fill the column instead of the
   // default 560px cap.
   className?: string;

@@ -3668,6 +3668,14 @@ a.article-meta-author:hover .article-meta-author-name {
   height: auto;
 }
 
+/* A small photo (a 300px portrait) shown whole at its own size: the zoom rule
+   above stretches every image to the column, which upscales it. Scoped one
+   class deeper so it outranks that rule in any bundle order. */
+.article-figure-native .article-figure-zoom img {
+  width: auto;
+  max-width: 100%;
+}
+
 .article-lightbox {
   /* `margin: auto` is what centres a top-layer dialog; without it the element
      sits wherever the default block layout puts it. */
