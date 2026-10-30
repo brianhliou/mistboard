@@ -233,8 +233,9 @@ describe('puzzles route', () => {
     expect(root.querySelectorAll('[data-puzzle-theme-card]')).toHaveLength(1);
     const link = root.querySelector<HTMLAnchorElement>('a[href="/puzzles?theme=ma-hou-pao"]');
     expect(link?.textContent).toContain('Cannon behind the horse');
-    expect(root.textContent).toContain('马后炮');
-    expect(root.textContent).toContain('mǎ hòu pào');
+    // English copy assumes no Chinese: no hanzi or pinyin beside the name.
+    expect(root.textContent).not.toContain('马后炮');
+    expect(root.textContent).not.toContain('mǎ hòu pào');
     // Lichess's row: the count sits inline after the name, a bare number.
     const count = root.querySelector(
       '[data-puzzle-theme-card="ma-hou-pao"] h3 .puzzle-theme-count',
@@ -335,11 +336,12 @@ describe('puzzles route', () => {
     expect(root.querySelector('[data-puzzle-theme-card="endgame"]')?.textContent).toContain(
       '14 or fewer pieces',
     );
-    // The hanzi · pinyin line sits on mate patterns only.
-    expect(root.querySelector('[data-puzzle-theme-card="matein1"] .puzzle-theme-name')).toBeNull();
-    expect(
-      root.querySelector('[data-puzzle-theme-card="men-gong"] .puzzle-theme-name [lang="zh-Hans"]'),
-    ).not.toBeNull();
+    // English copy assumes no Chinese: a mate pattern reads in English only,
+    // with no hanzi or pinyin line under it.
+    const menGong = root.querySelector<HTMLElement>('[data-puzzle-theme-card="men-gong"]');
+    expect(menGong?.querySelector('h3')?.textContent).toContain('Sealed palace');
+    expect(menGong?.querySelector('.puzzle-theme-name')).toBeNull();
+    expect(menGong?.textContent).not.toMatch(/[\u3400-\u9fff]/);
 
     // Recommended comes first: one row training on everything, counted as
     // the corpus (each puzzle has one phase: 5 + 70 + 30).
@@ -1252,8 +1254,16 @@ describe('standard xiangqi puzzles', () => {
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
     const chip = root.querySelector<HTMLElement>('.puzzle-tag-motif');
-    expect(chip?.textContent).toBe(`${motif.hanzi} ${motif.label}`);
-    expect(chip?.title).toBe(motif.pinyin);
+    // English names only in en: no hanzi, no pinyin tooltip.
+    expect(chip?.textContent).toBe(motif.label);
+    expect(chip?.textContent).not.toMatch(/[\u3400-\u9fff]/);
+    expect(chip?.title).not.toBe(motif.pinyin);
+    // Theme tags read as names, never as the raw id ("Matein2").
+    const themeChips = [...root.querySelectorAll('.puzzle-tag:not(.puzzle-tag-motif)')].map(
+      (tag) => tag.textContent,
+    );
+    expect(themeChips.length).toBeGreaterThan(0);
+    for (const label of themeChips) expect(label).not.toMatch(/^Matein|^Winning-|-/);
   });
 
   it('glides ONLY the scripted opponent reply after a correct move, and reverses on a back-step', async () => {

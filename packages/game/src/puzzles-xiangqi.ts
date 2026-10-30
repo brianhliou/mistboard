@@ -42,17 +42,21 @@ import {
   isStandardXiangqiLegalMove,
 } from './variants-xiangqi-standard.js';
 
-export type XiangqiPuzzleTheme =
-  | 'checkmate'
-  | 'matein1'
-  | 'matein2'
-  | 'matein3'
-  | 'matein4'
-  | 'winning'
-  | 'winning-material'
-  | 'crushing'
-  | 'endgame'
-  | 'middlegame';
+/** Every theme the miner (`tagXiangqiPuzzleThemes`) can put on a puzzle. */
+export const XIANGQI_PUZZLE_THEMES = [
+  'checkmate',
+  'matein1',
+  'matein2',
+  'matein3',
+  'matein4',
+  'winning',
+  'winning-material',
+  'crushing',
+  'endgame',
+  'middlegame',
+] as const;
+
+export type XiangqiPuzzleTheme = (typeof XIANGQI_PUZZLE_THEMES)[number];
 
 export type XiangqiPuzzleGoal =
   | {

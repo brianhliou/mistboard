@@ -4,9 +4,14 @@
  * themes card, and the settings card (variant picker + auto-next).
  */
 
-import { puzzleShortCode, XIANGQI_MOTIF_BY_ID, XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  type JunglePuzzleTheme,
+  puzzleShortCode,
+  XIANGQI_MOTIF_BY_ID,
+  XIANGQI_SPEC_ID,
+  type XiangqiPuzzleTheme,
+} from '@mistboard/game';
 import { type I18nKey, t } from '../i18n/catalog.js';
-import { currentLocale } from '../i18n/locale.js';
 import { seatDiscEl } from '../seat-disc.js';
 import { renderVariantMarker } from '../variant-markers.js';
 import { colorLabel, type PuzzleSummary } from './adapter.js';
@@ -416,30 +421,57 @@ export function puzzleCodeLine(puzzle: PuzzleSummary): HTMLSpanElement {
 export function tagsPanel(puzzle: Pick<PuzzleSummary, 'themes' | 'motifs'>): HTMLElement {
   const tags = document.createElement('div');
   tags.className = 'puzzle-tags';
-  // Named kill patterns lead: the Chinese name is the name, the English
-  // gloss rides beside it outside zh locales, pinyin sits in the tooltip.
-  const zh = currentLocale().startsWith('zh');
+  // Named kill patterns lead, under the catalogue's name for the locale: the
+  // English name in en, the hanzi in zh (traditional in zh-Hant). English copy
+  // assumes a reader who reads no Chinese (2026-10-10), as the themes page does.
   for (const id of puzzle.motifs ?? []) {
-    const motif = XIANGQI_MOTIF_BY_ID.get(id);
-    if (!motif) continue;
+    if (!XIANGQI_MOTIF_BY_ID.has(id)) continue;
     const tag = document.createElement('span');
     tag.className = 'puzzle-tag puzzle-tag-motif';
-    tag.lang = 'zh';
-    // zh-Hant reads the traditional form from the catalogue.
-    tag.textContent = zh ? t(`puzzle.motifName.${id}` as I18nKey) : `${motif.hanzi} ${motif.label}`;
-    tag.title = motif.pinyin;
+    tag.textContent = t(`puzzle.motifName.${id}` as I18nKey);
+    tag.title = t(`puzzle.motifDesc.${id}` as I18nKey);
     tags.append(tag);
   }
   for (const theme of puzzle.themes) {
     const tag = document.createElement('span');
     tag.className = 'puzzle-tag';
-    tag.textContent = themeLabel(theme);
+    tag.textContent = puzzleThemeLabel(theme);
     tags.append(tag);
   }
   return tags;
 }
 
-function themeLabel(theme: string): string {
+// The label for every theme a puzzle can carry. A theme that is also a
+// training tag shares the themes page's name, so the chip and the page agree.
+// Typed over both unions: a theme added to the miner without a label here
+// fails the typecheck, and puzzles.test.ts checks every catalogue has it.
+export const PUZZLE_THEME_LABEL_KEYS: Record<XiangqiPuzzleTheme | JunglePuzzleTheme, I18nKey> = {
+  checkmate: 'puzzle.tagName.checkmate',
+  matein1: 'puzzle.tagName.matein1',
+  matein2: 'puzzle.tagName.matein2',
+  matein3: 'puzzle.tagName.matein3',
+  matein4: 'puzzle.tagName.matein4',
+  winning: 'puzzle.tagName.winning',
+  'winning-material': 'puzzle.themeName.winning-material',
+  crushing: 'puzzle.themeName.crushing',
+  endgame: 'puzzle.tagName.endgame',
+  middlegame: 'puzzle.tagName.middlegame',
+  'den-race': 'puzzle.themeName.den-race',
+  'capture-all': 'puzzle.themeName.capture-all',
+  stalemate: 'puzzle.themeName.stalemate',
+  trap: 'puzzle.themeName.trap',
+  'water-leap': 'puzzle.themeName.water-leap',
+  'rank-up': 'puzzle.themeName.rank-up',
+  rat: 'puzzle.themeName.rat',
+  elephant: 'puzzle.themeName.elephant',
+  lion: 'puzzle.themeName.lion',
+  tiger: 'puzzle.themeName.tiger',
+};
+
+export function puzzleThemeLabel(theme: string): string {
+  const key = (PUZZLE_THEME_LABEL_KEYS as Record<string, I18nKey | undefined>)[theme];
+  if (key) return t(key);
+  // A theme from a newer server than this client: spell it out readably.
   return theme
     .split('-')
     .filter(Boolean)

@@ -11,7 +11,6 @@ import {
   type XiangqiTrainingTagId,
 } from '@mistboard/game';
 import { type I18nKey, t } from '../i18n/catalog.js';
-import { currentLocale } from '../i18n/locale.js';
 import { puzzleNavItems } from '../nav-items.js';
 
 export type PuzzleThemeCount = XiangqiMotif & { count: number };
@@ -288,7 +287,6 @@ function themeRow(
   name: string,
   count: number | null,
   description: string,
-  motif?: XiangqiMotif,
 ): HTMLElement {
   const card = document.createElement('article');
   card.className = 'puzzle-theme-entry';
@@ -314,18 +312,10 @@ function themeRow(
   const text = document.createElement('p');
   text.className = 'puzzle-theme-description';
   text.textContent = description;
+  // Every locale shows the catalogue's own name: English in en, the hanzi in
+  // zh. English copy assumes a reader who reads no Chinese (2026-10-10), so
+  // there is no hanzi or pinyin line under an English name.
   body.append(heading, text);
-  // In zh the name is already the hanzi; the pinyin and English literal are
-  // for readers who do not read it.
-  if (motif && !currentLocale().startsWith('zh')) {
-    const native = document.createElement('p');
-    native.className = 'puzzle-theme-name';
-    const hanzi = document.createElement('span');
-    hanzi.lang = 'zh-Hans';
-    hanzi.textContent = motif.hanzi;
-    native.append(hanzi, ` · ${motif.pinyin} · “${motif.literal}”`);
-    body.append(native);
-  }
   link.append(themeIcon(key), body);
   card.append(link);
   return card;
@@ -338,7 +328,6 @@ function themeCard(entry: PuzzleThemeEntry): HTMLElement {
     entry.name,
     entry.count,
     entry.description,
-    entry.motif,
   );
 }
 
