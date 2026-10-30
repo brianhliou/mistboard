@@ -1,3 +1,4 @@
+import type { EngineClock } from './engine-time-budget.js';
 import type { UciEval } from './uci-engine-harness.js';
 import {
   XIANGQI_FSF_ENGINE_VERSION,
@@ -107,7 +108,7 @@ export function xiangqiEngineVersion(clientId: string | undefined): string | nul
 export function xiangqiLiveEngineMove(
   engineId: string,
   moves: string[],
-  opts: { movetimeMs?: number } = {},
+  opts: { movetimeMs?: number; clock?: EngineClock } = {},
 ): Promise<UciEval> {
   // The random floor bot has no UCI subprocess; the EvE runner's move provider
   // picks its move directly. Reaching here means a caller mis-routed it.
