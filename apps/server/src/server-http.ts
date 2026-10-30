@@ -594,7 +594,7 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
-    // Short links for X posts and the YouTube address (x-short-links.ts): a 302 so a slug can be
+    // Short links for X and Facebook posts and the YouTube address (x-short-links.ts): a 302 so a slug can be
     // repointed, and no-store so neither the edge nor a browser pins the hop.
     const xShortLinkTarget = xShortLinkRedirect(pathname);
     if (xShortLinkTarget) {
