@@ -316,6 +316,16 @@ export const EN_COMMUNITY = {
   'profile.ratedGameMany': '{count} rated games',
   'profile.unrated': 'Unrated',
   'profile.puzzleSolved': '{count} solved',
+  'profile.puzzleProgress': 'Puzzle progress',
+  'profile.puzzleHistory': 'Past results',
+  'profile.puzzleHistoryPrivate': 'Xiangqi puzzle history. Only you can see this.',
+  'profile.puzzleHistoryEmpty': 'No puzzle results yet.',
+  'profile.puzzleChartEmpty': 'No saved rating points yet.',
+  'profile.puzzleHistoryLegacy':
+    'Older results may not have saved ratings. Gaps are left in the timeline.',
+  'profile.puzzleRatingUnavailable': 'Rating unavailable',
+  'profile.puzzleHistoryFailed': 'Could not load puzzle history.',
+  'profile.puzzleHistoryRetry': 'Try again',
   // Puzzle streak on the Puzzles heading line: the live run with its best,
   // or only the best once the run has lapsed.
   'profile.streakCurrent': '{days} streak · best {best}',

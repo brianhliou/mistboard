@@ -35,6 +35,7 @@ import {
   profileGamesFilterParams,
   profileUrlWithFilter,
 } from './profile-games-tools.js';
+import { buildProfilePuzzleProgress } from './profile-puzzles.js';
 import {
   buildProfileDashboard,
   buildProfileGameRow,
@@ -319,7 +320,11 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
     locale,
   );
 
-  shell.append(buildProfileDashboard(ratings, overview, tabs.el));
+  const dashboard = buildProfileDashboard(ratings, overview, tabs.el);
+  if (profile.isViewer) {
+    tabs.el.before(buildProfilePuzzleProgress(locale));
+  }
+  shell.append(dashboard);
 }
 
 // Static frame of the players page: community rail, twin headings (Online
