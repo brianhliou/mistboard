@@ -12,8 +12,10 @@
 import {
   ALL_THREE_KINGDOMS_BANQI_SQUARES,
   applyThreeKingdomsBanqiMove,
+  type BanqiDeal,
   getThreeKingdomsBanqiPlayerView,
   isThreeKingdomsBanqiLegalMove,
+  THREE_KINGDOMS_BANQI_SETUP_SQUARES,
   type ThreeKingdomsBanqiMove,
   type ThreeKingdomsBanqiPlayerView,
   type ThreeKingdomsBanqiSquare,
@@ -24,6 +26,20 @@ import {
 import type { ProjectedView, VariantTreeAdapter } from './game-tree.js';
 
 const SQUARE_SET = new Set<string>(ALL_THREE_KINGDOMS_BANQI_SQUARES);
+
+/** A finished game's deal, read off its ply-0 revealed board (the postgame's
+ *  history.revealed[0]) in setup-square order, the order the room dealt it.
+ *  Throws on a face-down or empty setup square rather than guess a tile, so a
+ *  bad payload renders an error, never a wrong board. */
+export function recoverThreeKingdomsBanqiDeal(revealed: ThreeKingdomsBanqiPlayerView): BanqiDeal {
+  return THREE_KINGDOMS_BANQI_SETUP_SQUARES.map((square) => {
+    const entry = revealed.board[square];
+    if (!entry || entry.faceDown) {
+      throw new Error(`three kingdoms banqi deal recovery: square ${square} is not revealed`);
+    }
+    return { color: entry.color, role: entry.role };
+  });
+}
 
 function parseSquare(token: string): ThreeKingdomsBanqiSquare | null {
   return SQUARE_SET.has(token) ? (token as ThreeKingdomsBanqiSquare) : null;

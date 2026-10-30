@@ -12,10 +12,16 @@ import {
 export type CrosstableTenantLookup = {
   forRoomId: (
     roomId: string,
-  ) => Pick<VariantTenantRegistration, 'export' | 'finishedGameOpensRoom'> | null;
+  ) => Pick<
+    VariantTenantRegistration,
+    'export' | 'finishedGameOpensRoom' | 'reviewRouteBase'
+  > | null;
   forSpecId: (
     gameSpecId: string,
-  ) => Pick<VariantTenantRegistration, 'export' | 'finishedGameOpensRoom'> | null;
+  ) => Pick<
+    VariantTenantRegistration,
+    'export' | 'finishedGameOpensRoom' | 'reviewRouteBase'
+  > | null;
 };
 
 export const REGISTRY_LOOKUP: CrosstableTenantLookup = {
@@ -33,6 +39,8 @@ export function crosstableReviewUrl(
   const routeBase =
     lookup.forRoomId(roomId)?.export?.gameRouteBase ??
     lookup.forSpecId(variant)?.export?.gameRouteBase ??
+    lookup.forRoomId(roomId)?.reviewRouteBase ??
+    lookup.forSpecId(variant)?.reviewRouteBase ??
     null;
   if (routeBase) return `${routeBase}/${encodeURIComponent(roomId)}`;
   const tenant = lookup.forRoomId(roomId) ?? lookup.forSpecId(variant);

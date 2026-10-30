@@ -123,9 +123,8 @@ const tkWebTenant: WebVariantTenant<BanqiSeat> = {
   isColor: isSeat,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
   enabled: threeKingdomsBanqiOffered,
-  // No review page yet: the Review link reopens the room, whose move list steps
-  // through the finished game.
-  reviewUrl: (roomId) => `/room/${encodeURIComponent(roomId)}`,
+  // The finished game's review page (live-three-kingdoms-banqi-postgame.ts).
+  reviewUrl: (roomId) => `/three-kingdoms-banqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase,
   spectatorBody: 'live.spectatorWatchingGame',
   selectInstruction: 'live.selectBanqi',
