@@ -21,6 +21,7 @@ import { captureServerEvent, clientIpForAnalytics } from './../analytics-server.
 import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
 import { authCounters } from './../obs.js';
 import * as persistence from './../persistence.js';
+import { emailLocale } from './../player-email.js';
 import { isProductionLikeRuntime } from './../server-policy.js';
 import { readJsonBody, requireMethod, requirePersistence, writeJson } from './lib.js';
 
@@ -139,7 +140,11 @@ export async function tryHandle(
       expiresAt,
     });
     if (authEmailDeliveryEnabled) {
-      const delivery = await sendEmailLoginCode(email, code);
+      const delivery = await sendEmailLoginCode(
+        email,
+        code,
+        emailLocale(typeof body.locale === 'string' ? body.locale : null),
+      );
       if (!delivery.ok) {
         await persistence.deleteEmailLoginChallenge(loginId);
         authCounters.recordStart('delivery_failed');

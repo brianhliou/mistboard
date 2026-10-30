@@ -1494,7 +1494,7 @@ function buildProfileRatingSpotlight(
     button.type = 'button';
     button.className = 'profile-chart-range';
     button.dataset.range = range;
-    button.textContent = range;
+    button.textContent = t(`profile.chartRange${range}`, {}, locale);
     const active = range === 'ALL';
     button.classList.toggle('profile-chart-range-active', active);
     button.setAttribute('aria-pressed', String(active));

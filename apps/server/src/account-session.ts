@@ -3,6 +3,7 @@ import type { IncomingMessage } from 'node:http';
 import { handleBaseForEmail, maxHandleLength, randomFallbackHandle } from './account-identity.js';
 import { renderEmail } from './email-layout.js';
 import * as persistence from './persistence.js';
+import { type EmailLocale, emailLocale } from './player-email.js';
 import { touchPresence } from './presence.js';
 import { sendTransactionalEmail, transactionalEmailConfigured } from './send-email.js';
 import { isProductionLikeRuntime } from './server-policy.js';
@@ -135,56 +136,120 @@ export function randomEmailLoginCode(): string {
 export async function sendEmailLoginCode(
   email: string,
   code: string,
+  locale?: string | null,
 ): Promise<{ ok: true } | { ok: false }> {
-  return sendAccountEmailCode(email, code, 'login');
+  return sendAccountEmailCode(email, code, 'login', locale);
 }
 
 export async function sendEmailChangeCode(
   email: string,
   code: string,
+  locale?: string | null,
 ): Promise<{ ok: true } | { ok: false }> {
-  return sendAccountEmailCode(email, code, 'email-change');
+  return sendAccountEmailCode(email, code, 'email-change', locale);
 }
 
 export async function sendAccountClosureCode(
   email: string,
   code: string,
+  locale?: string | null,
 ): Promise<{ ok: true } | { ok: false }> {
-  return sendAccountEmailCode(email, code, 'account-closure');
+  return sendAccountEmailCode(email, code, 'account-closure', locale);
 }
 
-// Login, email-change and closure codes. English only: the login request is
-// for an address that may have no account yet, so there is no stored locale to
-// read. No settings link: nobody can opt out of a code they asked for.
+type AccountCodePurpose = 'account-closure' | 'email-change' | 'login';
+
+const ACCOUNT_CODE_COPY: Record<
+  EmailLocale,
+  {
+    purposes: Record<AccountCodePurpose, { subject: string; headline: string; intro: string }>;
+    instructions: string;
+    footer: string;
+  }
+> = {
+  en: {
+    purposes: {
+      login: {
+        subject: 'Your Mistboard login code',
+        headline: 'Your login code',
+        intro: 'Your Mistboard login code is',
+      },
+      'email-change': {
+        subject: 'Confirm your new Mistboard email',
+        headline: 'Your email-change code',
+        intro: 'Your Mistboard email-change code is',
+      },
+      'account-closure': {
+        subject: 'Confirm closing your Mistboard account',
+        headline: 'Your account-closure code',
+        intro: 'Your Mistboard account-closure code is',
+      },
+    },
+    instructions: 'Enter it on Mistboard to continue. The code expires in 10 minutes.',
+    footer: 'If you did not request this code, you can ignore this email.',
+  },
+  'zh-Hans': {
+    purposes: {
+      login: {
+        subject: '你的 Mistboard 登录验证码',
+        headline: '你的登录验证码',
+        intro: '你的 Mistboard 登录验证码是',
+      },
+      'email-change': {
+        subject: '确认你的 Mistboard 新邮箱',
+        headline: '你的邮箱变更验证码',
+        intro: '你的 Mistboard 邮箱变更验证码是',
+      },
+      'account-closure': {
+        subject: '确认关闭你的 Mistboard 账号',
+        headline: '你的账号关闭验证码',
+        intro: '你的 Mistboard 账号关闭验证码是',
+      },
+    },
+    instructions: '请在 Mistboard 输入此验证码以继续。验证码将在 10 分钟后过期。',
+    footer: '如果你没有请求此验证码，可以忽略这封邮件。',
+  },
+  'zh-Hant': {
+    purposes: {
+      login: {
+        subject: '你的 Mistboard 登入驗證碼',
+        headline: '你的登入驗證碼',
+        intro: '你的 Mistboard 登入驗證碼是',
+      },
+      'email-change': {
+        subject: '確認你的 Mistboard 新信箱',
+        headline: '你的信箱變更驗證碼',
+        intro: '你的 Mistboard 信箱變更驗證碼是',
+      },
+      'account-closure': {
+        subject: '確認關閉你的 Mistboard 帳號',
+        headline: '你的帳號關閉驗證碼',
+        intro: '你的 Mistboard 帳號關閉驗證碼是',
+      },
+    },
+    instructions: '請在 Mistboard 輸入此驗證碼以繼續。驗證碼將在 10 分鐘後過期。',
+    footer: '如果你沒有請求此驗證碼，可以忽略這封郵件。',
+  },
+};
+
+// Login uses the browser locale; authenticated changes use the stored locale.
+// No settings link: nobody can opt out of a code they asked for.
 export function accountCodeEmail(
   code: string,
-  purpose: 'account-closure' | 'email-change' | 'login',
+  purpose: AccountCodePurpose,
+  locale?: string | null,
 ): { subject: string; text: string; html: string } {
-  const subject =
-    purpose === 'account-closure'
-      ? 'Confirm closing your Mistboard account'
-      : purpose === 'email-change'
-        ? 'Confirm your new Mistboard email'
-        : 'Your Mistboard login code';
-  const headline =
-    purpose === 'account-closure'
-      ? 'Your account-closure code'
-      : purpose === 'email-change'
-        ? 'Your email-change code'
-        : 'Your login code';
-  const intro =
-    purpose === 'account-closure'
-      ? 'Your Mistboard account-closure code is'
-      : purpose === 'email-change'
-        ? 'Your Mistboard email-change code is'
-        : 'Your Mistboard login code is';
+  const lang = emailLocale(locale);
+  const copy = ACCOUNT_CODE_COPY[lang];
+  const { subject, headline, intro } = copy.purposes[purpose];
   const { text, html } = renderEmail({
+    lang,
     preheader: `${intro} ${code}.`,
     headline,
     code,
-    paragraphs: ['Enter it on Mistboard to continue. The code expires in 10 minutes.'],
+    paragraphs: [copy.instructions],
     footer: {
-      reason: 'If you did not request this code, you can ignore this email.',
+      reason: copy.footer,
       manage: null,
     },
   });
@@ -194,10 +259,11 @@ export function accountCodeEmail(
 async function sendAccountEmailCode(
   email: string,
   code: string,
-  purpose: 'account-closure' | 'email-change' | 'login',
+  purpose: AccountCodePurpose,
+  locale?: string | null,
 ): Promise<{ ok: true } | { ok: false }> {
   if (!authEmailDeliveryEnabled || !authEmailFrom) return { ok: false };
-  const { subject, text, html } = accountCodeEmail(code, purpose);
+  const { subject, text, html } = accountCodeEmail(code, purpose, locale);
   const result = await sendTransactionalEmail({
     from: authEmailFrom,
     to: [email],

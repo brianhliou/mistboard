@@ -36,6 +36,8 @@ import {
   getPuzzleRating,
   getUserPuzzleRating,
   listAttemptedPuzzleIds,
+  listFailedPuzzleAttempts,
+  listPuzzleAttemptHistory,
   listPuzzleRatingSummaries,
   recordPuzzleAttempt,
 } from '../persistence-puzzle-ratings.js';
@@ -386,6 +388,87 @@ export async function tryHandle(
     return true;
   }
 
+  // Private history and progress for the session owner. Claim the literal
+  // before :id, and never accept an account selector from the client.
+  if (pathname === '/api/puzzles/history') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    const headers = { 'cache-control': 'private, no-store' };
+    const user = await currentAccountUser(request);
+    if (!user) {
+      writeJson(response, 401, { error: 'authentication_required' }, headers);
+      return true;
+    }
+    const variant = parsePuzzleVariant(parsedUrl.searchParams.get('variant'));
+    if (variant === 'invalid' || variant === null) {
+      writeJson(response, 400, { error: 'invalid_variant' }, headers);
+      return true;
+    }
+    const limitText = parsedUrl.searchParams.get('limit') ?? '50';
+    const offsetText = parsedUrl.searchParams.get('offset') ?? '0';
+    const limit = Number(limitText);
+    const offset = Number(offsetText);
+    if (
+      !/^\d+$/.test(limitText) ||
+      !/^\d+$/.test(offsetText) ||
+      !Number.isSafeInteger(offset + limit + 1) ||
+      limit < 1 ||
+      limit > 100
+    ) {
+      writeJson(response, 400, { error: 'invalid_pagination' }, headers);
+      return true;
+    }
+    const history = await listPuzzleAttemptHistory(user.id, variant, limit, offset);
+    const rating = await getUserPuzzleRating(user.id, variant);
+    writeJson(
+      response,
+      200,
+      {
+        ...history,
+        progress: rating
+          ? {
+              rating: rating.rating,
+              provisional: rating.provisional,
+              solved: rating.solved,
+              attempts: rating.attempts,
+            }
+          : null,
+      },
+      headers,
+    );
+    return true;
+  }
+
+  // Private retry queue. By default only unresolved failures are returned;
+  // ?repaired=true reads repaired failures. The account comes only from the
+  // session, never a caller-supplied user id. No solution data is exposed.
+  if (pathname === '/api/puzzles/failed') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    const user = await currentAccountUser(request);
+    if (!user) {
+      writeJson(response, 401, { error: 'not_signed_in' });
+      return true;
+    }
+    const variant = parsePuzzleVariant(parsedUrl.searchParams.get('variant'));
+    if (variant === 'invalid') {
+      writeJson(response, 400, { error: 'invalid_variant' });
+      return true;
+    }
+    const repaired = parsedUrl.searchParams.get('repaired');
+    if (repaired !== null && repaired !== 'true' && repaired !== 'false') {
+      writeJson(response, 400, { error: 'invalid_repaired' });
+      return true;
+    }
+    const failures = await listFailedPuzzleAttempts(user.id, {
+      variant: variant ?? undefined,
+      repaired: repaired === 'true',
+    });
+    const store = await getPuzzleStore();
+    writeJson(response, 200, {
+      failures: failures.filter((failure) => store.byId.has(failure.puzzleId)),
+    });
+    return true;
+  }
+
   const qualityMatch = pathname.match(/^\/api\/puzzles\/([^/]+)\/quality$/);
   if (qualityMatch) {
     if (!requireMethod(request, response, 'POST')) return true;
@@ -475,10 +558,17 @@ export async function tryHandle(
           sessionId: qualitySessionId,
           variant: puzzle.variant,
           event: qualityEvent,
+          player: { userId: (await currentAccountUser(request))?.id ?? null, deviceId: null },
         });
       }
     }
-    const rating = await recordAttemptRating(request, puzzle, attempt, body.rated !== false);
+    const rating = await recordAttemptRating(
+      request,
+      puzzle,
+      attempt,
+      body.rated !== false,
+      qualitySessionId,
+    );
     // A completed solve answers with the solver's puzzle streak, read after the
     // attempt row landed so today counts. Days follow the browser's calendar
     // (`timeZone` in the body, play-streak.ts); anonymous solvers get none.
@@ -656,6 +746,7 @@ type PuzzleAttemptRating = {
   provisional: boolean;
   ratingChanged: boolean;
   firstAttempt: boolean;
+  repairedAt: string | null;
 };
 
 // true = solved, false = a genuine wrong answer, null = not a terminal outcome
@@ -700,23 +791,27 @@ async function recordAttemptRating(
   puzzle: PublicPuzzle,
   attempt: PuzzleAttempt,
   rated: boolean,
+  qualitySessionId: string | null,
 ): Promise<PuzzleAttemptRating | null> {
   const outcome = attemptOutcome(attempt);
   if (outcome === null) return null;
-  return recordOutcomeRating(request, puzzle, outcome, rated);
+  return recordOutcomeRating(request, puzzle, outcome, rated, qualitySessionId);
 }
 
 // Book a single terminal outcome (solved/failed) for a signed-in user. The
 // puzzle_attempts primary key makes this idempotent per (user, puzzle): only the
 // FIRST terminal outcome moves ratings, so a wrong-move fail followed by a
 // reveal, or a reveal followed by a completed line, records once and returns
-// firstAttempt=false / ratingChanged=false on the repeat. Anon users and
+// firstAttempt=false / ratingChanged=false on the repeat. A completed retry
+// on a clean later visit records a separate repairedAt for a prior failure.
+// The per-visit quality session supplies that evidence. Anon users and
 // persistence-off return null (no rating).
 async function recordOutcomeRating(
   request: IncomingMessage,
   puzzle: PublicPuzzle,
   solved: boolean,
   rated: boolean,
+  qualitySessionId?: string | null,
 ): Promise<PuzzleAttemptRating | null> {
   const user = await currentAccountUser(request);
   if (!user) return null;
@@ -729,6 +824,7 @@ async function recordOutcomeRating(
     variant: puzzle.variant,
     solved,
     rated,
+    qualitySessionId,
     seedRating: seedPuzzleRating(
       puzzle.solution.length,
       (await getPuzzleStore()).difficultyById.get(puzzle.id),
@@ -741,6 +837,7 @@ async function recordOutcomeRating(
     provisional: result.provisional,
     ratingChanged: result.ratingChanged,
     firstAttempt: result.firstAttempt,
+    repairedAt: result.repairedAt,
   };
 }
 

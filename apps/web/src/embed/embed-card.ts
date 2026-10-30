@@ -442,6 +442,9 @@ export async function mountEmbedCard(
     // Stepping forward is asking for the answer.
     if (target > 0 && revealOnStep) revealSolution();
     handle?.jumpToPly?.(target);
+    // Leaving a branch can return to the mainline ply already anchored under
+    // it. Watch renderers suppress duplicate ply notifications in that case.
+    status.textContent = maxPly > 0 ? `${target} / ${maxPly}` : '';
   };
 
   // The rows follow the board: whichever seat the board is drawn for sits
@@ -699,6 +702,7 @@ export async function mountEmbedCard(
       handle = await options.mountBoard(boardHost, { onPlyChange });
       rowsForBottom = null;
       if (handle.jumpToPly) jump(at);
+      rebuildSheet();
       onPlyChange(at, maxPly);
     });
     return remounting;
