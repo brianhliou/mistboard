@@ -29,7 +29,7 @@
   "devDependencies": {
     "@posthog/rollup-plugin": "1.6.1",
     "@resvg/resvg-js": "^2.6.2",
-    "happy-dom": "^20.11.1",
+    "happy-dom": "^21.0.4",
     "shogiops": "^0.21.0",
     "tsx": "^4.23.1",
     "typescript": "^7.0.2",
