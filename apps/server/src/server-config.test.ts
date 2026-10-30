@@ -41,3 +41,11 @@ test('server runtime config normalizes room region inputs', () => {
   assert.equal(normalizeRoomRegion('bad region!'), 'global');
   assert.equal(normalizeRoomRegion(undefined), 'global');
 });
+
+test('server runtime config accepts a bind host without changing the public origin', () => {
+  const config = loadServerRuntimeConfig({ HOST: ' 127.0.0.1 ' });
+  assert.equal(config.host, '127.0.0.1');
+  assert.equal(config.publicHost, 'https://mistboard.com');
+  assert.equal(loadServerRuntimeConfig({}).host, undefined);
+  assert.equal(loadServerRuntimeConfig({ HOST: ' ' }).host, undefined);
+});

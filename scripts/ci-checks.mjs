@@ -2,6 +2,7 @@
 // Named local confidence gates for agent and contributor handoffs.
 
 import { spawnSync } from 'node:child_process';
+import { checkLoopback } from './lib/loopback-check.mjs';
 
 const suites = {
   // check:drift runs first: it is near-instant and guards invariants (SQL enum
@@ -43,6 +44,12 @@ if (!commands) {
 }
 
 console.log(`# ci:${suiteName}`);
+try {
+  await checkLoopback();
+} catch (error) {
+  console.error(error.message);
+  process.exit(1);
+}
 for (const command of commands) run(command);
 
 if (suiteName === 'local') {
@@ -73,6 +80,8 @@ function printHelp() {
   console.log(`Usage:
   npm run ci:quick
   npm run ci:local
+
+Both gates first check IPv4 loopback connectivity (3s timeout).
 
 ci:quick runs the drift check (INDEX/SQL-enum/redaction invariants), checks
 formatting and translation-catalog policy, runs the local build so unit tests
