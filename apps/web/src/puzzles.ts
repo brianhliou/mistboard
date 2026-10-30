@@ -53,7 +53,11 @@ import {
 } from './puzzles/api.js';
 import { feedbackPanel } from './puzzles/detail-panels.js';
 import { keepActivePuzzleMoveInView, moveListPanel } from './puzzles/move-list.js';
-import { puzzlePhoneMenuHead, puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
+import {
+  puzzlePhoneMenuHead,
+  puzzlePhoneMenuRows,
+  puzzlePhoneMenuVisitRow,
+} from './puzzles/phone-menu.js';
 import { type QueuePanelProps, renderQueuePanel } from './puzzles/queue-panel.js';
 import {
   allPuzzleBoardAdapters,
@@ -164,6 +168,12 @@ export async function mountPuzzles(
       outcome: played.failed || played.revealed ? 'failed' : 'solved',
     });
   };
+  const pickSessionPuzzle = (id: string): void => {
+    if (id !== selectedId) void selectPuzzle(id, true);
+  };
+  // The phone shows the same row as the ☰ sheet's last row instead of under
+  // the board (puzzles.css hides that one at 980px and below).
+  phoneMenu.visit = () => puzzlePhoneMenuVisitRow(sessionResults, selectedId, pickSessionPuzzle);
   const solvedIds = loadSolvedPuzzleIds();
   const seenPuzzles = loadSeenPuzzles();
   // Record a puzzle as seen (for the next visit's rotation) without disturbing
@@ -347,9 +357,7 @@ export async function mountPuzzles(
         label: t('puzzle.sessionHistory'),
         text: 'mark',
         className: 'puzzle-session-chips',
-        onPick: (id) => {
-          if (id !== selectedId) void selectPuzzle(id, true);
-        },
+        onPick: pickSessionPuzzle,
       }),
     );
     renderControls();
@@ -657,10 +665,15 @@ function renderPuzzleDetail(
       // Phone only (the bar is hidden elsewhere). The engine row and the
       // analysis link are lent in while the sheet is open, read at open time
       // so they show up once the puzzle is complete; the header and the
-      // settings rows are built for the sheet from the sidebar's props.
+      // settings rows are built for the sheet from the sidebar's props, and
+      // this visit's chips close the sheet, next to ☰.
       blocks: () => [session.analysis?.engineEl, session.analysis?.openLinkEl],
       head: () => (phoneMenu.props ? puzzlePhoneMenuHead(phoneMenu.props) : null),
-      rows: () => (phoneMenu.props ? puzzlePhoneMenuRows(phoneMenu.props) : []),
+      rows: () => {
+        const rows = phoneMenu.props ? puzzlePhoneMenuRows(phoneMenu.props) : [];
+        const visit = phoneMenu.visit?.();
+        return visit ? [...rows, visit] : rows;
+      },
       signal: phoneMenu.abort?.signal,
     },
   );
@@ -904,6 +917,8 @@ const phoneMenu: {
   abort: AbortController | null;
   evalSync: MutationObserver | null;
   props: QueuePanelProps | null;
+  /** This visit's chips as a sheet row; set by the page, null before a finish. */
+  visit: (() => HTMLElement | null) | null;
   refresh: (() => void) | null;
 } = {
   open: false,
@@ -912,6 +927,7 @@ const phoneMenu: {
   abort: null,
   evalSync: null,
   props: null,
+  visit: null,
   refresh: null,
 };
 

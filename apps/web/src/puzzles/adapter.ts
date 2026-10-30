@@ -73,15 +73,19 @@ export type PuzzleSummary = {
   // `attribution` is the credit a source such as DPXQ requires back to its
   // original game page (#712). `hosted` (detail only) means the server holds
   // the game and its page serves it, so the card links there; the names are
-  // then the game row's.
+  // then the game row's. The `*En` fields are English forms of the Chinese
+  // event and names, shown on English pages.
   sourceGame?: {
     gameId: string;
     ply: number;
     event?: string;
+    eventEn?: string;
     playedOn?: string;
     result?: string;
     redName?: string;
     blackName?: string;
+    redNameEn?: string;
+    blackNameEn?: string;
     attribution?: { name: string; url: string };
     hosted?: boolean;
   };
@@ -152,7 +156,7 @@ export type PuzzleSession = {
   // The source game's moves before the setup move, shown greyed at the top of
   // the move list and steppable read-only (viewPly < 0, see firstPuzzleViewPly).
   // Absent where the list starts at the setup move: no history sent, a variant
-  // without historyStart, or a mode that leaves it out (Streak, embeds).
+  // without historyStart, or an embed.
   history?: PuzzleMove[];
   // Post-completion engine analysis (adapters that expose createAnalysis).
   // Created lazily the first time a completed puzzle renders, then persists

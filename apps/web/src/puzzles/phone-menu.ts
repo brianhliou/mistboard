@@ -24,6 +24,7 @@ import {
   variantLabel,
   withSelectedSource,
 } from './queue-panel.js';
+import { type PuzzleChipResult, puzzleResultChips } from './result-chips.js';
 import { puzzleThemePicker, puzzleThemesLink } from './themes.js';
 
 export type PuzzlePhoneMenuKey = 'rated' | 'autoNext' | 'variant';
@@ -65,6 +66,16 @@ export function puzzlePhoneMenuHead(props: QueuePanelProps): HTMLElement | null 
   const source = document.createElement('span');
   source.className = 'puzzle-pm-head__line puzzle-pm-head__source';
   source.append(...sourceGameLines(current));
+  // Archive names carry the team ("Xu Wei (Xinjiang …)"); the sheet has half a
+  // line per player, so it shows the player and keeps the team in the tooltip.
+  for (const name of source.querySelectorAll<HTMLElement>('.puzzle-source-player-name')) {
+    const full = name.textContent ?? '';
+    const player = playerWithoutTeam(full);
+    if (player !== full) {
+      name.textContent = player;
+      name.title = full;
+    }
+  }
 
   head.append(top, goal, source);
   return head;
@@ -152,6 +163,34 @@ export function puzzlePhoneMenuRows(props: QueuePanelProps): HTMLElement[] {
   return rows;
 }
 
+/** This visit's ✓/✗ chips as the sheet's last row, next to ☰. On the phone the
+ *  page keeps them out of its one screen, so the board keeps its full width and
+ *  the page never scrolls (Brian, 2026-10-28). Null before the first finish:
+ *  the row would hold only the puzzle in play. */
+export function puzzlePhoneMenuVisitRow(
+  results: readonly PuzzleChipResult[],
+  currentId: string | null,
+  onPick: (id: string) => void,
+): HTMLElement | null {
+  if (results.length === 0) return null;
+  const row = document.createElement('div');
+  row.className = 'puzzle-pm-row puzzle-pm-row--visit';
+  row.dataset.puzzleMenuRow = 'visit';
+  const label = document.createElement('span');
+  label.className = 'puzzle-pm-row__label';
+  label.textContent = t('puzzle.sessionVisit');
+  row.append(
+    label,
+    puzzleResultChips(results, currentId, {
+      label: t('puzzle.sessionHistory'),
+      text: 'mark',
+      className: 'puzzle-pm-visit-chips',
+      onPick,
+    }),
+  );
+  return row;
+}
+
 function switchRow(
   key: PuzzlePhoneMenuKey,
   labelText: string,
@@ -183,4 +222,11 @@ function switchRow(
   track.setAttribute('aria-hidden', 'true');
   row.append(text, input, track);
   return row;
+}
+
+/** "Xu Wei (Xinjiang Production Team)" → "Xu Wei"; a name with no team, or one
+ *  that is only a parenthetical, is returned as is. */
+export function playerWithoutTeam(name: string): string {
+  const cut = name.indexOf(' (');
+  return cut > 0 ? name.slice(0, cut) : name;
 }

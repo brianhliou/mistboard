@@ -339,6 +339,7 @@ export const ZH_HANT_PLAY = {
   'puzzle.streakFinished': '本輪結束',
   'puzzle.streakReview': '本輪題目',
   'puzzle.sessionHistory': '本次練習的題目',
+  'puzzle.sessionVisit': '本次練習',
   'puzzle.sessionCurrent': '當前題目',
   'puzzle.streakResult': '題目 #{code}：{outcome}',
   'puzzle.streakOutcomeSolved': '已解開',

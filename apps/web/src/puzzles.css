@@ -1480,11 +1480,11 @@ a.puzzle-streak-chip:focus-visible {
     overflow: visible;
   }
 
-  /* Phone: the session row closes the page, under the move bar. */
-  .puzzle-session-chips {
-    order: 3;
-    grid-column: auto;
-    padding: 8px 12px 0;
+  /* Phone: this visit's chips live in the ☰ sheet (its last row), never on
+     the page, so the portrait trainer stays one screen with a full-width
+     board (Brian, 2026-10-28). */
+  .puzzles-shell .puzzle-board-panel > .puzzle-session-chips {
+    display: none;
   }
 
   .puzzle-trainer-panel {
@@ -1932,6 +1932,19 @@ a.puzzle-streak-chip:focus-visible {
     white-space: nowrap;
   }
 
+  /* This visit's chips, right of the label like the themes, wrapping onto
+     more lines as the visit grows: the sheet grows, never the page. */
+  .puzzles-shell .puzzle-pm-row--visit > .puzzle-pm-row__label {
+    flex: 0 0 auto;
+  }
+
+  .puzzles-shell .puzzle-pm-row--visit > .puzzle-pm-visit-chips {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    min-width: 0;
+    padding-block: 6px;
+  }
+
   /* The engine panel, lent in, is one row: [Pikafish / status] … [eval]
      [gear] [switch]. Its lines stay out of the sheet; the gear opens a
      sub-view (its settings in the flow, then the lines) that hides the rows
@@ -2153,15 +2166,6 @@ a.puzzle-streak-chip:focus-visible {
 
   .puzzle-board-panel--pending .puzzle-side-panel {
     min-height: var(--puzzle-stack-chrome);
-  }
-
-  .puzzles-page > .puzzles-shell:has(.puzzle-session-chips) {
-    --puzzle-stack-chrome: 214px;
-  }
-
-  .puzzles-shell .puzzle-session-chips {
-    flex: none;
-    padding-bottom: 8px;
   }
 }
 

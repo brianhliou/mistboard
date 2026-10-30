@@ -11,6 +11,9 @@
 //   game" card names the players the game page names and links to that page.
 //   The names stored on the puzzle are copied at mine time, and the source
 //   dump re-pseudonymizes players on each release, so the row is the truth.
+// - English forms of the event and both player names (`eventEn`,
+//   `redNameEn`, `blackNameEn`), from the broadcast translators, so an English
+//   page reads no Chinese; the originals stay for the Chinese pages.
 //
 // One query per source game, cached for the process lifetime (puzzle rows and
 // source games do not change under a served id). Persistence off (seed only),
@@ -26,6 +29,11 @@ import {
   type XiangqiPuzzleSetupMove,
 } from '@mistboard/game';
 import type { HistoricalXiangqiVisibility } from './persistence-historical-xiangqi.js';
+import {
+  romanizeXiangqiPlayerName,
+  translateXiangqiEventName,
+  translateXiangqiTeamName,
+} from './xiangqi-broadcast-translate.js';
 
 export type PuzzleSourceGameRow = {
   moves: readonly XiangqiMove[];
@@ -38,8 +46,15 @@ export type SourceGameLoader = (gameId: string) => Promise<PuzzleSourceGameRow |
 
 type SourceGame = NonNullable<XiangqiPuzzle['sourceGame']>;
 
+export type PuzzleDetailSourceGame = SourceGame & {
+  hosted?: true;
+  eventEn?: string;
+  redNameEn?: string;
+  blackNameEn?: string;
+};
+
 export type PuzzleDetailSourceFields = {
-  sourceGame?: SourceGame & { hosted?: true };
+  sourceGame?: PuzzleDetailSourceGame;
   setupMove?: XiangqiPuzzleSetupMove;
   history?: XiangqiMove[];
 };
@@ -110,18 +125,68 @@ export async function puzzleDetailSourceFields(
   const stored = puzzle.sourceGame;
   if (!stored) return {};
   const context = load ? await sourceContext(puzzle, load) : null;
-  const fields: PuzzleDetailSourceFields = { sourceGame: stored };
+  const fields: PuzzleDetailSourceFields = { sourceGame: withEnglishNames(stored) };
   if (!context) return fields;
   if (context.names) {
     const { redName: _staleRed, blackName: _staleBlack, ...rest } = stored;
-    fields.sourceGame = {
+    fields.sourceGame = withEnglishNames({
       ...rest,
       ...(context.names.redName ? { redName: context.names.redName } : {}),
       ...(context.names.blackName ? { blackName: context.names.blackName } : {}),
       hosted: true,
-    };
+    });
   }
   if (context.setupMove) fields.setupMove = context.setupMove;
   if (context.history && context.history.length > 0) fields.history = context.history;
   return fields;
+}
+
+// Han characters and the full-width punctuation that travels with them.
+const CJK = /[\p{Script=Han}\u3000-\u303f\uff00-\uffef]/u;
+
+function englishOnly(text: string | undefined): string | undefined {
+  const trimmed = text?.trim();
+  return trimmed && !CJK.test(trimmed) ? trimmed : undefined;
+}
+
+/**
+ * A source-game player as an English page shows it. The archive writes the
+ * team first and the player last ("山东省棋牌运动管理中心 黄蕾蕾"), so the
+ * last token is romanized as a name (scoped by the team, as broadcasts scope by
+ * federation) and the rest translated as a team: "Huang Leilei (Shandong Board
+ * Games Centre)". A team the glossary leaves with Chinese in it is dropped
+ * rather than shown half translated. Undefined when the name has no Chinese.
+ */
+export function englishSourcePlayerName(raw: string): string | undefined {
+  const trimmed = raw.trim();
+  if (!CJK.test(trimmed)) return undefined;
+  const tokens = trimmed.split(/\s+/u);
+  // The player is the last token, or every trailing Latin token when the
+  // player is written in Latin letters ("金州 Son X Nguyen").
+  let start = tokens.length - 1;
+  if (!CJK.test(tokens[start] ?? '')) {
+    while (start > 0 && !CJK.test(tokens[start - 1] ?? '')) start -= 1;
+  }
+  const player = tokens.slice(start).join(' ');
+  const team = tokens.slice(0, start).join(' ');
+  const name =
+    (CJK.test(player)
+      ? englishOnly(romanizeXiangqiPlayerName(player, team || undefined))
+      : englishOnly(player)) ?? englishOnly(romanizeXiangqiPlayerName(trimmed));
+  if (!name) return undefined;
+  const teamEn = team ? englishOnly(translateXiangqiTeamName(team)) : undefined;
+  return teamEn ? `${name} (${teamEn})` : name;
+}
+
+function withEnglishNames(source: PuzzleDetailSourceGame): PuzzleDetailSourceGame {
+  const { eventEn: _staleEvent, redNameEn: _staleRed, blackNameEn: _staleBlack, ...rest } = source;
+  const eventEn = source.event ? englishOnly(translateXiangqiEventName(source.event)) : undefined;
+  const redNameEn = source.redName ? englishSourcePlayerName(source.redName) : undefined;
+  const blackNameEn = source.blackName ? englishSourcePlayerName(source.blackName) : undefined;
+  return {
+    ...rest,
+    ...(eventEn ? { eventEn } : {}),
+    ...(redNameEn ? { redNameEn } : {}),
+    ...(blackNameEn ? { blackNameEn } : {}),
+  };
 }

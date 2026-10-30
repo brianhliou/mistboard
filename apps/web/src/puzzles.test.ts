@@ -1967,6 +1967,51 @@ describe('sourceGameLines', () => {
   });
 });
 
+describe('sourceGameLines locale', () => {
+  const CJK = /[\p{Script=Han}\u3000-\u303f\uff00-\uffef]/u;
+  const source = {
+    gameId: 'hxq_zh',
+    ply: 30,
+    event: '2026年全国象棋团体赛',
+    eventEn: '2026 National Xiangqi Team Championship',
+    playedOn: '2026-04-02',
+    result: '1-0',
+    redName: '山东省棋牌运动管理中心 黄蕾蕾',
+    redNameEn: 'Huang Leilei (Shandong Board Games Centre)',
+    blackName: '广东省二沙体育训练中心 时凤兰',
+    blackNameEn: 'Shi Fenglan (Guangdong Ersha Sports Training Centre)',
+  };
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('shows no Chinese in the players and event lines on an English page', () => {
+    window.history.replaceState(null, '', '/puzzles');
+    const lines = sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: source });
+    const text = lines.map((line) => line.textContent ?? '');
+    expect(text[0]).toBe('From game · 2026 National Xiangqi Team Championship (2026)');
+    expect(text[1]).toContain('Huang Leilei (Shandong Board Games Centre)');
+    expect(text[2]).toContain('Shi Fenglan');
+    for (const line of text) expect(line).not.toMatch(CJK);
+  });
+
+  it('leaves out a Chinese string with no English form on an English page', () => {
+    window.history.replaceState(null, '', '/puzzles');
+    const lines = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: { gameId: 'g', ply: 1, event: '某某杯', redName: '张三', blackName: 'Li Si' },
+    });
+    expect(lines.map((line) => line.textContent ?? '')).toEqual(['From game', 'Red', 'Li Si']);
+  });
+
+  it('keeps the original Chinese on a Chinese page', () => {
+    window.history.replaceState(null, '', '/zh-hans/puzzles');
+    const lines = sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: source });
+    expect(lines[0]?.textContent).toContain('2026年全国象棋团体赛');
+    expect(lines[1]?.textContent).toContain('山东省棋牌运动管理中心 黄蕾蕾');
+  });
+});
+
 describe('puzzles prerender shell', () => {
   const render = (): HTMLDivElement => {
     const wrap = document.createElement('div');
