@@ -31,6 +31,7 @@ import {
   isPrivateOrReservedIp,
   isReviewShellRoute,
   legacyPageRedirect,
+  localePuzzlesRedirect,
   proxyTrustWarningFor,
   type RuntimeEnv,
   recordMessageTimestamp,
@@ -682,6 +683,28 @@ test('legacyPageRedirect sends the old games-database paths to /games/search, on
   // Game detail keeps its path: it is a different surface, still linked from
   // the opening explorer.
   assert.equal(legacyPageRedirect('/historical-xiangqi/game/hxq_abc123'), null);
+});
+
+// /zh-hans/puzzles/... served the 404 shell (2026-10-29): puzzles have one URL
+// in every language, so the prefix hops off and the language rides as ?lang=.
+test('localePuzzlesRedirect drops the language prefix from a puzzle URL, once', () => {
+  assert.equal(localePuzzlesRedirect('/zh-hans/puzzles', ''), '/puzzles?lang=zh-hans');
+  assert.equal(localePuzzlesRedirect('/zh-hant/puzzles/', ''), '/puzzles?lang=zh-hant');
+  assert.equal(
+    localePuzzlesRedirect('/zh-hans/puzzles/xq-mined-hxq_1-94', '?theme=x'),
+    '/puzzles/xq-mined-hxq_1-94?theme=x&lang=zh-hans',
+  );
+  assert.equal(
+    localePuzzlesRedirect('/zh-hans/puzzles/themes', ''),
+    '/puzzles/themes?lang=zh-hans',
+  );
+  // The target is a client route and is not itself redirected.
+  assert.equal(localePuzzlesRedirect('/puzzles', '?lang=zh-hans'), null);
+  assert.equal(isClientRoute('/puzzles'), true);
+  assert.equal(isClientRoute('/zh-hans/puzzles'), false);
+  // Other zh paths are untouched.
+  assert.equal(localePuzzlesRedirect('/zh-hans/rules', ''), null);
+  assert.equal(localePuzzlesRedirect('/zh-hans/puzzlesx', ''), null);
 });
 
 test('legacyPageRedirect sends /challenges to /champions in each language, once', () => {

@@ -21,6 +21,7 @@ import {
   isEmbedRoute,
   isReviewShellRoute,
   legacyPageRedirect,
+  localePuzzlesRedirect,
 } from './server-policy.js';
 import {
   ARTICLE_META,
@@ -609,7 +610,9 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     // /games/search with their query; a bare /games is the current-games page.
     const search = url.includes('?') ? url.slice(url.indexOf('?')) : '';
     const legacyPageTarget =
-      gamesSearchQueryRedirect(pathname, search) ?? legacyPageRedirect(pathname);
+      gamesSearchQueryRedirect(pathname, search) ??
+      localePuzzlesRedirect(pathname, search) ??
+      legacyPageRedirect(pathname);
     if (legacyPageTarget) {
       response.writeHead(301, { location: legacyPageTarget });
       response.end();
