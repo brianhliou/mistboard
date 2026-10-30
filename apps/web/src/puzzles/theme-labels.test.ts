@@ -1,14 +1,14 @@
 import { JUNGLE_PUZZLE_THEMES, XIANGQI_PUZZLE_THEMES } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { EN_PLAY } from '../i18n/catalogs/play.js';
-import { ZH_HANS_PLAY } from '../i18n/catalogs/play.zh-hans.js';
-import { ZH_HANT_PLAY } from '../i18n/catalogs/play.zh-hant.js';
 import { PUZZLE_THEME_LABEL_KEYS, puzzleThemeLabel } from './queue-panel.js';
 
+// The zh catalogues load through import(), as in the app: a static edge to
+// them is what catalog.test.ts guards against.
 const CATALOGS: Record<string, Readonly<Record<string, string>>> = {
   en: EN_PLAY,
-  'zh-hans': ZH_HANS_PLAY,
-  'zh-hant': ZH_HANT_PLAY,
+  'zh-hans': (await import('../i18n/catalogs/play.zh-hans.js')).ZH_HANS_PLAY,
+  'zh-hant': (await import('../i18n/catalogs/play.zh-hant.js')).ZH_HANT_PLAY,
 };
 
 const CJK = /[㐀-鿿]/;
