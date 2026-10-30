@@ -45,12 +45,22 @@ test('the jqe bot is unplayable with its flag off, even on a box that has the bi
 
   delete process.env.MISTBOARD_JQE_ENABLED;
   assert.deepEqual(botPlayOptions(jqeBot), [
-    { gameSpecId: 'jieqi', engineId: JIEQI_JQE_ENGINE_ID, playable: false },
+    {
+      gameSpecId: 'jieqi',
+      engineId: JIEQI_JQE_ENGINE_ID,
+      playable: false,
+      version: '331a6e61 · it014',
+    },
   ]);
 
   process.env.MISTBOARD_JQE_ENABLED = '1';
   assert.deepEqual(botPlayOptions(jqeBot), [
-    { gameSpecId: 'jieqi', engineId: JIEQI_JQE_ENGINE_ID, playable: true },
+    {
+      gameSpecId: 'jieqi',
+      engineId: JIEQI_JQE_ENGINE_ID,
+      playable: true,
+      version: '331a6e61 · it014',
+    },
   ]);
 
   // Flag on, but the box lacks the net: still unplayable, never served half-built.

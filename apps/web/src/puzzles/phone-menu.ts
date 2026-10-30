@@ -11,6 +11,7 @@
  * `data-puzzle-*` hooks, so a selector for one never finds the other.
  */
 
+import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
 import { colorLabel } from './adapter.js';
 import {
@@ -21,12 +22,17 @@ import {
   sourceGameLines,
   tagsPanel,
   variantLabel,
+  withSelectedSource,
 } from './queue-panel.js';
+import { puzzleThemePicker, puzzleThemesLink } from './themes.js';
 
 export type PuzzlePhoneMenuKey = 'rated' | 'autoNext' | 'variant';
 
 function currentPuzzle(props: QueuePanelProps) {
-  return props.queue.find((puzzle) => puzzle.id === props.selectedId) ?? props.queue[0] ?? null;
+  return withSelectedSource(
+    props.queue.find((puzzle) => puzzle.id === props.selectedId) ?? props.queue[0] ?? null,
+    props.selectedSource,
+  );
 }
 
 /** Puzzle code and status, then the goal (spoiler-gated like the sidebar) and
@@ -58,6 +64,7 @@ export function puzzlePhoneMenuHead(props: QueuePanelProps): HTMLElement | null 
 
   const source = document.createElement('span');
   source.className = 'puzzle-pm-head__line puzzle-pm-head__source';
+  // The player lines show the name only, the team in the tooltip (sourceGameLines).
   source.append(...sourceGameLines(current));
 
   head.append(top, goal, source);
@@ -135,6 +142,13 @@ export function puzzlePhoneMenuRows(props: QueuePanelProps): HTMLElement[] {
     });
     row.append(label, select);
     rows.push(row);
+  }
+  if (props.theme && props.variantFilter === XIANGQI_SPEC_ID) {
+    rows.push(puzzleThemePicker(props.theme, true));
+    const browse = document.createElement('div');
+    browse.className = 'puzzle-pm-row';
+    browse.append(puzzleThemesLink());
+    rows.push(browse);
   }
   return rows;
 }

@@ -553,6 +553,90 @@
   }
 }
 
+/* Homepage three-column band (Brian, 2026-10-26): compact rows, so the panel
+   is never what pushes the article rows below a laptop fold. The band's height
+   is set by the tallest column (often the play rail beside it), and the panel
+   stretches to it; the rows share any height left over instead of leaving
+   dead panel under the last one. Still no internal scroll and no dropped row:
+   a list longer than the band grows the band, as before. */
+@media (min-width: 1241px) {
+  .landing-demo .pp-board {
+    --pp-icon: 34px;
+  }
+
+  .landing-demo .pp-view-computer .pp-scroll {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .landing-demo .pp-view-computer .pp-row {
+    flex: 1 0 auto;
+    min-height: 40px;
+  }
+
+  .landing-demo .pp-feature {
+    padding-block: 4px;
+  }
+}
+
+/* Play a person never scrolls (Brian, 2026-10-27), like the computer tab: its
+   rows drop to a 32px floor with a 32px marker and the Casual/Rated bar to
+   2px padding, so the ten variants plus room for two more fit the height the
+   computer tab sets (11 bot rows at their 40px floor), and they share whatever
+   is left over
+   instead of leaving dead panel under the last one. The scroll stays only as
+   the fallback for a long list of open seeks above the rows. */
+@media (min-width: 641px) {
+  .pp-board .pp-view-person {
+    --pp-icon: 32px;
+  }
+
+  /* The Casual/Rated bar is one line at any note length (Brian, 2026-10-27:
+     "account for that spacing"): 2px padding, a slimmer switch, and a note
+     that ellipsizes instead of wrapping the bar to two lines. */
+  .pp-view-person .pp-control {
+    padding-block: 2px;
+  }
+
+  .pp-view-person .pp-mode-btn {
+    padding: 2px 12px;
+    line-height: 1.35;
+  }
+
+  .pp-view-person .pp-note {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pp-view-person .pp-scroll {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .pp-person-rows {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+  }
+
+  .pp-view-person .pp-row-person {
+    flex: 1 0 auto;
+    min-height: 32px;
+    max-height: 46px;
+  }
+}
+
+/* Three-column band: a person row tops out at the bot rows' 40px floor, so
+   the two tabs share one row rhythm (Brian, 2026-10-27: "compress it even a
+   tiny bit more"). Spare height stays under the last row. */
+@media (min-width: 1241px) {
+  .landing-demo .pp-view-person .pp-row-person {
+    max-height: 40px;
+  }
+}
+
 /* Phone width: name and action on the first line, steppers under them. */
 @media (max-width: 640px) {
   .pp-board {

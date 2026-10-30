@@ -15,6 +15,8 @@
 import {
   applyStandardXiangqiMove,
   coordOf,
+  createInitialXiangqiState,
+  formatXiangqiMove,
   formatXiangqiMoveFromAfter,
   formatXiangqiMoves,
   fsfUciToXiangqiSquares,
@@ -27,6 +29,7 @@ import {
   type XiangqiMove,
   type XiangqiPuzzleSetupMove,
   type XiangqiSquare,
+  xiangqiPieceLetter,
   xiangqiPuzzlePreSetupState,
 } from '@mistboard/game';
 import '../live-xiangqi.css';
@@ -323,13 +326,16 @@ export const xiangqiPuzzleAdapter: PuzzleBoardAdapter = {
     applyStandardXiangqiMove(state as XiangqiGameState, move as XiangqiMove),
   moveLabel: (move: PuzzleMove) => ('drop' in move ? `@${move.to}` : `${move.from}-${move.to}`),
   // The reader's notation, replayed from the puzzle position. The setup move
-  // is labeled from the board after it, the only board the client has for it.
+  // reads in the same style as the line after it: formatted from the board
+  // before it when the server's capture record rebuilds that board, else
+  // from the board after it, where algebraic drops to the piece and its
+  // destination (Rg6) rather than the long from-to form (Rc6-g6).
   moveLabels: (puzzle: PuzzleDetail, played: readonly PuzzleMove[]) => {
     const style = currentXiangqiNotationStyle();
     const initial = puzzle.initial as XiangqiGameState;
     const setup = initial.lastMove as XiangqiMove | undefined;
     return {
-      setup: setup ? formatXiangqiMoveFromAfter(initial, setup, style) : null,
+      setup: setup ? xiangqiSetupLabel(puzzle, initial, setup, style) : null,
       played: formatXiangqiMoves(played as XiangqiMove[], style, initial),
     };
   },
@@ -341,7 +347,34 @@ export const xiangqiPuzzleAdapter: PuzzleBoardAdapter = {
       puzzle.initial as XiangqiGameState,
       puzzle.setupMove as XiangqiPuzzleSetupMove | undefined,
     ),
+  // Every standard game opens from the standard array, red to move.
+  historyStart: (puzzle: PuzzleDetail) =>
+    puzzle.history && puzzle.history.length > 0
+      ? createInitialXiangqiState(`${puzzle.id}:history`)
+      : null,
+  historyLabels: (puzzle: PuzzleDetail, history: readonly PuzzleMove[]) =>
+    formatXiangqiMoves(
+      history as XiangqiMove[],
+      currentXiangqiNotationStyle(),
+      createInitialXiangqiState(`${puzzle.id}:history`),
+    ),
   sideIconSvg: (puzzle: PuzzleDetail) =>
     xiangqiPieceGhostSvg({ color: puzzle.sideToMove ?? 'red', role: 'general' }),
   createAnalysis: createPuzzleAnalysis,
 };
+
+function xiangqiSetupLabel(
+  puzzle: PuzzleDetail,
+  initial: XiangqiGameState,
+  setup: XiangqiMove,
+  style: ReturnType<typeof currentXiangqiNotationStyle>,
+): string {
+  const before = xiangqiPuzzlePreSetupState(
+    initial,
+    puzzle.setupMove as XiangqiPuzzleSetupMove | undefined,
+  );
+  if (before) return formatXiangqiMove(before, setup, style);
+  const piece = initial.board[setup.to];
+  if (style === 'algebraic' && piece) return `${xiangqiPieceLetter(piece.role)}${setup.to}`;
+  return formatXiangqiMoveFromAfter(initial, setup, style);
+}

@@ -6,6 +6,11 @@ import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
 import { track } from './analytics.js';
 import { SITE_AUTHOR } from './articles/site-author.js';
 import { buildContact } from './contact.js';
+import {
+  PIKAFISH_REPO_URL,
+  PIKAFISH_SITE_URL,
+  pikafishWeightsLicenseUrl,
+} from './engine-credits.js';
 import { jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { applyDocumentLocale, currentLocale, type Locale, localizedHref } from './i18n/locale.js';
@@ -962,18 +967,6 @@ function textLine(value: string): HTMLSpanElement {
   const span = document.createElement('span');
   span.textContent = value;
   return span;
-}
-
-export const PIKAFISH_REPO_URL = 'https://github.com/official-pikafish/Pikafish';
-export const PIKAFISH_SITE_URL = 'https://pikafish.com/';
-const PIKAFISH_WEIGHTS_LICENSE_URLS: Record<Locale, string> = {
-  en: 'https://www.pikafish.com/en/list.html',
-  'zh-Hans': 'https://www.pikafish.com/list.html',
-  'zh-Hant': 'https://www.pikafish.com/zh-hant/list.html',
-};
-
-export function pikafishWeightsLicenseUrl(locale: Locale): string {
-  return PIKAFISH_WEIGHTS_LICENSE_URLS[locale];
 }
 
 function pikafishCreditLine(locale: Locale): HTMLSpanElement {

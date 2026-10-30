@@ -31,7 +31,13 @@
 // the count uses the same line: 25 of 324 counted games sat under it on
 // 2026-09-12. Set 2026-09-12.
 
-import { ALLOWLISTED_PLAYTEST_SPEC_IDS, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
+import {
+  ALLOWLISTED_PLAYTEST_SPEC_IDS,
+  isPublicGameSpec,
+  RETIRED_GAME_SPEC_IDS,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
+} from '@mistboard/game';
+import type { GameParticipantColor, GameResult } from './persistence-games.js';
 
 export const STATS_COUNTED_FROM = '2026-06-01';
 export const MIN_COUNTED_PLIES = 2;
@@ -146,8 +152,16 @@ export function notRetiredVariant(
 // publicSurface derives). A hidden variant's games would otherwise show in
 // the /stats totals and its per-variant JSON before anyone may see the game;
 // the day the switch flips, its games count, history included. Set 2026-10-16.
+//
+// Three Kingdoms banqi (#684) is an admin-only playtest with no allowlist
+// rows: an admin's games stay off the public figures while its spec is hidden.
+const ADMIN_PLAYTEST_SPEC_IDS: readonly string[] = [THREE_KINGDOMS_BANQI_SPEC_ID];
+
 export function offPublicGameSpecIds(allowlisted: readonly string[]): readonly string[] {
-  return [...RETIRED_GAME_SPEC_IDS, ...allowlisted];
+  const adminOnly = ADMIN_PLAYTEST_SPEC_IDS.filter(
+    (id) => !isPublicGameSpec(id) && !allowlisted.includes(id),
+  );
+  return [...RETIRED_GAME_SPEC_IDS, ...allowlisted, ...adminOnly];
 }
 
 export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds(
@@ -306,19 +320,32 @@ export function playedHumanGame(gamesAlias = 'g'): string {
     AND ${notRetiredVariant(gamesAlias)}`;
 }
 
-// The seat won the game: a red seat on red-wins, a black seat on black-wins,
-// any other seat on white-wins. The profile's Wins filter and row tone
-// (persistence-profiles.ts, apps/web/src/profile-ui.ts) and the wins
-// achievement family read this one definition, so "Wins" on the profile and
-// the count on the card agree.
+// The result each seat wins on: every seat wins on its own colour's result.
+// A Record over GameParticipantColor, so a seat added to the type (and to
+// game_participants_color_check) fails the typecheck here until it has a
+// winning result, instead of silently counting every win as a loss.
+export const SEAT_WIN_RESULT = {
+  white: 'white-wins',
+  black: 'black-wins',
+  red: 'red-wins',
+  east: 'east-wins',
+  south: 'south-wins',
+  west: 'west-wins',
+  north: 'north-wins',
+} as const satisfies Record<GameParticipantColor, GameResult>;
+
+// The seat won the game: the seat's colour matches the result (SEAT_WIN_RESULT).
+// The profile's Wins filter and row tone (persistence-profiles.ts,
+// apps/web/src/profile-ui.ts), the wins achievement family and the bot records
+// (persistence-bots.ts) read this one definition, so "Wins" on every surface
+// agrees.
 export function seatWonGame(participantsAlias = 'p', gamesAlias = 'g'): string {
   const p = participantsAlias;
   const g = gamesAlias;
+  const clauses = Object.entries(SEAT_WIN_RESULT).map(
+    ([color, result]) => `(${p}.color = '${color}' AND ${g}.result = '${result}')`,
+  );
   return `(
-  (${p}.color = 'red' AND ${g}.result = 'red-wins')
-  OR (${p}.color = 'black' AND ${g}.result = 'black-wins')
-  OR (${p}.color = 'east' AND ${g}.result = 'east-wins')
-  OR (${p}.color = 'west' AND ${g}.result = 'west-wins')
-  OR (${p}.color NOT IN ('red', 'black', 'east', 'west') AND ${g}.result = 'white-wins')
+  ${clauses.join('\n  OR ')}
 )`;
 }

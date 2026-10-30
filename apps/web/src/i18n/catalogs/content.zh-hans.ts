@@ -48,7 +48,7 @@ export const ZH_HANS_CONTENT = {
   'videos.previousVideos': '上一个视频',
   'videos.moreVideos': '更多视频',
   'articles.heading': '文章',
-  'articles.latest': '最新动态',
+  'articles.latest': '博客',
   'articles.deepDives': '象棋深度文章',
   'articles.topicAll': '全部',
   'articles.topicEngineering': '技术',
@@ -379,7 +379,7 @@ export const ZH_HANS_CONTENT = {
     '随时可以从本页打开账单管理页面来调整方案或取消。周期性扣款会在当前周期结束时停止。如果扣款有误，或者你想要回最近一笔付款，请在扣款后 30 天内联系我们，我们会退款。',
   'patron.faqPayQuestion': '可以用哪些方式付款？',
   'patron.faqPayAnswer':
-    '按月订阅支持银行卡。单次付款支持银行卡、支付宝和微信支付。价格以美元定价，结账时会以你所在地区的货币显示，你也可以选择用美元支付。',
+    '按月订阅支持银行卡。单次付款支持银行卡和支付宝。价格以美元定价，结账时会以你所在地区的货币显示，你也可以选择用美元支付。',
   'patron.termsPrefix': '扣款、取消和退款的规定见',
   'patron.termsLink': '使用条款',
   'patron.termsSuffix': '。',
@@ -465,7 +465,9 @@ export const ZH_HANS_CONTENT = {
     '作者 Huorongrong 和 Laoxu（Kouza）：带有自己神经网络的 Pikafish 分叉。在本站每步 4 秒，4 线程。',
   'champions.aboutJungle':
     '作者 hzyhhzy，网络来自 Kouza：自我对弈训练的神经网络。在本站每步 150 次访问。',
-  'champions.sourceLink': '源代码',
+  'champions.creditCode': '代码',
+  'champions.creditNetwork': '神经网络',
+  'champions.netPikafish': '皮卡鱼 NNUE',
   'champions.aboutJqe':
     "作者 Devin O'Keefe：开源引擎，带有自己的神经网络，通过自我对弈训练。在本站每步 4 秒，4 线程。",
   'champions.tookJqe': '2026-10-21 从 AB-JChess 0.2d 手中夺得头衔，共 300 局，得分率 60%。',

@@ -25,7 +25,6 @@
 import { spawnSync } from 'node:child_process';
 import {
   compareDrainTokenFingerprints,
-  DRAIN_TOKEN_KEYCHAIN_FALLBACK,
   DRAIN_TOKEN_KEYCHAIN_SERVICE,
   listDrainTokenFingerprints,
   PROD_FINGERPRINT_COMMAND,
@@ -95,7 +94,7 @@ switch (result.verdict) {
       `MISMATCH: no local copy equals prod's. Either the laptop is stale (copy the value from ` +
         `the Railway dashboard, web service, and store it: ${store}) or prod is stale (push the ` +
         `laptop's copy: node scripts/railway-secret.mjs --service web --var MISTBOARD_DRAIN_TOKEN, ` +
-        `which reads Keychain item "${DRAIN_TOKEN_KEYCHAIN_FALLBACK}"; Railway restarts web on the change).`,
+        `which reads Keychain item "${DRAIN_TOKEN_KEYCHAIN_SERVICE}"; Railway restarts web on the change).`,
     );
     break;
   case 'local-none':

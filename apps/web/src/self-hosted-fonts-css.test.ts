@@ -35,10 +35,54 @@ const VIETNAMESE_RANGES = [
   'U+1EA0-1EF9',
 ];
 
+/** A face cut to fixed captions draws only the characters it lists and never
+ *  running text: every range is CJK (U+3000 and up) or one ASCII letter or
+ *  letter run, and the whole cut is a few dozen code points. The river face
+ *  holds 楚河漢界 and the letters of "Mistboard", so no Vietnamese text meets it. */
+const CAPTION_CUT_MAX = 32;
+function captionOnly(face: Face): boolean {
+  const ranges = face.unicodeRange?.split(',').map((r) => {
+    const [lo, hi = lo] = r
+      .trim()
+      .slice(2)
+      .split('-')
+      .map((h) => Number.parseInt(h, 16));
+    return { lo, hi };
+  });
+  if (!ranges?.length) return false;
+  const letter = (c: number) => (c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a);
+  const size = ranges.reduce((n, { lo, hi }) => n + hi - lo + 1, 0);
+  return (
+    size <= CAPTION_CUT_MAX &&
+    ranges.every(({ lo, hi }) => lo >= 0x3000 || (letter(lo) && letter(hi)))
+  );
+}
+
 describe('self-hosted font faces', () => {
+  const selfHosted = faces.filter((f) => f.src.startsWith('/fonts/'));
   const families = [
-    ...new Set(faces.filter((f) => f.src.startsWith('/fonts/')).map((f) => f.family)),
+    ...new Set(
+      selfHosted
+        .filter((f) => !selfHosted.filter((o) => o.family === f.family).every(captionOnly))
+        .map((f) => f.family),
+    ),
   ];
+
+  it('tells a caption cut from a text face', () => {
+    const face = (unicodeRange: string) =>
+      ({ family: 'X', src: '/fonts/x.woff2', unicodeRange }) as Face;
+    expect(captionOnly(face('U+4D, U+61-62, U+64, U+69, U+6F, U+72-74, U+695A, U+6CB3'))).toBe(
+      true,
+    );
+    expect(captionOnly(face('U+0000-00FF, U+0131'))).toBe(false);
+    expect(captionOnly(face('U+0020-007E'))).toBe(false);
+    expect(captionOnly(face('U+41-5A, U+61-7A'))).toBe(false);
+  });
+
+  it('skips only the river caption face', () => {
+    expect(selfHosted.filter(captionOnly).map((f) => f.family)).toEqual(['Mistboard River']);
+    expect(families).not.toContain('Mistboard River');
+  });
 
   it('finds the self-hosted families', () => {
     expect(families).toEqual(expect.arrayContaining(['Noto Sans', 'Roboto']));

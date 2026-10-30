@@ -43,6 +43,13 @@ const SOURCE_CREDITS: readonly SourceCredit[] = [
   { name: 'thanks.jimPngName', body: 'thanks.jimPngBody', href: 'https://www.xqinenglish.com/' },
 ];
 
+// A /contact?about= link prefills the form for a visitor; crawlers are kept off
+// it so they do not file the ?about= copy as another URL for /contact.
+function nofollow(link: HTMLAnchorElement): HTMLAnchorElement {
+  link.rel = 'nofollow';
+  return link;
+}
+
 // Lichess closes the page: most of the site follows its design (Brian,
 // 2026-10-17: "they basically inspire everything"), said once, not as a banner.
 function lichessSection(locale: Locale): HTMLElement {
@@ -96,7 +103,7 @@ export function buildThanks(locale: Locale = currentLocale()): HTMLElement {
     engines,
     proseParagraph([
       t('thanks.enginesAskPrefix', {}, locale),
-      proseLink(t('thanks.enginesAskLink', {}, locale), '/contact?about=/thanks'),
+      nofollow(proseLink(t('thanks.enginesAskLink', {}, locale), '/contact?about=/thanks')),
       t('thanks.enginesAskSuffix', {}, locale),
     ]),
 
@@ -107,7 +114,7 @@ export function buildThanks(locale: Locale = currentLocale()): HTMLElement {
     proseParagraph([t('thanks.playersBody', {}, locale)]),
     proseParagraph([
       t('thanks.playersAskPrefix', {}, locale),
-      proseLink(t('thanks.playersAskLink', {}, locale), '/contact?about=/thanks'),
+      nofollow(proseLink(t('thanks.playersAskLink', {}, locale), '/contact?about=/thanks')),
       t('thanks.playersAskSuffix', {}, locale),
     ]),
 

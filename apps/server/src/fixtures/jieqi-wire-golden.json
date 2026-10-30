@@ -3406,7 +3406,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -4466,7 +4467,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -4853,7 +4855,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -5561,7 +5564,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -5569,7 +5573,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -5975,7 +5980,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -6721,7 +6727,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -6729,7 +6736,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -7178,7 +7186,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -7186,7 +7195,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -7922,7 +7932,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -7930,7 +7941,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -7938,7 +7950,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "chariot"
+                    "role": "chariot",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -8238,7 +8251,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -8246,7 +8260,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -9029,7 +9044,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -9037,7 +9053,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -9045,7 +9062,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "chariot"
+                    "role": "chariot",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -9437,7 +9455,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -9445,7 +9464,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -10251,7 +10271,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -10259,7 +10280,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -10267,11 +10289,13 @@
                   },
                   {
                     "owner": "black",
-                    "role": "chariot"
+                    "role": "chariot",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
-                    "role": "elephant"
+                    "role": "elephant",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -10706,7 +10730,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -10714,7 +10739,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -11542,7 +11568,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -11550,7 +11577,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -11558,11 +11586,13 @@
                   },
                   {
                     "owner": "black",
-                    "role": "chariot"
+                    "role": "chariot",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
-                    "role": "elephant"
+                    "role": "elephant",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -12008,7 +12038,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -12016,7 +12047,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -12028,7 +12060,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -12894,7 +12927,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -12902,7 +12936,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -12910,11 +12945,13 @@
                   },
                   {
                     "owner": "black",
-                    "role": "chariot"
+                    "role": "chariot",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
-                    "role": "elephant"
+                    "role": "elephant",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -12922,7 +12959,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -13387,7 +13425,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -13395,7 +13434,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -13407,7 +13447,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -14127,7 +14168,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -14135,7 +14177,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -14143,11 +14186,13 @@
                   },
                   {
                     "owner": "black",
-                    "role": "chariot"
+                    "role": "chariot",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
-                    "role": "elephant"
+                    "role": "elephant",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -14155,7 +14200,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -14623,7 +14669,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -14631,7 +14678,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -14643,7 +14691,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -14651,7 +14700,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -15367,7 +15417,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -15375,7 +15426,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -15383,11 +15435,13 @@
                   },
                   {
                     "owner": "black",
-                    "role": "chariot"
+                    "role": "chariot",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
-                    "role": "elephant"
+                    "role": "elephant",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -15395,7 +15449,8 @@
                   },
                   {
                     "owner": "black",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -15736,7 +15791,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -15744,7 +15800,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -15756,7 +15813,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "advisor"
+                    "role": "advisor",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "black",
@@ -15764,7 +15822,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -20091,7 +20150,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -21148,7 +21208,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -21534,7 +21595,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,
@@ -22084,7 +22146,8 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   },
                   {
                     "owner": "red",
@@ -22361,7 +22424,8 @@
                   },
                   {
                     "owner": "red",
-                    "role": "horse"
+                    "role": "horse",
+                    "takenFaceDown": true
                   }
                 ],
                 "inCheck": false,

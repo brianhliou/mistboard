@@ -169,8 +169,8 @@ export function reviewOpenedProps(input: {
   };
 }
 
-export type PuzzleAttemptOutcome = 'solved' | 'revealed' | 'abandoned';
-export type PuzzleAttemptMode = 'session' | 'embed';
+export type PuzzleAttemptOutcome = 'solved' | 'revealed' | 'abandoned' | 'failed' | 'skipped';
+export type PuzzleAttemptMode = 'session' | 'embed' | 'streak';
 
 // One event per terminal outcome, mirroring the server-side quality session's
 // first terminal outcome so the two counts reconcile. `clean` is a solve with
@@ -455,10 +455,10 @@ export function trackLocaleResolved(resolution: LocaleResolution): void {
     locale: resolution.locale,
     locale_source: resolution.source,
     browser_tag: resolution.browserTag,
-    // The piece set this visitor is defaulted to (locale, language list, then
-    // country), so games started can be sliced by first-impression board
+    // The piece set this visitor is defaulted to (first locale, language list,
+    // then country), so games started can be sliced by first-impression board
     // without a per-browser storage read.
-    piece_set_default: inferredXiangqiPieceSet(resolution.locale),
+    piece_set_default: inferredXiangqiPieceSet(),
   });
 }
 

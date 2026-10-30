@@ -77,31 +77,17 @@ describe('phone room bands', () => {
     ).toContain('--phone-room-extra: var(--phone-room-pool, 96px);');
   });
 
-  // Found by the finished-room sweep (2026-10-17): after a resign, the 52px
-  // Rematch and three stacked links pushed the moves and the bar 137px below
-  // the fold, and the bar, alone on its line once Resign left, rode up beside
-  // the moves strip at 0px wide.
-  it('fits the finished room: a 2x2 actions grid the budget gives up, the bar on its own line', () => {
-    expect(rule('.review-shell__cluster.live-review__cluster {\n    --phone-room-band')).toContain(
-      'var(--phone-room-post, 0px)',
-    );
-    // One 48px line per row the grid fills: a lone Review game takes one.
-    expect(rule('.review-shell__cluster.live-review__cluster:has(.postgame-actions)')).toContain(
-      '--phone-room-post: 48px;',
-    );
-    expect(
-      rule('.review-shell__cluster.live-review__cluster:has(.postgame-actions > :nth-child(3))'),
-    ).toContain('--phone-room-post: 96px;');
-    expect(rule('.live-review__cluster .round-table__row:has(.postgame-actions)')).toContain(
-      'height: calc(var(--phone-room-post) - 8px);',
-    );
-    expect(rule('.live-review__cluster .postgame-actions {')).toContain(
-      'grid-template-columns: 1fr 1fr;',
+  it('keeps the full playing budget with post-game actions in an overlay', () => {
+    const budget = rule('.review-shell__cluster.live-review__cluster {\n    --phone-room-band');
+    expect(budget).not.toContain('--phone-room-post');
+    expect(phone).not.toMatch(/--phone-room-post: (48|96)px/);
+    expect(rule('.live-review__cluster .postgame-sheet {')).toContain('position: fixed;');
+    expect(rule('.live-review__cluster .room-actions[data-postgame-sheet] {')).toContain(
+      'display: contents;',
     );
     expect(rule('.live-review__cluster .move-nav-bar {\n    order: 47;')).toContain(
       'min-width: 60%;',
     );
-    expect(rule('main.shell:has(.live-review__cluster)')).toContain('align-content: start;');
   });
 
   it('drops the blank jieqi odds lines once the game is over', () => {

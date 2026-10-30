@@ -29,8 +29,20 @@ export function detectScriptLanguage(text: string): ScriptLanguage {
   return han / (han + latin) >= 0.3 ? 'zh' : 'latin';
 }
 
+// The author's own words: every line outside a ">" quote (the Quote button
+// writes "> Name wrote:" and the quoted lines). A quote is someone else's
+// words, so it never decides the source language: a reply quoting an English
+// post with one line of Chinese is Chinese. Same rule as the server's
+// forumAuthorText.
+export function forumAuthorText(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .filter((line) => !line.startsWith('>'))
+    .join('\n');
+}
+
 export function translationNeeded(text: string, target: Locale): boolean {
-  const script = detectScriptLanguage(text);
+  const script = detectScriptLanguage(forumAuthorText(text));
   if (script === 'unknown') return false;
   if (script === 'zh') return target === 'en';
   return target !== 'en';

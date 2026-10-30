@@ -285,6 +285,8 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   // runtimeStatus 'future': falls back to the spec's English publicName.
   mahjong: null,
   'xiangqi-mahjong': 'variant.xiangqiMahjong.name',
+  // Hidden playtest (#628, #684): admin-only on prod.
+  'three-kingdoms-banqi': 'variant.threeKingdomsBanqi.name',
   'dark-chess': 'variant.darkChess.name',
   'dark-xiangqi': 'variant.darkXiangqi.name',
   'fortress-xiangqi': 'variant.fortressXiangqi.name',

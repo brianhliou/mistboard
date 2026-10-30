@@ -26,6 +26,21 @@ describe('locale helpers', () => {
     vi.restoreAllMocks();
   });
 
+  it('takes a puzzle page language from ?lang= and drops the parameter', () => {
+    window.history.replaceState(null, '', '/puzzles/xq-1?lang=zh-hans&theme=x#top');
+    expect(initializeLocaleFromCurrentUrl()).toBe('zh-Hans');
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('zh-Hans');
+    expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe(
+      '/puzzles/xq-1?theme=x#top',
+    );
+    // Only the puzzle pages read it: elsewhere ?lang= is someone else's parameter.
+    window.localStorage.removeItem(LOCALE_STORAGE_KEY);
+    window.history.replaceState(null, '', '/club/confirm?lang=zh-hant');
+    initializeLocaleFromCurrentUrl();
+    expect(window.localStorage.getItem(LOCALE_STORAGE_KEY)).toBeNull();
+    expect(window.location.search).toBe('?lang=zh-hant');
+  });
+
   it('detects locales from current path prefixes', () => {
     expect(localeFromPath('/zh-hans/rules/banqi')).toBe('zh-Hans');
     expect(localeFromPath('/zh-hant/blog')).toBe('zh-Hant');

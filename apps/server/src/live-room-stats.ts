@@ -39,6 +39,13 @@ export interface LiveRoomStats {
   playingRoomIds: Set<string>;
   onlineIdentities: Set<string>;
   playingUserIds: Set<string>;
+  // Seated human -> the room a spectator can open to watch them (the friends
+  // menu's Watch link). A user seated in several playing rooms gets one that
+  // is genuinely in play over one that is paused or idle. A tenant room is
+  // linked only while its tenant is enabled, so the link never lands on a
+  // closed surface. The id only: what a spectator then sees is the room's own
+  // public view (roomViewPolicy), so no game state rides on this map.
+  playingRoomByUserId: Map<string, string>;
   anonymousOnline: number;
 }
 
@@ -50,6 +57,19 @@ export function collectLiveRoomStats(
 ): LiveRoomStats {
   const onlineIdentities = new Set<string>();
   const playingUserIds = new Set<string>();
+  const playingRoomByUserId = new Map<string, string>();
+  // Users whose linked room above is genuinely in play; a later in-play room
+  // never displaces one of these, and an idle one never displaces anything.
+  const linkedInPlay = new Set<string>();
+  const linkRoom = (userId: string, roomId: string, inPlay: boolean) => {
+    if (linkedInPlay.has(userId)) return;
+    if (inPlay) {
+      playingRoomByUserId.set(userId, roomId);
+      linkedInPlay.add(userId);
+    } else if (!playingRoomByUserId.has(userId)) {
+      playingRoomByUserId.set(userId, roomId);
+    }
+  };
   const playingRoomIds = new Set<string>();
   const playingBySpec: Record<string, number> = {};
   let playing = 0;
@@ -74,11 +94,13 @@ export function collectLiveRoomStats(
       if (client.seat !== 'spectator') seatedHuman = true;
       if (roomPlaying && client.userId && client.seat !== 'spectator') {
         playingUserIds.add(client.userId);
+        linkRoom(client.userId, roomId, inPlay);
       }
     }
     if (inPlay && seatedHuman) countSpec(room.projection.variant);
   }
   for (const tenant of registeredVariantTenants()) {
+    const linkable = tenant.enabled();
     for (const [roomId, room] of tenant.rooms.entries()) {
       const roomPlaying = room.projection?.state.status.type === 'playing';
       let inPlay = false;
@@ -96,12 +118,17 @@ export function collectLiveRoomStats(
           onlineIdentities.add(`u:${client.userId}`);
           if (roomPlaying && client.seat && client.seat !== 'spectator') {
             playingUserIds.add(client.userId);
+            if (linkable) linkRoom(client.userId, roomId, inPlay);
           }
         } else if (client.id) {
           onlineIdentities.add(`c:${client.id}`);
         }
       }
-      if (inPlay && seatedHuman) countSpec(tenant.gameSpecId);
+      // The per-variant count is public (/api/live-stats, the homepage "N
+      // playing"), so an unlisted tenant's room stays out of it: a hidden
+      // playtest an admin plays on prod (Three Kingdoms banqi, #684) must not
+      // name itself there.
+      if (inPlay && seatedHuman && linkable) countSpec(tenant.gameSpecId);
     }
   }
   let anonymousOnline = 0;
@@ -114,6 +141,7 @@ export function collectLiveRoomStats(
     playingRoomIds,
     onlineIdentities,
     playingUserIds,
+    playingRoomByUserId,
     anonymousOnline,
   };
 }

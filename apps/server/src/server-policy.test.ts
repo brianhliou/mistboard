@@ -3,7 +3,18 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { createClock, expireClock, type GameEvent, replayGameEvents } from '@mistboard/game';
+import {
+  applyXmjMove,
+  createClock,
+  createXmjRoomState,
+  createXmjSetup,
+  expireClock,
+  type GameEvent,
+  replayGameEvents,
+  XIANGQI_MAHJONG_SPEC_ID,
+  type XmjSeat,
+  xmjPendingAction,
+} from '@mistboard/game';
 import {
   adminDebugTokenFromProtocolHeader,
   airsOnDelay,
@@ -20,6 +31,7 @@ import {
   isPrivateOrReservedIp,
   isReviewShellRoute,
   legacyPageRedirect,
+  localePuzzlesRedirect,
   proxyTrustWarningFor,
   type RuntimeEnv,
   recordMessageTimestamp,
@@ -27,6 +39,8 @@ import {
   withDelayedAir,
 } from './server-policy.js';
 import { SITEMAP_STATIC_ROUTES } from './server-static-pages.js';
+import { xmjBotMove } from './server-xiangqi-mahjong-bots.js';
+import type { XmjEvent } from './xiangqi-mahjong-tenant.js';
 
 test('live persisted events are not public replay data', () => {
   const events: GameEvent[] = [
@@ -75,6 +89,42 @@ test('finished Dark Xiangqi event logs stay out of the generic chess replay API'
     status: 403,
     body: { error: 'game_not_public' },
   });
+});
+
+// The generic replay API sends the raw log, and a Xiangqi Mahjong log opens with
+// every wall of the match in its room-created setup. Its own postgame route
+// (routes/xiangqi-mahjong-games.ts) is the only public read; this one stays shut
+// live and finished, so a later chess-shell mapping for the spec cannot open it.
+test('Xiangqi Mahjong logs never reach the generic replay API, live or finished', () => {
+  const roomId = 'xmj_policy';
+  const setup = createXmjSetup(() => 0.5);
+  const log: XmjEvent[] = [
+    { type: 'room-created', at: 1, roomId, gameSpecId: XIANGQI_MAHJONG_SPEC_ID, setup },
+    { type: 'seat-assigned', at: 2, roomId, clientId: 'e', seat: 'east' },
+    { type: 'seat-assigned', at: 3, roomId, clientId: 'w', seat: 'west' },
+  ];
+  const seats: readonly XmjSeat[] = ['east', 'west'];
+  let state = createXmjRoomState(setup, roomId);
+  let now = 10_000;
+  for (let step = 0; step < 4000 && state.status.type === 'playing'; step += 1) {
+    now += 10_000;
+    const move =
+      seats.map((seat) => xmjBotMove(state, seat, now)).find((m) => m !== null) ??
+      xmjPendingAction(state)?.move;
+    assert.ok(move, `stuck at move ${state.moveNumber}`);
+    state = applyXmjMove(state, move);
+    log.push({ type: 'move-played', at: move.at, roomId, color: move.by, move });
+  }
+  assert.equal(state.status.type, 'finished');
+
+  for (const events of [log.slice(0, 3), log.slice(0, 13), log]) {
+    const asGameEvents = events as unknown as GameEvent[];
+    assert.equal(canExposeFullEventReplay(asGameEvents), false);
+    assert.deepEqual(eventReplayResponse(asGameEvents), {
+      status: 403,
+      body: { error: 'game_not_public' },
+    });
+  }
 });
 
 test('live replay API returns 403 for every mode (PvP, PvE, EvE)', () => {
@@ -633,6 +683,28 @@ test('legacyPageRedirect sends the old games-database paths to /games/search, on
   // Game detail keeps its path: it is a different surface, still linked from
   // the opening explorer.
   assert.equal(legacyPageRedirect('/historical-xiangqi/game/hxq_abc123'), null);
+});
+
+// /zh-hans/puzzles/... served the 404 shell (2026-10-29): puzzles have one URL
+// in every language, so the prefix hops off and the language rides as ?lang=.
+test('localePuzzlesRedirect drops the language prefix from a puzzle URL, once', () => {
+  assert.equal(localePuzzlesRedirect('/zh-hans/puzzles', ''), '/puzzles?lang=zh-hans');
+  assert.equal(localePuzzlesRedirect('/zh-hant/puzzles/', ''), '/puzzles?lang=zh-hant');
+  assert.equal(
+    localePuzzlesRedirect('/zh-hans/puzzles/xq-mined-hxq_1-94', '?theme=x'),
+    '/puzzles/xq-mined-hxq_1-94?theme=x&lang=zh-hans',
+  );
+  assert.equal(
+    localePuzzlesRedirect('/zh-hans/puzzles/themes', ''),
+    '/puzzles/themes?lang=zh-hans',
+  );
+  // The target is a client route and is not itself redirected.
+  assert.equal(localePuzzlesRedirect('/puzzles', '?lang=zh-hans'), null);
+  assert.equal(isClientRoute('/puzzles'), true);
+  assert.equal(isClientRoute('/zh-hans/puzzles'), false);
+  // Other zh paths are untouched.
+  assert.equal(localePuzzlesRedirect('/zh-hans/rules', ''), null);
+  assert.equal(localePuzzlesRedirect('/zh-hans/puzzlesx', ''), null);
 });
 
 test('legacyPageRedirect sends /challenges to /champions in each language, once', () => {

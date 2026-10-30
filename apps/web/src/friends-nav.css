@@ -1,0 +1,129 @@
+/* Header Friends menu (friends-nav.ts). Reuses the bell's trigger and panel
+   (notification-nav.css); only the open state, the rows and the empty state are
+   its own. */
+
+.friends-nav-trigger:hover,
+.friends-nav.friends-nav-open .friends-nav-trigger {
+  color: var(--site-heading);
+  background: var(--site-panel-soft);
+}
+
+.friends-nav.friends-nav-open .friends-nav-panel {
+  display: flex;
+}
+
+.friends-nav-panel {
+  max-height: min(70vh, 480px);
+  overflow-y: auto;
+}
+
+.friends-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.friends-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--site-radius);
+}
+
+.friends-nav-row:hover {
+  background: var(--site-accent-soft);
+}
+
+.friends-nav-link {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: var(--site-radius);
+  color: var(--site-heading);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.friends-nav-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friends-nav-link:focus-visible,
+.friends-nav-watch:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: -2px;
+}
+
+.friends-nav-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  /* The forum's online green (forum.css). */
+  background: hsl(128, 52%, 45%);
+}
+
+.friends-nav-watch {
+  flex: none;
+  margin-right: 6px;
+  padding: 3px 8px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm, 4px);
+  color: var(--site-accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.friends-nav-watch:hover {
+  border-color: var(--site-accent);
+}
+
+.friends-nav-empty {
+  padding: 16px 10px 14px;
+  text-align: center;
+}
+
+.friends-nav-empty-title {
+  margin: 0 0 6px;
+  color: var(--site-heading);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.friends-nav-empty-hint {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+/* /following: the dot sits inside the player link, Watch beside Unfollow. */
+.following-player-link .friends-nav-dot {
+  margin-right: 6px;
+}
+
+.following-actions .friends-nav-watch {
+  display: inline-block;
+  margin-right: 8px;
+}
+
+/* Phone site menu: "Friends  2 online". */
+.site-menu-count {
+  color: var(--site-muted);
+  font-size: 14px;
+}
+
+/* Phones (600px and under) have no header Friends icon: the bar holds the
+   menu, brand, bell and account only, and the site menu carries the count. */
+@media (max-width: 600px) {
+  .site-nav .friends-nav {
+    display: none;
+  }
+}

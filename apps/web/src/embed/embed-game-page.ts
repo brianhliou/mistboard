@@ -265,7 +265,20 @@ export async function mountEmbedGame(
           pov,
         });
         // A remount (a fog game's view change) keeps the overlay it had.
-        if (analysis) handle.setBoardOverlay?.(analysis.overlayAtPly);
+        if (analysis) {
+          handle.setBoardOverlay?.(analysis.overlayAtPly);
+          if (specId !== 'jieqi') {
+            const { installEmbedGameLines } = await import('./embed-game-lines.js');
+            await installEmbedGameLines(
+              host,
+              handle,
+              specId,
+              roomId,
+              analysis.bestMoves,
+              pov,
+            ).catch(() => {});
+          }
+        }
         boardReady(handle);
         return handle;
       },
@@ -295,6 +308,16 @@ export async function mountEmbedGame(
           mark.note =
             `${mark.note ?? ''} This piece was never revealed, so this alternative cannot be replayed.`.trim();
       }
+    } else if (boardHost) {
+      const { installEmbedGameLines } = await import('./embed-game-lines.js');
+      await installEmbedGameLines(
+        boardHost,
+        card.handle,
+        specId,
+        roomId,
+        loaded.bestMoves,
+        pov,
+      ).catch(() => {});
     }
     card.setAnnotations(loaded.annotations);
     card.handle.setBoardOverlay?.(loaded.overlayAtPly);

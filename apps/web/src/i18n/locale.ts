@@ -4,6 +4,7 @@ export const SUPPORTED_LOCALES: readonly Locale[] = ['en', 'zh-Hans', 'zh-Hant']
 
 export const DEFAULT_LOCALE: Locale = 'en';
 export const LOCALE_STORAGE_KEY = 'mistboard.locale';
+export const FIRST_LOCALE_STORAGE_KEY = 'mistboard.firstLocale';
 
 export type LocaleMeta = {
   dateLocale: string;
@@ -48,6 +49,32 @@ export function localeFromPath(pathname = currentPathname()): Locale | null {
   if (lower === '/zh-hans' || lower.startsWith('/zh-hans/')) return 'zh-Hans';
   if (lower === '/zh-hant' || lower.startsWith('/zh-hant/')) return 'zh-Hant';
   return null;
+}
+
+// /puzzles has no locale prefix; the server sends /zh-hans/puzzles/... to
+// /puzzles/...?lang=zh-hans. Store that language and drop the parameter, so a
+// later switch from the language menu is not undone by the same URL reloading.
+export function puzzlesQueryLocale(): Locale | null {
+  if (typeof window === 'undefined') return null;
+  const { pathname, search, hash } = window.location;
+  if (pathname !== '/puzzles' && !pathname.startsWith('/puzzles/')) return null;
+  const params = new URLSearchParams(search);
+  const raw = params.get('lang')?.toLowerCase();
+  const locale =
+    raw === 'zh-hans' ? 'zh-Hans' : raw === 'zh-hant' ? 'zh-Hant' : raw === 'en' ? 'en' : null;
+  if (!locale) return null;
+  params.delete('lang');
+  const query = params.toString();
+  try {
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${pathname}${query ? `?${query}` : ''}${hash}`,
+    );
+  } catch {
+    // A sandboxed frame can refuse replaceState; the stored locale still holds.
+  }
+  return locale;
 }
 
 export function storedLocale(): Locale | null {
@@ -167,8 +194,27 @@ export function applyAccountLocalePreference(locale: string | null | undefined):
   return previous !== supportedLocale;
 }
 
+// The locale this browser was first served, kept for good. Board defaults (piece
+// set, river text, move notation) read it instead of the current locale, so a
+// reader who switches the interface language keeps the board they started on
+// (Brian, 2026-10-29: switching to Chinese should not switch the notation). Only
+// the guess is kept; what the board defaults to for it can still change.
+export function firstLocale(): Locale {
+  try {
+    const stored = window.localStorage.getItem(FIRST_LOCALE_STORAGE_KEY);
+    if (isLocale(stored)) return stored;
+    const locale = currentLocale();
+    window.localStorage.setItem(FIRST_LOCALE_STORAGE_KEY, locale);
+    return locale;
+  } catch {
+    return currentLocale();
+  }
+}
+
 export function initializeLocaleFromCurrentUrl(): Locale {
-  const pathLocale = localeFromPath();
+  // Before the path is stored, so a first visit records the page it landed on.
+  firstLocale();
+  const pathLocale = localeFromPath() ?? puzzlesQueryLocale();
   if (pathLocale) setStoredLocale(pathLocale);
   const locale = currentLocale();
   applyDocumentLocale(locale);

@@ -10,7 +10,7 @@ import {
   DEFAULT_BREAKER,
   DEFAULT_DAILY_MISS_CAP,
   type ForumTranslationService,
-  forumContentHash,
+  forumTranslationCacheHash,
   isTranslationLocale,
   TRANSLATION_LOCALES,
   type TranslationLocale,
@@ -106,7 +106,9 @@ async function translationOverlay(
   const textByHash = new Map<string, string>();
   for (const text of texts) {
     if (!text || !translationNeeded(text, locale)) continue;
-    textByHash.set(forumContentHash(text), text);
+    // The key the Translate route stores under: quotes and mixed-script posts
+    // are keyed apart from the whole-body rows written before segments.
+    textByHash.set(forumTranslationCacheHash(text, locale), text);
   }
   if (textByHash.size === 0) return NO_OVERLAY;
   const found = await persistence.listForumTranslations({

@@ -32,6 +32,7 @@ import { practiceChapterPath } from './practice-chapter-redirect.js';
 import { puzzleById } from './routes/puzzles.js';
 import { isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
+import { studyHasAdminOnlyChapter } from './study-admin-only.js';
 import {
   chapterPageMeta,
   renderStudyBody,
@@ -637,8 +638,19 @@ export async function routePreloadLinksForPath(params: {
 // Routes whose query string picks what the page shows but not which page it is:
 // /watch?channel=…&game=… is the one watch page tuned to a channel or game, and
 // each combination crawled as its own URL (SEO backlog D8). They canonicalise to
-// the bare path.
-const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set(['/watch', '/games']);
+// the bare path. /contact?about=<page> prefills the form with the page a message
+// is about; every player, team and broadcast page links one, and Search Console
+// filed 43 of them as duplicates without a canonical (validation failed
+// 2026-10-19). /contact has no locale-prefixed form.
+const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set([
+  '/watch',
+  '/games',
+  '/contact',
+  '/terms',
+  '/privacy',
+  '/thanks',
+  '/faq',
+]);
 
 // Client routes whose list is live (it changes by the minute, so nothing in it
 // is worth baking) but whose page still needs a heading and its links for a
@@ -956,7 +968,9 @@ export async function serveStudyPage(params: {
   const study = await (params.getStudy ?? persistence.getStudyById)(params.studyId).catch(
     () => null,
   );
-  if (study && study.visibility === 'public') {
+  // An admin-only variant's study (#628) gets the bare shell: its meta and
+  // card would publish it to crawlers, which are never admins.
+  if (study && study.visibility === 'public' && !studyHasAdminOnlyChapter(study)) {
     const chapter = params.chapterId
       ? study.chapters.find((c) => c.id === params.chapterId)
       : undefined;

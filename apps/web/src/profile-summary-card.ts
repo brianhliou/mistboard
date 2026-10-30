@@ -56,7 +56,11 @@ export type BotSummaryPlayOption = {
   gameSpecId: string;
   engineId: string;
   playable: boolean;
+  /** The engine build this variant plays (server bot-engine-versions.ts); absent when none is recorded. */
+  version?: string;
 };
+
+export type BotSummaryRecord = { games: number; wins: number; losses: number; draws: number };
 
 export type BotSummaryRating = {
   gameSpecId: string;
@@ -76,9 +80,11 @@ export type BotSummaryProfile = {
   supportedGameSpecIds: string[];
   playOptions?: BotSummaryPlayOption[];
   gamesTotal: number;
-  record: { games: number; wins: number; losses: number; draws: number };
+  record: BotSummaryRecord;
   rating?: BotSummaryRating | null;
   ratings?: BotSummaryRating[];
+  /** Per-variant record; the lifetime `record` is their sum. Older payloads omit it. */
+  recordsByGameSpecId?: Record<string, BotSummaryRecord>;
 };
 
 // How many rated variants the compact grid shows before it stops (a hover card
@@ -123,13 +129,23 @@ export type BotCardOptions = {
   primaryPlayGameSpecId?: string;
 };
 
+// A bot that plays one variant keeps the compact shape: bio, its rating, one
+// Play button sized to its label, lifetime games and record. A bot that plays
+// several gets one row per variant instead (rating, games, record and that
+// variant's Play), since a lifetime record summed across xiangqi, fortress and
+// duck says nothing about any of them.
 export function buildBotSummaryCard(
   profile: BotSummaryProfile,
   options: BotCardOptions = {},
 ): HTMLElement {
   const card = buildCardShell('bot');
   card.dataset.botId = profile.id;
-  card.append(buildBotHeader(profile, options));
+  const rows = botVariantRows(profile, options.primaryPlayGameSpecId);
+  // One version for the whole card goes beside the subtitle; when the variants
+  // run different builds, each row names its own.
+  const versions = new Set(rows.map((row) => row.option?.version ?? null));
+  const sharedVersion = versions.size === 1 ? ([...versions][0] ?? null) : null;
+  card.append(buildBotHeader(profile, options, sharedVersion));
 
   const bioText = options.bio === undefined ? profile.bio : options.bio;
   if (bioText?.trim()) {
@@ -137,6 +153,11 @@ export function buildBotSummaryCard(
     bio.className = 'profile-summary-card-bio';
     bio.textContent = bioText;
     card.append(bio);
+  }
+
+  if (rows.length > 1) {
+    card.append(buildBotVariantRows(profile, rows, sharedVersion === null));
+    return card;
   }
 
   const ratings = options.ratingGameSpecId
@@ -148,6 +169,100 @@ export function buildBotSummaryCard(
   if (actions) card.append(actions);
   card.append(buildBotFooter(profile));
   return card;
+}
+
+type BotVariantRow = {
+  gameSpecId: string;
+  option: BotSummaryPlayOption | null;
+  record: BotSummaryRecord | null;
+};
+
+// Every variant the bot can be played at, the card's lead variant first. A
+// variant it no longer offers gets no row: the card is for choosing a game.
+function botVariantRows(profile: BotSummaryProfile, primaryGameSpecId?: string): BotVariantRow[] {
+  const options = botPlayOptions(profile);
+  // A bot with one variant has one obvious action, so it is the primary one.
+  const primary =
+    options.find((option) => option.gameSpecId === primaryGameSpecId) ??
+    (options.length === 1 ? options[0] : undefined);
+  const ordered = primary ? [primary, ...options.filter((option) => option !== primary)] : options;
+  const records = profile.recordsByGameSpecId;
+  return ordered.map((option) => ({
+    gameSpecId: option.gameSpecId,
+    option,
+    record: records?.[option.gameSpecId] ?? null,
+  }));
+}
+
+function buildBotVariantRows(
+  profile: BotSummaryProfile,
+  rows: readonly BotVariantRow[],
+  showVersions: boolean,
+): HTMLElement {
+  const list = document.createElement('ul');
+  list.className = 'profile-summary-card-variants';
+  const ratings = botRatings(profile);
+  rows.forEach((row, index) => {
+    const item = document.createElement('li');
+    item.className = 'profile-summary-card-variant';
+    item.dataset.gameSpecId = row.gameSpecId;
+    const label = gameSpecLabel(row.gameSpecId);
+
+    const miniId = variantMiniIdForRawVariant(row.gameSpecId);
+    const icon = document.createElement('span');
+    icon.className = 'profile-summary-card-rating-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    if (miniId) icon.innerHTML = renderVariantMarker(miniId, { size: 20, label });
+    item.append(icon);
+
+    const copy = document.createElement('span');
+    copy.className = 'profile-summary-card-variant-copy';
+    const name = document.createElement('span');
+    name.className = 'profile-summary-card-variant-name';
+    name.textContent = label;
+    copy.append(name);
+    const meta: string[] = [];
+    if (row.record) {
+      meta.push(gameCountLabel(row.record.games));
+      if (row.record.games > 0) meta.push(recordLabel(row.record));
+    }
+    const version = showVersions ? row.option?.version : undefined;
+    if (version) meta.push(t('bots.versionValue', { version }));
+    if (meta.length > 0) {
+      const metaEl = document.createElement('span');
+      metaEl.className = 'profile-summary-card-variant-meta';
+      // Each fact is its own unit, so a narrow card wraps between "10-0-0" and
+      // "Version bcc83f88", never inside the version.
+      meta.forEach((fact, index) => {
+        if (index > 0) metaEl.append(' · ');
+        const part = document.createElement('span');
+        part.className = 'profile-summary-card-variant-fact';
+        part.textContent = fact;
+        metaEl.append(part);
+      });
+      copy.append(metaEl);
+    }
+    item.append(copy);
+
+    const rating = ratings.find((candidate) => candidate.gameSpecId === row.gameSpecId);
+    const value = document.createElement('span');
+    value.className = 'profile-summary-card-rating-value profile-summary-card-variant-rating';
+    if (rating) {
+      value.textContent = `${new Intl.NumberFormat().format(rating.rating)}${rating.provisional ? '?' : ''}`;
+      value.title = t('bots.engineRating', { variant: label });
+    }
+    item.append(value);
+
+    if (row.option) {
+      item.append(buildBotPlayControl(profile, row.option, index === 0, t('bots.play')));
+    }
+    list.append(item);
+  });
+  return list;
+}
+
+function recordLabel(record: BotSummaryRecord): string {
+  return `${record.wins}-${record.losses}-${record.draws}`;
 }
 
 function buildCardShell(kind: 'user' | 'bot'): HTMLElement {
@@ -206,7 +321,11 @@ function buildHeader(
   return header;
 }
 
-function buildBotHeader(profile: BotSummaryProfile, options: BotCardOptions): HTMLElement {
+function buildBotHeader(
+  profile: BotSummaryProfile,
+  options: BotCardOptions,
+  version: string | null,
+): HTMLElement {
   const header = document.createElement('div');
   header.className = 'profile-summary-card-header';
 
@@ -232,6 +351,13 @@ function buildBotHeader(profile: BotSummaryProfile, options: BotCardOptions): HT
   owner.className = 'profile-summary-card-subtitle';
   owner.textContent =
     options.subtitle ?? (profile.ownerType === 'system' ? 'First-party bot' : 'Community bot');
+  if (version) {
+    const versionEl = document.createElement('span');
+    versionEl.className = 'profile-summary-card-version';
+    versionEl.title = t('bots.engineVersion');
+    versionEl.textContent = t('bots.versionValue', { version });
+    owner.append(' · ', versionEl);
+  }
   identity.append(name, owner);
 
   const badge = document.createElement('span');
@@ -345,7 +471,10 @@ function buildBotActions(
 ): HTMLElement | null {
   const options = botPlayOptions(profile);
   if (options.length === 0) return null;
-  const primary = options.find((option) => option.gameSpecId === primaryGameSpecId);
+  // A bot with one variant has one obvious action, so it is the primary one.
+  const primary =
+    options.find((option) => option.gameSpecId === primaryGameSpecId) ??
+    (options.length === 1 ? options[0] : undefined);
   const ordered = primary ? [primary, ...options.filter((option) => option !== primary)] : options;
   const row = document.createElement('div');
   row.className = 'profile-summary-card-actions profile-summary-card-bot-actions';
@@ -359,14 +488,15 @@ function buildBotPlayControl(
   profile: BotSummaryProfile,
   option: BotSummaryPlayOption,
   primary = false,
+  labelOverride?: string,
 ): HTMLElement {
   const variant = gameSpecLabel(option.gameSpecId);
-  const label = primary ? t('bots.playVariant', { variant }) : variant;
+  const label = labelOverride ?? (primary ? t('bots.playVariant', { variant }) : variant);
   if (!option.playable) {
     const control = document.createElement('span');
     control.className = 'profile-summary-card-action profile-summary-card-action-unavailable';
     control.textContent = label;
-    control.title = 'Not available right now';
+    control.title = t('bots.unavailable');
     return control;
   }
 
@@ -375,6 +505,8 @@ function buildBotPlayControl(
   control.className = 'profile-summary-card-action';
   if (primary) control.classList.add('profile-summary-card-action-primary');
   control.textContent = label;
+  // A bare "Play" in a variant row names its variant for screen readers.
+  if (labelOverride) control.setAttribute('aria-label', t('bots.playVariant', { variant }));
   bindBotPlayControl(
     control,
     () => ({ botId: profile.id, gameSpecId: option.gameSpecId, preferredColor: 'random' }),
@@ -482,8 +614,8 @@ function buildBotFooter(profile: BotSummaryProfile): HTMLElement {
   const games = document.createElement('span');
   games.textContent = gameCountLabel(profile.gamesTotal);
   const record = document.createElement('span');
-  record.textContent = `${profile.record.wins}-${profile.record.losses}-${profile.record.draws}`;
-  record.title = 'Wins, losses, draws';
+  record.textContent = recordLabel(profile.record);
+  record.title = t('bots.recordTitle');
   footer.append(games, record);
   return footer;
 }

@@ -296,18 +296,12 @@
   "how-puzzle-mining-works": {
     "title": "Mining puzzles from real games",
     "kind": "article",
-    "description": "A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.",
+    "description": "A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in twenty survives. Here is the algorithm, the code, and what it kept and threw away.",
     "status": "published",
     "zhTitles": {
       "zh-hans": "从真实对局中挖掘象棋题目",
       "zh-hant": "從真實對局中挖掘象棋題目"
     }
-  },
-  "how-to-play-xiangqi-mahjong": {
-    "title": "How to Play Xiangqi Mahjong",
-    "kind": "article",
-    "description": "Xiangqi Mahjong is a folk game from Taiwan that plays one 32-piece xiangqi set as mahjong tiles. How a turn goes, what makes a winning hand, how it scores, and how to start a match on Mistboard.",
-    "status": "draft"
   },
   "jieqi": {
     "title": "Jieqi Rules (Reveal Xiangqi)",
@@ -553,6 +547,16 @@
       "zh-hant": "用伺服器端真實局面實現迷霧國際象棋"
     }
   },
+  "set-up-your-board": {
+    "title": "How to Change Your Board and Pieces",
+    "kind": "article",
+    "description": "Mistboard has nine xiangqi piece sets, pieces can be flat or 3D, and the xiangqi board can be lined or a square grid. Pieces glide when you step through a game and turn over when a hidden piece is revealed. Here is what each look is and where to set it.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "如何更改棋盘和棋子的样式",
+      "zh-hant": "如何更改棋盤和棋子的樣式"
+    }
+  },
   "shogi4": {
     "title": "Shogi4 (4×4 Shogi) Rules",
     "kind": "rules",
@@ -602,6 +606,12 @@
       "zh-hans": "唐丹",
       "zh-hant": "唐丹"
     }
+  },
+  "three-kingdoms-banqi": {
+    "title": "Three Kingdoms Banqi Rules",
+    "kind": "rules",
+    "description": "Three Kingdoms banqi is face-down banqi on a 9 by 5 board with xiangqi moves. Any piece can capture any piece, every capture scores points, and the first player to 100 wins.",
+    "status": "draft"
   },
   "titled-players": {
     "title": "Bring your title to Mistboard",

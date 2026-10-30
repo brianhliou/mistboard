@@ -203,7 +203,9 @@ export async function mountLandingTv(
       await handle.loadGame(entry.roomId);
       return;
     }
-    const priorHeight = handle ? root.offsetHeight : 0;
+    // Pin whatever holds the slot now (the last board, or the first-paint
+    // skeleton) so the mount never paints a frame of an empty, zero-height slot.
+    const priorHeight = root.offsetHeight;
     destroyHandle();
     if (priorHeight > 0) root.style.minHeight = `${priorHeight}px`;
     // The seat discs' dark ink is blue for the Jungle family (seat-disc-ink.css).

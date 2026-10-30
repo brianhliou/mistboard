@@ -840,8 +840,8 @@ function renderOnlinePlayers(body: HTMLElement, result: OnlinePlayersResult, loc
         if (variantLabel) rating.title = variantLabel;
         link.append(rating);
       }
-      // Same reusable hover card the friends-online widget uses — the online
-      // list is the second surface it serves.
+      // Same reusable hover card the header Friends menu uses; the online list
+      // is the second surface it serves.
       attachUserCard(link, player.handle, { online: true, playing: player.playing });
       item.append(link);
       list.append(item);
@@ -1494,7 +1494,7 @@ function buildProfileRatingSpotlight(
     button.type = 'button';
     button.className = 'profile-chart-range';
     button.dataset.range = range;
-    button.textContent = range;
+    button.textContent = t(`profile.chartRange${range}`, {}, locale);
     const active = range === 'ALL';
     button.classList.toggle('profile-chart-range-active', active);
     button.setAttribute('aria-pressed', String(active));

@@ -7,10 +7,13 @@ import {
   type XmjHandState,
   type XmjTile,
   xmjAdvance,
+  xmjCanDiscard,
   xmjCanSelfDraw,
   xmjClaim,
   xmjClaimsOpen,
   xmjDeal,
+  xmjDeclarationDiscards,
+  xmjDeclareReady,
   xmjDiscard,
   xmjLegalClaims,
   xmjMatchWinner,
@@ -42,6 +45,149 @@ function wallWith(dealer: XmjTile[], other: XmjTile[], draws: XmjTile[] = []): X
 function count(tiles: readonly XmjTile[], tile: XmjTile) {
   return tiles.filter((t) => t === tile).length;
 }
+
+test('table 3 declaration requires a possible wait, with or without an exposed meld', () => {
+  const hand = xmjDeal(wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR']), 0, 3);
+  assert.ok(xmjDeclarationDiscards(hand).includes('bH'));
+  const declared = xmjDeclareReady(hand, 'bH');
+  assert.deepEqual(declared.declared, [true, false]);
+  assert.deepEqual(declared.discards[0], ['bH']);
+  assert.equal(declared.phase.type, 'claim');
+  assert.equal(xmjDeclareReady(hand, 'bP'), hand, 'invalid discard is atomic');
+  assert.deepEqual(hand.declared, [false, false], 'the input is unchanged');
+
+  const exposed: XmjHandState = {
+    ...hand,
+    hands: [['rP', 'bH'], hand.hands[1]],
+    melds: [[{ kind: 'sequence', tiles: ['rK', 'rA', 'rE'] }], []],
+    phase: { type: 'discard', mayWin: false, drawn: null },
+  };
+  assert.ok(xmjDeclarationDiscards(exposed).includes('bH'));
+  assert.deepEqual(xmjDeclareReady(exposed, 'bH').hands[0], ['rP']);
+
+  const impossible = xmjDeal(
+    wallWith(['rK', 'rA', 'bE', 'bR', 'rP'], ['bK', 'bA', 'rE', 'rR']),
+    0,
+    3,
+  );
+  assert.deepEqual(xmjDeclarationDiscards(impossible), []);
+  assert.equal(xmjDeclareReady(impossible, 'bR'), impossible);
+  const allCopies = xmjDeal(
+    wallWith(['rP', 'rP', 'rP', 'rP', 'rP'], ['bK', 'bA', 'bE', 'bR']),
+    0,
+    3,
+  );
+  assert.deepEqual(xmjDeclarationDiscards(allCopies), [], 'the thrown fifth copy cannot be drawn');
+});
+
+test('declaration eligibility counts public tiles, never the opponent hand or wall', () => {
+  const hand = xmjDeal(wallWith(['rR', 'rH', 'rC', 'rK', 'bH'], ['bK', 'bA', 'bE', 'bR']), 0, 3);
+  assert.ok(xmjDeclarationDiscards(hand).includes('bH'), 'concealed bK remains a possible wait');
+  const hiddenChanged: XmjHandState = { ...hand, hands: [hand.hands[0], []], wall: [] };
+  assert.deepEqual(xmjDeclarationDiscards(hiddenChanged), xmjDeclarationDiscards(hand));
+  const publicGeneral: XmjHandState = { ...hiddenChanged, discards: [[], ['bK']] };
+  assert.ok(
+    !xmjDeclarationDiscards(publicGeneral).includes('bH'),
+    'rK cannot pair with another rK',
+  );
+  const exposedGeneral: XmjHandState = {
+    ...hiddenChanged,
+    melds: [[], [{ kind: 'sequence', tiles: ['bK', 'bA', 'bE'] }]],
+  };
+  assert.ok(!xmjDeclarationDiscards(exposedGeneral).includes('bH'));
+});
+
+test('declared hands discard only the drawn tile, including when it has a twin', () => {
+  const hand = xmjDeal(
+    wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR'], ['bP', 'rA']),
+    0,
+    3,
+  );
+  const declared = xmjDeclareReady(hand, 'bH');
+  const drawn = xmjPass(xmjDiscard(xmjPass(declared), 'bR'));
+  assert.ok(xmjCanDiscard(drawn, 'rA'));
+  assert.ok(!xmjCanDiscard(drawn, 'rK'));
+  assert.ok(!xmjCanDiscard(drawn, 'rA', true));
+  assert.equal(xmjDiscard(drawn, 'rA', true), drawn);
+  assert.equal(xmjDiscard(drawn, 'rK'), drawn);
+  assert.equal(xmjDeclareReady(drawn, 'rA'), drawn, 'cannot redeclare');
+  const discarded = xmjDiscard(drawn, 'rA');
+  assert.deepEqual(discarded.hands[0], ['rK', 'rA', 'rE', 'rP']);
+  assert.deepEqual(discarded.drawnDiscards[0], [false, true]);
+});
+
+test('declared hands refuse both pung and chow while retaining win claims', () => {
+  for (const [dealer, other, thrown, kind, fromHand] of [
+    [['rR', 'rH', 'rP', 'rP', 'bH'], ['rK', 'rA', 'bP', 'rP'], 'rP', 'pung', ['rP', 'rP']],
+    [['rR', 'rH', 'rC', 'rP', 'bH'], ['bK', 'bA', 'bE', 'rR'], 'rR', 'chow', ['rH', 'rC']],
+  ] as const) {
+    const hand = xmjDeal(wallWith([...dealer], [...other], ['bC']), 0, 3);
+    const window = xmjDiscard(xmjPass(xmjDeclareReady(hand, 'bH')), thrown);
+    assert.ok(xmjLegalClaims(window.hands[0], [], thrown).some((claim) => claim.kind === kind));
+    assert.deepEqual(xmjClaimsOpen(window), []);
+    assert.equal(xmjClaim(window, { kind, fromHand }), window);
+  }
+});
+
+test('table 3 adds one declaration tai on either winning path and resets next hand', () => {
+  const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR'], ['rP', 'rP']);
+  for (const selfDrawn of [false, true]) {
+    const match = xmjNewMatch([wall, wall], 0, 3);
+    let hand = xmjDeclareReady(match.hand, 'bH');
+    hand = xmjPass(hand);
+    hand = xmjDiscard(hand, selfDrawn ? 'bR' : 'rP');
+    const won = selfDrawn
+      ? xmjSelfDraw(xmjPass(hand))
+      : xmjClaim(hand, { kind: 'win', fromHand: [] });
+    assert.equal(won.phase.type, 'won');
+    if (won.phase.type !== 'won') continue;
+    assert.equal(won.phase.selfDrawn, selfDrawn);
+    const score = won.phase.score;
+    assert.ok(score.lines.some((line) => line.key === 'declared-ready' && line.tai === 1));
+    const base = xmjScore({
+      concealed: won.hands[0],
+      melds: [],
+      selfDrawn,
+      winnerIsDealer: true,
+      heavenly: false,
+      earthly: false,
+      lastTile: false,
+      table: 2,
+    });
+    assert.equal(score.total, base.total + 1);
+    const next = xmjNextHand(xmjAdvance(match, won));
+    assert.deepEqual(next.hand.declared, [false, false]);
+    assert.equal(next.hand.taiTable, 3);
+  }
+});
+
+test('heavenly precedence and legacy scoring ignore declaration bonuses', () => {
+  const ctx = {
+    concealed: ['rK', 'rA', 'rE', 'rP', 'rP'] as XmjTile[],
+    melds: [],
+    selfDrawn: true,
+    winnerIsDealer: false,
+    heavenly: false,
+    earthly: false,
+    lastTile: true,
+    declared: true,
+  };
+  for (const firstDraw of ['heavenly', 'earthly'] as const) {
+    const score = xmjScore({ ...ctx, table: 3, [firstDraw]: true });
+    assert.equal(score.total, 6);
+    assert.deepEqual(
+      score.lines.map((line) => line.key),
+      ['heavenly'],
+    );
+  }
+  for (const table of [1, 2] as const) {
+    assert.deepEqual(xmjScore({ ...ctx, table }), xmjScore({ ...ctx, table, declared: false }));
+    const hand = xmjDeal(wallWith(ctx.concealed, ['bK', 'bA', 'bE', 'bR']), 0, table);
+    assert.equal('declared' in hand, false);
+    assert.deepEqual(xmjDeclarationDiscards(hand), []);
+    assert.equal(xmjDeclareReady(hand, 'rP'), hand);
+  }
+});
 
 test('the set is 32 tiles, 16 per colour, with the right copies', () => {
   const tiles = xmjOrderedTiles();

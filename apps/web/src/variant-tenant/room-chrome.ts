@@ -30,7 +30,12 @@ import {
 import { type I18nKey, t } from '../i18n/catalog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
-import { postGameActions, renderGameResult, resultScore } from '../postgame-panel.js';
+import {
+  clearPostGameSheet,
+  renderGameResult,
+  renderPostGameActions,
+  resultScore,
+} from '../postgame-panel.js';
 import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile-link.js';
 import { rememberBotRoomRequest } from '../pve-memory.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
@@ -220,6 +225,9 @@ export type TenantChromeContext<C extends string> = {
   // The viewer's bottom-of-board color (seat when seated, else perspective).
   orientation(): C;
   playAgainRequestBody(): Record<string, unknown>;
+  // The bot this room was played against (snapshot `pveEngineId`), or null.
+  // Optional so a test ctx may omit it.
+  pveEngineId?(): string | null;
   // Post-game rematch block for a seated player, or null to fall back to
   // play-again. Tenant-owned because the shared control reads liveState.
   rematchControls(sendSocket: (payload: unknown) => boolean): HTMLElement | null;
@@ -762,12 +770,15 @@ export function createTenantRoomChrome<C extends string>(
 
   function renderRoomActions(): void {
     if (!refs) return;
-    refs.roomActions.replaceChildren();
     const row = document.createElement('div');
     row.className = 'room-actions-row';
     const view = ctx.view();
     // A recording is the review itself: nothing to rematch, nobody to invite.
-    if (ctx.recording?.()) return;
+    if (ctx.recording?.()) {
+      clearPostGameSheet(refs.roomActions);
+      refs.roomActions.replaceChildren();
+      return;
+    }
 
     if (view?.status.type === 'finished') {
       // Rematch / New opponent / Review game (postgame-panel.ts). Only a seated
@@ -785,17 +796,17 @@ export function createTenantRoomChrome<C extends string>(
           : mode === 'pve'
             ? playAgainButton()
             : null;
-      refs.roomActions.append(
-        postGameActions({
-          variant: tenantSpecId(),
-          mode,
-          seated,
-          rematch,
-          reviewHref: tenant.reviewUrl(ctx.room()),
-        }),
-      );
+      renderPostGameActions(refs.roomActions, {
+        variant: tenantSpecId(),
+        mode,
+        seated,
+        rematch,
+        reviewHref: tenant.reviewUrl(ctx.room()),
+      });
       return;
     }
+    clearPostGameSheet(refs.roomActions);
+    refs.roomActions.replaceChildren();
     // Aborted games offer NO play-again: an instant new room after an abort
     // creates a fresh solo room where the mover can play before the opponent
     // joins. No Home button either (lichess parity): the site nav is the way
@@ -867,7 +878,7 @@ export function createTenantRoomChrome<C extends string>(
   // flip variants they are move order, so this alternates who opens. A table
   // of four (mahjong) keeps the tenant's own body.
   function playAgainBody(): Record<string, unknown> {
-    const body = ctx.playAgainRequestBody();
+    const body = withRoomBot(ctx.playAgainRequestBody(), ctx.pveEngineId?.() ?? null);
     const seat = seatColor();
     if (seat === null || tenant.colors.length !== 2) return body;
     return { ...body, preferredColor: tenant.oppositeColor(seat) };
@@ -1428,4 +1439,18 @@ const SEAT_WORD_KEYS: Readonly<Record<string, I18nKey>> = {
  *  shown as a variant (mahjong): no icon box, never a stand-in glyph. */
 export function roomMarkerId(gameSpecId: string | undefined): VariantMiniId | undefined {
   return (gameSpecId && variantMiniIdForRawVariant(gameSpecId)) || undefined;
+}
+
+/** A bot rematch plays the same bot. Four tenants (Duck Xiangqi, Flip Jungle,
+ *  both mahjongs) sent a body with no bot, so the server picked its default
+ *  and the home panel's Play again record, which needs a bot, kept naming an
+ *  older game. The room's own engine fills the gap; a body that names a bot
+ *  keeps it. */
+export function withRoomBot(
+  body: Record<string, unknown>,
+  pveEngineId: string | null,
+): Record<string, unknown> {
+  if (body.mode !== 'pve' || !pveEngineId) return body;
+  if (typeof body.botId === 'string' || typeof body.engineId === 'string') return body;
+  return { ...body, engineId: pveEngineId };
 }

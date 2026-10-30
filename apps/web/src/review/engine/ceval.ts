@@ -67,7 +67,20 @@ const ENGINE_BASE = '/engine/fairy-stockfish/';
 // -fortress2: fortress-xiangqi.ini turned FSF's no-capture draw off (#472).
 // -crazyhouse1: crazyhouse-xiangqi.ini joined the custom variants.
 const ENGINE_ASSET_VERSION = '1.1.12-atomic1-fortress2-crazyhouse1';
-const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_ASSET_VERSION}`;
+
+export type FsfCevalVariant = 'fortressxiangqi' | 'atomicxiangqi' | 'crazyhousexiangqi' | 'chess';
+
+/** A complete browser FSF build selection. The script, WASM, pthread worker
+ *  and variant INIs all come from this directory with the same cache version.
+ *  Keep separate builds in separate directories; each must export Stockfish. */
+export interface FsfEngineAssets {
+  readonly baseUrl: string;
+  readonly version: string;
+  readonly variantInis: readonly string[];
+}
+
+const engineAsset = (assets: FsfEngineAssets, file: string): string =>
+  `${assets.baseUrl}${file}?v=${encodeURIComponent(assets.version)}`;
 
 /** Human label for the engine, shown in the analysis panel. */
 export const CEVAL_ENGINE_NAME = 'Fairy-Stockfish';
@@ -81,6 +94,21 @@ const CUSTOM_VARIANT_INIS = [
   'atomic-xiangqi.ini',
   'crazyhouse-xiangqi.ini',
 ] as const;
+
+/** Existing review consumers keep the patched build and all three INIs. */
+export const DEFAULT_FSF_ASSETS: FsfEngineAssets = Object.freeze({
+  baseUrl: ENGINE_BASE,
+  version: ENGINE_ASSET_VERSION,
+  variantInis: CUSTOM_VARIANT_INIS,
+});
+
+function snapshotAssets(assets: FsfEngineAssets): FsfEngineAssets {
+  return {
+    baseUrl: `${assets.baseUrl.replace(/\/+$/, '')}/`,
+    version: assets.version,
+    variantInis: [...assets.variantInis],
+  };
+}
 
 /** Whether the client engine for `variant` can run in this page. Fairy-Stockfish,
  *  Pikafish and PikaJieQi need SharedArrayBuffer (cross-origin isolation); the
@@ -110,7 +138,7 @@ export function cevalEngineUrl(variant: CevalVariant): string | null {
   return pikafishEngineUrl(variant);
 }
 
-// --- low-level engine (singleton) ---------------------------------------------
+// --- low-level engine (shared per asset selection) ----------------------------
 
 interface RawEngine {
   postMessage(cmd: string): void;
@@ -162,34 +190,50 @@ class EngineCore {
   }
 }
 
-let enginePromise: Promise<EngineCore> | null = null;
+const enginePromises = new Map<string, Promise<EngineCore>>();
+const engineFactories = new Map<string, Promise<StockfishFactory>>();
+let scriptLoadTail: Promise<unknown> = Promise.resolve();
 
-function injectEngineScript(src: string): Promise<void> {
+function injectEngineScript(src: string): Promise<StockfishFactory> {
   return new Promise((resolve, reject) => {
-    if (document.querySelector('script[data-fsf-engine]')) {
-      resolve();
-      return;
-    }
+    // Classic scripts share one global. Clear it and capture this script's
+    // factory before the next script can run, including after a failed load.
+    globalThis.Stockfish = undefined;
     const el = document.createElement('script');
     el.src = src;
     el.async = true;
     el.dataset.fsfEngine = '1';
-    el.addEventListener('load', () => resolve());
+    el.addEventListener('load', () => {
+      const factory = globalThis.Stockfish;
+      if (typeof factory !== 'function') {
+        reject(new Error('ceval: engine global missing after script load'));
+      } else {
+        resolve(factory);
+      }
+    });
     el.addEventListener('error', () => reject(new Error('ceval: failed to load engine script')));
     document.head.appendChild(el);
   });
 }
 
-async function loadEngineCore(): Promise<EngineCore> {
+function engineFactory(src: string): Promise<StockfishFactory> {
+  let pending = engineFactories.get(src);
+  if (!pending) {
+    // Serialize only script injection, not WASM initialization. A missing
+    // factory must never borrow the previous build's global Stockfish.
+    pending = scriptLoadTail.then(() => injectEngineScript(src));
+    scriptLoadTail = pending.catch(() => {});
+    engineFactories.set(src, pending);
+  }
+  return pending;
+}
+
+async function loadEngineCore(assets: FsfEngineAssets): Promise<EngineCore> {
   if (!cevalSupported()) {
     throw new Error('ceval_unsupported: page is not cross-origin isolated');
   }
-  await injectEngineScript(engineAsset('stockfish.js'));
-  const factory = globalThis.Stockfish;
-  if (typeof factory !== 'function') {
-    throw new Error('ceval: engine global missing after script load');
-  }
-  const raw = await factory({ locateFile: (f) => engineAsset(f) });
+  const factory = await engineFactory(engineAsset(assets, 'stockfish.js'));
+  const raw = await factory({ locateFile: (f) => engineAsset(assets, f) });
   const core = new EngineCore(raw);
 
   core.send('uci');
@@ -201,19 +245,18 @@ async function loadEngineCore(): Promise<EngineCore> {
   core.send(`setoption name Threads value ${threads}`);
   core.send('setoption name Hash value 64');
 
-  // Load our custom variants into the engine's in-memory FS. Standard xiangqi
-  // is a Fairy-Stockfish built-in and needs no .ini. VariantPath names ONE
-  // file, so the two stanzas are concatenated into it; each .ini is kept as a
-  // separate file on disk because each is a mirror of a server-side original
-  // (apps/server/src/*.ini) that is diffed against it.
-  try {
-    const inis = await Promise.all(
-      CUSTOM_VARIANT_INIS.map((file) => fetch(engineAsset(file)).then((r) => r.text())),
-    );
-    core.writeFile('variants.ini', inis.join('\n\n'));
-    core.send('setoption name VariantPath value variants.ini');
-  } catch {
-    // Custom-variant analysis will be unavailable, but xiangqi still works.
+  // VariantPath names one file, so concatenate the selected definitions.
+  // An empty selection needs no virtual file (e.g. a built-in chess build).
+  if (assets.variantInis.length) {
+    try {
+      const inis = await Promise.all(
+        assets.variantInis.map((file) => fetch(engineAsset(assets, file)).then((r) => r.text())),
+      );
+      core.writeFile('variants.ini', inis.join('\n\n'));
+      core.send('setoption name VariantPath value variants.ini');
+    } catch {
+      // Custom-variant analysis will be unavailable, but built-in chess works.
+    }
   }
 
   const ready = core.waitFor((line) => line === 'readyok');
@@ -223,14 +266,19 @@ async function loadEngineCore(): Promise<EngineCore> {
 }
 
 /** Warm the engine up ahead of the first evaluate (script + wasm + variant load). */
-export function preloadEngine(): Promise<void> {
-  if (!enginePromise) enginePromise = loadEngineCore();
-  return enginePromise.then(() => undefined);
+export function preloadEngine(assets: FsfEngineAssets = DEFAULT_FSF_ASSETS): Promise<void> {
+  return engine(assets).then(() => undefined);
 }
 
-function engine(): Promise<EngineCore> {
-  if (!enginePromise) enginePromise = loadEngineCore();
-  return enginePromise;
+function engine(assets: FsfEngineAssets): Promise<EngineCore> {
+  const selection = snapshotAssets(assets);
+  const key = JSON.stringify([selection.baseUrl, selection.version, selection.variantInis]);
+  let pending = enginePromises.get(key);
+  if (!pending) {
+    pending = loadEngineCore(selection);
+    enginePromises.set(key, pending);
+  }
+  return pending;
 }
 
 const EMIT_THROTTLE_MS = 80;
@@ -240,15 +288,21 @@ const EMIT_THROTTLE_MS = 80;
 class Ceval implements CevalHandle {
   private token = 0;
   private currentOff: (() => void) | null = null;
+  private readonly assets: FsfEngineAssets;
 
-  constructor(readonly variant: CevalVariant) {}
+  constructor(
+    readonly variant: FsfCevalVariant,
+    assets: FsfEngineAssets,
+  ) {
+    this.assets = snapshotAssets(assets);
+  }
 
   preload(): Promise<void> {
-    return preloadEngine();
+    return preloadEngine(this.assets);
   }
 
   async evaluate(req: CevalRequest): Promise<CevalUpdate> {
-    const core = await engine();
+    const core = await engine(this.assets);
     this.stop(); // supersede any in-flight search
     const myToken = ++this.token;
     const multiPv = req.multiPv ?? 1;
@@ -332,7 +386,7 @@ class Ceval implements CevalHandle {
       this.currentOff();
       this.currentOff = null;
     }
-    void engine()
+    void engine(this.assets)
       .then((core) => core.send('stop'))
       .catch(() => {});
   }
@@ -342,9 +396,22 @@ class Ceval implements CevalHandle {
   }
 }
 
-export function createCeval(variant: CevalVariant): CevalHandle {
+export function createCeval(variant: CevalVariant): CevalHandle;
+export function createCeval(variant: FsfCevalVariant, assets: FsfEngineAssets): CevalHandle;
+export function createCeval(
+  variant: CevalVariant,
+  assets: FsfEngineAssets = DEFAULT_FSF_ASSETS,
+): CevalHandle {
   if (isMistyCevalVariant(variant)) return new MistyCeval(variant);
   if (isPikafishCevalVariant(variant)) return new PikafishCeval(variant);
   if (isPikaJieqiCevalVariant(variant)) return new PikaJieQiCeval(variant);
-  return new Ceval(variant);
+  switch (variant) {
+    case 'fortressxiangqi':
+    case 'atomicxiangqi':
+    case 'crazyhousexiangqi':
+    case 'chess':
+      return new Ceval(variant, assets);
+    default:
+      throw new Error(`ceval: unsupported variant ${variant}`);
+  }
 }

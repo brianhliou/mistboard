@@ -17,7 +17,12 @@ import {
 import { createJieqiInteractiveBoard } from '../jieqi-board.js';
 import { renderJieqiMaterial } from '../jieqi-material.js';
 import type { JieqiBoardArrow, JieqiBoardMarker } from '../live-jieqi-render.js';
-import { animateJieqiBoardMove, JIEQI_GEO, jieqiPieceGhostSvg } from '../live-jieqi-render.js';
+import {
+  animateJieqiBoardMove,
+  animateJieqiStepReveal,
+  JIEQI_GEO,
+  jieqiPieceGhostSvg,
+} from '../live-jieqi-render.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
@@ -126,8 +131,14 @@ function makeJieqiPresentation(
       return board;
     },
     // The same glide the replay, TV and embed boards use. A face-down piece
-    // keeps its slot through the move, so it glides like a revealed one.
-    animateMove: animateJieqiBoardMove,
+    // keeps its slot through the move, so it glides like a revealed one; a
+    // forward step that turned it face up turns it over on the way.
+    animateMove: (boardEl, move, perspective, opts) => {
+      animateJieqiBoardMove(boardEl, move, perspective, opts);
+      if (!opts?.reverse && opts?.after) {
+        animateJieqiStepReveal(boardEl, move, opts.before?.board, opts.after.board, perspective);
+      }
+    },
     shapeToArrow: (s: NodeShape): JieqiBoardArrow => ({
       from: s.orig as JieqiBoardArrow['from'],
       to: (s.dest ?? s.orig) as JieqiBoardArrow['to'],

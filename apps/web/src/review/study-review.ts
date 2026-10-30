@@ -256,6 +256,29 @@ export async function mountStudyReview(
         root: { truth: parsed.state, fen: jungleFlipStateToDealtFen(parsed.state) },
       });
     }
+    case 'three-kingdoms-banqi': {
+      const [
+        { mountThreeKingdomsBanqiReview },
+        { installBanqiBoardStyles },
+        { parseThreeKingdomsBanqiFen, threeKingdomsBanqiStateToDealtFen },
+      ] = await Promise.all([
+        import('./three-kingdoms-banqi-review.js'),
+        import('./../live-banqi-render.js'),
+        import('@mistboard/game'),
+      ]);
+      // The face-down backs and hit targets are styled by banqi's installed sheet.
+      installBanqiBoardStyles();
+      const parsed = rootFen
+        ? parseThreeKingdomsBanqiFen(rootFen, { gameId: STUDY_GAME_ID })
+        : null;
+      if (!parsed?.ok) {
+        throw new Error('three kingdoms banqi study chapter needs a dealt root position');
+      }
+      return mountThreeKingdomsBanqiReview(root, {
+        ...(await baseReady),
+        root: { truth: parsed.state, fen: threeKingdomsBanqiStateToDealtFen(parsed.state) },
+      });
+    }
     default: {
       // Fail-closed: a new catalog member must get its own case, never another
       // variant's board.

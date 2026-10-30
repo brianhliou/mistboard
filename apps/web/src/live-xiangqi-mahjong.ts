@@ -40,6 +40,7 @@ import './xiangqi-mahjong.css';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { xmjHandLog } from './xiangqi-mahjong-log.js';
 import {
+  fitXmjRackBadges,
   toggleXmjLogHand,
   XMJ_TILE_LOOKS,
   xiangqiMahjongTableHtml,
@@ -400,6 +401,26 @@ function renderHandsUnderBoard(board: HTMLElement, view: XmjPlayerView | null): 
   if (host.innerHTML !== html) host.innerHTML = html;
 }
 
+let rackFitObserver: ResizeObserver | null = null;
+let rackFitBoard: HTMLElement | null = null;
+let rackFitWidth = -1;
+
+/**
+ * Keep every rack's badges inside the felt: on each redraw, and when the
+ * table's width changes (its tiles scale with the column on desktop).
+ */
+function fitRacks(board: HTMLElement): void {
+  fitXmjRackBadges(board);
+  rackFitWidth = board.clientWidth;
+  if (rackFitBoard === board || typeof ResizeObserver !== 'function') return;
+  rackFitObserver?.disconnect();
+  rackFitBoard = board;
+  rackFitObserver = new ResizeObserver(() => {
+    if (board.isConnected && board.clientWidth !== rackFitWidth) fitRacks(board);
+  });
+  rackFitObserver.observe(board);
+}
+
 function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
   renderHandsUnderBoard(refs.board, view);
   const felt = xmjFeltFromSearch(window.location.search);
@@ -440,6 +461,8 @@ function renderTable(refs: LiveRefs, view: XmjPlayerView | null): void {
   const resultShown = refs.board.querySelector('.xmj-result') !== null;
   refs.board.innerHTML = html;
   lastTableHtml = html;
+  // Before the flights: they measure where each tile lands.
+  fitRacks(refs.board);
   if (resultShown) refs.board.querySelector('.xmj-result')?.classList.add('xmj-result--settled');
   if (sources) animateMoves(refs.board, view, sources);
   else drawnCounts = null;

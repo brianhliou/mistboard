@@ -175,6 +175,8 @@ function fixtureBoard(input: {
   };
 }
 
+const XQBASE_EVENT = 'https://vietnamchess.vn/databank/xqbase-vietnamchess?view=game&id=1631';
+
 // The ingested shape: Chinese originals with cached English translations on
 // the rounds and player tags (tour name here is already English). `rounds`
 // carries the sibling-round stats the round switcher renders markers from.
@@ -475,8 +477,14 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(link?.getAttribute('href')).toBe(
       `/contact?about=${encodeURIComponent('/broadcast/xiangqi/t/round/r')}`,
     );
-    // The last thing on the page, after the event layout.
-    expect(root.querySelector('.xqb-event')?.lastElementChild).toBe(notes[0]);
+    // The last thing on the page: the event layout's last grid item, in the
+    // foot area under the content column. Below the layout it ended the pinned
+    // left column's grid area above the page's foot, so at the bottom of the
+    // page the column was pushed up by the note's height.
+    const layout = root.querySelector('.xqb-event-layout-with-rail');
+    expect(layout).not.toBeNull();
+    expect(layout?.lastElementChild).toBe(notes[0]);
+    expect(root.querySelector('.xqb-event')?.lastElementChild).toBe(layout);
     window.history.replaceState(null, '', '/');
   });
 
@@ -727,6 +735,46 @@ describe('broadcastRecordsCredit', () => {
         { sourceUrl: 'not a url' },
       ]),
     ).toEqual({ host: 'dpxq.com', href: 'http://www.dpxq.com' });
+  });
+
+  // The HCMC Chess Federation's permission (2026-10-26) asks for credit to
+  // XQBase and a link back to its databank on vietnamchess.vn.
+  it('names XQBase and links its event page for records from its databank', () => {
+    expect(
+      broadcastRecordsCredit([{ sourceUrl: XQBASE_EVENT }, { sourceUrl: XQBASE_EVENT }], {
+        slug: '2026-kim-long-motor-cup',
+        sourceUrl: XQBASE_EVENT,
+      }),
+    ).toEqual({ host: 'vietnamchess.vn', href: XQBASE_EVENT, name: 'XQBase' });
+  });
+
+  it('names no database for the rest of the same site or a lookalike path', () => {
+    expect(
+      broadcastRecordsCredit([
+        { sourceUrl: XQBASE_EVENT },
+        { sourceUrl: 'https://vietnamchess.vn/news/1' },
+      ]),
+    ).toEqual({ host: 'vietnamchess.vn', href: 'https://vietnamchess.vn' });
+    expect(
+      broadcastRecordsCredit([
+        { sourceUrl: 'https://vietnamchess.vn/databank/xqbase-vietnamchess-copy?id=1' },
+      ]),
+    ).toEqual({ host: 'vietnamchess.vn', href: 'https://vietnamchess.vn' });
+  });
+
+  it('shows the database name as the round credit link', async () => {
+    stubFetchJson(() => ({
+      ...ROUND,
+      tour: { ...ROUND.tour, sourceUrl: XQBASE_EVENT },
+      boards: ROUND.boards.map((board) => ({ ...board, sourceUrl: XQBASE_EVENT })),
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    const credit = root.querySelector('.xqb-records-credit');
+    expect(credit?.textContent).toBe('Game records from XQBase');
+    expect(credit?.querySelector('a')?.getAttribute('href')).toBe(XQBASE_EVENT);
+    vi.unstubAllGlobals();
   });
 
   it('ignores non-http schemes so a discovery source never becomes a credit', () => {
@@ -1347,6 +1395,37 @@ describe('event page (tabs, default round, standings)', () => {
     expect(urls[1]).toBe('/api/xiangqi/broadcasts/t/rounds/r2');
   });
 
+  // dpxq published the 2026 league's rounds 10 and 11 as result rows with no
+  // moves; the homepage card's tour link opened round 11 on 78 empty boards.
+  it('skips a newer round of results-only boards for the latest round with moves', async () => {
+    const urls: string[] = [];
+    stubFetchJson((url) => {
+      urls.push(url);
+      if (url.includes('/rounds/')) return { ...ROUND, round: ROUND.rounds[1] };
+      return {
+        ...TOUR,
+        rounds: [
+          { ...ROUND.rounds[0], liveBoardCount: 0, completeBoardCount: 2, recordedBoardCount: 2 },
+          { ...ROUND.rounds[1], boardCount: 3, completeBoardCount: 3, recordedBoardCount: 3 },
+          {
+            ...ROUND.rounds[1],
+            id: 'r3',
+            name: '第3轮',
+            nameEn: 'Round 3',
+            boardCount: 4,
+            completeBoardCount: 4,
+            recordedBoardCount: 0,
+          },
+        ],
+      };
+    });
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastTour(root, 't');
+    expect(urls[1]).toBe('/api/xiangqi/broadcasts/t/rounds/r2');
+  });
+
   it('switches tabs in place: Overview lists the schedule, Players computes standings from every round', async () => {
     const finished = {
       ...ROUND,
@@ -1532,6 +1611,17 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
     ]);
   });
 
+  it('credits XQBase by name in a finished game provenance', async () => {
+    const board = { ...COMPLETE, board: { ...COMPLETE.board, sourceUrl: XQBASE_EVENT } };
+    stubFetchJson((url) => (url.includes('/api/xiangqi/broadcasts/boards/') ? board : ROUND));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastBoard(root, 't-r-b1');
+    const link = root.querySelector('.review-provenance a');
+    expect(link?.textContent).toBe('XQBase');
+    expect(link?.getAttribute('href')).toBe(XQBASE_EVENT);
+  });
+
   it("marks a record-less sibling in the board page's game list as nothing to open", async () => {
     const noRecord = fixtureBoard({
       n: 3,
@@ -1565,6 +1655,102 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
     expect(sibling?.classList.contains('xqb-rail-row-no-record')).toBe(true);
     expect(sibling?.querySelector('.xqb-rail-no-record')?.textContent).toBe('No record published');
     expect(sibling?.textContent).toContain('Wu Zonghan');
+  });
+});
+
+describe('a withheld record (the source record reads two ways)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const SOURCE = 'https://vietnamchess.vn/databank/xqbase-vietnamchess?view=game&id=1640';
+  const HELD_BOARD = {
+    ...fixtureBoard({
+      n: 2,
+      red: 'Quách Trung Cơ',
+      black: 'Phan Nguyễn Công Minh',
+      moves: [],
+      status: 'complete',
+      result: '1-0',
+    }),
+    red: { name: 'Quách Trung Cơ', federation: '广东', federationEn: 'Guangdong' },
+    black: { name: 'Phan Nguyễn Công Minh', federation: '越南', federationEn: 'Vietnam' },
+    sourceUrl: SOURCE,
+    recordWithheld: 'ambiguous',
+  };
+  const PLAYED = fixtureBoard({
+    n: 1,
+    red: '梁运龙',
+    redEn: 'Liang Yunlong',
+    black: 'Nguyễn Thành Bảo',
+    moves: [{ from: 'b3', to: 'e3' }],
+    status: 'complete',
+    result: '0-1',
+  });
+  const HELD_ROUND = { ...ROUND, boards: [PLAYED, HELD_BOARD] };
+  const HELD_RESPONSE = {
+    board: HELD_BOARD,
+    state: { status: { type: 'playing', turn: 'red' }, moveNumber: 1 },
+    timeline: [],
+    view: buildXiangqiReplayFromMoves([]).views[0]!,
+    views: { truth: buildXiangqiReplayFromMoves([]).views[0]! },
+    history: { truth: [] },
+  };
+
+  it('shows the card with its players and result, and it opens the board page', async () => {
+    stubFetchJson(() => HELD_ROUND);
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const held = root.querySelectorAll<HTMLElement>('.xqb-board-card')[1];
+    expect(held?.tagName).toBe('A');
+    expect(held?.getAttribute('href')).toBe('/broadcast/xiangqi/board/t-r-b2');
+    expect(held?.classList.contains('xqb-board-card-withheld')).toBe(true);
+    expect(held?.querySelector('.xqb-card-no-moves')?.textContent).toBe('Not replayed');
+    expect(held?.getAttribute('title')).toContain('can be read two ways');
+    expect([...(held?.querySelectorAll('.xqb-score') ?? [])].map((n) => n.textContent)).toEqual([
+      '0',
+      '1',
+    ]);
+    const row = root.querySelectorAll<HTMLElement>('.xqb-rail-row')[1];
+    expect(row?.tagName).toBe('A');
+    expect(row?.querySelector('.xqb-rail-no-record')?.textContent).toBe('Not replayed');
+  });
+
+  it('its board page names the players, the result and the reason, with no replay', async () => {
+    stubFetchJson((url) =>
+      url.includes('/api/xiangqi/broadcasts/boards/') ? HELD_RESPONSE : HELD_ROUND,
+    );
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastBoard(root, 't-r-b2');
+
+    const held = root.querySelector('.xqb-event-body .xqb-held');
+    expect(held).not.toBeNull();
+    expect(held?.querySelector('.xqb-held-title')?.textContent).toBe(
+      'Quách Trung Cơ vs Phan Nguyễn Công Minh',
+    );
+    expect(held?.textContent).toContain('Red wins');
+    expect([...root.querySelectorAll('.xqb-held-score')].map((n) => n.textContent)).toEqual([
+      '1',
+      '0',
+    ]);
+    const note = root.querySelector('.xqb-held-note');
+    expect(note?.textContent).toBe(
+      "The source record of this game can be read two ways, so it isn't replayed.",
+    );
+    expect(note?.querySelector('a')?.getAttribute('href')).toBe(SOURCE);
+    expect(note?.querySelector('a')?.textContent).toBe('source record');
+    // No review and no board: the start position never stands in for the game.
+    expect(root.querySelector('.review-shell--embedded')).toBeNull();
+    expect(root.querySelector('.xqb-event-body .xiangqi-live-board')).toBeNull();
+    expect(root.querySelector('.xqb-review-no-record-label')).toBeNull();
+    expect(root.querySelector('.engine-panel')).toBeNull();
+    // The open board stays marked in the game list.
+    expect(root.querySelector('.xqb-side-rail .xqb-rail-row-current')?.getAttribute('href')).toBe(
+      '/broadcast/xiangqi/board/t-r-b2',
+    );
   });
 });
 

@@ -15,9 +15,12 @@ import test, { mock } from 'node:test';
 import {
   createXmjSetup,
   XIANGQI_MAHJONG_SPEC_ID,
+  XMJ_CLAIM_PAUSE_MS,
   type XmjMove,
   type XmjPlayerView,
   type XmjSeat,
+  type XmjTile,
+  xmjOrderedTiles,
 } from '@mistboard/game';
 import type pg from 'pg';
 import type { UserAccount } from './persistence.js';
@@ -25,6 +28,7 @@ import { mayPlayVariant } from './persistence-variant-access.js';
 import { xmjPveEngineSeat } from './routes/xiangqi-mahjong-rooms.js';
 import { canObserveRoom } from './server-policy.js';
 import { isXmjBotClientId, XMJ_BOT_CLIENT_ID, xmjBotMove } from './server-xiangqi-mahjong-bots.js';
+import { tenantParticipant } from './variant-tenant/events.js';
 import {
   clearTenantRuntimeTimers,
   scheduleTenantLifecycleTimers,
@@ -33,9 +37,11 @@ import {
 import {
   appendTenantRuntimeEvent,
   createTenantRuntimeRoomFromEvents,
+  tenantClockRemainingMs,
   tenantEventsForClient,
   tenantLiveHistoryExtras,
   tenantPlyAtEventIndex,
+  tenantSeatProfiles,
   tenantSnapshotPayload,
 } from './variant-tenant/runtime.js';
 import { assignTenantSeat } from './variant-tenant/seat-session.js';
@@ -334,6 +340,82 @@ test('xmj pvp: a friend room seats no bot and carries the rated flag', async () 
   }
 });
 
+// The room's side card linked the human but printed "Misty" as plain text
+// (2026-10-27): the room was created with pveBotId 'misty-xiangqi-mahjong', the
+// ENGINE id, which names no bot profile, so seatProfiles had no entry for the bot
+// seat and the name fell back to the engine's display name. Other variants send
+// { botId: 'misty' } and the card links /bot/misty.
+test("xmj pvp: the bot seat links to Misty's bot page like every other variant", async () => {
+  const pve = await createXiangqiMahjongRoom(FIVE_FIVE, 'east', {
+    engineId: XMJ_BOT_CLIENT_ID,
+    seat: 'west',
+  });
+  try {
+    assert.ok(pve.ok);
+    if (!pve.ok) return;
+    assert.deepEqual(tenantSeatProfiles(tenant, pve.room), { west: { botId: 'misty' } });
+    const snapshot = tenantSnapshotPayload(tenant, pve.room, client('east'));
+    assert.deepEqual(snapshot.seatProfiles, { west: { botId: 'misty' } });
+    assert.equal(snapshot.seatDisplayNames.west, 'Misty');
+    // A room created before the fix carries the engine id as its pveBotId.
+    const legacy = { ...pve.room, pveBotId: XMJ_BOT_CLIENT_ID };
+    assert.deepEqual(tenantSeatProfiles(tenant, legacy), { west: { botId: 'misty' } });
+  } finally {
+    if (pve.ok) xiangqiMahjongRooms.delete(pve.room.id);
+  }
+});
+
+test('xmj pve: every way to seat the bot stores the seat as Misty, the public bot', async () => {
+  // 2026-10-28: a room made with no botId (the setup dialog, a rematch) took the
+  // engine id 'misty-xiangqi-mahjong' as its bot id. No bot profile has that id,
+  // so 8 of Misty's 12 Xiangqi Mahjong games were missing from /bot/misty.
+  const viaSetup = await createXiangqiMahjongRoom(FIVE_FIVE, 'east', {
+    engineId: XMJ_BOT_CLIENT_ID,
+    seat: 'west',
+  });
+  const viaBotPage = await createXiangqiMahjongRoom(FIVE_FIVE, 'east', {
+    engineId: XMJ_BOT_CLIENT_ID,
+    seat: 'west',
+    botId: 'misty',
+  });
+  try {
+    assert.ok(viaSetup.ok && viaBotPage.ok);
+    if (!viaSetup.ok || !viaBotPage.ok) return;
+    // A room created before the fix resumes from a log naming the old id.
+    const [created, ...rest] = viaSetup.room.events as XmjEvent[];
+    assert.equal(created?.type, 'room-created');
+    const beforeFix = hydrate([
+      { ...created, pveBotId: 'misty-xiangqi-mahjong' } as XmjEvent,
+      ...rest,
+    ]);
+    for (const [path, room] of [
+      ['setup dialog', viaSetup.room],
+      ['bot page', viaBotPage.room],
+      ['pre-fix event log', beforeFix],
+    ] as const) {
+      const seat = tenantParticipant(tenant, 'west', room, 'public');
+      assert.deepEqual(
+        {
+          subjectType: seat.subjectType,
+          subjectId: seat.subjectId,
+          engineId: seat.engineId,
+          displayName: seat.displayName,
+        },
+        {
+          subjectType: 'bot',
+          subjectId: 'misty',
+          engineId: XMJ_BOT_CLIENT_ID,
+          displayName: 'Misty',
+        },
+        path,
+      );
+    }
+  } finally {
+    if (viaSetup.ok) xiangqiMahjongRooms.delete(viaSetup.room.id);
+    if (viaBotPage.ok) xiangqiMahjongRooms.delete(viaBotPage.room.id);
+  }
+});
+
 test('xmj pvp: against the bot the human keeps east unless they named west', () => {
   const bot = { engineId: XMJ_BOT_CLIENT_ID, seat: 'east' as XmjSeat };
   assert.equal(xmjPveEngineSeat(bot, 'random')?.seat, 'west');
@@ -460,3 +542,101 @@ test('xmj pvp: the first-move timer ends a rated room as a loss for the seat tha
     mock.timers.reset();
   }
 });
+
+for (const incrementMs of [0, 1_000]) {
+  test(`table-3 forced discard never charges its timer wait (${incrementMs} ms increment)`, async () => {
+    const front: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR', 'bP', 'rA'];
+    const rest = xmjOrderedTiles();
+    for (const tile of front) rest.splice(rest.indexOf(tile), 1);
+    const roomId = `xmj_forced-discard-${incrementMs}`;
+    const drawAt = 13_000 + 60_000 + incrementMs - 100;
+    const moves: XmjMove[] = [
+      { by: 'east', at: 10_000, action: 'declare-ready', tile: 'bH' },
+      { by: 'west', at: 12_000, action: 'pass' },
+      { by: 'west', at: 13_000, action: 'discard', tile: 'bR' },
+      { by: 'east', at: drawAt, action: 'pass' },
+    ];
+    const room = hydrate([
+      {
+        type: 'room-created',
+        at: 1_000,
+        roomId,
+        gameSpecId: XIANGQI_MAHJONG_SPEC_ID,
+        timeControl: { initialMs: 60_000, incrementMs },
+        setup: { walls: [[...front, ...rest]], firstDealer: 'east', taiTable: 3 },
+      },
+      {
+        type: 'clock-started',
+        at: 1_000,
+        roomId,
+        clock: {
+          initialMs: 60_000,
+          incrementMs,
+          remainingMs: { east: 60_000, west: 60_000 },
+          activeColor: null,
+          runningSince: null,
+        },
+      },
+      { type: 'seat-assigned', at: 2_000, roomId, clientId: 'client-east', seat: 'east' },
+      { type: 'seat-assigned', at: 3_000, roomId, clientId: 'client-west', seat: 'west' },
+      ...moves.map(
+        (move): XmjEvent => ({
+          type: 'move-played',
+          at: move.at,
+          roomId,
+          color: move.by,
+          move,
+        }),
+      ),
+    ]);
+    const clock = room.projection.clock;
+    assert.ok(clock);
+    assert.ok(tenantClockRemainingMs(clock, 'east', drawAt) < XMJ_CLAIM_PAUSE_MS);
+    mock.timers.enable({ apis: ['setTimeout', 'Date'], now: drawAt });
+    try {
+      const ctx = {
+        appendEvent: async (_room: unknown, event: XmjEvent) =>
+          appendTenantRuntimeEvent(tenant, room, event),
+        broadcastEventAppended: () => {},
+      };
+      scheduleTenantLifecycleTimers(tenant, room, ctx);
+      mock.timers.tick(XMJ_CLAIM_PAUSE_MS + 25);
+      await Promise.resolve();
+      assert.equal(room.projection.state.status.type, 'playing', 'a forced wait cannot flag east');
+      assert.equal(
+        room.events.some((event) => event.type === 'clock-expired'),
+        false,
+      );
+      assert.equal(room.projection.state.lastMove?.action, 'discard');
+      assert.equal(room.projection.state.lastMove?.by, 'east');
+      assert.equal(room.projection.state.lastMove?.at, drawAt + XMJ_CLAIM_PAUSE_MS);
+      assert.deepEqual(room.projection.state.match.hand.hands[0], ['rK', 'rA', 'rE', 'rP']);
+      const after = room.projection.clock;
+      assert.ok(after);
+      assert.equal(
+        after.remainingMs.east,
+        100 + incrementMs,
+        'one increment and no forced-wait cost',
+      );
+      assert.equal(
+        after.remainingMs.west,
+        clock.remainingMs.west,
+        'neither seat pays for the wait',
+      );
+      assert.equal(after.activeColor, 'west', 'the next claim decision starts west’s clock');
+      assert.equal(after.runningSince, Date.now());
+      const restored = hydrate(JSON.parse(JSON.stringify(room.events)));
+      assert.deepEqual(
+        restored.projection,
+        room.projection,
+        'reconnect preserves the paused clock',
+      );
+      scheduleTenantLifecycleTimers(tenant, room, ctx);
+      mock.timers.tick(100);
+      assert.equal(tenantClockRemainingMs(after, 'west', Date.now()), after.remainingMs.west - 100);
+    } finally {
+      clearTenantRuntimeTimers(room);
+      mock.timers.reset();
+    }
+  });
+}

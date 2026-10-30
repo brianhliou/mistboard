@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DEFAULT_RD, defaultRating } from './glicko.js';
-import { displayPuzzleRating, ratePuzzleAttempt, seedPuzzleRating } from './puzzle-rating.js';
+import { DEFAULT_RD, DEFAULT_VOLATILITY, defaultRating } from './glicko.js';
+import {
+  displayPuzzleRating,
+  newPlayerPuzzleRating,
+  puzzleServingRating,
+  ratePuzzleAttempt,
+  seedPuzzleRating,
+} from './puzzle-rating.js';
 
 test('seed rating increases with mate depth and starts provisional', () => {
   const mateIn1 = seedPuzzleRating(1); // 1 solver ply
@@ -46,4 +52,42 @@ test('display rounds the rating and flags provisional deviation', () => {
   assert.deepEqual(provisional, { rating: 1513, provisional: true });
   const settled = displayPuzzleRating({ rating: 1487.2, rd: 80, volatility: 0.06 });
   assert.deepEqual(settled, { rating: 1487, provisional: false });
+});
+
+// ── #712 serving rating and new-player start ────────────────────────────────
+
+test('serving rating ranks a long line above a short one the prior put level', () => {
+  // The old queue matched on the prior alone, which put this 7-ply line BELOW
+  // the 3-ply capture.
+  const long = puzzleServingRating({ prior: 1400, solutionPlyCount: 7 });
+  const short = puzzleServingRating({ prior: 1450, solutionPlyCount: 3 });
+  assert.ok(long > short, `${long} > ${short}`);
+});
+
+test('serving rating with no outcomes is the prior averaged with the length seed', () => {
+  assert.equal(puzzleServingRating({ prior: 1500, solutionPlyCount: 3 }), 1550);
+  assert.equal(
+    puzzleServingRating({ prior: 1500, solutionPlyCount: 3, evidence: { finished: 0, clean: 0 } }),
+    1550,
+  );
+});
+
+test('serving rating rises with reveals and falls with clean solves, more with more evidence', () => {
+  const prior = { prior: 1600, solutionPlyCount: 3 };
+  const base = puzzleServingRating(prior);
+  const fewReveals = puzzleServingRating({ ...prior, evidence: { finished: 3, clean: 0 } });
+  const manyReveals = puzzleServingRating({ ...prior, evidence: { finished: 40, clean: 2 } });
+  const manyClean = puzzleServingRating({ ...prior, evidence: { finished: 40, clean: 38 } });
+  assert.ok(fewReveals > base, `${fewReveals} > ${base}`);
+  assert.ok(manyReveals > fewReveals, `${manyReveals} > ${fewReveals}`);
+  assert.ok(manyClean < base, `${manyClean} < ${base}`);
+  assert.ok(manyReveals <= 2800 && manyClean >= 800);
+});
+
+test('a new player starts at 1800 with the default deviation', () => {
+  assert.deepEqual(newPlayerPuzzleRating(), {
+    rating: 1800,
+    rd: DEFAULT_RD,
+    volatility: DEFAULT_VOLATILITY,
+  });
 });

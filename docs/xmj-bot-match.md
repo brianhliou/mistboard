@@ -131,3 +131,97 @@ production stats/variant probes, installs, pushes, merges, releases, or issue
 updates were attempted. The weekly headline and live variant status could not
 be fetched offline. No network-dependent gate is required for these offline
 modules. No UI review sheet is needed for an offline-only build.
+
+## Stage 2: sampled action search (#676)
+
+`packages/game/src/xiangqi-mahjong-sampled-bot.ts` adds an offline challenger;
+the production policy and frozen baseline are unchanged. Review
+`xmjSampledDecision` first, then its hidden-state, claim and scoring tests.
+
+For every legal discard, and every set claim versus pass, the challenger uses
+**64 common physical-copy samples** of the opponent's concealed hand and the
+remaining wall. The pool excludes our whole hand, both public ponds and both
+exposed melds. The open discard is already in its pond. Every action uses the
+same sampled partition and wall order. Immediate self-draws and win claims
+bypass sampling; no-action live claim windows still use the room runtime pass.
+
+Each candidate runs to the end of the current hand under two equally weighted
+continuations: both seats use the frozen current policy, then both use stage
+1's defensive policy. Every policy call goes through `xmjViewFor`, so a simulated
+seat sees its own tiles, public information and legal actions. Kernel transitions
+own claims, draw sequencing, empty walls, wins and tai. Draw counts are recovered
+by tile conservation, including claimed tiles removed from ponds, to preserve
+heavenly and earthly scoring.
+
+The objective is the **projected six-hand match point**, including the current
+score and sampled outcomes of every remaining hand. A bounded tai term
+`0.001 * finalGap / (1 + abs(finalGap))` breaks finite-sample match-point ties.
+Thus an action's mean tai gain does not erase the risk of losing a banked lead.
+Future deals are independent fresh full walls. Their rollout margins can be
+cached across decisions because both frozen continuation policies ignore the
+match score; neither policy ever receives the canonical future match walls.
+This is a neutral unseen-tile prior, not inference from opponent choices. The
+future bank and 64-sample budget remain provisional until promotion results.
+
+Samples use the deterministic search seed `108404774`, salted only by the
+seat's decision information. Room IDs, clocks, move counters and canonical hidden
+tiles cannot affect them. The test permutes actual concealed opponent tiles and
+wall positions, serializes the resulting view, and compares the entire search
+result. Other tests inspect serialized rollout inputs for both seats, conserve
+all 32 physical tiles, check reconstructed draw counts across complete legal
+matches, check claim/discard sequencing, exhausted walls, immediate wins and
+score-race risk. Invalid models, budgets and rollout actions throw.
+
+### Commands and promotion
+
+```sh
+node scripts/xmj-bot-match.mjs --challenger sampled --opponent baseline --samples 64 --seed 30001 --pairs 1
+node scripts/xmj-bot-match.mjs --challenger sampled --opponent defensive --samples 64 --seed 30002 --pairs 1
+```
+
+Each command is a two-match smoke. `--samples` and `--search-seed` support
+reproducible experiments; do not tune on the promotion seeds below. Runner
+defaults still reproduce stage 1. `baseline` means the frozen current bot;
+`defensive` means the unchanged stage-1 policy at danger weight 4.
+
+Stage 2 requires **4,000 fresh matches per opponent**, at least **60%** match
+score against baseline and **55%** against defensive, and each paired 95% lower
+bound above 50%. The runner enforces the appropriate threshold and minimum
+match count. Both separate summaries must pass before promotion. A passing
+summary does not change production registration.
+
+From this worktree, the detached commands are:
+
+```sh
+nohup node scripts/xmj-bot-match.mjs --challenger sampled --opponent baseline --samples 64 --seed 67600001 --pairs 2000 > /tmp/burn-scratch/mistboard-burn-676-xmj-bot-2-3-sampled/promotion-baseline.jsonl 2>&1 < /dev/null &
+nohup node scripts/xmj-bot-match.mjs --challenger sampled --opponent defensive --samples 64 --seed 67610001 --pairs 2000 > /tmp/burn-scratch/mistboard-burn-676-xmj-bot-2-3-sampled/promotion-defensive.jsonl 2>&1 < /dev/null &
+```
+
+Each JSONL file gets a record after every completed swapped-seat seed pair,
+followed by its final summary. The commands need installed dependencies only.
+Capacity waits precede their launch. Do not remove this parked worktree while
+the measurements run.
+
+### Parked stage-2 evidence
+
+Burn `2026-10-25-0212-retry`, branch `agent/burn-676-xmj-bot-2-3-sampled`,
+stacked on reviewed stage-1 head `94fdcff10` (not yet merged). Seven changed
+files, with no production behavior, UI or payload change. The issue and comments
+were supplied inline; this sandbox has no network. No issue update, push,
+release, merge, worktree removal, install or production probe was attempted.
+
+The new tests failed before implementation (exit 1: missing sampled-search
+module). `tsx --test` cannot open its IPC pipe in this sandbox, so tests use
+the equivalent `node --import tsx --test` entrypoint. The matching rules,
+room, harness and sampled-search tests pass: **65 tests**. Detailed logs and
+measurement output are in the scratch directory shown above.
+Full-workspace typecheck and named-file Biome checks pass. Capacity waits
+precede every final gate and each npm gate invoked by the unmodified commit
+hook; the waits and npm wrapper live only in scratch. One intermediate test
+run began while its capacity wait was still pending; it was repeated after
+admission, and all subsequent runs use a sequential wait-and-exec wrapper.
+
+The baseline smoke at seed 30001 uses 64 samples: **1 win, 0 draws, 1 loss**,
+50% match score, tai difference **−7**, deal-ins **4 / 2**, one exhausted wall.
+Its promotion gate is false; one pair has no paired interval. This smoke is a
+runner check, not evidence that the challenger is stronger.

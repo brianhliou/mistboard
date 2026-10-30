@@ -91,10 +91,10 @@ describe('tree review glides', () => {
 });
 
 describe('review presentations that do not glide', () => {
-  // Fog never glides (a path can imply a redacted square, #158) and Duck
-  // Xiangqi moves two pieces a turn. Any other presentation must glide; a new
-  // one copying a no-op is the bug this guards.
-  it('are only the fog and duck boards', () => {
+  // Fog never glides (a path can imply a redacted square, #158). Any other
+  // presentation must glide (Duck Xiangqi glides the piece then the duck); a
+  // new one copying a no-op is the bug this guards.
+  it('are only the fog boards', () => {
     const dir = resolve(__dirname);
     const noop = readdirSync(dir)
       .filter((name) => name.endsWith('-review.ts'))
@@ -102,10 +102,6 @@ describe('review presentations that do not glide', () => {
         /animateMove:\s*\(\)\s*=>\s*\{\s*\}/.test(readFileSync(resolve(dir, name), 'utf8')),
       )
       .sort();
-    expect(noop).toEqual([
-      'dark-chess-review.ts',
-      'dark-xiangqi-review.ts',
-      'duck-xiangqi-review.ts',
-    ]);
+    expect(noop).toEqual(['dark-chess-review.ts', 'dark-xiangqi-review.ts']);
   });
 });

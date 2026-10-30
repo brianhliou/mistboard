@@ -6,10 +6,12 @@ import {
   DAYS_PER_MOVE_OPTIONS,
   GAME_SPECS,
   type GameSpecId,
+  isAdminOnlyStudySpecId,
   isPublicGameSpec,
   isRetiredGameSpec,
   MAHJONG_SPEC_ID,
   RETIRED_GAME_SPEC_IDS,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -25,7 +27,7 @@ import {
 import { panelPersonPaces } from './landing-play-panel.js';
 import { buildReviewMeta } from './review/game-review-meta.js';
 import { embedRendererKindForVariant } from './showcase-dispatch.js';
-import { STUDY_VARIANTS } from './study-catalog.js';
+import { buildStudyVariantSelect, STUDY_VARIANTS } from './study-catalog.js';
 import { gameSpecIdFromRulesSlug, rulesSlugForGameSpec } from './variant-public-surfaces.js';
 import {
   finishedGameHref,
@@ -144,8 +146,11 @@ describe('variant correspondence conformance', () => {
 // take only the spec and look the marker up in variants.ts; these pin that.
 describe('variant marker conformance', () => {
   // HK mahjong is behind a flag and never shown as a variant: no marker, no icon.
+  // Nor is Three Kingdoms banqi, a hidden playtest (#628, #684) only an admin
+  // reaches on prod.
   const markedTenants = webVariantTenants().filter(
-    (tenant) => tenant.gameSpecId !== MAHJONG_SPEC_ID,
+    (tenant) =>
+      tenant.gameSpecId !== MAHJONG_SPEC_ID && tenant.gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID,
   );
 
   it('marks Xiangqi Mahjong with its own tile marker', () => {
@@ -349,5 +354,20 @@ describe('Xiangqi Mahjong deliberate exclusions', () => {
     expect(row?.miniId).toBe('xiangqi-mahjong');
     expect(leaderboardVariants.map((variant) => variant.gameSpecId).includes(XMJ)).toBe(launched);
     expect(profileRatingVariants.map((variant) => variant.gameSpecId).includes(XMJ)).toBe(launched);
+  });
+});
+
+// Three Kingdoms banqi studies (#628) are built and admin-only until the public
+// launch: a study variant, on the admin-only list the server gates every study
+// route and list on, and never in the create picker for a non-admin. Making it
+// public is a launch decision: drop it from ADMIN_ONLY_STUDY_SPEC_IDS with it.
+describe('Three Kingdoms banqi study surface', () => {
+  it('is a study variant, admin-only, and absent from the public picker', () => {
+    expect(STUDY_VARIANTS.map((variant) => variant.id)).toContain(THREE_KINGDOMS_BANQI_SPEC_ID);
+    expect(isAdminOnlyStudySpecId(THREE_KINGDOMS_BANQI_SPEC_ID)).toBe(true);
+    const offered = [...buildStudyVariantSelect('variant', 'xiangqi', () => false).options].map(
+      (option) => option.value,
+    );
+    expect(offered).not.toContain(THREE_KINGDOMS_BANQI_SPEC_ID);
   });
 });

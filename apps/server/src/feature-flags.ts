@@ -115,6 +115,14 @@ export function jungleFlipEnabled(): boolean {
   return process.env.MISTBOARD_JUNGLE_FLIP_ENABLED === 'true';
 }
 
+// Three Kingdoms banqi (#628): this flag opens it to EVERYONE, for the local
+// playtest only; never set it in Railway. Prod runs the admin-only playtest
+// (#684, three-kingdoms-banqi-access.ts) with this off. Whether it gets a
+// public surface is a checkpoint decision.
+export function threeKingdomsBanqiEnabled(): boolean {
+  return process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED === 'true';
+}
+
 // Correspondence (days-per-move) dark chess on the variant-tenant stack.
 // Server-side opt-in: gates room creation; existing dchx_ rooms keep routing
 // if the flag flips off. Correspondence is account-gated and invite-link

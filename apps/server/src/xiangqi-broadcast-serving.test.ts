@@ -99,6 +99,23 @@ for (const reason of ['repetition', 'progress-clock'] as const) {
   });
 }
 
+test('the board API names a withheld record, so the page shows why and no replay', () => {
+  const board = stored('2025-wxc-sample/games/men-r1-b01.json');
+  const held = {
+    ...board,
+    moves: [],
+    plyCount: 0,
+    status: 'complete' as const,
+    recordWithheld: 'ambiguous' as const,
+    sourceUrl: 'https://fixture.invalid/game.html',
+  };
+  const replay = buildXiangqiBroadcastBoardReplay(held);
+  assert.equal(replay.board.recordWithheld, 'ambiguous');
+  assert.equal(replay.board.sourceUrl, 'https://fixture.invalid/game.html');
+  assert.equal(replay.timeline.length, 0);
+  assert.equal('recordWithheld' in buildXiangqiBroadcastBoardReplay(board).board, false);
+});
+
 test('live broadcast at the 61st no-capture ply stays playing', () => {
   const board = stored('arbiter-adjudicated/progress-clock.json');
   let state = createInitialXiangqiState(board.id);

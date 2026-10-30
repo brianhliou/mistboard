@@ -23,8 +23,7 @@ import { articleMadeWithNote, hasSiteByline, SITE_AUTHOR } from './articles/site
 import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
 import './articles.css';
-import { localizeAnnouncementString } from './announcement-i18n.js';
-import { type Announcement, announcements } from './announcements.js';
+import './hover-grammar.css';
 import { mountLazyStepGameSet, type StepGameSetController } from './article-game-set.js';
 import {
   type ArticleLang,
@@ -106,14 +105,13 @@ import {
   readStoredXiangqiPieceSet,
   xiangqiAppearanceChangedEvent,
 } from './theme.js';
-import { buildUiIcon, uiIconForAnnouncementKind } from './ui-icon.js';
-import { renderVariantMarker } from './variant-markers.js';
+import { renderPlaceholderVariantMarker, renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import {
   gameSpecIdFromRulesSlug,
   isGameSpecId,
-  rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
+  variantPlaytestSurfaceEnabled,
   variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
@@ -373,10 +371,10 @@ function buildContentIndex(
   if (entries.length > 0) {
     sheet.append(list);
   } else if (kind === 'article') {
-    const empty = document.createElement('p');
-    empty.className = 'articles-index-empty';
-    empty.textContent = 'No community posts yet.';
-    sheet.append(empty);
+    // An empty list read as a broken page, so with no posts this view asks for
+    // writers instead; the first community post replaces it.
+    heading.textContent = COMMUNITY_WRITER_HEADING;
+    sheet.append(buildCommunityWriterPitch(locale));
   }
   if (kind === 'article') {
     layout.append(sheet);
@@ -385,6 +383,163 @@ function buildContentIndex(
     main.append(sheet);
   }
   return main;
+}
+
+// English only until Brian signs the copy off; zh follows the sign-off.
+const COMMUNITY_WRITER_HEADING = 'Become a Mistboard contributor';
+
+const COMMUNITY_WRITER_LEDE =
+  'Players read Mistboard all over the world, from the US and China to Vietnam and Brazil. We are looking for a few players to write for it regularly, on the part of the game they know best.';
+
+const COMMUNITY_WRITER_BENEFITS: ReadonlyArray<{ title: string; body: string }> = [
+  {
+    title: 'Read in three languages',
+    body: 'Every post is published in English, Simplified Chinese and Traditional Chinese, so it reaches players an English blog never would.',
+  },
+  {
+    title: 'Boards readers can play through',
+    body: 'Your lines become interactive boards, checked with an engine before they go out.',
+  },
+  {
+    title: 'A place on the homepage',
+    body: "New posts appear on the homepage and in the site's RSS feed.",
+  },
+  {
+    title: 'Your name and your links',
+    body: 'Your byline links to your channel, club or stream, and you are free to post the piece elsewhere too.',
+  },
+];
+
+// Each column idea points at one of our own posts of that shape, shown with
+// that post's own card thumbnail, so the page shows what a finished post looks
+// like instead of an empty list.
+const COMMUNITY_WRITER_IDEAS: ReadonlyArray<{ title: string; body: string; example: string }> = [
+  {
+    title: 'A game you learned from',
+    body: 'Walk through one game: where it turned, and what you would play now.',
+    example: 'jieqi-bot-wins',
+  },
+  {
+    title: 'Opening notes',
+    body: 'A line you have worked out, with the games that taught it to you.',
+    example: 'jieqi-openings',
+  },
+  {
+    title: 'A player or a tournament',
+    body: 'Who plays, how they play, and what happened at the board.',
+    example: 'yin-sheng',
+  },
+  {
+    title: 'The case for a variant',
+    body: 'Why a variant deserves more players, and how to win your first game.',
+    example: 'duck-xiangqi-strategy',
+  },
+];
+
+const COMMUNITY_WRITER_STEPS: ReadonlyArray<{ title: string; body: string }> = [
+  {
+    title: 'Send a sample',
+    body: 'A link to something you have written, recorded or streamed, and the column you would like to run.',
+  },
+  { title: 'Write the first post with us', body: 'We edit together and build the boards.' },
+  { title: 'Keep going', body: 'About once a month, or on whatever schedule suits you.' },
+];
+
+function communityPitchSection(title: string, list: HTMLElement): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'articles-community-pitch-section';
+  const heading = document.createElement('h2');
+  heading.textContent = title;
+  section.append(heading, list);
+  return section;
+}
+
+function communityPitchTextCard(
+  item: HTMLElement,
+  entry: { title: string; body: string },
+): HTMLElement {
+  const title = document.createElement('h3');
+  title.textContent = entry.title;
+  const body = document.createElement('p');
+  body.textContent = entry.body;
+  item.append(title, body);
+  return item;
+}
+
+function buildCommunityWriterPitch(locale: Locale): HTMLElement {
+  const pitch = document.createElement('div');
+  pitch.className = 'articles-community-pitch';
+
+  const lede = document.createElement('p');
+  lede.className = 'articles-community-pitch-lede';
+  lede.textContent = COMMUNITY_WRITER_LEDE;
+
+  const benefits = document.createElement('ul');
+  benefits.className = 'articles-community-pitch-benefits';
+  for (const benefit of COMMUNITY_WRITER_BENEFITS) {
+    benefits.append(communityPitchTextCard(document.createElement('li'), benefit));
+  }
+
+  const ideas = document.createElement('ul');
+  ideas.className = 'articles-community-pitch-ideas';
+  for (const idea of COMMUNITY_WRITER_IDEAS) {
+    const example = articles.find(
+      (article) => article.slug === idea.example && isArticleListedInThisEnv(article),
+    );
+    const item = document.createElement('li');
+    // The whole card links to the example post; with no listed example it is
+    // plain text, so a retired slug never leaves a dead link or a blank frame.
+    const card = document.createElement(example ? 'a' : 'div');
+    card.className = 'articles-community-pitch-idea';
+    if (example && card instanceof HTMLAnchorElement) {
+      card.href = localizedArticleHref(example, locale);
+      if (example.thumbnail) {
+        const media = document.createElement('div');
+        media.className = 'articles-index-card-media';
+        media.append(renderArticleThumbnail(example.thumbnail, locale));
+        card.append(media);
+      }
+    }
+    const body = communityPitchTextCard(document.createElement('div'), idea);
+    body.className = 'articles-community-pitch-idea-body';
+    if (example) {
+      const exampleLine = document.createElement('span');
+      exampleLine.className = 'articles-community-pitch-example';
+      exampleLine.textContent = `Example: ${example.title}`;
+      body.append(exampleLine);
+    }
+    card.append(body);
+    item.append(card);
+    ideas.append(item);
+  }
+
+  const steps = document.createElement('ol');
+  steps.className = 'articles-community-pitch-steps';
+  for (const step of COMMUNITY_WRITER_STEPS) {
+    steps.append(communityPitchTextCard(document.createElement('li'), step));
+  }
+
+  const row = document.createElement('div');
+  row.className = 'article-cta-row articles-community-pitch-cta';
+  const buttons = [
+    { label: 'Apply to contribute', href: '/contact?about=/blog/community', emphasis: 'primary' },
+    { label: 'Read the Mistboard blog', href: '/blog', emphasis: 'secondary' },
+  ];
+  for (const button of buttons) {
+    const link = document.createElement('a');
+    link.className = `article-cta article-cta-${button.emphasis}`;
+    link.href = button.href;
+    link.textContent = button.label;
+    row.append(link);
+  }
+  pitch.append(
+    lede,
+    communityPitchSection('What you get', benefits),
+    communityPitchSection('What a column could cover', ideas),
+    communityPitchSection('How to start', steps),
+    row,
+  );
+  return pitch;
 }
 
 function buildArticleCommunityRail(locale: Locale, activeView: ArticleIndexView): HTMLElement {
@@ -469,9 +624,7 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
     const tile = document.createElement('a');
     tile.className = 'rules-landing-tile';
     tile.href = localizedArticleHref(article, locale);
-    const miniTile = renderVariantMiniThumb(article.slug);
-    if (miniTile) tile.append(miniTile);
-    else if (article.thumbnail) tile.append(renderArticleThumbnail(article.thumbnail, locale));
+    tile.append(renderRulesMarkerThumb(article.slug));
     const label = document.createElement('span');
     label.className = 'rules-landing-tile-label';
     label.textContent = variantNavLabel(localized.title);
@@ -505,19 +658,10 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // leads it, to put a new variant in front of people while it is new.
 export const HOME_ARTICLE_LEAD_ON_TIE = ['duck-xiangqi-strategy'] as const;
 
-type HomeCardItem =
-  | {
-      kind: 'announcement';
-      date: string;
-      order: number;
-      announcement: Announcement;
-    }
-  | {
-      kind: 'article';
-      date: string;
-      order: number;
-      article: Article;
-    };
+type HomeCardItem = {
+  date: string;
+  article: Article;
+};
 
 /**
  * How far back the homepage row reaches, and how short it is allowed to get.
@@ -544,8 +688,9 @@ export type HomeArticleCardOptions = {
   /** Cards kept regardless of age, so a quiet month cannot empty the row. */
   minCards?: number;
   /**
-   * Which homepage row to build. 'latest' (the default) is every article with no
-   * homeRow plus the newest announcement; 'deep-dives' is the articles tagged
+   * Which homepage row to build. 'latest' (the default, "From the blog") is
+   * every article with no homeRow, articles only: announcements live in the
+   * News box (Brian, 2026-10-26); 'deep-dives' is the articles tagged
    * for it, with no age cut, since a player page does not go stale in 60 days.
    * Engineering posts are in neither row: the homepage is for players, and those
    * posts live under the blog's Engineering chip (Brian, 2026-10-21).
@@ -555,7 +700,7 @@ export type HomeArticleCardOptions = {
 
 export type HomeArticleRow = 'latest' | 'deep-dives';
 
-/** Cards the homepage row shows at once (landing.ts), announcement included. */
+/** Cards the homepage row shows at once (landing.ts). */
 export const HOME_ARTICLE_ROW_SIZE = 6;
 
 export function buildHomeArticleCards(
@@ -573,25 +718,17 @@ export function buildHomeArticleCards(
     .filter((article) => isArticleListedInThisEnv(article) && article.kind !== 'rules')
     .filter((article) => !isEngineeringArticle(article))
     .filter((article) => (article.homeRow ?? 'latest') === row)
-    .sort((a, b) => tieRank(a) - tieRank(b) || compareArticlesNewestFirst(a, b))
-    .map<HomeCardItem>((article, index) => ({
-      kind: 'article',
-      date: articleDateKey(article),
-      order: index + 1,
-      article,
-    }));
-  const latestAnnouncement = row === 'latest' ? latestVisibleAnnouncement() : undefined;
-  const announcementItems: HomeCardItem[] = latestAnnouncement
-    ? [
-        {
-          kind: 'announcement',
-          date: latestAnnouncement.date,
-          order: 0,
-          announcement: latestAnnouncement,
-        },
-      ]
-    : [];
-  const ordered = [...announcementItems, ...articleItems].sort(compareHomeCardItems);
+    // Newest first; on a shared publish date a HOME_ARTICLE_LEAD_ON_TIE slug leads.
+    .sort(
+      (a, b) =>
+        articleDateKey(b).localeCompare(articleDateKey(a)) ||
+        tieRank(a) - tieRank(b) ||
+        a.title.localeCompare(b.title),
+    )
+    .map<HomeCardItem>((article) => ({ date: articleDateKey(article), article }));
+  // Articles only: the row used to slot in the newest announcement, which the
+  // News box already shows (Brian, 2026-10-26).
+  const ordered = articleItems;
 
   const maxAgeDays =
     options.maxAgeDays ??
@@ -607,13 +744,7 @@ export function buildHomeArticleCards(
   });
   const kept = fresh.length >= minCards ? fresh : ordered.slice(0, minCards);
 
-  const cards = kept
-    .map((item) =>
-      item.kind === 'announcement'
-        ? landingAnnouncementCard(item.announcement, locale)
-        : landingArticleCard(item.article, locale),
-    )
-    .slice(0, limit);
+  const cards = kept.map((item) => landingArticleCard(item.article, locale)).slice(0, limit);
   if (cards.length === 0) return null;
 
   const section = document.createElement('section');
@@ -623,9 +754,11 @@ export function buildHomeArticleCards(
     t(row === 'deep-dives' ? 'articles.deepDives' : 'articles.latest', {}, locale),
   );
 
-  // Both rows carry a short label (Brian, 2026-10-03: the unlabelled first
-  // row read as nothing next to "Xiangqi deep dives"), and the first row's
-  // label line links to the blog index, which the strip had no way to reach.
+  // Both rows carry a short label (Brian, 2026-10-03: the unlabelled row read
+  // as nothing next to "Xiangqi deep dives"; "Latest" became "From the blog"
+  // 2026-10-26, when it moved under the deep dives and dropped announcements),
+  // and its label line links to the blog index, which the strip had no way to
+  // reach.
   const header = document.createElement('div');
   header.className = 'landing-row-header';
   const label = document.createElement('h2');
@@ -646,7 +779,7 @@ export function buildHomeArticleCards(
         : null;
   if (moreHref) {
     const more = document.createElement('a');
-    more.className = 'landing-row-more';
+    more.className = 'landing-row-more hover-link';
     more.href = moreHref;
     more.textContent = t('site.more', {}, locale);
     // Autocapture is off, so a homepage link with no track() call is invisible
@@ -682,19 +815,6 @@ function compareArticlesNewestFirst(a: Article, b: Article): number {
   return a.title.localeCompare(b.title);
 }
 
-function compareHomeCardItems(a: HomeCardItem, b: HomeCardItem): number {
-  const dateCompare = b.date.localeCompare(a.date);
-  if (dateCompare !== 0) return dateCompare;
-  return a.order - b.order;
-}
-
-function latestVisibleAnnouncement(): Announcement | undefined {
-  return [...announcements()]
-    .filter((announcement) => announcement.showInHomeArticleWidget === true)
-    .filter((announcement) => rulesHrefPublicSurfaceEnabled(announcement.href))
-    .sort((a, b) => b.date.localeCompare(a.date))[0];
-}
-
 function carouselNavButton(dir: 'prev' | 'next', glyph: string, locale: Locale): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
@@ -713,7 +833,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   const articleLang = publishedArticleLang(article.slug, requestedLang);
   const localized = articleLang ? translateArticle(article, articleLang) : article;
   const link = document.createElement('a');
-  link.className = 'landing-article-card';
+  link.className = 'landing-article-card hover-card';
   link.dataset.cardKind = 'article';
   link.href = localizedArticleHref(article, locale);
 
@@ -731,7 +851,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   }
 
   const title = document.createElement('strong');
-  title.className = 'landing-article-card-title';
+  title.className = 'landing-article-card-title hover-title';
   appendCardTitle(title, localized.cardTitle ?? localized.title);
 
   link.append(thumb, title);
@@ -739,34 +859,6 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   // thumbnail needs no empty corner for it.
   const dateIso = article.publishedAt ?? article.updatedAt;
   if (dateIso) link.append(landingCardDate(dateIso, locale));
-  return link;
-}
-
-function landingAnnouncementCard(announcement: Announcement, locale: Locale): HTMLElement {
-  const link = document.createElement('a');
-  link.className = 'landing-article-card landing-announcement-card';
-  link.dataset.cardKind = 'announcement';
-  const href = announcement.href ?? '/feed';
-  link.href = /^https?:/.test(href) ? href : localizedHref(href, locale);
-  if (/^https?:/.test(href)) {
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-  }
-
-  const thumb = document.createElement('div');
-  thumb.className = 'landing-article-card-thumb landing-announcement-thumb';
-
-  const icon = document.createElement('span');
-  icon.className = 'landing-announcement-thumb-icon';
-  icon.setAttribute('aria-hidden', 'true');
-  icon.append(buildUiIcon(uiIconForAnnouncementKind(announcement.kind)));
-  thumb.append(icon);
-
-  const title = document.createElement('strong');
-  title.className = 'landing-article-card-title';
-  title.textContent = localizeAnnouncementString(announcement.headline, locale);
-
-  link.append(thumb, title, landingCardDate(announcement.date, locale));
   return link;
 }
 
@@ -960,6 +1052,17 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     badge.className = `article-status-badge article-status-${article.status}`;
     badge.textContent = t(ARTICLE_STATUS_KEYS[article.status], {}, locale);
     metaRow.append(badge);
+  }
+  // An engineering post says so first on the row, linking to the blog's
+  // Engineering chip, so a player who lands on a build story knows it is one
+  // (Brian, 2026-10-28: "make sure it's labeled engineering").
+  if (isEngineeringArticle(base)) {
+    const topic = document.createElement('a');
+    topic.className = 'articles-topic-chip article-topic-label';
+    topic.href = articleTopicHref('engineering', locale);
+    topic.dataset.topic = 'engineering';
+    topic.textContent = t('articles.topicEngineering', {}, locale);
+    metaRow.append(topic);
   }
   // Guest byline leads the meta row, before the dates: who wrote it matters
   // more to a reader than when. Absent on everything Mistboard wrote itself.
@@ -1242,6 +1345,12 @@ type BlogArticle = Extract<Article, { kind: 'article' }>;
 // article shows, so it is set on the banqi engine write-up and unset on the
 // xiangqi champions list, and ranking by it demoted a xiangqi article below a
 // banqi one on a xiangqi page.
+//
+// A xiangqi deep dive (a player page or game deep dive marked `game: 'xiangqi'`)
+// is stricter: its footer offers only xiangqi player posts, other deep dives
+// first, then the rest, and never another variant or an engineering post, even
+// when that leaves fewer than three cards (Brian, 2026-10-28: a player page
+// ended on a fortress/atomic post and a jieqi post).
 function relatedArticles(article: BlogArticle): BlogArticle[] {
   // A content-language page walks its OWN language's ring. `isArticleListedInThisEnv`
   // rejects everything with `sourceLang` set, so an unqualified pool leaves a
@@ -1253,13 +1362,15 @@ function relatedArticles(article: BlogArticle): BlogArticle[] {
     article.sourceLang
       ? candidate.sourceLang === article.sourceLang && isArticleVisibleInThisEnv(candidate)
       : isArticleListedInThisEnv(candidate);
+  const xiangqiDeepDive = isXiangqiDeepDive(article);
   const pool = articles
     .filter(
       (candidate): candidate is BlogArticle =>
         candidate.kind === 'article' &&
         candidate.slug !== article.slug &&
         candidate.publisher === article.publisher &&
-        sameLanguage(candidate),
+        sameLanguage(candidate) &&
+        (!xiangqiDeepDive || isXiangqiPlayerPost(candidate)),
     )
     .sort(compareArticlesNewestFirst);
   if (pool.length === 0) return [];
@@ -1279,9 +1390,22 @@ function relatedArticles(article: BlogArticle): BlogArticle[] {
     { length: ordered.length - 1 },
     (_, i) => ordered[(start + 1 + i) % ordered.length]!,
   ).filter((candidate) => !chosenSlugs.has(candidate.slug));
+  if (xiangqiDeepDive) {
+    const deepDives = ring.filter(isXiangqiDeepDive);
+    const rest = ring.filter((candidate) => !isXiangqiDeepDive(candidate));
+    return [...chosen, ...deepDives, ...rest].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
+  }
   const sameTopic = ring.filter((candidate) => candidate.topic === article.topic);
   const otherTopic = ring.filter((candidate) => candidate.topic !== article.topic);
   return [...chosen, ...sameTopic, ...otherTopic].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
+}
+
+function isXiangqiPlayerPost(article: BlogArticle): boolean {
+  return article.game === 'xiangqi' && article.topic !== 'engineering';
+}
+
+function isXiangqiDeepDive(article: BlogArticle): boolean {
+  return article.homeRow === 'deep-dives' && isXiangqiPlayerPost(article);
 }
 
 // Left rail on rules surfaces (pychess variant-page grammar): every listed
@@ -1320,9 +1444,7 @@ function buildVariantSidebar(currentSlug: string | null, lang?: ArticleLang): HT
     const link = document.createElement('a');
     link.className = 'article-variant-link';
     link.href = localizedArticleHref(entry, locale);
-    const miniRail = renderVariantMiniThumb(entry.slug);
-    if (miniRail) link.append(miniRail);
-    else if (entry.thumbnail) link.append(renderArticleThumbnail(entry.thumbnail, locale));
+    link.append(renderRulesMarkerThumb(entry.slug));
     const localized = entryLang ? translateArticle(entry, entryLang) : entry;
     const label = document.createElement('span');
     label.className = 'article-variant-label';
@@ -1356,7 +1478,7 @@ function variantNavLabel(title: string): string {
     .trim();
 }
 
-function buildRulesArticleRailEntries(entries: readonly Article[]): Article[] {
+export function buildRulesArticleRailEntries(entries: readonly Article[]): Article[] {
   return [...entries].sort(compareRulesArticleRailEntries);
 }
 
@@ -1366,7 +1488,16 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
   return a.title.localeCompare(b.title);
 }
 
+// A rules page whose variant is outside the canonical order (no game spec yet,
+// or a hidden playtest spec such as three-kingdoms-banqi, #628) sorts right
+// after the spec it varies, instead of falling to the end of the rail.
+const RULES_RAIL_AFTER_SPEC: Record<string, string> = {
+  'three-kingdoms-banqi': 'banqi',
+};
+
 function rulesArticleRailSortIndex(article: Article): number {
+  const after = RULES_RAIL_AFTER_SPEC[article.slug];
+  if (after && isGameSpecId(after)) return canonicalVariantOrderIndex(after) + 0.5;
   const gameSpecId = article.gameSpecId ?? article.slug;
   if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
   return Number.MAX_SAFE_INTEGER;
@@ -2100,7 +2231,7 @@ function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement 
   if (block.caption) {
     const cap = document.createElement('figcaption');
     cap.className = 'article-figure-caption';
-    cap.textContent = block.caption;
+    appendRichText(cap, block.caption);
     figure.append(cap);
   }
   return figure;
@@ -2478,7 +2609,9 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
   // The variant's switch, not the page's: an unlisted rules page for a public
   // variant (crazyhouse-xiangqi's, while it was held back for polish) still
   // offers the board, and a hidden variant (mahjong) still does not.
-  if (!variantPublicSurfaceEnabled(gameSpecId)) return null;
+  if (!variantPublicSurfaceEnabled(gameSpecId) && !variantPlaytestSurfaceEnabled(gameSpecId)) {
+    return null;
+  }
 
   const game = variantNavLabel(title);
   const row = document.createElement('div');
@@ -2538,7 +2671,12 @@ function playCtaGameSpecId(href: string): GameSpecId | null {
  *  check is the gate. */
 function playCtaOpenToViewer(href: string): boolean {
   const id = playCtaGameSpecId(href);
-  return id === null || variantPublicSurfaceEnabled(id) || hasLikelyVariantGrant(id);
+  return (
+    id === null ||
+    variantPublicSurfaceEnabled(id) ||
+    variantPlaytestSurfaceEnabled(id) ||
+    hasLikelyVariantGrant(id)
+  );
 }
 
 function renderCtaBlock(block: CtaBlock): HTMLElement {
@@ -2924,7 +3062,7 @@ export function renderArticleThumbnail(
 // Variant rules articles whose rail/landing thumbnail is the shared variant
 // marker. Base-game articles map to their no-fog markers so the whole rail
 // reads in one visual language. Chess is study-only, not a variant, and has no
-// marker: its rules page keeps its own board thumbnail.
+// marker: off the rail it keeps its own board thumbnail.
 const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   'fog-chess': 'dark-chess',
   xiangqi: 'xiangqi',
@@ -2935,6 +3073,7 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   'crazyhouse-xiangqi': 'crazyhouse-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
+  'three-kingdoms-banqi': 'three-kingdoms-banqi',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
   'xiangqi-mahjong-32': 'xiangqi-mahjong',
@@ -2945,11 +3084,25 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
 function renderVariantMiniThumb(slug: string): HTMLElement | null {
   const miniId = VARIANT_MINI_BY_SLUG[slug];
   if (!miniId) return null;
+  return variantMarkerThumb(renderVariantMarker(miniId, { size: 100 }));
+}
+
+// The rules rail and landing tiles always show a marker: the variant's own, or
+// the question-mark placeholder until it has art. Never the article's board
+// thumbnail, which reads as a different visual language in a marker column.
+function renderRulesMarkerThumb(slug: string): HTMLElement {
+  return (
+    renderVariantMiniThumb(slug) ??
+    variantMarkerThumb(renderPlaceholderVariantMarker({ size: 100 }))
+  );
+}
+
+function variantMarkerThumb(markerHtml: string): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'articles-index-card-thumb variant-mini-thumb variant-marker-thumb';
   wrap.setAttribute('aria-hidden', 'true');
   markNoTranslate(wrap);
-  wrap.innerHTML = renderVariantMarker(miniId, { size: 100 });
+  wrap.innerHTML = markerHtml;
   const marker = wrap.firstElementChild;
   if (marker instanceof HTMLElement) {
     marker.style.display = 'block';

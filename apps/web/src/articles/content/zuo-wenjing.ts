@@ -242,6 +242,7 @@ export const zuoWenjingArticle: Article = {
   homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: "Zuo Wenjing 左文静",
   seoTitle: "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis",
@@ -304,12 +305,12 @@ export const zuoWenjingArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Chinese Taipei, and the title with it.",
+          text: "The 17th World Xiangqi Championship was played in Kuching, in Sarawak, and the women's event ran over seven rounds from 24 to 29 October 2022. Zuo won her first four games, drew with Chen Xinglin in round five and won the last two. By then the title was certain to go to one of the two Chinese players. Zuo won her last game, against Peng Jou-An of Taiwan, and the title with it.",
         },
         {
           kind: 'table',
           headers: ["Round","Opponent","Colour","Result"],
-          rows: [["1","Lee Meng Ju, Chinese Taipei","Black","Win"],["2","Anna Yin Meixian, United States","Red","Win"],["3","Ngo Lan Huang","Black","Win"],["4","Fiona Tan Min Fang, Singapore","Red","Win"],["5","Chen Xinglin, China","Red","Draw"],["6","Nguyen Hoang Yen, Vietnam","Black","Win"],["7","Peng Jou-An, Chinese Taipei","Red","Win"]],
+          rows: [["1","Lee Meng Ju, Taiwan","Black","Win"],["2","Anna Yin Meixian, United States","Red","Win"],["3","Ngo Lan Huang","Black","Win"],["4","Fiona Tan Min Fang, Singapore","Red","Win"],["5","Chen Xinglin, China","Red","Draw"],["6","Nguyen Hoang Yen, Vietnam","Black","Win"],["7","Peng Jou-An, Taiwan","Red","Win"]],
           highlightRows: [6],
           compact: true,
           caption: "Her 2022 World Championship, round by round. Names and federations as the WXF's game records give them; round three's federation is left out because other sources give a different one. The record of round one does not replay, so that game is on no board.",

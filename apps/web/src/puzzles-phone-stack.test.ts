@@ -51,7 +51,7 @@ describe('puzzle phone stack', () => {
 
   it('turns the move list into one sideways-scrolling line on the phone only', () => {
     expect(phoneBlock).toMatch(
-      /\.puzzles-shell \.puzzle-moves \{ display: flex; align-items: center; height: 34px;/,
+      /\.puzzles-shell \.puzzle-moves \{ display: flex; align-items: center; height: 30px;/,
     );
     expect(phoneBlock).toMatch(
       /\.puzzles-shell \.puzzle-move-list \{ display: flex;[^}]*max-height: none;[^}]*overflow-x: auto; overflow-y: hidden;/,
@@ -138,7 +138,24 @@ describe('puzzle phone first screen', () => {
   it('keeps Hint, Solution and Skip on one row so a miss does not grow the strip', () => {
     expect(phoneBlock).toMatch(/\.puzzles-shell \.puzzle-assist-row \{[^}]*flex-wrap: nowrap;/);
     expect(phoneBlock).toMatch(
-      /\.puzzles-shell \.puzzle-assist-row > \.puzzle-feedback-skip \{ flex: 1 1 0; min-width: 0;/,
+      /\.puzzles-shell \.puzzle-assist-row > \.puzzle-feedback-skip \{ flex: 0 1 auto; min-width: 0;[^}]*min-height: 44px;/,
+    );
+  });
+
+  // Brian, 2026-10-29: "I want the board big as possible filling edge to
+  // edge." The prompt is one strip one button tall: the copy in the middle,
+  // the buttons on its right, and solved puts title, thumbs and Next in a row.
+  it('lays the prompt strip out as one row in every state', () => {
+    expect(phoneBlock).toMatch(
+      /\.puzzles-shell \.puzzle-feedback \{ grid-template-columns: 28px minmax\(0, 1fr\) auto; grid-template-areas: "icon title assist" "icon body assist";/,
+    );
+    expect(phoneBlock).toMatch(
+      /\.puzzles-shell \.puzzle-solved-panel \{[^}]*grid-template-areas: "title vote cta";/,
+    );
+    expect(phoneBlock).toContain('.puzzles-shell .puzzle-vote-prompt { display: none; }');
+    // The hint line clamps to two lines beside the buttons.
+    expect(phoneBlock).toMatch(
+      /\.puzzles-shell \.puzzle-feedback-body \{[^}]*-webkit-line-clamp: 2;/,
     );
   });
 
@@ -155,26 +172,62 @@ describe('puzzle phone first screen', () => {
     // The board sizes from the box it is given, never from the viewport.
     expect(portraitBlock).toContain('width: min(100cqw, calc(100cqh * 552 / 612));');
     expect(portraitBlock).toContain('width: min(100cqw, calc(100cqh * 576 / 636));');
+    // The board area's cap is the default board's own aspect, so the arrows
+    // sit flush under it (the coordinates+cell cap left a 7px band).
+    expect(portraitBlock).toMatch(
+      /\.puzzles-shell \.puzzle-board:has\(\.puzzle-xiangqi-board\) \{ align-content: start; max-height: calc\(100vw \* 612 \/ 552\); \}/,
+    );
     expect(portraitBlock).toMatch(
       /> \.puzzle-solved-panel \{ box-sizing: border-box; height: var\(--puzzle-prompt-height\); min-height: 0; overflow: hidden;/,
     );
   });
 
-  // Measured in the browser on 2026-10-20 (unsolved, after a miss with Skip,
-  // solved with the thumbs, solution revealed; scrollHeight == innerHeight in
-  // all 16): site bar 52px, arrows 46px, move strip 34px, prompt strip 100px.
+  // This visit's ✓/✗ chips are the phone page's last row (Brian, 2026-10-29,
+  // reversing the ☰ sheet row of 10-28), with the puzzle in play as the only
+  // chip before a finish. The row has a fixed height inside the chrome budget,
+  // so it never shrinks the board or scrolls the page;
+  // tests/e2e/puzzles-phone.spec.ts measures the fit.
+  it('keeps the session row on the phone page, a fixed row inside the budget', () => {
+    expect(phoneBlock).toMatch(
+      /\.puzzles-shell \.puzzle-board-panel > \.puzzle-session-chips \{ order: 4;[^}]*height: 30px;/,
+    );
+    expect(phoneBlock).not.toMatch(/\.puzzle-session-chips \{[^}]*display: none/);
+    // Centred in the spare height under the prompt; auto margins take only
+    // what the capped board leaves, never the board's own height.
+    expect(portraitBlock).toContain(
+      '.puzzles-shell .puzzle-board-panel > .puzzle-session-chips { flex: none; margin-block: auto; }',
+    );
+    expect(portraitBlock).not.toMatch(/overflow-y: (auto|scroll)/);
+    expect(portraitBlock.match(/--puzzle-stack-chrome: \d+px;/g)).toHaveLength(1);
+    // Desktop keeps it under the board.
+    expect(desktop).toMatch(/\.puzzle-session-chips \{ order: 4; grid-column: 2;/);
+  });
+
+  // Streak is the same one screen: its shell scrolled (overflow: auto) where
+  // the trainer's is clipped, the one layout difference between the modes.
+  it('gives the streak board the trainer shell in portrait', () => {
+    expect(portraitBlock).toMatch(
+      /\.puzzles-page > \.puzzles-shell\.puzzle-streak-shell:has\(\.puzzle-board\) \{ overflow: hidden; \}/,
+    );
+  });
+
+  // Measured in the browser on 2026-10-29 (unsolved, hint shown, after a miss
+  // with Skip, solved with the thumbs; scrollHeight == innerHeight): site bar
+  // 52px, arrows 46px, move strip 30px, prompt strip 56px, session row 30px.
+  // A full-width board at 390x664 and 375x667, the iPhone 13 and SE sizes.
   const NAV = 52;
   const ARROWS = 46;
-  const MOVES = 34;
+  const MOVES = 30;
+  const CHIPS = 30;
   it.each([
     [390, 664, 390],
     [375, 667, 375],
-    [320, 568, 303],
+    [320, 568, 319],
     [430, 932, 430],
   ])('fits board, arrows, strip and prompt in a %ix%i portrait screen', (vw, vh, width) => {
     const prompt = Number(portraitBlock.match(/--puzzle-prompt-height: (\d+)px;/)?.[1]);
     const chrome = Number(portraitBlock.match(/--puzzle-stack-chrome: (\d+)px;/)?.[1]);
-    expect(chrome).toBe(ARROWS + MOVES + prompt);
+    expect(chrome).toBe(ARROWS + MOVES + prompt + CHIPS);
     const boardBox = vh - NAV - chrome; // what flex leaves the board
     const boardWidth = Math.min(vw, (boardBox * 552) / 612); // xiangqi 552:612
     expect(Math.round(boardWidth)).toBe(width);
@@ -438,6 +491,25 @@ describe('puzzle phone menu rows', () => {
     const solved = props({ solvedIds: new Set([puzzle.id]) });
     expect(keys(puzzlePhoneMenuRows(solved))).toEqual(['rated', 'autoNext', 'themes']);
     expect(puzzlePhoneMenuHead(solved)?.textContent).toContain('Mate in 2');
+  });
+
+  it('puts the event over the players and drops the team from each name', () => {
+    const fromGame = {
+      ...puzzle,
+      sourceGame: {
+        event: '2026 National Xiangqi Team Championship',
+        redName: 'Xu Wei (Xinjiang Production Team)',
+        blackName: 'Xu Tengfei',
+        result: '0-1',
+      },
+    } as PuzzleSummary;
+    const head = puzzlePhoneMenuHead(props({ queue: [fromGame] }));
+    const source = head?.querySelector('.puzzle-pm-head__source');
+    expect(source?.firstElementChild?.textContent).toContain('2026 National Xiangqi');
+    const names = [...(source?.querySelectorAll<HTMLElement>('.puzzle-source-player-name') ?? [])];
+    expect(names.map((name) => name.textContent)).toEqual(['Xu Wei', 'Xu Tengfei']);
+    expect(names[0]?.title).toBe('Xu Wei (Xinjiang Production Team)');
+    expect(names[1]?.title).toBe('');
   });
 
   it('carries the rating as small text on the Rated row', () => {

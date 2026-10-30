@@ -108,8 +108,8 @@
     "updatedAt": "2026-10-07"
   },
   "how-puzzle-mining-works": {
-    "hash": "d7d41509d334fb64",
-    "updatedAt": "2026-10-07"
+    "hash": "dd57578f76e8eb23",
+    "updatedAt": "2026-10-28"
   },
   "jieqi": {
     "hash": "8e2145840ac94150",
@@ -152,8 +152,8 @@
     "updatedAt": "2026-10-16"
   },
   "lai-ly-huynh": {
-    "hash": "86b1620ce708880b",
-    "updatedAt": null
+    "hash": "df8341ecdf8babba",
+    "updatedAt": "2026-10-26"
   },
   "lichess-analysis-accuracy": {
     "hash": "ef0c201c7e281461",
@@ -203,6 +203,10 @@
     "hash": "0ed51d9643c6d857",
     "updatedAt": null
   },
+  "set-up-your-board": {
+    "hash": "c05fe103ab6b1fd0",
+    "updatedAt": null
+  },
   "shogi4": {
     "hash": "833315d6cd688a17",
     "updatedAt": "2026-06-06"
@@ -228,7 +232,7 @@
     "updatedAt": null
   },
   "tony-fung-ga-zen": {
-    "hash": "0806fe8986d8fdda",
+    "hash": "c36dd27327d0b6a7",
     "updatedAt": "2026-10-08"
   },
   "unstyled-first-paint": {
@@ -248,15 +252,15 @@
     "updatedAt": null
   },
   "xiangqi-mahjong-32": {
-    "hash": "43845a58512c10af",
-    "updatedAt": "2026-10-25"
+    "hash": "48c9e9d23f89557d",
+    "updatedAt": "2026-10-26"
   },
   "xiangqi-match-fixing": {
     "hash": "f55a00f41e970dc6",
     "updatedAt": null
   },
   "xiangqi-world-championship": {
-    "hash": "324ac24fcad65cfd",
+    "hash": "6a88654548361124",
     "updatedAt": "2026-10-24"
   },
   "yin-sheng": {
@@ -264,7 +268,7 @@
     "updatedAt": null
   },
   "zuo-wenjing": {
-    "hash": "00ec726e9f20c4a9",
+    "hash": "fa62ad1024c680ce",
     "updatedAt": null
   }
 }

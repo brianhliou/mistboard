@@ -1,0 +1,24 @@
+/* Three Kingdoms banqi draws xiangqi's gold band around the last-moved piece;
+   a flip's band carries the flipper's ink instead (2026-10-28), the same two
+   inks as the banqi cell tint above, strong enough to read as a line. Gold on
+   a move. Higher specificity than board-lastmove.css's ring, which can land in
+   either order in the bundle. */
+.xq-live-lastmove-ring.tk-flip-ring--red {
+  stroke: rgb(194, 32, 26);
+  stroke-opacity: 0.85;
+}
+.xq-live-lastmove-ring.tk-flip-ring--black {
+  stroke: rgb(22, 40, 58);
+  stroke-opacity: 0.85;
+}
+/* On a 3D tile the band is the tile's edge, a filled path: it takes the
+   flipper's ink in place of gold (Brian, 2026-10-29: "color the flipped
+   piece edge as either red or gray slash black"). */
+.xq-live-lastmove-edge.tk-flip-ring--red {
+  fill: rgb(194, 32, 26);
+  fill-opacity: 0.85;
+}
+.xq-live-lastmove-edge.tk-flip-ring--black {
+  fill: rgb(22, 40, 58);
+  fill-opacity: 0.85;
+}

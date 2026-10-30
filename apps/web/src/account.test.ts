@@ -45,6 +45,49 @@ describe('account page auth flow', () => {
     document.body.innerHTML = '';
   });
 
+  it.each([
+    ['en', '/account'],
+    ['zh-Hans', '/zh-hans/account'],
+    ['zh-Hant', '/zh-hant/account'],
+  ])(
+    'sends the selected %s locale when requesting and resending a login code',
+    async (locale, path) => {
+      window.history.replaceState(null, '', path);
+      const requests: unknown[] = [];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url = String(input);
+          if (url === '/api/auth/me') return jsonResponse({ user: null });
+          if (url === '/api/auth/email/start') {
+            requests.push(JSON.parse(String(init?.body)));
+            return jsonResponse(
+              {
+                ...authStartData(`login-${requests.length}`),
+                resendAvailableAt: new Date(Date.now() - 1_000).toISOString(),
+              },
+              202,
+            );
+          }
+          throw new Error(`unexpected fetch: ${url}`);
+        }),
+      );
+      const { mountAccount } = await import('./account.js');
+      await mountAccount(document.querySelector<HTMLElement>('#app') as HTMLElement);
+      const email = document.querySelector<HTMLInputElement>('input[name="email"]');
+      if (email) email.value = 'misty@example.com';
+      submitAccountForm();
+      await flushDom();
+      document.querySelector<HTMLButtonElement>('.account-auth-resend')?.click();
+      await flushDom();
+      document.querySelectorAll<HTMLButtonElement>('.account-auth-reset')[1]?.click();
+      expect(requests).toEqual([
+        { email: 'misty@example.com', locale },
+        { email: 'misty@example.com', locale },
+      ]);
+    },
+  );
+
   it('updates the top nav after confirming a login code in-page', async () => {
     const user = testUser('misty');
     vi.stubGlobal(
@@ -322,9 +365,16 @@ describe('account page auth flow', () => {
       'Change username',
       'Email and sign-in',
       'Security',
+      'Mistboard Patron',
       'Close account',
     ]);
-    expect(document.querySelectorAll('.account-settings-rail-separator')).toHaveLength(3);
+    expect(document.querySelectorAll('.account-settings-rail-separator')).toHaveLength(4);
+    // The Patron link is a plain way out to /patron, never a settings section.
+    const patronLink = [
+      ...document.querySelectorAll<HTMLAnchorElement>('.account-settings-rail-link'),
+    ].find((link) => link.textContent === 'Mistboard Patron');
+    expect(patronLink?.getAttribute('href')).toBe('/patron');
+    expect(patronLink?.classList.contains('active')).toBe(false);
 
     const animation = document.querySelector<HTMLInputElement>(
       'input[name="pieceAnimation"][value="fast"]',

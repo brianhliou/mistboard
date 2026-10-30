@@ -4,6 +4,7 @@ import {
   validateStandardXiangqiPuzzle,
   XIANGQI_SPEC_ID,
   type XiangqiPuzzle,
+  xiangqiPuzzleAttributionIssue,
 } from '@mistboard/game';
 import type pg from 'pg';
 import { withTransaction } from './persistence-db.js';
@@ -129,8 +130,12 @@ export async function planXiangqiPuzzlePublication(
   runId: string,
 ): Promise<XiangqiPuzzlePublicationPlan> {
   if (!runId.trim()) throw new Error('runId is required');
-  const runResult = await db.query<{ status: string; license_status: string }>(
-    `SELECT run.status, source.license_status
+  const runResult = await db.query<{
+    status: string;
+    license_status: string;
+    source_slug?: string | null;
+  }>(
+    `SELECT run.status, source.license_status, source.slug AS source_slug
      FROM xiangqi_puzzle_mining_runs run
      JOIN historical_xiangqi_sources source ON source.id = run.source_id
      WHERE run.id = $1`,
@@ -167,6 +172,12 @@ export async function planXiangqiPuzzlePublication(
       throw new Error(`candidate ${entry.candidate.id} lacks a publishable approval review`);
     }
     const puzzle = validatedPuzzle(entry);
+    // A source that lets us mine on condition of credit (DPXQ, #712) cannot
+    // go live without it: the credit is part of the license, not decoration.
+    const attributionIssue = xiangqiPuzzleAttributionIssue(puzzle, run.source_slug);
+    if (attributionIssue) {
+      throw new Error(`candidate ${entry.candidate.id}: ${attributionIssue}`);
+    }
     if (seenPuzzleIds.has(puzzle.id)) {
       throw new Error(`publication set contains duplicate puzzle id ${puzzle.id}`);
     }

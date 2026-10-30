@@ -14,12 +14,6 @@ export function xiangqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_XIANGQI_ENABLED === 'true';
 }
 
-// Global friends-online widget (bottom-corner pill → expandable list, lichess
-// parity). On in dev; in prod/staging it stays hidden until the build opts in.
-export function friendsOnlineEnabled(): boolean {
-  return import.meta.env.DEV || import.meta.env.VITE_FRIENDS_ONLINE_ENABLED === 'true';
-}
-
 // Fortress Xiangqi (7x8 xiangqi-with-a-pocket). Launched: always on (the server
 // MISTBOARD_FORTRESS_XIANGQI_ENABLED flag remains the runtime kill-switch for
 // room creation).
@@ -42,6 +36,20 @@ export function mahjongEnabled(): boolean {
 // allowlist, so turning this on renders the table only for grant holders.
 export function xiangqiMahjongEnabled(): boolean {
   return import.meta.env.VITE_XIANGQI_MAHJONG_ENABLED === 'true';
+}
+
+// Three Kingdoms banqi (#628): this build flag opens the playtest to everyone
+// and is set only locally, never in prod. On prod an admin account gets it
+// without the flag (#684); the entry reads three-kingdoms-banqi-access.ts, and
+// the public surfaces (rules page, rail) read this flag alone.
+export function threeKingdomsBanqiEnabled(): boolean {
+  return import.meta.env.VITE_THREE_KINGDOMS_BANQI_ENABLED === 'true';
+}
+
+// The playtest bot is offered only when the local build says the engine path
+// is set (the server refuses a PvE room without it, too).
+export function threeKingdomsBanqiEngineEnabled(): boolean {
+  return threeKingdomsBanqiEnabled() && import.meta.env.VITE_THREE_KINGDOMS_BANQI_ENGINE === 'true';
 }
 
 // jqe, the jieqi bot above AB-JChess. Off by default and never on in dev: the

@@ -14,7 +14,7 @@
 
 .bots-directory-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 6px;
   align-items: center;
   overflow: hidden;
@@ -85,27 +85,6 @@
   transform: translateY(-50%);
 }
 
-.bots-directory-markers {
-  display: flex;
-  align-items: center;
-  padding: 8px 10px 8px 28px;
-}
-
-.bots-directory-marker {
-  display: inline-flex;
-  filter: drop-shadow(0 8px 12px color-mix(in srgb, var(--site-shadow) 24%, transparent));
-  line-height: 0;
-}
-
-.bots-directory-marker + .bots-directory-marker {
-  margin-left: -14px;
-}
-
-.bots-directory-marker:nth-child(2) {
-  position: relative;
-  z-index: 1;
-}
-
 .bots-status {
   padding: 20px;
   border: 1px solid var(--site-border);
@@ -159,9 +138,11 @@
   text-transform: uppercase;
 }
 
+/* Cards about the width of the hover card (300px), three across at the page's
+   1040px, one on a phone; two stretched to 500px read as empty bars. */
 .bot-roster {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: 12px;
 }
 
@@ -171,7 +152,6 @@
   width: auto;
   max-width: none;
   height: 100%;
-  min-height: 190px;
   background: linear-gradient(
     145deg,
     color-mix(in srgb, var(--site-accent) 5%, var(--site-panel)),
@@ -190,7 +170,8 @@
   transform: translateY(-2px);
 }
 
-.bots-directory .profile-summary-card-footer {
+.bots-directory .profile-summary-card-footer,
+.bots-directory .profile-summary-card-variants {
   margin-top: auto;
 }
 
@@ -234,6 +215,26 @@
   font-weight: 600;
 }
 
+/* Bio and credits read at the page's width under the header, not in the side
+   column, where a long credit ran past its edge. */
+.bot-profile-about {
+  display: grid;
+  gap: 8px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.bot-profile-about .profile-side-bio {
+  max-width: 72ch;
+  font-size: 14px;
+}
+
+.bot-profile-credits a {
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 .bot-profile-provenance {
   max-width: 100%;
   color: var(--site-muted);
@@ -258,16 +259,6 @@
   color: var(--site-accent-strong);
 }
 
-@media (max-width: 760px) {
-  .bots-directory-markers {
-    padding-left: 8px;
-  }
-
-  .bot-roster {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 560px) {
   .bots-main {
     gap: 22px;
@@ -276,10 +267,6 @@
   .bots-directory-header {
     grid-template-columns: 1fr;
     padding: 20px;
-  }
-
-  .bots-directory-markers {
-    display: none;
   }
 
   .bots-directory-meta {

@@ -90,6 +90,13 @@
   border-color: var(--site-accent-strong);
 }
 
+/* The same chip on an engineering article's meta row, sized down to the row's
+   13px type so it labels the post instead of reading as a button bar. */
+.article-meta-row .article-topic-label {
+  padding: 2px 10px;
+  font-size: 12px;
+}
+
 @media (pointer: coarse) {
   .articles-topic-chip {
     display: inline-flex;
@@ -118,6 +125,166 @@
   color: var(--site-muted);
   font-size: 17px;
   line-height: 1.6;
+}
+
+.articles-community-pitch {
+  container-type: inline-size;
+  display: grid;
+  gap: 28px;
+  max-width: 52em;
+}
+
+/* Two classes: the card paragraph rule below (0,1,1) would otherwise mute it. */
+.articles-community-pitch .articles-community-pitch-lede {
+  margin: 0;
+  max-width: 36em;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--site-text);
+}
+
+.articles-community-pitch-section {
+  display: grid;
+  gap: 12px;
+}
+
+.articles-community-pitch h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--site-muted);
+}
+
+.articles-community-pitch h3 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.35;
+  color: var(--site-heading);
+}
+
+.articles-community-pitch p {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.articles-community-pitch-benefits,
+.articles-community-pitch-ideas,
+.articles-community-pitch-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+/* Two by two once there is room, one column on a phone: four cards never
+   leave an orphan on a row of their own. */
+@container (min-width: 520px) {
+  .articles-community-pitch-benefits,
+  .articles-community-pitch-ideas {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .articles-community-pitch-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.articles-community-pitch-benefits li {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 16px 16px 18px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+}
+
+.articles-community-pitch-benefits li::before {
+  content: "";
+  width: 28px;
+  height: 3px;
+  margin-bottom: 6px;
+  border-radius: 2px;
+  background: var(--site-accent);
+}
+
+.articles-community-pitch-ideas li {
+  display: grid;
+}
+
+.articles-community-pitch-idea {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  transition:
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+
+a.articles-community-pitch-idea:hover {
+  box-shadow:
+    0 2px 8px rgba(29, 37, 34, 0.16),
+    0 0 12px color-mix(in srgb, var(--site-accent) 24%, transparent);
+  transform: translateY(-1px);
+}
+
+.articles-community-pitch-idea-body {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 14px 16px 16px;
+}
+
+.articles-community-pitch-example {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--site-link);
+}
+
+a.articles-community-pitch-idea:hover .articles-community-pitch-example {
+  text-decoration: underline;
+}
+
+.articles-community-pitch-steps {
+  counter-reset: pitch-step;
+}
+
+.articles-community-pitch-steps li {
+  counter-increment: pitch-step;
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  align-content: start;
+  column-gap: 12px;
+  row-gap: 2px;
+}
+
+.articles-community-pitch-steps li::before {
+  content: counter(pitch-step);
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.articles-community-pitch .article-cta-row {
+  justify-content: flex-start;
+  margin: 0;
 }
 
 .articles-index-item {
@@ -859,10 +1026,14 @@
   .article-toc-sidebar,
   .article-variant-sidebar {
     position: sticky;
-    /* Exactly the rail's natural offset (58px sticky nav + 40px section
-       padding) so it pins with zero travel on scroll. */
-    top: 98px;
-    max-height: calc(100vh - 118px);
+    /* Exactly the rail's natural offset so it pins with zero travel on
+       scroll: the sticky nav (60px min-height + 1px hairline, site-shell.css)
+       plus .site-section's 40px top padding (app-base.css). Any less and both
+       rails ride up with the page for the first few pixels and then stop, a
+       bob at the top of every rules page (98px here after the nav grew to
+       61px). sticky-rail-offsets.test.ts adds the three up. */
+    top: 101px;
+    max-height: calc(100vh - 121px);
     overflow-y: auto;
     scrollbar-width: none;
   }
@@ -1273,6 +1444,34 @@
   margin: 0;
 }
 
+/* A pair of boards that fills its columns instead of the single-board cap, so
+   two boards side by side read at a useful size. Two classes on the row so it
+   outranks the single-layout width rule. */
+.article-figure-row.article-figure-row--full-boards .xq-article-svg[data-xq-layout] {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* A pair of small boards for a setting that changes one detail (River text):
+   the boards stay small, side by side and centred, so the detail is what reads. */
+.article-figure-row.article-figure-row--small-boards {
+  grid-template-columns: repeat(2, minmax(0, 300px));
+  justify-content: center;
+}
+
+.article-figure-row.article-figure-row--small-boards .xq-article-svg[data-xq-layout] {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Stills composed of several rounded panels on a transparent ground: the
+   panels carry their own corners and outline, so the figure adds neither. */
+.article-figure-image.article-figure-panels img {
+  border: none;
+  border-radius: 0;
+  max-width: 100%;
+}
+
 .article-figure-row-caption {
   grid-column: 1 / -1;
   margin: 0;
@@ -1386,6 +1585,28 @@
 }
 .xq-article-svg .xq-diagram-ink {
   fill: var(--xq-diagram-ink, #4b3c2a);
+}
+/* The square grid (xqCellBoardGrid): the live square grid's colours
+   (xiangqi-board-surface.css), mixed from the diagram's own board and ink so a
+   picked board colour carries along. */
+.xq-article-svg .xq-diagram-cell--light {
+  fill: var(--xq-cell-light, var(--xq-diagram-bg, #f5dca8));
+}
+.xq-article-svg .xq-diagram-cell--dark {
+  fill: var(
+    --xq-cell-dark,
+    color-mix(in srgb, var(--xq-diagram-bg, #f5dca8) 84%, var(--xq-diagram-ink, #5a3a14))
+  );
+}
+.xq-article-svg .xq-diagram-cell-palace {
+  fill: var(--xq-cell-palace, color-mix(in srgb, #7c4d72 24%, transparent));
+}
+.xq-article-svg .xq-diagram-cell-river {
+  fill: color-mix(in srgb, #4f9bc6 78%, var(--xq-diagram-bg, #f5dca8));
+}
+.xq-article-svg .xq-diagram-cell-line {
+  stroke: color-mix(in srgb, var(--xq-diagram-ink, #5a3a14) 42%, transparent);
+  stroke-width: 1;
 }
 /* The replay board draws the shared surface (xiangqi-replay.ts, #558); its
    lines keep the diagrams' ink and hairline so it matches the boards beside it. */

@@ -43,6 +43,22 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-30',
+    kind: 'update',
+    headline: 'Puzzle Streak, and puzzles by theme.',
+    body: 'Puzzle Streak serves puzzles that get harder as you go, with no clock and one skip, and one wrong move ends the run. The new themes page lets you train one theme at a time, such as a single mate pattern. Each puzzle now plays in the moves of the game it came from before you start.',
+    href: '/puzzles?mode=streak',
+    cta: 'Start a streak',
+  },
+  {
+    date: '2026-10-29',
+    kind: 'update',
+    headline: '3D pieces, and banqi tiles that turn over.',
+    body: 'Xiangqi, jieqi, banqi and Flip Jungle pieces can now stand in 3D: pick 3D under Pieces in the board settings. A banqi tile turns over when it is revealed, and stepping through a finished game glides each move into place.',
+    href: '/?play=computer&gameSpecId=banqi',
+    cta: 'Play banqi',
+  },
+  {
     date: '2026-11-03',
     kind: 'article',
     headline: 'The shortest xiangqi stalemate we know: 21 plies.',

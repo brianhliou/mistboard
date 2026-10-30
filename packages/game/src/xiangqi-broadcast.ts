@@ -97,7 +97,15 @@ export type XiangqiBroadcastBoard = {
   moves: XiangqiMove[];
   sourceUrl?: string;
   details?: XiangqiBroadcastGameDetails;
+  /** Set on a finished game the source published a record for that we do not
+   *  replay, with the reason: `ambiguous`, the record reads two legal ways
+   *  (a lost front/rear marker the stored check marks cannot settle). The
+   *  board carries the players and the result, no moves, and a `sourceUrl`
+   *  for the reader to see the record there. */
+  recordWithheld?: XiangqiBroadcastRecordWithheld;
 };
+
+export type XiangqiBroadcastRecordWithheld = 'ambiguous';
 
 export type XiangqiBroadcastTapeEvent = {
   atMs: number;
@@ -269,9 +277,29 @@ export function validateXiangqiBroadcastBoard(
   validateMoveList(value.moves, 'board.moves', errors);
   validateOptionalString(value, 'sourceUrl', 'board', errors);
   if (value.details !== undefined) validateGameDetails(value.details, errors);
+  if (value.recordWithheld !== undefined) validateRecordWithheld(value, errors);
   return errors.length
     ? { ok: false, errors }
     : { ok: true, value: value as XiangqiBroadcastBoard };
+}
+
+const RECORD_WITHHELD = new Set<XiangqiBroadcastRecordWithheld>(['ambiguous']);
+
+// A withheld record is a finished result with nothing to replay and a page
+// that has the record: anything else would show a start position as the game.
+function validateRecordWithheld(value: Record<string, unknown>, errors: string[]): void {
+  if (!RECORD_WITHHELD.has(value.recordWithheld as XiangqiBroadcastRecordWithheld)) {
+    errors.push('board.recordWithheld must be ambiguous when present');
+  }
+  if (value.status !== 'complete') {
+    errors.push('board.recordWithheld needs board.status complete');
+  }
+  if (Array.isArray(value.moves) && value.moves.length > 0) {
+    errors.push('board.recordWithheld needs board.moves to be empty');
+  }
+  if (!nonEmptyString(value.sourceUrl)) {
+    errors.push('board.recordWithheld needs board.sourceUrl, the page with the record');
+  }
 }
 
 const GAME_KINDS = new Set<XiangqiBroadcastGameKind>(['standard', 'rapid', 'blitz']);
@@ -493,6 +521,35 @@ export function dpxqTourIdForTour(tour: {
   return HAND_IMPORTED_DPXQ_TOURS[tour.slug] ?? null;
 }
 
+// Record databases published on another organisation's site, credited by the
+// database's name rather than the host: the publisher asked for the name. The
+// HCMC Chess Federation hosts XQBase's Vietnamese records on vietnamchess.vn
+// and agreed on 2026-10-26 to community use with credit to XQBase and a link
+// back to its databank.
+const NAMED_RECORD_SOURCES: ReadonlyArray<{ host: string; pathPrefix: string; name: string }> = [
+  { host: 'vietnamchess.vn', pathPrefix: '/databank/xqbase-vietnamchess', name: 'XQBase' },
+];
+
+/** The database a record's source URL belongs to, when it has a name of its
+ *  own (XQBase on vietnamchess.vn); null for a plain site. */
+export function broadcastRecordsSourceName(sourceUrl: string | undefined): string | null {
+  if (!sourceUrl) return null;
+  let url: URL;
+  try {
+    url = new URL(sourceUrl);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+  const host = url.host.replace(/^www\./, '');
+  const source = NAMED_RECORD_SOURCES.find(
+    (entry) =>
+      entry.host === host &&
+      (url.pathname === entry.pathPrefix || url.pathname.startsWith(`${entry.pathPrefix}/`)),
+  );
+  return source?.name ?? null;
+}
+
 /**
  * The credit links the page a reader can check the records against: the
  * tour's own dpxq page when known, otherwise a public tour URL on the same
@@ -502,14 +559,17 @@ export function dpxqTourIdForTour(tour: {
 export function broadcastRecordsCredit(
   boards: readonly { sourceUrl?: string }[],
   tour?: { slug: string; sourceUrl?: string | null } | null,
-): { host: string; href: string } | null {
+): { host: string; href: string; name?: string } | null {
   const origins = new Map<string, string>();
+  // The database name, kept only while every voting board agrees on it.
+  const names = new Set<string | null>();
   for (const board of boards) {
     if (!board.sourceUrl) continue;
     try {
       const url = new URL(board.sourceUrl);
       if (url.protocol !== 'http:' && url.protocol !== 'https:') continue;
       origins.set(url.host.replace(/^www\./, ''), url.origin);
+      names.add(broadcastRecordsSourceName(board.sourceUrl));
     } catch {
       // A board with an unparseable source simply does not vote.
     }
@@ -519,8 +579,10 @@ export function broadcastRecordsCredit(
   if (origins.size !== 1) return null;
   const [entry] = [...origins.entries()];
   const [host, origin] = entry!;
+  const [onlyName] = names.size === 1 ? [...names] : [null];
+  const credit = (href: string) => (onlyName ? { host, href, name: onlyName } : { host, href });
   const dpxqTour = host === 'dpxq.com' && tour ? dpxqTourIdForTour(tour) : null;
-  if (dpxqTour) return { host, href: dpxqTourPageUrl(dpxqTour) };
+  if (dpxqTour) return credit(dpxqTourPageUrl(dpxqTour));
   if (tour?.sourceUrl) {
     try {
       const page = new URL(tour.sourceUrl);
@@ -531,11 +593,11 @@ export function broadcastRecordsCredit(
         !page.password &&
         (page.pathname !== '/' || page.search !== '')
       ) {
-        return { host, href: page.href };
+        return credit(page.href);
       }
     } catch {
       // Invalid poll targets cannot replace the known source's site link.
     }
   }
-  return { host, href: origin };
+  return credit(origin);
 }

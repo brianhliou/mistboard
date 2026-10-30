@@ -27,6 +27,12 @@
      On desktop the min-width:1241px block re-derives this from the rail width so
      the boxes match the full-width daily-puzzle board. */
   --landing-lower-widget-height: 20em;
+  /* Band 3 (forum beside chat and Top studies) is flatter than band 2 (Brian,
+     2026-10-27): five compact forum topics (a 64px row: title, one-line
+     excerpt, meta, plus 1px for a taller CJK fallback font) under the box's
+     42px title bar. The stacked phone layout
+     sizes the forum to its rows instead (landing-forum-preview.css). */
+  --landing-forum-height: calc(42px + 5 * 65px);
   /* Desktop side-rail (puzzle / players column) width. Single-sourced here so the
      grid columns and the puzzle board's derived height stay in sync. */
   --landing-rail-width: 340px;
@@ -46,8 +52,9 @@
   /* lichess-shaped portal in three bands. Band 1 (~the first two-thirds of the
      initial screen): event banners + the game viewer (left), the tall tabbed
      lobby panel (center, the focal element), the single Play button + activity
-     stats (right). Band 2: daily puzzle (left), the blog row then the deep-dives
-     row (center), top studies (right); the puzzle and studies span both rows.
+     stats (right). Band 2: daily puzzle (left), the deep-dives row then the blog
+     row (center; deep dives on top since 2026-10-26, Brian: the row we are
+     proudest of goes above the laptop fold), top studies (right); the puzzle and studies span both rows.
      Band 3: News (left), forum topics (center), the lobby chat (right), so the
      forum sits beside the chat (Brian, 2026-10-25: the articles are the work we
      are proud of, and the forum is quiet). */
@@ -60,9 +67,9 @@
     minmax(280px, var(--landing-rail-width));
   grid-template-areas:
     "left   panel  play"
-    "puzzle blogs  studies"
-    "puzzle dives  studies"
-    "news   forum  chat";
+    "puzzle dives  news"
+    "puzzle blogs  news"
+    "studies forum chat";
   /* The play panel's tab strip, fixed so the play rail can drop by exactly
      this much and start level with the panel's card (2026-10-11). */
   --landing-lobby-tabs-height: 40px;
@@ -104,13 +111,6 @@
   line-height: 1.4;
   color: var(--site-muted);
   text-decoration: none;
-}
-
-.landing-about a:hover,
-.landing-about a:focus-visible {
-  color: var(--site-link);
-  text-decoration: underline;
-  outline: none;
 }
 
 /* Puzzle-of-the-day widget: caption, board, caption as one column. The two
@@ -273,16 +273,42 @@
    the panel, which with the summary line added left four different gaps down
    the rail (2026-09-25). */
 .landing-play-column {
+  --landing-play-gap: clamp(12px, 1.6vw, 18px);
+  --landing-event-more-height: 22px;
+  --landing-event-more-gap: 4px;
   grid-area: play;
   display: flex;
   flex-direction: column;
   align-self: stretch;
-  gap: clamp(12px, 1.6vw, 18px);
+  gap: var(--landing-play-gap);
   min-width: 0;
 }
 
 .landing-play-column > .landing-event-banners {
   margin-top: auto;
+}
+
+/* With a "N more broadcasts" link the link takes the column's bottom edge
+   (level with the panel's bottom) and the cards sit right above it, one unit
+   with the link (Brian, 2026-10-27; they sat midway up the gap from
+   2026-10-26 and read as apart from it). With no link the cards themselves
+   end on that bottom edge. The link is laid out of the cards' grid, so it
+   does not take an equal 1fr row (a card-tall empty row that pushed the link
+   ~70px down and stretched the whole band). A pending slot keeps the link's
+   room too. */
+.landing-play-column:has(> .landing-event-banners > .landing-event-banners-more),
+.landing-play-column:has(> .landing-event-banners--pending) {
+  position: relative;
+  padding-bottom: calc(var(--landing-event-more-height) + var(--landing-event-more-gap));
+}
+
+.landing-play-column > .landing-event-banners > .landing-event-banners-more {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  box-sizing: border-box;
+  height: var(--landing-event-more-height);
+  line-height: 18px;
 }
 
 .landing-lobby-board > .pp-tabs {
@@ -346,10 +372,11 @@
   min-width: 0;
 }
 
-/* Band-3 left rail: News, stretched to the forum's height on desktop (the
-   stretch itself lives in the desktop block; stacked, the box keeps its own
-   fixed height), scrolling inside. Band-2 right rail: Top studies, spanning
-   the blog and deep-dives rows, fitting whole rows to the box (site-box-fit.ts). */
+/* Band-2 right rail: News, spanning the deep-dives and blog rows, scrolling
+   inside (it took this rail from Top studies 2026-10-26, Brian: News matters
+   more). Band-3 left rail: Top studies, stretched to the forum's height on
+   desktop (the stretch itself lives in the desktop block; stacked, the box
+   keeps its own fixed height), fitting whole rows to the box (site-box-fit.ts). */
 .landing-news-column {
   grid-area: news;
   display: flex;
@@ -1181,11 +1208,6 @@
   white-space: nowrap;
 }
 
-.landing-row-more:hover,
-.landing-row-more:focus-visible {
-  color: var(--site-accent-strong);
-}
-
 /* Row labels: quiet, so the cards stay the subject. */
 .landing-row-label {
   margin: 0;
@@ -1234,18 +1256,10 @@
   overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease;
 }
 
-/* No lift/scale on hover; the border warms to the brand accent and the title
-   strip under the thumbnail shifts to the soft panel tone so the card reads as
-   active without a material lift. */
-.landing-article-card:hover {
-  border-color: var(--site-accent);
-  background: var(--site-panel-soft);
-}
+/* Hover and focus: the card grammar (hover-grammar.css .hover-card), border to
+   the accent and the title to the link green, no lift. */
 
 .landing-article-card-thumb {
   position: relative;
@@ -1272,30 +1286,6 @@
 
 .landing-article-card-thumb.is-empty {
   background: linear-gradient(135deg, #2f5d4f, #1f6f5b);
-}
-
-.landing-announcement-thumb {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-  background:
-    radial-gradient(circle at 26% 28%, rgba(255, 255, 255, 0.72), transparent 34%),
-    linear-gradient(135deg, #f4d28c 0%, #e7b95f 46%, #5d8f75 100%);
-}
-
-.landing-announcement-thumb-icon {
-  display: grid;
-  place-items: center;
-  width: min(74%, 132px);
-  aspect-ratio: 1;
-  color: #ffffff;
-}
-
-.landing-announcement-thumb-icon .ui-icon {
-  width: 50%;
-  height: 50%;
-  filter: drop-shadow(0 6px 12px rgba(31, 24, 15, 0.26));
 }
 
 /* The Chinese after a romanized name stays whole (appendCardTitle). */
@@ -1661,6 +1651,14 @@
   display: block;
 }
 
+/* The xiangqi boards round their corners like the puzzle box beside them
+   (.home-puzzle-widget-board): the host clips, so a square grid's corner cells
+   cannot paint past the curve. Chess (cg-wrap) keeps its own square board. */
+.showcase-widget .replay-layout-solo .replay-board:has(.xq-live-svg) {
+  border-radius: var(--board-corner-radius);
+  overflow: hidden;
+}
+
 /* The SVG defines the height: full width, aspect-driven height (was 100%/100%,
    which forced the old square). preserveAspectRatio still guards against any
    distortion if a viewBox ever disagrees with the box. */
@@ -1740,11 +1738,12 @@
   max-width: 100%;
 }
 
-/* On the homepage the boards carry a seat row above and below; give the initial
-   skeleton the same allowance so the panel doesn't grow when the first board
-   lands (between-game swaps are exact via the cycler's min-height pin). */
+/* The initial skeleton (in the prerendered shell) holds the box of the board
+   the TV shows most, a 9x10 xiangqi-family board with its seats laid over it,
+   so the first board lands without moving the panel (between-game swaps are
+   exact via the cycler's min-height pin). */
 .landing-board-column #landing-replay .watch-replay-skeleton {
-  min-height: calc(var(--showcase-widget-size) + 54px);
+  min-height: calc(var(--showcase-widget-size) * 10 / 9);
 }
 
 .showcase-widget .watch-replay-skeleton-board {
@@ -2061,6 +2060,14 @@
     align-self: stretch;
   }
 
+  /* No height floor here: the band is as tall as its tallest column and the
+     panel stretches to it. The 60vh floor made the panel the band's height on
+     every laptop, so its rows ended ~100px above the card's bottom and the
+     article rows below fell under the fold (Brian, 2026-10-26). */
+  .landing-demo .landing-lobby-board {
+    min-height: 0;
+  }
+
   .landing-left-column {
     align-self: stretch;
   }
@@ -2156,9 +2163,9 @@
   }
 
   /* ── Stretched boxes ─────────────────────────────────────────────────────────
-     News and the chat sit beside the forum in band 3 and fill its height, each
-     body scrolling inside. Top studies fills band 2 beside the puzzle and the
-     article rows, fitting whole rows to the box. All three are taken out of flow
+     Top studies and the chat sit beside the forum in band 3 and fill its
+     height. News fills band 2 beside the puzzle and the article rows, its body
+     scrolling inside. All three are taken out of flow
      (absolute in the stretched column) so their own content contributes NOTHING
      to the auto row heights: in flow a long timeline would inflate the band. */
   .landing-news-column,
@@ -2179,6 +2186,16 @@
   .landing-chat-column .landing-chat {
     height: 100%;
     min-height: 0;
+  }
+
+  /* The News body clips its bottom entry mid-line; a short fade says "scroll
+     for more" (Brian, 2026-10-26). An alpha mask, so it needs no colour and
+     reads the same in both themes. The extra bottom padding lets the last entry
+     scroll clear of the fade. */
+  .landing-news-column .site-box-body.landing-news-scroll {
+    /* Less the last row's own padding (landing-announcements.css). */
+    padding-bottom: calc(var(--site-scroll-fade-size) - var(--landing-feed-row-pad));
+    mask-image: var(--site-scroll-fade);
   }
 
   /* ── Homepage viewer: flush box model (Stage 2) ──────────────────────────────
@@ -2326,7 +2343,7 @@
 @media (min-width: 960px) and (max-width: 1240px) {
   /* Two columns (lichess's middle band: the lobby app plus one side column).
      The left rail folds into the right one: the center keeps the lobby panel
-     with the blog and deep-dives rows under it beside the daily puzzle, then the
+     with the deep-dives and blog rows under it beside the daily puzzle, then the
      forum beside the chat, and News beside Top studies. Both columns scale with the window (a fixed 340px rail
      beside a fluid center read as the center alone resizing): the rail is a
      viewport fraction, re-sourced into the rail-width token so the viewer and
@@ -2341,8 +2358,8 @@
     grid-template-areas:
       "panel play"
       "panel left"
-      "blogs puzzle"
       "dives puzzle"
+      "blogs puzzle"
       "forum chat"
       "news  studies";
     --landing-puzzle-board-height: calc(var(--landing-rail-width) * 612 / 552);
@@ -2380,7 +2397,7 @@
 
   .landing-chat-column > .landing-chat-mount:not(:empty),
   .landing-chat-column .landing-chat {
-    height: var(--landing-lower-widget-height);
+    height: var(--landing-forum-height);
     min-height: 0;
   }
 
@@ -2394,21 +2411,21 @@
 
 @media (max-width: 959px) {
   /* Collapse to one column: Play button + activity, the lobby panel, banners +
-     viewer, then the blog row, the deep-dives row, the puzzle and Top studies,
-     and the band-3 boxes (forum, chat, news). */
+     viewer, then the deep-dives row, the blog row, the puzzle and News, and
+     the band-3 boxes (forum, chat, Top studies). */
   .landing-demo {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "play"
       "panel"
       "left"
-      "blogs"
       "dives"
+      "blogs"
       "puzzle"
-      "studies"
+      "news"
       "forum"
       "chat"
-      "news";
+      "studies";
     max-width: 640px;
   }
 
@@ -2727,11 +2744,12 @@
     order: 3;
   }
 
-  .landing-demo .landing-articles-row:not(.landing-dives-row) {
+  /* Deep dives above the blog row here too, as at every width (2026-10-26). */
+  .landing-demo .landing-dives-row {
     order: 4;
   }
 
-  .landing-demo .landing-dives-row {
+  .landing-demo .landing-articles-row:not(.landing-dives-row) {
     order: 5;
   }
 
@@ -2826,10 +2844,11 @@
     display: none;
   }
 
+  /* The pair sits as close as the shortcut tiles below it: one 6px gutter. */
   .landing-play-quick {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 6px;
   }
 
   .landing-play-quick-action {
@@ -2861,11 +2880,14 @@
     outline: none;
   }
 
-  /* Shortcut tiles: three by two. */
+  /* Shortcut tiles: three by two, each a sticker drawing over its label
+     (home-tile-art.ts). Brian, 2026-10-27: less empty space in each tile,
+     with a larger drawing and label, so the tile is 84px (was 92px) around a
+     52px drawing (was 44px) and a 15px label (was 14px). */
   .landing-phone-tiles {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
+    gap: 6px;
     margin-top: 6px;
   }
 
@@ -2874,14 +2896,15 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 4px;
     min-width: 0;
-    height: 68px;
+    height: 84px;
+    padding: 0 6px;
     border: 1px solid var(--site-border-soft);
     border-radius: 12px;
     background: var(--site-panel);
     color: var(--site-text);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     line-height: 1.15;
     text-align: center;
@@ -2894,10 +2917,21 @@
     outline: none;
   }
 
-  .landing-phone-tile-icon {
-    width: 24px;
-    height: 24px;
-    color: var(--site-accent);
+  .landing-phone-tile-art {
+    flex: none;
+    width: 52px;
+    height: 52px;
+    overflow: visible;
+  }
+
+  /* The drawings' cream sticker border, as on the broadcast TV: only the dark
+     theme needs it, where the navy parts and black outline sink into the panel. */
+  .landing-phone-tile-halo {
+    display: none;
+  }
+
+  :root[data-effective-theme="dark"] .landing-phone-tile-halo {
+    display: inline;
   }
 
   /* Blog rows: a strip the thumb swipes, bleeding off the right edge, in place

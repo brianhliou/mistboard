@@ -921,6 +921,13 @@
   gap: 4px;
 }
 
+/* The News box's "scroll for more" fade at the list's foot, on only while
+   rows sit below the visible part (scroll-fade.ts), so it goes at the bottom
+   and never shows on a list that fits. A mask, so clicks reach the last row. */
+.xqb-rail-list.xqb-rail-list-more {
+  mask-image: var(--site-scroll-fade);
+}
+
 .xqb-rail-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1002,7 +1009,24 @@
 
 .xqb-event-layout-with-rail {
   grid-template-columns: minmax(190px, 250px) minmax(0, 1fr);
-  grid-template-areas: "rail content";
+  /* The rights note is the content column's last row, so the pinned left
+     column's grid area runs to the foot of the page and the column never
+     moves: with the note below the layout, the column was pushed up by the
+     note's height at the bottom of the page. The second row takes whatever
+     height the column has beyond the content, so the note sits right under
+     the content rather than halfway down the leftover space. */
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "rail content"
+    "rail foot";
+}
+
+.xqb-event-layout-with-rail > .xqb-rights-note {
+  grid-area: foot;
+  align-self: start;
+  /* The layout's 16px row gap plus this is the 22px the note had below the
+     layout (the shell's 14px gap and the note's own 8px). */
+  margin-top: 6px;
 }
 
 .xqb-event-layout-with-rail .xqb-side-rail {
@@ -1265,7 +1289,8 @@
 @media (max-width: 900px) {
   .xqb-event-layout-with-rail {
     grid-template-columns: 1fr;
-    grid-template-areas: "content" "rail";
+    grid-template-rows: none;
+    grid-template-areas: "content" "rail" "foot";
   }
 
   .xqb-event-layout-with-rail .xqb-side-rail {
@@ -1793,8 +1818,10 @@
   top: var(--xqb-side-top, 12px);
   align-self: start;
   /* Ends where the page's bottom padding starts (.xqb-shell, 36px), so at the
-     foot of the page the column is not pushed up by its own container. */
-  height: calc(100vh - var(--xqb-side-top, 12px) - 36px);
+     foot of the page the column is not pushed up by its own container. One
+     more pixel for a page whose height is fractional: the last fraction of a
+     pixel cannot be scrolled to, and without it the column moved by it. */
+  height: calc(100vh - var(--xqb-side-top, 12px) - 37px);
   min-height: 360px;
   display: flex;
   flex-direction: column;
@@ -1932,7 +1959,7 @@
   height: 16px;
   margin: 0;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--site-text) 22%, transparent);
+  background-color: color-mix(in srgb, var(--site-text) 22%, transparent);
   cursor: pointer;
   transition: background-color 120ms ease;
 }
@@ -1961,8 +1988,11 @@
   }
 }
 
+/* background-color, never the `background` shorthand: the shorthand resets
+   background-clip to border-box, and this rule outranks the coarse one, so on
+   a phone the checked switch painted its 12px touch border green (54x40). */
 .xqb-gauge-toggle input:checked {
-  background: var(--site-accent);
+  background-color: var(--site-accent);
 }
 
 .xqb-gauge-toggle input:checked::after {
@@ -2991,4 +3021,70 @@ a.xqb-standings-name:focus-visible {
   font-size: 11px;
   font-weight: 500;
   line-height: 1.3;
+}
+
+/* ── Withheld records (2026-10-26) ───────────────────────────────────────────
+   A finished game whose source record reads two ways: the card dims the start
+   position under "Not replayed" like a results-only card, but it opens (its
+   page says why and links the source), so it keeps the card's hover. */
+.xqb-board-card-withheld .xqb-card-board {
+  position: relative;
+}
+
+.xqb-board-card-withheld .xqb-card-board svg {
+  opacity: 0.45;
+}
+
+/* The board page of the same game: players, result, the reason and the
+   source link, and no board, so the start position never stands in for it. */
+.xqb-held {
+  display: grid;
+  gap: 12px;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.xqb-held-title {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.xqb-held-seats {
+  display: grid;
+  gap: 6px;
+}
+
+.xqb-held-seat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--site-panel);
+}
+
+.xqb-held-team {
+  color: var(--site-muted);
+  font-size: 0.85em;
+}
+
+.xqb-held-score {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqb-held-result {
+  margin: 0;
+  font-weight: 600;
+}
+
+.xqb-held-note {
+  margin: 0;
+  color: var(--site-muted);
+  line-height: 1.5;
 }

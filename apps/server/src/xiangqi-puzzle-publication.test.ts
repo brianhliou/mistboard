@@ -8,11 +8,7 @@ import {
   publishXiangqiPuzzlePublication,
 } from './xiangqi-puzzle-publication.js';
 
-async function assertPublishedMateSpeedOnly(
-  t: TestContext,
-  auditEvidence: Record<string, unknown>,
-  expected: boolean | null,
-) {
+function seedMatePuzzle() {
   const seed = loadAllSeedPuzzles().find(
     (puzzle) =>
       puzzle.variant === 'xiangqi' &&
@@ -20,9 +16,12 @@ async function assertPublishedMateSpeedOnly(
       puzzle.solution.length >= 5,
   );
   assert.ok(seed);
-  const puzzle = { ...seed, sourceGame: { gameId: 'source-game', ply: 17 } };
+  return seed;
+}
+
+function candidateRow(puzzle: unknown, auditEvidence: Record<string, unknown>) {
   const now = new Date('2026-10-23T00:00:00Z');
-  const candidate = {
+  return {
     id: 'candidate',
     run_id: 'run',
     historical_game_id: 'source-game',
@@ -58,6 +57,15 @@ async function assertPublishedMateSpeedOnly(
       ),
     ),
   };
+}
+
+async function assertPublishedMateSpeedOnly(
+  t: TestContext,
+  auditEvidence: Record<string, unknown>,
+  expected: boolean | null,
+) {
+  const puzzle = { ...seedMatePuzzle(), sourceGame: { gameId: 'source-game', ply: 17 } };
+  const candidate = candidateRow(puzzle, auditEvidence);
   let inserted: { sql: string; values: unknown[] } | undefined;
   const db = {
     async query(sql: string, values: unknown[] = []) {
@@ -141,4 +149,42 @@ test('publication distinguishes speed-only admission from immediate mates and mi
       await assertPublishedMateSpeedOnly(subtest, item.evidence, item.expected);
     });
   }
+});
+
+test('publication refuses a DPXQ puzzle without its http credit and accepts one with it (#712)', async () => {
+  const plan = (sourceGame: Record<string, unknown>) => {
+    const candidate = candidateRow({ ...seedMatePuzzle(), sourceGame }, {});
+    const db = {
+      async query(sql: string) {
+        if (sql.includes('SELECT run.status'))
+          return {
+            rows: [
+              { status: 'review', license_status: 'cleared', source_slug: 'dpxq-archive-test' },
+            ],
+          };
+        if (sql.includes('SELECT candidate.*')) return { rows: [candidate] };
+        if (sql.includes('max(seq)')) return { rows: [{ count: 0, max_seq: null }] };
+        return { rows: [] };
+      },
+    };
+    return planXiangqiPuzzlePublication(db as unknown as pg.Pool, 'run');
+  };
+  await assert.rejects(
+    plan({ gameId: 'source-game', ply: 17 }),
+    /lacks the required source credit/,
+  );
+  await assert.rejects(
+    plan({
+      gameId: 'source-game',
+      ply: 17,
+      attribution: { name: 'DPXQ', url: 'https://www.dpxq.com/hldcg/search/view_m_1.html' },
+    }),
+    /does not accept/,
+  );
+  const ok = await plan({
+    gameId: 'source-game',
+    ply: 17,
+    attribution: { name: 'DPXQ', url: 'http://www.dpxq.com/hldcg/search/view_m_1.html' },
+  });
+  assert.equal(ok.totalCandidates, 1);
 });

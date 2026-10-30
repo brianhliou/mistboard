@@ -1,3 +1,11 @@
+import {
+  applyJieqiMove,
+  createInitialJieqiState,
+  getJieqiPlayerView,
+  getJieqiPublicView,
+  jieqiTruthView,
+  STANDARD_JIEQI_DEAL,
+} from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { renderJieqiMaterial } from './jieqi-material.js';
 import type { JieqiWireView } from './live-jieqi.js';
@@ -77,5 +85,42 @@ describe('renderJieqiMaterial', () => {
     expect(s.capturesTop.childElementCount).toBe(0);
     expect(s.capturesBottom.childElementCount).toBe(0);
     expect(s.hiddenPool.childElementCount).toBe(0);
+  });
+});
+
+// Brian, 2026-10-26: a piece named only because it was captured face-down is
+// drawn shaded. Built from a real game so the mark comes from the view builders:
+// red's face-down cannon on b3 jumps the face-down b8 and takes b10 face-down.
+describe('jieqi pool shading for a face-down capture', () => {
+  const start = createInitialJieqiState('jq_shade', STANDARD_JIEQI_DEAL);
+  const after = applyJieqiMove(start, { from: 'b3', to: 'b10' });
+  const shaded = (el: HTMLElement) =>
+    [...el.querySelectorAll<HTMLElement>('.review-capture-piece')].map((span) =>
+      span.classList.contains('is-taken-face-down'),
+    );
+
+  it('shades the identity the capturer holds, live and in a revealed review', () => {
+    for (const view of [getJieqiPlayerView(after, 'red'), jieqiTruthView(after)]) {
+      const s = slots();
+      renderJieqiMaterial(s, view, 'red');
+      expect(shaded(s.capturesBottom)).toEqual([true]);
+      expect(labels(s.capturesBottom)[0]).toMatch(/^black \w+, captured face-down$/);
+    }
+  });
+
+  it('keeps the disc, unshaded, for the victim and a spectator', () => {
+    for (const view of [getJieqiPlayerView(after, 'black'), getJieqiPublicView(after)]) {
+      const s = slots();
+      renderJieqiMaterial(s, view, 'red');
+      expect(shaded(s.capturesBottom)).toEqual([false]);
+      expect(labels(s.capturesBottom)).toEqual(['black hidden piece']);
+    }
+  });
+
+  it('does not shade a piece captured face-up', () => {
+    const s = slots();
+    renderJieqiMaterial(s, asRed, 'red');
+    expect(shaded(s.capturesTop)).toEqual([false, false]);
+    expect(shaded(s.capturesBottom)).toEqual([false]);
   });
 });

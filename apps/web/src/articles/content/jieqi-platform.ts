@@ -53,6 +53,9 @@ export const jieqiPlatformArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-03',
+  // The date ring used to lead with the puzzle-mining post; with that one an
+  // engineering post, it handed this page three xiangqi posts, yin-sheng's trio.
+  readNext: ['jieqi-openings', 'jieqi-bot-wins', 'jieqi-puzzle-search'],
   updatedAt: '2026-10-19',
   updateNote:
     'Rewritten as a guide to playing and reviewing jieqi here.',

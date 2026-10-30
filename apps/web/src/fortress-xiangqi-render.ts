@@ -11,7 +11,7 @@ import {
   fortressXiangqiSquareOf,
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
-import { boardCheckGlowSvg } from './board-check.js';
+import { boardCheckCellSvg, boardCheckGlowSvg } from './board-check.js';
 import {
   animateBoardLastMoveArrival,
   boardLastMoveMarkersSvg,
@@ -195,7 +195,7 @@ export function renderFortressXiangqiBoardSvg(
       ${cell ? `<g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(surface, perspective, layout)}</g>` : ''}
       ${coords ? `<g class="fxq-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
       ${lastMoveMarkers(view, perspective, pieceSet)}
-      ${options.check === false ? '' : checkGlow(view, perspective)}
+      ${options.check === false ? '' : checkGlow(view, perspective, pieceSet)}
       ${selectionRing(options.selectedSquare ?? null, perspective)}
       ${options.interactive ? '' : moveHints(view, targets, perspective)}
       ${options.interactive ? '' : blockedMarks(options.blockedSquares ?? [], perspective)}
@@ -207,11 +207,18 @@ export function renderFortressXiangqiBoardSvg(
   `;
 }
 
-function checkGlow(view: FortressXiangqiPlayerView, perspective: FortressXiangqiColor): string {
+function checkGlow(
+  view: FortressXiangqiPlayerView,
+  perspective: FortressXiangqiColor,
+  pieceSet: XiangqiPieceSet,
+): string {
   const square = fortressXiangqiCheckedGeneral(view.board, view.status);
   if (!square) return '';
   const coord = fortressXiangqiCoordOf(square);
-  return boardCheckGlowSvg(intersection(coord.file, coord.rank, perspective), MARK_PIECE_SIZE);
+  const center = intersection(coord.file, coord.rank, perspective);
+  return activeLayout === 'cell'
+    ? boardCheckCellSvg(center, CELL, pieceSet, MARK_PIECE_SIZE)
+    : boardCheckGlowSvg(center, MARK_PIECE_SIZE);
 }
 
 export function fortressXiangqiMarkerSvg(

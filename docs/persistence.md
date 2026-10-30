@@ -76,6 +76,36 @@ Replay visibility:
 - Live and pregame observers receive only WebSocket snapshots that are scoped to their seat. Spectators of live Fog of War games do not receive board truth or move events.
 - Administrative debug views are a separate capability. They are not authorized by room id, query params, or client-side UI state.
 
+### Private puzzle history and progress
+
+`GET /api/puzzles/history?variant=xiangqi&limit=50&offset=0` requires an active
+account session and returns only that account's first stored outcome for each
+puzzle. Account ids and handles in query parameters never select another
+account. Responses carry `Cache-Control: private, no-store`; anonymous or
+invalid sessions receive `401 authentication_required`.
+
+The response contains:
+
+- `attempts`: oldest first by timestamp, with puzzle id as the tie-breaker.
+  Each entry has `puzzleId`, `variant`, `solved`, `rated`, `createdAt` (UTC ISO),
+  `ratingBefore`, `ratingAfter`, and `ratingDelta`. Rating snapshots come
+  directly from `puzzle_attempts`; the delta is after minus before. Missing
+  legacy snapshots remain `null`, including the delta. These entries can feed
+  a rating progress graph without recalculating historical ratings.
+- `nextOffset`: pass this as `offset` to read the next page; `null` means the
+  end of the history. `limit` defaults to 50 and must be 1–100. `offset`
+  defaults to 0; both parameters must be nonnegative decimal integers within
+  JavaScript's safe integer range (including the next page offset).
+- `progress`: the account's current per-variant `{ rating, provisional, solved,
+  attempts }` summary, or `null` before its first attempt. The summary covers
+  the whole variant, independently of the requested page.
+
+`variant` is required and accepts the puzzle API's supported variants
+(`xiangqi` and `jungle`). Unsupported variants receive `400 invalid_variant`;
+invalid pagination receives `400 invalid_pagination`. History includes unrated
+outcomes and puzzles removed from the serving corpus. Retries do not add
+history or change its first outcome. This endpoint is read-only.
+
 ## Runtime Shape
 
 Production-like deployments run one web service for HTTP and WebSocket traffic,

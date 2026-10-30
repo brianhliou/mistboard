@@ -1,10 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 import {
+  applyStandardXiangqiMove,
   attemptStandardXiangqiPuzzleLine,
+  createInitialXiangqiState,
   detectXiangqiPuzzleMotifs,
   getStandardXiangqiLegalMoves,
   standardXiangqiPuzzleMoveEquals,
   XIANGQI_MOTIF_BY_ID,
+  XIANGQI_MOTIFS,
   XIANGQI_PUZZLES,
   XIANGQI_SPEC_ID,
   type XiangqiMove,
@@ -14,12 +17,17 @@ import {
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { displayPreferenceStorageKey } from './display-preferences.js';
+import { LOCALE_STORAGE_KEY } from './i18n/locale.js';
 import { playSound } from './live-sound.js';
+import { puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
+import { playerWithoutTeam } from './puzzles/queue-panel.js';
+import { loadPuzzleTheme, PUZZLE_THEME_MIN_PATTERN_COUNT } from './puzzles/themes.js';
 import {
   mountPuzzleSolver,
   mountPuzzles,
   puzzleMoveRowNumber,
   renderPuzzlesShellForPrerender,
+  resetPuzzleReloadCheckForTest,
   sourceGameLines,
 } from './puzzles.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
@@ -87,6 +95,428 @@ describe('puzzles route', () => {
     )!;
   const RED_MATE = minedMate('red');
   const BLACK_MATE = minedMate('black');
+  const themeOptions = XIANGQI_MOTIFS.map((motif) => ({
+    ...motif,
+    // Above PUZZLE_THEME_MIN_PATTERN_COUNT, so the picker lists it.
+    count: motif.id === 'ma-hou-pao' ? 24 : 0,
+    literal: 'cannon behind the horse',
+    gloss: 'The horse pens the general in and screens the cannon behind it.',
+  }));
+
+  it('filters the queue by theme, persists the picker, and keeps next navigation filtered', async () => {
+    const puzzles = XIANGQI_PUZZLES.slice(0, 3);
+    const summaries = puzzles.map((puzzle, index) => ({
+      ...publicSummary(puzzle),
+      motifs: index < 2 ? ['ma-hou-pao'] : [],
+    }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles') return json({ puzzles: summaries, themes: themeOptions });
+        const hinted = puzzles.find((puzzle) => url === `/api/puzzles/${puzzle.id}/reveal`);
+        if (hinted) return json({ move: hinted.solution[0] });
+        const index = puzzles.findIndex((puzzle) => url === `/api/puzzles/${puzzle.id}`);
+        return index >= 0
+          ? json({ puzzle: { ...publicDetail(puzzles[index]!), ...summaries[index] } })
+          : json({}, 404);
+      }),
+    );
+    stubWindowLocalStorage(memoryStorage());
+    const root = document.createElement('div');
+    await mountPuzzles(root);
+    const picker = root.querySelector<HTMLSelectElement>('[data-puzzle-theme]');
+    expect(picker).not.toBeNull();
+    picker!.value = 'ma-hou-pao';
+    picker!.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(root.textContent).toContain('0 solved of 2'));
+    expect(window.localStorage.getItem('mistboard:puzzles:theme')).toBe('ma-hou-pao');
+    await vi.waitFor(() =>
+      expect(new URL(window.location.href).searchParams.get('theme')).toBe('ma-hou-pao'),
+    );
+    const firstPath = window.location.pathname;
+    root.querySelector<HTMLButtonElement>('[data-puzzle-hint]')!.click();
+    await vi.waitFor(() => expect(root.querySelector('[data-puzzle-skip]')).not.toBeNull());
+    const next = root.querySelector<HTMLButtonElement>('[data-puzzle-skip]');
+    expect(next).not.toBeNull();
+    next!.click();
+    await vi.waitFor(() => expect(window.location.pathname).not.toBe(firstPath));
+    expect(new URL(window.location.href).searchParams.get('theme')).toBe('ma-hou-pao');
+    expect(puzzles.slice(0, 2).some((puzzle) => window.location.pathname.endsWith(puzzle.id))).toBe(
+      true,
+    );
+    expect(root.textContent).toContain('0 solved of 2');
+    const reopened = document.createElement('div');
+    window.history.replaceState(null, '', '/puzzles');
+    await mountPuzzles(reopened);
+    expect(reopened.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe(
+      'ma-hou-pao',
+    );
+    const all = reopened.querySelector<HTMLSelectElement>('[data-puzzle-theme]')!;
+    all.value = '';
+    all.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(reopened.textContent).toContain('0 solved of 3'));
+  });
+
+  it.each(['ma-hou-pao', ''])(
+    'preserves an unfinished puzzle when changing to theme "%s" keeps it in the queue',
+    async (nextTheme) => {
+      stubWindowLocalStorage(memoryStorage());
+      window.history.replaceState(
+        null,
+        '',
+        `/puzzles/${RED_MATE.id}?theme=${nextTheme ? '' : 'ma-hou-pao'}`,
+      );
+      const qualityEvents: Array<{ sessionId: string; event: string }> = [];
+      const attemptBodies: Array<{ moves: XiangqiMove[]; qualitySessionId: string }> = [];
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/puzzles') {
+          return json({
+            puzzles: [{ ...publicSummary(RED_MATE), motifs: ['ma-hou-pao'] }],
+            themes: themeOptions,
+          });
+        }
+        if (url === `/api/puzzles/${RED_MATE.id}`) {
+          return json({ puzzle: publicDetail(RED_MATE) });
+        }
+        if (url.endsWith('/quality')) {
+          qualityEvents.push(JSON.parse(String(init?.body)));
+          return new Response(null, { status: 204 });
+        }
+        if (url.endsWith('/attempt')) {
+          const body = JSON.parse(String(init?.body));
+          attemptBodies.push(body);
+          return json({ attempt: attemptStandardXiangqiPuzzleLine(RED_MATE, body.moves) });
+        }
+        return json({}, 404);
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const root = document.createElement('div');
+      await mountPuzzles(root, RED_MATE.id);
+      clickSquares(root, RED_MATE.solution[0]!);
+      await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+      const view = qualityEvents[0]!;
+
+      const picker = root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')!;
+      picker.value = nextTheme;
+      picker.dispatchEvent(new Event('change'));
+      await vi.waitFor(() =>
+        expect(new URL(window.location.href).searchParams.get('theme') ?? '').toBe(nextTheme),
+      );
+
+      expect(
+        fetchSpy.mock.calls.filter(([input]) => String(input) === `/api/puzzles/${RED_MATE.id}`),
+      ).toHaveLength(1);
+      expect(root.textContent).toContain('Correct.');
+      expect(root.textContent).toContain(
+        `${RED_MATE.solution[1]!.from}-${RED_MATE.solution[1]!.to}`,
+      );
+      expect(qualityEvents).toEqual([view]);
+      expect(view.event).toBe('view');
+      clickSquares(root, RED_MATE.solution[2]!);
+      await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+      expect(attemptBodies.map((body) => body.moves)).toEqual([
+        [RED_MATE.solution[0]],
+        [RED_MATE.solution[0], RED_MATE.solution[2]],
+      ]);
+      expect(attemptBodies.every((body) => body.qualitySessionId === view.sessionId)).toBe(true);
+    },
+  );
+
+  it('opens the themes index with counts, glosses and filtered-session links', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json({ puzzles: [], themes: themeOptions })),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, 'themes');
+    // An older server sends no tagCounts: the page still lists the patterns.
+    expect(root.querySelectorAll('[data-puzzle-theme-card]')).toHaveLength(1);
+    const link = root.querySelector<HTMLAnchorElement>('a[href="/puzzles?theme=ma-hou-pao"]');
+    expect(link?.textContent).toContain('Cannon behind the horse');
+    // English copy assumes no Chinese: no hanzi or pinyin beside the name.
+    expect(root.textContent).not.toContain('马后炮');
+    expect(root.textContent).not.toContain('mǎ hòu pào');
+    // Lichess's row: the count sits inline after the name, a bare number.
+    const count = root.querySelector(
+      '[data-puzzle-theme-card="ma-hou-pao"] h3 .puzzle-theme-count',
+    );
+    expect(count?.textContent).toBe('24');
+    expect(count?.getAttribute('title')).toBe('24 puzzles');
+    // Names and glosses come from the catalogue, so they follow the locale.
+    expect(root.textContent).toContain('the horse pens the general in');
+    // A theme with art wears it as a mask-painted marker, tagged with its group.
+    const icon = root.querySelector<HTMLElement>(
+      '[data-puzzle-theme-card="ma-hou-pao"] .puzzle-theme-icon',
+    );
+    expect(icon?.dataset.iconGroup).toBe('motif');
+    expect(icon?.dataset.iconTheme).toBe('ma-hou-pao');
+    expect(
+      icon
+        ?.querySelector<HTMLElement>('.variant-marker')
+        ?.style.getPropertyValue('--variant-marker-mask'),
+    ).toContain('/puzzle-theme-icons/ma-hou-pao.png');
+    expect(icon?.querySelector('text')).toBeNull();
+    expect(
+      root.querySelector<HTMLElement>('[data-puzzle-theme-recommended] .puzzle-theme-icon')?.dataset
+        .iconGroup,
+    ).toBe('mix');
+    expect(root.querySelector('.puzzle-xiangqi-board')).toBeNull();
+    expect(root.querySelector('a[href="/puzzles?theme=men-gong"]')).toBeNull();
+    // With no tag counts the mix row still links every puzzle, just uncounted.
+    // The mix row clears a saved theme: plain /puzzles would reopen the last drill.
+    const mix = root.querySelector('[data-puzzle-theme-recommended] a[href="/puzzles?theme="]');
+    expect(mix?.textContent).toContain('Healthy mix');
+    expect(mix?.querySelector('.puzzle-theme-count')).toBeNull();
+  });
+
+  it("names the mate patterns in the reader's script on a zh-Hant themes page", async () => {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, 'zh-Hant');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => json({ puzzles: [], themes: themeOptions })),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, 'themes');
+    const card = root.querySelector<HTMLElement>('[data-puzzle-theme-card="ma-hou-pao"]');
+    expect(card?.querySelector('h3')?.textContent).toContain('馬後炮');
+    expect(card?.textContent).toContain('炮在馬後將軍');
+    // The hanzi is the name: no pinyin or English literal line under it.
+    expect(card?.querySelector('.puzzle-theme-name')).toBeNull();
+    expect(card?.textContent).not.toContain('Cannon behind the horse');
+  });
+
+  it('groups the themes page like lichess, with the pattern minimum and no empty entries', async () => {
+    const motifCount = (id: string) =>
+      ({ 'ma-hou-pao': 30, 'men-gong': PUZZLE_THEME_MIN_PATTERN_COUNT, 'tie-men-shuan': 90 })[id] ??
+      (id === 'chong-pao' ? PUZZLE_THEME_MIN_PATTERN_COUNT - 1 : 0);
+    const tagCounts = {
+      ...Object.fromEntries(XIANGQI_MOTIFS.map((m) => [m.id, motifCount(m.id)])),
+      matein1: 40,
+      matein2: 25,
+      matein3: 9,
+      matein4: 0,
+      opening: 5,
+      middlegame: 70,
+      endgame: 30,
+      checkmate: 74,
+      winning: 31,
+      'one-move': 50,
+      short: 30,
+      long: 25,
+      'very-long': 0,
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        json({
+          puzzles: [],
+          themes: XIANGQI_MOTIFS.map((m) => ({ ...m, count: motifCount(m.id) })),
+          tagCounts,
+        }),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, 'themes');
+    const groups = [...root.querySelectorAll<HTMLElement>('[data-puzzle-theme-group]')];
+    expect(groups.map((g) => g.dataset.puzzleThemeGroup)).toEqual([
+      'motif',
+      'mate',
+      'phase',
+      'goal',
+      'length',
+    ]);
+    expect(groups.map((g) => g.querySelector('h2')?.textContent)).toEqual([
+      'Mate patterns',
+      'Mates',
+      'Phases',
+      'Goals',
+      'Lengths',
+    ]);
+    const cards = (group: HTMLElement) =>
+      [...group.querySelectorAll<HTMLElement>('[data-puzzle-theme-card]')].map(
+        (card) => card.dataset.puzzleThemeCard,
+      );
+    // Patterns at the minimum, most puzzles first; one short of it is hidden.
+    expect(cards(groups[0]!)).toEqual(['tie-men-shuan', 'ma-hou-pao', 'men-gong']);
+    // Zero counts are hidden; any count above zero shows outside the patterns.
+    expect(cards(groups[1]!)).toEqual(['matein1', 'matein2', 'matein3']);
+    expect(cards(groups[2]!)).toEqual(['opening', 'middlegame', 'endgame']);
+    expect(cards(groups[3]!)).toEqual(['checkmate', 'winning']);
+    expect(cards(groups[4]!)).toEqual(['one-move', 'short', 'long']);
+    const mateIn1 = root.querySelector<HTMLAnchorElement>('a[href="/puzzles?theme=matein1"]');
+    expect(mateIn1?.querySelector('h3')?.textContent).toBe('Mate in 1 40');
+    expect(root.querySelector('[data-puzzle-theme-card="endgame"]')?.textContent).toContain(
+      '14 or fewer pieces',
+    );
+    // English copy assumes no Chinese: a mate pattern reads in English only,
+    // with no hanzi or pinyin line under it.
+    const menGong = root.querySelector<HTMLElement>('[data-puzzle-theme-card="men-gong"]');
+    expect(menGong?.querySelector('h3')?.textContent).toContain('Sealed palace');
+    expect(menGong?.querySelector('.puzzle-theme-name')).toBeNull();
+    expect(menGong?.textContent).not.toMatch(/[\u3400-\u9fff]/);
+    // A pattern with no art of its own wears its group's line icon, never nothing.
+    const fallback = menGong?.querySelector<HTMLElement>('.puzzle-theme-icon');
+    expect(fallback?.dataset.iconTheme).toBeUndefined();
+    expect(fallback?.querySelector('svg path')).not.toBeNull();
+
+    // Recommended comes first: one row training on everything, counted as
+    // the corpus (each puzzle has one phase: 5 + 70 + 30).
+    const recommended = root.querySelector<HTMLElement>('[data-puzzle-theme-recommended]');
+    expect(recommended?.compareDocumentPosition(groups[0]!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(recommended?.querySelector('h2')?.textContent).toBe('Recommended');
+    const mix = recommended?.querySelectorAll<HTMLAnchorElement>('a') ?? [];
+    expect([...mix].map((a) => a.getAttribute('href'))).toEqual(['/puzzles?theme=']);
+    expect(mix[0]?.querySelector('h3')?.textContent).toBe('Healthy mix 105');
+    expect(mix[0]?.querySelector('.puzzle-theme-description')?.textContent).toContain(
+      'Every theme shuffled together',
+    );
+
+    // The sidebar is the Puzzles menu, this page current.
+    const side = root.querySelector<HTMLElement>('.puzzle-themes-side');
+    expect(
+      [...(side?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map((a) => [
+        a.getAttribute('href'),
+        a.textContent,
+        a.getAttribute('aria-current'),
+      ]),
+    ).toEqual([
+      ['/puzzles', 'Puzzles', null],
+      ['/puzzles/themes', 'Puzzle Themes', 'page'],
+      ['/puzzles?mode=streak', 'Puzzle Streak', null],
+    ]);
+  });
+
+  it('drills any tag, not only patterns, from the URL and the grouped picker', async () => {
+    const puzzles = XIANGQI_PUZZLES.slice(0, 3);
+    const summaries = puzzles.map((puzzle, index) => ({
+      ...publicSummary(puzzle),
+      tags: index === 1 ? ['matein2', 'middlegame', 'checkmate', 'short'] : ['endgame'],
+    }));
+    window.history.replaceState(null, '', '/puzzles?theme=matein2');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles')
+          return json({
+            puzzles: summaries,
+            themes: themeOptions,
+            tagCounts: { 'ma-hou-pao': 24, matein2: 1, middlegame: 1, endgame: 2, short: 1 },
+          });
+        const index = puzzles.findIndex((puzzle) => url === `/api/puzzles/${puzzle.id}`);
+        return index >= 0
+          ? json({ puzzle: { ...publicDetail(puzzles[index]!), ...summaries[index] } })
+          : json({}, 404);
+      }),
+    );
+    stubWindowLocalStorage(memoryStorage());
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    await vi.waitFor(() => expect(root.textContent).toContain('0 solved of 1'));
+    const picker = root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')!;
+    expect(picker.value).toBe('matein2');
+    expect([...picker.querySelectorAll('optgroup')].map((g) => g.label)).toEqual([
+      'Mate patterns',
+      'Mates',
+      'Phases',
+      'Lengths',
+    ]);
+    expect(
+      [...picker.querySelectorAll<HTMLOptionElement>('optgroup option')].map((o) => o.value),
+    ).toEqual(['ma-hou-pao', 'matein2', 'middlegame', 'endgame', 'short']);
+    picker.value = 'endgame';
+    picker.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(root.textContent).toContain('0 solved of 2'));
+    expect(loadPuzzleTheme()).toBe('endgame');
+  });
+
+  it('honors a theme URL over storage and offers recovery from an empty theme', async () => {
+    stubWindowLocalStorage(memoryStorage({ 'mistboard:puzzles:theme': 'ma-hou-pao' }));
+    window.history.replaceState(null, '', '/puzzles?theme=men-gong');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input) === '/api/puzzles'
+          ? json({
+              puzzles: [{ ...publicSummary(RED_MATE), motifs: ['ma-hou-pao'] }],
+              themes: themeOptions,
+            })
+          : json({ puzzle: publicDetail(RED_MATE) }),
+      ),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    expect(root.querySelector('.puzzle-detail')?.textContent).toContain(
+      'No puzzles for this theme',
+    );
+    expect(root.querySelector('.puzzle-detail a[href="/puzzles?theme="]')).not.toBeNull();
+    expect(root.querySelector('[data-square]')).toBeNull();
+    window.history.replaceState(null, '', '/puzzles');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    await vi.waitFor(() => expect(root.querySelector('[data-square]')).not.toBeNull());
+    expect(root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe('');
+    expect(loadPuzzleTheme()).toBe('men-gong');
+  });
+
+  it('opens a direct puzzle link without erasing the saved theme and ignores invalid stored ids', async () => {
+    stubWindowLocalStorage(memoryStorage({ 'mistboard:puzzles:theme': 'ma-hou-pao' }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input) === '/api/puzzles'
+          ? json({ puzzles: [{ ...publicSummary(RED_MATE), motifs: [] }], themes: themeOptions })
+          : json({ puzzle: publicDetail(RED_MATE) }),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, RED_MATE.id);
+    expect(root.querySelector('[data-square]')).not.toBeNull();
+    expect(root.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe('');
+    expect(loadPuzzleTheme()).toBe('ma-hou-pao');
+    window.history.replaceState(null, '', '/puzzles');
+    const reopened = document.createElement('div');
+    await mountPuzzles(reopened);
+    expect(reopened.querySelector<HTMLSelectElement>('[data-puzzle-theme]')?.value).toBe(
+      'ma-hou-pao',
+    );
+    window.localStorage.setItem('mistboard:puzzles:theme', 'toString');
+    expect(loadPuzzleTheme()).toBeNull();
+    stubWindowLocalStorage({
+      getItem: () => {
+        throw new Error('blocked');
+      },
+    } as unknown as Storage);
+    expect(loadPuzzleTheme()).toBeNull();
+  });
+
+  it('offers the theme picker in the phone menu using the same callback', async () => {
+    const onChange = vi.fn(async () => {});
+    const rows = puzzlePhoneMenuRows({
+      queue: [],
+      selectedId: null,
+      solvedIds: new Set(),
+      variantFilter: 'xiangqi',
+      variantFilters: ['xiangqi'],
+      autoNext: false,
+      ratedEnabled: true,
+      userRating: null,
+      ratingDelta: null,
+      onVariantChange: vi.fn(),
+      onAutoNextChange: vi.fn(),
+      onRatedChange: vi.fn(),
+      theme: { id: null, options: { motifs: themeOptions, tagCounts: {} }, onChange },
+    });
+    const field = rows.find((row) => row.dataset.puzzleMenuRow === 'theme')!;
+    const select = field.querySelector<HTMLSelectElement>('[data-puzzle-menu="theme"]')!;
+    select.value = 'ma-hou-pao';
+    select.dispatchEvent(new Event('change'));
+    expect(onChange).toHaveBeenCalledWith('ma-hou-pao');
+    expect(rows.some((row) => row.querySelector('a[href="/puzzles/themes"]'))).toBe(true);
+  });
   const movesOf = (init?: RequestInit): XiangqiMove[] =>
     (JSON.parse(String(init?.body)) as { moves: XiangqiMove[] }).moves;
   const clickSquares = (root: HTMLElement, move: XiangqiMove): void => {
@@ -213,6 +643,72 @@ describe('puzzles route', () => {
     expect(rule('.puzzle-side-panel--analysis')).toMatch(
       /max-height: var\(--puzzle-board-height, var\(--puzzle-surface-size\)\)/,
     );
+  });
+
+  it("puts the board's inset on the detail, where the session row under the board reads it", async () => {
+    const puzzle = RED_MATE;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url === '/api/puzzles') return json({ puzzles: [publicSummary(puzzle)] });
+        if (url === `/api/puzzles/${puzzle.id}`) return json({ puzzle: publicDetail(puzzle) });
+        return json({ error: 'not_found' }, 404);
+      }),
+    );
+    // A shrunk board centred in a wider column (1920x1080 at scale 0.6,
+    // measured): the 465px board sat 26px in from its 516px column, and the
+    // session row, a sibling of the column, started in that gutter.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      const painted = this.classList.contains('puzzle-xiangqi-board');
+      return new DOMRect(0, 0, painted ? 465 : 516, 516);
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle.id);
+
+    const detail = root.querySelector<HTMLElement>('.puzzle-detail');
+    await vi.waitFor(() =>
+      expect(detail?.style.getPropertyValue('--puzzle-board-inset')).toBe('26px'),
+    );
+    expect(detail?.querySelector('.puzzle-session-chips')).not.toBeNull();
+  });
+
+  describe('desktop columns around the board', () => {
+    const css = readFileSync(
+      ['src/puzzles.css', 'apps/web/src/puzzles.css'].find((path) => existsSync(path))!,
+      'utf8',
+    );
+    const rule = (selector: string): string =>
+      css.match(new RegExp(`(?<!,)\\n${selector.replace(/[.()-]/g, '\\$&')} \\{([^}]*)\\}`))?.[1] ??
+      '';
+
+    it('lets the left column keep its natural height instead of the board height', () => {
+      // Tied to the board, a shrunk board made the column scroll inside itself,
+      // and its last card pinned to the board's bottom left a blank gap above it.
+      expect(css).not.toMatch(/\.puzzles-sidebar \{[^}]*height: var\(--puzzle-board-height/);
+      expect(css).not.toMatch(/\.puzzles-sidebar > :last-child \{[^}]*margin-top: auto/);
+      // It spans the session row's line too, so that row stays under the board.
+      expect(css).toMatch(/\.puzzles-sidebar \{\s*grid-row: 1 \/ span 2;/);
+      expect(css).toMatch(/\.puzzles-layout \{\s*grid-template-rows: auto minmax\(0, 1fr\);/);
+    });
+
+    it("sizes the board column to the 9x10 board's drawn width", () => {
+      expect(rule('.puzzles-layout')).toMatch(
+        /minmax\(min\(420px, var\(--puzzle-board-track\)\), var\(--puzzle-board-track\)\)/,
+      );
+      expect(rule('.puzzles-layout:has(.puzzle-xiangqi-board)')).toContain(
+        'calc(var(--puzzle-surface-size) * 552 / 612)',
+      );
+    });
+
+    it('keeps the move nav as plain arrows, not boxed buttons', () => {
+      expect(rule('.puzzle-actions')).toContain('grid-template-columns: repeat(4, 48px);');
+      expect(rule('.puzzle-button')).toMatch(/border: 0;[\s\S]*background: transparent;/);
+    });
   });
 
   it('merges the practice note into the puzzle rating card', async () => {
@@ -692,6 +1188,39 @@ describe('standard xiangqi puzzles', () => {
     expect(root.querySelectorAll('[data-square]').length).toBe(90);
   });
 
+  it('a reload past a finished puzzle opens the next unseen one; a link still opens it', async () => {
+    // Every Next pushes /puzzles/<id>, so a reload lands on the last puzzle
+    // opened. Solving it and reloading used to serve the solved puzzle again.
+    const [done, fresh] = [XIANGQI_PUZZLES[0]!, XIANGQI_PUZZLES[1]!];
+    const mountAt = async (navigationType: NavigationTimingType) => {
+      stubWindowLocalStorage(
+        memoryStorage({
+          'mistboard:puzzles:solved': JSON.stringify([done.id]),
+          'mistboard:puzzles:seen': JSON.stringify({ [done.id]: Date.now() }),
+        }),
+      );
+      vi.spyOn(performance, 'getEntriesByType').mockReturnValue([
+        { type: navigationType } as PerformanceNavigationTiming,
+      ]);
+      resetPuzzleReloadCheckForTest();
+      window.history.replaceState(null, '', `/puzzles/${done.id}`);
+      const fetchSpy = xiangqiFetchMock([done, fresh]);
+      vi.stubGlobal('fetch', fetchSpy);
+      await mountPuzzles(document.createElement('div'), done.id);
+      return fetchSpy;
+    };
+
+    const reloaded = await mountAt('reload');
+    expect(reloaded).toHaveBeenCalledWith(`/api/puzzles/${fresh.id}`);
+    expect(reloaded).not.toHaveBeenCalledWith(`/api/puzzles/${done.id}`);
+    expect(window.location.pathname).toBe(`/puzzles/${fresh.id}`);
+
+    // A shared or bookmarked link is not a reload: it opens what it names.
+    const linked = await mountAt('navigate');
+    expect(linked).toHaveBeenCalledWith(`/api/puzzles/${done.id}`);
+    expect(window.location.pathname).toBe(`/puzzles/${done.id}`);
+  });
+
   it('paints a standard puzzle with the saved xiangqi piece set', async () => {
     stubWindowLocalStorage(
       memoryStorage({
@@ -755,7 +1284,7 @@ describe('standard xiangqi puzzles', () => {
     );
   });
 
-  it('names the kill pattern in the themes card once a mate puzzle is solved', async () => {
+  it('names the kill pattern in the info card once a mate puzzle is solved', async () => {
     const puzzle = XIANGQI_PUZZLES.find(
       (candidate) =>
         candidate.goal.type === 'checkmate' && detectXiangqiPuzzleMotifs(candidate).length > 0,
@@ -769,15 +1298,49 @@ describe('standard xiangqi puzzles', () => {
     await mountPuzzles(root, puzzle!.id);
     // Spoiler-gated: the pattern names the mate, so it stays hidden until solved.
     expect(root.querySelector('.puzzle-tag-motif')).toBeNull();
+    // The themes are the info card's last row, not a card of their own; the
+    // left column is info, rating, then one settings card.
+    const sidebarCards = () =>
+      [...root.querySelectorAll<HTMLElement>('.puzzle-left-card')].map((card) =>
+        [...card.classList].find((name) => name !== 'puzzle-left-card'),
+      );
+    expect(sidebarCards()).toEqual([
+      'puzzle-current-card',
+      'puzzle-rating-card',
+      'puzzle-settings-card',
+    ]);
+    const hiddenRow = root.querySelector<HTMLElement>(
+      '.puzzle-info-card [data-puzzle-info-themes]',
+    );
+    expect(hiddenRow?.dataset.puzzleInfoThemes).toBe('hidden');
+    expect(hiddenRow?.textContent).toBe('Puzzle themesRevealed after you solve it.');
+    const settings = root.querySelector<HTMLElement>('.puzzle-settings-card');
+    expect(settings?.querySelector('[data-puzzle-auto-next]')).not.toBeNull();
+    // Muted like the page's other small links (sign-in, practice), whose
+    // shared rule in puzzles.css also names .puzzle-quiet-link.
+    expect(settings?.querySelector('a[href="/puzzles/themes"]')?.className).toBe(
+      'puzzle-quiet-link',
+    );
     for (const move of solverMovesOf(puzzle!)) {
       clickMove(root, move);
       await vi.waitFor(() => expect(root.textContent).toMatch(/Correct\.|Success!/));
     }
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
-    const chip = root.querySelector<HTMLElement>('.puzzle-tag-motif');
-    expect(chip?.textContent).toBe(`${motif.hanzi} ${motif.label}`);
-    expect(chip?.title).toBe(motif.pinyin);
+    const shownRow = root.querySelector<HTMLElement>('.puzzle-info-card [data-puzzle-info-themes]');
+    expect(shownRow?.dataset.puzzleInfoThemes).toBe('shown');
+    expect(shownRow?.textContent).not.toContain('Revealed after you solve it.');
+    const chip = shownRow?.querySelector<HTMLElement>('.puzzle-tag-motif');
+    // English names only in en: no hanzi, no pinyin tooltip.
+    expect(chip?.textContent).toBe(motif.label);
+    expect(chip?.textContent).not.toMatch(/[\u3400-\u9fff]/);
+    expect(chip?.title).not.toBe(motif.pinyin);
+    // Theme tags read as names, never as the raw id ("Matein2").
+    const themeChips = [...root.querySelectorAll('.puzzle-tag:not(.puzzle-tag-motif)')].map(
+      (tag) => tag.textContent,
+    );
+    expect(themeChips.length).toBeGreaterThan(0);
+    for (const label of themeChips) expect(label).not.toMatch(/^Matein|^Winning-|-/);
   });
 
   it('glides ONLY the scripted opponent reply after a correct move, and reverses on a back-step', async () => {
@@ -836,6 +1399,122 @@ describe('standard xiangqi puzzles', () => {
 
     await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
     expect(root.textContent).toContain(moveLabel(puzzle.solution[1]!));
+  });
+
+  it('keeps a wrong try as a ✗ row, marks found moves ✓, and shows the rating once over', async () => {
+    const puzzle = minedByPlyCount(3);
+    const solver = solverMovesOf(puzzle);
+    const wrong = getStandardXiangqiLegalMoves(puzzle.initial).find(
+      (move) => !standardXiangqiPuzzleMoveEquals(move, puzzle.solution[0]!),
+    )!;
+    vi.stubGlobal('fetch', xiangqiFetchMock([puzzle]));
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle.id);
+    // The puzzle's own rating is a spoiler while it is in play.
+    expect(root.textContent).toContain('Rating: hidden');
+    // The session row holds only the puzzle in play, as the blue current chip.
+    const chipsBefore = root.querySelector('.puzzle-session-chips');
+    expect(chipsBefore?.querySelectorAll('.puzzle-streak-chip--current')).toHaveLength(1);
+
+    clickMove(root, wrong);
+    await vi.waitFor(() => expect(root.textContent).toContain('Try again'));
+    // The miss stays in the list after it is taken back, flashed on the board.
+    const variation = root.querySelector('.puzzle-move-variation');
+    expect(variation?.textContent).toContain(moveLabel(wrong));
+    expect(variation?.querySelector('.puzzle-move-cell--wrong')?.textContent).toContain('✗');
+    expect(root.querySelector('.puzzle-wrong-flash')).not.toBeNull();
+
+    clickMove(root, solver[0]!);
+    await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+    // The retry still lands, and the earlier miss is still listed.
+    expect(root.querySelector('.puzzle-move-variation')?.textContent).toContain(moveLabel(wrong));
+    clickMove(root, solver[1]!);
+    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+
+    // Only the solver's finds are ✓; the scripted reply is not.
+    const right = [...root.querySelectorAll('.puzzle-move-cell--right')].map((cell) =>
+      cell.textContent?.trim(),
+    );
+    expect(right).toEqual([`${moveLabel(solver[0]!)} ✓`, `${moveLabel(solver[1]!)} ✓`]);
+    // Over: the puzzle's rating is out.
+    expect(root.textContent).toContain('Rating: 1500');
+    // A miss on the way makes the session chip a failure.
+    const chips = [
+      ...root.querySelectorAll<HTMLElement>('.puzzle-session-chips .puzzle-streak-chip'),
+    ];
+    expect(chips.map((chip) => [chip.dataset.outcome, chip.textContent])).toEqual([
+      ['failed', '✗'],
+    ]);
+    expect(chips[0]?.getAttribute('aria-current')).toBe('step');
+  });
+
+  it('marks the revealed moves and records the reveal as a miss', async () => {
+    const puzzle = minedByPlyCount(3);
+    const base = xiangqiFetchMock([puzzle]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) =>
+        String(input) === `/api/puzzles/${puzzle.id}/reveal`
+          ? json({ solution: puzzle.solution })
+          : base(input, init),
+      ),
+    );
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle.id);
+    root.querySelector<HTMLButtonElement>('[data-puzzle-reveal]')?.click();
+
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.puzzle-move-cell--revealed')).toHaveLength(
+        puzzle.solution.length,
+      ),
+    );
+    expect(root.querySelector('.puzzle-move-cell--right')).toBeNull();
+    expect(root.textContent).toContain('Rating: 1500');
+    const chip = root.querySelector<HTMLElement>('.puzzle-session-chips .puzzle-streak-chip');
+    expect(chip?.dataset.outcome).toBe('failed');
+  });
+
+  it('adds a ✓ chip per solved puzzle and reopens a past one from its chip', async () => {
+    const threes = XIANGQI_PUZZLES.filter((puzzle) => puzzle.solution.length === 3);
+    const [first, second] = [threes[0]!, threes[1]!];
+    stubWindowLocalStorage(
+      memoryStorage({ 'mistboard:puzzles:seen': JSON.stringify({ [second.id]: 1 }) }),
+    );
+    vi.stubGlobal('fetch', xiangqiFetchMock([first, second]));
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, first.id);
+    for (const move of solverMovesOf(first)) {
+      clickMove(root, move);
+      await vi.waitFor(() => expect(root.textContent).toContain(moveLabel(move)));
+    }
+    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+    root.querySelector<HTMLButtonElement>('[data-puzzle-next]')?.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(second.id),
+    );
+
+    const row = root.querySelector('.puzzle-session-chips')!;
+    const past = row.querySelector<HTMLAnchorElement>('a.puzzle-streak-chip--solved');
+    expect(past?.textContent).toBe('✓');
+    expect(past?.getAttribute('href')).toBe(`/puzzles/${first.id}`);
+    expect(row.lastElementChild?.classList.contains('puzzle-streak-chip--current')).toBe(true);
+
+    past?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() =>
+      expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(first.id),
+    );
+    expect(window.location.pathname).toBe(`/puzzles/${first.id}`);
+    // Leaving the second puzzle untouched records nothing for it.
+    const outcomes = [
+      ...root.querySelectorAll<HTMLElement>('.puzzle-session-chips .puzzle-streak-chip'),
+    ].map((chip) => chip.dataset.outcome);
+    expect(outcomes).toEqual(['solved']);
   });
 
   it('advances to the next mined puzzle after a solve', async () => {
@@ -1049,6 +1728,168 @@ describe('standard xiangqi puzzles', () => {
       }
     });
   });
+
+  describe('source game history in the move list', () => {
+    // A short legal game; the puzzle starts at ply 4, so GAME[3] is the setup
+    // move, GAME[0..3) the history, and red solves with GAME[4..7).
+    const GAME: XiangqiMove[] = [
+      { from: 'h3', to: 'e3' },
+      { from: 'h10', to: 'g8' },
+      { from: 'h1', to: 'g3' },
+      { from: 'i10', to: 'h10' },
+      { from: 'i1', to: 'h1' },
+      { from: 'b10', to: 'c8' },
+      { from: 'h1', to: 'h7' },
+    ];
+    const HISTORY = GAME.slice(0, 3);
+    const SETUP = { ...GAME[3]!, captured: null };
+    const PUZZLE: XiangqiPuzzle = (() => {
+      let initial = createInitialXiangqiState('xq_hist');
+      for (const move of GAME.slice(0, 4)) initial = applyStandardXiangqiMove(initial, move);
+      return {
+        ...XIANGQI_PUZZLES[0]!,
+        id: 'xq_hist',
+        title: 'History puzzle',
+        initial,
+        solution: GAME.slice(4),
+        goal: { type: 'winning-advantage', winner: 'red' },
+        sourceGame: { gameId: 'hxq_src', ply: 4, event: 'Club' },
+      };
+    })();
+
+    const slotAt = (root: HTMLElement, square: string): Element | null =>
+      root.querySelector(`[data-piece-square="${square}"]`);
+    const control = (root: HTMLElement, key: string): HTMLButtonElement =>
+      root.querySelector<HTMLButtonElement>(`[data-${key}]`)!;
+    const cellTexts = (root: HTMLElement, selector: string): string[] =>
+      [...root.querySelectorAll(selector)].map((cell) => cell.textContent ?? '');
+
+    function historyFetchMock(withHistory: boolean) {
+      const base = xiangqiFetchMock([PUZZLE]);
+      return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input) === `/api/puzzles/${PUZZLE.id}`) {
+          return json({
+            puzzle: {
+              ...publicDetail(PUZZLE),
+              sourceGame: { ...PUZZLE.sourceGame, redName: 'R', blackName: 'B', hosted: true },
+              setupMove: SETUP,
+              ...(withHistory ? { history: HISTORY } : {}),
+            },
+          });
+        }
+        return base(input, init);
+      });
+    }
+
+    function animationOff(): void {
+      // No opening glide, so the board starts on the live puzzle position.
+      stubWindowLocalStorage(
+        memoryStorage({
+          [displayPreferenceStorageKey]: JSON.stringify({ pieceAnimation: 'none' }),
+        }),
+      );
+      window.dispatchEvent(new Event('mistboard:display-preferences-change'));
+    }
+
+    async function mountWithoutGlide(withHistory = true) {
+      animationOff();
+      const fetchSpy = historyFetchMock(withHistory);
+      vi.stubGlobal('fetch', fetchSpy);
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountPuzzles(root, PUZZLE.id);
+      return { root, fetchSpy };
+    }
+
+    afterEach(() => window.dispatchEvent(new Event('mistboard:display-preferences-change')));
+
+    it('lists the game moves first, muted and numbered as in the game', async () => {
+      const { root } = await mountWithoutGlide();
+      expect(cellTexts(root, '.puzzle-move-cell--history')).toEqual(HISTORY.map(moveLabel));
+      const rows = [...root.querySelectorAll('.puzzle-move-list .puzzle-move-item')].map((row) =>
+        [...row.children].map((cell) => cell.textContent),
+      );
+      // Row 2 ends on the setup move (black), which is not muted.
+      expect(rows.slice(0, 2)).toEqual([
+        ['1', 'h3-e3', 'h10-g8'],
+        ['2', 'h1-g3', 'i10-h10'],
+      ]);
+      const setup = root.querySelector('[data-view-ply="0"]');
+      expect(setup?.classList.contains('puzzle-move-cell--history')).toBe(false);
+      expect(setup?.classList.contains('puzzle-move-cell--active')).toBe(true);
+
+      clickMove(root, GAME[4]!);
+      await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+      // The solution continues the game's numbering, with its mark.
+      const third = root.querySelectorAll('.puzzle-move-list .puzzle-move-item')[2];
+      expect(third?.children[0]?.textContent).toBe('3');
+      expect(third?.children[1]?.textContent).toContain('i1-h1');
+      expect(third?.children[1]?.textContent).toContain('✓');
+    });
+
+    it('steps back through the game read-only and returns to the live position', async () => {
+      const { root, fetchSpy } = await mountWithoutGlide();
+      expect(control(root, 'puzzle-replay-first').disabled).toBe(false);
+
+      control(root, 'puzzle-replay-first').click();
+      // The game's opening position: the central cannon still on h3.
+      expect(slotAt(root, 'h3')).not.toBeNull();
+      expect(slotAt(root, 'e3')).toBeNull();
+      expect(control(root, 'puzzle-replay-first').disabled).toBe(true);
+      expect(root.querySelector('.puzzle-move-cell--active')).toBeNull();
+
+      control(root, 'puzzle-replay-next').click();
+      expect(slotAt(root, 'e3')).not.toBeNull();
+      expect(root.querySelector('.puzzle-move-cell--active')?.textContent).toBe('h3-e3');
+
+      // A click on a history move jumps there.
+      root.querySelector<HTMLElement>('[data-view-ply="-2"]')!.click();
+      expect(root.querySelector('.puzzle-move-cell--active')?.textContent).toBe('h10-g8');
+      expect(slotAt(root, 'g8')).not.toBeNull();
+      expect(slotAt(root, 'g3')).toBeNull();
+
+      // Off the live position the board takes no moves.
+      clickMove(root, GAME[4]!);
+      expect(fetchSpy).not.toHaveBeenCalledWith(
+        `/api/puzzles/${PUZZLE.id}/attempt`,
+        expect.anything(),
+      );
+
+      control(root, 'puzzle-replay-last').click();
+      expect(root.querySelector('.puzzle-move-cell--active')?.textContent).toBe('i10-h10');
+      clickMove(root, GAME[4]!);
+      await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+    });
+
+    it('links the info card to the game page at the puzzle move', async () => {
+      const { root } = await mountWithoutGlide();
+      const link = root.querySelector<HTMLAnchorElement>('.puzzle-source-link');
+      expect(link?.getAttribute('href')).toBe('/historical-xiangqi/game/hxq_src?ply=4');
+      expect(link?.textContent).toContain('From game');
+    });
+
+    it('keeps the setup move as the first position when the detail has no history', async () => {
+      const { root } = await mountWithoutGlide(false);
+      expect(root.querySelector('.puzzle-move-cell--history')).toBeNull();
+      expect(control(root, 'puzzle-replay-first').disabled).toBe(true);
+    });
+
+    it('leaves the embed solver without history', () => {
+      animationOff();
+      const host = document.createElement('div');
+      document.body.append(host);
+      const solver = mountPuzzleSolver(host, {
+        ...publicDetail(PUZZLE),
+        setupMove: SETUP,
+        history: HISTORY,
+      } as unknown as Parameters<typeof mountPuzzleSolver>[1]);
+      try {
+        expect(host.querySelector('.puzzle-move-cell--history')).toBeNull();
+      } finally {
+        solver.dispose();
+      }
+    });
+  });
 });
 
 function pointerEvent(type: string, clientX: number, clientY: number): MouseEvent {
@@ -1108,7 +1949,8 @@ describe('sourceGameLines', () => {
       },
     });
     expect(lines).toHaveLength(3);
-    expect(lines[0]?.textContent).toBe('From game · 2026 Team Championship (2026)');
+    // The event already names its year, so the year is not added again.
+    expect(lines[0]?.textContent).toBe('From game · 2026 Team Championship');
     expect(lines[1]?.textContent).toContain('Red Player');
     expect(lines[2]?.textContent).toContain('Black Player');
     // Draw shows ½ on both players.
@@ -1125,6 +1967,44 @@ describe('sourceGameLines', () => {
     expect(lines[2]?.querySelector('.puzzle-source-result')).toBeNull();
   });
 
+  it('adds the year only to an event name that does not say it', () => {
+    const header = (event: string | undefined) =>
+      sourceGameLines({
+        variant: XIANGQI_SPEC_ID,
+        sourceGame: { gameId: 'g', ply: 1, event, playedOn: '2025-11-08', redName: 'R' },
+      })[0]?.textContent;
+    expect(header('Guangdong Ten Tigers Match')).toBe(
+      'From game · Guangdong Ten Tigers Match (2025)',
+    );
+    expect(header('2025 Guangdong Ten Tigers Match')).toBe(
+      'From game · 2025 Guangdong Ten Tigers Match',
+    );
+    // No event an English reader can read: a plain description.
+    expect(header(undefined)).toBe('From a 2025 game');
+    expect(header('某某杯')).toBe('From a 2025 game');
+  });
+
+  it('shows the player without the team, the full string in the tooltip', () => {
+    const lines = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: {
+        gameId: 'g',
+        ply: 1,
+        redName: 'Li Xiaolong (Shaanxi Sports Bureau)',
+        blackName: 'Xu Tengfei',
+        result: '1-0',
+      },
+    });
+    const names = lines.map((line) =>
+      line.querySelector<HTMLElement>('.puzzle-source-player-name'),
+    );
+    expect(names[1]?.textContent).toBe('Li Xiaolong');
+    expect(names[1]?.title).toBe('Li Xiaolong (Shaanxi Sports Bureau)');
+    // No team, no tooltip.
+    expect(names[2]?.textContent).toBe('Xu Tengfei');
+    expect(names[2]?.title).toBe('');
+  });
+
   it('falls back to "From set <variant>" without attribution', () => {
     expect(sourceGameLines({ variant: 'jungle' }).map((l) => l.textContent)).toEqual([
       'From set Jungle Chess',
@@ -1135,6 +2015,99 @@ describe('sourceGameLines', () => {
         (l) => l.textContent,
       ),
     ).toEqual(['From set Xiangqi']);
+  });
+
+  it('credits a source that requires it with a link back to the original game (#712)', () => {
+    const lines = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: {
+        gameId: 'view_m_140041',
+        ply: 41,
+        redName: 'R',
+        blackName: 'B',
+        attribution: {
+          name: '东萍象棋网 (DPXQ)',
+          url: 'http://www.dpxq.com/hldcg/search/view_m_140041.html',
+        },
+      },
+    });
+    expect(lines).toHaveLength(4);
+    const link = lines[3]?.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('http://www.dpxq.com/hldcg/search/view_m_140041.html');
+    expect(link?.textContent).toBe('东萍象棋网 (DPXQ)');
+    expect(lines[3]?.textContent).toBe('Game courtesy of 东萍象棋网 (DPXQ)');
+    // A credit alone still renders the "From game" card, so the link shows.
+    const bare = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: {
+        gameId: 'g',
+        ply: 1,
+        attribution: { name: 'DPXQ', url: 'http://www.dpxq.com/a.html' },
+      },
+    });
+    expect(bare.map((l) => l.textContent)).toEqual(['From game', 'Game courtesy of DPXQ']);
+  });
+});
+
+describe('sourceGameLines locale', () => {
+  const CJK = /[\p{Script=Han}\u3000-\u303f\uff00-\uffef]/u;
+  const source = {
+    gameId: 'hxq_zh',
+    ply: 30,
+    event: '2026年全国象棋团体赛',
+    eventEn: '2026 National Xiangqi Team Championship',
+    playedOn: '2026-04-02',
+    result: '1-0',
+    redName: '山东省棋牌运动管理中心 黄蕾蕾',
+    redNameEn: 'Huang Leilei (Shandong Board Games Centre)',
+    blackName: '广东省二沙体育训练中心 时凤兰',
+    blackNameEn: 'Shi Fenglan (Guangdong Ersha Sports Training Centre)',
+  };
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('shows no Chinese in the players and event lines on an English page', () => {
+    window.history.replaceState(null, '', '/puzzles');
+    const lines = sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: source });
+    const text = lines.map((line) => line.textContent ?? '');
+    expect(text[0]).toBe('From game · 2026 National Xiangqi Team Championship');
+    expect(text[1]).toContain('Huang Leilei');
+    expect(text[1]).not.toContain('Shandong');
+    expect(text[2]).toContain('Shi Fenglan');
+    for (const line of text) expect(line).not.toMatch(CJK);
+  });
+
+  it('leaves out a Chinese string with no English form on an English page', () => {
+    window.history.replaceState(null, '', '/puzzles');
+    const lines = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: { gameId: 'g', ply: 1, event: '某某杯', redName: '张三', blackName: 'Li Si' },
+    });
+    expect(lines.map((line) => line.textContent ?? '')).toEqual(['From game', 'Red', 'Li Si']);
+  });
+
+  it('keeps the original Chinese on a Chinese page', () => {
+    window.history.replaceState(null, '', '/zh-hans/puzzles');
+    const lines = sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: source });
+    expect(lines[0]?.textContent).toContain('2026年全国象棋团体赛');
+    // The Chinese original puts the team first; the name shows, the team is
+    // in the tooltip.
+    const red = lines[1]?.querySelector<HTMLElement>('.puzzle-source-player-name');
+    expect(red?.textContent).toBe('黄蕾蕾');
+    expect(red?.title).toBe('山东省棋牌运动管理中心 黄蕾蕾');
+  });
+
+  it('strips the team from every archive name shape', () => {
+    expect(playerWithoutTeam('Xu Wei (Xinjiang Production Team)')).toBe('Xu Wei');
+    expect(playerWithoutTeam('徐伟（新疆）')).toBe('徐伟');
+    expect(playerWithoutTeam('四川 黎德玲')).toBe('黎德玲');
+    expect(playerWithoutTeam('北京棋院（北京市棋牌运动管理中心） 王禹博')).toBe('王禹博');
+    expect(playerWithoutTeam('金州 Son X Nguyen')).toBe('Son X Nguyen');
+    // Nothing to strip: a plain name, a Latin team word, a lone parenthetical.
+    expect(playerWithoutTeam('HTown David Nguyen')).toBe('HTown David Nguyen');
+    expect(playerWithoutTeam('许银川')).toBe('许银川');
+    expect(playerWithoutTeam('(Team)')).toBe('(Team)');
   });
 });
 

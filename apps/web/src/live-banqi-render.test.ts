@@ -102,7 +102,7 @@ describe('renderBanqiBoardSvg', () => {
     }
   });
 
-  it('marks a flip as a single bordered cell', () => {
+  it('marks a flip as one cell in a move\u2019s destination tint, no border', () => {
     const svg = renderBanqiBoardSvg(
       { ...view, ply: 5, lastMove: { from: 'a1', to: 'a1' } } as never,
       'red',
@@ -112,17 +112,16 @@ describe('renderBanqiBoardSvg', () => {
     // A flip is a self-move: one cell, and never an origin wash to go with it.
     expect(rects).toHaveLength(1);
     expect(rects[0]?.cls).toContain('banqi-lastmove-flip');
+    expect(rects[0]?.cls).toContain('banqi-lastmove-to');
     expect(svg).not.toContain('banqi-lastmove-from');
 
-    // A move's tint fills its cell edge to edge, but the flip's rect must be
-    // strictly smaller: its border straddles the rect edge, so an un-inset flip
-    // would paint the outer half of that stroke into the neighbouring cell.
-    const [from, to] = lastMoveRects(
+    // One flat shade (Brian, 2026-10-28): the flip fills its whole cell like a
+    // move's destination, and no rule gives it a stroke.
+    const [, to] = lastMoveRects(
       renderBanqiBoardSvg({ ...view, ply: 5, lastMove: { from: 'a1', to: 'b1' } } as never, 'red'),
     );
-    const cell = (to?.x ?? 0) - (from?.x ?? 0); // one-step move => centres one cell apart
-    expect(cell).toBeGreaterThan(0);
-    expect(rects[0]?.w).toBeLessThan(cell);
+    expect(rects[0]?.w).toBe(to?.w);
+    expect(BANQI_BOARD_CSS).not.toMatch(/banqi-lastmove-flip[^{]*\{[^}]*stroke/);
   });
 
   it('colours the mark with the mover\u2019s ink, not the ink a flip revealed', () => {
@@ -271,7 +270,7 @@ describe('banqi piece look', () => {
     }
   });
 
-  it('draws face-down backs as discs of the face-up outer size', () => {
+  it('draws flat face-down backs as discs of the face-up outer size', () => {
     const r = banqiFaceDownRadius(BANQI_PIECE_PX);
     // The back's 2-unit stroke puts its outer edge at r + 1.
     expect(r + 1).toBeCloseTo((BANQI_PIECE_PX * XIANGQI_PIECE_OUTLINE_SHARE) / 2, 1);
@@ -289,7 +288,10 @@ describe('banqi piece look', () => {
       firstColor: 'red',
       moveNumber: 1,
     };
-    const svg = renderBanqiBoardSvg(view as never, 'red', { pieceSet: 'international' });
+    const svg = renderBanqiBoardSvg(view as never, 'red', {
+      pieceSet: 'international',
+      tile3d: false,
+    });
     expect(svg).toContain(`r="${r}"`);
     expect(svg).not.toContain('<rect x="4" y="4" width="92" height="92" rx="14"');
   });

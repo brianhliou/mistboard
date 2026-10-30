@@ -61,12 +61,12 @@
       "sha": "cc414aa9c16a549d"
     },
     "xiangqi/lacquer": {
-      "version": 2,
-      "sha": "f0f19140a295f798"
+      "version": 3,
+      "sha": "327f29956c86ce6c"
     },
     "xiangqi/lacquer/tile": {
-      "version": 2,
-      "sha": "82adb9abb464cb98"
+      "version": 3,
+      "sha": "67f787a5a383d177"
     },
     "xiangqi/wood": {
       "version": 1,

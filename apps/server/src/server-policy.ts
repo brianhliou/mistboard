@@ -141,7 +141,13 @@ export type LiveObservePolicy = 'open' | 'masked' | 'sealed';
 // Explicit and exhaustive over the hidden-identity specs: a new one fails
 // hiddenIdentityLiveObservePolicy's key check in watch-live.test.ts until it is
 // classified here, and an unclassified spec falls through to 'masked'.
-const SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = ['banqi', 'jungle-flip'] as const;
+// Three Kingdoms banqi (#628, hidden playtest) serves a spectator the red seat's
+// masked board, the same for both seats (three-kingdoms-banqi-hidden-info.test.ts).
+const SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = [
+  'banqi',
+  'jungle-flip',
+  'three-kingdoms-banqi',
+] as const;
 const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS_WITH_PUBLIC_VIEW = ['jieqi'] as const;
 
 export const HIDDEN_IDENTITY_LIVE_OBSERVE: Readonly<Record<string, LiveObservePolicy>> = {
@@ -295,6 +301,20 @@ export function legacyPageRedirect(pathname: string): string | null {
   // (#605); the players merged into /players/teams/taiwan.
   if (normalized === '/players/teams/chinese-taipei') return '/players/teams/taiwan';
   return null;
+}
+
+// Puzzles have one URL in every language: the trainer is translated by the
+// stored locale, not a path prefix. A /zh-hans/puzzles or /zh-hant/puzzles link
+// (hand-typed, or guessed from the rules and blog pages that do have one) used
+// to land on the 404 shell; it hops to the same page without the prefix and
+// carries the language as ?lang=, which the client stores and then drops.
+export function localePuzzlesRedirect(pathname: string, search: string): string | null {
+  const match = /^\/(zh-hans|zh-hant)(\/puzzles(?:\/[^?#]*)?)$/i.exec(pathname);
+  if (!match) return null;
+  const rest = match[2]!.replace(/\/+$/, '');
+  const params = new URLSearchParams(search);
+  params.set('lang', match[1]!.toLowerCase());
+  return `${rest}?${params.toString()}`;
 }
 
 // The games database's filter links carried their query on /games for three

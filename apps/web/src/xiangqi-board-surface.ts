@@ -29,7 +29,7 @@ import {
 import {
   XIANGQI_RIVER_BRAND_TEXT,
   XIANGQI_RIVER_BRAND_TRACKING,
-  XIANGQI_RIVER_CLASSIC_TEXT,
+  xiangqiRiverCharacters,
 } from './xiangqi-river-text.js';
 
 /** A palace, in 1-indexed board coordinates (inclusive on both ends). */
@@ -145,8 +145,8 @@ function cellGrid(cfg: XiangqiSurfaceConfig): string {
       );
     }
   }
-  // Only internal boundaries are stroked. The first/last cells meet the SVG
-  // viewBox edge directly, so the square layout has no enclosing hairline.
+  // Only internal boundaries are stroked. Without coordinates the first/last
+  // cells run to the viewBox edge; with them, cellRim draws the frame.
   for (let boundary = 1; boundary < rankCount; boundary++) {
     if (boundary === half) continue;
     const y = top + boundary * cell + (boundary > half ? riverGap : 0);
@@ -352,7 +352,8 @@ export function xiangqiSurfaceRiver(
   const y = riverTop + cell / 2;
   const x = margin + ((fileCount - 1) / 2) * cell;
   // Both captions; CSS shows the chosen one (xiangqi-board-surface.css). The
-  // brand is set larger than the hanzi, since Latin letters stand shorter in
+  // inscription is four characters spread along the river
+  // (xiangqiRiverCharacters). The brand is set larger than the hanzi, since Latin letters stand shorter in
   // their em; the shift re-centres its trailing letter-spacing
   // (XIANGQI_RIVER_BRAND_TRACKING). A board drawn at another cell size scales
   // both through --xq-river-scale, so the caption fills its river the same way.
@@ -360,7 +361,7 @@ export function xiangqiSurfaceRiver(
   const scaleAttr = scale === 1 ? '' : ` style="--xq-river-scale: ${scale}"`;
   const brandX = round(x + (BRAND_FONT_SIZE * scale * XIANGQI_RIVER_BRAND_TRACKING) / 2);
   return `
-    <text class="xq-live-river-label"${scaleAttr} x="${x}" y="${y + 1}">${XIANGQI_RIVER_CLASSIC_TEXT}</text>
+    ${xiangqiRiverCharacters(x, y + 1, cell, `class="xq-live-river-label"${scaleAttr}`)}
     <text class="xq-live-river-brand"${scaleAttr} translate="no" x="${brandX}" y="${y + 1}">${XIANGQI_RIVER_BRAND_TEXT}</text>
   `;
 }
@@ -408,13 +409,17 @@ export function xiangqiSurfaceCoords(
   // plus whatever the margin leaves over: 21 units on the standard intersection
   // board where the gutter alone is 12. Sizing to the gutter made the labels
   // roughly half the size they had room for.
+  //
+  // The square grid instead frames its squares (cellRim), and the labels sit
+  // centred on that frame, so its band is the gutter itself.
+  const cell = layout === 'cell';
   const pieceTop = geo.margin - geo.cell * 0.45;
-  const band = pieceTop - vb.minY;
-  const size = Math.max(6, Math.round(band * 0.68));
+  const band = cell ? gutter : pieceTop - vb.minY;
+  const size = Math.max(6, Math.round(band * (cell ? 0.8 : 0.68)));
   const topY = vb.minY + band / 2;
   const bottomY = vb.minY + vb.height - band / 2;
 
-  const parts: string[] = [];
+  const parts: string[] = cell ? [cellRim(geo, vb)] : [];
   for (let file = 0; file < geo.fileCount; file += 1) {
     const x = xiangqiBoardPoint(file, 1, perspective, layout, geo).x;
     // The label nearest a player is that player's own numbering. Red sits at the
@@ -437,6 +442,30 @@ export function xiangqiSurfaceCoords(
     }
   }
   return parts.join('');
+}
+
+// SQUARE GRID RIM (2026-10-29, Brian: "the rim if possible. Add some kind of edge
+// and rim for coordinates"). The label gutter was the board's own colour, so an
+// edge piece looked short of the board's edge. Painted as a darker frame with an
+// ink line where the squares end, the squares read as the board and the gutter
+// as the frame the labels are printed on, the way the intersection board's outer
+// line separates its labels from the play area. Drawn with the labels, so a board
+// with coordinates off has no rim, and as a ring (evenodd), so it covers only the
+// gutter whatever layer order a renderer uses.
+function cellRim(
+  geo: XiangqiSurfaceConfig['geo'],
+  vb: { minX: number; minY: number; width: number; height: number },
+): string {
+  const left = geo.margin - geo.cell / 2;
+  const top = geo.margin - geo.cell / 2;
+  const width = geo.fileCount * geo.cell;
+  const height = geo.rankCount * geo.cell + geo.riverGap;
+  const outer = `M${vb.minX} ${vb.minY}h${vb.width}v${vb.height}h${-vb.width}Z`;
+  const inner = `M${left} ${top}h${width}v${height}h${-width}Z`;
+  return (
+    `<path class="xq-live-cell-rim" fill-rule="evenodd" d="${outer}${inner}"/>` +
+    `<rect class="xq-live-cell-frame" x="${left}" y="${top}" width="${width}" height="${height}"/>`
+  );
 }
 
 function label(x: number, y: number, text: string | undefined, size: number): string {

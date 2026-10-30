@@ -243,6 +243,7 @@ export const tangDanArticle: Article = {
   slug: "tang-dan",
   homeRow: "deep-dives",
   kind: 'article',
+  game: 'xiangqi',
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
   title: "Tang Dan 唐丹",

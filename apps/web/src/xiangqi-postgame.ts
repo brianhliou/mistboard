@@ -5,14 +5,12 @@
 
 import {
   type StandardXiangqiPlayerView,
-  standardXiangqiFen,
   XIANGQI_SPEC_ID,
   type XiangqiColor,
   type XiangqiMove,
 } from '@mistboard/game';
 import { reviewSeatProfiles } from './profile-link.js';
 import { reviewMoveClocks } from './review/move-clocks.js';
-import { analysisHref, editorHref } from './review/position-links.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import './game-shell.css';
 import './live-xiangqi.css';
@@ -159,6 +157,8 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     summary: `${status} · ${postgame.game.plyCount} plies`,
     metaCard,
     details,
+    // Phone: board, bar and a move strip; card, chart and chat in a sheet (#619).
+    phoneInfoSheet: true,
     // The tree reconstructs positions from the move list client-side (open info,
     // so it matches the server truth); the server per-ply snapshots are unused.
     moves,
@@ -175,8 +175,6 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     urlPly: true,
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
-    analyseFromHere: (truth) => analysisHref('xiangqi', standardXiangqiFen(truth)),
-    boardEditorHref: (truth) => editorHref('xiangqi', standardXiangqiFen(truth)),
     ...gameExportShareExtra('xiangqi', postgame.game.roomId),
     // "Study" in the review menu: one click turns the game you are looking at
     // into a private study you can annotate. Same path /analysis/xiangqi has
@@ -184,6 +182,7 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     studyExport: {
       variant: DEFAULT_STUDY_VARIANT,
       name: studyName(playerNames.red, playerNames.black),
+      label: t('review.newStudyFromGame'),
     },
     // Server Pikafish whole-game analysis, DB-cached: an already-analysed game
     // loads straight from cache on open (a GET that never computes). Requesting a

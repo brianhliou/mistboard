@@ -274,6 +274,7 @@ export const laiLyHuynhArticle: Article = {
   homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: "Lại Lý Huynh 赖理兄",
   seoTitle: "Lại Lý Huynh 赖理兄, the world xiangqi champion: games and analysis",
@@ -281,6 +282,8 @@ export const laiLyHuynhArticle: Article = {
   showSummaryOnPage: false,
   status: "published",
   publishedAt: "2026-10-02",
+  updatedAt: "2026-10-26",
+  updateNote: "Added a link to the Vietnam vs Guangdong match in the broadcast archive.",
   thumbnail: {
     kind: 'image',
     src: "/article-thumbs/lai-ly-huynh-2026-face.jpg",
@@ -414,6 +417,10 @@ export const laiLyHuynhArticle: Article = {
         {
           kind: 'paragraph',
           text: "\"Since I won the world championship, more people in Vietnam follow xiangqi,\" he said in Guangzhou, \"and more of them have started playing.\"",
+        },
+        {
+          kind: 'paragraph',
+          text: "In July he led Vietnam against Guangdong in Đà Nẵng, and the [1st Kim Long Motor Cup](/broadcast/xiangqi/2026-kim-long-motor-cup) is in the broadcast archive, from XQBase's game records.",
         },
       ],
     },

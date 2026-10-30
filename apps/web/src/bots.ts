@@ -26,6 +26,9 @@ type BotPlayOption = {
   gameSpecId: string;
   engineId: string;
   playable: boolean;
+  // The engine build this variant plays, from the server's pins
+  // (bot-engine-versions.ts); absent when none is recorded.
+  version?: string;
 };
 
 type BotRecord = {
@@ -137,18 +140,7 @@ export async function mountBots(root: HTMLElement): Promise<void> {
   );
   headerCopy.append(eyebrow, heading, sub, meta);
 
-  const markers = document.createElement('div');
-  markers.className = 'bots-directory-markers';
-  markers.setAttribute('aria-hidden', 'true');
-  for (const [gameSpecId, size] of [
-    ['dark-chess', 48],
-    ['xiangqi', 64],
-    ['banqi', 44],
-  ] as const) {
-    const marker = variantThumb(gameSpecId, size, 'bots-directory-marker');
-    if (marker) markers.append(marker);
-  }
-  header.append(headerCopy, markers);
+  header.append(headerCopy);
 
   const body = document.createElement('section');
   body.className = 'bots-directory';
@@ -196,15 +188,16 @@ export async function mountBotProfile(root: HTMLElement, botId: string): Promise
     bot = await fetchBotProfile(botId);
   } catch (err) {
     if (err instanceof BotNotFound) {
-      document.title = 'Bot not found · Mistboard';
-      shell.append(buildNotice('Bot not found', 'This bot profile is not public.'));
+      document.title = `${t('bots.notFoundTitle')} · Mistboard`;
+      shell.append(buildNotice(t('bots.notFoundTitle'), t('bots.notFoundBody')));
       return;
     }
-    shell.append(buildNotice('Bots unavailable', 'This bot profile could not load.'));
+    document.title = `${t('bots.unavailableTitle')} · Mistboard`;
+    shell.append(buildNotice(t('bots.unavailableTitle'), t('bots.profileLoadFailedBody')));
     return;
   }
 
-  document.title = `${bot.displayName} · Bot · Mistboard`;
+  document.title = t('bots.profileTitle', { name: bot.displayName });
 
   const options = playOptionsFor(bot);
   const primaryGameSpecId = primaryRating(bot)?.gameSpecId;
@@ -236,7 +229,7 @@ export async function mountBotProfile(root: HTMLElement, botId: string): Promise
   });
   const tabs = buildProfileTabsShell([
     {
-      label: 'Recent games',
+      label: t('bots.recentGames'),
       panel: games,
     },
   ]);
@@ -267,7 +260,8 @@ async function fetchBotProfile(botId: string): Promise<BotProfile> {
 // plays xiangqi (Pikafish) as the top rung. Each rung is named by its level,
 // shows its one xiangqi rating, and leads with "Play xiangqi"; the level a
 // first-timer is given (XIANGQI_FIRST_GAME_LEVEL) says "Start here". Bots that
-// do not play xiangqi (Misty) follow under Other games.
+// do not play xiangqi follow: Misty in a section of its own, since its card
+// lists every game it plays, then the rest under Other games.
 function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
   const system = bots.filter((bot) => bot.ownerType === 'system');
   const ladder = system
@@ -289,7 +283,9 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
     .filter((bot) => playsGame(bot, 'jieqi'))
     .sort((a, b) => jieqiTopRank(a.id) - jieqiTopRank(b.id));
   const jieqiStrongestId = jieqiTopRungs.at(-1)?.id;
-  const otherGames = others.filter((bot) => !playsGame(bot, 'xiangqi') && !playsGame(bot, 'jieqi'));
+  const nonLadder = others.filter((bot) => !playsGame(bot, 'xiangqi') && !playsGame(bot, 'jieqi'));
+  const misty = nonLadder.filter((bot) => bot.id === 'misty');
+  const otherGames = nonLadder.filter((bot) => bot.id !== 'misty');
   const community = bots.filter((bot) => bot.ownerType === 'user');
   const xiangqiCard = { ratingGameSpecId: 'xiangqi', primaryPlayGameSpecId: 'xiangqi' };
   const jieqiCard = { ratingGameSpecId: 'jieqi', primaryPlayGameSpecId: 'jieqi' };
@@ -300,7 +296,11 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
       intro: t('bots.ladderIntro'),
       rows: [
         ...worst.map((bot) =>
-          buildBotSummaryCard(bot, { ...xiangqiCard, subtitle: t('bots.firstParty') }),
+          buildBotSummaryCard(bot, {
+            ...xiangqiCard,
+            subtitle: t('bots.firstParty'),
+            bio: systemBotBio(bot),
+          }),
         ),
         ...ladder.map((bot) => {
           const level = ladderLevel(bot);
@@ -361,6 +361,13 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
         : [],
     },
     {
+      title: t('bots.mistyTitle'),
+      intro: t('bots.mistyIntro'),
+      rows: misty.map((bot) =>
+        buildBotSummaryCard(bot, { subtitle: t('bots.firstParty'), bio: systemBotBio(bot) }),
+      ),
+    },
+    {
       title: t('bots.otherTitle'),
       intro: t('bots.otherIntro'),
       rows: otherGames.map((bot) =>
@@ -376,9 +383,17 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
   return groups.filter((group) => group.rows.length > 0).map(buildRosterSection);
 }
 
-// A localized one-liner for the named system bots; any other keeps its stored
-// bio (undefined leaves the card's default in place).
+// Only system-owned prose gets a catalog overlay; community biographies stay
+// verbatim. Unknown system bots keep their stored bio as a fallback.
 function systemBotBio(bot: BotProfile): string | undefined {
+  if (bot.ownerType !== 'system') return undefined;
+  if (bot.id.startsWith(LADDER_BOT_ID_PREFIX)) {
+    return t('bots.fairyStockfishLevelBio', { level: ladderLevel(bot) });
+  }
+  if (bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX)) {
+    return t('bots.pikafishLevelBio', { level: ladderLevel(bot) });
+  }
+  if (bot.id === XIANGQI_WORST_BOT_ID) return t('bots.generalBlunderBio');
   if (bot.id === 'pikafish') return t('bots.pikafishBio');
   if (bot.id === 'ab-jchess') return t('bots.abJchessBio');
   if (bot.id === 'jqe') return t('bots.jqeBio');
@@ -408,16 +423,6 @@ export function botCredits(botId: string): BotCredit[] {
     { label: t('bots.katagoCreditKatago'), href: 'https://github.com/lightvector/KataGo' },
     { label: t('bots.katagoCreditNet'), href: 'https://github.com/lxsgx23/Dandelion-Chess' },
   ];
-}
-
-// The version a bot plays, for bots whose strength depends on which one it is:
-// match results and the ladder are against this version, not the engine in
-// general. jqe has no release numbers, so its network names it. Keep in step
-// with ab-jchess.ref and jqe.ref.
-export function botVersion(botId: string): string | undefined {
-  if (botId === 'jqe') return 'it014 (network)';
-  if (botId === 'ab-jchess') return '0.2d';
-  return undefined;
 }
 
 function buildBotCredits(credits: readonly BotCredit[]): HTMLElement {
@@ -490,12 +495,35 @@ function buildBotOverview(bot: BotProfile, gameSpecId: string): HTMLElement {
   const option =
     playOptionsFor(bot).find((candidate) => candidate.gameSpecId === gameSpecId) ??
     playOptionsFor(bot)[0];
-  return buildProfileOverviewShell({
+  const overview = buildProfileOverviewShell({
     identity: buildBotIdentity(bot, gameSpecId),
     actions: option ? buildBotPlayAction(bot, option) : null,
     primary: buildBotRatingSpotlight(bot, gameSpecId),
     side: buildBotSideInfo(bot, gameSpecId),
   });
+  const about = buildBotAbout(bot);
+  if (about) overview.querySelector('.profile-overview-top')?.after(about);
+  return overview;
+}
+
+// The bio and credits, at the page's width under the header. In the side column
+// they had a third of the card, and a long credit ran past its edge.
+function buildBotAbout(bot: BotProfile): HTMLElement | null {
+  // The roster card's localized bio, so the page and the card say the same thing
+  // in every locale; other bots keep their stored bio.
+  const bioText = systemBotBio(bot) ?? bot.bio;
+  const credits = botCredits(bot.id);
+  if (bioText.trim().length === 0 && credits.length === 0) return null;
+  const about = document.createElement('div');
+  about.className = 'bot-profile-about';
+  if (bioText.trim().length > 0) {
+    const bio = document.createElement('p');
+    bio.className = 'profile-side-line profile-side-bio';
+    bio.textContent = bioText;
+    about.append(bio);
+  }
+  if (credits.length > 0) about.append(buildBotCredits(credits));
+  return about;
 }
 
 function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
@@ -514,7 +542,9 @@ function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
   badge.textContent = t('watch.botBadge');
   const owner = document.createElement('span');
   owner.className = 'profile-role-badge profile-role-owner';
-  owner.textContent = bot.ownerType === 'system' ? 'First-party' : 'Community';
+  owner.textContent = t(
+    bot.ownerType === 'system' ? 'bots.firstPartyBadge' : 'bots.communityBadge',
+  );
   meta.append(badge, owner);
   identity.append(meta);
 
@@ -535,9 +565,9 @@ function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
   // measurement.
   const record = botRecordFor(bot, gameSpecId);
   counts.append(
-    buildBotCount(new Intl.NumberFormat().format(record.games), 'Games here'),
-    buildBotCount(recordLabel(record), 'Record here'),
-    buildBotCount(String(playOptionsFor(bot).length), 'Variants'),
+    buildBotCount(new Intl.NumberFormat().format(record.games), t('bots.gamesHere')),
+    buildBotCount(recordLabel(record), t('bots.recordHere')),
+    buildBotCount(String(playOptionsFor(bot).length), t('bots.variants')),
   );
   identity.append(counts);
   return identity;
@@ -563,12 +593,14 @@ function buildBotPlayAction(bot: BotProfile, option: BotPlayOption): HTMLElement
   button.type = 'button';
   button.className = option.playable ? 'landing-setup-start' : 'landing-setup-back';
   button.disabled = !option.playable;
-  button.textContent = option.playable ? `Play ${gameSpecLabel(option.gameSpecId)}` : 'Unavailable';
+  button.textContent = option.playable
+    ? t('bots.playVariant', { variant: gameSpecLabel(option.gameSpecId) })
+    : t('play.unavailable');
   if (option.playable) {
     bindBotPlayControl(
       button,
       () => ({ botId: bot.id, gameSpecId: option.gameSpecId, preferredColor: 'random' }),
-      { pendingLabel: 'Starting...', errorLabel: 'Try again' },
+      { pendingLabel: t('bots.starting'), errorLabel: t('setup.tryAgain') },
     );
   }
   actions.append(button);
@@ -604,7 +636,7 @@ function buildBotRatingSpotlight(bot: BotProfile, gameSpecId: string): HTMLEleme
   } else {
     value.textContent = '—';
     value.classList.add('profile-chart-value-empty');
-    detail.textContent = 'No published rating yet';
+    detail.textContent = t('bots.noPublishedRating');
   }
   headline.append(name, value, detail);
   head.append(headline);
@@ -618,13 +650,13 @@ function buildBotRatingSpotlight(bot: BotProfile, gameSpecId: string): HTMLEleme
   const playTitle = document.createElement('span');
   playTitle.className = 'bot-rating-spotlight-title';
   playTitle.textContent = option?.playable
-    ? `Play against ${bot.displayName}`
-    : 'Currently offline';
+    ? t('bots.playAgainst', { name: bot.displayName })
+    : t('bots.offline');
   const clock = document.createElement('span');
   clock.className = 'bot-rating-spotlight-clock';
   clock.textContent = option?.playable
-    ? `${timeControlLabel(bot.play.timeControl)} · random side`
-    : 'Not available right now';
+    ? t('bots.clockRandomSide', { control: timeControlLabel(bot.play.timeControl) })
+    : t('bots.notAvailable');
   playCopy.append(playTitle, clock);
   play.append(playCopy);
   section.append(head, play);
@@ -635,25 +667,17 @@ function buildBotSideInfo(bot: BotProfile, gameSpecId: string): HTMLElement {
   const side = document.createElement('aside');
   side.className = 'profile-overview-side';
 
-  // The roster card's localized bio, so the page and the card say the same thing in
-  // every locale; other bots keep their stored bio.
-  const bioText = systemBotBio(bot) ?? bot.bio;
-  if (bioText.trim().length > 0) {
-    const bio = document.createElement('p');
-    bio.className = 'profile-side-line profile-side-bio';
-    bio.textContent = bioText;
-    side.append(bio);
-  }
-  const credits = botCredits(bot.id);
-  if (credits.length > 0) side.append(buildBotCredits(credits));
-  const version = botVersion(bot.id);
-  if (version) side.append(buildBotSideStat('Version', version));
+  // The selected variant's engine build: Misty runs a different one per variant.
+  const version = playOptionsFor(bot).find(
+    (candidate) => candidate.gameSpecId === gameSpecId,
+  )?.version;
+  if (version) side.append(buildBotSideStat(t('bots.version'), version));
 
   const rating = botRatings(bot).find((candidate) => candidate.gameSpecId === gameSpecId);
-  if (rating) side.append(buildBotSideStat('Published rating', ratingLabel(rating)));
+  if (rating) side.append(buildBotSideStat(t('bots.publishedRating'), ratingLabel(rating)));
   // Sits directly under "Published rating", which is an engine-ladder number.
   // Same disambiguation as the header counts: say which population this counts.
-  side.append(buildBotSideStat('Record here', recordLabel(botRecordFor(bot, gameSpecId))));
+  side.append(buildBotSideStat(t('bots.recordHere'), recordLabel(botRecordFor(bot, gameSpecId))));
   // No engine id here: it is an internal name (jqe-jieqi, pikafish-jieqi-level-8), and
   // the credits above already say whose engine it is.
   return side;
@@ -681,14 +705,14 @@ function buildBotRatingsRail(
 
   const heading = document.createElement('h2');
   heading.className = 'profile-ratings-heading';
-  heading.textContent = 'Ratings';
+  heading.textContent = t('bots.ratings');
   section.append(heading);
 
   const options = playOptionsFor(bot);
   if (options.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'profile-ratings-empty';
-    empty.textContent = 'No published rating yet.';
+    empty.textContent = t('bots.noPublishedRating');
     section.append(empty);
     return section;
   }
@@ -745,8 +769,8 @@ function buildBotRatingRow(
   games.textContent = rating
     ? ratingSampleLabel(rating, { style: 'rail' })
     : option.playable
-      ? 'Unrated'
-      : 'Unavailable';
+      ? t('profile.unrated')
+      : t('play.unavailable');
 
   figures.append(value, games);
   meta.append(name, figures);
@@ -777,7 +801,7 @@ function buildRecentGames(bot: BotProfile, gameSpecId: string): HTMLElement {
     empty.className = 'landing-games-empty';
     // Names the variant: on a page with a variant selector, a bare "no games"
     // reads as "this bot has never played", which is a different claim.
-    empty.textContent = `No completed ${variantDisplayLabel(gameSpecId)} games yet.`;
+    empty.textContent = t('bots.noCompletedGames', { variant: variantDisplayLabel(gameSpecId) });
     section.append(empty);
     return section;
   }
@@ -936,9 +960,10 @@ function timeControlLabel(timeControl: BotProfile['play']['timeControl']): strin
   if (Number.isInteger(initialMinutes) && Number.isInteger(incrementSeconds)) {
     return `${initialMinutes}+${incrementSeconds}`;
   }
-  return `${Math.round(timeControl.initialMs / 1_000)}s + ${Math.round(
-    timeControl.incrementMs / 1_000,
-  )}s`;
+  return t('bots.timeControlSeconds', {
+    initial: Math.round(timeControl.initialMs / 1_000),
+    increment: Math.round(timeControl.incrementMs / 1_000),
+  });
 }
 
 function recordLabel(record: BotRecord): string {
@@ -950,7 +975,12 @@ function ratingLabel(rating: BotRatingSnapshot): string {
 }
 
 function timeClassLabel(timeClass: BotRatingSnapshot['timeClass']): string {
-  return timeClass[0].toUpperCase() + timeClass.slice(1);
+  const keys = {
+    bullet: 'live.timeClassBullet',
+    blitz: 'live.timeClassBlitz',
+    rapid: 'live.timeClassRapid',
+  } as const;
+  return t(keys[timeClass]);
 }
 
 /**
@@ -973,16 +1003,18 @@ function ratingSampleLabel(
   rating: BotRatingSnapshot,
   opts: { style: 'rail' | 'spotlight' },
 ): string {
-  const plural = rating.games === 1 ? 'game' : 'games';
   const spotlight = opts.style === 'spotlight';
   if (rating.source === 'eve-anchor') {
     // The rail row is a narrow fixed-width cell beside the number, so it takes
     // the bare sample; "Elo from ..." overflowed it into an ellipsis. The
     // spotlight has the room to say what the number is.
-    return spotlight
-      ? `Elo from ${rating.games} engine ${plural}`
-      : `${rating.games} engine ${plural}`;
+    const sample = t(rating.games === 1 ? 'bots.engineGameOne' : 'bots.engineGameMany', {
+      count: rating.games,
+    });
+    return spotlight ? t('bots.eloFromSample', { sample }) : sample;
   }
   const suffix = spotlight ? ` · ${timeClassLabel(rating.timeClass)}` : '';
-  return `${rating.games} rated ${plural}${suffix}`;
+  return `${t(rating.games === 1 ? 'profile.ratedGameOne' : 'profile.ratedGameMany', {
+    count: rating.games,
+  })}${suffix}`;
 }

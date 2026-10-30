@@ -11,7 +11,9 @@ import {
   buildArticlePage,
   buildArticlesIndex,
   buildHomeArticleCards,
+  buildRulesArticleRailEntries,
   buildRulesIndex,
+  HOME_ARTICLE_ROW_SIZE,
   renderArticleThumbnail,
   renderBlock,
 } from './articles.js';
@@ -141,9 +143,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The Xiangqi Mahjong how-to, a draft dated 2026-11-06 until its zh pages
-      // exist (DEV shows it early for review).
-      '/blog/how-to-play-xiangqi-mahjong',
+      // The board and piece settings showcase, scheduled for 2026-11-06
+      // (DEV shows it early for review).
+      '/blog/set-up-your-board',
       // The sixth player page, the ten-time national women's champion Tang Dan,
       // scheduled for 2026-11-06 (DEV shows it early for review).
       '/blog/tang-dan',
@@ -301,9 +303,55 @@ describe('article public listing gates', () => {
     expect(official.querySelectorAll('button')).toHaveLength(0);
     expect(official.textContent).not.toContain('All languages');
     expect(community.querySelector('.articles-index-card')).toBeNull();
-    expect(community.querySelector('.articles-index-empty')?.textContent).toBe(
-      'No community posts yet.',
-    );
+    // With no posts the view asks for contributors rather than reading as broken.
+    expect(community.querySelector('h1')?.textContent).toBe('Become a Mistboard contributor');
+    const pitch = community.querySelector<HTMLElement>('.articles-community-pitch');
+    expect(pitch).not.toBeNull();
+    expect(
+      [...community.querySelectorAll('.articles-community-pitch-benefits h3')].map(
+        (title) => title.textContent,
+      ),
+    ).toEqual([
+      'Read in three languages',
+      'Boards readers can play through',
+      'A place on the homepage',
+      'Your name and your links',
+    ]);
+    // Every column card links a live example post, so a retired slug fails here,
+    // and each shows that post's own card thumbnail.
+    const ideaCards = [
+      ...community.querySelectorAll<HTMLAnchorElement>('a.articles-community-pitch-idea'),
+    ];
+    expect(ideaCards.map((card) => card.getAttribute('href'))).toEqual([
+      '/blog/jieqi-bot-wins',
+      '/blog/jieqi-openings',
+      '/blog/yin-sheng',
+      '/blog/duck-xiangqi-strategy',
+    ]);
+    for (const card of ideaCards) {
+      expect(
+        card.querySelector('.articles-index-card-media .articles-index-card-thumb'),
+      ).not.toBeNull();
+      expect(card.querySelector('.articles-community-pitch-example')?.textContent).toMatch(
+        /^Example: /,
+      );
+    }
+    // No hand-drawn icons: the only SVG left is inside an example's thumbnail.
+    expect(community.querySelector('.articles-community-pitch-icon')).toBeNull();
+    for (const svg of pitch?.querySelectorAll('svg') ?? []) {
+      expect(svg.closest('.articles-index-card-thumb')).not.toBeNull();
+    }
+    expect(community.querySelectorAll('.articles-community-pitch-steps li')).toHaveLength(3);
+    const ctaLinks = [
+      ...community.querySelectorAll<HTMLAnchorElement>('.articles-community-pitch-cta a'),
+    ].map((link) => [link.textContent, link.getAttribute('href')]);
+    expect(ctaLinks).toEqual([
+      ['Apply to contribute', '/contact?about=/blog/community'],
+      ['Read the Mistboard blog', '/blog'],
+    ]);
+    // Nothing after the buttons.
+    expect(pitch?.lastElementChild?.classList.contains('articles-community-pitch-cta')).toBe(true);
+    expect(official.querySelector('.articles-community-pitch')).toBeNull();
   });
 
   it('filters community-authored posts out of the By Mistboard view', () => {
@@ -351,7 +399,7 @@ describe('article public listing gates', () => {
     vi.stubEnv('DEV', false);
 
     const home = buildHomeArticleCards(50, 'zh-Hant', NO_AGE_CUT);
-    expect(home?.getAttribute('aria-label')).toBe('最新動態');
+    expect(home?.getAttribute('aria-label')).toBe('網誌');
     expect(home?.querySelector('.landing-carousel-nav-prev')?.getAttribute('aria-label')).toBe(
       '上一篇文章',
     );
@@ -359,8 +407,9 @@ describe('article public listing gates', () => {
       '更多文章',
     );
     expect(home?.querySelector('a[href="/zh-hant/blog/misty"]')).not.toBeNull();
-    expect(home?.querySelector('a[href="/zh-hant/blog/mistybanqi"]')).not.toBeNull();
-    // An engineering post stays off the homepage in every language.
+    // An engineering post stays off the homepage in every language (MistyBanqi
+    // is one since 2026-10-28: it shows its Rust).
+    expect(home?.querySelector('a[href="/zh-hant/blog/mistybanqi"]')).toBeNull();
     expect(home?.querySelector('a[href="/zh-hant/blog/server-enforced-fog"]')).toBeNull();
 
     const page = buildArticlePage('banqi', 'zh-Hant');
@@ -419,7 +468,7 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
-      '/blog/how-to-play-xiangqi-mahjong',
+      '/blog/set-up-your-board',
       '/blog/shortest-stalemate-xiangqi',
       '/blog/banqi-chariot-endgame',
       '/blog/jqe',
@@ -447,8 +496,6 @@ describe('article public listing gates', () => {
       '/blog/puzzles-with-more-than-one-solution',
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
-      // Moved from brianhliou.com (2026-08-31) on 2026-10-16.
-      '/blog/jungle-den-term',
       '/blog/titled-players',
       '/blog/riverbank-cannon',
       '/blog/skill-vs-luck',
@@ -457,7 +504,6 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-06-27) on 2026-10-16.
       '/blog/dou-shou-qi-engine',
       '/blog/misty',
-      '/blog/mistybanqi',
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
@@ -485,36 +531,23 @@ describe('article public listing gates', () => {
     ]);
   });
 
-  it('keeps still-gated release announcements out of the homepage article widget by default', () => {
-    vi.stubEnv('DEV', false);
-
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.textContent).not.toContain('Reveal Chess is open for alpha play.');
-  });
-
-  it('keeps the rated xiangqi announcement out of the homepage article row', () => {
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.textContent).not.toContain('Rated xiangqi is live.');
-    expect(cards?.querySelector('.landing-announcement-card[href="/leaderboard"]')).toBeNull();
-  });
-
-  it('keeps the Secret in the Tangerine announcement out of the homepage article row', () => {
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.textContent).not.toContain('Secret in the Tangerine, both game volumes.');
-    expect(cards?.querySelector('.landing-announcement-card[href="/study/Dfi3NpRE"]')).toBeNull();
-  });
-
-  it('does not show the Banqi alpha announcement in the homepage article widget', () => {
-    vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_BANQI_ENABLED', 'true');
-
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-
-    expect(cards?.querySelector('.landing-announcement-card[href="/rules/banqi"]')).toBeNull();
-    expect(cards?.textContent).not.toContain('Banqi (半棋) is open for alpha play.');
+  it('makes "From the blog" articles only, with More linking the blog index', () => {
+    // Brian, 2026-10-26: announcements live in the News box, not this row.
+    const section = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE);
+    expect(section?.querySelector('.landing-row-label')?.textContent).toBe('From the blog');
+    expect(section?.querySelector('.landing-row-more')?.getAttribute('href')).toBe('/blog');
+    const cards = [...(section?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].filter(
+      (link) => !link.classList.contains('landing-row-more'),
+    );
+    // HOME_CARD_MIN (4) keeps the row full of articles through a quiet month.
+    expect(cards.length).toBeGreaterThanOrEqual(4);
+    for (const card of cards) {
+      expect(card.dataset.cardKind).toBe('article');
+      expect(card.getAttribute('href')).toMatch(/^\/blog\//);
+    }
+    const zh = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, 'zh-Hans');
+    expect(zh?.querySelector('.landing-row-label')?.textContent).toBe('博客');
+    expect(zh?.querySelector('.landing-row-more')?.getAttribute('href')).toBe('/zh-hans/blog');
   });
 
   it('keeps Banqi rules surfaces on the variant marker while the MistyBanqi thumbnail renders a full-board card', () => {
@@ -545,14 +578,11 @@ describe('article public listing gates', () => {
       rulesIndex.querySelector('a[href="/rules/banqi"] span[data-variant-marker-id="banqi"]'),
     ).not.toBeNull();
 
-    // ...while the MistyBanqi editorial card keeps the full-board thumbnail in
-    // the homepage row.
+    // ...while the MistyBanqi card keeps the full-board thumbnail on /blog
+    // (above). It is an engineering post since 2026-10-28, so it is off the
+    // homepage row.
     const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    expect(
-      home?.querySelector(
-        '.landing-article-card[href="/blog/mistybanqi"] svg g[data-banqi-thumbnail-layout="engine-full-board"]',
-      ),
-    ).not.toBeNull();
+    expect(home?.querySelector('.landing-article-card[href="/blog/mistybanqi"]')).toBeNull();
   });
 
   it('renders Misty with the generated thumbnail', () => {
@@ -647,6 +677,37 @@ describe('article public listing gates', () => {
   // playableOnMistboard is true for every rules article that exists, so the
   // badge appeared on all of them and distinguished nothing. If a genuinely
   // unplayable variant ever gets a rules page, mark THAT one, not all the rest.
+  // A variant without marker art used to fall back to its article's board
+  // thumbnail, a full board picture in a column of one-colour icons
+  // (three-kingdoms-banqi, 2026-10-24). It gets the question-mark placeholder.
+  it('gives every rules tile a marker, the placeholder when the variant has no art', () => {
+    const tiles = [...buildRulesIndex().querySelectorAll('.rules-landing-tile')];
+    expect(tiles.length).toBeGreaterThan(0);
+    for (const tile of tiles) {
+      const href = tile.getAttribute('href') ?? '';
+      expect(tile.querySelector('.variant-marker'), href).not.toBeNull();
+      expect(tile.querySelector('svg, img, .articles-thumb-board'), href).toBeNull();
+    }
+  });
+
+  // Three Kingdoms banqi became a game spec for the local playtest (#628), hidden
+  // like Xiangqi Mahjong, so its rules page follows the launch switch: reachable
+  // by URL, off the tiles and unindexed until the spec goes public.
+  it('keeps the three kingdoms banqi rules tile off while its spec is hidden', () => {
+    expect(rulesSlugPublicSurfaceEnabled('three-kingdoms-banqi')).toBe(false);
+    expect(
+      buildRulesIndex().querySelector('.rules-landing-tile[href="/rules/three-kingdoms-banqi"]'),
+    ).toBeNull();
+  });
+
+  it('sorts three kingdoms banqi right after banqi in the rules rail order', () => {
+    const rules = articles.filter((article) => article.kind === 'rules' && !article.sourceLang);
+    const slugs = buildRulesArticleRailEntries(rules).map((article) => article.slug);
+    const banqi = slugs.indexOf('banqi');
+    expect(banqi).toBeGreaterThanOrEqual(0);
+    expect(slugs[banqi + 1]).toBe('three-kingdoms-banqi');
+  });
+
   it('renders rules tiles as marker plus label, with no per-tile badge', () => {
     const index = buildRulesIndex();
     const tiles = [...index.querySelectorAll('.rules-landing-tile')];
@@ -949,7 +1010,7 @@ describe('rules variant sidebar', () => {
     expect(page.querySelector('.xq-piece-back-mark')).not.toBeNull();
     expect(page.innerHTML).toContain('fill="#2f7d62"');
     expect(page.innerHTML).toContain('fill="#a95f4a"');
-    expect(page.innerHTML).toContain('stroke="#553025"');
+    expect(page.innerHTML).toContain('stroke="#202427"');
     expect(page.innerHTML).not.toContain('fill="#286d55"');
     expect(page.innerHTML).not.toContain('stroke="#c8ead2"');
     expect(page.innerHTML).not.toContain('fill="#2563eb"');
@@ -962,6 +1023,24 @@ describe('rules variant sidebar', () => {
     expect(pageText).toContain('CAPTURED PIECE KNOWLEDGE');
     expect(pageText).toContain('RED KNOWS');
     expect(pageText).toContain('BLACK KNOWS');
+  });
+
+  it('bolds each Xiangqi Mahjong hand total in its caption', () => {
+    const page = buildArticlePage('xiangqi-mahjong-32');
+    const totals = [...page.querySelectorAll('.article-figure-caption strong')].map(
+      (el) => el.textContent,
+    );
+    expect(totals).toEqual([
+      '2 points',
+      '1 point',
+      '1 point',
+      '2 points',
+      '3 points',
+      '7 points',
+      '3 points',
+      '3 points',
+    ]);
+    expect(page.querySelector('.article-figure-caption')?.textContent).not.toContain('**');
   });
 
   it('renders Banqi diagrams and states the Mistboard cannon rule clearly', () => {
@@ -1098,6 +1177,83 @@ describe('blog post read-next footer', () => {
     }
   });
 
+  // Brian, 2026-10-28: zuo-wenjing ended on the fortress/atomic post and
+  // lai-ly-huynh on a jieqi post. A xiangqi deep dive's footer offers other
+  // xiangqi deep dives first, then other xiangqi player posts, and nothing else.
+  describe('xiangqi deep dives', () => {
+    const post = (slug: string) => {
+      const found = articles.find((a) => a.slug === slug);
+      return found?.kind === 'article' ? found : undefined;
+    };
+    const isXiangqiPlayerPost = (slug: string) =>
+      post(slug)?.game === 'xiangqi' && post(slug)?.topic !== 'engineering';
+    const isXiangqiDeepDive = (slug: string) =>
+      post(slug)?.homeRow === 'deep-dives' && isXiangqiPlayerPost(slug);
+    const onwardSlugs = (slug: string) =>
+      footerLinks(slug).map((href) => href.split('/').pop() ?? '');
+
+    it('offers only xiangqi posts, other deep dives first', () => {
+      vi.stubEnv('DEV', false);
+      const deepDives = publishedBlogSlugs().filter(isXiangqiDeepDive);
+      expect(deepDives).toEqual(expect.arrayContaining(['zuo-wenjing', 'lai-ly-huynh']));
+      for (const slug of deepDives) {
+        const onward = onwardSlugs(slug);
+        // A content-language page walks its own language's posts, which can hold
+        // fewer than three xiangqi posts; an English page always has three.
+        if (!post(slug)?.sourceLang) expect(onward, slug).toHaveLength(3);
+        expect(onward.length, slug).toBeGreaterThan(0);
+        expect(onward.filter(isXiangqiPlayerPost), slug).toEqual(onward);
+        // Deep dives lead: none follows a post that is not one.
+        const firstOther = onward.findIndex((s) => !isXiangqiDeepDive(s));
+        if (firstOther >= 0) {
+          expect(onward.slice(firstOther).filter(isXiangqiDeepDive), slug).toEqual([]);
+        }
+      }
+    });
+
+    it('fills from deep dives on the pages Brian reported', () => {
+      vi.stubEnv('DEV', false);
+      for (const slug of ['zuo-wenjing', 'lai-ly-huynh']) {
+        const onward = onwardSlugs(slug);
+        expect(onward, slug).toHaveLength(3);
+        expect(onward.filter(isXiangqiDeepDive), slug).toEqual(onward);
+      }
+    });
+
+    // The field is the only signal, so a deep dive that forgets it would fall
+    // back to the date ring's off-topic fill without a test noticing.
+    it('every deep dive names its game', () => {
+      const unmarked = articles
+        .filter((a) => a.kind === 'article' && a.homeRow === 'deep-dives')
+        .filter((a) => a.kind === 'article' && a.game === undefined)
+        .map((a) => a.slug);
+      expect(unmarked).toEqual([]);
+    });
+
+    // A post dated ahead is not offered before it goes live.
+    it('never offers a post that is not live yet', () => {
+      vi.stubEnv('DEV', false);
+      const scheduled = articles.filter(
+        (a) => a.kind === 'article' && a.game === 'xiangqi' && !articleIsLive(a),
+      );
+      for (const slug of publishedBlogSlugs().filter(isXiangqiDeepDive)) {
+        const onward = onwardSlugs(slug);
+        for (const a of scheduled) expect(onward, slug).not.toContain(a.slug);
+      }
+    });
+
+    // Every other post keeps the plain date ring: general-blunder-challenge's
+    // next-older neighbours are a deep dive and a variant post, offered as before.
+    it('leaves posts that are not deep dives on the date ring', () => {
+      vi.stubEnv('DEV', false);
+      expect(onwardSlugs('general-blunder-challenge')).toEqual([
+        'zuo-wenjing',
+        'fortress-and-atomic-xiangqi-on-hold',
+        'banqi-perpetual-chase',
+      ]);
+    });
+  });
+
   it('closes a blog post with three onward posts instead of nothing', () => {
     vi.stubEnv('DEV', false);
     const page = buildArticlePage('riverbank-cannon');
@@ -1178,14 +1334,21 @@ describe('blog post read-next footer', () => {
       // how many pages exist in that language. Three Vietnamese pages means two
       // onward links, not a broken footer: asserting a flat 3 here would force
       // the ring back to English and dead-end the reader it was built for.
+      // A xiangqi deep dive is likewise capped by how many xiangqi posts exist
+      // in its language: the Vietnamese Lại Lý Huynh page has one.
       const article = articles.find((a) => a.slug === slug);
+      const xiangqiDeepDive =
+        article?.kind === 'article' &&
+        article.homeRow === 'deep-dives' &&
+        article.game === 'xiangqi';
       const pool = articles.filter(
         (a) =>
           a.kind === 'article' &&
           a.status === 'published' &&
           a.publisher === 'mistboard' &&
           a.sourceLang === article?.sourceLang &&
-          a.slug !== slug,
+          a.slug !== slug &&
+          (!xiangqiDeepDive || (a.game === 'xiangqi' && a.topic !== 'engineering')),
       );
       const expected = Math.min(3, pool.length);
       expect(expected, `${slug} has no same-language siblings at all`).toBeGreaterThan(0);

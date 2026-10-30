@@ -237,16 +237,24 @@ test('finished jieqi leak: the live room serves the victim and spectators the sa
     return payload;
   };
   for (const seat of ['black', 'spectator'] as const) {
-    assertSameForEveryDeal(
-      seat,
-      DEALS.map((deal) => JSON.stringify(frame(deal, seat))),
-    );
+    const frames = DEALS.map((deal) => JSON.stringify(frame(deal, seat)));
+    assertSameForEveryDeal(seat, frames);
+    // Nor the mark that rides beside a role named for a face-down capture.
+    for (const bytes of frames) assert.equal(bytes.includes('takenFaceDown'), false);
   }
   // The capturer keeps what it saw when it took the piece, and nothing more: not
   // the deal, and not its own pieces that never moved.
   const red = DEALS.map((deal) => frame(deal, 'red'));
-  assert.deepEqual(red[0]?.state.captured[0], { owner: 'black', role: 'horse' });
-  assert.deepEqual(red[1]?.state.captured[0], { owner: 'black', role: 'elephant' });
+  assert.deepEqual(red[0]?.state.captured[0], {
+    owner: 'black',
+    role: 'horse',
+    takenFaceDown: true,
+  });
+  assert.deepEqual(red[1]?.state.captured[0], {
+    owner: 'black',
+    role: 'elephant',
+    takenFaceDown: true,
+  });
   assert.equal(JSON.stringify(red[1]), JSON.stringify(red[2]), 'red learns its own a1 and b1');
   assert.deepEqual(red[0]?.state.board.c10, { color: 'black', faceDown: true });
   assert.deepEqual(red[0]?.state.board.a1, { color: 'red', faceDown: true });

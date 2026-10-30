@@ -19,6 +19,8 @@ import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
 const EMBED_REFUSED_STUDY_VARIANTS: Readonly<Record<string, string>> = {
   'dark-xiangqi':
     'no embed board yet (found missing 2026-09-29); a fog xiangqi chapter shows the named refusal',
+  'three-kingdoms-banqi':
+    'admin-only until the public launch (#628): an embed is a public surface, and the study API 404s it to everyone else',
 };
 
 const CHAPTER = {

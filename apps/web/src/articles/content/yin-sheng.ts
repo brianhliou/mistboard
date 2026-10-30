@@ -292,6 +292,7 @@ export const yinShengArticle: Article = {
   homeRow: 'deep-dives',
   kind: 'article',
   publisher: 'mistboard',
+  game: 'xiangqi',
   boardFamily: 'xiangqi',
   title: 'Yin Sheng 尹昇',
   seoTitle: 'Yin Sheng 尹昇: games, results, and analysis',

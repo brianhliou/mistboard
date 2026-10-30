@@ -55,6 +55,7 @@ const SEAT_NAMING: Readonly<Record<GameSpecId, SeatNaming>> = {
   banqi: 'seat-word',
   mahjong: 'seat-word',
   'xiangqi-mahjong': 'player',
+  'three-kingdoms-banqi': 'seat-word',
   'dark-chess': 'seat-word',
   'dark-xiangqi': 'seat-word',
   'fortress-xiangqi': 'seat-word',
