@@ -50,6 +50,27 @@ function playMatch(seed: number) {
 }
 
 describe('xiangqi mahjong hand log', () => {
+  it('keeps an atomic declaration as one public row and the following draw and claim', () => {
+    const moves: XmjMove[] = [
+      { by: 'east', at: 0, action: 'declare-ready', tile: 'bH' },
+      { by: 'west', at: 0, action: 'pass' },
+      { by: 'west', at: 0, action: 'declare-ready', tile: 'bR' },
+      { by: 'east', at: 0, action: 'claim', kind: 'win', fromHand: [] },
+      { by: 'east', at: 0, action: 'next-hand' },
+      { by: 'west', at: 0, action: 'next-hand' },
+      { by: 'west', at: 0, action: 'discard', tile: 'rP' },
+    ];
+    const log = xmjHandLog(moves.map((move, i) => ({ move, ply: i + 1 })));
+    expect(log[0]?.rows).toEqual([
+      { kind: 'declare-ready', seat: 'east', tile: 'bH', drew: false, ply: 1 },
+      { kind: 'declare-ready', seat: 'west', tile: 'bR', drew: true, ply: 3 },
+      { kind: 'win', seat: 'east', tile: 'bR', ply: 4 },
+    ]);
+    expect(log[1]?.rows).toEqual([
+      { kind: 'discard', seat: 'west', tile: 'rP', drew: false, ply: 7 },
+    ]);
+  });
+
   for (const seed of [3, 7, 11, 19]) {
     it(`groups a bot match into its hands, one result row each (seed ${seed})`, () => {
       const { state, moves, drewBeforeDiscard } = playMatch(seed);

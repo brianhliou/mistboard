@@ -67,6 +67,8 @@ export interface XmjTableOptions {
    * whether it was the drawn tile or a copy in the hand.
    */
   readonly armedDiscard?: { readonly tile: XmjTile; readonly drawn: boolean } | null;
+  /** Local choice mode; eligible tiles still come only from view.legal. */
+  readonly declaring?: boolean;
 }
 
 /** The wall at the deal: 32 tiles less both hands. */
@@ -230,10 +232,12 @@ function tileSpan(tile: XmjTile, extra = '', label = xmjTileName(tile), tip = fa
   return `<span class="${tileClass(tile, extra)}"${tileFaceStyle(tile)} role="img" aria-label="${label}"${title}>${tileArt(tile)}</span>`;
 }
 
-function tileButton(tile: XmjTile, extra = '', armed = false): string {
+function tileButton(tile: XmjTile, extra = '', armed = false, declaring = false): string {
   if (armed) extra = extra ? `${extra} xmj-tile--armed` : 'xmj-tile--armed';
   const cls = tileClass(tile, `xmj-tile--button${extra ? ` ${extra}` : ''}`);
-  const label = t('live.xmj.discardTile', { tile: xmjTileName(tile) });
+  const label = t(declaring ? 'live.xmj.declareTile' : 'live.xmj.discardTile', {
+    tile: xmjTileName(tile),
+  });
   return `<button type="button" class="${cls}"${tileFaceStyle(tile)} data-xmj-tile="${tile}" aria-label="${label}">${tileArt(tile)}</button>`;
 }
 
@@ -368,6 +372,9 @@ export function fitXmjRackBadges(root: ParentNode): void {
  * column, the homepage viewer's seat rows), as every other variant's board.
  */
 function rackHtml(view: XmjPlayerView, seat: XmjSeat, concealed: string): string {
+  const declared = view.declared?.[seat]
+    ? `<span class="xmj-badge xmj-badge--declared">${t('live.xmj.declaredReady')}</span>`
+    : '';
   const dealer =
     view.dealer === seat
       ? `<span class="xmj-badge xmj-badge--dealer">${t('live.xmj.dealer')}</span>`
@@ -379,7 +386,7 @@ function rackHtml(view: XmjPlayerView, seat: XmjSeat, concealed: string): string
     view.turn === seat
       ? `<span class="xmj-badge xmj-badge--turn">${t('live.xmj.toDiscard')}</span>`
       : '';
-  return `<div class="xmj-rack"><span class="xmj-rack__tag xmj-rack__tag--start">${dealer}</span><span class="xmj-rack__hand"><span class="xmj-concealed">${concealed}</span>${meldsHtml(view.melds[seat])}</span><span class="xmj-rack__tag xmj-rack__tag--end">${turn}</span></div>`;
+  return `<div class="xmj-rack"><span class="xmj-rack__tag xmj-rack__tag--start">${dealer}${declared}</span><span class="xmj-rack__hand"><span class="xmj-concealed">${concealed}</span>${meldsHtml(view.melds[seat])}</span><span class="xmj-rack__tag xmj-rack__tag--end">${turn}</span></div>`;
 }
 
 function opponentHtml(
@@ -418,6 +425,7 @@ function selfHtml(
   canAct: boolean,
   names: Readonly<Record<XmjSeat, string>>,
   armed: XmjTableOptions['armedDiscard'] = null,
+  declaring = false,
 ): string {
   const hand = view.hands[seat];
   const drawn = view.phase.type === 'discard' && view.turn === seat ? view.phase.drawn : null;
@@ -425,7 +433,7 @@ function selfHtml(
   if (hand === null) {
     concealed = Array.from({ length: view.handCounts[seat] }, () => back()).join('');
   } else {
-    const legal = new Set(view.legal.discard);
+    const legal = new Set(declaring ? view.legal.declareReady : view.legal.discard);
     // The drawn tile sits apart at the right, as it would on a table.
     const rest = [...hand];
     const drawnAt = drawn === null ? -1 : rest.lastIndexOf(drawn);
@@ -433,13 +441,14 @@ function selfHtml(
     // One copy is raised when armed: the drawn tile, or the first in the hand.
     let armedLeft = armed !== null && !armed.drawn;
     const draw = (tile: XmjTile, extra = '', fromDraw = false) => {
-      if (!(canAct && legal.has(tile))) return tileSpan(tile, extra);
+      if (!(canAct && legal.has(tile)) || (view.declared?.[seat] && !fromDraw))
+        return tileSpan(tile, extra);
       let raise = false;
       if (armed?.tile === tile && armed.drawn === fromDraw && (fromDraw || armedLeft)) {
         raise = true;
         if (!fromDraw) armedLeft = false;
       }
-      return tileButton(tile, extra, raise);
+      return tileButton(tile, extra, raise, declaring);
     };
     concealed = rest.map((tile) => draw(tile)).join('');
     if (drawn !== null && drawnAt >= 0) concealed += draw(drawn, 'xmj-tile--drawn', true);
@@ -566,7 +575,7 @@ export function xmjCountdown(
 }
 
 function actionsHtml(view: XmjPlayerView, options: XmjTableOptions): string {
-  if (!options.canAct) return '';
+  if (!options.canAct || view.perspective === 'spectator') return '';
   const legal = view.legal;
   const phase = view.phase;
   const spent = options.passQueued === true;
@@ -609,6 +618,13 @@ function actionsHtml(view: XmjPlayerView, options: XmjTableOptions): string {
     buttons.push(
       `<button type="button" class="xmj-action" data-xmj-pass${disabled}>${t(spent ? 'live.xmj.passing' : 'live.xmj.pass')}</button>`,
     );
+  }
+  if (legal.declareReady?.length) {
+    buttons.push(
+      `<button type="button" class="xmj-action" data-xmj-declare aria-pressed="${options.declaring === true}">${t(options.declaring ? 'live.xmj.cancelDeclaration' : 'live.xmj.declareReady')}</button>`,
+    );
+    if (options.declaring && !options.armedDiscard)
+      timer = `<p class="xmj-actions__hint">${t('live.xmj.declarationPrompt')}</p>`;
   }
   if (buttons.length === 0) return '';
   return `<div class="xmj-actions">${timer}<div class="xmj-buttons">${buttons.join('')}</div></div>`;
@@ -732,9 +748,9 @@ function scoringHtml(score: XmjScore): string {
   const listed = new Set(PANEL_ROWS.flatMap(([, keys]) => keys));
   const rows = [
     ...PANEL_ROWS.map(([label, keys]) => row(label, keys)),
-    ...XMJ_TAI_ORDER_LEGACY.filter((key) => scored.has(key) && !listed.has(key)).map((key) =>
-      row(`live.xmj.tai.${key}` as I18nKey, [key]),
-    ),
+    ...[...XMJ_TAI_ORDER_LEGACY, 'declared-ready' as const]
+      .filter((key) => scored.has(key) && !listed.has(key))
+      .map((key) => row(`live.xmj.tai.${key}` as I18nKey, [key])),
   ].join('');
   const how = t('live.xmj.howScoring');
   const link = `<a class="xmj-result__how" href="${localizedHref(XMJ_SCORING_HREF)}" title="${how}" aria-label="${how}">?</a>`;
@@ -952,7 +968,7 @@ function tableHtml(view: XmjPlayerView, options: XmjTableOptions): string {
       : ' xmj-middle--result xmj-middle--brief'
     : '';
   const middle = `<div class="xmj-middle${band}">${pondHtml(view, opponent, false, names, claimBubble)}${centreHtml(view, self, options, handOver)}${pondHtml(view, self, you, names, '')}${result}</div>`;
-  return `<div class="xmj-table">${opponentHtml(view, opponent, names)}${middle}${selfHtml(view, self, you, options.canAct && you, names, options.armedDiscard ?? null)}</div>`;
+  return `<div class="xmj-table">${opponentHtml(view, opponent, names)}${middle}${selfHtml(view, self, you, options.canAct && you, names, options.armedDiscard ?? null, options.declaring === true && !!view.legal.declareReady?.length)}</div>`;
 }
 
 // ── The move log, one hand at a time ─────────────────────────────────────────
@@ -980,6 +996,10 @@ function logRowText(row: XmjLogRow, options: XmjLogOptions): string {
   const you = 'seat' in row && row.seat === options.viewer;
   const name = 'seat' in row ? escapeHtml(options.names[row.seat]) : '';
   switch (row.kind) {
+    case 'declare-ready':
+      return you
+        ? t('live.xmj.log.youDeclareReady')
+        : t('live.xmj.log.nameDeclaresReady', { name });
     case 'discard':
       if (row.drew) {
         return you
