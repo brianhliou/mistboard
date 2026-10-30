@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- the Mistboard river caption is set in Zen Antique, like 楚河 漢界 ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - a banqi tile turns over when it is revealed, and with 3D pieces it spins as a solid tile; Flip Jungle tiles turn the same way ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
 - 楚河 漢界 is set like a real board, spread along the river in old printed type, with the far pair facing the opponent ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
 - on phones a game review fits one screen: bigger board, engine analysis and chat in the menu, unread chat dot ([55eb9f07](https://github.com/brianhliou/mistboard/commit/55eb9f07))
@@ -97,6 +98,9 @@ Conventions:
 
 ### Learning and puzzles
 
+- Puzzle Streak serves puzzles that get harder as you go, until one wrong move ends the run ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
+- a themes page trains one puzzle theme at a time, with a count for each theme ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
+- each puzzle first plays in the moves of the game it came from, and the puzzle page keeps its settings in one column ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - The Xiangqi Mahjong rules page now ends with how a match runs on Mistboard and bolds each hand's score ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
 - Step-through boards in articles use the site's move bar, with first and last buttons and arrow keys ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
 - Gamebook lessons are in Chinese for Chinese readers ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
@@ -149,6 +153,8 @@ Conventions:
 
 ### Watching and review
 
+- account-pair scores link to the player's profile filtered to that pair ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
+- better moves stored in a game embed's analysis can be played through on every variant ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - stepping through a finished game glides each move into place, the duck included, and a face-down jieqi piece flips as it lands ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
 - a broadcast's board list fades at its bottom edge while more boards are below ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
 - The 1st Kim Long Motor Cup is on broadcasts, and a board whose record reads two ways shows its result and source without a replay ([7dd60fbe](https://github.com/brianhliou/mistboard/commit/7dd60fbe))
@@ -216,6 +222,7 @@ Conventions:
 
 ### Community
 
+- the empty community blog now asks players to become regular contributors ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - a Friends menu in the header shows who you follow is online, with a Watch link when they're playing; it replaces the bottom-right box ([482ca76b](https://github.com/brianhliou/mistboard/commit/482ca76b))
 - Lobby chat says when a site update is about to restart games ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - Taiwan's players sit on one team page, and players from Taiwan, Hong Kong, Macau and Vietnam show their names in traditional characters ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
@@ -234,6 +241,7 @@ Conventions:
 
 ### Site
 
+- account emails, bot profiles, community labels, lessons and game import are now in Chinese ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - Xiangqi, jieqi, banqi and Flip Jungle pieces can stand in 3D, picked under Pieces in the board settings, with a Thick edge option and a gold edge on the last move ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
 - Square grid boards meet their edge, and with coordinates on the squares sit in a framed rim ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
 - Square grid pieces sit inside their squares, 85% flat and 90% in 3D, with the last-move ring outside the piece and gliding in with it ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
@@ -330,6 +338,7 @@ Conventions:
 
 ### Fixed
 
+- Lacquer pieces follow the Piece shadow setting ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - switching the site language no longer changes your pieces, river text or move notation ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
 - on square tiles, a general in check now sits on a red square instead of a round glow ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
 - with the square-grid board, article diagrams and blog cards show alternating squares, a blue river and tinted palaces like the live board ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
