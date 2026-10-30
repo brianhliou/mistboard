@@ -27,6 +27,9 @@ case "$name" in
   jungle-engine)
     repo=brianhliou/misty-jungle tag=v0.0.6 mode=exec
     sha=0e7a4e18418be3a813a2eac5fe04b055af74e1da922d3fa666d99253fbac4423 ;;
+  three-kingdoms-engine)
+    repo=brianhliou/misty-three-kingdoms-banqi tag=v0.1.0 mode=exec
+    sha=eede3169523783c6d4281a5dbac5d16363cadf08c05327a3ee5972590049863e ;;
   *)
     echo "release-asset: unknown asset $name" >&2
     exit 1 ;;
