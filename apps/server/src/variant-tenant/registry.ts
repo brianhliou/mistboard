@@ -223,6 +223,11 @@ export type VariantTenantRegistration = {
   // there instead of marking the game unsupported; the web tenant carries the
   // same flag (apps/web/src/variant-registry-sync.test.ts holds the two).
   finishedGameOpensRoom?: true;
+  // Review page base for a tenant that has a postgame page but no export, e.g.
+  // '/three-kingdoms-banqi/game' (the admin playtest, whose games must not be
+  // exportable). crosstableReviewUrl links a finished game there when no
+  // export.gameRouteBase does; mirrors gameRouteBase in apps/web's registry.
+  reviewRouteBase?: string;
   // Share card for finished games, or null/absent (see VariantTenantCard).
   card?: VariantTenantCard | null;
   // Does a stored log still replay under the current rules? Bound with

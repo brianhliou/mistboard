@@ -131,9 +131,8 @@ const tkWebTenant: WebVariantTenant<BanqiSeat> = {
   // for a real admin. 'room unavailable' keeps the generic no-such-room line.
   enabled: () => true,
   rejectedBodyByReason: { 'game spec disabled': 'live.tk.adminOnly' },
-  // No review page yet: the Review link reopens the room, whose move list steps
-  // through the finished game.
-  reviewUrl: (roomId) => `/room/${encodeURIComponent(roomId)}`,
+  // The finished game's review page (live-three-kingdoms-banqi-postgame.ts).
+  reviewUrl: (roomId) => `/three-kingdoms-banqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase,
   spectatorBody: 'live.spectatorWatchingGame',
   selectInstruction: 'live.selectBanqi',

@@ -1111,10 +1111,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     // Three Kingdoms banqi (三國暗棋, #628): a playtest offered to admin
     // accounts on prod (#684) and to everyone in a build with
     // VITE_THREE_KINGDOMS_BANQI_ENABLED (local only). See
-    // ../three-kingdoms-banqi-access.ts. No postgame, review or watch surface,
-    // so like HK mahjong the server marks its finished rows unavailable; the
-    // room itself still shows the finished game. Whether it gets any of those
-    // is the 10-31 checkpoint's call.
+    // ../three-kingdoms-banqi-access.ts. A finished game opens its review page
+    // (admin-only, like the room); no export and no watch surface.
     gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
     roomIdPrefix: 'tkb_',
     enabled: threeKingdomsBanqiOffered,
@@ -1122,6 +1120,12 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     // WebSocket door refuses a non-admin with 1008 and the room says why.
     liveRoomServerGated: true,
     pageTitleKey: 'variant.threeKingdomsBanqi.name',
+    gameRouteBase: '/three-kingdoms-banqi/game',
+    mountPostgame: (root, roomId) =>
+      import('../live-three-kingdoms-banqi-postgame.js').then(
+        ({ mountThreeKingdomsBanqiPostgame }) => mountThreeKingdomsBanqiPostgame(root, roomId),
+      ),
+    reviewRouteBase: '/three-kingdoms-banqi/game',
     loadLiveRoomClient: () =>
       import('../live-three-kingdoms-banqi.js').then(
         ({ bootstrapThreeKingdomsBanqiLiveRoom }) =>
