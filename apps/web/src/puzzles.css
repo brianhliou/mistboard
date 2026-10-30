@@ -2434,6 +2434,14 @@ a.puzzle-streak-chip:focus-visible {
   height: 100%;
 }
 
+/* Generated theme art: the variant markers' mask paint, filling the icon box
+   and taking the row's colour (muted, or the accent on the recommended row). */
+.puzzle-theme-icon .variant-marker {
+  display: block;
+  --variant-marker-size: 100%;
+  --variant-marker-color: currentColor;
+}
+
 .puzzle-theme-body {
   min-width: 0;
 }

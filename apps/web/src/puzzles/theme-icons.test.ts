@@ -1,94 +1,98 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { XIANGQI_MOTIFS, XIANGQI_TRAINING_TAGS } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { GROUP_ICON, missingThemeIcons, THEME_ICON, themeIconMarkup } from './theme-icons.js';
+import { GROUP_ICON, THEME_ICON_PATH, themeIconMarkup } from './theme-icons.js';
 
-const ALL_IDS = [
+const PUBLIC = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'public');
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const ART_DIR = 'puzzle-theme-icons';
+type Group = keyof typeof GROUP_ICON;
+
+/** Every row the themes page can show: the mix, each pattern, each training tag. */
+const SHOWN: string[] = [
+  'mix',
   ...XIANGQI_MOTIFS.map((motif) => motif.id),
   ...XIANGQI_TRAINING_TAGS.map((tag) => tag.id),
 ];
+const GROUP = new Map<string, Group>([
+  ['mix', 'mix'],
+  ...XIANGQI_MOTIFS.map((motif): [string, Group] => [motif.id, 'motif']),
+  ...XIANGQI_TRAINING_TAGS.map((tag): [string, Group] => [tag.id, tag.group]),
+]);
+const PATHS = THEME_ICON_PATH as Readonly<Record<string, string | undefined>>;
 
-/** Theme ids grouped as the themes page groups them. */
-const GROUPS: Record<string, string[]> = {
-  motif: XIANGQI_MOTIFS.map((motif) => motif.id),
-};
-for (const tag of XIANGQI_TRAINING_TAGS) {
-  const ids = GROUPS[tag.group] ?? [];
-  ids.push(tag.id);
-  GROUPS[tag.group] = ids;
-}
-
-/** Pairs of ids in one group whose drawings are the same markup. */
-function sharedDrawings(
-  icons: Readonly<Record<string, string>>,
-  groups: Record<string, string[]>,
-): string[] {
-  const shared: string[] = [];
-  for (const ids of Object.values(groups)) {
-    const seen = new Map<string, string>();
-    for (const id of ids) {
-      const markup = icons[id];
-      if (markup === undefined) continue;
-      const first = seen.get(markup);
-      if (first) shared.push(`${first}=${id}`);
-      else seen.set(markup, id);
+/** The ids whose path is not a PNG on disk under apps/web/public. */
+function missingArt(paths: Readonly<Record<string, string | undefined>>): string[] {
+  const missing: string[] = [];
+  for (const [id, path] of Object.entries(paths)) {
+    if (!path) continue;
+    let bytes: Buffer;
+    try {
+      bytes = readFileSync(join(PUBLIC, path));
+    } catch {
+      missing.push(id);
+      continue;
     }
+    if (!bytes.subarray(0, 8).equals(PNG_SIGNATURE)) missing.push(id);
   }
-  return shared;
-}
-
-/** Drawn points (circle edges, path move and line points) that reach past the ring's inside. */
-function outsideRing(markup: string, limit = 43): string[] {
-  const out: string[] = [];
-  for (const [, cx, cy, r] of markup.matchAll(/cx="([\d.-]+)" cy="([\d.-]+)" r="([\d.]+)"/g)) {
-    if (Math.hypot(Number(cx) - 50, Number(cy) - 50) + Number(r) > limit)
-      out.push(`circle ${cx},${cy}`);
-  }
-  for (const [, x, y] of markup.matchAll(/[ML]\s*(-?[\d.]+)\s+(-?[\d.]+)/g)) {
-    if (Math.hypot(Number(x) - 50, Number(y) - 50) > limit) out.push(`point ${x},${y}`);
-  }
-  return out;
+  return missing;
 }
 
 describe('puzzle theme icons', () => {
-  it('draws every pattern and every training tag', () => {
-    expect(ALL_IDS.length).toBe(36);
-    expect(missingThemeIcons(ALL_IDS)).toEqual([]);
-  });
-
-  it('flags a planted id with no drawing', () => {
-    // A tag added to the game package without a drawing must fail here, not
-    // quietly wear its group's icon on the page.
-    expect(missingThemeIcons(['ma-hou-pao', 'matein5'])).toEqual(['matein5']);
-  });
-
-  it("falls back to the group's icon for an id with no drawing", () => {
-    expect(themeIconMarkup('matein5', 'mate')).toEqual({ markup: GROUP_ICON.mate, own: false });
-    expect(themeIconMarkup('matein2', 'mate')).toEqual({ markup: THEME_ICON.matein2, own: true });
-    expect(themeIconMarkup('mix', 'mix')).toEqual({ markup: GROUP_ICON.mix, own: false });
-  });
-
-  it('gives no two themes in a group the same drawing', () => {
-    expect(sharedDrawings(THEME_ICON, GROUPS)).toEqual([]);
-  });
-
-  it('flags a planted pair of identical drawings', () => {
-    const planted = { ...THEME_ICON, 'chong-pao': THEME_ICON['ma-hou-pao'] };
-    expect(sharedDrawings(planted, GROUPS)).toEqual(['chong-pao=ma-hou-pao']);
-  });
-
-  it('keeps every drawing a line drawing inside the ring, with no text', () => {
-    for (const id of ALL_IDS) {
-      const markup = THEME_ICON[id];
-      expect(markup, id).not.toMatch(/<text|<image|<foreignObject/);
-      expect(markup, id).not.toBe(GROUP_ICON.motif);
-      expect(outsideRing(markup), id).toEqual([]);
+  it('points every theme with art at a 256px PNG mask on disk, named by its id', () => {
+    expect(Object.keys(PATHS).length).toBe(22);
+    expect(missingArt(PATHS)).toEqual([]);
+    for (const [id, path] of Object.entries(PATHS)) {
+      expect(path, id).toBe(`/${ART_DIR}/${id}.png`);
+      const bytes = readFileSync(join(PUBLIC, path as string));
+      // IHDR: width and height are the big-endian u32s at bytes 16 and 20.
+      expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)], id).toEqual([256, 256]);
     }
   });
 
-  it('flags a planted mark past the ring', () => {
-    expect(outsideRing('<circle cx="90" cy="50" r="5" fill="currentColor"/>')).toEqual([
-      'circle 90,50',
-    ]);
-    expect(outsideRing('<path d="M50 50 L50 96"/>')).toEqual(['point 50,96']);
+  it('reports a planted id whose file does not exist', () => {
+    expect(
+      missingArt({ 'ma-hou-pao': PATHS['ma-hou-pao'], matein5: `/${ART_DIR}/matein5.png` }),
+    ).toEqual(['matein5']);
+  });
+
+  it('has no art file on disk that no theme uses', () => {
+    const used = new Set(Object.values(PATHS).map((path) => path?.split('/').pop()));
+    const files = readdirSync(join(PUBLIC, ART_DIR)).filter((name) => name.endsWith('.png'));
+    expect(files.filter((name) => !used.has(name))).toEqual([]);
+  });
+
+  it('gives art only to real theme ids', () => {
+    const known = new Set(SHOWN);
+    expect(Object.keys(PATHS).filter((id) => !known.has(id))).toEqual([]);
+  });
+
+  it('renders every shown theme as its art or its group icon, never nothing', () => {
+    expect(SHOWN.length).toBe(37);
+    for (const id of SHOWN) {
+      const group = GROUP.get(id);
+      if (!group) throw new Error(`${id} has no group`);
+      expect(GROUP_ICON[group].length, id).toBeGreaterThan(0);
+      const { markup, own } = themeIconMarkup(id, group);
+      const path = PATHS[id];
+      if (path) {
+        expect(own, id).toBe(true);
+        expect(markup, id).toContain('class="variant-marker"');
+        expect(markup, id).toContain(`url('${path}')`);
+      } else {
+        expect(own, id).toBe(false);
+        expect(markup, id).toContain(GROUP_ICON[group]);
+      }
+    }
+  });
+
+  it("falls back to the group's line icon for an id with no art", () => {
+    const fallback = themeIconMarkup('matein5', 'mate');
+    expect(fallback.own).toBe(false);
+    expect(fallback.markup).toContain('<svg');
+    expect(fallback.markup).toContain(GROUP_ICON.mate);
+    expect(themeIconMarkup('matein2', 'mate').own).toBe(true);
   });
 });

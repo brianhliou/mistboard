@@ -246,13 +246,17 @@ describe('puzzles route', () => {
     expect(count?.getAttribute('title')).toBe('24 puzzles');
     // Names and glosses come from the catalogue, so they follow the locale.
     expect(root.textContent).toContain('the horse pens the general in');
-    // Every row wears its theme's own line icon, tagged with its group.
+    // A theme with art wears it as a mask-painted marker, tagged with its group.
     const icon = root.querySelector<HTMLElement>(
       '[data-puzzle-theme-card="ma-hou-pao"] .puzzle-theme-icon',
     );
     expect(icon?.dataset.iconGroup).toBe('motif');
     expect(icon?.dataset.iconTheme).toBe('ma-hou-pao');
-    expect(icon?.querySelector('svg path')).not.toBeNull();
+    expect(
+      icon
+        ?.querySelector<HTMLElement>('.variant-marker')
+        ?.style.getPropertyValue('--variant-marker-mask'),
+    ).toContain('/puzzle-theme-icons/ma-hou-pao.png');
     expect(icon?.querySelector('text')).toBeNull();
     expect(
       root.querySelector<HTMLElement>('[data-puzzle-theme-recommended] .puzzle-theme-icon')?.dataset
@@ -352,6 +356,10 @@ describe('puzzles route', () => {
     expect(menGong?.querySelector('h3')?.textContent).toContain('Sealed palace');
     expect(menGong?.querySelector('.puzzle-theme-name')).toBeNull();
     expect(menGong?.textContent).not.toMatch(/[\u3400-\u9fff]/);
+    // A pattern with no art of its own wears its group's line icon, never nothing.
+    const fallback = menGong?.querySelector<HTMLElement>('.puzzle-theme-icon');
+    expect(fallback?.dataset.iconTheme).toBeUndefined();
+    expect(fallback?.querySelector('svg path')).not.toBeNull();
 
     // Recommended comes first: one row training on everything, counted as
     // the corpus (each puzzle has one phase: 5 + 70 + 30).

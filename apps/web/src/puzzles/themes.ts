@@ -10,7 +10,7 @@ import {
 } from '@mistboard/game';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import { puzzleNavItems } from '../nav-items.js';
-import { themeIconMarkup, themeIconSvg } from './theme-icons.js';
+import { themeIconMarkup } from './theme-icons.js';
 
 export type PuzzleThemeCount = XiangqiMotif & { count: number };
 /** Any tag the trainer filters by: a kill pattern, mate-in-N, phase, goal or length. */
@@ -190,10 +190,10 @@ export function puzzleThemePicker(settings: PuzzleThemeSettings, phone = false):
 }
 
 /*
- * Every row wears its theme's own drawing (theme-icons.ts), in one family: the
- * same ring, the same 5-unit round stroke, no text or hanzi, so the set reads
- * the same in any locale and any font. An id with no drawing falls back to its
- * group's icon, and the theme-icons test fails on it.
+ * Every row wears its theme's own icon (theme-icons.ts): generated art painted
+ * as a mask over the row's text colour, like the variant markers, no text or
+ * hanzi, so the set reads the same in any locale and any font. A theme with no
+ * art (a rare pattern) wears its group's line icon.
  */
 const TAG_GROUP = new Map<string, XiangqiTrainingTagGroup>(
   XIANGQI_TRAINING_TAGS.map((tag) => [tag.id, tag.group]),
@@ -207,7 +207,7 @@ function themeIcon(id: PuzzleThemeId | 'mix'): HTMLElement {
   icon.dataset.iconGroup = group;
   if (own) icon.dataset.iconTheme = id;
   icon.setAttribute('aria-hidden', 'true');
-  icon.innerHTML = themeIconSvg(markup);
+  icon.innerHTML = markup;
   return icon;
 }
 
