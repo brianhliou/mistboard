@@ -39,6 +39,7 @@ import type { XiangqiAnalysisSource } from './review/xiangqi-review.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildNav } from './site-shell.js';
+import { localFederation, localName, localTitle } from './xiangqi-broadcast-names.js';
 import { formatEventDateTime } from './xiangqi-broadcast-time.js';
 
 export type BroadcastReviewBoard = {
@@ -292,8 +293,8 @@ function provenance(
   const details = document.createElement('dl');
   details.className = 'review-provenance';
   if (context) {
-    addDetail(details, t('broadcast.event'), primary(context.tour), secondary(context.tour));
-    addDetail(details, t('broadcast.round'), primary(context.round), secondary(context.round));
+    addDetail(details, t('broadcast.event'), primary(context.tour));
+    addDetail(details, t('broadcast.round'), primary(context.round));
     const date = formatEventDateTime(gameDate(data.board, context));
     if (date) addDetail(details, t('broadcast.date'), date);
   }
@@ -318,44 +319,30 @@ function provenance(
   return details;
 }
 
-function addDetail(
-  details: HTMLElement,
-  label: string,
-  value: string,
-  secondaryValue?: string | null,
-): void {
+function addDetail(details: HTMLElement, label: string, value: string): void {
   const dt = document.createElement('dt');
   dt.textContent = label;
   const dd = document.createElement('dd');
-  dd.textContent =
-    secondaryValue && secondaryValue !== value ? `${value} (${secondaryValue})` : value;
+  dd.textContent = value;
   details.append(dt, dd);
 }
 
-function primary(entity: { name: string; nameEn?: string }): string {
-  return entity.nameEn?.trim() || entity.name;
-}
+// Names in the reader's language only (xiangqi-broadcast-names.ts).
+const primary = localName;
 
-function secondary(entity: { name: string; nameEn?: string }): string | null {
-  return entity.nameEn?.trim() && entity.nameEn.trim() !== entity.name ? entity.name : null;
-}
-
-/** The player's team, English first, for the strip's muted line. */
+/** The player's team, for the strip's muted line. */
 function teamOf(player: XiangqiBroadcastPlayerTag): string | undefined {
-  return player.federationEn?.trim() || player.federation?.trim() || undefined;
+  return localFederation(player);
 }
 
 function playerLabel(player: XiangqiBroadcastPlayerTag): string {
   const name = primary(player);
-  return player.title ? `${player.title} ${name}` : name;
+  return player.title ? `${localTitle(player.title)} ${name}` : name;
 }
 
 function playerLine(player: XiangqiBroadcastPlayerTag): string {
-  const zh = secondary(player);
-  const team = player.federationEn?.trim() || player.federation;
-  return [playerLabel(player), zh ? `(${zh})` : null, team ? `· ${team}` : null]
-    .filter(Boolean)
-    .join(' ');
+  const team = teamOf(player);
+  return [playerLabel(player), team ? `· ${team}` : null].filter(Boolean).join(' ');
 }
 
 function resultOf(result: XiangqiBroadcastResult): { score: string; label: string } {

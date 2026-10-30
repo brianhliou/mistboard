@@ -952,7 +952,8 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     expect(featured?.className).toContain('xqb-tour-card-live');
     expect(featured?.querySelector('.xqb-tour-status-live')?.textContent).toBe('Round 3 · Live');
     expect(featured?.querySelector('.xqb-tour-card-name')?.textContent).toBe('Live Cup');
-    expect(featured?.querySelector('.xqb-name-zh')?.textContent).toBe('直播杯');
+    // One language per page: the English reader gets no 直播杯 under it.
+    expect(featured?.textContent).not.toContain('直播杯');
     // Who is playing: ranked by the CXA lists; an unranked name stays off.
     // (no title tag: a life ban hides it, players/sanctions.ts)
     expect(featured?.querySelector('.xqb-tour-players')?.textContent).toBe('Wang Tianyi');
@@ -968,7 +969,7 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     // board motif), lichess's card image, in place of a board thumbnail.
     const arts = root.querySelectorAll('.xqb-tour-card > .xqb-event-art');
     expect(arts.length).toBe(2);
-    expect(arts[0]?.querySelector('.xqb-event-art-zh')?.textContent).toBeTruthy();
+    expect(arts[0]?.querySelector('.xqb-event-art-title')?.textContent).toBe('Live Cup');
     expect(root.querySelector('.xqb-tour-card .xqb-card-board')).toBeNull();
   });
 

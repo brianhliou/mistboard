@@ -11,6 +11,7 @@ import { CXA_POINTS } from './players/cxa-points.js';
 import { CXA_RATINGS } from './players/cxa-ratings.js';
 import { playerTitleFor } from './players/player-title.js';
 import { buildNav } from './site-shell.js';
+import { localName, localPlace, localTitle } from './xiangqi-broadcast-names.js';
 import { formatEventDateRange } from './xiangqi-broadcast-time.js';
 
 export type BroadcastRailItem = 'broadcasts' | 'calendar' | 'about' | 'players' | 'teams';
@@ -103,11 +104,11 @@ export function topBroadcastPlayers(players: readonly BroadcastPlayerRef[], coun
         (b.rating ?? 0) - (a.rating ?? 0),
     );
   return ranked.slice(0, count).map(({ player }) => {
-    const name = player.nameEn?.trim() || player.name;
+    const name = localName(player);
     // The same tag the player pages show, so a grade the match-fixing
     // rulings may have revoked is hidden here too (players/sanctions.ts).
     const shown = player.title ?? playerTitleFor({ name: player.name, nameEn: player.nameEn });
-    return shown ? `${shown} ${name}` : name;
+    return shown ? `${localTitle(shown)} ${name}` : name;
   });
 }
 
@@ -153,11 +154,9 @@ export function calendarEventRow(event: BroadcastCalendarEvent): HTMLElement {
   const what = document.createElement('span');
   what.className = 'xqb-cal-what';
   const name = document.createElement('strong');
-  name.textContent = event.nameEn ?? event.name;
+  name.textContent = localName(event);
   what.append(name);
-  const sub = [event.nameEn ? event.name : null, event.location || null]
-    .filter(Boolean)
-    .join(' · ');
+  const sub = localPlace(event.location) ?? '';
   if (sub) {
     const line = document.createElement('span');
     line.className = 'xqb-cal-sub';

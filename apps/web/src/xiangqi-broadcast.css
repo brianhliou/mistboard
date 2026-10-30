@@ -2553,7 +2553,7 @@ a.xqb-standings-name:focus-visible {
   color: var(--xqb-art-ink);
 }
 
-.xqb-event-art-zh {
+.xqb-event-art-title {
   max-width: 100%;
   font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
   font-size: clamp(16px, 2.2cqw, 30px);
@@ -2564,18 +2564,6 @@ a.xqb-standings-name:focus-visible {
   background: #f1dcb0;
   padding: 2px 8px;
   border-radius: 4px;
-}
-
-.xqb-event-art-en {
-  max-width: 100%;
-  color: #3b2a1c;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.25;
-  text-wrap: balance;
-  background: #f1dcb0;
-  padding: 1px 6px;
-  border-radius: 3px;
 }
 
 .xqb-event-art-meta {
@@ -2640,7 +2628,7 @@ a.xqb-standings-name:focus-visible {
   border-radius: 0 var(--site-radius) 0 0;
 }
 
-.xqb-event-header > .xqb-event-art .xqb-event-art-zh {
+.xqb-event-header > .xqb-event-art .xqb-event-art-title {
   font-size: 24px;
 }
 
@@ -2658,15 +2646,11 @@ a.xqb-standings-name:focus-visible {
 }
 
 /* The list's cards: the art on top, lichess's card image. */
-.xqb-tour-card > .xqb-event-art .xqb-event-art-zh {
+.xqb-tour-card > .xqb-event-art .xqb-event-art-title {
   font-size: 17px;
 }
 
-.xqb-tour-card > .xqb-event-art .xqb-event-art-en {
-  font-size: 11px;
-}
-
-.xqb-tour-card-featured > .xqb-event-art .xqb-event-art-zh {
+.xqb-tour-card-featured > .xqb-event-art .xqb-event-art-title {
   font-size: 22px;
 }
 
@@ -2675,7 +2659,7 @@ a.xqb-standings-name:focus-visible {
   padding: 10px 10px;
 }
 
-.xqb-tour-card > .xqb-event-art .xqb-event-art-zh {
+.xqb-tour-card > .xqb-event-art .xqb-event-art-title {
   font-size: 15px;
   letter-spacing: 0.02em;
 }
