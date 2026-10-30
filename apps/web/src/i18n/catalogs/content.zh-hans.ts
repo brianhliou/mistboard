@@ -87,7 +87,7 @@ export const ZH_HANS_CONTENT = {
   'rules.kind': '规则',
   'rules.navigation': '规则导航',
   'rules.translateIssue': '看到翻译问题？',
-  'rules.translateIssueLink': '帮我们审阅一页',
+  'rules.translateIssueLink': '告诉我们',
   'news.heading': '新闻',
   'news.feedHeading': 'Mistboard 更新',
   'news.intro': 'Mistboard 的发布、状态更新和公告。',

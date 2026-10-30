@@ -1242,16 +1242,23 @@ describe('blog post read-next footer', () => {
     expect(buildArticlePage('fog-xiangqi').querySelector('.article-footer')).toBeNull();
   });
 
-  // The zh rules pages are machine-translated; each ends in one line pointing a
-  // native reader at the review role on /contribute. English has nothing to review.
-  it('ends zh rules pages with a review invitation and leaves English without one', () => {
+  // The zh rules pages are machine-translated; each ends in one line sending a
+  // reader who spots a bad term to the contact form, labelled with the page.
+  // English has nothing to review.
+  it('ends zh rules pages with a translation report link and leaves English without one', () => {
     expect(buildArticlePage('banqi').querySelector('.article-translate-note')).toBeNull();
-    const hant = buildArticlePage('banqi', 'zh-Hant').querySelector('.article-translate-note');
-    expect(hant?.textContent).toContain('看到翻譯問題？');
-    expect(hant?.querySelector('a')?.getAttribute('href')).toBe('/contribute#translate');
-    const hans = buildArticlePage('banqi', 'zh-Hans').querySelector('.article-translate-note');
-    expect(hans?.textContent).toContain('看到翻译问题？');
-    expect(hans?.querySelector('a')?.getAttribute('href')).toBe('/contribute#translate');
+    for (const [lang, text] of [
+      ['zh-Hant', '看到翻譯問題？告訴我們'],
+      ['zh-Hans', '看到翻译问题？告诉我们'],
+    ] as const) {
+      const note = buildArticlePage('banqi', lang).querySelector('.article-translate-note');
+      expect(note?.textContent).toBe(text);
+      const link = note?.querySelector('a');
+      expect(link?.getAttribute('rel')).toBe('nofollow');
+      const url = new URL(link?.getAttribute('href') ?? '', 'https://mistboard.com');
+      expect(url.pathname).toMatch(/\/contact$/);
+      expect(url.searchParams.get('about')).toMatch(/\/rules\/banqi$/);
+    }
   });
 
   // The star marked a Mistboard post apart from a community one. With no

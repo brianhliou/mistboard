@@ -87,7 +87,7 @@ export const EN_CONTENT = {
   'rules.kind': 'Rules',
   'rules.navigation': 'Rules navigation',
   'rules.translateIssue': 'See a translation problem?',
-  'rules.translateIssueLink': 'Help us review a page',
+  'rules.translateIssueLink': 'Tell us',
   'news.heading': 'News',
   'news.feedHeading': 'Mistboard updates',
   'news.intro': 'Releases, status updates, and announcements from Mistboard.',
