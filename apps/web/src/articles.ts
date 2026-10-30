@@ -370,10 +370,10 @@ function buildContentIndex(
   if (entries.length > 0) {
     sheet.append(list);
   } else if (kind === 'article') {
-    const empty = document.createElement('p');
-    empty.className = 'articles-index-empty';
-    empty.textContent = 'No community posts yet.';
-    sheet.append(empty);
+    // An empty list read as a broken page, so with no posts this view asks for
+    // writers instead; the first community post replaces it.
+    heading.textContent = 'Write for Mistboard';
+    sheet.append(buildCommunityWriterPitch());
   }
   if (kind === 'article') {
     layout.append(sheet);
@@ -382,6 +382,119 @@ function buildContentIndex(
     main.append(sheet);
   }
   return main;
+}
+
+// English only until Brian signs the copy off; zh follows the sign-off.
+const COMMUNITY_WRITER_LEDE =
+  'The community blog is for posts by players. No title or track record needed: send a few lines on what you want to write, and we will work on the draft with you.';
+
+// Each idea points at one of our own posts of that shape, so the page shows
+// what a finished post looks like instead of an empty list.
+const COMMUNITY_WRITER_IDEAS: ReadonlyArray<{
+  title: string;
+  body: string;
+  example: string;
+  icon: string;
+}> = [
+  {
+    title: 'A game you learned from',
+    body: 'Walk through one game: where it turned, and what you would play now.',
+    example: 'jieqi-bot-wins',
+    icon: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9.3h16M4 14.7h16M9.3 4v16M14.7 4v16"/>',
+  },
+  {
+    title: 'Opening notes',
+    body: 'A line you have worked out, with the games that taught it to you.',
+    example: 'jieqi-openings',
+    icon: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/>',
+  },
+  {
+    title: 'A player or a tournament',
+    body: 'Who plays, how they play, and what happened at the board.',
+    example: 'yin-sheng',
+    icon: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5v1a3 3 0 0 0 3 3M16 6h3v1a3 3 0 0 1-3 3M12 13v4M8 20h8"/>',
+  },
+  {
+    title: 'The case for a variant',
+    body: 'Why a variant deserves more players, and how to win your first game.',
+    example: 'duck-xiangqi-strategy',
+    icon: '<circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 8v8M6 13c0-3 4-5 10-5"/>',
+  },
+];
+
+const COMMUNITY_WRITER_STEPS: ReadonlyArray<{ title: string; body: string }> = [
+  { title: 'Pitch it', body: 'A few lines on the idea and how you play.' },
+  { title: 'Draft it with us', body: 'We edit with you and build the board diagrams.' },
+  { title: 'Published under your name', body: 'It goes on the community blog with your byline.' },
+];
+
+function buildCommunityWriterPitch(): HTMLElement {
+  const pitch = document.createElement('div');
+  pitch.className = 'articles-community-pitch';
+
+  const lede = document.createElement('p');
+  lede.className = 'articles-community-pitch-lede';
+  lede.textContent = COMMUNITY_WRITER_LEDE;
+  pitch.append(lede);
+
+  const ideasHeading = document.createElement('h2');
+  ideasHeading.textContent = 'What you could write';
+  const ideas = document.createElement('ul');
+  ideas.className = 'articles-community-pitch-ideas';
+  for (const idea of COMMUNITY_WRITER_IDEAS) {
+    const example = articles.find(
+      (article) => article.slug === idea.example && isArticleListedInThisEnv(article),
+    );
+    const item = document.createElement('li');
+    const icon = document.createElement('span');
+    icon.className = 'articles-community-pitch-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    // Static markup from the constant above, never user input.
+    icon.innerHTML = `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${idea.icon}</svg>`;
+    const title = document.createElement('h3');
+    title.textContent = idea.title;
+    const body = document.createElement('p');
+    body.textContent = idea.body;
+    item.append(icon, title, body);
+    if (example) {
+      const link = document.createElement('a');
+      link.className = 'articles-community-pitch-example';
+      link.href = `/blog/${example.slug}`;
+      link.textContent = `Example: ${example.title}`;
+      item.append(link);
+    }
+    ideas.append(item);
+  }
+
+  const stepsHeading = document.createElement('h2');
+  stepsHeading.textContent = 'How it works';
+  const steps = document.createElement('ol');
+  steps.className = 'articles-community-pitch-steps';
+  for (const step of COMMUNITY_WRITER_STEPS) {
+    const item = document.createElement('li');
+    const title = document.createElement('h3');
+    title.textContent = step.title;
+    const body = document.createElement('p');
+    body.textContent = step.body;
+    item.append(title, body);
+    steps.append(item);
+  }
+
+  const row = document.createElement('div');
+  row.className = 'article-cta-row articles-community-pitch-cta';
+  const buttons = [
+    { label: 'Pitch a post', href: '/contact?about=/blog/community', emphasis: 'primary' },
+    { label: 'Read the Mistboard blog', href: '/blog', emphasis: 'secondary' },
+  ];
+  for (const button of buttons) {
+    const link = document.createElement('a');
+    link.className = `article-cta article-cta-${button.emphasis}`;
+    link.href = button.href;
+    link.textContent = button.label;
+    row.append(link);
+  }
+  pitch.append(ideasHeading, ideas, stepsHeading, steps, row);
+  return pitch;
 }
 
 function buildArticleCommunityRail(locale: Locale, activeView: ArticleIndexView): HTMLElement {

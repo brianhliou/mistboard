@@ -120,6 +120,113 @@
   line-height: 1.6;
 }
 
+.articles-community-pitch {
+  display: grid;
+  gap: 16px;
+  max-width: 52em;
+}
+
+.articles-community-pitch-lede {
+  margin: 0;
+  max-width: 36em;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.articles-community-pitch h2 {
+  margin: 12px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--site-muted);
+}
+
+.articles-community-pitch h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--site-heading);
+}
+
+.articles-community-pitch-ideas,
+.articles-community-pitch-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.articles-community-pitch-ideas {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+}
+
+.articles-community-pitch-ideas li {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+}
+
+.articles-community-pitch-ideas p,
+.articles-community-pitch-steps p {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.articles-community-pitch-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+}
+
+.articles-community-pitch-example {
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--site-link);
+}
+
+.articles-community-pitch-steps {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  counter-reset: pitch-step;
+}
+
+.articles-community-pitch-steps li {
+  counter-increment: pitch-step;
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  column-gap: 12px;
+  row-gap: 2px;
+}
+
+.articles-community-pitch-steps li::before {
+  content: counter(pitch-step);
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.articles-community-pitch .article-cta-row {
+  justify-content: flex-start;
+  margin: 8px 0 0;
+}
+
 .articles-index-item {
   margin: 0;
 }

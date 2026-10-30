@@ -296,9 +296,27 @@ describe('article public listing gates', () => {
     expect(official.querySelectorAll('button')).toHaveLength(0);
     expect(official.textContent).not.toContain('All languages');
     expect(community.querySelector('.articles-index-card')).toBeNull();
-    expect(community.querySelector('.articles-index-empty')?.textContent).toBe(
-      'No community posts yet.',
-    );
+    // With no posts the view pitches for writers rather than reading as broken.
+    expect(community.querySelector('h1')?.textContent).toBe('Write for Mistboard');
+    const ctaLinks = [
+      ...community.querySelectorAll<HTMLAnchorElement>('.articles-community-pitch-cta a'),
+    ].map((link) => [link.textContent, link.getAttribute('href')]);
+    expect(ctaLinks).toEqual([
+      ['Pitch a post', '/contact?about=/blog/community'],
+      ['Read the Mistboard blog', '/blog'],
+    ]);
+    // Every idea card links a live example post, so a retired slug fails here.
+    const exampleHrefs = [
+      ...community.querySelectorAll<HTMLAnchorElement>('.articles-community-pitch-example'),
+    ].map((link) => link.getAttribute('href'));
+    expect(exampleHrefs).toEqual([
+      '/blog/jieqi-bot-wins',
+      '/blog/jieqi-openings',
+      '/blog/yin-sheng',
+      '/blog/duck-xiangqi-strategy',
+    ]);
+    expect(community.querySelectorAll('.articles-community-pitch-steps li')).toHaveLength(3);
+    expect(official.querySelector('.articles-community-pitch')).toBeNull();
   });
 
   it('filters community-authored posts out of the By Mistboard view', () => {
