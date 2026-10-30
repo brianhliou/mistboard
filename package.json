@@ -117,6 +117,7 @@
     "pilot:elephantchess-review:export": "npm run pilot:elephantchess-review:export --workspace @mistboard/server --",
     "pilot:elephantchess-publish": "npm run pilot:elephantchess-publish --workspace @mistboard/server --",
     "release:local-smoke": "node scripts/release-local-smoke.mjs",
+    "smoke:local": "node scripts/local-prod-smoke.mjs",
     "release:prod": "node scripts/release-prod.mjs",
     "release:profile": "node scripts/release-profile.mjs",
     "indexnow": "node scripts/indexnow-submit.mjs",
