@@ -12,9 +12,9 @@
   the `/* vietnamese */` faces; gstatic `notosans/v42` and `roboto/v49`).
   Same licenses as their latin halves (OFL 1.1 and Apache 2.0).
 - `zen-antique-river.woff2`: Zen Antique 1.001 (github.com/googlefonts/zen-antique,
-  The Zen Antique Project Authors), cut to the river inscription's four characters 楚河漢界,
-  downloaded from Google Fonts
-  (`fonts.googleapis.com/css2?family=Zen+Antique&text=楚河漢界`, gstatic v15).
+  The Zen Antique Project Authors), cut to the river inscription's four characters 楚河漢界
+  and the letters of the river caption "Mistboard", downloaded from Google Fonts
+  (`fonts.googleapis.com/css2?family=Zen+Antique&text=楚河漢界Mistboard`, gstatic v15).
   Licensed under the SIL Open Font License 1.1.
 - `apps/server/assets/fonts/NotoSans-{Regular,Bold}.ttf` — Noto Sans
   (notofonts.github.io), bundled for server-side share-card text rendering
