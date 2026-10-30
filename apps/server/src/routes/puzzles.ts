@@ -55,6 +55,17 @@ import {
 import { type PuzzleDetailSourceFields, puzzleDetailSourceFields } from '../puzzle-setup-move.js';
 import { getPuzzleStore, type PuzzleStoreSnapshot } from '../puzzle-store.js';
 import {
+  advancePuzzleStorm,
+  bestPuzzleStorm,
+  expirePuzzleStorm,
+  loadPuzzleStorm,
+  recentStormPuzzleIds,
+  type StormRun,
+  savePuzzleStorm,
+  startPuzzleStorm,
+  stormRemainingMs,
+} from '../puzzle-storm.js';
+import {
   bestPuzzleStreak,
   loadPuzzleStreak,
   orderedPuzzleRamp,
@@ -142,6 +153,101 @@ export async function tryHandle(
       return true;
     }
     writeJson(response, 200, { puzzles: await ratedPuzzleRamp(variant) });
+    return true;
+  }
+
+  if (pathname === '/api/puzzles/storm') {
+    if (!requireMethod(request, response, 'POST')) return true;
+    if (await refusedForPlayLock(request, response)) return true;
+    const body = await readJsonBody(request);
+    const userId = (await currentAccountUser(request))?.id ?? null;
+    if (body.action === 'start') {
+      if (!streakStartRateLimiter.check(clientIpForRateLimit(request))) {
+        writeJson(response, 429, { error: 'rate_limited' });
+        return true;
+      }
+      const avoid = await recentStormPuzzleIds(userId);
+      for (const id of await recentStreakPuzzleIds(userId)) avoid.add(id);
+      for (const id of parseRecentPuzzleIds(body.recent)) avoid.add(id);
+      const ramp = shuffledPuzzleRamp(await rampPool(XIANGQI_SPEC_ID), { avoid });
+      const run = await startPuzzleStorm(
+        ramp.map((p) => p.id),
+        userId,
+      );
+      writeJson(response, 200, await stormResponse(run));
+      return true;
+    }
+    if (
+      (body.action !== 'move' && body.action !== 'resume') ||
+      !isPuzzleQualitySessionId(body.runId) ||
+      (body.action === 'move' &&
+        (typeof body.version !== 'number' ||
+          !Number.isSafeInteger(body.version) ||
+          body.version < 0))
+    ) {
+      writeJson(response, 400, { error: 'invalid_storm_action' });
+      return true;
+    }
+    if (!streakMoveRateLimiter.check(clientIpForRateLimit(request))) {
+      writeJson(response, 429, { error: 'rate_limited' });
+      return true;
+    }
+    const run = await loadPuzzleStorm(body.runId);
+    if (!run || run.userId !== userId) {
+      writeJson(response, 404, { error: 'storm_not_found' });
+      return true;
+    }
+    if (body.action === 'move' && body.version !== run.version) {
+      writeJson(response, 409, { error: 'storm_action_unavailable' });
+      return true;
+    }
+    const state = run.state;
+    const expired = expirePuzzleStorm(state, Date.now());
+    if (expired && !(await savePuzzleStorm(run))) {
+      writeJson(response, 409, { error: 'storm_action_unavailable' });
+      return true;
+    }
+    // Resume never resets the partial line: doing so would let the same
+    // correct moves earn combo time repeatedly. Return it for board replay.
+    if (state.finished || body.action === 'resume') {
+      writeJson(response, 200, await stormResponse(run));
+      return true;
+    }
+    const id = state.ids[state.results.length]!;
+    if (id !== body.puzzleId) {
+      writeJson(response, 409, { error: 'storm_action_unavailable' });
+      return true;
+    }
+    const moves = parsePuzzleMoves([body.move]);
+    if (!moves) {
+      writeJson(response, 400, { error: 'invalid_moves' });
+      return true;
+    }
+    const puzzle = await puzzleById(id);
+    if (!puzzle) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    const attempt = attemptPuzzle(puzzle, [...state.moves, ...moves]);
+    if (!attempt.ok && attempt.code !== 'incorrect-move') {
+      writeJson(response, 200, { ...(await stormResponse(run)), attempt });
+      return true;
+    }
+    const accepted = advancePuzzleStorm(
+      state,
+      moves[0] as XiangqiMove,
+      !attempt.ok ? 'failed' : attempt.complete ? 'solved' : 'correct',
+      Date.now(),
+    );
+    if (!(await savePuzzleStorm(run))) {
+      writeJson(response, 409, { error: 'storm_action_unavailable' });
+      return true;
+    }
+    // Like Streak, Storm never records a rated outcome or calendar-day solve.
+    writeJson(response, 200, {
+      ...(await stormResponse(run)),
+      ...(accepted ? { attempt } : {}),
+    });
     return true;
   }
 
@@ -685,6 +791,26 @@ async function streakResponse(run: StreakRun) {
     best: await bestPuzzleStreak(run.userId),
     skipUsed: run.state.skipUsed,
     finished: run.state.finished,
+    results: run.state.results,
+    puzzle: puzzle ? await puzzleDetail(puzzle) : null,
+  };
+}
+
+async function stormResponse(run: StormRun) {
+  const id = run.state.ids[run.state.results.length];
+  const puzzle = !run.state.finished && id ? await puzzleById(id) : null;
+  return {
+    runId: run.id,
+    version: run.version,
+    day: run.day,
+    score: run.state.score,
+    combo: run.state.combo,
+    ...(await bestPuzzleStorm(run.userId, run.day)),
+    startedAt: run.state.startedAt,
+    deadlineAt: run.state.deadlineAt,
+    remainingMs: stormRemainingMs(run.state, Date.now()),
+    finished: run.state.finished,
+    moves: run.state.moves,
     results: run.state.results,
     puzzle: puzzle ? await puzzleDetail(puzzle) : null,
   };
