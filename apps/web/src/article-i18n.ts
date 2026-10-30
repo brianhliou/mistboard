@@ -34,6 +34,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-29, not native-reviewed, from the English signed
+  // off that day. Menu names are the zh shell catalog's (棋盘样式, 河界文字,
+  // 兵炮位标记, 平面/立体, 加厚, 速度) so the article names what the menu shows.
+  'set-up-your-board',
   // Machine-drafted 2026-10-24, not native-reviewed, from the English signed
   // off that day (jieqi readers are mostly Chinese).
   'jqe',
@@ -6248,6 +6252,118 @@ const ZH_HANS: Record<string, string> = {
     '第 152 盘：两个引擎眼中 jqe 每回合的胜率。到第 16 回合，两者的判断都跌到 25% 以下，并一直保持到第 22 回合；随后 jqe 自己的判断跳到 81% 和 99%，而 AB-JChess 的判断又在 0% 附近停留了一个回合，到第 24 回合才跳到 91%。',
   'General takes the chariot': '将吃车',
   'move 24': '第 24 回合',
+  // set-up-your-board: machine-drafted 2026-10-29, not native-reviewed, from the English signed off that day. Menu and option names are the zh shell catalog's (prefs.*: 棋盘/棋子, 棋盘样式, 棋盘颜色, 河界文字/无, 兵炮位标记, 外观/动画, 平面/立体, 边缘/标准/加厚, 速度/关闭/快/正常/慢; piece sets 国际 繁体 简体 动物 亮漆 木质 棋书 毛笔 隶书). The board-style tiles have no zh label, so lined/square grid are 交叉点棋盘/方格棋盘.
+  'How to Change Your Board and Pieces': '如何更改棋盘和棋子的样式',
+  'Change Your Board and Pieces': '更改棋盘和棋子样式',
+  'Xiangqi Piece Sets and Board Settings: 3D, Square Grid, River Text':
+    '象棋棋子样式与棋盘设置：立体棋子、方格棋盘、河界文字',
+  'Mistboard has nine xiangqi piece sets, pieces can be flat or 3D, and the xiangqi board can be lined or a square grid. Pieces glide when you step through a game and turn over when a hidden piece is revealed. Here is what each look is and where to set it.':
+    'Mistboard 有九套象棋棋子样式，棋子可以是平面或立体的，象棋棋盘可以是交叉点棋盘或方格棋盘。逐步查看对局时棋子会滑动，暗子翻开时会翻转。本文介绍每种样式是什么样子，以及在哪里设置。',
+  'Xiangqi pieces drawn in 3D on the lined board': '交叉点棋盘上的立体象棋棋子',
+  'Mistboard has nine piece sets: pictures, Chinese characters, cartoon animals, and five art sets in traditional styles. Pick one under Pieces in Settings.':
+    'Mistboard 有九套棋子样式：图画、汉字、卡通动物，以及五套传统风格的美术棋子。在设置的「棋子」里选择。',
+  'Pieces are flat until you switch them to 3D under Pieces in Settings. 3D works on xiangqi, jieqi, banqi and Flip Jungle, and a Thick edge makes the rim deeper.':
+    '棋子默认是平面的，可以在设置的「棋子」里改成「立体」。立体适用于象棋、揭棋、暗棋和翻翻棋，「加厚」边缘让棋子的侧边更厚。',
+  'The xiangqi board is lined, with pieces on the points, or a square grid, with pieces inside the squares. Pick it under Board.':
+    '象棋棋盘可以是交叉点棋盘，棋子落在交叉点上；也可以是方格棋盘，棋子放在格子里。在「棋盘」里选择。',
+  'A hidden piece in banqi, jieqi or Flip Jungle turns over when it is revealed, spinning on its edge in 3D. Speed sets how fast pieces move and turn, and Off stops the motion.':
+    '暗棋、揭棋和翻翻棋里的暗子翻开时会翻转，立体棋子会立在侧边上转过来。「速度」决定棋子移动和翻转的快慢，选「关闭」就不播放动画。',
+  'Mistboard draws xiangqi pieces in nine sets, flat or in 3D, and the xiangqi board lined or as a square grid. Pieces move and turn over on screen, and the river can carry its traditional name.':
+    'Mistboard 的象棋棋子有九套样式，可以画成平面或立体；象棋棋盘可以画成交叉点棋盘或方格棋盘。棋子在屏幕上会移动和翻转，河界也可以写上传统的名字。',
+  'Nine piece sets': '九套棋子样式',
+  'International draws each piece as a picture of what it is, so you can play without reading Chinese. Traditional and Simplified write the piece’s Chinese character, in the traditional or the simplified form. Animal Dobutsu swaps in cartoon animals. The last five are art sets in traditional styles: Lacquer, Wood, Book, Brush and Clerical. Every set works in xiangqi, jieqi and banqi, flat or in 3D.':
+    '「国际」把每个棋子画成它所代表的东西，不认识汉字也能下。「繁体」和「简体」在棋子上写汉字，分别用繁体字和简体字。「动物」换成卡通动物。最后五套是传统风格的美术棋子：「亮漆」「木质」「棋书」「毛笔」和「隶书」。每一套都能用在象棋、揭棋和暗棋上，平面或立体都可以。',
+  'The red general and horse and the black chariot and cannon in each set.':
+    '每套样式里的红帅、红马、黑车和黑炮。',
+  'Piece set: International': '国际',
+  'Piece set: Animal Dobutsu': '动物',
+  'Piece set: Traditional': '繁体',
+  'Piece set: Simplified': '简体',
+  'Piece set: Lacquer': '亮漆',
+  'Piece set: Wood': '木质',
+  'Piece set: Book': '棋书',
+  'Piece set: Brush': '毛笔',
+  'Piece set: Clerical': '隶书',
+  'Pieces can be flat or 3D': '棋子可以是平面或立体的',
+  'Flat pieces are the default: a disc with the piece drawn on it. In 3D each piece gets a rim, so it stands on the board like a wooden piece on a table. Once 3D is on, the Edge choice appears beside it. Standard is a shallow rim, and Thick makes it half again as deep while the piece keeps its size on the board.':
+    '默认是平面棋子：一个圆片，上面画着棋子。选「立体」后，每个棋子都有一圈侧边，像木头棋子放在桌上一样立在棋盘上。打开立体后，旁边会出现「边缘」选项。「标准」的侧边较浅，「加厚」把侧边再加深一半，棋子在棋盘上的大小不变。',
+  'The same corner of a xiangqi board three times: flat pieces, 3D pieces, and 3D pieces with the thick edge':
+    '同一个象棋棋盘角落画了三次：平面棋子、立体棋子，以及加厚边缘的立体棋子',
+  'Flat, 3D, and 3D with the Thick edge.': '平面、立体，以及「加厚」边缘的立体。',
+  'The same look reaches the hidden-piece games. In [jieqi](/rules/jieqi) the face-down pieces stand in 3D with the rest, and in [banqi](/rules/banqi) and [Flip Jungle](/rules/jungle-flip) so does every tile.':
+    '有暗子的棋也能用这种样式。在[揭棋](/rules/jieqi)里，背面朝上的暗子和其他棋子一样以立体显示；在[暗棋](/rules/banqi)和[翻翻棋](/rules/jungle-flip)里，每一枚棋子也是如此。',
+  'A jieqi position with face-down and revealed pieces three times: flat, 3D, and 3D with the thick edge':
+    '一个既有暗子也有明子的揭棋局面画了三次：平面、立体，以及加厚边缘的立体',
+  'Jieqi: flat, 3D, and 3D with the Thick edge. The plain discs are pieces still face down.':
+    '揭棋：平面、立体，以及「加厚」边缘的立体。没有字的圆片是还没翻开的暗子。',
+  'A Flip Jungle board three times: flat tiles, 3D tiles, and 3D tiles with the thick edge':
+    '同一个翻翻棋棋盘画了三次：平面棋子、立体棋子，以及加厚边缘的立体棋子',
+  'Flip Jungle: flat, 3D, and 3D with the Thick edge. The green tiles are still face down.':
+    '翻翻棋：平面、立体，以及「加厚」边缘的立体。绿色的棋子还没翻开。',
+  'The xiangqi board can be lined, or a square grid like chess':
+    '象棋棋盘可以是交叉点棋盘，也可以是像国际象棋那样的方格棋盘',
+  'The lined board is the traditional one. Pieces sit on the points where the lines cross, the palaces have their diagonals, and the river runs across the middle. The square grid puts each piece inside a square, the way a chessboard does, with light and dark squares, the river as a blue band and each palace as a shaded block. The rules are the same on both.':
+    '交叉点棋盘是传统的棋盘。棋子落在线的交叉点上，九宫画有斜线，河界横贯中间。方格棋盘像国际象棋棋盘那样把每个棋子放在格子里：格子深浅相间，河界是一条蓝色的带子，九宫是一块颜色较深的区域。两种棋盘的规则完全相同。',
+  LINED: '交叉点棋盘',
+  'SQUARE GRID': '方格棋盘',
+  'The starting position on each board, drawn with your piece set.':
+    '两种棋盘上的开局局面，用你选的棋子样式绘制。',
+  'If you come to xiangqi from chess, try the square grid first. The pieces sit in squares on a checkered board, so a move looks the way you already picture one, and the lined board is one setting away when you want it. Both boards work with flat and 3D pieces. Board color offers the same woods and paper on both, and the green Jungle color only on the square grid.':
+    '如果你是从国际象棋转来下象棋的，可以先试试方格棋盘。棋子放在深浅相间的格子里，一步棋看起来就和你习惯的一样；想用交叉点棋盘时，改一项设置就行。两种棋盘都能用平面和立体棋子。「棋盘颜色」在两种棋盘上提供同样的木色和纸色，绿色的「斗兽棋」配色只用于方格棋盘。',
+  'Pieces glide and turn over': '棋子会滑动和翻转',
+  'When you step through a game in a review, a study or a replay, each move slides from its square to the next, so you can follow it without hunting for what changed. A hidden piece turns over when it is revealed, in banqi, jieqi and Flip Jungle. A 3D piece spins over on its edge like a real one. A flat piece narrows to a thin line and widens again showing its other face.':
+    '在复盘、研究或回放里逐步查看对局时，每一步的棋子都会从原来的位置滑到新的位置，不用到处找哪里变了也能跟上。在暗棋、揭棋和翻翻棋里，暗子翻开时会翻转。立体棋子像真的棋子一样立在侧边上翻过来；平面棋子先收窄成一条细线，再展开露出另一面。',
+  'Press the forward arrow under each board to see it. The first move in the banqi game flips a tile where it lies. In jieqi a face-down piece moves and turns over as it lands. Both boards are shown in 3D whatever your own setting is.':
+    '点每个棋盘下方的前进箭头就能看到。暗棋这盘的第一步是在原地翻开一枚棋子。揭棋里，一枚暗子走动后在落点翻开。无论你自己怎么设置，这两个棋盘都以立体显示。',
+  'Banqi: the first move turns a tile over.': '暗棋：第一步翻开一枚棋子。',
+  'Banqi game with 3D tiles: step forward to see a tile turn over':
+    '立体棋子的暗棋对局：往前走一步，看棋子翻开',
+  'Jieqi: a hidden piece flips as it lands.': '揭棋：暗子在落点翻开。',
+  'Jieqi game with 3D pieces: step forward to see a piece flip as it lands':
+    '立体棋子的揭棋对局：往前走一步，看暗子在落点翻开',
+  'Speed, under Pieces, sets how fast all of this runs: Fast, Normal or Slow. Off moves pieces straight to their squares and reveals a piece without the turn. If your device is set to reduce motion, Mistboard skips the motion too.':
+    '「棋子」里的「速度」决定这些动画有多快：「快」「正常」或「慢」。选「关闭」时，棋子直接出现在新位置，翻子时也不播放翻转。如果你的设备开启了减少动态效果，Mistboard 也会跳过这些动画。',
+  'The river can name Chu and Han': '河界可以写上楚河汉界',
+  'Printed xiangqi boards often write four characters in the river: 楚河 (chǔ hé, "Chu river") on one side and 漢界 (hàn jiè, "Han border") on the other. They name the border between Chu and Han, the two states that fought for China after the Qin dynasty fell, from 206 to 202 BC. In 203 BC Xiang Yu of Chu and Liu Bang of Han agreed to split the country along the Hong Canal; the truce broke within months, Liu Bang won the next year, and he founded the Han dynasty. The river on the board stands for that line. River text has three choices. 楚河 漢界 draws the characters, one pair on each half of the river, each pair facing the player on its side. Off leaves the river blank. Mistboard writes the site name.':
+    '印刷的象棋盘常在河界里写四个字：一边是「楚河」，另一边是「汉界」。它们指的是楚与汉的分界。秦朝灭亡后，楚、汉两方在公元前 206 年到前 202 年间争夺天下。公元前 203 年，楚的项羽和汉的刘邦约定以鸿沟为界平分天下；和约几个月内就破裂了，刘邦在第二年取胜，建立了汉朝。棋盘上的河界代表的就是这条界线。「河界文字」有三个选项。「楚河 漢界」写出这四个字，河界两半各写一对，每一对都朝向自己那一侧的棋手。「无」让河界留空。「Mistboard」写上本站的名字。',
+  'River text: 楚河 漢界 (Chu river, Han border), and Off.': '河界文字：「楚河 漢界」和「无」。',
+  OFF: '无',
+  'River text starts Off, or with 楚河 漢界 on for players who read Chinese. It is a lined-board setting, so the square grid leaves its river band blank.':
+    '「河界文字」默认为「无」，读中文的玩家则默认显示「楚河 漢界」。这是交叉点棋盘的设置，方格棋盘的河界带子总是留空。',
+  'Start markers show where the cannons and soldiers began': '兵炮位标记显示炮和兵的起始位置',
+  'The small crosses on a printed xiangqi board are start marks: corner brackets on the points where each side’s two cannons and five soldiers begin, so the pieces can be set out without a diagram. Mistboard draws them too. At the start of a game the pieces cover them, so they show only once a cannon or soldier has moved. Start markers, on the Board page, turns them off.':
+    '印刷的象棋盘上那些小十字是兵炮位标记：画在双方两个炮和五个兵（卒）起始交叉点四角的折线，让人不看图也能摆好棋子。Mistboard 也画出了这些标记。开局时它们被棋子盖住，所以要等炮或兵走动之后才会露出来。在「棋盘」页面取消勾选「兵炮位标记」，就能关掉它们。',
+  'The red half of a xiangqi middlegame twice: with start markers on the empty cannon and soldier points, and without them':
+    '同一个象棋中局的红方半盘画了两次：一次在空出的炮位和兵位上显示兵炮位标记，一次不显示',
+  'Start markers on, then off.': '兵炮位标记：先开，后关。',
+  'Everything is in Settings': '一切都在设置里',
+  'Signed out, open the gear in the top bar. Signed in, open your account menu. Board and Pieces are rows in that menu, and each opens its own page of choices. A change applies to the boards you play and review on.':
+    '未登录时，点开顶栏的齿轮图标；登录后，打开你的账户菜单。「棋盘」和「棋子」是菜单里的两行，各自打开一页选项。更改会应用到你下棋和复盘用的棋盘上。',
+  Setting: '设置项',
+  Where: '位置',
+  Choices: '选项',
+  'Board style': '棋盘样式',
+  Board: '棋盘',
+  'Lined or Square grid': '交叉点棋盘或方格棋盘',
+  'Board color': '棋盘颜色',
+  'Seven colors, plus Jungle on the square grid': '七种颜色，方格棋盘另有「斗兽棋」配色',
+  'River text': '河界文字',
+  'Off, 楚河 漢界 or Mistboard (lined board only)': '无、楚河 漢界或 Mistboard（仅限交叉点棋盘）',
+  'Start markers': '兵炮位标记',
+  'On or Off': '开或关',
+  'Piece set': '棋子样式',
+  'Any of the nine sets above': '上面九套中的任意一套',
+  'Pieces, under Look': '棋子（外观）',
+  'Flat or 3D': '平面或立体',
+  Edge: '边缘',
+  'Standard or Thick (3D only)': '标准或加厚（仅限立体）',
+  Speed: '速度',
+  'Pieces, under Motion': '棋子（动画）',
+  'Off, Fast, Normal or Slow': '关闭、快、正常或慢',
+  'As of November 6, 2026': '截至 2026 年 11 月 6 日',
+  'The menus, sets and choices as they are on this date. When a setting moves or a set is added, this article is updated and says so at the top.':
+    '本文的菜单、棋子样式和选项以这一天为准。设置项换了位置或新增了棋子样式时，本文会随之更新，并在文章开头注明。',
+  'Play xiangqi': '下象棋',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -12072,6 +12188,118 @@ const ZH_HANT: Record<string, string> = {
     '第 152 盤：兩個引擎眼中 jqe 每回合的勝率。到第 16 回合，兩者的判斷都跌到 25% 以下，並一直保持到第 22 回合；隨後 jqe 自己的判斷跳到 81% 和 99%，而 AB-JChess 的判斷又在 0% 附近停留了一個回合，到第 24 回合才跳到 91%。',
   'General takes the chariot': '將吃車',
   'move 24': '第 24 回合',
+  // set-up-your-board: machine-drafted 2026-10-29, not native-reviewed, from the English signed off that day. Menu and option names are the zh shell catalog's (prefs.*: 棋盤/棋子, 棋盤樣式, 棋盤顏色, 河界文字/無, 兵炮位標記, 外觀/動畫, 平面/立體, 邊緣/標準/加厚, 速度/關閉/快/正常/慢; piece sets 國際 繁體 簡體 動物 亮漆 木質 棋書 毛筆 隸書). The board-style tiles have no zh label, so lined/square grid are 交叉點棋盤/方格棋盤.
+  'How to Change Your Board and Pieces': '如何更改棋盤和棋子的樣式',
+  'Change Your Board and Pieces': '更改棋盤和棋子樣式',
+  'Xiangqi Piece Sets and Board Settings: 3D, Square Grid, River Text':
+    '象棋棋子樣式與棋盤設定：立體棋子、方格棋盤、河界文字',
+  'Mistboard has nine xiangqi piece sets, pieces can be flat or 3D, and the xiangqi board can be lined or a square grid. Pieces glide when you step through a game and turn over when a hidden piece is revealed. Here is what each look is and where to set it.':
+    'Mistboard 有九套象棋棋子樣式，棋子可以是平面或立體的，象棋棋盤可以是交叉點棋盤或方格棋盤。逐步查看對局時棋子會滑動，暗子翻開時會翻轉。本文介紹每種樣式是什麼樣子，以及在哪裡設定。',
+  'Xiangqi pieces drawn in 3D on the lined board': '交叉點棋盤上的立體象棋棋子',
+  'Mistboard has nine piece sets: pictures, Chinese characters, cartoon animals, and five art sets in traditional styles. Pick one under Pieces in Settings.':
+    'Mistboard 有九套棋子樣式：圖畫、漢字、卡通動物，以及五套傳統風格的美術棋子。在設定的「棋子」裡選擇。',
+  'Pieces are flat until you switch them to 3D under Pieces in Settings. 3D works on xiangqi, jieqi, banqi and Flip Jungle, and a Thick edge makes the rim deeper.':
+    '棋子預設是平面的，可以在設定的「棋子」裡改成「立體」。立體適用於象棋、揭棋、暗棋和翻翻棋，「加厚」邊緣讓棋子的側邊更厚。',
+  'The xiangqi board is lined, with pieces on the points, or a square grid, with pieces inside the squares. Pick it under Board.':
+    '象棋棋盤可以是交叉點棋盤，棋子落在交叉點上；也可以是方格棋盤，棋子放在格子裡。在「棋盤」裡選擇。',
+  'A hidden piece in banqi, jieqi or Flip Jungle turns over when it is revealed, spinning on its edge in 3D. Speed sets how fast pieces move and turn, and Off stops the motion.':
+    '暗棋、揭棋和翻翻棋裡的暗子翻開時會翻轉，立體棋子會立在側邊上轉過來。「速度」決定棋子移動和翻轉的快慢，選「關閉」就不播放動畫。',
+  'Mistboard draws xiangqi pieces in nine sets, flat or in 3D, and the xiangqi board lined or as a square grid. Pieces move and turn over on screen, and the river can carry its traditional name.':
+    'Mistboard 的象棋棋子有九套樣式，可以畫成平面或立體；象棋棋盤可以畫成交叉點棋盤或方格棋盤。棋子在螢幕上會移動和翻轉，河界也可以寫上傳統的名字。',
+  'Nine piece sets': '九套棋子樣式',
+  'International draws each piece as a picture of what it is, so you can play without reading Chinese. Traditional and Simplified write the piece’s Chinese character, in the traditional or the simplified form. Animal Dobutsu swaps in cartoon animals. The last five are art sets in traditional styles: Lacquer, Wood, Book, Brush and Clerical. Every set works in xiangqi, jieqi and banqi, flat or in 3D.':
+    '「國際」把每個棋子畫成它所代表的東西，不認識漢字也能下。「繁體」和「簡體」在棋子上寫漢字，分別用繁體字和簡體字。「動物」換成卡通動物。最後五套是傳統風格的美術棋子：「亮漆」「木質」「棋書」「毛筆」和「隸書」。每一套都能用在象棋、揭棋和暗棋上，平面或立體都可以。',
+  'The red general and horse and the black chariot and cannon in each set.':
+    '每套樣式裡的紅帥、紅馬、黑車和黑炮。',
+  'Piece set: International': '國際',
+  'Piece set: Animal Dobutsu': '動物',
+  'Piece set: Traditional': '繁體',
+  'Piece set: Simplified': '簡體',
+  'Piece set: Lacquer': '亮漆',
+  'Piece set: Wood': '木質',
+  'Piece set: Book': '棋書',
+  'Piece set: Brush': '毛筆',
+  'Piece set: Clerical': '隸書',
+  'Pieces can be flat or 3D': '棋子可以是平面或立體的',
+  'Flat pieces are the default: a disc with the piece drawn on it. In 3D each piece gets a rim, so it stands on the board like a wooden piece on a table. Once 3D is on, the Edge choice appears beside it. Standard is a shallow rim, and Thick makes it half again as deep while the piece keeps its size on the board.':
+    '預設是平面棋子：一個圓片，上面畫著棋子。選「立體」後，每個棋子都有一圈側邊，像木頭棋子放在桌上一樣立在棋盤上。打開立體後，旁邊會出現「邊緣」選項。「標準」的側邊較淺，「加厚」把側邊再加深一半，棋子在棋盤上的大小不變。',
+  'The same corner of a xiangqi board three times: flat pieces, 3D pieces, and 3D pieces with the thick edge':
+    '同一個象棋棋盤角落畫了三次：平面棋子、立體棋子，以及加厚邊緣的立體棋子',
+  'Flat, 3D, and 3D with the Thick edge.': '平面、立體，以及「加厚」邊緣的立體。',
+  'The same look reaches the hidden-piece games. In [jieqi](/rules/jieqi) the face-down pieces stand in 3D with the rest, and in [banqi](/rules/banqi) and [Flip Jungle](/rules/jungle-flip) so does every tile.':
+    '有暗子的棋也能用這種樣式。在[揭棋](/rules/jieqi)裡，背面朝上的暗子和其他棋子一樣以立體顯示；在[暗棋](/rules/banqi)和[翻翻棋](/rules/jungle-flip)裡，每一枚棋子也是如此。',
+  'A jieqi position with face-down and revealed pieces three times: flat, 3D, and 3D with the thick edge':
+    '一個既有暗子也有明子的揭棋局面畫了三次：平面、立體，以及加厚邊緣的立體',
+  'Jieqi: flat, 3D, and 3D with the Thick edge. The plain discs are pieces still face down.':
+    '揭棋：平面、立體，以及「加厚」邊緣的立體。沒有字的圓片是還沒翻開的暗子。',
+  'A Flip Jungle board three times: flat tiles, 3D tiles, and 3D tiles with the thick edge':
+    '同一個翻翻棋棋盤畫了三次：平面棋子、立體棋子，以及加厚邊緣的立體棋子',
+  'Flip Jungle: flat, 3D, and 3D with the Thick edge. The green tiles are still face down.':
+    '翻翻棋：平面、立體，以及「加厚」邊緣的立體。綠色的棋子還沒翻開。',
+  'The xiangqi board can be lined, or a square grid like chess':
+    '象棋棋盤可以是交叉點棋盤，也可以是像西洋棋那樣的方格棋盤',
+  'The lined board is the traditional one. Pieces sit on the points where the lines cross, the palaces have their diagonals, and the river runs across the middle. The square grid puts each piece inside a square, the way a chessboard does, with light and dark squares, the river as a blue band and each palace as a shaded block. The rules are the same on both.':
+    '交叉點棋盤是傳統的棋盤。棋子落在線的交叉點上，九宮畫有斜線，河界橫貫中間。方格棋盤像西洋棋棋盤那樣把每個棋子放在格子裡：格子深淺相間，河界是一條藍色的帶子，九宮是一塊顏色較深的區域。兩種棋盤的規則完全相同。',
+  LINED: '交叉點棋盤',
+  'SQUARE GRID': '方格棋盤',
+  'The starting position on each board, drawn with your piece set.':
+    '兩種棋盤上的開局局面，用你選的棋子樣式繪製。',
+  'If you come to xiangqi from chess, try the square grid first. The pieces sit in squares on a checkered board, so a move looks the way you already picture one, and the lined board is one setting away when you want it. Both boards work with flat and 3D pieces. Board color offers the same woods and paper on both, and the green Jungle color only on the square grid.':
+    '如果你是從西洋棋轉來下象棋的，可以先試試方格棋盤。棋子放在深淺相間的格子裡，一步棋看起來就和你習慣的一樣；想用交叉點棋盤時，改一項設定就行。兩種棋盤都能用平面和立體棋子。「棋盤顏色」在兩種棋盤上提供同樣的木色和紙色，綠色的「鬥獸棋」配色只用於方格棋盤。',
+  'Pieces glide and turn over': '棋子會滑動和翻轉',
+  'When you step through a game in a review, a study or a replay, each move slides from its square to the next, so you can follow it without hunting for what changed. A hidden piece turns over when it is revealed, in banqi, jieqi and Flip Jungle. A 3D piece spins over on its edge like a real one. A flat piece narrows to a thin line and widens again showing its other face.':
+    '在覆盤、研究或回放裡逐步查看對局時，每一步的棋子都會從原來的位置滑到新的位置，不用到處找哪裡變了也能跟上。在暗棋、揭棋和翻翻棋裡，暗子翻開時會翻轉。立體棋子像真的棋子一樣立在側邊上翻過來；平面棋子先收窄成一條細線，再展開露出另一面。',
+  'Press the forward arrow under each board to see it. The first move in the banqi game flips a tile where it lies. In jieqi a face-down piece moves and turns over as it lands. Both boards are shown in 3D whatever your own setting is.':
+    '點每個棋盤下方的前進箭頭就能看到。暗棋這盤的第一步是在原地翻開一枚棋子。揭棋裡，一枚暗子走動後在落點翻開。無論你自己怎麼設定，這兩個棋盤都以立體顯示。',
+  'Banqi: the first move turns a tile over.': '暗棋：第一步翻開一枚棋子。',
+  'Banqi game with 3D tiles: step forward to see a tile turn over':
+    '立體棋子的暗棋對局：往前走一步，看棋子翻開',
+  'Jieqi: a hidden piece flips as it lands.': '揭棋：暗子在落點翻開。',
+  'Jieqi game with 3D pieces: step forward to see a piece flip as it lands':
+    '立體棋子的揭棋對局：往前走一步，看暗子在落點翻開',
+  'Speed, under Pieces, sets how fast all of this runs: Fast, Normal or Slow. Off moves pieces straight to their squares and reveals a piece without the turn. If your device is set to reduce motion, Mistboard skips the motion too.':
+    '「棋子」裡的「速度」決定這些動畫有多快：「快」「正常」或「慢」。選「關閉」時，棋子直接出現在新位置，翻子時也不播放翻轉。如果你的裝置開啟了減少動態效果，Mistboard 也會跳過這些動畫。',
+  'The river can name Chu and Han': '河界可以寫上楚河漢界',
+  'Printed xiangqi boards often write four characters in the river: 楚河 (chǔ hé, "Chu river") on one side and 漢界 (hàn jiè, "Han border") on the other. They name the border between Chu and Han, the two states that fought for China after the Qin dynasty fell, from 206 to 202 BC. In 203 BC Xiang Yu of Chu and Liu Bang of Han agreed to split the country along the Hong Canal; the truce broke within months, Liu Bang won the next year, and he founded the Han dynasty. The river on the board stands for that line. River text has three choices. 楚河 漢界 draws the characters, one pair on each half of the river, each pair facing the player on its side. Off leaves the river blank. Mistboard writes the site name.':
+    '印刷的象棋盤常在河界裡寫四個字：一邊是「楚河」，另一邊是「漢界」。它們指的是楚與漢的分界。秦朝滅亡後，楚、漢兩方在公元前 206 年到前 202 年間爭奪天下。公元前 203 年，楚的項羽和漢的劉邦約定以鴻溝為界平分天下；和約幾個月內就破裂了，劉邦在第二年取勝，建立了漢朝。棋盤上的河界代表的就是這條界線。「河界文字」有三個選項。「楚河 漢界」寫出這四個字，河界兩半各寫一對，每一對都朝向自己那一側的棋手。「無」讓河界留空。「Mistboard」寫上本站的名字。',
+  'River text: 楚河 漢界 (Chu river, Han border), and Off.': '河界文字：「楚河 漢界」和「無」。',
+  OFF: '無',
+  'River text starts Off, or with 楚河 漢界 on for players who read Chinese. It is a lined-board setting, so the square grid leaves its river band blank.':
+    '「河界文字」預設為「無」，讀中文的玩家則預設顯示「楚河 漢界」。這是交叉點棋盤的設定，方格棋盤的河界帶子總是留空。',
+  'Start markers show where the cannons and soldiers began': '兵炮位標記顯示炮和兵的起始位置',
+  'The small crosses on a printed xiangqi board are start marks: corner brackets on the points where each side’s two cannons and five soldiers begin, so the pieces can be set out without a diagram. Mistboard draws them too. At the start of a game the pieces cover them, so they show only once a cannon or soldier has moved. Start markers, on the Board page, turns them off.':
+    '印刷的象棋盤上那些小十字是兵炮位標記：畫在雙方兩個炮和五個兵（卒）起始交叉點四角的折線，讓人不看圖也能擺好棋子。Mistboard 也畫出了這些標記。開局時它們被棋子蓋住，所以要等炮或兵走動之後才會露出來。在「棋盤」頁面取消勾選「兵炮位標記」，就能關掉它們。',
+  'The red half of a xiangqi middlegame twice: with start markers on the empty cannon and soldier points, and without them':
+    '同一個象棋中局的紅方半盤畫了兩次：一次在空出的炮位和兵位上顯示兵炮位標記，一次不顯示',
+  'Start markers on, then off.': '兵炮位標記：先開，後關。',
+  'Everything is in Settings': '一切都在設定裡',
+  'Signed out, open the gear in the top bar. Signed in, open your account menu. Board and Pieces are rows in that menu, and each opens its own page of choices. A change applies to the boards you play and review on.':
+    '未登入時，點開頂欄的齒輪圖示；登入後，打開你的帳戶選單。「棋盤」和「棋子」是選單裡的兩行，各自打開一頁選項。更改會套用到你下棋和覆盤用的棋盤上。',
+  Setting: '設定項',
+  Where: '位置',
+  Choices: '選項',
+  'Board style': '棋盤樣式',
+  Board: '棋盤',
+  'Lined or Square grid': '交叉點棋盤或方格棋盤',
+  'Board color': '棋盤顏色',
+  'Seven colors, plus Jungle on the square grid': '七種顏色，方格棋盤另有「鬥獸棋」配色',
+  'River text': '河界文字',
+  'Off, 楚河 漢界 or Mistboard (lined board only)': '無、楚河 漢界或 Mistboard（僅限交叉點棋盤）',
+  'Start markers': '兵炮位標記',
+  'On or Off': '開或關',
+  'Piece set': '棋子樣式',
+  'Any of the nine sets above': '上面九套中的任意一套',
+  'Pieces, under Look': '棋子（外觀）',
+  'Flat or 3D': '平面或立體',
+  Edge: '邊緣',
+  'Standard or Thick (3D only)': '標準或加厚（僅限立體）',
+  Speed: '速度',
+  'Pieces, under Motion': '棋子（動畫）',
+  'Off, Fast, Normal or Slow': '關閉、快、正常或慢',
+  'As of November 6, 2026': '截至 2026 年 11 月 6 日',
+  'The menus, sets and choices as they are on this date. When a setting moves or a set is added, this article is updated and says so at the top.':
+    '本文的選單、棋子樣式和選項以這一天為準。設定項換了位置或新增了棋子樣式時，本文會隨之更新，並在文章開頭註明。',
+  'Play xiangqi': '下象棋',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
@@ -12099,13 +12327,34 @@ export const ARTICLE_GEOMETRY_KEYS: ReadonlySet<string> = new Set([
   'orientation',
 ]);
 
-function deepTranslate<T>(value: T, dict: Record<string, string>): T {
-  if (typeof value === 'string') return (hasOwnKey(dict, value) ? dict[value] : value) as T;
-  if (Array.isArray(value)) return value.map((v) => deepTranslate(v, dict)) as T;
+// Per-article values for a key the flat dictionary already gives another
+// meaning. Matching is by whole string, so a bare word can only translate one
+// way site-wide: "Pieces" heads the flip-jungle-skill-ceiling tablebase table
+// as a count (子数) and names the Settings page in set-up-your-board (棋子, the
+// zh menu's own word). The global entry still has to exist for the coverage
+// test; this only overrides it inside the one article.
+const ARTICLE_SCOPED_DICTS: Record<
+  ArticleLang,
+  Readonly<Record<string, Readonly<Record<string, string>>>>
+> = {
+  'zh-Hans': { 'set-up-your-board': { Pieces: '棋子' } },
+  'zh-Hant': { 'set-up-your-board': { Pieces: '棋子' } },
+};
+
+function deepTranslate<T>(
+  value: T,
+  dict: Record<string, string>,
+  scoped?: Readonly<Record<string, string>>,
+): T {
+  if (typeof value === 'string') {
+    if (scoped && hasOwnKey(scoped, value)) return scoped[value] as T;
+    return (hasOwnKey(dict, value) ? dict[value] : value) as T;
+  }
+  if (Array.isArray(value)) return value.map((v) => deepTranslate(v, dict, scoped)) as T;
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
-      out[k] = ARTICLE_GEOMETRY_KEYS.has(k) ? v : deepTranslate(v, dict);
+      out[k] = ARTICLE_GEOMETRY_KEYS.has(k) ? v : deepTranslate(v, dict, scoped);
     }
     return out as T;
   }
@@ -12116,7 +12365,10 @@ function deepTranslate<T>(value: T, dict: Record<string, string>): T {
 // Strings absent from the dictionary fall through as English (graceful partial
 // translation). Does not mutate the source article.
 export function translateArticle(article: Article, lang: ArticleLang): Article {
-  return deepTranslate(article, ARTICLE_DICTS[lang]);
+  const scoped = hasOwnKey(ARTICLE_SCOPED_DICTS[lang], article.slug)
+    ? ARTICLE_SCOPED_DICTS[lang][article.slug]
+    : undefined;
+  return deepTranslate(article, ARTICLE_DICTS[lang], scoped);
 }
 
 export function translateArticleText(lang: ArticleLang | undefined, text: string): string {

@@ -642,7 +642,7 @@ type AssetSetSpec = {
 };
 
 const ASSET_SETS: Record<AssetXiangqiPieceSet, AssetSetSpec> = {
-  lacquer: { version: 2, ink: { red: '#ffffff', black: '#ffffff' }, neutralBack: null },
+  lacquer: { version: 3, ink: { red: '#ffffff', black: '#ffffff' }, neutralBack: null },
   wood: { version: 1, ink: { red: '#ae1d04', black: '#1e1e1a' }, neutralBack: 'red' },
   book: { version: 1, ink: { red: '#ff0000', black: '#000000' }, neutralBack: null },
   brush: { version: 2, ink: { red: '#ff0000', black: '#005500' }, neutralBack: 'red' },
