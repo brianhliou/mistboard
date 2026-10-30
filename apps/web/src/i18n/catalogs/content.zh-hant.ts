@@ -131,6 +131,9 @@ export const ZH_HANT_CONTENT = {
   'contact.rightsPrefix': '主辦這項賽事、擁有其中對局的權利，或發現了錯誤？請',
   'contact.rightsLink': '聯絡我們',
   'contact.rightsSuffix': '。',
+  'contact.correctionsPrefix': '更正或版權事宜，請',
+  'contact.correctionsLink': '聯絡我們',
+  'contact.correctionsSuffix': '。',
   'contact.aboutPage': '相關頁面：{path}',
   'about.heading': '關於 Mistboard',
   'about.lede':

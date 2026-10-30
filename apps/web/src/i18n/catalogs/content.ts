@@ -177,12 +177,17 @@ export const EN_CONTENT = {
     'Daily limit reached. Sign in for unlimited replies, or try again tomorrow.',
   'contact.sendFailed': "Couldn't send. Try again, or email if it keeps failing.",
   'contact.networkError': 'Network error. Try again.',
-  // The small print under every player, team and broadcast page. Approved
+  // The small print under every broadcast page. Approved
   // English, verbatim (Brian, 2026-10-30); "Contact us" is the link to
   // /contact?about=<page>.
   'contact.rightsPrefix': 'Run this event, hold rights to its games, or spot a mistake? ',
   'contact.rightsLink': 'Contact us',
   'contact.rightsSuffix': '.',
+  // The quieter form on player and team pages and under a player article's
+  // photo (Brian, 2026-10-30: "short due diligence", not an invitation).
+  'contact.correctionsPrefix': 'Corrections or rights requests: ',
+  'contact.correctionsLink': 'contact us',
+  'contact.correctionsSuffix': '.',
   'contact.aboutPage': 'About: {path}',
   'about.heading': 'About Mistboard',
   'about.lede':
@@ -781,6 +786,9 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'contact.rightsPrefix',
   'contact.rightsLink',
   'contact.rightsSuffix',
+  'contact.correctionsPrefix',
+  'contact.correctionsLink',
+  'contact.correctionsSuffix',
   'contact.aboutPage',
   'about.heading',
   'about.lede',

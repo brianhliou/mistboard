@@ -133,7 +133,7 @@ export async function mountXiangqiPlayer(root: HTMLElement, slug: string): Promi
     );
     document.title = `${displayName(data.player)} · Mistboard`;
     const page = renderPlayer(data.player, data.boards);
-    page.append(rightsContactNote(playerHref(data.player)));
+    page.append(rightsContactNote(playerHref(data.player), 'corrections'));
     root.replaceChildren(buildNav(), page.main);
   } catch (err) {
     renderError(root, err);
@@ -160,7 +160,7 @@ export async function mountXiangqiTeam(root: HTMLElement, key: string): Promise<
     if (canonical !== key) history.replaceState(history.state, '', teamHref(canonical));
     document.title = `${teamLabel(team)} · Mistboard`;
     const page = renderTeam(team);
-    page.append(rightsContactNote(teamHref(team.key)));
+    page.append(rightsContactNote(teamHref(team.key), 'corrections'));
     root.replaceChildren(buildNav(), page.main);
   } catch (err) {
     renderError(root, err);

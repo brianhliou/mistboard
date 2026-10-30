@@ -274,6 +274,7 @@ const G_M_118072: XiangqiReplaySpec = {
 
 export const tonyFungGaZenArticle: Article = {
   slug: "tony-fung-ga-zen",
+  contactNote: true,
   homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',

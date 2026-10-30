@@ -131,6 +131,9 @@ export const ZH_HANS_CONTENT = {
   'contact.rightsPrefix': '主办这项赛事、拥有其中对局的权利，或发现了错误？请',
   'contact.rightsLink': '联系我们',
   'contact.rightsSuffix': '。',
+  'contact.correctionsPrefix': '更正或版权事宜，请',
+  'contact.correctionsLink': '联系我们',
+  'contact.correctionsSuffix': '。',
   'contact.aboutPage': '相关页面：{path}',
   'about.heading': '关于 Mistboard',
   'about.lede':

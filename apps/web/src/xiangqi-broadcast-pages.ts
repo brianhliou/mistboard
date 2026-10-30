@@ -65,7 +65,12 @@ export function broadcastSectionLayout(
  * `?about=`, so the message arrives labelled with the page it is about.
  * One element for all of them, so every page says it the same way.
  */
-export function rightsContactNote(path: string = window.location.pathname): HTMLElement {
+// 'event' is the broadcast wording (organisers, game rights); 'corrections' is
+// the shorter line for player and team pages and player articles.
+export function rightsContactNote(
+  path: string = window.location.pathname,
+  kind: 'event' | 'corrections' = 'event',
+): HTMLElement {
   const note = document.createElement('p');
   note.className = 'xqb-rights-note';
   const link = document.createElement('a');
@@ -74,8 +79,13 @@ export function rightsContactNote(path: string = window.location.pathname): HTML
   // it (Search Console, 2026-10-19); /contact canonicalises to the bare path,
   // and nofollow stops crawlers minting new copies. The form still prefills.
   link.rel = 'nofollow';
-  link.textContent = t('contact.rightsLink');
-  note.append(t('contact.rightsPrefix'), link, t('contact.rightsSuffix'));
+  if (kind === 'corrections') {
+    link.textContent = t('contact.correctionsLink');
+    note.append(t('contact.correctionsPrefix'), link, t('contact.correctionsSuffix'));
+  } else {
+    link.textContent = t('contact.rightsLink');
+    note.append(t('contact.rightsPrefix'), link, t('contact.rightsSuffix'));
+  }
   return note;
 }
 
