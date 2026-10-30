@@ -6,6 +6,7 @@
 // raw cp so mates don't spike the axis.
 import { winPercent } from '@mistboard/game';
 import '../seat-disc-ink.css';
+import { t } from '../i18n/catalog.js';
 import './advantage-chart.css';
 import { attachChartScrub, createChartTip, showChartTip } from './chart-scrub.js';
 import { formatEval } from './engine/eval-format.js';
@@ -191,9 +192,9 @@ export function createAdvantageChart(
   // A game with no detected middlegame gets no phase chrome at all.
   if (opts.phases?.middle && opts.phases.middle <= maxPly) {
     const names = opts.phaseLabels ?? {
-      opening: 'Opening',
-      middlegame: 'Middlegame',
-      endgame: 'Endgame',
+      opening: t('summary.opening'),
+      middlegame: t('summary.middlegame'),
+      endgame: t('summary.endgame'),
     };
     const marks: { ply: number; label: string }[] = [{ ply: 0, label: names.opening }];
     marks.push({ ply: opts.phases.middle, label: names.middlegame });

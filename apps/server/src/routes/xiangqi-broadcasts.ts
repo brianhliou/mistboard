@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { broadcastRecordsCredit } from '@mistboard/game';
+import { broadcastRecordsCredit, xiangqiBroadcastRoundStart } from '@mistboard/game';
 import * as persistence from './../persistence.js';
 import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from '../xiangqi-analysis.js';
 import { handleXiangqiBroadcastAnalysisRoutes } from '../xiangqi-broadcast-analysis.js';
@@ -115,6 +115,8 @@ type XiangqiBroadcastRoundStats = {
   scheduledBoardCount: number;
   /** Boards with moves to replay; a results-only board (dpxq's 0-ply result rows) is not one. */
   recordedBoardCount: number;
+  /** When the round started by its games (`xiangqiBroadcastRoundStart`), else its seed; null when neither says. */
+  startedAt: string | null;
 };
 
 type SourceHealthState = 'ok' | 'warning' | 'error' | 'unknown' | 'missing_source';
@@ -189,7 +191,7 @@ type IndexRound = {
   id: string;
   name: string;
   nameEn?: string;
-  /** The seeded start, else the earliest start a game in it states. */
+  /** When it started by its games, else its seed (`xiangqiBroadcastRoundStart`). */
   startsAt: string | null;
   live: boolean;
 };
@@ -213,15 +215,15 @@ function indexRoundStatus(
           (roundNumberFromRoundId(b.round.id) ?? b.index) || a.index - b.index,
     );
   const summary = (entry: (typeof ordered)[number]): IndexRound => {
-    const stated = entry.boards
-      .map((board) => board.details?.playedAt)
-      .filter((at): at is string => typeof at === 'string')
-      .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
     return {
       id: entry.round.id,
       name: entry.round.name,
       ...(entry.round.nameEn ? { nameEn: entry.round.nameEn } : {}),
-      startsAt: stated ?? entry.round.startsAt ?? null,
+      startsAt:
+        xiangqiBroadcastRoundStart(
+          entry.boards.map((board) => board.details?.playedAt),
+          entry.round.startsAt,
+        ) ?? null,
       live: entry.boards.some((board) => board.status === 'live'),
     };
   };
@@ -289,6 +291,7 @@ function featuredXiangqiBroadcastBoard(boards: persistence.StoredXiangqiBroadcas
 }
 
 function roundBoardStats(
+  round: persistence.StoredXiangqiBroadcastRound,
   boards: persistence.StoredXiangqiBroadcastBoard[],
 ): XiangqiBroadcastRoundStats {
   return {
@@ -297,6 +300,11 @@ function roundBoardStats(
     completeBoardCount: boards.filter((board) => board.status === 'complete').length,
     scheduledBoardCount: boards.filter((board) => board.status === 'scheduled').length,
     recordedBoardCount: boards.filter((board) => board.plyCount > 0).length,
+    startedAt:
+      xiangqiBroadcastRoundStart(
+        boards.map((board) => board.details?.playedAt),
+        round.startsAt,
+      ) ?? null,
   };
 }
 
@@ -571,7 +579,7 @@ export async function xiangqiBroadcastTourForApi(
     recordsSource: broadcastRecordsCredit(boardsByRound.flat(), tour),
     rounds: rounds.map((round, index) => ({
       ...round,
-      ...roundBoardStats(boardsByRound[index] ?? []),
+      ...roundBoardStats(round, boardsByRound[index] ?? []),
     })),
   };
 }
@@ -614,7 +622,7 @@ export async function xiangqiBroadcastRoundForApi(
     boards,
     rounds: rounds.map((entry, index) => ({
       ...entry,
-      ...roundBoardStats(boardsByRound[index] ?? []),
+      ...roundBoardStats(entry, boardsByRound[index] ?? []),
     })),
   };
 }

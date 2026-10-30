@@ -1455,3 +1455,20 @@ describe('image thumbnail crop', () => {
     expect(wrap.querySelector('img')?.style.objectPosition).toBe('center 12%');
   });
 });
+
+describe('player article contact note', () => {
+  it('puts the corrections line under the header photo, about that article', () => {
+    const page = buildArticlePage('zuo-wenjing');
+    const notes = page.querySelectorAll('.article-contact-note');
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.closest('figure.article-figure-image')).not.toBeNull();
+    expect(notes[0]?.textContent).toBe('Corrections or rights requests: contact us.');
+    expect(notes[0]?.querySelector('a')?.getAttribute('href')).toBe(
+      '/contact?about=%2Fblog%2Fzuo-wenjing',
+    );
+  });
+
+  it('stays off articles that are not about a person', () => {
+    expect(buildArticlePage('pikafish').querySelector('.article-contact-note')).toBeNull();
+  });
+});
