@@ -296,9 +296,55 @@ describe('article public listing gates', () => {
     expect(official.querySelectorAll('button')).toHaveLength(0);
     expect(official.textContent).not.toContain('All languages');
     expect(community.querySelector('.articles-index-card')).toBeNull();
-    expect(community.querySelector('.articles-index-empty')?.textContent).toBe(
-      'No community posts yet.',
-    );
+    // With no posts the view asks for contributors rather than reading as broken.
+    expect(community.querySelector('h1')?.textContent).toBe('Become a Mistboard contributor');
+    const pitch = community.querySelector<HTMLElement>('.articles-community-pitch');
+    expect(pitch).not.toBeNull();
+    expect(
+      [...community.querySelectorAll('.articles-community-pitch-benefits h3')].map(
+        (title) => title.textContent,
+      ),
+    ).toEqual([
+      'Read in three languages',
+      'Boards readers can play through',
+      'A place on the homepage',
+      'Your name and your links',
+    ]);
+    // Every column card links a live example post, so a retired slug fails here,
+    // and each shows that post's own card thumbnail.
+    const ideaCards = [
+      ...community.querySelectorAll<HTMLAnchorElement>('a.articles-community-pitch-idea'),
+    ];
+    expect(ideaCards.map((card) => card.getAttribute('href'))).toEqual([
+      '/blog/jieqi-bot-wins',
+      '/blog/jieqi-openings',
+      '/blog/yin-sheng',
+      '/blog/duck-xiangqi-strategy',
+    ]);
+    for (const card of ideaCards) {
+      expect(
+        card.querySelector('.articles-index-card-media .articles-index-card-thumb'),
+      ).not.toBeNull();
+      expect(card.querySelector('.articles-community-pitch-example')?.textContent).toMatch(
+        /^Example: /,
+      );
+    }
+    // No hand-drawn icons: the only SVG left is inside an example's thumbnail.
+    expect(community.querySelector('.articles-community-pitch-icon')).toBeNull();
+    for (const svg of pitch?.querySelectorAll('svg') ?? []) {
+      expect(svg.closest('.articles-index-card-thumb')).not.toBeNull();
+    }
+    expect(community.querySelectorAll('.articles-community-pitch-steps li')).toHaveLength(3);
+    const ctaLinks = [
+      ...community.querySelectorAll<HTMLAnchorElement>('.articles-community-pitch-cta a'),
+    ].map((link) => [link.textContent, link.getAttribute('href')]);
+    expect(ctaLinks).toEqual([
+      ['Apply to contribute', '/contact?about=/blog/community'],
+      ['Read the Mistboard blog', '/blog'],
+    ]);
+    // Nothing after the buttons.
+    expect(pitch?.lastElementChild?.classList.contains('articles-community-pitch-cta')).toBe(true);
+    expect(official.querySelector('.articles-community-pitch')).toBeNull();
   });
 
   it('filters community-authored posts out of the By Mistboard view', () => {

@@ -370,10 +370,10 @@ function buildContentIndex(
   if (entries.length > 0) {
     sheet.append(list);
   } else if (kind === 'article') {
-    const empty = document.createElement('p');
-    empty.className = 'articles-index-empty';
-    empty.textContent = 'No community posts yet.';
-    sheet.append(empty);
+    // An empty list read as a broken page, so with no posts this view asks for
+    // writers instead; the first community post replaces it.
+    heading.textContent = COMMUNITY_WRITER_HEADING;
+    sheet.append(buildCommunityWriterPitch(locale));
   }
   if (kind === 'article') {
     layout.append(sheet);
@@ -382,6 +382,163 @@ function buildContentIndex(
     main.append(sheet);
   }
   return main;
+}
+
+// English only until Brian signs the copy off; zh follows the sign-off.
+const COMMUNITY_WRITER_HEADING = 'Become a Mistboard contributor';
+
+const COMMUNITY_WRITER_LEDE =
+  'Players read Mistboard all over the world, from the US and China to Vietnam and Brazil. We are looking for a few players to write for it regularly, on the part of the game they know best.';
+
+const COMMUNITY_WRITER_BENEFITS: ReadonlyArray<{ title: string; body: string }> = [
+  {
+    title: 'Read in three languages',
+    body: 'Every post is published in English, Simplified Chinese and Traditional Chinese, so it reaches players an English blog never would.',
+  },
+  {
+    title: 'Boards readers can play through',
+    body: 'Your lines become interactive boards, checked with an engine before they go out.',
+  },
+  {
+    title: 'A place on the homepage',
+    body: "New posts appear on the homepage and in the site's RSS feed.",
+  },
+  {
+    title: 'Your name and your links',
+    body: 'Your byline links to your channel, club or stream, and you are free to post the piece elsewhere too.',
+  },
+];
+
+// Each column idea points at one of our own posts of that shape, shown with
+// that post's own card thumbnail, so the page shows what a finished post looks
+// like instead of an empty list.
+const COMMUNITY_WRITER_IDEAS: ReadonlyArray<{ title: string; body: string; example: string }> = [
+  {
+    title: 'A game you learned from',
+    body: 'Walk through one game: where it turned, and what you would play now.',
+    example: 'jieqi-bot-wins',
+  },
+  {
+    title: 'Opening notes',
+    body: 'A line you have worked out, with the games that taught it to you.',
+    example: 'jieqi-openings',
+  },
+  {
+    title: 'A player or a tournament',
+    body: 'Who plays, how they play, and what happened at the board.',
+    example: 'yin-sheng',
+  },
+  {
+    title: 'The case for a variant',
+    body: 'Why a variant deserves more players, and how to win your first game.',
+    example: 'duck-xiangqi-strategy',
+  },
+];
+
+const COMMUNITY_WRITER_STEPS: ReadonlyArray<{ title: string; body: string }> = [
+  {
+    title: 'Send a sample',
+    body: 'A link to something you have written, recorded or streamed, and the column you would like to run.',
+  },
+  { title: 'Write the first post with us', body: 'We edit together and build the boards.' },
+  { title: 'Keep going', body: 'About once a month, or on whatever schedule suits you.' },
+];
+
+function communityPitchSection(title: string, list: HTMLElement): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'articles-community-pitch-section';
+  const heading = document.createElement('h2');
+  heading.textContent = title;
+  section.append(heading, list);
+  return section;
+}
+
+function communityPitchTextCard(
+  item: HTMLElement,
+  entry: { title: string; body: string },
+): HTMLElement {
+  const title = document.createElement('h3');
+  title.textContent = entry.title;
+  const body = document.createElement('p');
+  body.textContent = entry.body;
+  item.append(title, body);
+  return item;
+}
+
+function buildCommunityWriterPitch(locale: Locale): HTMLElement {
+  const pitch = document.createElement('div');
+  pitch.className = 'articles-community-pitch';
+
+  const lede = document.createElement('p');
+  lede.className = 'articles-community-pitch-lede';
+  lede.textContent = COMMUNITY_WRITER_LEDE;
+
+  const benefits = document.createElement('ul');
+  benefits.className = 'articles-community-pitch-benefits';
+  for (const benefit of COMMUNITY_WRITER_BENEFITS) {
+    benefits.append(communityPitchTextCard(document.createElement('li'), benefit));
+  }
+
+  const ideas = document.createElement('ul');
+  ideas.className = 'articles-community-pitch-ideas';
+  for (const idea of COMMUNITY_WRITER_IDEAS) {
+    const example = articles.find(
+      (article) => article.slug === idea.example && isArticleListedInThisEnv(article),
+    );
+    const item = document.createElement('li');
+    // The whole card links to the example post; with no listed example it is
+    // plain text, so a retired slug never leaves a dead link or a blank frame.
+    const card = document.createElement(example ? 'a' : 'div');
+    card.className = 'articles-community-pitch-idea';
+    if (example && card instanceof HTMLAnchorElement) {
+      card.href = localizedArticleHref(example, locale);
+      if (example.thumbnail) {
+        const media = document.createElement('div');
+        media.className = 'articles-index-card-media';
+        media.append(renderArticleThumbnail(example.thumbnail, locale));
+        card.append(media);
+      }
+    }
+    const body = communityPitchTextCard(document.createElement('div'), idea);
+    body.className = 'articles-community-pitch-idea-body';
+    if (example) {
+      const exampleLine = document.createElement('span');
+      exampleLine.className = 'articles-community-pitch-example';
+      exampleLine.textContent = `Example: ${example.title}`;
+      body.append(exampleLine);
+    }
+    card.append(body);
+    item.append(card);
+    ideas.append(item);
+  }
+
+  const steps = document.createElement('ol');
+  steps.className = 'articles-community-pitch-steps';
+  for (const step of COMMUNITY_WRITER_STEPS) {
+    steps.append(communityPitchTextCard(document.createElement('li'), step));
+  }
+
+  const row = document.createElement('div');
+  row.className = 'article-cta-row articles-community-pitch-cta';
+  const buttons = [
+    { label: 'Apply to contribute', href: '/contact?about=/blog/community', emphasis: 'primary' },
+    { label: 'Read the Mistboard blog', href: '/blog', emphasis: 'secondary' },
+  ];
+  for (const button of buttons) {
+    const link = document.createElement('a');
+    link.className = `article-cta article-cta-${button.emphasis}`;
+    link.href = button.href;
+    link.textContent = button.label;
+    row.append(link);
+  }
+  pitch.append(
+    lede,
+    communityPitchSection('What you get', benefits),
+    communityPitchSection('What a column could cover', ideas),
+    communityPitchSection('How to start', steps),
+    row,
+  );
+  return pitch;
 }
 
 function buildArticleCommunityRail(locale: Locale, activeView: ArticleIndexView): HTMLElement {
