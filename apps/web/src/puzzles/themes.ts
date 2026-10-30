@@ -10,6 +10,7 @@ import {
 } from '@mistboard/game';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import { puzzleNavItems } from '../nav-items.js';
+import { themeIconMarkup } from './theme-icons.js';
 
 export type PuzzleThemeCount = XiangqiMotif & { count: number };
 /** Any tag the trainer filters by: a kill pattern, mate-in-N, phase, goal or length. */
@@ -189,41 +190,24 @@ export function puzzleThemePicker(settings: PuzzleThemeSettings, phone = false):
 }
 
 /*
- * One hand-drawn line icon per group (Brian, 2026-10-29: "more beautiful sort
- * of icons for each of these sections"), every row in a group wearing its
- * group's: the same ring, the same 5-unit round stroke, no text or hanzi, so
- * the set reads as one family in any locale and any font. The row's name
- * tells the rows of a group apart.
+ * Every row wears its theme's own icon (theme-icons.ts): generated art painted
+ * as a mask over the row's text colour, like the variant markers, no text or
+ * hanzi, so the set reads the same in any locale and any font. A theme with no
+ * art (a rare pattern) wears its group's line icon.
  */
-const ICON_LINE =
-  'fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"';
-
-const GROUP_ICON: Record<XiangqiTrainingTagGroup | 'mix', string> = {
-  // Two crossing arrows: everything, shuffled.
-  mix: `<path ${ICON_LINE} d="M28 39 H38 C51 39 49 61 62 61 H70 M28 61 H38 C51 61 49 39 62 39 H70 M64 33 L70 39 L64 45 M64 55 L70 61 L64 67"/>`,
-  // The palace, its diagonals and the general caught at its centre.
-  motif: `<path ${ICON_LINE} d="M32 32 H68 V68 H32 Z M32 32 L68 68 M68 32 L32 68"/><circle cx="50" cy="50" r="8" fill="currentColor"/>`,
-  // A sight on the general: forced mate.
-  mate: `<circle cx="50" cy="50" r="15" ${ICON_LINE}/><path ${ICON_LINE} d="M50 25 V35 M50 65 V75 M25 50 H35 M65 50 H75"/><circle cx="50" cy="50" r="5" fill="currentColor"/>`,
-  // An hourglass: where the game is.
-  phase: `<path ${ICON_LINE} d="M36 30 H64 M36 70 H64 M39 30 C39 45 61 53 61 70 M61 30 C61 45 39 53 39 70"/>`,
-  // A flag on its pole: what the line wins.
-  goal: `<path ${ICON_LINE} d="M37 72 V28 M37 31 C47 25 55 37 66 31 V51 C55 57 47 45 37 51"/>`,
-  // Moves along a path to an arrow: how long the line is.
-  length: `<path ${ICON_LINE} d="M29 63 L43 49 L56 58 L70 41 M60 40 H71 V51"/><circle cx="29" cy="63" r="4" fill="currentColor"/><circle cx="43" cy="49" r="4" fill="currentColor"/><circle cx="56" cy="58" r="4" fill="currentColor"/>`,
-};
-
 const TAG_GROUP = new Map<string, XiangqiTrainingTagGroup>(
   XIANGQI_TRAINING_TAGS.map((tag) => [tag.id, tag.group]),
 );
 
 function themeIcon(id: PuzzleThemeId | 'mix'): HTMLElement {
   const group = id === 'mix' ? 'mix' : (TAG_GROUP.get(id) ?? 'motif');
+  const { markup, own } = themeIconMarkup(id, group);
   const icon = document.createElement('span');
   icon.className = 'puzzle-theme-icon';
   icon.dataset.iconGroup = group;
+  if (own) icon.dataset.iconTheme = id;
   icon.setAttribute('aria-hidden', 'true');
-  icon.innerHTML = `<svg viewBox="0 0 100 100" focusable="false"><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="2.5"/>${GROUP_ICON[group]}</svg>`;
+  icon.innerHTML = markup;
   return icon;
 }
 
