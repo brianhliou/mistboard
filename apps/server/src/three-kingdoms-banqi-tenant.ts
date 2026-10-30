@@ -1,8 +1,10 @@
 /**
- * Three Kingdoms banqi (三國暗棋, #628) VariantTenant: a LOCAL PLAYTEST ONLY.
+ * Three Kingdoms banqi (三國暗棋, #628) VariantTenant: a hidden playtest.
  *
- * Off unless MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED=true; no nav link, lobby,
- * TV channel, export, card or correspondence. Whether it gets a public surface is
+ * Playable by everyone under MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED=true (local),
+ * and by admin accounts only on prod (#684; the gate is three-kingdoms-banqi-
+ * access.ts, checked at create and at every websocket connection). No nav link,
+ * lobby, TV channel, export, card, rating or correspondence. Whether it gets a public surface is
  * a checkpoint decision.
  *
  * Same hidden-information shape as banqi (banqi-tenant.ts): every occupied square
@@ -30,7 +32,6 @@ import {
   type ThreeKingdomsBanqiSquare,
   type ThreeKingdomsBanqiState,
 } from '@mistboard/game';
-import { threeKingdomsBanqiEnabled } from './feature-flags.js';
 import type * as persistence from './persistence.js';
 import {
   isThreeKingdomsBanqiEngineClientId,
@@ -166,7 +167,11 @@ export const threeKingdomsBanqiTenant: ThreeKingdomsBanqiTenant = {
   gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
   roomIdPrefix: THREE_KINGDOMS_BANQI_ROOM_ID_PREFIX,
   colors: SEATS,
-  enabled: threeKingdomsBanqiEnabled,
+  // The runtime is on in every build: createTenantRuntimeRoom's enabled()
+  // backstop would otherwise refuse the admin playtest's rooms. Who may start
+  // one is decided at the doors (three-kingdoms-banqi-access.ts), and no other
+  // path starts a TK game (no lobby, correspondence, rematch or bot-vs-bot).
+  enabled: () => true,
   oppositeColor: oppositeBanqiSeat,
   rules: {
     createInitialState: (roomId, setup) => createThreeKingdomsBanqiStateFromSetup(roomId, setup),

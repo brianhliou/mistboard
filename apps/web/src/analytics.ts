@@ -169,8 +169,8 @@ export function reviewOpenedProps(input: {
   };
 }
 
-export type PuzzleAttemptOutcome = 'solved' | 'revealed' | 'abandoned';
-export type PuzzleAttemptMode = 'session' | 'embed';
+export type PuzzleAttemptOutcome = 'solved' | 'revealed' | 'abandoned' | 'failed' | 'skipped';
+export type PuzzleAttemptMode = 'session' | 'embed' | 'streak';
 
 // One event per terminal outcome, mirroring the server-side quality session's
 // first terminal outcome so the two counts reconcile. `clean` is a solve with

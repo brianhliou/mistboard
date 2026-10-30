@@ -42,16 +42,21 @@ import {
   isStandardXiangqiLegalMove,
 } from './variants-xiangqi-standard.js';
 
-export type XiangqiPuzzleTheme =
-  | 'checkmate'
-  | 'matein1'
-  | 'matein2'
-  | 'matein3'
-  | 'winning'
-  | 'winning-material'
-  | 'crushing'
-  | 'endgame'
-  | 'middlegame';
+/** Every theme the miner (`tagXiangqiPuzzleThemes`) can put on a puzzle. */
+export const XIANGQI_PUZZLE_THEMES = [
+  'checkmate',
+  'matein1',
+  'matein2',
+  'matein3',
+  'matein4',
+  'winning',
+  'winning-material',
+  'crushing',
+  'endgame',
+  'middlegame',
+] as const;
+
+export type XiangqiPuzzleTheme = (typeof XIANGQI_PUZZLE_THEMES)[number];
 
 export type XiangqiPuzzleGoal =
   | {
@@ -82,12 +87,13 @@ export type XiangqiPuzzle = {
   // game's first `ply` moves from the standard opening reproduces `initial`
   // (modulo the puzzle-state reset of progressClock/positionCounts).
   //
-  // The event/date/result/player fields are denormalized ATTRIBUTION copied
-  // from the historical_xiangqi_games row at mine time. They travel with the
-  // puzzle so the "From game" card renders without the source game being
-  // hosted (the games themselves stay gated on license clearance — see
-  // docs-private/historical-xiangqi-library-track.md). All optional: older
-  // puzzles and non-db-mined puzzles carry only { gameId, ply }.
+  // The event/date/result/player fields are attribution copied from the
+  // historical_xiangqi_games row at mine time, so the "From game" card renders
+  // where that row is not stored (seed-only runs). Where it is, the server's
+  // puzzle detail replaces the player names with the row's (the dump
+  // re-pseudonymizes players per release) and links the card to the game page
+  // (apps/server/src/puzzle-setup-move.ts). All optional: older puzzles and
+  // non-db-mined puzzles carry only { gameId, ply }.
   sourceGame?: {
     gameId: string;
     ply: number;
@@ -96,6 +102,10 @@ export type XiangqiPuzzle = {
     result?: string; // "1-0" | "0-1" | "1/2-1/2"
     redName?: string;
     blackName?: string;
+    // Credit the source archive requires on every puzzle mined from it, with a
+    // link back to the original game (#712; policy in
+    // puzzles-xiangqi-attribution.ts). Absent for sources that ask for none.
+    attribution?: { name: string; url: string };
   };
 };
 

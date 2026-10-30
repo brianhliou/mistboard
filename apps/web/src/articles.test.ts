@@ -143,6 +143,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The board and piece settings showcase, scheduled for 2026-11-06
+      // (DEV shows it early for review).
+      '/blog/set-up-your-board',
       // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
       // (DEV shows it early for review).
       '/blog/shortest-stalemate-xiangqi',
@@ -297,9 +300,55 @@ describe('article public listing gates', () => {
     expect(official.querySelectorAll('button')).toHaveLength(0);
     expect(official.textContent).not.toContain('All languages');
     expect(community.querySelector('.articles-index-card')).toBeNull();
-    expect(community.querySelector('.articles-index-empty')?.textContent).toBe(
-      'No community posts yet.',
-    );
+    // With no posts the view asks for contributors rather than reading as broken.
+    expect(community.querySelector('h1')?.textContent).toBe('Become a Mistboard contributor');
+    const pitch = community.querySelector<HTMLElement>('.articles-community-pitch');
+    expect(pitch).not.toBeNull();
+    expect(
+      [...community.querySelectorAll('.articles-community-pitch-benefits h3')].map(
+        (title) => title.textContent,
+      ),
+    ).toEqual([
+      'Read in three languages',
+      'Boards readers can play through',
+      'A place on the homepage',
+      'Your name and your links',
+    ]);
+    // Every column card links a live example post, so a retired slug fails here,
+    // and each shows that post's own card thumbnail.
+    const ideaCards = [
+      ...community.querySelectorAll<HTMLAnchorElement>('a.articles-community-pitch-idea'),
+    ];
+    expect(ideaCards.map((card) => card.getAttribute('href'))).toEqual([
+      '/blog/jieqi-bot-wins',
+      '/blog/jieqi-openings',
+      '/blog/yin-sheng',
+      '/blog/duck-xiangqi-strategy',
+    ]);
+    for (const card of ideaCards) {
+      expect(
+        card.querySelector('.articles-index-card-media .articles-index-card-thumb'),
+      ).not.toBeNull();
+      expect(card.querySelector('.articles-community-pitch-example')?.textContent).toMatch(
+        /^Example: /,
+      );
+    }
+    // No hand-drawn icons: the only SVG left is inside an example's thumbnail.
+    expect(community.querySelector('.articles-community-pitch-icon')).toBeNull();
+    for (const svg of pitch?.querySelectorAll('svg') ?? []) {
+      expect(svg.closest('.articles-index-card-thumb')).not.toBeNull();
+    }
+    expect(community.querySelectorAll('.articles-community-pitch-steps li')).toHaveLength(3);
+    const ctaLinks = [
+      ...community.querySelectorAll<HTMLAnchorElement>('.articles-community-pitch-cta a'),
+    ].map((link) => [link.textContent, link.getAttribute('href')]);
+    expect(ctaLinks).toEqual([
+      ['Apply to contribute', '/contact?about=/blog/community'],
+      ['Read the Mistboard blog', '/blog'],
+    ]);
+    // Nothing after the buttons.
+    expect(pitch?.lastElementChild?.classList.contains('articles-community-pitch-cta')).toBe(true);
+    expect(official.querySelector('.articles-community-pitch')).toBeNull();
   });
 
   it('filters community-authored posts out of the By Mistboard view', () => {
@@ -355,8 +404,9 @@ describe('article public listing gates', () => {
       '更多文章',
     );
     expect(home?.querySelector('a[href="/zh-hant/blog/misty"]')).not.toBeNull();
-    expect(home?.querySelector('a[href="/zh-hant/blog/mistybanqi"]')).not.toBeNull();
-    // An engineering post stays off the homepage in every language.
+    // An engineering post stays off the homepage in every language (MistyBanqi
+    // is one since 2026-10-28: it shows its Rust).
+    expect(home?.querySelector('a[href="/zh-hant/blog/mistybanqi"]')).toBeNull();
     expect(home?.querySelector('a[href="/zh-hant/blog/server-enforced-fog"]')).toBeNull();
 
     const page = buildArticlePage('banqi', 'zh-Hant');
@@ -415,6 +465,7 @@ describe('article public listing gates', () => {
     // curated list. Deep dives have their own row (next test); engineering
     // posts are on neither.
     expect(hrefs).toEqual([
+      '/blog/set-up-your-board',
       '/blog/shortest-stalemate-xiangqi',
       '/blog/banqi-chariot-endgame',
       '/blog/jqe',
@@ -442,8 +493,6 @@ describe('article public listing gates', () => {
       '/blog/puzzles-with-more-than-one-solution',
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
-      // Moved from brianhliou.com (2026-08-31) on 2026-10-16.
-      '/blog/jungle-den-term',
       '/blog/titled-players',
       '/blog/riverbank-cannon',
       '/blog/skill-vs-luck',
@@ -452,7 +501,6 @@ describe('article public listing gates', () => {
       // Moved from brianhliou.com (2026-06-27) on 2026-10-16.
       '/blog/dou-shou-qi-engine',
       '/blog/misty',
-      '/blog/mistybanqi',
       // Moved from brianhliou.com (2026-05-07), a draft until Brian's go.
       '/blog/chess960-starting-positions',
       '/blog/fog-chess-concepts',
@@ -526,14 +574,11 @@ describe('article public listing gates', () => {
       rulesIndex.querySelector('a[href="/rules/banqi"] span[data-variant-marker-id="banqi"]'),
     ).not.toBeNull();
 
-    // ...while the MistyBanqi editorial card keeps the full-board thumbnail in
-    // the homepage row.
+    // ...while the MistyBanqi card keeps the full-board thumbnail on /blog
+    // (above). It is an engineering post since 2026-10-28, so it is off the
+    // homepage row.
     const home = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    expect(
-      home?.querySelector(
-        '.landing-article-card[href="/blog/mistybanqi"] svg g[data-banqi-thumbnail-layout="engine-full-board"]',
-      ),
-    ).not.toBeNull();
+    expect(home?.querySelector('.landing-article-card[href="/blog/mistybanqi"]')).toBeNull();
   });
 
   it('renders Misty with the generated thumbnail', () => {

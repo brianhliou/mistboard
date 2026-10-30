@@ -81,7 +81,9 @@ const GATED_GAME_SPECS = {
     disabledError: 'jungle_flip_disabled',
     notIntegratedError: 'jungle_flip_not_integrated',
   },
-  // Local playtest only (#628); the flag is never set in prod.
+  // Hidden playtest (#628, #684). The flag is never set in prod; there an admin
+  // reaches the tenant through its own create route (three-kingdoms-banqi-access.ts),
+  // which dispatches before this gate.
   'three-kingdoms-banqi': {
     enabled: threeKingdomsBanqiEnabled,
     disabledError: 'three_kingdoms_banqi_disabled',

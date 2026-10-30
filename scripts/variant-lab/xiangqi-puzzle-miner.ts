@@ -13,7 +13,7 @@
 //      at a time, re-searching MultiPV(2) at a --verify-depth floor at each
 //      solver position. A solver move is kept only if it is uniquely correct by
 //      the winning-floor gate (isXiangqiSolverMoveUnique: best keeps a clear win
-//      AND the runner-up either loses the win or trails by --material-gap-cp);
+//      AND the runner-up loses the win);
 //      the defender reply is the engine's best (its uniqueness is not required).
 //      The line stops at the first non-unique solver move, at mate, or at the
 //      ply cap, always ending on the solver's move — so puzzles are born clean
@@ -79,6 +79,7 @@ import {
   detectXiangqiBlunderCandidates,
   importXiangqiGame,
   isStandardXiangqiLegalMove,
+  isXiangqiQuietKeyMove,
   pikafishUciToXiangqiSquares,
   positionRepetitionKey,
   standardXiangqiEngineFen,
@@ -99,8 +100,14 @@ import {
 } from './xiangqi-pikafish-uci.ts';
 
 export type XiangqiPuzzleMinerOptions = {
-  source: 'db' | 'dir';
+  source: 'db' | 'dir' | 'json';
   dir: string | null;
+  /** --source json: a file of { games: XiangqiPuzzleMinerGame[] } (the shape
+   *  scripts/export-unmined-xiangqi-games.mjs writes). */
+  gamesFile?: string | null;
+  /** --source dir: the historical_xiangqi_sources slug the files come from,
+   *  which selects the source's attribution policy. */
+  sourceSlug?: string | null;
   dbUrl: string;
   plyMin: number;
   limit: number;
@@ -117,10 +124,13 @@ export type XiangqiPuzzleMinerOptions = {
   winHi: number;
   winLo: number;
   minGapCp: number;
-  materialGapCp: number;
   minPly: number;
   maxSolutionPlies: number;
   minSolutionPlies: number;
+  /** #712: refuse a puzzle whose key move captures or checks. */
+  quietKey?: boolean;
+  /** #712: re-apply minSolutionPlies after the winning-advantage trim. */
+  floorAfterTrim?: boolean;
   perGame: number;
   emitSeed: string | null;
   insertDb: boolean;
@@ -140,6 +150,9 @@ export type XiangqiPuzzleMinerGame = {
     result?: string | null;
     redName?: string | null;
     blackName?: string | null;
+    sourceSlug?: string | null;
+    sourceUrl?: string | null;
+    sourceGameId?: string | null;
   };
 };
 
@@ -201,6 +214,8 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
     options: {
       source: { type: 'string', default: 'db' },
       dir: { type: 'string' },
+      games: { type: 'string' },
+      'source-slug': { type: 'string' },
       'db-url': { type: 'string' },
       'ply-min': { type: 'string', default: '20' },
       limit: { type: 'string', default: '50' },
@@ -222,14 +237,13 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
         type: 'string',
         default: String(XIANGQI_SOLVER_GATE_DEFAULTS.minGapCp),
       },
-      'material-gap-cp': {
-        type: 'string',
-        default: String(XIANGQI_SOLVER_GATE_DEFAULTS.materialGapCp),
-      },
       'min-ply': { type: 'string', default: '8' },
       'max-solution-plies': { type: 'string', default: '7' },
       'min-solution-plies': { type: 'string', default: '3' },
       'per-game': { type: 'string', default: '3' },
+      // #712 harder puzzles: a quiet key and a floor that survives the trim.
+      'quiet-key': { type: 'boolean', default: false },
+      'floor-after-trim': { type: 'boolean', default: false },
       'emit-seed': { type: 'boolean', default: false },
       'seed-path': { type: 'string' },
       'insert-db': { type: 'boolean', default: false },
@@ -250,8 +264,10 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
   }
 
   const options: XiangqiPuzzleMinerOptions = {
-    source: values.source === 'dir' ? 'dir' : 'db',
+    source: values.source === 'dir' ? 'dir' : values.source === 'json' ? 'json' : 'db',
     dir: values.dir ?? null,
+    gamesFile: values.games ?? null,
+    sourceSlug: values['source-slug'] ?? null,
     dbUrl: values['db-url'] ?? process.env.DATABASE_URL ?? DEFAULT_DB_URL,
     plyMin: parseNonNegativeInt(values['ply-min'], 20),
     limit: parseNonNegativeInt(values.limit, 50),
@@ -268,13 +284,11 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
     winHi: Number.parseFloat(values['win-hi'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winHi)),
     winLo: Number.parseFloat(values['win-lo'] ?? String(XIANGQI_SOLVER_GATE_DEFAULTS.winLo)),
     minGapCp: parsePositiveInt(values['min-gap-cp'], XIANGQI_SOLVER_GATE_DEFAULTS.minGapCp),
-    materialGapCp: parsePositiveInt(
-      values['material-gap-cp'],
-      XIANGQI_SOLVER_GATE_DEFAULTS.materialGapCp,
-    ),
     minPly: parseNonNegativeInt(values['min-ply'], 8),
     maxSolutionPlies: parsePositiveInt(values['max-solution-plies'], 7),
     minSolutionPlies: parsePositiveInt(values['min-solution-plies'], 3),
+    quietKey: values['quiet-key'] === true,
+    floorAfterTrim: values['floor-after-trim'] === true,
     perGame: parsePositiveInt(values['per-game'], 3),
     emitSeed: values['emit-seed'] === true ? (values['seed-path'] ?? DEFAULT_SEED_TARGET) : null,
     insertDb: values['insert-db'] === true,
@@ -285,6 +299,10 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
 
   if (options.source === 'dir' && !options.dir) {
     console.error('--source dir requires --dir <path>');
+    process.exit(1);
+  }
+  if (options.source === 'json' && !options.gamesFile) {
+    console.error('--source json requires --games <file.json>');
     process.exit(1);
   }
 
@@ -302,9 +320,8 @@ function parseCliOptions(): XiangqiPuzzleMinerOptions {
 
 async function loadDbGames(opts: XiangqiPuzzleMinerOptions): Promise<XiangqiPuzzleMinerGame[]> {
   const { init, close } = await import('../../apps/server/src/persistence-db.ts');
-  const { getHistoricalXiangqiGame, queryHistoricalXiangqiGames } = await import(
-    '../../apps/server/src/persistence-historical-xiangqi.ts'
-  );
+  const { getHistoricalXiangqiGame, getHistoricalXiangqiSource, queryHistoricalXiangqiGames } =
+    await import('../../apps/server/src/persistence-historical-xiangqi.ts');
   init(opts.dbUrl);
   try {
     const ids: string[] = [];
@@ -326,9 +343,16 @@ async function loadDbGames(opts: XiangqiPuzzleMinerOptions): Promise<XiangqiPuzz
       opts.limit > 0 ? opts.offset + opts.limit : undefined,
     );
     const games: XiangqiPuzzleMinerGame[] = [];
+    const slugBySource = new Map<string, string | null>();
     for (const id of window) {
       const row = await getHistoricalXiangqiGame(id);
       if (row && row.moves.length >= opts.plyMin) {
+        if (!slugBySource.has(row.sourceId)) {
+          slugBySource.set(
+            row.sourceId,
+            (await getHistoricalXiangqiSource(row.sourceId))?.slug ?? null,
+          );
+        }
         games.push({
           id: row.id,
           moves: row.moves,
@@ -338,6 +362,9 @@ async function loadDbGames(opts: XiangqiPuzzleMinerOptions): Promise<XiangqiPuzz
             result: row.result ?? null,
             redName: row.redNameRaw ?? null,
             blackName: row.blackNameRaw ?? null,
+            sourceSlug: slugBySource.get(row.sourceId) ?? null,
+            sourceUrl: row.sourceUrl ?? null,
+            sourceGameId: row.sourceGameId ?? null,
           },
         });
       }
@@ -367,10 +394,64 @@ function loadDirGames(opts: XiangqiPuzzleMinerOptions): XiangqiPuzzleMinerGame[]
       console.error(`skip ${name}: ${imported.error ?? `only ${imported.moves.length} plies`}`);
       continue;
     }
-    games.push({ id: gameIdForFile(name), moves: imported.moves });
+    const id = gameIdForFile(name);
+    games.push({ id, moves: imported.moves, meta: dhtmlxqMeta(raw, id, opts.sourceSlug ?? null) });
   }
   const ordered = opts.seed > 0 ? seededShuffle(games, opts.seed) : games;
   return ordered.slice(opts.offset, opts.limit > 0 ? opts.offset + opts.limit : undefined);
+}
+
+// --source json: games exported with their real ids and attribution (e.g. the
+// unmined ElephantChess games, scripts/export-unmined-xiangqi-games.mjs).
+export function loadJsonGames(
+  opts: Pick<XiangqiPuzzleMinerOptions, 'gamesFile' | 'plyMin' | 'seed' | 'offset' | 'limit'>,
+): XiangqiPuzzleMinerGame[] {
+  const parsed = JSON.parse(readFileSync(resolve(opts.gamesFile as string), 'utf8')) as {
+    games?: XiangqiPuzzleMinerGame[];
+  };
+  const games = (parsed.games ?? []).filter(
+    (game) =>
+      typeof game.id === 'string' && Array.isArray(game.moves) && game.moves.length >= opts.plyMin,
+  );
+  const ordered = opts.seed > 0 ? seededShuffle(games, opts.seed) : games;
+  return ordered.slice(opts.offset, opts.limit > 0 ? opts.offset + opts.limit : undefined);
+}
+
+// DhtmlXQ files (the DPXQ archive) carry their own metadata as
+// [DhtmlXQ_<tag>]value[/DhtmlXQ_<tag>] pairs, including the game's page in
+// the archive, which the source's attribution policy needs.
+export function dhtmlxqMeta(
+  raw: string,
+  sourceGameId: string,
+  sourceSlug: string | null,
+): NonNullable<XiangqiPuzzleMinerGame['meta']> {
+  const tag = (name: string): string | null => {
+    const match = new RegExp(`\\[DhtmlXQ_${name}\\]([^\\[]*)\\[/DhtmlXQ_${name}\\]`, 'i').exec(raw);
+    const value = match?.[1]?.trim();
+    return value ? value : null;
+  };
+  const rawDate = tag('date');
+  const date = rawDate ? /^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})/.exec(rawDate) : null;
+  const rawResult = tag('result') ?? '';
+  const result = /红胜|1-0/.test(rawResult)
+    ? '1-0'
+    : /黑胜|0-1/.test(rawResult)
+      ? '0-1'
+      : /和|1\/2/.test(rawResult)
+        ? '1/2-1/2'
+        : null;
+  return {
+    event: tag('event') ?? tag('title'),
+    playedOn: date
+      ? `${date[1]}-${(date[2] as string).padStart(2, '0')}-${(date[3] as string).padStart(2, '0')}`
+      : null,
+    result,
+    redName: tag('red'),
+    blackName: tag('black'),
+    sourceSlug,
+    sourceUrl: tag('source_url'),
+    sourceGameId,
+  };
 }
 
 // dpxq HTML pages carry the record as `[DhtmlXQ_movelist]<digits>` inside a JS
@@ -494,6 +575,8 @@ export async function mineXiangqiPuzzleGame(
     const result = assembleMinedXiangqiPuzzle(assemblyInput, {
       maxSolutionPlies: opts.maxSolutionPlies,
       minSolutionPlies: opts.minSolutionPlies,
+      quietKey: opts.quietKey === true,
+      floorAfterTrim: opts.floorAfterTrim === true,
     });
     if (!result.ok) {
       bumpReject(metrics, result.reason);
@@ -516,6 +599,7 @@ export async function mineXiangqiPuzzleGame(
         const short = assembleMinedXiangqiPuzzle(assemblyInput, {
           maxSolutionPlies: opts.maxSolutionPlies,
           minSolutionPlies: 1,
+          quietKey: opts.quietKey === true,
         });
         if (short.ok) {
           await hooks.shortCandidateVerified({
@@ -594,7 +678,6 @@ async function buildGatedLine(
     winHi: opts.winHi,
     winLo: opts.winLo,
     minGapCp: opts.minGapCp,
-    materialGapCp: opts.materialGapCp,
   };
   const limits = { depth: opts.verifyDepth, nodes: opts.verifyNodes };
   const pv: XiangqiMove[] = [];
@@ -627,6 +710,10 @@ async function buildGatedLine(
     const solverMove: XiangqiMove = { from: sq.from, to: sq.to };
     if (!isStandardXiangqiLegalMove(cur, solverMove))
       return { ok: false, reason: 'pv-illegal', evals };
+    // A loud key fails assembly anyway; stop before spending the line's evals.
+    if (firstSolverPly && opts.quietKey && !isXiangqiQuietKeyMove(cur, solverMove)) {
+      return { ok: false, reason: 'loud-key', evals };
+    }
     pv.push(solverMove);
     cur = applyStandardXiangqiMove(cur, solverMove);
     if (cur.status.type !== 'playing') break; // mate: line ends on the solver move
@@ -730,9 +817,16 @@ async function insertDbPuzzles(dbUrl: string, puzzles: readonly XiangqiPuzzle[])
 
 function jsonlLine(record: MinedPuzzleRecord | VerifiedShortPuzzleRecord): string {
   const { puzzle } = record;
+  const key = puzzle.solution[0];
   return JSON.stringify({
     id: puzzle.id,
     gameId: record.gameId,
+    // The start position and whether the key move is quiet (no capture, no
+    // check) ride on every record, so a run mined without --quiet-key can be
+    // cut to its quiet subset afterwards without re-mining (#712).
+    fen: standardXiangqiEngineFen(puzzle.initial),
+    quietKey: key ? isXiangqiQuietKeyMove(puzzle.initial, key) : false,
+    sourceUrl: puzzle.sourceGame?.attribution?.url ?? null,
     ply: record.blunderPly + 1,
     solver: puzzle.goal.winner ?? null,
     goal: puzzle.goal.type,
@@ -761,7 +855,12 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
   const binary = options.binary ? resolve(options.binary) : pikafishXiangqiPath();
   const net = options.net ? resolve(options.net) : pikafishXiangqiNetPath(binary);
 
-  const games = options.source === 'db' ? await loadDbGames(options) : loadDirGames(options);
+  const games =
+    options.source === 'db'
+      ? await loadDbGames(options)
+      : options.source === 'json'
+        ? loadJsonGames(options)
+        : loadDirGames(options);
   const metrics: XiangqiPuzzleMinerMetrics = {
     gamesRequested: options.limit,
     gamesLoaded: games.length,
@@ -883,10 +982,11 @@ async function main(options: XiangqiPuzzleMinerOptions): Promise<void> {
       winHi: options.winHi,
       winLo: options.winLo,
       minGapCp: options.minGapCp,
-      materialGapCp: options.materialGapCp,
       minPly: options.minPly,
       maxSolutionPlies: options.maxSolutionPlies,
       minSolutionPlies: options.minSolutionPlies,
+      quietKey: options.quietKey === true,
+      floorAfterTrim: options.floorAfterTrim === true,
       perGame: options.perGame,
     },
     concurrency: workerCount,
@@ -939,7 +1039,6 @@ Detection:
   --win-hi F              Per-ply gate: min win prob for the best solver line. Default: 0.80.
   --win-lo F              Per-ply gate: a runner-up at/below this win prob has lost the win. Default: 0.60.
   --min-gap-cp N          Hard near-tie rejection floor for non-mate alternatives. Default: 200.
-  --material-gap-cp N     Per-ply gate: a runner-up trailing best by >= N cp is wrong even if winning. Default: 250.
   --min-ply N             Skip game plies before N (opening filter). Default: 8.
   --max-solution-plies N  Solution-line cap (normalized to odd). Default: 7.
   --min-solution-plies N  Minimum solution plies for seed/DB output. Default: 3.

@@ -1,5 +1,6 @@
-// Live room client for Three Kingdoms banqi (三國暗棋, #628): a LOCAL PLAYTEST
-// ONLY, behind VITE_THREE_KINGDOMS_BANQI_ENABLED (off by default). Built on the
+// Live room client for Three Kingdoms banqi (三國暗棋, #628): a playtest for
+// admin accounts on prod (#684) and for everyone in a local build with
+// VITE_THREE_KINGDOMS_BANQI_ENABLED (three-kingdoms-banqi-access.ts). Built on the
 // generic live-client core like live-jungle-flip.ts, which it follows closely:
 // symmetric hidden identity (the server sends both seats the same masked board),
 // seats are move order and the ink binds on the opening flip (view.firstColor),
@@ -23,12 +24,12 @@ import {
   THREE_KINGDOMS_BANQI_SCORE_TARGET,
 } from '@mistboard/game';
 import './live-xiangqi.css';
-import { threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { flipSeatInk } from './flip-seat-ink.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { banqiPieceGhostSvg, banqiRevealFlipSquare } from './live-banqi-render.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import { threeKingdomsBanqiOffered } from './three-kingdoms-banqi-access.js';
 import {
   animateThreeKingdomsBanqiBoardMove,
   animateThreeKingdomsBanqiReveal,
@@ -121,7 +122,7 @@ const tkWebTenant: WebVariantTenant<BanqiSeat> = {
   colors: ['red', 'black'],
   isColor: isSeat,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
-  enabled: threeKingdomsBanqiEnabled,
+  enabled: threeKingdomsBanqiOffered,
   // No review page yet: the Review link reopens the room, whose move list steps
   // through the finished game.
   reviewUrl: (roomId) => `/room/${encodeURIComponent(roomId)}`,

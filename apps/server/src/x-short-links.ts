@@ -1,5 +1,10 @@
-// Short links for the site's X posts: mistboard.com/x/<slug> answers a 302 to a
-// page on the site with the post's UTM tags added. 302, not 301, so a slug can
+// Short links for the site's social posts, so a post shows mistboard.com/fb/15
+// instead of a long analysis URL. Each answers a 302 to a page on the site with
+// the post's UTM tags added:
+//   /x/<slug>            X: the problem with its solution loaded (ply 0)
+//   /fb/<slug>           Facebook puzzle post: the bare position, no solution
+//   /fb/<slug>/answer    Facebook answer post: the problem with its solution
+// The channel is in the path, so the tags carry it without a longer link. 302, not 301, so a slug can
 // be repointed after the post is out. An unknown slug lands on the homepage
 // tagged x-unknown rather than a 404: someone clicked it, so it still counts.
 //
@@ -53,9 +58,18 @@ export const X_SHORT_LINKS: Readonly<Record<string, XShortLink>> = {
     },
     campaign: 'x-elegant-003-2026-10',
   },
+  // Problem 15, "Deftly Shaking the War Bell" (mistboard-studio xpost problem 4).
+  '15': {
+    target: {
+      fen: 'r1b1k4/c1PPaRc2/r2ab3n/4C4/7RC/9/9/9/4p4/3K5 r - - 0 1',
+      moves: 'h6h10 i8h10 d9d10 e10d10 f9f10 e9f10 c9d9 d10d9 i6d6 d8e9 e7d7',
+    },
+    campaign: 'x-elegant-015-2026-10',
+  },
 };
 
 const UNKNOWN_CAMPAIGN = 'x-unknown';
+const FB_UNKNOWN_CAMPAIGN = 'fb-unknown';
 
 // The YouTube Shorts address, mistboard.com/yt: shown at the end of every
 // Short and used as the channel's profile link (a Short's description and
@@ -72,16 +86,31 @@ function targetPath(target: XShortLinkPosition): string {
   return `/analysis/xiangqi?${params.toString()}`;
 }
 
-function withUtm(path: string, campaign: string): string {
+function positionPath(target: XShortLinkPosition): string {
+  return `/analysis/xiangqi?${new URLSearchParams({ fen: target.fen }).toString()}`;
+}
+
+function withUtm(path: string, campaign: string, source = 'x', content?: string): string {
   const utm = new URLSearchParams({
-    utm_source: 'x',
+    utm_source: source,
     utm_medium: 'social',
     utm_campaign: campaign,
   });
+  if (content) utm.set('utm_content', content);
   return `${path}${path.includes('?') ? '&' : '?'}${utm.toString()}`;
 }
 
-/** The redirect target for /x/<slug>, or null when the path is not a short link. */
+function lookup(encoded: string): XShortLink | null | undefined {
+  let slug: string;
+  try {
+    slug = decodeURIComponent(encoded);
+  } catch {
+    return null;
+  }
+  return Object.hasOwn(X_SHORT_LINKS, slug) ? X_SHORT_LINKS[slug] : undefined;
+}
+
+/** The redirect target for a short link (/x, /fb, /yt), or null when the path is not one. */
 export function xShortLinkRedirect(pathname: string): string | null {
   if (/^\/yt\/?$/.test(pathname)) {
     const fen = X_SHORT_LINKS[YT_NEXT_SLUG]!.target.fen;
@@ -93,15 +122,19 @@ export function xShortLinkRedirect(pathname: string): string | null {
     });
     return `/analysis/xiangqi?${utm.toString()}`;
   }
+  const fb = /^\/fb\/([^/]+)(\/answer)?\/?$/.exec(pathname);
+  if (fb) {
+    const link = lookup(fb[1]!);
+    if (!link) return withUtm('/', FB_UNKNOWN_CAMPAIGN, 'facebook');
+    const answer = Boolean(fb[2]);
+    // The X campaign renamed for Facebook: x-elegant-015-2026-10 → fb-elegant-015-2026-10.
+    const campaign = link.campaign.replace(/^x-/, 'fb-');
+    const path = answer ? targetPath(link.target) : positionPath(link.target);
+    return withUtm(path, campaign, 'facebook', answer ? 'answer' : 'puzzle');
+  }
   const match = /^\/x\/([^/]+)\/?$/.exec(pathname);
   if (!match) return null;
-  let slug: string;
-  try {
-    slug = decodeURIComponent(match[1]!);
-  } catch {
-    return withUtm('/', UNKNOWN_CAMPAIGN);
-  }
-  const link = Object.hasOwn(X_SHORT_LINKS, slug) ? X_SHORT_LINKS[slug] : undefined;
+  const link = lookup(match[1]!);
   if (!link) return withUtm('/', UNKNOWN_CAMPAIGN);
   return withUtm(targetPath(link.target), link.campaign);
 }

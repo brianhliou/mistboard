@@ -85,12 +85,136 @@ test('a fresh setup is one full wall per match hand and passes its own validator
   assert.ok(!isXmjRoomSetup({ ...setup, firstDealer: 'north' }));
 });
 
+test('table 3 accepts an atomic declaration only by explicit setup; new rooms stay on table 2', () => {
+  assert.equal(XMJ_TAI_TABLE, 2);
+  for (const correspondence of [false, true]) {
+    assert.equal(createXmjSetup(seeded(1), { correspondence }).taiTable, 2);
+  }
+  const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR']);
+  const setup = { walls: [wall], firstDealer: 'east', taiTable: 3 } as const;
+  assert.ok(isXmjRoomSetup(setup), 'an explicitly stamped table-3 setup is accepted');
+  const move = xmjMoveFromMessage({ action: 'declare-ready', tiles: ['bH'] });
+  assert.ok(move, 'declaration carries its discard in one move');
+  assert.ok(isXmjMove(move));
+  const start = createXmjRoomState(setup);
+  const declared = play(start, 'east', move);
+  assert.equal(declared.match.hand.phase.type, 'claim');
+  assert.deepEqual(declared.match.hand.hands[0], ['rK', 'rA', 'rE', 'rP']);
+  assert.deepEqual(xmjViewFor(declared, 'east').declared, { east: true, west: false });
+  assert.deepEqual(declared.ready, [], 'declaration is separate from next-hand readiness');
+});
+
+test('table-3 eligibility is owner-only; older tables retain their serialized payload shape', () => {
+  const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR']);
+  const setup = { walls: [wall], firstDealer: 'east' } as const;
+  const state = createXmjRoomState({ ...setup, taiTable: 3 });
+  assert.ok(xmjViewFor(state, 'east').legal.declareReady?.includes('bH'));
+  for (const seat of ['west', 'spectator'] as const) {
+    const view = JSON.parse(JSON.stringify(xmjViewFor(state, seat)));
+    assert.deepEqual(view.legal.declareReady, []);
+    assert.deepEqual(view.declared, { east: false, west: false });
+    for (const tile of ['rK', 'rA', 'rE', 'rP', 'bH']) {
+      assert.ok(!JSON.stringify(view).includes(`"${tile}"`), `${seat} sees ${tile}`);
+    }
+  }
+  for (const stamp of [{}, { taiTable: 1 }, { taiTable: 2 }] as const) {
+    const legacy = createXmjRoomState({ ...setup, ...stamp });
+    for (const seat of ['east', 'west', 'spectator'] as const) {
+      const view = JSON.parse(JSON.stringify(xmjViewFor(legacy, seat)));
+      assert.equal('declared' in view, false);
+      assert.deepEqual(Object.keys(view.legal), [
+        'discard',
+        'selfDraw',
+        'claims',
+        'pass',
+        'nextHand',
+      ]);
+    }
+    const declare = { by: 'east', at: 1, action: 'declare-ready', tile: 'bH' } as const;
+    assert.equal(xmjIsLegalMove(legacy, declare), false);
+    assert.equal(applyXmjMove(legacy, declare), legacy);
+  }
+});
+
+test('table-3 locked nonwinning draws have persisted pending discards and deterministic replay', () => {
+  const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR'], ['bP', 'rA']);
+  const setup = { walls: [wall], firstDealer: 'east', taiTable: 3 } as const;
+  const moves: XmjMove[] = [
+    { by: 'east', at: 1_000, action: 'declare-ready', tile: 'bH' },
+    { by: 'west', at: 3_000, action: 'pass' },
+    { by: 'west', at: 4_000, action: 'discard', tile: 'bR' },
+    { by: 'east', at: 6_000, action: 'pass' },
+  ];
+  let state = createXmjRoomState(setup);
+  for (const move of moves) state = play(state, move.by, move, move.at);
+  assert.deepEqual(xmjViewFor(state, 'east').legal.discard, ['rA']);
+  assert.deepEqual(xmjViewFor(state, 'east').legal.declareReady, []);
+  assert.equal(xmjClockOwner(state), null, 'a forced discard waits on neither player’s clock');
+  for (const action of [
+    { action: 'discard', tile: 'rK' },
+    { action: 'discard', tile: 'rA', handCopy: true },
+    { action: 'declare-ready', tile: 'rA' },
+  ] as const) {
+    const illegal = { ...action, by: 'east', at: 7_000 } as const;
+    assert.equal(xmjIsLegalMove(state, illegal), false);
+    assert.equal(applyXmjMove(state, illegal), state);
+  }
+  const pending = xmjPendingAction(state);
+  assert.deepEqual(pending, {
+    at: 6_000 + XMJ_CLAIM_PAUSE_MS,
+    color: 'east',
+    move: { by: 'east', at: 6_000 + XMJ_CLAIM_PAUSE_MS, action: 'discard', tile: 'rA' },
+  });
+  assert.ok(pending);
+  const replay = JSON.parse(JSON.stringify(moves)).reduce(applyXmjMove, createXmjRoomState(setup));
+  assert.deepEqual(replay, state);
+  assert.deepEqual(xmjPendingAction(replay), pending);
+  assert.deepEqual(applyXmjMove(replay, pending.move), applyXmjMove(state, pending.move));
+  assert.deepEqual(applyXmjMove(state, pending.move).match.hand.hands[0], ['rK', 'rA', 'rE', 'rP']);
+});
+
+test('a declared winning draw waits for its owner; next-hand readiness resets declarations', () => {
+  const wall = wallWith(['rK', 'rA', 'rE', 'rP', 'bH'], ['bK', 'bA', 'bE', 'bR'], ['bP', 'rP']);
+  let state = createXmjRoomState({ walls: [wall, wall], firstDealer: 'east', taiTable: 3 });
+  state = play(state, 'east', { action: 'declare-ready', tile: 'bH' });
+  state = play(state, 'west', { action: 'pass' });
+  state = play(state, 'west', { action: 'discard', tile: 'bR' });
+  state = play(state, 'east', { action: 'pass' });
+  assert.equal(xmjPendingAction(state), null, 'never throw away a winning draw automatically');
+  assert.equal(xmjClockOwner(state), 'east', 'a winning draw still needs its owner’s decision');
+  state = play(state, 'east', { action: 'self-draw' });
+  assert.deepEqual(state.ready, []);
+  state = play(state, 'east', { action: 'next-hand' });
+  assert.deepEqual(state.ready, ['east']);
+  assert.deepEqual(xmjViewFor(state, 'west').declared, { east: true, west: false });
+  state = play(state, 'west', { action: 'next-hand' });
+  assert.deepEqual(state.ready, []);
+  assert.deepEqual(xmjViewFor(state, 'east').declared, { east: false, west: false });
+});
+
+test('declaration wire actions require exactly one tile and validate hand-copy hints', () => {
+  assert.deepEqual(xmjMoveFromMessage({ action: 'declare-ready-hand', tiles: ['rP'] }), {
+    by: 'east',
+    at: 0,
+    action: 'declare-ready',
+    tile: 'rP',
+    handCopy: true,
+  });
+  for (const tiles of [[], ['rP', 'rP'], ['bad']]) {
+    assert.equal(xmjMoveFromMessage({ action: 'declare-ready', tiles }), null);
+  }
+  assert.equal(
+    isXmjMove({ by: 'east', at: 0, action: 'declare-ready', tile: 'rP', handCopy: false }),
+    false,
+  );
+});
+
 test('a match scores on the 台 table its setup was stamped with; no stamp is table 1', () => {
   assert.equal(createXmjSetup(seeded(1)).taiTable, XMJ_TAI_TABLE);
   assert.equal(createXmjSetup(seeded(1), { correspondence: true }).taiTable, XMJ_TAI_TABLE);
   const setup = createXmjSetup(seeded(1));
   assert.ok(isXmjRoomSetup({ ...setup, taiTable: 1 }));
-  assert.ok(!isXmjRoomSetup({ ...setup, taiTable: 3 }));
+  assert.ok(!isXmjRoomSetup({ ...setup, taiTable: 4 }));
   assert.ok(!isXmjRoomSetup({ ...setup, taiTable: '2' }));
 
   // East deals and throws 象; west's 將士 + 兵兵 wins on it. Table 2 adds 將之才.

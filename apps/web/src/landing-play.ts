@@ -3819,7 +3819,7 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === CRAZYHOUSE_XIANGQI_SPEC_ID) return CRAZYHOUSE_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_SPEC_ID) return JUNGLE_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
-  // Local playtest only (#628), behind VITE_THREE_KINGDOMS_BANQI_ENABLED.
+  // Admin playtest on prod (#684), everyone in a local flag build (#628).
   if (setup.gameSpecId === THREE_KINGDOMS_BANQI_SPEC_ID) return THREE_KINGDOMS_BANQI_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;
   if (setup.gameSpecId === BANQI_SPEC_ID) return BANQI_SPEC_ID;

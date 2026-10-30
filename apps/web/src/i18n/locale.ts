@@ -51,6 +51,32 @@ export function localeFromPath(pathname = currentPathname()): Locale | null {
   return null;
 }
 
+// /puzzles has no locale prefix; the server sends /zh-hans/puzzles/... to
+// /puzzles/...?lang=zh-hans. Store that language and drop the parameter, so a
+// later switch from the language menu is not undone by the same URL reloading.
+export function puzzlesQueryLocale(): Locale | null {
+  if (typeof window === 'undefined') return null;
+  const { pathname, search, hash } = window.location;
+  if (pathname !== '/puzzles' && !pathname.startsWith('/puzzles/')) return null;
+  const params = new URLSearchParams(search);
+  const raw = params.get('lang')?.toLowerCase();
+  const locale =
+    raw === 'zh-hans' ? 'zh-Hans' : raw === 'zh-hant' ? 'zh-Hant' : raw === 'en' ? 'en' : null;
+  if (!locale) return null;
+  params.delete('lang');
+  const query = params.toString();
+  try {
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${pathname}${query ? `?${query}` : ''}${hash}`,
+    );
+  } catch {
+    // A sandboxed frame can refuse replaceState; the stored locale still holds.
+  }
+  return locale;
+}
+
 export function storedLocale(): Locale | null {
   try {
     const raw = window.localStorage.getItem(LOCALE_STORAGE_KEY);
@@ -188,7 +214,7 @@ export function firstLocale(): Locale {
 export function initializeLocaleFromCurrentUrl(): Locale {
   // Before the path is stored, so a first visit records the page it landed on.
   firstLocale();
-  const pathLocale = localeFromPath();
+  const pathLocale = localeFromPath() ?? puzzlesQueryLocale();
   if (pathLocale) setStoredLocale(pathLocale);
   const locale = currentLocale();
   applyDocumentLocale(locale);

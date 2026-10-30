@@ -11,6 +11,8 @@
 // deliberately absent; documenting them would promise a contract they do not
 // have. Version 0: shapes may change, and the description says so.
 
+import { XIANGQI_MOTIFS, XIANGQI_TRAINING_TAGS } from '@mistboard/game';
+
 type Schema = Record<string, unknown>;
 
 const ref = (name: string): Schema => ({ $ref: `#/components/schemas/${name}` });
@@ -154,6 +156,13 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         },
       },
       themes: { type: 'array', items: { type: 'string' } },
+      motifs: { type: 'array', items: { type: 'string' } },
+      tags: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Trainer tags derived at load: kill patterns plus mate-in-N, phase, goal and length.',
+      },
       solutionPlyCount: { type: 'integer' },
       rating: { type: 'integer' },
       ratingProvisional: { type: 'boolean' },
@@ -853,9 +862,25 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
             'variant',
             {
               type: 'string',
-              enum: ['xiangqi', 'fortress-xiangqi', 'jungle'],
+              enum: ['xiangqi', 'jungle'],
             },
             'Restrict to one variant; omit for all.',
+          ),
+          query(
+            'motif',
+            { type: 'string', enum: XIANGQI_MOTIFS.map((motif) => motif.id) },
+            'Restrict to a named xiangqi mating pattern. Intersects variant; omit or leave empty for all.',
+          ),
+          query(
+            'theme',
+            {
+              type: 'string',
+              enum: [
+                ...XIANGQI_MOTIFS.map((motif) => motif.id),
+                ...XIANGQI_TRAINING_TAGS.map((tag) => tag.id),
+              ],
+            },
+            'Restrict to any trainer tag: a mating pattern, mate-in-N, phase, goal or length. Intersects variant and motif.',
           ),
         ],
         responses: {
@@ -864,9 +889,33 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
             properties: {
               puzzles: { type: 'array', items: ref('PuzzleSummary') },
               attemptedIds: { type: 'array', items: { type: 'string' } },
+              themes: {
+                type: 'array',
+                description:
+                  'All classified themes and counts for the discoverable variant pool, before the theme filter.',
+                items: {
+                  type: 'object',
+                  properties: {
+                    id: { type: 'string' },
+                    label: { type: 'string' },
+                    hanzi: { type: 'string' },
+                    pinyin: { type: 'string' },
+                    literal: { type: 'string' },
+                    gloss: { type: 'string' },
+                    tier: { type: 'string' },
+                    count: { type: 'integer', minimum: 0 },
+                  },
+                },
+              },
+              tagCounts: {
+                type: 'object',
+                description:
+                  'Puzzles per trainer tag (every tag, zeros included) in the discoverable variant pool, before the motif and theme filters.',
+                additionalProperties: { type: 'integer', minimum: 0 },
+              },
             },
           }),
-          '400': ERROR_RESPONSE('`invalid_variant`'),
+          '400': ERROR_RESPONSE('`invalid_variant`, `invalid_motif`, `invalid_theme`'),
         },
       },
     },

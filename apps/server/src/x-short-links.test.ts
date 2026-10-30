@@ -60,6 +60,46 @@ test('youtube link: /yt opens the next problem position, no solution, tagged you
     assert.equal(xShortLinkRedirect(path), null, path);
 });
 
+test('facebook short link: the puzzle post opens the bare position, never the solution', () => {
+  const location = xShortLinkRedirect('/fb/15');
+  assert.ok(location);
+  assert.equal(xShortLinkRedirect('/fb/15/'), location);
+  const url = parseTarget(location);
+  assert.equal(url.pathname, '/analysis/xiangqi');
+  assert.equal(url.searchParams.get('fen'), X_SHORT_LINKS['15']!.target.fen);
+  // A puzzle post asks for the first move; a loaded line would give it away.
+  assert.equal(url.searchParams.get('moves'), null);
+  assert.equal(url.searchParams.get('utm_source'), 'facebook');
+  assert.equal(url.searchParams.get('utm_medium'), 'social');
+  assert.equal(url.searchParams.get('utm_campaign'), 'fb-elegant-015-2026-10');
+  assert.equal(url.searchParams.get('utm_content'), 'puzzle');
+});
+
+test('facebook short link: the answer post opens the problem with its solution at ply 0', () => {
+  const location = xShortLinkRedirect('/fb/1/answer');
+  assert.ok(location);
+  assert.equal(xShortLinkRedirect('/fb/1/answer/'), location);
+  const url = parseTarget(location);
+  assert.equal(url.searchParams.get('fen'), X_SHORT_LINKS['1']!.target.fen);
+  assert.equal(url.searchParams.get('moves'), X_SHORT_LINKS['1']!.target.moves);
+  assert.equal(url.searchParams.get('ply'), '0');
+  assert.equal(url.searchParams.get('utm_source'), 'facebook');
+  assert.equal(url.searchParams.get('utm_campaign'), 'fb-elegant-001-2026-10');
+  assert.equal(url.searchParams.get('utm_content'), 'answer');
+});
+
+test('facebook short link: an unknown slug lands on the homepage tagged fb-unknown', () => {
+  for (const path of ['/fb/nope', '/fb/toString/answer', '/fb/%E0%A4%A']) {
+    const url = parseTarget(xShortLinkRedirect(path)!);
+    assert.equal(url.pathname, '/', path);
+    assert.equal(url.searchParams.get('utm_source'), 'facebook', path);
+    assert.equal(url.searchParams.get('utm_campaign'), 'fb-unknown', path);
+  }
+  for (const path of ['/fb', '/fb/', '/fb/1/extra', '/fb/1/answer/extra', '/fbx/1']) {
+    assert.equal(xShortLinkRedirect(path), null, path);
+  }
+});
+
 test('x short link: other paths are not short links', () => {
   for (const path of ['/x', '/x/', '/x/1/extra', '/xiangqi', '/analysis/xiangqi']) {
     assert.equal(xShortLinkRedirect(path), null, path);
@@ -124,6 +164,11 @@ test('x short link: the server answers /x/<slug> with a 302 before the SPA', asy
     assert.equal(url.searchParams.get('utm_campaign'), 'x-elegant-002-2026-10');
     assert.ok(!location!.includes(' '));
     await known.text();
+
+    const fb = await fetch(`${base}/fb/15`, { redirect: 'manual' });
+    assert.equal(fb.status, 302);
+    assert.equal(fb.headers.get('location'), xShortLinkRedirect('/fb/15'));
+    await fb.text();
 
     const unknown = await fetch(`${base}/x/999`, { redirect: 'manual' });
     assert.equal(unknown.status, 302);

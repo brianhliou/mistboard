@@ -34,6 +34,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-29, not native-reviewed, from the English signed
+  // off that day. Menu names are the zh shell catalog's (棋盘样式, 河界文字,
+  // 兵炮位标记, 平面/立体, 加厚, 速度) so the article names what the menu shows.
+  'set-up-your-board',
   // Machine-drafted 2026-10-24, not native-reviewed, from the English signed
   // off that day (jieqi readers are mostly Chinese).
   'jqe',
@@ -962,15 +966,11 @@ const ZH_HANS: Record<string, string> = {
   // how-puzzle-mining-works blog merge (2026-10-07): machine-translated.
   'Every source carries a licence status, and publishing refuses any puzzle whose source has not been cleared.':
     '每个来源都带有授权状态，来源未获授权的题目一律不予发布。',
-  'What survives the gate goes to an audit. A separate process searches every solution again at depth 22 with no node ceiling, knowing nothing of what the first pass decided, and about 6% of the survivors do not hold up. Those are dropped too.':
-    '通过判定关卡的题目还要接受复核。另一个独立进程以 22 层深度、不设节点上限，把每道题的解答重新搜索一遍，它完全不知道第一遍的结论。大约 6% 的幸存者经不起复核，同样被丢弃。',
   'In August 2026 mining cost about six core-hours per thousand games, or about one core-minute per published puzzle.':
     '2026 年 8 月，挖掘的成本约为每千盘对局六个核心小时，也就是每发布一道题目约一个核心分钟。',
   'A rating scores what makes the line hard to see': '评分衡量的是这条线路难在哪里',
   'Every puzzle needs a rating before anyone has solved it, so the trainer can pick problems near your level. Rating by mate depth gives four distinct values across the corpus. The rating walks the solution instead: a quiet first move adds, a capture subtracts, a sacrifice the solver never wins back adds up to 200, and the number of replies the defender has pushes it either way. On 2 September 2026 the 1,415 puzzles served had 479 distinct ratings between 1000 and 2600.':
     '每道题目在还没有人解过之前就需要一个评分，这样训练器才能挑出接近你水平的题目。只按杀棋步数评分，整个题库只会得到四个不同的数值。所以评分会把解答逐步走一遍：第一步不吃子会加分，吃子会减分，解题者弃掉且始终没有追回的子力最多加 200 分，防守方可走的应着数量则可能加分也可能减分。2026 年 9 月 2 日，上线的 1,415 道题目共有 479 个不同的评分，介于 1000 到 2600 之间。',
-  'The largest penalty goes to a first move that takes something nothing can take back, scaled by the piece it wins and capped at a chariot’s 900, because a hanging piece is the easiest thing on a board to spot. The check only runs while the game is still going. A capture that mates also leaves the defender no legal reply, and counted naively that looks like a piece nothing can recapture, which would mark down every mating capture in the corpus.':
-    '扣分最多的，是第一步吃掉一个对方无法反吃的子，扣分按吃到的子力计算，上限是一个车的 900，因为无人保护的子是棋盘上最容易发现的东西。这项检查只在对局仍在进行时才执行。吃子同时将死对方时，防守方也没有任何合法应着；如果照字面去数，这看起来就像一个无法反吃的子，题库里每一步吃子成杀都会被扣分。',
   'One kind of position is withheld: the solver is already at least 300 centipawns ahead and the answer takes something undefended. It teaches nothing at any rating, and a rating can only decide who gets shown a problem. That rule hid 12% of the corpus.':
     '有一类局面不予上线：解题者已经领先至少 300 厘兵，而答案是吃掉一个无人保护的子。这种题目在任何评分上都教不了什么，而评分只能决定一道题出现在谁面前。这条规则隐藏了题库的 12%。',
   // katago-jungle blog merge (2026-10-07): machine-translated.
@@ -2069,7 +2069,6 @@ const ZH_HANS: Record<string, string> = {
   'second move mates': '次佳着法也能将死',
   'gap below 200cp': '差距低于 200cp',
   'win%(second) at or below 0.6': '次佳胜率不高于 0.6',
-  'gap of 250cp or more': '差距达到 250cp 或以上',
   'anything left over': '其余情况',
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
@@ -2085,58 +2084,18 @@ const ZH_HANS: Record<string, string> = {
   // second engine pass. 厘兵 is a coinage for centipawn and the article defines
   // it in place, which is why that paragraph must not be cut in translation.
   'Mining puzzles from real games': '从真实对局中挖掘象棋题目',
-  'A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.':
-    '一个挖掘器：读入真实的象棋对局，找出人们下错的着法，保留那些恰好只有一步棋能赢的局面。大约每九个漏着里有一个能留下来。下面是算法、代码，以及它留下和丢掉的一些例子。',
-  'Mistboard needed xiangqi puzzles and I could not find a corpus to use, so I wrote a miner. It reads real games, finds the moments somebody threw the game away, and keeps the positions where exactly one move wins.':
-    'Mistboard 需要象棋题目，而我找不到现成的题库可用，于是写了一个挖掘器。它读入真实对局，找出有人把棋葬送掉的那一刻，保留恰好只有一步棋能赢的局面。',
-  'About one blunder in nine makes it through. The reasons the other eight fail turn out to be a working definition of a puzzle, which is the interesting part and most of what is below.':
-    '大约每九个漏着里有一个能通过。另外八个失败的原因，恰好构成了一道题目该是什么样子的定义，这才是有意思的部分，也是下文的主要内容。',
   'The games': '棋谱从哪里来',
   'They come from [ElephantChess](https://elephantchess.io/about/datasets), which publishes its own site’s games as anonymised monthly dumps under GPL-3.0. Amateur games, which matters: strong players do not blunder often enough to be a supply.':
     '它们来自 [ElephantChess](https://elephantchess.io/about/datasets)，该网站以 GPL-3.0 协议按月发布自己站内对局的匿名数据集。业余对局，这一点很重要：高手漏着的频率不足以支撑一个题库。',
-  'A run freezes its game list before any engine time is spent, sampled across ratings, time controls, results and lengths so it does not turn out to be all blitz. Nothing is added to a run once it starts.':
-    '每一轮挖掘在花掉任何引擎时间之前，都会先把棋谱清单冻结，并按等级分、时限、结果和长度采样，以免全是快棋。一轮开始之后就不再往里加棋。',
   'The algorithm': '算法',
   'Two passes: a cheap one over every position of every game, and an expensive one over the few that survive it.':
     '两遍扫描：一遍便宜的，跑遍每一局的每一个局面；一遍昂贵的，只跑通过了前一遍的少数局面。',
-  'The cheap pass replays a game and stops at every position after ply 8, asking Pikafish for its top two moves at 60,000 nodes. That is roughly depth 10 to 14, and it is shallow on purpose, because it runs everywhere.':
-    '便宜的那一遍把棋谱重演一次，在第 8 个半回合之后的每个局面停下，用 60,000 个节点向 Pikafish 要它认为最好的两步棋。这大约相当于 10 到 14 层深度，浅是故意的，因为这一遍要跑遍所有局面。',
-  'A position becomes a candidate when the move actually played loses at least 250 centipawns against the engine’s best, and the position it leaves behind is winning by at least 250 centipawns for the other side. A blunder that leaves the game equal is not a puzzle. There is nothing to find.':
-    '当实际走出的那一步比引擎的最佳着法差至少 250 厘兵，并且它留下的局面对另一方而言至少领先 250 厘兵时，这个局面就成为候选。一个只把棋下成均势的漏着不是题目，那里没有东西可找。',
-  'A centipawn is a hundredth of a soldier, the unit engines use for material. Xiangqi has no pawn, so the name comes from chess along with the scale. The values this site uses put a horse or a cannon at 450 and a chariot at 900, which makes a 250-centipawn swing about half a horse.':
-    '厘兵是一个兵的百分之一，引擎用来衡量子力的单位。象棋里没有国际象棋那种兵，所以这个名字连同它的标度都是从国际象棋借来的。本站采用的子力价值把马或炮记作 450，车记作 900，因此 250 厘兵的落差大约是半个马。',
-  'Two filters keep that pass honest. Positions already decided by 800 centipawns are skipped, because winning a won game harder is not a tactic. And no game gives up more than three candidates, so one collapse cannot flood the corpus with variations on itself.':
-    '另有两个过滤器让这一遍保持诚实。已经以 800 厘兵分出胜负的局面会被跳过，因为把一盘已经赢定的棋赢得更多不算战术。而且每一局最多只交出三个候选，这样一次崩盘就不会用同一个局面的各种变化淹没题库。',
-  'The expensive pass takes each candidate back to the engine at depth 20 and 600,000 nodes, ten times the budget, handed over as a bare FEN with no move history. Same position, no context, so the engine cannot lean on the search it just did.':
-    '昂贵的那一遍把每个候选送回引擎，用 20 层深度和 600,000 个节点，是前一遍预算的十倍，而且只交给它一个不带走子历史的 FEN。同一个局面，没有上下文，引擎无法依赖它刚才做过的搜索。',
-  'Then the line is built one solver move at a time, and every move has to be uniquely best on its own. That is what separates a puzzle from a plausible sequence. A principal variation is one line the engine liked from one search. It says nothing about whether move three was forced, and a solver who finds a different move three and is told they are wrong has been lied to.':
-    '然后解答线路一步一步地搭起来，每一步都必须自己单独是唯一最佳。这才是一道题目和一串看起来合理的着法之间的区别。主变只是引擎在一次搜索里喜欢的一条线路，它没有说第三步是不是被迫的；一个找到了另一种第三步却被判为错误的解题者，是被骗了。',
-  'Uniqueness is not a centipawn gap. Two moves 50 centipawns apart are both fine, and demanding one punishes a solver for choosing correctly. What makes a move **the** answer is that every alternative is wrong: it gives the win away, or it wins materially less. The test is a hand-tuned cascade rather than anything principled, and it fails closed, so anything it cannot separate is thrown away.':
-    '唯一性不是厘兵差。相差 50 厘兵的两步棋都不错，硬要挑出一步只会因为解题者选对了而惩罚他。让一步棋成为**那个**答案的，是其余每一种选择都是错的：要么把胜势让掉，要么赢得的子力明显更少。这个判定是一串手工调出来的阈值，谈不上有什么原理，而且它是分不开就拒绝，所以凡是它分不开的都会被丢掉。',
   'The gate in evaluation order. Green passes the move, grey rejects it, and the label on the right is the reason stored on the candidate.':
     '判定关卡按求值顺序排列。绿色表示这一步通过，灰色表示被拒绝，右边的标签是记录在候选上的原因。',
   'The code': '代码',
-  'The cheap pass, condensed. One detail halves it: judging a move needs the position’s value before and after, and both are already there if the scans stay in order, because the move played is worth the negation of the next position’s score. One search per position, not two.':
-    '便宜的那一遍，精简版。有一个细节把它的开销减半：判断一步棋需要知道局面在这一步之前和之后的分值，而只要扫描保持顺序，这两个值就都已经在手上了，因为走出的这一步的价值就是下一个局面分值的相反数。每个局面搜索一次，而不是两次。',
-  'And the gate. Every branch that returns false here is a way a real blunder fails to be a puzzle.':
-    '还有判定关卡。这里每一个返回 false 的分支，都是一个真实的漏着未能成为题目的方式。',
   'What it keeps': '它留下什么',
-  '**Two thirds of the puzzles open with a move that captures nothing.** If you hunt for tactics by scanning the captures first, which is what most of us do, you are looking at the wrong third of the board most of the time. Step through this one: the chariot goes the length of the board and takes nothing on the way.':
-    '**三分之二的题目以一步不吃子的棋开始。** 如果你像我们大多数人那样，先扫一遍能吃子的着法去找战术，那你多数时候看的是棋盘上错误的那三分之一。把这一题走一遍看看：车从棋盘的一端走到另一端，一路上什么都没吃。',
   'Red plays the chariot the length of the board, taking nothing. Black brings the horse back to c3 to cover the mate, and it does not cover it.':
     '红方把车从棋盘的一端走到另一端，什么也没吃。黑方把马退回 c3 想守住杀棋，而它守不住。',
-  '**Only about a tenth involve giving material away.** Sacrifices are the tactics people remember, so I had assumed they would be a larger slice. In real games between real players, the winning move is usually just a move. Here is one of the tenth, and the solver is the one behind: a horse and a cannon down before it starts.':
-    '**只有大约十分之一涉及弃子。** 弃子是人们记得住的那种战术，所以我原本以为它的比例会更大。在真实棋手之间的真实对局里，取胜的那一步通常就只是一步棋。这是十分之一里的一个，而且落后的正是解题的一方：开始时少一马一炮。',
-  'Red gave a chariot for an advisor and a horse, so it finishes 1,150 centipawns down instead of 900. The material never comes back. The mate just arrives first.':
-    '红方用一个车换回一士一马，所以它从落后 900 厘兵变成落后 1,150 厘兵。子力再也没有追回来，只是杀棋先到了。',
-  '**Not every puzzle ends in mate.** About 40% end with the solver simply winning, and those are the ones a mate-shaped intuition misses. This one opens with a move that takes nothing, hands a soldier back, and collects an advisor and both horses for it.':
-    '**并不是每道题目都以将死收尾。** 大约 40% 是以解题方单纯取得胜势结束的，而这些正是一心找杀棋的直觉会漏掉的。这一题以一步不吃子的棋开始，交还一个兵，换回一个士和两个马。',
-  'Black ends a thousand centipawns up, an advisor and both horses against one soldier. There is no mate here and no threat of one. It is still a puzzle.':
-    '黑方最终领先一千厘兵，一士两马对一兵。这里没有杀棋，也没有杀棋的威胁，它仍然是一道题目。',
-  'And one that takes nothing for four plies. Red is 150 centipawns down here and the engine calls the position level.':
-    '还有一题连着四个半回合什么都不吃。红方在这里落后 150 厘兵，而引擎认为局面是均势。',
-  'The chariot steps quietly to d3, the general is walked to the back rank, and the advisor on d8 falls. Red goes from 150 down to an engine score of +917, with Black left holding two legal moves.':
-    '车悄悄走到 d3，将被逼到底线，d8 的士随之落下。红方从落后 150 变成引擎给出的 +917，而黑方只剩下两步合法着法。',
   'What it throws out': '它丢掉什么',
   'The rejects define a puzzle better than the keeps do, because each one is a real blunder that failed for exactly one reason.':
     '被丢掉的那些比留下的更能说清一道题目是什么，因为每一个都是一个真实的漏着，而且恰好因为一个原因失败。',
@@ -2147,30 +2106,72 @@ const ZH_HANS: Record<string, string> = {
   'Rejected: promised mate not reached': '拒绝：许诺的杀棋没有兑现',
   'Rejected: not unique, or not winning': '拒绝：不唯一，或者并非胜势',
   'Survived to the audit': '进入复核',
-  'Measured over 10,503 candidates from 3,500 games in August 2026. The shares have held within about two points across three runs; the totals will not survive the next one.':
-    '数据取自 2026 年 8 月、来自 3,500 局棋的 10,503 个候选。这些比例在三轮挖掘之间的浮动大约在两个百分点以内；绝对数字则活不过下一轮。',
-  '**Near-tie is the biggest, about a third.** The player had a winning move and so did something else. Both work, so there is no answer to check against and no puzzle, even though the blunder was real and the position was winning.':
-    '**几乎并列是最大的一类，约占三分之一。** 走棋的一方有一步能赢的棋，而另外还有一步也能赢。两步都成立，于是没有可以用来对照的答案，也就没有题目，尽管那个漏着是真实的，局面也确实是胜势。',
-  '**Too short is another third**, and it gives the clearest example in the corpus of what the miner is for. Below is a position it rejected. Black is to move, the engine scores it as a forced mate against a second-best line of +1407, and exactly one of Black’s twenty legal moves does it.':
-    '**太短是另外三分之一**，它给出了整个题库里最能说明这个挖掘器是干什么的例子。下面是一个被拒绝的局面。轮黑方走，引擎把它判为必然的杀棋，次优线路是 +1407，而黑方二十步合法着法里恰好只有一步能做到。',
-  'The horse drops to c3 and it is mate. Unique, crushing, correct, and rejected, because the whole win is one move and one move is a spot-check rather than a puzzle.':
-    '马落到 c3，杀棋。唯一、致命、正确，然后被拒绝，因为整个取胜过程只有一步棋，而一步棋是一次抽查，不是一道题目。',
-  'The other way to fail is to have too many answers rather than too few. Red is to move below and the horse on e8 mates two different ways, c9 or g9. The stepper plays one of them. Either wins, so there is nothing to check a solver against, and the candidate is thrown out.':
-    '另一种失败方式是答案太多而不是太少。下面轮红方走，e8 的马有两种不同的将死方法，c9 或者 g9。这个走子器演示其中一种。两种都能赢，于是没有东西可以用来对照解题者的答案，这个候选就被丢掉了。',
   'The horse mates on c9. It also mates on g9. Two answers is not one answer, so this is not a puzzle.':
     '马在 c9 将死。它在 g9 也能将死。两个答案不是一个答案，所以这不是一道题目。',
-  '**Promised mate not reached** is the narrow one, and it is not a rule against non-mate puzzles. It fires only when the engine returned a mate score, so the line promised a mate, and replaying it inside the seven-ply cap never got there. The promise could not be checked, so the candidate goes. A position with an ordinary winning evaluation never enters that branch at all, and ships as one of the winning-advantage puzzles above.':
-    '**许诺的杀棋没有兑现**是范围最窄的一类，它并不是一条针对非杀棋题目的规则。它只在引擎返回杀棋分值时触发，也就是说这条线路许诺了一个杀棋，而在七个半回合的上限内把它重演一遍却没有走到。这个许诺无法验证，于是候选被丢弃。评分只是普通胜势的局面根本不会进入这个分支，它们会作为上面那种胜势题目发布出去。',
   'What a puzzle turns out to be': '一道题目到头来是什么',
-  'Most winning positions have several winning moves, and that is what disqualifies them: a third of everything found died on that alone. A puzzle is a position with one answer, deep enough that finding it takes work, and stable enough that a stronger engine still agrees an hour later.':
-    '大多数胜势局面都有好几步能赢的棋，而这正是它们被淘汰的原因：找到的全部候选里有三分之一只栽在这一点上。一道题目是这样一个局面：它只有一个答案，深到需要下功夫才找得到，稳到一小时后一个更强的引擎仍然同意。',
-  'That is a much narrower thing than a mistake. Nine out of ten mistakes do not qualify.':
-    '这比一个错误要窄得多。十个错误里有九个不够格。',
-  'One caveat I would rather say than hide: the gate has never been checked against a human. Its four thresholds came from reading rejected positions, not from measuring whether the puzzles they admit are any good, and the win-rate curve they act on is inherited from chess. Solve rates and reveal rates are recorded per puzzle, so the data to grade it exists.':
-    '有一点我宁可说出来而不是藏着：这套判定关卡从来没有拿真人检验过。它的四个阈值来自翻看被拒绝的局面，而不是来自衡量它放行的题目到底好不好，而这些阈值所依据的胜率曲线是从国际象棋继承来的。每道题目的解出率和看答案率都有记录，所以用来给它打分的数据是存在的。',
   'Solve xiangqi puzzles': '做象棋题目',
   'Play twelve of them': '试走其中十二题',
   'How Mistboard mines xiangqi puzzles from real games': 'Mistboard 如何从真实对局中挖掘象棋题目',
+  'A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in twenty survives. Here is the algorithm, the code, and what it kept and threw away.':
+    '一个挖掘器：读入真实的象棋对局，找出人们下错的着法，保留那些恰好只有一步棋能赢的局面。大约每二十个漏着里有一个能留下来。下面是算法、代码，以及它留下和丢掉的例子。',
+  'Mistboard needed xiangqi puzzles and I could not find a corpus to use, so I wrote a miner.':
+    'Mistboard 需要象棋题目，而我找不到现成的题库可用，于是写了一个挖掘器。',
+  'About one blunder in twenty makes it through. The reasons the other nineteen fail turn out to be a working definition of a puzzle, and most of this article is about them.':
+    '大约每二十个漏着里有一个能通过。另外十九个失败的原因，恰好构成了一道题目该是什么样子的定义，本文大部分篇幅讲的就是它们。',
+  'A run freezes its game list before any engine time is spent, sampled across ratings, time controls, results and lengths so it is not all blitz. Nothing is added to a run once it starts.':
+    '每一轮挖掘在花掉任何引擎时间之前，都会先把棋谱清单冻结，并按等级分、时限、结果和长度采样，以免全是快棋。一轮开始之后就不再往里加棋。',
+  'The cheap pass replays a game and stops at every position after ply 8, asking Pikafish for its top two moves at 60,000 nodes, roughly depth 10 to 14. It is shallow on purpose, because it runs everywhere.':
+    '便宜的那一遍把棋谱重演一次，在第 8 个半回合之后的每个局面停下，用 60,000 个节点向 Pikafish 要它认为最好的两步棋，大约相当于 10 到 14 层深度。浅是故意的，因为这一遍要跑遍所有局面。',
+  'A position becomes a candidate when the move played loses at least 250 centipawns against the engine’s best and leaves the other side winning by at least 250. A blunder that leaves the game equal has nothing to find.':
+    '当走出的那一步比引擎的最佳着法差至少 250 厘兵，并让另一方领先至少 250 时，这个局面就成为候选。一个只把棋下成均势的漏着，没有东西可找。',
+  'A centipawn is a hundredth of a soldier, the unit engines use for material. Xiangqi has no pawn, so the name comes from chess along with the scale. This site puts a horse or a cannon at 450 and a chariot at 900, so 250 centipawns is about half a horse.':
+    '厘兵是一个兵的百分之一，引擎用来衡量子力的单位。象棋里没有国际象棋那种兵，所以这个名字连同它的标度都是从国际象棋借来的。本站把马或炮记作 450，车记作 900，因此 250 厘兵大约是半个马。',
+  'Two filters narrow it. Positions already decided by 800 centipawns are skipped, because winning a won game harder is not a tactic. No game gives up more than three candidates, so one collapse cannot flood the corpus with variations on itself.':
+    '另有两个过滤器进一步收窄范围。已经以 800 厘兵分出胜负的局面会被跳过，因为把一盘已经赢定的棋赢得更多不算战术。每一局最多只交出三个候选，这样一次崩盘就不会用同一个局面的各种变化淹没题库。',
+  'The expensive pass sends each candidate back to the engine at depth 20 and 600,000 nodes, ten times the budget, as a bare FEN with no move history, so the engine cannot lean on the search it just did.':
+    '昂贵的那一遍把每个候选送回引擎，用 20 层深度和 600,000 个节点，是前一遍预算的十倍，而且只交给它一个不带走子历史的 FEN，所以引擎无法依赖它刚才做过的搜索。',
+  'Then the line is built one solver move at a time, and every move has to be uniquely best on its own. A principal variation is one line the engine liked from one search. It says nothing about whether move three was forced, and a solver who finds a different move three and is told they are wrong has been lied to.':
+    '然后解答线路一步一步地搭起来，每一步都必须自己单独是唯一最佳。主变只是引擎在一次搜索里喜欢的一条线路，它没有说第三步是不是被迫的；一个找到了另一种第三步却被判为错误的解题者，是被骗了。',
+  'Uniqueness is not a centipawn gap. Two moves 50 centipawns apart are both fine, and demanding one punishes a solver for choosing correctly. A move is **the** answer when every alternative gives the win away. A second move that still wins, even by a whole piece less, is a second answer. The test is a hand-tuned cascade, and it fails closed: anything it cannot separate is thrown away.':
+    '唯一性不是厘兵差。相差 50 厘兵的两步棋都不错，硬要挑出一步只会因为解题者选对了而惩罚他。当其余每一种选择都会把胜势让掉时，一步棋才是**那个**答案。第二步棋只要仍然能赢，哪怕少赢整整一个子，也是第二个答案。这个判定是一串手工调出来的阈值，而且分不开就拒绝：凡是它分不开的都会被丢掉。',
+  'What survives goes to an audit. A separate process, knowing nothing of what the first pass decided, searches every solution again at depth 22 with no node ceiling and drops the roughly 6% that do not hold up.':
+    '通过的题目还要接受复核。另一个独立进程完全不知道第一遍的结论，它以 22 层深度、不设节点上限，把每道题的解答重新搜索一遍，并丢弃经不起复核的大约 6%。',
+  'The cheap pass, condensed. One detail halves the searches: judging a move needs the position’s value before and after, and if the scans stay in order both are already there, because the move played is worth the negation of the next position’s score.':
+    '便宜的那一遍，精简版。有一个细节把搜索次数减半：判断一步棋需要知道局面在这一步之前和之后的分值，而只要扫描保持顺序，这两个值就都已经在手上了，因为走出的这一步的价值就是下一个局面分值的相反数。',
+  'And the gate. Every branch that returns false is a way a real blunder fails to be a puzzle.':
+    '还有判定关卡。每一个返回 false 的分支，都是一个真实的漏着未能成为题目的方式。',
+  '**Two thirds of the puzzles open with a move that captures nothing.** If you hunt for tactics by scanning the captures first, as most of us do, you start in the wrong place two times in three.':
+    '**三分之二的题目以一步不吃子的棋开始。** 如果你像我们大多数人那样，先扫一遍能吃子的着法去找战术，那么三次里有两次你都从错误的地方开始。',
+  '**Only about a tenth involve giving material away.** Sacrifices are the tactics people remember, so I had expected more. In real games the winning move is usually just a move. In this one the solver is already a horse and a cannon down, and gives more away.':
+    '**只有大约十分之一涉及弃子。** 弃子是人们记得住的那种战术，所以我原本以为会更多。在真实对局里，取胜的那一步通常就只是一步棋。这一题里，解题方已经少一马一炮，还要再送。',
+  'Red gives a chariot for an advisor and a horse, going from 900 to 1,150 centipawns down. The mate arrives first.':
+    '红方用一个车换回一士一马，从落后 900 厘兵变成落后 1,150 厘兵。杀棋先到了。',
+  '**Not every puzzle ends in mate.** About 40% end with the solver simply winning, and a mate-shaped intuition misses those. This one opens with a quiet move, hands a soldier back, and collects an advisor and both horses for it.':
+    '**并不是每道题目都以将死收尾。** 大约 40% 是以解题方单纯取得胜势结束的，而一心找杀棋的直觉会漏掉这些。这一题以一步不吃子的棋开始，交还一个兵，换回一个士和两个马。',
+  'Black ends a thousand centipawns up, with no mate and no threat of one. It is still a puzzle.':
+    '黑方最终领先一千厘兵，没有杀棋，也没有杀棋的威胁。它仍然是一道题目。',
+  'And one that takes nothing for four plies. Red starts 150 centipawns down, and the engine calls the position level.':
+    '还有一题连着四个半回合什么都不吃。红方开始时落后 150 厘兵，而引擎认为局面是均势。',
+  'The chariot steps quietly to d3, the general is walked to the back rank, and the advisor on d8 falls. Red goes from 150 down to an engine score of +917, and Black has two legal moves left.':
+    '车悄悄走到 d3，将被逼到底线，d8 的士随之落下。红方从落后 150 变成引擎给出的 +917，而黑方只剩下两步合法着法。',
+  'Measured over 13,897 candidates from 4,115 games in October 2026, counting lines of three plies or more as survivors. Under the old gate in August, not unique was 9% and survivors 12%; the totals will not survive the next run.':
+    '数据取自 2026 年 10 月、来自 4,115 局棋的 13,897 个候选，三个半回合及以上的线路算作通过。8 月旧判定关卡下，不唯一占 9%，通过的占 12%；绝对数字活不过下一轮。',
+  '**Near-tie is the biggest, about a third.** The position had two winning moves, so there is no single answer to check against, even though the blunder was real.':
+    '**几乎并列是最大的一类，约占三分之一。** 局面里有两步能赢的棋，于是没有唯一的答案可以对照，尽管那个漏着是真实的。',
+  '**Too short is another quarter**, and it gives the clearest example of what the miner is for. In this rejected position Black is to move, the engine scores a forced mate against a second-best line of +1407, and exactly one of Black’s twenty legal moves does it.':
+    '**太短是另外四分之一**，它给出了最能说明这个挖掘器是干什么的例子。在这个被拒绝的局面里轮黑方走，引擎判为必然的杀棋，次优线路是 +1407，而黑方二十步合法着法里恰好只有一步能做到。',
+  'The horse drops to c3 and it is mate. Unique, crushing, correct, and rejected: a win that takes one move is a spot-check, not a puzzle.':
+    '马落到 c3，杀棋。唯一、致命、正确，然后被拒绝：一步就赢的棋是一次抽查，不是一道题目。',
+  'The other way to fail is too many answers. Below, Red is to move and the horse on e8 mates two ways, c9 or g9, and the board plays one of them. Either wins, so there is nothing to check a solver against.':
+    '另一种失败方式是答案太多。下面轮红方走，e8 的马有两种将死方法，c9 或者 g9，棋盘演示其中一种。两种都能赢，于是没有东西可以用来对照解题者的答案。',
+  '**Promised mate not reached** is the narrow one, and it is not a rule against non-mate puzzles. It fires only when the engine returned a mate score and replaying the line inside the seven-ply cap never reached the mate. A position with an ordinary winning evaluation never enters that branch, and ships as a winning-advantage puzzle like the ones above.':
+    '**许诺的杀棋没有兑现**是范围最窄的一类，它并不是一条针对非杀棋题目的规则。它只在引擎返回杀棋分值、而在七个半回合的上限内重演这条线路却没有走到杀棋时触发。评分只是普通胜势的局面不会进入这个分支，它们会像上面那些题目一样，作为胜势题目发布出去。',
+  'The largest penalty goes to a first move that takes a piece nothing can take back, scaled by that piece and capped at a chariot’s 900, because a hanging piece is the easiest thing on a board to spot. The check runs only while the game is still going: a capture that mates also leaves no legal reply, and counted naively it would look like a free piece and mark down every mating capture in the corpus.':
+    '扣分最多的，是第一步吃掉一个对方无法反吃的子，扣分按这个子计算，上限是一个车的 900，因为无人保护的子是棋盘上最容易发现的东西。这项检查只在对局仍在进行时才执行：吃子同时将死对方时，对方也没有任何合法应着；如果照字面去数，这看起来就像白吃一个子，题库里每一步吃子成杀都会被扣分。',
+  'Most winning positions have several winning moves, and a third of everything found died on that alone. A puzzle is a position with one answer, deep enough that finding it takes work, and stable enough that a stronger engine still agrees an hour later. Nineteen mistakes in twenty do not qualify.':
+    '大多数胜势局面都有好几步能赢的棋，找到的全部候选里有三分之一只栽在这一点上。一道题目是这样一个局面：它只有一个答案，深到需要下功夫才找得到，稳到一小时后一个更强的引擎仍然同意。二十个错误里有十九个不够格。',
+  'One caveat: the gate has never been checked against human solvers. Its three thresholds came from reading rejected positions; nobody has measured whether the puzzles they admit are any good, and the win-rate curve they act on comes from chess. Solve and reveal rates are recorded per puzzle, so the data to grade it exists.':
+    '有一点需要说明：这套判定关卡从来没有拿真人解题者检验过。它的三个阈值来自翻看被拒绝的局面；没有人衡量过它放行的题目到底好不好，而这些阈值所依据的胜率曲线来自国际象棋。每道题目的解出率和看答案率都有记录，所以用来给它打分的数据是存在的。',
   // The xq-replay specs: title, event, resultText and the two seat labels.
   // article-prose.ts extracts only a stepper's caption, so these are invisible
   // to the coverage test, but deepTranslate walks the whole article and will
@@ -2180,14 +2181,6 @@ const ZH_HANS: Record<string, string> = {
   'Winning, not mating': '取胜，而不是将死',
   'Level, then winning': '先是均势，然后取胜',
   'Rejected: two answers': '拒绝：两个答案',
-  'Mined puzzle, mate in two': '挖掘出的题目，两步杀',
-  'Mined puzzle, winning advantage': '挖掘出的题目，取得胜势',
-  'Mate in one, thrown away': '一步杀，被丢掉',
-  'Two mates in one, thrown away': '两种一步杀，被丢掉',
-  'Mate in two.': '两步杀。',
-  'Winning advantage, no mate.': '取得胜势，没有杀棋。',
-  'Rejected: too short.': '拒绝：太短。',
-  'Rejected: two winning answers.': '拒绝：两个都能赢的答案。',
   Solver: '解题方',
   Defence: '防守方',
 
@@ -5835,7 +5828,7 @@ const ZH_HANS: Record<string, string> = {
   'SINCE 1956': '1956 年至今',
   'THE EASIER OF THE TWO': '两者中较容易的那个',
   'SINCE 1990': '1990 年至今',
-  '12% of blunders become puzzles': '12% 的漏着成为题目',
+  '6% of blunders become puzzles': '6% 的漏着成为题目',
   'AND WHY THE REST ARE NOT': '以及其余为何落选',
   '10 of the last 13 champions': '近 13 位冠军中有 10 位',
   'CHINESE XIANGQI ASSOCIATION RULINGS': '中国象棋协会处罚决定',
@@ -6093,8 +6086,8 @@ const ZH_HANS: Record<string, string> = {
   'Added the Manila final with its round table and board.': '新增马尼拉决赛，附轮次表和棋盘。',
   'Rewritten as a guide to playing and reviewing jieqi here.':
     '改写为在本站下揭棋和复盘揭棋的指南。',
-  "Added the miner's puzzle ratings, its audit, the licence gate and the withheld class.":
-    '新增挖题程序给出的题目等级分、对它的审校、授权门槛，以及不予上线的一类题目。',
+  'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
+    '从判定关卡中删去了 250 厘兵的例外：次佳着法仍然能赢的局面现在一律拒绝，不管它少赢多少。漏斗数据按新关卡重新测量，六个例子改为可以走的棋盘（其中三个就是线上的题目），正文也更精简。',
   'Removed a claim that Zhao Xinxin is the youngest world champion; Zheng Weitong won the title younger in 2015.':
     '删去了赵鑫鑫是最年轻世界冠军的说法；郑惟桐 2015 年夺冠时更年轻。',
   'Replaced the sample game with a game played against the engine on the site.':
@@ -6259,6 +6252,118 @@ const ZH_HANS: Record<string, string> = {
     '第 152 盘：两个引擎眼中 jqe 每回合的胜率。到第 16 回合，两者的判断都跌到 25% 以下，并一直保持到第 22 回合；随后 jqe 自己的判断跳到 81% 和 99%，而 AB-JChess 的判断又在 0% 附近停留了一个回合，到第 24 回合才跳到 91%。',
   'General takes the chariot': '将吃车',
   'move 24': '第 24 回合',
+  // set-up-your-board: machine-drafted 2026-10-29, not native-reviewed, from the English signed off that day. Menu and option names are the zh shell catalog's (prefs.*: 棋盘/棋子, 棋盘样式, 棋盘颜色, 河界文字/无, 兵炮位标记, 外观/动画, 平面/立体, 边缘/标准/加厚, 速度/关闭/快/正常/慢; piece sets 国际 繁体 简体 动物 亮漆 木质 棋书 毛笔 隶书). The board-style tiles have no zh label, so lined/square grid are 交叉点棋盘/方格棋盘.
+  'How to Change Your Board and Pieces': '如何更改棋盘和棋子的样式',
+  'Change Your Board and Pieces': '更改棋盘和棋子样式',
+  'Xiangqi Piece Sets and Board Settings: 3D, Square Grid, River Text':
+    '象棋棋子样式与棋盘设置：立体棋子、方格棋盘、河界文字',
+  'Mistboard has nine xiangqi piece sets, pieces can be flat or 3D, and the xiangqi board can be lined or a square grid. Pieces glide when you step through a game and turn over when a hidden piece is revealed. Here is what each look is and where to set it.':
+    'Mistboard 有九套象棋棋子样式，棋子可以是平面或立体的，象棋棋盘可以是交叉点棋盘或方格棋盘。逐步查看对局时棋子会滑动，暗子翻开时会翻转。本文介绍每种样式是什么样子，以及在哪里设置。',
+  'Xiangqi pieces drawn in 3D on the lined board': '交叉点棋盘上的立体象棋棋子',
+  'Mistboard has nine piece sets: pictures, Chinese characters, cartoon animals, and five art sets in traditional styles. Pick one under Pieces in Settings.':
+    'Mistboard 有九套棋子样式：图画、汉字、卡通动物，以及五套传统风格的美术棋子。在设置的「棋子」里选择。',
+  'Pieces are flat until you switch them to 3D under Pieces in Settings. 3D works on xiangqi, jieqi, banqi and Flip Jungle, and a Thick edge makes the rim deeper.':
+    '棋子默认是平面的，可以在设置的「棋子」里改成「立体」。立体适用于象棋、揭棋、暗棋和翻翻棋，「加厚」边缘让棋子的侧边更厚。',
+  'The xiangqi board is lined, with pieces on the points, or a square grid, with pieces inside the squares. Pick it under Board.':
+    '象棋棋盘可以是交叉点棋盘，棋子落在交叉点上；也可以是方格棋盘，棋子放在格子里。在「棋盘」里选择。',
+  'A hidden piece in banqi, jieqi or Flip Jungle turns over when it is revealed, spinning on its edge in 3D. Speed sets how fast pieces move and turn, and Off stops the motion.':
+    '暗棋、揭棋和翻翻棋里的暗子翻开时会翻转，立体棋子会立在侧边上转过来。「速度」决定棋子移动和翻转的快慢，选「关闭」就不播放动画。',
+  'Mistboard draws xiangqi pieces in nine sets, flat or in 3D, and the xiangqi board lined or as a square grid. Pieces move and turn over on screen, and the river can carry its traditional name.':
+    'Mistboard 的象棋棋子有九套样式，可以画成平面或立体；象棋棋盘可以画成交叉点棋盘或方格棋盘。棋子在屏幕上会移动和翻转，河界也可以写上传统的名字。',
+  'Nine piece sets': '九套棋子样式',
+  'International draws each piece as a picture of what it is, so you can play without reading Chinese. Traditional and Simplified write the piece’s Chinese character, in the traditional or the simplified form. Animal Dobutsu swaps in cartoon animals. The last five are art sets in traditional styles: Lacquer, Wood, Book, Brush and Clerical. Every set works in xiangqi, jieqi and banqi, flat or in 3D.':
+    '「国际」把每个棋子画成它所代表的东西，不认识汉字也能下。「繁体」和「简体」在棋子上写汉字，分别用繁体字和简体字。「动物」换成卡通动物。最后五套是传统风格的美术棋子：「亮漆」「木质」「棋书」「毛笔」和「隶书」。每一套都能用在象棋、揭棋和暗棋上，平面或立体都可以。',
+  'The red general and horse and the black chariot and cannon in each set.':
+    '每套样式里的红帅、红马、黑车和黑炮。',
+  'Piece set: International': '国际',
+  'Piece set: Animal Dobutsu': '动物',
+  'Piece set: Traditional': '繁体',
+  'Piece set: Simplified': '简体',
+  'Piece set: Lacquer': '亮漆',
+  'Piece set: Wood': '木质',
+  'Piece set: Book': '棋书',
+  'Piece set: Brush': '毛笔',
+  'Piece set: Clerical': '隶书',
+  'Pieces can be flat or 3D': '棋子可以是平面或立体的',
+  'Flat pieces are the default: a disc with the piece drawn on it. In 3D each piece gets a rim, so it stands on the board like a wooden piece on a table. Once 3D is on, the Edge choice appears beside it. Standard is a shallow rim, and Thick makes it half again as deep while the piece keeps its size on the board.':
+    '默认是平面棋子：一个圆片，上面画着棋子。选「立体」后，每个棋子都有一圈侧边，像木头棋子放在桌上一样立在棋盘上。打开立体后，旁边会出现「边缘」选项。「标准」的侧边较浅，「加厚」把侧边再加深一半，棋子在棋盘上的大小不变。',
+  'The same corner of a xiangqi board three times: flat pieces, 3D pieces, and 3D pieces with the thick edge':
+    '同一个象棋棋盘角落画了三次：平面棋子、立体棋子，以及加厚边缘的立体棋子',
+  'Flat, 3D, and 3D with the Thick edge.': '平面、立体，以及「加厚」边缘的立体。',
+  'The same look reaches the hidden-piece games. In [jieqi](/rules/jieqi) the face-down pieces stand in 3D with the rest, and in [banqi](/rules/banqi) and [Flip Jungle](/rules/jungle-flip) so does every tile.':
+    '有暗子的棋也能用这种样式。在[揭棋](/rules/jieqi)里，背面朝上的暗子和其他棋子一样以立体显示；在[暗棋](/rules/banqi)和[翻翻棋](/rules/jungle-flip)里，每一枚棋子也是如此。',
+  'A jieqi position with face-down and revealed pieces three times: flat, 3D, and 3D with the thick edge':
+    '一个既有暗子也有明子的揭棋局面画了三次：平面、立体，以及加厚边缘的立体',
+  'Jieqi: flat, 3D, and 3D with the Thick edge. The plain discs are pieces still face down.':
+    '揭棋：平面、立体，以及「加厚」边缘的立体。没有字的圆片是还没翻开的暗子。',
+  'A Flip Jungle board three times: flat tiles, 3D tiles, and 3D tiles with the thick edge':
+    '同一个翻翻棋棋盘画了三次：平面棋子、立体棋子，以及加厚边缘的立体棋子',
+  'Flip Jungle: flat, 3D, and 3D with the Thick edge. The green tiles are still face down.':
+    '翻翻棋：平面、立体，以及「加厚」边缘的立体。绿色的棋子还没翻开。',
+  'The xiangqi board can be lined, or a square grid like chess':
+    '象棋棋盘可以是交叉点棋盘，也可以是像国际象棋那样的方格棋盘',
+  'The lined board is the traditional one. Pieces sit on the points where the lines cross, the palaces have their diagonals, and the river runs across the middle. The square grid puts each piece inside a square, the way a chessboard does, with light and dark squares, the river as a blue band and each palace as a shaded block. The rules are the same on both.':
+    '交叉点棋盘是传统的棋盘。棋子落在线的交叉点上，九宫画有斜线，河界横贯中间。方格棋盘像国际象棋棋盘那样把每个棋子放在格子里：格子深浅相间，河界是一条蓝色的带子，九宫是一块颜色较深的区域。两种棋盘的规则完全相同。',
+  LINED: '交叉点棋盘',
+  'SQUARE GRID': '方格棋盘',
+  'The starting position on each board, drawn with your piece set.':
+    '两种棋盘上的开局局面，用你选的棋子样式绘制。',
+  'If you come to xiangqi from chess, try the square grid first. The pieces sit in squares on a checkered board, so a move looks the way you already picture one, and the lined board is one setting away when you want it. Both boards work with flat and 3D pieces. Board color offers the same woods and paper on both, and the green Jungle color only on the square grid.':
+    '如果你是从国际象棋转来下象棋的，可以先试试方格棋盘。棋子放在深浅相间的格子里，一步棋看起来就和你习惯的一样；想用交叉点棋盘时，改一项设置就行。两种棋盘都能用平面和立体棋子。「棋盘颜色」在两种棋盘上提供同样的木色和纸色，绿色的「斗兽棋」配色只用于方格棋盘。',
+  'Pieces glide and turn over': '棋子会滑动和翻转',
+  'When you step through a game in a review, a study or a replay, each move slides from its square to the next, so you can follow it without hunting for what changed. A hidden piece turns over when it is revealed, in banqi, jieqi and Flip Jungle. A 3D piece spins over on its edge like a real one. A flat piece narrows to a thin line and widens again showing its other face.':
+    '在复盘、研究或回放里逐步查看对局时，每一步的棋子都会从原来的位置滑到新的位置，不用到处找哪里变了也能跟上。在暗棋、揭棋和翻翻棋里，暗子翻开时会翻转。立体棋子像真的棋子一样立在侧边上翻过来；平面棋子先收窄成一条细线，再展开露出另一面。',
+  'Press the forward arrow under each board to see it. The first move in the banqi game flips a tile where it lies. In jieqi a face-down piece moves and turns over as it lands. Both boards are shown in 3D whatever your own setting is.':
+    '点每个棋盘下方的前进箭头就能看到。暗棋这盘的第一步是在原地翻开一枚棋子。揭棋里，一枚暗子走动后在落点翻开。无论你自己怎么设置，这两个棋盘都以立体显示。',
+  'Banqi: the first move turns a tile over.': '暗棋：第一步翻开一枚棋子。',
+  'Banqi game with 3D tiles: step forward to see a tile turn over':
+    '立体棋子的暗棋对局：往前走一步，看棋子翻开',
+  'Jieqi: a hidden piece flips as it lands.': '揭棋：暗子在落点翻开。',
+  'Jieqi game with 3D pieces: step forward to see a piece flip as it lands':
+    '立体棋子的揭棋对局：往前走一步，看暗子在落点翻开',
+  'Speed, under Pieces, sets how fast all of this runs: Fast, Normal or Slow. Off moves pieces straight to their squares and reveals a piece without the turn. If your device is set to reduce motion, Mistboard skips the motion too.':
+    '「棋子」里的「速度」决定这些动画有多快：「快」「正常」或「慢」。选「关闭」时，棋子直接出现在新位置，翻子时也不播放翻转。如果你的设备开启了减少动态效果，Mistboard 也会跳过这些动画。',
+  'The river can name Chu and Han': '河界可以写上楚河汉界',
+  'Printed xiangqi boards often write four characters in the river: 楚河 (chǔ hé, "Chu river") on one side and 漢界 (hàn jiè, "Han border") on the other. They name the border between Chu and Han, the two states that fought for China after the Qin dynasty fell, from 206 to 202 BC. In 203 BC Xiang Yu of Chu and Liu Bang of Han agreed to split the country along the Hong Canal; the truce broke within months, Liu Bang won the next year, and he founded the Han dynasty. The river on the board stands for that line. River text has three choices. 楚河 漢界 draws the characters, one pair on each half of the river, each pair facing the player on its side. Off leaves the river blank. Mistboard writes the site name.':
+    '印刷的象棋盘常在河界里写四个字：一边是「楚河」，另一边是「汉界」。它们指的是楚与汉的分界。秦朝灭亡后，楚、汉两方在公元前 206 年到前 202 年间争夺天下。公元前 203 年，楚的项羽和汉的刘邦约定以鸿沟为界平分天下；和约几个月内就破裂了，刘邦在第二年取胜，建立了汉朝。棋盘上的河界代表的就是这条界线。「河界文字」有三个选项。「楚河 漢界」写出这四个字，河界两半各写一对，每一对都朝向自己那一侧的棋手。「无」让河界留空。「Mistboard」写上本站的名字。',
+  'River text: 楚河 漢界 (Chu river, Han border), and Off.': '河界文字：「楚河 漢界」和「无」。',
+  OFF: '无',
+  'River text starts Off, or with 楚河 漢界 on for players who read Chinese. It is a lined-board setting, so the square grid leaves its river band blank.':
+    '「河界文字」默认为「无」，读中文的玩家则默认显示「楚河 漢界」。这是交叉点棋盘的设置，方格棋盘的河界带子总是留空。',
+  'Start markers show where the cannons and soldiers began': '兵炮位标记显示炮和兵的起始位置',
+  'The small crosses on a printed xiangqi board are start marks: corner brackets on the points where each side’s two cannons and five soldiers begin, so the pieces can be set out without a diagram. Mistboard draws them too. At the start of a game the pieces cover them, so they show only once a cannon or soldier has moved. Start markers, on the Board page, turns them off.':
+    '印刷的象棋盘上那些小十字是兵炮位标记：画在双方两个炮和五个兵（卒）起始交叉点四角的折线，让人不看图也能摆好棋子。Mistboard 也画出了这些标记。开局时它们被棋子盖住，所以要等炮或兵走动之后才会露出来。在「棋盘」页面取消勾选「兵炮位标记」，就能关掉它们。',
+  'The red half of a xiangqi middlegame twice: with start markers on the empty cannon and soldier points, and without them':
+    '同一个象棋中局的红方半盘画了两次：一次在空出的炮位和兵位上显示兵炮位标记，一次不显示',
+  'Start markers on, then off.': '兵炮位标记：先开，后关。',
+  'Everything is in Settings': '一切都在设置里',
+  'Signed out, open the gear in the top bar. Signed in, open your account menu. Board and Pieces are rows in that menu, and each opens its own page of choices. A change applies to the boards you play and review on.':
+    '未登录时，点开顶栏的齿轮图标；登录后，打开你的账户菜单。「棋盘」和「棋子」是菜单里的两行，各自打开一页选项。更改会应用到你下棋和复盘用的棋盘上。',
+  Setting: '设置项',
+  Where: '位置',
+  Choices: '选项',
+  'Board style': '棋盘样式',
+  Board: '棋盘',
+  'Lined or Square grid': '交叉点棋盘或方格棋盘',
+  'Board color': '棋盘颜色',
+  'Seven colors, plus Jungle on the square grid': '七种颜色，方格棋盘另有「斗兽棋」配色',
+  'River text': '河界文字',
+  'Off, 楚河 漢界 or Mistboard (lined board only)': '无、楚河 漢界或 Mistboard（仅限交叉点棋盘）',
+  'Start markers': '兵炮位标记',
+  'On or Off': '开或关',
+  'Piece set': '棋子样式',
+  'Any of the nine sets above': '上面九套中的任意一套',
+  'Pieces, under Look': '棋子（外观）',
+  'Flat or 3D': '平面或立体',
+  Edge: '边缘',
+  'Standard or Thick (3D only)': '标准或加厚（仅限立体）',
+  Speed: '速度',
+  'Pieces, under Motion': '棋子（动画）',
+  'Off, Fast, Normal or Slow': '关闭、快、正常或慢',
+  'As of November 6, 2026': '截至 2026 年 11 月 6 日',
+  'The menus, sets and choices as they are on this date. When a setting moves or a set is added, this article is updated and says so at the top.':
+    '本文的菜单、棋子样式和选项以这一天为准。设置项换了位置或新增了棋子样式时，本文会随之更新，并在文章开头注明。',
+  'Play xiangqi': '下象棋',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -7182,15 +7287,11 @@ const ZH_HANT: Record<string, string> = {
   // how-puzzle-mining-works blog merge (2026-10-07): machine-translated.
   'Every source carries a licence status, and publishing refuses any puzzle whose source has not been cleared.':
     '每個來源都帶有授權狀態，來源未獲授權的題目一律不予發布。',
-  'What survives the gate goes to an audit. A separate process searches every solution again at depth 22 with no node ceiling, knowing nothing of what the first pass decided, and about 6% of the survivors do not hold up. Those are dropped too.':
-    '通過判定關卡的題目還要接受複核。另一個獨立程序以 22 層深度、不設節點上限，把每道題的解答重新搜尋一遍，它完全不知道第一遍的結論。大約 6% 的倖存者經不起複核，同樣被丟棄。',
   'In August 2026 mining cost about six core-hours per thousand games, or about one core-minute per published puzzle.':
     '2026 年 8 月，挖掘的成本約為每千盤對局六個核心小時，也就是每發布一道題目約一個核心分鐘。',
   'A rating scores what makes the line hard to see': '評分衡量的是這條線路難在哪裡',
   'Every puzzle needs a rating before anyone has solved it, so the trainer can pick problems near your level. Rating by mate depth gives four distinct values across the corpus. The rating walks the solution instead: a quiet first move adds, a capture subtracts, a sacrifice the solver never wins back adds up to 200, and the number of replies the defender has pushes it either way. On 2 September 2026 the 1,415 puzzles served had 479 distinct ratings between 1000 and 2600.':
     '每道題目在還沒有人解過之前就需要一個評分，這樣訓練器才能挑出接近你水準的題目。只按殺棋步數評分，整個題庫只會得到四個不同的數值。所以評分會把解答逐步走一遍：第一步不吃子會加分，吃子會減分，解題者棄掉且始終沒有追回的子力最多加 200 分，防守方可走的應著數量則可能加分也可能減分。2026 年 9 月 2 日，上線的 1,415 道題目共有 479 個不同的評分，介於 1000 到 2600 之間。',
-  'The largest penalty goes to a first move that takes something nothing can take back, scaled by the piece it wins and capped at a chariot’s 900, because a hanging piece is the easiest thing on a board to spot. The check only runs while the game is still going. A capture that mates also leaves the defender no legal reply, and counted naively that looks like a piece nothing can recapture, which would mark down every mating capture in the corpus.':
-    '扣分最多的，是第一步吃掉一個對方無法反吃的子，扣分按吃到的子力計算，上限是一個車的 900，因為無人保護的子是棋盤上最容易發現的東西。這項檢查只在對局仍在進行時才執行。吃子同時將死對方時，防守方也沒有任何合法應著；如果照字面去數，這看起來就像一個無法反吃的子，題庫裡每一步吃子成殺都會被扣分。',
   'One kind of position is withheld: the solver is already at least 300 centipawns ahead and the answer takes something undefended. It teaches nothing at any rating, and a rating can only decide who gets shown a problem. That rule hid 12% of the corpus.':
     '有一類局面不予上線：解題者已經領先至少 300 厘兵，而答案是吃掉一個無人保護的子。這種題目在任何評分上都教不了什麼，而評分只能決定一道題出現在誰面前。這條規則隱藏了題庫的 12%。',
   // katago-jungle blog merge (2026-10-07): machine-translated.
@@ -8263,7 +8364,6 @@ const ZH_HANT: Record<string, string> = {
   'second move mates': '次佳著法也能將死',
   'gap below 200cp': '差距低於 200cp',
   'win%(second) at or below 0.6': '次佳勝率不高於 0.6',
-  'gap of 250cp or more': '差距達到 250cp 或以上',
   'anything left over': '其餘情況',
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
@@ -8277,58 +8377,18 @@ const ZH_HANT: Record<string, string> = {
   // an identical ASCII token stream (the counts, Pikafish, FEN, the squares,
   // the markdown link and the ** markers).
   'Mining puzzles from real games': '從真實對局中挖掘象棋題目',
-  'A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.':
-    '一個挖掘器：讀入真實的象棋對局，找出人們下錯的著法，保留那些恰好只有一步棋能贏的局面。大約每九個漏著裡有一個能留下來。下面是算法、代碼，以及它留下和丟掉的一些例子。',
-  'Mistboard needed xiangqi puzzles and I could not find a corpus to use, so I wrote a miner. It reads real games, finds the moments somebody threw the game away, and keeps the positions where exactly one move wins.':
-    'Mistboard 需要象棋題目，而我找不到現成的題庫可用，於是寫了一個挖掘器。它讀入真實對局，找出有人把棋葬送掉的那一刻，保留恰好只有一步棋能贏的局面。',
-  'About one blunder in nine makes it through. The reasons the other eight fail turn out to be a working definition of a puzzle, which is the interesting part and most of what is below.':
-    '大約每九個漏著裡有一個能通過。另外八個失敗的原因，恰好構成了一道題目該是什麼樣子的定義，這才是有意思的部分，也是下文的主要內容。',
   'The games': '棋譜從哪裡來',
   'They come from [ElephantChess](https://elephantchess.io/about/datasets), which publishes its own site’s games as anonymised monthly dumps under GPL-3.0. Amateur games, which matters: strong players do not blunder often enough to be a supply.':
     '它們來自 [ElephantChess](https://elephantchess.io/about/datasets)，該網站以 GPL-3.0 協議按月發布自己站內對局的匿名數據集。業餘對局，這一點很重要：高手漏著的頻率不足以支撐一個題庫。',
-  'A run freezes its game list before any engine time is spent, sampled across ratings, time controls, results and lengths so it does not turn out to be all blitz. Nothing is added to a run once it starts.':
-    '每一輪挖掘在花掉任何引擎時間之前，都會先把棋譜清單凍結，並按等級分、時限、結果和長度採樣，以免全是快棋。一輪開始之後就不再往裡加棋。',
   'The algorithm': '算法',
   'Two passes: a cheap one over every position of every game, and an expensive one over the few that survive it.':
     '兩遍掃描：一遍便宜的，跑遍每一局的每一個局面；一遍昂貴的，只跑通過了前一遍的少數局面。',
-  'The cheap pass replays a game and stops at every position after ply 8, asking Pikafish for its top two moves at 60,000 nodes. That is roughly depth 10 to 14, and it is shallow on purpose, because it runs everywhere.':
-    '便宜的那一遍把棋譜重演一次，在第 8 個半回合之後的每個局面停下，用 60,000 個節點向 Pikafish 要它認為最好的兩步棋。這大約相當於 10 到 14 層深度，淺是故意的，因為這一遍要跑遍所有局面。',
-  'A position becomes a candidate when the move actually played loses at least 250 centipawns against the engine’s best, and the position it leaves behind is winning by at least 250 centipawns for the other side. A blunder that leaves the game equal is not a puzzle. There is nothing to find.':
-    '當實際走出的那一步比引擎的最佳著法差至少 250 厘兵，並且它留下的局面對另一方而言至少領先 250 厘兵時，這個局面就成為候選。一個只把棋下成均勢的漏著不是題目，那裡沒有東西可找。',
-  'A centipawn is a hundredth of a soldier, the unit engines use for material. Xiangqi has no pawn, so the name comes from chess along with the scale. The values this site uses put a horse or a cannon at 450 and a chariot at 900, which makes a 250-centipawn swing about half a horse.':
-    '厘兵是一個兵的百分之一，引擎用來衡量子力的單位。象棋裡沒有國際象棋那種兵，所以這個名字連同它的標度都是從國際象棋借來的。本站採用的子力價值把馬或炮記作 450，車記作 900，因此 250 厘兵的落差大約是半個馬。',
-  'Two filters keep that pass honest. Positions already decided by 800 centipawns are skipped, because winning a won game harder is not a tactic. And no game gives up more than three candidates, so one collapse cannot flood the corpus with variations on itself.':
-    '另有兩個過濾器讓這一遍保持誠實。已經以 800 厘兵分出勝負的局面會被跳過，因為把一盤已經贏定的棋贏得更多不算戰術。而且每一局最多只交出三個候選，這樣一次崩盤就不會用同一個局面的各種變化淹沒題庫。',
-  'The expensive pass takes each candidate back to the engine at depth 20 and 600,000 nodes, ten times the budget, handed over as a bare FEN with no move history. Same position, no context, so the engine cannot lean on the search it just did.':
-    '昂貴的那一遍把每個候選送回引擎，用 20 層深度和 600,000 個節點，是前一遍預算的十倍，而且只交給它一個不帶走子歷史的 FEN。同一個局面，沒有上下文，引擎無法依賴它剛才做過的搜索。',
-  'Then the line is built one solver move at a time, and every move has to be uniquely best on its own. That is what separates a puzzle from a plausible sequence. A principal variation is one line the engine liked from one search. It says nothing about whether move three was forced, and a solver who finds a different move three and is told they are wrong has been lied to.':
-    '然後解答線路一步一步地搭起來，每一步都必須自己單獨是唯一最佳。這才是一道題目和一串看起來合理的著法之間的區別。主變只是引擎在一次搜索裡喜歡的一條線路，它沒有說第三步是不是被迫的；一個找到了另一種第三步卻被判為錯誤的解題者，是被騙了。',
-  'Uniqueness is not a centipawn gap. Two moves 50 centipawns apart are both fine, and demanding one punishes a solver for choosing correctly. What makes a move **the** answer is that every alternative is wrong: it gives the win away, or it wins materially less. The test is a hand-tuned cascade rather than anything principled, and it fails closed, so anything it cannot separate is thrown away.':
-    '唯一性不是厘兵差。相差 50 厘兵的兩步棋都不錯，硬要挑出一步只會因為解題者選對了而懲罰他。讓一步棋成為**那個**答案的，是其餘每一種選擇都是錯的：要麼把勝勢讓掉，要麼贏得的子力明顯更少。這個判定是一串手工調出來的閾值，談不上有什麼原理，而且它是分不開就拒絕，所以凡是它分不開的都會被丟掉。',
   'The gate in evaluation order. Green passes the move, grey rejects it, and the label on the right is the reason stored on the candidate.':
     '判定關卡按求值順序排列。綠色表示這一步通過，灰色表示被拒絕，右邊的標簽是記錄在候選上的原因。',
   'The code': '代碼',
-  'The cheap pass, condensed. One detail halves it: judging a move needs the position’s value before and after, and both are already there if the scans stay in order, because the move played is worth the negation of the next position’s score. One search per position, not two.':
-    '便宜的那一遍，精簡版。有一個細節把它的開銷減半：判斷一步棋需要知道局面在這一步之前和之後的分值，而只要掃描保持順序，這兩個值就都已經在手上了，因為走出的這一步的價值就是下一個局面分值的相反數。每個局面搜索一次，而不是兩次。',
-  'And the gate. Every branch that returns false here is a way a real blunder fails to be a puzzle.':
-    '還有判定關卡。這裡每一個返回 false 的分支，都是一個真實的漏著未能成為題目的方式。',
   'What it keeps': '它留下什麼',
-  '**Two thirds of the puzzles open with a move that captures nothing.** If you hunt for tactics by scanning the captures first, which is what most of us do, you are looking at the wrong third of the board most of the time. Step through this one: the chariot goes the length of the board and takes nothing on the way.':
-    '**三分之二的題目以一步不吃子的棋開始。** 如果你像我們大多數人那樣，先掃一遍能吃子的著法去找戰術，那你多數時候看的是棋盤上錯誤的那三分之一。把這一題走一遍看看：車從棋盤的一端走到另一端，一路上什麼都沒吃。',
   'Red plays the chariot the length of the board, taking nothing. Black brings the horse back to c3 to cover the mate, and it does not cover it.':
     '紅方把車從棋盤的一端走到另一端，什麼也沒吃。黑方把馬退回 c3 想守住殺棋，而它守不住。',
-  '**Only about a tenth involve giving material away.** Sacrifices are the tactics people remember, so I had assumed they would be a larger slice. In real games between real players, the winning move is usually just a move. Here is one of the tenth, and the solver is the one behind: a horse and a cannon down before it starts.':
-    '**只有大約十分之一涉及棄子。** 棄子是人們記得住的那種戰術，所以我原本以為它的比例會更大。在真實棋手之間的真實對局裡，取勝的那一步通常就只是一步棋。這是十分之一裡的一個，而且落後的正是解題的一方：開始時少一馬一炮。',
-  'Red gave a chariot for an advisor and a horse, so it finishes 1,150 centipawns down instead of 900. The material never comes back. The mate just arrives first.':
-    '紅方用一個車換回一士一馬，所以它從落後 900 厘兵變成落後 1,150 厘兵。子力再也沒有追回來，只是殺棋先到了。',
-  '**Not every puzzle ends in mate.** About 40% end with the solver simply winning, and those are the ones a mate-shaped intuition misses. This one opens with a move that takes nothing, hands a soldier back, and collects an advisor and both horses for it.':
-    '**並不是每道題目都以將死收尾。** 大約 40% 是以解題方單純取得勝勢結束的，而這些正是一心找殺棋的直覺會漏掉的。這一題以一步不吃子的棋開始，交還一個兵，換回一個士和兩個馬。',
-  'Black ends a thousand centipawns up, an advisor and both horses against one soldier. There is no mate here and no threat of one. It is still a puzzle.':
-    '黑方最終領先一千厘兵，一士兩馬對一兵。這裡沒有殺棋，也沒有殺棋的威脅，它仍然是一道題目。',
-  'And one that takes nothing for four plies. Red is 150 centipawns down here and the engine calls the position level.':
-    '還有一題連著四個半回合什麼都不吃。紅方在這裡落後 150 厘兵，而引擎認為局面是均勢。',
-  'The chariot steps quietly to d3, the general is walked to the back rank, and the advisor on d8 falls. Red goes from 150 down to an engine score of +917, with Black left holding two legal moves.':
-    '車悄悄走到 d3，將被逼到底線，d8 的士隨之落下。紅方從落後 150 變成引擎給出的 +917，而黑方只剩下兩步合法著法。',
   'What it throws out': '它丟掉什麼',
   'The rejects define a puzzle better than the keeps do, because each one is a real blunder that failed for exactly one reason.':
     '被丟掉的那些比留下的更能說清一道題目是什麼，因為每一個都是一個真實的漏著，而且恰好因為一個原因失敗。',
@@ -8339,30 +8399,72 @@ const ZH_HANT: Record<string, string> = {
   'Rejected: promised mate not reached': '拒絕：許諾的殺棋沒有兌現',
   'Rejected: not unique, or not winning': '拒絕：不唯一，或者並非勝勢',
   'Survived to the audit': '進入複核',
-  'Measured over 10,503 candidates from 3,500 games in August 2026. The shares have held within about two points across three runs; the totals will not survive the next one.':
-    '數據取自 2026 年 8 月、來自 3,500 局棋的 10,503 個候選。這些比例在三輪挖掘之間的浮動大約在兩個百分點以內；絕對數字則活不過下一輪。',
-  '**Near-tie is the biggest, about a third.** The player had a winning move and so did something else. Both work, so there is no answer to check against and no puzzle, even though the blunder was real and the position was winning.':
-    '**幾乎並列是最大的一類，約占三分之一。** 走棋的一方有一步能贏的棋，而另外還有一步也能贏。兩步都成立，於是沒有可以用來對照的答案，也就沒有題目，儘管那個漏著是真實的，局面也確實是勝勢。',
-  '**Too short is another third**, and it gives the clearest example in the corpus of what the miner is for. Below is a position it rejected. Black is to move, the engine scores it as a forced mate against a second-best line of +1407, and exactly one of Black’s twenty legal moves does it.':
-    '**太短是另外三分之一**，它給出了整個題庫裡最能說明這個挖掘器是幹什麼的例子。下面是一個被拒絕的局面。輪黑方走，引擎把它判為必然的殺棋，次優線路是 +1407，而黑方二十步合法著法裡恰好只有一步能做到。',
-  'The horse drops to c3 and it is mate. Unique, crushing, correct, and rejected, because the whole win is one move and one move is a spot-check rather than a puzzle.':
-    '馬落到 c3，殺棋。唯一、致命、正確，然後被拒絕，因為整個取勝過程只有一步棋，而一步棋是一次抽查，不是一道題目。',
-  'The other way to fail is to have too many answers rather than too few. Red is to move below and the horse on e8 mates two different ways, c9 or g9. The stepper plays one of them. Either wins, so there is nothing to check a solver against, and the candidate is thrown out.':
-    '另一種失敗方式是答案太多而不是太少。下面輪紅方走，e8 的馬有兩種不同的將死方法，c9 或者 g9。這個走子器演示其中一種。兩種都能贏，於是沒有東西可以用來對照解題者的答案，這個候選就被丟掉了。',
   'The horse mates on c9. It also mates on g9. Two answers is not one answer, so this is not a puzzle.':
     '馬在 c9 將死。它在 g9 也能將死。兩個答案不是一個答案，所以這不是一道題目。',
-  '**Promised mate not reached** is the narrow one, and it is not a rule against non-mate puzzles. It fires only when the engine returned a mate score, so the line promised a mate, and replaying it inside the seven-ply cap never got there. The promise could not be checked, so the candidate goes. A position with an ordinary winning evaluation never enters that branch at all, and ships as one of the winning-advantage puzzles above.':
-    '**許諾的殺棋沒有兌現**是範圍最窄的一類，它並不是一條針對非殺棋題目的規則。它只在引擎返回殺棋分值時觸發，也就是說這條線路許諾了一個殺棋，而在七個半回合的上限內把它重演一遍卻沒有走到。這個許諾無法驗證，於是候選被丟棄。評分只是普通勝勢的局面根本不會進入這個分支，它們會作為上面那種勝勢題目發布出去。',
   'What a puzzle turns out to be': '一道題目到頭來是什麼',
-  'Most winning positions have several winning moves, and that is what disqualifies them: a third of everything found died on that alone. A puzzle is a position with one answer, deep enough that finding it takes work, and stable enough that a stronger engine still agrees an hour later.':
-    '大多數勝勢局面都有好幾步能贏的棋，而這正是它們被淘汰的原因：找到的全部候選裡有三分之一只栽在這一點上。一道題目是這樣一個局面：它只有一個答案，深到需要下功夫才找得到，穩到一小時後一個更強的引擎仍然同意。',
-  'That is a much narrower thing than a mistake. Nine out of ten mistakes do not qualify.':
-    '這比一個錯誤要窄得多。十個錯誤裡有九個不夠格。',
-  'One caveat I would rather say than hide: the gate has never been checked against a human. Its four thresholds came from reading rejected positions, not from measuring whether the puzzles they admit are any good, and the win-rate curve they act on is inherited from chess. Solve rates and reveal rates are recorded per puzzle, so the data to grade it exists.':
-    '有一點我寧可說出來而不是藏著：這套判定關卡從來沒有拿真人檢驗過。它的四個閾值來自翻看被拒絕的局面，而不是來自衡量它放行的題目到底好不好，而這些閾值所依據的勝率曲線是從國際象棋繼承來的。每道題目的解出率和看答案率都有記錄，所以用來給它打分的數據是存在的。',
   'Solve xiangqi puzzles': '做象棋題目',
   'Play twelve of them': '試走其中十二題',
   'How Mistboard mines xiangqi puzzles from real games': 'Mistboard 如何從真實對局中挖掘象棋題目',
+  'A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in twenty survives. Here is the algorithm, the code, and what it kept and threw away.':
+    '一個挖掘器：讀入真實的象棋對局，找出人們下錯的著法，保留那些恰好只有一步棋能贏的局面。大約每二十個漏著裡有一個能留下來。下面是算法、代碼，以及它留下和丟掉的例子。',
+  'Mistboard needed xiangqi puzzles and I could not find a corpus to use, so I wrote a miner.':
+    'Mistboard 需要象棋題目，而我找不到現成的題庫可用，於是寫了一個挖掘器。',
+  'About one blunder in twenty makes it through. The reasons the other nineteen fail turn out to be a working definition of a puzzle, and most of this article is about them.':
+    '大約每二十個漏著裡有一個能通過。另外十九個失敗的原因，恰好構成了一道題目該是什麼樣子的定義，本文大部分篇幅講的就是它們。',
+  'A run freezes its game list before any engine time is spent, sampled across ratings, time controls, results and lengths so it is not all blitz. Nothing is added to a run once it starts.':
+    '每一輪挖掘在花掉任何引擎時間之前，都會先把棋譜清單凍結，並按等級分、時限、結果和長度採樣，以免全是快棋。一輪開始之後就不再往裡加棋。',
+  'The cheap pass replays a game and stops at every position after ply 8, asking Pikafish for its top two moves at 60,000 nodes, roughly depth 10 to 14. It is shallow on purpose, because it runs everywhere.':
+    '便宜的那一遍把棋譜重演一次，在第 8 個半回合之後的每個局面停下，用 60,000 個節點向 Pikafish 要它認為最好的兩步棋，大約相當於 10 到 14 層深度。淺是故意的，因為這一遍要跑遍所有局面。',
+  'A position becomes a candidate when the move played loses at least 250 centipawns against the engine’s best and leaves the other side winning by at least 250. A blunder that leaves the game equal has nothing to find.':
+    '當走出的那一步比引擎的最佳著法差至少 250 厘兵，並讓另一方領先至少 250 時，這個局面就成為候選。一個只把棋下成均勢的漏著，沒有東西可找。',
+  'A centipawn is a hundredth of a soldier, the unit engines use for material. Xiangqi has no pawn, so the name comes from chess along with the scale. This site puts a horse or a cannon at 450 and a chariot at 900, so 250 centipawns is about half a horse.':
+    '厘兵是一個兵的百分之一，引擎用來衡量子力的單位。象棋裡沒有國際象棋那種兵，所以這個名字連同它的標度都是從國際象棋借來的。本站把馬或炮記作 450，車記作 900，因此 250 厘兵大約是半個馬。',
+  'Two filters narrow it. Positions already decided by 800 centipawns are skipped, because winning a won game harder is not a tactic. No game gives up more than three candidates, so one collapse cannot flood the corpus with variations on itself.':
+    '另有兩個過濾器進一步收窄範圍。已經以 800 厘兵分出勝負的局面會被跳過，因為把一盤已經贏定的棋贏得更多不算戰術。每一局最多只交出三個候選，這樣一次崩盤就不會用同一個局面的各種變化淹沒題庫。',
+  'The expensive pass sends each candidate back to the engine at depth 20 and 600,000 nodes, ten times the budget, as a bare FEN with no move history, so the engine cannot lean on the search it just did.':
+    '昂貴的那一遍把每個候選送回引擎，用 20 層深度和 600,000 個節點，是前一遍預算的十倍，而且只交給它一個不帶走子歷史的 FEN，所以引擎無法依賴它剛才做過的搜索。',
+  'Then the line is built one solver move at a time, and every move has to be uniquely best on its own. A principal variation is one line the engine liked from one search. It says nothing about whether move three was forced, and a solver who finds a different move three and is told they are wrong has been lied to.':
+    '然後解答線路一步一步地搭起來，每一步都必須自己單獨是唯一最佳。主變只是引擎在一次搜索裡喜歡的一條線路，它沒有說第三步是不是被迫的；一個找到了另一種第三步卻被判為錯誤的解題者，是被騙了。',
+  'Uniqueness is not a centipawn gap. Two moves 50 centipawns apart are both fine, and demanding one punishes a solver for choosing correctly. A move is **the** answer when every alternative gives the win away. A second move that still wins, even by a whole piece less, is a second answer. The test is a hand-tuned cascade, and it fails closed: anything it cannot separate is thrown away.':
+    '唯一性不是厘兵差。相差 50 厘兵的兩步棋都不錯，硬要挑出一步只會因為解題者選對了而懲罰他。當其餘每一種選擇都會把勝勢讓掉時，一步棋才是**那個**答案。第二步棋只要仍然能贏，哪怕少贏整整一個子，也是第二個答案。這個判定是一串手工調出來的閾值，而且分不開就拒絕：凡是它分不開的都會被丟掉。',
+  'What survives goes to an audit. A separate process, knowing nothing of what the first pass decided, searches every solution again at depth 22 with no node ceiling and drops the roughly 6% that do not hold up.':
+    '通過的題目還要接受複核。另一個獨立程序完全不知道第一遍的結論，它以 22 層深度、不設節點上限，把每道題的解答重新搜尋一遍，並丟棄經不起複核的大約 6%。',
+  'The cheap pass, condensed. One detail halves the searches: judging a move needs the position’s value before and after, and if the scans stay in order both are already there, because the move played is worth the negation of the next position’s score.':
+    '便宜的那一遍，精簡版。有一個細節把搜索次數減半：判斷一步棋需要知道局面在這一步之前和之後的分值，而只要掃描保持順序，這兩個值就都已經在手上了，因為走出的這一步的價值就是下一個局面分值的相反數。',
+  'And the gate. Every branch that returns false is a way a real blunder fails to be a puzzle.':
+    '還有判定關卡。每一個返回 false 的分支，都是一個真實的漏著未能成為題目的方式。',
+  '**Two thirds of the puzzles open with a move that captures nothing.** If you hunt for tactics by scanning the captures first, as most of us do, you start in the wrong place two times in three.':
+    '**三分之二的題目以一步不吃子的棋開始。** 如果你像我們大多數人那樣，先掃一遍能吃子的著法去找戰術，那麼三次裡有兩次你都從錯誤的地方開始。',
+  '**Only about a tenth involve giving material away.** Sacrifices are the tactics people remember, so I had expected more. In real games the winning move is usually just a move. In this one the solver is already a horse and a cannon down, and gives more away.':
+    '**只有大約十分之一涉及棄子。** 棄子是人們記得住的那種戰術，所以我原本以為會更多。在真實對局裡，取勝的那一步通常就只是一步棋。這一題裡，解題方已經少一馬一炮，還要再送。',
+  'Red gives a chariot for an advisor and a horse, going from 900 to 1,150 centipawns down. The mate arrives first.':
+    '紅方用一個車換回一士一馬，從落後 900 厘兵變成落後 1,150 厘兵。殺棋先到了。',
+  '**Not every puzzle ends in mate.** About 40% end with the solver simply winning, and a mate-shaped intuition misses those. This one opens with a quiet move, hands a soldier back, and collects an advisor and both horses for it.':
+    '**並不是每道題目都以將死收尾。** 大約 40% 是以解題方單純取得勝勢結束的，而一心找殺棋的直覺會漏掉這些。這一題以一步不吃子的棋開始，交還一個兵，換回一個士和兩個馬。',
+  'Black ends a thousand centipawns up, with no mate and no threat of one. It is still a puzzle.':
+    '黑方最終領先一千厘兵，沒有殺棋，也沒有殺棋的威脅。它仍然是一道題目。',
+  'And one that takes nothing for four plies. Red starts 150 centipawns down, and the engine calls the position level.':
+    '還有一題連著四個半回合什麼都不吃。紅方開始時落後 150 厘兵，而引擎認為局面是均勢。',
+  'The chariot steps quietly to d3, the general is walked to the back rank, and the advisor on d8 falls. Red goes from 150 down to an engine score of +917, and Black has two legal moves left.':
+    '車悄悄走到 d3，將被逼到底線，d8 的士隨之落下。紅方從落後 150 變成引擎給出的 +917，而黑方只剩下兩步合法著法。',
+  'Measured over 13,897 candidates from 4,115 games in October 2026, counting lines of three plies or more as survivors. Under the old gate in August, not unique was 9% and survivors 12%; the totals will not survive the next run.':
+    '數據取自 2026 年 10 月、來自 4,115 局棋的 13,897 個候選，三個半回合及以上的線路算作通過。8 月舊判定關卡下，不唯一占 9%，通過的占 12%；絕對數字活不過下一輪。',
+  '**Near-tie is the biggest, about a third.** The position had two winning moves, so there is no single answer to check against, even though the blunder was real.':
+    '**幾乎並列是最大的一類，約占三分之一。** 局面裡有兩步能贏的棋，於是沒有唯一的答案可以對照，儘管那個漏著是真實的。',
+  '**Too short is another quarter**, and it gives the clearest example of what the miner is for. In this rejected position Black is to move, the engine scores a forced mate against a second-best line of +1407, and exactly one of Black’s twenty legal moves does it.':
+    '**太短是另外四分之一**，它給出了最能說明這個挖掘器是幹什麼的例子。在這個被拒絕的局面裡輪黑方走，引擎判為必然的殺棋，次優線路是 +1407，而黑方二十步合法著法裡恰好只有一步能做到。',
+  'The horse drops to c3 and it is mate. Unique, crushing, correct, and rejected: a win that takes one move is a spot-check, not a puzzle.':
+    '馬落到 c3，殺棋。唯一、致命、正確，然後被拒絕：一步就贏的棋是一次抽查，不是一道題目。',
+  'The other way to fail is too many answers. Below, Red is to move and the horse on e8 mates two ways, c9 or g9, and the board plays one of them. Either wins, so there is nothing to check a solver against.':
+    '另一種失敗方式是答案太多。下面輪紅方走，e8 的馬有兩種將死方法，c9 或者 g9，棋盤演示其中一種。兩種都能贏，於是沒有東西可以用來對照解題者的答案。',
+  '**Promised mate not reached** is the narrow one, and it is not a rule against non-mate puzzles. It fires only when the engine returned a mate score and replaying the line inside the seven-ply cap never reached the mate. A position with an ordinary winning evaluation never enters that branch, and ships as a winning-advantage puzzle like the ones above.':
+    '**許諾的殺棋沒有兌現**是範圍最窄的一類，它並不是一條針對非殺棋題目的規則。它只在引擎返回殺棋分值、而在七個半回合的上限內重演這條線路卻沒有走到殺棋時觸發。評分只是普通勝勢的局面不會進入這個分支，它們會像上面那些題目一樣，作為勝勢題目發布出去。',
+  'The largest penalty goes to a first move that takes a piece nothing can take back, scaled by that piece and capped at a chariot’s 900, because a hanging piece is the easiest thing on a board to spot. The check runs only while the game is still going: a capture that mates also leaves no legal reply, and counted naively it would look like a free piece and mark down every mating capture in the corpus.':
+    '扣分最多的，是第一步吃掉一個對方無法反吃的子，扣分按這個子計算，上限是一個車的 900，因為無人保護的子是棋盤上最容易發現的東西。這項檢查只在對局仍在進行時才執行：吃子同時將死對方時，對方也沒有任何合法應著；如果照字面去數，這看起來就像白吃一個子，題庫裡每一步吃子成殺都會被扣分。',
+  'Most winning positions have several winning moves, and a third of everything found died on that alone. A puzzle is a position with one answer, deep enough that finding it takes work, and stable enough that a stronger engine still agrees an hour later. Nineteen mistakes in twenty do not qualify.':
+    '大多數勝勢局面都有好幾步能贏的棋，找到的全部候選裡有三分之一只栽在這一點上。一道題目是這樣一個局面：它只有一個答案，深到需要下功夫才找得到，穩到一小時後一個更強的引擎仍然同意。二十個錯誤裡有十九個不夠格。',
+  'One caveat: the gate has never been checked against human solvers. Its three thresholds came from reading rejected positions; nobody has measured whether the puzzles they admit are any good, and the win-rate curve they act on comes from chess. Solve and reveal rates are recorded per puzzle, so the data to grade it exists.':
+    '有一點需要說明：這套判定關卡從來沒有拿真人解題者檢驗過。它的三個閾值來自翻看被拒絕的局面；沒有人衡量過它放行的題目到底好不好，而這些閾值所依據的勝率曲線來自國際象棋。每道題目的解出率和看答案率都有記錄，所以用來給它打分的數據是存在的。',
   // The xq-replay specs: title, event, resultText and the two seat labels.
   // article-prose.ts extracts only a stepper's caption, so these are invisible
   // to the coverage test, but deepTranslate walks the whole article and will
@@ -8372,14 +8474,6 @@ const ZH_HANT: Record<string, string> = {
   'Winning, not mating': '取勝，而不是將死',
   'Level, then winning': '先是均勢，然後取勝',
   'Rejected: two answers': '拒絕：兩個答案',
-  'Mined puzzle, mate in two': '挖掘出的題目，兩步殺',
-  'Mined puzzle, winning advantage': '挖掘出的題目，取得勝勢',
-  'Mate in one, thrown away': '一步殺，被丟掉',
-  'Two mates in one, thrown away': '兩種一步殺，被丟掉',
-  'Mate in two.': '兩步殺。',
-  'Winning advantage, no mate.': '取得勝勢，沒有殺棋。',
-  'Rejected: too short.': '拒絕：太短。',
-  'Rejected: two winning answers.': '拒絕：兩個都能贏的答案。',
   Solver: '解題方',
   Defence: '防守方',
   // -- Helpmates in Xiangqi (helpmates-in-xiangqi): machine-drafted 2026-10-10, not native-reviewed.
@@ -11887,7 +11981,7 @@ const ZH_HANT: Record<string, string> = {
   'SINCE 1956': '1956 年至今',
   'THE EASIER OF THE TWO': '兩者中較容易的那個',
   'SINCE 1990': '1990 年至今',
-  '12% of blunders become puzzles': '12% 的漏著成為題目',
+  '6% of blunders become puzzles': '6% 的漏著成為題目',
   'AND WHY THE REST ARE NOT': '以及其餘為何落選',
   '10 of the last 13 champions': '近 13 位冠軍中有 10 位',
   'CHINESE XIANGQI ASSOCIATION RULINGS': '中國象棋協會處罰決定',
@@ -11928,8 +12022,8 @@ const ZH_HANT: Record<string, string> = {
   'Added the Manila final with its round table and board.': '新增馬尼拉決賽，附輪次表和棋盤。',
   'Rewritten as a guide to playing and reviewing jieqi here.':
     '改寫為在本站下揭棋和復盤揭棋的指南。',
-  "Added the miner's puzzle ratings, its audit, the licence gate and the withheld class.":
-    '新增挖題程式給出的題目等級分、對它的審校、授權門檻，以及不予上線的一類題目。',
+  'Dropped the 250-centipawn exception from the gate: a position whose second-best move still wins is now rejected, however much less it wins by. The funnel figures are re-measured under the new gate, the six examples are now playable boards (three are the puzzles as served), and the text is shorter.':
+    '從判定關卡中刪去了 250 厘兵的例外：次佳著法仍然能贏的局面現在一律拒絕，不管它少贏多少。漏斗數據按新關卡重新測量，六個例子改為可以走的棋盤（其中三個就是線上的題目），正文也更精簡。',
   'Removed a claim that Zhao Xinxin is the youngest world champion; Zheng Weitong won the title younger in 2015.':
     '刪去了赵鑫鑫是最年輕世界冠軍的說法；郑惟桐 2015 年奪冠時更年輕。',
   'Replaced the sample game with a game played against the engine on the site.':
@@ -12094,6 +12188,118 @@ const ZH_HANT: Record<string, string> = {
     '第 152 盤：兩個引擎眼中 jqe 每回合的勝率。到第 16 回合，兩者的判斷都跌到 25% 以下，並一直保持到第 22 回合；隨後 jqe 自己的判斷跳到 81% 和 99%，而 AB-JChess 的判斷又在 0% 附近停留了一個回合，到第 24 回合才跳到 91%。',
   'General takes the chariot': '將吃車',
   'move 24': '第 24 回合',
+  // set-up-your-board: machine-drafted 2026-10-29, not native-reviewed, from the English signed off that day. Menu and option names are the zh shell catalog's (prefs.*: 棋盤/棋子, 棋盤樣式, 棋盤顏色, 河界文字/無, 兵炮位標記, 外觀/動畫, 平面/立體, 邊緣/標準/加厚, 速度/關閉/快/正常/慢; piece sets 國際 繁體 簡體 動物 亮漆 木質 棋書 毛筆 隸書). The board-style tiles have no zh label, so lined/square grid are 交叉點棋盤/方格棋盤.
+  'How to Change Your Board and Pieces': '如何更改棋盤和棋子的樣式',
+  'Change Your Board and Pieces': '更改棋盤和棋子樣式',
+  'Xiangqi Piece Sets and Board Settings: 3D, Square Grid, River Text':
+    '象棋棋子樣式與棋盤設定：立體棋子、方格棋盤、河界文字',
+  'Mistboard has nine xiangqi piece sets, pieces can be flat or 3D, and the xiangqi board can be lined or a square grid. Pieces glide when you step through a game and turn over when a hidden piece is revealed. Here is what each look is and where to set it.':
+    'Mistboard 有九套象棋棋子樣式，棋子可以是平面或立體的，象棋棋盤可以是交叉點棋盤或方格棋盤。逐步查看對局時棋子會滑動，暗子翻開時會翻轉。本文介紹每種樣式是什麼樣子，以及在哪裡設定。',
+  'Xiangqi pieces drawn in 3D on the lined board': '交叉點棋盤上的立體象棋棋子',
+  'Mistboard has nine piece sets: pictures, Chinese characters, cartoon animals, and five art sets in traditional styles. Pick one under Pieces in Settings.':
+    'Mistboard 有九套棋子樣式：圖畫、漢字、卡通動物，以及五套傳統風格的美術棋子。在設定的「棋子」裡選擇。',
+  'Pieces are flat until you switch them to 3D under Pieces in Settings. 3D works on xiangqi, jieqi, banqi and Flip Jungle, and a Thick edge makes the rim deeper.':
+    '棋子預設是平面的，可以在設定的「棋子」裡改成「立體」。立體適用於象棋、揭棋、暗棋和翻翻棋，「加厚」邊緣讓棋子的側邊更厚。',
+  'The xiangqi board is lined, with pieces on the points, or a square grid, with pieces inside the squares. Pick it under Board.':
+    '象棋棋盤可以是交叉點棋盤，棋子落在交叉點上；也可以是方格棋盤，棋子放在格子裡。在「棋盤」裡選擇。',
+  'A hidden piece in banqi, jieqi or Flip Jungle turns over when it is revealed, spinning on its edge in 3D. Speed sets how fast pieces move and turn, and Off stops the motion.':
+    '暗棋、揭棋和翻翻棋裡的暗子翻開時會翻轉，立體棋子會立在側邊上轉過來。「速度」決定棋子移動和翻轉的快慢，選「關閉」就不播放動畫。',
+  'Mistboard draws xiangqi pieces in nine sets, flat or in 3D, and the xiangqi board lined or as a square grid. Pieces move and turn over on screen, and the river can carry its traditional name.':
+    'Mistboard 的象棋棋子有九套樣式，可以畫成平面或立體；象棋棋盤可以畫成交叉點棋盤或方格棋盤。棋子在螢幕上會移動和翻轉，河界也可以寫上傳統的名字。',
+  'Nine piece sets': '九套棋子樣式',
+  'International draws each piece as a picture of what it is, so you can play without reading Chinese. Traditional and Simplified write the piece’s Chinese character, in the traditional or the simplified form. Animal Dobutsu swaps in cartoon animals. The last five are art sets in traditional styles: Lacquer, Wood, Book, Brush and Clerical. Every set works in xiangqi, jieqi and banqi, flat or in 3D.':
+    '「國際」把每個棋子畫成它所代表的東西，不認識漢字也能下。「繁體」和「簡體」在棋子上寫漢字，分別用繁體字和簡體字。「動物」換成卡通動物。最後五套是傳統風格的美術棋子：「亮漆」「木質」「棋書」「毛筆」和「隸書」。每一套都能用在象棋、揭棋和暗棋上，平面或立體都可以。',
+  'The red general and horse and the black chariot and cannon in each set.':
+    '每套樣式裡的紅帥、紅馬、黑車和黑炮。',
+  'Piece set: International': '國際',
+  'Piece set: Animal Dobutsu': '動物',
+  'Piece set: Traditional': '繁體',
+  'Piece set: Simplified': '簡體',
+  'Piece set: Lacquer': '亮漆',
+  'Piece set: Wood': '木質',
+  'Piece set: Book': '棋書',
+  'Piece set: Brush': '毛筆',
+  'Piece set: Clerical': '隸書',
+  'Pieces can be flat or 3D': '棋子可以是平面或立體的',
+  'Flat pieces are the default: a disc with the piece drawn on it. In 3D each piece gets a rim, so it stands on the board like a wooden piece on a table. Once 3D is on, the Edge choice appears beside it. Standard is a shallow rim, and Thick makes it half again as deep while the piece keeps its size on the board.':
+    '預設是平面棋子：一個圓片，上面畫著棋子。選「立體」後，每個棋子都有一圈側邊，像木頭棋子放在桌上一樣立在棋盤上。打開立體後，旁邊會出現「邊緣」選項。「標準」的側邊較淺，「加厚」把側邊再加深一半，棋子在棋盤上的大小不變。',
+  'The same corner of a xiangqi board three times: flat pieces, 3D pieces, and 3D pieces with the thick edge':
+    '同一個象棋棋盤角落畫了三次：平面棋子、立體棋子，以及加厚邊緣的立體棋子',
+  'Flat, 3D, and 3D with the Thick edge.': '平面、立體，以及「加厚」邊緣的立體。',
+  'The same look reaches the hidden-piece games. In [jieqi](/rules/jieqi) the face-down pieces stand in 3D with the rest, and in [banqi](/rules/banqi) and [Flip Jungle](/rules/jungle-flip) so does every tile.':
+    '有暗子的棋也能用這種樣式。在[揭棋](/rules/jieqi)裡，背面朝上的暗子和其他棋子一樣以立體顯示；在[暗棋](/rules/banqi)和[翻翻棋](/rules/jungle-flip)裡，每一枚棋子也是如此。',
+  'A jieqi position with face-down and revealed pieces three times: flat, 3D, and 3D with the thick edge':
+    '一個既有暗子也有明子的揭棋局面畫了三次：平面、立體，以及加厚邊緣的立體',
+  'Jieqi: flat, 3D, and 3D with the Thick edge. The plain discs are pieces still face down.':
+    '揭棋：平面、立體，以及「加厚」邊緣的立體。沒有字的圓片是還沒翻開的暗子。',
+  'A Flip Jungle board three times: flat tiles, 3D tiles, and 3D tiles with the thick edge':
+    '同一個翻翻棋棋盤畫了三次：平面棋子、立體棋子，以及加厚邊緣的立體棋子',
+  'Flip Jungle: flat, 3D, and 3D with the Thick edge. The green tiles are still face down.':
+    '翻翻棋：平面、立體，以及「加厚」邊緣的立體。綠色的棋子還沒翻開。',
+  'The xiangqi board can be lined, or a square grid like chess':
+    '象棋棋盤可以是交叉點棋盤，也可以是像西洋棋那樣的方格棋盤',
+  'The lined board is the traditional one. Pieces sit on the points where the lines cross, the palaces have their diagonals, and the river runs across the middle. The square grid puts each piece inside a square, the way a chessboard does, with light and dark squares, the river as a blue band and each palace as a shaded block. The rules are the same on both.':
+    '交叉點棋盤是傳統的棋盤。棋子落在線的交叉點上，九宮畫有斜線，河界橫貫中間。方格棋盤像西洋棋棋盤那樣把每個棋子放在格子裡：格子深淺相間，河界是一條藍色的帶子，九宮是一塊顏色較深的區域。兩種棋盤的規則完全相同。',
+  LINED: '交叉點棋盤',
+  'SQUARE GRID': '方格棋盤',
+  'The starting position on each board, drawn with your piece set.':
+    '兩種棋盤上的開局局面，用你選的棋子樣式繪製。',
+  'If you come to xiangqi from chess, try the square grid first. The pieces sit in squares on a checkered board, so a move looks the way you already picture one, and the lined board is one setting away when you want it. Both boards work with flat and 3D pieces. Board color offers the same woods and paper on both, and the green Jungle color only on the square grid.':
+    '如果你是從西洋棋轉來下象棋的，可以先試試方格棋盤。棋子放在深淺相間的格子裡，一步棋看起來就和你習慣的一樣；想用交叉點棋盤時，改一項設定就行。兩種棋盤都能用平面和立體棋子。「棋盤顏色」在兩種棋盤上提供同樣的木色和紙色，綠色的「鬥獸棋」配色只用於方格棋盤。',
+  'Pieces glide and turn over': '棋子會滑動和翻轉',
+  'When you step through a game in a review, a study or a replay, each move slides from its square to the next, so you can follow it without hunting for what changed. A hidden piece turns over when it is revealed, in banqi, jieqi and Flip Jungle. A 3D piece spins over on its edge like a real one. A flat piece narrows to a thin line and widens again showing its other face.':
+    '在覆盤、研究或回放裡逐步查看對局時，每一步的棋子都會從原來的位置滑到新的位置，不用到處找哪裡變了也能跟上。在暗棋、揭棋和翻翻棋裡，暗子翻開時會翻轉。立體棋子像真的棋子一樣立在側邊上翻過來；平面棋子先收窄成一條細線，再展開露出另一面。',
+  'Press the forward arrow under each board to see it. The first move in the banqi game flips a tile where it lies. In jieqi a face-down piece moves and turns over as it lands. Both boards are shown in 3D whatever your own setting is.':
+    '點每個棋盤下方的前進箭頭就能看到。暗棋這盤的第一步是在原地翻開一枚棋子。揭棋裡，一枚暗子走動後在落點翻開。無論你自己怎麼設定，這兩個棋盤都以立體顯示。',
+  'Banqi: the first move turns a tile over.': '暗棋：第一步翻開一枚棋子。',
+  'Banqi game with 3D tiles: step forward to see a tile turn over':
+    '立體棋子的暗棋對局：往前走一步，看棋子翻開',
+  'Jieqi: a hidden piece flips as it lands.': '揭棋：暗子在落點翻開。',
+  'Jieqi game with 3D pieces: step forward to see a piece flip as it lands':
+    '立體棋子的揭棋對局：往前走一步，看暗子在落點翻開',
+  'Speed, under Pieces, sets how fast all of this runs: Fast, Normal or Slow. Off moves pieces straight to their squares and reveals a piece without the turn. If your device is set to reduce motion, Mistboard skips the motion too.':
+    '「棋子」裡的「速度」決定這些動畫有多快：「快」「正常」或「慢」。選「關閉」時，棋子直接出現在新位置，翻子時也不播放翻轉。如果你的裝置開啟了減少動態效果，Mistboard 也會跳過這些動畫。',
+  'The river can name Chu and Han': '河界可以寫上楚河漢界',
+  'Printed xiangqi boards often write four characters in the river: 楚河 (chǔ hé, "Chu river") on one side and 漢界 (hàn jiè, "Han border") on the other. They name the border between Chu and Han, the two states that fought for China after the Qin dynasty fell, from 206 to 202 BC. In 203 BC Xiang Yu of Chu and Liu Bang of Han agreed to split the country along the Hong Canal; the truce broke within months, Liu Bang won the next year, and he founded the Han dynasty. The river on the board stands for that line. River text has three choices. 楚河 漢界 draws the characters, one pair on each half of the river, each pair facing the player on its side. Off leaves the river blank. Mistboard writes the site name.':
+    '印刷的象棋盤常在河界裡寫四個字：一邊是「楚河」，另一邊是「漢界」。它們指的是楚與漢的分界。秦朝滅亡後，楚、漢兩方在公元前 206 年到前 202 年間爭奪天下。公元前 203 年，楚的項羽和漢的劉邦約定以鴻溝為界平分天下；和約幾個月內就破裂了，劉邦在第二年取勝，建立了漢朝。棋盤上的河界代表的就是這條界線。「河界文字」有三個選項。「楚河 漢界」寫出這四個字，河界兩半各寫一對，每一對都朝向自己那一側的棋手。「無」讓河界留空。「Mistboard」寫上本站的名字。',
+  'River text: 楚河 漢界 (Chu river, Han border), and Off.': '河界文字：「楚河 漢界」和「無」。',
+  OFF: '無',
+  'River text starts Off, or with 楚河 漢界 on for players who read Chinese. It is a lined-board setting, so the square grid leaves its river band blank.':
+    '「河界文字」預設為「無」，讀中文的玩家則預設顯示「楚河 漢界」。這是交叉點棋盤的設定，方格棋盤的河界帶子總是留空。',
+  'Start markers show where the cannons and soldiers began': '兵炮位標記顯示炮和兵的起始位置',
+  'The small crosses on a printed xiangqi board are start marks: corner brackets on the points where each side’s two cannons and five soldiers begin, so the pieces can be set out without a diagram. Mistboard draws them too. At the start of a game the pieces cover them, so they show only once a cannon or soldier has moved. Start markers, on the Board page, turns them off.':
+    '印刷的象棋盤上那些小十字是兵炮位標記：畫在雙方兩個炮和五個兵（卒）起始交叉點四角的折線，讓人不看圖也能擺好棋子。Mistboard 也畫出了這些標記。開局時它們被棋子蓋住，所以要等炮或兵走動之後才會露出來。在「棋盤」頁面取消勾選「兵炮位標記」，就能關掉它們。',
+  'The red half of a xiangqi middlegame twice: with start markers on the empty cannon and soldier points, and without them':
+    '同一個象棋中局的紅方半盤畫了兩次：一次在空出的炮位和兵位上顯示兵炮位標記，一次不顯示',
+  'Start markers on, then off.': '兵炮位標記：先開，後關。',
+  'Everything is in Settings': '一切都在設定裡',
+  'Signed out, open the gear in the top bar. Signed in, open your account menu. Board and Pieces are rows in that menu, and each opens its own page of choices. A change applies to the boards you play and review on.':
+    '未登入時，點開頂欄的齒輪圖示；登入後，打開你的帳戶選單。「棋盤」和「棋子」是選單裡的兩行，各自打開一頁選項。更改會套用到你下棋和覆盤用的棋盤上。',
+  Setting: '設定項',
+  Where: '位置',
+  Choices: '選項',
+  'Board style': '棋盤樣式',
+  Board: '棋盤',
+  'Lined or Square grid': '交叉點棋盤或方格棋盤',
+  'Board color': '棋盤顏色',
+  'Seven colors, plus Jungle on the square grid': '七種顏色，方格棋盤另有「鬥獸棋」配色',
+  'River text': '河界文字',
+  'Off, 楚河 漢界 or Mistboard (lined board only)': '無、楚河 漢界或 Mistboard（僅限交叉點棋盤）',
+  'Start markers': '兵炮位標記',
+  'On or Off': '開或關',
+  'Piece set': '棋子樣式',
+  'Any of the nine sets above': '上面九套中的任意一套',
+  'Pieces, under Look': '棋子（外觀）',
+  'Flat or 3D': '平面或立體',
+  Edge: '邊緣',
+  'Standard or Thick (3D only)': '標準或加厚（僅限立體）',
+  Speed: '速度',
+  'Pieces, under Motion': '棋子（動畫）',
+  'Off, Fast, Normal or Slow': '關閉、快、正常或慢',
+  'As of November 6, 2026': '截至 2026 年 11 月 6 日',
+  'The menus, sets and choices as they are on this date. When a setting moves or a set is added, this article is updated and says so at the top.':
+    '本文的選單、棋子樣式和選項以這一天為準。設定項換了位置或新增了棋子樣式時，本文會隨之更新，並在文章開頭註明。',
+  'Play xiangqi': '下象棋',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
@@ -12121,13 +12327,34 @@ export const ARTICLE_GEOMETRY_KEYS: ReadonlySet<string> = new Set([
   'orientation',
 ]);
 
-function deepTranslate<T>(value: T, dict: Record<string, string>): T {
-  if (typeof value === 'string') return (hasOwnKey(dict, value) ? dict[value] : value) as T;
-  if (Array.isArray(value)) return value.map((v) => deepTranslate(v, dict)) as T;
+// Per-article values for a key the flat dictionary already gives another
+// meaning. Matching is by whole string, so a bare word can only translate one
+// way site-wide: "Pieces" heads the flip-jungle-skill-ceiling tablebase table
+// as a count (子数) and names the Settings page in set-up-your-board (棋子, the
+// zh menu's own word). The global entry still has to exist for the coverage
+// test; this only overrides it inside the one article.
+const ARTICLE_SCOPED_DICTS: Record<
+  ArticleLang,
+  Readonly<Record<string, Readonly<Record<string, string>>>>
+> = {
+  'zh-Hans': { 'set-up-your-board': { Pieces: '棋子' } },
+  'zh-Hant': { 'set-up-your-board': { Pieces: '棋子' } },
+};
+
+function deepTranslate<T>(
+  value: T,
+  dict: Record<string, string>,
+  scoped?: Readonly<Record<string, string>>,
+): T {
+  if (typeof value === 'string') {
+    if (scoped && hasOwnKey(scoped, value)) return scoped[value] as T;
+    return (hasOwnKey(dict, value) ? dict[value] : value) as T;
+  }
+  if (Array.isArray(value)) return value.map((v) => deepTranslate(v, dict, scoped)) as T;
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
-      out[k] = ARTICLE_GEOMETRY_KEYS.has(k) ? v : deepTranslate(v, dict);
+      out[k] = ARTICLE_GEOMETRY_KEYS.has(k) ? v : deepTranslate(v, dict, scoped);
     }
     return out as T;
   }
@@ -12138,7 +12365,10 @@ function deepTranslate<T>(value: T, dict: Record<string, string>): T {
 // Strings absent from the dictionary fall through as English (graceful partial
 // translation). Does not mutate the source article.
 export function translateArticle(article: Article, lang: ArticleLang): Article {
-  return deepTranslate(article, ARTICLE_DICTS[lang]);
+  const scoped = hasOwnKey(ARTICLE_SCOPED_DICTS[lang], article.slug)
+    ? ARTICLE_SCOPED_DICTS[lang][article.slug]
+    : undefined;
+  return deepTranslate(article, ARTICLE_DICTS[lang], scoped);
 }
 
 export function translateArticleText(lang: ArticleLang | undefined, text: string): string {

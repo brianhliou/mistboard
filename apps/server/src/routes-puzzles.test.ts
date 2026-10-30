@@ -2,13 +2,20 @@ import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
 import {
+  attemptStandardXiangqiPuzzleLine,
+  getStandardXiangqiLegalMoves,
   type JunglePuzzle,
   puzzleShortCode,
   XIANGQI_MOTIFS,
+  XIANGQI_TRAINING_TAGS,
   type XiangqiMotifId,
   type XiangqiPuzzle,
+  xiangqiPuzzleTrainingTags,
 } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
+import { puzzleServingRating } from './puzzle-rating.js';
+import { getPuzzleStore } from './puzzle-store.js';
+import { loadPuzzleStreak, savePuzzleStreak, startPuzzleStreak } from './puzzle-streak.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/puzzles.js';
 
@@ -66,6 +73,235 @@ async function route(path: string, method = 'GET', body?: unknown): Promise<Resp
   return response;
 }
 
+test('streak ramp is ordered, unique, solution-hidden and rejects unknown variants', async () => {
+  const response = await route('/api/puzzles/ramp?variant=xiangqi');
+  assert.equal(response.status, 200);
+  const { puzzles } = JSON.parse(response.body);
+  assert.ok(puzzles.length > 2);
+  assert.equal(new Set(puzzles.map((p: { id: string }) => p.id)).size, puzzles.length);
+  for (let i = 0; i < puzzles.length; i++) {
+    assert.equal(puzzles[i].variant, 'xiangqi');
+    assert.equal(puzzles[i].solution, undefined);
+    assert.equal(puzzles[i].initial, undefined);
+    if (i > 0) assert.ok(puzzles[i].rating >= puzzles[i - 1].rating);
+  }
+  assert.equal((await route('/api/puzzles/ramp?variant=unknown')).status, 400);
+  assert.equal((await route('/api/puzzles/ramp?variant=jungle')).status, 200);
+});
+
+test('anonymous streak counts solves, allows one skip, and locks the run on a miss', async () => {
+  const started = await route('/api/puzzles/streak', 'POST', { action: 'start' });
+  assert.equal(started.status, 200);
+  let run = JSON.parse(started.body);
+  assert.equal(run.score, 0);
+  assert.equal(run.best, null);
+  assert.equal(run.skipUsed, false);
+  assert.equal(run.finished, false);
+  assert.equal(JSON.stringify(run).includes('"solution":'), false);
+  const first = XIANGQI_PUZZLES.find((p) => p.id === run.puzzle.id)!;
+  for (const move of first.solution.filter((_, i) => i % 2 === 0)) {
+    const response = await route('/api/puzzles/streak', 'POST', {
+      action: 'move',
+      runId: run.runId,
+      puzzleId: first.id,
+      move,
+    });
+    assert.equal(response.status, 200);
+    run = JSON.parse(response.body);
+  }
+  assert.equal(run.score, 1);
+  assert.equal(run.results[0].outcome, 'solved');
+  assert.equal(run.solution, undefined);
+  const duplicate = await route('/api/puzzles/streak', 'POST', {
+    action: 'move',
+    runId: run.runId,
+    puzzleId: first.id,
+    move: first.solution[0],
+  });
+  assert.equal(duplicate.status, 409);
+  run = JSON.parse(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'skip',
+        runId: run.runId,
+        puzzleId: run.puzzle.id,
+      })
+    ).body,
+  );
+  assert.equal(run.skipUsed, true);
+  assert.equal(run.score, 1);
+  assert.equal(run.results[1].outcome, 'skipped');
+  const secondSkip = await route('/api/puzzles/streak', 'POST', {
+    action: 'skip',
+    runId: run.runId,
+    puzzleId: run.puzzle.id,
+  });
+  assert.equal(secondSkip.status, 409);
+  // A malformed action is rejected without ending the run.
+  assert.equal(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'move',
+        runId: run.runId,
+        puzzleId: run.puzzle.id,
+        move: null,
+      })
+    ).status,
+    400,
+  );
+  const missedId = run.puzzle.id;
+  const missedPuzzle = XIANGQI_PUZZLES.find((p) => p.id === missedId)!;
+  const wrongMove = getStandardXiangqiLegalMoves(missedPuzzle.initial).find((move) => {
+    const attempt = attemptStandardXiangqiPuzzleLine(missedPuzzle, [move]);
+    return !attempt.ok && attempt.code === 'incorrect-move';
+  });
+  assert.ok(wrongMove, 'the miss must be a legal wrong answer');
+  run = JSON.parse(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'move',
+        runId: run.runId,
+        puzzleId: missedId,
+        move: wrongMove,
+      })
+    ).body,
+  );
+  assert.equal(run.attempt.ok, false);
+  assert.equal(run.attempt.code, 'incorrect-move');
+  assert.equal(run.finished, true);
+  assert.equal(run.score, 1);
+  assert.equal(run.results[2].outcome, 'failed');
+  // The finishing miss carries the line so the end screen can play it out.
+  assert.deepEqual(run.solution, missedPuzzle.solution);
+  assert.equal(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'move',
+        runId: run.runId,
+        puzzleId: missedId,
+        move: first.solution[0],
+      })
+    ).status,
+    409,
+  );
+});
+
+test('a second streak run does not replay the first one', async () => {
+  const N = 5;
+  const firstRun = JSON.parse(
+    (await route('/api/puzzles/streak', 'POST', { action: 'start' })).body,
+  );
+  const first = (await loadPuzzleStreak(firstRun.runId))!.state.ids;
+  assert.ok(first.length > N * 2, 'the pool must be larger than the compared prefix');
+  // The browser lists the puzzles the player met in the first run.
+  const secondRun = JSON.parse(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'start',
+        recent: first.slice(0, N),
+      })
+    ).body,
+  );
+  const second = (await loadPuzzleStreak(secondRun.runId))!.state.ids;
+  assert.notDeepEqual(second.slice(0, N), first.slice(0, N));
+  // It opens on a puzzle the player has not met.
+  assert.equal(first.slice(0, N).includes(second[0]!), false);
+});
+
+test('resume picks the open run up at the start of its puzzle and refuses an ended one', async () => {
+  const puzzle = XIANGQI_PUZZLES.find((p) => p.solution.length >= 3)!;
+  const run = await startPuzzleStreak(
+    [puzzle.id, XIANGQI_PUZZLES.find((p) => p !== puzzle)!.id],
+    null,
+  );
+  const played = await route('/api/puzzles/streak', 'POST', {
+    action: 'move',
+    runId: run.id,
+    puzzleId: puzzle.id,
+    move: puzzle.solution[0],
+  });
+  assert.equal(JSON.parse(played.body).attempt.ok, true);
+  const resumed = await route('/api/puzzles/streak', 'POST', { action: 'resume', runId: run.id });
+  assert.equal(resumed.status, 200);
+  const body = JSON.parse(resumed.body);
+  assert.equal(body.runId, run.id);
+  assert.equal(body.puzzle.id, puzzle.id);
+  assert.equal(JSON.stringify(body).includes('"solution":'), false);
+  assert.deepEqual((await loadPuzzleStreak(run.id))!.state.moves, []);
+  // The line is played again from its first move.
+  const again = await route('/api/puzzles/streak', 'POST', {
+    action: 'move',
+    runId: run.id,
+    puzzleId: puzzle.id,
+    move: puzzle.solution[0],
+  });
+  assert.equal(JSON.parse(again.body).attempt.ok, true);
+
+  const ended = await startPuzzleStreak([puzzle.id], null);
+  ended.state.finished = true;
+  assert.equal(await savePuzzleStreak(ended), true);
+  assert.equal(
+    (await route('/api/puzzles/streak', 'POST', { action: 'resume', runId: ended.id })).status,
+    409,
+  );
+  assert.equal(
+    (await route('/api/puzzles/streak', 'POST', { action: 'resume', runId: 'nope' })).status,
+    400,
+  );
+  assert.equal(
+    (
+      await route('/api/puzzles/streak', 'POST', {
+        action: 'resume',
+        runId: 'a85ef43f-73b3-4ef0-bdc2-d1e907c1ff35',
+      })
+    ).status,
+    404,
+  );
+});
+
+for (const code of ['illegal-move', 'line-too-long'] as const) {
+  test(`streak ${code} rejection preserves the run and allows a correct retry`, async (t) => {
+    const puzzle = XIANGQI_PUZZLES[0]!;
+    const run = await startPuzzleStreak([puzzle.id, XIANGQI_PUZZLES[1]!.id], null);
+    const before = await loadPuzzleStreak(run.id);
+    const store = await getPuzzleStore();
+    const originalGet = store.byId.get.bind(store.byId);
+    const move = { from: 'a1', to: 'a1' } as const;
+    // These checker errors require a broken stored line: arbitrary guesses,
+    // including illegal ones, are classified as incorrect-move first.
+    const brokenPuzzle = { ...puzzle, solution: code === 'illegal-move' ? [move] : [] };
+    const lookup = t.mock.method(store.byId, 'get', (id: string) =>
+      id === puzzle.id ? brokenPuzzle : originalGet(id),
+    );
+    const response = await route('/api/puzzles/streak', 'POST', {
+      action: 'move',
+      runId: run.id,
+      puzzleId: puzzle.id,
+      move,
+      qualitySessionId: 'a85ef43f-73b3-4ef0-bdc2-d1e907c1ff35',
+    });
+    assert.equal(response.status, 200);
+    const rejected = JSON.parse(response.body);
+    assert.equal(rejected.attempt.ok, false);
+    assert.equal(rejected.attempt.code, code);
+    assert.equal(rejected.finished, false);
+    assert.equal(rejected.score, 0);
+    assert.equal(rejected.skipUsed, false);
+    assert.deepEqual(rejected.results, []);
+    assert.deepEqual(await loadPuzzleStreak(run.id), before);
+
+    lookup.mock.restore();
+    const retried = await route('/api/puzzles/streak', 'POST', {
+      action: 'move',
+      runId: run.id,
+      puzzleId: puzzle.id,
+      move: puzzle.solution[0],
+    });
+    assert.equal(retried.status, 200);
+    assert.equal(JSON.parse(retried.body).attempt.ok, true);
+  });
+}
+
 test('puzzle list returns surfaced summaries without solutions', async () => {
   const response = await route('/api/puzzles');
   const body = JSON.parse(response.body) as {
@@ -104,6 +340,21 @@ test('puzzle list returns surfaced summaries without solutions', async () => {
   );
 });
 
+test('puzzle list serves each puzzle on its rating folded with solution length (#712)', async () => {
+  const response = await route('/api/puzzles');
+  const body = JSON.parse(response.body) as {
+    puzzles: Array<{ solutionPlyCount: number; rating: number; servingRating?: number }>;
+  };
+  assert.equal(response.status, 200);
+  for (const puzzle of body.puzzles) {
+    // No persistence here, so no outcomes: the length-folded prior.
+    assert.equal(
+      puzzle.servingRating,
+      puzzleServingRating({ prior: puzzle.rating, solutionPlyCount: puzzle.solutionPlyCount }),
+    );
+  }
+});
+
 test('puzzle list filters by variant, and a retired variant filters to nothing', async () => {
   const xiangqi = await route('/api/puzzles?variant=xiangqi');
   assert.equal(xiangqi.status, 200);
@@ -135,6 +386,58 @@ test('puzzle list filters by every registered motif without changing summary ord
     assert.deepEqual(body.attemptedIds, all.attemptedIds, id);
   }
   assert.ok(hasNonemptySubset, 'the corpus must exercise a motif with matches and exclusions');
+});
+
+test('puzzle list filters by any trainer tag through theme=, and counts every tag', async () => {
+  const all = JSON.parse((await route('/api/puzzles')).body) as {
+    puzzles: Array<{ id: string; variant: string; motifs: string[]; tags: string[] }>;
+    tagCounts: Record<string, number>;
+  };
+  // Every tag is counted, zeros included, so the page can hide what is empty.
+  const ids = [...XIANGQI_MOTIFS.map((m) => m.id), ...XIANGQI_TRAINING_TAGS.map((t) => t.id)];
+  assert.deepEqual(Object.keys(all.tagCounts).sort(), [...ids].sort());
+
+  let exercised = 0;
+  for (const id of ids) {
+    const response = await route(`/api/puzzles?theme=${id}`);
+    assert.equal(response.status, 200, id);
+    const body = JSON.parse(response.body) as typeof all;
+    const expected = all.puzzles.filter((puzzle) => puzzle.tags.includes(id));
+    assert.deepEqual(body.puzzles, expected, id);
+    assert.equal(all.tagCounts[id], expected.length, id);
+    // The counts describe the pool before the filter.
+    assert.deepEqual(body.tagCounts, all.tagCounts, id);
+    if (expected.length > 0 && expected.length < all.puzzles.length) exercised += 1;
+  }
+  assert.ok(exercised >= 5, 'the corpus must exercise several tags with matches and exclusions');
+});
+
+test('trainer tags are derived at load, not read from the mined themes', async () => {
+  const all = JSON.parse((await route('/api/puzzles?variant=xiangqi')).body) as {
+    puzzles: Array<{ id: string; motifs: string[]; tags: string[] }>;
+  };
+  const byId = new Map(XIANGQI_PUZZLES.map((puzzle) => [puzzle.id, puzzle]));
+  for (const summary of all.puzzles) {
+    const puzzle = byId.get(summary.id);
+    assert.ok(puzzle, summary.id);
+    assert.deepEqual(summary.tags, [...summary.motifs, ...xiangqiPuzzleTrainingTags(puzzle)]);
+  }
+});
+
+test('theme= intersects motif= and rejects unknown tags', async () => {
+  const both = await route('/api/puzzles?motif=ma-hou-pao&theme=matein1');
+  assert.equal(both.status, 200);
+  const body = JSON.parse(both.body) as { puzzles: Array<{ tags: string[] }> };
+  for (const puzzle of body.puzzles) {
+    assert.ok(puzzle.tags.includes('ma-hou-pao') && puzzle.tags.includes('matein1'));
+  }
+  for (const theme of ['crushing', 'winning-material', 'MATEIN1', '__proto__', 'toString']) {
+    const response = await route(`/api/puzzles?theme=${encodeURIComponent(theme)}`);
+    assert.equal(response.status, 400, theme);
+    assert.deepEqual(JSON.parse(response.body), { error: 'invalid_theme' }, theme);
+  }
+  const empty = await route('/api/puzzles?theme=');
+  assert.deepEqual(JSON.parse(empty.body), JSON.parse((await route('/api/puzzles')).body));
 });
 
 test('puzzle list treats an empty motif like an omitted motif', async () => {
@@ -169,7 +472,9 @@ test('puzzle list combines motif and variant filters while keeping parked puzzle
 
   const jungle = await route('/api/puzzles?variant=jungle&motif=ma-hou-pao');
   assert.equal(jungle.status, 200);
-  assert.deepEqual(JSON.parse(jungle.body), { puzzles: [], attemptedIds: [] });
+  // `themes` and `tagCounts` (#376) carry the variant pool's counts; their own tests cover them.
+  const { themes: _themes, tagCounts: _tagCounts, ...jungleList } = JSON.parse(jungle.body);
+  assert.deepEqual(jungleList, { puzzles: [], attemptedIds: [] });
 
   const invalidMotif = await route('/api/puzzles?variant=jungle&motif=not-a-motif');
   assert.equal(invalidMotif.status, 400);
@@ -238,6 +543,48 @@ test('puzzle list rejects unsupported variants', async () => {
 
   assert.equal(response.status, 400);
   assert.deepEqual(JSON.parse(response.body), { error: 'invalid_variant' });
+});
+
+test('puzzle theme filter matches classified motifs and returns unfiltered theme counts', async () => {
+  const all = JSON.parse((await route('/api/puzzles')).body);
+  assert.deepEqual(
+    all.themes.map((motif: { id: string }) => motif.id),
+    XIANGQI_MOTIFS.map((motif) => motif.id),
+  );
+  for (const motif of all.themes) {
+    assert.equal(
+      motif.count,
+      all.puzzles.filter((puzzle: { motifs: string[] }) => puzzle.motifs.includes(motif.id)).length,
+    );
+    assert.ok(motif.literal && motif.gloss && motif.pinyin && motif.hanzi);
+  }
+  const theme = 'ma-hou-pao';
+  const expected = all.puzzles.filter((puzzle: { motifs: string[] }) =>
+    puzzle.motifs.includes(theme),
+  );
+  assert.ok(expected.length > 0 && expected.length < all.puzzles.length);
+  const response = await route(`/api/puzzles?variant=xiangqi&motif=${theme}`);
+  assert.equal(response.status, 200);
+  const filtered = JSON.parse(response.body);
+  assert.deepEqual(filtered.puzzles, expected);
+  assert.deepEqual(filtered.themes, all.themes);
+  const entry = filtered.themes.find((item: { id: string }) => item.id === theme);
+  assert.equal(entry.count, expected.length);
+  assert.equal(entry.hanzi, '马后炮');
+  assert.ok(entry.pinyin && entry.literal && entry.gloss);
+  assert.equal(JSON.stringify(filtered).includes('"solution":'), false);
+});
+
+test('puzzle themes reject unknown ids and intersect variant discovery', async () => {
+  // An empty motif is no filter (main's #637 contract); only unknown ids are refused.
+  for (const theme of ['unknown', 'toString', 'mate']) {
+    const response = await route(`/api/puzzles?motif=${theme}`);
+    assert.equal(response.status, 400);
+    assert.deepEqual(JSON.parse(response.body), { error: 'invalid_motif' });
+  }
+  const jungle = JSON.parse((await route('/api/puzzles?variant=jungle&motif=ma-hou-pao')).body);
+  assert.deepEqual(jungle.puzzles, []);
+  assert.ok(jungle.themes.every((theme: { count: number }) => theme.count === 0));
 });
 
 // Standard xiangqi serving wiring: the variant filter round-trips even while

@@ -40,7 +40,7 @@ export function normalizeXiangqiRiverText(value: string | null | undefined): Xia
 
 /** The inscription as real boards set it (Brian picked it from a sheet of five,
  *  2026-10-29): each pair near its own edge, one character to a square, 漢界
- *  turned to face the far player, in a brush hand. Offsets are in cells from
+ *  turned to face the far player, in old printed type. Offsets are in cells from
  *  the river's centre; true turns the character 180 degrees. */
 const RIVER_CHARACTERS: readonly [string, number, boolean][] = [
   ['楚', -2.5, false],
@@ -52,9 +52,15 @@ const RIVER_CHARACTERS: readonly [string, number, boolean][] = [
 /** Character height as a share of the cell. */
 export const XIANGQI_RIVER_CHARACTER_SCALE = 0.7;
 
-/** A four-character cut of LXGW WenKai TC Bold (app-base.css, public/fonts),
- *  so every device draws the same brush hand; the system Kaiti faces follow. */
-export const XIANGQI_RIVER_FONT_FAMILY = "'Mistboard River', 'Kaiti SC', 'STKaiti', 'KaiTi', serif";
+/** A four-character cut of Zen Antique (app-base.css, public/fonts), so every
+ *  device draws the same old printed type; the system Song faces follow. */
+export const XIANGQI_RIVER_FONT_FAMILY =
+  "'Mistboard River', 'Songti TC', 'STSong', 'SimSun', serif";
+
+/** The "Mistboard" caption in the same cut (it carries the nine letters), so
+ *  the two river choices share one face; Georgia follows, not a Song face's
+ *  Latin. */
+export const XIANGQI_RIVER_BRAND_FONT_FAMILY = "'Mistboard River', ui-serif, Georgia, serif";
 
 const round1 = (value: number): number => Math.round(value * 10) / 10;
 
@@ -77,6 +83,7 @@ export function xiangqiDiagramRiverText(x: number, y: number, cell: number, font
   const brandSize = Math.round(fontSize * XIANGQI_RIVER_BRAND_SCALE * 10) / 10;
   const tracking = Math.round(brandSize * XIANGQI_RIVER_BRAND_TRACKING * 10) / 10;
   const labelFont = XIANGQI_RIVER_FONT_FAMILY.replaceAll("'", '&quot;');
+  const brandFont = XIANGQI_RIVER_BRAND_FONT_FAMILY.replaceAll("'", '&quot;');
   return (
     xiangqiRiverCharacters(
       x,
@@ -84,6 +91,6 @@ export function xiangqiDiagramRiverText(x: number, y: number, cell: number, font
       cell,
       `font-family="${labelFont}" font-size="${round1(cell * XIANGQI_RIVER_CHARACTER_SCALE)}" font-weight="700" class="xq-diagram-ink xq-diagram-river-label" text-anchor="middle" dominant-baseline="central"`,
     ) +
-    `<text x="${Math.round((x + tracking / 2) * 10) / 10}" y="${y}" font-family="serif" font-size="${brandSize}" font-weight="600" letter-spacing="${tracking}" class="xq-diagram-ink xq-diagram-river-brand" translate="no" text-anchor="middle" dominant-baseline="central">${XIANGQI_RIVER_BRAND_TEXT}</text>`
+    `<text x="${Math.round((x + tracking / 2) * 10) / 10}" y="${y}" font-family="${brandFont}" font-size="${brandSize}" font-weight="700" letter-spacing="${tracking}" class="xq-diagram-ink xq-diagram-river-brand" translate="no" text-anchor="middle" dominant-baseline="central">${XIANGQI_RIVER_BRAND_TEXT}</text>`
   );
 }

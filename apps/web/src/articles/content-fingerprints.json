@@ -108,8 +108,8 @@
     "updatedAt": "2026-10-07"
   },
   "how-puzzle-mining-works": {
-    "hash": "d7d41509d334fb64",
-    "updatedAt": "2026-10-07"
+    "hash": "dd57578f76e8eb23",
+    "updatedAt": "2026-10-28"
   },
   "jieqi": {
     "hash": "8e2145840ac94150",
@@ -201,6 +201,10 @@
   },
   "server-enforced-fog": {
     "hash": "0ed51d9643c6d857",
+    "updatedAt": null
+  },
+  "set-up-your-board": {
+    "hash": "c05fe103ab6b1fd0",
     "updatedAt": null
   },
   "shogi4": {

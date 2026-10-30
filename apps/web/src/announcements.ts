@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-30',
+    kind: 'update',
+    headline: 'Puzzle Streak, and puzzles by theme.',
+    body: 'Puzzle Streak serves puzzles that get harder as you go, with no clock and one skip, and one wrong move ends the run. The new themes page lets you train one theme at a time, such as a single mate pattern. Each puzzle now plays in the moves of the game it came from before you start.',
+    href: '/puzzles?mode=streak',
+    cta: 'Start a streak',
+  },
+  {
     date: '2026-10-29',
     kind: 'update',
     headline: '3D pieces, and banqi tiles that turn over.',

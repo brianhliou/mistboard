@@ -1,4 +1,4 @@
-// The Three Kingdoms banqi PvE turn (local playtest, #628): when the engine's
+// The Three Kingdoms banqi PvE turn (hidden playtest, #628, #684): when the engine's
 // seat is to move, ask the Rust engine for a move on the REDACTED position and
 // append it as an ordinary move-played event. Modeled on server-banqi-engine.ts.
 //

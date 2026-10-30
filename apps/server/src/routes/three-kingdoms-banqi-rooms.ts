@@ -1,9 +1,12 @@
-// Create route for the Three Kingdoms banqi local playtest (#628). PvE exists
-// only when MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH names a binary; without
-// it a PvE create answers 404 three_kingdoms_banqi_disabled.
+// Create route for the Three Kingdoms banqi playtest (#628, #684). With the
+// local flag off, only an admin account may create a room (admits); everyone
+// else gets 404 three_kingdoms_banqi_disabled, the same answer as before. PvE
+// exists only when the engine binary resolves (three-kingdoms-banqi-engine.ts);
+// without it a PvE create answers the same 404.
 
 import { type RoomTimeControl, THREE_KINGDOMS_BANQI_SPEC_ID } from '@mistboard/game';
 import type { DrainCreate } from '../deploy-gate.js';
+import { threeKingdomsBanqiAdmits } from '../three-kingdoms-banqi-access.js';
 import {
   isThreeKingdomsBanqiEngineClientId,
   THREE_KINGDOMS_BANQI_ENGINE_ID,
@@ -34,6 +37,7 @@ const route = createTenantRoomsRoute<ThreeKingdomsBanqiCreateContext, Seat | 'ra
   gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
   errorPrefix: 'three_kingdoms_banqi',
   hasDisabledFlag: true,
+  admits: threeKingdomsBanqiAdmits,
   preferredColors: ['red', 'black', 'random'],
   engine: {
     kind: 'seated',

@@ -115,8 +115,10 @@ export function jungleFlipEnabled(): boolean {
   return process.env.MISTBOARD_JUNGLE_FLIP_ENABLED === 'true';
 }
 
-// Three Kingdoms banqi (#628) is a LOCAL PLAYTEST: never set this in Railway.
-// Whether it gets a public surface is a checkpoint decision.
+// Three Kingdoms banqi (#628): this flag opens it to EVERYONE, for the local
+// playtest only; never set it in Railway. Prod runs the admin-only playtest
+// (#684, three-kingdoms-banqi-access.ts) with this off. Whether it gets a
+// public surface is a checkpoint decision.
 export function threeKingdomsBanqiEnabled(): boolean {
   return process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED === 'true';
 }
