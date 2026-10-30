@@ -26,10 +26,10 @@ import {
   startIsDealt,
 } from '@mistboard/game';
 import { currentAccountUser } from './../account-session.js';
-import { threeKingdomsBanqiEnabled } from './../feature-flags.js';
 import * as persistence from './../persistence.js';
 import { STUDY_PAGE_MAX, type StudyListAccess } from './../persistence-studies.js';
 import { studyHasAdminOnlyChapter } from './../study-admin-only.js';
+import { threeKingdomsBanqiAdmits } from './../three-kingdoms-banqi-access.js';
 import {
   readJsonBody,
   requireAdminSession,
@@ -50,25 +50,20 @@ const FEATURED_PATH = new RegExp(`^/api/admin/studies/(${ID})/featured$`);
 const SLUG_PATH = new RegExp(`^/api/admin/studies/(${ID})/slug$`);
 
 // ── Admin-only study variants (#628) ──
-// Who may see a study in an ADMIN_ONLY_STUDY_SPEC_IDS variant: an admin
+// Who may see a study in an ADMIN_ONLY_STUDY_SPEC_IDS variant: the same rule
+// as the Three Kingdoms banqi rooms (three-kingdoms-banqi-access.ts): an admin
 // account, or everyone when the local playtest flag is on (never in Railway).
-// STAND-IN for threeKingdomsBanqiAdmits() in three-kingdoms-banqi-access.ts,
-// which agent/tk-prod-playtest (#684) is building with exactly this rule but
-// had not committed when this landed. When it lands, replace the body of
-// tkStudyAdmitsStandIn with `threeKingdomsBanqiAdmits(await currentAccountUser(request))`.
-async function tkStudyAdmitsStandIn(request: IncomingMessage): Promise<boolean> {
-  if (threeKingdomsBanqiEnabled()) return true;
-  const user = await currentAccountUser(request);
-  return user?.accountRole === 'admin';
+async function adminOnlyStudyAdmits(request: IncomingMessage): Promise<boolean> {
+  return threeKingdomsBanqiAdmits(await currentAccountUser(request));
 }
 
 type AdminOnlyStudyGate = (request: IncomingMessage) => Promise<boolean>;
-let adminOnlyStudyGate: AdminOnlyStudyGate = tkStudyAdmitsStandIn;
+let adminOnlyStudyGate: AdminOnlyStudyGate = adminOnlyStudyAdmits;
 
 /** Tests only: replace the gate (a planted open gate must fail the refusal
  *  test), or pass null to restore the real one. */
 export function setAdminOnlyStudyGateForTests(gate: AdminOnlyStudyGate | null): void {
-  adminOnlyStudyGate = gate ?? tkStudyAdmitsStandIn;
+  adminOnlyStudyGate = gate ?? adminOnlyStudyAdmits;
 }
 
 // Every route that names one study (read, edit, delete, like, clone, chapters,
