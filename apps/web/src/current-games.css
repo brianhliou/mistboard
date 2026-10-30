@@ -909,25 +909,29 @@
   white-space: nowrap;
 }
 
-/* Just finished: a smaller grid of final positions. */
+/* Just finished: a smaller grid of final positions, every card one cell (a
+   banqi board is a short strip in its card; Brian, 2026-10-30). */
 .current-games-finished-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
   gap: 14px;
 }
 
+/* The board runs edge to edge; the names and the result sit in padded rows
+   above and below it. Cards in a row stretch to one height and the result
+   line keeps to the bottom. */
 .current-game-finished {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   min-width: 0;
-  padding: 8px;
+  overflow: hidden;
   border-radius: 8px;
   border: 1px solid var(--site-border);
   background: var(--site-panel);
   color: var(--site-text);
   text-decoration: none;
   font-size: 0.78rem;
+  transition: border-color 120ms ease;
 }
 
 .current-game-finished:hover,
@@ -935,20 +939,59 @@
   border-color: var(--site-accent);
 }
 
+.current-game-finished .current-game-board {
+  aspect-ratio: var(--finished-board-aspect, 1);
+  border-radius: 0;
+}
+
+.current-game-finished .current-game-board.is-loading {
+  background: var(--site-panel-soft);
+}
+
 .current-game-finished .current-game-fog {
   padding: 10px;
 }
 
+/* Xiangqi Mahjong: both final hands on the table's felt
+   (current-games-xmj-card.ts). */
+.current-game-finished .xmj-card-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.current-game-hands-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f1f5f2;
+  background: #1f5c45;
+}
+
 /* One row per player, above and below the board on the side their pieces
-   start from (placeFinishedSeats), each with the card's full width. */
+   start from (placeFinishedSeats), each with the card's full width. The
+   winner's name reads first; the other steps back. */
 .current-game-finished-seat {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
+  padding: 7px 10px;
   line-height: 1.3;
   font-weight: 600;
   color: var(--site-heading);
+}
+
+.current-game-finished-seat[data-outcome="lost"] {
+  font-weight: 500;
+  color: var(--site-muted);
 }
 
 .current-game-finished-seat-name {
@@ -958,11 +1001,21 @@
   text-overflow: ellipsis;
 }
 
+/* The result on the left, when it ended in the bottom-right corner. */
 .current-game-finished-line {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 6px;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  margin-top: auto;
+  padding: 0 10px 9px;
+}
+
+.current-game-finished .current-game-result {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .current-game-result {
@@ -972,7 +1025,11 @@
 }
 
 .current-game-finished-when {
+  flex: none;
+  margin-left: auto;
   color: var(--site-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Adds two more rows from the finished pool already loaded. */

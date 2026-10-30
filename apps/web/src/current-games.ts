@@ -45,9 +45,12 @@ import {
   FINISHED_BOARD_BOTTOM_SEAT,
   FINISHED_BOARD_POV,
   FINISHED_POOL_URL,
+  finishedBoardAspect,
+  finishedBoardBoxAspect,
   finishedBoardTenantPov,
   finishedPoolDue,
   finishedTileKind,
+  finishedWinnerColor,
   isLowClock,
   liveCardShowsHands,
   liveTileKind,
@@ -523,7 +526,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       if (at !== tile) finished.grid.insertBefore(tile, at);
       if (existing) return;
       finishedTiles.set(game.roomId, { tile, handle: null });
-      if (finishedTileKind(game.variant) !== 'board') return;
+      if (finishedTileKind(game.variant) === 'fog') return;
       const host = tile.querySelector<HTMLElement>('.current-game-board');
       if (!host) return;
       if (boardObserver) {
@@ -547,6 +550,10 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
   // A tile replaced while its board loaded (a pool refresh) is off the page by
   // the time the mount resolves; its handle is destroyed rather than kept.
   async function mountFinishedBoard(host: HTMLElement, game: FeaturedGame): Promise<void> {
+    if (finishedTileKind(game.variant) === 'hands') {
+      await mountFinishedHands(host, game);
+      return;
+    }
     try {
       const { mountShowcaseBoard } = await import('./showcase-board.js');
       if (!isConnected() || !host.isConnected) return;
@@ -587,6 +594,7 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       }
       entry.handle = handle;
       handle.jumpToPly?.(handle.plyCount?.() ?? game.plyCount);
+      fitFinishedBoard(host);
       // The names were placed for the expected orientation; the mounted board
       // has the final word.
       placeFinishedSeats(entry.tile, handle.bottomSeat?.() ?? FINISHED_BOARD_BOTTOM_SEAT);
@@ -594,6 +602,37 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       console.warn('[current-games] finished board failed', err);
       host.replaceChildren(buildFogTile(variantDisplayLabel(game.variant), null));
     }
+  }
+
+  // Xiangqi Mahjong: both final hands from the finished-match read. A match
+  // the server will not show (or a failed read) keeps a plain felt with the
+  // variant's name, never the misty tile: nothing about it is fog.
+  async function mountFinishedHands(host: HTMLElement, game: FeaturedGame): Promise<void> {
+    let drawn = false;
+    try {
+      const [{ loadXmjFinalView, xmjFinalHandsSvg }, { readStoredXiangqiPieceSet }] =
+        await Promise.all([
+          import('./current-games-xmj-card.js'),
+          import('./xiangqi-appearance-storage.js'),
+        ]);
+      const view = await loadXmjFinalView(game.roomId);
+      if (!isConnected() || !host.isConnected) return;
+      if (view) {
+        const winner = finishedWinnerColor(game.result);
+        host.innerHTML = xmjFinalHandsSvg(
+          view,
+          finishedBottomSeatColor(game) === 'west' ? 'west' : 'east',
+          winner === 'east' || winner === 'west' ? winner : null,
+          readStoredXiangqiPieceSet(),
+          t('games.finalHands'),
+        );
+        drawn = true;
+      }
+    } catch (err) {
+      console.warn('[current-games] finished hands failed', err);
+    }
+    host.classList.remove('is-loading');
+    if (!drawn && host.isConnected) host.replaceChildren(buildHandsFallback(game.variant));
   }
 
   // ---- clocks -----------------------------------------------------------
@@ -976,18 +1015,22 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   const firstName = displayParticipantName(game, first);
   const secondName = displayParticipantName(game, second);
   const matchup = namesMatchupLabel(firstName, secondName);
+  const kind = finishedTileKind(game.variant);
   const tile = document.createElement('a');
   tile.className = 'current-game-finished';
   tile.dataset.roomId = game.roomId;
+  tile.dataset.tileKind = kind;
   tile.href = profileGameHref(game);
   tile.setAttribute('aria-label', t('games.finishedGame', { matchup }));
   const board = document.createElement('div');
   board.className = 'current-game-board';
-  if (finishedTileKind(game.variant) === 'fog') {
+  setBoardAspect(board, finishedBoardAspect(game.variant));
+  if (kind === 'fog') {
     board.append(buildFogTile(variantDisplayLabel(game.variant), null));
   } else {
     board.classList.add('is-loading');
   }
+  // The result on the left, when it ended in the bottom-right corner.
   const line = document.createElement('span');
   line.className = 'current-game-finished-line';
   const result = document.createElement('span');
@@ -995,18 +1038,53 @@ export function buildFinishedTile(game: FeaturedGame): HTMLElement {
   result.textContent = watchQueueResultLabel(game);
   const reason = terminationLabel(game.termination);
   if (reason) result.title = reason;
-  const when = document.createElement('span');
+  const when = document.createElement('time');
   when.className = 'current-game-finished-when';
   when.textContent = formatGameTime(game.endedAt, locale);
+  const ended = game.endedAt ? new Date(game.endedAt) : null;
+  if (ended && Number.isFinite(ended.getTime())) when.dateTime = ended.toISOString();
   line.append(result, when);
+  const winner = finishedWinnerColor(game.result);
   tile.append(
-    finishedSeatRow(game, 'first', first, firstName),
+    finishedSeatRow(game, 'first', first, firstName, winner),
     board,
-    finishedSeatRow(game, 'second', second, secondName),
+    finishedSeatRow(game, 'second', second, secondName, winner),
     line,
   );
   stampSeatInkFamily(tile, game.variant);
   placeFinishedSeats(tile, FINISHED_BOARD_BOTTOM_SEAT);
+  return tile;
+}
+
+// The board box's width over height, read by its aspect-ratio.
+function setBoardAspect(board: HTMLElement, aspect: number): void {
+  const box = finishedBoardBoxAspect(aspect);
+  board.style.setProperty('--finished-board-aspect', String(Math.round(box * 10000) / 10000));
+}
+
+// The mounted renderer has the final word on its drawn ratio: the box takes
+// the board SVG's viewBox, so it fills the card edge to edge. Chessground draws
+// in a square box (its only SVG is the arrows layer) and keeps the guess.
+function fitFinishedBoard(host: HTMLElement): void {
+  const svg = [...host.querySelectorAll<SVGSVGElement>('svg[viewBox]')].find(
+    (el) => !el.closest('.cg-wrap') && el.getBoundingClientRect().width > 40,
+  );
+  const box = svg?.viewBox?.baseVal;
+  if (!box || box.width <= 0 || box.height <= 0) return;
+  const aspect = box.width / box.height;
+  setBoardAspect(host, aspect);
+}
+
+// The seat colour whose name sits under the board (placeFinishedSeats).
+function finishedBottomSeatColor(game: FeaturedGame): string {
+  const [first, second] = matchupSeats(game);
+  return FINISHED_BOARD_BOTTOM_SEAT === 'first' ? first : second;
+}
+
+function buildHandsFallback(variant: string): HTMLElement {
+  const tile = document.createElement('div');
+  tile.className = 'current-game-hands-fallback';
+  tile.textContent = variantDisplayLabel(variant);
   return tile;
 }
 
@@ -1015,11 +1093,14 @@ function finishedSeatRow(
   seat: BoardSeat,
   color: string,
   name: string,
+  winner: string | null = null,
 ): HTMLElement {
   const row = document.createElement('span');
   row.className = 'current-game-finished-seat';
   row.dataset.seat = seat;
   row.dataset.color = color;
+  // The winner's name reads first; a draw leaves both as they are.
+  if (winner) row.dataset.outcome = winner === color ? 'won' : 'lost';
   row.title = name;
   const label = document.createElement('span');
   label.className = 'current-game-finished-seat-name';

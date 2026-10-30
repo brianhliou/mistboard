@@ -882,6 +882,7 @@ export const ZH_HANS_REVIEW = {
   'games.justFinished': '刚刚结束',
   'games.inTheFog': '对局结束前，棋盘隐藏在迷雾中',
   'games.finishedGame': '打开 {matchup}',
+  'games.finalHands': '双方最后的手牌',
   'games.playingNow': '正在对弈',
   'games.kindLive': '实时',
   'games.kindCorrespondence': '通信',
