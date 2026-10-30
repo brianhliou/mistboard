@@ -386,7 +386,7 @@ describe('article public listing gates', () => {
       '常见的一条家规允许炮隔子打暗子',
     );
     expect(buildArticlePage('banqi', 'zh-Hant').textContent).toContain(
-      '常見的一條家規允許砲隔子打暗子',
+      '常見的一條家規允許炮隔子打暗子',
     );
   });
 
@@ -1001,7 +1001,10 @@ describe('rules variant sidebar', () => {
     expect(pageText).toContain('60 plies (single moves) with no flip or capture');
     expect(pageText).toContain('keeps the 40-ply limit it began under');
     expect(pageText).toContain('threefold repetition');
-    expect(pageText).toContain('On your turn you do exactly one of two things.');
+    expect(pageText).toContain(
+      'On your turn you do exactly one of two things: flip a face-down tile',
+    );
+    expect(pageText).toContain('Can you chain captures in banqi?');
     expect(pageText).toContain('it captures by jumping, not by stepping');
     expect(pageText).toContain('jumping exactly one piece, the screen');
     expect(pageText).toContain('Without a capture it moves one square like everything else.');

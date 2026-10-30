@@ -21,6 +21,16 @@ import type { Article, ArticleBlock } from '../types.js';
 // ladder is the jungle page's row; the prose is shorter; the FAQ keeps only the
 // questions people actually search. The sample game moves to the companion
 // study once the engine games are in.
+//
+// Question-led pass, 2026-10-29: the zh-Hant page takes ~30% of the site's
+// Google impressions (Taiwan searches: 暗棋規則, 暗棋怎麼玩, 暗棋規則吃法,
+// 暗棋規則連吃, 暗棋大小, 象棋規則半盤, 暗棋馬可以斜吃嗎), so each section is
+// headed by the question a player types and opens with a sentence that answers
+// it. When the English is signed off, the zh-Hant headings should read as those
+// searches do: 暗棋怎麼玩？, 半盤象棋怎麼擺？, 輪到你可以做什麼？,
+// 暗棋大小順序：誰吃誰？, 暗棋的炮可以吃什麼？, 暗棋可以連吃嗎？,
+// 暗棋怎樣算贏？什麼時候和棋？. The zh-Hant body uses the generic piece names
+// Taiwan players search with (將 士 象 車 馬 炮 兵), not one colour's set.
 export const banqiArticle: Article = {
   slug: 'banqi',
   gameSpecId: 'banqi',
@@ -33,9 +43,9 @@ export const banqiArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-15',
-  updatedAt: '2026-10-25',
+  updatedAt: '2026-10-29',
   updateNote:
-    'The repetition and chase rules now sit together in one note under Winning and draws.',
+    'Each section now opens with the question it answers, and two new sections cover how to play and whether you can chain captures.',
   audience:
     'Experienced banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
   thumbnail: { kind: 'svg', svg: BANQI_RULES_THUMBNAIL },
@@ -51,7 +61,36 @@ export const banqiArticle: Article = {
   ],
   sections: [
     {
-      heading: 'Board and setup',
+      heading: 'How do you play banqi?',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Banqi is played with the thirty-two xiangqi pieces shuffled face-down on half a xiangqi board. On each turn you either flip one tile or move one of your revealed pieces one square, and you capture by moving onto an enemy piece of equal or lower rank. You win when your opponent has no legal move left.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**Setup.** All thirty-two pieces go face-down into the thirty-two squares, so the board starts full and nobody has a color yet.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**First flip.** The first player flips any tile, and the color that turns up is theirs for the game.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**Each turn.** Flip one face-down tile, or move one of your revealed pieces one square up, down, left or right. Moving onto an enemy piece of equal or lower rank captures it. The cannon is the exception: it captures by jumping over exactly one piece.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**Winning.** You win when your opponent cannot move, usually because all their pieces are gone. Capturing the general does not end the game. Sixty plies with no flip or capture, or the same position three times, is a draw, with one exception for chases explained below.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'You can [play a game against the computer](/?play=computer&gameSpecId=banqi) right now, no account needed.',
+        },
+      ],
+    },
+    {
+      heading: 'How is banqi set up on half a xiangqi board?',
       blocks: [
         {
           kind: 'paragraph',
@@ -74,11 +113,11 @@ export const banqiArticle: Article = {
       ],
     },
     {
-      heading: 'Turns',
+      heading: 'What can you do on your turn?',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'On your turn you do exactly one of two things.',
+          text: 'On your turn you do exactly one of two things: flip a face-down tile, or move one of your revealed pieces one square.',
         },
         {
           kind: 'paragraph',
@@ -87,6 +126,10 @@ export const banqiArticle: Article = {
         {
           kind: 'paragraph',
           text: '**Move** one of your revealed pieces one square up, down, left, or right, onto an empty square or onto an enemy piece it outranks, which captures it. Face-down tiles block the way and cannot be captured.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Every piece moves the same way, the horse and the chariot included: one square at a time, never diagonally.',
         },
         {
           kind: 'paragraph',
@@ -100,7 +143,7 @@ export const banqiArticle: Article = {
       ],
     },
     {
-      heading: 'Capture by rank',
+      heading: 'What is the piece order, and who captures whom?',
       blocks: [
         {
           kind: 'paragraph',
@@ -134,7 +177,7 @@ export const banqiArticle: Article = {
       ],
     },
     {
-      heading: 'The cannon',
+      heading: 'What can the cannon capture in banqi?',
       blocks: [
         {
           kind: 'paragraph',
@@ -168,7 +211,20 @@ export const banqiArticle: Article = {
       ],
     },
     {
-      heading: 'Winning and draws',
+      heading: 'Can you chain captures in banqi?',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'No. In standard banqi, the game played on Mistboard and in computer competition, a turn is one flip or one move, so a piece captures at most once per turn.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Chain capture is a well-known house rule in Taiwan, offered as a separate table mode by many banqi apps and game sites. A piece that captures may keep capturing in the same turn, and some versions also let a piece attack a face-down tile, turning it over in the process. Mistboard plays only the standard game.',
+        },
+      ],
+    },
+    {
+      heading: 'How do you win at banqi, and when is it a draw?',
       blocks: [
         {
           kind: 'paragraph',
@@ -239,6 +295,21 @@ export const banqiArticle: Article = {
             {
               question: 'Can a horse capture a chariot?',
               answer: 'No. The chariot outranks the horse. A horse captures horses, cannons, and soldiers.',
+            },
+            {
+              question: 'Can the horse move or capture diagonally in banqi?',
+              answer:
+                'No. In standard banqi every piece, the horse included, moves one square up, down, left or right. A diagonal horse is a house rule some apps offer as a table option; Mistboard does not use it.',
+            },
+            {
+              question: 'Can the general capture a soldier in banqi?',
+              answer:
+                'No. The general can capture every enemy piece except a soldier, and a soldier can capture the general.',
+            },
+            {
+              question: 'Can the cannon capture the general in banqi?',
+              answer:
+                'Yes. The cannon ignores rank: with exactly one piece between them in a straight line, it can capture the general or any other revealed enemy piece.',
             },
             {
               question: 'Can you capture more than once in a turn?',
