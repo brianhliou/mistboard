@@ -145,8 +145,8 @@ describe('variant correspondence conformance', () => {
 // take only the spec and look the marker up in variants.ts; these pin that.
 describe('variant marker conformance', () => {
   // HK mahjong is behind a flag and never shown as a variant: no marker, no icon.
-  // Nor is Three Kingdoms banqi, a local playtest (#628) whose flag is never set
-  // in prod.
+  // Nor is Three Kingdoms banqi, a hidden playtest (#628, #684) only an admin
+  // reaches on prod.
   const markedTenants = webVariantTenants().filter(
     (tenant) =>
       tenant.gameSpecId !== MAHJONG_SPEC_ID && tenant.gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID,

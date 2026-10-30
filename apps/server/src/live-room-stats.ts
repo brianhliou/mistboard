@@ -124,7 +124,11 @@ export function collectLiveRoomStats(
           onlineIdentities.add(`c:${client.id}`);
         }
       }
-      if (inPlay && seatedHuman) countSpec(tenant.gameSpecId);
+      // The per-variant count is public (/api/live-stats, the homepage "N
+      // playing"), so an unlisted tenant's room stays out of it: a hidden
+      // playtest an admin plays on prod (Three Kingdoms banqi, #684) must not
+      // name itself there.
+      if (inPlay && seatedHuman && linkable) countSpec(tenant.gameSpecId);
     }
   }
   let anonymousOnline = 0;

@@ -31,7 +31,12 @@
 // the count uses the same line: 25 of 324 counted games sat under it on
 // 2026-09-12. Set 2026-09-12.
 
-import { ALLOWLISTED_PLAYTEST_SPEC_IDS, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
+import {
+  ALLOWLISTED_PLAYTEST_SPEC_IDS,
+  isPublicGameSpec,
+  RETIRED_GAME_SPEC_IDS,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
+} from '@mistboard/game';
 import type { GameParticipantColor, GameResult } from './persistence-games.js';
 
 export const STATS_COUNTED_FROM = '2026-06-01';
@@ -147,8 +152,16 @@ export function notRetiredVariant(
 // publicSurface derives). A hidden variant's games would otherwise show in
 // the /stats totals and its per-variant JSON before anyone may see the game;
 // the day the switch flips, its games count, history included. Set 2026-10-16.
+//
+// Three Kingdoms banqi (#684) is an admin-only playtest with no allowlist
+// rows: an admin's games stay off the public figures while its spec is hidden.
+const ADMIN_PLAYTEST_SPEC_IDS: readonly string[] = [THREE_KINGDOMS_BANQI_SPEC_ID];
+
 export function offPublicGameSpecIds(allowlisted: readonly string[]): readonly string[] {
-  return [...RETIRED_GAME_SPEC_IDS, ...allowlisted];
+  const adminOnly = ADMIN_PLAYTEST_SPEC_IDS.filter(
+    (id) => !isPublicGameSpec(id) && !allowlisted.includes(id),
+  );
+  return [...RETIRED_GAME_SPEC_IDS, ...allowlisted, ...adminOnly];
 }
 
 export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds(

@@ -28,6 +28,7 @@
         "if [ ${VITE_BANQI_ENABLED:-false} = true ] || [ ${MISTBOARD_INSTALL_BANQI:-0} = 1 ] || [ ${MISTBOARD_BUILD_ENGINE:-0} = 1 ]; then sh /app/scripts/fetch-release-asset.sh /app/bin banqi-engine; fi",
         "sh /app/scripts/fetch-release-asset.sh /app/bin jungle-flip-engine",
         "sh /app/scripts/fetch-release-asset.sh /app/bin jungle_flip_tb_4.bin",
+        "sh /app/scripts/fetch-release-asset.sh /app/bin three-kingdoms-engine",
         "if [ ${MISTBOARD_JUNGLE_RUST_ENGINE:-false} = true ] || [ ${MISTBOARD_INSTALL_JUNGLE:-0} = 1 ] || [ ${MISTBOARD_BUILD_ENGINE:-0} = 1 ]; then sh /app/scripts/fetch-release-asset.sh /app/bin jungle-engine; fi",
         "if [ ${MISTBOARD_BUILD_ENGINE:-0} = 1 ]; then pip install maturin; fi",
         "if [ ${MISTBOARD_BUILD_ENGINE:-0} = 1 ]; then python -m maturin build --release -m /app/mistboard-engine/fow_rust/Cargo.toml && ls /app/mistboard-engine/fow_rust/target/wheels/; fi",

@@ -46,8 +46,6 @@ import {
   jungleEnabled,
   jungleFlipEnabled,
   mahjongEnabled,
-  threeKingdomsBanqiEnabled,
-  threeKingdomsBanqiEngineEnabled,
   xiangqiEnabled,
   xiangqiMahjongEnabled,
 } from '../feature-flags.js';
@@ -55,6 +53,10 @@ import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
 import { hasLikelyVariantGrant } from '../signed-in-state.js';
+import {
+  threeKingdomsBanqiEngineOffered,
+  threeKingdomsBanqiOffered,
+} from '../three-kingdoms-banqi-access.js';
 
 export type WebTenantEngineOption = {
   id: string;
@@ -182,6 +184,10 @@ const XIANGQI_CAPABILITIES_BASE = {
 } as const;
 
 const alwaysEnabled = () => true;
+
+const THREE_KINGDOMS_BANQI_ENGINE_OPTIONS: readonly WebTenantEngineOption[] = [
+  { id: 'misty-three-kingdoms-banqi', name: 'Misty', familyName: 'Misty', kind: 'container' },
+];
 
 // Offered only to an account the server would actually seat: the build flag
 // plus, while the spec is a hidden playtest, a grant named on /api/auth/me
@@ -1096,14 +1102,16 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     },
   },
   {
-    // Three Kingdoms banqi (三國暗棋, #628): a LOCAL PLAYTEST ONLY, on
-    // VITE_THREE_KINGDOMS_BANQI_ENABLED (off by default; never set in prod). No
-    // postgame, review or watch surface, so like HK mahjong the server marks its
-    // finished rows unavailable; the room itself still shows the finished game.
-    // Whether it gets any of those is the 10-31 checkpoint's call.
+    // Three Kingdoms banqi (三國暗棋, #628): a playtest offered to admin
+    // accounts on prod (#684) and to everyone in a build with
+    // VITE_THREE_KINGDOMS_BANQI_ENABLED (local only). See
+    // ../three-kingdoms-banqi-access.ts. No postgame, review or watch surface,
+    // so like HK mahjong the server marks its finished rows unavailable; the
+    // room itself still shows the finished game. Whether it gets any of those
+    // is the 10-31 checkpoint's call.
     gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
     roomIdPrefix: 'tkb_',
-    enabled: threeKingdomsBanqiEnabled,
+    enabled: threeKingdomsBanqiOffered,
     pageTitleKey: 'variant.threeKingdomsBanqi.name',
     loadLiveRoomClient: () =>
       import('../live-three-kingdoms-banqi.js').then(
@@ -1127,23 +1135,21 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsTimeControl: true,
       },
       timePresetIds: ['5m5', '10m5'],
-      // One predicate for both (the conformance test checks the pair).
-      offerInMenu: threeKingdomsBanqiEnabled,
-      acceptsDeepLink: threeKingdomsBanqiEnabled,
-      // The Rust UCI engine, only when the build says the server has its binary
+      // One predicate for both (the conformance test checks the pair). It is
+      // read per call, never at module load, because the admin answer arrives
+      // with /api/auth/me after the registry is built.
+      offerInMenu: threeKingdomsBanqiOffered,
+      acceptsDeepLink: threeKingdomsBanqiOffered,
+      // The Rust UCI engine: for an admin on prod (the server fetches the
+      // binary) and in a local build that says the server has it
       // (VITE_THREE_KINGDOMS_BANQI_ENGINE). Without an option the variant offers
-      // no Play-the-computer path at all.
-      engineOptions: threeKingdomsBanqiEngineEnabled()
-        ? [
-            {
-              id: 'misty-three-kingdoms-banqi',
-              name: 'Misty',
-              familyName: 'Misty',
-              kind: 'container',
-            },
-          ]
-        : undefined,
-      defaultEngineId: threeKingdomsBanqiEngineEnabled() ? 'misty-three-kingdoms-banqi' : undefined,
+      // no Play-the-computer path at all. Getters for the same reason as above.
+      get engineOptions() {
+        return threeKingdomsBanqiEngineOffered() ? THREE_KINGDOMS_BANQI_ENGINE_OPTIONS : undefined;
+      },
+      get defaultEngineId() {
+        return threeKingdomsBanqiEngineOffered() ? 'misty-three-kingdoms-banqi' : undefined;
+      },
     },
   },
 ];

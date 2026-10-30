@@ -141,7 +141,7 @@ export type LiveObservePolicy = 'open' | 'masked' | 'sealed';
 // Explicit and exhaustive over the hidden-identity specs: a new one fails
 // hiddenIdentityLiveObservePolicy's key check in watch-live.test.ts until it is
 // classified here, and an unclassified spec falls through to 'masked'.
-// Three Kingdoms banqi (#628, local playtest) serves a spectator the red seat's
+// Three Kingdoms banqi (#628, hidden playtest) serves a spectator the red seat's
 // masked board, the same for both seats (three-kingdoms-banqi-hidden-info.test.ts).
 const SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = [
   'banqi',

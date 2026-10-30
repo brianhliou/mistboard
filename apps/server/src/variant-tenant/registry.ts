@@ -259,6 +259,12 @@ export type VariantTenantRegistration = {
   // `${errorPrefix}_not_integrated`.
   errorPrefix: string;
   enabled(): boolean;
+  // A playtest open to some accounts while enabled() is off (Three Kingdoms
+  // banqi: admins, #684). Present, it replaces enabled() at the WebSocket door
+  // and is also applied to LIVE rooms, which otherwise route before any flag
+  // check: a refused account cannot sit, watch or hydrate. Absent, the door is
+  // enabled() for persisted rooms and open for live ones, as before.
+  admitsConnection?(accountUser: UserAccount | null): boolean;
   // The tenant's live room map (adapter-owned). Read by the ws resolver
   // (live rooms route before flag checks) and the shutdown sweeps.
   rooms: ReadonlyMap<string, TenantManagedRoom>;

@@ -1,13 +1,19 @@
 /**
- * Three Kingdoms banqi (#628) registry entry: a LOCAL PLAYTEST ONLY.
+ * Three Kingdoms banqi (#628) registry entry: an admin-only prod playtest (#684).
  *
  * As narrow as mahjong's: no TV channel, no lobby seek, no export, no card, no
- * correspondence. A room exists only through the create route, which the game
- * spec gate refuses unless MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED=true. PvE
- * seats the Rust engine (three-kingdoms-banqi-engine.ts) when its path is set.
+ * correspondence, never rated. A room exists only through the create route,
+ * which admits an admin account, or anyone when the local flag
+ * MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED=true (three-kingdoms-banqi-access.ts).
+ * The WebSocket door applies the same rule to every connection, live room or
+ * persisted (admitsConnection). enabled() stays the env flag, so every listing
+ * surface skips the variant. PvE seats the Rust engine
+ * (three-kingdoms-banqi-engine.ts) when its binary resolves.
  */
 
 import type { BanqiSeat, RoomTimeControl } from '@mistboard/game';
+import { currentAccountUser } from './account-session.js';
+import { threeKingdomsBanqiEnabled } from './feature-flags.js';
 import * as persistence from './persistence.js';
 import {
   handleThreeKingdomsBanqiCreate,
@@ -17,6 +23,7 @@ import {
   scheduleThreeKingdomsBanqiEngineMove,
   type ThreeKingdomsBanqiEngineRoom,
 } from './server-three-kingdoms-banqi-engine.js';
+import { threeKingdomsBanqiAdmits } from './three-kingdoms-banqi-access.js';
 import {
   type ThreeKingdomsBanqiEvent,
   type ThreeKingdomsBanqiRuntimeRoom,
@@ -88,7 +95,10 @@ registerVariantTenant({
   ownsSpecRouting: true,
   replays: tenantReplayCheck(threeKingdomsBanqiTenant),
   errorPrefix: 'three_kingdoms_banqi',
-  enabled: threeKingdomsBanqiTenant.enabled,
+  // The env flag only: listing surfaces (current games, TV, lobby, bot
+  // profiles, live stats) read this and must not show the admin playtest.
+  enabled: threeKingdomsBanqiEnabled,
+  admitsConnection: threeKingdomsBanqiAdmits,
   watch: null,
   rooms: threeKingdomsBanqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
   activeGameCount: () =>
@@ -118,12 +128,14 @@ registerVariantTenant({
   clearRooms: () => threeKingdomsBanqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsThreeKingdomsBanqi,
-    handleCreate: (ctx, _request, response, body, accountUser) =>
+    // The dispatcher resolves the account only for a rated request; the admin
+    // gate needs it for every create.
+    handleCreate: async (ctx, request, response, body, accountUser) =>
       handleThreeKingdomsBanqiCreate(
         { ...ctx, createThreeKingdomsBanqiRoom },
         response,
         body,
-        accountUser,
+        accountUser ?? (await currentAccountUser(request)),
       ),
   },
   lobby: null,

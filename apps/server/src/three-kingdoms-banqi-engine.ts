@@ -1,11 +1,13 @@
-// The Three Kingdoms banqi (三國暗棋, #628) bot for the LOCAL playtest.
+// The Three Kingdoms banqi (三國暗棋, #628) bot for the admin-only prod playtest
+// (#684).
 //
 // The engine is the Rust `three-kingdoms-banqi-engine` binary from the private
 // engine repo (three_kingdoms_banqi_rust), driven as a UCI subprocess, one
-// process per move, the same pattern as MistyBanqi (banqi-engine.ts). Nothing
-// here ships: the binary comes only from MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH,
-// and with it unset the bot does not exist (the create route refuses a PvE room
-// and the web client hides the option).
+// process per move, the same pattern as MistyBanqi (banqi-engine.ts). Prod gets
+// the release asset `three-kingdoms-engine`, fetched and sha-checked into
+// /app/bin by railpack.json (scripts/fetch-release-asset.sh). Locally,
+// MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH names a build; with neither, the
+// bot does not exist (the create route refuses a PvE room).
 //
 // The engine is handed the REDACTED position only: the public FEN, the covered
 // pool computed from public counts, and the quiet moves since the last flip or
@@ -32,13 +34,29 @@ const enginePool = new UciEnginePool({
   queueTimeoutMessage: 'three-kingdoms-banqi-engine concurrency queue timed out',
 });
 
-/** The binary from the env var, or null. No default search path: a bot that
- * appears because a file happens to exist is not "off unless set locally". */
-export function threeKingdomsBanqiEnginePath(): string | null {
-  const explicit = process.env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH;
-  if (!explicit) return null;
-  const resolved = resolve(explicit);
-  return existsSync(resolved) ? resolved : null;
+export const THREE_KINGDOMS_BANQI_ENGINE_BINARY = 'three-kingdoms-engine';
+
+/**
+ * The binary: the env var when set (a set path that does not exist means no
+ * bot, never a silent fallback), else the release asset railpack fetched into
+ * bin/ (cwd first, then /app/bin, where the prod image puts it), else null.
+ */
+export function threeKingdomsBanqiEnginePath(
+  env: NodeJS.ProcessEnv = process.env,
+  cwd: string = process.cwd(),
+): string | null {
+  const explicit = env.MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH;
+  if (explicit) {
+    const resolved = resolve(explicit);
+    return existsSync(resolved) ? resolved : null;
+  }
+  for (const candidate of [
+    resolve(cwd, 'bin', THREE_KINGDOMS_BANQI_ENGINE_BINARY),
+    `/app/bin/${THREE_KINGDOMS_BANQI_ENGINE_BINARY}`,
+  ]) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
 }
 
 export function threeKingdomsBanqiEngineAvailable(): boolean {
@@ -96,7 +114,11 @@ export const threeKingdomsBanqiLiveEngineMove: ThreeKingdomsBanqiEngineProvider 
   request,
 ) => {
   const bin = threeKingdomsBanqiEnginePath();
-  if (!bin) throw new Error('MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH is not set');
+  if (!bin) {
+    throw new Error(
+      'three-kingdoms-engine not found (MISTBOARD_THREE_KINGDOMS_BANQI_ENGINE_PATH unset or missing, no bin/three-kingdoms-engine)',
+    );
+  }
   const release = await enginePool.acquire();
   try {
     return await runUciEval({
