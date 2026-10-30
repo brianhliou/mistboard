@@ -276,6 +276,14 @@
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
   }
+  /* A reserved gauge track with no bar in it (an engine-less page) keeps the
+     rail's rounded corners: there is nothing for the table to butt against. */
+  .review-shell__cluster--gauge:has(.review-shell__gauge-spacer)
+    .review-shell__right
+    .review-rail-main {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+  }
 }
 
 @media (min-width: 1260px) {

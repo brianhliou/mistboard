@@ -25,7 +25,7 @@ import {
   type TkBoardArrow,
   type TkBoardMarker,
 } from '../three-kingdoms-banqi-diagrams.js';
-import { tkMovesLeftLine, tkPoints } from '../three-kingdoms-banqi-score.js';
+import { tkPoints } from '../three-kingdoms-banqi-score.js';
 import { fillCapturedPoolWith } from './captured-pool.js';
 import type { NodeShape } from './game-tree.js';
 import { makeThreeKingdomsBanqiTreeAdapter } from './three-kingdoms-banqi-tree-adapter.js';
@@ -61,21 +61,15 @@ export function threeKingdomsBanqiInkScores(
   return scores;
 }
 
-// The live room's wording (three-kingdoms-banqi-score.ts): "45 pts", and the
-// moves-left line only once the quiet-move count nears the limit.
-function scoreRow(host: HTMLElement, points: number, quiet: number | null): void {
+// The live room's wording (three-kingdoms-banqi-score.ts), beside the seat's
+// captures as the room shows it beside the name: "45 pts". In the seat row,
+// not the right rail, so the move list keeps the board's top and height as on
+// every other review page.
+function seatPoints(points: number): HTMLElement {
   const line = document.createElement('span');
   line.className = 'tk-banqi-scores';
   line.textContent = tkPoints(points);
-  const left = quiet === null ? null : tkMovesLeftLine(quiet);
-  if (!left) {
-    host.replaceChildren(line);
-    return;
-  }
-  const note = document.createElement('span');
-  note.className = 'tk-banqi-moves-left';
-  note.textContent = left;
-  host.replaceChildren(line, note);
+  return line;
 }
 
 const adapter = makeThreeKingdomsBanqiTreeAdapter();
@@ -96,7 +90,8 @@ const presentation: TreePresentation<
   defaultBoardAriaLabel: 'Three Kingdoms banqi board',
   boardAspect: TK_LIVE_BOARD_VIEW.width / TK_LIVE_BOARD_VIEW.height,
   boardCols: 10,
-  boardMaxPx: 620,
+  boardMaxPx: 560,
+  reserveGaugeTrack: true,
   // The board is the same for both seats, so the Flip control only swaps the
   // seat rows, as on banqi.
   perspective: (flipped) => (flipped ? 'black' : 'red'),
@@ -116,18 +111,13 @@ const presentation: TreePresentation<
     kind: 'circle',
     className: `xq-shape--${s.brush}`,
   }),
+  // The pieces this seat took, then its points. `owner` is the ink of the
+  // pieces in the row, so the points are the other ink's score.
   seatCaptures: (host, view, _rootView, owner) => {
     if (owner !== 'red' && owner !== 'black') return;
     fillCapturedPoolWith(host, view.captured, owner, banqiPieceGhostSvg);
-  },
-  // The race to 100, one row per ink: the bottom row is the ink the board
-  // puts at the bottom, and it also carries the shared moves-left line.
-  material: (hosts) => (truth, _rootTruth, flipped) => {
-    const scores = threeKingdomsBanqiInkScores(truth.captures);
-    const bottom: BanqiColor = flipped ? 'black' : 'red';
-    const top: BanqiColor = bottom === 'red' ? 'black' : 'red';
-    scoreRow(hosts.top, scores[top], null);
-    scoreRow(hosts.bottom, scores[bottom], truth.noProgressClock);
+    const scorer: BanqiColor = owner === 'red' ? 'black' : 'red';
+    host.append(seatPoints(threeKingdomsBanqiInkScores(view.captured)[scorer]));
   },
   moveGlyphMarker: (move: ThreeKingdomsBanqiMove, glyph): TkBoardMarker => ({
     square: move.to,

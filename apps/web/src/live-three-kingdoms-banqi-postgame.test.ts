@@ -152,8 +152,11 @@ describe('Three Kingdoms banqi postgame page', () => {
     expect(root.querySelector('.game-meta-card')).not.toBeNull();
     const firstMove = root.querySelector('.review-move-list__row .review-move-list__move');
     expect(firstMove?.querySelector('.review-move-list__san')?.textContent).toBeTruthy();
-    // The per-ply score row from the review's material hook.
-    expect(root.querySelector('.tk-banqi-scores')?.textContent).toMatch(/^\d+ pts$/);
+    // Each seat's points, in its seat row under and over the board.
+    expect(root.querySelectorAll('.review-seat .tk-banqi-scores')).toHaveLength(2);
+    expect(root.querySelector('.review-seat .tk-banqi-scores')?.textContent).toMatch(/^\d+ pts$/);
+    // Nothing between the board and the move list: no right-rail material rows.
+    expect(root.querySelector('.review-material-row:not(.review-seat__material)')).toBeNull();
     // No engine for TK: no analysis request button.
     expect(root.textContent).not.toContain('Request computer analysis');
   });

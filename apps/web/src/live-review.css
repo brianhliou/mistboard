@@ -586,6 +586,9 @@
     --phone-room-band: 44px;
     --phone-room-bar: 48px;
     --phone-room-header: 52px;
+    /* Square corners: the board meets the screen edges and the seat bands,
+       and a rounded corner left wedges of page showing (Brian, 2026-10-30). */
+    --board-corner-radius: 0px;
     --uni-board-h-budget: calc(
       100svh -
       var(--phone-room-header) -
@@ -652,6 +655,13 @@
      px it gives back instead of leaving them all on the right. */
   .live-review__cluster .board-shell > .board-stage {
     justify-self: center;
+  }
+
+  /* An SVG board needs no 8px snap (that is for chessground's container,
+     .cg-snap); unsnapped it reaches both edges of a full-width board instead
+     of leaving a 3px strip of page on each side. */
+  .live-review__cluster .board-shell > .board-stage:not(:has(.cg-snap)) {
+    width: 100%;
   }
 
   /* The start/finish frame (live-lifecycle-effects.css) sits 2px outside the
@@ -856,6 +866,96 @@
     [data-action-section]:not([hidden]) .action-notice > span:last-child
   ) {
     --phone-room-notice: 60px;
+  }
+
+  /* The waiting room: before the first move the moves strip is empty, so the
+     invite takes its slot: the title on one line with Copy invite beside it.
+     The board gives up nothing it would not give up mid-game, so a 390px
+     phone gets a full-width board even with the browser's bars showing
+     (Brian's 2026-10-30 phone review: the board should fill the width and
+     the space under it "looks unintentional"). The band sits midway down the
+     room a width-bound board leaves, and the bar still ends the screen. */
+  .review-shell__cluster.live-review__cluster:has(
+    .round-table__row:not([hidden])
+      > .room-actions:not([data-postgame-sheet])
+      .room-actions-row
+      > button
+  ) {
+    --phone-room-notice: 0px;
+    --phone-room-wait-top: calc(var(--phone-room-slack) / 2);
+  }
+
+  .review-shell__cluster.live-review__cluster:has(
+      .round-table__row:not([hidden])
+        > .room-actions:not([data-postgame-sheet])
+        .room-actions-row
+        > button
+    )
+    .game-table-moves {
+    /* Kept as a zero-height line, not removed: its top margin moves the
+       whole bar line (the bar and the Abort button beside it) to the
+       bottom of the screen. */
+    min-height: 0;
+    height: 0;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    margin-top: calc(var(--phone-room-slack) - var(--phone-room-wait-top));
+  }
+
+  .review-shell__cluster.live-review__cluster:has(
+      .round-table__row:not([hidden])
+        > .room-actions:not([data-postgame-sheet])
+        .room-actions-row
+        > button
+    )
+    [data-action-section] {
+    /* Wide enough to start its own line under the seat line, narrow enough
+       to leave the button its place at the end of it. */
+    flex: 1 1 calc(100% - 160px);
+    min-width: 0;
+    height: calc(var(--phone-room-band) - 8px);
+    margin: calc(4px + var(--phone-room-wait-top)) 8px 4px 12px;
+  }
+
+  /* The button says what the sentence said. */
+  .review-shell__cluster.live-review__cluster:has(
+      .round-table__row:not([hidden])
+        > .room-actions:not([data-postgame-sheet])
+        .room-actions-row
+        > button
+    )
+    [data-action-section]
+    .action-notice
+    > span {
+    display: none;
+  }
+
+  .review-shell__cluster.live-review__cluster:has(
+      .round-table__row:not([hidden])
+        > .room-actions:not([data-postgame-sheet])
+        .room-actions-row
+        > button
+    )
+    .round-table__row:has(> .room-actions) {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    height: calc(var(--phone-room-band) - 8px);
+    margin: calc(4px + var(--phone-room-wait-top)) 12px 4px 0;
+    padding: 0;
+  }
+
+  .review-shell__cluster.live-review__cluster:has(
+      .round-table__row:not([hidden])
+        > .room-actions:not([data-postgame-sheet])
+        .room-actions-row
+        > button
+    )
+    .room-actions-row
+    > button {
+    min-width: 0;
+    padding: 6px 14px;
   }
 
   .live-review__cluster [data-action-section]:has(.action-notice > span:last-child) {

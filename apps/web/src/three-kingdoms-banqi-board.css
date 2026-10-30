@@ -22,3 +22,14 @@
   fill: rgb(22, 40, 58);
   fill-opacity: 0.85;
 }
+
+/* A review seat's points, after its captures: the live room's seat tag
+   (.clock-seat-tag) in the study board's seat row. */
+.review-seat .tk-banqi-scores {
+  flex-shrink: 0;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--site-muted);
+  white-space: nowrap;
+}
