@@ -473,10 +473,11 @@ async function createStudy(
   // rootFen rides inside the serialized tree blob (SerializedTree.rootFen), so a
   // composition chapter needs no dedicated column or route change.
   //
-  // A dealt variant (banqi, jieqi, flip jungle) has no standard start, so an
-  // author who leaves the position box empty still needs a deal: without one the
-  // chapter would have nothing to replay from and would not open at all. Mint a
-  // fresh one, exactly as visiting /analysis/<variant> with no fen does.
+  // A dealt variant (banqi, jieqi, flip jungle, three kingdoms banqi) has no
+  // standard start, so an author who leaves the position box empty still needs
+  // a deal: without one the chapter would have nothing to replay from and would
+  // not open at all. Mint a fresh one, exactly as visiting /analysis/<variant>
+  // with no fen does.
   const effectiveRootFen = rootFen || initialStartFen(variant) || undefined;
   const root = effectiveRootFen ? { ...EMPTY_TREE, rootFen: effectiveRootFen } : EMPTY_TREE;
   const response = await fetch('/api/studies', {

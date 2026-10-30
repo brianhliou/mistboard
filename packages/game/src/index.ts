@@ -37,6 +37,7 @@ export * from './puzzles-xiangqi-setup.js';
 export * from './puzzles-xiangqi-transposition.js';
 export * from './start-fen.js';
 export * from './study-analysis-coverage.js';
+export * from './three-kingdoms-banqi-fen.js';
 export * from './time-controls.js';
 export * from './types.js';
 export * from './variants.js';

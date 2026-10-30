@@ -113,6 +113,7 @@ describe('study board dispatch', () => {
       'duck-xiangqi': './duck-xiangqi-review.js',
       'atomic-xiangqi': './atomic-xiangqi-review.js',
       'crazyhouse-xiangqi': './crazyhouse-xiangqi-review.js',
+      'three-kingdoms-banqi': './three-kingdoms-banqi-review.js',
       chess: './chess-review.js',
     };
     for (const variant of STUDY_VARIANTS) {
@@ -137,16 +138,23 @@ describe('create-study variant picker', () => {
     expect(STUDY_ELIGIBLE_SPEC_IDS).toContain('duck-xiangqi');
   });
 
-  // The "already selected but unlaunched" branch of the filter is real and
-  // still there, but it is currently UNREACHABLE from a test: every
-  // study-eligible variant has launched, and the filter reads
-  // variantPublicSurfaceEnabled directly rather than taking a predicate. This
-  // asserts the half that is reachable, across every variant, instead of
-  // naming one and quietly proving nothing. When the next eligible variant
-  // lands unlaunched, restore a case that pins it.
+  // Three Kingdoms banqi (#628) is eligible and unlaunched: its studies are
+  // admin-only, so the picker offers it to an admin and to nobody else.
+  it('offers an unlaunched admin-only variant to an admin only', () => {
+    const offered = (isAdmin: boolean) =>
+      [...buildStudyVariantSelect('variant', DEFAULT_STUDY_VARIANT, () => isAdmin).options].map(
+        (option) => option.value,
+      );
+    expect(offered(false)).not.toContain('three-kingdoms-banqi');
+    expect(offered(true)).toContain('three-kingdoms-banqi');
+    // Retired variants stay out for an admin too: admin-only is a list, not a
+    // blanket "admins see everything".
+    expect(offered(true)).not.toContain('fortress-xiangqi');
+  });
+
   it('keeps the current selection listed, whichever variant it is', () => {
     for (const { id } of STUDY_VARIANTS) {
-      const select = buildStudyVariantSelect('variant', id);
+      const select = buildStudyVariantSelect('variant', id, () => false);
       expect([...select.options].map((option) => option.value)).toContain(id);
       expect(select.value).toBe(id);
     }

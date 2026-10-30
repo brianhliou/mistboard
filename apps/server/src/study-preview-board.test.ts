@@ -77,7 +77,14 @@ test('an unparseable rootFen is a failure, not a fall-through to the start', () 
     fen: null,
     grid: null,
   });
-  for (const variant of ['jieqi', 'banqi', 'jungle', 'chess', 'duck-xiangqi']) {
+  for (const variant of [
+    'jieqi',
+    'banqi',
+    'jungle',
+    'chess',
+    'duck-xiangqi',
+    'three-kingdoms-banqi',
+  ]) {
     assert.equal(
       studyPreviewBoard({ variant, rootFen: 'not a fen', mainline: [] })?.grid,
       null,
@@ -174,6 +181,22 @@ const derived: {
     size: [4, 4],
     row: [0, '????'],
   },
+  {
+    // Three Kingdoms banqi (#628): a 9x5 point board; file e and rank 3 start
+    // empty, every other point a face-down tile with no colour.
+    variant: 'three-kingdoms-banqi',
+    rootFen: initialStartFen('three-kingdoms-banqi', () => 0.3),
+    shape: 'three-kingdoms-banqi',
+    size: [9, 5],
+    row: [0, '????.????'],
+  },
+  {
+    variant: 'three-kingdoms-banqi',
+    rootFen: '9/9/2X6/9/G4Xc2 r R1s1 0 1 Rs',
+    shape: 'three-kingdoms-banqi',
+    size: [9, 5],
+    row: [4, 'r....?b..'],
+  },
 ];
 
 for (const c of derived) {
@@ -205,6 +228,7 @@ test('a face-down piece stays face down in the preview payload, whatever lies un
       'XXXX/XXXX/XXXX/XXXX - R1C1D1W1P1T1L1E1r1c1d1w1p1t1l1e1 0 0 WlePDdwpTCErcLRt',
       'XXXX/XXXX/XXXX/XXXX - R1C1D1W1P1T1L1E1r1c1d1w1p1t1l1e1 0 0 lWePDdwpTCErcLRt',
     ],
+    ['three-kingdoms-banqi', '9/9/2X6/9/G4Xc2 r R1s1 0 1 Rs', '9/9/2X6/9/G4Xc2 r R1s1 0 1 sR'],
   ];
   for (const [variant, a, b] of pairs) {
     const left = JSON.stringify(studyPreviewBoard({ variant, rootFen: a, mainline: [] }));

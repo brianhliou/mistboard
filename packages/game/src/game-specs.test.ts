@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  ADMIN_ONLY_STUDY_SPEC_IDS,
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   CANONICAL_VARIANT_ORDER,
@@ -13,9 +14,11 @@ import {
   GAME_SPECS,
   gameSpecForId,
   gameSpecForLegacyLiveRoom,
+  isAdminOnlyStudySpecId,
   isCorrespondenceAllowlistedSpec,
   isCorrespondenceRatedSpec,
   isGameSpecId,
+  isPublicGameSpec,
   isRatedPoolBase,
   isRetiredGameSpec,
   isStudyEligibleSpecId,
@@ -29,6 +32,7 @@ import {
   RETIRED_GAME_SPEC_IDS,
   ratingPoolForSpec,
   STUDY_ELIGIBLE_SPEC_IDS,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
@@ -262,4 +266,23 @@ test('Xiangqi Mahjong is not played by correspondence, publicly or by allowlist'
   assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(XIANGQI_MAHJONG_SPEC_ID), false);
   assert.equal(isCorrespondenceAllowlistedSpec(XIANGQI_MAHJONG_SPEC_ID), false);
   assert.equal(isCorrespondenceRatedSpec(XIANGQI_MAHJONG_SPEC_ID), false);
+});
+
+test('admin-only study variants are study-eligible and not yet launched', () => {
+  assert.deepEqual(ADMIN_ONLY_STUDY_SPEC_IDS, [THREE_KINGDOMS_BANQI_SPEC_ID]);
+  for (const id of ADMIN_ONLY_STUDY_SPEC_IDS) {
+    assert.equal(isStudyEligibleSpecId(id), true, `${id} is admin-only but has no study board`);
+    // A launch flips publicSurface; this fails until the same change lets
+    // everyone at the variant's studies by dropping the id from the list.
+    assert.equal(
+      isPublicGameSpec(id),
+      false,
+      `${id} launched but its studies are still admin-only`,
+    );
+    // The list queries splice the ids into SQL as literals.
+    assert.match(id, /^[a-z0-9-]+$/);
+  }
+  assert.equal(isAdminOnlyStudySpecId(THREE_KINGDOMS_BANQI_SPEC_ID), true);
+  assert.equal(isAdminOnlyStudySpecId(BANQI_SPEC_ID), false);
+  assert.equal(isAdminOnlyStudySpecId('three-kingdoms-banqi '), false);
 });

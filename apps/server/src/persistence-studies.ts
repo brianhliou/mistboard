@@ -6,6 +6,7 @@
 // All reads/writes no-op (null / no-op) when persistence is disabled.
 
 import { randomBytes } from 'node:crypto';
+import { ADMIN_ONLY_STUDY_SPEC_IDS } from '@mistboard/game';
 import { getPool, isInitialized } from './persistence-db.js';
 import {
   STUDY_PREVIEW_PLIES,
@@ -292,6 +293,24 @@ function nameFilter(q: string | undefined, paramIndex: number): { clause: string
   return { clause: ` AND s.name ILIKE $${paramIndex}`, value: `%${escaped}%` };
 }
 
+/** Who a list is for. Admin-only study variants (ADMIN_ONLY_STUDY_SPEC_IDS,
+ *  #628) stay out of every list unless the caller says the reader is an admin,
+ *  so a list call that forgets the option hides them rather than leaks them. */
+export type StudyListAccess = { includeAdminOnly?: boolean };
+
+/** ` AND NOT EXISTS (...)` dropping a study with any chapter in an admin-only
+ *  variant, for a study aliased `s`. The ids are spliced as literals: they are
+ *  constants checked to be plain slugs (game-specs.test.ts), never input. */
+export function adminOnlyStudyFilter(access: StudyListAccess | undefined): string {
+  if (access?.includeAdminOnly || ADMIN_ONLY_STUDY_SPEC_IDS.length === 0) return '';
+  const ids = ADMIN_ONLY_STUDY_SPEC_IDS.map((id) => {
+    if (!/^[a-z0-9-]+$/.test(id)) throw new Error(`unsafe study variant id: ${id}`);
+    return `'${id}'`;
+  }).join(', ');
+  return ` AND NOT EXISTS (SELECT 1 FROM study_chapters admin_only
+                    WHERE admin_only.study_id = s.id AND admin_only.variant IN (${ids}))`;
+}
+
 type PublicStudyRow = StudyRow & {
   chapter_count: string;
   chapter_preview: unknown;
@@ -456,6 +475,21 @@ export async function getStudyById(id: string): Promise<StudyWithChapters | null
   return { ...mapStudy(row), chapters: chapters.rows.map(mapChapter) };
 }
 
+/** The variants of a study's chapters, without their trees; null when the
+ *  study does not exist. The route's admin-only check (#628) reads this
+ *  before any handler, so it costs one indexed lookup, not a whole study. */
+export async function getStudyChapterVariants(id: string): Promise<string[] | null> {
+  if (!isInitialized()) return null;
+  const { rows } = await getPool().query<{ variant: string | null }>(
+    `SELECT c.variant FROM studies s
+       LEFT JOIN study_chapters c ON c.study_id = s.id
+      WHERE s.id = $1`,
+    [id],
+  );
+  if (rows.length === 0) return null;
+  return rows.flatMap((row) => (row.variant === null ? [] : [row.variant]));
+}
+
 /**
  * Resolve a curated slug to its full study, any visibility. The study curator
  * keys its studies on the slug (a recipe id), so this is how a re-run finds
@@ -523,7 +557,11 @@ export async function getPracticeStudiesBySlug(
   }));
 }
 
-export async function listStudiesForOwner(ownerId: string, q?: string): Promise<StudySummary[]> {
+export async function listStudiesForOwner(
+  ownerId: string,
+  q?: string,
+  access?: StudyListAccess,
+): Promise<StudySummary[]> {
   if (!isInitialized()) return [];
   const filter = nameFilter(q, 2);
   const params: unknown[] = [ownerId];
@@ -537,7 +575,8 @@ export async function listStudiesForOwner(ownerId: string, q?: string): Promise<
        (SELECT count(*) FROM study_chapters c WHERE c.study_id = s.id) AS chapter_count,
        ${CHAPTER_PREVIEW},
        ${PREVIEW_BOARD}
-       FROM studies s WHERE s.owner_id = $1${filter.clause} ORDER BY s.updated_at DESC`,
+       FROM studies s WHERE s.owner_id = $1${filter.clause}${adminOnlyStudyFilter(access)}
+       ORDER BY s.updated_at DESC`,
     params,
   );
   return rows.map((row) => ({
@@ -563,6 +602,7 @@ export async function listTopPublicStudies(
   limit = 5,
   q?: string,
   offset = 0,
+  access?: StudyListAccess,
 ): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
   const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX + 1));
@@ -589,7 +629,7 @@ export async function listTopPublicStudies(
        LEFT JOIN study_chapters c ON c.study_id = s.id
        LEFT JOIN study_likes l ON l.study_id = s.id
       WHERE s.visibility = 'public'
-        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
+        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}${adminOnlyStudyFilter(access)}
       GROUP BY s.id, u.handle, u.display_name
       -- Newest first by creation, not by last edit: an edit to an old study
       -- (a fixed comment, a new translation) must not put it back at the top
@@ -607,6 +647,7 @@ export async function listFeaturedStudies(
   limit = 30,
   q?: string,
   offset = 0,
+  access?: StudyListAccess,
 ): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
   const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX + 1));
@@ -634,7 +675,7 @@ export async function listFeaturedStudies(
        LEFT JOIN study_likes l ON l.study_id = s.id
       WHERE s.visibility = 'public'
         AND s.featured_at IS NOT NULL
-        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
+        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}${adminOnlyStudyFilter(access)}
       GROUP BY s.id, u.handle, u.display_name
       ORDER BY s.featured_at DESC, s.updated_at DESC, s.id
       LIMIT $1 OFFSET ${offsetParam}`,
@@ -710,6 +751,7 @@ export async function listFavoriteStudies(
   userId: string,
   limit = 30,
   q?: string,
+  access?: StudyListAccess,
 ): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
   const bounded = Math.max(1, Math.min(limit, STUDY_PAGE_MAX));
@@ -733,7 +775,7 @@ export async function listFavoriteStudies(
        LEFT JOIN study_likes l ON l.study_id = s.id
       WHERE fav.user_id = $1
         AND s.visibility = 'public'
-        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
+        AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}${adminOnlyStudyFilter(access)}
       GROUP BY s.id, u.handle, u.display_name
       ORDER BY s.updated_at DESC, s.id
       LIMIT $2`,

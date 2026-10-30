@@ -32,6 +32,7 @@ import { practiceChapterPath } from './practice-chapter-redirect.js';
 import { puzzleById } from './routes/puzzles.js';
 import { isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
+import { studyHasAdminOnlyChapter } from './study-admin-only.js';
 import {
   chapterPageMeta,
   renderStudyBody,
@@ -967,7 +968,9 @@ export async function serveStudyPage(params: {
   const study = await (params.getStudy ?? persistence.getStudyById)(params.studyId).catch(
     () => null,
   );
-  if (study && study.visibility === 'public') {
+  // An admin-only variant's study (#628) gets the bare shell: its meta and
+  // card would publish it to crawlers, which are never admins.
+  if (study && study.visibility === 'public' && !studyHasAdminOnlyChapter(study)) {
     const chapter = params.chapterId
       ? study.chapters.find((c) => c.id === params.chapterId)
       : undefined;

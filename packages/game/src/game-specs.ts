@@ -298,6 +298,11 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  // Three Kingdoms banqi (#628): a tree-review stack (review/three-kingdoms-banqi-
+  // review.ts) and a dealt FEN (three-kingdoms-banqi-fen.ts) pinning the deal in
+  // the chapter root. Unlaunched, so ADMIN_ONLY_STUDY_SPEC_IDS below holds its
+  // studies to admins until the public launch.
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   // Retired 2026-10-11 (Fortress; Atomic, which has a tree-review stack over the
   // standard board and start): off the canonical order, so at the tail. They
   // stay eligible so existing chapters keep loading; the picker no longer
@@ -314,6 +319,19 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
  *  untrusted request string (or a persisted chapter's variant column). */
 export function isStudyEligibleSpecId(value: string): value is GameSpecId {
   return (STUDY_ELIGIBLE_SPEC_IDS as readonly string[]).includes(value);
+}
+
+// Study-eligible specs whose studies only an admin may create, open or list
+// until the variant's public launch (#628). The server refuses everyone else
+// (routes/studies.ts: 403 on create, 404 on every read, filtered out of every
+// list, the sitemap and the share cards); the create picker offers them only
+// to an admin. A launch removes the id here in the same change that flips its
+// publicSurface: game-specs.test.ts fails while an id is both listed here and
+// public. The ids are plain [a-z0-9-] slugs, which the list queries rely on.
+export const ADMIN_ONLY_STUDY_SPEC_IDS: readonly GameSpecId[] = [THREE_KINGDOMS_BANQI_SPEC_ID];
+
+export function isAdminOnlyStudySpecId(value: string): boolean {
+  return (ADMIN_ONLY_STUDY_SPEC_IDS as readonly string[]).includes(value);
 }
 
 // Single source of truth for variant DISPLAY order across every surface: the

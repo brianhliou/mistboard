@@ -40,6 +40,7 @@ import {
   createInitialJieqiState,
   createInitialJungleFlipState,
   createInitialJungleState,
+  createInitialThreeKingdomsBanqiState,
   createInitialXiangqiState,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
@@ -59,7 +60,9 @@ import {
   parseJungleFlipFen,
   parseStandardChessFen,
   parseStandardXiangqiFen,
+  parseThreeKingdomsBanqiFen,
   standardXiangqiFen,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   XIANGQI_SPEC_ID,
   type XiangqiGameState,
 } from '@mistboard/game';
@@ -73,13 +76,14 @@ export type StudyPreviewShape =
   | 'chess' // 8x8 checkered squares
   | 'jungle' // 7x9 squares with the two rivers
   | 'banqi' // 8x4 squares
-  | 'jungle-flip'; // 4x4 squares
+  | 'jungle-flip' // 4x4 squares
+  | 'three-kingdoms-banqi'; // 9x5 points
 
 /**
  * One character per cell, rows from the top rank down, files left to right:
  * '.' empty, 'r' red (white in chess), 'b' black, 'R' / 'B' a face-down piece
  * whose side is public (jieqi), '?' a face-down tile of hidden colour (banqi,
- * flip jungle), 'd' the duck.
+ * flip jungle, three kingdoms banqi), 'd' the duck.
  */
 export type StudyPreviewGrid = {
   shape: StudyPreviewShape;
@@ -113,6 +117,7 @@ const JUNGLE_FILES = 'abcdefg';
 const FORTRESS_FILES = 'abcdefg';
 const BANQI_FILES = 'abcdefgh';
 const JUNGLE_FLIP_FILES = 'abcd';
+const THREE_KINGDOMS_BANQI_FILES = 'abcdefghi';
 const CHESS_START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const PREVIEW_ID = 'study-preview';
 
@@ -214,6 +219,16 @@ export function studyPreviewBoard(source: unknown): StudyPreviewBoard | null {
         state && squareGrid('jungle-flip', JUNGLE_FLIP_FILES, 4, state.board),
       );
     }
+    case THREE_KINGDOMS_BANQI_SPEC_ID: {
+      const state =
+        rootFen === null
+          ? createInitialThreeKingdomsBanqiState(PREVIEW_ID, fixedRng)
+          : parseOk(parseThreeKingdomsBanqiFen(rootFen, { rng: fixedRng }));
+      return withGrid(
+        variant,
+        state && squareGrid('three-kingdoms-banqi', THREE_KINGDOMS_BANQI_FILES, 5, state.board),
+      );
+    }
     default:
       return { variant, fen: null, grid: null };
   }
@@ -253,7 +268,7 @@ function withGrid(variant: string, grid: StudyPreviewGrid | null): StudyPreviewB
  * Read a square-keyed board ('a1'.., rank 1 at the bottom) into the cell string.
  * `faceDown` says what a face-down piece may show: 'side' keeps its colour
  * (jieqi, whose dark pieces start on their own side's home squares), 'hidden'
- * drops it (banqi, flip jungle). The role is never read either way.
+ * drops it (banqi, flip jungle, three kingdoms banqi). The role is never read either way.
  */
 function squareGrid(
   shape: StudyPreviewShape,

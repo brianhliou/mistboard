@@ -572,6 +572,7 @@ export {
   getPracticeStudiesBySlug,
   getStudyById,
   getStudyBySlug,
+  getStudyChapterVariants,
   getStudyLikeState,
   isStudyVisibility,
   listFavoriteStudies,

@@ -24,7 +24,7 @@ import { isVariantMarkerId, renderVariantMarker } from './variant-markers.js';
 // discs on a faint grid instead of reusing the glyph-drawn OG board: at ~6 px a
 // glyph inside a disc only greys the disc out. A face-down piece is the back of
 // a tile: a brown disc, ringed in its side's colour where the side is public
-// (jieqi) and plain where it is not (banqi, flip jungle). The server sends
+// (jieqi) and plain where it is not (banqi, flip jungle, three kingdoms banqi). The server sends
 // discs only, never roles, so nothing hidden can reach this drawing.
 
 type StudyThumbnail = {
@@ -38,7 +38,8 @@ export type StudyPreviewShape =
   | 'chess'
   | 'jungle'
   | 'banqi'
-  | 'jungle-flip';
+  | 'jungle-flip'
+  | 'three-kingdoms-banqi';
 
 /** One character per cell, top rank first (server study-preview-board.ts):
  *  '.' empty, 'r' red (white in chess), 'b' black, 'R'/'B' face-down with a
@@ -168,6 +169,7 @@ const SHAPES: Readonly<
   jungle: { files: 7, ranks: 9, points: false },
   banqi: { files: 8, ranks: 4, points: false },
   'jungle-flip': { files: 4, ranks: 4, points: false },
+  'three-kingdoms-banqi': { files: 9, ranks: 5, points: true },
 };
 
 /** Draw a disc grid on its variant's board. Fail-closed: a shape this client

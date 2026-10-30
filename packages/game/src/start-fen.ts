@@ -14,7 +14,8 @@
 // to be `unknown` and would lose exactly the safety the dispatch is for.
 //
 // Membership is not a product call: a variant is here once it HAS a parser. The
-// hidden-deal variants (banqi, jieqi, jungle-flip) qualify through their DEALT
+// hidden-deal variants (banqi, jieqi, jungle-flip,
+// three-kingdoms-banqi) qualify through their DEALT
 // FEN (dealt-fen.ts): the placement plus the unrevealed pool is a complete public
 // description, and the hidden assignment under the face-down tiles is sampled
 // ONCE here and pinned in the sixth field. So their canonical spelling is always
@@ -37,17 +38,23 @@ import {
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
 import { jieqiStateToDealtFen, parseJieqiFen } from './jieqi-fen.js';
 import { jungleStateToEngineFen, parseJungleFen } from './jungle-fen.js';
 import { jungleFlipStateToDealtFen, parseJungleFlipFen } from './jungle-flip-fen.js';
+import {
+  parseThreeKingdomsBanqiFen,
+  threeKingdomsBanqiStateToDealtFen,
+} from './three-kingdoms-banqi-fen.js';
 import { darkChessFen, parseDarkChessFen, parseStandardChessFen } from './variants.js';
 import { createBanqiDeal, createInitialBanqiState } from './variants-banqi.js';
 import { crazyhouseXiangqiFen, parseCrazyhouseXiangqiFen } from './variants-crazyhouse-xiangqi.js';
 import { fortressXiangqiEngineFen, parseFortressXiangqiFen } from './variants-fortress-xiangqi.js';
 import { createInitialJieqiState, createJieqiDeal } from './variants-jieqi.js';
 import { createInitialJungleFlipState, createJungleFlipDeal } from './variants-jungle-flip.js';
+import { createInitialThreeKingdomsBanqiState } from './variants-three-kingdoms-banqi.js';
 import { parseStandardXiangqiFen, standardXiangqiFen } from './xiangqi-position.js';
 
 /** Specs whose start position can be given as a FEN. */
@@ -60,6 +67,7 @@ export const START_FEN_SPEC_IDS: readonly GameSpecId[] = [
   BANQI_SPEC_ID,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   ATOMIC_XIANGQI_SPEC_ID,
   CRAZYHOUSE_XIANGQI_SPEC_ID,
@@ -90,6 +98,8 @@ export function initialStartFen(spec: string, rng: () => number = Math.random): 
       return jungleFlipStateToDealtFen(
         createInitialJungleFlipState('start', createJungleFlipDeal(rng)),
       );
+    case THREE_KINGDOMS_BANQI_SPEC_ID:
+      return threeKingdomsBanqiStateToDealtFen(createInitialThreeKingdomsBanqiState('start', rng));
     // Deterministic variants need no stored root: replaying from their standard
     // opening reproduces the document exactly.
     default:
@@ -100,7 +110,12 @@ export function initialStartFen(spec: string, rng: () => number = Math.random): 
 /** Whether a variant's start is a random deal, so a document of it is only
  *  reconstructable from a stored root FEN. */
 export function startIsDealt(spec: string): boolean {
-  return spec === BANQI_SPEC_ID || spec === JIEQI_SPEC_ID || spec === JUNGLE_FLIP_SPEC_ID;
+  return (
+    spec === BANQI_SPEC_ID ||
+    spec === JIEQI_SPEC_ID ||
+    spec === JUNGLE_FLIP_SPEC_ID ||
+    spec === THREE_KINGDOMS_BANQI_SPEC_ID
+  );
 }
 
 export type NormalizeStartFenResult = { ok: true; fen: string } | { ok: false; error: string };
@@ -166,6 +181,12 @@ export function normalizeStartFen(spec: string, fen: string): NormalizeStartFenR
     case BANQI_SPEC_ID: {
       const parsed = parseBanqiFen(fen);
       return parsed.ok ? { ok: true, fen: banqiStateToDealtFen(parsed.state) } : parsed;
+    }
+    case THREE_KINGDOMS_BANQI_SPEC_ID: {
+      const parsed = parseThreeKingdomsBanqiFen(fen);
+      return parsed.ok
+        ? { ok: true, fen: threeKingdomsBanqiStateToDealtFen(parsed.state) }
+        : parsed;
     }
     case JIEQI_SPEC_ID: {
       const parsed = parseJieqiFen(fen);

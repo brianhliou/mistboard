@@ -46,6 +46,14 @@ import {
   flipBanqiTile3dReveal,
 } from './live-banqi-render.js';
 import { BANQI_PIECE_3D, piece3dLook, round2 } from './piece-3d.js';
+import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
+import {
+  GLYPH_OFFSET_RATIO,
+  GLYPH_RADIUS_RATIO,
+  type SvgBoardMarkerStyle,
+  svgBoardCircleMarker,
+  svgBoardGlyphMarker,
+} from './svg-board-marker.js';
 import {
   renderXiangqiPieceGlyphed,
   xiangqiBanqiBackMarks,
@@ -418,6 +426,45 @@ function tile3dMarkPiece(): BoardLastMovePiece {
   return { box, outer: (look.radius * 100) / box, lift: round2(look.depth / 2) };
 }
 
+/** A study's drawn arrow, point to point. */
+export interface TkBoardArrow extends SvgBoardArrowStyle {
+  from: Square;
+  to: Square;
+}
+
+/** A study's drawn circle, or a move's judgment badge, on one point. */
+export interface TkBoardMarker extends SvgBoardMarkerStyle {
+  square: Square;
+  kind: 'circle' | 'glyph';
+  /** Badge label for kind 'glyph' (e.g. '??'). Ignored by 'circle'. */
+  text?: string;
+}
+
+export function tkArrowSvg(arrow: TkBoardArrow): string {
+  const width = arrow.width === undefined ? undefined : arrow.width * (CELL / 72);
+  return svgBoardArrow({ ...arrow, width }, point(arrow.from), point(arrow.to), {
+    baseClassName: 'xq-arrow',
+    defaultWidth: 8,
+    startInset: 10,
+  });
+}
+
+export function tkMarkerSvg(marker: TkBoardMarker): string {
+  const center = point(marker.square);
+  if (marker.kind === 'glyph') {
+    return svgBoardGlyphMarker(
+      marker,
+      center,
+      CELL * GLYPH_RADIUS_RATIO,
+      CELL * GLYPH_OFFSET_RATIO,
+      { baseClassName: 'xq-marker' },
+    );
+  }
+  return svgBoardCircleMarker(marker, center, PIECE_SIZE / 2 + 6, {
+    baseClassName: 'xq-marker engine-marker',
+  });
+}
+
 /** The live room's board geometry, for drag-ghost sizing. */
 export const TK_LIVE_BOARD_VIEW = { width: WIDTH, height: HEIGHT, cell: CELL, files: 9 } as const;
 
@@ -439,6 +486,10 @@ export function renderThreeKingdomsBanqiLiveBoardSvg(
     lastMoveInk?: 'red' | 'black' | null;
     /** 3D tiles; unset reads the reader's setting (banqiTile3dEnabled). */
     tile3d?: boolean;
+    /** Drawn overlays (a study's arrows and circles). Omit for no overlay
+     *  layers; the live room has none. */
+    arrows?: readonly TkBoardArrow[];
+    markers?: readonly TkBoardMarker[];
   },
 ): string {
   // Pieces sit on points, so the marks are xiangqi's and jieqi's: a pale wash
@@ -516,6 +567,12 @@ export function renderThreeKingdomsBanqiLiveBoardSvg(
         : `<circle class="banqi-hint" cx="${x}" cy="${y}" r="${HINT_DOT_R}"/>`;
     })
     .join('');
+  // The overlay layers exist only when a caller passes overlays, so the board
+  // handle can swap their contents without a full render (as banqi's does).
+  const overlays =
+    opts.arrows || opts.markers
+      ? `<g class="xq-live-markers" aria-hidden="true" pointer-events="none">${(opts.markers ?? []).map(tkMarkerSvg).join('')}</g><g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${(opts.arrows ?? []).map(tkArrowSvg).join('')}</g>`
+      : '';
   const half = CELL / 2;
   const hits = ALL_THREE_KINGDOMS_BANQI_SQUARES.map((square) => {
     const { x, y } = point(square);
@@ -525,6 +582,6 @@ export function renderThreeKingdomsBanqiLiveBoardSvg(
   return `<svg class="banqi-board" width="100%" style="height:auto;display:block" viewBox="0 0 ${WIDTH} ${HEIGHT}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three Kingdoms banqi board">
     <rect class="banqi-board-bg" x="0" y="0" width="${WIDTH}" height="${HEIGHT}" rx="${boardCornerRadius(WIDTH)}"/>
     <g class="banqi-grid">${gridLines()}</g>
-    ${marks('under')}${selection}${pieces}${marksOver ? `<g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${marksOver}</g>` : ''}${hints}${hits}
+    ${marks('under')}${selection}${pieces}${marksOver ? `<g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${marksOver}</g>` : ''}${hints}${overlays}${hits}
   </svg>`;
 }
