@@ -169,7 +169,18 @@ export const EMBED_ANALYSIS_VARIANTS: Record<GameSpecId, EmbedAnalysisVariant | 
       const summary = await fetchCachedDarkChessDecisions(roomId);
       if (!summary) return null;
       const moves: Move[] = (await events()).filter(isMovePlayed).map((event) => event.move);
-      return darkChessDecisionOverlay(summary, moves);
+      const overlay = darkChessDecisionOverlay(summary, moves);
+      // The review omits UCI because it draws no fog advice arrows. The embed
+      // needs the stored token to replay the advice; arrows stay disabled here.
+      for (const [ply, info] of overlay.byPly) {
+        const candidates = summary.byPly.get(ply)?.candidates;
+        if (info.candidates && candidates)
+          info.candidates = info.candidates.map((candidate, index) => ({
+            ...candidate,
+            ...(candidates[index]?.move ? { uci: candidates[index].move } : {}),
+          }));
+      }
+      return overlay;
     },
   },
   // No stored server analysis for these.
