@@ -305,6 +305,7 @@ export const ZH_HANT_PLAY = {
   'puzzle.autoNext': '解開後直接跳到下一題',
   'puzzle.fromGame': '取自對局',
   'puzzle.fromGameWith': '取自對局 · {details}',
+  'puzzle.sourceCredit': '對局來源：',
   'puzzle.openSourceGame': '打開這道題所取自的對局',
   'puzzle.label': '題目 ',
   'puzzle.winning': '優勢',

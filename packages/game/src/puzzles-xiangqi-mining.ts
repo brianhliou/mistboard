@@ -25,6 +25,7 @@ import {
   type XiangqiPuzzleGoal,
   type XiangqiPuzzleTheme,
 } from './puzzles-xiangqi.js';
+import { xiangqiSourceAttribution } from './puzzles-xiangqi-attribution.js';
 import { trimXiangqiWinningAdvantageMoves } from './puzzles-xiangqi-trim.js';
 import {
   positionRepetitionKey,
@@ -34,6 +35,7 @@ import {
 } from './variants-xiangqi.js';
 import {
   applyStandardXiangqiMove,
+  isStandardXiangqiGeneralInCheck,
   isStandardXiangqiLegalMove,
 } from './variants-xiangqi-standard.js';
 
@@ -175,9 +177,6 @@ export type XiangqiSolverUniquenessOptions = {
   /** Hard stability floor: reject any non-mate runner-up closer than this even
    *  when it happens to straddle the winLo boundary in one engine process. */
   minGapCp: number;
-  /** ...or a runner-up trailing best by at least this many cp is wrong even if
-   *  it is still nominally winning (win the chariot, not the horse). */
-  materialGapCp: number;
 };
 
 export type XiangqiSolverUniquenessReason =
@@ -190,7 +189,6 @@ export type XiangqiSolverUniquenessReason =
   | 'runner-up-mates'
   | 'near-tie'
   | 'runner-up-loses-win'
-  | 'material-gap'
   | 'alternative-still-good';
 
 export type XiangqiSolverUniquenessVerdict = {
@@ -199,8 +197,11 @@ export type XiangqiSolverUniquenessVerdict = {
 };
 
 /** Per-ply gate for a solver move: is the best line uniquely correct? True when
- *  best keeps a clear win AND the runner-up is actually wrong (lost the win or
- *  trails by a whole piece). Mates: unique iff no other move mates at all,
+ *  best keeps a clear win AND the runner-up has lost the win. A runner-up that
+ *  still wins is a second answer however much less it wins, so the position is
+ *  not a puzzle (Brian, 2026-10-28: failing a solver for a move that still wins
+ *  is unfair; the old "material gap" exception admitted 85 of 335 hard lines
+ *  with a +594 runner-up beside a +870 best). Mates: unique iff no other move mates at all,
  *  whatever its length, except that a mate-in-one ply is always unique. This
  *  is the lichess rule (adopted 2026-09-11): the grader accepts a stored line
  *  plus any move that mates on the spot, nothing else, so a position with a
@@ -239,7 +240,6 @@ export function classifyXiangqiSolverMoveUniqueness(
   if (xiangqiWinRate(second.scoreCp) <= opts.winLo) {
     return { unique: true, reason: 'runner-up-loses-win' };
   }
-  if (gapCp >= opts.materialGapCp) return { unique: true, reason: 'material-gap' };
   return { unique: false, reason: 'alternative-still-good' };
 }
 
@@ -414,10 +414,48 @@ export type XiangqiMineCandidateInput = {
     result?: string | null;
     redName?: string | null;
     blackName?: string | null;
+    /** historical_xiangqi_sources.slug: selects the source's attribution
+     *  policy (puzzles-xiangqi-attribution.ts). */
+    sourceSlug?: string | null;
+    /** The game's page in the source archive, when the row stored one. */
+    sourceUrl?: string | null;
+    /** The archive's own id for the game (e.g. DPXQ `view_m_140041`). */
+    sourceGameId?: string | null;
   };
 };
 
-export type XiangqiMineReject = XiangqiSolutionBuildReject | 'not-playing' | 'validation-failed';
+export type XiangqiMineReject =
+  | XiangqiSolutionBuildReject
+  | 'not-playing'
+  | 'validation-failed'
+  | 'loud-key'
+  | 'too-short-after-trim'
+  | 'missing-attribution';
+
+/** Assembly knobs on top of the solution-length window (#712, harder puzzles). */
+export type XiangqiMineAssembleOptions = Omit<XiangqiSolutionBuildOptions, 'mateExpected'> & {
+  /** Require a quiet key move: the solver's first move neither captures nor
+   *  gives check (isXiangqiQuietKeyMove). A capture or a check announces
+   *  itself; a quiet key is the move a player has to find. */
+  quietKey?: boolean;
+  /** Apply minSolutionPlies again after a winning-advantage line is trimmed to
+   *  its last capture. Without it the trim can cut a 5-ply line back to a bare
+   *  1-ply capture under any floor. */
+  floorAfterTrim?: boolean;
+};
+
+/**
+ * A key move is quiet when it captures nothing and does not put the defender's
+ * general in check (the flying-general rule counts, as it does for legality).
+ * Mate-in-one is therefore never quiet.
+ */
+export function isXiangqiQuietKeyMove(state: XiangqiGameState, move: XiangqiMove): boolean {
+  if (state.status.type !== 'playing') return false;
+  if (state.board[move.to] !== undefined) return false;
+  const defender: XiangqiColor = state.status.turn === 'red' ? 'black' : 'red';
+  const next = applyStandardXiangqiMove(state, move);
+  return !isStandardXiangqiGeneralInCheck(next, defender);
+}
 
 export type XiangqiMineResult =
   | { ok: true; puzzle: XiangqiPuzzle }
@@ -426,16 +464,30 @@ export type XiangqiMineResult =
 /** Build (and kernel-re-validate) a mined puzzle from a verified candidate. */
 export function assembleMinedXiangqiPuzzle(
   input: XiangqiMineCandidateInput,
-  opts: Omit<XiangqiSolutionBuildOptions, 'mateExpected'>,
+  opts: XiangqiMineAssembleOptions,
 ): XiangqiMineResult {
   if (input.postBlunderState.status.type !== 'playing') {
     return { ok: false, reason: 'not-playing' };
+  }
+  const credit = xiangqiSourceAttribution({
+    sourceSlug: input.sourceMeta?.sourceSlug,
+    sourceUrl: input.sourceMeta?.sourceUrl,
+    sourceGameId: input.sourceMeta?.sourceGameId,
+  });
+  if (!credit.ok) return { ok: false, reason: credit.reason };
+  const key = input.pv[0];
+  if (opts.quietKey && (!key || !isXiangqiQuietKeyMove(input.postBlunderState, key))) {
+    return { ok: false, reason: 'loud-key' };
   }
   const solver = input.postBlunderState.status.turn;
   const id = `xq-mined-${input.gameId}-${input.blunderPly + 1}`;
   const initial = makeXiangqiPuzzleInitial(input.postBlunderState, id);
   const mateExpected = input.verifyScore.mate !== null && input.verifyScore.mate > 0;
-  const built = buildXiangqiSolutionFromPv(initial, input.pv, { ...opts, mateExpected });
+  const built = buildXiangqiSolutionFromPv(initial, input.pv, {
+    maxSolutionPlies: opts.maxSolutionPlies,
+    minSolutionPlies: opts.minSolutionPlies,
+    mateExpected,
+  });
   if (!built.ok) return built;
 
   const goal: XiangqiPuzzleGoal = built.endedByMate
@@ -443,11 +495,15 @@ export function assembleMinedXiangqiPuzzle(
     : { type: 'winning-advantage', winner: solver, centipawns: input.verifyScore.scoreCp };
   // A winning-advantage line ends on its payoff: trim the quiet PV tail back to
   // the solver's last capture. This can leave a bare 1-ply capture ("win the
-  // hanging piece") — kept as a legitimate easy puzzle, not re-floored.
+  // hanging piece"), kept as a legitimate easy puzzle unless floorAfterTrim
+  // asks for the floor to hold after the trim too (#712 harder mining).
   const solution =
     goal.type === 'winning-advantage'
       ? trimXiangqiWinningAdvantageMoves(initial, built.moves)
       : built.moves;
+  if (opts.floorAfterTrim && solution.length < opts.minSolutionPlies) {
+    return { ok: false, reason: 'too-short-after-trim' };
+  }
   const puzzle: XiangqiPuzzle = {
     id,
     variant: XIANGQI_SPEC_ID,
@@ -465,6 +521,7 @@ export function assembleMinedXiangqiPuzzle(
       gameId: input.gameId,
       ply: input.blunderPly + 1,
       ...cleanSourceMeta(input.sourceMeta),
+      ...(credit.attribution ? { attribution: credit.attribution } : {}),
     },
   };
   if (!validateStandardXiangqiPuzzle(puzzle).ok) {

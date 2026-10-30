@@ -113,7 +113,6 @@ const auditProfile = {
   winHi: 0.8,
   winLo: 0.6,
   minGapCp: 200,
-  materialGapCp: 250,
   clearHashBeforeStandaloneSearch: true,
 };
 

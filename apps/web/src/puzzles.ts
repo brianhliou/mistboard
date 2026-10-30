@@ -11,7 +11,7 @@
  * change. See puzzles/adapter.ts for the contract.
  */
 
-import { resolvePuzzleShortCode, XIANGQI_SPEC_ID } from '@mistboard/game';
+import { PUZZLE_NEW_PLAYER_RATING, resolvePuzzleShortCode, XIANGQI_SPEC_ID } from '@mistboard/game';
 import './puzzles.css';
 import {
   type PuzzleAttemptMode,
@@ -465,7 +465,7 @@ export async function mountPuzzles(
   await Promise.all(
     [...new Set(summaries.map((puzzle) => puzzle.variant))].map(async (variant) => {
       const rating = await fetchUserPuzzleRating(variant);
-      targetRatings.set(variant, rating?.rating ?? 1500);
+      targetRatings.set(variant, rating?.rating ?? PUZZLE_NEW_PLAYER_RATING);
     }),
   );
   // Rotate the queue so both the leading puzzle and the sequence vary between

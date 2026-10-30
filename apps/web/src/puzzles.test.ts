@@ -1934,6 +1934,37 @@ describe('sourceGameLines', () => {
       ),
     ).toEqual(['From set Xiangqi']);
   });
+
+  it('credits a source that requires it with a link back to the original game (#712)', () => {
+    const lines = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: {
+        gameId: 'view_m_140041',
+        ply: 41,
+        redName: 'R',
+        blackName: 'B',
+        attribution: {
+          name: '东萍象棋网 (DPXQ)',
+          url: 'http://www.dpxq.com/hldcg/search/view_m_140041.html',
+        },
+      },
+    });
+    expect(lines).toHaveLength(4);
+    const link = lines[3]?.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('http://www.dpxq.com/hldcg/search/view_m_140041.html');
+    expect(link?.textContent).toBe('东萍象棋网 (DPXQ)');
+    expect(lines[3]?.textContent).toBe('Game courtesy of 东萍象棋网 (DPXQ)');
+    // A credit alone still renders the "From game" card, so the link shows.
+    const bare = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: {
+        gameId: 'g',
+        ply: 1,
+        attribution: { name: 'DPXQ', url: 'http://www.dpxq.com/a.html' },
+      },
+    });
+    expect(bare.map((l) => l.textContent)).toEqual(['From game', 'Game courtesy of DPXQ']);
+  });
 });
 
 describe('puzzles prerender shell', () => {

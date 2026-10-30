@@ -48,7 +48,6 @@ export const XIANGQI_SOLVER_GATE_DEFAULTS: XiangqiSolverUniquenessOptions = {
   winHi: 0.8,
   winLo: 0.6,
   minGapCp: 200,
-  materialGapCp: 250,
 };
 
 // ── UCI `info` line parsing ──────────────────────────────────────────────────

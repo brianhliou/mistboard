@@ -8,6 +8,23 @@
 //   env DATABASE_URL=... npm run import:historical-xiangqi --workspace @mistboard/server -- \
 //     --dir <folder> --source-slug famous-xiangqi --source-name "Famous Xiangqi" \
 //     --license-status cleared --source-license "permission from ..." --persist
+//
+// Clearing a source is the same command with --license-status cleared: the
+// source upsert flips its license_status, and re-importing the same files
+// updates the existing game rows (content hash) instead of duplicating them.
+// DPXQ (东萍象棋网), cleared 2026-10-28 on the operator's standing yes, on the
+// condition that every puzzle credits it with an http link to the original
+// game (packages/game/src/puzzles-xiangqi-attribution.ts enforces that):
+//
+//   env DATABASE_URL=... npm run import:historical-xiangqi --workspace @mistboard/server -- \
+//     --dir ../xiangqi-corpus/dpxq-viewm --source-slug dpxq-archive-test \
+//     --source-name "东萍象棋网 (DPXQ)" --source-url http://www.dpxq.com/ \
+//     --license-status cleared \
+//     --source-license "Operator permission: mining with credit and an http link to each game" \
+//     --persist
+//
+// Each game keeps its own [DhtmlXQ_source_url] as source_url, the link the
+// credit points at.
 
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
@@ -52,6 +69,7 @@ type ParsedHistoricalXiangqiGame = {
   redNameRaw: string | null;
   result: HistoricalXiangqiResult;
   sourceGameId: string;
+  sourceUrl: string | null;
   tags: Record<string, unknown>;
 };
 
@@ -183,7 +201,7 @@ function supportedGameFile(file: string): boolean {
   return ['.dhtmlxq', '.txt', '.pgn', '.wxf'].includes(extname(file).toLowerCase());
 }
 
-function parseHistoricalGame(file: string, raw: string): ImportPlan {
+export function parseHistoricalGame(file: string, raw: string): ImportPlan {
   // Paste-aware on purpose: `.pgn` is an accepted extension here, and a real
   // PGN carries a tag block that the bare notation sniffer cannot read past.
   const imported = importXiangqiPaste(raw);
@@ -208,6 +226,7 @@ function parseHistoricalGame(file: string, raw: string): ImportPlan {
       redNameRaw,
       result: parseResult(rawResult),
       sourceGameId: basename(file, extname(file)),
+      sourceUrl: tagValue(raw, 'source_url') || null,
       tags: {
         rawFile: file,
         ...(title ? { title } : {}),
@@ -271,6 +290,7 @@ async function persistPlans(args: Args, inputHash: string, plans: ImportPlan[]):
         sourceId: source.id,
         importBatchId: batch.id,
         sourceGameId: plan.game.sourceGameId,
+        sourceUrl: plan.game.sourceUrl,
         eventName: plan.game.eventName,
         playedOn: plan.game.playedOn,
         redNameRaw: plan.game.redNameRaw,

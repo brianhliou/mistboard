@@ -102,6 +102,10 @@ export type XiangqiPuzzle = {
     result?: string; // "1-0" | "0-1" | "1/2-1/2"
     redName?: string;
     blackName?: string;
+    // Credit the source archive requires on every puzzle mined from it, with a
+    // link back to the original game (#712; policy in
+    // puzzles-xiangqi-attribution.ts). Absent for sources that ask for none.
+    attribution?: { name: string; url: string };
   };
 };
 

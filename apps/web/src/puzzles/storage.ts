@@ -4,6 +4,7 @@
  * built on the seen-set. All best-effort: puzzle play works without storage.
  */
 
+import { PUZZLE_NEW_PLAYER_RATING } from '@mistboard/game';
 import type { PuzzleSummary } from './adapter.js';
 
 const SOLVED_PUZZLES_STORAGE_KEY = 'mistboard:puzzles:solved';
@@ -63,7 +64,7 @@ export function rotatePuzzleOrder(
     unseenByVariant.set(puzzle.variant, group);
   }
   const adaptive = [...unseenByVariant.values()].flatMap((group) =>
-    adaptivePuzzleOrder(group, targetRatings.get(group[0]!.variant) ?? 1500),
+    adaptivePuzzleOrder(group, targetRatings.get(group[0]!.variant) ?? PUZZLE_NEW_PLAYER_RATING),
   );
   seenList.sort((a, b) => (seen.get(a.id) ?? 0) - (seen.get(b.id) ?? 0));
   return [...adaptive, ...seenList];
@@ -82,11 +83,18 @@ export function rotatePuzzleOrder(
 // get variety -- just the closest variety available, not the whole range.
 const EXPLORE_WINDOWS = [300, 600, 1200] as const;
 
+// Match on the serving rating when the server sent one (#712): the rating
+// folded with solution length and what players actually did. The displayed
+// rating alone was the prior for nearly every puzzle.
+function matchRating(puzzle: PuzzleSummary): number {
+  return puzzle.servingRating ?? puzzle.rating;
+}
+
 function exploreIndex(remaining: readonly PuzzleSummary[], targetRating: number): number {
   for (const window of EXPLORE_WINDOWS) {
     const withinBand: number[] = [];
     for (let index = 0; index < remaining.length; index += 1) {
-      if (Math.abs(remaining[index]!.rating - targetRating) <= window) withinBand.push(index);
+      if (Math.abs(matchRating(remaining[index]!) - targetRating) <= window) withinBand.push(index);
     }
     if (withinBand.length > 0) {
       return withinBand[Math.floor(Math.random() * withinBand.length)]!;
@@ -113,7 +121,7 @@ function matchedIndex(
   for (const band of MATCH_BANDS) {
     const inBand: number[] = [];
     for (let index = 0; index < remaining.length; index += 1) {
-      if (Math.abs(remaining[index]!.rating - targetRating) <= band) inBand.push(index);
+      if (Math.abs(matchRating(remaining[index]!) - targetRating) <= band) inBand.push(index);
     }
     if (inBand.length === 0) continue;
     // Prefer a puzzle whose lead theme the last two did not share.
@@ -128,8 +136,8 @@ function matchedIndex(
   let nearest = 0;
   for (let index = 1; index < remaining.length; index += 1) {
     if (
-      Math.abs(remaining[index]!.rating - targetRating) <
-      Math.abs(remaining[nearest]!.rating - targetRating)
+      Math.abs(matchRating(remaining[index]!) - targetRating) <
+      Math.abs(matchRating(remaining[nearest]!) - targetRating)
     ) {
       nearest = index;
     }

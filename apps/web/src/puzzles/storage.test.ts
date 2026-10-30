@@ -174,3 +174,31 @@ describe('bounded explore', () => {
     expect(new Set(ordered.map(({ id }) => id)).size).toBe(10);
   });
 });
+
+describe('#712 serving order and new-player start', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('matches on the serving rating, not the displayed prior', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    // Both show 1800, but players reveal 'revealed-often' far more than its
+    // prior says; its serving rating is 2400. A 1800 player gets the other.
+    const ordered = rotatePuzzleOrder(
+      [
+        { ...puzzle('revealed-often', 1800, 'mate'), servingRating: 2400 },
+        { ...puzzle('as-rated', 1700, 'fork'), servingRating: 1800 },
+      ],
+      new Map(),
+      new Map([['xiangqi', 1800]]),
+    );
+    expect(ordered[0]?.id).toBe('as-rated');
+  });
+
+  it('starts a player with no rating at 1800', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const ordered = rotatePuzzleOrder(
+      [puzzle('easy', 1500, 'fork'), puzzle('harder', 1800, 'mate')],
+      new Map(),
+    );
+    expect(ordered[0]?.id).toBe('harder');
+  });
+});

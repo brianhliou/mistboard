@@ -313,7 +313,10 @@ export function sourceGameLines(
   const hasAttribution =
     puzzle.variant === XIANGQI_SPEC_ID &&
     source !== undefined &&
-    (source.event !== undefined || source.redName !== undefined || source.blackName !== undefined);
+    (source.event !== undefined ||
+      source.redName !== undefined ||
+      source.blackName !== undefined ||
+      source.attribution !== undefined);
   if (!source || !hasAttribution) {
     return [puzzleInfoLine(t('puzzle.fromSet', { variant: variantLabel(puzzle.variant) }))];
   }
@@ -324,6 +327,7 @@ export function sourceGameLines(
       sourceGamePlayerLine('black', source.blackName, source.result),
     );
   }
+  if (source.attribution) lines.push(sourceCreditLine(source.attribution));
   return lines;
 }
 
@@ -348,6 +352,20 @@ function sourceGameHeaderLine(source: NonNullable<PuzzleSummary['sourceGame']>):
   link.textContent = sourceGameHeader(source);
   link.title = t('puzzle.openSourceGame');
   line.append(link);
+  return line;
+}
+
+// The credit a source requires (#712; DPXQ asks for a link back to the
+// original game, over http). Rendered wherever the "From game" lines are.
+function sourceCreditLine(attribution: { name: string; url: string }): HTMLSpanElement {
+  const line = document.createElement('span');
+  line.className = 'puzzle-source-credit';
+  const link = document.createElement('a');
+  link.href = attribution.url;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = attribution.name;
+  line.append(t('puzzle.sourceCredit'), link);
   return line;
 }
 

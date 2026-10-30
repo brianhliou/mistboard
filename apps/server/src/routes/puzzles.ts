@@ -25,6 +25,7 @@ import { isPlayDisabled, isInitialized as persistenceInitialized } from '../pers
 import { getHistoricalXiangqiPuzzleSourceGame } from '../persistence-historical-xiangqi.js';
 import {
   isPuzzleQualitySessionId,
+  listPuzzleServingEvidence,
   type PuzzleQualityPlayer,
   type PuzzleQualityVote,
   parsePuzzleDeviceId,
@@ -44,7 +45,11 @@ import {
   getOrCreateDailyPuzzleSelection,
   parseDailyPuzzleSlot,
 } from '../persistence-puzzles.js';
-import { seedPuzzleRating } from '../puzzle-rating.js';
+import {
+  type PuzzleServingEvidence,
+  puzzleServingRating,
+  seedPuzzleRating,
+} from '../puzzle-rating.js';
 import { type PuzzleDetailSourceFields, puzzleDetailSourceFields } from '../puzzle-setup-move.js';
 import { getPuzzleStore, type PuzzleStoreSnapshot } from '../puzzle-store.js';
 import {
@@ -108,6 +113,9 @@ type PuzzleSummary = {
   solutionPlyCount: number;
   rating: number;
   ratingProvisional: boolean;
+  /** What the queue matches a player against (#712): the rating folded with
+   *  solution length and observed outcomes. List responses only. */
+  servingRating?: number;
 };
 
 type PuzzleDetail = PuzzleSummary & {
@@ -306,20 +314,26 @@ export async function tryHandle(
       }
     }
     const ratings = await listPuzzleRatingSummaries(puzzles.map((puzzle) => puzzle.id));
+    const evidence = await servingEvidence();
     // Signed-in visitors also get what they have already finished, so rotation
     // survives a cleared browser or a second device. Anonymous visitors get an
     // empty list and fall back to the localStorage seen-set alone.
     const user = await currentAccountUser(request);
     const attemptedIds = user ? await listAttemptedPuzzleIds(user.id, variant ?? undefined) : [];
     writeJson(response, 200, {
-      puzzles: puzzles.map((puzzle) =>
-        puzzleSummary(
-          puzzle,
+      puzzles: puzzles.map((puzzle) => {
+        const rating =
           ratings.get(puzzle.id) ??
-            seededPuzzleRatingSummary(puzzle.solution.length, store.difficultyById.get(puzzle.id)),
-          store,
-        ),
-      ),
+          seededPuzzleRatingSummary(puzzle.solution.length, store.difficultyById.get(puzzle.id));
+        return {
+          ...puzzleSummary(puzzle, rating, store),
+          servingRating: puzzleServingRating({
+            prior: rating.rating,
+            solutionPlyCount: puzzle.solution.length,
+            evidence: evidence.get(puzzle.id),
+          }),
+        };
+      }),
       attemptedIds,
       themes: XIANGQI_MOTIFS.map((motif) => ({ ...motif, count: counts.get(motif.id) ?? 0 })),
       tagCounts,
@@ -792,6 +806,34 @@ async function detailSourceFields(puzzle: PublicPuzzle): Promise<PuzzleDetailSou
     puzzle,
     persistenceInitialized() ? getHistoricalXiangqiPuzzleSourceGame : null,
   );
+}
+
+// Outcome counts move slowly next to list traffic, so the list reads them at
+// most once per TTL per process. A failed read serves the last good counts
+// (or none): ordering degrades to the prior, the list never fails over it.
+const SERVING_EVIDENCE_TTL_MS = 5 * 60_000;
+let servingEvidenceCache: {
+  at: number;
+  evidence: Map<string, PuzzleServingEvidence>;
+} | null = null;
+
+async function servingEvidence(): Promise<Map<string, PuzzleServingEvidence>> {
+  const now = Date.now();
+  if (servingEvidenceCache && now - servingEvidenceCache.at < SERVING_EVIDENCE_TTL_MS) {
+    return servingEvidenceCache.evidence;
+  }
+  try {
+    servingEvidenceCache = { at: now, evidence: await listPuzzleServingEvidence() };
+  } catch (error) {
+    console.error('puzzle serving evidence read failed', error);
+    servingEvidenceCache = { at: now, evidence: servingEvidenceCache?.evidence ?? new Map() };
+  }
+  return servingEvidenceCache.evidence;
+}
+
+/** Test seam: forget cached outcome counts. */
+export function resetPuzzleServingEvidenceCacheForTests(): void {
+  servingEvidenceCache = null;
 }
 
 function seededPuzzleRatingSummary(

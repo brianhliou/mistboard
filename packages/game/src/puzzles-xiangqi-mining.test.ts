@@ -6,6 +6,7 @@ import {
   classifyXiangqiSolverMoveUniqueness,
   createInitialXiangqiState,
   detectXiangqiBlunderCandidates,
+  isXiangqiQuietKeyMove,
   isXiangqiSolverMoveUnique,
   isXiangqiUniquelyWinning,
   makeXiangqiPuzzleInitial,
@@ -15,7 +16,9 @@ import {
   type XiangqiBoard,
   type XiangqiGameState,
   type XiangqiMove,
+  xiangqiPuzzleAttributionIssue,
   xiangqiPuzzleTitle,
+  xiangqiSourceAttribution,
   xiangqiUciScoreToCp,
 } from './index.js';
 
@@ -176,7 +179,7 @@ test('isXiangqiUniquelyWinning accepts a lone mate over a non-mate second line',
 // ── Winning-floor per-ply uniqueness (gated re-mine) ─────────────────────────
 
 // winHi 0.80 ~ +240cp, winLo 0.60 ~ +70cp on the K=400 logistic.
-const SOLVER_UNIQUE_OPTS = { winHi: 0.8, winLo: 0.6, minGapCp: 200, materialGapCp: 250 };
+const SOLVER_UNIQUE_OPTS = { winHi: 0.8, winLo: 0.6, minGapCp: 200 };
 
 test('isXiangqiSolverMoveUnique: only-move (no runner-up) is unique', () => {
   assert.equal(
@@ -246,15 +249,15 @@ test('isXiangqiSolverMoveUnique: hard near-tie floor rejects a boundary-sensitiv
   );
 });
 
-test('isXiangqiSolverMoveUnique: unique when the runner-up trails by a whole piece', () => {
-  // +900 vs +600: both winning, but a 300cp material margin (win the chariot).
-  assert.equal(
-    isXiangqiSolverMoveUnique(
+test('isXiangqiSolverMoveUnique: a runner-up that still wins is a second answer, whatever the margin', () => {
+  // +900 vs +600: the runner-up still wins (~97%), so failing it would be unfair.
+  assert.deepEqual(
+    classifyXiangqiSolverMoveUniqueness(
       { scoreCp: 900, mate: null },
       { scoreCp: 600, mate: null },
       SOLVER_UNIQUE_OPTS,
     ),
-    true,
+    { unique: false, reason: 'alternative-still-good' },
   );
 });
 
@@ -466,4 +469,151 @@ test('assembleMinedXiangqiPuzzle rejects when the expected mate is not reachable
     BUILD_OPTS,
   );
   assert.deepEqual(result, { ok: false, reason: 'mate-not-reached' });
+});
+
+// ── #712 harder mining: quiet key, floor after trim, source attribution ─────
+
+// Red wins a loose horse with a1xa5 and the PV then shuffles: a winning-
+// advantage line whose trim cuts it back to the single capture.
+function looseHorseState(): XiangqiGameState {
+  return playingState('mining-loose-horse', {
+    d1: { color: 'red', role: 'general' },
+    a1: { color: 'red', role: 'chariot' },
+    e10: { color: 'black', role: 'general' },
+    a5: { color: 'black', role: 'horse' },
+  });
+}
+
+const LOOSE_HORSE_PV: XiangqiMove[] = [
+  { from: 'a1', to: 'a5' },
+  { from: 'e10', to: 'e9' },
+  { from: 'a5', to: 'a6' },
+  { from: 'e9', to: 'e10' },
+  { from: 'a6', to: 'a7' },
+];
+
+function looseHorseInput(
+  sourceMeta?: Parameters<typeof assembleMinedXiangqiPuzzle>[0]['sourceMeta'],
+) {
+  return {
+    gameId: 'g2',
+    blunderPly: 30,
+    postBlunderState: looseHorseState(),
+    pv: LOOSE_HORSE_PV,
+    verifyScore: { scoreCp: 900, mate: null },
+    swingCp: 600,
+    ...(sourceMeta ? { sourceMeta } : {}),
+  };
+}
+
+test('isXiangqiQuietKeyMove: a capture or a check is loud, a developing move is quiet', () => {
+  const opening = createInitialXiangqiState('quiet-open');
+  assert.equal(isXiangqiQuietKeyMove(opening, { from: 'h3', to: 'e3' }), true);
+  assert.equal(isXiangqiQuietKeyMove(looseHorseState(), { from: 'a1', to: 'a5' }), false);
+  // b1-b9 checks the general on e9.
+  assert.equal(isXiangqiQuietKeyMove(mateInTwoState(), { from: 'b1', to: 'b9' }), false);
+});
+
+test('assembleMinedXiangqiPuzzle with quietKey refuses a checking key', () => {
+  const input = {
+    gameId: 'g1',
+    blunderPly: 20,
+    postBlunderState: mateInTwoState(),
+    pv: [...MATE_IN_TWO_PV],
+    verifyScore: { scoreCp: XIANGQI_MATE_SCORE_CP - 2, mate: 2 },
+    swingCp: 700,
+  };
+  assert.equal(assembleMinedXiangqiPuzzle(input, BUILD_OPTS).ok, true);
+  assert.deepEqual(assembleMinedXiangqiPuzzle(input, { ...BUILD_OPTS, quietKey: true }), {
+    ok: false,
+    reason: 'loud-key',
+  });
+});
+
+test('assembleMinedXiangqiPuzzle: the trim beats a 5-ply floor unless floorAfterTrim holds it', () => {
+  const opts = { maxSolutionPlies: 9, minSolutionPlies: 5 };
+  // Old behaviour: the 5-ply line passes the floor, then trims to 1 ply.
+  const loose = assembleMinedXiangqiPuzzle(looseHorseInput(), opts);
+  assert.equal(loose.ok, true);
+  if (loose.ok) assert.equal(loose.puzzle.solution.length, 1);
+  assert.deepEqual(
+    assembleMinedXiangqiPuzzle(looseHorseInput(), { ...opts, floorAfterTrim: true }),
+    {
+      ok: false,
+      reason: 'too-short-after-trim',
+    },
+  );
+});
+
+test('assembleMinedXiangqiPuzzle refuses a DPXQ game with no link and credits one with http', () => {
+  const opts = { maxSolutionPlies: 9, minSolutionPlies: 1 };
+  assert.deepEqual(
+    assembleMinedXiangqiPuzzle(looseHorseInput({ sourceSlug: 'dpxq-archive-test' }), opts),
+    { ok: false, reason: 'missing-attribution' },
+  );
+  const linked = assembleMinedXiangqiPuzzle(
+    looseHorseInput({
+      sourceSlug: 'dpxq-archive-test',
+      sourceUrl: 'https://dpxq.com/hldcg/search/view_m_140041.html',
+    }),
+    opts,
+  );
+  assert.equal(linked.ok, true);
+  if (linked.ok) {
+    assert.deepEqual(linked.puzzle.sourceGame?.attribution, {
+      name: '东萍象棋网 (DPXQ)',
+      url: 'http://www.dpxq.com/hldcg/search/view_m_140041.html',
+    });
+  }
+  // A source with no policy (ElephantChess) needs and gets no credit field.
+  const plain = assembleMinedXiangqiPuzzle(
+    looseHorseInput({ sourceSlug: 'elephantchess-pvp' }),
+    opts,
+  );
+  assert.equal(plain.ok, true);
+  if (plain.ok) assert.equal(plain.puzzle.sourceGame?.attribution, undefined);
+});
+
+test('xiangqiSourceAttribution rebuilds the DPXQ link from the view id', () => {
+  assert.deepEqual(xiangqiSourceAttribution({ sourceSlug: 'dpxq', sourceGameId: 'view_m_7' }), {
+    ok: true,
+    attribution: {
+      name: '东萍象棋网 (DPXQ)',
+      url: 'http://www.dpxq.com/hldcg/search/view_m_7.html',
+    },
+  });
+  assert.deepEqual(
+    xiangqiSourceAttribution({ sourceSlug: 'dpxq', sourceUrl: 'https://example.com/x' }),
+    {
+      ok: false,
+      reason: 'missing-attribution',
+    },
+  );
+});
+
+test('xiangqiPuzzleAttributionIssue flags a DPXQ puzzle without an http credit', () => {
+  const base = { id: 'p1', sourceGame: { gameId: 'g', ply: 3 } };
+  assert.equal(xiangqiPuzzleAttributionIssue(base, 'elephantchess-pvp'), null);
+  assert.match(
+    xiangqiPuzzleAttributionIssue(base, 'dpxq-archive-test') ?? '',
+    /lacks the required source credit/,
+  );
+  const https = {
+    id: 'p1',
+    sourceGame: {
+      gameId: 'g',
+      ply: 3,
+      attribution: { name: 'DPXQ', url: 'https://www.dpxq.com/a.html' },
+    },
+  };
+  assert.match(xiangqiPuzzleAttributionIssue(https, 'dpxq') ?? '', /does not accept/);
+  const ok = {
+    id: 'p1',
+    sourceGame: {
+      gameId: 'g',
+      ply: 3,
+      attribution: { name: 'DPXQ', url: 'http://www.dpxq.com/a.html' },
+    },
+  };
+  assert.equal(xiangqiPuzzleAttributionIssue(ok, 'dpxq'), null);
 });

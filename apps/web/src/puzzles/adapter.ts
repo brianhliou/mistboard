@@ -65,9 +65,15 @@ export type PuzzleSummary = {
   solutionPlyCount: number;
   rating: number;
   ratingProvisional: boolean;
-  // Attribution for the "From game" card (standard-xiangqi mined puzzles), on
-  // the detail only. `hosted` means the server holds the game and its page
-  // serves it, so the card links there; the names are then the game row's.
+  /** What the queue matches against (#712): the rating folded with solution
+   *  length and observed outcomes. Sent on list responses; display stays
+   *  `rating`. */
+  servingRating?: number;
+  // Attribution for the "From game" card (standard-xiangqi mined puzzles).
+  // `attribution` is the credit a source such as DPXQ requires back to its
+  // original game page (#712). `hosted` (detail only) means the server holds
+  // the game and its page serves it, so the card links there; the names are
+  // then the game row's.
   sourceGame?: {
     gameId: string;
     ply: number;
@@ -76,6 +82,7 @@ export type PuzzleSummary = {
     result?: string;
     redName?: string;
     blackName?: string;
+    attribution?: { name: string; url: string };
     hosted?: boolean;
   };
 };

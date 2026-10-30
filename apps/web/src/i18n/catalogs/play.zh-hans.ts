@@ -305,6 +305,7 @@ export const ZH_HANS_PLAY = {
   'puzzle.autoNext': '解开后直接跳到下一题',
   'puzzle.fromGame': '取自对局',
   'puzzle.fromGameWith': '取自对局 · {details}',
+  'puzzle.sourceCredit': '对局来源：',
   'puzzle.openSourceGame': '打开这道题所取自的对局',
   'puzzle.label': '题目 ',
   'puzzle.winning': '优势',

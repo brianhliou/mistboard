@@ -194,7 +194,9 @@ function buildSnapshot(
 // reconciling when the seed changed: seed-owned rows are upserted AND removed
 // when they left the seed, miner-owned rows are never touched. Runs inside one
 // transaction under an advisory lock so concurrent first requests (or several
-// server processes) cannot interleave.
+// server processes) cannot interleave. Its read-only mirror, which prints what
+// a candidate seed would insert/update/delete in prod, is
+// puzzle-seed-sync-plan.ts: change the two together.
 /** The hidden_reason a retired variant's puzzles carry (matches migration 143). */
 export const RETIRED_VARIANT_HIDDEN_REASON = 'retired-variant';
 
