@@ -26,7 +26,7 @@ import {
   writeDisplayPreference,
 } from './display-preferences.js';
 import { buildFlairIcon, FLAIR_KEYS, flairLabel, flairOfferedInPicker } from './flair.js';
-import { t } from './i18n/catalog.js';
+import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { refreshNotifications } from './notification-nav.js';
 import { type AuthUser, buildLoadingState, buildNav, fetchCurrentUser } from './site-shell.js';
@@ -1721,7 +1721,8 @@ function displayPreferenceOptionLabel(
   if (id !== 'pieceAnimation') {
     return value;
   }
-  const key = keys[id][value as keyof (typeof keys)[typeof id]];
+  const options: Partial<Record<string, I18nKey>> = keys[id];
+  const key = options[value];
   return key ? t(key, {}, locale) : value;
 }
 

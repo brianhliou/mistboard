@@ -124,25 +124,46 @@ describe('landing announcements', () => {
     expect(visible).toHaveLength(rows.length);
   });
 
-  it('links each hoverable relative date to its own entry on the feed', () => {
+  it('makes each row one link to its own entry on the feed, the date its timeline mark', () => {
+    // One target per row (list-row hover grammar): the date and the headline
+    // were separate anchors to the same place, with two different hovers.
     const panel = buildLandingAnnouncements();
-    const dates = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-date')];
+    const rows = [
+      ...panel.querySelectorAll<HTMLElement>('.landing-news-update[data-announcement-kind]'),
+    ];
 
-    expect(dates).toHaveLength(
-      panel.querySelectorAll('.landing-news-update[data-announcement-kind]').length,
-    );
-    for (const date of dates) {
-      const stamp = date.querySelector('time')?.dateTime ?? '';
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.tagName).toBe('A');
+      expect(row.classList.contains('hover-row')).toBe(true);
+      expect(row.querySelector('a')).toBeNull();
+
+      const date = row.querySelector<HTMLElement>('.landing-news-date');
+      expect(date?.tagName).toBe('SPAN');
+      const stamp = date?.querySelector('time')?.dateTime ?? '';
       expect(stamp).toMatch(/^2026-\d{2}-\d{2}$/);
       // The anchor starts with this row's own date, so a row cannot link to a
       // different row's entry.
-      expect(date.getAttribute('href')).toMatch(/^\/feed#2026-\d{2}-\d{2}-[a-z0-9-]+$/);
-      expect(date.getAttribute('href')).toContain(`/feed#${stamp}-`);
-      expect(date.getAttribute('title')).toMatch(/2026/);
+      expect(row.getAttribute('href')).toMatch(/^\/feed#2026-\d{2}-\d{2}-[a-z0-9-]+$/);
+      expect(row.getAttribute('href')).toContain(`/feed#${stamp}-`);
+      expect(date?.getAttribute('title')).toMatch(/2026/);
+      expect(row.querySelector('.landing-news-headline')?.classList.contains('hover-title')).toBe(
+        true,
+      );
     }
   });
 
-  it('sends the headline to the entry on /feed, not to the feature it announces', () => {
+  it('names each row by its date and headline, not the clamped body', () => {
+    const panel = buildLandingAnnouncements();
+    const row = panel.querySelector<HTMLElement>('.landing-news-update[data-announcement-kind]');
+    const named = [...(row?.querySelectorAll<HTMLElement>('.landing-news-content > *') ?? [])]
+      .filter((el) => el.getAttribute('aria-hidden') !== 'true')
+      .map((el) => el.className.split(' ')[0]);
+    expect(named).toEqual(['landing-news-date', 'landing-news-headline']);
+    expect(row?.getAttribute('aria-label')).toBeNull();
+  });
+
+  it('sends the row to the entry on /feed, not to the feature it announces', () => {
     // The row clamps its body to one line, so every row ends in an ellipsis. A
     // reader clicking a truncated headline is asking to read the rest; before
     // this, the headline jumped to /import (or wherever) and the only route to
@@ -155,13 +176,6 @@ describe('landing announcements', () => {
     );
     for (const link of links) {
       expect(link.getAttribute('href')).toMatch(/^\/feed#2026-\d{2}-\d{2}-[a-z0-9-]+$/);
-    }
-    // Every row's headline and its date agree on the target.
-    const rows = [...panel.querySelectorAll('.landing-news-update[data-announcement-kind]')];
-    for (const row of rows) {
-      const headline = row.querySelector('a.landing-news-link')?.getAttribute('href');
-      const date = row.querySelector('a.landing-news-date')?.getAttribute('href');
-      expect(headline).toBe(date);
     }
   });
 
@@ -283,11 +297,9 @@ describe('landing announcements', () => {
     expect(news.querySelector<HTMLAnchorElement>('.news-page-link')?.getAttribute('href')).toBe(
       newestFeatureHref,
     );
-    // Both of the row's targets are the entry's anchor, so nothing in the row
-    // sends a reader somewhere other than the update they clicked.
-    expect(
-      landing.querySelector<HTMLAnchorElement>('a.landing-news-date')?.getAttribute('href'),
-    ).toBe(newestHref);
+    // The row is the one target, so nothing in it sends a reader somewhere
+    // other than the update they clicked.
+    expect(firstRow?.querySelectorAll('a')).toHaveLength(0);
     // Authored announcement copy (headline, body, CTA label) is translated by
     // announcement-i18n.ts, not the catalog, so the whole entry renders in zh.
     const newest = [...announcements()].sort((a, b) => b.date.localeCompare(a.date))[0];
@@ -351,12 +363,17 @@ describe('News rail geometry', () => {
     // A row's marker is centred in it, so 50% of the row is the marker centre.
     const up = rule('.landing-news-update:not(:first-child)::before');
     expect(up).toMatch(/bottom: 50%;/);
-    expect(up).toMatch(/top: calc\(-1 \* var\(--landing-feed-row-gap\)\);/);
+    expect(up).toMatch(
+      /top: calc\(2 \* var\(--landing-feed-row-pad\) - var\(--landing-feed-row-gap\)\);/,
+    );
     const down = rule('.landing-news-update:not(:last-child)::after');
     expect(down).toMatch(/top: 50%;/);
     expect(down).toMatch(/bottom: 0;/);
-    // The gap the upward half crosses is the gap between rows.
-    expect(rule('.landing-news-update')).toMatch(/margin-top: var\(--landing-feed-row-gap\);/);
+    // The gap the upward half crosses is the margin between row boxes: the row
+    // gap less both rows' hover padding, the same sum the upward half spans.
+    expect(rule('.landing-news-update')).toMatch(
+      /margin-top: calc\(var\(--landing-feed-row-gap\) - 2 \* var\(--landing-feed-row-pad\)\);/,
+    );
     expect(rule('.landing-news-update')).toMatch(/position: relative;/);
     // The marker stays centred in its row, which the 50% anchors rely on.
     expect(rule('.landing-news-marker')).toMatch(/align-self: center;/);

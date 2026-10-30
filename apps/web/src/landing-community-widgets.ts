@@ -5,6 +5,7 @@ import { fitRowsToBody } from './site-box-fit.js';
 import { localizedStudyName } from './study-i18n.js';
 import { buildStudyThumbnail, type StudyPreviewBoard } from './study-thumbnails.js';
 import { leaderboardVariants } from './variants.js';
+import './hover-grammar.css';
 import './landing-community-widgets.css';
 
 type PublicStudy = {
@@ -86,7 +87,7 @@ async function hydrateStudies(body: HTMLElement): Promise<void> {
 
 function studyRow(study: PublicStudy): HTMLElement {
   const row = document.createElement('a');
-  row.className = 'site-box-row landing-study-row';
+  row.className = 'site-box-row landing-study-row hover-row';
   row.href = `/study/${encodeURIComponent(study.id)}`;
   // Every row holds a thumbnail slot, so titles line up down the box even when
   // a study has no derived board and no variant marker (an empty panel of the
@@ -106,7 +107,10 @@ function studyRow(study: PublicStudy): HTMLElement {
   // study page, and their first 45 characters (a URL, a date, the title again)
   // said less than the title (#710, tried 2026-10-27).
   main.append(
-    text('landing-community-name landing-study-name', localizedStudyName(study.name, study.i18n)),
+    text(
+      'landing-community-name landing-study-name hover-title',
+      localizedStudyName(study.name, study.i18n),
+    ),
     text('landing-community-meta', `${study.owner.displayName} · ${chapters}`),
   );
   row.append(thumbnail, main);
@@ -148,12 +152,12 @@ async function hydrateLeaderboard(body: HTMLElement): Promise<void> {
 
 function leaderboardRow(category: string, leader: LeaderboardEntry): HTMLElement {
   const row = document.createElement('a');
-  row.className = 'site-box-row landing-leaderboard-row';
+  row.className = 'site-box-row landing-leaderboard-row hover-row';
   row.href = `/@/${encodeURIComponent(leader.handle)}`;
   // Built by hand rather than through text(), which sets textContent and would
   // wipe a badge appended before the name.
   const player = document.createElement('span');
-  player.className = 'landing-leaderboard-player';
+  player.className = 'landing-leaderboard-player hover-title';
   prependTitleBadge(player, leader.title);
   player.append(leader.displayName);
   row.append(

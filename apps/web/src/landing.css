@@ -113,13 +113,6 @@
   text-decoration: none;
 }
 
-.landing-about a:hover,
-.landing-about a:focus-visible {
-  color: var(--site-link);
-  text-decoration: underline;
-  outline: none;
-}
-
 /* Puzzle-of-the-day widget: caption, board, caption as one column. The two
    captions used to be absolutely positioned OUT of the widget (bottom: 100% and
    top: 100%), which aligned the BOARD with the forum and chat boxes and left the
@@ -1215,11 +1208,6 @@
   white-space: nowrap;
 }
 
-.landing-row-more:hover,
-.landing-row-more:focus-visible {
-  color: var(--site-accent-strong);
-}
-
 /* Row labels: quiet, so the cards stay the subject. */
 .landing-row-label {
   margin: 0;
@@ -1268,18 +1256,10 @@
   overflow: hidden;
   text-decoration: none;
   color: inherit;
-  transition:
-    border-color 120ms ease,
-    background 120ms ease;
 }
 
-/* No lift/scale on hover; the border warms to the brand accent and the title
-   strip under the thumbnail shifts to the soft panel tone so the card reads as
-   active without a material lift. */
-.landing-article-card:hover {
-  border-color: var(--site-accent);
-  background: var(--site-panel-soft);
-}
+/* Hover and focus: the card grammar (hover-grammar.css .hover-card), border to
+   the accent and the title to the link green, no lift. */
 
 .landing-article-card-thumb {
   position: relative;
@@ -1669,6 +1649,14 @@
   max-width: 100%;
   height: auto;
   display: block;
+}
+
+/* The xiangqi boards round their corners like the puzzle box beside them
+   (.home-puzzle-widget-board): the host clips, so a square grid's corner cells
+   cannot paint past the curve. Chess (cg-wrap) keeps its own square board. */
+.showcase-widget .replay-layout-solo .replay-board:has(.xq-live-svg) {
+  border-radius: var(--board-corner-radius);
+  overflow: hidden;
 }
 
 /* The SVG defines the height: full width, aspect-driven height (was 100%/100%,
@@ -2205,8 +2193,9 @@
      reads the same in both themes. The extra bottom padding lets the last entry
      scroll clear of the fade. */
   .landing-news-column .site-box-body.landing-news-scroll {
-    padding-bottom: 32px;
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
+    /* Less the last row's own padding (landing-announcements.css). */
+    padding-bottom: calc(var(--site-scroll-fade-size) - var(--landing-feed-row-pad));
+    mask-image: var(--site-scroll-fade);
   }
 
   /* ── Homepage viewer: flush box model (Stage 2) ──────────────────────────────

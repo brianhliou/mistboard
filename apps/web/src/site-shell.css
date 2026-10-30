@@ -514,11 +514,6 @@ a.site-nav-link[hidden],
   font-weight: 600;
 }
 
-.landing-footer a:hover {
-  color: var(--site-text);
-  text-decoration: underline;
-}
-
 /* Phones keep the same four links (Brian 2026-10-17). After the base rules on
    purpose: the phone padding used to sit above them and never applied. Where
    the row runs out of width, the identity line wraps, centred, under the links. */

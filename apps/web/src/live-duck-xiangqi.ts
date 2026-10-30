@@ -19,6 +19,7 @@ import {
   getDuckXiangqiPlayerView,
 } from '@mistboard/game';
 import {
+  animateDuckXiangqiTurn,
   type DuckXiangqiBoardPhase,
   duckXiangqiBoardSvg,
   duckXiangqiClickResult,
@@ -162,6 +163,21 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
   renderBoard: (refs, view) => {
     reconcileInteractionState(core?.state.view ?? null);
     renderBoard(refs, view);
+  },
+  // Scrubbing the room's replay glides the turn stepped over, the piece and the
+  // duck together. Live turns keep the landing plop (renderBoard) and no glide.
+  animateBoard: (liveRefs, view, takePendingAnimation) => {
+    if (!view) return;
+    const pending = takePendingAnimation();
+    if (pending?.kind !== 'scrub') return;
+    const perspective = orientationFor(view);
+    if (pending.direction === 'forward') {
+      animateDuckXiangqiTurn(liveRefs.board, pending.prevView, view, perspective);
+    } else if (pending.prevView) {
+      animateDuckXiangqiTurn(liveRefs.board, view, pending.prevView, perspective, {
+        reverse: true,
+      });
+    }
   },
   renderExtras: (refs, view) => renderPhaseNotice(refs, view),
   onDisabled: (refs) => {

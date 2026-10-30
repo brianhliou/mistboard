@@ -14,12 +14,6 @@ export function xiangqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_XIANGQI_ENABLED === 'true';
 }
 
-// Global friends-online widget (bottom-corner pill → expandable list, lichess
-// parity). On in dev; in prod/staging it stays hidden until the build opts in.
-export function friendsOnlineEnabled(): boolean {
-  return import.meta.env.DEV || import.meta.env.VITE_FRIENDS_ONLINE_ENABLED === 'true';
-}
-
 // Fortress Xiangqi (7x8 xiangqi-with-a-pocket). Launched: always on (the server
 // MISTBOARD_FORTRESS_XIANGQI_ENABLED flag remains the runtime kill-switch for
 // room creation).

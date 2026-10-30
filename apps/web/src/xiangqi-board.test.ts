@@ -3,7 +3,7 @@ import {
   createInitialXiangqiState,
   getStandardXiangqiPlayerView,
 } from '@mistboard/game';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type DisplayPreferenceValue, writeDisplayPreference } from './display-preferences.js';
 import { renderXiangqiBoardSvg as renderLiveXiangqiBoardSvg } from './live-xiangqi.js';
 import {
@@ -15,6 +15,15 @@ import {
   xiangqiBoardSvg,
   xiangqiMarkerSvg,
 } from './xiangqi-board.js';
+
+// Flat pieces unless a test asks for 3D: the board-wide 3D default
+// (piece3dEnabled, 2026-10-28) reads the root, which these tests pin off.
+beforeEach(() => {
+  document.documentElement.dataset.banqiTile3d = 'off';
+});
+afterEach(() => {
+  delete document.documentElement.dataset.banqiTile3d;
+});
 
 // This happy-dom build ships no window.localStorage; back it with memory (same
 // idiom as puzzles.test.ts) so the pieceAnimation preference writes work.
@@ -146,9 +155,10 @@ describe('standard Xiangqi board SVG', () => {
     expect(svg).toContain(
       '<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="246" y="438" width="60" height="60"/>',
     );
-    // The ring traces the moved piece's outline (62-unit box: rect 4..96).
+    // The ring wraps the moved piece's outline from outside (the art fills
+    // 53.77 of its 62 box at 85% of the cell), and stays inside the square.
     expect(svg).toContain(
-      '<rect x="247.48" y="439.48" width="57.04" height="57.04" rx="8.68" class="xq-live-lastmove-piece-ring" fill="none" stroke="#f59e0b" stroke-width="2.6"/>',
+      '<rect class="xq-live-lastmove-piece-ring" fill="none" stroke="#f59e0b" stroke-width="2.26" data-cx="276" data-cy="468" x="249.38" y="441.38" width="53.24" height="53.24" rx="9.41"/>',
     );
     expect(svg).not.toContain('xq-live-lastmove-cell');
     expect(svg).not.toContain('xq-live-lastmove-ring');

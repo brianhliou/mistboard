@@ -20,8 +20,8 @@ import {
 // never a just-drawn tile, never a concealed tile. The timeline goes through the
 // same xmjClientEventFor every room recipient's events go through, and then
 // keeps only the public fields of each move: `handCopy` (whether a discard was
-// the drawn tile's twin) is dropped here, so TV never repeats it even while the
-// shared serializer still passes it. Regression: xiangqi-mahjong-spectate.test.ts.
+// the drawn tile's twin) is dropped by that serializer for every recipient and
+// again here, so TV never carries it. Regression: xiangqi-mahjong-spectate.test.ts.
 
 export type XmjWatchMove = {
   type: 'move-played';

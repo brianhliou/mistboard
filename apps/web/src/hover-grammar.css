@@ -1,0 +1,65 @@
+/* One hover grammar (homepage, 2026-10-28). Three kinds of target, one green:
+   every hover colour is --site-link. Keyboard focus shows the same change as
+   hover and keeps the global focus ring (app-base.css a:focus-visible), so no
+   rule here sets outline except to pull a row's ring inside its own box.
+
+   1. Text link (.hover-link): the text turns green and underlines. Everything
+      inside it inherits the green, so a number or label that sets its own
+      colour at rest does not stay grey or black on hover. When the link is a
+      larger box and only one span in it is the text (a site-box header's
+      "More »", the News archive row), the box is .hover-link-host and the span
+      .hover-link-text.
+   2. Card (.hover-card): the border warms to the accent and the .hover-title
+      turns green. No underline, no lift, no background change.
+   3. List row (.hover-row): the row takes the soft accent tint and the
+      .hover-title turns green. No underline.
+
+   Specificity: every hover rule here is two classes or more, so it outranks a
+   widget's one-class resting colour wherever Vite puts this file in the
+   bundle. A widget that needs a resting background on a row (zebra) sets
+   --site-box-row-bg instead of background, so it never competes with the
+   hover tint (site-box.css). */
+
+.hover-link:hover,
+.hover-link:focus-visible,
+.hover-link-host:hover .hover-link-text,
+.hover-link-host:focus-visible .hover-link-text {
+  color: var(--site-link);
+  text-decoration-line: underline;
+  text-underline-offset: 3px;
+}
+
+.hover-link:hover *,
+.hover-link:focus-visible *,
+.hover-link-host:hover .hover-link-text *,
+.hover-link-host:focus-visible .hover-link-text * {
+  color: inherit;
+}
+
+.hover-card {
+  transition: border-color 120ms ease;
+}
+
+.hover-card:hover,
+.hover-card:focus-visible {
+  border-color: var(--site-accent);
+}
+
+.hover-row:hover,
+.hover-row:focus-visible {
+  background-color: var(--site-accent-soft);
+}
+
+/* Rows sit flush in clipped boxes (site-box, the News scroller), so the ring
+   is drawn inside the row; outside it the box edge would cut it off. */
+.hover-row:focus-visible {
+  outline-offset: -3px;
+}
+
+.hover-card:hover .hover-title,
+.hover-card:focus-visible .hover-title,
+.hover-row:hover .hover-title,
+.hover-row:focus-visible .hover-title {
+  color: var(--site-link);
+  text-decoration-line: none;
+}

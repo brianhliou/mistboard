@@ -1,4 +1,5 @@
 import './site-shell.css';
+import './hover-grammar.css';
 import type { AccountPreferences } from './account-preferences.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -727,6 +728,15 @@ export function registerMenuLocaleSelectHandler(handler: MenuLocaleSelectHandler
   menuLocaleSelectHandler = handler;
 }
 
+// Called with the freshly built panel each time the menu opens; account-nav
+// registers the signed-in decoration (the Friends item's online count).
+type SiteMenuOpenHandler = (panel: HTMLElement, locale: Locale) => void;
+let siteMenuOpenHandler: SiteMenuOpenHandler | null = null;
+
+export function registerSiteMenuOpenHandler(handler: SiteMenuOpenHandler | null): void {
+  siteMenuOpenHandler = handler;
+}
+
 interface OpenSiteMenuState {
   panel: HTMLElement;
   toggle: HTMLElement;
@@ -774,6 +784,7 @@ export function openSiteMenu(
   openSiteMenuState = { panel, toggle, onKeydown };
   panel.querySelector<HTMLElement>('.site-menu-close')?.focus();
   if (initialView) showSettings(initialView.view, initialView.includeLanguage);
+  siteMenuOpenHandler?.(panel, locale);
 }
 
 export function closeSiteMenu({ restoreFocus = true }: { restoreFocus?: boolean } = {}): void {
@@ -902,6 +913,8 @@ function siteMenuLink(item: NavItem, locale: Locale, path: string): HTMLAnchorEl
   const link = document.createElement('a');
   link.className = 'site-menu-link';
   link.href = item.external ? item.href : localizedHref(item.href, locale);
+  // The unlocalized destination, so a decoration can find its item.
+  link.dataset.navHref = item.href;
   const label = document.createElement('span');
   label.textContent = t(item.labelKey, {}, locale);
   link.append(label);
@@ -969,6 +982,7 @@ export function buildHomeFooter(locale: Locale = currentLocale()): HTMLElement {
   for (const link of footerNavItems()) {
     if (isBlockedForViewer(link.blockedIn)) continue;
     const anchor = document.createElement('a');
+    anchor.className = 'hover-link';
     anchor.href = link.external ? link.href : localizedHref(link.href, locale);
     anchor.textContent = t(link.labelKey, {}, locale);
     if (link.external) {

@@ -13,10 +13,11 @@
 import { drawMarkerOnArrival, glideSvgPiece } from './board-anim.js';
 import { TOKEN_PIECE_RATIO, xiangqiPieceDrawSize } from './board-metrics.js';
 import {
+  SQUARE_CORNER_PER_HALF,
   type XiangqiPieceSet,
   type XiangqiPieceShape,
-  xiangqiPieceFrameOutline,
   xiangqiPieceOuterRadius,
+  xiangqiPieceSetShape,
 } from './xiangqi-piece-sets.js';
 import './board-lastmove.css';
 
@@ -56,7 +57,13 @@ export const BOARD_LASTMOVE_BAND_WIDTH = 2.5;
  * (xiangqiPieceOuterRadius: 47.4 for the international and Dobutsu sets, 47.25
  * for the character discs, 45 for the asset discs).
  */
-export type BoardLastMovePiece = { box: number; outer: number };
+export type BoardLastMovePiece = {
+  box: number;
+  outer: number;
+  /** How far the drawn disc sits above its anchor: a 3D piece raises its disc
+   *  by half its rim, and its mark is that rim in gold (boardLastMoveEdgeSvg). */
+  lift?: number;
+};
 
 /** The piece a set draws face up in a box of this size. */
 export function boardLastMovePiece(box: number, set: XiangqiPieceSet): BoardLastMovePiece {
@@ -168,25 +175,79 @@ export function boardLastMoveMarkersSvg(
   layer: BoardLastMoveLayer,
   piece: BoardLastMovePiece,
 ): string {
-  if (layer === 'over') return '';
+  // A raised (3D) piece's mark is its gold edge, over the pieces
+  // (boardLastMoveEdgeSvg); a flat one's band goes under.
+  const lift = piece.lift ?? 0;
+  if (layer === 'over' && !lift) return '';
   const scale = pieceSize / CANONICAL_PIECE_SIZE;
   // A stroke is centred on its circle, so a mark's centre line sits half its
   // own stroke inside the edge it is meant to reach. Get this wrong and the
   // outline, not the fill, is what collides with the neighbouring mark.
   const originRadius = round2((CANONICAL_ORIGIN_OUTER_EDGE - CANONICAL_ORIGIN_STROKE / 2) * scale);
   const parts: string[] = [];
-  if (endpoints.from) {
+  if (endpoints.from && layer !== 'over') {
     parts.push(
       `<circle class="xq-live-lastmove-cell xq-live-lastmove-from" cx="${endpoints.from.x}" cy="${endpoints.from.y}" r="${originRadius}"/>`,
     );
   }
-  if (endpoints.to) {
+  if (endpoints.to && lift && layer !== 'under') {
+    parts.push(boardLastMoveEdgeSvg(endpoints.to, boardLastMoveBand(piece).inner, lift));
+  } else if (endpoints.to && !lift) {
     const band = boardLastMoveBand(piece);
     parts.push(
       `<circle class="xq-live-lastmove-ring" cx="${endpoints.to.x}" cy="${endpoints.to.y}" r="${band.r}" stroke-width="${band.width}"/>`,
     );
   }
   return parts.join('');
+}
+
+/**
+ * A raised (3D) piece's destination mark: its edge, the wall showing below the
+ * face, painted gold (Brian, 2026-10-29, picked over a band on the rim, which
+ * "sits a little bit on the edge of the disk" and made it harder to read as
+ * one). Down both sides from the face's centre line, round the base, back up
+ * under the face. `data-cx`/`data-cy` name the point the piece stands on, so the
+ * mark glides with the piece (animateBoardLastMoveArrival) instead of fading in
+ * after it lands.
+ */
+function boardLastMoveEdgeSvg(to: BoardPoint, radius: number, lift: number): string {
+  const r = round2(radius);
+  const left = round2(to.x - r);
+  const right = round2(to.x + r);
+  const top = round2(to.y - lift);
+  const base = round2(to.y + lift);
+  const d = `M${left} ${top}V${base}A${r} ${r} 0 0 0 ${right} ${base}V${top}A${r} ${r} 0 0 1 ${left} ${top}Z`;
+  return edgePath(d, to);
+}
+
+/**
+ * The same gold edge under a rounded square of outer half-width `half` and
+ * outer corner `corner` (a 3D piece on the Square grid): the wall between the
+ * face's bottom edge and the base's, down the sides and round both corners.
+ */
+function boardLastMoveSquareEdgeSvg(
+  to: BoardPoint,
+  half: number,
+  corner: number,
+  lift: number,
+): string {
+  const h = round2(half);
+  const rc = round2(corner);
+  const left = round2(to.x - h);
+  const right = round2(to.x + h);
+  const faceBottom = round2(to.y - lift + h);
+  const baseBottom = round2(to.y + lift + h);
+  const d =
+    `M${left} ${round2(faceBottom - rc)}V${round2(baseBottom - rc)}` +
+    `A${rc} ${rc} 0 0 0 ${round2(left + rc)} ${baseBottom}H${round2(right - rc)}` +
+    `A${rc} ${rc} 0 0 0 ${right} ${round2(baseBottom - rc)}V${round2(faceBottom - rc)}` +
+    `A${rc} ${rc} 0 0 1 ${round2(right - rc)} ${faceBottom}H${round2(left + rc)}` +
+    `A${rc} ${rc} 0 0 1 ${left} ${round2(faceBottom - rc)}Z`;
+  return edgePath(d, to);
+}
+
+function edgePath(d: string, to: BoardPoint): string {
+  return `<path class="xq-live-lastmove-ring xq-live-lastmove-edge" d="${d}" data-cx="${to.x}" data-cy="${to.y}"/>`;
 }
 
 /**
@@ -197,8 +258,8 @@ export function boardLastMoveMarkersSvg(
  * never sits on the destination while the piece is still travelling, and it is
  * already in place when the piece lands. A band that is not centred on `to`
  * (a board whose marks belong to another move) and every other destination mark
- * (the square grid's tint and piece ring, banqi's tint) keep the fade-in on
- * arrival. `from` and `to` are the glide's start and end centres in viewBox
+ * (the square grid's cell tint, banqi's tint) keep the fade-in on arrival. The
+ * square grid's ring on the piece rides the glide like the band. `from` and `to` are the glide's start and end centres in viewBox
  * units. A reverse step (stepping back) should not call this.
  */
 export function animateBoardLastMoveArrival(
@@ -208,7 +269,7 @@ export function animateBoardLastMoveArrival(
   durationMs: number,
 ): void {
   for (const marker of root.querySelectorAll(BOARD_LASTMOVE_MARKER_SELECTOR)) {
-    if (marker.classList.contains('xq-live-lastmove-ring') && centredOn(marker, to)) {
+    if (rides(marker) && centredOn(marker, to)) {
       glideSvgPiece(marker, from.x - to.x, from.y - to.y, durationMs);
     } else {
       drawMarkerOnArrival(marker, durationMs);
@@ -216,9 +277,27 @@ export function animateBoardLastMoveArrival(
   }
 }
 
+/** The gold edge a 3D piece standing on `at` carries, if it is the last move's. */
+export function boardLastMoveEdgeOn(root: ParentNode, at: BoardPoint): Element | null {
+  for (const edge of root.querySelectorAll('.xq-live-lastmove-edge')) {
+    if (centredOn(edge, at)) return edge;
+  }
+  return null;
+}
+
+// The marks drawn on the piece itself ride its glide: the intersection band,
+// a 3D piece's edge, the square grid's ring. Cell tints stay put and fade in.
+function rides(marker: Element): boolean {
+  return (
+    marker.classList.contains('xq-live-lastmove-ring') ||
+    marker.classList.contains('xq-live-lastmove-piece-ring')
+  );
+}
+
 function centredOn(el: Element, p: BoardPoint): boolean {
-  const cx = Number(el.getAttribute('cx'));
-  const cy = Number(el.getAttribute('cy'));
+  // A 3D piece's edge is a path; it names the point it stands on.
+  const cx = Number(el.getAttribute('data-cx') ?? el.getAttribute('cx'));
+  const cy = Number(el.getAttribute('data-cy') ?? el.getAttribute('cy'));
   return Math.abs(cx - p.x) < 0.01 && Math.abs(cy - p.y) < 0.01;
 }
 
@@ -231,7 +310,11 @@ function centredOn(el: Element, p: BoardPoint): boolean {
  * - origin: the whole cell, edge to edge, in solid amber at 0.65, under the
  *   pieces (it marks an empty square and must sit under whatever lands there);
  * - destination: today's soft cell tint under the piece, plus an amber ring
- *   traced on the moved piece's own outline, over the pieces.
+ *   just outside the moved piece's own outline, over the pieces. Since pieces
+ *   sit inside their squares (2026-10-29, 85%) the ring wraps the piece's dark
+ *   outline instead of covering it (Brian: "draw the ring a little outside the
+ *   black line"); a 3D piece's mark is its edge in gold, as on the
+ *   intersection board.
  * Jungle, Flip Jungle and banqi keep their own cell tints; the intersection
  * layout keeps the wash and band above.
  */
@@ -240,22 +323,32 @@ export const CELL_LASTMOVE_AMBER = '#f59e0b';
 export const CELL_LASTMOVE_ORIGIN_OPACITY = 0.65;
 /** The destination ring's width in the piece's 100-unit box: 1.5x the piece's own 2.8 ring. */
 export const CELL_LASTMOVE_RING_WIDTH = 4.2;
-/** Half-width of a piece's outline in its 100-unit box (rect 4..96 / r 46). */
+/** Half-width of a piece's outline at its stroke's centre, in its 100-unit box
+ *  (rect 4..96 / r 46). */
 const PIECE_OUTLINE_HALF = 46;
 
 /**
  * Last-move marks for a xiangqi-family board drawn on the square grid. `piece`
- * is the box the pieces are drawn in (its side, not the layout size the
- * intersection origin wash is tuned on) and the outline the set draws there: the
+ * is the box the piece's art fills (xiangqiPieceCellBox of the box it is given,
+ * not the layout size the intersection origin wash is tuned on) and its set: the
  * asset sets keep their disc on the square grid, so the ring follows the piece
- * actually drawn. A null endpoint is left unmarked, as with the intersection
- * marks (a drop has no origin; a fog board passes only what the viewer sees).
+ * actually drawn. `outer` overrides the outline's outer edge in that box (a 3D
+ * piece's face), `lift` raises the face by half its rim. A null endpoint is left
+ * unmarked, as with the intersection marks (a drop has no origin; a fog board
+ * passes only what the viewer sees).
  */
+export type BoardLastMoveCellPiece = {
+  size: number;
+  set: XiangqiPieceSet;
+  outer?: number;
+  lift?: number;
+};
+
 export function boardLastMoveCellMarksSvg(
   endpoints: { from?: BoardPoint | null; to?: BoardPoint | null },
   cell: number,
   layer: BoardLastMoveLayer,
-  piece: { size: number; shape: XiangqiPieceShape },
+  piece: BoardLastMoveCellPiece,
 ): string {
   const parts: string[] = [];
   const cellRect = (p: BoardPoint, attrs: string) =>
@@ -274,18 +367,31 @@ export function boardLastMoveCellMarksSvg(
     }
   }
   if (endpoints.to && layer !== 'under') {
-    const k = piece.size / 100;
-    parts.push(
-      xiangqiPieceFrameOutline(
-        piece.shape,
-        PIECE_OUTLINE_HALF * k,
-        `class="xq-live-lastmove-piece-ring" fill="none" stroke="${CELL_LASTMOVE_AMBER}" stroke-width="${round2(CELL_LASTMOVE_RING_WIDTH * k)}"`,
-        endpoints.to.x,
-        endpoints.to.y,
-      ),
-    );
+    parts.push(cellPieceMark(endpoints.to, piece));
   }
   return parts.join('');
+}
+
+function cellPieceMark(to: BoardPoint, piece: BoardLastMoveCellPiece): string {
+  const k = piece.size / 100;
+  const shape: XiangqiPieceShape = xiangqiPieceSetShape(piece.set, 'square');
+  const outer = piece.outer ?? xiangqiPieceOuterRadius(piece.set);
+  // A rounded square's corner grows with its half-width beyond the stroke's
+  // centre line, so the ring stays concentric with the outline.
+  const corner = SQUARE_CORNER_PER_HALF * PIECE_OUTLINE_HALF + (outer - PIECE_OUTLINE_HALF);
+  if (piece.lift) {
+    return shape === 'square'
+      ? boardLastMoveSquareEdgeSvg(to, outer * k, corner * k, piece.lift)
+      : boardLastMoveEdgeSvg(to, outer * k, piece.lift);
+  }
+  const width = CELL_LASTMOVE_RING_WIDTH * k;
+  const half = round2(outer * k + width / 2);
+  const paint = `class="xq-live-lastmove-piece-ring" fill="none" stroke="${CELL_LASTMOVE_AMBER}" stroke-width="${round2(width)}" data-cx="${to.x}" data-cy="${to.y}"`;
+  if (shape === 'disc') {
+    return `<circle ${paint} cx="${to.x}" cy="${to.y}" r="${half}"/>`;
+  }
+  const rx = round2(corner * k + width / 2);
+  return `<rect ${paint} x="${round2(to.x - half)}" y="${round2(to.y - half)}" width="${round2(2 * half)}" height="${round2(2 * half)}" rx="${rx}"/>`;
 }
 
 function round2(value: number): number {

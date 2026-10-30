@@ -7,6 +7,8 @@ import { isLikelySignedIn } from './signed-in-state.js';
 import { readStoredSoundSet, type SoundSetId, storeSoundSet } from './sound-sets.js';
 import {
   endXiangqiAppearancePreview,
+  readStoredBanqiTile3d,
+  readStoredPieceEdgeThick,
   readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
@@ -15,6 +17,8 @@ import {
   readStoredXiangqiRiverStyle,
   readStoredXiangqiRiverText,
   readStoredXiangqiStartMarkers,
+  writeStoredBanqiTile3d,
+  writeStoredPieceEdgeThick,
   writeStoredXiangqiBoardColor,
   writeStoredXiangqiBoardLayout,
   writeStoredXiangqiNotation,
@@ -42,6 +46,8 @@ import type { XiangqiPieceSet } from './xiangqi-piece-sets.js';
 import type { XiangqiRiverText } from './xiangqi-river-text.js';
 
 export {
+  readStoredBanqiTile3d,
+  readStoredPieceEdgeThick,
   readStoredXiangqiBoardColor,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
@@ -173,6 +179,8 @@ export function initializeThemeSettings(): void {
   applyXiangqiRiverStyle(readStoredXiangqiRiverStyle());
   applyXiangqiStartMarkers(readStoredXiangqiStartMarkers());
   applyXiangqiPieceShadow(readStoredXiangqiPieceShadow());
+  applyBanqiTile3d(readStoredBanqiTile3d());
+  applyPieceEdge(readStoredPieceEdgeThick());
   applyXiangqiPieceSet(readStoredXiangqiPieceSet());
   if (!document.documentElement.dataset.boardFamily) {
     document.documentElement.dataset.boardFamily = defaultBoardFamily;
@@ -203,6 +211,8 @@ function watchForXiangqiAppearanceInOtherDocuments(): void {
     applyXiangqiRiverStyle(readStoredXiangqiRiverStyle());
     applyXiangqiStartMarkers(readStoredXiangqiStartMarkers());
     applyXiangqiPieceShadow(readStoredXiangqiPieceShadow());
+    applyBanqiTile3d(readStoredBanqiTile3d());
+    applyPieceEdge(readStoredPieceEdgeThick());
     applyXiangqiPieceSet(readStoredXiangqiPieceSet());
     syncThemeControls();
     dispatchXiangqiAppearanceChanged();
@@ -316,6 +326,16 @@ function applyXiangqiPieceShadow(on: boolean): void {
   document.documentElement.dataset.xiangqiPieceShadow = on ? 'on' : 'off';
 }
 
+/** Every board renderer reads this (piece3dEnabled). */
+function applyBanqiTile3d(on: boolean): void {
+  document.documentElement.dataset.banqiTile3d = on ? 'on' : 'off';
+}
+
+/** Every 3D rim reads this (piece3dThickEdge). */
+function applyPieceEdge(thick: boolean): void {
+  document.documentElement.dataset.pieceEdge = thick ? 'thick' : 'standard';
+}
+
 /** Mirrors the coordinate preference onto the root so CSS can pick the matching
  *  board aspect. The label gutter is only reserved when labels are shown, so the
  *  board is a different rectangle in each state and the host slot has to agree
@@ -404,6 +424,62 @@ export function setXiangqiPieceShadowPreference(on: boolean): void {
   writeStoredXiangqiPieceShadow(on);
   syncThemeControls();
   dispatchXiangqiAppearanceChanged();
+}
+
+export function setBanqiTile3dPreference(on: boolean): void {
+  endXiangqiAppearancePreview('tile');
+  applyBanqiTile3d(on);
+  writeStoredBanqiTile3d(on);
+  syncThemeControls();
+  dispatchXiangqiAppearanceChanged();
+}
+
+export function setPieceEdgePreference(thick: boolean): void {
+  endXiangqiAppearancePreview('edge');
+  applyPieceEdge(thick);
+  writeStoredPieceEdgeThick(thick);
+  syncThemeControls();
+  dispatchXiangqiAppearanceChanged();
+}
+
+export const PIECE_ANIMATION_SPEEDS = ['none', 'fast', 'normal', 'slow'] as const;
+type PieceAnimationSpeed = (typeof PIECE_ANIMATION_SPEEDS)[number];
+
+/** The gear's Pieces rows, each as the value its segmented buttons carry. */
+export type PieceSegmentValues = {
+  look: 'flat' | '3d';
+  edge: 'standard' | 'thick';
+  speed: PieceAnimationSpeed;
+};
+export type PieceSegment = keyof PieceSegmentValues;
+
+export function pieceSegmentValues(): PieceSegmentValues {
+  const prefs = readDisplayPreferences();
+  return {
+    look: readStoredBanqiTile3d() ? '3d' : 'flat',
+    edge: readStoredPieceEdgeThick() ? 'thick' : 'standard',
+    speed: prefs.pieceAnimation,
+  };
+}
+
+/** Edge means nothing on flat pieces. */
+export function pieceSegmentHidden(segment: PieceSegment, values: PieceSegmentValues): boolean {
+  if (segment === 'edge') return values.look !== '3d';
+  return false;
+}
+
+/** Piece animation is also an account setting, and the account page copies the
+ *  account's value over this browser's on load, so a signed-in reader's change
+ *  here is saved to the account too or it would revert. */
+export function setPieceAnimationPreference(speed: PieceAnimationSpeed): void {
+  writeDisplayPreference('pieceAnimation', speed);
+  syncThemeControls();
+  if (!isLikelySignedIn()) return;
+  void fetch('/api/account/display-preferences', {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ pieceAnimation: speed }),
+  }).catch(() => {});
 }
 
 export function setXiangqiPieceSetPreference(pieceSet: XiangqiPieceSet): void {
@@ -707,6 +783,16 @@ function syncThemeControls(): void {
   });
   document.querySelectorAll<HTMLInputElement>('input[data-xq-piece-shadow]').forEach((input) => {
     input.checked = readStoredXiangqiPieceShadow();
+  });
+  const segments = pieceSegmentValues();
+  document.querySelectorAll<HTMLElement>('[data-piece-segment]').forEach((button) => {
+    const segment = button.dataset.pieceSegment as PieceSegment;
+    const isActive = button.dataset.value === segments[segment];
+    button.setAttribute('aria-checked', String(isActive));
+    button.classList.toggle('selected', isActive);
+  });
+  document.querySelectorAll<HTMLElement>('[data-piece-segment-field]').forEach((field) => {
+    field.hidden = pieceSegmentHidden(field.dataset.pieceSegmentField as PieceSegment, segments);
   });
   document.querySelectorAll<HTMLInputElement>('input[data-sound-volume]').forEach((input) => {
     input.value = String(Math.round(effectiveVolume * 100));

@@ -1163,6 +1163,22 @@ const MISTBOARD_SHORTS: readonly YoutubeVideo[] = [
     addedAt: '2026-10-17',
     publishAt: '2026-10-24T16:00:00Z',
   },
+  {
+    source: 'youtube',
+    id: 'YtXPkQbtgsc',
+    short: true,
+    thumbnailUrl: '/video-thumbs/short-03-war-bell-v1.png',
+    title: 'Deftly Shaking the War Bell: Four Pieces Given Up in a Chinese Chess Mate',
+    author: 'Mistboard',
+    firstParty: true,
+    durationMinutes: 1,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-10-28',
+    publishAt: '2026-10-29T02:35:00Z',
+  },
 ];
 
 /** The curated catalogue: other people's videos, filtered and faceted by the

@@ -29,9 +29,12 @@ import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js'
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
   animateJieqiBoardMove,
+  animateJieqiReveal,
+  animateJieqiStepReveal,
   installJieqiBoardStyles,
   JIEQI_PIECE_PX,
   jieqiPieceGhostSvg,
+  jieqiRevealSquare,
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
 import { rebuildLiveJieqiHistory } from './live-jieqi-replay-history.js';
@@ -92,6 +95,9 @@ let core: TenantLiveClientContext<JieqiColor, JieqiWireView> | null = null;
 let selectedSquare: JieqiSquare | null = null;
 // Right-click arrows/circles the player drew on this board.
 let annotations: BoardAnnotations | null = null;
+// The live board the last animateBoard saw: whether a moving piece was face
+// down before its move (public), for the reveal turn-over (#709 prototype).
+let lastLiveBoard: JieqiWireView['board'] | null = null;
 // The live reveal odds (live-jieqi-reveal-odds.ts), mounted once at setup.
 let revealOdds: RevealOddsMount | null = null;
 // The square a piece is being dragged from (its piece is lifted off the board so
@@ -150,6 +156,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
     roomMode = 'pvp';
     pveEngineId = null;
     checkMarks = [];
+    lastLiveBoard = null;
   },
   renderBoard,
   // Piece glides (pieceAnimation pref). Live: only REMOTE moves animate -- an own
@@ -168,18 +175,39 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
           generalSquare: (color) => generalSquareOn(view.board, color),
         })
       : [],
+  // A live move that reveals its piece turns it over (#709 prototype): during
+  // the glide for a remote move, in place for an own one (which does not glide).
+  // A forward scrub step turns it along its glide; back steps and jumps never do.
   animateBoard: (liveRefs, view, takePendingAnimation) => {
+    const live = core?.replay.isLive() ?? false;
+    const before = lastLiveBoard;
+    lastLiveBoard = live && view ? view.board : null;
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
     if (!pending) return;
     const perspective = orientationFor(view);
     if (pending.kind === 'live') {
-      if (pending.color === core?.state.seat) return;
-      animateJieqiBoardMove(liveRefs.board, pending.move, perspective);
+      const own = pending.color === core?.state.seat;
+      if (!own) animateJieqiBoardMove(liveRefs.board, pending.move, perspective);
+      const revealed = live ? jieqiRevealSquare(pending.move, before, view.board) : null;
+      if (revealed) {
+        animateJieqiReveal(liveRefs.board, revealed, pending.color, perspective, {
+          alongGlide: !own,
+        });
+      }
       return;
     }
     if (pending.direction === 'forward') {
-      if (view.lastMove) animateJieqiBoardMove(liveRefs.board, view.lastMove, perspective);
+      const stepped = view.lastMove;
+      if (!stepped) return;
+      animateJieqiBoardMove(liveRefs.board, stepped, perspective);
+      animateJieqiStepReveal(
+        liveRefs.board,
+        stepped,
+        pending.prevView?.board,
+        view.board,
+        perspective,
+      );
       return;
     }
     const undone = pending.prevView?.lastMove;

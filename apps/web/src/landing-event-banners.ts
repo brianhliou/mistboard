@@ -14,6 +14,7 @@
 // Hangzhou, Sep 14-18, 174 boards) came and went without a banner because
 // nobody made that edit. EVENT_BANNERS stays for events the API does not know
 // (a stream, an arena).
+import './hover-grammar.css';
 import './landing-event-banners.css';
 import type { Locale } from './i18n/locale.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
@@ -332,7 +333,7 @@ function renderBroadcastSlot(host: HTMLElement, rows: readonly EventBanner[], lo
   if (more > 0) {
     // lichess's "more broadcasts" under its featured ones.
     const link = document.createElement('a');
-    link.className = 'landing-event-banners-more';
+    link.className = 'landing-event-banners-more hover-link';
     link.dataset.broadcastSlot = '';
     link.href = '/broadcast/xiangqi';
     link.textContent = WORDS[locale].more(more);
@@ -456,7 +457,7 @@ export function cardLines(banner: Pick<EventBanner, 'title' | 'subtitle'>): {
 function eventBannerRow(banner: EventBanner): HTMLElement {
   const lines = cardLines(banner);
   const row = document.createElement('a');
-  row.className = `landing-event-banner landing-event-banner-${banner.kind}`;
+  row.className = `landing-event-banner landing-event-banner-${banner.kind} hover-card`;
   row.href = banner.href;
   row.dataset.eventId = banner.id;
 
@@ -473,7 +474,7 @@ function eventBannerRow(banner: EventBanner): HTMLElement {
   const text = document.createElement('span');
   text.className = 'landing-event-banner-text';
   const title = document.createElement('span');
-  title.className = 'landing-event-banner-title';
+  title.className = 'landing-event-banner-title hover-title';
   title.textContent = lines.title;
   const subtitle = document.createElement('span');
   subtitle.className = 'landing-event-banner-subtitle';

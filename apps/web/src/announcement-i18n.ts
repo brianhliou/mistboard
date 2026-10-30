@@ -35,6 +35,9 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  '3D pieces, and banqi tiles that turn over.': '立体棋子上线，暗棋翻开时会翻面。',
+  'Xiangqi, jieqi, banqi and Flip Jungle pieces can now stand in 3D: pick 3D under Pieces in the board settings. A banqi tile turns over when it is revealed, and stepping through a finished game glides each move into place.':
+    '象棋、揭棋、暗棋和翻翻棋的棋子现在可以显示为立体：在棋盘设置的“棋子”中选择“立体”。暗棋的棋子翻开时会翻面；逐步回看已结束的对局时，每一步都会滑到位。',
   // ── 2026-10-23 (batch 4 manuals) ── 书名沿用研究页的中文名。
   'The classical opening manuals are online.': '经典布局古谱已上线。',
   "The Plum Blossom Manual and six books in its family, the Eighteen Variations of the Golden Roc, Unrivaled Since Leaving the Cave, the handicap games of Secret in the Tangerine, and the two games in the Forest of Affairs, usually counted as the oldest recorded xiangqi games, join the shelf. Two hundred and thirty-five full games from the opening position, each labelled with the book's own opening name. Positions come from dpxq.com and are credited on every chapter.":
@@ -538,6 +541,9 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  '3D pieces, and banqi tiles that turn over.': '立體棋子上線，暗棋翻開時會翻面。',
+  'Xiangqi, jieqi, banqi and Flip Jungle pieces can now stand in 3D: pick 3D under Pieces in the board settings. A banqi tile turns over when it is revealed, and stepping through a finished game glides each move into place.':
+    '象棋、揭棋、暗棋和翻翻棋的棋子現在可以顯示為立體：在棋盤設定的「棋子」中選擇「立體」。暗棋的棋子翻開時會翻面；逐步回看已結束的對局時，每一步都會滑到位。',
   // ── 2026-10-23 (batch 4 manuals) ── 書名沿用研究頁的中文名。
   'The classical opening manuals are online.': '經典布局古譜已上線。',
   "The Plum Blossom Manual and six books in its family, the Eighteen Variations of the Golden Roc, Unrivaled Since Leaving the Cave, the handicap games of Secret in the Tangerine, and the two games in the Forest of Affairs, usually counted as the oldest recorded xiangqi games, join the shelf. Two hundred and thirty-five full games from the opening position, each labelled with the book's own opening name. Positions come from dpxq.com and are credited on every chapter.":

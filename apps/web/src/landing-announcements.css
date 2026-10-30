@@ -37,6 +37,12 @@
   --landing-feed-marker-size: 36px;
   --landing-feed-rail-x: 32px;
   --landing-feed-row-gap: 13px;
+  /* Each row is a link with a hover tint, so it carries part of the gap
+     between rows as its own padding (the tint has room around the text). The
+     scroller's padding and the row margin give that much back, so nothing
+     moves at rest: 13px from the box to the first row's text, 13px between
+     rows. */
+  --landing-feed-row-pad: 4px;
 
   box-sizing: border-box;
   display: flex;
@@ -55,7 +61,7 @@
   flex: 1 1 auto;
   box-sizing: border-box;
   display: block;
-  padding: 13px 12px 13px 0;
+  padding: calc(13px - var(--landing-feed-row-pad)) 0;
   overflow: hidden auto;
   scrollbar-color: transparent transparent;
   scrollbar-width: thin;
@@ -89,20 +95,25 @@
   margin-inline-start: 0;
 }
 
+/* The 12px end padding was the scroller's; it moved onto the row so the tint
+   runs to the box edge, as site-box rows do. */
 .landing-news-update {
   position: relative;
   display: grid;
   grid-template-columns: var(--landing-feed-content-x) minmax(0, 1fr);
   column-gap: 0;
-  padding-inline-start: 0;
-  margin-top: var(--landing-feed-row-gap);
+  padding: var(--landing-feed-row-pad) 12px var(--landing-feed-row-pad) 0;
+  margin-top: calc(var(--landing-feed-row-gap) - 2 * var(--landing-feed-row-pad));
+  color: inherit;
+  text-decoration: none;
 }
 
 /* The rail, one segment per row: up from the marker's centre (the row's middle,
    since the marker is centred in it) across the gap to the row above, and down
    to the row's bottom edge. The first row draws no upward half and the last no
    downward half, so the rail never runs past the end discs. The markers sit on
-   z-index 1 above it. */
+   z-index 1 above it. The gap between row boxes is the row gap less both
+   rows' padding. */
 .landing-news-update:not(:first-child)::before,
 .landing-news-update:not(:last-child)::after {
   position: absolute;
@@ -113,7 +124,7 @@
 }
 
 .landing-news-update:not(:first-child)::before {
-  top: calc(-1 * var(--landing-feed-row-gap));
+  top: calc(2 * var(--landing-feed-row-pad) - var(--landing-feed-row-gap));
   bottom: 50%;
 }
 
@@ -148,11 +159,8 @@
   line-height: 1;
 }
 
-/* The terminal row is one link: the archive disc plus its label. */
-.landing-news-more {
-  color: inherit;
-  text-decoration: none;
-}
+/* The terminal row is one link: the archive disc plus its label, a text link
+   (hover-grammar.css .hover-link-host), not a row with a tint. */
 
 .landing-news-more-content {
   display: flex;
@@ -165,16 +173,6 @@
   font-size: 13.5px;
   font-weight: 600;
   line-height: 1.28;
-}
-
-.landing-news-more:hover .landing-news-more-label,
-.landing-news-more:focus-visible .landing-news-more-label {
-  color: var(--site-link);
-  text-decoration: underline;
-}
-
-.landing-news-more:focus-visible {
-  outline: none;
 }
 
 .landing-news-disc {
@@ -207,13 +205,6 @@
   letter-spacing: 0.04em;
   line-height: 1.2;
   text-transform: uppercase;
-  text-decoration: none;
-}
-
-.landing-news-date:hover,
-.landing-news-date:focus-visible {
-  text-decoration: underline;
-  outline: none;
 }
 
 /* The row's own heading line. Before this it was a run of plain text sharing
@@ -224,18 +215,6 @@
   font-size: 13.5px;
   font-weight: 600;
   line-height: 1.28;
-}
-
-.landing-news-link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.landing-news-link:hover,
-.landing-news-link:focus-visible {
-  color: var(--site-link);
-  text-decoration: underline;
-  outline: none;
 }
 
 /* One line, so every row costs the same height and the box holds a predictable

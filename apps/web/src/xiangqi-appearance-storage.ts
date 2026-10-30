@@ -1,6 +1,6 @@
 import {
   browserLanguageList,
-  currentLocale,
+  firstLocale,
   type Locale,
   localeFromLanguageTag,
 } from './i18n/locale.js';
@@ -127,7 +127,7 @@ export function writeStoredXiangqiBoardLayout(layout: XiangqiBoardLayout): void 
 // that traffic runs an en-US work laptop. Anything else keeps the
 // international art.
 export function inferredXiangqiPieceSet(
-  locale: Locale = currentLocale(),
+  locale: Locale = firstLocale(),
   country: string | null = viewerCountry(),
   languages: readonly string[] | null | undefined = browserLanguageList(),
 ): XiangqiPieceSet {
@@ -140,11 +140,33 @@ export function inferredXiangqiPieceSet(
 // True when any listed language maps to a Chinese locale (zh-*, and yue, which
 // the locale resolver also reads as Chinese), at any position in the list.
 function listsChineseLanguage(languages: readonly string[] | null | undefined): boolean {
-  if (!languages) return false;
-  return languages.some((tag) => {
+  return firstChineseLanguage(languages) !== null;
+}
+
+function firstChineseLanguage(
+  languages: readonly string[] | null | undefined,
+): 'zh-Hans' | 'zh-Hant' | null {
+  for (const tag of languages ?? []) {
     const locale = localeFromLanguageTag(tag);
-    return locale === 'zh-Hans' || locale === 'zh-Hant';
-  });
+    if (locale === 'zh-Hans' || locale === 'zh-Hant') return locale;
+  }
+  return null;
+}
+
+const HANT_COUNTRIES = new Set(['TW', 'HK', 'MO']);
+
+// The script for Chinese move text under an English interface: the first
+// locale if it was Chinese, then the browser's first Chinese language, then the
+// region. Under a Chinese interface the interface's own script wins (caller).
+export function inferredChineseScript(
+  locale: Locale = firstLocale(),
+  country: string | null = viewerCountry(),
+  languages: readonly string[] | null | undefined = browserLanguageList(),
+): 'zh-Hans' | 'zh-Hant' {
+  if (locale === 'zh-Hans' || locale === 'zh-Hant') return locale;
+  const listed = firstChineseLanguage(languages);
+  if (listed) return listed;
+  return country && HANT_COUNTRIES.has(country) ? 'zh-Hant' : 'zh-Hans';
 }
 
 // The river caption follows the same audience as the pieces (Brian, 2026-10-08:
@@ -152,7 +174,7 @@ function listsChineseLanguage(languages: readonly string[] | null | undefined): 
 // starts with 楚河 漢界 in the river; everyone else starts with none. Like the
 // piece set, nothing stored means "follow this", so a pick always wins.
 export function inferredXiangqiRiverText(
-  locale: Locale = currentLocale(),
+  locale: Locale = firstLocale(),
   country: string | null = viewerCountry(),
   languages: readonly string[] | null | undefined = browserLanguageList(),
 ): XiangqiRiverText {
@@ -396,13 +418,72 @@ export function writeStoredXiangqiPieceShadow(on: boolean): void {
   }
 }
 
-/** The URL preview hooks (?xqLayout=, ?xqBoardColor=, ?xqRiver=, ?xqShadow=) win over the
+// 3D pieces (2026-10-28): pieces drawn as short cylinders with an ivory rim
+// (piece-3d.ts), banqi's first and then every board's (Brian: "ship 3D as the
+// default for all variants"). The key and names keep "banqi" from the first
+// cut so no stored pick is lost. Off by default, a reader's own pick (Brian,
+// 2026-10-29: "if users want the 3D, they have to toggle it themselves"; the
+// xiangqi board was tuned for flat pieces); only an explicit pick is stored. The
+// key keeps the mistboard.xiangqi prefix so other documents hear the change
+// (theme.ts, watchForXiangqiAppearanceInOtherDocuments).
+const banqiTile3dStorageKey = 'mistboard.xiangqiBanqiTile3d';
+const defaultBanqiTile3d = false;
+
+export function readStoredBanqiTile3d(): boolean {
+  try {
+    // QA/share hook: `?tile=flat` or `?tile=3d` previews the switch without saving it.
+    const preview = new URLSearchParams(window.location.search).get('tile');
+    if (preview === '3d') return true;
+    if (preview === 'flat') return false;
+    const stored = window.localStorage.getItem(banqiTile3dStorageKey);
+    if (stored === 'on') return true;
+    if (stored === 'off') return false;
+    return defaultBanqiTile3d;
+  } catch {
+    return defaultBanqiTile3d;
+  }
+}
+
+export function writeStoredBanqiTile3d(on: boolean): void {
+  try {
+    window.localStorage.setItem(banqiTile3dStorageKey, on ? 'on' : 'off');
+  } catch {
+    // The root attribute still updates for the current page.
+  }
+}
+
+// The 3D pieces' edge depth: Standard, or Thicker (1.5x deeper, same footprint;
+// piece-3d.ts). Brian, 2026-10-29: both looked "decent" and he "couldn't pick",
+// so both ship with a Pieces-menu switch, Standard by default.
+const pieceEdgeStorageKey = 'mistboard.xiangqiPieceEdge';
+
+export function readStoredPieceEdgeThick(): boolean {
+  try {
+    // QA/share hook: `?edge=thick` or `?edge=standard` previews the switch without saving it.
+    const preview = new URLSearchParams(window.location.search).get('edge');
+    if (preview === 'thick') return true;
+    if (preview === 'standard') return false;
+    return window.localStorage.getItem(pieceEdgeStorageKey) === 'thick';
+  } catch {
+    return false;
+  }
+}
+
+export function writeStoredPieceEdgeThick(thick: boolean): void {
+  try {
+    window.localStorage.setItem(pieceEdgeStorageKey, thick ? 'thick' : 'standard');
+  } catch {
+    // The root attribute still updates for the current page.
+  }
+}
+
+/** The URL preview hooks (?xqLayout=, ?xqBoardColor=, ?xqRiver=, ?xqShadow=, ?tile=, ?edge=) win over the
  *  stored pick, so a pick made on a preview link has to end the preview, or the
  *  gear would keep showing the previewed option as selected while the board
  *  shows the pick (Brian's 2026-10-08 review: the river-text selection "stuck"
  *  on a ?xqRiver= link). Drops the parameter from the address in place. */
 export function endXiangqiAppearancePreview(
-  param: 'xqLayout' | 'xqBoardColor' | 'xqRiver' | 'xqShadow',
+  param: 'xqLayout' | 'xqBoardColor' | 'xqRiver' | 'xqShadow' | 'tile' | 'edge',
 ): void {
   try {
     const url = new URL(window.location.href);
@@ -429,8 +510,9 @@ export function xiangqiBoardGrainFlag(): boolean {
 // changes with it. 'chinese' resolves its script from the locale at format
 // time (zh-hant → traditional glyphs, else simplified).
 //
-// The default follows the interface locale and is NOT written to storage: a
-// Chinese reader expects 炮二平五, everyone else gets chess-style algebraic
+// The default follows the same guess as the piece set (first locale, language
+// list, then country) and is NOT written to storage: a Chinese reader expects
+// 炮二平五, everyone else gets chess-style algebraic
 // (Che3, Cxe7), the one form a chess player reads without a manual. WXF is
 // the tournament standard and what the export PGN carries, so it stays on
 // offer. Coordinates (h3-e3) and ICCS (h2e2) exist as formatter styles for
@@ -458,18 +540,22 @@ export const xiangqiNotationOptions: ReadonlyArray<{
   { id: 'wxf', label: 'WXF', preview: 'C2.5' },
 ];
 
-/** The notation a reader with no stored choice sees, by interface locale. */
-export function defaultXiangqiNotationForLocale(locale: string): XiangqiNotationPreference {
-  return locale.toLowerCase().startsWith('zh') ? 'chinese' : 'algebraic';
+/** The notation a reader with no stored choice sees: Chinese wherever the
+ *  piece inference gives hanzi, algebraic everywhere else. */
+export function inferredXiangqiNotation(
+  locale: Locale = firstLocale(),
+  country: string | null = viewerCountry(),
+  languages: readonly string[] | null | undefined = browserLanguageList(),
+): XiangqiNotationPreference {
+  return inferredXiangqiPieceSet(locale, country, languages) === 'traditional'
+    ? 'chinese'
+    : 'algebraic';
 }
 
-/**
- * The stored choice, or the locale default when the reader has never picked
- * one. `locale` is a parameter rather than an import so this module stays
- * free of the i18n chunk; callers pass the current interface locale.
- */
-export function readStoredXiangqiNotation(locale = 'en'): XiangqiNotationPreference {
-  const fallback = defaultXiangqiNotationForLocale(locale);
+/** The stored choice, or the inferred default when the reader has never
+ *  picked one. */
+export function readStoredXiangqiNotation(): XiangqiNotationPreference {
+  const fallback = inferredXiangqiNotation();
   try {
     const stored = window.localStorage.getItem(xiangqiNotationStorageKey);
     const version = window.localStorage.getItem(xiangqiNotationStorageVersionKey);
@@ -499,11 +585,4 @@ export function writeStoredXiangqiNotation(notation: XiangqiNotationPreference):
   } catch {
     // The current page still re-renders with the new mode.
   }
-}
-
-export function normalizeXiangqiNotation(
-  value: string | null,
-  locale = 'en',
-): XiangqiNotationPreference {
-  return isXiangqiNotationPreference(value) ? value : defaultXiangqiNotationForLocale(locale);
 }
