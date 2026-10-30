@@ -240,14 +240,15 @@ export function bootstrapThreeKingdomsBanqiLiveRoom(): void {
 
 // ── Notation ──────────────────────────────────────────────────────────────────
 
+// Banqi's letters, so the move list reads like a banqi study (G general, S soldier).
 const ROLE_LETTER: Record<BanqiPieceRole, string> = {
-  general: 'K',
+  general: 'G',
   advisor: 'A',
   elephant: 'E',
   chariot: 'R',
   horse: 'H',
   cannon: 'C',
-  soldier: 'P',
+  soldier: 'S',
 };
 
 // "c2-c4", a capture "c2xc4", and a flip names what it turned up: "c2(H)".
