@@ -63,6 +63,8 @@ export type DpxqPairing = {
   result: XiangqiBroadcastResult;
   /** Game record ids (view_m_<id>) the row links, in page order. */
   recordIds: string[];
+  /** When the round was played, as the page states it (`playedAt`). */
+  playedAt?: string;
 };
 
 export type DpxqRoundPage = {
@@ -71,6 +73,9 @@ export type DpxqRoundPage = {
   /** How many rounds the tour has paired so far (最新对阵(7)); falls back to
    *  this page's round. */
   roundCount: number;
+  /** 比赛时间 on the page, China time: `2026-10-28T13:00:00+08:00`, or the
+   *  day at midnight when the page gives only the day. */
+  playedAt?: string;
   pairings: DpxqPairing[];
 };
 
@@ -185,6 +190,23 @@ export function parseDpxqRoundPageHeader(
 }
 
 /**
+ * When the round was played, from the page: the info row's 比赛时间：2026-10-28
+ * 13:00, else the title's 比赛时间2026年10月28日 (the day alone, stored at
+ * midnight, which the round's date reads as a day). dpxq states China time.
+ */
+export function parseDpxqRoundTime(html: string): string | undefined {
+  const pad = (n: string) => n.padStart(2, '0');
+  const at = html.match(/比赛时间[：:]\s*(\d{4})-(\d{1,2})-(\d{1,2})(?:\s+(\d{1,2}):(\d{2}))?/);
+  const day = at ?? html.match(/比赛时间\s*(\d{4})年(\d{1,2})月(\d{1,2})日/);
+  if (!day) return undefined;
+  const [, y, m, dd] = day;
+  const hh = at?.[4] ? pad(at[4]) : '00';
+  const mm = at?.[5] ?? '00';
+  const iso = `${y}-${pad(m!)}-${pad(dd!)}T${hh}:${mm}:00+08:00`;
+  return Number.isNaN(Date.parse(iso)) ? undefined : iso;
+}
+
+/**
  * Read one round page. Returns null for a page with no individual pairings
  * table (a team event, a team league's round paired by team only so far, or a
  * tour that has paired nothing yet: dpxq serves "第00轮" with no table then).
@@ -198,6 +220,7 @@ export function parseDpxqRoundPage(html: string): DpxqRoundPage | null {
   const header = parseDpxqRoundPageHeader(html);
   if (!header) return null;
   const { roundNumber, roundCount } = header;
+  const playedAt = parseDpxqRoundTime(html);
 
   let columns: Columns | null = null;
   const pairings: DpxqPairing[] = [];
@@ -251,6 +274,7 @@ export function parseDpxqRoundPage(html: string): DpxqRoundPage | null {
         black,
         result: resultFromDpxqScore(resultCell.text),
         recordIds: [...new Set(recordIds)],
+        ...(playedAt ? { playedAt } : {}),
       });
       continue;
     }
@@ -280,6 +304,7 @@ export function parseDpxqRoundPage(html: string): DpxqRoundPage | null {
       black,
       result: resultFromDpxqScore(resultCell.text),
       recordIds: [...new Set(recordIds)],
+      ...(playedAt ? { playedAt } : {}),
     };
     pairings.push(pairing);
     lastMain = { pairing, index: pairings.length - 1 };
@@ -295,7 +320,7 @@ export function parseDpxqRoundPage(html: string): DpxqRoundPage | null {
       delete pairing.matchName;
     }
   });
-  return { roundNumber, roundCount, pairings };
+  return { roundNumber, roundCount, ...(playedAt ? { playedAt } : {}), pairings };
 }
 
 /** `r07t01`, `r07t01g2`, and `r01m04t02` in a team league: unique within a
@@ -345,6 +370,7 @@ export function dpxqPairingBoard(input: {
       table: pairing.table,
       ...(pairing.game ? { game: pairing.game } : {}),
       ...(pairing.kind ? { kind: pairing.kind } : {}),
+      ...(pairing.playedAt ? { playedAt: pairing.playedAt } : {}),
     },
   };
 }

@@ -11,7 +11,11 @@ import type {
   XiangqiColor,
   XiangqiMove,
 } from '@mistboard/game';
-import { broadcastRecordsSourceName, XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  broadcastRecordsSourceName,
+  XIANGQI_SPEC_ID,
+  xiangqiBroadcastRoundStart,
+} from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import { broadcastEmbedCode } from './xiangqi-broadcast-embed-code.js';
@@ -48,6 +52,7 @@ export type BroadcastReviewBoard = {
   sourceUrl?: string;
   /** A record we do not replay (it reads two legal ways); see the schema. */
   recordWithheld?: 'ambiguous';
+  details?: { playedAt?: string };
 };
 
 export type BroadcastReviewInput = {
@@ -82,7 +87,7 @@ export function mountBroadcastBoardReview(
   const result = resultOf(data.board.result);
   const eventName = context ? primary(context.tour) : null;
   const roundName = context ? primary(context.round) : null;
-  const playedOn = context ? formatEventDateTime(context.round.startsAt) : null;
+  const playedOn = context ? formatEventDateTime(gameDate(data.board, context)) : null;
 
   document.title = `${red} vs ${black} · ${eventName ?? 'Mistboard'}`;
   if (!opts.embedded) {
@@ -117,6 +122,7 @@ export function mountBroadcastBoardReview(
     moves: [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move),
     tour: context?.tour ?? null,
     round: context?.round ?? null,
+    ...(data.board.details?.playedAt ? { playedAt: data.board.details.playedAt } : {}),
     origin: window.location.origin,
   };
   if (opts.embedded) root.replaceChildren();
@@ -270,6 +276,15 @@ function broadcastAnalysisSource(
   };
 }
 
+// A game's date is its own when the record states one; the round's seed is
+// a guess (the 2026 league's seeds ran up to two days late).
+function gameDate(
+  board: BroadcastReviewBoard,
+  context: NonNullable<BroadcastReviewInput['context']>,
+): string | undefined {
+  return xiangqiBroadcastRoundStart([board.details?.playedAt], context.round.startsAt);
+}
+
 function provenance(
   data: BroadcastReviewInput,
   context: BroadcastReviewInput['context'],
@@ -279,7 +294,7 @@ function provenance(
   if (context) {
     addDetail(details, t('broadcast.event'), primary(context.tour), secondary(context.tour));
     addDetail(details, t('broadcast.round'), primary(context.round), secondary(context.round));
-    const date = formatEventDateTime(context.round.startsAt);
+    const date = formatEventDateTime(gameDate(data.board, context));
     if (date) addDetail(details, t('broadcast.date'), date);
   }
   addDetail(details, t('broadcast.board'), String(data.board.boardNumber));

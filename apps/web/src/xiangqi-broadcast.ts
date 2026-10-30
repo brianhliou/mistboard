@@ -14,6 +14,7 @@ import {
   broadcastRecordsCredit,
   broadcastSourcePageHref,
   formatXiangqiMoves,
+  xiangqiBroadcastRoundStart,
   xiangqiMoveToFsfUci,
 } from '@mistboard/game';
 import './live-xiangqi.css';
@@ -159,6 +160,8 @@ type BroadcastRoundStats = {
   scheduledBoardCount: number;
   /** Boards with moves; results-only rows (no plies) do not count. */
   recordedBoardCount: number;
+  /** When it started by its games, else its seed (`xiangqiBroadcastRoundStart`). */
+  startedAt: string | null;
 };
 
 type BroadcastRoundWithStats = XiangqiBroadcastRound & Partial<BroadcastRoundStats>;
@@ -1388,7 +1391,7 @@ function renderBoardsTab(
   const meta = document.createElement('p');
   meta.className = 'xqb-round-meta';
   meta.textContent = [
-    formatEventDateTime(roundPlayedAt(data.boards) ?? data.round.startsAt),
+    formatEventDateTime(roundStart(data)),
     countLabel(data.boards.length, 'board', 'boards'),
     liveCount > 0 ? `${liveCount} live` : null,
   ]
@@ -1428,7 +1431,7 @@ function renderBoardsTab(
   // Only once the round is over: while it is running, freshness is the more
   // useful thing in that slot and the round date is the same on every card.
   const roundPlayedOn = data.boards.every((board) => board.status !== 'live')
-    ? formatEventDay(roundPlayedAt(data.boards) ?? data.round.startsAt)
+    ? formatEventDay(roundStart(data))
     : null;
   head.prepend(boardsToolbar(wrap, data.boards));
   // Playing with nothing live: say so rather than show an empty page.
@@ -1581,17 +1584,15 @@ function applyStoredToggles(target: HTMLElement): void {
   for (const toggle of BOARDS_TOGGLES) applyToggle(target, toggle, readToggle(toggle));
 }
 
-/** When a round was played, from its games: the earliest start a game states.
- *  The seeded schedule is a guess made before the event (the 2026 league was
- *  seeded one round a day at 14:30; it played two a day, 13:00 and 19:00), so
- *  the games' own dates win whenever they carry one. */
-function roundPlayedAt(boards: readonly BroadcastBoardSummary[]): string | undefined {
-  let earliest: string | undefined;
-  for (const board of boards) {
-    const at = board.details?.playedAt;
-    if (at && (!earliest || Date.parse(at) < Date.parse(earliest))) earliest = at;
-  }
-  return earliest;
+/** When a round started: its games' own dates over the seeded guess. */
+function roundStart(data: {
+  round: XiangqiBroadcastRound;
+  boards: readonly BroadcastBoardSummary[];
+}): string | undefined {
+  return xiangqiBroadcastRoundStart(
+    data.boards.map((board) => board.details?.playedAt),
+    data.round.startsAt,
+  );
 }
 
 // One match's line: the two teams and the score, the match name, the slow and
@@ -1868,12 +1869,14 @@ function roundStatsFor(data: BroadcastRoundResponse): Partial<BroadcastRoundStat
     liveBoardCount: data.boards.filter((board) => board.status === 'live').length,
     completeBoardCount: data.boards.filter((board) => board.status === 'complete').length,
     scheduledBoardCount: data.boards.filter((board) => board.status === 'scheduled').length,
+    startedAt: roundStart(data) ?? null,
   };
 }
 
-function roundHasStarted(round: XiangqiBroadcastRound): boolean {
-  if (!round.startsAt) return false;
-  const at = new Date(round.startsAt).getTime();
+function roundHasStarted(round: BroadcastRoundWithStats): boolean {
+  const start = round.startedAt ?? round.startsAt;
+  if (!start) return false;
+  const at = new Date(start).getTime();
   return Number.isFinite(at) && at <= Date.now();
 }
 
@@ -2151,7 +2154,10 @@ function roundSwitcher(
     label.textContent = primaryName(round);
     const when = document.createElement('span');
     when.className = 'xqb-round-option-when';
-    when.textContent = formatEventDateTime(round.startsAt) ?? '';
+    // The tour payload's game-dated start: the seed alone left every round
+    // the poller added (the league from round 6) blank and rounds 2-5 a day
+    // or two late.
+    when.textContent = formatEventDateTime(round.startedAt ?? round.startsAt) ?? '';
     option.append(label, when, roundStatusEl(round, { withLabel: false }));
     option.addEventListener('click', () => close());
     panel.append(option);
@@ -2215,8 +2221,9 @@ function roundStatusEl(round: BroadcastRoundWithStats, opts: { withLabel: boolea
   } else {
     // An undated round says nothing: the source gave no time, and "Upcoming"
     // was wrong for the rounds of a running event already played.
-    const at = round.startsAt ? new Date(round.startsAt).getTime() : Number.NaN;
-    el.textContent = !round.startsAt
+    const start = round.startedAt ?? round.startsAt;
+    const at = start ? new Date(start).getTime() : Number.NaN;
+    el.textContent = !start
       ? ''
       : Number.isFinite(at) && at > Date.now()
         ? relativeFromNow(at)
@@ -2418,6 +2425,7 @@ function renderBoardReplay(
       moves: [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move),
       tour: context?.tour ?? null,
       round: context?.round ?? null,
+      ...(data.board.details?.playedAt ? { playedAt: data.board.details.playedAt } : {}),
       origin: window.location.origin,
     }),
     exportLink(data.board.id),
