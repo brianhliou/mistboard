@@ -241,6 +241,7 @@ const G_M_144949: XiangqiReplaySpec = {
 
 export const tangDanArticle: Article = {
   slug: "tang-dan",
+  contactNote: true,
   homeRow: "deep-dives",
   kind: 'article',
   game: 'xiangqi',
