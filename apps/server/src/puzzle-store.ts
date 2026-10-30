@@ -81,17 +81,155 @@ let snapshotLoadedAt = 0;
 let seedSyncChecked = false;
 let inFlight: Promise<PuzzleStoreSnapshot> | null = null;
 
+/** Distinct reporters, not clicks or sessions. Review clears pending reports. */
+export const PUZZLE_REPORT_WITHHOLD_THRESHOLD = 3;
+const REPORT_HIDDEN_REASON = 'puzzle-reports';
+export const PUZZLE_REPORT_REASONS = [
+  'wrong-solution',
+  'second-winning-move',
+  'wrong-theme',
+  'other',
+] as const;
+export type PuzzleReportReason = (typeof PUZZLE_REPORT_REASONS)[number];
+export type PuzzleReportEvidence = {
+  initial: StoredPuzzle['initial'];
+  position: StoredPuzzle['initial'];
+  moves: { from: string; to: string }[];
+  movePlayed: { from: string; to: string } | null;
+  solution: StoredPuzzle['solution'];
+};
+export type PuzzleReport = {
+  puzzleId: string;
+  userId: string | null;
+  deviceId: string | null;
+  reason: PuzzleReportReason;
+  evidence: PuzzleReportEvidence;
+  createdAt: string;
+  withheld: boolean;
+};
+const memoryReports = new Map<string, PuzzleReport>();
+const memoryWithheld = new Set<string>();
+const memoryReviewed = new Set<string>();
+
+// Memory mode is a local preview. Production evidence and review live in SQL.
+export async function recordPuzzleReport(input: Omit<PuzzleReport, 'createdAt' | 'withheld'>) {
+  const reporter = input.userId ? `account:${input.userId}` : `guest:${input.deviceId}`;
+  if (!input.userId && !input.deviceId) throw new Error('puzzle reporter required');
+  if (!isInitialized()) {
+    const key = `${input.puzzleId}|${reporter}`;
+    if (!memoryReports.has(key)) {
+      memoryReports.set(key, { ...input, createdAt: new Date().toISOString(), withheld: false });
+    }
+    const count = [...memoryReports.entries()].filter(
+      ([key, r]) => r.puzzleId === input.puzzleId && !memoryReviewed.has(key),
+    ).length;
+    if (count >= PUZZLE_REPORT_WITHHOLD_THRESHOLD) memoryWithheld.add(input.puzzleId);
+    snapshot = null;
+    return;
+  }
+  await withTransaction(async (db) => {
+    // Serialize inserts and reviews for one puzzle. Concurrent reporters must
+    // see each other's committed count before deciding whether to withhold.
+    await db.query('SELECT id FROM puzzles WHERE id = $1 FOR UPDATE', [input.puzzleId]);
+    await db.query(
+      `INSERT INTO puzzle_reports (puzzle_id, reporter, user_id, device_id, reason, evidence)
+       VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+       ON CONFLICT (puzzle_id, reporter) DO NOTHING`,
+      [
+        input.puzzleId,
+        reporter,
+        input.userId,
+        input.deviceId,
+        input.reason,
+        JSON.stringify(input.evidence),
+      ],
+    );
+    await db.query(
+      `UPDATE puzzles SET hidden_reason = $2
+       WHERE id = $1 AND hidden_reason IS NULL
+         AND (SELECT count(*) FROM puzzle_reports
+              WHERE puzzle_id = $1 AND reviewed_at IS NULL) >= $3`,
+      [input.puzzleId, REPORT_HIDDEN_REASON, PUZZLE_REPORT_WITHHOLD_THRESHOLD],
+    );
+  });
+  // Do not let an older in-flight snapshot repopulate the cache after review.
+  await inFlight;
+  snapshot = null;
+}
+
+export async function listPuzzleReports(): Promise<PuzzleReport[]> {
+  if (!isInitialized()) {
+    return [...memoryReports.entries()]
+      .filter(([key]) => !memoryReviewed.has(key))
+      .map(([, r]) => ({ ...r, withheld: memoryWithheld.has(r.puzzleId) }));
+  }
+  const { rows } = await getPool().query<PuzzleReport>(
+    `SELECT r.puzzle_id AS "puzzleId", r.user_id AS "userId", r.device_id AS "deviceId",
+            r.reason, r.evidence, r.created_at::text AS "createdAt",
+            (p.hidden_reason IS NOT NULL) AS withheld
+       FROM puzzle_reports r JOIN puzzles p ON p.id = r.puzzle_id
+      WHERE r.reviewed_at IS NULL
+      ORDER BY r.created_at, r.puzzle_id LIMIT 200`,
+  );
+  return rows;
+}
+
+export async function reviewPuzzleReports(
+  puzzleId: string,
+  decision: 'dismiss' | 'retire',
+  reviewerId: string | null,
+): Promise<void> {
+  if (!isInitialized()) {
+    let reviewed = false;
+    for (const [key, report] of memoryReports) {
+      if (report.puzzleId === puzzleId && !memoryReviewed.has(key)) {
+        memoryReviewed.add(key);
+        reviewed = true;
+      }
+    }
+    if (!reviewed) return;
+    if (decision === 'dismiss') memoryWithheld.delete(puzzleId);
+    else memoryWithheld.add(puzzleId);
+    snapshot = null;
+    return;
+  }
+  await withTransaction(async (db) => {
+    await db.query('SELECT id FROM puzzles WHERE id = $1 FOR UPDATE', [puzzleId]);
+    const reviewed = await db.query(
+      `UPDATE puzzle_reports SET reviewed_at = now(), reviewed_by = $2, decision = $3
+        WHERE puzzle_id = $1 AND reviewed_at IS NULL RETURNING puzzle_id`,
+      [puzzleId, reviewerId, decision],
+    );
+    if (!reviewed.rowCount) return;
+    // Preserve unrelated editorial holds. Dismissal releases only our hold;
+    // retirement is durable and is never cleared by a later dismissal.
+    await db.query(
+      `UPDATE puzzles SET hidden_reason = $2
+        WHERE id = $1 AND (hidden_reason IS NULL OR hidden_reason = $3)`,
+      [puzzleId, decision === 'retire' ? 'reported-puzzle-retired' : null, REPORT_HIDDEN_REASON],
+    );
+  });
+  await inFlight;
+  snapshot = null;
+}
+
 export function resetPuzzleStoreForTests(): void {
   snapshot = null;
   snapshotLoadedAt = 0;
   seedSyncChecked = false;
   inFlight = null;
+  memoryReports.clear();
+  memoryWithheld.clear();
+  memoryReviewed.clear();
 }
 
 export async function getPuzzleStore(): Promise<PuzzleStoreSnapshot> {
   if (!isInitialized()) {
     if (snapshot?.source !== 'seed') {
-      snapshot = buildSnapshot(loadAllSeedPuzzles() as readonly StoredPuzzle[], 'seed');
+      snapshot = buildSnapshot(
+        (loadAllSeedPuzzles() as readonly StoredPuzzle[]).filter((p) => !memoryWithheld.has(p.id)),
+        'seed',
+      );
     }
     return snapshot;
   }

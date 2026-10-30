@@ -786,6 +786,100 @@ describe('puzzles route', () => {
     );
   });
 
+  it('offers reports after completion, retries failed sends and preserves the sent state', async () => {
+    const puzzle = RED_MATE;
+    const reports: Array<{ reason: string; deviceId: string; moves: XiangqiMove[] }> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/puzzles') return json({ puzzles: [publicSummary(puzzle)] });
+        if (url === `/api/puzzles/${puzzle.id}`) return json({ puzzle: publicDetail(puzzle) });
+        if (url.endsWith('/attempt'))
+          return json({ attempt: attemptStandardXiangqiPuzzleLine(puzzle, movesOf(init)) });
+        if (url.endsWith('/report')) {
+          reports.push(JSON.parse(String(init?.body)));
+          return reports.length === 1
+            ? json({ error: 'temporarily_unavailable' }, 503)
+            : json({ reported: true }, 201);
+        }
+        return new Response(null, { status: 204 });
+      }),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, puzzle.id);
+    expect(root.querySelector('.puzzle-report')).toBeNull();
+    await solveLine(root, puzzle);
+    // Reporting stays account-optional even when durable browser storage is
+    // unavailable: the puzzle visit supplies an anonymous fallback identity.
+    stubWindowLocalStorage({
+      getItem() {
+        throw new Error('storage unavailable');
+      },
+      setItem() {
+        throw new Error('storage unavailable');
+      },
+    } as unknown as Storage);
+    const reason = root.querySelector<HTMLSelectElement>('.puzzle-report select')!;
+    expect([...reason.options].map((option) => option.textContent)).toEqual([
+      'Wrong solution',
+      'A second winning move',
+      'Wrong theme',
+      'Other',
+    ]);
+    reason.value = 'second-winning-move';
+    reason.dispatchEvent(new Event('change'));
+    const form = root.querySelector<HTMLFormElement>('.puzzle-report form')!;
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    await vi.waitFor(() => expect(form.textContent).toContain('Could not send the report'));
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    await vi.waitFor(() => expect(root.textContent).toContain('Report sent. Thank you.'));
+    expect(reports[1]).toEqual({
+      reason: 'second-winning-move',
+      deviceId: expect.any(String),
+      moves: puzzle.solution.filter((_, ply) => ply % 2 === 0),
+    });
+    root.querySelector<HTMLButtonElement>('[aria-label="Puzzle was helpful"]')?.click();
+    expect(root.querySelector('.puzzle-report form')).toBeNull();
+    expect(root.textContent).toContain('Report sent. Thank you.');
+    expect(reports).toHaveLength(2);
+  });
+
+  it('reports the rejected move after revealing the solution', async () => {
+    const puzzle = RED_MATE;
+    const wrong = getStandardXiangqiLegalMoves(puzzle.initial).find(
+      (move) =>
+        !standardXiangqiPuzzleMoveEquals(move, puzzle.solution[0]!) &&
+        !attemptStandardXiangqiPuzzleLine(puzzle, [move]).ok,
+    )!;
+    let report: { moves: XiangqiMove[] } | null = null;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/puzzles') return json({ puzzles: [publicSummary(puzzle)] });
+        if (url === `/api/puzzles/${puzzle.id}`) return json({ puzzle: publicDetail(puzzle) });
+        if (url.endsWith('/attempt'))
+          return json({ attempt: attemptStandardXiangqiPuzzleLine(puzzle, movesOf(init)) });
+        if (url.endsWith('/reveal')) return json({ solution: puzzle.solution });
+        if (url.endsWith('/report')) {
+          report = JSON.parse(String(init?.body));
+          return json({ reported: true }, 201);
+        }
+        return new Response(null, { status: 204 });
+      }),
+    );
+    const root = document.createElement('div');
+    await mountPuzzles(root, puzzle.id);
+    clickSquares(root, wrong);
+    await vi.waitFor(() => expect(root.textContent).toContain('Try again'));
+    expect(root.querySelector('.puzzle-report')).toBeNull();
+    root.querySelector<HTMLButtonElement>('[data-puzzle-reveal]')?.click();
+    await vi.waitFor(() => expect(root.querySelector('.puzzle-report form')).not.toBeNull());
+    root.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    await vi.waitFor(() => expect(report).toEqual(expect.objectContaining({ moves: [wrong] })));
+  });
+
   it('shows no streak line under Success even when the server sends one', async () => {
     const drop = RED_MATE;
     let timeZone: unknown = null;

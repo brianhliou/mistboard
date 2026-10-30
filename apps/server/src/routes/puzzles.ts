@@ -53,7 +53,15 @@ import {
   seedPuzzleRating,
 } from '../puzzle-rating.js';
 import { type PuzzleDetailSourceFields, puzzleDetailSourceFields } from '../puzzle-setup-move.js';
-import { getPuzzleStore, type PuzzleStoreSnapshot } from '../puzzle-store.js';
+import {
+  getPuzzleStore,
+  listPuzzleReports,
+  PUZZLE_REPORT_REASONS,
+  type PuzzleReportReason,
+  type PuzzleStoreSnapshot,
+  recordPuzzleReport,
+  reviewPuzzleReports,
+} from '../puzzle-store.js';
 import {
   bestPuzzleStreak,
   loadPuzzleStreak,
@@ -66,13 +74,20 @@ import {
 } from '../puzzle-streak.js';
 import { clientIpForRateLimit } from '../server-policy.js';
 import { rememberExcludedDevice } from '../stats-excluded-device.js';
-import { type HttpApiContext, readJsonBody, requireMethod, writeJson } from './lib.js';
+import {
+  type HttpApiContext,
+  readJsonBody,
+  requireAdminSession,
+  requireMethod,
+  writeJson,
+} from './lib.js';
 
 // High enough for fast play, low enough to prevent unbounded anonymous UUID
 // insertion. The IP key stays only in process memory and is never persisted.
 const puzzleQualityRateLimiter = createAuthRateLimiter(300, 60_000);
 const streakStartRateLimiter = createAuthRateLimiter(30, 60_000);
 const streakMoveRateLimiter = createAuthRateLimiter(300, 60_000);
+const puzzleReportRateLimiter = createAuthRateLimiter(10, 60_000);
 
 // The public puzzle surface spans the Jungle registry and the standard-xiangqi
 // registry. Fortress Xiangqi's registry was deleted with the variant
@@ -134,6 +149,100 @@ export async function tryHandle(
   pathname: string,
   parsedUrl: URL,
 ): Promise<boolean> {
+  if (pathname === '/api/puzzles/reports') {
+    const headers = { 'cache-control': 'private, no-store' };
+    response.setHeader?.('cache-control', headers['cache-control']);
+    if (!(await requireAdminSession(request, response))) return true;
+    if (request.method === 'POST') {
+      const body = await readJsonBody(request);
+      if (
+        typeof body.puzzleId !== 'string' ||
+        (body.decision !== 'dismiss' && body.decision !== 'retire')
+      ) {
+        writeJson(response, 400, { error: 'invalid_review' }, headers);
+        return true;
+      }
+      await reviewPuzzleReports(
+        body.puzzleId,
+        body.decision,
+        (await currentAccountUser(request))?.id ?? null,
+      );
+      writeJson(response, 200, { reviewed: true }, headers);
+      return true;
+    }
+    if (!requireMethod(request, response, 'GET')) return true;
+    const reports = await listPuzzleReports();
+    if (parsedUrl.searchParams.get('format') === 'html') {
+      const escapeHtml = (value: string) =>
+        value.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+      const rows = reports
+        .map(
+          (r) => `<article><h2>${escapeHtml(r.puzzleId)}</h2>
+        <p>${escapeHtml(r.reason)} · ${r.withheld ? 'Withheld' : 'Serving'} · ${escapeHtml(r.createdAt)}</p>
+        <p>Account: ${escapeHtml(r.userId ?? 'Guest')} · Browser: ${escapeHtml(r.deviceId ?? 'None')}</p>
+        <details><summary>Position and move evidence</summary><pre>${escapeHtml(JSON.stringify(r.evidence, null, 2))}</pre></details>
+        <button data-puzzle="${escapeHtml(r.puzzleId)}" data-decision="dismiss">Dismiss reports and restore</button>
+        <button data-puzzle="${escapeHtml(r.puzzleId)}" data-decision="retire">Retire puzzle</button></article>`,
+        )
+        .join('');
+      response.writeHead(200, { ...headers, 'content-type': 'text/html; charset=utf-8' });
+      response.end(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Puzzle reports</title>
+        <style>body{font:16px system-ui;max-width:60rem;margin:2rem auto;padding:1rem}article{border-top:1px solid #aaa;padding:1rem 0}pre{overflow:auto}button{margin:.5rem;padding:.75rem}</style>
+        <h1>Puzzle reports</h1><p>Up to 200 pending reports. Review acts on all pending reports for that puzzle. Other editorial holds are preserved.</p>${rows || '<p>No pending reports.</p>'}
+        <script>document.addEventListener('click',async(e)=>{const b=e.target.closest('button[data-puzzle]');if(!b)return;b.disabled=true;try{const r=await fetch(location.pathname,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({puzzleId:b.dataset.puzzle,decision:b.dataset.decision})});if(!r.ok)throw Error();location.reload()}catch{b.disabled=false;b.textContent='Review failed; retry'}})</script></html>`);
+    } else {
+      writeJson(response, 200, { reports }, headers);
+    }
+    return true;
+  }
+
+  const reportMatch = pathname.match(/^\/api\/puzzles\/([^/]+)\/report$/);
+  if (reportMatch) {
+    if (!requireMethod(request, response, 'POST')) return true;
+    const puzzle = await puzzleById(decodeURIComponent(reportMatch[1]!));
+    if (!puzzle) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    const body = await readJsonBody(request);
+    const moves = parsePuzzleMoves(body.moves);
+    const deviceId = parsePuzzleDeviceId(body.deviceId);
+    const user = await currentAccountUser(request);
+    if (
+      !PUZZLE_REPORT_REASONS.includes(body.reason as PuzzleReportReason) ||
+      !moves ||
+      (!user && !deviceId)
+    ) {
+      writeJson(response, 400, { error: 'invalid_report' });
+      return true;
+    }
+    if (!puzzleReportRateLimiter.check(user?.id ?? clientIpForRateLimit(request))) {
+      writeJson(response, 429, { error: 'rate_limited' });
+      return true;
+    }
+    const attempt = attemptPuzzle(puzzle, moves);
+    if (!attempt.ok && attempt.code !== 'incorrect-move') {
+      writeJson(response, 400, { error: 'invalid_report_moves' });
+      return true;
+    }
+    await recordPuzzleReport({
+      puzzleId: puzzle.id,
+      userId: user?.id ?? null,
+      deviceId,
+      reason: body.reason as PuzzleReportReason,
+      evidence: {
+        initial: puzzle.initial,
+        position: attempt.state,
+        moves,
+        movePlayed: moves.at(-1) ?? null,
+        solution: puzzle.solution,
+      },
+    });
+    // Evidence and reporter identities are admin-only, including on writes.
+    writeJson(response, 201, { reported: true }, { 'cache-control': 'private, no-store' });
+    return true;
+  }
+
   if (pathname === '/api/puzzles/ramp') {
     if (!requireMethod(request, response, 'GET')) return true;
     const variant = parsePuzzleVariant(parsedUrl.searchParams.get('variant')) ?? XIANGQI_SPEC_ID;
