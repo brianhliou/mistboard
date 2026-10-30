@@ -11,6 +11,55 @@ const SOLVED_PUZZLES_STORAGE_KEY = 'mistboard:puzzles:solved';
 const SEEN_PUZZLES_STORAGE_KEY = 'mistboard:puzzles:seen';
 const AUTO_NEXT_STORAGE_KEY = 'mistboard:puzzles:auto-next';
 const RATED_STORAGE_KEY = 'mistboard:puzzles:rated';
+const DIFFICULTY_STORAGE_KEY = 'mistboard:puzzles:difficulty';
+export const PUZZLE_DIFFICULTIES = ['easiest', 'easier', 'normal', 'harder', 'hardest'] as const;
+export type PuzzleDifficulty = (typeof PUZZLE_DIFFICULTIES)[number];
+const DIFFICULTY_OFFSETS: Record<PuzzleDifficulty, number> = {
+  easiest: -600,
+  easier: -300,
+  normal: 0,
+  harder: 300,
+  hardest: 600,
+};
+
+export function parsePuzzleDifficulty(value: string | null): PuzzleDifficulty {
+  return PUZZLE_DIFFICULTIES.find((level) => level === value) ?? 'normal';
+}
+
+export function loadPuzzleDifficulty(): PuzzleDifficulty {
+  try {
+    return parsePuzzleDifficulty(window.localStorage?.getItem(DIFFICULTY_STORAGE_KEY) ?? null);
+  } catch {
+    return 'normal';
+  }
+}
+
+export function savePuzzleDifficulty(level: PuzzleDifficulty): void {
+  try {
+    window.localStorage?.setItem(DIFFICULTY_STORAGE_KEY, level);
+  } catch {
+    // Training works when storage is unavailable.
+  }
+}
+
+/** Availability in the active variant/theme, excluding local and account history.
+ * Twenty near puzzles support a short drill before the band has to widen. */
+export function puzzleDifficultyAvailability(
+  puzzles: readonly PuzzleSummary[],
+  seen: ReadonlyMap<string, number>,
+  targetRating: number,
+  level: PuzzleDifficulty,
+): { nearby: number; unseen: number } {
+  const target = targetRating + DIFFICULTY_OFFSETS[level];
+  let nearby = 0;
+  let unseen = 0;
+  for (const puzzle of puzzles) {
+    if (seen.has(puzzle.id)) continue;
+    unseen += 1;
+    if (Math.abs(matchRating(puzzle) - target) <= MATCH_BANDS[0]) nearby += 1;
+  }
+  return { nearby, unseen };
+}
 // The cap bounds localStorage growth, but it MUST stay ahead of the served
 // corpus or rotation quietly breaks: once eviction starts, "unseen first"
 // re-serves evicted puzzles while genuinely unseen ones are still waiting. At
@@ -50,6 +99,7 @@ export function rotatePuzzleOrder(
   puzzles: readonly PuzzleSummary[],
   seen: ReadonlyMap<string, number>,
   targetRatings: ReadonlyMap<string, number> = new Map(),
+  difficulty: PuzzleDifficulty = 'normal',
 ): PuzzleSummary[] {
   const unseen: PuzzleSummary[] = [];
   const seenList: PuzzleSummary[] = [];
@@ -64,7 +114,11 @@ export function rotatePuzzleOrder(
     unseenByVariant.set(puzzle.variant, group);
   }
   const adaptive = [...unseenByVariant.values()].flatMap((group) =>
-    adaptivePuzzleOrder(group, targetRatings.get(group[0]!.variant) ?? PUZZLE_NEW_PLAYER_RATING),
+    adaptivePuzzleOrder(
+      group,
+      (targetRatings.get(group[0]!.variant) ?? PUZZLE_NEW_PLAYER_RATING) +
+        DIFFICULTY_OFFSETS[difficulty],
+    ),
   );
   seenList.sort((a, b) => (seen.get(a.id) ?? 0) - (seen.get(b.id) ?? 0));
   return [...adaptive, ...seenList];

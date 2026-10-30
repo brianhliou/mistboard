@@ -418,6 +418,16 @@ export const EN_PLAY = {
   'puzzle.themesTitle': 'Puzzle themes',
   'puzzle.themesHidden': 'Revealed after you solve it.',
   'puzzle.settings': 'Settings',
+  'puzzle.difficulty': 'Difficulty',
+  'puzzle.difficulty.easiest': 'Easiest',
+  'puzzle.difficulty.easier': 'Easier',
+  'puzzle.difficulty.normal': 'Normal',
+  'puzzle.difficulty.harder': 'Harder',
+  'puzzle.difficulty.hardest': 'Hardest',
+  'puzzle.difficultySparse':
+    'Few unseen puzzles near this level ({count} left). Widening the rating range as needed to avoid repeats.',
+  'puzzle.difficultyExhausted':
+    'All puzzles in this selection have been seen. Returning to the least recently seen puzzles.',
   'puzzle.variantField': 'Variant',
   'puzzle.themeField': 'Theme',
   'puzzle.allThemes': 'All themes',

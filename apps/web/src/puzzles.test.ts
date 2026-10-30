@@ -103,6 +103,121 @@ describe('puzzles route', () => {
     gloss: 'The horse pens the general in and screens the cannon behind it.',
   }));
 
+  it('saves difficulty, preserves an active attempt, and shifts the next puzzle', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const puzzles = [
+      RED_MATE,
+      BLACK_MATE,
+      XIANGQI_PUZZLES.find((puzzle) => puzzle.id !== RED_MATE.id && puzzle.id !== BLACK_MATE.id)!,
+    ];
+    const summaries = puzzles.map((puzzle, index) => ({
+      ...publicSummary(puzzle),
+      servingRating: [1800, 1200, 2400][index],
+    }));
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/puzzles') return json({ puzzles: summaries });
+      if (url.endsWith('/quality')) return new Response(null, { status: 204 });
+      if (url.endsWith('/attempt')) {
+        return json({
+          attempt: attemptStandardXiangqiPuzzleLine(RED_MATE, JSON.parse(String(init?.body)).moves),
+        });
+      }
+      const index = puzzles.findIndex((puzzle) => url === `/api/puzzles/${puzzle.id}`);
+      return index >= 0 ? json({ puzzle: publicDetail(puzzles[index]!) }) : json({}, 404);
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzles(root, RED_MATE.id);
+    clickSquares(root, RED_MATE.solution[0]!);
+    await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+    const picker = root.querySelector<HTMLSelectElement>('[data-puzzle-difficulty]');
+    expect(picker).not.toBeNull();
+    expect([...picker!.options].map((option) => option.textContent)).toEqual([
+      'Easiest',
+      'Easier',
+      'Normal',
+      'Harder',
+      'Hardest',
+    ]);
+    expect(picker!.value).toBe('normal');
+    picker!.value = 'easiest';
+    picker!.dispatchEvent(new Event('change'));
+    expect(window.localStorage.getItem('mistboard:puzzles:difficulty')).toBe('easiest');
+    expect(root.textContent).toContain('Correct.');
+    expect(
+      fetchSpy.mock.calls.filter(([input]) => String(input) === `/api/puzzles/${RED_MATE.id}`),
+    ).toHaveLength(1);
+    expect(root.textContent).toContain('Few unseen puzzles near this level');
+    clickSquares(root, RED_MATE.solution[2]!);
+    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+    root.querySelector<HTMLButtonElement>('[data-puzzle-next]')!.click();
+    await vi.waitFor(() => expect(window.location.pathname).toContain(BLACK_MATE.id));
+    const reopened = document.createElement('div');
+    await mountPuzzles(reopened);
+    expect(reopened.querySelector<HTMLSelectElement>('[data-puzzle-difficulty]')?.value).toBe(
+      'easiest',
+    );
+  });
+
+  it('offers difficulty and sparse fallback in the phone menu', () => {
+    const onChange = vi.fn();
+    const rows = puzzlePhoneMenuRows({
+      queue: [],
+      selectedId: null,
+      solvedIds: new Set(),
+      variantFilter: 'xiangqi',
+      variantFilters: ['xiangqi'],
+      autoNext: false,
+      ratedEnabled: true,
+      userRating: null,
+      ratingDelta: null,
+      onVariantChange: vi.fn(),
+      onAutoNextChange: vi.fn(),
+      onRatedChange: vi.fn(),
+      difficulty: { level: 'hardest', nearby: 0, unseen: 3, onChange },
+    });
+    const field = rows.find((row) => row.dataset.puzzleMenuRow === 'difficulty');
+    expect(field).toBeDefined();
+    const select = field!.querySelector<HTMLSelectElement>('[data-puzzle-menu="difficulty"]')!;
+    expect(select.value).toBe('hardest');
+    select.value = 'easier';
+    select.dispatchEvent(new Event('change'));
+    expect(onChange).toHaveBeenCalledWith('easier');
+    expect(rows.map((row) => row.textContent).join(' ')).toContain(
+      'Few unseen puzzles near this level',
+    );
+  });
+
+  it.each([
+    { nearby: 0, unseen: 0, note: 'All puzzles in this selection have been seen.' },
+    { nearby: 19, unseen: 30, note: 'Few unseen puzzles near this level (19 left).' },
+    { nearby: 20, unseen: 30, note: null },
+  ])(
+    'explains difficulty availability: $nearby near, $unseen unseen',
+    ({ nearby, unseen, note }) => {
+      const rows = puzzlePhoneMenuRows({
+        queue: [],
+        selectedId: null,
+        solvedIds: new Set(),
+        variantFilter: 'xiangqi',
+        variantFilters: ['xiangqi'],
+        autoNext: false,
+        ratedEnabled: true,
+        userRating: null,
+        ratingDelta: null,
+        onVariantChange: vi.fn(),
+        onAutoNextChange: vi.fn(),
+        onRatedChange: vi.fn(),
+        difficulty: { level: 'normal', nearby, unseen, onChange: vi.fn() },
+      });
+      const fallback = rows.find((row) => row.dataset.puzzleDifficultyFallback);
+      if (note) expect(fallback?.textContent).toContain(note);
+      else expect(fallback).toBeUndefined();
+    },
+  );
+
   it('filters the queue by theme, persists the picker, and keeps next navigation filtered', async () => {
     const puzzles = XIANGQI_PUZZLES.slice(0, 3);
     const summaries = puzzles.map((puzzle, index) => ({

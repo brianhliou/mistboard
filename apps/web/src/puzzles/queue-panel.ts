@@ -19,7 +19,15 @@ import { renderVariantMarker } from '../variant-markers.js';
 import { colorLabel, type PuzzleSummary } from './adapter.js';
 import type { UserPuzzleRating } from './api.js';
 import { isPuzzleVariant, type PuzzleVariant, puzzleBoardAdapter } from './registry.js';
+import { PUZZLE_DIFFICULTIES, type PuzzleDifficulty, parsePuzzleDifficulty } from './storage.js';
 import { type PuzzleThemeSettings, puzzleThemePicker, puzzleThemesLink } from './themes.js';
+
+type PuzzleDifficultySettings = {
+  level: PuzzleDifficulty;
+  nearby: number;
+  unseen: number;
+  onChange: (level: PuzzleDifficulty) => void;
+};
 
 export type QueuePanelProps = {
   queue: readonly PuzzleSummary[];
@@ -29,6 +37,7 @@ export type QueuePanelProps = {
   // Variants surfaced in the Settings variant picker (order = display order).
   variantFilters: readonly PuzzleVariant[];
   theme?: PuzzleThemeSettings;
+  difficulty?: PuzzleDifficultySettings;
   // The selected puzzle is over in this visit (solved or its solution shown):
   // its rating, goal and themes are no longer spoilers.
   selectedComplete?: boolean;
@@ -165,6 +174,7 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   if (props.theme && variantFilter === XIANGQI_SPEC_ID) {
     form.append(puzzleThemePicker(props.theme));
   }
+  if (props.difficulty) form.append(...puzzleDifficultyControls(props.difficulty));
   // Muted like the page's other small links (sign-in, practice), not the
   // browser's default blue.
   const browseThemes = puzzleThemesLink();
@@ -190,6 +200,44 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   settingsCard.append(settingsTitle, form);
 
   host.append(infoCard, ratingCard, settingsCard);
+}
+
+/** Shared controls and availability copy for the sidebar and phone sheet. */
+export function puzzleDifficultyControls(
+  settings: PuzzleDifficultySettings,
+  phone = false,
+): HTMLElement[] {
+  const field = document.createElement('label');
+  field.className = phone ? 'puzzle-pm-row' : 'puzzle-field';
+  if (phone) field.dataset.puzzleMenuRow = 'difficulty';
+  const label = document.createElement('span');
+  label.className = phone ? 'puzzle-pm-row__label' : '';
+  label.textContent = t('puzzle.difficulty');
+  const select = document.createElement('select');
+  select.className = 'puzzle-select';
+  if (phone) select.dataset.puzzleMenu = 'difficulty';
+  else select.dataset.puzzleDifficulty = 'true';
+  for (const level of PUZZLE_DIFFICULTIES) {
+    const option = document.createElement('option');
+    option.value = level;
+    option.textContent = t(`puzzle.difficulty.${level}`);
+    select.append(option);
+  }
+  select.value = settings.level;
+  select.addEventListener('change', () => settings.onChange(parsePuzzleDifficulty(select.value)));
+  field.append(label, select);
+  if (settings.nearby >= 20) return [field];
+  const note = document.createElement('p');
+  note.className = 'puzzle-rated-note';
+  note.id = phone ? 'puzzle-menu-difficulty-note' : 'puzzle-difficulty-note';
+  note.dataset.puzzleDifficultyFallback = 'true';
+  note.setAttribute('role', 'status');
+  note.textContent = t(
+    settings.unseen === 0 ? 'puzzle.difficultyExhausted' : 'puzzle.difficultySparse',
+    { count: settings.nearby },
+  );
+  select.setAttribute('aria-describedby', note.id);
+  return [field, note];
 }
 
 // The current-puzzle info card (lichess's puzzle__side__metas): the puzzle's
