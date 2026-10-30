@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  'Puzzle Streak, and puzzles by theme.': '连续解题上线，还可以按主题练题。',
+  'Puzzle Streak serves puzzles that get harder as you go, with no clock and one skip, and one wrong move ends the run. The new themes page lets you train one theme at a time, such as a single mate pattern. Each puzzle now plays in the moves of the game it came from before you start.':
+    '连续解题会出越来越难的题目，不计时，可跳过一次，走错一步即结束。新的题目主题页可以一次只练一个主题，例如某一种杀法。每道题开始前，会先播放它所出自的那盘对局的着法。',
+  'Start a streak': '开始连续解题',
   '3D pieces, and banqi tiles that turn over.': '立体棋子上线，暗棋翻开时会翻面。',
   'Xiangqi, jieqi, banqi and Flip Jungle pieces can now stand in 3D: pick 3D under Pieces in the board settings. A banqi tile turns over when it is revealed, and stepping through a finished game glides each move into place.':
     '象棋、揭棋、暗棋和翻翻棋的棋子现在可以显示为立体：在棋盘设置的“棋子”中选择“立体”。暗棋的棋子翻开时会翻面；逐步回看已结束的对局时，每一步都会滑到位。',
@@ -541,6 +545,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  'Puzzle Streak, and puzzles by theme.': '連續解題上線，還可以按主題練題。',
+  'Puzzle Streak serves puzzles that get harder as you go, with no clock and one skip, and one wrong move ends the run. The new themes page lets you train one theme at a time, such as a single mate pattern. Each puzzle now plays in the moves of the game it came from before you start.':
+    '連續解題會出越來越難的題目，不計時，可跳過一次，走錯一步即結束。新的題目主題頁可以一次只練一個主題，例如某一種殺法。每道題開始前，會先播放它所出自的那盤對局的著法。',
+  'Start a streak': '開始連續解題',
   '3D pieces, and banqi tiles that turn over.': '立體棋子上線，暗棋翻開時會翻面。',
   'Xiangqi, jieqi, banqi and Flip Jungle pieces can now stand in 3D: pick 3D under Pieces in the board settings. A banqi tile turns over when it is revealed, and stepping through a finished game glides each move into place.':
     '象棋、揭棋、暗棋和翻翻棋的棋子現在可以顯示為立體：在棋盤設定的「棋子」中選擇「立體」。暗棋的棋子翻開時會翻面；逐步回看已結束的對局時，每一步都會滑到位。',
