@@ -1974,7 +1974,8 @@ const ZH_HANS: Record<string, string> = {
   // in one form in both scripts and, with the dates, reach zh-Hant through the spread.
   // Li Sih-yi is 李思谊 as dpxq records her; Taiwan is 中华台北 here, 台灣 in zh-Hant.
   'Tang Dan 唐丹': '唐丹',
-  'Tang Dan.': '唐丹。',
+  'Tang Dan. Card photo: Liu Cheng / Yangcheng Evening News, at the 2026 Five Rams Cup.':
+    '唐丹。卡片照片：刘程／《羊城晚报》，摄于 2026 年五羊杯。',
   'xiangqiqipu.com': 'xiangqiqipu.com',
   'Oct 3–6, 2026': '2026年10月3–6日',
   'From Sep 23, 2026': '2026年9月23日起',
@@ -1982,8 +1983,6 @@ const ZH_HANS: Record<string, string> = {
   'Dec 6–13, 2025': '2025年12月6–13日',
   "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.":
     '十个全国冠军，比任何一位女棋手都多，还有 2025 年女子世界冠军。她从上海到马尼拉夺得亚洲冠军的这个赛季，盘面上五盘对局，50 局附引擎分析。',
-  'Tang Dan in glasses and a navy top with a white bow, in front of a potted plant.':
-    '唐丹戴着眼镜，身穿系白色蝴蝶结的藏青色上衣，站在一盆绿植前。',
   "English-speaking xiangqi players who follow the women's game and China's national championship. Found through search, the site, and the Zuo Wenjing and Yin Sheng pages.":
     '关注女子象棋和全国象棋个人赛的说英语的棋友。通过搜索、本站以及左文静和尹昇的专页找到这一页。',
   "Tang Dan has won China's national individual women's title ten times, more than any other woman; the tenth came in December 2025, against Zuo Wenjing in the final.":
@@ -8391,8 +8390,6 @@ const ZH_HANT: Record<string, string> = {
   // Li Sih-yi converts (李思誼), Taiwan is 台灣, Cup is 盃.
   "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.":
     '十個全國冠軍，比任何一位女棋手都多，還有 2025 年女子世界冠軍。她從上海到馬尼拉奪得亞洲冠軍的這個賽季，盤面上五盤對局，50 局附引擎分析。',
-  'Tang Dan in glasses and a navy top with a white bow, in front of a potted plant.':
-    '唐丹戴著眼鏡，身穿繫白色蝴蝶結的藏青色上衣，站在一盆綠植前。',
   "English-speaking xiangqi players who follow the women's game and China's national championship. Found through search, the site, and the Zuo Wenjing and Yin Sheng pages.":
     '關注女子象棋和全國象棋個人賽的說英語的棋友。透過搜尋、本站以及左文静和尹昇的專頁找到這一頁。',
   "Tang Dan has won China's national individual women's title ten times, more than any other woman; the tenth came in December 2025, against Zuo Wenjing in the final.":
