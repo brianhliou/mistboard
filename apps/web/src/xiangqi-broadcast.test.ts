@@ -339,7 +339,8 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastRound(root, 'w', 'w-r01');
 
-    expect(root.querySelector('.xqb-tab.xqb-tab-active')?.textContent).toBe('Overview');
+    // The Overview stands alone: Boards and Players wait for the first game.
+    expect(root.querySelector('.xqb-tabs')).toBeNull();
     const pending = root.querySelector('.xqb-overview-pending')?.textContent ?? '';
     expect(pending).toContain('three tables');
     expect(pending).toContain('No games yet');
@@ -1514,16 +1515,10 @@ describe('event page (tabs, default round, standings)', () => {
     const pending = root.querySelector('.xqb-overview-pending')?.textContent ?? '';
     expect(pending).toContain('This event is over and the source has not published its games');
     expect(pending).not.toContain('round by round');
-    (
-      [...root.querySelectorAll('.xqb-tab')].find(
-        (tab) => tab.textContent === 'Boards',
-      ) as HTMLButtonElement
-    ).click();
-    const empty = root.querySelector('.xqb-empty');
-    expect(empty?.textContent).toContain("The source has not published this round's games");
-    expect(empty?.textContent).not.toContain('usually after play');
-    // The source link stays: it is where the games would come from.
-    expect(empty?.querySelector('a')).not.toBeNull();
+    // No tabs to an empty Boards grid; the source link stays on the Overview,
+    // where the games would come from.
+    expect(root.querySelector('.xqb-tabs')).toBeNull();
+    expect(root.querySelector('.xqb-overview-strip a.xqb-overview-link')).not.toBeNull();
     expect(root.querySelector('.xqb-side-rail .xqb-rail-empty')?.textContent).toBe(
       'No games published',
     );
@@ -2111,6 +2106,25 @@ describe('event header before any round exists', () => {
     const header = root.querySelector('.xqb-event-header')?.textContent ?? '';
     expect(header).toContain('Test Cup');
     expect(header).not.toMatch(/0 rounds/);
+  });
+
+  // The placeholder drew Boards and Players tabs that did nothing on click.
+  it('shows the Overview alone, with no tabs, until the first game', async () => {
+    stubFetchJson(() => ({
+      tour: {
+        schema: XIANGQI_BROADCAST_SCHEMA,
+        slug: 't',
+        name: 'Test Cup',
+        startsAt: '2099-10-02T00:00:00+08:00',
+        endsAt: '2099-10-08T23:59:59+08:00',
+      },
+      rounds: [],
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastTour(root, 't');
+    expect(root.querySelector('.xqb-tabs')).toBeNull();
+    expect(root.querySelector('.xqb-overview-pending')).not.toBeNull();
   });
 
   it('keeps the left column, an empty game list over the chat', async () => {

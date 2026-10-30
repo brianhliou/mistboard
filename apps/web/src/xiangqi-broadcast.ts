@@ -1123,7 +1123,8 @@ function renderEvent(
     ? `${primaryName(data.round)} · ${primaryName(data.tour)} · Mistboard`
     : `${primaryName(data.tour)} · Mistboard`;
   let body: HTMLElement;
-  if (state.tab === 'overview') body = renderOverviewTab(data, state);
+  // Before the first game the Overview is the whole page (no tabs are shown).
+  if (state.tab === 'overview' || eventHasNoGames(data)) body = renderOverviewTab(data, state);
   else if (state.tab === 'players') body = renderPlayersTab(data, state);
   else if (state.tab === 'teams' && isTeamEvent(data)) body = renderTeamsTab(data, state);
   else body = renderBoardsTab(data, cards, state);
@@ -1175,6 +1176,9 @@ function renderEventShell(
   // An open board takes the whole column, header and tabs included, so it
   // fills the height of the screen; the game list's back arrow returns.
   if (boardOpen) content.append(body);
+  // Before the first game Boards and Players would only say "no games yet",
+  // so the tabs wait for one and the Overview stands alone.
+  else if (eventHasNoGames(data)) content.append(eventHeader(data), body);
   else content.append(eventHeader(data), eventTabs(data, state), body);
   layout.append(content);
   // The round's pairings, lichess's left column: scan the round without the
@@ -1933,7 +1937,7 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     link.textContent = t('broadcast.source');
     strip.append(link);
   }
-  if (rounds.length > 0) {
+  if (rounds.length > 0 && !eventHasNoGames(data)) {
     const standings = document.createElement('button');
     standings.type = 'button';
     standings.className = 'xqb-overview-link';
