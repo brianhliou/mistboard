@@ -26,6 +26,7 @@ import {
   mountPuzzles,
   puzzleMoveRowNumber,
   renderPuzzlesShellForPrerender,
+  resetPuzzleReloadCheckForTest,
   sourceGameLines,
 } from './puzzles.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
@@ -1168,6 +1169,39 @@ describe('standard xiangqi puzzles', () => {
     expect(root.querySelector('.puzzles-sidebar')?.textContent).toContain('From set Xiangqi');
     // Every intersection carries a click target for the shared drag helper.
     expect(root.querySelectorAll('[data-square]').length).toBe(90);
+  });
+
+  it('a reload past a finished puzzle opens the next unseen one; a link still opens it', async () => {
+    // Every Next pushes /puzzles/<id>, so a reload lands on the last puzzle
+    // opened. Solving it and reloading used to serve the solved puzzle again.
+    const [done, fresh] = [XIANGQI_PUZZLES[0]!, XIANGQI_PUZZLES[1]!];
+    const mountAt = async (navigationType: NavigationTimingType) => {
+      stubWindowLocalStorage(
+        memoryStorage({
+          'mistboard:puzzles:solved': JSON.stringify([done.id]),
+          'mistboard:puzzles:seen': JSON.stringify({ [done.id]: Date.now() }),
+        }),
+      );
+      vi.spyOn(performance, 'getEntriesByType').mockReturnValue([
+        { type: navigationType } as PerformanceNavigationTiming,
+      ]);
+      resetPuzzleReloadCheckForTest();
+      window.history.replaceState(null, '', `/puzzles/${done.id}`);
+      const fetchSpy = xiangqiFetchMock([done, fresh]);
+      vi.stubGlobal('fetch', fetchSpy);
+      await mountPuzzles(document.createElement('div'), done.id);
+      return fetchSpy;
+    };
+
+    const reloaded = await mountAt('reload');
+    expect(reloaded).toHaveBeenCalledWith(`/api/puzzles/${fresh.id}`);
+    expect(reloaded).not.toHaveBeenCalledWith(`/api/puzzles/${done.id}`);
+    expect(window.location.pathname).toBe(`/puzzles/${fresh.id}`);
+
+    // A shared or bookmarked link is not a reload: it opens what it names.
+    const linked = await mountAt('navigate');
+    expect(linked).toHaveBeenCalledWith(`/api/puzzles/${done.id}`);
+    expect(window.location.pathname).toBe(`/puzzles/${done.id}`);
   });
 
   it('paints a standard puzzle with the saved xiangqi piece set', async () => {

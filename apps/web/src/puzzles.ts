@@ -447,6 +447,20 @@ export async function mountPuzzles(
   for (const id of puzzleList.attemptedIds) {
     if (!seenPuzzles.has(id)) seenPuzzles.set(id, 0);
   }
+  // Every Next pushes /puzzles/<id>, so a reload lands on the last puzzle
+  // opened. When that puzzle is already finished, opening it again repeated
+  // it: a visitor who solved a few, reloaded and played on got the solved one
+  // back first. A reload past a finished puzzle starts at the head of the
+  // fresh queue instead. A link opened from anywhere else is not a reload and
+  // still opens the puzzle it names, finished or not.
+  let reloadedPastFinished = false;
+  if (selectedId && isFirstMountReload()) {
+    const fullId = resolveToFullPuzzleId(selectedId, summaries);
+    if (solvedIds.has(fullId) || puzzleList.attemptedIds.includes(fullId)) {
+      selectedId = null;
+      reloadedPastFinished = true;
+    }
+  }
   const targetRatings = new Map<string, number>();
   await Promise.all(
     [...new Set(summaries.map((puzzle) => puzzle.variant))].map(async (variant) => {
@@ -481,6 +495,14 @@ export async function mountPuzzles(
       ? selectedId
       : (queue[0]?.id ?? null);
   if (firstId) {
+    if (reloadedPastFinished) {
+      // Replace, not push: Back should not return to the finished puzzle.
+      window.history.replaceState(
+        null,
+        '',
+        `/puzzles/${encodeURIComponent(firstId)}${window.location.search}`,
+      );
+    }
     await selectPuzzle(firstId, false);
   } else {
     renderEmptyQueue();
@@ -1418,6 +1440,27 @@ function filterPuzzlesByVariant(
   variant: PuzzleVariantFilter,
 ): PuzzleSummary[] {
   return puzzles.filter((puzzle) => puzzle.variant === variant);
+}
+
+// True once per document, for the first mount of a page the visitor reloaded.
+// Later mounts in the same document (none today) are not reloads.
+let firstMountChecked = false;
+function isFirstMountReload(): boolean {
+  if (firstMountChecked) return false;
+  firstMountChecked = true;
+  try {
+    const entry = performance.getEntriesByType?.('navigation')[0] as
+      | PerformanceNavigationTiming
+      | undefined;
+    return entry?.type === 'reload';
+  } catch {
+    return false;
+  }
+}
+
+/** Test hook: let the next mount read the navigation type again. */
+export function resetPuzzleReloadCheckForTest(): void {
+  firstMountChecked = false;
 }
 
 function navigationFor(

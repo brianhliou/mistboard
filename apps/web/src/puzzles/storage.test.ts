@@ -40,9 +40,60 @@ describe('adaptive puzzle rotation', () => {
       new Map([['xiangqi', 1500]]),
     );
 
-    expect(ordered[0]?.id).toBe('nearer');
+    // The two unseen puzzles within 100 of the target come first, in either
+    // order; seen puzzles stay last, oldest first.
+    expect(new Set(ordered.slice(0, 2).map(({ id }) => id))).toEqual(new Set(['near', 'nearer']));
+    expect(ordered[2]?.id).toBe('mid');
     expect(ordered.slice(0, 5).map(({ id }) => id)).toContain('explore');
     expect(ordered.slice(-2).map(({ id }) => id)).toEqual(['seen-old', 'seen-new']);
+  });
+
+  // A corpus shaped like prod's around 1500: a few dozen puzzles per 100 points.
+  const corpus = Array.from({ length: 300 }, (_, i) =>
+    puzzle(`p-${i}`, 1200 + ((i * 37) % 600), ['mate', 'fork', 'pin', 'capture'][i % 4]!),
+  );
+  it('opens fresh visits on different first five puzzles', () => {
+    // Puzzles 45 points apart, more than the old 0-30 jitter, and only five
+    // within the explore window: nearest-first served this exact first five on
+    // every visit with nothing seen. A band draw varies it.
+    const sparse = [
+      ...[1500, 1545, 1590, 1635, 1680].map((rating, i) => puzzle(`s-${i}`, rating, `t${i}`)),
+      ...Array.from({ length: 20 }, (_, i) => puzzle(`far-${i}`, 2400 + i, `f${i}`)),
+    ];
+    const visit = (): string =>
+      rotatePuzzleOrder(sparse, new Map(), new Map([['xiangqi', 1500]]))
+        .slice(0, 5)
+        .map(({ id }) => id)
+        .join(',');
+    const firstFives = new Set(Array.from({ length: 10 }, visit));
+    expect(firstFives.size).toBeGreaterThan(1);
+  });
+
+  it('opens on any puzzle in the near band, not only the nearest few', () => {
+    const openers = new Set(
+      Array.from(
+        { length: 40 },
+        () => rotatePuzzleOrder(corpus, new Map(), new Map([['xiangqi', 1500]]))[0]!.id,
+      ),
+    );
+    expect(openers.size).toBeGreaterThan(20);
+  });
+
+  it('draws the matched picks inside the band around the target', () => {
+    for (let visit = 0; visit < 20; visit += 1) {
+      const ordered = rotatePuzzleOrder(corpus, new Map(), new Map([['xiangqi', 1500]]));
+      for (const [index, { rating }] of ordered.slice(0, 20).entries()) {
+        // Every fifth pick explores within 300; the rest stay within 100.
+        expect(Math.abs(rating - 1500)).toBeLessThanOrEqual(index % 5 === 4 ? 300 : 100);
+      }
+    }
+  });
+
+  it('widens outward once the near band is used up', () => {
+    const ordered = rotatePuzzleOrder(corpus, new Map(), new Map([['xiangqi', 1500]]));
+    const meanDistance = (slice: readonly PuzzleSummary[]) =>
+      slice.reduce((sum, { rating }) => sum + Math.abs(rating - 1500), 0) / slice.length;
+    expect(meanDistance(ordered.slice(0, 50))).toBeLessThan(meanDistance(ordered.slice(-50)));
   });
 });
 

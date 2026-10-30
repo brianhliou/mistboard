@@ -82,15 +82,11 @@ export function rotatePuzzleOrder(
 // get variety -- just the closest variety available, not the whole range.
 const EXPLORE_WINDOWS = [300, 600, 1200] as const;
 
-function exploreIndex(
-  remaining: readonly { puzzle: PuzzleSummary }[],
-  targetRating: number,
-): number {
+function exploreIndex(remaining: readonly PuzzleSummary[], targetRating: number): number {
   for (const window of EXPLORE_WINDOWS) {
     const withinBand: number[] = [];
     for (let index = 0; index < remaining.length; index += 1) {
-      if (Math.abs(remaining[index]!.puzzle.rating - targetRating) <= window)
-        withinBand.push(index);
+      if (Math.abs(remaining[index]!.rating - targetRating) <= window) withinBand.push(index);
     }
     if (withinBand.length > 0) {
       return withinBand[Math.floor(Math.random() * withinBand.length)]!;
@@ -101,35 +97,62 @@ function exploreIndex(
   return Math.floor(Math.random() * remaining.length);
 }
 
+// The matched pick draws at random inside a rating band around the target
+// instead of taking the nearest puzzle. Nearest-first with a 0-30 jitter made
+// every fresh visit open on the same few puzzles in nearly the same order: with
+// an empty seen-set the queue was close to a pure function of the corpus and
+// the rating. Bands widen only when the closer one is empty, so the queue
+// still starts near the viewer and moves outward as the near puzzles are used.
+const MATCH_BANDS = [100, 200, 400, 800] as const;
+
+function matchedIndex(
+  remaining: readonly PuzzleSummary[],
+  targetRating: number,
+  recentThemes: ReadonlySet<string>,
+): number {
+  for (const band of MATCH_BANDS) {
+    const inBand: number[] = [];
+    for (let index = 0; index < remaining.length; index += 1) {
+      if (Math.abs(remaining[index]!.rating - targetRating) <= band) inBand.push(index);
+    }
+    if (inBand.length === 0) continue;
+    // Prefer a puzzle whose lead theme the last two did not share.
+    const fresh = inBand.filter((index) => {
+      const theme = remaining[index]!.themes[0];
+      return !theme || !recentThemes.has(theme);
+    });
+    const pool = fresh.length > 0 ? fresh : inBand;
+    return pool[Math.floor(Math.random() * pool.length)]!;
+  }
+  // Nothing within the widest band: the nearest puzzle left.
+  let nearest = 0;
+  for (let index = 1; index < remaining.length; index += 1) {
+    if (
+      Math.abs(remaining[index]!.rating - targetRating) <
+      Math.abs(remaining[nearest]!.rating - targetRating)
+    ) {
+      nearest = index;
+    }
+  }
+  return nearest;
+}
+
 function adaptivePuzzleOrder(
   puzzles: readonly PuzzleSummary[],
   targetRating: number,
 ): PuzzleSummary[] {
-  const remaining = puzzles.map((puzzle) => ({ puzzle, jitter: Math.random() * 30 }));
+  const remaining = [...puzzles];
   const ordered: PuzzleSummary[] = [];
   while (remaining.length > 0) {
     const explore = ordered.length % 5 === 4;
-    let selectedIndex = 0;
-    if (explore) {
-      selectedIndex = exploreIndex(remaining, targetRating);
-    } else {
-      const recentThemes = new Set(
-        ordered.slice(-2).flatMap((puzzle) => puzzle.themes.slice(0, 1)),
-      );
-      let bestScore = Number.POSITIVE_INFINITY;
-      for (let index = 0; index < remaining.length; index += 1) {
-        const candidate = remaining[index]!;
-        const primaryTheme = candidate.puzzle.themes[0];
-        const repeatPenalty = primaryTheme && recentThemes.has(primaryTheme) ? 75 : 0;
-        const score =
-          Math.abs(candidate.puzzle.rating - targetRating) + repeatPenalty + candidate.jitter;
-        if (score < bestScore) {
-          bestScore = score;
-          selectedIndex = index;
-        }
-      }
-    }
-    ordered.push(remaining.splice(selectedIndex, 1)[0]!.puzzle);
+    const selectedIndex = explore
+      ? exploreIndex(remaining, targetRating)
+      : matchedIndex(
+          remaining,
+          targetRating,
+          new Set(ordered.slice(-2).flatMap((puzzle) => puzzle.themes.slice(0, 1))),
+        );
+    ordered.push(remaining.splice(selectedIndex, 1)[0]!);
   }
   return ordered;
 }
