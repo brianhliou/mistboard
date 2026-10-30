@@ -20,6 +20,7 @@ import { displayPreferenceStorageKey } from './display-preferences.js';
 import { LOCALE_STORAGE_KEY } from './i18n/locale.js';
 import { playSound } from './live-sound.js';
 import { puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
+import { playerWithoutTeam } from './puzzles/queue-panel.js';
 import { loadPuzzleTheme, PUZZLE_THEME_MIN_PATTERN_COUNT } from './puzzles/themes.js';
 import {
   mountPuzzleSolver,
@@ -1274,7 +1275,7 @@ describe('standard xiangqi puzzles', () => {
     );
   });
 
-  it('names the kill pattern in the themes card once a mate puzzle is solved', async () => {
+  it('names the kill pattern in the info card once a mate puzzle is solved', async () => {
     const puzzle = XIANGQI_PUZZLES.find(
       (candidate) =>
         candidate.goal.type === 'checkmate' && detectXiangqiPuzzleMotifs(candidate).length > 0,
@@ -1288,13 +1289,35 @@ describe('standard xiangqi puzzles', () => {
     await mountPuzzles(root, puzzle!.id);
     // Spoiler-gated: the pattern names the mate, so it stays hidden until solved.
     expect(root.querySelector('.puzzle-tag-motif')).toBeNull();
+    // The themes are the info card's last row, not a card of their own; the
+    // left column is info, rating, then one settings card.
+    const sidebarCards = () =>
+      [...root.querySelectorAll<HTMLElement>('.puzzle-left-card')].map((card) =>
+        [...card.classList].find((name) => name !== 'puzzle-left-card'),
+      );
+    expect(sidebarCards()).toEqual([
+      'puzzle-current-card',
+      'puzzle-rating-card',
+      'puzzle-settings-card',
+    ]);
+    const hiddenRow = root.querySelector<HTMLElement>(
+      '.puzzle-info-card [data-puzzle-info-themes]',
+    );
+    expect(hiddenRow?.dataset.puzzleInfoThemes).toBe('hidden');
+    expect(hiddenRow?.textContent).toBe('Puzzle themesRevealed after you solve it.');
+    const settings = root.querySelector<HTMLElement>('.puzzle-settings-card');
+    expect(settings?.querySelector('[data-puzzle-auto-next]')).not.toBeNull();
+    expect(settings?.querySelector('a[href="/puzzles/themes"]')).not.toBeNull();
     for (const move of solverMovesOf(puzzle!)) {
       clickMove(root, move);
       await vi.waitFor(() => expect(root.textContent).toMatch(/Correct\.|Success!/));
     }
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
-    const chip = root.querySelector<HTMLElement>('.puzzle-tag-motif');
+    const shownRow = root.querySelector<HTMLElement>('.puzzle-info-card [data-puzzle-info-themes]');
+    expect(shownRow?.dataset.puzzleInfoThemes).toBe('shown');
+    expect(shownRow?.textContent).not.toContain('Revealed after you solve it.');
+    const chip = shownRow?.querySelector<HTMLElement>('.puzzle-tag-motif');
     // English names only in en: no hanzi, no pinyin tooltip.
     expect(chip?.textContent).toBe(motif.label);
     expect(chip?.textContent).not.toMatch(/[\u3400-\u9fff]/);
@@ -1948,6 +1971,27 @@ describe('sourceGameLines', () => {
     expect(header('某某杯')).toBe('From a 2025 game');
   });
 
+  it('shows the player without the team, the full string in the tooltip', () => {
+    const lines = sourceGameLines({
+      variant: XIANGQI_SPEC_ID,
+      sourceGame: {
+        gameId: 'g',
+        ply: 1,
+        redName: 'Li Xiaolong (Shaanxi Sports Bureau)',
+        blackName: 'Xu Tengfei',
+        result: '1-0',
+      },
+    });
+    const names = lines.map((line) =>
+      line.querySelector<HTMLElement>('.puzzle-source-player-name'),
+    );
+    expect(names[1]?.textContent).toBe('Li Xiaolong');
+    expect(names[1]?.title).toBe('Li Xiaolong (Shaanxi Sports Bureau)');
+    // No team, no tooltip.
+    expect(names[2]?.textContent).toBe('Xu Tengfei');
+    expect(names[2]?.title).toBe('');
+  });
+
   it('falls back to "From set <variant>" without attribution', () => {
     expect(sourceGameLines({ variant: 'jungle' }).map((l) => l.textContent)).toEqual([
       'From set Jungle Chess',
@@ -2015,7 +2059,8 @@ describe('sourceGameLines locale', () => {
     const lines = sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: source });
     const text = lines.map((line) => line.textContent ?? '');
     expect(text[0]).toBe('From game · 2026 National Xiangqi Team Championship');
-    expect(text[1]).toContain('Huang Leilei (Shandong Board Games Centre)');
+    expect(text[1]).toContain('Huang Leilei');
+    expect(text[1]).not.toContain('Shandong');
     expect(text[2]).toContain('Shi Fenglan');
     for (const line of text) expect(line).not.toMatch(CJK);
   });
@@ -2033,7 +2078,23 @@ describe('sourceGameLines locale', () => {
     window.history.replaceState(null, '', '/zh-hans/puzzles');
     const lines = sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: source });
     expect(lines[0]?.textContent).toContain('2026年全国象棋团体赛');
-    expect(lines[1]?.textContent).toContain('山东省棋牌运动管理中心 黄蕾蕾');
+    // The Chinese original puts the team first; the name shows, the team is
+    // in the tooltip.
+    const red = lines[1]?.querySelector<HTMLElement>('.puzzle-source-player-name');
+    expect(red?.textContent).toBe('黄蕾蕾');
+    expect(red?.title).toBe('山东省棋牌运动管理中心 黄蕾蕾');
+  });
+
+  it('strips the team from every archive name shape', () => {
+    expect(playerWithoutTeam('Xu Wei (Xinjiang Production Team)')).toBe('Xu Wei');
+    expect(playerWithoutTeam('徐伟（新疆）')).toBe('徐伟');
+    expect(playerWithoutTeam('四川 黎德玲')).toBe('黎德玲');
+    expect(playerWithoutTeam('北京棋院（北京市棋牌运动管理中心） 王禹博')).toBe('王禹博');
+    expect(playerWithoutTeam('金州 Son X Nguyen')).toBe('Son X Nguyen');
+    // Nothing to strip: a plain name, a Latin team word, a lone parenthetical.
+    expect(playerWithoutTeam('HTown David Nguyen')).toBe('HTown David Nguyen');
+    expect(playerWithoutTeam('许银川')).toBe('许银川');
+    expect(playerWithoutTeam('(Team)')).toBe('(Team)');
   });
 });
 

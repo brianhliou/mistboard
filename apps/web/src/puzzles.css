@@ -810,16 +810,26 @@ a.puzzle-streak-chip:focus-visible {
   line-height: 1.35;
 }
 
-.puzzle-theme-card p {
-  margin: 0;
+/* The info card's last row: the puzzle's themes, a muted note until it is
+   solved, the chips after. Label over content, full card width. */
+.puzzle-info-themes {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
   color: var(--site-muted);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.3;
+}
+
+.puzzle-info-themes__label {
+  color: var(--site-heading);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .puzzle-settings {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .puzzle-field {

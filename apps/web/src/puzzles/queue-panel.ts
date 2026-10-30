@@ -1,7 +1,8 @@
 /**
  * The puzzles-page sidebar: the current-puzzle info card (identity, source
- * game, side to move), the rated toggle + rating summary, the spoiler-gated
- * themes card, and the settings card (variant picker + auto-next).
+ * game, side to move, and its themes once solved), the rated toggle + rating
+ * summary, and the settings card (variant and theme pickers, the themes page
+ * link, auto-next).
  */
 
 import {
@@ -77,6 +78,7 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
         rating: revealed ? current.rating : null,
         status: solvedIds.has(current.id) ? t('puzzle.statusSolved') : t('puzzle.playedLocally'),
         goalRevealed: revealed,
+        themes: revealed ? 'shown' : 'hidden',
       })
     : emptyInfoCard(props.theme?.id ? t('puzzle.noneForTheme') : t('puzzle.noneForVariant'));
 
@@ -132,29 +134,6 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     ratingCard.append(ratedNote);
   }
 
-  const themesCard = document.createElement('section');
-  themesCard.className = 'puzzle-left-card puzzle-theme-card';
-  const themesTitle = document.createElement('h2');
-  themesTitle.textContent = t('puzzle.themesTitle');
-  const themesCopy = document.createElement('p');
-  themesCopy.textContent = t('puzzle.themesCopy');
-  themesCard.append(themesTitle);
-  if (current && revealed) {
-    // Themes name the piece/pattern (e.g. "Drop", "Treasure"), so reveal them
-    // only after the puzzle is solved to avoid giving the move away.
-    themesCard.append(themesCopy, tagsPanel(current));
-  } else if (current) {
-    const hidden = document.createElement('p');
-    hidden.className = 'puzzle-card-empty';
-    hidden.textContent = t('puzzle.themesHidden');
-    themesCard.append(hidden);
-  } else {
-    const empty = document.createElement('p');
-    empty.className = 'puzzle-card-empty';
-    empty.textContent = t('puzzle.themesEmpty');
-    themesCard.append(empty);
-  }
-
   const settingsCard = document.createElement('section');
   settingsCard.className = 'puzzle-left-card puzzle-settings-card';
   const settingsTitle = document.createElement('h2');
@@ -206,17 +185,24 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   form.append(autoNextToggle);
   settingsCard.append(settingsTitle, form);
 
-  host.append(infoCard, ratingCard, themesCard, settingsCard);
+  host.append(infoCard, ratingCard, settingsCard);
 }
 
 // The current-puzzle info card (lichess's puzzle__side__metas): the puzzle's
 // code linking to its page, the rating (hidden unless `rating` is given), an
 // optional status line, then where it came from and who is to move. The goal
 // (e.g. "Mate in 1") is a spoiler while solving, so it shows only once
-// `goalRevealed`. Puzzle Streak puts the same card over its own.
+// `goalRevealed`. Puzzle Streak puts the same card over its own. With `themes`
+// the card ends in the puzzle's themes row: a spoiler note until the puzzle is
+// over ('hidden'), the theme chips after ('shown'). Streak passes none.
 export function puzzleInfoCard(
   puzzle: PuzzleSummary,
-  opts: { rating: number | null; status: string | null; goalRevealed: boolean },
+  opts: {
+    rating: number | null;
+    status: string | null;
+    goalRevealed: boolean;
+    themes?: 'hidden' | 'shown';
+  },
 ): HTMLElement {
   const infoCard = document.createElement('section');
   infoCard.className = 'puzzle-left-card puzzle-current-card puzzle-info-card';
@@ -250,7 +236,31 @@ export function puzzleInfoCard(
       puzzle.variant,
     ),
   );
+  if (opts.themes) infoCard.append(puzzleInfoDivider(), puzzleThemesRow(puzzle, opts.themes));
   return infoCard;
+}
+
+// Themes name the piece or pattern (e.g. "Drop", "Treasure"), so the chips
+// show only once the puzzle is over; until then the row says when they will.
+function puzzleThemesRow(
+  puzzle: Pick<PuzzleSummary, 'themes' | 'motifs'>,
+  state: 'hidden' | 'shown',
+): HTMLElement {
+  const row = document.createElement('div');
+  row.className = `puzzle-info-themes puzzle-info-themes--${state}`;
+  row.dataset.puzzleInfoThemes = state;
+  const label = document.createElement('span');
+  label.className = 'puzzle-info-themes__label';
+  label.textContent = t('puzzle.themesTitle');
+  if (state === 'shown') {
+    row.append(label, tagsPanel(puzzle));
+  } else {
+    const note = document.createElement('span');
+    note.className = 'puzzle-info-themes__note';
+    note.textContent = t('puzzle.themesHidden');
+    row.append(label, note);
+  }
+  return row;
 }
 
 function emptyInfoCard(message: string): HTMLElement {
@@ -419,8 +429,15 @@ function sourceGamePlayerLine(
   const disc = seatDiscEl(color, 'puzzle-source-disc');
   const label = document.createElement('span');
   label.className = 'puzzle-source-player-name';
-  label.textContent =
-    name && name.length > 0 ? name : color === 'red' ? t('setup.red') : t('setup.black');
+  if (name && name.length > 0) {
+    // The archive strings carry the team, which crowds out the name in a
+    // sidebar line; the name shows and the full string is the tooltip.
+    const player = playerWithoutTeam(name);
+    label.textContent = player;
+    if (player !== name) label.title = name;
+  } else {
+    label.textContent = color === 'red' ? t('setup.red') : t('setup.black');
+  }
   line.append(disc, label);
   const glyph = sourceGameResultGlyph(color, result);
   if (glyph) {
@@ -430,6 +447,21 @@ function sourceGamePlayerLine(
     line.append(outcome);
   }
   return line;
+}
+
+const CJK_TEAM_PREFIX = /^[\p{Script=Han}\u3000-\u303f\uff00-\uffef]+\s+(?=\S)/u;
+
+/** The player without the team the archive strings carry: the English form
+ *  puts it in a trailing parenthetical ("Xu Wei (Xinjiang Production Team)" →
+ *  "Xu Wei"), the Chinese original before the name ("四川 黎德玲" → "黎德玲").
+ *  A name with no team, or one that is only a team, is returned as is. */
+export function playerWithoutTeam(name: string): string {
+  const trimmed = name.trim();
+  const open = trimmed.search(/\s*[(（]/u);
+  if (open > 0 && /[)）]$/u.test(trimmed)) return trimmed.slice(0, open);
+  const prefix = trimmed.match(CJK_TEAM_PREFIX);
+  if (prefix) return trimmed.slice(prefix[0].length);
+  return name;
 }
 
 function sourceGameResultGlyph(color: 'red' | 'black', result: string | undefined): string | null {
