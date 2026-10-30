@@ -17,6 +17,8 @@ import {
   type ThreeKingdomsBanqiState,
 } from '@mistboard/game';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderBanqiMaterial } from './banqi-material.js';
+import { banqiRevealOdds } from './banqi-reveal-odds.js';
 import type { ThreeKingdomsBanqiWireView } from './live-three-kingdoms-banqi.js';
 import { TK_LIVE_BOARD_VIEW } from './three-kingdoms-banqi-diagrams.js';
 import type { TenantLiveEvent } from './variant-tenant/live-client.js';
@@ -28,6 +30,8 @@ import type {
 const socket = vi.hoisted(() => ({
   options: null as TenantSocketClientOptions | null,
   sent: [] as unknown[],
+  connection: 'connected' as string,
+  closeReason: '',
 }));
 
 vi.mock('./feature-flags.js', async (importOriginal) => {
@@ -50,9 +54,9 @@ vi.mock('./variant-tenant/socket-client.js', async (importOriginal) => {
           return true;
         },
         startPing: () => {},
-        connection: () => 'connected',
+        connection: () => socket.connection,
         noticeTier: () => 'none',
-        closeReason: () => '',
+        closeReason: () => socket.closeReason,
         clientId: () => 'test-client',
         latencyMs: () => null,
         reconnectAttempt: () => 0,
@@ -101,6 +105,8 @@ async function mount(): Promise<TenantSocketClientOptions> {
   window.history.replaceState(null, '', `/room/${ROOM}`);
   socket.options = null;
   socket.sent = [];
+  socket.connection = 'connected';
+  socket.closeReason = '';
   vi.resetModules();
   const { bootstrapThreeKingdomsBanqiLiveRoom } = await import('./live-three-kingdoms-banqi.js');
   bootstrapThreeKingdomsBanqiLiveRoom();
@@ -146,7 +152,7 @@ beforeEach(() => {
 });
 
 describe('Three Kingdoms banqi live room', () => {
-  it('draws 45 points, every setup tile face down, and the score line', async () => {
+  it('draws 45 points, every setup tile face down, the seat points and the tally', async () => {
     const { states } = playLine(0);
     const options = await mount();
     options.applyHello(
@@ -162,7 +168,109 @@ describe('Three Kingdoms banqi live room', () => {
     const pieces = document.querySelectorAll('[data-piece-square]');
     expect(pieces.length).toBe(Object.keys(states[0]!.board).length);
     expect(document.querySelectorAll('[data-piece-square] image')).toHaveLength(0);
-    expect(document.querySelector('.tk-banqi-scores')?.textContent).toContain('first to 100');
+    // Points beside each seat's name, the target once in the game card.
+    const tags = [...document.querySelectorAll('.clock-seat-tag')].map((el) => el.textContent);
+    expect(tags).toEqual(['0 pts', '0 pts']);
+    expect(document.body.textContent).toContain('First to 100 points');
+    expect(document.body.textContent?.match(/First to 100 points/g)).toHaveLength(1);
+    // Banqi's face-down tally, 16 a side, and no quiet-move line this early.
+    expect(document.querySelector('.hidden-pool__row')).not.toBeNull();
+    expect(document.querySelector('.tk-banqi-moves-left')).toBeNull();
+    expect(document.body.textContent).not.toContain('Quiet moves');
+  });
+
+  it('says how many moves are left only from 30 quiet moves on', async () => {
+    const { states } = playLine(12);
+    const base = view(states[12]!, 'red');
+    const lineAt = async (noProgressClock: number) => {
+      const options = await mount();
+      options.applyHello(
+        hello({
+          type: 'hello',
+          seat: 'red',
+          state: { ...base, noProgressClock },
+          events: [CREATED],
+        }),
+      );
+      options.render();
+      return document.querySelector('.tk-banqi-moves-left')?.textContent ?? null;
+    };
+    expect(await lineAt(29)).toBeNull();
+    expect(await lineAt(30)).toBe('10 moves left before the game is decided on points');
+    expect(await lineAt(38)).toBe('2 moves left before the game is decided on points');
+    expect(await lineAt(39)).toBe('1 move left before the game is decided on points');
+  });
+
+  // The playtest is gated on the server: a non-admin's socket closes 1008
+  // 'game spec disabled', and the room says it is admin-only rather than
+  // drawing a dead board or calling the room inactive.
+  it('a refused socket says the playtest is admin-only', async () => {
+    const options = await mount();
+    socket.connection = 'rejected';
+    socket.closeReason = 'game spec disabled';
+    options.render();
+    expect(document.body.textContent).toContain('opens only for admin accounts');
+    socket.closeReason = 'room unavailable';
+    options.render();
+    expect(document.body.textContent).not.toContain('opens only for admin accounts');
+  });
+
+  // Hidden information: the strips, the tally and its reveal odds are built from
+  // the masked view alone. Swapping two face-down tiles of different identity
+  // in the truth changes nothing a seat is sent, so nothing drawn may change.
+  it('material and reveal odds do not change when two face-down tiles swap', async () => {
+    const { states, moves } = playLine(12);
+    const truth = states[12]!;
+    const down = (
+      Object.entries(truth.board) as [
+        string,
+        NonNullable<(typeof truth.board)[keyof typeof truth.board]>,
+      ][]
+    ).filter(([, piece]) => piece.faceDown);
+    const a = down[0]!;
+    const b = down.find(([, p]) => p.color !== a[1].color || p.role !== a[1].role)!;
+    expect(b, 'no two face-down tiles differ').toBeDefined();
+    const swapped: ThreeKingdomsBanqiState = {
+      ...truth,
+      board: { ...truth.board, [a[0]]: b[1], [b[0]]: a[1] },
+    };
+    expect(swapped.board).not.toEqual(truth.board);
+
+    const drawn = (state: ThreeKingdomsBanqiState) => {
+      const masked = view(state, 'red');
+      const slots = {
+        capturesTop: document.createElement('div'),
+        capturesBottom: document.createElement('div'),
+        hiddenPool: document.createElement('div'),
+      };
+      renderBanqiMaterial(slots, masked, 'red', moves);
+      return {
+        view: JSON.stringify(masked),
+        odds: banqiRevealOdds(masked),
+        html: [slots.capturesTop, slots.capturesBottom, slots.hiddenPool].map((el) => el.innerHTML),
+      };
+    };
+    const before = drawn(truth);
+    expect(before.odds.total).toBeGreaterThan(0);
+    expect(drawn(swapped)).toEqual(before);
+
+    // And the mounted room, which only ever sees the wire view.
+    const roomPool = async (state: ThreeKingdomsBanqiState) => {
+      const options = await mount();
+      options.applyHello(
+        hello({
+          type: 'hello',
+          seat: 'red',
+          state: view(state, 'red'),
+          events: [CREATED, ...moveEvents(moves)],
+        }),
+      );
+      options.render();
+      return document.querySelector('[data-hidden-pool]')?.innerHTML ?? '';
+    };
+    const roomBefore = await roomPool(truth);
+    expect(roomBefore).toContain('hidden-pool__chip');
+    expect(await roomPool(swapped)).toBe(roomBefore);
   });
 
   // Without banqi's route class the room fell back to the square-board layout:

@@ -450,7 +450,8 @@ const tenantLiveRoom = tenantLiveRoomCandidate
   ? webVariantTenantForRoomId(tenantLiveRoomCandidate)
   : null;
 const wantsTenantLiveRoom =
-  tenantLiveRoom?.loadLiveRoomClient !== undefined && tenantLiveRoom.enabled();
+  tenantLiveRoom?.loadLiveRoomClient !== undefined &&
+  (tenantLiveRoom.enabled() || tenantLiveRoom.liveRoomServerGated === true);
 
 if (replaySample) {
   setTitle('Replay');

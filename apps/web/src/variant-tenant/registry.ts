@@ -129,6 +129,12 @@ export type WebVariantTenant = {
   // registration carries the same flag (crosstableReviewUrl);
   // variant-registry-sync.test.ts holds the two.
   finishedGameOpensRoom?: true;
+  // The live room is gated by the server alone: /room/<prefix>* routes to
+  // loadLiveRoomClient even while enabled() is false, because enabled() reads a
+  // client hint (the admin flag from /api/auth/me) that a fresh page load does
+  // not have yet. The room's WebSocket refuses whoever the server would not
+  // seat (close 1008), and the room client shows that refusal.
+  liveRoomServerGated?: true;
   // Self-contained live-room client. Resolves to the bootstrap
   // function so callers can preload the chunk before swapping the URL/DOM.
   // Tenants without one ride the chess live shell (live.ts) and register
@@ -1112,6 +1118,9 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
     roomIdPrefix: 'tkb_',
     enabled: threeKingdomsBanqiOffered,
+    // /room/tkb_* loads this client whatever the admin hint says; the server's
+    // WebSocket door refuses a non-admin with 1008 and the room says why.
+    liveRoomServerGated: true,
     pageTitleKey: 'variant.threeKingdomsBanqi.name',
     loadLiveRoomClient: () =>
       import('../live-three-kingdoms-banqi.js').then(

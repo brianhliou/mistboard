@@ -831,6 +831,12 @@ export const EN_PLAY = {
     '{color}’s general can be taken or blown up next move. A repeated check like this loses.',
   'live.banqiChaseForbidden':
     'Perpetual chase (長捉): this move would repeat the position a third time. Play another move.',
+  'live.tk.points': '{count} pts',
+  'live.tk.firstTo': 'First to {count} points',
+  'live.tk.movesLeft': '{count} moves left before the game is decided on points',
+  'live.tk.oneMoveLeft': '1 move left before the game is decided on points',
+  'live.tk.adminOnly':
+    'This {variant} room opens only for admin accounts while the variant is in a closed playtest.',
   'lobby.panelTabComputer': 'Play the computer',
   'lobby.panelTabPerson': 'Play a person',
   'lobby.panelPlayAgain': 'Play again',
@@ -1161,4 +1167,9 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'live.atomicCheckYour',
   'live.atomicCheckColor',
   'live.banqiChaseForbidden',
+  'live.tk.points',
+  'live.tk.firstTo',
+  'live.tk.movesLeft',
+  'live.tk.oneMoveLeft',
+  'live.tk.adminOnly',
 ] as const satisfies readonly PlayI18nKey[];

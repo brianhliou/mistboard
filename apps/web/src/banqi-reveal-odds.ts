@@ -11,20 +11,29 @@
 //   P(a face-down tile is red chariot) = unseen red chariots / unseen total.
 // The denominator is the WHOLE pool (red and black), which is why each ink's
 // percentages sum to that ink's share, not to 100%.
+//
+// Three Kingdoms banqi (#628) deals the same 32 pieces onto a bigger board and
+// keeps every rule this relies on (a face-down tile is never moved or taken),
+// so the same functions serve it; they are generic over the square type.
 
 import {
   type BanqiCapturedView,
   type BanqiColor,
-  type BanqiMove,
   type BanqiPieceRole,
   type BanqiPlayerBoard,
   type BanqiSquare,
+  type BanqiVisibleBoardEntry,
   banqiHiddenPool,
   type HiddenPool,
 } from '@mistboard/game';
 
-export type BanqiOddsView = {
-  board: BanqiPlayerBoard;
+/** A masked board on any banqi-family grid (banqi's 8x4, Three Kingdoms' 9x5). */
+export type BanqiFamilyBoard<S extends string = BanqiSquare> = Partial<
+  Record<S, BanqiVisibleBoardEntry>
+>;
+
+export type BanqiOddsView<S extends string = BanqiSquare> = {
+  board: BanqiFamilyBoard<S>;
   captured: readonly BanqiCapturedView[];
 };
 
@@ -34,8 +43,10 @@ export type BanqiRevealOdds = {
   pool: HiddenPool<BanqiColor, BanqiPieceRole>;
 };
 
-export function banqiRevealOdds(view: BanqiOddsView): BanqiRevealOdds {
-  const pool = banqiHiddenPool(view);
+export function banqiRevealOdds<S extends string>(view: BanqiOddsView<S>): BanqiRevealOdds {
+  // The pool reads only the entries, never the squares they stand on, so a
+  // board on another grid is the same input as far as it is concerned.
+  const pool = banqiHiddenPool({ board: view.board as BanqiPlayerBoard, captured: view.captured });
   return { total: pool.red.total + pool.black.total, pool };
 }
 
@@ -59,18 +70,15 @@ export function banqiRevealChance(
  * end. Returns null when the log does not cover the whole game (the caller
  * then shows nothing rather than a wrong tally).
  */
-export function banqiFaceDownAtEnd<V extends BanqiOddsView & { ply: number }>(
+export function banqiFaceDownAtEnd<S extends string, V extends BanqiOddsView<S> & { ply: number }>(
   view: V,
-  moves: readonly BanqiMove[],
+  moves: readonly { from: S; to: S }[],
 ): V | null {
   if (moves.length !== view.ply) return null;
-  const flipped = new Set<BanqiSquare>();
+  const flipped = new Set<S>();
   for (const move of moves) if (move.from === move.to) flipped.add(move.from);
-  const board: BanqiPlayerBoard = {};
-  for (const [square, entry] of Object.entries(view.board) as [
-    BanqiSquare,
-    BanqiPlayerBoard[BanqiSquare],
-  ][]) {
+  const board: BanqiFamilyBoard<S> = {};
+  for (const [square, entry] of Object.entries(view.board) as [S, BanqiVisibleBoardEntry][]) {
     if (!entry) continue;
     board[square] = flipped.has(square) ? entry : { faceDown: true };
   }

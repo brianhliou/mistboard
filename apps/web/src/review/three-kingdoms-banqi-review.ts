@@ -10,9 +10,7 @@
 import {
   type BanqiColor,
   type BanqiSeat,
-  THREE_KINGDOMS_BANQI_NO_PROGRESS_LIMIT,
   THREE_KINGDOMS_BANQI_POINTS,
-  THREE_KINGDOMS_BANQI_SCORE_TARGET,
   type ThreeKingdomsBanqiMove,
   type ThreeKingdomsBanqiPlayerView,
   type ThreeKingdomsBanqiState,
@@ -27,6 +25,7 @@ import {
   type TkBoardArrow,
   type TkBoardMarker,
 } from '../three-kingdoms-banqi-diagrams.js';
+import { tkMovesLeftLine, tkPoints } from '../three-kingdoms-banqi-score.js';
 import { fillCapturedPoolWith } from './captured-pool.js';
 import type { NodeShape } from './game-tree.js';
 import { makeThreeKingdomsBanqiTreeAdapter } from './three-kingdoms-banqi-tree-adapter.js';
@@ -62,14 +61,21 @@ export function threeKingdomsBanqiInkScores(
   return scores;
 }
 
+// The live room's wording (three-kingdoms-banqi-score.ts): "45 pts", and the
+// moves-left line only once the quiet-move count nears the limit.
 function scoreRow(host: HTMLElement, points: number, quiet: number | null): void {
   const line = document.createElement('span');
   line.className = 'tk-banqi-scores';
-  line.textContent =
-    quiet === null
-      ? `${points} of ${THREE_KINGDOMS_BANQI_SCORE_TARGET} points`
-      : `${points} of ${THREE_KINGDOMS_BANQI_SCORE_TARGET} points. Quiet moves: ${quiet}/${THREE_KINGDOMS_BANQI_NO_PROGRESS_LIMIT}.`;
-  host.replaceChildren(line);
+  line.textContent = tkPoints(points);
+  const left = quiet === null ? null : tkMovesLeftLine(quiet);
+  if (!left) {
+    host.replaceChildren(line);
+    return;
+  }
+  const note = document.createElement('span');
+  note.className = 'tk-banqi-moves-left';
+  note.textContent = left;
+  host.replaceChildren(line, note);
 }
 
 const adapter = makeThreeKingdomsBanqiTreeAdapter();
@@ -115,7 +121,7 @@ const presentation: TreePresentation<
     fillCapturedPoolWith(host, view.captured, owner, banqiPieceGhostSvg);
   },
   // The race to 100, one row per ink: the bottom row is the ink the board
-  // puts at the bottom, and it also carries the shared no-progress count.
+  // puts at the bottom, and it also carries the shared moves-left line.
   material: (hosts) => (truth, _rootTruth, flipped) => {
     const scores = threeKingdomsBanqiInkScores(truth.captures);
     const bottom: BanqiColor = flipped ? 'black' : 'red';

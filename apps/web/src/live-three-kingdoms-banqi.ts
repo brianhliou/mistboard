@@ -7,9 +7,13 @@
 // so there is no fog and the move list is unmasked.
 //
 // What is its own: the 9x5 intersection board (three-kingdoms-banqi-diagrams.ts),
-// the score race to 100 and the no-progress count shown under the board, and a
-// plain move notation. No postgame page, review page, watch channel or sounds of
-// its own; whether it gets any is the 10-31 checkpoint's call.
+// the score race to 100 (each seat's points beside its name, the target once in
+// the game card, and a moves-left line under the tally once the no-progress
+// count nears its limit), and a plain move notation. The captured strips and the
+// face-down tally with reveal odds are banqi's (banqi-material.ts): the same 32
+// pieces, the same never-moved face-down tiles. No postgame page, review page,
+// watch channel or sounds of its own; whether it gets any is the 10-31
+// checkpoint's call.
 
 import type {
   BanqiColor,
@@ -19,17 +23,14 @@ import type {
   ThreeKingdomsBanqiSquare,
   ThreeKingdomsBanqiStatus,
 } from '@mistboard/game';
-import {
-  THREE_KINGDOMS_BANQI_NO_PROGRESS_LIMIT,
-  THREE_KINGDOMS_BANQI_SCORE_TARGET,
-} from '@mistboard/game';
 import './live-xiangqi.css';
+import { renderBanqiMaterial } from './banqi-material.js';
 import { flipSeatInk } from './flip-seat-ink.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { banqiPieceGhostSvg, banqiRevealFlipSquare } from './live-banqi-render.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
-import { threeKingdomsBanqiOffered } from './three-kingdoms-banqi-access.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   animateThreeKingdomsBanqiBoardMove,
   animateThreeKingdomsBanqiReveal,
@@ -37,6 +38,7 @@ import {
   TK_LIVE_BOARD_VIEW,
   type TkLiveBoardEntry,
 } from './three-kingdoms-banqi-diagrams.js';
+import { tkMovesLeftLine, tkPoints, tkScoreTarget } from './three-kingdoms-banqi-score.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import {
   createTenantLiveClient,
@@ -122,7 +124,13 @@ const tkWebTenant: WebVariantTenant<BanqiSeat> = {
   colors: ['red', 'black'],
   isColor: isSeat,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
-  enabled: threeKingdomsBanqiOffered,
+  // The room is gated on the server, never here: its WebSocket refuses a
+  // non-admin with 1008 'game spec disabled' (three-kingdoms-banqi-access.ts),
+  // and the notice says the playtest is admin-only. A client gate read the
+  // admin hint, which a fresh browser does not have yet, and drew a dead room
+  // for a real admin. 'room unavailable' keeps the generic no-such-room line.
+  enabled: () => true,
+  rejectedBodyByReason: { 'game spec disabled': 'live.tk.adminOnly' },
   // No review page yet: the Review link reopens the room, whose move list steps
   // through the finished game.
   reviewUrl: (roomId) => `/room/${encodeURIComponent(roomId)}`,
@@ -132,6 +140,11 @@ const tkWebTenant: WebVariantTenant<BanqiSeat> = {
   seatLabel,
   seatInk: liveSeatInk,
   showPregameTurn: true,
+  // Each seat's points beside its name; the target is said once, in the card.
+  seatTags: (seat) => {
+    const view = core?.displayedView();
+    return view ? [tkPoints(view.scores[seat])] : [];
+  },
 };
 
 const client = createTenantLiveClient<
@@ -145,6 +158,7 @@ const client = createTenantLiveClient<
   boardClass: 'tk-banqi-live-board',
   chrome: {
     roomMode: () => roomMode,
+    variantDetail: () => tkScoreTarget(),
   },
   playAgainRequestBody: (state) => ({
     mode: roomMode,
@@ -185,15 +199,17 @@ const client = createTenantLiveClient<
     const undone = pending.prevView?.lastMove;
     if (undone) animateThreeKingdomsBanqiBoardMove(liveRefs.board, undone, { reverse: true });
   },
-  renderExtras: (refs, view) => renderScores(refs, view),
+  renderExtras: (refs, view) => renderMaterial(refs, view),
   onDisabled: (refs) => {
-    renderScores(refs, core?.displayedView() ?? null);
+    renderMaterial(refs, core?.displayedView() ?? null);
     selectedSquare = null;
   },
   setup: (ctx) => {
     core = ctx;
     installInteraction(ctx.refs);
     placeHiddenPoolUnderBoard(ctx.refs);
+    // The captured strips and the tally draw in the chosen piece set.
+    window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
     installSelectionClickAway({
       roots: () => [core?.refs.board],
       hasSelection: () => selectedSquare !== null,
@@ -263,25 +279,25 @@ function notate(
   return `${move.from}-${move.to}`;
 }
 
-// ── Scores ────────────────────────────────────────────────────────────────────
+// ── Material and the no-progress line ─────────────────────────────────────────
 
-// The race to 100 and the no-progress count, as one line under the board.
-function renderScores(liveRefs: LiveRefs, view: ThreeKingdomsBanqiWireView | null): void {
-  const pool = liveRefs.hiddenPool;
-  if (!view) {
-    pool.replaceChildren();
-    return;
-  }
-  pool.hidden = false;
+// Banqi's material (banqi-material.ts), from this viewer's masked view only:
+// the captured strips beside each seat and the face-down tally with reveal odds
+// under the board. A finished room serves the truth view, and the move log
+// recovers which tiles were still face-down when play ended. Then, once the
+// quiet-move count nears the limit, how many moves are left before points
+// decide the game.
+function renderMaterial(liveRefs: LiveRefs, view: ThreeKingdomsBanqiWireView | null): void {
+  const moves = (core?.state.events ?? []).filter(isMoveEvent).map((event) => event.move);
+  const viewerInk = view && core ? seatInk(core.orientation(), view) : null;
+  renderBanqiMaterial(liveRefs, view, viewerInk, moves);
+  if (!view || view.status.type !== 'playing') return;
+  const left = tkMovesLeftLine(view.noProgressClock);
+  if (!left) return;
   const line = document.createElement('p');
-  line.className = 'tk-banqi-scores';
-  const side = (seat: BanqiSeat) => {
-    const ink = seatInk(seat, view);
-    const name = ink ? (ink === 'red' ? 'Red' : 'Black') : seat === 'red' ? 'First' : 'Second';
-    return `${name} ${view.scores[seat]}`;
-  };
-  line.textContent = `${side('red')}, ${side('black')} (first to ${THREE_KINGDOMS_BANQI_SCORE_TARGET}). Quiet moves: ${view.noProgressClock}/${THREE_KINGDOMS_BANQI_NO_PROGRESS_LIMIT}.`;
-  pool.replaceChildren(line);
+  line.className = 'tk-banqi-moves-left';
+  line.textContent = left;
+  liveRefs.hiddenPool.append(line);
 }
 
 // ── Rendering ─────────────────────────────────────────────────────────────────

@@ -58,6 +58,33 @@
   --uni-board-aspect: calc(586 / 330);
 }
 
+/* The banqi band (live-review.css, >=1260px) is as tall as its tallest column
+   and centred in the room. TK's 9x5 board is short, so the table's move list
+   outgrew the board column after ~20 plies and the band, board included, rode
+   up the screen with every move (36px by ply 20 at 1440x900). Size containment
+   takes the table's content out of the band's height, and a fixed floor gives
+   the table its own height: the band is the taller of that floor and the board
+   column, whatever the ply, so the board never moves. Clamped to the board
+   column alone, the seat bands, clocks and status row left the move list about
+   three rows; here the table box fills the column and the move window takes
+   the rest, scrolling inside (about nine rows at 1440x900). */
+@media (min-width: 1260px) {
+  .live-route--banqi.live-route--three-kingdoms-banqi .live-review__cluster .moves-panel {
+    contain: size;
+    min-height: min(700px, calc(100dvh - 160px));
+  }
+  .live-route--banqi.live-route--three-kingdoms-banqi .live-review__cluster .round-table__box {
+    flex: 1 1 auto;
+  }
+  .live-route--banqi.live-route--three-kingdoms-banqi
+    .live-review__cluster
+    .replay-console
+    .game-table-moves {
+    flex: 1 1 auto;
+    max-height: none;
+  }
+}
+
 .live-route--banqi .board-status {
   width: 100%;
 }
