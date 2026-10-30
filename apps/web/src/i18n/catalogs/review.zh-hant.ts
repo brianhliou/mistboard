@@ -882,6 +882,7 @@ export const ZH_HANT_REVIEW = {
   'games.justFinished': '剛剛結束',
   'games.inTheFog': '對局結束前，棋盤隱藏在迷霧中',
   'games.finishedGame': '打開 {matchup}',
+  'games.finalHands': '雙方最後的手牌',
   'games.playingNow': '正在對弈',
   'games.kindLive': '即時',
   'games.kindCorrespondence': '通訊',

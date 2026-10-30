@@ -15,6 +15,7 @@ import { xmjBotMove } from '../server-xiangqi-mahjong-bots.js';
 import type { XmjEvent } from '../xiangqi-mahjong-tenant.js';
 import {
   type XmjPostgamePersistence,
+  xiangqiMahjongFinalForApi,
   xiangqiMahjongPostgameForApi,
 } from './xiangqi-mahjong-games.js';
 
@@ -149,6 +150,19 @@ test('a finished match replays every move with both hands and every draw face up
   // Several hands, each with its result.
   assert.ok(payload.view.results.length > 1);
   assertNoWalls(payload, MATCH.setup);
+});
+
+test("the final-only payload is the review's last view, without history or timeline", async () => {
+  const full = await xiangqiMahjongPostgameForApi(ROOM_ID, deps(gameRecord(), MATCH.events));
+  const final = await xiangqiMahjongFinalForApi(ROOM_ID, deps(gameRecord(), MATCH.events));
+  assert.ok(full && final);
+  assert.deepEqual(Object.keys(final).sort(), ['game', 'state', 'view']);
+  assert.deepEqual(final.view, full.view);
+  assert.deepEqual(final.state, full.state);
+  assertNoWalls(final, MATCH.setup);
+  // Same walls as the full review: a live match reveals nothing.
+  const live = cutAfter(MATCH, 1);
+  assert.equal(await xiangqiMahjongFinalForApi(ROOM_ID, deps(gameRecord(), live)), null);
 });
 
 test("a timed match carries each seat's clock per ply; an untimed one carries none", async () => {

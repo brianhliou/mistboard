@@ -73,7 +73,7 @@ export async function tryHandle(
   request: IncomingMessage,
   response: ServerResponse,
   pathname: string,
-  _parsedUrl: URL,
+  parsedUrl: URL,
 ): Promise<boolean> {
   const postgameMatch = pathname.match(/^\/api\/xiangqi-mahjong\/games\/([^/]+)$/);
   if (!postgameMatch) return false;
@@ -86,7 +86,12 @@ export async function tryHandle(
   if (!requirePersistence(response)) return true;
 
   const roomId = decodeURIComponent(postgameMatch[1]!);
-  const payload = await xiangqiMahjongPostgameForApi(roomId);
+  // ?final=1: the last position only, for a list card (/games "Just
+  // finished"); the full review is every ply's view and runs to hundreds of KB.
+  const payload =
+    parsedUrl.searchParams.get('final') === '1'
+      ? await xiangqiMahjongFinalForApi(roomId)
+      : await xiangqiMahjongPostgameForApi(roomId);
   if (!payload) {
     writeJson(response, 404, { error: 'not_found' });
     return true;
@@ -99,6 +104,28 @@ export async function xiangqiMahjongPostgameForApi(
   roomId: string,
   deps: XmjPostgamePersistence = defaultPersistence,
 ) {
+  const finished = await loadFinishedMatch(roomId, deps);
+  if (!finished) return null;
+  const { events } = finished;
+  return {
+    ...finalPayload(finished),
+    timeline: xmjPostgameTimeline(events),
+    history: xmjPostgameHistory(events),
+  };
+}
+
+/** The finished match's last position only: the same game, state and view as
+ *  the full review, without the per-ply history and timeline. Same walls: a
+ *  match that does not replay to 'finished' answers null. */
+export async function xiangqiMahjongFinalForApi(
+  roomId: string,
+  deps: XmjPostgamePersistence = defaultPersistence,
+) {
+  const finished = await loadFinishedMatch(roomId, deps);
+  return finished ? finalPayload(finished) : null;
+}
+
+async function loadFinishedMatch(roomId: string, deps: XmjPostgamePersistence) {
   const [game, events] = await Promise.all([
     deps.getGameSummary(roomId),
     deps.loadRoomEvents(roomId),
@@ -110,7 +137,13 @@ export async function xiangqiMahjongPostgameForApi(
   // with a log that does not replay to 'finished' reveals nothing.
   const projection = replayTenantEvents(xiangqiMahjongTenant, events);
   if (projection.state.status.type !== 'finished') return null;
+  return { game, events, projection };
+}
 
+function finalPayload({
+  game,
+  projection,
+}: NonNullable<Awaited<ReturnType<typeof loadFinishedMatch>>>) {
   return {
     game: postgameGameSummary(game),
     state: {
@@ -118,9 +151,7 @@ export async function xiangqiMahjongPostgameForApi(
       moveNumber: projection.state.moveNumber,
       ...(projection.timeControl ? { timeControl: projection.timeControl } : {}),
     },
-    timeline: xmjPostgameTimeline(events),
     view: xmjReviewViewFor(projection.state),
-    history: xmjPostgameHistory(events),
   };
 }
 

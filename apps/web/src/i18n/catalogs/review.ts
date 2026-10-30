@@ -962,6 +962,7 @@ export const EN_REVIEW = {
   'games.justFinished': 'Just finished',
   'games.inTheFog': 'Board stays in the fog until the game ends',
   'games.finishedGame': 'Open {matchup}',
+  'games.finalHands': 'Both final hands',
   'games.playingNow': 'Playing now',
   'games.kindLive': 'Live',
   'games.kindCorrespondence': 'Correspondence',
