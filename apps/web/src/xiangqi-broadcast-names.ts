@@ -8,7 +8,7 @@
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 
-type Named = { name: string; nameEn?: string };
+type Named = { name: string; nameEn?: string | null };
 
 function english(entity: Named): string | undefined {
   return entity.nameEn?.trim() || undefined;
