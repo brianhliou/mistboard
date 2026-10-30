@@ -1581,7 +1581,7 @@ a.puzzle-streak-chip:focus-visible {
     column-gap: 8px;
     row-gap: 0;
     align-content: center;
-    padding: 6px 12px;
+    padding: 3px 12px;
   }
 
   .puzzles-shell .puzzle-feedback-copy {
@@ -1598,21 +1598,22 @@ a.puzzle-streak-chip:focus-visible {
     grid-area: title;
     align-self: end;
     overflow: hidden;
-    font-size: 15px;
-    line-height: 1.2;
+    font-size: 14px;
+    line-height: 1.3;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
 
   /* A long line (the hint's "move the highlighted piece") takes two lines
-     beside the buttons rather than growing the strip. */
+     beside the buttons rather than growing the strip: 18 + 2 x 16 fits the
+     strip's 49px inside its padding, at the 1.3 line box descenders need. */
   .puzzles-shell .puzzle-feedback-body {
     display: -webkit-box;
     grid-area: body;
     align-self: start;
     overflow: hidden;
     font-size: 12px;
-    line-height: 1.25;
+    line-height: 1.3;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
   }
