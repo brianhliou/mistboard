@@ -87,7 +87,7 @@ export const ZH_HANT_CONTENT = {
   'rules.kind': '規則',
   'rules.navigation': '規則導覽',
   'rules.translateIssue': '看到翻譯問題？',
-  'rules.translateIssueLink': '幫我們審閱一頁',
+  'rules.translateIssueLink': '告訴我們',
   'news.heading': '新聞',
   'news.feedHeading': 'Mistboard 更新',
   'news.intro': 'Mistboard 的發布、狀態更新和公告。',
