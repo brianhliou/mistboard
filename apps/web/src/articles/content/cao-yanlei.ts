@@ -289,6 +289,7 @@ const G_M_143937: XiangqiReplaySpec = {
 
 export const caoYanleiArticle: Article = {
   slug: "cao-yanlei",
+  contactNote: true,
   homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',

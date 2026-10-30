@@ -14,6 +14,7 @@ import {
   broadcastRecordsCredit,
   broadcastSourcePageHref,
   formatXiangqiMoves,
+  xiangqiBroadcastRoundStart,
   xiangqiMoveToFsfUci,
 } from '@mistboard/game';
 import './live-xiangqi.css';
@@ -47,6 +48,14 @@ import {
   type TeamMatch,
   teamStandings,
 } from './xiangqi-broadcast-matches.js';
+import {
+  countText,
+  localFederation,
+  localName,
+  localPlace,
+  localTitle,
+  otherName,
+} from './xiangqi-broadcast-names.js';
 import {
   type BroadcastCalendarResponse,
   type BroadcastPlayerRef,
@@ -159,6 +168,8 @@ type BroadcastRoundStats = {
   scheduledBoardCount: number;
   /** Boards with moves; results-only rows (no plies) do not count. */
   recordedBoardCount: number;
+  /** When it started by its games, else its seed (`xiangqiBroadcastRoundStart`). */
+  startedAt: string | null;
 };
 
 type BroadcastRoundWithStats = XiangqiBroadcastRound & Partial<BroadcastRoundStats>;
@@ -764,13 +775,6 @@ async function fetchJson<T>(url: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-// These counts render as bare English on surfaces the catalog does not cover,
-// so "1 boards" reaches the page. Chinese needs no plural form, which is why
-// only the English catalog entry gains a singular sibling.
-function countLabel(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
-
 function renderError(root: HTMLElement, err: unknown): void {
   const message = err instanceof Error ? err.message : String(err);
   root.replaceChildren(buildNav(), buildNotice(t('broadcast.unavailable'), message));
@@ -1123,7 +1127,8 @@ function renderEvent(
     ? `${primaryName(data.round)} · ${primaryName(data.tour)} · Mistboard`
     : `${primaryName(data.tour)} · Mistboard`;
   let body: HTMLElement;
-  if (state.tab === 'overview') body = renderOverviewTab(data, state);
+  // Before the first game the Overview is the whole page (no tabs are shown).
+  if (state.tab === 'overview' || eventHasNoGames(data)) body = renderOverviewTab(data, state);
   else if (state.tab === 'players') body = renderPlayersTab(data, state);
   else if (state.tab === 'teams' && isTeamEvent(data)) body = renderTeamsTab(data, state);
   else body = renderBoardsTab(data, cards, state);
@@ -1175,6 +1180,9 @@ function renderEventShell(
   // An open board takes the whole column, header and tabs included, so it
   // fills the height of the screen; the game list's back arrow returns.
   if (boardOpen) content.append(body);
+  // Before the first game Boards and Players would only say "no games yet",
+  // so the tabs wait for one and the Overview stands alone.
+  else if (eventHasNoGames(data)) content.append(eventHeader(data), body);
   else content.append(eventHeader(data), eventTabs(data, state), body);
   layout.append(content);
   // The round's pairings, lichess's left column: scan the round without the
@@ -1273,17 +1281,23 @@ function eventHeader(data: BroadcastRoundResponse): HTMLElement {
     eyebrow: '',
     title: primaryName(data.tour),
     meta: [
-      secondaryName(data.tour),
-      data.tour.location,
+      localPlace(data.tour.location),
       formatEventDateRange(data.tour.startsAt, data.tour.endsAt),
       // Before the first round is paired the dates say it; "0 rounds" read as
       // an event with nothing in it.
-      rounds.length > 0 ? countLabel(rounds.length, 'round', 'rounds') : null,
-      liveCount > 0 ? `${liveCount} live` : null,
+      rounds.length > 0 ? countText(rounds.length, 'broadcast.roundCount') : null,
+      liveCount > 0 ? t('broadcast.liveCount', { count: liveCount }) : null,
     ].filter(Boolean) as string[],
     switcher: data.round.id !== '' ? roundSwitcher(data.tour.slug, rounds, data.round.id) : null,
   });
   header.classList.add('xqb-event-header');
+  const path =
+    data.round.id !== ''
+      ? roundHref(data.tour.slug, data.round.id)
+      : `/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}`;
+  header
+    .querySelector('.xqb-hero-actions')
+    ?.append(copyLinkButton(`${window.location.origin}${path}`, primaryName(data.tour)));
   // lichess's banner on the header's right.
   header.append(eventArt(data.tour));
   return header;
@@ -1310,17 +1324,12 @@ function eventArt(tour: {
   for (const char of tour.slug) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   art.style.setProperty('--xqb-art-ink', EVENT_ART_INKS[hash % EVENT_ART_INKS.length]!);
   const year = tour.startsAt?.slice(0, 4) ?? tour.name.match(/^(\d{4})/)?.[1] ?? null;
-  const zh = document.createElement('span');
-  zh.className = 'xqb-event-art-zh';
-  zh.textContent = tour.name.replace(/^\d{4}\s*年?/, '');
-  art.append(zh);
-  if (tour.nameEn) {
-    const en = document.createElement('span');
-    en.className = 'xqb-event-art-en';
-    en.textContent = tour.nameEn.replace(/^\d{4}\s*/, '');
-    art.append(en);
-  }
-  const meta = [tour.location, year].filter(Boolean).join(' · ');
+  // One language, the page's: the year sits in the meta line below.
+  const title = document.createElement('span');
+  title.className = 'xqb-event-art-title';
+  title.textContent = localName(tour).replace(/^\d{4}\s*年?\s*/, '');
+  art.append(title);
+  const meta = [localPlace(tour.location), year].filter(Boolean).join(' · ');
   if (meta) {
     const line = document.createElement('span');
     line.className = 'xqb-event-art-meta';
@@ -1377,9 +1386,9 @@ function renderBoardsTab(
   const meta = document.createElement('p');
   meta.className = 'xqb-round-meta';
   meta.textContent = [
-    formatEventDateTime(roundPlayedAt(data.boards) ?? data.round.startsAt),
-    countLabel(data.boards.length, 'board', 'boards'),
-    liveCount > 0 ? `${liveCount} live` : null,
+    formatEventDateTime(roundStart(data)),
+    countText(data.boards.length, 'broadcast.boardCount'),
+    liveCount > 0 ? t('broadcast.liveCount', { count: liveCount }) : null,
   ]
     .filter(Boolean)
     .join(' / ');
@@ -1417,7 +1426,7 @@ function renderBoardsTab(
   // Only once the round is over: while it is running, freshness is the more
   // useful thing in that slot and the round date is the same on every card.
   const roundPlayedOn = data.boards.every((board) => board.status !== 'live')
-    ? formatEventDay(roundPlayedAt(data.boards) ?? data.round.startsAt)
+    ? formatEventDay(roundStart(data))
     : null;
   head.prepend(boardsToolbar(wrap, data.boards));
   // Playing with nothing live: say so rather than show an empty page.
@@ -1570,24 +1579,22 @@ function applyStoredToggles(target: HTMLElement): void {
   for (const toggle of BOARDS_TOGGLES) applyToggle(target, toggle, readToggle(toggle));
 }
 
-/** When a round was played, from its games: the earliest start a game states.
- *  The seeded schedule is a guess made before the event (the 2026 league was
- *  seeded one round a day at 14:30; it played two a day, 13:00 and 19:00), so
- *  the games' own dates win whenever they carry one. */
-function roundPlayedAt(boards: readonly BroadcastBoardSummary[]): string | undefined {
-  let earliest: string | undefined;
-  for (const board of boards) {
-    const at = board.details?.playedAt;
-    if (at && (!earliest || Date.parse(at) < Date.parse(earliest))) earliest = at;
-  }
-  return earliest;
+/** When a round started: its games' own dates over the seeded guess. */
+function roundStart(data: {
+  round: XiangqiBroadcastRound;
+  boards: readonly BroadcastBoardSummary[];
+}): string | undefined {
+  return xiangqiBroadcastRoundStart(
+    data.boards.map((board) => board.details?.playedAt),
+    data.round.startsAt,
+  );
 }
 
 // One match's line: the two teams and the score, the match name, the slow and
 // blitz split. The Teams tab lists the round's matches this way, and the
 // Boards grid heads a filtered team's games with it.
 function teamLabel(team: MatchTeam): string {
-  return team.nameEn ?? team.name;
+  return localName(team);
 }
 
 function matchSummary(match: TeamMatch<BroadcastBoardSummary>): HTMLElement {
@@ -1598,8 +1605,9 @@ function matchSummary(match: TeamMatch<BroadcastBoardSummary>): HTMLElement {
   const side = (team: MatchTeam, index: 0 | 1): HTMLElement => {
     const el = document.createElement('span');
     el.className = `xqb-match-team${match.winner === index ? ' xqb-match-team-won' : ''}`;
-    el.textContent = team.nameEn ?? team.name;
-    if (team.nameEn) el.title = team.name;
+    el.textContent = teamLabel(team);
+    const other = otherName(team);
+    if (other) el.title = other;
     return el;
   };
   // Game points, the league's 2 a win and 1 a draw, slow and blitz together:
@@ -1609,9 +1617,8 @@ function matchSummary(match: TeamMatch<BroadcastBoardSummary>): HTMLElement {
   score.textContent = `${formatPoints(match.score[0])} – ${formatPoints(match.score[1])}`;
   header.append(side(match.teams[0], 0), score, side(match.teams[1], 1));
   section.append(header);
-  const names = [match.nameEn ? match.nameEn.replace('-', ' vs ') : null, match.name].filter(
-    Boolean,
-  );
+  const localMatch = localName(match);
+  const names = [currentLocale() === 'en' ? localMatch.replace('-', ' vs ') : localMatch];
   // What settled it, in words: the score above is the tables' points, and a
   // level match is decided by one more blitz game. The slow and blitz point
   // split this line used to show counted the two games at a table separately
@@ -1735,11 +1742,11 @@ function teamFilter(
   select.append(all);
   const teams = matches
     .flatMap((match) => match.teams)
-    .sort((a, b) => (a.nameEn ?? a.name).localeCompare(b.nameEn ?? b.name));
+    .sort((a, b) => teamLabel(a).localeCompare(teamLabel(b), currentLocale()));
   for (const side of teams) {
     const option = document.createElement('option');
     option.value = side.name;
-    option.textContent = side.nameEn ?? side.name;
+    option.textContent = teamLabel(side);
     option.selected = side.name === team;
     select.append(option);
   }
@@ -1826,14 +1833,9 @@ function renderTeamsTab(data: BroadcastRoundResponse, state: EventPageState): HT
     const team = document.createElement('td');
     team.className = 'xqb-standings-player';
     const name = document.createElement('strong');
-    name.textContent = row.team.nameEn ?? row.team.name;
+    name.textContent = teamLabel(row.team);
+    name.title = otherName(row.team) ?? '';
     team.append(name);
-    if (row.team.nameEn) {
-      const zh = document.createElement('span');
-      zh.className = 'xqb-standings-sub';
-      zh.textContent = row.team.name;
-      team.append(zh);
-    }
     const matches = document.createElement('td');
     matches.textContent = String(row.matches);
     const wdl = document.createElement('td');
@@ -1857,12 +1859,14 @@ function roundStatsFor(data: BroadcastRoundResponse): Partial<BroadcastRoundStat
     liveBoardCount: data.boards.filter((board) => board.status === 'live').length,
     completeBoardCount: data.boards.filter((board) => board.status === 'complete').length,
     scheduledBoardCount: data.boards.filter((board) => board.status === 'scheduled').length,
+    startedAt: roundStart(data) ?? null,
   };
 }
 
-function roundHasStarted(round: XiangqiBroadcastRound): boolean {
-  if (!round.startsAt) return false;
-  const at = new Date(round.startsAt).getTime();
+function roundHasStarted(round: BroadcastRoundWithStats): boolean {
+  const start = round.startedAt ?? round.startsAt;
+  if (!start) return false;
+  const at = new Date(start).getTime();
   return Number.isFinite(at) && at <= Date.now();
 }
 
@@ -1910,13 +1914,13 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     ICON_TROPHY,
     [
       teamEvent ? t('broadcast.teamLeague') : null,
-      rounds.length > 0 ? countLabel(rounds.length, 'round', 'rounds') : null,
+      rounds.length > 0 ? countText(rounds.length, 'broadcast.roundCount') : null,
     ]
       .filter(Boolean)
       .join(' · ') || null,
   );
   item(ICON_CLOCK, eventTimeControls(data.boards));
-  item(ICON_PIN, data.tour.location ?? null);
+  item(ICON_PIN, localPlace(data.tour.location) ?? null);
   const source = broadcastSourcePageHref(data.tour.sourceUrl);
   if (source) {
     const link = document.createElement('a');
@@ -1926,7 +1930,7 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     link.textContent = t('broadcast.source');
     strip.append(link);
   }
-  if (rounds.length > 0) {
+  if (rounds.length > 0 && !eventHasNoGames(data)) {
     const standings = document.createElement('button');
     standings.type = 'button';
     standings.className = 'xqb-overview-link';
@@ -1954,37 +1958,6 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     wrap.append(note);
   }
 
-  const share = document.createElement('details');
-  share.className = 'xqb-share xqb-overview-share';
-  share.open = true;
-  // lichess's share box: its title is a tab on the box's top edge, with a
-  // chevron that turns as it opens and closes.
-  const summary = document.createElement('summary');
-  summary.className = 'xqb-share-tab';
-  summary.append(t('broadcast.shareByUrl'));
-  const chevron = document.createElement('span');
-  chevron.className = 'xqb-share-chevron';
-  chevron.setAttribute('aria-hidden', 'true');
-  chevron.innerHTML = CARET_DOWN;
-  summary.append(chevron);
-  share.append(summary);
-  const origin = window.location.origin;
-  share.append(
-    shareRow(
-      primaryName(data.tour),
-      `${origin}/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}`,
-    ),
-  );
-  if (data.round.id !== '') {
-    share.append(
-      shareRow(
-        `${primaryName(data.tour)} | ${primaryName(data.round)}`,
-        `${origin}/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}/round/${encodeURIComponent(
-          data.round.id,
-        )}`,
-      ),
-    );
-  }
   const credit = broadcastRecordsCredit(data.boards, data.tour);
   if (credit) {
     const line = document.createElement('p');
@@ -1995,9 +1968,7 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     link.rel = 'noreferrer';
     link.textContent = credit.name ?? credit.host;
     line.append(link);
-    wrap.append(share, line);
-  } else {
-    wrap.append(share);
+    wrap.append(line);
   }
   return wrap;
 }
@@ -2029,49 +2000,6 @@ const ICON_CALENDAR = `<svg ${ICON_ATTRS}><rect x="3.5" y="5" width="17" height=
 const ICON_TROPHY = `<svg ${ICON_ATTRS}><path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/></svg>`;
 const ICON_CLOCK = `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>`;
 const ICON_PIN = `<svg ${ICON_ATTRS}><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>`;
-
-function shareRow(label: string, url: string): HTMLElement {
-  const row = document.createElement('div');
-  row.className = 'xqb-share-row';
-  const name = document.createElement('span');
-  name.className = 'xqb-share-label';
-  name.textContent = label;
-  const field = document.createElement('input');
-  field.type = 'text';
-  field.readOnly = true;
-  field.value = url;
-  field.className = 'xqb-share-url';
-  field.setAttribute('aria-label', label);
-  field.addEventListener('focus', () => field.select());
-  // The copy button is joined to the field (lichess's clipboard tab); it
-  // shows a check for a moment once the link is on the clipboard.
-  const copy = document.createElement('button');
-  copy.type = 'button';
-  copy.className = 'xqb-share-copy';
-  copy.setAttribute('aria-label', t('broadcast.copy'));
-  copy.title = t('broadcast.copy');
-  copy.innerHTML = CLIPBOARD_ICON;
-  copy.addEventListener('click', () => {
-    void navigator.clipboard?.writeText(url).then(() => {
-      copy.innerHTML = CHECK_MARK;
-      copy.title = t('broadcast.copied');
-      copy.classList.add('xqb-share-copied');
-      window.setTimeout(() => {
-        copy.innerHTML = CLIPBOARD_ICON;
-        copy.title = t('broadcast.copy');
-        copy.classList.remove('xqb-share-copied');
-      }, 1500);
-    });
-  });
-  const joined = document.createElement('div');
-  joined.className = 'xqb-share-field';
-  joined.append(field, copy);
-  row.append(name, joined);
-  return row;
-}
-
-const CLIPBOARD_ICON =
-  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4.5" width="12" height="16" rx="2"/><path d="M9.5 4.5V3.5h5v1M9 10h6M9 14h6"/></svg>';
 
 // Players: standings from the broadcast games, the way lichess computes its
 // Players tab, with the same caveat that they may differ from the official
@@ -2128,14 +2056,12 @@ function renderPlayersTab(data: BroadcastRoundResponse, state: EventPageState): 
     if (title) {
       const tag = document.createElement('span');
       tag.className = 'xqb-player-title';
-      tag.textContent = title;
+      tag.textContent = localTitle(title);
       name.append(tag, ' ');
     }
     name.append(primaryName(row.player));
     player.append(name);
-    const zh = playerNameZh(row.player);
-    const team = primaryFederation(row.player);
-    const sub = [zh, team].filter(Boolean).join(' · ');
+    const sub = primaryFederation(row.player);
     if (sub) {
       const subline = document.createElement('span');
       subline.className = 'xqb-standings-sub';
@@ -2216,7 +2142,10 @@ function roundSwitcher(
     label.textContent = primaryName(round);
     const when = document.createElement('span');
     when.className = 'xqb-round-option-when';
-    when.textContent = formatEventDateTime(round.startsAt) ?? '';
+    // The tour payload's game-dated start: the seed alone left every round
+    // the poller added (the league from round 6) blank and rounds 2-5 a day
+    // or two late.
+    when.textContent = formatEventDateTime(round.startedAt ?? round.startsAt) ?? '';
     option.append(label, when, roundStatusEl(round, { withLabel: false }));
     option.addEventListener('click', () => close());
     panel.append(option);
@@ -2280,8 +2209,9 @@ function roundStatusEl(round: BroadcastRoundWithStats, opts: { withLabel: boolea
   } else {
     // An undated round says nothing: the source gave no time, and "Upcoming"
     // was wrong for the rounds of a running event already played.
-    const at = round.startsAt ? new Date(round.startsAt).getTime() : Number.NaN;
-    el.textContent = !round.startsAt
+    const start = round.startedAt ?? round.startsAt;
+    const at = start ? new Date(start).getTime() : Number.NaN;
+    el.textContent = !start
       ? ''
       : Number.isFinite(at) && at > Date.now()
         ? relativeFromNow(at)
@@ -2396,19 +2326,14 @@ function renderBoardReplay(
   const liveArrows = liveEval ? engineArrowsFromLines(cevalLinesFromLiveEval(liveEval)) : [];
 
   document.title = `${playerName(data.board.red)} vs ${playerName(data.board.black)} · Mistboard`;
-  const redZh = playerNameZh(data.board.red);
-  const blackZh = playerNameZh(data.board.black);
   const hero = heroSection({
-    eyebrow: `Board ${data.board.boardNumber}`,
+    eyebrow: t('broadcast.boardNumber', { n: data.board.boardNumber }),
     title: `${playerName(data.board.red)} vs ${playerName(data.board.black)}`,
-    subtitle:
-      redZh || blackZh
-        ? `${redZh ?? data.board.red.name} vs ${blackZh ?? data.board.black.name}`
-        : null,
+    subtitle: null,
     href: data.board.sourceUrl,
     meta: [
       resultLabel(data.board),
-      `${data.timeline.length} plies`,
+      t('watch.plyCount', { count: data.timeline.length }),
       statusLabel(data.state.status),
     ],
     backHref: `/broadcast/xiangqi/${encodeURIComponent(
@@ -2483,6 +2408,7 @@ function renderBoardReplay(
       moves: [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move),
       tour: context?.tour ?? null,
       round: context?.round ?? null,
+      ...(data.board.details?.playedAt ? { playedAt: data.board.details.playedAt } : {}),
       origin: window.location.origin,
     }),
     exportLink(data.board.id),
@@ -2745,9 +2671,10 @@ function tourCard(entry: BroadcastIndexEntry, opts: { featured?: boolean } = {})
   name.className = 'xqb-tour-card-name';
   name.textContent = primaryName(entry.tour);
   copy.append(name);
-  const tourZh = zhSubline(secondaryName(entry.tour));
-  if (tourZh) copy.append(tourZh);
-  const place = [entry.tour.location, formatEventDateRange(entry.tour.startsAt, entry.tour.endsAt)]
+  const place = [
+    localPlace(entry.tour.location),
+    formatEventDateRange(entry.tour.startsAt, entry.tour.endsAt),
+  ]
     .filter(Boolean)
     .join(' / ');
   if (place) {
@@ -2762,8 +2689,8 @@ function tourCard(entry: BroadcastIndexEntry, opts: { featured?: boolean } = {})
     const counts = document.createElement('span');
     counts.className = 'xqb-tour-card-meta';
     counts.textContent = [
-      countLabel(entry.roundCount, 'round', 'rounds'),
-      countLabel(entry.boardCount, 'game', 'games'),
+      countText(entry.roundCount, 'broadcast.roundCount'),
+      countText(entry.boardCount, 'broadcast.gameCount'),
     ].join(' / ');
     copy.append(counts);
   }
@@ -2913,11 +2840,11 @@ function cardSeat(
   if (title) {
     const tag = document.createElement('span');
     tag.className = 'xqb-player-title';
-    tag.textContent = title;
+    tag.textContent = localTitle(title);
     name.append(tag, ' ');
   }
   name.append(primaryName(player));
-  name.title = [playerNameZh(player), primaryFederation(player)].filter(Boolean).join(' · ');
+  name.title = [otherName(player), primaryFederation(player)].filter(Boolean).join(' · ');
   const points = document.createElement('span');
   points.className = 'xqb-score';
   // The game list colours a result (lichess): the winner's 1 green, the
@@ -3144,9 +3071,8 @@ function playerPanel(
   label.textContent = labelText;
   const name = document.createElement('strong');
   name.textContent = playerName(player);
+  name.title = otherName(player) ?? '';
   panel.append(label, name);
-  const zh = zhSubline(playerNameZh(player));
-  if (zh) panel.append(zh);
   return panel;
 }
 
@@ -3243,6 +3169,32 @@ function pgnLink(input: BroadcastPgnInput): HTMLElement {
   return link;
 }
 
+// One small button in place of a share box: the phone's share sheet where
+// there is one (a touch screen), else the page's link on the clipboard.
+function copyLinkButton(url: string, title: string): HTMLElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'xqb-export-link xqb-copy-link';
+  const sheet =
+    typeof navigator.share === 'function' && window.matchMedia?.('(pointer: coarse)').matches;
+  const label = t(sheet ? 'broadcast.share' : 'broadcast.copyLink');
+  button.textContent = label;
+  button.addEventListener('click', () => {
+    if (sheet) {
+      void navigator.share({ title, url }).catch(() => {});
+      return;
+    }
+    void navigator.clipboard?.writeText(url).then(
+      () => {
+        button.textContent = t('broadcast.copied');
+        setTimeout(() => (button.textContent = label), 1500);
+      },
+      () => {},
+    );
+  });
+  return button;
+}
+
 // Copies the game's iframe code, for a creator's own page (#454).
 function embedCodeButton(boardId: string, title: string): HTMLElement {
   const button = document.createElement('button');
@@ -3271,44 +3223,15 @@ function exportLink(boardId: string): HTMLElement {
   return link;
 }
 
-// Ingestion caches an English form (nameEn) next to the original Chinese
-// name on tours, rounds, and player tags. Viewers render English primary and
-// keep the Chinese as a subtle secondary line when the two differ.
-function primaryName(entity: { name: string; nameEn?: string }): string {
-  const en = entity.nameEn?.trim();
-  return en && en.length > 0 ? en : entity.name;
-}
-
-function secondaryName(entity: { name: string; nameEn?: string }): string | null {
-  const en = entity.nameEn?.trim();
-  return en && en.length > 0 && en !== entity.name ? entity.name : null;
-}
-
-function zhSubline(text: string | null, className = 'xqb-name-zh'): HTMLElement | null {
-  if (!text) return null;
-  const span = document.createElement('span');
-  span.className = className;
-  span.textContent = text;
-  return span;
-}
-
-// Team affiliations get the same English-primary treatment as names: a team
-// event is most of top-level xiangqi, so an untranslated team beside a
-// romanized player would leave half of every label in Chinese.
-function primaryFederation(player: XiangqiBroadcastPlayerTag): string | undefined {
-  const en = player.federationEn?.trim();
-  return en && en.length > 0 ? en : player.federation;
-}
+// Names follow the locale, one language per page (xiangqi-broadcast-names.ts).
+const primaryName = localName;
+const primaryFederation = localFederation;
 
 function playerName(player: XiangqiBroadcastPlayerTag): string {
-  const prefix = player.title ? `${player.title} ` : '';
+  const prefix = player.title ? `${localTitle(player.title)} ` : '';
   const federation = primaryFederation(player);
   const suffix = federation ? ` (${federation})` : '';
   return `${prefix}${primaryName(player)}${suffix}`;
-}
-
-function playerNameZh(player: XiangqiBroadcastPlayerTag): string | null {
-  return secondaryName(player);
 }
 
 function resultLabel(board: Pick<BroadcastBoardSummary, 'result' | 'status'>): string {

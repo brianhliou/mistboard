@@ -1233,6 +1233,8 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     const intro = document.createElement('div');
     intro.className = 'article-intro';
     for (const block of article.intro) intro.append(renderBlock(block, articleLang));
+    const photo = intro.querySelector('figure.article-figure-image');
+    if (article.contactNote && photo) photo.append(articleContactNote(article.slug, locale));
     sheet.append(intro);
   }
 
@@ -2159,6 +2161,23 @@ function localizeInlineSvgText(root: ParentNode, lang?: ArticleLang): void {
     const out = translateArticleText(lang, label);
     if (out !== label) svg.setAttribute('aria-label', out);
   });
+}
+
+// The player pages' small print (rightsContactNote), written here so an
+// article does not pull in the broadcast module.
+function articleContactNote(slug: string, locale: Locale): HTMLElement {
+  const note = document.createElement('p');
+  note.className = 'article-contact-note';
+  const link = document.createElement('a');
+  link.href = localizedHref(`/contact?about=${encodeURIComponent(`/blog/${slug}`)}`, locale);
+  link.rel = 'nofollow';
+  link.textContent = t('contact.correctionsLink', {}, locale);
+  note.append(
+    t('contact.correctionsPrefix', {}, locale),
+    link,
+    t('contact.correctionsSuffix', {}, locale),
+  );
+  return note;
 }
 
 function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {

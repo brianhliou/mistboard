@@ -11,6 +11,7 @@ import { CXA_POINTS } from './players/cxa-points.js';
 import { CXA_RATINGS } from './players/cxa-ratings.js';
 import { playerTitleFor } from './players/player-title.js';
 import { buildNav } from './site-shell.js';
+import { localName, localPlace, localTitle } from './xiangqi-broadcast-names.js';
 import { formatEventDateRange } from './xiangqi-broadcast-time.js';
 
 export type BroadcastRailItem = 'broadcasts' | 'calendar' | 'about' | 'players' | 'teams';
@@ -64,7 +65,12 @@ export function broadcastSectionLayout(
  * `?about=`, so the message arrives labelled with the page it is about.
  * One element for all of them, so every page says it the same way.
  */
-export function rightsContactNote(path: string = window.location.pathname): HTMLElement {
+// 'event' is the broadcast wording (organisers, game rights); 'corrections' is
+// the shorter line for player and team pages and player articles.
+export function rightsContactNote(
+  path: string = window.location.pathname,
+  kind: 'event' | 'corrections' = 'event',
+): HTMLElement {
   const note = document.createElement('p');
   note.className = 'xqb-rights-note';
   const link = document.createElement('a');
@@ -73,8 +79,13 @@ export function rightsContactNote(path: string = window.location.pathname): HTML
   // it (Search Console, 2026-10-19); /contact canonicalises to the bare path,
   // and nofollow stops crawlers minting new copies. The form still prefills.
   link.rel = 'nofollow';
-  link.textContent = t('contact.rightsLink');
-  note.append(t('contact.rightsPrefix'), link, t('contact.rightsSuffix'));
+  if (kind === 'corrections') {
+    link.textContent = t('contact.correctionsLink');
+    note.append(t('contact.correctionsPrefix'), link, t('contact.correctionsSuffix'));
+  } else {
+    link.textContent = t('contact.rightsLink');
+    note.append(t('contact.rightsPrefix'), link, t('contact.rightsSuffix'));
+  }
   return note;
 }
 
@@ -103,11 +114,11 @@ export function topBroadcastPlayers(players: readonly BroadcastPlayerRef[], coun
         (b.rating ?? 0) - (a.rating ?? 0),
     );
   return ranked.slice(0, count).map(({ player }) => {
-    const name = player.nameEn?.trim() || player.name;
+    const name = localName(player);
     // The same tag the player pages show, so a grade the match-fixing
     // rulings may have revoked is hidden here too (players/sanctions.ts).
     const shown = player.title ?? playerTitleFor({ name: player.name, nameEn: player.nameEn });
-    return shown ? `${shown} ${name}` : name;
+    return shown ? `${localTitle(shown)} ${name}` : name;
   });
 }
 
@@ -153,11 +164,9 @@ export function calendarEventRow(event: BroadcastCalendarEvent): HTMLElement {
   const what = document.createElement('span');
   what.className = 'xqb-cal-what';
   const name = document.createElement('strong');
-  name.textContent = event.nameEn ?? event.name;
+  name.textContent = localName(event);
   what.append(name);
-  const sub = [event.nameEn ? event.name : null, event.location || null]
-    .filter(Boolean)
-    .join(' · ');
+  const sub = localPlace(event.location) ?? '';
   if (sub) {
     const line = document.createElement('span');
     line.className = 'xqb-cal-sub';

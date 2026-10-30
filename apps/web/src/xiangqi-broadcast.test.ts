@@ -339,7 +339,8 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastRound(root, 'w', 'w-r01');
 
-    expect(root.querySelector('.xqb-tab.xqb-tab-active')?.textContent).toBe('Overview');
+    // The Overview stands alone: Boards and Players wait for the first game.
+    expect(root.querySelector('.xqb-tabs')).toBeNull();
     const pending = root.querySelector('.xqb-overview-pending')?.textContent ?? '';
     expect(pending).toContain('three tables');
     expect(pending).toContain('No games yet');
@@ -470,10 +471,10 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const notes = root.querySelectorAll('.xqb-rights-note');
     expect(notes).toHaveLength(1);
     expect(notes[0]?.textContent).toBe(
-      "Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, contact us and we'll take care of it.",
+      'Run this event, hold rights to its games, or spot a mistake? Contact us.',
     );
     const link = notes[0]?.querySelector('a');
-    expect(link?.textContent).toBe('contact us');
+    expect(link?.textContent).toBe('Contact us');
     expect(link?.getAttribute('href')).toBe(
       `/contact?about=${encodeURIComponent('/broadcast/xiangqi/t/round/r')}`,
     );
@@ -951,7 +952,8 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     expect(featured?.className).toContain('xqb-tour-card-live');
     expect(featured?.querySelector('.xqb-tour-status-live')?.textContent).toBe('Round 3 · Live');
     expect(featured?.querySelector('.xqb-tour-card-name')?.textContent).toBe('Live Cup');
-    expect(featured?.querySelector('.xqb-name-zh')?.textContent).toBe('直播杯');
+    // One language per page: the English reader gets no 直播杯 under it.
+    expect(featured?.textContent).not.toContain('直播杯');
     // Who is playing: ranked by the CXA lists; an unranked name stays off.
     // (no title tag: a life ban hides it, players/sanctions.ts)
     expect(featured?.querySelector('.xqb-tour-players')?.textContent).toBe('Wang Tianyi');
@@ -967,7 +969,7 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     // board motif), lichess's card image, in place of a board thumbnail.
     const arts = root.querySelectorAll('.xqb-tour-card > .xqb-event-art');
     expect(arts.length).toBe(2);
-    expect(arts[0]?.querySelector('.xqb-event-art-zh')?.textContent).toBeTruthy();
+    expect(arts[0]?.querySelector('.xqb-event-art-title')?.textContent).toBe('Live Cup');
     expect(root.querySelector('.xqb-tour-card .xqb-card-board')).toBeNull();
   });
 
@@ -1445,12 +1447,19 @@ describe('event page (tabs, default round, standings)', () => {
     (root.querySelectorAll('.xqb-tab')[0] as HTMLButtonElement).click();
     expect(root.querySelector('.xqb-tab-active')?.textContent).toBe('Overview');
     expect(window.location.search).toBe('?tab=overview');
-    // lichess's overview: one strip of facts and links, then the share box; no
-    // schedule (the round select is the schedule) and no table of labels.
+    // lichess's overview: one strip of facts and links; no schedule (the round
+    // select is the schedule), no table of labels and no share box (the
+    // header's Copy link button replaced it).
     expect(root.querySelector('.xqb-overview-strip')?.textContent).toContain('2 rounds');
     expect(root.querySelector('.xqb-round-row')).toBeNull();
     expect(root.querySelector('.xqb-facts')).toBeNull();
-    expect(root.querySelectorAll('.xqb-share-url')).toHaveLength(2);
+    expect(root.querySelector('.xqb-share-url')).toBeNull();
+    const copyLink = root.querySelector<HTMLButtonElement>('.xqb-event-header .xqb-copy-link');
+    expect(copyLink?.textContent).toBe('Copy link');
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    copyLink?.click();
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/broadcast/xiangqi/t/round/r`);
 
     (root.querySelectorAll('.xqb-tab')[2] as HTMLButtonElement).click();
     // The other rounds are fetched once the tab opens; then the table paints.
@@ -1507,16 +1516,10 @@ describe('event page (tabs, default round, standings)', () => {
     const pending = root.querySelector('.xqb-overview-pending')?.textContent ?? '';
     expect(pending).toContain('This event is over and the source has not published its games');
     expect(pending).not.toContain('round by round');
-    (
-      [...root.querySelectorAll('.xqb-tab')].find(
-        (tab) => tab.textContent === 'Boards',
-      ) as HTMLButtonElement
-    ).click();
-    const empty = root.querySelector('.xqb-empty');
-    expect(empty?.textContent).toContain("The source has not published this round's games");
-    expect(empty?.textContent).not.toContain('usually after play');
-    // The source link stays: it is where the games would come from.
-    expect(empty?.querySelector('a')).not.toBeNull();
+    // No tabs to an empty Boards grid; the source link stays on the Overview,
+    // where the games would come from.
+    expect(root.querySelector('.xqb-tabs')).toBeNull();
+    expect(root.querySelector('.xqb-overview-strip a.xqb-overview-link')).not.toBeNull();
     expect(root.querySelector('.xqb-side-rail .xqb-rail-empty')?.textContent).toBe(
       'No games published',
     );
@@ -2104,6 +2107,25 @@ describe('event header before any round exists', () => {
     const header = root.querySelector('.xqb-event-header')?.textContent ?? '';
     expect(header).toContain('Test Cup');
     expect(header).not.toMatch(/0 rounds/);
+  });
+
+  // The placeholder drew Boards and Players tabs that did nothing on click.
+  it('shows the Overview alone, with no tabs, until the first game', async () => {
+    stubFetchJson(() => ({
+      tour: {
+        schema: XIANGQI_BROADCAST_SCHEMA,
+        slug: 't',
+        name: 'Test Cup',
+        startsAt: '2099-10-02T00:00:00+08:00',
+        endsAt: '2099-10-08T23:59:59+08:00',
+      },
+      rounds: [],
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastTour(root, 't');
+    expect(root.querySelector('.xqb-tabs')).toBeNull();
+    expect(root.querySelector('.xqb-overview-pending')).not.toBeNull();
   });
 
   it('keeps the left column, an empty game list over the chat', async () => {
