@@ -76,7 +76,7 @@ export async function tryHandle(
       expiresAt,
     });
     if (authEmailDeliveryEnabled) {
-      const delivery = await sendAccountClosureCode(user.email, code);
+      const delivery = await sendAccountClosureCode(user.email, code, user.locale);
       if (!delivery.ok) {
         await persistence.deleteAccountClosureChallenge(closureId);
         writeJson(response, 502, { error: 'email_delivery_failed' });
@@ -258,7 +258,7 @@ export async function tryHandle(
       expiresAt,
     });
     if (authEmailDeliveryEnabled) {
-      const delivery = await sendEmailChangeCode(email, code);
+      const delivery = await sendEmailChangeCode(email, code, user.locale);
       if (!delivery.ok) {
         await persistence.deleteEmailChangeChallenge(changeId);
         writeJson(response, 502, { error: 'email_delivery_failed' });
