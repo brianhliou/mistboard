@@ -246,11 +246,12 @@ describe('puzzles route', () => {
     expect(count?.getAttribute('title')).toBe('24 puzzles');
     // Names and glosses come from the catalogue, so they follow the locale.
     expect(root.textContent).toContain('the horse pens the general in');
-    // Every row wears its group's one line icon: the palace for a mate pattern.
+    // Every row wears its theme's own line icon, tagged with its group.
     const icon = root.querySelector<HTMLElement>(
       '[data-puzzle-theme-card="ma-hou-pao"] .puzzle-theme-icon',
     );
     expect(icon?.dataset.iconGroup).toBe('motif');
+    expect(icon?.dataset.iconTheme).toBe('ma-hou-pao');
     expect(icon?.querySelector('svg path')).not.toBeNull();
     expect(icon?.querySelector('text')).toBeNull();
     expect(
