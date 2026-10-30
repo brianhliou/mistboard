@@ -51,9 +51,30 @@
   color: var(--site-accent);
 }
 
-.puzzle-streak-side .puzzle-streak-practice {
-  display: inline-block;
-  margin-top: 12px;
+/* The left card in the regular page's card type: the title as a card heading,
+   the rules in body text, the facts and links muted, one 12px gap apart. */
+.puzzle-streak-side {
+  justify-items: start;
+}
+
+.puzzle-streak-side h1 {
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.puzzle-streak-side p {
+  margin: 0;
+  color: var(--site-text);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.puzzle-streak-side p.puzzle-streak-meta {
+  color: var(--site-muted);
+  font-size: 13px;
 }
 
 /* Beside the board the left card asks a guest to sign in, so the run's side
@@ -175,39 +196,31 @@ a.puzzle-streak-chip:focus-visible {
   outline-offset: 2px;
 }
 
-.puzzle-streak-progress:not(:empty) {
-  margin-top: 12px;
-}
-
-/* In the run: count, best, prompt, then Next puzzle or a quiet Skip. */
+/* In the run: the regular prompt (the side's general, "Black to move" over
+   "Find the best move."), then the run's tally (count, best or a guest's
+   sign-in) and Next puzzle or a quiet Skip. */
 .puzzle-streak-feedback .puzzle-continue-button {
   min-height: 44px;
   margin: 0;
 }
 
-.puzzles-shell .puzzle-feedback.puzzle-streak-feedback {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "title" "meta" "body" "assist";
+.puzzle-streak-tally {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
 }
 
-.puzzle-streak-feedback .puzzle-feedback-copy {
-  display: contents;
+.puzzle-streak-tally .puzzle-streak-count {
+  gap: 6px;
 }
 
-.puzzle-streak-feedback .puzzle-feedback-title {
-  grid-area: title;
+.puzzle-streak-tally .puzzle-streak-count strong {
+  font-size: 24px;
 }
 
-.puzzle-streak-feedback .puzzle-feedback-meta {
-  grid-area: meta;
-}
-
-.puzzle-streak-feedback .puzzle-feedback-body {
-  grid-area: body;
-}
-
-.puzzle-streak-feedback .puzzle-assist-row {
-  grid-area: assist;
+.puzzle-streak-tally .puzzle-streak-count span {
+  font-size: 12px;
 }
 
 /* Game over, in place of the prompt: title, the run's score, best, the run's
@@ -1480,11 +1493,28 @@ a.puzzle-streak-chip:focus-visible {
     overflow: visible;
   }
 
-  /* Phone: this visit's chips live in the ☰ sheet (its last row), never on
-     the page, so the portrait trainer stays one screen with a full-width
-     board (Brian, 2026-10-28). */
+  /* Phone: this visit's chips are the page's last row, under the prompt
+     strip, with the puzzle in play as the only chip until a finish. The
+     portrait chrome budget counts it (--puzzle-stack-chrome), so the board
+     keeps the full width. */
   .puzzles-shell .puzzle-board-panel > .puzzle-session-chips {
-    display: none;
+    order: 4;
+    grid-column: auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    box-sizing: border-box;
+    height: 30px;
+    min-height: 0;
+    padding: 0 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .puzzles-shell .puzzle-board-panel > .puzzle-session-chips .puzzle-streak-chip {
+    flex: none;
+    min-width: 24px;
+    height: 24px;
+    font-size: 13px;
   }
 
   .puzzle-trainer-panel {
@@ -1538,16 +1568,17 @@ a.puzzle-streak-chip:focus-visible {
     border-bottom: 0;
   }
 
-  /* The prompt strip, unsolved: the side's general, "Red to move" over "Find
-     the best move.", then Hint / Solution (and Skip after a miss) in one row.
-     The copy wrapper dissolves so the buttons can take the full width. */
+  /* The prompt strip, unsolved: one row, the side's general, "Red to move"
+     over "Find the best move.", then Hint / Solution (and Skip after a miss)
+     on the right, so the strip is one button tall and the board gets the
+     height (Brian, 2026-10-29: "the board big as possible filling edge to
+     edge"). The copy wrapper dissolves into the strip's grid. */
   .puzzles-shell .puzzle-feedback {
-    grid-template-columns: 32px minmax(0, 1fr);
+    grid-template-columns: 28px minmax(0, 1fr) auto;
     grid-template-areas:
-      "icon title"
-      "icon body"
-      "assist assist";
-    column-gap: 10px;
+      "icon title assist"
+      "icon body assist";
+    column-gap: 8px;
     row-gap: 0;
     align-content: center;
     padding: 6px 12px;
@@ -1559,56 +1590,65 @@ a.puzzle-streak-chip:focus-visible {
 
   .puzzles-shell .puzzle-feedback-icon {
     grid-area: icon;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
   }
 
   .puzzles-shell .puzzle-feedback-title {
     grid-area: title;
-    font-size: 16px;
-    line-height: 1.2;
-  }
-
-  .puzzles-shell .puzzle-feedback-body {
-    grid-area: body;
+    align-self: end;
     overflow: hidden;
-    font-size: 13px;
-    line-height: 1.3;
+    font-size: 15px;
+    line-height: 1.2;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
 
-  /* One row in every state: after a miss Skip joins as a third equal button
-     and long labels wrap to two lines inside the 44px floor, so the strip
-     never grows a row and pushes the buttons off a 568px screen. */
+  /* A long line (the hint's "move the highlighted piece") takes two lines
+     beside the buttons rather than growing the strip. */
+  .puzzles-shell .puzzle-feedback-body {
+    display: -webkit-box;
+    grid-area: body;
+    align-self: start;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  /* The buttons beside the copy in every state: after a miss Skip joins as
+     a third, and long labels wrap to two lines inside the 44px floor, so the
+     strip never grows a row. */
   .puzzles-shell .puzzle-assist-row {
     grid-area: assist;
     flex-wrap: nowrap;
+    align-self: center;
     gap: 6px;
-    margin-top: 6px;
+    margin-top: 0;
   }
 
   .puzzles-shell .puzzle-assist-row > .puzzle-feedback-skip {
-    flex: 1 1 0;
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: 92px;
+    min-height: 44px;
     margin-top: 0;
-    padding-inline: 6px;
+    padding: 4px 8px;
+    font-size: 13px;
     line-height: 1.15;
     text-wrap: balance;
   }
 
-  /* The prompt strip, solved or revealed: the title and the thumbs share a
-     row, Next puzzle fills the row under it, in the spot Hint and Solution
-     held. */
+  /* The prompt strip, solved or revealed: one row, the title, the thumbs,
+     then Next puzzle taking the rest, in the spot Hint and Solution held. */
   .puzzles-shell .puzzle-solved-panel {
     grid-template-rows: none;
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas:
-      "title vote"
-      "cta cta";
+    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-areas: "title vote cta";
     align-content: center;
-    row-gap: 4px;
-    padding-bottom: 6px;
+    align-items: center;
+    padding: 6px 12px 6px 0;
     text-align: left;
   }
 
@@ -1623,13 +1663,14 @@ a.puzzle-streak-chip:focus-visible {
     grid-area: vote;
     gap: 8px;
     min-height: 44px;
-    padding: 2px 8px 0 0;
+    padding: 0 8px 0 0;
     border-top: 0;
   }
 
+  /* The thumbs carry their own labels; the line asking for a vote has no
+     room in the one-row strip. */
   .puzzles-shell .puzzle-vote-prompt {
-    font-size: 13px;
-    text-align: right;
+    display: none;
   }
 
   .puzzles-shell .puzzle-vote-button {
@@ -1641,7 +1682,7 @@ a.puzzle-streak-chip:focus-visible {
     grid-area: cta;
     width: auto;
     min-height: 44px;
-    margin-inline: 8px;
+    margin: 0;
     font-size: 15px;
   }
 
@@ -1652,7 +1693,7 @@ a.puzzle-streak-chip:focus-visible {
   .puzzles-shell .puzzle-moves {
     display: flex;
     align-items: center;
-    height: 34px;
+    height: 30px;
     box-sizing: border-box;
   }
 
@@ -1932,19 +1973,6 @@ a.puzzle-streak-chip:focus-visible {
     white-space: nowrap;
   }
 
-  /* This visit's chips, right of the label like the themes, wrapping onto
-     more lines as the visit grows: the sheet grows, never the page. */
-  .puzzles-shell .puzzle-pm-row--visit > .puzzle-pm-row__label {
-    flex: 0 0 auto;
-  }
-
-  .puzzles-shell .puzzle-pm-row--visit > .puzzle-pm-visit-chips {
-    flex: 1 1 auto;
-    justify-content: flex-end;
-    min-width: 0;
-    padding-block: 6px;
-  }
-
   /* The engine panel, lent in, is one row: [Pikafish / status] … [eval]
      [gear] [switch]. Its lines stay out of the sheet; the gear opens a
      sub-view (its settings in the flow, then the lines) that hides the rows
@@ -2074,8 +2102,8 @@ a.puzzle-streak-chip:focus-visible {
   }
 
   .puzzles-page > .puzzles-shell {
-    --puzzle-stack-chrome: 180px;
-    --puzzle-prompt-height: 100px;
+    --puzzle-stack-chrome: 162px;
+    --puzzle-prompt-height: 56px;
     --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - var(--puzzle-stack-chrome)));
     display: flex;
     flex: 1 1 0;
@@ -2164,6 +2192,16 @@ a.puzzle-streak-chip:focus-visible {
     overflow: hidden;
   }
 
+  .puzzles-shell .puzzle-board-panel > .puzzle-session-chips {
+    flex: none;
+  }
+
+  /* Streak's shell scrolls on desktop (its summary card can be long); with a
+     board it is the trainer's one clipped screen, the same box edge to edge. */
+  .puzzles-page > .puzzles-shell.puzzle-streak-shell:has(.puzzle-board) {
+    overflow: hidden;
+  }
+
   .puzzle-board-panel--pending .puzzle-side-panel {
     min-height: var(--puzzle-stack-chrome);
   }
@@ -2221,14 +2259,16 @@ a.puzzle-streak-chip:focus-visible {
   }
 }
 /* Puzzle Themes, lichess's training/themes: the Puzzles menu on the left and
-   the catalogue in one lifted panel, light headings, borderless rows. */
+   the catalogue in one lifted panel, light headings, borderless rows. Compact
+   on desktop (Brian, 2026-10-29: "too spread out and spacey"): three columns
+   of short rows, the site's card type rather than display sizes. */
 .puzzle-themes-layout {
   box-sizing: border-box;
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   column-gap: 12px;
   align-items: start;
-  width: min(100%, 1300px);
+  width: min(100%, 1180px);
   margin: 0 auto;
   padding: 24px 16px 48px;
   color: var(--site-text);
@@ -2280,7 +2320,7 @@ a.puzzle-streak-chip:focus-visible {
 .puzzle-themes-index {
   min-width: 0;
   box-sizing: border-box;
-  padding: clamp(30px, 4vh, 40px) clamp(24px, 3.5vw, 50px) clamp(32px, 4vh, 44px);
+  padding: 24px 28px 28px;
   border-radius: var(--site-radius);
   background: var(--site-panel);
   box-shadow: 0 2px 5px color-mix(in srgb, var(--site-shadow) 35%, transparent);
@@ -2288,27 +2328,29 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-themes-index .puzzle-themes-title {
   margin: 0;
-  font-size: clamp(30px, 2.6vw, 38px);
+  font-size: 28px;
   line-height: 1.2;
 }
 
 .puzzle-themes-group {
-  margin-top: 36px;
+  margin-top: 22px;
 }
 
 .puzzle-themes-group h2 {
-  margin: 0 0 12px;
-  color: var(--site-heading);
-  font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
-  font-size: 28px;
-  font-weight: 300;
+  margin: 0 0 4px;
+  padding: 0 10px;
+  color: var(--site-muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .puzzle-themes-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px 24px;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 2px 8px;
 }
 
 .puzzle-themes-recommended .puzzle-themes-grid {
@@ -2323,10 +2365,10 @@ a.puzzle-streak-chip:focus-visible {
 .puzzle-theme-entry__link {
   display: flex;
   align-items: flex-start;
-  gap: 20px;
+  gap: 12px;
   height: 100%;
   box-sizing: border-box;
-  padding: 16px 18px;
+  padding: 10px;
   border-radius: 6px;
   color: inherit;
   text-decoration: none;
@@ -2345,9 +2387,9 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-theme-icon {
   flex: 0 0 auto;
-  width: 56px;
-  height: 56px;
-  margin-top: 2px;
+  width: 38px;
+  height: 38px;
+  margin-top: 1px;
   color: color-mix(in srgb, var(--site-muted) 80%, transparent);
 }
 
@@ -2364,24 +2406,24 @@ a.puzzle-streak-chip:focus-visible {
 .puzzle-theme-entry h3 {
   margin: 0;
   color: var(--site-heading);
-  font-family: Roboto, ui-sans-serif, system-ui, sans-serif;
-  font-size: 23px;
-  font-weight: 300;
-  line-height: 1.25;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
 }
 
 .puzzle-theme-count {
   margin-left: 4px;
   color: var(--site-muted);
-  font-family: "Noto Sans", ui-sans-serif, system-ui, sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 400;
   white-space: nowrap;
 }
 
 .puzzle-theme-entry p {
-  margin: 4px 0 0;
-  line-height: 1.5;
+  margin: 2px 0 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .puzzle-theme-name {
@@ -2422,44 +2464,34 @@ a.puzzle-streak-chip:focus-visible {
   }
 
   .puzzle-themes-index {
-    padding: 24px 12px 28px;
+    padding: 20px 8px 24px;
   }
 
   .puzzle-themes-index .puzzle-themes-title {
-    padding: 0 8px;
-    font-size: 28px;
+    padding: 0 10px;
+    font-size: 24px;
   }
 
   .puzzle-themes-group {
-    margin-top: 28px;
-  }
-
-  .puzzle-themes-group h2 {
-    padding: 0 8px;
-    font-size: 24px;
+    margin-top: 20px;
   }
 
   .puzzle-themes-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
+    gap: 0;
   }
 
+  /* The phone keeps reading sizes: 16px names, 14px glosses, 44px rows. */
   .puzzle-theme-entry__link {
-    gap: 14px;
-    padding: 12px 8px;
-  }
-
-  .puzzle-themes-recommended .puzzle-theme-entry__link {
-    padding: 14px 12px;
-  }
-
-  .puzzle-theme-icon {
-    width: 40px;
-    height: 40px;
+    min-height: 44px;
   }
 
   .puzzle-theme-entry h3 {
-    font-size: 20px;
+    font-size: 16px;
+  }
+
+  .puzzle-theme-entry p {
+    font-size: 14px;
   }
 }
 
@@ -2479,38 +2511,51 @@ a.puzzle-streak-chip:focus-visible {
 /* Puzzle Streak on the phone stack. Kept after the shared phone blocks, which
    puzzles-phone-stack.test.ts reads as the first 980px query. */
 @media (max-width: 980px) {
-  /* Stacked, the run's count shares a row with the prompt so the strip stays
-     as short as the trainer's. */
+  /* Stacked, the run is the trainer's one-row prompt strip (the general,
+     "Black to move" over "Find the best move.") with the count and a guest's
+     sign-in on its right, then Skip or Next puzzle. */
   .puzzles-shell .puzzle-feedback.puzzle-streak-feedback {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: 28px minmax(0, 1fr) auto auto;
     grid-template-areas:
-      "title meta"
-      "title body"
-      "assist assist";
-    column-gap: 14px;
+      "icon title tally assist"
+      "icon body tally assist";
+  }
+
+  .puzzles-shell .puzzle-streak-feedback .puzzle-streak-tally {
+    grid-area: tally;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    gap: 2px;
+    text-align: right;
   }
 
   .puzzles-shell .puzzle-streak-feedback .puzzle-streak-count {
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
+    gap: 4px;
   }
 
   .puzzles-shell .puzzle-streak-feedback .puzzle-streak-count strong {
-    font-size: 30px;
+    font-size: 18px;
   }
 
   .puzzles-shell .puzzle-streak-feedback .puzzle-streak-count span {
     font-size: 11px;
   }
 
+  .puzzles-shell .puzzle-streak-feedback .puzzle-streak-meta {
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
   .puzzles-shell .puzzle-streak-feedback .puzzle-assist-row > .puzzle-feedback-skip {
-    flex: 0 1 auto;
-    padding-inline: 12px;
+    flex: none;
+    max-width: 76px;
   }
 
   .puzzles-shell .puzzle-streak-feedback .puzzle-assist-row > .puzzle-continue-button {
-    flex: 1 1 auto;
+    flex: none;
+    padding-inline: 14px;
   }
 
   /* Game over grows past the fixed prompt height: the board above gives the

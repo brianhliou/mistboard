@@ -5,6 +5,7 @@ import type { PuzzleSolverHandle, PuzzleSolverOptions } from '../puzzles.js';
 import { colorLabel, type PuzzleDetail, type PuzzleMove, type PuzzleSession } from './adapter.js';
 import { type PuzzleAttempt, PuzzlePlayDisabledError, sendPuzzleQualityEvent } from './api.js';
 import { puzzleInfoCard } from './queue-panel.js';
+import { puzzleBoardAdapter } from './registry.js';
 import { puzzleResultChips } from './result-chips.js';
 
 type Outcome = 'solved' | 'skipped' | 'failed';
@@ -42,6 +43,7 @@ export async function mountPuzzleStreak(
       submitAttempt: NonNullable<PuzzleSolverOptions['submitAttempt']>;
       feedback: (session: PuzzleSession) => HTMLElement;
       onAttempt: (attempt: PuzzleAttempt) => void;
+      afterRender: (host: HTMLElement) => void;
     },
   ) => PuzzleSolverHandle,
 ): Promise<void> {
@@ -125,11 +127,13 @@ export async function mountPuzzleStreak(
     card.querySelector<HTMLElement>('[data-puzzle-next="true"]')?.focus({ preventScroll: true });
   };
 
-  // The left card: what the mode is in two short lines, a sign-in line for a
-  // guest (known once the run answers), the run so far, and practice. Desktop
-  // only: the phone stack hides this column, and the side panel and Game over
-  // carry the count, sign-in and chips there.
-  const sideCard = (): { card: HTMLElement; progress: HTMLElement; signIn: HTMLElement | null } => {
+  // The left card, in the regular page's card type (Brian, 2026-10-29: "align
+  // it with the regular mode left column"): what the mode is in two short
+  // lines, a sign-in line for a guest (known once the run answers), and
+  // practice. The run so far sits under the board, where the trainer keeps
+  // this visit's chips. Desktop only: the phone stack hides this column, and
+  // the prompt row and Game over carry the count and sign-in there.
+  const sideCard = (): { card: HTMLElement; signIn: HTMLElement | null } => {
     const card = document.createElement('section');
     card.className = 'puzzle-left-card puzzle-streak-side';
     const title = document.createElement('h1');
@@ -142,11 +146,8 @@ export async function mountPuzzleStreak(
     card.append(title, rules, facts);
     const signIn = run && run.best === null ? bestLine(run, false) : null;
     if (signIn) card.append(signIn);
-    // The run so far, with the puzzle in play as the last chip.
-    const progress = document.createElement('div');
-    progress.className = 'puzzle-streak-progress';
-    card.append(progress, practiceLink());
-    return { card, progress, signIn };
+    card.append(practiceLink());
+    return { card, signIn };
   };
 
   const showBoard = (): void => {
@@ -158,14 +159,14 @@ export async function mountPuzzleStreak(
     current = run.puzzle;
     overFocused = false;
     shell.replaceChildren(layout);
-    const { card, progress, signIn } = sideCard();
+    const { card, signIn } = sideCard();
     // The regular page's puzzle info card on top, as on Lichess's streak: the
     // rating stays hidden until the run is over.
     let info = streakInfoCard(current, false);
     controls.replaceChildren(info, card);
     const paintProgress = (): void => {
-      progress.replaceChildren(...(run!.finished ? [] : [chips(run!.results, current!.id)]));
-      // Game over carries its own sign-in line.
+      // Game over carries its own sign-in line and chips.
+      if (run!.finished) detail.querySelector('.puzzle-streak-run-chips')?.remove();
       if (signIn) signIn.hidden = run!.finished;
       if (run!.finished && info.dataset.revealed !== 'true') {
         const revealed = streakInfoCard(current!, true);
@@ -200,22 +201,28 @@ export async function mountPuzzleStreak(
           }
           return gameOver();
         }
+        // The regular page's prompt (the side's general, "Black to move" over
+        // "Find the best move."), with the run's count, the guest's sign-in
+        // line and Skip beside it instead of a big count block on its own.
+        const kind = session.solved ? 'good' : session.feedback.kind;
         const panel = document.createElement('div');
-        panel.className = 'puzzle-feedback puzzle-streak-feedback';
+        panel.className = `puzzle-feedback puzzle-feedback--${kind} puzzle-streak-feedback`;
         panel.setAttribute('aria-busy', String(session.submitting));
+        const icon = document.createElement('span');
+        icon.className = 'puzzle-feedback-icon';
+        icon.innerHTML = puzzleBoardAdapter(current!.variant).sideIconSvg(current!);
+        icon.setAttribute('aria-hidden', 'true');
         const copy = document.createElement('div');
         copy.className = 'puzzle-feedback-copy';
-        const count = streakCount(run!.score, t('puzzle.streakCount'));
-        count.classList.add('puzzle-feedback-title');
-        const meta = bestLine(run!, false);
-        meta.classList.add('puzzle-feedback-meta');
+        const title = document.createElement('h2');
+        title.className = 'puzzle-feedback-title';
+        title.textContent = streakPromptTitle(session, current!);
         const prompt = document.createElement('span');
         prompt.className = 'puzzle-feedback-body';
-        prompt.textContent = session.solved
-          ? t('puzzle.streakCorrect')
-          : session.feedback.kind === 'bad'
-            ? session.feedback.text
-            : t('puzzle.toMove', { color: colorLabel(current!.sideToMove) });
+        prompt.textContent = session.feedback.text;
+        const tally = document.createElement('div');
+        tally.className = 'puzzle-streak-tally';
+        tally.append(streakCount(run!.score, t('puzzle.streakCount')), bestLine(run!, false, true));
         const actions = document.createElement('div');
         actions.className = 'puzzle-assist-row';
         if (session.solved) {
@@ -257,9 +264,19 @@ export async function mountPuzzleStreak(
             actions.append(quietButton(t('puzzle.streakNewRun'), start));
           }
         }
-        copy.append(count, meta, prompt, actions);
-        panel.append(copy);
+        copy.append(title, prompt, tally, actions);
+        panel.append(icon, copy);
         return panel;
+      },
+      // The run so far, with the puzzle in play as the last chip, in the
+      // trainer's chip row under the board (the phone's last row).
+      afterRender: (host) => {
+        const panel = host.querySelector('.puzzle-board-panel');
+        if (!panel || run!.finished) return;
+        panel.querySelector('.puzzle-streak-run-chips')?.remove();
+        const row = chips(run!.results, current!.id);
+        row.classList.add('puzzle-session-chips', 'puzzle-streak-run-chips');
+        panel.append(row);
       },
       onAttempt: (attempt) => {
         if (!attempt.ok) attempted('failed');
@@ -437,6 +454,22 @@ function streakInfoCard(puzzle: PuzzleDetail, over: boolean): HTMLElement {
   return card;
 }
 
+// The prompt's title: a solve reads Correct!, an unsolved puzzle names the side
+// to move, as on the regular page (detail-panels feedbackTitle).
+function streakPromptTitle(session: PuzzleSession, puzzle: PuzzleDetail): string {
+  if (session.solved) return t('puzzle.streakCorrect');
+  switch (session.feedback.kind) {
+    case 'good':
+      return t('puzzle.statusCorrect');
+    case 'bad':
+      return t('puzzle.statusTryAgain');
+    case 'pending':
+      return t('puzzle.statusChecking');
+    case 'neutral':
+      return t('puzzle.toMove', { color: colorLabel(puzzle.sideToMove) });
+  }
+}
+
 // The streak as a big number over its label.
 function streakCount(score: number, label: string): HTMLElement {
   const block = document.createElement('div');
@@ -451,12 +484,13 @@ function streakCount(score: number, label: string): HTMLElement {
 
 // Best for a signed-in player ("New best!" when this run beat it); a quiet
 // sign-in line for a guest, whose best is not kept.
-function bestLine(run: Run, newBest: boolean): HTMLElement {
+function bestLine(run: Run, newBest: boolean, short = false): HTMLElement {
   if (run.best === null) {
     const link = document.createElement('a');
     link.className = 'puzzle-streak-meta puzzle-streak-signin';
     link.href = loginHrefForCurrentPage();
-    link.textContent = t('puzzle.streakSignInBest');
+    link.textContent = t(short ? 'puzzle.streakSignInShort' : 'puzzle.streakSignInBest');
+    if (short) link.title = t('puzzle.streakSignInBest');
     return link;
   }
   const line = document.createElement('p');

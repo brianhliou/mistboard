@@ -245,10 +245,17 @@ describe('puzzles route', () => {
     expect(count?.getAttribute('title')).toBe('24 puzzles');
     // Names and glosses come from the catalogue, so they follow the locale.
     expect(root.textContent).toContain('the horse pens the general in');
-    // The pattern's piece is the row's icon, in the board's baked glyph outline.
+    // Every row wears its group's one line icon: the palace for a mate pattern.
+    const icon = root.querySelector<HTMLElement>(
+      '[data-puzzle-theme-card="ma-hou-pao"] .puzzle-theme-icon',
+    );
+    expect(icon?.dataset.iconGroup).toBe('motif');
+    expect(icon?.querySelector('svg path')).not.toBeNull();
+    expect(icon?.querySelector('text')).toBeNull();
     expect(
-      root.querySelector('[data-puzzle-theme-card="ma-hou-pao"] .puzzle-theme-icon svg path'),
-    ).not.toBeNull();
+      root.querySelector<HTMLElement>('[data-puzzle-theme-recommended] .puzzle-theme-icon')?.dataset
+        .iconGroup,
+    ).toBe('mix');
     expect(root.querySelector('.puzzle-xiangqi-board')).toBeNull();
     expect(root.querySelector('a[href="/puzzles?theme=men-gong"]')).toBeNull();
     // With no tag counts the mix row still links every puzzle, just uncounted.
@@ -1906,7 +1913,8 @@ describe('sourceGameLines', () => {
       },
     });
     expect(lines).toHaveLength(3);
-    expect(lines[0]?.textContent).toBe('From game · 2026 Team Championship (2026)');
+    // The event already names its year, so the year is not added again.
+    expect(lines[0]?.textContent).toBe('From game · 2026 Team Championship');
     expect(lines[1]?.textContent).toContain('Red Player');
     expect(lines[2]?.textContent).toContain('Black Player');
     // Draw shows ½ on both players.
@@ -1921,6 +1929,23 @@ describe('sourceGameLines', () => {
     });
     expect(lines[1]?.querySelector('.puzzle-source-result')?.textContent).toBe('1');
     expect(lines[2]?.querySelector('.puzzle-source-result')).toBeNull();
+  });
+
+  it('adds the year only to an event name that does not say it', () => {
+    const header = (event: string | undefined) =>
+      sourceGameLines({
+        variant: XIANGQI_SPEC_ID,
+        sourceGame: { gameId: 'g', ply: 1, event, playedOn: '2025-11-08', redName: 'R' },
+      })[0]?.textContent;
+    expect(header('Guangdong Ten Tigers Match')).toBe(
+      'From game · Guangdong Ten Tigers Match (2025)',
+    );
+    expect(header('2025 Guangdong Ten Tigers Match')).toBe(
+      'From game · 2025 Guangdong Ten Tigers Match',
+    );
+    // No event an English reader can read: a plain description.
+    expect(header(undefined)).toBe('From a 2025 game');
+    expect(header('某某杯')).toBe('From a 2025 game');
   });
 
   it('falls back to "From set <variant>" without attribution', () => {
@@ -1989,7 +2014,7 @@ describe('sourceGameLines locale', () => {
     window.history.replaceState(null, '', '/puzzles');
     const lines = sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: source });
     const text = lines.map((line) => line.textContent ?? '');
-    expect(text[0]).toBe('From game · 2026 National Xiangqi Team Championship (2026)');
+    expect(text[0]).toBe('From game · 2026 National Xiangqi Team Championship');
     expect(text[1]).toContain('Huang Leilei (Shandong Board Games Centre)');
     expect(text[2]).toContain('Shi Fenglan');
     for (const line of text) expect(line).not.toMatch(CJK);

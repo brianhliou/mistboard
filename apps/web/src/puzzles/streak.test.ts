@@ -146,6 +146,19 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   expect(root.textContent).toContain('Best: 4');
   expect(root.textContent).not.toContain('Guest');
   expect(root.querySelector('.puzzle-streak-count strong')?.textContent).toBe('0');
+  // The run's prompt is the trainer's row (Brian, 2026-10-29): the side's
+  // general, "<side> to move" over "Find the best move.", with the count in a
+  // tally beside it rather than a big block of its own.
+  const prompt = root.querySelector('.puzzle-streak-feedback')!;
+  expect(prompt.querySelector('.puzzle-feedback-icon svg')).not.toBeNull();
+  expect(prompt.querySelector('.puzzle-feedback-title')?.textContent).toMatch(
+    /^(Red|Black) to move$/,
+  );
+  expect(prompt.querySelector('.puzzle-feedback-body')?.textContent).toBe('Find the best move.');
+  expect(
+    prompt.querySelector('.puzzle-streak-tally .puzzle-streak-count strong')?.textContent,
+  ).toBe('0');
+  expect(prompt.querySelector('.puzzle-streak-tally')?.textContent).toContain('Best: 4');
   for (const m of puzzles[0]!.solution.filter((_, i) => i % 2 === 0)) {
     const count = fetchSpy.mock.calls.length;
     move(root, m);
@@ -160,11 +173,15 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
     expect(root.querySelector('.puzzle-streak-count strong')?.textContent).toBe('1'),
   );
   click(root, 'Next puzzle');
-  // During the run the left card shows the run so far plus the puzzle in play.
+  // During the run the row under the board shows the run so far plus the
+  // puzzle in play, as the trainer's chip row; the left card has none.
+  expect(root.querySelector('.puzzle-streak-side .puzzle-streak-chip')).toBeNull();
   expect(
-    [...root.querySelectorAll('.puzzle-streak-progress .puzzle-streak-chip')].map(
-      (c) => c.className,
-    ),
+    [
+      ...root.querySelectorAll(
+        '.puzzle-board-panel > .puzzle-session-chips.puzzle-streak-run-chips .puzzle-streak-chip',
+      ),
+    ].map((c) => c.className),
   ).toEqual([expect.stringContaining('--solved'), expect.stringContaining('--current')]);
   const skip = root.querySelector<HTMLButtonElement>('[data-streak-skip]');
   expect(skip?.className).toBe('puzzle-feedback-skip');
@@ -315,6 +332,12 @@ it('says New best when the run beats the best it started from, and asks a guest 
   const signIn = root.querySelector<HTMLAnchorElement>('.puzzle-streak-side .puzzle-streak-signin');
   expect(signIn?.textContent).toBe('Sign in to save your best');
   expect(signIn?.getAttribute('href')).toContain('/account');
+  // The phone's prompt row carries a short sign-in beside the count.
+  const short = root.querySelector<HTMLAnchorElement>(
+    '.puzzle-streak-feedback .puzzle-streak-tally .puzzle-streak-signin',
+  );
+  expect(short?.textContent).toBe('Sign in to save');
+  expect(short?.title).toBe('Sign in to save your best');
   expect(root.textContent).not.toContain('Guest');
 });
 

@@ -3,10 +3,11 @@ import { expect, type Page, test } from '@playwright/test';
 import { expectNoErrors, trackPageErrors } from './support';
 
 // The puzzle page in portrait is one screen with no vertical scroll (Brian,
-// 2026-10-20, apps/web/src/puzzles-phone-stack.test.ts). This visit's result
-// chips used to sit under the controls and push the page 42px past a short
-// phone's fold; on the phone they live in the ☰ sheet (Brian, 2026-10-28) and
-// the board keeps the full width. Desktop keeps the row under the board.
+// 2026-10-20, apps/web/src/puzzles-phone-stack.test.ts). The board fills the
+// width edge to edge and the rows under it are compressed (Brian, 2026-10-29:
+// "I want the board big as possible filling edge to edge"), so this visit's
+// result chips keep a 30px row on the page and still fit a short phone's fold.
+// Desktop keeps the same row under the board.
 
 /** Give up on the puzzle in play so the session row has a result, then move on. */
 async function finishOnePuzzle(page: Page): Promise<void> {
@@ -15,12 +16,12 @@ async function finishOnePuzzle(page: Page): Promise<void> {
   await expect(reveal).toBeVisible();
   await reveal.click();
   // The reveal plays the answer out, then the puzzle counts as failed.
-  await expect(page.locator('.puzzle-session-chips a.puzzle-result-chip')).toHaveCount(1, {
+  await expect(page.locator('.puzzle-session-chips a.puzzle-streak-chip')).toHaveCount(1, {
     timeout: 30_000,
   });
   await page.locator('[data-puzzle-next="true"]').click();
   await expect(page.locator('[data-puzzle-reveal="true"]')).toBeVisible();
-  await expect(page.locator('.puzzle-session-chips .puzzle-result-chip--current')).toHaveCount(1);
+  await expect(page.locator('.puzzle-session-chips .puzzle-streak-chip--current')).toHaveCount(1);
 }
 
 /** Overflow past the screen of both scrollers the page could use. */
@@ -42,7 +43,7 @@ for (const [width, height] of [
   [390, 664],
   [375, 667],
 ] as const) {
-  test(`phone ${width}x${height}: no vertical scroll with results, the row in the ☰ sheet`, async ({
+  test(`phone ${width}x${height}: no vertical scroll with results, board edge to edge`, async ({
     page,
     isMobile,
   }) => {
@@ -56,12 +57,11 @@ for (const [width, height] of [
     expect(fit.page, '.puzzles-page scrolls').toBeLessThanOrEqual(0);
     expect(fit.boardWidth).toBe(fit.viewportWidth);
 
-    await expect(page.locator('.puzzle-board-panel > .puzzle-session-chips')).toBeHidden();
-    await page.locator('.puzzle-move-nav .move-nav-bar__menu-button').click();
-    const visit = page.locator('.puzzle-phone-menu [data-puzzle-menu-row="visit"]');
-    await expect(visit).toBeVisible();
-    await expect(visit.locator('a.puzzle-result-chip--failed')).toBeVisible();
-    await expect(visit.locator('.puzzle-result-chip--current')).toBeVisible();
+    const row = page.locator('.puzzle-board-panel > .puzzle-session-chips');
+    await expect(row.locator('a.puzzle-streak-chip--failed')).toBeVisible();
+    await expect(row.locator('.puzzle-streak-chip--current')).toBeVisible();
+    // Hint and solution stay on the page, not in the ☰ sheet.
+    await expect(page.locator('[data-puzzle-reveal="true"]')).toBeVisible();
     expectNoErrors(errors);
   });
 }
@@ -71,7 +71,7 @@ test('desktop: the session row stays under the board', async ({ page, isMobile }
   const errors = trackPageErrors(page);
   await finishOnePuzzle(page);
   await expect(
-    page.locator('.puzzle-board-panel > .puzzle-session-chips a.puzzle-result-chip--failed'),
+    page.locator('.puzzle-board-panel > .puzzle-session-chips a.puzzle-streak-chip--failed'),
   ).toBeVisible();
   await expect(page.locator('.puzzle-move-nav')).toBeHidden();
   expectNoErrors(errors);

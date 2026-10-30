@@ -24,7 +24,6 @@ import {
   variantLabel,
   withSelectedSource,
 } from './queue-panel.js';
-import { type PuzzleChipResult, puzzleResultChips } from './result-chips.js';
 import { puzzleThemePicker, puzzleThemesLink } from './themes.js';
 
 export type PuzzlePhoneMenuKey = 'rated' | 'autoNext' | 'variant';
@@ -161,34 +160,6 @@ export function puzzlePhoneMenuRows(props: QueuePanelProps): HTMLElement[] {
     rows.push(browse);
   }
   return rows;
-}
-
-/** This visit's ✓/✗ chips as the sheet's last row, next to ☰. On the phone the
- *  page keeps them out of its one screen, so the board keeps its full width and
- *  the page never scrolls (Brian, 2026-10-28). Null before the first finish:
- *  the row would hold only the puzzle in play. */
-export function puzzlePhoneMenuVisitRow(
-  results: readonly PuzzleChipResult[],
-  currentId: string | null,
-  onPick: (id: string) => void,
-): HTMLElement | null {
-  if (results.length === 0) return null;
-  const row = document.createElement('div');
-  row.className = 'puzzle-pm-row puzzle-pm-row--visit';
-  row.dataset.puzzleMenuRow = 'visit';
-  const label = document.createElement('span');
-  label.className = 'puzzle-pm-row__label';
-  label.textContent = t('puzzle.sessionVisit');
-  row.append(
-    label,
-    puzzleResultChips(results, currentId, {
-      label: t('puzzle.sessionHistory'),
-      text: 'mark',
-      className: 'puzzle-pm-visit-chips',
-      onPick,
-    }),
-  );
-  return row;
 }
 
 function switchRow(

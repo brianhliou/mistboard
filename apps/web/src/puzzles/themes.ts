@@ -1,12 +1,10 @@
 /** Theme preferences, the grouped theme catalogue, its picker and the themes page. */
-import { XIANGQI_GLYPH_PATHS } from '@mistboard/board-render';
 import {
   isXiangqiTrainingTagId,
   XIANGQI_ENDGAME_MAX_PIECES,
   XIANGQI_OPENING_MAX_PLY,
   XIANGQI_TRAINING_TAGS,
   type XiangqiMotif,
-  type XiangqiMotifId,
   type XiangqiTrainingTagGroup,
   type XiangqiTrainingTagId,
 } from '@mistboard/game';
@@ -190,88 +188,42 @@ export function puzzleThemePicker(settings: PuzzleThemeSettings, phone = false):
   return field;
 }
 
-/**
- * The piece that carries each mate pattern, drawn as the row's icon: the
- * character in a ring, in the board's own baked glyph outlines (the flair
- * lesson: a CSS circle round a text character overflowed and changed with
- * the viewer's fonts). A Record so a new pattern fails the typecheck here.
+/*
+ * One hand-drawn line icon per group (Brian, 2026-10-29: "more beautiful sort
+ * of icons for each of these sections"), every row in a group wearing its
+ * group's: the same ring, the same 5-unit round stroke, no text or hanzi, so
+ * the set reads as one family in any locale and any font. The row's name
+ * tells the rows of a group apart.
  */
-const MOTIF_ICON_GLYPH: Record<XiangqiMotifId, string> = {
-  'bai-lian-jiang': '將',
-  'men-gong': '炮',
-  'men-sha': '將',
-  'chen-ya-jun': '士',
-  'chong-pao': '炮',
-  'ma-hou-pao': '炮',
-  'tian-di-pao': '炮',
-  'kong-tou-pao': '炮',
-  'tie-men-shuan': '車',
-  'wo-cao-ma': '馬',
-  'gua-jiao-ma': '馬',
-  'ba-jiao-ma': '馬',
-  'diao-yu-ma': '馬',
-  'gao-diao-ma': '馬',
-  'ba-huang-ma': '馬',
-  'shuang-ju-cuo': '車',
-  'da-dan-chuan-xin': '車',
-  'xiao-dao-wan-xin': '卒',
-  'ju-pao-chou-sha': '車',
-  'er-gui-pai-men': '卒',
-  'song-fo-gui-dian': '卒',
-  'lao-zu-sou-shan': '卒',
-  'shuang-zhao-jiang': '將',
-};
-
 const ICON_LINE =
   'fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"';
-const dots = (n: number) =>
-  Array.from(
-    { length: n },
-    (_, i) => `<circle cx="${50 + (i - (n - 1) / 2) * 15}" cy="50" r="5" fill="currentColor"/>`,
-  ).join('');
-const digit = (n: number) =>
-  `<text x="50" y="52" text-anchor="middle" dominant-baseline="central" font-family="Roboto, ui-sans-serif, sans-serif" font-size="48" font-weight="400" fill="currentColor">${n}</text>`;
 
-/** Phases, goals and lengths: a line symbol in the same ring. */
-const TAG_ICON: Record<(typeof XIANGQI_TRAINING_TAGS)[number]['id'], string> = {
-  matein1: digit(1),
-  matein2: digit(2),
-  matein3: digit(3),
-  matein4: digit(4),
-  // An open book.
-  opening: `<path ${ICON_LINE} d="M28 35 Q39 30 50 36 Q61 30 72 35 V66 Q61 61 50 67 Q39 61 28 66 Z M50 36 V67"/>`,
-  // Crossed blades.
-  middlegame: `<path ${ICON_LINE} d="M33 33 L65 65 M67 33 L35 65 M58 67 L67 58 M33 58 L42 67"/>`,
-  // An hourglass.
-  endgame: `<path ${ICON_LINE} d="M36 30 H64 M36 70 H64 M39 30 C39 45 61 53 61 70 M61 30 C61 45 39 53 39 70"/>`,
-  checkmate: '將',
-  // A rising line.
-  winning: `<path ${ICON_LINE} d="M30 64 L44 50 L54 58 L70 40 M59 40 H70 V51"/>`,
-  'one-move': dots(1),
-  short: dots(2),
-  long: dots(3),
-  'very-long': dots(4),
+const GROUP_ICON: Record<XiangqiTrainingTagGroup | 'mix', string> = {
+  // Two crossing arrows: everything, shuffled.
+  mix: `<path ${ICON_LINE} d="M28 39 H38 C51 39 49 61 62 61 H70 M28 61 H38 C51 61 49 39 62 39 H70 M64 33 L70 39 L64 45 M64 55 L70 61 L64 67"/>`,
+  // The palace, its diagonals and the general caught at its centre.
+  motif: `<path ${ICON_LINE} d="M32 32 H68 V68 H32 Z M32 32 L68 68 M68 32 L32 68"/><circle cx="50" cy="50" r="8" fill="currentColor"/>`,
+  // A sight on the general: forced mate.
+  mate: `<circle cx="50" cy="50" r="15" ${ICON_LINE}/><path ${ICON_LINE} d="M50 25 V35 M50 65 V75 M25 50 H35 M65 50 H75"/><circle cx="50" cy="50" r="5" fill="currentColor"/>`,
+  // An hourglass: where the game is.
+  phase: `<path ${ICON_LINE} d="M36 30 H64 M36 70 H64 M39 30 C39 45 61 53 61 70 M61 30 C61 45 39 53 39 70"/>`,
+  // A flag on its pole: what the line wins.
+  goal: `<path ${ICON_LINE} d="M37 72 V28 M37 31 C47 25 55 37 66 31 V51 C55 57 47 45 37 51"/>`,
+  // Moves along a path to an arrow: how long the line is.
+  length: `<path ${ICON_LINE} d="M29 63 L43 49 L56 58 L70 41 M60 40 H71 V51"/><circle cx="29" cy="63" r="4" fill="currentColor"/><circle cx="43" cy="49" r="4" fill="currentColor"/><circle cx="56" cy="58" r="4" fill="currentColor"/>`,
 };
 
-// Two crossing arrows: everything, shuffled.
-const MIX_ICON = `<path ${ICON_LINE} d="M28 39 H38 C51 39 49 61 62 61 H70 M28 61 H38 C51 61 49 39 62 39 H70 M64 33 L70 39 L64 45 M64 55 L70 61 L64 67"/>`;
-
-function iconMarks(id: PuzzleThemeId | 'mix'): string {
-  if (id === 'mix') return MIX_ICON;
-  const mark =
-    (MOTIF_ICON_GLYPH as Record<string, string | undefined>)[id] ??
-    (TAG_ICON as Record<string, string | undefined>)[id] ??
-    '';
-  if (mark.startsWith('<')) return mark;
-  const path = XIANGQI_GLYPH_PATHS[mark];
-  return path ? `<path d="${path}" fill="currentColor"/>` : '';
-}
+const TAG_GROUP = new Map<string, XiangqiTrainingTagGroup>(
+  XIANGQI_TRAINING_TAGS.map((tag) => [tag.id, tag.group]),
+);
 
 function themeIcon(id: PuzzleThemeId | 'mix'): HTMLElement {
+  const group = id === 'mix' ? 'mix' : (TAG_GROUP.get(id) ?? 'motif');
   const icon = document.createElement('span');
   icon.className = 'puzzle-theme-icon';
+  icon.dataset.iconGroup = group;
   icon.setAttribute('aria-hidden', 'true');
-  icon.innerHTML = `<svg viewBox="0 0 100 100" focusable="false"><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="2.5"/>${iconMarks(id)}</svg>`;
+  icon.innerHTML = `<svg viewBox="0 0 100 100" focusable="false"><circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="2.5"/>${GROUP_ICON[group]}</svg>`;
   return icon;
 }
 

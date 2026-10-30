@@ -11,11 +11,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PuzzleSummary } from './puzzles/adapter.js';
 import { keepActivePuzzleMoveInView } from './puzzles/move-list.js';
-import {
-  puzzlePhoneMenuHead,
-  puzzlePhoneMenuRows,
-  puzzlePhoneMenuVisitRow,
-} from './puzzles/phone-menu.js';
+import { puzzlePhoneMenuHead, puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
 import type { QueuePanelProps } from './puzzles/queue-panel.js';
 import {
   focusPuzzleNext,
@@ -55,7 +51,7 @@ describe('puzzle phone stack', () => {
 
   it('turns the move list into one sideways-scrolling line on the phone only', () => {
     expect(phoneBlock).toMatch(
-      /\.puzzles-shell \.puzzle-moves \{ display: flex; align-items: center; height: 34px;/,
+      /\.puzzles-shell \.puzzle-moves \{ display: flex; align-items: center; height: 30px;/,
     );
     expect(phoneBlock).toMatch(
       /\.puzzles-shell \.puzzle-move-list \{ display: flex;[^}]*max-height: none;[^}]*overflow-x: auto; overflow-y: hidden;/,
@@ -142,7 +138,24 @@ describe('puzzle phone first screen', () => {
   it('keeps Hint, Solution and Skip on one row so a miss does not grow the strip', () => {
     expect(phoneBlock).toMatch(/\.puzzles-shell \.puzzle-assist-row \{[^}]*flex-wrap: nowrap;/);
     expect(phoneBlock).toMatch(
-      /\.puzzles-shell \.puzzle-assist-row > \.puzzle-feedback-skip \{ flex: 1 1 0; min-width: 0;/,
+      /\.puzzles-shell \.puzzle-assist-row > \.puzzle-feedback-skip \{ flex: 0 1 auto; min-width: 0;[^}]*min-height: 44px;/,
+    );
+  });
+
+  // Brian, 2026-10-29: "I want the board big as possible filling edge to
+  // edge." The prompt is one strip one button tall: the copy in the middle,
+  // the buttons on its right, and solved puts title, thumbs and Next in a row.
+  it('lays the prompt strip out as one row in every state', () => {
+    expect(phoneBlock).toMatch(
+      /\.puzzles-shell \.puzzle-feedback \{ grid-template-columns: 28px minmax\(0, 1fr\) auto; grid-template-areas: "icon title assist" "icon body assist";/,
+    );
+    expect(phoneBlock).toMatch(
+      /\.puzzles-shell \.puzzle-solved-panel \{[^}]*grid-template-areas: "title vote cta";/,
+    );
+    expect(phoneBlock).toContain('.puzzles-shell .puzzle-vote-prompt { display: none; }');
+    // The hint line clamps to two lines beside the buttons.
+    expect(phoneBlock).toMatch(
+      /\.puzzles-shell \.puzzle-feedback-body \{[^}]*-webkit-line-clamp: 2;/,
     );
   });
 
@@ -164,37 +177,50 @@ describe('puzzle phone first screen', () => {
     );
   });
 
-  // This visit's ✓/✗ chips leave the page on the phone and close the ☰ sheet
-  // (Brian, 2026-10-28): under the controls they pushed the page 42px past a
-  // 390x664 fold, and given a share of the height they shrank the board to
-  // 352px. The page gets no scroll escape for them and the board budget stays
-  // the one chrome figure; tests/e2e/puzzles-phone.spec.ts measures the fit.
-  it('keeps the session row off the phone page, with no scroll and no budget for it', () => {
-    expect(phoneBlock).toContain(
-      '.puzzles-shell .puzzle-board-panel > .puzzle-session-chips { display: none; }',
+  // This visit's ✓/✗ chips are the phone page's last row (Brian, 2026-10-29,
+  // reversing the ☰ sheet row of 10-28), with the puzzle in play as the only
+  // chip before a finish. The row has a fixed height inside the chrome budget,
+  // so it never shrinks the board or scrolls the page;
+  // tests/e2e/puzzles-phone.spec.ts measures the fit.
+  it('keeps the session row on the phone page, a fixed row inside the budget', () => {
+    expect(phoneBlock).toMatch(
+      /\.puzzles-shell \.puzzle-board-panel > \.puzzle-session-chips \{ order: 4;[^}]*height: 30px;/,
     );
-    expect(portraitBlock).not.toContain('puzzle-session-chips');
+    expect(phoneBlock).not.toMatch(/\.puzzle-session-chips \{[^}]*display: none/);
+    expect(portraitBlock).toContain(
+      '.puzzles-shell .puzzle-board-panel > .puzzle-session-chips { flex: none; }',
+    );
     expect(portraitBlock).not.toMatch(/overflow-y: (auto|scroll)/);
     expect(portraitBlock.match(/--puzzle-stack-chrome: \d+px;/g)).toHaveLength(1);
     // Desktop keeps it under the board.
     expect(desktop).toMatch(/\.puzzle-session-chips \{ order: 4; grid-column: 2;/);
   });
 
-  // Measured in the browser on 2026-10-20 (unsolved, after a miss with Skip,
-  // solved with the thumbs, solution revealed; scrollHeight == innerHeight in
-  // all 16): site bar 52px, arrows 46px, move strip 34px, prompt strip 100px.
+  // Streak is the same one screen: its shell scrolled (overflow: auto) where
+  // the trainer's is clipped, the one layout difference between the modes.
+  it('gives the streak board the trainer shell in portrait', () => {
+    expect(portraitBlock).toMatch(
+      /\.puzzles-page > \.puzzles-shell\.puzzle-streak-shell:has\(\.puzzle-board\) \{ overflow: hidden; \}/,
+    );
+  });
+
+  // Measured in the browser on 2026-10-29 (unsolved, hint shown, after a miss
+  // with Skip, solved with the thumbs; scrollHeight == innerHeight): site bar
+  // 52px, arrows 46px, move strip 30px, prompt strip 56px, session row 30px.
+  // A full-width board at 390x664 and 375x667, the iPhone 13 and SE sizes.
   const NAV = 52;
   const ARROWS = 46;
-  const MOVES = 34;
+  const MOVES = 30;
+  const CHIPS = 30;
   it.each([
     [390, 664, 390],
     [375, 667, 375],
-    [320, 568, 303],
+    [320, 568, 319],
     [430, 932, 430],
   ])('fits board, arrows, strip and prompt in a %ix%i portrait screen', (vw, vh, width) => {
     const prompt = Number(portraitBlock.match(/--puzzle-prompt-height: (\d+)px;/)?.[1]);
     const chrome = Number(portraitBlock.match(/--puzzle-stack-chrome: (\d+)px;/)?.[1]);
-    expect(chrome).toBe(ARROWS + MOVES + prompt);
+    expect(chrome).toBe(ARROWS + MOVES + prompt + CHIPS);
     const boardBox = vh - NAV - chrome; // what flex leaves the board
     const boardWidth = Math.min(vw, (boardBox * 552) / 612); // xiangqi 552:612
     expect(Math.round(boardWidth)).toBe(width);
@@ -488,28 +514,6 @@ describe('puzzle phone menu rows', () => {
     ).toContain('1512?');
     // Practice mode: no rating line, the explanation moves to the tooltip.
     expect(sub(props({ ratedEnabled: false }))).toBeNull();
-  });
-
-  it("closes the sheet with this visit's chips once a puzzle is finished", () => {
-    expect(puzzlePhoneMenuVisitRow([], puzzle.id, () => {})).toBeNull();
-    const onPick = vi.fn();
-    const row = puzzlePhoneMenuVisitRow(
-      [
-        { id: 'xiangqi-test-puzzle-0', outcome: 'solved' },
-        { id: 'xiangqi-test-puzzle-9', outcome: 'failed' },
-      ],
-      puzzle.id,
-      onPick,
-    );
-    expect(row?.dataset.puzzleMenuRow).toBe('visit');
-    expect(row?.querySelector('.puzzle-pm-row__label')?.textContent).toBe('This visit');
-    const chips = [...(row?.querySelectorAll<HTMLElement>('.puzzle-streak-chip') ?? [])];
-    expect(chips.map((chip) => chip.textContent)).toEqual(['✓', '✗', '']);
-    expect(chips[2]?.classList.contains('puzzle-streak-chip--current')).toBe(true);
-    // Its own class, so the phone's hide of the page row never reaches it.
-    expect(row?.querySelector('.puzzle-session-chips')).toBeNull();
-    chips[1]?.click();
-    expect(onPick).toHaveBeenCalledWith('xiangqi-test-puzzle-9');
   });
 
   it('wires each switch to its setting, with the switch on the right', () => {

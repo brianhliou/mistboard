@@ -390,15 +390,19 @@ export function sourceText(
   return original && !CJK.test(original) ? original : undefined;
 }
 
-// "From game · <event> (<year>)" — event and year are both optional.
+// "From game · <event> (<year>)" — event and year are both optional, and the
+// year is left off an event name that already says it ("2026 National Xiangqi
+// Team Championship", not "... (2026)").
 function sourceGameHeader(source: NonNullable<PuzzleSummary['sourceGame']>): string {
-  const year = source.playedOn?.slice(0, 4);
-  const parts = [sourceText(source.event, source.eventEn), year ? `(${year})` : undefined].filter(
+  const event = sourceText(source.event, source.eventEn);
+  const playedYear = source.playedOn?.slice(0, 4);
+  const year = playedYear && !event?.includes(playedYear) ? playedYear : undefined;
+  const parts = [event, year ? `(${year})` : undefined].filter(
     (part): part is string => part !== undefined && part.length > 0,
   );
-  return parts.length > 0
-    ? t('puzzle.fromGameWith', { details: parts.join(' ') })
-    : t('puzzle.fromGame');
+  // No event a reader can read: a plain description ("From a 2025 game").
+  if (!event) return year ? t('puzzle.fromGameYear', { year }) : t('puzzle.fromGame');
+  return t('puzzle.fromGameWith', { details: parts.join(' ') });
 }
 
 // One player row: a color disc, the player name, and a result glyph on the
