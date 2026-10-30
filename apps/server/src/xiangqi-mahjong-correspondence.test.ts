@@ -22,6 +22,8 @@ import {
   type XmjPlayerView,
   type XmjRoomState,
   type XmjSeat,
+  type XmjTile,
+  xmjOrderedTiles,
   xmjViewFor,
 } from '@mistboard/game';
 import { collectCurrentGames, currentGameBoardPayload } from './current-games.js';
@@ -121,11 +123,68 @@ test('accepting a seek makes a casual correspondence table; east deals and owes 
     assert.equal(room.seatTokens.east?.userId, 'first-xmj');
     assert.equal(room.seatTokens.west?.userId, 'second-xmj');
     assert.equal(state(room).correspondence, true);
+    assert.equal(state(room).match.hand.taiTable, 2, 'production correspondence stays on table 2');
     assert.equal(view(room, 'east').dealer, 'east');
     const deadline = tenantDurableDeadlineFor(tenant, room);
     assert.equal(deadline?.seat, 'east');
     assert.ok(Math.abs((deadline?.dueAt ?? 0) - (Date.now() + 3 * DAY_MS)) < 60_000);
     assert.equal(registration().activeGameCount(), 0, 'a days-per-move table never pins a drain');
+  } finally {
+    registration().clearRooms();
+  }
+});
+
+test('explicit table-3 correspondence persists automatic locked discards across reconnect', async () => {
+  try {
+    const accepted = await acceptSeek(3);
+    const front: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR', 'bP', 'rA'];
+    const rest = xmjOrderedTiles();
+    for (const tile of front) rest.splice(rest.indexOf(tile), 1);
+    const wall = [...front, ...rest];
+    const events = accepted.events.map((event) =>
+      event.type === 'room-created'
+        ? {
+            ...event,
+            setup: { walls: [wall, wall], firstDealer: 'east', taiTable: 3, correspondence: true },
+          }
+        : event,
+    );
+    const hydrated = createTenantRuntimeRoomFromEvents(tenant, events as XmjEvent[]);
+    assert.ok(hydrated.ok);
+    const room = hydrated.room as XmjRuntimeRoom;
+    const at = Date.now();
+    play(room, { by: 'east', at, action: 'declare-ready', tile: 'bH' });
+    assert.deepEqual(view(room, 'west').declared, { east: true, west: false });
+    assert.deepEqual(state(room).ready, []);
+    assert.equal(deadlineSeat(room), 'west');
+    play(room, { by: 'west', at: at + 1_000, action: 'pass' });
+    play(room, { by: 'west', at: at + 2_000, action: 'discard', tile: 'bR' });
+    play(room, { by: 'east', at: at + 3_000, action: 'pass' });
+    assert.equal(state(room).claimPauseEndsAt, null);
+    assert.equal(view(room, 'east').legal.selfDraw, false);
+    const pending = tenant.rules.pendingAction?.(state(room));
+    assert.deepEqual(pending, {
+      at: at + 3_000,
+      color: 'east',
+      move: { by: 'east', at: at + 3_000, action: 'discard', tile: 'rA' },
+    });
+    assert.ok(pending);
+    for (const seat of tenant.colors) await assertSeatSeesOnlyItsOwn(room, seat, 'declared draw');
+    const reconnected = createTenantRuntimeRoomFromEvents(
+      tenant,
+      JSON.parse(JSON.stringify(room.events)),
+    );
+    assert.ok(reconnected.ok);
+    const restored = reconnected.room as XmjRuntimeRoom;
+    assert.deepEqual(tenant.rules.pendingAction?.(state(restored)), pending);
+    assert.deepEqual(state(restored), state(room));
+    play(restored, pending.move);
+    const last = restored.events.at(-1);
+    assert.ok(last?.type === 'move-played' && last.move.action === 'discard');
+    assert.deepEqual(state(restored).match.hand.hands[0], ['rK', 'rA', 'rE', 'rP']);
+    assert.equal(deadlineSeat(restored), 'west');
+    for (const seat of tenant.colors)
+      await assertSeatSeesOnlyItsOwn(restored, seat, 'automatic discard');
   } finally {
     registration().clearRooms();
   }

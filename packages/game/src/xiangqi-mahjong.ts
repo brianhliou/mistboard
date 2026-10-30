@@ -252,10 +252,11 @@ export function xmjLegalClaims(
  * 鼓角齊鳴 lines. A stored game replays under the table it was played with, and
  * a setup with no stamp is table 1 (`XmjRoomSetup.taiTable`).
  *
- * Not in table 2 yet: 聽牌 (1) and 雙龍搶珠 / 雙龍再戰 (5 each) need a
- * declare-ready action the game does not have.
+ * Table 3 adds 聽牌 (1) with an atomic declaration and discard. It is accepted
+ * only by explicit setup: new rooms remain on table 2. 雙龍搶珠 / 雙龍再戰
+ * remain outside these tables.
  */
-export type XmjTaiTable = 1 | 2;
+export type XmjTaiTable = 1 | 2 | 3;
 export const XMJ_TAI_TABLE: XmjTaiTable = 2;
 
 export type XmjTaiKey =
@@ -274,6 +275,7 @@ export type XmjTaiKey =
   | 'mixed-soldiers'
   | 'five-soldiers'
   | 'last-tile'
+  | 'declared-ready'
   | 'heavenly'
   | 'earthly';
 
@@ -310,6 +312,7 @@ export const XMJ_TAI_LABELS: Readonly<Record<XmjTaiKey, string>> = {
   'mixed-soldiers': '鼓角齊鳴 Five soldiers, mixed',
   'five-soldiers': '五兵合縱 / 五卒連橫 Five soldiers, one colour',
   'last-tile': '海底撈月 Last tile',
+  'declared-ready': '聽牌 Declared ready',
   heavenly: '天胡 Heavenly hand',
   earthly: '地胡 Earthly hand',
 };
@@ -327,6 +330,8 @@ export interface XmjWinContext {
   readonly lastTile: boolean;
   /** The table to score with; the current one when absent. */
   readonly table?: XmjTaiTable;
+  /** A table-3 declaration made before winning; distinct from next-hand readiness. */
+  readonly declared?: boolean;
 }
 
 /** What each line is worth: the one table the scorer and the result panel read. */
@@ -346,6 +351,7 @@ export const XMJ_TAI_POINTS: Readonly<Record<XmjTaiKey, number>> = {
   'self-draw': 2,
   dealer: 1,
   'last-tile': 1,
+  'declared-ready': 1,
   heavenly: 6,
   earthly: 6,
 };
@@ -421,6 +427,7 @@ export function xmjScore(ctx: XmjWinContext): XmjScore {
   }
   if (ctx.lastTile) hit.add('last-tile');
   const lines = XMJ_TAI_ORDER.filter((key) => hit.has(key)).map(line);
+  if (ctx.table === 3 && ctx.declared) lines.push(line('declared-ready'));
   const total = lines.reduce((sum, l) => sum + l.tai, 0);
   return { lines, total, shape };
 }
@@ -491,6 +498,8 @@ export interface XmjHandState {
   readonly claimed: boolean;
   /** The 台 table this hand scores on. Absent on a hand built before the stamp: table 1. */
   readonly taiTable?: XmjTaiTable;
+  /** Table 3 only. Public flags; the waiting tiles themselves stay concealed. */
+  readonly declared?: readonly [boolean, boolean];
 }
 
 export function xmjOtherSeat(seat: XmjSeatIndex): XmjSeatIndex {
@@ -521,6 +530,7 @@ export function xmjDeal(
     draws: [0, 0],
     claimed: false,
     taiTable,
+    ...(taiTable === 3 ? { declared: [false, false] as const } : {}),
   };
 }
 
@@ -542,8 +552,54 @@ function drawFor(state: XmjHandState, seat: XmjSeatIndex): XmjHandState {
   };
 }
 
-export function xmjCanDiscard(state: XmjHandState, tile: XmjTile): boolean {
-  return state.phase.type === 'discard' && state.hands[state.turn].includes(tile);
+export function xmjIsDeclared(state: XmjHandState, seat: XmjSeatIndex): boolean {
+  return state.taiTable === 3 && state.declared?.[seat] === true;
+}
+
+export function xmjCanDiscard(state: XmjHandState, tile: XmjTile, handCopy = false): boolean {
+  if (state.phase.type !== 'discard' || !state.hands[state.turn].includes(tile)) return false;
+  // Even when the draw has a twin, the locked hand cannot exchange its copy.
+  return !xmjIsDeclared(state, state.turn) || (state.phase.drawn === tile && !handCopy);
+}
+
+/**
+ * Discards leaving at least one physically possible wait. Only this seat's
+ * tiles and the public table count as seen, including the proposed discard:
+ * consulting the wall or the opponent's hand would leak their contents through
+ * eligibility. Exposed melds count both toward the shape and the available set.
+ */
+export function xmjDeclarationDiscards(state: XmjHandState): XmjTile[] {
+  if (state.taiTable !== 3 || state.phase.type !== 'discard' || xmjIsDeclared(state, state.turn)) {
+    return [];
+  }
+  const seat = state.turn;
+  const seen = [
+    ...state.hands[seat],
+    ...state.melds.flatMap((melds) => melds.flatMap((meld) => meld.tiles)),
+    ...state.discards.flat(),
+  ];
+  return [...new Set(state.hands[seat])].filter((discard) => {
+    const kept = removeTiles(state.hands[seat], [discard]) as XmjTile[];
+    return XMJ_TILE_KINDS.some(
+      (tile) =>
+        seen.filter((known) => known === tile).length < XMJ_COPIES[tilePiece(tile)] &&
+        xmjWinShape([...kept, tile], state.melds[seat]) !== null,
+    );
+  });
+}
+
+/** Declare and discard as one transition; an invalid declaration changes nothing. */
+export function xmjDeclareReady(
+  state: XmjHandState,
+  tile: XmjTile,
+  handCopy = false,
+): XmjHandState {
+  if (!xmjDeclarationDiscards(state).includes(tile)) return state;
+  const discarded = xmjDiscard(state, tile, handCopy);
+  return {
+    ...discarded,
+    declared: setSeat(state.declared ?? [false, false], state.turn, true),
+  };
 }
 
 /**
@@ -558,7 +614,7 @@ export function xmjCanDiscard(state: XmjHandState, tile: XmjTile): boolean {
  * the tile left.
  */
 export function xmjDiscard(state: XmjHandState, tile: XmjTile, handCopy = false): XmjHandState {
-  if (!xmjCanDiscard(state, tile)) return state;
+  if (!xmjCanDiscard(state, tile, handCopy)) return state;
   const seat = state.turn;
   const hand = removeTiles(state.hands[seat], [tile]) as XmjTile[];
   // A hand copy needs a second tile of that face in the hand; otherwise the
@@ -580,7 +636,8 @@ export function xmjDiscard(state: XmjHandState, tile: XmjTile, handCopy = false)
 export function xmjClaimsOpen(state: XmjHandState): XmjClaim[] {
   if (state.phase.type !== 'claim') return [];
   const claimant = xmjOtherSeat(state.phase.discarder);
-  return xmjLegalClaims(state.hands[claimant], state.melds[claimant], state.phase.discard);
+  const claims = xmjLegalClaims(state.hands[claimant], state.melds[claimant], state.phase.discard);
+  return xmjIsDeclared(state, claimant) ? claims.filter((claim) => claim.kind === 'win') : claims;
 }
 
 /** Decline the discard: the claimant draws (or the hand is a 流局). */
@@ -621,6 +678,7 @@ export function xmjClaim(state: XmjHandState, claim: XmjClaim): XmjHandState {
       earthly: false,
       lastTile: false,
       table: state.taiTable ?? 1,
+      declared: xmjIsDeclared(state, seat),
     });
     return {
       ...state,
@@ -673,6 +731,7 @@ export function xmjSelfDraw(state: XmjHandState): XmjHandState {
     earthly,
     lastTile: state.wall.length === 0 && state.phase.drawn !== null,
     table: state.taiTable ?? 1,
+    declared: xmjIsDeclared(state, seat),
   });
   const winningTile = state.phase.drawn ?? (state.hands[seat][0] as XmjTile);
   return {
