@@ -23,7 +23,7 @@ it('describes the searched rules in the zh-Hant banqi search snippet', () => {
     title: `${localized.seoTitle ?? localized.title} | Mistboard`,
     description: localized.summary,
   }).toEqual({
-    title: '暗棋規則怎麼玩？大小順序、吃法與連吃一次看懂 | Mistboard',
+    title: '暗棋規則：怎麼玩、大小順序與連吃 | Mistboard',
     description:
       '暗棋怎麼玩？三十二顆象棋棋子蓋著鋪滿半張棋盤，輪到你就翻一顆或走一格。大小順序是將、士、象、車、馬、兵，兵能吃將，炮隔一子吃子不看大小。可以連吃嗎？看圖解答。採用台灣標準暗棋，免註冊直接線上對弈。',
   });

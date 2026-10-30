@@ -1300,7 +1300,7 @@ function buildVariantSidebar(currentSlug: string | null, lang?: ArticleLang): HT
 // Dark Chess)") or a zh subtitle after a fullwidth colon ("暗棋规则：玩法详解…")
 // would otherwise render in full and widen the rail enough to push the article
 // column off centre. Strip the search freight first, then the "Rules" suffix.
-function variantNavLabel(title: string): string {
+export function variantNavLabel(title: string): string {
   return title
     .replace(/：.*$/u, '')
     .replace(/\s*\([^)]*\)\s*$/u, '')

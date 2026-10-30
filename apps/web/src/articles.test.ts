@@ -379,14 +379,14 @@ describe('article public listing gates', () => {
   it('names the cannon blind shot as the rejected banqi house rule, in every language', () => {
     // The 09-17 copy listed Mistboard's own rules as the house rules it rejects.
     const en = buildArticlePage('banqi').textContent ?? '';
-    expect(en).toContain('A common house rule lets a cannon also fire at a face-down tile');
+    expect(en).toContain('no cannon firing at a face-down tile');
     expect(en).not.toContain('house rules are deliberately not used');
     expect(en).not.toContain('Taiwan Computer Game Association');
     expect(buildArticlePage('banqi', 'zh-Hans').textContent).toContain(
-      '常见的一条家规允许炮隔子打暗子',
+      '炮不能打暗子（炮只吃已翻开的敌子）',
     );
     expect(buildArticlePage('banqi', 'zh-Hant').textContent).toContain(
-      '常見的一條家規允許炮隔子打暗子',
+      '炮不能打暗子（炮只吃已翻開的敵子）',
     );
   });
 
@@ -994,18 +994,16 @@ describe('rules variant sidebar', () => {
     const pageText = page.textContent ?? '';
 
     expect(pageText).not.toContain('[VISUAL:');
-    expect(pageText).toContain('General > Advisor > Elephant > Chariot > Horse > Soldier');
+    expect(pageText).not.toContain('What is the capture order in banqi?');
     expect(pageText).toContain(
-      'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier',
+      'Strongest to weakest: general, advisor, elephant, chariot, horse, cannon, soldier',
     );
     expect(pageText).toContain('60 plies (single moves) with no flip or capture');
     expect(pageText).toContain('keeps the 40-ply limit it began under');
     expect(pageText).toContain('threefold repetition');
-    expect(pageText).toContain(
-      'On your turn you do exactly one of two things: flip a face-down tile',
-    );
+    expect(pageText).toContain('Flip any face-down tile');
     expect(pageText).toContain('Can you chain captures in banqi?');
-    expect(pageText).toContain('it captures by jumping, not by stepping');
+    expect(pageText).toContain('only the cannon captures differently, by jumping');
     expect(pageText).toContain('jumping exactly one piece, the screen');
     expect(pageText).toContain('Without a capture it moves one square like everything else.');
     expect(pageText).not.toContain('Rules used on Mistboard');
@@ -1045,7 +1043,7 @@ describe('rules variant sidebar', () => {
 
     const text = page.textContent ?? '';
     expect(text).toContain('第一次翻子之前。谁都还没有颜色。');
-    expect(text).toContain('最大在左，最小在右。');
+    expect(text).toContain('最大的在左边。每颗子都能吃同级和它右边的所有子，但有两个例外。');
     expect(text).toContain('一颗炮架，再来是目标。大小不重要：炮吃将。');
     expect(text).not.toContain('Before the first flip.');
     expect(text).not.toContain('One screen, then the target.');
