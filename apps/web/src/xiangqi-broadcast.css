@@ -1158,62 +1158,6 @@
   border-color: color-mix(in srgb, var(--site-accent) 42%, var(--site-border-soft));
 }
 
-.xqb-share {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.xqb-share-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "label label" "url copy";
-  gap: 4px 8px;
-  align-items: center;
-}
-
-.xqb-share-label {
-  grid-area: label;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--site-text);
-}
-
-.xqb-share-url {
-  grid-area: url;
-  min-width: 0;
-  min-height: 34px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius-sm);
-  background: var(--site-panel);
-  color: var(--site-muted);
-  padding: 6px 10px;
-  font: inherit;
-  font-size: 13px;
-}
-
-.xqb-share-copy {
-  grid-area: copy;
-  min-height: 34px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius-sm);
-  background: var(--site-panel);
-  color: var(--site-text);
-  padding: 6px 12px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.xqb-share-copy:hover,
-.xqb-share-copy:focus-visible {
-  border-color: color-mix(in srgb, var(--site-accent) 42%, var(--site-border-soft));
-  background: var(--site-accent-soft);
-  color: var(--site-accent-strong);
-}
-
 .xqb-standings {
   width: 100%;
   border-collapse: collapse;
@@ -2354,31 +2298,6 @@ a.xqb-standings-name:focus-visible {
   text-underline-offset: 2px;
 }
 
-.xqb-overview-share {
-  border-radius: var(--site-radius);
-  background: color-mix(in srgb, var(--site-panel) 92%, var(--site-text));
-  padding: 4px 22px 18px;
-}
-
-.xqb-overview-share > summary {
-  cursor: pointer;
-  padding: 12px 0;
-  color: var(--site-heading);
-  font-size: 15px;
-  font-weight: 600;
-  list-style-position: inside;
-}
-
-.xqb-overview-share:not([open]) {
-  padding-bottom: 4px;
-}
-
-.xqb-overview-share {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
 /* ── Boards pager, lichess's (2026-09-23) ────────────────────────────────────
    Page buttons and the count, the team filter, the page size; the switches
    sit on the row below. */
@@ -2581,130 +2500,8 @@ a.xqb-standings-name:focus-visible {
   color: var(--site-accent);
 }
 
-/* The share box: the title is a tab sitting on the box's top-right edge. */
-.xqb-overview-share {
-  position: relative;
-  margin-top: 30px;
-  padding: 34px 28px 26px;
-  gap: 22px;
-}
-
-.xqb-overview-share:not([open]) {
-  padding: 0;
-  min-height: 12px;
-}
-
-.xqb-share-tab {
-  position: absolute;
-  top: -22px;
-  right: 28px;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  border-radius: 12px 12px 0 0;
-  background: inherit;
-  padding: 10px 18px 8px;
-  color: var(--site-text);
-  font-size: 15px;
-  font-weight: 500;
-  list-style: none;
-  cursor: pointer;
-}
-
-.xqb-share-tab::-webkit-details-marker {
-  display: none;
-}
-
-.xqb-share-chevron {
-  display: inline-flex;
-  transform: rotate(180deg);
-  transition: transform 120ms ease;
-}
-
-.xqb-overview-share:not([open]) .xqb-share-chevron {
-  transform: none;
-}
-
-.xqb-overview-share .xqb-share-row {
-  display: grid;
-  gap: 8px;
-}
-
-.xqb-share-label {
-  color: var(--site-heading);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.xqb-share-field {
-  display: flex;
-  border: 1px solid var(--site-border-soft);
-  border-radius: 10px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--site-panel) 70%, var(--site-bg, #000));
-}
-
-.xqb-share-field .xqb-share-url {
-  flex: 1 1 auto;
-  min-width: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--site-text);
-  padding: 11px 16px;
-  font: inherit;
-  font-size: 14px;
-}
-
-.xqb-share-field .xqb-share-url:focus {
-  outline: none;
-}
-
-.xqb-share-field:focus-within {
-  border-color: color-mix(in srgb, var(--site-accent) 55%, var(--site-border-soft));
-}
-
-.xqb-share-field .xqb-share-copy {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 50px;
-  border: 0;
-  border-left: 1px solid var(--site-border-soft);
-  border-radius: 0;
-  background: color-mix(in srgb, var(--site-text) 6%, transparent);
-  color: var(--site-text);
-  padding: 0;
-  cursor: pointer;
-}
-
-.xqb-share-field .xqb-share-copy:hover,
-.xqb-share-field .xqb-share-copy:focus-visible {
-  color: var(--site-accent-strong);
-  background: color-mix(in srgb, var(--site-accent) 14%, transparent);
-}
-
-.xqb-share-field .xqb-share-copied {
-  color: #4f8a2a;
-}
-
 :root[data-effective-theme="dark"] .xqb-round-option-current .xqb-round-status-check {
   color: inherit;
-}
-
-/* <details> does not lay its content out as flex everywhere; space the rows
-   with margins instead. */
-.xqb-overview-share .xqb-share-row + .xqb-share-row {
-  margin-top: 24px;
-}
-
-.xqb-overview-share[open] .xqb-share-tab {
-  box-shadow: 0 -1px 0 var(--site-border-soft);
-}
-
-.xqb-overview-share[open] {
-  border-top: 1px solid var(--site-border-soft);
 }
 
 /* Centred rows (lichess's strip): a wrapped second row sits under the first
@@ -2807,6 +2604,31 @@ a.xqb-standings-name:focus-visible {
 
 .xqb-event-header > .xqb-hero-actions {
   grid-area: actions;
+}
+
+/* Copy link sits on the round picker's line, as tall as it, so the header
+   gains no row. */
+.xqb-event-header > .xqb-hero-actions {
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.xqb-event-header .xqb-round-picker {
+  flex: 0 1 560px;
+  min-width: 0;
+}
+
+.xqb-event-header .xqb-copy-link {
+  flex: none;
+  min-height: 40px;
+  padding-inline: 14px;
+  border-radius: 12px;
+}
+
+@media (pointer: coarse) {
+  .xqb-event-header .xqb-copy-link {
+    min-height: 44px;
+  }
 }
 
 .xqb-event-header > .xqb-event-art {

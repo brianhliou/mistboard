@@ -128,10 +128,9 @@ export const ZH_HANT_CONTENT = {
   'contact.dailyLimit': '已達每日限制。登入後可不限次數回覆，或明天再試。',
   'contact.sendFailed': '送出失敗。請重試，如果一直失敗可以改用信箱。',
   'contact.networkError': '網路錯誤。請重試。',
-  'contact.rightsPrefix':
-    '你出現在這個頁面上，或者你是這項賽事的主辦方、擁有其中對局的權利？如果想修改或刪除這裡的任何內容，請',
+  'contact.rightsPrefix': '主辦這項賽事、擁有其中對局的權利，或發現了錯誤？請',
   'contact.rightsLink': '聯絡我們',
-  'contact.rightsSuffix': '，我們會處理。',
+  'contact.rightsSuffix': '。',
   'contact.aboutPage': '相關頁面：{path}',
   'about.heading': '關於 Mistboard',
   'about.lede':

@@ -1284,6 +1284,13 @@ function eventHeader(data: BroadcastRoundResponse): HTMLElement {
     switcher: data.round.id !== '' ? roundSwitcher(data.tour.slug, rounds, data.round.id) : null,
   });
   header.classList.add('xqb-event-header');
+  const path =
+    data.round.id !== ''
+      ? roundHref(data.tour.slug, data.round.id)
+      : `/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}`;
+  header
+    .querySelector('.xqb-hero-actions')
+    ?.append(copyLinkButton(`${window.location.origin}${path}`, primaryName(data.tour)));
   // lichess's banner on the header's right.
   header.append(eventArt(data.tour));
   return header;
@@ -1954,37 +1961,6 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     wrap.append(note);
   }
 
-  const share = document.createElement('details');
-  share.className = 'xqb-share xqb-overview-share';
-  share.open = true;
-  // lichess's share box: its title is a tab on the box's top edge, with a
-  // chevron that turns as it opens and closes.
-  const summary = document.createElement('summary');
-  summary.className = 'xqb-share-tab';
-  summary.append(t('broadcast.shareByUrl'));
-  const chevron = document.createElement('span');
-  chevron.className = 'xqb-share-chevron';
-  chevron.setAttribute('aria-hidden', 'true');
-  chevron.innerHTML = CARET_DOWN;
-  summary.append(chevron);
-  share.append(summary);
-  const origin = window.location.origin;
-  share.append(
-    shareRow(
-      primaryName(data.tour),
-      `${origin}/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}`,
-    ),
-  );
-  if (data.round.id !== '') {
-    share.append(
-      shareRow(
-        `${primaryName(data.tour)} | ${primaryName(data.round)}`,
-        `${origin}/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}/round/${encodeURIComponent(
-          data.round.id,
-        )}`,
-      ),
-    );
-  }
   const credit = broadcastRecordsCredit(data.boards, data.tour);
   if (credit) {
     const line = document.createElement('p');
@@ -1995,9 +1971,7 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     link.rel = 'noreferrer';
     link.textContent = credit.name ?? credit.host;
     line.append(link);
-    wrap.append(share, line);
-  } else {
-    wrap.append(share);
+    wrap.append(line);
   }
   return wrap;
 }
@@ -2029,49 +2003,6 @@ const ICON_CALENDAR = `<svg ${ICON_ATTRS}><rect x="3.5" y="5" width="17" height=
 const ICON_TROPHY = `<svg ${ICON_ATTRS}><path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/></svg>`;
 const ICON_CLOCK = `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>`;
 const ICON_PIN = `<svg ${ICON_ATTRS}><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>`;
-
-function shareRow(label: string, url: string): HTMLElement {
-  const row = document.createElement('div');
-  row.className = 'xqb-share-row';
-  const name = document.createElement('span');
-  name.className = 'xqb-share-label';
-  name.textContent = label;
-  const field = document.createElement('input');
-  field.type = 'text';
-  field.readOnly = true;
-  field.value = url;
-  field.className = 'xqb-share-url';
-  field.setAttribute('aria-label', label);
-  field.addEventListener('focus', () => field.select());
-  // The copy button is joined to the field (lichess's clipboard tab); it
-  // shows a check for a moment once the link is on the clipboard.
-  const copy = document.createElement('button');
-  copy.type = 'button';
-  copy.className = 'xqb-share-copy';
-  copy.setAttribute('aria-label', t('broadcast.copy'));
-  copy.title = t('broadcast.copy');
-  copy.innerHTML = CLIPBOARD_ICON;
-  copy.addEventListener('click', () => {
-    void navigator.clipboard?.writeText(url).then(() => {
-      copy.innerHTML = CHECK_MARK;
-      copy.title = t('broadcast.copied');
-      copy.classList.add('xqb-share-copied');
-      window.setTimeout(() => {
-        copy.innerHTML = CLIPBOARD_ICON;
-        copy.title = t('broadcast.copy');
-        copy.classList.remove('xqb-share-copied');
-      }, 1500);
-    });
-  });
-  const joined = document.createElement('div');
-  joined.className = 'xqb-share-field';
-  joined.append(field, copy);
-  row.append(name, joined);
-  return row;
-}
-
-const CLIPBOARD_ICON =
-  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4.5" width="12" height="16" rx="2"/><path d="M9.5 4.5V3.5h5v1M9 10h6M9 14h6"/></svg>';
 
 // Players: standings from the broadcast games, the way lichess computes its
 // Players tab, with the same caveat that they may differ from the official
@@ -3241,6 +3172,32 @@ function pgnLink(input: BroadcastPgnInput): HTMLElement {
   link.download = broadcastPgnFileName(input);
   link.textContent = t('broadcast.downloadPgn');
   return link;
+}
+
+// One small button in place of a share box: the phone's share sheet where
+// there is one (a touch screen), else the page's link on the clipboard.
+function copyLinkButton(url: string, title: string): HTMLElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'xqb-export-link xqb-copy-link';
+  const sheet =
+    typeof navigator.share === 'function' && window.matchMedia?.('(pointer: coarse)').matches;
+  const label = t(sheet ? 'broadcast.share' : 'broadcast.copyLink');
+  button.textContent = label;
+  button.addEventListener('click', () => {
+    if (sheet) {
+      void navigator.share({ title, url }).catch(() => {});
+      return;
+    }
+    void navigator.clipboard?.writeText(url).then(
+      () => {
+        button.textContent = t('broadcast.copied');
+        setTimeout(() => (button.textContent = label), 1500);
+      },
+      () => {},
+    );
+  });
+  return button;
 }
 
 // Copies the game's iframe code, for a creator's own page (#454).

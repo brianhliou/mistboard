@@ -178,11 +178,11 @@ export const EN_CONTENT = {
   'contact.sendFailed': "Couldn't send. Try again, or email if it keeps failing.",
   'contact.networkError': 'Network error. Try again.',
   // The small print under every player, team and broadcast page. Approved
-  // English, verbatim; "contact us" is the link to /contact?about=<page>.
-  'contact.rightsPrefix':
-    'Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, ',
-  'contact.rightsLink': 'contact us',
-  'contact.rightsSuffix': " and we'll take care of it.",
+  // English, verbatim (Brian, 2026-10-30); "Contact us" is the link to
+  // /contact?about=<page>.
+  'contact.rightsPrefix': 'Run this event, hold rights to its games, or spot a mistake? ',
+  'contact.rightsLink': 'Contact us',
+  'contact.rightsSuffix': '.',
   'contact.aboutPage': 'About: {path}',
   'about.heading': 'About Mistboard',
   'about.lede':

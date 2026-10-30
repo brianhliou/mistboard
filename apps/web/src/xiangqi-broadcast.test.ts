@@ -470,10 +470,10 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const notes = root.querySelectorAll('.xqb-rights-note');
     expect(notes).toHaveLength(1);
     expect(notes[0]?.textContent).toBe(
-      "Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, contact us and we'll take care of it.",
+      'Run this event, hold rights to its games, or spot a mistake? Contact us.',
     );
     const link = notes[0]?.querySelector('a');
-    expect(link?.textContent).toBe('contact us');
+    expect(link?.textContent).toBe('Contact us');
     expect(link?.getAttribute('href')).toBe(
       `/contact?about=${encodeURIComponent('/broadcast/xiangqi/t/round/r')}`,
     );
@@ -1445,12 +1445,19 @@ describe('event page (tabs, default round, standings)', () => {
     (root.querySelectorAll('.xqb-tab')[0] as HTMLButtonElement).click();
     expect(root.querySelector('.xqb-tab-active')?.textContent).toBe('Overview');
     expect(window.location.search).toBe('?tab=overview');
-    // lichess's overview: one strip of facts and links, then the share box; no
-    // schedule (the round select is the schedule) and no table of labels.
+    // lichess's overview: one strip of facts and links; no schedule (the round
+    // select is the schedule), no table of labels and no share box (the
+    // header's Copy link button replaced it).
     expect(root.querySelector('.xqb-overview-strip')?.textContent).toContain('2 rounds');
     expect(root.querySelector('.xqb-round-row')).toBeNull();
     expect(root.querySelector('.xqb-facts')).toBeNull();
-    expect(root.querySelectorAll('.xqb-share-url')).toHaveLength(2);
+    expect(root.querySelector('.xqb-share-url')).toBeNull();
+    const copyLink = root.querySelector<HTMLButtonElement>('.xqb-event-header .xqb-copy-link');
+    expect(copyLink?.textContent).toBe('Copy link');
+    const writeText = vi.fn(async () => {});
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    copyLink?.click();
+    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/broadcast/xiangqi/t/round/r`);
 
     (root.querySelectorAll('.xqb-tab')[2] as HTMLButtonElement).click();
     // The other rounds are fetched once the tab opens; then the table paints.

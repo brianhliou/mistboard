@@ -355,8 +355,8 @@ export const EN_REVIEW = {
   'broadcast.location': 'Location',
   'broadcast.gameRecords': 'Game records',
   'broadcast.schedule': 'Schedule',
-  'broadcast.shareByUrl': 'Share this broadcast by URL',
-  'broadcast.copy': 'Copy',
+  'broadcast.copyLink': 'Copy link',
+  'broadcast.share': 'Share',
   'broadcast.copied': 'Copied',
   'broadcast.standingsNote':
     'Standings are calculated from the broadcast games and may differ from the official results.',

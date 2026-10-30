@@ -256,8 +256,7 @@ describe('rights note', () => {
     vi.unstubAllGlobals();
   });
 
-  const RIGHTS_TEXT =
-    "Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, contact us and we'll take care of it.";
+  const RIGHTS_TEXT = 'Run this event, hold rights to its games, or spot a mistake? Contact us.';
 
   const zhejiang = {
     ...player({ name: '尹昇', nameEn: 'Yin Sheng', games: 0 }),
@@ -282,7 +281,7 @@ describe('rights note', () => {
     const notes = root.querySelectorAll<HTMLElement>('.xqb-rights-note');
     expect(notes).toHaveLength(1);
     expect(notes[0]?.textContent).toBe(RIGHTS_TEXT);
-    expect(notes[0]?.querySelector('a')?.textContent).toBe('contact us');
+    expect(notes[0]?.querySelector('a')?.textContent).toBe('Contact us');
     return notes[0]!;
   }
 
