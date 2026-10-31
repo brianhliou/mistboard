@@ -36,6 +36,13 @@ import {
   profileUrlWithFilter,
 } from './profile-games-tools.js';
 import {
+  buildProfilePuzzleProgress,
+  createProfilePuzzleHistory,
+  type ProfilePuzzleDay,
+  type ProfilePuzzleHistory,
+  profilePuzzleDays,
+} from './profile-puzzles.js';
+import {
   buildProfileDashboard,
   buildProfileGameRow,
   buildProfileOverviewShell,
@@ -292,7 +299,10 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
   const overview = buildProfileOverview(profile, spotlight, locale);
   void hydrateProfilePresence(overview, profile.user.handle, locale);
 
-  const tabs = buildProfileTabs(profile, locale, initialFilter);
+  // The owner's puzzle history feeds both the progress chart and the Activity
+  // tab's daily puzzle rows; visitors never request it.
+  const puzzleHistory = profile.isViewer ? createProfilePuzzleHistory() : null;
+  const tabs = buildProfileTabs(profile, locale, initialFilter, puzzleHistory);
   const ratings = buildProfileRatings(profile.ratings, locale, {
     selectedVariant,
     onSelect: (variant, timeClass) => {
@@ -319,7 +329,11 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
     locale,
   );
 
-  shell.append(buildProfileDashboard(ratings, overview, tabs.el));
+  const dashboard = buildProfileDashboard(ratings, overview, tabs.el);
+  if (puzzleHistory) {
+    tabs.el.before(buildProfilePuzzleProgress(locale, puzzleHistory));
+  }
+  shell.append(dashboard);
 }
 
 // Static frame of the players page: community rail, twin headings (Online
@@ -1831,8 +1845,9 @@ function buildProfileTabs(
   profile: UserProfile,
   locale: Locale = currentLocale(),
   initialFilter: ProfileGamesFilter = NO_PROFILE_GAMES_FILTER,
+  puzzleHistory: ProfilePuzzleHistory | null = null,
 ): ProfileTabsHandle {
-  const activityPanel = buildProfileActivity(profile, locale);
+  const activityPanel = buildProfileActivity(profile, locale, puzzleHistory);
   let filter = initialFilter;
   let gamesPanel = buildProfileGames(profile, locale, filter);
   const saved = profile.isViewer ? buildSavedGamesPanel(locale) : null;
@@ -2109,31 +2124,69 @@ type ProfileActivitySummary = {
   key: string;
   day: string;
   variant: string;
+  // Latest game end that day, for ordering against the puzzle rows.
+  time: number;
   count: number;
   wins: number;
   losses: number;
   draws: number;
 };
 
-function buildProfileActivity(profile: UserProfile, locale: Locale = currentLocale()): HTMLElement {
+type ProfileActivityRow = {
+  day: string;
+  time: number;
+  title: string;
+  pills: { text: string; tone: 'win' | 'loss' | 'draw' }[];
+};
+
+// Puzzle days shown beside the games: at most this many, and when the game
+// list is only its first page, none older than the oldest game loaded, so the
+// feed never implies there were no games on those days.
+const PROFILE_ACTIVITY_PUZZLE_DAYS = 30;
+
+function buildProfileActivity(
+  profile: UserProfile,
+  locale: Locale = currentLocale(),
+  puzzleHistory: ProfilePuzzleHistory | null = null,
+): HTMLElement {
   const section = document.createElement('section');
   section.className = 'profile-activity-panel';
   // No heading: the Activity tab is this panel's label.
 
-  if (profile.games.length === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'landing-games-empty';
-    empty.textContent = t('profile.noAccountGames', {}, locale);
-    section.append(empty);
-    return section;
-  }
+  const gameRows = profileActivitySummaries(profile.games, locale).map((summary) =>
+    profileGameActivityRow(summary, locale),
+  );
+  const render = (puzzleDays: ProfilePuzzleDay[]) => {
+    const rows = mergeProfileActivityRows(
+      gameRows,
+      puzzleDays.map((day) => profilePuzzleActivityRow(day, locale)),
+    );
+    if (rows.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'landing-games-empty';
+      empty.textContent = t('profile.noAccountGames', {}, locale);
+      section.replaceChildren(empty);
+      return;
+    }
+    const list = document.createElement('ol');
+    list.className = 'profile-activity-summary-list';
+    for (const row of rows) list.append(buildProfileActivitySummaryRow(row));
+    section.replaceChildren(list);
+  };
+  render([]);
 
-  const list = document.createElement('ol');
-  list.className = 'profile-activity-summary-list';
-  for (const summary of profileActivitySummaries(profile.games, locale)) {
-    list.append(buildProfileActivitySummaryRow(summary, locale));
-  }
-  section.append(list);
+  puzzleHistory?.subscribe((attempts) => {
+    let days = profilePuzzleDays(attempts, (createdAt) => dayLabel(createdAt, locale));
+    if (profile.games.length < profile.gamesTotal) {
+      const oldestGame = Math.min(...gameRows.map((row) => row.time));
+      if (Number.isFinite(oldestGame)) {
+        const oldestDay = new Date(oldestGame);
+        oldestDay.setHours(0, 0, 0, 0);
+        days = days.filter((day) => day.time >= oldestDay.getTime());
+      }
+    }
+    render(days.slice(0, PROFILE_ACTIVITY_PUZZLE_DAYS));
+  });
   return section;
 }
 
@@ -2146,11 +2199,14 @@ function profileActivitySummaries(
     const day = dayLabel(game.endedAt, locale);
     const variant = profileGameSpecLabel(game, locale);
     const key = `${day}\0${variant}`;
+    const endedAt = game.endedAt ? Date.parse(game.endedAt) : Number.NaN;
+    const time = Number.isFinite(endedAt) ? endedAt : Number.NEGATIVE_INFINITY;
     let summary = summaries.get(key);
     if (!summary) {
-      summary = { key, day, variant, count: 0, wins: 0, losses: 0, draws: 0 };
+      summary = { key, day, variant, time, count: 0, wins: 0, losses: 0, draws: 0 };
       summaries.set(key, summary);
     }
+    summary.time = Math.max(summary.time, time);
     summary.count += 1;
     const tone = profileResultTone(game);
     if (tone === 'win') summary.wins += 1;
@@ -2160,10 +2216,69 @@ function profileActivitySummaries(
   return [...summaries.values()];
 }
 
-function buildProfileActivitySummaryRow(
+function profileGameActivityRow(
   summary: ProfileActivitySummary,
   locale: Locale = currentLocale(),
-): HTMLElement {
+): ProfileActivityRow {
+  const pills: ProfileActivityRow['pills'] = [];
+  const pill = (count: number, key: I18nKey, tone: 'win' | 'loss' | 'draw') => {
+    if (count > 0) pills.push({ text: `${count} ${t(key, {}, locale).toLowerCase()}`, tone });
+  };
+  pill(summary.wins, 'result.win', 'win');
+  pill(summary.draws, 'result.draw', 'draw');
+  pill(summary.losses, 'result.loss', 'loss');
+  return {
+    day: summary.day,
+    time: summary.time,
+    title: t(
+      summary.count === 1 ? 'profile.activityPlayedOne' : 'profile.activityPlayedMany',
+      { count: summary.count, variant: summary.variant },
+      locale,
+    ),
+    pills,
+  };
+}
+
+function profilePuzzleActivityRow(
+  day: ProfilePuzzleDay,
+  locale: Locale = currentLocale(),
+): ProfileActivityRow {
+  const pills: ProfileActivityRow['pills'] = [];
+  if (day.solved > 0) {
+    pills.push({ text: t('profile.puzzleSolved', { count: day.solved }, locale), tone: 'win' });
+  }
+  if (day.failed > 0) {
+    pills.push({ text: t('profile.puzzleFailed', { count: day.failed }, locale), tone: 'loss' });
+  }
+  return {
+    day: day.day,
+    time: day.time,
+    title: t(
+      day.count === 1 ? 'profile.activityPuzzlesOne' : 'profile.activityPuzzlesMany',
+      { count: day.count },
+      locale,
+    ),
+    pills,
+  };
+}
+
+// Game rows keep their server order (newest first); each puzzle day slots in
+// ahead of the first game row that ended before its latest attempt.
+function mergeProfileActivityRows(
+  games: ProfileActivityRow[],
+  puzzles: ProfileActivityRow[],
+): ProfileActivityRow[] {
+  const rows: ProfileActivityRow[] = [];
+  let next = 0;
+  for (const game of games) {
+    while (next < puzzles.length && puzzles[next]!.time >= game.time) rows.push(puzzles[next++]!);
+    rows.push(game);
+  }
+  rows.push(...puzzles.slice(next));
+  return rows;
+}
+
+function buildProfileActivitySummaryRow(row: ProfileActivityRow): HTMLElement {
   const item = document.createElement('li');
   item.className = 'profile-activity-summary-row';
 
@@ -2176,40 +2291,25 @@ function buildProfileActivitySummaryRow(
 
   const day = document.createElement('span');
   day.className = 'profile-activity-summary-day';
-  day.textContent = summary.day;
+  day.textContent = row.day;
 
   const title = document.createElement('span');
   title.className = 'profile-activity-summary-title';
-  title.textContent = t(
-    summary.count === 1 ? 'profile.activityPlayedOne' : 'profile.activityPlayedMany',
-    { count: summary.count, variant: summary.variant },
-    locale,
-  );
+  title.textContent = row.title;
   body.append(day, title);
 
   const record = document.createElement('span');
   record.className = 'profile-activity-record';
-  if (summary.wins > 0)
-    record.append(buildProfileRecordPill(summary.wins, t('result.win', {}, locale), 'win'));
-  if (summary.draws > 0) {
-    record.append(buildProfileRecordPill(summary.draws, t('result.draw', {}, locale), 'draw'));
-  }
-  if (summary.losses > 0) {
-    record.append(buildProfileRecordPill(summary.losses, t('result.loss', {}, locale), 'loss'));
-  }
+  for (const pill of row.pills) record.append(buildProfileRecordPill(pill.text, pill.tone));
 
   item.append(marker, body, record);
   return item;
 }
 
-function buildProfileRecordPill(
-  count: number,
-  label: string,
-  tone: 'win' | 'loss' | 'draw',
-): HTMLElement {
+function buildProfileRecordPill(text: string, tone: 'win' | 'loss' | 'draw'): HTMLElement {
   const pill = document.createElement('span');
   pill.className = `profile-record-pill profile-record-pill-${tone}`;
-  pill.textContent = `${count} ${label.toLowerCase()}`;
+  pill.textContent = text;
   return pill;
 }
 
