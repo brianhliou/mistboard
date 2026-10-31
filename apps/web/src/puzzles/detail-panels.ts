@@ -28,8 +28,10 @@ export function feedbackPanel(
   renderSession: () => void,
   assist: PuzzleAssistHooks,
 ): HTMLElement {
-  if (isSessionSolved(session)) return solvedPanel(session, navigation, renderSession, assist);
+  // Revealed first: a played-out mate line finishes the board, which would
+  // otherwise read as solved and show "Success!" for a give-up.
   if (session.revealed) return revealedPanel(session, navigation);
+  if (isSessionSolved(session)) return solvedPanel(session, navigation, renderSession, assist);
 
   const panel = document.createElement('div');
   panel.className = `puzzle-feedback puzzle-feedback--${session.feedback.kind}`;

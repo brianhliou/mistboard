@@ -1627,6 +1627,10 @@ describe('standard xiangqi puzzles', () => {
     );
     expect(root.querySelector('.puzzle-move-cell--right')).toBeNull();
     expect(root.textContent).toContain('Rating: 1500');
+    // The played-out answer ends in mate, so the board is finished; a reveal
+    // is still a give-up, never "Success!".
+    await vi.waitFor(() => expect(root.querySelector('.puzzle-revealed-panel')).not.toBeNull());
+    expect(root.textContent).not.toContain('Success!');
     const chip = root.querySelector<HTMLElement>('.puzzle-session-chips .puzzle-streak-chip');
     expect(chip?.dataset.outcome).toBe('failed');
   });
