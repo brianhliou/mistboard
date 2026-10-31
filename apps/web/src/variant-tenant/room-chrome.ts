@@ -39,6 +39,7 @@ import {
 import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile-link.js';
 import { rememberBotRoomRequest } from '../pve-memory.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
+import { postWithBrowserIdentity } from '../room-create-retry.js';
 import { isLikelySignedIn } from '../signed-in-state.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { localizedRulesHref } from '../variant-public-surfaces.js';
@@ -893,7 +894,7 @@ export function createTenantRoomChrome<C extends string>(
     renderRoomActions();
     try {
       const body = playAgainBody();
-      const response = await fetch('/api/rooms', {
+      const response = await postWithBrowserIdentity('/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),

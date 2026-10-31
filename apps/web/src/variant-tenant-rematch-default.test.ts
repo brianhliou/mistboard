@@ -5,7 +5,7 @@
 // roomMode, so a finished bot game read as PvP and showed no Rematch at all.
 // Drives the real room modules through a stubbed socket.
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TenantSocketClientOptions } from './variant-tenant/socket-client.js';
 
 const socket = vi.hoisted(() => ({
@@ -121,6 +121,8 @@ function buttonsNamed(label: string): HTMLButtonElement[] {
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 
+afterEach(() => vi.unstubAllGlobals());
+
 beforeEach(() => {
   document.body.innerHTML = '';
   fetchSpy = vi.fn(async () => new Response('{}', { status: 404 }));
@@ -160,6 +162,10 @@ describe('tenant PvP rematch, on by default', () => {
 
 describe('Fog Xiangqi bot rematch', () => {
   it('shows Rematch on a finished bot game and opens a new bot room, colours swapped', async () => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => (key === 'mistboard.device' ? 'guest-rematch-776' : null),
+      setItem: vi.fn(),
+    });
     await mount(
       'dxq_rematch',
       bootDarkXiangqi,
@@ -173,6 +179,7 @@ describe('Fog Xiangqi bot rematch', () => {
     rematch?.click();
     await vi.waitFor(() => expect(roomPosts()).toHaveLength(1));
     const [[, init]] = roomPosts();
+    expect(new Headers(init.headers).get('x-mistboard-device-id')).toBe('guest-rematch-776');
     expect(JSON.parse(String(init.body))).toMatchObject({
       mode: 'pve',
       gameSpecId: 'dark-xiangqi',

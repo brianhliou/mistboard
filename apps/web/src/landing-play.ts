@@ -54,7 +54,7 @@ import { registerLobbySeek, withdrawLobbySeeks } from './lobby-seek-registry.js'
 import { playerNameEl, profileTargetFor } from './profile-link.js';
 import { rememberBotRoomRequest, rememberedPveEngine } from './pve-memory.js';
 import { isCorrespondenceRatedModeEnabled, isRatedModeEnabled } from './rated-flag.js';
-import { postThroughRestart } from './room-create-retry.js';
+import { postThroughRestart, postWithBrowserIdentity } from './room-create-retry.js';
 import { buildSeekAcceptAction } from './seek-accept.js';
 import { isLikelySignedIn, isLikelyStatsExcluded } from './signed-in-state.js';
 import { navPhoneMediaQuery } from './site-shell.js';
@@ -4103,7 +4103,7 @@ export function joinLobbyFromPlay(
     if (!active) return;
     // Not aborted on cancel: the server makes the ticket whether or not this
     // tab reads the answer, so the answer is needed to withdraw it.
-    const response = await fetch('/api/lobby', {
+    const response = await postWithBrowserIdentity('/api/lobby', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
