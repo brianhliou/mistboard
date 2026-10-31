@@ -224,7 +224,7 @@ describe('cold join to a finished banqi room', () => {
     expect(moveCells()).toHaveLength(PLIES);
     expect(document.querySelectorAll('li.xiangqi-move-row')).toHaveLength(Math.ceil(PLIES / 2));
     expect(reviewHref()).toBe(`/banqi/game/${ROOM}?ply=${PLIES}`);
-    // The live tip is the server's fully revealed board.
+    // The live tip: this game turned every tile over before it ended.
     expect(Object.values(boardOnScreen())).not.toContain('');
 
     moveCells()[MID - 1]!.click();
@@ -233,6 +233,22 @@ describe('cold join to a finished banqi room', () => {
 
     controlButton('first').click();
     expect(boardOnScreen()).toEqual(expectedMasked(STATES[0]!));
+  });
+
+  // The server serves a finished room every tile face up; the room turns the
+  // ones nobody flipped back over (Brian, 2026-10-30).
+  it('keeps the tiles still face down at the end face down on the board', async () => {
+    const options = await mount();
+    options.applyHello(
+      frame('hello', {
+        seat: 'spectator',
+        state: truthView(resigned(STATES[MID]!)),
+        events: [CREATED, ...moveEvents(MID), FINISHED],
+      }),
+    );
+    options.render();
+    expect(Object.values(expectedMasked(STATES[MID]!))).toContain('');
+    expect(boardOnScreen()).toEqual(expectedMasked(STATES[MID]!));
   });
 
   it('enables the scrubber controls (#264)', async () => {

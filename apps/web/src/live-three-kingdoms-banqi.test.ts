@@ -265,7 +265,8 @@ describe('Three Kingdoms banqi live room', () => {
     }
   });
 
-  it('keeps both lines and their names once the game is over', async () => {
+  // A seeded game played to its end, captures first, with the moves that got there.
+  function playToFinish(): { line: ThreeKingdomsBanqiState; moves: ThreeKingdomsBanqiMove[] } {
     let line = createThreeKingdomsBanqiStateFromSetup(
       ROOM,
       createThreeKingdomsBanqiSetup(seeded(7)),
@@ -281,20 +282,55 @@ describe('Three Kingdoms banqi live room', () => {
       moves.push(move);
     }
     expect(line.status.type).not.toBe('playing');
+    return { line, moves };
+  }
+
+  async function mountFinished(
+    state: ThreeKingdomsBanqiWireView,
+    moves: ThreeKingdomsBanqiMove[],
+  ): Promise<void> {
     const options = await mount();
     options.applyHello(
-      hello({
-        type: 'hello',
-        seat: 'red',
-        state: view(line, 'red'),
-        events: [CREATED, ...moveEvents(moves)],
-      }),
+      hello({ type: 'hello', seat: 'red', state, events: [CREATED, ...moveEvents(moves)] }),
     );
     options.render();
+  }
+
+  function slotsOnScreen(): Record<string, string> {
+    const slots: Record<string, string> = {};
+    for (const slot of document.querySelectorAll<SVGGElement>('[data-piece-square]')) {
+      slots[slot.dataset.pieceSquare ?? ''] = slot.innerHTML;
+    }
+    return slots;
+  }
+
+  it('keeps both lines and their names once the game is over', async () => {
+    const { line, moves } = playToFinish();
+    await mountFinished(view(line, 'red'), moves);
     const blocks = [...document.querySelectorAll<HTMLElement>('.hidden-pool .tk-seat')];
     expect(blocks).toHaveLength(2);
     for (const block of blocks) expect(lineKeys(block)).toEqual(['Captured', 'Still face-down']);
     expect(document.body.textContent).not.toContain('Face-down at the end');
+  });
+
+  // A finished room is served every tile face up; the board keeps the ones
+  // nobody flipped face down, as the panel's line says (Brian, 2026-10-30).
+  it('draws the finished board as play left it, unflipped tiles face down', async () => {
+    const { line, moves } = playToFinish();
+    expect(Object.values(line.board).some((entry) => entry?.faceDown)).toBe(true);
+    await mountFinished(view(line, 'red'), moves);
+    const asPlayed = slotsOnScreen();
+    const truth: ThreeKingdomsBanqiWireView = {
+      ...view(line, 'red'),
+      board: Object.fromEntries(
+        Object.entries(line.board).map(([square, entry]) => [
+          square,
+          entry && { color: entry.color, role: entry.role, faceDown: false as const },
+        ]),
+      ),
+    };
+    await mountFinished(truth, moves);
+    expect(slotsOnScreen()).toEqual(asPlayed);
   });
 
   it('says how many moves are left only from 30 quiet moves on', async () => {

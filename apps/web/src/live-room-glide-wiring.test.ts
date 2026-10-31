@@ -334,11 +334,12 @@ describe('Three Kingdoms banqi game end', () => {
     return found;
   }
 
-  it('lands the last move, then turns the hidden tiles over in turn', async () => {
+  // The tiles nobody flipped stay face down at the end (Brian, 2026-10-30), so
+  // the finish is the last move landing, then the badges.
+  it('lands the last move and turns nothing else over', async () => {
     const animateBoard = await liveHook('./live-three-kingdoms-banqi.js', 'three-kingdoms-banqi');
     vi.useFakeTimers();
     try {
-      // Attached: a turn whose slot a later render replaced does nothing.
       const el = document.body.appendChild(document.createElement('div'));
       el.innerHTML = renderThreeKingdomsBanqiLiveBoardSvg(playing, {
         selected: null,
@@ -358,36 +359,18 @@ describe('Three Kingdoms banqi game end', () => {
         draggingFrom: null,
         lastMove: { from: 'a1', to: 'b1' },
       });
-      const atOnce = recordAnimations(el, () => {
+      const played = recordAnimations(el, () => {
         animateBoard({ board: el }, finished, () => ({
           kind: 'live',
           move: { from: 'a1', to: 'b1' },
           color: 'black',
         }));
-      });
-      // The move glides now; the two hidden tiles wait face down for it.
-      expect(atOnce).toContain('b1');
-      expect(atOnce).not.toContain('c1');
-      const faceDown = (square: string) =>
-        el.querySelector(`[data-piece-square="${square}"] .banqi-back`) !== null;
-      expect(faceDown('c1') && faceDown('d1')).toBe(true);
-
-      // One tile at a time, c1 before d1.
-      const first = recordAnimations(el, () => {
-        while (faceDown('c1') && vi.getTimerCount()) {
-          vi.advanceTimersToNextTimer();
-        }
-      });
-      expect(first.filter((s) => s === 'piece-flip-back')).toHaveLength(1);
-      expect(faceDown('c1')).toBe(false);
-      expect(faceDown('d1')).toBe(true);
-      const rest = recordAnimations(el, () => {
         vi.runAllTimers();
       });
-      expect(rest.filter((s) => s === 'piece-flip-back')).toHaveLength(1);
-      expect(faceDown('d1')).toBe(false);
+      expect(played).toContain('b1');
+      expect(played).not.toContain('piece-flip-back');
 
-      // The badges wait until the last tile has turned.
+      // The badges wait for the move to land.
       expect(config().finishBadgeDelayMs as number).toBeGreaterThan(0);
       el.remove();
     } finally {

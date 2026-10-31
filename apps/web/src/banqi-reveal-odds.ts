@@ -84,3 +84,17 @@ export function banqiFaceDownAtEnd<S extends string, V extends BanqiOddsView<S> 
   }
   return { ...view, board };
 }
+
+/**
+ * The board a finished live room draws: as play left it, so the tiles nobody
+ * turned over stay face down (Brian, 2026-10-30: "at the end of the game we
+ * don't face everything up"). The review page still shows the whole deal. Any
+ * other view, or a log that does not cover the game, draws as served.
+ */
+export function banqiBoardAsPlayed<
+  S extends string,
+  V extends BanqiOddsView<S> & { ply: number; status: { type: string } },
+>(view: V, moves: readonly { from: S; to: S }[]): V {
+  if (view.status.type !== 'finished') return view;
+  return banqiFaceDownAtEnd<S, V>(view, moves) ?? view;
+}

@@ -28,6 +28,7 @@ import type {
 import { banqiMoveLabel, banqiMoveLabelOnBoard } from '@mistboard/game';
 import './live-xiangqi.css';
 import { renderBanqiMaterial } from './banqi-material.js';
+import { banqiBoardAsPlayed } from './banqi-reveal-odds.js';
 import { pieceFlipDurationMs } from './board-anim.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { banqiEnabled } from './feature-flags.js';
@@ -344,20 +345,25 @@ function renderBoard(liveRefs: LiveRefs, view: BanqiWireView | null): void {
 
   const perspective = orientationFor(view);
   const drawn = drawnBoardOverlays<BanqiSquare>(annotations?.shapes() ?? []);
-  liveRefs.board.innerHTML = renderBanqiBoardSvg(view, perspective, {
-    arrows: drawn.arrows,
-    markers: drawn.markers,
-    interactive: true,
-    selectedSquare,
-    draggingFrom,
-    coordinates: boardCoordinatesEnabled(),
-    // A face-down tile is clicked directly to flip, so the renderer wants only
-    // the selected piece's board moves (it already excludes self-move flips).
-    legalMoves: selectedSquare
-      ? view.legalMoves.filter((move) => move.from === selectedSquare && move.to !== move.from)
-      : [],
-    forbiddenMoves: selectedSquare ? (view.forbiddenMoves ?? []) : [],
-  });
+  // A finished room keeps the tiles nobody turned over face down.
+  liveRefs.board.innerHTML = renderBanqiBoardSvg(
+    banqiBoardAsPlayed(view, playedMoves()),
+    perspective,
+    {
+      arrows: drawn.arrows,
+      markers: drawn.markers,
+      interactive: true,
+      selectedSquare,
+      draggingFrom,
+      coordinates: boardCoordinatesEnabled(),
+      // A face-down tile is clicked directly to flip, so the renderer wants only
+      // the selected piece's board moves (it already excludes self-move flips).
+      legalMoves: selectedSquare
+        ? view.legalMoves.filter((move) => move.from === selectedSquare && move.to !== move.from)
+        : [],
+      forbiddenMoves: selectedSquare ? (view.forbiddenMoves ?? []) : [],
+    },
+  );
   // Click + drag are delegated to the persistent board container once at mount
   // (installBanqiBoardInteraction), so they survive these innerHTML re-renders.
   syncChaseNotice(view);
@@ -509,8 +515,11 @@ function dropBanqiPiece(liveRefs: LiveRefs, from: BanqiSquare, to: BanqiSquare |
 // has unrevealed: public arithmetic (start minus revealed minus captured) that
 // the player would otherwise do by hand.
 function renderCapturedPools(liveRefs: LiveRefs, view: BanqiWireView | null): void {
-  const moves = (core?.state.events ?? []).filter(isBanqiMoveEvent).map((event) => event.move);
-  renderBanqiMaterial(liveRefs, view, view ? viewerInkFor(view) : null, moves);
+  renderBanqiMaterial(liveRefs, view, view ? viewerInkFor(view) : null, playedMoves());
+}
+
+function playedMoves() {
+  return (core?.state.events ?? []).filter(isBanqiMoveEvent).map((event) => event.move);
 }
 
 // The viewer's INK (glyph colour), once the first flip binds it. Falls back to

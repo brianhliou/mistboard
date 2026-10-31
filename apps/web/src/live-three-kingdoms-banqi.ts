@@ -27,6 +27,7 @@ import type {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { renderBanqiMaterial } from './banqi-material.js';
+import { banqiBoardAsPlayed } from './banqi-reveal-odds.js';
 import { pieceAnimationDurationMs, pieceFlipDurationMs } from './board-anim.js';
 import { flipSeatInk } from './flip-seat-ink.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
@@ -44,7 +45,6 @@ import {
   animateThreeKingdomsBanqiBoardMove,
   animateThreeKingdomsBanqiReveal,
   renderThreeKingdomsBanqiLiveBoardSvg,
-  revealThreeKingdomsBanqiTilesInTurn,
   TK_LIVE_BOARD_VIEW,
   type TkLiveBoardEntry,
 } from './three-kingdoms-banqi-diagrams.js';
@@ -91,16 +91,8 @@ let core: TenantLiveClientContext<BanqiSeat, ThreeKingdomsBanqiWireView> | null 
 let selectedSquare: Square | null = null;
 let draggingFrom: Square | null = null;
 let roomMode: 'pve' | 'pvp' = 'pvp';
-// The board the last live render showed, to know which tiles the final move
-// left face down; and how long the finish takes before the badges come up.
-let lastLiveBoard: ThreeKingdomsBanqiWireView['board'] | null = null;
+// How long the final move takes to land before the badges come up.
 let finishHoldMs = 0;
-
-// The end of the game in order: the last move lands, the tiles still face down
-// turn over one by one in under a second, then the badges.
-const FINISH_PAUSE_MS = 150;
-const FINISH_REVEAL_SPAN_MS = 900;
-const FINISH_STAGGER_MAX_MS = 70;
 
 function isSeat(value: unknown): value is BanqiSeat {
   return value === 'red' || value === 'black';
@@ -196,11 +188,10 @@ const client = createTenantLiveClient<
     selectedSquare = null;
     draggingFrom = null;
     roomMode = 'pvp';
-    lastLiveBoard = null;
     finishHoldMs = 0;
   },
-  // The generals, in the ink each seat bound; a general taken earlier has no
-  // badge. TK's own end reasons borrow the labels that say the same thing.
+  // The generals, in the ink each seat bound; a general taken earlier or still
+  // face down when play ended has no badge. TK's own end reasons borrow the labels that say the same thing.
   finishBadges: (view) =>
     view.status.type === 'finished'
       ? finishBadgesForResult({
@@ -209,7 +200,7 @@ const client = createTenantLiveClient<
           reason: TK_BADGE_REASON[view.status.reason] ?? view.status.reason,
           generalSquare: (seat) => {
             const ink = seatInk(seat, view);
-            return ink ? tkGeneralSquare(view.board, ink) : null;
+            return ink ? tkGeneralSquare(boardAsPlayed(view), ink) : null;
           },
         })
       : [],
@@ -223,10 +214,6 @@ const client = createTenantLiveClient<
   // echoes it (a dropped piece snaps back to its origin until then), so the
   // echo is the first time the piece moves and gliding it is not a replay.
   animateBoard: (liveRefs, view, takePendingAnimation) => {
-    // Only a live pending plays the finish, and the core arms one only while
-    // the replay is at the live ply, so the board drawn before it is live too.
-    const before = lastLiveBoard;
-    lastLiveBoard = view?.board ?? null;
     finishHoldMs = 0;
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
@@ -235,12 +222,11 @@ const client = createTenantLiveClient<
       const flipped = banqiRevealFlipSquare(pending, view.board);
       if (flipped) animateThreeKingdomsBanqiReveal(liveRefs.board, flipped);
       else animateThreeKingdomsBanqiBoardMove(liveRefs.board, pending.move);
-      if (view.status.type === 'finished' && before) {
-        finishHoldMs = playFinishReveal(liveRefs, view, before, flipped !== null);
-        return finishHoldMs;
-      }
-      // Held for the core: the bot's instant reply waits for the move to land.
-      return flipped ? pieceFlipDurationMs() : pieceAnimationDurationMs();
+      // Held for the core: the bot's instant reply waits for the move to land,
+      // and the finish badges wait for the final one.
+      const landMs = Math.max(0, flipped ? pieceFlipDurationMs() : pieceAnimationDurationMs());
+      if (view.status.type === 'finished') finishHoldMs = landMs;
+      return landMs;
     }
     if (pending.direction === 'forward') {
       const stepped = view.lastMove;
@@ -315,7 +301,7 @@ const TK_BADGE_REASON: Partial<Record<string, string>> = {
   agreement: 'draw',
 };
 
-/** A finished room shows every tile face up, so the general is found by face. */
+/** The general's square on the board as drawn; a face-down general has none. */
 function tkGeneralSquare(
   board: ThreeKingdomsBanqiWireView['board'],
   ink: BanqiColor,
@@ -326,33 +312,6 @@ function tkGeneralSquare(
     }
   }
   return null;
-}
-
-/** After the final move: every tile the last live board still showed face
- *  down turns over in turn, once the move has landed. Returns when the badges
- *  may start. */
-function playFinishReveal(
-  liveRefs: LiveRefs,
-  view: ThreeKingdomsBanqiWireView,
-  before: ThreeKingdomsBanqiWireView['board'],
-  flip: boolean,
-): number {
-  const landMs = Math.max(0, flip ? pieceFlipDurationMs() : pieceAnimationDurationMs());
-  const hidden = new Set<Square>();
-  for (const [square, entry] of Object.entries(before)) {
-    const now = view.board[square as Square];
-    if (entry?.faceDown && now && !now.faceDown && square !== view.lastMove?.to) {
-      hidden.add(square as Square);
-    }
-  }
-  const staggerMs = hidden.size
-    ? Math.min(FINISH_STAGGER_MAX_MS, FINISH_REVEAL_SPAN_MS / hidden.size)
-    : 0;
-  const revealEnd = revealThreeKingdomsBanqiTilesInTurn(liveRefs.board, hidden, {
-    startMs: landMs + FINISH_PAUSE_MS,
-    staggerMs,
-  });
-  return Math.max(landMs, revealEnd);
 }
 
 // ── Notation ──────────────────────────────────────────────────────────────────
@@ -388,8 +347,17 @@ function notate(
 // recovers which tiles were still face-down when play ended. Then, once the
 // quiet-move count nears the limit, how many moves are left before points
 // decide the game.
+function playedMoves(): ThreeKingdomsBanqiMove[] {
+  return (core?.state.events ?? []).filter(isMoveEvent).map((event) => event.move);
+}
+
+/** The board as play left it: a finished room keeps the unturned tiles face down. */
+function boardAsPlayed(view: ThreeKingdomsBanqiWireView): ThreeKingdomsBanqiWireView['board'] {
+  return banqiBoardAsPlayed<Square, ThreeKingdomsBanqiWireView>(view, playedMoves()).board;
+}
+
 function renderMaterial(liveRefs: LiveRefs, view: ThreeKingdomsBanqiWireView | null): void {
-  const moves = (core?.state.events ?? []).filter(isMoveEvent).map((event) => event.move);
+  const moves = playedMoves();
   const bottomSeat: BanqiSeat = core?.orientation() ?? 'red';
   const topSeat: BanqiSeat = bottomSeat === 'red' ? 'black' : 'red';
   const viewerInk = view && core ? seatInk(bottomSeat, view) : null;
@@ -544,7 +512,7 @@ function renderBoard(liveRefs: LiveRefs, view: ThreeKingdomsBanqiWireView | null
   const targets = selectedSquare
     ? view.legalMoves.filter((m) => m.from === selectedSquare && m.to !== m.from).map((m) => m.to)
     : [];
-  liveRefs.board.innerHTML = renderThreeKingdomsBanqiLiveBoardSvg(view.board, {
+  liveRefs.board.innerHTML = renderThreeKingdomsBanqiLiveBoardSvg(boardAsPlayed(view), {
     selected: selectedSquare,
     targets,
     draggingFrom,
