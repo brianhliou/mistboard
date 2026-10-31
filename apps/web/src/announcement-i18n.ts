@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-11-01 (AB-JChess-20261031) ── 电脑 / 级 follow the 2026-10-22 jqe entry.
+  'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成为最强揭棋电脑。',
+  "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.":
+    'AB-JChess-20261031 是 Huorongrong 和 Laoxu（Kouza）基于 jqe 开源代码推出的新版本。它与 jqe 对弈 600 盘，306 胜、67 和、227 负。它现在排在 jqe 上面一级，jqe 继续保留。',
+  'Play AB-JChess': '与 AB-JChess 对弈',
   'Puzzle Streak, and puzzles by theme.': '连续解题上线，还可以按主题练题。',
   'Puzzle Streak serves puzzles that get harder as you go, with no clock and one skip, and one wrong move ends the run. The new themes page lets you train one theme at a time, such as a single mate pattern. Each puzzle now plays in the moves of the game it came from before you start.':
     '连续解题会出越来越难的题目，不计时，可跳过一次，走错一步即结束。新的题目主题页可以一次只练一个主题，例如某一种杀法。每道题开始前，会先播放它所出自的那盘对局的着法。',
@@ -545,6 +550,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-11-01 (AB-JChess-20261031) ── 電腦 / 級 follow the 2026-10-22 jqe entry.
+  'AB-JChess is the top jieqi bot again.': 'AB-JChess 重新成為最強揭棋電腦。',
+  "AB-JChess-20261031, a new release by Huorongrong and Laoxu (Kouza) built on jqe's open-source code, beat jqe 306 games to 227 with 67 draws over 600 games. It now sits one level above jqe, which stays on the ladder.":
+    'AB-JChess-20261031 是 Huorongrong 和 Laoxu（Kouza）基於 jqe 開源程式碼推出的新版本。它與 jqe 對弈 600 盤，306 勝、67 和、227 負。它現在排在 jqe 上面一級，jqe 繼續保留。',
+  'Play AB-JChess': '與 AB-JChess 對弈',
   'Puzzle Streak, and puzzles by theme.': '連續解題上線，還可以按主題練題。',
   'Puzzle Streak serves puzzles that get harder as you go, with no clock and one skip, and one wrong move ends the run. The new themes page lets you train one theme at a time, such as a single mate pattern. Each puzzle now plays in the moves of the game it came from before you start.':
     '連續解題會出越來越難的題目，不計時，可跳過一次，走錯一步即結束。新的題目主題頁可以一次只練一個主題，例如某一種殺法。每道題開始前，會先播放它所出自的那盤對局的著法。',
