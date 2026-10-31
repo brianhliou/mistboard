@@ -90,12 +90,13 @@ environment values.
 
 Bot subprocess capacity has two independent limits. Each engine keeps its search
 pool; KataGo Jungle defaults to one process, tunable to two with
-`MISTBOARD_KATAGO_JUNGLE_MAX_PROCESSES` (queue timeout:
-`MISTBOARD_KATAGO_JUNGLE_QUEUE_TIMEOUT_MS`). All UCI runners, analysis sessions,
-warm sessions and KataGo also share `MISTBOARD_ENGINE_MAX_PROCESSES` (default 12,
+`MISTBOARD_KATAGO_JUNGLE_MAX_PROCESSES` (queue timeout
+`MISTBOARD_KATAGO_JUNGLE_QUEUE_TIMEOUT_MS`, default 29,200 ms: two worst-case
+moves, so a second concurrent jungle game waits instead of being shed). All UCI
+runners, analysis sessions, warm sessions and KataGo also share `MISTBOARD_ENGINE_MAX_PROCESSES` (default 12,
 clamped 1–64). This counts parked processes as well as active ones. At capacity,
 the oldest parked process is evicted first; otherwise requests queue for
-`MISTBOARD_ENGINE_QUEUE_TIMEOUT_MS` (default 5,000, clamped 100–30,000 ms).
+`MISTBOARD_ENGINE_QUEUE_TIMEOUT_MS` (default 30,000, clamped 100–30,000 ms, so it is never stricter than a per-engine pool's own wait).
 The lease is held until the child closes, including after a kill or failed spawn.
 `/api/server-status` reports physical usage under `enginePools.processes`,
 separately from per-engine search-slot totals. This is a process cap, not an RSS

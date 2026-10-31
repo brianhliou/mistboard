@@ -90,9 +90,15 @@ export async function deliverEnginePoolWaitDigestOn(
   return sent;
 }
 
+/** The digest's sender. It retries every minute until a day is marked sent, and
+ * those retries hit the alert throttle; none of them is a suppressed alert. */
+export function sendEnginePoolWaitDigest(
+  alert: EngineAlertEmailPayload,
+): Promise<SendEngineAlertEmailResult> {
+  return sendEngineAlertNotification(alert, { countSuppressed: false });
+}
+
 export async function deliverEnginePoolWaitDigest(): Promise<SendEngineAlertEmailResult | null> {
   if (!isInitialized()) return null;
-  return await withTransaction((db) =>
-    deliverEnginePoolWaitDigestOn(db, sendEngineAlertNotification),
-  );
+  return await withTransaction((db) => deliverEnginePoolWaitDigestOn(db, sendEnginePoolWaitDigest));
 }

@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import type { ChildProcess } from 'node:child_process';
+import { EventEmitter } from 'node:events';
 import { appendFileSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -24,8 +26,13 @@ const {
   UciEnginePool,
   UciEngineSession,
   UciWarmSessionCache,
+  withEngineProcess,
 } = await import('./uci-engine-harness.js');
-const { katagoJungleMove } = await import('./jungle-katago-engine.js');
+const { katagoJungleMove, katagoJunglePool, katagoMoveDeadlineMs, KATAGO_JUNGLE_QUEUE_TIMEOUT_MS } =
+  await import('./jungle-katago-engine.js');
+const { deliverEnginePoolWaitDigestOn, sendEnginePoolWaitDigest } = await import(
+  './persistence-engine-capacity.js'
+);
 
 function pool(name: string, timeout = 5_000) {
   return new UciEnginePool({
@@ -325,4 +332,120 @@ test('KataGo never exceeds its configured cap and shares the total guard', async
     aggregateEnginePoolStats().pools.find((p) => p.name === 'katago-jungle')?.maxProcesses,
     1,
   );
+});
+
+test('closing a session still waiting for a total slot leaves the queue and never pages a drop', async (t) => {
+  setEnv(t, 'MISTBOARD_ENGINE_MAX_PROCESSES', '1');
+  setEnv(t, 'MISTBOARD_ENGINE_QUEUE_TIMEOUT_MS', '100');
+  const emails = captureEmails(t);
+  const held = new UciEngineSession(spec);
+  try {
+    await held.ready();
+    const timedOutBefore = aggregateEnginePoolStats().processes.timedOut;
+    const queued = new UciEngineSession(spec);
+    const rejected = assert.rejects(queued.ready(), /session closed/);
+    await delay(20);
+    assert.equal(aggregateEnginePoolStats().processes.queueDepth, 1);
+    queued.close();
+    await rejected;
+    assert.equal(aggregateEnginePoolStats().processes.queueDepth, 0, 'the waiter left the queue');
+    // Past the queue timeout: a waiter left behind would fire a CRITICAL drop email.
+    await delay(250);
+    assert.equal(emails.length, 0);
+    assert.equal(aggregateEnginePoolStats().processes.timedOut, timedOutBefore);
+  } finally {
+    held.close();
+  }
+});
+
+test('a second KataGo move waits out two worst-case moves instead of being shed', async (t) => {
+  assert.ok(KATAGO_JUNGLE_QUEUE_TIMEOUT_MS >= 2 * katagoMoveDeadlineMs(6_000));
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const held = await katagoJunglePool.acquire();
+  let settled = false;
+  const queued = katagoJunglePool.acquire().finally(() => {
+    settled = true;
+  });
+  // The running move may hold its slot for its whole deadline, and the queued
+  // one may sit behind another queued move: two deadlines, less a millisecond.
+  t.mock.timers.tick(2 * katagoMoveDeadlineMs(6_000) - 1);
+  await delay(0);
+  assert.equal(settled, false, 'the queued move must not be shed');
+  held();
+  (await queued)();
+});
+
+test('digest retries through the alert throttle are not reported as suppressed alerts', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: 1_800_400_000_000 });
+  const bodies: Array<{ subject: string; text: string }> = [];
+  let failNext = true;
+  t.mock.method(globalThis, 'fetch', async (_url: string, init: RequestInit) => {
+    if (failNext) {
+      failNext = false;
+      return new Response('{}', { status: 500 });
+    }
+    bodies.push(JSON.parse(String(init.body)));
+    return new Response('{}', { status: 200 });
+  });
+  const day = {
+    day: '2026-10-30',
+    pool: 'jieqi',
+    wait_count: 3,
+    max_wait_ms: 1_500,
+    max_queue_depth: 2,
+  };
+  const db = {
+    query: async (sql: string) => ({
+      rows: sql.includes('advisory')
+        ? [{ locked: true }]
+        : sql.trim().startsWith('SELECT day')
+          ? [day]
+          : [],
+    }),
+  } as unknown as Parameters<typeof deliverEnginePoolWaitDigestOn>[0];
+  const statuses: Array<string | undefined> = [];
+  // The observability loop retries the stored day once a minute until it is sent.
+  for (let minute = 0; minute < 15 && statuses.at(-1) !== 'sent'; minute += 1) {
+    statuses.push(
+      (await deliverEnginePoolWaitDigestOn(db, sendEnginePoolWaitDigest, new Date()))?.status,
+    );
+    t.mock.timers.tick(60_000);
+  }
+  assert.equal(statuses[0], 'failed');
+  assert.ok(statuses.includes('throttled'), 'retries inside the window were throttled');
+  assert.equal(statuses.at(-1), 'sent');
+  assert.equal(bodies.length, 1);
+  assert.doesNotMatch(bodies[0]!.text, /suppressed_since_last_email/);
+});
+
+test('a spawn that errors without ever closing (EMFILE) still frees its total slot', async () => {
+  const before = aggregateEnginePoolStats().processes.active;
+  await withEngineProcess((track) => {
+    // Node's EMFILE/ENFILE path: 'error', no pid, and no 'close' ever follows.
+    const child = new EventEmitter() as unknown as ChildProcess;
+    track(child);
+    child.emit('error', Object.assign(new Error('spawn EMFILE'), { code: 'EMFILE' }));
+  });
+  assert.equal(aggregateEnginePoolStats().processes.active, before);
+});
+
+test('the total process cap never sheds sooner than any per-engine pool would', async () => {
+  const { ENGINE_PROCESS_QUEUE_TIMEOUT_DEFAULT_MS } = await import('./uci-engine-harness.js');
+  const { ABJCHESS_LIVE_QUEUE_TIMEOUT_MS, JQE_LIVE_QUEUE_TIMEOUT_MS } = await import(
+    './jieqi-engine.js'
+  );
+  const { KATAGO_JUNGLE_QUEUE_TIMEOUT_MS } = await import('./jungle-katago-engine.js');
+  // A bot waiting on the total cap has already won its own pool's slot; a
+  // shorter wait here would resign a jieqi or jungle bot its pool would have served.
+  for (const poolTimeout of [
+    5_000,
+    ABJCHESS_LIVE_QUEUE_TIMEOUT_MS,
+    JQE_LIVE_QUEUE_TIMEOUT_MS,
+    KATAGO_JUNGLE_QUEUE_TIMEOUT_MS,
+  ]) {
+    assert.ok(
+      ENGINE_PROCESS_QUEUE_TIMEOUT_DEFAULT_MS >= poolTimeout,
+      `total-cap wait ${ENGINE_PROCESS_QUEUE_TIMEOUT_DEFAULT_MS} ms is shorter than a pool's ${poolTimeout} ms`,
+    );
+  }
 });

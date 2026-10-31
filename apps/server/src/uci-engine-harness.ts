@@ -78,6 +78,8 @@ type QueueEntry = {
   resolve(release: () => void): void;
   timer: ReturnType<typeof setTimeout>;
   warnTimer: ReturnType<typeof setTimeout>;
+  /** Detach the caller's abort listener once the entry leaves the queue. */
+  detach(): void;
 };
 
 // Every constructed pool registers here so /api/server-status can report web-side
@@ -130,8 +132,11 @@ export class UciEnginePool {
     poolRegistry.add(this);
   }
 
-  /** Take a slot, returning a release function. Call it exactly once when done. */
-  acquire(): Promise<() => void> {
+  /** Take a slot, returning a release function. Call it exactly once when done.
+   *  Aborting `signal` while queued leaves the queue at once: no slot, no wait
+   *  warning, no timeout alert (a closed session must not page as a drop). */
+  acquire(signal?: AbortSignal): Promise<() => void> {
+    if (signal?.aborted) return Promise.reject(abortReason(signal));
     if (this.active < this.maxProcesses() && this.queue.length === 0) {
       this.active += 1;
       this.acquired += 1;
@@ -152,9 +157,18 @@ export class UciEnginePool {
         boundedEnvInt('MISTBOARD_ENGINE_POOL_WAIT_WARN_MS', 1_000, 10, 30_000),
       );
       warnTimer.unref();
+      const onAbort = (): void => {
+        const idx = this.queue.indexOf(entry);
+        if (idx < 0) return;
+        this.queue.splice(idx, 1);
+        clearTimeout(entry.timer);
+        clearTimeout(entry.warnTimer);
+        reject(abortReason(signal!));
+      };
       const timer = setTimeout(() => {
         clearTimeout(warnTimer);
-        const idx = this.queue.findIndex((entry) => entry.reject === reject);
+        entry.detach();
+        const idx = this.queue.indexOf(entry);
         if (idx >= 0) this.queue.splice(idx, 1);
         this.timedOut += 1;
         // Saturation that actually shed load (#203): every queue-wait timeout is
@@ -174,7 +188,15 @@ export class UciEnginePool {
         reject(new Error(this.config.queueTimeoutMessage));
       }, this.queueTimeoutMs());
       timer.unref();
-      this.queue.push({ reject, resolve: resolveSlot, timer, warnTimer });
+      const entry: QueueEntry = {
+        reject,
+        resolve: resolveSlot,
+        timer,
+        warnTimer,
+        detach: () => signal?.removeEventListener('abort', onAbort),
+      };
+      signal?.addEventListener('abort', onAbort, { once: true });
+      this.queue.push(entry);
       if (this.queue.length > this.peakQueueDepth) this.peakQueueDepth = this.queue.length;
     });
   }
@@ -185,6 +207,7 @@ export class UciEnginePool {
       const next = this.queue.shift()!;
       clearTimeout(next.timer);
       clearTimeout(next.warnTimer);
+      next.detach();
       this.active += 1;
       this.acquired += 1;
       next.resolve(this.releaseOnce());
@@ -237,10 +260,19 @@ export class UciEnginePool {
 // hash/net in RAM. This independent lease lasts until the OS closes the child.
 // 12 processes leaves headroom on the 24 GB web host even for the ~1 GB engines.
 const parkedProcesses = new Map<UciEngineSession, () => void>();
+
+function abortReason(signal: AbortSignal): Error {
+  return signal.reason instanceof Error ? signal.reason : new Error('engine slot wait aborted');
+}
+// The total cap is a memory guard taken after the per-engine slot, so it must
+// never be the stricter timeout: a 5 s wait here would resign a jieqi bot whose
+// own pool allows 20 s. Default to the harness clamp (30 s), above every pool.
+export const ENGINE_PROCESS_QUEUE_TIMEOUT_DEFAULT_MS = 30_000;
 const engineProcessPool = new UciEnginePool({
   name: 'all-engine-processes',
   maxProcessesEnvVar: 'MISTBOARD_ENGINE_MAX_PROCESSES',
   queueTimeoutEnvVar: 'MISTBOARD_ENGINE_QUEUE_TIMEOUT_MS',
+  defaultQueueTimeoutMs: ENGINE_PROCESS_QUEUE_TIMEOUT_DEFAULT_MS,
   defaultMaxProcesses: 12,
   maxProcessesLimit: 64,
   queueTimeoutMessage: 'Total engine process queue timed out',
@@ -251,13 +283,19 @@ const engineProcessPool = new UciEnginePool({
  * physical lease; resolving a bestmove or sending SIGKILL does not release it. */
 export async function withEngineProcess<T>(
   start: (track: (child: ChildProcess) => void) => T,
+  signal?: AbortSignal,
 ): Promise<Awaited<T>> {
-  const release = await engineProcessPool.acquire();
+  const release = await engineProcessPool.acquire(signal);
   let spawned = false;
   try {
     return await start((child) => {
       spawned = true;
       child.once('close', release);
+      // A spawn that fails for want of file descriptors (EMFILE/ENFILE) emits
+      // 'error' and never 'close'; without a pid there is no process to wait for.
+      child.once('error', () => {
+        if (child.pid === undefined) release();
+      });
     });
   } finally {
     if (!spawned) release();
@@ -955,6 +993,8 @@ export class UciEngineSession {
   private readonly readyPromise: Promise<void>;
   private spawnedAt = Date.now();
   private initDurationMs: number | null = null;
+  // Cancels a still-queued wait for a total-engine slot when the session closes.
+  private readonly slotWait = new AbortController();
 
   constructor(private readonly config: UciEngineSessionConfig) {
     this.readyPromise = this.enqueue(() =>
@@ -973,7 +1013,7 @@ export class UciEngineSession {
         });
         this.child.stdout?.on('data', (chunk: Buffer) => this.onData(chunk));
         return this.init();
-      }),
+      }, this.slotWait.signal),
     );
     // Callers await ready() (or their first eval); an unobserved duplicate
     // rejection must not crash the process.
@@ -1148,6 +1188,7 @@ export class UciEngineSession {
     const pending = this.consumer;
     this.consumer = null;
     pending?.reject(new Error(`${this.label()} session closed`));
+    this.slotWait.abort(new Error(`${this.label()} session closed`));
     try {
       this.ref();
       this.child?.kill('SIGKILL');
@@ -1283,6 +1324,7 @@ export class UciEngineSession {
     const pending = this.consumer;
     this.consumer = null;
     this.closed = true;
+    this.slotWait.abort(err);
     try {
       this.ref();
       this.child?.kill('SIGKILL');

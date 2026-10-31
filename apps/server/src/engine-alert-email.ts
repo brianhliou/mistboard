@@ -15,6 +15,12 @@ type SendOptions = {
   fetchImpl?: typeof fetch;
   nowMs?: number;
   serviceName?: string;
+  /**
+   * False for a retry of one deduplicated delivery (the daily wait digest): a
+   * throttled try is the same email again, not another alert, so it must not
+   * count toward the next email's `suppressed_since_last_email`.
+   */
+  countSuppressed?: boolean;
 };
 
 const alertEmailFrom =
@@ -85,7 +91,7 @@ export async function sendEngineAlertNotification(
   const throttleKey = alertThrottleKey(alert);
   const bucket = throttleBuckets.get(throttleKey);
   if (bucket && nowMs - bucket.lastEmailAtMs < alertEmailMinIntervalMs) {
-    bucket.suppressed += 1;
+    if (options.countSuppressed !== false) bucket.suppressed += 1;
     return { status: 'throttled', suppressed: bucket.suppressed };
   }
   // Carry the burst forward: an email that says nothing about the ones it stands in

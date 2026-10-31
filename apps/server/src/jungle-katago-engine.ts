@@ -174,6 +174,12 @@ const STARTUP_RESERVE_MS = 1_000;
 // linux/amd64 smoke runs); 300 ms is ~50 visits on the reference box.
 const MIN_STAGE_MS = 300;
 
+/** The hard deadline on one move's process: its budget, both minimum stages, and
+ *  8 s of slack for startup and net load. */
+export function katagoMoveDeadlineMs(movetimeCapMs: number): number {
+  return movetimeCapMs + MIN_STAGE_MS * 2 + 8_000;
+}
+
 /** Per-stage `maxTime` in seconds for a move whose whole budget is `movetimeCapMs`. */
 export function katagoStageSeconds(movetimeCapMs: number): number {
   const perStage = Math.max(MIN_STAGE_MS, (movetimeCapMs - STARTUP_RESERVE_MS) / 2);
@@ -229,7 +235,7 @@ export function katagoJungleMove(
   // Timed around the whole call, process start included: what the seat's clock
   // is charged is the wall time, not the search's own idea of it.
   const started = Date.now();
-  return runKatagoGtp(commands, movetimeCapMs + MIN_STAGE_MS * 2 + 8_000).then((replies) => ({
+  return runKatagoGtp(commands, katagoMoveDeadlineMs(movetimeCapMs)).then((replies) => ({
     best: katagoMoveFromReplies(replies),
     visits,
     elapsedMs: Date.now() - started,
@@ -281,18 +287,28 @@ export function katagoMoveFromReplies(replies: readonly string[]): string | null
   return from && to ? `${from}${to}` : null;
 }
 
-const katagoPool = new UciEnginePool({
+// One slot by default: each process peaks near 1 GB. A move can hold that slot
+// for its whole hard deadline (14.6 s at the live 6 s budget), so the default
+// 5 s queue timeout would shed the second concurrent jungle game's move (a shed
+// move retries once, then resigns the bot). The queue waits out two worst-case
+// moves instead: the one running and the one ahead in the queue. 29.2 s sits
+// under the harness's 30 s clamp; MISTBOARD_KATAGO_JUNGLE_QUEUE_TIMEOUT_MS tunes it.
+export const KATAGO_JUNGLE_QUEUE_TIMEOUT_MS =
+  2 * katagoMoveDeadlineMs(KATAGO_JUNGLE_TIERS.get(KATAGO_JUNGLE_ENGINE_ID)!.movetimeCapMs);
+/** Exported for the capacity tests; moves go through `katagoJungleMove`. */
+export const katagoJunglePool = new UciEnginePool({
   name: 'katago-jungle',
   maxProcessesEnvVar: 'MISTBOARD_KATAGO_JUNGLE_MAX_PROCESSES',
   queueTimeoutEnvVar: 'MISTBOARD_KATAGO_JUNGLE_QUEUE_TIMEOUT_MS',
   defaultMaxProcesses: 1,
   maxProcessesLimit: 2,
+  defaultQueueTimeoutMs: KATAGO_JUNGLE_QUEUE_TIMEOUT_MS,
   queueTimeoutMessage: 'KataGo jungle queue timed out',
 });
 
 /** Drive one GTP process to completion, collecting its replies. */
 async function runKatagoGtp(commands: string[], timeoutMs: number): Promise<string[]> {
-  const release = await katagoPool.acquire();
+  const release = await katagoJunglePool.acquire();
   let spawned = false;
   try {
     return await withEngineProcess(
