@@ -1324,13 +1324,13 @@ function showSolutionLine(
 }
 
 // Step the replay cursor forward one ply at a time, reusing the scrub-forward
-// animation, until the whole solution has been shown. Stops early if the user
-// navigated to another puzzle (the board's puzzle id no longer matches).
+// animation, until the whole solution has been shown. Stops once this session
+// is no longer the painted one: another puzzle, or the same puzzle opened again,
+// whose fresh session a stale step would paint over (10-31: the new session's
+// reply then bailed as unpainted and its board never went live).
 function playbackSolution(session: PuzzleSession, renderSession: () => void): void {
-  const puzzleId = session.puzzle.id;
   const step = (): void => {
-    const board = document.querySelector<HTMLElement>('.puzzle-board');
-    if (!board || board.dataset.puzzleId !== puzzleId) return;
+    if (!isPaintedPuzzleSession(session)) return;
     if (session.viewPly >= session.playedMoves.length) return;
     scrubPuzzle(session, renderSession, 'next');
     window.setTimeout(step, REVEAL_STEP_MS);

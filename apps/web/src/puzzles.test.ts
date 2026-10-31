@@ -72,9 +72,13 @@ function json(body: unknown, status = 200): Response {
 beforeEach(() => pinXiangqiNotation('coordinate'));
 afterEach(() => pinXiangqiNotation(null));
 
+// The board goes live only after the page's own pauses (the setup move's intro,
+// the opponent's reply), about 0.9s by design, which leaves vitest's 1s default
+// no margin on a loaded runner. Wait well past the pauses.
 const waitForLiveBoard = (root: HTMLElement): Promise<void> =>
-  vi.waitFor(() =>
-    expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleLive).toBe('true'),
+  vi.waitFor(
+    () => expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleLive).toBe('true'),
+    { timeout: 4000 },
   );
 
 describe('puzzles route', () => {
@@ -1535,6 +1539,41 @@ describe('standard xiangqi puzzles', () => {
     expect(root.textContent).toContain('Rating: 1500');
     const chip = root.querySelector<HTMLElement>('.puzzle-session-chips .puzzle-streak-chip');
     expect(chip?.dataset.outcome).toBe('failed');
+  });
+
+  it('a solution still playing back stops once the same puzzle is reopened', async () => {
+    // 10-31 CI: the reveal playback only checked the board's puzzle id, so after
+    // the same puzzle was opened again it kept stepping its old session onto the
+    // board, and the new session's reply bailed as not painted: no move ever
+    // went live again. Seven plies keep the old playback stepping across every
+    // reply pause of the second solve.
+    const puzzle = minedByPlyCount(7);
+    const base = xiangqiFetchMock([puzzle]);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) =>
+        String(input) === `/api/puzzles/${puzzle.id}/reveal`
+          ? json({ solution: puzzle.solution })
+          : base(input, init),
+      ),
+    );
+    const revealed = document.createElement('div');
+    document.body.append(revealed);
+    await mountPuzzles(revealed, puzzle.id);
+    revealed.querySelector<HTMLButtonElement>('[data-puzzle-reveal]')?.click();
+    await vi.waitFor(() =>
+      expect(revealed.querySelector('.puzzle-move-cell--revealed')).not.toBeNull(),
+    );
+    revealed.remove();
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root, puzzle.id);
+    for (const move of solverMovesOf(puzzle)) {
+      await clickMove(root, move);
+      await vi.waitFor(() => expect(root.textContent).toContain(moveLabel(move)));
+    }
+    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
   });
 
   it('adds a ✓ chip per solved puzzle and reopens a past one from its chip', async () => {
