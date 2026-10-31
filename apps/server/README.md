@@ -88,6 +88,28 @@ Alert email is optional. Engine alert rendering is covered by tests, and
 runtime delivery should be verified without printing provider credentials or
 environment values.
 
+Bot subprocess capacity has two independent limits. Each engine keeps its search
+pool; KataGo Jungle defaults to one process, tunable to two with
+`MISTBOARD_KATAGO_JUNGLE_MAX_PROCESSES` (queue timeout:
+`MISTBOARD_KATAGO_JUNGLE_QUEUE_TIMEOUT_MS`). All UCI runners, analysis sessions,
+warm sessions and KataGo also share `MISTBOARD_ENGINE_MAX_PROCESSES` (default 12,
+clamped 1–64). This counts parked processes as well as active ones. At capacity,
+the oldest parked process is evicted first; otherwise requests queue for
+`MISTBOARD_ENGINE_QUEUE_TIMEOUT_MS` (default 5,000, clamped 100–30,000 ms).
+The lease is held until the child closes, including after a kill or failed spawn.
+`/api/server-status` reports physical usage under `enginePools.processes`,
+separately from per-engine search-slot totals. This is a process cap, not an RSS
+measurement or memory guarantee; size overrides for the engines' hash/net memory.
+
+A pool wait reaching `MISTBOARD_ENGINE_POOL_WAIT_WARN_MS` (default 1,000 ms)
+logs `engine_pool_queue_wait` with pool, elapsed wait and queue depth. These
+warnings are persisted by UTC day and summarized into one email after that day
+ends, including counts per pool. The observability loop checks for completed days
+at boot and every minute, so pending digests survive deploys. Every
+`engine_pool_queue_timeout` sends a prompt critical email through the existing
+alert sender, throttled per pool independently of wait digests. Memory-only
+dev/CLI runs use a process-local 24-hour digest.
+
 ## Security invariant
 
 A `PlayerView` — not a `GameState` — is the only thing that should ever leave the server toward a client. Any outbound path that sends full board state or hidden moves is a security bug. See [`SECURITY.md`](../../SECURITY.md).

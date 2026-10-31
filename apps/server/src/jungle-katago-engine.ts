@@ -7,7 +7,8 @@
 // rung only. hzyhhzy agreed to the site running his engine with that net
 // (hzyhhzy/KataGomo#12), credited on the bot page and /source.
 //
-// It speaks GTP, not UCI, so it cannot ride uci-engine-harness. Two differences
+// It speaks GTP, not UCI; it shares the harness's capacity gates, but has its own
+// command/response driver. Two differences
 // from every other engine we drive:
 //
 //   1. A move is TWO `genmove` calls. The board has a per-move stage (pick the
@@ -48,7 +49,12 @@ import {
   toKatagoFen,
 } from '@mistboard/game';
 import { logger } from './obs.js';
-import { resolveFsfVariantIniPath, type UciEval } from './uci-engine-harness.js';
+import {
+  resolveFsfVariantIniPath,
+  UciEnginePool,
+  type UciEval,
+  withEngineProcess,
+} from './uci-engine-harness.js';
 
 /** The engine id the top jungle seat carries. Named for its engine, not a level,
  *  like AB-JChess: a stronger engine can replace it without redefining a rung. */
@@ -275,47 +281,68 @@ export function katagoMoveFromReplies(replies: readonly string[]): string | null
   return from && to ? `${from}${to}` : null;
 }
 
+const katagoPool = new UciEnginePool({
+  name: 'katago-jungle',
+  maxProcessesEnvVar: 'MISTBOARD_KATAGO_JUNGLE_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_KATAGO_JUNGLE_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 1,
+  maxProcessesLimit: 2,
+  queueTimeoutMessage: 'KataGo jungle queue timed out',
+});
+
 /** Drive one GTP process to completion, collecting its replies. */
-function runKatagoGtp(commands: string[], timeoutMs: number): Promise<string[]> {
-  return new Promise((resolvePromise, reject) => {
-    const child = spawn(
-      katagoJungleEnginePath(),
-      ['gtp', '-model', katagoJungleNetPath(), '-config', katagoJungleConfigPath()],
-      { stdio: ['pipe', 'pipe', 'ignore'] },
+async function runKatagoGtp(commands: string[], timeoutMs: number): Promise<string[]> {
+  const release = await katagoPool.acquire();
+  let spawned = false;
+  try {
+    return await withEngineProcess(
+      (track) =>
+        new Promise<string[]>((resolvePromise, reject) => {
+          const child = spawn(
+            katagoJungleEnginePath(),
+            ['gtp', '-model', katagoJungleNetPath(), '-config', katagoJungleConfigPath()],
+            { stdio: ['pipe', 'pipe', 'ignore'] },
+          );
+          track(child);
+          spawned = true;
+          child.once('close', release);
+          const replies: string[] = [];
+          let buffer = '';
+          let settled = false;
+          const done = (err: Error | null): void => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            child.kill('SIGKILL');
+            if (err) reject(err);
+            else resolvePromise(replies);
+          };
+          const timer = setTimeout(() => {
+            logger.warn({ kind: 'katago_jungle_timeout', timeoutMs, replies: replies.length });
+            done(new Error('katago-jungle move timed out'));
+          }, timeoutMs);
+          timer.unref();
+          child.stdout.setEncoding('utf8');
+          child.stdout.on('data', (chunk: string) => {
+            buffer += chunk;
+            let nl = buffer.indexOf('\n');
+            while (nl >= 0) {
+              const line = buffer.slice(0, nl).trim();
+              buffer = buffer.slice(nl + 1);
+              if (line.startsWith('=') || line.startsWith('?')) replies.push(line);
+              nl = buffer.indexOf('\n');
+            }
+          });
+          child.on('error', (err) => done(err as Error));
+          child.on('close', () => done(null));
+          child.stdin.on('error', () => {
+            // The process can die before it reads stdin (a missing net); 'close' reports it.
+          });
+          child.stdin.write(`${commands.join('\n')}\n`);
+          child.stdin.end();
+        }),
     );
-    const replies: string[] = [];
-    let buffer = '';
-    let settled = false;
-    const done = (err: Error | null): void => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      child.kill('SIGKILL');
-      if (err) reject(err);
-      else resolvePromise(replies);
-    };
-    const timer = setTimeout(() => {
-      logger.warn({ kind: 'katago_jungle_timeout', timeoutMs, replies: replies.length });
-      done(new Error('katago-jungle move timed out'));
-    }, timeoutMs);
-    timer.unref();
-    child.stdout.setEncoding('utf8');
-    child.stdout.on('data', (chunk: string) => {
-      buffer += chunk;
-      let nl = buffer.indexOf('\n');
-      while (nl >= 0) {
-        const line = buffer.slice(0, nl).trim();
-        buffer = buffer.slice(nl + 1);
-        if (line.startsWith('=') || line.startsWith('?')) replies.push(line);
-        nl = buffer.indexOf('\n');
-      }
-    });
-    child.on('error', (err) => done(err as Error));
-    child.on('exit', () => done(null));
-    child.stdin.on('error', () => {
-      // The process can die before it reads stdin (a missing net); 'exit' reports it.
-    });
-    child.stdin.write(`${commands.join('\n')}\n`);
-    child.stdin.end();
-  });
+  } finally {
+    if (!spawned) release();
+  }
 }

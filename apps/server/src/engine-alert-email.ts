@@ -68,7 +68,7 @@ export function alertKindOf(alert: EngineAlertEmailPayload): string {
 // operator got ONE email describing one of them, because a flat (kind, severity)
 // bucket cannot tell six failures apart from one failure repeated.
 export function alertThrottleKey(alert: EngineAlertEmailPayload): string {
-  const subject = typeof alert.room_id === 'string' ? alert.room_id : '';
+  const subject = typeof alert.room_id === 'string' ? alert.room_id : (alert.pool ?? '');
   return `${alertKindOf(alert)}:${alert.severity}:${subject}`;
 }
 
