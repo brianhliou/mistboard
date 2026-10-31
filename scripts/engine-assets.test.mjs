@@ -176,7 +176,12 @@ test('the AB-JChess net is fetched from the author, checksummed, and never packa
   assert.match(fetchNet, /^url=https:\/\/github\.com\/lxsgx23\/AB-JChess\/releases\/download\//m);
   assert.match(fetchNet, /^zip_sha=[0-9a-f]{64}$/m, 'the zip is checked');
   assert.match(fetchNet, /^net_sha=[0-9a-f]{64}$/m, 'the extracted net is checked');
-  assert.match(fetchNet, /ABJNNUE model loaded/, 'the fetched binary loads the net');
+  assert.match(fetchNet, /EvalFile loaded/, 'the fetched binary loads the net');
+  assert.match(
+    fetchNet,
+    /^bench_nodes=43125$/m,
+    'the fetched binary matches the author bench signature',
+  );
   const step = railpack.indexOf('sh /app/scripts/fetch-abjchess-net.sh /app/bin');
   assert.ok(step > 0, 'railpack.json runs the net script');
   assert.ok(
