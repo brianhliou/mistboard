@@ -53,6 +53,14 @@ export function setRestartBanner(
   }
 }
 
+/** A new connection's hello: clear "restarting now", which that hello proves
+ *  is over, but keep "update pending". A socket that reconnects to a server
+ *  still draining (page boot mid-drain, a network blip, a phone tab waking)
+ *  says hello too, and the drain it was warned about has not happened yet. */
+export function clearRestartingBanner(): void {
+  if (currentPhase === 'restarting') setRestartBanner(null);
+}
+
 function clearCountdown(): void {
   if (countdownTimer !== null) window.clearInterval(countdownTimer);
   countdownTimer = null;

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { track } from '../analytics.js';
-import { setRestartBanner } from '../restart-banner.js';
+import { clearRestartingBanner, setRestartBanner } from '../restart-banner.js';
 import {
   createTenantSocketClient,
   SOCKET_FALLBACK_AFTER_FAILED_OPENS,
@@ -10,7 +10,10 @@ import {
   tenantReconnectDelayMs,
 } from './socket-client.js';
 
-vi.mock('../restart-banner.js', () => ({ setRestartBanner: vi.fn() }));
+vi.mock('../restart-banner.js', () => ({
+  setRestartBanner: vi.fn(),
+  clearRestartingBanner: vi.fn(),
+}));
 vi.mock('../analytics.js', () => ({ track: vi.fn() }));
 
 class FakeWebSocket {
@@ -310,8 +313,23 @@ describe('tenant socket client', () => {
     vi.advanceTimersByTime(750);
     lastSocket().open();
     expect(vi.mocked(setRestartBanner).mock.calls.at(-1)?.[0]).toBe('restarting');
+    vi.mocked(clearRestartingBanner).mockClear();
     lastSocket().message({ type: 'hello', clientId: 'returned' });
-    expect(setRestartBanner).toHaveBeenLastCalledWith(null);
+    expect(clearRestartingBanner).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a pending drain notice when a hello comes from the server still draining', () => {
+    const { client } = makeClient();
+    client.connect();
+    lastSocket().open();
+    lastSocket().message({
+      type: 'server_restart_scheduled',
+      phase: 'pending',
+      restartAt: 9_999_999,
+    });
+    vi.mocked(setRestartBanner).mockClear();
+    lastSocket().message({ type: 'hello', clientId: 'same-server' });
+    expect(setRestartBanner).not.toHaveBeenCalledWith(null);
   });
 
   it.each(['visibilitychange', 'online'])('reconnects immediately on %s during backoff', (type) => {

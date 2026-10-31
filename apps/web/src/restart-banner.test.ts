@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mountRestartBanner, refreshRestartBanner, setRestartBanner } from './restart-banner.js';
+import {
+  clearRestartingBanner,
+  mountRestartBanner,
+  refreshRestartBanner,
+  setRestartBanner,
+} from './restart-banner.js';
 
 function getBanner(): HTMLDivElement {
   const el = document.body.querySelector<HTMLDivElement>('.restart-banner');
@@ -47,6 +52,16 @@ describe('restart-banner', () => {
     expect(getBanner().hidden).toBe(false);
     expect(getLabelText()).toBe('Update pending');
     expect(getHintText()).toBe('Active games can finish before the restart.');
+  });
+
+  it('a hello clears "restarting now" but keeps "update pending"', () => {
+    setRestartBanner('pending', Date.now() + 65_000);
+    clearRestartingBanner();
+    expect(getBanner().hidden).toBe(false);
+    expect(getLabelText()).toContain('Update pending');
+    setRestartBanner('restarting');
+    clearRestartingBanner();
+    expect(getBanner().hidden).toBe(true);
   });
 
   it('shows when the restart is beginning', () => {

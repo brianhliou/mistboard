@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { connectSocket, initSocket } from './live-socket.js';
 import { liveState, noteRematchCancel } from './live-state.js';
+import { setRestartBanner } from './restart-banner.js';
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
@@ -189,6 +190,17 @@ describe('chess liveState socket adapter', () => {
     lastSocket().message(helloFrame());
     expect(liveState.connectionState).toBe('connected');
     expect(liveState.connectionNoticeTier).toBe('none');
+  });
+
+  it('clears "restarting now" when the new server says hello, and keeps "update pending"', () => {
+    bootChessSocket();
+    setRestartBanner('restarting');
+    lastSocket().message(helloFrame());
+    expect(document.querySelector<HTMLElement>('.restart-banner')?.hidden).toBe(true);
+    setRestartBanner('pending');
+    lastSocket().message(helloFrame());
+    expect(document.querySelector<HTMLElement>('.restart-banner')?.hidden).toBe(false);
+    setRestartBanner(null);
   });
 
   it.each(['visibilitychange', 'online'])(

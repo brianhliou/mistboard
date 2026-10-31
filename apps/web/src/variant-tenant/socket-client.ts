@@ -26,7 +26,7 @@ import {
   seatTokenForRoom,
   writeSeatTokenForRoom,
 } from '../live-state.js';
-import { setRestartBanner } from '../restart-banner.js';
+import { clearRestartingBanner, setRestartBanner } from '../restart-banner.js';
 
 export type TenantConnectionState =
   | 'connecting'
@@ -406,7 +406,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     }
 
     if (message.type === 'hello') {
-      setRestartBanner(null);
+      clearRestartingBanner();
       connectionState = 'connected';
       clientId = message.clientId ?? clientId;
       if (message.seatToken && isPlayableSeat(message.seat)) {
