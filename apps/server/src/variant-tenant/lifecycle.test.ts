@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import type { IncomingMessage } from 'node:http';
 import test from 'node:test';
 import {
   type Color,
@@ -15,6 +16,7 @@ import {
   LOBBY_NO_SHOW_ABORT_MS,
   PVP_DISCONNECT_FORFEIT_ENABLED,
 } from '../lifecycle-windows.js';
+import { hashSeatToken } from '../server-seat-session.js';
 import { type XmjEvent, xiangqiMahjongTenant as xmjTenant } from '../xiangqi-mahjong-tenant.js';
 import { appendTenantEvent } from './events.js';
 import {
@@ -32,6 +34,7 @@ import {
   tenantPauseEventFor,
   tenantResumeEventFor,
 } from './runtime.js';
+import { createTenantWsRuntime } from './ws.js';
 
 // Lifecycle behavior under the days-per-move clock policy, pinned through the
 // dark-chess tenant (the correspondence launch tenant). The live policy's
@@ -554,5 +557,66 @@ test('table 2, undeclared draws, and claim phases retain real clock forfeits', a
     assert.equal(await duplicate, -1);
     assert.equal(room.events.at(-1)?.type, 'clock-expired');
     assert.equal(room.projection.state.status.type, 'finished', phase);
+  }
+});
+
+test('a move sent after a declared seat flags broadcasts the discard the writer stored', async (t) => {
+  // The move handler ends a flagged turn itself when the move beats the clock
+  // timer. The writer may store a discard in place of the clock-expired it was
+  // asked for, so the frame must carry the stored event, never the request.
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout'], now: 18_100 });
+  const room = declaredWinningDraw();
+  const ws = createTenantWsRuntime(xmjTenant);
+  const live = room as unknown as Parameters<typeof ws.handleConnection>[3];
+  const issuedAt = new Date(0);
+  room.seatTokens.east = {
+    clientId: 'east-client',
+    seat: 'east',
+    tokenHash: hashSeatToken('east-token'),
+    userId: null,
+    userHandle: null,
+    userDisplayName: null,
+    issuedAt,
+    lastSeenAt: issuedAt,
+    revokedAt: null,
+  };
+  const sent: { type?: string; seq?: number; event?: { type?: string } }[] = [];
+  let onMessage: ((data: unknown) => Promise<void> | void) | undefined;
+  const socket = {
+    send: (data: string) => sent.push(JSON.parse(data)),
+    close: () => {},
+    on(event: string, cb: (data: unknown) => Promise<void> | void) {
+      if (event === 'message') onMessage = cb;
+      return this;
+    },
+  };
+  try {
+    await ws.handleConnection(
+      { wsMessageLimit: 100, wsMessageWindowMs: 1_000 },
+      socket as never,
+      {
+        url: '/?client=east-client',
+        headers: { host: 'localhost', 'sec-websocket-protocol': 'mistboard-seat.east-token' },
+      } as IncomingMessage,
+      live,
+    );
+    const before = room.events.length;
+    sent.length = 0;
+    await onMessage?.(Buffer.from(JSON.stringify({ type: 'move', action: 'self-draw' })));
+    await room.pendingWrites;
+    for (let i = 0; i < 20 && !sent.some((f) => f.type === 'event-appended'); i += 1) {
+      await Promise.resolve();
+    }
+
+    assert.equal(room.events.length, before + 1);
+    const stored = room.events.at(-1);
+    assert.ok(stored?.type === 'move-played' && stored.move.action === 'discard');
+    const frames = sent.filter((frame) => frame.type === 'event-appended');
+    assert.equal(frames.length, 1);
+    assert.equal(frames[0].seq, before);
+    assert.equal(frames[0].event?.type, 'move-played');
+  } finally {
+    clearTenantRuntimeTimers(room);
+    for (const client of live.clients) live.clients.delete(client);
   }
 });
