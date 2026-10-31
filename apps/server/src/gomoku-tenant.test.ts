@@ -5,8 +5,12 @@ import { after, before, test } from 'node:test';
 import {
   applyGomokuMove,
   createInitialGomokuState,
+  GOMOKU_OPENINGS,
   type GomokuColor,
   type GomokuMove,
+  type GomokuOpening,
+  type GomokuRoomState,
+  type GomokuSquare,
   getGomokuLegalMoves,
 } from '@mistboard/game';
 import type { WebSocket } from 'ws';
@@ -39,7 +43,13 @@ after(() => {
 });
 
 function room(id: string) {
-  const created = createTenantRuntimeRoom(gomokuTenant, `gmk_${id}`, { now: 1 });
+  // Preserve the original empty-board referee fixtures; dealt games are
+  // exercised separately through the production factory below.
+  const created = createTenantRuntimeRoom(
+    { ...gomokuTenant, rules: { ...gomokuTenant.rules, createSetup: undefined } },
+    `gmk_${id}`,
+    { now: 1 },
+  );
   assert.ok(created.ok);
   const room = created.room;
   for (const color of gomokuTenant.colors)
@@ -52,6 +62,142 @@ function room(id: string) {
     });
   return room;
 }
+
+test('new Gomoku games deal an opening instead of giving Black an empty board', async () => {
+  const boards = new Set(
+    GOMOKU_OPENINGS.map((opening) => JSON.stringify(createInitialGomokuState(opening).board)),
+  );
+  const dealt = new Set<string>();
+  for (let i = 0; i < 24; i += 1) {
+    const created = await createGomokuRoom();
+    assert.ok(created.ok);
+    const state = created.room.projection.state;
+    assert.ok([3, 4, 5].includes(state.ply));
+    assert.ok(boards.has(JSON.stringify(state.board)));
+    dealt.add(JSON.stringify(state.board));
+    assert.equal(state.moveNumber, 1);
+    assert.deepEqual(state.status, { type: 'playing', turn: state.ply % 2 ? 'white' : 'black' });
+    assert.deepEqual(
+      replayTenantEvents(gomokuTenant, JSON.parse(JSON.stringify(created.room.events))),
+      created.room.projection,
+    );
+    const move = getGomokuLegalMoves({
+      ...state,
+      status: { type: 'playing', turn: state.ply % 2 ? 'white' : 'black' },
+    })[0]!;
+    appendTenantRuntimeEvent(gomokuTenant, created.room, {
+      type: 'move-played',
+      at: Date.now(),
+      roomId: state.id,
+      color: state.ply % 2 ? 'white' : 'black',
+      move,
+    });
+    assert.equal(created.room.projection.state.ply, state.ply + 1);
+    const hydrated = createTenantRuntimeRoomFromEvents(
+      gomokuTenant,
+      JSON.parse(JSON.stringify(created.room.events)),
+    );
+    assert.ok(hydrated.ok);
+    assert.deepEqual(hydrated.room.projection.state, created.room.projection.state);
+    const payload = JSON.stringify(
+      tenantSnapshotPayload(gomokuTenant, created.room, {
+        id: 'viewer',
+        seat: 'spectator',
+        solo: false,
+      }),
+    );
+    for (const field of ['screening', 'winrate', 'finalScore', 'score'])
+      assert.equal(payload.includes(`"${field}"`), false);
+    assert.deepEqual(JSON.parse(payload).state.opening, state.opening);
+  }
+  assert.ok(dealt.size > 1, 'games must not always receive the same opening');
+});
+
+test('Gomoku legacy logs replay from empty, and corrupt opening setups fail closed', () => {
+  const event = {
+    type: 'room-created',
+    at: 1,
+    roomId: 'gmk_legacy',
+    gameSpecId: 'gomoku',
+  } as const;
+  const legacy = createTenantRuntimeRoomFromEvents(gomokuTenant, [event]);
+  assert.ok(legacy.ok);
+  assert.equal(legacy.room.projection.state.ply, 0);
+  for (const setup of [
+    null,
+    {},
+    { stones: [], turn: 'white' },
+    { stones: [{ square: 'p1', color: 'black' }], turn: 'white' },
+  ])
+    assert.equal(createTenantRuntimeRoomFromEvents(gomokuTenant, [{ ...event, setup }]).ok, false);
+});
+
+test('dealt 3/4/5-stone rooms start their clocks and move numbers from human play', () => {
+  for (const count of [3, 4, 5]) {
+    const opening: GomokuOpening = {
+      stones: ['h8', 'h9', 'i9', 'i8', 'g7'].slice(0, count).map((square, i) => ({
+        square: square as GomokuSquare,
+        color: i % 2 ? 'white' : 'black',
+      })),
+      turn: count % 2 ? 'white' : 'black',
+    };
+    const created = createTenantRuntimeRoom(
+      { ...gomokuTenant, rules: { ...gomokuTenant.rules, createSetup: () => opening } },
+      `gmk_clock_${count}`,
+      { now: 1, timeControl: { initialMs: 60_000, incrementMs: 1_000 } },
+    );
+    assert.ok(created.ok);
+    assert.equal(created.room.projection.state.moveNumber, 1);
+    for (const [i, to] of ['a1', 'b1'].entries()) {
+      const state: GomokuRoomState = created.room.projection.state;
+      assert.equal(state.status.type, 'playing');
+      if (state.status.type !== 'playing') throw new Error('unexpected terminal state');
+      appendTenantRuntimeEvent(gomokuTenant, created.room, {
+        type: 'move-played',
+        roomId: created.room.id,
+        at: 100 + i * 10,
+        color: state.status.turn,
+        move: { to: to as GomokuSquare },
+      });
+    }
+    assert.equal(created.room.projection.state.moveNumber, 2);
+    assert.equal(created.room.projection.clock?.activeColor, opening.turn);
+    assert.notEqual(created.room.projection.clock?.runningSince, null);
+  }
+});
+
+test('Gomoku create route offers free opening and refuses unknown opening modes', async () => {
+  for (const opening of ['free', 'balanced', 'swap2', null, {}]) {
+    let status = 0;
+    let payload = '';
+    await handleGomokuCreate(
+      {
+        databaseRequired: false,
+        refusesCreate: () => false,
+        drainDeadlineMs: () => null,
+        createGomokuRoom,
+      },
+      {
+        writeHead: (value: number) => {
+          status = value;
+        },
+        end: (value: string) => {
+          payload = value;
+        },
+      } as unknown as ServerResponse,
+      { gameSpecId: 'gomoku', mode: 'pvp', opening },
+    );
+    if (opening !== 'free' && opening !== 'balanced') {
+      assert.equal(status, 400);
+      assert.equal(JSON.parse(payload).error, 'gomoku_invalid_opening');
+      continue;
+    }
+    assert.equal(status, 201);
+    const live = gomokuRooms.get(JSON.parse(payload).roomId)!;
+    assert.equal(live.projection.state.ply === 0, opening === 'free');
+    assert.deepEqual(replayTenantEvents(gomokuTenant, live.events), live.projection);
+  }
+});
 
 test('Gomoku server referee plays 32 seeded random games to a win and replays/hydrates every placement', () => {
   const winners = new Set<GomokuColor>();
@@ -167,7 +313,12 @@ test('Gomoku refuses malformed, occupied, out-of-turn and postgame moves', () =>
 
 test('Gomoku friend creation preserves Black/White preference and exposes complete player views', async () => {
   for (const preferred of ['black', 'white'] as const) {
-    const created = await createGomokuRoom({ initialMs: 300_000, incrementMs: 5_000 }, preferred);
+    const created = await createGomokuRoom(
+      { initialMs: 300_000, incrementMs: 5_000 },
+      preferred,
+      undefined,
+      'free',
+    );
     assert.ok(created.ok);
     assert.equal(created.room.rated, false);
     assert.equal(assignTenantSeat(gomokuTenant, created.room, 'creator', undefined, null).ok, true);
@@ -302,6 +453,7 @@ test('Gomoku casual lobby creates a random-seat room and refuses a rated room', 
   const match = await registration.lobby.createRoom(tc, false);
   const live = gomokuRooms.get(match.id);
   assert.ok(live);
+  assert.ok(live.projection.state.ply >= 3);
   assert.equal(match.region, 'global');
   assert.equal(live.projection.creatorPreference, 'random');
   assert.deepEqual(live.projection.timeControl, tc);
@@ -316,7 +468,7 @@ test('Gomoku WebSocket binds placements to the authenticated seat and waits for 
     }
     close() {}
   }
-  const created = await createGomokuRoom();
+  const created = await createGomokuRoom(undefined, undefined, undefined, 'free');
   assert.ok(created.ok);
   const live = created.room as Parameters<typeof gomokuWs.handleConnection>[3];
   const black = new Socket();

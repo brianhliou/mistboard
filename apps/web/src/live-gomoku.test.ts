@@ -1,9 +1,14 @@
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
   applyGomokuRoomMove,
   createGomokuRoomState,
+  createInitialGomokuState,
+  GOMOKU_OPENINGS,
   type GomokuColor,
   type GomokuMove,
   type GomokuRoomState,
+  getGomokuLegalMoves,
   getGomokuPlayerView,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -302,6 +307,90 @@ describe('Rapfi browser PvE', () => {
 });
 
 describe('hidden Gomoku live room', () => {
+  it.each([3, 4, 5])(
+    'keeps dealt %i-stone move-list jumps in chronological order',
+    async (count) => {
+      const stones = ['h8', 'h9', 'i9', 'i8', 'g7'].slice(0, count).map((square, i) => ({
+        square: square as GomokuMove['to'],
+        color: i % 2 ? ('white' as const) : ('black' as const),
+      }));
+      const turn = count % 2 ? 'white' : 'black';
+      const first = applyGomokuRoomMove(createGomokuRoomState(ROOM, { stones, turn }), {
+        to: 'a1',
+      });
+      const state = applyGomokuRoomMove(first, { to: 'b1' });
+      await mount(state, 'spectator', 0, {
+        events: [
+          CREATED,
+          { type: 'move-played', color: turn, move: { to: 'a1' }, at: 1, ply: 1 },
+          {
+            type: 'move-played',
+            color: turn === 'white' ? 'black' : 'white',
+            move: { to: 'b1' },
+            at: 2,
+            ply: 2,
+          },
+        ],
+      });
+      const buttons = [
+        ...document.querySelectorAll<HTMLButtonElement>('.gomoku-move-row__move.move-jump'),
+      ];
+      expect(buttons.map((button) => button.textContent)).toEqual(['a1', 'b1']);
+      buttons[0]!.click();
+      expect(document.querySelectorAll('[data-piece-square]')).toHaveLength(count + 1);
+      expect(document.querySelector('[data-piece-square="a1"]')).not.toBeNull();
+      expect(document.querySelector('[data-piece-square="b1"]')).toBeNull();
+    },
+  );
+
+  it('replays from the dealt stones after reconnect, without replaying them as human moves', async () => {
+    const opening = GOMOKU_OPENINGS[0]!;
+    const start = createGomokuRoomState(ROOM, opening);
+    const move = getGomokuLegalMoves(createInitialGomokuState(opening))[0]!;
+    const state = applyGomokuRoomMove(start, move);
+    await mount(state, 'spectator', 0, {
+      events: [
+        CREATED,
+        {
+          type: 'move-played',
+          color: opening.turn,
+          move,
+          at: 1,
+          ply: 1,
+        },
+      ],
+    });
+    expect(document.querySelectorAll('[data-piece-square]')).toHaveLength(state.ply);
+    document.querySelector<HTMLButtonElement>('[data-replay="first"]')?.click();
+    expect(document.querySelectorAll('[data-piece-square]')).toHaveLength(start.ply);
+    for (const stone of opening.stones)
+      expect(document.querySelector(`[data-piece-square="${stone.square}"]`)).not.toBeNull();
+    document.querySelector<HTMLButtonElement>('[data-replay="next"]')!.click();
+    expect(document.querySelectorAll('[data-piece-square]')).toHaveLength(state.ply);
+    expect(sentMoves()).toEqual([]);
+  });
+
+  it.each([3, 4, 5])(
+    'sends the full %i-stone opening to Rapfi on the actual side to move',
+    async (count) => {
+      const stones = ['h8', 'h9', 'i9', 'i8', 'g7'].slice(0, count).map((square, i) => ({
+        square: square as GomokuMove['to'],
+        color: i % 2 ? ('white' as const) : ('black' as const),
+      }));
+      const turn = count % 2 ? 'white' : 'black';
+      const human = turn === 'black' ? 'white' : 'black';
+      const state = createGomokuRoomState(ROOM, { stones, turn });
+      await mount(state, human, 0, { ...pveFrame(human), events: [CREATED] });
+      expect(workers).toHaveLength(1);
+      const commands = (workers[0]!.messages[1] as { commands: string[] }).commands;
+      expect(commands.at(-1)?.split('\n')).toHaveLength(count + 2);
+      workers[0]!.answer(0, 0);
+      await flushBot();
+      expect(sentMoves()).toEqual([
+        { type: 'move', to: 'a1', browserBot: true, roomId: ROOM, expectedPly: 0 },
+      ]);
+    },
+  );
   it.each(['black', 'white'] as const)(
     'places one stone from the %s seat with a click or keyboard',
     async (seat) => {
@@ -382,5 +471,98 @@ describe('hidden Gomoku live room', () => {
     expect(document.querySelectorAll('.gomoku-winning')).toHaveLength(6);
     expect(document.querySelectorAll('[data-square]')).toHaveLength(225);
     expect(document.querySelector('[data-square="o15"] .gomoku-hit')?.getAttribute('x')).toBe('16');
+  });
+});
+
+describe('hidden Gomoku setup conformance', () => {
+  it('screens with the pinned evaluator despite CLI arguments and repeats with a cold hash', async () => {
+    const script = await import(
+      pathToFileURL(resolve(__dirname, '../../../scripts/screen-gomoku-openings.mjs')).href
+    );
+    const saved = process.argv;
+    try {
+      process.argv = [...saved, '--audit', '/tmp/unused-screen-test'];
+      const engine = await script.loadEngine();
+      const classic = script.classicOpenings()[0];
+      const first = engine.search(classic, 10_000).screen;
+      expect(first).not.toBeNull();
+      expect(first.score, 'a missing evaluator would falsely report 0 / 50%').toBeLessThan(-100);
+      expect(engine.search(classic, 10_000).screen).toEqual(first);
+    } finally {
+      process.argv = saved;
+    }
+  });
+
+  it('offers a free opening in hidden Gomoku setup and preserves the selected colour', async () => {
+    const { openLandingSetupDialog, closeActiveLandingDialog, setRoomNavigator } = await import(
+      './landing-play.js'
+    );
+    const fetch = vi.fn(
+      async (_input: unknown, _init?: RequestInit) =>
+        new Response(JSON.stringify({ url: '/room/gmk_test' }), {
+          status: 201,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+    );
+    vi.stubGlobal('fetch', fetch);
+    const navigate = vi.fn();
+    setRoomNavigator(navigate);
+    try {
+      for (const free of [false, true]) {
+        openLandingSetupDialog({
+          mode: 'pvp',
+          engineId: 'rapfi-level-1',
+          initialGameSpecId: 'gomoku',
+          initialColor: 'white',
+          locale: 'en',
+        });
+        const checkbox = document.querySelector<HTMLInputElement>('[data-gomoku-free-opening]');
+        expect(checkbox).not.toBeNull();
+        expect(checkbox!.checked).toBe(false);
+        checkbox!.checked = free;
+        checkbox!.dispatchEvent(new Event('change', { bubbles: true }));
+        document.querySelector<HTMLButtonElement>('.landing-setup-start')!.click();
+        await vi.waitFor(() => expect(navigate).toHaveBeenCalled());
+        const call = fetch.mock.calls.find(([input]) => input === '/api/rooms');
+        expect(JSON.parse(call![1]!.body as string)).toMatchObject({
+          gameSpecId: 'gomoku',
+          preferredColor: 'white',
+          opening: free ? 'free' : 'balanced',
+          rated: false,
+        });
+        fetch.mockClear();
+        navigate.mockClear();
+        closeActiveLandingDialog();
+      }
+    } finally {
+      closeActiveLandingDialog();
+      setRoomNavigator(null);
+      window.localStorage?.clear();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('preserves balanced/free opening in both casual request modes without adding it to other variants', async () => {
+    const { roomCreationRequestBody } = await import('./landing-play.js');
+    const setupFor = (gameSpecId: 'gomoku' | 'xiangqi') => ({
+      gameSpecId,
+      rated: false,
+      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
+      preferredColor: 'white' as const,
+    });
+    for (const mode of ['pvp', 'pve'] as const) {
+      for (const opening of ['balanced', 'free'] as const) {
+        expect(
+          roomCreationRequestBody(mode, { ...setupFor('gomoku'), opening }, 'rapfi-level-1'),
+        ).toMatchObject({ opening });
+      }
+      expect(roomCreationRequestBody(mode, setupFor('gomoku'))).toHaveProperty(
+        'opening',
+        'balanced',
+      );
+      expect(
+        roomCreationRequestBody(mode, { ...setupFor('xiangqi'), opening: 'free' }),
+      ).not.toHaveProperty('opening');
+    }
   });
 });

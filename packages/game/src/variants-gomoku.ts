@@ -1,4 +1,5 @@
 // Pure Gomoku kernel (#761) and the open-information room view (#768).
+import openingPool from './gomoku-openings.json' with { type: 'json' };
 import type { AbortReason } from './types.js';
 export const GOMOKU_BOARD_SIZE = 15;
 const POINT_COUNT = GOMOKU_BOARD_SIZE * GOMOKU_BOARD_SIZE;
@@ -35,6 +36,20 @@ export type GomokuOpening = {
   readonly turn: GomokuColor;
   readonly rule?: GomokuRule;
 };
+export type GomokuOpeningMode = 'balanced' | 'free';
+export const GOMOKU_OPENING_SCREEN = openingPool.screening;
+export const GOMOKU_OPENINGS = openingPool.openings as readonly (GomokuOpening & {
+  readonly id: string;
+  readonly classicId: string;
+  readonly screening: {
+    readonly score: number;
+    readonly finalScore: number;
+    readonly winrate: number;
+    readonly nodes: number;
+    readonly depth: number;
+    readonly forcedWin: boolean;
+  };
+})[];
 export type GomokuStatus =
   | { readonly type: 'playing'; readonly turn: GomokuColor }
   | { readonly type: 'finished'; readonly winner: GomokuColor; readonly reason: 'five' }
@@ -54,6 +69,9 @@ export type GomokuState = {
 export type GomokuRoomState = Omit<GomokuState, 'status'> & {
   readonly id: string;
   readonly moveNumber: number;
+  // Public starting stones for replay. Legacy empty-board rooms omit this.
+  // Screening evaluations stay off the wire.
+  readonly opening?: GomokuOpening;
   readonly status:
     | GomokuStatus
     | {
@@ -74,8 +92,16 @@ export function isGomokuColor(value: unknown): value is GomokuColor {
   return value === 'black' || value === 'white';
 }
 
-export function createGomokuRoomState(id: string): GomokuRoomState {
-  return { ...createInitialGomokuState(), id, moveNumber: 1 };
+export function createGomokuRoomState(id: string, opening?: GomokuOpening): GomokuRoomState {
+  const initial = createInitialGomokuState(opening);
+  return {
+    ...initial,
+    id,
+    moveNumber: 1,
+    ...(opening
+      ? { opening: { stones: opening.stones.map((stone) => ({ ...stone })), turn: opening.turn } }
+      : {}),
+  };
 }
 
 export function applyGomokuRoomMove(state: GomokuRoomState, move: GomokuMove): GomokuRoomState {
@@ -83,7 +109,12 @@ export function applyGomokuRoomMove(state: GomokuRoomState, move: GomokuMove): G
   const kernel: GomokuState = { ...state, status: state.status };
   const next = applyGomokuMove(kernel, move);
   if (next === kernel) return state;
-  return { ...next, id: state.id, moveNumber: 1 + Math.floor(next.ply / 2) };
+  return {
+    ...next,
+    id: state.id,
+    moveNumber: 1 + Math.floor((next.ply - (state.opening?.stones.length ?? 0)) / 2),
+    ...(state.opening ? { opening: state.opening } : {}),
+  };
 }
 
 /** Public terminal evidence, never an evaluation or a live threat overlay. */

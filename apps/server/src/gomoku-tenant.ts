@@ -1,11 +1,14 @@
 // Hidden freestyle Gomoku referee. The kernel owns legality and five/full-board
 // endings; the generic runtime owns seats, clocks, reconnects and event replay.
+import { randomInt } from 'node:crypto';
 import {
   applyGomokuRoomMove,
   createGomokuRoomState,
+  GOMOKU_OPENINGS,
   GOMOKU_SPEC_ID,
   type GomokuColor,
   type GomokuMove,
+  type GomokuOpening,
   type GomokuPlayerView,
   type GomokuRoomState,
   getGomokuPlayerView,
@@ -58,7 +61,24 @@ export const gomokuTenant: VariantTenant<
   enabled: gomokuEnabled,
   oppositeColor: (color) => (color === 'black' ? 'white' : 'black'),
   rules: {
-    createInitialState: createGomokuRoomState,
+    createSetup: () => {
+      const { stones, turn } = GOMOKU_OPENINGS[randomInt(GOMOKU_OPENINGS.length)]!;
+      return { stones, turn };
+    },
+    createInitialState: (id, setup) => {
+      // Missing setup means a pre-pool log. Never re-deal during hydration.
+      if (setup === undefined) return createGomokuRoomState(id);
+      if (
+        typeof setup !== 'object' ||
+        setup === null ||
+        !('stones' in setup) ||
+        !Array.isArray(setup.stones) ||
+        !('turn' in setup) ||
+        !isGomokuColor(setup.turn)
+      )
+        throw new Error('gomoku: invalid opening setup');
+      return createGomokuRoomState(id, setup as GomokuOpening);
+    },
     applyMove: (state, move) => {
       const next = applyGomokuRoomMove(state, move);
       if (next === state) throw new Error(`gomoku: illegal placement ${move.to}`);

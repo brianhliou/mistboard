@@ -93,9 +93,11 @@ for (const human of ['black', 'white'] as const) {
     expect(final.ply).toBeLessThanOrEqual(225);
     expect(networkLoaded, 'the real pinned Rapfi networks loaded').toBe(true);
     expect(workerUrls.some((url) => url.includes('/engine/rapfi/worker.js'))).toBe(true);
-    expect(positions.size).toBe(final.ply + 1);
-    let referee = createGomokuRoomState(room.roomId);
-    for (let ply = 1; ply <= final.ply; ply += 1) {
+    const openingPly = final.opening?.stones.length ?? 0;
+    expect(openingPly).toBeGreaterThanOrEqual(3);
+    expect(positions.size).toBe(final.ply - openingPly + 1);
+    let referee = createGomokuRoomState(room.roomId, final.opening);
+    for (let ply = openingPly + 1; ply <= final.ply; ply += 1) {
       const recorded = positions.get(ply);
       const move = recorded?.lastMove;
       expect(move, `missing ply ${ply}`).toBeDefined();

@@ -124,7 +124,7 @@ function syncBot(): void {
           to: placement.to,
           browserBot: true,
           roomId: view.id,
-          expectedPly: view.ply,
+          expectedPly: view.ply - (view.opening?.stones.length ?? 0),
         })
       )
         throw new Error('Rapfi reply disconnected');
@@ -187,7 +187,13 @@ window.addEventListener('pageshow', (event) => {
 
 const tenant: WebVariantTenant<GomokuColor> = {
   displayName: 'variant.gomoku.name',
-  colors: ['black', 'white'],
+  // The shared move list's columns follow move order. A dealt odd-stone
+  // opening starts with White; stone colour and seat ownership stay fixed.
+  get colors() {
+    return core?.state.view?.opening?.turn === 'white'
+      ? (['white', 'black'] as const)
+      : (['black', 'white'] as const);
+  },
   isColor: isGomokuColor,
   oppositeColor: (color) => (color === 'black' ? 'white' : 'black'),
   enabled: gomokuEnabled,
@@ -253,6 +259,7 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
     gameSpecId: GOMOKU_SPEC_ID,
     preferredColor: isGomokuColor(state.seat) ? state.seat : 'random',
     rated: false,
+    opening: state.view?.opening?.stones.length === 0 ? 'free' : 'balanced',
     ...(state.timeControl ? { timeControl: state.timeControl } : {}),
   }),
   renderBoard: (refs: LiveRefs, view) => {
@@ -293,12 +300,13 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
   },
   replayCapture: {
     positionKey: (view) => JSON.stringify(view.board),
-    plyForView: (view) => view.ply,
+    plyForView: (view) => view.ply - (view.opening?.stones.length ?? 0),
   },
   replayHistory: {
     rebuild: ({ events, view, state }) => {
       const perspective = isGomokuColor(state.seat) ? state.seat : 'black';
-      let game = createGomokuRoomState(view.id);
+      let game = createGomokuRoomState(view.id, view.opening);
+      const openingPly = game.ply;
       const snapshots = [{ ply: 0, view: getGomokuPlayerView(game, perspective) }];
       for (const event of events) {
         if (!isMoveEvent(event)) continue;
@@ -306,7 +314,10 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
         const next = applyGomokuRoomMove(game, event.move);
         if (next === game) return null;
         game = next;
-        snapshots.push({ ply: game.ply, view: getGomokuPlayerView(game, perspective) });
+        snapshots.push({
+          ply: game.ply - openingPly,
+          view: getGomokuPlayerView(game, perspective),
+        });
       }
       return snapshots;
     },

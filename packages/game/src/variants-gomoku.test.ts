@@ -83,6 +83,84 @@ test('Gomoku starts with an empty freestyle 15x15 board and Black to move', () =
   assert.deepEqual(game.mustBlock(state), []);
 });
 
+test('the Rapfi pool contains at least 50 distinct, legal, nonterminal near-even openings', async () => {
+  const { positionKey } = await import(
+    new URL('../../../scripts/screen-gomoku-openings.mjs', import.meta.url).href
+  );
+  assert.ok(game.GOMOKU_OPENINGS.length >= 50);
+  assert.equal(game.GOMOKU_OPENING_SCREEN.accepted, game.GOMOKU_OPENINGS.length);
+  assert.equal(game.GOMOKU_OPENING_SCREEN.nodes, 1_000_000);
+  const keys = new Set<string>();
+  for (const entry of game.GOMOKU_OPENINGS) {
+    const initial = game.createInitialGomokuState(entry);
+    assert.ok([3, 4, 5].includes(initial.ply));
+    assert.deepEqual(initial.status, { type: 'playing', turn: entry.turn });
+    assert.equal(winners(initial.board).size, 0, entry.id);
+    const { score, finalScore, winrate, nodes, forcedWin, depth } = entry.screening;
+    assert.ok(Math.abs(score) <= 40 && Math.abs(finalScore) <= 40, entry.id);
+    assert.ok(winrate >= 0.45 && winrate <= 0.55, entry.id);
+    assert.ok(nodes >= 1_000_000 && depth > 0, entry.id);
+    assert.equal(forcedWin, false);
+    assert.ok(!keys.has(positionKey(entry)), 'symmetries must not inflate the pool');
+    keys.add(positionKey(entry));
+    const room = game.createGomokuRoomState('pool-test', entry);
+    assert.deepEqual(room.board, initial.board);
+    assert.equal(room.moveNumber, 1);
+    const next = game.applyGomokuRoomMove(room, game.getGomokuLegalMoves(initial)[0]!);
+    assert.deepEqual(next.opening, room.opening);
+    assert.equal(next.ply, initial.ply + 1);
+  }
+});
+
+test('opening screening generates all 26 classics and rejects missing, mate and under-budget telemetry', async () => {
+  const script = await import(
+    new URL('../../../scripts/screen-gomoku-openings.mjs', import.meta.url).href
+  );
+  const classics = script.classicOpenings();
+  assert.equal(classics.length, 26);
+  assert.equal(
+    new Set(classics.map((entry: game.GomokuOpening) => script.positionKey(entry))).size,
+    26,
+  );
+  const all = [...script.candidates()] as game.GomokuOpening[];
+  for (const entry of all)
+    assert.equal(game.createInitialGomokuState(entry).status.type, 'playing');
+  assert.deepEqual([...new Set(all.map((entry) => entry.stones.length))].sort(), [3, 4, 5]);
+  const lines = [
+    'INFO PV 0',
+    'INFO DEPTH 20',
+    'INFO EVAL 0',
+    'INFO WINRATE 0.5',
+    'INFO TOTALNODES 1000000',
+    'INFO PV DONE',
+    'MESSAGE Speed 200K | Depth 20-30 | Eval 0 | Node 1000K | Time 5000ms',
+  ];
+  assert.ok(script.passesScreen(script.parseScreen(lines, 1_000_000)));
+  for (const bad of [
+    [],
+    lines.filter((line) => !line.startsWith('INFO WINRATE')),
+    lines.map((line) => line.replace('Eval 0 | Node', 'Eval +M9 | Node')),
+    lines.map((line) => line.replace('Node 1000K', 'Node 10K')),
+    lines.map((line) => line.replace('Node 1000K', 'Node 999K')),
+    lines.map((line) => line.replace('WINRATE 0.5', 'WINRATE NaN')),
+  ])
+    assert.equal(script.parseScreen(bad, 1_000_000), null);
+  for (const [from, to] of [
+    ['WINRATE 0.5', 'WINRATE 0.8'],
+    ['EVAL 0', 'EVAL 200'],
+    ['Eval 0 |', 'Eval -200 |'],
+  ])
+    assert.equal(
+      script.passesScreen(
+        script.parseScreen(
+          lines.map((line) => line.replace(from!, to!)),
+          1_000_000,
+        ),
+      ),
+      false,
+    );
+});
+
 test('Gomoku notation round-trips all a1-o15 points and rejects noncanonical coordinates', () => {
   for (const square of squares) assert.equal(game.formatGomokuMove(move(square)), square);
   for (const invalid of ['', 'a0', 'a16', 'p1', 'a01', 'A1', ' a1', 'a1 ', 'a1b2', 'a1\n']) {

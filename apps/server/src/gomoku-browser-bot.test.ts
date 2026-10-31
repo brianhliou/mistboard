@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import type { IncomingMessage } from 'node:http';
 import { afterEach, test } from 'node:test';
-import type { GomokuColor } from '@mistboard/game';
+import type { GomokuColor, GomokuOpening, GomokuSquare } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import { gomokuWs } from './gomoku-registration.js';
 import { gomokuTenant } from './gomoku-tenant.js';
@@ -39,11 +39,23 @@ const request = (id: string, token?: string) =>
     },
   }) as IncomingMessage;
 
-async function fixture(human: GomokuColor, runtime = gomokuWs, bot = true) {
+async function fixture(
+  human: GomokuColor,
+  runtime = gomokuWs,
+  bot = true,
+  opening?: GomokuOpening,
+) {
   process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
-  const created = createTenantRuntimeRoom(gomokuTenant, `gmk_auth_${rooms.length}`, {
-    creatorPreference: human,
-  });
+  const created = createTenantRuntimeRoom(
+    {
+      ...gomokuTenant,
+      rules: { ...gomokuTenant.rules, createSetup: opening ? () => opening : undefined },
+    },
+    `gmk_auth_${rooms.length}`,
+    {
+      creatorPreference: human,
+    },
+  );
   assert.ok(created.ok);
   const room = created.room as Room;
   rooms.push(room);
@@ -73,7 +85,27 @@ const botMove = (room: Room, to = 'i8') => ({
   to,
   browserBot: true,
   roomId: room.id,
-  expectedPly: room.projection.state.ply,
+  expectedPly: room.projection.state.ply - (room.projection.state.opening?.stones.length ?? 0),
+});
+
+test('dealt 3/4/5-stone bot games validate played plies, including the first bot reply', async () => {
+  for (const count of [3, 4, 5]) {
+    const opening: GomokuOpening = {
+      stones: ['h8', 'h9', 'i9', 'i8', 'g7'].slice(0, count).map((square, i) => ({
+        square: square as GomokuSquare,
+        color: i % 2 ? 'white' : 'black',
+      })),
+      turn: count % 2 ? 'white' : 'black',
+    };
+    const human = opening.turn === 'white' ? 'black' : 'white';
+    const { room, socket } = await fixture(human, gomokuWs, true, opening);
+    assert.equal(room.projection.state.ply, count);
+    await send(room, socket, { ...botMove(room, 'a1'), expectedPly: count });
+    assert.equal(room.projection.state.ply, count, 'stone count is not the event ply');
+    await send(room, socket, botMove(room, 'a1'));
+    assert.equal(room.projection.state.ply, count + 1);
+    assert.equal(room.events.filter((event) => event.type === 'move-played').length, 1);
+  }
 });
 
 for (const human of ['black', 'white'] as const) {

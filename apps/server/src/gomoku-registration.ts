@@ -1,5 +1,10 @@
 // Built-hidden, flag-gated casual play. Rapfi runs only in the human's browser.
-import { GOMOKU_SPEC_ID, type GomokuColor, type RoomTimeControl } from '@mistboard/game';
+import {
+  GOMOKU_SPEC_ID,
+  type GomokuColor,
+  type GomokuOpeningMode,
+  type RoomTimeControl,
+} from '@mistboard/game';
 import { gomokuEnabled } from './feature-flags.js';
 import {
   type GomokuEvent,
@@ -8,7 +13,7 @@ import {
   isGomokuEngineClientId,
 } from './gomoku-tenant.js';
 import * as persistence from './persistence.js';
-import { isAllowedFullTimeControl } from './routes/lib.js';
+import { isAllowedFullTimeControl, writeJson } from './routes/lib.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
@@ -43,14 +48,21 @@ export async function createGomokuRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: GomokuColor | 'random',
   engine?: TenantRoomEngineSeat<GomokuColor>,
+  opening: GomokuOpeningMode = 'balanced',
 ) {
+  if (opening !== 'balanced' && opening !== 'free') throw new Error('gomoku: invalid opening mode');
   if (
     engine &&
     (!isGomokuEngineClientId(engine.engineId) || !gomokuTenant.rules.isColor(engine.seat))
   )
     throw new Error('gomoku: invalid browser engine seat');
   const created = await createTenantLiveRoom(
-    gomokuTenant,
+    opening === 'free'
+      ? {
+          ...gomokuTenant,
+          rules: { ...gomokuTenant.rules, createSetup: () => ({ stones: [], turn: 'black' }) },
+        }
+      : gomokuTenant,
     {
       rooms: gomokuRooms,
       isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, gomokuTenant.kind),
@@ -91,7 +103,26 @@ const route = createTenantRoomsRoute<
   createRoom: (ctx, { timeControl, preferredColor, engine }) =>
     ctx.createGomokuRoom(timeControl, preferredColor, engine),
 });
-export const handleGomokuCreate = route.handleCreate;
+export async function handleGomokuCreate(...args: Parameters<typeof route.handleCreate>) {
+  const [ctx, response, body, accountUser] = args;
+  const opening = body.opening === undefined ? 'balanced' : body.opening;
+  if (opening !== 'balanced' && opening !== 'free') {
+    writeJson(response, 400, { error: 'gomoku_invalid_opening' });
+    return;
+  }
+  // Keep per-request setup local to the factory; concurrent requests must not
+  // mutate the registered tenant's random deal policy.
+  return route.handleCreate(
+    {
+      ...ctx,
+      createGomokuRoom: (timeControl, preferredColor, engine) =>
+        ctx.createGomokuRoom(timeControl, preferredColor, engine, opening),
+    },
+    response,
+    body,
+    accountUser,
+  );
+}
 
 registerVariantTenant({
   kind: gomokuTenant.kind,
