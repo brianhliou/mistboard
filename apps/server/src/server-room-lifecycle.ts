@@ -523,10 +523,38 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
     }, config.stalePausedSweepMs);
   }
 
+  let tenantStaleResumeRunning = false;
+
   async function runStalePausedSweep(): Promise<void> {
     const now = new Date();
+    // Tenant resumes are spaced and can take minutes on a backlog, and their
+    // failure must not stop the chess-stack finalize: run them after it, on
+    // their own, one sweep at a time.
     try {
-      await resumeStalePausedTenantRooms(now, config.stalePauseMs);
+      await finalizeStaleChessStackPauses(now);
+    } finally {
+      if (!tenantStaleResumeRunning) {
+        tenantStaleResumeRunning = true;
+        try {
+          await resumeStalePausedTenantRooms(now, config.stalePauseMs);
+        } catch (err) {
+          console.error(
+            JSON.stringify({
+              level: 'error',
+              kind: 'stale_paused_tenant_sweep_failure',
+              message: err instanceof Error ? err.message : String(err),
+              at: Date.now(),
+            }),
+          );
+        } finally {
+          tenantStaleResumeRunning = false;
+        }
+      }
+    }
+  }
+
+  async function finalizeStaleChessStackPauses(now: Date): Promise<void> {
+    try {
       const result = await persistence.finalizeStalePausedRooms(now, config.stalePauseMs);
       if (result.finalized === 0) return;
       for (const room of result.rooms) {

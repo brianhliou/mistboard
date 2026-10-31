@@ -23,7 +23,7 @@ import {
 } from './persistence-test-support.js';
 
 definePersistenceTests('lifecycle', () => {
-  test('listStalePausedTenantRoomIds selects only stale last pauses without a games row', async () => {
+  test('listStalePausedTenantRoomIds selects only stale last pauses without a finished games row', async () => {
     const now = new Date('2026-10-31T12:00:00.000Z');
     const stalePauseMs = 60_000;
     const staleAt = now.getTime() - stalePauseMs - 1;
@@ -79,7 +79,11 @@ definePersistenceTests('lifecycle', () => {
       plyCount: 2,
       endedAt: now,
     });
-    assert.deepEqual(await listStalePausedTenantRoomIds(now, stalePauseMs), ['xq_stale']);
+    // A running row (written at creation by some tenants) does not hide a pause.
+    assert.deepEqual(await listStalePausedTenantRoomIds(now, stalePauseMs), [
+      'xq_running_row',
+      'xq_stale',
+    ]);
   });
 
   test('listActiveRoomIds excludes finished games', async () => {

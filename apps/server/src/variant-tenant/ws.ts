@@ -227,9 +227,10 @@ export function createTenantWsRuntime<
       clockPolicyKindFor(room.projection.timeControl) === 'days-per-move' ||
       (room.resumeDeadline != null && room.resumeDeadline > at)
     )
-      return;
+      return false;
     clearTenantResumeTimer(room);
     await resumeTenantRoom(tenant, room, lifecycleCtx, at, 'grace-elapsed');
+    return true;
   });
 
   function scheduleLifecycleTimers(room: LiveRoom): void {

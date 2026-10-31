@@ -14,6 +14,7 @@ import {
   TENANT_PAUSE_GRACE_MS,
   type TenantLifecycleClient,
 } from './lifecycle.js';
+import { TENANT_STALE_RESUME_SPACING_MS } from './pause-recovery.js';
 import {
   appendTenantRuntimeEvent,
   createTenantRuntimeRoomFromEvents,
@@ -336,6 +337,9 @@ function staleSweepFixture(t: TestContext) {
     if (sql.startsWith('SELECT payload FROM events')) {
       return { rows: (logs.get(values[0] as string) ?? []).map((payload) => ({ payload })) };
     }
+    // Mirrors listStalePausedTenantRoomIds: only a finished games row hides a
+    // pause (a running row does not). The real SQL is pinned against Postgres
+    // in persistence-lifecycle.test.ts.
     if (sql.includes("e.type = 'clock-paused'")) {
       return {
         rows: [...logs].flatMap(([room_id, events]) => {
@@ -432,6 +436,23 @@ test('the stale-pause sweep completes a shutdown-paused tenant game without a re
   t.mock.timers.tick(fixture.stalePauseMs);
   await fixture.flush();
   assert.equal(fixture.gameEnds.length, 1);
+});
+
+test('the stale-pause sweep spaces a backlog of resumes', async (t) => {
+  const fixture = staleSweepFixture(t);
+  await fixture.shutdown('dchx_backlog_a');
+  await fixture.shutdown('dchx_backlog_b');
+  t.mock.timers.tick(fixture.stalePauseMs + 1);
+  fixture.lifecycle.startStalePausedSweep();
+  await fixture.flush();
+  const resumed = () =>
+    ['dchx_backlog_a', 'dchx_backlog_b'].filter((id) =>
+      fixture.logs.get(id)!.some((event) => event.type === 'clock-resumed'),
+    );
+  assert.deepEqual(resumed(), ['dchx_backlog_a'], 'the second room waits its turn');
+  t.mock.timers.tick(TENANT_STALE_RESUME_SPACING_MS);
+  await fixture.flush();
+  assert.deepEqual(resumed(), ['dchx_backlog_a', 'dchx_backlog_b']);
 });
 
 test('a tenant player returning inside the stale-pause window resumes normally', async (t) => {

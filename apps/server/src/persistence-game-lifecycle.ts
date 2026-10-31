@@ -593,8 +593,9 @@ export async function finalizeStalePausedRooms(
   };
 }
 
-// Tenants deliberately have no running games row. Find their pauses directly
-// in the event log; a later event or any games row makes a room ineligible.
+// Find tenant pauses directly in the event log. Some tenants write a running
+// games row at creation (dark chess, xiangqi, duck, mahjong, ...) and some write
+// none, so only a finished row or a later event makes a room ineligible.
 export async function listStalePausedTenantRoomIds(
   now: Date,
   staleAfterMs: number,
@@ -604,7 +605,9 @@ export async function listStalePausedTenantRoomIds(
      FROM events e
      WHERE e.type = 'clock-paused'
        AND (e.payload->>'at')::bigint < $1
-       AND NOT EXISTS (SELECT 1 FROM games g WHERE g.room_id = e.room_id)
+       AND NOT EXISTS (
+         SELECT 1 FROM games g WHERE g.room_id = e.room_id AND g.status <> 'running'
+       )
        AND NOT EXISTS (
          SELECT 1 FROM events later
          WHERE later.room_id = e.room_id AND later.seq > e.seq
