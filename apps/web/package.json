@@ -14,7 +14,7 @@
     "i18n:check": "node scripts/app-i18n-check.mjs",
     "i18n:coverage": "node scripts/i18n-coverage.mjs",
     "i18n:prune": "node scripts/prune-article-i18n.mjs",
-    "predev": "node ../../scripts/ensure-packages-built.mjs && node scripts/fetch-pikafish-net.mjs",
+    "predev": "node ../../scripts/ensure-packages-built.mjs && node scripts/fetch-pikafish-net.mjs && node scripts/fetch-rapfi-net.mjs",
     "pretypecheck": "node ../../scripts/ensure-packages-built.mjs",
     "pretest:unit": "node ../../scripts/ensure-packages-built.mjs",
     "pretest": "node ../../scripts/ensure-packages-built.mjs"

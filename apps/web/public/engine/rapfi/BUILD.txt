@@ -1,0 +1,4 @@
+rapfi 1387d11312 (2026-10-23)
+networks 7eeb19b
+emcc emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.13 (e13ee988ce3d87a738dd8f3661d02223308c412a)
+flags: NO_MULTI_THREADING NO_COMMAND_MODULES USE_WASM_SIMD
