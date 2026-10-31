@@ -203,9 +203,9 @@ describe('private puzzle progress on the profile (#704)', () => {
     const root = await mount();
     await vi.waitFor(() => expect(activityRows(root)).toHaveLength(2));
     const rows = activityRows(root);
-    expect(rowTitle(rows[0])).toBe('Solved 1 Xiangqi puzzle');
+    expect(rowTitle(rows[0])).toBe('Played 1 Xiangqi puzzle');
     expect(rowPills(rows[0])).toEqual([['1 solved', 'win']]);
-    expect(rowTitle(rows[1])).toBe('Solved 2 Xiangqi puzzles');
+    expect(rowTitle(rows[1])).toBe('Played 2 Xiangqi puzzles');
     expect(rowPills(rows[1])).toEqual([
       ['1 solved', 'win'],
       ['1 failed', 'loss'],
@@ -231,9 +231,9 @@ describe('private puzzle progress on the profile (#704)', () => {
     await vi.waitFor(() => expect(activityRows(root)).toHaveLength(4));
     expect(activityRows(root).map(rowTitle)).toEqual([
       'Played 1 Xiangqi game',
-      'Solved 1 Xiangqi puzzle',
+      'Played 1 Xiangqi puzzle',
       'Played 1 Xiangqi game',
-      'Solved 1 Xiangqi puzzle',
+      'Played 1 Xiangqi puzzle',
     ]);
   });
 
@@ -251,7 +251,7 @@ describe('private puzzle progress on the profile (#704)', () => {
     const root = await mount();
     await vi.waitFor(() => expect(activityRows(root)).toHaveLength(2));
     expect(activityRows(root).map(rowTitle)).toEqual([
-      'Solved 1 Xiangqi puzzle',
+      'Played 1 Xiangqi puzzle',
       'Played 1 Xiangqi game',
     ]);
   });
@@ -296,7 +296,7 @@ describe('private puzzle progress on the profile (#704)', () => {
     await vi.waitFor(() =>
       expect(root.querySelectorAll('.profile-puzzle-chart-dot')).toHaveLength(1),
     );
-    expect(activityRows(root).map(rowTitle)).toEqual(['Solved 1 Xiangqi puzzle']);
+    expect(activityRows(root).map(rowTitle)).toEqual(['Played 1 Xiangqi puzzle']);
     expect(calls).toBe(2);
   });
 
@@ -318,8 +318,8 @@ describe('private puzzle progress on the profile (#704)', () => {
   });
 
   it.each([
-    ['zh-hans', '解题进度', '解了 2 道象棋题', '已解 1 题', '走错 1 题'],
-    ['zh-hant', '解題進度', '解了 2 道象棋題', '已解 1 題', '走錯 1 題'],
+    ['zh-hans', '解题进度', '做了 2 道象棋题', '已解 1 题', '走错 1 题'],
+    ['zh-hant', '解題進度', '做了 2 道象棋題', '已解 1 題', '走錯 1 題'],
   ])(
     'localizes the chart heading and daily rows for %s',
     async (prefix, heading, title, solved, failed) => {
