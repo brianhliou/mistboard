@@ -16,6 +16,7 @@
 
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
+import { clockPolicyKindFor } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import { currentAccountUser } from '../account-session.js';
 import { logger, wsCounters } from '../obs.js';
@@ -38,10 +39,13 @@ import {
   type TenantEventWriterContext,
 } from './events.js';
 import {
+  clearTenantResumeTimer,
   clearTenantRuntimeTimers,
+  resumeTenantRoom,
   scheduleTenantLifecycleTimers,
   type TenantLifecycleContext,
 } from './lifecycle.js';
+import { registerTenantPauseRecovery } from './pause-recovery.js';
 import {
   cancelTenantRematch,
   declineTenantRematch,
@@ -101,6 +105,8 @@ export type TenantLiveRoom<
   Spec extends string = string,
 > = Omit<TenantRuntimeRoom<Kind, C, M, State, Spec>, 'clients'> & {
   clients: Set<TenantLiveClient<C>>;
+  // The shutdown lifecycle sets this before persisting the pause.
+  stopping?: boolean;
 };
 
 export type TenantWebSocketContext = {
@@ -207,6 +213,25 @@ export function createTenantWsRuntime<
     appendEvent: (room, event) => appendTenantEvent(tenant, room, event, eventWriterCtx),
     broadcastEventAppended,
   };
+
+  registerTenantPauseRecovery(tenant.kind, async (managedRoom, at, staleAfterMs) => {
+    const room = managedRoom as unknown as LiveRoom;
+    await room.pendingWrites;
+    // The DB selection can race a reconnect, a move, or another shutdown.
+    // Recheck canonical state and preserve an already-open reconnect grace.
+    if (
+      room.stopping ||
+      !room.projection.paused ||
+      room.projection.paused.at >= at - staleAfterMs ||
+      room.projection.state.status.type !== 'playing' ||
+      clockPolicyKindFor(room.projection.timeControl) === 'days-per-move' ||
+      (room.resumeDeadline != null && room.resumeDeadline > at)
+    )
+      return false;
+    clearTenantResumeTimer(room);
+    await resumeTenantRoom(tenant, room, lifecycleCtx, at, 'grace-elapsed');
+    return true;
+  });
 
   function scheduleLifecycleTimers(room: LiveRoom): void {
     scheduleTenantLifecycleTimers(tenant, room, lifecycleCtx);

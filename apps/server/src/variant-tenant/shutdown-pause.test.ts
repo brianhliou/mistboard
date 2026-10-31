@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
+import test, { type TestContext } from 'node:test';
+import { setImmediate } from 'node:timers/promises';
 import { type Color, correspondenceTimeControl, type RoomTimeControl } from '@mistboard/game';
+import { darkChessTenantRooms, getOrLoadDarkChessTenantRoom } from '../dark-chess-registration.js';
 import { type DarkChessTenantEvent, darkChessTenant } from '../dark-chess-tenant.js';
+import * as persistence from '../persistence.js';
+import { getPool } from '../persistence-db.js';
+import { createRoomLifecycle } from '../server-room-lifecycle.js';
 import {
   clearTenantRuntimeTimers,
   pauseTenantRoomsOnShutdown,
@@ -9,6 +14,7 @@ import {
   TENANT_PAUSE_GRACE_MS,
   type TenantLifecycleClient,
 } from './lifecycle.js';
+import { TENANT_STALE_RESUME_SPACING_MS } from './pause-recovery.js';
 import {
   appendTenantRuntimeEvent,
   createTenantRuntimeRoomFromEvents,
@@ -19,6 +25,7 @@ import {
   tenantOrphanPauseFor,
   tenantPauseEventFor,
 } from './runtime.js';
+import { createTenantWsRuntime } from './ws.js';
 
 // A server stop used to leave a live tenant game's clock running: hydration
 // replays the log, the clock is still running from the last move, and the
@@ -307,4 +314,197 @@ test('a server that died without pausing is paused at its last event on hydratio
 
   // A long think is not an outage.
   assert.equal(tenantOrphanPauseFor(projection, events, 20_000 + 60_000, 300_000), null);
+});
+
+// Exercise the production sweep, hydrator and writer without a Postgres server.
+// The database adapter retains events and captures recordGameEnd's games write;
+// rule replay, timer scheduling and terminal summary construction stay real.
+function staleSweepFixture(t: TestContext) {
+  t.mock.timers.enable({ apis: ['Date', 'setTimeout', 'setInterval'], now: 25_000 });
+  const logs = new Map<string, DarkChessTenantEvent[]>();
+  const gameEnds: Array<{ roomId: string; result: string; termination: string }> = [];
+  const stalePauseMs = 60_000;
+  persistence.init('postgres://unused/unused');
+  const pool = getPool();
+  const query = async (sql: string, values: unknown[] = []) => {
+    if (sql.startsWith('INSERT INTO events')) {
+      const roomId = values[0] as string;
+      const events = logs.get(roomId) ?? [];
+      assert.equal(values[1], events.length, 'event sequences remain contiguous');
+      events.push(values[3] as DarkChessTenantEvent);
+      logs.set(roomId, events);
+    }
+    if (sql.startsWith('SELECT payload FROM events')) {
+      return { rows: (logs.get(values[0] as string) ?? []).map((payload) => ({ payload })) };
+    }
+    // Mirrors listStalePausedTenantRoomIds: only a finished games row hides a
+    // pause (a running row does not). The real SQL is pinned against Postgres
+    // in persistence-lifecycle.test.ts.
+    if (sql.includes("e.type = 'clock-paused'")) {
+      return {
+        rows: [...logs].flatMap(([room_id, events]) => {
+          const last = events.at(-1);
+          return last?.type === 'clock-paused' &&
+            last.at < Number(values[0]) &&
+            !gameEnds.some((end) => end.roomId === room_id)
+            ? [{ room_id }]
+            : [];
+        }),
+      };
+    }
+    if (sql.trimStart().startsWith('INSERT INTO games')) {
+      gameEnds.push({
+        roomId: values[0] as string,
+        result: values[2] as string,
+        termination: values[3] as string,
+      });
+    }
+    return { rows: [], rowCount: 0 };
+  };
+  t.mock.method(pool, 'query', query as typeof pool.query);
+  t.mock.method(pool, 'connect', (async () => ({
+    query,
+    release() {},
+  })) as unknown as typeof pool.connect);
+
+  const lifecycle = createRoomLifecycle({
+    rooms: new Map(),
+    roomMgrCtx: {
+      send() {},
+      recordPersistenceError() {},
+      pveBuiltinEngineClientId: 'builtin-random-legal',
+      pveEngineMoveDelayMs: 0,
+      liveEngineTimeoutMs: 1_000,
+      liveClockInitialMs: 180_000,
+      liveClockIncrementMs: 2_000,
+    },
+    defaultRoomRegion: 'global',
+    orphanThresholdMs: 300_000,
+    guestPrestartAbortMs: 60_000,
+    abortPolicySweepMs: 60_000,
+    stalePauseMs,
+    stalePausedSweepMs: 60_000,
+    pauseGraceMs: TENANT_PAUSE_GRACE_MS,
+    recordPersistenceError() {},
+    releaseLiveEngineReservation() {},
+    reserveHydratedLiveEngineSeat: async () => null,
+    seatVacateGraceMs: () => 60_000,
+  });
+  t.after(async () => {
+    lifecycle.stopSweeps();
+    for (const room of darkChessTenantRooms.values()) clearTenantRuntimeTimers(room);
+    darkChessTenantRooms.clear();
+    await persistence.close();
+  });
+  const runtime = createTenantWsRuntime(darkChessTenant);
+  const flush = async () => {
+    for (let i = 0; i < 10; i += 1) await setImmediate();
+  };
+  const shutdown = async (roomId: string) => {
+    const room = hydrate(liveGame(roomId));
+    logs.set(roomId, [...room.events]);
+    darkChessTenantRooms.set(roomId, room);
+    await pauseTenantRoomsOnShutdown(darkChessTenant, [room], runtime.lifecycleCtx, Date.now());
+    clearTenantRuntimeTimers(room);
+    darkChessTenantRooms.delete(roomId);
+  };
+  return { lifecycle, runtime, shutdown, flush, logs, gameEnds, stalePauseMs };
+}
+
+test('the stale-pause sweep completes a shutdown-paused tenant game without a reconnect', async (t) => {
+  const fixture = staleSweepFixture(t);
+  const roomId = 'dchx_stale_shutdown';
+  await fixture.shutdown(roomId);
+  fixture.lifecycle.startStalePausedSweep();
+  await fixture.flush();
+  assert.equal(darkChessTenantRooms.has(roomId), false, 'a fresh pause is left alone');
+  assert.deepEqual(fixture.gameEnds, []);
+  fixture.lifecycle.stopSweeps();
+  t.mock.timers.tick(fixture.stalePauseMs + 1);
+  fixture.lifecycle.startStalePausedSweep();
+  await fixture.flush();
+  t.mock.timers.tick(177_000 + 26);
+  await fixture.flush();
+
+  assert.deepEqual(fixture.gameEnds, [{ roomId, result: 'black-wins', termination: 'timeout' }]);
+  const events = fixture.logs.get(roomId)!;
+  assert.equal(events.filter((event) => event.type === 'clock-resumed').length, 1);
+  const resume = events.find((event) => event.type === 'clock-resumed');
+  assert.equal(resume?.reason, 'grace-elapsed');
+  assert.equal(events.at(-1)?.type, 'clock-expired');
+  // Later sweeps and timer callbacks cannot record the same result twice.
+  t.mock.timers.tick(fixture.stalePauseMs);
+  await fixture.flush();
+  assert.equal(fixture.gameEnds.length, 1);
+});
+
+test('the stale-pause sweep spaces a backlog of resumes', async (t) => {
+  const fixture = staleSweepFixture(t);
+  await fixture.shutdown('dchx_backlog_a');
+  await fixture.shutdown('dchx_backlog_b');
+  t.mock.timers.tick(fixture.stalePauseMs + 1);
+  fixture.lifecycle.startStalePausedSweep();
+  await fixture.flush();
+  const resumed = () =>
+    ['dchx_backlog_a', 'dchx_backlog_b'].filter((id) =>
+      fixture.logs.get(id)!.some((event) => event.type === 'clock-resumed'),
+    );
+  assert.deepEqual(resumed(), ['dchx_backlog_a'], 'the second room waits its turn');
+  t.mock.timers.tick(TENANT_STALE_RESUME_SPACING_MS);
+  await fixture.flush();
+  assert.deepEqual(resumed(), ['dchx_backlog_a', 'dchx_backlog_b']);
+});
+
+test('a tenant player returning inside the stale-pause window resumes normally', async (t) => {
+  const fixture = staleSweepFixture(t);
+  const roomId = 'dchx_stale_return';
+  await fixture.shutdown(roomId);
+  t.mock.timers.tick(fixture.stalePauseMs / 2);
+  const room = await getOrLoadDarkChessTenantRoom(roomId);
+  assert.ok(room);
+  const client = { seat: 'white' as const, displaced: false, socket: { send() {} } };
+  room.clients.add(client);
+  fixture.runtime.scheduleLifecycleTimers(
+    room as Parameters<typeof fixture.runtime.scheduleLifecycleTimers>[0],
+  );
+  await fixture.flush();
+  const resumed = fixture.logs.get(roomId)!.find((event) => event.type === 'clock-resumed');
+  assert.equal(resumed?.reason, 'players-returned');
+  const remainingBeforeSweep = room.projection.clock?.remainingMs.white;
+
+  t.mock.timers.tick(fixture.stalePauseMs / 2 + 1);
+  fixture.lifecycle.startStalePausedSweep();
+  await fixture.flush();
+  assert.equal(
+    fixture.logs.get(roomId)!.filter((event) => event.type === 'clock-resumed').length,
+    1,
+  );
+  assert.equal(room.projection.clock?.remainingMs.white, remainingBeforeSweep);
+  assert.deepEqual(fixture.gameEnds, []);
+});
+
+test('the stale-pause sweep preserves an open reconnect grace window', async (t) => {
+  const fixture = staleSweepFixture(t);
+  const roomId = 'dchx_stale_reconnect_grace';
+  await fixture.shutdown(roomId);
+  t.mock.timers.tick(fixture.stalePauseMs + 1);
+  const room = await getOrLoadDarkChessTenantRoom(roomId);
+  assert.ok(room);
+  const client = { seat: 'black' as const, displaced: false, socket: { send() {} } };
+  room.clients.add(client);
+  fixture.runtime.scheduleLifecycleTimers(
+    room as Parameters<typeof fixture.runtime.scheduleLifecycleTimers>[0],
+  );
+  const deadline = room.resumeDeadline;
+  fixture.lifecycle.startStalePausedSweep();
+  await fixture.flush();
+  assert.equal(room.resumeDeadline, deadline);
+  assert.equal(fixture.logs.get(roomId)!.at(-1)?.type, 'clock-paused');
+
+  t.mock.timers.tick(TENANT_PAUSE_GRACE_MS);
+  await fixture.flush();
+  const resumed = fixture.logs.get(roomId)!.find((event) => event.type === 'clock-resumed');
+  assert.equal(resumed?.reason, 'grace-elapsed');
+  assert.equal(resumed?.at, deadline);
+  assert.deepEqual(fixture.gameEnds, []);
 });

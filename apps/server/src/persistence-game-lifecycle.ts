@@ -593,6 +593,31 @@ export async function finalizeStalePausedRooms(
   };
 }
 
+// Find tenant pauses directly in the event log. Some tenants write a running
+// games row at creation (dark chess, xiangqi, duck, mahjong, ...) and some write
+// none, so only a finished row or a later event makes a room ineligible.
+export async function listStalePausedTenantRoomIds(
+  now: Date,
+  staleAfterMs: number,
+): Promise<string[]> {
+  const { rows } = await getPool().query<{ room_id: string }>(
+    `SELECT e.room_id
+     FROM events e
+     WHERE e.type = 'clock-paused'
+       AND (e.payload->>'at')::bigint < $1
+       AND NOT EXISTS (
+         SELECT 1 FROM games g WHERE g.room_id = e.room_id AND g.status <> 'running'
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM events later
+         WHERE later.room_id = e.room_id AND later.seq > e.seq
+       )
+     ORDER BY e.room_id`,
+    [now.getTime() - staleAfterMs],
+  );
+  return rows.map((row) => row.room_id);
+}
+
 export async function recordGameStart(roomId: string, summary: RunningGameSummary): Promise<void> {
   await getPool().query(
     `INSERT INTO games
