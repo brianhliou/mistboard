@@ -88,7 +88,7 @@ import {
 } from './game-tree.js';
 import { attachGradeGlyphCard, attachGradeMarkCard } from './grade-mark-card.js';
 import { defaultFormatBestMove } from './move-advice.js';
-import { type MoveGlyphTone, moveGlyphTone } from './move-glyph.js';
+import { type MoveGlyphTone, moveGlyphTone, refreshMoveGlyphs } from './move-glyph.js';
 import { createMoveTimesChart } from './move-times-chart.js';
 import { createMoveTree, type MoveTree, type MoveTreeAnnotation, pathKey } from './move-tree.js';
 import { createRetro, type RetroController, type RetroHost, type RetroSide } from './retro.js';
@@ -1177,6 +1177,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       ...glyphMarkers(),
       ...shapes.filter((s) => s.kind === 'circle').map(presentation.shapeToMarker),
     ]);
+    refreshMoveGlyphs(boardEl);
   }
 
   const enginePanel =
