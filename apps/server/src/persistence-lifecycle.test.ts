@@ -1,12 +1,14 @@
 import {
   abortStaleGuestPrestartGames,
   appendEvent,
+  appendRoomEvent,
   createUser,
   finalizeStalePausedRooms,
   type GameSummary,
   getRoomLifecycleTimeline,
   listActiveRoomIds,
   listRoomLifecycleAudit,
+  listStalePausedTenantRoomIds,
   recordGameEnd,
   recordGameStart,
   recordRoomLifecycleAudit,
@@ -21,6 +23,65 @@ import {
 } from './persistence-test-support.js';
 
 definePersistenceTests('lifecycle', () => {
+  test('listStalePausedTenantRoomIds selects only stale last pauses without a games row', async () => {
+    const now = new Date('2026-10-31T12:00:00.000Z');
+    const stalePauseMs = 60_000;
+    const staleAt = now.getTime() - stalePauseMs - 1;
+    const fixtures = [
+      { roomId: 'xq_stale', events: [{ type: 'clock-paused', at: staleAt }] },
+      { roomId: 'xq_fresh', events: [{ type: 'clock-paused', at: now.getTime() - 1 }] },
+      { roomId: 'xq_boundary', events: [{ type: 'clock-paused', at: staleAt + 1 }] },
+      {
+        roomId: 'xq_resumed',
+        events: [
+          { type: 'clock-paused', at: staleAt },
+          { type: 'clock-resumed', at: staleAt + 1 },
+        ],
+      },
+      {
+        roomId: 'xq_later_event',
+        events: [
+          { type: 'clock-paused', at: staleAt },
+          { type: 'seat-assigned', at: staleAt - 1 },
+        ],
+      },
+      {
+        roomId: 'xq_paused_again',
+        events: [
+          { type: 'clock-paused', at: staleAt },
+          { type: 'clock-resumed', at: staleAt + 1 },
+          { type: 'clock-paused', at: now.getTime() - 1 },
+        ],
+      },
+      { roomId: 'xq_completed', events: [{ type: 'clock-paused', at: staleAt }] },
+      { roomId: 'xq_running_row', events: [{ type: 'clock-paused', at: staleAt }] },
+      { roomId: 'legacy_pause', events: [{ type: 'pause', at: staleAt }] },
+    ];
+    for (const { roomId, events } of fixtures) {
+      for (const [seq, event] of events.entries()) {
+        await appendRoomEvent(roomId, seq, { ...event, roomId });
+      }
+    }
+    const summary = {
+      variant: 'xiangqi',
+      startedAt: new Date(staleAt - 1_000),
+      whiteClient: null,
+      blackClient: null,
+      whiteName: null,
+      blackName: null,
+      corpusId: null,
+    };
+    await recordGameStart('xq_running_row', { ...summary, mode: 'pvp' });
+    await recordGameEnd('xq_completed', {
+      ...summary,
+      result: 'red-wins',
+      termination: 'timeout',
+      plyCount: 2,
+      endedAt: now,
+    });
+    assert.deepEqual(await listStalePausedTenantRoomIds(now, stalePauseMs), ['xq_stale']);
+  });
+
   test('listActiveRoomIds excludes finished games', async () => {
     const now = new Date();
     const earlier = new Date(now.getTime() - 60_000);

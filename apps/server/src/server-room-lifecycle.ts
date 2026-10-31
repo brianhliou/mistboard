@@ -30,6 +30,7 @@ import {
 import { modeForProjection } from './server-policy.js';
 import { verifySeatToken } from './server-seat-session.js';
 import type { Client, Room } from './server-types.js';
+import { resumeStalePausedTenantRooms } from './variant-tenant/pause-recovery.js';
 
 type CreateRoomOptions = {
   randomSeating?: boolean;
@@ -525,6 +526,7 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
   async function runStalePausedSweep(): Promise<void> {
     const now = new Date();
     try {
+      await resumeStalePausedTenantRooms(now, config.stalePauseMs);
       const result = await persistence.finalizeStalePausedRooms(now, config.stalePauseMs);
       if (result.finalized === 0) return;
       for (const room of result.rooms) {

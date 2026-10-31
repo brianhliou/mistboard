@@ -301,6 +301,7 @@ export {
   listGameDebugArtifactSummaries,
   listRoomLifecycleAudit,
   listRoomLifecycleAuditByKinds,
+  listStalePausedTenantRoomIds,
   loadRoom,
   loadRoomEvents,
   loadRoomsEvents,
