@@ -1,5 +1,5 @@
--- Evidence survives puzzle edits and review; one vote per account or guest
--- browser per puzzle prevents reloads from reaching the withholding threshold.
+-- Evidence survives puzzle edits and review; one report per account or guest
+-- browser per puzzle. Only account reports count toward withholding a puzzle.
 CREATE TABLE puzzle_reports (
   puzzle_id text NOT NULL REFERENCES puzzles(id) ON DELETE CASCADE,
   reporter text NOT NULL,

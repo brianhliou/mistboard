@@ -78,22 +78,35 @@ test('puzzle report stores the position and move with the guest identity', async
   assert.equal(queue.headers['cache-control'], 'private, no-store');
 });
 
-test('distinct-report threshold withholds list, detail, short codes, daily and ramps until review', async () => {
+test('distinct account reports withhold list, detail, short codes, daily and ramps until review', async () => {
   assert.equal(PUZZLE_REPORT_WITHHOLD_THRESHOLD, 3);
   const puzzle = JSON.parse((await route('/api/puzzles/daily')).payload).puzzle as { id: string };
   const path = `/api/puzzles/${puzzle.id}/report`;
-  const report = (id: number) =>
+  const guestReport = (id: number) =>
     route(path, 'POST', {
       reason: 'wrong-theme',
       deviceId: `guest-threshold-${id}`,
       moves: [],
     });
-  for (let i = 1; i < PUZZLE_REPORT_WITHHOLD_THRESHOLD; i++) {
-    assert.equal((await report(i)).status, 201);
+  // Guest device ids are free to mint, so a flood of guest reports is saved as
+  // evidence but never withholds a puzzle.
+  for (let i = 1; i <= PUZZLE_REPORT_WITHHOLD_THRESHOLD * 2; i++) {
+    assert.equal((await guestReport(i)).status, 201);
   }
-  assert.equal((await report(1)).status, 201);
   assert.equal((await route(`/api/puzzles/${puzzle.id}`)).status, 200);
-  assert.equal((await report(PUZZLE_REPORT_WITHHOLD_THRESHOLD)).status, 201);
+
+  const accountReport = (id: number) =>
+    recordPuzzleReport({
+      puzzleId: puzzle.id,
+      userId: `account-threshold-${id}`,
+      deviceId: null,
+      reason: 'wrong-theme',
+      evidence: { initial: null, position: null, moves: [], movePlayed: null, solution: [] },
+    } as unknown as Parameters<typeof recordPuzzleReport>[0]);
+  for (let i = 1; i < PUZZLE_REPORT_WITHHOLD_THRESHOLD; i++) await accountReport(i);
+  await accountReport(1);
+  assert.equal((await route(`/api/puzzles/${puzzle.id}`)).status, 200);
+  await accountReport(PUZZLE_REPORT_WITHHOLD_THRESHOLD);
   assert.equal((await route(`/api/puzzles/${puzzle.id}`)).status, 404);
   assert.equal((await route(`/api/puzzles/${puzzleShortCode(puzzle.id)}`)).status, 404);
   assert.notEqual(JSON.parse((await route('/api/puzzles/daily')).payload).puzzle.id, puzzle.id);
@@ -112,7 +125,7 @@ test('distinct-report threshold withholds list, detail, short codes, daily and r
   assert.equal((await route(`/api/puzzles/${puzzle.id}`)).status, 200);
   assert.deepEqual(JSON.parse((await route('/api/puzzles/reports')).payload), { reports: [] });
   // A reviewed reporter cannot vote again to put the puzzle back on hold.
-  await report(1);
+  await accountReport(1);
   assert.deepEqual(JSON.parse((await route('/api/puzzles/reports')).payload), { reports: [] });
 });
 
@@ -212,6 +225,7 @@ test('durable reports serialize threshold counting and preserve evidence; review
   ]);
   assert.match(statements[3]!.sql, /hidden_reason IS NULL/);
   assert.match(statements[3]!.sql, /reviewed_at IS NULL/);
+  assert.match(statements[3]!.sql, /user_id IS NOT NULL/);
   assert.equal(statements[3]!.values[2], PUZZLE_REPORT_WITHHOLD_THRESHOLD);
   assert.equal(statements[4]!.sql, 'COMMIT');
   statements.length = 0;

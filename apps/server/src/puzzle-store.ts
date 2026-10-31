@@ -81,7 +81,9 @@ let snapshotLoadedAt = 0;
 let seedSyncChecked = false;
 let inFlight: Promise<PuzzleStoreSnapshot> | null = null;
 
-/** Distinct reporters, not clicks or sessions. Review clears pending reports. */
+/** Distinct signed-in reporters, not clicks or sessions. Guest reports are kept
+ * as evidence but never count: a guest device id is free to mint. Review clears
+ * pending reports. */
 export const PUZZLE_REPORT_WITHHOLD_THRESHOLD = 3;
 const REPORT_HIDDEN_REASON = 'puzzle-reports';
 export const PUZZLE_REPORT_REASONS = [
@@ -121,7 +123,7 @@ export async function recordPuzzleReport(input: Omit<PuzzleReport, 'createdAt' |
       memoryReports.set(key, { ...input, createdAt: new Date().toISOString(), withheld: false });
     }
     const count = [...memoryReports.entries()].filter(
-      ([key, r]) => r.puzzleId === input.puzzleId && !memoryReviewed.has(key),
+      ([key, r]) => r.puzzleId === input.puzzleId && r.userId && !memoryReviewed.has(key),
     ).length;
     if (count >= PUZZLE_REPORT_WITHHOLD_THRESHOLD) memoryWithheld.add(input.puzzleId);
     snapshot = null;
@@ -148,7 +150,8 @@ export async function recordPuzzleReport(input: Omit<PuzzleReport, 'createdAt' |
       `UPDATE puzzles SET hidden_reason = $2
        WHERE id = $1 AND hidden_reason IS NULL
          AND (SELECT count(*) FROM puzzle_reports
-              WHERE puzzle_id = $1 AND reviewed_at IS NULL) >= $3`,
+              WHERE puzzle_id = $1 AND reviewed_at IS NULL
+                AND user_id IS NOT NULL) >= $3`,
       [input.puzzleId, REPORT_HIDDEN_REASON, PUZZLE_REPORT_WITHHOLD_THRESHOLD],
     );
   });

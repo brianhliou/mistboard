@@ -179,24 +179,24 @@ function puzzleReportControl(session: PuzzleSession): HTMLElement {
   details.className = 'puzzle-report';
   const link = document.createElement('summary');
   link.className = 'puzzle-feedback-skip';
-  link.textContent = reportState.sent ? 'Report sent. Thank you.' : 'Report a problem';
+  link.textContent = reportState.sent ? t('puzzle.reportSent') : t('puzzle.reportProblem');
   details.append(link);
   if (reportState.sent) return details;
 
   const form = document.createElement('form');
   const label = document.createElement('label');
-  label.textContent = 'Problem: ';
+  label.textContent = t('puzzle.reportReasonLabel');
   const reason = document.createElement('select');
-  reason.setAttribute('aria-label', 'Problem with this puzzle');
-  for (const [value, text] of [
-    ['wrong-solution', 'Wrong solution'],
-    ['second-winning-move', 'A second winning move'],
-    ['wrong-theme', 'Wrong theme'],
-    ['other', 'Other'],
+  reason.setAttribute('aria-label', t('puzzle.reportReasonAria'));
+  for (const [value, key] of [
+    ['wrong-solution', 'puzzle.reportWrongSolution'],
+    ['second-winning-move', 'puzzle.reportSecondMove'],
+    ['wrong-theme', 'puzzle.reportWrongTheme'],
+    ['other', 'puzzle.reportOther'],
   ] as const) {
     const option = document.createElement('option');
     option.value = value;
-    option.textContent = text;
+    option.textContent = t(key);
     reason.append(option);
   }
   reason.value = reportState.reason;
@@ -207,7 +207,7 @@ function puzzleReportControl(session: PuzzleSession): HTMLElement {
   const send = document.createElement('button');
   send.type = 'submit';
   send.className = 'puzzle-feedback-skip';
-  send.textContent = reportState.pending ? 'Sending report…' : 'Send report';
+  send.textContent = reportState.pending ? t('puzzle.reportSending') : t('puzzle.reportSend');
   send.disabled = reportState.pending;
   const status = document.createElement('p');
   status.setAttribute('role', 'status');
@@ -236,10 +236,10 @@ function puzzleReportControl(session: PuzzleSession): HTMLElement {
       });
       if (!response.ok) throw new Error('report failed');
       reportState.sent = true;
-      link.textContent = 'Report sent. Thank you.';
+      link.textContent = t('puzzle.reportSent');
       form.hidden = true;
     } catch {
-      status.textContent = 'Could not send the report. Please try again.';
+      status.textContent = t('puzzle.reportFailed');
     } finally {
       reportState.pending = false;
       send.disabled = reportState.sent;
