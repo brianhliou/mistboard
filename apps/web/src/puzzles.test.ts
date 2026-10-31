@@ -112,6 +112,121 @@ describe('puzzles route', () => {
     gloss: 'The horse pens the general in and screens the cannon behind it.',
   }));
 
+  it('saves difficulty, preserves an active attempt, and shifts the next puzzle', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const puzzles = [
+      RED_MATE,
+      BLACK_MATE,
+      XIANGQI_PUZZLES.find((puzzle) => puzzle.id !== RED_MATE.id && puzzle.id !== BLACK_MATE.id)!,
+    ];
+    const summaries = puzzles.map((puzzle, index) => ({
+      ...publicSummary(puzzle),
+      servingRating: [1800, 1200, 2400][index],
+    }));
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/puzzles') return json({ puzzles: summaries });
+      if (url.endsWith('/quality')) return new Response(null, { status: 204 });
+      if (url.endsWith('/attempt')) {
+        return json({
+          attempt: attemptStandardXiangqiPuzzleLine(RED_MATE, JSON.parse(String(init?.body)).moves),
+        });
+      }
+      const index = puzzles.findIndex((puzzle) => url === `/api/puzzles/${puzzle.id}`);
+      return index >= 0 ? json({ puzzle: publicDetail(puzzles[index]!) }) : json({}, 404);
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzles(root, RED_MATE.id);
+    clickSquares(root, RED_MATE.solution[0]!);
+    await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+    const picker = root.querySelector<HTMLSelectElement>('[data-puzzle-difficulty]');
+    expect(picker).not.toBeNull();
+    expect([...picker!.options].map((option) => option.textContent)).toEqual([
+      'Easiest',
+      'Easier',
+      'Normal',
+      'Harder',
+      'Hardest',
+    ]);
+    expect(picker!.value).toBe('normal');
+    picker!.value = 'easiest';
+    picker!.dispatchEvent(new Event('change'));
+    expect(window.localStorage.getItem('mistboard:puzzles:difficulty')).toBe('easiest');
+    expect(root.textContent).toContain('Correct.');
+    expect(
+      fetchSpy.mock.calls.filter(([input]) => String(input) === `/api/puzzles/${RED_MATE.id}`),
+    ).toHaveLength(1);
+    expect(root.textContent).toContain('Few unseen puzzles near this level');
+    clickSquares(root, RED_MATE.solution[2]!);
+    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+    root.querySelector<HTMLButtonElement>('[data-puzzle-next]')!.click();
+    await vi.waitFor(() => expect(window.location.pathname).toContain(BLACK_MATE.id));
+    const reopened = document.createElement('div');
+    await mountPuzzles(reopened);
+    expect(reopened.querySelector<HTMLSelectElement>('[data-puzzle-difficulty]')?.value).toBe(
+      'easiest',
+    );
+  });
+
+  it('offers difficulty and sparse fallback in the phone menu', () => {
+    const onChange = vi.fn();
+    const rows = puzzlePhoneMenuRows({
+      queue: [],
+      selectedId: null,
+      solvedIds: new Set(),
+      variantFilter: 'xiangqi',
+      variantFilters: ['xiangqi'],
+      autoNext: false,
+      ratedEnabled: true,
+      userRating: null,
+      ratingDelta: null,
+      onVariantChange: vi.fn(),
+      onAutoNextChange: vi.fn(),
+      onRatedChange: vi.fn(),
+      difficulty: { level: 'hardest', nearby: 0, unseen: 3, onChange },
+    });
+    const field = rows.find((row) => row.dataset.puzzleMenuRow === 'difficulty');
+    expect(field).toBeDefined();
+    const select = field!.querySelector<HTMLSelectElement>('[data-puzzle-menu="difficulty"]')!;
+    expect(select.value).toBe('hardest');
+    select.value = 'easier';
+    select.dispatchEvent(new Event('change'));
+    expect(onChange).toHaveBeenCalledWith('easier');
+    expect(rows.map((row) => row.textContent).join(' ')).toContain(
+      'Few unseen puzzles near this level',
+    );
+  });
+
+  it.each([
+    { nearby: 0, unseen: 0, note: 'All puzzles in this selection have been seen.' },
+    { nearby: 19, unseen: 30, note: 'Few unseen puzzles near this level (19 left).' },
+    { nearby: 20, unseen: 30, note: null },
+  ])(
+    'explains difficulty availability: $nearby near, $unseen unseen',
+    ({ nearby, unseen, note }) => {
+      const rows = puzzlePhoneMenuRows({
+        queue: [],
+        selectedId: null,
+        solvedIds: new Set(),
+        variantFilter: 'xiangqi',
+        variantFilters: ['xiangqi'],
+        autoNext: false,
+        ratedEnabled: true,
+        userRating: null,
+        ratingDelta: null,
+        onVariantChange: vi.fn(),
+        onAutoNextChange: vi.fn(),
+        onRatedChange: vi.fn(),
+        difficulty: { level: 'normal', nearby, unseen, onChange: vi.fn() },
+      });
+      const fallback = rows.find((row) => row.dataset.puzzleDifficultyFallback);
+      if (note) expect(fallback?.textContent).toContain(note);
+      else expect(fallback).toBeUndefined();
+    },
+  );
+
   it('filters the queue by theme, persists the picker, and keeps next navigation filtered', async () => {
     const puzzles = XIANGQI_PUZZLES.slice(0, 3);
     const summaries = puzzles.map((puzzle, index) => ({
@@ -1332,8 +1447,8 @@ describe('standard xiangqi puzzles', () => {
     await mountPuzzles(root, puzzle!.id);
     // Spoiler-gated: the pattern names the mate, so it stays hidden until solved.
     expect(root.querySelector('.puzzle-tag-motif')).toBeNull();
-    // The themes are the info card's last row, not a card of their own; the
-    // left column is info, rating, then one settings card.
+    // Lichess's left column: info, rating, the theme box, then a Settings card
+    // (no heading). The puzzle's own themes join the theme box after a solve.
     const sidebarCards = () =>
       [...root.querySelectorAll<HTMLElement>('.puzzle-left-card')].map((card) =>
         [...card.classList].find((name) => name !== 'puzzle-left-card'),
@@ -1344,13 +1459,31 @@ describe('standard xiangqi puzzles', () => {
       'puzzle-theme-card',
       'puzzle-settings-card',
     ]);
-    const hiddenRow = root.querySelector<HTMLElement>(
-      '.puzzle-info-card [data-puzzle-info-themes]',
+    // Nothing stands in for the themes before a solve (no "revealed later" note).
+    expect(root.querySelector('[data-puzzle-solved-themes]')).toBeNull();
+    expect(root.textContent).not.toContain('Revealed after you solve it.');
+    const settings = root.querySelector<HTMLElement>(
+      '.puzzle-settings-card [data-puzzle-settings]',
     );
-    expect(hiddenRow?.dataset.puzzleInfoThemes).toBe('hidden');
-    expect(hiddenRow?.textContent).toBe('Puzzle themesRevealed after you solve it.');
-    const settings = root.querySelector<HTMLElement>('.puzzle-settings-card');
-    expect(settings?.querySelector('[data-puzzle-auto-next]')).not.toBeNull();
+    expect(settings?.getAttribute('role')).toBe('group');
+    expect(settings?.getAttribute('aria-label')).toBe('Settings');
+    const autoNext = settings?.querySelector('[data-puzzle-auto-next]');
+    const difficulty = settings?.querySelector('[data-puzzle-difficulty]');
+    expect(autoNext).not.toBeNull();
+    expect(difficulty).not.toBeNull();
+    // Jump toggle first, then the difficulty row.
+    expect(
+      autoNext!.compareDocumentPosition(difficulty!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(root.querySelector('.puzzle-rating-card [data-puzzle-settings]')).toBeNull();
+    expect(root.querySelector('.puzzles-sidebar h2')?.textContent).not.toBe('Settings');
+    // The rating sits on the toggle's row, not under it as a headline.
+    expect(
+      root
+        .querySelector('.puzzle-rating-head [data-puzzle-rated]')
+        ?.closest('.puzzle-rating-head')
+        ?.querySelector('.puzzle-rating-summary'),
+    ).not.toBeNull();
     // The theme box's heading is the link back to the themes page (lichess's
     // "« Puzzle Themes"), over what the current choice drills.
     const themeCard = root.querySelector<HTMLElement>('.puzzle-theme-card');
@@ -1367,9 +1500,14 @@ describe('standard xiangqi puzzles', () => {
     }
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
-    const shownRow = root.querySelector<HTMLElement>('.puzzle-info-card [data-puzzle-info-themes]');
-    expect(shownRow?.dataset.puzzleInfoThemes).toBe('shown');
-    expect(shownRow?.textContent).not.toContain('Revealed after you solve it.');
+    // The solved puzzle's themes sit in the theme box, under its picker, and
+    // the info card stays compact.
+    const shownRow = root.querySelector<HTMLElement>(
+      '.puzzle-theme-card [data-puzzle-solved-themes]',
+    );
+    expect(shownRow?.getAttribute('aria-label')).toBe('Puzzle themes');
+    expect(root.querySelector('.puzzle-info-card .puzzle-tag')).toBeNull();
+    expect(root.querySelector('.puzzle-theme-card')?.lastElementChild).toBe(shownRow);
     const chip = shownRow?.querySelector<HTMLElement>('.puzzle-tag-motif');
     // English names only in en: no hanzi, no pinyin tooltip.
     expect(chip?.textContent).toBe(motif.label);
@@ -1964,6 +2102,10 @@ describe('standard xiangqi puzzles', () => {
       const link = root.querySelector<HTMLAnchorElement>('.puzzle-source-link');
       expect(link?.getAttribute('href')).toBe('/historical-xiangqi/game/hxq_src?ply=4');
       expect(link?.textContent).toContain('From game');
+      // The event is clipped to one line in the sidebar, so the full text rides
+      // on the hover title.
+      expect(link?.closest('.puzzle-source-event')).not.toBeNull();
+      expect(link?.title.split('\n')[0]).toBe(link?.textContent);
     });
 
     it('keeps the setup move as the first position when the detail has no history', async () => {

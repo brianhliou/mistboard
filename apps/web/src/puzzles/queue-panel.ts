@@ -1,8 +1,9 @@
 /**
- * The puzzles-page sidebar: the current-puzzle info card (identity, source
- * game, side to move, and its themes once solved), the rated toggle + rating
- * summary, and the settings card (variant and theme pickers, the themes page
- * link, auto-next).
+ * The puzzles-page sidebar, in lichess's order (ui/puzzle/src/view/main.ts):
+ * the current-puzzle info card (identity, source game, side to move), the
+ * rated toggle + rating summary, the theme box (with the puzzle's own themes
+ * once it is over), and the settings card (variant picker, auto-next,
+ * difficulty).
  */
 
 import {
@@ -20,7 +21,15 @@ import { renderVariantMarker } from '../variant-markers.js';
 import { colorLabel, type PuzzleSummary } from './adapter.js';
 import type { UserPuzzleRating } from './api.js';
 import { isPuzzleVariant, type PuzzleVariant, puzzleBoardAdapter } from './registry.js';
+import { PUZZLE_DIFFICULTIES, type PuzzleDifficulty, parsePuzzleDifficulty } from './storage.js';
 import { type PuzzleThemeSettings, puzzleThemeCard } from './themes.js';
+
+type PuzzleDifficultySettings = {
+  level: PuzzleDifficulty;
+  nearby: number;
+  unseen: number;
+  onChange: (level: PuzzleDifficulty) => void;
+};
 
 export type QueuePanelProps = {
   queue: readonly PuzzleSummary[];
@@ -30,6 +39,7 @@ export type QueuePanelProps = {
   // Variants surfaced in the Settings variant picker (order = display order).
   variantFilters: readonly PuzzleVariant[];
   theme?: PuzzleThemeSettings;
+  difficulty?: PuzzleDifficultySettings;
   // The selected puzzle is over in this visit (solved or its solution shown):
   // its rating, goal and themes are no longer spoilers.
   selectedComplete?: boolean;
@@ -74,12 +84,17 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     current !== null &&
     (solvedIds.has(current.id) || (selectedComplete && current.id === selectedId));
 
+  // The theme box holds the puzzle's own themes once it is over (lichess's
+  // puzzle__themes); a variant with no theme box keeps them in the info card.
+  const themeCard =
+    props.theme && variantFilter === XIANGQI_SPEC_ID ? puzzleThemeCard(props.theme) : null;
+  if (themeCard && current && revealed) themeCard.append(puzzleSolvedThemes(current));
   const infoCard = current
     ? puzzleInfoCard(current, {
         rating: revealed ? current.rating : null,
         status: solvedIds.has(current.id) ? t('puzzle.statusSolved') : t('puzzle.playedLocally'),
         goalRevealed: revealed,
-        themes: revealed ? 'shown' : 'hidden',
+        themes: revealed && !themeCard,
       })
     : emptyInfoCard(props.theme?.id ? t('puzzle.noneForTheme') : t('puzzle.noneForVariant'));
 
@@ -103,7 +118,12 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   ratedName.className = 'puzzle-toggle-label';
   ratedName.textContent = t('puzzle.rated');
   ratedToggle.append(ratedInput, ratedSwitch, ratedName);
-  ratingCard.append(ratedToggle);
+  // One row: the toggle, then the rating and the solved count beside it
+  // (lichess's compact sidebar), wrapping under the toggle in a narrow column.
+  const ratingHead = document.createElement('div');
+  ratingHead.className = 'puzzle-rating-head';
+  ratingHead.append(ratedToggle);
+  ratingCard.append(ratingHead);
   if (ratedEnabled) {
     const ratingSummary = document.createElement('div');
     ratingSummary.className = 'puzzle-rating-summary';
@@ -117,7 +137,7 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
         ratingValue.append(delta);
       }
     } else {
-      // No rating yet (a guest, or no rated attempt): one quiet line beside the
+      // No rating yet (a guest, or no rated attempt): one quiet word beside the
       // count, not a headline number.
       ratingSummary.classList.add('puzzle-rating-summary--none');
       ratingValue.textContent = t('puzzle.unrated');
@@ -126,7 +146,7 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     ratingMeta.className = 'puzzle-rating-meta';
     ratingMeta.textContent = t('puzzle.solvedOf', { solved: solvedCount, total: queue.length });
     ratingSummary.append(ratingValue, ratingMeta);
-    ratingCard.append(ratingSummary);
+    ratingHead.append(ratingSummary);
   }
   if (!ratedEnabled) {
     const ratedNote = document.createElement('p');
@@ -135,12 +155,15 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     ratingCard.append(ratedNote);
   }
 
+  // The settings card, lichess's puzzle__side__config: no header, the toggle
+  // and the difficulty row speak for themselves; the group carries the name.
   const settingsCard = document.createElement('section');
   settingsCard.className = 'puzzle-left-card puzzle-settings-card';
-  const settingsTitle = document.createElement('h2');
-  settingsTitle.textContent = t('puzzle.settings');
   const form = document.createElement('div');
   form.className = 'puzzle-settings';
+  form.setAttribute('role', 'group');
+  form.setAttribute('aria-label', t('puzzle.settings'));
+  form.dataset.puzzleSettings = 'true';
   // The variant picker only appears when more than one variant is surfaced.
   if (variantFilters.length > 1) {
     const field = document.createElement('label');
@@ -180,12 +203,50 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   autoNextLabel.textContent = t('puzzle.autoNext');
   autoNextToggle.append(autoNextInput, autoNextSwitch, autoNextLabel);
   form.append(autoNextToggle);
-  settingsCard.append(settingsTitle, form);
+  // Lichess's order: the jump toggle, then the difficulty row under it.
+  if (props.difficulty) form.append(...puzzleDifficultyControls(props.difficulty));
+  settingsCard.append(form);
 
-  // Lichess's order: the puzzle, the rating, the theme box, then settings.
-  const themeCard =
-    props.theme && variantFilter === XIANGQI_SPEC_ID ? [puzzleThemeCard(props.theme)] : [];
-  host.append(infoCard, ratingCard, ...themeCard, settingsCard);
+  host.append(infoCard, ratingCard, ...(themeCard ? [themeCard] : []), settingsCard);
+}
+
+/** Shared controls and availability copy for the sidebar and phone sheet. */
+export function puzzleDifficultyControls(
+  settings: PuzzleDifficultySettings,
+  phone = false,
+): HTMLElement[] {
+  const field = document.createElement('label');
+  // Desktop: label left, select right on one row (lichess's "Difficulty level").
+  field.className = phone ? 'puzzle-pm-row' : 'puzzle-field puzzle-field--inline';
+  if (phone) field.dataset.puzzleMenuRow = 'difficulty';
+  const label = document.createElement('span');
+  label.className = phone ? 'puzzle-pm-row__label' : '';
+  label.textContent = t('puzzle.difficulty');
+  const select = document.createElement('select');
+  select.className = 'puzzle-select';
+  if (phone) select.dataset.puzzleMenu = 'difficulty';
+  else select.dataset.puzzleDifficulty = 'true';
+  for (const level of PUZZLE_DIFFICULTIES) {
+    const option = document.createElement('option');
+    option.value = level;
+    option.textContent = t(`puzzle.difficulty.${level}`);
+    select.append(option);
+  }
+  select.value = settings.level;
+  select.addEventListener('change', () => settings.onChange(parsePuzzleDifficulty(select.value)));
+  field.append(label, select);
+  if (settings.nearby >= 20) return [field];
+  const note = document.createElement('p');
+  note.className = 'puzzle-rated-note';
+  note.id = phone ? 'puzzle-menu-difficulty-note' : 'puzzle-difficulty-note';
+  note.dataset.puzzleDifficultyFallback = 'true';
+  note.setAttribute('role', 'status');
+  note.textContent = t(
+    settings.unseen === 0 ? 'puzzle.difficultyExhausted' : 'puzzle.difficultySparse',
+    { count: settings.nearby },
+  );
+  select.setAttribute('aria-describedby', note.id);
+  return [field, note];
 }
 
 // The current-puzzle info card (lichess's puzzle__side__metas): the puzzle's
@@ -193,15 +254,15 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
 // optional status line, then where it came from and who is to move. The goal
 // (e.g. "Mate in 1") is a spoiler while solving, so it shows only once
 // `goalRevealed`. Puzzle Streak puts the same card over its own. With `themes`
-// the card ends in the puzzle's themes row: a spoiler note until the puzzle is
-// over ('hidden'), the theme chips after ('shown'). Streak passes none.
+// the card ends in the puzzle's theme chips, for a page with no theme box to
+// hold them; pass it only once the puzzle is over (the themes are spoilers).
 export function puzzleInfoCard(
   puzzle: PuzzleSummary,
   opts: {
     rating: number | null;
     status: string | null;
     goalRevealed: boolean;
-    themes?: 'hidden' | 'shown';
+    themes?: boolean;
   },
 ): HTMLElement {
   const infoCard = document.createElement('section');
@@ -231,36 +292,28 @@ export function puzzleInfoCard(
                 color: colorLabel(puzzle.sideToMove),
               })
             : t('puzzle.toMove', { color: colorLabel(puzzle.sideToMove) }),
+          'puzzle-info-goal',
         ),
       ],
       puzzle.variant,
     ),
   );
-  if (opts.themes) infoCard.append(puzzleInfoDivider(), puzzleThemesRow(puzzle, opts.themes));
+  if (opts.themes) infoCard.append(puzzleInfoDivider(), puzzleSolvedThemes(puzzle));
   return infoCard;
 }
 
-// Themes name the piece or pattern (e.g. "Drop", "Treasure"), so the chips
-// show only once the puzzle is over; until then the row says when they will.
-function puzzleThemesRow(
+// The puzzle's own theme chips, shown once it is over (they name the pattern,
+// so they are spoilers before). No visible label, as lichess's puzzle__themes:
+// the divider above sets them apart, the group carries the name for a reader.
+function puzzleSolvedThemes(
   puzzle: Pick<PuzzleSummary, 'themes' | 'motifs' | 'variant'>,
-  state: 'hidden' | 'shown',
 ): HTMLElement {
-  const row = document.createElement('div');
-  row.className = `puzzle-info-themes puzzle-info-themes--${state}`;
-  row.dataset.puzzleInfoThemes = state;
-  const label = document.createElement('span');
-  label.className = 'puzzle-info-themes__label';
-  label.textContent = t('puzzle.themesTitle');
-  if (state === 'shown') {
-    row.append(label, tagsPanel(puzzle));
-  } else {
-    const note = document.createElement('span');
-    note.className = 'puzzle-info-themes__note';
-    note.textContent = t('puzzle.themesHidden');
-    row.append(label, note);
-  }
-  return row;
+  const tags = tagsPanel(puzzle);
+  tags.classList.add('puzzle-solved-themes');
+  tags.dataset.puzzleSolvedThemes = 'true';
+  tags.setAttribute('role', 'group');
+  tags.setAttribute('aria-label', t('puzzle.themesTitle'));
+  return tags;
 }
 
 function emptyInfoCard(message: string): HTMLElement {
@@ -308,8 +361,9 @@ function puzzleInfoRow(
   return row;
 }
 
-function puzzleInfoLine(text: string): HTMLSpanElement {
+function puzzleInfoLine(text: string, className?: string): HTMLSpanElement {
   const line = document.createElement('span');
+  if (className) line.className = className;
   line.textContent = text;
   return line;
 }
@@ -364,14 +418,22 @@ export function withSelectedSource(
 // The header, a link to the game's page at the puzzle's move when the server
 // says it hosts the game (the same route as historicalXiangqiReviewUrl, not
 // imported: that module brings the game search's styles with it).
+// One line, cut with an ellipsis (lichess's "From game 3+2 • Blitz" fits; an
+// event name often does not), with the whole header as the tooltip.
 function sourceGameHeaderLine(source: NonNullable<PuzzleSummary['sourceGame']>): HTMLElement {
-  if (!source.hosted) return puzzleInfoLine(sourceGameHeader(source));
+  const header = sourceGameHeader(source);
+  if (!source.hosted) {
+    const line = puzzleInfoLine(header, 'puzzle-source-event');
+    line.title = header;
+    return line;
+  }
   const line = document.createElement('span');
+  line.className = 'puzzle-source-event';
   const link = document.createElement('a');
   link.className = 'puzzle-source-link';
   link.href = `/historical-xiangqi/game/${encodeURIComponent(source.gameId)}?ply=${source.ply}`;
-  link.textContent = sourceGameHeader(source);
-  link.title = t('puzzle.openSourceGame');
+  link.textContent = header;
+  link.title = `${header}\n${t('puzzle.openSourceGame')}`;
   line.append(link);
   return line;
 }

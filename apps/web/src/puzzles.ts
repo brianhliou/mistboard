@@ -71,11 +71,14 @@ import {
 import { type PuzzleChipResult, puzzleResultChips } from './puzzles/result-chips.js';
 import {
   loadAutoNextEnabled,
+  loadPuzzleDifficulty,
   loadRatedEnabled,
   loadSeenPuzzles,
   loadSolvedPuzzleIds,
+  puzzleDifficultyAvailability,
   rotatePuzzleOrder,
   saveAutoNextEnabled,
+  savePuzzleDifficulty,
   saveRatedEnabled,
   saveSeenPuzzles,
   saveSolvedPuzzleIds,
@@ -184,6 +187,8 @@ export async function mountPuzzles(
   };
   const solvedIds = loadSolvedPuzzleIds();
   const seenPuzzles = loadSeenPuzzles();
+  const targetRatings = new Map<string, number>();
+  let difficulty = loadPuzzleDifficulty();
   // Record a puzzle as seen (for the next visit's rotation) without disturbing
   // this visit's already-frozen queue order.
   const markPuzzleSeen = (id: string): void => {
@@ -297,6 +302,30 @@ export async function mountPuzzles(
           themeFilter = id;
           savePuzzleTheme(id);
           await changeQueue();
+        },
+      },
+      difficulty: {
+        level: difficulty,
+        ...puzzleDifficultyAvailability(
+          queueSummaries(),
+          seenPuzzles,
+          targetRatings.get(variantFilter) ?? PUZZLE_NEW_PLAYER_RATING,
+          difficulty,
+        ),
+        onChange: (level) => {
+          difficulty = level;
+          savePuzzleDifficulty(level);
+          clearAutoNextTimer();
+          if (userRating) targetRatings.set(variantFilter, userRating.rating);
+          const current = summaries.find((puzzle) => puzzle.id === selectedId);
+          const ordered = rotatePuzzleOrder(summaries, seenPuzzles, targetRatings, difficulty);
+          // Keep the active attempt and its quality session intact; Next starts
+          // the newly ordered queue, including after revisiting a result chip.
+          summaries = current
+            ? [current, ...ordered.filter((puzzle) => puzzle.id !== current.id)]
+            : ordered;
+          if (session) renderSession();
+          else renderControls();
         },
       },
       selectedComplete: session !== null && isPuzzleComplete(session),
@@ -478,7 +507,6 @@ export async function mountPuzzles(
       reloadedPastFinished = true;
     }
   }
-  const targetRatings = new Map<string, number>();
   await Promise.all(
     [...new Set(summaries.map((puzzle) => puzzle.variant))].map(async (variant) => {
       const rating = await fetchUserPuzzleRating(variant);
@@ -488,7 +516,7 @@ export async function mountPuzzles(
   // Rotate the queue so both the leading puzzle and the sequence vary between
   // visits instead of being identical every time. Computed once per visit so
   // navigation stays stable while solving; filtering by variant preserves it.
-  summaries = rotatePuzzleOrder(summaries, seenPuzzles, targetRatings);
+  summaries = rotatePuzzleOrder(summaries, seenPuzzles, targetRatings, difficulty);
   // The deep-link path may be a short code; resolve it to the full id before it
   // drives variant selection and queue matching below.
   if (selectedId) selectedId = resolveToFullPuzzleId(selectedId, summaries);

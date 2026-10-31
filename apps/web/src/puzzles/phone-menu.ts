@@ -18,6 +18,7 @@ import {
   goalLabel,
   parseVariantFilter,
   puzzleCodeLine,
+  puzzleDifficultyControls,
   type QueuePanelProps,
   sourceGameLines,
   tagsPanel,
@@ -108,6 +109,7 @@ export function puzzlePhoneMenuRows(props: QueuePanelProps): HTMLElement[] {
       props.onAutoNextChange(on),
     ),
   );
+  if (props.difficulty) rows.push(...puzzleDifficultyControls(props.difficulty, true));
 
   if (current && props.solvedIds.has(current.id)) {
     const themes = document.createElement('div');

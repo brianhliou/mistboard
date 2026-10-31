@@ -416,8 +416,17 @@ export const EN_PLAY = {
   'puzzle.ratingNote':
     'Your puzzle rating will not change. Note that puzzles are not a competition. Your rating helps select the most appropriate puzzles for your skill level.',
   'puzzle.themesTitle': 'Puzzle themes',
-  'puzzle.themesHidden': 'Revealed after you solve it.',
   'puzzle.settings': 'Settings',
+  'puzzle.difficulty': 'Difficulty',
+  'puzzle.difficulty.easiest': 'Easiest',
+  'puzzle.difficulty.easier': 'Easier',
+  'puzzle.difficulty.normal': 'Normal',
+  'puzzle.difficulty.harder': 'Harder',
+  'puzzle.difficulty.hardest': 'Hardest',
+  'puzzle.difficultySparse':
+    'Few unseen puzzles near this level ({count} left). Widening the rating range as needed to avoid repeats.',
+  'puzzle.difficultyExhausted':
+    'All puzzles in this selection have been seen. Returning to the least recently seen puzzles.',
   'puzzle.variantField': 'Variant',
   'puzzle.themeField': 'Theme',
   'puzzle.allThemes': 'All themes',
@@ -1051,7 +1060,6 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'puzzle.unrated',
   'puzzle.ratingNote',
   'puzzle.themesTitle',
-  'puzzle.themesHidden',
   'puzzle.settings',
   'puzzle.variantField',
   'puzzle.autoNext',
