@@ -62,6 +62,9 @@ export type ShowcaseBoardOptions = {
   // renderer paths. Off by default: the other compact hosts hide or restyle the
   // seat rows.
   seatDiscs?: boolean;
+  // Tenant path only: a drop variant's reserves ride the seat rows instead of
+  // strips above and below the board (watch-tenant-replay.ts `reservesInSeats`).
+  reservesInSeats?: boolean;
 };
 
 export async function mountShowcaseBoard(
@@ -87,6 +90,7 @@ export async function mountShowcaseBoard(
       ...(options.onLoadError ? { onLoadError: options.onLoadError } : {}),
       ...(options.airStartMs !== undefined ? { airStartMs: options.airStartMs } : {}),
       ...(options.seatDiscs ? { seatDiscs: true } : {}),
+      ...(options.reservesInSeats ? { reservesInSeats: true } : {}),
       ...(options.tenantPov ? { pov: options.tenantPov } : {}),
     });
   }

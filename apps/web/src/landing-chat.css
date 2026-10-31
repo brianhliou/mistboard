@@ -9,7 +9,6 @@
   --landing-chat-height: 292px;
   --landing-chat-bg: var(--site-panel);
   --landing-chat-border: var(--site-border-soft);
-  --landing-chat-title: #5c5c5c;
   --landing-chat-text: #555;
   --landing-chat-handle: #7a7a7a;
   --landing-chat-token: var(--site-link);
@@ -26,12 +25,11 @@
   background: var(--landing-chat-bg);
 }
 
+/* The shared box header (tinted bar, rule under it), like Latest studies, the
+   forum and News beside it (Brian, 2026-10-31); centred for the mute toggle. */
 .landing-chat .site-box-top {
   flex: 0 0 auto;
   align-items: center;
-  padding: 9px 11px 5px 13px;
-  border-bottom: 0;
-  background: transparent;
 }
 
 .landing-chat-toggle {
@@ -88,13 +86,6 @@
     border-color: var(--landing-chat-input-border);
     background: var(--site-panel-soft);
   }
-}
-
-.landing-chat .site-box-title {
-  color: var(--landing-chat-title);
-  font-size: 16px;
-  font-weight: 300;
-  line-height: 1.1;
 }
 
 .landing-chat .site-box-body {
@@ -321,7 +312,6 @@ a.landing-chat-token:focus-visible {
 }
 
 :root[data-effective-theme="dark"] .landing-chat {
-  --landing-chat-title: #a9a9a4;
   --landing-chat-text: #c7c3bb;
   --landing-chat-handle: #d5d1c9;
   --landing-chat-input-bg: #302f2b;

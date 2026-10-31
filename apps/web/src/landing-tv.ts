@@ -217,6 +217,7 @@ export async function mountLandingTv(
       const next = await mountShowcaseBoard(root, entry.specId, entry.roomId, {
         metadataByRoomId: options.metadataByRoomId,
         seatDiscs: true,
+        reservesInSeats: true,
         namesByRoomId: options.namesByRoomId,
         loaderForId: options.loaderForId,
         pov: entry.pov,

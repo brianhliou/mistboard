@@ -2055,7 +2055,10 @@
      The three band-1 columns share one bottom edge: the play rail already
      stretches (chat pinned to its bottom), the lobby panel stretches so the
      board's bottom edge rides the same line, and the left rail stretches with
-     the viewer pushed down to it (banners stay pinned to the top). */
+     the viewer centred in the space under the banners (banners stay pinned
+     to the top). Pushed to the bottom, the viewer's lower seat row sat one
+     gutter above the puzzle's caption line and read as part of band 2
+     (Brian, 2026-10-31). */
   .landing-lobby-panel {
     align-self: stretch;
   }
@@ -2073,17 +2076,18 @@
   }
 
   .landing-left-column .landing-viewer-column {
-    margin-top: auto;
+    margin-block: auto;
   }
 
   /* ── Band-2 equal heights ────────────────────────────────────────────────────
      The daily-puzzle board fills the rail width. A standard xiangqi board is
      portrait (540:612), so the board box is the rail width times that ratio and
-     its width lands flush with the rail (no pillarboxing). The shared band-2
-     height is that board PLUS its two captions, which now sit inside the widget
-     instead of in the row gutters. The forum and chat boxes read the same
-     variable, so all three band-2 boxes align top AND bottom — the alignment is
-     of the whole widget now, caption to caption, not of the bare board. */
+     its width lands flush with the rail (no pillarboxing). The three band-2
+     boxes align on the BOARD's edges, not the widget's (Brian, 2026-10-31): the
+     board, the deep-dive cards' top and the News box share one top line, and
+     the board, the blog cards' bottom and News share one bottom line. The labels
+     (puzzle of the day and the side to move, the two row labels) ride centred
+     as small caps in the gutters above the row and between the card rows. */
   .landing-demo {
     /* 612/552 is the intersection board's own ratio. This read 612/540 (the
        square-grid layout's width) and so ran ~8px tall, letterboxing the board
@@ -2094,6 +2098,83 @@
       (var(--landing-board-caption-line) + var(--landing-board-caption-gap)) *
       2
     );
+    --landing-gutter-label-size: 12px;
+    /* A gutter that carries a label line runs a few px past the grid gap, so
+       12px caps clear the boxes on both sides. */
+    --landing-label-gutter: calc(var(--landing-row-gap) + 6px);
+    --landing-label-gutter-extra: calc(var(--landing-label-gutter) - var(--landing-row-gap));
+    /* Two card rows and the labelled gutter between them fill the board's
+       height. */
+    --landing-article-card-height: calc(
+      (var(--landing-puzzle-board-height) - var(--landing-label-gutter)) /
+      2
+    );
+  }
+
+  /* The puzzle widget's captions fill the labelled gutters above and below the
+     board with no gap to it, and the column pulls up and down into both, so the
+     board itself sits on the band's top and bottom lines. The gutter under band
+     2 is a label gutter too, for the side to move: band 2 ends on the board's
+     bottom line and band 3 steps down by the gutter's extra. Scoped to this
+     column: the viewer's seat rows read the same caption variables. */
+  .landing-demo .landing-puzzle-column {
+    --landing-board-caption-line: var(--landing-label-gutter);
+    --landing-board-caption-gap: 0px;
+    margin-top: calc(-1 * var(--landing-row-gap));
+    margin-bottom: calc(-1 * var(--landing-label-gutter));
+  }
+
+  .landing-demo :is(.landing-studies-column, .landing-forum-column, .landing-chat-column) {
+    margin-top: var(--landing-label-gutter-extra);
+  }
+
+  .landing-news-column,
+  .landing-demo .landing-articles-row {
+    margin-top: var(--landing-label-gutter-extra);
+  }
+
+  .landing-demo .landing-puzzle-column :is(.home-puzzle-widget-title, .home-puzzle-widget-turn),
+  .landing-demo .landing-articles-row .landing-row-label {
+    color: var(--site-muted);
+    font-size: var(--landing-gutter-label-size);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .landing-demo
+    .landing-puzzle-column
+    .home-puzzle-widget:is(:hover, :focus-visible)
+    :is(.home-puzzle-widget-title, .home-puzzle-widget-turn) {
+    color: var(--site-accent);
+  }
+
+  /* Each article row is just its cards; its label line sits in the gutter
+     above it, over the cards' stacking so the More link's hover underline is
+     never painted under a thumbnail. */
+  .landing-demo .landing-articles-row {
+    position: relative;
+  }
+
+  .landing-demo .landing-articles-row > .landing-row-header {
+    position: absolute;
+    z-index: 1;
+    right: 0;
+    bottom: 100%;
+    left: 0;
+    height: var(--landing-label-gutter);
+    align-items: center;
+  }
+
+  .landing-demo
+    .landing-articles-row
+    > .landing-row-header
+    :is(.landing-row-label, .landing-row-more) {
+    line-height: var(--landing-label-gutter);
+  }
+
+  .landing-demo .landing-articles-row > .landing-row-header .landing-row-more {
+    font-size: var(--landing-gutter-label-size);
   }
 
   .landing-puzzle-column .home-puzzle-box {
@@ -2112,8 +2193,7 @@
      one where it does not (the container query below), and its size grows to
      take up the strip, never a gap between the rows. */
   .landing-demo .landing-articles-row {
-    gap: 4px;
-    height: calc((var(--landing-lower-widget-height) - var(--landing-col-gap)) / 2);
+    height: var(--landing-article-card-height);
   }
 
   .landing-demo .landing-articles-row .landing-carousel {
@@ -2126,18 +2206,57 @@
     height: 100%;
   }
 
+  /* The card height is fixed by the board; the thumbnail keeps its 8:5 width
+     share until the text strip under it would drop below one 14px title line,
+     the date and a few px between them (50px), then crops (object-fit cover)
+     instead. That only happens at the widest track (~9px of a 133px thumbnail
+     at 654px). The title's size takes up whatever strip is left: two lines (or
+     one, past a 569px track) of 1.3, after the date, margins and that gap
+     (32px), 14px to 17px. */
   .landing-demo .landing-articles-row .landing-article-card {
+    --landing-article-thumb-height: min(
+      (100cqi - 2 * var(--landing-carousel-gap)) /
+      3 *
+      5 / 8,
+      var(--landing-article-card-height) -
+      50px
+    );
+    --landing-article-strip: calc(
+      var(--landing-article-card-height) -
+      var(--landing-article-thumb-height) -
+      32px
+    );
     position: relative;
   }
 
-  /* The text strip under the 8:5 thumbnail shrinks as the track widens (about
-     83px at a 482px track, 48px at 650px), so the title's size follows the
-     track: two lines sized to fill the strip, between 14px and 17px. The
-     figures are the strip height (row 181px, less the thumbnail at 5/24 of the
-     track) minus the date and margins (28px), over two lines of 1.3. */
+  .landing-demo .landing-articles-row .landing-article-card-thumb {
+    height: var(--landing-article-thumb-height);
+    aspect-ratio: auto;
+  }
+
+  /* The frame runs a little wider than 8:5 when the strip caps the thumbnail
+     height, and an 8:5 drawn thumbnail (the typographic cards, half-board
+     diagrams) letterboxed inside it with dark bars at the sides. Those fill the
+     width and crop top and bottom like the photos. Portrait board diagrams
+     keep their framed look. */
+  .landing-demo
+    .landing-articles-row
+    .articles-index-card-thumb:has(> svg:not(.xq-article-svg), > svg.xq-half-thumb) {
+    display: flex;
+    align-items: center;
+  }
+
+  .landing-demo
+    .landing-articles-row
+    .articles-index-card-thumb
+    > :is(svg:not(.xq-article-svg), svg.xq-half-thumb) {
+    flex: none;
+    height: auto;
+  }
+
   .landing-demo .landing-articles-row .landing-article-card-title {
     margin-top: 4px;
-    font-size: clamp(14px, 59.6px - 8.01cqi, 17px);
+    font-size: clamp(14px, var(--landing-article-strip) / 2.6, 17px);
   }
 
   .landing-demo .landing-articles-row .landing-article-card-date {
@@ -2154,7 +2273,7 @@
     .landing-demo .landing-articles-row .landing-article-card-title {
       -webkit-line-clamp: 1;
       line-clamp: 1;
-      font-size: clamp(14px, 119.2px - 16.02cqi, 17px);
+      font-size: clamp(14px, var(--landing-article-strip) / 1.3, 17px);
     }
 
     .landing-demo .landing-articles-row .landing-article-card-title-break {
@@ -2329,6 +2448,19 @@
      beyond the shared width var below — the base rules already lay it out. */
   .landing-page .landing-board-column #landing-replay .replay-layout-solo .showcase-board-row {
     width: var(--showcase-widget-size);
+  }
+
+  /* Jungle's 7x9 board is taller for its width than xiangqi's: at the rail
+     width it stood 437px and grew the first band whenever the viewer reached
+     it. Its board takes the xiangqi board's height instead (rail x 612/552),
+     its width follows the 336:432 board, and it centres in the rail (Brian,
+     2026-10-31). */
+  .landing-page .landing-board-column #landing-replay:has(.jungle-live-svg) {
+    --showcase-widget-size: calc(100cqw * 612 / 552 * 336 / 432);
+  }
+
+  .landing-page .landing-board-column:has(.jungle-live-svg) {
+    align-items: center;
   }
 } /* end @media (min-width: 1241px) — homepage viewer flush box model */
 
@@ -2621,6 +2753,76 @@
   .showcase-reserve.drop-mini-reserve-strip--all-roles
   .drop-mini-reserve-piece.is-empty {
   opacity: 0.24;
+}
+
+/* Homepage viewer: a drop variant's hands ride the seat rows (the
+   `reservesInSeats` mount option), just before each clock, so its viewer is no
+   taller than a bare board's and the first band keeps one height whatever
+   variant is on (Brian, 2026-10-31). Held pieces only: seven slots beside a
+   long engine name would not fit the row. */
+.showcase-widget .replay-layout-solo .showcase-seat > .showcase-reserve.showcase-reserve--in-seat {
+  --showcase-seat-piece: 18px;
+
+  flex: 0 1 auto;
+  align-self: center;
+  width: auto;
+  height: var(--showcase-seat-piece);
+  min-width: 0;
+  margin-left: auto;
+  padding: 0;
+  gap: 0;
+  overflow: visible;
+}
+
+.showcase-widget
+  .replay-layout-solo
+  .showcase-seat
+  > .showcase-reserve.showcase-reserve--in-seat
+  .drop-mini-reserve-row {
+  width: auto;
+  gap: 7px;
+}
+
+.showcase-widget
+  .replay-layout-solo
+  .showcase-seat
+  > .showcase-reserve.showcase-reserve--in-seat
+  .drop-mini-reserve-piece {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--showcase-seat-piece);
+  height: var(--showcase-seat-piece);
+}
+
+.showcase-widget
+  .replay-layout-solo
+  .showcase-seat
+  > .showcase-reserve.showcase-reserve--in-seat
+  .drop-mini-reserve-piece.is-empty {
+  display: none;
+}
+
+/* The base 14px count badge would cover an 18px piece: a smaller one rides
+   the piece's lower right corner, into the gap before the next piece. */
+.showcase-widget
+  .replay-layout-solo
+  .showcase-seat
+  > .showcase-reserve.showcase-reserve--in-seat
+  .captures-count-badge {
+  right: -6px;
+  bottom: -3px;
+  min-width: 11px;
+  height: 11px;
+  padding: 0 2px;
+  font-size: 8px;
+}
+
+.showcase-widget
+  .replay-layout-solo
+  .showcase-seat:has(> .showcase-reserve--in-seat)
+  .showcase-seat-name {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .landing-play-intro {
