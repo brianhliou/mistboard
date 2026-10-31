@@ -22,3 +22,199 @@
   fill: rgb(22, 40, 58);
   fill-opacity: 0.85;
 }
+
+/* A review seat's points, after its captures: the live room's seat tag
+   (.clock-seat-tag) in the study board's seat row. */
+.review-seat .tk-banqi-scores {
+  flex-shrink: 0;
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--site-muted);
+  white-space: nowrap;
+}
+
+/* The material panel under the board (live room, live-three-kingdoms-banqi.ts
+   renderMaterial): one block per seat, the opponent's first like the board,
+   each its name over its points and two named lines at one disc size, the
+   pieces it took and its own pieces still face-down (Brian, 2026-10-30). The
+   same layout on every width: two seat rows the board's width. Compound
+   selectors: banqi's pool rules (live-review.css) match these nodes at three
+   classes. */
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool:not(:empty) {
+  --tk-piece: 30px;
+  --tk-key: 6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 2px;
+}
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat {
+  display: grid;
+  grid-template-columns: 4.75rem var(--tk-key) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 4px;
+}
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat + .tk-seat {
+  padding-top: 6px;
+  border-top: 1px solid var(--site-border-soft, var(--site-border));
+}
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__head {
+  grid-row: span 2;
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  line-height: 1.1;
+}
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__name {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.live-route--three-kingdoms-banqi
+  .live-review__cluster
+  .hidden-pool
+  .tk-seat[data-ink="red"]
+  .tk-seat__name {
+  color: #b91c1c;
+}
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__points {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--site-text);
+}
+/* Each line's name and discs are the seat grid's second and third columns,
+   so both lines' discs start at one x in both seats. */
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__line {
+  display: contents;
+}
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__key {
+  grid-column: 2;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--site-muted);
+}
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__pieces {
+  grid-column: 3;
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 3px;
+  height: auto;
+  min-height: var(--tk-piece);
+  overflow: visible;
+}
+.live-route--three-kingdoms-banqi
+  .live-review__cluster
+  .hidden-pool
+  .tk-seat__pieces
+  .review-capture-piece {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 var(--tk-piece);
+  width: var(--tk-piece);
+  height: var(--tk-piece);
+}
+.live-route--three-kingdoms-banqi
+  .live-review__cluster
+  .hidden-pool
+  .tk-seat__pieces
+  .review-capture-piece
+  svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.live-route--three-kingdoms-banqi
+  .live-review__cluster
+  .hidden-pool
+  .tk-seat__pieces
+  > .hidden-pool__chip {
+  flex: 0 0 var(--tk-piece);
+}
+/* An empty line's "None" sits at the discs' height, so the panel keeps its
+   shape when a line empties. */
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__none {
+  font-size: 0.72rem;
+  line-height: var(--tk-piece);
+  color: var(--site-muted);
+}
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .reveal-odds-chip__pct {
+  font-size: 10px;
+  line-height: 1.2;
+}
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .hidden-pool__note {
+  grid-column: 2 / -1;
+}
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .hidden-pool__caption,
+.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-banqi-moves-left {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--site-muted);
+}
+
+/* Phone: the panel is a fixed slot under the bottom seat, sized to its
+   content so the width-bound board's spare height goes to the pieces, not to
+   blank margins. Each seat's name and points become a header line over its
+   two named lines, so the discs get the full width at 28px. The odds caption
+   goes to screen readers only, as in banqi's phone odds rows (every tile draws
+   from one pool, so the chances carry the count). Heights: header 20, two
+   28px lines, the chance under each face-down disc adds 12, the moves-left
+   line 20. */
+@media (max-width: 600px) {
+  .live-route--banqi.live-route--three-kingdoms-banqi
+    .review-shell__cluster.live-review__cluster:has(.hidden-pool:not(:empty)) {
+    --phone-room-pool: 184px;
+  }
+  .live-route--banqi.live-route--three-kingdoms-banqi
+    .review-shell__cluster.live-review__cluster:has(.hidden-pool.tk-material--odds) {
+    --phone-room-pool: 208px;
+  }
+  .live-route--banqi.live-route--three-kingdoms-banqi
+    .review-shell__cluster.live-review__cluster:has(.hidden-pool .tk-banqi-moves-left) {
+    --phone-room-pool: 228px;
+  }
+  .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool:not(:empty) {
+    --tk-piece: 28px;
+    --tk-key: 7.5rem;
+    gap: 4px;
+    padding-top: 0;
+  }
+  .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat {
+    grid-template-columns: var(--tk-key) minmax(0, 1fr);
+  }
+  .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat + .tk-seat {
+    padding-top: 4px;
+  }
+  .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__head {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__name {
+    font-size: 0.85rem;
+  }
+  .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__points {
+    font-size: 1.05rem;
+  }
+  .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__key {
+    grid-column: 1;
+  }
+  .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__pieces {
+    grid-column: 2;
+  }
+  .live-route--three-kingdoms-banqi .live-review__cluster .tk-material--odds .hidden-pool__caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

@@ -154,6 +154,42 @@ export function puzzleThemesLink(): HTMLAnchorElement {
   return link;
 }
 
+/**
+ * The puzzle page's themes card, lichess's theme box: a header that reads as a
+ * link back to the themes page ("‹ Puzzle themes"), what the chosen theme
+ * drills (the mix when none is chosen), and the picker to change it.
+ */
+export function puzzleThemeCard(settings: PuzzleThemeSettings): HTMLElement {
+  const card = document.createElement('section');
+  card.className = 'puzzle-left-card puzzle-theme-card';
+  card.dataset.puzzleThemeCard = 'true';
+  const heading = document.createElement('h2');
+  const back = document.createElement('a');
+  back.className = 'puzzle-theme-card__back';
+  back.href = '/puzzles/themes';
+  const chevron = document.createElement('span');
+  chevron.className = 'puzzle-theme-card__chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.textContent = '‹';
+  back.append(chevron, t('puzzle.themesTitle'));
+  heading.append(back);
+  const description = document.createElement('p');
+  description.className = 'puzzle-theme-card__description';
+  description.textContent = puzzleThemeDescription(settings);
+  card.append(heading, description, puzzleThemePicker(settings));
+  return card;
+}
+
+/** What the chosen theme drills, in the themes page's words. */
+function puzzleThemeDescription(settings: PuzzleThemeSettings): string {
+  if (!settings.id) return t('puzzle.themeMixDesc');
+  for (const group of puzzleThemeGroups(settings.options, settings.id)) {
+    const entry = group.entries.find((candidate) => candidate.id === settings.id);
+    if (entry) return entry.description;
+  }
+  return t('puzzle.themeMixDesc');
+}
+
 export function puzzleThemePicker(settings: PuzzleThemeSettings, phone = false): HTMLLabelElement {
   const field = document.createElement('label');
   field.className = phone ? 'puzzle-pm-row' : 'puzzle-field';

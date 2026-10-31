@@ -224,6 +224,7 @@ test('unfloored specs accept every pace their own allowlist offers', () => {
 test('variantDefaultTimeControl: deliberate variants opt out of the house pace', () => {
   assert.equal(variantDefaultTimeControl('jieqi').id, '10m5');
   assert.equal(variantDefaultTimeControl('xiangqi').id, '10m5');
+  assert.equal(variantDefaultTimeControl('three-kingdoms-banqi').id, '5m5');
   // Everything else keeps 3+2, including a spec with no entry at all.
   assert.equal(variantDefaultTimeControl('banqi').id, '3m2');
   assert.equal(variantDefaultTimeControl('fortress-xiangqi').id, '3m2');

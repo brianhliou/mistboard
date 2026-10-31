@@ -1,0 +1,33 @@
+/* Selection marks on 3D pieces (board-select-3d.ts). The green is the move-hint
+   dot's (.xq-live-hint-dot, .jieqi-hint), one token. It stays the light-board
+   teal on the dark board tones too: these marks paint the piece, whose face and
+   rim are ivory on every board, not the board itself. */
+:root {
+  --board-move-hint: rgba(31, 111, 91, 0.72);
+}
+
+/* A capture target's face: the hint green as a tint, multiplied so the piece's
+   art still reads through it. */
+.board-select3d-face {
+  fill: var(--board-move-hint);
+  opacity: 0.5;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* The selected piece's side, and a hovered target's: solid green over the
+   rim, and over the last move's gold edge (drawn after it). */
+.board-select3d-edge {
+  fill: rgb(31, 111, 91);
+  stroke: none;
+  pointer-events: none;
+}
+
+.board-select3d-edge--hover {
+  opacity: 0;
+}
+
+.xq-live-hit--target:hover .board-select3d-edge--hover,
+.jieqi-hit--target:hover .board-select3d-edge--hover {
+  opacity: 1;
+}

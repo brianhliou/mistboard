@@ -239,6 +239,7 @@ const G_M_144890: XiangqiReplaySpec = {
 
 export const zuoWenjingArticle: Article = {
   slug: "zuo-wenjing",
+  contactNote: true,
   homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',

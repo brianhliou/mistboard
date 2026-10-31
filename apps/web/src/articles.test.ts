@@ -146,6 +146,9 @@ describe('article public listing gates', () => {
       // The board and piece settings showcase, scheduled for 2026-11-06
       // (DEV shows it early for review).
       '/blog/set-up-your-board',
+      // The sixth player page, the ten-time national women's champion Tang Dan,
+      // scheduled for 2026-11-06 (DEV shows it early for review).
+      '/blog/tang-dan',
       // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
       // (DEV shows it early for review).
       '/blog/shortest-stalemate-xiangqi',
@@ -430,14 +433,14 @@ describe('article public listing gates', () => {
   it('names the cannon blind shot as the rejected banqi house rule, in every language', () => {
     // The 09-17 copy listed Mistboard's own rules as the house rules it rejects.
     const en = buildArticlePage('banqi').textContent ?? '';
-    expect(en).toContain('A common house rule lets a cannon also fire at a face-down tile');
+    expect(en).toContain('no cannon firing at a face-down tile');
     expect(en).not.toContain('house rules are deliberately not used');
     expect(en).not.toContain('Taiwan Computer Game Association');
     expect(buildArticlePage('banqi', 'zh-Hans').textContent).toContain(
-      '常见的一条家规允许炮隔子打暗子',
+      '炮不能打暗子（炮只吃已翻开的敌子）',
     );
     expect(buildArticlePage('banqi', 'zh-Hant').textContent).toContain(
-      '常見的一條家規允許砲隔子打暗子',
+      '炮不能打暗子（炮只吃已翻開的敵子）',
     );
   });
 
@@ -516,6 +519,7 @@ describe('article public listing gates', () => {
 
     // No age cut on this row, so this holds whatever the date.
     expect(hrefs).toEqual([
+      '/blog/tang-dan',
       '/blog/zuo-wenjing',
       '/blog/tony-fung-ga-zen',
       '/blog/lai-ly-huynh',
@@ -1044,15 +1048,16 @@ describe('rules variant sidebar', () => {
     const pageText = page.textContent ?? '';
 
     expect(pageText).not.toContain('[VISUAL:');
-    expect(pageText).toContain('General > Advisor > Elephant > Chariot > Horse > Soldier');
+    expect(pageText).not.toContain('What is the capture order in banqi?');
     expect(pageText).toContain(
-      'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier',
+      'Strongest to weakest: general, advisor, elephant, chariot, horse, cannon, soldier',
     );
     expect(pageText).toContain('60 plies (single moves) with no flip or capture');
     expect(pageText).toContain('keeps the 40-ply limit it began under');
     expect(pageText).toContain('threefold repetition');
-    expect(pageText).toContain('On your turn you do exactly one of two things.');
-    expect(pageText).toContain('it captures by jumping, not by stepping');
+    expect(pageText).toContain('Flip any face-down tile');
+    expect(pageText).toContain('Can you chain captures in banqi?');
+    expect(pageText).toContain('only the cannon captures differently, by jumping');
     expect(pageText).toContain('jumping exactly one piece, the screen');
     expect(pageText).toContain('Without a capture it moves one square like everything else.');
     expect(pageText).not.toContain('Rules used on Mistboard');
@@ -1092,7 +1097,7 @@ describe('rules variant sidebar', () => {
 
     const text = page.textContent ?? '';
     expect(text).toContain('第一次翻子之前。谁都还没有颜色。');
-    expect(text).toContain('最大在左，最小在右。');
+    expect(text).toContain('最大的在左边。每颗子都能吃同级和它右边的所有子，但有两个例外。');
     expect(text).toContain('一颗炮架，再来是目标。大小不重要：炮吃将。');
     expect(text).not.toContain('Before the first flip.');
     expect(text).not.toContain('One screen, then the target.');
@@ -1291,16 +1296,23 @@ describe('blog post read-next footer', () => {
     expect(buildArticlePage('fog-xiangqi').querySelector('.article-footer')).toBeNull();
   });
 
-  // The zh rules pages are machine-translated; each ends in one line pointing a
-  // native reader at the review role on /contribute. English has nothing to review.
-  it('ends zh rules pages with a review invitation and leaves English without one', () => {
+  // The zh rules pages are machine-translated; each ends in one line sending a
+  // reader who spots a bad term to the contact form, labelled with the page.
+  // English has nothing to review.
+  it('ends zh rules pages with a translation report link and leaves English without one', () => {
     expect(buildArticlePage('banqi').querySelector('.article-translate-note')).toBeNull();
-    const hant = buildArticlePage('banqi', 'zh-Hant').querySelector('.article-translate-note');
-    expect(hant?.textContent).toContain('看到翻譯問題？');
-    expect(hant?.querySelector('a')?.getAttribute('href')).toBe('/contribute#translate');
-    const hans = buildArticlePage('banqi', 'zh-Hans').querySelector('.article-translate-note');
-    expect(hans?.textContent).toContain('看到翻译问题？');
-    expect(hans?.querySelector('a')?.getAttribute('href')).toBe('/contribute#translate');
+    for (const [lang, text] of [
+      ['zh-Hant', '看到翻譯問題？告訴我們'],
+      ['zh-Hans', '看到翻译问题？告诉我们'],
+    ] as const) {
+      const note = buildArticlePage('banqi', lang).querySelector('.article-translate-note');
+      expect(note?.textContent).toBe(text);
+      const link = note?.querySelector('a');
+      expect(link?.getAttribute('rel')).toBe('nofollow');
+      const url = new URL(link?.getAttribute('href') ?? '', 'https://mistboard.com');
+      expect(url.pathname).toMatch(/\/contact$/);
+      expect(url.searchParams.get('about')).toMatch(/\/rules\/banqi$/);
+    }
   });
 
   // The star marked a Mistboard post apart from a community one. With no
@@ -1384,6 +1396,32 @@ describe('blog post read-next footer', () => {
   });
 });
 
+describe('image figure credit', () => {
+  // xiangqiqipu.com's portraits are used on condition of a credit and a link
+  // (permission of 2026-10-11), so an article figure can carry a linked credit.
+  it('renders the credit as a link after the caption, opening in a new tab', () => {
+    const el = renderBlock({
+      kind: 'image-figure',
+      src: '/player-photos/tang-dan.jpg',
+      alt: 'A portrait.',
+      caption: 'Tang Dan.',
+      credit: { text: 'xiangqiqipu.com', href: 'https://www.xiangqiqipu.com/Player/View-33.html' },
+    });
+    const cap = el.querySelector('figcaption');
+    expect(cap?.textContent).toBe('Tang Dan. Photo: xiangqiqipu.com');
+    const link = cap?.querySelector('a');
+    expect(link?.getAttribute('href')).toBe('https://www.xiangqiqipu.com/Player/View-33.html');
+    expect(link?.target).toBe('_blank');
+    expect(link?.rel).toBe('noopener');
+  });
+
+  it('keeps a caption without a credit as plain text', () => {
+    const el = renderBlock({ kind: 'image-figure', src: '/a.jpg', alt: 'A.', caption: 'Plain.' });
+    expect(el.querySelector('figcaption')?.textContent).toBe('Plain.');
+    expect(el.querySelector('figcaption a')).toBeNull();
+  });
+});
+
 describe('note block', () => {
   it('renders one paragraph of rich text in a bordered aside', () => {
     const el = renderBlock({
@@ -1423,5 +1461,22 @@ describe('image thumbnail crop', () => {
       position: 'center 12%',
     });
     expect(wrap.querySelector('img')?.style.objectPosition).toBe('center 12%');
+  });
+});
+
+describe('player article contact note', () => {
+  it('puts the corrections line under the header photo, about that article', () => {
+    const page = buildArticlePage('zuo-wenjing');
+    const notes = page.querySelectorAll('.article-contact-note');
+    expect(notes).toHaveLength(1);
+    expect(notes[0]?.closest('figure.article-figure-image')).not.toBeNull();
+    expect(notes[0]?.textContent).toBe('Corrections or rights requests: contact us.');
+    expect(notes[0]?.querySelector('a')?.getAttribute('href')).toBe(
+      '/contact?about=%2Fblog%2Fzuo-wenjing',
+    );
+  });
+
+  it('stays off articles that are not about a person', () => {
+    expect(buildArticlePage('pikafish').querySelector('.article-contact-note')).toBeNull();
   });
 });

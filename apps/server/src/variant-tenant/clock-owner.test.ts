@@ -153,3 +153,28 @@ test('a game-ending move stops the clock and settles the running seat', () => {
   assert.equal(finished.runningSince, null);
   assert.equal(finished.remainingMs.east, 300_000 + 5_000 - 7_000, 'no increment on the last move');
 });
+
+test('an expiry replacement hands on at zero, earning only the normal increment or allowance', () => {
+  const clock = {
+    ...createTenantClock(tenant, 300_000, 5_000),
+    activeColor: 'east' as const,
+    runningSince: 1_000,
+    remainingMs: { east: 100, south: 300_000, west: 300_000, north: 300_000 },
+  };
+  for (const policy of ['live', 'days-per-move'] as const) {
+    const next = nextTenantClockForMove(
+      tenant,
+      clock,
+      1_125,
+      'east',
+      4,
+      playing('south'),
+      policy,
+      'south',
+    )!;
+    assert.equal(next.activeColor, 'south');
+    assert.equal(next.runningSince, 1_125);
+    assert.equal(next.remainingMs.east, policy === 'live' ? 5_000 : 300_000);
+    assert.equal(next.remainingMs.south, 300_000);
+  }
+});

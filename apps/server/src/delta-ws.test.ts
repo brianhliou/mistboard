@@ -577,6 +577,7 @@ async function startServer(): Promise<{ port: number; child: ServerProcess }> {
       MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE: 'true',
       MISTBOARD_EXTRA_PLAYABLE_ENGINES: 'builtin-random-legal',
       NODE_ENV: 'test',
+      MISTBOARD_BIND_HOST: '127.0.0.1',
       PORT: String(port),
     },
     stdio: ['ignore', 'pipe', 'pipe'],

@@ -15,6 +15,15 @@
 //   node scripts/dpxq-archive-harvest.mjs --red 杨官 --event 全国象棋个人赛
 //   node scripts/dpxq-archive-harvest.mjs --player 胡荣华 --pages 3 --out ./games
 //   node scripts/dpxq-archive-harvest.mjs --red 吕钦 --json
+//   node scripts/dpxq-archive-harvest.mjs --tour 12286 --player 唐丹 --out ./games
+//   node scripts/dpxq-archive-harvest.mjs --ids m_138545,m_138533 --out ./games
+//
+// Since October 2026 search.asp answers "AI爬虫机器人太多了,请先登陆" (log in
+// first) instead of rows, so --player/--red/--black/--event/--date stop with an
+// error naming the wall. The record pages are still public: --tour reads a
+// tournament's game list (/hldcg/movelist_<tour>.html, ids from the year pages
+// /hldcg/index_<year>.html) and keeps the rows naming --player; --ids takes the
+// keys directly.
 //
 // Every game is replayed through our own converter and rule engine before it
 // is reported; anything that does not replay legally is dropped and counted.
@@ -35,78 +44,19 @@ import {
   getStandardXiangqiLegalMoves,
 } from '../packages/game/dist/variants-xiangqi-standard.js';
 import { formatXiangqiMoves } from '../packages/game/dist/xiangqi-notation-format.js';
+import {
+  harvestMode,
+  hasTarget,
+  idRows,
+  isLoginWall,
+  parseArgs,
+  parseRows,
+  parseTourRows,
+} from './lib/dpxq-harvest-args.mjs';
 
 const HOST = 'http://www.dpxq.com';
 const REQUEST_TIMEOUT_MS = 20000;
 const POLITE_DELAY_MS = 400;
-const DEFAULT_LIBRARY = '大师对局'; // the master-games library
-
-function parseArgs(argv) {
-  const args = {
-    red: '',
-    black: '',
-    player: '',
-    event: '',
-    date: '',
-    library: DEFAULT_LIBRARY,
-    pages: 1,
-    out: null,
-    json: false,
-    limit: 0,
-  };
-  for (let i = 2; i < argv.length; i += 1) {
-    const flag = argv[i];
-    const value = argv[i + 1];
-    switch (flag) {
-      case '--red':
-        args.red = value ?? '';
-        i += 1;
-        break;
-      case '--black':
-        args.black = value ?? '';
-        i += 1;
-        break;
-      case '--player':
-        args.player = value ?? '';
-        i += 1;
-        break;
-      case '--event':
-        args.event = value ?? '';
-        i += 1;
-        break;
-      case '--date':
-        args.date = value ?? '';
-        i += 1;
-        break;
-      case '--library':
-        args.library = value ?? DEFAULT_LIBRARY;
-        i += 1;
-        break;
-      case '--pages':
-        args.pages = Math.max(1, Number(value) || 1);
-        i += 1;
-        break;
-      case '--limit':
-        args.limit = Math.max(0, Number(value) || 0);
-        i += 1;
-        break;
-      case '--out':
-        args.out = value ?? null;
-        i += 1;
-        break;
-      case '--json':
-        args.json = true;
-        break;
-      default:
-        if (flag.startsWith('--')) {
-          console.error(`unknown flag: ${flag}`);
-          process.exit(1);
-        }
-    }
-  }
-  return args;
-}
-
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // dpxq is GB18030 end to end: the query string is percent-encoded GB18030 and
@@ -212,16 +162,6 @@ function searchUrl({ library, red, black, event, date, page }) {
   return `${HOST}/hldcg/search/search.asp?${qs}`;
 }
 
-const ROW_RE = /view\('owner=(\w+)&id=(\d+)#f=0'\)"\s*>([^<]+)<\/a>/g;
-
-function parseRows(html) {
-  const rows = [];
-  for (const match of html.matchAll(ROW_RE)) {
-    rows.push({ owner: match[1], id: match[2], title: match[3].trim() });
-  }
-  return rows;
-}
-
 // The record page ships [DhtmlXQ_movelist] EMPTY and puts the real mainline in
 // a JS variable, with variations appended as [0_7_1]-style branch blocks. Take
 // the mainline only.
@@ -298,7 +238,13 @@ function verify(html, movelist, key) {
 }
 
 async function main() {
-  const args = parseArgs(process.argv);
+  let args;
+  try {
+    args = parseArgs(process.argv);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
   // dpxq filters by seat, so "every game this player appeared in" is two
   // queries, not one. --player runs both; --red/--black pin the seat.
   const queries = args.player
@@ -307,31 +253,58 @@ async function main() {
         { red: '', black: args.player },
       ]
     : [{ red: args.red, black: args.black }];
-  if (!args.player && !args.red && !args.black && !args.event && !args.date) {
+  if (!hasTarget(args)) {
     console.error(
-      'refusing to harvest the whole archive: pass --player, --red, --black, --event or --date',
+      'refusing to harvest the whole archive: pass --player, --red, --black, --event, --date, --tour or --ids',
     );
     process.exit(1);
+  }
+  // Each source yields pages of rows; the search yields one page per request.
+  const sources = [];
+  const mode = harvestMode(args);
+  if (mode === 'ids') {
+    sources.push(async function* () {
+      yield idRows(args.ids);
+    });
+  } else if (mode === 'tour') {
+    sources.push(async function* () {
+      const html = await fetchGb(`${HOST}/hldcg/movelist_${args.tour}.html`);
+      yield parseTourRows(html, args.player);
+    });
+  } else {
+    for (const query of queries) {
+      sources.push(async function* () {
+        for (let page = 1; page <= args.pages; page += 1) {
+          const html = await fetchGb(
+            searchUrl({
+              library: args.library,
+              red: query.red,
+              black: query.black,
+              event: args.event,
+              date: args.date,
+              page,
+            }),
+          );
+          if (isLoginWall(html)) {
+            throw new Error(
+              'dpxq search asks for a login (AI爬虫…请先登陆); use --tour <id> --player <name> or --ids instead',
+            );
+          }
+          const rows = parseRows(html).map((row) => ({ ...row, fromSearch: true }));
+          if (rows.length === 0) return;
+          yield rows;
+          if (page < args.pages) await sleep(POLITE_DELAY_MS);
+        }
+      });
+    }
   }
 
   const seen = new Set();
   const games = [];
   const failures = [];
 
-  for (const query of queries) {
-    for (let page = 1; page <= args.pages; page += 1) {
-      const html = await fetchGb(
-        searchUrl({
-          library: args.library,
-          red: query.red,
-          black: query.black,
-          event: args.event,
-          date: args.date,
-          page,
-        }),
-      );
-      const rows = parseRows(html);
-      if (rows.length === 0) break;
+  for (const source of sources) {
+    for await (const rows of source()) {
       for (const row of rows) {
         const key = `${row.owner}_${row.id}`;
         if (seen.has(key)) continue;
@@ -386,7 +359,9 @@ async function main() {
         games.push({
           key,
           sourceUrl: `${HOST}/hldcg/search/view_${row.owner}_${row.id}.html`,
-          title: row.title,
+          // A search row's text is the game's title; a tour row's is the match
+          // row, so take the record's own title there.
+          title: row.fromSearch ? row.title : tagFrom(record, 'title') || row.title,
           event: tagFrom(record, 'event'),
           date: tagFrom(record, 'date'),
           place: tagFrom(record, 'place'),
@@ -404,7 +379,6 @@ async function main() {
         });
       }
       if (args.limit && games.length >= args.limit) break;
-      if (page < args.pages) await sleep(POLITE_DELAY_MS);
     }
     if (args.limit && games.length >= args.limit) break;
   }

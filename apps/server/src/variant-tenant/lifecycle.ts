@@ -2,8 +2,9 @@
  * Generic lifecycle timers for tenant rooms: the pregame abort window, the
  * active-clock expiry timer, and the disconnect-forfeit window. All timers are
  * speculative and .unref()'d (leaked-timer rule), re-derived from room state on
- * every schedule call, and append their terminal event through the tenant's
- * event writer so persistence/broadcast behave exactly like a player action.
+ * every schedule call, and append through the tenant's event writer so
+ * persistence/broadcast behave exactly like a player action. The writer may
+ * replace a clock-expired request with the tenant's legal automatic move.
  *
  * Clock policy (derived per room from the persisted time control, see
  * clockPolicyKindFor) governs which timers exist at all. Days-per-move
@@ -454,9 +455,9 @@ export function tenantDurableDeadlineFor<
 
 // Sweeper enforcement for a hydrated days-per-move room: re-derive the
 // deadline from the room itself (never trust the row), and when actually due
-// append the same terminal event the in-memory timers would have — pregame
-// phases abort, armed clocks expire — through the tenant's writer so
-// persistence/broadcast behave exactly like a live flag.
+// append the same request the in-memory timers would have — pregame phases
+// abort, armed clocks expire — through the tenant's writer, which revalidates
+// the clock and may replace expiry with a legal move before persisting it.
 export async function sweepTenantRoomDeadline<
   C extends string,
   M,
@@ -499,6 +500,7 @@ export async function sweepTenantRoomDeadline<
     color: activeColor,
     clock: expiredClock,
   });
+  if (seq < 0) return 'not-due';
   const event = room.events[seq];
   if (event) ctx.broadcastEventAppended(room, event, seq);
   return 'expired';
@@ -735,9 +737,15 @@ function scheduleTenantClockTimeout<
   room.clockTimer = setTimeout(() => {
     const currentClock = room.projection.clock;
     const currentActive = currentClock?.activeColor ?? null;
-    if (room.projection.state.status.type !== 'playing' || !currentClock || currentActive === null)
+    if (
+      room.projection.state.status.type !== 'playing' ||
+      room.projection.paused ||
+      !currentClock ||
+      currentClock !== clock ||
+      currentActive === null
+    )
       return;
-    const firedAt = Date.now();
+    const firedAt = ctx.now?.() ?? Date.now();
     if (tenantClockRemainingMs(currentClock, currentActive, firedAt) > 0) return;
     const expiredClock = expireTenantClock(currentClock, firedAt, currentActive);
     if (!expiredClock) return;

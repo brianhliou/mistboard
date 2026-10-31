@@ -7,6 +7,9 @@
 // not attending; they want the time on the venue's wall. So: keep the offset the
 // string carries, and format the clock reading as if it were UTC.
 
+import { t } from './i18n/catalog.js';
+import { currentLocale, type Locale } from './i18n/locale.js';
+
 const OFFSET = /([+-])(\d{2}):?(\d{2})$/;
 
 /** The offset the ISO string carries, in minutes east of UTC; 0 for `Z`, null when it carries none. */
@@ -38,8 +41,14 @@ function readsAsUtc(value: string): boolean {
   return isoOffsetMinutes(value) !== null || !hasClock(value);
 }
 
+// Dates read in the site's language (its locale setting), not the browser's:
+// a zh reader on an English browser saw "Sep 18" beside 第9轮.
+
 /** "Sep 13, 2026, 2:30 PM" in the event's clock; a date-only string stays a date. */
-export function formatEventDateTime(value: string | undefined, locale?: string): string | null {
+export function formatEventDateTime(
+  value: string | undefined,
+  locale: string = currentLocale(),
+): string | null {
   if (!value) return null;
   const shifted = shiftedToOffset(value);
   if (!shifted) return value;
@@ -54,7 +63,10 @@ export function formatEventDateTime(value: string | undefined, locale?: string):
 }
 
 /** "Sep 13" (year only outside the current one), in the event's clock. */
-export function formatEventDay(value: string | undefined, locale?: string): string | null {
+export function formatEventDay(
+  value: string | undefined,
+  locale: string = currentLocale(),
+): string | null {
   if (!value) return null;
   const shifted = shiftedToOffset(value);
   if (!shifted) return null;
@@ -72,11 +84,15 @@ export function formatEventDay(value: string | undefined, locale?: string): stri
 export function formatEventDateRange(
   startsAt: string | undefined,
   endsAt: string | undefined,
-  locale?: string,
+  locale: string = currentLocale(),
 ): string | null {
   const start = formatEventDay(startsAt, locale);
   const end = formatEventDay(endsAt, locale);
-  if (start && end && start !== end) return `${start} to ${end}`;
+  if (start && end && start !== end) {
+    // The joiner follows the dates' language; a raw tag ('en-US') reads English.
+    const catalog: Locale = locale.startsWith('zh') ? (locale as Locale) : 'en';
+    return t('broadcast.dateRange', { start, end }, catalog);
+  }
   return start ?? end;
 }
 

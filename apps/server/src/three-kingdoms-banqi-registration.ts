@@ -2,7 +2,8 @@
  * Three Kingdoms banqi (#628) registry entry: an admin-only prod playtest (#684).
  *
  * As narrow as mahjong's: no TV channel, no lobby seek, no export, no card, no
- * correspondence, never rated. A room exists only through the create route,
+ * correspondence, never rated. A finished game has a review page
+ * (/three-kingdoms-banqi/game/:id), behind the same admin gate. A room exists only through the create route,
  * which admits an admin account, or anyone when the local flag
  * MISTBOARD_THREE_KINGDOMS_BANQI_ENABLED=true (three-kingdoms-banqi-access.ts).
  * The WebSocket door applies the same rule to every connection, live room or
@@ -139,6 +140,9 @@ registerVariantTenant({
       ),
   },
   lobby: null,
+  // The review page (routes/three-kingdoms-banqi-games.ts, admin-gated like the
+  // rooms), with no export: a playtest game is not downloadable.
+  reviewRouteBase: '/three-kingdoms-banqi/game',
   export: null,
   card: null,
   sweepDueDeadline: null,

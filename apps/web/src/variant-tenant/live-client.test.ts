@@ -706,6 +706,73 @@ describe('animateBoard hook (one-shot pending-animation channel)', () => {
     h.client.renderAll();
     expect(h.pendings.at(-1)).toBeNull();
   });
+
+  // The server sends the game-ending move as a finished snapshot, never as an
+  // event, so the last move used to land with no glide on every variant
+  // (Brian, 2026-10-30).
+  it('glides the move a finished snapshot adds to a live game', () => {
+    const h = animatedHarness();
+    h.feedHello({ events: [moveEvent('red', 'a1', 'a2', 1)], state: view({ moveNumber: 2 }) });
+    h.feedSnapshot({
+      events: [moveEvent('red', 'a1', 'a2', 1), moveEvent('blue', 'b1', 'b2', 2)],
+      state: view({ status: { type: 'finished', winner: 'blue', reason: 'checkmate' } }),
+    });
+    expect(h.pendings.at(-1)).toEqual({
+      kind: 'live',
+      move: { from: 'b1', to: 'b2' },
+      color: 'blue',
+    });
+  });
+
+  // The bot replies on a 0ms timer, so its move redrew the board inside the
+  // player's own flip and the flip never showed (Brian, 2026-10-30).
+  it('holds a socket render while the last animation runs, then plays the reply', () => {
+    vi.useFakeTimers();
+    try {
+      const pendings: Pending[] = [];
+      const h = createHarness({
+        animateBoard: (_refs, _view, takePendingAnimation) => {
+          const pending = takePendingAnimation();
+          pendings.push(pending);
+          return pending ? 280 : undefined;
+        },
+      });
+      h.feedHello({});
+      h.feedEvent({ event: moveEvent('red', 'a1', 'a1', 1), state: view({ moveNumber: 2 }) });
+      const afterOwn = pendings.length;
+      expect(pendings.at(-1)).toMatchObject({ kind: 'live', color: 'red' });
+      vi.advanceTimersByTime(30);
+      h.feedEvent({ event: moveEvent('blue', 'b1', 'b2', 2), state: view({ moveNumber: 3 }) });
+      expect(pendings).toHaveLength(afterOwn);
+      vi.advanceTimersByTime(250);
+      expect(pendings).toHaveLength(afterOwn + 1);
+      expect(pendings.at(-1)).toEqual({
+        kind: 'live',
+        move: { from: 'b1', to: 'b2' },
+        color: 'blue',
+      });
+      // A click or scrub renders at once and is never held.
+      h.client.renderAll();
+      expect(pendings).toHaveLength(afterOwn + 2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not glide a finished game met on arrival or a snapshot that adds no move', () => {
+    const h = animatedHarness();
+    const finished = view({ status: { type: 'finished', winner: 'blue', reason: 'resignation' } });
+    h.feedHello({ events: [moveEvent('red', 'a1', 'a2', 1)], state: view({ moveNumber: 2 }) });
+    // A resignation finishes the game without a move.
+    h.feedSnapshot({ events: [moveEvent('red', 'a1', 'a2', 1)], state: finished });
+    expect(h.pendings.at(-1)).toBeNull();
+
+    // A reconnect to a game that is already over replays nothing.
+    const late = animatedHarness();
+    late.feedHello({ events: [moveEvent('red', 'a1', 'a2', 1)], state: finished });
+    late.feedSnapshot({ events: [moveEvent('red', 'a1', 'a2', 1)], state: finished });
+    expect(late.pendings.at(-1)).toBeNull();
+  });
 });
 
 describe('replayHistory hook (per-ply rebuild from the event log, #80)', () => {

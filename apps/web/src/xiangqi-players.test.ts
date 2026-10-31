@@ -256,8 +256,7 @@ describe('rights note', () => {
     vi.unstubAllGlobals();
   });
 
-  const RIGHTS_TEXT =
-    "Are you on this page, or do you run this event or hold rights to its games? If you want anything here changed or removed, contact us and we'll take care of it.";
+  const RIGHTS_TEXT = 'Corrections or rights requests: contact us.';
 
   const zhejiang = {
     ...player({ name: '尹昇', nameEn: 'Yin Sheng', games: 0 }),

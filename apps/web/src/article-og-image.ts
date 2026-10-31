@@ -33,6 +33,7 @@ export const ARTICLE_OG_WIDE_ONLY_SLUGS: readonly string[] = [
   'banqi-statistics',
   'one-thousand-games',
   'zuo-wenjing',
+  'tang-dan',
   'xiangqi-mahjong-32',
 ];
 

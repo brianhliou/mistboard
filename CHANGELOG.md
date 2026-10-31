@@ -26,6 +26,11 @@ Conventions:
 
 ### Playing
 
+- Three Kingdoms banqi shows each seat's points under the board, plays bot sounds and animates flips; banqi and Three Kingdoms banqi keep unturned tiles face down when a game ends; Three Kingdoms banqi offers 1+1 and 3+2 ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
+- 3D pieces show a selection with a green side and capture targets with a green face instead of rings ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
+- On phones, the waiting room puts the invite where the moves go, so the board fills the width, and every room's board has square corners that meet the screen edges ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
+- Three Kingdoms Banqi rooms show captured pieces and points on the seat lines, and the board holds still through the game ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
+- The end-of-game buttons fit inside a taller right column, so the column and clock no longer move when a game ends ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - the Mistboard river caption is set in Zen Antique, like 楚河 漢界 ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - a banqi tile turns over when it is revealed, and with 3D pieces it spins as a solid tile; Flip Jungle tiles turn the same way ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
 - 楚河 漢界 is set like a real board, spread along the river in old printed type, with the far pair facing the opponent ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
@@ -98,6 +103,9 @@ Conventions:
 
 ### Learning and puzzles
 
+- Puzzles mark right and wrong moves on the board and in the move list, and themes get their own card linking to each theme's drill ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
+- Puzzles from online games give the year instead of player names, and Puzzle Streak shows the moves played ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
+- The banqi rules page is reorganized around the questions players ask, in English and Chinese ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - Puzzle Streak serves puzzles that get harder as you go, until one wrong move ends the run ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - a themes page trains one puzzle theme at a time, with a count for each theme ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - each puzzle first plays in the moves of the game it came from, and the puzzle page keeps its settings in one column ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
@@ -153,6 +161,12 @@ Conventions:
 
 ### Watching and review
 
+- Finished Xiangqi Mahjong games lead with who won and how, then the points ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
+- Finished Three Kingdoms Banqi games open on a review page laid out like banqi's ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
+- Broadcast pages trade the share box for a Copy link button in the header (Share on phones), and the rights note is one short line ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
+- An event that has not started shows its Overview alone, without tabs that led nowhere ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
+- Broadcast pages read in one language: English names, rounds, counts and dates in English, and Chinese ones in Chinese ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
+- Player and team pages read in one language too: Chinese readers see Chinese headings, names, events, results and titles ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - account-pair scores link to the player's profile filtered to that pair ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - better moves stored in a game embed's analysis can be played through on every variant ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - stepping through a finished game glides each move into place, the duck included, and a face-down jieqi piece flips as it lands ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
@@ -241,6 +255,7 @@ Conventions:
 
 ### Site
 
+- Player pages and player articles carry one short line for corrections or rights requests ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - account emails, bot profiles, community labels, lessons and game import are now in Chinese ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - Xiangqi, jieqi, banqi and Flip Jungle pieces can stand in 3D, picked under Pieces in the board settings, with a Thick edge option and a gold edge on the last move ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
 - Square grid boards meet their edge, and with coordinates on the squares sit in a framed rim ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
@@ -338,6 +353,9 @@ Conventions:
 
 ### Fixed
 
+- Xiangqi Mahjong no longer shows a timeout loss the server never recorded when a move arrives just after a flag falls ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
+- Finished Xiangqi Mahjong games on the games page show both final hands instead of a placeholder ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
+- Broadcast round menus and headers show each round's real date from its games, and rounds with results only carry their date ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - Lacquer pieces follow the Piece shadow setting ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - switching the site language no longer changes your pieces, river text or move notation ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
 - on square tiles, a general in check now sits on a red square instead of a round glow ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
@@ -546,6 +564,7 @@ Conventions:
 
 ### Technical
 
+- Server support for unrated three-minute Puzzle Storm runs with daily personal bests ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - The engine worker survives a database restart and recovers runs cut off by an outage ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - Postgres JIT is off on every pool, which removes the slow first /stats and /metrics query after a deploy ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - Parked jieqi engines from a burst of games now close after 10 idle minutes, cutting the server's idle memory ([2cab42fb](https://github.com/brianhliou/mistboard/commit/2cab42fb))

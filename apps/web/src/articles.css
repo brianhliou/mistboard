@@ -2608,6 +2608,21 @@ a.articles-community-pitch-idea:hover .articles-community-pitch-example {
   max-width: 560px;
 }
 
+/* Same small print as .xqb-rights-note on the player pages. */
+.article-contact-note {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.article-contact-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .article-interactive-placeholder {
   margin: 24px 0;
   padding: 32px 16px;
@@ -3651,6 +3666,14 @@ a.article-meta-author:hover .article-meta-author-name {
   display: block;
   width: 100%;
   height: auto;
+}
+
+/* A small photo (a 300px portrait) shown whole at its own size: the zoom rule
+   above stretches every image to the column, which upscales it. Scoped one
+   class deeper so it outranks that rule in any bundle order. */
+.article-figure-native .article-figure-zoom img {
+  width: auto;
+  max-width: 100%;
 }
 
 .article-lightbox {

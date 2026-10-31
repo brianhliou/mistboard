@@ -72,6 +72,11 @@ function json(body: unknown, status = 200): Response {
 beforeEach(() => pinXiangqiNotation('coordinate'));
 afterEach(() => pinXiangqiNotation(null));
 
+const waitForLiveBoard = (root: HTMLElement): Promise<void> =>
+  vi.waitFor(() =>
+    expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleLive).toBe('true'),
+  );
+
 describe('puzzles route', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -309,7 +314,7 @@ describe('puzzles route', () => {
       vi.stubGlobal('fetch', fetchSpy);
       const root = document.createElement('div');
       await mountPuzzles(root, RED_MATE.id);
-      clickSquares(root, RED_MATE.solution[0]!);
+      await clickSquares(root, RED_MATE.solution[0]!);
       await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
       const view = qualityEvents[0]!;
 
@@ -324,12 +329,14 @@ describe('puzzles route', () => {
         fetchSpy.mock.calls.filter(([input]) => String(input) === `/api/puzzles/${RED_MATE.id}`),
       ).toHaveLength(1);
       expect(root.textContent).toContain('Correct.');
-      expect(root.textContent).toContain(
-        `${RED_MATE.solution[1]!.from}-${RED_MATE.solution[1]!.to}`,
+      await vi.waitFor(() =>
+        expect(root.textContent).toContain(
+          `${RED_MATE.solution[1]!.from}-${RED_MATE.solution[1]!.to}`,
+        ),
       );
       expect(qualityEvents).toEqual([view]);
       expect(view.event).toBe('view');
-      clickSquares(root, RED_MATE.solution[2]!);
+      await clickSquares(root, RED_MATE.solution[2]!);
       await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
       expect(attemptBodies.map((body) => body.moves)).toEqual([
         [RED_MATE.solution[0]],
@@ -634,7 +641,8 @@ describe('puzzles route', () => {
   });
   const movesOf = (init?: RequestInit): XiangqiMove[] =>
     (JSON.parse(String(init?.body)) as { moves: XiangqiMove[] }).moves;
-  const clickSquares = (root: HTMLElement, move: XiangqiMove): void => {
+  const clickSquares = async (root: HTMLElement, move: XiangqiMove): Promise<void> => {
+    await waitForLiveBoard(root);
     root
       .querySelector<SVGGElement>(`[data-square="${move.from}"]`)
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -642,13 +650,18 @@ describe('puzzles route', () => {
       .querySelector<SVGGElement>(`[data-square="${move.to}"]`)
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   };
-  // Every solver ply of the line, waiting for each attempt to land before the
-  // next click (a pending submit would swallow it).
+  // Every solver ply of the line, waiting for each attempt to land and its
+  // scripted reply to glide in (the ✓ pause holds input) before the next click.
   const solveLine = async (root: HTMLElement, puzzle: XiangqiPuzzle): Promise<void> => {
     for (const [ply, move] of puzzle.solution.entries()) {
       if (ply % 2 !== 0) continue;
-      clickSquares(root, move);
-      await vi.waitFor(() => expect(root.textContent).toContain(`${move.from}-${move.to}`));
+      await clickSquares(root, move);
+      const shown = puzzle.solution[ply + 1] ?? move;
+      await vi.waitFor(() =>
+        expect(root.querySelector('.puzzle-move-cell--active')?.textContent).toContain(
+          `${shown.from}-${shown.to}`,
+        ),
+      );
     }
   };
 
@@ -885,6 +898,15 @@ describe('puzzles route', () => {
     await solveLine(root, drop);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+    // The mate draws the game rooms' slash through the mated general, and
+    // stepping off the final position takes it away.
+    const slash = root.querySelector<HTMLElement>('.finish-badge--mated');
+    expect(slash?.querySelector('.finish-badge__slash')).not.toBeNull();
+    expect(root.querySelector('.finish-badges')).not.toBeNull();
+    root.querySelector<HTMLButtonElement>('[data-puzzle-replay-previous]')?.click();
+    expect(root.querySelector('.finish-badge--mated')).toBeNull();
+    root.querySelector<HTMLButtonElement>('[data-puzzle-replay-next]')?.click();
+    expect(root.querySelector('.finish-badge--mated')).not.toBeNull();
     root.querySelector<HTMLButtonElement>('[aria-label="Puzzle was helpful"]')?.click();
     await vi.waitFor(() =>
       expect(qualityEvents.some((event) => event.event === 'vote' && event.vote === 'up')).toBe(
@@ -1027,7 +1049,7 @@ describe('puzzles route', () => {
     document.body.append(root);
 
     await mountPuzzles(root, redDrop.id);
-    clickSquares(root, redDrop.solution[0]!);
+    await clickSquares(root, redDrop.solution[0]!);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
     const nextButton = root.querySelector<HTMLButtonElement>('[data-puzzle-next]');
@@ -1117,7 +1139,7 @@ describe('puzzles route', () => {
     const wrong = getStandardXiangqiLegalMoves(redDrop.initial).find(
       (move) => !standardXiangqiPuzzleMoveEquals(move, solution),
     )!;
-    clickSquares(root, wrong);
+    await clickSquares(root, wrong);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Try again'));
     const skipButton = root.querySelector<HTMLButtonElement>('[data-puzzle-skip]');
@@ -1275,7 +1297,15 @@ describe('standard xiangqi puzzles', () => {
     });
   }
 
-  function clickMove(root: HTMLElement, move: XiangqiMove): void {
+  // Waits out any pause that holds the board (the ✓ before a scripted reply,
+  // a wrong try's take-back) the way a solver would, then plays the move.
+  // `held` clicks at once, to check that a held board ignores the move.
+  async function clickMove(
+    root: HTMLElement,
+    move: XiangqiMove,
+    opts: { held?: boolean } = {},
+  ): Promise<void> {
+    if (!opts.held) await waitForLiveBoard(root);
     root
       .querySelector<SVGGElement>(`[data-square="${move.from}"]`)
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -1380,16 +1410,16 @@ describe('standard xiangqi puzzles', () => {
     document.body.append(root);
 
     await mountPuzzles(root, puzzle.id);
-    clickMove(root, solver[0]!);
+    await clickMove(root, solver[0]!);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
     // The defender's scripted reply auto-played and both moves hit the move list.
     expect(root.textContent).toContain(moveLabel(puzzle.solution[0]!));
-    expect(root.textContent).toContain(moveLabel(puzzle.solution[1]!));
+    await vi.waitFor(() => expect(root.textContent).toContain(moveLabel(puzzle.solution[1]!)));
     // Last-move highlight (gold ring) from the canonical board module.
     expect(root.querySelector('.xq-live-lastmove-ring')).not.toBeNull();
 
-    clickMove(root, solver[1]!);
+    await clickMove(root, solver[1]!);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
     expect(root.textContent).toContain(moveLabel(puzzle.solution[2]!));
@@ -1422,6 +1452,7 @@ describe('standard xiangqi puzzles', () => {
     expect(sidebarCards()).toEqual([
       'puzzle-current-card',
       'puzzle-rating-card',
+      'puzzle-theme-card',
       'puzzle-settings-card',
     ]);
     const hiddenRow = root.querySelector<HTMLElement>(
@@ -1431,13 +1462,18 @@ describe('standard xiangqi puzzles', () => {
     expect(hiddenRow?.textContent).toBe('Puzzle themesRevealed after you solve it.');
     const settings = root.querySelector<HTMLElement>('.puzzle-settings-card');
     expect(settings?.querySelector('[data-puzzle-auto-next]')).not.toBeNull();
-    // Muted like the page's other small links (sign-in, practice), whose
-    // shared rule in puzzles.css also names .puzzle-quiet-link.
-    expect(settings?.querySelector('a[href="/puzzles/themes"]')?.className).toBe(
-      'puzzle-quiet-link',
+    // The theme box's heading is the link back to the themes page (lichess's
+    // "« Puzzle Themes"), over what the current choice drills.
+    const themeCard = root.querySelector<HTMLElement>('.puzzle-theme-card');
+    const back = themeCard?.querySelector<HTMLAnchorElement>('h2 a[href="/puzzles/themes"]');
+    expect(back?.textContent).toBe('‹Puzzle themes');
+    expect(themeCard?.querySelector('.puzzle-theme-card__description')?.textContent).toBe(
+      'Every theme shuffled together, as positions come up in a real game: no hint of what is coming.',
     );
+    expect(themeCard?.querySelector('select[data-puzzle-theme]')).not.toBeNull();
+    expect(settings?.querySelector('a[href="/puzzles/themes"]')).toBeNull();
     for (const move of solverMovesOf(puzzle!)) {
-      clickMove(root, move);
+      await clickMove(root, move);
       await vi.waitFor(() => expect(root.textContent).toMatch(/Correct\.|Success!/));
     }
 
@@ -1448,6 +1484,8 @@ describe('standard xiangqi puzzles', () => {
     const chip = shownRow?.querySelector<HTMLElement>('.puzzle-tag-motif');
     // English names only in en: no hanzi, no pinyin tooltip.
     expect(chip?.textContent).toBe(motif.label);
+    // A drillable theme links to its drill.
+    expect(chip?.getAttribute('href')).toBe(`/puzzles?theme=${motif.id}`);
     expect(chip?.textContent).not.toMatch(/[\u3400-\u9fff]/);
     expect(chip?.title).not.toBe(motif.pinyin);
     // Theme tags read as names, never as the raw id ("Matein2").
@@ -1480,12 +1518,26 @@ describe('standard xiangqi puzzles', () => {
       await mountPuzzles(root, puzzle.id);
       expect(glides).toHaveLength(0); // the initial paint is discrete
 
-      clickMove(root, solverMovesOf(puzzle)[0]!);
+      const found = solverMovesOf(puzzle)[0]!;
+      await clickMove(root, found);
       await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
-      // Both moves landed in one render; only the reply glides (the solver
-      // chose their own move an instant ago).
+      // The board holds on the solver's move under a green ✓ (lichess), and
+      // takes no input until the reply is in.
       const reply = puzzle.solution[1]!;
-      expect(pieceGlides()).toEqual([reply.to]);
+      expect(pieceGlides()).toEqual([]);
+      const check = root.querySelector('.xq-marker--good.xq-marker--glyph');
+      expect(check?.querySelector('.xq-marker__icon')).not.toBeNull();
+      expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleLive).toBe('false');
+      // The list keeps the reply back until the board plays it.
+      const movesListed = () =>
+        [...root.querySelectorAll('.puzzle-move-red, .puzzle-move-black')].filter((cell) =>
+          cell.textContent?.trim(),
+        ).length;
+      const listedInPause = movesListed();
+      // Then only the reply glides (the solver chose their own move an instant ago).
+      await vi.waitFor(() => expect(pieceGlides()).toEqual([reply.to]));
+      expect(root.querySelector('.xq-marker--glyph')).toBeNull();
+      expect(movesListed()).toBe(listedInPause + 1);
 
       // Replay back-step reverse-glides the undone reply at its origin square.
       root.querySelector<HTMLButtonElement>('[data-puzzle-replay-previous]')?.click();
@@ -1506,14 +1558,14 @@ describe('standard xiangqi puzzles', () => {
     const root = document.createElement('div');
 
     await mountPuzzles(root, puzzle.id);
-    clickMove(root, wrong);
+    await clickMove(root, wrong);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Try again'));
     // The board did not advance: the correct first move still works immediately.
-    clickMove(root, solver[0]!);
+    await clickMove(root, solver[0]!);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
-    expect(root.textContent).toContain(moveLabel(puzzle.solution[1]!));
+    await vi.waitFor(() => expect(root.textContent).toContain(moveLabel(puzzle.solution[1]!)));
   });
 
   it('keeps a wrong try as a ✗ row, marks found moves ✓, and shows the rating once over', async () => {
@@ -1533,19 +1585,26 @@ describe('standard xiangqi puzzles', () => {
     const chipsBefore = root.querySelector('.puzzle-session-chips');
     expect(chipsBefore?.querySelectorAll('.puzzle-streak-chip--current')).toHaveLength(1);
 
-    clickMove(root, wrong);
+    await clickMove(root, wrong);
     await vi.waitFor(() => expect(root.textContent).toContain('Try again'));
-    // The miss stays in the list after it is taken back, flashed on the board.
+    // The miss shows on the board under a red ✗, then is taken back.
+    expect(root.querySelector(`[data-piece-square="${wrong.to}"]`)).not.toBeNull();
+    expect(
+      root.querySelector('.xq-marker--blunder.xq-marker--glyph .xq-marker__icon'),
+    ).not.toBeNull();
+    await waitForLiveBoard(root);
+    expect(root.querySelector(`[data-piece-square="${wrong.from}"]`)).not.toBeNull();
+    expect(root.querySelector('.xq-marker--blunder')).toBeNull();
+    // It stays in the list after it is taken back.
     const variation = root.querySelector('.puzzle-move-variation');
     expect(variation?.textContent).toContain(moveLabel(wrong));
     expect(variation?.querySelector('.puzzle-move-cell--wrong')?.textContent).toContain('✗');
-    expect(root.querySelector('.puzzle-wrong-flash')).not.toBeNull();
 
-    clickMove(root, solver[0]!);
+    await clickMove(root, solver[0]!);
     await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
     // The retry still lands, and the earlier miss is still listed.
     expect(root.querySelector('.puzzle-move-variation')?.textContent).toContain(moveLabel(wrong));
-    clickMove(root, solver[1]!);
+    await clickMove(root, solver[1]!);
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
 
     // Only the solver's finds are ✓; the scripted reply is not.
@@ -1605,7 +1664,7 @@ describe('standard xiangqi puzzles', () => {
 
     await mountPuzzles(root, first.id);
     for (const move of solverMovesOf(first)) {
-      clickMove(root, move);
+      await clickMove(root, move);
       await vi.waitFor(() => expect(root.textContent).toContain(moveLabel(move)));
     }
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
@@ -1646,7 +1705,7 @@ describe('standard xiangqi puzzles', () => {
 
     await mountPuzzles(root, first.id);
     for (const move of solverMovesOf(first)) {
-      clickMove(root, move);
+      await clickMove(root, move);
       // The move label only appears once the attempt response is applied, so
       // this waits out the async submit before the next click.
       await vi.waitFor(() => expect(root.textContent).toContain(moveLabel(move)));
@@ -1672,7 +1731,7 @@ describe('standard xiangqi puzzles', () => {
 
       await mountPuzzles(root, puzzle.id);
       for (const move of solverMovesOf(puzzle)) {
-        clickMove(root, move);
+        await clickMove(root, move);
         // Wait for the attempt response (the move label lands with it) before
         // the next click; a pending submit would swallow it.
         await vi.waitFor(() => expect(root.textContent).toContain(moveLabel(move)));
@@ -1752,7 +1811,7 @@ describe('standard xiangqi puzzles', () => {
         );
         expect(playSound).not.toHaveBeenCalled();
         // Input is blocked until the hand-over.
-        clickMove(root, solverMovesOf(puzzle)[0]!);
+        await clickMove(root, solverMovesOf(puzzle)[0]!, { held: true });
         expect(fetchSpy).not.toHaveBeenCalledWith(
           `/api/puzzles/${puzzle.id}/attempt`,
           expect.anything(),
@@ -1764,7 +1823,7 @@ describe('standard xiangqi puzzles', () => {
         expect(root.textContent).toContain(moveLabel(setupMove));
         expect(vi.mocked(playSound).mock.calls).toEqual([['move']]);
 
-        clickMove(root, solverMovesOf(puzzle)[0]!);
+        await clickMove(root, solverMovesOf(puzzle)[0]!);
         await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
       } finally {
         if (originalAnimate === undefined) delete proto.animate;
@@ -1788,7 +1847,7 @@ describe('standard xiangqi puzzles', () => {
       expect(slotAt(root, setupMove.from)).toBeNull();
       expect(slotAt(root, setupMove.to)).not.toBeNull();
       expect(root.textContent).toContain(moveLabel(setupMove));
-      clickMove(root, solverMovesOf(puzzle)[0]!);
+      await clickMove(root, solverMovesOf(puzzle)[0]!);
       await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
     });
 
@@ -1933,7 +1992,7 @@ describe('standard xiangqi puzzles', () => {
       expect(setup?.classList.contains('puzzle-move-cell--history')).toBe(false);
       expect(setup?.classList.contains('puzzle-move-cell--active')).toBe(true);
 
-      clickMove(root, GAME[4]!);
+      await clickMove(root, GAME[4]!);
       await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
       // The solution continues the game's numbering, with its mark.
       const third = root.querySelectorAll('.puzzle-move-list .puzzle-move-item')[2];
@@ -1964,7 +2023,7 @@ describe('standard xiangqi puzzles', () => {
       expect(slotAt(root, 'g3')).toBeNull();
 
       // Off the live position the board takes no moves.
-      clickMove(root, GAME[4]!);
+      await clickMove(root, GAME[4]!, { held: true });
       expect(fetchSpy).not.toHaveBeenCalledWith(
         `/api/puzzles/${PUZZLE.id}/attempt`,
         expect.anything(),
@@ -1972,7 +2031,7 @@ describe('standard xiangqi puzzles', () => {
 
       control(root, 'puzzle-replay-last').click();
       expect(root.querySelector('.puzzle-move-cell--active')?.textContent).toBe('i10-h10');
-      clickMove(root, GAME[4]!);
+      await clickMove(root, GAME[4]!);
       await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
     });
 
@@ -2000,6 +2059,27 @@ describe('standard xiangqi puzzles', () => {
       } as unknown as Parameters<typeof mountPuzzleSolver>[1]);
       try {
         expect(host.querySelector('.puzzle-move-cell--history')).toBeNull();
+      } finally {
+        solver.dispose();
+      }
+    });
+
+    // Streak dropped the history the server sent for the same puzzle.
+    it('shows the game before the puzzle in Puzzle Streak', () => {
+      animationOff();
+      const host = document.createElement('div');
+      document.body.append(host);
+      const solver = mountPuzzleSolver(
+        host,
+        {
+          ...publicDetail(PUZZLE),
+          setupMove: SETUP,
+          history: HISTORY,
+        } as unknown as Parameters<typeof mountPuzzleSolver>[1],
+        { mode: 'streak', analysis: false },
+      );
+      try {
+        expect(host.querySelectorAll('.puzzle-move-cell--history')).toHaveLength(HISTORY.length);
       } finally {
         solver.dispose();
       }
@@ -2118,6 +2198,19 @@ describe('sourceGameLines', () => {
     // No team, no tooltip.
     expect(names[2]?.textContent).toBe('Xu Tengfei');
     expect(names[2]?.title).toBe('');
+  });
+
+  it('names an online platform game only as an online game and its year', () => {
+    const online = { gameId: 'g', ply: 4, online: true };
+    expect(
+      sourceGameLines({
+        variant: XIANGQI_SPEC_ID,
+        sourceGame: { ...online, playedOn: '2026-03-14' },
+      }).map((l) => l.textContent),
+    ).toEqual(['From a 2026 online game']);
+    expect(
+      sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: online }).map((l) => l.textContent),
+    ).toEqual(['From an online game']);
   });
 
   it('falls back to "From set <variant>" without attribution', () => {

@@ -120,6 +120,10 @@ export type WebVariantTenant<C extends string> = {
   reasonPhrase(reason: string): TenantReasonKey;
   // The rejected-room body. Default: 'live.roomNotActive' with the variant name.
   rejectedBody?: I18nKey;
+  // A body per WebSocket close reason, ahead of rejectedBody, for a tenant the
+  // server gates by account: its 'game spec disabled' refusal is "not for this
+  // account", while 'room unavailable' still means no such room.
+  rejectedBodyByReason?: Readonly<Record<string, I18nKey>>;
   // The body for a visitor refused a seat at a live game whose class shows
   // spectators nothing until it ends (close reason LIVE_GAME_NO_SEAT_REASON).
   // Default: 'live.roomLiveGameSeatedOnly', which promises the full game at the
@@ -1052,9 +1056,11 @@ export function createTenantRoomChrome<C extends string>(
       if (ctx.closeReason() === RATED_COUNTED_REASON) return t('live.rejectedRatedCountedAccount');
       if (liveGameRejection())
         return t(tenant.liveGameRejectedBody ?? 'live.roomLiveGameSeatedOnly');
-      return ctx.closeReason() === 'play disabled'
-        ? t('live.roomPlayDisabled')
-        : t(tenant.rejectedBody ?? 'live.roomNotActive', { variant: variantName() });
+      if (ctx.closeReason() === 'play disabled') return t('live.roomPlayDisabled');
+      const byReason = tenant.rejectedBodyByReason?.[ctx.closeReason()];
+      return t(byReason ?? tenant.rejectedBody ?? 'live.roomNotActive', {
+        variant: variantName(),
+      });
     }
     if (ctx.connectionState() === 'displaced') return t('live.roomDisplaced');
     if (!view) return t('live.roomOpeningSocket');

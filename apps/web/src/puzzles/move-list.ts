@@ -118,6 +118,7 @@ function puzzleMoveRows(session: PuzzleSession, onJump: JumpTo): HTMLElement[] {
       viewPly: 0,
     });
   for (const [index, move] of session.playedMoves.entries()) {
+    if (index === session.pendingReplyPly) continue;
     combined.push({
       label: labels?.played[index] ?? adapter.moveLabel(move),
       solutionIndex: index,

@@ -11,7 +11,11 @@ import type {
   XiangqiColor,
   XiangqiMove,
 } from '@mistboard/game';
-import { broadcastRecordsSourceName, XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  broadcastRecordsSourceName,
+  XIANGQI_SPEC_ID,
+  xiangqiBroadcastRoundStart,
+} from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import { broadcastEmbedCode } from './xiangqi-broadcast-embed-code.js';
@@ -35,6 +39,7 @@ import type { XiangqiAnalysisSource } from './review/xiangqi-review.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildNav } from './site-shell.js';
+import { localFederation, localName, localTitle } from './xiangqi-broadcast-names.js';
 import { formatEventDateTime } from './xiangqi-broadcast-time.js';
 
 export type BroadcastReviewBoard = {
@@ -48,6 +53,7 @@ export type BroadcastReviewBoard = {
   sourceUrl?: string;
   /** A record we do not replay (it reads two legal ways); see the schema. */
   recordWithheld?: 'ambiguous';
+  details?: { playedAt?: string };
 };
 
 export type BroadcastReviewInput = {
@@ -82,7 +88,7 @@ export function mountBroadcastBoardReview(
   const result = resultOf(data.board.result);
   const eventName = context ? primary(context.tour) : null;
   const roundName = context ? primary(context.round) : null;
-  const playedOn = context ? formatEventDateTime(context.round.startsAt) : null;
+  const playedOn = context ? formatEventDateTime(gameDate(data.board, context)) : null;
 
   document.title = `${red} vs ${black} · ${eventName ?? 'Mistboard'}`;
   if (!opts.embedded) {
@@ -117,6 +123,7 @@ export function mountBroadcastBoardReview(
     moves: [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move),
     tour: context?.tour ?? null,
     round: context?.round ?? null,
+    ...(data.board.details?.playedAt ? { playedAt: data.board.details.playedAt } : {}),
     origin: window.location.origin,
   };
   if (opts.embedded) root.replaceChildren();
@@ -270,6 +277,15 @@ function broadcastAnalysisSource(
   };
 }
 
+// A game's date is its own when the record states one; the round's seed is
+// a guess (the 2026 league's seeds ran up to two days late).
+function gameDate(
+  board: BroadcastReviewBoard,
+  context: NonNullable<BroadcastReviewInput['context']>,
+): string | undefined {
+  return xiangqiBroadcastRoundStart([board.details?.playedAt], context.round.startsAt);
+}
+
 function provenance(
   data: BroadcastReviewInput,
   context: BroadcastReviewInput['context'],
@@ -277,9 +293,9 @@ function provenance(
   const details = document.createElement('dl');
   details.className = 'review-provenance';
   if (context) {
-    addDetail(details, t('broadcast.event'), primary(context.tour), secondary(context.tour));
-    addDetail(details, t('broadcast.round'), primary(context.round), secondary(context.round));
-    const date = formatEventDateTime(context.round.startsAt);
+    addDetail(details, t('broadcast.event'), primary(context.tour));
+    addDetail(details, t('broadcast.round'), primary(context.round));
+    const date = formatEventDateTime(gameDate(data.board, context));
     if (date) addDetail(details, t('broadcast.date'), date);
   }
   addDetail(details, t('broadcast.board'), String(data.board.boardNumber));
@@ -303,44 +319,30 @@ function provenance(
   return details;
 }
 
-function addDetail(
-  details: HTMLElement,
-  label: string,
-  value: string,
-  secondaryValue?: string | null,
-): void {
+function addDetail(details: HTMLElement, label: string, value: string): void {
   const dt = document.createElement('dt');
   dt.textContent = label;
   const dd = document.createElement('dd');
-  dd.textContent =
-    secondaryValue && secondaryValue !== value ? `${value} (${secondaryValue})` : value;
+  dd.textContent = value;
   details.append(dt, dd);
 }
 
-function primary(entity: { name: string; nameEn?: string }): string {
-  return entity.nameEn?.trim() || entity.name;
-}
+// Names in the reader's language only (xiangqi-broadcast-names.ts).
+const primary = localName;
 
-function secondary(entity: { name: string; nameEn?: string }): string | null {
-  return entity.nameEn?.trim() && entity.nameEn.trim() !== entity.name ? entity.name : null;
-}
-
-/** The player's team, English first, for the strip's muted line. */
+/** The player's team, for the strip's muted line. */
 function teamOf(player: XiangqiBroadcastPlayerTag): string | undefined {
-  return player.federationEn?.trim() || player.federation?.trim() || undefined;
+  return localFederation(player);
 }
 
 function playerLabel(player: XiangqiBroadcastPlayerTag): string {
   const name = primary(player);
-  return player.title ? `${player.title} ${name}` : name;
+  return player.title ? `${localTitle(player.title)} ${name}` : name;
 }
 
 function playerLine(player: XiangqiBroadcastPlayerTag): string {
-  const zh = secondary(player);
-  const team = player.federationEn?.trim() || player.federation;
-  return [playerLabel(player), zh ? `(${zh})` : null, team ? `· ${team}` : null]
-    .filter(Boolean)
-    .join(' ');
+  const team = teamOf(player);
+  return [playerLabel(player), team ? `· ${team}` : null].filter(Boolean).join(' ');
 }
 
 function resultOf(result: XiangqiBroadcastResult): { score: string; label: string } {

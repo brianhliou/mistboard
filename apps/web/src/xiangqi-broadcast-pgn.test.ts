@@ -35,6 +35,13 @@ describe('broadcast game PGN', () => {
     expect(pgn.trim().endsWith('1-0')).toBe(true);
   });
 
+  it("dates the game by its own record over the round's seeded start", () => {
+    // The 2026 league seeded round 2 a day late; the record has the real day.
+    expect(broadcastGamePgn({ ...GAME, playedAt: '2026-09-13T19:00:00+08:00' })).toContain(
+      '[Date "2026.09.13"]',
+    );
+  });
+
   it('writes WXF when the line replays and coordinates when it does not', () => {
     expect(broadcastGamePgn(GAME)).toMatch(/1\. C2\.5 H8\+7 1-0/);
     // A black move first cannot replay from the opening position.
