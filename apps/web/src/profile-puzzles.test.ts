@@ -145,6 +145,14 @@ describe('private puzzle progress on the profile (#704)', () => {
     const xs = dots.map((dot) => Number(dot.getAttribute('cx')));
     expect((xs[1]! - xs[0]!) / (xs[2]! - xs[0]!)).toBeCloseTo(1 / 9);
     expect(root.querySelector('.profile-puzzle-chart svg')?.getAttribute('role')).toBe('img');
+    // The line runs dot to dot: no leading rating-before point, which drew a
+    // vertical tick from the start rating at the first attempt's x.
+    const at = (dot: Element) => `${dot.getAttribute('cx')},${dot.getAttribute('cy')}`;
+    const lines = [...root.querySelectorAll('.profile-puzzle-chart-line')];
+    expect(lines.map((line) => line.getAttribute('points'))).toEqual([
+      `${at(dots[0]!)} ${at(dots[1]!)}`,
+      at(dots[2]!),
+    ]);
   });
 
   it('does not list individual attempts on the profile', async () => {

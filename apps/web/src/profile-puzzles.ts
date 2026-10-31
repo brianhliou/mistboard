@@ -222,8 +222,8 @@ function buildPuzzleChart(attempts: PuzzleHistoryEntry[], locale: Locale): HTMLE
     let low = Number.POSITIVE_INFINITY;
     let high = Number.NEGATIVE_INFINITY;
     for (const point of points) {
-      low = Math.min(low, point.ratingBefore, point.ratingAfter);
-      high = Math.max(high, point.ratingBefore, point.ratingAfter);
+      low = Math.min(low, point.ratingAfter);
+      high = Math.max(high, point.ratingAfter);
     }
     const padding = Math.max(20, (high - low) * 0.15);
     low = Math.floor((low - padding) / 10) * 10;
@@ -248,15 +248,15 @@ function buildPuzzleChart(attempts: PuzzleHistoryEntry[], locale: Locale): HTMLE
       label.textContent = String(Math.round(rating));
       svg.append(line, label);
     }
+    // One point per attempt at its rating after, as Lichess plots it; a
+    // leading ratingBefore point shares the first attempt's x and drew a
+    // vertical tick from the 1500 start.
     for (const entries of segments) {
       const line = document.createElementNS(ns, 'polyline');
       line.setAttribute('class', 'profile-puzzle-chart-line');
       line.setAttribute(
         'points',
-        [
-          `${x(entries[0]!)},${y(entries[0]!.ratingBefore)}`,
-          ...entries.map((entry) => `${x(entry)},${y(entry.ratingAfter)}`),
-        ].join(' '),
+        entries.map((entry) => `${x(entry)},${y(entry.ratingAfter)}`).join(' '),
       );
       svg.append(line);
     }
