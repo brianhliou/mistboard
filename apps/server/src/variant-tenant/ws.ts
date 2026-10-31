@@ -607,7 +607,12 @@ export function createTenantWsRuntime<
       client.socket.close(1011, 'persistence failure');
       return;
     }
-    broadcastEventAppended(room, event, seq);
+    // The writer may refuse a stale expiry (-1) or store a policy move in its
+    // place (a declared Xiangqi Mahjong draw is discarded), so broadcast what
+    // landed, never the request.
+    if (seq < 0) return;
+    const appended = room.events[seq];
+    if (appended) broadcastEventAppended(room, appended, seq);
   }
 
   // `seat` is the caller's read-only-guarded color (never 'spectator').
