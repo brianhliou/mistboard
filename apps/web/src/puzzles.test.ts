@@ -1444,7 +1444,8 @@ describe('standard xiangqi puzzles', () => {
     // Spoiler-gated: the pattern names the mate, so it stays hidden until solved.
     expect(root.querySelector('.puzzle-tag-motif')).toBeNull();
     // The themes are the info card's last row, not a card of their own; the
-    // left column is info, rating, then one settings card.
+    // left column is info, rating (with the settings under a divider, #717),
+    // then the theme box. No separate Settings card or header.
     const sidebarCards = () =>
       [...root.querySelectorAll<HTMLElement>('.puzzle-left-card')].map((card) =>
         [...card.classList].find((name) => name !== 'puzzle-left-card'),
@@ -1453,15 +1454,25 @@ describe('standard xiangqi puzzles', () => {
       'puzzle-current-card',
       'puzzle-rating-card',
       'puzzle-theme-card',
-      'puzzle-settings-card',
     ]);
     const hiddenRow = root.querySelector<HTMLElement>(
       '.puzzle-info-card [data-puzzle-info-themes]',
     );
     expect(hiddenRow?.dataset.puzzleInfoThemes).toBe('hidden');
     expect(hiddenRow?.textContent).toBe('Puzzle themesRevealed after you solve it.');
-    const settings = root.querySelector<HTMLElement>('.puzzle-settings-card');
+    const settings = root.querySelector<HTMLElement>('.puzzle-rating-card [data-puzzle-settings]');
+    expect(settings?.getAttribute('role')).toBe('group');
+    expect(settings?.getAttribute('aria-label')).toBe('Settings');
     expect(settings?.querySelector('[data-puzzle-auto-next]')).not.toBeNull();
+    expect(settings?.querySelector('[data-puzzle-difficulty]')).not.toBeNull();
+    expect(root.querySelector('.puzzles-sidebar h2')?.textContent).not.toBe('Settings');
+    // The rating sits on the toggle's row, not under it as a headline.
+    expect(
+      root
+        .querySelector('.puzzle-rating-head [data-puzzle-rated]')
+        ?.closest('.puzzle-rating-head')
+        ?.querySelector('.puzzle-rating-summary'),
+    ).not.toBeNull();
     // The theme box's heading is the link back to the themes page (lichess's
     // "« Puzzle Themes"), over what the current choice drills.
     const themeCard = root.querySelector<HTMLElement>('.puzzle-theme-card');

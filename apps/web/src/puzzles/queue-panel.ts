@@ -1,8 +1,8 @@
 /**
  * The puzzles-page sidebar: the current-puzzle info card (identity, source
- * game, side to move, and its themes once solved), the rated toggle + rating
- * summary, and the settings card (variant and theme pickers, the themes page
- * link, auto-next).
+ * game, side to move, and its themes once solved), the rating card (rated
+ * toggle, rating summary, then the settings: variant picker, difficulty,
+ * auto-next), and the theme box.
  */
 
 import {
@@ -112,7 +112,12 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   ratedName.className = 'puzzle-toggle-label';
   ratedName.textContent = t('puzzle.rated');
   ratedToggle.append(ratedInput, ratedSwitch, ratedName);
-  ratingCard.append(ratedToggle);
+  // One row: the toggle, then the rating and the solved count beside it
+  // (lichess's compact sidebar), wrapping under the toggle in a narrow column.
+  const ratingHead = document.createElement('div');
+  ratingHead.className = 'puzzle-rating-head';
+  ratingHead.append(ratedToggle);
+  ratingCard.append(ratingHead);
   if (ratedEnabled) {
     const ratingSummary = document.createElement('div');
     ratingSummary.className = 'puzzle-rating-summary';
@@ -126,7 +131,7 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
         ratingValue.append(delta);
       }
     } else {
-      // No rating yet (a guest, or no rated attempt): one quiet line beside the
+      // No rating yet (a guest, or no rated attempt): one quiet word beside the
       // count, not a headline number.
       ratingSummary.classList.add('puzzle-rating-summary--none');
       ratingValue.textContent = t('puzzle.unrated');
@@ -135,7 +140,7 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     ratingMeta.className = 'puzzle-rating-meta';
     ratingMeta.textContent = t('puzzle.solvedOf', { solved: solvedCount, total: queue.length });
     ratingSummary.append(ratingValue, ratingMeta);
-    ratingCard.append(ratingSummary);
+    ratingHead.append(ratingSummary);
   }
   if (!ratedEnabled) {
     const ratedNote = document.createElement('p');
@@ -144,12 +149,15 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     ratingCard.append(ratedNote);
   }
 
-  const settingsCard = document.createElement('section');
-  settingsCard.className = 'puzzle-left-card puzzle-settings-card';
-  const settingsTitle = document.createElement('h2');
-  settingsTitle.textContent = t('puzzle.settings');
+  // The settings sit in the rating card under a divider (lichess's
+  // puzzle__side__config), not in a card of their own with a header.
+  const divider = document.createElement('hr');
+  divider.className = 'puzzle-info-divider puzzle-settings-divider';
   const form = document.createElement('div');
   form.className = 'puzzle-settings';
+  form.setAttribute('role', 'group');
+  form.setAttribute('aria-label', t('puzzle.settings'));
+  form.dataset.puzzleSettings = 'true';
   // The variant picker only appears when more than one variant is surfaced.
   if (variantFilters.length > 1) {
     const field = document.createElement('label');
@@ -190,12 +198,12 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   autoNextLabel.textContent = t('puzzle.autoNext');
   autoNextToggle.append(autoNextInput, autoNextSwitch, autoNextLabel);
   form.append(autoNextToggle);
-  settingsCard.append(settingsTitle, form);
+  ratingCard.append(divider, form);
 
-  // Lichess's order: the puzzle, the rating, the theme box, then settings.
+  // The puzzle, the rating with its settings, then the theme box.
   const themeCard =
     props.theme && variantFilter === XIANGQI_SPEC_ID ? [puzzleThemeCard(props.theme)] : [];
-  host.append(infoCard, ratingCard, ...themeCard, settingsCard);
+  host.append(infoCard, ratingCard, ...themeCard);
 }
 
 /** Shared controls and availability copy for the sidebar and phone sheet. */

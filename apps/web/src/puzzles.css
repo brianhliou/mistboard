@@ -554,7 +554,7 @@ a.puzzle-streak-chip:focus-visible {
   display: grid;
   order: 1;
   align-content: start;
-  gap: 14px;
+  gap: 10px;
   max-height: var(--puzzle-column-max-height);
   overflow: auto;
 }
@@ -642,6 +642,13 @@ a.puzzle-streak-chip:focus-visible {
   padding: 17px 20px;
 }
 
+/* The puzzle page's column sits beside the board and should end near its
+   bottom edge (#717), so its cards run tighter than the streak's. */
+.puzzles-sidebar .puzzle-left-card {
+  gap: 10px;
+  padding: 12px 16px;
+}
+
 .puzzles-sidebar h2,
 .puzzle-left-card h2 {
   margin: 0;
@@ -658,9 +665,9 @@ a.puzzle-streak-chip:focus-visible {
   line-height: 1.35;
 }
 
-.puzzle-info-card {
+.puzzle-left-card.puzzle-info-card {
   gap: 0;
-  padding: 18px 20px 17px;
+  padding: 11px 16px 10px;
 }
 
 .puzzle-info-row {
@@ -668,7 +675,7 @@ a.puzzle-streak-chip:focus-visible {
   grid-template-columns: 54px minmax(0, 1fr);
   gap: 13px;
   align-items: center;
-  min-height: 66px;
+  min-height: 54px;
 }
 
 .puzzle-info-icon {
@@ -695,7 +702,7 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-info-copy {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
   color: var(--site-muted);
   font-size: 14px;
@@ -761,14 +768,30 @@ a.puzzle-streak-chip:focus-visible {
 .puzzle-info-divider {
   width: 100%;
   height: 1px;
-  margin: 9px 0;
+  margin: 7px 0;
   border: 0;
   background: var(--site-border-soft);
 }
 
-.puzzle-rating-card {
+.puzzles-sidebar .puzzle-left-card.puzzle-rating-card {
   align-content: start;
-  gap: 14px;
+  gap: 8px;
+}
+
+/* The settings divider is a grid item: the card's gap spaces it. */
+.puzzle-rating-card .puzzle-settings-divider {
+  margin: 0;
+}
+
+/* The rated toggle with the rating and solved count beside it; in a column
+   too narrow for both, the summary wraps under the toggle. */
+.puzzle-rating-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  min-width: 0;
 }
 
 .puzzle-rating-card p {
@@ -779,24 +802,20 @@ a.puzzle-streak-chip:focus-visible {
 }
 
 .puzzle-rating-summary {
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin-inline-start: auto;
+  min-width: 0;
 }
 
 .puzzle-rating-card strong {
   color: var(--site-heading);
-  font-size: clamp(44px, 5vw, 62px);
+  font-size: 28px;
   font-weight: 400;
   line-height: 1;
-}
-
-.puzzle-rating-card .puzzle-rating-summary--none {
-  grid-auto-flow: column;
-  justify-content: space-between;
-  align-items: baseline;
-  text-align: start;
+  font-variant-numeric: tabular-nums;
 }
 
 .puzzle-rating-card .puzzle-rating-summary--none strong {
@@ -812,8 +831,8 @@ a.puzzle-streak-chip:focus-visible {
 }
 
 .puzzle-rating-delta {
-  margin-left: 6px;
-  font-size: 18px;
+  margin-left: 4px;
+  font-size: 15px;
   font-weight: 600;
   vertical-align: middle;
 }
@@ -843,6 +862,14 @@ a.puzzle-streak-chip:focus-visible {
   line-height: 1.3;
 }
 
+/* Before the solve the label and its one-line note share a row. */
+.puzzle-info-themes--hidden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
 .puzzle-info-themes__label {
   color: var(--site-heading);
   font-size: 13px;
@@ -851,7 +878,20 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-settings {
   display: grid;
-  gap: 12px;
+  gap: 8px;
+}
+
+/* The difficulty note sits right under its select. */
+.puzzle-settings .puzzle-field + .puzzle-rated-note {
+  margin: -2px 0 0;
+  font-size: 12px;
+}
+
+/* Short option names: the select keeps to the label's row. */
+.puzzles-sidebar .puzzle-field .puzzle-select {
+  flex-basis: 140px;
+  min-height: 32px;
+  padding-block: 4px;
 }
 
 .puzzle-field {
@@ -1426,6 +1466,16 @@ a.puzzle-tag--link:hover {
   line-height: 1.4;
 }
 
+/* Two lines beside the board; the full text is the tooltip. */
+.puzzles-sidebar .puzzle-theme-card__description {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  line-height: 1.35;
+}
+
 .puzzles-status {
   color: var(--site-muted);
   font-size: 14px;
@@ -1497,10 +1547,6 @@ a.puzzle-tag--link:hover {
       minmax(230px, 310px)
       minmax(min(400px, var(--puzzle-board-track)), min(50vw, 620px, var(--puzzle-board-track)))
       minmax(270px, 360px);
-  }
-
-  .puzzle-rating-card strong {
-    font-size: 50px;
   }
 }
 

@@ -176,6 +176,8 @@ export function puzzleThemeCard(settings: PuzzleThemeSettings): HTMLElement {
   const description = document.createElement('p');
   description.className = 'puzzle-theme-card__description';
   description.textContent = puzzleThemeDescription(settings);
+  // The sidebar clamps it to two lines; the tooltip keeps the whole sentence.
+  description.title = description.textContent;
   card.append(heading, description, puzzleThemePicker(settings));
   return card;
 }
