@@ -24,7 +24,7 @@ function stubListener(t: TestContext) {
   return listen;
 }
 
-test('bind option: server forwards the configured HOST to its listener', async (t) => {
+test('bind option: server forwards the configured MISTBOARD_BIND_HOST to its listener', async (t) => {
   const listen = stubListener(t);
   const previousHost = serverConfig.host;
   serverConfig.host = '127.0.0.1';
@@ -36,7 +36,7 @@ test('bind option: server forwards the configured HOST to its listener', async (
   assert.deepEqual(listen.mock.calls[0].arguments[0], { port: 0, host: '127.0.0.1' });
 });
 
-test('bind option: test harness overrides a wildcard configured HOST', async (t) => {
+test('bind option: test harness overrides a wildcard configured MISTBOARD_BIND_HOST', async (t) => {
   const listen = stubListener(t);
   const previousHost = serverConfig.host;
   serverConfig.host = '::';

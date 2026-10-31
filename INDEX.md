@@ -88,7 +88,7 @@ Edit task → find file → open only that file.
 
 | File | Owns |
 |------|------|
-| `main.ts` | Prod entry point. Calls `installShutdownHandlers()` then `startServer()`, using `PORT` and optional bind `HOST` from runtime config. Tiny — all logic lives in `index.ts`. |
+| `main.ts` | Prod entry point. Calls `installShutdownHandlers()` then `startServer()`, using `PORT` and optional bind `MISTBOARD_BIND_HOST` from runtime config. Tiny — all logic lives in `index.ts`. |
 | `index.ts` | Server library: exports `startServer`, `installShutdownHandlers`, `stopServer`. Module-load side-effect-free so the integration harness can boot a test instance on a random port. Owns canonical maps, startup wiring, shutdown composition, game-flow callbacks, and persistence-error status while delegating HTTP, WebSocket, and room lifecycle edges. |
 | `server-http.ts` | HTTP entry routing: `/health`, admin drain handoff, API context dispatch, OG/static page routes, robots/sitemap, article/game shell fallbacks, and SPA static fallback. |
 | `bot-page-meta.ts` | Server-side title/description for `/bot/:id` (the bot profile page, a client route): bot name, the games it fronts, its bio; rides the finished-game meta slot in `serveSpaShellWithRoutePreloads`. The pikafish page's primary CTA lands here, so the link had to carry the right title. |
@@ -167,7 +167,7 @@ Edit task → find file → open only that file.
 | `build-info.ts` | Build metadata surfaced through status responses |
 | `feature-flags.ts` | Runtime on-switches for rated mode and hidden/prelaunch surfaces |
 | `game-spec-request-gate.ts` | Request gate from incoming room specs to supported runtime families |
-| `server-config.ts` | Runtime config parsing (`HOST` selects the bind address; `MISTBOARD_HOST` is the public origin) and room-region normalization |
+| `server-config.ts` | Runtime config parsing (`MISTBOARD_BIND_HOST` selects the bind address; `MISTBOARD_HOST` is the public origin) and room-region normalization |
 | `server-types.ts` | Shared server types: `Client`, `Room`, `SeatTokenState`, `SeatAssignment`, `LobbyTicket` |
 | `server-policy.ts` | Access control: `canObserveLiveRoom`, `liveObservePolicy`/`canServeLiveBoard` (visibility-keyed live-TV gate, fail-closed on fog), `eventReplayResponse`, `visibleEventsForLiveSnapshot`, `modeForProjection`, `isAdminDebugToken`, `isAllowedWebSocketOrigin`, `isClientRoute`, `PARKED_CLIENT_ROUTES` |
 | `viewer-country.ts` | Viewer country from Cloudflare's `CF-IPCountry` to the browser: `viewerCountryFromRequest` (two-letter code; XX/T1/absent are unknown) and the readable day-long `mb_cc` cookie that `server-http.ts` sets on page navigations so the client can skip links blocked where the viewer is |

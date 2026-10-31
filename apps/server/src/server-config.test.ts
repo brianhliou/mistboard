@@ -43,9 +43,11 @@ test('server runtime config normalizes room region inputs', () => {
 });
 
 test('server runtime config accepts a bind host without changing the public origin', () => {
-  const config = loadServerRuntimeConfig({ HOST: ' 127.0.0.1 ' });
+  const config = loadServerRuntimeConfig({ MISTBOARD_BIND_HOST: ' 127.0.0.1 ' });
   assert.equal(config.host, '127.0.0.1');
   assert.equal(config.publicHost, 'https://mistboard.com');
   assert.equal(loadServerRuntimeConfig({}).host, undefined);
-  assert.equal(loadServerRuntimeConfig({ HOST: ' ' }).host, undefined);
+  assert.equal(loadServerRuntimeConfig({ MISTBOARD_BIND_HOST: ' ' }).host, undefined);
+  // A platform-set generic HOST (e.g. 0.0.0.0) must never pick the prod bind address.
+  assert.equal(loadServerRuntimeConfig({ HOST: '0.0.0.0' }).host, undefined);
 });
