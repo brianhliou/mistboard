@@ -5,6 +5,7 @@ import { liveState, noteRematchCancel } from './live-state.js';
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
   static OPEN = 1;
+  static CONNECTING = 0;
   url: string;
   protocols?: string[];
   readyState = 0;
@@ -47,6 +48,7 @@ class FakeWebSocket {
   }
 
   closeWith(code: number, reason: string): void {
+    this.readyState = 3;
     this.emit('close', { code, reason });
   }
 }
@@ -114,6 +116,7 @@ describe('chess liveState socket adapter', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });
@@ -187,4 +190,20 @@ describe('chess liveState socket adapter', () => {
     expect(liveState.connectionState).toBe('connected');
     expect(liveState.connectionNoticeTier).toBe('none');
   });
+
+  it.each(['visibilitychange', 'online'])(
+    'reconnects the chess shell immediately on %s',
+    (type) => {
+      bootChessSocket();
+      lastSocket().message(helloFrame());
+      lastSocket().closeWith(1006, '');
+      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+      (type === 'online' ? window : document).dispatchEvent(new Event(type));
+      expect(FakeWebSocket.instances).toHaveLength(2);
+      expect(liveState.reconnectAttempt).toBe(0);
+      lastSocket().open();
+      lastSocket().message(helloFrame());
+      expect(liveState.connectionState).toBe('connected');
+    },
+  );
 });

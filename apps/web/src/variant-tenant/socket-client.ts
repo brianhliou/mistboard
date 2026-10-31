@@ -152,16 +152,19 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
   let latencyMs: number | null = null;
   let lastLatencySampleSentAt = 0;
   let pingTimer: number | null = null;
+  let closed = false;
 
   function connect(): void {
+    if (closed) return;
     if (reconnectTimer) {
       window.clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
     if (socket) {
-      socket.removeEventListener('message', onMessage);
-      socket.close();
+      const previous = socket;
       socket = null;
+      previous.removeEventListener('message', onMessage);
+      previous.close();
     }
     connectionState = clientId ? 'reconnecting' : 'connecting';
     options.render();
@@ -279,6 +282,9 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
   }
 
   function close(): void {
+    closed = true;
+    document.removeEventListener('visibilitychange', onVisibilityChange);
+    window.removeEventListener('online', onWake);
     clearOpenTimer();
     if (reconnectTimer) {
       window.clearTimeout(reconnectTimer);
@@ -290,9 +296,10 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     }
     clearNoticeTiers();
     if (socket) {
-      socket.removeEventListener('message', onMessage);
-      socket.close();
+      const previous = socket;
       socket = null;
+      previous.removeEventListener('message', onMessage);
+      previous.close();
     }
   }
 
@@ -320,6 +327,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
   }
 
   function scheduleReconnect(): void {
+    if (closed) return;
     if (connectionState === 'displaced' || connectionState === 'rejected') return;
     if (reconnectTimer) return;
     reconnectAttempt += 1;
@@ -333,12 +341,27 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
   }
 
   function reconnectNow(): void {
+    if (closed) return;
     if (connectionState === 'displaced' || connectionState === 'rejected') return;
     reconnectAttempt = 0;
     connect();
   }
 
+  function onVisibilityChange(): void {
+    if (document.visibilityState === 'visible') onWake();
+  }
+
+  function onWake(): void {
+    // online and visibilitychange can arrive together; leave an in-flight
+    // handshake alone, as well as a healthy connection.
+    if (connectionState === 'connecting' && socket === null) return;
+    if (socket?.readyState === WebSocket.CONNECTING) return;
+    if (connectionState === 'connected' && socket?.readyState === WebSocket.OPEN) return;
+    reconnectNow();
+  }
+
   function send(payload: unknown): boolean {
+    if (closed) return false;
     if (connectionState === 'displaced' || connectionState === 'rejected') return false;
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       // A send against a closed socket is the cheapest disconnect detector we
@@ -362,7 +385,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
       return;
     }
     if (message.type === 'server_restart_scheduled') {
-      setRestartBanner(message.phase ?? 'pending');
+      setRestartBanner(message.phase ?? 'pending', message.restartAt);
       return;
     }
     if (message.type === 'server_restart_cancelled') {
@@ -383,6 +406,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     }
 
     if (message.type === 'hello') {
+      setRestartBanner(null);
       connectionState = 'connected';
       clientId = message.clientId ?? clientId;
       if (message.seatToken && isPlayableSeat(message.seat)) {
@@ -418,9 +442,13 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
   }
 
   function startPing(intervalMs = 5_000): void {
+    if (closed) return;
     if (pingTimer !== null) return;
     pingTimer = window.setInterval(() => send({ type: 'ping', at: Date.now() }), intervalMs);
   }
+
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  window.addEventListener('online', onWake);
 
   return {
     connect,

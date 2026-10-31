@@ -5,6 +5,7 @@ import {
   createTenantSocketClient,
   SOCKET_FALLBACK_AFTER_FAILED_OPENS,
   SOCKET_OPEN_TIMEOUT_MS,
+  type TenantSocketClient,
   type TenantSocketClientOptions,
   tenantReconnectDelayMs,
 } from './socket-client.js';
@@ -15,6 +16,7 @@ vi.mock('../analytics.js', () => ({ track: vi.fn() }));
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
   static OPEN = 1;
+  static CONNECTING = 0;
   url: string;
   protocols?: string[];
   readyState = 0;
@@ -57,6 +59,7 @@ class FakeWebSocket {
   }
 
   closeWith(code: number, reason: string): void {
+    this.readyState = 3;
     this.emit('close', { code, reason });
   }
 }
@@ -80,8 +83,11 @@ function makeClient(overrides: Partial<TenantSocketClientOptions> = {}) {
     },
     ...overrides,
   });
+  clients.push(client);
   return { client, calls };
 }
+
+const clients: TenantSocketClient[] = [];
 
 function lastSocket(): FakeWebSocket {
   const socket = FakeWebSocket.instances.at(-1);
@@ -128,6 +134,8 @@ describe('tenant socket client', () => {
   });
 
   afterEach(() => {
+    for (const client of clients.splice(0)) client.close();
+    vi.restoreAllMocks();
     vi.useRealTimers();
     vi.unstubAllGlobals();
   });
@@ -286,11 +294,94 @@ describe('tenant socket client', () => {
     client.connect();
     lastSocket().open();
     lastSocket().message({ type: 'server_restart_scheduled', phase: 'pending', restartAt: 1_234 });
-    expect(setRestartBanner).toHaveBeenLastCalledWith('pending');
+    expect(setRestartBanner).toHaveBeenLastCalledWith('pending', 1_234);
     lastSocket().message({ type: 'server_restart_scheduled', phase: 'restarting' });
-    expect(setRestartBanner).toHaveBeenLastCalledWith('restarting');
+    expect(setRestartBanner).toHaveBeenLastCalledWith('restarting', undefined);
     lastSocket().message({ type: 'server_restart_cancelled' });
     expect(setRestartBanner).toHaveBeenLastCalledWith(null);
+  });
+
+  it('clears the restart banner on hello, after the new server accepts the connection', () => {
+    const { client } = makeClient();
+    client.connect();
+    lastSocket().open();
+    lastSocket().message({ type: 'server_restart_scheduled', phase: 'restarting' });
+    lastSocket().closeWith(1001, 'server shutting down');
+    vi.advanceTimersByTime(750);
+    lastSocket().open();
+    expect(vi.mocked(setRestartBanner).mock.calls.at(-1)?.[0]).toBe('restarting');
+    lastSocket().message({ type: 'hello', clientId: 'returned' });
+    expect(setRestartBanner).toHaveBeenLastCalledWith(null);
+  });
+
+  it.each(['visibilitychange', 'online'])('reconnects immediately on %s during backoff', (type) => {
+    const { client } = makeClient();
+    client.connect();
+    lastSocket().open();
+    lastSocket().closeWith(1006, '');
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    (type === 'online' ? window : document).dispatchEvent(new Event(type));
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    expect(client.reconnectAttempt()).toBe(0);
+    lastSocket().open();
+    vi.advanceTimersByTime(750);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+  });
+
+  it('also wakes a failed initial open and a silently closed connected socket', () => {
+    const { client } = makeClient();
+    window.dispatchEvent(new Event('online'));
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    client.connect();
+    lastSocket().closeWith(1006, '');
+    window.dispatchEvent(new Event('online'));
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    lastSocket().open();
+    // A sleeping tab can observe CLOSED before receiving the close event.
+    lastSocket().readyState = 3;
+    window.dispatchEvent(new Event('online'));
+    expect(FakeWebSocket.instances).toHaveLength(3);
+  });
+
+  it('ignores hidden tabs, healthy sockets, and a wake while a reconnect is already dialing', () => {
+    const { client } = makeClient();
+    client.connect();
+    lastSocket().open();
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('online'));
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    lastSocket().closeWith(1006, '');
+    visibility.mockReturnValue('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    window.dispatchEvent(new Event('online'));
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    visibility.mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(FakeWebSocket.instances).toHaveLength(2);
+  });
+
+  it.each([4000, 1008])('does not wake a terminal socket closed with %s', (code) => {
+    const { client } = makeClient();
+    client.connect();
+    lastSocket().closeWith(code, code === 4000 ? 'duplicate session' : 'private room');
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('online'));
+    expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+
+  it('removes wake listeners on close so an old client cannot reclaim the seat', () => {
+    const { client } = makeClient();
+    client.connect();
+    lastSocket().closeWith(1006, '');
+    client.close();
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('online'));
+    vi.advanceTimersByTime(10_000);
+    expect(FakeWebSocket.instances).toHaveLength(1);
   });
 
   it('recovers from a silent drop on send', () => {

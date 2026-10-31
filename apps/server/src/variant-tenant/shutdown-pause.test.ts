@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { type Color, correspondenceTimeControl, type RoomTimeControl } from '@mistboard/game';
+import type { WebSocket } from 'ws';
 import { type DarkChessTenantEvent, darkChessTenant } from '../dark-chess-tenant.js';
+import { closeRoomClients } from '../server-lifecycle.js';
 import {
   clearTenantRuntimeTimers,
   pauseTenantRoomsOnShutdown,
@@ -19,6 +21,7 @@ import {
   tenantOrphanPauseFor,
   tenantPauseEventFor,
 } from './runtime.js';
+import { createTenantWsRuntime, type TenantLiveClient } from './ws.js';
 
 // A server stop used to leave a live tenant game's clock running: hydration
 // replays the log, the clock is still running from the last move, and the
@@ -276,6 +279,57 @@ test('the shutdown pause does not resume a room whose players are still connecte
   assert.deepEqual(room.projection.paused, { at: 25_000, activeColor: 'white' });
   assert.equal(room.clockTimer, null);
   assert.equal(room.resumeTimer ?? null, null);
+});
+
+test('shutdown sends tenant clients a redacted frozen clock and restart notice before close', async () => {
+  const received = new Map<string, string[]>();
+  const clients = new Set<TenantLiveClient<Color>>();
+  for (const seat of ['white', 'black', 'spectator'] as const) {
+    const frames: string[] = [];
+    received.set(seat, frames);
+    clients.add({
+      id: seat,
+      roomId: 'dchx_shutdown_wire',
+      seat,
+      solo: false,
+      displaced: false,
+      debugRequested: false,
+      messageTimestamps: [],
+      socket: {
+        send(raw: string) {
+          frames.push(raw);
+        },
+        close() {
+          frames.push('close');
+        },
+      } as unknown as WebSocket,
+    });
+  }
+  const room = { ...hydrate(liveGame('dchx_shutdown_wire')), clients };
+  const runtime = createTenantWsRuntime(darkChessTenant);
+
+  assert.equal(
+    await pauseTenantRoomsOnShutdown(darkChessTenant, [room], runtime.lifecycleCtx, 25_000),
+    1,
+  );
+  closeRoomClients([room]);
+
+  for (const [seat, frames] of received) {
+    assert.equal(frames.length, 3, `${seat}: pause, notice, close`);
+    const pause = JSON.parse(frames[0]!);
+    assert.equal(pause.type, 'event-appended');
+    assert.equal(pause.clock.activeColor, null);
+    assert.equal(pause.clock.runningSince, null);
+    assert.equal(pause.clock.remainingMs.white, 177_000);
+    assert.equal(pause.event, undefined, 'pause bookkeeping stays server-only');
+    assert.deepEqual(JSON.parse(frames[1]!), {
+      type: 'server_restart_scheduled',
+      phase: 'restarting',
+    });
+    assert.equal(frames[2], 'close');
+    const hidden = seat === 'white' ? /"e8"|"h8"/ : seat === 'black' ? /"e1"|"h1"/ : /"e8"|"e1"/;
+    assert.doesNotMatch(frames[0]!, hidden);
+  }
 });
 
 test('only a live, timed, running game is paused', () => {

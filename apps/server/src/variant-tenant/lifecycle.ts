@@ -321,6 +321,8 @@ export async function pauseTenantRoomsOnShutdown<
     try {
       const seq = await ctx.appendEvent(room, event);
       if (seq < 0) continue;
+      const appended = room.events[seq];
+      if (appended) ctx.broadcastEventAppended(room, appended, seq);
       paused += 1;
       await recordRoomLifecycleAuditSafe({
         roomId: room.id,
