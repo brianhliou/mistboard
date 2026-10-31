@@ -11,7 +11,7 @@ import {
 } from './crosstable.js';
 import type { GameParticipant } from './persistence-games.js';
 
-// A registry stand-in: xiangqi + banqi bind a route base, the dark-chess
+// A registry stand-in: xiangqi + banqi bind a route base, TK a review base, the dark-chess
 // correspondence registration (dchx_) binds none, nothing else is registered.
 const LOOKUP: CrosstableTenantLookup = {
   forRoomId: (roomId) => {
@@ -20,6 +20,9 @@ const LOOKUP: CrosstableTenantLookup = {
     if (roomId.startsWith('bq_'))
       return { export: { gameRouteBase: '/banqi/game', finishedGame: () => null } };
     if (roomId.startsWith('dchx_')) return { export: null };
+    // Three Kingdoms banqi: no export, but a review page of its own.
+    if (roomId.startsWith('tkb_'))
+      return { export: null, reviewRouteBase: '/three-kingdoms-banqi/game' };
     return null;
   },
   forSpecId: (specId) => {
@@ -259,6 +262,11 @@ test('crosstable review url: chess stack, tenant room, legacy room id, unknown v
   assert.equal(crosstableReviewUrl('dchx_1', 'dark-chess', LOOKUP), '/game/dchx_1');
   assert.equal(crosstableReviewUrl('xq_1', 'xiangqi', LOOKUP), '/xiangqi/game/xq_1');
   assert.equal(crosstableReviewUrl('bq_1', 'banqi', LOOKUP), '/banqi/game/bq_1');
+  // A tenant with no export still links a review page it names.
+  assert.equal(
+    crosstableReviewUrl('tkb_1', 'three-kingdoms-banqi', LOOKUP),
+    '/three-kingdoms-banqi/game/tkb_1',
+  );
   // A legacy room id with no tenant prefix resolves through the spec.
   assert.equal(crosstableReviewUrl('legacy-1', 'xiangqi', LOOKUP), '/xiangqi/game/legacy-1');
   // Unknown variants and un-registered tenants get no URL, never a guess.

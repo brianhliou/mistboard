@@ -95,6 +95,36 @@ test('a missing game row leaves the puzzle as before: stored attribution, no his
   assert.deepEqual(fields, { sourceGame: stored.sourceGame });
 });
 
+// The puzzle card named the platform and printed its pseudonyms
+// ("ElephantChess:cqM1Apb2GWRD"). The whole payload is checked, not the
+// rendered card, so no later field brings them back.
+test('an online platform game goes out as an online game and its year, nothing else', async () => {
+  resetPuzzleSetupMoveCacheForTests();
+  const base = puzzle('xq_ec', 4, {
+    redName: 'ElephantChess:cqM1Apb2GWRD',
+    blackName: 'ElephantChess:H8Zr42oigB9S',
+  });
+  const stored = {
+    ...base,
+    sourceGame: {
+      ...base.sourceGame,
+      event: 'ElephantChess PvP',
+      playedOn: '2026-03-14',
+      result: '1-0',
+    },
+  };
+  const expected = { gameId: 'hxq_src', ply: 4, playedOn: '2026-03-14', online: true };
+  const linked = await puzzleDetailSourceFields(stored, async () =>
+    row({ redNameRaw: 'ElephantChess:cqM1Apb2GWRD', blackNameRaw: 'ElephantChess:H8Zr42oigB9S' }),
+  );
+  assert.deepEqual(linked.sourceGame, expected);
+  // The moves before the puzzle still go out: they name no one.
+  assert.deepEqual(linked.history, GAME.slice(0, 3));
+  assert.doesNotMatch(JSON.stringify(linked), /ElephantChess/);
+  resetPuzzleSetupMoveCacheForTests();
+  assert.deepEqual(await puzzleDetailSourceFields(stored, null), { sourceGame: expected });
+});
+
 test('persistence off sends the stored attribution unlinked', async () => {
   const stored = puzzle('xq_off');
   assert.deepEqual(await puzzleDetailSourceFields(stored, null), { sourceGame: stored.sourceGame });

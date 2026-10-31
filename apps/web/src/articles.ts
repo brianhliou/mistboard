@@ -1233,6 +1233,8 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
     const intro = document.createElement('div');
     intro.className = 'article-intro';
     for (const block of article.intro) intro.append(renderBlock(block, articleLang));
+    const photo = intro.querySelector('figure.article-figure-image');
+    if (article.contactNote && photo) photo.append(articleContactNote(article.slug, locale));
     sheet.append(intro);
   }
 
@@ -1281,7 +1283,7 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
 // rules pages, which end in a single line inviting a reader to review the
 // machine translation (buildRulesTranslateNote).
 function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement | null {
-  if (article.kind === 'rules') return buildRulesTranslateNote(lang);
+  if (article.kind === 'rules') return buildRulesTranslateNote(article, lang);
   if (article.kind !== 'article') return null;
   const related = relatedArticles(article);
   if (related.length === 0) return null;
@@ -1307,18 +1309,21 @@ function buildArticleFooter(article: Article, lang?: ArticleLang): HTMLElement |
   return footer;
 }
 
-// zh rules pages ship on machine translation; this line points a native reader
-// at the volunteer review role on /contribute. English pages have nothing to
-// review, so they get no line. The anchor is the id contribute-page.ts sets on
-// its translate heading.
-function buildRulesTranslateNote(lang?: ArticleLang): HTMLElement | null {
+// zh rules pages ship on machine translation; this line lets a reader who
+// spots a bad term report it from the contact form, which arrives labelled with
+// the page (`?about=`). The volunteer review role stays on /contribute.
+// English pages have nothing to review, so they get no line. nofollow keeps
+// crawlers from filing the ?about= copy as another URL for /contact.
+function buildRulesTranslateNote(article: Article, lang?: ArticleLang): HTMLElement | null {
   if (!lang) return null;
   const locale = articleLocale(lang);
   const footer = document.createElement('footer');
   footer.className = 'article-translate-note';
   const line = document.createElement('p');
   const link = document.createElement('a');
-  link.href = '/contribute#translate';
+  const path = localizedHref(`/rules/${article.slug}`, locale);
+  link.href = localizedHref(`/contact?about=${encodeURIComponent(path)}`, locale);
+  link.rel = 'nofollow';
   link.textContent = t('rules.translateIssueLink', {}, locale);
   line.append(t('rules.translateIssue', {}, locale), link);
   footer.append(line);
@@ -1469,7 +1474,7 @@ function buildVariantSidebar(currentSlug: string | null, lang?: ArticleLang): HT
 // Dark Chess)") or a zh subtitle after a fullwidth colon ("暗棋规则：玩法详解…")
 // would otherwise render in full and widen the rail enough to push the article
 // column off centre. Strip the search freight first, then the "Rules" suffix.
-function variantNavLabel(title: string): string {
+export function variantNavLabel(title: string): string {
   return title
     .replace(/：.*$/u, '')
     .replace(/\s*\([^)]*\)\s*$/u, '')
@@ -2158,6 +2163,23 @@ function localizeInlineSvgText(root: ParentNode, lang?: ArticleLang): void {
   });
 }
 
+// The player pages' small print (rightsContactNote), written here so an
+// article does not pull in the broadcast module.
+function articleContactNote(slug: string, locale: Locale): HTMLElement {
+  const note = document.createElement('p');
+  note.className = 'article-contact-note';
+  const link = document.createElement('a');
+  link.href = localizedHref(`/contact?about=${encodeURIComponent(`/blog/${slug}`)}`, locale);
+  link.rel = 'nofollow';
+  link.textContent = t('contact.correctionsLink', {}, locale);
+  note.append(
+    t('contact.correctionsPrefix', {}, locale),
+    link,
+    t('contact.correctionsSuffix', {}, locale),
+  );
+  return note;
+}
+
 function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-image';
@@ -2186,10 +2208,18 @@ function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
   zoom.append(img);
   if (darkImg) zoom.append(darkImg);
   figure.append(zoom);
-  if (block.caption) {
+  if (block.caption || block.credit) {
     const cap = document.createElement('figcaption');
     cap.className = 'article-figure-caption';
-    cap.textContent = block.caption;
+    cap.textContent = block.caption ?? '';
+    if (block.credit) {
+      const link = document.createElement('a');
+      link.href = block.credit.href;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = block.credit.text;
+      cap.append(`${block.caption ? ' ' : ''}Photo: `, link);
+    }
     figure.append(cap);
   }
   return figure;

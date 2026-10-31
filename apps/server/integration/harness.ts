@@ -66,6 +66,7 @@ export async function startTestServer(
   await stopServer().catch(() => undefined);
   const started: StartedServer = await startServer({
     port: 0,
+    host: '127.0.0.1',
     seatVacateGraceMs: opts.seatVacateGraceMs,
   });
   const url = `ws://127.0.0.1:${started.port}`;

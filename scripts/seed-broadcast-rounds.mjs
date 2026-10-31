@@ -17,6 +17,13 @@
 //
 // Every emitted record is checked with the same validators the importer runs,
 // so a pack that would be rejected at ingestion fails here instead.
+//
+// A seeded startsAt is a guess made before the event: it orders the calendar
+// and finds the poll's round, but once a round has games their own dates win
+// on every page (xiangqiBroadcastRoundStart). Round days slip; the 2026 league
+// seeded rounds 2-5 one and two days late. After an event, audit with
+// `node scripts/broadcast-round-dates.mjs` (read-only; exits 1 on a round with
+// games and no date to show).
 
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';

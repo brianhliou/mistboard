@@ -27,7 +27,7 @@ import {
   matchupSeats,
   namesMatchupLabel,
   participantForColor,
-  terminationLabel,
+  terminationReason,
   variantDisplayLabel,
   watchChannelLabel,
 } from './game-display.js';
@@ -1953,9 +1953,11 @@ function playersMatchupLabel(players: GameMetaPlayer[]): string {
   return namesMatchupLabel(first.name, second.name);
 }
 
-function watchGameStatusLine(game: FeaturedGame): string {
+export function watchGameStatusLine(game: FeaturedGame): string {
   const result = watchQueueResultLabel(game);
-  const reason = terminationLabel(game.termination);
+  // "On points" is already a phrase; "wins by On points" is not a sentence.
+  if (game.termination === 'points') return t('watch.resultOnPoints', { result });
+  const reason = terminationReason(game.termination);
   return reason ? t('watch.resultByReason', { result, reason }) : result;
 }
 

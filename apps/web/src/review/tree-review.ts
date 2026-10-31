@@ -280,6 +280,9 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  8x4 banqi board) otherwise stretch to the full column width; a cap keeps them at
    *  a sane size, matching the linear layout's boardMaxPx. Omit for square-ish boards. */
   boardMaxPx?: number;
+  /** With no client engine, keep the eval gauge's track as an empty spacer so the
+   *  three columns land where an engine page's do (Three Kingdoms beside banqi). */
+  reserveGaugeTrack?: boolean;
   /** Window event whose fire forces a full re-render (variants that render pieces
    *  inline as SVG need this on a piece-set change; variants that pick up their set
    *  via CSS omit it). */
@@ -980,6 +983,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
 
   // No client engine → no eval gauge (and no engine panel below).
   const evalBar = presentation.engine ? createEvalBar() : null;
+  const gaugeSpacer = () => {
+    const spacer = document.createElement('div');
+    spacer.className = 'review-shell__gauge-spacer';
+    return spacer;
+  };
 
   // ── Engine (live, current node) ──
   // On-board PV arrows: live MultiPV lines win; with the engine off (or between
@@ -1936,7 +1944,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     railBelow: explorerBelowRail ? config.explorer?.el : undefined,
     navigation: controls.el,
     analysisSummary: analysisSummaryEl,
-    gauge: evalBar?.el,
+    gauge: evalBar?.el ?? (presentation.reserveGaugeTrack ? gaugeSpacer() : undefined),
     materialTop,
     materialBottom,
     showBoardMaterial: Boolean(presentation.material),

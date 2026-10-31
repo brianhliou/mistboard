@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   ARBITER_ADJUDICATED_DRAWS,
   replayXiangqiBroadcastBoard,
+  xiangqiBroadcastRoundStart as start,
   validateXiangqiBroadcastBoard,
   validateXiangqiBroadcastBoards,
   validateXiangqiBroadcastRound,
@@ -251,4 +252,28 @@ test('a tour polled through dpxq-tour discovery links to the dpxq tour page, not
   assert.equal(broadcastSourcePageHref('mistboard-discover://dpxq-tour?tour=abc'), undefined);
   assert.equal(broadcastSourcePageHref('not a url'), undefined);
   assert.equal(broadcastSourcePageHref(undefined), undefined);
+});
+
+test('a round starts when its games say, over the seeded guess', () => {
+  // 2026 league round 2: seeded a day late at 14:30, played Sep 14 at 19:00.
+  assert.equal(
+    start(['2026-09-14T19:30:00+08:00', '2026-09-14T19:00:00+08:00'], '2026-09-15T14:30:00+08:00'),
+    '2026-09-14T19:00:00+08:00',
+  );
+  // A round the poller added has no seed; its games date it.
+  assert.equal(start(['2026-09-16T19:00:00+08:00'], undefined), '2026-09-16T19:00:00+08:00');
+  // No games with a date: the seed, a midnight seed read as its day.
+  assert.equal(start([undefined, null], '2026-09-13T14:30:00+08:00'), '2026-09-13T14:30:00+08:00');
+  assert.equal(start([], '2026-04-03T00:00:00-05:00'), '2026-04-03');
+  assert.equal(start([], undefined), undefined);
+  // A day-only game (stored as China midnight) keeps a seed on the same day...
+  assert.equal(
+    start(['2026-03-28T00:00:00+08:00'], '2026-03-28T09:00:00+08:00'),
+    '2026-03-28T09:00:00+08:00',
+  );
+  // ...and shows the day alone when the seed names another one.
+  assert.equal(start(['2026-03-29T00:00:00+08:00'], '2026-03-30T09:00:00+08:00'), '2026-03-29');
+  assert.equal(start(['2026-04-03'], '2026-04-03T00:00:00-05:00'), '2026-04-03');
+  // An unreadable date is no date.
+  assert.equal(start(['not a date'], '2026-09-13T14:30:00+08:00'), '2026-09-13T14:30:00+08:00');
 });

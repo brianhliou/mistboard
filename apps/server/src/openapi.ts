@@ -481,7 +481,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         tags: ['Games'],
         summary: 'A finished game with its per-ply views',
         description:
-          'The postgame payload the review pages render: the game envelope, the final view, and every position of the game. One route per variant: `/api/xiangqi/games/{roomId}`, `/api/banqi/games/{roomId}`, `/api/jieqi/games/{roomId}`, `/api/dark-xiangqi/games/{roomId}`, and so on for every variant with a game route. Finished games only; a variant mismatch is a 404.',
+          'The postgame payload the review pages render: the game envelope, the final view, and every position of the game. One route per variant: `/api/xiangqi/games/{roomId}`, `/api/banqi/games/{roomId}`, `/api/jieqi/games/{roomId}`, `/api/dark-xiangqi/games/{roomId}`, and so on for every variant with a game route. Finished games only; a variant mismatch is a 404. `/api/three-kingdoms-banqi/games/{roomId}` (an admin-only playtest) answers only an admin session; anyone else gets the same 404 as an unknown game.',
         parameters: [
           pathParam('variant', 'A game spec id with a review route, e.g. `xiangqi`.'),
           pathParam('roomId', 'Room id.'),

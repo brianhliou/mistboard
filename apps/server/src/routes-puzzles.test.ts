@@ -15,6 +15,7 @@ import {
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import { puzzleServingRating } from './puzzle-rating.js';
 import { getPuzzleStore } from './puzzle-store.js';
+import { loadPuzzleStorm, startPuzzleStorm } from './puzzle-storm.js';
 import { loadPuzzleStreak, savePuzzleStreak, startPuzzleStreak } from './puzzle-streak.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/puzzles.js';
@@ -73,6 +74,103 @@ async function route(path: string, method = 'GET', body?: unknown): Promise<Resp
   return response;
 }
 
+test('storm validates moves, rejects replayed submits, penalizes misses and expires on server time', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const started = await route('/api/puzzles/storm', 'POST', { action: 'start', score: 999 });
+  assert.equal(started.status, 200);
+  let run = JSON.parse(started.body);
+  assert.equal(run.score, 0);
+  assert.equal(run.combo, 0);
+  assert.equal(run.remainingMs, 180_000);
+  assert.equal(run.best, null);
+  assert.equal(run.dailyBest, null);
+  assert.equal(run.version, 0);
+  assert.equal(JSON.stringify(run).includes('"solution":'), false);
+  const puzzle = XIANGQI_PUZZLES.find((p) => p.id === run.puzzle.id)!;
+  const firstSubmit = {
+    action: 'move',
+    runId: run.runId,
+    puzzleId: puzzle.id,
+    version: run.version,
+    move: puzzle.solution[0],
+  };
+  const [first, duplicate] = await Promise.all([
+    route('/api/puzzles/storm', 'POST', firstSubmit),
+    route('/api/puzzles/storm', 'POST', firstSubmit),
+  ]);
+  assert.deepEqual([first.status, duplicate.status].sort(), [200, 409]);
+  run = JSON.parse((first.status === 200 ? first : duplicate).body);
+  assert.equal(run.combo, 1);
+  const resumed = await route('/api/puzzles/storm', 'POST', {
+    action: 'resume',
+    runId: run.runId,
+  });
+  assert.equal(resumed.status, 200);
+  assert.deepEqual(JSON.parse(resumed.body).moves, run.moves);
+  assert.equal(JSON.parse(resumed.body).combo, 1);
+  for (const move of puzzle.solution.filter((_, i) => i % 2 === 0).slice(1)) {
+    const response = await route('/api/puzzles/storm', 'POST', {
+      action: 'move',
+      runId: run.runId,
+      puzzleId: puzzle.id,
+      version: run.version,
+      move,
+    });
+    assert.equal(response.status, 200);
+    run = JSON.parse(response.body);
+  }
+  assert.equal(run.score, 1);
+  assert.equal(run.results[0].outcome, 'solved');
+  assert.equal((await route('/api/puzzles/storm', 'POST', firstSubmit)).status, 409);
+  const next = XIANGQI_PUZZLES.find((p) => p.id === run.puzzle.id)!;
+  const malformed = await route('/api/puzzles/storm', 'POST', {
+    action: 'move',
+    runId: run.runId,
+    puzzleId: next.id,
+    version: run.version,
+    move: null,
+  });
+  assert.equal(malformed.status, 400);
+  const beforePenalty = run.remainingMs;
+  const wrong = getStandardXiangqiLegalMoves(next.initial).find((move) => {
+    const attempt = attemptStandardXiangqiPuzzleLine(next, [move]);
+    return !attempt.ok && attempt.code === 'incorrect-move';
+  });
+  assert.ok(wrong);
+  const missed = await route('/api/puzzles/storm', 'POST', {
+    action: 'move',
+    runId: run.runId,
+    puzzleId: next.id,
+    version: run.version,
+    move: wrong,
+  });
+  assert.equal(missed.status, 200);
+  run = JSON.parse(missed.body);
+  assert.equal(run.remainingMs, beforePenalty - 10_000);
+  assert.equal(run.combo, 0);
+  assert.equal(run.score, 1);
+  assert.equal(run.finished, false);
+  assert.equal(run.results[1].outcome, 'failed');
+  assert.notEqual(run.puzzle.id, next.id);
+  assert.equal(JSON.stringify(run).includes('"solution":'), false);
+  t.mock.timers.tick(run.remainingMs);
+  const late = await route('/api/puzzles/storm', 'POST', {
+    action: 'move',
+    runId: run.runId,
+    puzzleId: run.puzzle.id,
+    version: run.version,
+    move: XIANGQI_PUZZLES.find((p) => p.id === run.puzzle.id)!.solution[0],
+  });
+  assert.equal(late.status, 200);
+  const ended = JSON.parse(late.body);
+  assert.equal(ended.remainingMs, 0);
+  assert.equal(ended.finished, true);
+  assert.equal(ended.score, 1);
+  assert.equal(ended.puzzle, null);
+  const again = await route('/api/puzzles/storm', 'POST', { action: 'resume', runId: run.runId });
+  assert.deepEqual(JSON.parse(again.body), ended);
+});
+
 test('streak ramp is ordered, unique, solution-hidden and rejects unknown variants', async () => {
   const response = await route('/api/puzzles/ramp?variant=xiangqi');
   assert.equal(response.status, 200);
@@ -88,6 +186,116 @@ test('streak ramp is ordered, unique, solution-hidden and rejects unknown varian
   assert.equal((await route('/api/puzzles/ramp?variant=unknown')).status, 400);
   assert.equal((await route('/api/puzzles/ramp?variant=jungle')).status, 200);
 });
+
+test('storm uses the shared fresh ramp and protects run ownership and move versions', async () => {
+  const first = JSON.parse((await route('/api/puzzles/storm', 'POST', { action: 'start' })).body);
+  const ids = (await loadPuzzleStorm(first.runId))!.state.ids;
+  const step = Math.max(3, Math.ceil(ids.length / 10));
+  const second = JSON.parse(
+    (
+      await route('/api/puzzles/storm', 'POST', {
+        action: 'start',
+        recent: ids.slice(0, step),
+      })
+    ).body,
+  );
+  const fresh = (await loadPuzzleStorm(second.runId))!.state.ids;
+  assert.deepEqual([...fresh].sort(), [...ids].sort());
+  assert.ok(fresh.slice(0, step).every((id) => !ids.slice(0, step).includes(id)));
+  const owned = await startPuzzleStorm([ids[0]!], 'other-owner');
+  assert.equal(
+    (
+      await route('/api/puzzles/storm', 'POST', {
+        action: 'resume',
+        runId: owned.id,
+      })
+    ).status,
+    404,
+  );
+  assert.equal((await route('/api/puzzles/storm', 'GET')).status, 405);
+  for (const body of [
+    { action: 'skip', runId: first.runId },
+    { action: 'resume', runId: 'invalid' },
+    { action: 'move', runId: first.runId, puzzleId: first.puzzle.id },
+    { action: 'move', runId: first.runId, version: -1 },
+  ])
+    assert.equal((await route('/api/puzzles/storm', 'POST', body)).status, 400);
+  assert.equal(
+    (
+      await route('/api/puzzles/storm', 'POST', {
+        action: 'move',
+        runId: first.runId,
+        version: 1,
+        puzzleId: first.puzzle.id,
+      })
+    ).status,
+    409,
+  );
+});
+
+test('storm resume retains a partial line and its moves cannot earn a second combo increment', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  const puzzle = XIANGQI_PUZZLES.find((p) => p.solution.length >= 3)!;
+  const run = await startPuzzleStorm([puzzle.id], null);
+  const submit = {
+    action: 'move',
+    runId: run.id,
+    puzzleId: puzzle.id,
+    version: 0,
+    move: puzzle.solution[0],
+  };
+  assert.equal((await route('/api/puzzles/storm', 'POST', submit)).status, 200);
+  const resumed = JSON.parse(
+    (
+      await route('/api/puzzles/storm', 'POST', {
+        action: 'resume',
+        runId: run.id,
+      })
+    ).body,
+  );
+  assert.equal(resumed.combo, 1);
+  assert.equal(resumed.score, 0);
+  assert.equal(resumed.version, 1);
+  assert.deepEqual(resumed.moves, [puzzle.solution[0]]);
+  assert.equal((await route('/api/puzzles/storm', 'POST', submit)).status, 409);
+  assert.equal((await loadPuzzleStorm(run.id))!.state.combo, 1);
+});
+
+for (const code of ['illegal-move', 'line-too-long'] as const) {
+  test(`storm ${code} checker error preserves the clock, combo and run`, async (t) => {
+    t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+    const puzzle = XIANGQI_PUZZLES[0]!;
+    const run = await startPuzzleStorm([puzzle.id, XIANGQI_PUZZLES[1]!.id], null);
+    const before = await loadPuzzleStorm(run.id);
+    const store = await getPuzzleStore();
+    const originalGet = store.byId.get.bind(store.byId);
+    const move = { from: 'a1', to: 'a1' } as const;
+    const brokenPuzzle = { ...puzzle, solution: code === 'illegal-move' ? [move] : [] };
+    const lookup = t.mock.method(store.byId, 'get', (id: string) =>
+      id === puzzle.id ? brokenPuzzle : originalGet(id),
+    );
+    const response = await route('/api/puzzles/storm', 'POST', {
+      action: 'move',
+      runId: run.id,
+      puzzleId: puzzle.id,
+      version: 0,
+      move,
+    });
+    assert.equal(response.status, 200);
+    assert.equal(JSON.parse(response.body).attempt.code, code);
+    assert.deepEqual(await loadPuzzleStorm(run.id), before);
+    lookup.mock.restore();
+    const retry = await route('/api/puzzles/storm', 'POST', {
+      action: 'move',
+      runId: run.id,
+      puzzleId: puzzle.id,
+      version: 0,
+      move: puzzle.solution[0],
+    });
+    assert.equal(retry.status, 200);
+    assert.equal(JSON.parse(retry.body).attempt.ok, true);
+  });
+}
 
 test('anonymous streak counts solves, allows one skip, and locks the run on a miss', async () => {
   const started = await route('/api/puzzles/streak', 'POST', { action: 'start' });

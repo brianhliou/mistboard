@@ -50,6 +50,7 @@ import {
   type XmjSeat,
   xmjAnswerAt,
   xmjClockOwner,
+  xmjIsDeclared,
   xmjIsLegalMove,
   xmjMoveFromMessage,
   xmjPendingAction,
@@ -179,6 +180,22 @@ export const xiangqiMahjongTenant: XmjTenantType = {
     isLegalMove: xmjIsLegalMove,
     seatMayAct: xmjSeatMayAct,
     pendingAction: xmjPendingAction,
+    clockExpiryMove: (state, color, at) => {
+      const hand = state.match.hand;
+      const phase = hand.phase;
+      if (
+        state.status.type !== 'playing' ||
+        state.match.between ||
+        XMJ_SEATS[hand.turn] !== color ||
+        phase.type !== 'discard' ||
+        phase.drawn === null ||
+        !xmjIsDeclared(hand, hand.turn)
+      )
+        return null;
+      // This includes a winning draw its owner left unanswered. The actual
+      // drawn copy is discarded, never an identical tile from the locked hand.
+      return { by: color, at, action: 'discard', tile: phase.drawn };
+    },
     finish: (state, winner, reason) => ({
       ...state,
       status: { type: 'finished', winner, reason },

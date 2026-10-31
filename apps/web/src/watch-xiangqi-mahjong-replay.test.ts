@@ -8,7 +8,9 @@ import {
   type XmjMove,
   type XmjPlayerView,
   type XmjRoomState,
+  type XmjTile,
   xmjBotAction,
+  xmjOrderedTiles,
   xmjPendingAction,
   xmjViewFor,
 } from '@mistboard/game';
@@ -75,6 +77,53 @@ const faceUpInRacks = (root: HTMLElement): number =>
   root.querySelectorAll('.xmj-rack .xmj-tile:not(.xmj-tile--back)').length;
 
 describe('xiangqi mahjong TV mount', () => {
+  it('rewinds public declaration badges and rows on the table-3 spectator track', async () => {
+    const tiles: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR'];
+    const rest = xmjOrderedTiles();
+    for (const tile of tiles) rest.splice(rest.indexOf(tile), 1);
+    let state = createXmjRoomState({
+      walls: [[...tiles, ...rest]],
+      firstDealer: 'east',
+      taiTable: 3,
+    });
+    const move: XmjMove = { by: 'east', at: 1000, action: 'declare-ready', tile: 'bH' };
+    const before = xmjViewFor(state, 'spectator');
+    state = applyXmjMove(state, move);
+    const after = xmjViewFor(state, 'spectator');
+    const root = document.createElement('div');
+    const handle = await mountXiangqiMahjongWatchReplay(root, 'xmj_declared', {
+      autoplay: false,
+      live: true,
+      metadataByRoomId: {},
+      loadPostgameOverride: async () => ({
+        ok: true,
+        postgame: {
+          history: {
+            spectator: [
+              { ply: 0, view: before },
+              { ply: 1, view: after },
+            ],
+          },
+          timeline: [{ type: 'move-played', move }],
+        },
+      }),
+    });
+    expect(root.querySelectorAll('.xmj-badge--declared')).toHaveLength(1);
+    const log = handle.moveLog?.()?.el;
+    expect(log?.textContent).toContain('declares ready, discards');
+    handle.jumpToPly?.(0);
+    expect(root.querySelector('.xmj-badge--declared')).toBeNull();
+    log?.querySelector<HTMLButtonElement>('[data-xmj-ply="1"]')?.click();
+    expect(root.querySelectorAll('.xmj-badge--declared')).toHaveLength(1);
+    expect(faceUpInRacks(root)).toBe(0);
+    expect(root.querySelector('[data-xmj-declare], [data-xmj-tile], .xmj-action')).toBeNull();
+    // The entire spectator track contains only the one public discarded tile.
+    const serialized = JSON.stringify([before, after]);
+    for (const tile of tiles.filter((tile) => tile !== 'bH'))
+      expect(serialized).not.toContain(`"${tile}"`);
+    handle.destroy();
+  });
+
   afterEach(() => {
     vi.unstubAllGlobals();
   });

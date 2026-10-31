@@ -32,7 +32,8 @@ import type { HttpApiContext } from './routes/lib.js';
 import { xmjBotMove } from './server-xiangqi-mahjong-bots.js';
 // Side-effect import: every tenant registers, as the server boots.
 import './variant-tenant/register-tenants.js';
-import { tenantDurableDeadlineFor } from './variant-tenant/lifecycle.js';
+import { appendTenantEvent, type TenantEventWriterPersistence } from './variant-tenant/events.js';
+import { sweepTenantRoomDeadline, tenantDurableDeadlineFor } from './variant-tenant/lifecycle.js';
 import {
   correspondenceTenantForSpecId,
   type TenantManagedRoom,
@@ -216,6 +217,103 @@ test('a discard hands the deadline to the other seat, which passes, draws and di
     registration().clearRooms();
   }
 });
+
+for (const drawn of ['rA', 'rP'] as const) {
+  test(`real correspondence expiry discards a declared ${drawn === 'rP' ? 'winning' : 'nonwinning'} draw instead of forfeiting`, async () => {
+    try {
+      const accepted = await acceptSeek(1);
+      const front: XmjTile[] = ['rK', 'rA', 'rE', 'rP', 'bH', 'bK', 'bA', 'bE', 'bR', 'bP', drawn];
+      const rest = xmjOrderedTiles();
+      for (const tile of front) rest.splice(rest.indexOf(tile), 1);
+      const wall = [...front, ...rest];
+      const events = accepted.events.map((event, index) => ({
+        ...event,
+        at: 1_000 + index * 1_000,
+        ...(event.type === 'room-created'
+          ? {
+              setup: {
+                walls: [wall, wall],
+                firstDealer: 'east',
+                taiTable: 3,
+                correspondence: true,
+              },
+            }
+          : {}),
+      }));
+      const hydrated = createTenantRuntimeRoomFromEvents(tenant, events as XmjEvent[]);
+      assert.ok(hydrated.ok);
+      const room = hydrated.room as XmjRuntimeRoom;
+      play(room, { by: 'east', at: 10_000, action: 'declare-ready', tile: 'bH' });
+      play(room, { by: 'west', at: 11_000, action: 'pass' });
+      play(room, { by: 'west', at: 12_000, action: 'discard', tile: 'bR' });
+      play(room, { by: 'east', at: 13_000, action: 'pass' });
+      assert.equal(view(room, 'east').legal.selfDraw, drawn === 'rP');
+      liveRooms().set(room.id, room as unknown as TenantManagedRoom);
+      await registration().sweepDueDeadline?.(room.id);
+
+      assert.equal(state(room).status.type, 'playing');
+      const last = room.events.at(-1);
+      assert.ok(last?.type === 'move-played');
+      assert.deepEqual(last.move, { by: 'east', at: last.at, action: 'discard', tile: drawn });
+      assert.deepEqual(state(room).match.hand.hands[0], ['rK', 'rA', 'rE', 'rP']);
+      assert.equal(state(room).match.hand.drawnDiscards[0].at(-1), true);
+      assert.equal(deadlineSeat(room), 'west');
+      assert.equal(room.projection.clock?.remainingMs.east, DAY_MS);
+      assert.equal(tenantDurableDeadlineFor(tenant, room)?.dueAt, last.at + DAY_MS);
+      const count = room.events.length;
+      await registration().sweepDueDeadline?.(room.id);
+      assert.equal(room.events.length, count, 'repeated expiry makes no extra move');
+      const restored = createTenantRuntimeRoomFromEvents(
+        tenant,
+        JSON.parse(JSON.stringify(room.events)),
+      );
+      assert.ok(restored.ok);
+      assert.deepEqual(restored.room.projection, room.projection);
+      // Check the same deadline with an initialized writer: both the legal
+      // discard and the next seat's durable deadline must be written.
+      const beforeExpiry = createTenantRuntimeRoomFromEvents(tenant, room.events.slice(0, -1));
+      assert.ok(beforeExpiry.ok);
+      const persisted: XmjEvent[] = [];
+      const rows: Array<{ seat: string; dueAt: Date }> = [];
+      const persistence: TenantEventWriterPersistence<
+        XmjSeat,
+        XmjMove,
+        typeof XIANGQI_MAHJONG_SPEC_ID
+      > = {
+        isInitialized: () => true,
+        appendRoomEvent: async (_id, _seq, event) => {
+          persisted.push(event);
+        },
+        upsertRoomDeadline: async (row) => {
+          rows.push(row);
+        },
+        deleteRoomDeadline: async () => {
+          assert.fail('an automatic discard keeps its deadline row');
+        },
+        abortRunningGame: async () => {
+          assert.fail('an automatic discard cannot abort');
+        },
+        recordGameEnd: async () => {
+          assert.fail('an automatic discard cannot forfeit');
+        },
+        upsertRoomSeatToken: async () => {},
+      };
+      await sweepTenantRoomDeadline(tenant, beforeExpiry.room, {
+        appendEvent: (r, event) => appendTenantEvent(tenant, r, event, { persistence }),
+        broadcastEventAppended: () => {},
+        now: () => last.at,
+      });
+      assert.deepEqual(persisted, [last]);
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0]?.seat, 'west');
+      assert.equal(rows[0]?.dueAt.getTime(), last.at + DAY_MS);
+      assert.deepEqual(beforeExpiry.room.projection, room.projection);
+      for (const seat of tenant.colors) await assertSeatSeesOnlyItsOwn(room, seat, 'clock discard');
+    } finally {
+      registration().clearRooms();
+    }
+  });
+}
 
 test('the sweeper flags the seat that let its turn lapse: a loss on time', async () => {
   try {

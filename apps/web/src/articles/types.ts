@@ -431,6 +431,10 @@ export type ImageFigureBlock = {
   darkSrc?: string;
   alt: string;
   caption?: string;
+  // A credit that must carry a link (a photo used on condition of a credit
+  // and a link, like the xiangqiqipu.com portraits): rendered after the
+  // caption as "Photo: <a href>text</a>", opening in a new tab.
+  credit?: { text: string; href: string };
   // 'article-figure-full' lets the image fill the column instead of the
   // default 560px cap.
   className?: string;
@@ -592,6 +596,10 @@ type ArticleBase = {
   // article lands on the homepage with no second edit; 'deep-dives' moves it to
   // the row beneath (player pages and game deep dives).
   homeRow?: 'deep-dives';
+  // A page about a person (the player articles): one gray line under the
+  // header photo, "Corrections or rights requests: contact us.", the same small
+  // print the player pages carry, linked to /contact about this article.
+  contactNote?: boolean;
   status: 'outline' | 'draft' | 'published';
   audience: string;
   // ISO-8601 dates (YYYY-MM-DD). When present, rendered in the article meta.

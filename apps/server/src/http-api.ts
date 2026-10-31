@@ -53,6 +53,7 @@ import * as readoutsRoute from './routes/readouts.js';
 import * as relationsRoute from './routes/relations.js';
 import * as roomsRoute from './routes/rooms.js';
 import * as studiesRoute from './routes/studies.js';
+import * as threeKingdomsBanqiGamesRoute from './routes/three-kingdoms-banqi-games.js';
 import * as titlesRoute from './routes/titles.js';
 import * as usersRoute from './routes/users.js';
 import * as xiangqiBroadcastsRoute from './routes/xiangqi-broadcasts.js';
@@ -131,6 +132,7 @@ export const routes: RouteModule[] = [
   jungleGamesRoute,
   jungleFlipGamesRoute,
   banqiGamesRoute,
+  threeKingdomsBanqiGamesRoute,
   xiangqiMahjongGamesRoute,
   gamesRoute,
   relationsRoute,

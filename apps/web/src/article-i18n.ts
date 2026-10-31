@@ -141,6 +141,10 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-10-11, not native-reviewed. The fifth player page;
   // locked with its English copy, which publishes in the same release.
   'zuo-wenjing',
+  // Machine-drafted 2026-10-26, not native-reviewed, from the English Brian
+  // signed off that day. The sixth player page; terms and names follow
+  // zuo-wenjing. Taiwan is 中华台北 in zh-Hans and 台灣 in zh-Hant.
+  'tang-dan',
   // Machine-drafted 2026-09-03, not native-reviewed, locked the day the English
   // copy published. The openings article's dictionary was already complete and
   // waiting: the lock requires a PUBLISHED article, so it could not be listed
@@ -1547,8 +1551,6 @@ const ZH_HANS: Record<string, string> = {
     '[将死](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一个相关的盲点跟将有关。只有卒、对方的将或炮的跳吃拿得下它，所以被围住的将一次只怕一种子，而引擎很慢才会替被逼到角落的将腾出空间。它有时候会把一颗子调到棋盘另一头，同时一颗孤零零的敌方卒走过来把它困死。跟上面那个和棋是同一个缺口：这套评估函数对于好几步之外慢慢成形的安静威胁，没有什么感觉。',
-  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
-    '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
   // cao-yanlei (zh-Hans), machine-drafted 2026-09-25, not native-reviewed. Mainland
   // players' names stay in one form in both scripts, as on the yin-sheng page.
   'His 2026 record by event.': '他 2026 年各项赛事的战绩。',
@@ -1967,6 +1969,92 @@ const ZH_HANS: Record<string, string> = {
   'Her games in the archive': '她在档案里的对局',
   "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
     '左文静，2022 年女子世界象棋冠军：对局与分析',
+  // tang-dan (zh-Hans), machine-drafted 2026-10-26, not native-reviewed, from the
+  // English Brian signed off that day. Terms follow zuo-wenjing; mainland names stay
+  // in one form in both scripts and, with the dates, reach zh-Hant through the spread.
+  // Li Sih-yi is 李思谊 as dpxq records her; Taiwan is 中华台北 here, 台灣 in zh-Hant.
+  'Tang Dan 唐丹': '唐丹',
+  'Tang Dan. Card photo: Liu Cheng / Yangcheng Evening News, at the 2026 Five Rams Cup.':
+    '唐丹。卡片照片：刘程／《羊城晚报》，摄于 2026 年五羊杯。',
+  'xiangqiqipu.com': 'xiangqiqipu.com',
+  'Oct 3–6, 2026': '2026年10月3–6日',
+  'From Sep 23, 2026': '2026年9月23日起',
+  'Dec 24–28, 2025': '2025年12月24–28日',
+  'Dec 6–13, 2025': '2025年12月6–13日',
+  "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.":
+    '十个全国冠军，比任何一位女棋手都多，还有 2025 年女子世界冠军。她从上海到马尼拉夺得亚洲冠军的这个赛季，盘面上五盘对局，50 局附引擎分析。',
+  "English-speaking xiangqi players who follow the women's game and China's national championship. Found through search, the site, and the Zuo Wenjing and Yin Sheng pages.":
+    '关注女子象棋和全国象棋个人赛的说英语的棋友。通过搜索、本站以及左文静和尹昇的专页找到这一页。',
+  "Tang Dan has won China's national individual women's title ten times, more than any other woman; the tenth came in December 2025, against Zuo Wenjing in the final.":
+    '唐丹十次夺得全国象棋个人赛女子冠军，比任何一位女棋手都多；第十个冠军在 2025 年 12 月到手，决赛对手是左文静。',
+  "Between September 2025 and October 2026 she won the women's world title in Shanghai, her fourth, and the Asian individual title in Manila.":
+    '2025 年 9 月到 2026 年 10 月间，她在上海夺得女子世界冠军，这是她的第四个世界冠军，又在马尼拉夺得亚洲个人赛冠军。',
+  'In the 50 games we hold from that stretch she lost twice, both with red; with black she won 15 and drew 9.':
+    '我们收录的这段时间的 50 盘对局中，她只输了两盘，都是执红；执黑她 15 胜 9 和。',
+  'With red she most often opens by pushing a soldier: 12 of her 26 red games here start that way.':
+    '执红她最常以进兵开局：这里她的 26 盘执红对局，有 12 盘这样开局。',
+  'Tang Dan in glasses and a navy top with a white bow at the collar, arms folded, standing in front of a potted plant.':
+    '唐丹戴着眼镜，身穿领口系白色蝴蝶结的藏青色上衣，双臂交叉，站在一盆绿植前。',
+  "Tang Dan 唐丹 has won China's national individual women's championship ten times, more than any other woman since the women's event began in 1979. The tenth came in December 2025 in Jinan, where she beat Zuo Wenjing in the final. Three months earlier, in Shanghai, she had won her fourth women's world title, and in October 2026 she added the Asian individual title in Manila.":
+    '唐丹十次夺得全国象棋个人赛女子组冠军，是 1979 年设立女子组以来夺冠最多的女棋手。第十个冠军是 2025 年 12 月在济南拿下的，决赛她击败了左文静。三个月前在上海，她第四次夺得女子世界冠军；2026 年 10 月，她又在马尼拉拿下亚洲个人赛冠军。',
+  "She was born in 1990 in Anhui, moved to Beijing as a child, and plays for the Beijing Chess Academy. She is a Chinese grandmaster and a WXF International Grandmaster, and at the 2010 Asian Games in Guangzhou she won the women's individual gold, winning all seven rounds. On the Chinese Xiangqi Association's points list of 28 December 2025 she was the second woman, behind Li Qin.":
+    '她 1990 年生于安徽，小时候迁居北京，代表北京棋院出赛。她是象棋特级大师，也是世界象棋联合会国际特级大师；2010 年广州亚运会上，她七轮全胜，夺得女子个人赛金牌。在中国象棋协会 2025 年 12 月 28 日的积分榜上，她在女棋手中排名第二，仅次于李沁。',
+  'This page is her season from the 2025 world championship to Manila, with five of her games on the board. I ran the 50 games we hold through the same engine analysis Mistboard gives your own games.':
+    '这一页写的是她从 2025 年世锦赛到马尼拉的这个赛季，盘面上有她的五盘对局。我们收录的 50 盘对局，我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  '**She did not lose with black.** In her 24 games with black here she won 15 and drew 9. Both of her losses came with red.':
+    '**执黑她没有输过。** 这里她的 24 盘执黑对局，15 胜 9 和。她的两盘败局都是执红。',
+  '**She opens with a soldier.** In 12 of her 26 red games here her first move pushes a soldier. No other first move comes close: the horse, the elephant and the central cannon have four games each.':
+    '**她以进兵开局。** 这里她的 26 盘执红对局中，有 12 盘第一步就是进兵。其他第一步都差得远：起马、飞相和中炮各有四盘。',
+  '**She played her best at the world championship.** Her median accuracy over the 50 games is 95.7. Over her seven games in Shanghai it was 97.3, her highest at any event here.':
+    '**她在世锦赛上下得最好。** 50 盘对局中她的准确率中位数是 95.7。在上海的七盘对局是 97.3，是这里所有赛事中她最高的。',
+  '"I\'m not afraid of losing," she told the Yangcheng Evening News in March 2026, "only of not playing a high-quality game."':
+    '2026 年 3 月她对《羊城晚报》说：“我不怕输棋，只怕下不出高质量的棋局。”',
+  'The titles': '她的冠军',
+  "The 19th World Xiangqi Championship was played in Shanghai from 21 to 27 September 2025. Tang Dan won the women's individual title, her fourth world title, and the women's team gold for China with Chen Lichun. We hold seven of her games there: five wins and two draws. The first was a win with black over Li Sih-yi of Taiwan.":
+    '第十九届世界象棋锦标赛于 2025 年 9 月 21 日至 27 日在上海举行。唐丹夺得女子个人冠军，这是她的第四个世界冠军；她还与陈丽淳一起为中国队夺得女子团体金牌。我们收录了她在那里的七盘对局：五胜两和。第一盘她执黑战胜中华台北的李思谊。',
+  "Li Sih-yi vs Tang Dan, 2025 World Xiangqi Championship, women, 22 September 2025. Tang Dan won with black in 32 moves. The board opens after red's move 23, with Tang Dan to move.":
+    '李思谊对唐丹，2025 世界象棋锦标赛女子组，2025 年 9 月 22 日。唐丹执黑 32 回合取胜。棋盘从红方第 23 回合之后开始，轮到唐丹走。',
+  '2025 World Xiangqi Championship, women': '2025 世界象棋锦标赛，女子组',
+  'National Championship, Jinan': '全国象棋个人赛，济南',
+  "China's national individual championship was played in Gangcheng, Jinan, from 6 to 13 December 2025, with 56 women in the field. After the group stage and three knockout rounds she met Zuo Wenjing in the final, drew the slow game, and won the rapid tie-break with black for her tenth national title.":
+    '全国象棋个人赛于 2025 年 12 月 6 日至 13 日在济南钢城举行，女子组有 56 名棋手参赛。经过小组赛和三轮淘汰赛，她在决赛遇上左文静，慢棋弈和，快棋加赛执黑取胜，拿下她的第十个全国冠军。',
+  "It was the second time in a month that she beat Zuo for a title: in November she had won the women's individual open event at the 15th National Games, beating Zuo there too. Zuo, the 2022 world champion, has [her own page](/blog/zuo-wenjing).":
+    '这是一个月内她第二次在冠军争夺中击败左文静：11 月在第十五届全运会上，她夺得女子个人公开组冠军，击败的也是左文静。2022 年世界冠军左文静也有[自己的专页](/blog/zuo-wenjing)。',
+  "Zuo Wenjing vs Tang Dan, 2025 National Individual Championship, women, final, 13 December 2025. Tang Dan won with black in 36 moves. The board opens after red's move 33, with Tang Dan to move.":
+    '左文静对唐丹，2025 全国象棋个人赛女子组决赛，2025 年 12 月 13 日。唐丹执黑 36 回合取胜。棋盘从红方第 33 回合之后开始，轮到唐丹走。',
+  '2025 National Individual Championship, women, final': '2025 全国象棋个人赛，女子组决赛',
+  'The season since': '此后的赛季',
+  'CXA Year-End Finals, Chengmai': '中国象棋协会年终总决赛，澄迈',
+  "Eleven days later she played the Chinese Xiangqi Association's year-end finals in Chengmai, Hainan, from 24 to 28 December 2025. We hold eight of her games there: five wins, two draws and a loss to Shi Fenglan. Her last game was a win with red over Li Qin.":
+    '十一天后，她在海南澄迈参加了 2025 年 12 月 24 日至 28 日的中国象棋协会年终总决赛。我们收录了她在那里的八盘对局：五胜两和，另有一盘负于时凤兰。最后一盘她执红战胜李沁。',
+  "Tang Dan vs Li Qin, 2025 CXA Year-End Finals, women, 28 December 2025. Tang Dan won with red in 49 moves. The board opens after black's move 21, with Tang Dan to move.":
+    '唐丹对李沁，2025 中国象棋协会年终总决赛女子组，2025 年 12 月 28 日。唐丹执红 49 回合取胜。棋盘从黑方第 21 回合之后开始，轮到唐丹走。',
+  '2025 CXA Year-End Finals, women': '2025 中国象棋协会年终总决赛，女子组',
+  'The national team championship ran from 28 March to 2 April 2026. Tang played all seven rounds for Beijing and went unbeaten: five wins and two draws. The [whole event](/broadcast/xiangqi/2026-womens-xiangqi-team-championship) is in the broadcast archive.':
+    '全国象棋团体赛于 2026 年 3 月 28 日至 4 月 2 日举行。唐丹代表北京打满七轮，保持不败：五胜两和。[整项赛事](/broadcast/xiangqi/2026-womens-xiangqi-team-championship)都在直播档案里。',
+  "Women's league": '女子甲级联赛',
+  "The first stage of China's [women's league](/broadcast/xiangqi/2026-womens-xiangqi-league) was played in Suifenhe from 23 to 27 September 2026. In round one she beat Tang Sinan, the 2023 women's world champion, with red. She finished the stage with seven wins, two draws and a loss to Liang Yanting.":
+    '全国象棋[女子甲级联赛](/broadcast/xiangqi/2026-womens-xiangqi-league)第一阶段于 2026 年 9 月 23 日至 27 日在绥芬河举行。第一轮她执红战胜 2023 年女子世界冠军唐思楠。这一阶段她七胜两和，另有一盘负于梁妍婷。',
+  "Tang Dan vs Tang Sinan, 2026 Women's Xiangqi League, 23 September 2026. Tang Dan won with red in 42 moves. The board opens after black's move 13, with Tang Dan to move.":
+    '唐丹对唐思楠，2026 全国象棋女子甲级联赛，2026 年 9 月 23 日。唐丹执红 42 回合取胜。棋盘从黑方第 13 回合之后开始，轮到唐丹走。',
+  "2026 Women's Xiangqi League": '2026 全国象棋女子甲级联赛',
+  "A week later she was in Manila for the 21st Asian Individual Championship, and won the women's title, beating Hong Qianhui of Malaysia in the final. We hold six of her games there: four wins and two draws. Her last two were against Hong on the final day: a draw with red, then a win with black.":
+    '一周后她来到马尼拉参加第二十一届亚洲象棋个人锦标赛，决赛击败马来西亚的洪千惠，夺得女子组冠军。我们收录了她在那里的六盘对局：四胜两和。最后两盘都是在最后一天对洪千惠：先执红弈和，再执黑取胜。',
+  "Hong Qianhui vs Tang Dan, 2026 Asian Xiangqi Individual Championship, women, 6 October 2026. Tang Dan won with black in 49 moves. The board opens after red's move 24, with Tang Dan to move.":
+    '洪千惠对唐丹，2026 亚洲象棋个人锦标赛女子组，2026 年 10 月 6 日。唐丹执黑 49 回合取胜。棋盘从红方第 24 回合之后开始，轮到唐丹走。',
+  '2026 Asian Xiangqi Individual Championship, women': '2026 亚洲象棋个人锦标赛，女子组',
+  'Every event in our records': '我们记录中的每项赛事',
+  "Women's league, rounds 1–18": '女子甲级联赛，第 1–18 轮',
+  'Her results in the games we hold, newest first. Our game records come from dpxq.com, which may not hold every game of an event; the Jinan count includes its rapid tie-breaks. The Five Rams Cup, where we hold one game, is left out.':
+    '她在我们收录的对局中的成绩，最新的在前。我们的棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；济南的数字包括快棋加赛。五羊杯我们只收录了一盘，没有列入。',
+  "Sources: game records from dpxq.com and Mistboard's broadcast archive; the national titles from China Sports Daily and the xiangqi news site Guangxiang, with Chinese Wikipedia for the earlier champions; the National Games from Beijing Daily and the Yangcheng Evening News; the 2025 world championship from the Shanghai Sports Bureau, The Paper and Taiwan News; the Manila result from Ming Pao, Sin Chew, Sing Tao and HK01; the 2010 Asian Games from Sina; her titles from the WXF title list of December 2022 and China's national registration list of 2023; the points list from the Chinese Xiangqi Association; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '资料来源：棋谱来自 dpxq.com 和 Mistboard 的直播档案；全国冠军来自《中国体育报》和象棋新闻网站广象网，更早的冠军参考中文维基百科；全运会来自《北京日报》和《羊城晚报》；2025 年世锦赛来自上海市体育局、澎湃新闻和 Taiwan News；马尼拉的成绩来自《明报》、《星洲日报》、《星岛》和 HK01；2010 年亚运会来自新浪；她的称号来自世界象棋联合会 2022 年 12 月的称号名单和 2023 年的全国等级称号注册名单；积分榜来自中国象棋协会；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
+  'Sixteen years after her Asian Games gold she is still winning titles. In thirteen months she won the world, national and Asian titles, and in the 50 games we hold from that stretch nobody beat her when she had black.':
+    '亚运会夺金十六年后，她仍在不断夺冠。十三个月里，她拿下了世界、全国和亚洲冠军；我们收录的这段时间的 50 盘对局中，她执黑时没有人赢过她。',
+  'Her player page': '她的棋手页面',
+  'The Manila championship': '马尼拉锦标赛',
+  "Tang Dan 唐丹, ten-time Chinese women's xiangqi champion: games and analysis":
+    '唐丹，十届全国象棋女子个人冠军：对局与分析',
   // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：对局、战绩与分析',
@@ -2858,15 +2946,7 @@ const ZH_HANS: Record<string, string> = {
   'Repetition follows xiangqi. On the third occurrence of the same position, a player who gave check on every one of their moves in the repeating cycle loses, so perpetual check cannot save a lost game. If both players checked throughout, or the cycle had no checks, the game is drawn. Perpetual chase without check is not ruled on and stays a draw.':
     '重复局面按象棋规则处理。同一局面第三次出现时，若一方在重复循环中的每一步都将军，该方判负，长将不能挽救败局。若双方都一直将军，或循环中没有将军，则判和。不将军的长捉不作裁决，按和棋处理。',
   Turns: '回合',
-  'Capture by rank': '按等级吃子',
-  'The cannon': '炮',
-  'You win when your opponent has no legal move, usually because every enemy piece is captured, sometimes because they are boxed in. The general is not royal: capturing it is progress, not the win, and play continues until one side is wiped out or stuck.':
-    '当对手轮到自己却无棋可走时，你获胜——通常是因为敌方棋子被全部吃光，有时则是被困死、无路可走。这里的将不是王棋：吃掉它只是进展，而非胜利，棋局会一直进行到一方被吃光或被困死为止。',
-  'Mistboard draws a game two ways: 60 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly. A game started before 17 October 2026 keeps the 40-ply limit it began under.':
-    'Mistboard 有两种自动和棋：连续 60 个半回合没有翻子或吃子，或同一局面出现三次。翻子或吃子会不可逆地改变局面，因此会重置两个计数。2026 年 10 月 17 日之前开始的对局仍按开局时的 40 个半回合计算。',
   'Repetition and chases': '重复局面与捉子',
-  'A position repeated three times draws, with one exception: a chase. A chase is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. So a repetition caused by a chase is never a draw: the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
-    '同一局面出现三次判和，只有一个例外：捉子。捉子指既不翻子也不吃子、走完后能吃掉对方刚走动那枚棋子的一步棋，不论那枚棋子有没有根。捉子的一方不能用捉子让同一局面第三次出现，必须改走别的着法，除非没有其他合法着法。所以由捉子造成的重复局面一律不判和：被捉的棋子不走就会被吃。不断把对方棋子赶到新位置的捉子不受限制。[这条规则为什么这样定](/blog/banqi-perpetual-chase)，附对局。',
   'Play MistyBanqi': '对战 MistyBanqi',
   'Challenge a friend': '挑战好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -2945,6 +3025,91 @@ const ZH_HANS: Record<string, string> = {
     '正统象棋禁止将帅照面。迷雾象棋允许这个局面；如果一方将帅在无阻挡的直线上看见对方，就可以沿这条线直接擒获。',
   'Banqi Rules': '暗棋规则',
   'Banqi Rules (Chinese Dark Chess)': '暗棋规则：玩法详解与免费在线对弈',
+  'All thirty-two xiangqi pieces start face-down on half a xiangqi board. On your turn you flip one tile or move one revealed piece one square.':
+    '三十二颗象棋棋子全部盖着，铺在半张象棋盘上。轮到你时，翻开一颗暗子，或把一颗已翻开的己方棋子走一格。',
+  'A piece captures an enemy of equal or lower rank, general down to soldier, except that the soldier takes the general and the general cannot take a soldier.':
+    '一颗子可以吃同级或更小的敌子，从将排到兵；例外是兵可以吃将，而将不能吃兵。',
+  'The cannon captures by jumping exactly one piece, and then rank does not matter.':
+    '炮隔着正好一颗子吃子，这时不看大小。',
+  'One capture per turn, no chain captures. You win when your opponent cannot move.':
+    '每回合只能吃一次，不能连吃。对手无子可走时，你就赢了。',
+  'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played with [xiangqi](/rules/xiangqi) pieces on half a xiangqi board, and a separate game from xiangqi with its own rules, given here exactly as Mistboard plays them.':
+    '暗棋又称盲棋，是用[象棋](/rules/xiangqi)棋子在半张象棋盘上玩的快节奏翻子游戏。它和象棋是两种不同的游戏，规则自成一套，本页写的正是 Mistboard 采用的规则。',
+  'How do you play banqi?': '暗棋怎么玩？',
+  'Shuffle the thirty-two xiangqi pieces face-down onto half a xiangqi board. The first tile flipped decides the colors. On each turn you either flip one tile or move one of your revealed pieces one square, and you capture by moving onto an enemy piece of equal or lower rank. You win when your opponent has no legal move left.':
+    '把三十二颗象棋棋子盖着洗乱，铺满半张象棋盘。第一颗翻开的棋子决定双方颜色。每回合你要么翻一颗暗子，要么把一颗已翻开的己方棋子走一格；走到同级或更小的敌子上，就把它吃掉。对手无子可走时，你就赢了。',
+  'You can [play a game against the computer](/?play=computer&gameSpecId=banqi) right now, no account needed.':
+    '现在就可以[和电脑下一盘](/?play=computer&gameSpecId=banqi)，不用注册。',
+  'How is banqi set up on half a xiangqi board?': '半盘象棋怎么摆？',
+  'The board is a **4 by 8 grid**, half a xiangqi board, and the thirty-two shuffled pieces fill its squares exactly, every one face-down. Colors are not assigned in advance: whatever color the first flip turns up belongs to the player who flipped it, and the opponent plays the other.':
+    '棋盘是 **4×8 的格子**，也就是半张象棋盘，三十二颗洗乱的棋子正好把格子铺满，全部盖着。颜色不是事先分配的：第一次翻出什么颜色，就归翻子的那一方，对手执另一色。',
+  'What can you do on your turn?': '轮到你可以做什么？',
+  '**Move** one of your revealed pieces one square up, down, left or right, onto an empty square or onto an enemy piece of equal or lower rank, which captures it. Every piece moves this way, the horse and the chariot included, and none moves diagonally; only the cannon captures differently, by jumping. Face-down tiles block the way and cannot be captured.':
+    '**走**一颗已翻开的己方棋子，向上、下、左、右走一格，走到空格，或走到同级或更小的敌子上把它吃掉。每种棋子都这样走，马和车也一样，都不能斜走；只有炮吃子的方式不同，要隔子吃。暗子会挡路，也不能被吃。',
+  'What is the piece order, and who captures whom?': '暗棋大小顺序：谁吃谁？',
+  'Strongest to weakest: general, advisor, elephant, chariot, horse, cannon, soldier. A piece captures an adjacent revealed enemy of **equal or lower rank**.':
+    '从大到小：将、士、象、车、马、炮、兵。一颗子可以吃相邻、已翻开、**同级或更小**的敌子。',
+  'Strongest at the left. Each piece takes its own rank and everything to its right, with two exceptions.':
+    '最大的在左边。每颗子都能吃同级和它右边的所有子，但有两个例外。',
+  'Two exceptions: the soldier and the cannon': '两个例外：兵与炮',
+  '**The soldier captures the general**, and the general cannot capture a soldier.':
+    '**兵可以吃将**，将却不能吃兵。',
+  '**The cannon captures by jumping** and ignores rank, as the next section shows. As a target it keeps its place in the order: the horse and every piece above it can take a cannon, and a soldier cannot.':
+    '**炮隔子吃子**，不看大小，下一节会详细说明。被吃的时候，炮仍按它在顺序中的位置算：马和比马大的子都可以吃炮，兵不能。',
+  'What can the cannon capture in banqi?': '暗棋的炮可以吃什么？',
+  'The cannon captures along a row or column by jumping exactly one piece, the screen, and taking the first piece beyond it if that piece is a revealed enemy, **whatever its rank**. Without a capture it moves one square like everything else.':
+    '炮沿着横线或直线隔正好一颗子（炮架）吃子，吃的是炮架后面的第一颗子，只要它是已翻开的敌子，**不论大小**。不吃子时，炮和其他子一样走一格。',
+  'Any piece can be the screen: friendly, enemy, or face-down. With nothing to jump, the cannon cannot capture at all, so a piece right beside it is safe from it.':
+    '任何子都可以当炮架：己方的、敌方的、暗子都行。没有子可以隔，炮就完全不能吃子，所以紧贴在炮旁边的子不怕炮。',
+  'Can you chain captures in banqi?': '暗棋可以连吃吗？',
+  'No. In standard banqi, the game played on Mistboard and in computer competition, a turn is one flip or one move, so a piece captures at most once per turn.':
+    '不行。在标准暗棋里，也就是 Mistboard 和电脑比赛采用的规则，一回合只能翻一次或走一步，所以一颗子每回合最多吃一次。',
+  'Chain capture is a well-known house rule in Taiwan, offered as a separate table mode by many banqi apps and game sites. A piece that captures may keep capturing in the same turn, and some versions also let a piece attack a face-down tile, turning it over in the process. Mistboard plays only the standard game.':
+    '连吃是台湾很常见的家规，许多暗棋 App 和游戏网站都把它做成独立的玩法。吃了子的棋子可以在同一回合继续吃，有些版本还允许攻击暗子，顺便把它翻开。Mistboard 只采用标准玩法。',
+  'How do you win at banqi, and when is it a draw?': '暗棋怎样算赢？什么时候和棋？',
+  'You win when your opponent has **no legal move**, usually because every enemy piece is captured, sometimes because they are boxed in. The general is not royal. Capturing it is progress, and play continues until one side is wiped out or stuck.':
+    '对手**无子可走**时你就赢了，通常是因为敌方棋子全被吃光，有时是因为被困住动不了。将不是王，吃掉它只是占了优势，对局会一直进行到一方被吃光或被困死。',
+  'Mistboard draws a game two ways: 60 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
+    'Mistboard 在两种情况下判和：连续 60 步（双方各走一步各算一步）没有翻子或吃子，或同一局面出现三次。翻子或吃子会把两个计数都归零，因为局面已经无法回到从前。',
+  'A **chase** is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not repeat a position for the third time with a chase unless it has no other legal move, so a chase never ends in a repetition draw; a chase that drives the piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '**捉子**是指不翻子也不吃子、威胁要吃掉对方刚走的那颗子的一步，不论那颗子有没有保护。捉子的一方不能用捉子让同一局面第三次出现，除非没有别的合法着法，所以捉子永远不会形成重复和棋；如果追捉让对方的子一直走到新的格子，则不受限制。[这条规则为什么这样定](/blog/banqi-perpetual-chase)，附实战对局。',
+  'The draw rules come from the competition rules of Chen, Shen and Hsu (ICGA Journal, 2010), which set the no-progress limit at 40 plies. Mistboard moved it to 60 in October 2026, because some won endings need more than 40 plies to force the next capture. A game started before 17 October 2026 keeps the 40-ply limit it began under.':
+    '和棋规则出自 Chen、Shen 与 Hsu 的比赛规则（ICGA Journal，2010），原本的无进展上限是 40 步。Mistboard 在 2026 年 10 月改成 60 步，因为有些已经赢定的残局需要超过 40 步才能逼出下一次吃子。2026 年 10 月 17 日之前开始的对局，仍按开局时的 40 步上限计算。',
+  'Banqi is a folk game and the rules differ by region. Mistboard plays the **standard Taiwanese game**, the one used in computer competition and on the main banqi sites in Taiwan. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
+    '暗棋是民间游戏，各地规则不同。Mistboard 采用**台湾标准暗棋**，也就是电脑比赛和台湾主要暗棋网站使用的规则。如果你学的是另一种大小顺序，本站的引擎和每一盘棋都按本页的顺序进行。',
+  Region: '地区',
+  'How it plays': '玩法',
+  Taiwan: '台湾',
+  'The ladder on this page, and a cannon that captures by jumping one screen':
+    '本页的大小顺序，炮隔一颗炮架吃子',
+  'Hong Kong': '香港',
+  'Pieces rank general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder':
+    '大小顺序为将、车、马、炮、士、象、兵，炮也排在顺序里',
+  'Mainland China': '中国大陆',
+  'The cannon usually does not jump and captures adjacent pieces by rank like everything else':
+    '炮通常不隔子，和其他子一样按大小吃相邻的子',
+  'Taiwan’s rules are the ones played on Mistboard.': 'Mistboard 采用的是台湾规则。',
+  'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).':
+    'Mistboard 不采用任何常见家规：不能连吃，炮不能打暗子（炮只吃已翻开的敌子），马也不能斜走（每颗子都只能向上、下、左、右走一格）。',
+  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.':
+    '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。',
+  'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
+    '[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
+  'No. A soldier captures only soldiers and the general. The cannon ranks just above the soldier, so the horse and every piece above it can take a cannon, and a soldier cannot.':
+    '不行。兵只能吃兵和将。炮只比兵大一级，所以马和比马大的子都可以吃炮，兵不能。',
+  'Can the horse move or capture diagonally in banqi?': '暗棋的马可以斜走或斜吃吗？',
+  'No. In standard banqi every piece, the horse included, moves one square up, down, left or right. A diagonal horse is a house rule some apps offer as a table option; Mistboard does not use it.':
+    '不行。在标准暗棋里，每颗子（包括马）都只能向上、下、左、右走一格。马斜走是有些 App 提供的家规选项，Mistboard 不采用。',
+  'Can the general capture a soldier in banqi?': '暗棋的将可以吃兵吗？',
+  'No. The general can capture every enemy piece except a soldier, and a soldier can capture the general.':
+    '不行。将可以吃除了兵以外的所有敌子，而兵可以吃将。',
+  'Can the cannon capture the general in banqi?': '暗棋的炮可以吃将吗？',
+  'Yes. The cannon ignores rank: with exactly one piece between them in a straight line, it can capture the general or any other revealed enemy piece.':
+    '可以。炮不看大小：只要两者在同一直线上、中间正好隔一颗子，炮就能吃将，或吃任何已翻开的敌子。',
+  'Play the computer or send a friend a link. No account needed.':
+    '和电脑下一盘，或把链接传给朋友。不用注册。',
+  'The page is reorganized around the questions players ask, with new sections on how to play and chain captures, the capture order set out as one rule with two exceptions, and a table of how the regional rules differ.':
+    '本页按玩家常问的问题重新整理，新增了怎么玩和连吃两节，把大小顺序整理成一条规则加两个例外，并用表格列出各地规则的差别。',
   'Use [Xiangqi Rules](/rules/xiangqi) for the base game. This page covers what changes.':
     '基础规则请参考[象棋规则](/rules/xiangqi)。本页只说明变化之处。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
@@ -2974,11 +3139,7 @@ const ZH_HANS: Record<string, string> = {
   "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
     '揭棋保留象棋的棋盘和将死目标，但隐藏所有非将帅棋子的身份。暗子首次按它所在起始位置的棋子走法移动、攻击和吃子，走完后翻开，之后按真实身份行棋。',
   'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
-    '暗棋又称盲棋，在半张象棋棋盘上以背面朝上的棋子进行。棋子按等级吃子，但有两个例外：卒可以吃将，炮则隔着一个炮架跳吃任何棋子。',
-  'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
-    '暗棋是在半张象棋棋盘上进行的快节奏隐藏棋子游戏。三十二枚棋子全部洗匀并背面朝上。第一次翻子决定双方颜色。之后每回合都在两种行动中选择：翻开棋子，或移动一枚已翻开的棋子。除炮外，吃子按等级进行。',
-  'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
-    '虽然它使用[象棋](/rules/xiangqi)棋子，但它是独立的游戏：棋子每次移动一格，将不是王棋，背面朝下的棋子不能被吃。本页说明 Mistboard 采用的确切规则。',
+    '暗棋怎么玩？三十二颗象棋棋子盖着铺满半张棋盘，轮到你就翻一颗或走一格。大小顺序是将、士、象、车、马、兵，兵能吃将，炮隔一子吃子不看大小。可以连吃吗？看图解答。采用台湾标准暗棋，免注册直接在线对弈。',
   "MistyBanqi is the bot you play in [Banqi](/rules/banqi) on Mistboard. It's a classical engine: it searches ahead and scores positions with a hand-written evaluation, no neural network, and it's open source. It will outplay most people. It also has a few honest blind spots, and the one worth knowing is that it can draw a game it has completely won.":
     'MistyBanqi 是你在 Mistboard 上对弈[暗棋](/rules/banqi)时面对的机器人。它是一个经典引擎：向前搜索，用手写评估为局面打分，没有神经网络，而且开源。它能赢过大多数人，但也有几个坦诚的盲点，其中最值得了解的是：它会把已经完全赢定的棋下成和棋。',
   'The board is seven files wide and nine ranks deep. Your den sits at the center of your back rank, ringed by three trap squares. Two rivers, each a 2×3 block of water, split the middle of the board. Red moves first from the fixed starting position below.':
@@ -5255,21 +5416,10 @@ const ZH_HANS: Record<string, string> = {
   'Horse 傌 / 馬': '马：傌 / 马',
   'Soldier 兵 / 卒': '兵卒：兵 / 卒',
   'Cannon 炮 / 砲': '炮：炮 / 炮',
-  'What is the capture order in banqi?': '暗棋的大小顺序是什么？',
-  'General > Advisor > Elephant > Chariot > Horse > Soldier. A piece captures its own rank or anything below it. Two exceptions: the soldier can capture the general, and the general cannot capture a soldier. The cannon captures by jumping and sits outside the ladder.':
-    '将 > 士 > 象 > 车 > 马 > 卒。棋子可以吃同等级或更低等级的棋子。两个例外：卒可以吃将，将不能吃卒。炮靠跳吃，不在这个等级序列里。',
-  'How does the cannon capture in banqi?': '暗棋的炮怎么吃？',
-  'Under the Taiwanese rules this site plays: it moves along a row or column, jumps over exactly one piece (face-up or face-down, either color), and captures the first revealed enemy beyond it, whatever its rank. It cannot capture an adjacent piece because it needs that one piece to jump. Without a capture it moves one square like everything else. Hong Kong and mainland tables differ; see Rule variants above.':
-    '在本站采用的台湾规则下：炮沿直线或横线走，隔着恰好一枚棋子（明子或暗子、哪一方的都可以）跳过去，吃掉后面第一枚已翻开的敌子，不论等级。因为一定要隔一子，炮不能吃相邻的棋子。不吃子时，炮和其他棋子一样只走一格。香港和大陆的下法不同，见上面的“规则变体”。',
   'Can a soldier capture a cannon?': '暗棋的兵可以吃炮吗？',
-  'No. A soldier captures only soldiers and the general. As a target, the cannon ranks between the horse and the soldier, so the horse and everything above it can take a cannon, and a soldier cannot.':
-    '不行。卒只能吃卒和将。炮被吃时算在马与卒之间，所以马以上的棋子都能吃炮，卒不能。',
   'Can a horse capture a chariot?': '暗棋的马可以吃车吗？',
   'No. The chariot outranks the horse. A horse captures horses, cannons, and soldiers.':
     '不行，车比马高一级。马能吃马、炮、卒。',
-  'Can you capture more than once in a turn?': '暗棋可以连吃吗？',
-  'No. A turn is exactly one action: flip one face-down tile, or move one revealed piece one square, capturing or not. There are no chain captures on Mistboard.':
-    '不行。一回合只做一件事：翻开一枚暗子，或把一枚已翻开的棋子走一格（吃子或不吃子）。Mistboard 上没有连吃。',
   'What is the rank order in Jungle Chess?': '斗兽棋的大小顺序是什么？',
   'Elephant > lion > tiger > leopard > wolf > dog > cat > rat. An animal captures an adjacent enemy of equal or lower rank. The one exception: a rat on land can capture the elephant, and the elephant can never capture a rat.':
     '象 > 狮 > 虎 > 豹 > 狼 > 狗 > 猫 > 鼠。动物可以吃相邻的同等级或更低等级的敌方动物。唯一的例外：在陆地上的鼠可以吃象，而象永远不能吃鼠。',
@@ -5353,8 +5503,6 @@ const ZH_HANS: Record<string, string> = {
     '暗子是一次性的选择权：在车位上它只在这一步是车，之后就是它真正的身份。不要把这一步花在便宜的活上。高手会先挺兵再翻炮，抢着翻出真车，翻出三个大子之后就不再翻。这些都还没有被测量过；本站的开局文章把这场争论连同出处写了下来。',
   // banqi rule variants (2026-09-17)
   'Rule variants': '规则版本',
-  'Banqi is a folk game and the rules differ by region. Three families are common. Taiwanese rules use the ladder above and a cannon that captures by jumping one screen. Hong Kong rules rank the pieces general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder. Mainland rules usually have no jumping cannon at all: it captures adjacent pieces by rank like everything else.':
-    '暗棋是民间棋戏，各地规则不同，常见的有三种。台湾规则用本页的大小顺序，炮隔一子跳吃。香港规则的大小是将、车、马、炮、士、象、卒，炮在等级序列里面。中国大陆的规则通常没有跳吃的炮：炮和其他棋子一样按等级吃相邻的棋子。',
   // pikafish (2026-09-21, machine-drafted, not native-reviewed). Mainland wording on purpose: 在线, 网页版, 人机, 账号, 服务器 are the words the Bing corpus uses.
   'Pikafish on Mistboard': '皮卡鱼象棋：在线对弈与分析',
   'Now opens with where to play and analyze Pikafish in your browser, and points to the official download for the engine itself.':
@@ -5509,45 +5657,24 @@ const ZH_HANS: Record<string, string> = {
   'MOVE 12: BLACK LEADS BY 4': '第 12 回合：黑方领先 4 分',
   'MOVE 13: THE SOLDIER TAKES THE GENERAL': '第 13 回合：卒吃将',
   // banqi rules page re-cut 2026-09-21: real-board diagrams, shorter prose.
-  'The board is half a xiangqi board, a 4 by 8 grid. Pieces sit in the squares, and the thirty-two shuffled pieces fill it exactly, every one face-down.':
-    '棋盘是半张象棋盘，4 列 8 行。棋子放在格子里，洗匀的三十二颗子刚好填满棋盘，每一颗都盖着。',
   'Before the first flip. Nobody has a color yet.': '第一次翻子之前。谁都还没有颜色。',
   'The horse may take the soldier or the other horse, not the chariot above it.':
     '马可以吃卒或另一只马，不能吃排在它上面的车。',
-  'Strongest at the left, weakest at the right. The cannon captures by jumping; as a target it ranks where it stands here, between the horse and the soldier.':
-    '最大在左，最小在右。炮靠跳吃；被吃的时候，它的位置就是这里，在马和卒之间。',
-  'One exception connects the ends of the ladder: the soldier can capture the general, and the general cannot capture a soldier.':
-    '一条例外把顺序的两端接起来：卒可以吃将，将不能吃卒。',
   'The lowest piece can take the highest.': '最小的子可以吃最大的。',
-  'The cannon captures along a row or column by jumping exactly one piece, the screen, and taking the first revealed enemy beyond it, whatever its rank. The screen can be any piece: friendly, enemy, or face-down. With nothing to jump, it cannot capture at all, so an adjacent piece is safe from it. Without a capture it moves one square like everything else.':
-    '炮沿直行或横列吃子：正好跳过一颗子（炮架），吃掉后面第一颗翻开的敌子，不论大小。炮架可以是任何子：自己的、对方的、或暗子。没有子可跳就完全不能吃，所以紧邻的子是安全的。不吃子的时候，它和其他子一样走一格。',
   'A friendly piece is a screen too. The face-down tile beyond the elephant is not a target.':
     '自己的子也能当炮架。象后面的暗子不是目标。',
   'As a target, the cannon is below the horse: the horse may take it.':
     '被吃的时候，炮排在马下面：马可以吃它。',
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '卒不能吃炮。它可以吃另一颗卒，或吃将。',
-  'A soldier can take the general, and the general can never take a soldier. No account needed.':
-    '卒可以吃将，将却永远不能吃卒。无需账户。',
-  'Mistboard plays the standard Taiwanese game, the one used in computer competition and on the main banqi sites in Taiwan. The draw rules come from the competition rules of Chen, Shen and Hsu (ICGA Journal, 2010): the no-progress clock and the repetition draw above. Those rules set the clock at 40 plies. Mistboard moved it to 60 in October 2026, because some won endings need more than 40 plies to force the next capture. A common house rule lets a cannon also fire at a face-down tile, often played together with chain captures. That is a side variant, not the standard game, and it is not played here: a cannon only captures revealed enemy pieces. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
-    'Mistboard 采用标准台湾暗棋，也就是电脑对局比赛和台湾主要暗棋网站使用的规则。和棋规则取自 Chen、Shen 与 Hsu 的比赛规则（ICGA Journal，2010 年）：上面的无进展计数和重复局面判和。这些规则把计数定为 40 个半回合。Mistboard 在 2026 年 10 月改为 60，因为有些必胜残局需要超过 40 个半回合才能逼出下一次吃子。常见的一条家规允许炮隔子打暗子，通常和连吃一起玩。这是变体，不是标准规则，本站不采用：炮只能吃已翻开的敌方棋子。如果你学的是另一套大小顺序，本页这一套才是引擎和站上每一盘棋遵守的。',
   'An engine game': '一盘引擎对局',
   'Banqi: an engine game under the competition rules': '暗棋：比赛规则下的一盘引擎对局',
-  'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs for the game, and the opponent plays the other.':
-    '颜色不是事先分好的。先手翻开任何一颗子：翻到什么颜色，这一盘就是他的，对手用另一种。',
   'The first flip turned up red, so the player who flipped it is red.':
     '第一次翻子翻到红，所以翻的人这盘是红方。',
-  'On your turn you do exactly one of two things.': '轮到你时，两件事里做一件。',
   '**Flip** any face-down tile. It turns over for both players to see, whichever color it turns out to be, and your turn is over.':
     '**翻**任何一颗暗子。它翻开給双方看，不管翻出什么颜色，你这一回合就结束了。',
-  '**Move** one of your revealed pieces one square up, down, left, or right, onto an empty square or onto an enemy piece it outranks, which captures it. Face-down tiles block the way and cannot be captured.':
-    '**走**你翻开的一颗子，往上、下、左、右一格，走到空格，或走到一颗比它小的敌子上把它吃掉。暗子挡路，也不能被吃。',
-  'The cannon is the one exception to both the movement and the ranks below: it moves one square like everything else, but it captures by jumping, not by stepping, and rank does not apply to what it takes.':
-    '炮是走法和下面大小顺序的唯一例外：它和其他子一样走一格，但吃子靠跳、不靠走，而且吃什么不看大小。',
   'The selected horse can move to the three marked squares. The face-down tile above it is not a destination.':
     '选中的马可以走到三个标记的格子。它上面的暗子不能当目的地。',
-  'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier. A piece captures an adjacent revealed enemy of equal or lower rank.':
-    '从大到小：将、士、象、车、马、卒。一颗子可以吃相邻、已翻开、同级或更小的敌子。',
   'The general cannot take the soldier back; the advisor beside it, it can.':
     '将不能回头吃卒；旁边的士，它可以吃。',
   'One screen, then the target. Rank does not matter: the cannon takes the general.':
@@ -6096,8 +6223,6 @@ const ZH_HANS: Record<string, string> = {
   'Rewritten as a guide for chess players.': '改写为写给国际象棋棋手的指南。',
   'Reworked the diagrams, the history and the prose.': '重做了图示、历史部分和正文。',
   'Added a capture table and an FAQ.': '新增吃子对照表和常见问题。',
-  'The repetition and chase rules now sit together in one note under Winning and draws.':
-    '重复局面和捉子的规则现在合并为“胜负与和棋”下的一条说明。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我对弈 200 盘，每步一千万节点，采用台湾比赛规则和 40 个半回合无进展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':
@@ -7700,8 +7825,6 @@ const ZH_HANT: Record<string, string> = {
   'KataGomo is open source at [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo). Thank you, hzyhhzy, for the engine and for letting us use it; lightvector, for KataGo; and Kouza, for the Dandelion 4 network.':
     'KataGomo 是開源專案，網址是 [github.com/hzyhhzy/KataGomo](https://github.com/hzyhhzy/KataGomo)。感謝 hzyhhzy 提供引擎並允許我們使用，感謝 lightvector 的 KataGo，也感謝 Kouza 的 Dandelion 4 神經網路。',
   'Jungle Chess rules': '鬥獸棋規則',
-  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
-    '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一個相關的盲點跟將有關。只有卒、對方的將或砲的跳吃拿得下它，所以被圍住的將一次只怕一種子，而引擎很慢才會替被逼到角落的將騰出空間。它有時候會把一顆子調到棋盤另一頭，同時一顆孤零零的敵方卒走過來把它困死。跟上面那個和棋是同一個缺口：這套評估函數對於好幾步之外慢慢成形的安靜威脅，沒有什麼感覺。',
   // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed. Variant names follow the
@@ -8262,6 +8385,83 @@ const ZH_HANT: Record<string, string> = {
   'Her games in the archive': '她在檔案裡的對局',
   "Zuo Wenjing 左文静, the 2022 women's world xiangqi champion: games and analysis":
     '左文静，2022 年女子世界象棋冠軍：對局與分析',
+  // tang-dan (zh-Hant), machine-drafted 2026-10-26, not native-reviewed. After the
+  // spread, like zuo-wenjing's: mainland names stay simplified (陈丽淳, 时凤兰);
+  // Li Sih-yi converts (李思誼), Taiwan is 台灣, Cup is 盃.
+  "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.":
+    '十個全國冠軍，比任何一位女棋手都多，還有 2025 年女子世界冠軍。她從上海到馬尼拉奪得亞洲冠軍的這個賽季，盤面上五盤對局，50 局附引擎分析。',
+  "English-speaking xiangqi players who follow the women's game and China's national championship. Found through search, the site, and the Zuo Wenjing and Yin Sheng pages.":
+    '關注女子象棋和全國象棋個人賽的說英語的棋友。透過搜尋、本站以及左文静和尹昇的專頁找到這一頁。',
+  "Tang Dan has won China's national individual women's title ten times, more than any other woman; the tenth came in December 2025, against Zuo Wenjing in the final.":
+    '唐丹十次奪得全國象棋個人賽女子冠軍，比任何一位女棋手都多；第十個冠軍在 2025 年 12 月到手，決賽對手是左文静。',
+  "Between September 2025 and October 2026 she won the women's world title in Shanghai, her fourth, and the Asian individual title in Manila.":
+    '2025 年 9 月到 2026 年 10 月間，她在上海奪得女子世界冠軍，這是她的第四個世界冠軍，又在馬尼拉奪得亞洲個人賽冠軍。',
+  'In the 50 games we hold from that stretch she lost twice, both with red; with black she won 15 and drew 9.':
+    '我們收錄的這段時間的 50 盤對局中，她只輸了兩盤，都是執紅；執黑她 15 勝 9 和。',
+  'With red she most often opens by pushing a soldier: 12 of her 26 red games here start that way.':
+    '執紅她最常以進兵開局：這裡她的 26 盤執紅對局，有 12 盤這樣開局。',
+  'Tang Dan in glasses and a navy top with a white bow at the collar, arms folded, standing in front of a potted plant.':
+    '唐丹戴著眼鏡，身穿領口繫白色蝴蝶結的藏青色上衣，雙臂交叉，站在一盆綠植前。',
+  "Tang Dan 唐丹 has won China's national individual women's championship ten times, more than any other woman since the women's event began in 1979. The tenth came in December 2025 in Jinan, where she beat Zuo Wenjing in the final. Three months earlier, in Shanghai, she had won her fourth women's world title, and in October 2026 she added the Asian individual title in Manila.":
+    '唐丹十次奪得全國象棋個人賽女子組冠軍，是 1979 年設立女子組以來奪冠最多的女棋手。第十個冠軍是 2025 年 12 月在濟南拿下的，決賽她擊敗了左文静。三個月前在上海，她第四次奪得女子世界冠軍；2026 年 10 月，她又在馬尼拉拿下亞洲個人賽冠軍。',
+  "She was born in 1990 in Anhui, moved to Beijing as a child, and plays for the Beijing Chess Academy. She is a Chinese grandmaster and a WXF International Grandmaster, and at the 2010 Asian Games in Guangzhou she won the women's individual gold, winning all seven rounds. On the Chinese Xiangqi Association's points list of 28 December 2025 she was the second woman, behind Li Qin.":
+    '她 1990 年生於安徽，小時候遷居北京，代表北京棋院出賽。她是象棋特級大師，也是世界象棋聯合會國際特級大師；2010 年廣州亞運會上，她七輪全勝，奪得女子個人賽金牌。在中國象棋協會 2025 年 12 月 28 日的積分榜上，她在女棋手中排名第二，僅次於李沁。',
+  'This page is her season from the 2025 world championship to Manila, with five of her games on the board. I ran the 50 games we hold through the same engine analysis Mistboard gives your own games.':
+    '這一頁寫的是她從 2025 年世錦賽到馬尼拉的這個賽季，盤面上有她的五盤對局。我們收錄的 50 盤對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  '**She did not lose with black.** In her 24 games with black here she won 15 and drew 9. Both of her losses came with red.':
+    '**執黑她沒有輸過。** 這裡她的 24 盤執黑對局，15 勝 9 和。她的兩盤敗局都是執紅。',
+  '**She opens with a soldier.** In 12 of her 26 red games here her first move pushes a soldier. No other first move comes close: the horse, the elephant and the central cannon have four games each.':
+    '**她以進兵開局。** 這裡她的 26 盤執紅對局中，有 12 盤第一步就是進兵。其他第一步都差得遠：起馬、飛相和中炮各有四盤。',
+  '**She played her best at the world championship.** Her median accuracy over the 50 games is 95.7. Over her seven games in Shanghai it was 97.3, her highest at any event here.':
+    '**她在世錦賽上下得最好。** 50 盤對局中她的準確率中位數是 95.7。在上海的七盤對局是 97.3，是這裡所有賽事中她最高的。',
+  '"I\'m not afraid of losing," she told the Yangcheng Evening News in March 2026, "only of not playing a high-quality game."':
+    '2026 年 3 月她對《羊城晚報》說：「我不怕輸棋，只怕下不出高質量的棋局。」',
+  'The titles': '她的冠軍',
+  "The 19th World Xiangqi Championship was played in Shanghai from 21 to 27 September 2025. Tang Dan won the women's individual title, her fourth world title, and the women's team gold for China with Chen Lichun. We hold seven of her games there: five wins and two draws. The first was a win with black over Li Sih-yi of Taiwan.":
+    '第十九屆世界象棋錦標賽於 2025 年 9 月 21 日至 27 日在上海舉行。唐丹奪得女子個人冠軍，這是她的第四個世界冠軍；她還與陈丽淳一起為中國隊奪得女子團體金牌。我們收錄了她在那裡的七盤對局：五勝兩和。第一盤她執黑戰勝台灣的李思誼。',
+  "Li Sih-yi vs Tang Dan, 2025 World Xiangqi Championship, women, 22 September 2025. Tang Dan won with black in 32 moves. The board opens after red's move 23, with Tang Dan to move.":
+    '李思誼對唐丹，2025 世界象棋錦標賽女子組，2025 年 9 月 22 日。唐丹執黑 32 回合取勝。棋盤從紅方第 23 回合之後開始，輪到唐丹走。',
+  '2025 World Xiangqi Championship, women': '2025 世界象棋錦標賽，女子組',
+  'National Championship, Jinan': '全國象棋個人賽，濟南',
+  "China's national individual championship was played in Gangcheng, Jinan, from 6 to 13 December 2025, with 56 women in the field. After the group stage and three knockout rounds she met Zuo Wenjing in the final, drew the slow game, and won the rapid tie-break with black for her tenth national title.":
+    '全國象棋個人賽於 2025 年 12 月 6 日至 13 日在濟南鋼城舉行，女子組有 56 名棋手參賽。經過小組賽和三輪淘汰賽，她在決賽遇上左文静，慢棋弈和，快棋加賽執黑取勝，拿下她的第十個全國冠軍。',
+  "It was the second time in a month that she beat Zuo for a title: in November she had won the women's individual open event at the 15th National Games, beating Zuo there too. Zuo, the 2022 world champion, has [her own page](/blog/zuo-wenjing).":
+    '這是一個月內她第二次在冠軍爭奪中擊敗左文静：11 月在第十五屆全運會上，她奪得女子個人公開組冠軍，擊敗的也是左文静。2022 年世界冠軍左文静也有[自己的專頁](/blog/zuo-wenjing)。',
+  "Zuo Wenjing vs Tang Dan, 2025 National Individual Championship, women, final, 13 December 2025. Tang Dan won with black in 36 moves. The board opens after red's move 33, with Tang Dan to move.":
+    '左文静對唐丹，2025 全國象棋個人賽女子組決賽，2025 年 12 月 13 日。唐丹執黑 36 回合取勝。棋盤從紅方第 33 回合之後開始，輪到唐丹走。',
+  '2025 National Individual Championship, women, final': '2025 全國象棋個人賽，女子組決賽',
+  'The season since': '此後的賽季',
+  'CXA Year-End Finals, Chengmai': '中國象棋協會年終總決賽，澄邁',
+  "Eleven days later she played the Chinese Xiangqi Association's year-end finals in Chengmai, Hainan, from 24 to 28 December 2025. We hold eight of her games there: five wins, two draws and a loss to Shi Fenglan. Her last game was a win with red over Li Qin.":
+    '十一天後，她在海南澄邁參加了 2025 年 12 月 24 日至 28 日的中國象棋協會年終總決賽。我們收錄了她在那裡的八盤對局：五勝兩和，另有一盤負於时凤兰。最後一盤她執紅戰勝李沁。',
+  "Tang Dan vs Li Qin, 2025 CXA Year-End Finals, women, 28 December 2025. Tang Dan won with red in 49 moves. The board opens after black's move 21, with Tang Dan to move.":
+    '唐丹對李沁，2025 中國象棋協會年終總決賽女子組，2025 年 12 月 28 日。唐丹執紅 49 回合取勝。棋盤從黑方第 21 回合之後開始，輪到唐丹走。',
+  '2025 CXA Year-End Finals, women': '2025 中國象棋協會年終總決賽，女子組',
+  'The national team championship ran from 28 March to 2 April 2026. Tang played all seven rounds for Beijing and went unbeaten: five wins and two draws. The [whole event](/broadcast/xiangqi/2026-womens-xiangqi-team-championship) is in the broadcast archive.':
+    '全國象棋團體賽於 2026 年 3 月 28 日至 4 月 2 日舉行。唐丹代表北京打滿七輪，保持不敗：五勝兩和。[整項賽事](/broadcast/xiangqi/2026-womens-xiangqi-team-championship)都在直播檔案裡。',
+  "Women's league": '女子甲級聯賽',
+  "The first stage of China's [women's league](/broadcast/xiangqi/2026-womens-xiangqi-league) was played in Suifenhe from 23 to 27 September 2026. In round one she beat Tang Sinan, the 2023 women's world champion, with red. She finished the stage with seven wins, two draws and a loss to Liang Yanting.":
+    '全國象棋[女子甲級聯賽](/broadcast/xiangqi/2026-womens-xiangqi-league)第一階段於 2026 年 9 月 23 日至 27 日在綏芬河舉行。第一輪她執紅戰勝 2023 年女子世界冠軍唐思楠。這一階段她七勝兩和，另有一盤負於梁妍婷。',
+  "Tang Dan vs Tang Sinan, 2026 Women's Xiangqi League, 23 September 2026. Tang Dan won with red in 42 moves. The board opens after black's move 13, with Tang Dan to move.":
+    '唐丹對唐思楠，2026 全國象棋女子甲級聯賽，2026 年 9 月 23 日。唐丹執紅 42 回合取勝。棋盤從黑方第 13 回合之後開始，輪到唐丹走。',
+  "2026 Women's Xiangqi League": '2026 全國象棋女子甲級聯賽',
+  "A week later she was in Manila for the 21st Asian Individual Championship, and won the women's title, beating Hong Qianhui of Malaysia in the final. We hold six of her games there: four wins and two draws. Her last two were against Hong on the final day: a draw with red, then a win with black.":
+    '一週後她來到馬尼拉參加第二十一屆亞洲象棋個人錦標賽，決賽擊敗馬來西亞的洪千惠，奪得女子組冠軍。我們收錄了她在那裡的六盤對局：四勝兩和。最後兩盤都是在最後一天對洪千惠：先執紅弈和，再執黑取勝。',
+  "Hong Qianhui vs Tang Dan, 2026 Asian Xiangqi Individual Championship, women, 6 October 2026. Tang Dan won with black in 49 moves. The board opens after red's move 24, with Tang Dan to move.":
+    '洪千惠對唐丹，2026 亞洲象棋個人錦標賽女子組，2026 年 10 月 6 日。唐丹執黑 49 回合取勝。棋盤從紅方第 24 回合之後開始，輪到唐丹走。',
+  '2026 Asian Xiangqi Individual Championship, women': '2026 亞洲象棋個人錦標賽，女子組',
+  'Every event in our records': '我們記錄中的每項賽事',
+  "Women's league, rounds 1–18": '女子甲級聯賽，第 1–18 輪',
+  'Her results in the games we hold, newest first. Our game records come from dpxq.com, which may not hold every game of an event; the Jinan count includes its rapid tie-breaks. The Five Rams Cup, where we hold one game, is left out.':
+    '她在我們收錄的對局中的成績，最新的在前。我們的棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；濟南的數字包括快棋加賽。五羊盃我們只收錄了一盤，沒有列入。',
+  "Sources: game records from dpxq.com and Mistboard's broadcast archive; the national titles from China Sports Daily and the xiangqi news site Guangxiang, with Chinese Wikipedia for the earlier champions; the National Games from Beijing Daily and the Yangcheng Evening News; the 2025 world championship from the Shanghai Sports Bureau, The Paper and Taiwan News; the Manila result from Ming Pao, Sin Chew, Sing Tao and HK01; the 2010 Asian Games from Sina; her titles from the WXF title list of December 2022 and China's national registration list of 2023; the points list from the Chinese Xiangqi Association; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '資料來源：棋譜來自 dpxq.com 和 Mistboard 的直播檔案；全國冠軍來自《中國體育報》和象棋新聞網站廣象網，更早的冠軍參考中文維基百科；全運會來自《北京日報》和《羊城晚報》；2025 年世錦賽來自上海市體育局、澎湃新聞和 Taiwan News；馬尼拉的成績來自《明報》、《星洲日報》、《星島》和 HK01；2010 年亞運會來自新浪；她的稱號來自世界象棋聯合會 2022 年 12 月的稱號名單和 2023 年的全國等級稱號註冊名單；積分榜來自中國象棋協會；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
+  'Sixteen years after her Asian Games gold she is still winning titles. In thirteen months she won the world, national and Asian titles, and in the 50 games we hold from that stretch nobody beat her when she had black.':
+    '亞運會奪金十六年後，她仍在不斷奪冠。十三個月裡，她拿下了世界、全國和亞洲冠軍；我們收錄的這段時間的 50 盤對局中，她執黑時沒有人贏過她。',
+  'Her player page': '她的棋手頁面',
+  'The Manila championship': '馬尼拉錦標賽',
+  "Tang Dan 唐丹, ten-time Chinese women's xiangqi champion: games and analysis":
+    '唐丹，十屆全國象棋女子個人冠軍：對局與分析',
   // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. After the
   // spread, or the Simplified entries win (they did, for one deploy).
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：對局、戰績與分析',
@@ -9335,15 +9535,7 @@ const ZH_HANT: Record<string, string> = {
   'Repetition follows xiangqi. On the third occurrence of the same position, a player who gave check on every one of their moves in the repeating cycle loses, so perpetual check cannot save a lost game. If both players checked throughout, or the cycle had no checks, the game is drawn. Perpetual chase without check is not ruled on and stays a draw.':
     '重複局面按象棋規則處理。同一局面第三次出現時，若一方在重複循環中的每一步都將軍，該方判負，長將不能挽救敗局。若雙方都一直將軍，或循環中沒有將軍，則判和。不將軍的長捉不作裁決，按和棋處理。',
   Turns: '回合',
-  'Capture by rank': '按等級吃子',
-  'The cannon': '砲',
-  'You win when your opponent has no legal move, usually because every enemy piece is captured, sometimes because they are boxed in. The general is not royal: capturing it is progress, not the win, and play continues until one side is wiped out or stuck.':
-    '當對手輪到自己卻無棋可走時，你獲勝——通常是因為敵方棋子被全部吃光，有時則是被困死、無路可走。這裡的將不是王棋：吃掉它只是進展，而非勝利，棋局會一直進行到一方被吃光或被困死為止。',
-  'Mistboard draws a game two ways: 60 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly. A game started before 17 October 2026 keeps the 40-ply limit it began under.':
-    'Mistboard 有兩種自動和棋：連續 60 個半回合沒有翻子或吃子，或同一局面出現三次。翻子或吃子會不可逆地改變局面，因此會重置兩個計數。2026 年 10 月 17 日之前開始的對局仍按開局時的 40 個半回合計算。',
   'Repetition and chases': '重複局面與捉子',
-  'A position repeated three times draws, with one exception: a chase. A chase is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not make a position appear for the third time with a chase; it must play something else, unless it has no other legal move. So a repetition caused by a chase is never a draw: the chased piece cannot stay put without being taken. A chase that keeps driving a piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
-    '同一局面出現三次判和，只有一個例外：捉子。捉子指既不翻子也不吃子、走完後能吃掉對方剛走動那枚棋子的一步棋，不論那枚棋子有沒有根。捉子的一方不能用捉子讓同一局面第三次出現，必須改走別的著法，除非沒有其他合法著法。所以由捉子造成的重複局面一律不判和：被捉的棋子不走就會被吃。不斷把對方棋子趕到新位置的捉子不受限制。[這條規則為什麼這樣定](/blog/banqi-perpetual-chase)，附對局。',
   'Play MistyBanqi': '對戰 MistyBanqi',
   'Challenge a friend': '挑戰好友',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
@@ -9402,7 +9594,92 @@ const ZH_HANT: Record<string, string> = {
   'Orthodox xiangqi forbids facing generals. Fog Xiangqi allows the position; if one general sees the other on a clear file, it can capture across that file.':
     '正統象棋禁止將帥照面。迷霧象棋允許這個局面；如果一方將帥在無阻擋的直線上看見對方，就可以沿這條線直接擒獲。',
   'Banqi Rules': '暗棋規則',
-  'Banqi Rules (Chinese Dark Chess)': '暗棋規則：吃子大小、兵吃將與砲的走法',
+  'Banqi Rules (Chinese Dark Chess)': '暗棋規則：怎麼玩、大小順序與連吃',
+  'All thirty-two xiangqi pieces start face-down on half a xiangqi board. On your turn you flip one tile or move one revealed piece one square.':
+    '三十二顆象棋棋子全部蓋著，鋪在半張象棋盤上。輪到你時，翻開一顆暗子，或把一顆已翻開的己方棋子走一格。',
+  'A piece captures an enemy of equal or lower rank, general down to soldier, except that the soldier takes the general and the general cannot take a soldier.':
+    '一顆子可以吃同級或更小的敵子，從將排到兵；例外是兵可以吃將，而將不能吃兵。',
+  'The cannon captures by jumping exactly one piece, and then rank does not matter.':
+    '炮隔著正好一顆子吃子，這時不看大小。',
+  'One capture per turn, no chain captures. You win when your opponent cannot move.':
+    '每回合只能吃一次，不能連吃。對手無子可走時，你就贏了。',
+  'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played with [xiangqi](/rules/xiangqi) pieces on half a xiangqi board, and a separate game from xiangqi with its own rules, given here exactly as Mistboard plays them.':
+    '暗棋又稱盲棋，是用[象棋](/rules/xiangqi)棋子在半張象棋盤上玩的快節奏翻子遊戲。它和象棋是兩種不同的遊戲，規則自成一套，本頁寫的正是 Mistboard 採用的規則。',
+  'How do you play banqi?': '暗棋怎麼玩？',
+  'Shuffle the thirty-two xiangqi pieces face-down onto half a xiangqi board. The first tile flipped decides the colors. On each turn you either flip one tile or move one of your revealed pieces one square, and you capture by moving onto an enemy piece of equal or lower rank. You win when your opponent has no legal move left.':
+    '把三十二顆象棋棋子蓋著洗亂，鋪滿半張象棋盤。第一顆翻開的棋子決定雙方顏色。每回合你要嘛翻一顆暗子，要嘛把一顆已翻開的己方棋子走一格；走到同級或更小的敵子上，就把它吃掉。對手無子可走時，你就贏了。',
+  'You can [play a game against the computer](/?play=computer&gameSpecId=banqi) right now, no account needed.':
+    '現在就可以[和電腦下一盤](/?play=computer&gameSpecId=banqi)，不用註冊。',
+  'How is banqi set up on half a xiangqi board?': '半盤象棋怎麼擺？',
+  'The board is a **4 by 8 grid**, half a xiangqi board, and the thirty-two shuffled pieces fill its squares exactly, every one face-down. Colors are not assigned in advance: whatever color the first flip turns up belongs to the player who flipped it, and the opponent plays the other.':
+    '棋盤是 **4×8 的格子**，也就是半張象棋盤，三十二顆洗亂的棋子正好把格子鋪滿，全部蓋著。顏色不是事先分配的：第一次翻出什麼顏色，就歸翻子的那一方，對手執另一色。',
+  'What can you do on your turn?': '輪到你可以做什麼？',
+  '**Move** one of your revealed pieces one square up, down, left or right, onto an empty square or onto an enemy piece of equal or lower rank, which captures it. Every piece moves this way, the horse and the chariot included, and none moves diagonally; only the cannon captures differently, by jumping. Face-down tiles block the way and cannot be captured.':
+    '**走**一顆已翻開的己方棋子，向上、下、左、右走一格，走到空格，或走到同級或更小的敵子上把它吃掉。每種棋子都這樣走，馬和車也一樣，都不能斜走；只有炮吃子的方式不同，要隔子吃。暗子會擋路，也不能被吃。',
+  'What is the piece order, and who captures whom?': '暗棋大小順序：誰吃誰？',
+  'Strongest to weakest: general, advisor, elephant, chariot, horse, cannon, soldier. A piece captures an adjacent revealed enemy of **equal or lower rank**.':
+    '從大到小：將、士、象、車、馬、炮、兵。一顆子可以吃相鄰、已翻開、**同級或更小**的敵子。',
+  'Strongest at the left. Each piece takes its own rank and everything to its right, with two exceptions.':
+    '最大的在左邊。每顆子都能吃同級和它右邊的所有子，但有兩個例外。',
+  'Two exceptions: the soldier and the cannon': '兩個例外：兵與炮',
+  '**The soldier captures the general**, and the general cannot capture a soldier.':
+    '**兵可以吃將**，將卻不能吃兵。',
+  '**The cannon captures by jumping** and ignores rank, as the next section shows. As a target it keeps its place in the order: the horse and every piece above it can take a cannon, and a soldier cannot.':
+    '**炮隔子吃子**，不看大小，下一節會詳細說明。被吃的時候，炮仍按它在順序中的位置算：馬和比馬大的子都可以吃炮，兵不能。',
+  'What can the cannon capture in banqi?': '暗棋的炮可以吃什麼？',
+  'The cannon captures along a row or column by jumping exactly one piece, the screen, and taking the first piece beyond it if that piece is a revealed enemy, **whatever its rank**. Without a capture it moves one square like everything else.':
+    '炮沿著橫線或直線隔正好一顆子（炮架）吃子，吃的是炮架後面的第一顆子，只要它是已翻開的敵子，**不論大小**。不吃子時，炮和其他子一樣走一格。',
+  'Any piece can be the screen: friendly, enemy, or face-down. With nothing to jump, the cannon cannot capture at all, so a piece right beside it is safe from it.':
+    '任何子都可以當炮架：己方的、敵方的、暗子都行。沒有子可以隔，炮就完全不能吃子，所以緊貼在炮旁邊的子不怕炮。',
+  'Can you chain captures in banqi?': '暗棋可以連吃嗎？',
+  'No. In standard banqi, the game played on Mistboard and in computer competition, a turn is one flip or one move, so a piece captures at most once per turn.':
+    '不行。在標準暗棋裡，也就是 Mistboard 和電腦比賽採用的規則，一回合只能翻一次或走一步，所以一顆子每回合最多吃一次。',
+  'Chain capture is a well-known house rule in Taiwan, offered as a separate table mode by many banqi apps and game sites. A piece that captures may keep capturing in the same turn, and some versions also let a piece attack a face-down tile, turning it over in the process. Mistboard plays only the standard game.':
+    '連吃是台灣很常見的家規，許多暗棋 App 和遊戲網站都把它做成獨立的玩法。吃了子的棋子可以在同一回合繼續吃，有些版本還允許攻擊暗子，順便把它翻開。Mistboard 只採用標準玩法。',
+  'How do you win at banqi, and when is it a draw?': '暗棋怎樣算贏？什麼時候和棋？',
+  'You win when your opponent has **no legal move**, usually because every enemy piece is captured, sometimes because they are boxed in. The general is not royal. Capturing it is progress, and play continues until one side is wiped out or stuck.':
+    '對手**無子可走**時你就贏了，通常是因為敵方棋子全被吃光，有時是因為被困住動不了。將不是王，吃掉它只是佔了優勢，對局會一直進行到一方被吃光或被困死。',
+  'Mistboard draws a game two ways: 60 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
+    'Mistboard 在兩種情況下判和：連續 60 步（雙方各走一步各算一步）沒有翻子或吃子，或同一局面出現三次。翻子或吃子會把兩個計數都歸零，因為局面已經無法回到從前。',
+  'A **chase** is a quiet move, with no flip and no capture, that threatens to capture the enemy piece that just moved, protected or not. The chasing side may not repeat a position for the third time with a chase unless it has no other legal move, so a chase never ends in a repetition draw; a chase that drives the piece onto new squares is not limited. [Why the rule works this way](/blog/banqi-perpetual-chase), with games.':
+    '**捉子**是指不翻子也不吃子、威脅要吃掉對方剛走的那顆子的一步，不論那顆子有沒有保護。捉子的一方不能用捉子讓同一局面第三次出現，除非沒有別的合法著法，所以捉子永遠不會形成重複和棋；如果追捉讓對方的子一直走到新的格子，則不受限制。[這條規則為什麼這樣定](/blog/banqi-perpetual-chase)，附實戰對局。',
+  'The draw rules come from the competition rules of Chen, Shen and Hsu (ICGA Journal, 2010), which set the no-progress limit at 40 plies. Mistboard moved it to 60 in October 2026, because some won endings need more than 40 plies to force the next capture. A game started before 17 October 2026 keeps the 40-ply limit it began under.':
+    '和棋規則出自 Chen、Shen 與 Hsu 的比賽規則（ICGA Journal，2010），原本的無進展上限是 40 步。Mistboard 在 2026 年 10 月改成 60 步，因為有些已經贏定的殘局需要超過 40 步才能逼出下一次吃子。2026 年 10 月 17 日之前開始的對局，仍按開局時的 40 步上限計算。',
+  'Banqi is a folk game and the rules differ by region. Mistboard plays the **standard Taiwanese game**, the one used in computer competition and on the main banqi sites in Taiwan. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
+    '暗棋是民間遊戲，各地規則不同。Mistboard 採用**台灣標準暗棋**，也就是電腦比賽和台灣主要暗棋網站使用的規則。如果你學的是另一種大小順序，本站的引擎和每一盤棋都按本頁的順序進行。',
+  Region: '地區',
+  'How it plays': '玩法',
+  Taiwan: '台灣',
+  'The ladder on this page, and a cannon that captures by jumping one screen':
+    '本頁的大小順序，炮隔一顆炮架吃子',
+  'Hong Kong': '香港',
+  'Pieces rank general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder':
+    '大小順序為將、車、馬、炮、士、象、兵，炮也排在順序裡',
+  'Mainland China': '中國大陸',
+  'The cannon usually does not jump and captures adjacent pieces by rank like everything else':
+    '炮通常不隔子，和其他子一樣按大小吃相鄰的子',
+  'Taiwan’s rules are the ones played on Mistboard.': 'Mistboard 採用的是台灣規則。',
+  'Mistboard plays none of the common house rules: no chain captures, no cannon firing at a face-down tile (a cannon only captures revealed enemy pieces), and no diagonal horse (every piece moves one square up, down, left or right).':
+    'Mistboard 不採用任何常見家規：不能連吃，炮不能打暗子（炮只吃已翻開的敵子），馬也不能斜走（每顆子都只能向上、下、左、右走一格）。',
+  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows.':
+    '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。',
+  'The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
+    '[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
+  'No. A soldier captures only soldiers and the general. The cannon ranks just above the soldier, so the horse and every piece above it can take a cannon, and a soldier cannot.':
+    '不行。兵只能吃兵和將。炮只比兵大一級，所以馬和比馬大的子都可以吃炮，兵不能。',
+  'Can the horse move or capture diagonally in banqi?': '暗棋的馬可以斜走或斜吃嗎？',
+  'No. In standard banqi every piece, the horse included, moves one square up, down, left or right. A diagonal horse is a house rule some apps offer as a table option; Mistboard does not use it.':
+    '不行。在標準暗棋裡，每顆子（包括馬）都只能向上、下、左、右走一格。馬斜走是有些 App 提供的家規選項，Mistboard 不採用。',
+  'Can the general capture a soldier in banqi?': '暗棋的將可以吃兵嗎？',
+  'No. The general can capture every enemy piece except a soldier, and a soldier can capture the general.':
+    '不行。將可以吃除了兵以外的所有敵子，而兵可以吃將。',
+  'Can the cannon capture the general in banqi?': '暗棋的炮可以吃將嗎？',
+  'Yes. The cannon ignores rank: with exactly one piece between them in a straight line, it can capture the general or any other revealed enemy piece.':
+    '可以。炮不看大小：只要兩者在同一直線上、中間正好隔一顆子，炮就能吃將，或吃任何已翻開的敵子。',
+  'Play the computer or send a friend a link. No account needed.':
+    '和電腦下一盤，或把連結傳給朋友。不用註冊。',
+  'The page is reorganized around the questions players ask, with new sections on how to play and chain captures, the capture order set out as one rule with two exceptions, and a table of how the regional rules differ.':
+    '本頁依玩家常問的問題重新整理，新增了怎麼玩和連吃兩節，把大小順序整理成一條規則加兩個例外，並用表格列出各地規則的差別。',
   'Use [Xiangqi Rules](/rules/xiangqi) for the base game. This page covers what changes.':
     '基礎規則請參考[象棋規則](/rules/xiangqi)。本頁只說明變化之處。',
   'Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.':
@@ -11351,21 +11628,10 @@ const ZH_HANT: Record<string, string> = {
   'Horse 傌 / 馬': '馬：傌 / 馬',
   'Soldier 兵 / 卒': '兵卒：兵 / 卒',
   'Cannon 炮 / 砲': '砲：炮 / 砲',
-  'What is the capture order in banqi?': '暗棋的大小順序是什麼？',
-  'General > Advisor > Elephant > Chariot > Horse > Soldier. A piece captures its own rank or anything below it. Two exceptions: the soldier can capture the general, and the general cannot capture a soldier. The cannon captures by jumping and sits outside the ladder.':
-    '將 > 士 > 象 > 車 > 馬 > 卒。棋子可以吃同等級或更低等級的棋子。兩個例外：卒可以吃將，將不能吃卒。砲靠跳吃，不在這個等級序列裡。',
-  'How does the cannon capture in banqi?': '暗棋的砲怎麼吃？',
-  'Under the Taiwanese rules this site plays: it moves along a row or column, jumps over exactly one piece (face-up or face-down, either color), and captures the first revealed enemy beyond it, whatever its rank. It cannot capture an adjacent piece because it needs that one piece to jump. Without a capture it moves one square like everything else. Hong Kong and mainland tables differ; see Rule variants above.':
-    '在本站採用的台灣規則下：砲沿直線或橫線走，隔著恰好一枚棋子（明子或暗子、哪一方的都可以）跳過去，吃掉後面第一枚已翻開的敵子，不論等級。因為一定要隔一子，砲不能吃相鄰的棋子。不吃子時，砲和其他棋子一樣只走一格。香港和大陸的下法不同，見上面的「規則變體」。',
-  'Can a soldier capture a cannon?': '暗棋的兵可以吃砲嗎？',
-  'No. A soldier captures only soldiers and the general. As a target, the cannon ranks between the horse and the soldier, so the horse and everything above it can take a cannon, and a soldier cannot.':
-    '不行。卒只能吃卒和將。砲被吃時算在馬與卒之間，所以馬以上的棋子都能吃砲，卒不能。',
+  'Can a soldier capture a cannon?': '暗棋的兵可以吃炮嗎？',
   'Can a horse capture a chariot?': '暗棋的馬可以吃車嗎？',
   'No. The chariot outranks the horse. A horse captures horses, cannons, and soldiers.':
-    '不行，車比馬高一級。馬能吃馬、砲、卒。',
-  'Can you capture more than once in a turn?': '暗棋可以連吃嗎？',
-  'No. A turn is exactly one action: flip one face-down tile, or move one revealed piece one square, capturing or not. There are no chain captures on Mistboard.':
-    '不行。一回合只做一件事：翻開一枚暗子，或把一枚已翻開的棋子走一格（吃子或不吃子）。Mistboard 上沒有連吃。',
+    '不行，車比馬大。馬能吃馬、炮、兵。',
   'What is the rank order in Jungle Chess?': '鬥獸棋的大小順序是什麼？',
   'Elephant > lion > tiger > leopard > wolf > dog > cat > rat. An animal captures an adjacent enemy of equal or lower rank. The one exception: a rat on land can capture the elephant, and the elephant can never capture a rat.':
     '象 > 獅 > 虎 > 豹 > 狼 > 狗 > 貓 > 鼠。動物可以吃相鄰的同等級或更低等級的敵方動物。唯一的例外：在陸地上的鼠可以吃象，而象永遠不能吃鼠。',
@@ -11394,11 +11660,7 @@ const ZH_HANT: Record<string, string> = {
   "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
     '揭棋保留象棋的棋盤和將死目標，但隱藏所有非將帥棋子的身份。暗子首次按它所在起始位置的棋子走法移動、攻擊和吃子，走完後翻開，之後按真實身份行棋。',
   'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
-    '暗棋規則怎麼玩？看圖掌握棋子大小與吃子順序、兵吃將、砲隔一子吃棋，以及翻子、走法、勝負與和棋判定。採用台灣暗棋玩法，看完可免費線上對弈。',
-  'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
-    '暗棋是在半張象棋棋盤上進行的快節奏隱藏棋子遊戲。三十二枚棋子全部洗勻並背面朝上。第一次翻子決定雙方顏色。之後每回合都在兩種行動中選擇：翻開棋子，或移動一枚已翻開的棋子。除砲外，吃子按等級進行。',
-  'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
-    '雖然它使用[象棋](/rules/xiangqi)棋子，但它是獨立的遊戲：棋子每次移動一格，將不是王棋，背面朝下的棋子不能被吃。本頁說明 Mistboard 採用的確切規則。',
+    '暗棋怎麼玩？三十二顆象棋棋子蓋著鋪滿半張棋盤，輪到你就翻一顆或走一格。大小順序是將、士、象、車、馬、兵，兵能吃將，炮隔一子吃子不看大小。可以連吃嗎？看圖解答。採用台灣標準暗棋，免註冊直接線上對弈。',
   "MistyBanqi is the bot you play in [Banqi](/rules/banqi) on Mistboard. It's a classical engine: it searches ahead and scores positions with a hand-written evaluation, no neural network, and it's open source. It will outplay most people. It also has a few honest blind spots, and the one worth knowing is that it can draw a game it has completely won.":
     'MistyBanqi 是你在 Mistboard 上對弈[暗棋](/rules/banqi)時面對的電腦。它是一個經典引擎：向前搜尋，用手寫評估為局面打分，沒有神經網路，而且開源。它能贏過大多數人，但也有幾個坦誠的盲點，其中最值得了解的是：它會把已經完全贏定的棋下成和棋。',
   'The board is seven files wide and nine ranks deep. Your den sits at the center of your back rank, ringed by three trap squares. Two rivers, each a 2×3 block of water, split the middle of the board. Red moves first from the fixed starting position below.':
@@ -11506,8 +11768,6 @@ const ZH_HANT: Record<string, string> = {
     '暗子是一次性的選擇權：在車位上它只在這一步是車，之後就是它真正的身份。不要把這一步花在便宜的活上。高手會先挺兵再翻砲，搶著翻出真車，翻出三個大子之後就不再翻。這些都還沒有被測量過；本站的開局文章把這場爭論連同出處寫了下來。',
   // banqi rule variants (2026-09-17)
   'Rule variants': '規則版本',
-  'Banqi is a folk game and the rules differ by region. Three families are common. Taiwanese rules use the ladder above and a cannon that captures by jumping one screen. Hong Kong rules rank the pieces general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder. Mainland rules usually have no jumping cannon at all: it captures adjacent pieces by rank like everything else.':
-    '暗棋是民間棋戲，各地規則不同，常見的有三種。台灣規則用本頁的大小順序，砲隔一子跳吃。香港規則的大小是將、車、馬、砲、士、象、卒，砲在等級序列裡面。中國大陸的規則通常沒有跳吃的砲：砲和其他棋子一樣按等級吃相鄰的棋子。',
   // pikafish: Taiwan forms (線上, 網頁, 帳號, 伺服器, 等級, 選單, 資料, 西洋棋, 建置).
   'Pikafish on Mistboard': '皮卡魚象棋：線上對弈與分析',
   'Now opens with where to play and analyze Pikafish in your browser, and points to the official download for the engine itself.':
@@ -11662,51 +11922,30 @@ const ZH_HANT: Record<string, string> = {
   'MOVE 12: BLACK LEADS BY 4': '第 12 回合：黑方領先 4 分',
   'MOVE 13: THE SOLDIER TAKES THE GENERAL': '第 13 回合：卒吃將',
   // banqi rules page re-cut 2026-09-21 (zh-Hant: 砲、暗子、砲架、大小順序).
-  'The board is half a xiangqi board, a 4 by 8 grid. Pieces sit in the squares, and the thirty-two shuffled pieces fill it exactly, every one face-down.':
-    '棋盤是半張象棋盤，4 列 8 行。棋子放在格子裡，洗勻的三十二顆子剛好填滿棋盤，每一顆都蓋著。',
   'Before the first flip. Nobody has a color yet.': '第一次翻子之前。誰都還沒有顏色。',
   'The horse may take the soldier or the other horse, not the chariot above it.':
-    '馬可以吃卒或另一隻馬，不能吃排在它上面的車。',
-  'Strongest at the left, weakest at the right. The cannon captures by jumping; as a target it ranks where it stands here, between the horse and the soldier.':
-    '最大在左，最小在右。砲靠跳吃；被吃的時候，它的位置就是這裡，在馬和卒之間。',
-  'One exception connects the ends of the ladder: the soldier can capture the general, and the general cannot capture a soldier.':
-    '一條例外把順序的兩端接起來：卒可以吃將，將不能吃卒。',
+    '馬可以吃兵或另一隻馬，不能吃排在它上面的車。',
   'The lowest piece can take the highest.': '最小的子可以吃最大的。',
-  'The cannon captures along a row or column by jumping exactly one piece, the screen, and taking the first revealed enemy beyond it, whatever its rank. The screen can be any piece: friendly, enemy, or face-down. With nothing to jump, it cannot capture at all, so an adjacent piece is safe from it. Without a capture it moves one square like everything else.':
-    '砲沿直行或橫列吃子：正好跳過一顆子（砲架），吃掉後面第一顆翻開的敵子，不論大小。砲架可以是任何子：自己的、對方的、或暗子。沒有子可跳就完全不能吃，所以緊鄰的子是安全的。不吃子的時候，它和其他子一樣走一格。',
   'A friendly piece is a screen too. The face-down tile beyond the elephant is not a target.':
-    '自己的子也能當砲架。象後面的暗子不是目標。',
+    '自己的子也能當炮架。象後面的暗子不是目標。',
   'As a target, the cannon is below the horse: the horse may take it.':
-    '被吃的時候，砲排在馬下面：馬可以吃它。',
+    '被吃的時候，炮排在馬下面：馬可以吃它。',
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
-    '卒不能吃砲。它可以吃另一顆卒，或吃將。',
-  'A soldier can take the general, and the general can never take a soldier. No account needed.':
-    '卒可以吃將，將卻永遠不能吃卒。無需帳號。',
-  'Mistboard plays the standard Taiwanese game, the one used in computer competition and on the main banqi sites in Taiwan. The draw rules come from the competition rules of Chen, Shen and Hsu (ICGA Journal, 2010): the no-progress clock and the repetition draw above. Those rules set the clock at 40 plies. Mistboard moved it to 60 in October 2026, because some won endings need more than 40 plies to force the next capture. A common house rule lets a cannon also fire at a face-down tile, often played together with chain captures. That is a side variant, not the standard game, and it is not played here: a cannon only captures revealed enemy pieces. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
-    'Mistboard 採用標準台灣暗棋，也就是電腦對局比賽和台灣主要暗棋網站使用的規則。和棋規則取自 Chen、Shen 與 Hsu 的比賽規則（ICGA Journal，2010 年）：上面的無進展計數和重複局面判和。這些規則把計數定為 40 個半回合。Mistboard 在 2026 年 10 月改為 60，因為有些必勝殘局需要超過 40 個半回合才能逼出下一次吃子。常見的一條家規允許砲隔子打暗子，通常和連吃一起玩。這是變體，不是標準規則，本站不採用：砲只能吃已翻開的敵方棋子。如果你學的是另一套大小順序，本頁這一套才是引擎和站上每一盤棋遵守的。',
+    '兵不能吃炮。它可以吃另一顆兵，或吃將。',
   'An engine game': '一盤引擎對局',
   'Banqi: an engine game under the competition rules': '暗棋：比賽規則下的一盤引擎對局',
-  'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs for the game, and the opponent plays the other.':
-    '顏色不是事先分好的。先手翻開任何一顆子：翻到什麼顏色，這一盤就是他的，對手用另一種。',
   'The first flip turned up red, so the player who flipped it is red.':
     '第一次翻子翻到紅，所以翻的人這盤是紅方。',
-  'On your turn you do exactly one of two things.': '輪到你時，兩件事裡做一件。',
   '**Flip** any face-down tile. It turns over for both players to see, whichever color it turns out to be, and your turn is over.':
     '**翻**任何一顆暗子。它翻開給雙方看，不管翻出什麼顏色，你這一回合就結束了。',
-  '**Move** one of your revealed pieces one square up, down, left, or right, onto an empty square or onto an enemy piece it outranks, which captures it. Face-down tiles block the way and cannot be captured.':
-    '**走**你翻開的一顆子，往上、下、左、右一格，走到空格，或走到一顆比它小的敵子上把它吃掉。暗子擋路，也不能被吃。',
-  'The cannon is the one exception to both the movement and the ranks below: it moves one square like everything else, but it captures by jumping, not by stepping, and rank does not apply to what it takes.':
-    '砲是走法和下面大小順序的唯一例外：它和其他子一樣走一格，但吃子靠跳、不靠走，而且吃什麼不看大小。',
   'The selected horse can move to the three marked squares. The face-down tile above it is not a destination.':
     '選中的馬可以走到三個標記的格子。它上面的暗子不能當目的地。',
-  'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier. A piece captures an adjacent revealed enemy of equal or lower rank.':
-    '從大到小：將、士、象、車、馬、卒。一顆子可以吃相鄰、已翻開、同級或更小的敵子。',
   'The general cannot take the soldier back; the advisor beside it, it can.':
-    '將不能回頭吃卒；旁邊的士，它可以吃。',
+    '將不能回頭吃兵；旁邊的士，它可以吃。',
   'One screen, then the target. Rank does not matter: the cannon takes the general.':
-    '一顆砲架，再來是目標。大小不重要：砲吃將。',
+    '一顆炮架，再來是目標。大小不重要：炮吃將。',
   'No screen, no capture: the chariot beside it is safe, and so is the horse two squares up with nothing between.':
-    '沒有砲架就不能吃：旁邊的車是安全的，上面隔兩格、中間沒有子的馬也是。',
+    '沒有炮架就不能吃：旁邊的車是安全的，上面隔兩格、中間沒有子的馬也是。',
   // Rules-page study embeds (2026-09-25): duck, jungle, fog chess.
   'Misty against itself at 30 seconds a move, shown with the whole board visible. Black wins White’s queen for a rook on move 10, but on move 27 White’s rook lands on e8 and Black’s king steps to d8 beside it. Fog chess has no check to warn it, and 28.Rxd8 captures the king.':
     'Misty 自我對弈，每步 30 秒，這裡顯示整個棋盤。第 10 回合黑方以一車換得白方的后，但第 27 回合白方的車落到 e8，黑方的王走到旁邊的 d8。迷霧國際象棋沒有將軍來提醒它，28.Rxd8 吃掉了王。',
@@ -12032,8 +12271,6 @@ const ZH_HANT: Record<string, string> = {
   'Rewritten as a guide for chess players.': '改寫為寫給西洋棋棋手的指南。',
   'Reworked the diagrams, the history and the prose.': '重做了圖示、歷史部分和正文。',
   'Added a capture table and an FAQ.': '新增吃子對照表和常見問題。',
-  'The repetition and chase rules now sit together in one note under Winning and draws.':
-    '重複局面和捉子的規則現在合併為「勝負與和棋」下的一條說明。',
   '200 games of MistyBanqi against itself at ten million nodes a move, under the Taiwanese competition rules with the forty-ply no-progress draw.':
     'MistyBanqi 自我對弈 200 盤，每步一千萬節點，採用台灣比賽規則和 40 個半回合無進展和棋。',
   'Every game a fresh deal, with both seats the same engine at the same search.':

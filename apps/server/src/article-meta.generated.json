@@ -46,7 +46,7 @@
     "status": "published",
     "zhTitles": {
       "zh-hans": "暗棋规则：玩法详解与免费在线对弈",
-      "zh-hant": "暗棋規則：吃子大小、兵吃將與砲的走法"
+      "zh-hant": "暗棋規則：怎麼玩、大小順序與連吃"
     }
   },
   "banqi-chariot-endgame": {
@@ -595,6 +595,16 @@
     "zhTitles": {
       "zh-hans": "求解器在古谱里发现了什么",
       "zh-hant": "求解器在古譜裡發現了什麼"
+    }
+  },
+  "tang-dan": {
+    "title": "Tang Dan 唐丹",
+    "kind": "article",
+    "description": "Ten national titles, more than any other woman, and the 2025 women's world title. Her season from Shanghai to the Asian title in Manila, five games on the board, 50 games analysed.",
+    "status": "published",
+    "zhTitles": {
+      "zh-hans": "唐丹",
+      "zh-hant": "唐丹"
     }
   },
   "three-kingdoms-banqi": {

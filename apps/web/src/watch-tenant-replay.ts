@@ -325,11 +325,11 @@ function localizeResultLabel(label: string | undefined, result: string, locale: 
   return label;
 }
 
-// English keeps the Title Case token this strip always showed; the zh locales
-// go through the shared, total termination map (the old four-case switch here
-// let "General Captured" and "No Legal Moves" through untranslated).
+// English reads the token mid-sentence ("by resignation"); the zh locales go
+// through the shared, total termination map (the old four-case switch here let
+// "General Captured" and "No Legal Moves" through untranslated).
 function terminationLabel(reason: string, locale: Locale): string {
-  if (locale === 'en') return labelize(reason);
+  if (locale === 'en') return labelize(reason).toLowerCase();
   return sharedTerminationLabel(reason, locale);
 }
 

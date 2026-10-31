@@ -211,39 +211,86 @@ export function boardLastMoveMarkersSvg(
  * after it lands.
  */
 function boardLastMoveEdgeSvg(to: BoardPoint, radius: number, lift: number): string {
-  const r = round2(radius);
+  return edgePath(raisedPieceEdgeD(to, { shape: 'disc', half: radius, corner: 0, lift }), to);
+}
+
+/**
+ * The outline of a raised (3D) piece's face, for marks drawn on the piece
+ * itself (its edge in gold here, the selection's green in board-select-3d.ts):
+ * a disc of radius `half`, or a rounded square of outer half-width `half` and
+ * outer corner `corner`, raised `lift` above the point the piece stands on.
+ */
+export type RaisedPieceOutline = {
+  shape: XiangqiPieceShape;
+  half: number;
+  corner: number;
+  lift: number;
+};
+
+/** The face outline of a 3D piece on the intersection layout (a disc). */
+export function raisedPieceOutline(piece: BoardLastMovePiece): RaisedPieceOutline {
+  return { shape: 'disc', half: boardLastMoveBand(piece).inner, corner: 0, lift: piece.lift ?? 0 };
+}
+
+/** The face outline of a 3D piece on the square grid: a rounded square, or the
+ *  asset sets' disc. */
+export function raisedCellPieceOutline(piece: BoardLastMoveCellPiece): RaisedPieceOutline {
+  const k = piece.size / 100;
+  const outer = piece.outer ?? xiangqiPieceOuterRadius(piece.set);
+  // A rounded square's corner grows with its half-width beyond the stroke's
+  // centre line, so a mark stays concentric with the outline.
+  const corner = SQUARE_CORNER_PER_HALF * PIECE_OUTLINE_HALF + (outer - PIECE_OUTLINE_HALF);
+  return {
+    shape: xiangqiPieceSetShape(piece.set, 'square'),
+    half: outer * k,
+    corner: corner * k,
+    lift: piece.lift ?? 0,
+  };
+}
+
+/**
+ * The path of a raised piece's edge, the wall showing below its face. A disc:
+ * down both sides from the face's centre line, round the base, back up under
+ * the face. A rounded square: the wall between the face's bottom edge and the
+ * base's, down the sides and round both corners.
+ */
+export function raisedPieceEdgeD(to: BoardPoint, outline: RaisedPieceOutline): string {
+  const { lift } = outline;
+  if (outline.shape === 'square') {
+    const h = round2(outline.half);
+    const rc = round2(outline.corner);
+    const left = round2(to.x - h);
+    const right = round2(to.x + h);
+    const faceBottom = round2(to.y - lift + h);
+    const baseBottom = round2(to.y + lift + h);
+    return (
+      `M${left} ${round2(faceBottom - rc)}V${round2(baseBottom - rc)}` +
+      `A${rc} ${rc} 0 0 0 ${round2(left + rc)} ${baseBottom}H${round2(right - rc)}` +
+      `A${rc} ${rc} 0 0 0 ${right} ${round2(baseBottom - rc)}V${round2(faceBottom - rc)}` +
+      `A${rc} ${rc} 0 0 1 ${round2(right - rc)} ${faceBottom}H${round2(left + rc)}` +
+      `A${rc} ${rc} 0 0 1 ${left} ${round2(faceBottom - rc)}Z`
+    );
+  }
+  const r = round2(outline.half);
   const left = round2(to.x - r);
   const right = round2(to.x + r);
   const top = round2(to.y - lift);
   const base = round2(to.y + lift);
-  const d = `M${left} ${top}V${base}A${r} ${r} 0 0 0 ${right} ${base}V${top}A${r} ${r} 0 0 1 ${left} ${top}Z`;
-  return edgePath(d, to);
+  return `M${left} ${top}V${base}A${r} ${r} 0 0 0 ${right} ${base}V${top}A${r} ${r} 0 0 1 ${left} ${top}Z`;
 }
 
-/**
- * The same gold edge under a rounded square of outer half-width `half` and
- * outer corner `corner` (a 3D piece on the Square grid): the wall between the
- * face's bottom edge and the base's, down the sides and round both corners.
- */
-function boardLastMoveSquareEdgeSvg(
+/** A raised piece's face: the disc or rounded square on top, raised by `lift`. */
+export function raisedPieceFaceSvg(
   to: BoardPoint,
-  half: number,
-  corner: number,
-  lift: number,
+  outline: RaisedPieceOutline,
+  attrs: string,
 ): string {
-  const h = round2(half);
-  const rc = round2(corner);
-  const left = round2(to.x - h);
-  const right = round2(to.x + h);
-  const faceBottom = round2(to.y - lift + h);
-  const baseBottom = round2(to.y + lift + h);
-  const d =
-    `M${left} ${round2(faceBottom - rc)}V${round2(baseBottom - rc)}` +
-    `A${rc} ${rc} 0 0 0 ${round2(left + rc)} ${baseBottom}H${round2(right - rc)}` +
-    `A${rc} ${rc} 0 0 0 ${right} ${round2(baseBottom - rc)}V${round2(faceBottom - rc)}` +
-    `A${rc} ${rc} 0 0 1 ${round2(right - rc)} ${faceBottom}H${round2(left + rc)}` +
-    `A${rc} ${rc} 0 0 1 ${left} ${round2(faceBottom - rc)}Z`;
-  return edgePath(d, to);
+  const h = round2(outline.half);
+  const cy = round2(to.y - outline.lift);
+  if (outline.shape === 'square') {
+    return `<rect ${attrs} x="${round2(to.x - h)}" y="${round2(cy - h)}" width="${round2(2 * h)}" height="${round2(2 * h)}" rx="${round2(outline.corner)}"/>`;
+  }
+  return `<circle ${attrs} cx="${to.x}" cy="${cy}" r="${h}"/>`;
 }
 
 function edgePath(d: string, to: BoardPoint): string {
@@ -380,9 +427,7 @@ function cellPieceMark(to: BoardPoint, piece: BoardLastMoveCellPiece): string {
   // centre line, so the ring stays concentric with the outline.
   const corner = SQUARE_CORNER_PER_HALF * PIECE_OUTLINE_HALF + (outer - PIECE_OUTLINE_HALF);
   if (piece.lift) {
-    return shape === 'square'
-      ? boardLastMoveSquareEdgeSvg(to, outer * k, corner * k, piece.lift)
-      : boardLastMoveEdgeSvg(to, outer * k, piece.lift);
+    return edgePath(raisedPieceEdgeD(to, raisedCellPieceOutline(piece)), to);
   }
   const width = CELL_LASTMOVE_RING_WIDTH * k;
   const half = round2(outer * k + width / 2);

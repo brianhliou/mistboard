@@ -22,14 +22,22 @@ import {
 import { pieceAnimationDurationMs } from './board-anim.js';
 import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 import { t } from './i18n/catalog.js';
+import {
+  createLiveFinishBadges,
+  finishBadgesForResult,
+  generalSquareOn,
+  type LiveFinishBadges,
+} from './live-finish-badges.js';
 import { initLiveSound, playSound } from './live-sound.js';
 import { createMoveNavBar, type MoveNavBar } from './move-nav-bar.js';
 import {
   clonePuzzleState,
   firstPuzzleViewPly,
   isPuzzleComplete,
+  isReplayLive,
   type PuzzleDetail,
   type PuzzleMove,
+  type PuzzleMoveMark,
   type PuzzleNavigation,
   type PuzzleSession,
   type PuzzleState,
@@ -98,6 +106,13 @@ const REVEAL_STEP_MS = 650;
 // How long the pre-setup position holds before the opponent's setup move
 // glides in (#664): long enough for the eye to land on the board.
 const SETUP_INTRO_PAUSE_MS = 400;
+// After a correct move the board holds on it under its ✓ before the scripted
+// reply glides in (lichess), so the verdict reads before the position changes.
+const REPLY_PAUSE_MS = 500;
+// How long a wrong try stays on the board under its ✗ before it glides back.
+const WRONG_HOLD_MS = 700;
+// The finish-badge layer's default delay before the mate slash starts drawing.
+const MATE_SLASH_DELAY_MS = 250;
 
 // Variants surfaced in the Settings variant picker (order = display order; the
 // first is the default view). Standard Xiangqi (the mined real-game corpus,
@@ -233,6 +248,7 @@ export async function mountPuzzles(
         trackPuzzleAttempted(session, 'abandoned');
       }
       session?.analysis?.dispose();
+      forgetPaintedPuzzle();
       selectedId = null;
       session = null;
       if (pushUrl)
@@ -537,8 +553,7 @@ export async function mountPuzzles(
 }
 
 // `history`: show the source game's moves before the puzzle in the move list
-// (the trainer page). Streak and embeds leave it out: one is a timed run where
-// the game is beside the point, the other a small frame.
+// (the trainer page and Puzzle Streak). Embeds leave it out: a small frame.
 function createPuzzleSession(
   puzzle: PuzzleDetail,
   opts: { history?: boolean } = {},
@@ -611,6 +626,10 @@ function renderPuzzleDetail(
   // Tag the board with the current puzzle so async reveal playback can detect a
   // navigation away (new puzzle = new id) and stop stepping a stale session.
   board.dataset.puzzleId = session.puzzle.id;
+  // Whether a move made now would be taken: false while a pause holds the
+  // board (the setup glide, the ✓ before a reply, a wrong try's ✗) or the
+  // solver is scrubbed back.
+  board.dataset.puzzleLive = String(isReplayLive(session));
   const side = document.createElement('aside');
   side.className = 'puzzle-side-panel';
 
@@ -621,8 +640,9 @@ function renderPuzzleDetail(
     displayState,
     renderSession,
     submitMove: (move) => submitMove(session, move, renderSession, onSolved, opts),
+    moveMarks: puzzleMoveMarks(session),
   });
-  paintWrongFlash(board, session);
+  renderedPuzzleSession = session;
 
   // Board zoom, same grip and same persisted --uni-board-scale as the room,
   // review and analysis boards. Attached per render because renderSession
@@ -693,6 +713,7 @@ function renderPuzzleDetail(
 
   boardPanel.append(board, side);
   host.append(boardPanel);
+  paintMateSlash(board, session, displayState);
   keepActivePuzzleMoveInView(side);
   // A re-render while the menu is open (a step from the bar's own arrows, a
   // vote) keeps it open on the new bar.
@@ -741,7 +762,7 @@ export type PuzzleScrub = 'first' | 'previous' | 'next' | 'last';
 // Held while the opening glide is pending: the board then shows the position
 // before the setup move whatever the cursor says.
 function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: PuzzleScrub): void {
-  if (session.submitting || session.setupIntro) return;
+  if (session.submitting || session.setupIntro || session.wrongPreview) return;
   const firstPly = firstPuzzleViewPly(session);
   const lastPly = session.playedMoves.length;
   switch (action) {
@@ -779,7 +800,7 @@ function scrubPuzzle(session: PuzzleSession, renderSession: () => void, action: 
 // A click on a move in the list: show the position after it. One step glides
 // like the arrows; a longer jump repaints, as ⏮ and ⏭ do.
 function jumpPuzzle(session: PuzzleSession, renderSession: () => void, viewPly: number): void {
-  if (session.submitting || session.setupIntro) return;
+  if (session.submitting || session.setupIntro || session.wrongPreview) return;
   const target = Math.min(
     session.playedMoves.length,
     Math.max(firstPuzzleViewPly(session), viewPly),
@@ -803,7 +824,7 @@ function puzzleMoveIntoView(session: PuzzleSession, viewPly: number): PuzzleMove
 }
 
 function puzzleScrubBounds(session: PuzzleSession): { atStart: boolean; atEnd: boolean } {
-  const held = session.submitting || session.setupIntro !== null;
+  const held = session.submitting || session.setupIntro !== null || !!session.wrongPreview;
   return {
     atStart: session.viewPly <= firstPuzzleViewPly(session) || held,
     atEnd: session.viewPly >= session.playedMoves.length || held,
@@ -1097,13 +1118,14 @@ async function submitMove(
 ): Promise<void> {
   // Once the answer has been shown (or the puzzle is solved), the board is a
   // locked replay: no further moves are submitted.
-  if (session.submitting || session.revealed || session.solved) return;
+  if (session.submitting || session.revealed || session.solved || session.wrongPreview) return;
   session.setupIntro = null;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.checkingMove') };
   renderSession();
   const beforeCount = puzzlePieceCount(session.state);
   const playedCountBefore = session.playedMoves.length;
+  const stateBefore = session.state;
   const nextSolverMoves = [...session.solverMoves, move];
   const submitted = await (opts.submitAttempt ?? submitPuzzleAttempt)(
     session.puzzle.id,
@@ -1129,6 +1151,9 @@ async function submitMove(
     session.playedMoves = attempt.playedMoves;
     session.state = attempt.state;
     session.viewPly = session.playedMoves.length;
+    // With a scripted reply, hold on the solver's move (its ✓) first; the reply
+    // glides in after REPLY_PAUSE_MS. Input stays blocked until then.
+    if (session.playedMoves.length - playedCountBefore >= 2) session.viewPly -= 1;
     if (attempt.complete) {
       session.solved = true;
       session.focusNext = true;
@@ -1160,6 +1185,7 @@ async function submitMove(
     // the answer out from the ply that went wrong, like a reveal.
     session.failed = true;
     session.wrongMove = { ply: session.playedMoves.length, move: attempt.move };
+    session.wrongPreview = wrongPreviewOf(session, stateBefore, attempt.move);
     showSolutionLine(session, solution, session.playedMoves.length);
     session.feedback = { kind: 'bad', text: t('puzzle.tryAnotherMove') };
     playSound('learn-failure');
@@ -1169,10 +1195,7 @@ async function submitMove(
     if (attempt.code === 'incorrect-move') {
       const ply = session.playedMoves.length;
       session.wrongTries = [...(session.wrongTries ?? []), { ply, move: attempt.move }];
-      session.wrongFlash = {
-        squares: 'from' in attempt.move ? [attempt.move.from, attempt.move.to] : [attempt.move.to],
-        at: Date.now(),
-      };
+      session.wrongPreview = wrongPreviewOf(session, stateBefore, attempt.move);
     }
     // Persist the failed state so the escape hatches (hint / view solution /
     // next) survive the piece-select feedback reset on the next render.
@@ -1186,15 +1209,21 @@ async function submitMove(
     playSound('learn-failure');
   }
   if (rating) reportAttemptRating(rating);
+  // The solver's own move lands instantly (they just chose it); the scripted
+  // reply waits under the ✓, then glides. A wrong try waits under its ✗, then
+  // glides back; Streak's ending miss then plays the answer out.
+  const reply =
+    attempt.ok && session.viewPly < session.playedMoves.length
+      ? attempt.playedMoves.at(-1)
+      : undefined;
+  session.pendingReplyPly = reply ? session.playedMoves.length - 1 : null;
   renderSession();
-  // A correct move lands the solver's move AND the engine reply in the same
-  // render; glide ONLY the reply (the user just chose their own move, so it
-  // reads fine landing instantly — the reply is what teleported before).
-  if (attempt.ok && attempt.playedMoves.length - playedCountBefore >= 2) {
-    const reply = attempt.playedMoves.at(-1);
-    if (reply) animatePuzzleMove(session, reply);
+  if (reply) playPuzzleReply(session, renderSession, reply);
+  if (session.wrongPreview) {
+    takeBackWrongTry(session, renderSession, () => {
+      if (session.wrongMove && session.revealed) playbackSolution(session, renderSession);
+    });
   }
-  if (session.wrongMove && session.revealed) playbackSolution(session, renderSession);
   opts.onAttempt?.(attempt);
 }
 
@@ -1205,6 +1234,8 @@ async function submitMove(
 // then play the highlighted piece, take the full solution, or move on.
 async function requestHint(session: PuzzleSession, renderSession: () => void): Promise<void> {
   if (session.submitting || session.revealed || session.solved) return;
+  // A wrong try still held under its ✗ is dropped, not glided back.
+  session.wrongPreview = null;
   session.setupIntro = null;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.fetchingHint') };
@@ -1242,6 +1273,8 @@ async function requestHint(session: PuzzleSession, renderSession: () => void): P
 // rated attempt on the first terminal action (idempotent server-side).
 async function revealSolution(session: PuzzleSession, renderSession: () => void): Promise<void> {
   if (session.submitting || session.revealed) return;
+  // A wrong try still held under its ✗ is dropped, not glided back.
+  session.wrongPreview = null;
   session.setupIntro = null;
   session.submitting = true;
   session.feedback = { kind: 'pending', text: t('puzzle.loadingSolution') };
@@ -1347,25 +1380,117 @@ function fitPuzzleGrip(column: HTMLElement): void {
   });
 }
 
-// A wrong try's squares flash red for a moment after it is taken back. The
-// board repaints on every render, so the flash is re-applied with its elapsed
-// time as a negative delay and keeps its phase instead of restarting.
-const WRONG_FLASH_MS = 700;
+// The session the page last painted. A pause (the reply, a wrong try's
+// take-back) checks it before acting, so a timer from a puzzle the solver has
+// left never repaints over what replaced it; painting anything else forgets it.
+let renderedPuzzleSession: PuzzleSession | null = null;
 
-function paintWrongFlash(board: HTMLElement, session: PuzzleSession): void {
-  const flash = session.wrongFlash;
-  if (!flash) return;
-  const elapsed = Date.now() - flash.at;
-  if (elapsed >= WRONG_FLASH_MS) {
-    session.wrongFlash = null;
+function isPaintedPuzzleSession(session: PuzzleSession): boolean {
+  return renderedPuzzleSession === session;
+}
+
+function forgetPaintedPuzzle(): void {
+  renderedPuzzleSession = null;
+  puzzleFinishBadges?.destroy();
+  puzzleFinishBadges = null;
+}
+
+// Verdict badges for the painted position: ✗ on a wrong try held before its
+// take-back, else ✓ on the move just played when it was the solver's own find.
+// Moves of a shown solution (reveal, Streak's miss) get none: they were shown,
+// not found, as in the move list.
+function puzzleMoveMarks(session: PuzzleSession): PuzzleMoveMark[] {
+  if (session.wrongPreview) return [{ square: session.wrongPreview.move.to, verdict: 'wrong' }];
+  if (session.setupIntro || session.viewPly < 1) return [];
+  const index = session.viewPly - 1;
+  const move = session.playedMoves[index];
+  const revealedFrom = session.revealed ? (session.revealedFromPly ?? null) : null;
+  const shown = revealedFrom !== null && index >= revealedFrom;
+  if (!move || index % 2 !== 0 || shown) return [];
+  return [{ square: move.to, verdict: 'right' }];
+}
+
+function wrongPreviewOf(
+  session: PuzzleSession,
+  before: PuzzleState,
+  move: PuzzleMove,
+): PuzzleSession['wrongPreview'] {
+  try {
+    return { state: puzzleBoardAdapter(session.puzzle.variant).applyMove(before, move), move };
+  } catch {
+    // A move the client cannot replay just reads as not taken.
+    return null;
+  }
+}
+
+function playPuzzleReply(
+  session: PuzzleSession,
+  renderSession: () => void,
+  reply: PuzzleMove,
+): void {
+  const held = session.viewPly;
+  window.setTimeout(() => {
+    session.pendingReplyPly = null;
+    if (!isPaintedPuzzleSession(session)) return;
+    // A step through the list in the pause leaves the cursor where it was put.
+    if (session.viewPly !== held) {
+      renderSession();
+      return;
+    }
+    session.viewPly = session.playedMoves.length;
+    renderSession();
+    animatePuzzleMove(session, reply);
+  }, REPLY_PAUSE_MS);
+}
+
+function takeBackWrongTry(
+  session: PuzzleSession,
+  renderSession: () => void,
+  then: () => void,
+): void {
+  const preview = session.wrongPreview;
+  if (!preview) return;
+  window.setTimeout(() => {
+    if (session.wrongPreview !== preview) return;
+    session.wrongPreview = null;
+    if (!isPaintedPuzzleSession(session)) return;
+    renderSession();
+    animatePuzzleMove(session, preview.move, { reverse: true });
+    then();
+  }, WRONG_HOLD_MS);
+}
+
+// The mated general's slash, the one the game rooms draw (live-finish-badges.ts),
+// on a puzzle that ends in mate. The layer sits over the painted board and is
+// rebuilt on every render, so the slash starts once and keeps its phase from
+// `mateSlashAt`; leaving the mate clears it and stepping back replays it.
+let puzzleFinishBadges: LiveFinishBadges | null = null;
+
+function paintMateSlash(column: HTMLElement, session: PuzzleSession, shown: PuzzleState): void {
+  puzzleFinishBadges?.destroy();
+  puzzleFinishBadges = null;
+  const status = shown.status as { type: string; winner?: string | null; reason?: string };
+  const atEnd = isReplayLive(session) && status.type === 'finished';
+  if (!atEnd || status.reason !== 'checkmate' || !status.winner) {
+    session.mateSlashAt = null;
     return;
   }
-  for (const square of flash.squares) {
-    const hit = board.querySelector<SVGElement>(`[data-square="${square}"]`);
-    if (!hit) continue;
-    hit.classList.add('puzzle-wrong-flash');
-    hit.style.setProperty('--puzzle-wrong-flash-delay', `-${elapsed}ms`);
-  }
+  const board = shown.board as Record<string, { color: string; role?: string } | undefined>;
+  const colors = [
+    ...new Set(Object.values(board).flatMap((piece) => (piece ? [piece.color] : []))),
+  ];
+  const badges = finishBadgesForResult({
+    colors,
+    winner: status.winner,
+    reason: 'checkmate',
+    generalSquare: (color) => generalSquareOn(board, color),
+  });
+  if (badges.length === 0) return;
+  session.mateSlashAt ??= Date.now();
+  puzzleFinishBadges = createLiveFinishBadges(column, paintedPuzzleBoard(column));
+  puzzleFinishBadges.play(session.puzzle.id, badges, {
+    delayMs: MATE_SLASH_DELAY_MS - (Date.now() - session.mateSlashAt),
+  });
 }
 
 // Both widths move with the viewport AND with the zoom scale (applyBoardScale
@@ -1430,6 +1555,7 @@ function puzzlePieceCount(state: PuzzleState): number {
 
 function renderStatus(host: HTMLElement, message: string): void {
   resetPhoneMenu();
+  forgetPaintedPuzzle();
   const status = document.createElement('p');
   status.className = 'puzzles-status';
   status.textContent = message;
@@ -1498,6 +1624,7 @@ function navigationFor(
 // The replay-aware state to display: the live state when the cursor sits at the
 // tip, else the initial state with the first viewPly moves re-applied.
 function puzzleReplayState(session: PuzzleSession): PuzzleState {
+  if (session.wrongPreview) return session.wrongPreview.state;
   if (session.setupIntro) return session.setupIntro;
   if (session.viewPly >= session.playedMoves.length) return session.state;
   const adapter = puzzleBoardAdapter(session.puzzle.variant);
@@ -1578,6 +1705,7 @@ function buildPuzzlesFrame(): {
 // only surfaced trainer, and a deep link to another variant settles once.
 function renderPendingBoard(host: HTMLElement, message: string | null): void {
   resetPhoneMenu();
+  forgetPaintedPuzzle();
   const panel = document.createElement('div');
   panel.className = 'puzzle-board-panel puzzle-board-panel--pending';
   const board = document.createElement('div');
@@ -1729,7 +1857,7 @@ export function mountPuzzleSolver(
   }
   restoreBoardScale();
   installPuzzleGripFit();
-  const session = createPuzzleSession(puzzle);
+  const session = createPuzzleSession(puzzle, { history: opts.mode === 'streak' });
   if (opts.mode === 'streak') {
     void sendPuzzleQualityEvent(puzzle.id, session.qualitySessionId, 'view').catch(() => {});
   }
@@ -1768,6 +1896,7 @@ export function mountPuzzleSolver(
   return {
     dispose: () => {
       disposed = true;
+      if (isPaintedPuzzleSession(session)) forgetPaintedPuzzle();
       session.analysis?.dispose();
       window.removeEventListener('keydown', onKeyDown);
     },

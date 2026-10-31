@@ -129,6 +129,12 @@ export type WebVariantTenant = {
   // registration carries the same flag (crosstableReviewUrl);
   // variant-registry-sync.test.ts holds the two.
   finishedGameOpensRoom?: true;
+  // The live room is gated by the server alone: /room/<prefix>* routes to
+  // loadLiveRoomClient even while enabled() is false, because enabled() reads a
+  // client hint (the admin flag from /api/auth/me) that a fresh page load does
+  // not have yet. The room's WebSocket refuses whoever the server would not
+  // seat (close 1008), and the room client shows that refusal.
+  liveRoomServerGated?: true;
   // Self-contained live-room client. Resolves to the bootstrap
   // function so callers can preload the chunk before swapping the URL/DOM.
   // Tenants without one ride the chess live shell (live.ts) and register
@@ -1105,14 +1111,21 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     // Three Kingdoms banqi (三國暗棋, #628): a playtest offered to admin
     // accounts on prod (#684) and to everyone in a build with
     // VITE_THREE_KINGDOMS_BANQI_ENABLED (local only). See
-    // ../three-kingdoms-banqi-access.ts. No postgame, review or watch surface,
-    // so like HK mahjong the server marks its finished rows unavailable; the
-    // room itself still shows the finished game. Whether it gets any of those
-    // is the 10-31 checkpoint's call.
+    // ../three-kingdoms-banqi-access.ts. A finished game opens its review page
+    // (admin-only, like the room); no export and no watch surface.
     gameSpecId: THREE_KINGDOMS_BANQI_SPEC_ID,
     roomIdPrefix: 'tkb_',
     enabled: threeKingdomsBanqiOffered,
+    // /room/tkb_* loads this client whatever the admin hint says; the server's
+    // WebSocket door refuses a non-admin with 1008 and the room says why.
+    liveRoomServerGated: true,
     pageTitleKey: 'variant.threeKingdomsBanqi.name',
+    gameRouteBase: '/three-kingdoms-banqi/game',
+    mountPostgame: (root, roomId) =>
+      import('../live-three-kingdoms-banqi-postgame.js').then(
+        ({ mountThreeKingdomsBanqiPostgame }) => mountThreeKingdomsBanqiPostgame(root, roomId),
+      ),
+    reviewRouteBase: '/three-kingdoms-banqi/game',
     loadLiveRoomClient: () =>
       import('../live-three-kingdoms-banqi.js').then(
         ({ bootstrapThreeKingdomsBanqiLiveRoom }) =>
@@ -1134,7 +1147,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsRated: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['5m5', '10m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       // One predicate for both (the conformance test checks the pair). It is
       // read per call, never at module load, because the admin answer arrives
       // with /api/auth/me after the registry is built.

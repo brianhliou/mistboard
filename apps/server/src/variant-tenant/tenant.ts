@@ -546,6 +546,13 @@ export type VariantTenant<
     // new state, so a hook that settles a four-seat window one seat at a time
     // costs four round trips through the event writer.
     pendingAction?(state: State): TenantPendingAction<C, M> | null;
+    /**
+     * Replace a real clock expiry with a legal move for the expired seat.
+     * Called inside the serialized writer against the current state, never
+     * during replay. Null retains the normal timeout loss. The replacement is
+     * persisted as move-played and uses ordinary move clock accounting.
+     */
+    clockExpiryMove?(state: State, color: C, at: number): M | null;
   };
   visibility: {
     // Per-seat wire-event redaction. Fog tenants hide opponent moves and

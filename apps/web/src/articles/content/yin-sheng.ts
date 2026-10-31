@@ -289,6 +289,7 @@ const G_QUALIFIER: XiangqiReplaySpec = {
 
 export const yinShengArticle: Article = {
   slug: 'yin-sheng',
+  contactNote: true,
   homeRow: 'deep-dives',
   kind: 'article',
   publisher: 'mistboard',

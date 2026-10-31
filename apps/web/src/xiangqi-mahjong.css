@@ -1008,6 +1008,16 @@
   opacity: 0.85;
 }
 
+/* A match score is one figure ("9–7"); it never breaks at the dash. */
+.xmj-result__total--match,
+.xmj-result__total--match b {
+  white-space: nowrap;
+}
+
+.xmj-result__head > div {
+  min-width: 0;
+}
+
 /* Points that went to the other player: the number, without the gold. */
 .xmj-result--theirs .xmj-result__total {
   color: var(--xmj-on-felt);
@@ -1725,6 +1735,24 @@ ol.xmj-log {
 .watch-queue-preview .xmj-result--brief .xmj-result__title {
   font-size: 16px;
   white-space: nowrap;
+}
+
+/* A queue card's finished match: the score sized to sit beside the line. */
+.watch-queue-preview .xmj-result__head {
+  gap: 10px;
+}
+
+.watch-queue-preview .xmj-result__total--match b {
+  font-size: 28px;
+}
+
+.watch-queue-preview .xmj-result__head--match .xmj-result__title {
+  font-size: 15px;
+  white-space: normal;
+}
+
+.watch-queue-preview .xmj-result__head--match .xmj-result__sub {
+  font-size: 12px;
 }
 
 /* The foot is hidden, so the winning hand closes the group. */

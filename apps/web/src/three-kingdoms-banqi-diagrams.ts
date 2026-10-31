@@ -23,9 +23,10 @@ import {
   type ThreeKingdomsBanqiState,
 } from '@mistboard/game';
 import { activeXiangqiPieceSet } from './articles/diagrams.js';
-import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import {
   animateBoardLastMoveArrival,
+  BOARD_LASTMOVE_MARKER_SELECTOR,
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
   type BoardLastMovePiece,
   boardLastMoveMarkersSvg,
@@ -397,8 +398,15 @@ export function animateThreeKingdomsBanqiBoardMove(
   const to = point(settle);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
   // The gold band rides the piece in, as on xiangqi and jieqi. A reverse step
-  // draws the prior move's marks elsewhere, so nothing follows that glide.
-  if (!opts.reverse) animateBoardLastMoveArrival(host, from, to, duration);
+  // draws the prior move's marks elsewhere: they fade in as the glide lands, so
+  // a tile's coloured edge never sits waiting for the piece (Brian, 2026-10-30).
+  if (!opts.reverse) {
+    animateBoardLastMoveArrival(host, from, to, duration);
+    return;
+  }
+  for (const marker of host.querySelectorAll(BOARD_LASTMOVE_MARKER_SELECTOR)) {
+    drawMarkerOnArrival(marker, duration);
+  }
 }
 
 /** Turn a live-flipped tile over (banqi's turn-over, on the point grid). The

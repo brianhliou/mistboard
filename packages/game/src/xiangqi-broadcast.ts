@@ -445,6 +445,41 @@ export function xiangqiBroadcastVariant(): typeof XIANGQI_SPEC_ID {
   return XIANGQI_SPEC_ID;
 }
 
+// A midnight reading is a day the source wrote with no time: dpxq dates a
+// record 2026-04-03 and older imports stored that as 00:00 China time, which
+// put a Houston round at "12:00 AM". Read it back as the day.
+const MIDNIGHT = /^(\d{4}-\d{2}-\d{2})T00:00(?::00(?:\.0+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/;
+
+function dayOrMoment(value: string): string {
+  return MIDNIGHT.exec(value)?.[1] ?? value;
+}
+
+/**
+ * When a round started, for every surface that shows it (round menu, round
+ * header, events card): its games' own dates over the seeded schedule. A seed
+ * is a guess made before the event (the 2026 league was seeded one round a day
+ * at 14:30 and played two a day, 13:00 and 19:00), and a round the poller added
+ * from the source has no seed at all. A game time with a clock wins; a game
+ * that states only its day keeps the seed's time when the seed falls on that
+ * day, and shows the day alone when it does not.
+ */
+export function xiangqiBroadcastRoundStart(
+  playedAt: Iterable<string | null | undefined>,
+  startsAt: string | null | undefined,
+): string | undefined {
+  let earliest: string | undefined;
+  for (const raw of playedAt) {
+    if (!raw || Number.isNaN(Date.parse(raw))) continue;
+    if (!earliest || Date.parse(raw) < Date.parse(earliest)) earliest = raw;
+  }
+  const seeded = startsAt ? dayOrMoment(startsAt) : undefined;
+  if (!earliest) return seeded;
+  const played = dayOrMoment(earliest);
+  if (played.includes('T')) return played;
+  if (seeded?.includes('T') && seeded.slice(0, 10) === played) return seeded;
+  return played;
+}
+
 /**
  * Where a tour's or round's records came from, derived from the provenance each
  * board already carries.
