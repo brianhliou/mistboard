@@ -26,6 +26,8 @@ Conventions:
 
 ### Playing
 
+- Three Kingdoms banqi shows each seat's points under the board, plays bot sounds and animates flips; banqi and Three Kingdoms banqi keep unturned tiles face down when a game ends; Three Kingdoms banqi offers 1+1 and 3+2 ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
+- 3D pieces show a selection with a green side and capture targets with a green face instead of rings ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - On phones, the waiting room puts the invite where the moves go, so the board fills the width, and every room's board has square corners that meet the screen edges ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - Three Kingdoms Banqi rooms show captured pieces and points on the seat lines, and the board holds still through the game ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - The end-of-game buttons fit inside a taller right column, so the column and clock no longer move when a game ends ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
@@ -101,6 +103,8 @@ Conventions:
 
 ### Learning and puzzles
 
+- Puzzles mark right and wrong moves on the board and in the move list, and themes get their own card linking to each theme's drill ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
+- Puzzles from online games give the year instead of player names, and Puzzle Streak shows the moves played ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - The banqi rules page is reorganized around the questions players ask, in English and Chinese ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - Puzzle Streak serves puzzles that get harder as you go, until one wrong move ends the run ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - a themes page trains one puzzle theme at a time, with a count for each theme ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
@@ -157,6 +161,7 @@ Conventions:
 
 ### Watching and review
 
+- Finished Xiangqi Mahjong games lead with who won and how, then the points ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - Finished Three Kingdoms Banqi games open on a review page laid out like banqi's ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - Broadcast pages trade the share box for a Copy link button in the header (Share on phones), and the rights note is one short line ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - An event that has not started shows its Overview alone, without tabs that led nowhere ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
@@ -348,6 +353,7 @@ Conventions:
 
 ### Fixed
 
+- Xiangqi Mahjong no longer shows a timeout loss the server never recorded when a move arrives just after a flag falls ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - Finished Xiangqi Mahjong games on the games page show both final hands instead of a placeholder ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - Broadcast round menus and headers show each round's real date from its games, and rounds with results only carry their date ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - Lacquer pieces follow the Piece shadow setting ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
@@ -558,6 +564,7 @@ Conventions:
 
 ### Technical
 
+- Server support for unrated three-minute Puzzle Storm runs with daily personal bests ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - The engine worker survives a database restart and recovers runs cut off by an outage ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - Postgres JIT is off on every pool, which removes the slow first /stats and /metrics query after a deploy ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - Parked jieqi engines from a burst of games now close after 10 idle minutes, cutting the server's idle memory ([2cab42fb](https://github.com/brianhliou/mistboard/commit/2cab42fb))
