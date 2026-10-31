@@ -1130,6 +1130,55 @@ a.puzzle-streak-chip:focus-visible {
   opacity: 0.55;
 }
 
+/* Report a problem (#719): a quiet link under the solved and revealed
+   panels that opens one row (reason select, send). */
+.puzzle-report {
+  padding: 4px 18px 12px;
+}
+
+.puzzle-report-link {
+  width: fit-content;
+  color: var(--site-muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.puzzle-report-link:hover,
+.puzzle-report[open] .puzzle-report-link {
+  color: var(--site-text);
+}
+
+.puzzle-report form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.puzzle-report label {
+  display: flex;
+  flex: 1 1 220px;
+  align-items: center;
+  gap: 8px;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.puzzle-report .puzzle-feedback-skip {
+  margin-top: 0;
+}
+
+.puzzle-report [role="status"] {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+}
+
+.puzzle-report [role="status"]:empty {
+  display: none;
+}
+
 /* Persistent escape hatches (hint / view solution / next) under the feedback
    copy. Wraps so the three buttons stack on a narrow trainer column. */
 .puzzle-assist-row {

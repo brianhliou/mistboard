@@ -178,7 +178,7 @@ function puzzleReportControl(session: PuzzleSession): HTMLElement {
   const details = document.createElement('details');
   details.className = 'puzzle-report';
   const link = document.createElement('summary');
-  link.className = 'puzzle-feedback-skip';
+  link.className = 'puzzle-report-link';
   link.textContent = reportState.sent ? t('puzzle.reportSent') : t('puzzle.reportProblem');
   details.append(link);
   if (reportState.sent) return details;
@@ -187,6 +187,7 @@ function puzzleReportControl(session: PuzzleSession): HTMLElement {
   const label = document.createElement('label');
   label.textContent = t('puzzle.reportReasonLabel');
   const reason = document.createElement('select');
+  reason.className = 'puzzle-select';
   reason.setAttribute('aria-label', t('puzzle.reportReasonAria'));
   for (const [value, key] of [
     ['wrong-solution', 'puzzle.reportWrongSolution'],

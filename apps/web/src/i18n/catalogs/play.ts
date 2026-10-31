@@ -407,7 +407,7 @@ export const EN_PLAY = {
   // Report a problem (#719): under the solved and revealed panels.
   'puzzle.reportProblem': 'Report a problem',
   'puzzle.reportSent': 'Report sent. Thank you.',
-  'puzzle.reportReasonLabel': 'Problem: ',
+  'puzzle.reportReasonLabel': 'Problem',
   'puzzle.reportReasonAria': 'Problem with this puzzle',
   'puzzle.reportWrongSolution': 'Wrong solution',
   'puzzle.reportSecondMove': 'A second winning move',
