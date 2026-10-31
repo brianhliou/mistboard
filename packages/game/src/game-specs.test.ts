@@ -12,6 +12,7 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   GAME_SPECS,
+  GOMOKU_SPEC_ID,
   gameSpecForId,
   gameSpecForLegacyLiveRoom,
   isAdminOnlyStudySpecId,
@@ -51,6 +52,31 @@ test('canonical display order contains exactly the current public variant shelf'
     JUNGLE_FLIP_SPEC_ID,
     XIANGQI_MAHJONG_SPEC_ID,
   ]);
+});
+
+test('Gomoku is a built-hidden, unrated freestyle placement game', () => {
+  const spec = gameSpecForId(GOMOKU_SPEC_ID);
+  assert.equal(spec.publicName, 'Gomoku');
+  assert.equal(spec.family, 'gomoku');
+  assert.equal(spec.board, 'gomoku-15x15');
+  assert.equal(spec.movement, 'gomoku-freestyle');
+  assert.equal(spec.objective, 'five-in-a-row');
+  assert.equal(spec.setup, 'empty');
+  assert.equal(spec.visibility, 'open');
+  assert.equal(spec.reserves, 'none');
+  assert.equal(spec.dropPolicy, 'none');
+  assert.equal(spec.runtimeStatus, 'live');
+  assert.equal(spec.publicSurface, 'hidden');
+  assert.equal(spec.rated, false);
+  assert.equal(spec.legacyLiveRoom, undefined);
+  assert.equal(isPublicGameSpec(spec.id), false);
+  assert.equal(ratingPoolForSpec(spec.id), null);
+  assert.equal(isRatedPoolBase('gomoku'), false);
+  assert.equal(CANONICAL_VARIANT_ORDER.includes(spec.id), false);
+  assert.equal(CORRESPONDENCE_ELIGIBLE_SPEC_IDS.includes(spec.id), false);
+  assert.equal(isCorrespondenceAllowlistedSpec(spec.id), false);
+  assert.equal(isCorrespondenceRatedSpec(spec.id), false);
+  assert.equal(isStudyEligibleSpecId(spec.id), false);
 });
 
 test('current dark chess maps to the flagship chess spec', () => {

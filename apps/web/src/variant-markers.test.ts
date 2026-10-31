@@ -24,7 +24,8 @@ const MARKER_PX = 1254;
 // Game specs that are deliberately not variants anywhere a marker is shown.
 // Adding to this list is a product decision, not a way to get a test green.
 // HK mahjong is an allowlisted playtest with no public surface to mark.
-const SPECS_WITHOUT_MARKER = ['chess', 'mahjong'];
+// Gomoku is built-hidden, without a tenant or a public variant surface (#768).
+const SPECS_WITHOUT_MARKER = ['chess', 'gomoku', 'mahjong'];
 
 describe('variant markers', () => {
   it('wires the committed Three Kingdoms art without a public variant row', () => {

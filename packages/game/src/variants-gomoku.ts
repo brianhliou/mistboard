@@ -1,4 +1,4 @@
-// Engine-only Gomoku (#761): no GameSpecId, tenant, route or UI registration.
+// Pure Gomoku kernel (#761). Built-hidden taxonomy (#768); no tenant or UI yet.
 export const GOMOKU_BOARD_SIZE = 15;
 const POINT_COUNT = GOMOKU_BOARD_SIZE * GOMOKU_BOARD_SIZE;
 const FILES = 'abcdefghijklmno';

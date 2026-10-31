@@ -59,6 +59,8 @@ export const notificationSettingsUrl = `${emailPublicHost}/account/settings/noti
 // when a name here drifts from the site. Exhaustive over GameSpecId so a new
 // variant fails the build until it is named; null falls back to publicName.
 const VARIANT_NAMES: Record<GameSpecId, Record<EmailLocale, string> | null> = {
+  // Built-hidden: use the spec's publicName until a localized surface exists.
+  gomoku: null,
   banqi: { en: 'Banqi', 'zh-Hans': '暗棋', 'zh-Hant': '暗棋' },
   mahjong: null,
   'three-kingdoms-banqi': {

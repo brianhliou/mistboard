@@ -17,7 +17,7 @@ Edit task → find file → open only that file.
 | `xiangqi-mahjong-bot-match.ts` | Seeded six-hand XMJ harness, swapped-seat wall pairs, kernel scoring and paired promotion bounds |
 | `xiangqi-mahjong-sampled-bot.ts` | Offline XMJ action search: 64 common unseen-tile samples, redacted policy rollouts and six-hand score-race value |
 | `types.ts` | Shared types: `Color`, `Square`, `Board`, `Move`, `GameState`, `PlayerView`, `Variant` |
-| `game-specs.ts` | Cross-family game-spec taxonomy and stable ids (`GameSpecId`): families (chess, xiangqi, jungle, military-chess, ...), board geometries, movement/objective rules, and the open / dark / hidden-identity visibility axis that fail-closed variant dispatch keys on |
+| `game-specs.ts` | Cross-family game-spec taxonomy and stable ids (`GameSpecId`): families (chess, xiangqi, jungle, mahjong, gomoku), board geometries, movement/objective rules, and visibility; Gomoku is built-hidden and unrated, without tenant integration (#768 build 1) |
 | `export-formats.ts` | `GAME_EXPORT_FORMATS`: the one table of which export formats (pgn/json) each variant serves, read by the server route gate AND the web download links; explicit map, no fallback |
 | `js-compat.ts` | `hasOwnKey` / `deepCloneJson`: shims for builtins newer than the browsers that actually reach us (`Object.hasOwn` needs Chrome 93, `structuredClone` Chrome 98). Vite's `build.target` lowers syntax only, never builtins, so a too-new global ships verbatim and throws on load; Chrome 92 / Android hard-failed `/puzzles` this way in Aug 2026. `apps/web/src/web-builtin-floor.test.ts` fails the build if either builtin returns to client code |
 | `engine-protocol.ts` | Public redacted engine request/response contract shared by server and external/first-party engines |
@@ -26,7 +26,7 @@ Edit task → find file → open only that file.
 | `bughouse.ts` | Pure Chess Bughouse aggregate: two-board match state, capture transfer, drops, clocks, timeouts, event replay, and partner-request projection |
 | `variants.ts` | Variants (`standardChessVariant`, `darkChessVariant`); fog kernel: `fogVisibleSquares`, `fogMovesFrom`, `fogPawnMoves`, `fogSlideMoves`, `fogCastlingMoves`, `applyFogMove` |
 | `variants-xiangqi.ts` | FoW Xiangqi variant; cannon vision = field of fire |
-| `variants-gomoku.ts` | Engine-only 15x15 freestyle Gomoku (#761): validated dealt openings, immutable placements, a1-o15 notation, immediate wins and opponent threats; no game-spec or surface registration |
+| `variants-gomoku.ts` | Pure 15x15 freestyle Gomoku kernel (#761): validated dealt openings, immutable placements, a1-o15 notation, immediate wins and opponent threats; taxonomy registered hidden (#768), no tenant or play surface yet |
 | `variants-gomoku.test.ts` | Gomoku geometry, overlines, draws, illegal openings, notation, tactical oracles and 10,000 deterministic random games |
 | `variants-three-kingdoms-banqi.ts` | Engine-only Three Kingdoms banqi (#628): seeded 9×5 corner deal, xiangqi movement without royal constraints, score settlement, a perpetual-chase rule that refuses a chase move repeating its position a third time, masked player views and public FEN-like snapshots; no tenant or game-spec registration |
 | `variants-three-kingdoms-banqi.test.ts` | Three Kingdoms banqi setup, movement, scoring, turn binding, the 40-ply count, the repetition-based chase rule, wipe-out unreachability, terminal results and whole-payload hidden-information regressions |

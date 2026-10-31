@@ -6,6 +6,7 @@ import {
   DAYS_PER_MOVE_OPTIONS,
   GAME_SPECS,
   type GameSpecId,
+  GOMOKU_SPEC_ID,
   isAdminOnlyStudySpecId,
   isPublicGameSpec,
   isRetiredGameSpec,
@@ -18,6 +19,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ANALYSIS_VARIANTS } from './analysis-catalog.js';
 import { articles } from './articles-data.js';
 import { EDITOR_VARIANT_IDS } from './editor/editor-catalog.js';
+import { EMBED_ANALYSIS_VARIANTS } from './embed/embed-analysis.js';
 import { LANDING_BOT_GAME_SPEC_IDS } from './landing-bot-policy.js';
 import {
   type LandingRoomSetup,
@@ -65,6 +67,21 @@ function setupFor(gameSpecId: LandingRoomSetup['gameSpecId']): LandingRoomSetup 
 }
 
 describe('variant create-request conformance', () => {
+  it('preserves Gomoku setup ids and colors while refusing rated requests', () => {
+    for (const mode of ['pvp', 'pve'] as const) {
+      for (const preferredColor of ['black', 'white', 'random'] as const) {
+        const setup = { ...setupFor(GOMOKU_SPEC_ID), rated: true, preferredColor };
+        expect(roomCreationGameSpecId(setup)).toBe('gomoku');
+        expect(roomCreationRequestBody(mode, setup)).toMatchObject({
+          gameSpecId: 'gomoku',
+          mode,
+          rated: false,
+          preferredColor,
+        });
+      }
+    }
+  });
+
   it('has at least one selectable picker variant to check', () => {
     expect(pickerTenants.length).toBeGreaterThan(0);
   });
@@ -292,12 +309,32 @@ describe('rules link conformance', () => {
   it('every live variant links to a rules page that exists and points back', () => {
     const rulesSlugs = new Set(articles.filter((a) => a.kind === 'rules').map((a) => a.slug));
     for (const spec of GAME_SPECS) {
-      if (isRetiredGameSpec(spec.id) || spec.id === 'chess') continue;
+      // Taxonomy-only Gomoku has no rules page or playable tenant yet (#768).
+      if (isRetiredGameSpec(spec.id) || spec.id === 'chess' || spec.id === GOMOKU_SPEC_ID) continue;
       const slug = rulesSlugForGameSpec(spec.id);
       expect(rulesSlugs.has(slug), `${spec.id}: no /rules/${slug}`).toBe(true);
       expect(gameSpecIdFromRulesSlug(slug), slug).toBe(spec.id);
     }
     expect(rulesSlugForGameSpec(XIANGQI_MAHJONG_SPEC_ID)).toBe('xiangqi-mahjong-32');
+  });
+});
+
+describe('Gomoku deliberate exclusions before tenant integration', () => {
+  it('has no public play, rating, study, analysis, editor, embed or marker surface', () => {
+    expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(false);
+    expect(webVariantTenants().map((tenant) => tenant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
+    expect(leaderboardVariants.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
+    expect(profileRatingVariants.map((variant) => variant.gameSpecId)).not.toContain(
+      GOMOKU_SPEC_ID,
+    );
+    expect(LANDING_BOT_GAME_SPEC_IDS).not.toContain(GOMOKU_SPEC_ID);
+    expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).not.toContain(GOMOKU_SPEC_ID);
+    expect(EDITOR_VARIANT_IDS).not.toContain(GOMOKU_SPEC_ID);
+    expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(GOMOKU_SPEC_ID);
+    expect(EMBED_ANALYSIS_VARIANTS[GOMOKU_SPEC_ID]).toBeNull();
+    expect(embedRendererKindForVariant(GOMOKU_SPEC_ID)).toBeNull();
+    expect(variantMiniIdForGameSpec(GOMOKU_SPEC_ID)).toBeNull();
   });
 });
 

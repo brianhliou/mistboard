@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 // The server cannot import the web bundle, so two of its dispatch surfaces
 // hand-maintain per-variant entries that must mirror the web tenant registry:
 // the SPA fallback allowlist (server-policy.ts isClientRoute) and the tenant
@@ -17,6 +17,7 @@ import {
   BOT_DEFAULT_TIME_CONTROL_ID,
   defaultEngineTimeControl,
   ENGINE_FLOORED_GAME_SPEC_IDS,
+  GOMOKU_SPEC_ID,
   isAllowedEngineTimeControl,
   isRetiredGameSpec,
   maybeGameSpecForId,
@@ -365,6 +366,27 @@ describe('web tenant registry <-> server tenant registry parity', () => {
       ).toBe(defaultEngineTimeControl(tenant.gameSpecId).id);
     }
   });
+});
+
+describe('Gomoku taxonomy-only registration', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each(['false', 'true'])(
+    'keeps both registries and public routes closed with flag %s',
+    (value) => {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', value);
+      vi.stubEnv('MISTBOARD_GOMOKU_ENABLED', value);
+      expect(maybeGameSpecForId(GOMOKU_SPEC_ID)?.publicSurface).toBe('hidden');
+      expect(webVariantTenants().map((tenant) => tenant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
+      expect(registeredVariantTenants().map((tenant) => tenant.gameSpecId)).not.toContain(
+        GOMOKU_SPEC_ID,
+      );
+      expect(landingBotOffer(GOMOKU_SPEC_ID)).toBeNull();
+      for (const path of ['/gomoku', '/gomoku/game/test', '/gomoku/review/test']) {
+        expect(isClientRoute(path), path).toBe(false);
+      }
+    },
+  );
 });
 
 // A variant's play deep link must be gated on its OWN feature flag. Two were

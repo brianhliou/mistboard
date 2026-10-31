@@ -27,6 +27,16 @@ import { ensureLocaleCatalog } from './i18n/catalog.js';
 // and rendered the literal seat word instead. Every "X vs Y" surface now goes
 // through matchupSeats/matchupLabel.
 describe('matchupSeats', () => {
+  it('puts Gomoku Black first, with or without persisted participants', () => {
+    expect(matchupSeats(game('gomoku'))).toEqual(['black', 'white']);
+    const seats = [participant('white', 'alice'), participant('black', 'bob')];
+    expect(matchupSeats(game('gomoku', seats))).toEqual(['black', 'white']);
+    expect(matchupLabel(game('gomoku', seats))).toBe('bob vs alice');
+    expect(matchupLabel(game('gomoku'))).toBe('Black vs White');
+    expect(firstMoverColorName('gomoku')).toBe('Black');
+    expect(secondMoverColorName('gomoku')).toBe('White');
+  });
+
   it('resolves xiangqi to red vs black from the spec family', () => {
     expect(matchupSeats(game(XIANGQI_SPEC_ID))).toEqual(['red', 'black']);
   });

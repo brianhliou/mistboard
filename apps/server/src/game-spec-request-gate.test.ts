@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { Readable } from 'node:stream';
 import test from 'node:test';
 import { GAME_SPECS, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
+import { gomokuEnabled } from './feature-flags.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
+import type { HttpApiContext } from './routes/lib.js';
+import { tryHandle } from './routes/rooms.js';
 // Importing register-tenants registers every tenant (module-scope side effect
 // of each *-registration.ts module), so the registry-driven test below sees
 // the same tenant set the server boots with.
@@ -15,6 +20,70 @@ test('game spec gate passes current chess requests', () => {
   // The WS dispatch passes url.searchParams.get('gameSpecId'), so an absent
   // query param arrives as null: treat it like undefined.
   assert.deepEqual(gateGameSpecRequest({ gameSpecId: null }), { type: 'pass' });
+});
+
+test('Gomoku requests fail closed with its flag off and on, before tenant integration', () => {
+  for (const enabled of [false, true]) {
+    withFlag('MISTBOARD_GOMOKU_ENABLED', enabled, () => {
+      assert.equal(gomokuEnabled(), enabled);
+      assert.equal(
+        registeredVariantTenants().some((tenant) => tenant.gameSpecId === 'gomoku'),
+        false,
+      );
+      for (const input of [{ gameSpecId: 'gomoku' }, { variant: 'gomoku' }]) {
+        assert.deepEqual(gateGameSpecRequest(input), {
+          type: 'reject',
+          error: enabled ? 'gomoku_not_integrated' : 'gomoku_disabled',
+          httpStatus: enabled ? 501 : 404,
+          wsCloseReason: enabled ? 'game spec not integrated' : 'game spec disabled',
+        });
+      }
+    });
+  }
+});
+
+test('POST /api/rooms rejects Gomoku for both selectors, modes and flag states', async () => {
+  const name = 'MISTBOARD_GOMOKU_ENABLED';
+  const before = process.env[name];
+  try {
+    for (const value of [undefined, 'false', '1', 'true']) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+      assert.equal(gomokuEnabled(), value === 'true');
+      for (const mode of ['pvp', 'pve']) {
+        for (const selector of [{ gameSpecId: 'gomoku' }, { variant: 'gomoku' }]) {
+          const request = Readable.from([
+            Buffer.from(JSON.stringify({ ...selector, mode })),
+          ]) as unknown as IncomingMessage;
+          request.method = 'POST';
+          request.headers = {};
+          let status = 0;
+          let payload = '';
+          const response = {
+            writeHead(code: number) {
+              status = code;
+            },
+            end(body: string) {
+              payload = body;
+            },
+          } as unknown as ServerResponse;
+          // No room factory in this context: falling through to chess creation
+          // must fail this test as well as returning the wrong error.
+          assert.equal(
+            await tryHandle({} as HttpApiContext, request, response, '/api/rooms'),
+            true,
+          );
+          assert.equal(status, value === 'true' ? 501 : 404);
+          assert.deepEqual(JSON.parse(payload), {
+            error: value === 'true' ? 'gomoku_not_integrated' : 'gomoku_disabled',
+          });
+        }
+      }
+    }
+  } finally {
+    if (before === undefined) delete process.env[name];
+    else process.env[name] = before;
+  }
 });
 
 test('game spec gate leaves free-string variants to parseVariantId', () => {
