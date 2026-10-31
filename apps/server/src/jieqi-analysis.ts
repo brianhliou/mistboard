@@ -23,11 +23,14 @@
 import {
   applyJieqiMove,
   createInitialJieqiState,
+  getJieqiLegalMoves,
   type JieqiColor,
   type JieqiDeal,
   type JieqiGameState,
   type JieqiMove,
   type JieqiPieceRole,
+  parseJieqiFen,
+  redPovScore,
   WIN_PCT_K,
   winPercent,
   winPercentK,
@@ -129,29 +132,17 @@ export const JIEQI_ANALYSIS_ENGINE_ID = `pikafish-jieqi-analysis@${JIEQI_ANALYSI
 
 // ── AB-JChess budgets (#482) ─────────────────────────────────────────────────────
 //
-// AB-JChess is ~50x slower per node than PikaJieQi and stronger per node: single-threaded it
-// searched ~30k nps on prod web (EPYC 9655, avx2 build) and, measured on an M-series dev box
-// over a real 28-ply game (jq_23d2a761), ~35k nps in the all-dark opening rising to ~100k in
-// the middlegame (its net is lazily loaded on the first `go`, ~0.5 s once per session). It
-// prints no `info` line until a search is a few hundred ms old, but on every position measured
-// the last scored line before `bestmove` was an exact score from the last completed iteration
-// (never bound-only), which is what the reader keeps (a bound is only its last resort). A fixed depth is unreachable at these rates (depth 16 would be
-// minutes), so it gets a node budget for the same reason PikaJieQi does (see
-// JIEQI_ANALYSIS_NODES): every ply buys the same search.
-//
-// 50k nodes is ~1.7 s per ply on prod in the opening and ~1 s later (0.5-0.9 s locally), so
-// a 100-ply sweep is ~2-3 min. It still reaches depth 8-9 in the all-dark opening and 11-19
-// from the middlegame on, and finds the mate-in-1 that ends that game at once.
-const ABJCHESS_ANALYSIS_NODES = 50_000;
+// AB-JChess-20261031 searches ~1.4M nps on prod-like CPUs, versus ~30k for v0.2d.
+// Its 500k-node sweep takes ~0.35 s per ply; the 4x (2M-node) consistency re-search
+// takes ~1.4 s. Fixed nodes keep neighbouring positions comparable despite extensions.
+const ABJCHESS_ANALYSIS_NODES = 500_000;
 const ABJCHESS_CONSISTENCY_RESEARCH_NODES = ABJCHESS_ANALYSIS_NODES * 4;
-// A safety net, never the dial: 200k nodes (the re-search) at 30k nps is ~7 s. Binding it
-// would take a box under ~7k nps, and that ply would stop being reproducible.
+// A safety net, never the dial: 2M nodes at 1.4M nps is ~1.4 s, well inside this cap.
 const ABJCHESS_ANALYSIS_MOVETIME_CAP_MS = 30_000;
-// Decisions: a reveal costs one MultiPV search (it only names the candidate moves; its
-// scores never reach the output) plus one eval per (candidate, hidden role), up to ~24. Each
-// eval gets 20k nodes (~0.7 s on prod) and the MultiPV table 100k (~3 s), so a reveal is
-// ~10-15 s and a game's decomposition a few minutes, like PikaJieQi's depth-16 pass was.
-const ABJCHESS_DECISION_NODES = 20_000;
+// This build has no MultiPV. Rank ~40 legal children at 200k nodes each (~5.7 s),
+// then true-baseline the top three plus played with the unchanged per-role fan
+// (up to ~24 more evals, ~3.4 s): roughly 10 s per reveal, cached once per game.
+const ABJCHESS_DECISION_NODES = 200_000;
 const ABJCHESS_DECISION_MULTIPV_NODES = 100_000;
 
 const ABJCHESS_NET_TAG = ABJCHESS_NET_FILE.replace(/\.nnue$/, '');
@@ -180,6 +171,8 @@ export type JieqiAnalysisProfile = {
   consistency: { unit: 'cp'; threshold: number } | { unit: 'win'; threshold: number };
   /** Budget of one decisions eval (a pool-mean term). */
   decisionEval: JieqiEvalBudget;
+  /** How candidate roots are ranked before their true pool-mean baselines. */
+  decisionCandidates: 'multipv' | 'legal-moves';
   /** Budget of the decisions MultiPV table (candidate moves only). */
   decisionMultiPv: JieqiEvalBudget;
 };
@@ -705,13 +698,46 @@ export function jieqiDecisionDepsFromSession(
   profile: JieqiAnalysisProfile,
 ): JieqiDecisionDeps {
   return {
-    multiPv: (fen, repetitionWindow) =>
-      session.multiPv(repetitionWindow?.fen ?? fen, {
+    multiPv: async (fen, repetitionWindow) => {
+      if (profile.decisionCandidates === 'legal-moves') {
+        // Parse the CURRENT public position only for move generation. Hidden identities
+        // are immaterial to legality; never send the parser's sampled deal to the engine.
+        const parsed = parseJieqiFen(fen, { rng: () => 0 });
+        if (!parsed.ok) throw new Error(`Invalid jieqi decision FEN: ${parsed.error}`);
+        const lines: UciMultiPvLine[] = [];
+        for (const move of getJieqiLegalMoves(parsed.state)) {
+          const uci = jieqiMoveToPikafishUci(move);
+          // Let the engine apply the root move, including an unknown reveal role.
+          // The child has the opponent to move; keep the anchor and its history.
+          const evaluation = await session.evaluateFen(repetitionWindow?.fen ?? fen, {
+            ...profile.decisionEval,
+            moves: [...(repetitionWindow?.moves ?? []), uci],
+            fresh: true,
+          });
+          lines.push({
+            index: 0,
+            move: uci,
+            ...redPovScore(evaluation.cp, evaluation.mate, -1),
+            depth: evaluation.depth,
+            pv: [uci, ...(evaluation.pv ?? [])],
+            bound: null,
+          });
+        }
+        // Proven mates outrank cp scores; prefer shorter wins and longer losses.
+        const score = (line: UciMultiPvLine) =>
+          line.mate == null
+            ? (line.cp ?? Number.NEGATIVE_INFINITY)
+            : Math.sign(line.mate) * (1_000_000_000 - Math.abs(line.mate));
+        lines.sort((a, b) => score(b) - score(a));
+        return lines.map((line, i) => ({ ...line, index: i + 1 }));
+      }
+      return session.multiPv(repetitionWindow?.fen ?? fen, {
         ...profile.decisionMultiPv,
         multiPv: JIEQI_DECISION_MULTIPV,
         moves: repetitionWindow?.moves,
         fresh: true,
-      }),
+      });
+    },
     evalPosition: (fen, repetitionWindow) =>
       session
         .evaluateFen(repetitionWindow?.fen ?? fen, {
@@ -901,7 +927,7 @@ async function poolMeanWin(
 /**
  * Compute the decision-vs-luck numbers for every CHANCE ply (a reveal or a face-down capture,
  * jieqiChancePlies). Reconstructs the game from the deal (same kernel as the Layer-1 sweep). For
- * each, MultiPV names a few candidate ceiling moves; we true-baseline the played move plus those
+ * each, the profile ranks candidate ceiling moves; we true-baseline the played move plus those
  * candidates (unclamped pool-mean win% over every hidden identity the move touches, poolMeanWin),
  * take the max as `bestWin`, and read the played move's true-identity term as `realizedWin`. `deps` is
  * injectable so tests drive it without an engine. No dependency on the Layer-1 sweep — realized is
@@ -1035,6 +1061,7 @@ export const PIKAFISH_JIEQI_ANALYSIS_PROFILE: JieqiAnalysisProfile = {
   movetimeCapMs: JIEQI_ANALYSIS_MOVETIME_CAP_MS,
   consistency: { unit: 'cp', threshold: JIEQI_CONSISTENCY_THRESHOLD_CP },
   decisionEval: { depth: JIEQI_DECISION_DEPTH, movetimeMs: JIEQI_DECISION_MOVETIME_CAP_MS },
+  decisionCandidates: 'multipv',
   decisionMultiPv: { depth: JIEQI_DECISION_DEPTH, movetimeMs: JIEQI_DECISION_MOVETIME_CAP_MS },
 };
 
@@ -1048,6 +1075,7 @@ export const ABJCHESS_JIEQI_ANALYSIS_PROFILE: JieqiAnalysisProfile = {
   movetimeCapMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS,
   consistency: { unit: 'win', threshold: JIEQI_CONSISTENCY_THRESHOLD_WIN },
   decisionEval: { nodes: ABJCHESS_DECISION_NODES, movetimeMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS },
+  decisionCandidates: 'legal-moves',
   decisionMultiPv: {
     nodes: ABJCHESS_DECISION_MULTIPV_NODES,
     movetimeMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS,

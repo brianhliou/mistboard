@@ -21,6 +21,7 @@ import {
   getJieqiLegalMoves,
   type JieqiDeal,
   type JieqiMove,
+  parseJieqiFen,
   STANDARD_JIEQI_DEAL,
   WIN_PCT_K,
   winPercent,
@@ -41,6 +42,7 @@ import {
   type JieqiDecisionsCache,
   jieqiAnalysisRepetitionWindows,
   jieqiChancePlies,
+  jieqiDecisionDepsFromSession,
   jieqiDeterministicPlies,
   PIKAFISH_JIEQI_ANALYSIS_PROFILE,
   resolveJieqiAnalysis,
@@ -49,9 +51,12 @@ import {
 import {
   ABJCHESS_ENGINE_REF,
   buildJieqiAnalysisInitCommands,
+  type JieqiAnalysisEvaluators,
+  type JieqiAnalysisRequest,
   jieqiAnalysisEngine,
   jieqiAnalysisEngineAvailable,
 } from './jieqi-engine.js';
+import { jieqiMoveToPikafishUci, jieqiStateToPikafishFen } from './jieqi-fen.js';
 
 const fixtureDir = mkdtempSync(join(tmpdir(), 'jieqi-abjchess-analysis-'));
 after(() => rmSync(fixtureDir, { recursive: true, force: true }));
@@ -368,6 +373,140 @@ test('the AB consistency rule triggers on a win% swing, not on 200cp', async () 
 });
 
 // ── Decisions reuse one session ──────────────────────────────────────────────
+
+test('AB-JChess ranks every legal child even when MultiPV only returns one line', async () => {
+  const state = createInitialJieqiState('candidates', STANDARD_JIEQI_DEAL);
+  const legal = getJieqiLegalMoves(state);
+  const ucis = legal.map(jieqiMoveToPikafishUci).sort();
+  const played = legal.find((move) => jieqiMoveToPikafishUci(move) === ucis.at(-1))!;
+  assert.equal(state.board[played.from]?.faceDown, true, 'played move is a reveal');
+  let multiPvCalls = 0;
+  const evaluations: Array<{ fen: string; opts: JieqiAnalysisRequest }> = [];
+  const session: JieqiAnalysisEvaluators = {
+    multiPv: async () => {
+      multiPvCalls += 1;
+      return [
+        { index: 1, move: ucis[0]!, cp: 0, mate: null, depth: 4, pv: [ucis[0]!], bound: null },
+      ];
+    },
+    evaluateFen: async (fen, opts) => {
+      evaluations.push({ fen, opts });
+      // Root child searches have a move appended; pool-mean terms use child FENs.
+      const index = ucis.indexOf(opts.moves?.at(-1) ?? '');
+      const parsed = parseJieqiFen(fen);
+      assert.ok(parsed.ok);
+      const baselineCp = parsed.state.board[played.to] ? 400 : -400;
+      return { cp: index >= 0 ? index * 10 : baselineCp, mate: null, best: null, depth: 4 };
+    },
+  };
+  const deps = jieqiDecisionDepsFromSession(session, ABJCHESS_JIEQI_ANALYSIS_PROFILE);
+  const fen = jieqiStateToPikafishFen(state, { public: true });
+  const table = await deps.multiPv(fen);
+  assert.deepEqual(
+    table.map((line) => line.move),
+    ucis,
+    'negate child scores to rank for mover',
+  );
+  assert.deepEqual(
+    table.map((line) => line.index),
+    ucis.map((_, i) => i + 1),
+  );
+  assert.equal(evaluations.length, legal.length, 'one search per legal move');
+  for (const { fen: requestedFen, opts } of evaluations) {
+    assert.equal(requestedFen, fen, 'engine applies the move without sampling a landing role');
+    assert.equal(opts.nodes, 200_000);
+    assert.equal(opts.movetimeMs, 30_000);
+    assert.equal(opts.fresh, true);
+    assert.equal(opts.moves?.length, 1);
+  }
+  const decisions = await analyzeJieqiDecisions(
+    [played],
+    STANDARD_JIEQI_DEAL,
+    deps,
+    undefined,
+    ABJCHESS_JIEQI_ANALYSIS_PROFILE,
+  );
+  assert.equal(multiPvCalls, 0);
+  assert.deepEqual(
+    decisions[0]!.candidates?.map((candidate) => candidate.move).sort(),
+    [...ucis.slice(0, 3), jieqiMoveToPikafishUci(played)].sort(),
+    'true-baseline three alternatives plus the played move',
+  );
+  assert.equal(decisions[0]!.candidates?.filter((candidate) => candidate.played).length, 1);
+  assert.equal(decisions[0]!.playedRank, 4, 'all three alternatives beat the played move');
+  assert.ok(decisions[0]!.bestWin > decisions[0]!.playedWin);
+});
+
+test('AB legal candidate searches append to the repetition window and generate from current FEN', async () => {
+  let state = createInitialJieqiState('history', STANDARD_JIEQI_DEAL);
+  const anchorFen = jieqiStateToPikafishFen(state, { public: true });
+  const moves: string[] = [];
+  for (let i = 0; i < 2; i += 1) {
+    const move = getJieqiLegalMoves(state).find((m) => state.board[m.from]?.role === 'general')!;
+    moves.push(jieqiMoveToPikafishUci(move));
+    state = applyJieqiMove(state, move);
+  }
+  const expected = getJieqiLegalMoves(state).map(jieqiMoveToPikafishUci).sort();
+  const searched: string[] = [];
+  const deps = jieqiDecisionDepsFromSession(
+    {
+      multiPv: async () => assert.fail('new profile must not request MultiPV'),
+      evaluateFen: async (fen, opts) => {
+        assert.equal(fen, anchorFen);
+        assert.deepEqual(opts.moves?.slice(0, -1), moves);
+        assert.equal(opts.fresh, true);
+        searched.push(opts.moves!.at(-1)!);
+        return { cp: 0, mate: null, best: null, depth: 3 };
+      },
+    },
+    ABJCHESS_JIEQI_ANALYSIS_PROFILE,
+  );
+  await deps.multiPv(jieqiStateToPikafishFen(state, { public: true }), { fen: anchorFen, moves });
+  assert.deepEqual(searched.sort(), expected);
+  assert.equal(moves.length, 2, 'caller history was not mutated');
+});
+
+test('legacy decision profiles still request MultiPV 12 with their original budget', async () => {
+  const fen = jieqiStateToPikafishFen(createInitialJieqiState('legacy', STANDARD_JIEQI_DEAL));
+  const calls: unknown[] = [];
+  const deps = jieqiDecisionDepsFromSession(
+    {
+      evaluateFen: async () => assert.fail('legacy candidate selection uses MultiPV'),
+      multiPv: async (requestedFen, opts) => {
+        calls.push({ fen: requestedFen, opts });
+        return [];
+      },
+    },
+    PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+  );
+  await deps.multiPv(fen, { fen: 'anchor', moves: ['e0e1'] });
+  assert.deepEqual(calls, [
+    {
+      fen: 'anchor',
+      opts: {
+        depth: 16,
+        movetimeMs: 6_000,
+        multiPv: 12,
+        moves: ['e0e1'],
+        fresh: true,
+      },
+    },
+  ]);
+});
+
+test('AB-JChess-20261031 budgets use 500k sweep, 2M re-search and 200k decisions', () => {
+  const profile = ABJCHESS_JIEQI_ANALYSIS_PROFILE;
+  assert.equal(profile.sweepNodes, 500_000);
+  assert.equal(profile.researchNodes, 2_000_000);
+  assert.equal(profile.movetimeCapMs, 30_000);
+  assert.equal(profile.decisionCandidates, 'legal-moves');
+  assert.deepEqual(profile.decisionEval, { nodes: 200_000, movetimeMs: 30_000 });
+  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.decisionCandidates, 'multipv');
+  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.sweepNodes, 500_000);
+  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.researchNodes, 2_000_000);
+  assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.movetimeCapMs, 6_000);
+  assert.deepEqual(PIKAFISH_JIEQI_ANALYSIS_PROFILE.decisionEval, { depth: 16, movetimeMs: 6_000 });
+});
 
 // A fake UCI engine that logs each spawn and each `go` to a file, answers every search
 // with one scored line, and advertises the options the analysis handshake sets.
