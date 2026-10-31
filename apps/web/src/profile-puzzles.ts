@@ -1,7 +1,7 @@
 import { t } from './i18n/catalog.js';
 import { LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 
-type PuzzleHistoryEntry = {
+export type PuzzleHistoryEntry = {
   puzzleId: string;
   variant: string;
   solved: boolean;
@@ -19,12 +19,110 @@ type PuzzleHistoryPage = {
 
 type RatedEntry = PuzzleHistoryEntry & { ratingBefore: number; ratingAfter: number };
 const HISTORY_PAGE_SIZE = 100;
-const VISIBLE_RESULTS = 20;
+
+// The owner's xiangqi puzzle history, fetched once and shared by the progress
+// chart and the Activity tab's daily rows. A failed load is not cached, so the
+// chart's retry fetches again and every subscriber hears the result.
+export type ProfilePuzzleHistory = {
+  load(): Promise<PuzzleHistoryEntry[]>;
+  subscribe(listener: (attempts: PuzzleHistoryEntry[]) => void): void;
+};
+
+export function createProfilePuzzleHistory(
+  fetchAll: () => Promise<PuzzleHistoryEntry[]> = fetchAllPuzzleHistory,
+): ProfilePuzzleHistory {
+  let pending: Promise<PuzzleHistoryEntry[]> | null = null;
+  let latest: PuzzleHistoryEntry[] | null = null;
+  const listeners = new Set<(attempts: PuzzleHistoryEntry[]) => void>();
+  return {
+    load() {
+      pending ??= fetchAll().then(
+        (attempts) => {
+          latest = attempts;
+          for (const listener of listeners) listener(attempts);
+          return attempts;
+        },
+        (err: unknown) => {
+          pending = null;
+          throw err;
+        },
+      );
+      return pending;
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      if (latest) listener(latest);
+    },
+  };
+}
 
 // Called only for the viewer's own profile. The API selects the account from
 // the session; there is deliberately no handle or account id in this request.
 // Xiangqi is the public puzzle pool shown on profiles (Jungle is hidden there).
-export function buildProfilePuzzleProgress(locale: Locale): HTMLElement {
+async function fetchAllPuzzleHistory(): Promise<PuzzleHistoryEntry[]> {
+  // The API is oldest-first. Follow every page before showing the graph so an
+  // existing player never gets a misleading, truncated early timeline.
+  const attempts: PuzzleHistoryEntry[] = [];
+  let offset: number | null = 0;
+  while (offset !== null) {
+    const query = new URLSearchParams({
+      variant: 'xiangqi',
+      limit: String(HISTORY_PAGE_SIZE),
+      offset: String(offset),
+    });
+    const response = await fetch(`/api/puzzles/history?${query}`);
+    if (!response.ok) throw new Error(`puzzle history failed: ${response.status}`);
+    const page: PuzzleHistoryPage = await response.json();
+    if (
+      !Array.isArray(page.attempts) ||
+      (page.nextOffset !== null &&
+        (!Number.isSafeInteger(page.nextOffset) || page.nextOffset <= offset))
+    ) {
+      throw new Error('invalid puzzle history page');
+    }
+    attempts.push(...page.attempts);
+    offset = page.nextOffset;
+  }
+  return attempts;
+}
+
+export type ProfilePuzzleDay = {
+  day: string;
+  // Latest attempt that day, for ordering against the game rows.
+  time: number;
+  count: number;
+  solved: number;
+  failed: number;
+};
+
+// One row per calendar day (the same day labels the game rows use), newest
+// first. Individual attempts are not listed on the profile.
+export function profilePuzzleDays(
+  attempts: PuzzleHistoryEntry[],
+  dayLabel: (createdAt: string) => string,
+): ProfilePuzzleDay[] {
+  const days = new Map<string, ProfilePuzzleDay>();
+  for (const entry of attempts) {
+    const time = Date.parse(entry.createdAt);
+    if (!Number.isFinite(time)) continue;
+    const day = dayLabel(entry.createdAt);
+    let summary = days.get(day);
+    if (!summary) {
+      summary = { day, time, count: 0, solved: 0, failed: 0 };
+      days.set(day, summary);
+    }
+    summary.time = Math.max(summary.time, time);
+    summary.count += 1;
+    if (entry.solved) summary.solved += 1;
+    else summary.failed += 1;
+  }
+  return [...days.values()].sort((a, b) => b.time - a.time);
+}
+
+export function buildProfilePuzzleProgress(
+  locale: Locale,
+  history: ProfilePuzzleHistory = createProfilePuzzleHistory(),
+): HTMLElement {
   const section = document.createElement('section');
   section.className = 'profile-puzzle-progress';
   const heading = document.createElement('h2');
@@ -43,29 +141,7 @@ export function buildProfilePuzzleProgress(locale: Locale): HTMLElement {
     status.textContent = t('profile.loading', {}, locale);
     body.append(status);
     try {
-      // The API is oldest-first. Follow every page before showing the graph so
-      // an existing player never gets a misleading, truncated early timeline.
-      const attempts: PuzzleHistoryEntry[] = [];
-      let offset: number | null = 0;
-      while (offset !== null) {
-        const query = new URLSearchParams({
-          variant: 'xiangqi',
-          limit: String(HISTORY_PAGE_SIZE),
-          offset: String(offset),
-        });
-        const response = await fetch(`/api/puzzles/history?${query}`);
-        if (!response.ok) throw new Error(`puzzle history failed: ${response.status}`);
-        const page: PuzzleHistoryPage = await response.json();
-        if (
-          !Array.isArray(page.attempts) ||
-          (page.nextOffset !== null &&
-            (!Number.isSafeInteger(page.nextOffset) || page.nextOffset <= offset))
-        ) {
-          throw new Error('invalid puzzle history page');
-        }
-        attempts.push(...page.attempts);
-        offset = page.nextOffset;
-      }
+      const attempts = await history.load();
       body.replaceChildren();
       if (attempts.length === 0) {
         const empty = document.createElement('p');
@@ -75,7 +151,7 @@ export function buildProfilePuzzleProgress(locale: Locale): HTMLElement {
         play.textContent = t('nav.puzzles', {}, locale);
         body.append(empty, play);
       } else {
-        body.append(buildPuzzleChart(attempts, locale), buildPuzzleResults(attempts, locale));
+        body.append(buildPuzzleChart(attempts, locale));
       }
     } catch {
       status.textContent = t('profile.puzzleHistoryFailed', {}, locale);
@@ -220,55 +296,4 @@ function buildPuzzleChart(attempts: PuzzleHistoryEntry[], locale: Locale): HTMLE
     chart.append(note);
   }
   return chart;
-}
-
-function buildPuzzleResults(attempts: PuzzleHistoryEntry[], locale: Locale): HTMLElement {
-  const results = document.createElement('div');
-  const heading = document.createElement('h3');
-  heading.textContent = t('profile.puzzleHistory', {}, locale);
-  const list = document.createElement('ol');
-  list.className = 'profile-puzzle-history';
-  const newestFirst = [...attempts].reverse();
-  let shown = 0;
-  const more = document.createElement('button');
-  more.type = 'button';
-  more.className = 'profile-puzzle-history-more';
-  more.textContent = t('profile.loadMore', {}, locale);
-
-  function appendPage(): void {
-    for (const entry of newestFirst.slice(shown, shown + VISIBLE_RESULTS)) {
-      const row = document.createElement('li');
-      row.className = 'profile-puzzle-history-row';
-      const link = document.createElement('a');
-      link.href = localizedHref(`/puzzles/${encodeURIComponent(entry.puzzleId)}`, locale);
-      link.textContent = t(
-        entry.solved ? 'puzzle.streakOutcomeSolved' : 'puzzle.streakOutcomeFailed',
-        {},
-        locale,
-      );
-      link.setAttribute('aria-label', `${link.textContent} · ${historyDate(entry, locale)}`);
-      const date = document.createElement('time');
-      date.dateTime = entry.createdAt;
-      date.textContent = historyDate(entry, locale);
-      const rating = document.createElement('span');
-      rating.className = 'profile-puzzle-history-rating';
-      if (!entry.rated) {
-        rating.textContent = t('profile.unrated', {}, locale);
-      } else if (!hasSavedRating(entry)) {
-        rating.textContent = t('profile.puzzleRatingUnavailable', {}, locale);
-      } else {
-        const delta = entry.ratingAfter - entry.ratingBefore;
-        rating.textContent = `${entry.ratingAfter} (${delta > 0 ? '+' : ''}${delta})`;
-      }
-      row.append(link, date, rating);
-      list.append(row);
-    }
-    shown = list.children.length;
-    if (shown >= newestFirst.length) more.remove();
-  }
-
-  more.addEventListener('click', appendPage);
-  results.append(heading, list, more);
-  appendPage();
-  return results;
 }
