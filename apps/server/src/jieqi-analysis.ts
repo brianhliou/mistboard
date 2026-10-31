@@ -139,12 +139,14 @@ const ABJCHESS_ANALYSIS_NODES = 500_000;
 const ABJCHESS_CONSISTENCY_RESEARCH_NODES = ABJCHESS_ANALYSIS_NODES * 4;
 // A safety net, never the dial: 2M nodes at 1.4M nps is ~1.4 s, well inside this cap.
 const ABJCHESS_ANALYSIS_MOVETIME_CAP_MS = 30_000;
-// This build has no MultiPV. Ranking costs one 200k-node eval per deterministic
+// This build has no MultiPV. Ranking costs one 50k-node eval per deterministic
 // child or dark capture, and up to six per reveal (one per distinct hidden role).
-// Opening position: 43 reveals + one quiet move = 259 evals / 51.8M nodes,
-// ~37 s per decision at 1.4M nps (fewer as roles and legal moves disappear).
-// Reuse those baselines and their terms for the top three plus played.
+// Opening position: 43 reveals + one quiet move = 259 ranking evals / 12.95M nodes.
+// True-baseline the top three plus played at 200k: up to 4 * 6 = 24 more evals,
+// 4.8M nodes. Total <= 17.75M nodes / 1.4M nps ~= 12.7 s per reveal (search time;
+// fewer as roles and legal moves disappear). Ranking scores never reach the output.
 const ABJCHESS_DECISION_NODES = 200_000;
+const ABJCHESS_DECISION_RANK_NODES = 50_000;
 const ABJCHESS_DECISION_MULTIPV_NODES = 100_000;
 
 const ABJCHESS_NET_TAG = ABJCHESS_NET_FILE.replace(/\.nnue$/, '');
@@ -173,6 +175,8 @@ export type JieqiAnalysisProfile = {
   consistency: { unit: 'cp'; threshold: number } | { unit: 'win'; threshold: number };
   /** Budget of one decisions eval (a pool-mean term). */
   decisionEval: JieqiEvalBudget;
+  /** Budget of each legal-move ranking eval; defaults to decisionEval for older profiles. */
+  decisionRank?: JieqiEvalBudget;
   /** How candidate roots are ranked before their true pool-mean baselines. */
   decisionCandidates: 'multipv' | 'legal-moves';
   /** Budget of the decisions MultiPV table (candidate moves only). */
@@ -687,8 +691,6 @@ export type JieqiDecisionDeps = {
     fen: string,
     repetitionWindow?: JieqiRepetitionWindow,
   ) => Promise<(UciMultiPvLine & { win?: number })[]>;
-  /** True pool-mean already computed during candidate ranking, scoped to that parent FEN. */
-  rankedBaseline?: (fen: string, uci: string) => number | undefined;
   /** Single-position eval (side-to-move POV) at decision depth — the pool-mean's per-role term. */
   evalPosition: (
     fen: string,
@@ -704,33 +706,21 @@ export function jieqiDecisionDepsFromSession(
   session: JieqiAnalysisEvaluators,
   profile: JieqiAnalysisProfile,
 ): JieqiDecisionDeps {
-  // Keep only the current decision's terms. Reusing public FEN evaluations also lets
-  // the played move recover its TRUE realized role, never the parser's sampled role.
-  const terms = new Map<string, ReturnType<JieqiDecisionDeps['evalPosition']>>();
-  const baselines = new Map<string, number>();
-  let rankedFen: string | undefined;
-  const evalPosition: JieqiDecisionDeps['evalPosition'] = (fen, repetitionWindow) => {
-    const anchor = repetitionWindow?.fen ?? fen;
-    const moves = repetitionWindow?.moves ?? [];
-    const key = JSON.stringify([anchor, moves]);
-    const cached = terms.get(key);
-    if (cached) return cached;
-    const result = session.evaluateFen(anchor, {
-      ...profile.decisionEval,
-      moves,
-      fresh: true,
-    });
-    if (profile.decisionCandidates === 'legal-moves') terms.set(key, result);
-    return result;
-  };
+  const evaluateWithBudget =
+    (budget: JieqiEvalBudget): JieqiDecisionDeps['evalPosition'] =>
+    (fen, repetitionWindow) =>
+      session.evaluateFen(repetitionWindow?.fen ?? fen, {
+        ...budget,
+        moves: repetitionWindow?.moves ?? [],
+        fresh: true,
+      });
+  const evalPosition = evaluateWithBudget(profile.decisionEval);
+  const rankBudget = profile.decisionRank ?? profile.decisionEval;
+  const rankPosition = evaluateWithBudget(rankBudget);
   return {
     evalPosition,
-    rankedBaseline: (fen, uci) => (fen === rankedFen ? baselines.get(uci) : undefined),
     multiPv: async (fen, repetitionWindow) => {
       if (profile.decisionCandidates === 'legal-moves') {
-        terms.clear();
-        baselines.clear();
-        rankedFen = fen;
         // The CURRENT public FEN includes both public pools (including dark captures).
         // Sampling supplies a state for legality and counterfactual role swaps only;
         // every child sent to the engine must pass through the PUBLIC encoder.
@@ -747,11 +737,10 @@ export function jieqiDecisionDepsFromSession(
               state,
               move,
               mover,
-              evalPosition,
+              rankPosition,
               repWindow,
               profile.winK,
             );
-            baselines.set(uci, baseline);
             lines.push({
               index: 0,
               move: uci,
@@ -771,7 +760,7 @@ export function jieqiDecisionDepsFromSession(
             ? jieqiStateToPikafishFen(applyJieqiMove(state, move), { public: true })
             : (repetitionWindow?.fen ?? fen);
           const evaluation = await session.evaluateFen(childFen, {
-            ...profile.decisionEval,
+            ...rankBudget,
             moves: capture ? [] : [...(repetitionWindow?.moves ?? []), uci],
             fresh: true,
           });
@@ -1046,32 +1035,14 @@ export async function analyzeJieqiDecisions(
       for (const uci of candidateUcis) {
         const candidate = uci === playedUci ? move : pikafishUciToJieqiMove(uci);
         if (!candidate) continue;
-        const rankedBaseline = deps.rankedBaseline?.(fen, uci);
-        let baseline: number;
-        let realized: number;
-        if (rankedBaseline === undefined) {
-          ({ baseline, realized } = await poolMeanWin(
-            state,
-            candidate,
-            mover,
-            deps.evalPosition,
-            repWindow,
-            profile.winK,
-          ));
-        } else {
-          baseline = rankedBaseline;
-          realized = baseline;
-          if (uci === playedUci && !state.board[candidate.from]?.unknown) {
-            const post = applyJieqiMove(state, candidate);
-            realized = await moverWinAfter(
-              post,
-              mover,
-              deps.evalPosition,
-              jieqiDecisionWindowAfterMove(state, candidate, post, repWindow),
-              profile.winK,
-            );
-          }
-        }
+        const { baseline, realized } = await poolMeanWin(
+          state,
+          candidate,
+          mover,
+          deps.evalPosition,
+          repWindow,
+          profile.winK,
+        );
         scored.push({ move: uci, win: baseline, ...(uci === playedUci ? { played: true } : {}) });
         if (uci === playedUci) {
           playedWin = baseline;
@@ -1111,7 +1082,7 @@ export async function analyzeJieqiDecisions(
 // d4 grades each reveal from its mover's view (#487); d3 added the live repetition window; d2
 // fixed counterfactual hidden-role-multiset preservation.
 export const JIEQI_DECISIONS_ENGINE_ID = `pikafish-jieqi-decisions@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+d6-public`;
-export const ABJCHESS_JIEQI_DECISIONS_ENGINE_ID = `ab-jchess-jieqi-decisions@2+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_DECISION_NODES}+mpv${ABJCHESS_DECISION_MULTIPV_NODES}+d6-public`;
+export const ABJCHESS_JIEQI_DECISIONS_ENGINE_ID = `ab-jchess-jieqi-decisions@2+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_DECISION_NODES}+rank${ABJCHESS_DECISION_RANK_NODES}+d6-public`;
 /** Decisions ids of earlier algorithms that may still be served after every current id.
  *  Empty since d6 (2026-10-16): every earlier row was graded from the real deal, so its
  *  numbers (a capture's luck, a candidate valued on its true target) carry identities no
@@ -1145,6 +1116,10 @@ export const ABJCHESS_JIEQI_ANALYSIS_PROFILE: JieqiAnalysisProfile = {
   movetimeCapMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS,
   consistency: { unit: 'win', threshold: JIEQI_CONSISTENCY_THRESHOLD_WIN },
   decisionEval: { nodes: ABJCHESS_DECISION_NODES, movetimeMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS },
+  decisionRank: {
+    nodes: ABJCHESS_DECISION_RANK_NODES,
+    movetimeMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS,
+  },
   decisionCandidates: 'legal-moves',
   decisionMultiPv: {
     nodes: ABJCHESS_DECISION_MULTIPV_NODES,
