@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  'Choose a puzzle difficulty, and see your puzzle rating over time.':
+    '象棋题可以选难度，个人资料显示解题评分走势。',
+  'Pick a difficulty from Easiest to Hardest on the puzzle page, and it is remembered between visits. Your profile now charts your puzzle rating, one point per day, and lists each day you did puzzles in Activity. After a puzzle you can also report a problem with it.':
+    '在题目页可以从“最简单”到“最难”选择难度，下次访问会记住。你的个人资料现在会画出解题评分，每天一个点，并在动态中列出每个做题的日子。做完一道题后，也可以报告这道题的问题。',
+  'Open puzzles': '去做题',
   'Puzzle Streak, and puzzles by theme.': '连续解题上线，还可以按主题练题。',
   'Puzzle Streak serves puzzles that get harder as you go, with no clock and one skip, and one wrong move ends the run. The new themes page lets you train one theme at a time, such as a single mate pattern. Each puzzle now plays in the moves of the game it came from before you start.':
     '连续解题会出越来越难的题目，不计时，可跳过一次，走错一步即结束。新的题目主题页可以一次只练一个主题，例如某一种杀法。每道题开始前，会先播放它所出自的那盘对局的着法。',
@@ -545,6 +550,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  'Choose a puzzle difficulty, and see your puzzle rating over time.':
+    '象棋題可以選難度，個人資料顯示解題評分走勢。',
+  'Pick a difficulty from Easiest to Hardest on the puzzle page, and it is remembered between visits. Your profile now charts your puzzle rating, one point per day, and lists each day you did puzzles in Activity. After a puzzle you can also report a problem with it.':
+    '在題目頁可以從「最簡單」到「最難」選擇難度，下次造訪會記住。你的個人資料現在會畫出解題評分，每天一個點，並在動態中列出每個做題的日子。做完一道題後，也可以回報這道題的問題。',
+  'Open puzzles': '去做題',
   'Puzzle Streak, and puzzles by theme.': '連續解題上線，還可以按主題練題。',
   'Puzzle Streak serves puzzles that get harder as you go, with no clock and one skip, and one wrong move ends the run. The new themes page lets you train one theme at a time, such as a single mate pattern. Each puzzle now plays in the moves of the game it came from before you start.':
     '連續解題會出越來越難的題目，不計時，可跳過一次，走錯一步即結束。新的題目主題頁可以一次只練一個主題，例如某一種殺法。每道題開始前，會先播放它所出自的那盤對局的著法。',
