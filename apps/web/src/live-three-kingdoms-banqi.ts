@@ -7,13 +7,15 @@
 // so there is no fog and the move list is unmasked.
 //
 // What is its own: the 9x5 intersection board (three-kingdoms-banqi-diagrams.ts),
-// the score race to 100 (each seat's points beside its name, the target once in
-// the game card, and a moves-left line under the tally once the no-progress
-// count nears its limit), and a plain move notation. The captured strips and the
-// face-down tally with reveal odds are banqi's (banqi-material.ts): the same 32
-// pieces, the same never-moved face-down tiles. No postgame page, review page,
-// watch channel or sounds of its own; whether it gets any is the 10-31
-// checkpoint's call.
+// the score race to 100 (each seat's points and captures in a row under the
+// board, the target once in the game card, and a moves-left line under the tally
+// once the no-progress count nears its limit), and a plain move notation. The
+// captures and the face-down tally with reveal odds are banqi's
+// (banqi-material.ts): the same 32 pieces, the same never-moved face-down
+// tiles. Sounds are banqi's, on this
+// room's seats (live-three-kingdoms-banqi-sound.ts). A game that ends glides
+// its last move, turns the still-hidden tiles over one by one, then badges the
+// generals (Brian, 2026-10-30).
 
 import type {
   BanqiColor,
@@ -25,16 +27,24 @@ import type {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { renderBanqiMaterial } from './banqi-material.js';
+import { pieceAnimationDurationMs, pieceFlipDurationMs } from './board-anim.js';
 import { flipSeatInk } from './flip-seat-ink.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
+import { t } from './i18n/catalog.js';
 import { banqiPieceGhostSvg, banqiRevealFlipSquare } from './live-banqi-render.js';
+import { finishBadgesForResult } from './live-finish-badges.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
+import {
+  maybePlayThreeKingdomsBanqiSound,
+  resetThreeKingdomsBanqiSoundState,
+} from './live-three-kingdoms-banqi-sound.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   animateThreeKingdomsBanqiBoardMove,
   animateThreeKingdomsBanqiReveal,
   renderThreeKingdomsBanqiLiveBoardSvg,
+  revealThreeKingdomsBanqiTilesInTurn,
   TK_LIVE_BOARD_VIEW,
   type TkLiveBoardEntry,
 } from './three-kingdoms-banqi-diagrams.js';
@@ -81,6 +91,16 @@ let core: TenantLiveClientContext<BanqiSeat, ThreeKingdomsBanqiWireView> | null 
 let selectedSquare: Square | null = null;
 let draggingFrom: Square | null = null;
 let roomMode: 'pve' | 'pvp' = 'pvp';
+// The board the last live render showed, to know which tiles the final move
+// left face down; and how long the finish takes before the badges come up.
+let lastLiveBoard: ThreeKingdomsBanqiWireView['board'] | null = null;
+let finishHoldMs = 0;
+
+// The end of the game in order: the last move lands, the tiles still face down
+// turn over one by one in under a second, then the badges.
+const FINISH_PAUSE_MS = 150;
+const FINISH_REVEAL_SPAN_MS = 900;
+const FINISH_STAGGER_MAX_MS = 70;
 
 function isSeat(value: unknown): value is BanqiSeat {
   return value === 'red' || value === 'black';
@@ -139,11 +159,8 @@ const tkWebTenant: WebVariantTenant<BanqiSeat> = {
   seatLabel,
   seatInk: liveSeatInk,
   showPregameTurn: true,
-  // Each seat's points beside its name; the target is said once, in the card.
-  seatTags: (seat) => {
-    const view = core?.displayedView();
-    return view ? [tkPoints(view.scores[seat])] : [];
-  },
+  // Each seat's points sit under the board with its captures (renderMaterial);
+  // the target is said once, in the card.
 };
 
 const client = createTenantLiveClient<
@@ -168,10 +185,37 @@ const client = createTenantLiveClient<
   onFrame: (frame) => {
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
   },
+  onSnapshotApplied: () => {
+    if (core) maybePlayThreeKingdomsBanqiSound(core.state.view, core.state.seat);
+  },
+  onEventApplied: () => {
+    if (core) maybePlayThreeKingdomsBanqiSound(core.state.view, core.state.seat);
+  },
+  resetSounds: resetThreeKingdomsBanqiSoundState,
   resetState: () => {
     selectedSquare = null;
     draggingFrom = null;
     roomMode = 'pvp';
+    lastLiveBoard = null;
+    finishHoldMs = 0;
+  },
+  // The generals, in the ink each seat bound; a general taken earlier has no
+  // badge. TK's own end reasons borrow the labels that say the same thing.
+  finishBadges: (view) =>
+    view.status.type === 'finished'
+      ? finishBadgesForResult({
+          colors: tkWebTenant.colors,
+          winner: view.status.winner,
+          reason: TK_BADGE_REASON[view.status.reason] ?? view.status.reason,
+          generalSquare: (seat) => {
+            const ink = seatInk(seat, view);
+            return ink ? tkGeneralSquare(view.board, ink) : null;
+          },
+        })
+      : [],
+  // Read when the badges start, after animateBoard set it for this render.
+  get finishBadgeDelayMs() {
+    return finishHoldMs;
   },
   renderBoard,
   // Banqi's glides (pieceAnimation pref), live and on scrubs. Unlike banqi,
@@ -179,20 +223,32 @@ const client = createTenantLiveClient<
   // echoes it (a dropped piece snaps back to its origin until then), so the
   // echo is the first time the piece moves and gliding it is not a replay.
   animateBoard: (liveRefs, view, takePendingAnimation) => {
+    // Only a live pending plays the finish, and the core arms one only while
+    // the replay is at the live ply, so the board drawn before it is live too.
+    const before = lastLiveBoard;
+    lastLiveBoard = view?.board ?? null;
+    finishHoldMs = 0;
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
     if (!pending) return;
     if (pending.kind === 'live') {
       const flipped = banqiRevealFlipSquare(pending, view.board);
-      if (flipped) {
-        animateThreeKingdomsBanqiReveal(liveRefs.board, flipped);
-        return;
+      if (flipped) animateThreeKingdomsBanqiReveal(liveRefs.board, flipped);
+      else animateThreeKingdomsBanqiBoardMove(liveRefs.board, pending.move);
+      if (view.status.type === 'finished' && before) {
+        finishHoldMs = playFinishReveal(liveRefs, view, before, flipped !== null);
+        return finishHoldMs;
       }
-      animateThreeKingdomsBanqiBoardMove(liveRefs.board, pending.move);
-      return;
+      // Held for the core: the bot's instant reply waits for the move to land.
+      return flipped ? pieceFlipDurationMs() : pieceAnimationDurationMs();
     }
     if (pending.direction === 'forward') {
-      if (view.lastMove) animateThreeKingdomsBanqiBoardMove(liveRefs.board, view.lastMove);
+      const stepped = view.lastMove;
+      if (!stepped) return;
+      // A step onto a flip turns the tile over, as it did live (and as banqi's
+      // replay does).
+      if (stepped.from === stepped.to) animateThreeKingdomsBanqiReveal(liveRefs.board, stepped.to);
+      else animateThreeKingdomsBanqiBoardMove(liveRefs.board, stepped);
       return;
     }
     const undone = pending.prevView?.lastMove;
@@ -253,6 +309,52 @@ export function bootstrapThreeKingdomsBanqiLiveRoom(): void {
   client.bootstrap();
 }
 
+const TK_BADGE_REASON: Partial<Record<string, string>> = {
+  score: 'points',
+  'no-legal-move': 'no-legal-moves',
+  agreement: 'draw',
+};
+
+/** A finished room shows every tile face up, so the general is found by face. */
+function tkGeneralSquare(
+  board: ThreeKingdomsBanqiWireView['board'],
+  ink: BanqiColor,
+): Square | null {
+  for (const [square, entry] of Object.entries(board)) {
+    if (entry && !entry.faceDown && entry.color === ink && entry.role === 'general') {
+      return square as Square;
+    }
+  }
+  return null;
+}
+
+/** After the final move: every tile the last live board still showed face
+ *  down turns over in turn, once the move has landed. Returns when the badges
+ *  may start. */
+function playFinishReveal(
+  liveRefs: LiveRefs,
+  view: ThreeKingdomsBanqiWireView,
+  before: ThreeKingdomsBanqiWireView['board'],
+  flip: boolean,
+): number {
+  const landMs = Math.max(0, flip ? pieceFlipDurationMs() : pieceAnimationDurationMs());
+  const hidden = new Set<Square>();
+  for (const [square, entry] of Object.entries(before)) {
+    const now = view.board[square as Square];
+    if (entry?.faceDown && now && !now.faceDown && square !== view.lastMove?.to) {
+      hidden.add(square as Square);
+    }
+  }
+  const staggerMs = hidden.size
+    ? Math.min(FINISH_STAGGER_MAX_MS, FINISH_REVEAL_SPAN_MS / hidden.size)
+    : 0;
+  const revealEnd = revealThreeKingdomsBanqiTilesInTurn(liveRefs.board, hidden, {
+    startMs: landMs + FINISH_PAUSE_MS,
+    staggerMs,
+  });
+  return Math.max(landMs, revealEnd);
+}
+
 // ── Notation ──────────────────────────────────────────────────────────────────
 
 // Banqi's letters, so the move list reads like a banqi study (G general, S soldier).
@@ -288,15 +390,146 @@ function notate(
 // decide the game.
 function renderMaterial(liveRefs: LiveRefs, view: ThreeKingdomsBanqiWireView | null): void {
   const moves = (core?.state.events ?? []).filter(isMoveEvent).map((event) => event.move);
-  const viewerInk = view && core ? seatInk(core.orientation(), view) : null;
-  renderBanqiMaterial(liveRefs, view, viewerInk, moves);
-  if (!view || view.status.type !== 'playing') return;
+  const bottomSeat: BanqiSeat = core?.orientation() ?? 'red';
+  const topSeat: BanqiSeat = bottomSeat === 'red' ? 'black' : 'red';
+  const viewerInk = view && core ? seatInk(bottomSeat, view) : null;
+  // Banqi's renderer fills scratch hosts; the panel under the board regroups
+  // what it drew by seat, so each seat's points, captures and face-down
+  // pieces read as one block (Brian, 2026-10-30: two blocks in two orders
+  // read as unrelated).
+  const topCaptures = document.createElement('div');
+  const bottomCaptures = document.createElement('div');
+  const pool = document.createElement('div');
+  renderBanqiMaterial(
+    { capturesTop: topCaptures, capturesBottom: bottomCaptures, hiddenPool: pool },
+    view,
+    viewerInk,
+    moves,
+  );
+  liveRefs.capturesTop.replaceChildren();
+  liveRefs.capturesBottom.replaceChildren();
+  const host = liveRefs.hiddenPool;
+  host.replaceChildren();
+  host.classList.remove('hidden-pool--odds');
+  if (!view || Object.keys(view.board).length === 0) return;
+  const playing = view.status.type === 'playing';
+  const odds = pool.classList.contains('hidden-pool--odds');
+  host.classList.toggle('tk-material--odds', odds);
+  // The odds caption says what the percentages are; at the end the line's
+  // own name says it.
+  const caption = pool.querySelector('.hidden-pool__caption');
+  if (playing && odds && caption) host.append(caption);
+  const bound = liveSeatInk(topSeat) !== null && liveSeatInk(bottomSeat) !== null;
+  // One name for the line in play and after it: at the end it still lists
+  // what was face-down when play stopped (Brian, 2026-10-30: "Face-down at the
+  // end" read oddly mid-game).
+  const faceDownKey = t('live.stillFaceDown');
+  if (bound) {
+    for (const [seat, captures] of [
+      [topSeat, topCaptures],
+      [bottomSeat, bottomCaptures],
+    ] as const) {
+      const row = pool.querySelector<HTMLElement>(
+        `.hidden-pool__row[data-ink="${liveSeatInk(seat)}"]`,
+      );
+      host.append(seatBlock(seat, view.scores[seat], captures, row, faceDownKey));
+    }
+  } else {
+    // Before the first flip binds the inks no seat owns a colour and nothing
+    // can have been captured: the panel is each ink's face-down pieces, in
+    // the seat layout without points.
+    for (const row of pool.querySelectorAll<HTMLElement>('.hidden-pool__row')) {
+      host.append(inkBlock(row, faceDownKey));
+    }
+  }
+  if (!playing) return;
   const left = tkMovesLeftLine(view.noProgressClock);
   if (!left) return;
   const line = document.createElement('p');
   line.className = 'tk-banqi-moves-left';
   line.textContent = left;
-  liveRefs.hiddenPool.append(line);
+  host.append(line);
+}
+
+// One seat under the board: its name (the ink once the opening flip binds
+// it) over its points, large enough to read across the table (Brian,
+// 2026-10-30: the tag beside the name was too small), then two named lines
+// at one disc size: the pieces it took, and its own pieces still face-down.
+function seatBlock(
+  seat: BanqiSeat,
+  points: number,
+  captures: HTMLElement,
+  poolRow: HTMLElement | null,
+  faceDownKey: string,
+): HTMLElement {
+  const block = document.createElement('div');
+  block.className = 'tk-seat';
+  block.dataset.seat = seat;
+  const ink = liveSeatInk(seat);
+  if (ink) block.dataset.ink = ink;
+  const head = document.createElement('div');
+  head.className = 'tk-seat__head';
+  const label = document.createElement('span');
+  label.className = 'tk-seat__name';
+  label.textContent = t(seatLabel(seat));
+  const value = document.createElement('span');
+  value.className = 'tk-seat__points';
+  value.textContent = tkPoints(points);
+  head.append(label, value);
+  block.append(head);
+  captures.className = 'captures-row review-captures-row tk-seat__pieces';
+  if (!captures.querySelector('.review-capture-piece')) captures.replaceChildren(noneMark());
+  block.append(seatLine('captured', t('live.tk.captured'), captures));
+  block.append(faceDownLine(poolRow, faceDownKey));
+  return block;
+}
+
+// One ink's face-down pieces before the opening flip, named by the ink.
+function inkBlock(poolRow: HTMLElement, faceDownKey: string): HTMLElement {
+  const block = document.createElement('div');
+  block.className = 'tk-seat';
+  if (poolRow.dataset.ink) block.dataset.ink = poolRow.dataset.ink;
+  const head = document.createElement('div');
+  head.className = 'tk-seat__head';
+  const label = document.createElement('span');
+  label.className = 'tk-seat__name';
+  label.textContent = poolRow.querySelector('.hidden-pool__label')?.textContent ?? '';
+  head.append(label);
+  block.append(head);
+  block.append(faceDownLine(poolRow, faceDownKey));
+  return block;
+}
+
+// Every seat shows both lines in every state, an empty one saying "None", so
+// the panel keeps one shape from the first flip to the end (Brian,
+// 2026-10-30: "always show both").
+function faceDownLine(poolRow: HTMLElement | null, key: string): HTMLElement {
+  const found = poolRow?.querySelector<HTMLElement>('.hidden-pool__pieces');
+  const pieces = found ?? document.createElement('div');
+  if (!found || pieces.querySelector('.hidden-pool__none')) pieces.replaceChildren(noneMark());
+  pieces.classList.add('tk-seat__pieces');
+  const line = seatLine('face-down', key, pieces);
+  const note = poolRow?.querySelector('.hidden-pool__note');
+  if (note) line.append(note);
+  return line;
+}
+
+function noneMark(): HTMLElement {
+  const none = document.createElement('span');
+  none.className = 'tk-seat__none';
+  none.textContent = t('live.tk.none');
+  return none;
+}
+
+function seatLine(kind: string, key: string, pieces: HTMLElement): HTMLElement {
+  const line = document.createElement('div');
+  line.className = 'tk-seat__line';
+  line.dataset.line = kind;
+  const name = document.createElement('span');
+  name.className = 'tk-seat__key';
+  name.textContent = key;
+  line.append(name, pieces);
+  return line;
 }
 
 // ── Rendering ─────────────────────────────────────────────────────────────────

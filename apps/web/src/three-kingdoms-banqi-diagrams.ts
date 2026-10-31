@@ -23,9 +23,15 @@ import {
   type ThreeKingdomsBanqiState,
 } from '@mistboard/game';
 import { activeXiangqiPieceSet } from './articles/diagrams.js';
-import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import {
+  drawMarkerOnArrival,
+  glideSvgPiece,
+  pieceAnimationDurationMs,
+  pieceFlipDurationMs,
+} from './board-anim.js';
 import {
   animateBoardLastMoveArrival,
+  BOARD_LASTMOVE_MARKER_SELECTOR,
   BOARD_LASTMOVE_OVER_GROUP_ATTRS,
   type BoardLastMovePiece,
   boardLastMoveMarkersSvg,
@@ -397,8 +403,15 @@ export function animateThreeKingdomsBanqiBoardMove(
   const to = point(settle);
   glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
   // The gold band rides the piece in, as on xiangqi and jieqi. A reverse step
-  // draws the prior move's marks elsewhere, so nothing follows that glide.
-  if (!opts.reverse) animateBoardLastMoveArrival(host, from, to, duration);
+  // draws the prior move's marks elsewhere: they fade in as the glide lands, so
+  // a tile's coloured edge never sits waiting for the piece (Brian, 2026-10-30).
+  if (!opts.reverse) {
+    animateBoardLastMoveArrival(host, from, to, duration);
+    return;
+  }
+  for (const marker of host.querySelectorAll(BOARD_LASTMOVE_MARKER_SELECTOR)) {
+    drawMarkerOnArrival(marker, duration);
+  }
 }
 
 /** Turn a live-flipped tile over (banqi's turn-over, on the point grid). The
@@ -415,6 +428,44 @@ export function animateThreeKingdomsBanqiReveal(
     return flipBanqiTile3dReveal(host, square, point, activeXiangqiPieceSet, { faceMark });
   }
   return flipBanqiFamilyReveal(host, square, point, faceDown, undefined, faceMark);
+}
+
+/** The end-of-game reveal: a finished room shows every tile face up, which
+ *  arrived as one jolt with the final move (Brian, 2026-10-30). Call after the
+ *  render that drew the faces: each tile in `squares` goes back to its back at
+ *  once, then turns over in board order from `startMs`, `staggerMs` apart. A
+ *  later render replaces the slots and the remaining turns do nothing. Returns
+ *  when the last turn ends, 0 when nothing turns (reduced motion, no tiles). */
+export function revealThreeKingdomsBanqiTilesInTurn(
+  host: HTMLElement,
+  squares: ReadonlySet<Square>,
+  opts: { startMs: number; staggerMs: number },
+): number {
+  const flipMs = pieceFlipDurationMs();
+  if (flipMs <= 0) return 0;
+  const tile3d = banqiTile3dEnabled();
+  const order = ALL_THREE_KINGDOMS_BANQI_SQUARES.filter((square) => squares.has(square));
+  let turned = 0;
+  for (const square of order) {
+    const slot = host.querySelector(`[data-piece-square="${square}"]`);
+    if (!slot) continue;
+    const face = slot.innerHTML;
+    const { x, y } = point(square);
+    slot.innerHTML = tile3d
+      ? banqiTile3dMarkup({ x, y }, null, activeXiangqiPieceSet)
+      : faceDown(x, y);
+    setTimeout(
+      () => {
+        if (!slot.isConnected) return;
+        slot.innerHTML = face;
+        if (tile3d) flipBanqiTile3dReveal(host, square, point, activeXiangqiPieceSet);
+        else flipBanqiFamilyReveal(host, square, point, faceDown);
+      },
+      opts.startMs + turned * opts.staggerMs,
+    );
+    turned += 1;
+  }
+  return turned ? opts.startMs + (turned - 1) * opts.staggerMs + flipMs : 0;
 }
 
 /** The piece the last-move mark hugs on a 3D tile: the raised disc, so the mark

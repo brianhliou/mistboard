@@ -152,7 +152,7 @@ beforeEach(() => {
 });
 
 describe('Three Kingdoms banqi live room', () => {
-  it('draws 45 points, every setup tile face down, the seat points and the tally', async () => {
+  it('draws 45 points, every setup tile face down, and each ink face-down before a flip', async () => {
     const { states } = playLine(0);
     const options = await mount();
     options.applyHello(
@@ -168,15 +168,133 @@ describe('Three Kingdoms banqi live room', () => {
     const pieces = document.querySelectorAll('[data-piece-square]');
     expect(pieces.length).toBe(Object.keys(states[0]!.board).length);
     expect(document.querySelectorAll('[data-piece-square] image')).toHaveLength(0);
-    // Points beside each seat's name, the target once in the game card.
-    const tags = [...document.querySelectorAll('.clock-seat-tag')].map((el) => el.textContent);
-    expect(tags).toEqual(['0 pts', '0 pts']);
+    // Before the first flip no seat owns an ink and nothing can be taken:
+    // one block per ink with its face-down pieces, no points and no captured
+    // line; nothing beside the names; the target once in the game card.
+    expect(document.querySelectorAll('.clock-seat-tag')).toHaveLength(0);
+    const blocks = [...document.querySelectorAll<HTMLElement>('.hidden-pool .tk-seat')];
+    expect(blocks.map((block) => block.dataset.ink).sort()).toEqual(['black', 'red']);
+    for (const block of blocks) {
+      expect(block.dataset.seat).toBeUndefined();
+      expect(block.querySelector('.tk-seat__points')).toBeNull();
+      expect(block.querySelector('[data-line="captured"]')).toBeNull();
+      expect(
+        block.querySelectorAll('[data-line="face-down"] .review-capture-piece').length,
+      ).toBeGreaterThan(0);
+    }
     expect(document.body.textContent).toContain('First to 100 points');
     expect(document.body.textContent?.match(/First to 100 points/g)).toHaveLength(1);
-    // Banqi's face-down tally, 16 a side, and no quiet-move line this early.
-    expect(document.querySelector('.hidden-pool__row')).not.toBeNull();
+    // No quiet-move line this early.
     expect(document.querySelector('.tk-banqi-moves-left')).toBeNull();
     expect(document.body.textContent).not.toContain('Quiet moves');
+  });
+
+  it('puts each seat block under the board: points, captures and face-down, not the rails', async () => {
+    // A line that takes whenever it can, up to the first ply where each ink
+    // has lost a piece.
+    let line = createThreeKingdomsBanqiStateFromSetup(
+      ROOM,
+      createThreeKingdomsBanqiSetup(seeded(7)),
+    );
+    const states = [line];
+    for (let ply = 0; ply < 200 && line.status.type === 'playing'; ply += 1) {
+      const legal = getThreeKingdomsBanqiLegalMoves(line);
+      const move =
+        legal.find((m) => m.from !== m.to && line.board[m.to]) ??
+        legal.find((m) => m.from === m.to) ??
+        legal[0]!;
+      line = applyThreeKingdomsBanqiMove(line, move);
+      states.push(line);
+    }
+    const at = states.findIndex(
+      (state) =>
+        state.status.type === 'playing' &&
+        view(state, 'red').captured.some((c) => c.owner === 'red') &&
+        view(state, 'red').captured.some((c) => c.owner === 'black'),
+    );
+    expect(at).toBeGreaterThan(0);
+    const state = view(states[at]!, 'red');
+    const options = await mount();
+    options.applyHello(hello({ type: 'hello', seat: 'red', state, events: [CREATED] }));
+    options.render();
+    const [top, bottom] = [...document.querySelectorAll<HTMLElement>('.hidden-pool .tk-seat')];
+    expect(top?.dataset.seat).toBe('black');
+    expect(bottom?.dataset.seat).toBe('red');
+    expect(bottom?.querySelector('.tk-seat__points')?.textContent).toBe(`${state.scores.red} pts`);
+    expect(top?.querySelector('.tk-seat__points')?.textContent).toBe(`${state.scores.black} pts`);
+    for (const block of [top, bottom]) {
+      expect(
+        block?.querySelectorAll('[data-line="captured"] .review-capture-piece').length,
+      ).toBeGreaterThan(0);
+      // Every disc in the block is one size: the captures and the face-down
+      // pieces share the tk-seat__pieces class the size rule keys on.
+      for (const piece of block?.querySelectorAll('.review-capture-piece') ?? []) {
+        expect(piece.closest('.tk-seat__pieces')).not.toBeNull();
+      }
+    }
+    expect(
+      document.querySelectorAll('.hidden-pool [data-line="face-down"]').length,
+    ).toBeGreaterThan(0);
+    for (const rail of document.querySelectorAll('[data-captures-top], [data-captures-bottom]')) {
+      expect(rail.childElementCount).toBe(0);
+    }
+  });
+
+  // Both lines under one name in every state, an empty one saying "None"
+  // (Brian, 2026-10-30: "always show both").
+  function lineKeys(block: Element | undefined): string[] {
+    return [...(block?.querySelectorAll('.tk-seat__key') ?? [])].map(
+      (key) => key.textContent ?? '',
+    );
+  }
+
+  it('after the first flip each seat shows an empty captured line as None', async () => {
+    const { states } = playLine(1);
+    const options = await mount();
+    options.applyHello(
+      hello({ type: 'hello', seat: 'red', state: view(states[1]!, 'red'), events: [CREATED] }),
+    );
+    options.render();
+    const blocks = [...document.querySelectorAll<HTMLElement>('.hidden-pool .tk-seat')];
+    expect(blocks).toHaveLength(2);
+    for (const block of blocks) {
+      expect(lineKeys(block)).toEqual(['Captured', 'Still face-down']);
+      expect(block.querySelector('[data-line="captured"] .tk-seat__none')?.textContent).toBe(
+        'None',
+      );
+    }
+  });
+
+  it('keeps both lines and their names once the game is over', async () => {
+    let line = createThreeKingdomsBanqiStateFromSetup(
+      ROOM,
+      createThreeKingdomsBanqiSetup(seeded(7)),
+    );
+    const moves: ThreeKingdomsBanqiMove[] = [];
+    for (let ply = 0; ply < 2000 && line.status.type === 'playing'; ply += 1) {
+      const legal = getThreeKingdomsBanqiLegalMoves(line);
+      const move =
+        legal.find((m) => m.from !== m.to && line.board[m.to]) ??
+        legal.find((m) => m.from === m.to) ??
+        legal[0]!;
+      line = applyThreeKingdomsBanqiMove(line, move);
+      moves.push(move);
+    }
+    expect(line.status.type).not.toBe('playing');
+    const options = await mount();
+    options.applyHello(
+      hello({
+        type: 'hello',
+        seat: 'red',
+        state: view(line, 'red'),
+        events: [CREATED, ...moveEvents(moves)],
+      }),
+    );
+    options.render();
+    const blocks = [...document.querySelectorAll<HTMLElement>('.hidden-pool .tk-seat')];
+    expect(blocks).toHaveLength(2);
+    for (const block of blocks) expect(lineKeys(block)).toEqual(['Captured', 'Still face-down']);
+    expect(document.body.textContent).not.toContain('Face-down at the end');
   });
 
   it('says how many moves are left only from 30 quiet moves on', async () => {

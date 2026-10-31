@@ -772,6 +772,8 @@ export const ZH_HANT_PLAY = {
   'live.atomicCheckColor': '{color}的將帥下一步可能被吃或被炸。這樣的重複將軍會判負。',
   'live.banqiChaseForbidden': '長捉：這步棋會讓同一局面第三次出現。請走別的著法。',
   'live.tk.points': '{count} 分',
+  'live.tk.captured': '吃子',
+  'live.tk.none': '無',
   'live.tk.firstTo': '先得 {count} 分者勝',
   'live.tk.movesLeft': '還剩 {count} 步，之後按分數判定勝負',
   'live.tk.oneMoveLeft': '還剩 1 步，之後按分數判定勝負',

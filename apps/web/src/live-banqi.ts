@@ -28,6 +28,7 @@ import type {
 import { banqiMoveLabel, banqiMoveLabelOnBoard } from '@mistboard/game';
 import './live-xiangqi.css';
 import { renderBanqiMaterial } from './banqi-material.js';
+import { pieceFlipDurationMs } from './board-anim.js';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 import { banqiEnabled } from './feature-flags.js';
 import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
@@ -218,7 +219,8 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
       const flipped = banqiRevealFlipSquare(pending, view.board);
       if (flipped) {
         animateBanqiReveal(liveRefs.board, flipped);
-        return;
+        // Held for the core: the bot's instant reply waits for the turn-over.
+        return pieceFlipDurationMs();
       }
       if (pending.color === core?.state.seat) return;
       animateBanqiBoardMove(liveRefs.board, pending.move);
