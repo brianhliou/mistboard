@@ -22,6 +22,14 @@
   pointer-events: none;
 }
 
+.xq-marker--glyph .xq-marker__icon {
+  fill: none;
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
 .xq-marker--blunder .xq-marker__disc {
   fill: #e5222c;
 }

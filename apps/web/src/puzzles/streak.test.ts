@@ -43,7 +43,12 @@ function click(root: HTMLElement, label: string) {
   expect(target, label).toBeTruthy();
   target!.click();
 }
-function move(root: HTMLElement, m: XiangqiMove) {
+// Waits out any pause that holds the board (the ✓ before a scripted reply) the
+// way a solver would, then plays the move.
+async function move(root: HTMLElement, m: XiangqiMove) {
+  await vi.waitFor(() =>
+    expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleLive).toBe('true'),
+  );
   for (const square of [m.from, m.to]) {
     const target = root.querySelector(`[data-square="${square}"]`);
     expect(target).toBeTruthy();
@@ -161,7 +166,7 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   expect(prompt.querySelector('.puzzle-streak-tally')?.textContent).toContain('Best: 4');
   for (const m of puzzles[0]!.solution.filter((_, i) => i % 2 === 0)) {
     const count = fetchSpy.mock.calls.length;
-    move(root, m);
+    await move(root, m);
     await vi.waitFor(() => expect(fetchSpy.mock.calls.length).toBeGreaterThan(count));
     await vi.waitFor(() =>
       expect(root.querySelector('.puzzle-streak-feedback')?.getAttribute('aria-busy')).toBe(
@@ -193,7 +198,7 @@ it('plays through a solve, one skip, and a terminal miss with review and mode te
   const wrong = getStandardXiangqiLegalMoves(puzzles[2]!.initial).find(
     (m) => !attemptStandardXiangqiPuzzleLine(puzzles[2]!, [m]).ok,
   )!;
-  move(root, wrong);
+  await move(root, wrong);
   await vi.waitFor(() => expect(root.textContent).toContain('Game over'));
   // The run ends on the puzzle page: the failed puzzle stays on the board and
   // its answer is laid out in the move list, the miss marked ✗, the right move ✓.
@@ -316,7 +321,7 @@ it('says New best when the run beats the best it started from, and asks a guest 
     expect(root.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleId).toBe(puzzle.id),
   );
   for (const m of puzzle.solution.filter((_, i) => i % 2 === 0)) {
-    move(root, m);
+    await move(root, m);
     await vi.waitFor(() =>
       expect(
         root.querySelector('.puzzle-streak-feedback')?.getAttribute('aria-busy') ?? 'false',

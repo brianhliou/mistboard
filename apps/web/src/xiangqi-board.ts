@@ -10,7 +10,8 @@
 // also lives here; live-xiangqi.ts re-exports it for its existing importers.
 
 // This board builds the judgment badge in its own intersection geometry rather
-// than through svg-board-marker, so it imports the badge palette directly.
+// than through svg-board-marker (it borrows only the drawn ✓/✗ icon), so it
+// imports the badge palette directly.
 import './board-glyph-marker.css';
 // Its circle markers take a brush class (`xq-marker xq-shape--green`) whose
 // colours live here; without the import a page that draws one but loads no
@@ -45,6 +46,7 @@ import {
   xiangqiPiece3dMarkup,
 } from './piece-3d.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
+import { type SvgBoardGlyphIcon, svgBoardGlyphIcon } from './svg-board-marker.js';
 import { installBoardDrag, installBoardDraw } from './variant-tenant/board-drag.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import { escapeHtml } from './web-utils.js';
@@ -203,6 +205,8 @@ export interface XiangqiBoardMarker {
   kind: 'star' | 'circle' | 'glyph';
   /** Disc label for kind 'glyph' (e.g. '??'). Ignored by the other kinds. */
   text?: string;
+  /** A drawn mark for kind 'glyph' in place of the label (puzzle ✓ / ✗). */
+  icon?: SvgBoardGlyphIcon;
   className?: string;
 }
 
@@ -433,14 +437,16 @@ export function xiangqiMarkerSvg(
   if (marker.kind === 'glyph') {
     // Offsets are in SCREEN space (intersection() has already applied the
     // perspective flip), so the badge sits in the same corner whichever way the
-    // board faces. Empty text draws nothing rather than an unlabelled disc.
-    if (!marker.text) return '';
+    // board faces. No text and no icon draws nothing rather than an unlabelled disc.
+    if (!marker.text && !marker.icon) return '';
     const cx = center.x + GLYPH_OFFSET;
     const cy = center.y - GLYPH_OFFSET;
     return (
       `<g class="${className} xq-marker--glyph">` +
       `<circle class="xq-marker__disc" cx="${cx}" cy="${cy}" r="${GLYPH_RADIUS}"/>` +
-      `<text class="xq-marker__label" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${GLYPH_FONT_SIZE}">${escapeHtml(marker.text)}</text>` +
+      (marker.icon
+        ? svgBoardGlyphIcon(marker.icon, cx, cy, GLYPH_RADIUS)
+        : `<text class="xq-marker__label" x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${GLYPH_FONT_SIZE}">${escapeHtml(marker.text ?? '')}</text>`) +
       `</g>`
     );
   }

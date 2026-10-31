@@ -37,8 +37,7 @@
 }
 
 /* Quiet links: practice and sign-in sit under the main action, never beside
-   it as a second call to action. The settings card's Browse puzzle themes
-   (.puzzle-quiet-link) reads the same. */
+   it as a second call to action. */
 .puzzle-streak-practice,
 .puzzle-streak-signin,
 .puzzle-quiet-link {
@@ -273,17 +272,37 @@ a.puzzle-streak-chip:focus-visible {
    row under the row it was tried in, like a variation; moves the solution
    showed are muted (after Streak's miss, the move that was right there keeps
    its ✓). */
-.puzzle-move-cell--right .puzzle-move-mark {
-  color: #2b8a57;
+/* The verdict sits at the cell's right edge, lichess-style, so the move
+   labels stay aligned down the column whether or not they carry one. */
+/* Lichess marks: a found move ✓ in green, a miss ✗ in red, in the same
+   colours as the board badges so the list and the board agree. Scoped under the
+   list so they outrank the plain cell colour (.puzzle-move-red), which comes
+   later in this file at the same specificity. */
+.puzzle-move-list .puzzle-move-cell--right,
+.puzzle-move-list .puzzle-move-cell--wrong {
+  display: flex;
+  align-items: center;
+}
+
+/* The mark follows its move rather than pinning to the cell's right edge: at
+   the edge, a red move's mark sat against the black move beside it. */
+.puzzle-move-mark {
+  margin-left: 6px;
   font-weight: 700;
 }
 
-.puzzle-move-cell--wrong {
-  color: #b03636;
+.puzzle-move-list .puzzle-move-cell--right .puzzle-move-mark {
+  color: #00ad40;
 }
 
-.puzzle-move-cell--wrong .puzzle-move-mark {
-  font-weight: 700;
+.puzzle-move-list .puzzle-move-cell--wrong,
+.puzzle-move-list .puzzle-move-cell--wrong .puzzle-move-mark {
+  color: #e5222c;
+}
+
+.puzzle-move-list
+  .puzzle-move-cell--right.puzzle-move-cell--active:not(.puzzle-move-cell--revealed) {
+  background: color-mix(in srgb, #00ad40 22%, transparent);
 }
 
 .puzzle-move-variation {
@@ -1339,29 +1358,6 @@ a.puzzle-streak-chip:focus-visible {
   cursor: default;
 }
 
-/* A wrong try's squares flash red after the move is taken back
-   (paintWrongFlash; the delay keeps the phase across a repaint). */
-.puzzle-wrong-flash rect {
-  animation: puzzle-wrong-flash 700ms ease-out both;
-  animation-delay: var(--puzzle-wrong-flash-delay, 0ms);
-  rx: 8px;
-}
-
-@keyframes puzzle-wrong-flash {
-  from {
-    fill: rgba(204, 51, 51, 0.55);
-  }
-  to {
-    fill: rgba(204, 51, 51, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .puzzle-wrong-flash rect {
-    animation-timing-function: steps(1, end);
-  }
-}
-
 .puzzle-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1387,6 +1383,47 @@ a.puzzle-streak-chip:focus-visible {
 .puzzle-tag.puzzle-tag-motif {
   color: var(--site-text);
   border-color: var(--site-border);
+}
+
+/* A theme the themes page drills links to that drill. */
+a.puzzle-tag--link {
+  text-decoration: none;
+}
+
+a.puzzle-tag--link:hover {
+  border-color: var(--site-accent);
+  color: var(--site-accent);
+}
+
+/* The theme box (lichess's): the heading is the way back to the themes page,
+   so it reads as a link (accent, chevron) rather than a muted footnote. */
+.puzzle-theme-card h2 {
+  font-size: 15px;
+}
+
+.puzzle-theme-card__back {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--site-link);
+  text-decoration: none;
+}
+
+.puzzle-theme-card__back:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.puzzle-theme-card__chevron {
+  font-size: 1.25em;
+  line-height: 1;
+}
+
+.puzzle-theme-card__description {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .puzzles-status {

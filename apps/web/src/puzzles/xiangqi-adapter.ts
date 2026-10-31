@@ -41,6 +41,7 @@ import {
   animateXiangqiBoardMove,
   XIANGQI_PIECE_SIZE,
   type XiangqiBoardArrow,
+  type XiangqiBoardMarker,
   xiangqiArrowSvg,
   xiangqiBoardSvg,
   xiangqiClickResult,
@@ -73,6 +74,14 @@ function paintBoard(board: HTMLElement, ctx: PuzzleBoardContext): void {
     // the selection while scrubbing history instead of painting stale targets.
     selectedSquare: isReplayLive(session) ? (session.selectedSquare as XiangqiSquare | null) : null,
     draggingFrom: session.draggingFrom as XiangqiSquare | null,
+    markers: ctx.moveMarks.map(
+      (mark): XiangqiBoardMarker => ({
+        square: mark.square as XiangqiSquare,
+        kind: 'glyph',
+        icon: mark.verdict === 'right' ? 'check' : 'cross',
+        className: mark.verdict === 'right' ? 'xq-marker--good' : 'xq-marker--blunder',
+      }),
+    ),
   });
   board.append(host);
   installBoardDrag({

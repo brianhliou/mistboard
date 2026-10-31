@@ -6,6 +6,7 @@
  */
 
 import {
+  isXiangqiTrainingTagId,
   type JunglePuzzleTheme,
   puzzleShortCode,
   XIANGQI_MOTIF_BY_ID,
@@ -19,7 +20,7 @@ import { renderVariantMarker } from '../variant-markers.js';
 import { colorLabel, type PuzzleSummary } from './adapter.js';
 import type { UserPuzzleRating } from './api.js';
 import { isPuzzleVariant, type PuzzleVariant, puzzleBoardAdapter } from './registry.js';
-import { type PuzzleThemeSettings, puzzleThemePicker, puzzleThemesLink } from './themes.js';
+import { type PuzzleThemeSettings, puzzleThemeCard } from './themes.js';
 
 export type QueuePanelProps = {
   queue: readonly PuzzleSummary[];
@@ -162,14 +163,6 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     field.append(fieldLabel, select);
     form.append(field);
   }
-  if (props.theme && variantFilter === XIANGQI_SPEC_ID) {
-    form.append(puzzleThemePicker(props.theme));
-  }
-  // Muted like the page's other small links (sign-in, practice), not the
-  // browser's default blue.
-  const browseThemes = puzzleThemesLink();
-  browseThemes.className = 'puzzle-quiet-link';
-  form.append(browseThemes);
   const autoNextToggle = document.createElement('label');
   autoNextToggle.className = 'puzzle-toggle';
   const autoNextInput = document.createElement('input');
@@ -189,7 +182,10 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   form.append(autoNextToggle);
   settingsCard.append(settingsTitle, form);
 
-  host.append(infoCard, ratingCard, settingsCard);
+  // Lichess's order: the puzzle, the rating, the theme box, then settings.
+  const themeCard =
+    props.theme && variantFilter === XIANGQI_SPEC_ID ? [puzzleThemeCard(props.theme)] : [];
+  host.append(infoCard, ratingCard, ...themeCard, settingsCard);
 }
 
 // The current-puzzle info card (lichess's puzzle__side__metas): the puzzle's
@@ -247,7 +243,7 @@ export function puzzleInfoCard(
 // Themes name the piece or pattern (e.g. "Drop", "Treasure"), so the chips
 // show only once the puzzle is over; until then the row says when they will.
 function puzzleThemesRow(
-  puzzle: Pick<PuzzleSummary, 'themes' | 'motifs'>,
+  puzzle: Pick<PuzzleSummary, 'themes' | 'motifs' | 'variant'>,
   state: 'hidden' | 'shown',
 ): HTMLElement {
   const row = document.createElement('div');
@@ -503,7 +499,9 @@ export function puzzleCodeLine(puzzle: PuzzleSummary): HTMLSpanElement {
   return line;
 }
 
-export function tagsPanel(puzzle: Pick<PuzzleSummary, 'themes' | 'motifs'>): HTMLElement {
+export function tagsPanel(
+  puzzle: Pick<PuzzleSummary, 'themes' | 'motifs' | 'variant'>,
+): HTMLElement {
   const tags = document.createElement('div');
   tags.className = 'puzzle-tags';
   // Named kill patterns lead, under the catalogue's name for the locale: the
@@ -511,19 +509,32 @@ export function tagsPanel(puzzle: Pick<PuzzleSummary, 'themes' | 'motifs'>): HTM
   // assumes a reader who reads no Chinese (2026-10-10), as the themes page does.
   for (const id of puzzle.motifs ?? []) {
     if (!XIANGQI_MOTIF_BY_ID.has(id)) continue;
-    const tag = document.createElement('span');
-    tag.className = 'puzzle-tag puzzle-tag-motif';
+    const tag = themeTag(puzzle, id);
+    tag.classList.add('puzzle-tag-motif');
     tag.textContent = t(`puzzle.motifName.${id}` as I18nKey);
     tag.title = t(`puzzle.motifDesc.${id}` as I18nKey);
     tags.append(tag);
   }
   for (const theme of puzzle.themes) {
-    const tag = document.createElement('span');
-    tag.className = 'puzzle-tag';
+    const tag = themeTag(puzzle, theme);
     tag.textContent = puzzleThemeLabel(theme);
     tags.append(tag);
   }
   return tags;
+}
+
+// A xiangqi theme the themes page drills is a link to that drill (lichess's
+// theme list); the rest (Crushing, every Jungle theme) stay plain chips.
+function themeTag(puzzle: Pick<PuzzleSummary, 'variant'>, id: string): HTMLElement {
+  if (puzzle.variant !== XIANGQI_SPEC_ID || !isXiangqiTrainingTagId(id)) {
+    const tag = document.createElement('span');
+    tag.className = 'puzzle-tag';
+    return tag;
+  }
+  const link = document.createElement('a');
+  link.className = 'puzzle-tag puzzle-tag--link';
+  link.href = `/puzzles?theme=${encodeURIComponent(id)}`;
+  return link;
 }
 
 // The label for every theme a puzzle can carry. A theme that is also a
