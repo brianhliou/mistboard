@@ -139,9 +139,11 @@ const ABJCHESS_ANALYSIS_NODES = 500_000;
 const ABJCHESS_CONSISTENCY_RESEARCH_NODES = ABJCHESS_ANALYSIS_NODES * 4;
 // A safety net, never the dial: 2M nodes at 1.4M nps is ~1.4 s, well inside this cap.
 const ABJCHESS_ANALYSIS_MOVETIME_CAP_MS = 30_000;
-// This build has no MultiPV. Rank ~40 legal children at 200k nodes each (~5.7 s),
-// then true-baseline the top three plus played with the unchanged per-role fan
-// (up to ~24 more evals, ~3.4 s): roughly 10 s per reveal, cached once per game.
+// This build has no MultiPV. Ranking costs one 200k-node eval per deterministic
+// child or dark capture, and up to six per reveal (one per distinct hidden role).
+// Opening position: 43 reveals + one quiet move = 259 evals / 51.8M nodes,
+// ~37 s per decision at 1.4M nps (fewer as roles and legal moves disappear).
+// Reuse those baselines and their terms for the top three plus played.
 const ABJCHESS_DECISION_NODES = 200_000;
 const ABJCHESS_DECISION_MULTIPV_NODES = 100_000;
 
@@ -681,7 +683,12 @@ export type JieqiDecisionCandidate = {
 export type JieqiDecisionDeps = {
   /** Top candidate moves (engine ranking) for a pre-move FEN — used only to pick which moves to
    *  true-baseline as the ceiling; the returned scores are not used in the output. */
-  multiPv: (fen: string, repetitionWindow?: JieqiRepetitionWindow) => Promise<UciMultiPvLine[]>;
+  multiPv: (
+    fen: string,
+    repetitionWindow?: JieqiRepetitionWindow,
+  ) => Promise<(UciMultiPvLine & { win?: number })[]>;
+  /** True pool-mean already computed during candidate ranking, scoped to that parent FEN. */
+  rankedBaseline?: (fen: string, uci: string) => number | undefined;
   /** Single-position eval (side-to-move POV) at decision depth — the pool-mean's per-role term. */
   evalPosition: (
     fen: string,
@@ -697,21 +704,75 @@ export function jieqiDecisionDepsFromSession(
   session: JieqiAnalysisEvaluators,
   profile: JieqiAnalysisProfile,
 ): JieqiDecisionDeps {
+  // Keep only the current decision's terms. Reusing public FEN evaluations also lets
+  // the played move recover its TRUE realized role, never the parser's sampled role.
+  const terms = new Map<string, ReturnType<JieqiDecisionDeps['evalPosition']>>();
+  const baselines = new Map<string, number>();
+  let rankedFen: string | undefined;
+  const evalPosition: JieqiDecisionDeps['evalPosition'] = (fen, repetitionWindow) => {
+    const anchor = repetitionWindow?.fen ?? fen;
+    const moves = repetitionWindow?.moves ?? [];
+    const key = JSON.stringify([anchor, moves]);
+    const cached = terms.get(key);
+    if (cached) return cached;
+    const result = session.evaluateFen(anchor, {
+      ...profile.decisionEval,
+      moves,
+      fresh: true,
+    });
+    if (profile.decisionCandidates === 'legal-moves') terms.set(key, result);
+    return result;
+  };
   return {
+    evalPosition,
+    rankedBaseline: (fen, uci) => (fen === rankedFen ? baselines.get(uci) : undefined),
     multiPv: async (fen, repetitionWindow) => {
       if (profile.decisionCandidates === 'legal-moves') {
-        // Parse the CURRENT public position only for move generation. Hidden identities
-        // are immaterial to legality; never send the parser's sampled deal to the engine.
+        terms.clear();
+        baselines.clear();
+        rankedFen = fen;
+        // The CURRENT public FEN includes both public pools (including dark captures).
+        // Sampling supplies a state for legality and counterfactual role swaps only;
+        // every child sent to the engine must pass through the PUBLIC encoder.
         const parsed = parseJieqiFen(fen, { rng: () => 0 });
         if (!parsed.ok) throw new Error(`Invalid jieqi decision FEN: ${parsed.error}`);
-        const lines: UciMultiPvLine[] = [];
-        for (const move of getJieqiLegalMoves(parsed.state)) {
+        const lines: (UciMultiPvLine & { win?: number })[] = [];
+        const state = parsed.state;
+        const mover = state.status.type === 'playing' ? state.status.turn : 'red';
+        const repWindow: JieqiDecisionWindow = { anchor: state, moves: [] };
+        for (const move of getJieqiLegalMoves(state)) {
           const uci = jieqiMoveToPikafishUci(move);
-          // Let the engine apply the root move, including an unknown reveal role.
-          // The child has the opponent to move; keep the anchor and its history.
-          const evaluation = await session.evaluateFen(repetitionWindow?.fen ?? fen, {
+          if (isJieqiChanceMove(state, move)) {
+            const { baseline } = await poolMeanWin(
+              state,
+              move,
+              mover,
+              evalPosition,
+              repWindow,
+              profile.winK,
+            );
+            baselines.set(uci, baseline);
+            lines.push({
+              index: 0,
+              move: uci,
+              cp: null,
+              mate: null,
+              win: baseline,
+              depth: 0,
+              pv: [uci],
+              bound: null,
+            });
+            continue;
+          }
+          // Only face-up non-captures belong in UCI history. A known capture
+          // resets the anchor, just as jieqiAnalysisRepetitionWindows does.
+          const capture = state.board[move.to] != null;
+          const childFen = capture
+            ? jieqiStateToPikafishFen(applyJieqiMove(state, move), { public: true })
+            : (repetitionWindow?.fen ?? fen);
+          const evaluation = await session.evaluateFen(childFen, {
             ...profile.decisionEval,
-            moves: [...(repetitionWindow?.moves ?? []), uci],
+            moves: capture ? [] : [...(repetitionWindow?.moves ?? []), uci],
             fresh: true,
           });
           lines.push({
@@ -723,12 +784,11 @@ export function jieqiDecisionDepsFromSession(
             bound: null,
           });
         }
-        // Proven mates outrank cp scores; prefer shorter wins and longer losses.
-        const score = (line: UciMultiPvLine) =>
-          line.mate == null
-            ? (line.cp ?? Number.NEGATIVE_INFINITY)
-            : Math.sign(line.mate) * (1_000_000_000 - Math.abs(line.mate));
-        lines.sort((a, b) => score(b) - score(a));
+        // Compare on the same win% curve as the true means. For equal mate
+        // values, prefer shorter wins and longer losses.
+        const score = (line: (typeof lines)[number]) =>
+          line.win ?? winPercent(line.cp, line.mate, profile.winK);
+        lines.sort((a, b) => score(b) - score(a) || (a.mate ?? 0) - (b.mate ?? 0));
         return lines.map((line, i) => ({ ...line, index: i + 1 }));
       }
       return session.multiPv(repetitionWindow?.fen ?? fen, {
@@ -738,14 +798,6 @@ export function jieqiDecisionDepsFromSession(
         fresh: true,
       });
     },
-    evalPosition: (fen, repetitionWindow) =>
-      session
-        .evaluateFen(repetitionWindow?.fen ?? fen, {
-          ...profile.decisionEval,
-          moves: repetitionWindow?.moves,
-          fresh: true,
-        })
-        .then((e) => ({ cp: e.cp, mate: e.mate })),
   };
 }
 
@@ -994,14 +1046,32 @@ export async function analyzeJieqiDecisions(
       for (const uci of candidateUcis) {
         const candidate = uci === playedUci ? move : pikafishUciToJieqiMove(uci);
         if (!candidate) continue;
-        const { baseline, realized } = await poolMeanWin(
-          state,
-          candidate,
-          mover,
-          deps.evalPosition,
-          repWindow,
-          profile.winK,
-        );
+        const rankedBaseline = deps.rankedBaseline?.(fen, uci);
+        let baseline: number;
+        let realized: number;
+        if (rankedBaseline === undefined) {
+          ({ baseline, realized } = await poolMeanWin(
+            state,
+            candidate,
+            mover,
+            deps.evalPosition,
+            repWindow,
+            profile.winK,
+          ));
+        } else {
+          baseline = rankedBaseline;
+          realized = baseline;
+          if (uci === playedUci && !state.board[candidate.from]?.unknown) {
+            const post = applyJieqiMove(state, candidate);
+            realized = await moverWinAfter(
+              post,
+              mover,
+              deps.evalPosition,
+              jieqiDecisionWindowAfterMove(state, candidate, post, repWindow),
+              profile.winK,
+            );
+          }
+        }
         scored.push({ move: uci, win: baseline, ...(uci === playedUci ? { played: true } : {}) });
         if (uci === playedUci) {
           playedWin = baseline;

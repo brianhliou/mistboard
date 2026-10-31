@@ -33,7 +33,9 @@ import {
   ABJCHESS_JIEQI_DECISIONS_ENGINE_ID,
   analyzeJieqiDecisions,
   analyzeJieqiPostgame,
+  believedMoverPool,
   currentJieqiAnalysisProfile,
+  isJieqiChanceMove,
   JIEQI_ANALYSIS_ENGINE_ID,
   JIEQI_DECISIONS_ENGINE_ID,
   JIEQI_LEGACY_DECISIONS_ENGINE_IDS,
@@ -56,7 +58,11 @@ import {
   jieqiAnalysisEngine,
   jieqiAnalysisEngineAvailable,
 } from './jieqi-engine.js';
-import { jieqiMoveToPikafishUci, jieqiStateToPikafishFen } from './jieqi-fen.js';
+import {
+  jieqiMoveToPikafishUci,
+  jieqiStateToPikafishFen,
+  pikafishUciToJieqiMove,
+} from './jieqi-fen.js';
 
 const fixtureDir = mkdtempSync(join(tmpdir(), 'jieqi-abjchess-analysis-'));
 after(() => rmSync(fixtureDir, { recursive: true, force: true }));
@@ -374,51 +380,90 @@ test('the AB consistency rule triggers on a win% swing, not on 200cp', async () 
 
 // ── Decisions reuse one session ──────────────────────────────────────────────
 
-test('AB-JChess ranks every legal child even when MultiPV only returns one line', async () => {
-  const state = createInitialJieqiState('candidates', STANDARD_JIEQI_DEAL);
-  const legal = getJieqiLegalMoves(state);
-  const ucis = legal.map(jieqiMoveToPikafishUci).sort();
-  const played = legal.find((move) => jieqiMoveToPikafishUci(move) === ucis.at(-1))!;
-  assert.equal(state.board[played.from]?.faceDown, true, 'played move is a reveal');
-  let multiPvCalls = 0;
+test('AB decision searches never put a reveal or capture in UCI history', async () => {
   const evaluations: Array<{ fen: string; opts: JieqiAnalysisRequest }> = [];
-  const session: JieqiAnalysisEvaluators = {
-    multiPv: async () => {
-      multiPvCalls += 1;
-      return [
-        { index: 1, move: ucis[0]!, cp: 0, mate: null, depth: 4, pv: [ucis[0]!], bound: null },
-      ];
+  const deps = jieqiDecisionDepsFromSession(
+    {
+      multiPv: async () => assert.fail('AB does not support MultiPV'),
+      evaluateFen: async (fen, opts) => {
+        evaluations.push({ fen, opts });
+        return { cp: 0, mate: null, best: null, depth: 4 };
+      },
     },
-    evaluateFen: async (fen, opts) => {
-      evaluations.push({ fen, opts });
-      // Root child searches have a move appended; pool-mean terms use child FENs.
-      const index = ucis.indexOf(opts.moves?.at(-1) ?? '');
-      const parsed = parseJieqiFen(fen);
-      assert.ok(parsed.ok);
-      const baselineCp = parsed.state.board[played.to] ? 400 : -400;
-      return { cp: index >= 0 ? index * 10 : baselineCp, mate: null, best: null, depth: 4 };
-    },
-  };
-  const deps = jieqiDecisionDepsFromSession(session, ABJCHESS_JIEQI_ANALYSIS_PROFILE);
-  const fen = jieqiStateToPikafishFen(state, { public: true });
-  const table = await deps.multiPv(fen);
-  assert.deepEqual(
-    table.map((line) => line.move),
-    ucis,
-    'negate child scores to rank for mover',
+    ABJCHESS_JIEQI_ANALYSIS_PROFILE,
   );
-  assert.deepEqual(
-    table.map((line) => line.index),
-    ucis.map((_, i) => i + 1),
+  const initial = createInitialJieqiState('recording', STANDARD_JIEQI_DEAL);
+  const legal = getJieqiLegalMoves(initial);
+  assert.ok(legal.some((m) => initial.board[m.from]?.faceDown && !initial.board[m.to]));
+  assert.ok(
+    legal.some((m) => initial.board[m.to]),
+    'fixture offers captures too',
   );
-  assert.equal(evaluations.length, legal.length, 'one search per legal move');
-  for (const { fen: requestedFen, opts } of evaluations) {
-    assert.equal(requestedFen, fen, 'engine applies the move without sampling a landing role');
+  const decisions = await analyzeJieqiDecisions(
+    [
+      { from: 'b3', to: 'b10' },
+      { from: 'a10', to: 'b10' },
+    ],
+    STANDARD_JIEQI_DEAL,
+    deps,
+    undefined,
+    ABJCHESS_JIEQI_ANALYSIS_PROFILE,
+  );
+  assert.equal(decisions.length, 2);
+  assert.ok(evaluations.length > 0);
+  for (const { fen, opts } of evaluations) {
+    const parsed = parseJieqiFen(fen, { rng: () => 0 });
+    assert.ok(parsed.ok);
+    let state = parsed.state;
+    assert.equal(fen.trim().split(/\s+/).length, 5, 'only public FENs reach the engine');
+    assert.equal(jieqiStateToPikafishFen(state, { public: true }), fen);
+    for (const uci of opts.moves ?? []) {
+      const move = pikafishUciToJieqiMove(uci);
+      assert.ok(move);
+      assert.equal(state.board[move.from]?.faceDown, false, `UCI reveal: ${uci}`);
+      assert.equal(state.board[move.to], undefined, `UCI capture: ${uci}`);
+      state = applyJieqiMove(state, move);
+    }
     assert.equal(opts.nodes, 200_000);
     assert.equal(opts.movetimeMs, 30_000);
     assert.equal(opts.fresh, true);
-    assert.equal(opts.moves?.length, 1);
   }
+});
+
+test('AB ranks every legal move by pool means and reuses each reveal baseline once', async () => {
+  const state = createInitialJieqiState('candidates', STANDARD_JIEQI_DEAL);
+  const played = { from: 'b1', to: 'c3' } as const;
+  const playedUci = jieqiMoveToPikafishUci(played);
+  const evaluations: string[] = [];
+  const cpByRole = {
+    chariot: -900,
+    horse: -600,
+    elephant: -300,
+    advisor: 0,
+    cannon: 300,
+    soldier: 900,
+  };
+  const session: JieqiAnalysisEvaluators = {
+    multiPv: async () => assert.fail('new profile must not request MultiPV'),
+    evaluateFen: async (fen, opts) => {
+      evaluations.push(JSON.stringify([fen, opts.moves ?? []]));
+      const parsed = parseJieqiFen(fen, { rng: () => 0 });
+      assert.ok(parsed.ok);
+      const landing = parsed.state.board[played.to];
+      const cp =
+        landing && !landing.faceDown && landing.role !== 'general' ? cpByRole[landing.role] : 1200;
+      return { cp, mate: null, best: null, depth: 4 };
+    },
+  };
+  const deps = jieqiDecisionDepsFromSession(session, ABJCHESS_JIEQI_ANALYSIS_PROFILE);
+  const rank = deps.multiPv;
+  let table: Awaited<ReturnType<typeof rank>> = [];
+  let callsAfterRanking = 0;
+  deps.multiPv = async (...args) => {
+    table = await rank(...args);
+    callsAfterRanking = evaluations.length;
+    return table;
+  };
   const decisions = await analyzeJieqiDecisions(
     [played],
     STANDARD_JIEQI_DEAL,
@@ -426,18 +471,48 @@ test('AB-JChess ranks every legal child even when MultiPV only returns one line'
     undefined,
     ABJCHESS_JIEQI_ANALYSIS_PROFILE,
   );
-  assert.equal(multiPvCalls, 0);
+  const pool = believedMoverPool(state, 'red');
+  const total = [...pool.values()].reduce((a, b) => a + b, 0);
+  const expected = [...pool].reduce((sum, [role, count]) => {
+    assert.notEqual(role, 'general');
+    return (
+      sum +
+      (count / total) *
+        winPercent(-cpByRole[role as keyof typeof cpByRole], null, ABJCHESS_20261031_WIN_PCT_K)
+    );
+  }, 0);
+  const ranked = table.find((line) => line.move === playedUci)!;
+  assert.ok(
+    Math.abs(ranked.win! - expected) < 1e-9,
+    'ranking is the probability-weighted win mean',
+  );
+  assert.ok(Math.abs(decisions[0]!.playedWin - expected) < 1e-9);
+  assert.equal(
+    decisions[0]!.realizedWin,
+    winPercent(-cpByRole.horse, null, ABJCHESS_20261031_WIN_PCT_K),
+    'realized score uses the actual role, not the parser sample',
+  );
+  assert.ok(
+    table.slice(0, 3).some((line) => line.move === playedUci),
+    'reveal reaches top three',
+  );
+  assert.equal(evaluations.length, callsAfterRanking, 'selected reveals are not baselined twice');
+  assert.equal(new Set(evaluations).size, evaluations.length, 'each role term searched once');
+  assert.deepEqual(
+    table.map((line) => line.move).sort(),
+    getJieqiLegalMoves(state).map(jieqiMoveToPikafishUci).sort(),
+  );
+  assert.deepEqual(
+    table.map((line) => line.index),
+    table.map((_, i) => i + 1),
+  );
   assert.deepEqual(
     decisions[0]!.candidates?.map((candidate) => candidate.move).sort(),
-    [...ucis.slice(0, 3), jieqiMoveToPikafishUci(played)].sort(),
-    'true-baseline three alternatives plus the played move',
+    [...new Set([...table.slice(0, 3).map((line) => line.move), playedUci])].sort(),
   );
-  assert.equal(decisions[0]!.candidates?.filter((candidate) => candidate.played).length, 1);
-  assert.equal(decisions[0]!.playedRank, 4, 'all three alternatives beat the played move');
-  assert.ok(decisions[0]!.bestWin > decisions[0]!.playedWin);
 });
 
-test('AB legal candidate searches append to the repetition window and generate from current FEN', async () => {
+test('AB only appends reversible moves to the repetition window', async () => {
   let state = createInitialJieqiState('history', STANDARD_JIEQI_DEAL);
   const anchorFen = jieqiStateToPikafishFen(state, { public: true });
   const moves: string[] = [];
@@ -446,24 +521,82 @@ test('AB legal candidate searches append to the repetition window and generate f
     moves.push(jieqiMoveToPikafishUci(move));
     state = applyJieqiMove(state, move);
   }
-  const expected = getJieqiLegalMoves(state).map(jieqiMoveToPikafishUci).sort();
+  const expected = getJieqiLegalMoves(state)
+    .filter((m) => !isJieqiChanceMove(state, m) && !state.board[m.to])
+    .map(jieqiMoveToPikafishUci)
+    .sort();
   const searched: string[] = [];
   const deps = jieqiDecisionDepsFromSession(
     {
       multiPv: async () => assert.fail('new profile must not request MultiPV'),
       evaluateFen: async (fen, opts) => {
-        assert.equal(fen, anchorFen);
-        assert.deepEqual(opts.moves?.slice(0, -1), moves);
+        if (opts.moves?.length) {
+          assert.equal(fen, anchorFen);
+          assert.deepEqual(opts.moves.slice(0, -1), moves);
+          searched.push(opts.moves.at(-1)!);
+        }
         assert.equal(opts.fresh, true);
-        searched.push(opts.moves!.at(-1)!);
-        return { cp: 0, mate: null, best: null, depth: 3 };
+        return { cp: 40, mate: null, best: null, depth: 3 };
       },
     },
     ABJCHESS_JIEQI_ANALYSIS_PROFILE,
   );
-  await deps.multiPv(jieqiStateToPikafishFen(state, { public: true }), { fen: anchorFen, moves });
+  const table = await deps.multiPv(jieqiStateToPikafishFen(state, { public: true }), {
+    fen: anchorFen,
+    moves,
+  });
+  assert.ok(expected.length > 0);
   assert.deepEqual(searched.sort(), expected);
+  for (const uci of expected) assert.equal(table.find((line) => line.move === uci)?.cp, -40);
   assert.equal(moves.length, 2, 'caller history was not mutated');
+});
+
+test('AB known captures use a fresh public child FEN with public pool surplus intact', async () => {
+  const state = createInitialJieqiState('capture', STANDARD_JIEQI_DEAL);
+  state.board = {
+    e1: { color: 'red', role: 'general', faceDown: false },
+    e10: { color: 'black', role: 'general', faceDown: false },
+    e5: { color: 'red', role: 'soldier', faceDown: false },
+    a2: { color: 'red', role: 'chariot', faceDown: false },
+    a3: { color: 'black', role: 'horse', faceDown: false },
+    c1: { color: 'red', role: 'cannon', faceDown: true },
+    b2: { color: 'red', role: 'chariot', faceDown: false },
+    b8: { color: 'black', role: 'horse', faceDown: true },
+  };
+  state.captures = [{ owner: 'black', role: 'elephant', revealedAtCapture: false }];
+  const move = { from: 'a2', to: 'a3' } as const;
+  const childFen = jieqiStateToPikafishFen(applyJieqiMove(state, move), { public: true });
+  const calls: Array<{ fen: string; opts: JieqiAnalysisRequest }> = [];
+  const deps = jieqiDecisionDepsFromSession(
+    {
+      multiPv: async () => assert.fail('new profile must not request MultiPV'),
+      evaluateFen: async (fen, opts) => {
+        calls.push({ fen, opts });
+        return { cp: 70, mate: null, best: null, depth: 3 };
+      },
+    },
+    ABJCHESS_JIEQI_ANALYSIS_PROFILE,
+  );
+  const table = await deps.multiPv(jieqiStateToPikafishFen(state, { public: true }), {
+    fen: 'old anchor',
+    moves: ['e0e1'],
+  });
+  const capture = calls.filter((call) => call.fen === childFen);
+  assert.equal(capture.length, 1);
+  assert.deepEqual(capture[0]!.opts.moves, []);
+  assert.equal(table.find((line) => line.move === jieqiMoveToPikafishUci(move))?.cp, -70);
+  const darkCapture = { from: 'b2', to: 'b8' } as const;
+  assert.equal(isJieqiChanceMove(state, darkCapture), true);
+  const darkChildFen = jieqiStateToPikafishFen(applyJieqiMove(state, darkCapture), {
+    public: true,
+  });
+  const darkCalls = calls.filter((call) => call.fen === darkChildFen);
+  assert.equal(darkCalls.length, 1, 'face-up capture of a dark piece has one pool-mean term');
+  assert.deepEqual(darkCalls[0]!.opts.moves, []);
+  assert.equal(
+    table.find((line) => line.move === jieqiMoveToPikafishUci(darkCapture))?.win,
+    winPercent(-70, null, ABJCHESS_20261031_WIN_PCT_K),
+  );
 });
 
 test('legacy decision profiles still request MultiPV 12 with their original budget', async () => {
