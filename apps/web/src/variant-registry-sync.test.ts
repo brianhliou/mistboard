@@ -368,11 +368,11 @@ describe('web tenant registry <-> server tenant registry parity', () => {
   });
 });
 
-describe('Gomoku hidden PvP registration', () => {
+describe('Gomoku hidden registration', () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it.each(['false', 'true'])(
-    'registers matching casual tenants without public routes or bots with flag %s',
+    'registers matching casual tenants and five browser bots without public routes with flag %s',
     (value) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', value);
       vi.stubEnv('MISTBOARD_GOMOKU_ENABLED', value);
@@ -392,7 +392,16 @@ describe('Gomoku hidden PvP registration', () => {
         secondColor: 'white',
         supportsRated: false,
       });
-      expect(web?.landing?.engineOptions).toBeUndefined();
+      expect(web?.landing?.engineOptions?.map((engine) => engine.id)).toEqual(
+        [1, 2, 3, 4, 5].map((level) => `rapfi-level-${level}`),
+      );
+      for (const option of web?.landing?.engineOptions ?? []) {
+        expect(option.kind).toBe('browser');
+        expect(server?.isEngineClientId?.(option.id)).toBe(true);
+      }
+      for (const id of ['rapfi-level-0', 'rapfi-level-6', 'rapfi-level-1\n', 'engine:black'])
+        expect(server?.isEngineClientId?.(id)).toBe(false);
+      expect(web?.landing?.defaultEngineId).toBe('rapfi-level-1');
       expect(server?.lobby?.supportsRated).toBe(false);
       expect(server?.watch).toBeNull();
       expect(landingBotOffer(GOMOKU_SPEC_ID)).toBeNull();

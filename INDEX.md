@@ -91,7 +91,8 @@ Edit task → find file → open only that file.
 | File | Owns |
 |------|------|
 | `gomoku-tenant.ts` | Hidden, unrated Black-first Gomoku referee: kernel placements, open-information views, room endings and persistence mappings (#768 build 2) |
-| `gomoku-registration.ts` | Flag-gated Gomoku room map, factory, create route, WebSocket runtime, hydration, casual lobby and friend challenges with Black/White preference; rejects rated and engine requests; no bot, TV, export or correspondence |
+| `gomoku-registration.ts` | Hidden flag-gated Gomoku rooms, casual lobby/friend challenges and five-level browser Rapfi PvE with Black/White preference; opt-in bot-move delegation, no rated, TV, export or correspondence |
+| `gomoku-browser-bot.test.ts` | Browser bot move boundary: both colours, own-room human only, exact ply, kernel legality, PvP/rated/spectator refusal and durable bot-seat reconnect |
 | `gomoku-tenant.test.ts` | Seeded referee wins, legal 225-ply draw, replay/hydration, seat preference, wire fields and unsupported-surface regressions |
 | `main.ts` | Prod entry point. Calls `installShutdownHandlers()` then `startServer({port})`. Tiny — all logic lives in `index.ts`. |
 | `index.ts` | Server library: exports `startServer`, `installShutdownHandlers`, `stopServer`. Module-load side-effect-free so the integration harness can boot a test instance on a random port. Owns canonical maps, startup wiring, shutdown composition, game-flow callbacks, and persistence-error status while delegating HTTP, WebSocket, and room lifecycle edges. |
@@ -523,8 +524,8 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | File | Owns |
 |------|------|
 | `gomoku-board.ts` (+ `.css`) | Responsive 15x15 SVG intersection board, stone placements, keyboard hit targets, last-move and terminal winning-line marks |
-| `live-gomoku.ts` | Hidden casual Gomoku room client with server-confirmed placements, Black/White orientation, shared room chrome and public-event replay |
-| `live-gomoku.test.ts` | Placement/turn/connection guards, terminal marks, overlines, flipped edges and reconnect replay |
+| `live-gomoku.ts` | Hidden casual Gomoku room client: server-confirmed placements, Black/White orientation, public-event replay and five-level browser Rapfi with cancellation, retry/reconnect and GPL/source panel |
+| `live-gomoku.test.ts` | Placement guards, terminal marks/replay and both-colour Rapfi lifecycle: levels, reuse, cancel/resume, stale replies, load errors and spectators |
 | `main.ts` | Entry point — URL routing to page modules via dynamic import; mounts theme + nav + restart banner + analytics |
 | `chunk-load-recovery.ts` | Shared one-shot reload guard for stale code-split chunks after a deployment; used by route mounts and the asynchronous homepage showcase cycler |
 | `live.ts` | Live-game page bootstrap — wires `live-state`, `live-socket`, `live-render`, and `live-view` for `/room/:id` |

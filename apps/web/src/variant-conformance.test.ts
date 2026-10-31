@@ -23,6 +23,7 @@ import { EMBED_ANALYSIS_VARIANTS } from './embed/embed-analysis.js';
 import { LANDING_BOT_GAME_SPEC_IDS } from './landing-bot-policy.js';
 import {
   type LandingRoomSetup,
+  landingVariantSupportsPve,
   roomCreationGameSpecId,
   roomCreationRequestBody,
 } from './landing-play.js';
@@ -67,6 +68,29 @@ function setupFor(gameSpecId: LandingRoomSetup['gameSpecId']): LandingRoomSetup 
 }
 
 describe('variant create-request conformance', () => {
+  it('preserves the five browser Rapfi choices and both human colours in hidden setup', () => {
+    expect(landingVariantSupportsPve(GOMOKU_SPEC_ID)).toBe(true);
+    for (const preferredColor of ['black', 'white'] as const) {
+      for (const level of [1, 2, 3, 4, 5]) {
+        expect(
+          roomCreationRequestBody(
+            'pve',
+            {
+              ...setupFor(GOMOKU_SPEC_ID),
+              preferredColor,
+            },
+            `rapfi-level-${level}`,
+          ),
+        ).toMatchObject({
+          gameSpecId: GOMOKU_SPEC_ID,
+          preferredColor,
+          engineId: `rapfi-level-${level}`,
+          mode: 'pve',
+          rated: false,
+        });
+      }
+    }
+  });
   it('preserves Gomoku setup ids and colors while refusing rated requests', () => {
     for (const mode of ['pvp', 'pve'] as const) {
       for (const preferredColor of ['black', 'white', 'random'] as const) {
@@ -321,12 +345,12 @@ describe('rules link conformance', () => {
   });
 });
 
-describe('Gomoku deliberate exclusions during hidden PvP integration', () => {
+describe('Gomoku deliberate exclusions during hidden integration', () => {
   it('has no public play, rating, study, analysis, editor, embed or marker surface', () => {
     expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(false);
     const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
     expect(tenant?.landing?.offerInMenu()).toBe(false);
-    expect(tenant?.landing?.engineOptions).toBeUndefined();
+    expect(tenant?.landing?.engineOptions).toHaveLength(5);
     expect(tenant?.landing?.capabilities.supportsRated).toBe(false);
     expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
     expect(leaderboardVariants.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);

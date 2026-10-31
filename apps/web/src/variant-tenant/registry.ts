@@ -323,7 +323,14 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      // Local opt-in deep links only. No public menu or bot offer.
+      engineOptions: [1, 2, 3, 4, 5].map((level) => ({
+        id: `rapfi-level-${level}`,
+        name: `Rapfi Level ${level}`,
+        familyName: 'Rapfi',
+        kind: 'browser',
+      })),
+      defaultEngineId: 'rapfi-level-1',
+      // Local opt-in deep links only. No public menu or bot shelf.
       offerInMenu: () => false,
       acceptsDeepLink: gomokuEnabled,
     },

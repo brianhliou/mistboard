@@ -1,6 +1,11 @@
 // Play translation catalog. English is the source contract; locale maps may fall back.
 
 export const EN_PLAY = {
+  'live.gomokuBotThinking': 'Rapfi is thinking…',
+  'live.gomokuBotFailed': 'Rapfi could not load or find a move. Retry to continue.',
+  'live.gomokuBotPaused': 'Rapfi paused.',
+  'live.gomokuBotRetry': 'Resume Rapfi',
+  'live.gomokuBotSource': 'Source code',
   'game.saveGame': 'Save game',
   'game.savedGame': 'Saved',
   'game.signInToSave': 'Sign in to save',

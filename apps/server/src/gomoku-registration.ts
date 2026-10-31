@@ -1,7 +1,12 @@
-// Built-hidden, flag-gated casual PvP only. No TV, bot, export or correspondence.
+// Built-hidden, flag-gated casual play. Rapfi runs only in the human's browser.
 import { GOMOKU_SPEC_ID, type GomokuColor, type RoomTimeControl } from '@mistboard/game';
 import { gomokuEnabled } from './feature-flags.js';
-import { type GomokuEvent, type GomokuRuntimeRoom, gomokuTenant } from './gomoku-tenant.js';
+import {
+  type GomokuEvent,
+  type GomokuRuntimeRoom,
+  gomokuTenant,
+  isGomokuEngineClientId,
+} from './gomoku-tenant.js';
 import * as persistence from './persistence.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
@@ -12,7 +17,7 @@ import {
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
-import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
+import { createTenantLiveRoom, type TenantRoomEngineSeat } from './variant-tenant/room-factory.js';
 import {
   createTenantRoomsRoute,
   type TenantRoomCreateBaseContext,
@@ -25,7 +30,7 @@ import {
 } from './variant-tenant/ws.js';
 
 export const gomokuRooms = new Map<string, GomokuRuntimeRoom>();
-export const gomokuWs = createTenantWsRuntime(gomokuTenant);
+export const gomokuWs = createTenantWsRuntime(gomokuTenant, { allowBrowserEngineMoves: true });
 type LiveRoom = TenantLiveRoom<
   'gomoku',
   GomokuColor,
@@ -37,7 +42,13 @@ type LiveRoom = TenantLiveRoom<
 export async function createGomokuRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: GomokuColor | 'random',
+  engine?: TenantRoomEngineSeat<GomokuColor>,
 ) {
+  if (
+    engine &&
+    (!isGomokuEngineClientId(engine.engineId) || !gomokuTenant.rules.isColor(engine.seat))
+  )
+    throw new Error('gomoku: invalid browser engine seat');
   const created = await createTenantLiveRoom(
     gomokuTenant,
     {
@@ -49,14 +60,19 @@ export async function createGomokuRoom(
       recordPersistenceError: (roomId, seq, eventType, err) =>
         recordTenantPersistenceError(gomokuTenant, roomId, seq, eventType, err),
     },
-    { timeControl, creatorPreference, rated: false },
+    {
+      timeControl,
+      creatorPreference,
+      engine: engine ? { engineId: engine.engineId, seat: engine.seat } : undefined,
+      rated: false,
+    },
   );
   if (!created.ok && created.error === 'disabled')
     return { ok: false as const, error: 'gomoku_disabled' as const };
   return created;
 }
 
-// A dedicated, fail-closed room route; no engine branch until build 3.
+// The shared factory persists the bot seat; it schedules no server engine work.
 const route = createTenantRoomsRoute<
   TenantRoomCreateBaseContext & { createGomokuRoom: typeof createGomokuRoom },
   GomokuColor | 'random',
@@ -66,9 +82,14 @@ const route = createTenantRoomsRoute<
   errorPrefix: 'gomoku',
   hasDisabledFlag: true,
   preferredColors: ['black', 'white', 'random'],
-  engine: { kind: 'none', rejectEngineId: true },
-  createRoom: (ctx, { timeControl, preferredColor }) =>
-    ctx.createGomokuRoom(timeControl, preferredColor),
+  engine: {
+    kind: 'seated',
+    defaultEngineId: 'rapfi-level-1',
+    isEngineClientId: isGomokuEngineClientId,
+    seats: ['black', 'white'],
+  },
+  createRoom: (ctx, { timeControl, preferredColor, engine }) =>
+    ctx.createGomokuRoom(timeControl, preferredColor, engine),
 });
 export const handleGomokuCreate = route.handleCreate;
 
@@ -76,8 +97,7 @@ registerVariantTenant({
   kind: gomokuTenant.kind,
   gameSpecId: gomokuTenant.gameSpecId,
   roomIdPrefix: gomokuTenant.roomIdPrefix,
-  // PvP only: there is no engine id namespace in this build.
-  isEngineClientId: () => false,
+  isEngineClientId: isGomokuEngineClientId,
   ownsSpecRouting: true,
   replays: tenantReplayCheck(gomokuTenant),
   errorPrefix: 'gomoku',

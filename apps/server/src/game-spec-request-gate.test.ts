@@ -43,7 +43,7 @@ test('the chess-stack gate still rejects Gomoku; only its registered tenant serv
   }
 });
 
-test('POST /api/rooms admits only flag-enabled Gomoku PvP; legacy selectors stay closed', async () => {
+test('POST /api/rooms admits only flag-enabled Gomoku PvP and PvE; legacy selectors stay closed', async () => {
   const name = 'MISTBOARD_GOMOKU_ENABLED';
   const before = process.env[name];
   try {
@@ -83,7 +83,16 @@ test('POST /api/rooms admits only flag-enabled Gomoku PvP; legacy selectors stay
             true,
           );
           const enabled = value === 'true';
-          if (enabled && 'gameSpecId' in selector && mode === 'pvp') {
+          if (enabled && 'gameSpecId' in selector && mode === 'pve') {
+            // The bot runs in the human's browser (#768 build 3); the room still
+            // opens unrated through the same gate.
+            assert.equal(status, 201);
+            const data = JSON.parse(payload);
+            assert.match(data.roomId, /^gmk_/);
+            assert.equal(data.mode, 'pve');
+            assert.equal(data.gameSpecId, 'gomoku');
+            assert.equal(data.rated, false);
+          } else if (enabled && 'gameSpecId' in selector && mode === 'pvp') {
             assert.equal(status, 201);
             const data = JSON.parse(payload);
             assert.match(data.roomId, /^gmk_/);

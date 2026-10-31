@@ -208,11 +208,11 @@ test('Gomoku friend creation preserves Black/White preference and exposes comple
   }
 });
 
-test('Gomoku route rejects rated, PvE and engine requests before calling its factory', async () => {
+test('Gomoku route rejects rated and unsupported modes before calling its factory', async () => {
   for (const body of [
     { mode: 'pvp', rated: true },
-    { mode: 'pve' },
-    { mode: 'pvp', engineId: 'rapfi' },
+    { mode: 'pve', rated: true },
+    { mode: 'correspondence' },
   ]) {
     let status = 0;
     let payload = '';
@@ -238,6 +238,58 @@ test('Gomoku route rejects rated, PvE and engine requests before calling its fac
     );
     assert.equal(status, 501);
     assert.deepEqual(JSON.parse(payload), { error: 'gomoku_unsupported_surface' });
+  }
+});
+
+test('Gomoku PvE creates all five Rapfi levels opposite either human colour and rejects unknown ids', async () => {
+  for (const human of ['black', 'white'] as const) {
+    for (const level of [1, 2, 3, 4, 5, 0, 6]) {
+      let status = 0;
+      let payload = '';
+      await handleGomokuCreate(
+        {
+          databaseRequired: false,
+          refusesCreate: () => false,
+          drainDeadlineMs: () => null,
+          createGomokuRoom,
+        },
+        {
+          writeHead: (value: number) => {
+            status = value;
+          },
+          end: (value: string) => {
+            payload = value;
+          },
+        } as unknown as ServerResponse,
+        {
+          gameSpecId: 'gomoku',
+          mode: 'pve',
+          preferredColor: human,
+          engineId: `rapfi-level-${level}`,
+        },
+      );
+      const result = JSON.parse(payload);
+      if (level === 0 || level === 6) {
+        assert.equal(status, 400);
+        assert.equal(result.error, 'invalid_engine');
+        continue;
+      }
+      assert.equal(status, 201);
+      const live = gomokuRooms.get(result.roomId);
+      assert.ok(live);
+      assert.equal(live.rated, false);
+      const bot = human === 'black' ? 'white' : 'black';
+      assert.equal(live.projection.seats[bot], `rapfi-level-${level}`);
+      assert.equal(live.projection.seats[human], undefined);
+      const wire = tenantSnapshotPayload(gomokuTenant, live, {
+        id: 'human',
+        seat: human,
+        solo: false,
+      });
+      assert.equal(wire.roomMode, 'pve');
+      assert.equal(wire.pveEngineId, `rapfi-level-${level}`);
+      assert.deepEqual(replayTenantEvents(gomokuTenant, live.events), live.projection);
+    }
   }
 });
 

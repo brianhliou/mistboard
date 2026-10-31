@@ -14,7 +14,7 @@ import {
 } from '@mistboard/game';
 import { gomokuEnabled } from './feature-flags.js';
 import type { GameTermination } from './persistence.js';
-import { tenantForfeitDeadlineForClient } from './variant-tenant/runtime.js';
+import { tenantForfeitDeadlineForClient, tenantPveEngineId } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent, TenantRuntimeRoom, VariantTenant } from './variant-tenant/tenant.js';
 
 export type GomokuEvent = TenantRoomEvent<GomokuColor, GomokuMove, typeof GOMOKU_SPEC_ID>;
@@ -25,6 +25,10 @@ export type GomokuRuntimeRoom = TenantRuntimeRoom<
   GomokuRoomState,
   typeof GOMOKU_SPEC_ID
 >;
+
+export function isGomokuEngineClientId(id: string | undefined): boolean {
+  return typeof id === 'string' && /^rapfi-level-[1-5]$/.test(id) && id.length === 13;
+}
 
 function moveFromMessage(message: Record<string, unknown>): GomokuMove | null {
   return typeof message.to === 'string' ? parseGomokuMove(message.to) : null;
@@ -84,9 +88,21 @@ export const gomokuTenant: VariantTenant<
         client.seat === 'spectator',
       ),
   },
+  engine: {
+    terminalContext: 'full-history',
+    isEngineClientId: isGomokuEngineClientId,
+    displayName: (id) => {
+      if (!isGomokuEngineClientId(id)) throw new Error(`gomoku: unknown engine ${id}`);
+      return `Rapfi Level ${id.at(-1)}`;
+    },
+    engineVersion: () => '1387d11312',
+    reservationReleaseTag: 'gomoku-browser',
+  },
   wire: {
     snapshotExtras: (room, client) => ({
-      roomMode: 'pvp',
+      roomMode: tenantPveEngineId(gomokuTenant, room) ? 'pve' : 'pvp',
+      pveEngineId: tenantPveEngineId(gomokuTenant, room),
+      browserBotPaused: Boolean(room.projection.paused),
       forfeitDeadline: tenantForfeitDeadlineForClient(gomokuTenant, room, client),
     }),
   },
