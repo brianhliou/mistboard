@@ -43,8 +43,8 @@ export function xiangqiBotLadder(): string[] {
 // play scheduled games, so every published game shows a bot as prod serves it.
 const BOT_LADDERS: Readonly<Record<string, () => string[]>> = {
   xiangqi: xiangqiBotLadder,
-  // jqe tops the jieqi ladder only while MISTBOARD_JQE_ENABLED is on (held until its
-  // author's OK), so no scheduled game publishes a bot players cannot pick.
+  // jqe (one rung under AB-JChess) plays the jieqi ladder only while
+  // MISTBOARD_JQE_ENABLED is on, so no scheduled game publishes a bot players cannot pick.
   jieqi: () =>
     JIEQI_PLAYABLE_ENGINES.map((engine) => engine.id).filter(
       (id) => id !== JIEQI_JQE_ENGINE_ID || jqeEnabled(),

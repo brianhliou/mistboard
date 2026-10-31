@@ -15,7 +15,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 import {
-  ABJCHESS_WIN_PCT_K,
+  ABJCHESS_20261031_WIN_PCT_K,
   applyJieqiMove,
   createInitialJieqiState,
   getJieqiLegalMoves,
@@ -112,7 +112,7 @@ function keyedCache<T>(): {
 
 test('AB-JChess computes new analysis when its binary and net resolve, PikaJieQi otherwise', async () => {
   const bin = join(fixtureDir, 'ab-jchess');
-  const net = join(fixtureDir, 'abjchess-20261010.nnue');
+  const net = join(fixtureDir, 'abjchess-20261030.nnue');
   writeFileSync(bin, '');
   writeFileSync(net, '');
   await withEnv({ MISTBOARD_ABJCHESS_PATH: bin, MISTBOARD_ABJCHESS_NET: net }, () => {
@@ -141,14 +141,15 @@ test('the two engines file under different ids, and the AB ids name its ref and 
     // The client picks AB's win curve off this prefix (winPercentK).
     assert.match(id, /^ab-jchess-/);
     assert.ok(id.includes(ABJCHESS_ENGINE_REF), `${id} carries the binary ref`);
-    assert.ok(id.includes('abjchess-20261010'), `${id} carries the net, so a new net re-keys`);
+    assert.ok(id.includes('abjchess-20261030'), `${id} carries the net, so a new net re-keys`);
   }
-  assert.equal(ABJCHESS_JIEQI_ANALYSIS_PROFILE.winK, ABJCHESS_WIN_PCT_K);
+  // The served net is AB-JChess-20261031's, on the jqe-lineage curve (winPercentK).
+  assert.equal(ABJCHESS_JIEQI_ANALYSIS_PROFILE.winK, ABJCHESS_20261031_WIN_PCT_K);
   assert.equal(PIKAFISH_JIEQI_ANALYSIS_PROFILE.winK, WIN_PCT_K);
 });
 
 test('an AB-JChess analysis session loads its net on a single-threaded fixed table', async () => {
-  const net = join(fixtureDir, 'abjchess-20261010.nnue');
+  const net = join(fixtureDir, 'abjchess-20261030.nnue');
   writeFileSync(net, '');
   await withEnv({ MISTBOARD_ABJCHESS_NET: net }, () => {
     const commands = buildJieqiAnalysisInitCommands('ab-jchess');
@@ -327,20 +328,22 @@ test('AB decisions turn engine cp into win% on AB-JChess’s curve, not lila’s
   assert.ok(ab.length > 0);
   // The post-move score is the opponent's +100; the mover sits at -100 on each curve.
   for (const d of ab) {
-    assert.ok(Math.abs(d.playedWin - winPercent(-100, null, ABJCHESS_WIN_PCT_K)) < 1e-6);
+    assert.ok(Math.abs(d.playedWin - winPercent(-100, null, ABJCHESS_20261031_WIN_PCT_K)) < 1e-6);
   }
   for (const d of pika) assert.ok(Math.abs(d.playedWin - winPercent(-100, null)) < 1e-6);
 });
 
-// The re-search rule is a win% swing on the engine's own curve for AB-JChess: +100cp out of
-// equality is ~23 points there (re-search) and ~9 on lila's (no re-search under 200cp).
+// The re-search rule is a win% swing on the engine's own curve for AB-JChess. The threshold
+// is lila's 200cp swing (~17.6 points); AB-JChess-20261031's curve is flatter than lila's,
+// so +230cp out of equality is ~15 points there (no re-search) while the cp rule re-searches
+// it, and +300cp is ~19 points (re-search).
 test('the AB consistency rule triggers on a win% swing, not on 200cp', async () => {
   const moves = playGame(STANDARD_JIEQI_DEAL, 12);
   const target = jieqiDeterministicPlies(moves, STANDARD_JIEQI_DEAL)[0]!;
   const moverSign = target % 2 === 1 ? 1 : -1;
   const windows = jieqiAnalysisRepetitionWindows(moves, STANDARD_JIEQI_DEAL);
   const plyOf = new Map(windows.map((w, ply) => [`${w.fen}|${w.moves.join(',')}`, ply]));
-  const run = async (profile: typeof ABJCHESS_JIEQI_ANALYSIS_PROFILE) => {
+  const run = async (profile: typeof ABJCHESS_JIEQI_ANALYSIS_PROFILE, cp: number) => {
     const researched: Array<{ ply: number; nodes: number }> = [];
     await analyzeJieqiPostgame(
       moves,
@@ -348,17 +351,20 @@ test('the AB consistency rule triggers on a win% swing, not on 200cp', async () 
       async (_state, window, nodes) => {
         const ply = plyOf.get(`${window.fen}|${window.moves.join(',')}`)!;
         if (nodes !== undefined) researched.push({ ply, nodes });
-        return { cp: ply >= target ? 100 * moverSign : 0, mate: null, best: null };
+        return { cp: ply >= target ? cp * moverSign : 0, mate: null, best: null };
       },
       undefined,
       profile,
     );
     return researched;
   };
-  assert.deepEqual(await run(ABJCHESS_JIEQI_ANALYSIS_PROFILE), [
+  assert.deepEqual(await run(ABJCHESS_JIEQI_ANALYSIS_PROFILE, 230), []);
+  assert.deepEqual(await run(PIKAFISH_JIEQI_ANALYSIS_PROFILE, 230), [
+    { ply: target - 1, nodes: PIKAFISH_JIEQI_ANALYSIS_PROFILE.researchNodes },
+  ]);
+  assert.deepEqual(await run(ABJCHESS_JIEQI_ANALYSIS_PROFILE, 300), [
     { ply: target - 1, nodes: ABJCHESS_JIEQI_ANALYSIS_PROFILE.researchNodes },
   ]);
-  assert.deepEqual(await run(PIKAFISH_JIEQI_ANALYSIS_PROFILE), []);
 });
 
 // ── Decisions reuse one session ──────────────────────────────────────────────

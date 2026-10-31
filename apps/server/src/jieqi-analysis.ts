@@ -157,10 +157,11 @@ const ABJCHESS_DECISION_MULTIPV_NODES = 100_000;
 const ABJCHESS_NET_TAG = ABJCHESS_NET_FILE.replace(/\.nnue$/, '');
 
 // The re-search rule, stated in WIN% so it means the same on either engine's scale. 200cp
-// was chosen on lila's curve, where it is a ~17.6-point swing out of equality; AB-JChess's
-// cp are steeper (+112cp is already 75%), so the same 200cp there would be a ~38-point swing
-// and would almost never fire. PikaJieQi keeps its original cp rule: its cache ids predate
-// this and promise the evals they were computed with.
+// was chosen on lila's curve, where it is a ~17.6-point swing out of equality. AB-JChess's
+// cp were on a much steeper curve through v0.2d (+112cp already 75%, a ~38-point swing at
+// 200cp), and from AB-JChess-20261031 sit on jqe's flatter one (+409cp is 75%, ~13 points at
+// 200cp), so a cp rule would mean something different on each net. PikaJieQi keeps its
+// original cp rule: its cache ids predate this and promise the evals they were computed with.
 const JIEQI_CONSISTENCY_THRESHOLD_WIN = winPercent(JIEQI_CONSISTENCY_THRESHOLD_CP, null) - 50;
 
 /** Everything about one analysis engine that a cached result depends on. */
