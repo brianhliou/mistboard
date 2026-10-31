@@ -1,6 +1,6 @@
 // Crazyhouse Xiangqi against its engine.
 //
-// fixtures/crazyhouse-xiangqi-parity.json is Fairy-Stockfish's answer, loaded
+// packages/game/fixtures/crazyhouse-xiangqi-parity.json is Fairy-Stockfish's answer, loaded
 // with apps/server/src/crazyhouse-xiangqi.ini, at several hundred positions of
 // real games: the legal moves (`go perft 1`) and the perft-2 node count.
 // Regenerate it with scripts/generate-crazyhouse-xiangqi-parity-fixture.mjs.
@@ -44,7 +44,7 @@ type Fixture = {
 };
 
 const fixture = JSON.parse(
-  readFileSync(new URL('./fixtures/crazyhouse-xiangqi-parity.json', import.meta.url), 'utf8'),
+  readFileSync(new URL('../fixtures/crazyhouse-xiangqi-parity.json', import.meta.url), 'utf8'),
 ) as Fixture;
 
 function positionOf(fen: string): CrazyhouseXiangqiPosition {
