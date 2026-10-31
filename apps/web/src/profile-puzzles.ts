@@ -18,6 +18,10 @@ type PuzzleHistoryPage = {
 };
 
 type RatedEntry = PuzzleHistoryEntry & { ratingBefore: number; ratingAfter: number };
+// A day's rated attempts: ratingBefore from its first, ratingAfter and
+// createdAt from its last.
+type RatedDay = RatedEntry & { attempts: number };
+const localDay = (createdAt: string) => new Date(createdAt).toDateString();
 const HISTORY_PAGE_SIZE = 100;
 
 // The owner's xiangqi puzzle history, fetched once and shared by the progress
@@ -194,6 +198,7 @@ function buildPuzzleChart(attempts: PuzzleHistoryEntry[], locale: Locale): HTMLE
   chart.className = 'profile-puzzle-chart';
   const segments: RatedEntry[][] = [];
   let segment: RatedEntry[] = [];
+  const daySegments: RatedDay[][] = [];
   for (const entry of attempts) {
     if (!entry.rated) continue;
     if (!hasSavedRating(entry)) {
@@ -206,7 +211,23 @@ function buildPuzzleChart(attempts: PuzzleHistoryEntry[], locale: Locale): HTMLE
     if (segment.length === 0) segments.push(segment);
     segment.push(entry);
   }
-  const points = segments.flat();
+  // One point per day at the day's closing rating, as Lichess's rating graph
+  // does: a session of attempts plotted one by one stacked into a vertical bar.
+  for (const entries of segments) {
+    const days: RatedDay[] = [];
+    for (const entry of entries) {
+      const day = days.at(-1);
+      if (day && localDay(day.createdAt) === localDay(entry.createdAt)) {
+        day.ratingAfter = entry.ratingAfter;
+        day.createdAt = entry.createdAt;
+        day.attempts += 1;
+      } else {
+        days.push({ ...entry, attempts: 1 });
+      }
+    }
+    daySegments.push(days);
+  }
+  const points = daySegments.flat();
   if (points.length === 0) {
     const empty = document.createElement('p');
     empty.textContent = t('profile.puzzleChartEmpty', {}, locale);
@@ -248,10 +269,9 @@ function buildPuzzleChart(attempts: PuzzleHistoryEntry[], locale: Locale): HTMLE
       label.textContent = String(Math.round(rating));
       svg.append(line, label);
     }
-    // One point per attempt at its rating after, as Lichess plots it; a
-    // leading ratingBefore point shares the first attempt's x and drew a
-    // vertical tick from the 1500 start.
-    for (const entries of segments) {
+    // Points sit at the day's rating after; a leading ratingBefore point
+    // would share the first day's x and draw a vertical tick from 1500.
+    for (const entries of daySegments) {
       const line = document.createElementNS(ns, 'polyline');
       line.setAttribute('class', 'profile-puzzle-chart-line');
       line.setAttribute(

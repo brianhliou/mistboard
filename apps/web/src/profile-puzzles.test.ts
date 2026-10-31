@@ -155,6 +155,28 @@ describe('private puzzle progress on the profile (#704)', () => {
     ]);
   });
 
+  it('plots one point per day at the day closing rating', async () => {
+    mockProfile(() =>
+      json({
+        attempts: [
+          attempt(0, { createdAt: at(1, 10) }),
+          attempt(1, { createdAt: at(1, 11), solved: false, ratingAfter: 1490, ratingDelta: -30 }),
+          attempt(2, { createdAt: at(1, 12), ratingBefore: 1490, ratingAfter: 1505 }),
+          attempt(3, { createdAt: at(3, 12), ratingBefore: 1505, ratingAfter: 1540 }),
+        ],
+        nextOffset: null,
+      }),
+    );
+    const root = await mount();
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.profile-puzzle-chart-dot')).toHaveLength(2),
+    );
+    const dots = [...root.querySelectorAll('.profile-puzzle-chart-dot')];
+    expect(dots.map((dot) => dot.getAttribute('data-rating'))).toEqual(['1505', '1540']);
+    expect(dots[0]?.querySelector('title')?.textContent).toContain('1500 → 1505');
+    expect(root.querySelectorAll('.profile-puzzle-chart-line')).toHaveLength(1);
+  });
+
   it('does not list individual attempts on the profile', async () => {
     mockProfile(() =>
       json({ attempts: Array.from({ length: 24 }, (_, i) => attempt(i)), nextOffset: null }),
