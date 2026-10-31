@@ -345,6 +345,7 @@ export const ZH_HANT_REVIEW = {
   'watch.colorWins': '{color}獲勝',
   'watch.won': '分出勝負',
   'watch.resultByReason': '{result}（{reason}）',
+  'watch.resultOnPoints': '{result}（計分勝負）',
   'watch.matchup': '{first} 對 {second}',
   'watch.reviewMatchup': '復盤 {matchup}',
   'watch.featuredChannel': '精選',

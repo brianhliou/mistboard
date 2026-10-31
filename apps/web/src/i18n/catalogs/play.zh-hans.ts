@@ -663,7 +663,6 @@ export const ZH_HANS_PLAY = {
   'live.xmj.resultSelfDraw': '{name}自摸',
   'live.xmj.resultDiscard': '{name}胡牌',
   'live.xmj.resultNone': '流局',
-  'live.xmj.matchWon': '{name}赢得比赛，{winner} 比 {loser}。',
   'live.xmj.matchDrawn': '比赛打平，各 {points} 分。',
   'live.xmj.youWinOnPoints': '你以积分获胜',
   'live.xmj.nameWinsOnPoints': '{name}以积分获胜',

@@ -21,7 +21,7 @@ describe('Banqi watch replay', () => {
     expect(handle.activeSampleId()).toBe('bq_watch');
     expect(root.textContent).toContain('Human vs engine');
     expect(root.textContent).toContain('Red wins');
-    expect(root.textContent).toContain('by Resignation');
+    expect(root.textContent).toContain('by resignation');
     expect(root.textContent).toContain('1 plies');
     expect(root.textContent).toContain('Casual');
     expect(root.textContent).toContain('Ply 0 / 1');

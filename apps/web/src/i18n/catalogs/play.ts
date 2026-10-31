@@ -716,7 +716,6 @@ export const EN_PLAY = {
   'live.xmj.resultSelfDraw': '{name}, self-draw',
   'live.xmj.resultDiscard': '{name}, on a discard',
   'live.xmj.resultNone': 'No winner',
-  'live.xmj.matchWon': 'Match to {name}, {winner} to {loser}.',
   'live.xmj.matchDrawn': 'Match drawn, {points} points each.',
   'live.xmj.youWinOnPoints': 'You win on points',
   'live.xmj.nameWinsOnPoints': '{name} wins on points',

@@ -28,6 +28,7 @@ import {
   watchFeedCacheIsFresh,
   watchFeedIsDark,
   watchGamePlayers,
+  watchGameStatusLine,
   watchKeyboardHandlers,
   watchPovToggleApplies,
   watchQueueMatchupLabel,
@@ -221,6 +222,26 @@ describe('watch route copy helpers', () => {
     expect(watchQueueResultLabel({ ...base, result: 'east-wins' })).toBe('brianhliou wins');
     expect(watchQueueResultLabel({ ...base, result: 'draw' })).toBe('Draw');
     expect(watchQueueResultLabel({ ...base, participants: [] })).toBe('Guest wins');
+  });
+
+  // The meta line read "Guest wins by On points": "On points" is a phrase, not a reason noun.
+  it('says a match decided on points wins on points', () => {
+    const game: FeaturedGame = {
+      blackName: null,
+      corpusId: null,
+      mode: 'pve',
+      plyCount: 60,
+      result: 'east-wins',
+      roomId: 'xmj_points',
+      termination: 'points',
+      variant: 'xiangqi-mahjong',
+      whiteName: null,
+      participants: [],
+    };
+    expect(watchGameStatusLine(game)).toBe('Guest wins on points');
+    expect(watchGameStatusLine({ ...game, termination: 'resignation' })).toBe(
+      'Guest wins by resignation',
+    );
   });
 
   it('labels a Flip Jungle queue result by bound ink, in the family colour words', () => {

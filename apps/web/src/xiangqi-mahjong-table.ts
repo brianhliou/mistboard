@@ -810,6 +810,18 @@ export function xmjResultTitle(
   view: XmjPlayerView,
   names: Readonly<Record<XmjSeat, string>>,
 ): string {
+  // A finished match is the news, however it ended; the last hand is the
+  // head's small line. Between hands, the hand is the news.
+  if (view.status.type === 'finished') {
+    return xmjResultLine(view.status.winner, view.status.reason, view.perspective, (seat) =>
+      escapeHtml(names[seat]),
+    );
+  }
+  return xmjLastHandLine(view, names);
+}
+
+/** One sentence on the hand just played, or the hand a match stopped in. */
+function xmjLastHandLine(view: XmjPlayerView, names: Readonly<Record<XmjSeat, string>>): string {
   const phase = view.phase;
   // The hand in play, not the count of finished ones: a match lost on time in
   // hand 3 has two results and names hand 3.
@@ -830,13 +842,6 @@ export function xmjResultTitle(
     });
   }
   if (phase.type === 'exhausted') return t('live.xmj.exhausted', { hand });
-  // The match ended mid-hand (resignation, timeout): how it ended is the news,
-  // and the head's small line names the hand.
-  if (view.status.type === 'finished') {
-    return xmjResultLine(view.status.winner, view.status.reason, view.perspective, (seat) =>
-      escapeHtml(names[seat]),
-    );
-  }
   return xmjHandEnded(view);
 }
 
@@ -850,6 +855,22 @@ function resultHeadHtml(
   title: string,
 ): string {
   const phase = view.phase;
+  if (view.status.type === 'finished') {
+    // The match: who won it and how, the match score large, the last hand
+    // underneath, so a last hand the loser took never reads as the result.
+    const winner = view.status.winner;
+    const [first, second] =
+      winner === null
+        ? [view.scores.east, view.scores.west]
+        : [view.scores[winner], view.scores[other(winner)]];
+    const tone =
+      winner === null || view.perspective === 'spectator'
+        ? ''
+        : view.perspective === winner
+          ? ' xmj-result--yours'
+          : ' xmj-result--theirs';
+    return `<div class="xmj-result__head xmj-result__head--match${tone}"><div><h3 class="xmj-result__title">${title}</h3><p class="xmj-result__sub">${xmjLastHandLine(view, names)}</p></div><p class="xmj-result__total xmj-result__total--match"><b>${first}–${second}</b><span>${t('live.xmj.pointsUnit')}</span></p></div>`;
+  }
   if (phase.type === 'exhausted') {
     return `<div class="xmj-result__head"><h3 class="xmj-result__title">${title}</h3></div>`;
   }
@@ -882,9 +903,6 @@ function xmjHandEnded(view: XmjPlayerView): string {
   });
 }
 
-/** Finished reasons the match score decides; any other names how it ended. */
-const ON_POINTS: ReadonlySet<string> = new Set(['points', 'tie']);
-
 function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
   const names = options.names;
   const phase = view.phase;
@@ -894,26 +912,11 @@ function resultHtml(view: XmjPlayerView, options: XmjTableOptions): string {
       ? `<div class="xmj-won">${winningHandHtml(phase.score, phase.winningTile)}</div>${scoringHtml(phase.score)}`
       : '';
   let foot: string;
-  if (phase.type !== 'won' && phase.type !== 'exhausted' && view.status.type === 'finished') {
-    // Ended mid-hand: the head already says how, and which hand.
+  if (view.status.type === 'finished') {
+    // The head already names the match, how it ended and the score.
     foot = '';
-  } else if (view.status.type === 'finished' && !ON_POINTS.has(view.status.reason)) {
-    // Ended by the clock, a resignation or abandonment: the score says nothing
-    // about why (often +0 to +0), so the line names how instead.
-    const line = xmjResultLine(view.status.winner, view.status.reason, view.perspective, (seat) =>
-      escapeHtml(names[seat]),
-    );
-    foot = `<div class="xmj-result__foot"><p class="xmj-note xmj-note--strong">${line}.</p></div>`;
   } else if (view.status.type !== 'playing') {
-    const winner = view.status.type === 'finished' ? view.status.winner : null;
-    const line =
-      winner === null
-        ? t('live.xmj.matchDrawn', { points: view.scores.east })
-        : t('live.xmj.matchWon', {
-            name: escapeHtml(names[winner]),
-            winner: view.scores[winner],
-            loser: view.scores[other(winner)],
-          });
+    const line = t('live.xmj.matchDrawn', { points: view.scores.east });
     foot = `<div class="xmj-result__foot"><p class="xmj-note xmj-note--strong">${line}</p></div>`;
   } else {
     const parts: string[] = [];
