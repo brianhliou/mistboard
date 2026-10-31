@@ -49,6 +49,7 @@ export * from './variants-banqi.js';
 export * from './variants-crazyhouse-xiangqi.js';
 export * from './variants-duck-xiangqi.js';
 export * from './variants-fortress-xiangqi.js';
+export * from './variants-gomoku.js';
 export * from './variants-jieqi.js';
 export * from './variants-jungle.js';
 export * from './variants-jungle-flip.js';
