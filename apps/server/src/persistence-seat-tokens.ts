@@ -21,6 +21,39 @@ export type RoomSeatTokenRecord<TSeat extends RoomSeatTokenSeat = Color> = {
   revokedAt: Date | null;
 };
 
+/**
+ * Durable seat ownership for admission, including tenants that only insert a
+ * games row at game end. room-created is the durable clock-policy source;
+ * aborted tenants may have no games row, so exclude their terminal event too.
+ * Loaded rooms are authoritative and are filtered by the admission service.
+ */
+export async function listLiveRoomIdsForIdentity(identity: {
+  userId?: string | null;
+  deviceId?: string | null;
+}): Promise<string[]> {
+  if (!identity.userId && !identity.deviceId) return [];
+  const { rows } = await getPool().query<{ room_id: string }>(
+    `SELECT DISTINCT seats.room_id
+     FROM room_seat_tokens seats
+     JOIN events created ON created.room_id = seats.room_id
+       AND created.seq = 0 AND created.type = 'room-created'
+     LEFT JOIN games ON games.room_id = seats.room_id
+     WHERE seats.revoked_at IS NULL
+       AND (seats.user_id = $1 OR seats.device_id = $2)
+       AND (games.status IS NULL OR games.status = 'running')
+       AND created.payload->'timeControl'->>'daysPerMove' IS NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM events terminal
+         WHERE terminal.room_id = seats.room_id
+           AND terminal.type IN ('game-aborted', 'seat-resigned', 'seat-forfeited',
+                                 'clock-expired', 'game-adjudicated', 'draw-agreed')
+       )
+     ORDER BY seats.room_id`,
+    [identity.userId ?? null, identity.deviceId ?? null],
+  );
+  return rows.map((row) => row.room_id);
+}
+
 export async function loadRoomSeatTokens<TSeat extends RoomSeatTokenSeat = Color>(
   roomId: string,
 ): Promise<Partial<Record<TSeat, RoomSeatTokenRecord<TSeat>>>> {
