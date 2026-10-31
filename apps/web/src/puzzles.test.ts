@@ -1889,6 +1889,27 @@ describe('standard xiangqi puzzles', () => {
         solver.dispose();
       }
     });
+
+    // Streak dropped the history the server sent for the same puzzle.
+    it('shows the game before the puzzle in Puzzle Streak', () => {
+      animationOff();
+      const host = document.createElement('div');
+      document.body.append(host);
+      const solver = mountPuzzleSolver(
+        host,
+        {
+          ...publicDetail(PUZZLE),
+          setupMove: SETUP,
+          history: HISTORY,
+        } as unknown as Parameters<typeof mountPuzzleSolver>[1],
+        { mode: 'streak', analysis: false },
+      );
+      try {
+        expect(host.querySelectorAll('.puzzle-move-cell--history')).toHaveLength(HISTORY.length);
+      } finally {
+        solver.dispose();
+      }
+    });
   });
 });
 
@@ -2003,6 +2024,19 @@ describe('sourceGameLines', () => {
     // No team, no tooltip.
     expect(names[2]?.textContent).toBe('Xu Tengfei');
     expect(names[2]?.title).toBe('');
+  });
+
+  it('names an online platform game only as an online game and its year', () => {
+    const online = { gameId: 'g', ply: 4, online: true };
+    expect(
+      sourceGameLines({
+        variant: XIANGQI_SPEC_ID,
+        sourceGame: { ...online, playedOn: '2026-03-14' },
+      }).map((l) => l.textContent),
+    ).toEqual(['From a 2026 online game']);
+    expect(
+      sourceGameLines({ variant: XIANGQI_SPEC_ID, sourceGame: online }).map((l) => l.textContent),
+    ).toEqual(['From an online game']);
   });
 
   it('falls back to "From set <variant>" without attribution', () => {

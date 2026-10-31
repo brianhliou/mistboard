@@ -325,6 +325,12 @@ export function sourceGameLines(
   puzzle: Pick<PuzzleSummary, 'variant' | 'sourceGame'>,
 ): HTMLElement[] {
   const source = puzzle.sourceGame;
+  if (puzzle.variant === XIANGQI_SPEC_ID && source?.online) {
+    const year = source.playedOn?.slice(0, 4);
+    return [
+      puzzleInfoLine(year ? t('puzzle.fromOnlineGameYear', { year }) : t('puzzle.fromOnlineGame')),
+    ];
+  }
   const hasAttribution =
     puzzle.variant === XIANGQI_SPEC_ID &&
     source !== undefined &&

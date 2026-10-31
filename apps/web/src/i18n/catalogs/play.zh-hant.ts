@@ -304,6 +304,8 @@ export const ZH_HANT_PLAY = {
   'puzzle.fromGame': '取自對局',
   'puzzle.fromGameWith': '取自對局 · {details}',
   'puzzle.fromGameYear': '取自{year}年對局',
+  'puzzle.fromOnlineGame': '取自網路對局',
+  'puzzle.fromOnlineGameYear': '取自{year}年網路對局',
   'puzzle.sourceCredit': '對局來源：',
   'puzzle.openSourceGame': '打開這道題所取自的對局',
   'puzzle.label': '題目 ',

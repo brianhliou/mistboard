@@ -48,6 +48,8 @@ type SourceGame = NonNullable<XiangqiPuzzle['sourceGame']>;
 
 export type PuzzleDetailSourceGame = SourceGame & {
   hosted?: true;
+  // A game from an online platform's dump: no event, players or link go out.
+  online?: true;
   eventEn?: string;
   redNameEn?: string;
   blackNameEn?: string;
@@ -125,6 +127,12 @@ export async function puzzleDetailSourceFields(
   const stored = puzzle.sourceGame;
   if (!stored) return {};
   const context = load ? await sourceContext(puzzle, load) : null;
+  if (isOnlinePlatformGame(stored)) {
+    const fields: PuzzleDetailSourceFields = { sourceGame: onlineSourceGame(stored) };
+    if (context?.setupMove) fields.setupMove = context.setupMove;
+    if (context?.history && context.history.length > 0) fields.history = context.history;
+    return fields;
+  }
   const fields: PuzzleDetailSourceFields = { sourceGame: withEnglishNames(stored) };
   if (!context) return fields;
   if (context.names) {
@@ -139,6 +147,28 @@ export async function puzzleDetailSourceFields(
   if (context.setupMove) fields.setupMove = context.setupMove;
   if (context.history && context.history.length > 0) fields.history = context.history;
   return fields;
+}
+
+// The event import-elephantchess-xiangqi.ts writes on every game it imports.
+const ONLINE_PLATFORM_EVENTS: ReadonlySet<string> = new Set(['ElephantChess PvP']);
+
+// An online platform's games name the platform as their event and carry
+// per-release pseudonyms as players ("ElephantChess:cqM1Apb2GWRD"), which tell
+// a solver nothing. The puzzle says only that it came from an online game, and
+// when, and leaves the platform unnamed. A credited source (#712) is never one.
+export function isOnlinePlatformGame(source: SourceGame): boolean {
+  return (
+    !source.attribution && source.event !== undefined && ONLINE_PLATFORM_EVENTS.has(source.event)
+  );
+}
+
+function onlineSourceGame(source: SourceGame): PuzzleDetailSourceGame {
+  return {
+    gameId: source.gameId,
+    ply: source.ply,
+    ...(source.playedOn ? { playedOn: source.playedOn } : {}),
+    online: true,
+  };
 }
 
 // Han characters and the full-width punctuation that travels with them.

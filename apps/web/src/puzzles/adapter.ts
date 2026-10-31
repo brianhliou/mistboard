@@ -88,6 +88,8 @@ export type PuzzleSummary = {
     blackNameEn?: string;
     attribution?: { name: string; url: string };
     hosted?: boolean;
+    // An online platform's game: the server sends no event, players or link.
+    online?: boolean;
   };
 };
 
