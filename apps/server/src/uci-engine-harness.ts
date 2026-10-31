@@ -13,11 +13,11 @@
 // the Obscuro container engines) — those speak the redaction-shaped HTTP protocol
 // and are unaffected.
 
-import { spawn } from 'node:child_process';
+import { type ChildProcess, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { logger } from './obs.js';
+import { dispatchAlertEmail, logger, recordEnginePoolWait } from './obs.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -40,6 +40,10 @@ export type UciEnginePoolConfig = {
   queueTimeoutEnvVar: string;
   /** Default max concurrent subprocesses (default 2). */
   defaultMaxProcesses?: number;
+  /** Upper bound for the env override; 8 for search pools, 64 for the total guard. */
+  maxProcessesLimit?: number;
+  /** Reclaim parked processes before queueing against the total guard. */
+  onSaturated?: () => void;
   /** Default queue-wait timeout in ms (default 5_000). */
   defaultQueueTimeoutMs?: number;
   /** Error message when a waiter times out waiting for a slot. */
@@ -73,6 +77,9 @@ type QueueEntry = {
   reject(err: Error): void;
   resolve(release: () => void): void;
   timer: ReturnType<typeof setTimeout>;
+  warnTimer: ReturnType<typeof setTimeout>;
+  /** Detach the caller's abort listener once the entry leaves the queue. */
+  detach(): void;
 };
 
 // Every constructed pool registers here so /api/server-status can report web-side
@@ -86,8 +93,11 @@ const poolRegistry = new Set<UciEnginePool>();
 export function aggregateEnginePoolStats(): {
   pools: UciEnginePoolStats[];
   totals: { active: number; queueDepth: number; waited: number; timedOut: number };
+  /** Physical processes, including parked sessions; separate from search slots. */
+  processes: UciEnginePoolStats;
 } {
   const pools = [...poolRegistry]
+    .filter((pool) => pool !== engineProcessPool)
     .map((pool) => pool.stats())
     .sort((a, b) => a.name.localeCompare(b.name));
   const totals = pools.reduce(
@@ -99,7 +109,7 @@ export function aggregateEnginePoolStats(): {
     }),
     { active: 0, queueDepth: 0, waited: 0, timedOut: 0 },
   );
-  return { pools, totals };
+  return { pools, totals, processes: engineProcessPool.stats() };
 }
 
 /**
@@ -122,51 +132,96 @@ export class UciEnginePool {
     poolRegistry.add(this);
   }
 
-  /** Take a slot, returning a release function. Call it exactly once when done. */
-  acquire(): Promise<() => void> {
-    if (this.active < this.maxProcesses()) {
+  /** Take a slot, returning a release function. Call it exactly once when done.
+   *  Aborting `signal` while queued leaves the queue at once: no slot, no wait
+   *  warning, no timeout alert (a closed session must not page as a drop). */
+  acquire(signal?: AbortSignal): Promise<() => void> {
+    if (signal?.aborted) return Promise.reject(abortReason(signal));
+    if (this.active < this.maxProcesses() && this.queue.length === 0) {
       this.active += 1;
       this.acquired += 1;
-      return Promise.resolve(this.release);
+      return Promise.resolve(this.releaseOnce());
     }
+    this.config.onSaturated?.();
     this.waited += 1;
     return new Promise<() => void>((resolveSlot, reject) => {
+      const startedAt = Date.now();
+      const warnTimer = setTimeout(
+        () => {
+          recordEnginePoolWait(
+            this.config.name ?? 'unnamed',
+            Date.now() - startedAt,
+            this.queue.length,
+          );
+        },
+        boundedEnvInt('MISTBOARD_ENGINE_POOL_WAIT_WARN_MS', 1_000, 10, 30_000),
+      );
+      warnTimer.unref();
+      const onAbort = (): void => {
+        const idx = this.queue.indexOf(entry);
+        if (idx < 0) return;
+        this.queue.splice(idx, 1);
+        clearTimeout(entry.timer);
+        clearTimeout(entry.warnTimer);
+        reject(abortReason(signal!));
+      };
       const timer = setTimeout(() => {
-        const idx = this.queue.findIndex((entry) => entry.reject === reject);
+        clearTimeout(warnTimer);
+        entry.detach();
+        const idx = this.queue.indexOf(entry);
         if (idx >= 0) this.queue.splice(idx, 1);
         this.timedOut += 1;
         // Saturation that actually shed load (#203): every queue-wait timeout is
         // an engine request we dropped. /api/server-status only exposes the
         // counters on demand; this makes each increment an alertable log line.
-        logger.warn(
-          {
-            kind: 'engine_pool_queue_timeout',
-            pool: this.config.name ?? 'unnamed',
-            active: this.active,
-            queue_depth: this.queue.length,
-            max_processes: this.maxProcesses(),
-            timed_out_total: this.timedOut,
-          },
-          'Engine pool queue-wait timed out; a request was shed (pool saturated)',
-        );
+        const alert = {
+          kind: 'engine_pool_queue_timeout',
+          pool: this.config.name ?? 'unnamed',
+          active: this.active,
+          queue_depth: this.queue.length,
+          max_processes: this.maxProcesses(),
+          timed_out_total: this.timedOut,
+          wait_ms: Date.now() - startedAt,
+        };
+        logger.warn(alert, 'Engine pool queue-wait timed out; a request was shed (pool saturated)');
+        dispatchAlertEmail({ ...alert, severity: 'critical' });
         reject(new Error(this.config.queueTimeoutMessage));
       }, this.queueTimeoutMs());
       timer.unref();
-      this.queue.push({ reject, resolve: resolveSlot, timer });
+      const entry: QueueEntry = {
+        reject,
+        resolve: resolveSlot,
+        timer,
+        warnTimer,
+        detach: () => signal?.removeEventListener('abort', onAbort),
+      };
+      signal?.addEventListener('abort', onAbort, { once: true });
+      this.queue.push(entry);
       if (this.queue.length > this.peakQueueDepth) this.peakQueueDepth = this.queue.length;
     });
   }
 
   private readonly release = (): void => {
     this.active = Math.max(0, this.active - 1);
-    const next = this.queue.shift();
-    if (next) {
+    while (this.active < this.maxProcesses() && this.queue.length > 0) {
+      const next = this.queue.shift()!;
       clearTimeout(next.timer);
+      clearTimeout(next.warnTimer);
+      next.detach();
       this.active += 1;
       this.acquired += 1;
-      next.resolve(this.release);
+      next.resolve(this.releaseOnce());
     }
   };
+
+  private releaseOnce(): () => void {
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.release();
+    };
+  }
 
   /** Point-in-time saturation snapshot (aggregated in /api/server-status). */
   stats(): UciEnginePoolStats {
@@ -187,7 +242,7 @@ export class UciEnginePool {
       this.config.maxProcessesEnvVar,
       this.config.defaultMaxProcesses ?? 2,
       1,
-      8,
+      this.config.maxProcessesLimit ?? 8,
     );
   }
 
@@ -198,6 +253,52 @@ export class UciEnginePool {
       100,
       30_000,
     );
+  }
+}
+
+// Search slots are released between moves, but parked children still hold their
+// hash/net in RAM. This independent lease lasts until the OS closes the child.
+// 12 processes leaves headroom on the 24 GB web host even for the ~1 GB engines.
+const parkedProcesses = new Map<UciEngineSession, () => void>();
+
+function abortReason(signal: AbortSignal): Error {
+  return signal.reason instanceof Error ? signal.reason : new Error('engine slot wait aborted');
+}
+// The total cap is a memory guard taken after the per-engine slot, so it must
+// never be the stricter timeout: a 5 s wait here would resign a jieqi bot whose
+// own pool allows 20 s. Default to the harness clamp (30 s), above every pool.
+export const ENGINE_PROCESS_QUEUE_TIMEOUT_DEFAULT_MS = 30_000;
+const engineProcessPool = new UciEnginePool({
+  name: 'all-engine-processes',
+  maxProcessesEnvVar: 'MISTBOARD_ENGINE_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_ENGINE_QUEUE_TIMEOUT_MS',
+  defaultQueueTimeoutMs: ENGINE_PROCESS_QUEUE_TIMEOUT_DEFAULT_MS,
+  defaultMaxProcesses: 12,
+  maxProcessesLimit: 64,
+  queueTimeoutMessage: 'Total engine process queue timed out',
+  onSaturated: () => parkedProcesses.values().next().value?.(),
+});
+
+/** Call track immediately after spawn. Failed spawns and every exit release the
+ * physical lease; resolving a bestmove or sending SIGKILL does not release it. */
+export async function withEngineProcess<T>(
+  start: (track: (child: ChildProcess) => void) => T,
+  signal?: AbortSignal,
+): Promise<Awaited<T>> {
+  const release = await engineProcessPool.acquire(signal);
+  let spawned = false;
+  try {
+    return await start((child) => {
+      spawned = true;
+      child.once('close', release);
+      // A spawn that fails for want of file descriptors (EMFILE/ENFILE) emits
+      // 'error' and never 'close'; without a pid there is no process to wait for.
+      child.once('error', () => {
+        if (child.pid === undefined) release();
+      });
+    });
+  } finally {
+    if (!spawned) release();
   }
 }
 
@@ -377,82 +478,88 @@ export type RunUciBestmoveArgs = {
  */
 export function runUciBestmove(args: RunUciBestmoveArgs): Promise<string | null> {
   const { bin, commands, timeoutMs, timeoutMessage, env } = args;
-  return new Promise<string | null>((resolveMove, reject) => {
-    const child = spawn(bin, [], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      ...(env ? { env: { ...process.env, ...env } } : {}),
-    });
-    const trace = new UciOutputTrace('spawn');
-    let buf = '';
-    let settled = false;
-    const advertisedOptions = new Set<string>();
+  return withEngineProcess(
+    (track) =>
+      new Promise<string | null>((resolveMove, reject) => {
+        const child = spawn(bin, [], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          ...(env ? { env: { ...process.env, ...env } } : {}),
+        });
+        track(child);
+        const trace = new UciOutputTrace('spawn');
+        let buf = '';
+        let settled = false;
+        const advertisedOptions = new Set<string>();
 
-    const finish = (run: () => void): void => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try {
-        child.kill('SIGKILL');
-      } catch {
-        /* already gone */
-      }
-      run();
-    };
+        const finish = (run: () => void): void => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          try {
+            child.kill('SIGKILL');
+          } catch {
+            /* already gone */
+          }
+          run();
+        };
 
-    const readStderrTail = captureStderrTail(child);
-    const timer = setTimeout(
-      () =>
-        finish(() =>
-          reject(timeoutError(timeoutMessage, timeoutMs, trace, stderrDetail(readStderrTail()))),
-        ),
-      timeoutMs,
-    );
-    child.on('error', (err) => finish(() => reject(err)));
-    const consume = (): void => {
-      let newline = buf.indexOf('\n');
-      while (newline >= 0) {
-        const line = buf.slice(0, newline).trim();
-        buf = buf.slice(newline + 1);
-        trace.note(line);
-        const option = parseUciOptionLine(line);
-        if (option) advertisedOptions.add(option);
-        const protocolError = uciProtocolError(line);
-        if (protocolError) {
-          finish(() => reject(new Error(`UCI engine rejected command: ${protocolError}`)));
-          return;
-        }
-        const parsed = parseBestmoveLine(line);
-        if (parsed !== undefined) {
-          finish(() => {
-            try {
-              validateConfiguredUciOptions(commands, advertisedOptions);
-              resolveMove(parsed);
-            } catch (err) {
-              reject(err);
+        const readStderrTail = captureStderrTail(child);
+        const timer = setTimeout(
+          () =>
+            finish(() =>
+              reject(
+                timeoutError(timeoutMessage, timeoutMs, trace, stderrDetail(readStderrTail())),
+              ),
+            ),
+          timeoutMs,
+        );
+        child.on('error', (err) => finish(() => reject(err)));
+        const consume = (): void => {
+          let newline = buf.indexOf('\n');
+          while (newline >= 0) {
+            const line = buf.slice(0, newline).trim();
+            buf = buf.slice(newline + 1);
+            trace.note(line);
+            const option = parseUciOptionLine(line);
+            if (option) advertisedOptions.add(option);
+            const protocolError = uciProtocolError(line);
+            if (protocolError) {
+              finish(() => reject(new Error(`UCI engine rejected command: ${protocolError}`)));
+              return;
             }
-          });
-          return;
-        }
-        newline = buf.indexOf('\n');
-      }
-    };
-    child.stdout.on('data', (chunk: Buffer) => {
-      buf += chunk.toString('utf8');
-      consume();
-    });
-    child.on('close', (code, signal) => {
-      if (settled) return;
-      // A final line missing its newline is still a result; flush it before
-      // calling this a crash.
-      if (buf.trim() !== '') {
-        buf += '\n';
-        consume();
-      }
-      finish(() => reject(earlyExitError(bin, code, signal, readStderrTail())));
-    });
+            const parsed = parseBestmoveLine(line);
+            if (parsed !== undefined) {
+              finish(() => {
+                try {
+                  validateConfiguredUciOptions(commands, advertisedOptions);
+                  resolveMove(parsed);
+                } catch (err) {
+                  reject(err);
+                }
+              });
+              return;
+            }
+            newline = buf.indexOf('\n');
+          }
+        };
+        child.stdout.on('data', (chunk: Buffer) => {
+          buf += chunk.toString('utf8');
+          consume();
+        });
+        child.on('close', (code, signal) => {
+          if (settled) return;
+          // A final line missing its newline is still a result; flush it before
+          // calling this a crash.
+          if (buf.trim() !== '') {
+            buf += '\n';
+            consume();
+          }
+          finish(() => reject(earlyExitError(bin, code, signal, readStderrTail())));
+        });
 
-    child.stdin.write(`${commands.join('\n')}\n`);
-  });
+        child.stdin.write(`${commands.join('\n')}\n`);
+      }),
+  );
 }
 
 /**
@@ -592,89 +699,95 @@ class UciEvalAccumulator {
  */
 export function runUciEval(args: RunUciBestmoveArgs): Promise<UciEval> {
   const { bin, commands, timeoutMs, timeoutMessage, env } = args;
-  return new Promise<UciEval>((resolveEval, reject) => {
-    // `env` is honoured here exactly as in runUciBestmove. It was silently
-    // dropped until 2026-09-05, which mattered the moment the Flip Jungle live
-    // move switched to this runner to record its search: its per-game tie-break
-    // seed travels in JF_TIE_SEED, and losing it would have made the opening
-    // flip identical in every game rather than merely reproducible per room.
-    const child = spawn(bin, [], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      ...(env ? { env: { ...process.env, ...env } } : {}),
-    });
-    const trace = new UciOutputTrace('spawn');
-    let buf = '';
-    let settled = false;
-    const evaluation = new UciEvalAccumulator();
-    const advertisedOptions = new Set<string>();
+  return withEngineProcess(
+    (track) =>
+      new Promise<UciEval>((resolveEval, reject) => {
+        // `env` is honoured here exactly as in runUciBestmove. It was silently
+        // dropped until 2026-09-05, which mattered the moment the Flip Jungle live
+        // move switched to this runner to record its search: its per-game tie-break
+        // seed travels in JF_TIE_SEED, and losing it would have made the opening
+        // flip identical in every game rather than merely reproducible per room.
+        const child = spawn(bin, [], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          ...(env ? { env: { ...process.env, ...env } } : {}),
+        });
+        track(child);
+        const trace = new UciOutputTrace('spawn');
+        let buf = '';
+        let settled = false;
+        const evaluation = new UciEvalAccumulator();
+        const advertisedOptions = new Set<string>();
 
-    const finish = (run: () => void): void => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try {
-        child.kill('SIGKILL');
-      } catch {
-        /* already gone */
-      }
-      run();
-    };
+        const finish = (run: () => void): void => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          try {
+            child.kill('SIGKILL');
+          } catch {
+            /* already gone */
+          }
+          run();
+        };
 
-    const readStderrTail = captureStderrTail(child);
-    const timer = setTimeout(
-      () =>
-        finish(() =>
-          reject(timeoutError(timeoutMessage, timeoutMs, trace, stderrDetail(readStderrTail()))),
-        ),
-      timeoutMs,
-    );
-    child.on('error', (err) => finish(() => reject(err)));
-    const consume = (): void => {
-      let newline = buf.indexOf('\n');
-      while (newline >= 0) {
-        const line = buf.slice(0, newline).trim();
-        buf = buf.slice(newline + 1);
-        trace.note(line);
-        const option = parseUciOptionLine(line);
-        if (option) advertisedOptions.add(option);
-        const protocolError = uciProtocolError(line);
-        if (protocolError) {
-          finish(() => reject(new Error(`UCI engine rejected command: ${protocolError}`)));
-          return;
-        }
-        evaluation.note(line);
-        const move = parseBestmoveLine(line);
-        if (move !== undefined) {
-          finish(() => {
-            try {
-              validateConfiguredUciOptions(commands, advertisedOptions);
-              resolveEval(evaluation.result(move));
-            } catch (err) {
-              reject(err);
+        const readStderrTail = captureStderrTail(child);
+        const timer = setTimeout(
+          () =>
+            finish(() =>
+              reject(
+                timeoutError(timeoutMessage, timeoutMs, trace, stderrDetail(readStderrTail())),
+              ),
+            ),
+          timeoutMs,
+        );
+        child.on('error', (err) => finish(() => reject(err)));
+        const consume = (): void => {
+          let newline = buf.indexOf('\n');
+          while (newline >= 0) {
+            const line = buf.slice(0, newline).trim();
+            buf = buf.slice(newline + 1);
+            trace.note(line);
+            const option = parseUciOptionLine(line);
+            if (option) advertisedOptions.add(option);
+            const protocolError = uciProtocolError(line);
+            if (protocolError) {
+              finish(() => reject(new Error(`UCI engine rejected command: ${protocolError}`)));
+              return;
             }
-          });
-          return;
-        }
-        newline = buf.indexOf('\n');
-      }
-    };
-    child.stdout.on('data', (chunk: Buffer) => {
-      buf += chunk.toString('utf8');
-      consume();
-    });
-    child.on('close', (code, signal) => {
-      if (settled) return;
-      // A final line missing its newline is still a result; flush it before
-      // calling this a crash.
-      if (buf.trim() !== '') {
-        buf += '\n';
-        consume();
-      }
-      finish(() => reject(earlyExitError(bin, code, signal, readStderrTail())));
-    });
+            evaluation.note(line);
+            const move = parseBestmoveLine(line);
+            if (move !== undefined) {
+              finish(() => {
+                try {
+                  validateConfiguredUciOptions(commands, advertisedOptions);
+                  resolveEval(evaluation.result(move));
+                } catch (err) {
+                  reject(err);
+                }
+              });
+              return;
+            }
+            newline = buf.indexOf('\n');
+          }
+        };
+        child.stdout.on('data', (chunk: Buffer) => {
+          buf += chunk.toString('utf8');
+          consume();
+        });
+        child.on('close', (code, signal) => {
+          if (settled) return;
+          // A final line missing its newline is still a result; flush it before
+          // calling this a crash.
+          if (buf.trim() !== '') {
+            buf += '\n';
+            consume();
+          }
+          finish(() => reject(earlyExitError(bin, code, signal, readStderrTail())));
+        });
 
-    child.stdin.write(`${commands.join('\n')}\n`);
-  });
+        child.stdin.write(`${commands.join('\n')}\n`);
+      }),
+  );
 }
 
 /**
@@ -756,82 +869,88 @@ export type UciMultiPvEval = {
  */
 export function runUciMultiPv(args: RunUciBestmoveArgs): Promise<UciMultiPvLine[]> {
   const { bin, commands, timeoutMs, timeoutMessage } = args;
-  return new Promise<UciMultiPvLine[]>((resolveTable, reject) => {
-    const child = spawn(bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
-    const trace = new UciOutputTrace('spawn');
-    let buf = '';
-    let settled = false;
-    const table = new Map<number, UciMultiPvLine>();
-    const advertisedOptions = new Set<string>();
+  return withEngineProcess(
+    (track) =>
+      new Promise<UciMultiPvLine[]>((resolveTable, reject) => {
+        const child = spawn(bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+        track(child);
+        const trace = new UciOutputTrace('spawn');
+        let buf = '';
+        let settled = false;
+        const table = new Map<number, UciMultiPvLine>();
+        const advertisedOptions = new Set<string>();
 
-    const finish = (run: () => void): void => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try {
-        child.kill('SIGKILL');
-      } catch {
-        /* already gone */
-      }
-      run();
-    };
+        const finish = (run: () => void): void => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          try {
+            child.kill('SIGKILL');
+          } catch {
+            /* already gone */
+          }
+          run();
+        };
 
-    const readStderrTail = captureStderrTail(child);
-    const timer = setTimeout(
-      () =>
-        finish(() =>
-          reject(timeoutError(timeoutMessage, timeoutMs, trace, stderrDetail(readStderrTail()))),
-        ),
-      timeoutMs,
-    );
-    child.on('error', (err) => finish(() => reject(err)));
-    const consume = (): void => {
-      let newline = buf.indexOf('\n');
-      while (newline >= 0) {
-        const line = buf.slice(0, newline).trim();
-        buf = buf.slice(newline + 1);
-        trace.note(line);
-        const option = parseUciOptionLine(line);
-        if (option) advertisedOptions.add(option);
-        const protocolError = uciProtocolError(line);
-        if (protocolError) {
-          finish(() => reject(new Error(`UCI engine rejected command: ${protocolError}`)));
-          return;
-        }
-        const row = parseInfoMultiPv(line);
-        if (row) table.set(row.index, row);
-        const move = parseBestmoveLine(line);
-        if (move !== undefined) {
-          finish(() => {
-            try {
-              validateConfiguredUciOptions(commands, advertisedOptions);
-              resolveTable([...table.values()].sort((a, b) => a.index - b.index));
-            } catch (err) {
-              reject(err);
+        const readStderrTail = captureStderrTail(child);
+        const timer = setTimeout(
+          () =>
+            finish(() =>
+              reject(
+                timeoutError(timeoutMessage, timeoutMs, trace, stderrDetail(readStderrTail())),
+              ),
+            ),
+          timeoutMs,
+        );
+        child.on('error', (err) => finish(() => reject(err)));
+        const consume = (): void => {
+          let newline = buf.indexOf('\n');
+          while (newline >= 0) {
+            const line = buf.slice(0, newline).trim();
+            buf = buf.slice(newline + 1);
+            trace.note(line);
+            const option = parseUciOptionLine(line);
+            if (option) advertisedOptions.add(option);
+            const protocolError = uciProtocolError(line);
+            if (protocolError) {
+              finish(() => reject(new Error(`UCI engine rejected command: ${protocolError}`)));
+              return;
             }
-          });
-          return;
-        }
-        newline = buf.indexOf('\n');
-      }
-    };
-    child.stdout.on('data', (chunk: Buffer) => {
-      buf += chunk.toString('utf8');
-      consume();
-    });
-    child.on('close', (code, signal) => {
-      if (settled) return;
-      // A final line missing its newline is still a result; flush it before
-      // calling this a crash.
-      if (buf.trim() !== '') {
-        buf += '\n';
-        consume();
-      }
-      finish(() => reject(earlyExitError(bin, code, signal, readStderrTail())));
-    });
+            const row = parseInfoMultiPv(line);
+            if (row) table.set(row.index, row);
+            const move = parseBestmoveLine(line);
+            if (move !== undefined) {
+              finish(() => {
+                try {
+                  validateConfiguredUciOptions(commands, advertisedOptions);
+                  resolveTable([...table.values()].sort((a, b) => a.index - b.index));
+                } catch (err) {
+                  reject(err);
+                }
+              });
+              return;
+            }
+            newline = buf.indexOf('\n');
+          }
+        };
+        child.stdout.on('data', (chunk: Buffer) => {
+          buf += chunk.toString('utf8');
+          consume();
+        });
+        child.on('close', (code, signal) => {
+          if (settled) return;
+          // A final line missing its newline is still a result; flush it before
+          // calling this a crash.
+          if (buf.trim() !== '') {
+            buf += '\n';
+            consume();
+          }
+          finish(() => reject(earlyExitError(bin, code, signal, readStderrTail())));
+        });
 
-    child.stdin.write(`${commands.join('\n')}\n`);
-  });
+        child.stdin.write(`${commands.join('\n')}\n`);
+      }),
+  );
 }
 
 // ── Persistent UCI session (one process per whole-game analysis sweep) ────────
@@ -864,7 +983,7 @@ type SessionConsumer = {
  * UciEnginePool. Always `close()` in a finally.
  */
 export class UciEngineSession {
-  private readonly child: ReturnType<typeof spawn>;
+  private child: ReturnType<typeof spawn> | undefined;
   private buf = '';
   private closed = false;
   private exitError: Error | null = null;
@@ -872,24 +991,33 @@ export class UciEngineSession {
   private readonly advertisedOptions = new Set<string>();
   private chain: Promise<unknown> = Promise.resolve();
   private readonly readyPromise: Promise<void>;
-  private readonly spawnedAt = Date.now();
+  private spawnedAt = Date.now();
   private initDurationMs: number | null = null;
+  // Cancels a still-queued wait for a total-engine slot when the session closes.
+  private readonly slotWait = new AbortController();
 
   constructor(private readonly config: UciEngineSessionConfig) {
-    this.child = spawn(config.bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
-    const readStderrTail = captureStderrTail(this.child);
-    this.child.on('error', (err) => this.fail(err));
-    this.child.on('exit', (code, signal) => {
-      if (this.closed) return;
-      const how = signal !== null ? `was killed by ${signal}` : `exited with code ${code}`;
-      const tail = readStderrTail();
-      this.fail(new Error(`${this.label()} ${how}${tail === '' ? '' : `; stderr: ${tail}`}`));
-    });
-    this.child.stdout?.on('data', (chunk: Buffer) => this.onData(chunk));
-    this.readyPromise = this.enqueue(() => this.init());
+    this.readyPromise = this.enqueue(() =>
+      withEngineProcess((track) => {
+        if (this.closed) throw new Error(`${this.label()} session closed`);
+        this.spawnedAt = Date.now();
+        this.child = spawn(config.bin, [], { stdio: ['pipe', 'pipe', 'pipe'] });
+        track(this.child);
+        const readStderrTail = captureStderrTail(this.child);
+        this.child.on('error', (err) => this.fail(err));
+        this.child.on('exit', (code, signal) => {
+          if (this.closed) return;
+          const how = signal !== null ? `was killed by ${signal}` : `exited with code ${code}`;
+          const tail = readStderrTail();
+          this.fail(new Error(`${this.label()} ${how}${tail === '' ? '' : `; stderr: ${tail}`}`));
+        });
+        this.child.stdout?.on('data', (chunk: Buffer) => this.onData(chunk));
+        return this.init();
+      }, this.slotWait.signal),
+    );
     // Callers await ready() (or their first eval); an unobserved duplicate
     // rejection must not crash the process.
-    this.readyPromise.catch(() => {});
+    this.readyPromise.catch((err: Error) => this.fail(err));
   }
 
   /** Resolves once the engine answered `readyok` and every configured option was
@@ -915,7 +1043,7 @@ export class UciEngineSession {
    * the first is worth respawning for, the second is a real error to surface.
    */
   get failed(): boolean {
-    return this.exitError !== null;
+    return this.exitError !== null || this.closed;
   }
 
   /**
@@ -1060,8 +1188,10 @@ export class UciEngineSession {
     const pending = this.consumer;
     this.consumer = null;
     pending?.reject(new Error(`${this.label()} session closed`));
+    this.slotWait.abort(new Error(`${this.label()} session closed`));
     try {
-      this.child.kill('SIGKILL');
+      this.ref();
+      this.child?.kill('SIGKILL');
     } catch {
       /* already gone */
     }
@@ -1075,15 +1205,15 @@ export class UciEngineSession {
    * search is never abandoned by an exiting process.
    */
   unref(): void {
-    this.child.unref();
-    for (const stream of [this.child.stdin, this.child.stdout, this.child.stderr]) {
+    this.child?.unref();
+    for (const stream of [this.child?.stdin, this.child?.stdout, this.child?.stderr]) {
       refStream(stream, 'unref');
     }
   }
 
   ref(): void {
-    this.child.ref();
-    for (const stream of [this.child.stdin, this.child.stdout, this.child.stderr]) {
+    this.child?.ref();
+    for (const stream of [this.child?.stdin, this.child?.stdout, this.child?.stderr]) {
       refStream(stream, 'ref');
     }
   }
@@ -1162,7 +1292,7 @@ export class UciEngineSession {
   private write(payload: string): void {
     if (this.closed) return;
     try {
-      this.child.stdin?.write(payload);
+      this.child?.stdin?.write(payload);
     } catch (err) {
       this.fail(err instanceof Error ? err : new Error(String(err)));
     }
@@ -1194,8 +1324,10 @@ export class UciEngineSession {
     const pending = this.consumer;
     this.consumer = null;
     this.closed = true;
+    this.slotWait.abort(err);
     try {
-      this.child.kill('SIGKILL');
+      this.ref();
+      this.child?.kill('SIGKILL');
     } catch {
       /* already gone */
     }
@@ -1268,6 +1400,7 @@ export class UciWarmSessionCache {
   private spawned = 0;
   private reused = 0;
   private discarded = 0;
+  private closed = false;
 
   constructor(
     private readonly config: {
@@ -1300,9 +1433,12 @@ export class UciWarmSessionCache {
    * dead, and neither state is safe to hand to the next move.
    */
   async withSession<T>(spec: WarmSessionSpec, fn: (session: UciEngineSession) => Promise<T>) {
+    if (this.closed) throw new Error(`${this.config.name} cache closed`);
     const key = `${spec.bin}\n${spec.initCommands.join('\n')}`;
     const list = this.idle.get(key);
     const parked = this.config.extraIdleTtlMs === undefined ? list?.shift() : list?.pop();
+    if (list?.length === 0) this.idle.delete(key);
+    if (parked) parkedProcesses.delete(parked.session);
     let session: UciEngineSession;
     if (parked && !parked.session.failed) {
       session = parked.session;
@@ -1330,7 +1466,7 @@ export class UciWarmSessionCache {
       if (out > 0) this.lent.set(key, out);
       else this.lent.delete(key);
     }
-    if (session.failed) {
+    if (session.failed || this.closed) {
       this.discard(session);
     } else {
       session.unref();
@@ -1339,6 +1475,20 @@ export class UciWarmSessionCache {
       this.idle.set(key, list);
       const cap = this.config.maxIdlePerKey ?? 2;
       while (list.length > cap) this.discard(list.shift()!.session);
+      if (list.length === 0) this.idle.delete(key);
+      if (!session.failed) {
+        parkedProcesses.set(session, () => {
+          // The sweeper replaces lists; look up the current one at eviction.
+          const parkedList = this.idle.get(key);
+          const index = parkedList?.findIndex((entry) => entry.session === session) ?? -1;
+          if (index >= 0) parkedList!.splice(index, 1);
+          if (parkedList?.length === 0) this.idle.delete(key);
+          this.discard(session);
+        });
+      }
+      // A request may have queued while this session was busy. Parking must
+      // wake it as well; do not wait for another acquire or the idle sweeper.
+      if (engineProcessPool.stats().queueDepth > 0) parkedProcesses.get(session)?.();
     }
     return result;
   }
@@ -1359,6 +1509,7 @@ export class UciWarmSessionCache {
   /** Close every parked session (shutdown, tests). Lent-out sessions are the
    *  borrower's to finish; they are discarded on return if the cache is gone. */
   closeAll(): void {
+    this.closed = true;
     for (const list of this.idle.values()) for (const entry of list) this.discard(entry.session);
     this.idle.clear();
     clearInterval(this.sweeper);
@@ -1366,6 +1517,7 @@ export class UciWarmSessionCache {
 
   private discard(session: UciEngineSession): void {
     this.discarded += 1;
+    parkedProcesses.delete(session);
     session.close();
   }
 
