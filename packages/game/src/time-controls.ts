@@ -12,6 +12,7 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   type GameSpecId,
   JIEQI_SPEC_ID,
+  THREE_KINGDOMS_BANQI_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from './game-specs.js';
@@ -205,6 +206,9 @@ const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeCon
   // A PREFERENCE: the table offers every preset (no clock runs while a claim
   // is open), but a first-time player starts where a claim can be read.
   [XIANGQI_MAHJONG_SPEC_ID]: '5m5',
+  // A PREFERENCE: the table offers every preset (Brian, 2026-10-31), and a
+  // first-time player starts where it started before 1+1 and 3+2 were added.
+  [THREE_KINGDOMS_BANQI_SPEC_ID]: '5m5',
 };
 
 /** The house pace, for every variant that does not name its own. */

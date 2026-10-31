@@ -1147,7 +1147,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         supportsRated: false,
         supportsTimeControl: true,
       },
-      timePresetIds: ['5m5', '10m5'],
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       // One predicate for both (the conformance test checks the pair). It is
       // read per call, never at module load, because the admin answer arrives
       // with /api/auth/me after the registry is built.
