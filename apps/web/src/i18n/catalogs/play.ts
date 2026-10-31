@@ -416,7 +416,6 @@ export const EN_PLAY = {
   'puzzle.ratingNote':
     'Your puzzle rating will not change. Note that puzzles are not a competition. Your rating helps select the most appropriate puzzles for your skill level.',
   'puzzle.themesTitle': 'Puzzle themes',
-  'puzzle.themesHidden': 'Revealed after you solve it.',
   'puzzle.settings': 'Settings',
   'puzzle.difficulty': 'Difficulty',
   'puzzle.difficulty.easiest': 'Easiest',
@@ -1061,7 +1060,6 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'puzzle.unrated',
   'puzzle.ratingNote',
   'puzzle.themesTitle',
-  'puzzle.themesHidden',
   'puzzle.settings',
   'puzzle.variantField',
   'puzzle.autoNext',

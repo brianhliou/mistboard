@@ -198,7 +198,6 @@ export const ZH_HANS_PLAY = {
   'puzzle.unrated': '不计分',
   'puzzle.ratingNote': '你的题目评分不会变化。题目不是比赛，评分只是用来挑出最适合你水平的题目。',
   'puzzle.themesTitle': '题目主题',
-  'puzzle.themesHidden': '解开后显示。',
   'puzzle.settings': '设置',
   'puzzle.variantField': '棋种',
   'puzzle.themeField': '主题',

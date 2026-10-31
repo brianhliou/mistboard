@@ -1443,9 +1443,8 @@ describe('standard xiangqi puzzles', () => {
     await mountPuzzles(root, puzzle!.id);
     // Spoiler-gated: the pattern names the mate, so it stays hidden until solved.
     expect(root.querySelector('.puzzle-tag-motif')).toBeNull();
-    // The themes are the info card's last row, not a card of their own; the
-    // left column is info, rating (with the settings under a divider, #717),
-    // then the theme box. No separate Settings card or header.
+    // Lichess's left column: info, rating, the theme box, then a Settings card
+    // (no heading). The puzzle's own themes join the theme box after a solve.
     const sidebarCards = () =>
       [...root.querySelectorAll<HTMLElement>('.puzzle-left-card')].map((card) =>
         [...card.classList].find((name) => name !== 'puzzle-left-card'),
@@ -1454,17 +1453,25 @@ describe('standard xiangqi puzzles', () => {
       'puzzle-current-card',
       'puzzle-rating-card',
       'puzzle-theme-card',
+      'puzzle-settings-card',
     ]);
-    const hiddenRow = root.querySelector<HTMLElement>(
-      '.puzzle-info-card [data-puzzle-info-themes]',
+    // Nothing stands in for the themes before a solve (no "revealed later" note).
+    expect(root.querySelector('[data-puzzle-solved-themes]')).toBeNull();
+    expect(root.textContent).not.toContain('Revealed after you solve it.');
+    const settings = root.querySelector<HTMLElement>(
+      '.puzzle-settings-card [data-puzzle-settings]',
     );
-    expect(hiddenRow?.dataset.puzzleInfoThemes).toBe('hidden');
-    expect(hiddenRow?.textContent).toBe('Puzzle themesRevealed after you solve it.');
-    const settings = root.querySelector<HTMLElement>('.puzzle-rating-card [data-puzzle-settings]');
     expect(settings?.getAttribute('role')).toBe('group');
     expect(settings?.getAttribute('aria-label')).toBe('Settings');
-    expect(settings?.querySelector('[data-puzzle-auto-next]')).not.toBeNull();
-    expect(settings?.querySelector('[data-puzzle-difficulty]')).not.toBeNull();
+    const autoNext = settings?.querySelector('[data-puzzle-auto-next]');
+    const difficulty = settings?.querySelector('[data-puzzle-difficulty]');
+    expect(autoNext).not.toBeNull();
+    expect(difficulty).not.toBeNull();
+    // Jump toggle first, then the difficulty row.
+    expect(
+      autoNext!.compareDocumentPosition(difficulty!) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(root.querySelector('.puzzle-rating-card [data-puzzle-settings]')).toBeNull();
     expect(root.querySelector('.puzzles-sidebar h2')?.textContent).not.toBe('Settings');
     // The rating sits on the toggle's row, not under it as a headline.
     expect(
@@ -1489,9 +1496,14 @@ describe('standard xiangqi puzzles', () => {
     }
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
-    const shownRow = root.querySelector<HTMLElement>('.puzzle-info-card [data-puzzle-info-themes]');
-    expect(shownRow?.dataset.puzzleInfoThemes).toBe('shown');
-    expect(shownRow?.textContent).not.toContain('Revealed after you solve it.');
+    // The solved puzzle's themes sit in the theme box, under its picker, and
+    // the info card stays compact.
+    const shownRow = root.querySelector<HTMLElement>(
+      '.puzzle-theme-card [data-puzzle-solved-themes]',
+    );
+    expect(shownRow?.getAttribute('aria-label')).toBe('Puzzle themes');
+    expect(root.querySelector('.puzzle-info-card .puzzle-tag')).toBeNull();
+    expect(root.querySelector('.puzzle-theme-card')?.lastElementChild).toBe(shownRow);
     const chip = shownRow?.querySelector<HTMLElement>('.puzzle-tag-motif');
     // English names only in en: no hanzi, no pinyin tooltip.
     expect(chip?.textContent).toBe(motif.label);
@@ -2051,6 +2063,10 @@ describe('standard xiangqi puzzles', () => {
       const link = root.querySelector<HTMLAnchorElement>('.puzzle-source-link');
       expect(link?.getAttribute('href')).toBe('/historical-xiangqi/game/hxq_src?ply=4');
       expect(link?.textContent).toContain('From game');
+      // The event is clipped to one line in the sidebar, so the full text rides
+      // on the hover title.
+      expect(link?.closest('.puzzle-source-event')).not.toBeNull();
+      expect(link?.title.split('\n')[0]).toBe(link?.textContent);
     });
 
     it('keeps the setup move as the first position when the detail has no history', async () => {

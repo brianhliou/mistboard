@@ -198,7 +198,6 @@ export const ZH_HANT_PLAY = {
   'puzzle.unrated': '不計分',
   'puzzle.ratingNote': '你的題目評分不會變化。題目不是比賽，評分只是用來挑出最適合你程度的題目。',
   'puzzle.themesTitle': '題目主題',
-  'puzzle.themesHidden': '解開後顯示。',
   'puzzle.settings': '設定',
   'puzzle.variantField': '棋種',
   'puzzle.themeField': '主題',

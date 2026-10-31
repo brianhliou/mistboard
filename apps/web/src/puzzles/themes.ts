@@ -157,7 +157,8 @@ export function puzzleThemesLink(): HTMLAnchorElement {
 /**
  * The puzzle page's themes card, lichess's theme box: a header that reads as a
  * link back to the themes page ("‹ Puzzle themes"), what the chosen theme
- * drills (the mix when none is chosen), and the picker to change it.
+ * drills (the mix when none is chosen), and the picker to change it. Once the
+ * puzzle is over the sidebar appends the puzzle's own themes under a divider.
  */
 export function puzzleThemeCard(settings: PuzzleThemeSettings): HTMLElement {
   const card = document.createElement('section');
@@ -176,8 +177,6 @@ export function puzzleThemeCard(settings: PuzzleThemeSettings): HTMLElement {
   const description = document.createElement('p');
   description.className = 'puzzle-theme-card__description';
   description.textContent = puzzleThemeDescription(settings);
-  // The sidebar clamps it to two lines; the tooltip keeps the whole sentence.
-  description.title = description.textContent;
   card.append(heading, description, puzzleThemePicker(settings));
   return card;
 }

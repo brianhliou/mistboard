@@ -1,8 +1,9 @@
 /**
- * The puzzles-page sidebar: the current-puzzle info card (identity, source
- * game, side to move, and its themes once solved), the rating card (rated
- * toggle, rating summary, then the settings: variant picker, difficulty,
- * auto-next), and the theme box.
+ * The puzzles-page sidebar, in lichess's order (ui/puzzle/src/view/main.ts):
+ * the current-puzzle info card (identity, source game, side to move), the
+ * rated toggle + rating summary, the theme box (with the puzzle's own themes
+ * once it is over), and the settings card (variant picker, auto-next,
+ * difficulty).
  */
 
 import {
@@ -83,12 +84,17 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     current !== null &&
     (solvedIds.has(current.id) || (selectedComplete && current.id === selectedId));
 
+  // The theme box holds the puzzle's own themes once it is over (lichess's
+  // puzzle__themes); a variant with no theme box keeps them in the info card.
+  const themeCard =
+    props.theme && variantFilter === XIANGQI_SPEC_ID ? puzzleThemeCard(props.theme) : null;
+  if (themeCard && current && revealed) themeCard.append(puzzleSolvedThemes(current));
   const infoCard = current
     ? puzzleInfoCard(current, {
         rating: revealed ? current.rating : null,
         status: solvedIds.has(current.id) ? t('puzzle.statusSolved') : t('puzzle.playedLocally'),
         goalRevealed: revealed,
-        themes: revealed ? 'shown' : 'hidden',
+        themes: revealed && !themeCard,
       })
     : emptyInfoCard(props.theme?.id ? t('puzzle.noneForTheme') : t('puzzle.noneForVariant'));
 
@@ -149,10 +155,10 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     ratingCard.append(ratedNote);
   }
 
-  // The settings sit in the rating card under a divider (lichess's
-  // puzzle__side__config), not in a card of their own with a header.
-  const divider = document.createElement('hr');
-  divider.className = 'puzzle-info-divider puzzle-settings-divider';
+  // The settings card, lichess's puzzle__side__config: no header, the toggle
+  // and the difficulty row speak for themselves; the group carries the name.
+  const settingsCard = document.createElement('section');
+  settingsCard.className = 'puzzle-left-card puzzle-settings-card';
   const form = document.createElement('div');
   form.className = 'puzzle-settings';
   form.setAttribute('role', 'group');
@@ -180,7 +186,6 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
     field.append(fieldLabel, select);
     form.append(field);
   }
-  if (props.difficulty) form.append(...puzzleDifficultyControls(props.difficulty));
   const autoNextToggle = document.createElement('label');
   autoNextToggle.className = 'puzzle-toggle';
   const autoNextInput = document.createElement('input');
@@ -198,12 +203,11 @@ export function renderQueuePanel(host: HTMLElement, props: QueuePanelProps): voi
   autoNextLabel.textContent = t('puzzle.autoNext');
   autoNextToggle.append(autoNextInput, autoNextSwitch, autoNextLabel);
   form.append(autoNextToggle);
-  ratingCard.append(divider, form);
+  // Lichess's order: the jump toggle, then the difficulty row under it.
+  if (props.difficulty) form.append(...puzzleDifficultyControls(props.difficulty));
+  settingsCard.append(form);
 
-  // The puzzle, the rating with its settings, then the theme box.
-  const themeCard =
-    props.theme && variantFilter === XIANGQI_SPEC_ID ? [puzzleThemeCard(props.theme)] : [];
-  host.append(infoCard, ratingCard, ...themeCard);
+  host.append(infoCard, ratingCard, ...(themeCard ? [themeCard] : []), settingsCard);
 }
 
 /** Shared controls and availability copy for the sidebar and phone sheet. */
@@ -212,7 +216,8 @@ export function puzzleDifficultyControls(
   phone = false,
 ): HTMLElement[] {
   const field = document.createElement('label');
-  field.className = phone ? 'puzzle-pm-row' : 'puzzle-field';
+  // Desktop: label left, select right on one row (lichess's "Difficulty level").
+  field.className = phone ? 'puzzle-pm-row' : 'puzzle-field puzzle-field--inline';
   if (phone) field.dataset.puzzleMenuRow = 'difficulty';
   const label = document.createElement('span');
   label.className = phone ? 'puzzle-pm-row__label' : '';
@@ -249,15 +254,15 @@ export function puzzleDifficultyControls(
 // optional status line, then where it came from and who is to move. The goal
 // (e.g. "Mate in 1") is a spoiler while solving, so it shows only once
 // `goalRevealed`. Puzzle Streak puts the same card over its own. With `themes`
-// the card ends in the puzzle's themes row: a spoiler note until the puzzle is
-// over ('hidden'), the theme chips after ('shown'). Streak passes none.
+// the card ends in the puzzle's theme chips, for a page with no theme box to
+// hold them; pass it only once the puzzle is over (the themes are spoilers).
 export function puzzleInfoCard(
   puzzle: PuzzleSummary,
   opts: {
     rating: number | null;
     status: string | null;
     goalRevealed: boolean;
-    themes?: 'hidden' | 'shown';
+    themes?: boolean;
   },
 ): HTMLElement {
   const infoCard = document.createElement('section');
@@ -287,36 +292,28 @@ export function puzzleInfoCard(
                 color: colorLabel(puzzle.sideToMove),
               })
             : t('puzzle.toMove', { color: colorLabel(puzzle.sideToMove) }),
+          'puzzle-info-goal',
         ),
       ],
       puzzle.variant,
     ),
   );
-  if (opts.themes) infoCard.append(puzzleInfoDivider(), puzzleThemesRow(puzzle, opts.themes));
+  if (opts.themes) infoCard.append(puzzleInfoDivider(), puzzleSolvedThemes(puzzle));
   return infoCard;
 }
 
-// Themes name the piece or pattern (e.g. "Drop", "Treasure"), so the chips
-// show only once the puzzle is over; until then the row says when they will.
-function puzzleThemesRow(
+// The puzzle's own theme chips, shown once it is over (they name the pattern,
+// so they are spoilers before). No visible label, as lichess's puzzle__themes:
+// the divider above sets them apart, the group carries the name for a reader.
+function puzzleSolvedThemes(
   puzzle: Pick<PuzzleSummary, 'themes' | 'motifs' | 'variant'>,
-  state: 'hidden' | 'shown',
 ): HTMLElement {
-  const row = document.createElement('div');
-  row.className = `puzzle-info-themes puzzle-info-themes--${state}`;
-  row.dataset.puzzleInfoThemes = state;
-  const label = document.createElement('span');
-  label.className = 'puzzle-info-themes__label';
-  label.textContent = t('puzzle.themesTitle');
-  if (state === 'shown') {
-    row.append(label, tagsPanel(puzzle));
-  } else {
-    const note = document.createElement('span');
-    note.className = 'puzzle-info-themes__note';
-    note.textContent = t('puzzle.themesHidden');
-    row.append(label, note);
-  }
-  return row;
+  const tags = tagsPanel(puzzle);
+  tags.classList.add('puzzle-solved-themes');
+  tags.dataset.puzzleSolvedThemes = 'true';
+  tags.setAttribute('role', 'group');
+  tags.setAttribute('aria-label', t('puzzle.themesTitle'));
+  return tags;
 }
 
 function emptyInfoCard(message: string): HTMLElement {
@@ -364,8 +361,9 @@ function puzzleInfoRow(
   return row;
 }
 
-function puzzleInfoLine(text: string): HTMLSpanElement {
+function puzzleInfoLine(text: string, className?: string): HTMLSpanElement {
   const line = document.createElement('span');
+  if (className) line.className = className;
   line.textContent = text;
   return line;
 }
@@ -420,14 +418,22 @@ export function withSelectedSource(
 // The header, a link to the game's page at the puzzle's move when the server
 // says it hosts the game (the same route as historicalXiangqiReviewUrl, not
 // imported: that module brings the game search's styles with it).
+// One line, cut with an ellipsis (lichess's "From game 3+2 • Blitz" fits; an
+// event name often does not), with the whole header as the tooltip.
 function sourceGameHeaderLine(source: NonNullable<PuzzleSummary['sourceGame']>): HTMLElement {
-  if (!source.hosted) return puzzleInfoLine(sourceGameHeader(source));
+  const header = sourceGameHeader(source);
+  if (!source.hosted) {
+    const line = puzzleInfoLine(header, 'puzzle-source-event');
+    line.title = header;
+    return line;
+  }
   const line = document.createElement('span');
+  line.className = 'puzzle-source-event';
   const link = document.createElement('a');
   link.className = 'puzzle-source-link';
   link.href = `/historical-xiangqi/game/${encodeURIComponent(source.gameId)}?ply=${source.ply}`;
-  link.textContent = sourceGameHeader(source);
-  link.title = t('puzzle.openSourceGame');
+  link.textContent = header;
+  link.title = `${header}\n${t('puzzle.openSourceGame')}`;
   line.append(link);
   return line;
 }
