@@ -338,7 +338,7 @@
 }
 
 .xq-live-hint-dot {
-  fill: rgba(31, 111, 91, 0.72);
+  fill: var(--board-move-hint, rgba(31, 111, 91, 0.72));
   opacity: 0.9;
   pointer-events: none;
 }

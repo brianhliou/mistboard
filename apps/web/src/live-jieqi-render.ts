@@ -22,6 +22,9 @@ import {
   boardLastMoveEdgeOn,
   boardLastMoveMarkersSvg,
   boardLastMoveStyleAttr,
+  type RaisedPieceOutline,
+  raisedCellPieceOutline,
+  raisedPieceOutline,
 } from './board-lastmove.js';
 import { type LuckMarkSpec, svgBoardLuckMark } from './board-luck-mark.js';
 import {
@@ -30,6 +33,12 @@ import {
   xiangqiPieceCellBox,
   xiangqiPieceDrawSize,
 } from './board-metrics.js';
+import {
+  SELECT_3D_GROUP_ATTRS,
+  select3dCaptureFaceSvg,
+  select3dHoverEdgeSvg,
+  select3dSelectedSvg,
+} from './board-select-3d.js';
 import { readDisplayPreferences } from './display-preferences.js';
 import {
   piece3dEnabled,
@@ -240,6 +249,16 @@ export function renderJieqiBoardSvg(
   const palaceBands = bandsInner
     ? `<g class="jieqi-palace-bands xq-live-palace-bands">${bandsInner}</g>`
     : '';
+  // A 3D piece is marked on the piece itself (board-select-3d.ts): no rings.
+  // Face up or face down it is one disc, so one outline serves both.
+  const outline3d: RaisedPieceOutline | null = !tile3d
+    ? null
+    : layout === 'cell'
+      ? raisedCellPieceOutline(xiangqiPiece3dCellMark(pieceSet, CELL))
+      : xiangqiPiece3dApplies(pieceSet, xiangqiPieceShapeForLayout(layout))
+        ? raisedPieceOutline(xiangqiPiece3dMarkPiece(pieceSet, CELL))
+        : null;
+  const selectedSquare = options.selectedSquare ?? null;
   return `
     <svg class="jieqi-board jieqi-board--${layout} xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}"${boardLastMoveStyleAttr(MARK_PIECE_SIZE)} viewBox="${vb.minX} ${vb.minY} ${vb.width} ${vb.height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jieqi board">
       ${backdrop}
@@ -249,13 +268,13 @@ export function renderJieqiBoardSvg(
       ${coords ? `<g class="jieqi-coords xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>` : ''}
       ${lastMoveMarkers(view, perspective, 'under', pieceSet, tile3d)}
       ${options.check === false ? '' : checkGlow(view, perspective, pieceSet)}
-      ${selectionRing(options.selectedSquare ?? null, perspective)}
-      ${options.interactive ? '' : moveHints(view, legalMoves, perspective)}
+      ${outline3d ? '' : selectionRing(selectedSquare, perspective)}
+      ${options.interactive ? '' : moveHints(view, legalMoves, perspective, outline3d !== null)}
       ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null, tile3d)}
-      <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarkers(view, perspective, 'over', pieceSet, tile3d)}</g>
+      <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarkers(view, perspective, 'over', pieceSet, tile3d)}</g>${outline3d ? `<g ${SELECT_3D_GROUP_ATTRS}>${select3dLayer(view, legalMoves, selectedSquare, perspective, outline3d)}</g>` : ''}
       <g class="jieqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jieqiMarkerSvg(marker, perspective)).join('')}</g>
       <g class="jieqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jieqiArrowLayer(options.arrows ?? [], perspective)}</g>
-      ${options.interactive ? hitLayer(perspective, view, legalMoves) : ''}
+      ${options.interactive ? hitLayer(perspective, view, legalMoves, outline3d) : ''}
     </svg>
   `;
 }
@@ -511,12 +530,15 @@ function moveHints(
   view: JieqiPlayerView,
   moves: readonly JieqiMove[],
   perspective: JieqiColor,
+  raised = false,
 ): string {
   return moves
     .map((move) => {
       const { file, rank } = jieqiCoordOf(move.to);
       const { x, y } = intersection(file, rank, perspective);
       const capture = view.board[move.to] !== undefined;
+      // A 3D capture target's tint is on its face, over the pieces (select3dLayer).
+      if (capture && raised) return '';
       return capture
         ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
         : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`;
@@ -572,10 +594,38 @@ function lastMoveMarkers(
   return boardLastMoveMarkersSvg(ends, MARK_PIECE_SIZE, layer, { box: PIECE_SIZE, outer });
 }
 
+/**
+ * The selection on a board of 3D pieces (board-select-3d.ts): the selected
+ * piece's side in green and every capture target's face tinted, face
+ * up or face down alike, over the pieces and the last move's gold edge. The
+ * targets are the selected piece's legal moves, which the flat board rings.
+ */
+function select3dLayer(
+  view: JieqiPlayerView,
+  moves: readonly JieqiMove[],
+  selectedSquare: JieqiSquare | null,
+  perspective: JieqiColor,
+  outline: RaisedPieceOutline,
+): string {
+  if (!selectedSquare || !view.board[selectedSquare]) return '';
+  const at = (square: JieqiSquare) => {
+    const { file, rank } = jieqiCoordOf(square);
+    return intersection(file, rank, perspective);
+  };
+  const parts = [select3dSelectedSvg(at(selectedSquare), outline)];
+  for (const move of moves) {
+    if (move.from === selectedSquare && view.board[move.to] !== undefined) {
+      parts.push(select3dCaptureFaceSvg(at(move.to), outline));
+    }
+  }
+  return parts.join('');
+}
+
 function hitLayer(
   perspective: JieqiColor,
   view: JieqiPlayerView,
   moves: readonly JieqiMove[],
+  outline3d: RaisedPieceOutline | null = null,
 ): string {
   const targets = new Map<JieqiSquare, { capture: boolean }>();
   for (const move of moves) targets.set(move.to, { capture: view.board[move.to] !== undefined });
@@ -585,13 +635,20 @@ function hitLayer(
       const sq = jieqiSquareOf(f, r);
       const { x, y } = intersection(f, r, perspective);
       const target = targets.get(sq);
+      // A 3D capture target carries its marks on the piece: its face tint over
+      // the pieces (select3dLayer) and, under the pointer, its side in green.
+      const raised = target?.capture && outline3d;
       const marker = target
-        ? target.capture
-          ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
-          : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`
+        ? raised
+          ? ''
+          : target.capture
+            ? `<circle class="jieqi-hint-capture" cx="${x}" cy="${y}" r="${RING_CAPTURE}"/>`
+            : `<circle class="jieqi-hint" cx="${x}" cy="${y}" r="10"/>`
         : '';
       const hover = target
-        ? `<circle class="jieqi-target-hover" cx="${x}" cy="${y}" r="${RING_LAST}"/>`
+        ? raised
+          ? select3dHoverEdgeSvg({ x, y }, outline3d)
+          : `<circle class="jieqi-target-hover" cx="${x}" cy="${y}" r="${RING_LAST}"/>`
         : '';
       parts.push(
         `<g data-square="${sq}" class="jieqi-hit${target ? ' jieqi-hit--target' : ''}">${hover}${marker}<rect x="${x - HIT_HALF}" y="${y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}"/></g>`,
@@ -629,7 +686,7 @@ export function installJieqiBoardStyles(): void {
       stroke-width: 1.2;
     }
     .jieqi-selection { fill: rgba(31, 111, 91, 0.32); stroke: none; pointer-events: none; }
-    .jieqi-hint { fill: rgba(31, 111, 91, 0.72); opacity: 0.78; pointer-events: none; }
+    .jieqi-hint { fill: var(--board-move-hint, rgba(31, 111, 91, 0.72)); opacity: 0.78; pointer-events: none; }
     .jieqi-hint-capture {
       fill: none; stroke: rgba(31, 111, 91, 0.48); stroke-width: 3; pointer-events: none;
     }
