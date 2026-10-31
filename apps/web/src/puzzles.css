@@ -2322,6 +2322,19 @@ a.puzzle-tag--link:hover {
     margin-block: auto;
   }
 
+  /* Report a problem takes its own row under the one-row strip, and the strip
+     grows for it out of the gap the session row sits in; at the fixed height
+     the open form was clipped. */
+  .puzzles-shell .puzzle-trainer-panel > .puzzle-solved-panel:has(> .puzzle-report) {
+    height: auto;
+    min-height: var(--puzzle-prompt-height);
+  }
+
+  .puzzles-shell .puzzle-solved-panel > .puzzle-report {
+    grid-column: 1 / -1;
+    padding: 2px 12px 8px;
+  }
+
   /* Streak's shell scrolls on desktop (its summary card can be long); with a
      board it is the trainer's one clipped screen, the same box edge to edge. */
   .puzzles-page > .puzzles-shell.puzzle-streak-shell:has(.puzzle-board) {
