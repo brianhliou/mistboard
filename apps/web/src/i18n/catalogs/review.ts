@@ -104,6 +104,7 @@ export const EN_REVIEW = {
   'watch.colorWins': '{color} wins',
   'watch.won': 'Won',
   'watch.resultByReason': '{result} by {reason}',
+  'watch.resultOnPoints': '{result} on points',
   'watch.matchup': '{first} vs {second}',
   'watch.reviewMatchup': 'Review {matchup}',
   // The two cross-variant rail channels; variant channels use variant.*.name.

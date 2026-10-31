@@ -604,27 +604,28 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
     }
   }
 
-  // Xiangqi Mahjong: both final hands from the finished-match read. A match
-  // the server will not show (or a failed read) keeps a plain felt with the
-  // variant's name, never the misty tile: nothing about it is fog.
+  // Xiangqi Mahjong: both final hands and the match score from the
+  // finished-match read, with how the match ended on the centre line (a played
+  // out match's `tie` reads as the site's Draw). A match the server will not
+  // show (or a failed read) keeps a plain felt with the variant's name, never
+  // the misty tile: nothing about it is fog.
   async function mountFinishedHands(host: HTMLElement, game: FeaturedGame): Promise<void> {
     let drawn = false;
     try {
-      const [{ loadXmjFinalView, xmjFinalHandsSvg }, { readStoredXiangqiPieceSet }] =
-        await Promise.all([
-          import('./current-games-xmj-card.js'),
-          import('./xiangqi-appearance-storage.js'),
-        ]);
-      const view = await loadXmjFinalView(game.roomId);
+      const [{ loadXmjFinal, xmjFinalHandsSvg }, { readStoredXiangqiPieceSet }] = await Promise.all(
+        [import('./current-games-xmj-card.js'), import('./xiangqi-appearance-storage.js')],
+      );
+      const final = await loadXmjFinal(game.roomId);
       if (!isConnected() || !host.isConnected) return;
-      if (view) {
+      if (final) {
         const winner = finishedWinnerColor(game.result);
         host.innerHTML = xmjFinalHandsSvg(
-          view,
+          final.view,
           finishedBottomSeatColor(game) === 'west' ? 'west' : 'east',
           winner === 'east' || winner === 'west' ? winner : null,
           readStoredXiangqiPieceSet(),
           t('games.finalHands'),
+          terminationLabel(final.reason === 'tie' ? 'draw' : final.reason) || null,
         );
         drawn = true;
       }

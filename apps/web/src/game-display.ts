@@ -401,6 +401,11 @@ export function terminationLabel(termination: string, locale?: Locale): string {
   return humanizeToken(termination);
 }
 
+/** The ending as it reads mid-sentence ("Red wins by timeout"): the label lowercased. */
+export function terminationReason(termination: string, locale?: Locale): string {
+  return terminationLabel(termination, locale).toLowerCase();
+}
+
 // A watch/games rail channel's name in the page locale. The server's `label` is
 // English; every variant channel's id IS its spec id, so the variant-name
 // catalog covers it, and the two cross-variant channels (Featured, Engines) get

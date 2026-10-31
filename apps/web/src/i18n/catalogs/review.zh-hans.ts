@@ -345,6 +345,7 @@ export const ZH_HANS_REVIEW = {
   'watch.colorWins': '{color}获胜',
   'watch.won': '分出胜负',
   'watch.resultByReason': '{result}（{reason}）',
+  'watch.resultOnPoints': '{result}（计分胜负）',
   'watch.matchup': '{first} 对 {second}',
   'watch.reviewMatchup': '复盘 {matchup}',
   'watch.featuredChannel': '精选',

@@ -107,7 +107,7 @@ describe('xmjFinalHandsSvg', () => {
   const view: XmjFinalView = {
     hands: { east: ['rR', 'rP', 'bP', 'bP'], west: ['rH', 'rH', 'bP', 'bP', 'bP'] },
     melds: { east: [], west: [{ kind: 'triplet', tiles: ['bC', 'bC', 'bC'], claimed: 'bC' }] },
-    discards: { east: ['rA', 'bE'], west: ['bK'] },
+    scores: { east: 3, west: 6 },
   };
 
   function seatTiles(svg: string, cls: string, seat: string): number {
@@ -118,12 +118,44 @@ describe('xmjFinalHandsSvg', () => {
     return group.querySelectorAll('rect[fill="#fbf7ec"]').length;
   }
 
-  it('draws every tile in both hands, melds and ponds', () => {
+  it('draws every tile in both hands and melds, and no discards', () => {
     const svg = xmjFinalHandsSvg(view, 'east', 'west', 'international', 'Both final hands');
     expect(seatTiles(svg, 'xmj-card-hand', 'east')).toBe(4);
     expect(seatTiles(svg, 'xmj-card-hand', 'west')).toBe(5 + 3);
-    expect(seatTiles(svg, 'xmj-card-pond', 'east')).toBe(2);
-    expect(seatTiles(svg, 'xmj-card-pond', 'west')).toBe(1);
+    expect(svg).not.toContain('xmj-card-pond');
+  });
+
+  it("puts each seat's match points in its own half, the winner's lit", () => {
+    const doc = new DOMParser().parseFromString(
+      xmjFinalHandsSvg(view, 'east', 'west', 'international', 't', 'Timeout'),
+      'image/svg+xml',
+    );
+    const score = (seat: string) => doc.querySelector(`text.xmj-card-score[data-seat="${seat}"]`);
+    expect(score('west')?.textContent).toBe('6');
+    expect(score('east')?.textContent).toBe('3');
+    // West sits on top when east is the bottom seat; the centre line is at half height.
+    const half = Number(doc.querySelector('svg')?.getAttribute('viewBox')?.split(' ')[3]) / 2;
+    expect(Number(score('west')?.getAttribute('y'))).toBeLessThan(half);
+    expect(Number(score('east')?.getAttribute('y'))).toBeGreaterThan(half);
+    expect(score('west')?.getAttribute('fill')).not.toBe(score('east')?.getAttribute('fill'));
+  });
+
+  it('names how the match ended on the centre line, and draws no pill without a label', () => {
+    const svg = xmjFinalHandsSvg(view, 'east', 'west', 'international', 't', 'On <points>');
+    const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    expect(doc.querySelector('g.xmj-card-ending text')?.textContent).toBe('On <points>');
+    expect(xmjFinalHandsSvg(view, 'east', 'west', 'international', 't')).not.toContain(
+      'xmj-card-ending',
+    );
+  });
+
+  it('lights neither score when there is no winner', () => {
+    const svg = xmjFinalHandsSvg(view, 'east', null, 'international', 't', 'Draw');
+    const doc = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    const fills = [...doc.querySelectorAll('text.xmj-card-score')].map((n) =>
+      n.getAttribute('fill'),
+    );
+    expect(new Set(fills).size).toBe(1);
   });
 
   it("puts the bottom seat's hand below the top seat's", () => {

@@ -293,16 +293,73 @@ describe('xiangqi mahjong table', () => {
     expect(current.status.type).toBe('finished');
     expect(wins).toBeGreaterThan(0);
     const host = doc(xiangqiMahjongTableHtml(xmjViewFor(current, 'east'), opts(true)));
-    // A finished match says its result in the foot, in plain points, and has
-    // no running match line.
-    expect(host.querySelector('.xmj-result__foot')?.textContent).toMatch(
-      /^Match to (You|Bot), \d+ to \d+\.$|^Match drawn, \d+ points each\.$/,
+    // A finished match heads the result with the match, its score large and
+    // the last hand underneath; no foot repeats it.
+    expect(host.querySelector('.xmj-result__title')?.textContent).toMatch(
+      /^(You win|Bot wins) on points$|^Match drawn on points$/,
     );
+    expect(host.querySelector('.xmj-result__total--match b')?.textContent).toMatch(/^\d+–\d+$/);
+    expect(host.querySelector('.xmj-result__sub')?.textContent).toMatch(/hand 6|Hand 6/);
+    expect(host.querySelector('.xmj-result__foot')).toBeNull();
     expect(host.querySelector('.xmj-result__match')).toBeNull();
     expect(host.querySelector('.xmj-centre .xmj-message--held')).not.toBeNull();
     expect(host.querySelector('.xmj-centre .xmj-hand-line')?.textContent).toBe('Hand 6 of 6');
     // The running score lives in the points table under the board, not by the names.
     expect(host.querySelector('.xmj-points')).toBeNull();
+  });
+
+  const tableFor = (view: XmjPlayerView) => xiangqiMahjongTableHtml(view, opts(false));
+
+  it('heads a finished match with the match, not a last hand the loser won', () => {
+    // Play until a hand is won, then end the match there for the other seat.
+    let current = state;
+    for (let steps = 0; steps < 5000; steps += 1) {
+      const view = xmjViewFor(current, 'spectator');
+      if (view.phase.type === 'won') break;
+      current = botStep(current);
+    }
+    const base = xmjViewFor(current, 'spectator');
+    if (base.phase.type !== 'won') throw new Error('no hand was won');
+    // The seat that won the last hand lost the match, 7 to 9 (the TV case).
+    const handWinner = base.phase.winner;
+    const matchWinner: XmjSeat = handWinner === 'east' ? 'west' : 'east';
+    const view: XmjPlayerView = {
+      ...base,
+      status: { type: 'finished', winner: matchWinner, reason: 'points' },
+      scores: { [matchWinner]: 9, [handWinner]: 7 } as XmjPlayerView['scores'],
+    };
+    const host = doc(tableFor(view));
+    expect(host.querySelector('.xmj-result__title')?.textContent).toBe(
+      `${NAMES[matchWinner]} wins on points`,
+    );
+    expect(host.querySelector('.xmj-result__total--match b')?.textContent).toBe('9–7');
+    expect(host.querySelector('.xmj-result__sub')?.textContent).toContain(
+      `${NAMES[handWinner]} wins hand ${view.handNumber}`,
+    );
+    // Between hands the hand is still the headline.
+    const between = doc(
+      tableFor({ ...base, status: { type: 'playing', turn: 'east' }, between: true }),
+    );
+    expect(between.querySelector('.xmj-result__title')?.textContent).toBe(
+      `${NAMES[handWinner]} wins`,
+    );
+    expect(between.querySelector('.xmj-result__total--match')).toBeNull();
+  });
+
+  it('heads a match lost on time mid-hand with the match and the hand it stopped in', () => {
+    const base = xmjViewFor(state, 'spectator');
+    const view: XmjPlayerView = {
+      ...base,
+      status: { type: 'finished', winner: 'west', reason: 'timeout' },
+    };
+    const host = doc(tableFor(view));
+    expect(host.querySelector('.xmj-result__title')?.textContent).toBe('Bot wins on time');
+    expect(host.querySelector('.xmj-result__sub')?.textContent).toBe(
+      `Ended during hand ${view.handNumber} of ${Math.max(view.handsInMatch, view.handNumber)}`,
+    );
+    expect(host.querySelector('.xmj-result__total--match b')?.textContent).toBe(
+      `${view.scores.west}–${view.scores.east}`,
+    );
   });
 
   it('lays the table out opponent, middle band, viewer, with the hand and the wall in the centre', () => {

@@ -655,7 +655,6 @@ export const ZH_HANT_PLAY = {
   'live.xmj.resultSelfDraw': '{name}自摸',
   'live.xmj.resultDiscard': '{name}胡牌',
   'live.xmj.resultNone': '流局',
-  'live.xmj.matchWon': '{name}贏得比賽，{winner} 比 {loser}。',
   'live.xmj.matchDrawn': '比賽打平，各 {points} 分。',
   'live.xmj.youWinOnPoints': '你以積分獲勝',
   'live.xmj.nameWinsOnPoints': '{name}以積分獲勝',
