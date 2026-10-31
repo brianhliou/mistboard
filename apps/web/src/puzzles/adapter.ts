@@ -173,9 +173,17 @@ export type PuzzleSession = {
   // The ply the solution line took over from (a reveal, or Streak's miss):
   // moves from here on were shown, not found, and read as such in the list.
   revealedFromPly?: number | null;
-  // The last wrong try's squares, flashed red on the board for a moment.
-  // `at` is when it landed, so a repaint inside the flash keeps its phase.
-  wrongFlash?: { squares: string[]; at: number } | null;
+  // A wrong try held on the board under its ✗ for a moment before it glides
+  // back (lichess): the position after the miss, painted instead of the live
+  // one, with input blocked until the take-back.
+  wrongPreview?: { state: PuzzleState; move: PuzzleMove } | null;
+  // The scripted reply's ply while it waits under the solver's ✓: kept out of
+  // the move list until it glides, so the list never shows it before the board.
+  pendingReplyPly?: number | null;
+  // When the mated general's slash first showed, so a repaint mid-animation
+  // keeps its phase; cleared when the board leaves the mate so a step back
+  // onto it replays the slash.
+  mateSlashAt?: number | null;
 };
 
 export type PuzzleNavigation = {
@@ -214,7 +222,12 @@ export type PuzzleBoardContext = {
   renderSession: () => void;
   /** Submit a candidate solution move through the shared attempt path. */
   submitMove: (move: PuzzleMove) => Promise<void>;
+  /** Verdict badges for the painted position: ✓ on a found solver move, ✗ on
+   *  a wrong try held before its take-back. Adapters pin each at `square`. */
+  moveMarks: readonly PuzzleMoveMark[];
 };
+
+export type PuzzleMoveMark = { square: string; verdict: 'right' | 'wrong' };
 
 /**
  * The per-variant contract. One adapter per GameSpecId with puzzles; the core
@@ -283,7 +296,11 @@ export type PuzzleBoardAdapter = {
 // The board shows the live position the solver can move from: not a scrubbed
 // replay, and not the pre-setup position of the opening glide.
 export function isReplayLive(session: PuzzleSession): boolean {
-  return session.setupIntro === null && session.viewPly >= session.playedMoves.length;
+  return (
+    session.setupIntro === null &&
+    !session.wrongPreview &&
+    session.viewPly >= session.playedMoves.length
+  );
 }
 
 // The replay cursor's floor. viewPly 0 is `initial` (the setup move just
