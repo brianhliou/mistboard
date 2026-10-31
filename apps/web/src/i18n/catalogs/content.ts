@@ -380,8 +380,6 @@ export const EN_CONTENT = {
   'champions.heading': 'Engine champions',
   'champions.intro':
     'Each game has one reigning champion engine: the strongest bot you can play here, credited by name. Easier bots and levels sit below it. Any engine can challenge for the title in a public match. We also want to host other engines as bots you can play, not only champions; to offer one, use the submission steps below.',
-  'champions.aboutJieqi':
-    'By Huorongrong and Laoxu (Kouza): a Pikafish fork with its own neural network. It plays here at 4 s a move on 4 threads.',
   'champions.aboutJungle':
     'By hzyhhzy with a network from Kouza: a self-play neural network. It plays here at 150 visits a move.',
   'champions.creditCode': 'Code',
@@ -392,12 +390,10 @@ export const EN_CONTENT = {
   'champions.statDraws': 'draws',
   'champions.statLosses': 'losses',
   'champions.barLabel': '{wins} wins, {draws} draws, {losses} losses',
-  'champions.tookJieqi':
-    'Took the title from Pikafish Level 8 on 2026-09-30, over 400 games, scoring 64%.',
-  'champions.aboutJqe':
-    "By Devin O'Keefe: an open-source engine with its own neural network, trained on self-play. It plays here at 4 s a move on 4 threads.",
-  'champions.tookJqe':
-    'Took the title from AB-JChess 0.2d on 2026-10-21, over 300 games, scoring 60%.',
+  'champions.tookAbJchess2':
+    'Took the title back from jqe on 2026-10-31, over 600 games, scoring 57%.',
+  'champions.aboutAbJchess2':
+    "By Huorongrong and Laoxu (Kouza), built on jqe's open-source code by Devin O'Keefe, with its own neural network. It plays here at 4 s a move on 4 threads.",
   'champions.tookJungle':
     'Took the title from MistyJungle on 2026-09-22, over 200 games at 1,000 visits a move, without a loss.',
   'champions.readMatch': 'Read the match',
@@ -418,6 +414,8 @@ export const EN_CONTENT = {
   'champions.parenClose': ').',
   'champions.lineEnd': '.',
   'champions.historyHeading': 'Title history',
+  'champions.historyAbJchess2':
+    "2026-10-31, Jieqi: AB-JChess-20261031, by Huorongrong and Laoxu (Kouza) and built on jqe's code, took the title from jqe, 306-227-67 over 600 games, scoring 57%",
   'champions.historyJieqi':
     '2026-09-30, Jieqi: AB-JChess, by Huorongrong and Laoxu (Kouza), took the title from Pikafish Level 8, 248-136-16 over 400 games, scoring 64%',
   'champions.historyJqe':
@@ -447,7 +445,8 @@ export const EN_CONTENT = {
   'thanks.fairyStockfishBody':
     'Plays the xiangqi bot levels below Pikafish and the Duck Xiangqi bot.',
   'thanks.abJchessAuthors': 'Huorongrong and Laoxu',
-  'thanks.abJchessBody': 'The top jieqi bot. Its authors let us use its neural network.',
+  'thanks.abJchessBody':
+    "The top jieqi bot. Its current release is built on jqe's open-source code by Devin O'Keefe. Its authors let us use its neural network.",
   'thanks.katagomoAuthor': 'KataGomo by hzyhhzy',
   'thanks.katagoAuthor': 'KataGo by lightvector',
   'thanks.dandelionAuthor': 'Dandelion 4 network by Kouza',

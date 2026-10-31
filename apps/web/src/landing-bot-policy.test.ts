@@ -323,15 +323,17 @@ describe('landing bot ladder (homepage play panel)', () => {
     ]);
   });
 
-  it('puts jqe above AB-JChess only where /api/bots reports it playable', () => {
+  it('puts jqe one rung under AB-JChess only where /api/bots reports it playable', () => {
     const jieqi = (playable: string[]) =>
       landingBotLadder('jieqi', new Set(playable)).map((rung) => rung.botId);
     // Flag off (the server never lists jqe): the ladder is unchanged.
     expect(jieqi([])).toEqual(ids('jieqi'));
     expect(jieqi(['ab-jchess'])).toEqual(ids('jieqi'));
-    expect(jieqi(['jqe'])).toEqual([...ids('jieqi'), 'jqe']);
+    // AB-JChess-20261031 took the top back from jqe (2026-10-31): jqe sits just under it.
+    expect(jieqi(['jqe'])).toEqual([...ids('jieqi').slice(0, -1), 'jqe', 'ab-jchess']);
     const ladder = landingBotLadder('jieqi', new Set(['jqe']));
-    expect(ladder.at(-1)).toMatchObject({ name: 'jqe', engine: 'jqe', net: 'nnue', level: null });
+    expect(ladder.at(-1)?.botId).toBe('ab-jchess');
+    expect(ladder.at(-2)).toMatchObject({ name: 'jqe', engine: 'jqe', net: 'nnue', level: null });
     expect(ladder[landingBotLadderIndex(ladder, 'jqe-jieqi')]?.botId).toBe('jqe');
     expect(pveEngineIdForRememberedPick('jieqi', 'jqe')).toBe('jqe-jieqi');
     // A remembered jqe is a returning player, like AB-JChess.

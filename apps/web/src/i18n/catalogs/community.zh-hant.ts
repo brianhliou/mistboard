@@ -608,9 +608,9 @@ export const ZH_HANT_COMMUNITY = {
   'bots.otherIntro': 'Mistboard 其他棋類的機器人。',
   'bots.pikafishBio': '開源，由 Stockfish 改造而來，每步搜尋三百萬個局面。也可以下揭棋。',
   'bots.abJchessBio':
-    '開源揭棋引擎，自帶神經網路，作者 Huorongrong 和 Laoxu（Kouza）。經作者許可在本站使用。',
+    '開源揭棋引擎，作者 Huorongrong 和 Laoxu（Kouza），自帶神經網路。其 AB-JChess-20261031 版本基於 jqe 的程式碼，在我們 600 局的對抗賽中以 306 勝 227 負 67 和戰勝 jqe，重回本站榜首。每步思考 4 秒。經作者許可在本站使用。',
   'bots.jqeBio':
-    "開源揭棋引擎，作者 Devin O'Keefe，自帶神經網路，透過自我對弈訓練。在我們 300 局的對抗賽中以 171 勝 114 負 15 和戰勝 AB-JChess 0.2d，登上本站榜首。每步思考 4 秒。經作者許可在本站使用。",
+    "開源揭棋引擎，作者 Devin O'Keefe，自帶神經網路，透過自我對弈訓練。2026 年 10 月 21 日以 171 勝 114 負 15 和戰勝 AB-JChess 0.2d 登上本站榜首，現位於基於其程式碼的 AB-JChess-20261031 之下一級。每步思考 4 秒。經作者許可在本站使用。",
   'bots.katagoBio':
     '我們所知最強的鬥獸棋引擎：hzyhhzy 的 KataGomo，基於 lightvector 的 KataGo，神經網路來自 Kouza 的 Dandelion 4。經作者許可在本站使用。',
   'bots.katagoCreditKatagomo': 'KataGomo，作者 hzyhhzy',
