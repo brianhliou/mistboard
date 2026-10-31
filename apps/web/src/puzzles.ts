@@ -537,8 +537,7 @@ export async function mountPuzzles(
 }
 
 // `history`: show the source game's moves before the puzzle in the move list
-// (the trainer page). Streak and embeds leave it out: one is a timed run where
-// the game is beside the point, the other a small frame.
+// (the trainer page and Puzzle Streak). Embeds leave it out: a small frame.
 function createPuzzleSession(
   puzzle: PuzzleDetail,
   opts: { history?: boolean } = {},
@@ -1729,7 +1728,7 @@ export function mountPuzzleSolver(
   }
   restoreBoardScale();
   installPuzzleGripFit();
-  const session = createPuzzleSession(puzzle);
+  const session = createPuzzleSession(puzzle, { history: opts.mode === 'streak' });
   if (opts.mode === 'streak') {
     void sendPuzzleQualityEvent(puzzle.id, session.qualitySessionId, 'view').catch(() => {});
   }
