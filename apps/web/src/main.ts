@@ -137,7 +137,7 @@ if (!isEmbedDocument)
               : typeof data.restartAt === 'number'
                 ? 'pending'
                 : null;
-          setRestartBanner(phase);
+          setRestartBanner(phase, data.restartAt);
         }
         if (data) {
           setRatedModeEnabled(data.ratedEnabled === true, data.correspondenceRatedEnabled === true);

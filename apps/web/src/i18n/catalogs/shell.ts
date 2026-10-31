@@ -175,7 +175,7 @@ export const EN_SHELL = {
   'connection.restartPending': 'Update pending',
   'connection.restartPendingHint': 'Active games can finish before the restart.',
   'connection.restartNow': 'Server restarting now',
-  'connection.restartNowHint': 'Please reconnect in a moment.',
+  'connection.restartNowHint': 'Back in a few seconds.',
   'homePuzzle.ariaLabel': 'Puzzle of the day: {title}',
   'homePuzzle.title': 'Puzzle of the day',
   'homePuzzle.toPlay': '{color} to play',

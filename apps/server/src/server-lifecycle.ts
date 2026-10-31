@@ -6,6 +6,7 @@ import type { Room } from './server-types.js';
 
 type ClosableRuntimeClient = {
   socket: {
+    send: (data: string) => void;
     close: (code: number, reason: string) => void;
   };
 };
@@ -75,7 +76,13 @@ export async function pauseActiveRoomsOnShutdown(
 }
 
 export function closeRoomClients(rooms: Iterable<RuntimeRoomWithClients>): void {
+  const notice = JSON.stringify({ type: 'server_restart_scheduled', phase: 'restarting' });
   for (const client of [...rooms].flatMap((room) => [...room.clients])) {
+    try {
+      client.socket.send(notice);
+    } catch {
+      /* socket already closed; still attempt the close handshake */
+    }
     try {
       client.socket.close(1001, 'server shutting down');
     } catch {
