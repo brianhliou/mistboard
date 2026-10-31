@@ -22,6 +22,7 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
+  GOMOKU_SPEC_ID,
   isPublicGameSpec,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
@@ -41,6 +42,7 @@ import {
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
+  gomokuEnabled,
   jieqiEnabled,
   jqeEnabled,
   jungleEnabled,
@@ -301,6 +303,31 @@ export function jieqiEngineOptions(withJqe = jqeEnabled()): readonly WebTenantEn
 // Deleting a retired variant's block is its own later commit
 // (docs-private/variant-retirement-plan.md, #396).
 const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
+  {
+    gameSpecId: GOMOKU_SPEC_ID,
+    roomIdPrefix: 'gmk_',
+    enabled: gomokuEnabled,
+    pageTitleKey: 'variant.gomoku.name',
+    finishedGameOpensRoom: true,
+    loadLiveRoomClient: () =>
+      import('../live-gomoku.js').then(({ bootstrapGomokuLiveRoom }) => bootstrapGomokuLiveRoom),
+    landing: {
+      capabilities: {
+        firstColor: 'black',
+        firstGlyph: '●',
+        firstLabel: 'Black',
+        secondColor: 'white',
+        secondGlyph: '○',
+        secondLabel: 'White',
+        supportsRated: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      // Local opt-in deep links only. No public menu or bot offer.
+      offerInMenu: () => false,
+      acceptsDeepLink: gomokuEnabled,
+    },
+  },
   {
     // Dark-chess correspondence rooms (server registration: correspondence
     // create flow). Deliberately capability-free: no loadLiveRoomClient (rooms

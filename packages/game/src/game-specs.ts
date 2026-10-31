@@ -747,9 +747,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Kernel #761 and standalone Rapfi worker #762 are built. Taxonomy only
-    // at this stage: hidden, unrated, and refused by the request gate until
-    // matching server/web tenants are integrated (#768, build 2).
+    // Hidden, unrated casual PvP (#768 build 2), under explicit local flags.
+    // The standalone Rapfi worker (#762) is not offered until build 3.
     id: GOMOKU_SPEC_ID,
     publicName: 'Gomoku',
     family: 'gomoku',

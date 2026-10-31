@@ -1,4 +1,5 @@
-// Pure Gomoku kernel (#761). Built-hidden taxonomy (#768); no tenant or UI yet.
+// Pure Gomoku kernel (#761) and the open-information room view (#768).
+import type { AbortReason } from './types.js';
 export const GOMOKU_BOARD_SIZE = 15;
 const POINT_COUNT = GOMOKU_BOARD_SIZE * GOMOKU_BOARD_SIZE;
 const FILES = 'abcdefghijklmno';
@@ -47,6 +48,84 @@ export type GomokuState = {
   readonly ply: number;
   readonly lastMove?: GomokuMove;
 };
+
+// The live referee can also end a game by clock, resignation or agreement.
+// Keep those room endings outside the kernel's placement-only status union.
+export type GomokuRoomState = Omit<GomokuState, 'status'> & {
+  readonly id: string;
+  readonly moveNumber: number;
+  readonly status:
+    | GomokuStatus
+    | {
+        readonly type: 'finished';
+        readonly winner: GomokuColor | null;
+        readonly reason: 'timeout' | 'resignation' | 'abandonment' | 'agreement';
+      }
+    | { readonly type: 'aborted'; readonly reason: AbortReason };
+};
+
+export type GomokuPlayerView = GomokuRoomState & {
+  readonly perspective: GomokuColor;
+  readonly legalMoves: readonly GomokuMove[];
+  readonly winningLine: readonly GomokuSquare[];
+};
+
+export function isGomokuColor(value: unknown): value is GomokuColor {
+  return value === 'black' || value === 'white';
+}
+
+export function createGomokuRoomState(id: string): GomokuRoomState {
+  return { ...createInitialGomokuState(), id, moveNumber: 1 };
+}
+
+export function applyGomokuRoomMove(state: GomokuRoomState, move: GomokuMove): GomokuRoomState {
+  if (state.status.type !== 'playing') return state;
+  const kernel: GomokuState = { ...state, status: state.status };
+  const next = applyGomokuMove(kernel, move);
+  if (next === kernel) return state;
+  return { ...next, id: state.id, moveNumber: 1 + Math.floor(next.ply / 2) };
+}
+
+/** Public terminal evidence, never an evaluation or a live threat overlay. */
+function winningLine(state: GomokuRoomState): GomokuSquare[] {
+  if (state.status.type !== 'finished' || state.status.reason !== 'five' || !state.lastMove)
+    return [];
+  const index = indexOf(state.lastMove.to);
+  const col = index % GOMOKU_BOARD_SIZE;
+  const row = Math.floor(index / GOMOKU_BOARD_SIZE);
+  for (const [dx, dy] of DIRECTIONS) {
+    const line = [state.lastMove.to];
+    for (const sign of [-1, 1]) {
+      for (let step = 1; step < GOMOKU_BOARD_SIZE; step += 1) {
+        const x = col + dx * sign * step;
+        const y = row + dy * sign * step;
+        if (x < 0 || x >= GOMOKU_BOARD_SIZE || y < 0 || y >= GOMOKU_BOARD_SIZE) break;
+        if (state.board[y * GOMOKU_BOARD_SIZE + x] !== state.status.winner) break;
+        const square = moveAt(y * GOMOKU_BOARD_SIZE + x).to;
+        if (sign === -1) line.unshift(square);
+        else line.push(square);
+      }
+    }
+    if (line.length >= 5) return line;
+  }
+  return [];
+}
+
+export function getGomokuPlayerView(
+  state: GomokuRoomState,
+  perspective: GomokuColor,
+  spectator = false,
+): GomokuPlayerView {
+  return {
+    ...state,
+    perspective,
+    legalMoves:
+      !spectator && state.status.type === 'playing' && state.status.turn === perspective
+        ? getGomokuLegalMoves({ ...state, status: state.status })
+        : [],
+    winningLine: winningLine(state),
+  };
+}
 
 /** Strict canonical a1-o15 notation; ranks increase from row 0 (a1) to row 14. */
 export function parseGomokuMove(notation: string): GomokuMove | null {

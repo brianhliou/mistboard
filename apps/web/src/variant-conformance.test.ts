@@ -167,7 +167,9 @@ describe('variant marker conformance', () => {
   // reaches on prod.
   const markedTenants = webVariantTenants().filter(
     (tenant) =>
-      tenant.gameSpecId !== MAHJONG_SPEC_ID && tenant.gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID,
+      tenant.gameSpecId !== MAHJONG_SPEC_ID &&
+      tenant.gameSpecId !== THREE_KINGDOMS_BANQI_SPEC_ID &&
+      tenant.gameSpecId !== GOMOKU_SPEC_ID,
   );
 
   it('marks Xiangqi Mahjong with its own tile marker', () => {
@@ -319,10 +321,13 @@ describe('rules link conformance', () => {
   });
 });
 
-describe('Gomoku deliberate exclusions before tenant integration', () => {
+describe('Gomoku deliberate exclusions during hidden PvP integration', () => {
   it('has no public play, rating, study, analysis, editor, embed or marker surface', () => {
     expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(false);
-    expect(webVariantTenants().map((tenant) => tenant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
+    const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
+    expect(tenant?.landing?.offerInMenu()).toBe(false);
+    expect(tenant?.landing?.engineOptions).toBeUndefined();
+    expect(tenant?.landing?.capabilities.supportsRated).toBe(false);
     expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
     expect(leaderboardVariants.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
     expect(profileRatingVariants.map((variant) => variant.gameSpecId)).not.toContain(

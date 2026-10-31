@@ -5,6 +5,7 @@ import test from 'node:test';
 import { GAME_SPECS, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
 import { gomokuEnabled } from './feature-flags.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
+import { gomokuRooms } from './gomoku-registration.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/rooms.js';
 // Importing register-tenants registers every tenant (module-scope side effect
@@ -22,13 +23,13 @@ test('game spec gate passes current chess requests', () => {
   assert.deepEqual(gateGameSpecRequest({ gameSpecId: null }), { type: 'pass' });
 });
 
-test('Gomoku requests fail closed with its flag off and on, before tenant integration', () => {
+test('the chess-stack gate still rejects Gomoku; only its registered tenant serves it', () => {
   for (const enabled of [false, true]) {
     withFlag('MISTBOARD_GOMOKU_ENABLED', enabled, () => {
       assert.equal(gomokuEnabled(), enabled);
       assert.equal(
         registeredVariantTenants().some((tenant) => tenant.gameSpecId === 'gomoku'),
-        false,
+        true,
       );
       for (const input of [{ gameSpecId: 'gomoku' }, { variant: 'gomoku' }]) {
         assert.deepEqual(gateGameSpecRequest(input), {
@@ -42,7 +43,7 @@ test('Gomoku requests fail closed with its flag off and on, before tenant integr
   }
 });
 
-test('POST /api/rooms rejects Gomoku for both selectors, modes and flag states', async () => {
+test('POST /api/rooms admits only flag-enabled Gomoku PvP; legacy selectors stay closed', async () => {
   const name = 'MISTBOARD_GOMOKU_ENABLED';
   const before = process.env[name];
   try {
@@ -67,20 +68,50 @@ test('POST /api/rooms rejects Gomoku for both selectors, modes and flag states',
               payload = body;
             },
           } as unknown as ServerResponse;
-          // No room factory in this context: falling through to chess creation
-          // must fail this test as well as returning the wrong error.
+          // No chess room factory: a fallback into chess must fail.
           assert.equal(
-            await tryHandle({} as HttpApiContext, request, response, '/api/rooms'),
+            await tryHandle(
+              {
+                databaseRequired: false,
+                refusesCreate: () => false,
+                drainDeadlineMs: () => null,
+              } as unknown as HttpApiContext,
+              request,
+              response,
+              '/api/rooms',
+            ),
             true,
           );
-          assert.equal(status, value === 'true' ? 501 : 404);
-          assert.deepEqual(JSON.parse(payload), {
-            error: value === 'true' ? 'gomoku_not_integrated' : 'gomoku_disabled',
-          });
+          const enabled = value === 'true';
+          if (enabled && 'gameSpecId' in selector && mode === 'pvp') {
+            assert.equal(status, 201);
+            const data = JSON.parse(payload);
+            assert.match(data.roomId, /^gmk_/);
+            // Every field read by room navigation and the setup/lobby handoff.
+            assert.deepEqual(data, {
+              roomId: data.roomId,
+              url: `/room/${data.roomId}`,
+              mode: 'pvp',
+              gameSpecId: 'gomoku',
+              rated: false,
+              region: 'global',
+              timeControl: { initialMs: 300_000, incrementMs: 0 },
+            });
+          } else {
+            assert.equal(status, enabled ? 501 : 404);
+            assert.deepEqual(JSON.parse(payload), {
+              error: !enabled
+                ? 'gomoku_disabled'
+                : 'gameSpecId' in selector
+                  ? 'gomoku_unsupported_surface'
+                  : 'gomoku_not_integrated',
+            });
+          }
         }
       }
     }
   } finally {
+    gomokuRooms.clear();
     if (before === undefined) delete process.env[name];
     else process.env[name] = before;
   }

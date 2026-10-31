@@ -17,7 +17,7 @@ Edit task → find file → open only that file.
 | `xiangqi-mahjong-bot-match.ts` | Seeded six-hand XMJ harness, swapped-seat wall pairs, kernel scoring and paired promotion bounds |
 | `xiangqi-mahjong-sampled-bot.ts` | Offline XMJ action search: 64 common unseen-tile samples, redacted policy rollouts and six-hand score-race value |
 | `types.ts` | Shared types: `Color`, `Square`, `Board`, `Move`, `GameState`, `PlayerView`, `Variant` |
-| `game-specs.ts` | Cross-family game-spec taxonomy and stable ids (`GameSpecId`): families (chess, xiangqi, jungle, mahjong, gomoku), board geometries, movement/objective rules, and visibility; Gomoku is built-hidden and unrated, without tenant integration (#768 build 1) |
+| `game-specs.ts` | Cross-family game-spec taxonomy and stable ids (`GameSpecId`): families (chess, xiangqi, jungle, mahjong, gomoku), board geometries, movement/objective rules, and visibility; Gomoku is built-hidden and unrated (#768) |
 | `export-formats.ts` | `GAME_EXPORT_FORMATS`: the one table of which export formats (pgn/json) each variant serves, read by the server route gate AND the web download links; explicit map, no fallback |
 | `js-compat.ts` | `hasOwnKey` / `deepCloneJson`: shims for builtins newer than the browsers that actually reach us (`Object.hasOwn` needs Chrome 93, `structuredClone` Chrome 98). Vite's `build.target` lowers syntax only, never builtins, so a too-new global ships verbatim and throws on load; Chrome 92 / Android hard-failed `/puzzles` this way in Aug 2026. `apps/web/src/web-builtin-floor.test.ts` fails the build if either builtin returns to client code |
 | `engine-protocol.ts` | Public redacted engine request/response contract shared by server and external/first-party engines |
@@ -26,7 +26,7 @@ Edit task → find file → open only that file.
 | `bughouse.ts` | Pure Chess Bughouse aggregate: two-board match state, capture transfer, drops, clocks, timeouts, event replay, and partner-request projection |
 | `variants.ts` | Variants (`standardChessVariant`, `darkChessVariant`); fog kernel: `fogVisibleSquares`, `fogMovesFrom`, `fogPawnMoves`, `fogSlideMoves`, `fogCastlingMoves`, `applyFogMove` |
 | `variants-xiangqi.ts` | FoW Xiangqi variant; cannon vision = field of fire |
-| `variants-gomoku.ts` | Pure 15x15 freestyle Gomoku kernel (#761): validated dealt openings, immutable placements, a1-o15 notation, immediate wins and opponent threats; taxonomy registered hidden (#768), no tenant or play surface yet |
+| `variants-gomoku.ts` | Pure 15x15 freestyle Gomoku kernel (#761): validated dealt openings, immutable placements, a1-o15 notation, tactical helpers, room state and open-information player views with terminal winning lines (#768) |
 | `variants-gomoku.test.ts` | Gomoku geometry, overlines, draws, illegal openings, notation, tactical oracles and 10,000 deterministic random games |
 | `variants-three-kingdoms-banqi.ts` | Engine-only Three Kingdoms banqi (#628): seeded 9×5 corner deal, xiangqi movement without royal constraints, score settlement, a perpetual-chase rule that refuses a chase move repeating its position a third time, masked player views and public FEN-like snapshots; no tenant or game-spec registration |
 | `variants-three-kingdoms-banqi.test.ts` | Three Kingdoms banqi setup, movement, scoring, turn binding, the 40-ply count, the repetition-based chase rule, wipe-out unreachability, terminal results and whole-payload hidden-information regressions |
@@ -90,6 +90,9 @@ Edit task → find file → open only that file.
 
 | File | Owns |
 |------|------|
+| `gomoku-tenant.ts` | Hidden, unrated Black-first Gomoku referee: kernel placements, open-information views, room endings and persistence mappings (#768 build 2) |
+| `gomoku-registration.ts` | Flag-gated Gomoku room map, factory, create route, WebSocket runtime, hydration, casual lobby and friend challenges with Black/White preference; rejects rated and engine requests; no bot, TV, export or correspondence |
+| `gomoku-tenant.test.ts` | Seeded referee wins, legal 225-ply draw, replay/hydration, seat preference, wire fields and unsupported-surface regressions |
 | `main.ts` | Prod entry point. Calls `installShutdownHandlers()` then `startServer({port})`. Tiny — all logic lives in `index.ts`. |
 | `index.ts` | Server library: exports `startServer`, `installShutdownHandlers`, `stopServer`. Module-load side-effect-free so the integration harness can boot a test instance on a random port. Owns canonical maps, startup wiring, shutdown composition, game-flow callbacks, and persistence-error status while delegating HTTP, WebSocket, and room lifecycle edges. |
 | `server-http.ts` | HTTP entry routing: `/health`, admin drain handoff, API context dispatch, OG/static page routes, robots/sitemap, article/game shell fallbacks, and SPA static fallback. |
@@ -519,6 +522,9 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 
 | File | Owns |
 |------|------|
+| `gomoku-board.ts` (+ `.css`) | Responsive 15x15 SVG intersection board, stone placements, keyboard hit targets, last-move and terminal winning-line marks |
+| `live-gomoku.ts` | Hidden casual Gomoku room client with server-confirmed placements, Black/White orientation, shared room chrome and public-event replay |
+| `live-gomoku.test.ts` | Placement/turn/connection guards, terminal marks, overlines, flipped edges and reconnect replay |
 | `main.ts` | Entry point — URL routing to page modules via dynamic import; mounts theme + nav + restart banner + analytics |
 | `chunk-load-recovery.ts` | Shared one-shot reload guard for stale code-split chunks after a deployment; used by route mounts and the asynchronous homepage showcase cycler |
 | `live.ts` | Live-game page bootstrap — wires `live-state`, `live-socket`, `live-render`, and `live-view` for `/room/:id` |

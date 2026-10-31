@@ -368,19 +368,33 @@ describe('web tenant registry <-> server tenant registry parity', () => {
   });
 });
 
-describe('Gomoku taxonomy-only registration', () => {
+describe('Gomoku hidden PvP registration', () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it.each(['false', 'true'])(
-    'keeps both registries and public routes closed with flag %s',
+    'registers matching casual tenants without public routes or bots with flag %s',
     (value) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', value);
       vi.stubEnv('MISTBOARD_GOMOKU_ENABLED', value);
       expect(maybeGameSpecForId(GOMOKU_SPEC_ID)?.publicSurface).toBe('hidden');
-      expect(webVariantTenants().map((tenant) => tenant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
-      expect(registeredVariantTenants().map((tenant) => tenant.gameSpecId)).not.toContain(
-        GOMOKU_SPEC_ID,
+      const web = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
+      const server = registeredVariantTenants().find(
+        (tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID,
       );
+      expect(web?.roomIdPrefix).toBe('gmk_');
+      expect(server?.roomIdPrefix).toBe(web?.roomIdPrefix);
+      expect(web?.enabled()).toBe(value === 'true');
+      expect(server?.enabled()).toBe(value === 'true');
+      expect(web?.landing?.offerInMenu()).toBe(false);
+      expect(web?.landing?.acceptsDeepLink()).toBe(value === 'true');
+      expect(web?.landing?.capabilities).toMatchObject({
+        firstColor: 'black',
+        secondColor: 'white',
+        supportsRated: false,
+      });
+      expect(web?.landing?.engineOptions).toBeUndefined();
+      expect(server?.lobby?.supportsRated).toBe(false);
+      expect(server?.watch).toBeNull();
       expect(landingBotOffer(GOMOKU_SPEC_ID)).toBeNull();
       for (const path of ['/gomoku', '/gomoku/game/test', '/gomoku/review/test']) {
         expect(isClientRoute(path), path).toBe(false);
