@@ -11,10 +11,9 @@ Rapfi searches for whoever follows the last listed stone; board-index order
 therefore searched for the opponent on about half of moves. Commit
 `ebb6b3637` (2026-11-01) makes the last listed stone belong to the opponent
 of the requested side to move. The original
-[data/gomoku-level-ladder.json](data/gomoku-level-ladder.json) is preserved
+`gomoku-level-ladder.json` is preserved
 byte for byte. Its results are historical diagnostics, not evidence of the
-fixed engine's strength. The second attempt has its own record,
-[data/gomoku-level-ladder-fixed.json](data/gomoku-level-ladder-fixed.json).
+fixed engine's strength. The second attempt has its own record, `gomoku-level-ladder-fixed.json`.
 
 ## Active policy
 
@@ -67,8 +66,7 @@ Same policy, openings, run seed `20261101` and per-game/per-ply seeds as
 attempt 1, on the engine after `ebb6b3637`. The full 14-pairing ladder ran at
 20 games per pairing; the two top pairings, the only attempt-1 misses above
 L4, were then rerun at 60 games each (30 openings, both colours). No policy
-was changed. Record:
-[data/gomoku-level-ladder-fixed.json](data/gomoku-level-ladder-fixed.json).
+was changed. Record: `gomoku-level-ladder-fixed.json`.
 
 | Pairing (weaker / stronger) | Stronger wins | Weaker wins | Draws | Stronger score |
 | --- | ---: | ---: | ---: | ---: |
@@ -185,7 +183,7 @@ aborted before a complete pairing; none were scored. Active candidate tiers
 start at 5,000 nodes to allow a completed PV. Engine errors, illegal replies
 and watchdog failures abort calibration rather than count as a loss or draw.
 
-Record: [data/gomoku-level-ladder.json](data/gomoku-level-ladder.json). The two
+Record: `gomoku-level-ladder.json`. The two
 budget-only historical runs below remain unchanged, followed by both new runs.
 Each new run retains complete policies, engine/network checksums, openings,
 game seeds, every move, terminal results, search timings and ceiling-hit counts.
@@ -195,7 +193,7 @@ reviewing so this bounded calibration keeps only its two completed attempts):
 
 ```sh
 node scripts/gomoku-level-ladder.mjs --games 20 --seed 20261101 --label review --output /tmp/gomoku-review.json
-node --test scripts/gomoku-level-ladder.test.mjs
+node --test scripts/gomoku-level-ladder.test.mjs   # record pins skip unless GOMOKU_LADDER_DATA names the records
 ```
 
 The CLI also accepts `--pairs` (for example `baseline-1,1-3`), `--budgets` (eight
@@ -254,7 +252,7 @@ These measurements support neither a fair five-level replacement nor a claim
 that the current L1 is suitable for beginners. No node budget or time ceiling was changed in those two historical attempts. A follow-up should narrow the L1/L2 gap and use more paired
 openings before considering launch; actual beginner play remains unmeasured.
 
-The machine-readable record is [data/gomoku-level-ladder.json](data/gomoku-level-ladder.json).
+The machine-readable record is `gomoku-level-ladder.json`.
 It retains every game, opening, colour assignment, result, node/time budget,
 engine/network checksums, search timing and ceiling-hit count for both attempts.
 

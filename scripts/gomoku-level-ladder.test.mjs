@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -8,6 +8,18 @@ import { tsImport } from 'tsx/esm/api';
 import * as ladder from './gomoku-level-ladder.mjs';
 
 const { baselineMove, playGame, runPairing, seededRandom } = ladder;
+
+// The calibration records (18 MB of games) live in the private docs repo, not
+// the public tree. GOMOKU_LADDER_DATA points elsewhere; without them the four
+// record pins skip by name and the policy tests still run.
+const LADDER_DATA = process.env.GOMOKU_LADDER_DATA
+  ? new URL(`file://${process.env.GOMOKU_LADDER_DATA.replace(/\/?$/, '/')}`)
+  : new URL('../docs-private/gomoku/', import.meta.url);
+const LADDER_FILES = ['gomoku-level-ladder.json', 'gomoku-level-ladder-fixed.json'];
+const calibrationSkip = LADDER_FILES.every((file) => existsSync(new URL(file, LADDER_DATA)))
+  ? false
+  : 'calibration records not present (docs-private/gomoku); set GOMOKU_LADDER_DATA to run the pins';
+const calibrationRecord = (file) => JSON.parse(readFileSync(new URL(file, LADDER_DATA), 'utf8'));
 
 const game = await tsImport('../packages/game/src/variants-gomoku.ts', import.meta.url);
 const rapfi = await tsImport('../apps/web/src/engine/rapfi.ts', import.meta.url);
@@ -488,17 +500,17 @@ test('measurement pin rejects candidate-count or margin drift with identical bud
   );
 });
 
-test('the recorded complete policy agrees with RAPFI_LEVELS and a measured pairing', () => {
-  const record = JSON.parse(
-    readFileSync(new URL('../docs/data/gomoku-level-ladder.json', import.meta.url), 'utf8'),
-  );
+test('the recorded complete policy agrees with RAPFI_LEVELS and a measured pairing', {
+  skip: calibrationSkip,
+}, () => {
+  const record = calibrationRecord('gomoku-level-ladder.json');
   assertMeasuredPolicies(record, RAPFI_LEVELS);
 });
 
-test('every recorded game replays to its claimed terminal result in the real kernel', () => {
-  const records = ['gomoku-level-ladder.json', 'gomoku-level-ladder-fixed.json'].map((file) =>
-    JSON.parse(readFileSync(new URL(`../docs/data/${file}`, import.meta.url), 'utf8')),
-  );
+test('every recorded game replays to its claimed terminal result in the real kernel', {
+  skip: calibrationSkip,
+}, () => {
+  const records = LADDER_FILES.map(calibrationRecord);
   for (const run of records.flatMap((record) => record.runs)) {
     for (const pair of run.pairings) {
       assert.equal(pair.games.length, run.gamesPerPair);
@@ -577,13 +589,11 @@ test('every recorded game replays to its claimed terminal result in the real ker
   }
 });
 
-test('fixed BOARD calibration is a separate full attempt plus 60 games per top pairing on the original seeds', () => {
-  const original = JSON.parse(
-    readFileSync(new URL('../docs/data/gomoku-level-ladder.json', import.meta.url), 'utf8'),
-  );
-  const fixed = JSON.parse(
-    readFileSync(new URL('../docs/data/gomoku-level-ladder-fixed.json', import.meta.url), 'utf8'),
-  );
+test('fixed BOARD calibration is a separate full attempt plus 60 games per top pairing on the original seeds', {
+  skip: calibrationSkip,
+}, () => {
+  const original = calibrationRecord('gomoku-level-ladder.json');
+  const fixed = calibrationRecord('gomoku-level-ladder-fixed.json');
   const [full, ...top] = fixed.runs;
   assert.equal(fixed.runs.length, 3);
   assertMeasuredPolicies(fixed, RAPFI_LEVELS);
@@ -627,10 +637,10 @@ test('fixed BOARD calibration is a separate full attempt plus 60 games per top p
   }
 });
 
-test('eight-level calibration measures every active pairing, preserving history with at most one affected-pair rerun', () => {
-  const record = JSON.parse(
-    readFileSync(new URL('../docs/data/gomoku-level-ladder.json', import.meta.url), 'utf8'),
-  );
+test('eight-level calibration measures every active pairing, preserving history with at most one affected-pair rerun', {
+  skip: calibrationSkip,
+}, () => {
+  const record = calibrationRecord('gomoku-level-ladder.json');
   const runs = record.runs.filter((run) => run.label.startsWith('eight-level-'));
   assert.ok(runs.length >= 1 && runs.length <= 2);
   const run = runs.at(-1);
