@@ -35,6 +35,8 @@ import './dark-xiangqi-postgame.css';
 import './drop-reserve.css';
 import { normalizeStartFen } from '@mistboard/game';
 import { type AnalysisVariantId, analysisVariantLabel } from './analysis-catalog.js';
+import { variantDisplayLabel } from './game-display.js';
+import { gomokuOffered } from './gomoku-access.js';
 import { t } from './i18n/catalog.js';
 import { editorHref } from './review/position-links.js';
 import type { AnalysisSource, TreeReviewConfig } from './review/tree-review.js';
@@ -170,6 +172,21 @@ export async function mountVariantAnalysisPage(
   root.classList.add('landing-page');
   root.replaceChildren(buildNav());
 
+  // Guard the mount itself, including callers that bypass the catalog loader.
+  // This roomless board reads no game data; protected replays still go through
+  // the server's independent gomokuAdmits check.
+  if (id === 'gomoku' && !gomokuOffered()) {
+    const main = document.createElement('main');
+    main.className = 'game-shell';
+    const heading = document.createElement('h1');
+    heading.textContent = t('replay.variantUnavailable', { variant: variantDisplayLabel(id) });
+    const detail = document.createElement('p');
+    detail.textContent = t('replay.routeNotEnabled');
+    main.append(heading, detail);
+    root.append(main);
+    return;
+  }
+
   const params = new URLSearchParams(window.location.search);
   const fenParam = params.get('fen');
   const movesParam = params.get('moves');
@@ -195,6 +212,29 @@ export async function mountVariantAnalysisPage(
   const newDeal = (): void => window.location.assign(`/analysis/${id}`);
 
   switch (id) {
+    case 'gomoku': {
+      const [{ mountGomokuReview }, { makeGomokuTreeAdapter }] = await Promise.all([
+        import('./review/gomoku-review.js'),
+        import('./review/gomoku-tree-adapter.js'),
+      ]);
+      // No dealt opening: the standalone board starts empty. Gomoku has no
+      // editor, study or FEN importer; those are separate product decisions.
+      const codec = makeGomokuTreeAdapter();
+      const title = t('analysis.pageTitle', { variant: variantDisplayLabel(id) });
+      mountGomokuReview(root, {
+        ...base,
+        // Keep the preceding board's fixed-orientation controls. The generic
+        // phone bar assumes red/black seats and always offers a flip.
+        phoneAnalysisBar: undefined,
+        title,
+        ariaLabel: title,
+        boardAriaLabel: t('live.gomokuBoard'),
+        summary: t('analysis.playAMove'),
+        moves: movesFromParam(movesParam, codec, codec.initialTruth()),
+        onLineChange: syncLineToUrl(codec),
+      });
+      return;
+    }
     case 'banqi': {
       // The board SVG's fills live in a page-level installed <style>, not the
       // imported CSS files — without the installer the board renders black.

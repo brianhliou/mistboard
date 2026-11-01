@@ -1,6 +1,7 @@
 import { normalizeStartFen } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ANALYSIS_VARIANTS, type AnalysisVariantId } from './analysis-catalog.js';
+import { setResolvedAdmin } from './signed-in-state.js';
 import { mountVariantAnalysisPage } from './variant-analysis.js';
 
 // The /analysis/<variant> ingress for the seven non-xiangqi boards (jsdom; the
@@ -9,7 +10,8 @@ import { mountVariantAnalysisPage } from './variant-analysis.js';
 //     (a bare route mints one, a public paste is sampled once and pinned, a
 //     dealt fen is honoured verbatim), while the FEN box shows the PUBLIC fen;
 //   - ?moves= seeds the tree; an invalid ?fen= degrades to a fresh board;
-//   - every board carries the editable FEN + moves import block.
+//   - FEN-capable boards carry the editable FEN + moves import block; the gated
+//     Gomoku tree board deliberately has neither a FEN importer nor an editor.
 
 type VariantId = Exclude<AnalysisVariantId, 'xiangqi'>;
 
@@ -75,9 +77,46 @@ const FIRST_MOVE: Record<(typeof DEALT)[number], { clicks: string[]; token: stri
 };
 
 afterEach(() => {
+  setResolvedAdmin(undefined);
+  vi.unstubAllEnvs();
   document.body.replaceChildren();
   vi.restoreAllMocks();
   window.history.replaceState(null, '', '/');
+});
+
+describe('Gomoku direct analysis mount', () => {
+  it('refuses the lower-level mount when the admin gate is closed', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
+    setResolvedAdmin(false);
+    const root = await mountAt('gomoku');
+    expect(root.textContent).toContain('Gomoku unavailable');
+    expect(root.querySelector('.review-shell')).toBeNull();
+  });
+
+  it('admits a flagged viewer without adding editor, study or FEN-import capabilities', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+    setResolvedAdmin(false);
+    const root = await mountAt('gomoku');
+    expect(root.querySelector('.gomoku-live-board')).not.toBeNull();
+    expect(root.querySelector('.review-import')).toBeNull();
+    expect(menuItem(root, 'Board editor')).toBeUndefined();
+    expect(menuItem(root, 'Study')).toBeUndefined();
+    expect(menuItem(root, 'Flip board')).toBeUndefined();
+  });
+
+  it('seeds canonical placements into the empty-root tree and truncates an illegal placement', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
+    setResolvedAdmin(true);
+    const root = await mountAt('gomoku', '?moves=a1 b1 a1 c1');
+    expect(
+      [...root.querySelectorAll('[data-piece-square]')].map((stone) =>
+        stone.getAttribute('data-piece-square'),
+      ),
+    ).toEqual(['a1', 'b1']);
+    expect(root.querySelector('.review-move-list')?.textContent).toContain('b1');
+    root.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
+    expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(0);
+  });
 });
 
 describe('hidden-deal analysis boards', () => {
@@ -311,7 +350,7 @@ describe('duck xiangqi analysis board', () => {
 
 describe('import block', () => {
   const ids = ANALYSIS_VARIANTS.map((variant) => variant.id).filter(
-    (id): id is VariantId => id !== 'xiangqi',
+    (id): id is Exclude<VariantId, 'gomoku'> => id !== 'xiangqi' && id !== 'gomoku',
   );
   for (const id of ids) {
     it(`${id} carries an editable FEN box and a moves import`, async () => {
