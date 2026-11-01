@@ -104,11 +104,11 @@ class UciProcess {
     });
   }
 
-  async init(net: string): Promise<void> {
+  async init(net: string, threads = 1, hashMb = 16): Promise<void> {
     this.send('uci');
     await this.until((l) => l === 'uciok', 30_000);
-    this.send('setoption name Threads value 1');
-    this.send('setoption name Hash value 16');
+    this.send(`setoption name Threads value ${threads}`);
+    this.send(`setoption name Hash value ${hashMb}`);
     this.send(`setoption name EvalFile value ${net}`);
     await this.ready();
   }
@@ -138,6 +138,8 @@ export type MoveRecord = {
   nodes: number | null;
   /** The node budget stopped the search before the time limit did. */
   nodesBound: boolean;
+  /** The engine's last reported score, red's point of view (mate = +-100000). */
+  score?: number | null;
 };
 
 export type ClockedGame = {
@@ -155,6 +157,70 @@ class Flag extends Error {
   }
 }
 
+/** A game stopped early by score adjudication (cutechess-style resign/draw rules). */
+class Adjudicated extends Error {
+  constructor(
+    readonly winner: 'red' | 'black' | 'draw',
+    readonly termination: string,
+  ) {
+    super(termination);
+  }
+}
+
+export type Adjudication = {
+  /** Win: both sides' last `resignPlies` scores at least `resignCp` for the same colour. */
+  resignPlies: number;
+  resignCp: number;
+  /** Draw: from ply `drawFromPly`, the last `drawPlies` scores all within `drawCp` of 0. */
+  drawFromPly: number;
+  drawPlies: number;
+  drawCp: number;
+};
+
+/**
+ * Resign as fishtest (3 moves a side at 600 cp, two-sided). Draw much later than
+ * fishtest's move 34 / 20 cp: in a local smoke 3 of 4 xiangqi games were cut at
+ * exactly move 34, and near-zero stretches there are still won by the stronger side,
+ * which would bias a strength test toward zero. Draw from move 60, 10 moves a side
+ * within 10 cp.
+ */
+export const MATCH_ADJUDICATION: Adjudication = {
+  resignPlies: 6,
+  resignCp: 600,
+  drawFromPly: 120,
+  drawPlies: 20,
+  drawCp: 10,
+};
+
+const MATE_CP = 100_000;
+
+/** The last reported score in red's point of view, or null. */
+export function redScore(infos: readonly string[], color: string): number | null {
+  for (let i = infos.length - 1; i >= 0; i--) {
+    const m = / score (cp|mate) (-?\d+)/.exec(infos[i]!);
+    if (!m) continue;
+    const v = Number(m[2]);
+    const mover = m[1] === 'mate' ? (v > 0 ? MATE_CP : -MATE_CP) : v;
+    return color === 'red' ? mover : -mover;
+  }
+  return null;
+}
+
+export function adjudicate(
+  scores: readonly (number | null)[],
+  ply: number,
+  rule: Adjudication,
+): 'red' | 'black' | 'draw' | null {
+  const tail = (n: number) => (scores.length >= n ? scores.slice(-n) : null);
+  const r = tail(rule.resignPlies);
+  if (r && r.every((v) => v !== null && v >= rule.resignCp)) return 'red';
+  if (r && r.every((v) => v !== null && v <= -rule.resignCp)) return 'black';
+  const d = tail(rule.drawPlies);
+  if (ply >= rule.drawFromPly && d && d.every((v) => v !== null && Math.abs(v) <= rule.drawCp))
+    return 'draw';
+  return null;
+}
+
 export async function playClockedGame(input: {
   rules: { A: BotTimeRule; B: BotTimeRule };
   engines: { A: UciProcess; B: UciProcess };
@@ -163,10 +229,15 @@ export async function playClockedGame(input: {
   tc: { initialMs: number; incrementMs: number };
   overheadMs: number;
   openingPlies: number;
+  /** Per-arm node cap; 0 sends no `nodes` limit. Defaults to the tier's anchor. */
+  nodes?: { A: number; B: number };
+  adjudication?: Adjudication | null;
 }): Promise<ClockedGame> {
   const tier = xiangqiEngineTierFor(MATCH_ENGINE_ID);
   if (!tier || !('nodes' in tier)) throw new Error(`${MATCH_ENGINE_ID} has no node budget`);
-  const nodes = (tier as { nodes: number }).nodes;
+  const tierNodes = (tier as { nodes: number }).nodes;
+  const nodesFor = (arm: 'A' | 'B') => input.nodes?.[arm] ?? tierNodes;
+  const scores: (number | null)[] = [];
   const armOf = (color: string): 'A' | 'B' =>
     color === 'red' ? input.redArm : input.redArm === 'A' ? 'B' : 'A';
   const clocks: Record<string, number> = { red: input.tc.initialMs, black: input.tc.initialMs };
@@ -209,7 +280,8 @@ export async function playClockedGame(input: {
         const infos: string[] = [];
         const t0 = Date.now();
         engine.send(position);
-        engine.send(`go nodes ${nodes} ${limit}`);
+        const nodes = nodesFor(arm);
+        engine.send(nodes > 0 ? `go nodes ${nodes} ${limit}` : `go ${limit}`);
         const best = await engine.until(
           (l) => l.startsWith('bestmove'),
           time.movetimeMs + 4_000,
@@ -226,10 +298,21 @@ export async function playClockedGame(input: {
           go: limit,
           spentMs,
           nodes: searched,
-          nodesBound: searched !== null && searched >= nodes,
+          nodesBound: nodes > 0 && searched !== null && searched >= nodes,
+          score: redScore(infos, color),
         });
         if (spentMs >= clockBeforeMs) throw new Flag(color);
         clocks[color] = clockBeforeMs - spentMs + input.tc.incrementMs;
+        if (input.adjudication) {
+          scores.push(redScore(infos, color));
+          const verdict = adjudicate(scores, history.length + 1, input.adjudication);
+          if (verdict) {
+            throw new Adjudicated(
+              verdict,
+              verdict === 'draw' ? 'adjudicated-draw' : 'adjudicated-win',
+            );
+          }
+        }
         const uci = best.split(/\s+/)[1];
         return uci && uci !== '(none)' ? uci : null;
       },
@@ -251,6 +334,16 @@ export async function playClockedGame(input: {
       moves,
     };
   } catch (error) {
+    if (error instanceof Adjudicated) {
+      return {
+        redArm: input.redArm,
+        result: error.winner === 'draw' ? 'draw' : armOf(error.winner),
+        termination: error.termination,
+        plies: moves.length + input.openingPlies,
+        wallMs: Date.now() - started,
+        moves,
+      };
+    }
     if (!(error instanceof Flag)) throw error;
     const loser = armOf(error.color);
     return {
@@ -294,8 +387,25 @@ export async function main(argv: string[]): Promise<void> {
   const openingPlies = Number(arg(argv, 'opening-plies', '2'));
   const bin = arg(argv, 'bin');
   const net = arg(argv, 'net');
+  const num = (name: string, fallback: string) => Number(arg(argv, name, fallback));
+  const hw = {
+    A: { threads: num('a-threads', '1'), hashMb: num('a-hash', '16') },
+    B: { threads: num('b-threads', '1'), hashMb: num('b-hash', '16') },
+  };
+  const nodesArg = (name: string) => {
+    const i = argv.indexOf(`--${name}`);
+    return i >= 0 ? Number(argv[i + 1]) : undefined;
+  };
+  const aNodes = nodesArg('a-nodes');
+  const bNodes = nodesArg('b-nodes');
+  const tierNodes = (xiangqiEngineTierFor(MATCH_ENGINE_ID) as { nodes: number }).nodes;
+  const nodes = { A: aNodes ?? tierNodes, B: bNodes ?? tierNodes };
+  const adjudication = argv.includes('--adjudicate') ? MATCH_ADJUDICATION : null;
   const engines = { A: new UciProcess(bin), B: new UciProcess(bin) };
-  await Promise.all([engines.A.init(net), engines.B.init(net)]);
+  await Promise.all([
+    engines.A.init(net, hw.A.threads, hw.A.hashMb),
+    engines.B.init(net, hw.B.threads, hw.B.hashMb),
+  ]);
   try {
     for (let p = 0; p < pairs; p++) {
       const pairSeed = String(seed + p);
@@ -310,12 +420,14 @@ export async function main(argv: string[]): Promise<void> {
             tc,
             overheadMs,
             openingPlies,
+            nodes,
+            adjudication,
           }),
         );
       }
       const score = (scoreForA(games[0]!) + scoreForA(games[1]!)) / 2;
       process.stdout.write(
-        `${JSON.stringify({ pairSeed, rules, tc, overheadMs, score, games })}\n`,
+        `${JSON.stringify({ pairSeed, rules, hw, nodes, adjudicated: adjudication !== null, tc, overheadMs, score, games })}\n`,
       );
     }
   } finally {
