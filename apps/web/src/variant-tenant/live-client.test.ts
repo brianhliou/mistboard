@@ -27,7 +27,7 @@ import {
 import { adoptLiveHistory } from './live-history.js';
 import { createTenantReplayController } from './replay-controller.js';
 import type { TenantWebView, WebVariantTenant } from './room-chrome.js';
-import type { TenantSocketClientOptions } from './socket-client.js';
+import { createTenantSocketClient, type TenantSocketClientOptions } from './socket-client.js';
 
 // The real controller needs an AudioContext; the wiring test only needs to see
 // which sound the client asked for.
@@ -188,6 +188,76 @@ beforeEach(() => {
 });
 
 describe('tenant live-client core', () => {
+  it('keeps a reopened transport reconnecting until a fresh room frame arrives', () => {
+    class Socket extends EventTarget {
+      static instances: Socket[] = [];
+      constructor() {
+        super();
+        Socket.instances.push(this);
+      }
+      close() {}
+    }
+    vi.useFakeTimers();
+    vi.stubGlobal('WebSocket', Socket);
+    const client = createTenantSocketClient({
+      room: 'restart-test',
+      socketUrl: 'ws://localhost/restart-test',
+      applyHello: () => {},
+      applySnapshot: () => {},
+      applyEvent: () => {},
+      render: () => {},
+    });
+    const hello = () =>
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'hello', clientId: 'restart-client' }),
+      });
+    try {
+      client.connect();
+      const first = Socket.instances[0]!;
+      first.dispatchEvent(new Event('open'));
+      first.dispatchEvent(hello());
+      expect(client.connection()).toBe('connected');
+      first.dispatchEvent(new CloseEvent('close', { code: 1012 }));
+      vi.advanceTimersByTime(750);
+      const reopened = Socket.instances[1]!;
+      reopened.dispatchEvent(new Event('open'));
+      expect(client.connection()).toBe('reconnecting');
+      vi.advanceTimersByTime(5_000);
+      expect(client.connection()).toBe('reconnecting');
+      reopened.dispatchEvent(hello());
+      expect(client.connection()).toBe('connected');
+      expect(client.noticeTier()).toBe('none');
+    } finally {
+      client.close();
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('applies pause frames to the overlay and blocks board actions until resume', () => {
+    let ctx: TenantLiveClientContext<TColor, TView> | null = null;
+    const h = createHarness({
+      setup: (value) => {
+        ctx = value;
+      },
+    });
+    h.feedHello({ paused: true });
+    expect(h.refs().boardPaused.hidden).toBe(false);
+    expect(h.refs().boardPaused.textContent).toContain('Game paused');
+    expect(ctx!.canActNow()).toBe(false);
+    expect(h.client.send({ type: 'move', from: 'a1', to: 'a2' })).toBe(false);
+    expect(h.sent).toEqual([]);
+    expect(h.refs().board.inert).toBe(true);
+    h.feedSnapshot({});
+    expect(h.refs().boardPaused.hidden).toBe(true);
+    expect(ctx!.canActNow()).toBe(true);
+    expect(h.refs().board.inert).toBe(false);
+    expect(h.client.send({ type: 'move', from: 'a1', to: 'a2' })).toBe(true);
+    h.feedEvent({ paused: true, event: { type: 'clock-paused' } });
+    expect(h.refs().boardPaused.hidden).toBe(false);
+    expect(ctx!.canActNow()).toBe(false);
+  });
+
   it('applies hello frames into shared state', () => {
     const h = createHarness();
     h.feedHello({

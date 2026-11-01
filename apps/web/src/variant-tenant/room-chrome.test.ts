@@ -62,6 +62,7 @@ type CtxOverrides = Partial<{
   } | null;
   timeControl: { initialMs: number; incrementMs: number; daysPerMove?: number } | null;
   rated: boolean;
+  paused: boolean;
   isReplayLive: boolean;
   variantDetail: string | null;
   lobbyMatch: boolean;
@@ -103,6 +104,7 @@ function chromeHarness(
     rematchControls: () => null,
     lobbyMatch: () => overrides.lobbyMatch ?? false,
     rated: () => overrides.rated ?? false,
+    paused: () => overrides.paused ?? false,
     drawOffer: () => overrides.drawOffer ?? null,
     drawOfferCooldown: () => overrides.drawOfferCooldown ?? 0,
     ...(overrides.variantDetail !== undefined
@@ -1165,6 +1167,73 @@ describe('tenant room chrome action row', () => {
 
 // #427: the room was English end to end for zh visitors with every suite green.
 // Render the whole chrome in each zh locale and read it back for Latin words.
+describe('restart clocks and pause', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('freezes immediately on disconnect across ticks and full renders', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(10_000);
+    const overrides: CtxOverrides = {
+      connectionState: 'connected',
+      timeControl: { initialMs: 180_000, incrementMs: 0 },
+      clock: {
+        activeColor: 'white',
+        initialMs: 180_000,
+        incrementMs: 0,
+        remainingMs: { white: 180_000, red: 180_000 },
+        runningSince: 10_000,
+      },
+    };
+    const { chrome, refs } = chromeHarness(overrides);
+    chrome.renderClocks();
+    vi.advanceTimersByTime(2_000);
+    overrides.connectionState = 'disconnected';
+    chrome.renderClocks();
+    expect(refs.clockNote.hidden).toBe(false);
+    expect(refs.clockNote.textContent).toBe('Reconnecting…');
+    const faces = () => [refs.clockTop.textContent, refs.clockBottom.textContent];
+    const frozen = faces();
+    expect(frozen).toEqual(['03:00', '02:58']);
+    overrides.connectionState = 'reconnecting';
+    vi.advanceTimersByTime(20_000);
+    chrome.tickClocks();
+    expect(faces()).toEqual(frozen);
+    chrome.renderClocks();
+    expect(faces()).toEqual(frozen);
+    overrides.connectionState = 'connected';
+    overrides.clock = {
+      ...overrides.clock!,
+      runningSince: Date.now(),
+      remainingMs: { white: 178_000, red: 180_000 },
+    };
+    chrome.renderClocks();
+    expect(refs.clockNote.hidden).toBe(true);
+    vi.advanceTimersByTime(1_000);
+    chrome.tickClocks();
+    expect(faces()).toEqual(['03:00', '02:57']);
+  });
+
+  it('shows the shared paused overlay, then clears it on resume and finish', () => {
+    const overrides: CtxOverrides = { paused: true };
+    const { chrome, refs } = chromeHarness(overrides);
+    refs.boardPaused.innerHTML =
+      '<strong data-board-paused-title></strong><span data-board-paused-body></span>';
+    chrome.renderBoardStatus();
+    expect(refs.boardPaused.hidden).toBe(false);
+    expect(refs.boardPaused.textContent).toContain('Game paused');
+    expect(refs.boardPaused.textContent).toContain('Server is restarting');
+    overrides.paused = false;
+    chrome.renderBoardStatus();
+    expect(refs.boardPaused.hidden).toBe(true);
+    overrides.paused = true;
+    overrides.view = playingView({
+      status: { type: 'finished', winner: 'white', reason: 'checkmate' },
+    });
+    chrome.renderBoardStatus();
+    expect(refs.boardPaused.hidden).toBe(true);
+  });
+});
+
 describe('tenant room chrome in Chinese', () => {
   afterEach(() => {
     store.delete('mistboard.locale');

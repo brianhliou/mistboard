@@ -8,6 +8,7 @@ import { maybePlayLowTimeSound } from './live-sound.js';
 import { type LiveRefs, liveState } from './live-state.js';
 import { connectionNoticeMode } from './live-status.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
+import { createClockDisplayTime, isClockReconnecting } from './variant-tenant/clock-projection.js';
 import { formatClock, formatDayClock, isColor } from './web-utils.js';
 
 type ClockRefs = Pick<
@@ -18,9 +19,11 @@ type ClockRefs = Pick<
 // Tracks the previous active clock color across renderClocks() calls so we can
 // detect the turn flip into the seated player's clock and play a flash.
 let lastActiveClockColor: Color | null = null;
+let clockDisplayTime = createClockDisplayTime();
 
 export function resetClockState(): void {
   lastActiveClockColor = null;
+  clockDisplayTime = createClockDisplayTime();
 }
 
 export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
@@ -28,8 +31,10 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
   refs.clockBottom.replaceChildren();
   refs.playerTop.replaceChildren();
   refs.playerBottom.replaceChildren();
-  refs.clockNote.hidden = true;
-  refs.clockNote.textContent = '';
+  const reconnecting = isClockReconnecting(liveState.connectionState);
+  const liveAt = clockDisplayTime(liveState.connectionState);
+  refs.clockNote.hidden = !reconnecting;
+  refs.clockNote.textContent = reconnecting ? `${t('live.statusReconnecting')}…` : '';
   if (!view?.clock) {
     resetClockState();
     const roomCreated = liveState.events.find(
@@ -77,13 +82,15 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
     });
     // Correspondence keeps its days-per-move line (it states the pace); live
     // games drop the pregame "clock starts when ready" hint (Brian, 2026-10-02).
-    refs.clockNote.textContent = tc && dayScale ? daysPerMoveNote() : '';
-    refs.clockNote.hidden = !(tc && dayScale);
+    if (!reconnecting) {
+      refs.clockNote.textContent = tc && dayScale ? daysPerMoveNote() : '';
+      refs.clockNote.hidden = !(tc && dayScale);
+    }
     return;
   }
 
   const clock = view.clock;
-  const displayAt = isLive() ? Date.now() : (clock.runningSince ?? Date.now());
+  const displayAt = isLive() ? liveAt : (clock.runningSince ?? liveAt);
   // Top first, bottom last; the bottom follows the board (seat, else the
   // view's perspective, then the viewer's flip).
   const bottom = flippedBottom(
@@ -170,7 +177,7 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
     (index === 0 ? refs.playerTop : refs.playerBottom).append(playerLine);
     (index === 0 ? refs.clockTop : refs.clockBottom).append(row);
   });
-  if (daysPerMoveAllowance() !== null) {
+  if (!reconnecting && daysPerMoveAllowance() !== null) {
     refs.clockNote.textContent = daysPerMoveNote();
     refs.clockNote.hidden = false;
   }
@@ -202,8 +209,12 @@ export function tickClockTimers(refs: ClockRefs, view: PlayerView | null): void 
     renderClocks(refs, view);
     return;
   }
-  const displayAt = isLive() ? Date.now() : (view.clock.runningSince ?? Date.now());
-  const humanColor = isLive() && isColor(liveState.seat) ? liveState.seat : null;
+  const liveAt = clockDisplayTime(liveState.connectionState);
+  const displayAt = isLive() ? liveAt : (view.clock.runningSince ?? liveAt);
+  const humanColor =
+    liveState.connectionState === 'connected' && isLive() && isColor(liveState.seat)
+      ? liveState.seat
+      : null;
   // Day-scale rooms keep the per-tick refresh (cheap, and the final hour ticks
   // in M:SS) but skip the low-time sound: its threshold is a fraction of the
   // initial budget, which on a days-long clock would chime hours out.

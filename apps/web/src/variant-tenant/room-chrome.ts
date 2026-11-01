@@ -60,7 +60,12 @@ export type TenantWebView<C extends string> = {
   moveNumber: number;
 };
 
-import { clockRemainingMs, type TenantWebClock } from './clock-projection.js';
+import {
+  clockRemainingMs,
+  createClockDisplayTime,
+  isClockReconnecting,
+  type TenantWebClock,
+} from './clock-projection.js';
 
 // Server seat gate (apps/server variant-tenant/seat-session.ts): an account
 // excluded from stats takes no seat in a rated room, and signing in will not help.
@@ -207,6 +212,7 @@ export type TenantChromeContext<C extends string> = {
   // sentence; everything else falls back to the tenant's rejectedBody line.
   closeReason(): string;
   clock(): TenantWebClock<C> | null | undefined;
+  paused?(): boolean;
   timeControl():
     | { initialMs: number; incrementMs: number; daysPerMove?: number }
     | null
@@ -305,6 +311,7 @@ export function createTenantRoomChrome<C extends string>(
   // Previous active clock color across full clock renders, used to flash the
   // seated player's clock on the turn flip (mirrors the chess clock).
   let lastActiveClockColor: C | null = null;
+  let clockDisplayTime = createClockDisplayTime();
   // The in-place question the player opened on the action row, and the
   // control to focus after the next rebuild of that row.
   let pendingConfirm: ConfirmAction | null = null;
@@ -357,6 +364,7 @@ export function createTenantRoomChrome<C extends string>(
   function resetState(): void {
     playAgainStatus = 'idle';
     lastActiveClockColor = null;
+    clockDisplayTime = createClockDisplayTime();
     pendingConfirm = null;
     focusNext = null;
   }
@@ -411,8 +419,10 @@ export function createTenantRoomChrome<C extends string>(
     refs.clockBottom.replaceChildren();
     refs.playerTop.replaceChildren();
     refs.playerBottom.replaceChildren();
-    refs.clockNote.hidden = true;
-    refs.clockNote.textContent = '';
+    const reconnecting = !ctx.recording?.() && isClockReconnecting(ctx.connectionState());
+    const liveAt = clockDisplayTime(ctx.connectionState());
+    refs.clockNote.hidden = !reconnecting;
+    refs.clockNote.textContent = reconnecting ? `${t('live.statusReconnecting')}…` : '';
 
     const timeControl = ctx.timeControl();
     const recording = ctx.recording?.() ?? null;
@@ -502,13 +512,11 @@ export function createTenantRoomChrome<C extends string>(
       // No pregame "clock starts after the opening moves" note (Brian,
       // 2026-10-02): the header already names the time control, and the
       // unarmed clocks say the rest.
-      refs.clockNote.textContent = '';
-      refs.clockNote.hidden = true;
       lastActiveClockColor = null;
       return;
     }
 
-    const displayAt = ctx.isReplayLive() ? Date.now() : (clock.runningSince ?? Date.now());
+    const displayAt = ctx.isReplayLive() ? liveAt : (clock.runningSince ?? liveAt);
     const playing = recording ? !ended : view?.status.type === 'playing';
     const activeColor = playing ? clock.activeColor : null;
     const humanColor = seatColor();
@@ -582,8 +590,10 @@ export function createTenantRoomChrome<C extends string>(
       renderClocks();
       return;
     }
-    const displayAt = ctx.isReplayLive() ? Date.now() : (clock.runningSince ?? Date.now());
-    const seatedColor = ctx.isReplayLive() ? seatColor() : null;
+    const liveAt = clockDisplayTime(ctx.connectionState());
+    const displayAt = ctx.isReplayLive() ? liveAt : (clock.runningSince ?? liveAt);
+    const seatedColor =
+      ctx.connectionState() === 'connected' && ctx.isReplayLive() ? seatColor() : null;
     const rows = [...Array.from(refs.clockTop.children), ...Array.from(refs.clockBottom.children)];
     for (const row of rows as HTMLDivElement[]) {
       const color = row.dataset.color;
@@ -1387,6 +1397,15 @@ export function createTenantRoomChrome<C extends string>(
   function renderBoardStatus(): void {
     if (!refs) return;
     const view = ctx.view();
+    const paused = ctx.paused?.() === true && view?.status.type === 'playing';
+    refs.board.inert = paused;
+    refs.boardPaused.hidden = !paused;
+    if (paused) {
+      const title = refs.boardPaused.querySelector<HTMLElement>('[data-board-paused-title]');
+      const body = refs.boardPaused.querySelector<HTMLElement>('[data-board-paused-body]');
+      if (title) title.textContent = t('live.pausedTitle');
+      if (body) body.textContent = t('live.pausedBody');
+    }
     refs.boardStatus.hidden = view !== null;
     if (view !== null) return;
     const state = ctx.connectionState();
