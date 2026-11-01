@@ -45,19 +45,27 @@ test('x short link: an unknown slug lands on the homepage tagged x-unknown', () 
   }
 });
 
-test('youtube link: /yt opens the next problem position, no solution, tagged youtube / video', () => {
-  const location = xShortLinkRedirect('/yt');
+test('youtube link: /yt opens the xiangqi rules page, tagged youtube / video with the visit month', () => {
+  const now = new Date('2026-11-01T19:00:00Z');
+  const location = xShortLinkRedirect('/yt', now);
   assert.ok(location);
-  assert.equal(xShortLinkRedirect('/yt/'), location);
+  for (const path of ['/yt/', '/YT', '/Yt/'])
+    assert.equal(xShortLinkRedirect(path, now), location, path);
   const url = parseTarget(location);
-  assert.equal(url.pathname, '/analysis/xiangqi');
-  assert.equal(url.searchParams.get('fen'), X_SHORT_LINKS['2']!.target.fen);
-  assert.equal(url.searchParams.get('moves'), null);
+  assert.equal(url.pathname, '/rules/xiangqi');
+  assert.equal(url.searchParams.get('fen'), null);
   assert.equal(url.searchParams.get('utm_source'), 'youtube');
   assert.equal(url.searchParams.get('utm_medium'), 'video');
-  assert.equal(url.searchParams.get('utm_campaign'), 'yt-shorts-2026-10');
+  assert.equal(url.searchParams.get('utm_campaign'), 'yt-shorts-2026-11');
+  // A standing link: next month's visit reports under next month.
+  assert.equal(
+    parseTarget(xShortLinkRedirect('/yt', new Date('2026-12-02T00:00:00Z'))!).searchParams.get(
+      'utm_campaign',
+    ),
+    'yt-shorts-2026-12',
+  );
   for (const path of ['/yt/1', '/ytx', '/yt/2/extra'])
-    assert.equal(xShortLinkRedirect(path), null, path);
+    assert.equal(xShortLinkRedirect(path, now), null, path);
 });
 
 test('facebook short link: the puzzle post opens the bare position, never the solution', () => {
