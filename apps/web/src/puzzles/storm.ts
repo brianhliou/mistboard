@@ -274,14 +274,17 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     if (panel) panel.replaceWith(recovery());
     else shell.append(recovery());
   };
-  const showStart = (): void => {
-    error = null;
-    shell.classList.remove('puzzle-storm-error');
+  const showStart = (cause: PuzzlePlayDisabledError | null = null): void => {
+    error = cause;
+    shell.classList.toggle('puzzle-storm-error', Boolean(error));
     solver?.dispose();
     solver = null;
     shell.replaceChildren(layout);
     detail.replaceChildren();
-    controls.replaceChildren(sideCard(), button(t('puzzle.stormNewRun'), start));
+    controls.replaceChildren(
+      sideCard(),
+      error ? recovery() : button(t('puzzle.stormNewRun'), start),
+    );
   };
   function openPendingReview(): void {
     if (!pendingReviewId) return;
@@ -301,11 +304,12 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     } catch (cause) {
       if (!active()) return;
       const missing = cause instanceof Error && cause.message === '404';
-      if (missing) {
+      const disabled = cause instanceof PuzzlePlayDisabledError;
+      if (missing || disabled) {
         run = null;
         resumeId = null;
         rememberRun(null);
-        showStart();
+        showStart(disabled ? cause : null);
         if (initialReconcile) openPendingReview();
       } else {
         // Keep the live snapshot (and its eventual completion transition)
@@ -346,10 +350,13 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     header.className = 'puzzle-storm-review';
     const title = document.createElement('h2');
     title.textContent = t('puzzle.stormReview');
-    header.append(
-      title,
-      button(t(run ? 'puzzle.stormBack' : 'puzzle.stormNewRun'), run ? showSummary : start),
-    );
+    header.append(title);
+    if (error instanceof PuzzlePlayDisabledError) header.append(recovery());
+    else {
+      header.append(
+        button(t(run ? 'puzzle.stormBack' : 'puzzle.stormNewRun'), run ? showSummary : start),
+      );
+    }
     detail.replaceChildren(header);
     try {
       const puzzle = await fetchPuzzleDetail(id);
@@ -423,7 +430,7 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     document.removeEventListener('prerenderingchange', beginWhenVisible);
     // Reconcile a saved run before opening a review so a live clock never
     // runs unseen. showSummary opens the pending review once the run ends.
-    // Only an initial 404 may open it without a finished run.
+    // An initial 404 or play lock may open it without a finished run.
     if (resumeId) void resume();
     else if (pendingReviewId) openPendingReview();
     else {

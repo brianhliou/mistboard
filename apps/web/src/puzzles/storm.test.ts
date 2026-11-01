@@ -450,9 +450,56 @@ it.each([false, true])(
   },
 );
 
+it.each(['saved', 'loaded'].flatMap((state) => [false, true].map((review) => ({ state, review }))))(
+  'forgets a play-disabled $state run without retry controls (review: $review)',
+  async ({ state, review }) => {
+    auth.loadCachedCurrentUser.mockResolvedValue({ id: 'account-a' });
+    window.sessionStorage.setItem(
+      storageKey,
+      JSON.stringify({ runId: 'run', owner: 'account-a', finished: false }),
+    );
+    if (review) {
+      window.history.replaceState(null, '', `/puzzles?mode=storm&review=${puzzles[2]!.id}`);
+    }
+    const api = server({ remaining: 1000 });
+    if (state === 'saved') api.failResume(true, 403);
+    const root = await open();
+    if (state === 'loaded') {
+      await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+      api.failResume(true, 403);
+      await vi.advanceTimersByTimeAsync(1100);
+    }
+    await vi.waitFor(() => expect(root.querySelector('[role="alert"]')).not.toBeNull());
+    expect(root.querySelector('[role="alert"]')?.textContent).toBe(
+      'Puzzle play is disabled for this account.',
+    );
+    expect(window.sessionStorage.getItem(storageKey)).toBeNull();
+    expect([...root.querySelectorAll('button')].map((button) => button.textContent)).not.toContain(
+      'Resume Storm',
+    );
+    expect([...root.querySelectorAll('button')].map((button) => button.textContent)).not.toContain(
+      'New Storm',
+    );
+    if (state === 'saved' && review) {
+      await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[2]!.id));
+      expect(root.textContent).toContain('Unrated review');
+    } else {
+      expect(boardId(root)).toBeUndefined();
+      expect(root.textContent).not.toContain('Unrated review');
+    }
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(
+      api.fetchSpy.mock.calls
+        .filter(([url]) => url === '/api/puzzles/storm')
+        .map(([, init]) => JSON.parse(String(init?.body))),
+    ).toEqual(Array(state === 'saved' ? 1 : 2).fill({ action: 'resume', runId: 'run' }));
+    expect(track).not.toHaveBeenCalledWith('puzzle_mode_finished', expect.anything());
+  },
+);
+
 it.each(
   [false, true].flatMap((finished) =>
-    ([503, 403, 'network', 'timeout'] as const).map((status) => ({ finished, status })),
+    ([503, 'network', 'timeout'] as const).map((status) => ({ finished, status })),
   ),
 )(
   'keeps a review pending through an initial $status failure (saved finished: $finished)',
@@ -515,7 +562,7 @@ it('opens the pending review if an initial retry returns 404', async () => {
 
 it.each(
   [false, true].flatMap((review) =>
-    ([503, 403, 'network', 'timeout'] as const).map((status) => ({ review, status })),
+    ([503, 'network', 'timeout'] as const).map((status) => ({ review, status })),
   ),
 )(
   'retains the live run and completion through a $status expiry failure (review: $review)',
