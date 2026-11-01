@@ -91,7 +91,7 @@ Edit task → find file → open only that file.
 | File | Owns |
 |------|------|
 | `gomoku-tenant.ts` | Hidden, unrated Black-first Gomoku referee: kernel placements, open-information views, room endings and persistence mappings (#768 build 2) |
-| `gomoku-registration.ts` | Hidden flag-gated Gomoku rooms, casual lobby/friend challenges and five-level browser Rapfi PvE with Black/White preference; opt-in bot-move delegation, no rated, TV, export or correspondence |
+| `gomoku-registration.ts` | Hidden flag-gated Gomoku rooms, casual lobby/friend challenges and five-level browser Rapfi PvE with Black/White preference; opt-in bot-move delegation, finished-game share card; no rated, TV, export or correspondence |
 | `gomoku-browser-bot.test.ts` | Browser bot move boundary: both colours, own-room human only, exact ply, kernel legality, PvP/rated/spectator refusal and durable bot-seat reconnect |
 | `gomoku-tenant.test.ts` | Seeded referee wins, legal 225-ply draw, replay/hydration, seat preference, wire fields and unsupported-surface regressions |
 | `main.ts` | Prod entry point. Calls `installShutdownHandlers()` then `startServer({port})`. Tiny — all logic lives in `index.ts`. |

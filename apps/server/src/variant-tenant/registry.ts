@@ -20,7 +20,7 @@ import type { TenantGameOrigin } from './tenant.js';
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { HiddenPieceIdentity, RoomTimeControl } from '@mistboard/game';
+import type { GomokuPlayerView, HiddenPieceIdentity, RoomTimeControl } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import {
   censusDeployGate,
@@ -208,7 +208,21 @@ export type VariantTenantMatchCard = {
   finalScores(events: readonly unknown[], roomId: string): Record<string, number> | null;
 };
 
-export type VariantTenantCard = VariantTenantBoardCard | VariantTenantMatchCard;
+/** Gomoku has placements rather than FEN. Only the finished public board and
+ * its marks cross this boundary; no room, setup or engine state is needed. */
+export type GomokuCardPosition = Pick<GomokuPlayerView, 'board' | 'lastMove' | 'winningLine'>;
+
+export type VariantTenantGomokuCard = {
+  layout: 'gomoku';
+  variant: 'gomoku';
+  label: string;
+  finalPosition(events: readonly unknown[], roomId: string): GomokuCardPosition | null;
+};
+
+export type VariantTenantCard =
+  | VariantTenantBoardCard
+  | VariantTenantMatchCard
+  | VariantTenantGomokuCard;
 
 export type VariantTenantRegistration = {
   kind: string;

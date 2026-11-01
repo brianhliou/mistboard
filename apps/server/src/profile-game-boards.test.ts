@@ -116,7 +116,7 @@ test('a xiangqi game ending on a move keeps the deciding move in its final board
   ];
   const boardDeps = await deps({ [roomId]: events });
   const card = boardDeps.cardForRoomId(roomId);
-  assert.ok(card && card.layout !== 'match');
+  assert.ok(card && card.layout !== 'match' && card.layout !== 'gomoku');
   const terminalFen = card.fenAtPly(events, roomId, plies);
   assert.ok(terminalFen);
   assert.equal(terminalFen.split(/\s+/)[1], '-');
@@ -188,7 +188,7 @@ for (const fixture of [
     ];
     const boardDeps = await deps({ [roomId]: events });
     const card = boardDeps.cardForRoomId(roomId);
-    assert.ok(card && card.layout !== 'match');
+    assert.ok(card && card.layout !== 'match' && card.layout !== 'gomoku');
     const terminalFen = card.fenAtPly(events, roomId, moves.length);
     assert.ok(terminalFen, 'the real tenant replay finishes on the capture');
     assert.ok(!terminalFen.split(' ')[0]?.includes('k'), 'the black general is gone');

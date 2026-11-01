@@ -44,6 +44,7 @@ import {
   XIANGQI_GLYPH_PATHS,
 } from '@mistboard/board-render';
 import {
+  GOMOKU_BOARD_SIZE,
   JUNGLE_DENS,
   JUNGLE_HEIGHT,
   JUNGLE_WIDTH,
@@ -55,6 +56,9 @@ import {
 import type { PositionOgBoard } from './og-position.js';
 import { escapeXml, OG_FONT, OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
 import { halvePng, OG_CARD_ZOOM, pngSize } from './og-raster.js';
+import type { GomokuCardPosition } from './variant-tenant/registry.js';
+
+type CardBoard = PositionOgBoard | { kind: 'gomoku'; position: GomokuCardPosition };
 
 // ── Card frame ────────────────────────────────────────────────────────────────
 
@@ -290,7 +294,7 @@ export function intersectionLayout(files: number, ranks: number, height: number)
 }
 
 /** The board's width over its height, as drawn. */
-function boardAspect(board: PositionOgBoard): number {
+function boardAspect(board: CardBoard): number {
   switch (board.kind) {
     case 'intersection': {
       const g = intersectionLayout(board.files, board.ranks, 1000);
@@ -301,6 +305,7 @@ function boardAspect(board: PositionOgBoard): number {
     case 'jungle':
       return JUNGLE_WIDTH / JUNGLE_HEIGHT;
     case 'chess':
+    case 'gomoku':
       return 1;
     default: {
       const unreachable: never = board;
@@ -312,7 +317,7 @@ function boardAspect(board: PositionOgBoard): number {
 /** The board's drawn size inside the slot: height-bound, then capped at the
  *  slot width for wide boards. */
 export function boardSize(
-  board: PositionOgBoard,
+  board: CardBoard,
   slotHeight: number = CARD_BOARD_HEIGHT,
   slotWidth: number = CARD_BOARD_MAX_WIDTH,
 ): { width: number; height: number } {
@@ -695,6 +700,50 @@ function renderJungle(
 
 // ── The card ──────────────────────────────────────────────────────────────────
 
+/** Mirrors gomoku-board.ts and its default CSS, with presentation marks only:
+ * no interactive targets, move hints or browser engine output. Rank 1 is at
+ * the top, exactly as the unflipped live Gomoku board is drawn. */
+function renderGomokuBoard(position: GomokuCardPosition, size: number): string {
+  const cell = 32;
+  const edge = cell * (GOMOKU_BOARD_SIZE + 1);
+  const point = (index: number) => cell * (index + 1);
+  const files = 'abcdefghijklmno';
+  const parts = [
+    `<svg width="${size}" height="${size}" viewBox="0 0 ${edge} ${edge}"><rect width="${edge}" height="${edge}" fill="#dcb975"/>`,
+  ];
+  for (let index = 0; index < GOMOKU_BOARD_SIZE; index += 1) {
+    const p = point(index);
+    parts.push(
+      `<path d="M${cell} ${p}H${edge - cell}M${p} ${cell}V${edge - cell}" fill="none" stroke="#6e542e" stroke-width="1"/>`,
+      `<text x="${p}" y="${edge - 6}" fill="#503e24" font-family="${OG_FONT}" font-size="11" text-anchor="middle">${files[index]}</text>`,
+      `<text x="12" y="${p + 4}" fill="#503e24" font-family="${OG_FONT}" font-size="11" text-anchor="middle">${index + 1}</text>`,
+    );
+  }
+  for (const x of [3, 7, 11])
+    for (const y of [3, 7, 11])
+      parts.push(`<circle cx="${point(x)}" cy="${point(y)}" r="3" fill="#6e542e"/>`);
+  const winning = new Set<string>(position.winningLine);
+  for (const [index, color] of position.board.entries()) {
+    if (!color) continue;
+    const square = `${files[index % GOMOKU_BOARD_SIZE]}${1 + Math.floor(index / GOMOKU_BOARD_SIZE)}`;
+    const x = point(index % GOMOKU_BOARD_SIZE);
+    const y = point(Math.floor(index / GOMOKU_BOARD_SIZE));
+    parts.push(
+      `<circle data-piece-square="${square}" class="gomoku-stone gomoku-stone--${color}" cx="${x}" cy="${y}" r="14" fill="${color === 'black' ? '#222' : '#faf7ee'}" stroke="${color === 'black' ? '#080808' : '#8a806d'}" stroke-width="1.2"/>`,
+    );
+    if (winning.has(square))
+      parts.push(
+        `<circle class="gomoku-winning" cx="${x}" cy="${y}" r="14" fill="none" stroke="#168344" stroke-width="4"/>`,
+      );
+    if (position.lastMove?.to === square)
+      parts.push(
+        `<rect class="gomoku-last" x="${x - 3}" y="${y - 3}" width="6" height="6" fill="#d65330"/>`,
+      );
+  }
+  parts.push('</svg>');
+  return parts.join('');
+}
+
 export type CardPlayer = {
   name: string;
   /** The seat's ink: red/black on the xiangqi family and jungle, white/black
@@ -817,6 +866,7 @@ function playerRows(
   boardHeight: number,
   jungleInk: boolean,
   chess: boolean,
+  stones: boolean,
   pieceSet: CardPieceSet,
 ): string[] {
   const gap = 16;
@@ -836,9 +886,11 @@ function playerRows(
   const row = (player: CardPlayer, nameLines: string[], firstBaseline: number) => {
     const cx = x + TOKEN_SIZE / 2;
     const cy = firstBaseline - size * 0.36;
-    const token = chess
-      ? chessKing(player.ink === 'white' ? 'white' : 'black', cx, cy)
-      : seatToken(art, player.ink, cx, cy, jungleInk, pieceSet);
+    const token = stones
+      ? `<circle cx="${cx}" cy="${cy}" r="${TOKEN_SIZE * 0.44}" fill="${player.ink === 'black' ? '#222' : '#faf7ee'}" stroke="${player.ink === 'black' ? '#080808' : '#8a806d'}" stroke-width="2"/>`
+      : chess
+        ? chessKing(player.ink === 'white' ? 'white' : 'black', cx, cy)
+        : seatToken(art, player.ink, cx, cy, jungleInk, pieceSet);
     const score = player.score
       ? `<text x="${x + width}" y="${firstBaseline}" text-anchor="end" fill="#e5e9df" font-family="${OG_FONT}" font-size="${SCORE_SIZE}" font-weight="700">${escapeXml(player.score)}</text>`
       : '';
@@ -880,13 +932,15 @@ function playerRows(
 /** The board alone, drawn at the origin at `width` x `height` (boardSize's
  *  numbers for the slot it goes in); the card frames place it. */
 function renderBoardInner(
-  board: PositionOgBoard,
+  board: CardBoard,
   art: CardArt,
   width: number,
   height: number,
   pieceSet: CardPieceSet,
 ): string {
   switch (board.kind) {
+    case 'gomoku':
+      return renderGomokuBoard(board.position, height);
     case 'intersection':
       return renderIntersection(board, art, height, pieceSet);
     case 'grid':
@@ -925,7 +979,7 @@ function renderBoardInner(
  * map for the glyph fallback); `pieceSet` picks the xiangqi family's pieces.
  */
 export function renderBoardCard(
-  board: PositionOgBoard,
+  board: CardBoard,
   art: CardArt,
   caption: CardCaption,
   pieceSet: CardPieceSet = 'international',
@@ -954,6 +1008,7 @@ export function renderBoardCard(
         height,
         jungleInk,
         board.kind === 'chess',
+        board.kind === 'gomoku',
         pieceSet,
       ),
       `</svg>`,

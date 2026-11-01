@@ -3,6 +3,7 @@ import {
   GOMOKU_SPEC_ID,
   type GomokuColor,
   type GomokuOpeningMode,
+  getGomokuPlayerView,
   type RoomTimeControl,
 } from '@mistboard/game';
 import { gomokuEnabled } from './feature-flags.js';
@@ -27,7 +28,12 @@ import {
   createTenantRoomsRoute,
   type TenantRoomCreateBaseContext,
 } from './variant-tenant/rooms-route.js';
-import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
+import {
+  countActiveTenantGames,
+  isTenantEventLog,
+  replayTenantEvents,
+  tenantReplayCheck,
+} from './variant-tenant/runtime.js';
 import {
   clearTenantRuntimeTimers,
   createTenantWsRuntime,
@@ -162,7 +168,19 @@ registerVariantTenant({
   finishedGameOpensRoom: true,
   watch: null,
   export: null,
-  card: null,
+  card: {
+    layout: 'gomoku',
+    variant: GOMOKU_SPEC_ID,
+    // The Chinese name is identical in Simplified and Traditional Chinese.
+    label: 'Gomoku · 五子棋',
+    finalPosition(events, roomId) {
+      if (!gomokuEnabled() || !isTenantEventLog(gomokuTenant, events, roomId)) return null;
+      const { state } = replayTenantEvents(gomokuTenant, events);
+      if (state.status.type !== 'finished') return null;
+      const { board, lastMove, winningLine } = getGomokuPlayerView(state, 'black', true);
+      return { board, lastMove, winningLine };
+    },
+  },
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,
 });

@@ -127,8 +127,8 @@ function finalBoardOf(
   try {
     const card = deps.cardForRoomId(roomId);
     if (!card) return chessFinalBoard(roomId, events);
-    // A tile match has totals, not a position (VariantTenantMatchCard).
-    if (card.layout === 'match') return null;
+    // Match totals and Gomoku placements have no FEN thumbnail renderer.
+    if (card.layout === 'match' || card.layout === 'gomoku') return null;
     const plies = events.filter(
       (event) => (event as { type?: unknown } | null)?.type === 'move-played',
     ).length;
