@@ -1,9 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  afterBoardSettles,
+  BOARD_SETTLE_MAX_WAIT_MS,
+  boardSettled,
   chessgroundAnimation,
   glideSvgPiece,
+  holdBoardSettle,
   PIECE_GLIDE_EASING,
   pieceAnimationDurationMs,
+  resetBoardSettleForTests,
+  trackPieceAnimation,
 } from './board-anim.js';
 import { type DisplayPreferenceValue, writeDisplayPreference } from './display-preferences.js';
 
@@ -104,5 +110,100 @@ describe('glideSvgPiece', () => {
     glideSvgPiece(el, 0, 0, 250);
     glideSvgPiece(el, -60, 0, 0);
     expect(animate).not.toHaveBeenCalled();
+  });
+});
+
+// #825: the game-over sound waits for the final move to land, chained on the
+// animation's own finish event rather than a guessed delay.
+describe('afterBoardSettles', () => {
+  function fakeAnimation(): EventTarget & { finish(): void; cancel(): void } {
+    const target = new EventTarget();
+    return Object.assign(target, {
+      finish: () => target.dispatchEvent(new Event('finish')),
+      cancel: () => target.dispatchEvent(new Event('cancel')),
+    });
+  }
+  const flush = () => new Promise<void>((resolve) => queueMicrotask(resolve));
+
+  afterEach(() => resetBoardSettleForTests());
+
+  it('runs at once when nothing is moving', () => {
+    const run = vi.fn();
+    afterBoardSettles(run);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for a tracked glide to finish', async () => {
+    const glide = fakeAnimation();
+    trackPieceAnimation(glide);
+    const run = vi.fn();
+    afterBoardSettles(run);
+    await flush();
+    expect(run).not.toHaveBeenCalled();
+    glide.finish();
+    await flush();
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(boardSettled()).toBe(true);
+  });
+
+  it('a cancelled glide settles too (a re-render replaced it)', async () => {
+    const glide = fakeAnimation();
+    trackPieceAnimation(glide);
+    const run = vi.fn();
+    afterBoardSettles(run);
+    glide.cancel();
+    await flush();
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('a hold released by the render that starts the glide waits for that glide', async () => {
+    const release = holdBoardSettle();
+    const run = vi.fn();
+    afterBoardSettles(run);
+    // The render: release, then start the final move's glide in the same task.
+    release();
+    const glide = fakeAnimation();
+    trackPieceAnimation(glide);
+    await flush();
+    expect(run).not.toHaveBeenCalled();
+    glide.finish();
+    await flush();
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('a hold released with nothing to animate runs on the next microtask', async () => {
+    const release = holdBoardSettle();
+    const run = vi.fn();
+    afterBoardSettles(run);
+    release();
+    release(); // idempotent
+    expect(run).not.toHaveBeenCalled();
+    await flush();
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('never drops the call: a hold that is never released gives way after the cap', () => {
+    vi.useFakeTimers();
+    try {
+      holdBoardSettle();
+      const run = vi.fn();
+      afterBoardSettles(run);
+      vi.advanceTimersByTime(BOARD_SETTLE_MAX_WAIT_MS - 1);
+      expect(run).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(run).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('glideSvgPiece registers the glide it starts', async () => {
+    const glide = fakeAnimation();
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    Object.assign(el, { animate: () => glide, getAnimations: () => [] });
+    glideSvgPiece(el, -60, 0, 250);
+    expect(boardSettled()).toBe(false);
+    glide.finish();
+    expect(boardSettled()).toBe(true);
   });
 });
