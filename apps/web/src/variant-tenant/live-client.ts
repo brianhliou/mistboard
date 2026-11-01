@@ -26,6 +26,7 @@ import {
   maybeGameSpecAnalyticsProps,
   roomModeAnalyticsProps,
 } from '../analytics.js';
+import { holdBoardSettle } from '../board-anim.js';
 import { brandedEngineName } from '../game-display.js';
 import { isFlipShortcut, setReplayAnalysisHref, setReplayFlipHandler } from '../game-table.js';
 import { t } from '../i18n/catalog.js';
@@ -436,6 +437,13 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   // a scrub or a key renders at once and drops the hold.
   let boardBusyUntil = 0;
   let heldRender: ReturnType<typeof setTimeout> | null = null;
+  // An applied frame holds the board unsettled until the render that draws it
+  // (#825): the sound hooks run between the two, and the game-over sound waits
+  // for the glide that render starts (live-sound.ts playTerminalPlan).
+  let releaseFrameSettleHold: (() => void) | null = null;
+  function holdUntilDrawn(): void {
+    releaseFrameSettleHold ??= holdBoardSettle();
+  }
   let lifecycleEffects: LiveLifecycleEffects | null = null;
   let finishBadges: LiveFinishBadges | null = null;
   // The live view before the current one: where a general captured by the
@@ -613,6 +621,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   }
 
   function applyEventFrame(frame: TenantLiveFrame<C, V>): void {
+    holdUntilDrawn();
     const events = state.events;
     applyFrame(frame);
     state.events = events;
@@ -749,6 +758,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
         announceLiveRoomSeat(room, tenant.isColor(state.seat));
       },
       applySnapshot: (frame) => {
+        holdUntilDrawn();
         const before = state.view;
         const movesSeen = state.events.filter(moveList.isMoveEvent).length;
         applyFrame(frame as TenantLiveFrame<C, V>);
@@ -822,6 +832,11 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   }
 
   function renderAll(): void {
+    // Released before the draw: the settle check is a microtask, so the glide
+    // this render starts is registered by the time it runs.
+    const releaseSettle = releaseFrameSettleHold;
+    releaseFrameSettleHold = null;
+    releaseSettle?.();
     if (!refs) return;
     if (heldRender) {
       clearTimeout(heldRender);

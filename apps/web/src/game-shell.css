@@ -1335,6 +1335,13 @@ a.clock-name.player-name-link {
 
 .round-table__box .room-actions .postgame-actions a,
 .round-table__box .room-actions .postgame-actions button {
+  /* Flex centres the label in the min-height box. New game, Review game and
+     Challenge a friend are links (display: block from .room-actions a), and a
+     block puts its text at the top: the hover box showed the label high (#825). */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
   width: 100%;
   min-width: 0;
   min-height: 34px;
