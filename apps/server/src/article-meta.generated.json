@@ -207,8 +207,8 @@
     "description": "Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "翻翻棋：搜索量提升 512 倍，仍有 23% 的对局落败",
-      "zh-hant": "翻翻棋：搜尋量提升 512 倍，仍有 23% 的對局落敗"
+      "zh-hans": "翻翻兽棋：搜索量提升 512 倍，仍有 23% 的对局落败",
+      "zh-hant": "翻翻獸棋：搜尋量提升 512 倍，仍有 23% 的對局落敗"
     }
   },
   "fog-chess": {
@@ -399,8 +399,8 @@
     "description": "The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.",
     "status": "published",
     "zhTitles": {
-      "zh-hans": "翻翻棋规则：玩法详解与免费在线对弈",
-      "zh-hant": "翻翻棋規則：玩法詳解與免費線上對弈"
+      "zh-hans": "翻翻兽棋规则：玩法详解与免费在线对弈",
+      "zh-hant": "翻翻獸棋規則：玩法詳解與免費線上對弈"
     }
   },
   "katago-jungle": {
