@@ -45,7 +45,7 @@ export async function tryHandle(
       const registration = registeredVariantTenants().find(
         (entry) => entry.gameSpecId === 'ffq-banqi',
       );
-      if (gate.type === 'reject' && (gate.error !== 'ffq_banqi_not_integrated' || !registration)) {
+      if (gate.type === 'reject') {
         writeJson(response, gate.httpStatus, { error: gate.error });
         return true;
       }

@@ -101,7 +101,7 @@ registerVariantTenant({
     handleCreate: async (ctx, request, response, body, accountUser) => {
       const account = accountUser ?? (await currentAccountUser(request));
       const gate = gateGameSpecRequest(body, account);
-      if (gate.type === 'reject' && gate.error !== 'ffq_banqi_not_integrated') {
+      if (gate.type === 'reject') {
         writeJson(response, gate.httpStatus, { error: gate.error });
         return;
       }

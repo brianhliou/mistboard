@@ -142,8 +142,7 @@ export async function handleWebSocketConnection(
     // The reserved namespace is itself an FFQ selector. Reject a conflicting
     // URL even when neither explicit selector names FFQ.
     const gate = gateGameSpecRequest({ gameSpecId: 'ffq-banqi' }, await resolveAccount());
-    const registered = registeredVariantTenants().some((entry) => entry.gameSpecId === 'ffq-banqi');
-    if (gate.type === 'reject' && (gate.error !== 'ffq_banqi_not_integrated' || !registered)) {
+    if (gate.type === 'reject') {
       socket.close(1008, gate.wsCloseReason);
       return;
     }

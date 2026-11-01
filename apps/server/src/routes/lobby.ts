@@ -68,6 +68,10 @@ export async function tryHandle(
         writeJson(response, gate.httpStatus, { error: gate.error });
         return true;
       }
+      // Admission opens the private room playtest; FFQ has no lobby. Claim
+      // conflicting selectors here before another tenant can match them.
+      writeJson(response, 501, { error: 'ffq_banqi_unsupported_surface' });
+      return true;
     }
     // Variant tenants join the lobby on their own path; the chess gate would
     // 501 them as not-integrated, so the registry is consulted before it.

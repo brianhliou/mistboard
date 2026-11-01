@@ -6,7 +6,7 @@ import { gateGameSpecRequest } from './game-spec-request-gate.js';
 // of each *-registration.ts module), so the registry-driven test below sees
 // the same tenant set the server boots with.
 import './variant-tenant/register-tenants.js';
-import { registeredVariantTenants } from './variant-tenant/registry.js';
+import { registeredVariantTenants, variantTenantForSpecId } from './variant-tenant/registry.js';
 
 test('game spec gate passes current chess requests', () => {
   assert.deepEqual(gateGameSpecRequest({ variant: 'dark-chess' }), { type: 'pass' });
@@ -104,29 +104,41 @@ const FFQ_SELECTORS = [
   { gameSpecId: 'unknown', variant: 'ffq-banqi' },
 ];
 
-for (const flag of [undefined, false, true]) {
-  for (const accountRole of [null, 'player', 'admin'] as const) {
-    test(`FFQ selectors: flag=${flag}, account=${accountRole ?? 'guest'}`, () => {
-      withFlag('MISTBOARD_FFQ_BANQI_ENABLED', flag, () => {
-        const admitted = flag === true && accountRole === 'admin';
-        for (const input of FFQ_SELECTORS) {
-          assert.deepEqual(
-            gateGameSpecRequest(input, accountRole ? { accountRole } : null),
-            {
-              type: 'reject',
-              error: admitted ? 'ffq_banqi_not_integrated' : 'ffq_banqi_disabled',
-              httpStatus: admitted ? 501 : 404,
-              wsCloseReason: admitted ? 'game spec not integrated' : 'game spec disabled',
-            },
-            JSON.stringify(input),
-          );
+for (const registered of [false, true]) {
+  for (const flag of [undefined, false, true]) {
+    for (const accountRole of [null, 'player', 'admin'] as const) {
+      test(`FFQ selectors: registered=${registered}, flag=${flag}, account=${accountRole ?? 'guest'}`, () => {
+        const registration = variantTenantForSpecId('ffq-banqi');
+        assert.ok(registration);
+        const original = registration.gameSpecId;
+        if (!registered) registration.gameSpecId = 'test-missing-ffq';
+        try {
+          withFlag('MISTBOARD_FFQ_BANQI_ENABLED', flag, () => {
+            const enabled = flag === true && accountRole === 'admin';
+            for (const input of FFQ_SELECTORS) {
+              assert.deepEqual(
+                gateGameSpecRequest(input, accountRole ? { accountRole } : null),
+                enabled && registered
+                  ? { type: 'pass' }
+                  : {
+                      type: 'reject',
+                      error: enabled ? 'ffq_banqi_not_integrated' : 'ffq_banqi_disabled',
+                      httpStatus: enabled ? 501 : 404,
+                      wsCloseReason: enabled ? 'game spec not integrated' : 'game spec disabled',
+                    },
+                JSON.stringify(input),
+              );
+            }
+          });
+        } finally {
+          registration.gameSpecId = original;
         }
       });
-    });
+    }
   }
 }
 
-test('FFQ registers its own tenant while the fallback gate still refuses chess routing', () => {
+test('FFQ registers its own tenant for enabled admin requests', () => {
   assert.equal(
     registeredVariantTenants().some((tenant) => tenant.gameSpecId === 'ffq-banqi'),
     true,

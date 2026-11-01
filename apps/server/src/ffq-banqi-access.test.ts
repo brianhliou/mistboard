@@ -212,6 +212,9 @@ for (const flag of [undefined, 'false', 'true']) {
         } else assert.deepEqual(result.body, { error: 'ffq_banqi_disabled' });
         const lobby = await post('/api/lobby', selectors, headers(), refusedCtx);
         assert.equal(lobby.status, admitted ? 501 : 404);
+        assert.deepEqual(lobby.body, {
+          error: admitted ? 'ffq_banqi_unsupported_surface' : 'ffq_banqi_disabled',
+        });
       }
       const direct = await createFFQBanqiRoom(role ? { accountRole: role } : null);
       assert.equal(direct.ok, admitted, 'the factory itself also enforces policy');
@@ -224,7 +227,7 @@ for (const flag of [undefined, 'false', 'true']) {
             !admitted
               ? 'ffq_banqi_disabled'
               : path === '/api/lobby'
-                ? 'ffq_banqi_not_integrated'
+                ? 'ffq_banqi_unsupported_surface'
                 : 'unknown_game_spec',
           );
         }

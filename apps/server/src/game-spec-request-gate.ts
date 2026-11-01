@@ -16,6 +16,7 @@ import {
 } from './feature-flags.js';
 import { ffqBanqiAdmits, isFFQBanqiRequest } from './ffq-banqi-access.js';
 import type { UserAccount } from './persistence.js';
+import { variantTenantForSpecId } from './variant-tenant/registry.js';
 
 type GateAccount = Pick<UserAccount, 'accountRole'> | null;
 
@@ -75,7 +76,7 @@ const GATED_GAME_SPECS = {
     disabledError: 'banqi_disabled',
     notIntegratedError: 'banqi_not_integrated',
   },
-  // Hidden playtest: BOTH the flag and admin role, with no room registration.
+  // Hidden playtest: BOTH the flag and admin role, plus a room registration.
   'ffq-banqi': {
     enabled: ffqBanqiAdmits,
     disabledError: 'ffq_banqi_disabled',
@@ -183,7 +184,13 @@ export function gateGameSpecRequest(
 ): GameSpecGateDecision {
   // Either selector claims the hidden variant, even if they conflict. Do not
   // let a public canonical selector bypass a private legacy selector's policy.
-  if (isFFQBanqiRequest(input)) return rejectGatedSpec('ffq-banqi', accountUser);
+  if (isFFQBanqiRequest(input)) {
+    if (ffqBanqiAdmits(accountUser) && variantTenantForSpecId('ffq-banqi')) {
+      return { type: 'pass' };
+    }
+    // Missing registration must still reject, even for an enabled admin.
+    return rejectGatedSpec('ffq-banqi', accountUser);
+  }
   // `gameSpecId` is the canonical selector. Absent (undefined, or null from
   // URLSearchParams.get on the WS path) passes; anything else must resolve to
   // a chess-stack spec.
