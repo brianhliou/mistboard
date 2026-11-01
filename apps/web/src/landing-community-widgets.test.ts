@@ -8,6 +8,13 @@ describe('landing community widgets', () => {
     vi.restoreAllMocks();
   });
 
+  it('links the Top players header directly to the player directory', async () => {
+    const { buildTopPlayersWidget } = await import('./landing-community-widgets.js');
+    const widget = buildTopPlayersWidget({ hydrate: false });
+
+    expect(widget.querySelector('.site-box-top')?.getAttribute('href')).toBe('/player');
+  });
+
   it('hydrates popular studies and the leader of each returned public ladder', async () => {
     const variant = leaderboardVariants[0]!;
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {

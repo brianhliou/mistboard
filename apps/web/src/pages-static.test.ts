@@ -356,6 +356,18 @@ describe('static pages', () => {
     expect(root.textContent).toContain('我們承諾什麼，以及不承諾什麼');
   });
 
+  it.each(['en', 'zh-hans', 'zh-hant'])(
+    'links 404 quick Play directly to the lobby in %s',
+    (locale) => {
+      window.history.replaceState(null, '', locale === 'en' ? '/missing' : `/${locale}/missing`);
+      const root = document.createElement('main');
+      mountNotFound(root);
+
+      expect(root.querySelector('.not-found-links a')?.getAttribute('href')).toBe('/');
+      expect(root.querySelector('.not-found-links a[href="/play"]')).toBeNull();
+    },
+  );
+
   it('localizes Traditional Chinese not-found page chrome', () => {
     window.history.replaceState(null, '', '/zh-hant/missing');
 

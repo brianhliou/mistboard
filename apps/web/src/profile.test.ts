@@ -14,6 +14,22 @@ describe('profile ratings rail', () => {
   });
 
   it.each([
+    ['/player', '/'],
+    ['/zh-hans', '/zh-hans/'],
+    ['/zh-hant', '/zh-hant/'],
+  ])('links the empty leaderboard directly to the lobby at %s', async (path, href) => {
+    window.history.replaceState(null, '', path);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () => new Response(JSON.stringify({ ladders: [], players: [] })),
+    );
+    const { mountLeaderboard } = await import('./profile.js');
+    const root = document.createElement('main');
+    await mountLeaderboard(root);
+
+    expect(root.querySelector('.leaderboard-awaiting a')?.getAttribute('href')).toBe(href);
+  });
+
+  it.each([
     ['en', 'Title verification'],
     ['zh-Hans', '头衔认证'],
     ['zh-Hant', '頭銜認證'],
@@ -940,7 +956,7 @@ describe('profile ratings rail', () => {
     expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(0);
     expect(root.textContent).not.toContain('No rated games yet.');
     expect(root.textContent).toContain('The ladders open with the first rated game.');
-    expect(root.querySelector('.leaderboard-awaiting a')?.getAttribute('href')).toBe('/play');
+    expect(root.querySelector('.leaderboard-awaiting a')?.getAttribute('href')).toBe('/');
     // The online-players column still renders beside it.
     expect(root.textContent).toContain('Online players');
   });

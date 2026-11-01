@@ -393,7 +393,7 @@ function buildLeaderboardAwaitingRatedGames(locale: Locale): HTMLElement {
   empty.className = 'leaderboard-awaiting';
   empty.append(t('profile.leaderboardAwaiting', {}, locale), ' ');
   const link = document.createElement('a');
-  link.href = localizedHref('/play', locale);
+  link.href = localizedHref('/', locale);
   link.textContent = t('profile.leaderboardAwaitingCta', {}, locale);
   empty.append(link);
   return empty;

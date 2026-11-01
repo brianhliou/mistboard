@@ -1044,7 +1044,7 @@ function buildNotFound(locale: Locale = currentLocale()): HTMLElement {
   quick.className = 'not-found-links';
   quick.setAttribute('aria-label', t('notFound.quickLinks', {}, locale));
   for (const [labelKey, href] of [
-    ['nav.play', '/play'],
+    ['nav.play', '/'],
     ['nav.rules', '/rules'],
     ['nav.watch', '/watch'],
     ['nav.puzzles', '/puzzles'],
