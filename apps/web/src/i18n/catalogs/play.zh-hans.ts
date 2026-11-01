@@ -7,6 +7,11 @@
 import type { PlayI18nKey } from './play.js';
 
 export const ZH_HANS_PLAY = {
+  'live.gomokuBotThinking': 'Rapfi 正在思考…',
+  'live.gomokuBotFailed': 'Rapfi 无法加载或找到落子位置，请重试以继续。',
+  'live.gomokuBotPaused': 'Rapfi 已暂停。',
+  'live.gomokuBotRetry': '继续 Rapfi',
+  'live.gomokuBotSource': '源代码',
   'game.saveGame': '收藏对局',
   'game.savedGame': '已收藏',
   'game.signInToSave': '登录后收藏',
