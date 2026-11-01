@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { forumTranslationCacheHash } from './forum-translation.js';
 import {
   addForumPost,
   countRecentForumPostsByUser,
@@ -24,7 +25,7 @@ import {
   updateForumTopic,
 } from './persistence.js';
 import { getPool } from './persistence-db.js';
-import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
+import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 import { tryHandle as tryHandleForumRoute } from './routes/forum.js';
 
 type ResponseCapture = {
@@ -634,7 +635,9 @@ definePersistenceTests('forum', () => {
       ],
     ] as const) {
       await putForumTranslation({
-        contentHash: sha256(text),
+        // The read looks rows up by the current prompt-versioned key, so a
+        // row cached under an older prompt is not served (c6d69583e).
+        contentHash: forumTranslationCacheHash(text, 'zh-Hans'),
         targetLocale: 'zh-Hans',
         model: 'an-older-model',
         translatedText,
