@@ -272,9 +272,7 @@ const ZH_HANS: Record<string, string> = {
   // Gomoku rules: machine-drafted 2026-10-31, not native-reviewed.
   'Gomoku Rules': '五子棋规则',
   'Gomoku board': '五子棋棋盘',
-  'The board and your turn': '棋盘与落子',
   'Five in a row wins': '连五获胜',
-  'Why is White moving first in my game?': '为什么我的对局轮到白方先下？',
   // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困毙 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作杀, 萨姆·劳埃德); 迷雾国际象棋 for fog of war; 研究 for a study.
   'The Shortest Xiangqi Stalemate We Know': '我们所知最短的象棋困毙',
   'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':
@@ -6504,9 +6502,7 @@ const ZH_HANT: Record<string, string> = {
   // Gomoku rules: machine-drafted 2026-10-31, not native-reviewed.
   'Gomoku Rules': '五子棋規則',
   'Gomoku board': '五子棋棋盤',
-  'The board and your turn': '棋盤與落子',
   'Five in a row wins': '連五獲勝',
-  'Why is White moving first in my game?': '為什麼我的對局輪到白方先下？',
   // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困斃 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作殺, 薩姆·勞埃德, 著法, 搜尋, 電腦); 迷霧國際象棋 for fog of war; 研究 for a study.
   'The Shortest Xiangqi Stalemate We Know': '我們所知最短的象棋困斃',
   'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':
