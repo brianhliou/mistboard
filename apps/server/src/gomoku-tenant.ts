@@ -15,7 +15,6 @@ import {
   isGomokuColor,
   parseGomokuMove,
 } from '@mistboard/game';
-import { gomokuEnabled } from './feature-flags.js';
 import type { GameTermination } from './persistence.js';
 import { tenantForfeitDeadlineForClient, tenantPveEngineId } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent, TenantRuntimeRoom, VariantTenant } from './variant-tenant/tenant.js';
@@ -58,7 +57,10 @@ export const gomokuTenant: VariantTenant<
   gameSpecId: GOMOKU_SPEC_ID,
   roomIdPrefix: 'gmk_',
   colors: ['black', 'white'],
-  enabled: gomokuEnabled,
+  // The runtime ships in every build, like Three Kingdoms banqi. The create
+  // and socket doors enforce gomokuAdmits; the registration's enabled() stays
+  // the flag so lobby, TV, challenges and bot profiles remain unlisted.
+  enabled: () => true,
   oppositeColor: (color) => (color === 'black' ? 'white' : 'black'),
   rules: {
     createSetup: () => {

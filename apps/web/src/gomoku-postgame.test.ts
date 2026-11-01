@@ -65,8 +65,10 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-async function mount(payload: unknown, status = 200) {
+async function mount(payload: unknown, status = 200, admin?: boolean) {
   vi.resetModules();
+  const { setResolvedAdmin } = await import('./signed-in-state.js');
+  setResolvedAdmin(admin);
   const { setPostHogInstance } = await import('./analytics.js');
   setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
   const fetchSpy = vi.fn(
@@ -87,6 +89,21 @@ async function mount(payload: unknown, status = 200) {
 const key = (name: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
 
 describe('Gomoku finished-game review', () => {
+  for (const enabled of [false, true]) {
+    it.each([undefined, false, true])(
+      `admits review by role with flag ${enabled}: admin %s`,
+      async (admin) => {
+        vi.stubEnv('VITE_GOMOKU_ENABLED', String(enabled));
+        const { root, fetchSpy } = await mount(fixture(), 200, admin);
+        const admitted = enabled || admin === true;
+        expect(
+          fetchSpy.mock.calls.some(([input]) => String(input).startsWith('/api/gomoku/')),
+        ).toBe(admitted);
+        expect(Boolean(root.querySelector('.gomoku-live-board'))).toBe(admitted);
+      },
+    );
+  }
+
   it.each([3, 4, 5])(
     'keeps the recorded %i-stone opening through board and move-list navigation',
     async (count) => {

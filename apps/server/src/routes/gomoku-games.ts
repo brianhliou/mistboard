@@ -6,7 +6,8 @@ import {
   type GomokuPlayerView,
   getGomokuPlayerView,
 } from '@mistboard/game';
-import { gomokuEnabled } from '../feature-flags.js';
+import { currentAccountUser } from '../account-session.js';
+import { gomokuAdmits } from '../gomoku-access.js';
 import { gomokuRooms } from '../gomoku-registration.js';
 import {
   type GomokuEvent,
@@ -34,7 +35,7 @@ import {
   writeJson,
 } from './lib.js';
 
-// Built-hidden Gomoku replay. Both read paths require the playtest flag; merely
+// Built-hidden Gomoku replay. Both read paths require playtest admission; merely
 // registering the live builder does not opt the tenant into watch election.
 export type GomokuPostgamePersistence = {
   getGameSummary(roomId: string): ReturnType<typeof persistence.getGameSummary>;
@@ -50,12 +51,19 @@ const defaultPersistence: GomokuPostgamePersistence = {
   getLiveRoom: (roomId) => gomokuRooms.get(roomId) ?? null,
 };
 
+type GomokuPostgameRouteDeps = GomokuPostgamePersistence & {
+  currentAccountUser: typeof currentAccountUser;
+};
+
+const defaultRouteDeps: GomokuPostgameRouteDeps = { ...defaultPersistence, currentAccountUser };
+
 export async function tryHandle(
   _ctx: HttpApiContext,
   request: IncomingMessage,
   response: ServerResponse,
   pathname: string,
   _parsedUrl: URL,
+  deps: GomokuPostgameRouteDeps = defaultRouteDeps,
 ): Promise<boolean> {
   const match = pathname.match(/^\/api\/gomoku\/games\/([^/]+)$/);
   if (!match) return false;
@@ -67,7 +75,7 @@ export async function tryHandle(
     writeJson(response, 404, { error: 'not_found' });
     return true;
   }
-  const payload = await gomokuPostgameForApi(roomId);
+  const payload = await gomokuPostgameForApi(roomId, deps, await deps.currentAccountUser(request));
   if (!payload) writeJson(response, 404, { error: 'not_found' });
   else writeJson(response, 200, payload);
   return true;
@@ -76,8 +84,10 @@ export async function tryHandle(
 export async function gomokuPostgameForApi(
   roomId: string,
   deps: GomokuPostgamePersistence = defaultPersistence,
+  accountUser: Pick<persistence.UserAccount, 'accountRole'> | null = null,
 ) {
-  if (!gomokuEnabled()) return null;
+  // Refused callers learn nothing about the room or persistence availability.
+  if (!gomokuAdmits(accountUser)) return null;
   const persistent = deps.isPersistenceEnabled?.() ?? true;
   const [record, events] = await Promise.all([
     persistent ? deps.getGameSummary(roomId) : null,
@@ -127,8 +137,13 @@ export async function gomokuPostgameForApi(
   };
 }
 
-export async function gomokuLiveWatchPayload(roomId: string) {
-  if (!gomokuEnabled()) return null;
+export async function gomokuLiveWatchPayload(
+  roomId: string,
+  accountUser: Pick<persistence.UserAccount, 'accountRole'> | null = null,
+) {
+  // Public TV calls without an account and remains closed when the flag is
+  // off. Admin admission here never opts a room into the public election.
+  if (!gomokuAdmits(accountUser)) return null;
   const room = gomokuRooms.get(roomId);
   if (!room || room.id !== roomId) return null;
   await room.pendingWrites.catch(() => undefined);
@@ -155,8 +170,7 @@ export async function gomokuLiveWatchPayload(roomId: string) {
   };
 }
 
-// http-api.ts imports this module; the tenant's watch registration stays null
-// until a separate change supplies a renderer and opts it into watch channels.
+// Election and channel listings remain governed by the flag and publicSurface.
 registerLiveWatchPayloadBuilder('gomoku', gomokuLiveWatchPayload);
 
 type GomokuSnapshot = {

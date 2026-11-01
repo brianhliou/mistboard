@@ -5,8 +5,8 @@ import {
   type GomokuPlayerView,
 } from '@mistboard/game';
 import { reviewOpenedProps, track } from './analytics.js';
-import { gomokuEnabled } from './feature-flags.js';
 import { variantDisplayLabel } from './game-display.js';
+import { gomokuOffered } from './gomoku-access.js';
 import { t } from './i18n/catalog.js';
 import { bootstrapGomokuRecording } from './live-gomoku.js';
 import { buildNav } from './site-shell.js';
@@ -96,7 +96,7 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
     root.replaceChildren(buildNav(), main);
   };
   root.classList.add('landing-page', 'game-route');
-  if (!gomokuEnabled()) {
+  if (!gomokuOffered()) {
     message(t('replay.variantUnavailable', { variant }), t('replay.routeNotEnabled'));
     return;
   }

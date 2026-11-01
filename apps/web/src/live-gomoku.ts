@@ -10,7 +10,6 @@ import {
   parseGomokuMove,
 } from '@mistboard/game';
 import { Rapfi, type RapfiLevel, type RapfiPosition } from './engine/rapfi.js';
-import { gomokuEnabled } from './feature-flags.js';
 import { gomokuBoardSvg } from './gomoku-board.js';
 import './gomoku-board.css';
 import { t } from './i18n/catalog.js';
@@ -56,7 +55,6 @@ function syncBot(): void {
   if (
     !ctx ||
     !view ||
-    !gomokuEnabled() ||
     ctx.state.rated ||
     roomMode !== 'pve' ||
     !level ||
@@ -197,7 +195,10 @@ const tenant: WebVariantTenant<GomokuColor> = {
   },
   isColor: isGomokuColor,
   oppositeColor: (color) => (color === 'black' ? 'white' : 'black'),
-  enabled: gomokuEnabled,
+  // Like Three Kingdoms banqi, bootstrap even before the cosmetic admin hint
+  // resolves. Every socket is account-gated by the server; only an admitted
+  // room's hello can start Rapfi, including when the public flag is off.
+  enabled: () => true,
   reviewUrl: (roomId) => `/gomoku/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: (reason) => {
     switch (reason) {

@@ -51,6 +51,7 @@ import {
   xiangqiEnabled,
   xiangqiMahjongEnabled,
 } from '../feature-flags.js';
+import { gomokuOffered } from '../gomoku-access.js';
 import type { I18nKey } from '../i18n/catalog.js';
 import { JIEQI_FIRST_GAME_ENGINE_ID, XIANGQI_FIRST_GAME_ENGINE_ID } from '../landing-bot-policy.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
@@ -306,7 +307,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
   {
     gameSpecId: GOMOKU_SPEC_ID,
     roomIdPrefix: 'gmk_',
-    enabled: gomokuEnabled,
+    enabled: gomokuOffered,
+    liveRoomServerGated: true,
     pageTitleKey: 'variant.gomoku.name',
     gameRouteBase: '/gomoku/game',
     reviewRouteBase: '/gomoku/game',
@@ -342,9 +344,10 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         kind: 'browser',
       })),
       defaultEngineId: 'rapfi-level-1',
-      // The menu and deep link share the explicit opt-in flag.
+      // The picker stays unlisted. Admins have the same ?play deep-link door
+      // as Three Kingdoms banqi, for a friend room or the browser bot.
       offerInMenu: gomokuEnabled,
-      acceptsDeepLink: gomokuEnabled,
+      acceptsDeepLink: gomokuOffered,
     },
   },
   {

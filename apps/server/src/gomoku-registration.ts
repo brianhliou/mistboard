@@ -1,4 +1,4 @@
-// Built-hidden, flag-gated casual play. Rapfi runs only in the human's browser.
+// Built-hidden admin playtest. Rapfi runs only in the human's browser.
 import {
   GOMOKU_SPEC_ID,
   type GomokuColor,
@@ -6,7 +6,9 @@ import {
   getGomokuPlayerView,
   type RoomTimeControl,
 } from '@mistboard/game';
+import { currentAccountUser } from './account-session.js';
 import { gomokuEnabled } from './feature-flags.js';
+import { gomokuAdmits } from './gomoku-access.js';
 import {
   type GomokuEvent,
   type GomokuRuntimeRoom,
@@ -99,6 +101,7 @@ const route = createTenantRoomsRoute<
   gameSpecId: GOMOKU_SPEC_ID,
   errorPrefix: 'gomoku',
   hasDisabledFlag: true,
+  admits: gomokuAdmits,
   preferredColors: ['black', 'white', 'random'],
   engine: {
     kind: 'seated',
@@ -140,7 +143,7 @@ registerVariantTenant({
   replays: tenantReplayCheck(gomokuTenant),
   errorPrefix: 'gomoku',
   enabled: gomokuEnabled,
-  admitsConnection: gomokuEnabled,
+  admitsConnection: gomokuAdmits,
   rooms: gomokuRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
   activeGameCount: () => countActiveTenantGames(gomokuRooms.values(), gomokuTenant),
   getOrLoadRoom: (roomId) =>
@@ -153,8 +156,15 @@ registerVariantTenant({
   clearRooms: () => gomokuRooms.clear(),
   http: {
     matchesCreateRequest: route.matchesCreateRequest,
-    handleCreate: (ctx, _request, response, body, accountUser) =>
-      handleGomokuCreate({ ...ctx, createGomokuRoom }, response, body, accountUser),
+    // The dispatcher resolves accounts only for rated requests; the playtest
+    // needs the real account on casual creates too, like Three Kingdoms.
+    handleCreate: async (ctx, request, response, body, accountUser) =>
+      handleGomokuCreate(
+        { ...ctx, createGomokuRoom },
+        response,
+        body,
+        accountUser ?? (await currentAccountUser(request)),
+      ),
   },
   lobby: {
     supportsRated: false,

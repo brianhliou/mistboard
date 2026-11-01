@@ -82,6 +82,8 @@ async function mount(
   socket.options = null;
   socket.connection = 'connected';
   vi.resetModules();
+  const { setResolvedAdmin } = await import('./signed-in-state.js');
+  setResolvedAdmin(extras.admin === true);
   const { bootstrapGomokuLiveRoom } = await import('./live-gomoku.js');
   bootstrapGomokuLiveRoom();
   const options = socket.options as TenantSocketClientOptions | null;
@@ -163,6 +165,17 @@ afterEach(() => {
 });
 
 describe('Rapfi browser PvE', () => {
+  it('an admin plays a browser bot with the public flag off', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
+    await mount(position(0), 'white', 0, { ...pveFrame('white'), admin: true });
+    expect(workers).toHaveLength(1);
+    workers[0]!.answer();
+    await flushBot();
+    expect(sentMoves()).toEqual([
+      { type: 'move', to: 'h8', browserBot: true, roomId: ROOM, expectedPly: 0 },
+    ]);
+  });
+
   it('links the finished room to review and reports the postgame action', async () => {
     await mount(position(9), 'white');
     const capture = vi.fn();
