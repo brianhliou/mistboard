@@ -1,4 +1,12 @@
-import { GOMOKU_BOARD_SIZE, type GomokuPlayerView, type GomokuSquare } from '@mistboard/game';
+import {
+  applyGomokuRoomMove,
+  GOMOKU_BOARD_SIZE,
+  type GomokuMove,
+  type GomokuPlayerView,
+  type GomokuRoomState,
+  type GomokuSquare,
+  parseGomokuMove,
+} from '@mistboard/game';
 import { boardCoordinatesEnabled } from './display-preferences.js';
 
 const CELL = 32;
@@ -6,7 +14,15 @@ const PAD = CELL;
 const EDGE = PAD * 2 + CELL * (GOMOKU_BOARD_SIZE - 1);
 const FILES = 'abcdefghijklmno';
 
-export function gomokuBoardSvg(view: GomokuPlayerView, interactive: boolean): string {
+export type GomokuBoardMarker =
+  | { kind: 'best' | 'circle'; square: string }
+  | { kind: 'pv'; moves: readonly GomokuMove[] };
+
+export function gomokuBoardSvg(
+  view: GomokuPlayerView,
+  interactive: boolean,
+  markers: readonly GomokuBoardMarker[] = [],
+): string {
   const winning = new Set(view.winningLine);
   const legal = new Set(interactive ? view.legalMoves.map((move) => move.to) : []);
   const coordinates = boardCoordinatesEnabled();
@@ -52,6 +68,39 @@ export function gomokuBoardSvg(view: GomokuPlayerView, interactive: boolean): st
       `<rect class="gomoku-hit" x="${x - 16}" y="${y - 16}" width="32" height="32" role="button" aria-label="${square}" aria-disabled="${!legal.has(square)}"${legal.has(square) ? ' tabindex="0"' : ''}/></g>`,
     );
   }
+  const overlays: string[] = [];
+  const point = (square: GomokuSquare) => ({
+    x: filePoint(square.charCodeAt(0) - 97),
+    y: rankPoint(Number(square.slice(1)) - 1),
+  });
+  for (const marker of markers) {
+    if (marker.kind === 'pv') {
+      let state: GomokuRoomState = view;
+      for (const [index, move] of marker.moves.entries()) {
+        if (state.status.type !== 'playing') break;
+        const color = state.status.turn;
+        const next = applyGomokuRoomMove(state, move);
+        if (next === state) break;
+        const { x, y } = point(move.to);
+        overlays.push(
+          `<g class="gomoku-pv" data-square="${move.to}" opacity="0.65"><circle class="gomoku-stone gomoku-stone--${color}" cx="${x}" cy="${y}" r="14"/><text class="gomoku-pv-number gomoku-pv-number--${color}" x="${x}" y="${y}">${index + 1}</text></g>`,
+        );
+        state = next;
+      }
+    } else {
+      const move = parseGomokuMove(marker.square);
+      if (!move || (marker.kind === 'best' && !view.legalMoves.some((m) => m.to === move.to)))
+        continue;
+      const { x, y } = point(move.to);
+      overlays.push(
+        `<circle class="gomoku-${marker.kind}" data-square="${move.to}" cx="${x}" cy="${y}" r="15"/>`,
+      );
+    }
+  }
+  if (overlays.length)
+    nodes.push(
+      `<g class="gomoku-engine-overlay" pointer-events="none" aria-hidden="true">${overlays.join('')}</g>`,
+    );
   nodes.push('</svg>');
   return nodes.join('');
 }

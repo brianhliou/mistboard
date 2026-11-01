@@ -229,6 +229,8 @@ export interface EnginePresentation<Move, Truth, Arrow, Marker> {
   bestMoveArrow?(best: string | null | undefined): Arrow[];
   /** Single best-action marker from a whole-game analysis ply. */
   bestMoveMarker?(best: string | null | undefined): Marker[];
+  /** Some boards keep all engine ink off when local analysis is off. */
+  showStoredBestWhenOff?: boolean;
   /** A chance ply's ranked alternatives (engine UCI, best first, mover-POV win%) as arrows,
    *  weighted by how much each concedes to the best. Omit and a judged chance ply draws
    *  only its top alternative, through bestMoveArrow. Never a line: one move each. */
@@ -287,6 +289,8 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  inline as SVG need this on a piece-set change; variants that pick up their set
    *  via CSS omit it). */
   appearanceEvent?: string;
+  /** Placement boards keep their coordinates and chrome in one orientation. */
+  fixedOrientation?: boolean;
   /** Board orientation for a flipped/unflipped state. */
   perspective(flipped: boolean): Color;
   /** The interactive seat for a view (the side to move, on a review board that
@@ -453,6 +457,8 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  repertoire read from red's side asks the reader to mentally mirror every
    *  line, and the Flip button only fixes it until the next chapter remounts. */
   initialFlipped?: boolean;
+  /** Optional viewer preference. Without it, local analysis starts off. */
+  localEngine?: { enabled: boolean; onToggle(enabled: boolean): void };
   /** Fired after any tree mutation (move, annotation, promote, delete). The study
    *  page uses it to autosave; the analysis/postgame pages ignore it. */
   onChange?: () => void;
@@ -665,7 +671,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // `?flip=1` opens the review from the second seat's side: the crosstable links
   // a row's games that way, so a click reads as "this game from their side".
   // An explicit initialFlipped (the study's chapter orientation) still wins.
-  let flipped = config.initialFlipped ?? flippedFromUrl();
+  let flipped = presentation.fixedOrientation ? false : (config.initialFlipped ?? flippedFromUrl());
 
   const currentNode = (): Node => tree.nodeAt(currentPath) ?? tree.root;
   const orientation = (): Color => presentation.perspective(flipped);
@@ -808,7 +814,17 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     // contradict them.
     const { top: topSeat_, bottom: bottomSeat_ } = seatStripInks(presentation.perspective, flipped);
     const toInk = (seat: Color): string =>
-      seatStripDisplayInk(String(seat), config.seatColors, config.seatInkBindsOnFlip ?? false);
+      seatStripDisplayInk(
+        // seatColors names analysis slots, whereas perspective gives the board
+        // side. On a Black-first board, physical Black is the FIRST slot.
+        config.seatColors
+          ? seat === presentation.perspective(false)
+            ? 'red'
+            : 'black'
+          : String(seat),
+        config.seatColors,
+        config.seatInkBindsOnFlip ?? false,
+      );
     const topInk = toInk(topSeat_);
     const bottomInk = toInk(bottomSeat_);
     const profiles = config.playerProfiles;
@@ -1046,7 +1062,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         return engine.bestMoveArrow(best);
       }
     }
-    if (!engineOn) {
+    if (!engineOn && engine.showStoredBestWhenOff !== false) {
       const better = markedBetter();
       if (!better) return [];
       // A chance ply's ranked set, weighted; without that hook, its top move alone.
@@ -1084,7 +1100,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     }
     // Engine off: a judged move whose better move has no travel (a flip, a drop) gets
     // the ring. Only a single best move: a chance ply's ranked set is drawn as arrows.
-    if (!engineOn && engine.bestMoveMarker) {
+    if (!engineOn && engine.showStoredBestWhenOff !== false && engine.bestMoveMarker) {
       const better = markedBetter();
       if (better?.kind === 'move') return engine.bestMoveMarker(better.uci);
     }
@@ -1196,6 +1212,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           },
           onToggle: (on) => {
             engineOn = on;
+            config.localEngine?.onToggle(on);
             phoneBar?.setEngineOn(on);
             reviewEngine?.setOn(on);
             paintOverlays();
@@ -1379,10 +1396,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // advice line already name the best move, so the win% table is a second layer
   // the reader asks for rather than one they scroll past.
   let showAlternatives = alternativesEnabled();
-  const menuItems: ReviewMenuItem[] = [
-    { label: t('review.flipBoard'), icon: REVIEW_MENU_ICONS.flip, onClick: () => flipBoard() },
-  ];
-  if (config.saveDefaultOrientation) {
+  const menuItems: ReviewMenuItem[] = presentation.fixedOrientation
+    ? []
+    : [{ label: t('review.flipBoard'), icon: REVIEW_MENU_ICONS.flip, onClick: () => flipBoard() }];
+  if (config.saveDefaultOrientation && !presentation.fixedOrientation) {
     menuItems.push({
       label: t('review.setDefaultView'),
       icon: REVIEW_MENU_ICONS.pinView,
@@ -2145,6 +2162,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     }
   }
   function flipBoard(): void {
+    if (presentation.fixedOrientation) return;
     flipped = !flipped;
     // The names travel with the board: whoever is at the bottom is the side the
     // reader is looking from.
@@ -2681,6 +2699,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // analysis/postgame paths seed no glyphs, so this is a harmless no-op there).
   refreshMoveTreeAnnotations();
   render();
+  if (config.localEngine?.enabled) enginePanel?.setOn(true);
   scaffold.refit();
   // The module-level handle is the backstop for a surface that re-mounts
   // without calling destroy(): the next mount still aborts the last one's

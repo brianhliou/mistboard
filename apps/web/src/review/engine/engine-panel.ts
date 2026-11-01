@@ -346,7 +346,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     currentSearchable = searchable;
     // The shared score axis is the first seat: Black in Gomoku, Red in xiangqi.
     currentBaseSide =
-      opts.variant === 'gomoku'
+      opts.variant === 'gomoku' && searchable
         ? rapfiCevalPosition({ initialFen, movesUci: [] }).turn === 2
           ? 'black'
           : 'red'
