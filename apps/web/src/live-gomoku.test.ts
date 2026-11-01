@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -12,6 +13,7 @@ import {
   getGomokuPlayerView,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { writeDisplayPreference } from './display-preferences.js';
 import { RAPFI_LEVELS } from './engine/rapfi.js';
 import { gomokuBoardSvg } from './gomoku-board.js';
 import type {
@@ -150,6 +152,13 @@ const refresh = (options: TenantSocketClientOptions, state: GomokuRoomState, sea
 };
 
 beforeEach(() => {
+  const stored = new Map<string, string>();
+  vi.stubGlobal('localStorage', {
+    getItem: (key: string) => stored.get(key) ?? null,
+    setItem: (key: string, value: string) => stored.set(key, value),
+    removeItem: (key: string) => stored.delete(key),
+    clear: () => stored.clear(),
+  });
   workers.length = 0;
   vi.stubGlobal('Worker', TestWorker);
   vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
@@ -205,10 +214,6 @@ describe('Rapfi browser PvE', () => {
         const search = worker.messages[1] as { commands: string[] };
         expect(search.commands).toContain(`INFO max_node ${tier.nodes}`);
         expect(search.commands.at(-1)).toBe(human === 'white' ? 'BEGIN' : 'BOARD\n0,0,2\nDONE');
-        expect(document.querySelector('[data-gomoku-bot]')?.textContent).toContain('GPL-3.0');
-        expect(document.querySelector('[data-gomoku-bot] a:last-child')?.getAttribute('href')).toBe(
-          'https://github.com/dhbloo/rapfi/archive/1387d11312.tar.gz',
-        );
         // Snapshot retries and repeated paints cannot start parallel searches.
         refresh(options, state, human);
         expect(worker.messages).toHaveLength(2);
@@ -336,6 +341,119 @@ describe('Rapfi browser PvE', () => {
 });
 
 describe('hidden Gomoku live room', () => {
+  it('uses the shared Xiangqi board fill and ink tokens, including their default palette', () => {
+    const css = readFileSync(resolve(__dirname, 'gomoku-board.css'), 'utf8');
+    expect(css).toMatch(/\.gomoku-wood\s*\{\s*fill: var\(--xq-live-board-bg, #f5dca8\)/);
+    for (const [selector, property] of [
+      ['grid', 'stroke'],
+      ['star', 'fill'],
+      ['coordinate', 'fill'],
+    ]) {
+      expect(css).toMatch(
+        new RegExp(`\\.gomoku-${selector}\\s*\\{\\s*${property}: var\\(--xq-live-ink, #5a3a14\\)`),
+      );
+    }
+  });
+
+  it('shows a hover stone only on an empty legal point on your turn with a hovering pointer', async () => {
+    const hover = (square: string, pointerType = 'mouse', buttons = 0) => {
+      document
+        .querySelector(`[data-square="${square}"] .gomoku-hit`)
+        ?.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerType, buttons }));
+    };
+    const ghost = () => document.querySelector('.gomoku-ghost[visibility="visible"]');
+    for (const seat of ['black', 'white'] as const) {
+      const options = await mount(position(seat === 'black' ? 2 : 1), seat);
+      expect(ghost()).toBeNull();
+      hover('h8');
+      expect(ghost()?.classList.contains(`gomoku-stone--${seat}`)).toBe(true);
+      expect(ghost()?.closest('[data-square]')?.getAttribute('data-square')).toBe('h8');
+      hover('a1');
+      expect(ghost()).toBeNull();
+      for (const pointer of ['touch', '']) {
+        hover('h8', pointer);
+        expect(ghost()).toBeNull();
+      }
+      hover('h8', 'mouse', 1);
+      expect(ghost()).toBeNull();
+      hover('h8');
+      document.querySelector('.gomoku-live-board')!.dispatchEvent(new PointerEvent('pointerleave'));
+      expect(ghost()).toBeNull();
+      hover('h8');
+      socket.connection = 'reconnecting';
+      options.render();
+      hover('h8');
+      expect(ghost()).toBeNull();
+    }
+    for (const seat of ['black', 'spectator'] as const) {
+      await mount(position(1), seat);
+      hover('h8');
+      expect(ghost()).toBeNull();
+    }
+    await mount(position(2), 'black');
+    document.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
+    hover('h8');
+    expect(ghost()).toBeNull();
+    await mount(position(9), 'black');
+    hover('h8');
+    expect(ghost()).toBeNull();
+  });
+
+  it('keeps Rapfi status and controls without a live-page credit line', async () => {
+    await mount(position(0), 'white', 0, pveFrame('white'));
+    const panel = document.querySelector('[data-gomoku-bot]')!;
+    expect(panel.querySelector('[role="status"]')).not.toBeNull();
+    expect(panel.querySelector('[data-gomoku-bot-action]')).not.toBeNull();
+    expect(panel.querySelector('a')).toBeNull();
+    expect(panel.textContent).not.toContain('GPL-3.0');
+  });
+
+  it('uses the Three Kingdoms paired move-list shape and shared current-move styling', async () => {
+    const reference = readFileSync(resolve(__dirname, 'live-three-kingdoms-banqi.ts'), 'utf8');
+    expect(reference).toContain("rowClass: 'move-row xiangqi-move-row'");
+    expect(reference).toContain("cellPrefix: 'xiangqi-move-row'");
+    expect(readFileSync(resolve(__dirname, 'live-gomoku.ts'), 'utf8')).toContain(
+      "import './live-xiangqi.css'",
+    );
+    await mount(position(4), 'black');
+    const list = document.querySelector('.move-list')!;
+    expect(list.classList.contains('xiangqi-move-list')).toBe(true);
+    const rows = [...list.querySelectorAll('.move-row.xiangqi-move-row')];
+    expect(rows.map((row) => [...row.children].map((cell) => cell.textContent))).toEqual([
+      ['1.', 'a1', 'a2'],
+      ['2.', 'b1', 'b2'],
+    ]);
+    (rows[1]!.children[1] as HTMLButtonElement).click();
+    expect(document.querySelector('.xiangqi-move-row__move.active')?.textContent).toBe('b1');
+    document.querySelector<HTMLButtonElement>('.move-list .move-jump')!.click();
+    expect(document.querySelector('.xiangqi-move-row__move.active')?.textContent).toBe('a1');
+    expect(document.querySelectorAll('.move-row.xiangqi-move-row')).toHaveLength(2);
+  });
+
+  it('keeps A on the left and row 1 at the bottom for both seats, without a flip control', async () => {
+    for (const seat of ['black', 'white'] as const) {
+      await mount(position(1), seat);
+      const stone = document.querySelector('[data-piece-square="a1"]')!;
+      expect([stone.getAttribute('cx'), stone.getAttribute('cy')]).toEqual(['32', '480']);
+      expect(document.querySelector('[data-square="o15"] .gomoku-hit')?.getAttribute('x')).toBe(
+        '464',
+      );
+      expect(document.querySelector('[data-replay-flip]:not([hidden])')).toBeNull();
+    }
+  });
+
+  it('hides coordinates by default and repaints when the site preference changes', async () => {
+    await mount(position(1), 'white');
+    expect(document.querySelectorAll('.gomoku-coordinate')).toHaveLength(0);
+    writeDisplayPreference('boardCoordinates', true);
+    expect(document.querySelectorAll('.gomoku-coordinate')).toHaveLength(30);
+    const labels = [...document.querySelectorAll('.gomoku-coordinate')];
+    expect(labels.find((label) => label.textContent === 'a')?.getAttribute('x')).toBe('32');
+    expect(labels.find((label) => label.textContent === '1')?.getAttribute('y')).toBe('484');
+    writeDisplayPreference('boardCoordinates', false);
+    expect(document.querySelectorAll('.gomoku-coordinate')).toHaveLength(0);
+  });
+
   it.each([3, 4, 5])(
     'keeps dealt %i-stone move-list jumps in chronological order',
     async (count) => {
@@ -361,9 +479,7 @@ describe('hidden Gomoku live room', () => {
           },
         ],
       });
-      const buttons = [
-        ...document.querySelectorAll<HTMLButtonElement>('.gomoku-move-row__move.move-jump'),
-      ];
+      const buttons = [...document.querySelectorAll<HTMLButtonElement>('.move-list .move-jump')];
       expect(buttons.map((button) => button.textContent)).toEqual(['a1', 'b1']);
       buttons[0]!.click();
       expect(document.querySelectorAll('[data-piece-square]')).toHaveLength(count + 1);
@@ -490,16 +606,18 @@ describe('hidden Gomoku live room', () => {
     expect(sentMoves()).toEqual([]);
   });
 
-  it('shows an overline in full and preserves every edge hit target when flipped', () => {
+  it('shows an overline in full and preserves every edge hit target', () => {
     let state = createGomokuRoomState(ROOM);
     for (const to of ['a1', 'a2', 'b1', 'b2', 'c1', 'c2', 'e1', 'e2', 'f1', 'f2', 'd1'])
       state = applyGomokuRoomMove(state, { to } as GomokuMove);
     const view = getGomokuPlayerView(state, 'black');
     expect(view.winningLine).toEqual(['a1', 'b1', 'c1', 'd1', 'e1', 'f1']);
-    document.body.innerHTML = gomokuBoardSvg(view, false, true);
+    document.body.innerHTML = gomokuBoardSvg(view, false);
     expect(document.querySelectorAll('.gomoku-winning')).toHaveLength(6);
     expect(document.querySelectorAll('[data-square]')).toHaveLength(225);
-    expect(document.querySelector('[data-square="o15"] .gomoku-hit')?.getAttribute('x')).toBe('16');
+    expect(document.querySelector('[data-square="o15"] .gomoku-hit')?.getAttribute('x')).toBe(
+      '464',
+    );
   });
 });
 
