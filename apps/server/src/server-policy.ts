@@ -508,6 +508,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized.startsWith('/atomic-xiangqi/game/') ||
     normalized.startsWith('/crazyhouse-xiangqi/game/') ||
     normalized.startsWith('/xiangqi-mahjong/game/') ||
+    normalized.startsWith('/gomoku/game/') ||
     normalized.startsWith('/game/') ||
     // Study browse index (/study) + persisted study chapters. The study pages
     // serves the review SPA shell + mounts the ceval engine, so it is also a

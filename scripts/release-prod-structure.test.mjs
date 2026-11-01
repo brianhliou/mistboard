@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
+import { tsImport } from 'tsx/esm/api';
 
 // release-prod.mjs runs its release from a top-level try block, and the
 // functions it calls are hoisted, so they are reachable from that block
@@ -70,4 +72,49 @@ test('release-prod still waits for the revision and smokes after a red CI run', 
   assert.match(handler, /if \(!release\.pushCompleted \|\| !error\?\.ciRed\) throw error;/);
   assert.match(handler, /ciRed = error;/);
   assert.ok(source.indexOf('announceNews(') > rethrow, 'News and IndexNow stay behind a green CI');
+});
+
+// Exercise the actual release smoke dispatcher without pushing, fetching or
+// launching browsers. Flip only a copy of the real launch registry.
+test('Gomoku browser smoke runs only for a public spec in web/full releases', async () => {
+  const { GAME_SPECS, publicSpecPredicate } = await tsImport(
+    '../packages/game/src/game-specs.ts',
+    import.meta.url,
+  );
+  const source = readFileSync(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const start = source.indexOf('async function runSmoke(');
+  const end = source.indexOf('async function runParallelSmokes(', start);
+  assert.ok(start > 0 && end > start);
+  for (const publicSurface of ['hidden', 'beta', 'casual', 'rated']) {
+    const specs = GAME_SPECS.map((spec) =>
+      spec.id === 'gomoku' ? { ...spec, publicSurface } : spec,
+    );
+    for (const tier of ['none', 'lite', 'web', 'full']) {
+      const calls = [];
+      const runSmoke = vm.runInNewContext(
+        `(${source.slice(start, end).replaceAll('import.meta.url', JSON.stringify(import.meta.url))}\n)`,
+        {
+          console: { log() {} },
+          release: {},
+          workdir: '/active-release',
+          releaseRoot: '/release',
+          path,
+          resolveSmokeTier: () => tier,
+          baseArgs: () => ['--base', 'https://example.test'],
+          npmCommand: (script, args) => [script, ...args],
+          runTimed: (label, command) => calls.push({ label, command }),
+          runParallelSmokes: async () => {},
+          tsImport: async (file) => {
+            assert.equal(file, '/active-release/packages/game/src/game-specs.ts');
+            return { isPublicGameSpec: publicSpecPredicate(specs) };
+          },
+        },
+      );
+      await runSmoke({ deployRequired: true, headRevision: 'revision' });
+      const gomoku = calls.filter(({ command }) => command[0] === 'prod:smoke:gomoku');
+      const expected = publicSurface !== 'hidden' && ['web', 'full'].includes(tier);
+      assert.equal(gomoku.length, expected ? 1 : 0, `${publicSurface} / ${tier}`);
+      if (expected) assert.equal(gomoku[0].command[2], 'https://example.test');
+    }
+  }
 });

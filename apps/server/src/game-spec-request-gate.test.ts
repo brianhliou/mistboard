@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { Readable } from 'node:stream';
 import test from 'node:test';
 import { GAME_SPECS, RETIRED_GAME_SPEC_IDS } from '@mistboard/game';
+import { gomokuEnabled } from './feature-flags.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
+import { gomokuRooms } from './gomoku-registration.js';
+import type { HttpApiContext } from './routes/lib.js';
+import { tryHandle } from './routes/rooms.js';
 // Importing register-tenants registers every tenant (module-scope side effect
 // of each *-registration.ts module), so the registry-driven test below sees
 // the same tenant set the server boots with.
@@ -15,6 +21,109 @@ test('game spec gate passes current chess requests', () => {
   // The WS dispatch passes url.searchParams.get('gameSpecId'), so an absent
   // query param arrives as null: treat it like undefined.
   assert.deepEqual(gateGameSpecRequest({ gameSpecId: null }), { type: 'pass' });
+});
+
+test('the chess-stack gate still rejects Gomoku; only its registered tenant serves it', () => {
+  for (const enabled of [false, true]) {
+    withFlag('MISTBOARD_GOMOKU_ENABLED', enabled, () => {
+      assert.equal(gomokuEnabled(), enabled);
+      assert.equal(
+        registeredVariantTenants().some((tenant) => tenant.gameSpecId === 'gomoku'),
+        true,
+      );
+      for (const input of [{ gameSpecId: 'gomoku' }, { variant: 'gomoku' }]) {
+        assert.deepEqual(gateGameSpecRequest(input), {
+          type: 'reject',
+          error: enabled ? 'gomoku_not_integrated' : 'gomoku_disabled',
+          httpStatus: enabled ? 501 : 404,
+          wsCloseReason: enabled ? 'game spec not integrated' : 'game spec disabled',
+        });
+      }
+    });
+  }
+});
+
+test('POST /api/rooms admits only flag-enabled Gomoku PvP and PvE; legacy selectors stay closed', async () => {
+  const name = 'MISTBOARD_GOMOKU_ENABLED';
+  const before = process.env[name];
+  try {
+    for (const value of [undefined, 'false', '1', 'true']) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+      assert.equal(gomokuEnabled(), value === 'true');
+      for (const mode of ['pvp', 'pve']) {
+        for (const selector of [{ gameSpecId: 'gomoku' }, { variant: 'gomoku' }]) {
+          const request = Readable.from([
+            Buffer.from(JSON.stringify({ ...selector, mode })),
+          ]) as unknown as IncomingMessage;
+          request.method = 'POST';
+          request.headers = {};
+          let status = 0;
+          let payload = '';
+          const response = {
+            writeHead(code: number) {
+              status = code;
+            },
+            end(body: string) {
+              payload = body;
+            },
+          } as unknown as ServerResponse;
+          // No chess room factory: a fallback into chess must fail.
+          assert.equal(
+            await tryHandle(
+              {
+                databaseRequired: false,
+                refusesCreate: () => false,
+                drainDeadlineMs: () => null,
+              } as unknown as HttpApiContext,
+              request,
+              response,
+              '/api/rooms',
+            ),
+            true,
+          );
+          const enabled = value === 'true';
+          if (enabled && 'gameSpecId' in selector && mode === 'pve') {
+            // The bot runs in the human's browser (#768 build 3); the room still
+            // opens unrated through the same gate.
+            assert.equal(status, 201);
+            const data = JSON.parse(payload);
+            assert.match(data.roomId, /^gmk_/);
+            assert.equal(data.mode, 'pve');
+            assert.equal(data.gameSpecId, 'gomoku');
+            assert.equal(data.rated, false);
+          } else if (enabled && 'gameSpecId' in selector && mode === 'pvp') {
+            assert.equal(status, 201);
+            const data = JSON.parse(payload);
+            assert.match(data.roomId, /^gmk_/);
+            // Every field read by room navigation and the setup/lobby handoff.
+            assert.deepEqual(data, {
+              roomId: data.roomId,
+              url: `/room/${data.roomId}`,
+              mode: 'pvp',
+              gameSpecId: 'gomoku',
+              rated: false,
+              region: 'global',
+              timeControl: { initialMs: 300_000, incrementMs: 0 },
+            });
+          } else {
+            assert.equal(status, enabled ? 501 : 404);
+            assert.deepEqual(JSON.parse(payload), {
+              error: !enabled
+                ? 'gomoku_disabled'
+                : 'gameSpecId' in selector
+                  ? 'gomoku_unsupported_surface'
+                  : 'gomoku_not_integrated',
+            });
+          }
+        }
+      }
+    }
+  } finally {
+    gomokuRooms.clear();
+    if (before === undefined) delete process.env[name];
+    else process.env[name] = before;
+  }
 });
 
 test('game spec gate leaves free-string variants to parseVariantId', () => {

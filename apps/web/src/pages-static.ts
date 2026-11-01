@@ -10,8 +10,11 @@ import {
   PIKAFISH_REPO_URL,
   PIKAFISH_SITE_URL,
   pikafishWeightsLicenseUrl,
+  RAPFI_BUILD_URL,
+  RAPFI_NETWORKS_LICENSE_URL,
+  RAPFI_REPO_URL,
 } from './engine-credits.js';
-import { jqeEnabled } from './feature-flags.js';
+import { gomokuEnabled, jqeEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { applyDocumentLocale, currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { isLikelySignedIn } from './signed-in-state.js';
@@ -681,6 +684,14 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     ),
     linkLine(t('source.katago', {}, locale), 'https://github.com/lightvector/KataGo'),
     linkLine(t('source.dandelion', {}, locale), 'https://github.com/lxsgx23/Dandelion-Chess'),
+    // Rapfi's code, networks and reproducible browser build follow the Gomoku gate.
+    ...(gomokuEnabled()
+      ? [
+          linkLine(t('source.rapfi', {}, locale), RAPFI_REPO_URL),
+          linkLine(t('source.rapfiNetworks', {}, locale), RAPFI_NETWORKS_LICENSE_URL),
+          linkLine(t('source.rapfiBuild', {}, locale), RAPFI_BUILD_URL),
+        ]
+      : []),
     // The tablebase in the explorer pane and practice grading read chessdb.cn
     // (through our server); credited with a link like the engines.
     linkLine(t('source.chessdb', {}, locale), 'https://www.chessdb.cn/'),

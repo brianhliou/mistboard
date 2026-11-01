@@ -204,6 +204,10 @@ export const ZH_HANS_CONTENT = {
   'source.katagomo':
     'KataGomo，作者 hzyhhzy：斗兽棋版 KataGo（AnimalChess2025 分支），本站最强的斗兽棋机器人，MIT；经作者许可使用。',
   'source.katago': 'KataGo，作者 lightvector：KataGomo 所基于的引擎，MIT。',
+  'source.rapfi': 'Rapfi，作者 dhbloo 及贡献者：在浏览器中运行的五个五子棋机器人等级，GPL-3.0。',
+  'source.rapfiNetworks': 'Rapfi 项目提供的 Rapfi 神经网络，CC0 1.0。',
+  'source.rapfiBuild':
+    'rapfi-wasm，作者 Brian H. Liou：本站使用的可复现 Rapfi 浏览器构建，GPL-3.0。',
   'source.dandelion':
     'Dandelion 4，作者 Kouza（lxsgx23）：本站最强斗兽棋机器人的神经网络来源，从其发布页获取，不在本站转存。',
   'source.chessdb': '象棋云库（chessdb.cn）：象棋分析棋盘和练习中的残局精确结果。',
@@ -532,6 +536,10 @@ export const ZH_HANS_CONTENT = {
   'thanks.dandelionAuthor': 'Dandelion 4 神经网络，作者 Kouza',
   'thanks.katagoBody':
     '本站最强的斗兽棋机器人：hzyhhzy 的斗兽棋版 KataGo，使用 Dandelion 4 神经网络，经作者许可在本站运行。',
+  'thanks.rapfiAuthors': 'dhbloo 和 Rapfi 的贡献者',
+  'thanks.rapfiBuildAuthor': '浏览器构建：Brian H. Liou',
+  'thanks.rapfiBody':
+    '在浏览器中运行全部五个五子棋机器人等级，使用 Rapfi 项目提供的神经网络和 rapfi-wasm 构建。',
   'thanks.communityBotBy': '来自社区开发者的机器人。',
   'thanks.statGames': 'Mistboard 上的对局',
   'thanks.statRating': '{variant}等级分',

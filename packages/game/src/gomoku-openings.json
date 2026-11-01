@@ -1,0 +1,1761 @@
+{
+  "screening": {
+    "engineCommit": "1387d11312",
+    "networksCommit": "7eeb19b",
+    "dataSha256": "f61d31b4d98fc53fb43a31a4f0b4357a8b64053bb5762a0967250b873cc9a57e",
+    "rule": "freestyle",
+    "boardSize": 15,
+    "nodes": 1000000,
+    "prefilterNodes": 10000,
+    "maxAbsScore": 40,
+    "minWinrate": 0.45,
+    "maxWinrate": 0.55,
+    "timeoutMs": 60000,
+    "screened": 2204,
+    "deepScreened": 560,
+    "accepted": 50,
+    "scorePerspective": "side-to-move",
+    "hashPolicy": "YXHASHCLEAR before every search",
+    "prefilterMaxAbsScore": 170
+  },
+  "openings": [
+    {
+      "id": "gmk-001",
+      "classicId": "indirect-1",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 2,
+        "winrate": 0.5025,
+        "finalScore": -6,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-002",
+      "classicId": "indirect-1",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        }
+      ],
+      "turn": "black",
+      "screening": {
+        "score": 4,
+        "winrate": 0.505,
+        "finalScore": -7,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-003",
+      "classicId": "direct-7",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "f8",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -8,
+        "winrate": 0.490001,
+        "finalScore": -8,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-004",
+      "classicId": "direct-8",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "f8",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -26,
+        "winrate": 0.467546,
+        "finalScore": -3,
+        "nodes": 1001000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-005",
+      "classicId": "direct-5",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "f9",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -27,
+        "winrate": 0.466301,
+        "finalScore": -27,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-006",
+      "classicId": "direct-3",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -12,
+        "winrate": 0.485004,
+        "finalScore": -12,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-007",
+      "classicId": "indirect-12",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 11,
+        "winrate": 0.513747,
+        "finalScore": 31,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-008",
+      "classicId": "indirect-9",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "black"
+        },
+        {
+          "square": "g6",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -31,
+        "winrate": 0.461327,
+        "finalScore": -31,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-009",
+      "classicId": "direct-12",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 33,
+        "winrate": 0.541157,
+        "finalScore": 33,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-010",
+      "classicId": "indirect-12",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -2,
+        "winrate": 0.4975,
+        "finalScore": 21,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-011",
+      "classicId": "direct-5",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 36,
+        "winrate": 0.544879,
+        "finalScore": 16,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-012",
+      "classicId": "direct-13",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 21,
+        "winrate": 0.526226,
+        "finalScore": 21,
+        "nodes": 1001000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-013",
+      "classicId": "indirect-11",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -15,
+        "winrate": 0.481259,
+        "finalScore": -15,
+        "nodes": 1001000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-014",
+      "classicId": "indirect-11",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "h7",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -27,
+        "winrate": 0.466301,
+        "finalScore": -27,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-015",
+      "classicId": "direct-3",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -26,
+        "winrate": 0.467546,
+        "finalScore": -26,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-016",
+      "classicId": "direct-7",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i9",
+          "color": "black"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -20,
+        "winrate": 0.475021,
+        "finalScore": 0,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-017",
+      "classicId": "indirect-9",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "black"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -10,
+        "winrate": 0.487503,
+        "finalScore": -5,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-018",
+      "classicId": "indirect-11",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -4,
+        "winrate": 0.495,
+        "finalScore": -24,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-019",
+      "classicId": "direct-2",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -17,
+        "winrate": 0.478763,
+        "finalScore": 3,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-020",
+      "classicId": "indirect-5",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 28,
+        "winrate": 0.534943,
+        "finalScore": 28,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-021",
+      "classicId": "direct-3",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "h10",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": -13,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-022",
+      "classicId": "indirect-4",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "h6",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 11,
+        "winrate": 0.513747,
+        "finalScore": 11,
+        "nodes": 1000000,
+        "depth": 27,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-023",
+      "classicId": "indirect-6",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 4,
+        "winrate": 0.505,
+        "finalScore": 4,
+        "nodes": 1000000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-024",
+      "classicId": "indirect-8",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "i10",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 1,
+        "winrate": 0.50125,
+        "finalScore": 1,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-025",
+      "classicId": "direct-2",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 20,
+        "winrate": 0.524979,
+        "finalScore": 20,
+        "nodes": 1000000,
+        "depth": 28,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-026",
+      "classicId": "indirect-5",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "j6",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 0,
+        "winrate": 0.5,
+        "finalScore": -20,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-027",
+      "classicId": "indirect-9",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "black"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 19,
+        "winrate": 0.523732,
+        "finalScore": 19,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-028",
+      "classicId": "indirect-12",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j9",
+          "color": "black"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 22,
+        "winrate": 0.527472,
+        "finalScore": 2,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-029",
+      "classicId": "direct-6",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "j9",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 10,
+        "winrate": 0.512497,
+        "finalScore": 30,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-030",
+      "classicId": "direct-11",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        },
+        {
+          "square": "f6",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -10,
+        "winrate": 0.487503,
+        "finalScore": -30,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-031",
+      "classicId": "indirect-9",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "f7",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -13,
+        "winrate": 0.483756,
+        "finalScore": 27,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-032",
+      "classicId": "indirect-10",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j7",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "f7",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 3,
+        "winrate": 0.50375,
+        "finalScore": 3,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-033",
+      "classicId": "direct-5",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i7",
+          "color": "black"
+        },
+        {
+          "square": "g9",
+          "color": "white"
+        },
+        {
+          "square": "f7",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 5,
+        "winrate": 0.50625,
+        "finalScore": -35,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-034",
+      "classicId": "indirect-9",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "black"
+        },
+        {
+          "square": "h6",
+          "color": "white"
+        },
+        {
+          "square": "f7",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 10,
+        "winrate": 0.512497,
+        "finalScore": 33,
+        "nodes": 1000000,
+        "depth": 21,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-035",
+      "classicId": "indirect-11",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "i7",
+          "color": "white"
+        },
+        {
+          "square": "f7",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -26,
+        "winrate": 0.467546,
+        "finalScore": -26,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-036",
+      "classicId": "direct-8",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "f7",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -22,
+        "winrate": 0.472528,
+        "finalScore": -2,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-037",
+      "classicId": "indirect-11",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "i8",
+          "color": "white"
+        },
+        {
+          "square": "f7",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 20,
+        "winrate": 0.524979,
+        "finalScore": -21,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-038",
+      "classicId": "direct-8",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "f7",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 40,
+        "winrate": 0.549834,
+        "finalScore": 40,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-039",
+      "classicId": "direct-8",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i10",
+          "color": "black"
+        },
+        {
+          "square": "j8",
+          "color": "white"
+        },
+        {
+          "square": "f7",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 40,
+        "winrate": 0.549834,
+        "finalScore": 40,
+        "nodes": 1001000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-040",
+      "classicId": "direct-11",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j8",
+          "color": "black"
+        },
+        {
+          "square": "f10",
+          "color": "white"
+        },
+        {
+          "square": "f8",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -11,
+        "winrate": 0.486253,
+        "finalScore": -31,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-041",
+      "classicId": "direct-13",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "f8",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -39,
+        "winrate": 0.451404,
+        "finalScore": -39,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-042",
+      "classicId": "indirect-13",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j10",
+          "color": "black"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        },
+        {
+          "square": "f8",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -22,
+        "winrate": 0.472528,
+        "finalScore": 18,
+        "nodes": 1001000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-043",
+      "classicId": "direct-4",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "black"
+        },
+        {
+          "square": "j10",
+          "color": "white"
+        },
+        {
+          "square": "f8",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -35,
+        "winrate": 0.456361,
+        "finalScore": -35,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-044",
+      "classicId": "indirect-5",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "g8",
+          "color": "white"
+        },
+        {
+          "square": "f9",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -9,
+        "winrate": 0.488752,
+        "finalScore": -9,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-045",
+      "classicId": "indirect-6",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "i6",
+          "color": "black"
+        },
+        {
+          "square": "g10",
+          "color": "white"
+        },
+        {
+          "square": "f9",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 38,
+        "winrate": 0.547358,
+        "finalScore": 38,
+        "nodes": 1000000,
+        "depth": 26,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-046",
+      "classicId": "indirect-5",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "h7",
+          "color": "black"
+        },
+        {
+          "square": "h10",
+          "color": "white"
+        },
+        {
+          "square": "f9",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -38,
+        "winrate": 0.452642,
+        "finalScore": -18,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-047",
+      "classicId": "direct-1",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "h6",
+          "color": "black"
+        },
+        {
+          "square": "i6",
+          "color": "white"
+        },
+        {
+          "square": "f9",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -19,
+        "winrate": 0.476268,
+        "finalScore": -39,
+        "nodes": 1000000,
+        "depth": 24,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-048",
+      "classicId": "indirect-9",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "black"
+        },
+        {
+          "square": "j7",
+          "color": "white"
+        },
+        {
+          "square": "f9",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": 30,
+        "winrate": 0.53743,
+        "finalScore": 30,
+        "nodes": 1000000,
+        "depth": 23,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-049",
+      "classicId": "direct-6",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "h9",
+          "color": "white"
+        },
+        {
+          "square": "i8",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "f10",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -3,
+        "winrate": 0.49625,
+        "finalScore": -23,
+        "nodes": 1000000,
+        "depth": 25,
+        "forcedWin": false
+      }
+    },
+    {
+      "id": "gmk-050",
+      "classicId": "indirect-9",
+      "stones": [
+        {
+          "square": "h8",
+          "color": "black"
+        },
+        {
+          "square": "i9",
+          "color": "white"
+        },
+        {
+          "square": "j6",
+          "color": "black"
+        },
+        {
+          "square": "f7",
+          "color": "white"
+        },
+        {
+          "square": "f10",
+          "color": "black"
+        }
+      ],
+      "turn": "white",
+      "screening": {
+        "score": -30,
+        "winrate": 0.46257,
+        "finalScore": 4,
+        "nodes": 1000000,
+        "depth": 22,
+        "forcedWin": false
+      }
+    }
+  ]
+}

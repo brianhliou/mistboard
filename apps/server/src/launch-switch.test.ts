@@ -56,7 +56,7 @@ const XMJ_POOL = 'xiangqi_mahjong';
  *  of one public predicate. */
 function xmjListedUnder(isPublic: (id: GameSpecId) => boolean): Record<string, boolean> {
   const lists = deriveLaunchLists(isPublic);
-  const offPublic = offPublicGameSpecIds(lists.allowlisted);
+  const offPublic = offPublicGameSpecIds(isPublic);
   return {
     'on the variant shelf (CANONICAL_VARIANT_ORDER)': lists.canonicalVariantOrder.includes(XMJ),
     'not on the play allowlist': !lists.allowlisted.includes(XMJ),
@@ -141,7 +141,7 @@ test('every server list agrees with the launch switch as it stands', () => {
   assert.deepEqual(ALLOWLISTED_PLAYTEST_SPEC_IDS, lists.allowlisted);
   assert.deepEqual(ALLOWLISTED_GAME_SPEC_IDS, lists.allowlisted);
   assert.deepEqual(PRIVATE_RATING_POOLS, privateRatingPoolsFor(lists.allowlisted));
-  assert.deepEqual(OFF_PUBLIC_GAME_SPEC_IDS, offPublicGameSpecIds(lists.allowlisted));
+  assert.deepEqual(OFF_PUBLIC_GAME_SPEC_IDS, offPublicGameSpecIds(isPublicGameSpec));
 
   // Each playtest spec is on exactly one side: allowlisted while hidden,
   // public once launched; its rules page is indexed exactly when public.
@@ -158,6 +158,13 @@ test('every server list agrees with the launch switch as it stands', () => {
 
   assert.deepEqual(xmjListedNow(), everyValue(xmjListedNow(), isPublicGameSpec(XMJ)));
   assert.deepEqual(xmjListedNow(), xmjListedUnder(isPublicGameSpec));
+});
+
+test('Gomoku rules stay unindexed while hidden and follow the launch switch', () => {
+  assert.equal(isPublicGameSpec('gomoku'), false);
+  assert.equal(articleIsIndexable('gomoku'), false);
+  assert.ok(playtestRulesSlugs(isPublicGameSpec).includes('gomoku'));
+  assert.ok(!playtestRulesSlugs(publicSpecPredicate(withSwitchOn('gomoku'))).includes('gomoku'));
 });
 
 // config/product-profile.json is the deploy catalog (dev flags, seed fixtures),

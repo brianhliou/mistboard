@@ -40,6 +40,9 @@ export const GAME_EXPORT_FORMATS = {
   'crazyhouse-xiangqi': ['json'],
   jungle: ['json'],
   'jungle-flip': ['pgn', 'json'],
+  // JSON preserves the dealt opening separately from the played placements.
+  // No PGN: Gomoku does not use chess movetext.
+  gomoku: ['json'],
 } as const satisfies Readonly<Record<string, readonly GameExportFormat[]>>;
 
 export type GameExportVariant = keyof typeof GAME_EXPORT_FORMATS;

@@ -7,6 +7,11 @@
 import type { PlayI18nKey } from './play.js';
 
 export const ZH_HANS_PLAY = {
+  'live.gomokuBotThinking': 'Rapfi 正在思考…',
+  'live.gomokuBotFailed': 'Rapfi 无法加载或找到落子位置，请重试以继续。',
+  'live.gomokuBotPaused': 'Rapfi 已暂停。',
+  'live.gomokuBotRetry': '继续 Rapfi',
+  'live.gomokuBotSource': '源代码',
   'game.saveGame': '收藏对局',
   'game.savedGame': '已收藏',
   'game.signInToSave': '登录后收藏',
@@ -116,6 +121,11 @@ export const ZH_HANS_PLAY = {
   'variant.miniXiangqi.name': '迷你象棋',
   'variant.darkMiniXiangqi.name': '迷雾迷你象棋',
   'variant.xiangqi.name': '象棋',
+  'variant.gomoku.name': '五子棋',
+  'live.gomokuBoard': '五子棋棋盘',
+  'live.gomokuPlace': '点击空交叉点落子。',
+  'result.five': '五子连线',
+  'result.boardFull': '棋盘已满',
   'variant.darkXiangqi.name': '迷雾象棋',
   'variant.fortressXiangqi.name': '堡垒象棋',
   'variant.duckXiangqi.name': '鸭子象棋',
