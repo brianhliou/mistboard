@@ -1,6 +1,5 @@
 import type { JieqiDeal } from '@mistboard/game';
 import type { Article, ArticleBlock } from '../types.js';
-import { evalCompareChartSvg, moveLabel } from '../eval-compare-chart.js';
 import matchJson from './ab-jchess-vs-jqe-match.json' with { type: 'json' };
 
 // DRAFT for Brian's read. AB-JChess-20261031 took the jieqi title back from jqe
@@ -180,48 +179,9 @@ function replay(key: string, caption: string): ArticleBlock {
     path: `/embed/study/${AB_JQE_STUDY.id}/${chapter}?ply=${g.dispute.ply - 1}`,
     title: `${NAME(g.red)} vs ${NAME(g.black)}, move ${g.dispute.move}`,
     caption,
-    // Width-bound at the 702px column, as the AB-JChess post's embeds.
-    aspect: [702, 780],
-  };
-}
-
-/**
- * Under each game, both engines' read of it from the match itself, no new search:
- * every position's score from the engine that just moved and the one to move, as
- * AB-JChess's chance. The dot marks the disputed move the board opens on.
- */
-function gameChart(key: string, heading: string): ArticleBlock {
-  const g = game(key);
-  const { abj, jqe } = g.series;
-  const at = g.dispute.ply;
-  const n = abj.length;
-  const high = (abj[at]! + jqe[at]!) / 2 > 0.5;
-  return {
-    kind: 'raw-svg',
-    className: 'article-figure-eval-compare',
-    zoomable: true,
-    svg: evalCompareChartSvg({
-      id: `ab-jqe-${key.replace(':', '-')}`,
-      heading,
-      ariaLabel: `${heading}: AB-JChess's chance to win, move by move, as each engine scored it during the game.`,
-      nameA: 'AB-JChess',
-      nameB: 'jqe',
-      a: abj,
-      b: jqe,
-      xLabel: 'Move',
-      axis: 'move',
-      yTicks: [0.5, 1],
-      lineLabels: { at: Math.round(n * 0.12), a: 'AB-JChess thinks', b: 'jqe thinks' },
-      callouts: [
-        {
-          ply: at,
-          on: 'a',
-          lines: [`Move ${moveLabel(at)}`, 'the disputed move'],
-          side: at < n / 2 ? 'right' : 'left',
-          level: high ? 0.25 : 0.85,
-        },
-      ],
-    }),
+    // A placeholder until the card reports its height: the 702px column's card
+    // plus the ~98px win-chance graph under it (study_chapters.score_series).
+    aspect: [702, 878],
   };
 }
 
@@ -353,32 +313,28 @@ export const abJchessVsJqeArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Each game below opens just before one of the disputed moves. The blue arrow is AB-JChess\'s pick and the orange arrow is jqe\'s. Step on to the move to see the other engine\'s line beside it, with both engines\' chances. The marks on moves come from the stronger engine: AB-JChess searched every position for 15 seconds after the match, and its preferred move is the green line beside each marked move. A face-down piece taken before it turned over stays face-down here, as it would for anyone watching.',
+          text: 'Each game below opens just before one of the disputed moves. The blue arrow is AB-JChess\'s pick and the orange arrow is jqe\'s. Step on to the move to see the other engine\'s line beside it, with both engines\' chances. The graph under each board is AB-JChess\'s chance to win, move by move, as each engine scored it during the game; tap it to jump to that move. The marks on moves come from the stronger engine: AB-JChess searched every position for 15 seconds after the match, and its preferred move is the green line beside each marked move. A face-down piece taken before it turned over stays face-down here, as it would for anyone watching.',
         },
         { kind: 'sub-heading', text: 'AB-JChess sees a chariot check coming' },
         replay(
           G1.key,
           `AB-JChess has Red and plays its chariot from ${to(G1.dispute.played)} on move ${G1.dispute.move}. jqe wanted ${to(G1.dispute.alt)}. In both engines' lines after ${G1.dispute.alt.slice(2)}, Black's chariot checks from i2, drives Red's general to f1 and takes the soldier on e3, and AB-JChess drops Red from ${C1.abj}% to ${C1.abjAlt}%. After ${G1.dispute.played.slice(2)}, Black's chariot goes to d1 instead, in the game and in both lines. Given ${D.searchMs / 1000} seconds, jqe scores the two moves the same, ${C1.jqe}%; AB-JChess mates on move ${G1.moveCount}.`,
         ),
-        gameChart(G1.key, `AB-JChess's chance, as each engine saw it`),
         { kind: 'sub-heading', text: `AB-JChess gives Red ${C2.abj}%, jqe gives it ${C2.jqe}%` },
         replay(
           G2.key,
           `AB-JChess has Red. On move ${G2.dispute.move} it plays its elephant from ${to(G2.dispute.played)}, where jqe wanted the advisor from ${to(G2.dispute.alt)}. The bigger difference is how each engine reads the position: after the elephant move AB-JChess gives Red ${C2.abj}% and jqe gives it ${C2.jqe}%. Red wins: AB-JChess mates on move ${G2.moveCount}.`,
         ),
-        gameChart(G2.key, `AB-JChess's chance, as each engine saw it`),
         { kind: 'sub-heading', text: `jqe comes round, given ${D.searchMs / 1000} seconds` },
         replay(
           G3.key,
           `jqe has Red. On move ${G3.dispute.move} AB-JChess pushes a soldier, ${to(G3.dispute.played)}. At a glance jqe wanted the chariot ${to(G3.dispute.alt)} instead. Given ${D.searchMs / 1000} seconds it agrees with AB-JChess's move and still gives Red ${own(G3, 0)}%. Both engines read the game as close for another ${SEEN3.abj - G3.dispute.move} moves. AB-JChess's chance for Black passes 70% on move ${SEEN3.abj} and stays there; jqe's does on move ${SEEN3.jqe}. AB-JChess mates on move ${G3.moveCount}.`,
         ),
-        gameChart(G3.key, `AB-JChess's chance, as each engine saw it`),
         { kind: 'sub-heading', text: 'A dispute AB-JChess lost' },
         replay(
           G4.key,
           `jqe has Red and plays its cannon from ${to(G4.dispute.played)} on move ${G4.dispute.move}. AB-JChess wanted the chariot from ${to(G4.dispute.alt)}, and still did with ${D.searchMs / 1000} seconds: ${C4.abjAlt}% for Red against ${C4.abj}%. jqe scored its own move ${C4.jqe}%. AB-JChess's general steps to f10 at once, its own score slips from ${own(G4, 0)}% to ${own(G4, 1)}% over its next two moves, and jqe mates on move ${G4.moveCount}.`,
         ),
-        gameChart(G4.key, `AB-JChess's chance, as each engine saw it`),
       ],
     },
     {
