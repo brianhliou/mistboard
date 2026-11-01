@@ -604,7 +604,7 @@ describe('Rapfi request lifecycle', () => {
     'rejects illegal or missing engine output: %s',
     async (line) => {
       const transport = controlled();
-      const pending = transport.engine.chooseMove(position([[7, 7]], []), 5);
+      const pending = transport.engine.chooseMove(position([[7, 7]], [[0, 0]]), 5);
       transport.receive({ type: 'ready' });
       transport.receive({ type: 'line', line });
       transport.receive({ type: 'done', elapsedMs: 1 });

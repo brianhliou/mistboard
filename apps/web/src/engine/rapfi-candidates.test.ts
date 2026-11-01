@@ -328,7 +328,7 @@ describe('Rapfi candidate commands and selection', () => {
       'INFO max_node 1000',
       'INFO timeout_turn 1500',
       'INFO show_detail 2',
-      'YXBOARD\n3,8,2\n8,3,1\nDONE',
+      'YXBOARD\n8,3,1\n3,8,2\nDONE',
       'YXNBEST 3',
     ]);
     expect(
@@ -622,4 +622,76 @@ describe('Rapfi candidate lifecycle', () => {
       }
     },
   );
+});
+
+/** Rapfi's getPosition (command/gomocup.cpp) places the listed stones in order, alternating
+ * sides with a pass between two of the same side, then searches for whoever comes after the
+ * last one: field 1 alone does not make a side the one to move. */
+const rapfiSearchesFieldOne = (lines: readonly string[]) => {
+  const stones = lines.filter((line) => /^\d+,\d+,[12]$/.test(line));
+  return stones.length === 0 || stones.at(-1)!.endsWith(',2');
+};
+
+describe('Rapfi board order', () => {
+  // 11-01: board-index order put the side to move last whenever it held the highest square,
+  // so Rapfi searched for the opponent on about half of all positions.
+  const positions: [string, RapfiPosition][] = [
+    [
+      'Black to move, Black holds o15',
+      {
+        turn: 1,
+        stones: [
+          { x: 0, y: 0, player: 2 },
+          { x: 14, y: 14, player: 1 },
+        ],
+      },
+    ],
+    [
+      'White to move, White holds o15',
+      {
+        turn: 2,
+        stones: [
+          { x: 7, y: 7, player: 1 },
+          { x: 8, y: 8, player: 1 },
+          { x: 14, y: 14, player: 2 },
+        ],
+      },
+    ],
+    [
+      'White to move, Black holds o15',
+      {
+        turn: 2,
+        stones: [
+          { x: 7, y: 7, player: 2 },
+          { x: 8, y: 8, player: 1 },
+          { x: 14, y: 14, player: 1 },
+        ],
+      },
+    ],
+  ];
+
+  it.each(positions)('searches for the side to move: %s', (_name, position) => {
+    for (const candidateCount of [undefined, 1]) {
+      const { lines } = rapfi.rapfiCommands(position, { nodes: 1, timeMs: 1, candidateCount });
+      const board = lines.flatMap((line) => line.split('\n'));
+      expect(rapfiSearchesFieldOne(board)).toBe(true);
+    }
+  });
+
+  it.each(positions)(
+    'lists every stone once and alternates without passes: %s',
+    (_name, position) => {
+      const lines = shared.rapfiBoardLines(position);
+      expect([...lines].sort()).toEqual(
+        position.stones.map((s) => `${s.x},${s.y},${s.player === position.turn ? 1 : 2}`).sort(),
+      );
+      expect(lines.every((line, i) => i === 0 || line.at(-1) !== lines[i - 1]!.at(-1))).toBe(true);
+    },
+  );
+
+  it('refuses a board where only the side to move has stones', () => {
+    expect(() => shared.rapfiBoardLines({ turn: 1, stones: [{ x: 7, y: 7, player: 1 }] })).toThrow(
+      /opponent/,
+    );
+  });
 });

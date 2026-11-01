@@ -268,7 +268,7 @@ describe('Rapfi browser PvE', () => {
     refresh(options, position(3), 'black');
     expect(workers).toHaveLength(1);
     const search = workers[0]?.messages.at(-1) as { commands: string[] };
-    expect(search.commands).toContain('YXBOARD\n0,0,2\n1,0,2\n0,1,1\nDONE');
+    expect(search.commands).toContain('YXBOARD\n0,0,2\n0,1,1\n1,0,2\nDONE');
   });
 
   it('derives distinct seeds per absolute ply and repeats the same seed on retry', async () => {

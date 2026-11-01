@@ -131,6 +131,21 @@ test('Gomoku sweep returns sequential N+1 recorded scores in Black POV', async (
   assert.equal(engine.commands.at(-1), 'END');
 });
 
+test('Gomoku sweep lists each board so Rapfi searches for the side to move', async () => {
+  // 11-01: Rapfi searches for whoever comes after the LAST listed stone (command/gomocup.cpp
+  // getPosition). Board-index order put Black's o15 last at Black's turn: it searched for White.
+  const { analyzeGomokuPostgame } = await api();
+  const engine = fakeEngine([recorded]);
+  await analyzeGomokuPostgame([{ to: 'o15' }, { to: 'a1' }], undefined, engine);
+  const boards: string[][] = [];
+  for (const line of engine.commands) {
+    if (line === 'YXBOARD') boards.push([]);
+    else if (line === 'DONE') boards.at(-1)?.push(line);
+    else if (boards.length && boards.at(-1)!.at(-1) !== 'DONE') boards.at(-1)!.push(line);
+  }
+  assert.deepEqual(boards, [['DONE'], ['14,14,2', 'DONE'], ['14,14,1', '0,0,2', 'DONE']]);
+});
+
 test('Gomoku sweep uses the recorded opening turn, including odd dealt stones', async () => {
   const { analyzeGomokuPostgame } = await api();
   const opening = GOMOKU_OPENINGS.find((o) => o.stones.length === 3)!;

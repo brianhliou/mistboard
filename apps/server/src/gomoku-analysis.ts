@@ -12,6 +12,7 @@ import {
   type GomokuState,
   parseRapfiOutput,
   type RapfiPoint,
+  rapfiBoardLines,
 } from '@mistboard/game';
 import { publicRepoRoot } from './engine-paths.js';
 import {
@@ -190,9 +191,12 @@ class RapfiAnalysisSession {
   async evaluate(state: GomokuState): Promise<Omit<SweepPlyEval, 'ply'>> {
     if (state.status.type !== 'playing') throw new Error('Cannot search a terminal Gomoku board');
     const turn = state.status.turn;
-    const stones = state.board.flatMap((color, index) =>
-      color ? [`${index % 15},${Math.floor(index / 15)},${color === turn ? 1 : 2}`] : [],
-    );
+    const stones = rapfiBoardLines({
+      turn: 1,
+      stones: state.board.flatMap((color, index) =>
+        color ? [{ x: index % 15, y: Math.floor(index / 15), player: color === turn ? 1 : 2 }] : [],
+      ),
+    });
     // YXBOARD loads WITHOUT searching. DONE commits the whole board; YXNBEST
     // emits structured PVs and a final raw x,y line. No human MESSAGE parsing.
     const output = await this.exchange(['YXBOARD', ...stones, 'DONE', 'YXNBEST 1'], (line) =>

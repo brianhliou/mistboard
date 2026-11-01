@@ -4,6 +4,7 @@ import {
   type RapfiCandidate,
   type RapfiChoiceOptions,
   type RapfiPosition,
+  rapfiBoardLines,
   rapfiPositionState,
   selectRapfiMove,
   validateRapfiCandidateCount,
@@ -114,15 +115,12 @@ export function rapfiCommands(
       `INFO max_node ${tier.nodes}`,
       `INFO timeout_turn ${tier.timeMs}`,
       ...(count !== undefined ? ['INFO show_detail 2'] : []),
-      // BOARD's 1 means us, 2 means opponent, regardless of stone color.
+      // BOARD's 1 means us, 2 means opponent, regardless of stone color; the order decides
+      // who Rapfi searches for (rapfiBoardLines).
       position.stones.length
-        ? [
-            count !== undefined ? 'YXBOARD' : 'BOARD',
-            ...position.stones.map(
-              (stone) => `${stone.x},${stone.y},${stone.player === position.turn ? 1 : 2}`,
-            ),
-            'DONE',
-          ].join('\n')
+        ? [count !== undefined ? 'YXBOARD' : 'BOARD', ...rapfiBoardLines(position), 'DONE'].join(
+            '\n',
+          )
         : count !== undefined
           ? `YXNBEST ${count}`
           : 'BEGIN',

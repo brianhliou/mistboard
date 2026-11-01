@@ -197,6 +197,25 @@ export function rapfiPositionState(position: RapfiPosition): GomokuState {
   };
 }
 
+/** The stone lines of a BOARD/YXBOARD command. Rapfi places the listed stones in order,
+ * alternating sides (a pass goes in between two of the same side), and searches for whoever
+ * comes after the last one (command/gomocup.cpp getPosition): field 1 does not by itself make
+ * a side the one to move. So the list interleaves and ends on an opponent stone, any surplus
+ * first, each side's stones in the order given. */
+export function rapfiBoardLines(position: RapfiPosition): string[] {
+  const own = position.stones.filter((stone) => stone.player === position.turn);
+  const opponent = position.stones.filter((stone) => stone.player !== position.turn);
+  if (own.length && !opponent.length)
+    throw new Error('Rapfi needs an opponent stone to search for the side to move');
+  const lines: string[] = [];
+  // Built from the end: opponent, own, opponent, ... then whatever one side has left over.
+  for (let i = opponent.length - 1, j = own.length - 1; i >= 0 || j >= 0; i--, j--) {
+    if (i >= 0) lines.push(`${opponent[i]!.x},${opponent[i]!.y},2`);
+    if (j >= 0) lines.push(`${own[j]!.x},${own[j]!.y},1`);
+  }
+  return lines.reverse();
+}
+
 export function validateRapfiCandidateCount(count: number): void {
   if (!Number.isSafeInteger(count) || count < 1 || count > 225)
     throw new Error('Invalid Rapfi candidate count');
