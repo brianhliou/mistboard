@@ -130,7 +130,11 @@ export function readRecords(logPath) {
 
 export function summarize(records) {
   const ok = records.filter((r) => r.outcome === 'ok');
-  const failed = records.filter((r) => r.outcome !== 'ok');
+  const notOk = records.filter((r) => r.outcome !== 'ok');
+  // A refusal ran nothing (no stage, milliseconds): it costs no time, so it is
+  // counted beside the attempts rather than as a failed one.
+  const refused = notOk.filter(isRefusal);
+  const failed = notOk.filter((r) => !isRefusal(r));
   const stages = new Map();
   for (const record of records) {
     for (const stage of record.stages ?? []) {
@@ -140,9 +144,10 @@ export function summarize(records) {
   }
   const deploys = ok.map(deployMs).filter((ms) => ms !== null);
   return {
-    count: records.length,
+    count: records.length - refused.length,
     ok: ok.length,
     failed: failed.length,
+    refused: countBy(refused.map((r) => failureClass(r))),
     total: quantiles(ok.map((r) => r.elapsedMs)),
     deploy: quantiles(deploys),
     stages: [...stages.entries()]
@@ -209,7 +214,27 @@ export function failureClass(record) {
   if (stage === 'hosted CI wait') return 'hosted CI red';
   if (stage && /^prod /.test(stage)) return 'prod smoke failed';
   if (stage) return `local gate: ${stage}`;
+  // Under 10 s with no stage: the guard said no before anything ran.
+  if (text && (record.stages ?? []).length === 0 && (record.elapsedMs ?? Infinity) < 10_000) {
+    return `refused: ${refusalReason(text)}`;
+  }
   return 'unknown (output cut short)';
+}
+
+// The release script refused before its first stage (an argument check, a
+// lock or window guard). Its error says why; nothing ran.
+export function isRefusal(record) {
+  return record.outcome !== 'ok' && failureClass(record).startsWith('refused: ');
+}
+
+function refusalReason(text) {
+  if (/ship queue is in use/.test(text)) return 'ship queue in use';
+  if (/CHANGELOG\.md already has/.test(text)) return 'changelog line already present';
+  if (/ship window|within 4h/i.test(text)) return 'inside the ship window';
+  return text
+    .split(/[;:\n]/)[0]
+    .trim()
+    .slice(0, 60);
 }
 
 export function quantiles(values) {
@@ -242,6 +267,11 @@ function printSummary(records, options) {
     for (const [name, n] of s.failures) {
       console.log(`  ${String(n).padStart(3)}  ${pct(n, s.count).padStart(4)}  ${name}`);
     }
+  }
+  if (s.refused.length) {
+    const n = s.refused.reduce((sum, [, k]) => sum + k, 0);
+    console.log(`\nrefused before running (not attempts, no time spent): ${n}`);
+    for (const [name, k] of s.refused) console.log(`  ${String(k).padStart(3)}  ${name}`);
   }
   console.log(`\nattempts per day: ${(s.count / Math.max(1, days)).toFixed(1)}`);
   printHolds(records);
