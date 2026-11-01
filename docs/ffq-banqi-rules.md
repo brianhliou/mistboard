@@ -41,8 +41,9 @@ It creates no tenant, GameSpecId, route, UI or player-accessible registration.
      jump exactly one occupied screen, of any ink and either face orientation.
      The first occupied square after that screen must be a revealed enemy of
      any rank or a covered piece of **either ink**. Stop at that victim: no
-     skipping another piece. A covered victim is revealed to the capturer;
-     taking a covered own piece damages the mover's own HP and can lose the game.
+     skipping another piece. A covered victim is revealed to both seats and
+     observers; taking a covered own piece damages the mover's own HP and can
+     lose the game.
 7. **No progress:** 30 consecutive plies without a flip or capture draw. Either
    action resets the clock, including a cannon's friendly covered capture.
 8. **Long chase (长捉):** a quiet step chases if the moved piece then attacks
@@ -67,17 +68,24 @@ secret crypto-backed RNG and persist the initial deal with the action history.
 
 A board back serializes to exactly `{ faceDown: true }`, without ink or role.
 Legality and chase detection depend only on public occupancy and face-up pieces.
-HP loss identifies the captured piece's ink, but a covered capture's exact role
-is shown **only to its capturer**, following Mistboard's hidden-capture rule.
-Other players and observers receive `role: null`, including at game end.
-HP damage may itself allow an inference (for example, 30 damage is a general).
+Every off-board capture's ink and exact role are **public to both seats and
+observers**, whether captured face up or covered, live or finished. This is an
+explicit FFQ exception to Mistboard's capturer-only covered-capture policy:
+public HP damage already identifies the ink and, unless clamped at zero,
+distinguishes generals (30), advisors (10) and soldiers (2); five-damage victims
+are now also identified.
+The former capturer-only tests guarded a disclosure choice, not a movement or
+settlement invariant. Making the removed victim public changes neither legal
+moves nor HP. `wasFaceDown` records how it was captured; it never keeps an
+off-board role private. Covered pieces **still on the board remain masked**,
+including after an HP-ending friendly capture or any other game end.
 
-Pools are calculated from the initial multiset minus the identities actually
-shown to that viewer, never from the truth under the remaining backs. An unseen
-captured identity stays among the candidates, with `unknownCaptured` counting
-how many candidates of each ink are already off the board. This avoids leaking
-the private capture through a pool update. The capturer can have a more precise
-pool than the other seat; both see the same pool before any covered capture.
+Pools are calculated from the initial multiset minus revealed on-board pieces
+and **all captures**, never from the truth under the remaining backs. Both seats
+and observers therefore see the same pool, whose counts equal the remaining
+covered on-board multiset without assigning identities to squares.
+`unknownCaptured` is retained in the view for snapshot compatibility and is
+always `{ red: 0, black: 0 }`.
 
 The public FEN is an **observer snapshot**, not a save/import format:
 
@@ -88,10 +96,13 @@ The public FEN is an **observer snapshot**, not a save/import format:
 Ranks run y=7 to y=0, files x=0 to x=3. `X` is a back, upper/lowercase
 `G A E R H C S` denotes revealed red/black pieces, and digits collapse empty
 runs. Turn is `r` or `b`. Pool pairs are letter+count in descending rank order,
-red then black; `-` means empty. The final fields count privately captured
-identities still included in that public pool. Hidden permutations leave the
-**entire FEN and serialized views** unchanged. There is deliberately no dealt
-suffix or parser: canonical replay requires the secret initial deal and moves.
+red then black; `-` means empty. Public covered captures are subtracted from the
+pool, so different captured roles may produce different pool fields even when
+their damage is identical. The final two fields remain `0 0`, preserving the
+11-field format with no privately captured identities. Permuting identities
+under **on-board** backs leaves the **entire FEN and serialized views** unchanged,
+live and finished. There is deliberately no dealt suffix or parser: canonical
+replay requires the secret initial deal and moves.
 This FFQ-specific dialect does not claim compatibility with an external engine.
 
 ## Unverified against Tencent's live app
@@ -107,5 +118,11 @@ comparison is available. `FFQ_BANQI_RULES` records the choices in one object.
 
 Tests mirror the source self-test names `flip_reset` and `chase4_forbid5`, cover
 each numbered rule, serialize full player/observer projections, and play 2,000
-seeded random games to legal terminal outcomes. The cannon quiet-move test is
-the mutation sentinel for the required deliberately planted rule failure.
+seeded random games to legal terminal outcomes, checking capture disclosure and
+exact remaining pools for both seats and observers at every ply.
+
+Disclosure regression check (2026-11-01): deliberately adding `color` and `role`
+to a covered board entry caused **hidden permutations preserve complete
+player/observer payloads and legality, even after game end** to fail. Restoring
+the exact `{ faceDown: true }` projection made it pass. This sentinel checks
+the whole serialized view after a covered capture, across all result reasons.

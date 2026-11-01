@@ -44,7 +44,7 @@ test('setup FEN masks 28 tiles, carries four revealed pieces and no per-square d
   assert.equal(ffqBanqiStateToFen(swapped), ffqBanqiStateToFen(state));
 });
 
-test('covered capture role stays out of public FEN and public pool, live AND finished', () => {
+test('public FEN subtracts disclosed covered captures from the pool, live AND finished', () => {
   const initial: FFQBanqiState = {
     ...createInitialFFQBanqiState('fen', 800),
     board: Array.from({ length: 32 }, () => null),
@@ -61,15 +61,30 @@ test('covered capture role stays out of public FEN and public pool, live AND fin
     },
     { from: 0, to: 8 },
   );
-  assert.equal(
-    ffqBanqiStateToFen(horse),
-    ffqBanqiStateToFen(elephant),
-    'same damage, different privately captured role',
-  );
-  assert.ok(ffqBanqiStateToFen(horse).endsWith(' 0 1'));
-  for (const state of [horse, elephant])
-    state.status = { type: 'finished', winner: 'red', reason: 'hp' };
-  assert.equal(ffqBanqiStateToFen(horse), ffqBanqiStateToFen(elephant));
+  for (const finished of [false, true]) {
+    if (finished)
+      for (const state of [horse, elephant])
+        state.status = { type: 'finished', winner: 'red', reason: 'hp' };
+    const horseFields = ffqBanqiStateToFen(horse).split(' ');
+    const elephantFields = ffqBanqiStateToFen(elephant).split(' ');
+    assert.equal(horseFields.length, 11);
+    assert.equal(horseFields.slice(0, 8).join(' '), '3X/4/4/4/4/C3/s3/4 b 60 55 0 0 0 1');
+    assert.deepEqual(horseFields.slice(0, 8), elephantFields.slice(0, 8));
+    assert.equal(horseFields[8], 'G1A2E2R2H2C1S5g1a2e2r2h1c2s4');
+    assert.equal(elephantFields[8], 'G1A2E2R2H2C1S5g1a2e1r2h2c2s4');
+    assert.deepEqual(horseFields.slice(9), ['0', '0']);
+    assert.deepEqual(elephantFields.slice(9), ['0', '0']);
+    // Changing an identity still on the board cannot change even the pool.
+    const masked = {
+      ...horse,
+      board: horse.board.map((piece) =>
+        piece?.faceDown
+          ? { color: 'red' as const, role: 'advisor' as const, faceDown: true }
+          : piece,
+      ),
+    };
+    assert.equal(ffqBanqiStateToFen(masked), ffqBanqiStateToFen(horse));
+  }
 });
 
 test('empty public pool is a dash, with no exact-deal suffix', () => {

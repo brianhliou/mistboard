@@ -6,14 +6,15 @@
 //
 // Eight ranks, y=7 first, four files left-to-right. X hides BOTH ink and role;
 // G/A/E/R/H/C/S are revealed pieces (UPPER red, lower black), digits are empties.
-// Pool: <letter><count> in rank order, red then black, or '-'. It includes the
-// identities of covered captures not shown to an observer; the last two fields
-// count those captures by ink. Computed only from the masked observer view.
-// Permuting identities underneath backs cannot change any field.
+// Pool: <letter><count> in rank order, red then black, or '-'. All captures,
+// including covered victims, are public and subtracted from this pool. The last
+// two fields remain zero for snapshot compatibility (no private captures).
+// Computed only from the masked observer view. Permuting identities underneath
+// on-board backs cannot change any field, even after game end.
 //
 // No parser/dealt field: importing a public snapshot cannot reconstruct the
-// secret deal or either player's private capture knowledge. Replay must use the
-// server-secret initial deal and actions, as in the Three Kingdoms boundary.
+// secret deal. Replay must use the server-secret initial deal and actions,
+// as in the Three Kingdoms boundary.
 import { banqiPieceLetter } from './banqi-fen.js';
 import {
   FFQ_BANQI_ROLE_ORDER,
