@@ -30,6 +30,7 @@ function chapter(overrides: Partial<StudyChapterRecord> = {}): StudyChapterRecor
     gamebook: false,
     practice: false,
     practiceGoal: null,
+    scoreSeries: null,
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,

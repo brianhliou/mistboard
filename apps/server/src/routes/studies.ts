@@ -210,6 +210,9 @@ function chapterView(chapter: persistence.StudyChapterRecord) {
     gamebook: chapter.gamebook,
     practice: chapter.practice,
     practiceGoal: chapter.practiceGoal,
+    // Only when set: the field is rare, and leaving it off keeps every other
+    // chapter's payload exactly as it was.
+    ...(chapter.scoreSeries ? { scoreSeries: chapter.scoreSeries } : {}),
   };
 }
 

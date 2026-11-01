@@ -13,6 +13,7 @@ import {
   type StudyPreviewBoard,
   studyPreviewBoard,
 } from './study-preview-board.js';
+import type { ChapterScoreSeries } from './study-score-series.js';
 
 export type StudyVisibility = 'private' | 'unlisted' | 'public';
 
@@ -46,6 +47,9 @@ export type StudyChapterRecord = {
   /** Authored goal text ("mate in 3", "win", "draw in 20"); parsed by
    *  parsePracticeGoal. Non-null whenever `practice` is true (DB CHECK). */
   practiceGoal: string | null;
+  /** Named win-chance series drawn under the board in the study embed
+   *  (study-score-series.ts). Null on almost every chapter. */
+  scoreSeries: ChapterScoreSeries | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -183,6 +187,7 @@ type ChapterRow = {
   gamebook: boolean;
   practice: boolean;
   practice_goal: string | null;
+  score_series: ChapterScoreSeries | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -220,6 +225,7 @@ function mapChapter(row: ChapterRow): StudyChapterRecord {
     gamebook: row.gamebook,
     practice: row.practice,
     practiceGoal: row.practice_goal,
+    scoreSeries: row.score_series ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -228,7 +234,7 @@ function mapChapter(row: ChapterRow): StudyChapterRecord {
 const STUDY_COLS =
   'id, owner_id, slug, name, description, i18n, visibility, featured_at, created_at, updated_at';
 const CHAPTER_COLS =
-  'id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags, version, gamebook, practice, practice_goal, created_at, updated_at';
+  'id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags, version, gamebook, practice, practice_goal, score_series, created_at, updated_at';
 
 /** Correlated scalar subquery yielding the first few chapters (by ordinal) as a
  *  jsonb array of `{name, i18n}`, for a study aliased `s`. This is the preview
@@ -420,8 +426,8 @@ export async function cloneStudy(sourceId: string, ownerId: string): Promise<Clo
       await client.query(
         `INSERT INTO study_chapters
            (id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags,
-            gamebook, practice, practice_goal)
-           VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13)`,
+            gamebook, practice, practice_goal, score_series)
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13, $14::jsonb)`,
         [
           shortId(),
           studyId,
@@ -436,6 +442,7 @@ export async function cloneStudy(sourceId: string, ownerId: string): Promise<Clo
           chapter.gamebook,
           chapter.practice,
           chapter.practiceGoal,
+          chapter.scoreSeries ? JSON.stringify(chapter.scoreSeries) : null,
         ],
       );
     }
@@ -1184,6 +1191,34 @@ export async function setChapterPractice(
     `UPDATE study_chapters SET practice = $1, practice_goal = $2, updated_at = now()
        WHERE id = $3 RETURNING ${CHAPTER_COLS}`,
     [practice, practice ? goal : null, chapterId],
+  );
+  return { ok: true, chapter: mapChapter(updated.rows[0]!) };
+}
+
+/**
+ * Set or clear a chapter's score series (owner). The caller validates the shape
+ * (parseChapterScoreSeries); null clears. No version bump: the series rides
+ * beside the tree, not in it, so it never races a tree autosave.
+ */
+export async function setChapterScoreSeries(
+  chapterId: string,
+  ownerId: string,
+  scoreSeries: ChapterScoreSeries | null,
+): Promise<UpdateChapterResult> {
+  if (!isInitialized()) return { ok: false, error: 'not_found' };
+  const { rows } = await getPool().query<{ owner_id: string }>(
+    `SELECT s.owner_id
+       FROM study_chapters c JOIN studies s ON s.id = c.study_id
+       WHERE c.id = $1`,
+    [chapterId],
+  );
+  const found = rows[0];
+  if (!found) return { ok: false, error: 'not_found' };
+  if (found.owner_id !== ownerId) return { ok: false, error: 'forbidden' };
+  const updated = await getPool().query<ChapterRow>(
+    `UPDATE study_chapters SET score_series = $1::jsonb, updated_at = now()
+       WHERE id = $2 RETURNING ${CHAPTER_COLS}`,
+    [scoreSeries ? JSON.stringify(scoreSeries) : null, chapterId],
   );
   return { ok: true, chapter: mapChapter(updated.rows[0]!) };
 }
