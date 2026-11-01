@@ -29,7 +29,7 @@ import {
   replayTenantEvents,
   tenantSnapshotPayload,
 } from './variant-tenant/runtime.js';
-import { assignTenantSeat } from './variant-tenant/seat-session.js';
+import { assignTenantSeat, mintTenantSeatToken } from './variant-tenant/seat-session.js';
 import { clearTenantRuntimeTimers } from './variant-tenant/ws.js';
 
 const flag = process.env.MISTBOARD_GOMOKU_ENABLED;
@@ -460,13 +460,16 @@ test('Gomoku casual lobby creates a random-seat room and refuses a rated room', 
   await assert.rejects(registration.lobby.createRoom(tc, true), /unsupported_surface/);
 });
 
-test('Gomoku WebSocket binds placements to the authenticated seat and waits for both players', async () => {
+test('Gomoku WebSocket refuses ungranted seats and binds placements to reserved seats', async () => {
   class Socket extends EventEmitter {
     sent: Record<string, unknown>[] = [];
+    closed?: { code?: number; reason?: string };
     send(payload: string) {
       this.sent.push(JSON.parse(payload));
     }
-    close() {}
+    close(code?: number, reason?: string) {
+      this.closed = { code, reason };
+    }
   }
   const created = await createGomokuRoom(undefined, undefined, undefined, 'free');
   assert.ok(created.ok);
@@ -474,17 +477,38 @@ test('Gomoku WebSocket binds placements to the authenticated seat and waits for 
   const black = new Socket();
   const white = new Socket();
   const ctx = { wsMessageLimit: 100, wsMessageWindowMs: 1_000 };
-  const request = (id: string) =>
-    ({ url: `/?client=${id}`, headers: { host: 'localhost' } }) as IncomingMessage;
+  // Exercise the move protocol on reserved seats; fresh playtest seats need
+  // an account grant, while reconnecting seats retain access.
+  const request = (id: string, seat: GomokuColor) => {
+    const { rawToken } = mintTenantSeatToken(live, seat, {
+      userId: null,
+      userHandle: null,
+      userDisplayName: null,
+    });
+    return {
+      url: `/?client=${id}`,
+      headers: { host: 'localhost', 'sec-websocket-protocol': `mistboard-seat.${rawToken}` },
+    } as IncomingMessage;
+  };
   const place = async (socket: Socket, to: string) => {
     socket.emit('message', JSON.stringify({ type: 'move', to, color: 'white' }));
     await live.pendingWrites;
   };
   try {
+    const stranger = new Socket();
+    await gomokuWs.handleConnection(
+      ctx,
+      stranger as unknown as WebSocket,
+      { url: '/?client=stranger', headers: { host: 'localhost' } } as IncomingMessage,
+      live,
+    );
+    assert.deepEqual(stranger.closed, { code: 1008, reason: 'variant not granted' });
+    assert.deepEqual(stranger.sent, []);
+    assert.equal(live.clients.size, 0);
     await gomokuWs.handleConnection(
       ctx,
       black as unknown as WebSocket,
-      request('black-player'),
+      request('black-player', 'black'),
       live,
     );
     assert.equal(black.sent[0]?.seat, 'black');
@@ -493,7 +517,7 @@ test('Gomoku WebSocket binds placements to the authenticated seat and waits for 
     await gomokuWs.handleConnection(
       ctx,
       white as unknown as WebSocket,
-      request('white-player'),
+      request('white-player', 'white'),
       live,
     );
     assert.equal(white.sent[0]?.seat, 'white');

@@ -376,6 +376,8 @@ const VARIANT_SHELF_ORDER: readonly GameSpecId[] = [
   // Xiangqi Mahjong takes the last place on the shelf the day it launches;
   // until then the launch switch (its publicSurface) keeps it out.
   XIANGQI_MAHJONG_SPEC_ID,
+  // Gomoku follows Xiangqi Mahjong only after its own launch switch flips.
+  GOMOKU_SPEC_ID,
   // Study-only chess is deliberately absent: it is on no shelf, and an unlisted
   // spec sorts last, which is where the study picker should offer it.
 ];
@@ -834,6 +836,7 @@ export function publicSpecPredicate(
 export const PLAYTEST_GAME_SPEC_IDS: readonly GameSpecId[] = [
   MAHJONG_SPEC_ID,
   XIANGQI_MAHJONG_SPEC_ID,
+  GOMOKU_SPEC_ID,
 ];
 
 export type LaunchLists = {

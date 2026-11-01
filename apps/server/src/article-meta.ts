@@ -34,6 +34,7 @@ const GENERATED = generated as Record<string, GeneratedArticleMeta>;
 const PLAYTEST_RULES_SLUG: Readonly<Record<string, string>> = {
   mahjong: 'mahjong',
   'xiangqi-mahjong': 'xiangqi-mahjong-32',
+  gomoku: 'gomoku',
 };
 
 /** The playtest rules slugs kept out of the index under a public predicate:
@@ -70,8 +71,6 @@ const NON_INDEXED_ARTICLE_SLUGS = new Set([
   // follow the launch switch (the spec's publicSurface), as the web side's
   // rulesSlugPublicSurfaceEnabled does.
   ...playtestRulesSlugs(isPublicGameSpec),
-  // Direct-URL Gomoku rules follow its hidden spec, as the web rules rail does.
-  ...(isPublicGameSpec('gomoku') ? [] : ['gomoku']),
 ]);
 
 // Rules pages for DELETED variants (docs-private/variant-retirement-plan.md,

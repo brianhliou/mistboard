@@ -11,6 +11,7 @@ import {
   createTenantRuntimeRoom,
   createTenantRuntimeRoomFromEvents,
 } from './variant-tenant/runtime.js';
+import { mintTenantSeatToken } from './variant-tenant/seat-session.js';
 import { clearTenantRuntimeTimers, createTenantWsRuntime } from './variant-tenant/ws.js';
 
 type Room = Parameters<typeof gomokuWs.handleConnection>[3];
@@ -68,13 +69,20 @@ async function fixture(
       clientId: 'rapfi-level-1',
     });
   const socket = new Socket();
+  // Existing seats may reconnect after a playtest grant is revoked. Reserve
+  // this fixture's seat so bot protocol tests need no account database.
+  const { rawToken: seatToken } = mintTenantSeatToken(room, human, {
+    userId: null,
+    userHandle: null,
+    userDisplayName: null,
+  });
   await runtime.handleConnection(
     ctx,
     socket as unknown as WebSocket,
-    request('human-player'),
+    request('human-player', seatToken),
     room,
   );
-  return { room, socket };
+  return { room, socket, seatToken };
 }
 async function send(room: Room, socket: Socket, message: Record<string, unknown>) {
   socket.emit('message', JSON.stringify(message));
@@ -157,10 +165,15 @@ test('Gomoku delegation is opt-in: other runtimes and PvP retain own-seat-only m
   assert.equal(room.projection.state.ply, 0);
   const pvp = await fixture('white', gomokuWs, false);
   const black = new Socket();
+  const { rawToken } = mintTenantSeatToken(pvp.room, 'black', {
+    userId: null,
+    userHandle: null,
+    userDisplayName: null,
+  });
   await gomokuWs.handleConnection(
     ctx,
     black as unknown as WebSocket,
-    request('other-player'),
+    request('other-player', rawToken),
     pvp.room,
   );
   await send(pvp.room, pvp.socket, botMove(pvp.room));
@@ -202,7 +215,7 @@ test('replayed bot seats survive hydration and duplicate bot replies append only
   await gomokuWs.handleConnection(
     ctx,
     socket as unknown as WebSocket,
-    request('reconnected-player', String(original.socket.sent[0]?.seatToken)),
+    request('reconnected-player', original.seatToken),
     room,
   );
   const reply = botMove(room);

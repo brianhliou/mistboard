@@ -10,6 +10,7 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
+  deriveLaunchLists,
   FORTRESS_XIANGQI_SPEC_ID,
   GAME_SPECS,
   GOMOKU_SPEC_ID,
@@ -28,6 +29,8 @@ import {
   JUNGLE_SPEC_ID,
   legacyLiveRoomForGameSpec,
   maybeGameSpecForId,
+  PLAYTEST_GAME_SPEC_IDS,
+  publicSpecPredicate,
   RATED_POOL_BASES,
   type RatingVariant,
   RETIRED_GAME_SPEC_IDS,
@@ -77,6 +80,28 @@ test('Gomoku is a built-hidden, unrated freestyle placement game', () => {
   assert.equal(isCorrespondenceAllowlistedSpec(spec.id), false);
   assert.equal(isCorrespondenceRatedSpec(spec.id), false);
   assert.equal(isStudyEligibleSpecId(spec.id), false);
+});
+
+test('Gomoku is allowlisted while hidden and takes its shelf place only at launch', () => {
+  assert.ok(PLAYTEST_GAME_SPEC_IDS.includes(GOMOKU_SPEC_ID));
+  const hidden = deriveLaunchLists(isPublicGameSpec);
+  assert.ok(hidden.allowlisted.includes(GOMOKU_SPEC_ID));
+  assert.ok(!hidden.canonicalVariantOrder.includes(GOMOKU_SPEC_ID));
+
+  const launched = deriveLaunchLists(
+    publicSpecPredicate(
+      GAME_SPECS.map((spec) =>
+        spec.id === GOMOKU_SPEC_ID ? { ...spec, publicSurface: 'casual' as const } : spec,
+      ),
+    ),
+  );
+  assert.ok(!launched.allowlisted.includes(GOMOKU_SPEC_ID));
+  assert.deepEqual(launched.canonicalVariantOrder, [
+    ...hidden.canonicalVariantOrder,
+    GOMOKU_SPEC_ID,
+  ]);
+  assert.deepEqual(launched.correspondenceEligible, hidden.correspondenceEligible);
+  assert.deepEqual(launched.correspondenceAllowlisted, hidden.correspondenceAllowlisted);
 });
 
 test('current dark chess maps to the flagship chess spec', () => {
