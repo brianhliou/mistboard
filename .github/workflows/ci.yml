@@ -76,6 +76,13 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Cache pinned engine nets
+        uses: actions/cache@v4
+        with:
+          path: |
+            apps/web/public/engine/pikafish/pikafish.nnue
+            apps/web/public/engine/rapfi/*.data
+          key: engine-nets-${{ hashFiles('apps/web/public/engine/*/net.json') }}
       - name: Build
         run: npm run build
 
@@ -119,6 +126,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Build saves both nets. Shards only restore: saving a Rapfi-only cache
+      # first would prevent Build from filling the shared, immutable cache.
+      - name: Restore pinned engine nets
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            apps/web/public/engine/pikafish/pikafish.nnue
+            apps/web/public/engine/rapfi/*.data
+          key: engine-nets-${{ hashFiles('apps/web/public/engine/*/net.json') }}
       # No server build: nothing under apps/web imports @mistboard/server. The
       # old combined job needed it for the server's own unit tests.
       - name: Build workspace dependencies
@@ -311,6 +327,14 @@ jobs:
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
           npm run build --workspace @mistboard/mahjong
+      - name: Read Playwright version
+        id: playwright-version
+        run: node -e "const lock = require('./package-lock.json'); console.log('version=' + lock.packages['node_modules/@playwright/test'].version)" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
       # The browser only: the runner image already carries Chrome's system
       # libraries. `--with-deps` also apt-installed ~32 MB of fonts from the
       # Ubuntu mirror, which took 7.5 min on 2026-10-02 (71 kB/s) and nearly
