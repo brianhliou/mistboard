@@ -13,6 +13,7 @@ import {
 import { homedir, hostname, tmpdir } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
+import { tsImport } from 'tsx/esm/api';
 import { resolveBlogDeployHook, triggerBlogDeployHook } from './lib/blog-deploy-hook.mjs';
 import {
   assertEntriesAreNew,
@@ -1280,6 +1281,18 @@ async function runSmoke({ deployRequired, headRevision }) {
   // page) — the class of failure the fetch-based smokes cannot see (they
   // verify serving/isolation, not a real run).
   runTimed('prod ceval smoke', npmCommand('prod:smoke:ceval', baseArgs()));
+  // Rapfi runs in the browser, outside FIRST_PARTY_BOT_PROFILES/server engine
+  // seats. Read this checkout's SOURCE launch switch (dist may be stale after
+  // the post-push cwd change). A hidden deploy must never open a gated route.
+  const { isPublicGameSpec } = await tsImport(
+    path.join(workdir, 'packages/game/src/game-specs.ts'),
+    import.meta.url,
+  );
+  if (isPublicGameSpec('gomoku')) {
+    runTimed('prod Gomoku browser bot smoke', npmCommand('prod:smoke:gomoku', baseArgs()));
+  } else {
+    console.log('skip: prod Gomoku browser bot smoke (publicSurface hidden)');
+  }
   // The /practice catalogue is DATA, and its failure mode is silent: a chapter
   // that loses its practice flag stops being an exercise while the card's count
   // stays truthful, so nothing on the page looks wrong. Cheap (a handful of
