@@ -15,6 +15,8 @@ const OFF_DAY_EXCEPTIONS: Readonly<Record<string, string>> = {
   // Brian, 2026-10-17: pull the challenge up next to the bot it is about, which
   // shipped that evening; Monday had no article, and the next free slot was 11-03.
   'general-blunder-challenge': '2026-10-19',
+  // The champion change ships with the 11-02 release (Brian, 2026-10-31).
+  'ab-jchess-vs-jqe': '2026-11-02',
 };
 
 // How-tos for a launched feature and engineering posts that share a day with a

@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildChampions, CHAMPIONS, OPEN_TITLES, TITLE_HISTORY, TITLES } from './champions-page.js';
+import { articleIsLive } from './articles/publish-time.js';
+import {
+  AB_JCHESS_2026_WRITE_UP,
+  buildChampions,
+  CHAMPIONS,
+  OPEN_TITLES,
+  TITLE_HISTORY,
+  TITLES,
+} from './champions-page.js';
 import { mountContribute } from './contribute-page.js';
 import { mountCreators } from './creators-page.js';
 import { ensureLocaleCatalog, type I18nKey, t } from './i18n/catalog.js';
@@ -134,8 +142,10 @@ describe('/champions', () => {
       [...card(game).querySelectorAll<HTMLAnchorElement>('.champions-actions a')].map(
         (a) => `${a.textContent} ${a.getAttribute('href')}`,
       );
-    // No write-up or study of the AB-JChess-20261031 match exists yet: Play only.
+    // The AB-JChess-20261031 match has no study; its write-up shows from its own
+    // date (the dated test below pins both sides of it).
     expect(buttons('jieqi')).toEqual([
+      ...(articleIsLive(AB_JCHESS_2026_WRITE_UP) ? ['Read the match /blog/ab-jchess-vs-jqe'] : []),
       'Play the champion /?play=computer&gameSpecId=jieqi&engineId=ab-jchess-jieqi',
     ]);
     expect(buttons('jungle')).toEqual([
@@ -303,6 +313,40 @@ describe('/champions', () => {
     ]);
   });
 
+  it('links the AB-JChess-20261031 write-up on its card and history line once live', async () => {
+    const { abJchessVsJqeArticle } = await import('./articles/content/ab-jchess-vs-jqe.js');
+    expect(AB_JCHESS_2026_WRITE_UP.publishedAt).toBe(abJchessVsJqeArticle.publishedAt);
+    const jieqiLinks = async (now: string) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(now));
+      vi.resetModules();
+      try {
+        const { buildChampions: build } = await import('./champions-page.js');
+        const page = build('en');
+        const text = (as: Iterable<HTMLAnchorElement>) =>
+          [...as].map((a) => `${a.textContent} ${a.getAttribute('href')}`);
+        const li = [...page.querySelectorAll('.champions-list li')].find((item) =>
+          item.textContent?.startsWith('2026-10-31, Jieqi: AB-JChess-20261031'),
+        );
+        return {
+          card: text(
+            page.querySelectorAll<HTMLAnchorElement>('[data-game="jieqi"] .champions-actions a'),
+          ),
+          history: text(li?.querySelectorAll<HTMLAnchorElement>('a') ?? []),
+        };
+      } finally {
+        vi.useRealTimers();
+        vi.resetModules();
+      }
+    };
+    const play = 'Play the champion /?play=computer&gameSpecId=jieqi&engineId=ab-jchess-jieqi';
+    expect(await jieqiLinks('2026-11-01T12:00:00Z')).toEqual({ card: [play], history: [] });
+    expect(await jieqiLinks('2026-11-02T17:00:00Z')).toEqual({
+      card: ['Read the match /blog/ab-jchess-vs-jqe', play],
+      history: ['write-up /blog/ab-jchess-vs-jqe'],
+    });
+  });
+
   it('lists the title history newest first, then the challenge rules', () => {
     const page = buildChampions('en');
     const headings = [...page.querySelectorAll('h2')].map((h) => h.textContent);
@@ -310,10 +354,12 @@ describe('/champions', () => {
     const history = page.querySelector('.champions-list')!;
     const lines = [...history.querySelectorAll('li')].map((li) => li.textContent ?? '');
     expect(lines).toHaveLength(TITLE_HISTORY.length);
-    // AB-JChess-20261031's match has no write-up or study yet, so its line links nothing.
-    expect(lines[0]).toBe(
-      "2026-10-31, Jieqi: AB-JChess-20261031, by Huorongrong and Laoxu (Kouza) and built on jqe's code, took the title from jqe, 306-227-67 over 600 games, scoring 57%.",
-    );
+    // AB-JChess-20261031's match has no study; its write-up link is pinned by the dated test.
+    expect(
+      lines[0].startsWith(
+        "2026-10-31, Jieqi: AB-JChess-20261031, by Huorongrong and Laoxu (Kouza) and built on jqe's code, took the title from jqe, 306-227-67 over 600 games, scoring 57%.",
+      ),
+    ).toBe(true);
     expect(lines[1]).toMatch(/^2026-10-21, Jieqi: jqe, by Devin O'Keefe/);
     expect(lines[2]).toMatch(/^2026-09-30, Jieqi: AB-JChess/);
     expect(lines[3]).toMatch(/^2026-09-22, Jungle Chess: KataGo-AnimalChess/);

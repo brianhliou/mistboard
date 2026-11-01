@@ -22,6 +22,7 @@ import { coUpArticle } from './articles/content/co-up.js';
 import { luatCoUpArticle } from './articles/content/luat-co-up.js';
 import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
 import { pikafishArticle } from './articles/content/pikafish.js';
+import { abJchessVsJqeArticle } from './articles/content/ab-jchess-vs-jqe.js';
 import { abJchessArticle } from './articles/content/ab-jchess.js';
 import { jqeArticle } from './articles/content/jqe.js';
 import { pikafishRevealBugArticle } from './articles/content/pikafish-reveal-bug.js';
@@ -100,6 +101,7 @@ export const articles: Article[] = [
   solverAuditArticle,
   pikafishRevealBugArticle,
   katagoJungleArticle,
+  abJchessVsJqeArticle,
   jqeArticle,
   abJchessArticle,
   jieqiBotWinsArticle,

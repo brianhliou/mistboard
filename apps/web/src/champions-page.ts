@@ -148,8 +148,13 @@ const FAIRY_STOCKFISH_L8 = {
 
 // AB-JChess-20261031 took the jieqi title back from jqe (mistboard-engine
 // lab/jieqi-match/jqe-vs-abj-20261031, commit c01c608, 2026-10-31): 600 games at 4 s
-// and 4 threads, 306-67-227 (a 0.566 score). No write-up or study of the match
-// exists yet, so the card links neither; add them here when they do.
+// and 4 threads, 306-67-227 (a 0.566 score). The write-up (blog/ab-jchess-vs-jqe)
+// goes live on its own date, as the jqe one did; the test pins this date to the
+// article's publishedAt. No study of the match exists, so the card links no games.
+export const AB_JCHESS_2026_WRITE_UP = { status: 'published', publishedAt: '2026-11-02' } as const;
+const AB_JCHESS_2026_MATCH: TitleMatch = articleIsLive(AB_JCHESS_2026_WRITE_UP)
+  ? { writeUpHref: '/blog/ab-jchess-vs-jqe' }
+  : {};
 const JIEQI_AB_JCHESS_20261031: Title = {
   gameId: 'jieqi',
   nameKey: 'variant.jieqi.name',
@@ -176,6 +181,7 @@ const JIEQI_AB_JCHESS_20261031: Title = {
     losses: 227,
     tookKey: 'champions.tookAbJchess2',
     about: (locale) => [t('champions.aboutAbJchess2', {}, locale)],
+    ...AB_JCHESS_2026_MATCH,
   },
 };
 
@@ -249,7 +255,7 @@ export const OPEN_TITLES = TITLES.filter((title) => !title.reign);
 
 // One line per title change, newest first.
 export const TITLE_HISTORY: ReadonlyArray<TitleMatch & { textKey: I18nKey }> = [
-  { textKey: 'champions.historyAbJchess2' },
+  { ...AB_JCHESS_2026_MATCH, textKey: 'champions.historyAbJchess2' },
   { ...JQE_MATCH, textKey: 'champions.historyJqe' },
   { ...JIEQI_MATCH, textKey: 'champions.historyJieqi' },
   { ...JUNGLE_MATCH, textKey: 'champions.historyJungle' },

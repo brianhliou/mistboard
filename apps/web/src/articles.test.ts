@@ -152,6 +152,9 @@ describe('article public listing gates', () => {
       // The shortest xiangqi stalemate we found, scheduled for 2026-11-03
       // (DEV shows it early for review).
       '/blog/shortest-stalemate-xiangqi',
+      // AB-JChess-20261031 against jqe, scheduled for 2026-11-02 (DEV shows it
+      // early for review).
+      '/blog/ab-jchess-vs-jqe',
       // A solved banqi endgame (chariot and horse against chariot, horse and
       // soldier), scheduled for 2026-10-30 (DEV shows it early for review).
       '/blog/banqi-chariot-endgame',
@@ -470,6 +473,7 @@ describe('article public listing gates', () => {
     expect(hrefs).toEqual([
       '/blog/set-up-your-board',
       '/blog/shortest-stalemate-xiangqi',
+      '/blog/ab-jchess-vs-jqe',
       '/blog/banqi-chariot-endgame',
       '/blog/jqe',
       '/blog/helpmates-in-xiangqi',

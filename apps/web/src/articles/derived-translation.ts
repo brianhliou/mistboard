@@ -75,7 +75,8 @@ export function articleStrings(article: Article): string[] {
       return;
     }
     if (value && typeof value === 'object') {
-      for (const [k, v] of Object.entries(value)) walk(v, k);
+      // A replay's `notes` is keyed by ply number; every value is reader text.
+      for (const [k, v] of Object.entries(value)) walk(v, key === 'notes' ? 'text' : k);
     }
   };
   walk(article as unknown);
