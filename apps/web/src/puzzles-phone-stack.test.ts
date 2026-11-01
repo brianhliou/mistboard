@@ -150,8 +150,10 @@ describe('puzzle phone first screen', () => {
       /\.puzzles-shell \.puzzle-feedback \{ grid-template-columns: 28px minmax\(0, 1fr\) auto; grid-template-areas: "icon title assist" "icon body assist";/,
     );
     expect(phoneBlock).toMatch(
-      /\.puzzles-shell \.puzzle-solved-panel \{[^}]*grid-template-areas: "title vote cta";/,
+      /\.puzzles-shell \.puzzle-solved-panel \{[^}]*grid-template-areas: "title vote cta play";/,
     );
+    // #788: Play the computer sits after Next puzzle as the icon alone.
+    expect(phoneBlock).toMatch(/\.puzzles-shell \.puzzle-play-position \{ grid-area: play;/);
     expect(phoneBlock).toContain('.puzzles-shell .puzzle-vote-prompt { display: none; }');
     // The hint line clamps to two lines beside the buttons.
     expect(phoneBlock).toMatch(
