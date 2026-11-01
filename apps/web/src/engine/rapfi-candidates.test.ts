@@ -151,6 +151,8 @@ function candidate(x: number, y: number, ev: number, pvIndex = 0) {
 }
 
 const empty: RapfiPosition = { turn: 1, stones: [] };
+// L5 uses best-move search in both the existing and eight-level ladders.
+const bestMoveLevel = 5;
 const options = { candidateCount: 3, evalMargin: 100, seed: 42 };
 const choices = () => [candidate(6, 8, 100), candidate(7, 8, 80, 1), candidate(8, 8, 40, 2)];
 
@@ -280,8 +282,26 @@ describe('Rapfi candidate commands and selection', () => {
     expect(commands.lines.some((line) => line === 'BEGIN' || line.startsWith('BOARD\n'))).toBe(
       false,
     );
-    expect(rapfi.RAPFI_LEVELS.map(({ level }) => level)).toEqual([1, 2, 3, 4, 5]);
-    expect(rapfi.rapfiCommands(empty, rapfi.RAPFI_LEVELS[0]).lines.at(-1)).toBe('BEGIN');
+  });
+
+  it('uses plain search commands when no candidate policy is requested', () => {
+    const tier = { nodes: 1000, timeMs: 1500 };
+    expect(rapfi.rapfiCommands(empty, tier).lines).toEqual([
+      'START 15',
+      'INFO rule 0',
+      'INFO max_node 1000',
+      'INFO timeout_turn 1500',
+      'BEGIN',
+    ]);
+    expect(
+      rapfi.rapfiCommands({ turn: 2, stones: [{ x: 3, y: 8, player: 1 }] }, tier).lines,
+    ).toEqual([
+      'START 15',
+      'INFO rule 0',
+      'INFO max_node 1000',
+      'INFO timeout_turn 1500',
+      'BOARD\n3,8,2\nDONE',
+    ]);
   });
 
   it.each([0, -1, 1.5, 226, NaN])('rejects invalid candidate count %s', (candidateCount) => {
@@ -434,7 +454,9 @@ function controlled() {
     create,
     postMessage,
     terminate,
-    receive: (data: unknown) => receive(data),
+    get receive() {
+      return receive;
+    },
     output(text: string) {
       for (const line of text.split('\n')) receive({ type: 'line', line });
       receive({ type: 'done', elapsedMs: 10 });
@@ -442,7 +464,7 @@ function controlled() {
   };
 }
 
-describe('Rapfi opt-in candidate lifecycle', () => {
+describe('Rapfi candidate lifecycle', () => {
   it('collects complete output, selects with a copied seed/options, and resets per request', async () => {
     const transport = controlled();
     try {
@@ -461,7 +483,11 @@ describe('Rapfi opt-in candidate lifecycle', () => {
       const next = transport.engine.chooseMove(empty, 1, options);
       transport.output(single);
       await expect(next).resolves.toMatchObject({ candidates: rapfi.parseRapfiOutput(single) });
-      const plain = transport.engine.chooseMove(empty, 1);
+      const plain = transport.engine.chooseMove(empty, bestMoveLevel);
+      expect(transport.postMessage.mock.lastCall?.[0].commands).toEqual(
+        rapfi.rapfiCommands(empty, rapfi.RAPFI_LEVELS.find(({ level }) => level === bestMoveLevel)!)
+          .lines,
+      );
       transport.output('7,7');
       await expect(plain).resolves.toEqual({ move: { x: 7, y: 7 }, elapsedMs: 10 });
     } finally {
@@ -505,4 +531,40 @@ describe('Rapfi opt-in candidate lifecycle', () => {
     );
     expect(transport.create).not.toHaveBeenCalled();
   });
+
+  it.each(['initializing', 'searching'])(
+    'cancels while %s and ignores the old worker',
+    async (phase) => {
+      const transport = controlled();
+      try {
+        const pending = transport.engine.chooseMove(empty, 1, options);
+        const cancelled = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+        const staleReceive = transport.receive;
+        if (phase === 'searching') {
+          transport.receive({ type: 'ready' });
+          for (const line of multi.split('\n')) transport.receive({ type: 'line', line });
+        }
+        transport.engine.stop();
+        await cancelled;
+        expect(transport.terminate).toHaveBeenCalledOnce();
+
+        const next = transport.engine.chooseMove(empty, 1, options);
+        expect(transport.create).toHaveBeenCalledTimes(2);
+        staleReceive({ type: 'ready' });
+        for (const line of multi.split('\n')) staleReceive({ type: 'line', line });
+        staleReceive({ type: 'done', elapsedMs: 10 });
+        staleReceive({ type: 'error', error: 'late worker error' });
+        expect(transport.postMessage.mock.lastCall?.[0]).toEqual({ type: 'init' });
+        transport.receive({ type: 'ready' });
+        transport.output(single);
+        await expect(next).resolves.toEqual({
+          move: { x: 7, y: 8 },
+          candidates: rapfi.parseRapfiOutput(single),
+          elapsedMs: 10,
+        });
+      } finally {
+        transport.engine.stop();
+      }
+    },
+  );
 });
