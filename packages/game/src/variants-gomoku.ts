@@ -36,7 +36,6 @@ export type GomokuOpening = {
   readonly turn: GomokuColor;
   readonly rule?: GomokuRule;
 };
-export type GomokuOpeningMode = 'balanced' | 'free';
 export const GOMOKU_OPENING_SCREEN = openingPool.screening;
 export const GOMOKU_OPENINGS = openingPool.openings as readonly (GomokuOpening & {
   readonly id: string;

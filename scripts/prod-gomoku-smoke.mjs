@@ -96,10 +96,10 @@ export async function checkGomokuRoom(browser, { baseUrl, timeoutMs = DEFAULT_TI
           assert.equal(frame.pveEngineId, ENGINE_ID);
           assert.equal(frame.seats?.black, ENGINE_ID);
           initial = createGomokuRoomState(roomId, state.opening);
-          assert.equal(initial.ply, 0, 'smoke requires an empty bot-first opening');
+          assert.ok([3, 4, 5].includes(initial.ply), 'smoke requires a dealt balanced opening');
           assert.deepEqual(state.board, initial.board);
           assert.deepEqual(state.status, initial.status);
-        } else if (state.ply === 1 && !reply) {
+        } else if (state.ply === initial?.ply + 1 && !reply) {
           assert.ok(initial, 'missing initial Gomoku frame');
           assert.ok(
             submitted?.roomId === roomId &&
@@ -122,35 +122,45 @@ export async function checkGomokuRoom(browser, { baseUrl, timeoutMs = DEFAULT_TI
   });
 
   try {
-    const created = await page.request.post(new URL('/api/rooms', baseUrl).href, {
-      timeout: remaining(),
-      data: {
-        gameSpecId: 'gomoku',
-        mode: 'pve',
-        preferredColor: 'white',
-        engineId: ENGINE_ID,
-        rated: false,
-        opening: 'free',
-        timeControl: { initialMs: 600_000, incrementMs: 5_000 },
-      },
-    });
-    if (created.status() !== 201)
-      throw new Error(
-        `Gomoku room creation failed: ${created.status()} (check the Gomoku flag/public launch)`,
-      );
-    const room = await created.json();
-    assert.equal(typeof room.roomId, 'string');
-    assert.equal(room.rated, false);
-    roomId = room.roomId;
-    const url = new URL(room.url, baseUrl);
-    assert.equal(url.origin, new URL(baseUrl).origin, 'room URL must stay on the smoke origin');
-    const response = await page.goto(url.href, {
-      waitUntil: 'domcontentloaded',
-      timeout: remaining(),
-    });
-    if (!response?.ok())
-      throw new Error(`Gomoku room page returned HTTP ${response?.status() ?? 'no response'}`);
-    await page.locator('.gomoku-svg').waitFor({ state: 'visible', timeout: remaining() });
+    // A dealt opening can start with either colour. Abort human-first deals
+    // and retry within the same deadline, without playing any human moves.
+    while (true) {
+      initial = submitted = reply = finalStatus = undefined;
+      workerLoaded = networkLoaded = false;
+      const created = await page.request.post(new URL('/api/rooms', baseUrl).href, {
+        timeout: remaining(),
+        data: {
+          gameSpecId: 'gomoku',
+          mode: 'pve',
+          preferredColor: 'white',
+          engineId: ENGINE_ID,
+          rated: false,
+          timeControl: { initialMs: 600_000, incrementMs: 5_000 },
+        },
+      });
+      if (created.status() !== 201)
+        throw new Error(
+          `Gomoku room creation failed: ${created.status()} (check the Gomoku flag/public launch)`,
+        );
+      const room = await created.json();
+      assert.equal(typeof room.roomId, 'string');
+      assert.equal(room.rated, false);
+      roomId = room.roomId;
+      const url = new URL(room.url, baseUrl);
+      assert.equal(url.origin, new URL(baseUrl).origin, 'room URL must stay on the smoke origin');
+      const response = await page.goto(url.href, {
+        waitUntil: 'domcontentloaded',
+        timeout: remaining(),
+      });
+      if (!response?.ok())
+        throw new Error(`Gomoku room page returned HTTP ${response?.status() ?? 'no response'}`);
+      await page.locator('.gomoku-svg').waitFor({ state: 'visible', timeout: remaining() });
+      await waitFor(() => initial, 'the dealt opening');
+      if (initial.status.turn === 'black') break;
+      await page.locator('[data-game-action="abort"]').click({ timeout: remaining() });
+      await page.locator('[data-game-action="confirm-yes"]').click({ timeout: remaining() });
+      await waitFor(() => finalStatus, 'aborting the human-first deal');
+    }
     await waitFor(
       () => initial && submitted && reply && workerLoaded && networkLoaded,
       'Rapfi networks and a legal bot reply',

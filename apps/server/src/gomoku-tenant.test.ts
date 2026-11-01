@@ -166,36 +166,33 @@ test('dealt 3/4/5-stone rooms start their clocks and move numbers from human pla
   }
 });
 
-test('Gomoku create route offers free opening and refuses unknown opening modes', async () => {
-  for (const opening of ['free', 'balanced', 'swap2', null, {}]) {
-    let status = 0;
-    let payload = '';
-    await handleGomokuCreate(
-      {
-        databaseRequired: false,
-        refusesCreate: () => false,
-        drainDeadlineMs: () => null,
-        createGomokuRoom,
-      },
-      {
-        writeHead: (value: number) => {
-          status = value;
+test('Gomoku create route refuses the removed opening field before creating a room', async () => {
+  for (const mode of ['pvp', 'pve']) {
+    for (const opening of ['free', 'balanced', 'swap2', null, {}]) {
+      let status = 0;
+      let payload = '';
+      await handleGomokuCreate(
+        {
+          databaseRequired: false,
+          refusesCreate: () => false,
+          drainDeadlineMs: () => null,
+          createGomokuRoom: async () => {
+            assert.fail('a removed opening field must not reach the room factory');
+          },
         },
-        end: (value: string) => {
-          payload = value;
-        },
-      } as unknown as ServerResponse,
-      { gameSpecId: 'gomoku', mode: 'pvp', opening },
-    );
-    if (opening !== 'free' && opening !== 'balanced') {
-      assert.equal(status, 400);
-      assert.equal(JSON.parse(payload).error, 'gomoku_invalid_opening');
-      continue;
+        {
+          writeHead: (value: number) => {
+            status = value;
+          },
+          end: (value: string) => {
+            payload = value;
+          },
+        } as unknown as ServerResponse,
+        { gameSpecId: 'gomoku', mode, opening },
+      );
+      assert.equal(status, 501);
+      assert.equal(JSON.parse(payload).error, 'gomoku_unsupported_surface');
     }
-    assert.equal(status, 201);
-    const live = gomokuRooms.get(JSON.parse(payload).roomId)!;
-    assert.equal(live.projection.state.ply === 0, opening === 'free');
-    assert.deepEqual(replayTenantEvents(gomokuTenant, live.events), live.projection);
   }
 });
 
@@ -313,12 +310,7 @@ test('Gomoku refuses malformed, occupied, out-of-turn and postgame moves', () =>
 
 test('Gomoku friend creation preserves Black/White preference and exposes complete player views', async () => {
   for (const preferred of ['black', 'white'] as const) {
-    const created = await createGomokuRoom(
-      { initialMs: 300_000, incrementMs: 5_000 },
-      preferred,
-      undefined,
-      'free',
-    );
+    const created = await createGomokuRoom({ initialMs: 300_000, incrementMs: 5_000 }, preferred);
     assert.ok(created.ok);
     assert.equal(created.room.rated, false);
     assert.equal(assignTenantSeat(gomokuTenant, created.room, 'creator', undefined, null).ok, true);
@@ -348,11 +340,15 @@ test('Gomoku friend creation preserves Black/White preference and exposes comple
       assert.ok(key in payload, key);
     assert.equal(payload.state.id, created.room.id);
     assert.equal(payload.state.board.length, 225);
-    assert.equal(payload.state.ply, 0);
+    const state = created.room.projection.state;
+    assert.ok([3, 4, 5].includes(payload.state.ply));
     assert.equal(payload.state.moveNumber, 1);
-    assert.deepEqual(payload.state.status, { type: 'playing', turn: 'black' });
+    assert.deepEqual(payload.state.status, { type: 'playing', turn: state.opening?.turn });
     assert.equal(payload.state.perspective, preferred);
-    assert.equal(payload.state.legalMoves.length, preferred === 'black' ? 225 : 0);
+    assert.equal(
+      payload.state.legalMoves.length,
+      preferred === state.opening?.turn ? 225 - state.ply : 0,
+    );
     assert.deepEqual(payload.state.winningLine, []);
     assert.equal(payload.clock.activeColor, null);
     assert.deepEqual(payload.clock.remainingMs, { black: 300_000, white: 300_000 });
@@ -522,7 +518,7 @@ test('Gomoku WebSocket refuses ungranted seats and binds placements to reserved 
       this.closed = { code, reason };
     }
   }
-  const created = await createGomokuRoom(undefined, undefined, undefined, 'free');
+  const created = await createGomokuRoom();
   assert.ok(created.ok);
   const live = created.room as Parameters<typeof gomokuWs.handleConnection>[3];
   const black = new Socket();
@@ -563,8 +559,16 @@ test('Gomoku WebSocket refuses ungranted seats and binds placements to reserved 
       live,
     );
     assert.equal(black.sent[0]?.seat, 'black');
-    await place(black, 'h8');
-    assert.equal(live.projection.state.ply, 0);
+    const initial = live.projection.state;
+    const first = initial.opening!.turn === 'black' ? black : white;
+    const second = first === black ? white : black;
+    const [move, next] = getGomokuLegalMoves({
+      ...initial,
+      status: { type: 'playing', turn: initial.opening!.turn },
+    });
+    assert.ok(move && next);
+    await place(black, move.to);
+    assert.equal(live.projection.state.ply, initial.ply);
     await gomokuWs.handleConnection(
       ctx,
       white as unknown as WebSocket,
@@ -572,15 +576,14 @@ test('Gomoku WebSocket refuses ungranted seats and binds placements to reserved 
       live,
     );
     assert.equal(white.sent[0]?.seat, 'white');
-    await place(white, 'h8');
-    assert.equal(live.projection.state.ply, 0);
-    await place(black, 'h8');
-    assert.equal(live.projection.state.board[112], 'black');
-    await place(white, 'h8');
-    assert.equal(live.projection.state.ply, 1);
-    await place(white, 'i8');
-    assert.equal(live.projection.state.board[113], 'white');
-    assert.equal(live.projection.state.ply, 2);
+    await place(second, move.to);
+    assert.equal(live.projection.state.ply, initial.ply);
+    await place(first, move.to);
+    assert.equal(live.projection.state.ply, initial.ply + 1);
+    await place(second, move.to);
+    assert.equal(live.projection.state.ply, initial.ply + 1);
+    await place(second, next.to);
+    assert.equal(live.projection.state.ply, initial.ply + 2);
     assert.deepEqual(replayTenantEvents(gomokuTenant, live.events).state, live.projection.state);
   } finally {
     clearTenantRuntimeTimers(live);

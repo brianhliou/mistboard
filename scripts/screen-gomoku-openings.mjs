@@ -268,7 +268,7 @@ export function writePool(
       `No forced win was found within this finite search; this is screening evidence, not a solved draw. ` +
       `WINRATE comes directly from INFO WINRATE, paired with the last completed INFO PV; the separate final summary can be an interrupted iteration and must pass too. Missing, nonnumeric, mate or short-budget telemetry is rejected.\n\n` +
       `Reproduce: node scripts/screen-gomoku-openings.mjs --audit /tmp/gomoku-screen.jsonl. ` +
-      `This run's full telemetry: ${audit}. New casual games and rematches draw randomly; opening: 'free' requests an empty board. Legacy logs without setup stay empty-board games.\n`,
+      `This run's full telemetry: ${audit}. New casual games and rematches draw randomly. Legacy logs without setup stay empty-board games.\n`,
   );
   return metadata;
 }
