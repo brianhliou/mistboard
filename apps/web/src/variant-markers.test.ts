@@ -11,6 +11,7 @@ import {
 } from './variant-markers.js';
 import { VARIANT_MINIS, type VariantMiniId } from './variant-mini-boards.js';
 import { VARIANTS, variantMiniIdForGameSpec } from './variants.js';
+import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 // Variant markers fail closed: no fallback picture exists, so a variant with no
 // marker art has to fail here (or at the `satisfies Record<VariantMiniId, …>`
@@ -24,10 +25,20 @@ const MARKER_PX = 1254;
 // Game specs that are deliberately not variants anywhere a marker is shown.
 // Adding to this list is a product decision, not a way to get a test green.
 // HK mahjong is an allowlisted playtest with no public surface to mark.
-// Gomoku is built-hidden, without a tenant or a public variant surface (#768).
-const SPECS_WITHOUT_MARKER = ['chess', 'gomoku', 'mahjong'];
+const SPECS_WITHOUT_MARKER = ['chess', 'mahjong'];
 
 describe('variant markers', () => {
+  it('shares the Gomoku marker with TV while keeping it hidden and unrated', () => {
+    const id = 'gomoku';
+    expect(variantMiniIdForGameSpec(id)).toBe(id);
+    expect(WATCH_CHANNEL_MINI_IDS[id]).toBe(id);
+    expect(renderVariantMarker(id as VariantMiniId)).toContain(
+      "url('/variant-markers/final/gomoku.png')",
+    );
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
+    expect(isPublicGameSpec(id)).toBe(false);
+  });
+
   it('wires the committed Three Kingdoms art without a public variant row', () => {
     const id = 'three-kingdoms-banqi';
     expect(variantMiniIdForGameSpec(id)).toBe(id);

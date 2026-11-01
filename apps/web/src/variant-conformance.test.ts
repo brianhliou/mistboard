@@ -22,6 +22,7 @@ import { EDITOR_VARIANT_IDS } from './editor/editor-catalog.js';
 import { EMBED_ANALYSIS_VARIANTS } from './embed/embed-analysis.js';
 import { LANDING_BOT_GAME_SPEC_IDS } from './landing-bot-policy.js';
 import {
+  enabledLandingVariantGameSpecs,
   type LandingRoomSetup,
   landingVariantSupportsPve,
   roomCreationGameSpecId,
@@ -346,7 +347,23 @@ describe('rules link conformance', () => {
 });
 
 describe('Gomoku deliberate exclusions during hidden integration', () => {
-  it('has no public play, rating, study, analysis, editor, embed or marker surface', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each(['false', 'true'])('gates localized play-menu entries on flag %s', (flag) => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', flag);
+    for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as const) {
+      const entries = enabledLandingVariantGameSpecs('pvp', locale).filter(
+        (entry) => entry.gameSpecId === GOMOKU_SPEC_ID,
+      );
+      expect(entries).toEqual(
+        flag === 'true'
+          ? [{ gameSpecId: GOMOKU_SPEC_ID, label: locale === 'en' ? 'Gomoku' : '五子棋' }]
+          : [],
+      );
+    }
+  });
+
+  it('has a marker but no public play, rating, study, analysis, editor or embed surface', () => {
     expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(false);
     const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
     expect(tenant?.landing?.offerInMenu()).toBe(false);
@@ -363,7 +380,7 @@ describe('Gomoku deliberate exclusions during hidden integration', () => {
     expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(GOMOKU_SPEC_ID);
     expect(EMBED_ANALYSIS_VARIANTS[GOMOKU_SPEC_ID]).toBeNull();
     expect(embedRendererKindForVariant(GOMOKU_SPEC_ID)).toBeNull();
-    expect(variantMiniIdForGameSpec(GOMOKU_SPEC_ID)).toBeNull();
+    expect(variantMiniIdForGameSpec(GOMOKU_SPEC_ID)).toBe('gomoku');
   });
 });
 

@@ -18,9 +18,29 @@ import {
   matchupSeats,
   secondMoverColorName,
   terminationLabel,
+  variantDisplayLabel,
   variantNameKeyForSpecId,
+  watchChannelLabel,
 } from './game-display.js';
 import { ensureLocaleCatalog } from './i18n/catalog.js';
+
+describe('Gomoku display name', () => {
+  it.each([
+    ['/en/watch', 'Gomoku'],
+    ['/zh-hans/watch', '五子棋'],
+    ['/zh-hant/watch', '五子棋'],
+  ])('localizes the game and TV channel at %s', (path, label) => {
+    const previousPath = window.location.pathname;
+    window.history.pushState(null, '', path);
+    try {
+      expect(variantNameKeyForSpecId('gomoku')).toBe('variant.gomoku.name');
+      expect(variantDisplayLabel('gomoku')).toBe(label);
+      expect(watchChannelLabel({ id: 'gomoku', label: 'Gomoku' })).toBe(label);
+    } finally {
+      window.history.replaceState(null, '', previousPath);
+    }
+  });
+});
 
 // Regression suite for the "white vs pikajieqi" bug: surfaces that hardcoded a
 // 'white' seat lookup dropped the red player's name on every red/black variant

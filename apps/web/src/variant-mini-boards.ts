@@ -9,6 +9,7 @@
 // this path.
 
 export type VariantMiniId =
+  | 'gomoku'
   | 'dark-chess'
   | 'xiangqi'
   | 'dark-xiangqi'
@@ -23,7 +24,7 @@ export type VariantMiniId =
   | 'jungle-flip'
   | 'xiangqi-mahjong';
 
-export type VariantMiniFamily = 'chess' | 'xiangqi' | 'jungle' | 'mahjong';
+export type VariantMiniFamily = 'chess' | 'xiangqi' | 'jungle' | 'mahjong' | 'gomoku';
 
 export interface VariantMiniDef {
   id: VariantMiniId;
@@ -36,6 +37,14 @@ export interface VariantMiniDef {
 }
 
 export const VARIANT_MINIS: readonly VariantMiniDef[] = [
+  {
+    id: 'gomoku',
+    label: 'Gomoku',
+    shortLabel: 'GMK',
+    accent: '#8b5a24',
+    blurb: 'Five stones in a row on the intersections of a 15x15 board.',
+    family: 'gomoku',
+  },
   {
     id: 'dark-chess',
     label: 'Fog Chess',

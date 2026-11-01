@@ -385,7 +385,7 @@ describe('Gomoku hidden registration', () => {
       expect(server?.roomIdPrefix).toBe(web?.roomIdPrefix);
       expect(web?.enabled()).toBe(value === 'true');
       expect(server?.enabled()).toBe(value === 'true');
-      expect(web?.landing?.offerInMenu()).toBe(false);
+      expect(web?.landing?.offerInMenu()).toBe(value === 'true');
       expect(web?.landing?.acceptsDeepLink()).toBe(value === 'true');
       expect(web?.landing?.capabilities).toMatchObject({
         firstColor: 'black',

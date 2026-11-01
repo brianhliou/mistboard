@@ -283,11 +283,10 @@ export function secondMoverColorName(gameSpecId: string): string {
 // Catalog name key per spec. Exhaustive over GameSpecId on purpose: a new
 // union member fails the build until it decides, matching the fail-closed
 // registry rule. `null` means "no catalog name yet" (the runtimeStatus
-// 'future' specs and built-hidden Gomoku), and the caller falls back to the
+// 'future' specs), and the caller falls back to the
 // spec's English publicName rather than inventing a product name.
 export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
-  // Built-hidden: use publicName until a localized surface exists.
-  gomoku: null,
+  gomoku: 'variant.gomoku.name',
   banqi: 'variant.banqi.name',
   // runtimeStatus 'future': falls back to the spec's English publicName.
   mahjong: null,

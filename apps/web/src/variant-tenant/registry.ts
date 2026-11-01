@@ -330,8 +330,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         kind: 'browser',
       })),
       defaultEngineId: 'rapfi-level-1',
-      // Local opt-in deep links only. No public menu or bot shelf.
-      offerInMenu: () => false,
+      // The menu and deep link share the explicit opt-in flag.
+      offerInMenu: gomokuEnabled,
       acceptsDeepLink: gomokuEnabled,
     },
   },
