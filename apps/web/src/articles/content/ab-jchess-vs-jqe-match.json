@@ -1929,7 +1929,12 @@
    "bothKeptDrawn": 15,
    "bothKeptLost": 5,
    "disputedWon": 58,
-   "disputedLost": 10
+   "disputedLost": 10,
+   "moverSwitched": 15,
+   "bothKeptGames": 31,
+   "bothKeptGamesWon": 14,
+   "bothKeptGamesDrawn": 13,
+   "bothKeptGamesLost": 4
   },
   "jqe": {
    "disputed": 74,
@@ -1939,7 +1944,12 @@
    "bothKeptDrawn": 5,
    "bothKeptLost": 11,
    "disputedWon": 22,
-   "disputedLost": 27
+   "disputedLost": 27,
+   "moverSwitched": 18,
+   "bothKeptGames": 17,
+   "bothKeptGamesWon": 5,
+   "bothKeptGamesDrawn": 4,
+   "bothKeptGamesLost": 8
   }
  },
  "calibration": {
@@ -1973,13 +1983,41 @@
    "captures": 971,
    "contested": 143,
    "meanPts": -0.7,
-   "se": 1.28
+   "se": 1.28,
+   "byResult": {
+    "won": {
+     "games": 306,
+     "captures": 561
+    },
+    "drawn": {
+     "games": 67,
+     "captures": 91
+    },
+    "lost": {
+     "games": 227,
+     "captures": 319
+    }
+   }
   },
   "jqe": {
    "captures": 1187,
    "contested": 171,
    "meanPts": -1.7,
-   "se": 1.14
+   "se": 1.14,
+   "byResult": {
+    "won": {
+     "games": 227,
+     "captures": 494
+    },
+    "drawn": {
+     "games": 67,
+     "captures": 145
+    },
+    "lost": {
+     "games": 306,
+     "captures": 548
+    }
+   }
   },
   "gapPts": -1.01,
   "gapSe": 1.71,

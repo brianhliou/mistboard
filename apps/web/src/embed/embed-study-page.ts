@@ -676,7 +676,8 @@ async function mountJieqiEmbed(
   const tags = chapter.tags ?? {};
   const final = line.states[line.states.length - 1]!;
   const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
-  // The win-chance graph under the board, when the chapter carries one that fits
+  // The win-chance graph under the board, inside the board column the way the
+  // article replay draws its chart, when the chapter carries one that fits
   // this line (one value per position). A hidden solution keeps it off: the
   // graph would give the answer's swing away.
   const series = options.hideSolution
@@ -701,7 +702,7 @@ async function mountJieqiEmbed(
     railWidthPx: embedRailWidthPx('jieqi'),
     startPly: options.startPly ?? 0,
     ...solutionCardOptions(options),
-    ...(chart ? { belowCard: chart.el } : {}),
+    ...(chart ? { underBoard: chart.el } : {}),
     mountBoard: async (host, hooks) =>
       mountJieqiReplayBoard(
         host,

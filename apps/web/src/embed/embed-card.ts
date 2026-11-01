@@ -156,6 +156,10 @@ export type EmbedCardOptions = {
   /** A pane under the card (a banqi chapter's tablebase). It must keep one
    *  height whatever it shows: the board is fitted to the room it leaves. */
   belowCard?: HTMLElement;
+  /** A pane inside the board column, between the bottom seat row and the step
+   *  controls (a study chapter's win-chance graph, where the article replay
+   *  draws its chart). One fixed height, for belowCard's reason. */
+  underBoard?: HTMLElement;
   mountBoard: (
     host: HTMLElement,
     hooks: { onPlyChange: (ply: number, maxPly: number) => void },
@@ -361,7 +365,9 @@ export async function mountEmbedCard(
   controls.className = 'embed-card-controls';
   const status = document.createElement('span');
   status.className = 'embed-card-status';
-  boardCol.append(seatTop.el, boardHost, seatBottom.el, controls);
+  const underBoard = options.underBoard ?? null;
+  const boardFoot = underBoard ? [underBoard, controls] : [controls];
+  boardCol.append(seatTop.el, boardHost, seatBottom.el, ...boardFoot);
 
   const rail = document.createElement('div');
   rail.className = 'embed-card-rail';
@@ -423,8 +429,10 @@ export async function mountEmbedCard(
   const below = options.belowCard ?? null;
   frame.append(header, card, ...(below ? [below] : []), credit);
   root.replaceChildren(frame);
-  // The pane under the card and its gap, out of the board's room.
-  const belowHeight = (): number => (below ? below.offsetHeight + FRAME_GAP_PX : 0);
+  // The pane under the card and its gap, and the pane under the board, out of
+  // the board's room.
+  const belowHeight = (): number =>
+    (below ? below.offsetHeight + FRAME_GAP_PX : 0) + (underBoard ? underBoard.offsetHeight : 0);
 
   let handle: EmbedBoardHandle | null = null;
   let moveList: MoveList | null = null;
@@ -459,7 +467,7 @@ export async function mountEmbedCard(
     rowsForBottom = bottom;
     const top = bottom === 'first' ? seatTop : seatBottom;
     const under = bottom === 'first' ? seatBottom : seatTop;
-    boardCol.replaceChildren(top.el, boardHost, under.el, controls);
+    boardCol.replaceChildren(top.el, boardHost, under.el, ...boardFoot);
   };
   // A clock is a game's; a study has none and the slot stays empty. Tenths
   // only under ten seconds, the way the live clocks show them.
@@ -566,9 +574,9 @@ export async function mountEmbedCard(
     const rect = frame.getBoundingClientRect();
     if (rect.width <= 0) return;
     const stacked = rect.width < STACK_BELOW_PX;
-    // A pane under the card is height the host's phone rule knows nothing
-    // about, so a card with one reports its height stacked too.
-    if (stacked && !below) {
+    // A pane under the card or the board is height the host's phone rule knows
+    // nothing about, so a card with one reports its height stacked too.
+    if (stacked && !below && !underBoard) {
       postHeight(null);
       return;
     }

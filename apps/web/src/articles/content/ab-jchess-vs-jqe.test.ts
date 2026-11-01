@@ -13,10 +13,31 @@ import {
   jieqiPublicDeal,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { AB_JQE_GAMES, AB_JQE_MATCH, abJchessVsJqeArticle, chance, AB_JQE_STUDY,
-  seenFrom } from './ab-jchess-vs-jqe.js';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { AB_JQE_GAMES, AB_JQE_JUDGE, AB_JQE_MATCH, abJchessVsJqeArticle, chance, AB_JQE_STUDY,
+  darkPerGame, seenFrom } from './ab-jchess-vs-jqe.js';
 
 const M = AB_JQE_MATCH;
+// The 15 s judge's rows; its squares count ranks from 0 (f8c8 is f9c9).
+type JudgeRow = { key: string; ply: number; played: string; best: string | null; cp: number };
+const oneBased = (m: string) => m.replace(/([a-i])(\d)/g, (_, f: string, r: string) => `${f}${Number(r) + 1}`);
+const JUDGE = new Map(
+  readFileSync(
+    resolve(dirname(fileURLToPath(import.meta.url)), '../../../../../scripts/variant-lab/ab-jchess-vs-jqe-judge.jsonl'),
+    'utf8',
+  )
+    .trim()
+    .split('\n')
+    .map((l) => JSON.parse(l) as JudgeRow)
+    .map((r) => [`${r.key}@${r.ply}`, r] as const),
+);
+const judgeAt = (key: string, ply: number) => {
+  const r = JUDGE.get(`${key}@${ply}`);
+  if (!r) throw new Error(`no judge row for ${key} ply ${ply}`);
+  return { ...r, played: oneBased(r.played), best: r.best && oneBased(r.best) };
+};
 const sum = (r: { wins: number; draws: number; losses: number }) => r.wins + r.draws + r.losses;
 const elo = (r: { wins: number; draws: number; losses: number }) => {
   const score = (r.wins + r.draws / 2) / sum(r);
@@ -178,6 +199,12 @@ describe('AB-JChess vs jqe games', () => {
       expect(G.moves.split(' ')[d.ply]).toBe('i1d1');
       expect(chance(d.jqe.played)).toBe(chance(d.jqe.alt));
       expect(keeps(d.abj)).toBe(true);
+      // "AB-JChess itself prefers a third move, the chariot to c9."
+      const j = judgeAt(G.key, d.ply - 1);
+      expect(j.played).toBe(d.played);
+      expect(j.best).toBe(AB_JQE_JUDGE.game1Best);
+      expect(b[sq('f9')]).toMatchObject({ role: 'chariot' });
+      expect([d.played, d.alt]).not.toContain(j.best);
       expect(G.abWon).toBe(true);
     }
     // Game 2: elephant g3 to e5 against the advisor d1 to c2; the engines read the
@@ -206,7 +233,19 @@ describe('AB-JChess vs jqe games', () => {
       expect(b[sq('g6')]).toMatchObject({ role: 'chariot', color: 'black', faceDown: false });
       expect(keeps(d.jqe)).toBe(true);
       expect(chance(d.glance.played)).toBeLessThan(chance(d.glance.alt));
-      expect(chance(d.criticOwn[0]!)).toBeGreaterThan(50);
+      expect(chance(-d.jqe.played)).toBeGreaterThan(50);
+      // The turn: jqe's soldier d5-d6 on move 82, a ?? by the judge (Red 50% to 22%).
+      const t = AB_JQE_JUDGE.game3Turn;
+      expect(G.moves.split(' ')[t.ply - 1]).toBe(t.played);
+      expect(t.move).toBe(Math.ceil(t.ply / 2));
+      expect(t.ply % 2).toBe(1); // Red's move: jqe's
+      expect(board(G.key, t.ply - 1)[sq('d5')]).toMatchObject({ role: 'soldier', color: 'red' });
+      const before = judgeAt(G.key, t.ply - 1);
+      const after = judgeAt(G.key, t.ply);
+      expect(before.played).toBe(t.played);
+      expect(before.cp).toBe(t.redBefore); // Red to move
+      expect(-after.cp).toBe(t.redAfter); // Black to move
+      expect(chance(t.redBefore) - chance(t.redAfter)).toBeGreaterThanOrEqual(15);
       const abj = seenFrom(G, G.series.abj);
       const jqe = seenFrom(G, G.series.jqe);
       expect(abj).toBeGreaterThan(d.move);
@@ -214,6 +253,7 @@ describe('AB-JChess vs jqe games', () => {
       // Read off the move-by-move dump: AB-JChess 74% after Red's soldier d5-d6 (ply
       // 163, its reply is move 82); jqe 72% scored before its horse i1-g2 (move 89).
       expect([abj, jqe]).toEqual([82, 89]);
+      expect(abj).toBe(t.move);
       expect(G.series.abj[163]).toBeGreaterThanOrEqual(0.7);
       expect(G.series.abj[162]).toBeLessThan(0.7);
       expect(G.abWon).toBe(true);
@@ -245,6 +285,25 @@ describe('AB-JChess vs jqe games', () => {
     expect(Math.abs(X.gapZ)).toBeLessThan(2);
   });
 
+  it('splits the face-down captures by result, and jqe takes more in every row', () => {
+    const X = M.darkCaptures;
+    const T = M.total;
+    // Each engine's games by its own result are the match result from its side.
+    const games = { abj: [T.wins, T.draws, T.losses], jqe: [T.losses, T.draws, T.wins] };
+    for (const e of ['abj', 'jqe'] as const) {
+      const r = X[e].byResult;
+      expect([r.won.games, r.drawn.games, r.lost.games]).toEqual(games[e]);
+      expect(r.won.captures + r.drawn.captures + r.lost.captures).toBe(X[e].captures);
+    }
+    for (const res of ['won', 'drawn', 'lost'] as const) {
+      expect(Number(darkPerGame('jqe', res))).toBeGreaterThan(Number(darkPerGame('abj', res)));
+    }
+    // "Both engines take more in the games they win."
+    for (const e of ['abj', 'jqe'] as const) {
+      expect(Number(darkPerGame(e, 'won'))).toBeGreaterThan(Number(darkPerGame(e, 'lost')));
+    }
+  });
+
   it('backs the disagreement and calibration claims', () => {
     const D = M.disagree;
     // "jqe came round on half the AB-JChess moves… AB-JChess on fewer than half of jqe's."
@@ -253,8 +312,15 @@ describe('AB-JChess vs jqe games', () => {
     for (const e of ['abj', 'jqe'] as const) {
       const s = D[e];
       expect(s.bothKeptWon + s.bothKeptDrawn + s.bothKeptLost).toBe(s.bothKept);
-      expect(s.criticCameRound + s.bothKept).toBeLessThanOrEqual(s.disputed);
+      // The table's rows add up to the moves called mistakes.
+      expect(s.criticCameRound + s.moverSwitched + s.bothKept).toBe(s.disputed);
+      expect(s.bothKeptGamesWon + s.bothKeptGamesDrawn + s.bothKeptGamesLost).toBe(s.bothKeptGames);
+      expect(s.bothKeptGames).toBeLessThanOrEqual(s.bothKept);
     }
+    // "AB-JChess's choices held up better" and "lean the same way as the match".
+    expect(D.abj.bothKeptGamesWon).toBeGreaterThan(D.abj.bothKeptGamesLost);
+    expect(D.jqe.bothKeptGamesWon).toBeLessThan(D.jqe.bothKeptGamesLost);
+    expect(M.total.wins).toBeGreaterThan(M.total.losses);
     // "jqe also thinks it is doing better than it is."
     expect(M.calibration.jqe.scorePct).toBeLessThan(50);
     expect(M.calibration.abj.scorePct).toBeGreaterThan(50);

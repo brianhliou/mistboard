@@ -1293,10 +1293,12 @@ body.embed-body {
   }
 }
 
-/* A study chapter's win-chance graph under the card (embed-score-chart.ts).
-   ONE height for the tablebase's reason: the card fits the board to the room
-   the pane leaves (embed-card.ts belowCard). 92px + the 6px frame gap is what it
-   costs the frame. The inks are the article's two-engine pair, lifted on dark. */
+/* A study chapter's win-chance graph in the board column, under the bottom seat
+   row (embed-score-chart.ts; embed-card.ts underBoard), where the article
+   replay draws its chart. ONE height for the tablebase's reason: the card fits
+   the board to the room the pane leaves, so 92px is what it costs the board.
+   It sits on the card, so no border of its own. The inks are the article's
+   two-engine pair, lifted on dark. */
 .embed-score-chart {
   display: flex;
   flex: none;
@@ -1304,10 +1306,7 @@ body.embed-body {
   gap: 3px;
   box-sizing: border-box;
   height: 92px;
-  padding: 5px 8px 6px;
-  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
-  border-radius: 10px;
-  background: var(--site-panel, transparent);
+  padding: 2px 14px 6px;
   color: var(--site-text);
 }
 :root[data-effective-theme="dark"] .embed-score-chart {

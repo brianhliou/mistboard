@@ -703,9 +703,10 @@ describe('mountEmbedStudy', () => {
 
     const chart = root.querySelector<HTMLElement>('.embed-score-chart');
     expect(chart).not.toBeNull();
-    // Under the card, inside the frame, above the credit line.
-    expect(chart?.previousElementSibling?.classList.contains('embed-card')).toBe(true);
-    expect(chart?.nextElementSibling?.classList.contains('embed-credit')).toBe(true);
+    // In the board column, under the bottom seat row, above the step controls.
+    expect(chart?.parentElement?.classList.contains('embed-card-board')).toBe(true);
+    expect(chart?.previousElementSibling?.classList.contains('embed-card-seat')).toBe(true);
+    expect(chart?.nextElementSibling?.classList.contains('embed-card-controls')).toBe(true);
     const lines = [...(chart?.querySelectorAll('polyline.embed-score-chart__line') ?? [])];
     expect(lines.map((l) => l.getAttribute('data-series'))).toEqual(['AB-JChess', 'jqe']);
     expect(lines[0]?.getAttribute('stroke')).toBe('var(--eval-compare-a, #1f7a8c)');

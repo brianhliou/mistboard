@@ -7,7 +7,7 @@
 // (articles/eval-compare-chart.ts), so an embed and the post around it agree.
 //
 // One fixed height (embed.css): the card fits the board to the room the pane
-// leaves (embed-card.ts belowCard), so a pane that changed height would resize
+// leaves (embed-card.ts underBoard), so a pane that changed height would resize
 // the board.
 
 import { ENGINE_A_COLOR, ENGINE_B_COLOR } from '../articles/eval-compare-chart.js';
