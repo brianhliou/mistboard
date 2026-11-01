@@ -11,6 +11,27 @@ What changed on mistboard.com, month by month, newest first.
   docs-only commits do not.
 - The file starts at 2026-09-11. Earlier history is in `git log`.
 
+## 2026-11
+
+### Learning and puzzles
+
+- Puzzle Storm: solve as many puzzles as you can in three minutes, then go back through the run ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+- Play a finished puzzle's final position against the computer, from a quiet link under Next puzzle ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+- Guests see Register and Sign in buttons on the puzzle page ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
+### Watching and review
+
+- Move glyphs in review fade once the pieces land ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
+### Site
+
+- About, FAQ, Terms and Privacy rewritten around the mission, with a binding fair-play rule and a new share card ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+- A shorter About menu, and the phone menu now matches the desktop one ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
+### Fixed
+
+- Forum posts embed game links that use /room/, and game names show in the reader's language ([a4162b65](https://github.com/brianhliou/mistboard/commit/a4162b65))
+
 ## 2026-10
 
 ### Playing
