@@ -15,8 +15,10 @@ vi.mock('../analytics.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../analytics.js')>()),
   track: vi.fn(),
 }));
-const auth = vi.hoisted(() => ({ user: null as { id: string } | null }));
-vi.mock('../account-nav.js', () => ({ loadCachedCurrentUser: async () => auth.user }));
+const auth = vi.hoisted(() => ({
+  loadCachedCurrentUser: vi.fn<() => Promise<{ id: string } | null>>(),
+}));
+vi.mock('../account-nav.js', () => auth);
 
 const puzzles = XIANGQI_PUZZLES.filter((p) => p.solution.length === 3).slice(0, 4);
 const storageKey = 'mistboard:puzzles:storm-run';
@@ -50,7 +52,7 @@ function server(options: { combo?: number; remaining?: number; partial?: boolean
   let deadline = Date.now() + (options.remaining ?? 180_000);
   let loseMoveResponse = false;
   let failStart = false;
-  let failResume: number | 'network' | null = null;
+  let failResume: number | 'network' | 'timeout' | null = null;
   let delayMove = 0;
   const results: { id: string; outcome: 'solved' | 'failed' }[] = [];
   const snapshot = () => ({
@@ -89,6 +91,7 @@ function server(options: { combo?: number; remaining?: number; partial?: boolean
     if (body.action === 'start' && failStart) return json({}, 503);
     if (body.action === 'resume' && failResume) {
       if (failResume === 'network') throw new TypeError('Offline');
+      if (failResume === 'timeout') throw new DOMException('Request timed out', 'TimeoutError');
       return json({}, failResume);
     }
     let attempt: ReturnType<typeof attemptStandardXiangqiPuzzleLine> | undefined;
@@ -136,7 +139,7 @@ function server(options: { combo?: number; remaining?: number; partial?: boolean
     failStart: (value: boolean) => {
       failStart = value;
     },
-    failResume: (value: boolean, status: number | 'network' = 503) => {
+    failResume: (value: boolean, status: number | 'network' | 'timeout' = 503) => {
       failResume = value ? status : null;
     },
     delayNextMove: (ms: number) => {
@@ -166,7 +169,7 @@ function click(root: HTMLElement, label: string) {
   button!.click();
 }
 beforeEach(() => {
-  auth.user = null;
+  auth.loadCachedCurrentUser.mockReset().mockResolvedValue(null);
   vi.mocked(track).mockClear();
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-10-31T12:00:00Z'));
@@ -267,6 +270,49 @@ it('resumes accepted partial progress and never resubmits its first move', async
   expect(actions[1].move).toEqual(puzzles[0]!.solution[2]);
 });
 
+it.each(['non-OK', 'network'])(
+  'resumes a saved signed-in run without a %s account lookup',
+  async (failure) => {
+    window.sessionStorage.setItem(
+      storageKey,
+      JSON.stringify({ runId: 'run', owner: 'account-a', finished: false }),
+    );
+    if (failure === 'network') {
+      auth.loadCachedCurrentUser.mockRejectedValue(new TypeError('Offline'));
+    }
+    const { fetchSpy } = server();
+    const root = await open();
+    await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+    expect(auth.loadCachedCurrentUser).not.toHaveBeenCalled();
+    expect(
+      fetchSpy.mock.calls
+        .filter(([url]) => url === '/api/puzzles/storm')
+        .map(([, init]) => JSON.parse(String(init?.body))),
+    ).toEqual([{ action: 'resume', runId: 'run' }]);
+    expect(JSON.parse(window.sessionStorage.getItem(storageKey)!)).toEqual({
+      runId: 'run',
+      finished: false,
+    });
+  },
+);
+
+it('resumes a legacy record containing only the run id', async () => {
+  window.sessionStorage.setItem(storageKey, JSON.stringify({ runId: 'run' }));
+  const { fetchSpy } = server({ partial: true });
+  const root = await open();
+  await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+  expect(JSON.parse(String(fetchSpy.mock.calls[0]![1]?.body))).toEqual({
+    action: 'resume',
+    runId: 'run',
+  });
+  expect(JSON.parse(window.sessionStorage.getItem(storageKey)!)).toEqual({
+    runId: 'run',
+    finished: false,
+  });
+  await move(root, puzzles[0]!.solution[2]!);
+  expect(boardId(root)).toBe(puzzles[1]!.id);
+});
+
 it('recovers an ambiguous move response by resuming the accepted position', async () => {
   const api = server();
   const root = await open();
@@ -292,7 +338,6 @@ it('expires without another move, keeps results, and opens an unrated review', a
   expect(root.querySelector('[data-storm-clock]')?.textContent).toBe('0:00');
   expect(JSON.parse(window.sessionStorage.getItem(storageKey)!)).toEqual({
     runId: 'run',
-    owner: null,
     finished: true,
   });
   const chip = root.querySelector<HTMLAnchorElement>('.puzzle-streak-chip--solved')!;
@@ -307,9 +352,9 @@ it('expires without another move, keeps results, and opens an unrated review', a
 });
 
 it.each([null, 'account-a'])(
-  'restores the same results and review chips for owner %s until New Storm is pressed',
-  async (owner) => {
-    auth.user = owner ? { id: owner } : null;
+  'restores the same results and review chips with cached user %s until New Storm is pressed',
+  async (userId) => {
+    auth.loadCachedCurrentUser.mockResolvedValue(userId ? { id: userId } : null);
     const { fetchSpy } = server({ remaining: 10_000 });
     const root = await open();
     await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
@@ -338,38 +383,12 @@ it.each([null, 'account-a'])(
   },
 );
 
-it.each([
-  [null, 'account-a'],
-  ['account-a', null],
-  ['account-a', 'account-b'],
-])('drops a finished run when its owner changes from %s to %s', async (from, to) => {
-  auth.user = from ? { id: from } : null;
-  const api = server({ remaining: 1000 });
-  const root = await open();
-  await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
-  await vi.advanceTimersByTimeAsync(1100);
-  await vi.waitFor(() => expect(root.querySelector('[data-storm-results]')).not.toBeNull());
-
-  window.dispatchEvent(new Event('pagehide'));
-  root.remove();
-  auth.user = to ? { id: to } : null;
-  api.failResume(true, 404);
-  api.fetchSpy.mockClear();
-  const reloaded = await open();
-  await vi.waitFor(() => expect(api.fetchSpy).toHaveBeenCalled());
-  expect(reloaded.querySelector('[role="alert"]')).toBeNull();
-  const actions = api.fetchSpy.mock.calls
-    .filter(([url]) => url === '/api/puzzles/storm')
-    .map(([, init]) => JSON.parse(String(init?.body)).action);
-  expect(actions).not.toContain('resume');
-  expect(JSON.parse(window.sessionStorage.getItem(storageKey)!).owner).toBe(to);
-});
-
-it('clears a missing finished run silently and waits for New Storm', async () => {
+it.each([false, true])('lets the server forget a missing run (finished: %s)', async (finished) => {
   window.sessionStorage.setItem(
     storageKey,
-    JSON.stringify({ runId: 'run', owner: null, finished: true }),
+    JSON.stringify({ runId: 'run', owner: 'account-a', finished }),
   );
+  auth.loadCachedCurrentUser.mockResolvedValue({ id: 'account-b' });
   const api = server();
   api.failResume(true, 404);
   const root = await open();
@@ -377,6 +396,10 @@ it('clears a missing finished run silently and waits for New Storm', async () =>
   expect(root.querySelector('[role="alert"]')).toBeNull();
   expect(root.querySelector('[data-storm-results]')).toBeNull();
   expect(api.fetchSpy).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(String(api.fetchSpy.mock.calls[0]![1]?.body))).toEqual({
+    action: 'resume',
+    runId: 'run',
+  });
   click(root, 'New Storm');
   await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
 });
@@ -406,40 +429,151 @@ it('emits one completion on the live transition and none on review or results re
   expect(completions()).toHaveLength(1);
 });
 
-it.each([
-  { state: 'saved', status: 404 },
-  { state: 'saved', status: 503 },
-  { state: 'saved', status: 403 },
-  { state: 'saved', status: 'network' },
-  { state: 'loaded', status: 404 },
-  { state: 'loaded', status: 503 },
-  { state: 'loaded', status: 403 },
-  { state: 'loaded', status: 'network' },
-] as const)(
-  'opens a pending unrated review when a $state run resumes with $status',
-  async ({ state, status }) => {
+it.each([false, true])(
+  'opens a pending unrated review on an initial 404 (saved finished: %s)',
+  async (finished) => {
     window.sessionStorage.setItem(
       storageKey,
-      JSON.stringify({ runId: 'run', owner: null, finished: false }),
+      JSON.stringify({ runId: 'run', owner: null, finished }),
     );
     window.history.replaceState(null, '', `/puzzles?mode=storm&review=${puzzles[2]!.id}`);
-    const api = server({ remaining: 1000 });
-    if (state === 'saved') api.failResume(true, status);
+    const api = server();
+    api.failResume(true, 404);
     const root = await open();
-    if (state === 'loaded') {
-      await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
-      api.failResume(true, status);
-      await vi.advanceTimersByTimeAsync(1100);
-    }
     await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[2]!.id));
     expect(root.textContent).toContain('Unrated review');
     expect(root.querySelector('[role="alert"]')).toBeNull();
     await move(root, puzzles[2]!.solution[0]!);
     expect(api.fetchSpy.mock.calls.some(([url]) => String(url).endsWith('/attempt'))).toBe(true);
-    expect(api.fetchSpy.mock.calls.filter(([url]) => url === '/api/puzzles/storm')).toHaveLength(
-      state === 'saved' ? 1 : 2,
+    expect(api.fetchSpy.mock.calls.filter(([url]) => url === '/api/puzzles/storm')).toHaveLength(1);
+    expect(window.sessionStorage.getItem(storageKey)).toBeNull();
+  },
+);
+
+it.each(
+  [false, true].flatMap((finished) =>
+    ([503, 403, 'network', 'timeout'] as const).map((status) => ({ finished, status })),
+  ),
+)(
+  'keeps a review pending through an initial $status failure (saved finished: $finished)',
+  async ({ finished, status }) => {
+    const saved = JSON.stringify({ runId: 'run', owner: null, finished });
+    window.sessionStorage.setItem(storageKey, saved);
+    window.history.replaceState(null, '', `/puzzles?mode=storm&review=${puzzles[2]!.id}`);
+    const api = server({ remaining: finished ? 0 : 1000 });
+    api.failResume(true, status);
+    const root = await open();
+    await vi.waitFor(() => expect(root.querySelector('[role="alert"]')).not.toBeNull());
+    expect(boardId(root)).toBeUndefined();
+    expect(root.textContent).not.toContain('Unrated review');
+    expect(api.fetchSpy.mock.calls.some(([url]) => url === `/api/puzzles/${puzzles[2]!.id}`)).toBe(
+      false,
     );
-    expect(window.sessionStorage.getItem(storageKey) !== null).toBe(status !== 404);
+    expect(window.sessionStorage.getItem(storageKey)).toBe(saved);
+    api.failResume(false);
+    click(root, 'Resume Storm');
+    if (!finished) {
+      await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+      expect(root.querySelector('[role="alert"]')).toBeNull();
+      expect(root.textContent).not.toContain('Unrated review');
+      await vi.advanceTimersByTimeAsync(1100);
+    }
+    await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[2]!.id));
+    expect(root.textContent).toContain('Unrated review');
+    expect(
+      api.fetchSpy.mock.calls
+        .filter(([url]) => url === '/api/puzzles/storm')
+        .map(([, init]) => JSON.parse(String(init?.body))),
+    ).toEqual(Array(finished ? 2 : 3).fill({ action: 'resume', runId: 'run' }));
+    expect(
+      vi
+        .mocked(track)
+        .mock.calls.filter(
+          ([event, props]) => event === 'puzzle_mode_finished' && props?.reason === 'completed',
+        ),
+    ).toHaveLength(finished ? 0 : 1);
+  },
+);
+
+it('opens the pending review if an initial retry returns 404', async () => {
+  window.sessionStorage.setItem(
+    storageKey,
+    JSON.stringify({ runId: 'run', owner: null, finished: false }),
+  );
+  window.history.replaceState(null, '', `/puzzles?mode=storm&review=${puzzles[2]!.id}`);
+  const api = server();
+  api.failResume(true);
+  const root = await open();
+  await vi.waitFor(() => expect(root.querySelector('[role="alert"]')).not.toBeNull());
+  api.failResume(true, 404);
+  click(root, 'Resume Storm');
+  await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[2]!.id));
+  expect(root.querySelector('[role="alert"]')).toBeNull();
+  expect(window.sessionStorage.getItem(storageKey)).toBeNull();
+  expect(api.fetchSpy.mock.calls.filter(([url]) => url === '/api/puzzles/storm')).toHaveLength(2);
+});
+
+it.each(
+  [false, true].flatMap((review) =>
+    ([503, 403, 'network', 'timeout'] as const).map((status) => ({ review, status })),
+  ),
+)(
+  'retains the live run and completion through a $status expiry failure (review: $review)',
+  async ({ review, status }) => {
+    window.sessionStorage.setItem(
+      storageKey,
+      JSON.stringify({ runId: 'run', owner: null, finished: false }),
+    );
+    if (review) {
+      window.history.replaceState(null, '', `/puzzles?mode=storm&review=${puzzles[2]!.id}`);
+    }
+    const api = server({ remaining: 1000, partial: true, combo: 1 });
+    const root = await open();
+    await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+    await move(root, puzzles[0]!.solution[2]!);
+    expect(boardId(root)).toBe(puzzles[1]!.id);
+    const saved = window.sessionStorage.getItem(storageKey);
+    api.failResume(true, status);
+    await vi.advanceTimersByTimeAsync(1100);
+    await vi.waitFor(() => expect(root.querySelector('[role="alert"]')).not.toBeNull());
+    expect(boardId(root)).toBe(puzzles[1]!.id);
+    expect(root.textContent).not.toContain('Unrated review');
+    expect(window.sessionStorage.getItem(storageKey)).toBe(saved);
+    expect(track).not.toHaveBeenCalledWith('puzzle_mode_finished', expect.anything());
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(api.fetchSpy.mock.calls.filter(([url]) => url === '/api/puzzles/storm')).toHaveLength(3);
+    api.failResume(false);
+    click(root, 'Resume Storm');
+    if (review) {
+      await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[2]!.id));
+      expect(root.textContent).toContain('Unrated review');
+      click(root, 'Back to results');
+    }
+    await vi.waitFor(() => expect(root.querySelector('[data-storm-results]')).not.toBeNull());
+    expect(JSON.parse(window.sessionStorage.getItem(storageKey)!)).toEqual({
+      runId: 'run',
+      finished: true,
+    });
+    expect(
+      vi.mocked(track).mock.calls.filter(([event]) => event === 'puzzle_mode_finished'),
+    ).toEqual([
+      [
+        'puzzle_mode_finished',
+        { mode: 'storm', variant: 'xiangqi', run_length: 1, reason: 'completed' },
+      ],
+    ]);
+    await vi.advanceTimersByTimeAsync(1000);
+    window.dispatchEvent(new Event('pagehide'));
+    root.remove();
+    const reloaded = await open();
+    if (review) {
+      await vi.waitFor(() => expect(boardId(reloaded)).toBe(puzzles[2]!.id));
+      click(reloaded, 'Back to results');
+    }
+    await vi.waitFor(() => expect(reloaded.querySelector('[data-storm-results]')).not.toBeNull());
+    expect(
+      vi.mocked(track).mock.calls.filter(([event]) => event === 'puzzle_mode_finished'),
+    ).toHaveLength(1);
   },
 );
 
@@ -468,12 +602,19 @@ it('resumes a live run before opening a review link and opens it after the run e
   expect(root.querySelector('[data-storm-score]')?.textContent).toBe('1');
 });
 
-it.each(['saved', 'loaded'])('offers New Storm when a %s run returns 404', async (state) => {
+it.each([
+  { state: 'saved', review: false },
+  { state: 'loaded', review: false },
+  { state: 'loaded', review: true },
+])('offers New Storm silently on a $state 404 (review: $review)', async ({ state, review }) => {
   window.sessionStorage.setItem(
     storageKey,
     JSON.stringify({ runId: 'run', owner: null, finished: false }),
   );
   const api = server();
+  if (review) {
+    window.history.replaceState(null, '', `/puzzles?mode=storm&review=${puzzles[2]!.id}`);
+  }
   if (state === 'saved') api.failResume(true, 404);
   const root = await open();
   if (state === 'loaded') {
@@ -488,7 +629,9 @@ it.each(['saved', 'loaded'])('offers New Storm when a %s run returns 404', async
       true,
     ),
   );
-  expect(root.querySelector('[role="alert"]')).not.toBeNull();
+  expect(root.querySelector('[role="alert"]')).toBeNull();
+  expect(boardId(root)).toBeUndefined();
+  expect(root.textContent).not.toContain('Unrated review');
   expect(window.sessionStorage.getItem(storageKey)).toBeNull();
   expect(root.textContent).not.toContain('Resume Storm');
   const actions = () =>
@@ -498,6 +641,7 @@ it.each(['saved', 'loaded'])('offers New Storm when a %s run returns 404', async
   expect(actions()).not.toContain('start');
   api.failResume(false);
   click(root, 'New Storm');
+  await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
   await vi.waitFor(() => expect(root.querySelector('[role="alert"]')).toBeNull());
   expect(actions().at(-1)).toBe('start');
   expect(boardId(root)).toBe(puzzles[0]!.id);

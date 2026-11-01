@@ -1,4 +1,3 @@
-import { loadCachedCurrentUser } from '../account-nav.js';
 import { track } from '../analytics.js';
 import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { t } from '../i18n/catalog.js';
@@ -25,7 +24,7 @@ type StormRun = {
 };
 type Frame = { shell: HTMLElement; detail: HTMLElement; controls: HTMLElement };
 type MountSolver = (puzzle: PuzzleDetail, options: PuzzleSolverOptions) => PuzzleSolverHandle;
-type SavedRun = { runId: string; owner: string | null; finished: boolean };
+type SavedRun = { runId: string; finished: boolean };
 const RUN_KEY = 'mistboard:puzzles:storm-run';
 const SEEN_KEY = 'mistboard:puzzles:storm-seen';
 
@@ -46,9 +45,7 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
   let change = '';
   let reviewing = false;
   let reviewToken = 0;
-  const owner = (await loadCachedCurrentUser())?.id ?? null;
-  const savedRun = rememberedRun(owner);
-  let resumeId = savedRun?.runId ?? null;
+  let resumeId = rememberedRun()?.runId ?? null;
   let pendingReviewId = new URLSearchParams(window.location.search).get('review');
 
   const active = (): boolean => !stopped && shell.isConnected;
@@ -81,7 +78,7 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     error = null;
     shell.classList.remove('puzzle-storm-error');
     // Results belong to this run too; reload must not start another clock.
-    rememberRun({ runId: next.runId, owner, finished: next.finished });
+    rememberRun({ runId: next.runId, finished: next.finished });
     rememberSeen(next.results.map((result) => result.id));
     if (completed) finish();
   };
@@ -134,8 +131,8 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
           : 'puzzle.stormContinueFailed',
       );
       box.append(message);
-      if (!(error instanceof PuzzlePlayDisabledError)) {
-        const canResume = (run && !run.finished) || resumeId;
+      const canResume = (run && !run.finished) || resumeId;
+      if (canResume || !(error instanceof PuzzlePlayDisabledError)) {
         box.append(
           button(
             t(canResume ? 'puzzle.stormResume' : 'puzzle.stormNewRun'),
@@ -295,6 +292,7 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
   async function resume(): Promise<void> {
     const runId = run?.runId ?? resumeId;
     if (busy || !runId || !active()) return;
+    const initialReconcile = run === null;
     busy = true;
     solver?.end();
     try {
@@ -302,25 +300,18 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
       showBoard();
     } catch (cause) {
       if (!active()) return;
-      const finished = run?.finished ?? savedRun?.finished ?? false;
       const missing = cause instanceof Error && cause.message === '404';
       if (missing) {
         run = null;
         resumeId = null;
         rememberRun(null);
+        showStart();
+        if (initialReconcile) openPendingReview();
+      } else {
+        // Keep the live snapshot (and its eventual completion transition)
+        // until the server can reconcile it. A review must wait too.
+        showError(cause);
       }
-      if (pendingReviewId) {
-        // A failed reconciliation must not swallow the requested review or
-        // leave a live clock running behind it. Keep retryable saves for reload.
-        if (run && !run.finished) {
-          resumeId = run.runId;
-          run = null;
-        }
-        error = null;
-        shell.classList.remove('puzzle-storm-error');
-        openPendingReview();
-      } else if (missing && finished) showStart();
-      else showError(cause);
     } finally {
       busy = false;
     }
@@ -432,7 +423,7 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     document.removeEventListener('prerenderingchange', beginWhenVisible);
     // Reconcile a saved run before opening a review so a live clock never
     // runs unseen. showSummary opens the pending review once the run ends.
-    // A failed resume opens the requested review; retryable saves keep the id.
+    // Only an initial 404 may open it without a finished run.
     if (resumeId) void resume();
     else if (pendingReviewId) openPendingReview();
     else {
@@ -462,21 +453,15 @@ function clockText(ms: number): string {
   const seconds = Math.ceil(ms / 1000);
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
-function rememberedRun(owner: string | null): SavedRun | null {
+function rememberedRun(): SavedRun | null {
   try {
     const value = JSON.parse(window.sessionStorage?.getItem(RUN_KEY) ?? 'null') as {
       runId?: unknown;
-      owner?: unknown;
       finished?: unknown;
     } | null;
-    if (
-      typeof value?.runId === 'string' &&
-      value.owner === owner &&
-      typeof value.finished === 'boolean'
-    ) {
-      return { runId: value.runId, owner, finished: value.finished };
+    if (typeof value?.runId === 'string') {
+      return { runId: value.runId, finished: value.finished === true };
     }
-    rememberRun(null);
     return null;
   } catch {
     return null;
