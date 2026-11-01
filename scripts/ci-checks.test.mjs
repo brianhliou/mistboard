@@ -48,7 +48,7 @@ cp.spawnSync = (command, args, options) => {
     return cp.spawnSync(args[offset + 1], args.slice(offset + 2), options);
   }
   if (command === 'npm' && args[0] === 'run') {
-    const code = failures[args[1]] ?? 0;
+    const code = failures[args.slice(1).join(' ')] ?? failures[args[1]] ?? 0;
     if (code === 'signal') return { status: null, signal: 'SIGTERM' };
     if (code === 'spawn') return { status: null, error: new Error('fixture ENOENT') };
     return originalSpawn(process.execPath, ['-e', 'process.exit(' + code + ')'], options);
@@ -67,7 +67,11 @@ net.createServer = (callback) => {
   });
   return server;
 };
-net.createConnection = () => {
+// tsx (imported by release-prod) dials its parent's IPC pipe by path on load;
+// only the TCP loopback preflight is doubled here.
+const originalCreateConnection = net.createConnection;
+net.createConnection = (...args) => {
+  if (typeof args[0] === 'string') return originalCreateConnection(...args);
   const client = new EventEmitter();
   client.destroy = () => {};
   queueMicrotask(() => {
@@ -119,7 +123,23 @@ function fixture(script, args, failures) {
   return { ...result, output, summary, calls, lockFile, logFile };
 }
 
-const ran = (calls, script) => calls.some((call) => call.join(' ') === `npm run ${script}`);
+const ran = (calls, script) =>
+  calls.some((call) => {
+    const line = call.join(' ');
+    return line === `npm run ${script}` || line.startsWith(`npm run ${script} `);
+  });
+
+test('a web and a server unit failure are both reported in one run', () => {
+  const result = fixture('scripts/ci-checks.mjs', ['quick'], {
+    'test:unit --workspace @mistboard/web': 3,
+    'test:unit --workspace @mistboard/server': 4,
+  });
+  assert.equal(result.status, 1, result.output);
+  assert.match(result.summary, /npm run test:unit --workspace @mistboard\/web.*exit 3/);
+  assert.match(result.summary, /npm run test:unit --workspace @mistboard\/server.*exit 4/);
+  assert.match(result.summary, /npm run test:unit --workspace @mistboard\/game.*passed/);
+  assert.match(result.summary, /npm run test:tooling.*passed/);
+});
 
 test('quick reports two planted command failures together and exits 1', () => {
   const result = fixture('scripts/ci-checks.mjs', ['quick'], { lint: 7, 'test:unit': 9 });

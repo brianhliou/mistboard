@@ -126,6 +126,10 @@ jobs:
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
           npm run build --workspace @mistboard/mahjong
+      # live-gomoku.test.ts screens openings with the real Rapfi WASM, whose
+      # 40 MB net is untracked; the web build fetches it, this job never builds.
+      - name: Fetch the pinned Rapfi net
+        run: node apps/web/scripts/fetch-rapfi-net.mjs
       - name: Unit tests (web, shard ${{ matrix.shard }} of 2)
         run: npm run test:unit --workspace @mistboard/web -- --shard ${{ matrix.shard }}/2
 
