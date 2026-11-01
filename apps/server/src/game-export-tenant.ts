@@ -36,6 +36,7 @@ import {
   fortressXiangqiMoveToFsfUci,
   type GameEvent,
   type GameExportFormat,
+  type GomokuOpening,
   type HiddenPieceIdentity,
   type HiddenPieceReveal,
   type HiddenPieceVariant,
@@ -121,6 +122,8 @@ export type TenantExportOptions<M, State> = {
   san?: (moves: readonly M[]) => readonly (string | null)[];
   // Flip variants: read the ink the first-mover seat bound, off the final state.
   firstMoverInk?: (state: State) => string | null;
+  // Gomoku retains the original opening on its state throughout replay.
+  opening?: (state: State) => GomokuOpening;
   // Hidden-identity variants: squares per color still holding a piece whose
   // identity the game never determined (see TenantExportGame.neverRevealed).
   neverRevealed?: (state: State) => Record<string, string[]> | null;
@@ -253,6 +256,7 @@ export function tenantExportBinding<
           ? { neverRevealed: options.neverRevealed(projection.state) }
           : {}),
         ...(dealFen ? { dealFen } : {}),
+        ...(options.opening ? { opening: options.opening(projection.state) } : {}),
         ...(writePgn ? { writePgn } : {}),
       };
     },
@@ -295,6 +299,8 @@ export type TenantGamePublication = {
   // game, never an imported one): the start as the variant's dealt FEN, the public FEN
   // plus a sixth field naming each face-down piece in board order.
   deal_fen?: string;
+  // Gomoku: played plies start AFTER these recorded stones.
+  opening?: GomokuOpening;
   // Imported games only (a game played elsewhere, e.g. an off-site engine match):
   //   event: the event it was played in;
   //   credit: the credited work, its authors (as written) and link;
@@ -395,6 +401,14 @@ export function buildTenantGamePublicationJson(
     license: LICENSE,
     ...(game.firstMoverInk !== undefined ? { first_mover_ink: game.firstMoverInk } : {}),
     ...(game.dealFen ? { deal_fen: game.dealFen } : {}),
+    ...(game.opening
+      ? {
+          opening: {
+            stones: game.opening.stones.map((stone) => ({ ...stone })),
+            turn: game.opening.turn,
+          },
+        }
+      : {}),
     ...(game.origin ? { origin: publicationOrigin(game) } : {}),
     plies: publicationPlies(game),
   };

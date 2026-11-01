@@ -1,14 +1,18 @@
 import {
+  exportFormatsForVariant,
   GOMOKU_SPEC_ID,
   type GomokuColor,
   type GomokuMove,
   type GomokuPlayerView,
 } from '@mistboard/game';
 import { reviewOpenedProps, track } from './analytics.js';
+import { gomokuEnabled } from './feature-flags.js';
 import { variantDisplayLabel } from './game-display.js';
 import { gomokuOffered } from './gomoku-access.js';
 import { t } from './i18n/catalog.js';
 import { bootstrapGomokuRecording } from './live-gomoku.js';
+import { gameExportLinks } from './review/game-export-links.js';
+import { downloadRow } from './review/underboard-tabs.js';
 import { buildNav } from './site-shell.js';
 import { readTenantWebClock, type TenantWebClock } from './variant-tenant/clock-projection.js';
 import type { TenantLiveFrame } from './variant-tenant/live-client.js';
@@ -142,6 +146,16 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
         return clock ? { remainingMs: clock.remainingMs, active: clock.activeColor } : null;
       },
     });
+    // The server serves the export only under the flag, not to an admin on
+    // prod, so the link waits for the same flag.
+    if (gomokuEnabled()) {
+      const downloads = document.createElement('div');
+      downloads.className = 'review-underboard review-share';
+      downloads.append(
+        downloadRow(gameExportLinks(roomId, exportFormatsForVariant(GOMOKU_SPEC_ID))),
+      );
+      root.querySelector('.review-shell__center')?.append(downloads);
+    }
     track(
       'review_opened',
       reviewOpenedProps({

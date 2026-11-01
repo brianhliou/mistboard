@@ -202,7 +202,7 @@ test('Gomoku flag gates metadata and PNGs before store reads, including a warmed
   assert.equal(maybeGameSpecForId('gomoku')?.publicSurface, 'hidden');
   const registration = variantTenantForRoomId(roomId);
   assert.equal(registration?.lobby?.supportsRated, false);
-  assert.equal(registration?.export, null);
+  assert.equal(registration?.export?.gameRouteBase, '/gomoku/game');
   assert.equal(registration?.watch?.channelId, 'gomoku');
 });
 

@@ -215,10 +215,17 @@ test('engine-game files have their own paths, keys and names, and fail closed th
 });
 
 test('hidden and retired variants are off /data: no rail entry, no count, no file', () => {
-  for (const variant of ['fortress-xiangqi', 'atomic-xiangqi']) {
+  // Export support does not launch Gomoku or admit it to public bulk files.
+  assert.deepEqual(dataFormatsForVariant('gomoku'), ['jsonl']);
+  for (const variant of ['fortress-xiangqi', 'atomic-xiangqi', 'gomoku']) {
     assert.ok(!DATA_VARIANTS.includes(variant), variant);
     assert.deepEqual(
       parseDataFilePath(`/api/data/monthly/2026-09/${variant}.jsonl.gz`),
+      { ok: false, status: 404, error: 'unknown_variant' },
+      variant,
+    );
+    assert.deepEqual(
+      parseDataFilePath(`/api/data/engine-monthly/2026-09/${variant}.0123456789ab.jsonl.gz`),
       { ok: false, status: 404, error: 'unknown_variant' },
       variant,
     );
@@ -228,8 +235,12 @@ test('hidden and retired variants are off /data: no rail entry, no count, no fil
       { month: '2026-09', variant: 'xiangqi', games: 10 },
       { month: '2026-09', variant: 'fortress-xiangqi', games: 12 },
       { month: '2026-09', variant: 'atomic-xiangqi', games: 5 },
+      { month: '2026-09', variant: 'gomoku', games: 7 },
     ],
-    engineCounts: [{ month: '2026-09', variant: 'atomic-xiangqi', games: 40 }],
+    engineCounts: [
+      { month: '2026-09', variant: 'atomic-xiangqi', games: 40 },
+      { month: '2026-09', variant: 'gomoku', games: 8 },
+    ],
     stored: [],
     collections: [],
     now: NOW,

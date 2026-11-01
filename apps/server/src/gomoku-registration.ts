@@ -8,6 +8,7 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
 import { gomokuEnabled } from './feature-flags.js';
+import { tenantExportBinding } from './game-export-tenant.js';
 import { gomokuAdmits } from './gomoku-access.js';
 import {
   type GomokuEvent,
@@ -44,6 +45,11 @@ import {
 
 export const gomokuRooms = new Map<string, GomokuRuntimeRoom>();
 export const gomokuWs = createTenantWsRuntime(gomokuTenant, { allowBrowserEngineMoves: true });
+const gomokuExport = tenantExportBinding(gomokuTenant, {
+  gameRouteBase: '/gomoku/game',
+  uci: (move) => move.to,
+  opening: (state) => state.opening ?? { stones: [], turn: 'black' },
+});
 type LiveRoom = TenantLiveRoom<
   'gomoku',
   GomokuColor,
@@ -183,7 +189,13 @@ registerVariantTenant({
     label: 'Gomoku',
     legacyVariants: ['gomoku'],
   },
-  export: null,
+  export: {
+    gameRouteBase: gomokuExport.gameRouteBase,
+    // Unlike a public variant's export, the playtest download stays behind
+    // its flag even for a finished, durable game with a known room id.
+    finishedGame: (events, roomId) =>
+      gomokuEnabled() ? gomokuExport.finishedGame(events, roomId) : null,
+  },
   card: {
     layout: 'gomoku',
     variant: GOMOKU_SPEC_ID,

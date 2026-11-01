@@ -20,7 +20,12 @@ import type { TenantGameOrigin } from './tenant.js';
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { GomokuPlayerView, HiddenPieceIdentity, RoomTimeControl } from '@mistboard/game';
+import type {
+  GomokuOpening,
+  GomokuPlayerView,
+  HiddenPieceIdentity,
+  RoomTimeControl,
+} from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import {
   censusDeployGate,
@@ -153,6 +158,9 @@ export type TenantExportGame = {
   // game had a real deal (every site game). Absent for an imported game, whose
   // source drew identities at reveal time: its stored deal is partly invented.
   dealFen?: string;
+  // Gomoku's stored opening, separate from event-counted placements. Legacy
+  // games explicitly export the empty board with Black to move.
+  opening?: GomokuOpening;
   // Present only for tenants with an honest movetext notation. Receives the
   // full tag block the neutral builder assembled (Event, Site, Date, Round, the
   // two color-named player tags, Result, Variant, ...) and the result token;

@@ -79,6 +79,9 @@ async function mount(payload: unknown, status = 200, admin?: boolean) {
       }),
   );
   vi.stubGlobal('fetch', fetchSpy);
+  const { currentLocale } = await import('./i18n/locale.js');
+  const { ensureLocaleCatalog } = await import('./i18n/catalog.js');
+  await ensureLocaleCatalog(currentLocale());
   const { mountGomokuPostgame } = await import('./gomoku-postgame.js');
   const root = document.querySelector<HTMLDivElement>('#app')!;
   mountGomokuPostgame(root, ROOM);
@@ -89,6 +92,22 @@ async function mount(payload: unknown, status = 200, admin?: boolean) {
 const key = (name: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
 
 describe('Gomoku finished-game review', () => {
+  it.each(['en', 'zh-Hans', 'zh-Hant'])('offers the JSON download in %s', async (locale) => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => (key === 'mistboard.locale' ? locale : null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    });
+    window.history.replaceState(null, '', `/gomoku/game/${ROOM}?lang=${locale}`);
+    const { root } = await mount(fixture());
+    const link = root.querySelector<HTMLAnchorElement>('a[download$=".json"]');
+    expect(link?.getAttribute('href')).toBe(`/api/games/${ROOM}/export.json`);
+    expect(link?.download).toBe(`mistboard-${ROOM}.json`);
+    expect(link?.textContent).toBe('JSON');
+    expect(link?.closest('.review-share__row')?.textContent).toContain(
+      locale === 'en' ? 'Download' : locale === 'zh-Hans' ? '下载' : '下載',
+    );
+  });
   for (const enabled of [false, true]) {
     it.each([undefined, false, true])(
       `admits review by role with flag ${enabled}: admin %s`,
@@ -204,6 +223,15 @@ describe('Gomoku finished-game review', () => {
       expect(capture).not.toHaveBeenCalled();
     },
   );
+
+  // The server serves the export only under the flag (gomoku-registration.ts),
+  // so an admin on prod reviews a game with no download link to a 404.
+  it('offers no download to an admin while the flag is off', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
+    const { root } = await mount(fixture(), 200, true);
+    expect(root.querySelector('.gomoku-live-board')).not.toBeNull();
+    expect(root.querySelector('a[download]')).toBeNull();
+  });
 
   it('does not fetch or count a review while the flag is off', async () => {
     vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');

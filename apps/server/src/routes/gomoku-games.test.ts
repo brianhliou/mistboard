@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { after, before, test } from 'node:test';
 import {
+  applyGomokuRoomMove,
+  createGomokuRoomState,
+  exportFormatsForVariant,
   GOMOKU_OPENINGS,
   GOMOKU_SPEC_ID,
   type GomokuOpening,
@@ -10,6 +13,7 @@ import {
   getGomokuPlayerView,
 } from '@mistboard/game';
 import { gomokuEnabled } from '../feature-flags.js';
+import { resolveGameExport } from '../game-export-tenant.js';
 import { gomokuRooms } from '../gomoku-registration.js';
 import { type GomokuEvent, gomokuTenant } from '../gomoku-tenant.js';
 import { handleApiRequest } from '../http-api.js';
@@ -120,11 +124,15 @@ function deps(
 
 const api = () => import('./gomoku-games.js');
 
-async function request(path = `/api/gomoku/games/${ROOM_ID}`, method = 'GET') {
+async function request(
+  path = `/api/gomoku/games/${ROOM_ID}`,
+  method = 'GET',
+  ctx = {} as HttpApiContext,
+) {
   let status = 0;
   let body = '';
   await handleApiRequest(
-    {} as HttpApiContext,
+    ctx,
     { url: path, method } as IncomingMessage,
     {
       writeHead: (value: number) => {
@@ -159,11 +167,127 @@ test('Gomoku finished games link to their tenant review instead of the live room
   assert.equal(registration.finishedGameOpensRoom, undefined);
 });
 
+test('Gomoku JSON export preserves recorded openings and replays every placement', () => {
+  assert.deepEqual(exportFormatsForVariant('gomoku'), ['json']);
+  for (const opening of [
+    { stones: [], turn: 'black' } as GomokuOpening,
+    ...[3, 4, 5].map((count) => GOMOKU_OPENINGS.find((entry) => entry.stones.length === count)!),
+  ]) {
+    const live = finish(room(opening));
+    const firstMove = live.events.find((event) => event.type === 'move-played')!;
+    firstMove.clock = {
+      initialMs: TC.initialMs,
+      incrementMs: TC.incrementMs,
+      remainingMs: { black: 58_123, white: 59_456 },
+      activeColor: gomokuTenant.oppositeColor(firstMove.color),
+      runningSince: firstMove.at,
+    };
+    const resolved = resolveGameExport({
+      roomId: ROOM_ID,
+      format: 'json',
+      summary: gameRecord(),
+      events: live.events,
+    });
+    assert.equal(resolved.status, 200);
+    if (resolved.status !== 200) throw new Error('missing JSON export');
+    const payload = JSON.parse(resolved.body);
+    assert.deepEqual(payload.opening, { stones: opening.stones, turn: opening.turn });
+    assert.equal(payload.source.game_url, `https://mistboard.com/gomoku/game/${ROOM_ID}`);
+    assert.deepEqual(Object.keys(payload.players), ['black', 'white']);
+    assert.equal(payload.result, 'black');
+    assert.equal(payload.ply_count, 3);
+    assert.deepEqual(
+      payload.plies.map((ply: { uci: string }) => ply.uci),
+      ['a1', 'b1', 'a2'],
+    );
+    let replay = createGomokuRoomState(ROOM_ID, payload.opening);
+    for (const ply of payload.plies) {
+      assert.equal(replay.status.type === 'playing' && replay.status.turn, ply.mover);
+      const next = applyGomokuRoomMove(replay, { to: ply.uci });
+      assert.notEqual(next, replay);
+      replay = next;
+    }
+    assert.deepEqual(replay.board, live.projection.state.board);
+    assert.equal(payload.plies[0].black_clock_ms_after, 58_123);
+    assert.equal(payload.plies[0].white_clock_ms_after, 59_456);
+    assert.equal(
+      resolveGameExport({
+        roomId: ROOM_ID,
+        format: 'pgn',
+        summary: gameRecord(),
+        events: live.events,
+      }).status,
+      501,
+    );
+  }
+});
+
+test('Gomoku legacy export uses an empty opening; live, aborted and flag-off logs export no data', () => {
+  const legacy = finish(room({ stones: [], turn: 'black' }));
+  const created = legacy.events[0];
+  assert.equal(created?.type, 'room-created');
+  if (created?.type !== 'room-created') throw new Error('missing room-created');
+  delete created.setup;
+  const resolve = (events: readonly unknown[]) =>
+    resolveGameExport({
+      roomId: ROOM_ID,
+      format: 'json',
+      summary: gameRecord(),
+      events,
+    });
+  const result = resolve(legacy.events);
+  assert.equal(result.status, 200);
+  if (result.status !== 200) throw new Error('missing legacy export');
+  assert.deepEqual(JSON.parse(result.body).opening, { stones: [], turn: 'black' });
+  const playing = room();
+  assert.deepEqual(resolve(playing.events), { status: 403, body: { error: 'game_not_public' } });
+  assert.deepEqual(
+    resolve(
+      playing.events.slice(0, 1).concat({
+        type: 'game-aborted',
+        at: 10_000,
+        roomId: ROOM_ID,
+        reason: 'user-abort',
+      } as GomokuEvent),
+    ),
+    { status: 403, body: { error: 'game_not_public' } },
+  );
+  process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
+  try {
+    assert.deepEqual(resolve(legacy.events), { status: 403, body: { error: 'game_not_public' } });
+  } finally {
+    process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
+  }
+});
+
+test('canonical Gomoku export HTTP surface serves JSON only while its flag is on', async () => {
+  const live = finish();
+  const ctx = {
+    rooms: new Map([[ROOM_ID, { events: live.events }]]),
+    inMemoryGameSummary: () => gameRecord(),
+  } as unknown as HttpApiContext;
+  const path = `/api/games/${ROOM_ID}/export.json`;
+  const result = await request(path, 'GET', ctx);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.variant, 'gomoku');
+  assert.deepEqual(result.body.opening, live.projection.state.opening);
+  assert.equal((await request(path, 'POST', ctx)).status, 405);
+  process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
+  try {
+    assert.deepEqual(await request(path, 'GET', ctx), {
+      status: 403,
+      body: { error: 'game_not_public' },
+    });
+  } finally {
+    process.env.MISTBOARD_GOMOKU_ENABLED = 'true';
+  }
+});
+
 test('Gomoku live payload builder and watch capability keep listings and rated play closed', () => {
   assert.equal(hasLiveWatchPayloadBuilder('gomoku'), true);
   const registration = variantTenantForSpecId(GOMOKU_SPEC_ID)!;
   assert.equal(registration.watch?.channelId, GOMOKU_SPEC_ID);
-  assert.equal(registration.export, null);
+  assert.equal(registration.export?.gameRouteBase, '/gomoku/game');
   assert.equal(registration.lobby?.supportsRated, false);
   assert.equal(gameSpecForId(GOMOKU_SPEC_ID).publicSurface, 'hidden');
   const live = room();

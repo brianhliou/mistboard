@@ -91,7 +91,7 @@ Edit task → find file → open only that file.
 | File | Owns |
 |------|------|
 | `gomoku-tenant.ts` | Hidden, unrated Black-first Gomoku referee: kernel placements, open-information views, room endings and persistence mappings (#768 build 2) |
-| `gomoku-registration.ts` | Hidden flag-gated Gomoku rooms, casual lobby/friend challenges and five-level browser Rapfi PvE with Black/White preference; opt-in bot-move delegation, finished-game share card and TV capability with Rapfi names; listings wait for publicSurface; no rated, export or correspondence |
+| `gomoku-registration.ts` | Hidden flag-gated Gomoku rooms, casual lobby/friend challenges and five-level browser Rapfi PvE with Black/White preference; opt-in bot-move delegation, finished-game share card, JSON export with the recorded opening and TV capability with Rapfi names; listings and /data wait for publicSurface; no rated or correspondence |
 | `routes/gomoku-games.ts` | Flag-gated finished replay and registered live payload builder; replays the recorded opening into spectator views, with event-counted plies, terminal history and clocks; hidden games stay out of TV election and listings |
 | `routes/gomoku-games.test.ts` | Gomoku HTTP dispatch, flag denial, dealt/legacy replay, clocks, terminal evidence, invalid logs and event-derived live snapshots |
 | `gomoku-browser-bot.test.ts` | Browser bot move boundary: both colours, own-room human only, exact ply, kernel legality, PvP/rated/spectator refusal and durable bot-seat reconnect |
