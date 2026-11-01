@@ -1,4 +1,18 @@
-// Standalone freestyle 15x15 adapter: no variant registration or game kernel.
+// Freestyle 15x15 adapter; candidate choice is opt-in until ladder integration.
+import {
+  parseRapfiOutput,
+  type RapfiCandidate,
+  type RapfiChoiceOptions,
+  type RapfiPosition,
+  rapfiPositionState,
+  selectRapfiMove,
+  validateRapfiCandidateCount,
+  validateRapfiChoiceOptions,
+} from './rapfi-candidates.js';
+
+export type { RapfiCandidate, RapfiChoiceOptions, RapfiPosition };
+export { parseRapfiOutput, selectRapfiMove };
+
 export type RapfiLevel = 1 | 2 | 3 | 4 | 5;
 export const RAPFI_LEVELS: readonly {
   readonly level: RapfiLevel;
@@ -12,15 +26,12 @@ export const RAPFI_LEVELS: readonly {
   { level: 5, nodes: 100_000, timeMs: 5_000 },
 ]);
 
-export interface RapfiPosition {
-  turn: 1 | 2;
-  stones: readonly { x: number; y: number; player: 1 | 2 }[];
-}
-
 export interface RapfiMove {
   move: { x: number; y: number };
   /** Worker time, including lazy network initialization on the first move. */
   elapsedMs: number;
+  /** Present only for an opt-in YXNBEST request. */
+  candidates?: readonly RapfiCandidate[];
 }
 
 /** Small transport seam so Node tests run the real browser worker in a thread. */
@@ -49,7 +60,7 @@ function browserTransport(): RapfiTransport {
 /** Shared with the offline ladder so calibration exercises browser commands. */
 export function rapfiCommands(
   position: RapfiPosition,
-  tier: { nodes: number; timeMs: number },
+  tier: { nodes: number; timeMs: number; candidateCount?: number },
 ): { lines: string[]; timeMs: number } {
   if (
     !Number.isSafeInteger(tier.nodes) ||
@@ -58,24 +69,9 @@ export function rapfiCommands(
     tier.timeMs < 1
   )
     throw new Error('Invalid Rapfi budget');
-  if (position.turn !== 1 && position.turn !== 2) throw new Error('Invalid Rapfi turn');
-  const occupied = new Set<string>();
-  for (const stone of position.stones) {
-    if (
-      !Number.isInteger(stone.x) ||
-      stone.x < 0 ||
-      stone.x >= 15 ||
-      !Number.isInteger(stone.y) ||
-      stone.y < 0 ||
-      stone.y >= 15 ||
-      (stone.player !== 1 && stone.player !== 2)
-    )
-      throw new Error('Invalid Rapfi stone');
-    const key = `${stone.x},${stone.y}`;
-    if (occupied.has(key)) throw new Error('Duplicate Rapfi stone');
-    occupied.add(key);
-  }
-  if (occupied.size === 225) throw new Error('Rapfi board is full');
+  rapfiPositionState(position);
+  const count = tier.candidateCount;
+  if (count !== undefined) validateRapfiCandidateCount(count);
   return {
     timeMs: tier.timeMs,
     lines: [
@@ -83,16 +79,20 @@ export function rapfiCommands(
       'INFO rule 0',
       `INFO max_node ${tier.nodes}`,
       `INFO timeout_turn ${tier.timeMs}`,
+      ...(count !== undefined ? ['INFO show_detail 2'] : []),
       // BOARD's 1 means us, 2 means opponent, regardless of stone color.
       position.stones.length
         ? [
-            'BOARD',
+            count !== undefined ? 'YXBOARD' : 'BOARD',
             ...position.stones.map(
               (stone) => `${stone.x},${stone.y},${stone.player === position.turn ? 1 : 2}`,
             ),
             'DONE',
           ].join('\n')
-        : 'BEGIN',
+        : count !== undefined
+          ? `YXNBEST ${count}`
+          : 'BEGIN',
+      ...(count !== undefined && position.stones.length ? [`YXNBEST ${count}`] : []),
     ],
   };
 }
@@ -102,6 +102,8 @@ type Pending = {
   lines: string[];
   timeMs: number;
   move?: { x: number; y: number };
+  choice?: RapfiChoiceOptions;
+  output: string[];
   resolve(result: RapfiMove): void;
   reject(error: Error): void;
 };
@@ -116,16 +118,27 @@ export class Rapfi {
 
   constructor(private readonly createTransport: () => RapfiTransport = browserTransport) {}
 
-  async chooseMove(position: RapfiPosition, level: RapfiLevel): Promise<RapfiMove> {
+  async chooseMove(
+    position: RapfiPosition,
+    level: RapfiLevel,
+    choice?: RapfiChoiceOptions,
+  ): Promise<RapfiMove> {
     if (this.pending) throw new Error('Rapfi is already searching');
     const tier = RAPFI_LEVELS.find((entry) => entry.level === level);
     if (!tier) throw new Error('Unknown Rapfi level');
-    const { lines, timeMs } = rapfiCommands(position, tier);
+    const { lines, timeMs } = rapfiCommands(position, {
+      ...tier,
+      candidateCount: choice?.candidateCount,
+    });
+    // Validate options before allocating a worker, including on an empty board.
+    if (choice) validateRapfiChoiceOptions(choice);
     return new Promise<RapfiMove>((resolve, reject) => {
       this.pending = {
         position: { turn: position.turn, stones: position.stones.map((stone) => ({ ...stone })) },
         lines,
         timeMs,
+        choice: choice ? { ...choice } : undefined,
+        output: [],
         resolve,
         reject,
       };
@@ -180,6 +193,8 @@ export class Rapfi {
       }
       const match = /^(\d+),(\d+)$/.exec(message.line);
       if (match && this.pending) this.pending.move = { x: Number(match[1]), y: Number(match[2]) };
+      if (this.pending?.choice && message.line.startsWith('INFO '))
+        this.pending.output.push(message.line);
     } else if (message.type === 'done' && this.pending) {
       const { move, position, resolve } = this.pending;
       if (
@@ -198,9 +213,23 @@ export class Rapfi {
         this.fail(new Error('Rapfi move timed out'));
         return;
       }
-      clearTimeout(this.timer);
-      this.pending = null;
-      resolve({ move, elapsedMs: message.elapsedMs });
+      // The final move remains required even for YXNBEST. Its human MESSAGE
+      // summaries never supply candidates; missing structured output fails closed.
+      try {
+        const { choice, output } = this.pending;
+        const candidates = choice ? parseRapfiOutput(output) : undefined;
+        const selected =
+          choice && candidates ? selectRapfiMove(position, candidates, choice) : move;
+        clearTimeout(this.timer);
+        this.pending = null;
+        resolve({
+          move: selected,
+          elapsedMs: message.elapsedMs,
+          ...(candidates ? { candidates } : {}),
+        });
+      } catch (error) {
+        this.fail(error instanceof Error ? error : new Error(String(error)));
+      }
     }
   }
 

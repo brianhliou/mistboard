@@ -5,7 +5,13 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { RAPFI_LEVELS, Rapfi, type RapfiPosition, type RapfiTransport } from './rapfi.js';
+import {
+  parseRapfiOutput,
+  RAPFI_LEVELS,
+  Rapfi,
+  type RapfiPosition,
+  type RapfiTransport,
+} from './rapfi.js';
 
 const engineDir = resolve(__dirname, '../../public/engine/rapfi');
 const clients: Rapfi[] = [];
@@ -107,6 +113,75 @@ function hasFive(stones: RapfiPosition['stones']): boolean {
 }
 
 describe('Rapfi SIMD WASM (#762)', () => {
+  it('records structured single/multi-PV output from the pinned binary via YXNBEST', async () => {
+    const output: string[] = [];
+    const engine = new Rapfi(() => {
+      const transport = nodeTransport();
+      return {
+        ...transport,
+        listen(onMessage, onError) {
+          transport.listen((message) => {
+            const event = message as { type: string; line?: string };
+            if (event.type === 'line' && event.line) output.push(event.line);
+            onMessage(message);
+          }, onError);
+        },
+      };
+    });
+    clients.push(engine);
+    const pos = position(
+      [
+        [7, 7],
+        [8, 8],
+        [6, 8],
+      ],
+      [
+        [7, 8],
+        [8, 7],
+        [6, 7],
+      ],
+    );
+    for (const candidateCount of [1, 3]) {
+      output.length = 0;
+      const result = await engine.chooseMove(pos, 3, { candidateCount, evalMargin: 0, seed: 42 });
+      expect(result.candidates).toEqual(parseRapfiOutput(output));
+      expect(result.candidates).toHaveLength(candidateCount);
+      expect(result.candidates?.map(({ pvIndex }) => pvIndex)).toEqual(
+        Array.from({ length: candidateCount }, (_, i) => i),
+      );
+      for (const candidate of result.candidates ?? []) {
+        expect(candidate.move).toEqual(candidate.pv[0]);
+        expect(
+          pos.stones.some(({ x, y }) => x === candidate.move.x && y === candidate.move.y),
+        ).toBe(false);
+      }
+    }
+    const forced = await engine.chooseMove(
+      position(
+        [
+          [4, 7],
+          [5, 7],
+          [6, 7],
+          [7, 7],
+        ],
+        [
+          [3, 7],
+          [5, 8],
+          [6, 8],
+          [8, 9],
+        ],
+      ),
+      1,
+      { candidateCount: 3, evalMargin: 100, seed: 0 },
+    );
+    expect(forced.move).toEqual({ x: 8, y: 7 });
+    // Rapfi may short-circuit trivial wins before emitting a structured PV.
+    for (const candidate of forced.candidates ?? []) {
+      if (candidate.eval >= 29775)
+        expect(candidate.forcedFive).toEqual({ result: 'win', plies: 30000 - candidate.eval });
+    }
+  });
+
   it('loads the pinned WASM and takes a win in one', async () => {
     expect(readFileSync(resolve(engineDir, 'rapfi-single-simd128.wasm')).length).toBe(1_263_368);
     const pin = JSON.parse(readFileSync(resolve(engineDir, 'net.json'), 'utf8'));
