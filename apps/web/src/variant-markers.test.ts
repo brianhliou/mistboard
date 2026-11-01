@@ -10,7 +10,7 @@ import {
   renderVariantMarker,
 } from './variant-markers.js';
 import { VARIANT_MINIS, type VariantMiniId } from './variant-mini-boards.js';
-import { VARIANTS, variantMiniIdForGameSpec } from './variants.js';
+import { VARIANT_MINI_BY_GAME_SPEC, VARIANTS, variantMiniIdForGameSpec } from './variants.js';
 
 // Variant markers fail closed: no fallback picture exists, so a variant with no
 // marker art has to fail here (or at the `satisfies Record<VariantMiniId, …>`
@@ -24,9 +24,20 @@ const MARKER_PX = 1254;
 // Game specs that are deliberately not variants anywhere a marker is shown.
 // Adding to this list is a product decision, not a way to get a test green.
 // HK mahjong is an allowlisted playtest with no public surface to mark.
-const SPECS_WITHOUT_MARKER = ['chess', 'mahjong'];
+// FFQ is reserved before its hidden spec is registered; it has no board art.
+const SPECS_WITHOUT_MARKER = ['chess', 'ffq-banqi', 'mahjong'];
 
 describe('variant markers', () => {
+  it('explicitly reserves FFQ without a mini-board, marker or public variant row', () => {
+    const id = 'ffq-banqi';
+    expect(VARIANT_MINI_BY_GAME_SPEC).toHaveProperty(id, null);
+    expect(variantMiniIdForGameSpec(id)).toBeNull();
+    expect(VARIANT_MINIS.map((mini) => mini.id)).not.toContain(id);
+    expect(isVariantMarkerId(id)).toBe(false);
+    expect(() => renderVariantMarker(id as VariantMiniId)).toThrow(/No variant marker/);
+    expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
+  });
+
   it('wires the committed Three Kingdoms art without a public variant row', () => {
     const id = 'three-kingdoms-banqi';
     expect(variantMiniIdForGameSpec(id)).toBe(id);
@@ -63,7 +74,8 @@ describe('variant markers', () => {
       .filter((spec) => variantMiniIdForGameSpec(spec.id) === null)
       .map((spec) => spec.id)
       .sort();
-    expect(missing).toEqual(SPECS_WITHOUT_MARKER);
+    const liveIds = new Set<string>(live.map((spec) => spec.id));
+    expect(missing).toEqual(SPECS_WITHOUT_MARKER.filter((id) => liveIds.has(id)));
     for (const spec of live) {
       const id = variantMiniIdForGameSpec(spec.id);
       if (id) expect(isVariantMarkerId(id), spec.id).toBe(true);

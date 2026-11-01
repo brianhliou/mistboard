@@ -51,8 +51,11 @@ export function seatInkFamily(variant: string | null | undefined): string | null
  * unknown or legacy variant string reads as 'seat-word', the old behaviour.
  */
 export type SeatNaming = 'seat-word' | 'player';
-const SEAT_NAMING: Readonly<Record<GameSpecId, SeatNaming>> = {
+// Reserve FFQ ahead of GameSpecId registration; all registered specs stay required.
+export const SEAT_NAMING: Readonly<Record<GameSpecId | 'ffq-banqi', SeatNaming>> = {
   banqi: 'seat-word',
+  // Fixed Red/Black seats; its first flip never binds a player's ink.
+  'ffq-banqi': 'seat-word',
   mahjong: 'seat-word',
   'xiangqi-mahjong': 'player',
   'three-kingdoms-banqi': 'seat-word',
@@ -70,6 +73,7 @@ const SEAT_NAMING: Readonly<Record<GameSpecId, SeatNaming>> = {
 };
 
 export function seatsNamePlayers(variant: string | null | undefined): boolean {
-  const spec = variant ? maybeGameSpecForId(variant) : undefined;
-  return spec ? SEAT_NAMING[spec.id] === 'player' : false;
+  const id =
+    variant === 'ffq-banqi' ? variant : variant ? maybeGameSpecForId(variant)?.id : undefined;
+  return id ? SEAT_NAMING[id] === 'player' : false;
 }

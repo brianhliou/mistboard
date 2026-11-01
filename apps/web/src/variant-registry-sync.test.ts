@@ -46,6 +46,21 @@ import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
 
+describe('FFQ banqi reserved dispatch stays unavailable', () => {
+  it('registers no web or server tenant while only web metadata is prepared', () => {
+    expect(webVariantTenants().map((tenant) => tenant.gameSpecId)).not.toContain('ffq-banqi');
+    expect(registeredVariantTenants().map((tenant) => tenant.gameSpecId)).not.toContain(
+      'ffq-banqi',
+    );
+  });
+
+  it('adds no FFQ game or review route to the server shell allowlist', () => {
+    for (const path of ['/ffq-banqi/game/reserved-room', '/ffq-banqi/review/reserved-room']) {
+      expect(isClientRoute(path), path).toBe(false);
+    }
+  });
+});
+
 describe('web tenant routes <-> server SPA fallback allowlist', () => {
   it('every tenant postgame route serves the SPA shell on direct hits', () => {
     for (const tenant of webVariantTenants()) {
