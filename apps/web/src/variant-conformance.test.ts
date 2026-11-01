@@ -124,8 +124,8 @@ function setupFor(gameSpecId: LandingRoomSetup['gameSpecId']): LandingRoomSetup 
 
 describe('Chinese variant names', () => {
   it.each([
-    { language: 'zh-CN', locale: 'zh-Hans', flipName: '兽棋', jungleName: '斗兽棋' },
-    { language: 'zh-TW', locale: 'zh-Hant', flipName: '獸棋', jungleName: '鬥獸棋' },
+    { language: 'zh-CN', locale: 'zh-Hans', flipName: '翻翻兽棋', jungleName: '斗兽棋' },
+    { language: 'zh-TW', locale: 'zh-Hant', flipName: '翻翻獸棋', jungleName: '鬥獸棋' },
   ] as const)(
     'names jungle-flip in $language while preserving Jungle',
     ({ locale, flipName, jungleName }) => {

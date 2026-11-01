@@ -133,7 +133,7 @@ export const ZH_HANS_PLAY = {
   'variant.crazyhouseXiangqi.name': '疯狂屋象棋',
   'variant.darkChess.name': '迷雾国际象棋',
   'variant.jungle.name': '斗兽棋',
-  'variant.jungleFlip.name': '兽棋',
+  'variant.jungleFlip.name': '翻翻兽棋',
   'variant.jieqi.name': '揭棋',
   'variant.chess.name': '国际象棋',
   'live.abort': '中止',
