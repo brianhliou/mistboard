@@ -4,6 +4,8 @@ import test from 'node:test';
 import { FFQ_BANQI_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import { collectCurrentGames } from './current-games.js';
 import { ffqBanqiEnabled } from './feature-flags.js';
+import { ffqBanqiRooms } from './ffq-banqi-registration.js';
+import './variant-tenant/register-tenants.js';
 import { collectLiveRoomStats } from './live-room-stats.js';
 import { onlineFollowingRows } from './online-following.js';
 import { close, getPool, init } from './persistence-db.js';
@@ -11,12 +13,7 @@ import { filterReplayableGames, markUnavailableGames } from './replayable-games.
 import { clearWatchInitialReplayCache, tryHandle } from './routes/games.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { canServeLiveBoard } from './server-policy.js';
-import {
-  registeredVariantTenants,
-  registerVariantTenant,
-  type TenantManagedRoom,
-  type VariantTenantRegistration,
-} from './variant-tenant/registry.js';
+import { registeredVariantTenants, type TenantManagedRoom } from './variant-tenant/registry.js';
 import { listedOnSurface, listWatchChannels, watchChannelForId } from './watch-channels.js';
 import {
   collectLiveTvCandidates,
@@ -80,10 +77,10 @@ test('FFQ stays off current games, TV and presence Watch links with an enabled t
   });
   assert.equal(
     registeredVariantTenants().some((entry) => entry.gameSpecId === FFQ_BANQI_SPEC_ID),
-    false,
-    'production FFQ registration must remain absent',
+    true,
+    'exercise the production FFQ registration',
   );
-  const rooms = new Map<string, TenantManagedRoom>();
+  const rooms = ffqBanqiRooms as unknown as Map<string, TenantManagedRoom>;
   const room = {
     id: ROOM,
     clients: new Set([
@@ -100,22 +97,17 @@ test('FFQ stays off current games, TV and presence Watch links with an enabled t
     pendingWrites: Promise.resolve(),
   } as unknown as TenantManagedRoom;
   rooms.set(ROOM, room);
-  // Test-only registration: exercise future plumbing without registering the
-  // real tenant, lobby, bots or creation handler in production.
-  registerVariantTenant({
-    kind: 'test-ffq-discovery',
-    gameSpecId: FFQ_BANQI_SPEC_ID,
-    roomIdPrefix: 'ffq_',
-    enabled: ffqBanqiEnabled,
-    rooms,
-    watch: {
-      channelId: FFQ_BANQI_SPEC_ID,
-      label: 'FFQ playtest',
-      family: 'xiangqi',
-      legacyVariants: [FFQ_BANQI_SPEC_ID],
-    },
-    isEngineClientId: () => false,
-  } as unknown as VariantTenantRegistration);
+  const registration = registeredVariantTenants().find(
+    (entry) => entry.gameSpecId === FFQ_BANQI_SPEC_ID,
+  )!;
+  for (const capability of [
+    'watch',
+    'lobby',
+    'export',
+    'card',
+    'createCorrespondenceGameForSeek',
+  ] as const)
+    assert.equal(registration[capability], null, capability);
   t.after(() => rooms.clear());
   let built = 0;
   registerLiveWatchPayloadBuilder(FFQ_BANQI_SPEC_ID, async () => {

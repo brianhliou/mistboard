@@ -93,6 +93,12 @@ export async function resolveWebSocketLiveRuntime(
   if (ffqRoom && !ffqBanqiAdmits(await accountUser())) {
     return { kind: 'variant-tenant-unavailable', reason: 'game spec disabled' };
   }
+  if (ffqRoom) {
+    registrations = registrations.filter(
+      (entry) =>
+        entry.gameSpecId === 'ffq-banqi' && entry.roomIdPrefix === FFQ_BANQI_ROOM_ID_PREFIX,
+    );
+  }
   const refused = async (registration: VariantTenantRegistration): Promise<boolean> =>
     registration.admitsConnection !== undefined &&
     !registration.admitsConnection(await accountUser());
@@ -131,10 +137,22 @@ export async function handleWebSocketConnection(
     gameSpecId: url.searchParams.get('gameSpecId'),
     variant: url.searchParams.get('variant'),
   };
-  if (isFFQBanqiRequest(selectors)) {
-    const gate = gateGameSpecRequest(selectors, await resolveAccount());
-    if (gate.type === 'reject') {
+  const ffqRoom = roomId.startsWith(FFQ_BANQI_ROOM_ID_PREFIX);
+  if (isFFQBanqiRequest(selectors) || ffqRoom) {
+    // The reserved namespace is itself an FFQ selector. Reject a conflicting
+    // URL even when neither explicit selector names FFQ.
+    const gate = gateGameSpecRequest({ gameSpecId: 'ffq-banqi' }, await resolveAccount());
+    const registered = registeredVariantTenants().some((entry) => entry.gameSpecId === 'ffq-banqi');
+    if (gate.type === 'reject' && (gate.error !== 'ffq_banqi_not_integrated' || !registered)) {
       socket.close(1008, gate.wsCloseReason);
+      return;
+    }
+    if (Object.values(selectors).some((id) => id !== null && id !== 'ffq-banqi')) {
+      socket.close(1008, 'unknown game spec');
+      return;
+    }
+    if (!ffqRoom) {
+      socket.close(1008, 'room unavailable');
       return;
     }
   }

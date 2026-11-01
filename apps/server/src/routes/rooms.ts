@@ -37,12 +37,20 @@ export async function tryHandle(
   if (pathname === '/api/rooms') {
     if (!requireMethod(request, response, 'POST')) return true;
     const rawBody = await readJsonBody(request);
-    // Claim either FFQ selector before bot resolution or tenant dispatch.
-    // Enabled admins still get not-integrated until room creation is wired.
+    // Claim either FFQ selector before bot resolution or another tenant.
+    // A missing registration must retain the fallback gate's rejection.
     if (isFFQBanqiRequest(rawBody)) {
-      const gate = gateGameSpecRequest(rawBody, await currentAccountUser(request));
-      if (gate.type === 'reject') {
+      const account = await currentAccountUser(request);
+      const gate = gateGameSpecRequest(rawBody, account);
+      const registration = registeredVariantTenants().find(
+        (entry) => entry.gameSpecId === 'ffq-banqi',
+      );
+      if (gate.type === 'reject' && (gate.error !== 'ffq_banqi_not_integrated' || !registration)) {
         writeJson(response, gate.httpStatus, { error: gate.error });
+        return true;
+      }
+      if (registration) {
+        await registration.http.handleCreate(ctx, request, response, rawBody, account);
         return true;
       }
     }

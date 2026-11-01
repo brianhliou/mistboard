@@ -97,6 +97,7 @@ test('game spec gate keeps rejecting legacy variant spellings for tenant specs',
 const FFQ_SELECTORS = [
   { gameSpecId: 'ffq-banqi' },
   { variant: 'ffq-banqi' },
+  { gameSpecId: 'ffq-banqi', variant: 'ffq-banqi' },
   { gameSpecId: 'dark-chess', variant: 'ffq-banqi' },
   { gameSpecId: 'ffq-banqi', variant: 'dark-chess' },
   { gameSpecId: 'banqi', variant: 'ffq-banqi' },
@@ -125,10 +126,10 @@ for (const flag of [undefined, false, true]) {
   }
 }
 
-test('FFQ access policy does not register a tenant', () => {
+test('FFQ registers its own tenant while the fallback gate still refuses chess routing', () => {
   assert.equal(
     registeredVariantTenants().some((tenant) => tenant.gameSpecId === 'ffq-banqi'),
-    false,
+    true,
   );
 });
 

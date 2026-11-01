@@ -31,6 +31,7 @@ import { crazyhouseXiangqiTenant } from './crazyhouse-xiangqi-tenant.js';
 import { darkChessTenant } from './dark-chess-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
+import { ffqBanqiTenant } from './ffq-banqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
@@ -75,6 +76,7 @@ const DRAWING_TENANTS: readonly AnyTenant[] = [
   atomicXiangqiTenant,
   fortressXiangqiTenant,
   threeKingdomsBanqiTenant,
+  ffqBanqiTenant,
 ] as unknown as AnyTenant[];
 
 // Two-seat tenants with no draw by agreement, each with its reason.

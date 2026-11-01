@@ -154,14 +154,14 @@ test('resignation, abandonment, agreed draw and aborted FFQ rooms retain the mas
   }
 });
 
-test('loading the FFQ tenant leaves every network path unregistered and request selectors rejected', () => {
+test('registered FFQ tenant retains its fallback gate and never reveals finished-board truth', () => {
   assert.equal(
     registeredVariantTenants().some(
       (entry) =>
         entry.gameSpecId === FFQ_BANQI_SPEC_ID ||
         entry.roomIdPrefix === ffqBanqiTenant.roomIdPrefix,
     ),
-    false,
+    true,
   );
   for (const input of [{ gameSpecId: FFQ_BANQI_SPEC_ID }, { variant: FFQ_BANQI_SPEC_ID }]) {
     assert.deepEqual(gateGameSpecRequest(input), {
