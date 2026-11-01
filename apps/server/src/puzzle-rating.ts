@@ -6,6 +6,9 @@
 // puzzle ratings self-calibrate exactly like player ratings do.
 
 import { PUZZLE_NEW_PLAYER_RATING } from '@mistboard/game';
+
+export { type PuzzleDashboardResults, puzzleDashboardMetrics } from '@mistboard/game';
+
 import {
   DEFAULT_RATING,
   DEFAULT_RD,
@@ -81,36 +84,6 @@ export function ratePuzzleAttempt(
 // Display helpers so callers agree on rounding + the provisional marker.
 export function displayPuzzleRating(r: Glicko2): { rating: number; provisional: boolean } {
   return { rating: Math.round(r.rating), provisional: isProvisional(r.rd) };
-}
-
-export type PuzzleDashboardResults = {
-  nb: number;
-  wins: number;
-  fixed: number;
-  puzzleRatingAvg: number | null;
-};
-
-/** Pure dashboard arithmetic, shared with the dashboard page (#796). */
-export function puzzleDashboardMetrics(results: PuzzleDashboardResults): {
-  firstWins: number;
-  unfixed: number;
-  failed: number;
-  performance: number | null;
-  clear: boolean;
-} {
-  const firstWins = results.wins - results.fixed;
-  const unfixed = results.nb - results.wins;
-  const failed = results.fixed + unfixed;
-  return {
-    firstWins,
-    unfixed,
-    failed,
-    performance:
-      results.nb === 0 || results.puzzleRatingAvg === null
-        ? null
-        : Math.round(results.puzzleRatingAvg - 500 + (1000 * firstWins) / results.nb),
-    clear: results.nb >= 6 && firstWins >= 2 && failed >= 2,
-  };
 }
 
 // ── Serving rating (#712) ───────────────────────────────────────────────────

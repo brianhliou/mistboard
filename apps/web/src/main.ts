@@ -332,6 +332,7 @@ const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
 const xiangqiBroadcastRound = xiangqiBroadcastRoundFromPath(path);
 const xiangqiBroadcastTourSlug = xiangqiBroadcastTourSlugFromPath(path);
 const puzzleId = puzzleIdFromPath(path);
+const wantsPuzzleDashboard = path === '/puzzles/dashboard';
 const wantsPuzzles = path === '/puzzles' || page === 'puzzles' || puzzleId !== null;
 // Behind the correspondence build flag (soft launch). The nav bell + this
 // dashboard share the gate; the route is invisible until the flag is on.
@@ -836,6 +837,13 @@ if (replaySample) {
         installBroadcastNavigation(appRoot);
         return mountXiangqiBroadcastTour(appRoot, xiangqiBroadcastTourSlug);
       },
+    ),
+  );
+} else if (wantsPuzzleDashboard) {
+  setTitleKey('puzzle.dashboardTitle');
+  void mountOrReport(() =>
+    import('./puzzles/dashboard.js').then(({ mountPuzzleDashboard }) =>
+      mountPuzzleDashboard(appRoot),
     ),
   );
 } else if (wantsPuzzles) {

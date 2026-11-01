@@ -511,6 +511,7 @@ describe('puzzles route', () => {
       ['/puzzles', 'Puzzles', null],
       ['/puzzles/themes', 'Puzzle Themes', 'page'],
       ['/puzzles?mode=streak', 'Puzzle Streak', null],
+      ['/puzzles/dashboard', 'Puzzle Dashboard', null],
     ]);
   });
 

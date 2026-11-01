@@ -48,6 +48,18 @@ describe('watch nav', () => {
   });
 });
 
+describe('puzzle nav', () => {
+  it('offers Puzzle Dashboard after Puzzle Streak', async () => {
+    const { puzzleNavItems } = await import('./nav-items.js');
+    expect(puzzleNavItems().map(({ label, labelKey, href }) => [label, labelKey, href])).toEqual([
+      ['Puzzles', 'nav.puzzles', '/puzzles'],
+      ['Puzzle Themes', 'nav.puzzleThemes', '/puzzles/themes'],
+      ['Puzzle Streak', 'nav.puzzleStreak', '/puzzles?mode=streak'],
+      ['Puzzle Dashboard', 'puzzle.dashboardTitle', '/puzzles/dashboard'],
+    ]);
+  });
+});
+
 describe('tools nav', () => {
   it('lists the analysis board first and the board editor beside it', async () => {
     const { toolsNavItems } = await import('./nav-items.js');

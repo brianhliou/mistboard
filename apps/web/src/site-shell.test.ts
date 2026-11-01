@@ -56,16 +56,19 @@ describe('site shell nav', () => {
     ).toBe(true);
   });
 
-  it('marks Puzzle Themes, not the trainer, as the current page on the themes index', () => {
-    window.history.replaceState(null, '', '/puzzles/themes');
-    const nav = buildNav();
-    document.body.append(nav);
-    const current = [...nav.querySelectorAll<HTMLAnchorElement>('[aria-current="page"]')];
-    expect(current.map((a) => a.getAttribute('href'))).toEqual(['/puzzles/themes']);
-    expect(
-      nav.querySelector('.site-nav-menu-toggle[href="/puzzles"]')?.classList.contains('active'),
-    ).toBe(true);
-  });
+  it.each(['/puzzles/themes', '/puzzles/dashboard'])(
+    'marks only the destination current on %s',
+    (path) => {
+      window.history.replaceState(null, '', path);
+      const nav = buildNav();
+      document.body.append(nav);
+      const current = [...nav.querySelectorAll<HTMLAnchorElement>('[aria-current="page"]')];
+      expect(current.map((a) => a.getAttribute('href'))).toEqual([path]);
+      expect(
+        nav.querySelector('.site-nav-menu-toggle[href="/puzzles"]')?.classList.contains('active'),
+      ).toBe(true);
+    },
+  );
 
   it('links to Puzzles from the primary nav and marks puzzle detail routes active', () => {
     window.history.replaceState(null, '', '/puzzles/xq-mined-hxq_4a41e15e9d8a17414cf249ee-41');
@@ -114,6 +117,7 @@ describe('site shell nav', () => {
       ['/puzzles', 'Puzzles'],
       ['/puzzles/themes', 'Puzzle Themes'],
       ['/puzzles?mode=streak', 'Puzzle Streak'],
+      ['/puzzles/dashboard', 'Puzzle Dashboard'],
     ]);
     const puzzleLink = puzzlePanel?.querySelector<HTMLAnchorElement>('a[href="/puzzles"]');
     expect(puzzleLink?.classList.contains('active')).toBe(true);
@@ -584,7 +588,14 @@ describe('site shell phone menu', () => {
       [...(play?.querySelectorAll<HTMLAnchorElement>('.site-menu-link') ?? [])].map((a) =>
         a.getAttribute('href'),
       ),
-    ).toEqual(['/', '/correspondence', '/puzzles', '/puzzles/themes', '/puzzles?mode=streak']);
+    ).toEqual([
+      '/',
+      '/correspondence',
+      '/puzzles',
+      '/puzzles/themes',
+      '/puzzles?mode=streak',
+      '/puzzles/dashboard',
+    ]);
     expect(menuPanel()?.querySelector('a[href="/patron"]')).not.toBeNull();
     expect(menuPanel()?.querySelector('a[href="/database"]')).toBeNull();
   });
