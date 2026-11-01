@@ -122,10 +122,10 @@ function setupFor(gameSpecId: LandingRoomSetup['gameSpecId']): LandingRoomSetup 
 }
 
 describe('variant create-request conformance', () => {
-  it('preserves the five browser Rapfi choices and both human colours in hidden setup', () => {
+  it('preserves the eight browser Rapfi choices and both human colours in hidden setup', () => {
     expect(landingVariantSupportsPve(GOMOKU_SPEC_ID)).toBe(true);
     for (const preferredColor of ['black', 'white'] as const) {
-      for (const level of [1, 2, 3, 4, 5]) {
+      for (const level of [1, 2, 3, 4, 5, 6, 7, 8]) {
         expect(
           roomCreationRequestBody(
             'pve',
@@ -416,11 +416,11 @@ describe('Gomoku deliberate exclusions during hidden integration', () => {
     }
   });
 
-  it('has a marker and game renderer but no public play, rating, study, analysis or editor surface', () => {
+  it('has analysis capability but no public play, rating, study or editor surface', () => {
     expect(isPublicGameSpec(GOMOKU_SPEC_ID)).toBe(false);
     const tenant = webVariantTenants().find((tenant) => tenant.gameSpecId === GOMOKU_SPEC_ID);
     expect(tenant?.landing?.offerInMenu()).toBe(false);
-    expect(tenant?.landing?.engineOptions).toHaveLength(5);
+    expect(tenant?.landing?.engineOptions).toHaveLength(8);
     expect(tenant?.landing?.capabilities.supportsRated).toBe(false);
     expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
     expect(leaderboardVariants.map((variant) => variant.gameSpecId)).not.toContain(GOMOKU_SPEC_ID);
@@ -428,7 +428,7 @@ describe('Gomoku deliberate exclusions during hidden integration', () => {
       GOMOKU_SPEC_ID,
     );
     expect(LANDING_BOT_GAME_SPEC_IDS).not.toContain(GOMOKU_SPEC_ID);
-    expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).not.toContain(GOMOKU_SPEC_ID);
+    expect(ANALYSIS_VARIANTS.map((variant) => variant.id)).toContain(GOMOKU_SPEC_ID);
     expect(EDITOR_VARIANT_IDS).not.toContain(GOMOKU_SPEC_ID);
     expect(STUDY_VARIANTS.map((variant) => variant.id)).not.toContain(GOMOKU_SPEC_ID);
     expect(EMBED_ANALYSIS_VARIANTS[GOMOKU_SPEC_ID]).toBeNull();

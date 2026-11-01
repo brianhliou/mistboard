@@ -91,7 +91,7 @@ const ENGINE_CREDITS: readonly EngineCredit[] = [
     ],
     body: 'thanks.rapfiBody',
     gameSpecIds: ['gomoku'],
-    botIds: levels('rapfi-level-', 5),
+    botIds: levels('rapfi-level-', 8),
     href: RAPFI_REPO_URL,
     enabled: gomokuEnabled,
   },

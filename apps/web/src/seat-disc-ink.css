@@ -27,7 +27,7 @@
 
    2. FAMILY SLOTS (`--seat-first-*` / `--seat-second-*`): which ink each seat of a
       family wears. "First" is the family's first-mover ink and "second" the other:
-      xiangqi red/black, jungle red/blue, chess white/black. For flip variants
+      xiangqi red/black, jungle red/blue, chess white/black, gomoku black/white. For flip variants
       (Banqi, Flip Jungle) that is the ink, not the move-order seat: the TS binds a
       seat to an ink after the opening reveal (`seatColors`, `seatInkBindsOnFlip`)
       and ink-named classes (`advantage-chart__area--black`) resolve through that.
@@ -186,4 +186,16 @@
   --seat-second-on-chip: var(--ink-on-black);
   --seat-first-gauge: var(--ink-white-chip);
   --seat-second-gauge: var(--ink-black-vs-white);
+}
+
+/* Gomoku starts with Black, so its positive-score share uses the dark ink. */
+[data-seat-ink-family="gomoku"] {
+  --seat-first-ink: var(--ink-black-vs-white);
+  --seat-second-ink: var(--ink-white);
+  --seat-first-chip: var(--ink-black-chip);
+  --seat-second-chip: var(--ink-white-chip);
+  --seat-first-on-chip: var(--ink-on-black);
+  --seat-second-on-chip: var(--ink-on-white);
+  --seat-first-gauge: var(--ink-black-vs-white);
+  --seat-second-gauge: var(--ink-white-chip);
 }

@@ -539,8 +539,12 @@ export function isClientRoute(pathname: string): boolean {
     // Standalone analysis board: bare /analysis (opens the flagship variant) or
     // /analysis/:variant, fed by a move list rather than a room. Serves the
     // review SPA shell and mounts the ceval engine, so it must also be a
-    // review-shell route (COOP/COEP) below.
-    /^\/analysis(?:\/[a-z0-9-]+)?$/.test(normalized) ||
+    // review-shell route (COOP/COEP) below. Mirror analysis-catalog.ts, including
+    // Gomoku's gated roomless board. The client checks gomokuOffered before
+    // mounting; protected game data independently requires gomokuAdmits.
+    /^\/analysis(?:\/(?:xiangqi|jieqi|banqi|duck-xiangqi|crazyhouse-xiangqi|dark-xiangqi|dark-chess|jungle|jungle-flip|gomoku|fortress-xiangqi|atomic-xiangqi))?$/.test(
+      normalized,
+    ) ||
     // Board editor: bare /editor (the flagship) or /editor/:variant, the same
     // catalog as /analysis. Plain client page: no engine, so not a review-shell
     // route.
@@ -598,6 +602,8 @@ export function isNoindexRoute(pathname: string): boolean {
     // title until 2026-10-24, and Bing filed them as duplicates of it.
     normalized === '/lag' ||
     normalized === '/verify-title' ||
+    // Built-hidden analysis capability, never an indexed public offering.
+    normalized === '/analysis/gomoku' ||
     isSitePlayedGamePage(normalized)
   );
 }

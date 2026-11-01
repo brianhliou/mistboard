@@ -1,5 +1,6 @@
 import { canonicalVariantOrderIndex, gameSpecForId } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
+import { isClientRoute, isReviewShellRoute } from '../../server/src/server-policy.js';
 import { ANALYSIS_VARIANTS, analysisVariantFromPath } from './analysis-catalog.js';
 import { variantMiniIdForGameSpec } from './variants.js';
 
@@ -36,11 +37,25 @@ describe('analysis catalog', () => {
     expect(analysisVariantFromPath('/zh-hans/analysis/banqi')).toBeNull();
     expect(analysisVariantFromPath('/zh-hans/analysis')).toBeNull();
     expect(analysisVariantFromPath('/analysis/banqi')).toBe('banqi');
+    expect(analysisVariantFromPath('/analysis/gomoku')).toBe('gomoku');
     expect(analysisVariantFromPath('/analysis/jungle-flip')).toBe('jungle-flip');
     // Unknown or malformed slugs must return null (404), never another variant.
     expect(analysisVariantFromPath('/analysis/chess960')).toBeNull();
     expect(analysisVariantFromPath('/analysis/banqi/extra')).toBeNull();
     expect(analysisVariantFromPath('/analysis/Banqi')).toBeNull();
     expect(analysisVariantFromPath('/analysisx')).toBeNull();
+  });
+
+  it('every catalog route has an isolated server shell, including gated Gomoku', () => {
+    for (const { id } of ANALYSIS_VARIANTS) {
+      const path = `/analysis/${id}`;
+      expect(analysisVariantFromPath(path)).toBe(id);
+      expect(isClientRoute(path), path).toBe(true);
+      expect(isReviewShellRoute(path), path).toBe(true);
+    }
+    for (const path of ['/analysis/unknown-variant', '/analysis/gomoku/extra']) {
+      expect(analysisVariantFromPath(path)).toBeNull();
+      expect(isClientRoute(path), path).toBe(false);
+    }
   });
 });
