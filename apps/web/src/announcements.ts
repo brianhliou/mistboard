@@ -43,6 +43,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-11-01',
+    kind: 'update',
+    headline: 'Puzzle Storm: as many puzzles as you can in three minutes.',
+    body: 'Puzzle Storm starts a three-minute clock and serves puzzles one after another. A wrong move costs 10 seconds, and a run of correct solves wins time back. When the clock runs out, you can go back through every puzzle in the run.',
+    href: '/puzzles?mode=storm',
+    cta: 'Play Puzzle Storm',
+  },
+  {
     date: '2026-10-31',
     kind: 'update',
     headline: 'Choose a puzzle difficulty, and see your puzzle rating over time.',

@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  'Puzzle Storm: as many puzzles as you can in three minutes.':
+    '限时解题上线：三分钟内解尽可能多的题。',
+  'Puzzle Storm starts a three-minute clock and serves puzzles one after another. A wrong move costs 10 seconds, and a run of correct solves wins time back. When the clock runs out, you can go back through every puzzle in the run.':
+    '限时解题开始后计时三分钟，题目一道接一道。走错一步扣 10 秒，连续解对可以加回时间。时间用完后，可以回看这一轮的每一道题。',
+  'Play Puzzle Storm': '开始限时解题',
   'Choose a puzzle difficulty, and see your puzzle rating over time.':
     '象棋题可以选难度，个人资料显示解题评分走势。',
   'Pick a difficulty from Easiest to Hardest on the puzzle page, and it is remembered between visits. Your profile now charts your puzzle rating, one point per day, and lists each day you did puzzles in Activity. After a puzzle you can also report a problem with it.':
@@ -550,6 +555,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  'Puzzle Storm: as many puzzles as you can in three minutes.':
+    '限時解題上線：三分鐘內解盡可能多的題。',
+  'Puzzle Storm starts a three-minute clock and serves puzzles one after another. A wrong move costs 10 seconds, and a run of correct solves wins time back. When the clock runs out, you can go back through every puzzle in the run.':
+    '限時解題開始後計時三分鐘，題目一道接一道。走錯一步扣 10 秒，連續解對可以加回時間。時間用完後，可以回看這一輪的每一道題。',
+  'Play Puzzle Storm': '開始限時解題',
   'Choose a puzzle difficulty, and see your puzzle rating over time.':
     '象棋題可以選難度，個人資料顯示解題評分走勢。',
   'Pick a difficulty from Easiest to Hardest on the puzzle page, and it is remembered between visits. Your profile now charts your puzzle rating, one point per day, and lists each day you did puzzles in Activity. After a puzzle you can also report a problem with it.':
