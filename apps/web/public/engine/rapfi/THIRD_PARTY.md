@@ -22,14 +22,11 @@ sets freestyle (`INFO rule 0`) and only loads the freestyle weights for play.
 | `rapfi-single-simd128.js` | 39,154 | yes |
 | `rapfi-single-simd128.data` | 40,382,079 | no |
 
-Run `node apps/web/scripts/fetch-rapfi-net.mjs` from the repo root. This is also
-part of web `predev`. It verifies an existing file, or copies the pinned data
-from `/Users/brianliou/projects/tools/rapfi-wasm/1387d11312/`. It checks both
-size and SHA-256 before writing. On other machines, set `net.json.url` to an
-immutable release asset once hosted; it is deliberately `null` for this parked
-phase. Missing local data with no URL fails with an explicit staging instruction.
-The web build does not fetch this data while the release URL is unset; hosting
-the data and wiring a surface are later work. No page, route or tenant is added.
+Run `node apps/web/scripts/fetch-rapfi-net.mjs` from the repo root; web `predev`
+and `build` both run it. It keeps a local file that matches the pin, or downloads
+the [v0.1.0 release asset](https://github.com/brianhliou/rapfi-wasm/releases/tag/v0.1.0)
+named in `net.json` and checks its size and SHA-256 before writing. That repo's
+`build.sh` rebuilds all three files byte for byte from the pinned sources.
 
 ## API and protocol
 
