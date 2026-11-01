@@ -408,6 +408,11 @@ describe('hidden Gomoku live room', () => {
     expect(panel.textContent).not.toContain('GPL-3.0');
   });
 
+  it('shows no bot panel while Rapfi is idle on the human turn', async () => {
+    await mount(position(0), 'black', 0, pveFrame('black'));
+    expect(document.querySelector('[data-gomoku-bot]')).toBeNull();
+  });
+
   it('uses the Three Kingdoms paired move-list shape and shared current-move styling', async () => {
     const reference = readFileSync(resolve(__dirname, 'live-three-kingdoms-banqi.ts'), 'utf8');
     expect(reference).toContain("rowClass: 'move-row xiangqi-move-row'");
