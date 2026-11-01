@@ -98,6 +98,46 @@ test('seeded sampling is repeatable', () => {
   assert.deepEqual(Array.from({ length: 20 }, a), Array.from({ length: 20 }, b));
 });
 
+test('confidence summary reports wins and half-point scores separately, including draws', () => {
+  const pair = {
+    id: 'stub',
+    games: Array.from({ length: 60 }, (_, index) => ({
+      strongerColor: index % 2 ? 'black' : 'white',
+      winner: null,
+    })),
+  };
+  const result = ladder.confidenceSummary(pair);
+  assert.equal(result.wins, 0);
+  assert.equal(result.draws, 60);
+  assert.equal(result.losses, 0);
+  assert.equal(result.winRate, 0);
+  assert.equal(result.scoreRate, 0.5);
+  assert.ok(Math.abs(result.wilson95[0]) < 1e-12);
+  assert.ok(Math.abs(result.wilson95[1] - 0.060171852142089886) < 1e-12);
+  assert.deepEqual(result.pairedBootstrap95, [0, 0]);
+  assert.deepEqual(result.scorePairedBootstrap95, [0.5, 0.5]);
+});
+
+test('confidence summary resamples both colors together instead of treating 60 games as independent', () => {
+  const pair = {
+    id: 'stub',
+    games: Array.from({ length: 60 }, (_, index) => ({
+      strongerColor: index % 2 ? 'black' : 'white',
+      winner: index < 30 ? (index % 2 ? 'black' : 'white') : index % 2 ? 'white' : 'black',
+    })),
+  };
+  const result = ladder.confidenceSummary(pair);
+  assert.equal(result.winRate, 0.5);
+  assert.equal(result.scoreRate, 0.5);
+  assert.ok(Math.abs(result.wilson95[0] - 0.37735024241544235) < 1e-12);
+  assert.ok(Math.abs(result.wilson95[1] - 0.6226497575845577) < 1e-12);
+  assert.deepEqual(result.pairedBootstrap95, [1 / 3, 2 / 3]);
+  assert.deepEqual(result.scorePairedBootstrap95, result.pairedBootstrap95);
+  assert.deepEqual(ladder.confidenceSummary(pair), result);
+  for (const games of [[], pair.games.slice(0, 3)])
+    assert.throws(() => ladder.confidenceSummary({ ...pair, games }), /paired/i);
+});
+
 test('default pairings cover every active level against baseline and the level two below', () => {
   for (const count of [5, 8]) {
     const levels = Array.from({ length: count }, (_, index) => ({
@@ -219,8 +259,11 @@ test('ladder uses the shared multi-PV policy and varies choice by game and ply',
     return { lines: candidateOutput, elapsedMs: 5 };
   });
   const state = game.createInitialGomokuState({
-    turn: 'white',
-    stones: [{ square: 'h8', color: 'black' }],
+    turn: 'black',
+    stones: [
+      { square: 'h8', color: 'black' },
+      { square: 'o15', color: 'white' },
+    ],
   });
   const candidates = rapfi.parseRapfiOutput(candidateOutput);
   const chosen = new Set();
@@ -232,7 +275,13 @@ test('ladder uses the shared multi-PV policy and varies choice by game and ply',
         context,
       );
       const expected = rapfi.selectRapfiMove(
-        { turn: color === 'black' ? 1 : 2, stones: [{ x: 7, y: 7, player: 1 }] },
+        {
+          turn: color === 'black' ? 1 : 2,
+          stones: [
+            { x: 7, y: 7, player: 1 },
+            { x: 14, y: 14, player: 2 },
+          ],
+        },
         candidates,
         { ...tier, seed: context.plySeed },
       );
@@ -245,7 +294,9 @@ test('ladder uses the shared multi-PV policy and varies choice by game and ply',
   assert.ok(
     commands.every((lines) => lines.includes('INFO show_detail 2') && lines.at(-1) === 'YXNBEST 3'),
   );
-  assert.deepEqual(player.telemetry, {
+  const { moves, ...totals } = player.telemetry;
+  assert.equal(moves.length, 40);
+  assert.deepEqual(totals, {
     searches: 40,
     wallTimeMs: 200,
     maxMoveMs: 5,
@@ -261,6 +312,67 @@ test('ladder uses the shared multi-PV policy and varies choice by game and ply',
     }));
     assert.deepEqual(await best.choose(state, { plySeed: 0 }), { to: 'a1' });
   }
+});
+
+test('best-move measurement records completed nodes and final rounded nodes without changing BOARD search', async () => {
+  const summary = 'MESSAGE Speed 142K | Depth 14-21 | Eval -466 | Node 80K | Time 563ms';
+  const player = ladder.createRapfiPlayer(RAPFI_LEVELS[4], async ({ commands }) => {
+    assert.ok(commands.includes('INFO show_detail 2'));
+    assert.ok(commands.at(-1).startsWith('BOARD\n'));
+    assert.ok(!commands.some((line) => line.startsWith('YXNBEST')));
+    return {
+      lines: [
+        'MESSAGE OptiTime 1477ms | MaxTime 1970ms',
+        ...candidateOutput.slice(0, 14),
+        summary,
+        '7,7',
+      ],
+      elapsedMs: 640,
+    };
+  });
+  await player.choose(game.createInitialGomokuState(opening), { gameSeed: 17, plySeed: 42 });
+  assert.deepEqual(player.telemetry.moves, [
+    {
+      gameSeed: 17,
+      plySeed: 42,
+      ply: 8,
+      color: 'black',
+      to: 'h8',
+      elapsedMs: 640,
+      completedDepth: 6,
+      completedNodes: 300,
+      depth: 14,
+      seldepth: 21,
+      reportedNodes: 80000,
+      nodeResolution: 1000,
+      engineTimeMs: 563,
+      optimalTimeMs: 1477,
+      maxTimeMs: 1970,
+      summary,
+    },
+  ]);
+});
+
+test('forced replies retain missing search evidence as null rather than invented zero nodes', async () => {
+  const player = ladder.createRapfiPlayer(RAPFI_LEVELS[7], async () => ({
+    lines: ['7,7'],
+    elapsedMs: 1,
+  }));
+  await player.choose(game.createInitialGomokuState(), { gameSeed: 17, plySeed: 42 });
+  const [move] = player.telemetry.moves;
+  for (const field of [
+    'completedDepth',
+    'completedNodes',
+    'depth',
+    'seldepth',
+    'reportedNodes',
+    'nodeResolution',
+    'engineTimeMs',
+    'optimalTimeMs',
+    'maxTimeMs',
+    'summary',
+  ])
+    assert.equal(move[field], null, field);
 });
 
 test('ladder selection protects a five and an open-four block even without INFO candidates', async () => {
@@ -384,10 +496,10 @@ test('the recorded complete policy agrees with RAPFI_LEVELS and a measured pairi
 });
 
 test('every recorded game replays to its claimed terminal result in the real kernel', () => {
-  const record = JSON.parse(
-    readFileSync(new URL('../docs/data/gomoku-level-ladder.json', import.meta.url), 'utf8'),
+  const records = ['gomoku-level-ladder.json', 'gomoku-level-ladder-fixed.json'].map((file) =>
+    JSON.parse(readFileSync(new URL(`../docs/data/${file}`, import.meta.url), 'utf8')),
   );
-  for (const run of record.runs) {
+  for (const run of records.flatMap((record) => record.runs)) {
     for (const pair of run.pairings) {
       assert.equal(pair.games.length, run.gamesPerPair);
       for (const side of [pair.weaker, pair.stronger]) {
@@ -410,6 +522,23 @@ test('every recorded game replays to its claimed terminal result in the real ker
         if (index % 2) assert.deepEqual(entry.opening, pair.games[index - 1].opening);
         let state = game.createInitialGomokuState(entry.opening);
         for (const to of entry.moves) {
+          if (run.telemetryPolicy) {
+            const side = state.status.turn === entry.strongerColor ? 'stronger' : 'weaker';
+            if (pair[side].level !== 'baseline') {
+              const measured = pair.telemetry[side].moves.find(
+                (move) => move.gameSeed === entry.seed && move.ply === state.ply,
+              );
+              assert.ok(measured, `missing search evidence for ${pair.id}/${index}/${state.ply}`);
+              assert.equal(measured.to, to);
+              assert.equal(measured.color, state.status.turn);
+              assert.equal(measured.plySeed, rapfi.rapfiPlySeed(entry.seed, state.ply));
+              assert.ok(measured.elapsedMs <= pair[side].timeMs + 250);
+              if (measured.completedNodes !== null && measured.reportedNodes !== null)
+                assert.ok(
+                  measured.completedNodes <= measured.reportedNodes + measured.nodeResolution,
+                );
+            }
+          }
           const next = game.applyGomokuMove(state, { to });
           assert.notEqual(next, state, `illegal recorded move ${to}`);
           state = next;
@@ -425,6 +554,75 @@ test('every recorded game replays to its claimed terminal result in the real ker
         else tally.weakerWins += 1;
       }
       for (const [key, count] of Object.entries(tally)) assert.equal(pair[key], count);
+      assert.equal(pair.strongerScore, (pair.strongerWins + pair.draws / 2) / pair.games.length);
+      if (run.telemetryPolicy) {
+        for (const side of ['weaker', 'stronger']) {
+          if (pair[side].level === 'baseline') continue;
+          const telemetry = pair.telemetry[side];
+          assert.equal(telemetry.searches, telemetry.moves.length);
+          const counted = pair.games.reduce((count, entry) => {
+            // Count from the kernel rather than assuming the opening's turn.
+            let state = game.createInitialGomokuState(entry.opening);
+            for (const to of entry.moves) {
+              const actualSide = state.status.turn === entry.strongerColor ? 'stronger' : 'weaker';
+              if (side === actualSide) count += 1;
+              state = game.applyGomokuMove(state, { to });
+            }
+            return count;
+          }, 0);
+          assert.equal(telemetry.moves.length, counted);
+        }
+      }
+    }
+  }
+});
+
+test('fixed BOARD calibration is a separate full attempt plus 60 games per top pairing on the original seeds', () => {
+  const original = JSON.parse(
+    readFileSync(new URL('../docs/data/gomoku-level-ladder.json', import.meta.url), 'utf8'),
+  );
+  const fixed = JSON.parse(
+    readFileSync(new URL('../docs/data/gomoku-level-ladder-fixed.json', import.meta.url), 'utf8'),
+  );
+  const [full, ...top] = fixed.runs;
+  assert.equal(fixed.runs.length, 3);
+  assertMeasuredPolicies(fixed, RAPFI_LEVELS);
+  assert.equal(full.label, 'fixed-board-full');
+  assert.equal(full.gamesPerPair, 20);
+  assert.deepEqual(
+    full.pairings.map((pair) => pair.id),
+    ladder.pairingPlan().map((pair) => pair.id),
+  );
+  for (const run of top) {
+    assert.ok(run.label.startsWith('fixed-board-top60-'));
+    assert.equal(run.gamesPerPair, 60);
+  }
+  assert.deepEqual(
+    fixed.analysis.topPairings,
+    top.flatMap((run) => run.pairings.map((pair) => ladder.confidenceSummary(pair, run.seed))),
+  );
+  assert.deepEqual(
+    top.flatMap((run) => run.pairings.map((pair) => pair.id)),
+    ['5-7', '6-8'],
+  );
+  for (const run of fixed.runs) {
+    assert.equal(run.seed, 20261101);
+    assert.deepEqual(run.levels, RAPFI_LEVELS);
+    assert.deepEqual(run.engine, original.runs.at(-1).engine);
+    assert.equal(run.openingsSha256, original.runs.at(-1).openingsSha256);
+    assert.match(run.boardPolicy, /ebb6b3637/);
+    assert.equal(
+      run.pairings.reduce((n, pair) => n + pair.games.length, 0),
+      run.gamesPerPair * run.pairings.length,
+    );
+    for (const pair of run.pairings) {
+      const prior = original.runs
+        .find((r) => r.label === 'eight-level-initial')
+        .pairings.find((p) => p.id === pair.id);
+      for (const [index, entry] of pair.games.slice(0, 20).entries()) {
+        assert.deepEqual(entry.opening, prior.games[index].opening);
+        assert.equal(entry.seed, prior.games[index].seed);
+      }
     }
   }
 });

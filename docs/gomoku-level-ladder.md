@@ -1,10 +1,20 @@
 # Rapfi level calibration — 2026-11-01
 
-Eight browser levels are active for hidden, unrated playtesting. L1-4 use seeded
+Eight browser levels are active for hidden, unrated, admin-only playtesting. L1-4 use seeded
 eval-weighted selection; L5-8 take the best move under increasing node budgets.
 Existing `rapfi-level-1` through `rapfi-level-5` ids remain valid, the new ids are
 `rapfi-level-6` through `rapfi-level-8`, and the default remains L1. These small
 measurements do **not** establish an evenly spaced ladder or beginner suitability.
+
+The s-6c06 table below is **attempt 1, measured with the BOARD-order bug**.
+Rapfi searches for whoever follows the last listed stone; board-index order
+therefore searched for the opponent on about half of moves. Commit
+`ebb6b3637` (2026-11-01) makes the last listed stone belong to the opponent
+of the requested side to move. The original
+[data/gomoku-level-ladder.json](data/gomoku-level-ladder.json) is preserved
+byte for byte. Its results are historical diagnostics, not evidence of the
+fixed engine's strength. The second attempt has its own record,
+[data/gomoku-level-ladder-fixed.json](data/gomoku-level-ladder-fixed.json).
 
 ## Active policy
 
@@ -51,7 +61,71 @@ The exported parser normalizes structured `INFO EVAL +M3` / `-M4` to 29997 /
 -29996 before the shared PV-block validator; human `MESSAGE` text is never
 used as evaluation or PV evidence.
 
-## Bounded eight-level measurements
+## Attempt 2: fixed BOARD order (s-94a1)
+
+Same policy, openings, run seed `20261101` and per-game/per-ply seeds as
+attempt 1, on the engine after `ebb6b3637`. The full 14-pairing ladder ran at
+20 games per pairing; the two top pairings, the only attempt-1 misses above
+L4, were then rerun at 60 games each (30 openings, both colours). No policy
+was changed. Record:
+[data/gomoku-level-ladder-fixed.json](data/gomoku-level-ladder-fixed.json).
+
+| Pairing (weaker / stronger) | Stronger wins | Weaker wins | Draws | Stronger score |
+| --- | ---: | ---: | ---: | ---: |
+| baseline-1 … baseline-8 | 20/20 each | 0 | 0 | 100% |
+| 1-3, 2-4, 3-5, 4-6 | 20/20 each | 0 | 0 | 100% |
+| 5-7 (20 games) | 12 | 1 | 7 | 77.5% |
+| 6-8 (20 games) | 7 | 2 | 11 | 62.5% |
+| **5-7 (60 games)** | 29 | 6 | 25 | **69.2%** |
+| **6-8 (60 games)** | 20 | 6 | 34 | **61.7%** |
+
+Score counts a draw as half. For the 60-game pairings, 95% intervals from a
+bootstrap over the 30 opening clusters (both colours resampled together):
+
+- 5-7: score 60.0–77.5%; win rate 35.0–61.7% (Wilson 36.2–60.7%).
+- 6-8: score 55.0–68.3%; win rate 23.3–43.3% (Wilson 22.7–45.9%).
+
+Both score intervals exclude 50%, so L7 is measurably stronger than L5 and
+L8 than L6. Neither reaches a 65% win rate: the top of the ladder separates
+by fewer losses, not more wins. Every draw is a full board (25 of 60 at 5-7,
+34 of 60 at 6-8; median game length 91 and 225 plies). There were no
+move-limit draws, resignations or engine errors.
+
+The attempt-1 top misses (50% and 35%) were mostly the BOARD-order bug: a
+side that searched for its opponent on about half its moves. Below L5 the
+fix turns every two-step pairing into a sweep, which says the low ladder is
+steep rather than evenly spaced. baseline-1 stays 10 points above the 90%
+upper target.
+
+### The top levels are partly time-bound
+
+`ceilingHits` is zero everywhere, but L8 runs at the edge of its ceiling:
+
+| Level | Node budget | Ceiling (ms) | Slowest move (ms) | p95 (ms) | Moves stopped below 90% of budget |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| L5 | 80,000 | 2,000 | 1,098 | 878 | 324 / 3,789 (9%) |
+| L6 | 150,000 | 2,500 | 2,475 | 1,765 | 357 / 4,443 (8%) |
+| L7 | 250,000 | 3,500 | 3,468 | 2,817 | 449 / 3,803 (12%) |
+| L8 | 400,000 | 4,750 | 4,741 | 4,585 | 883 / 4,452 (20%) |
+
+The 60-game runs shared a 14-core laptop, at most three searches at once.
+Rapfi's own time management stops a search before the hard ceiling, so one L8
+move in five ended short of its node budget even here. On a slower phone more
+L8 and L7 searches stop on time and the two levels converge toward each
+other; these numbers do not measure that.
+
+### Recommendation
+
+Keep `RAPFI_LEVELS` unchanged and Gomoku hidden. The fix removes the evidence
+that the top levels fail to separate; it does not make the ladder even. Before
+any launch claim of eight distinct levels: run L6-8 on a mid-range phone and
+report the share of time-bound moves, and widen the L1-L4 spacing (they all
+sweep the level two below). Beginner suitability remains unmeasured.
+
+`fixed-board-full`: 9,071 s, 280 games. `fixed-board-top60-5-7`: 9,077 s, 60
+games. `fixed-board-top60-6-8`: 18,940 s, 60 games.
+
+## Attempt 1: bounded eight-level measurements (BOARD-order bug)
 
 Both attempts use **20 games per pairing**, with ten screened openings and both color assignments. All eight levels play
 the random-tactical baseline, then L3-8 play the level two below: **14 pairings,
@@ -61,7 +135,7 @@ measurements. Both attempts use run seed `20261101`, the same sampled
 openings and per-game/per-ply seed derivation. Every game reaches a kernel
 five/overline or board-full result; there are no move-limit draws or resignations.
 
-| Pairing (weaker / stronger) | Initial stronger wins | Active stronger wins | Active target result |
+| Pairing (weaker / stronger) | Initial stronger wins | After L1 tuning (still bugged) | Attempt-1 target result |
 | --- | ---: | ---: | --- |
 | baseline-1 | 20/20 (100%) | 20/20 (100%, rerun) | MISS: 10 pp above 90% |
 | baseline-2 | 20/20 (100%) | 20/20 (100%, initial) | baseline measured; no upper-tier target |
