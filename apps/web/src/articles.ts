@@ -389,7 +389,7 @@ function buildContentIndex(
 const COMMUNITY_WRITER_HEADING = 'Become a Mistboard contributor';
 
 const COMMUNITY_WRITER_LEDE =
-  'Players read Mistboard all over the world, from the US and China to Vietnam and Brazil. We are looking for a few players to write for it regularly, on the part of the game they know best.';
+  'Players read Mistboard all over the world, from the US and China to Vietnam and Singapore. We are looking for a few players to write for it regularly, on the part of the game they know best.';
 
 const COMMUNITY_WRITER_BENEFITS: ReadonlyArray<{ title: string; body: string }> = [
   {

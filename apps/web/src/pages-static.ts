@@ -532,6 +532,9 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
   heading.className = 'site-section-heading';
   heading.textContent = t('about.heading', {}, locale);
 
+  const mission = aboutParagraph([t('about.mission', {}, locale)]);
+  mission.className = 'about-mission';
+
   const lede = aboutParagraph([t('about.lede', {}, locale)]);
 
   const whyHeading = aboutSubheading(t('about.whyHeading', {}, locale));
@@ -587,6 +590,7 @@ function buildAbout(locale: Locale = currentLocale()): HTMLElement {
 
   section.append(
     heading,
+    mission,
     lede,
     whyHeading,
     whyP,
