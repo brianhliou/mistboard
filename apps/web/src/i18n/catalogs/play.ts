@@ -397,6 +397,7 @@ export const EN_PLAY = {
   'puzzle.viewSolution': 'View solution',
   'puzzle.skipToNext': 'Skip to the next puzzle',
   'puzzle.nextPuzzle': 'Next puzzle',
+  'puzzle.playPosition': 'Play this position',
   'puzzle.success': 'Success!',
   // Streak line under the Success heading (signed-in solvers only; days on the
   // solver's own calendar).

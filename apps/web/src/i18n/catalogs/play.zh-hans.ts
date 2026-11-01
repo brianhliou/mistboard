@@ -182,6 +182,7 @@ export const ZH_HANS_PLAY = {
   'puzzle.viewSolution': '看答案',
   'puzzle.skipToNext': '跳过，看下一题',
   'puzzle.nextPuzzle': '下一题',
+  'puzzle.playPosition': '从此局面继续下',
   'puzzle.success': '解开了！',
   'puzzle.voteThanks': '感谢你的反馈！',
   'puzzle.votePrompt': '这道题你喜欢吗？',

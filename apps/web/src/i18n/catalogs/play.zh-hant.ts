@@ -182,6 +182,7 @@ export const ZH_HANT_PLAY = {
   'puzzle.viewSolution': '看答案',
   'puzzle.skipToNext': '跳過，看下一題',
   'puzzle.nextPuzzle': '下一題',
+  'puzzle.playPosition': '從此局面繼續下',
   'puzzle.success': '解開了！',
   'puzzle.voteThanks': '感謝你的回饋！',
   'puzzle.votePrompt': '這道題你喜歡嗎？',
