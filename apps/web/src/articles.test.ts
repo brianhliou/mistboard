@@ -1398,6 +1398,8 @@ describe('blog post read-next footer', () => {
   // the row furniture rather than navigation. Walking the date ring from each
   // post is what keeps the trios distinct, so assert the property, not the
   // implementation.
+  // Renders the footer for every published post: 18.6 s on a hosted runner on
+  // 2026-11-01, past the 15 s default.
   it('gives each post a different trio', () => {
     const seen = new Map<string, string>();
     for (const slug of publishedBlogSlugs()) {
@@ -1405,7 +1407,7 @@ describe('blog post read-next footer', () => {
       expect(seen.get(key), `${slug} repeats the row on ${seen.get(key)}`).toBeUndefined();
       seen.set(key, slug);
     }
-  });
+  }, 60_000);
 
   // The row overrides the index's column ladder at two classes of specificity,
   // which outranks the index's own media queries. That is deliberate (three

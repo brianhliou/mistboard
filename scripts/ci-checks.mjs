@@ -2,8 +2,44 @@
 // Named local confidence gates for agent and contributor handoffs.
 
 import { spawnSync } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import { readdirSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { checkLoopback } from './lib/loopback-check.mjs';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// The root `test:unit` is `test:tooling && npm run test:unit --workspaces`, which
+// stops at the first workspace that fails. One command per workspace lets the
+// keep-going gate report a web failure and a server failure in the same run
+// (2026-11-01: they surfaced one release attempt apart). Read from disk so a new
+// workspace joins without an edit here; packages first, as npm orders them.
+export function unitTestCommands(root = ROOT) {
+  const commands = [['npm', 'run', 'test:tooling']];
+  for (const group of ['packages', 'apps']) {
+    let dirs = [];
+    try {
+      dirs = readdirSync(path.join(root, group), { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort();
+    } catch {
+      continue;
+    }
+    for (const dir of dirs) {
+      let pkg;
+      try {
+        pkg = JSON.parse(readFileSync(path.join(root, group, dir, 'package.json'), 'utf8'));
+      } catch {
+        continue;
+      }
+      if (pkg.scripts?.['test:unit']) {
+        commands.push(['npm', 'run', 'test:unit', '--workspace', pkg.name]);
+      }
+    }
+  }
+  return commands;
+}
 
 const suites = {
   // check:drift runs first: it is near-instant and guards invariants (SQL enum
@@ -16,7 +52,7 @@ const suites = {
     ['npm', 'run', 'i18n:check'],
     ['npm', 'run', 'build'],
     ['npm', 'run', 'typecheck'],
-    ['npm', 'run', 'test:unit'],
+    ...unitTestCommands(),
     ['npm', 'run', 'check:cycles'],
   ],
   local: [
@@ -25,7 +61,7 @@ const suites = {
     ['npm', 'run', 'i18n:check'],
     ['npm', 'run', 'build'],
     ['npm', 'run', 'typecheck'],
-    ['npm', 'run', 'test:unit'],
+    ...unitTestCommands(),
     ['npm', 'run', 'check:cycles'],
     ['npm', 'run', 'test:integration', '--workspace', '@mistboard/server'],
   ],
