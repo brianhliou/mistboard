@@ -194,6 +194,7 @@ export const ZH_HANT_SHELL = {
   'home.noRatedPlayers': '還沒有計分棋手。',
   'home.rankingsUnavailable': '無法取得排行榜。',
   'home.latestStudies': '最新研究',
+  'home.topPlayers': '頂尖棋手',
   'home.gameViewerUnavailable': '無法顯示對局',
   'home.setupErrorTimeControl': '該用時不可用，請換一個。',
   'home.setupErrorStorage': '此伺服器無法儲存房間。',

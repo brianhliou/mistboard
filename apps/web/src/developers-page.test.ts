@@ -4,7 +4,7 @@ import {
   EMBED_MAX_WIDTH,
   EMBED_MIN_WIDTH,
 } from '@mistboard/game';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   analysisSnippet,
   embedSnippet,
@@ -26,6 +26,32 @@ const ORIGIN = 'https://mistboard.com';
 // because both sides import them from @mistboard/game, so what is left to check
 // is the part that is still hand-written: the URLs in the snippet.
 describe('the developers page documents something real', () => {
+  afterEach(() => {
+    window.history.replaceState(null, '', '/');
+    vi.unstubAllGlobals();
+  });
+
+  it.each([
+    ['/developers', ['Source code', 'Contribute', 'Game data', 'API', 'Thank you']],
+    ['/zh-hans/developers', ['源代码', '参与贡献', '对局数据', 'API 文档', '致谢']],
+    ['/zh-hant/developers', ['原始碼', '參與貢獻', '對局資料', 'API 文件', '致謝']],
+  ] as const)('preserves resource links in the developers page content at %s', (path, labels) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 503 })),
+    );
+    window.history.replaceState(null, '', path);
+    const root = document.createElement('main');
+    mountDevelopers(root);
+
+    const destinations = ['/source', '/contribute', '/data', '/api-docs', '/thanks'];
+    for (const [index, href] of destinations.entries()) {
+      expect(root.querySelector(`.developers-section a[href="${href}"]`)?.textContent).toBe(
+        labels[index],
+      );
+    }
+  });
+
   it('writes a snippet whose src the embed router actually accepts', () => {
     const snippet = embedSnippet(ORIGIN);
     const src = /src="([^"]+)"/.exec(snippet)?.[1];

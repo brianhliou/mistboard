@@ -47,6 +47,9 @@ export const EN_CONTENT = {
   'videos.previousVideos': 'Previous videos',
   'videos.moreVideos': 'More videos',
   'articles.heading': 'Articles',
+  'articles.navigation': 'Blog navigation',
+  'articles.byMistboard': 'By Mistboard',
+  'articles.communityPosts': 'Community posts',
   'articles.latest': 'From the blog',
   'articles.deepDives': 'Xiangqi deep dives',
   'articles.topicAll': 'All',
@@ -725,6 +728,9 @@ export type ContentI18nKey = keyof typeof EN_CONTENT;
 
 export const CRITICAL_CONTENT_I18N_KEYS = [
   'articles.heading',
+  'articles.navigation',
+  'articles.byMistboard',
+  'articles.communityPosts',
   'articles.deepDives',
   'articles.topicAll',
   'articles.topicEngineering',

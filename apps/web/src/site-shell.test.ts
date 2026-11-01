@@ -16,6 +16,7 @@ import {
   placeNavAccount,
   syncAdminNavMenus,
 } from './site-shell.js';
+import { buildStaticPageLayout } from './static-page-shell.js';
 import {
   readStoredXiangqiPieceSet,
   setSiteThemePreference,
@@ -87,6 +88,13 @@ describe('site shell nav', () => {
       'Tools',
       'Support',
     ]);
+    expect(
+      [
+        ...nav.querySelectorAll(
+          '.site-nav-links > .site-nav-menu > .site-nav-menu-toggle, .site-nav-links > .site-nav-link-donate',
+        ),
+      ].map((link) => link.getAttribute('href')),
+    ).toEqual(['/', '/puzzles', '/rules', '/watch', '/player', '/analysis/xiangqi', '/patron']);
     const donate = nav.querySelector<HTMLAnchorElement>('.site-nav-link-donate');
     expect(donate?.getAttribute('href')).toBe('/patron');
     expect(donate?.querySelector('.site-nav-donate-icon')?.getAttribute('aria-hidden')).toBe(
@@ -133,7 +141,7 @@ describe('site shell nav', () => {
     expect(correspondence?.textContent).toBe('Correspondence');
     expect(correspondence?.hidden).toBe(false);
     expect(nav.querySelector<HTMLAnchorElement>('a[href="/forum"]')?.textContent).toBe('Forum');
-    // Community dropdown: Leaderboard, Pro players, Bots, Friends, Forum, Blog.
+    // Community dropdown: Leaderboard, Pro players, Bots, Friends, Forum.
     // The title also links to /player, so scope item lookups to the panel.
     const communityMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Community',
@@ -151,7 +159,6 @@ describe('site shell nav', () => {
       ['/bots', 'Bots'],
       ['/following', 'Friends'],
       ['/forum', 'Forum'],
-      ['/blog', 'Blog'],
     ]);
     // The Discord invite was pulled from this dropdown on 2026-08-28. It is
     // still in the footer, so the assertion moves rather than disappearing.
@@ -212,7 +219,7 @@ describe('site shell nav', () => {
       [...(learnMenu?.querySelectorAll<HTMLAnchorElement>('.site-nav-menu-panel a') ?? [])].map(
         (link) => link.textContent,
       ),
-    ).toEqual(['Rules', 'Xiangqi Basics', 'Practice', 'Study', 'Coaches']);
+    ).toEqual(['Rules', 'Xiangqi Basics', 'Practice', 'Study', 'Coaches', 'Blog']);
     expect(
       learnMenu?.querySelector<HTMLAnchorElement>('.site-nav-menu-toggle')?.getAttribute('href'),
     ).toBe('/rules');
@@ -348,7 +355,7 @@ describe('site shell nav', () => {
     );
     expect(learnToggle?.textContent).toBe('學習');
     expect(learnToggle?.classList.contains('active')).toBe(true);
-    // Articles now surface as "Blog" (網誌) in the Community dropdown.
+    // Articles surface as "Blog" (網誌) in the Learn dropdown.
     expect(nav.querySelector<HTMLAnchorElement>('a[href="/zh-hant/blog"]')?.textContent).toBe(
       '網誌',
     );
@@ -572,48 +579,75 @@ describe('site shell phone menu', () => {
     }
   });
 
-  it('groups destinations into Play, Watch, Tools, Learn, Community and Mistboard, no admin for others', () => {
+  it('groups destinations into Play, Puzzles, Learn, Watch, Community, Tools and Mistboard', () => {
     const { toggle } = phoneNav();
     toggle.click();
     const headings = [
       ...(menuPanel()?.querySelectorAll<HTMLElement>('.site-menu-heading') ?? []),
     ].map((h) => h.textContent);
-    expect(headings).toEqual(['Play', 'Watch', 'Tools', 'Learn', 'Community', 'Mistboard']);
-    const play = menuPanel()?.querySelector('.site-menu-section');
+    expect(headings).toEqual([
+      'Play',
+      'Puzzles',
+      'Learn',
+      'Watch',
+      'Community',
+      'Tools',
+      'Mistboard',
+    ]);
+    const sections = [...(menuPanel()?.querySelectorAll('.site-menu-section') ?? [])];
+    const play = sections[0];
     expect(
       [...(play?.querySelectorAll<HTMLAnchorElement>('.site-menu-link') ?? [])].map((a) =>
         a.getAttribute('href'),
       ),
-    ).toEqual(['/', '/correspondence', '/puzzles', '/puzzles/themes', '/puzzles?mode=streak']);
+    ).toEqual(['/', '/correspondence']);
+    expect(
+      [...(sections[1]?.querySelectorAll('a') ?? [])].map((link) => link.getAttribute('href')),
+    ).toEqual(['/puzzles', '/puzzles/themes', '/puzzles?mode=streak']);
     expect(menuPanel()?.querySelector('a[href="/patron"]')).not.toBeNull();
     expect(menuPanel()?.querySelector('a[href="/database"]')).toBeNull();
   });
 
-  // The info pages a phone reaches from any page close the menu. Patron is
-  // not among them: Community's Support row already reaches it. Admin slots in
-  // before it, so Mistboard stays last for admins too.
-  it('ends with a Mistboard section of the info pages', () => {
-    for (const admin of [false, true]) {
-      setResolvedAdmin(admin);
-      try {
-        const { toggle } = phoneNav();
-        openSiteMenu(toggle, 'zh-Hant');
-        const last = [...(menuPanel()?.querySelectorAll('.site-menu-section') ?? [])].at(-1);
-        expect(last?.querySelector('.site-menu-heading')?.textContent).toBe('Mistboard');
-        expect(
-          [...(last?.querySelectorAll<HTMLAnchorElement>('.site-menu-link') ?? [])].map((a) =>
-            a.getAttribute('href'),
-          ),
-        ).toEqual(['/stats', '/feed', '/faq', '/contact', '/source', '/developers', '/data']);
-        expect(menuPanel()?.querySelectorAll('a[href="/patron"]')).toHaveLength(1);
-        if (admin) expect(menuPanel()?.querySelector('a[href="/database"]')).not.toBeNull();
-        closeSiteMenu({ restoreFocus: false });
-        document.body.innerHTML = '';
-      } finally {
-        setResolvedAdmin(undefined);
+  // The phone and rail must keep the same localized destinations and labels.
+  // Admin slots in before Mistboard, which always closes the menu.
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'ends with the About rail destinations and labels in %s',
+    (locale) => {
+      for (const admin of [false, true]) {
+        setResolvedAdmin(admin);
+        try {
+          const { toggle } = phoneNav();
+          openSiteMenu(toggle, locale);
+          const sections = [...(menuPanel()?.querySelectorAll('.site-menu-section') ?? [])];
+          if (admin) {
+            expect(sections.at(-2)?.querySelector('.site-menu-heading')?.textContent).toBe(
+              locale === 'en' ? 'Admin' : '管理',
+            );
+          }
+          const last = [...(menuPanel()?.querySelectorAll('.site-menu-section') ?? [])].at(-1);
+          expect(last?.querySelector('.site-menu-heading')?.textContent).toBe('Mistboard');
+          const rail = buildStaticPageLayout('about', document.createElement('div'), locale);
+          expect(
+            [...(last?.querySelectorAll('.site-menu-link') ?? [])].map((link) => [
+              link.getAttribute('href'),
+              link.textContent,
+            ]),
+          ).toEqual(
+            [...rail.querySelectorAll('.static-page-rail-link')].map((link) => [
+              link.getAttribute('href'),
+              link.textContent,
+            ]),
+          );
+          expect(menuPanel()?.querySelectorAll('a[href="/patron"]')).toHaveLength(1);
+          if (admin) expect(menuPanel()?.querySelector('a[href="/database"]')).not.toBeNull();
+          closeSiteMenu({ restoreFocus: false });
+          document.body.innerHTML = '';
+        } finally {
+          setResolvedAdmin(undefined);
+        }
       }
-    }
-  });
+    },
+  );
 
   it('marks the current page bold with a dot', () => {
     window.history.replaceState(null, '', '/puzzles/some-puzzle');

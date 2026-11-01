@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import { hasSiteByline } from './articles/site-author.js';
 import { articles } from './articles-data.js';
+import { mountCreators } from './creators-page.js';
 import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import {
   ARTICLE_ROUTE_CLASS,
@@ -72,16 +73,28 @@ describe('static pages', () => {
       'Mistboard Patron',
       'Terms of Use',
       'Privacy',
-      'Title verification',
       'Source code',
-      'Contribute',
       'Work with us',
       'Engine champions',
       'Developers',
-      'Game data',
-      'API',
-      'Thank you',
-      'Is Mistboard lagging?',
+    ]);
+    expect(
+      [...root.querySelectorAll('.static-page-rail-group')].map((group) =>
+        [...group.querySelectorAll('a')].map((link) => link.getAttribute('href')),
+      ),
+    ).toEqual([
+      [
+        '/about',
+        '/stats',
+        '/feed',
+        '/changelog',
+        '/faq',
+        '/contact',
+        '/patron',
+        '/terms',
+        '/privacy',
+      ],
+      ['/source', '/creators', '/champions', '/developers'],
     ]);
     // Game totals live only on /stats (linked from the rail above); About
     // neither fetches nor shows them.
@@ -149,6 +162,37 @@ describe('static pages', () => {
     expect(root.textContent).toContain('GitHub 儲存庫');
     expect(root.textContent).toContain('第三方元件');
     expect(root.textContent).toContain('專案身份');
+  });
+
+  it.each([
+    ['/source', ['Contribute', 'Developers', 'Game data', 'API', 'Thank you']],
+    ['/zh-hans/source', ['参与贡献', '开发者', '对局数据', 'API 文档', '致谢']],
+    ['/zh-hant/source', ['參與貢獻', '開發者', '對局資料', 'API 文件', '致謝']],
+  ] as const)('preserves resource links in the source page content at %s', (path, labels) => {
+    window.history.replaceState(null, '', path);
+    const root = document.createElement('main');
+    mountSource(root);
+
+    const destinations = ['/contribute', '/developers', '/data', '/api-docs', '/thanks'];
+    for (const [index, href] of destinations.entries()) {
+      expect(root.querySelector(`.source-section a[href="${href}"]`)?.textContent).toBe(
+        labels[index],
+      );
+    }
+  });
+
+  it.each([
+    ['/creators', 'title verification'],
+    ['/zh-hans/creators', '称号认证'],
+    ['/zh-hant/creators', '稱號認證'],
+  ])('keeps title verification in the creators page content at %s', (path, label) => {
+    window.history.replaceState(null, '', path);
+    const root = document.createElement('main');
+    mountCreators(root);
+
+    expect(root.querySelector('.creators-section a[href="/verify-title"]')?.textContent).toBe(
+      label,
+    );
   });
 
   it('credits Pikafish on the source page with its site, weights license and repository', () => {
@@ -356,6 +400,18 @@ describe('static pages', () => {
     );
     expect(root.textContent).toContain('我們承諾什麼，以及不承諾什麼');
   });
+
+  it.each(['en', 'zh-hans', 'zh-hant'])(
+    'links 404 quick Play directly to the lobby in %s',
+    (locale) => {
+      window.history.replaceState(null, '', locale === 'en' ? '/missing' : `/${locale}/missing`);
+      const root = document.createElement('main');
+      mountNotFound(root);
+
+      expect(root.querySelector('.not-found-links a')?.getAttribute('href')).toBe('/');
+      expect(root.querySelector('.not-found-links a[href="/play"]')).toBeNull();
+    },
+  );
 
   it('localizes Traditional Chinese not-found page chrome', () => {
     window.history.replaceState(null, '', '/zh-hant/missing');

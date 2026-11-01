@@ -367,10 +367,8 @@ describe('bot pages', () => {
     expect(
       [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
     ).toEqual(['Xiangqi, level by level', 'Misty, the house bot']);
-    // Community rail is shared with /player; Online bots is the active entry.
-    expect(root.querySelector('.community-rail a[aria-current="page"]')?.textContent).toBe(
-      'Online bots',
-    );
+    // Community rail is shared with /player; Bots is the active entry.
+    expect(root.querySelector('.community-rail a[aria-current="page"]')?.textContent).toBe('Bots');
 
     const sectionNames = (index: number) =>
       [

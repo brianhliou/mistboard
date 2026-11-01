@@ -125,7 +125,7 @@ function blankThumbnail(): HTMLElement {
 }
 
 function buildLeaderboardWidget(options: { hydrate?: boolean }): HTMLElement {
-  const { box, body } = buildSiteBox({ title: 'Top players', href: '/leaderboard' });
+  const { box, body } = buildSiteBox({ title: t('home.topPlayers'), href: '/player' });
   box.classList.add('landing-leaderboard-widget', 'landing-community-widget');
   body.append(statusRow(t('home.loadingRankings')));
   if (options.hydrate !== false) void hydrateLeaderboard(body);
