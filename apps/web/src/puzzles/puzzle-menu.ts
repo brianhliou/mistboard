@@ -30,7 +30,21 @@ export function renderPuzzleMenu(active: PuzzleMenuPage): HTMLElement {
     if (item.page === active) link.setAttribute('aria-current', 'page');
     menu.append(link);
   }
+  // On a phone the menu is one scrolling row; bring the current page into view
+  // once the strip is laid out, so it is never the item cut off at the edge.
+  requestAnimationFrame(() => centreActivePuzzleMenuItem(menu));
   return menu;
+}
+
+/** Scroll a horizontal menu strip so its current item sits in the middle. No-op when nothing overflows. */
+export function centreActivePuzzleMenuItem(menu: HTMLElement): void {
+  if (menu.scrollWidth <= menu.clientWidth) return;
+  const active = menu.querySelector<HTMLElement>('[aria-current="page"]');
+  if (!active) return;
+  const strip = menu.getBoundingClientRect();
+  const item = active.getBoundingClientRect();
+  const target = menu.scrollLeft + item.left - strip.left - (menu.clientWidth - item.width) / 2;
+  menu.scrollLeft = Math.max(0, Math.min(target, menu.scrollWidth - menu.clientWidth));
 }
 
 /** Put any puzzle page beside the menu, or below its scrollable row on phones. */

@@ -38,26 +38,66 @@
 }
 
 .puzzle-history__row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  /* Boards fill the row: two on a phone, four from tablet width up. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px 12px;
 }
 
+@media (min-width: 700px) {
+  .puzzle-history__row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .puzzle-history__attempt {
-  --history-result: #238636;
+  /* Lichess's good and bad colours. */
+  --history-result: #629924;
   display: flex;
-  flex: 0 0 min(140px, calc((100% - 12px) / 2));
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
   color: var(--site-text);
   font-size: 14px;
-  text-align: center;
   text-decoration: none;
 }
 
 .puzzle-history__attempt--incorrect {
-  --history-result: #cf3535;
+  --history-result: #cc3333;
+}
+
+.puzzle-history__result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--history-result);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.puzzle-history__result::before {
+  content: "\2714" / "";
+  font-size: 15px;
+  line-height: 1;
+}
+
+.puzzle-history__attempt--incorrect .puzzle-history__result::before {
+  content: "\2716" / "";
+}
+
+.puzzle-history__result::after {
+  content: attr(data-puzzle-code);
+  margin-left: auto;
+  color: var(--site-muted);
+  text-transform: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.puzzle-history__attempt:hover .puzzle-history__result::after,
+.puzzle-history__attempt:focus-visible .puzzle-history__result::after {
+  opacity: 1;
 }
 
 .puzzle-history__board {
@@ -66,9 +106,11 @@
   overflow: hidden;
   width: 100%;
   aspect-ratio: 275 / 305;
-  border: 3px solid var(--history-result);
-  border-radius: 4px;
-  background: var(--site-panel-soft);
+  border: 4px solid var(--history-result);
+  /* Rounder than the board image's own corners, so the clip hides them and
+     no panel colour shows between board and outline. */
+  border-radius: 12px;
+  background: var(--history-result);
 }
 
 .puzzle-history__board svg {

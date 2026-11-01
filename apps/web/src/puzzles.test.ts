@@ -1,11 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { XIANGQI_GLYPH_PATHS } from '@mistboard/board-render';
 import {
   applyStandardXiangqiMove,
   attemptStandardXiangqiPuzzleLine,
   createInitialXiangqiState,
   detectXiangqiPuzzleMotifs,
   getStandardXiangqiLegalMoves,
+  puzzleShortCode,
   standardXiangqiEngineFen,
   standardXiangqiPuzzleMoveEquals,
   XIANGQI_MOTIF_BY_ID,
@@ -37,6 +37,7 @@ import {
   sourceGameLines,
 } from './puzzles.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { writeStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { pinXiangqiNotation } from './xiangqi-notation.js';
 
 vi.mock('./live-sound.js', async (importOriginal) => {
@@ -144,6 +145,13 @@ describe('puzzles route', () => {
     });
     expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(RED_MATE.id);
     expect(root.querySelector('.puzzle-replay-progress')?.textContent).toBe('Replay: 1 of 2');
+    // The left column: back to the Dashboard, the run's title, none of two finished yet.
+    const side = root.querySelector<HTMLElement>('.puzzle-replay-side')!;
+    expect(side.hidden).toBe(false);
+    expect(side.querySelector('a')?.getAttribute('href')).toBe('/puzzles/dashboard?days=30');
+    expect(side.querySelector('h2')?.textContent).toBe('Replay failed puzzles');
+    expect(side.querySelector('[role="progressbar"]')?.getAttribute('aria-valuenow')).toBe('0');
+    expect(side.querySelector('.puzzle-replay-side__count')?.textContent).toBe('0 / 2');
     expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/puzzles/replay')).toBe(false);
     expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/puzzles')).toBe(false);
     expect(window.location.pathname + window.location.search).toBe('/puzzles/replay?days=30');
@@ -182,6 +190,7 @@ describe('puzzles route', () => {
     await vi.waitFor(() =>
       expect(root.querySelector('.puzzle-replay-progress')?.textContent).toBe('Replay: 2 of 2'),
     );
+    expect(root.querySelector('.puzzle-replay-side__count')?.textContent).toBe('1 / 2');
     const wrong = getStandardXiangqiLegalMoves(BLACK_MATE.initial).find(
       (move) => !standardXiangqiPuzzleMoveEquals(move, BLACK_MATE.solution[0]!),
     )!;
@@ -328,19 +337,46 @@ describe('puzzles route', () => {
     ).toEqual(['Solved', 'Incorrect']);
     expect(sessions[0]!.querySelector('time')?.dateTime).toBe(recent.createdAt);
     const boards = sessions[0]!.querySelectorAll('.puzzle-history__board');
-    expect(boards[0]!.querySelectorAll('svg path').length).toBeGreaterThan(0);
-    expect(boards[1]!.querySelectorAll('svg path').length).toBeGreaterThan(0);
+    expect(boards[0]!.querySelectorAll('[aria-label$=" general"]')).toHaveLength(2);
+    expect(boards[1]!.querySelectorAll('[aria-label$=" general"]')).toHaveLength(2);
     // The bottom general's colour changes with the solver; glyphs stay upright.
-    const generalY = (board: Element, glyph: string) => {
-      const path = [...board.querySelectorAll('path')].find(
-        (el) => el.getAttribute('d') === XIANGQI_GLYPH_PATHS[glyph],
-      );
-      const transform = path!.parentElement!.getAttribute('transform')!;
-      return Number(/translate\([^ ]+ ([^)]+)\)/.exec(transform)![1]);
-    };
-    expect(generalY(boards[0]!, '帥')).toBeGreaterThan(generalY(boards[0]!, '將'));
-    expect(generalY(boards[1]!, '將')).toBeGreaterThan(generalY(boards[1]!, '帥'));
+    const generalY = (board: Element, color: 'red' | 'black') =>
+      Number(board.querySelector(`[aria-label="${color} general"]`)!.getAttribute('y'));
+    expect(generalY(boards[0]!, 'red')).toBeGreaterThan(generalY(boards[0]!, 'black'));
+    expect(generalY(boards[1]!, 'black')).toBeGreaterThan(generalY(boards[1]!, 'red'));
+    // Lichess's short id, shown at the end of the result line on hover.
+    expect(
+      [...sessions[0]!.querySelectorAll<HTMLElement>('.puzzle-history__result')].map(
+        (label) => label.dataset.puzzleCode,
+      ),
+    ).toEqual([`#${puzzleShortCode(RED_MATE.id)}`, `#${puzzleShortCode(BLACK_MATE.id)}`]);
     expect(root.querySelector<HTMLButtonElement>('main button')!.hidden).toBe(true);
+  });
+
+  it("draws history thumbnails in the reader's chosen piece set", async () => {
+    const boardFor = async (set: 'traditional' | 'international') => {
+      stubWindowLocalStorage(memoryStorage());
+      writeStoredXiangqiPieceSet(set);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          json({ attempts: [historyEntry(RED_MATE, '2026-10-31T16:00:00Z')], nextCursor: null }),
+        ),
+      );
+      const root = document.createElement('div');
+      await mountPuzzleHistory(root);
+      return root.querySelector('.puzzle-history__board')!;
+    };
+    const traditional = await boardFor('traditional');
+    const international = await boardFor('international');
+    const general = (board: Element) =>
+      board.querySelector('[aria-label="red general"]')!.outerHTML;
+    expect(general(traditional)).not.toBe(general(international));
+    // The international set draws picture art; the traditional set draws characters.
+    expect(
+      international.querySelector('[aria-label="red general"] image')?.getAttribute('href'),
+    ).toContain('/piece-sets/xiangqi/international/red-general');
+    expect(traditional.querySelector('[aria-label="red general"] image')).toBeNull();
   });
 
   it.each([

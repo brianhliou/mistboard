@@ -706,6 +706,47 @@ a.puzzle-streak-chip:focus-visible {
   padding: 17px 20px;
 }
 
+.puzzle-replay-side {
+  gap: 10px;
+}
+
+.puzzle-replay-side__back {
+  color: var(--site-muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.puzzle-replay-side__back:hover,
+.puzzle-replay-side__back:focus-visible {
+  color: var(--site-text);
+}
+
+.puzzle-replay-side__title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.puzzle-replay-side__bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--site-border-soft);
+}
+
+.puzzle-replay-side__bar > span {
+  display: block;
+  height: 100%;
+  background: #629924;
+  transition: width 0.3s ease;
+}
+
+.puzzle-replay-side__count {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
 /* The puzzle page's column sits beside the board and should end near its
    bottom edge (#717), so its cards run tighter than the streak's. */
 .puzzles-sidebar .puzzle-left-card {

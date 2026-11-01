@@ -1,5 +1,5 @@
 import { renderXiangqiOgBoardSvg } from '@mistboard/board-render';
-import { coordOf, parseJungleFen, parseStandardXiangqiFen } from '@mistboard/game';
+import { coordOf, parseJungleFen, parseStandardXiangqiFen, puzzleShortCode } from '@mistboard/game';
 import './history.css';
 import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { t } from '../i18n/catalog.js';
@@ -8,6 +8,8 @@ import { renderJungleBoardSvg } from '../jungle-render.js';
 import type { PuzzleHistoryEntry } from '../profile-puzzles.js';
 import { buildNav } from '../site-shell.js';
 import { xiangqiDisplayFile, xiangqiDisplayRow } from '../xiangqi-board-geometry.js';
+import { drawsCrossedSoldier } from '../xiangqi-crossed-soldier.js';
+import { renderXiangqiPiece } from '../xiangqi-pieces.js';
 import { renderPuzzleMenuLayout } from './puzzle-menu.js';
 
 type HistoryEntry = PuzzleHistoryEntry & {
@@ -57,22 +59,33 @@ function thumbnail(entry: HistoryEntry): HTMLElement {
     if (entry.variant === 'xiangqi') {
       const parsed = parseStandardXiangqiFen(entry.fen);
       if (parsed.ok) {
+        // The board's lines come from the shared OG renderer; the pieces are
+        // the reader's own piece set, placed on the same points.
+        const height = 305;
+        const cell = height / (9 + 2 * 0.58);
+        const margin = 0.58 * cell;
+        const offsetX = 137.5 - (2 * margin + 8 * cell) / 2;
+        const size = (0.98 / 0.948) * cell;
         const pieces = Object.entries(parsed.state.board).flatMap(([square, piece]) => {
           if (!piece) return [];
           const { file, rank } = coordOf(square as keyof typeof parsed.state.board);
+          const x = offsetX + margin + xiangqiDisplayFile(file, perspective, 9) * cell;
+          const y = margin + xiangqiDisplayRow(rank, perspective, 10) * cell;
           return [
-            {
-              ...piece,
-              file: xiangqiDisplayFile(file, perspective, 9),
-              rank: 10 - xiangqiDisplayRow(rank, perspective, 10),
-            },
+            renderXiangqiPiece(piece, {
+              x: x - size / 2,
+              y: y - size / 2,
+              size,
+              crossed: drawsCrossedSoldier(piece, rank),
+              shadow: false,
+            }),
           ];
         });
         board.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 275 305">${renderXiangqiOgBoardSvg(
           {
             files: 9,
             ranks: 10,
-            pieces,
+            pieces: [],
             riverBetweenRanks: [5, 6],
             palaces: [
               { fileLo: 3, fileHi: 5, rankLo: 1, rankHi: 3 },
@@ -80,9 +93,9 @@ function thumbnail(entry: HistoryEntry): HTMLElement {
             ],
             centerX: 137.5,
             y: 0,
-            height: 305,
+            height,
           },
-        )}</svg>`;
+        )}${pieces.join('')}</svg>`;
       }
     } else if (entry.variant === 'jungle') {
       const parsed = parseJungleFen(entry.fen);
@@ -94,6 +107,9 @@ function thumbnail(entry: HistoryEntry): HTMLElement {
     }
   }
   const label = document.createElement('span');
+  label.className = 'puzzle-history__result';
+  // Lichess shows the puzzle's short id at the end of this line on hover.
+  label.dataset.puzzleCode = `#${puzzleShortCode(entry.puzzleId)}`;
   label.textContent = entry.solved
     ? t('puzzle.dashboardSolved')
     : { en: 'Incorrect', 'zh-Hans': '错误', 'zh-Hant': '錯誤' }[currentLocale()];

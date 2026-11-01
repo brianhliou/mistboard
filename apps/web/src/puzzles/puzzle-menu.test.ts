@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { hasAppTranslation, type I18nKey, t } from '../i18n/catalog.js';
 import { type Locale, SUPPORTED_LOCALES, setStoredLocale } from '../i18n/locale.js';
 import { puzzleNavItems } from '../nav-items.js';
-import { type PuzzleMenuPage, renderPuzzleMenu, renderPuzzleMenuLayout } from './puzzle-menu.js';
+import {
+  centreActivePuzzleMenuItem,
+  type PuzzleMenuPage,
+  renderPuzzleMenu,
+  renderPuzzleMenuLayout,
+} from './puzzle-menu.js';
 
 const DASHBOARD_COPY = {
   'puzzle.dashboardTitle': ['Puzzle Dashboard', '解题面板', '解題面板'],
@@ -123,5 +128,37 @@ describe('shared puzzle menu', () => {
     expect(layout.querySelector('[aria-current="page"]')?.getAttribute('href')).toBe(
       '/puzzles/history',
     );
+  });
+
+  it('scrolls a phone strip so the current page is in view, and leaves a strip that fits alone', () => {
+    const menu = renderPuzzleMenu('dashboard');
+    const active = menu.querySelector<HTMLElement>('[aria-current="page"]')!;
+    const rect = (left: number, width: number) =>
+      ({
+        left,
+        width,
+        right: left + width,
+        top: 0,
+        bottom: 44,
+        height: 44,
+        x: left,
+        y: 0,
+      }) as DOMRect;
+    Object.defineProperty(menu, 'clientWidth', { value: 374 });
+    Object.defineProperty(menu, 'scrollWidth', { value: 700 });
+    menu.getBoundingClientRect = () => rect(8, 374);
+    // Laid out unscrolled, the Dashboard item starts past the strip's right edge.
+    active.getBoundingClientRect = () => rect(430, 150);
+    centreActivePuzzleMenuItem(menu);
+    expect(menu.scrollLeft).toBe(310);
+    const item = 430 - menu.scrollLeft;
+    expect(item).toBeGreaterThanOrEqual(8);
+    expect(item + 150).toBeLessThanOrEqual(8 + 374);
+
+    const fits = renderPuzzleMenu('dashboard');
+    Object.defineProperty(fits, 'clientWidth', { value: 700 });
+    Object.defineProperty(fits, 'scrollWidth', { value: 700 });
+    centreActivePuzzleMenuItem(fits);
+    expect(fits.scrollLeft).toBe(0);
   });
 });

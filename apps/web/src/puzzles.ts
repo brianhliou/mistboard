@@ -2018,14 +2018,20 @@ async function mountFailedPuzzleReplay(frame: ReturnType<typeof buildPuzzlesFram
     ? requested
     : '30';
   const copy = {
-    en: { progress: (n: number, total: number) => `Replay: ${n} of ${total}`, done: 'All done' },
+    en: {
+      progress: (n: number, total: number) => `Replay: ${n} of ${total}`,
+      done: 'All done',
+      title: 'Replay failed puzzles',
+    },
     'zh-Hans': {
       progress: (n: number, total: number) => `错题重练：${n} / ${total}`,
       done: '全部完成',
+      title: '错题重练',
     },
     'zh-Hant': {
       progress: (n: number, total: number) => `錯題重練：${n} / ${total}`,
       done: '全部完成',
+      title: '錯題重練',
     },
   }[currentLocale()];
   const dashboard = (): HTMLAnchorElement => {
@@ -2034,10 +2040,36 @@ async function mountFailedPuzzleReplay(frame: ReturnType<typeof buildPuzzlesFram
     link.textContent = t('puzzle.dashboardTitle');
     return link;
   };
+  // The left column, as on Lichess: the way back to the Dashboard, then the
+  // run's title and how far through it the player is.
   const card = document.createElement('section');
-  card.className = 'puzzle-left-card';
-  card.append(dashboard());
+  card.className = 'puzzle-left-card puzzle-replay-side';
+  const back = dashboard();
+  back.className = 'puzzle-replay-side__back';
+  back.textContent = `‹ ${t('puzzle.dashboardTitle')}`;
+  const heading = document.createElement('h2');
+  heading.className = 'puzzle-replay-side__title';
+  heading.textContent = copy.title;
+  const bar = document.createElement('div');
+  bar.className = 'puzzle-replay-side__bar';
+  const fill = document.createElement('span');
+  bar.append(fill);
+  const count = document.createElement('p');
+  count.className = 'puzzle-replay-side__count';
+  card.append(back, heading, bar, count);
+  card.hidden = true;
   controls.replaceChildren(card);
+  /** Puzzles finished so far out of the run; the bar fills as each one is left behind. */
+  const showProgress = (done: number, total: number): void => {
+    card.hidden = total === 0;
+    bar.setAttribute('role', 'progressbar');
+    bar.setAttribute('aria-valuemin', '0');
+    bar.setAttribute('aria-valuemax', String(total));
+    bar.setAttribute('aria-valuenow', String(done));
+    bar.setAttribute('aria-label', copy.title);
+    fill.style.width = `${total ? (100 * done) / total : 0}%`;
+    count.textContent = `${done} / ${total}`;
+  };
   setOnAttemptRating(null);
   let failures: { puzzleId: string; failedAt: string }[] = [];
   let index = 0;
@@ -2092,10 +2124,12 @@ async function mountFailedPuzzleReplay(frame: ReturnType<typeof buildPuzzlesFram
         if (!puzzle) index++;
       }
       if (!puzzle) {
+        showProgress(failures.length, failures.length);
         message(copy.done, dashboard());
         return;
       }
       const current = index;
+      showProgress(current, failures.length);
       const navigation: PuzzleNavigation = {
         index: current,
         total: failures.length,
