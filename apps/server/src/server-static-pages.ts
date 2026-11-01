@@ -190,7 +190,7 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/contribute': {
     title: 'How to Contribute | Mistboard',
     description:
-      'Contribute to Mistboard as a player, teacher, translator, game creator or engine author.',
+      'Ways to contribute to Mistboard as a player, teacher, translator, game creator or engine author, and where each one starts.',
   },
   // A casual xiangqi group in Bellevue; Mistboard hosts its page, and
   // washingtonxiangqi.org and .com forward here (2026-10-23).
@@ -202,7 +202,7 @@ export const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/creators': {
     title: 'Work With Us: Creators and Players | Mistboard',
     description:
-      'Work with Mistboard on teaching, broadcasts, original games and engine challenges across languages.',
+      'Work with Mistboard on teaching, broadcasts, original games and engine challenges across languages, and how to get in touch.',
   },
   // One reigning champion engine per game, moved from
   // brianhliou.com/challenges/ (and its zh copies) on 2026-10-07; /challenges
