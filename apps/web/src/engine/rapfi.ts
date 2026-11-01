@@ -46,9 +46,18 @@ function browserTransport(): RapfiTransport {
   };
 }
 
-function commands(position: RapfiPosition, level: RapfiLevel): { lines: string[]; timeMs: number } {
-  const tier = RAPFI_LEVELS.find((entry) => entry.level === level);
-  if (!tier) throw new Error('Unknown Rapfi level');
+/** Shared with the offline ladder so calibration exercises browser commands. */
+export function rapfiCommands(
+  position: RapfiPosition,
+  tier: { nodes: number; timeMs: number },
+): { lines: string[]; timeMs: number } {
+  if (
+    !Number.isSafeInteger(tier.nodes) ||
+    tier.nodes < 1 ||
+    !Number.isSafeInteger(tier.timeMs) ||
+    tier.timeMs < 1
+  )
+    throw new Error('Invalid Rapfi budget');
   if (position.turn !== 1 && position.turn !== 2) throw new Error('Invalid Rapfi turn');
   const occupied = new Set<string>();
   for (const stone of position.stones) {
@@ -109,7 +118,9 @@ export class Rapfi {
 
   async chooseMove(position: RapfiPosition, level: RapfiLevel): Promise<RapfiMove> {
     if (this.pending) throw new Error('Rapfi is already searching');
-    const { lines, timeMs } = commands(position, level);
+    const tier = RAPFI_LEVELS.find((entry) => entry.level === level);
+    if (!tier) throw new Error('Unknown Rapfi level');
+    const { lines, timeMs } = rapfiCommands(position, tier);
     return new Promise<RapfiMove>((resolve, reject) => {
       this.pending = {
         position: { turn: position.turn, stones: position.stones.map((stone) => ({ ...stone })) },
