@@ -178,12 +178,12 @@ describe('static pages', () => {
   });
 
   it.each([
-    ['/source', 'en', 'Gomoku', 'neural networks', 'browser build'],
-    ['/zh-hans/source', 'zh-Hans', '五子棋', '神经网络', '浏览器构建'],
-    ['/zh-hant/source', 'zh-Hant', '五子棋', '神經網路', '瀏覽器建置'],
+    ['/source', 'en', 'Gomoku', 'neural networks', 'browser build', 'eight'],
+    ['/zh-hans/source', 'zh-Hans', '五子棋', '神经网络', '浏览器构建', '八个'],
+    ['/zh-hant/source', 'zh-Hant', '五子棋', '神經網路', '瀏覽器建置', '八個'],
   ] as const)(
     'credits Rapfi code, networks and build on %s when enabled',
-    async (path, locale, game, networks, build) => {
+    async (path, locale, game, networks, build, levels) => {
       await ensureLocaleCatalog(locale);
       vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
       window.history.replaceState(null, '', path);
@@ -192,6 +192,7 @@ describe('static pages', () => {
       const engine = root.querySelector('a[href="https://github.com/dhbloo/rapfi"]');
       expect(engine?.textContent).toContain('dhbloo');
       expect(engine?.textContent).toContain(game);
+      expect(engine?.textContent).toContain(levels);
       expect(engine?.textContent).toContain('GPL-3.0');
       const weights = root.querySelector('a[href="/engine/rapfi/NETWORKS-CC0.txt"]');
       expect(weights?.textContent).toContain(networks);

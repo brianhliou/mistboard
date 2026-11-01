@@ -405,7 +405,12 @@ describe('Gomoku hidden registration', () => {
         expect(option.kind).toBe('browser');
         expect(server?.isEngineClientId?.(option.id)).toBe(true);
       }
-      for (const id of ['rapfi-level-0', 'rapfi-level-6', 'rapfi-level-1\n', 'engine:black'])
+      // The server is ready for eight ids before the browser ladder is integrated.
+      for (const level of [1, 2, 3, 4, 5, 6, 7, 8]) {
+        expect(server?.isEngineClientId?.(`rapfi-level-${level}`)).toBe(true);
+        expect(server?.engineDisplayName?.(`rapfi-level-${level}`)).toBe('Rapfi');
+      }
+      for (const id of ['rapfi-level-0', 'rapfi-level-9', 'rapfi-level-1\n', 'engine:black'])
         expect(server?.isEngineClientId?.(id)).toBe(false);
       expect(web?.landing?.defaultEngineId).toBe('rapfi-level-1');
       expect(server?.lobby?.supportsRated).toBe(false);

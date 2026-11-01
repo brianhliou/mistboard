@@ -29,7 +29,7 @@ export type GomokuRuntimeRoom = TenantRuntimeRoom<
 >;
 
 export function isGomokuEngineClientId(id: string | undefined): boolean {
-  return typeof id === 'string' && /^rapfi-level-[1-5]$/.test(id) && id.length === 13;
+  return typeof id === 'string' && /^rapfi-level-[1-8]$/.test(id) && id.length === 13;
 }
 
 function moveFromMessage(message: Record<string, unknown>): GomokuMove | null {

@@ -517,31 +517,34 @@ test('Gomoku zero-move endings retain a terminal ply zero and unrated logs are r
 
 test('Gomoku live and finished payloads retain the browser Rapfi engine on either seat', async () => {
   const { gomokuPostgameForApi, gomokuLiveWatchPayload } = await api();
-  for (const seat of gomokuTenant.colors) {
-    const live = room();
-    const assignment = live.events.find(
-      (event) => event.type === 'seat-assigned' && event.seat === seat,
-    )!;
-    assert.equal(assignment.type, 'seat-assigned');
-    if (assignment.type !== 'seat-assigned') throw new Error('missing seat');
-    assignment.clientId = 'rapfi-level-5';
-    gomokuRooms.set(ROOM_ID, live);
-    try {
-      const snapshot = await gomokuLiveWatchPayload(ROOM_ID);
-      assert.ok(snapshot);
-      assert.equal(snapshot.game.mode, 'pve');
-      assert.equal(snapshot.game.pveEngineId, 'rapfi-level-5');
-      finish(live);
-      const payload = await gomokuPostgameForApi(
-        ROOM_ID,
-        deps(live.events, gameRecord({ mode: 'pve' })),
-      );
-      assert.ok(payload);
-      assert.equal(payload.game.pveEngineId, 'rapfi-level-5');
-      assert.equal(payload.game.rated, false);
-      assert.equal(JSON.stringify(payload).includes('"clientId"'), false);
-    } finally {
-      gomokuRooms.clear();
+  for (const level of [1, 2, 3, 4, 5, 6, 7, 8]) {
+    for (const seat of gomokuTenant.colors) {
+      const live = room();
+      const assignment = live.events.find(
+        (event) => event.type === 'seat-assigned' && event.seat === seat,
+      )!;
+      assert.equal(assignment.type, 'seat-assigned');
+      if (assignment.type !== 'seat-assigned') throw new Error('missing seat');
+      assignment.clientId = `rapfi-level-${level}`;
+      gomokuRooms.set(ROOM_ID, live);
+      try {
+        const snapshot = await gomokuLiveWatchPayload(ROOM_ID);
+        assert.ok(snapshot);
+        assert.equal(snapshot.game.mode, 'pve');
+        assert.equal(snapshot.game.pveEngineId, `rapfi-level-${level}`);
+        assert.equal(JSON.stringify(snapshot).includes('"clientId"'), false);
+        finish(live);
+        const payload = await gomokuPostgameForApi(
+          ROOM_ID,
+          deps(live.events, gameRecord({ mode: 'pve' })),
+        );
+        assert.ok(payload);
+        assert.equal(payload.game.pveEngineId, `rapfi-level-${level}`);
+        assert.equal(payload.game.rated, false);
+        assert.equal(JSON.stringify(payload).includes('"clientId"'), false);
+      } finally {
+        gomokuRooms.clear();
+      }
     }
   }
 });
