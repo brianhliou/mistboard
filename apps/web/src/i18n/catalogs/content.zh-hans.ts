@@ -54,7 +54,7 @@ export const ZH_HANS_CONTENT = {
   'articles.topicEngineering': '技术',
   'articles.topicsLabel': '主题',
   'articles.read': '阅读',
-  'articles.intro': '原创策略游戏的文章、规则说明与引擎工作。',
+  'articles.intro': '关于中国象棋及其近亲的文章、规则说明与引擎工作。',
   'articles.allArticles': '全部文章',
   'articles.previousArticles': '上一篇文章',
   'articles.moreArticles': '更多文章',
@@ -136,26 +136,26 @@ export const ZH_HANS_CONTENT = {
   'contact.correctionsSuffix': '。',
   'contact.aboutPage': '相关页面：{path}',
   'about.heading': '关于 Mistboard',
-  'about.lede':
-    'Mistboard 是免费、开源的中国象棋对弈与学习网站，也提供我们设计的原创策略游戏。看得懂中文与看不懂中文的玩家，都能在同一张棋盘上对弈。',
-  'about.whyHeading': '让中国象棋走上世界舞台',
+  'about.mission': '通过中国象棋与世界经典策略游戏，让不同文化背景的人走到一起。',
+  'about.lede': 'Mistboard 是免费、开源的中国象棋对弈与学习网站，支持英文、简体中文和繁体中文。',
+  'about.whyHeading': '三种语言的中国象棋',
   'about.whyBody':
-    '这里的中国棋类包括象棋及其近亲揭棋和暗棋。Mistboard 支持英文、简体中文和繁体中文，让上海的玩家与多伦多的玩家可以坐在同一张棋盘前。棋子可以显示为容易辨认的图标，不认识“車”或“砲”也能下棋，入门课程则从第一步开始教。我们的使命是通过中国象棋与原创策略游戏，让不同文化背景的人走到一起。',
+    '这里的中国棋类包括象棋及其传统近亲揭棋和暗棋。上海的玩家与多伦多的玩家可以坐在同一张棋盘前，各自用自己的语言浏览网站。棋子可以显示为图标，认识汉字之前就能下棋，入门课程则从第一步开始教。',
   'about.darkChessHeading': '从熟悉的棋盘创造新游戏',
   'about.darkChessBody':
-    '鸭子象棋在棋盘上放入一只不属于任何一方的鸭子。迷雾象棋隐藏你的棋子无法到达的格点。疯狂屋象棋让你把吃到的棋子重新放回棋盘。这些游戏都从熟悉的规则出发，改变玩家需要做的决策。每一种都有清楚的规则，由服务器执行。我们也希望其他创作者将来能在这里与玩家一起开发、测试自己的游戏。',
+    '鸭子象棋在棋盘上放入一只不属于任何一方的鸭子。迷雾象棋隐藏你的棋子无法到达的格点。疯狂屋象棋让你把吃到的棋子重新放回棋盘。每一种都从熟悉的游戏出发，改变玩家需要做的决策，并且都有清楚的规则，由服务器执行。',
   'about.playStudyHeading': '对弈、研究与教学',
   'about.playStudyBody':
     '用链接邀请朋友对弈，在大厅寻找对手，或挑战电脑。练习从真实对局中提取的战术题，逐步研究一盘比赛，或在结束后复盘自己的对局。课程、研习和赛事直播，让玩家能够互相学习，也把自己的经验教给别人。',
-  'about.trustHeading': '与玩家共建，规则可供检验',
+  'about.trustHeading': '公平对弈，规则公开',
   'about.trustBody':
-    '我们的标准是棋盘响应及时、下一步操作清楚。我们在开发中使用 AI，迅速处理问题和玩家建议。规则公开，任何人都可以检查；公平对弈由服务器执行：在迷雾游戏中，浏览器根本不会收到你看不见的棋子。电脑对手也只能获得同一位置上的人类玩家有权知道的信息。',
+    '人类账号只供真人对弈，机器人只能使用标注为机器人的账号下棋。服务器保存每一盘棋，只把每位玩家的座位有权看到的信息发给他。规则和代码都公开，任何人都可以检查；玩家的举报和建议会被迅速处理。',
   'about.enginesHeading': '打造下一个挑战者',
   'about.enginesBody':
-    '引擎作者可以在 Mistboard 的公开比赛中争夺冠军头衔。我们希望把它发展为一个竞技场，让任何人都能带来自己的引擎，在清楚的规则下比赛，对局和结果可供他人检查。更长远地，我们希望为新创造的策略游戏举办比赛，让人类和 AI 智能体为从未玩过的游戏开发新的方法。',
-  'about.communityHeading': '俱乐部、比赛与文化交流',
+    '引擎作者可以在 Mistboard 的公开比赛中争夺冠军头衔。想在网站上运行机器人，请先联系我们；获批的机器人使用标注为机器人的账号下棋。',
+  'about.communityHeading': '俱乐部、教师与主办方',
   'about.communityBody':
-    '我们希望建立华盛顿州象棋俱乐部，举办线下比赛，让大家能在 Mistboard 上观看和研究这些对局。在此基础上，我们希望与中国及其他地方的俱乐部、教师、体育和文化机构合作，开展交流与国际赛事。',
+    '我们与棋手、教师、俱乐部和赛事主办方合作，在线上和线下开展直播、研究和教学。',
   'about.openSourceHeading': '免费且开源',
   'about.openSourcePrefix': 'Mistboard 以 AGPL-3.0-or-later 发布在 ',
   'about.openSourceMiddle':
@@ -163,7 +163,7 @@ export const ZH_HANS_CONTENT = {
   'about.openSourceSuffix': '。',
   'about.whoHeading': '谁在打造 Mistboard',
   'about.whoBody':
-    'Brian H. Liou 借助一套 AI 智能体系统设计、开发并运营 Mistboard，从游戏服务器、Mistboard 自研引擎，到赛事直播和文章。此前，他在亚马逊和 DoorDash 工作了五年，从事大规模分布式系统和增长工程。他创办 Mistboard，是为了通过中国象棋与原创策略游戏，让不同文化背景的人走到一起。',
+    'Brian H. Liou 借助一套 AI 智能体系统设计、开发并运营 Mistboard，从游戏服务器、Mistboard 自研引擎，到赛事直播和文章。此前，他在亚马逊和 DoorDash 工作了五年，从事大规模分布式系统和增长工程。',
   'about.whoSitePrefix': '他的网站：',
   'about.articlesHeading': '文章如何写成',
   'about.articlesBody':
@@ -249,12 +249,12 @@ export const ZH_HANS_CONTENT = {
   'faq.playFriendAnswer': '开始对局时选择和朋友对弈，把链接发给朋友，对方打开链接就能入座。',
   'faq.playOtherQuestion': '还有哪些玩法？',
   'faq.playOtherAnswer':
-    '揭棋、暗棋、斗兽棋、翻翻棋，以及我们设计的游戏：疯狂屋象棋、鸭子象棋和迷雾象棋。',
+    '揭棋和暗棋、斗兽棋和翻翻棋，以及我们设计的游戏：疯狂屋象棋、鸭子象棋、迷雾象棋和象棋麻将。',
   'faq.playReviewQuestion': '下完可以复盘吗？',
   'faq.playReviewAnswer': '可以。象棋对局结束后可以进入复盘，引擎会标出决定胜负的几步。',
   'faq.darkChessQuestion': 'Mistboard 上可以玩什么？',
   'faq.darkChessPrefix':
-    '以中国象棋为主：象棋及其传统近亲揭棋和暗棋。旁边是我们设计的游戏，例如疯狂屋象棋、鸭子象棋和迷雾象棋，还有斗兽棋和迷雾国际象棋。有些是公开信息游戏；有些用迷雾或背面朝下的棋子隐藏信息。',
+    '以中国象棋为主：象棋及其传统近亲揭棋和暗棋。此外还有我们设计的游戏，例如疯狂屋象棋、鸭子象棋、迷雾象棋和象棋麻将，以及斗兽棋和迷雾国际象棋。',
   'faq.rulesReference': '规则参考',
   'faq.darkChessSuffix': '列出了当前游戏。',
   'faq.accountQuestion': '我需要账号吗？',
@@ -267,7 +267,7 @@ export const ZH_HANS_CONTENT = {
   'faq.contactSuffix': '发送消息。如果是关于某局对局，请附上房间链接。',
   'faq.cheatingQuestion': 'Mistboard 如何防作弊？',
   'faq.cheatingPrefix':
-    '无论哪种棋、是否计分，借助引擎或他人帮助、滥用账号都违反公平竞赛规则。在隐藏棋子的游戏里，服务器还保存完整棋盘，只把每位玩家可以看到的部分发给他，所以页面里没有东西可挖。代码是',
+    '人类账号只供真人对弈。无论哪种棋、是否计分，借助引擎、他人或任何外部工具都违反公平竞赛规则；机器人只能使用标注为机器人的账号下棋。服务器保存完整对局，只把每位玩家自己能看到的部分发给他。代码是',
   'faq.openSource': '开源的',
   'faq.cheatingSuffix': '，任何人都可以检查。',
   'faq.enginesQuestion': 'Mistboard 引擎会看到完整棋盘吗？',
@@ -283,19 +283,18 @@ export const ZH_HANS_CONTENT = {
     '开局库另外使用了一份获授权的匿名网络对局数据，所以它统计的局数比棋谱库列出的要多。',
   'faq.ratedQuestion': '计分对局如何运作？',
   'faq.ratedAnswer':
-    '计分对局在两位已登录的玩家之间进行，仅限设有排行榜的变体。计分对局仍处于 Beta 阶段，评分在稳定下来之前可能波动较大。引擎对局和休闲对局不计分。',
+    '计分对局在两位已登录的玩家之间进行，仅限设有排行榜的变体。引擎对局和休闲对局不计分。',
   'terms.heading': '使用条款',
-  'terms.intro':
-    'Mistboard 是一个免费的开源爱好项目。这些是使用 mistboard.com 托管网站的基本规则。随着项目成长，这些规则会变化；本页始终是当前版本。',
+  'terms.intro': '这些是使用 mistboard.com 托管网站的规则。本页始终是当前版本。',
   'terms.offeredHeading': '网站按现状提供',
   'terms.offeredBody':
-    '不提供担保。开发期间，对局、账号、评分和存储数据可能会丢失、重置，或在不另行通知的情况下移除。不要把任何你承受不起丢失的东西放在 Mistboard 上。',
+    'Mistboard 按现状提供，不提供任何担保。对局、账号、评分和存储数据可能会被更改、重置或移除。',
   'terms.anonymousHeading': '匿名对弈',
   'terms.anonymousBody':
-    '默认情况下，对弈是匿名且基于链接的。账号是可选的，会增加个人资料和用户名。不要把本服务用于任何需要不可丢失身份的事情。',
+    '默认情况下，对弈是匿名且基于链接的。账号是可选的，会增加个人资料和用户名。',
   'terms.acceptableHeading': '可接受使用',
   'terms.acceptableBody':
-    '不要骚扰其他玩家、发送垃圾内容、滥用服务、试图破坏迷雾过滤器，或用爬虫大量请求本站。计分对局不要使用外部引擎帮助。滥用时，用户名、房间和账号可能会被撤销。',
+    '不要骚扰其他玩家、发送垃圾内容、滥用服务、试图查看游戏隐藏的信息，或用爬虫大量请求本站。滥用时，用户名、房间和账号可能会被撤销。',
   'terms.ratedAccountHeading': '计分对局需要账号',
   'terms.ratedAccountBody':
     '休闲和基于链接的对局保持匿名且免费。计分对局需要账号，所以评分归属于一个人。一个人，一个账号。',
@@ -304,7 +303,7 @@ export const ZH_HANS_CONTENT = {
     '我们决定评分如何计算以及它们代表什么。我们可以随时设置、调整、重新计算、作废或重置任何评分或排行榜本身，也可以改变系统的运作方式。评分是我们发布的一项测量结果，不是你拥有的东西。',
   'terms.fairPlayHeading': '公平竞赛',
   'terms.fairPlayBody':
-    '计分对局只有在结果诚实时才有效。我们不容忍外部协助、操纵自己或他人的评分，或任何试图钻排行榜空子的行为。我们决定什么越界，并且可能在越界时移除评分或账号。',
+    '人类账号只供真人对弈。用人类账号下的每一盘棋，无论是否计分，都不得借助引擎、他人或任何外部工具；任何账号都不得操纵自己或他人的评分。机器人只能使用经我们批准并标注为机器人的账号下棋；想运行机器人，请先联系我们。我们决定什么越界，并且可能在越界时移除评分，或限制、关闭账号。',
   'terms.integrityHeading': '公平性数据',
   'terms.integrityPrefix':
     '我们会收集并分析对局和账号数据，以保护计分对局的公平性。如何调查，以及采取什么处理，由我们决定。我们收集什么见',
@@ -333,8 +332,7 @@ export const ZH_HANS_CONTENT = {
   'terms.sourceLink': '源码',
   'terms.openSourceSuffix': '。',
   'privacy.heading': '隐私',
-  'privacy.intro':
-    'Mistboard 是一个免费的开源爱好项目。本页说明我们在 mistboard.com 托管网站上收集什么。随着项目成长，本页会变化；本页始终是当前版本。',
+  'privacy.intro': '本页说明我们在 mistboard.com 托管网站上收集什么。本页始终是当前版本。',
   'privacy.collectHeading': '我们收集什么',
   'privacy.collectBody':
     '分析数据、你下过的对局，以及如果你创建账号，你的用户名和邮箱。我们使用 PostHog 做分析：它会按浏览器记录你访问的页面和在页面上的操作，如果你登录，这些记录会关联到你的账号。你的浏览器会在本地存储中保存一个随机标识，以便把你未登录时下的对局在统计中计为同一位访客；它不是 Cookie，不会离开本站，也不会展示给其他玩家。围绕计分对局，为保持诚实公平，我们会收集更多数据。',
@@ -347,7 +345,7 @@ export const ZH_HANS_CONTENT = {
   'privacy.publicGamesSuffix': ' 许可。',
   'privacy.promisesHeading': '我们承诺什么，以及不承诺什么',
   'privacy.promisesBody':
-    '我们承诺把隐藏信息保留在服务器端，并告诉你我们收集什么。我们不承诺你的数据、账号或评分能在开发期间保留。它们可能会在不另行通知的情况下改变或消失。不要把任何你承受不起丢失的东西放在 Mistboard 上。',
+    '我们告诉你我们收集什么，并且只把每位玩家的座位有权看到的信息发给他。数据、账号和评分可能会改变或被移除。',
   'patron.heading': 'Mistboard 赞助会员',
   'patron.heroTitle': '成为 Mistboard 赞助会员。',
   'patron.heroSubtitle': '可选的按月订阅或单次付款。没有广告，没有付费变强，核心功能始终免费。',
@@ -389,7 +387,7 @@ export const ZH_HANS_CONTENT = {
   'developers.heading': '开发者',
   'apiDocs.heading': 'API 文档',
   'contribute.intro':
-    '一起为中国象棋和原创策略游戏创造未来。Mistboard 免费且开源，玩家、教师、游戏创作者和引擎作者都可以参与。从一件你在意、想改进的事开始。',
+    'Mistboard 免费且开源，玩家、教师、游戏创作者和引擎作者都可以参与。从一件你在意、想改进的事开始。',
   'contribute.playHeading': '下棋并给出反馈',
   'contribute.playBody':
     '眼下你能做的最有用的事，就是下棋，然后告诉我们哪里坏了、哪里别扭。真实对局暴露规则漏洞、含糊之处和缺失功能的速度，比任何其他方式都快。我们设计的新游戏也需要试玩。',
@@ -403,7 +401,7 @@ export const ZH_HANS_CONTENT = {
     ' 上。你可以认领一个开放的 issue，或者直接提交 pull request。源码页面列出了代码仓库，以及 Mistboard 所依赖的库。',
   'contribute.translateHeading': '帮忙翻译',
   'contribute.translateBody':
-    'Mistboard 提供英文、简体中文和繁体中文。中文是机器翻译的，还没有母语读者校对过。如果你会下棋、能读中文，欢迎帮我们审阅一页，规则页或者一节课都可以，把棋手不会这样说的地方标出来：一个术语、一个开局名称、一句读起来像翻译的话。一页不到一小时，之后没有任何义务。',
+    'Mistboard 提供英文、简体中文和繁体中文，中文是机器翻译的。如果你会下棋、能读中文，欢迎帮我们审阅一页，规则页或者一节课都可以，把棋手不会这样说的地方标出来：一个术语、一个开局名称、一句读起来像翻译的话。一页不到一小时，之后没有任何义务。',
   'contribute.translateStartPrefix': '想开始的话，请发邮件到 ',
   'contribute.translateStartMiddle':
     '，用一句话说说你怎么下棋，以及想先看规则页还是课程。如果你愿意署名，我们会把你的名字加到',
@@ -418,7 +416,7 @@ export const ZH_HANS_CONTENT = {
   'contribute.crossLinkOr': '或',
   'creators.heading': '与我们合作',
   'creators.intro':
-    '一起把中国象棋带上世界舞台。Mistboard 将对弈和研究与赛事直播、原创游戏和引擎挑战赛连接起来。我们希望跨越语言，在线上和线下与棋手、教师、创作者及主办方合作。网站免费、开源、无广告。',
+    'Mistboard 将对弈和研究与赛事直播、原创游戏和引擎挑战赛连接起来。我们跨越语言，在线上和线下与棋手、教师、创作者及主办方合作。网站免费、开源、无广告。',
   'creators.playersHeading': '有等级称号的棋手和教练',
   'creators.playersPrefix': '经过认证的称号徽章，以及一个',
   'creators.playersCoachLink': '教练页面',
@@ -561,7 +559,7 @@ export const ZH_HANS_CONTENT = {
   'thanks.playersAskSuffix': '。',
   'thanks.lichessHeading': 'Lichess',
   'thanks.lichessLead':
-    'Mistboard 是把 lichess 的设计用在象棋及其变体上。每当我们不知道某样东西该怎么做，就去看 lichess 是怎么做的，大多数时候我们做的是同样的东西。',
+    'Mistboard 的设计很大程度上得益于 lichess。每当我们不知道某样东西该怎么做，就去看 lichess 是怎么做的。',
   'thanks.lichessTook':
     '我们从 lichess 学来了大厅和使用 Glicko-2 的计分对局、对局室的布局、直播和职业棋手页面、杀棋题的规则、更新日志和这个页面，以及我们国际象棋棋盘底下的棋盘代码。',
   'thanks.lichessCloseLink': 'Lichess',

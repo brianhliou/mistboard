@@ -793,6 +793,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'contact.correctionsSuffix',
   'contact.aboutPage',
   'about.heading',
+  'about.mission',
   'about.lede',
   'about.whyHeading',
   'about.whyBody',
