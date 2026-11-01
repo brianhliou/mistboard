@@ -1,3 +1,4 @@
+import { loadCachedCurrentUser } from '../account-nav.js';
 import { track } from '../analytics.js';
 import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { t } from '../i18n/catalog.js';
@@ -24,6 +25,7 @@ type StormRun = {
 };
 type Frame = { shell: HTMLElement; detail: HTMLElement; controls: HTMLElement };
 type MountSolver = (puzzle: PuzzleDetail, options: PuzzleSolverOptions) => PuzzleSolverHandle;
+type SavedRun = { runId: string; owner: string | null; finished: boolean };
 const RUN_KEY = 'mistboard:puzzles:storm-run';
 const SEEN_KEY = 'mistboard:puzzles:storm-seen';
 
@@ -44,7 +46,9 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
   let change = '';
   let reviewing = false;
   let reviewToken = 0;
-  let resumeId = rememberedRun();
+  const owner = (await loadCachedCurrentUser())?.id ?? null;
+  const savedRun = rememberedRun(owner);
+  let resumeId = savedRun?.runId ?? null;
   let pendingReviewId = new URLSearchParams(window.location.search).get('review');
 
   const active = (): boolean => !stopped && shell.isConnected;
@@ -71,13 +75,15 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
       const delta = next.deadlineAt - run.deadlineAt;
       if (delta) change = `${delta > 0 ? '+' : '−'}${Math.abs(delta) / 1000}s`;
     }
+    const completed = run !== null && !run.finished && next.finished;
     run = next;
     resumeId = null;
     error = null;
     shell.classList.remove('puzzle-storm-error');
     // Results belong to this run too; reload must not start another clock.
-    rememberRun(next.runId);
+    rememberRun({ runId: next.runId, owner, finished: next.finished });
     rememberSeen(next.results.map((result) => result.id));
+    if (completed) finish();
   };
   const finish = (): void => {
     if (!run || terminalSent) return;
@@ -181,7 +187,6 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     shell.classList.remove('puzzle-storm-reviewing');
     solver?.dispose();
     solver = null;
-    finish();
     const card = document.createElement('section');
     card.className = 'puzzle-left-card puzzle-storm-results';
     card.dataset.stormResults = 'true';
@@ -209,11 +214,7 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     card.append(title, tally(), bests, chips, next, recovery());
     shell.replaceChildren(card);
     next.focus({ preventScroll: true });
-    if (pendingReviewId) {
-      const id = pendingReviewId;
-      pendingReviewId = null;
-      void review(id);
-    }
+    openPendingReview();
   };
   const showBoard = (): void => {
     if (!active() || !run) return;
@@ -276,6 +277,21 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     if (panel) panel.replaceWith(recovery());
     else shell.append(recovery());
   };
+  const showStart = (): void => {
+    error = null;
+    shell.classList.remove('puzzle-storm-error');
+    solver?.dispose();
+    solver = null;
+    shell.replaceChildren(layout);
+    detail.replaceChildren();
+    controls.replaceChildren(sideCard(), button(t('puzzle.stormNewRun'), start));
+  };
+  function openPendingReview(): void {
+    if (!pendingReviewId) return;
+    const id = pendingReviewId;
+    pendingReviewId = null;
+    void review(id);
+  }
   async function resume(): Promise<void> {
     const runId = run?.runId ?? resumeId;
     if (busy || !runId || !active()) return;
@@ -285,12 +301,26 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
       adopt(await request({ action: 'resume', runId }));
       showBoard();
     } catch (cause) {
-      if (cause instanceof Error && cause.message === '404') {
+      if (!active()) return;
+      const finished = run?.finished ?? savedRun?.finished ?? false;
+      const missing = cause instanceof Error && cause.message === '404';
+      if (missing) {
         run = null;
         resumeId = null;
         rememberRun(null);
       }
-      showError(cause);
+      if (pendingReviewId) {
+        // A failed reconciliation must not swallow the requested review or
+        // leave a live clock running behind it. Keep retryable saves for reload.
+        if (run && !run.finished) {
+          resumeId = run.runId;
+          run = null;
+        }
+        error = null;
+        shell.classList.remove('puzzle-storm-error');
+        openPendingReview();
+      } else if (missing && finished) showStart();
+      else showError(cause);
     } finally {
       busy = false;
     }
@@ -402,13 +432,10 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     document.removeEventListener('prerenderingchange', beginWhenVisible);
     // Reconcile a saved run before opening a review so a live clock never
     // runs unseen. showSummary opens the pending review once the run ends.
-    // Network failures retain the id; a missing run requires New Storm.
+    // A failed resume opens the requested review; retryable saves keep the id.
     if (resumeId) void resume();
-    else if (pendingReviewId) {
-      const id = pendingReviewId;
-      pendingReviewId = null;
-      void review(id);
-    } else {
+    else if (pendingReviewId) openPendingReview();
+    else {
       void start();
     }
   };
@@ -435,19 +462,29 @@ function clockText(ms: number): string {
   const seconds = Math.ceil(ms / 1000);
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
 }
-function rememberedRun(): string | null {
+function rememberedRun(owner: string | null): SavedRun | null {
   try {
     const value = JSON.parse(window.sessionStorage?.getItem(RUN_KEY) ?? 'null') as {
       runId?: unknown;
+      owner?: unknown;
+      finished?: unknown;
     } | null;
-    return typeof value?.runId === 'string' ? value.runId : null;
+    if (
+      typeof value?.runId === 'string' &&
+      value.owner === owner &&
+      typeof value.finished === 'boolean'
+    ) {
+      return { runId: value.runId, owner, finished: value.finished };
+    }
+    rememberRun(null);
+    return null;
   } catch {
     return null;
   }
 }
-function rememberRun(runId: string | null): void {
+function rememberRun(run: SavedRun | null): void {
   try {
-    if (runId) window.sessionStorage?.setItem(RUN_KEY, JSON.stringify({ runId }));
+    if (run) window.sessionStorage?.setItem(RUN_KEY, JSON.stringify(run));
     else window.sessionStorage?.removeItem(RUN_KEY);
   } catch {
     /* Storage blocked: the run still plays. */
