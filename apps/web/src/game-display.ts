@@ -262,8 +262,6 @@ export function liveMatchupNames(
 const WHITE_FIRST_SPECS: ReadonlySet<string> = new Set(['dark-chess', 'chess']);
 
 export function firstMoverColorName(gameSpecId: string): string {
-  // Reserved ahead of registration: FFQ seats have fixed ink from move one.
-  if (gameSpecId === 'ffq-banqi') return seatColorWord(gameSpecId, 'red');
   if (isFlipSeatVariant(gameSpecId)) return t('setup.first');
   if (maybeGameSpecForId(gameSpecId)?.family === 'mahjong') return t('live.seatEast');
   if (WHITE_FIRST_SPECS.has(gameSpecId) || !maybeGameSpecForId(gameSpecId)) {
@@ -273,7 +271,6 @@ export function firstMoverColorName(gameSpecId: string): string {
 }
 
 export function secondMoverColorName(gameSpecId: string): string {
-  if (gameSpecId === 'ffq-banqi') return seatColorWord(gameSpecId, 'black');
   if (maybeGameSpecForId(gameSpecId)?.family === 'mahjong') return t('live.seatWest');
   return isFlipSeatVariant(gameSpecId) ? t('setup.second') : seatColorWord(gameSpecId, 'black');
 }
@@ -283,9 +280,7 @@ export function secondMoverColorName(gameSpecId: string): string {
 // registry rule. `null` means "no catalog name yet" (the runtimeStatus
 // 'future' specs), and the caller falls back to the
 // spec's English publicName rather than inventing a product name.
-// The reserved literal keeps this preparatory change buildable before the
-// game package registers FFQ, without weakening coverage of GameSpecId.
-export const VARIANT_NAME_KEYS: Readonly<Record<GameSpecId | 'ffq-banqi', I18nKey | null>> = {
+export const VARIANT_NAME_KEYS: Readonly<Record<GameSpecId, I18nKey | null>> = {
   banqi: 'variant.banqi.name',
   'ffq-banqi': null,
   // runtimeStatus 'future': falls back to the spec's English publicName.
@@ -312,7 +307,7 @@ export const VARIANT_NAME_KEYS: Readonly<Record<GameSpecId | 'ffq-banqi', I18nKe
 // their own partial copy, and the bots one silently missed xiangqi, jungle,
 // jungle-flip, and dark-xiangqi.
 export function variantNameKeyForSpecId(gameSpecId: string): I18nKey | null {
-  const id = gameSpecId === 'ffq-banqi' ? gameSpecId : maybeGameSpecForId(gameSpecId)?.id;
+  const id = maybeGameSpecForId(gameSpecId)?.id;
   return id ? VARIANT_NAME_KEYS[id] : null;
 }
 

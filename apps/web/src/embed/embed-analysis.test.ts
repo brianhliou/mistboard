@@ -39,8 +39,7 @@ afterEach(() => {
 
 describe('EMBED_ANALYSIS_VARIANTS', () => {
   it('names every game spec, with marks exactly where the server stores analysis', () => {
-    // FFQ is reserved before registration; Set also works once GameSpecId includes it.
-    const ids = [...new Set([...GAME_SPECS.map((spec) => spec.id), 'ffq-banqi'] as const)].sort();
+    const ids = GAME_SPECS.map((spec) => spec.id).sort();
     expect(Object.keys(EMBED_ANALYSIS_VARIANTS).sort()).toEqual(ids);
     const withMarks = ids.filter((id) => EMBED_ANALYSIS_VARIANTS[id] !== null);
     expect(withMarks).toEqual([
@@ -70,7 +69,7 @@ describe('EMBED_ANALYSIS_VARIANTS', () => {
 });
 
 describe('loadEmbedAnalysis', () => {
-  it('makes no API request for reserved FFQ analysis', async () => {
+  it('makes no API request for unavailable FFQ analysis', async () => {
     const calls = stubApi({});
     expect(await loadEmbedAnalysis('ffq-banqi', ROOM, noMoves)).toBeNull();
     expect(calls).toEqual([]);

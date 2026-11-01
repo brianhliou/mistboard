@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   DAYS_PER_MOVE_OPTIONS,
+  FFQ_BANQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
   isAdminOnlyStudySpecId,
@@ -28,6 +29,7 @@ import {
   firstMoverColorName,
   secondMoverColorName,
   VARIANT_NAME_KEYS,
+  variantDisplayLabel,
   variantNameKeyForSpecId,
 } from './game-display.js';
 import { LANDING_BOT_GAME_SPEC_IDS } from './landing-bot-policy.js';
@@ -55,6 +57,7 @@ import { roomMarkerId } from './variant-tenant/room-chrome.js';
 import {
   leaderboardVariants,
   profileRatingVariants,
+  VARIANT_MINI_BY_GAME_SPEC,
   VARIANTS,
   variantMiniIdForGameSpec,
 } from './variants.js';
@@ -319,13 +322,38 @@ describe('rules link conformance', () => {
   });
 });
 
-describe('FFQ banqi reserved web metadata', () => {
-  it('reserves FFQ banqi name metadata without borrowing the Banqi name', () => {
-    expect(VARIANT_NAME_KEYS).toHaveProperty('ffq-banqi', null);
-    expect(variantNameKeyForSpecId('ffq-banqi')).toBeNull();
+describe('FFQ banqi canonical web metadata', () => {
+  it.each(['variants.ts', 'variant-seat-label.ts', 'game-display.ts', 'embed/embed-analysis.ts'])(
+    'keeps %s exhaustive over canonical GameSpecId without registration bypasses',
+    (file) => {
+      // A literal union can mask a missing canonical registration. Once registered,
+      // FFQ must use the same typed maps and metadata lookup as every other spec.
+      const source = readFileSync(new URL(file, import.meta.url), 'utf8');
+      expect(source).toMatch(/\bRecord\s*<\s*GameSpecId\s*,/);
+      expect(source).not.toMatch(/===\s*['"]ffq-banqi['"]/);
+    },
+  );
+
+  it('keys every dispatch map exactly by the registered game specs', () => {
+    const ids = GAME_SPECS.map((spec) => spec.id).sort();
+    expect(ids).toContain(FFQ_BANQI_SPEC_ID);
+    for (const map of [
+      VARIANT_MINI_BY_GAME_SPEC,
+      SEAT_NAMING,
+      VARIANT_NAME_KEYS,
+      EMBED_ANALYSIS_VARIANTS,
+    ]) {
+      expect(Object.keys(map).sort()).toEqual(ids);
+    }
   });
 
-  it('reserves FFQ banqi fixed Red/Black seats before spec registration', () => {
+  it('uses FFQ banqi canonical name metadata without borrowing the Banqi name', () => {
+    expect(VARIANT_NAME_KEYS).toHaveProperty('ffq-banqi', null);
+    expect(variantNameKeyForSpecId('ffq-banqi')).toBeNull();
+    expect(variantDisplayLabel(FFQ_BANQI_SPEC_ID)).toBe('FFQ Banqi');
+  });
+
+  it('keeps FFQ banqi fixed Red/Black seats after canonical registration', () => {
     expect(SEAT_NAMING).toHaveProperty('ffq-banqi', 'seat-word');
     expect(seatsNamePlayers('ffq-banqi')).toBe(false);
     expect(isFlipSeatVariant('ffq-banqi')).toBe(false);
@@ -350,6 +378,7 @@ describe('FFQ banqi reserved web metadata', () => {
 
   it('has no public play, rating, rules, watch, analysis, editor, study or embed listing', () => {
     const id = 'ffq-banqi';
+    expect(variantMiniIdForGameSpec(id)).toBeNull();
     expect(VARIANTS.map((variant) => variant.gameSpecId)).not.toContain(id);
     expect(LANDING_BOT_GAME_SPEC_IDS as readonly string[]).not.toContain(id);
     expect(WATCH_CHANNEL_MINI_IDS).not.toHaveProperty(id);

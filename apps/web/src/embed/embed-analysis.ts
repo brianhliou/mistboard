@@ -94,9 +94,7 @@ const isMovePlayed = (event: GameEvent): event is Extract<GameEvent, { type: 'mo
  * an explicit null (no marks). Typed over the whole GameSpecId union, so a new variant
  * does not compile until someone decides which it is. Fail-closed: there is no default.
  */
-export const EMBED_ANALYSIS_VARIANTS: Readonly<
-  Record<GameSpecId | 'ffq-banqi', EmbedAnalysisVariant | null>
-> = {
+export const EMBED_ANALYSIS_VARIANTS: Readonly<Record<GameSpecId, EmbedAnalysisVariant | null>> = {
   xiangqi: {
     route: 'xiangqi',
     quoteEvalBestMove: true,
@@ -193,7 +191,7 @@ export const EMBED_ANALYSIS_VARIANTS: Readonly<
   'xiangqi-mahjong': null,
   // Local playtest only (#628): no stored analysis.
   'three-kingdoms-banqi': null,
-  // Reserved before GameSpecId registration: no stored analysis or engine request.
+  // Hidden kernel only: no stored analysis or engine request.
   'ffq-banqi': null,
   chess: null,
 };
