@@ -308,6 +308,7 @@ export {
   recordGameDebugArtifact,
   recordGameStart,
   recordRoomLifecycleAudit,
+  roomHasGameSpec,
 } from './persistence-game-lifecycle.js';
 export type {
   CompletedGameFilters,

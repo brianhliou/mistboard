@@ -9,6 +9,7 @@
 // index.ts don't need to know things moved.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { guardFFQBanqiHttpRead } from './ffq-banqi-http.js';
 import * as accountRoute from './routes/account.js';
 import * as achievementsRoute from './routes/achievements.js';
 import * as adminAccountsRoute from './routes/admin-accounts.js';
@@ -155,6 +156,8 @@ export async function handleApiRequest(
   const url = request.url ?? '/';
   const parsedUrl = new URL(url, 'http://localhost');
   const pathname = parsedUrl.pathname;
+
+  if (await guardFFQBanqiHttpRead(ctx, request, response, parsedUrl)) return;
 
   for (const route of routes) {
     if (await route.tryHandle(ctx, request, response, pathname, parsedUrl)) return;
