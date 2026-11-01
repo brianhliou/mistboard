@@ -14,7 +14,7 @@ import {
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writeDisplayPreference } from './display-preferences.js';
-import { RAPFI_LEVELS } from './engine/rapfi.js';
+import { RAPFI_LEVELS, rapfiGameSeed, rapfiPlySeed } from './engine/rapfi.js';
 import { gomokuBoardSvg } from './gomoku-board.js';
 import type {
   TenantSocketClientOptions,
@@ -128,6 +128,27 @@ class TestWorker {
     this.terminated = true;
   }
   answer(x = 7, y = 7) {
+    if (
+      (this.messages.at(-1) as { commands?: string[] })?.commands?.some((line) =>
+        line.startsWith('YXNBEST'),
+      )
+    ) {
+      for (const line of [
+        `INFO PV 0`,
+        'INFO NUMPV 1',
+        'INFO DEPTH 2',
+        'INFO SELDEPTH 2',
+        'INFO NODES 10',
+        'INFO TOTALNODES 10',
+        'INFO TOTALTIME 1',
+        'INFO SPEED 10000',
+        'INFO EVAL 0',
+        'INFO WINRATE 0.5',
+        `INFO BESTLINE ${x},${y}`,
+        'INFO PV DONE',
+      ])
+        this.onmessage?.({ data: { type: 'line', line } });
+    }
     this.onmessage?.({ data: { type: 'line', line: `${x},${y}` } });
     this.onmessage?.({ data: { type: 'done', elapsedMs: 1 } });
   }
@@ -213,7 +234,12 @@ describe('Rapfi browser PvE', () => {
         expect(worker.url).toContain('/engine/rapfi/worker.js');
         const search = worker.messages[1] as { commands: string[] };
         expect(search.commands).toContain(`INFO max_node ${tier.nodes}`);
-        expect(search.commands.at(-1)).toBe(human === 'white' ? 'BEGIN' : 'BOARD\n0,0,2\nDONE');
+        if (tier.level <= 4 && human === 'black') {
+          expect(search.commands).toContain('INFO show_detail 2');
+          expect(search.commands.at(-1)).toBe(`YXNBEST ${tier.candidateCount}`);
+          expect(search.commands).toContain('YXBOARD\n0,0,2\nDONE');
+        } else
+          expect(search.commands.at(-1)).toBe(human === 'white' ? 'BEGIN' : 'BOARD\n0,0,2\nDONE');
         // Snapshot retries and repeated paints cannot start parallel searches.
         refresh(options, state, human);
         expect(worker.messages).toHaveLength(2);
@@ -242,7 +268,27 @@ describe('Rapfi browser PvE', () => {
     refresh(options, position(3), 'black');
     expect(workers).toHaveLength(1);
     const search = workers[0]?.messages.at(-1) as { commands: string[] };
-    expect(search.commands.at(-1)).toBe('BOARD\n0,0,2\n1,0,2\n0,1,1\nDONE');
+    expect(search.commands).toContain('YXBOARD\n0,0,2\n1,0,2\n0,1,1\nDONE');
+  });
+
+  it('derives distinct seeds per absolute ply and repeats the same seed on retry', async () => {
+    const options = await mount(position(0), 'black', 0, pveFrame('black'));
+    const { Rapfi } = await import('./engine/rapfi.js');
+    const choose = vi.spyOn(Rapfi.prototype, 'chooseMove');
+    try {
+      refresh(options, position(1), 'black');
+      workers[0]?.answer(0, 1);
+      await flushBot();
+      refresh(options, position(3), 'black');
+      document.querySelector<HTMLButtonElement>('[data-gomoku-bot-action="cancel"]')?.click();
+      document.querySelector<HTMLButtonElement>('[data-gomoku-bot-action="retry"]')?.click();
+      expect(choose.mock.calls.map((call) => call[2])).toEqual(
+        [1, 3, 3].map((ply) => rapfiPlySeed(rapfiGameSeed(ROOM), ply)),
+      );
+      expect(choose.mock.calls[0]?.[2]).not.toBe(choose.mock.calls[1]?.[2]);
+    } finally {
+      choose.mockRestore();
+    }
   });
 
   it('cancels on disconnect, ignores the old result and resumes from the reconnect snapshot', async () => {
@@ -314,7 +360,7 @@ describe('Rapfi browser PvE', () => {
       ['spectator', pveFrame('white')],
       ['white', {}],
       ['white', { ...pveFrame('white'), rated: true }],
-      ['white', { ...pveFrame('white'), pveEngineId: 'rapfi-level-6' }],
+      ['white', { ...pveFrame('white'), pveEngineId: 'rapfi-level-9' }],
     ] as const) {
       await mount(position(0), seat, 0, extras);
       expect(workers).toHaveLength(0);
@@ -533,7 +579,9 @@ describe('hidden Gomoku live room', () => {
       await mount(state, human, 0, { ...pveFrame(human), events: [CREATED] });
       expect(workers).toHaveLength(1);
       const commands = (workers[0]!.messages[1] as { commands: string[] }).commands;
-      expect(commands.at(-1)?.split('\n')).toHaveLength(count + 2);
+      expect(commands.find((line) => line.startsWith('YXBOARD\n'))?.split('\n')).toHaveLength(
+        count + 2,
+      );
       workers[0]!.answer(0, 0);
       await flushBot();
       expect(sentMoves()).toEqual([

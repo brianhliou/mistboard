@@ -378,7 +378,7 @@ describe('Gomoku hidden registration', () => {
   });
 
   it.each(['false', 'true'])(
-    'registers matching casual tenants, five browser bots and a gated review with flag %s',
+    'registers matching casual tenants, eight browser bots and a gated review with flag %s',
     (value) => {
       vi.stubEnv('VITE_GOMOKU_ENABLED', value);
       vi.stubEnv('MISTBOARD_GOMOKU_ENABLED', value);
@@ -399,13 +399,13 @@ describe('Gomoku hidden registration', () => {
         supportsRated: false,
       });
       expect(web?.landing?.engineOptions?.map((engine) => engine.id)).toEqual(
-        [1, 2, 3, 4, 5].map((level) => `rapfi-level-${level}`),
+        [1, 2, 3, 4, 5, 6, 7, 8].map((level) => `rapfi-level-${level}`),
       );
       for (const option of web?.landing?.engineOptions ?? []) {
         expect(option.kind).toBe('browser');
         expect(server?.isEngineClientId?.(option.id)).toBe(true);
       }
-      // The server is ready for eight ids before the browser ladder is integrated.
+      // Browser choices and server recognition agree on all eight stable ids.
       for (const level of [1, 2, 3, 4, 5, 6, 7, 8]) {
         expect(server?.isEngineClientId?.(`rapfi-level-${level}`)).toBe(true);
         expect(server?.engineDisplayName?.(`rapfi-level-${level}`)).toBe('Rapfi');

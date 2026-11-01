@@ -9,7 +9,13 @@ import {
   isGomokuColor,
   parseGomokuMove,
 } from '@mistboard/game';
-import { Rapfi, type RapfiLevel, type RapfiPosition } from './engine/rapfi.js';
+import {
+  Rapfi,
+  type RapfiLevel,
+  type RapfiPosition,
+  rapfiGameSeed,
+  rapfiPlySeed,
+} from './engine/rapfi.js';
 import { gomokuBoardSvg } from './gomoku-board.js';
 import './gomoku-board.css';
 import './live-xiangqi.css';
@@ -44,7 +50,7 @@ function stopBot(): void {
 }
 
 function botLevel(): RapfiLevel | null {
-  return engineId && /^rapfi-level-[1-5]$/.test(engineId) && engineId.length === 13
+  return engineId && /^rapfi-level-[1-8]$/.test(engineId) && engineId.length === 13
     ? (Number(engineId.at(-1)) as RapfiLevel)
     : null;
 }
@@ -95,7 +101,7 @@ function syncBot(): void {
   };
   rapfi ??= new Rapfi();
   void rapfi
-    .chooseMove(position, level)
+    .chooseMove(position, level, rapfiPlySeed(rapfiGameSeed(view.id), view.ply))
     .then(({ move }) => {
       if (generation !== ticket) return;
       pendingKey = null;

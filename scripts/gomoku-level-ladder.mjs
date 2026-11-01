@@ -170,8 +170,11 @@ export function createRapfiPlayer(tier, request) {
             : [],
         ),
       };
+      // Empty-board Rapfi returns centre without structured candidates. Match
+      // the live adapter's plain BEGIN for this forced opening reply.
+      const candidateCount = position.stones.length ? tier.candidateCount : undefined;
       const { lines, elapsedMs: elapsed } = await request(
-        { type: 'commands', commands: rapfiCommands(position, tier).lines },
+        { type: 'commands', commands: rapfiCommands(position, { ...tier, candidateCount }).lines },
         tier.timeMs + 250,
       );
       if (typeof elapsed !== 'number' || !Number.isFinite(elapsed) || elapsed < 0)
@@ -191,10 +194,10 @@ export function createRapfiPlayer(tier, request) {
       )
         throw new Error(`Rapfi returned an invalid move: ${reply}`);
       const move =
-        tier.candidateCount === undefined
+        candidateCount === undefined
           ? { x, y }
           : selectRapfiMove(position, parseRapfiOutput(lines), {
-              candidateCount: tier.candidateCount,
+              candidateCount,
               evalMargin,
               seed: plySeed,
             });

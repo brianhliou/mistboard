@@ -1,4 +1,4 @@
-// Freestyle 15x15 adapter; candidate choice is opt-in until ladder integration.
+// Freestyle 15x15 adapter; live play and calibration share the same tier policy.
 import {
   parseRapfiOutput,
   type RapfiCandidate,
@@ -41,24 +41,30 @@ export function rapfiPlySeed(gameSeed: number, ply: number): number {
   return hashSeed(`ply:${gameSeed}:${ply}`);
 }
 
-export type RapfiLevel = 1 | 2 | 3 | 4 | 5;
+export type RapfiLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 export const RAPFI_LEVELS: readonly {
   readonly level: RapfiLevel;
   readonly nodes: number;
   readonly timeMs: number;
+  readonly candidateCount?: number;
+  readonly evalMargin?: number;
 }[] = Object.freeze([
-  { level: 1, nodes: 100, timeMs: 1_000 },
-  { level: 2, nodes: 1_000, timeMs: 1_500 },
-  { level: 3, nodes: 5_000, timeMs: 2_000 },
-  { level: 4, nodes: 20_000, timeMs: 3_000 },
-  { level: 5, nodes: 100_000, timeMs: 5_000 },
+  { level: 1, nodes: 5_000, timeMs: 1_000, candidateCount: 128, evalMargin: 60_000 },
+  { level: 2, nodes: 10_000, timeMs: 1_000, candidateCount: 16, evalMargin: 2_000 },
+  { level: 3, nodes: 20_000, timeMs: 1_500, candidateCount: 8, evalMargin: 750 },
+  { level: 4, nodes: 40_000, timeMs: 1_500, candidateCount: 4, evalMargin: 300 },
+  { level: 5, nodes: 80_000, timeMs: 2_000 },
+  { level: 6, nodes: 150_000, timeMs: 2_500 },
+  { level: 7, nodes: 250_000, timeMs: 3_500 },
+  // Include the transport/watchdog allowance inside the five-second ceiling.
+  { level: 8, nodes: 400_000, timeMs: 4_750 },
 ]);
 
 export interface RapfiMove {
   move: { x: number; y: number };
   /** Worker time, including lazy network initialization on the first move. */
   elapsedMs: number;
-  /** Present only for an opt-in YXNBEST request. */
+  /** Present for nonempty L1-4 requests or an explicit YXNBEST override. */
   candidates?: readonly RapfiCandidate[];
 }
 
@@ -149,11 +155,24 @@ export class Rapfi {
   async chooseMove(
     position: RapfiPosition,
     level: RapfiLevel,
-    choice?: RapfiChoiceOptions,
+    seedOrChoice: number | RapfiChoiceOptions = 0,
   ): Promise<RapfiMove> {
     if (this.pending) throw new Error('Rapfi is already searching');
     const tier = RAPFI_LEVELS.find((entry) => entry.level === level);
     if (!tier) throw new Error('Unknown Rapfi level');
+    if (typeof seedOrChoice === 'number') validateSeed(seedOrChoice);
+    // Rapfi short-circuits an empty board to centre without emitting PVs.
+    // Explicit candidate requests retain their fail-closed parsing contract.
+    const choice =
+      typeof seedOrChoice !== 'number'
+        ? seedOrChoice
+        : tier.candidateCount !== undefined && position.stones.length > 0
+          ? {
+              candidateCount: tier.candidateCount,
+              evalMargin: tier.evalMargin ?? 0,
+              seed: seedOrChoice,
+            }
+          : undefined;
     const { lines, timeMs } = rapfiCommands(position, {
       ...tier,
       candidateCount: choice?.candidateCount,

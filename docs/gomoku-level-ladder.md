@@ -1,8 +1,141 @@
 # Rapfi level calibration — 2026-11-01
 
+Eight browser levels are active for hidden, unrated playtesting. L1-4 use seeded
+eval-weighted selection; L5-8 take the best move under increasing node budgets.
+Existing `rapfi-level-1` through `rapfi-level-5` ids remain valid, the new ids are
+`rapfi-level-6` through `rapfi-level-8`, and the default remains L1. These small
+measurements do **not** establish an evenly spaced ladder or beginner suitability.
+
+## Active policy
+
+| Level | Nodes | Search ceiling (ms) | Candidates | Inclusive eval margin |
+| --- | ---: | ---: | ---: | ---: |
+| L1 | 5,000 | 1,000 | 128 | 60,000 |
+| L2 | 10,000 | 1,000 | 16 | 2,000 |
+| L3 | 20,000 | 1,500 | 8 | 750 |
+| L4 | 40,000 | 1,500 | 4 | 300 |
+| L5 | 80,000 | 2,000 | best | n/a |
+| L6 | 150,000 | 2,500 | best | n/a |
+| L7 | 250,000 | 3,500 | best | n/a |
+| L8 | 400,000 | 4,750 | best | n/a |
+
+Time limits are ceilings, with nodes as the search-strength dial. L8 reserves
+250 ms for the transport/watchdog inside its 5,000 ms limit: the engine receives
+4,750 ms, and both the browser and ladder reject worker times over 5,000 ms.
+Module loading has a separate 30-second watchdog. The move ceiling covers the
+worker command request, including any lazy neural-network initialization on
+the first move; it does not promise a five-second asset download.
+
+For ordinary tier play, pass the per-ply seed as the third argument:
+
+```ts
+const gameSeed = rapfiGameSeed(roomId);
+const result = await engine.chooseMove(position, level, rapfiPlySeed(gameSeed, absolutePly));
+```
+
+The adapter takes candidate count and margin from `RAPFI_LEVELS`. Explicit
+`{ candidateCount, evalMargin, seed }` overrides retain the
+[candidate API](gomoku-rapfi-candidates.md) for analysis and tests. An omitted
+seed defaults to zero; live games always supply a room/absolute-ply seed.
+Retries of one frame reuse its seed, and different plies use different seeds,
+including the dealt opening stones. The ladder records each game seed and
+derives each ply seed with the same helpers.
+
+The kernel protects a win in one and an opponent four before weighted choice,
+even when Rapfi omits that point from its candidates. There is no unscored
+fallback for a missing candidate stream on a nonempty, nontactical board.
+An empty board is a special protocol case: Rapfi returns center without PV
+detail, so both live tier play and calibration send plain `BEGIN` there.
+Explicit candidate requests keep their existing fail-closed parsing contract.
+The exported parser normalizes structured `INFO EVAL +M3` / `-M4` to 29997 /
+-29996 before the shared PV-block validator; human `MESSAGE` text is never
+used as evaluation or PV evidence.
+
+## Bounded eight-level measurements
+
+Both attempts use **20 games per pairing**, with ten screened openings and both color assignments. All eight levels play
+the random-tactical baseline, then L3-8 play the level two below: **14 pairings,
+280 games in the initial run**. Only L1 changes, so the single tuning rerun
+repeats `baseline-1` and `1-3` (40 games); unchanged policies retain the initial
+measurements. Both attempts use run seed `20261101`, the same sampled
+openings and per-game/per-ply seed derivation. Every game reaches a kernel
+five/overline or board-full result; there are no move-limit draws or resignations.
+
+| Pairing (weaker / stronger) | Initial stronger wins | Active stronger wins | Active target result |
+| --- | ---: | ---: | --- |
+| baseline-1 | 20/20 (100%) | 20/20 (100%, rerun) | MISS: 10 pp above 90% |
+| baseline-2 | 20/20 (100%) | 20/20 (100%, initial) | baseline measured; no upper-tier target |
+| baseline-3 | 20/20 (100%) | 20/20 (100%, initial) | baseline measured; no upper-tier target |
+| baseline-4 | 20/20 (100%) | 20/20 (100%, initial) | baseline measured; no upper-tier target |
+| baseline-5 | 20/20 (100%) | 20/20 (100%, initial) | baseline measured; no upper-tier target |
+| baseline-6 | 20/20 (100%) | 20/20 (100%, initial) | baseline measured; no upper-tier target |
+| baseline-7 | 20/20 (100%) | 20/20 (100%, initial) | baseline measured; no upper-tier target |
+| baseline-8 | 20/20 (100%) | 20/20 (100%, initial) | baseline measured; no upper-tier target |
+| 1-3 | 18/20 (90%) | 20/20 (100%, rerun) | meets 65% |
+| 2-4 | 13/20 (65%) | 13/20 (65%, initial) | meets 65% |
+| 3-5 | 17/20 (85%) | 17/20 (85%, initial) | meets 65% |
+| 4-6 | 14/20 (70%) | 14/20 (70%, initial) | meets 65% |
+| 5-7 | 10/20 (50%) | 10/20 (50%, initial) | MISS: 15 pp below 65% |
+| 6-8 | 7/20 (35%) | 7/20 (35%, initial) | MISS: 30 pp below 65% |
+
+Every remaining target miss:
+
+- L1 / baseline: **20/20 (100%)**, 10 percentage points above the 90% upper target.
+- L7 / L5: **10/20 (50%)**, 15 percentage points below 65%.
+- L8 / L6: **7/20 (35%)**, 30 percentage points below 65%.
+
+The initial L1 result was **20/20 (100%)**, 10 percentage points above the upper target.
+The one tuning rerun widens L1 from 32 candidates / 6,000 eval margin to 128
+candidates / 60,000 margin; all node budgets, time ceilings and other policies
+are unchanged. Tactical protection still applies before this wider choice.
+No further tuning is permitted for this calibration. Initial two-level misses:
+
+- L7 / L5: **10/20 (50%)**, 15 percentage points below 65%.
+- L8 / L6: **7/20 (35%)**, 30 percentage points below 65%.
+
+`eight-level-initial`: 755.7 seconds; 280 games.
+Slowest L8 move 3924.9 ms; L8 search-ceiling hits 0.
+
+`eight-level-tuning-rerun`: 11.1 seconds; 40 games.
+
+All results are wins, with draws recorded separately in the JSON. Paired games
+are correlated and 20 per matchup is a diagnostic sample, not an Elo estimate.
+Node budgets can still stop early at the time ceiling on slower devices. The
+headless Node transport uses the vendored single-thread browser WASM, unchanged
+worker, pinned network and shared command/parser/selector; these are laptop
+measurements, not a browser/device benchmark. Separate heaps per side and
+`YXHASHCLEAR` before each game prevent cross-game search-table carryover.
+
+Preflight requests at tiny budgets exposed incomplete structured PVs and were
+aborted before a complete pairing; none were scored. Active candidate tiers
+start at 5,000 nodes to allow a completed PV. Engine errors, illegal replies
+and watchdog failures abort calibration rather than count as a loss or draw.
+
+Record: [data/gomoku-level-ladder.json](data/gomoku-level-ladder.json). The two
+budget-only historical runs below remain unchanged, followed by both new runs.
+Each new run retains complete policies, engine/network checksums, openings,
+game seeds, every move, terminal results, search timings and ceiling-hit counts.
+
+Reproduce the active policy (appends a distinct run; use a scratch output while
+reviewing so this bounded calibration keeps only its two completed attempts):
+
+```sh
+node scripts/gomoku-level-ladder.mjs --games 20 --seed 20261101 --label review --output /tmp/gomoku-review.json
+node --test scripts/gomoku-level-ladder.test.mjs
+```
+
+The CLI also accepts `--pairs` (for example `baseline-1,1-3`), `--budgets` (eight
+increasing positive integers), `--games` (even), `--seed`, `--label` and
+`--output`. Assets must already be staged; the runner never fetches them.
+Pin tests require matching full policies across all 14 active pairings, game
+seeds, historical results, at most one tuning rerun and legal terminal replay of every game.
+
+## Historical five-level node-only calibration
+
 The first 100-game run does **not** establish a beginner-friendly, evenly spaced
-ladder. Gomoku stays hidden and unrated. **Keep `RAPFI_LEVELS` unchanged:** the
-single proposed rerun also fails the spacing criteria.
+ladder. Gomoku stayed hidden and unrated. The recommendation at the time was
+to keep `RAPFI_LEVELS` unchanged: the single proposed rerun also failed the
+spacing criteria.
 
 | Pairing | Original nodes, weaker / stronger | Stronger wins | Draws |
 | --- | --- | --- | --- |
@@ -44,8 +177,7 @@ on slower machines.
 At one node L1 is beatable by the baseline in this sample, but L2 then wins
 every game against it. The proposed L3/L4 step still fails the lower threshold.
 These measurements support neither a fair five-level replacement nor a claim
-that the current L1 is suitable for beginners. No node budget or time ceiling
-has been changed. A follow-up should narrow the L1/L2 gap and use more paired
+that the current L1 is suitable for beginners. No node budget or time ceiling was changed in those two historical attempts. A follow-up should narrow the L1/L2 gap and use more paired
 openings before considering launch; actual beginner play remains unmeasured.
 
 The machine-readable record is [data/gomoku-level-ladder.json](data/gomoku-level-ladder.json).
@@ -69,53 +201,3 @@ five/overline win and full-board draw. There are no artificial move-limit draws
 or resignations. The baseline chooses a random legal move except that it first
 completes its own immediate five or blocks an opponent's immediate five,
 including open fours. It has no search, positional scoring or opening policy.
-
-Reproduce from the repo root (existing records are appended):
-
-```sh
-node scripts/gomoku-level-ladder.mjs --output /tmp/gomoku-ladder-original.json
-node scripts/gomoku-level-ladder.mjs --budgets 1,1000,20000,100000,500000 --label proposed-rerun --output /tmp/gomoku-ladder-proposal.json
-node --test scripts/gomoku-level-ladder.test.mjs
-```
-
-For a quick real-WASM check, add `--games 2 --pairs 1-2`. `--seed`, `--pairs`,
-`--games`, `--budgets`, `--label` and `--output` are the complete CLI. Assets must
-already be staged under `apps/web/public/engine/rapfi/`; this script never fetches
-anything. Game-loop tests use stub engines; the record test replays every stored
-game through the kernel and fails if recorded published budgets drift from
-`RAPFI_LEVELS` or lack matching measured games.
-
-Verification for the parked branch:
-
-- Before implementation, the new runner test failed because the module did not
-  exist. After implementation, all seven runner tests pass, including forced
-  five, illegal reply, tactical baseline, paired openings, budget agreement and
-  full replay of the stored games.
-  A scratch copy with L1's recorded budget changed from 100 to 101 fails the
-  budget-agreement test as intended (`budget-drift.log`).
-- Existing web engine tests: `npx vitest run src/engine/rapfi.test.ts
-  src/engine/rapfi-net-pin.test.ts` — two files, 16 tests passed.
-- Root `npm run typecheck` passed, including the e2e typecheck. Biome and
-  `git diff --check` passed. A two-game CLI smoke using the final code and
-  atomic checkpoint writer also passed (`final-cli-smoke.log`).
-- The exact requested Mistboard suite built game, board-render, mahjong and
-  server successfully, then stopped at tooling: 427 passed, seven failed.
-  All seven failures are `listen EPERM` from localhost fixtures in
-  `scripts/prod-smoke-lib.test.mjs` and `scripts/safe-deploy.test.mjs`. The
-  chained workspace tests were not reached. The sandbox also refused `nice`'s
-  priority change, although the command continued. This is a suite-only sandbox
-  blocker; no commit, push, merge, release or gate changes were made.
-
-Review the results and budget decision first, then the shared command builder,
-Node worker transport and game-loop tests. The Mistboard session owns review
-and merge after the burn runner completes the required suite outside this
-sandbox and commits these seven paths: `INDEX.md`, this summary,
-`docs/data/gomoku-level-ladder.json`, `apps/web/src/engine/rapfi.ts`,
-`scripts/gomoku-level-ladder.mjs`, `scripts/gomoku-level-ladder.test.mjs` and
-`scripts/rapfi-node-worker.mjs`. Branch:
-`agent/burn-s-dfae-mistboard-calibrate-rapfi-leve`.
-
-Local evidence logs are under
-`/tmp/burn-scratch/mistboard-burn-s-dfae-mistboard-calibrate-rapfi-leve/`:
-`ladder-before.log`, `ladder-tests-after.log`, `ladder-isolated.log`,
-`ladder-rerun.log`, `typecheck.log` and `mistboard-suite.log`.

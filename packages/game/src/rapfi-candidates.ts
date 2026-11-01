@@ -72,6 +72,8 @@ function onBoard(point: RapfiPoint): boolean {
 function rapfiValue(text: string): number {
   const mate = /^([+-])M(\d+)$/.exec(text);
   if (!mate) return Number(text);
+  // A five is at most 225 plies away on a 15x15 board; beyond that is garbage.
+  if (Number(mate[2]) > 225) return Number.NaN;
   const value = 30000 - Number(mate[2]);
   return mate[1] === '-' ? -value : value;
 }

@@ -256,9 +256,12 @@ describe('Rapfi structured output', () => {
     expect(parsed?.forcedFive).toEqual(forcedFive);
   });
 
-  it.each(['+M*', '-M*', 'VAL_INF', '+M', 'M3'])('drops the unusable score %s', (text) => {
-    expect(rapfi.parseRapfiOutput(single.replace('EVAL -142', `EVAL ${text}`))).toEqual([]);
-  });
+  it.each(['+M*', '-M*', 'VAL_INF', '+M', 'M3', '+M226', '-M226'])(
+    'drops the unusable score %s',
+    (text) => {
+      expect(rapfi.parseRapfiOutput(single.replace('EVAL -142', `EVAL ${text}`))).toEqual([]);
+    },
+  );
 
   it('reads a forced win from real native Rapfi output', () => {
     // Captured 2026-11-01 from the pinned native build, position after 6 plies.

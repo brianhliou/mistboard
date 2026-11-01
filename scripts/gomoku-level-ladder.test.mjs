@@ -218,7 +218,10 @@ test('ladder uses the shared multi-PV policy and varies choice by game and ply',
     assert.equal(timeout, tier.timeMs + 250);
     return { lines: candidateOutput, elapsedMs: 5 };
   });
-  const state = game.createInitialGomokuState();
+  const state = game.createInitialGomokuState({
+    turn: 'white',
+    stones: [{ square: 'h8', color: 'black' }],
+  });
   const candidates = rapfi.parseRapfiOutput(candidateOutput);
   const chosen = new Set();
   for (const color of ['black', 'white']) {
@@ -229,7 +232,7 @@ test('ladder uses the shared multi-PV policy and varies choice by game and ply',
         context,
       );
       const expected = rapfi.selectRapfiMove(
-        { turn: color === 'black' ? 1 : 2, stones: [] },
+        { turn: color === 'black' ? 1 : 2, stones: [{ x: 7, y: 7, player: 1 }] },
         candidates,
         { ...tier, seed: context.plySeed },
       );
@@ -275,16 +278,16 @@ test('ladder selection protects a five and an open-four block even without INFO 
   assert.ok(['c8', 'h8'].includes((await player.choose(openFour, { plySeed: 42 })).to));
 });
 
-test('unchanged best-move tiers still use BOARD and validate the final reply', async () => {
+test('best-move tiers still use BOARD and validate the final reply', async () => {
   const state = game.createInitialGomokuState(opening);
-  const player = ladder.createRapfiPlayer(RAPFI_LEVELS[0], async ({ commands }) => {
+  const player = ladder.createRapfiPlayer(RAPFI_LEVELS[4], async ({ commands }) => {
     assert.ok(commands.some((line) => line.startsWith('BOARD\n')));
     assert.ok(!commands.some((line) => line.startsWith('YXNBEST')));
     return { lines: ['7,7'], elapsedMs: 2 };
   });
   assert.deepEqual(await player.choose(state, { plySeed: 42 }), { to: 'h8' });
   for (const reply of ['3,7', '15,0', 'MESSAGE no move']) {
-    const bad = ladder.createRapfiPlayer(RAPFI_LEVELS[0], async () => ({
+    const bad = ladder.createRapfiPlayer(RAPFI_LEVELS[4], async () => ({
       lines: [reply],
       elapsedMs: 1,
     }));
@@ -295,7 +298,7 @@ test('unchanged best-move tiers still use BOARD and validate the final reply', a
 test('missing candidates and protocol/watchdog errors abort randomized measurement', async () => {
   const tier = { ...RAPFI_LEVELS[0], candidateCount: 3, evalMargin: 100 };
   for (const [lines, elapsedMs, error] of [
-    [['7,7'], 1, /no legal candidates/],
+    [['6,7'], 1, /no legal candidates/],
     [['ERROR bad position'], 1, /ERROR bad position/],
     [candidateOutput, tier.timeMs + 251, /watchdog/],
     [candidateOutput, Number.NaN, /elapsed/i],
@@ -303,7 +306,11 @@ test('missing candidates and protocol/watchdog errors abort randomized measureme
     [candidateOutput.slice(0, -1), 1, /invalid move/i],
   ]) {
     const player = ladder.createRapfiPlayer(tier, async () => ({ lines, elapsedMs }));
-    await assert.rejects(player.choose(game.createInitialGomokuState(), { plySeed: 0 }), error);
+    const nonempty = game.createInitialGomokuState({
+      turn: 'white',
+      stones: [{ square: 'h8', color: 'black' }],
+    });
+    await assert.rejects(player.choose(nonempty, { plySeed: 0 }), error);
   }
 });
 
@@ -419,5 +426,80 @@ test('every recorded game replays to its claimed terminal result in the real ker
       }
       for (const [key, count] of Object.entries(tally)) assert.equal(pair[key], count);
     }
+  }
+});
+
+test('eight-level calibration measures every active pairing, preserving history with at most one affected-pair rerun', () => {
+  const record = JSON.parse(
+    readFileSync(new URL('../docs/data/gomoku-level-ladder.json', import.meta.url), 'utf8'),
+  );
+  const runs = record.runs.filter((run) => run.label.startsWith('eight-level-'));
+  assert.ok(runs.length >= 1 && runs.length <= 2);
+  const run = runs.at(-1);
+  assert.deepEqual(run.levels, RAPFI_LEVELS);
+  const activePlan = ladder.pairingPlan(RAPFI_LEVELS);
+  for (const pair of activePlan) {
+    assert.ok(
+      runs.some((attempt) =>
+        attempt.pairings.some(
+          (measured) =>
+            measured.id === pair.id &&
+            isDeepStrictEqual(measured.weaker, pair.weaker) &&
+            isDeepStrictEqual(measured.stronger, pair.stronger),
+        ),
+      ),
+      `active ${pair.id} has no matching complete-policy measurement`,
+    );
+  }
+  for (const [index, attempt] of runs.entries()) {
+    assert.equal(attempt.gamesPerPair, 20);
+    const changed = index
+      ? attempt.levels
+          .filter(
+            (tier) =>
+              !isDeepStrictEqual(
+                tier,
+                runs[0].levels.find((old) => old.level === tier.level),
+              ),
+          )
+          .map((tier) => tier.level)
+      : [];
+    const plan = ladder
+      .pairingPlan(attempt.levels)
+      .filter(
+        (pair) =>
+          !index || changed.includes(pair.weaker.level) || changed.includes(pair.stronger.level),
+      );
+    assert.deepEqual(
+      attempt.pairings.map(({ id }) => id),
+      plan.map(({ id }) => id),
+    );
+    assert.equal(attempt.seed, 20261101);
+    for (const pair of attempt.pairings) {
+      assert.equal(pair.games.length, 20);
+      assert.ok(pair.games.every((entry) => Number.isInteger(entry.seed)));
+      if (pair.stronger.level === 8) assert.ok(pair.telemetry.stronger.maxMoveMs <= 5000);
+    }
+  }
+  // Budget-only history stays intact alongside the randomized calibration.
+  assert.deepEqual(
+    record.runs.slice(0, 2).map((run) => run.pairings.map((pair) => pair.strongerWins)),
+    [
+      [20, 9, 10, 8, 10],
+      [18, 20, 12, 10, 8],
+    ],
+  );
+});
+
+test('empty-board tier requests use the same plain centre reply as the browser', async () => {
+  for (const tier of RAPFI_LEVELS.slice(0, 4)) {
+    const player = ladder.createRapfiPlayer(tier, async ({ commands }) => {
+      assert.equal(commands.at(-1), 'BEGIN');
+      assert.ok(!commands.includes('INFO show_detail 2'));
+      return { lines: ['7,7'], elapsedMs: 1 };
+    });
+    assert.deepEqual(await player.choose(game.createInitialGomokuState(), { plySeed: 42 }), {
+      to: 'h8',
+    });
   }
 });
