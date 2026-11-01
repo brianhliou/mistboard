@@ -4,6 +4,7 @@ import type { VariantId } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import { currentAccountUser } from './account-session.js';
 import { darkChessLiveHistoryExtras } from './dark-chess-live-history.js';
+import { FFQ_BANQI_ROOM_ID_PREFIX, ffqBanqiAdmits, isFFQBanqiRequest } from './ffq-banqi-access.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
 import { parseVariantId } from './http-api.js';
 import { logger, wsCounters } from './obs.js';
@@ -88,6 +89,10 @@ export async function resolveWebSocketLiveRuntime(
   roomId: string,
   accountUser: () => Promise<UserAccount | null> = async () => null,
 ): Promise<WebSocketLiveRuntime> {
+  const ffqRoom = roomId.startsWith(FFQ_BANQI_ROOM_ID_PREFIX);
+  if (ffqRoom && !ffqBanqiAdmits(await accountUser())) {
+    return { kind: 'variant-tenant-unavailable', reason: 'game spec disabled' };
+  }
   const refused = async (registration: VariantTenantRegistration): Promise<boolean> =>
     registration.admitsConnection !== undefined &&
     !registration.admitsConnection(await accountUser());
@@ -100,7 +105,11 @@ export async function resolveWebSocketLiveRuntime(
     return { kind: 'variant-tenant', registration, room: live };
   }
   const registration = registrations.find((entry) => roomId.startsWith(entry.roomIdPrefix)) ?? null;
-  if (!registration) return { kind: 'chess' };
+  if (!registration) {
+    return ffqRoom
+      ? { kind: 'variant-tenant-unavailable', reason: 'room unavailable' }
+      : { kind: 'chess' };
+  }
   if (registration.admitsConnection ? await refused(registration) : !registration.enabled()) {
     return { kind: 'variant-tenant-unavailable', reason: 'game spec disabled' };
   }
@@ -117,10 +126,23 @@ export async function handleWebSocketConnection(
   const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
   const roomId = url.searchParams.get('room') ?? 'dev-room';
   let account: Promise<UserAccount | null> | null = null;
-  const runtime = await resolveWebSocketLiveRuntime(registeredVariantTenants(), roomId, () => {
-    account ??= currentAccountUser(request);
-    return account;
-  });
+  const resolveAccount = () => (account ??= currentAccountUser(request));
+  const selectors = {
+    gameSpecId: url.searchParams.get('gameSpecId'),
+    variant: url.searchParams.get('variant'),
+  };
+  if (isFFQBanqiRequest(selectors)) {
+    const gate = gateGameSpecRequest(selectors, await resolveAccount());
+    if (gate.type === 'reject') {
+      socket.close(1008, gate.wsCloseReason);
+      return;
+    }
+  }
+  const runtime = await resolveWebSocketLiveRuntime(
+    registeredVariantTenants(),
+    roomId,
+    resolveAccount,
+  );
   if (runtime.kind === 'variant-tenant') {
     await runtime.registration.attachWebSocket(
       {

@@ -14,6 +14,10 @@ import {
   xiangqiEnabled,
   xiangqiMahjongEnabled,
 } from './feature-flags.js';
+import { ffqBanqiAdmits, isFFQBanqiRequest } from './ffq-banqi-access.js';
+import type { UserAccount } from './persistence.js';
+
+type GateAccount = Pick<UserAccount, 'accountRole'> | null;
 
 // The chess stack behind this gate serves exactly this spec. parseVariantId
 // (routes/lib.ts) is the source of that truth: it collapses every variant
@@ -39,7 +43,7 @@ type GateSpecEntry<Id extends GatedGameSpecId> =
   | {
       // Launch flag from ./feature-flags.js: flag off answers 404 `_disabled`;
       // flag on but the tenant registry missed answers 501 `_not_integrated`.
-      enabled(): boolean;
+      enabled(accountUser: GateAccount): boolean;
       disabledError: `${SnakeCase<Id>}_disabled`;
       notIntegratedError: `${SnakeCase<Id>}_not_integrated`;
     }
@@ -71,8 +75,10 @@ const GATED_GAME_SPECS = {
     disabledError: 'banqi_disabled',
     notIntegratedError: 'banqi_not_integrated',
   },
-  // Kernel and hidden canonical metadata only. No tenant or launch flag yet.
+  // Hidden playtest: BOTH the flag and admin role, with no room registration.
   'ffq-banqi': {
+    enabled: ffqBanqiAdmits,
+    disabledError: 'ffq_banqi_disabled',
     notIntegratedError: 'ffq_banqi_not_integrated',
   },
   jungle: {
@@ -171,10 +177,13 @@ const REJECT_RETIRED: GameSpecGateDecision = {
   wsCloseReason: 'game spec retired',
 };
 
-export function gateGameSpecRequest(input: {
-  gameSpecId?: unknown;
-  variant?: unknown;
-}): GameSpecGateDecision {
+export function gateGameSpecRequest(
+  input: { gameSpecId?: unknown; variant?: unknown },
+  accountUser: GateAccount = null,
+): GameSpecGateDecision {
+  // Either selector claims the hidden variant, even if they conflict. Do not
+  // let a public canonical selector bypass a private legacy selector's policy.
+  if (isFFQBanqiRequest(input)) return rejectGatedSpec('ffq-banqi', accountUser);
   // `gameSpecId` is the canonical selector. Absent (undefined, or null from
   // URLSearchParams.get on the WS path) passes; anything else must resolve to
   // a chess-stack spec.
@@ -215,9 +224,12 @@ function isChessStackSpecId(id: GameSpecId): id is ChessStackSpecId {
   return CHESS_STACK_SPEC_ID_SET.has(id);
 }
 
-function rejectGatedSpec(id: GatedGameSpecId): GameSpecGateDecision {
+function rejectGatedSpec(
+  id: GatedGameSpecId,
+  accountUser: GateAccount = null,
+): GameSpecGateDecision {
   const entry = GATED_GAME_SPECS[id];
-  if ('enabled' in entry && !entry.enabled()) {
+  if ('enabled' in entry && !entry.enabled(accountUser)) {
     return {
       type: 'reject',
       error: entry.disabledError,

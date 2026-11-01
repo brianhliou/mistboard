@@ -166,9 +166,9 @@ test('loading the FFQ tenant leaves every network path unregistered and request 
   for (const input of [{ gameSpecId: FFQ_BANQI_SPEC_ID }, { variant: FFQ_BANQI_SPEC_ID }]) {
     assert.deepEqual(gateGameSpecRequest(input), {
       type: 'reject',
-      error: 'ffq_banqi_not_integrated',
-      httpStatus: 501,
-      wsCloseReason: 'game spec not integrated',
+      error: 'ffq_banqi_disabled',
+      httpStatus: 404,
+      wsCloseReason: 'game spec disabled',
     });
   }
   assert.equal(ffqBanqiTenant.visibility.truthView, undefined, 'FFQ has no finished-board reveal');

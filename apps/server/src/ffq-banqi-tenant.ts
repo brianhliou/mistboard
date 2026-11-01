@@ -1,6 +1,6 @@
 /**
- * Unregistered FFQ banqi tenant. No route, flag, room map, engine or public
- * surface is installed here. Registration and access gates are a later card.
+ * Unregistered FFQ banqi tenant. No route, room map, engine or public surface
+ * is installed here. The shared access policy lives in ffq-banqi-access.ts.
  * The crypto deal is server-secret; snapshots and per-ply history remain
  * masked for both seats and observers, including after any game ending.
  */
@@ -19,6 +19,7 @@ import {
   isFFQBanqiLegalMove,
   oppositeBanqiColor,
 } from '@mistboard/game';
+import { FFQ_BANQI_ROOM_ID_PREFIX } from './ffq-banqi-access.js';
 import type * as persistence from './persistence.js';
 import { tenantPerPlyViews } from './variant-tenant/runtime.js';
 import type {
@@ -30,7 +31,7 @@ import type {
   VariantTenant,
 } from './variant-tenant/tenant.js';
 
-export const FFQ_BANQI_ROOM_ID_PREFIX = 'ffq_';
+export { FFQ_BANQI_ROOM_ID_PREFIX } from './ffq-banqi-access.js';
 export type FFQBanqiTenant = VariantTenant<
   'ffq-banqi',
   BanqiColor,

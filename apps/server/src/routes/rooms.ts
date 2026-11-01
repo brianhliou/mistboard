@@ -10,6 +10,7 @@ import { currentAccountUser } from './../account-session.js';
 import { isBotSpecPlayable, parsePublicBotId } from './../bot-profile-policy.js';
 import { playableLiveEngines } from './../engine-registry.js';
 import { ratedEnabled } from './../feature-flags.js';
+import { isFFQBanqiRequest } from './../ffq-banqi-access.js';
 import { firstPartyBotEngineFor, firstPartyBotForId } from './../first-party-bots.js';
 import { gateGameSpecRequest } from './../game-spec-request-gate.js';
 import { InternalEngineClientError } from './../internal-engine-client.js';
@@ -36,6 +37,15 @@ export async function tryHandle(
   if (pathname === '/api/rooms') {
     if (!requireMethod(request, response, 'POST')) return true;
     const rawBody = await readJsonBody(request);
+    // Claim either FFQ selector before bot resolution or tenant dispatch.
+    // Enabled admins still get not-integrated until room creation is wired.
+    if (isFFQBanqiRequest(rawBody)) {
+      const gate = gateGameSpecRequest(rawBody, await currentAccountUser(request));
+      if (gate.type === 'reject') {
+        writeJson(response, gate.httpStatus, { error: gate.error });
+        return true;
+      }
+    }
     const body = await resolveBotRoomRequest(response, rawBody);
     if (!body) return true;
     // Variant tenants claim their create requests via the registry; each
