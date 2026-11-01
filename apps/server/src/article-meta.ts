@@ -70,6 +70,8 @@ const NON_INDEXED_ARTICLE_SLUGS = new Set([
   // follow the launch switch (the spec's publicSurface), as the web side's
   // rulesSlugPublicSurfaceEnabled does.
   ...playtestRulesSlugs(isPublicGameSpec),
+  // Direct-URL Gomoku rules follow its hidden spec, as the web rules rail does.
+  ...(isPublicGameSpec('gomoku') ? [] : ['gomoku']),
 ]);
 
 // Rules pages for DELETED variants (docs-private/variant-retirement-plan.md,

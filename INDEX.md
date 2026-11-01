@@ -1258,6 +1258,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/crazyhouse-xiangqi-replay-board.ts` | _needs a one-line description_ |
 | `apps/web/src/crazyhouse-xiangqi-replay.ts` | _needs a one-line description_ |
 | `apps/web/src/crazyhouse-xiangqi-rules-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/gomoku-rules-diagrams.ts` | Static Gomoku rules figures using the live board renderer, screened opening pool and kernel-checked winning positions. |
 | `apps/web/src/crazyhouse-xiangqi-sample-game.ts` | _needs a one-line description_ |
 | `apps/web/src/data-page.ts` | _needs a one-line description_ |
 | `apps/web/src/embed-code.ts` | _needs a one-line description_ |
