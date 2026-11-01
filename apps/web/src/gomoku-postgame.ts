@@ -4,16 +4,28 @@ import {
   type GomokuColor,
   type GomokuMove,
   type GomokuPlayerView,
+  parseGomokuMove,
+  winPercentK,
 } from '@mistboard/game';
 import { reviewOpenedProps, track } from './analytics.js';
 import { gomokuEnabled } from './feature-flags.js';
 import { variantDisplayLabel } from './game-display.js';
 import { gomokuOffered } from './gomoku-access.js';
 import { gomokuAnalysisGame, gomokuAnalysisHref } from './gomoku-analysis-import.js';
+import type { GomokuBoardMarker } from './gomoku-board.js';
 import { t } from './i18n/catalog.js';
 import { bootstrapGomokuRecording } from './live-gomoku.js';
+import { type AdvantageChart, createAdvantageChart } from './review/advantage-chart.js';
+import type { CevalLine } from './review/engine/ceval-types.js';
+import { createEnginePanel } from './review/engine/engine-panel.js';
+import {
+  fetchCachedGameAnalysis,
+  type GameAnalysis,
+  requestGameAnalysis,
+} from './review/game-analysis.js';
 import { gameExportLinks } from './review/game-export-links.js';
 import { downloadRow } from './review/underboard-tabs.js';
+import { isLikelyAdmin } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 import { readTenantWebClock, type TenantWebClock } from './variant-tenant/clock-projection.js';
 import type { TenantLiveFrame } from './variant-tenant/live-client.js';
@@ -143,17 +155,34 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
     const initialPly = raw !== null && /^\d+$/.test(raw) ? Math.min(Number(raw), lastPly) : lastPly;
     root.classList.remove('landing-page', 'game-route');
     root.replaceChildren();
-    bootstrapGomokuRecording({
-      room: roomId,
-      ...(root instanceof HTMLDivElement ? { root } : {}),
-      frame: recordingFrame(postgame),
-      initialPly,
-      analysisHref: (ply) => gomokuAnalysisHref(analysisGame, ply),
-      clockAt: (ply) => {
-        const clock = readTenantWebClock(history[ply]?.clock, ['black', 'white'] as const);
-        return clock ? { remainingMs: clock.remainingMs, active: clock.activeColor } : null;
+    const analysis = isLikelyAdmin() ? createRecordingAnalysis(roomId, lastPly) : null;
+    const recording = bootstrapGomokuRecording(
+      {
+        room: roomId,
+        ...(root instanceof HTMLDivElement ? { root } : {}),
+        frame: recordingFrame(postgame),
+        initialPly,
+        analysisHref: (ply) => gomokuAnalysisHref(analysisGame, ply),
+        clockAt: (ply) => {
+          const clock = readTenantWebClock(history[ply]?.clock, ['black', 'white'] as const);
+          return clock ? { remainingMs: clock.remainingMs, active: clock.activeColor } : null;
+        },
       },
-    });
+      analysis?.onPosition,
+    );
+    if (analysis) {
+      analysis.attach(recording);
+      root.querySelector('.review-shell__center')?.append(analysis.el);
+      analysis.loadCached();
+      window.addEventListener(
+        'pagehide',
+        () => {
+          analysis.dispose();
+          recording.dispose();
+        },
+        { once: true },
+      );
+    }
     // The server serves the export only under the flag, not to an admin on
     // prod, so the link waits for the same flag.
     if (gomokuEnabled()) {
@@ -177,4 +206,114 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
   } catch {
     message(t('replay.postgameUnavailable'), t('replay.gameCouldNotBeLoaded'));
   }
+}
+
+/** The room keeps its recorded snapshots and clocks. Both engine consumers
+ * follow the room stepper; neither can place a stone in the finished game. */
+function createRecordingAnalysis(roomId: string, lastPly: number) {
+  const el = document.createElement('section');
+  el.className = 'review-underboard';
+  el.dataset.seatInkFamily = 'gomoku';
+  const plot = document.createElement('div');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'xiangqi-review__analyse';
+  button.dataset.gomokuAnalyse = '';
+  button.textContent = t('replay.analyse');
+  plot.append(button);
+  let disposed = false;
+  let recording: ReturnType<typeof bootstrapGomokuRecording> | null = null;
+  let chart: AdvantageChart | null = null;
+  let selectedPly = lastPly;
+  let positionKey = '';
+  let lines: CevalLine[] | null = null;
+  let showIndicators = true;
+  const paintMarkers = () => {
+    const moves: GomokuMove[] = [];
+    for (const uci of showIndicators ? (lines?.[0]?.pvUci ?? []) : []) {
+      const move = parseGomokuMove(uci);
+      if (!move) break;
+      moves.push(move);
+    }
+    const markers: GomokuBoardMarker[] = moves.length
+      ? [
+          { kind: 'pv', moves },
+          { kind: 'best', square: moves[0]!.to },
+        ]
+      : [];
+    recording?.setMarkers(markers);
+  };
+  // Same Rapfi panel, switch, score/PV parser and board overlays as s-d032.
+  const engine = createEnginePanel({
+    variant: 'gomoku',
+    onLines: (next) => {
+      lines = next;
+      paintMarkers();
+    },
+    onShowArrowsChange: (on) => {
+      showIndicators = on;
+      paintMarkers();
+    },
+  });
+  el.append(engine.el, plot);
+  const apply = (analysis: GameAnalysis) => {
+    if (disposed || !el.isConnected) return;
+    if (analysis.evals.length !== lastPly + 1 || analysis.evals.some((point, i) => point.ply !== i))
+      throw new Error('analysis_incomplete');
+    if (analysis.evals.every((point) => point.cp === null && point.mate === null))
+      throw new Error('analysis_engine_unavailable');
+    chart = createAdvantageChart(analysis.evals, {
+      seatColors: { red: 'black', black: 'white' },
+      winK: winPercentK(analysis.engineId),
+      onJump: (ply) => recording?.jumpToPly(ply),
+    });
+    chart.setPly(selectedPly);
+    plot.replaceChildren(chart.el);
+  };
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    button.textContent = t('replay.analysingWholeGame');
+    try {
+      apply(await requestGameAnalysis('gomoku', roomId));
+    } catch (error) {
+      if (disposed) return;
+      button.disabled = false;
+      button.textContent =
+        error instanceof Error && error.message.includes('analysis_engine_unavailable')
+          ? t('engine.unavailable', { error: 'Rapfi' })
+          : t('replay.analysisFailed');
+    }
+  });
+  return {
+    el,
+    attach(handle: ReturnType<typeof bootstrapGomokuRecording>) {
+      recording = handle;
+    },
+    onPosition(ply: number, view: GomokuPlayerView) {
+      selectedPly = ply;
+      chart?.setPly(ply);
+      const position = JSON.stringify({
+        turn: view.status.type === 'playing' && view.status.turn === 'white' ? 2 : 1,
+        stones: view.board.flatMap((color, i) =>
+          color ? [{ x: i % 15, y: Math.floor(i / 15), player: color === 'black' ? 1 : 2 }] : [],
+        ),
+      });
+      if (position === positionKey) return;
+      positionKey = position;
+      engine.setPosition([], position, view.status.type === 'playing');
+    },
+    loadCached() {
+      void fetchCachedGameAnalysis('gomoku', roomId)
+        .then((cached) => {
+          if (cached) apply(cached);
+        })
+        .catch(() => {
+          /* The request button remains available. */
+        });
+    },
+    dispose() {
+      disposed = true;
+      engine.dispose();
+    },
+  };
 }

@@ -260,6 +260,9 @@ export async function loadRapfi() {
     throw new Error('Pinned neural evaluator did not initialize');
   }
   return {
+    // Offline acceptance fixtures record the scored protocol from this same
+    // serial transport, rather than inventing evaluations for generated moves.
+    request,
     pin: {
       ...pin,
       loaderSha256: sha256(js),

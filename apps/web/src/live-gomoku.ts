@@ -16,7 +16,7 @@ import {
   rapfiGameSeed,
   rapfiPlySeed,
 } from './engine/rapfi.js';
-import { gomokuBoardSvg } from './gomoku-board.js';
+import { type GomokuBoardMarker, gomokuBoardSvg } from './gomoku-board.js';
 import './gomoku-board.css';
 import './live-xiangqi.css';
 import { t } from './i18n/catalog.js';
@@ -40,6 +40,18 @@ let submittedKey: string | null = null;
 let botFailed = false;
 let botPaused = false;
 let roomPaused = false;
+let recordingPosition: ((ply: number, view: GomokuPlayerView) => void) | null = null;
+let recordingMarkers: readonly GomokuBoardMarker[] = [];
+
+function boardSvg(view: GomokuPlayerView, enabled: boolean): string {
+  // Recorded spectator views deliberately have no playable moves. Validate
+  // engine ink against the public kernel's turn without enabling placement.
+  const marked =
+    recordingMarkers.length && view.status.type === 'playing'
+      ? getGomokuPlayerView(view, view.status.turn)
+      : view;
+  return gomokuBoardSvg(marked, enabled, recordingMarkers);
+}
 
 function stopBot(): void {
   generation += 1;
@@ -256,9 +268,14 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
     botFailed = false;
     botPaused = false;
     roomPaused = false;
+    recordingPosition = null;
+    recordingMarkers = [];
   },
   onDisabled: () => stopBot(),
-  renderExtras: renderBotPanel,
+  renderExtras: (refs, view) => {
+    renderBotPanel(refs);
+    if (view) recordingPosition?.(client.replay.activePly() ?? client.replay.latestPly(), view);
+  },
   playAgainRequestBody: (state) => ({
     mode: roomMode,
     gameSpecId: GOMOKU_SPEC_ID,
@@ -271,7 +288,7 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
     refs.board.className = 'board gomoku-live-board';
     refs.board.setAttribute('aria-label', t('live.gomokuBoard'));
     refs.board.innerHTML = view
-      ? gomokuBoardSvg(view, (core?.canActNow() ?? false) && core?.connection() === 'connected')
+      ? boardSvg(view, (core?.canActNow() ?? false) && core?.connection() === 'connected')
       : '';
   },
   setup: (ctx) => {
@@ -358,6 +375,29 @@ export function bootstrapGomokuLiveRoom(): void {
 
 export function bootstrapGomokuRecording(
   recording: TenantRecording<GomokuColor, GomokuPlayerView>,
-): void {
+  onPosition?: (ply: number, view: GomokuPlayerView) => void,
+) {
   client.bootstrap(recording);
+  const owner = onPosition ?? null;
+  recordingPosition = owner;
+  client.renderAll();
+  return {
+    jumpToPly(ply: number) {
+      if (recordingPosition !== owner) return;
+      client.replay.jumpToPly(ply);
+      client.renderAll();
+    },
+    setMarkers(markers: readonly GomokuBoardMarker[]) {
+      if (recordingPosition !== owner || !core?.refs.board.isConnected) return;
+      recordingMarkers = markers;
+      const view = client.replay.currentView(client.state.view);
+      core.refs.board.innerHTML = view ? boardSvg(view, false) : '';
+    },
+    dispose() {
+      if (recordingPosition === owner) {
+        recordingPosition = null;
+        recordingMarkers = [];
+      }
+    },
+  };
 }
