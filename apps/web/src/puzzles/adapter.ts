@@ -16,6 +16,7 @@
  */
 
 import { deepCloneJson, type XiangqiMotifId, type XiangqiTrainingTagId } from '@mistboard/game';
+import type { PuzzleAttemptMode } from '../analytics.js';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import type { PuzzleVariant } from './variant-ids.js';
@@ -114,6 +115,10 @@ export type PuzzleDetail = PuzzleSummary & {
 export type FeedbackKind = 'neutral' | 'good' | 'bad' | 'pending';
 
 export type PuzzleSession = {
+  // Per-session identity: a late response must keep the mode of its own board.
+  mode?: PuzzleAttemptMode;
+  // Ended/disposed timed boards ignore input and outstanding responses.
+  locked?: boolean;
   // Fresh for every puzzle view and never reused across puzzles. This lets the
   // server aggregate anonymous quality outcomes without a cross-puzzle identity.
   qualitySessionId: string;
@@ -299,6 +304,7 @@ export type PuzzleBoardAdapter = {
 // replay, and not the pre-setup position of the opening glide.
 export function isReplayLive(session: PuzzleSession): boolean {
   return (
+    !session.locked &&
     session.setupIntro === null &&
     !session.wrongPreview &&
     session.viewPly >= session.playedMoves.length

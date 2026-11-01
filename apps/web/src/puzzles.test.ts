@@ -16,9 +16,12 @@ import {
   xiangqiPuzzlePreSetupState,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setPostHogInstance } from './analytics.js';
 import { displayPreferenceStorageKey } from './display-preferences.js';
 import { LOCALE_STORAGE_KEY } from './i18n/locale.js';
 import { playSound } from './live-sound.js';
+import type { PuzzleMove } from './puzzles/adapter.js';
+import type { PuzzleAttempt } from './puzzles/api.js';
 import { puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
 import { playerWithoutTeam } from './puzzles/queue-panel.js';
 import { loadPuzzleTheme, PUZZLE_THEME_MIN_PATTERN_COUNT } from './puzzles/themes.js';
@@ -1411,6 +1414,214 @@ describe('standard xiangqi puzzles', () => {
       .querySelector<SVGGElement>(`[data-square="${move.to}"]`)
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   }
+
+  describe('Storm solver support', () => {
+    const detailOf = (puzzle: XiangqiPuzzle) =>
+      publicDetail(puzzle) as Parameters<typeof mountPuzzleSolver>[1];
+    const feedback = () => document.createElement('div');
+    const capture = vi.fn<(name: string, props?: Record<string, unknown>) => void>();
+    beforeEach(() => {
+      capture.mockReset();
+      setPostHogInstance({ capture, identify: vi.fn(), reset: vi.fn() });
+    });
+    afterEach(() => setPostHogInstance({ capture: vi.fn(), identify: vi.fn(), reset: vi.fn() }));
+
+    it('opens a copied Storm result link as an unrated solver without starting a run', async () => {
+      const puzzle = minedByPlyCount(3);
+      stubWindowLocalStorage(memoryStorage());
+      const fetchSpy = xiangqiFetchMock([puzzle]);
+      vi.stubGlobal('fetch', fetchSpy);
+      window.history.replaceState(null, '', `/puzzles?mode=storm&review=${puzzle.id}`);
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountPuzzles(root);
+      try {
+        await vi.waitFor(() => expect(root.textContent).toContain('Unrated review'));
+        await vi.waitFor(() => expect(root.querySelector('.puzzle-board')).not.toBeNull());
+        await clickMove(root, puzzle.solution[0]!, { held: true });
+        await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
+        const attempt = fetchSpy.mock.calls.find(([url]) => String(url).endsWith('/attempt'));
+        expect(JSON.parse(String(attempt?.[1]?.body)).rated).toBe(false);
+        expect(fetchSpy.mock.calls.some(([url]) => url === '/api/puzzles/storm')).toBe(false);
+        expect(root.textContent).toContain('Unrated review');
+      } finally {
+        window.dispatchEvent(new Event('pagehide'));
+      }
+    });
+
+    it('skips the setup and reply pauses for fast timed play', async () => {
+      const puzzle = minedByPlyCount(3);
+      // A reconstructable setup move from the public position, including captures.
+      const last = puzzle.initial.lastMove!;
+      const host = document.createElement('div');
+      document.body.append(host);
+      const onAttempt = vi.fn();
+      const submitAttempt = vi.fn(async (_id: string, moves: readonly PuzzleMove[]) => ({
+        attempt: attemptStandardXiangqiPuzzleLine(puzzle, moves as XiangqiMove[]),
+        rating: null,
+      }));
+      const solver = mountPuzzleSolver(
+        host,
+        { ...detailOf(puzzle), setupMove: { ...last, captured: null } },
+        {
+          mode: 'storm',
+          analysis: false,
+          feedback,
+          submitAttempt,
+          onAttempt,
+        },
+      );
+      try {
+        expect(host.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleLive).toBe('true');
+        await clickMove(host, puzzle.solution[0]!, { held: true });
+        await vi.waitFor(() => expect(onAttempt).toHaveBeenCalledTimes(1));
+        expect(host.querySelector<HTMLElement>('.puzzle-board')?.dataset.puzzleLive).toBe('true');
+        expect(host.textContent).toContain(moveLabel(puzzle.solution[1]!));
+        await clickMove(host, puzzle.solution[2]!, { held: true });
+        await vi.waitFor(() => expect(onAttempt).toHaveBeenCalledTimes(2));
+        expect(capture.mock.calls.filter(([name]) => name === 'puzzle_attempted')).toEqual([
+          [
+            'puzzle_attempted',
+            expect.objectContaining({
+              mode: 'storm',
+              rated: false,
+              outcome: 'solved',
+              clean: true,
+            }),
+          ],
+        ]);
+      } finally {
+        solver.dispose();
+      }
+    });
+
+    it('restores a partial line without resubmitting or counting its moves again', async () => {
+      const puzzle = minedByPlyCount(3);
+      const progress = attemptStandardXiangqiPuzzleLine(puzzle, [puzzle.solution[0]!]);
+      if (!progress.ok) throw new Error('fixture must have accepted progress');
+      const host = document.createElement('div');
+      document.body.append(host);
+      const onAttempt = vi.fn();
+      const onSolved = vi.fn();
+      const submitAttempt = vi.fn(async (_id: string, moves: readonly PuzzleMove[]) => ({
+        attempt: attemptStandardXiangqiPuzzleLine(puzzle, moves as XiangqiMove[]),
+        rating: null,
+      }));
+      const solver = mountPuzzleSolver(host, detailOf(puzzle), {
+        mode: 'storm',
+        analysis: false,
+        feedback,
+        initialAttempt: progress,
+        submitAttempt,
+        onAttempt,
+        onSolved,
+      });
+      try {
+        expect(host.textContent).toContain(moveLabel(puzzle.solution[1]!));
+        expect(submitAttempt).not.toHaveBeenCalled();
+        expect(onAttempt).not.toHaveBeenCalled();
+        expect(capture).not.toHaveBeenCalled();
+        await clickMove(host, puzzle.solution[2]!, { held: true });
+        await vi.waitFor(() => expect(onSolved).toHaveBeenCalledWith(puzzle.id));
+        expect(submitAttempt.mock.calls[0]?.[1]).toEqual(solverMovesOf(puzzle));
+        expect(onAttempt).toHaveBeenCalledTimes(1);
+      } finally {
+        solver.dispose();
+      }
+    });
+
+    for (const action of ['end', 'dispose'] as const) {
+      it(`ignores a late response after ${action}, with no solve or telemetry`, async () => {
+        const puzzle = minedByPlyCount(1);
+        const host = document.createElement('div');
+        document.body.append(host);
+        let resolve!: (value: { attempt: PuzzleAttempt; rating: null }) => void;
+        const submitAttempt = vi.fn(
+          () =>
+            new Promise<{ attempt: PuzzleAttempt; rating: null }>((done) => {
+              resolve = done;
+            }),
+        );
+        const onAttempt = vi.fn();
+        const onSolved = vi.fn();
+        const solver = mountPuzzleSolver(host, detailOf(puzzle), {
+          mode: 'storm',
+          analysis: false,
+          feedback,
+          submitAttempt,
+          onAttempt,
+          onSolved,
+        });
+        try {
+          await clickMove(host, puzzle.solution[0]!, { held: true });
+          expect(submitAttempt).toHaveBeenCalledTimes(1);
+          solver[action]();
+          const ended = host.innerHTML;
+          resolve({
+            attempt: attemptStandardXiangqiPuzzleLine(puzzle, [puzzle.solution[0]!]),
+            rating: null,
+          });
+          // Flush the promise chain without waiting out any animation timers.
+          for (let i = 0; i < 8; i++) await Promise.resolve();
+          expect(host.innerHTML).toBe(ended);
+          expect(onAttempt).not.toHaveBeenCalled();
+          expect(onSolved).not.toHaveBeenCalled();
+          expect(capture).not.toHaveBeenCalled();
+          await clickMove(host, puzzle.solution[0]!, { held: true });
+          expect(submitAttempt).toHaveBeenCalledTimes(1);
+        } finally {
+          solver.dispose();
+        }
+      });
+    }
+
+    it('counts a Storm miss once and leaves checker errors out of telemetry', async () => {
+      const puzzle = minedByPlyCount(3);
+      const host = document.createElement('div');
+      document.body.append(host);
+      const wrong = getStandardXiangqiLegalMoves(puzzle.initial).find((move) => {
+        const attempt = attemptStandardXiangqiPuzzleLine(puzzle, [move]);
+        return !attempt.ok && attempt.code === 'incorrect-move';
+      })!;
+      const onAttempt = vi.fn();
+      let checkerError = true;
+      const solver = mountPuzzleSolver(host, detailOf(puzzle), {
+        mode: 'storm',
+        analysis: false,
+        feedback,
+        onAttempt,
+        submitAttempt: async (_id, moves) => ({
+          attempt: checkerError
+            ? { ok: false, code: 'illegal-move', state: puzzle.initial, ply: 0, move: moves[0]! }
+            : attemptStandardXiangqiPuzzleLine(puzzle, moves as XiangqiMove[]),
+          rating: null,
+        }),
+      });
+      try {
+        await clickMove(host, wrong, { held: true });
+        await vi.waitFor(() => expect(onAttempt).toHaveBeenCalledTimes(1));
+        expect(capture).not.toHaveBeenCalled();
+        checkerError = false;
+        await clickMove(host, wrong, { held: true });
+        await vi.waitFor(() => expect(onAttempt).toHaveBeenCalledTimes(2));
+        expect(capture.mock.calls.filter(([name]) => name === 'puzzle_attempted')).toEqual([
+          [
+            'puzzle_attempted',
+            expect.objectContaining({
+              mode: 'storm',
+              rated: false,
+              outcome: 'failed',
+              clean: false,
+            }),
+          ],
+        ]);
+        await clickMove(host, wrong, { held: true });
+        expect(onAttempt).toHaveBeenCalledTimes(2);
+      } finally {
+        solver.dispose();
+      }
+    });
+  });
 
   it('renders a mined puzzle on the canonical 9x10 board', async () => {
     const puzzle = minedByPlyCount(3);
