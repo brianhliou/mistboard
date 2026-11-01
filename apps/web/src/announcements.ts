@@ -51,6 +51,14 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Play AB-JChess',
   },
   {
+    date: '2026-10-31',
+    kind: 'update',
+    headline: 'Choose a puzzle difficulty, and see your puzzle rating over time.',
+    body: 'Pick a difficulty from Easiest to Hardest on the puzzle page, and it is remembered between visits. Your profile now charts your puzzle rating, one point per day, and lists each day you did puzzles in Activity. After a puzzle you can also report a problem with it.',
+    href: '/puzzles',
+    cta: 'Open puzzles',
+  },
+  {
     date: '2026-10-30',
     kind: 'update',
     headline: 'Puzzle Streak, and puzzles by theme.',

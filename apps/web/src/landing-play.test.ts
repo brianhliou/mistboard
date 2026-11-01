@@ -1292,6 +1292,7 @@ describe('landing play panel', () => {
   });
 
   it('sends the chess game spec id when finding a chess opponent', async () => {
+    window.localStorage.setItem('mistboard.device', 'lobby-browser-776');
     const fetchSpy = lobbyFetchSpy();
     vi.stubGlobal('fetch', fetchSpy);
     const panel = buildLandingPlayPanel([]);
@@ -1304,6 +1305,10 @@ describe('landing play panel', () => {
     await flushPromises();
 
     expect(lobbyPostBody(fetchSpy).gameSpecId).toBe('dark-chess');
+    const post = fetchSpy.mock.calls.find(
+      ([url, init]) => url === '/api/lobby' && init?.method === 'POST',
+    );
+    expect(new Headers(post?.[1]?.headers).get('x-mistboard-device-id')).toBe('lobby-browser-776');
   });
 
   // RETIRED 2026-09-04 (Brian). Mini Xiangqi was hidden from the picker in the

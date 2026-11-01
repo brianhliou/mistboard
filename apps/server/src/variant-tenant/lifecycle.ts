@@ -225,7 +225,7 @@ function scheduleTenantResume<
     connected[mover] &&
     !(tenant.engine?.isEngineClientId(room.projection.seats[mover]) ?? false);
   if (everyoneBack || moverBack) {
-    resumeTenantRoom(tenant, room, ctx, now, 'players-returned');
+    void resumeTenantRoom(tenant, room, ctx, now, 'players-returned');
     return;
   }
   if (room.resumeDeadline === null || room.resumeDeadline === undefined) {
@@ -234,14 +234,14 @@ function scheduleTenantResume<
   room.resumeTimer = setTimeout(
     () => {
       room.resumeTimer = null;
-      resumeTenantRoom(tenant, room, ctx, Date.now(), 'grace-elapsed');
+      void resumeTenantRoom(tenant, room, ctx, Date.now(), 'grace-elapsed');
     },
     Math.max(0, room.resumeDeadline - now),
   );
   room.resumeTimer.unref();
 }
 
-function resumeTenantRoom<
+export async function resumeTenantRoom<
   C extends string,
   M,
   State extends TenantGameStateLike<C>,
@@ -253,12 +253,12 @@ function resumeTenantRoom<
   ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
   at: number,
   reason: TenantResumeReason,
-): void {
+): Promise<void> {
   const paused = room.projection.paused;
   const event = tenantResumeEventFor<C, M, Spec>(room.projection, at, reason);
   if (!paused || !event) return;
   room.resumeDeadline = null;
-  void ctx
+  await ctx
     .appendEvent(room, event)
     .then(async (seq) => {
       if (seq < 0) return; // a concurrent resume landed first
@@ -321,6 +321,8 @@ export async function pauseTenantRoomsOnShutdown<
     try {
       const seq = await ctx.appendEvent(room, event);
       if (seq < 0) continue;
+      const appended = room.events[seq];
+      if (appended) ctx.broadcastEventAppended(room, appended, seq);
       paused += 1;
       await recordRoomLifecycleAuditSafe({
         roomId: room.id,

@@ -676,6 +676,112 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it("draws a jieqi chapter's score series under the board, its cursor on the board's ply", async () => {
+    // 40 plies, so 41 positions: index 0 the deal, index n after ply n.
+    const ab = Array.from({ length: 41 }, (_, i) => 0.5 - i * 0.01);
+    const jqe = Array.from({ length: 41 }, (_, i) => 0.5 - i * 0.005);
+    const jieqiChapter = {
+      id: 'AMY9DrPj',
+      name: 'Game 18',
+      orientation: 'red',
+      variant: 'jieqi',
+      tags: { red: 'AB-JChess', black: 'jqe' },
+      root: { rootFen: JIEQI_GAME_18_ROOT, root: chainTree(JIEQI_GAME_18) },
+      scoreSeries: {
+        side: 'red',
+        series: [
+          { name: 'AB-JChess', color: 'a', values: ab },
+          { name: 'jqe', color: 'b', values: jqe },
+        ],
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [jieqiChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'AMY9DrPj' });
+
+    const chart = root.querySelector<HTMLElement>('.embed-score-chart');
+    expect(chart).not.toBeNull();
+    // Under the card, inside the frame, above the credit line.
+    expect(chart?.previousElementSibling?.classList.contains('embed-card')).toBe(true);
+    expect(chart?.nextElementSibling?.classList.contains('embed-credit')).toBe(true);
+    const lines = [...(chart?.querySelectorAll('polyline.embed-score-chart__line') ?? [])];
+    expect(lines.map((l) => l.getAttribute('data-series'))).toEqual(['AB-JChess', 'jqe']);
+    expect(lines[0]?.getAttribute('stroke')).toBe('var(--eval-compare-a, #1f7a8c)');
+    expect(lines[1]?.getAttribute('stroke')).toBe('var(--eval-compare-b, #d9822b)');
+    expect(lines[0]?.getAttribute('points')?.split(' ')).toHaveLength(41);
+    expect(chart?.querySelector('.embed-score-chart__legend')?.textContent).toBe(
+      'AB-JChessjqeWin chance for Red (AB-JChess)',
+    );
+    const ply = () => chart?.dataset.ply;
+    const cursorX = () => chart?.querySelector('.embed-score-chart__cursor')?.getAttribute('x1');
+    expect(ply()).toBe('0');
+    const startX = cursorX();
+
+    // The step button, the arrow keys and the move list all move the cursor.
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
+    expect(ply()).toBe('1');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
+    expect(ply()).toBe('2');
+    expect(cursorX()).not.toBe(startX);
+    root.querySelectorAll<HTMLButtonElement>('button.review-move-list__move')[11]?.click();
+    expect(ply()).toBe('12');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'End' }));
+    expect(ply()).toBe('40');
+
+    // A click on the graph jumps the board to the ply under it.
+    const plot = chart!.querySelector<HTMLElement>('.embed-score-chart__plot')!;
+    plot.getBoundingClientRect = () =>
+      ({ left: 0, top: 0, width: 400, height: 60, right: 400, bottom: 60 }) as DOMRect;
+    plot.dispatchEvent(new MouseEvent('click', { clientX: 100, bubbles: true }));
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('10 / 40');
+    expect(ply()).toBe('10');
+    // Hovering reads both series at that ply; leaving puts the cursor back.
+    plot.dispatchEvent(new MouseEvent('pointermove', { clientX: 200, bubbles: true }));
+    expect(chart?.querySelector('.embed-score-chart__tip')?.textContent).toBe(
+      '10...AB-JChess 30% · jqe 40%',
+    );
+    expect(ply()).toBe('20');
+    plot.dispatchEvent(new MouseEvent('pointerleave'));
+    expect(ply()).toBe('10');
+    root.remove();
+  });
+
+  it('draws no score graph for a chapter without series, or with series that do not fit its line', async () => {
+    const chapter = (scoreSeries?: unknown) => ({
+      id: 'AMY9DrPj',
+      name: 'Game 18',
+      orientation: 'red',
+      variant: 'jieqi',
+      tags: {},
+      root: { rootFen: JIEQI_GAME_18_ROOT, root: chainTree(JIEQI_GAME_18) },
+      ...(scoreSeries === undefined ? {} : { scoreSeries }),
+    });
+    const stale = {
+      side: 'red',
+      // 40 values for 41 positions: a tree edit after the series was set.
+      series: [{ name: 'AB-JChess', color: 'a', values: Array(40).fill(0.5) }],
+    };
+    const badColor = {
+      side: 'red',
+      series: [{ name: 'x', color: 'url(evil)', values: Array(41).fill(0.5) }],
+    };
+    for (const value of [undefined, stale, badColor]) {
+      stubFetch(200, { study: { id: 's' }, chapters: [chapter(value)] });
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountEmbedStudy(root, { studyId: 's', chapterId: 'AMY9DrPj' });
+      expect(root.querySelector('.embed-board svg.jieqi-board')).not.toBeNull();
+      expect(root.querySelector('.embed-score-chart')).toBeNull();
+      // The frame is exactly today's: header, card, credit.
+      expect(
+        [...(root.querySelector('.embed-frame')?.children ?? [])].map((el) => el.className),
+      ).toEqual(['embed-card-header', 'embed-card', 'embed-credit']);
+      root.remove();
+    }
+  });
+
   it("shows a jieqi chapter's glyphs, comments, verdicts, sidelines and shapes, not the mainline alone", async () => {
     // The opening of prod game 18 (wd6c7qvG / AMY9DrPj) annotated the way the
     // study page shows a chapter: a ?! with a verdict and comment, a ?, a

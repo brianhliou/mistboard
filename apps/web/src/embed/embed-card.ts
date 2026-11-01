@@ -175,6 +175,9 @@ export type EmbedCard = {
   /** Show `cursor` moves into the sideline under mainline ply `atPly`, as a
    *  click on that move in the sheet's branch does. */
   jumpToLine: (atPly: number, cursor: number) => void;
+  /** Land on mainline ply `ply`, as the move list or the arrows do (leaves any
+   *  sideline). How a pane under the card (a score chart) moves the board. */
+  jumpToPly: (ply: number) => void;
   /** Mark moves on the score sheet: a glyph after the move and a note under it (the
    *  stored analysis's "?? … was best."), keyed by ply. Kept across sheet rebuilds. */
   setAnnotations: (byPly: ReadonlyMap<number, EmbedSheetAnnotation>) => void;
@@ -736,6 +739,7 @@ export async function mountEmbedCard(
     remountBoard,
     reloadLine,
     jumpToLine: jumpLine,
+    jumpToPly: (ply) => jump(ply),
     setAnnotations: (byPly) => {
       annotations = byPly;
       rebuildSheet();

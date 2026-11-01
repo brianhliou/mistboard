@@ -200,6 +200,13 @@ export type TenantWatchReplayOptions = {
    */
   hideReserve?: boolean;
   /**
+   * Compact only: put each player's reserve inside their seat row, between the
+   * name and the clock, instead of in a strip above or below the board. The
+   * homepage viewer opts in so a drop variant's viewer is no taller than a bare
+   * board's (two strips added ~84px and grew the whole first band).
+   */
+  reservesInSeats?: boolean;
+  /**
    * Compact only: lead each seat row with a disc in the ink that seat plays (the
    * /watch seat-row disc). The homepage TV opts in; flip variants (Banqi, Flip
    * Jungle) are otherwise unreadable there, since nothing says which name owns
@@ -1012,9 +1019,18 @@ export async function mountTenantWatchReplay<
         const right = document.createElement('div');
         right.className = 'showcase-reserve showcase-reserve-right';
         compactSideStrips = { left, right };
-        boardRow = document.createElement('div');
-        boardRow.className = 'showcase-board-row';
-        boardRow.append(left, pane.el, right);
+        if (options.reservesInSeats === true) {
+          // The opponent's hand rides the top seat row, the oriented side's the
+          // bottom one, each just before that seat's clock.
+          left.classList.add('showcase-reserve--in-seat');
+          right.classList.add('showcase-reserve--in-seat');
+          topSeat.row.insertBefore(left, topSeat.clockEl);
+          bottomSeat.row.insertBefore(right, bottomSeat.clockEl);
+        } else {
+          boardRow = document.createElement('div');
+          boardRow.className = 'showcase-board-row';
+          boardRow.append(left, pane.el, right);
+        }
       } else {
         compactSideStrips = null;
       }

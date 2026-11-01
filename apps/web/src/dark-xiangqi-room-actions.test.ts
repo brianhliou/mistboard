@@ -19,7 +19,9 @@ describe('Dark Xiangqi room actions', () => {
 
     expect(fetchSpy).toHaveBeenCalledWith('/api/rooms', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      // Room POSTs also carry the browser id when one is stored (#776), which
+      // depends on what earlier tests in the worker left behind.
+      headers: expect.objectContaining({ 'content-type': 'application/json' }),
       body: JSON.stringify({
         mode: 'pvp',
         gameSpecId: 'dark-xiangqi',

@@ -5,6 +5,7 @@
  */
 
 import { t } from '../i18n/catalog.js';
+import { deviceIdForBrowser } from '../live-state.js';
 import {
   colorLabel,
   isSessionSolved,
@@ -27,8 +28,10 @@ export function feedbackPanel(
   renderSession: () => void,
   assist: PuzzleAssistHooks,
 ): HTMLElement {
+  // Revealed first: a played-out mate line finishes the board, which would
+  // otherwise read as solved and show "Success!" for a give-up.
+  if (session.revealed) return revealedPanel(session, navigation);
   if (isSessionSolved(session)) return solvedPanel(session, navigation, renderSession, assist);
-  if (session.revealed) return revealedPanel(navigation);
 
   const panel = document.createElement('div');
   panel.className = `puzzle-feedback puzzle-feedback--${session.feedback.kind}`;
@@ -97,7 +100,7 @@ function assistRow(
 // Shown after "View solution": the answer has been played out and the board is a
 // locked replay to scrub. Distinct from the solved panel (no "Success!") — a
 // reveal counts as a give-up, not a win.
-function revealedPanel(navigation: PuzzleNavigation): HTMLElement {
+function revealedPanel(session: PuzzleSession, navigation: PuzzleNavigation): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'puzzle-solved-panel puzzle-revealed-panel';
 
@@ -114,7 +117,7 @@ function revealedPanel(navigation: PuzzleNavigation): HTMLElement {
   cont.disabled = !navigation.hasNext;
   cont.addEventListener('click', navigation.goNext);
 
-  panel.append(title, cont);
+  panel.append(title, cont, puzzleReportControl(session));
   return panel;
 }
 
@@ -158,8 +161,94 @@ function solvedPanel(
   );
   feedbackRow.append(prompt, votes);
 
-  panel.append(title, cont, feedbackRow);
+  panel.append(title, cont, feedbackRow, puzzleReportControl(session));
   return panel;
+}
+
+const reportStates = new WeakMap<
+  PuzzleSession,
+  { pending: boolean; sent: boolean; reason: string }
+>();
+
+function puzzleReportControl(session: PuzzleSession): HTMLElement {
+  let state = reportStates.get(session);
+  if (!state) {
+    state = { pending: false, sent: false, reason: 'wrong-solution' };
+    reportStates.set(session, state);
+  }
+  const reportState = state;
+  const details = document.createElement('details');
+  details.className = 'puzzle-report';
+  const link = document.createElement('summary');
+  link.className = 'puzzle-report-link';
+  link.textContent = reportState.sent ? t('puzzle.reportSent') : t('puzzle.reportProblem');
+  details.append(link);
+  if (reportState.sent) return details;
+
+  const form = document.createElement('form');
+  const label = document.createElement('label');
+  label.textContent = t('puzzle.reportReasonLabel');
+  const reason = document.createElement('select');
+  reason.className = 'puzzle-select';
+  reason.setAttribute('aria-label', t('puzzle.reportReasonAria'));
+  for (const [value, key] of [
+    ['wrong-solution', 'puzzle.reportWrongSolution'],
+    ['second-winning-move', 'puzzle.reportSecondMove'],
+    ['wrong-theme', 'puzzle.reportWrongTheme'],
+    ['other', 'puzzle.reportOther'],
+  ] as const) {
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = t(key);
+    reason.append(option);
+  }
+  reason.value = reportState.reason;
+  reason.addEventListener('change', () => {
+    reportState.reason = reason.value;
+  });
+  label.append(reason);
+  const send = document.createElement('button');
+  send.type = 'submit';
+  send.className = 'puzzle-feedback-skip';
+  send.textContent = reportState.pending ? t('puzzle.reportSending') : t('puzzle.reportSend');
+  send.disabled = reportState.pending;
+  const status = document.createElement('p');
+  status.setAttribute('role', 'status');
+  form.append(label, send, status);
+  details.append(form);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (reportState.pending || reportState.sent) return;
+    reportState.pending = true;
+    send.disabled = true;
+    // Revealing plays the answer over a rejected move. Preserve that actual
+    // try, so the report's position and move still explain a second answer.
+    const wrong = session.wrongTries?.slice(-1)[0] ?? session.wrongMove;
+    const moves = wrong
+      ? [...session.solverMoves.slice(0, Math.floor(wrong.ply / 2)), wrong.move]
+      : [...session.solverMoves];
+    try {
+      const response = await fetch(`/api/puzzles/${encodeURIComponent(session.puzzle.id)}/report`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          reason: reason.value,
+          deviceId: deviceIdForBrowser() ?? session.qualitySessionId,
+          moves,
+        }),
+      });
+      if (!response.ok) throw new Error('report failed');
+      reportState.sent = true;
+      link.textContent = t('puzzle.reportSent');
+      form.hidden = true;
+    } catch {
+      status.textContent = t('puzzle.reportFailed');
+    } finally {
+      reportState.pending = false;
+      send.disabled = reportState.sent;
+    }
+  });
+  return details;
 }
 
 // The thumb vote records a like/dislike and shows in-place feedback (the chosen

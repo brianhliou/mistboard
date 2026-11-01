@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- before a site update the banner counts down to the restart, games show a pause notice when it starts, and a page reconnects sooner when its tab wakes ([1e0a45a8](https://github.com/brianhliou/mistboard/commit/1e0a45a8))
 - Three Kingdoms banqi shows each seat's points under the board, plays bot sounds and animates flips; banqi and Three Kingdoms banqi keep unturned tiles face down when a game ends; Three Kingdoms banqi offers 1+1 and 3+2 ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - 3D pieces show a selection with a green side and capture targets with a green face instead of rings ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - On phones, the waiting room puts the invite where the moves go, so the board fills the width, and every room's board has square corners that meet the screen edges ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
@@ -103,6 +104,9 @@ Conventions:
 
 ### Learning and puzzles
 
+- your own profile shows your puzzle rating over time, one point per day, plus an Activity row for each day you did puzzles ([1e0a45a8](https://github.com/brianhliou/mistboard/commit/1e0a45a8))
+- choose a puzzle difficulty from Easiest to Hardest, remembered between visits; the puzzle page sidebar is more compact ([1e0a45a8](https://github.com/brianhliou/mistboard/commit/1e0a45a8))
+- report a problem with a puzzle after solving it or viewing the solution ([1e0a45a8](https://github.com/brianhliou/mistboard/commit/1e0a45a8))
 - Puzzles mark right and wrong moves on the board and in the move list, and themes get their own card linking to each theme's drill ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - Puzzles from online games give the year instead of player names, and Puzzle Streak shows the moves played ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - The banqi rules page is reorganized around the questions players ask, in English and Chinese ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
@@ -255,6 +259,7 @@ Conventions:
 
 ### Site
 
+- the homepage game viewer keeps one height for every variant; Crazyhouse Xiangqi shows held pieces beside each player's name, and Jungle's board is narrower ([1e0a45a8](https://github.com/brianhliou/mistboard/commit/1e0a45a8))
 - Player pages and player articles carry one short line for corrections or rights requests ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - account emails, bot profiles, community labels, lessons and game import are now in Chinese ([cb9e0c19](https://github.com/brianhliou/mistboard/commit/cb9e0c19))
 - Xiangqi, jieqi, banqi and Flip Jungle pieces can stand in 3D, picked under Pieces in the board settings, with a Thick edge option and a gold edge on the last move ([e0041d1f](https://github.com/brianhliou/mistboard/commit/e0041d1f))
@@ -353,6 +358,9 @@ Conventions:
 
 ### Fixed
 
+- games paused by a site update now finish on the clock when nobody comes back ([1e0a45a8](https://github.com/brianhliou/mistboard/commit/1e0a45a8))
+- viewing the solution of a mate puzzle no longer shows "Success!" ([1e0a45a8](https://github.com/brianhliou/mistboard/commit/1e0a45a8))
+- reopening a puzzle while its solution is still playing back no longer freezes the board ([1e0a45a8](https://github.com/brianhliou/mistboard/commit/1e0a45a8))
 - Xiangqi Mahjong no longer shows a timeout loss the server never recorded when a move arrives just after a flag falls ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - Finished Xiangqi Mahjong games on the games page show both final hands instead of a placeholder ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
 - Broadcast round menus and headers show each round's real date from its games, and rounds with results only carry their date ([0a1650b9](https://github.com/brianhliou/mistboard/commit/0a1650b9))
@@ -564,6 +572,7 @@ Conventions:
 
 ### Technical
 
+- bot engines now alert when players wait for a bot move, and share one process limit so warm engines cannot exhaust memory ([1e0a45a8](https://github.com/brianhliou/mistboard/commit/1e0a45a8))
 - Server support for unrated three-minute Puzzle Storm runs with daily personal bests ([4fc93e5d](https://github.com/brianhliou/mistboard/commit/4fc93e5d))
 - The engine worker survives a database restart and recovers runs cut off by an outage ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))
 - Postgres JIT is off on every pool, which removes the slow first /stats and /metrics query after a deploy ([15de3fbc](https://github.com/brianhliou/mistboard/commit/15de3fbc))

@@ -554,7 +554,7 @@ a.puzzle-streak-chip:focus-visible {
   display: grid;
   order: 1;
   align-content: start;
-  gap: 14px;
+  gap: 10px;
   max-height: var(--puzzle-column-max-height);
   overflow: auto;
 }
@@ -642,6 +642,13 @@ a.puzzle-streak-chip:focus-visible {
   padding: 17px 20px;
 }
 
+/* The puzzle page's column sits beside the board and should end near its
+   bottom edge (#717), so its cards run tighter than the streak's. */
+.puzzles-sidebar .puzzle-left-card {
+  gap: 10px;
+  padding: 12px 16px;
+}
+
 .puzzles-sidebar h2,
 .puzzle-left-card h2 {
   margin: 0;
@@ -658,9 +665,9 @@ a.puzzle-streak-chip:focus-visible {
   line-height: 1.35;
 }
 
-.puzzle-info-card {
+.puzzle-left-card.puzzle-info-card {
   gap: 0;
-  padding: 18px 20px 17px;
+  padding: 11px 16px 10px;
 }
 
 .puzzle-info-row {
@@ -668,7 +675,7 @@ a.puzzle-streak-chip:focus-visible {
   grid-template-columns: 54px minmax(0, 1fr);
   gap: 13px;
   align-items: center;
-  min-height: 66px;
+  min-height: 54px;
 }
 
 .puzzle-info-icon {
@@ -695,7 +702,7 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-info-copy {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
   color: var(--site-muted);
   font-size: 14px;
@@ -761,14 +768,63 @@ a.puzzle-streak-chip:focus-visible {
 .puzzle-info-divider {
   width: 100%;
   height: 1px;
-  margin: 9px 0;
+  margin: 7px 0;
   border: 0;
   background: var(--site-border-soft);
 }
 
-.puzzle-rating-card {
+/* The source game's header keeps to one line (lichess's "From game 3+2 •
+   Blitz"); a long event name ends in an ellipsis, the tooltip holds it all. */
+.puzzle-source-event {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Beside the board the info card runs at lichess's density (#717): 14px
+   lines, the players and the goal a step smaller, a 40px icon. */
+.puzzles-sidebar .puzzle-info-row {
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+}
+
+.puzzles-sidebar .puzzle-info-icon,
+.puzzles-sidebar .puzzle-target-avatar,
+.puzzles-sidebar .puzzle-info-icon .variant-marker {
+  width: 40px;
+  height: 40px;
+}
+
+.puzzles-sidebar .puzzle-info-copy {
+  gap: 2px;
+  line-height: 1.25;
+}
+
+.puzzles-sidebar .puzzle-info-copy > span:first-child {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.puzzles-sidebar .puzzle-source-player,
+.puzzles-sidebar .puzzle-info-goal {
+  font-size: 13px;
+}
+
+.puzzles-sidebar .puzzle-left-card.puzzle-rating-card {
   align-content: start;
-  gap: 14px;
+  gap: 8px;
+}
+
+/* The rated toggle with the rating and solved count beside it; in a column
+   too narrow for both, the summary wraps under the toggle. */
+.puzzle-rating-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  min-width: 0;
 }
 
 .puzzle-rating-card p {
@@ -779,24 +835,20 @@ a.puzzle-streak-chip:focus-visible {
 }
 
 .puzzle-rating-summary {
-  display: grid;
-  justify-items: center;
-  gap: 4px;
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin-inline-start: auto;
+  min-width: 0;
 }
 
 .puzzle-rating-card strong {
   color: var(--site-heading);
-  font-size: clamp(44px, 5vw, 62px);
+  font-size: 28px;
   font-weight: 400;
   line-height: 1;
-}
-
-.puzzle-rating-card .puzzle-rating-summary--none {
-  grid-auto-flow: column;
-  justify-content: space-between;
-  align-items: baseline;
-  text-align: start;
+  font-variant-numeric: tabular-nums;
 }
 
 .puzzle-rating-card .puzzle-rating-summary--none strong {
@@ -812,8 +864,8 @@ a.puzzle-streak-chip:focus-visible {
 }
 
 .puzzle-rating-delta {
-  margin-left: 6px;
-  font-size: 18px;
+  margin-left: 4px;
+  font-size: 15px;
   font-weight: 600;
   vertical-align: middle;
 }
@@ -832,26 +884,34 @@ a.puzzle-streak-chip:focus-visible {
   line-height: 1.35;
 }
 
-/* The info card's last row: the puzzle's themes, a muted note until it is
-   solved, the chips after. Label over content, full card width. */
-.puzzle-info-themes {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-  color: var(--site-muted);
-  font-size: 13px;
-  line-height: 1.3;
-}
-
-.puzzle-info-themes__label {
-  color: var(--site-heading);
-  font-size: 13px;
-  font-weight: 600;
-}
-
 .puzzle-settings {
   display: grid;
-  gap: 12px;
+  gap: 8px;
+}
+
+/* The difficulty note sits right under its select. */
+.puzzle-settings .puzzle-field + .puzzle-rated-note {
+  margin: -2px 0 0;
+  font-size: 12px;
+}
+
+/* Short option names: the select keeps to the label's row. */
+.puzzles-sidebar .puzzle-field .puzzle-select {
+  flex-basis: 140px;
+  min-height: 32px;
+  padding-block: 4px;
+}
+
+/* Lichess's "Difficulty level [select]": label left, select right, one row. */
+.puzzle-field--inline {
+  flex-wrap: nowrap;
+  justify-content: space-between;
+}
+
+.puzzles-sidebar .puzzle-field--inline .puzzle-select {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 120px;
 }
 
 .puzzle-field {
@@ -1128,6 +1188,55 @@ a.puzzle-streak-chip:focus-visible {
 .puzzle-feedback-skip:disabled {
   cursor: default;
   opacity: 0.55;
+}
+
+/* Report a problem (#719): a quiet link under the solved and revealed
+   panels that opens one row (reason select, send). */
+.puzzle-report {
+  padding: 4px 18px 12px;
+}
+
+.puzzle-report-link {
+  width: fit-content;
+  color: var(--site-muted);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.puzzle-report-link:hover,
+.puzzle-report[open] .puzzle-report-link {
+  color: var(--site-text);
+}
+
+.puzzle-report form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.puzzle-report label {
+  display: flex;
+  flex: 1 1 220px;
+  align-items: center;
+  gap: 8px;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.puzzle-report .puzzle-feedback-skip {
+  margin-top: 0;
+}
+
+.puzzle-report [role="status"] {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 13px;
+}
+
+.puzzle-report [role="status"]:empty {
+  display: none;
 }
 
 /* Persistent escape hatches (hint / view solution / next) under the feedback
@@ -1426,6 +1535,13 @@ a.puzzle-tag--link:hover {
   line-height: 1.4;
 }
 
+/* Once the puzzle is over, its own themes close the theme box under a
+   divider (lichess's puzzle__themes). */
+.puzzle-theme-card .puzzle-solved-themes {
+  padding-top: 10px;
+  border-top: 1px solid var(--site-border-soft);
+}
+
 .puzzles-status {
   color: var(--site-muted);
   font-size: 14px;
@@ -1497,10 +1613,6 @@ a.puzzle-tag--link:hover {
       minmax(230px, 310px)
       minmax(min(400px, var(--puzzle-board-track)), min(50vw, 620px, var(--puzzle-board-track)))
       minmax(270px, 360px);
-  }
-
-  .puzzle-rating-card strong {
-    font-size: 50px;
   }
 }
 
@@ -2271,6 +2383,19 @@ a.puzzle-tag--link:hover {
   .puzzles-shell .puzzle-board-panel > .puzzle-session-chips {
     flex: none;
     margin-block: auto;
+  }
+
+  /* Report a problem takes its own row under the one-row strip, and the strip
+     grows for it out of the gap the session row sits in; at the fixed height
+     the open form was clipped. */
+  .puzzles-shell .puzzle-trainer-panel > .puzzle-solved-panel:has(> .puzzle-report) {
+    height: auto;
+    min-height: var(--puzzle-prompt-height);
+  }
+
+  .puzzles-shell .puzzle-solved-panel > .puzzle-report {
+    grid-column: 1 / -1;
+    padding: 2px 12px 8px;
   }
 
   /* Streak's shell scrolls on desktop (its summary card can be long); with a
