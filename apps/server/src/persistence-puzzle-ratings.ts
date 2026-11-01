@@ -260,9 +260,16 @@ export async function getPuzzleDashboard(
 // separately; neither list treats a repair as a new first outcome.
 export async function listFailedPuzzleAttempts(
   userId: string,
-  options: { variant?: string; repaired?: boolean } = {},
+  options: { variant?: string; repaired?: boolean; days?: number } = {},
 ): Promise<readonly FailedPuzzleAttempt[]> {
   if (!isInitialized()) return [];
+  const values: unknown[] = [userId];
+  const variantFilter = options.variant ? `AND variant = $${values.push(options.variant)}` : '';
+  const windowFilter =
+    options.days === undefined
+      ? ''
+      : `AND created_at >= now() - ($${values.push(options.days)}::integer * INTERVAL '1 day')
+     AND created_at <= now()`;
   const { rows } = await getPool().query<{
     puzzle_id: string;
     variant: string;
@@ -272,9 +279,10 @@ export async function listFailedPuzzleAttempts(
     `SELECT puzzle_id, variant, created_at, repaired_at FROM puzzle_attempts
      WHERE user_id = $1
        AND ${options.repaired ? REPAIRED_PUZZLE_ATTEMPT : 'solved = FALSE AND repaired_at IS NULL'}
-       ${options.variant ? 'AND variant = $2' : ''}
+       ${variantFilter}
+       ${windowFilter}
      ORDER BY created_at DESC, puzzle_id`,
-    options.variant ? [userId, options.variant] : [userId],
+    values,
   );
   return rows.map((row) => ({
     puzzleId: row.puzzle_id,

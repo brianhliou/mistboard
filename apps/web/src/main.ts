@@ -331,7 +331,8 @@ const wantsXiangqiBroadcastAbout = path === '/broadcast/xiangqi/about';
 const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
 const xiangqiBroadcastRound = xiangqiBroadcastRoundFromPath(path);
 const xiangqiBroadcastTourSlug = xiangqiBroadcastTourSlugFromPath(path);
-const puzzleId = puzzleIdFromPath(path);
+const wantsPuzzleReplay = path === '/puzzles/replay';
+const puzzleId = wantsPuzzleReplay ? null : puzzleIdFromPath(path);
 const wantsPuzzleDashboard = path === '/puzzles/dashboard';
 const wantsPuzzles = path === '/puzzles' || page === 'puzzles' || puzzleId !== null;
 // Behind the correspondence build flag (soft launch). The nav bell + this
@@ -845,6 +846,11 @@ if (replaySample) {
     import('./puzzles/dashboard.js').then(({ mountPuzzleDashboard }) =>
       mountPuzzleDashboard(appRoot),
     ),
+  );
+} else if (wantsPuzzleReplay) {
+  setTitleKey('nav.puzzles');
+  void mountOrReport(() =>
+    import('./puzzles.js').then(({ mountPuzzles }) => mountPuzzles(appRoot)),
   );
 } else if (wantsPuzzles) {
   setTitleKey('nav.puzzles');

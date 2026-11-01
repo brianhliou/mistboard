@@ -19,9 +19,11 @@ import {
   puzzleAttemptedProps,
   track,
 } from './analytics.js';
+import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { pieceAnimationDurationMs } from './board-anim.js';
 import { attachBoardResizeGrip, restoreBoardScale } from './board-resize.js';
 import { t } from './i18n/catalog.js';
+import { currentLocale } from './i18n/locale.js';
 import {
   createLiveFinishBadges,
   finishBadgesForResult,
@@ -147,6 +149,11 @@ export async function mountPuzzles(
 
   const { shell, detail, controls } = buildPuzzlesFrame();
   root.replaceChildren(buildNav(), shell);
+
+  if (window.location.pathname.replace(/\/$/, '') === '/puzzles/replay') {
+    await mountFailedPuzzleReplay({ shell, detail, controls });
+    return;
+  }
 
   if (new URLSearchParams(window.location.search).get('mode') === 'streak') {
     const { mountPuzzleStreak } = await import('./puzzles/streak.js');
@@ -1169,7 +1176,7 @@ async function submitMove(
   if (!submitted) return;
   if (submitted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
   const { attempt, rating } = submitted;
-  // Only a streak submitter sends the line, and only on the miss that ends the run.
+  // A mode submitter can send the line on a terminal miss (streak or replay).
   const { solution } = submitted as { solution?: PuzzleMove[] };
   session.submitting = false;
   session.selectedSquare = null;
@@ -1839,7 +1846,8 @@ const ICON_NEXT =
 
 /**
  * One puzzle as a standalone solver: the board and the trainer panel (feedback,
- * hint, reveal, replay arrows) and nothing else. No queue, no nav, no auto-next.
+ * hint, reveal, replay arrows). Callers can supply queue navigation and opt
+ * into visit tracking for training modes.
  * It is what /embed/puzzle mounts inside someone else's page, and it is the
  * same code path the trainer uses, so a fix to solving lands in both.
  *
@@ -1848,7 +1856,9 @@ const ICON_NEXT =
  */
 export type PuzzleSolverOptions = {
   onSolved?: (id: string) => void;
-  mode?: 'embed' | 'streak';
+  mode?: PuzzleAttemptMode;
+  recordVisit?: boolean;
+  navigation?: PuzzleNavigation;
   analysis?: boolean;
   feedback?: (session: PuzzleSession) => HTMLElement;
   // A replacement attempt submitter. One that also returns `solution` on a
@@ -1860,7 +1870,7 @@ export type PuzzleSolverOptions = {
   ) => Promise<Awaited<ReturnType<typeof submitPuzzleAttempt>> & { solution?: PuzzleMove[] }>;
   onAttempt?: (attempt: PuzzleAttempt) => void;
   // Runs after each render of the board panel (streak adds its run chips).
-  afterRender?: (host: HTMLElement) => void;
+  afterRender?: (host: HTMLElement, session: PuzzleSession) => void;
 };
 
 export type PuzzleSolverHandle = {
@@ -1879,21 +1889,23 @@ export function mountPuzzleSolver(
   setBoardFamily('xiangqi');
   setPuzzleRatedPref(false);
   puzzleAnalyticsMode = opts.mode ?? 'embed';
-  if (opts.mode === 'streak') {
+  if (opts.mode === 'streak' || opts.recordVisit) {
     resetPhoneMenu();
     phoneMenu.props = null;
   }
   restoreBoardScale();
   installPuzzleGripFit();
-  const session = createPuzzleSession(puzzle, { history: opts.mode === 'streak' });
-  if (opts.mode === 'streak') {
+  const session = createPuzzleSession(puzzle, {
+    history: opts.mode === 'streak' || opts.recordVisit,
+  });
+  if (opts.mode === 'streak' || opts.recordVisit) {
     void sendPuzzleQualityEvent(puzzle.id, session.qualitySessionId, 'view').catch(() => {});
   }
-  // An empty queue: the feedback panel then offers no previous/next.
-  const navigation = navigationFor([], null, async () => {});
+  // Without a caller's queue, the feedback panel offers no previous/next.
+  const navigation = opts.navigation ?? navigationFor([], null, async () => {});
   const renderSession = (): void => {
     renderPuzzleDetail(host, session, renderSession, navigation, (id) => opts.onSolved?.(id), opts);
-    opts.afterRender?.(host);
+    opts.afterRender?.(host, session);
   };
   let disposed = false;
   renderSession();
@@ -1936,4 +1948,167 @@ export function mountPuzzleSolver(
       renderSession();
     },
   };
+}
+
+// This small mode keeps its two new messages together in all supported locales;
+// the rest of its chrome uses the trainer and Dashboard catalogs.
+async function mountFailedPuzzleReplay(frame: ReturnType<typeof buildPuzzlesFrame>): Promise<void> {
+  const { shell, detail, controls } = frame;
+  const requested = new URLSearchParams(window.location.search).get('days') ?? '30';
+  const days = ['1', '2', '3', '7', '10', '14', '21', '30', '60', '90'].includes(requested)
+    ? requested
+    : '30';
+  const copy = {
+    en: { progress: (n: number, total: number) => `Replay: ${n} of ${total}`, done: 'All done' },
+    'zh-Hans': {
+      progress: (n: number, total: number) => `错题重练：${n} / ${total}`,
+      done: '全部完成',
+    },
+    'zh-Hant': {
+      progress: (n: number, total: number) => `錯題重練：${n} / ${total}`,
+      done: '全部完成',
+    },
+  }[currentLocale()];
+  const dashboard = (): HTMLAnchorElement => {
+    const link = document.createElement('a');
+    link.href = `/puzzles/dashboard?days=${days}`;
+    link.textContent = t('puzzle.dashboardTitle');
+    return link;
+  };
+  const card = document.createElement('section');
+  card.className = 'puzzle-left-card';
+  card.append(dashboard());
+  controls.replaceChildren(card);
+  setOnAttemptRating(null);
+  let failures: { puzzleId: string; failedAt: string }[] = [];
+  let index = 0;
+  let solver: PuzzleSolverHandle | null = null;
+  let timer: number | null = null;
+  let busy = false;
+
+  const stopSolver = (): void => {
+    if (timer !== null) window.clearTimeout(timer);
+    timer = null;
+    solver?.dispose();
+    solver = null;
+  };
+  const message = (text: string, link: HTMLAnchorElement): void => {
+    stopSolver();
+    resetPhoneMenu();
+    const panel = document.createElement('section');
+    panel.className = 'puzzle-left-card puzzle-replay-summary';
+    const title = document.createElement('h1');
+    title.textContent = text;
+    panel.append(title, link);
+    shell.replaceChildren(panel);
+  };
+  const signIn = (): void => {
+    const link = document.createElement('a');
+    link.href = loginHrefForCurrentPage();
+    link.textContent = t('nav.signIn');
+    message(t('nav.puzzles'), link);
+  };
+  const retry = (action: () => Promise<void>): void => {
+    renderStatus(detail, t('stats.unavailableBody'));
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = t('puzzle.statusTryAgain');
+    button.addEventListener('click', () => void action());
+    detail.querySelector('.puzzles-status')!.append(' ', button);
+  };
+  const advance = (): void => {
+    if (busy) return;
+    index++;
+    void showPuzzle();
+  };
+  const showPuzzle = async (): Promise<void> => {
+    busy = true;
+    stopSolver();
+    renderPendingBoard(detail, t('puzzle.loading'));
+    try {
+      let puzzle: PuzzleDetail | null = null;
+      // A puzzle removed since the queue loaded can no longer be replayed.
+      while (index < failures.length && !puzzle) {
+        puzzle = await fetchPuzzleDetail(failures[index]!.puzzleId);
+        if (!puzzle) index++;
+      }
+      if (!puzzle) {
+        message(copy.done, dashboard());
+        return;
+      }
+      const current = index;
+      const navigation: PuzzleNavigation = {
+        index: current,
+        total: failures.length,
+        hasPrevious: false,
+        hasNext: true,
+        goPrevious: () => {},
+        goNext: advance,
+      };
+      solver = mountPuzzleSolver(detail, puzzle, {
+        mode: 'session',
+        recordVisit: true,
+        analysis: false,
+        navigation,
+        submitAttempt: async (id, moves, sessionId) => {
+          const result = await submitPuzzleAttempt(id, moves, sessionId);
+          if (!result.attempt.ok && result.attempt.code === 'incorrect-move') {
+            const revealed = await fetchPuzzleSolution(id, sessionId);
+            return { ...result, ...(revealed.solution ? { solution: revealed.solution } : {}) };
+          }
+          return result;
+        },
+        afterRender: (host, session) => {
+          const progress = host.querySelector('.puzzle-feedback-title, .puzzle-solved-panel h2');
+          if (progress) {
+            progress.classList.add('puzzle-replay-progress');
+            progress.textContent = copy.progress(current + 1, failures.length);
+            progress.setAttribute('aria-live', 'polite');
+          }
+          // The full answer stays on the board before moving on. No retry of
+          // the failed puzzle can accidentally repair it in this visit.
+          if (
+            (session.solved || session.revealed) &&
+            !session.wrongPreview &&
+            session.viewPly === session.playedMoves.length &&
+            timer === null
+          ) {
+            timer = window.setTimeout(
+              () => {
+                if (index === current && shell.isConnected && isPaintedPuzzleSession(session))
+                  advance();
+              },
+              session.solved ? AUTO_NEXT_DELAY_MS : REVEAL_STEP_MS * 2,
+            );
+          }
+        },
+      });
+    } catch {
+      retry(showPuzzle);
+    } finally {
+      busy = false;
+    }
+  };
+  const load = async (): Promise<void> => {
+    renderPendingBoard(detail, t('puzzle.loading'));
+    try {
+      const response = await fetch(`/api/puzzles/failed?days=${days}`, {
+        credentials: 'same-origin',
+      });
+      if (response.status === 401) {
+        signIn();
+        return;
+      }
+      if (!response.ok) throw new Error('Replay unavailable');
+      const result = (await response.json()) as { failures: typeof failures };
+      failures = result.failures.sort(
+        (a, b) =>
+          Date.parse(a.failedAt) - Date.parse(b.failedAt) || a.puzzleId.localeCompare(b.puzzleId),
+      );
+      await showPuzzle();
+    } catch {
+      retry(load);
+    }
+  };
+  await load();
 }

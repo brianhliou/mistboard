@@ -709,9 +709,15 @@ export async function tryHandle(
       writeJson(response, 400, { error: 'invalid_repaired' });
       return true;
     }
+    const days = parsedUrl.searchParams.get('days');
+    if (days !== null && !['1', '2', '3', '7', '10', '14', '21', '30', '60', '90'].includes(days)) {
+      writeJson(response, 400, { error: 'invalid_days' });
+      return true;
+    }
     const failures = await listFailedPuzzleAttempts(user.id, {
       variant: variant ?? undefined,
       repaired: repaired === 'true',
+      days: days === null ? undefined : Number(days),
     });
     const store = await getPuzzleStore();
     writeJson(response, 200, {

@@ -112,6 +112,171 @@ describe('puzzles route', () => {
     gloss: 'The horse pens the general in and screens the cannon behind it.',
   }));
 
+  it('replays Dashboard failures oldest first instead of opening puzzle replay', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/replay?days=30');
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === '/api/puzzles/failed?days=30') {
+        return json({
+          failures: [
+            { puzzleId: BLACK_MATE.id, failedAt: '2026-10-30T12:00:00Z' },
+            { puzzleId: RED_MATE.id, failedAt: '2026-10-29T12:00:00Z' },
+          ],
+        });
+      }
+      if (url === `/api/puzzles/${RED_MATE.id}`) return json({ puzzle: publicDetail(RED_MATE) });
+      if (url.endsWith('/quality')) return new Response(null, { status: 204 });
+      return json({ puzzles: [] }, url === '/api/puzzles' ? 200 : 404);
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/puzzles/failed?days=30', {
+      credentials: 'same-origin',
+    });
+    expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(RED_MATE.id);
+    expect(root.querySelector('.puzzle-replay-progress')?.textContent).toBe('Replay: 1 of 2');
+    expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/puzzles/replay')).toBe(false);
+    expect(fetchSpy.mock.calls.some(([url]) => String(url) === '/api/puzzles')).toBe(false);
+    expect(window.location.pathname + window.location.search).toBe('/puzzles/replay?days=30');
+
+    const main = readFileSync('src/main.ts', 'utf8');
+    const replayBranch = main.indexOf('} else if (wantsPuzzleReplay) {');
+    expect(replayBranch).toBeGreaterThan(0);
+    expect(replayBranch).toBeLessThan(main.indexOf('} else if (wantsPuzzles) {'));
+    expect(main).toContain("const wantsPuzzleReplay = path === '/puzzles/replay'");
+  });
+
+  it('solves replay puzzles unrated, advances after a miss plays its solution, and finishes', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/replay?days=7');
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url === '/api/puzzles/failed?days=7')
+        return json({
+          failures: [
+            { puzzleId: RED_MATE.id, failedAt: '2026-10-29T12:00:00Z' },
+            { puzzleId: BLACK_MATE.id, failedAt: '2026-10-30T12:00:00Z' },
+          ],
+        });
+      if (url.endsWith('/quality')) return new Response(null, { status: 204 });
+      const puzzle = url.includes(RED_MATE.id) ? RED_MATE : BLACK_MATE;
+      if (url.endsWith('/attempt'))
+        return json({ attempt: attemptStandardXiangqiPuzzleLine(puzzle, movesOf(init)) });
+      if (url.endsWith('/reveal')) return json({ solution: puzzle.solution });
+      return json({ puzzle: publicDetail(puzzle) });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    await solveLine(root, RED_MATE);
+    await vi.waitFor(() =>
+      expect(root.querySelector('.puzzle-replay-progress')?.textContent).toBe('Replay: 2 of 2'),
+    );
+    const wrong = getStandardXiangqiLegalMoves(BLACK_MATE.initial).find(
+      (move) => !standardXiangqiPuzzleMoveEquals(move, BLACK_MATE.solution[0]!),
+    )!;
+    await clickSquares(root, wrong);
+    await vi.waitFor(() => expect(root.querySelector('.puzzle-revealed-panel')).not.toBeNull());
+    expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(BLACK_MATE.id);
+    // The wrong visit submits only that miss: autoplay never submits a solve.
+    await vi.waitFor(
+      () => expect(root.querySelector('.puzzle-replay-summary')?.textContent).toContain('All done'),
+      { timeout: 7000 },
+    );
+    expect(root.querySelector('.puzzle-replay-summary a')?.getAttribute('href')).toBe(
+      '/puzzles/dashboard?days=7',
+    );
+    const attempts = fetchSpy.mock.calls.filter(([url]) => String(url).endsWith('/attempt'));
+    expect(attempts).toHaveLength(3);
+    for (const [, init] of attempts) {
+      expect(JSON.parse(String(init?.body))).toMatchObject({
+        rated: false,
+        qualitySessionId: expect.any(String),
+      });
+    }
+    const reveals = fetchSpy.mock.calls.filter(([url]) => String(url).endsWith('/reveal'));
+    expect(reveals).toHaveLength(1);
+    expect(JSON.parse(String(reveals[0]![1]?.body))).toMatchObject({
+      rated: false,
+      mode: 'solution',
+    });
+    expect(
+      fetchSpy.mock.calls.filter(
+        ([url, init]) =>
+          String(url).endsWith('/quality') && JSON.parse(String(init?.body)).event === 'view',
+      ),
+    ).toHaveLength(2);
+    expect(window.location.pathname + window.location.search).toBe('/puzzles/replay?days=7');
+  });
+
+  it.each([
+    ['en', 'Replay: 1 of 1', 'All done'],
+    ['zh-Hans', '错题重练：1 / 1', '全部完成'],
+    ['zh-Hant', '錯題重練：1 / 1', '全部完成'],
+  ])(
+    'localizes replay progress and the empty completion screen in %s',
+    async (locale, progress, done) => {
+      stubWindowLocalStorage(memoryStorage({ [LOCALE_STORAGE_KEY]: locale }));
+      window.history.replaceState(null, '', '/puzzles/replay?days=90');
+      let failures = [{ puzzleId: RED_MATE.id, failedAt: '2026-10-29T12:00:00Z' }];
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = String(input);
+          if (url.startsWith('/api/puzzles/failed')) return json({ failures });
+          if (url.endsWith('/quality')) return new Response(null, { status: 204 });
+          return json({ puzzle: publicDetail(RED_MATE) });
+        }),
+      );
+      const root = document.createElement('div');
+      await mountPuzzles(root);
+      expect(root.querySelector('.puzzle-replay-progress')?.textContent).toBe(progress);
+      failures = [];
+      await mountPuzzles(root);
+      expect(root.querySelector('.puzzle-replay-summary')?.textContent).toContain(done);
+      expect(root.querySelector('.puzzle-replay-summary a')?.getAttribute('href')).toBe(
+        '/puzzles/dashboard?days=90',
+      );
+    },
+  );
+
+  it('requires sign-in for replay and retains the days in the login return URL', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/replay?days=14');
+    const fetchSpy = vi.fn(async () => json({ error: 'not_signed_in' }, 401));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzles(root);
+    const link = root.querySelector<HTMLAnchorElement>('.puzzle-replay-summary a')!;
+    expect(new URL(link.href).searchParams.get('referrer')).toBe('/puzzles/replay?days=14');
+    expect(root.querySelector('.puzzle-board')).toBeNull();
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('defaults invalid replay windows to 30 days and retries a failed queue request', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/replay?days=31');
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(json({}, 500))
+      .mockResolvedValue(json({ failures: [] }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzles(root);
+    root.querySelector<HTMLButtonElement>('.puzzles-status button')!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector('.puzzle-replay-summary')?.textContent).toContain('All done'),
+    );
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    expect(fetchSpy).toHaveBeenLastCalledWith('/api/puzzles/failed?days=30', {
+      credentials: 'same-origin',
+    });
+  });
+
   it('saves difficulty, preserves an active attempt, and shifts the next puzzle', async () => {
     stubWindowLocalStorage(memoryStorage());
     vi.spyOn(Math, 'random').mockReturnValue(0);
