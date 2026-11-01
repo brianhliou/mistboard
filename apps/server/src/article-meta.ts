@@ -34,6 +34,7 @@ const GENERATED = generated as Record<string, GeneratedArticleMeta>;
 const PLAYTEST_RULES_SLUG: Readonly<Record<string, string>> = {
   mahjong: 'mahjong',
   'xiangqi-mahjong': 'xiangqi-mahjong-32',
+  gomoku: 'gomoku',
 };
 
 /** The playtest rules slugs kept out of the index under a public predicate:

@@ -15,8 +15,11 @@ import {
 } from '@mistboard/board-render';
 import {
   applyGameEvent,
+  applyGomokuRoomMove,
+  createGomokuRoomState,
   createInitialXiangqiState,
   type GameEvent,
+  getGomokuPlayerView,
   getPlayerView as getXiangqiPlayerView,
   initialGameProjection,
   parseStandardXiangqiFen,
@@ -27,6 +30,7 @@ import {
 } from '@mistboard/game';
 import type { ArticleZhTitles } from './article-meta.js';
 import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
+import { gomokuEnabled } from './feature-flags.js';
 import {
   CARD_ASPECT_FRAMES,
   type CardAspect,
@@ -299,43 +303,60 @@ export const JUNGLE_CARD_FEN = 't6/5dl/1c1w3/6r/e2p2E/1R5/3W3/1D3CT/L6 r 8 10';
 export const JUNGLE_FLIP_CARD_MOVES = 'b3b3 a3a3 b3a3 d3d3 c3c3 d3c3 d2d2 c2c2 b2b2';
 export const JUNGLE_FLIP_CARD_FEN = 'XXXX/L3/XDre/XXXX b R1C1P1T1E1d1p1t1l1 0 9';
 
+type ArticleCardBoard = Parameters<typeof renderBoardCard>[0];
+
+// The horizontal-five example from /rules/gomoku, replayed through the kernel
+// so the existing card renderer gets the same terminal evidence as the board.
+function gomokuRulesCardBoard(): Extract<ArticleCardBoard, { kind: 'gomoku' }> {
+  let state = createGomokuRoomState('gomoku-rules-card');
+  for (const to of ['e8', 'a1', 'f8', 'c1', 'g8', 'e1', 'h8', 'g1', 'i8'] as const) {
+    state = applyGomokuRoomMove(state, { to });
+  }
+  const { board, lastMove, winningLine } = getGomokuPlayerView(state, 'black');
+  return { kind: 'gomoku', position: { board, lastMove, winningLine } };
+}
+
 // Pages whose card is a position on the site board (og-card-board.ts), keyed by
 // the ARTICLE_META slug. Mostly rules pages; an article whose subject is a board
 // game gets one too. The fog xiangqi card shows Red's view of its game: the
 // kernel decides what Red can see, never a hand list. These slugs used to be
 // 'dark-*' and the cards silently vanished at the dark->fog rename (2026-09-12
-// audit); the key here MUST be the live slug. `hanzi` marks a xiangqi-family
-// board, whose zh pages get the card in the traditional set with a zh caption
-// (ARTICLE_OG_ZH_SLUGS). `fen` is required: there is no start-position default.
+// audit); the key here MUST be the live slug. `localized` opts into zh captions
+// (ARTICLE_OG_ZH_SLUGS). Xiangqi boards also use the traditional piece set.
+// Every entry supplies a FEN or a board: there is no start-position default.
 const BOARD_POSITION_CARDS: Record<
   string,
-  { variant: PositionOgVariant; fen: string; redFog?: boolean; hanzi?: true }
+  (
+    | { variant: PositionOgVariant; fen: string; redFog?: boolean }
+    | { board: Extract<ArticleCardBoard, { kind: 'gomoku' }> }
+  ) & { localized?: true }
 > = {
-  xiangqi: { variant: 'xiangqi', fen: XIANGQI_CARD_FEN, hanzi: true },
+  xiangqi: { variant: 'xiangqi', fen: XIANGQI_CARD_FEN, localized: true },
   'fog-xiangqi': {
     variant: 'dark-xiangqi',
     fen: FOG_XIANGQI_CARD_FEN,
     redFog: true,
-    hanzi: true,
+    localized: true,
   },
-  jieqi: { variant: 'jieqi', fen: JIEQI_CARD_FEN, hanzi: true },
-  banqi: { variant: 'banqi', fen: BANQI_RULES_CARD_FEN, hanzi: true },
+  jieqi: { variant: 'jieqi', fen: JIEQI_CARD_FEN, localized: true },
+  banqi: { variant: 'banqi', fen: BANQI_RULES_CARD_FEN, localized: true },
   'fortress-xiangqi': {
     variant: 'fortress-xiangqi',
     fen: FORTRESS_XIANGQI_CARD_FEN,
-    hanzi: true,
+    localized: true,
   },
-  'duck-xiangqi': { variant: 'duck-xiangqi', fen: DUCK_XIANGQI_CARD_FEN, hanzi: true },
+  'duck-xiangqi': { variant: 'duck-xiangqi', fen: DUCK_XIANGQI_CARD_FEN, localized: true },
   // Unlisted, but a rules link is still shared.
-  'atomic-xiangqi': { variant: 'atomic-xiangqi', fen: ATOMIC_XIANGQI_CARD_FEN, hanzi: true },
+  'atomic-xiangqi': { variant: 'atomic-xiangqi', fen: ATOMIC_XIANGQI_CARD_FEN, localized: true },
   'crazyhouse-xiangqi': {
     variant: 'crazyhouse-xiangqi',
     fen: CRAZYHOUSE_XIANGQI_CARD_FEN,
-    hanzi: true,
+    localized: true,
   },
   jungle: { variant: 'jungle', fen: JUNGLE_CARD_FEN },
   'jungle-flip': { variant: 'jungle-flip', fen: JUNGLE_FLIP_CARD_FEN },
-  pikafish: { variant: 'xiangqi', fen: PIKAFISH_CARD_FEN, hanzi: true },
+  pikafish: { variant: 'xiangqi', fen: PIKAFISH_CARD_FEN, localized: true },
+  gomoku: { board: gomokuRulesCardBoard(), localized: true },
 };
 
 /** The page languages a card has its own version for, as route prefixes. */
@@ -347,14 +368,14 @@ export function isArticleOgLang(value: string): value is ArticleOgLang {
 }
 
 /** Slugs whose card has a zh version per script (`?lang=zh-hans|zh-hant`):
- *  the same board in the traditional (hanzi) set, captioned with the page's
- *  own zh title. The site gives zh readers hanzi pieces by default (memory
+ *  the board captioned with the page's own zh title. Xiangqi-family cards use
+ *  the traditional (hanzi) set, as the site does by default (memory
  *  piece_set_default_by_locale_settled); one card URL per page language lets
  *  the card follow. Every one has published zh titles (og-image.test.ts).
  *  Mirrored by the web build (apps/web/src/article-og-image.ts); og-image.test.ts
  *  pins the two. */
 export const ARTICLE_OG_ZH_SLUGS: readonly string[] = Object.entries(BOARD_POSITION_CARDS)
-  .filter(([, entry]) => entry.hanzi)
+  .filter(([, entry]) => entry.localized)
   .map(([slug]) => slug);
 
 // ARTICLE_OG_POSITIONS (board-render) is keyed by the chess positions' original
@@ -399,9 +420,10 @@ export function articleOgImageUrl(host: string, slug: string, langPrefix?: strin
 export const ARTICLE_OG_WIDE_ONLY_SLUGS: readonly string[] = Object.keys(CUSTOM_ARTICLE_OG_SVGS);
 
 /** The board a page's position card shows, or null when the slug has none. */
-export function positionCardBoard(slug: string): PositionOgBoard | null {
+export function positionCardBoard(slug: string): ArticleCardBoard | null {
   const entry = BOARD_POSITION_CARDS[slug];
   if (!entry) return null;
+  if ('board' in entry) return entry.board;
   const resolved = resolvePositionOg(entry.variant, entry.fen);
   if (!resolved) return null;
   let board = resolved.board;
@@ -495,10 +517,17 @@ export async function serveArticleOgImage(params: {
   zhTitles?: ArticleZhTitles;
 }): Promise<void> {
   const { slug, kind, response, staticDir, aspect, lang } = params;
+  // Rules remain directly readable for review, but their hidden playtest card
+  // must not be served (including from cache) without the server's opt-in.
+  if (slug === 'gomoku' && !gomokuEnabled()) {
+    response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+    response.end('Gomoku rules card is disabled');
+    return;
+  }
   const zhTitle = lang ? params.zhTitles?.[lang] : undefined;
   if (lang && (!ARTICLE_OG_ZH_SLUGS.includes(slug) || !zhTitle)) {
     response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-    response.end(`no ${lang} card for ${slug}: it has no xiangqi-family board or no ${lang} page`);
+    response.end(`no ${lang} card for ${slug}: it has no localized board or no ${lang} page`);
     return;
   }
   const pieceSet: CardPieceSet = lang ? 'traditional' : 'international';

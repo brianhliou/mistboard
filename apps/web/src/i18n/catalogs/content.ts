@@ -271,6 +271,11 @@ export const EN_CONTENT = {
   'source.katagomo':
     "KataGomo by hzyhhzy: KataGo for jungle (the AnimalChess2025 branch), the top jungle bot, MIT; played here with the author's permission.",
   'source.katago': 'KataGo by lightvector: the engine KataGomo is built on, MIT.',
+  'source.rapfi':
+    'Rapfi by dhbloo and contributors: the five Gomoku bot levels, played in your browser, GPL-3.0.',
+  'source.rapfiNetworks': 'Rapfi neural networks by the Rapfi project, CC0 1.0.',
+  'source.rapfiBuild':
+    'rapfi-wasm by Brian H. Liou: the reproducible Rapfi browser build used here, GPL-3.0.',
   'source.dandelion':
     "Dandelion 4 by Kouza (lxsgx23): the source of the top jungle bot's neural network, fetched from its release and never re-hosted.",
   'source.chessdb':
@@ -455,6 +460,10 @@ export const EN_CONTENT = {
   'thanks.dandelionAuthor': 'Dandelion 4 network by Kouza',
   'thanks.katagoBody':
     "The top Jungle bot: hzyhhzy's Jungle version of KataGo, playing with the Dandelion 4 network, run here with their permission.",
+  'thanks.rapfiAuthors': 'dhbloo and the Rapfi contributors',
+  'thanks.rapfiBuildAuthor': 'Browser build by Brian H. Liou',
+  'thanks.rapfiBody':
+    'Plays all five Gomoku bot levels in your browser, with neural networks from the Rapfi project and the rapfi-wasm build.',
   'thanks.communityBotBy': 'A bot from a community developer.',
   'thanks.statGames': 'games on Mistboard',
   'thanks.statRating': '{variant} rating',
@@ -842,6 +851,12 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.jqe',
   'source.katagomo',
   'source.katago',
+  'source.rapfi',
+  'source.rapfiNetworks',
+  'source.rapfiBuild',
+  'thanks.rapfiAuthors',
+  'thanks.rapfiBuildAuthor',
+  'thanks.rapfiBody',
   'source.dandelion',
   'source.chessdb',
   'source.pieceSetLacquer',

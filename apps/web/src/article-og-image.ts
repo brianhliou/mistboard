@@ -37,10 +37,10 @@ export const ARTICLE_OG_WIDE_ONLY_SLUGS: readonly string[] = [
   'xiangqi-mahjong-32',
 ];
 
-/** Mirrors ARTICLE_OG_ZH_SLUGS in apps/server/src/og-image.ts: pages whose
- *  card is a xiangqi-family board, which their zh pages show in the traditional
- *  (hanzi) set, as the site draws the pieces for a zh reader, captioned with
- *  the page's own zh title. Any other slug's `lang=` URL is a 404. */
+/** Mirrors ARTICLE_OG_ZH_SLUGS in apps/server/src/og-image.ts: board cards
+ *  captioned with the page's own zh title. Xiangqi-family boards also use the
+ *  traditional (hanzi) set; Gomoku keeps the same stones in all languages.
+ *  Any other slug's `lang=` URL is a 404. */
 export const ARTICLE_OG_ZH_SLUGS: readonly string[] = [
   'xiangqi',
   'fog-xiangqi',
@@ -51,6 +51,7 @@ export const ARTICLE_OG_ZH_SLUGS: readonly string[] = [
   'atomic-xiangqi',
   'crazyhouse-xiangqi',
   'pikafish',
+  'gomoku',
 ];
 
 /** The card language a page in `lang` (an html lang or a route prefix:

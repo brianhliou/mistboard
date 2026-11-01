@@ -1493,18 +1493,19 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
   return a.title.localeCompare(b.title);
 }
 
-// A rules page whose variant is outside the canonical order (no game spec yet,
-// or a hidden playtest spec such as three-kingdoms-banqi, #628) sorts right
-// after the spec it varies, instead of falling to the end of the rail.
+// Explicit placement for rules pages outside the canonical public shelf:
+// related playtests follow their base game; Gomoku follows the shelf's end.
 const RULES_RAIL_AFTER_SPEC: Record<string, string> = {
   'three-kingdoms-banqi': 'banqi',
+  // A separate board-game family follows the public shelf in local playtests.
+  gomoku: 'xiangqi-mahjong',
 };
 
 function rulesArticleRailSortIndex(article: Article): number {
   const after = RULES_RAIL_AFTER_SPEC[article.slug];
   if (after && isGameSpecId(after)) return canonicalVariantOrderIndex(after) + 0.5;
-  const gameSpecId = article.gameSpecId ?? article.slug;
-  if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
+  const gameSpecId = article.gameSpecId ?? gameSpecIdFromRulesSlug(article.slug);
+  if (gameSpecId && isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
   return Number.MAX_SAFE_INTEGER;
 }
 
@@ -3086,6 +3087,7 @@ export function renderArticleThumbnail(
 // reads in one visual language. Chess is study-only, not a variant, and has no
 // marker: off the rail it keeps its own board thumbnail.
 const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
+  gomoku: 'gomoku',
   'fog-chess': 'dark-chess',
   xiangqi: 'xiangqi',
   'fog-xiangqi': 'dark-xiangqi',

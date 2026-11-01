@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import { hasSiteByline } from './articles/site-author.js';
 import { articles } from './articles-data.js';
-import { t } from './i18n/catalog.js';
+import { ensureLocaleCatalog, t } from './i18n/catalog.js';
 import {
   ARTICLE_ROUTE_CLASS,
   articlesIndexPrerenderHead,
@@ -36,6 +36,7 @@ describe('static pages', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     document.body.innerHTML = '';
   });
@@ -173,6 +174,50 @@ describe('static pages', () => {
       ]);
       expect(line?.textContent).not.toContain('\u2014');
       root.remove();
+    }
+  });
+
+  it.each([
+    ['/source', 'en', 'Gomoku', 'neural networks', 'browser build'],
+    ['/zh-hans/source', 'zh-Hans', '五子棋', '神经网络', '浏览器构建'],
+    ['/zh-hant/source', 'zh-Hant', '五子棋', '神經網路', '瀏覽器建置'],
+  ] as const)(
+    'credits Rapfi code, networks and build on %s when enabled',
+    async (path, locale, game, networks, build) => {
+      await ensureLocaleCatalog(locale);
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+      window.history.replaceState(null, '', path);
+      const root = document.createElement('main');
+      mountSource(root);
+      const engine = root.querySelector('a[href="https://github.com/dhbloo/rapfi"]');
+      expect(engine?.textContent).toContain('dhbloo');
+      expect(engine?.textContent).toContain(game);
+      expect(engine?.textContent).toContain('GPL-3.0');
+      const weights = root.querySelector('a[href="/engine/rapfi/NETWORKS-CC0.txt"]');
+      expect(weights?.textContent).toContain(networks);
+      expect(weights?.textContent).toContain('CC0 1.0');
+      const wasm = root.querySelector('a[href="https://github.com/brianhliou/rapfi-wasm"]');
+      expect(wasm?.textContent).toContain(build);
+      expect(wasm?.textContent).toContain('Brian H. Liou');
+      for (const link of [engine, weights, wasm]) {
+        expect(link).not.toBeNull();
+        expect(link?.getAttribute('rel')).toContain('noopener');
+        expect(link?.textContent).not.toContain('—');
+      }
+    },
+  );
+
+  it.each([false, true])('omits every Rapfi source credit with the flag off (DEV=%s)', (dev) => {
+    vi.stubEnv('DEV', dev);
+    for (const flag of [undefined, 'false']) {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', flag);
+      for (const path of ['/source', '/zh-hans/source', '/zh-hant/source']) {
+        window.history.replaceState(null, '', path);
+        const root = document.createElement('main');
+        mountSource(root);
+        expect(root.outerHTML).not.toMatch(/rapfi|gomoku|五子棋/i);
+        expect(root.querySelector('.source-credit-pikafish')).not.toBeNull();
+      }
     }
   });
 

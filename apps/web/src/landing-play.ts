@@ -12,6 +12,8 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   defaultEngineTimeControl,
   FORTRESS_XIANGQI_SPEC_ID,
+  GOMOKU_SPEC_ID,
+  type GomokuOpeningMode,
   gameSpecForId,
   isAllowedEngineTimeControl,
   JIEQI_SPEC_ID,
@@ -119,6 +121,7 @@ export type LandingPlayChoice = {
 };
 export type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
 export type LandingGameSpecId =
+  | typeof GOMOKU_SPEC_ID
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof JIEQI_SPEC_ID
@@ -164,6 +167,7 @@ export type LandingRoomSetup = {
     incrementMs: number;
   };
   preferredColor: LandingColorPreference;
+  opening?: GomokuOpeningMode;
 };
 type LandingSetupPreference = {
   // Legacy single-slot engine pick (pre per-variant). Still read/written for
@@ -333,6 +337,18 @@ const DARK_CHESS_LANDING_CAPABILITIES: LandingGameSpecCapabilities = {
   secondGlyph: '♚',
   secondLabel: 'Black',
   supportsRated: true,
+  supportsTimeControl: true,
+};
+// Taxonomy-only Gomoku has no tenant yet. Keep setup semantics explicit so
+// stale/programmatic requests retain Black first and never inherit rated chess.
+const GOMOKU_LANDING_CAPABILITIES: LandingGameSpecCapabilities = {
+  firstColor: 'black',
+  firstGlyph: '●',
+  firstLabel: 'Black',
+  secondColor: 'white',
+  secondGlyph: '○',
+  secondLabel: 'White',
+  supportsRated: false,
   supportsTimeControl: true,
 };
 
@@ -1869,6 +1885,12 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   let colorIsExplicit = storedColor !== undefined;
   let preferredColor: LandingColorPreference =
     storedColor ?? defaultColorPreference(choice.mode, selectedGameSpecId);
+  const openingSection = document.createElement('label');
+  openingSection.className = 'landing-setup-section';
+  const freeOpening = document.createElement('input');
+  freeOpening.type = 'checkbox';
+  freeOpening.dataset.gomokuFreeOpening = '';
+  openingSection.append(freeOpening, document.createTextNode('Free opening (empty board)'));
   let syncGameSpecificSections = () => {};
   let syncVariantControls = () => {};
   let syncColorPreferenceControls = () => {};
@@ -2313,6 +2335,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       return;
     }
     const setup = selectedRoomSetup(selectedGameSpecId, rated, selectedPreset, preferredColor);
+    if (selectedGameSpecId === GOMOKU_SPEC_ID && choice.mode !== 'lobby')
+      setup.opening = freeOpening.checked ? 'free' : 'balanced';
     storeSetupPreference(choice.mode, setup, selectedPreset, selectedEngineId, colorIsExplicit);
     if (choice.mode === 'lobby') {
       cancelLobbyWait?.();
@@ -2448,6 +2472,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
       : null;
 
   syncGameSpecificSections = () => {
+    openingSection.hidden = selectedGameSpecId !== GOMOKU_SPEC_ID || choice.mode === 'lobby';
+    openingSection.style.display = openingSection.hidden ? 'none' : '';
     const capabilities = landingGameSpecCapabilities(selectedGameSpecId);
     if (!capabilities.supportsRated) {
       rated = false;
@@ -2531,6 +2557,9 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
     ...(colorSection
       ? [buildSetupSection('side', t('setup.side', {}, locale), colorSection, colorSummary)]
       : []),
+    buildSetupSection('opening', 'Opening', openingSection, () =>
+      freeOpening.checked ? 'Free opening' : 'Balanced opening',
+    ),
     buildSetupSection(
       'gameType',
       t('setup.gameType', {}, locale),
@@ -2602,6 +2631,7 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   for (const section of setupSections) {
     section.button?.addEventListener('click', () => openSetupSection(section.id));
   }
+  freeOpening.addEventListener('change', () => syncSetupAccordion());
   syncSetupAccordion();
 
   // The decision sequence closes with game type and opponent. Computer adds one
@@ -3395,6 +3425,7 @@ function chessKingGlyphNodes(value: LandingColorPreference): Node[] {
 }
 
 function landingGameSpecCapabilities(gameSpecId: LandingGameSpecId): LandingGameSpecCapabilities {
+  if (gameSpecId === GOMOKU_SPEC_ID) return GOMOKU_LANDING_CAPABILITIES;
   // Tenant capabilities live on their registry entries; chess (the fallback)
   // keeps its row here until the P2 migration.
   return (
@@ -3789,6 +3820,7 @@ export function roomCreationRequestBody(
     timeControl: setup.timeControl,
     rated,
     preferredColor: setup.preferredColor,
+    ...(gameSpecId === GOMOKU_SPEC_ID ? { opening: setup.opening ?? 'balanced' } : {}),
     ...(mode === 'pve' && engineId ? { engineId } : {}),
   };
 }
@@ -3796,6 +3828,7 @@ export function roomCreationRequestBody(
 export function roomCreationGameSpecId(
   setup: LandingRoomSetup,
 ):
+  | typeof GOMOKU_SPEC_ID
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof JIEQI_SPEC_ID
@@ -3810,6 +3843,7 @@ export function roomCreationGameSpecId(
   | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
   | typeof XIANGQI_SPEC_ID {
+  if (setup.gameSpecId === GOMOKU_SPEC_ID) return GOMOKU_SPEC_ID;
   if (setup.gameSpecId === MAHJONG_SPEC_ID) return MAHJONG_SPEC_ID;
   if (setup.gameSpecId === XIANGQI_MAHJONG_SPEC_ID) return XIANGQI_MAHJONG_SPEC_ID;
   if (setup.gameSpecId === XIANGQI_SPEC_ID) return XIANGQI_SPEC_ID;

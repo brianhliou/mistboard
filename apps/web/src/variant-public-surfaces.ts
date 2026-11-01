@@ -3,11 +3,12 @@ import {
   DARK_XIANGQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
+  GOMOKU_SPEC_ID,
   isPublicGameSpec,
   isRetiredGameSpec,
   THREE_KINGDOMS_BANQI_SPEC_ID,
 } from '@mistboard/game';
-import { threeKingdomsBanqiEnabled } from './feature-flags.js';
+import { gomokuEnabled, threeKingdomsBanqiEnabled } from './feature-flags.js';
 import { localizedHref } from './i18n/locale.js';
 import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
@@ -79,11 +80,14 @@ export function localizedRulesHrefForRoom(roomId: string): string | null {
   return localizedRulesHref(webVariantTenantForRoomId(roomId)?.gameSpecId);
 }
 
-/** A hidden spec whose local playtest build is on (Three Kingdoms banqi, #628):
+/** A hidden spec whose local playtest build is on:
  *  its rules page lists in the rail and offers the board in that build only.
  *  Production never sets the flag, so there the page stays hidden. */
 export function variantPlaytestSurfaceEnabled(id: GameSpecId): boolean {
-  return id === THREE_KINGDOMS_BANQI_SPEC_ID && threeKingdomsBanqiEnabled();
+  return (
+    (id === THREE_KINGDOMS_BANQI_SPEC_ID && threeKingdomsBanqiEnabled()) ||
+    (id === GOMOKU_SPEC_ID && gomokuEnabled())
+  );
 }
 
 export function rulesSlugPublicSurfaceEnabled(slug: string): boolean {

@@ -9,6 +9,7 @@ import {
   loadAppI18nDomains,
   t,
 } from './catalog.js';
+import { CRITICAL_PLAY_I18N_KEYS } from './catalogs/play.js';
 import { SUPPORTED_LOCALES } from './locale.js';
 
 describe('app i18n catalog', () => {
@@ -33,6 +34,28 @@ describe('app i18n catalog', () => {
       }
     }
     expect(missing).toEqual([]);
+  });
+
+  describe('Gomoku bot copy', () => {
+    const keys = [
+      'live.gomokuBotThinking',
+      'live.gomokuBotFailed',
+      'live.gomokuBotPaused',
+      'live.gomokuBotRetry',
+      'live.gomokuBotSource',
+    ] as const;
+
+    it.each(keys)('%s stays in critical play coverage', (key) => {
+      expect(CRITICAL_PLAY_I18N_KEYS).toContain(key);
+    });
+
+    describe.each(['zh-Hans', 'zh-Hant'] as const)('%s', (locale) => {
+      it.each(keys)('%s has Chinese copy without English fallback', (key) => {
+        expect(hasAppTranslation(locale, key)).toBe(true);
+        expect(t(key, {}, locale)).not.toBe(t(key, {}, 'en'));
+        expect(t(key, {}, locale)).toMatch(/\p{Script=Han}/u);
+      });
+    });
   });
 
   it('keeps every key in exactly one domain with locale and critical keys in bounds', () => {

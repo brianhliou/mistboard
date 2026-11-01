@@ -14,6 +14,10 @@ import { type VariantMiniId, variantMiniForId } from './variant-mini-boards.js';
 // 4x canvas (atomic, 96981921) or cut from piece art (duck, 4e38852e), scaled
 // to fill ~93-97% of the box.
 export const FINAL_VARIANT_MARKERS = {
+  // Five stones on a diagonal, with the grid cleared around each stone.
+  gomoku: {
+    path: '/variant-markers/final/gomoku.png',
+  },
   xiangqi: {
     path: '/variant-markers/final/elephant-chess.png',
   },

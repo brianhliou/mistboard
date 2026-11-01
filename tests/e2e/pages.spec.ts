@@ -52,6 +52,7 @@ const TENANT_REVIEW_VARIANTS = [
   'duck-xiangqi',
   'atomic-xiangqi',
   'dark-xiangqi',
+  'gomoku',
 ];
 
 for (const route of ROUTES) {
@@ -106,7 +107,9 @@ test('game review: a finished game from the database replays', async ({ page }, 
   const errors = trackPageErrors(page);
   const path = `/${game.variant}/game/${encodeURIComponent(game.roomId)}`;
   await openAndCheck(page, path);
-  const board = page.locator('.review-board-host');
+  const board = page.locator(
+    game.variant === 'gomoku' ? '.gomoku-live-board' : '.review-board-host',
+  );
   await expect(board).toBeVisible();
   await expect(board.locator('svg').first()).toBeAttached();
   await capture(page, testInfo, `review-${game.variant}`);

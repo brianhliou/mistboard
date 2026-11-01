@@ -16,6 +16,7 @@ test('product profile contains exactly the intended live game specs', () => {
     'dark-xiangqi',
     'dark-chess',
     'xiangqi-mahjong',
+    'gomoku',
   ]);
 });
 
@@ -23,5 +24,6 @@ test('product flags cover every launched spec plus the correspondence surface', 
   assert.ok(PRODUCT_SERVER_FLAGS.includes('MISTBOARD_CORRESPONDENCE_ENABLED'));
   assert.ok(PRODUCT_SERVER_FLAGS.includes('MISTBOARD_DARK_XIANGQI_ENABLED'));
   assert.ok(PRODUCT_SERVER_FLAGS.includes('MISTBOARD_XIANGQI_MAHJONG_ENABLED'));
+  assert.ok(PRODUCT_SERVER_FLAGS.includes('MISTBOARD_GOMOKU_ENABLED'));
   assert.equal(new Set(PRODUCT_SERVER_FLAGS).size, PRODUCT_SERVER_FLAGS.length);
 });

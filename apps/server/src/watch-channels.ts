@@ -165,11 +165,11 @@ export function gameSpecIsPublic(gameSpecId: string): boolean {
 }
 
 // Variants whose listings (TV channel, the live election, /games) wait for the
-// public-surface gate rather than the feature flag alone. Xiangqi Mahjong is
-// flagged on for playtests before launch, so its flag cannot be the listing
+// public-surface gate rather than the feature flag alone. Gomoku and Xiangqi
+// Mahjong can be flagged on for playtests, so a flag cannot be the listing
 // gate. The other hidden specs (atomic xiangqi, HK mahjong, chess) keep their
 // flag-only listing until someone decides to move them here.
-const LISTED_ONLY_WHEN_PUBLIC: ReadonlySet<string> = new Set(['xiangqi-mahjong']);
+const LISTED_ONLY_WHEN_PUBLIC: ReadonlySet<string> = new Set(['xiangqi-mahjong', 'gomoku']);
 
 /** False only for a variant that waits on its public surface and is not on one. */
 export function listedOnSurface(gameSpecId: string): boolean {

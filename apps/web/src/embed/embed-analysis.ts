@@ -95,6 +95,8 @@ const isMovePlayed = (event: GameEvent): event is Extract<GameEvent, { type: 'mo
  * does not compile until someone decides which it is. Fail-closed: there is no default.
  */
 export const EMBED_ANALYSIS_VARIANTS: Record<GameSpecId, EmbedAnalysisVariant | null> = {
+  // No analysis surface for the hidden placement game.
+  gomoku: null,
   xiangqi: {
     route: 'xiangqi',
     quoteEvalBestMove: true,
