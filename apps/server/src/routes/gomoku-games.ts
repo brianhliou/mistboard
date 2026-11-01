@@ -8,6 +8,7 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from '../account-session.js';
 import { gomokuAdmits } from '../gomoku-access.js';
+import { resolveGomokuAnalysis } from '../gomoku-analysis.js';
 import { gomokuRooms } from '../gomoku-registration.js';
 import {
   type GomokuEvent,
@@ -26,6 +27,7 @@ import {
 } from '../variant-tenant/runtime.js';
 import type { TenantClockState } from '../variant-tenant/tenant.js';
 import { registerLiveWatchPayloadBuilder } from '../watch-live.js';
+import { createGameAnalysisRoutes } from './game-analysis-route.js';
 import {
   type HttpApiContext,
   type PostgameGameSummary,
@@ -53,6 +55,7 @@ const defaultPersistence: GomokuPostgamePersistence = {
 
 type GomokuPostgameRouteDeps = GomokuPostgamePersistence & {
   currentAccountUser: typeof currentAccountUser;
+  resolveAnalysis?: typeof resolveGomokuAnalysis;
 };
 
 const defaultRouteDeps: GomokuPostgameRouteDeps = { ...defaultPersistence, currentAccountUser };
@@ -65,6 +68,51 @@ export async function tryHandle(
   _parsedUrl: URL,
   deps: GomokuPostgameRouteDeps = defaultRouteDeps,
 ): Promise<boolean> {
+  if (/^\/api\/gomoku\/games\/[^/]+\/analysis(?:\/jobs\/[^/]+)?$/.test(pathname)) {
+    const user = await deps.currentAccountUser(request);
+    // Cover cached reads AND job polls with the same playtest admission as
+    // replay; the generic route's enabled() alone cannot admit an admin.
+    if (!gomokuAdmits(user)) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    try {
+      // Refuse malformed escapes before the shared route decodes the segments.
+      decodeURIComponent(pathname);
+    } catch {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    const handleAnalysis = createGameAnalysisRoutes(
+      {
+        routeId: 'gomoku',
+        logPrefix: 'gomoku',
+        variantLabel: 'Gomoku',
+        enabled: () => true, // Admission was checked above, including every poll.
+        requiresPersistence: false, // Finished memory-only rooms use the same log.
+        loadInputs: async (roomId: string) => {
+          const replay = await gomokuPostgameForApi(roomId, deps, user);
+          if (!replay) return null;
+          return {
+            opening: replay.history.truth[0]?.view.opening,
+            moves: replay.timeline.flatMap((e) => (e.type === 'move-played' ? [e.move] : [])),
+          };
+        },
+        countPlies: (inputs) => inputs.moves.length,
+        resolveAnalysis: (roomId, inputs, compute) =>
+          (deps.resolveAnalysis ?? resolveGomokuAnalysis)(
+            roomId,
+            inputs.moves,
+            inputs.opening,
+            undefined,
+            undefined,
+            compute,
+          ),
+      },
+      { currentUser: async () => user },
+    );
+    return handleAnalysis(request, response, pathname);
+  }
   const match = pathname.match(/^\/api\/gomoku\/games\/([^/]+)$/);
   if (!match) return false;
   if (!requireMethod(request, response, 'GET')) return true;

@@ -74,3 +74,21 @@
   stroke: #315e9c;
   stroke-width: 2;
 }
+
+.gomoku-best,
+.gomoku-circle {
+  fill: none;
+  stroke: #168344;
+  stroke-width: 3;
+}
+.gomoku-pv-number {
+  font: 700 14px system-ui;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+.gomoku-pv-number--black {
+  fill: #fff;
+}
+.gomoku-pv-number--white {
+  fill: #111;
+}

@@ -207,7 +207,7 @@ export const ZH_HANT_CONTENT = {
   'source.katagomo':
     'KataGomo，作者 hzyhhzy：鬥獸棋版 KataGo（AnimalChess2025 分支），本站最強的鬥獸棋機器人，MIT；經作者許可使用。',
   'source.katago': 'KataGo，作者 lightvector：KataGomo 所基於的引擎，MIT。',
-  'source.rapfi': 'Rapfi，作者 dhbloo 及貢獻者：在瀏覽器中執行的五個五子棋機器人等級，GPL-3.0。',
+  'source.rapfi': 'Rapfi，作者 dhbloo 及貢獻者：在瀏覽器中執行的八個五子棋機器人等級，GPL-3.0。',
   'source.rapfiNetworks': 'Rapfi 專案提供的 Rapfi 神經網路，CC0 1.0。',
   'source.rapfiBuild':
     'rapfi-wasm，作者 Brian H. Liou：本站使用的可重現 Rapfi 瀏覽器建置，GPL-3.0。',
@@ -540,7 +540,7 @@ export const ZH_HANT_CONTENT = {
   'thanks.rapfiAuthors': 'dhbloo 和 Rapfi 的貢獻者',
   'thanks.rapfiBuildAuthor': '瀏覽器建置：Brian H. Liou',
   'thanks.rapfiBody':
-    '在瀏覽器中執行全部五個五子棋機器人等級，使用 Rapfi 專案提供的神經網路和 rapfi-wasm 建置。',
+    '在瀏覽器中執行全部八個五子棋機器人等級，使用 Rapfi 專案提供的神經網路和 rapfi-wasm 建置。',
   'thanks.communityBotBy': '來自社群開發者的機器人。',
   'thanks.statGames': 'Mistboard 上的對局',
   'thanks.statRating': '{variant}等級分',

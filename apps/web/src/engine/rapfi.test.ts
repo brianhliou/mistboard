@@ -5,7 +5,16 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { RAPFI_LEVELS, Rapfi, type RapfiPosition, type RapfiTransport } from './rapfi.js';
+import {
+  parseRapfiOutput,
+  RAPFI_LEVELS,
+  Rapfi,
+  type RapfiPosition,
+  type RapfiTransport,
+  rapfiGameSeed,
+  rapfiPlySeed,
+  selectRapfiMove,
+} from './rapfi.js';
 
 const engineDir = resolve(__dirname, '../../public/engine/rapfi');
 const clients: Rapfi[] = [];
@@ -106,8 +115,109 @@ function hasFive(stones: RapfiPosition['stones']): boolean {
   );
 }
 
+describe('Rapfi seeds', () => {
+  it('reproduces a game and every ply without depending on call order', () => {
+    const gameSeed = rapfiGameSeed('room-17', 20261101);
+    expect(rapfiGameSeed('room-17', 20261101)).toBe(gameSeed);
+    expect(rapfiGameSeed('room-17')).toBe(rapfiGameSeed('room-17', 0));
+    const seeds = Array.from({ length: 225 }, (_, ply) => rapfiPlySeed(gameSeed, ply));
+    expect(new Set(seeds).size).toBe(225);
+    for (let ply = 224; ply >= 0; ply--) {
+      expect(rapfiPlySeed(gameSeed, ply)).toBe(seeds[ply]);
+      expect(seeds[ply]).toBeGreaterThanOrEqual(0);
+      expect(seeds[ply]).toBeLessThanOrEqual(0xffffffff);
+    }
+    expect(rapfiGameSeed('room-18', 20261101)).not.toBe(gameSeed);
+    expect(rapfiGameSeed('room-17', 20261102)).not.toBe(gameSeed);
+    expect(rapfiPlySeed(rapfiGameSeed('room-18', 20261101), 8)).not.toBe(seeds[8]);
+    // Pin browser/Node seed compatibility, including non-ASCII room identities.
+    expect([gameSeed, seeds[8], rapfiGameSeed('五子棋', 0xffffffff)]).toEqual([
+      2735149948, 2854282940, 2440546783,
+    ]);
+  });
+
+  it('rejects seed identities or plies that would silently wrap or alias', () => {
+    for (const seed of [-1, 0x100000000, 1.5, Number.NaN]) {
+      expect(() => rapfiGameSeed('room', seed)).toThrow('seed');
+      expect(() => rapfiPlySeed(seed, 0)).toThrow('seed');
+    }
+    expect(() => rapfiGameSeed('')).toThrow('identity');
+    for (const ply of [-1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])
+      expect(() => rapfiPlySeed(0, ply)).toThrow('ply');
+  });
+});
+
 describe('Rapfi SIMD WASM (#762)', () => {
-  it('loads the pinned WASM and takes a win in one', async () => {
+  it('records structured single/multi-PV output from the pinned binary via YXNBEST', async () => {
+    const output: string[] = [];
+    const engine = new Rapfi(() => {
+      const transport = nodeTransport();
+      return {
+        ...transport,
+        listen(onMessage, onError) {
+          transport.listen((message) => {
+            const event = message as { type: string; line?: string };
+            if (event.type === 'line' && event.line) output.push(event.line);
+            onMessage(message);
+          }, onError);
+        },
+      };
+    });
+    clients.push(engine);
+    const pos = position(
+      [
+        [7, 7],
+        [8, 8],
+        [6, 8],
+      ],
+      [
+        [7, 8],
+        [8, 7],
+        [6, 7],
+      ],
+    );
+    for (const candidateCount of [1, 3]) {
+      output.length = 0;
+      const result = await engine.chooseMove(pos, 5, { candidateCount, evalMargin: 0, seed: 42 });
+      expect(result.candidates).toEqual(parseRapfiOutput(output));
+      expect(result.candidates).toHaveLength(candidateCount);
+      expect(result.candidates?.map(({ pvIndex }) => pvIndex)).toEqual(
+        Array.from({ length: candidateCount }, (_, i) => i),
+      );
+      for (const candidate of result.candidates ?? []) {
+        expect(candidate.move).toEqual(candidate.pv[0]);
+        expect(
+          pos.stones.some(({ x, y }) => x === candidate.move.x && y === candidate.move.y),
+        ).toBe(false);
+      }
+    }
+    const forced = await engine.chooseMove(
+      position(
+        [
+          [4, 7],
+          [5, 7],
+          [6, 7],
+          [7, 7],
+        ],
+        [
+          [3, 7],
+          [5, 8],
+          [6, 8],
+          [8, 9],
+        ],
+      ),
+      1,
+      { candidateCount: 3, evalMargin: 100, seed: 0 },
+    );
+    expect(forced.move).toEqual({ x: 8, y: 7 });
+    // Rapfi may short-circuit trivial wins before emitting a structured PV.
+    for (const candidate of forced.candidates ?? []) {
+      if (candidate.eval >= 29775)
+        expect(candidate.forcedFive).toEqual({ result: 'win', plies: 30000 - candidate.eval });
+    }
+  });
+
+  it.each([1, 2, 3, 4] as const)('L%i takes a win in one with the pinned WASM', async (level) => {
     expect(readFileSync(resolve(engineDir, 'rapfi-single-simd128.wasm')).length).toBe(1_263_368);
     const pin = JSON.parse(readFileSync(resolve(engineDir, 'net.json'), 'utf8'));
     const data = readFileSync(resolve(engineDir, pin.file));
@@ -128,79 +238,83 @@ describe('Rapfi SIMD WASM (#762)', () => {
           [8, 9],
         ],
       ),
-      1,
+      level,
     );
     expect(result.move).toEqual({ x: 8, y: 7 });
   });
 
-  it('blocks an opponent open four (either end; the position is a forced loss)', async () => {
-    const result = await client().chooseMove(
-      position(
-        [
-          [5, 8],
-          [6, 9],
-          [9, 9],
-          [8, 10],
-        ],
-        [
-          [4, 7],
-          [5, 7],
-          [6, 7],
-          [7, 7],
-        ],
-      ),
-      1,
-    );
-    expect([
-      { x: 3, y: 7 },
-      { x: 8, y: 7 },
-    ]).toContainEqual(result.move);
-  });
+  it.each([1, 2, 3, 4] as const)(
+    'L%i blocks an open four (already a forced loss)',
+    async (level) => {
+      const result = await client().chooseMove(
+        position(
+          [
+            [5, 8],
+            [6, 9],
+            [9, 9],
+            [8, 10],
+          ],
+          [
+            [4, 7],
+            [5, 7],
+            [6, 7],
+            [7, 7],
+          ],
+        ),
+        level,
+      );
+      expect([
+        { x: 3, y: 7 },
+        { x: 8, y: 7 },
+      ]).toContainEqual(result.move);
+    },
+  );
 
-  it('returns legal moves for 20 fixed positions at all five node limits', async () => {
-    const moves: [number, number][] = [
-      [7, 7],
-      [7, 8],
-      [8, 8],
-      [8, 7],
-      [6, 8],
-      [6, 7],
-      [9, 7],
-      [5, 9],
-      [7, 6],
-      [9, 6],
-      [8, 9],
-      [6, 6],
-      [9, 9],
-      [7, 10],
-      [5, 7],
-      [4, 7],
-      [10, 8],
-      [10, 9],
-      [8, 5],
-      [6, 10],
-      [4, 9],
-      [3, 8],
-      [11, 7],
-      [11, 6],
-      [5, 5],
-      [4, 5],
-      [10, 11],
-      [9, 11],
-      [3, 10],
-      [2, 9],
-      [12, 8],
-      [12, 9],
-      [6, 4],
-      [7, 3],
-      [11, 11],
-      [12, 12],
-      [2, 6],
-      [3, 5],
-    ];
-    const counts = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 30, 34, 38];
-    const engine = client();
-    for (const tier of RAPFI_LEVELS) {
+  it.each(RAPFI_LEVELS)(
+    'returns legal moves for 20 fixed positions at L$level',
+    async (tier) => {
+      const moves: [number, number][] = [
+        [7, 7],
+        [7, 8],
+        [8, 8],
+        [8, 7],
+        [6, 8],
+        [6, 7],
+        [9, 7],
+        [5, 9],
+        [7, 6],
+        [9, 6],
+        [8, 9],
+        [6, 6],
+        [9, 9],
+        [7, 10],
+        [5, 7],
+        [4, 7],
+        [10, 8],
+        [10, 9],
+        [8, 5],
+        [6, 10],
+        [4, 9],
+        [3, 8],
+        [11, 7],
+        [11, 6],
+        [5, 5],
+        [4, 5],
+        [10, 11],
+        [9, 11],
+        [3, 10],
+        [2, 9],
+        [12, 8],
+        [12, 9],
+        [6, 4],
+        [7, 3],
+        [11, 11],
+        [12, 12],
+        [2, 6],
+        [3, 5],
+      ];
+      const counts = [0, 1, 2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 30, 34, 38];
+      const engine = client();
       const times: number[] = [];
       for (const count of counts) {
         const stones = moves.slice(0, count).map(([x, y], ply) => ({
@@ -209,10 +323,15 @@ describe('Rapfi SIMD WASM (#762)', () => {
           player: ((ply % 2) + 1) as 1 | 2,
         }));
         expect(hasFive(stones), `fixture at ply ${count} must be playable`).toBe(false);
-        const result = await engine.chooseMove(
-          { stones, turn: ((count % 2) + 1) as 1 | 2 },
-          tier.level,
-        );
+        const result = await engine
+          .chooseMove(
+            { stones, turn: ((count % 2) + 1) as 1 | 2 },
+            tier.level,
+            rapfiPlySeed(rapfiGameSeed(`fixture-L${tier.level}`), count),
+          )
+          .catch((error: Error) => {
+            throw new Error(`L${tier.level} at ply ${count}: ${error.message}`, { cause: error });
+          });
         expect(result.move.x).toBeGreaterThanOrEqual(0);
         expect(result.move.x).toBeLessThan(15);
         expect(result.move.y).toBeGreaterThanOrEqual(0);
@@ -226,8 +345,9 @@ describe('Rapfi SIMD WASM (#762)', () => {
       process.stdout.write(
         `Rapfi L${tier.level}: nodes=${tier.nodes}, mean=${(times.reduce((a, b) => a + b, 0) / times.length).toFixed(1)}ms, max=${Math.max(...times).toFixed(1)}ms\n`,
       );
-    }
-  }, 60_000);
+    },
+    60_000,
+  );
 
   it('stop rejects pending work, terminates the worker and allows a fresh session', async () => {
     const engine = client();
@@ -318,18 +438,110 @@ function controlled() {
   };
 }
 
+const tierOutput = [100, 80, 0].flatMap((ev, pvIndex) => [
+  `INFO PV ${pvIndex}`,
+  'INFO NUMPV 3',
+  'INFO DEPTH 2',
+  'INFO SELDEPTH 2',
+  'INFO NODES 10',
+  'INFO TOTALNODES 30',
+  'INFO TOTALTIME 1',
+  'INFO SPEED 30000',
+  `INFO EVAL ${ev}`,
+  'INFO WINRATE 0.5',
+  `INFO BESTLINE ${pvIndex},0`,
+  'INFO PV DONE',
+]);
+
+describe('eight Rapfi levels', () => {
+  it('parses the symbolic forced-five scores emitted by real structured Rapfi output', () => {
+    // Recorded from pinned 1387d11312 at the 24-stone position above.
+    const recorded = [
+      'INFO PV 0',
+      'INFO NUMPV 1',
+      'INFO DEPTH 2',
+      'INFO SELDEPTH 2',
+      'INFO NODES 1',
+      'INFO TOTALNODES 2',
+      'INFO TOTALTIME 2',
+      'INFO SPEED 1000',
+      'INFO EVAL +M3',
+      'INFO WINRATE 1',
+      'INFO BESTLINE 8,10',
+      'INFO PV DONE',
+    ];
+    for (const [text, score] of [
+      ['+M3', 29997],
+      ['-M4', -29996],
+    ] as const) {
+      const output = recorded.map((line) =>
+        line.startsWith('INFO EVAL') ? `INFO EVAL ${text}` : line,
+      );
+      expect(parseRapfiOutput(output)[0]).toMatchObject({
+        eval: score,
+        forcedFive: { result: score > 0 ? 'win' : 'loss', plies: 30000 - Math.abs(score) },
+      });
+      expect(parseRapfiOutput(output.join('\n'))).toEqual(parseRapfiOutput(output));
+    }
+    expect(
+      parseRapfiOutput(
+        recorded.map((line) => (line.startsWith('INFO EVAL') ? 'INFO EVAL +M226' : line)),
+      ),
+    ).toEqual([]);
+  });
+
+  it('uses four seeded choice tiers then four increasing best-move budgets within five seconds', async () => {
+    expect(RAPFI_LEVELS.map(({ level }) => level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    const candidates = parseRapfiOutput(tierOutput);
+    for (const [index, tier] of RAPFI_LEVELS.entries()) {
+      expect(tier.nodes).toBeGreaterThan(index ? RAPFI_LEVELS[index - 1].nodes : 0);
+      expect(tier.timeMs + 250).toBeLessThanOrEqual(5000);
+      const transport = controlled();
+      const pos: RapfiPosition = { turn: 2, stones: [{ x: 7, y: 7, player: 1 }] };
+      const seed = rapfiPlySeed(rapfiGameSeed('test-room'), 1);
+      const pending = transport.engine.chooseMove(pos, tier.level, seed);
+      transport.receive({ type: 'ready' });
+      const commands = transport.postMessage.mock.lastCall?.[0].commands;
+      const choice = tier.level <= 4;
+      expect(commands.includes('INFO show_detail 2')).toBe(choice);
+      if (choice) {
+        expect(tier.candidateCount).toBeGreaterThan(1);
+        expect(tier.evalMargin).toBeGreaterThan(0);
+        expect(commands).toContain('YXBOARD\n7,7,2\nDONE');
+        expect(commands.at(-1)).toBe(`YXNBEST ${tier.candidateCount}`);
+        for (const line of tierOutput) transport.receive({ type: 'line', line });
+      } else {
+        expect(tier.candidateCount).toBeUndefined();
+        expect(tier.evalMargin).toBeUndefined();
+        expect(commands.at(-1)).toBe('BOARD\n7,7,2\nDONE');
+      }
+      transport.receive({ type: 'line', line: '2,0' });
+      transport.receive({ type: 'done', elapsedMs: 1 });
+      expect((await pending).move).toEqual(
+        choice
+          ? selectRapfiMove(pos, candidates, {
+              candidateCount: tier.candidateCount!,
+              evalMargin: tier.evalMargin!,
+              seed,
+            })
+          : { x: 2, y: 0 },
+      );
+    }
+  });
+});
+
 describe('Rapfi request lifecycle', () => {
   it('maps the side to move, sends a complete BOARD command and uses the level table', async () => {
     const transport = controlled();
     const pending = transport.engine.chooseMove(
       { turn: 2, stones: [{ x: 3, y: 8, player: 1 }] },
-      3,
+      5,
     );
-    await expect(transport.engine.chooseMove({ turn: 1, stones: [] }, 1)).rejects.toThrow(
+    await expect(transport.engine.chooseMove({ turn: 1, stones: [] }, 5)).rejects.toThrow(
       'already searching',
     );
     transport.receive({ type: 'ready' });
-    const tier = RAPFI_LEVELS.find((entry) => entry.level === 3)!;
+    const tier = RAPFI_LEVELS.find((entry) => entry.level === 5)!;
     expect(transport.postMessage).toHaveBeenLastCalledWith({
       type: 'commands',
       commands: [
@@ -347,21 +559,26 @@ describe('Rapfi request lifecycle', () => {
     expect(transport.terminate).not.toHaveBeenCalled();
   });
 
-  it('rejects malformed positions without allocating a worker', async () => {
+  it('rejects malformed positions, levels and seeds without allocating a worker', async () => {
     const { engine, create } = controlled();
-    await expect(engine.chooseMove(position([[15, 0]], []), 1)).rejects.toThrow(
+    await expect(engine.chooseMove(position([[15, 0]], []), 5)).rejects.toThrow(
       'Invalid Rapfi stone',
     );
-    await expect(engine.chooseMove(position([[7, 7]], [[7, 7]]), 1)).rejects.toThrow('Duplicate');
-    await expect(engine.chooseMove({ turn: 1, stones: [] }, 6 as 1)).rejects.toThrow(
+    await expect(engine.chooseMove(position([[7, 7]], [[7, 7]]), 5)).rejects.toThrow('Duplicate');
+    await expect(engine.chooseMove({ turn: 1, stones: [] }, 9 as 1)).rejects.toThrow(
       'Unknown Rapfi level',
     );
+    for (const level of [1, 8] as const)
+      for (const seed of [-1, 0x100000000, 0.5, Number.NaN])
+        await expect(engine.chooseMove({ turn: 1, stones: [] }, level, seed)).rejects.toThrow(
+          'seed',
+        );
     const full = Array.from({ length: 225 }, (_, i) => ({
       x: i % 15,
       y: Math.floor(i / 15),
       player: 1 as const,
     }));
-    await expect(engine.chooseMove({ turn: 1, stones: full }, 1)).rejects.toThrow('full');
+    await expect(engine.chooseMove({ turn: 1, stones: full }, 5)).rejects.toThrow('full');
     expect(create).not.toHaveBeenCalled();
   });
 
@@ -369,11 +586,11 @@ describe('Rapfi request lifecycle', () => {
     vi.useFakeTimers();
     const transport = controlled();
     const first = expect(
-      transport.engine.chooseMove({ turn: 1, stones: [] }, 1),
+      transport.engine.chooseMove({ turn: 1, stones: [] }, 5),
     ).rejects.toMatchObject({ name: 'AbortError' });
     transport.engine.stop();
     await first;
-    const next = transport.engine.chooseMove({ turn: 1, stones: [] }, 1);
+    const next = transport.engine.chooseMove({ turn: 1, stones: [] }, 5);
     transport.receivers[0]({ type: 'ready' });
     expect(transport.postMessage).toHaveBeenLastCalledWith({ type: 'init' });
     transport.receive({ type: 'ready' });
@@ -387,7 +604,7 @@ describe('Rapfi request lifecycle', () => {
     'rejects illegal or missing engine output: %s',
     async (line) => {
       const transport = controlled();
-      const pending = transport.engine.chooseMove(position([[7, 7]], []), 1);
+      const pending = transport.engine.chooseMove(position([[7, 7]], [[0, 0]]), 5);
       transport.receive({ type: 'ready' });
       transport.receive({ type: 'line', line });
       transport.receive({ type: 'done', elapsedMs: 1 });
@@ -398,10 +615,10 @@ describe('Rapfi request lifecycle', () => {
 
   it('cleans up initialization failure and protocol errors', async () => {
     const transport = controlled();
-    const first = transport.engine.chooseMove({ turn: 1, stones: [] }, 1);
+    const first = transport.engine.chooseMove({ turn: 1, stones: [] }, 5);
     transport.fail(new Error('WASM SIMD unavailable'));
     await expect(first).rejects.toThrow('WASM SIMD unavailable');
-    const next = transport.engine.chooseMove({ turn: 1, stones: [] }, 1);
+    const next = transport.engine.chooseMove({ turn: 1, stones: [] }, 5);
     transport.receive({ type: 'ready' });
     transport.receive({ type: 'line', line: 'ERROR invalid position' });
     await expect(next).rejects.toThrow('ERROR invalid position');
@@ -411,16 +628,16 @@ describe('Rapfi request lifecycle', () => {
   it('times out initialization and search, terminating the worker in both cases', async () => {
     vi.useFakeTimers();
     const transport = controlled();
-    const init = expect(transport.engine.chooseMove({ turn: 1, stones: [] }, 1)).rejects.toThrow(
+    const init = expect(transport.engine.chooseMove({ turn: 1, stones: [] }, 5)).rejects.toThrow(
       'initialization timed out',
     );
     await vi.advanceTimersByTimeAsync(30_000);
     await init;
-    const move = expect(transport.engine.chooseMove({ turn: 1, stones: [] }, 1)).rejects.toThrow(
+    const move = expect(transport.engine.chooseMove({ turn: 1, stones: [] }, 5)).rejects.toThrow(
       'move timed out',
     );
     transport.receive({ type: 'ready' });
-    await vi.advanceTimersByTimeAsync(RAPFI_LEVELS[0].timeMs + 250);
+    await vi.advanceTimersByTimeAsync(RAPFI_LEVELS[4].timeMs + 250);
     await move;
     expect(transport.terminate).toHaveBeenCalledTimes(2);
     expect(vi.getTimerCount()).toBe(0);

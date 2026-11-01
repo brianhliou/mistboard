@@ -28,9 +28,9 @@ test('Gomoku registers TV and Rapfi names without opening hidden listings', () =
     label: 'Gomoku',
     legacyVariants: ['gomoku'],
   });
-  for (const level of [1, 2, 3, 4, 5])
+  for (const level of [1, 2, 3, 4, 5, 6, 7, 8])
     assert.equal(registration.engineDisplayName?.(`rapfi-level-${level}`), 'Rapfi');
-  for (const id of ['human', 'rapfi-level-0', 'rapfi-level-6'])
+  for (const id of ['human', 'rapfi-level-0', 'rapfi-level-9', 'rapfi-level-8\n'])
     assert.equal(registration.engineDisplayName?.(id), null);
 });
 
@@ -49,7 +49,7 @@ test('hidden Gomoku stays out of channels, Featured, Engines, current games and 
     ],
     projection: {
       state: { status: { type: 'playing' }, moveNumber: 8 },
-      seats: { black: 'human', white: 'rapfi-level-3' },
+      seats: { black: 'human', white: 'rapfi-level-8' },
       rated: false,
       timeControl: { initialMs: 180_000, incrementMs: 2_000 },
     },

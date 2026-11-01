@@ -15,12 +15,12 @@ describe('thanks page', () => {
   afterEach(() => vi.unstubAllEnvs());
 
   it.each([
-    ['en', 'Gomoku', 'networks', 'Browser build by Brian H. Liou'],
-    ['zh-Hans', '五子棋', '神经网络', '浏览器构建：Brian H. Liou'],
-    ['zh-Hant', '五子棋', '神經網路', '瀏覽器建置：Brian H. Liou'],
+    ['en', 'Gomoku', 'networks', 'Browser build by Brian H. Liou', 'eight'],
+    ['zh-Hans', '五子棋', '神经网络', '浏览器构建：Brian H. Liou', '八个'],
+    ['zh-Hant', '五子棋', '神經網路', '瀏覽器建置：Brian H. Liou', '八個'],
   ] as const)(
     'credits Rapfi, its networks and browser build in %s when enabled',
-    async (locale, game, networks, build) => {
+    async (locale, game, networks, build, levels) => {
       await ensureLocaleCatalog(locale);
       vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
       const page = buildThanks(locale);
@@ -30,6 +30,7 @@ describe('thanks page', () => {
       expect(row?.textContent).toContain(game);
       expect(row?.textContent).toContain(networks);
       expect(row?.textContent).toContain(build);
+      expect(row?.textContent).toContain(levels);
       expect(row?.querySelector('.thanks-engine-by a')?.getAttribute('href')).toBe(
         'https://github.com/dhbloo/rapfi',
       );
@@ -39,22 +40,34 @@ describe('thanks page', () => {
       expect(row?.querySelector('.thanks-engine-name a')?.getAttribute('href')).toBe(
         'https://github.com/dhbloo/rapfi',
       );
+    },
+  );
 
-      fillEngineStats(
-        page,
-        Array.from({ length: 5 }, (_, i) =>
+  it('aggregates exactly eight Rapfi levels in the credits', () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+    expect(enabledEngineCredits().find((credit) => credit.id === 'rapfi')?.botIds).toEqual(
+      Array.from({ length: 8 }, (_, i) => `rapfi-level-${i + 1}`),
+    );
+    const page = buildThanks('en');
+    fillEngineStats(
+      page,
+      [
+        ...Array.from({ length: 8 }, (_, i) =>
           bot({
             id: `rapfi-level-${i + 1}`,
             supportedGameSpecIds: ['gomoku'],
             gamesTotal: i + 1,
           }),
         ),
-        locale,
-      );
-      expect(row?.querySelector('.thanks-engine-stat-games dd')?.textContent).toBe('15');
-      expect(row?.querySelector('.thanks-engine-stat-rating dd')?.textContent).toBe('');
-    },
-  );
+        bot({ id: 'rapfi-level-0', supportedGameSpecIds: ['gomoku'], gamesTotal: 100 }),
+        bot({ id: 'rapfi-level-9', supportedGameSpecIds: ['gomoku'], gamesTotal: 100 }),
+      ],
+      'en',
+    );
+    const row = page.querySelector('[data-engine="rapfi"]');
+    expect(row?.querySelector('.thanks-engine-stat-games dd')?.textContent).toBe('36');
+    expect(row?.querySelector('.thanks-engine-stat-rating dd')?.textContent).toBe('');
+  });
 
   it.each([false, true])(
     'hides Rapfi with the flag off, including bot enrichment (DEV=%s)',
