@@ -7,6 +7,9 @@ import {
   getGomokuPlayerView,
 } from '@mistboard/game';
 import { gomokuBoardSvg } from './gomoku-board.js';
+// The board's classes also live in gomoku-board.css; the prerender's stylesheet
+// check fails a baked /rules/gomoku page that does not link it.
+import './gomoku-board.css';
 
 // Use the live board geometry, with its paint inline so article prerenders
 // and thumbnails do not depend on the live room's lazy CSS chunk. Educational
