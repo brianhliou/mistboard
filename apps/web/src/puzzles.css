@@ -1319,7 +1319,7 @@ a.puzzle-streak-chip:focus-visible {
   cursor: default;
 }
 
-/* Feedback row: analysis stub · short prompt · compact thumbs. */
+/* Feedback row: short prompt · compact thumbs · play the displayed position. */
 .puzzle-solved-feedback {
   display: flex;
   align-items: center;
@@ -1366,11 +1366,13 @@ a.puzzle-streak-chip:focus-visible {
   gap: 8px;
 }
 
-.puzzle-vote-button {
+.puzzle-vote-button,
+.puzzle-play-position {
   display: grid;
   place-items: center;
   width: 34px;
   height: 34px;
+  flex-shrink: 0;
   padding: 0;
   border: 0;
   border-radius: 4px;
@@ -1379,7 +1381,13 @@ a.puzzle-streak-chip:focus-visible {
   cursor: pointer;
 }
 
-.puzzle-vote-button svg {
+.puzzle-play-position {
+  color: var(--site-muted);
+  text-decoration: none;
+}
+
+.puzzle-vote-button svg,
+.puzzle-play-position svg {
   display: block;
   width: 22px;
   height: 22px;
@@ -1393,7 +1401,8 @@ a.puzzle-streak-chip:focus-visible {
   color: hsl(359, 58%, 57%);
 }
 
-.puzzle-vote-button:hover {
+.puzzle-vote-button:hover,
+.puzzle-play-position:hover {
   background: color-mix(in srgb, currentColor 14%, transparent);
 }
 
@@ -1409,6 +1418,7 @@ a.puzzle-streak-chip:focus-visible {
 
 .puzzle-analysis-button:focus-visible,
 .puzzle-vote-button:focus-visible,
+.puzzle-play-position:focus-visible,
 .puzzle-continue-button:focus-visible {
   outline: 2px solid var(--site-accent);
   outline-offset: -2px;
@@ -1841,7 +1851,8 @@ a.puzzle-tag--link:hover {
     display: none;
   }
 
-  .puzzles-shell .puzzle-vote-button {
+  .puzzles-shell .puzzle-vote-button,
+  .puzzles-shell .puzzle-play-position {
     width: 40px;
     height: 40px;
   }
@@ -1851,7 +1862,14 @@ a.puzzle-tag--link:hover {
     width: auto;
     min-height: 44px;
     margin: 0;
+    padding: 0 8px;
     font-size: 15px;
+    letter-spacing: normal;
+  }
+
+  /* Leave room for all three actions beside Next on a narrow phone. */
+  .puzzles-shell .puzzle-solved-panel .puzzle-continue-button svg {
+    display: none;
   }
 
   /* The move strip: one line that scrolls sideways inside itself, the moves

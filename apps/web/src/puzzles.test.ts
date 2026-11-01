@@ -5,6 +5,7 @@ import {
   createInitialXiangqiState,
   detectXiangqiPuzzleMotifs,
   getStandardXiangqiLegalMoves,
+  standardXiangqiEngineFen,
   standardXiangqiPuzzleMoveEquals,
   XIANGQI_MOTIF_BY_ID,
   XIANGQI_MOTIFS,
@@ -907,10 +908,22 @@ describe('puzzles route', () => {
     const slash = root.querySelector<HTMLElement>('.finish-badge--mated');
     expect(slash?.querySelector('.finish-badge__slash')).not.toBeNull();
     expect(root.querySelector('.finish-badges')).not.toBeNull();
+    expect(root.querySelector('[data-puzzle-play-position]')).toBeNull();
     root.querySelector<HTMLButtonElement>('[data-puzzle-replay-previous]')?.click();
     expect(root.querySelector('.finish-badge--mated')).toBeNull();
+    const playPosition = root.querySelector<HTMLAnchorElement>('[data-puzzle-play-position]');
+    expect(playPosition).not.toBeNull();
+    const shownState = drop.solution
+      .slice(0, -1)
+      .reduce((state, move) => applyStandardXiangqiMove(state, move), drop.initial);
+    expect(new URL(playPosition!.href).searchParams.get('fen')).toBe(
+      standardXiangqiEngineFen(shownState),
+    );
+    expect(playPosition!.closest('.puzzle-vote-actions')).not.toBeNull();
+    expect(playPosition!.target).toBe('_blank');
     root.querySelector<HTMLButtonElement>('[data-puzzle-replay-next]')?.click();
     expect(root.querySelector('.finish-badge--mated')).not.toBeNull();
+    expect(root.querySelector('[data-puzzle-play-position]')).toBeNull();
     root.querySelector<HTMLButtonElement>('[aria-label="Puzzle was helpful"]')?.click();
     await vi.waitFor(() =>
       expect(qualityEvents.some((event) => event.event === 'vote' && event.vote === 'up')).toBe(

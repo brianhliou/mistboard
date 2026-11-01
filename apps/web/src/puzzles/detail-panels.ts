@@ -14,11 +14,13 @@ import { track } from '../analytics.js';
 import { t } from '../i18n/catalog.js';
 import { deviceIdForBrowser } from '../live-state.js';
 import { practicePositionHref } from '../practice-position-params.js';
+import { buildUiIcon } from '../ui-icon.js';
 import {
   colorLabel,
   isSessionSolved,
   type PuzzleNavigation,
   type PuzzleSession,
+  type PuzzleState,
 } from './adapter.js';
 import { puzzleBoardAdapter } from './registry.js';
 
@@ -35,11 +37,14 @@ export function feedbackPanel(
   navigation: PuzzleNavigation,
   renderSession: () => void,
   assist: PuzzleAssistHooks,
+  displayState: PuzzleState,
 ): HTMLElement {
   // Revealed first: a played-out mate line finishes the board, which would
   // otherwise read as solved and show "Success!" for a give-up.
-  if (session.revealed) return revealedPanel(session, navigation);
-  if (isSessionSolved(session)) return solvedPanel(session, navigation, renderSession, assist);
+  if (session.revealed)
+    return revealedPanel(session, navigation, renderSession, assist, displayState);
+  if (isSessionSolved(session))
+    return solvedPanel(session, navigation, renderSession, assist, displayState);
 
   const panel = document.createElement('div');
   panel.className = `puzzle-feedback puzzle-feedback--${session.feedback.kind}`;
@@ -108,7 +113,13 @@ function assistRow(
 // Shown after "View solution": the answer has been played out and the board is a
 // locked replay to scrub. Distinct from the solved panel (no "Success!") — a
 // reveal counts as a give-up, not a win.
-function revealedPanel(session: PuzzleSession, navigation: PuzzleNavigation): HTMLElement {
+function revealedPanel(
+  session: PuzzleSession,
+  navigation: PuzzleNavigation,
+  renderSession: () => void,
+  assist: PuzzleAssistHooks,
+  displayState: PuzzleState,
+): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'puzzle-solved-panel puzzle-revealed-panel';
 
@@ -125,8 +136,7 @@ function revealedPanel(session: PuzzleSession, navigation: PuzzleNavigation): HT
   cont.disabled = !navigation.hasNext;
   cont.addEventListener('click', navigation.goNext);
 
-  panel.append(title, cont);
-  appendPlayPosition(panel, session);
+  panel.append(title, cont, solvedFeedback(session, renderSession, assist, displayState));
   panel.append(puzzleReportControl(session));
   return panel;
 }
@@ -136,6 +146,7 @@ function solvedPanel(
   navigation: PuzzleNavigation,
   renderSession: () => void,
   assist: PuzzleAssistHooks,
+  displayState: PuzzleState,
 ): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'puzzle-solved-panel';
@@ -156,6 +167,17 @@ function solvedPanel(
   cont.disabled = !navigation.hasNext;
   cont.addEventListener('click', navigation.goNext);
 
+  panel.append(title, cont, solvedFeedback(session, renderSession, assist, displayState));
+  panel.append(puzzleReportControl(session));
+  return panel;
+}
+
+function solvedFeedback(
+  session: PuzzleSession,
+  renderSession: () => void,
+  assist: PuzzleAssistHooks,
+  displayState: PuzzleState,
+): HTMLElement {
   const feedbackRow = document.createElement('div');
   feedbackRow.className = 'puzzle-solved-feedback';
   // Standard xiangqi now gets an inline local-engine analysis panel below (see
@@ -169,44 +191,44 @@ function solvedPanel(
     puzzleVoteButton('up', session, renderSession, assist),
     puzzleVoteButton('down', session, renderSession, assist),
   );
+  appendPlayPosition(votes, session, displayState);
   feedbackRow.append(prompt, votes);
-
-  panel.append(title, cont, feedbackRow);
-  appendPlayPosition(panel, session);
-  panel.append(puzzleReportControl(session));
-  return panel;
+  return feedbackRow;
 }
 
-function appendPlayPosition(panel: HTMLElement, session: PuzzleSession): void {
-  // This practice route only understands standard xiangqi. The session state
-  // is the solution's final position, independent of the replay cursor.
+function appendPlayPosition(
+  row: HTMLElement,
+  session: PuzzleSession,
+  displayState: PuzzleState,
+): void {
+  // Use the board's replay-aware state, including steps before a final mate.
+  // This practice route only understands standard xiangqi.
   if (session.puzzle.variant !== XIANGQI_SPEC_ID || !session.puzzle.sideToMove) return;
-  const state = session.state as XiangqiGameState;
+  const state = displayState as XiangqiGameState;
   if (state.status.type !== 'playing' || getStandardXiangqiLegalMoves(state).length === 0) return;
 
   const link = document.createElement('a');
-  link.className = 'puzzle-feedback-skip';
+  link.className = 'puzzle-play-position';
   link.dataset.puzzlePlayPosition = 'true';
-  link.textContent = t('puzzle.playPosition');
+  link.title = t('lobby.panelTabComputer');
+  link.setAttribute('aria-label', link.title);
+  link.append(buildUiIcon('play-engine'));
+  link.target = '_blank';
+  link.rel = 'noopener';
   link.href = practicePositionHref(
     standardXiangqiEngineFen(state),
     'mate',
     session.puzzle.sideToMove,
   );
-  // Reuse the secondary button's touch sizing; span the phone panel's three
-  // columns so this action stays inside the panel beneath Next puzzle.
-  link.style.gridColumn = '1 / -1';
-  link.style.justifySelf = 'stretch';
-  link.style.margin = '4px 12px';
-  link.style.display = 'grid';
-  link.style.placeItems = 'center';
+  const ply = session.viewPly;
   link.addEventListener('click', () => {
     track('puzzle_play_position', {
       puzzle_id: session.puzzle.id,
       outcome: session.revealed ? 'revealed' : session.failed ? 'failed' : 'solved',
+      ply,
     });
   });
-  panel.append(link);
+  row.append(link);
 }
 
 const reportStates = new WeakMap<

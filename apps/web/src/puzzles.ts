@@ -685,18 +685,24 @@ function renderPuzzleDetail(
   trainer.append(
     moveListPanel(session, (viewPly) => jumpPuzzle(session, renderSession, viewPly)),
     opts.feedback?.(session) ??
-      feedbackPanel(session, navigation, renderSession, {
-        onHint: () => void requestHint(session, renderSession),
-        onReveal: () => void revealSolution(session, renderSession),
-        onVote: (vote) => {
-          void sendPuzzleQualityEvent(
-            session.puzzle.id,
-            session.qualitySessionId,
-            'vote',
-            vote,
-          ).catch(() => {});
+      feedbackPanel(
+        session,
+        navigation,
+        renderSession,
+        {
+          onHint: () => void requestHint(session, renderSession),
+          onReveal: () => void revealSolution(session, renderSession),
+          onVote: (vote) => {
+            void sendPuzzleQualityEvent(
+              session.puzzle.id,
+              session.qualitySessionId,
+              'vote',
+              vote,
+            ).catch(() => {});
+          },
         },
-      }),
+        displayState,
+      ),
   );
   const actions = actionPanel(session, renderSession);
   const phoneBar = puzzlePhoneMoveNav(

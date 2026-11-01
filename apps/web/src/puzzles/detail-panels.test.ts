@@ -1,6 +1,7 @@
 import {
   applyStandardXiangqiMove,
   parseStandardXiangqiFen,
+  standardXiangqiEngineFen,
   XIANGQI_PUZZLES,
   type XiangqiColor,
   type XiangqiGameState,
@@ -44,8 +45,7 @@ function materialSession(side: XiangqiColor = 'red'): PuzzleSession {
     state: play(initial, move),
     playedMoves: [move],
     solverMoves: [move],
-    // Scrubbing back must not change the position handed to practice.
-    viewPly: 0,
+    viewPly: 1,
     solved: true,
     failed: false,
     revealed: false,
@@ -74,6 +74,7 @@ function panel(session: PuzzleSession): HTMLElement {
     },
     vi.fn(),
     { onHint: vi.fn(), onReveal: vi.fn(), onVote: vi.fn() },
+    session.viewPly === 0 ? session.puzzle.initial : session.state,
   );
 }
 
@@ -86,7 +87,7 @@ afterEach(() => {
   window.history.replaceState(null, '', '/');
 });
 
-describe('play the puzzle solution position', () => {
+describe('play the displayed puzzle position', () => {
   it.each(['red', 'black'] as const)(
     'hands the final material position to practice as %s',
     (side) => {
@@ -106,10 +107,38 @@ describe('play the puzzle solution position', () => {
       });
       expect(parsePracticePositionParams(url.searchParams).ok).toBe(true);
       expect(link!.closest('.puzzle-solved-panel')).toBe(el);
-      // The phone panel has three columns; the secondary action takes its own row.
-      expect(link!.style.gridColumn).toBe('1 / -1');
+      const votes = link!.closest('.puzzle-vote-actions');
+      expect(votes).not.toBeNull();
+      expect(votes!.querySelectorAll('button')).toHaveLength(2);
+      expect(link!.querySelector('.ui-icon-play-engine')).not.toBeNull();
+      expect(link!.textContent).toBe('');
+      expect(link!.getAttribute('style')).toBeNull();
+      expect(link!.target).toBe('_blank');
+      expect(link!.rel).toBe('noopener');
     },
   );
+
+  it.each([false, true])('follows a replay step back after solve/reveal (%s)', (revealed) => {
+    const session = materialSession();
+    session.revealed = revealed;
+    const finalHref = playLink(panel(session))!.href;
+    session.viewPly -= 1;
+    const link = playLink(panel(session));
+    expect(link).not.toBeNull();
+    expect(link!.href).not.toBe(finalHref);
+    expect(new URL(link!.href).searchParams.get('fen')).toBe(
+      standardXiangqiEngineFen(session.puzzle.initial as XiangqiGameState),
+    );
+    expect(link!.closest('.puzzle-vote-actions')?.querySelectorAll('button')).toHaveLength(2);
+    expect(link!.target).toBe('_blank');
+    link!.addEventListener('click', (event) => event.preventDefault());
+    link!.click();
+    expect(track).toHaveBeenCalledExactlyOnceWith('puzzle_play_position', {
+      puzzle_id: session.puzzle.id,
+      outcome: revealed ? 'revealed' : 'solved',
+      ply: 0,
+    });
+  });
 
   it.each(['solved', 'failed', 'revealed'] as const)(
     'tracks one click with outcome %s',
@@ -128,6 +157,7 @@ describe('play the puzzle solution position', () => {
       expect(track).toHaveBeenCalledExactlyOnceWith('puzzle_play_position', {
         puzzle_id: session.puzzle.id,
         outcome,
+        ply: 1,
       });
     },
   );
@@ -136,14 +166,20 @@ describe('play the puzzle solution position', () => {
     const puzzle = XIANGQI_PUZZLES.find((entry) => entry.goal.type === 'checkmate')!;
     const session = materialSession();
     session.state = puzzle.solution.reduce(play, puzzle.initial);
+    session.puzzle.initial = puzzle.initial;
     expect(session.state.status.type).toBe('finished');
     session.revealed = revealed;
     expect(playLink(panel(session))).toBeNull();
+    // A finished live state must not hide a playable earlier board position.
+    session.viewPly = 0;
+    expect(playLink(panel(session))).not.toBeNull();
   });
 
   it('also omits a no-move position whose parsed status still says playing', () => {
     const session = materialSession();
-    session.state = position('3k5/3R5/3R5/9/9/9/9/9/9/4K4 b - - 0 1');
+    session.puzzle.initial = position('3k5/3R5/3R5/9/9/9/9/9/9/4K4 b - - 0 1');
+    session.viewPly = 0;
+    expect(session.puzzle.initial.status.type).toBe('playing');
     expect(playLink(panel(session))).toBeNull();
   });
 
@@ -161,9 +197,9 @@ describe('play the puzzle solution position', () => {
   });
 
   it.each([
-    ['en', 'Play this position'],
-    ['zh-Hans', '从此局面继续下'],
-    ['zh-Hant', '從此局面繼續下'],
+    ['en', 'Play the computer'],
+    ['zh-Hans', '与电脑对弈'],
+    ['zh-Hant', '與電腦對弈'],
   ])('localizes the action for %s', (locale, label) => {
     window.history.replaceState(
       null,
@@ -171,7 +207,9 @@ describe('play the puzzle solution position', () => {
       locale === 'en' ? '/puzzles' : `/${locale.toLowerCase()}/puzzles`,
     );
     const link = playLink(panel(materialSession()));
-    expect(link?.textContent).toBe(label);
+    expect(link?.title).toBe(label);
+    expect(link?.getAttribute('aria-label')).toBe(label);
+    expect(link?.textContent).toBe('');
     expect(new URL(link!.href).pathname).toBe('/practice/position');
   });
 });
