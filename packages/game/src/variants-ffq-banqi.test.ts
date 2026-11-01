@@ -10,6 +10,8 @@ import {
 import {
   applyFFQBanqiMove,
   createFFQBanqiDeal,
+  createFFQBanqiSetup,
+  createFFQBanqiStateFromSetup,
   createInitialFFQBanqiState,
   FFQ_BANQI_DAMAGE,
   FFQ_BANQI_HEIGHT,
@@ -49,6 +51,58 @@ const dests = (state: FFQBanqiState, from: number) =>
     .filter((m) => m.from === from)
     .map((m) => m.to)
     .sort((a, b) => a - b);
+
+test('stored FFQ setup replays the exact deal and rejects missing or corrupt setup', () => {
+  const setup = createFFQBanqiSetup(() => 0.25);
+  const state = createFFQBanqiStateFromSetup('stored', setup);
+  assert.deepEqual(
+    state.board.map((piece) => ({ color: piece!.color, role: piece!.role })),
+    setup.deal,
+  );
+  assert.deepEqual(
+    state.board.flatMap((piece, i) => (piece && !piece.faceDown ? [i] : [])),
+    [6, 15, 16, 25],
+  );
+  assert.deepEqual(
+    createFFQBanqiStateFromSetup('stored', JSON.parse(JSON.stringify(setup))),
+    state,
+  );
+  for (const bad of [
+    undefined,
+    null,
+    {},
+    { deal: [] },
+    { deal: setup.deal.slice(1) },
+    { deal: Array(32).fill(setup.deal[0]) },
+  ]) {
+    assert.throws(() => createFFQBanqiStateFromSetup('bad', bad));
+  }
+  state.board[0]!.faceDown = false;
+  assert.ok(!('faceDown' in setup.deal[0]!), 'stored deal and board are independent');
+});
+
+test('runtime endings preserve their status and masked views without enabling moves', () => {
+  const state = createInitialFFQBanqiState('ended', 800);
+  const statuses: FFQBanqiState['status'][] = [
+    ...(['timeout', 'resignation', 'abandonment', 'agreement'] as const).map((reason) => ({
+      type: 'finished' as const,
+      winner: null,
+      reason,
+    })),
+    { type: 'aborted', reason: 'user-abort' },
+  ];
+  for (const status of statuses) {
+    const ended = { ...state, status };
+    assert.deepEqual(getFFQBanqiResult(ended), status);
+    assert.equal(applyFFQBanqiMove(ended, { from: 0, to: 0 }), ended);
+    for (const viewer of ['red', 'black', 'observer'] as const) {
+      const view = JSON.parse(JSON.stringify(getFFQBanqiPlayerView(ended, viewer)));
+      assert.deepEqual(view.status, status);
+      assert.deepEqual(view.board[0], { faceDown: true });
+      assert.deepEqual(view.legalMoves, []);
+    }
+  }
+});
 
 test('rule 1: 4x8 indices, orthogonal edges never wrap rows', () => {
   assert.equal(FFQ_BANQI_WIDTH, 4);

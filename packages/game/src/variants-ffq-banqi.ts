@@ -1,8 +1,10 @@
 // FFQ banqi (翻翻棋): rules as implemented by Huorongrong (mistboard#800).
-// Hidden canonical spec FFQ_BANQI_SPEC_ID; no tenant, route or launch flag.
+// Hidden canonical spec FFQ_BANQI_SPEC_ID; the server tenant is unregistered.
 // Canonical state is server-secret. Only getFFQBanqiPlayerView and
 // ffqBanqiStateToFen may cross a player/engine boundary, even at game end.
+import type { AbortReason } from './types.js';
 import {
+  assertValidBanqiDeal,
   BANQI_PIECE_COUNTS,
   type BanqiColor,
   type BanqiDeal,
@@ -76,7 +78,17 @@ export type FFQBanqiBoard = Array<BanqiPiece | null>;
 export type FFQBanqiMove = { from: number; to: number };
 export type FFQBanqiStatus =
   | { type: 'playing'; turn: BanqiColor }
-  | { type: 'finished'; winner: BanqiColor | null; reason: 'hp' | 'no-progress' | 'no-legal-move' };
+  | { type: 'finished'; winner: BanqiColor | null; reason: FFQBanqiEndReason }
+  | { type: 'aborted'; reason: AbortReason };
+export type FFQBanqiEndReason =
+  | 'hp'
+  | 'no-progress'
+  | 'no-legal-move'
+  // Endings produced by the live-room lifecycle.
+  | 'timeout'
+  | 'resignation'
+  | 'abandonment'
+  | 'agreement';
 export type FFQBanqiCapture = {
   owner: BanqiColor;
   role: BanqiPieceRole;
@@ -165,6 +177,28 @@ export function createInitialFFQBanqiState(
     noProgressClock: 0,
     chaseCounts: { red: 0, black: 0 },
     captures: [],
+  };
+}
+
+/** Server-secret replay setup: persist once, never send to a client. */
+export type FFQBanqiSetup = { deal: BanqiDeal };
+
+export function createFFQBanqiSetup(rng: () => number): FFQBanqiSetup {
+  return { deal: createFFQBanqiDeal(rng) };
+}
+
+/** Reconnects must replay the stored deal, never silently generate another. */
+export function createFFQBanqiStateFromSetup(id: string, setup: unknown): FFQBanqiState {
+  if (typeof setup !== 'object' || setup === null || !('deal' in setup)) {
+    throw new Error('invalid FFQ banqi setup: no deal');
+  }
+  const deal = setup.deal;
+  if (!Array.isArray(deal)) throw new Error('invalid FFQ banqi setup: no deal');
+  assertValidBanqiDeal(deal);
+  const open: readonly number[] = FFQ_BANQI_FACE_UP_SQUARES;
+  return {
+    ...createInitialFFQBanqiState(id, 0),
+    board: deal.map((piece, square) => ({ ...piece, faceDown: !open.includes(square) })),
   };
 }
 
