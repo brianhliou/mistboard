@@ -2075,7 +2075,14 @@ async function mountFailedPuzzleReplay(frame: ReturnType<typeof buildPuzzlesFram
           ) {
             timer = window.setTimeout(
               () => {
-                if (index === current && shell.isConnected && isPaintedPuzzleSession(session))
+                timer = null;
+                if (
+                  index === current &&
+                  shell.isConnected &&
+                  isPaintedPuzzleSession(session) &&
+                  !session.wrongPreview &&
+                  session.viewPly === session.playedMoves.length
+                )
                   advance();
               },
               session.solved ? AUTO_NEXT_DELAY_MS : REVEAL_STEP_MS * 2,

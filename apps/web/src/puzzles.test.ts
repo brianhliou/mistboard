@@ -1,10 +1,12 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { XIANGQI_GLYPH_PATHS } from '@mistboard/board-render';
 import {
   applyStandardXiangqiMove,
   attemptStandardXiangqiPuzzleLine,
   createInitialXiangqiState,
   detectXiangqiPuzzleMotifs,
   getStandardXiangqiLegalMoves,
+  standardXiangqiEngineFen,
   standardXiangqiPuzzleMoveEquals,
   XIANGQI_MOTIF_BY_ID,
   XIANGQI_MOTIFS,
@@ -19,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { displayPreferenceStorageKey } from './display-preferences.js';
 import { LOCALE_STORAGE_KEY } from './i18n/locale.js';
 import { playSound } from './live-sound.js';
+import { mountPuzzleHistory, puzzleHistorySessions, puzzleHistoryTime } from './puzzles/history.js';
 import { puzzlePhoneMenuRows } from './puzzles/phone-menu.js';
 import { playerWithoutTeam } from './puzzles/queue-panel.js';
 import { loadPuzzleTheme, PUZZLE_THEME_MIN_PATTERN_COUNT } from './puzzles/themes.js';
@@ -211,6 +214,211 @@ describe('puzzles route', () => {
       ),
     ).toHaveLength(2);
     expect(window.location.pathname + window.location.search).toBe('/puzzles/replay?days=7');
+  });
+
+  it('keeps the replay puzzle when the player steps back before auto-advance fires', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/replay?days=7');
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.startsWith('/api/puzzles/failed'))
+        return json({ failures: [{ puzzleId: RED_MATE.id, failedAt: '2026-10-29T12:00:00Z' }] });
+      if (url.endsWith('/attempt'))
+        return json({ attempt: attemptStandardXiangqiPuzzleLine(RED_MATE, movesOf(init)) });
+      if (url.endsWith('/quality')) return new Response(null, { status: 204 });
+      return json({ puzzle: publicDetail(RED_MATE) });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountPuzzles(root);
+    await solveLine(root, RED_MATE);
+    root.querySelector<HTMLButtonElement>('[data-puzzle-replay-previous]')!.click();
+    await new Promise((resolve) => window.setTimeout(resolve, 300));
+    expect(root.querySelector('.puzzle-board')?.getAttribute('data-puzzle-id')).toBe(RED_MATE.id);
+    expect(root.querySelector('.puzzle-replay-summary')).toBeNull();
+    // Returning to the final ply can schedule a fresh advance.
+    root.querySelector<HTMLButtonElement>('[data-puzzle-replay-last]')!.click();
+    await vi.waitFor(() => expect(root.querySelector('.puzzle-replay-summary')).not.toBeNull());
+  });
+
+  const historyEntry = (puzzle: XiangqiPuzzle, createdAt: string, solved = true) => ({
+    puzzleId: puzzle.id,
+    variant: puzzle.variant,
+    solved,
+    rated: true,
+    ratingBefore: 1500,
+    ratingAfter: 1510,
+    ratingDelta: 10,
+    createdAt,
+    fen: standardXiangqiEngineFen(puzzle.initial),
+    sideToMove: puzzle.initial.status.type === 'playing' ? puzzle.initial.status.turn : null,
+  });
+
+  it('opens Puzzle history before the puzzle-id route and highlights its shared menu', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/history');
+    const fetchSpy = vi.fn(async () => json({ attempts: [], nextOffset: null }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    expect(root.querySelector('h1')?.textContent).toBe('Puzzle history');
+    expect(root.querySelector('.puzzle-menu [aria-current="page"]')?.getAttribute('href')).toBe(
+      '/puzzles/history',
+    );
+    expect(root.querySelector('main a')?.textContent).toBe(
+      'Nothing to show, go play some puzzles first!',
+    );
+    expect(root.querySelector('main a')?.getAttribute('href')).toBe('/puzzles');
+    expect(root.querySelector<HTMLButtonElement>('main button')?.hidden).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledWith('/api/puzzles/history?order=newest&limit=50&offset=0', {
+      credentials: 'same-origin',
+    });
+    const source = readFileSync('src/main.ts', 'utf8');
+    expect(source).toContain("const wantsPuzzleHistory = path === '/puzzles/history'");
+    expect(source).toContain(
+      'wantsPuzzleReplay || wantsPuzzleHistory ? null : puzzleIdFromPath(path)',
+    );
+    const branch = source.indexOf('} else if (wantsPuzzleHistory) {');
+    expect(branch).toBeGreaterThan(0);
+    expect(branch).toBeLessThan(source.indexOf('} else if (wantsPuzzles) {'));
+    expect(source).toContain(
+      "import('./puzzles/history.js').then(({ mountPuzzleHistory }) => mountPuzzleHistory(appRoot))",
+    );
+  });
+
+  it('groups by successive one-hour gaps, including chained sessions lasting over an hour', () => {
+    const at = (time: string) => historyEntry(RED_MATE, `2026-10-31T${time}:00Z`);
+    expect(
+      puzzleHistorySessions([at('17:01'), at('16:00'), at('15:00'), at('14:01')]).map((session) =>
+        session.map((entry) => entry.createdAt.slice(11, 16)),
+      ),
+    ).toEqual([['17:01'], ['14:01', '15:00', '16:00']]);
+  });
+
+  it('joins sessions across offset pages, orders thumbnails as played, and draws each solver side', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    const recent = historyEntry(BLACK_MATE, '2026-10-31T16:00:00Z', false);
+    const earlier = historyEntry(RED_MATE, '2026-10-31T15:15:00Z');
+    const old = historyEntry(RED_MATE, '2026-10-30T14:00:00Z');
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(json({ attempts: [recent], nextOffset: 1 }))
+      .mockResolvedValueOnce(json({ attempts: [earlier, old], nextOffset: null }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    root.querySelector<HTMLButtonElement>('main button')!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.puzzle-history__session')).toHaveLength(2),
+    );
+    expect(fetchSpy).toHaveBeenLastCalledWith(
+      '/api/puzzles/history?order=newest&limit=50&offset=1',
+      { credentials: 'same-origin' },
+    );
+    const sessions = [...root.querySelectorAll('.puzzle-history__session')];
+    expect(
+      [...sessions[0]!.querySelectorAll('a')].map((link) => link.getAttribute('href')),
+    ).toEqual([`/puzzles/${RED_MATE.id}`, `/puzzles/${BLACK_MATE.id}`]);
+    expect(
+      [...sessions[0]!.querySelectorAll('a > span:last-child')].map((label) => label.textContent),
+    ).toEqual(['Solved', 'Incorrect']);
+    expect(sessions[0]!.querySelector('time')?.dateTime).toBe(recent.createdAt);
+    const boards = sessions[0]!.querySelectorAll('.puzzle-history__board');
+    expect(boards[0]!.querySelectorAll('svg path').length).toBeGreaterThan(0);
+    expect(boards[1]!.querySelectorAll('svg path').length).toBeGreaterThan(0);
+    // The bottom general's colour changes with the solver; glyphs stay upright.
+    const generalY = (board: Element, glyph: string) => {
+      const path = [...board.querySelectorAll('path')].find(
+        (el) => el.getAttribute('d') === XIANGQI_GLYPH_PATHS[glyph],
+      );
+      const transform = path!.parentElement!.getAttribute('transform')!;
+      return Number(/translate\([^ ]+ ([^)]+)\)/.exec(transform)![1]);
+    };
+    expect(generalY(boards[0]!, '帥')).toBeGreaterThan(generalY(boards[0]!, '將'));
+    expect(generalY(boards[1]!, '將')).toBeGreaterThan(generalY(boards[1]!, '帥'));
+    expect(root.querySelector<HTMLButtonElement>('main button')!.hidden).toBe(true);
+  });
+
+  it.each([
+    ['en', 'Puzzle history', 'Incorrect', '1 minute ago', '17 hours ago', '3 days ago'],
+    ['zh-Hans', '解题记录', '错误', '1分钟前', '17小时前', '3天前'],
+    ['zh-Hant', '解題紀錄', '錯誤', '1 分鐘前', '17 小時前', '3 天前'],
+  ])(
+    'localizes history and relative times in %s',
+    async (locale, title, incorrect, minute, hours, days) => {
+      stubWindowLocalStorage(memoryStorage({ [LOCALE_STORAGE_KEY]: locale }));
+      const now = Date.parse('2026-10-31T19:00:00Z');
+      expect(puzzleHistoryTime(new Date(now - 60_000).toISOString(), now)).toBe(minute);
+      expect(puzzleHistoryTime(new Date(now - 17 * 3_600_000).toISOString(), now)).toBe(hours);
+      expect(puzzleHistoryTime(new Date(now - 3 * 86_400_000).toISOString(), now)).toBe(days);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          json({
+            attempts: [historyEntry(RED_MATE, new Date(now).toISOString(), false)],
+            nextOffset: null,
+          }),
+        ),
+      );
+      const root = document.createElement('div');
+      await mountPuzzleHistory(root);
+      expect(root.querySelector('h1')?.textContent).toBe(title);
+      expect(root.querySelector('.puzzle-history__attempt > span:last-child')?.textContent).toBe(
+        incorrect,
+      );
+    },
+  );
+
+  it('keeps loaded history on paging failures, retries the same offset, and prompts on session expiry', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    window.history.replaceState(null, '', '/puzzles/history');
+    const fetchSpy = vi
+      .fn()
+      .mockResolvedValueOnce(
+        json({ attempts: [historyEntry(RED_MATE, '2026-10-31T12:00:00Z')], nextOffset: 1 }),
+      )
+      .mockResolvedValueOnce(json({}, 503))
+      .mockResolvedValue(json({}, 401));
+    vi.stubGlobal('fetch', fetchSpy);
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    root.querySelector<HTMLButtonElement>('main button')!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelector('main button')?.textContent).toBe('Try again'),
+    );
+    expect(root.querySelectorAll('.puzzle-history__attempt')).toHaveLength(1);
+    root.querySelector<HTMLButtonElement>('main button')!.click();
+    await vi.waitFor(() =>
+      expect(root.querySelectorAll('.puzzle-history__attempt')).toHaveLength(0),
+    );
+    const link = root.querySelector<HTMLAnchorElement>('main a')!;
+    expect(link.textContent).toBe('Sign in');
+    expect(new URL(link.href).searchParams.get('referrer')).toBe('/puzzles/history');
+    expect(fetchSpy.mock.calls.slice(1).map((args) => args[0])).toEqual([
+      '/api/puzzles/history?order=newest&limit=50&offset=1',
+      '/api/puzzles/history?order=newest&limit=50&offset=1',
+    ]);
+    await mountPuzzleHistory(root);
+    expect(root.querySelector('main a')?.textContent).toBe('Sign in');
+    expect(root.querySelector('main button')?.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('never renders a future hidden-information variant as a full-information board', async () => {
+    stubWindowLocalStorage(memoryStorage());
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        json({
+          attempts: [{ ...historyEntry(RED_MATE, '2026-10-31T12:00:00Z'), variant: 'jieqi' }],
+          nextOffset: null,
+        }),
+      ),
+    );
+    const root = document.createElement('div');
+    await mountPuzzleHistory(root);
+    expect(root.querySelector('.puzzle-history__board svg')).toBeNull();
+    expect(root.querySelectorAll('.puzzle-history__attempt')).toHaveLength(1);
   });
 
   it.each([

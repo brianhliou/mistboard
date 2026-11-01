@@ -171,9 +171,10 @@ export async function listAttemptedPuzzleIds(
 // break, so bounded chronological pages can also feed a progress graph.
 export async function listPuzzleAttemptHistory(
   userId: string,
-  variant: string,
+  variant: string | null,
   limit: number,
   offset: number,
+  order: 'oldest' | 'newest' = 'oldest',
 ): Promise<{ attempts: PuzzleAttemptHistoryEntry[]; nextOffset: number | null }> {
   if (!isInitialized()) return { attempts: [], nextOffset: null };
   const { rows } = await getPool().query<{
@@ -188,8 +189,8 @@ export async function listPuzzleAttemptHistory(
     `SELECT puzzle_id, variant, solved, rated,
             user_rating_before, user_rating_after, created_at
        FROM puzzle_attempts
-       WHERE user_id = $1 AND variant = $2
-       ORDER BY created_at ASC, puzzle_id ASC
+       WHERE user_id = $1 AND ($2::text IS NULL OR variant = $2)
+       ORDER BY created_at ${order === 'newest' ? 'DESC' : 'ASC'}, puzzle_id ${order === 'newest' ? 'DESC' : 'ASC'}
        LIMIT $3 OFFSET $4`,
     [userId, variant, limit + 1, offset],
   );

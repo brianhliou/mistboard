@@ -1,8 +1,16 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test, { type TestContext } from 'node:test';
+import {
+  type JunglePuzzle,
+  jungleStateToEngineFen,
+  standardXiangqiEngineFen,
+  type XiangqiPuzzle,
+} from '@mistboard/game';
+import { loadSeedPuzzleRegistry, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
 import { hashSecret } from './account-session.js';
 import { close, getPool, init } from './persistence-db.js';
+import { getPuzzleStore, resetPuzzleStoreForTests } from './puzzle-store.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/puzzles.js';
 
@@ -60,12 +68,35 @@ const rows = [
   },
 ];
 
+const xiangqi = loadSeedPuzzleRegistry('xiangqi')
+  .filter((puzzle): puzzle is XiangqiPuzzle => puzzle.variant === 'xiangqi')
+  .slice(0, 2);
+const jungle = loadSeedPuzzleRegistry('jungle').find(
+  (puzzle): puzzle is JunglePuzzle => puzzle.variant === 'jungle',
+)!;
+const thumbnailFields = (index: number) => ({
+  fen: standardXiangqiEngineFen(xiangqi[index]!.initial),
+  sideToMove:
+    xiangqi[index]!.initial.status.type === 'playing' ? xiangqi[index]!.initial.status.turn : null,
+});
+
 // Real session resolution and persistence serialization; only the pg boundary
 // is mocked. Fail on unknown reads so auth or owner checks cannot pass silently.
 function database(t: TestContext) {
+  resetPuzzleStoreForTests();
   init('postgres://mistboard@127.0.0.1:9/never');
-  t.after(close);
+  t.after(async () => {
+    await close();
+    resetPuzzleStoreForTests();
+  });
   return t.mock.method(getPool(), 'query', async (sql: string, values: unknown[] = []) => {
+    if (sql.includes('SELECT seed_hash')) return { rows: [{ seed_hash: seedPuzzleContentHash() }] };
+    if (sql.includes('SELECT data FROM puzzles'))
+      return {
+        rows: [{ ...xiangqi[0], id: 'first' }, { ...xiangqi[1], id: 'second' }, jungle].map(
+          (data) => ({ data }),
+        ),
+      };
     if (sql.includes('UPDATE account_sessions')) {
       assert.equal(values[1], hashSecret('test-token'));
       return {
@@ -93,12 +124,16 @@ function database(t: TestContext) {
       };
     }
     if (sql.includes('FROM puzzle_attempts')) {
-      assert.match(sql, /WHERE user_id = \$1 AND variant = \$2/);
-      assert.match(sql, /ORDER BY created_at ASC, puzzle_id ASC/);
+      assert.match(sql, /WHERE user_id = \$1 AND \(\$2::text IS NULL OR variant = \$2\)/);
+      const descending = sql.includes('ORDER BY created_at DESC, puzzle_id DESC');
+      if (!descending) assert.match(sql, /ORDER BY created_at ASC, puzzle_id ASC/);
       assert.match(sql, /LIMIT \$3 OFFSET \$4/);
-      assert.equal(values[1], 'xiangqi');
+      assert.ok(values[1] === 'xiangqi' || values[1] === null);
       const offset = Number(values[3]);
-      return { rows: values[0] === 'alice' ? rows.slice(offset, offset + Number(values[2])) : [] };
+      const ordered = descending ? [...rows].reverse() : rows;
+      return {
+        rows: values[0] === 'alice' ? ordered.slice(offset, offset + Number(values[2])) : [],
+      };
     }
     assert.fail('unexpected database query');
   });
@@ -127,6 +162,7 @@ test('puzzle history returns stored outcomes and rating changes in chronological
         ratingAfter: 1623,
         ratingDelta: 123,
         createdAt: '2026-10-25T12:00:00.000Z',
+        ...thumbnailFields(0),
       },
       {
         puzzleId: 'second',
@@ -137,6 +173,7 @@ test('puzzle history returns stored outcomes and rating changes in chronological
         ratingAfter: 1512,
         ratingDelta: -111,
         createdAt: '2026-10-26T12:00:00.000Z',
+        ...thumbnailFields(1),
       },
     ],
     nextOffset: 2,
@@ -153,6 +190,8 @@ test('puzzle history returns stored outcomes and rating changes in chronological
       ratingAfter: 1512,
       ratingDelta: 0,
       createdAt: '2026-10-27T12:00:00.000Z',
+      fen: null,
+      sideToMove: null,
     },
   ]);
   assert.equal(last.body.nextOffset, null);
@@ -174,7 +213,7 @@ test('another account cannot select private puzzle activity using query paramete
 
 test('puzzle history rejects unsupported variants and invalid pagination', async (t) => {
   database(t);
-  for (const query of ['', '?variant=banqi', '?variant=fortress-xiangqi']) {
+  for (const query of ['?variant=banqi', '?variant=fortress-xiangqi']) {
     const response = await history(query, 'alice');
     assert.equal(response.status, 400);
     assert.deepEqual(response.body, { error: 'invalid_variant' });
@@ -189,6 +228,7 @@ test('puzzle history rejects unsupported variants and invalid pagination', async
     'offset=NaN',
     'offset=1e2',
     'offset=9007199254740992',
+    'order=invalid',
   ]) {
     const response = await history(`?variant=xiangqi&${page}`, 'alice');
     assert.equal(response.status, 400, page);
@@ -199,6 +239,7 @@ test('puzzle history rejects unsupported variants and invalid pagination', async
 
 test('puzzle history preserves missing legacy rating snapshots', async (t) => {
   const query = database(t);
+  await getPuzzleStore();
   query.mock.restore();
   t.mock.method(getPool(), 'query', async (sql: string) => {
     if (sql.includes('UPDATE account_sessions')) return { rows: [{ id: 'alice' }] };
@@ -211,4 +252,56 @@ test('puzzle history preserves missing legacy rating snapshots', async (t) => {
   assert.equal(response.body.attempts[0].ratingBefore, null);
   assert.equal(response.body.attempts[0].ratingAfter, null);
   assert.equal(response.body.attempts[0].ratingDelta, null);
+});
+
+test('history offers newest-first offset pages without changing profile chronological defaults', async (t) => {
+  database(t);
+  const first = await history('?order=newest&limit=2', 'alice');
+  assert.equal(first.status, 200);
+  assert.deepEqual(
+    first.body.attempts.map((entry: { puzzleId: string }) => entry.puzzleId),
+    ['third', 'second'],
+  );
+  assert.equal(first.body.progress, null);
+  assert.equal(first.body.nextOffset, 2);
+  const last = await history('?order=newest&limit=2&offset=2', 'alice');
+  assert.equal(last.body.attempts[0].puzzleId, 'first');
+  assert.equal(last.body.nextOffset, null);
+});
+
+test('history serializes only thumbnail fields for public variants and withholds unknown or mismatched views', async (t) => {
+  const query = database(t);
+  await getPuzzleStore();
+  query.mock.restore();
+  const privateState = { hiddenRole: 'PRIVATE_FACE_DOWN_ROLE' };
+  const mockRows = [
+    { ...rows[0], puzzle_id: jungle.id, variant: 'jungle' },
+    {
+      ...rows[0],
+      puzzle_id: 'hidden',
+      variant: 'banqi',
+      initial: privateState,
+      solution: privateState,
+    },
+    { ...rows[0], puzzle_id: 'first', variant: 'banqi' },
+  ];
+  t.mock.method(getPool(), 'query', async (sql: string) => {
+    if (sql.includes('UPDATE account_sessions')) return { rows: [{ id: 'alice' }] };
+    assert.match(sql, /FROM puzzle_attempts/);
+    return { rows: mockRows };
+  });
+  const response = await history('?order=newest', 'alice');
+  assert.equal(response.status, 200);
+  assert.equal(response.body.attempts[0].fen, jungleStateToEngineFen(jungle.initial));
+  assert.equal(
+    response.body.attempts[0].sideToMove,
+    jungle.initial.status.type === 'playing' ? jungle.initial.status.turn : null,
+  );
+  for (const entry of response.body.attempts.slice(1)) {
+    assert.equal(entry.fen, null);
+    assert.equal(entry.sideToMove, null);
+  }
+  const payload = JSON.stringify(response.body);
+  for (const forbidden of ['PRIVATE_FACE_DOWN_ROLE', 'initial', 'solution', 'board'])
+    assert.equal(payload.includes(forbidden), false, forbidden);
 });

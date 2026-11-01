@@ -8,7 +8,9 @@ import {
   type JunglePuzzle,
   junglePuzzleNextMove,
   junglePuzzleSideToMove,
+  jungleStateToEngineFen,
   resolvePuzzleShortCode,
+  standardXiangqiEngineFen,
   standardXiangqiPuzzleNextMove,
   standardXiangqiPuzzleSideToMove,
   XIANGQI_MOTIFS,
@@ -650,7 +652,7 @@ export async function tryHandle(
       return true;
     }
     const variant = parsePuzzleVariant(parsedUrl.searchParams.get('variant'));
-    if (variant === 'invalid' || variant === null) {
+    if (variant === 'invalid') {
       writeJson(response, 400, { error: 'invalid_variant' }, headers);
       return true;
     }
@@ -658,23 +660,46 @@ export async function tryHandle(
     const offsetText = parsedUrl.searchParams.get('offset') ?? '0';
     const limit = Number(limitText);
     const offset = Number(offsetText);
+    const order = parsedUrl.searchParams.get('order') ?? 'oldest';
     if (
       !/^\d+$/.test(limitText) ||
       !/^\d+$/.test(offsetText) ||
       !Number.isSafeInteger(offset + limit + 1) ||
       limit < 1 ||
-      limit > 100
+      limit > 100 ||
+      (order !== 'oldest' && order !== 'newest')
     ) {
       writeJson(response, 400, { error: 'invalid_pagination' }, headers);
       return true;
     }
-    const history = await listPuzzleAttemptHistory(user.id, variant, limit, offset);
-    const rating = await getUserPuzzleRating(user.id, variant);
+    const history = await listPuzzleAttemptHistory(user.id, variant, limit, offset, order);
+    const rating = variant ? await getUserPuzzleRating(user.id, variant) : null;
+    const store = history.attempts.length ? await getPuzzleStore() : null;
     writeJson(
       response,
       200,
       {
         ...history,
+        attempts: history.attempts.map((entry) => {
+          const puzzle = store?.byId.get(entry.puzzleId);
+          // Only these two perfect-information variants may export a full FEN.
+          // A future hidden-info puzzle needs a solver-view serializer here.
+          let fen: string | null = null;
+          let sideToMove: 'red' | 'black' | null = null;
+          if (puzzle && puzzle.variant === entry.variant) {
+            switch (puzzle.variant) {
+              case XIANGQI_SPEC_ID:
+                fen = standardXiangqiEngineFen(puzzle.initial);
+                sideToMove = standardXiangqiPuzzleSideToMove(puzzle);
+                break;
+              case JUNGLE_SPEC_ID:
+                fen = jungleStateToEngineFen(puzzle.initial);
+                sideToMove = junglePuzzleSideToMove(puzzle);
+                break;
+            }
+          }
+          return { ...entry, fen, sideToMove };
+        }),
         progress: rating
           ? {
               rating: rating.rating,
