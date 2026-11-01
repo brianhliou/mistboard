@@ -10,7 +10,11 @@ import type pg from 'pg';
 import { emitAchievementTrigger } from './achievement-triggers.js';
 import { type Glicko2, isProvisional } from './glicko.js';
 import { getPool, isInitialized, withTransaction } from './persistence-db.js';
-import { newPlayerPuzzleRating, ratePuzzleAttempt } from './puzzle-rating.js';
+import {
+  newPlayerPuzzleRating,
+  type PuzzleDashboardResults,
+  ratePuzzleAttempt,
+} from './puzzle-rating.js';
 
 export type UserPuzzleRating = {
   glicko: Glicko2;
@@ -43,6 +47,38 @@ export type PuzzleAttemptHistoryEntry = {
   ratingDelta: number | null;
   createdAt: string;
 };
+
+export type PuzzleHistoryCursor = { createdAt: string; puzzleId: string };
+
+// null starts a new page; undefined is malformed and must be rejected by the route.
+export function parsePuzzleHistoryCursor(
+  raw: string | null,
+): PuzzleHistoryCursor | null | undefined {
+  if (raw === null) return null;
+  if (raw.length > 2048 || !/^[A-Za-z0-9_-]+$/.test(raw)) return undefined;
+  try {
+    const bytes = Buffer.from(raw, 'base64url');
+    if (bytes.toString('base64url') !== raw) return undefined;
+    const value: unknown = JSON.parse(bytes.toString('utf8'));
+    if (!Array.isArray(value) || value.length !== 2) return undefined;
+    const [createdAt, puzzleId] = value;
+    if (
+      typeof createdAt !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(createdAt) ||
+      typeof puzzleId !== 'string' ||
+      !puzzleId ||
+      puzzleId.length > 256 ||
+      puzzleId.includes('\0')
+    )
+      return undefined;
+    const date = new Date(createdAt);
+    if (!Number.isFinite(date.getTime()) || date.toISOString() !== `${createdAt.slice(0, 23)}Z`)
+      return undefined;
+    return { createdAt, puzzleId };
+  } catch {
+    return undefined;
+  }
+}
 
 export type RecordPuzzleAttemptInput = {
   userId: string;
@@ -165,13 +201,23 @@ export async function listAttemptedPuzzleIds(
 // puzzle ratings. The caller supplies the authenticated account, not a handle
 // or an account id taken from the request. Equal timestamps have a stable tie
 // break, so bounded chronological pages can also feed a progress graph.
+// Newest-first pages use a cursor; offsets remain for the profile's oldest-first
+// walk. Preserve PostgreSQL microseconds in the cursor: pg's Date loses them.
 export async function listPuzzleAttemptHistory(
   userId: string,
-  variant: string,
+  variant: string | null,
   limit: number,
   offset: number,
-): Promise<{ attempts: PuzzleAttemptHistoryEntry[]; nextOffset: number | null }> {
-  if (!isInitialized()) return { attempts: [], nextOffset: null };
+  order: 'oldest' | 'newest' = 'oldest',
+  cursor: PuzzleHistoryCursor | null = null,
+): Promise<{
+  attempts: PuzzleAttemptHistoryEntry[];
+  nextOffset?: number | null;
+  nextCursor?: string | null;
+}> {
+  const newest = order === 'newest';
+  if (!isInitialized())
+    return { attempts: [], ...(newest ? { nextCursor: null } : { nextOffset: null }) };
   const { rows } = await getPool().query<{
     puzzle_id: string;
     variant: string;
@@ -180,17 +226,28 @@ export async function listPuzzleAttemptHistory(
     user_rating_before: number | null;
     user_rating_after: number | null;
     created_at: Date;
+    cursor_created_at: string;
   }>(
     `SELECT puzzle_id, variant, solved, rated,
-            user_rating_before, user_rating_after, created_at
+            user_rating_before, user_rating_after, created_at,
+            to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cursor_created_at
        FROM puzzle_attempts
-       WHERE user_id = $1 AND variant = $2
-       ORDER BY created_at ASC, puzzle_id ASC
-       LIMIT $3 OFFSET $4`,
-    [userId, variant, limit + 1, offset],
+       WHERE user_id = $1 AND ($2::text IS NULL OR variant = $2)
+       ${newest ? `AND ($4::timestamptz IS NULL OR (created_at, puzzle_id) < ($4::timestamptz, $5::text))` : ''}
+       ORDER BY created_at ${newest ? 'DESC' : 'ASC'}, puzzle_id ${newest ? 'DESC' : 'ASC'}
+       LIMIT $3 ${newest ? '' : 'OFFSET $4'}`,
+    newest
+      ? [userId, variant, limit + 1, cursor?.createdAt ?? null, cursor?.puzzleId ?? null]
+      : [userId, variant, limit + 1, offset],
   );
+  const page = rows.slice(0, limit);
+  const last = page.at(-1);
+  const nextCursor =
+    newest && rows.length > limit && last
+      ? Buffer.from(JSON.stringify([last.cursor_created_at, last.puzzle_id])).toString('base64url')
+      : null;
   return {
-    attempts: rows.slice(0, limit).map((row) => ({
+    attempts: page.map((row) => ({
       puzzleId: row.puzzle_id,
       variant: row.variant,
       solved: row.solved,
@@ -203,7 +260,52 @@ export async function listPuzzleAttemptHistory(
           : row.user_rating_after - row.user_rating_before,
       createdAt: row.created_at.toISOString(),
     })),
-    nextOffset: rows.length > limit ? offset + limit : null,
+    ...(newest ? { nextCursor } : { nextOffset: rows.length > limit ? offset + limit : null }),
+  };
+}
+
+// A repair is the clean later visit already verified by recordPuzzleAttempt.
+// Keep the dashboard and retry queue on this same persisted definition.
+const REPAIRED_PUZZLE_ATTEMPT = 'solved = FALSE AND repaired_at IS NOT NULL';
+
+// One row per (user, puzzle) is enforced by the first-outcome ledger's primary
+// key. A repair makes that puzzle a win without adding another attempt. The
+// window follows created_at, so repairing an older failure cannot move it into
+// a newer window. Only ids still available in the caller's puzzle store count.
+export async function getPuzzleDashboard(
+  userId: string,
+  days: number,
+  puzzleIds: readonly string[],
+  variant?: string,
+): Promise<PuzzleDashboardResults & { days: number }> {
+  const empty = { days, nb: 0, wins: 0, fixed: 0, puzzleRatingAvg: null };
+  if (!isInitialized() || puzzleIds.length === 0) return empty;
+  const { rows } = await getPool().query<{
+    nb: number;
+    wins: number;
+    fixed: number;
+    puzzle_rating_avg: number | null;
+  }>(
+    `SELECT count(*)::integer AS nb,
+            (count(*) FILTER (WHERE solved OR (${REPAIRED_PUZZLE_ATTEMPT})))::integer AS wins,
+            (count(*) FILTER (WHERE ${REPAIRED_PUZZLE_ATTEMPT}))::integer AS fixed,
+            avg(rating.rating) AS puzzle_rating_avg
+       FROM puzzle_attempts AS attempt
+       JOIN puzzle_ratings AS rating ON rating.puzzle_id = attempt.puzzle_id
+       WHERE attempt.user_id = $1
+         AND attempt.created_at >= now() - ($2::integer * INTERVAL '1 day')
+         AND attempt.created_at <= now()
+         AND attempt.puzzle_id = ANY($3::text[])
+         AND ($4::text IS NULL OR attempt.variant = $4)`,
+    [userId, days, puzzleIds, variant ?? null],
+  );
+  const row = rows[0]!;
+  return {
+    days,
+    nb: row.nb,
+    wins: row.wins,
+    fixed: row.fixed,
+    puzzleRatingAvg: row.puzzle_rating_avg === null ? null : Math.round(row.puzzle_rating_avg),
   };
 }
 
@@ -211,9 +313,16 @@ export async function listPuzzleAttemptHistory(
 // separately; neither list treats a repair as a new first outcome.
 export async function listFailedPuzzleAttempts(
   userId: string,
-  options: { variant?: string; repaired?: boolean } = {},
+  options: { variant?: string; repaired?: boolean; days?: number } = {},
 ): Promise<readonly FailedPuzzleAttempt[]> {
   if (!isInitialized()) return [];
+  const values: unknown[] = [userId];
+  const variantFilter = options.variant ? `AND variant = $${values.push(options.variant)}` : '';
+  const windowFilter =
+    options.days === undefined
+      ? ''
+      : `AND created_at >= now() - ($${values.push(options.days)}::integer * INTERVAL '1 day')
+     AND created_at <= now()`;
   const { rows } = await getPool().query<{
     puzzle_id: string;
     variant: string;
@@ -221,11 +330,12 @@ export async function listFailedPuzzleAttempts(
     repaired_at: Date | null;
   }>(
     `SELECT puzzle_id, variant, created_at, repaired_at FROM puzzle_attempts
-     WHERE user_id = $1 AND solved = FALSE
-       AND repaired_at IS ${options.repaired ? 'NOT NULL' : 'NULL'}
-       ${options.variant ? 'AND variant = $2' : ''}
+     WHERE user_id = $1
+       AND ${options.repaired ? REPAIRED_PUZZLE_ATTEMPT : 'solved = FALSE AND repaired_at IS NULL'}
+       ${variantFilter}
+       ${windowFilter}
      ORDER BY created_at DESC, puzzle_id`,
-    options.variant ? [userId, options.variant] : [userId],
+    values,
   );
   return rows.map((row) => ({
     puzzleId: row.puzzle_id,

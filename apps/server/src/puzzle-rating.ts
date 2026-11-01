@@ -6,6 +6,9 @@
 // puzzle ratings self-calibrate exactly like player ratings do.
 
 import { PUZZLE_NEW_PLAYER_RATING } from '@mistboard/game';
+
+export { type PuzzleDashboardResults, puzzleDashboardMetrics } from '@mistboard/game';
+
 import {
   DEFAULT_RATING,
   DEFAULT_RD,

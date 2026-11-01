@@ -331,7 +331,10 @@ const wantsXiangqiBroadcastAbout = path === '/broadcast/xiangqi/about';
 const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
 const xiangqiBroadcastRound = xiangqiBroadcastRoundFromPath(path);
 const xiangqiBroadcastTourSlug = xiangqiBroadcastTourSlugFromPath(path);
-const puzzleId = puzzleIdFromPath(path);
+const wantsPuzzleReplay = path === '/puzzles/replay';
+const wantsPuzzleHistory = path === '/puzzles/history';
+const puzzleId = wantsPuzzleReplay || wantsPuzzleHistory ? null : puzzleIdFromPath(path);
+const wantsPuzzleDashboard = path === '/puzzles/dashboard';
 const wantsPuzzles = path === '/puzzles' || page === 'puzzles' || puzzleId !== null;
 // Behind the correspondence build flag (soft launch). The nav bell + this
 // dashboard share the gate; the route is invisible until the flag is on.
@@ -837,6 +840,23 @@ if (replaySample) {
         return mountXiangqiBroadcastTour(appRoot, xiangqiBroadcastTourSlug);
       },
     ),
+  );
+} else if (wantsPuzzleDashboard) {
+  setTitleKey('puzzle.dashboardTitle');
+  void mountOrReport(() =>
+    import('./puzzles/dashboard.js').then(({ mountPuzzleDashboard }) =>
+      mountPuzzleDashboard(appRoot),
+    ),
+  );
+} else if (wantsPuzzleHistory) {
+  setTitleKey('puzzle.historyTitle');
+  void mountOrReport(() =>
+    import('./puzzles/history.js').then(({ mountPuzzleHistory }) => mountPuzzleHistory(appRoot)),
+  );
+} else if (wantsPuzzleReplay) {
+  setTitleKey('nav.puzzles');
+  void mountOrReport(() =>
+    import('./puzzles.js').then(({ mountPuzzles }) => mountPuzzles(appRoot)),
   );
 } else if (wantsPuzzles) {
   setTitleKey('nav.puzzles');

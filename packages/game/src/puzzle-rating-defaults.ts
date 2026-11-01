@@ -8,3 +8,33 @@
 // fall to a weak player in a few misses instead of climbing for dozens of
 // solves. The rating deviation stays at the default, so it still moves fast.
 export const PUZZLE_NEW_PLAYER_RATING = 1800;
+
+export type PuzzleDashboardResults = {
+  nb: number;
+  wins: number;
+  fixed: number;
+  puzzleRatingAvg: number | null;
+};
+
+/** Pure dashboard arithmetic shared by the API and browser. */
+export function puzzleDashboardMetrics(results: PuzzleDashboardResults): {
+  firstWins: number;
+  unfixed: number;
+  failed: number;
+  performance: number | null;
+  clear: boolean;
+} {
+  const firstWins = results.wins - results.fixed;
+  const unfixed = results.nb - results.wins;
+  const failed = results.fixed + unfixed;
+  return {
+    firstWins,
+    unfixed,
+    failed,
+    performance:
+      results.nb === 0 || results.puzzleRatingAvg === null
+        ? null
+        : Math.round(results.puzzleRatingAvg - 500 + (1000 * firstWins) / results.nb),
+    clear: results.nb >= 6 && firstWins >= 2 && failed >= 2,
+  };
+}

@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import test, { type TestContext } from 'node:test';
+import test, { describe, type TestContext } from 'node:test';
 import type { XiangqiPuzzle } from '@mistboard/game';
 import { loadSeedPuzzleRegistry, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
 import type pg from 'pg';
+import { createUser } from './persistence.js';
 import { close, getPool, init } from './persistence-db.js';
 import { recordPuzzleQualityEvent } from './persistence-puzzle-quality.js';
-import { recordPuzzleAttempt } from './persistence-puzzle-ratings.js';
+import { listFailedPuzzleAttempts, recordPuzzleAttempt } from './persistence-puzzle-ratings.js';
+import { definePersistenceTests } from './persistence-test-support.js';
 import { seedPuzzleRating } from './puzzle-rating.js';
 import { resetPuzzleStoreForTests } from './puzzle-store.js';
 import type { HttpApiContext } from './routes/lib.js';
@@ -273,6 +275,121 @@ test('failed-puzzle API scopes private results to the session account and valida
   assert.equal((await route('/api/puzzles/failed?variant=banqi')).status, 400);
   assert.equal((await route('/api/puzzles/failed?repaired=maybe')).status, 400);
   assert.equal((await route('/api/puzzles/failed', true, 'POST')).status, 405);
+});
+
+test('failed-puzzle replay validates dashboard days and filters persisted failures by window', async (t) => {
+  database(t);
+  const now = new Date('2026-10-31T12:00:00Z');
+  const day = 86_400_000;
+  const rows = [
+    { puzzle_id: 'recent', created_at: new Date(now.getTime() - day), repaired_at: null },
+    { puzzle_id: 'boundary', created_at: new Date(now.getTime() - 30 * day), repaired_at: null },
+    { puzzle_id: 'old', created_at: new Date(now.getTime() - 31 * day), repaired_at: null },
+    { puzzle_id: 'repaired', created_at: new Date(now.getTime() - day), repaired_at: now },
+    { puzzle_id: 'old-repaired', created_at: new Date(now.getTime() - 31 * day), repaired_at: now },
+    { puzzle_id: 'future', created_at: new Date(now.getTime() + day), repaired_at: null },
+  ].map((row) => ({ ...row, variant: 'xiangqi' }));
+  const reads: unknown[][] = [];
+  t.mock.method(getPool(), 'query', async (sql: string, values: unknown[] = []) => {
+    assert.match(sql, /FROM puzzle_attempts/);
+    assert.equal(values[0], 'solver');
+    reads.push(values);
+    const days = values.find((value) => typeof value === 'number') as number | undefined;
+    return {
+      rows: rows.filter(
+        (row) =>
+          (sql.includes('repaired_at IS NOT NULL')
+            ? row.repaired_at !== null
+            : row.repaired_at === null) &&
+          (days === undefined ||
+            (row.created_at >= new Date(now.getTime() - days * day) && row.created_at <= now)),
+      ),
+    };
+  });
+  assert.deepEqual(
+    (await listFailedPuzzleAttempts('solver', { days: 30 })).map((row) => row.puzzleId),
+    ['recent', 'boundary'],
+  );
+  assert.deepEqual(reads.at(-1), ['solver', 30]);
+  assert.deepEqual(
+    (
+      await listFailedPuzzleAttempts('solver', { days: 30, variant: 'xiangqi', repaired: true })
+    ).map((row) => row.puzzleId),
+    ['repaired'],
+  );
+  assert.deepEqual(reads.at(-1), ['solver', 'xiangqi', 30]);
+});
+
+test('failed-puzzle API rejects invalid days and forwards every dashboard window', async (t) => {
+  const queries = database(t);
+  for (const days of ['', '0', '-1', '4', '31', '91', '1.5', '030', 'NaN']) {
+    const response = await route(`/api/puzzles/failed?days=${days}`);
+    assert.equal(response.status, 400, `days=${days}`);
+    assert.deepEqual(response.body, { error: 'invalid_days' });
+  }
+  for (const days of [1, 2, 3, 7, 10, 14, 21, 30, 60, 90]) {
+    assert.equal((await route(`/api/puzzles/failed?days=${days}`)).status, 200);
+    const read = queries.filter(({ sql }) => sql.includes('FROM puzzle_attempts')).at(-1)!;
+    assert.deepEqual(read.values, ['solver', days]);
+    assert.match(read.sql, /created_at >= now\(\) - \(\$2::integer \* INTERVAL '1 day'\)/);
+    assert.match(read.sql, /created_at <= now\(\)/);
+  }
+});
+
+describe('persistence puzzle-replay window', () => {
+  definePersistenceTests('puzzle-replay window', () => {
+    test('days filters seeded failures inside and outside the window, repaired and unresolved', async () => {
+      const now = new Date();
+      await createUser({
+        id: 'replay-window',
+        email: 'replay-window@example.com',
+        emailVerifiedAt: now,
+        handle: 'replay-window',
+        displayName: 'Replay window',
+        now,
+      });
+      for (const [id, age, repaired] of [
+        ['inside', 1, false],
+        ['older-inside', 29, false],
+        ['outside', 31, false],
+        ['repaired-inside', 1, true],
+        ['repaired-outside', 31, true],
+      ] as const) {
+        await recordPuzzleAttempt({
+          userId: 'replay-window',
+          puzzleId: id,
+          variant: 'xiangqi',
+          solved: false,
+          rated: false,
+          seedRating: seedPuzzleRating(1),
+        });
+        await getPool().query(
+          `UPDATE puzzle_attempts SET created_at = now() - ($2::integer * INTERVAL '1 day'),
+             repaired_at = CASE WHEN $3::boolean THEN now() ELSE NULL END
+           WHERE user_id = 'replay-window' AND puzzle_id = $1`,
+          [id, age, repaired],
+        );
+      }
+      assert.deepEqual(
+        (await listFailedPuzzleAttempts('replay-window', { days: 30 })).map((row) => row.puzzleId),
+        ['inside', 'older-inside'],
+      );
+      assert.deepEqual(
+        (
+          await listFailedPuzzleAttempts('replay-window', {
+            days: 30,
+            variant: 'xiangqi',
+            repaired: true,
+          })
+        ).map((row) => row.puzzleId),
+        ['repaired-inside'],
+      );
+      assert.deepEqual(
+        (await listFailedPuzzleAttempts('replay-window')).map((row) => row.puzzleId),
+        ['inside', 'older-inside', 'outside'],
+      );
+    });
+  });
 });
 
 test('attempt API repairs a clean later visit only after a complete validated solve', async (t) => {
