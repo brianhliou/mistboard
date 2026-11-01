@@ -1,4 +1,4 @@
-// Board renderer for Flip Jungle (兽棋 / 翻翻棋) — the 4×4 flip animal chess board.
+// Board renderer for Flip Jungle (翻翻兽棋) — the 4×4 flip animal chess board.
 //
 // Thin adapter over the shared descriptor-driven cell-board core
 // (@mistboard/board-render renderGridBoardSvg), like jungle-render.ts. Symmetric

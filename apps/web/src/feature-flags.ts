@@ -104,7 +104,7 @@ export function jungleEnabled(): boolean {
   return true;
 }
 
-// Flip Jungle (兽棋 / 翻翻棋, 4×4 flip animal chess) play surface. Launched: always on
+// Flip Jungle (翻翻兽棋, 4×4 flip animal chess) play surface. Launched: always on
 // (the server MISTBOARD_JUNGLE_FLIP_ENABLED flag remains the runtime kill-switch).
 export function jungleFlipEnabled(): boolean {
   return true;
