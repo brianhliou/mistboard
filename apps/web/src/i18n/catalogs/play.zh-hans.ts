@@ -807,6 +807,7 @@ export const ZH_HANS_PLAY = {
   'result.selfDraw': '自摸',
   'result.onDiscard': '点炮胡',
   'result.onPoints': '积分',
+  'result.reachedPoints': '达到100分',
   'live.stillFaceDown': '尚未翻开',
   'live.faceDownAtEnd': '终局时未翻开',
   'live.allRevealed': '已全部翻开',

@@ -116,7 +116,9 @@ function seatLabel(seat: BanqiSeat): TenantSeatKey {
 function reasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'score':
-      return 'result.onPoints';
+      // The score ending is a seat reaching the 100-point target (the engine's
+      // SCORE_TARGET); a no-progress ending is labelled separately.
+      return 'result.reachedPoints';
     case 'no-progress':
       return 'result.noProgress';
     case 'no-legal-move':
