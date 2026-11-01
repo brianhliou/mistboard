@@ -51,6 +51,11 @@ import {
   xiangqiPiece3dMarkup,
   xiangqiPiece3dTurnLook,
 } from './piece-3d.js';
+import {
+  type FaceDownFaces,
+  faceDownFaceSvg,
+  faceDownSlotClass,
+} from './review/face-down-faces.js';
 import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
@@ -175,6 +180,9 @@ export type JieqiBoardRenderOptions = {
    *  (piece-3d.ts) where the set and layout draw discs. Off unless asked: no
    *  surface turns it on yet. */
   tile3d?: boolean;
+  /** A finished game's review only: what each face-down piece was, drawn as a
+   *  ghost face over its back (review/face-down-faces.ts, #824). */
+  faceDownFaces?: FaceDownFaces;
 };
 
 export interface JieqiBoardArrow extends SvgBoardArrowStyle {
@@ -271,7 +279,7 @@ export function renderJieqiBoardSvg(
       ${options.check === false ? '' : checkGlow(view, perspective, pieceSet)}
       ${outline3d ? '' : selectionRing(selectedSquare, perspective)}
       ${options.interactive ? '' : moveHints(view, legalMoves, perspective, outline3d !== null)}
-      ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null, tile3d)}
+      ${pieceLayer(view, perspective, pieceSet, options.draggingFrom ?? null, tile3d, options.faceDownFaces)}
       <g ${BOARD_LASTMOVE_OVER_GROUP_ATTRS}>${lastMoveMarkers(view, perspective, 'over', pieceSet, tile3d)}</g>${outline3d ? `<g ${SELECT_3D_GROUP_ATTRS}>${select3dLayer(view, legalMoves, selectedSquare, perspective, outline3d)}</g>` : ''}
       <g class="jieqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map((marker) => jieqiMarkerSvg(marker, perspective)).join('')}</g>
       <g class="jieqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jieqiArrowLayer(options.arrows ?? [], perspective)}</g>
@@ -396,6 +404,7 @@ function pieceLayer(
   pieceSet: XiangqiPieceSet,
   draggingFrom: JieqiSquare | null,
   tile3d = false,
+  faces?: FaceDownFaces,
 ): string {
   const draw3d =
     tile3d && xiangqiPiece3dApplies(pieceSet, xiangqiPieceShapeForLayout(activeLayout));
@@ -406,6 +415,8 @@ function pieceLayer(
       const { file, rank } = jieqiCoordOf(square as JieqiSquare);
       const { x, y } = intersection(file, rank, perspective);
       const unknown = entry.faceDown && entry.unknown === true;
+      const slotClass = `jieqi-piece-slot${entry.faceDown ? faceDownSlotClass(faces, square) : ''}`;
+      type Face = Parameters<typeof renderXiangqiPieceGlyphed>[0];
       if (draw3d) {
         const rimClass = dragSource
           ? 'jieqi-piece-rim jieqi-piece--drag-source'
@@ -452,7 +463,20 @@ function pieceLayer(
               rimClass,
               xiangqiPieceShapeForLayout(activeLayout),
             );
-        return `<g class="jieqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
+        const ghost = entry.faceDown
+          ? faceDownFaceSvg(faces, square, (id) =>
+              xiangqiPiece3dMarkup(
+                { x, y },
+                CELL,
+                id as Face,
+                pieceSet,
+                { ariaLabel: `${id.color} ${id.role}`, className: 'jieqi-piece', shrouded: false },
+                'jieqi-piece-rim',
+                xiangqiPieceShapeForLayout(activeLayout),
+              ),
+            )
+          : '';
+        return `<g class="${slotClass}" data-piece-square="${square}">${pieceSvg}${ghost}</g>`;
       }
       const pieceSvg = entry.faceDown
         ? renderXiangqiPieceGlyphed({ color: entry.color, role: 'soldier' }, pieceSet, {
@@ -485,7 +509,21 @@ function pieceLayer(
             crossed: drawsCrossedSoldier(entry, rank),
             shape: xiangqiPieceShapeForLayout(activeLayout),
           });
-      return `<g class="jieqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
+      const ghost = entry.faceDown
+        ? faceDownFaceSvg(faces, square, (id) =>
+            renderXiangqiPieceGlyphed(id as Face, pieceSet, {
+              ariaLabel: `${id.color} ${id.role}`,
+              className: 'jieqi-piece',
+              shrouded: false,
+              x: x - PIECE_SIZE / 2,
+              y: y - PIECE_SIZE / 2,
+              size: PIECE_SIZE,
+              crossed: drawsCrossedSoldier(id as Face, rank),
+              shape: xiangqiPieceShapeForLayout(activeLayout),
+            }),
+          )
+        : '';
+      return `<g class="${slotClass}" data-piece-square="${square}">${pieceSvg}${ghost}</g>`;
     })
     .join('');
 }

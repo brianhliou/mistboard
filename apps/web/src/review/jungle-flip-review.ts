@@ -30,6 +30,7 @@ import {
   engineArrowsFromLinesWithParser,
   engineMarkersFromLinesWithParser,
 } from './engine/engine-arrows.js';
+import { withFaceDownReview } from './face-down-faces.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
 import { makeJungleFlipTreeAdapter } from './jungle-flip-tree-adapter.js';
 import { formatFlipVariantBestMove } from './move-advice.js';
@@ -141,6 +142,6 @@ export function mountJungleFlipReview(
   deal: JungleFlipDeal | null,
   config: JungleFlipReviewConfig,
 ): JungleFlipReviewHandle {
-  const adapter = makeJungleFlipTreeAdapter(gameId, deal);
-  return mountTreeReview(root, makeJungleFlipPresentation(adapter), config);
+  const faceDown = withFaceDownReview(makeJungleFlipTreeAdapter(gameId, deal), config);
+  return mountTreeReview(root, makeJungleFlipPresentation(faceDown.adapter), faceDown.config);
 }

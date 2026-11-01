@@ -16,6 +16,7 @@ import type {
 } from '@mistboard/game';
 import { flipSeatInk } from './flip-seat-ink.js';
 import { banqiPieceGhostSvg } from './live-banqi-render.js';
+import type { WithFaceDownFaces } from './review/face-down-faces.js';
 import {
   renderThreeKingdomsBanqiLiveBoardSvg,
   TK_LIVE_BOARD_VIEW,
@@ -92,6 +93,7 @@ export function createThreeKingdomsBanqiInteractiveBoard(
       lastMoveInk: threeKingdomsBanqiLastMoverInk(view),
       arrows,
       markers,
+      faceDownFaces: (view as WithFaceDownFaces<ThreeKingdomsBanqiPlayerView>).faceDownFaces,
     });
   }
 

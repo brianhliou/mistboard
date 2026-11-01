@@ -39,6 +39,11 @@ import {
   piece3dRim,
   round2,
 } from './piece-3d.js';
+import {
+  type FaceDownFaces,
+  faceDownFaceSvg,
+  faceDownSlotClass,
+} from './review/face-down-faces.js';
 import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
@@ -145,6 +150,9 @@ export type BanqiBoardRenderOptions = {
   coordinates?: boolean;
   // Tiles with a visible rim. Unset reads the reader's setting (banqiTile3dEnabled).
   tile3d?: boolean;
+  // A finished game's review only: what each face-down tile was, drawn as a
+  // ghost face over its back (review/face-down-faces.ts, #824).
+  faceDownFaces?: FaceDownFaces;
 };
 
 export interface BanqiBoardArrow extends SvgBoardArrowStyle {
@@ -307,15 +315,26 @@ function pieceLayer(
   pieceSet: XiangqiPieceSet,
   draggingFrom: BanqiSquare | null,
   tile3d = false,
+  faces?: FaceDownFaces,
 ): string {
   return ALL_BANQI_SQUARES.map((square) => {
     const entry = view.board[square];
     if (!entry) return '';
     const dragSource = square === draggingFrom;
+    const slotClass = `banqi-piece-slot${entry.faceDown ? faceDownSlotClass(faces, square) : ''}`;
     if (tile3d) {
       const tile = entry.faceDown ? null : { color: entry.color, role: entry.role };
       const markup = banqiTile3dMarkup(cellCenter(square), tile, pieceSet, { dragSource });
-      return `<g class="banqi-piece-slot" data-piece-square="${square}">${markup}</g>`;
+      const ghost = entry.faceDown
+        ? faceDownFaceSvg(faces, square, (id) =>
+            banqiTile3dMarkup(
+              cellCenter(square),
+              id as { color: BanqiColor; role: BanqiPieceRole },
+              pieceSet,
+            ),
+          )
+        : '';
+      return `<g class="${slotClass}" data-piece-square="${square}">${markup}${ghost}</g>`;
     }
     const { x, y } = cellCenter(square);
     const pieceSvg = entry.faceDown
@@ -329,7 +348,20 @@ function pieceLayer(
           size: PIECE_SIZE,
           shape: BANQI_PIECE_SHAPE,
         });
-    return `<g class="banqi-piece-slot" data-piece-square="${square}">${pieceSvg}</g>`;
+    const ghost = entry.faceDown
+      ? faceDownFaceSvg(faces, square, (id) =>
+          renderXiangqiPieceGlyphed(id as { color: BanqiColor; role: BanqiPieceRole }, pieceSet, {
+            ariaLabel: `${id.color} ${id.role}`,
+            className: 'banqi-piece',
+            shrouded: false,
+            x: x - PIECE_SIZE / 2,
+            y: y - PIECE_SIZE / 2,
+            size: PIECE_SIZE,
+            shape: BANQI_PIECE_SHAPE,
+          }),
+        )
+      : '';
+    return `<g class="${slotClass}" data-piece-square="${square}">${pieceSvg}${ghost}</g>`;
   }).join('');
 }
 
@@ -515,7 +547,7 @@ export function renderBanqiBoardSvg(
       ${options.coordinates ? banqiCoordinateLabels() : ''}
       ${lastMoveMarkers(view)}
       ${selectionRing(options.selectedSquare ?? null)}
-      ${pieceLayer(view, pieceSet, options.draggingFrom ?? null, options.tile3d ?? banqiTile3dEnabled())}
+      ${pieceLayer(view, pieceSet, options.draggingFrom ?? null, options.tile3d ?? banqiTile3dEnabled(), options.faceDownFaces)}
       ${options.interactive ? '' : moveHints(view, moves)}
       <g class="banqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map(banqiMarkerSvg).join('')}</g>
       <g class="banqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${(options.arrows ?? []).map(banqiArrowSvg).join('')}</g>

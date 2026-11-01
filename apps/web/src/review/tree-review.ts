@@ -69,6 +69,7 @@ import { readEngineArrowsEnabled, writeEngineArrowsEnabled } from './engine/engi
 import { createEnginePanel } from './engine/engine-panel.js';
 import { createEvalBar } from './engine/eval-bar.js';
 import { advantageSymbol, formatEval } from './engine/eval-format.js';
+import { installFaceDownPeek } from './face-down-faces.js';
 import {
   type GameAnalysis,
   type GamePhases,
@@ -598,6 +599,13 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  revealing means — this only carries the flag back to it and re-renders — so a
    *  variant opts in by supplying the setter its own projection reads. */
   revealHidden?: { setRevealed(next: boolean): void };
+  /** A finished game's review of a flip variant (banqi, Three Kingdoms banqi,
+   *  Flip Jungle, jieqi; #824): show what each still-face-down piece was, as a
+   *  ghost face on hover (desktop) and from the menu's Reveal identities (every
+   *  device). The variant mount wires the identities (withFaceDownReview in
+   *  face-down-faces.ts); the controller only adds the hover. Postgame only: a
+   *  study or the analysis board never shows more than the game showed. */
+  showFaceDown?: boolean;
   /** Menu action "Analyse from here": continue the CURRENT position on the
    *  standalone analysis board. Returns the href for the node's truth. A dealt
    *  variant pins its exact deal in that URL (the dealt FEN), so the analysis
@@ -923,6 +931,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       if (currentPov === truthKey) handleDrawShape(orig, dest, opts);
     },
   });
+  if (config.showFaceDown) installFaceDownPeek(boardEl, mountAbort.signal);
   const primarySlot: BoardSlot = {
     key: truthKey,
     wrap,

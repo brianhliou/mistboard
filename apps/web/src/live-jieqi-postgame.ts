@@ -192,6 +192,9 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
 
   root.replaceChildren(buildNav());
   mountJieqiReview(root, postgame.game.roomId, deal, {
+    // A finished game: what the still-face-down pieces were, on hover and
+    // from the menu (#824). The payload already carries the whole deal.
+    showFaceDown: true,
     pageClassName: 'jieqi-review',
     ariaLabel: 'Jieqi postgame',
     title: 'Jieqi',

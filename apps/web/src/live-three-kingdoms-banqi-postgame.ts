@@ -181,6 +181,9 @@ function renderPostgame(root: HTMLElement, postgame: ThreeKingdomsBanqiPostgameR
 
   root.replaceChildren(buildNav());
   mountThreeKingdomsBanqiReview(root, {
+    // A finished game: what the still-face-down pieces were, on hover and
+    // from the menu (#824). The payload already carries the whole deal.
+    showFaceDown: true,
     root: start,
     pageClassName: 'banqi-review',
     ariaLabel: variantName,

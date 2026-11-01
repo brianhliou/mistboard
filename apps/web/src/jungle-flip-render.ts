@@ -49,6 +49,11 @@ import {
 } from './jungle-art.js';
 import { characterTokenSvg, type JungleBoardSkin, type JunglePieceSkin } from './jungle-skins.js';
 import { PIECE_3D_IVORY, piece3dDepthShare, piece3dEnabled, round2 } from './piece-3d.js';
+import {
+  type FaceDownFaces,
+  faceDownFaceSvg,
+  faceDownSlotClass,
+} from './review/face-down-faces.js';
 import { animateMoveGlyphs } from './review/move-glyph.js';
 import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
 import {
@@ -140,6 +145,9 @@ export type JungleFlipRenderOptions = {
   /** Trial 3D tiles (#709): each tile shows a band of its body under its face.
    *  Off by default; without it the board's markup is unchanged. */
   tile3d?: boolean;
+  /** A finished game's review only: what each face-down tile was, drawn as a
+   *  ghost face over its back (review/face-down-faces.ts, #824). */
+  faceDownFaces?: FaceDownFaces;
 };
 
 export interface JungleFlipBoardArrow extends SvgBoardArrowStyle {
@@ -231,6 +239,7 @@ function pieces(
   draggingFrom: JungleFlipSquare | null,
   pieceSkin: JunglePieceSkin,
   tile3d = false,
+  faces?: FaceDownFaces,
 ): string {
   const parts: string[] = [];
   const tile = tile3d ? jungleFlipTile3dGeometry(geom.cell) : null;
@@ -261,7 +270,16 @@ function pieces(
       !entry.faceDown && square === draggingFrom
         ? `<g class="jungle-drag-source">${body}</g>`
         : body;
-    parts.push(`<g class="jgf-piece-slot" data-piece-square="${square}">${slotBody}</g>`);
+    const ghost = entry.faceDown
+      ? faceDownFaceSvg(faces, square, (id) => {
+          const face = id as { color: JungleFlipColor; role: JungleFlipPieceRole };
+          return tile
+            ? jungleFlipTile3dMarkup({ x, y }, face, tile, pieceSkin, filterId)
+            : tokenSvg({ cx: x, cy: y, size: s, ink: face.color, role: face.role, filterId });
+        })
+      : '';
+    const slotClass = `jgf-piece-slot${entry.faceDown ? faceDownSlotClass(faces, square) : ''}`;
+    parts.push(`<g class="${slotClass}" data-piece-square="${square}">${slotBody}${ghost}</g>`);
   }
   return parts.join('');
 }
@@ -348,6 +366,7 @@ export function renderJungleFlipBoardSvg(
         options.draggingFrom ?? null,
         pieceSkin,
         options.tile3d ?? piece3dEnabled(),
+        options.faceDownFaces,
       ) +
       `<g class="jungle-flip-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${jungleFlipMarkerLayer(options.markers ?? [], geom)}</g>` +
       `<g class="jungle-flip-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${jungleFlipArrowLayer(options.arrows ?? [], geom)}</g>`,

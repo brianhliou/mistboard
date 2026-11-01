@@ -194,6 +194,9 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
   // a game from before it, replayed with the rule off as it was played).
   const start = { deal, rules: banqiRulesFromView(postgame.view) };
   mountBanqiReview(root, postgame.game.roomId, start, {
+    // A finished game: what the still-face-down pieces were, on hover and
+    // from the menu (#824). The payload already carries the whole deal.
+    showFaceDown: true,
     pageClassName: 'banqi-review',
     ariaLabel: 'Banqi postgame',
     title: 'Banqi',
