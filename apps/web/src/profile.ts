@@ -1143,8 +1143,8 @@ function buildProfileActions(
   return null;
 }
 
-// Your own profile offers its editor; someone else's profile offers the social
-// actions assembled above.
+// Your own profile offers its editor and title verification; someone else's
+// profile offers the social actions assembled above.
 function buildOwnerActions(locale: Locale = currentLocale(), title?: unknown): HTMLElement {
   const row = document.createElement('div');
   row.className = 'profile-relation-actions profile-owner-actions';
@@ -1153,6 +1153,11 @@ function buildOwnerActions(locale: Locale = currentLocale(), title?: unknown): H
   edit.href = localizedHref('/account/settings', locale);
   edit.textContent = t('profile.editProfile', {}, locale);
   row.append(edit);
+  const verifyTitle = document.createElement('a');
+  verifyTitle.className = 'landing-setup-back';
+  verifyTitle.href = localizedHref('/verify-title', locale);
+  verifyTitle.textContent = t('verifyTitle.heading', {}, locale);
+  row.append(verifyTitle);
   // A held title unlocks the coach directory: offer the editor entry point.
   if (isPlayerTitle(title)) {
     const coach = document.createElement('a');

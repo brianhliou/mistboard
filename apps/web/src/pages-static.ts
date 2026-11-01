@@ -654,6 +654,11 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     linkLine(t('source.githubRepository', {}, locale), GITHUB_URL),
     textLine(t('source.licenseAgpl', {}, locale)),
     textLine(t('source.noWarranty', {}, locale)),
+    aboutLink(t('contribute.heading', {}, locale), localizedHref('/contribute', locale)),
+    aboutLink(t('developers.heading', {}, locale), localizedHref('/developers', locale)),
+    aboutLink(t('data.heading', {}, locale), localizedHref('/data', locale)),
+    aboutLink(t('apiDocs.heading', {}, locale), localizedHref('/api-docs', locale)),
+    aboutLink(t('thanks.heading', {}, locale), localizedHref('/thanks', locale)),
   ]);
 
   const thirdParty = sourceBlock(t('source.thirdParty', {}, locale), [

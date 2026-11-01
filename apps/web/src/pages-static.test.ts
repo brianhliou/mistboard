@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
 import { hasSiteByline } from './articles/site-author.js';
 import { articles } from './articles-data.js';
+import { mountCreators } from './creators-page.js';
 import { t } from './i18n/catalog.js';
 import {
   ARTICLE_ROUTE_CLASS,
@@ -148,6 +149,37 @@ describe('static pages', () => {
     expect(root.textContent).toContain('GitHub 儲存庫');
     expect(root.textContent).toContain('第三方元件');
     expect(root.textContent).toContain('專案身份');
+  });
+
+  it.each([
+    ['/source', ['Contribute', 'Developers', 'Game data', 'API', 'Thank you']],
+    ['/zh-hans/source', ['参与贡献', '开发者', '对局数据', 'API 文档', '致谢']],
+    ['/zh-hant/source', ['參與貢獻', '開發者', '對局資料', 'API 文件', '致謝']],
+  ] as const)('preserves resource links in the source page content at %s', (path, labels) => {
+    window.history.replaceState(null, '', path);
+    const root = document.createElement('main');
+    mountSource(root);
+
+    const destinations = ['/contribute', '/developers', '/data', '/api-docs', '/thanks'];
+    for (const [index, href] of destinations.entries()) {
+      expect(root.querySelector(`.source-section a[href="${href}"]`)?.textContent).toBe(
+        labels[index],
+      );
+    }
+  });
+
+  it.each([
+    ['/creators', 'title verification'],
+    ['/zh-hans/creators', '称号认证'],
+    ['/zh-hant/creators', '稱號認證'],
+  ])('keeps title verification in the creators page content at %s', (path, label) => {
+    window.history.replaceState(null, '', path);
+    const root = document.createElement('main');
+    mountCreators(root);
+
+    expect(root.querySelector('.creators-section a[href="/verify-title"]')?.textContent).toBe(
+      label,
+    );
   });
 
   it('credits Pikafish on the source page with its site, weights license and repository', () => {
