@@ -356,7 +356,8 @@ const BOARD_POSITION_CARDS: Record<
   jungle: { variant: 'jungle', fen: JUNGLE_CARD_FEN },
   'jungle-flip': { variant: 'jungle-flip', fen: JUNGLE_FLIP_CARD_FEN },
   pikafish: { variant: 'xiangqi', fen: PIKAFISH_CARD_FEN, localized: true },
-  gomoku: { board: gomokuRulesCardBoard(), localized: true },
+  // English only until the rewritten rules are reviewed and localized.
+  gomoku: { board: gomokuRulesCardBoard() },
 };
 
 /** The page languages a card has its own version for, as route prefixes. */

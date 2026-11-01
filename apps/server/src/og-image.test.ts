@@ -147,7 +147,7 @@ function setGomokuFlag(t: TestContext, flag: string | undefined): void {
 }
 
 test('Gomoku rules card shows five connected stones through the existing board renderer', async () => {
-  const { positionCardBoard, articleCardTitle, articleCardTitleZh } = await import('./og-image.js');
+  const { positionCardBoard, articleCardTitle } = await import('./og-image.js');
   const { renderBoardCard, renderBoardAspectCard, CARD_ASPECT_FRAMES } = await import(
     './og-card-board.js'
   );
@@ -159,12 +159,11 @@ test('Gomoku rules card shows five connected stones through the existing board r
   assert.deepEqual(board.position.lastMove, { to: 'i8' });
   assert.deepEqual([...board.position.winningLine].sort(), ['e8', 'f8', 'g8', 'h8', 'i8']);
   const meta = ARTICLE_META.gomoku!;
-  const titles = [
-    articleCardTitle(meta.kind, meta.title),
-    ...(['zh-hans', 'zh-hant'] as const).map((lang) => articleCardTitleZh(meta.zhTitles![lang])),
-  ];
-  assert.deepEqual(titles, ['Gomoku Rules', '五子棋规则', '五子棋規則']);
-  for (const title of titles) {
+  const title = articleCardTitle(meta.kind, meta.title);
+  assert.equal(title, 'Gomoku Rules');
+  // English only until the rewritten rules are localized.
+  assert.equal(meta.zhTitles, undefined);
+  {
     const svg = renderBoardCard(board, new Map(), { title: [title] });
     assert.match(svg, /fill="#dcb975"/);
     assert.equal((svg.match(/class="gomoku-stone /g) ?? []).length, 9);
@@ -182,7 +181,7 @@ test('Gomoku rules card shows five connected stones through the existing board r
   }
 });
 
-test('Gomoku rules share URLs serve all shapes and three caption languages when enabled', async (t) => {
+test('Gomoku rules share URLs serve every shape in English and 404 a zh caption when enabled', async (t) => {
   setGomokuFlag(t, 'true');
   const { articleOgImageUrl } = await import('./og-image.js');
   const { pngSize } = await import('./og-raster.js');
@@ -193,27 +192,28 @@ test('Gomoku rules share URLs serve all shapes and three caption languages when 
     '1x1': { width: 1200, height: 1200 },
   };
   for (const [aspect, size] of Object.entries(frames)) {
-    const cards: Buffer[] = [];
-    for (const lang of [undefined, 'zh-hans', 'zh-hant']) {
-      const url = new URL(articleOgImageUrl('https://mistboard.test', 'gomoku', lang));
-      if (aspect) url.searchParams.set('aspect', aspect);
-      const res = await getRoute(`${url.pathname}${url.search}`);
-      assert.equal(res.status, 200, `${lang ?? 'en'} ${aspect}`);
-      assert.equal(res.headers['content-type'], 'image/png');
-      assert.deepEqual(pngSize(res.body), size);
-      cards.push(res.body);
-    }
-    if (!aspect) {
-      assert.ok(!cards[0]!.equals(cards[1]!), 'English and Simplified captions differ');
-      assert.ok(!cards[1]!.equals(cards[2]!), 'Simplified and Traditional captions differ');
-    } else {
-      assert.ok(cards[0]!.equals(cards[1]!), 'Gomoku stones need no language-specific piece set');
-      assert.ok(cards[1]!.equals(cards[2]!));
+    const url = new URL(articleOgImageUrl('https://mistboard.test', 'gomoku'));
+    if (aspect) url.searchParams.set('aspect', aspect);
+    const res = await getRoute(`${url.pathname}${url.search}`);
+    assert.equal(res.status, 200, aspect);
+    assert.equal(res.headers['content-type'], 'image/png');
+    assert.deepEqual(pngSize(res.body), size);
+    for (const lang of ['zh-hans', 'zh-hant']) {
+      assert.equal(
+        articleOgImageUrl('https://mistboard.test', 'gomoku', lang),
+        articleOgImageUrl('https://mistboard.test', 'gomoku'),
+      );
+      url.searchParams.set('lang', lang);
+      assert.equal(
+        (await getRoute(`${url.pathname}${url.search}`)).status,
+        404,
+        `${lang} ${aspect}`,
+      );
     }
   }
   // The feature gate must run before a warm card cache can return bytes.
   process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
-  assert.equal((await getRoute('/og/article/gomoku.png?v=7&lang=zh-hant')).status, 404);
+  assert.equal((await getRoute('/og/article/gomoku.png?v=7')).status, 404);
 });
 
 test('Gomoku rules share images stay absent with the flag off or unset', async (t) => {
