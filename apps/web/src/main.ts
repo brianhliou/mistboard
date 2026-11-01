@@ -333,7 +333,7 @@ const xiangqiBroadcastRound = xiangqiBroadcastRoundFromPath(path);
 const xiangqiBroadcastTourSlug = xiangqiBroadcastTourSlugFromPath(path);
 const wantsPuzzleReplay = path === '/puzzles/replay';
 const wantsPuzzleHistory = path === '/puzzles/history';
-const puzzleId = wantsPuzzleReplay || wantsPuzzleHistory ? null : puzzleIdFromPath(path);
+const puzzleId = puzzleIdFromPath(path);
 const wantsPuzzleDashboard = path === '/puzzles/dashboard';
 const wantsPuzzles = path === '/puzzles' || page === 'puzzles' || puzzleId !== null;
 // Behind the correspondence build flag (soft launch). The nav bell + this
@@ -1223,7 +1223,9 @@ function liveRoomIdFromPath(value: string): string | null {
 
 function puzzleIdFromPath(value: string): string | null {
   const match = value.match(/^\/puzzles\/([^/]+)$/);
-  return match ? decodeURIComponent(match[1]!) : null;
+  // Fixed pages under /puzzles/ that are not puzzle ids.
+  if (!match || match[1] === 'replay' || match[1] === 'history') return null;
+  return decodeURIComponent(match[1]!);
 }
 
 function xiangqiBroadcastTourSlugFromPath(value: string): string | null {

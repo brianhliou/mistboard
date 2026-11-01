@@ -446,7 +446,7 @@ release, build and run the native gate above, then wait for the **new**
 Railpack fetches, then verifies the same binary and native data; it compiles
 no engines. This asset change also reaches engine-worker's watched inputs.
 
-Follow [engine-worker deployment safety](engine-worker-deploy-safety.md):
+Follow the engine-worker deployment runbook:
 use `node scripts/deploy-engine-worker.mjs` for the authorized check-only
 preview, establish verified running revisions, and retain the exact engine
 SHA/CI, clean-tree, baseline, lock/journal and new-deployment health checks.

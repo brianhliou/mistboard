@@ -288,9 +288,9 @@ describe('puzzles route', () => {
     });
     const source = readFileSync('src/main.ts', 'utf8');
     expect(source).toContain("const wantsPuzzleHistory = path === '/puzzles/history'");
-    expect(source).toContain(
-      'wantsPuzzleReplay || wantsPuzzleHistory ? null : puzzleIdFromPath(path)',
-    );
+    // puzzleIdFromPath rejects the fixed pages itself, so the route table's
+    // conformance test can still bind it as `puzzleIdFromPath(path)`.
+    expect(source).toContain("match[1] === 'replay' || match[1] === 'history'");
     const branch = source.indexOf('} else if (wantsPuzzleHistory) {');
     expect(branch).toBeGreaterThan(0);
     expect(branch).toBeLessThan(source.indexOf('} else if (wantsPuzzles) {'));
