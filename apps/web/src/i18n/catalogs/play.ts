@@ -635,6 +635,13 @@ export const EN_PLAY = {
   'variant.xiangqiMahjong.name': 'Xiangqi Mahjong',
   // Local playtest only (#628).
   'variant.threeKingdomsBanqi.name': 'Three Kingdoms Banqi',
+  'variant.ffqBanqi.name': 'FFQ Banqi',
+  'live.ffq.hp': '{hp}/{max} HP',
+  'live.ffq.noProgress': 'No progress {count}/{limit}',
+  'live.ffq.chase': '{side} chase {count}/{limit}',
+  'live.ffq.captureDamage': '{capturer} captured {owner} {piece}: {owner} −{damage} HP',
+  'live.ffq.adminOnly': 'This playtest requires an admin account and the FFQ Banqi flag.',
+  'result.hp': 'HP depletion',
   'live.pageTitle': 'Live',
   'live.you': 'You',
   'live.guestAre': 'Guest ({color})',
