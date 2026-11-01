@@ -4,8 +4,16 @@
  * and Solution panels with the next-puzzle CTA + thumb vote.
  */
 
+import {
+  getStandardXiangqiLegalMoves,
+  standardXiangqiEngineFen,
+  XIANGQI_SPEC_ID,
+  type XiangqiGameState,
+} from '@mistboard/game';
+import { track } from '../analytics.js';
 import { t } from '../i18n/catalog.js';
 import { deviceIdForBrowser } from '../live-state.js';
+import { practicePositionHref } from '../practice-position-params.js';
 import {
   colorLabel,
   isSessionSolved,
@@ -117,7 +125,9 @@ function revealedPanel(session: PuzzleSession, navigation: PuzzleNavigation): HT
   cont.disabled = !navigation.hasNext;
   cont.addEventListener('click', navigation.goNext);
 
-  panel.append(title, cont, puzzleReportControl(session));
+  panel.append(title, cont);
+  appendPlayPosition(panel, session);
+  panel.append(puzzleReportControl(session));
   return panel;
 }
 
@@ -161,8 +171,42 @@ function solvedPanel(
   );
   feedbackRow.append(prompt, votes);
 
-  panel.append(title, cont, feedbackRow, puzzleReportControl(session));
+  panel.append(title, cont, feedbackRow);
+  appendPlayPosition(panel, session);
+  panel.append(puzzleReportControl(session));
   return panel;
+}
+
+function appendPlayPosition(panel: HTMLElement, session: PuzzleSession): void {
+  // This practice route only understands standard xiangqi. The session state
+  // is the solution's final position, independent of the replay cursor.
+  if (session.puzzle.variant !== XIANGQI_SPEC_ID || !session.puzzle.sideToMove) return;
+  const state = session.state as XiangqiGameState;
+  if (state.status.type !== 'playing' || getStandardXiangqiLegalMoves(state).length === 0) return;
+
+  const link = document.createElement('a');
+  link.className = 'puzzle-feedback-skip';
+  link.dataset.puzzlePlayPosition = 'true';
+  link.textContent = t('puzzle.playPosition');
+  link.href = practicePositionHref(
+    standardXiangqiEngineFen(state),
+    'mate',
+    session.puzzle.sideToMove,
+  );
+  // Reuse the secondary button's touch sizing; span the phone panel's three
+  // columns so this action stays inside the panel beneath Next puzzle.
+  link.style.gridColumn = '1 / -1';
+  link.style.justifySelf = 'stretch';
+  link.style.margin = '4px 12px';
+  link.style.display = 'grid';
+  link.style.placeItems = 'center';
+  link.addEventListener('click', () => {
+    track('puzzle_play_position', {
+      puzzle_id: session.puzzle.id,
+      outcome: session.revealed ? 'revealed' : session.failed ? 'failed' : 'solved',
+    });
+  });
+  panel.append(link);
 }
 
 const reportStates = new WeakMap<
