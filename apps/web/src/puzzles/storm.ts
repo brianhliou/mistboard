@@ -1,10 +1,10 @@
 import { track } from '../analytics.js';
-import { loginHrefForCurrentPage } from '../auth-redirect.js';
 import { t } from '../i18n/catalog.js';
 import type { PuzzleSolverHandle, PuzzleSolverOptions } from '../puzzles.js';
 import { colorLabel, type PuzzleDetail, type PuzzleSession } from './adapter.js';
 import { fetchPuzzleDetail, type PuzzleAttempt, PuzzlePlayDisabledError } from './api.js';
 import { puzzleResultChips } from './result-chips.js';
+import { signInCta } from './sign-in-cta.js';
 
 type StormRun = {
   runId: string;
@@ -153,12 +153,7 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     const facts = document.createElement('p');
     facts.textContent = t('puzzle.stormFacts');
     card.append(title, rules, facts);
-    if (run?.best === null) {
-      const signIn = document.createElement('a');
-      signIn.href = loginHrefForCurrentPage();
-      signIn.textContent = t('puzzle.streakSignInBest');
-      card.append(signIn);
-    }
+    if (run?.best === null) card.append(signInCta(t('puzzle.streakSignInBest')));
     return card;
   };
   const feedback = (session: PuzzleSession): HTMLElement => {
@@ -189,14 +184,14 @@ export async function mountPuzzleStorm(frame: Frame, mountSolver: MountSolver): 
     card.dataset.stormResults = 'true';
     const title = document.createElement('h1');
     title.textContent = t('puzzle.stormFinished');
-    const bests = document.createElement('p');
+    // A guest's score is lost when they leave: the buttons stand where a
+    // signed-in player sees their bests.
+    let bests: HTMLElement;
     if (run.best !== null) {
+      bests = document.createElement('p');
       bests.textContent = `${t('puzzle.streakBest', { best: run.best })} · ${t('puzzle.stormDailyBest', { best: run.dailyBest ?? 0 })}`;
     } else {
-      const signIn = document.createElement('a');
-      signIn.href = loginHrefForCurrentPage();
-      signIn.textContent = t('puzzle.streakSignInBest');
-      bests.append(signIn);
+      bests = signInCta(t('puzzle.streakSignInBest'));
     }
     const chips = puzzleResultChips(run.results, null, {
       label: t('puzzle.streakReview'),

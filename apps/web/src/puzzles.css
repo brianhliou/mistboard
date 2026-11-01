@@ -39,7 +39,7 @@
 /* Quiet links: practice and sign-in sit under the main action, never beside
    it as a second call to action. */
 .puzzle-streak-practice,
-.puzzle-streak-signin,
+a.puzzle-streak-signin,
 .puzzle-quiet-link {
   color: var(--site-muted);
   font-size: 13px;
@@ -48,9 +48,73 @@
 }
 
 .puzzle-streak-practice:hover,
-.puzzle-streak-signin:hover,
+a.puzzle-streak-signin:hover,
 .puzzle-quiet-link:hover {
   color: var(--site-accent);
+}
+
+/* A guest's invitation to keep their score: Register filled like the
+   header's button, Sign in outlined, both returning to this page. */
+.puzzle-signin-cta {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.puzzle-signin-cta-lead {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.puzzle-signin-cta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.puzzle-signin-cta-register,
+.puzzle-signin-cta-login,
+.puzzle-streak-tally a.puzzle-streak-signin {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  border-radius: 7px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.puzzle-signin-cta-register {
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+  box-shadow: 0 1px 2px color-mix(in srgb, black 18%, transparent);
+}
+
+.puzzle-signin-cta-register:hover,
+.puzzle-signin-cta-register:focus-visible {
+  background: color-mix(in srgb, var(--site-accent) 82%, white);
+  color: var(--site-on-accent);
+}
+
+.puzzle-signin-cta-login,
+.puzzle-streak-tally a.puzzle-streak-signin {
+  border: 1px solid color-mix(in srgb, var(--site-accent) 45%, transparent);
+  color: var(--site-accent);
+}
+
+.puzzle-signin-cta-login:hover,
+.puzzle-signin-cta-login:focus-visible,
+.puzzle-streak-tally a.puzzle-streak-signin:hover {
+  background: color-mix(in srgb, var(--site-accent) 8%, transparent);
+  color: var(--site-accent);
+}
+
+.puzzle-streak-tally a.puzzle-streak-signin {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
 }
 
 /* The left card in the regular page's card type: the title as a card heading,
@@ -2922,6 +2986,12 @@ a.puzzle-tag--link:hover {
   justify-content: space-between;
   gap: 8px;
   padding: 8px;
+}
+
+/* A Storm run is played forward against the clock: the move arrows would sit
+   disabled the whole run, so they show only when reviewing a finished puzzle. */
+.puzzle-storm-shell:not(.puzzle-storm-reviewing) .puzzle-move-nav {
+  display: none;
 }
 
 @media (max-width: 980px) {

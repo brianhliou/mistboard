@@ -43,7 +43,9 @@ function json(body: unknown, status = 200) {
 
 // The HTTP double grades real corpus moves. The UI cannot infer a verdict,
 // bonus, deadline or next puzzle from the move it just sent.
-function server(options: { combo?: number; remaining?: number; partial?: boolean } = {}) {
+function server(
+  options: { combo?: number; remaining?: number; partial?: boolean; guest?: boolean } = {},
+) {
   let index = 0;
   let score = 0;
   let combo = options.combo ?? 0;
@@ -60,8 +62,8 @@ function server(options: { combo?: number; remaining?: number; partial?: boolean
     version,
     score,
     combo,
-    best: 8,
-    dailyBest: 3,
+    best: options.guest ? null : 8,
+    dailyBest: options.guest ? null : 3,
     remainingMs: Math.max(0, deadline - Date.now()),
     deadlineAt: deadline,
     startedAt: Date.now() - 1000,
@@ -220,6 +222,24 @@ it('starts Storm, counts down, and moves straight to the next public board after
       ([url]) => String(url) === '/api/puzzles/storm' || String(url).endsWith('/quality'),
     ),
   ).toBe(true);
+});
+
+it('invites a guest to register or sign in with buttons, before and after the run', async () => {
+  server({ guest: true, remaining: 1000 });
+  const root = await open();
+  await vi.waitFor(() => expect(boardId(root)).toBe(puzzles[0]!.id));
+  const before = root.querySelector('.puzzle-signin-cta');
+  expect(before?.querySelector('.puzzle-signin-cta-register')?.getAttribute('href')).toContain(
+    'tab=register',
+  );
+  expect(before?.querySelector('.puzzle-signin-cta-login')?.getAttribute('href')).toContain(
+    'tab=login',
+  );
+  await vi.advanceTimersByTimeAsync(2000);
+  await vi.waitFor(() => expect(root.querySelector('[data-storm-results]')).not.toBeNull());
+  const after = root.querySelector('[data-storm-results] .puzzle-signin-cta');
+  expect(after?.querySelector('.puzzle-signin-cta-register')?.textContent).toBe('Register');
+  expect(after?.querySelector('.puzzle-signin-cta-login')?.textContent).toBe('Sign in');
 });
 
 it.each([
