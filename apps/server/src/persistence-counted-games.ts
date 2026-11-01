@@ -33,6 +33,7 @@
 
 import {
   ALLOWLISTED_PLAYTEST_SPEC_IDS,
+  FFQ_BANQI_SPEC_ID,
   isPublicGameSpec,
   RETIRED_GAME_SPEC_IDS,
   THREE_KINGDOMS_BANQI_SPEC_ID,
@@ -161,7 +162,15 @@ export function offPublicGameSpecIds(allowlisted: readonly string[]): readonly s
   const adminOnly = ADMIN_PLAYTEST_SPEC_IDS.filter(
     (id) => !isPublicGameSpec(id) && !allowlisted.includes(id),
   );
-  return [...RETIRED_GAME_SPEC_IDS, ...allowlisted, ...adminOnly];
+  // FFQ never contributes public activity, even with its admin flag enabled
+  // or if its surface metadata changes. Other playtests retain their gates.
+  return [...new Set([...RETIRED_GAME_SPEC_IDS, ...allowlisted, ...adminOnly, FFQ_BANQI_SPEC_ID])];
+}
+
+// Apply before pagination and counts, including a person's own profile and
+// favorites. Room-read authorization does not grant public discoverability.
+export function notFFQBanqiGame(gamesAlias = 'games'): string {
+  return notRetiredVariant(gamesAlias, [FFQ_BANQI_SPEC_ID]);
 }
 
 export const OFF_PUBLIC_GAME_SPEC_IDS: readonly string[] = offPublicGameSpecIds(

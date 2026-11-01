@@ -1,6 +1,7 @@
 import {
   CANONICAL_VARIANT_ORDER,
   DARK_CHESS_SPEC_ID,
+  FFQ_BANQI_SPEC_ID,
   type GameFamilyId,
   type GameSpecId,
   isRetiredGameSpec,
@@ -171,8 +172,11 @@ export function gameSpecIsPublic(gameSpecId: string): boolean {
 // flag-only listing until someone decides to move them here.
 const LISTED_ONLY_WHEN_PUBLIC: ReadonlySet<string> = new Set(['xiangqi-mahjong']);
 
-/** False only for a variant that waits on its public surface and is not on one. */
+/** Public listing policy: permanent FFQ exclusion, then each existing surface gate. */
 export function listedOnSurface(gameSpecId: string): boolean {
+  // The admin-only FFQ playtest never enters discovery, regardless of flag
+  // or publicSurface. Retain the existing surface rules for other variants.
+  if (gameSpecId === FFQ_BANQI_SPEC_ID) return false;
   return !LISTED_ONLY_WHEN_PUBLIC.has(gameSpecId) || gameSpecIsPublic(gameSpecId);
 }
 

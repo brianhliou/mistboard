@@ -37,7 +37,7 @@ import {
   type TenantManagedRoom,
   type VariantTenantRegistration,
 } from './variant-tenant/registry.js';
-import { listWatchChannels, type WatchChannel } from './watch-channels.js';
+import { listedOnSurface, listWatchChannels, type WatchChannel } from './watch-channels.js';
 
 export const LIVE_TV_TOP_CHANNEL_ID = 'top';
 
@@ -73,6 +73,7 @@ export function hasLiveWatchPayloadBuilder(channelId: string): boolean {
 export async function liveWatchPayloadForFeatured(
   featured: LiveTvCandidate,
 ): Promise<Record<string, unknown> | null> {
+  if (!listedOnSurface(featured.gameSpecId)) return null;
   if (!canServeLiveBoard(featured.gameSpecId)) return null;
   const builder = liveWatchPayloadBuilders.get(featured.channelId);
   if (!builder) return null;
@@ -215,7 +216,7 @@ export function collectLiveTvCandidates(ctx: HttpApiContext, now = Date.now()): 
 
   for (const registration of registeredVariantTenants()) {
     const watch = registration.watch;
-    if (!watch || !registration.enabled()) continue;
+    if (!watch || !registration.enabled() || !listedOnSurface(registration.gameSpecId)) continue;
     if (!enabledChannelIds.has(watch.channelId)) continue;
     if (!canServeLiveBoard(registration.gameSpecId)) continue;
     if (!hasLiveWatchPayloadBuilder(watch.channelId)) continue;
