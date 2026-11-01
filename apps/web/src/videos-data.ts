@@ -1179,6 +1179,22 @@ const MISTBOARD_SHORTS: readonly YoutubeVideo[] = [
     addedAt: '2026-10-28',
     publishAt: '2026-10-29T02:35:00Z',
   },
+  {
+    source: 'youtube',
+    id: 'sG3ydJcuQ8w',
+    short: true,
+    thumbnailUrl: '/video-thumbs/short-04-six-directions-v1.png',
+    title: 'Released to the Six Directions: A Ming Dynasty Chinese Chess Mate in Five',
+    author: 'Mistboard',
+    firstParty: true,
+    durationMinutes: 1,
+    tags: ['tactics'],
+    level: 'intermediate',
+    variant: 'xiangqi',
+    language: 'en',
+    addedAt: '2026-11-01',
+    publishAt: '2026-11-01T17:00:00Z',
+  },
 ];
 
 /** The curated catalogue: other people's videos, filtered and faceted by the
