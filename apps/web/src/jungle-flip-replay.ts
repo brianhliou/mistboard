@@ -1,4 +1,4 @@
-// Flip Jungle (兽棋 / 翻翻棋) game replay for the rules article.
+// Flip Jungle (翻翻兽棋) game replay for the rules article.
 //
 // Sibling of banqi-replay.ts: the spec carries the hidden deal + a move list, not
 // per-ply board images. Each position is produced by replaying the moves through

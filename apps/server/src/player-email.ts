@@ -73,7 +73,7 @@ const VARIANT_NAMES: Record<GameSpecId, Record<EmailLocale, string> | null> = {
   'fortress-xiangqi': { en: 'Fortress Xiangqi', 'zh-Hans': '堡垒象棋', 'zh-Hant': '堡壘象棋' },
   jieqi: { en: 'Jieqi', 'zh-Hans': '揭棋', 'zh-Hant': '揭棋' },
   jungle: { en: 'Jungle Chess', 'zh-Hans': '斗兽棋', 'zh-Hant': '鬥獸棋' },
-  'jungle-flip': { en: 'Flip Jungle', 'zh-Hans': '翻翻棋', 'zh-Hant': '翻翻棋' },
+  'jungle-flip': { en: 'Flip Jungle', 'zh-Hans': '翻翻兽棋', 'zh-Hant': '翻翻獸棋' },
   xiangqi: { en: 'Xiangqi', 'zh-Hans': '象棋', 'zh-Hant': '象棋' },
   'crazyhouse-xiangqi': {
     en: 'Crazyhouse Xiangqi',

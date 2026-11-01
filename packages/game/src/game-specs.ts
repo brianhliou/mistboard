@@ -708,7 +708,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Flip Jungle (兽棋 / 翻翻棋): the 4x4 flip derivative of Dou Shou Qi. Symmetric
+    // Flip Jungle (翻翻兽棋): the 4x4 flip derivative of Dou Shou Qi. Symmetric
     // hidden-identity (both seats see the same masked board; only the deal is hidden),
     // like banqi. Equal-rank = 同归于尽 mutual destruction. Win by leaving the opponent
     // with no legal move. Rated human PvP (own pool); PvE bot games stay unrated.

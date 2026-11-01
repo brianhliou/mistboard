@@ -724,7 +724,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     },
   },
   {
-    // Flip Jungle (兽棋 / 翻翻棋). Symmetric hidden-identity 4×4 flip animal chess; a
+    // Flip Jungle (翻翻兽棋). Symmetric hidden-identity 4×4 flip animal chess; a
     // self-contained live client on the socket-client + chrome stack (no fog; the deal
     // is hidden from both seats equally). PvP-only at launch (no bot).
     gameSpecId: JUNGLE_FLIP_SPEC_ID,

@@ -1,4 +1,4 @@
-// Sound policy for Flip Jungle (兽棋 / 翻翻棋).
+// Sound policy for Flip Jungle (翻翻兽棋).
 //
 // Flip Jungle hides identity, not position: every square is visible to both seats, so
 // a flip (face-down -> revealed) is public and can be sounded precisely for both

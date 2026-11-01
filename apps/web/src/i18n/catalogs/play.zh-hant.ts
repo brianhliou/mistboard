@@ -133,7 +133,7 @@ export const ZH_HANT_PLAY = {
   'variant.crazyhouseXiangqi.name': '瘋狂屋象棋',
   'variant.darkChess.name': '迷霧國際象棋',
   'variant.jungle.name': '鬥獸棋',
-  'variant.jungleFlip.name': '翻翻棋',
+  'variant.jungleFlip.name': '翻翻獸棋',
   'variant.jieqi.name': '揭棋',
   'variant.chess.name': '國際象棋',
   'live.abort': '中止',

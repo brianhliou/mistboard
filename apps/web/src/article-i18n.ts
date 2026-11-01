@@ -849,11 +849,11 @@ const ZH_HANS: Record<string, string> = {
   ...endgamePageDictionary('zh-Hans'),
   // flip-jungle-skill-ceiling, katago-jungle den races, pikafish-reveal-bug audit, and the two links to the new page (2026-10-07): machine-drafted, not native-reviewed.
   'Flip Jungle: 512 times the search still loses 23% of games':
-    '翻翻棋：搜索量提升 512 倍，仍有 23% 的对局落败',
+    '翻翻兽棋：搜索量提升 512 倍，仍有 23% 的对局落败',
   'Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.':
-    '翻翻棋是所有动物都盖着的 4×4 斗兽棋。一个近乎完美的引擎能测出翻棋之后还剩多少棋力：512 倍的搜索量大约只换来 242 Elo，而且仍会输掉 23% 的对局。',
+    '翻翻兽棋是所有动物都盖着的 4×4 斗兽棋。一个近乎完美的引擎能测出翻棋之后还剩多少棋力：512 倍的搜索量大约只换来 242 Elo，而且仍会输掉 23% 的对局。',
   '[Flip Jungle](/rules/jungle-flip) is Jungle Chess on a 4×4 board with all sixteen animals face-down. Each turn you flip a tile, which reveals a random animal, or move a face-up animal one square. MistyJungleFlip, the bot you play here, picks the optimal move 99 to 100% of the time in the endgames that can be checked exactly. That makes it a measuring instrument for the question every flip game raises: how much of a game is skill, and how much is the flips?':
-    '[翻翻棋](/rules/jungle-flip)是在 4×4 棋盘上进行的斗兽棋，十六只动物开局时全都盖着。轮到你时，可以翻开一张棋子，随机揭示一只动物，或者把一只已翻开的动物走一格。本站的电脑 MistyJungleFlip 在能精确核对的残局中，选出最优着法的比例为 99% 到 100%。这让它成了一件测量仪器，用来回答每种翻棋游戏都会引出的问题：一盘棋里有多少是棋力，多少是翻棋？',
+    '[翻翻兽棋](/rules/jungle-flip)是在 4×4 棋盘上进行的斗兽棋，十六只动物开局时全都盖着。轮到你时，可以翻开一张棋子，随机揭示一只动物，或者把一只已翻开的动物走一格。本站的电脑 MistyJungleFlip 在能精确核对的残局中，选出最优着法的比例为 99% 到 100%。这让它成了一件测量仪器，用来回答每种翻棋游戏都会引出的问题：一盘棋里有多少是棋力，多少是翻棋？',
   'Less skill than it feels like. A copy of the engine with 512 times more search still loses 23% of its games against the weaker one.':
     '比感觉上要少。搜索量多 512 倍的引擎副本，对上较弱的那一个，仍会输掉 23% 的对局。',
   Measure: '测量项',
@@ -918,21 +918,21 @@ const ZH_HANS: Record<string, string> = {
     '最初的表里没有距离这一列。它们只存胜、和、负，这足以给着法评分，却不足以收官。在一盘自我对弈中，引擎有一虎一鼠对孤象，按表是必胜（鼠三着内困住象，因为象不能吃鼠）。连续八回合，它走出按表评为最优的着法，却毫无进展，因为每一步取胜着法得分相同，直到重复规则判为和棋。存入距离后，3 着取胜优于 9 着取胜：引擎选最短的必胜路线，并把必败局面尽量拖长，那个残局以鼠三着吃象告终。国际象棋的残局库，例如 Syzygy，附带距离也是同样的原因。',
   'Skill shows in the average, not the game': '棋力体现在平均值上，而不在单局上',
   'Skill is real in Flip Jungle: the 242-Elo ladder is a real gap, and over a long match the stronger engine wins. But the deal and the flips decide a large share of any one game, so even a far stronger player loses often, and one result says little about who is better. The measurement still missing is a rating against a strong human player, the one test that does not lean on the engine or its solver.':
-    '翻翻棋里棋力是真实存在的：242 Elo 的阶梯是真实差距，在长期对抗中更强的引擎会赢。但发牌和翻棋决定了任一局中相当大的一部分，所以哪怕强得多的棋手也常常落败，一局结果几乎说明不了谁更强。还缺的测量是对强人类棋手的等级分，这是唯一不依赖引擎或其求解器的检验。',
+    '翻翻兽棋里棋力是真实存在的：242 Elo 的阶梯是真实差距，在长期对抗中更强的引擎会赢。但发牌和翻棋决定了任一局中相当大的一部分，所以哪怕强得多的棋手也常常落败，一局结果几乎说明不了谁更强。还缺的测量是对强人类棋手的等级分，这是唯一不依赖引擎或其求解器的检验。',
   'Our [game review](/blog/skill-vs-luck) splits each flip into the decision and the luck, so you can see which share of your own games was which. The [twenty engine games](/study/uKxJ60mN) from the rules page show the bot playing itself, and the engine’s source is [on GitHub](https://github.com/brianhliou/misty-flip-jungle).':
     '本站的[对局复盘](/blog/skill-vs-luck)把每一次翻子拆成决定和运气，让你看清自己的对局里哪部分是哪一种。规则页上的[二十盘引擎对局](/study/uKxJ60mN)是电脑自我对弈，引擎源码在 [GitHub 上](https://github.com/brianhliou/misty-flip-jungle)。',
   'Play MistyJungleFlip': '与 MistyJungleFlip 对弈',
-  'Flip Jungle rules': '翻翻棋规则',
-  'FLIP JUNGLE': '翻翻棋',
+  'Flip Jungle rules': '翻翻兽棋规则',
+  'FLIP JUNGLE': '翻翻兽棋',
   'SKILL CEILING': '棋力上限',
   '512× THE SEARCH, 23% LOST': '512 倍搜索，仍输 23%',
   'Flip Jungle skill vs luck: 512× more search still loses 23% of games':
-    '翻翻棋的棋力与运气：搜索量多 512 倍，仍输 23% 的对局',
-  "Flip Jungle's skill ceiling": '翻翻棋的棋力上限',
+    '翻翻兽棋的棋力与运气：搜索量多 512 倍，仍输 23% 的对局',
+  "Flip Jungle's skill ceiling": '翻翻兽棋的棋力上限',
   'How much of a flip game the flips decide is measured in [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling): an engine with 512 times the search still loses 23% of its games.':
-    '翻棋游戏里有多少由翻棋决定，[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了测量：搜索量多 512 倍的引擎，仍会输掉 23% 的对局。',
+    '翻棋游戏里有多少由翻棋决定，[翻翻兽棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了测量：搜索量多 512 倍的引擎，仍会输掉 23% 的对局。',
   'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.':
-    '电脑有多强，翻棋又决定了多少？[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精确残局库给它评分，并测出 512 倍的搜索量值多少。',
+    '电脑有多强，翻棋又决定了多少？[翻翻兽棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精确残局库给它评分，并测出 512 倍的搜索量值多少。',
   'Misty has no idea of a den race': 'Misty 不懂冲兽穴竞速',
   // katago-jungle den paragraph, cut 2026-10-16 to link /blog/jungle-den-term: machine-drafted, not native-reviewed.
   'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den, so it learns who wins a den race only when the search reaches the den. In August we tried three ways to teach it, and none helped once the search budget was held fixed; races decide only 4.7% of games at full strength. [Teaching our Jungle Chess engine the den race](/blog/jungle-den-term) has the matches, and a game where depth found the race on its own.':
@@ -1401,7 +1401,7 @@ const ZH_HANS: Record<string, string> = {
   'June had 12 games. September has had nearly 800, and the week of September 21 alone had 387. The [statistics page](/stats) keeps the running count.':
     '6 月只有 12 盘。9 月已经有近 800 盘，光是 9 月 21 日那一周就有 387 盘。[统计页面](/stats)会持续更新计数。',
   '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 608 of the first 1,000. [Banqi](/rules/banqi) and [xiangqi](/rules/xiangqi) come next with 96 and 82, then Fog Chess, Jungle, Fog Xiangqi, Duck Xiangqi, Flip Jungle and Fortress Xiangqi. Seven of those games were between two people; the rest were against the bots.':
-    '[揭棋](/rules/jieqi)，也就是棋子背面朝下开局的象棋，在前 1,000 盘里占了 608 盘。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分别是 96 盘和 82 盘，然后是迷雾国际象棋、斗兽棋、迷雾象棋、鸭子象棋、翻翻棋和堡垒象棋。这些对局里只有 7 盘是两个人对下，其余都是和电脑下的。',
+    '[揭棋](/rules/jieqi)，也就是棋子背面朝下开局的象棋，在前 1,000 盘里占了 608 盘。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分别是 96 盘和 82 盘，然后是迷雾国际象棋、斗兽棋、迷雾象棋、鸭子象棋、翻翻兽棋和堡垒象棋。这些对局里只有 7 盘是两个人对下，其余都是和电脑下的。',
   'Thank you': '感谢',
   'Thank you to everyone who played a game, reported a bug, or supports the site as a [patron](/patron). We are building the best place to play Chinese chess and original board games, free and [open source](https://github.com/brianhliou/mistboard).':
     '感谢每一位来下过棋、报告过问题，或者成为[赞助会员](/patron)支持网站的朋友。我们要把这里做成下中国象棋和原创棋类游戏最好的地方，免费并且[开源](https://github.com/brianhliou/mistboard)。',
@@ -3138,9 +3138,9 @@ const ZH_HANS: Record<string, string> = {
     '斗兽棋在网上已经玩了很多年，大多在手机应用和国内游戏平台上。但等级分对局、赛后复盘，以及一台能告诉你哪一步走错的引擎，一直没有跟上。真正认真的斗兽棋引擎研究留在学术论文和残局库里，没有落在任何能实际对弈的地方。Mistboard 把这三件事放在了一起。',
   'Jungle Chess is a two-player strategy game about rank and terrain. Each side commands eight animals and tries to reach the enemy den or eliminate the enemy army.':
     '斗兽棋是一种围绕等级与地形展开的双人策略游戏。双方各指挥八种动物，目标是进入敌方兽穴或消灭敌方全部棋子。',
-  'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻棋规则：玩法详解与免费在线对弈',
+  'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻兽棋规则：玩法详解与免费在线对弈',
   'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
-    '斗兽棋的 4×4 翻面版本，又称翻翻棋。所有动物开局均背面朝上。每回合翻开一枚或走动一枚，等级相同的双方同归于尽、一起离场。',
+    '斗兽棋的 4×4 翻面版本，又称翻翻兽棋。所有动物开局均背面朝上。每回合翻开一枚或走动一枚，等级相同的双方同归于尽、一起离场。',
   'Jieqi Rules (Reveal Xiangqi)': '揭棋规则：玩法详解与免费在线对弈',
   'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
     '揭棋是一种暗子玩法的中国象棋变体，这里详解它的规则。除将帅外，所有棋子开局都背面朝上，第一步按所在位置原本棋子的走法行棋，走完即翻开，此后按真实身份行棋。',
@@ -3173,7 +3173,7 @@ const ZH_HANS: Record<string, string> = {
     '虎的走法与狮完全相同：在陆地上走一格，或者纵向、横向直线跳过河流，落在河对岸的第一格。路径上任何水格里只要有一只任意颜色的鼠，就会阻止两种动物跳跃。',
   'A rat in the river blocks the leap.': '河中的鼠会挡住跳跃。',
   'Flip Jungle is a compact hidden-piece relative of [Jungle Chess](/rules/jungle). All sixteen animals begin face-down on a 4×4 board. There are no rivers, dens, or traps: reveal tiles, move your animals, and eliminate the other color.':
-    '翻翻棋是[斗兽棋](/rules/jungle)的紧凑型隐藏棋子变体。十六枚动物棋子全部背面朝上放在 4×4 棋盘上。这里没有河流、兽穴或陷阱：翻开棋子、移动动物，并消灭另一种颜色。',
+    '翻翻兽棋是[斗兽棋](/rules/jungle)的紧凑型隐藏棋子变体。十六枚动物棋子全部背面朝上放在 4×4 棋盘上。这里没有河流、兽穴或陷阱：翻开棋子、移动动物，并消灭另一种颜色。',
   'A lion captures a lower-ranked wolf.': '狮吃掉等级较低的狼。',
   'Equal ranks work differently. When an animal captures an enemy of its own rank, both pieces leave the board, and neither side keeps the square.':
     '同等级的处理方式不同。当动物吃与自己同等级的敌子时，两枚棋子都离开棋盘，双方都不占据该格。',
@@ -3255,9 +3255,9 @@ const ZH_HANS: Record<string, string> = {
   'Separating Skill from Luck in Flip Games': '把翻子棋的实力和运气分开',
   // The seoTitle, which names the three variants where the on-page title does not.
   'Game Review for Banqi, Jieqi and Flip Jungle: Skill vs Luck':
-    '暗棋、揭棋和翻翻棋的对局复盘：实力与运气',
+    '暗棋、揭棋和翻翻兽棋的对局复盘：实力与运气',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.':
-    '暗棋、揭棋和翻翻棋里，一半的着法其实是掷骰子，照搬国际象棋的复盘就会把运气算到你头上。Mistboard 的对局复盘把每次翻子拆成决策和翻出的棋子两部分：去除运气的准确率、优势图上的运气曲线，以及 52 盘人机对局告诉我们谁的胜利才是真本事。',
+    '暗棋、揭棋和翻翻兽棋里，一半的着法其实是掷骰子，照搬国际象棋的复盘就会把运气算到你头上。Mistboard 的对局复盘把每次翻子拆成决策和翻出的棋子两部分：去除运气的准确率、优势图上的运气曲线，以及 52 盘人机对局告诉我们谁的胜利才是真本事。',
   'Mistboard’s game review now splits every flip into the decision you made and the tile you got. The first thing I did was run it over my own old games. It found a banqi win of mine against our own bot, from two months back, and handed the credit to the tiles.':
     'Mistboard 的对局复盘现在会把每次翻子拆成两部分：你做的决策，和你翻出的棋子。我做的第一件事，就是拿它跑了一遍自己的旧棋。它翻出了我两个月前赢自家引擎的一盘暗棋，然后把功劳记在了翻出的棋子上。',
   'The review scores everything in win chance, its 0-to-100 estimate of your odds of winning the game. My flips came out **76 points better than average**. The bot’s came out 12 points worse. I made the worse decisions, by a wide margin. I won anyway.':
@@ -3267,7 +3267,7 @@ const ZH_HANS: Record<string, string> = {
   'Most game review tools cannot say any of that.': '大多数复盘工具一句都说不出来。',
   'A flip is a decision plus a dice roll': '翻子是一次决策加一次掷骰',
   'Half the moves in a banqi game turn over a face-down tile. One move, two parts: choosing which tile to turn, and finding out what it is. Jieqi’s reveals and flip jungle’s flips are the same problem wearing different pieces; banqi is the worked example throughout because its bag is the purest.':
-    '暗棋里一半的着法是翻开一枚背面朝下的棋子。一步棋，两件事：选哪枚翻，以及翻出来是什么。揭棋的揭子和翻翻棋的翻子是同一个问题换了棋子；全文用暗棋做例子，因为它的随机性最纯粹。',
+    '暗棋里一半的着法是翻开一枚背面朝下的棋子。一步棋，两件事：选哪枚翻，以及翻出来是什么。揭棋的揭子和翻翻兽棋的翻子是同一个问题换了棋子；全文用暗棋做例子，因为它的随机性最纯粹。',
   'A chess-style review grades the swing of the whole move. Flip the corner tile, find the enemy general, and the review calls it a blunder. It was a bad tile, not a bad decision.':
     '照搬国际象棋的复盘会给整步棋的胜率波动打分。翻开角落那枚棋，翻出对方的将，复盘就记你一个漏着。可那是一枚坏棋子，不是一个坏决策。',
   'This is why banqi reviews on Mistboard show no centipawn loss: it cannot be separated from the tiles, so next to numbers that can be, it reads as noise.':
@@ -3339,7 +3339,7 @@ const ZH_HANS: Record<string, string> = {
     '引擎更强，赢它通常都借了棋子的力。如果你赢过它，现在复盘会告诉你借了多少。',
   'Jieqi rolls different dice': '揭棋掷的是另一种骰子',
   'Jieqi gets the same treatment with a different pool. A jieqi reveal draws from your own remaining dark pieces, so you know the color and not the piece. A banqi tile is dark to both players, color included. Different bags, same arithmetic, and jungle’s flip variant makes a third. Every one of them gets the dashed line.':
-    '揭棋用同一套办法，只是抽取的范围不同。揭棋的揭子从你自己剩余的暗子里抽，所以你知道颜色，不知道身份。暗棋的棋子对双方都是暗的，连颜色也是。范围不同，算法相同，斗兽棋的翻棋版本（翻翻棋）是第三家。它们每一个都有那条虚线。',
+    '揭棋用同一套办法，只是抽取的范围不同。揭棋的揭子从你自己剩余的暗子里抽，所以你知道颜色，不知道身份。暗棋的棋子对双方都是暗的，连颜色也是。范围不同，算法相同，斗兽棋的翻棋版本（翻翻兽棋）是第三家。它们每一个都有那条虚线。',
   'For the builders': '写给实现者',
   'Three choices keep the numbers honest. First, **a counterfactual must not change what is in the bag**. Relabel the flipped square from a soldier to a cannon and you have quietly added a cannon to the game and removed a soldier, which rebalances the position by two pieces and inflates the average. So the implementation swaps: the counterfactual tile trades places with a face-down square that really holds one, and the hidden set stays exactly the game’s.':
     '三个选择让这些数字保持诚实。第一，**反事实不能改变剩下棋子的构成**。把翻开的格子从卒改标成炮，你就悄悄往棋局里加了一枚炮、拿走了一枚卒，局面因此偏移两枚棋子的分量，平均值也被抬高。所以实现里用的是交换：让反事实身份和一个确实藏着这枚棋的背面格子对调，隐藏棋子的集合始终恰好等于这盘棋的集合。',
@@ -3354,12 +3354,12 @@ const ZH_HANS: Record<string, string> = {
     '还有一条诚实的边界：逐点扣除运气，等于把胜率当成线性的，而它并不是线性的。方向可信。小数点后第二位不可信。',
   'Try it on your own games': '拿你自己的棋试试',
   'Open any finished banqi, jieqi, or jungle flip game on Mistboard, yours or anyone’s from the [watch page](/watch), and request computer analysis. The luck numbers appear per flip in the move list, and the dashed line shows the game the bag would have given you.':
-    '在 Mistboard 打开任何一盘下完的暗棋、揭棋或翻翻棋，你自己的，或[观战页](/watch)上任何人的，然后请求电脑分析。运气数字会逐翻子出现在着法列表里，虚线则画出棋子们本该给你的那盘棋。',
+    '在 Mistboard 打开任何一盘下完的暗棋、揭棋或翻翻兽棋，你自己的，或[观战页](/watch)上任何人的，然后请求电脑分析。运气数字会逐翻子出现在着法列表里，虚线则画出棋子们本该给你的那盘棋。',
   'Sometimes it agrees you were robbed. Sometimes it takes your win away. It did both to me in a single pass over my old games.':
     '有时它承认你是被抢了。有时它把你的胜利收走。在对我旧棋的一轮扫描里，这两件事它都做了。',
   'Play Banqi': '下暗棋',
   'Play Jieqi': '下揭棋',
-  'Play Jungle Flip': '下翻翻棋',
+  'Play Jungle Flip': '下翻翻兽棋',
   // riverbank-cannon (drafted 2026-08-23; machine battery applied, native read pending)
   'The Riverbank Cannon Problem': '巡河炮问题',
   'Fog Xiangqi Opening Theory: The Riverbank Cannon': '迷雾象棋开局理论：巡河炮',
@@ -5553,7 +5553,7 @@ const ZH_HANS: Record<string, string> = {
   'Every finished xiangqi game on the site can be sent for review. Pikafish runs over it on the server, and the move list shows where the evaluation moved, what it preferred instead, and which moves lost the game. The post-game review chess players are used to, for xiangqi.':
     '站内每一盘下完的象棋都可以提交复盘。皮卡鱼在服务器上把整盘棋跑一遍，着法列表会显示评估在哪里发生了变化、它更倾向的走法，以及哪几步输掉了棋。国际象棋玩家习惯的那种赛后复盘，现在象棋也有。',
   'For banqi, jieqi and flip jungle the review does something no chess review needs: it prices every flip, so you see what you chose apart from what you drew. [Separating skill from luck](/blog/skill-vs-luck) explains how.':
-    '对暗棋、揭棋和翻棋斗兽棋，复盘还做了一件国际象棋复盘不需要做的事：给每一次翻子定价，让你把自己的选择和运气分开看。[把实力和运气分开](/blog/skill-vs-luck)一文解释了做法。',
+    '对暗棋、揭棋和翻翻兽棋，复盘还做了一件国际象棋复盘不需要做的事：给每一次翻子定价，让你把自己的选择和运气分开看。[把实力和运气分开](/blog/skill-vs-luck)一文解释了做法。',
   'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.':
     '[分析棋盘](/analysis/xiangqi)用于你自己摆的局面。它在你的浏览器里运行全强度的皮卡鱼，带官方权重，你分析的内容不会离开你的电脑。权重 51 MB，只需下载一次。',
   Questions: '常见问题',
@@ -5723,7 +5723,7 @@ const ZH_HANS: Record<string, string> = {
   // Rules-page study embeds, flip jungle (2026-09-25).
   'MistyJungleFlip against itself at three times the strength the site’s bot plays at. The first flip turns up red, so the first player is Red. The cats meet and trade off on move 10, a red rat takes Blue’s elephant on move 24, and on move 28 the two lions trade off too, which leaves Blue with no move. Red wins.':
     'MistyJungleFlip 以本站电脑三倍的强度自我对弈。第一次翻出的是红子，所以先手执红。第 10 回合双方的猫相遇并同归于尽，第 24 回合红方的老鼠吃掉了蓝方的大象，第 28 回合双方的狮子也同归于尽，蓝方随即无子可走。红方获胜。',
-  'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盘引擎对局，红方第 28 回合获胜',
+  'Flip Jungle: an engine game, Red wins on move 28': '翻翻兽棋：一盘引擎对局，红方第 28 回合获胜',
   'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
     '[配套研究](/study/uKxJ60mN)收录了这一批全部二十盘对局，每盘都从自己的发牌开始，并附有对局经过的说明。',
   // -- fortress-and-atomic-xiangqi-on-hold, machine-drafted 2026-10-14, not native-reviewed. Terms follow the
@@ -6396,11 +6396,11 @@ const ZH_HANS: Record<string, string> = {
   'Mistboard has nine piece sets: pictures, Chinese characters, cartoon animals, and five art sets in traditional styles. Pick one under Pieces in Settings.':
     'Mistboard 有九套棋子样式：图画、汉字、卡通动物，以及五套传统风格的美术棋子。在设置的「棋子」里选择。',
   'Pieces are flat until you switch them to 3D under Pieces in Settings. 3D works on xiangqi, jieqi, banqi and Flip Jungle, and a Thick edge makes the rim deeper.':
-    '棋子默认是平面的，可以在设置的「棋子」里改成「立体」。立体适用于象棋、揭棋、暗棋和翻翻棋，「加厚」边缘让棋子的侧边更厚。',
+    '棋子默认是平面的，可以在设置的「棋子」里改成「立体」。立体适用于象棋、揭棋、暗棋和翻翻兽棋，「加厚」边缘让棋子的侧边更厚。',
   'The xiangqi board is lined, with pieces on the points, or a square grid, with pieces inside the squares. Pick it under Board.':
     '象棋棋盘可以是交叉点棋盘，棋子落在交叉点上；也可以是方格棋盘，棋子放在格子里。在「棋盘」里选择。',
   'A hidden piece in banqi, jieqi or Flip Jungle turns over when it is revealed, spinning on its edge in 3D. Speed sets how fast pieces move and turn, and Off stops the motion.':
-    '暗棋、揭棋和翻翻棋里的暗子翻开时会翻转，立体棋子会立在侧边上转过来。「速度」决定棋子移动和翻转的快慢，选「关闭」就不播放动画。',
+    '暗棋、揭棋和翻翻兽棋里的暗子翻开时会翻转，立体棋子会立在侧边上转过来。「速度」决定棋子移动和翻转的快慢，选「关闭」就不播放动画。',
   'Mistboard draws xiangqi pieces in nine sets, flat or in 3D, and the xiangqi board lined or as a square grid. Pieces move and turn over on screen, and the river can carry its traditional name.':
     'Mistboard 的象棋棋子有九套样式，可以画成平面或立体；象棋棋盘可以画成交叉点棋盘或方格棋盘。棋子在屏幕上会移动和翻转，河界也可以写上传统的名字。',
   'Nine piece sets': '九套棋子样式',
@@ -6424,15 +6424,15 @@ const ZH_HANS: Record<string, string> = {
     '同一个象棋棋盘角落画了三次：平面棋子、立体棋子，以及加厚边缘的立体棋子',
   'Flat, 3D, and 3D with the Thick edge.': '平面、立体，以及「加厚」边缘的立体。',
   'The same look reaches the hidden-piece games. In [jieqi](/rules/jieqi) the face-down pieces stand in 3D with the rest, and in [banqi](/rules/banqi) and [Flip Jungle](/rules/jungle-flip) so does every tile.':
-    '有暗子的棋也能用这种样式。在[揭棋](/rules/jieqi)里，背面朝上的暗子和其他棋子一样以立体显示；在[暗棋](/rules/banqi)和[翻翻棋](/rules/jungle-flip)里，每一枚棋子也是如此。',
+    '有暗子的棋也能用这种样式。在[揭棋](/rules/jieqi)里，背面朝上的暗子和其他棋子一样以立体显示；在[暗棋](/rules/banqi)和[翻翻兽棋](/rules/jungle-flip)里，每一枚棋子也是如此。',
   'A jieqi position with face-down and revealed pieces three times: flat, 3D, and 3D with the thick edge':
     '一个既有暗子也有明子的揭棋局面画了三次：平面、立体，以及加厚边缘的立体',
   'Jieqi: flat, 3D, and 3D with the Thick edge. The plain discs are pieces still face down.':
     '揭棋：平面、立体，以及「加厚」边缘的立体。没有字的圆片是还没翻开的暗子。',
   'A Flip Jungle board three times: flat tiles, 3D tiles, and 3D tiles with the thick edge':
-    '同一个翻翻棋棋盘画了三次：平面棋子、立体棋子，以及加厚边缘的立体棋子',
+    '同一个翻翻兽棋棋盘画了三次：平面棋子、立体棋子，以及加厚边缘的立体棋子',
   'Flip Jungle: flat, 3D, and 3D with the Thick edge. The green tiles are still face down.':
-    '翻翻棋：平面、立体，以及「加厚」边缘的立体。绿色的棋子还没翻开。',
+    '翻翻兽棋：平面、立体，以及「加厚」边缘的立体。绿色的棋子还没翻开。',
   'The xiangqi board can be lined, or a square grid like chess':
     '象棋棋盘可以是交叉点棋盘，也可以是像国际象棋那样的方格棋盘',
   'The lined board is the traditional one. Pieces sit on the points where the lines cross, the palaces have their diagonals, and the river runs across the middle. The square grid puts each piece inside a square, the way a chessboard does, with light and dark squares, the river as a blue band and each palace as a shaded block. The rules are the same on both.':
@@ -6445,7 +6445,7 @@ const ZH_HANS: Record<string, string> = {
     '如果你是从国际象棋转来下象棋的，可以先试试方格棋盘。棋子放在深浅相间的格子里，一步棋看起来就和你习惯的一样；想用交叉点棋盘时，改一项设置就行。两种棋盘都能用平面和立体棋子。「棋盘颜色」在两种棋盘上提供同样的木色和纸色，绿色的「斗兽棋」配色只用于方格棋盘。',
   'Pieces glide and turn over': '棋子会滑动和翻转',
   'When you step through a game in a review, a study or a replay, each move slides from its square to the next, so you can follow it without hunting for what changed. A hidden piece turns over when it is revealed, in banqi, jieqi and Flip Jungle. A 3D piece spins over on its edge like a real one. A flat piece narrows to a thin line and widens again showing its other face.':
-    '在复盘、研究或回放里逐步查看对局时，每一步的棋子都会从原来的位置滑到新的位置，不用到处找哪里变了也能跟上。在暗棋、揭棋和翻翻棋里，暗子翻开时会翻转。立体棋子像真的棋子一样立在侧边上翻过来；平面棋子先收窄成一条细线，再展开露出另一面。',
+    '在复盘、研究或回放里逐步查看对局时，每一步的棋子都会从原来的位置滑到新的位置，不用到处找哪里变了也能跟上。在暗棋、揭棋和翻翻兽棋里，暗子翻开时会翻转。立体棋子像真的棋子一样立在侧边上翻过来；平面棋子先收窄成一条细线，再展开露出另一面。',
   'Press the forward arrow under each board to see it. The first move in the banqi game flips a tile where it lies. In jieqi a face-down piece moves and turns over as it lands. Both boards are shown in 3D whatever your own setting is.':
     '点每个棋盘下方的前进箭头就能看到。暗棋这盘的第一步是在原地翻开一枚棋子。揭棋里，一枚暗子走动后在落点翻开。无论你自己怎么设置，这两个棋盘都以立体显示。',
   'Banqi: the first move turns a tile over.': '暗棋：第一步翻开一枚棋子。',
@@ -7297,11 +7297,11 @@ const ZH_HANT: Record<string, string> = {
     '用縮寫拼成的鍵需要一項檢查，而這項檢查從任何單個縮寫上都看不出來：沒有兩個名字縮寫成同一個東西。手寫的字母表在有人為車選定 `r` 的那一刻，就做了這項檢查。`role[0]` 從來沒有做過。',
   // flip-jungle-skill-ceiling, katago-jungle den races, pikafish-reveal-bug audit, and the two links to the new page (2026-10-07): machine-drafted, not native-reviewed.
   'Flip Jungle: 512 times the search still loses 23% of games':
-    '翻翻棋：搜尋量提升 512 倍，仍有 23% 的對局落敗',
+    '翻翻獸棋：搜尋量提升 512 倍，仍有 23% 的對局落敗',
   'Flip Jungle is 4×4 Jungle Chess with every animal face-down. A near-perfect engine shows how much skill survives the flips: 512 times the search buys about 242 Elo and still loses 23% of its games.':
-    '翻翻棋是所有動物都蓋著的 4×4 鬥獸棋。一個近乎完美的引擎能測出翻棋之後還剩多少棋力：512 倍的搜尋量大約只換來 242 Elo，而且仍會輸掉 23% 的對局。',
+    '翻翻獸棋是所有動物都蓋著的 4×4 鬥獸棋。一個近乎完美的引擎能測出翻棋之後還剩多少棋力：512 倍的搜尋量大約只換來 242 Elo，而且仍會輸掉 23% 的對局。',
   '[Flip Jungle](/rules/jungle-flip) is Jungle Chess on a 4×4 board with all sixteen animals face-down. Each turn you flip a tile, which reveals a random animal, or move a face-up animal one square. MistyJungleFlip, the bot you play here, picks the optimal move 99 to 100% of the time in the endgames that can be checked exactly. That makes it a measuring instrument for the question every flip game raises: how much of a game is skill, and how much is the flips?':
-    '[翻翻棋](/rules/jungle-flip)是在 4×4 棋盤上進行的鬥獸棋，十六隻動物開局時全都蓋著。輪到你時，可以翻開一張棋子，隨機揭示一隻動物，或者把一隻已翻開的動物走一格。本站的電腦 MistyJungleFlip 在能精確核對的殘局中，選出最優著法的比例為 99% 到 100%。這讓它成了一件測量儀器，用來回答每種翻棋遊戲都會引出的問題：一盤棋裡有多少是棋力，多少是翻棋？',
+    '[翻翻獸棋](/rules/jungle-flip)是在 4×4 棋盤上進行的鬥獸棋，十六隻動物開局時全都蓋著。輪到你時，可以翻開一張棋子，隨機揭示一隻動物，或者把一隻已翻開的動物走一格。本站的電腦 MistyJungleFlip 在能精確核對的殘局中，選出最優著法的比例為 99% 到 100%。這讓它成了一件測量儀器，用來回答每種翻棋遊戲都會引出的問題：一盤棋裡有多少是棋力，多少是翻棋？',
   'Less skill than it feels like. A copy of the engine with 512 times more search still loses 23% of its games against the weaker one.':
     '比感覺上要少。搜尋量多 512 倍的引擎副本，對上較弱的那一個，仍會輸掉 23% 的對局。',
   Measure: '測量項',
@@ -7366,21 +7366,21 @@ const ZH_HANT: Record<string, string> = {
     '最初的表裡沒有距離這一欄。它們只存勝、和、負，這足以給著法評分，卻不足以收官。在一盤自我對弈中，引擎有一虎一鼠對孤象，按表是必勝（鼠三著內困住象，因為象不能吃鼠）。連續八回合，它走出按表評為最優的著法，卻毫無進展，因為每一步取勝著法得分相同，直到重複規則判為和棋。存入距離後，3 著取勝優於 9 著取勝：引擎選最短的必勝路線，並把必敗局面盡量拖長，那個殘局以鼠三著吃象告終。國際象棋的殘局庫，例如 Syzygy，附帶距離也是同樣的原因。',
   'Skill shows in the average, not the game': '棋力體現在平均值上，而不在單局上',
   'Skill is real in Flip Jungle: the 242-Elo ladder is a real gap, and over a long match the stronger engine wins. But the deal and the flips decide a large share of any one game, so even a far stronger player loses often, and one result says little about who is better. The measurement still missing is a rating against a strong human player, the one test that does not lean on the engine or its solver.':
-    '翻翻棋裡棋力是真實存在的：242 Elo 的階梯是真實差距，在長期對抗中更強的引擎會贏。但發牌和翻棋決定了任一局中相當大的一部分，所以哪怕強得多的棋手也常常落敗，一局結果幾乎說明不了誰更強。還缺的測量是對強人類棋手的等級分，這是唯一不依賴引擎或其求解器的檢驗。',
+    '翻翻獸棋裡棋力是真實存在的：242 Elo 的階梯是真實差距，在長期對抗中更強的引擎會贏。但發牌和翻棋決定了任一局中相當大的一部分，所以哪怕強得多的棋手也常常落敗，一局結果幾乎說明不了誰更強。還缺的測量是對強人類棋手的等級分，這是唯一不依賴引擎或其求解器的檢驗。',
   'Our [game review](/blog/skill-vs-luck) splits each flip into the decision and the luck, so you can see which share of your own games was which. The [twenty engine games](/study/uKxJ60mN) from the rules page show the bot playing itself, and the engine’s source is [on GitHub](https://github.com/brianhliou/misty-flip-jungle).':
     '本站的[對局覆盤](/blog/skill-vs-luck)把每一次翻子拆成決定和運氣，讓你看清自己的對局裡哪部分是哪一種。規則頁上的[二十盤引擎對局](/study/uKxJ60mN)是電腦自我對弈，引擎原始碼在 [GitHub 上](https://github.com/brianhliou/misty-flip-jungle)。',
   'Play MistyJungleFlip': '與 MistyJungleFlip 對弈',
-  'Flip Jungle rules': '翻翻棋規則',
-  'FLIP JUNGLE': '翻翻棋',
+  'Flip Jungle rules': '翻翻獸棋規則',
+  'FLIP JUNGLE': '翻翻獸棋',
   'SKILL CEILING': '棋力上限',
   '512× THE SEARCH, 23% LOST': '512 倍搜尋，仍輸 23%',
   'Flip Jungle skill vs luck: 512× more search still loses 23% of games':
-    '翻翻棋的棋力與運氣：搜尋量多 512 倍，仍輸 23% 的對局',
-  "Flip Jungle's skill ceiling": '翻翻棋的棋力上限',
+    '翻翻獸棋的棋力與運氣：搜尋量多 512 倍，仍輸 23% 的對局',
+  "Flip Jungle's skill ceiling": '翻翻獸棋的棋力上限',
   'How much of a flip game the flips decide is measured in [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling): an engine with 512 times the search still loses 23% of its games.':
-    '翻棋遊戲裡有多少由翻棋決定，[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了測量：搜尋量多 512 倍的引擎，仍會輸掉 23% 的對局。',
+    '翻棋遊戲裡有多少由翻棋決定，[翻翻獸棋的棋力上限](/blog/flip-jungle-skill-ceiling)一文做了測量：搜尋量多 512 倍的引擎，仍會輸掉 23% 的對局。',
   'How strong is the bot, and how much do the flips decide? [Flip Jungle’s skill ceiling](/blog/flip-jungle-skill-ceiling) grades it against exact endgame tables and measures what 512 times the search is worth.':
-    '電腦有多強，翻棋又決定了多少？[翻翻棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精確殘局庫給它評分，並測出 512 倍的搜尋量值多少。',
+    '電腦有多強，翻棋又決定了多少？[翻翻獸棋的棋力上限](/blog/flip-jungle-skill-ceiling)用精確殘局庫給它評分，並測出 512 倍的搜尋量值多少。',
   'Misty has no idea of a den race': 'Misty 不懂衝獸穴競速',
   // katago-jungle den paragraph, cut 2026-10-16 to link /blog/jungle-den-term: machine-drafted, not native-reviewed.
   'Misty scores a position by material plus a bonus for each piece’s distance to the enemy den, so it learns who wins a den race only when the search reaches the den. In August we tried three ways to teach it, and none helped once the search budget was held fixed; races decide only 4.7% of games at full strength. [Teaching our Jungle Chess engine the den race](/blog/jungle-den-term) has the matches, and a game where depth found the race on its own.':
@@ -7842,7 +7842,7 @@ const ZH_HANT: Record<string, string> = {
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一個相關的盲點跟將有關。只有卒、對方的將或砲的跳吃拿得下它，所以被圍住的將一次只怕一種子，而引擎很慢才會替被逼到角落的將騰出空間。它有時候會把一顆子調到棋盤另一頭，同時一顆孤零零的敵方卒走過來把它困死。跟上面那個和棋是同一個缺口：這套評估函數對於好幾步之外慢慢成形的安靜威脅，沒有什麼感覺。',
   // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed. Variant names follow the
-  // rules pages (迷霧國際象棋, 鬥獸棋, 鴨子象棋, 翻翻棋, 堡壘象棋).
+  // rules pages (迷霧國際象棋, 鬥獸棋, 鴨子象棋, 翻翻獸棋, 堡壘象棋).
   '1,000 games played': '已下完 1,000 盤棋',
   'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盤對局',
   'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.':
@@ -7855,7 +7855,7 @@ const ZH_HANT: Record<string, string> = {
   'June had 12 games. September has had nearly 800, and the week of September 21 alone had 387. The [statistics page](/stats) keeps the running count.':
     '6 月只有 12 盤。9 月已經有近 800 盤，光是 9 月 21 日那一週就有 387 盤。[統計頁面](/stats)會持續更新計數。',
   '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 608 of the first 1,000. [Banqi](/rules/banqi) and [xiangqi](/rules/xiangqi) come next with 96 and 82, then Fog Chess, Jungle, Fog Xiangqi, Duck Xiangqi, Flip Jungle and Fortress Xiangqi. Seven of those games were between two people; the rest were against the bots.':
-    '[揭棋](/rules/jieqi)，也就是棋子背面朝下開局的象棋，在前 1,000 盤裡占了 608 盤。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分別是 96 盤和 82 盤，然後是迷霧國際象棋、鬥獸棋、迷霧象棋、鴨子象棋、翻翻棋和堡壘象棋。這些對局裡只有 7 盤是兩個人對下，其餘都是和電腦下的。',
+    '[揭棋](/rules/jieqi)，也就是棋子背面朝下開局的象棋，在前 1,000 盤裡占了 608 盤。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分別是 96 盤和 82 盤，然後是迷霧國際象棋、鬥獸棋、迷霧象棋、鴨子象棋、翻翻獸棋和堡壘象棋。這些對局裡只有 7 盤是兩個人對下，其餘都是和電腦下的。',
   'Thank you': '感謝',
   'Thank you to everyone who played a game, reported a bug, or supports the site as a [patron](/patron). We are building the best place to play Chinese chess and original board games, free and [open source](https://github.com/brianhliou/mistboard).':
     '感謝每一位來下過棋、回報過問題，或者成為[贊助會員](/patron)支持網站的朋友。我們要把這裡做成下象棋和原創棋類遊戲最好的地方，免費並且[開源](https://github.com/brianhliou/mistboard)。',
@@ -9714,9 +9714,9 @@ const ZH_HANT: Record<string, string> = {
     '鬥獸棋在網上已經玩了很多年，大多在手機應用和中文遊戲平台上。但等級分對局、賽後覆盤，以及一台能告訴你哪一步走錯的引擎，一直沒有跟上。真正認真的鬥獸棋引擎研究留在學術論文和殘局庫裡，沒有落在任何能實際對弈的地方。Mistboard 把這三件事放在了一起。',
   'Jungle Chess is a two-player strategy game about rank and terrain. Each side commands eight animals and tries to reach the enemy den or eliminate the enemy army.':
     '鬥獸棋是一種圍繞等級與地形展開的雙人策略遊戲。雙方各指揮八種動物，目標是進入敵方獸穴或消滅敵方全部棋子。',
-  'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻棋規則：玩法詳解與免費線上對弈',
+  'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻獸棋規則：玩法詳解與免費線上對弈',
   'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
-    '鬥獸棋的 4×4 翻面版本，又稱翻翻棋。所有動物開局均背面朝上。每回合翻開一枚或走動一枚，等級相同的雙方同歸於盡、一起離場。',
+    '鬥獸棋的 4×4 翻面版本，又稱翻翻獸棋。所有動物開局均背面朝上。每回合翻開一枚或走動一枚，等級相同的雙方同歸於盡、一起離場。',
   'Jieqi Rules (Reveal Xiangqi)': '揭棋規則：玩法詳解與免費線上對弈',
   'Ranks and captures': '等級與吃子',
   'Each side has the same eight animals. Strongest to weakest: elephant, lion, tiger, leopard, wolf, dog, cat, rat. A piece captures an adjacent enemy of equal or lower rank.':
@@ -9752,7 +9752,7 @@ const ZH_HANT: Record<string, string> = {
   'The tiger moves exactly like the lion: one land square, or a leap straight across a river lengthwise or sideways, landing on the first square past the water. A rat of either color on any water square in the path blocks either animal’s jump.':
     '虎的走法與獅完全相同：在陸地上走一格，或者縱向、橫向直線跳過河流，落在河對岸的第一格。路徑上任何水格裡只要有一隻任意顏色的鼠，就會阻止兩種動物跳躍。',
   'Flip Jungle is a compact hidden-piece relative of [Jungle Chess](/rules/jungle). All sixteen animals begin face-down on a 4×4 board. There are no rivers, dens, or traps: reveal tiles, move your animals, and eliminate the other color.':
-    '翻翻棋是[鬥獸棋](/rules/jungle)的緊湊型隱藏棋子變體。十六枚動物棋子全部背面朝上放在 4×4 棋盤上。這裡沒有河流、獸穴或陷阱：翻開棋子、移動動物，並消滅另一種顏色。',
+    '翻翻獸棋是[鬥獸棋](/rules/jungle)的緊湊型隱藏棋子變體。十六枚動物棋子全部背面朝上放在 4×4 棋盤上。這裡沒有河流、獸穴或陷阱：翻開棋子、移動動物，並消滅另一種顏色。',
   'CAPTURED PIECE KNOWLEDGE': '被吃暗子資訊',
   General: '將',
   Advisor: '士',
@@ -9810,9 +9810,9 @@ const ZH_HANT: Record<string, string> = {
   'Separating Skill from Luck in Flip Games': '把翻子棋的實力和運氣分開',
   // The seoTitle, which names the three variants where the on-page title does not.
   'Game Review for Banqi, Jieqi and Flip Jungle: Skill vs Luck':
-    '暗棋、揭棋和翻翻棋的對局複盤：實力與運氣',
+    '暗棋、揭棋和翻翻獸棋的對局複盤：實力與運氣',
   'Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.':
-    '暗棋、揭棋和翻翻棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。Mistboard 的對局覆盤把每次翻子拆成決策和翻出的棋子兩部分：去除運氣的準確率、優勢圖上的運氣曲線，以及 52 盤人機對局告訴我們誰的勝利才是真本事。',
+    '暗棋、揭棋和翻翻獸棋裡，一半的著法其實是擲骰子，照搬國際象棋的覆盤就會把運氣算到你頭上。Mistboard 的對局覆盤把每次翻子拆成決策和翻出的棋子兩部分：去除運氣的準確率、優勢圖上的運氣曲線，以及 52 盤人機對局告訴我們誰的勝利才是真本事。',
   'Mistboard’s game review now splits every flip into the decision you made and the tile you got. The first thing I did was run it over my own old games. It found a banqi win of mine against our own bot, from two months back, and handed the credit to the tiles.':
     'Mistboard 的對局覆盤現在會把每次翻子拆成兩部分：你做的決策，和你翻出的棋子。我做的第一件事，就是拿它跑了一遍自己的舊棋。它翻出了我兩個月前贏自家引擎的一盤暗棋，然後把功勞記在了翻出的棋子上。',
   'The review scores everything in win chance, its 0-to-100 estimate of your odds of winning the game. My flips came out **76 points better than average**. The bot’s came out 12 points worse. I made the worse decisions, by a wide margin. I won anyway.':
@@ -9822,7 +9822,7 @@ const ZH_HANT: Record<string, string> = {
   'Most game review tools cannot say any of that.': '大多數覆盤工具一句都說不出來。',
   'A flip is a decision plus a dice roll': '翻子是一次決策加一次擲骰',
   'Half the moves in a banqi game turn over a face-down tile. One move, two parts: choosing which tile to turn, and finding out what it is. Jieqi’s reveals and flip jungle’s flips are the same problem wearing different pieces; banqi is the worked example throughout because its bag is the purest.':
-    '暗棋裡一半的著法是翻開一枚背面朝下的棋子。一步棋，兩件事：選哪枚翻，以及翻出來是什麼。揭棋的揭子和翻翻棋的翻子是同一個問題換了棋子；全文用暗棋做例子，因為它的隨機性最純粹。',
+    '暗棋裡一半的著法是翻開一枚背面朝下的棋子。一步棋，兩件事：選哪枚翻，以及翻出來是什麼。揭棋的揭子和翻翻獸棋的翻子是同一個問題換了棋子；全文用暗棋做例子，因為它的隨機性最純粹。',
   'A chess-style review grades the swing of the whole move. Flip the corner tile, find the enemy general, and the review calls it a blunder. It was a bad tile, not a bad decision.':
     '照搬國際象棋的覆盤會給整步棋的勝率波動打分。翻開角落那枚棋，翻出對方的將，覆盤就記你一個漏著。可那是一枚壞棋子，不是一個壞決策。',
   'This is why banqi reviews on Mistboard show no centipawn loss: it cannot be separated from the tiles, so next to numbers that can be, it reads as noise.':
@@ -9894,7 +9894,7 @@ const ZH_HANT: Record<string, string> = {
     '引擎更強，贏它通常都借了棋子的力。如果你贏過它，現在覆盤會告訴你借了多少。',
   'Jieqi rolls different dice': '揭棋擲的是另一種骰子',
   'Jieqi gets the same treatment with a different pool. A jieqi reveal draws from your own remaining dark pieces, so you know the color and not the piece. A banqi tile is dark to both players, color included. Different bags, same arithmetic, and jungle’s flip variant makes a third. Every one of them gets the dashed line.':
-    '揭棋用同一套辦法，只是抽取的範圍不同。揭棋的揭子從你自己剩餘的暗子裡抽，所以你知道顏色，不知道身份。暗棋的棋子對雙方都是暗的，連顏色也是。範圍不同，演算法相同，鬥獸棋的翻棋版本（翻翻棋）是第三家。它們每一個都有那條虛線。',
+    '揭棋用同一套辦法，只是抽取的範圍不同。揭棋的揭子從你自己剩餘的暗子裡抽，所以你知道顏色，不知道身份。暗棋的棋子對雙方都是暗的，連顏色也是。範圍不同，演算法相同，鬥獸棋的翻棋版本（翻翻獸棋）是第三家。它們每一個都有那條虛線。',
   'For the builders': '寫給實現者',
   'Three choices keep the numbers honest. First, **a counterfactual must not change what is in the bag**. Relabel the flipped square from a soldier to a cannon and you have quietly added a cannon to the game and removed a soldier, which rebalances the position by two pieces and inflates the average. So the implementation swaps: the counterfactual tile trades places with a face-down square that really holds one, and the hidden set stays exactly the game’s.':
     '三個選擇讓這些數字保持誠實。第一，**反事實不能改變剩下棋子的構成**。把翻開的格子從卒改標成炮，你就悄悄往棋局裡加了一枚炮、拿走了一枚卒，局面因此偏移兩枚棋子的分量，平均值也被抬高。所以實現裡用的是交換：讓反事實身份和一個確實藏著這枚棋的背面格子對調，隱藏棋子的集合始終恰好等於這盤棋的集合。',
@@ -9909,12 +9909,12 @@ const ZH_HANT: Record<string, string> = {
     '還有一條誠實的邊界：逐點扣除運氣，等於把勝率當成線性的，而它並不是線性的。方向可信。小數點後第二位不可信。',
   'Try it on your own games': '拿你自己的棋試試',
   'Open any finished banqi, jieqi, or jungle flip game on Mistboard, yours or anyone’s from the [watch page](/watch), and request computer analysis. The luck numbers appear per flip in the move list, and the dashed line shows the game the bag would have given you.':
-    '在 Mistboard 開啟任何一盤下完的暗棋、揭棋或翻翻棋，你自己的，或[觀戰頁](/watch)上任何人的，然後請求電腦分析。運氣數字會逐翻子出現在著法列表裡，虛線則畫出棋子們本該給你的那盤棋。',
+    '在 Mistboard 開啟任何一盤下完的暗棋、揭棋或翻翻獸棋，你自己的，或[觀戰頁](/watch)上任何人的，然後請求電腦分析。運氣數字會逐翻子出現在著法列表裡，虛線則畫出棋子們本該給你的那盤棋。',
   'Sometimes it agrees you were robbed. Sometimes it takes your win away. It did both to me in a single pass over my old games.':
     '有時它承認你是被搶了。有時它把你的勝利收走。在對我舊棋的一輪掃描裡，這兩件事它都做了。',
   'Play Banqi': '下暗棋',
   'Play Jieqi': '下揭棋',
-  'Play Jungle Flip': '下翻翻棋',
+  'Play Jungle Flip': '下翻翻獸棋',
   // riverbank-cannon (drafted 2026-08-23; machine battery applied, native read pending)
   'The Riverbank Cannon Problem': '巡河炮問題',
   'Fog Xiangqi Opening Theory: The Riverbank Cannon': '迷霧象棋開局理論：巡河炮',
@@ -11824,7 +11824,7 @@ const ZH_HANT: Record<string, string> = {
   'Every finished xiangqi game on the site can be sent for review. Pikafish runs over it on the server, and the move list shows where the evaluation moved, what it preferred instead, and which moves lost the game. The post-game review chess players are used to, for xiangqi.':
     '站內每一盤下完的象棋都可以提交復盤。皮卡魚在伺服器上把整盤棋跑一遍，著法列表會顯示評估在哪裡發生了變化、它更傾向的走法，以及哪幾步輸掉了棋。西洋棋玩家習慣的那種賽後復盤，現在象棋也有。',
   'For banqi, jieqi and flip jungle the review does something no chess review needs: it prices every flip, so you see what you chose apart from what you drew. [Separating skill from luck](/blog/skill-vs-luck) explains how.':
-    '對暗棋、揭棋和翻棋鬥獸棋，復盤還做了一件西洋棋復盤不需要做的事：給每一次翻子定價，讓你把自己的選擇和運氣分開看。[把實力和運氣分開](/blog/skill-vs-luck)一文解釋了做法。',
+    '對暗棋、揭棋和翻翻獸棋，復盤還做了一件西洋棋復盤不需要做的事：給每一次翻子定價，讓你把自己的選擇和運氣分開看。[把實力和運氣分開](/blog/skill-vs-luck)一文解釋了做法。',
   'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.':
     '[分析棋盤](/analysis/xiangqi)用於你自己擺的局面。它在你的瀏覽器裡運行全強度的皮卡魚，帶官方權重，你分析的內容不會離開你的電腦。權重 51 MB，只需下載一次。',
   Questions: '常見問題',
@@ -11994,7 +11994,7 @@ const ZH_HANT: Record<string, string> = {
   // Rules-page study embeds, flip jungle (2026-09-25).
   'MistyJungleFlip against itself at three times the strength the site’s bot plays at. The first flip turns up red, so the first player is Red. The cats meet and trade off on move 10, a red rat takes Blue’s elephant on move 24, and on move 28 the two lions trade off too, which leaves Blue with no move. Red wins.':
     'MistyJungleFlip 以本站電腦三倍的強度自我對弈。第一次翻出的是紅子，所以先手執紅。第 10 回合雙方的貓相遇並同歸於盡，第 24 回合紅方的老鼠吃掉了藍方的大象，第 28 回合雙方的獅子也同歸於盡，藍方隨即無子可走。紅方獲勝。',
-  'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盤引擎對局，紅方第 28 回合獲勝',
+  'Flip Jungle: an engine game, Red wins on move 28': '翻翻獸棋：一盤引擎對局，紅方第 28 回合獲勝',
   'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
     '[配套研究](/study/uKxJ60mN)收錄了這一批全部二十盤對局，每盤都從自己的發牌開始，並附有對局經過的說明。',
   // -- fortress-and-atomic-xiangqi-on-hold, machine-drafted 2026-10-14, not native-reviewed. Terms follow the
@@ -12450,11 +12450,11 @@ const ZH_HANT: Record<string, string> = {
   'Mistboard has nine piece sets: pictures, Chinese characters, cartoon animals, and five art sets in traditional styles. Pick one under Pieces in Settings.':
     'Mistboard 有九套棋子樣式：圖畫、漢字、卡通動物，以及五套傳統風格的美術棋子。在設定的「棋子」裡選擇。',
   'Pieces are flat until you switch them to 3D under Pieces in Settings. 3D works on xiangqi, jieqi, banqi and Flip Jungle, and a Thick edge makes the rim deeper.':
-    '棋子預設是平面的，可以在設定的「棋子」裡改成「立體」。立體適用於象棋、揭棋、暗棋和翻翻棋，「加厚」邊緣讓棋子的側邊更厚。',
+    '棋子預設是平面的，可以在設定的「棋子」裡改成「立體」。立體適用於象棋、揭棋、暗棋和翻翻獸棋，「加厚」邊緣讓棋子的側邊更厚。',
   'The xiangqi board is lined, with pieces on the points, or a square grid, with pieces inside the squares. Pick it under Board.':
     '象棋棋盤可以是交叉點棋盤，棋子落在交叉點上；也可以是方格棋盤，棋子放在格子裡。在「棋盤」裡選擇。',
   'A hidden piece in banqi, jieqi or Flip Jungle turns over when it is revealed, spinning on its edge in 3D. Speed sets how fast pieces move and turn, and Off stops the motion.':
-    '暗棋、揭棋和翻翻棋裡的暗子翻開時會翻轉，立體棋子會立在側邊上轉過來。「速度」決定棋子移動和翻轉的快慢，選「關閉」就不播放動畫。',
+    '暗棋、揭棋和翻翻獸棋裡的暗子翻開時會翻轉，立體棋子會立在側邊上轉過來。「速度」決定棋子移動和翻轉的快慢，選「關閉」就不播放動畫。',
   'Mistboard draws xiangqi pieces in nine sets, flat or in 3D, and the xiangqi board lined or as a square grid. Pieces move and turn over on screen, and the river can carry its traditional name.':
     'Mistboard 的象棋棋子有九套樣式，可以畫成平面或立體；象棋棋盤可以畫成交叉點棋盤或方格棋盤。棋子在螢幕上會移動和翻轉，河界也可以寫上傳統的名字。',
   'Nine piece sets': '九套棋子樣式',
@@ -12478,15 +12478,15 @@ const ZH_HANT: Record<string, string> = {
     '同一個象棋棋盤角落畫了三次：平面棋子、立體棋子，以及加厚邊緣的立體棋子',
   'Flat, 3D, and 3D with the Thick edge.': '平面、立體，以及「加厚」邊緣的立體。',
   'The same look reaches the hidden-piece games. In [jieqi](/rules/jieqi) the face-down pieces stand in 3D with the rest, and in [banqi](/rules/banqi) and [Flip Jungle](/rules/jungle-flip) so does every tile.':
-    '有暗子的棋也能用這種樣式。在[揭棋](/rules/jieqi)裡，背面朝上的暗子和其他棋子一樣以立體顯示；在[暗棋](/rules/banqi)和[翻翻棋](/rules/jungle-flip)裡，每一枚棋子也是如此。',
+    '有暗子的棋也能用這種樣式。在[揭棋](/rules/jieqi)裡，背面朝上的暗子和其他棋子一樣以立體顯示；在[暗棋](/rules/banqi)和[翻翻獸棋](/rules/jungle-flip)裡，每一枚棋子也是如此。',
   'A jieqi position with face-down and revealed pieces three times: flat, 3D, and 3D with the thick edge':
     '一個既有暗子也有明子的揭棋局面畫了三次：平面、立體，以及加厚邊緣的立體',
   'Jieqi: flat, 3D, and 3D with the Thick edge. The plain discs are pieces still face down.':
     '揭棋：平面、立體，以及「加厚」邊緣的立體。沒有字的圓片是還沒翻開的暗子。',
   'A Flip Jungle board three times: flat tiles, 3D tiles, and 3D tiles with the thick edge':
-    '同一個翻翻棋棋盤畫了三次：平面棋子、立體棋子，以及加厚邊緣的立體棋子',
+    '同一個翻翻獸棋棋盤畫了三次：平面棋子、立體棋子，以及加厚邊緣的立體棋子',
   'Flip Jungle: flat, 3D, and 3D with the Thick edge. The green tiles are still face down.':
-    '翻翻棋：平面、立體，以及「加厚」邊緣的立體。綠色的棋子還沒翻開。',
+    '翻翻獸棋：平面、立體，以及「加厚」邊緣的立體。綠色的棋子還沒翻開。',
   'The xiangqi board can be lined, or a square grid like chess':
     '象棋棋盤可以是交叉點棋盤，也可以是像西洋棋那樣的方格棋盤',
   'The lined board is the traditional one. Pieces sit on the points where the lines cross, the palaces have their diagonals, and the river runs across the middle. The square grid puts each piece inside a square, the way a chessboard does, with light and dark squares, the river as a blue band and each palace as a shaded block. The rules are the same on both.':
@@ -12499,7 +12499,7 @@ const ZH_HANT: Record<string, string> = {
     '如果你是從西洋棋轉來下象棋的，可以先試試方格棋盤。棋子放在深淺相間的格子裡，一步棋看起來就和你習慣的一樣；想用交叉點棋盤時，改一項設定就行。兩種棋盤都能用平面和立體棋子。「棋盤顏色」在兩種棋盤上提供同樣的木色和紙色，綠色的「鬥獸棋」配色只用於方格棋盤。',
   'Pieces glide and turn over': '棋子會滑動和翻轉',
   'When you step through a game in a review, a study or a replay, each move slides from its square to the next, so you can follow it without hunting for what changed. A hidden piece turns over when it is revealed, in banqi, jieqi and Flip Jungle. A 3D piece spins over on its edge like a real one. A flat piece narrows to a thin line and widens again showing its other face.':
-    '在覆盤、研究或回放裡逐步查看對局時，每一步的棋子都會從原來的位置滑到新的位置，不用到處找哪裡變了也能跟上。在暗棋、揭棋和翻翻棋裡，暗子翻開時會翻轉。立體棋子像真的棋子一樣立在側邊上翻過來；平面棋子先收窄成一條細線，再展開露出另一面。',
+    '在覆盤、研究或回放裡逐步查看對局時，每一步的棋子都會從原來的位置滑到新的位置，不用到處找哪裡變了也能跟上。在暗棋、揭棋和翻翻獸棋裡，暗子翻開時會翻轉。立體棋子像真的棋子一樣立在側邊上翻過來；平面棋子先收窄成一條細線，再展開露出另一面。',
   'Press the forward arrow under each board to see it. The first move in the banqi game flips a tile where it lies. In jieqi a face-down piece moves and turns over as it lands. Both boards are shown in 3D whatever your own setting is.':
     '點每個棋盤下方的前進箭頭就能看到。暗棋這盤的第一步是在原地翻開一枚棋子。揭棋裡，一枚暗子走動後在落點翻開。無論你自己怎麼設定，這兩個棋盤都以立體顯示。',
   'Banqi: the first move turns a tile over.': '暗棋：第一步翻開一枚棋子。',
