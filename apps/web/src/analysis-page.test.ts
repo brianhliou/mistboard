@@ -145,9 +145,10 @@ describe('analysis page', () => {
         expect(root.querySelector('.review-shell--game')).toBeNull();
         // Lichess minimalism: the dropdown IS the left rail — no meta card.
         expect(root.querySelector('.game-meta-card')).toBeNull();
-        // Gomoku is a gated tree board only; it has no FEN importer/editor.
+        // Gomoku imports its JSON export, with no FEN importer/editor.
         if (variant.id === 'gomoku') {
-          expect(root.querySelector('.review-import')).toBeNull();
+          expect(root.querySelector('.review-import textarea')).not.toBeNull();
+          expect(root.querySelector('.review-import input')).toBeNull();
         } else {
           expect(root.querySelector('.review-import'), 'import block').not.toBeNull();
           expect(root.querySelector<HTMLInputElement>('.review-import input')?.readOnly).toBe(

@@ -136,6 +136,7 @@ describe('Gomoku finished-game review', () => {
           fetchSpy.mock.calls.some(([input]) => String(input).startsWith('/api/gomoku/')),
         ).toBe(admitted);
         expect(Boolean(root.querySelector('.gomoku-live-board'))).toBe(admitted);
+        expect(Boolean(root.querySelector('[data-replay-analysis]:not([hidden])'))).toBe(admitted);
       },
     );
   }
@@ -181,7 +182,7 @@ describe('Gomoku finished-game review', () => {
             game_spec: 'gomoku',
             route: '/gomoku/game/:id',
             review_surface: 'game',
-            has_analysis: false,
+            has_analysis: true,
           }),
         ],
       ]);
@@ -190,6 +191,37 @@ describe('Gomoku finished-game review', () => {
       ).toEqual([]);
     },
   );
+
+  it('hands the recorded opening and full game to analysis at the selected ply with the flag off', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
+    const opening = GOMOKU_OPENINGS.find((entry) => entry.stones.length === 3)!;
+    const { root } = await mount(fixture(opening), 200, true);
+    key('Home');
+    key('ArrowRight');
+    const link = root.querySelector<HTMLAnchorElement>('[data-replay-analysis]:not([hidden])')!;
+    expect(link).not.toBeNull();
+    root.querySelector<HTMLButtonElement>('[data-move-nav-menu]')!.click();
+    expect(link.textContent).toContain('Analyse from here');
+    const url = new URL(link.href);
+    expect(url.pathname).toBe('/analysis/gomoku');
+    expect(url.searchParams.get('ply')).toBe('1');
+    // Follow the actual link through the analysis mount, without browser navigation.
+    window.dispatchEvent(new Event('pagehide'));
+    window.history.replaceState(null, '', url);
+    const { mountVariantAnalysisPage } = await import('./variant-analysis.js');
+    await mountVariantAnalysisPage(root, 'gomoku', document.createElement('div'));
+    expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(4);
+    for (const stone of opening.stones) {
+      expect(
+        root
+          .querySelector(`[data-piece-square="${stone.square}"]`)
+          ?.classList.contains(`gomoku-stone--${stone.color}`),
+      ).toBe(true);
+    }
+    key('End');
+    expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(6);
+    expect(root.querySelector('.review-move-list')?.textContent).toContain('a2');
+  });
 
   it('opens at the linked ply and reads the recorded clocks without advancing them', async () => {
     const payload = fixture(GOMOKU_OPENINGS.find((entry) => entry.stones.length === 3)!);

@@ -361,6 +361,11 @@ export const ZH_HANS_REVIEW = {
   'analysis.pasteGamePlaceholder': '粘贴棋谱以导入',
   'analysis.movesToImport': '要导入的着法',
   'analysis.importMoves': '导入着法',
+  'analysis.importJson': '导入 JSON',
+  'analysis.gomokuJsonPlaceholder': '粘贴 Mistboard 五子棋 JSON 导出内容',
+  'analysis.gomokuJsonHint': '保留已记录的开局和完整棋谱。新的续着会成为变着。',
+  'analysis.invalidGomokuJson':
+    '五子棋 JSON 无效。请使用包含有效开局及完整合法着法的五子棋导出内容。',
   'watch.noUnlockedDarkReplays': '还没有解锁的迷雾回放',
   'watch.noReplaysYet': '还没有回放',
   'watch.replayFeedUnavailable': '无法获取回放列表',

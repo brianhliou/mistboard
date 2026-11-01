@@ -9,6 +9,7 @@ import { reviewOpenedProps, track } from './analytics.js';
 import { gomokuEnabled } from './feature-flags.js';
 import { variantDisplayLabel } from './game-display.js';
 import { gomokuOffered } from './gomoku-access.js';
+import { gomokuAnalysisGame, gomokuAnalysisHref } from './gomoku-analysis-import.js';
 import { t } from './i18n/catalog.js';
 import { bootstrapGomokuRecording } from './live-gomoku.js';
 import { gameExportLinks } from './review/game-export-links.js';
@@ -132,6 +133,12 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
       throw new Error('invalid gomoku recording');
     }
     const lastPly = history.length - 1;
+    const opening = history[0]!.view.opening ?? { stones: [], turn: 'black' };
+    const moves = postgame.timeline
+      .filter((entry) => entry.type === 'move-played')
+      .map((entry) => entry.move?.to);
+    const analysisGame = gomokuAnalysisGame(opening, moves);
+    if (!analysisGame || moves.length !== lastPly) throw new Error('invalid gomoku mainline');
     const raw = new URLSearchParams(window.location.search).get('ply');
     const initialPly = raw !== null && /^\d+$/.test(raw) ? Math.min(Number(raw), lastPly) : lastPly;
     root.classList.remove('landing-page', 'game-route');
@@ -141,6 +148,7 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
       ...(root instanceof HTMLDivElement ? { root } : {}),
       frame: recordingFrame(postgame),
       initialPly,
+      analysisHref: (ply) => gomokuAnalysisHref(analysisGame, ply),
       clockAt: (ply) => {
         const clock = readTenantWebClock(history[ply]?.clock, ['black', 'white'] as const);
         return clock ? { remainingMs: clock.remainingMs, active: clock.activeColor } : null;
@@ -163,7 +171,7 @@ export async function mountGomokuPostgame(root: HTMLElement, roomId: string): Pr
         referrer: document.referrer,
         origin: window.location.origin,
         reviewSurface: 'game',
-        hasAnalysis: false,
+        hasAnalysis: true,
       }),
     );
   } catch {

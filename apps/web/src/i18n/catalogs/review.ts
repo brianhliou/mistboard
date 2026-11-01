@@ -124,6 +124,12 @@ export const EN_REVIEW = {
   'analysis.pasteGamePlaceholder': 'Paste a game to import',
   'analysis.movesToImport': 'Moves to import',
   'analysis.importMoves': 'Import moves',
+  'analysis.importJson': 'Import JSON',
+  'analysis.gomokuJsonPlaceholder': 'Paste a Mistboard Gomoku JSON export',
+  'analysis.gomokuJsonHint':
+    'Keeps the recorded opening and complete game. New continuations are side lines.',
+  'analysis.invalidGomokuJson':
+    'Invalid Gomoku JSON. Use a Gomoku export with a valid opening and complete legal move list.',
   'watch.noUnlockedDarkReplays': 'No unlocked dark replays yet',
   'watch.noReplaysYet': 'No replays yet',
   'watch.replayFeedUnavailable': 'Replay feed unavailable',

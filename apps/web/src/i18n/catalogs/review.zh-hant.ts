@@ -361,6 +361,11 @@ export const ZH_HANT_REVIEW = {
   'analysis.pasteGamePlaceholder': '貼上棋譜以匯入',
   'analysis.movesToImport': '要匯入的著法',
   'analysis.importMoves': '匯入著法',
+  'analysis.importJson': '匯入 JSON',
+  'analysis.gomokuJsonPlaceholder': '貼上 Mistboard 五子棋 JSON 匯出內容',
+  'analysis.gomokuJsonHint': '保留已記錄的開局和完整棋譜。新的續著會成為變著。',
+  'analysis.invalidGomokuJson':
+    '五子棋 JSON 無效。請使用包含有效開局及完整合法著法的五子棋匯出內容。',
   'watch.noUnlockedDarkReplays': '還沒有解鎖的迷霧回放',
   'watch.noReplaysYet': '還沒有回放',
   'watch.replayFeedUnavailable': '無法取得回放列表',

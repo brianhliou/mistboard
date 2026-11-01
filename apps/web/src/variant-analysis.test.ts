@@ -1,6 +1,20 @@
-import { normalizeStartFen } from '@mistboard/game';
+import {
+  applyGomokuRoomMove,
+  createGomokuRoomState,
+  GOMOKU_OPENINGS,
+  type GomokuOpening,
+  normalizeStartFen,
+} from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ANALYSIS_VARIANTS, type AnalysisVariantId } from './analysis-catalog.js';
+import {
+  createGomokuImportPanel,
+  gomokuAnalysisHref,
+  parseGomokuExport,
+  readGomokuAnalysisGame,
+} from './gomoku-analysis-import.js';
+import { ensureLocaleCatalog, t } from './i18n/catalog.js';
+import type { Locale } from './i18n/locale.js';
 import { setResolvedAdmin } from './signed-in-state.js';
 import { mountVariantAnalysisPage } from './variant-analysis.js';
 
@@ -77,8 +91,10 @@ const FIRST_MOVE: Record<(typeof DEALT)[number], { clicks: string[]; token: stri
 };
 
 afterEach(() => {
+  window.dispatchEvent(new Event('pagehide'));
   setResolvedAdmin(undefined);
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   document.body.replaceChildren();
   vi.restoreAllMocks();
   window.history.replaceState(null, '', '/');
@@ -98,7 +114,8 @@ describe('Gomoku direct analysis mount', () => {
     setResolvedAdmin(false);
     const root = await mountAt('gomoku');
     expect(root.querySelector('.gomoku-live-board')).not.toBeNull();
-    expect(root.querySelector('.review-import')).toBeNull();
+    expect(root.querySelector('.review-import textarea')).not.toBeNull();
+    expect(root.querySelector('.review-import input')).toBeNull();
     expect(menuItem(root, 'Board editor')).toBeUndefined();
     expect(menuItem(root, 'Study')).toBeUndefined();
     expect(menuItem(root, 'Flip board')).toBeUndefined();
@@ -116,6 +133,73 @@ describe('Gomoku direct analysis mount', () => {
     expect(root.querySelector('.review-move-list')?.textContent).toContain('b1');
     root.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
     expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(0);
+  });
+
+  it('imports a JSON export without losing its opening or mainline on navigation and side lines', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
+    setResolvedAdmin(true);
+    const opening = GOMOKU_OPENINGS.find((entry) => entry.stones.length === 3)!;
+    const exported = {
+      schema_version: '1.1',
+      variant: 'gomoku',
+      opening,
+      ply_count: 3,
+      plies: ['a1', 'b1', 'a2'].map((uci, i) => ({
+        ply: i + 1,
+        mover: i % 2 ? 'black' : 'white',
+        uci,
+      })),
+    };
+    const root = await mountAt('gomoku');
+    const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+    const textarea = root.querySelector<HTMLTextAreaElement>('.review-import textarea')!;
+    expect(textarea).not.toBeNull();
+    textarea.value = JSON.stringify(exported);
+    root.querySelector<HTMLButtonElement>('.review-import button')!.click();
+    expect(assign).toHaveBeenCalledOnce();
+    const url = new URL(String(assign.mock.calls[0]![0]), window.location.origin);
+    const encodedGame = url.searchParams.get('game');
+    url.searchParams.set('ply', '1');
+    const arrived = await mountAt('gomoku', url.search);
+    expect(arrived.querySelectorAll('[data-piece-square]')).toHaveLength(4);
+    clickSquare(arrived, 'c1');
+    expect(arrived.querySelector('[data-piece-square="c1"]')).not.toBeNull();
+    expect(arrived.querySelector('.review-move-list')?.textContent).toContain('b1');
+    arrived.querySelector<HTMLButtonElement>('[data-replay="first"]')!.click();
+    arrived.querySelector<HTMLButtonElement>('[data-replay="latest"]')!.click();
+    expect(arrived.querySelector('[data-piece-square="a2"]')).not.toBeNull();
+    expect(arrived.querySelector('[data-piece-square="c1"]')).toBeNull();
+    expect(new URLSearchParams(window.location.search).get('game')).toBe(encodedGame);
+    // A reload after navigation still has all three recorded placements.
+    const reloaded = await mountAt('gomoku', window.location.search);
+    expect(reloaded.querySelector('.review-move-list')?.textContent).toContain('a2');
+    expect(reloaded.querySelectorAll('[data-piece-square]')).toHaveLength(6);
+  });
+
+  it.each(['{broken', JSON.stringify({ variant: 'xiangqi', plies: [] })])(
+    'rejects invalid JSON without navigating: %s',
+    async (json) => {
+      vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
+      setResolvedAdmin(true);
+      const root = await mountAt('gomoku');
+      const assign = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
+      const textarea = root.querySelector<HTMLTextAreaElement>('.review-import textarea')!;
+      expect(textarea).not.toBeNull();
+      textarea.value = json;
+      root.querySelector<HTMLButtonElement>('.review-import button')!.click();
+      expect(root.querySelector('[role="alert"]')?.textContent).toContain('Invalid Gomoku JSON');
+      expect(assign).not.toHaveBeenCalled();
+      expect(root.querySelectorAll('[data-piece-square]')).toHaveLength(0);
+    },
+  );
+
+  it('refuses a corrupt game handoff instead of replacing it with an empty board', async () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
+    setResolvedAdmin(true);
+    const root = await mountAt('gomoku', '?game=%7Bbroken');
+    expect(root.querySelector('.gomoku-live-board')).toBeNull();
+    expect(root.querySelector('[role="alert"]')?.textContent).toContain('Invalid Gomoku JSON');
+    expect(root.querySelector('.review-import textarea')).not.toBeNull();
   });
 });
 
@@ -361,4 +445,162 @@ describe('import block', () => {
       expect(root.textContent).toContain('Import moves');
     });
   }
+});
+
+function exported(
+  opening: GomokuOpening = { stones: [], turn: 'black' },
+  tokens = ['a1', 'b1', 'a2'],
+) {
+  return {
+    schema_version: '1.1',
+    game_id: 'gmk_import',
+    variant: 'gomoku',
+    // Same recording fields as buildTenantGamePublicationJson; no evaluations
+    // or player metadata are needed to reproduce the game in analysis.
+    opening,
+    ply_count: tokens.length,
+    plies: tokens.map((uci, i) => ({
+      ply: i + 1,
+      mover: i % 2 === 0 ? opening.turn : opening.turn === 'black' ? 'white' : 'black',
+      uci,
+      san: null,
+      black_clock_ms_after: null,
+      white_clock_ms_after: null,
+    })),
+  };
+}
+
+describe('Gomoku JSON import and handoff model', () => {
+  it.each([0, 3, 4, 5])('replays a %i-stone opening and every exported placement', (count) => {
+    const opening =
+      count === 0
+        ? ({ stones: [], turn: 'black' } as const)
+        : GOMOKU_OPENINGS.find((entry) => entry.stones.length === count)!;
+    const game = parseGomokuExport(JSON.stringify(exported(opening)))!;
+    expect(game).not.toBeNull();
+    expect(game.opening).toEqual({ stones: opening.stones, turn: opening.turn });
+    expect(game.moves).toEqual([{ to: 'a1' }, { to: 'b1' }, { to: 'a2' }]);
+    let state = createGomokuRoomState('test', game.opening);
+    for (const move of game.moves) state = applyGomokuRoomMove(state, move);
+    expect(state.ply).toBe(count + 3);
+    const url = new URL(gomokuAnalysisHref(game, 1), 'https://mistboard.test');
+    expect(url.searchParams.get('ply')).toBe('1');
+    expect(readGomokuAnalysisGame(url.searchParams.get('game')!)).toEqual(game);
+  });
+
+  it('accepts an empty export, and a five on the last placement', () => {
+    expect(parseGomokuExport(JSON.stringify(exported(undefined, [])))?.moves).toEqual([]);
+    const moves = ['a1', 'a2', 'b1', 'b2', 'c1', 'c2', 'd1', 'd2', 'e1'];
+    expect(parseGomokuExport(JSON.stringify(exported(undefined, moves)))?.moves).toHaveLength(9);
+    expect(parseGomokuExport(JSON.stringify(exported(undefined, [...moves, 'e2'])))).toBeNull();
+  });
+
+  const invalid: Array<[string, (data: ReturnType<typeof exported>) => unknown]> = [
+    ['wrong variant', (data) => ({ ...data, variant: 'xiangqi' })],
+    ['unsupported version', (data) => ({ ...data, schema_version: '2' })],
+    ['missing opening', (data) => ({ ...data, opening: undefined })],
+    ['null opening', (data) => ({ ...data, opening: null })],
+    ['unsupported rule', (data) => ({ ...data, opening: { ...data.opening, rule: 'renju' } })],
+    [
+      'invalid opening square',
+      (data) => ({
+        ...data,
+        opening: { stones: [{ square: 'p1', color: 'black' }], turn: 'white' },
+      }),
+    ],
+    [
+      'invalid opening color',
+      (data) => ({ ...data, opening: { stones: [{ square: 'h8', color: 'red' }], turn: 'white' } }),
+    ],
+    [
+      'duplicate opening stones',
+      (data) => ({
+        ...data,
+        opening: {
+          stones: [
+            { square: 'h8', color: 'black' },
+            { square: 'h8', color: 'white' },
+          ],
+          turn: 'black',
+        },
+      }),
+    ],
+    ['wrong opening turn', (data) => ({ ...data, opening: { stones: [], turn: 'white' } })],
+    ['wrong count', (data) => ({ ...data, ply_count: 2 })],
+    ['missing plies', (data) => ({ ...data, plies: null })],
+    ['invalid ply', (data) => ({ ...data, plies: [{ ...data.plies[0], ply: 2 }], ply_count: 1 })],
+    [
+      'wrong mover',
+      (data) => ({ ...data, plies: [{ ...data.plies[0], mover: 'white' }], ply_count: 1 }),
+    ],
+    [
+      'out-of-bounds move',
+      (data) => ({ ...data, plies: [{ ...data.plies[0], uci: 'a16' }], ply_count: 1 }),
+    ],
+    [
+      'non-string move',
+      (data) => ({ ...data, plies: [{ ...data.plies[0], uci: {} }], ply_count: 1 }),
+    ],
+    ['duplicate placement', () => exported(undefined, ['a1', 'a1'])],
+    [
+      'opening already has five',
+      (data) => ({
+        ...data,
+        opening: {
+          stones: ['a1', 'b1', 'c1', 'd1', 'e1'].flatMap((square, i) => [
+            { square, color: 'black' },
+            { square: `${String.fromCharCode(97 + i)}3`, color: 'white' },
+          ]),
+          turn: 'black',
+        },
+      }),
+    ],
+    [
+      'placement on opening',
+      () => exported({ stones: [{ square: 'a1', color: 'black' }], turn: 'white' }),
+    ],
+  ];
+  it.each(invalid)('rejects the whole export: %s', (_name, mutate) => {
+    expect(parseGomokuExport(JSON.stringify(mutate(exported())))).toBeNull();
+  });
+  it.each(['', '{broken', 'null', '[]', 'true', '42'])('rejects non-export input %s', (text) => {
+    expect(parseGomokuExport(text)).toBeNull();
+    expect(readGomokuAnalysisGame(text)).toBeNull();
+  });
+  it('rejects corrupt compact handoffs and clamps selection to the complete game', () => {
+    const game = parseGomokuExport(JSON.stringify(exported()))!;
+    expect(readGomokuAnalysisGame(JSON.stringify({ ...game, moves: ['a1', 'a1'] }))).toBeNull();
+    for (const [input, expected] of [
+      [-1, 0],
+      [999, 3],
+      [Number.NaN, 3],
+    ]) {
+      expect(
+        new URL(gomokuAnalysisHref(game, input), 'https://mistboard.test').searchParams.get('ply'),
+      ).toBe(String(expected));
+    }
+  });
+
+  it.each(['en', 'zh-Hans', 'zh-Hant'] as const)(
+    'translates JSON import, hint and validation in %s',
+    async (locale: Locale) => {
+      vi.stubGlobal('localStorage', {
+        getItem: (key: string) => (key === 'mistboard.locale' ? locale : null),
+      });
+      await ensureLocaleCatalog(locale);
+      const panel = createGomokuImportPanel();
+      const input = panel.querySelector('textarea')!;
+      expect(input.placeholder).toBe(t('analysis.gomokuJsonPlaceholder', {}, locale));
+      expect(panel.querySelector('.review-import__hint')?.textContent).toBe(
+        t('analysis.gomokuJsonHint', {}, locale),
+      );
+      expect(panel.querySelector('button')?.textContent).toBe(t('analysis.importJson', {}, locale));
+      input.value = '{broken';
+      panel.querySelector('button')!.click();
+      expect(panel.querySelector('[role="alert"]')?.textContent).toBe(
+        t('analysis.invalidGomokuJson', {}, locale),
+      );
+      if (locale !== 'en') expect(panel.textContent).not.toContain('Invalid');
+    },
+  );
 });

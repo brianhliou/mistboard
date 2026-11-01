@@ -213,12 +213,26 @@ export async function mountVariantAnalysisPage(
 
   switch (id) {
     case 'gomoku': {
-      const [{ mountGomokuReview }, { makeGomokuTreeAdapter }] = await Promise.all([
+      const [
+        { mountGomokuReview },
+        { makeGomokuTreeAdapter },
+        { createGomokuImportPanel, readGomokuAnalysisGame },
+      ] = await Promise.all([
         import('./review/gomoku-review.js'),
         import('./review/gomoku-tree-adapter.js'),
+        import('./gomoku-analysis-import.js'),
       ]);
-      // No dealt opening: the standalone board starts empty. Gomoku has no
-      // editor, study or FEN importer; those are separate product decisions.
+      const gameParam = params.get('game');
+      const game = gameParam !== null ? readGomokuAnalysisGame(gameParam) : null;
+      if (gameParam !== null && !game) {
+        const main = document.createElement('main');
+        main.className = 'game-shell';
+        main.append(picker, createGomokuImportPanel(t('analysis.invalidGomokuJson')));
+        root.append(main);
+        return;
+      }
+      // Recorded games keep the opening and ALL placements in ?game=. Only
+      // ?ply= changes on navigation; a side line never replaces the mainline.
       const codec = makeGomokuTreeAdapter();
       const title = t('analysis.pageTitle', { variant: variantDisplayLabel(id) });
       mountGomokuReview(root, {
@@ -230,8 +244,11 @@ export async function mountVariantAnalysisPage(
         ariaLabel: title,
         boardAriaLabel: t('live.gomokuBoard'),
         summary: t('analysis.playAMove'),
-        moves: movesFromParam(movesParam, codec, codec.initialTruth()),
-        onLineChange: syncLineToUrl(codec),
+        opening: game?.opening,
+        moves: game?.moves ?? movesFromParam(movesParam, codec, codec.initialTruth()),
+        urlPly: true,
+        onLineChange: game || movesParam ? undefined : syncLineToUrl(codec),
+        underboardNote: createGomokuImportPanel(),
       });
       return;
     }

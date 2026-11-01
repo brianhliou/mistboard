@@ -377,6 +377,8 @@ export type TenantRecording<C extends string, V> = {
   frame: TenantLiveFrame<C, V>;
   /** Open at this ply instead of the end. */
   initialPly?: number;
+  /** Gated caller-owned handoff, retaining the recording at the displayed ply. */
+  analysisHref?(ply: number): string;
   /** The recorded clocks after a ply, or null for a match that kept none. */
   clockAt(ply: number): Omit<TenantRecordedClock<C>, 'final'> | null;
 };
@@ -793,12 +795,15 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     lastDisplayedView = displayed;
     if (moveList.listClass) refs.moveList.classList.add(moveList.listClass);
     replay.renderShell(refs, renderAll);
-    // A recording is already the review: no link to the page it is on.
+    // Recordings may offer a standalone analysis handoff owned by their caller.
     setReplayAnalysisHref(
       refs.actionSection,
-      view?.status.type === 'finished' && !recording
-        ? `${tenant.reviewUrl(state.room)}?ply=${replay.activePly() ?? replay.latestPly()}`
+      view?.status.type === 'finished'
+        ? recording
+          ? (recording.analysisHref?.(replay.activePly() ?? replay.latestPly()) ?? null)
+          : `${tenant.reviewUrl(state.room)}?ply=${replay.activePly() ?? replay.latestPly()}`
         : null,
+      recording?.analysisHref ? t('review.analyseFromHere') : undefined,
     );
     chrome.renderBoardStatus();
     chrome.renderActionStatus();

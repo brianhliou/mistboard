@@ -69,11 +69,17 @@ export function scrollMoveListToEnd(scroller: HTMLElement): void {
  * Points the bar menu's Analyse row at the review page, or hides it (null) while
  * the game is still being played. `anchor` is any element inside the console.
  */
-export function setReplayAnalysisHref(anchor: HTMLElement, href: string | null): void {
+export function setReplayAnalysisHref(
+  anchor: HTMLElement,
+  href: string | null,
+  label?: string,
+): void {
   const link = anchor
     .closest('.game-console')
     ?.querySelector<HTMLAnchorElement>('[data-replay-analysis]');
   if (!link) return;
+  if (label) link.dataset.analysisLabel = label;
+  else delete link.dataset.analysisLabel;
   const hidden = href === null;
   if (href !== null && link.getAttribute('href') !== href) link.href = href;
   if (link.hidden === hidden) return;
@@ -176,7 +182,9 @@ export function createGameTable(opts: { navMenu?: boolean } = {}): GameTable {
         hidden: true,
       },
       {
-        label: t('live.reviewThisMove'),
+        label: () =>
+          el.querySelector<HTMLElement>('[data-replay-analysis]')?.dataset.analysisLabel ??
+          t('live.reviewThisMove'),
         icon: REPLAY_ICON_ANALYSIS,
         href: '',
         dataset: { replayAnalysis: '' },
