@@ -22,23 +22,28 @@
   height: 100%;
 }
 .gomoku-wood {
-  fill: #dcb975;
+  fill: var(--xq-live-board-bg, #f5dca8);
 }
 .gomoku-grid {
-  stroke: #6e542e;
+  stroke: var(--xq-live-ink, #5a3a14);
   stroke-width: 1;
   fill: none;
 }
 .gomoku-star {
-  fill: #6e542e;
+  fill: var(--xq-live-ink, #5a3a14);
 }
 .gomoku-coordinate {
-  fill: #503e24;
+  fill: var(--xq-live-ink, #5a3a14);
   font: 11px system-ui;
   text-anchor: middle;
 }
 .gomoku-stone {
   stroke-width: 1.2;
+}
+.gomoku-ghost {
+  opacity: 0.4;
+  stroke-width: 1.2;
+  pointer-events: none;
 }
 .gomoku-stone--black {
   fill: #222;

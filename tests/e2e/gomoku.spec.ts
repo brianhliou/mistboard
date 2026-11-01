@@ -60,11 +60,8 @@ for (const human of ['black', 'white'] as const) {
     await expect(page.locator('.gomoku-svg')).toBeVisible();
     await expect.poll(() => ownSeat).toBe(human);
     expect(wireEngine).toBe('rapfi-level-1');
-    await expect(page.locator('[data-gomoku-bot]')).toContainText('GPL-3.0');
-    await expect(page.locator('[data-gomoku-bot] a').last()).toHaveAttribute(
-      'href',
-      'https://github.com/dhbloo/rapfi/archive/1387d11312.tar.gz',
-    );
+    await expect(page.locator('[data-gomoku-bot] [role="status"]')).toBeVisible();
+    await expect(page.locator('[data-gomoku-bot] a')).toHaveCount(0);
 
     // The human plays a fixed scattered order, with no engine assistance. A
     // freestyle game must end by five or a full board within 225 placements.

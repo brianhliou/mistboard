@@ -12,6 +12,7 @@ import {
 import { Rapfi, type RapfiLevel, type RapfiPosition } from './engine/rapfi.js';
 import { gomokuBoardSvg } from './gomoku-board.js';
 import './gomoku-board.css';
+import './live-xiangqi.css';
 import { t } from './i18n/catalog.js';
 import type { LiveRefs } from './live-state.js';
 import {
@@ -169,19 +170,15 @@ function renderBotPanel(refs: LiveRefs): void {
     });
     panel.append(button);
   }
-  const license = document.createElement('a');
-  license.href = '/engine/rapfi/GPL-3.0.txt';
-  license.textContent = 'Rapfi © dhbloo — GPL-3.0';
-  const source = document.createElement('a');
-  source.href = 'https://github.com/dhbloo/rapfi/archive/1387d11312.tar.gz';
-  source.textContent = t('live.gomokuBotSource');
-  panel.append(license, document.createTextNode(' · '), source);
   refs.hiddenPool.append(panel);
 }
 
 window.addEventListener('pagehide', stopBot);
 window.addEventListener('pageshow', (event) => {
   if (event.persisted) core?.renderAll();
+});
+window.addEventListener('mistboard:display-preferences-change', () => {
+  if (core?.refs.board.isConnected) core.renderAll();
 });
 
 const tenant: WebVariantTenant<GomokuColor> = {
@@ -233,7 +230,6 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
   gameSpecId: GOMOKU_SPEC_ID,
   defaultRoomId: 'gmk_dev',
   boardClass: 'gomoku-live-board',
-  flippable: true,
   chrome: { roomMode: () => roomMode },
   onFrame: (frame) => {
     if (frame.type === 'hello') {
@@ -268,11 +264,33 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
     refs.board.className = 'board gomoku-live-board';
     refs.board.setAttribute('aria-label', t('live.gomokuBoard'));
     refs.board.innerHTML = view
-      ? gomokuBoardSvg(view, core?.canActNow() ?? false, core?.orientation() === 'white')
+      ? gomokuBoardSvg(view, (core?.canActNow() ?? false) && core?.connection() === 'connected')
       : '';
   },
   setup: (ctx) => {
     core = ctx;
+    let hovered: Element | null = null;
+    const clearHover = () => {
+      hovered?.setAttribute('visibility', 'hidden');
+      hovered = null;
+    };
+    const hover = (event: PointerEvent) => {
+      clearHover();
+      if (
+        (event.pointerType !== 'mouse' && event.pointerType !== 'pen') ||
+        event.buttons !== 0 ||
+        !ctx.canActNow() ||
+        ctx.connection() !== 'connected' ||
+        !(event.target instanceof Element)
+      )
+        return;
+      hovered = event.target.closest('[data-square]')?.querySelector('.gomoku-ghost') ?? null;
+      hovered?.setAttribute('visibility', 'visible');
+    };
+    ctx.refs.board.addEventListener('pointerover', hover);
+    ctx.refs.board.addEventListener('pointermove', hover);
+    for (const event of ['pointerout', 'pointerleave', 'pointerdown', 'pointercancel'])
+      ctx.refs.board.addEventListener(event, clearHover);
     const place = (event: Event) => {
       if (!ctx.canActNow() || ctx.connection() !== 'connected') return;
       // The shared replay handler returns to live and repaints first. Its old
@@ -294,8 +312,9 @@ const client = createTenantLiveClient<GomokuColor, GomokuPlayerView, GomokuMove>
     });
   },
   moveList: {
-    rowClass: 'move-row',
-    cellPrefix: 'gomoku-move-row',
+    rowClass: 'move-row xiangqi-move-row',
+    cellPrefix: 'xiangqi-move-row',
+    listClass: 'xiangqi-move-list',
     masked: false,
     notate: (move) => move.to,
     isMoveEvent,

@@ -189,7 +189,7 @@ export async function mountGomokuWatchReplay(
   const render = (): void => {
     const current = frame();
     if (!payload || !current || destroyed) return;
-    pane.boardEl.innerHTML = gomokuBoardSvg(current.view, false, orientation === 'white');
+    pane.boardEl.innerHTML = gomokuBoardSvg(current.view, false);
     paintClocks();
     progress.textContent = atEnd()
       ? t(
@@ -377,9 +377,6 @@ export async function mountGomokuWatchReplay(
       next: button('>', t('watch.nextMove', {}, locale), () => jumpToPly(ply + 1)),
       last: button('>|', t('watch.lastMove', {}, locale), () => jumpToPly(maxPly())),
     };
-    button('↕', t('watch.flipBoards', {}, locale), () =>
-      setPov(orientation === 'black' ? 'white' : 'black'),
-    );
     root.replaceChildren(header.el, layout, bar, progress);
   };
 
@@ -461,10 +458,6 @@ export async function mountGomokuWatchReplay(
       case ' ':
         togglePlay();
         break;
-      case 'f':
-      case 'F':
-        setPov(orientation === 'black' ? 'white' : 'black');
-        break;
       default:
         return;
     }
@@ -474,6 +467,7 @@ export async function mountGomokuWatchReplay(
     if (document.visibilityState === 'visible') tick();
   };
   if (!compact) window.addEventListener('keydown', onKeydown);
+  window.addEventListener('mistboard:display-preferences-change', render);
   document.addEventListener('visibilitychange', onVisibility);
   await loadGame(initialRoomId);
   return {
@@ -484,6 +478,7 @@ export async function mountGomokuWatchReplay(
       loadSeq += 1;
       stop();
       if (!compact) window.removeEventListener('keydown', onKeydown);
+      window.removeEventListener('mistboard:display-preferences-change', render);
       document.removeEventListener('visibilitychange', onVisibility);
       root.replaceChildren();
     },

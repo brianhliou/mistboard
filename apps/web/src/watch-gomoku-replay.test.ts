@@ -8,6 +8,7 @@ import {
   getGomokuPlayerView,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { writeDisplayPreference } from './display-preferences.js';
 import type { ReplayHandle } from './replay.js';
 import { type GomokuWatchPayload, mountGomokuWatchReplay } from './watch-gomoku-replay.js';
 import { formatClock } from './web-utils.js';
@@ -197,7 +198,7 @@ describe('Gomoku watch replay', () => {
     expect(handle.clockAtPly?.()?.toMove).toBe('first');
   });
 
-  it('flips board coordinates and seat rows consistently for both colour POVs', async () => {
+  it('keeps a1 bottom left for both colour POVs while arranging the seat rows', async () => {
     const { root, handle } = await mount(fixture(OPENING), {
       compact: true,
       pov: 'white',
@@ -207,12 +208,13 @@ describe('Gomoku watch replay', () => {
     expect(seats(root).map((seat) => seat.name)).toEqual(['Black player', 'White player']);
     handle.jumpToPly?.(1);
     const stone = () => root.querySelector('[data-square="a1"] .gomoku-stone')!;
-    expect(stone().getAttribute('cx')).toBe('480');
+    expect([stone().getAttribute('cx'), stone().getAttribute('cy')]).toEqual(['32', '480']);
     handle.setPov?.('black');
     expect(stone().getAttribute('cx')).toBe('32');
     expect(handle.bottomSeat?.()).toBe('first');
     expect(seats(root).map((seat) => seat.name)).toEqual(['White player', 'Black player']);
     handle.setPov?.('white');
+    expect([stone().getAttribute('cx'), stone().getAttribute('cy')]).toEqual(['32', '480']);
     handle.setPov?.('truth');
     expect(handle.bottomSeat?.()).toBe('first');
   });
@@ -423,7 +425,7 @@ describe('Gomoku watch replay', () => {
     expect(removeVisibility).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
   });
 
-  it('supports full-view flip and play controls and ignores shortcuts inside inputs', async () => {
+  it('supports full-view play controls without a board flip and ignores shortcuts inside inputs', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(BASE);
     const { root, handle } = await mount(finish(fixture(OPENING), 'white'));
@@ -435,8 +437,9 @@ describe('Gomoku watch replay', () => {
     play!.click();
     await vi.advanceTimersByTimeAsync(10_000);
     expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(4);
-    root.querySelector<HTMLButtonElement>('[aria-label="Flip boards"]')!.click();
-    expect(root.querySelector('[data-square="a1"] .gomoku-stone')!.getAttribute('cx')).toBe('480');
+    expect(root.querySelector('[aria-label="Flip boards"]')).toBeNull();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f' }));
+    expect(root.querySelector('[data-square="a1"] .gomoku-stone')!.getAttribute('cx')).toBe('32');
     const input = document.createElement('input');
     document.body.append(input);
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
@@ -448,6 +451,27 @@ describe('Gomoku watch replay', () => {
     expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(3);
     handle.jumpToPly?.(Number.NaN);
     expect(root.querySelectorAll('.gomoku-stone')).toHaveLength(3);
+  });
+
+  it('reacts to coordinate preferences and removes the subscription on destroy', async () => {
+    const stored = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => stored.set(key, value),
+    });
+    const { root, handle } = await mount(fixture(), { pov: 'white' });
+    expect(root.querySelectorAll('.gomoku-coordinate')).toHaveLength(0);
+    writeDisplayPreference('boardCoordinates', true);
+    expect(root.querySelectorAll('.gomoku-coordinate')).toHaveLength(30);
+    expect(root.querySelector('.gomoku-ghost')).toBeNull();
+    writeDisplayPreference('boardCoordinates', false);
+    expect(root.querySelectorAll('.gomoku-coordinate')).toHaveLength(0);
+    const remove = vi.spyOn(window, 'removeEventListener');
+    handle.destroy();
+    expect(remove).toHaveBeenCalledWith(
+      'mistboard:display-preferences-change',
+      expect.any(Function),
+    );
   });
 
   it('joins delayed air at the current recorded ply and catches up after a hidden-tab stall', async () => {

@@ -6,6 +6,7 @@ import {
   getGomokuPlayerView,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { writeDisplayPreference } from './display-preferences.js';
 import type { GomokuPostgameResponse } from './gomoku-postgame.js';
 
 const ROOM = 'gmk_review';
@@ -92,6 +93,22 @@ async function mount(payload: unknown, status = 200, admin?: boolean) {
 const key = (name: string) => document.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
 
 describe('Gomoku finished-game review', () => {
+  it('keeps the fixed board orientation, has no hover stone or flip, and follows coordinates', async () => {
+    const stored = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => stored.set(key, value),
+    });
+    const { root } = await mount(fixture());
+    const stone = root.querySelector('[data-piece-square="a1"]')!;
+    expect([stone.getAttribute('cx'), stone.getAttribute('cy')]).toEqual(['32', '480']);
+    expect(root.querySelector('[data-replay-flip]:not([hidden]), .gomoku-ghost')).toBeNull();
+    expect(root.querySelectorAll('.gomoku-coordinate')).toHaveLength(0);
+    writeDisplayPreference('boardCoordinates', true);
+    expect(root.querySelectorAll('.gomoku-coordinate')).toHaveLength(30);
+    writeDisplayPreference('boardCoordinates', false);
+    expect(root.querySelectorAll('.gomoku-coordinate')).toHaveLength(0);
+  });
   it.each(['en', 'zh-Hans', 'zh-Hant'])('offers the JSON download in %s', async (locale) => {
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => (key === 'mistboard.locale' ? locale : null),
