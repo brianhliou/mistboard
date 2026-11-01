@@ -16,7 +16,7 @@ import './gomoku-board.css';
 // figures have one image role and no per-point controls or keyboard stops.
 export function gomokuRulesBoard(state: GomokuRoomState): string {
   const paint: Record<string, string> = {
-    'gomoku-svg': 'style="display:block;width:100%;height:auto" role="img"',
+    'gomoku-svg': 'width="384" style="display:block;width:min(100%, 384px);height:auto" role="img"',
     'gomoku-wood': 'fill="#dcb975"',
     'gomoku-grid': 'fill="none" stroke="#6e542e" stroke-width="1"',
     'gomoku-star': 'fill="#6e542e"',
@@ -46,22 +46,16 @@ function beforeWin(
   });
 }
 
-const white: GomokuSquare[] = ['a1', 'c1', 'e1', 'g1'];
+const white: GomokuSquare[] = ['f6', 'g6', 'h10', 'j9'];
 export const GOMOKU_RULES_EXAMPLES = [
   { before: beforeWin(['e8', 'f8', 'g8', 'h8'], white), to: 'i8' },
-  { before: beforeWin(['h5', 'h6', 'h7', 'h8'], white), to: 'h9' },
-  { before: beforeWin(['f6', 'g7', 'h8', 'i9'], white), to: 'j10' },
-  { before: beforeWin(['f10', 'g9', 'h8', 'i7'], white), to: 'j6' },
-  { before: beforeWin(['f8', 'g8', 'h8', 'j8', 'k8'], [...white, 'i1']), to: 'i8' },
 ] satisfies { before: GomokuRoomState; to: GomokuSquare }[];
 
-export const GOMOKU_OPENING_WHITE = () =>
+export const GOMOKU_OPENING = () =>
   gomokuRulesBoard(createGomokuRoomState('gomoku-rules', GOMOKU_OPENINGS[0]));
-export const GOMOKU_OPENING_BLACK = () =>
-  gomokuRulesBoard(createGomokuRoomState('gomoku-rules', GOMOKU_OPENINGS[1]));
-export const GOMOKU_BEFORE_FIVE = () => gomokuRulesBoard(GOMOKU_RULES_EXAMPLES[0].before);
-export const GOMOKU_WINNING_BOARDS = GOMOKU_RULES_EXAMPLES.map(
-  ({ before, to }) =>
-    () =>
-      gomokuRulesBoard(applyGomokuRoomMove(before, { to })),
-);
+export const GOMOKU_PLACEMENT = () =>
+  gomokuRulesBoard(applyGomokuRoomMove(createGomokuRoomState('gomoku-rules'), { to: 'h8' }));
+export const GOMOKU_WINNING_BOARD = () =>
+  gomokuRulesBoard(
+    applyGomokuRoomMove(GOMOKU_RULES_EXAMPLES[0].before, { to: GOMOKU_RULES_EXAMPLES[0].to }),
+  );

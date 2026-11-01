@@ -1,100 +1,104 @@
 import {
-  GOMOKU_BEFORE_FIVE,
-  GOMOKU_OPENING_BLACK,
-  GOMOKU_OPENING_WHITE,
-  GOMOKU_WINNING_BOARDS,
+  GOMOKU_BOARD_SIZE,
+  GOMOKU_OPENING_SCREEN,
+  GOMOKU_OPENINGS,
+  type GomokuOpening,
+} from '@mistboard/game';
+import {
+  GOMOKU_OPENING,
+  GOMOKU_PLACEMENT,
+  GOMOKU_WINNING_BOARD,
 } from '../../gomoku-rules-diagrams.js';
 import type { Article } from '../types.js';
 
-// Direct-URL review page. The spec's publicSurface keeps it out of rules
-// lists, rails and homepage cards; article-meta.ts mirrors that for the sitemap.
-// Rules and figures come from variants-gomoku.ts and gomoku-openings.json.
+function openingDescription(opening: GomokuOpening): string {
+  const stones = (color: 'black' | 'white') => {
+    const count = opening.stones.filter((stone) => stone.color === color).length;
+    return `${count} ${color} ${count === 1 ? 'stone' : 'stones'}`;
+  };
+  return `${stones('black')} and ${stones('white')}, ${opening.turn === 'black' ? 'Black' : 'White'} to move`;
+}
+
+const poolSize = `${GOMOKU_OPENINGS.length} ${GOMOKU_OPENINGS.length === 1 ? 'position' : 'positions'}`;
+const setups = [...new Set(GOMOKU_OPENINGS.map(openingDescription))];
+const percent = (value: number) => `${Number((value * 100).toFixed(2))}%`;
+const whiteToMove = GOMOKU_OPENINGS.some((opening) => opening.turn === 'white');
+
+// Direct-URL English review page. The hidden spec, sitemap exclusion and
+// VITE_GOMOKU_ENABLED playtest gate stay in place. Pool facts follow the kernel's
+// JSON exports so re-screening changes the prose and example together.
 export const gomokuArticle: Article = {
   slug: 'gomoku',
   gameSpecId: 'gomoku',
   kind: 'rules',
   title: 'Gomoku Rules',
-  summary: 'Freestyle five-in-a-row on a 15×15 board: learn placements, Mistboard’s dealt balanced openings, winning lines, draws and clocks.',
+  summary: 'Place stones, connect five, and compete from a dealt opening the engine judged even.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-31',
-  audience: 'Newcomers learning freestyle Gomoku and Mistboard’s dealt openings.',
-  thumbnail: { kind: 'svg', svg: GOMOKU_OPENING_WHITE },
+  updatedAt: '2026-11-01',
+  updateNote: 'Shortened the rules, explained the dealt openings and added the game’s history and draw-offer controls.',
+  audience: 'Players learning Mistboard’s freestyle Gomoku and dealt openings.',
+  thumbnail: { kind: 'svg', svg: GOMOKU_OPENING },
   tldr: [
-    'Place one stone on an empty intersection each turn. Five or more connected stones in a straight line wins.',
-    'The default opening is dealt from 50 Rapfi-screened positions. Continue with the side to move shown on the board.',
-    'A full board without a winning line is a draw. In a timed game, running out of time loses.',
+    'Take turns placing stones. Connect five or more in a straight line to win.',
+    'Mistboard deals an opening the engine judged even; follow the turn indicator.',
   ],
   intro: [
-    { kind: 'paragraph', text: '**Your goal: make five in a row before your opponent does.**' },
-    { kind: 'paragraph', text: 'Gomoku (五子棋) is a game for two players, one with black stones and one with white. Take turns placing stones; once placed, they stay put. Mistboard uses freestyle rules: a line of five or more wins for either colour, with no forbidden moves.' },
+    { kind: 'paragraph', text: 'As with Chess960, a fresh starting position lets you test each other’s play beyond memorised openings.' },
   ],
   sections: [
     {
-      heading: 'The board and your turn',
+      heading: 'Mistboard deals an engine-balanced opening',
       blocks: [
-        { kind: 'paragraph', text: 'The board has 15 lines in each direction, giving 225 intersections. Put a stone where two lines cross, including at an edge or corner, rather than inside a square. Coordinates run from a to o and 1 to 15; the centre is h8.' },
-        { kind: 'paragraph', text: 'On your turn, place exactly one stone of your colour on any empty intersection. You cannot pass, move a stone already on the board, capture a stone, or play on an occupied point. All stones remain visible to both players.' },
+        { kind: 'paragraph', text: `The pool has ${poolSize}, screened at ${GOMOKU_OPENING_SCREEN.nodes.toLocaleString('en-US')} search nodes each: ${percent(GOMOKU_OPENING_SCREEN.minWinrate)}–${percent(GOMOKU_OPENING_SCREEN.maxWinrate)} estimated win rate for the side to move, no forced win found. Dealt stones use no clock time.` },
+        { kind: 'paragraph', text: `Starting setups: ${setups.join('; ')}. Follow the turn indicator.` },
+        { kind: 'raw-svg', svg: GOMOKU_OPENING, caption: `Opening ${GOMOKU_OPENINGS[0].id}: ${openingDescription(GOMOKU_OPENINGS[0])}.` },
+        { kind: 'paragraph', text: 'Tournament rules such as Swap2, used at world championships since 2009, balance Black’s advantage by letting players place stones and choose colours. Mistboard deals a screened position instead.' },
       ],
     },
     {
-      heading: 'A dealt balanced opening',
+      heading: 'The board and your turn',
       blocks: [
-        { kind: 'paragraph', text: 'By default, Mistboard deals a starting position from a pool of 50 openings, so you begin with several stones already on the board. Those stones are part of the game, not moves you must play again.' },
-        { kind: 'paragraph', text: 'Rapfi screened each opening at one million search nodes under freestyle rules, keeping positions with an estimated win rate between 45% and 55% for the side to move and no forced win found for either side. This is an engine screening result, not a mathematical proof that every opening is drawn.' },
-        { kind: 'svg-row', items: [
-          { svg: GOMOKU_OPENING_WHITE, caption: 'Opening gmk-001: Black has h8 and f6, White has i9. White places the next stone.' },
-          { svg: GOMOKU_OPENING_BLACK, caption: 'Opening gmk-002 adds a white stone on i10. Both colours have two stones, so Black moves next.' },
-        ] },
-        { kind: 'paragraph', text: 'Read the turn indicator rather than assuming Black starts after the deal. Equal numbers of black and white stones mean Black to move; one extra black stone means White to move. The dealt stones cost neither player clock time.' },
-        { kind: 'paragraph', text: 'Choose the free opening option to start from an empty board instead. Black then places the first stone and White follows. Mistboard does not use a colour-swap phase in either opening mode.' },
+        { kind: 'paragraph', text: `Place one stone per turn on an empty intersection of the ${GOMOKU_BOARD_SIZE}×${GOMOKU_BOARD_SIZE} board. Stones stay put. Coordinates run a–o and 1–${GOMOKU_BOARD_SIZE}.` },
+        { kind: 'raw-svg', svg: GOMOKU_PLACEMENT, caption: 'Black places h8, the centre intersection.' },
       ],
     },
     {
       heading: 'Five in a row wins',
       blocks: [
-        { kind: 'paragraph', text: 'Connect at least five stones of your own colour horizontally, vertically, or along either diagonal. The stones must be consecutive: a gap or an enemy stone breaks the line. The game ends as soon as a placement completes the line; your opponent does not get a reply.' },
-        { kind: 'svg-row', items: [
-          { svg: GOMOKU_BEFORE_FIVE, caption: 'Black to move: e8, f8, g8 and h8 are four connected stones. The empty i8 completes five.' },
-          { svg: GOMOKU_WINNING_BOARDS[0], caption: 'Black places i8 and wins immediately. Green rings mark the winning line; the red square marks the last placement.' },
-        ] },
-        { kind: 'svg-row', items: [
-          { svg: GOMOKU_WINNING_BOARDS[1], caption: 'Vertical five: h5 through h9.' },
-          { svg: GOMOKU_WINNING_BOARDS[2], caption: 'Diagonal five: f6, g7, h8, i9 and j10.' },
-          { svg: GOMOKU_WINNING_BOARDS[3], caption: 'The other diagonal: f10, g9, h8, i7 and j6.' },
-        ] },
+        { kind: 'paragraph', text: 'Connect five stones of your colour horizontally, vertically or diagonally to win immediately. Freestyle also counts six or more in a row (an overline) for either colour.' },
+        { kind: 'raw-svg', svg: GOMOKU_WINNING_BOARD, caption: 'Black completes e8–i8. Green rings mark the five; the red square marks i8.' },
       ],
     },
     {
-      heading: 'Freestyle: longer lines count too',
+      heading: 'Players can agree to a draw',
       blocks: [
-        { kind: 'paragraph', text: 'A line of six or more stones, often called an overline, also wins. The same rule applies to Black and White. Double threes and double fours are legal; Mistboard does not use Renju’s forbidden-move rules or an exactly-five requirement.' },
-        { kind: 'raw-svg', svg: GOMOKU_WINNING_BOARDS[4], caption: 'Black fills i8 between h8 and j8, joining f8 through k8 into six. This is a freestyle win.' },
+        { kind: 'paragraph', text: 'In a human game, once both players have moved, press ½ (Offer draw) and confirm; your opponent can accept or decline. A full board without five is drawn; running out of time or resigning loses.' },
       ],
     },
     {
-      heading: 'Draws and clocks',
+      heading: 'Black wins a perfect game from the empty board',
       blocks: [
-        { kind: 'paragraph', text: 'If all 225 intersections are occupied and neither player has made a winning line, the game is drawn. A winning line made on the very last empty point still wins: the five-in-a-row check comes before the board-full draw.' },
-        { kind: 'paragraph', text: 'Once the clocks are running in a timed game, your time counts down on your turn. Placing a legal stone ends your turn and adds the chosen increment, if any. For example, 3+2 gives each player three minutes and adds two seconds after each move. Running out of time loses; resigning also gives the opponent the win.' },
+        { kind: 'paragraph', text: 'The Japanese name gomokunarabe means “five in a row”; the game is also called Chinese wuziqi, Korean omok and English gobang. Japanese records date to the Edo period, with a verifiable book from 1856; Renju, which restricts Black’s moves, was named in 1899. [L. Victor Allis’s 1994 PhD thesis](https://project.dke.maastrichtuniversity.nl/games/files/phd/SearchingForSolutions.pdf) proved Black wins with perfect play on 15×15 under both freestyle and exactly-five rules. Dealing balanced positions keeps a solved game competitive and fair for both colours.' },
       ],
     },
     {
       heading: 'Common questions',
       blocks: [
         { kind: 'faq', items: [
-          { question: 'Do I have to make exactly five?', answer: 'No. Freestyle Gomoku counts five or more consecutive stones as a win for either colour.' },
-          { question: 'Can I take an opponent’s stone?', answer: 'No. Stones are placed only on empty intersections and stay on the board. Blocking means occupying an empty point your opponent needs.' },
-          { question: 'Why is White moving first in my game?', answer: 'A dealt opening can already contain one more black stone than white. White then has the next turn. On an empty board, Black always starts.' },
-          { question: 'Is a screened opening guaranteed fair?', answer: 'The pool passed Rapfi’s finite search with a near-even evaluation and no forced win found. That reduces the opening advantage; it does not prove perfect balance or prevent a player from winning later.' },
+          { question: 'Can I start from an empty board?', answer: 'Choose Free opening (empty board) in setup. Black begins.' },
+          ...(whiteToMove ? [{ question: 'Why is White moving first in my game?', answer: 'The deal has one extra black stone, so White moves next.' }] : []),
+          { question: 'Does screening guarantee a draw?', answer: 'Screening uses finite search. A near-even evaluation is an estimate, not a proof.' },
         ] },
       ],
     },
     {
-      heading: 'More rules',
+      heading: 'Play on Mistboard',
       blocks: [
         { kind: 'cta', buttons: [
-          { label: 'Browse all rules', href: '/rules', emphasis: 'primary' },
+          { label: 'Play vs computer', href: '/?play=computer&gameSpecId=gomoku', emphasis: 'primary' },
+          { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=gomoku', emphasis: 'secondary' },
         ] },
       ],
     },

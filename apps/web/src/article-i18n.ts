@@ -34,8 +34,6 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
-  // Machine-drafted 2026-10-31, not native-reviewed; hidden with the Gomoku spec.
-  'gomoku',
   // Machine-drafted 2026-10-29, not native-reviewed, from the English signed
   // off that day. Menu names are the zh shell catalog's (棋盘样式, 河界文字,
   // 兵炮位标记, 平面/立体, 加厚, 速度) so the article names what the menu shows.
@@ -235,6 +233,8 @@ export const TRANSLATED_ARTICLE_SLUGS = [
 // its zh is late: "not yet translated" fails the same test (six moved posts
 // sat here that way from 2026-10-15 to 10-24).
 export const UNTRANSLATED_ARTICLE_SLUGS: Readonly<Record<string, string>> = {
+  gomoku:
+    'Hidden English review page; Brian is reviewing the rewritten rules before localized publication.',
   mahjong:
     'English only until a Hong Kong player checks the faan table; each correction would re-translate the page.',
   'luat-co-up': 'A Vietnamese rules page for Vietnamese search; it has no English or zh source.',
@@ -271,71 +271,10 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 const ZH_HANS: Record<string, string> = {
   // Gomoku rules: machine-drafted 2026-10-31, not native-reviewed.
   'Gomoku Rules': '五子棋规则',
-  'More rules': '更多规则',
-  'Browse all rules': '浏览所有规则',
   'Gomoku board': '五子棋棋盘',
-  'Freestyle five-in-a-row on a 15×15 board: learn placements, Mistboard’s dealt balanced openings, winning lines, draws and clocks.':
-    '在 15×15 棋盘上下自由规则五子棋：了解落子、Mistboard 的预置平衡开局、连五获胜、和棋与计时。',
-  'Place one stone on an empty intersection each turn. Five or more connected stones in a straight line wins.':
-    '每回合在空交叉点落一子。同色棋子连续五枚或更多连成直线即获胜。',
-  'The default opening is dealt from 50 Rapfi-screened positions. Continue with the side to move shown on the board.':
-    '默认从 50 个经 Rapfi 筛选的局面中抽取开局，按棋盘显示的行棋方继续落子。',
-  'A full board without a winning line is a draw. In a timed game, running out of time loses.':
-    '棋盘下满而无人连五即为和棋。计时对局中，超时判负。',
-  '**Your goal: make five in a row before your opponent does.**':
-    '**目标：先于对手将五枚同色棋子连成一线。**',
-  'Gomoku (五子棋) is a game for two players, one with black stones and one with white. Take turns placing stones; once placed, they stay put. Mistboard uses freestyle rules: a line of five or more wins for either colour, with no forbidden moves.':
-    '五子棋由两人对弈，一方执黑，一方执白，轮流落子，落下的棋子不再移动。Mistboard 采用自由规则：黑白双方均以连续五子或以上获胜，没有禁手。',
   'The board and your turn': '棋盘与落子',
-  'The board has 15 lines in each direction, giving 225 intersections. Put a stone where two lines cross, including at an edge or corner, rather than inside a square. Coordinates run from a to o and 1 to 15; the centre is h8.':
-    '棋盘横竖各有 15 条线，共 225 个交叉点。棋子落在线的交叉点上，包括边线和角上的点，不落在格子内。坐标为 a 至 o、1 至 15，中心点是 h8。',
-  'On your turn, place exactly one stone of your colour on any empty intersection. You cannot pass, move a stone already on the board, capture a stone, or play on an occupied point. All stones remain visible to both players.':
-    '轮到你时，在任意空交叉点放一枚己方棋子。不能停着不下，不能移动已有棋子，不能吃子，也不能在有子的点上落子。双方始终能看见所有棋子。',
-  'A dealt balanced opening': '预置平衡开局',
-  'By default, Mistboard deals a starting position from a pool of 50 openings, so you begin with several stones already on the board. Those stones are part of the game, not moves you must play again.':
-    '默认情况下，Mistboard 从 50 个开局中抽取一个，因此开局时棋盘上已有数枚棋子。这些棋子属于当前对局，不需要重下一遍。',
-  'Rapfi screened each opening at one million search nodes under freestyle rules, keeping positions with an estimated win rate between 45% and 55% for the side to move and no forced win found for either side. This is an engine screening result, not a mathematical proof that every opening is drawn.':
-    'Rapfi 按自由规则对每个开局搜索一百万节点，只保留行棋方预计胜率在 45% 至 55% 之间、且未发现任何一方必胜的局面。这是引擎筛选的结果，并非每个开局都必然和棋的数学证明。',
-  'Opening gmk-001: Black has h8 and f6, White has i9. White places the next stone.':
-    '开局 gmk-001：黑子在 h8 和 f6，白子在 i9。下一手由白方落子。',
-  'Opening gmk-002 adds a white stone on i10. Both colours have two stones, so Black moves next.':
-    '开局 gmk-002 多了一枚 i10 上的白子。双方各有两子，因此下一手轮到黑方。',
-  'Read the turn indicator rather than assuming Black starts after the deal. Equal numbers of black and white stones mean Black to move; one extra black stone means White to move. The dealt stones cost neither player clock time.':
-    '查看行棋提示，不要以为预置开局后总是黑方先下。黑白子数相等时轮到黑方；黑子多一枚时轮到白方。预置棋子不消耗任何一方的时间。',
-  'Choose the free opening option to start from an empty board instead. Black then places the first stone and White follows. Mistboard does not use a colour-swap phase in either opening mode.':
-    '选择自由开局即可从空棋盘开始，由黑方先落子，再轮到白方。Mistboard 的两种开局模式都没有交换执棋颜色的阶段。',
   'Five in a row wins': '连五获胜',
-  'Connect at least five stones of your own colour horizontally, vertically, or along either diagonal. The stones must be consecutive: a gap or an enemy stone breaks the line. The game ends as soon as a placement completes the line; your opponent does not get a reply.':
-    '将至少五枚己方棋子沿横线、竖线或任一斜线连续排列。必须连续，中间有空点或对方棋子就不算。落子成线时对局立即结束，对手没有再下一手的机会。',
-  'Black to move: e8, f8, g8 and h8 are four connected stones. The empty i8 completes five.':
-    '轮到黑方：e8、f8、g8、h8 已有连续四子，在空点 i8 落子即可连五。',
-  'Black places i8 and wins immediately. Green rings mark the winning line; the red square marks the last placement.':
-    '黑方在 i8 落子，立即获胜。绿圈标出获胜连线，红色小方块标出最后一手。',
-  'Vertical five: h5 through h9.': '竖向连五：h5 至 h9。',
-  'Diagonal five: f6, g7, h8, i9 and j10.': '斜向连五：f6、g7、h8、i9、j10。',
-  'The other diagonal: f10, g9, h8, i7 and j6.': '另一条斜线：f10、g9、h8、i7、j6。',
-  'Freestyle: longer lines count too': '自由规则：长连也获胜',
-  'A line of six or more stones, often called an overline, also wins. The same rule applies to Black and White. Double threes and double fours are legal; Mistboard does not use Renju’s forbidden-move rules or an exactly-five requirement.':
-    '六子或以上连续成线称为长连，同样获胜，黑白双方规则相同。三三、四四均为合法落子；Mistboard 不采用连珠的禁手规则，也不要求恰好五子。',
-  'Black fills i8 between h8 and j8, joining f8 through k8 into six. This is a freestyle win.':
-    '黑方在 h8 与 j8 之间的 i8 落子，将 f8 至 k8 连成六子。自由规则下这也获胜。',
-  'Draws and clocks': '和棋与计时',
-  'If all 225 intersections are occupied and neither player has made a winning line, the game is drawn. A winning line made on the very last empty point still wins: the five-in-a-row check comes before the board-full draw.':
-    '225 个交叉点全部落满而双方都未连五时，判为和棋。如果在最后一个空点落子成线，仍然获胜：先检查是否连五，再判断棋盘下满和棋。',
-  'Once the clocks are running in a timed game, your time counts down on your turn. Placing a legal stone ends your turn and adds the chosen increment, if any. For example, 3+2 gives each player three minutes and adds two seconds after each move. Running out of time loses; resigning also gives the opponent the win.':
-    '计时对局的时钟启动后，轮到你时你的剩余时间就会减少。合法落子后回合结束，并加上所选的每步加时（如有）。例如 3+2 表示每人三分钟，每落一子加两秒。超时判负，认输也由对手获胜。',
-  'Do I have to make exactly five?': '必须恰好五子吗？',
-  'No. Freestyle Gomoku counts five or more consecutive stones as a win for either colour.':
-    '不必。自由规则五子棋中，黑白双方连续五子或以上都算获胜。',
-  'Can I take an opponent’s stone?': '能吃掉对方的棋子吗？',
-  'No. Stones are placed only on empty intersections and stay on the board. Blocking means occupying an empty point your opponent needs.':
-    '不能。只能在空交叉点落子，棋子落下后留在棋盘上。防守是抢占对手需要的空点。',
   'Why is White moving first in my game?': '为什么我的对局轮到白方先下？',
-  'A dealt opening can already contain one more black stone than white. White then has the next turn. On an empty board, Black always starts.':
-    '预置开局可能已有的黑子比白子多一枚，此时下一手轮到白方。从空棋盘开始则总是黑方先下。',
-  'Is a screened opening guaranteed fair?': '筛选过的开局保证公平吗？',
-  'The pool passed Rapfi’s finite search with a near-even evaluation and no forced win found. That reduces the opening advantage; it does not prove perfect balance or prevent a player from winning later.':
-    '这些开局通过了 Rapfi 的有限搜索，评估接近均衡，且未发现必胜。这能减小开局优势，但不能证明绝对平衡，也不意味着之后没有人能赢。',
   // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困毙 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作杀, 萨姆·劳埃德); 迷雾国际象棋 for fog of war; 研究 for a study.
   'The Shortest Xiangqi Stalemate We Know': '我们所知最短的象棋困毙',
   'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':
@@ -6564,71 +6503,10 @@ const ZH_HANT: Record<string, string> = {
   ...ZH_HANS,
   // Gomoku rules: machine-drafted 2026-10-31, not native-reviewed.
   'Gomoku Rules': '五子棋規則',
-  'More rules': '更多規則',
-  'Browse all rules': '瀏覽所有規則',
   'Gomoku board': '五子棋棋盤',
-  'Freestyle five-in-a-row on a 15×15 board: learn placements, Mistboard’s dealt balanced openings, winning lines, draws and clocks.':
-    '在 15×15 棋盤上下自由規則五子棋：了解落子、Mistboard 的預設平衡開局、連五獲勝、和棋與計時。',
-  'Place one stone on an empty intersection each turn. Five or more connected stones in a straight line wins.':
-    '每回合在空交叉點落一子。同色棋子連續五枚或更多連成直線即獲勝。',
-  'The default opening is dealt from 50 Rapfi-screened positions. Continue with the side to move shown on the board.':
-    '預設從 50 個經 Rapfi 篩選的局面中抽取開局，按棋盤顯示的行棋方繼續落子。',
-  'A full board without a winning line is a draw. In a timed game, running out of time loses.':
-    '棋盤下滿而無人連五即為和棋。計時對局中，超時判負。',
-  '**Your goal: make five in a row before your opponent does.**':
-    '**目標：先於對手將五枚同色棋子連成一線。**',
-  'Gomoku (五子棋) is a game for two players, one with black stones and one with white. Take turns placing stones; once placed, they stay put. Mistboard uses freestyle rules: a line of five or more wins for either colour, with no forbidden moves.':
-    '五子棋由兩人對弈，一方執黑，一方執白，輪流落子，落下的棋子不再移動。Mistboard 採用自由規則：黑白雙方均以連續五子或以上獲勝，沒有禁手。',
   'The board and your turn': '棋盤與落子',
-  'The board has 15 lines in each direction, giving 225 intersections. Put a stone where two lines cross, including at an edge or corner, rather than inside a square. Coordinates run from a to o and 1 to 15; the centre is h8.':
-    '棋盤橫豎各有 15 條線，共 225 個交叉點。棋子落在線的交叉點上，包括邊線和角上的點，不落在格子內。座標為 a 至 o、1 至 15，中心點是 h8。',
-  'On your turn, place exactly one stone of your colour on any empty intersection. You cannot pass, move a stone already on the board, capture a stone, or play on an occupied point. All stones remain visible to both players.':
-    '輪到你時，在任意空交叉點放一枚己方棋子。不能停著不下，不能移動已有棋子，不能吃子，也不能在有子的點上落子。雙方始終能看見所有棋子。',
-  'A dealt balanced opening': '預設平衡開局',
-  'By default, Mistboard deals a starting position from a pool of 50 openings, so you begin with several stones already on the board. Those stones are part of the game, not moves you must play again.':
-    '預設情況下，Mistboard 從 50 個開局中抽取一個，因此開局時棋盤上已有數枚棋子。這些棋子屬於當前對局，不需要重下一遍。',
-  'Rapfi screened each opening at one million search nodes under freestyle rules, keeping positions with an estimated win rate between 45% and 55% for the side to move and no forced win found for either side. This is an engine screening result, not a mathematical proof that every opening is drawn.':
-    'Rapfi 按自由規則對每個開局搜尋一百萬節點，只保留行棋方預計勝率在 45% 至 55% 之間、且未發現任何一方必勝的局面。這是引擎篩選的結果，並非每個開局都必然和棋的數學證明。',
-  'Opening gmk-001: Black has h8 and f6, White has i9. White places the next stone.':
-    '開局 gmk-001：黑子在 h8 和 f6，白子在 i9。下一手由白方落子。',
-  'Opening gmk-002 adds a white stone on i10. Both colours have two stones, so Black moves next.':
-    '開局 gmk-002 多了一枚 i10 上的白子。雙方各有兩子，因此下一手輪到黑方。',
-  'Read the turn indicator rather than assuming Black starts after the deal. Equal numbers of black and white stones mean Black to move; one extra black stone means White to move. The dealt stones cost neither player clock time.':
-    '查看行棋提示，不要以為預設開局後總是黑方先下。黑白子數相等時輪到黑方；黑子多一枚時輪到白方。預設棋子不消耗任何一方的時間。',
-  'Choose the free opening option to start from an empty board instead. Black then places the first stone and White follows. Mistboard does not use a colour-swap phase in either opening mode.':
-    '選擇自由開局即可從空棋盤開始，由黑方先落子，再輪到白方。Mistboard 的兩種開局模式都沒有交換執棋顏色的階段。',
   'Five in a row wins': '連五獲勝',
-  'Connect at least five stones of your own colour horizontally, vertically, or along either diagonal. The stones must be consecutive: a gap or an enemy stone breaks the line. The game ends as soon as a placement completes the line; your opponent does not get a reply.':
-    '將至少五枚己方棋子沿橫線、豎線或任一斜線連續排列。必須連續，中間有空點或對方棋子就不算。落子成線時對局立即結束，對手沒有再下一手的機會。',
-  'Black to move: e8, f8, g8 and h8 are four connected stones. The empty i8 completes five.':
-    '輪到黑方：e8、f8、g8、h8 已有連續四子，在空點 i8 落子即可連五。',
-  'Black places i8 and wins immediately. Green rings mark the winning line; the red square marks the last placement.':
-    '黑方在 i8 落子，立即獲勝。綠圈標出獲勝連線，紅色小方塊標出最後一手。',
-  'Vertical five: h5 through h9.': '豎向連五：h5 至 h9。',
-  'Diagonal five: f6, g7, h8, i9 and j10.': '斜向連五：f6、g7、h8、i9、j10。',
-  'The other diagonal: f10, g9, h8, i7 and j6.': '另一條斜線：f10、g9、h8、i7、j6。',
-  'Freestyle: longer lines count too': '自由規則：長連也獲勝',
-  'A line of six or more stones, often called an overline, also wins. The same rule applies to Black and White. Double threes and double fours are legal; Mistboard does not use Renju’s forbidden-move rules or an exactly-five requirement.':
-    '六子或以上連續成線稱為長連，同樣獲勝，黑白雙方規則相同。三三、四四均為合法落子；Mistboard 不採用連珠的禁手規則，也不要求恰好五子。',
-  'Black fills i8 between h8 and j8, joining f8 through k8 into six. This is a freestyle win.':
-    '黑方在 h8 與 j8 之間的 i8 落子，將 f8 至 k8 連成六子。自由規則下這也獲勝。',
-  'Draws and clocks': '和棋與計時',
-  'If all 225 intersections are occupied and neither player has made a winning line, the game is drawn. A winning line made on the very last empty point still wins: the five-in-a-row check comes before the board-full draw.':
-    '225 個交叉點全部落滿而雙方都未連五時，判為和棋。如果在最後一個空點落子成線，仍然獲勝：先檢查是否連五，再判斷棋盤下滿和棋。',
-  'Once the clocks are running in a timed game, your time counts down on your turn. Placing a legal stone ends your turn and adds the chosen increment, if any. For example, 3+2 gives each player three minutes and adds two seconds after each move. Running out of time loses; resigning also gives the opponent the win.':
-    '計時對局的時鐘啟動後，輪到你時你的剩餘時間就會減少。合法落子後回合結束，並加上所選的每步加時（如有）。例如 3+2 表示每人三分鐘，每落一子加兩秒。超時判負，認輸也由對手獲勝。',
-  'Do I have to make exactly five?': '必須恰好五子嗎？',
-  'No. Freestyle Gomoku counts five or more consecutive stones as a win for either colour.':
-    '不必。自由規則五子棋中，黑白雙方連續五子或以上都算獲勝。',
-  'Can I take an opponent’s stone?': '能吃掉對方的棋子嗎？',
-  'No. Stones are placed only on empty intersections and stay on the board. Blocking means occupying an empty point your opponent needs.':
-    '不能。只能在空交叉點落子，棋子落下後留在棋盤上。防守是搶佔對手需要的空點。',
   'Why is White moving first in my game?': '為什麼我的對局輪到白方先下？',
-  'A dealt opening can already contain one more black stone than white. White then has the next turn. On an empty board, Black always starts.':
-    '預設開局可能已有的黑子比白子多一枚，此時下一手輪到白方。從空棋盤開始則總是黑方先下。',
-  'Is a screened opening guaranteed fair?': '篩選過的開局保證公平嗎？',
-  'The pool passed Rapfi’s finite search with a near-even evaluation and no forced win found. That reduces the opening advantage; it does not prove perfect balance or prevent a player from winning later.':
-    '這些開局通過了 Rapfi 的有限搜尋，評估接近均衡，且未發現必勝。這能減小開局優勢，但不能證明絕對平衡，也不意味著之後沒有人能贏。',
   // shortest-stalemate-xiangqi: machine-drafted 2026-10-21, not native-reviewed, from the English signed off that day. Terms follow longest-forced-mates-xiangqi and helpmates-in-xiangqi (困斃 for xiangqi stalemate, 逼和 for chess's, 半回合 for a ply, 合作殺, 薩姆·勞埃德, 著法, 搜尋, 電腦); 迷霧國際象棋 for fog of war; 研究 for a study.
   'The Shortest Xiangqi Stalemate We Know': '我們所知最短的象棋困斃',
   'The Shortest Known Stalemate in Xiangqi (Chinese Chess): 21 Plies':

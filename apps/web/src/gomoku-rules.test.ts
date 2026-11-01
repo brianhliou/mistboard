@@ -1,12 +1,14 @@
 import {
   applyGomokuRoomMove,
+  GOMOKU_BOARD_SIZE,
   GOMOKU_OPENING_SCREEN,
   GOMOKU_OPENINGS,
   getGomokuPlayerView,
 } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import openingPool from '../../../packages/game/src/gomoku-openings.json' with { type: 'json' };
 import { articleIsIndexable, canonicalArticleBase } from '../../server/src/article-meta.js';
-import { hasTranslation, translateArticle } from './article-i18n.js';
+import { isArticleTranslationPublished } from './article-i18n.js';
 import { articleProse } from './article-prose.js';
 import { blogPosts } from './articles/blog-listing.js';
 import {
@@ -18,10 +20,10 @@ import {
 } from './articles.js';
 import { articles, findArticle } from './articles-data.js';
 import {
-  GOMOKU_OPENING_BLACK,
-  GOMOKU_OPENING_WHITE,
+  GOMOKU_OPENING,
+  GOMOKU_PLACEMENT,
   GOMOKU_RULES_EXAMPLES,
-  GOMOKU_WINNING_BOARDS,
+  GOMOKU_WINNING_BOARD,
 } from './gomoku-rules-diagrams.js';
 import {
   articleIsNoindex,
@@ -33,17 +35,52 @@ import {
 afterEach(() => vi.unstubAllEnvs());
 
 describe('hidden Gomoku rules page', () => {
-  it('registers a directly readable rules page in all three languages', () => {
+  it('ends with computer and friend CTAs', () => {
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'true');
+    const page = buildArticlePage('gomoku');
+    const row = [...page.querySelectorAll('.article-cta-row')].at(-1)!;
+    const buttons = [...row.querySelectorAll('a.article-cta')];
+    expect(buttons.map((button) => [button.textContent, button.getAttribute('href')])).toEqual([
+      ['Play vs computer', '/?play=computer&gameSpecId=gomoku'],
+      ['Challenge a friend', '/?play=friend&gameSpecId=gomoku'],
+    ]);
+    expect(buttons[0].classList.contains('article-cta-primary')).toBe(true);
+    expect(buttons[1].classList.contains('article-cta-secondary')).toBe(true);
+    const article = findArticle('gomoku')!;
+    expect(article.sections.at(-1)?.blocks?.at(-1)?.kind).toBe('cta');
+  });
+
+  it('uses three single boards with the same crop and responsive width', () => {
+    const page = buildArticlePage('gomoku');
+    const boards = [...page.querySelectorAll<SVGElement>('figure > svg.gomoku-svg')];
+    expect(boards).toHaveLength(3);
+    expect(page.querySelector('.article-figure-row')).toBeNull();
+    expect(new Set(boards.map((board) => board.getAttribute('viewBox')))).toEqual(
+      new Set(['0 0 512 512']),
+    );
+    expect(
+      new Set(boards.map((board) => board.getAttribute('style')?.match(/width:([^;]+)/)?.[1])),
+    ).toEqual(new Set(['min(100%, 384px)']));
+    expect(new Set(boards.map((board) => board.getAttribute('width')))).toEqual(new Set(['384']));
+    const boardSection = findArticle('gomoku')!.sections.find(
+      (section) => section.heading === 'The board and your turn',
+    );
+    expect(boardSection?.blocks?.some((block) => block.kind === 'raw-svg')).toBe(true);
+    for (const stone of boards.at(-1)!.querySelectorAll('.gomoku-stone')) {
+      expect(stone.getAttribute('data-piece-square')).not.toMatch(/^[a-o]1$/);
+    }
+  });
+
+  it('keeps the hidden rewrite directly readable in English during review', () => {
     vi.stubEnv('DEV', false);
+    vi.stubEnv('VITE_GOMOKU_ENABLED', 'false');
     expect(findArticle('gomoku')).toMatchObject({ kind: 'rules', status: 'published' });
     expect(canonicalArticleBase('gomoku')).toBe('rules');
     for (const locale of [undefined, 'zh-Hans', 'zh-Hant'] as const) {
       const page = buildArticlePage('gomoku', locale);
       expect(page.dataset.articleSlug).toBe('gomoku');
-      expect(page.querySelector('h1')?.textContent).toBe(
-        locale === undefined ? 'Gomoku Rules' : locale === 'zh-Hans' ? '五子棋规则' : '五子棋規則',
-      );
-      expect(page.querySelectorAll('svg[role="img"]')).toHaveLength(8);
+      expect(page.querySelector('h1')?.textContent).toBe('Gomoku Rules');
+      expect(page.querySelectorAll('svg[role="img"]')).toHaveLength(3);
       expect(page.querySelector('a[href*="gameSpecId=gomoku"]')).toBeNull();
     }
   });
@@ -92,13 +129,11 @@ describe('hidden Gomoku rules page', () => {
       expect(articleIsIndexable('gomoku')).toBe(false);
       expect(rulesHrefForGameSpec('gomoku')).toBeNull();
       const prefix = locale ? `/${locale.toLowerCase()}` : '';
-      const href = `${prefix}/rules/gomoku`;
+      const href = '/rules/gomoku';
       const landing = buildRulesIndex(locale);
       const tile = landing.querySelector(`.rules-landing-tile[href="${href}"]`);
       expect(tile).not.toBeNull();
-      expect(tile?.querySelector('.rules-landing-tile-label')?.textContent).toBe(
-        locale ? '五子棋' : 'Gomoku',
-      );
+      expect(tile?.querySelector('.rules-landing-tile-label')?.textContent).toBe('Gomoku');
       for (const surface of [
         landing,
         buildArticlePage('xiangqi', locale),
@@ -128,67 +163,114 @@ describe('hidden Gomoku rules page', () => {
     expect(slugs[slugs.indexOf('xiangqi-mahjong-32') + 1]).toBe('gomoku');
   });
 
-  it('translates every prose string and caption into both Chinese scripts', () => {
-    const article = findArticle('gomoku');
-    expect(article).toBeDefined();
-    if (!article) return;
-    for (const locale of ['zh-Hans', 'zh-Hant'] as const) {
-      for (const { text, path } of articleProse(article)) {
-        expect(hasTranslation(locale, text), `${locale}: ${path}: ${text}`).toBe(true);
-      }
-      const translated = translateArticle(article, locale);
-      expect(translated.title).toContain('五子棋');
-    }
+  it('holds localized publication until the English rewrite is approved', () => {
+    expect(isArticleTranslationPublished('gomoku')).toBe(false);
   });
 });
 describe('Gomoku rules diagrams match the kernel and screened pool', () => {
-  it('pins the documented 50 openings and the two illustrated sides to move', () => {
-    expect(GOMOKU_OPENINGS).toHaveLength(50);
-    expect(GOMOKU_OPENING_SCREEN).toMatchObject({
-      nodes: 1_000_000,
-      minWinrate: 0.45,
-      maxWinrate: 0.55,
-    });
+  it('documents the pool, stone counts, turns and screening settings from the JSON', () => {
+    expect(GOMOKU_OPENINGS).toEqual(openingPool.openings);
+    expect(GOMOKU_OPENING_SCREEN).toEqual(openingPool.screening);
+    const prose = articleProse(findArticle('gomoku')!)
+      .map(({ text }) => text)
+      .join('\n');
+    expect(prose).toContain(
+      `The pool has ${openingPool.openings.length} ${openingPool.openings.length === 1 ? 'position' : 'positions'}`,
+    );
+    expect(prose).toContain(`${openingPool.screening.nodes.toLocaleString('en-US')} search nodes`);
+    const percentage = (n: number) => `${Number((n * 100).toFixed(2))}%`;
+    expect(prose).toContain(
+      `${percentage(openingPool.screening.minWinrate)}–${percentage(openingPool.screening.maxWinrate)} estimated win rate`,
+    );
+    expect(prose).toContain(`${GOMOKU_BOARD_SIZE}×${GOMOKU_BOARD_SIZE}`);
     for (const opening of GOMOKU_OPENINGS) {
       expect(opening.screening.forcedWin).toBe(false);
-      expect(opening.screening.winrate).toBeGreaterThanOrEqual(0.45);
-      expect(opening.screening.winrate).toBeLessThanOrEqual(0.55);
+      expect(opening.screening.winrate).toBeGreaterThanOrEqual(GOMOKU_OPENING_SCREEN.minWinrate);
+      expect(opening.screening.winrate).toBeLessThanOrEqual(GOMOKU_OPENING_SCREEN.maxWinrate);
+      for (const color of ['black', 'white'] as const) {
+        const count = opening.stones.filter((stone) => stone.color === color).length;
+        expect(prose).toContain(`${count} ${color} ${count === 1 ? 'stone' : 'stones'}`);
+      }
+      expect(prose).toContain(`${opening.turn === 'black' ? 'Black' : 'White'} to move`);
     }
-    expect(GOMOKU_OPENINGS[0]).toMatchObject({ id: 'gmk-001', turn: 'white' });
-    expect(GOMOKU_OPENINGS[0].stones).toEqual([
-      { square: 'h8', color: 'black' },
-      { square: 'i9', color: 'white' },
-      { square: 'f6', color: 'black' },
-    ]);
-    expect(GOMOKU_OPENINGS[1]).toMatchObject({ id: 'gmk-002', turn: 'black' });
-    expect(GOMOKU_OPENINGS[1].stones).toEqual([
-      ...GOMOKU_OPENINGS[0].stones,
-      { square: 'i10', color: 'white' },
-    ]);
+    const faqs = findArticle('gomoku')!.sections.flatMap((section) =>
+      (section.blocks ?? []).flatMap((block) => (block.kind === 'faq' ? block.items : [])),
+    );
+    expect(faqs.length).toBeLessThanOrEqual(3);
+    expect(faqs.some((item) => item.question === 'Why is White moving first in my game?')).toBe(
+      GOMOKU_OPENINGS.some((opening) => opening.turn === 'white'),
+    );
+    const root = document.createElement('div');
+    root.innerHTML = GOMOKU_OPENING();
+    expect(
+      [...root.querySelectorAll('.gomoku-stone')]
+        .map((stone) => ({
+          square: stone.getAttribute('data-piece-square'),
+          color: stone.classList.contains('gomoku-stone--black') ? 'black' : 'white',
+        }))
+        .sort((a, b) => a.square!.localeCompare(b.square!)),
+    ).toEqual([...GOMOKU_OPENINGS[0].stones].sort((a, b) => a.square.localeCompare(b.square)));
   });
 
   it.each(GOMOKU_RULES_EXAMPLES.map((example, index) => ({ ...example, index })))(
     'example $index wins by the captioned placement $to',
-    ({ before, to, index }) => {
+    ({ before, to }) => {
       expect(before.status).toEqual({ type: 'playing', turn: 'black' });
       const view = getGomokuPlayerView(before, 'black');
       expect(view.legalMoves).toContainEqual({ to });
       expect(view.winningLine).toEqual([]);
       const after = applyGomokuRoomMove(before, { to });
       expect(after.status).toEqual({ type: 'finished', winner: 'black', reason: 'five' });
-      expect(getGomokuPlayerView(after, 'black').winningLine).toHaveLength(index === 4 ? 6 : 5);
+      expect(getGomokuPlayerView(after, 'black').winningLine).toHaveLength(5);
     },
   );
 
   it('renders accessible static boards with their own paint and no hit targets', () => {
-    for (const render of [GOMOKU_OPENING_WHITE, GOMOKU_OPENING_BLACK, ...GOMOKU_WINNING_BOARDS]) {
+    for (const render of [GOMOKU_OPENING, GOMOKU_PLACEMENT, GOMOKU_WINNING_BOARD]) {
       const root = document.createElement('div');
       root.innerHTML = render();
       expect(root.querySelector('svg[role="img"] title')?.textContent).toBe('Gomoku board');
       expect(root.querySelector('[role="button"], [tabindex], .gomoku-hit')).toBeNull();
       expect(root.querySelector('.gomoku-wood')?.getAttribute('fill')).toBe('#dcb975');
       expect(root.querySelector('.gomoku-stone--black')?.getAttribute('fill')).toBe('#222');
-      expect(root.querySelector('.gomoku-stone--white')?.getAttribute('fill')).toBe('#faf7ee');
+      for (const whiteStone of root.querySelectorAll('.gomoku-stone--white')) {
+        expect(whiteStone.getAttribute('fill')).toBe('#faf7ee');
+      }
+    }
+  });
+
+  it('follows a re-screened equal-stone, Black-to-move pool without stale prose or FAQ', async () => {
+    const opening = GOMOKU_OPENINGS.find((candidate) => candidate.turn === 'black')!;
+    expect(opening).toBeDefined();
+    vi.resetModules();
+    vi.doMock('@mistboard/game', async (importOriginal) => ({
+      ...(await importOriginal<typeof import('@mistboard/game')>()),
+      GOMOKU_OPENINGS: [opening],
+      GOMOKU_OPENING_SCREEN: {
+        ...GOMOKU_OPENING_SCREEN,
+        nodes: 2_000_000,
+        minWinrate: 0.49,
+        maxWinrate: 0.51,
+      },
+    }));
+    try {
+      const { gomokuArticle } = await import('./articles/content/gomoku.js');
+      const prose = articleProse(gomokuArticle)
+        .map(({ text }) => text)
+        .join('\n');
+      expect(prose).toContain('The pool has 1 position');
+      expect(prose).toContain('2,000,000 search nodes');
+      expect(prose).toContain('49%–51% estimated win rate');
+      const blackCount = opening.stones.filter((stone) => stone.color === 'black').length;
+      const whiteCount = opening.stones.filter((stone) => stone.color === 'white').length;
+      expect(prose).toContain(
+        `${blackCount} black stones and ${whiteCount} white stones, Black to move`,
+      );
+      expect(prose).not.toContain('White to move');
+      expect(prose).not.toContain('Why is White moving first in my game?');
+    } finally {
+      vi.doUnmock('@mistboard/game');
+      vi.resetModules();
     }
   });
 });
