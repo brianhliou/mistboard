@@ -14,10 +14,11 @@ import {
 } from '@mistboard/game';
 import { gomokuEnabled } from '../feature-flags.js';
 import { resolveGameExport } from '../game-export-tenant.js';
+import { resolveGomokuAnalysis } from '../gomoku-analysis.js';
 import { gomokuRooms } from '../gomoku-registration.js';
 import { type GomokuEvent, gomokuTenant } from '../gomoku-tenant.js';
 import { handleApiRequest } from '../http-api.js';
-import type { RecentEveGameRecord } from '../persistence.js';
+import type { RecentEveGameRecord, UserAccount } from '../persistence.js';
 import { variantTenantForSpecId } from '../variant-tenant/registry.js';
 import {
   appendTenantRuntimeEvent,
@@ -123,6 +124,151 @@ function deps(
 }
 
 const api = () => import('./gomoku-games.js');
+
+test('Gomoku analysis admission protects GET, POST and job polls before any data reads', async () => {
+  const { tryHandle } = await api();
+  const previous = process.env.MISTBOARD_GOMOKU_ENABLED;
+  process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
+  try {
+    for (const user of [null, { id: 'member', accountRole: 'user' }]) {
+      for (const [method, suffix] of [
+        ['GET', 'analysis'],
+        ['POST', 'analysis'],
+        ['GET', 'analysis/jobs/private'],
+      ] as const) {
+        const path = `/api/gomoku/games/${ROOM_ID}/${suffix}`;
+        let status = 0;
+        let body = '';
+        const handled = await tryHandle(
+          {} as HttpApiContext,
+          { method } as IncomingMessage,
+          {
+            writeHead(value: number) {
+              status = value;
+              return this;
+            },
+            end(value = '') {
+              body = value;
+            },
+          } as unknown as ServerResponse,
+          path,
+          new URL(path, 'http://localhost'),
+          {
+            getGameSummary: async () => {
+              throw new Error('denied read');
+            },
+            loadRoomEvents: async () => {
+              throw new Error('denied read');
+            },
+            currentAccountUser: async () => user as UserAccount | null,
+          },
+        );
+        assert.equal(handled, true);
+        assert.equal(status, 404);
+        assert.deepEqual(JSON.parse(body), { error: 'not_found' });
+      }
+    }
+  } finally {
+    if (previous === undefined) delete process.env.MISTBOARD_GOMOKU_ENABLED;
+    else process.env.MISTBOARD_GOMOKU_ENABLED = previous;
+  }
+});
+
+test('Gomoku analysis serves an admin the persisted series with the flag off', async () => {
+  const { tryHandle } = await api();
+  const previous = process.env.MISTBOARD_GOMOKU_ENABLED;
+  process.env.MISTBOARD_GOMOKU_ENABLED = 'false';
+  const plies = [{ ply: 0, cp: 414, mate: null, best: 'f7' }];
+  let reads = 0;
+  try {
+    const path = `/api/gomoku/games/${ROOM_ID}/analysis`;
+    let status = 0;
+    let body = '';
+    const handled = await tryHandle(
+      {} as HttpApiContext,
+      { method: 'GET' } as IncomingMessage,
+      {
+        writeHead(value: number) {
+          status = value;
+          return this;
+        },
+        end(value = '') {
+          body = value;
+        },
+      } as unknown as ServerResponse,
+      path,
+      new URL(path, 'http://localhost'),
+      {
+        ...deps(finish().events),
+        currentAccountUser: async () => ({ id: 'admin', accountRole: 'admin' }) as UserAccount,
+        resolveAnalysis: async (roomId, moves, opening, _cache, _analyze, compute) => {
+          assert.equal(roomId, ROOM_ID);
+          assert.deepEqual(
+            moves.map((m) => m.to),
+            ['a1', 'b1', 'a2'],
+          );
+          assert.deepEqual(opening?.stones, GOMOKU_OPENINGS[0]!.stones);
+          assert.equal(compute, false);
+          return resolveGomokuAnalysis(
+            roomId,
+            moves,
+            opening,
+            {
+              get: async () => {
+                reads++;
+                return plies;
+              },
+              save: async () => {
+                throw new Error('cached GET wrote');
+              },
+            },
+            async () => {
+              throw new Error('cached GET searched');
+            },
+            compute,
+          );
+        },
+      },
+    );
+    assert.equal(handled, true);
+    assert.equal(status, 200);
+    assert.deepEqual(JSON.parse(body).plies, plies);
+    assert.equal(reads, 1);
+  } finally {
+    if (previous === undefined) delete process.env.MISTBOARD_GOMOKU_ENABLED;
+    else process.env.MISTBOARD_GOMOKU_ENABLED = previous;
+  }
+});
+
+test('Gomoku analysis route is registered and rejects unfinished or invalid logs', async () => {
+  // Exercise real HTTP dispatch without sockets, persistence or an engine.
+  const path = `/api/gomoku/games/${ROOM_ID}/analysis`;
+  const live = room();
+  gomokuRooms.set(ROOM_ID, live);
+  assert.equal((await request(path)).status, 404);
+  const { tryHandle } = await api();
+  let status = 0;
+  await tryHandle(
+    {} as HttpApiContext,
+    { method: 'GET' } as IncomingMessage,
+    {
+      writeHead(value: number) {
+        status = value;
+        return this;
+      },
+      end() {},
+    } as unknown as ServerResponse,
+    path,
+    new URL(path, 'http://localhost'),
+    {
+      ...deps([...finish().events, { type: 'invalid' }]),
+      currentAccountUser: async () => ({ id: 'admin', accountRole: 'admin' }) as UserAccount,
+    },
+  );
+  assert.equal(status, 404);
+  assert.equal((await request(`/api/gomoku/games/%ZZ/analysis`)).status, 404);
+  gomokuRooms.clear();
+});
 
 async function request(
   path = `/api/gomoku/games/${ROOM_ID}`,

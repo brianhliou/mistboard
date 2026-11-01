@@ -1,12 +1,175 @@
 # Gomoku analysis
 
+## Server sweep — s-ed43
+
+`apps/server/src/gomoku-analysis.ts` walks the position after **0 through N
+recorded moves**, in order, using `game-analysis-sweep.ts`. It starts from the
+room's recorded dealt opening (legacy games start empty); opening stones do
+not add chart points. Invalid/duplicate/after-terminal moves are rejected
+before a process is launched. Resignation, timeout and agreement remain game
+outcomes, not fictitious placements: their last board is still searched.
+A kernel five scores +30000/-30000 for Black/White, and a full-board draw 0,
+without another search.
+
+### Scores and compatibility
+
+`packages/game/src/rapfi-candidates.ts` is the single parser/selection module.
+It is exported by `@mistboard/game`; the former browser module re-exports all
+nine existing types/functions for s-d032 and s-c039. `rapfi.ts` changes only
+its import. Structured `INFO PV ... INFO PV DONE` blocks supply scores and
+raw PV coordinates; incomplete final iterations never replace complete ones.
+Human `MESSAGE` scores and coordinates are ignored.
+
+Rapfi's integer `EVAL` is **side-to-move POV**. The persisted `cp` field holds
+that engine evaluation unit (centipawn-like, not a calibrated chess material
+value), positive for **Black**, negative for White. White-to-move scores are
+negated, including odd-stone dealt openings. `abs(EVAL) >= 30000 - 225` means a
+forced five: Rapfi's distance is `30000 - abs(EVAL)` **plies**. The shared
+review `mate` field is signed **full moves**, `ceil(plies / 2)`, normalized to
+Black POV; `cp` is null on those rows. Thus +29997 at Black's turn is mate +2;
++29997 at White's turn is mate -2. Distance zero is stored as magnitude 1 so
+the winner's sign survives JSON serialization. Actual kernel wins use the
+terminal cp sentinel above, rather than signed zero. Best moves and PVs use
+`a1` through `o15`. Raw `(x,y)` maps to file `x`, rank `y+1`, matching the
+browser; the config's human `X_flipY` labels do not change this mapping.
+
+### Budget, resources and persistence
+
+Each sweep holds one dedicated `rapfi-gomoku-analysis` pool slot and one
+process until its pipes close and the child is reaped. Default concurrency is
+**1**; `RAPFI_ANALYSIS_MAX_PROCESSES` uses the shared pool's bounded 1–8 clamp,
+and `RAPFI_ANALYSIS_QUEUE_TIMEOUT_MS` controls slot wait (default 30 seconds).
+There is no per-ply fan-out or live-bot pool sharing. Each process uses one
+thread, a **32 MiB hash**, `INFO show_detail 2`, **100,000 nodes** and a
+**5,000 ms turn cap** for every searched position. The owner watchdog is
+20 seconds per protocol exchange (including startup). An empty board also
+uses `YXBOARD ... DONE`; `YXNBEST 1` starts the search after loading. Board
+entries use 1 for the side to move, 2 for its opponent, not absolute colors.
+
+Success sends `END`; a process ignoring it is killed after one second.
+Protocol/config errors, timeout and output over 1 MiB per position kill the
+child. All paths wait for process closure before returning the pool slot.
+The process is reused across all positions but is never parked after a sweep.
+
+Results use the existing `game_analysis` table, keyed by room, versioned
+engine id and nominal depth 0. The id records Rapfi commit 1387d11312, the
+freestyle network SHA prefix 6bc0d1b0, parser/scoring version 1, node/time
+budget, hash, threads and PV count. Change that version with any config,
+parser or score-convention change. No migration is needed. Reads are
+cache-first; simultaneous misses coalesce into one computation and one
+save. The default path checkpoints each ply under the same dimensions and
+clears checkpoints after the final row is durable. **An all-null series
+throws `VacuousAnalysisError` and never enters the final cache**; its null
+checkpoint is cleared so a repaired engine can retry.
+
+### Route and reproduction
+
+`GET /api/gomoku/games/:id/analysis` returns the cached series or 204 on miss.
+`POST` requires a signed-in admitted account, returns 200 on cache hit or
+202 with a job id, and uses the shared bounded analysis job queue. Poll
+`GET /api/gomoku/games/:id/analysis/jobs/:jobId`; done includes the result,
+failed all-null sweeps report `analysis_engine_unavailable`. Every path,
+including cached reads and job polling, checks `gomokuAdmits` before any
+room/cache/job read: with the flag off a non-admin gets the same 404 as the
+finished replay. Only valid finished, unrated Gomoku event histories load.
+Gomoku stays hidden and unrated; this card adds no browser surface.
+
+Binary resolution is the `binaryPath` option, then `RAPFI_BIN`, then the
+engine-assets layout (`<repo>/bin/rapfi` when present, otherwise
+`/app/bin/rapfi`). Default working directory is the binary's directory, with
+its pinned `config.toml` and native networks beside it; `cwd` can override
+this for an executable Docker shim. The binary receives no CLI arguments.
+The options also accept a process double so recorded streams exercise the
+real protocol and lifecycle without launching a native engine.
+
+Recorded-output tests, with no native binary:
+
+```sh
+npm run build --workspace @mistboard/game
+node --import tsx --test apps/server/src/gomoku-analysis.test.ts apps/server/src/routes/gomoku-games.test.ts
+npm run test:unit -w @mistboard/web -- src/engine/rapfi-candidates.test.ts
+```
+
+For a real sweep after review, build the server, then in a Node ESM script:
+
+```js
+import { analyzeGomokuPostgame } from './apps/server/dist/gomoku-analysis.js';
+// Use the finished replay's recorded opening and timeline placements.
+const result = await analyzeGomokuPostgame(moves, opening, {
+  binaryPath: process.env.RAPFI_BIN, // native asset or executable Docker shim
+});
+if (result.plies.length !== moves.length + 1) throw new Error('incomplete sweep');
+console.log(JSON.stringify(result));
+```
+
+Life-os-fa owns the **real non-trivial 80-ply acceptance sweep and peak-RSS
+measurement through the Docker shim after review**. This sandbox runs no
+native Rapfi binary. The 32 MiB hash is a configuration limit, not a measured
+process RSS figure; the loaded neural network and process add memory. That
+measurement and the native asset gate below remain acceptance work, and
+s-da96 owns graph/review integration and the long-game test.
+
+
+### Verification and parked handoff (s-ed43)
+
+Implementation is complete in **11 intended paths**, left **uncommitted**
+for the burn engine's sandbox-suite recovery. Branch:
+`agent/burn-s-ed43-gomoku-shared-rapfi-parser`; base HEAD:
+`0a8bdb71f1d47b788e16e6f98df58b5b971d8edd` (`game/gomoku`). Worktree:
+`/Users/brianliou/projects/mistboard-burn-s-ed43-gomoku-shared-rapfi-parser`.
+No push, merge, native engine run, deployment, flag or rating change occurred.
+
+Review `apps/server/src/gomoku-analysis.ts` first (protocol, score conversion
+and process ownership), then the admission wrapper in `routes/gomoku-games.ts`
+and the browser re-export. The changed paths are those two server modules,
+their two test files, `packages/game/src/{index,rapfi-candidates}.ts`,
+`apps/web/src/engine/{rapfi,rapfi-candidates,rapfi-candidates.test}.ts`,
+`INDEX.md` and this document. The shared candidate implementation is moved
+unchanged apart from its package-local import.
+
+Evidence lives in
+`/tmp/burn-scratch/mistboard-burn-s-ed43-gomoku-shared-rapfi-parser/`:
+
+- Before: seven sweep tests fail because the implementation is absent
+  (`regression-before.log`); the three added route tests fail against the
+  original handler (`route-before.log`, 16 existing tests pass). A separate
+  split-stderr regression also fails before its reader fix (`stderr-before.log`).
+  After: **28/28** focused server tests pass (`focused-final.log`). The browser
+  compatibility module preserves all five runtime exports and four types;
+  its **47** parser/candidate/lifecycle tests pass (`web-compatibility.log`).
+- Full web: **7,014 passed, 1 skipped**, exit 0 (`web-suite.log`). Full game:
+  **1,165 passed**; board-render: **27 passed**; mahjong: **139 passed**
+  (`game-unit.log`, `board-unit.log`, `mahjong-unit.log`). The package Node
+  suites use `node --import tsx --test` because the npm scripts' `tsx` CLI
+  cannot open its IPC socket in this sandbox (`unit-packages.log`).
+- Parent `npm --prefix apps/server test`: **3,150 passed, 53 failed,
+  79 skipped**, exit 1 (`server-final.log`). All 53 failure blocks report
+  **`listen EPERM`**; none are analysis regressions. The complete test list
+  includes the new sweep and route tests. Root `npm run typecheck` passes,
+  exit 0 (`typecheck-final.log`); changed-file Biome and whitespace checks pass.
+- The exact requested `nice -n 10 sh -c 'W="--changed main"; ...'` gate ran,
+  exit 1 (`suite.log`). All four builds pass. Tooling reports **441 passed,
+  7 failed**, all localhost `listen EPERM` in unchanged smoke/deploy tests;
+  its `&&` chain stops there. This includes the passing native-asset recipe
+  tests, which use recorded output and fixture processes, not a native search.
+  The normal-permission recovery runner must run the configured gate before
+  committing the named paths. No suite or hook was bypassed for a commit.
+
+Next owner: burn recovery runs the configured suite outside the socket sandbox
+and commits the tested paths; the Mistboard session reviews and merges into
+`game/gomoku`. Life-os-fa then runs the Docker-shim 80-ply/RSS acceptance.
+Suggested subject: `feat(gomoku): share Rapfi parsing and add cached server sweeps (s-ed43)`.
+Suggested trailer: `Lesson: Preserve browser exports when sharing an engine
+parser, and normalize side-to-move scores using the recorded opening before
+persisting a whole-game series.`
+
 ## Native Rapfi assets — s-06f7
 
-This card supplies the native binary, config, networks and release gates for
-the later admin-only whole-game analysis sweep. It adds no route, browser
-surface or rating change. The sweep, shared parser, cache and 80-ply RSS
-measurement belong to the following server card; the graph and long-game
-acceptance test belong to s-da96. Gomoku stays hidden and unrated.
+The earlier asset card supplies the native binary, config, networks and
+release gates used by this sweep. It added no route, browser surface or
+rating change. Its original evidence and deployment handoff are retained
+below. The graph and long-game acceptance test belong to s-da96. Gomoku
+stays hidden and unrated.
 
 ### Pins and licences
 

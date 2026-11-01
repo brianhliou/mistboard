@@ -26,6 +26,7 @@ Edit task → find file → open only that file.
 | `bughouse.ts` | Pure Chess Bughouse aggregate: two-board match state, capture transfer, drops, clocks, timeouts, event replay, and partner-request projection |
 | `variants.ts` | Variants (`standardChessVariant`, `darkChessVariant`); fog kernel: `fogVisibleSquares`, `fogMovesFrom`, `fogPawnMoves`, `fogSlideMoves`, `fogCastlingMoves`, `applyFogMove` |
 | `variants-xiangqi.ts` | FoW Xiangqi variant; cannon vision = field of fire |
+| `rapfi-candidates.ts` | Shared Rapfi 1387d11 structured INFO parser, candidate types, validation and seeded tactical choice; the browser compatibility module re-exports every existing name |
 | `variants-gomoku.ts` | Pure 15x15 freestyle Gomoku kernel (#761): validated dealt openings, immutable placements, a1-o15 notation, tactical helpers, room state and open-information player views with terminal winning lines (#768) |
 | `variants-gomoku.test.ts` | Gomoku geometry, overlines, draws, illegal openings, notation, tactical oracles and 10,000 deterministic random games |
 | `variants-three-kingdoms-banqi.ts` | Engine-only Three Kingdoms banqi (#628): seeded 9×5 corner deal, xiangqi movement without royal constraints, score settlement, a perpetual-chase rule that refuses a chase move repeating its position a third time, masked player views and public FEN-like snapshots; no tenant or game-spec registration |
@@ -92,7 +93,8 @@ Edit task → find file → open only that file.
 |------|------|
 | `gomoku-tenant.ts` | Hidden, unrated Black-first Gomoku referee: kernel placements, open-information views, room endings and persistence mappings (#768 build 2) |
 | `gomoku-registration.ts` | Hidden flag-gated Gomoku rooms, casual lobby/friend challenges and five-level browser Rapfi PvE with Black/White preference; opt-in bot-move delegation, finished-game share card, JSON export with the recorded opening and TV capability with Rapfi names; listings and /data wait for publicSurface; no rated or correspondence |
-| `routes/gomoku-games.ts` | Flag-gated finished replay and registered live payload builder; replays the recorded opening into spectator views, with event-counted plies, terminal history and clocks; hidden games stay out of TV election and listings |
+| `gomoku-analysis.ts` | Sequential N+1 Black-POV Rapfi sweep over the recorded opening; one bounded/reaped process, fixed 100k-node/5s budget, 32 MiB hash, cache/coalescing and incremental checkpoints; tests use recorded output only |
+| `routes/gomoku-games.ts` | Admission-gated async analysis/cache/job polling plus flag-gated finished replay and registered live payload builder; replays the recorded opening into spectator views, with event-counted plies, terminal history and clocks; hidden games stay out of TV election and listings |
 | `routes/gomoku-games.test.ts` | Gomoku HTTP dispatch, flag denial, dealt/legacy replay, clocks, terminal evidence, invalid logs and event-derived live snapshots |
 | `gomoku-browser-bot.test.ts` | Browser bot move boundary: both colours, own-room human only, exact ply, kernel legality, PvP/rated/spectator refusal and durable bot-seat reconnect |
 | `gomoku-tenant.test.ts` | Seeded referee wins, legal 225-ply draw, replay/hydration, seat preference, wire fields and unsupported-surface regressions |

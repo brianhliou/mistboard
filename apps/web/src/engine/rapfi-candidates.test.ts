@@ -1,7 +1,9 @@
 // @vitest-environment node
+import * as shared from '@mistboard/game';
 import { describe, expect, it, vi } from 'vitest';
 import type { RapfiPosition } from './rapfi.js';
 import * as rapfi from './rapfi.js';
+import * as compatibility from './rapfi-candidates.js';
 
 // Structured transcripts in the supplied 1387d11 searchoutput.cpp format.
 // MESSAGE is deliberately misleading: it must never supply evaluation or PV.
@@ -157,6 +159,16 @@ const options = { candidateCount: 3, evalMargin: 100, seed: 42 };
 const choices = () => [candidate(6, 8, 100), candidate(7, 8, 80, 1), candidate(8, 8, 40, 2)];
 
 describe('Rapfi structured output', () => {
+  it('keeps every browser compatibility export bound to the shared implementation', () => {
+    expect({ ...compatibility }).toEqual({
+      parseRapfiOutput: shared.parseRapfiOutput,
+      rapfiPositionState: shared.rapfiPositionState,
+      selectRapfiMove: shared.selectRapfiMove,
+      validateRapfiCandidateCount: shared.validateRapfiCandidateCount,
+      validateRapfiChoiceOptions: shared.validateRapfiChoiceOptions,
+    });
+  });
+
   it('parses recorded single/multi-PV, including re-ranked and repeated root moves', () => {
     expect(rapfi.parseRapfiOutput(recordedSingle)[0]).toMatchObject({
       eval: 414,
@@ -230,6 +242,46 @@ describe('Rapfi structured output', () => {
     expect(rapfi.parseRapfiOutput(single.replace('EVAL -142', `EVAL ${ev}`))[0].forcedFive).toEqual(
       forcedFive,
     );
+  });
+
+  // Rapfi prints mates as text (core/iohelper.cpp: "+M" << VALUE_MATE - value),
+  // never as the raw 30000-based number; database mates ("+M*") carry no distance.
+  it.each([
+    ['+M1', { result: 'win', plies: 1 }],
+    ['+M3', { result: 'win', plies: 3 }],
+    ['-M4', { result: 'loss', plies: 4 }],
+    ['-M225', { result: 'loss', plies: 225 }],
+  ])('reads the printed mate score %s', (text, forcedFive) => {
+    const [parsed] = rapfi.parseRapfiOutput(single.replace('EVAL -142', `EVAL ${text}`));
+    expect(parsed?.forcedFive).toEqual(forcedFive);
+  });
+
+  it.each(['+M*', '-M*', 'VAL_INF', '+M', 'M3'])('drops the unusable score %s', (text) => {
+    expect(rapfi.parseRapfiOutput(single.replace('EVAL -142', `EVAL ${text}`))).toEqual([]);
+  });
+
+  it('reads a forced win from real native Rapfi output', () => {
+    // Captured 2026-11-01 from the pinned native build, position after 6 plies.
+    const real = [
+      'MESSAGE OptiTime 3727ms | MaxTime 4970ms',
+      'INFO PV 0',
+      'INFO NUMPV 1',
+      'INFO DEPTH 2',
+      'INFO SELDEPTH 2',
+      'INFO NODES 1',
+      'INFO TOTALNODES 2',
+      'INFO TOTALTIME 0',
+      'INFO SPEED 2000',
+      'INFO EVAL +M3',
+      'INFO WINRATE 1',
+      'INFO BESTLINE 9,8',
+      'INFO PV DONE',
+      'MESSAGE Depth 2-2 | Eval +M3 | Time 0ms | J7',
+      '9,8',
+    ];
+    expect(rapfi.parseRapfiOutput(real)).toMatchObject([
+      { move: { x: 9, y: 8 }, eval: 29997, forcedFive: { result: 'win', plies: 3 } },
+    ]);
   });
 
   it.each([

@@ -8,7 +8,7 @@ import {
   selectRapfiMove,
   validateRapfiCandidateCount,
   validateRapfiChoiceOptions,
-} from './rapfi-candidates.js';
+} from '@mistboard/game';
 
 export type { RapfiCandidate, RapfiChoiceOptions, RapfiPosition };
 export { parseRapfiOutput, selectRapfiMove };

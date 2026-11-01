@@ -38,6 +38,7 @@ export * from './puzzles-xiangqi-motifs.js';
 export * from './puzzles-xiangqi-setup.js';
 export * from './puzzles-xiangqi-training-tags.js';
 export * from './puzzles-xiangqi-transposition.js';
+export * from './rapfi-candidates.js';
 export * from './start-fen.js';
 export * from './study-analysis-coverage.js';
 export * from './three-kingdoms-banqi-fen.js';
