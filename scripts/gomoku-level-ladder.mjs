@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Offline, serial, single-thread WASM. No browser, server, network or ratings.
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,10 +8,14 @@ import { Worker } from 'node:worker_threads';
 import { tsImport } from 'tsx/esm/api';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const { RAPFI_LEVELS, rapfiCommands } = await tsImport(
-  '../apps/web/src/engine/rapfi.ts',
-  import.meta.url,
-);
+const {
+  RAPFI_LEVELS,
+  rapfiCommands,
+  parseRapfiOutput,
+  selectRapfiMove,
+  rapfiGameSeed,
+  rapfiPlySeed,
+} = await tsImport('../apps/web/src/engine/rapfi.ts', import.meta.url);
 const {
   GOMOKU_OPENINGS,
   createInitialGomokuState,
@@ -21,6 +25,51 @@ const {
   mustBlock,
 } = await tsImport('../packages/game/src/variants-gomoku.ts', import.meta.url);
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
+const BASELINE = Object.freeze({
+  level: 'baseline',
+  policy: 'random legal, win-in-one then block-in-one',
+});
+
+/** Baseline at every level, plus two-level gaps. Explicit adjacent pairs and
+ * the old baseline alias remain available for historical comparisons. */
+export function pairingPlan(levels = RAPFI_LEVELS, pairs) {
+  const ids =
+    pairs === undefined
+      ? [
+          ...levels.map(({ level }) => `baseline-${level}`),
+          ...levels.slice(2).map(({ level }) => `${level - 2}-${level}`),
+        ]
+      : pairs.split(',');
+  if (new Set(ids).size !== ids.length) throw new Error('Duplicate pairing');
+  return ids.map((id) => {
+    const match = /^(baseline|\d+)-(\d+)$/.exec(id === 'baseline' ? 'baseline-1' : id);
+    const weaker =
+      match?.[1] === 'baseline'
+        ? BASELINE
+        : levels.find(({ level }) => level === Number(match?.[1]));
+    const stronger = levels.find(({ level }) => level === Number(match?.[2]));
+    if (!match || !weaker || !stronger || (weaker !== BASELINE && weaker.level >= stronger.level))
+      throw new Error(`Unknown pairing: ${id}`);
+    return { id, weaker, stronger };
+  });
+}
+
+/** Replace only this run's checkpoint. Older runs, including the budget-only
+ * schema-v1 records without runId/game seeds, retain their original contents. */
+export function writeRun(output, run, levels = RAPFI_LEVELS) {
+  if (typeof run.runId !== 'string' || !run.runId.length) throw new Error('Missing run id');
+  const record = existsSync(output)
+    ? JSON.parse(readFileSync(output, 'utf8'))
+    : { schemaVersion: 1, levels, runs: [] };
+  record.levels = levels;
+  const prior = record.runs.findIndex((entry) => entry.runId === run.runId);
+  if (prior >= 0) record.runs[prior] = run;
+  else record.runs.push(run);
+  mkdirSync(dirname(resolve(output)), { recursive: true });
+  const temporary = `${output}.tmp-${process.pid}`;
+  writeFileSync(temporary, `${JSON.stringify(record, null, 2)}\n`);
+  renameSync(temporary, output);
+}
 
 export function seededRandom(seed) {
   let value = seed >>> 0;
@@ -39,12 +88,15 @@ export function baselineMove(state, random) {
   return moves[Math.floor(random() * moves.length)];
 }
 
-export async function playGame({ opening, black, white }) {
+export async function playGame({ opening, black, white, seed = 0 }) {
   let state = createInitialGomokuState(opening);
   const moves = [];
   while (state.status.type === 'playing') {
     const color = state.status.turn;
-    const move = await (color === 'black' ? black : white)(state);
+    const move = await (color === 'black' ? black : white)(state, {
+      gameSeed: seed,
+      plySeed: rapfiPlySeed(seed, state.ply),
+    });
     const next = move && typeof move.to === 'string' ? applyGomokuMove(state, move) : state;
     if (next === state)
       throw new Error(
@@ -58,6 +110,7 @@ export async function playGame({ opening, black, white }) {
 
 export async function runPairing({
   id,
+  seed = 0,
   games,
   openings,
   weaker,
@@ -74,20 +127,84 @@ export async function runPairing({
     await beforeGame();
     const opening = openings[Math.floor(index / 2)];
     const strongerColor = index % 2 ? 'black' : 'white';
+    const gameSeed = rapfiGameSeed(`${id}:${index}`, seed);
     const game = await playGame({
       opening,
+      seed: gameSeed,
       black: strongerColor === 'black' ? stronger : weaker,
       white: strongerColor === 'white' ? stronger : weaker,
     });
     if (game.winner === null) result.draws += 1;
     else if (game.winner === strongerColor) result.strongerWins += 1;
     else result.weakerWins += 1;
-    result.games.push({ opening, strongerColor, ...game });
+    result.games.push({ opening, strongerColor, seed: gameSeed, ...game });
     onGame(result, index + 1);
   }
   result.wallTimeMs = Math.round(performance.now() - started);
   result.strongerScore = (result.strongerWins + result.draws / 2) / games;
   return result;
+}
+
+/** Transport seam exercises exactly the browser command/parser/choice policy
+ * with stub transcripts in tests and the pinned WASM in measurements. */
+export function createRapfiPlayer(tier, request) {
+  if (tier.evalMargin !== undefined && tier.candidateCount === undefined)
+    throw new Error('Rapfi eval margin requires a candidate count');
+  const evalMargin = tier.evalMargin ?? 0;
+  if (!Number.isFinite(evalMargin) || evalMargin < 0) throw new Error('Invalid Rapfi eval margin');
+  const telemetry = { searches: 0, wallTimeMs: 0, maxMoveMs: 0, ceilingHits: 0 };
+  return {
+    telemetry,
+    async choose(state, { plySeed }) {
+      const position = {
+        turn: state.status.turn === 'black' ? 1 : 2,
+        stones: state.board.flatMap((color, index) =>
+          color
+            ? [
+                {
+                  x: index % 15,
+                  y: Math.floor(index / 15),
+                  player: color === 'black' ? 1 : 2,
+                },
+              ]
+            : [],
+        ),
+      };
+      const { lines, elapsedMs: elapsed } = await request(
+        { type: 'commands', commands: rapfiCommands(position, tier).lines },
+        tier.timeMs + 250,
+      );
+      if (typeof elapsed !== 'number' || !Number.isFinite(elapsed) || elapsed < 0)
+        throw new Error('Invalid Rapfi elapsed time');
+      if (elapsed > tier.timeMs + 250)
+        throw new Error(`Rapfi exceeded browser watchdog: ${elapsed}ms`);
+      const failure = lines.find((line) => /^(ERROR|UNKNOWN)\b/.test(line));
+      if (failure) throw new Error(failure);
+      const reply = lines.findLast((line) => /^\d+,\d+$/.test(line));
+      const [x, y] = reply ? reply.split(',').map(Number) : [NaN, NaN];
+      if (
+        !Number.isInteger(x) ||
+        !Number.isInteger(y) ||
+        x >= 15 ||
+        y >= 15 ||
+        state.board[y * 15 + x] !== null
+      )
+        throw new Error(`Rapfi returned an invalid move: ${reply}`);
+      const move =
+        tier.candidateCount === undefined
+          ? { x, y }
+          : selectRapfiMove(position, parseRapfiOutput(lines), {
+              candidateCount: tier.candidateCount,
+              evalMargin,
+              seed: plySeed,
+            });
+      telemetry.searches += 1;
+      telemetry.wallTimeMs += elapsed;
+      telemetry.maxMoveMs = Math.max(telemetry.maxMoveMs, elapsed);
+      if (elapsed >= tier.timeMs) telemetry.ceilingHits += 1;
+      return { to: `${String.fromCharCode(97 + move.x)}${move.y + 1}` };
+    },
+  };
 }
 
 export async function loadRapfi() {
@@ -152,43 +269,7 @@ export async function loadRapfi() {
     },
     stop: () => thread.terminate(),
     player(tier) {
-      const telemetry = { searches: 0, wallTimeMs: 0, maxMoveMs: 0, ceilingHits: 0 };
-      return {
-        telemetry,
-        async choose(state) {
-          const position = {
-            turn: state.status.turn === 'black' ? 1 : 2,
-            stones: state.board.flatMap((color, index) =>
-              color
-                ? [
-                    {
-                      x: index % 15,
-                      y: Math.floor(index / 15),
-                      player: color === 'black' ? 1 : 2,
-                    },
-                  ]
-                : [],
-            ),
-          };
-          const { lines, elapsedMs: elapsed } = await request(
-            { type: 'commands', commands: rapfiCommands(position, tier).lines },
-            tier.timeMs + 250,
-          );
-          telemetry.searches += 1;
-          telemetry.wallTimeMs += elapsed;
-          telemetry.maxMoveMs = Math.max(telemetry.maxMoveMs, elapsed);
-          if (elapsed >= tier.timeMs) telemetry.ceilingHits += 1;
-          if (elapsed > tier.timeMs + 250)
-            throw new Error(`Rapfi exceeded browser watchdog: ${elapsed}ms`);
-          const failure = lines.find((line) => /^(ERROR|UNKNOWN)\b/.test(line));
-          if (failure) throw new Error(failure);
-          const reply = lines.findLast((line) => /^\d+,\d+$/.test(line));
-          if (!reply) throw new Error(`Rapfi returned no move: ${lines.join('\n')}`);
-          const [x, y] = reply.split(',').map(Number);
-          if (x >= 15 || y >= 15) throw new Error(`Rapfi returned out-of-bounds move: ${reply}`);
-          return { to: `${String.fromCharCode(97 + x)}${y + 1}` };
-        },
-      };
+      return createRapfiPlayer(tier, request);
     },
   };
 }
@@ -206,23 +287,22 @@ async function main() {
   const seed = Number(option('--seed', '20261101'));
   if (!Number.isInteger(games) || games < 2 || games % 2 || games / 2 > GOMOKU_OPENINGS.length)
     throw new Error('--games must be even, between 2 and twice the pool size');
-  if (!Number.isSafeInteger(seed) || seed < 0)
-    throw new Error('--seed must be a nonnegative integer');
+  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff)
+    throw new Error('--seed must be an unsigned 32-bit integer');
   const nodes = option('--budgets', RAPFI_LEVELS.map((tier) => tier.nodes).join(','))
     .split(',')
     .map(Number);
   if (
-    nodes.length !== 5 ||
+    nodes.length !== RAPFI_LEVELS.length ||
     nodes.some((n, i) => !Number.isSafeInteger(n) || n < 1 || (i > 0 && n <= nodes[i - 1]))
   )
-    throw new Error('--budgets needs five increasing positive integers');
+    throw new Error(`--budgets needs ${RAPFI_LEVELS.length} increasing positive integers`);
   const levels = RAPFI_LEVELS.map((tier, index) => ({ ...tier, nodes: nodes[index] }));
-  const pairIds = option('--pairs', 'baseline,1-2,2-3,3-4,4-5').split(',');
-  if (pairIds.some((id) => !['baseline', '1-2', '2-3', '3-4', '4-5'].includes(id)))
-    throw new Error('Unknown pairing');
+  const plan = pairingPlan(levels, option('--pairs'));
   const output = option('--output');
   if (!output) throw new Error('--output <record.json> is required (existing runs are appended)');
   const startedAt = new Date().toISOString();
+  const runId = randomUUID();
   const started = performance.now();
   const random = seededRandom(seed);
   // Same uniform screened pool as the live tenant, sampled without replacement.
@@ -236,15 +316,16 @@ async function main() {
   try {
     strongerEngine = await loadRapfi();
     const pairings = [];
-    for (const id of pairIds) {
-      const [low, high] = id === 'baseline' ? [0, 1] : id.split('-').map(Number);
-      const baseline = seededRandom(seed ^ 0xb451);
-      const weaker = low
-        ? weakerEngine.player(levels[low - 1])
-        : { choose: (state) => baselineMove(state, baseline) };
-      const stronger = strongerEngine.player(levels[high - 1]);
+    for (const pair of plan) {
+      const { id } = pair;
+      const weaker =
+        pair.weaker.level !== 'baseline'
+          ? weakerEngine.player(pair.weaker)
+          : { choose: (state, { plySeed }) => baselineMove(state, seededRandom(plySeed)) };
+      const stronger = strongerEngine.player(pair.stronger);
       const result = await runPairing({
         id,
+        seed,
         games,
         openings,
         weaker: weaker.choose,
@@ -260,18 +341,19 @@ async function main() {
       });
       pairings.push({
         ...result,
-        weaker: low
-          ? levels[low - 1]
-          : { level: 'baseline', policy: 'random legal, win-in-one then block-in-one' },
-        stronger: levels[high - 1],
+        weaker: pair.weaker,
+        stronger: pair.stronger,
         telemetry: { weaker: weaker.telemetry ?? null, stronger: stronger.telemetry },
       });
       // Checkpoint after each complete pairing; partial runs are never counted.
       const run = {
+        runId,
         label: option('--label', 'initial'),
         startedAt,
         wallTimeMs: Math.round(performance.now() - started),
         seed,
+        seedPolicy:
+          'FNV-1a UTF-16: game:<runSeed>:<pairingId>:<zero-based game index>; ply:<gameSeed>:<absolute kernel ply>; one Mulberry32 sample per move',
         gamesPerPair: games,
         levels,
         engine: strongerEngine.pin,
@@ -282,17 +364,7 @@ async function main() {
         ),
         pairings,
       };
-      const record = existsSync(output)
-        ? JSON.parse(readFileSync(output, 'utf8'))
-        : { schemaVersion: 1, levels: RAPFI_LEVELS, runs: [] };
-      record.levels = RAPFI_LEVELS;
-      const prior = record.runs.findIndex((entry) => entry.startedAt === startedAt);
-      if (prior >= 0) record.runs[prior] = run;
-      else record.runs.push(run);
-      mkdirSync(dirname(resolve(output)), { recursive: true });
-      const temporary = `${output}.tmp-${process.pid}`;
-      writeFileSync(temporary, `${JSON.stringify(record, null, 2)}\n`);
-      renameSync(temporary, output);
+      writeRun(output, run);
     }
   } finally {
     await weakerEngine.stop();

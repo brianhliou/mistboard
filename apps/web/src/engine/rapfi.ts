@@ -13,6 +13,34 @@ import {
 export type { RapfiCandidate, RapfiChoiceOptions, RapfiPosition };
 export { parseRapfiOutput, selectRapfiMove };
 
+function validateSeed(seed: number): void {
+  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff)
+    throw new Error('Invalid Rapfi seed');
+}
+
+// FNV-1a over UTF-16 code units: identical in browser and Node, with explicit
+// domains and separators so game identities and plies cannot alias by joining.
+function hashSeed(identity: string): number {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < identity.length; index++)
+    hash = Math.imul(hash ^ identity.charCodeAt(index), 0x01000193);
+  return hash >>> 0;
+}
+
+/** Persist this seed with the game; a room id works without a run seed. */
+export function rapfiGameSeed(gameId: string, runSeed = 0): number {
+  validateSeed(runSeed);
+  if (typeof gameId !== 'string' || !gameId.length) throw new Error('Invalid Rapfi game identity');
+  return hashSeed(`game:${runSeed}:${gameId}`);
+}
+
+/** Use the kernel's absolute ply (including opening stones), never call order. */
+export function rapfiPlySeed(gameSeed: number, ply: number): number {
+  validateSeed(gameSeed);
+  if (!Number.isSafeInteger(ply) || ply < 0) throw new Error('Invalid Rapfi ply');
+  return hashSeed(`ply:${gameSeed}:${ply}`);
+}
+
 export type RapfiLevel = 1 | 2 | 3 | 4 | 5;
 export const RAPFI_LEVELS: readonly {
   readonly level: RapfiLevel;

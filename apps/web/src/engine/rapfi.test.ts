@@ -11,6 +11,8 @@ import {
   Rapfi,
   type RapfiPosition,
   type RapfiTransport,
+  rapfiGameSeed,
+  rapfiPlySeed,
 } from './rapfi.js';
 
 const engineDir = resolve(__dirname, '../../public/engine/rapfi');
@@ -111,6 +113,38 @@ function hasFive(stones: RapfiPosition['stones']): boolean {
     ),
   );
 }
+
+describe('Rapfi seeds', () => {
+  it('reproduces a game and every ply without depending on call order', () => {
+    const gameSeed = rapfiGameSeed('room-17', 20261101);
+    expect(rapfiGameSeed('room-17', 20261101)).toBe(gameSeed);
+    expect(rapfiGameSeed('room-17')).toBe(rapfiGameSeed('room-17', 0));
+    const seeds = Array.from({ length: 225 }, (_, ply) => rapfiPlySeed(gameSeed, ply));
+    expect(new Set(seeds).size).toBe(225);
+    for (let ply = 224; ply >= 0; ply--) {
+      expect(rapfiPlySeed(gameSeed, ply)).toBe(seeds[ply]);
+      expect(seeds[ply]).toBeGreaterThanOrEqual(0);
+      expect(seeds[ply]).toBeLessThanOrEqual(0xffffffff);
+    }
+    expect(rapfiGameSeed('room-18', 20261101)).not.toBe(gameSeed);
+    expect(rapfiGameSeed('room-17', 20261102)).not.toBe(gameSeed);
+    expect(rapfiPlySeed(rapfiGameSeed('room-18', 20261101), 8)).not.toBe(seeds[8]);
+    // Pin browser/Node seed compatibility, including non-ASCII room identities.
+    expect([gameSeed, seeds[8], rapfiGameSeed('五子棋', 0xffffffff)]).toEqual([
+      2735149948, 2854282940, 2440546783,
+    ]);
+  });
+
+  it('rejects seed identities or plies that would silently wrap or alias', () => {
+    for (const seed of [-1, 0x100000000, 1.5, Number.NaN]) {
+      expect(() => rapfiGameSeed('room', seed)).toThrow('seed');
+      expect(() => rapfiPlySeed(seed, 0)).toThrow('seed');
+    }
+    expect(() => rapfiGameSeed('')).toThrow('identity');
+    for (const ply of [-1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])
+      expect(() => rapfiPlySeed(0, ply)).toThrow('ply');
+  });
+});
 
 describe('Rapfi SIMD WASM (#762)', () => {
   it('records structured single/multi-PV output from the pinned binary via YXNBEST', async () => {
