@@ -149,7 +149,7 @@ build_rapfi() (
   # shellcheck disable=SC2086
   cmake -S "$work/source/Rapfi" -B "$work/build" $RAPFI_CMAKE_FLAGS >/dev/null
   cmake --build "$work/build" -j"$JOBS" --target rapfi >/dev/null
-  strip -o "$bin/rapfi" "$work/build/rapfi"
+  strip -o "$bin/rapfi" "$work/build/pbrain-rapfi"
   chmod +x "$bin/rapfi"
   if [ -n "$bundle" ]; then
     node "$ROOT/scripts/rapfi-assets.mjs" stage "$bin" "$bundle"

@@ -273,7 +273,8 @@ else process.exit(1);
 const fs=require('node:fs');const path=require('node:path');const args=process.argv.slice(2);
 fs.appendFileSync(${JSON.stringify(log)},JSON.stringify(args)+'\\n');
 if(args[0]==='--build') {
-  fs.writeFileSync(path.join(args[1],'rapfi'),'fixture native binary');
+  // Rapfi/CMakeLists.txt sets OUTPUT_NAME "pbrain-rapfi" on the rapfi target.
+  fs.writeFileSync(path.join(args[1],'pbrain-rapfi'),'fixture native binary');
 } else {
   if(fs.readFileSync(path.join(args[args.indexOf('-S')+1],'CMakeLists.txt'),'utf8')!=='fixture pinned source') process.exit(1);
   fs.mkdirSync(args[args.indexOf('-B')+1],{recursive:true});
