@@ -826,7 +826,6 @@ export const ZH_HANS_PLAY = {
   'live.tk.points': '{count} 分',
   'live.tk.captured': '吃子',
   'live.tk.none': '无',
-  'live.tk.firstTo': '先得 {count} 分者胜',
   'live.tk.movesLeft': '还剩 {count} 步，之后按分数判定胜负',
   'live.tk.oneMoveLeft': '还剩 1 步，之后按分数判定胜负',
   'live.tk.adminOnly': '{variant}仍在内部试玩，这个房间只对管理员账号开放。',

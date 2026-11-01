@@ -37,16 +37,21 @@
 /* The material panel under the board (live room, live-three-kingdoms-banqi.ts
    renderMaterial): one block per seat, the opponent's first like the board,
    each its name over its points and two named lines at one disc size, the
-   pieces it took and its own pieces still face-down (Brian, 2026-10-30). The
-   same layout on every width: two seat rows the board's width. Compound
-   selectors: banqi's pool rules (live-review.css) match these nodes at three
-   classes. */
+   pieces it took and its own pieces still face-down (Brian, 2026-10-30).
+   Red and black sit side by side where the board is wide enough for two
+   halves of eight 30px discs (2 x 268px and the gap: 560px), else they stack
+   (#823). The pool is banqi's named size container (live-review.css), so the
+   seat layout below follows the same 560px line. Compound selectors: banqi's
+   pool rules (live-review.css) match these nodes at three classes. */
 .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool:not(:empty) {
   --tk-piece: 30px;
   --tk-key: 6rem;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 268px), 1fr));
+  align-content: start;
+  align-items: start;
+  column-gap: 24px;
+  row-gap: 6px;
   padding-top: 2px;
 }
 .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat {
@@ -150,54 +155,94 @@
 .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .hidden-pool__note {
   grid-column: 2 / -1;
 }
-.live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .hidden-pool__caption,
 .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-banqi-moves-left {
+  grid-column: 1 / -1;
   margin: 0;
   font-size: 0.72rem;
   color: var(--site-muted);
 }
 
-/* Phone: the panel is a fixed slot under the bottom seat, sized to its
-   content so the width-bound board's spare height goes to the pieces, not to
-   blank margins. Each seat's name and points become a header line over its
-   two named lines, so the discs get the full width at 28px. The odds caption
-   goes to screen readers only, as in banqi's phone odds rows (every tile draws
-   from one pool, so the chances carry the count). Heights: header 20, two
-   28px lines, the chance under each face-down disc adds 12, the moves-left
-   line 20. */
+/* Side by side: each seat is a header line (name, then points) over its two
+   named lines, each name over its discs, so a half keeps the full width for
+   the discs. The discs grow with the board: eight to a half's line, from 30px
+   at the 560px switch to 44px (about 40px under the default 720px board).
+   Never on a phone window: its panel stays stacked at 28px (below). */
+@media (min-width: 601px) {
+  @container hidden-pool (width >= 560px) {
+    .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat {
+      --tk-piece: clamp(30px, calc(((100cqw - 24px) / 2 - 28px) / 8), 44px);
+      grid-template-columns: minmax(0, 1fr);
+      row-gap: 3px;
+    }
+    .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat + .tk-seat {
+      padding-top: 0;
+      border-top: 0;
+    }
+    .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__head {
+      grid-row: auto;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__key {
+      grid-column: 1;
+      margin-top: 3px;
+    }
+    .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__pieces {
+      grid-column: 1;
+      gap: 4px;
+    }
+    .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .hidden-pool__note {
+      grid-column: 1;
+    }
+  }
+}
+
+/* Phone: use the same edge-to-edge board as banqi, without fitting it to the
+   height left by the material and status. Let the page scroll instead. At
+   390px the SVG is 390px wide and 390 * 330 / 586 = 219.6px tall. The seat
+   bands keep their shared order, above and below the board. The panel takes
+   its content height, with labels beside 28px discs and readable chances. */
 @media (max-width: 600px) {
-  .live-route--banqi.live-route--three-kingdoms-banqi
-    .review-shell__cluster.live-review__cluster:has(.hidden-pool:not(:empty)) {
-    --phone-room-pool: 184px;
+  .live-route--banqi.live-route--three-kingdoms-banqi .review-shell__cluster.live-review__cluster {
+    --phone-room-slack: 0px;
   }
-  .live-route--banqi.live-route--three-kingdoms-banqi
-    .review-shell__cluster.live-review__cluster:has(.hidden-pool.tk-material--odds) {
-    --phone-room-pool: 208px;
+  .live-route--three-kingdoms-banqi .live-review__cluster > .review-shell__center {
+    height: auto;
   }
-  .live-route--banqi.live-route--three-kingdoms-banqi
-    .review-shell__cluster.live-review__cluster:has(.hidden-pool .tk-banqi-moves-left) {
-    --phone-room-pool: 228px;
+  .live-route--three-kingdoms-banqi .live-review__cluster .board-shell {
+    width: 100%;
+    max-width: none;
   }
   .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool:not(:empty) {
     --tk-piece: 28px;
-    --tk-key: 7.5rem;
-    gap: 4px;
-    padding-top: 0;
+    --tk-key: 6rem;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+    height: auto;
+    margin-top: 4px;
+    padding: 0;
+    overflow: visible;
   }
   .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat {
     grid-template-columns: var(--tk-key) minmax(0, 1fr);
+    column-gap: 6px;
+    row-gap: 2px;
   }
   .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat + .tk-seat {
-    padding-top: 4px;
+    padding-top: 3px;
   }
   .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__head {
     grid-column: 1 / -1;
     grid-row: auto;
     flex-direction: row;
     align-items: baseline;
-    gap: 8px;
+    gap: 6px;
   }
+  /* The name takes the label column's width, so both seats' points start at
+     one x, over the discs, whatever the name's length ("Red" vs "Black"). */
   .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__name {
+    flex: 0 0 var(--tk-key);
     font-size: 0.85rem;
   }
   .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__points {
@@ -209,12 +254,40 @@
   .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .tk-seat__pieces {
     grid-column: 2;
   }
-  .live-route--three-kingdoms-banqi .live-review__cluster .tk-material--odds .hidden-pool__caption {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+  .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .reveal-odds-chip__pct,
+  .live-route--three-kingdoms-banqi .live-review__cluster .hidden-pool .captures-count-badge {
+    font-size: 11px;
+  }
+  .live-route--three-kingdoms-banqi
+    .live-review__cluster
+    [data-action-section]:has(.action-notice > span:last-child) {
+    height: auto;
+    margin: 4px 12px;
+    overflow: visible;
+  }
+  .live-route--three-kingdoms-banqi
+    .live-review__cluster
+    .action-status:has(> .action-notice > span:last-child) {
+    height: auto;
+  }
+  .live-route--three-kingdoms-banqi .live-review__cluster .action-notice:has(> span:last-child) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+    height: auto;
+    padding: 4px 8px;
+  }
+  .live-route--three-kingdoms-banqi
+    .live-review__cluster
+    .action-notice:has(> span:last-child)
+    > strong {
+    font-size: 13px;
+  }
+  .live-route--three-kingdoms-banqi
+    .live-review__cluster
+    .action-notice:has(> span:last-child)
+    > span {
+    display: block;
   }
 }
