@@ -45,6 +45,14 @@ const baseAnnouncements: Announcement[] = [
   {
     date: '2026-11-01',
     kind: 'update',
+    headline: 'Puzzle Dashboard: your results, your history, and the puzzles you missed.',
+    body: 'Sign in and the Puzzle Dashboard shows how many puzzles you played and solved over recent days, and how you performed. Puzzle history lists every attempt, and To replay serves the puzzles you missed again.',
+    href: '/puzzles/dashboard',
+    cta: 'Open the dashboard',
+  },
+  {
+    date: '2026-11-01',
+    kind: 'update',
     headline: 'Puzzle Storm: as many puzzles as you can in three minutes.',
     body: 'Puzzle Storm starts a three-minute clock and serves puzzles one after another. A wrong move costs 10 seconds, and a run of correct solves wins time back. When the clock runs out, you can go back through every puzzle in the run.',
     href: '/puzzles?mode=storm',

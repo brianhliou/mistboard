@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  'Puzzle Dashboard: your results, your history, and the puzzles you missed.':
+    '解题面板上线：成绩、记录，以及做错的题。',
+  'Sign in and the Puzzle Dashboard shows how many puzzles you played and solved over recent days, and how you performed. Puzzle history lists every attempt, and To replay serves the puzzles you missed again.':
+    '登录后，解题面板会显示你最近几天练了多少题、解开多少，以及表现如何。解题记录列出每一次尝试，“待重做”会把你做错的题再出一次。',
+  'Open the dashboard': '打开解题面板',
   'Puzzle Storm: as many puzzles as you can in three minutes.':
     '限时解题上线：三分钟内解尽可能多的题。',
   'Puzzle Storm starts a three-minute clock and serves puzzles one after another. A wrong move costs 10 seconds, and a run of correct solves wins time back. When the clock runs out, you can go back through every puzzle in the run.':
@@ -555,6 +560,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  'Puzzle Dashboard: your results, your history, and the puzzles you missed.':
+    '解題面板上線：成績、紀錄，以及做錯的題。',
+  'Sign in and the Puzzle Dashboard shows how many puzzles you played and solved over recent days, and how you performed. Puzzle history lists every attempt, and To replay serves the puzzles you missed again.':
+    '登入後，解題面板會顯示你最近幾天練了多少題、解開多少，以及表現如何。解題紀錄列出每一次嘗試，「待重做」會把你做錯的題再出一次。',
+  'Open the dashboard': '打開解題面板',
   'Puzzle Storm: as many puzzles as you can in three minutes.':
     '限時解題上線：三分鐘內解盡可能多的題。',
   'Puzzle Storm starts a three-minute clock and serves puzzles one after another. A wrong move costs 10 seconds, and a run of correct solves wins time back. When the clock runs out, you can go back through every puzzle in the run.':
