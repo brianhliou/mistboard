@@ -141,6 +141,9 @@ function syncBot(): void {
 function renderBotPanel(refs: LiveRefs): void {
   syncBot();
   if (roomMode !== 'pve' || !botLevel()) return;
+  // Idle says nothing: the opponent strip already names "Rapfi Level N", as
+  // every other variant's bot seat does.
+  if (!botFailed && !botPaused && !pendingKey) return;
   const panel = document.createElement('div');
   panel.dataset.gomokuBot = engineId ?? '';
   const label = document.createElement('p');
@@ -149,9 +152,7 @@ function renderBotPanel(refs: LiveRefs): void {
     ? t('live.gomokuBotFailed')
     : botPaused
       ? t('live.gomokuBotPaused')
-      : pendingKey
-        ? t('live.gomokuBotThinking')
-        : `Rapfi Level ${botLevel()}`;
+      : t('live.gomokuBotThinking');
   panel.append(label);
   if (
     core?.state.seat !== 'spectator' &&
