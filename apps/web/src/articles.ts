@@ -545,11 +545,19 @@ function buildCommunityWriterPitch(locale: Locale): HTMLElement {
 function buildArticleCommunityRail(locale: Locale, activeView: ArticleIndexView): HTMLElement {
   const rail = document.createElement('aside');
   rail.className = 'community-rail articles-community-rail';
-  rail.setAttribute('aria-label', 'Blog navigation');
+  rail.setAttribute('aria-label', t('articles.navigation', {}, locale));
 
   const links: Array<{ label: string; href: string; view: ArticleIndexView }> = [
-    { label: 'By Mistboard', href: localizedHref('/blog', locale), view: 'mistboard' },
-    { label: 'Community', href: localizedHref('/blog/community', locale), view: 'community' },
+    {
+      label: t('articles.byMistboard', {}, locale),
+      href: localizedHref('/blog', locale),
+      view: 'mistboard',
+    },
+    {
+      label: t('articles.communityPosts', {}, locale),
+      href: localizedHref('/blog/community', locale),
+      view: 'community',
+    },
   ];
 
   // A view with no posts is marked so the phone tab row can drop it (the

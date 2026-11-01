@@ -281,7 +281,7 @@ describe('article public listing gates', () => {
     }
   });
 
-  it('keeps only working Community and By Mistboard blog navigation', () => {
+  it('keeps only working Community posts and By Mistboard blog navigation', () => {
     const official = buildArticlesIndex();
     const community = buildArticlesIndex(undefined, 'community');
     const officialLinks = [
@@ -294,11 +294,11 @@ describe('article public listing gates', () => {
 
     expect(officialLinks).toEqual([
       { label: 'By Mistboard', href: '/blog', current: 'page' },
-      { label: 'Community', href: '/blog/community', current: null },
+      { label: 'Community posts', href: '/blog/community', current: null },
     ]);
     expect(
       community.querySelector('.articles-community-rail a[aria-current="page"]')?.textContent,
-    ).toBe('Community');
+    ).toBe('Community posts');
     expect(official.querySelector('.articles-index-controls')).toBeNull();
     expect(official.querySelectorAll('button')).toHaveLength(0);
     expect(official.textContent).not.toContain('All languages');
@@ -372,14 +372,40 @@ describe('article public listing gates', () => {
     }
   });
 
-  it('localizes both blog rail destinations', () => {
-    const index = buildArticlesIndex('zh-Hans', 'community');
-    const hrefs = [...index.querySelectorAll<HTMLAnchorElement>('.articles-community-rail a')].map(
-      (link) => link.getAttribute('href'),
-    );
+  it.each([
+    ['en', '', 'By Mistboard', 'Community posts', 'Blog navigation'],
+    ['zh-Hans', '/zh-hans', 'Mistboard 官方文章', '社区文章', '博客导航'],
+    ['zh-Hant', '/zh-hant', 'Mistboard 官方文章', '社群文章', '網誌導覽'],
+  ] as const)(
+    '%s: localizes blog rail labels and canonical destinations',
+    (locale, prefix, officialLabel, communityLabel, navigationLabel) => {
+      for (const view of ['mistboard', 'community'] as const) {
+        const index = buildArticlesIndex(locale === 'en' ? undefined : locale, view);
+        const rail = index.querySelector('.articles-community-rail');
+        const links = [...index.querySelectorAll<HTMLAnchorElement>('.articles-community-rail a')];
 
-    expect(hrefs).toEqual(['/zh-hans/blog', '/zh-hans/blog/community']);
-  });
+        expect(rail?.getAttribute('aria-label')).toBe(navigationLabel);
+        expect(
+          links.map((link) => ({
+            label: link.textContent,
+            href: link.getAttribute('href'),
+            current: link.getAttribute('aria-current'),
+          })),
+        ).toEqual([
+          {
+            label: officialLabel,
+            href: `${prefix}/blog`,
+            current: view === 'mistboard' ? 'page' : null,
+          },
+          {
+            label: communityLabel,
+            href: `${prefix}/blog/community`,
+            current: view === 'community' ? 'page' : null,
+          },
+        ]);
+      }
+    },
+  );
 
   it('localizes only publication-ready zh-Hans article cards', () => {
     vi.stubEnv('DEV', false);

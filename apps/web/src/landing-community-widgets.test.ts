@@ -4,16 +4,26 @@ import { leaderboardVariants } from './variants.js';
 describe('landing community widgets', () => {
   afterEach(() => {
     document.body.replaceChildren();
+    window.history.replaceState(null, '', '/');
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
-  it('links the Top players header directly to the player directory', async () => {
-    const { buildTopPlayersWidget } = await import('./landing-community-widgets.js');
-    const widget = buildTopPlayersWidget({ hydrate: false });
+  it.each([
+    ['/', 'Top players'],
+    ['/zh-hans/', '顶尖棋手'],
+    ['/zh-hant/', '頂尖棋手'],
+  ])(
+    '%s: localizes the Top players header and links to the canonical player directory',
+    async (path, title) => {
+      window.history.replaceState(null, '', path);
+      const { buildTopPlayersWidget } = await import('./landing-community-widgets.js');
+      const widget = buildTopPlayersWidget({ hydrate: false });
 
-    expect(widget.querySelector('.site-box-top')?.getAttribute('href')).toBe('/player');
-  });
+      expect(widget.querySelector('.site-box-title')?.textContent).toBe(title);
+      expect(widget.querySelector('.site-box-top')?.getAttribute('href')).toBe('/player');
+    },
+  );
 
   it('hydrates popular studies and the leader of each returned public ladder', async () => {
     const variant = leaderboardVariants[0]!;

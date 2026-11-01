@@ -194,6 +194,7 @@ export const ZH_HANS_SHELL = {
   'home.noRatedPlayers': '还没有计分棋手。',
   'home.rankingsUnavailable': '无法获取排行榜。',
   'home.latestStudies': '最新研究',
+  'home.topPlayers': '顶尖棋手',
   'home.gameViewerUnavailable': '无法显示对局',
   'home.setupErrorTimeControl': '该用时不可用，请换一个。',
   'home.setupErrorStorage': '此服务器无法保存房间。',
